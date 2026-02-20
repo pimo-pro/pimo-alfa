@@ -35,7 +35,7 @@ import { loadGLB } from "../../core/glb/glbLoader";
 import { snapHorizontalOffset } from "../../utils/openingConstraints";
 import { applyImageWatermark } from "../../utils/watermark";
 import { WallGizmo } from "../gizmos/WallGizmo";
-import { updateWallVisibility } from "../visibility/WallAutoHide";
+import { updateWallCulling } from "../visibility/WallRaycastCulling";
 import {
   keepModelInsideRoom,
   preventModelWallIntersection,
@@ -1983,27 +1983,14 @@ export class Viewer {
     const wallsMain = this.roomBoxWalls
       .map((w) => w.mesh)
       .filter((m) => m.userData?.isMainWall === true);
-    const wallsExtra = this.roomBoxWalls
-      .map((w) => w.mesh)
-      .filter((m) => m.userData?.isMainWall !== true);
 
-    updateWallVisibility(cam, wallsMain, wallsExtra);
+    updateWallCulling(cam, this.roomBounds, wallsMain);
 
     // Override manual continua com prioridade.
     if (this.manualHiddenWallId !== null) {
       this.roomBoxWalls.forEach((entry) => {
         if (entry.id === this.manualHiddenWallId) {
           entry.mesh.visible = false;
-          const mat = entry.mesh.material;
-          if (Array.isArray(mat)) {
-            mat.forEach((m) => {
-              m.depthWrite = false;
-              m.needsUpdate = true;
-            });
-          } else {
-            mat.depthWrite = false;
-            mat.needsUpdate = true;
-          }
         }
       });
     }
@@ -2652,6 +2639,9 @@ export class Viewer {
             );
           }
         }
+      }
+      if (this.cameraManager.camera.position.y < 0.3) {
+        this.cameraManager.camera.position.y = 0.3;
       }
       this.controls?.update();
       this.lerpLightsToTarget();
