@@ -35,6 +35,12 @@ import { loadGLB } from "../../core/glb/glbLoader";
 import { snapHorizontalOffset } from "../../utils/openingConstraints";
 import { applyImageWatermark } from "../../utils/watermark";
 import { WallGizmo } from "../gizmos/WallGizmo";
+import { updateWallVisibility } from "../visibility/WallAutoHide";
+import {
+  keepModelInsideRoom,
+  preventModelWallIntersection,
+} from "../collision/ModelCollision";
+import { snapModelToNearestWall } from "../snapping/ModelWallSnap";
 import {
   RoomManager,
   type IRoomManagerViewer,
@@ -155,10 +161,6 @@ export class Viewer {
   private boxesIntersectingWalls = new Set<string>();
   /** Parede escondida manualmente (se existir). */
   private manualHiddenWallId: number | null = null;
-  /** Cache para evitar recalcular auto-hide quando câmera não muda. */
-  private lastWallHideCamPos = new THREE.Vector3(Number.NaN, Number.NaN, Number.NaN);
-  private lastWallHideDir = new THREE.Vector3(Number.NaN, Number.NaN, Number.NaN);
-  private lastWallHideManualId: number | null = null;
 
   /** Overlay de dimensões da caixa selecionada (modo Selecionar). */
   private dimensionsOverlayVisible = false;
@@ -1874,9 +1876,16 @@ export class Viewer {
             this.applyCollisionConstraint(obj);
           }
           if (this.roomBounds && this.isMeshInsideOrTouchingRoom(obj)) {
-            if (!this._isDragging) {
-              this.applyAutoRotateToRoom(obj, { snapPosition: this.lockEnabled });
-            }
+            const wallsMain = this.roomBoxWalls
+              .map((w) => w.mesh)
+              .filter((w) => w.userData?.isMainWall === true);
+            const allRoomWalls = this.roomBoxWalls.map((w) => w.mesh);
+
+            // Ordem pedida: movimento normal -> snapping -> colisão/limites.
+            snapModelToNearestWall(obj, wallsMain, 0.4);
+            preventModelWallIntersection(obj, allRoomWalls);
+            keepModelInsideRoom(obj, this.roomBounds);
+
             if (this.lockEnabled) {
               this.applyRoomConstraint(obj, { ignoreY: entry.manualPosition });
             }
@@ -1971,33 +1980,33 @@ export class Viewer {
   private updateWallVisibilityBasedOnCamera(): void {
     if (!this.roomBounds) return;
     const cam = this.cameraManager.camera;
-    const centerY = (this.roomBounds.minY + this.roomBounds.maxY) / 2;
-    const center = new THREE.Vector3(this.roomBounds.centerX, centerY, this.roomBounds.centerZ);
-    const dir = center.clone().sub(cam.position);
-    if (dir.lengthSq() < 1e-6) return;
-    if (
-      this.lastWallHideCamPos.distanceToSquared(cam.position) < 1e-6 &&
-      this.lastWallHideDir.distanceToSquared(dir) < 1e-6 &&
-      this.lastWallHideManualId === this.manualHiddenWallId
-    ) {
-      return;
-    }
-    this.lastWallHideCamPos.copy(cam.position);
-    this.lastWallHideDir.copy(dir);
-    this.lastWallHideManualId = this.manualHiddenWallId;
+    const wallsMain = this.roomBoxWalls
+      .map((w) => w.mesh)
+      .filter((m) => m.userData?.isMainWall === true);
+    const wallsExtra = this.roomBoxWalls
+      .map((w) => w.mesh)
+      .filter((m) => m.userData?.isMainWall !== true);
 
-    const roomWalls = this.roomBoxWalls.map((w) => w.mesh);
-    if (!roomWalls.length) return;
-    this.raycaster.set(cam.position, dir.normalize());
-    const hits = this.raycaster.intersectObjects(roomWalls, false);
-    const hitWall = hits.length ? hits[0].object : null;
-    this.roomBoxWalls.forEach((entry) => {
-      let visible = entry.mesh !== hitWall;
-      if (this.manualHiddenWallId !== null && entry.id === this.manualHiddenWallId) {
-        visible = false;
-      }
-      entry.mesh.visible = visible;
-    });
+    updateWallVisibility(cam, wallsMain, wallsExtra);
+
+    // Override manual continua com prioridade.
+    if (this.manualHiddenWallId !== null) {
+      this.roomBoxWalls.forEach((entry) => {
+        if (entry.id === this.manualHiddenWallId) {
+          entry.mesh.visible = false;
+          const mat = entry.mesh.material;
+          if (Array.isArray(mat)) {
+            mat.forEach((m) => {
+              m.depthWrite = false;
+              m.needsUpdate = true;
+            });
+          } else {
+            mat.depthWrite = false;
+            mat.needsUpdate = true;
+          }
+        }
+      });
+    }
   }
 
   private getWallIdInFrontOfCamera(): number | null {
