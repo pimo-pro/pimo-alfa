@@ -1921,10 +1921,9 @@ export class Viewer {
         } else if (this.transformMode === "rotate") {
           obj.rotation.x = 0;
           obj.rotation.z = 0;
-          if (!this._isDragging && this.roomBounds && this.isMeshInsideOrTouchingRoom(obj)) {
-            (obj as THREE.Object3D & { rotation: { y: number } }).rotation.y = Viewer.snapRotationTo90(
-              (obj as THREE.Object3D & { rotation: { y: number } }).rotation.y
-            );
+          // rotation disabled — ModelWallSnap controla rotação
+          if (!this._isDragging && this.roomBounds && this.isMeshInsideOrTouchingRoom(obj) && import.meta.env.DEV) {
+            console.warn("ROTATION SOURCE:", "src/3d/core/Viewer.ts", 1925, obj.uuid);
           }
         }
         return;
@@ -2107,15 +2106,6 @@ export class Viewer {
   /** Altura em cm do piso à base da caixa superior (wall cabinet). */
   private static readonly HEIGHT_UPPER_CM = 150;
 
-  /** Garante rotação sempre múltiplo de 90° (0, π/2, π, -π/2). */
-  private static snapRotationTo90(rad: number): number {
-    let deg = (rad * 180) / Math.PI;
-    deg = Math.round(deg / 90) * 90;
-    deg = ((deg % 360) + 360) % 360;
-    if (deg === 360) deg = 0;
-    return (deg * Math.PI) / 180;
-  }
-
   /** Normaliza ângulo para 0..2π. */
   private static normalizeAngle(rad: number): number {
     const twoPi = Math.PI * 2;
@@ -2244,7 +2234,11 @@ export class Viewer {
     const normal = this.getNearestWallNormal(pt);
 
     const finalY = this.getRotationFromNormal(normal);
-    (movingMesh as THREE.Object3D & { rotation: { y: number } }).rotation.y = finalY;
+    // rotation disabled — ModelWallSnap controla rotação
+    if (import.meta.env.DEV) {
+      console.warn("ROTATION SOURCE:", "src/3d/core/Viewer.ts", 2247, movingMesh.uuid);
+    }
+    // (movingMesh as THREE.Object3D & { rotation: { y: number } }).rotation.y = finalY;
     movingMesh.updateMatrixWorld(true);
     if (Viewer.DEBUG_WALL_ROTATION) {
       const boxId = (movingMesh as THREE.Object3D & { userData?: { boxId?: string } }).userData?.boxId;
