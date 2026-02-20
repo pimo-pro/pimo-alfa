@@ -84,6 +84,17 @@ type PimoViewerAPI = {
   getRightmostX: () => number;
   setManualWallHidden?: (_active: boolean) => void;
   getManualWallHidden?: () => boolean;
+  /** Sala (RoomManager): criar com dimensões, remover, adicionar parede, lock. */
+  createRoomWithDimensions?: (_width: number, _depth: number, _height: number) => void;
+  setRoomDimensions?: (_width: number, _depth: number, _height: number) => void;
+  addExtraWall?: () => void;
+  setRoomLocked?: (_locked: boolean) => void;
+  getRoomExists?: () => boolean;
+  getRoomLocked?: () => boolean;
+  getRoomDimensions?: () => { width: number; depth: number; height: number } | null;
+  getRoomVisible?: () => boolean;
+  hideRoom?: () => void;
+  showRoom?: () => void;
 };
 
 export const usePimoViewer = (
@@ -392,6 +403,47 @@ export const usePimoViewer = (
     []
   );
 
+  const createRoomWithDimensions = useCallback(
+    (width: number, depth: number, height: number) => {
+      viewerRef.current?.createRoomWithDimensions?.(width, depth, height);
+    },
+    []
+  );
+  const setRoomDimensions = useCallback(
+    (width: number, depth: number, height: number) => {
+      viewerRef.current?.setRoomDimensions?.(width, depth, height);
+    },
+    []
+  );
+  const addExtraWall = useCallback(() => {
+    viewerRef.current?.addExtraWall?.();
+  }, []);
+  const setRoomLocked = useCallback((locked: boolean) => {
+    viewerRef.current?.setRoomLocked?.(locked);
+  }, []);
+  const getRoomExists = useCallback(
+    () => viewerRef.current?.getRoomExists?.() ?? false,
+    []
+  );
+  const getRoomLocked = useCallback(
+    () => viewerRef.current?.getRoomLocked?.() ?? false,
+    []
+  );
+  const getRoomDimensions = useCallback(
+    () => viewerRef.current?.getRoomDimensions?.() ?? null,
+    []
+  );
+  const getRoomVisible = useCallback(
+    () => viewerRef.current?.getRoomVisible?.() ?? false,
+    []
+  );
+  const hideRoom = useCallback(() => {
+    viewerRef.current?.hideRoom?.();
+  }, []);
+  const showRoom = useCallback(() => {
+    viewerRef.current?.showRoom?.();
+  }, []);
+
   const updateRoomElementConfig = useCallback(
     (elementId: string, config: DoorWindowConfig) =>
       viewerRef.current?.updateRoomElementConfig?.(elementId, config) ?? false,
@@ -469,6 +521,16 @@ export const usePimoViewer = (
       getRightmostX,
       setManualWallHidden,
       getManualWallHidden,
+      createRoomWithDimensions,
+      setRoomDimensions,
+      addExtraWall,
+      setRoomLocked,
+      getRoomExists,
+      getRoomLocked,
+      getRoomDimensions,
+      getRoomVisible,
+      hideRoom,
+      showRoom,
     }),
     [
       viewerReady,
@@ -521,6 +583,16 @@ export const usePimoViewer = (
       getRightmostX,
       setManualWallHidden,
       getManualWallHidden,
+      createRoomWithDimensions,
+      setRoomDimensions,
+      addExtraWall,
+      setRoomLocked,
+      getRoomExists,
+      getRoomLocked,
+      getRoomDimensions,
+      getRoomVisible,
+      hideRoom,
+      showRoom,
     ]
   );
 };

@@ -79,6 +79,17 @@ export type PimoViewerApi = {
   /** Esconde/mostra manualmente uma parede (auto-hide continua ativo). */
   setManualWallHidden?: (_active: boolean) => void;
   getManualWallHidden?: () => boolean;
+  /** Sala (RoomManager): criar com dimensões, remover, adicionar parede, lock. */
+  createRoomWithDimensions?: (_width: number, _depth: number, _height: number) => void;
+  setRoomDimensions?: (_width: number, _depth: number, _height: number) => void;
+  addExtraWall?: () => void;
+  setRoomLocked?: (_locked: boolean) => void;
+  getRoomExists?: () => boolean;
+  getRoomLocked?: () => boolean;
+  getRoomDimensions?: () => { width: number; depth: number; height: number } | null;
+  getRoomVisible?: () => boolean;
+  hideRoom?: () => void;
+  showRoom?: () => void;
 };
 
 export type PimoViewerContextValue = {

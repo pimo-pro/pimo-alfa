@@ -34,6 +34,13 @@ import type {
 import { loadGLB } from "../../core/glb/glbLoader";
 import { snapHorizontalOffset } from "../../utils/openingConstraints";
 import { applyImageWatermark } from "../../utils/watermark";
+import { WallGizmo } from "../gizmos/WallGizmo";
+import {
+  RoomManager,
+  type IRoomManagerViewer,
+  type RoomBounds,
+  type WallEntryForViewer,
+} from "../room/RoomManager";
 import {
   applyVisualMaterialToMesh as applyVisualMaterialToMeshV2,
   type VisualMaterial,
@@ -169,6 +176,11 @@ export class Viewer {
   /** Outline da parede selecionada (Room Box). */
   private wallSelectionOutline: THREE.BoxHelper | null = null;
   private wallSelectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
+  /** Gizmo para mover e rotacionar paredes (handles X/Z e rotação). */
+  private wallGizmo: WallGizmo | null = null;
+  private wallGizmoDragging = false;
+  /** Gestor da sala única (4 paredes principais + extras + piso + lock). */
+  private roomManager: RoomManager | null = null;
   private composer: EffectComposer | null = null;
   private bloomPass: UnrealBloomPass | null = null;
   private bokehPass: BokehPass | null = null;
@@ -287,10 +299,18 @@ export class Viewer {
     this.transformControlsHelper.visible = false;
     this.sceneManager.scene.add(this.transformControlsHelper);
 
+    this.wallGizmo = new WallGizmo(this.cameraManager.camera);
+    this.wallGizmo.setOnTransform(() => this.notifyWallTransform());
+    this.sceneManager.scene.add(this.wallGizmo.group);
+
+    this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
+
     this.updateCameraTarget();
 
     this.rendererManager.renderer.domElement.addEventListener("click", this.handleCanvasClick);
+    this.rendererManager.renderer.domElement.addEventListener("pointerdown", this.handleCanvasPointerDown);
     this.rendererManager.renderer.domElement.addEventListener("pointermove", this.handleCanvasPointerMove);
+    this.rendererManager.renderer.domElement.addEventListener("pointerup", this.handleCanvasPointerUp);
     this.rendererManager.renderer.domElement.addEventListener("pointerleave", this.handleCanvasPointerLeave);
 
     this.start();
@@ -973,12 +993,62 @@ export class Viewer {
 
   createRoom(config: RoomConfig): void {
     void config;
-    // Sistema de sala desativado temporariamente.
     this.clearRoomBounds();
   }
 
+  /** Cria a sala com o sistema RoomManager (4 paredes + piso, dimensões editáveis). */
+  createRoomWithDimensions(
+    width: number,
+    depth: number,
+    height: number
+  ): void {
+    this.roomManager?.createRoom(width, depth, height);
+  }
+
   removeRoom(): void {
-    this.clearRoomBounds();
+    if (this.roomManager?.room) {
+      this.roomManager.removeRoom();
+    } else {
+      this.clearRoomBounds();
+    }
+  }
+
+  setRoomDimensions(width: number, depth: number, height: number): void {
+    this.roomManager?.setDimensions(width, depth, height);
+  }
+
+  addExtraWall(): void {
+    this.roomManager?.addExtraWall();
+  }
+
+  setRoomLocked(locked: boolean): void {
+    this.roomManager?.setLocked(locked);
+  }
+
+  getRoomExists(): boolean {
+    return Boolean(this.roomManager?.room);
+  }
+
+  getRoomLocked(): boolean {
+    return this.roomManager?.locked ?? false;
+  }
+
+  getRoomDimensions(): { width: number; depth: number; height: number } | null {
+    if (!this.roomManager?.room) return null;
+    const r = this.roomManager.room;
+    return { width: r.width, depth: r.depth, height: r.height };
+  }
+
+  hideRoom(): void {
+    this.roomManager?.hideRoom();
+  }
+
+  showRoom(): void {
+    this.roomManager?.showRoom();
+  }
+
+  getRoomVisible(): boolean {
+    return this.roomManager?.visible ?? false;
   }
 
   private clearRoomBox(): void {
@@ -1013,6 +1083,46 @@ export class Viewer {
     this.roomBoxWalls = [];
     this.roomBoxFloor = null;
     this.roomBoxCeiling = null;
+  }
+
+  /** Chamado pelo RoomManager quando a sala é criada/atualizada. Adiciona o grupo à cena e regista paredes/bounds. */
+  setRoomFromManager(
+    walls: WallEntryForViewer[],
+    bounds: RoomBounds,
+    group: THREE.Group
+  ): void {
+    if (this.roomBoxGroup && this.roomBoxGroup !== group) {
+      this.sceneManager.root.remove(this.roomBoxGroup);
+    }
+    this.roomBoxGroup = group;
+    this.roomBoxWalls = walls;
+    this.roomBoxFloor = null;
+    this.roomBoxCeiling = null;
+    this.roomBounds = bounds;
+    this.sceneManager.root.add(group);
+    this.sceneManager.setGroundSize(
+      Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) * 1.5,
+      Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) * 1.5
+    );
+    this.sceneManager.setGroundPosition(bounds.centerX, bounds.centerZ);
+  }
+
+  /** Chamado pelo RoomManager quando a sala é removida. Remove o grupo da cena e limpa estado. */
+  clearRoomFromManager(): void {
+    if (this.roomBoxGroup) {
+      this.sceneManager.root.remove(this.roomBoxGroup);
+    }
+    this.roomBoxWalls = [];
+    this.roomBoxGroup = null;
+    this.roomBoxFloor = null;
+    this.roomBoxCeiling = null;
+    this.roomBounds = null;
+    this.selectedWallIndex = null;
+    if (this.wallGizmo) this.wallGizmo.detach();
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
+    this.sceneManager.setGroundSize(this.defaultGroundSize, this.defaultGroundSize);
+    this.sceneManager.setGroundPosition(0, 0);
   }
 
   createRoomBox(bounds: {
@@ -1120,6 +1230,10 @@ export class Viewer {
   }
 
   clearRoomBounds(): void {
+    if (this.roomManager?.room) {
+      this.roomManager.removeRoom();
+      return;
+    }
     this.roomBounds = null;
     this.sceneManager.setGroundSize(this.defaultGroundSize, this.defaultGroundSize);
     this.sceneManager.setGroundPosition(0, 0);
@@ -1222,10 +1336,20 @@ export class Viewer {
     return this.roomBoxWalls.map((w) => w.mesh);
   }
 
-  /** Seleciona parede por índice (ex.: ao clicar na lista do painel). Atualiza TransformControls. */
+  /** Seleciona parede por índice (ex.: ao clicar na lista do painel). Atualiza gizmo e outline. */
   selectWallByIndex(index: number | null): void {
-    void index;
-    this.selectedWallIndex = null;
+    this.selectedWallIndex = index !== null && this.roomBoxWalls.some((w) => w.id === index) ? index : null;
+    if (this.wallGizmo) {
+      if (this.selectedWallIndex !== null) {
+        const wall = this.roomBoxWalls.find((w) => w.id === this.selectedWallIndex)?.mesh;
+        if (wall) this.wallGizmo.attach(wall);
+      } else {
+        this.wallGizmo.detach();
+      }
+    }
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
+    this.onWallSelected?.(this.selectedWallIndex);
   }
 
   /** Seleciona abertura (porta/janela) por id (ex.: ao clicar no painel). Permite mover/rodar com botões do topo. */
@@ -1269,9 +1393,7 @@ export class Viewer {
       const wall = this.roomBoxWalls.find((w) => w.id === this.selectedWallIndex)?.mesh;
       if (wall) {
         this.transformControls.detach();
-        this.transformControls.attach(wall);
-        this.transformControls.setMode(mode);
-        if (this.transformControlsHelper) this.transformControlsHelper.visible = true;
+        if (this.transformControlsHelper) this.transformControlsHelper.visible = false;
         return;
       }
     }
@@ -1654,6 +1776,8 @@ export class Viewer {
       this.selectedBoxId = null;
       this.selectedWallIndex = wallId;
       this.selectedRoomElementId = null;
+      const wall = this.roomBoxWalls.find((w) => w.id === wallId)?.mesh;
+      if (this.wallGizmo && wall) this.wallGizmo.attach(wall);
       this.refreshTransformControlsAttachment();
       this.refreshOutlineTarget();
       this.onBoxSelected?.(null);
@@ -1665,11 +1789,37 @@ export class Viewer {
     this.selectedBoxId = null;
     this.selectedWallIndex = null;
     this.selectedRoomElementId = null;
+    if (this.wallGizmo) this.wallGizmo.detach();
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
     this.onBoxSelected?.(null);
     this.onRoomElementSelected?.(null);
     this.onWallSelected?.(null);
+  };
+
+  private getPointerNdc(event: { clientX: number; clientY: number }): { x: number; y: number } {
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      y: -((event.clientY - rect.top) / rect.height) * 2 + 1,
+    };
+  }
+
+  private handleCanvasPointerDown = (event: PointerEvent) => {
+    if (this.selectedWallIndex === null || !this.wallGizmo) return;
+    const { x, y } = this.getPointerNdc(event);
+    if (this.wallGizmo.onPointerDown(x, y)) {
+      this.wallGizmoDragging = true;
+    }
+  };
+
+  private handleCanvasPointerUp = (event: PointerEvent) => {
+    void event;
+    if (this.wallGizmoDragging && this.wallGizmo) {
+      this.wallGizmo.onPointerUp();
+      this.wallGizmoDragging = false;
+    }
   };
 
   private handleCanvasPointerMove = (event: PointerEvent) => {
@@ -2263,12 +2413,28 @@ export class Viewer {
   }
 
   private notifyWallTransform() {
-    if (this.selectedWallIndex === null || !this.onWallTransform) return;
+    if (this.selectedWallIndex === null) return;
     const wall = this.roomBoxWalls.find((w) => w.id === this.selectedWallIndex)?.mesh;
     if (!wall) return;
-    const { x, z } = wall.position;
     const rotationDeg = (wall.rotation.y * 180) / Math.PI;
-    this.onWallTransform(this.selectedWallIndex, { x, z }, rotationDeg);
+    if (
+      this.roomManager?.room &&
+      this.roomManager.locked &&
+      this.selectedWallIndex >= 0 &&
+      this.selectedWallIndex <= 3
+    ) {
+      this.roomManager.onMainWallTransformed(
+        this.selectedWallIndex,
+        { x: wall.position.x, z: wall.position.z },
+        rotationDeg
+      );
+    }
+    const wallAfter = this.roomBoxWalls.find((w) => w.id === this.selectedWallIndex)?.mesh;
+    if (wallAfter && this.onWallTransform) {
+      const { x, z } = wallAfter.position;
+      const rotDeg = (wallAfter.rotation.y * 180) / Math.PI;
+      this.onWallTransform(this.selectedWallIndex, { x, z }, rotDeg);
+    }
   }
 
   private notifyRoomElementTransform() {
@@ -2482,6 +2648,7 @@ export class Viewer {
       this.lerpLightsToTarget();
       this.updateDimensionsOverlay();
       this.updateWallVisibilityBasedOnCamera();
+      this.wallGizmo?.update();
       if (this.selectionOutline && this.selectionOutlineMaterial) {
         this.outlineCurrentOpacity += (this.outlineTargetOpacity - this.outlineCurrentOpacity) * 0.25;
         const shouldShow = this.outlineCurrentOpacity > 0.02 && this.selectionOutlineTarget;
@@ -2748,8 +2915,19 @@ export class Viewer {
     }
     const canvas = this.rendererManager.renderer.domElement;
     canvas.removeEventListener("click", this.handleCanvasClick);
+    canvas.removeEventListener("pointerdown", this.handleCanvasPointerDown);
     canvas.removeEventListener("pointermove", this.handleCanvasPointerMove);
+    canvas.removeEventListener("pointerup", this.handleCanvasPointerUp);
     canvas.removeEventListener("pointerleave", this.handleCanvasPointerLeave);
+    if (this.wallGizmo) {
+      this.wallGizmo.dispose();
+      this.sceneManager.scene.remove(this.wallGizmo.group);
+      this.wallGizmo = null;
+    }
+    if (this.roomManager) {
+      this.roomManager.removeRoom();
+      this.roomManager = null;
+    }
     if (this.selectionOutline) {
       this.sceneManager.scene.remove(this.selectionOutline);
       this.selectionOutline.geometry.dispose();
