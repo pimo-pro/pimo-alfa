@@ -40,7 +40,6 @@ import {
   keepModelInsideRoom,
   preventModelWallIntersection,
 } from "../collision/ModelCollision";
-import { clampCameraToRoom } from "../collision/CameraWallClamp";
 import { snapModelToNearestWall } from "../snapping/ModelWallSnap";
 import {
   RoomManager,
@@ -2641,13 +2640,10 @@ export class Viewer {
           }
         }
       }
-      this.controls?.update();
-      if (this.roomBounds) {
-        const wallsMain = this.roomBoxWalls
-          .map((w) => w.mesh)
-          .filter((m) => m.userData?.isMainWall === true);
-        clampCameraToRoom(this.cameraManager.camera, this.roomBounds, wallsMain, 0.25);
+      if (this.cameraManager.camera.position.y < 0.3) {
+        this.cameraManager.camera.position.y = 0.3;
       }
+      this.controls?.update();
       this.lerpLightsToTarget();
       this.updateDimensionsOverlay();
       this.updateWallVisibilityBasedOnCamera();
