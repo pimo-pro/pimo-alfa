@@ -23,6 +23,8 @@ export type SnapResult = {
   debug: SnapDebugData;
 };
 
+export const SNAP_THRESHOLD = 0.25; // 25 cm
+
 function getWallNormal(wall: THREE.Mesh): THREE.Vector3 {
   const raw = wall.userData?.wallNormal;
   if (raw instanceof THREE.Vector3) return raw.clone().normalize();
@@ -120,7 +122,7 @@ export function isInsideWallRange(
 export function snapModelToNearestWall(
   model: THREE.Object3D,
   wallsMain: THREE.Mesh[],
-  distanceThreshold = 0.4
+  distanceThreshold = SNAP_THRESHOLD
 ): SnapResult {
   const snapData = (model.userData as Record<string, unknown>);
   if (!("currentWallId" in snapData)) snapData.currentWallId = null;

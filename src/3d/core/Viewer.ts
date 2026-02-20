@@ -1905,7 +1905,7 @@ export class Viewer {
             const allRoomWalls = this.roomBoxWalls.map((w) => w.mesh);
 
             // Ordem pedida: movimento normal -> snapping -> colisão/limites.
-            const snapResult = snapModelToNearestWall(obj, wallsMain, 0.4);
+            const snapResult = snapModelToNearestWall(obj, wallsMain);
             this.lastSnapDebugData = snapResult.debug;
             preventModelWallIntersection(obj, allRoomWalls);
             keepModelInsideRoom(obj, this.roomBounds);
