@@ -12,6 +12,7 @@ export const LEFT_TOOLBAR_IDS = {
   MODELOS: "modelos",
   CALCULADORA: "calculadora",
   LAYOUT: "layout",
+  SALA: "sala",
   ELETRO: "eletro",
   ACESSORIOS: "acessorios",
   INFO: "info",

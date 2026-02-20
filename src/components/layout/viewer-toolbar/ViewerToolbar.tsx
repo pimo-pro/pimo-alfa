@@ -11,6 +11,7 @@ import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import { VIEWER_TOOLBAR_ITEMS } from "../../../constants/toolbarConfig";
 import type { ToolbarActionId } from "../../../constants/toolbarConfig";
+import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 
 export default function ViewerToolbar() {
   const { actions, viewerSync } = useProject();
@@ -83,6 +84,7 @@ export default function ViewerToolbar() {
           </span>
         </button>
       ))}
+      <RoomIconButton />
       <button
         type="button"
         title={ultraModeEnabled ? "Desativar Ultra Performance" : "Ativar Ultra Performance"}
