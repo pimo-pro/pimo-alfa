@@ -6,6 +6,23 @@ type SnapUserData = {
   movementDirection?: THREE.Vector3;
 };
 
+export type SnapDebugData = {
+  currentWallId: number | null;
+  nearestWallId: number | null;
+  projection: number;
+  wallLength: number;
+  distanceToWall: number;
+  movementDirection: THREE.Vector3;
+  alignment: number;
+  insideWallRange: boolean;
+  switchCondition: boolean;
+};
+
+export type SnapResult = {
+  applied: boolean;
+  debug: SnapDebugData;
+};
+
 function getWallNormal(wall: THREE.Mesh): THREE.Vector3 {
   const raw = wall.userData?.wallNormal;
   if (raw instanceof THREE.Vector3) return raw.clone().normalize();
@@ -104,13 +121,33 @@ export function snapModelToNearestWall(
   model: THREE.Object3D,
   wallsMain: THREE.Mesh[],
   distanceThreshold = 0.4
-): boolean {
-  if (!wallsMain.length) return false;
-
+): SnapResult {
   const snapData = (model.userData as Record<string, unknown>);
   if (!("currentWallId" in snapData)) snapData.currentWallId = null;
   if (!("lastWallId" in snapData)) snapData.lastWallId = null;
   const wallState = snapData as unknown as SnapUserData;
+
+  const movementDirection =
+    wallState.movementDirection instanceof THREE.Vector3
+      ? wallState.movementDirection.clone().normalize()
+      : new THREE.Vector3();
+
+  if (!wallsMain.length) {
+    return {
+      applied: false,
+      debug: {
+        currentWallId: wallState.currentWallId,
+        nearestWallId: null,
+        projection: 0,
+        wallLength: 0,
+        distanceToWall: Number.POSITIVE_INFINITY,
+        movementDirection,
+        alignment: 0,
+        insideWallRange: false,
+        switchCondition: false,
+      },
+    };
+  }
 
   const modelCenter = new THREE.Vector3();
   model.getWorldPosition(modelCenter);
@@ -127,7 +164,20 @@ export function snapModelToNearestWall(
   }
 
   if (!nearest || Math.abs(nearest.signedDistance) > distanceThreshold) {
-    return false;
+    return {
+      applied: false,
+      debug: {
+        currentWallId: wallState.currentWallId,
+        nearestWallId: nearest ? getWallId(nearest.wall) : null,
+        projection: 0,
+        wallLength: 0,
+        distanceToWall: nearest ? Math.abs(nearest.signedDistance) : Number.POSITIVE_INFINITY,
+        movementDirection,
+        alignment: 0,
+        insideWallRange: false,
+        switchCondition: false,
+      },
+    };
   }
 
   const currentWall =
@@ -137,10 +187,26 @@ export function snapModelToNearestWall(
 
   // Se ainda está no range da parede atual, mantém orientação atual
   // e só permite snap de posição nessa mesma parede.
-  if (currentWall && isInsideWallRange(model, currentWall)) {
+  const insideCurrentRange = currentWall ? isInsideWallRange(model, currentWall) : false;
+  if (currentWall && insideCurrentRange) {
     const current = getSignedDistanceToWall(modelCenter, currentWall);
     applySnapPosition(model, currentWall, current.normal, current.signedDistance);
-    return true;
+    const currentSeg = getWallSegment(currentWall);
+    const proj = getProjectionOnWall(modelCenter, currentSeg.start, currentSeg.end);
+    return {
+      applied: true,
+      debug: {
+        currentWallId: wallState.currentWallId,
+        nearestWallId: getWallId(nearest.wall),
+        projection: proj.projection,
+        wallLength: proj.wallLength,
+        distanceToWall: Math.abs(current.signedDistance),
+        movementDirection,
+        alignment: 0,
+        insideWallRange: true,
+        switchCondition: false,
+      },
+    };
   }
 
   const currentProjectionInfo = (() => {
@@ -161,24 +227,37 @@ export function snapModelToNearestWall(
     nearestId != null &&
     nearestId !== currentId &&
     Math.abs(nearest.signedDistance) < distanceThreshold;
-
-  const movementDirection =
-    wallState.movementDirection instanceof THREE.Vector3
-      ? wallState.movementDirection.clone().normalize()
-      : new THREE.Vector3();
   const newWallCenter = new THREE.Vector3();
   nearest.wall.getWorldPosition(newWallCenter);
   const toNewWall = newWallCenter.sub(modelCenter);
   const toNewWallDir =
     toNewWall.lengthSq() > 1e-10 ? toNewWall.clone().normalize() : new THREE.Vector3();
   const alignment = movementDirection.dot(toNewWallDir);
+  const switchCondition = canSwitchWall && alignment > 0.4;
 
-  if (canSwitchWall && alignment > 0.4) {
+  const projectionForDebug = currentProjectionInfo?.projection ?? 0;
+  const wallLengthForDebug = currentProjectionInfo?.wallLength ?? 0;
+  const distanceForDebug = Math.abs(nearest.signedDistance);
+
+  if (switchCondition) {
     wallState.lastWallId = currentId;
     wallState.currentWallId = nearestId;
     model.rotation.y = nearest.wall.rotation.y;
     applySnapPosition(model, nearest.wall, nearest.normal, nearest.signedDistance);
-    return true;
+    return {
+      applied: true,
+      debug: {
+        currentWallId: wallState.currentWallId,
+        nearestWallId: nearestId,
+        projection: projectionForDebug,
+        wallLength: wallLengthForDebug,
+        distanceToWall: distanceForDebug,
+        movementDirection,
+        alignment,
+        insideWallRange: false,
+        switchCondition: true,
+      },
+    };
   }
 
   // Primeiro encaixe (quando ainda não tinha parede atual válida).
@@ -186,17 +265,56 @@ export function snapModelToNearestWall(
     wallState.currentWallId = nearestId;
     model.rotation.y = nearest.wall.rotation.y;
     applySnapPosition(model, nearest.wall, nearest.normal, nearest.signedDistance);
-    return true;
+    return {
+      applied: true,
+      debug: {
+        currentWallId: wallState.currentWallId,
+        nearestWallId: nearestId,
+        projection: 0,
+        wallLength: 0,
+        distanceToWall: distanceForDebug,
+        movementDirection,
+        alignment,
+        insideWallRange: false,
+        switchCondition: false,
+      },
+    };
   }
 
   // Sem troca válida: mantém orientação e parede atual quando existir.
   if (currentWall) {
     const current = getSignedDistanceToWall(modelCenter, currentWall);
     applySnapPosition(model, currentWall, current.normal, current.signedDistance);
-    return true;
+    return {
+      applied: true,
+      debug: {
+        currentWallId: wallState.currentWallId,
+        nearestWallId: nearestId,
+        projection: projectionForDebug,
+        wallLength: wallLengthForDebug,
+        distanceToWall: Math.abs(current.signedDistance),
+        movementDirection,
+        alignment,
+        insideWallRange: false,
+        switchCondition,
+      },
+    };
   }
 
   applySnapPosition(model, nearest.wall, nearest.normal, nearest.signedDistance);
-  return true;
+  return {
+    applied: true,
+    debug: {
+      currentWallId: wallState.currentWallId,
+      nearestWallId: nearestId,
+      projection: projectionForDebug,
+      wallLength: wallLengthForDebug,
+      distanceToWall: distanceForDebug,
+      movementDirection,
+      alignment,
+      insideWallRange: insideCurrentRange,
+      switchCondition,
+    },
+  };
 }
 

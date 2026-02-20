@@ -40,7 +40,11 @@ import {
   keepModelInsideRoom,
   preventModelWallIntersection,
 } from "../collision/ModelCollision";
-import { snapModelToNearestWall } from "../snapping/ModelWallSnap";
+import {
+  snapModelToNearestWall,
+  type SnapDebugData,
+} from "../snapping/ModelWallSnap";
+import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import {
   RoomManager,
   type IRoomManagerViewer,
@@ -183,6 +187,9 @@ export class Viewer {
   private wallGizmoDragging = false;
   /** Gestor da sala única (4 paredes principais + extras + piso + lock). */
   private roomManager: RoomManager | null = null;
+  /** Overlay de debug do snapping (somente DEV). */
+  private snapDebugOverlay: SnapDebugOverlay | null = null;
+  private lastSnapDebugData: SnapDebugData | null = null;
   private composer: EffectComposer | null = null;
   private bloomPass: UnrealBloomPass | null = null;
   private bokehPass: BokehPass | null = null;
@@ -306,6 +313,9 @@ export class Viewer {
     this.sceneManager.scene.add(this.wallGizmo.group);
 
     this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
+    if (import.meta.env.DEV) {
+      this.snapDebugOverlay = new SnapDebugOverlay();
+    }
 
     this.updateCameraTarget();
 
@@ -1895,7 +1905,8 @@ export class Viewer {
             const allRoomWalls = this.roomBoxWalls.map((w) => w.mesh);
 
             // Ordem pedida: movimento normal -> snapping -> colisão/limites.
-            snapModelToNearestWall(obj, wallsMain, 0.4);
+            const snapResult = snapModelToNearestWall(obj, wallsMain, 0.4);
+            this.lastSnapDebugData = snapResult.debug;
             preventModelWallIntersection(obj, allRoomWalls);
             keepModelInsideRoom(obj, this.roomBounds);
 
@@ -2661,6 +2672,9 @@ export class Viewer {
       this.updateDimensionsOverlay();
       this.updateWallVisibilityBasedOnCamera();
       this.wallGizmo?.update();
+      if (this.snapDebugOverlay && this.lastSnapDebugData) {
+        this.snapDebugOverlay.update(this.lastSnapDebugData);
+      }
       if (this.selectionOutline && this.selectionOutlineMaterial) {
         this.outlineCurrentOpacity += (this.outlineTargetOpacity - this.outlineCurrentOpacity) * 0.25;
         const shouldShow = this.outlineCurrentOpacity > 0.02 && this.selectionOutlineTarget;
@@ -2935,6 +2949,10 @@ export class Viewer {
       this.wallGizmo.dispose();
       this.sceneManager.scene.remove(this.wallGizmo.group);
       this.wallGizmo = null;
+    }
+    if (this.snapDebugOverlay) {
+      this.snapDebugOverlay.dispose();
+      this.snapDebugOverlay = null;
     }
     if (this.roomManager) {
       this.roomManager.removeRoom();
