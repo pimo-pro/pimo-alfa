@@ -1869,6 +1869,19 @@ export class Viewer {
       const entry = this.boxes.get(this.selectedBoxId)!;
       if (obj === entry.mesh) {
         if (this.transformMode === "translate") {
+          const snapData = obj.userData as Record<string, unknown>;
+          const currentPos = obj.position.clone();
+          const lastPos =
+            snapData.lastSnapPosition instanceof THREE.Vector3
+              ? snapData.lastSnapPosition.clone()
+              : currentPos.clone();
+          const movementDirection = currentPos.sub(lastPos);
+          if (movementDirection.lengthSq() > 1e-10) {
+            movementDirection.normalize();
+          }
+          snapData.movementDirection = movementDirection.clone();
+          snapData.lastSnapPosition = obj.position.clone();
+
           obj.updateMatrixWorld(true);
           this._boundingBox.setFromObject(obj);
           if (this._boundingBox.min.y < 0) obj.position.y -= this._boundingBox.min.y;

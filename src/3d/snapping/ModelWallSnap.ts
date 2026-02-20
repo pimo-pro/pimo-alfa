@@ -3,6 +3,7 @@ import * as THREE from "three";
 type SnapUserData = {
   currentWallId: number | null;
   lastWallId: number | null;
+  movementDirection?: THREE.Vector3;
 };
 
 function getWallNormal(wall: THREE.Mesh): THREE.Vector3 {
@@ -161,7 +162,18 @@ export function snapModelToNearestWall(
     nearestId !== currentId &&
     Math.abs(nearest.signedDistance) < distanceThreshold;
 
-  if (canSwitchWall) {
+  const movementDirection =
+    wallState.movementDirection instanceof THREE.Vector3
+      ? wallState.movementDirection.clone().normalize()
+      : new THREE.Vector3();
+  const newWallCenter = new THREE.Vector3();
+  nearest.wall.getWorldPosition(newWallCenter);
+  const toNewWall = newWallCenter.sub(modelCenter);
+  const toNewWallDir =
+    toNewWall.lengthSq() > 1e-10 ? toNewWall.clone().normalize() : new THREE.Vector3();
+  const alignment = movementDirection.dot(toNewWallDir);
+
+  if (canSwitchWall && alignment > 0.4) {
     wallState.lastWallId = currentId;
     wallState.currentWallId = nearestId;
     model.rotation.y = nearest.wall.rotation.y;
