@@ -141,6 +141,11 @@ export class RoomManager {
       metalness: 0,
       side: THREE.DoubleSide,
     });
+    floorMat.depthWrite = true;
+    floorMat.depthTest = true;
+    floorMat.polygonOffset = true;
+    floorMat.polygonOffsetFactor = 1;
+    floorMat.polygonOffsetUnits = 1;
     this.floor = new THREE.Mesh(floorGeom, floorMat);
     this.floor.rotation.x = -Math.PI / 2;
     this.floor.position.set(this.room.centerX, 0, this.room.centerZ);
