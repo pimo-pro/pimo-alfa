@@ -25,6 +25,34 @@ function getWallLengthMeters(wall: THREE.Mesh): number {
   return Math.max(0.01, Number(geom.parameters?.width) || 1);
 }
 
+function getWallSegment(wall: THREE.Mesh): { start: THREE.Vector3; end: THREE.Vector3 } {
+  const center = new THREE.Vector3();
+  wall.getWorldPosition(center);
+  const halfLength = getWallLengthMeters(wall) * 0.5;
+  const localAxis = new THREE.Vector3(1, 0, 0);
+  const axisWorld = localAxis.applyQuaternion(wall.quaternion).normalize();
+  const offset = axisWorld.clone().multiplyScalar(halfLength);
+  return {
+    start: center.clone().sub(offset),
+    end: center.clone().add(offset),
+  };
+}
+
+export function getProjectionOnWall(
+  modelPos: THREE.Vector3,
+  wallStart: THREE.Vector3,
+  wallEnd: THREE.Vector3
+): { projection: number; wallLength: number } {
+  const wallDir = wallEnd.clone().sub(wallStart);
+  const wallLength = wallDir.length();
+  const wallDirNorm = wallDir.clone().normalize();
+
+  const modelVec = modelPos.clone().sub(wallStart);
+  const projection = modelVec.dot(wallDirNorm);
+
+  return { projection, wallLength };
+}
+
 function getSignedDistanceToWall(modelCenter: THREE.Vector3, wall: THREE.Mesh): {
   normal: THREE.Vector3;
   signedDistance: number;
@@ -58,14 +86,13 @@ function applySnapPosition(
 
 export function isInsideWallRange(
   model: THREE.Object3D,
-  wall: THREE.Mesh,
-  margin = 0.25
+  wall: THREE.Mesh
 ): boolean {
   const modelCenter = new THREE.Vector3();
   model.getWorldPosition(modelCenter);
-  const local = wall.worldToLocal(modelCenter.clone());
-  const halfLength = getWallLengthMeters(wall) * 0.5;
-  return local.x >= -halfLength - margin && local.x <= halfLength + margin;
+  const { start, end } = getWallSegment(wall);
+  const { projection, wallLength } = getProjectionOnWall(modelCenter, start, end);
+  return projection >= 0 && projection <= wallLength;
 }
 
 /**
@@ -109,24 +136,30 @@ export function snapModelToNearestWall(
 
   // Se ainda está no range da parede atual, mantém orientação atual
   // e só permite snap de posição nessa mesma parede.
-  if (currentWall && isInsideWallRange(model, currentWall, 0.25)) {
+  if (currentWall && isInsideWallRange(model, currentWall)) {
     const current = getSignedDistanceToWall(modelCenter, currentWall);
     applySnapPosition(model, currentWall, current.normal, current.signedDistance);
     return true;
   }
 
-  const currentDist =
-    currentWall == null
-      ? Number.POSITIVE_INFINITY
-      : Math.abs(getSignedDistanceToWall(modelCenter, currentWall).signedDistance);
+  const currentProjectionInfo = (() => {
+    if (!currentWall) return null;
+    const { start, end } = getWallSegment(currentWall);
+    return getProjectionOnWall(modelCenter, start, end);
+  })();
+  const leftCurrentWall =
+    currentProjectionInfo != null &&
+    (currentProjectionInfo.projection < 0 ||
+      currentProjectionInfo.projection > currentProjectionInfo.wallLength);
+
   const nearestId = getWallId(nearest.wall);
   const currentId = wallState.currentWallId;
 
   const canSwitchWall =
+    leftCurrentWall &&
     nearestId != null &&
     nearestId !== currentId &&
-    Math.abs(nearest.signedDistance) < distanceThreshold &&
-    currentDist > distanceThreshold;
+    Math.abs(nearest.signedDistance) < distanceThreshold;
 
   if (canSwitchWall) {
     wallState.lastWallId = currentId;
