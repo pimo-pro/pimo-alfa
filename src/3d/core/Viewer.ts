@@ -769,7 +769,11 @@ export class Viewer {
     }
     box.position.set(position.x, position.y, position.z);
     if (opts.rotationY != null && Number.isFinite(opts.rotationY)) {
-      box.rotation.y = opts.rotationY;
+      if (import.meta.env.DEV) {
+        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 772, box.uuid);
+      }
+      // rotation disabled — Viewer não controla orientação
+      // box.rotation.y = opts.rotationY;
     }
     // Registar em this.boxes ANTES de adicionar à cena (getRightmostX e restante lógica usam este mapa).
     this.boxes.set(id, {
@@ -789,7 +793,11 @@ export class Viewer {
     });
     this.sceneManager.add(box);
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
-      this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
+      if (import.meta.env.DEV) {
+        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 792, box.uuid);
+      }
+      // auto-rotate disabled — centralizado no snapping
+      // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
       if (this.lockEnabled) this.applyRoomConstraint(box, { ignoreY: manualPosition });
     }
     // reflowBoxes não altera caixas com manualPosition; clampTransform só em objectChange (arraste).
@@ -906,7 +914,11 @@ export class Viewer {
       entry.mesh.position.y = height / 2;
     }
     if (opts.rotationY != null && Number.isFinite(opts.rotationY)) {
-      entry.mesh.rotation.y = opts.rotationY;
+      if (import.meta.env.DEV) {
+        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 909, entry.mesh.uuid);
+      }
+      // rotation disabled — Viewer não controla orientação
+      // entry.mesh.rotation.y = opts.rotationY;
     }
     if (opts.costaRotationY !== undefined) {
       (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
@@ -936,7 +948,11 @@ export class Viewer {
       this.updateModelsVerticalPosition(entry);
     }
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(entry.mesh)) {
-      this.applyAutoRotateToRoom(entry.mesh, { snapPosition: this.lockEnabled });
+      if (import.meta.env.DEV) {
+        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 939, entry.mesh.uuid);
+      }
+      // auto-rotate disabled — centralizado no snapping
+      // this.applyAutoRotateToRoom(entry.mesh, { snapPosition: this.lockEnabled });
       if (this.lockEnabled) this.applyRoomConstraint(entry.mesh, { ignoreY: entry.manualPosition });
     }
     return true;
@@ -2095,57 +2111,12 @@ export class Viewer {
   private static readonly ROOM_WALL_THICKNESS_M = 0.12;
   /** Recuo (m) do limite interno da parede; com lock ON a caixa não entra no muro. */
   private static readonly WALL_INNER_INSET_M = 0.06;
-  /** Tolerância (m) para eliminar gap residual entre costa e parede (1–3 mm). */
-  private static readonly SNAP_GAP_TOLERANCE_M = 0.003;
   /** Offset (m) da caixa em relação ao plano da parede para evitar Z-fighting (0.5 cm). */
   private static readonly SNAP_WALL_OFFSET_M = 0.005;
-  /** Logs temporários para diagnosticar rotação/snap por parede. */
-  private static readonly DEBUG_WALL_ROTATION = !import.meta.env.PROD;
   /** Altura da base do armário inferior (PE) em cm; base da caixa fica a esta altura do piso. */
   private static readonly HEIGHT_BASE_CM = 10;
   /** Altura em cm do piso à base da caixa superior (wall cabinet). */
   private static readonly HEIGHT_UPPER_CM = 150;
-
-  /** Normaliza ângulo para 0..2π. */
-  private static normalizeAngle(rad: number): number {
-    const twoPi = Math.PI * 2;
-    const normalized = ((rad % twoPi) + twoPi) % twoPi;
-    return normalized === twoPi ? 0 : normalized;
-  }
-
-  /** Tolerância em graus para identificar rotação 0/90/180/270. */
-  private static readonly ROT_DEG_TOLERANCE = 1;
-
-  private getWallNormalFromSide(side: "front" | "right" | "back" | "left"): THREE.Vector3 {
-    if (side === "front") return new THREE.Vector3(0, 0, -1);
-    if (side === "right") return new THREE.Vector3(-1, 0, 0);
-    if (side === "back") return new THREE.Vector3(0, 0, 1);
-    return new THREE.Vector3(1, 0, 0);
-  }
-
-  /** Rotação Y (rad) para a costa da caixa (local -Z) ficar alinhada à normal da parede. */
-  private getRotationFromNormal(normal: THREE.Vector3): number {
-    const nz = normal.z;
-    const nx = normal.x;
-    if (nz <= -0.99) return 0;           // front: costa em -Z
-    if (nx <= -0.99) return Math.PI / 2;  // right: costa em +X
-    if (nz >= 0.99) return Math.PI;      // back: costa em +Z
-    if (nx >= 0.99) return -Math.PI / 2;  // left: costa em -X
-    return 0;
-  }
-
-  private getNearestWallNormal(point: { x: number; z: number }): THREE.Vector3 {
-    if (!this.roomBounds) return new THREE.Vector3(0, 0, -1);
-    const { minX, maxX, minZ, maxZ } = this.roomBounds;
-    const candidates = [
-      { normal: new THREE.Vector3(0, 0, -1), dist: point.z - minZ },
-      { normal: new THREE.Vector3(-1, 0, 0), dist: maxX - point.x },
-      { normal: new THREE.Vector3(0, 0, 1), dist: maxZ - point.z },
-      { normal: new THREE.Vector3(1, 0, 0), dist: point.x - minX },
-    ];
-    candidates.sort((a, b) => a.dist - b.dist);
-    return candidates[0].normal;
-  }
 
   /**
    * Caixa segue lógica da sala apenas quando está dentro ou encostada ao perímetro em X/Z.
@@ -2162,260 +2133,6 @@ export class Viewer {
       box.max.z < minZ - tolerance ||
       box.min.z > maxZ + tolerance
     );
-  }
-
-  private getSnapLimitForNormal(
-    normal: THREE.Vector3,
-    inset: number
-  ): { axis: "x" | "z"; target: number; boxIsMin: boolean } {
-    if (!this.roomBounds) return { axis: "z", target: 0, boxIsMin: true };
-    const { minX, maxX, minZ, maxZ } = this.roomBounds;
-    const off = Viewer.SNAP_WALL_OFFSET_M;
-    if (normal.z <= -0.99) return { axis: "z", target: minZ + inset + off, boxIsMin: true };
-    if (normal.z >= 0.99) return { axis: "z", target: maxZ - inset - off, boxIsMin: false };
-    if (normal.x <= -0.99) return { axis: "x", target: maxX - inset - off, boxIsMin: false };
-    return { axis: "x", target: minX + inset + off, boxIsMin: true };
-  }
-
-  /**
-   * Identifica qual face do AABB é a costa a partir de rotation.y (modo manual).
-   * Costa = face traseira da caixa (local -Z); após rotação corresponde a min/max de X ou Z.
-   */
-  /** Costa = face traseira da caixa (local -Z). Para cada rotação, devolve o eixo/valor dessa face em mundo e o lado da sala (front/right/back/left). */
-  private static getCostaFace(
-    rotationY_rad: number,
-    boxAABB: THREE.Box3
-  ): { eixo: "x" | "z"; valor: number; side: "front" | "back" | "left" | "right" } {
-    const deg = (Viewer.normalizeAngle(rotationY_rad) * 180) / Math.PI;
-    const t = Viewer.ROT_DEG_TOLERANCE;
-    if (deg >= 360 - t || deg < t) {
-      return { eixo: "z", valor: boxAABB.min.z, side: "front" };
-    }
-    if (deg >= 90 - t && deg < 90 + t) {
-      return { eixo: "x", valor: boxAABB.max.x, side: "right" };
-    }
-    if (deg >= 180 - t && deg < 180 + t) {
-      return { eixo: "z", valor: boxAABB.max.z, side: "back" };
-    }
-    return { eixo: "x", valor: boxAABB.min.x, side: "left" };
-  }
-
-  /**
-   * Orienta a caixa pelos lados da sala (piso) e encosta a costa no limite interno.
-   * Com autoRotateEnabled: escolhe lado, aplica rotação e snap. Sem: só snap (mantém rotation.y).
-   */
-  private applyAutoRotateToRoom(
-    movingMesh: THREE.Object3D,
-    options: { snapPosition?: boolean } = {}
-  ): void {
-    if (!this.roomBounds) return;
-    if (!this.isMeshInsideOrTouchingRoom(movingMesh)) return;
-
-    movingMesh.updateMatrixWorld(true);
-    const boxId = (movingMesh as THREE.Object3D & { userData?: { boxId?: string } }).userData?.boxId;
-    const entry = boxId ? this.boxes.get(boxId) : null;
-    const inset = this.lockEnabled ? Viewer.WALL_INNER_INSET_M : 0;
-    const parent = movingMesh.parent;
-
-    if (entry && entry.autoRotateEnabled === false) {
-      if ((entry.depth ?? 0) > 0 && options.snapPosition !== false) {
-        this.snapCostaToWallCurrentRotation(movingMesh, entry.depth, inset, parent);
-      }
-      if (this.lockEnabled) {
-        movingMesh.updateMatrixWorld(true);
-        this.applyInnerBoundsHardStop(movingMesh, parent);
-      }
-      return;
-    }
-
-    const worldCenter = new THREE.Vector3();
-    movingMesh.getWorldPosition(worldCenter);
-    const pt = { x: worldCenter.x, z: worldCenter.z };
-    const normal = this.getNearestWallNormal(pt);
-
-    const finalY = this.getRotationFromNormal(normal);
-    // rotation disabled — ModelWallSnap controla rotação
-    if (import.meta.env.DEV) {
-      console.warn("ROTATION SOURCE:", "src/3d/core/Viewer.ts", 2247, movingMesh.uuid);
-    }
-    // (movingMesh as THREE.Object3D & { rotation: { y: number } }).rotation.y = finalY;
-    movingMesh.updateMatrixWorld(true);
-    if (Viewer.DEBUG_WALL_ROTATION) {
-      const boxId = (movingMesh as THREE.Object3D & { userData?: { boxId?: string } }).userData?.boxId;
-      const box = new THREE.Box3().setFromObject(movingMesh);
-      const costa = Viewer.getCostaFace(finalY, box);
-      console.debug("[WallSnap] applyAutoRotateToRoom", {
-        boxId,
-        normal: { x: normal.x, y: normal.y, z: normal.z },
-        finalY,
-        costaSide: costa.side,
-        costaValue: costa.valor,
-      });
-    }
-
-    const snapEnabled = (entry?.depth ?? 0) > 0 && options.snapPosition !== false;
-    if (snapEnabled) {
-      this.snapCostaToWall(movingMesh, normal, inset, parent);
-      movingMesh.updateMatrixWorld(true);
-      const residual = this.measureSnapResidual(movingMesh, normal, inset);
-      if (residual !== 0 && Math.abs(residual) <= Viewer.SNAP_GAP_TOLERANCE_M) {
-        this.nudgeCostaBy(movingMesh, normal, residual, parent);
-      }
-    }
-    if (this.lockEnabled) {
-      movingMesh.updateMatrixWorld(true);
-      this.applyInnerBoundsHardStop(movingMesh, parent);
-    }
-  }
-
-  /**
-   * Encosta a costa na parede correta sem alterar rotation.y (modo manual).
-   * Usa getCostaFace(rotation.y, AABB) para identificar a face da costa e encostá-la no limite interno.
-   */
-  private snapCostaToWallCurrentRotation(
-    movingMesh: THREE.Object3D,
-    _depth: number,
-    inset: number,
-    parent: THREE.Object3D | null
-  ): void {
-    if (!this.roomBounds) return;
-    movingMesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(movingMesh);
-    const rotationY = (movingMesh as THREE.Object3D & { rotation: { y: number } }).rotation.y;
-    const { valor, side } = Viewer.getCostaFace(rotationY, box);
-    if (Viewer.DEBUG_WALL_ROTATION) {
-      const boxId = (movingMesh as THREE.Object3D & { userData?: { boxId?: string } }).userData?.boxId;
-      console.debug("[WallSnap] snapCostaToWallCurrentRotation", {
-        boxId,
-        rotationY,
-        costaSide: side,
-        costaValue: valor,
-      });
-    }
-    const { axis, target } = this.getSnapLimitForNormal(this.getWallNormalFromSide(side), inset);
-
-    let dx = 0;
-    let dz = 0;
-    if (axis === "x") dx = target - valor;
-    else dz = target - valor;
-
-    if (dx === 0 && dz === 0) return;
-    const worldPos = new THREE.Vector3();
-    movingMesh.getWorldPosition(worldPos);
-    worldPos.x += dx;
-    worldPos.z += dz;
-    if (parent) {
-      parent.worldToLocal(worldPos);
-      movingMesh.position.copy(worldPos);
-    } else {
-      movingMesh.position.copy(worldPos);
-    }
-  }
-
-  /**
-   * Encosta a face da costa (AABB) exatamente no limite interno da parede (Room Box).
-   */
-  private snapCostaToWall(
-    movingMesh: THREE.Object3D,
-    normal: THREE.Vector3,
-    inset: number,
-    parent: THREE.Object3D | null
-  ): void {
-    if (!this.roomBounds) return;
-    movingMesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(movingMesh);
-    const { axis, target, boxIsMin } = this.getSnapLimitForNormal(normal, inset);
-    const faceValue = axis === "x" ? (boxIsMin ? box.min.x : box.max.x) : boxIsMin ? box.min.z : box.max.z;
-    const delta = target - faceValue;
-    let dx = 0;
-    let dz = 0;
-    if (axis === "x") dx = delta;
-    else dz = delta;
-    if (dx === 0 && dz === 0) return;
-    const worldPos = new THREE.Vector3();
-    movingMesh.getWorldPosition(worldPos);
-    worldPos.x += dx;
-    worldPos.z += dz;
-    if (parent) {
-      parent.worldToLocal(worldPos);
-      movingMesh.position.copy(worldPos);
-    } else {
-      movingMesh.position.copy(worldPos);
-    }
-  }
-
-  /** Mede o gap residual entre a face da costa e o alvo lógico (positivo = folga, negativo = penetração). */
-  private measureSnapResidual(
-    movingMesh: THREE.Object3D,
-    normal: THREE.Vector3,
-    inset: number
-  ): number {
-    if (!this.roomBounds) return 0;
-    movingMesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(movingMesh);
-    const { axis, target, boxIsMin } = this.getSnapLimitForNormal(normal, inset);
-    const faceValue = axis === "x" ? (boxIsMin ? box.min.x : box.max.x) : boxIsMin ? box.min.z : box.max.z;
-    return target - faceValue;
-  }
-
-  /** Desloca a caixa ao longo do eixo da parede lógica para eliminar gap residual. */
-  private nudgeCostaBy(
-    movingMesh: THREE.Object3D,
-    normal: THREE.Vector3,
-    residualM: number,
-    parent: THREE.Object3D | null
-  ): void {
-    const { axis } = this.getSnapLimitForNormal(normal, 0);
-    const worldPos = new THREE.Vector3();
-    movingMesh.getWorldPosition(worldPos);
-    if (axis === "x") worldPos.x += residualM;
-    else worldPos.z += residualM;
-    if (parent) {
-      parent.worldToLocal(worldPos);
-      movingMesh.position.copy(worldPos);
-    } else {
-      movingMesh.position.copy(worldPos);
-    }
-  }
-
-  /**
-   * Hard stop: impede que o AABB penetre o limite interno da sala (lock ON).
-   * Compara box.min/max com inner limits e aplica o delta exato para remover penetração.
-   */
-  private applyInnerBoundsHardStop(
-    movingMesh: THREE.Object3D,
-    parent: THREE.Object3D | null
-  ): void {
-    if (!this.roomBounds || !this.lockEnabled) return;
-    const inset = Viewer.WALL_INNER_INSET_M;
-    const off = Viewer.SNAP_WALL_OFFSET_M;
-    const innerMinX = this.roomBounds.minX + inset + off;
-    const innerMaxX = this.roomBounds.maxX - inset - off;
-    const innerMinZ = this.roomBounds.minZ + inset + off;
-    const innerMaxZ = this.roomBounds.maxZ - inset - off;
-
-    movingMesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(movingMesh);
-
-    let dx = 0;
-    let dz = 0;
-    if (box.min.x < innerMinX) dx = innerMinX - box.min.x;
-    else if (box.max.x > innerMaxX) dx = innerMaxX - box.max.x;
-    if (box.min.z < innerMinZ) dz = innerMinZ - box.min.z;
-    else if (box.max.z > innerMaxZ) dz = innerMaxZ - box.max.z;
-
-    if (dx === 0 && dz === 0) return;
-
-    const worldPos = new THREE.Vector3();
-    movingMesh.getWorldPosition(worldPos);
-    worldPos.x += dx;
-    worldPos.z += dz;
-    if (parent) {
-      parent.worldToLocal(worldPos);
-      movingMesh.position.copy(worldPos);
-    } else {
-      movingMesh.position.copy(worldPos);
-    }
   }
 
   private notifyBoxTransform() {
