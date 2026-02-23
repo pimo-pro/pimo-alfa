@@ -106,6 +106,8 @@ export const usePimoViewer = (
   const [viewerReady, setViewerReady] = useState(false);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const onBoxSelectedRef = useRef<((_id: string | null) => void) | null>(null);
+  const preReadyRotationAttemptsRef = useRef<Map<string, number>>(new Map());
+  const preReadyLastLogRef = useRef(0);
 
   useEffect(() => {
     optionsRef.current = options;
@@ -144,9 +146,34 @@ export const usePimoViewer = (
     onBoxSelectedRef.current = _callback;
   }, []);
 
+  const logPreReadyRotationAttempt = useCallback((pseudoUuid: string) => {
+    if (!import.meta.env.DEV) return;
+    const map = preReadyRotationAttemptsRef.current;
+    map.set(pseudoUuid, (map.get(pseudoUuid) ?? 0) + 1);
+    const now = performance.now();
+    if (now - preReadyLastLogRef.current < 2000) return;
+    preReadyLastLogRef.current = now;
+    const rows = Array.from(map.entries()).map(([uuid, attempts]) => ({
+      uuid,
+      pre_ready_rotation_attempts: attempts,
+    }));
+    console.groupCollapsed("[Viewer Rotation Diagnostics] attempts before viewerReady");
+    console.table(rows);
+    console.groupEnd();
+  }, []);
+
   const addBox = useCallback(
-    (id: string, boxOptions?: BoxOptions) => viewerRef.current?.addBox(id, boxOptions) ?? false,
-    []
+    (id: string, boxOptions?: BoxOptions) => {
+      const viewer = viewerRef.current;
+      if (!viewer || !viewerReady) {
+        if (boxOptions?.rotationY != null && Number.isFinite(boxOptions.rotationY)) {
+          logPreReadyRotationAttempt(`pending:${id}`);
+        }
+        return false;
+      }
+      return viewer.addBox(id, boxOptions);
+    },
+    [viewerReady, logPreReadyRotationAttempt]
   );
 
   const removeBox = useCallback(
@@ -155,9 +182,17 @@ export const usePimoViewer = (
   );
 
   const updateBox = useCallback(
-    (id: string, boxOptions: Partial<BoxOptions>) =>
-      viewerRef.current?.updateBox(id, boxOptions) ?? false,
-    []
+    (id: string, boxOptions: Partial<BoxOptions>) => {
+      const viewer = viewerRef.current;
+      if (!viewer || !viewerReady) {
+        if (boxOptions.rotationY != null && Number.isFinite(boxOptions.rotationY)) {
+          logPreReadyRotationAttempt(`pending:${id}`);
+        }
+        return false;
+      }
+      return viewer.updateBox(id, boxOptions);
+    },
+    [viewerReady, logPreReadyRotationAttempt]
   );
 
   const setBoxIndex = useCallback(
@@ -166,9 +201,12 @@ export const usePimoViewer = (
   );
 
   const setBoxPosition = useCallback(
-    (id: string, position: { x: number; y: number; z: number }) =>
-      viewerRef.current?.setBoxPosition(id, position) ?? false,
-    []
+    (id: string, position: { x: number; y: number; z: number }) => {
+      const viewer = viewerRef.current;
+      if (!viewer || !viewerReady) return false;
+      return viewer.setBoxPosition(id, position);
+    },
+    [viewerReady]
   );
 
   const setRoomBounds = useCallback(

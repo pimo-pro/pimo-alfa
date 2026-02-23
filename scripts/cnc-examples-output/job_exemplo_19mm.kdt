@@ -1,0 +1,85 @@
+<PANEL>
+  <PanelLength>2750.00</PanelLength>
+  <PanelWidth>1830.00</PanelWidth>
+  <PanelThickness>19.00</PanelThickness>
+</PANEL>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>25.00</X1>
+  <Y1>25.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>575.00</X1>
+  <Y1>25.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>575.00</X1>
+  <Y1>375.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>25.00</X1>
+  <Y1>375.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>25.00</X1>
+  <Y1>428.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>475.00</X1>
+  <Y1>428.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>475.00</X1>
+  <Y1>678.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>
+<CAD>
+  <TypeNo>1</TypeNo>
+  <TypeName>Vertical Hole</TypeName>
+  <Quadrant>1</Quadrant>
+  <X1>25.00</X1>
+  <Y1>678.00</Y1>
+  <Z1>9.50</Z1>
+  <Depth>10.00</Depth>
+  <Diameter>5.00</Diameter>
+</CAD>

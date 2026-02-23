@@ -52,4 +52,31 @@ export type SheetResult = {
 
 export type CutLayoutResult = {
   sheets: SheetResult[];
+  diagnostics?: {
+    flow: {
+      skylineEnabled: boolean;
+      reorderEnabled: boolean;
+      gapFillEnabled: boolean;
+      gapFillAttempts: number;
+      rescueAttempts: number;
+      rotationPreferenceMode: "auto" | "aggressive" | "disabled";
+    };
+    rejectedByLimit: Array<{
+      partName: string;
+      boxId: string;
+      largura_mm: number;
+      altura_mm: number;
+      reason: string;
+    }>;
+    gapFillPlacements: Array<{
+      partName: string;
+      boxId: string;
+      sheetIndex: number;
+      rotacao: number;
+      x_mm: number;
+      y_mm: number;
+      largura_mm: number;
+      altura_mm: number;
+    }>;
+  };
 };

@@ -1,0 +1,11 @@
+VALIDACAO AUTOMATICA - TEST 1
+Total de chapas: 1
+Ocupacao por chapa: S0=7.75%
+Rotacionadas: 2
+Rejeitadas por limite: 0
+Gap-fill placements: 0
+Limites OK: true
+Rotacao influencia: true
+Skyline/Reorder/Gap-fill ativos: true/true/true
+TCN compatibilidade estrutural: W81=true W2200=false W2201=false Bounds=true
+Arquivo CNC final: C:\Users\Mofreita\pimo-v3\scripts\cnc-examples-output\TEST 1 FINAL.tcn

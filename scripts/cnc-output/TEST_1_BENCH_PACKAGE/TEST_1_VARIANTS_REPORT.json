@@ -1,0 +1,83 @@
+{
+  "generated": {
+    "variantA": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST_1_FINAL_A.tcn",
+    "variantB": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST_1_FINAL_B.tcn",
+    "variantC": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST_1_FINAL_C.tcn"
+  },
+  "validations": [
+    {
+      "file": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST_1_FINAL_A.tcn",
+      "checks": {
+        "noW2200": true,
+        "noPieceComments": true,
+        "w89Complete": true,
+        "w2201LoopsClosed": false,
+        "side1Continuous": true,
+        "sideAuxAtEnd": true
+      },
+      "counts": {
+        "w89": 2,
+        "w81": 10,
+        "w2201": 0,
+        "w2200": 0,
+        "pieceComments": 0
+      }
+    },
+    {
+      "file": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST_1_FINAL_B.tcn",
+      "checks": {
+        "noW2200": true,
+        "noPieceComments": true,
+        "w89Complete": true,
+        "w2201LoopsClosed": false,
+        "side1Continuous": true,
+        "sideAuxAtEnd": true
+      },
+      "counts": {
+        "w89": 2,
+        "w81": 0,
+        "w2201": 0,
+        "w2200": 0,
+        "pieceComments": 0
+      }
+    },
+    {
+      "file": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST_1_FINAL_C.tcn",
+      "checks": {
+        "noW2200": true,
+        "noPieceComments": true,
+        "w89Complete": true,
+        "w2201LoopsClosed": false,
+        "side1Continuous": true,
+        "sideAuxAtEnd": true
+      },
+      "counts": {
+        "w89": 2,
+        "w81": 0,
+        "w2201": 0,
+        "w2200": 0,
+        "pieceComments": 0
+      }
+    }
+  ],
+  "differences": {
+    "A": "W#89 + W#81 + W#2201 (formato atual corrigido)",
+    "B": "W#89 + W#2201 (sem W#81)",
+    "C": "W#89 + W#2201 (sem W#81) com #3=10.00"
+  },
+  "machineRecommendation": {
+    "closestToOriginal": "VARIANTE C",
+    "testOrder": [
+      "VARIANTE C",
+      "VARIANTE B",
+      "VARIANTE A"
+    ],
+    "rationale": "C aproxima o exemplo original da máquina (#3=10) e elimina possível interferência do W#81 no parser de contorno.",
+    "observeOnMachine": [
+      "Se os contornos aparecem na tela do post sem furos isolados.",
+      "Se o preview exibe polilinhas fechadas para todas as peças.",
+      "Se o ciclo de corte é aceito sem alertas de sintaxe/operação.",
+      "Se a operação inicia em W#89 e segue W#2201 sem ignorar blocos."
+    ]
+  }
+}

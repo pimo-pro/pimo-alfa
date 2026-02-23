@@ -8,6 +8,7 @@ import { buildTechnicalPdf } from "../../../core/pdf/pdfTechnical";
 import { buildCutlistPdf } from "../../../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../../../core/pdf/pdfUnified";
 import { runCutLayout, cutlistToPieces } from "../../../core/cutlayout/cutLayoutEngine";
+import { buildCncFromCutlistItems } from "../../../core/cnc/cncPipeline";
 import type { GerarArquivoConteudo } from "./GerarArquivoModal";
 import GerarArquivoModal from "./GerarArquivoModal";
 
@@ -90,7 +91,15 @@ export default function RightPanel() {
       alert("Nenhuma peça na cutlist para o layout de corte.");
       return;
     }
-    const result = runCutLayout(pieces, { largura_mm: 2750, altura_mm: 1830, espessura_mm: 19 });
+    const result = runCutLayout(
+      pieces,
+      { largura_mm: 2750, altura_mm: 1830, espessura_mm: 19 },
+      {
+        rotationPreferenceMode: "aggressive",
+        rotationWeight: 0.8,
+        rotationPenalty: 0.45,
+      }
+    );
     const { buildCutLayoutPdf } = await import("../../../core/cutlayout/cutLayoutPdf");
 const doc = buildCutLayoutPdf(result);
     doc.save(`${slug}_layout_corte.pdf`);
@@ -106,31 +115,30 @@ const doc = buildCutLayoutPdf(result);
       Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
     );
     const allItems = [...parametric, ...extracted].map((p) => ({ ...p, boxId: p.boxId ?? "" }));
-    const pieces = cutlistToPieces(allItems);
-    if (pieces.length === 0) {
+    const cncBundle = buildCncFromCutlistItems(project, allItems);
+    if (!cncBundle) {
       alert("Nenhuma peça na cutlist para exportar CNC.");
       return;
     }
-    const layoutResult = runCutLayout(pieces, { largura_mm: 2750, altura_mm: 1830, espessura_mm: 19 });
-const { exportCncFiles, buildBasicDrillOperations } = await import("../../../core/cnc/cncExport");
-const drillOps = buildBasicDrillOperations(layoutResult);
-const cnc = exportCncFiles(project, layoutResult, drillOps);
-    const tcnBlob = new Blob([cnc.tcn], { type: "text/plain" });
-    const kdtBlob = new Blob([cnc.kdt], { type: "text/xml" });
-    const tcnUrl = URL.createObjectURL(tcnBlob);
-    const kdtUrl = URL.createObjectURL(kdtBlob);
-    const link1 = document.createElement("a");
-    link1.href = tcnUrl;
-    link1.download = `${slug}.tcn`;
-    link1.click();
-    const link2 = document.createElement("a");
-    link2.href = kdtUrl;
-    link2.download = `${slug}.kdt`;
-    link2.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(tcnUrl);
-      URL.revokeObjectURL(kdtUrl);
-    }, 500);
+    const cnc = cncBundle.cnc;
+    const urls: string[] = [];
+    for (const file of cnc.files) {
+      const base = `job_${slug}_${file.thicknessMm}mm`;
+      const tcnBlob = new Blob([file.tcn], { type: "text/plain" });
+      const kdtBlob = new Blob([file.kdt], { type: "text/xml" });
+      const tcnUrl = URL.createObjectURL(tcnBlob);
+      const kdtUrl = URL.createObjectURL(kdtBlob);
+      urls.push(tcnUrl, kdtUrl);
+      const link1 = document.createElement("a");
+      link1.href = tcnUrl;
+      link1.download = `${base}.tcn`;
+      link1.click();
+      const link2 = document.createElement("a");
+      link2.href = kdtUrl;
+      link2.download = `${base}.kdt`;
+      link2.click();
+    }
+    setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
   };
 
   return (

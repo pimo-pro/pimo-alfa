@@ -1,0 +1,92 @@
+CHECKLIST DE BANCADA - ALBATROS/EDICAD (TEST 1)
+Data: ____/____/____
+Operador: ______________________
+Maquina/Post: __________________
+
+Arquivos deste pacote:
+- TEST_1_FINAL.tcn
+- TEST_1_FINAL_A.tcn
+- TEST_1_FINAL_B.tcn
+- TEST_1_FINAL_C.tcn
+- TEST_1_VARIANTS_REPORT.txt
+- TEST_1_VARIANTS_REPORT.json
+
+Para cada arquivo testado, marque:
+
+Arquivo: ________________________________
+
+[ ] Abriu sem erro 280?
+[ ] Painel com dimensoes corretas (DL/DH/DS)?
+[ ] Todos os contornos visiveis na tela?
+[ ] Profundidade de corte correta?
+[ ] Offsets/posicoes das pecas corretos?
+
+Observacoes livres:
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+
+Resultado final do arquivo:
+[ ] APROVADO PARA CORTE
+[ ] REJEITADO
+
+------------------------------------------------------------
+
+Arquivo: ________________________________
+
+[ ] Abriu sem erro 280?
+[ ] Painel com dimensoes corretas (DL/DH/DS)?
+[ ] Todos os contornos visiveis na tela?
+[ ] Profundidade de corte correta?
+[ ] Offsets/posicoes das pecas corretos?
+
+Observacoes livres:
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+
+Resultado final do arquivo:
+[ ] APROVADO PARA CORTE
+[ ] REJEITADO
+
+------------------------------------------------------------
+
+Arquivo: ________________________________
+
+[ ] Abriu sem erro 280?
+[ ] Painel com dimensoes corretas (DL/DH/DS)?
+[ ] Todos os contornos visiveis na tela?
+[ ] Profundidade de corte correta?
+[ ] Offsets/posicoes das pecas corretos?
+
+Observacoes livres:
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+
+Resultado final do arquivo:
+[ ] APROVADO PARA CORTE
+[ ] REJEITADO
+
+------------------------------------------------------------
+
+Arquivo: ________________________________
+
+[ ] Abriu sem erro 280?
+[ ] Painel com dimensoes corretas (DL/DH/DS)?
+[ ] Todos os contornos visiveis na tela?
+[ ] Profundidade de corte correta?
+[ ] Offsets/posicoes das pecas corretos?
+
+Observacoes livres:
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+____________________________________________________________
+
+Resultado final do arquivo:
+[ ] APROVADO PARA CORTE
+[ ] REJEITADO

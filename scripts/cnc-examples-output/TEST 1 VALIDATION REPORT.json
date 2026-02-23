@@ -1,0 +1,91 @@
+{
+  "scenario": "TEST 1",
+  "input": {
+    "sourceFile": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1.txt",
+    "pieceCount": 2,
+    "sheet": {
+      "dl": 2750,
+      "dh": 1830,
+      "ds": 19
+    },
+    "pieces": [
+      {
+        "id": "Fundo 19mm (exemplo-19)",
+        "largura_mm": 600,
+        "altura_mm": 400
+      },
+      {
+        "id": "Tampa 19mm (exemplo-19)",
+        "largura_mm": 500,
+        "altura_mm": 300
+      }
+    ]
+  },
+  "output": {
+    "totalSheets": 1,
+    "occupancyBySheetPercent": [
+      {
+        "sheetIndex": 0,
+        "utilizationPercent": 7.75,
+        "placementCount": 2
+      }
+    ],
+    "rotatedPieces": [
+      {
+        "id": "Fundo 19mm (exemplo-19)",
+        "angle": 90,
+        "sheetIndex": 0,
+        "x_mm": 0,
+        "y_mm": 0
+      },
+      {
+        "id": "Tampa 19mm (exemplo-19)",
+        "angle": 90,
+        "sheetIndex": 0,
+        "x_mm": 0,
+        "y_mm": 603
+      }
+    ],
+    "rejectedByLimit": [],
+    "rejectedByCountFallback": 0,
+    "gapFillPlacements": []
+  },
+  "checks": {
+    "noneOutsideSheet": true,
+    "rotationInfluencesNesting": true,
+    "skylineReorderGapFillActive": {
+      "skyline": true,
+      "reorder": true,
+      "gapFill": true,
+      "gapFillAttempts": 0,
+      "rescueAttempts": 0,
+      "rotationMode": "aggressive"
+    },
+    "tcnCompatibility": {
+      "hasW81": true,
+      "hasW2200": false,
+      "hasW2201": false,
+      "w2200Count": 0,
+      "w2201Count": 0,
+      "sameContourCount": true,
+      "boundsOk": true,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 400,
+      "maxY": 1103
+    },
+    "noRotationBaseline": {
+      "totalSheets": 1,
+      "occupancyBySheetPercent": [
+        {
+          "sheetIndex": 0,
+          "utilizationPercent": 7.75
+        }
+      ]
+    }
+  },
+  "generatedFiles": {
+    "tcn": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1 FINAL.tcn",
+    "txt": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1 FINAL.txt"
+  }
+}

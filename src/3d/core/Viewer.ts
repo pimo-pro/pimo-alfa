@@ -159,8 +159,6 @@ export class Viewer {
 
   /** Lock: quando ativo, impede que caixas entrem uma na outra e respeitam limites da sala (colisão). */
   private lockEnabled = false;
-  /** True enquanto o utilizador arrasta o TransformControls (para não snapar rotação a cada frame). */
-  private _isDragging = false;
   /** Quando lock desativado: caixas que intersectam paredes (para destaque vermelho). */
   private boxesIntersectingWalls = new Set<string>();
   /** Parede escondida manualmente (se existir). */
@@ -217,6 +215,11 @@ export class Viewer {
   } | null = null;
   private readonly LIGHT_LERP_FACTOR = 0.14;
   private _diagnosticsLogged = false;
+  /** Evita aplicar rotação duplicada no mesmo mesh. */
+  private appliedRotationByMeshUuid = new Map<string, number>();
+  /** Diagnóstico DEV: contadores por mesh.uuid. */
+  private rotationDiagnosticsByUuid = new Map<string, { applied: number; duplicateSkipped: number }>();
+  private rotationDiagnosticsLastLogTs = 0;
 
   constructor(container: HTMLElement, options: ViewerOptions = {}) {
     if (!container) {
@@ -290,7 +293,6 @@ export class Viewer {
     );
     this.transformControls.setSpace("world");
     this.transformControls.addEventListener("dragging-changed", (event) => {
-      this._isDragging = Boolean((event as { value: unknown }).value);
       if (this.controls?.controls) {
         this.controls.controls.enabled = !event.value;
       }
@@ -706,6 +708,46 @@ export class Viewer {
     return this.updateBox(id, { position });
   }
 
+  private incrementRotationDiagnostics(uuid: string, key: "applied" | "duplicateSkipped"): void {
+    if (!import.meta.env.DEV) return;
+    const current = this.rotationDiagnosticsByUuid.get(uuid) ?? { applied: 0, duplicateSkipped: 0 };
+    current[key] += 1;
+    this.rotationDiagnosticsByUuid.set(uuid, current);
+  }
+
+  private logRotationDiagnosticsIfNeeded(): void {
+    if (!import.meta.env.DEV) return;
+    const now = performance.now();
+    if (now - this.rotationDiagnosticsLastLogTs < 2000) return;
+    this.rotationDiagnosticsLastLogTs = now;
+
+    const rows = Array.from(this.rotationDiagnosticsByUuid.entries()).map(([uuid, stats]) => ({
+      uuid,
+      rot_applied: stats.applied,
+      rot_duplicate_skipped: stats.duplicateSkipped,
+    }));
+    if (rows.length === 0) return;
+    console.groupCollapsed("[Viewer Rotation Diagnostics] by mesh.uuid");
+    console.table(rows);
+    console.groupEnd();
+  }
+
+  private applyRotationIfNeeded(mesh: THREE.Object3D | null | undefined, rotationY?: number): void {
+    if (!mesh) return;
+    if (rotationY == null || !Number.isFinite(rotationY)) return;
+    const previous = this.appliedRotationByMeshUuid.get(mesh.uuid);
+    if (previous != null && Math.abs(previous - rotationY) < 1e-6) {
+      this.incrementRotationDiagnostics(mesh.uuid, "duplicateSkipped");
+      this.logRotationDiagnosticsIfNeeded();
+      return;
+    }
+    mesh.rotation.y = rotationY;
+    mesh.updateMatrixWorld();
+    this.appliedRotationByMeshUuid.set(mesh.uuid, rotationY);
+    this.incrementRotationDiagnostics(mesh.uuid, "applied");
+    this.logRotationDiagnosticsIfNeeded();
+  }
+
   setCameraFrontView() {
     console.log("CAMERA MOVE", "setCameraFrontView");
     this.cameraManager.setPosition(0, 2.2, 6);
@@ -768,13 +810,7 @@ export class Viewer {
       };
     }
     box.position.set(position.x, position.y, position.z);
-    if (opts.rotationY != null && Number.isFinite(opts.rotationY)) {
-      if (import.meta.env.DEV) {
-        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 772, box.uuid);
-      }
-      // rotation disabled — Viewer não controla orientação
-      // box.rotation.y = opts.rotationY;
-    }
+    this.applyRotationIfNeeded(box, opts.rotationY);
     // Registar em this.boxes ANTES de adicionar à cena (getRightmostX e restante lógica usam este mapa).
     this.boxes.set(id, {
       mesh: box,
@@ -793,9 +829,6 @@ export class Viewer {
     });
     this.sceneManager.add(box);
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
-      if (import.meta.env.DEV) {
-        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 792, box.uuid);
-      }
       // auto-rotate disabled — centralizado no snapping
       // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
       if (this.lockEnabled) this.applyRoomConstraint(box, { ignoreY: manualPosition });
@@ -913,13 +946,7 @@ export class Viewer {
     } else if (!entry.manualPosition) {
       entry.mesh.position.y = height / 2;
     }
-    if (opts.rotationY != null && Number.isFinite(opts.rotationY)) {
-      if (import.meta.env.DEV) {
-        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 909, entry.mesh.uuid);
-      }
-      // rotation disabled — Viewer não controla orientação
-      // entry.mesh.rotation.y = opts.rotationY;
-    }
+    this.applyRotationIfNeeded(entry.mesh, opts.rotationY);
     if (opts.costaRotationY !== undefined) {
       (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
         Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
@@ -948,9 +975,6 @@ export class Viewer {
       this.updateModelsVerticalPosition(entry);
     }
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(entry.mesh)) {
-      if (import.meta.env.DEV) {
-        console.warn("ROTATION SOURCE (Viewer):", "src/3d/core/Viewer.ts", 939, entry.mesh.uuid);
-      }
       // auto-rotate disabled — centralizado no snapping
       // this.applyAutoRotateToRoom(entry.mesh, { snapPosition: this.lockEnabled });
       if (this.lockEnabled) this.applyRoomConstraint(entry.mesh, { ignoreY: entry.manualPosition });
@@ -1010,6 +1034,7 @@ export class Viewer {
       entry.material.textures.forEach((texture) => texture.dispose());
     }
     this.boxes.delete(id);
+    this.appliedRotationByMeshUuid.delete(entry.mesh.uuid);
     this.reflowBoxes();
     this.updateCameraTarget();
     return true;
@@ -1937,10 +1962,6 @@ export class Viewer {
         } else if (this.transformMode === "rotate") {
           obj.rotation.x = 0;
           obj.rotation.z = 0;
-          // rotation disabled — ModelWallSnap controla rotação
-          if (!this._isDragging && this.roomBounds && this.isMeshInsideOrTouchingRoom(obj) && import.meta.env.DEV) {
-            console.warn("ROTATION SOURCE:", "src/3d/core/Viewer.ts", 1925, obj.uuid);
-          }
         }
         return;
       }

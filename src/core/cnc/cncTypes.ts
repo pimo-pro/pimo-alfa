@@ -24,7 +24,12 @@ export type CncDrillOperation = {
   tipo: "vertical" | "horizontal";
 };
 
-export type CncExportResult = {
+export type CncExportFile = {
+  thicknessMm: number;
   tcn: string;
   kdt: string;
+};
+
+export type CncExportResult = {
+  files: CncExportFile[];
 };

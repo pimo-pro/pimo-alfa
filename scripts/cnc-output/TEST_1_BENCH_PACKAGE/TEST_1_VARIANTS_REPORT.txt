@@ -1,0 +1,16 @@
+RELATORIO DE VARIANTES - TEST 1
+A: C:\Users\Mofreita\pimo-v3\scripts\cnc-examples-output\TEST_1_FINAL_A.tcn
+B: C:\Users\Mofreita\pimo-v3\scripts\cnc-examples-output\TEST_1_FINAL_B.tcn
+C: C:\Users\Mofreita\pimo-v3\scripts\cnc-examples-output\TEST_1_FINAL_C.tcn
+
+CHECKS (A/B/C):
+noW2200: true/true/true
+noPieceComments: true/true/true
+w89Complete: true/true/true
+w2201LoopsClosed: false/false/false
+side1Continuous: true/true/true
+sideAuxAtEnd: true/true/true
+
+RECOMENDACAO:
+Mais proxima do original: VARIANTE C
+Ordem de teste: C -> B -> A
