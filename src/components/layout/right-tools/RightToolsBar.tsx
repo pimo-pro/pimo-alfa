@@ -276,6 +276,7 @@ export default function RightToolsBar() {
       <aside className="right-tools-bar" aria-label="Resultados e modais">
         <div className="right-tools-card" style={{ marginTop: 0 }}>
           <div className="right-tools-card-title">Resultados Atuais</div>
+          <div className="right-tools-card-description">Resumo rápido do projeto em edição.</div>
           <div className="right-tools-card-row">
             <span>Peças</span>
             <strong>{totalPecas}</strong>
@@ -293,6 +294,9 @@ export default function RightToolsBar() {
         {/* Lista de Caixas - último bloco do painel direito */}
         <div className="right-tools-card" style={{ marginTop: 16 }}>
           <div className="section-title" style={{ marginBottom: 8 }}>Lista de Caixas</div>
+          <div className="right-tools-card-description" style={{ marginBottom: 8 }}>
+            Selecione rapidamente uma caixa para editar no workspace.
+          </div>
           <div
             className="boxes-list"
             style={{
@@ -329,6 +333,7 @@ export default function RightToolsBar() {
                     <div style={boxCardRowStyle}>
                       <button
                         type="button"
+                        title="Selecionar caixa no workspace"
                         onClick={() => {
                           actions.selectBox(box.id);
                           viewerApi?.highlightBox?.(box.id);
@@ -344,6 +349,7 @@ export default function RightToolsBar() {
                       </button>
                       <button
                         type="button"
+                        title="Remover caixa do projeto"
                         onClick={() => actions.removeWorkspaceBoxById(box.id)}
                         className="button button-ghost"
                         style={{

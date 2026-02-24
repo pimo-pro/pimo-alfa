@@ -220,6 +220,7 @@ export default function BottomPanel() {
           type="button"
           onClick={scrollToTop}
           title="Voltar ao topo"
+          aria-label="Voltar ao topo da página"
           style={{
             position: "absolute",
             bottom: 0,

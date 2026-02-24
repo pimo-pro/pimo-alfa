@@ -71,8 +71,10 @@ function PainelSala() {
 
   return (
     <aside className="panel-content panel-content--side">
-      <div className="section-title">Sala</div>
-      <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
+      <div className="design-panel-header">
+        <div className="section-title">Sala</div>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }} className="design-panel-subtitle">
         Dimensões em metros. Crie a sala para ter 4 paredes principais e piso; pode adicionar paredes extras e bloquear as principais.
       </p>
       <Panel title="Dimensões (m)">
@@ -199,7 +201,10 @@ function InfoPanelContent() {
     <div className="left-panel-content">
       <div className="left-panel-scroll">
         <aside className="panel-content panel-content--side">
-          <div className="section-title">Info</div>
+          <div className="design-panel-header">
+            <div className="section-title">Info</div>
+            <p className="design-panel-subtitle">Ajuda rápida sobre fluxo e operação da página de design.</p>
+          </div>
           {/* Tabs internas: preparadas para futura Info Técnica */}
           <div
             style={{
@@ -306,7 +311,12 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <div className="left-panel-content">
         <div className="left-panel-scroll">
       <aside className="panel-content panel-content--side">
-        <div className="section-title">Calculadora</div>
+        <div className="design-panel-header">
+          <div className="section-title">Calculadora</div>
+          <p className="design-panel-subtitle">
+            Criar, renomear e organizar caixas do projeto.
+          </p>
+        </div>
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
           Criar e gerir caixas do projeto.
         </p>
@@ -431,7 +441,9 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <div className="left-panel-content">
         <div className="left-panel-scroll">
         <aside className="panel-content panel-content--side">
-          <div className="section-title">Eletrodomésticos</div>
+          <div className="design-panel-header">
+            <div className="section-title">Eletrodomésticos</div>
+          </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8 }}>
             Modelos 3D de eletrodomésticos (em breve).
           </p>
@@ -447,7 +459,9 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <div className="left-panel-content">
         <div className="left-panel-scroll">
         <aside className="panel-content panel-content--side">
-          <div className="section-title">Acessórios</div>
+          <div className="design-panel-header">
+            <div className="section-title">Acessórios</div>
+          </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8 }}>
             Acessórios (em breve).
           </p>
@@ -469,7 +483,10 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <div className="left-panel-content">
         <div className="left-panel-scroll">
           <aside className="panel-content panel-content--side">
-            <div className="section-title">Início</div>
+            <div className="design-panel-header">
+              <div className="section-title">Início</div>
+              <p className="design-panel-subtitle">Comece criando uma caixa e definindo os dados básicos do projeto.</p>
+            </div>
             <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
               Nenhuma caixa selecionada. Defina o nome do projeto abaixo.
             </p>
@@ -507,7 +524,10 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     <div className="left-panel-content">
       <div className="left-panel-scroll">
     <aside className="panel-content panel-content--side">
-      <div className="section-title">Início</div>
+      <div className="design-panel-header">
+        <div className="section-title">Início</div>
+        <p className="design-panel-subtitle">Controles principais da caixa selecionada e definição inicial do projeto.</p>
+      </div>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
         Crie novas caixas a partir daqui para começar o seu projeto.
       </p>

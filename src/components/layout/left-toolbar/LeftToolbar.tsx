@@ -53,6 +53,7 @@ export default function LeftToolbar({ selectedId, onSelect }: LeftToolbarProps) 
               onClick={handleHomeClick}
               title={item.label}
               aria-label={item.label}
+              aria-pressed={isSelected}
             >
               <span className="left-toolbar-icon" aria-hidden="true">
                 {item.icon}
@@ -69,6 +70,7 @@ export default function LeftToolbar({ selectedId, onSelect }: LeftToolbarProps) 
             onClick={() => onSelect(item.id)}
             title={item.label}
             aria-label={item.label}
+            aria-pressed={isSelected}
           >
             <span className="left-toolbar-icon" aria-hidden="true">
               {item.icon}

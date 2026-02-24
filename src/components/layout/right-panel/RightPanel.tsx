@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
+import { useToast } from "../../../context/ToastContext";
 import {
   cutlistComPrecoFromBoxes,
 } from "../../../core/manufacturing/cutlistFromBoxes";
@@ -15,6 +16,7 @@ import GerarArquivoModal from "./GerarArquivoModal";
 export default function RightPanel() {
   const { project, actions } = useProject();
   const { openModal } = useToolbarModal();
+  const { showToast } = useToast();
   const boxes = project.boxes ?? [];
   const hasBoxes = boxes.length > 0;
   const slug = (project.projectName || "projeto").replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
@@ -50,7 +52,7 @@ export default function RightPanel() {
 
   const onPdfTecnico = () => {
     if (!hasBoxes) {
-      alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
     const doc = buildTechnicalPdf(pdfProject());
@@ -59,7 +61,7 @@ export default function RightPanel() {
 
   const onCutlist = () => {
     if (!hasBoxes) {
-      alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
     const doc = buildCutlistPdf(pdfProject());
@@ -68,7 +70,7 @@ export default function RightPanel() {
 
   const onAmbos = () => {
     if (!hasBoxes) {
-      alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
     const doc = buildUnifiedPdf(pdfProject());
@@ -78,7 +80,7 @@ export default function RightPanel() {
 
   const onLayoutCorte = async () => {
     if (!hasBoxes) {
-      alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
     const parametric = cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId);
@@ -88,7 +90,7 @@ export default function RightPanel() {
     const allItems = [...parametric, ...extracted].map((p) => ({ ...p, boxId: p.boxId ?? "" }));
     const pieces = cutlistToPieces(allItems);
     if (pieces.length === 0) {
-      alert("Nenhuma peça na cutlist para o layout de corte.");
+      showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
       return;
     }
     const result = runCutLayout(
@@ -107,7 +109,7 @@ const doc = buildCutLayoutPdf(result);
 
   const onExportarCnc = async () => {
     if (!hasBoxes) {
-      alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
     const parametric = cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId);
@@ -117,7 +119,7 @@ const doc = buildCutLayoutPdf(result);
     const allItems = [...parametric, ...extracted].map((p) => ({ ...p, boxId: p.boxId ?? "" }));
     const cncBundle = buildCncFromCutlistItems(project, allItems);
     if (!cncBundle) {
-      alert("Nenhuma peça na cutlist para exportar CNC.");
+      showToast("Nenhuma peça na cutlist para exportar CNC.", "warning");
       return;
     }
     const cnc = cncBundle.cnc;
@@ -143,7 +145,10 @@ const doc = buildCutLayoutPdf(result);
 
   return (
     <aside className="panel-content panel-content--side">
-      <div className="section-title" style={{ marginBottom: 8 }}>Ações</div>
+      <div className="design-panel-header">
+        <div className="section-title">Ações</div>
+        <p className="design-panel-subtitle">Exportação e operações do projeto atual.</p>
+      </div>
 
       <div className="stack-tight">
         {/* Gerar Design 3D */}

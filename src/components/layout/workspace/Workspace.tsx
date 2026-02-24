@@ -377,7 +377,7 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
   }, [actions, viewerApi]);
 
 return (
-    <main className="workspace-root" style={{ position: "relative", zIndex: 0 }}>
+    <main className="workspace-root" style={{ position: "relative", zIndex: 0 }} aria-label="Área de design 3D">
       <div className="workspace-canvas">
         <div className="workspace-toolbars" style={{ display: "flex", flexDirection: "column" }}>
           <ViewerToolbar />
@@ -435,7 +435,6 @@ const { x, y } = selectedBoxOverlayPosition;
                   boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
                 }}
               >
-                <span>DEBUG: Overlay Rendered</span>
                 <span>Rotação: {rotacaoGraus.toFixed(0)}°</span>
                 {selectedBoxDimensions && (
                   <div style={{ display: "flex", gap: 12 }}>
