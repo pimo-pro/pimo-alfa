@@ -5,14 +5,14 @@ v2: chapas=7 desperdício=9757500 sobra_útil=6426360 score=16114864
 v3: chapas=7 desperdício=9757500 sobra_útil=6426360 score=16114864
 v3.1: chapas=7 desperdício=9757500 sobra_útil=6426360 score=16114864
 v3.2: chapas=7 desperdício=9757500 sobra_útil=48653500 score=243015176.10873595
-compactação intra-chapa: v2=0.9407 v3=0.9407 v3.1=0.9407 v3.2=0.7565
+compactação intra-chapa: v2=0.9407 v3=0.9407 v3.1=0.9407 v3.2=0.7553
 delta v3: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
 delta v3.1: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
 delta v3.2: chapas=0 desperdício=0 sobra_útil=42227140 score=-226900312.10873595 (-1408.019%) vs v3.1=-226900312.10873595 (-1408.019%)
 meta: iterações=220 melhor=16114864 inicial=16114864 melhoria=0%
-meta v3.1: inits=8 iterações=480 melhor=16114864 inicial=16114864 melhoria=0% seed=20260301 estratégia=shelf+firstFit
-meta v3.2: inits=10 iterações=800 melhor=26633289.273947135 inicial=37311075.219810314 melhoria=28.618% seed=20260302 estratégia=skyline+bestFit
-meta v3.2 detalhes: hullWasteBySheet=0.1716,0.2493,0.1303,0.1782,0.2312,0.143,0.1853 fragmentation=0.7855902777777777 pockets=7 linearGap=1236.5599999999997 compactness=5.295723127856259 melhoriaVsV31=-1408.019%
+meta v3.1: inits=14 iterações=2520 melhor=16114864 inicial=16114864 melhoria=0% seed=20260301 estratégia=shelf+firstFit
+meta v3.2: inits=18 iterações=3600 melhor=26488592.2307363 inicial=37311075.219810314 melhoria=29.006% seed=20260318 estratégia=skyline+bestFit
+meta v3.2 detalhes: hullWasteBySheet=0.1992,0.1705,0.1932,0.1284,0.1408,0.1743,0.1979 fragmentation=0.7313368055555556 pockets=6 linearGap=1220.2800000000002 compactness=5.2872482466409005 melhoriaVsV31=-1408.019%
 
 [INDUSTRIAL_DENSE] peças=142
 v2: chapas=9 desperdício=5520900 sobra_útil=3202800 score=14200620
@@ -24,23 +24,23 @@ delta v3: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
 delta v3.1: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
 delta v3.2: chapas=0 desperdício=0 sobra_útil=64873200 score=-291588968.0349005 (-2053.354%) vs v3.1=-291588968.0349005 (-2053.354%)
 meta: iterações=220 melhor=14200620 inicial=14200620 melhoria=0%
-meta v3.1: inits=8 iterações=480 melhor=14200620 inicial=14200620 melhoria=0% seed=20260301 estratégia=guillotine+firstFit
-meta v3.2: inits=10 iterações=800 melhor=19022840.965147357 inicial=20809577.713416852 melhoria=8.586% seed=20260309 estratégia=skyline+bestFit
+meta v3.1: inits=14 iterações=2520 melhor=14200620 inicial=14200620 melhoria=0% seed=20260301 estratégia=guillotine+firstFit
+meta v3.2: inits=18 iterações=3600 melhor=19022840.965147357 inicial=20809577.713416852 melhoria=8.586% seed=20260309 estratégia=skyline+bestFit
 meta v3.2 detalhes: hullWasteBySheet=0.0259,0.0259,0.0939,0.0683,0.0436,0.0445,0.0497,0.0681,0.1317 fragmentation=0.57421875 pockets=2 linearGap=590.1999999999998 compactness=8.255100697785116 melhoriaVsV31=-2053.354%
 
 [VARIED_CUTS] peças=142
 v2: chapas=8 desperdício=7979200 sobra_útil=4576630 score=15521537
 v3: chapas=8 desperdício=7979200 sobra_útil=4576630 score=15521537
 v3.1: chapas=8 desperdício=7979200 sobra_útil=4576630 score=15521537
-v3.2: chapas=8 desperdício=7979200 sobra_útil=2435670 score=25066387.267249748
-compactação intra-chapa: v2=0.9102 v3=0.9102 v3.1=0.9102 v3.2=0.8482
+v3.2: chapas=8 desperdício=7979200 sobra_útil=84253200 score=368279159.6181585
+compactação intra-chapa: v2=0.9102 v3=0.9102 v3.1=0.9102 v3.2=0.8418
 delta v3: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
 delta v3.1: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
-delta v3.2: chapas=0 desperdício=0 sobra_útil=-2140960 score=-9544850.267249748 (-61.494%) vs v3.1=-9544850.267249748 (-61.494%)
+delta v3.2: chapas=0 desperdício=0 sobra_útil=79676570 score=-352757622.6181585 (-2272.698%) vs v3.1=-352757622.6181585 (-2272.698%)
 meta: iterações=220 melhor=15521537 inicial=15521537 melhoria=0%
-meta v3.1: inits=8 iterações=480 melhor=15521537 inicial=15521537 melhoria=0% seed=20260301 estratégia=guillotine+firstFit
-meta v3.2: inits=10 iterações=800 melhor=23327226.730016526 inicial=25066387.267249748 melhoria=6.938% seed=20260308 estratégia=guillotine+bestFit
-meta v3.2 detalhes: hullWasteBySheet=0.1709,0.1628,0.1709,0.1607,0.1529,0.1124,0.1029,0.042 fragmentation=0.6527777777777777 pockets=9 linearGap=932.4999999999994 compactness=6.785769268167362 melhoriaVsV31=-61.494%
+meta v3.1: inits=14 iterações=2520 melhor=15521537 inicial=15521537 melhoria=0% seed=20260301 estratégia=guillotine+firstFit
+meta v3.2: inits=18 iterações=3600 melhor=22977744.29336451 inicial=25066387.267249748 melhoria=8.332% seed=20260318 estratégia=skyline+bestFit
+meta v3.2 detalhes: hullWasteBySheet=0.1339,0.1691,0.162,0.0869,0.1602,0.1603,0.1077,0.0884 fragmentation=0.7434895833333333 pockets=6 linearGap=886.0199999999998 compactness=6.734059792902702 melhoriaVsV31=-2272.698%
 
 Cenários com melhoria v3: 0/3
 Cenários com melhoria v3.1: 0/3

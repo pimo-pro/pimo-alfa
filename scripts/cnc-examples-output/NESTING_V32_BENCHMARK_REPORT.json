@@ -1,6 +1,6 @@
 {
   "title": "Nesting v3.2 Benchmark (v2 vs v3 vs v3.1 vs v3.2)",
-  "generatedAt": "2026-02-24T09:20:40.038Z",
+  "generatedAt": "2026-02-24T09:46:20.480Z",
   "scenarios": [
     {
       "scenario": "TEST1_SCALED_MIX",
@@ -37,7 +37,7 @@
         "v2": 0.9407,
         "v3": 0.9407,
         "v31": 0.9407,
-        "v32": 0.7565
+        "v32": 0.7553
       },
       "deltas": {
         "panelReduction": 0,
@@ -88,13 +88,13 @@
         "compactnessScore": 6.584940314826308
       },
       "metaDiagnosticsV31": {
-        "iterations": 480,
+        "iterations": 2520,
         "bestScore": 16114864,
         "initialScore": 16114864,
         "improvementPercent": 0,
-        "acceptedMoves": 107,
-        "totalMoves": 480,
-        "initialSolutions": 8,
+        "acceptedMoves": 202,
+        "totalMoves": 2520,
+        "initialSolutions": 14,
         "winningSeed": 20260301,
         "winningStrategy": "shelf",
         "winningBinHeuristic": "firstFit",
@@ -113,29 +113,29 @@
         "compactnessScore": 6.584940314826308
       },
       "metaDiagnosticsV32": {
-        "iterations": 800,
-        "bestScore": 26633289.273947135,
+        "iterations": 3600,
+        "bestScore": 26488592.2307363,
         "initialScore": 37311075.219810314,
-        "improvementPercent": 28.618,
-        "acceptedMoves": 40,
-        "totalMoves": 800,
-        "initialSolutions": 10,
-        "winningSeed": 20260302,
+        "improvementPercent": 29.006,
+        "acceptedMoves": 94,
+        "totalMoves": 3600,
+        "initialSolutions": 18,
+        "winningSeed": 20260318,
         "winningStrategy": "skyline",
         "winningBinHeuristic": "bestFit",
         "convexHullWasteBySheet": [
-          0.17161847988077497,
-          0.24931743666169895,
-          0.13029925484351715,
-          0.17820417287630402,
-          0.23122146050670642,
-          0.14299493293591653,
-          0.18527511177347242
+          0.1992086438152012,
+          0.17054396423248883,
+          0.19324828614008943,
+          0.12840566318926974,
+          0.14078569299552907,
+          0.17431266766020864,
+          0.19786736214605066
         ],
-        "fragmentationScore": 0.7855902777777777,
-        "pocketsCount": 7,
-        "linearGapScore": 1236.5599999999997,
-        "compactnessScore": 5.295723127856259
+        "fragmentationScore": 0.7313368055555556,
+        "pocketsCount": 6,
+        "linearGapScore": 1220.2800000000002,
+        "compactnessScore": 5.2872482466409005
       },
       "v3Winner": {
         "strategy": "shelf",
@@ -238,13 +238,13 @@
         "compactnessScore": 8.586253376635982
       },
       "metaDiagnosticsV31": {
-        "iterations": 480,
+        "iterations": 2520,
         "bestScore": 14200620,
         "initialScore": 14200620,
         "improvementPercent": 0,
-        "acceptedMoves": 196,
-        "totalMoves": 480,
-        "initialSolutions": 8,
+        "acceptedMoves": 458,
+        "totalMoves": 2520,
+        "initialSolutions": 14,
         "winningSeed": 20260301,
         "winningStrategy": "guillotine",
         "winningBinHeuristic": "firstFit",
@@ -265,13 +265,13 @@
         "compactnessScore": 8.586253376635982
       },
       "metaDiagnosticsV32": {
-        "iterations": 800,
+        "iterations": 3600,
         "bestScore": 19022840.965147357,
         "initialScore": 20809577.713416852,
         "improvementPercent": 8.586,
-        "acceptedMoves": 47,
-        "totalMoves": 800,
-        "initialSolutions": 10,
+        "acceptedMoves": 95,
+        "totalMoves": 3600,
+        "initialSolutions": 18,
         "winningSeed": 20260309,
         "winningStrategy": "skyline",
         "winningBinHeuristic": "bestFit",
@@ -332,14 +332,14 @@
         "totalSheets": 8,
         "totalUsedArea": 32280800,
         "wasteArea": 7979200,
-        "usefulLeftoverArea": 2435670,
-        "score": 25066387.267249748
+        "usefulLeftoverArea": 84253200,
+        "score": 368279159.6181585
       },
       "compactness": {
         "v2": 0.9102,
         "v3": 0.9102,
         "v31": 0.9102,
-        "v32": 0.8482
+        "v32": 0.8418
       },
       "deltas": {
         "panelReduction": 0,
@@ -358,11 +358,11 @@
       "deltasV32": {
         "panelReduction": 0,
         "wasteReduction": 0,
-        "usefulLeftoverIncrease": -2140960,
-        "scoreImprovement": -9544850.267249748,
-        "scoreImprovementPercent": -61.494,
-        "scoreImprovementVsV31": -9544850.267249748,
-        "scoreImprovementVsV31Percent": -61.494
+        "usefulLeftoverIncrease": 79676570,
+        "scoreImprovement": -352757622.6181585,
+        "scoreImprovementPercent": -2272.698,
+        "scoreImprovementVsV31": -352757622.6181585,
+        "scoreImprovementVsV31Percent": -2272.698
       },
       "metaDiagnostics": {
         "iterations": 220,
@@ -391,13 +391,13 @@
         "compactnessScore": 7.28156681095674
       },
       "metaDiagnosticsV31": {
-        "iterations": 480,
+        "iterations": 2520,
         "bestScore": 15521537,
         "initialScore": 15521537,
         "improvementPercent": 0,
-        "acceptedMoves": 121,
-        "totalMoves": 480,
-        "initialSolutions": 8,
+        "acceptedMoves": 297,
+        "totalMoves": 2520,
+        "initialSolutions": 14,
         "winningSeed": 20260301,
         "winningStrategy": "guillotine",
         "winningBinHeuristic": "firstFit",
@@ -417,30 +417,30 @@
         "compactnessScore": 7.28156681095674
       },
       "metaDiagnosticsV32": {
-        "iterations": 800,
-        "bestScore": 23327226.730016526,
+        "iterations": 3600,
+        "bestScore": 22977744.29336451,
         "initialScore": 25066387.267249748,
-        "improvementPercent": 6.938,
-        "acceptedMoves": 47,
-        "totalMoves": 800,
-        "initialSolutions": 10,
-        "winningSeed": 20260308,
-        "winningStrategy": "guillotine",
+        "improvementPercent": 8.332,
+        "acceptedMoves": 106,
+        "totalMoves": 3600,
+        "initialSolutions": 18,
+        "winningSeed": 20260318,
+        "winningStrategy": "skyline",
         "winningBinHeuristic": "bestFit",
         "convexHullWasteBySheet": [
-          0.17088196721311474,
-          0.1628461003477397,
-          0.17088196721311474,
-          0.16066845504222554,
-          0.15289657228017883,
-          0.1124488822652757,
-          0.10286994535519126,
-          0.04196691505216096
+          0.1339076005961252,
+          0.16905772478887232,
+          0.16195678092399404,
+          0.08685762543467461,
+          0.1602052657724789,
+          0.16030789865871833,
+          0.1076582215598609,
+          0.08839870839542971
         ],
-        "fragmentationScore": 0.6527777777777777,
-        "pocketsCount": 9,
-        "linearGapScore": 932.4999999999994,
-        "compactnessScore": 6.785769268167362
+        "fragmentationScore": 0.7434895833333333,
+        "pocketsCount": 6,
+        "linearGapScore": 886.0199999999998,
+        "compactnessScore": 6.734059792902702
       },
       "v3Winner": {
         "strategy": "guillotine",
@@ -451,7 +451,7 @@
         "binHeuristic": "firstFit"
       },
       "v32Winner": {
-        "strategy": "guillotine",
+        "strategy": "skyline",
         "binHeuristic": "bestFit"
       }
     }

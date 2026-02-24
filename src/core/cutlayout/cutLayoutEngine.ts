@@ -747,7 +747,7 @@ function layoutFromPlacements(
     if (valid.length > 0) {
       validSheets.push({
         sheet: { ...sheet },
-        placements: valid.map((p, idx) => ({ ...p, sheetIndex: validSheets.length })),
+        placements: valid.map((p) => ({ ...p, sheetIndex: validSheets.length })),
       });
     }
   }
@@ -1543,7 +1543,7 @@ export function runCutLayout(
   const scoreModel: ScoreModel = options?.scoreModel ?? "legacy";
 
   const finalSheets: SheetResult[] = [];
-  const diagnostics = options?.collectDiagnostics
+  const diagnostics: CutLayoutResult["diagnostics"] | undefined = options?.collectDiagnostics
     ? {
       flow: {
         skylineEnabled: true,
@@ -1578,7 +1578,7 @@ export function runCutLayout(
           winningSeed: 0,
           winningStrategy: "skyline",
           winningBinHeuristic: "bestFit",
-          convexHullWasteBySheet: [],
+          convexHullWasteBySheet: [] as number[],
           fragmentationScore: 0,
           pocketsCount: 0,
           linearGapScore: 0,
