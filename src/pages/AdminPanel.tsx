@@ -58,6 +58,23 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
 ];
 
+const menuIconByTab: Partial<Record<AdminTab, string>> = {
+  "Materials": "🧱",
+  "Materiais & Fabricação": "🪵",
+  "Ferragens": "🔩",
+  "Component Types": "🧩",
+  "Regras": "📏",
+  "Configuração de Regras": "⚙️",
+  "Perfis de Regras": "📚",
+  "CAD Models": "📦",
+  "Templates": "🗂️",
+  "Gestor de Ficheiros": "🗃️",
+  "Deploy": "🧪",
+  "System Settings": "🛠️",
+  "Project Progress": "📈",
+  "Painel Referência": "📖",
+};
+
 const adminVisibleTabs = new Set<AdminTab>(
   adminMenu.filter((entry): entry is Extract<AdminMenuEntry, { type: "item" }> => entry.type === "item").map((entry) => entry.id)
 );
@@ -89,16 +106,17 @@ export default function AdminPanel() {
     >
       <aside
         style={{
-          width: 220,
+          width: 250,
           background: "color-mix(in srgb, var(--navy) 92%, transparent)",
           borderRight: "1px solid rgba(255,255,255,0.08)",
-          padding: "18px 14px",
+          padding: "18px 12px",
           display: "flex",
           flexDirection: "column",
-          gap: 8,
+          gap: 10,
           position: "sticky",
           top: 0,
           height: "100vh",
+          overflowY: "auto",
         }}
       >
         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
@@ -111,7 +129,7 @@ export default function AdminPanel() {
                 key={`group-${entry.label}-${index}`}
                 style={{
                   marginTop: index === 0 ? 4 : 10,
-                  marginBottom: 2,
+                  marginBottom: 4,
                   fontSize: 10,
                   textTransform: "uppercase",
                   letterSpacing: 0.6,
@@ -132,10 +150,10 @@ export default function AdminPanel() {
               onClick={() => !isDisabled && setActiveTab(entry.id)}
               style={{
                 textAlign: "left",
-                padding: "8px 10px",
+                padding: "9px 10px",
                 borderRadius: "var(--radius)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: isActive ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.04)",
+                border: isActive ? "1px solid rgba(59,130,246,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                background: isActive ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
                 color: "var(--text-main)",
                 fontSize: 12,
                 cursor: isDisabled ? "not-allowed" : "pointer",
@@ -146,7 +164,10 @@ export default function AdminPanel() {
                 gap: 8,
               }}
             >
-              <span>{entry.label}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span aria-hidden>{menuIconByTab[entry.id] ?? "•"}</span>
+                <span>{entry.label}</span>
+              </span>
               {entry.badge ? (
                 <span
                   style={{
@@ -169,7 +190,7 @@ export default function AdminPanel() {
       <section
         style={{
           flex: 1,
-          padding: "24px",
+          padding: "20px",
           overflowY: "auto",
         }}
       >

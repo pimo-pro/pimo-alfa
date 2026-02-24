@@ -2,6 +2,13 @@ import { useMemo, useState } from "react";
 import Panel from "../ui/Panel";
 import type { TemplateItem } from "../../core/templates/templates";
 import { useTemplates } from "../../hooks/useTemplates";
+import { useAdminFeedback } from "../../hooks/useAdminFeedback";
+import {
+  AdminPageHeader,
+  adminFieldErrorStyle,
+  adminLabelStyle,
+  adminPageShellStyle,
+} from "./AdminUi";
 
 const toTemplate = (form: TemplateItem): TemplateItem => ({
   id: form.id,
@@ -12,6 +19,7 @@ const toTemplate = (form: TemplateItem): TemplateItem => ({
 });
 
 export default function TemplatesManager() {
+  const feedback = useAdminFeedback();
   const { templates, setTemplates } = useTemplates();
 
   const [form, setForm] = useState<TemplateItem>({
@@ -24,6 +32,7 @@ export default function TemplatesManager() {
 
   const [dadosTexto, setDadosTexto] = useState("{}");
   const [importError, setImportError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const canSave = useMemo(
     () =>
@@ -41,12 +50,23 @@ export default function TemplatesManager() {
   };
 
   const handleSave = () => {
-    if (!canSave) return;
+    const nextErrors: Record<string, string> = {};
+    if (!form.nome.trim()) nextErrors.nome = "Nome é obrigatório.";
+    if (!form.categoria.trim()) nextErrors.categoria = "Categoria é obrigatória.";
+    if (!form.descricao.trim()) nextErrors.descricao = "Descrição é obrigatória.";
+    if (Object.keys(form.dados).length === 0) nextErrors.dados = "Dados JSON são obrigatórios.";
+    setFieldErrors(nextErrors);
+    if (!canSave) {
+      feedback.warning("Preencha os campos obrigatórios do template.");
+      return;
+    }
     const id = form.id || `template-${Date.now()}`;
     const normalized = toTemplate({ ...form, id });
     setTemplates((prev) => [...prev, normalized]);
     setForm({ id: "", nome: "", categoria: "", descricao: "", dados: {} });
     setDadosTexto("{}");
+    setFieldErrors({});
+    feedback.success("Template guardado com sucesso.");
   };
 
   const handleImportJson = (file: File) => {
@@ -61,8 +81,11 @@ export default function TemplatesManager() {
         setForm((prev) => ({ ...prev, dados: parsed }));
         setDadosTexto(JSON.stringify(parsed, null, 2));
         setImportError(null);
+        feedback.success("JSON do template importado com sucesso.");
       } catch (error) {
-        setImportError(error instanceof Error ? error.message : "Erro ao importar JSON");
+        const message = error instanceof Error ? error.message : "Erro ao importar JSON";
+        setImportError(message);
+        feedback.error(message);
       }
     };
     reader.readAsText(file);
@@ -78,11 +101,17 @@ export default function TemplatesManager() {
       }
     } catch {
       setImportError("JSON inválido");
+      feedback.warning("JSON inválido.");
     }
   };
 
   return (
-    <div className="stack">
+    <div style={adminPageShellStyle}>
+      <AdminPageHeader
+        title="Templates"
+        subtitle="Gestão de templates com importação JSON e validação visual de campos."
+      />
+
       <Panel title="Templates existentes">
         <div className="list-vertical">
           {templates.length === 0 ? (
@@ -117,18 +146,21 @@ export default function TemplatesManager() {
               value={form.nome}
               onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
             />
+            {fieldErrors.nome ? <div style={adminFieldErrorStyle}>{fieldErrors.nome}</div> : null}
             <input
               className="input"
               placeholder="Categoria"
               value={form.categoria}
               onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
             />
+            {fieldErrors.categoria ? <div style={adminFieldErrorStyle}>{fieldErrors.categoria}</div> : null}
             <input
               className="input"
               placeholder="Descrição curta"
               value={form.descricao}
               onChange={(e) => setForm((prev) => ({ ...prev, descricao: e.target.value }))}
             />
+            {fieldErrors.descricao ? <div style={adminFieldErrorStyle}>{fieldErrors.descricao}</div> : null}
             <input
               className="input"
               placeholder="ID (opcional)"
@@ -138,7 +170,7 @@ export default function TemplatesManager() {
           </div>
 
           <div>
-            <div className="muted-text" style={{ marginBottom: 6 }}>
+            <div style={adminLabelStyle}>
               Dados do template (JSON)
             </div>
             <textarea
@@ -151,6 +183,7 @@ export default function TemplatesManager() {
                 {importError}
               </div>
             )}
+            {fieldErrors.dados ? <div style={adminFieldErrorStyle}>{fieldErrors.dados}</div> : null}
           </div>
 
           <div className="row row-gap-md">

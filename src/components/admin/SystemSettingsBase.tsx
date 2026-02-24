@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import Panel from "../ui/Panel";
-import { useToast } from "../../context/ToastContext";
 import { useSettings } from "../../context/SettingsContext";
 import type { SettingsSchema } from "../../core/settings/settingsService";
+import {
+  AdminPageHeader,
+  AdminStickyActionBar,
+  adminFieldErrorStyle,
+  adminPageShellStyle,
+} from "./AdminUi";
+import { useAdminFeedback } from "../../hooks/useAdminFeedback";
 
 function NumberField({
   label,
@@ -36,9 +42,10 @@ function NumberField({
 }
 
 export default function SystemSettingsBase() {
-  const { showToast } = useToast();
+  const feedback = useAdminFeedback();
   const { settings, refreshSettings, updateSettings, validate } = useSettings();
   const [draft, setDraft] = useState<SettingsSchema>(settings);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setDraft(settings);
@@ -46,18 +53,33 @@ export default function SystemSettingsBase() {
 
   const applyAndSave = () => {
     const validation = validate(draft);
+    const nextErrors: Record<string, string> = {};
+    if (!validation.normalized.geral.locale.trim()) {
+      nextErrors["geral.locale"] = "Locale é obrigatório.";
+    }
+    if (validation.normalized.fabrica.espessuraPadraoMm <= 0) {
+      nextErrors["fabrica.espessuraPadraoMm"] = "Espessura deve ser maior que zero.";
+    }
+    setFieldErrors(nextErrors);
     const result = updateSettings(validation.normalized);
     if (result.success) {
-      showToast("Configurações globais guardadas com sucesso.", "info");
+      feedback.success("Configurações globais guardadas com sucesso.");
     } else {
-      showToast(result.errors[0] ?? "Configurações guardadas com ajustes.", "warning");
+      feedback.warning(result.errors[0] ?? "Configurações guardadas com ajustes.");
     }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 980 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>System Settings</h1>
+    <div style={{ ...adminPageShellStyle, maxWidth: 980 }}>
+      <AdminPageHeader
+        title="System Settings"
+        subtitle="Configurações globais do sistema. Alterações aplicam defaults e parâmetros transversais sem alterar a lógica de negócio."
+      />
+
+      <AdminStickyActionBar>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          Configure e salve quando terminar a edição.
+        </span>
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" className="button button-ghost" onClick={refreshSettings}>
             Recarregar
@@ -66,19 +88,23 @@ export default function SystemSettingsBase() {
             Salvar Configurações
           </button>
         </div>
-      </div>
+      </AdminStickyActionBar>
 
-      <Panel title="Geral">
-        <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <Panel title="Geral" description="Preferências de interface e comportamento geral da aplicação.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Locale</span>
             <input
               className="input"
+              placeholder="ex: pt-PT"
               value={draft.geral.locale}
               onChange={(e) =>
                 setDraft((prev) => ({ ...prev, geral: { ...prev.geral, locale: e.target.value } }))
               }
             />
+            {fieldErrors["geral.locale"] ? (
+              <span style={adminFieldErrorStyle}>{fieldErrors["geral.locale"]}</span>
+            ) : null}
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tema</span>
@@ -110,8 +136,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Fábrica (dimensões e tolerâncias)">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+      <Panel title="Fábrica (dimensões e tolerâncias)" description="Parâmetros padrão para dimensões de chapa e tolerâncias produtivas.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <NumberField
             label="Largura chapa padrão (mm)"
             value={draft.fabrica.larguraChapaPadraoMm}
@@ -127,6 +153,11 @@ export default function SystemSettingsBase() {
             value={draft.fabrica.espessuraPadraoMm}
             onChange={(value) => setDraft((prev) => ({ ...prev, fabrica: { ...prev.fabrica, espessuraPadraoMm: value } }))}
           />
+          {fieldErrors["fabrica.espessuraPadraoMm"] ? (
+            <span style={{ ...adminFieldErrorStyle, gridColumn: "1 / -1" }}>
+              {fieldErrors["fabrica.espessuraPadraoMm"]}
+            </span>
+          ) : null}
           <NumberField
             label="Tolerância de corte (mm)"
             value={draft.fabrica.toleranciaCorteMm}
@@ -136,8 +167,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Preços">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+      <Panel title="Preços" description="Defaults de cálculo para margem, multiplicadores e custo de operação.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <NumberField
             label="Margem (%)"
             value={draft.precos.margemPercentual}
@@ -159,8 +190,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Materiais (defaults)">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+      <Panel title="Materiais (defaults)" description="Valores padrão para categoria e presets quando nenhum valor específico estiver definido.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Categoria padrão</span>
             <input
@@ -194,8 +225,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="CNC (offsets e tolerâncias)">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+      <Panel title="CNC (offsets e tolerâncias)" description="Parâmetros padrão de corte, offset e tolerância para operação CNC.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <NumberField
             label="Profundidade corte padrão (mm)"
             value={draft.cnc.profundidadeCortePadraoMm}
@@ -217,8 +248,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Nesting (parâmetros globais)">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+      <Panel title="Nesting (parâmetros globais)" description="Preferências globais de corte e aproveitamento para planeamento.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <NumberField
             label="Kerf padrão (mm)"
             value={draft.nesting.kerfPadraoMm}
@@ -258,8 +289,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Viewer">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+      <Panel title="Viewer" description="Qualidade visual e opções de visualização do ambiente 3D.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Qualidade</span>
             <select

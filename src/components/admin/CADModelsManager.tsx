@@ -3,8 +3,15 @@ import Panel from "../ui/Panel";
 import ThreeViewer from "../ThreeViewer";
 import type { CadModel } from "../../core/cad/cadModels";
 import { useCadModels } from "../../hooks/useCadModels";
+import { useAdminFeedback } from "../../hooks/useAdminFeedback";
+import {
+  AdminPageHeader,
+  adminFieldErrorStyle,
+  adminPageShellStyle,
+} from "./AdminUi";
 
 export default function CADModelsManager() {
+  const feedback = useAdminFeedback();
   const { models, setModels } = useCadModels();
 
   const [form, setForm] = useState<CadModel>({
@@ -16,6 +23,7 @@ export default function CADModelsManager() {
   });
   const [arquivoNome, setArquivoNome] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const canSave = useMemo(
     () =>
@@ -33,7 +41,16 @@ export default function CADModelsManager() {
   };
 
   const handleSave = () => {
-    if (!canSave) return;
+    const nextErrors: Record<string, string> = {};
+    if (!form.nome.trim()) nextErrors.nome = "Nome é obrigatório.";
+    if (!form.categoria.trim()) nextErrors.categoria = "Categoria é obrigatória.";
+    if (!form.descricao.trim()) nextErrors.descricao = "Descrição é obrigatória.";
+    if (!form.arquivo.length) nextErrors.arquivo = "Ficheiro .glb é obrigatório.";
+    setFieldErrors(nextErrors);
+    if (!canSave) {
+      feedback.warning("Preencha os campos obrigatórios do modelo.");
+      return;
+    }
     const id = form.id || `cad-${Date.now()}`;
     const normalized: CadModel = {
       id,
@@ -45,11 +62,15 @@ export default function CADModelsManager() {
     setModels((prev) => [...prev, normalized]);
     setForm({ id: "", nome: "", categoria: "", descricao: "", arquivo: "" });
     setArquivoNome("");
+    setFieldErrors({});
+    feedback.success("Modelo CAD guardado com sucesso.");
   };
 
   const handleUpload = (file: File) => {
     if (!file.name.toLowerCase().endsWith(".glb")) {
-      setUploadError("Apenas ficheiros .glb são permitidos.");
+      const msg = "Apenas ficheiros .glb são permitidos.";
+      setUploadError(msg);
+      feedback.warning(msg);
       return;
     }
     const reader = new FileReader();
@@ -64,15 +85,23 @@ export default function CADModelsManager() {
       setForm((prev) => ({ ...prev, arquivo: base64 }));
       setArquivoNome(file.name);
       setUploadError(null);
+      feedback.success("Ficheiro .glb carregado com sucesso.");
     };
     reader.onerror = () => {
-      setUploadError("Falha ao ler o ficheiro.");
+      const msg = "Falha ao ler o ficheiro.";
+      setUploadError(msg);
+      feedback.error(msg);
     };
     reader.readAsArrayBuffer(file);
   };
 
   return (
-    <div className="stack">
+    <div style={adminPageShellStyle}>
+      <AdminPageHeader
+        title="CAD Models"
+        subtitle="Gestão de modelos 3D com upload de ficheiros .glb e preview."
+      />
+
       <Panel title="Modelos CAD existentes">
         <div className="list-vertical">
           {models.length === 0 ? (
@@ -110,18 +139,21 @@ export default function CADModelsManager() {
               value={form.nome}
               onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
             />
+            {fieldErrors.nome ? <div style={adminFieldErrorStyle}>{fieldErrors.nome}</div> : null}
             <input
               className="input"
               placeholder="Categoria"
               value={form.categoria}
               onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
             />
+            {fieldErrors.categoria ? <div style={adminFieldErrorStyle}>{fieldErrors.categoria}</div> : null}
             <input
               className="input"
               placeholder="Descrição"
               value={form.descricao}
               onChange={(e) => setForm((prev) => ({ ...prev, descricao: e.target.value }))}
             />
+            {fieldErrors.descricao ? <div style={adminFieldErrorStyle}>{fieldErrors.descricao}</div> : null}
             <input
               className="input"
               placeholder="ID (opcional)"
@@ -156,6 +188,7 @@ export default function CADModelsManager() {
                 {uploadError}
               </div>
             )}
+            {fieldErrors.arquivo ? <div style={adminFieldErrorStyle}>{fieldErrors.arquivo}</div> : null}
           </div>
 
           <button
