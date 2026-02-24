@@ -8,13 +8,21 @@ export default function FooterMenu() {
   const menuLinks: FooterMenuLink[] = [
     { label: "Ajuda", href: "#" },
     { label: "Contacto", href: "#" },
-    { label: "Projetos", href: "/projects" },
-    { label: "Design", href: "/design/active" },
-    { label: "Configurações", href: "/settings" },
-    { divider: true, label: "Navegação Principal" },
-    { label: "Dashboard", href: "/projects" },
-    { label: "Workspace", href: "/design/active" },
-    { label: "System Settings", href: "/settings" },
+    { label: "Documentação", href: "/documentacao" },
+    { label: "Documentação do Sistema", href: "/documentacao" },
+    { label: "Admin", href: "/admin" },
+    { label: "Sobre Nós", href: "/sobre-nos" },
+    { divider: true, label: "Páginas Internas (Dev)" },
+    { label: "Admin Panel", href: "/admin" },
+    { label: "Documentação", href: "/documentacao" },
+    { label: "Workspace", href: "/" },
+    { label: "Cutlist", href: "#" },
+    { label: "Settings", href: "#" },
+    { label: "Templates", href: "#" },
+    { label: "CAD Models", href: "#" },
+    { label: "Pricing", href: "#" },
+    { label: "System Settings", href: "#" },
+    { label: "Users", href: "#" },
   ];
 
   const handleLinkClick = (href: string) => {
