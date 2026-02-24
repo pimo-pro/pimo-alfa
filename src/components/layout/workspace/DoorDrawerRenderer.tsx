@@ -5,6 +5,7 @@ type DoorDrawerRendererProps = {
 };
 
 export default function DoorDrawerRenderer({ items }: DoorDrawerRendererProps) {
+  // Overlay legado mantido apenas como fallback visual leve.
   if (!items.length) return null;
 
   return (

@@ -112,6 +112,7 @@ export const useCalculadoraSync = (
       const pe_cm = wsBox?.pe_cm;
       const feetEnabled = wsBox?.feetEnabled ?? true;
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
+      const doorDrawerItems = wsBox?.doorsAndDrawers ?? [];
       const useCabinetLock = cabinetType === "lower" && feetEnabled;
       const cabinetOpts: Partial<BoxOptions> = useCabinetLock
         ? { cabinetType, pe_cm, feetEnabled }
@@ -129,6 +130,7 @@ export const useCalculadoraSync = (
           cadOnly,
           ...cabinetOpts,
           ...rotateOpts,
+          doorDrawerItems,
           ...posRot,
         });
       } else {
@@ -142,6 +144,7 @@ export const useCalculadoraSync = (
           index,
           ...cabinetOpts,
           ...rotateOpts,
+          doorDrawerItems,
           ...posRot,
         });
       }
