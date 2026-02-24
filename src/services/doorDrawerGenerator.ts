@@ -2,9 +2,7 @@ import type { BoxModel } from "../models/BoxModel";
 import type { DoorOrDrawer } from "../models/DoorOrDrawer";
 
 const DEFAULT_FACE_OFFSET_MM = 2;
-const DEFAULT_DRAWER_SPACING_MM = 2;
 const MIN_DRAWER_HEIGHT_MM = 120;
-const MAX_AUTO_DRAWERS = 6;
 
 const createId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -23,92 +21,131 @@ function getInternalBoxDimensions(box: BoxModel) {
   };
 }
 
-function getDrawerCount(box: BoxModel, internalHeight: number) {
-  if (box.gavetas > 0) return Math.min(MAX_AUTO_DRAWERS, Math.max(1, Math.floor(box.gavetas)));
-  return Math.min(MAX_AUTO_DRAWERS, Math.max(1, Math.floor(internalHeight / 220)));
-}
-
 export function generateDoorsAndDrawersForBox(box: BoxModel): DoorOrDrawer[] {
   const internal = getInternalBoxDimensions(box);
   const items: DoorOrDrawer[] = [];
-  const hasDoors = box.portaTipo !== "sem_porta";
 
-  if (hasDoors) {
-    if (box.portaTipo === "porta_dupla") {
-      const halfWidth = Math.max(50, internal.width / 2 - DEFAULT_DRAWER_SPACING_MM);
-      items.push(
-        {
-          id: createId(),
-          parentBoxId: box.id,
-          type: "door",
-          width: halfWidth,
-          height: internal.height,
-          depth: internal.thickness,
-          thickness: internal.thickness,
-          openDirection: "left",
-          isOpen: false,
-          offsetX: -halfWidth / 2,
-          offsetY: 0,
-          offsetZ: DEFAULT_FACE_OFFSET_MM,
-        },
-        {
-          id: createId(),
-          parentBoxId: box.id,
-          type: "door",
-          width: halfWidth,
-          height: internal.height,
-          depth: internal.thickness,
-          thickness: internal.thickness,
-          openDirection: "right",
-          isOpen: false,
-          offsetX: halfWidth / 2,
-          offsetY: 0,
-          offsetZ: DEFAULT_FACE_OFFSET_MM,
-        }
-      );
-    } else {
-      items.push({
+  const boxWidth = Math.max(1, box.dimensoes.largura);
+  const boxHeight = Math.max(1, box.dimensoes.altura);
+  const boxDepth = Math.max(1, box.dimensoes.profundidade);
+
+  const folgaLateral = 2;
+  const folgaSuperior = 2;
+  const folgaInferior = 2;
+  const folgaCentral = 2;
+  const folgaVertical = 2;
+
+  const espessuraPorta = Math.max(1, internal.thickness);
+  const espessuraFrente = Math.max(1, internal.thickness);
+
+  const portaPosY = boxHeight / 2;
+  const portaPosZ = boxDepth / 2 + espessuraPorta / 2;
+
+  // Regra explícita: sem porta => sem doorsAndDrawers
+  if (box.portaTipo === "sem_porta") {
+    return [];
+  }
+
+  if (box.portaTipo === "porta_dupla") {
+    const doorWidth = Math.max(1, boxWidth / 2 - folgaCentral - folgaLateral);
+    const doorHeight = Math.max(1, boxHeight - folgaSuperior - folgaInferior);
+    items.push(
+      {
         id: createId(),
         parentBoxId: box.id,
         type: "door",
-        width: internal.width,
-        height: internal.height,
-        depth: internal.thickness,
-        thickness: internal.thickness,
-        openDirection: "right",
+        width: doorWidth,
+        height: doorHeight,
+        depth: espessuraPorta,
+        thickness: espessuraPorta,
+        openDirection: "left",
         isOpen: false,
-        offsetX: 0,
+        offsetX: -(doorWidth / 2),
         offsetY: 0,
         offsetZ: DEFAULT_FACE_OFFSET_MM,
-      });
-    }
+        posX: -(doorWidth / 2),
+        posY: portaPosY,
+        posZ: portaPosZ,
+        rotY: 0,
+        hingeSide: "left",
+        pivot: "left-edge",
+      },
+      {
+        id: createId(),
+        parentBoxId: box.id,
+        type: "door",
+        width: doorWidth,
+        height: doorHeight,
+        depth: espessuraPorta,
+        thickness: espessuraPorta,
+        openDirection: "right",
+        isOpen: false,
+        offsetX: doorWidth / 2,
+        offsetY: 0,
+        offsetZ: DEFAULT_FACE_OFFSET_MM,
+        posX: doorWidth / 2,
+        posY: portaPosY,
+        posZ: portaPosZ,
+        rotY: 0,
+        hingeSide: "right",
+        pivot: "right-edge",
+      }
+    );
+  } else {
+    const doorWidth = Math.max(1, boxWidth - folgaLateral * 2);
+    const doorHeight = Math.max(1, boxHeight - folgaSuperior - folgaInferior);
+    items.push({
+      id: createId(),
+      parentBoxId: box.id,
+      type: "door",
+      width: doorWidth,
+      height: doorHeight,
+      depth: espessuraPorta,
+      thickness: espessuraPorta,
+      openDirection: "left",
+      isOpen: false,
+      offsetX: 0,
+      offsetY: 0,
+      offsetZ: DEFAULT_FACE_OFFSET_MM,
+      posX: 0,
+      posY: portaPosY,
+      posZ: portaPosZ,
+      rotY: 0,
+      hingeSide: "left",
+      pivot: "left-edge",
+    });
   }
 
-  const drawerCount = getDrawerCount(box, internal.height);
-  if (drawerCount > 0 && box.gavetas > 0) {
-    const totalSpacing = (drawerCount - 1) * DEFAULT_DRAWER_SPACING_MM;
-    const eachHeight = Math.max(
+  const gavetasCount = Math.max(0, Math.floor(box.gavetas || 0));
+  if (gavetasCount > 0) {
+    const gavetaHeight = Math.max(
       MIN_DRAWER_HEIGHT_MM,
-      Math.floor((internal.height - totalSpacing) / drawerCount)
+      boxHeight / gavetasCount - folgaVertical
     );
-    let currentY = internal.height / 2 - eachHeight / 2;
+    const gavetaWidth = Math.max(1, boxWidth - folgaLateral * 2);
+    const gavetaPosZ = boxDepth / 2 + espessuraFrente / 2;
 
-    for (let i = 0; i < drawerCount; i += 1) {
+    for (let index = 0; index < gavetasCount; index += 1) {
+      const posY = index * gavetaHeight + gavetaHeight / 2;
       items.push({
         id: createId(),
         parentBoxId: box.id,
         type: "drawer",
-        width: internal.width,
-        height: eachHeight,
-        depth: internal.depth,
-        thickness: internal.thickness,
+        width: gavetaWidth,
+        height: gavetaHeight,
+        depth: Math.max(1, internal.depth),
+        thickness: espessuraFrente,
         openDirection: "pull",
         isOpen: false,
         offsetX: 0,
-        offsetY: currentY,
+        offsetY: posY - boxHeight / 2,
         offsetZ: DEFAULT_FACE_OFFSET_MM,
+        posX: 0,
+        posY,
+        posZ: gavetaPosZ,
+        rotY: 0,
+        pivot: "front",
       });
-      currentY -= eachHeight + DEFAULT_DRAWER_SPACING_MM;
     }
   }
 

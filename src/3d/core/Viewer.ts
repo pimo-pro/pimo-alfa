@@ -878,14 +878,28 @@ export class Viewer {
       opts.doors !== undefined ||
       opts.drawers !== undefined ||
       opts.hingeType !== undefined ||
-      opts.runnerType !== undefined;
+      opts.runnerType !== undefined ||
+      opts.doorDrawerItems !== undefined;
+    if (import.meta.env.DEV && opts.doorDrawerItems !== undefined) {
+      console.log("[DoorDrawer][Viewer.updateBox] input", {
+        boxId: id,
+        cadOnly: entry.cadOnly === true,
+        structureChanged,
+        doorDrawerItemsCount: opts.doorDrawerItems?.length ?? 0,
+      });
+    }
 
     if (structureChanged) {
       width = Math.max(0.001, opts.width ?? opts.size ?? width);
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
       depth = Math.max(0.001, opts.depth ?? opts.size ?? depth);
       heightChanged = height !== entry.height;
-      if (!entry.cadOnly) {
+      const hasDoorDrawerUpdate = opts.doorDrawerItems !== undefined;
+      if (entry.cadOnly && !hasDoorDrawerUpdate) {
+        if (!entry.manualPosition) {
+          entry.mesh.position.y = height / 2;
+        }
+      } else {
         const fullOpts: Partial<BoxOptions> = {
           width: opts.width ?? width,
           height: opts.height ?? height,
@@ -896,7 +910,14 @@ export class Viewer {
           hingeType: opts.hingeType,
           drawers: opts.drawers,
           runnerType: opts.runnerType,
+          doorDrawerItems: opts.doorDrawerItems,
         };
+        if (import.meta.env.DEV && opts.doorDrawerItems !== undefined) {
+          console.log("[DoorDrawer][Viewer.updateBox] rebuild -> updateBoxGroup", {
+            boxId: id,
+            fullOptsDoorDrawerCount: fullOpts.doorDrawerItems?.length ?? 0,
+          });
+        }
         const updated =
           entry.mesh instanceof THREE.Group
             ? updateBoxGroup(entry.mesh, fullOpts)
@@ -904,9 +925,6 @@ export class Viewer {
         width = updated.width;
         height = updated.height;
         depth = updated.depth;
-      }
-      if (entry.cadOnly && !entry.manualPosition) {
-        entry.mesh.position.y = height / 2;
       }
     }
     if (opts.index !== undefined && opts.index !== entry.index) {

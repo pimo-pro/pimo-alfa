@@ -77,37 +77,38 @@ export const useCalculadoraSync = (
     if (!api) return;
     const currentBoxes = boxesRef.current ?? [];
     const wsBoxes = workspaceBoxesRef.current ?? [];
+    const boxById = new Map(currentBoxes.map((box) => [box.id, box]));
     const nextState = new Map<string, BoxState>();
     const currentIds = new Set<string>();
 
-    currentBoxes.forEach((box, arrayIndex) => {
-      currentIds.add(box.id);
-      const wsIndex = wsBoxes.findIndex((w) => w.id === box.id);
-      const index = wsIndex >= 0 ? wsIndex : arrayIndex;
-      nextState.set(box.id, { index });
-      const wsBox = wsBoxes.find((w) => w.id === box.id);
+    wsBoxes.forEach((wsBox, index) => {
+      const box = boxById.get(wsBox.id);
+      currentIds.add(wsBox.id);
+      nextState.set(wsBox.id, { index });
       const posRot = getBoxPositionAndRotation(wsBox);
+      console.log("[SYNC][doorDrawerItems]", wsBox?.doorsAndDrawers);
 
-      const widthMm = Number.isFinite(box.dimensoes?.largura) ? box.dimensoes.largura : undefined;
-      const heightMm = Number.isFinite(box.dimensoes?.altura) ? box.dimensoes.altura : undefined;
-      const depthMm = Number.isFinite(box.dimensoes?.profundidade)
-        ? box.dimensoes.profundidade
+      const widthMm = Number.isFinite(wsBox.dimensoes?.largura) ? wsBox.dimensoes.largura : undefined;
+      const heightMm = Number.isFinite(wsBox.dimensoes?.altura) ? wsBox.dimensoes.altura : undefined;
+      const depthMm = Number.isFinite(wsBox.dimensoes?.profundidade)
+        ? wsBox.dimensoes.profundidade
         : undefined;
       const width = widthMm !== undefined ? mmToM(widthMm) : undefined;
       const height = heightMm !== undefined ? mmToM(heightMm) : undefined;
       const depth = depthMm !== undefined ? mmToM(depthMm) : undefined;
-      const thicknessMm = Number.isFinite(box.espessura) ? box.espessura : undefined;
+      const thicknessMm = Number.isFinite(wsBox.espessura) ? wsBox.espessura : undefined;
       const thickness = thicknessMm !== undefined ? mmToM(thicknessMm) : undefined;
       const effectiveMaterial =
-        box.material ??
+        wsBox.material ??
+        box?.material ??
         projectMaterialIdRef.current ??
         materialName ??
         "MDF Branco";
       const resolvedMaterialName = getViewerMaterialId(effectiveMaterial);
       const cadOnly =
-        (box.models?.length ?? 0) > 0 && box.prateleiras === 0 && box.gavetas === 0;
+        (wsBox.models?.length ?? 0) > 0 && wsBox.prateleiras === 0 && wsBox.gavetas === 0;
 
-      const shelves = Number.isFinite(box.prateleiras) ? Math.max(0, box.prateleiras) : undefined;
+      const shelves = Number.isFinite(wsBox.prateleiras) ? Math.max(0, wsBox.prateleiras) : undefined;
       const cabinetType = wsBox?.cabinetType === "lower" || wsBox?.cabinetType === "upper" ? wsBox.cabinetType : undefined;
       const pe_cm = wsBox?.pe_cm;
       const feetEnabled = wsBox?.feetEnabled ?? true;
@@ -118,8 +119,8 @@ export const useCalculadoraSync = (
         ? { cabinetType, pe_cm, feetEnabled }
         : { cabinetType: null, feetEnabled };
       const rotateOpts = autoRotateEnabled === false ? { autoRotateEnabled: false } : {};
-      if (!stateRef.current.has(box.id)) {
-        api.addBox(box.id, {
+      if (!stateRef.current.has(wsBox.id)) {
+        api.addBox(wsBox.id, {
           width,
           height,
           depth,
@@ -134,7 +135,7 @@ export const useCalculadoraSync = (
           ...posRot,
         });
       } else {
-        api.updateBox(box.id, {
+        api.updateBox(wsBox.id, {
           width,
           height,
           depth,

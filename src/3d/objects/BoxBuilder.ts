@@ -82,6 +82,10 @@ const BACK_THICKNESS_M = SYSTEM_BACK_MM / 1000;
 const SHELF_WIDTH_CLEARANCE_M = 0.002;
 /** Profundidade interna antes da costa (costa 10 mm atrás). */
 const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
+/** Gap entre folhas de porta (m). */
+const DOOR_GAP_M = 0.002;
+/** Folga traseira da gaveta (m). */
+const DRAWER_CLEARANCE_M = 0.01;
 
 const resolveDimensions = (options: BoxOptions = {}) => {
   const size = options.size ?? 1;
@@ -153,8 +157,6 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
 
 type PanelType = "left" | "right" | "top" | "bottom" | "back" | "front";
 
-type PanelSpec = { size: [number, number, number]; pos: [number, number, number] };
-
 type DoorDrawerSpec = {
   id: string;
   type: "door" | "drawer";
@@ -164,67 +166,102 @@ type DoorDrawerSpec = {
   x: number;
   y: number;
   z: number;
+  rotY: number;
   openDirection: DoorOrDrawer["openDirection"];
+  hingeSide?: DoorOrDrawer["hingeSide"];
+  pivot?: DoorOrDrawer["pivot"];
   isOpen: boolean;
 };
 
-/** Portas: painéis reais com espessura 19 mm; largura e altura baseadas na caixa; posicionados à frente. */
-function getDoorSpecs(width: number, height: number, depth: number, count: number): PanelSpec[] {
-  const doorCount = Math.max(0, Math.floor(count));
-  if (doorCount < 1) return [];
-  const openingWidth = Math.max(0.001, width - 2 * THICKNESS_M);
-  const doorWidth = doorCount === 2 ? openingWidth / 2 : openingWidth;
-  const z = depth / 2 + THICKNESS_M / 2;
-  const specs: PanelSpec[] = [];
-  for (let i = 0; i < doorCount; i++) {
-    const x = doorCount === 2 ? (i === 0 ? -doorWidth / 2 : doorWidth / 2) : 0;
-    specs.push({
-      size: [doorWidth, height, THICKNESS_M],
-      pos: [x, 0, z],
-    });
+function buildDoorObjects(
+  width: number,
+  height: number,
+  depth: number,
+  doorCount: number,
+  material: THREE.Material
+): THREE.Object3D[] {
+  const count = Math.max(0, Math.floor(doorCount));
+  if (count < 1) return [];
+  const usableWidth = width - DOOR_GAP_M * (count - 1);
+  const doorWidth = usableWidth / count;
+  const doorZ = depth / 2 + THICKNESS_M / 2;
+  if (import.meta.env.DEV) {
+    console.log("[DoorBuilder] computed", { width, count, gap: DOOR_GAP_M, usableWidth, doorWidth });
   }
-  return specs;
+  const objects: THREE.Object3D[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const localStartX = i * (doorWidth + DOOR_GAP_M);
+    const centeredX = -width / 2 + doorWidth / 2 + localStartX;
+    const hingeSide: "left" | "right" = count === 1 ? "left" : i === 0 ? "left" : "right";
+    const pivot = new THREE.Group();
+    pivot.name = `door-builder-${i}`;
+    const mesh = createPanel(doorWidth, height, THICKNESS_M, `door-leaf-${i}`, "front", {
+      singleMaterial: material,
+    });
+    mesh.position.set(hingeSide === "left" ? doorWidth / 2 : -doorWidth / 2, 0, 0);
+    pivot.position.set(centeredX, 0, doorZ);
+    pivot.add(mesh);
+    objects.push(pivot);
+    if (import.meta.env.DEV) {
+      console.log("[DoorBuilder] final position", {
+        index: i,
+        hingeSide,
+        pivot: hingeSide === "left" ? "left-edge" : "right-edge",
+        localStartX,
+        centeredX,
+        y: 0,
+        z: doorZ,
+      });
+    }
+  }
+  return objects;
 }
 
-/** Gavetas: caixas internas (corpo) com largura, altura e profundidade baseadas na caixa. */
-function getDrawerSpecs(width: number, height: number, depth: number, count: number): PanelSpec[] {
-  const drawerCount = Math.max(0, Math.floor(count));
-  if (drawerCount < 1) return [];
-  const openingWidth = Math.max(0.001, width - 2 * THICKNESS_M);
-  const drawerDepth = Math.max(0.001, depth - BACK_THICKNESS_M);
-  const interiorHeight = Math.max(0.001, height - 2 * THICKNESS_M);
-  const drawerHeight = interiorHeight / drawerCount;
-  const yStart = -height / 2 + THICKNESS_M + drawerHeight / 2;
-  const z = depth / 2 - drawerDepth / 2;
-  const specs: PanelSpec[] = [];
-  for (let i = 0; i < drawerCount; i++) {
-    const y = yStart + i * drawerHeight;
-    specs.push({
-      size: [openingWidth, drawerHeight, drawerDepth],
-      pos: [0, y, z],
-    });
+function buildDrawerObjects(
+  width: number,
+  height: number,
+  depth: number,
+  drawerCount: number,
+  material: THREE.Material
+): THREE.Object3D[] {
+  const count = Math.max(0, Math.floor(drawerCount));
+  if (count < 1) return [];
+  const drawerWidth = width;
+  const drawerHeight = Math.max(0.001, height / count);
+  const drawerDepth = Math.max(0.001, depth - DRAWER_CLEARANCE_M);
+  const frontZ = depth / 2 + THICKNESS_M / 2;
+  if (import.meta.env.DEV) {
+    console.log("[DrawerBuilder] computed", { drawerWidth, drawerHeight, drawerDepth, count });
   }
-  return specs;
-}
+  const objects: THREE.Object3D[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const posY = -height / 2 + i * drawerHeight + drawerHeight / 2;
+    const group = new THREE.Group();
+    group.name = `drawer-builder-${i}`;
+    group.position.set(0, posY, 0);
 
-/** Frente visível de cada gaveta: painel com espessura 19 mm à frente da caixa. */
-function getDrawerFrontSpecs(width: number, height: number, depth: number, count: number): PanelSpec[] {
-  const drawerCount = Math.max(0, Math.floor(count));
-  if (drawerCount < 1) return [];
-  const openingWidth = Math.max(0.001, width - 2 * THICKNESS_M);
-  const interiorHeight = Math.max(0.001, height - 2 * THICKNESS_M);
-  const drawerHeight = interiorHeight / drawerCount;
-  const yStart = -height / 2 + THICKNESS_M + drawerHeight / 2;
-  const z = depth / 2 + THICKNESS_M / 2;
-  const specs: PanelSpec[] = [];
-  for (let i = 0; i < drawerCount; i++) {
-    const y = yStart + i * drawerHeight;
-    specs.push({
-      size: [openingWidth, drawerHeight, THICKNESS_M],
-      pos: [0, y, z],
+    const body = createPanel(drawerWidth, drawerHeight, drawerDepth, `drawer-body-${i}`, "front", {
+      singleMaterial: material,
     });
+    body.position.set(0, 0, depth / 2 - drawerDepth / 2);
+    group.add(body);
+
+    const front = createPanel(drawerWidth, drawerHeight, THICKNESS_M, `drawer-front-${i}`, "front", {
+      singleMaterial: material,
+    });
+    front.position.set(0, 0, frontZ);
+    group.add(front);
+    objects.push(group);
+    if (import.meta.env.DEV) {
+      console.log("[DrawerBuilder] final position", {
+        index: i,
+        x: 0,
+        y: posY,
+        z: frontZ,
+      });
+    }
   }
-  return specs;
+  return objects;
 }
 
 function buildDoorDrawerSpecs(depth: number, items: DoorOrDrawer[]): DoorDrawerSpec[] {
@@ -232,10 +269,16 @@ function buildDoorDrawerSpecs(depth: number, items: DoorOrDrawer[]): DoorDrawerS
     const widthM = Math.max(0.001, (item.width ?? 1) / 1000);
     const heightM = Math.max(0.001, (item.height ?? 1) / 1000);
     const thicknessM = Math.max(0.001, (item.thickness ?? 18) / 1000);
-    const x = (item.offsetX ?? 0) / 1000;
-    const y = (item.offsetY ?? 0) / 1000;
+    const hasExplicitPos =
+      item.posX !== undefined &&
+      item.posY !== undefined &&
+      item.posZ !== undefined;
+    const x = hasExplicitPos ? (item.posX ?? 0) / 1000 : (item.offsetX ?? 0) / 1000;
+    const y = hasExplicitPos ? (item.posY ?? 0) / 1000 : (item.offsetY ?? 0) / 1000;
     const openPushM = item.isOpen && (item.type === "drawer" || item.openDirection === "pull") ? 0.03 : 0;
-    const z = depth / 2 + thicknessM / 2 + ((item.offsetZ ?? 0) / 1000) + openPushM;
+    const z = hasExplicitPos
+      ? (item.posZ ?? 0) / 1000 + openPushM
+      : depth / 2 + thicknessM / 2 + ((item.offsetZ ?? 0) / 1000) + openPushM;
     return {
       id: item.id,
       type: item.type,
@@ -245,13 +288,30 @@ function buildDoorDrawerSpecs(depth: number, items: DoorOrDrawer[]): DoorDrawerS
       x,
       y,
       z,
+      rotY: Number.isFinite(item.rotY) ? (item.rotY as number) : 0,
       openDirection: item.openDirection,
+      hingeSide: item.hingeSide,
+      pivot: item.pivot,
       isOpen: item.isOpen,
     };
   });
 }
 
 function createDoorOrDrawerObject(spec: DoorDrawerSpec, material: THREE.Material): THREE.Object3D {
+  if (import.meta.env.DEV) {
+    console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] create", {
+      id: spec.id,
+      type: spec.type,
+      widthM: spec.widthM,
+      heightM: spec.heightM,
+      thicknessM: spec.thicknessM,
+      x: spec.x,
+      y: spec.y,
+      z: spec.z,
+      openDirection: spec.openDirection,
+      isOpen: spec.isOpen,
+    });
+  }
   const mesh = createPanel(
     spec.widthM,
     spec.heightM,
@@ -263,6 +323,13 @@ function createDoorOrDrawerObject(spec: DoorDrawerSpec, material: THREE.Material
 
   if (spec.type === "drawer" || spec.openDirection === "pull") {
     mesh.position.set(spec.x, spec.y, spec.z);
+    if (spec.rotY !== 0) mesh.rotation.y = spec.rotY;
+    if (import.meta.env.DEV) {
+      console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] drawer final position", {
+        id: spec.id,
+        position: mesh.position.toArray(),
+      });
+    }
     return mesh;
   }
 
@@ -271,21 +338,48 @@ function createDoorOrDrawerObject(spec: DoorDrawerSpec, material: THREE.Material
     pivot.name = `dd-pivot-${spec.id}`;
     mesh.position.set(0, spec.openDirection === "up" ? -spec.heightM / 2 : spec.heightM / 2, 0);
     pivot.position.set(spec.x, spec.y, spec.z);
+    if (spec.rotY !== 0) pivot.rotation.y = spec.rotY;
     if (spec.isOpen) {
       pivot.rotation.x = spec.openDirection === "up" ? -0.45 : 0.45;
     }
     pivot.add(mesh);
+    if (import.meta.env.DEV) {
+      console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] hinge-X final position", {
+        id: spec.id,
+        pivotPosition: pivot.position.toArray(),
+        meshLocalPosition: mesh.position.toArray(),
+      });
+    }
     return pivot;
   }
 
   const pivot = new THREE.Group();
   pivot.name = `dd-pivot-${spec.id}`;
-  mesh.position.set(spec.openDirection === "left" ? spec.widthM / 2 : -spec.widthM / 2, 0, 0);
+  const resolvedHingeSide =
+    spec.hingeSide ??
+    (spec.pivot === "left-edge" ? "left" : spec.pivot === "right-edge" ? "right" : undefined) ??
+    (spec.openDirection === "left" ? "left" : "right");
+  if (spec.pivot === "left-edge" || resolvedHingeSide === "left") {
+    mesh.position.set(spec.widthM / 2, 0, 0);
+  } else if (spec.pivot === "right-edge" || resolvedHingeSide === "right") {
+    mesh.position.set(-spec.widthM / 2, 0, 0);
+  } else {
+    mesh.position.set(spec.openDirection === "left" ? spec.widthM / 2 : -spec.widthM / 2, 0, 0);
+  }
   pivot.position.set(spec.x, spec.y, spec.z);
+  if (spec.rotY !== 0) pivot.rotation.y = spec.rotY;
   if (spec.isOpen) {
-    pivot.rotation.y = spec.openDirection === "left" ? -0.5 : 0.5;
+    const openSign = resolvedHingeSide === "left" ? -1 : 1;
+    pivot.rotation.y += openSign * 0.5;
   }
   pivot.add(mesh);
+  if (import.meta.env.DEV) {
+    console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] hinge-Y final position", {
+      id: spec.id,
+      pivotPosition: pivot.position.toArray(),
+      meshLocalPosition: mesh.position.toArray(),
+    });
+  }
   return pivot;
 }
 
@@ -392,41 +486,35 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
   }
 
   const customDoorDrawers = Array.isArray(opts.doorDrawerItems) ? opts.doorDrawerItems : [];
+  if (import.meta.env.DEV && customDoorDrawers.length > 0) {
+    console.log("[DoorDrawer][BoxBuilder.buildBox] doorDrawerItems received", {
+      count: customDoorDrawers.length,
+      width,
+      height,
+      depth,
+    });
+  }
   if (customDoorDrawers.length > 0) {
     const specs = buildDoorDrawerSpecs(depth, customDoorDrawers);
     specs.forEach((spec) => {
-      root.add(createDoorOrDrawerObject(spec, baseMaterial));
+      const object = createDoorOrDrawerObject(spec, baseMaterial);
+      root.add(object);
+      if (import.meta.env.DEV) {
+        console.log("[DoorDrawer][BoxBuilder.buildBox] object added to root", {
+          id: spec.id,
+          objectName: object.name,
+          rootChildrenCount: root.children.length,
+        });
+      }
     });
   } else {
     const doorCount = Math.max(0, Math.floor(opts.doors ?? 0));
-    if (doorCount > 0) {
-      const doorSpecs = getDoorSpecs(width, height, depth, doorCount);
-      const doorMat = baseMaterial;
-      doorSpecs.forEach((spec, i) => {
-        const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `door-${i}`, "front", { singleMaterial: doorMat });
-        mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-        if (opts.hingeType) mesh.userData.hingeType = opts.hingeType;
-        root.add(mesh);
-      });
-    }
+    const doorObjects = buildDoorObjects(width, height, depth, doorCount, baseMaterial);
+    doorObjects.forEach((obj) => root.add(obj));
 
     const drawerCount = Math.max(0, Math.floor(opts.drawers ?? 0));
-    if (drawerCount > 0) {
-      const drawerSpecs = getDrawerSpecs(width, height, depth, drawerCount);
-      const drawerMat = baseMaterial;
-      drawerSpecs.forEach((spec, i) => {
-        const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `drawer-${i}`, "front", { singleMaterial: drawerMat });
-        mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-        if (opts.runnerType) mesh.userData.runnerType = opts.runnerType;
-        root.add(mesh);
-      });
-      const drawerFrontSpecs = getDrawerFrontSpecs(width, height, depth, drawerCount);
-      drawerFrontSpecs.forEach((spec, i) => {
-        const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `drawer-front-${i}`, "front", { singleMaterial: drawerMat });
-        mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-        root.add(mesh);
-      });
-    }
+    const drawerObjects = buildDrawerObjects(width, height, depth, drawerCount, baseMaterial);
+    drawerObjects.forEach((obj) => root.add(obj));
   }
 
   root.position.set(0, 0, 0);
@@ -563,7 +651,11 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     if (
       name.startsWith("shelf-") ||
       name.startsWith("door-") ||
+      name.startsWith("door-builder-") ||
+      name.startsWith("door-leaf-") ||
       name.startsWith("drawer-") ||
+      name.startsWith("drawer-builder-") ||
+      name.startsWith("drawer-body-") ||
       name.startsWith("drawer-front-") ||
       name.startsWith("dd-item-") ||
       name.startsWith("dd-pivot-")
@@ -584,35 +676,37 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   });
 
   const customDoorDrawers = Array.isArray(opts.doorDrawerItems) ? opts.doorDrawerItems : [];
+  if (import.meta.env.DEV && opts.doorDrawerItems !== undefined) {
+    console.log("[DoorDrawer][BoxBuilder.updateBoxGroup] input", {
+      groupName: group.name,
+      customDoorDrawersCount: customDoorDrawers.length,
+      groupChildrenCountBefore: group.children.length,
+      width,
+      height,
+      depth,
+    });
+  }
   if (customDoorDrawers.length > 0) {
     const specs = buildDoorDrawerSpecs(depth, customDoorDrawers);
     specs.forEach((spec) => {
-      group.add(createDoorOrDrawerObject(spec, mat as THREE.Material));
+      const object = createDoorOrDrawerObject(spec, mat as THREE.Material);
+      group.add(object);
+      if (import.meta.env.DEV) {
+        console.log("[DoorDrawer][BoxBuilder.updateBoxGroup] object added to group", {
+          id: spec.id,
+          objectName: object.name,
+          groupChildrenCountAfterAdd: group.children.length,
+        });
+      }
     });
   } else {
     const doorCount = Math.max(0, Math.floor(opts.doors ?? 0));
-    const doorSpecs = getDoorSpecs(width, height, depth, doorCount);
-    doorSpecs.forEach((spec, i) => {
-      const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `door-${i}`, "front", { singleMaterial: mat as THREE.Material });
-      mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-      if (opts.hingeType) mesh.userData.hingeType = opts.hingeType;
-      group.add(mesh);
-    });
+    const doorObjects = buildDoorObjects(width, height, depth, doorCount, mat as THREE.Material);
+    doorObjects.forEach((obj) => group.add(obj));
 
     const drawerCount = Math.max(0, Math.floor(opts.drawers ?? 0));
-    const drawerSpecs = getDrawerSpecs(width, height, depth, drawerCount);
-    drawerSpecs.forEach((spec, i) => {
-      const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `drawer-${i}`, "front", { singleMaterial: mat as THREE.Material });
-      mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-      if (opts.runnerType) mesh.userData.runnerType = opts.runnerType;
-      group.add(mesh);
-    });
-    const drawerFrontSpecs = getDrawerFrontSpecs(width, height, depth, drawerCount);
-    drawerFrontSpecs.forEach((spec, i) => {
-      const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `drawer-front-${i}`, "front", { singleMaterial: mat as THREE.Material });
-      mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-      group.add(mesh);
-    });
+    const drawerObjects = buildDrawerObjects(width, height, depth, drawerCount, mat as THREE.Material);
+    drawerObjects.forEach((obj) => group.add(obj));
   }
 
   return { width, height, depth };

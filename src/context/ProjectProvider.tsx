@@ -263,6 +263,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
+  useEffect(() => {
+    console.log("[STATE][workspaceBoxes]", JSON.parse(JSON.stringify(project.workspaceBoxes)));
+  }, [project.workspaceBoxes]);
+  useEffect(() => {
+    console.log("[STATE][boxes]", JSON.parse(JSON.stringify(project.boxes)));
+  }, [project.boxes]);
   const viewerSync = useViewerSync(project);
   const undoStackRef = useRef<ProjectState[]>([]);
   const redoStackRef = useRef<ProjectState[]>([]);
@@ -446,6 +452,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
         }
         if (defaultModel) newBox.baseCabinetId = defaultModel.id;
+        newBox.doorsAndDrawers = generateDoorsAndDrawersForBox({
+          ...newBox,
+          doorsAndDrawers: newBox.doorsAndDrawers ?? [],
+        });
         const nextWorkspaceBoxes = [...prev.workspaceBoxes, newBox];
         const nextPrev = { ...prev, workspaceBoxes: nextWorkspaceBoxes };
         const boxes = buildBoxesFromWorkspace(nextPrev);
@@ -517,6 +527,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
         }
         newBox.baseCabinetId = baseModel.id;
+        newBox.doorsAndDrawers = generateDoorsAndDrawersForBox({
+          ...newBox,
+          doorsAndDrawers: newBox.doorsAndDrawers ?? [],
+        });
 
         const nextWorkspaceBoxes = [...prev.workspaceBoxes, newBox];
         const nextPrev = { ...prev, workspaceBoxes: nextWorkspaceBoxes };
@@ -857,14 +871,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === prev.selectedWorkspaceBoxId
-            ? {
-                ...box,
-                prateleiras: valor,
-                panelIds: ensureBoxPanelIds(box.panelIds, {
+            ? (() => {
+                const updatedBox = {
                   ...box,
                   prateleiras: valor,
-                }),
-              }
+                  panelIds: ensureBoxPanelIds(box.panelIds, {
+                    ...box,
+                    prateleiras: valor,
+                  }),
+                };
+                return {
+                  ...updatedBox,
+                  doorsAndDrawers: generateDoorsAndDrawersForBox({
+                    ...updatedBox,
+                    doorsAndDrawers: updatedBox.doorsAndDrawers ?? [],
+                  }),
+                };
+              })()
             : box
         );
         return recomputeState(
@@ -887,14 +910,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === prev.selectedWorkspaceBoxId
-            ? {
-                ...box,
-                gavetas: valor,
-                panelIds: ensureBoxPanelIds(box.panelIds, {
+            ? (() => {
+                const updatedBox = {
                   ...box,
                   gavetas: valor,
-                }),
-              }
+                  panelIds: ensureBoxPanelIds(box.panelIds, {
+                    ...box,
+                    gavetas: valor,
+                  }),
+                };
+                return {
+                  ...updatedBox,
+                  doorsAndDrawers: generateDoorsAndDrawersForBox({
+                    ...updatedBox,
+                    doorsAndDrawers: updatedBox.doorsAndDrawers ?? [],
+                  }),
+                };
+              })()
             : box
         );
         return recomputeState(
@@ -916,14 +948,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === prev.selectedWorkspaceBoxId
-            ? {
-                ...box,
-                portaTipo,
-                panelIds: ensureBoxPanelIds(box.panelIds, {
+            ? (() => {
+                const updatedBox = {
                   ...box,
                   portaTipo,
-                }),
-              }
+                  panelIds: ensureBoxPanelIds(box.panelIds, {
+                    ...box,
+                    portaTipo,
+                  }),
+                };
+                return {
+                  ...updatedBox,
+                  doorsAndDrawers: generateDoorsAndDrawersForBox({
+                    ...updatedBox,
+                    doorsAndDrawers: updatedBox.doorsAndDrawers ?? [],
+                  }),
+                };
+              })()
             : box
         );
         return recomputeState(prev, { workspaceBoxes }, true);
