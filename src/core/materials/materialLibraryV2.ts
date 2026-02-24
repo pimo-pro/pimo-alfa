@@ -45,8 +45,8 @@ export function buildVisualMaterial(
       ? { x: Number(preset.uvScale.x) || 1, y: Number(preset.uvScale.y) || 1 }
       : DEFAULT_UV_SCALE,
     uvRotation: Number(preset.uvRotation) || 0,
-    roughness: Math.max(0, Math.min(1, Number(preset.roughness) ?? DEFAULT_ROUGHNESS)),
-    metallic: Math.max(0, Math.min(1, Number(preset.metallic) ?? DEFAULT_METALLIC)),
+    roughness: Math.max(0, Math.min(1, Number(preset.roughness ?? DEFAULT_ROUGHNESS))),
+    metallic: Math.max(0, Math.min(1, Number(preset.metallic ?? DEFAULT_METALLIC))),
     normalMapUrl: preset.normalMapUrl,
   };
 }

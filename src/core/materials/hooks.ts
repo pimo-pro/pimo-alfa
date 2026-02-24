@@ -44,8 +44,8 @@ export function useMaterial(id: string | null): { material: MaterialRecord | nul
  */
 export function useSaveMaterial(): {
   save: (
-    data: CreateMaterialData | (UpdateMaterialData & { id?: string }),
-    editingId: string | null
+    _data: CreateMaterialData | (UpdateMaterialData & { id?: string }),
+    _editingId: string | null
   ) => { success: true; material: MaterialRecord } | { success: false; error: string };
 } {
   const save = useCallback(
@@ -68,7 +68,7 @@ export function useSaveMaterial(): {
  * Eliminar material por id. Retorna true se foi removido; a UI deve chamar reload() após sucesso.
  */
 export function useDeleteMaterial(): {
-  deleteMaterial: (id: string) => boolean;
+  deleteMaterial: (_id: string) => boolean;
 } {
   const deleteMaterial = useCallback((id: string) => {
     return deleteMaterialService(id);

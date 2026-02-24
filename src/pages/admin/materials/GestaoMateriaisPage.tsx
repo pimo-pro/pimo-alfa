@@ -189,7 +189,7 @@ export default function GestaoMateriaisPage() {
     color: form.color,
     textureUrl: form.textureUrl,
     espessura: Number(form.espessura) || 18,
-    precoPorM2: Number(form.precoPorM2) ?? 0,
+    precoPorM2: Number(form.precoPorM2 ?? 0),
     industrialMaterialId: form.industrialMaterialId || undefined,
     visualPresetId: form.visualPresetId || undefined,
   });

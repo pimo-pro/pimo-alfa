@@ -20,8 +20,8 @@ export interface PieceMaterialPayload {
  * Registar via setApplyPieceMaterialToPreview() para ativar no futuro.
  */
 export type ApplyPieceMaterialToPreviewFn = (
-  payload: PieceMaterialPayload,
-  target: unknown
+  _payload: PieceMaterialPayload,
+  _target: unknown
 ) => void;
 
 let applyPieceMaterialToPreview: ApplyPieceMaterialToPreviewFn | null = null;

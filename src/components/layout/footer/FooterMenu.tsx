@@ -3,8 +3,9 @@ import "./footerMenu.css";
 
 export default function FooterMenu() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  type FooterMenuLink = { label: string; href: string; divider?: false } | { divider: true; label: string };
 
-  const menuLinks = [
+  const menuLinks: FooterMenuLink[] = [
     { label: "Ajuda", href: "#" },
     { label: "Contacto", href: "#" },
     { label: "Documentação", href: "/documentacao" },
@@ -65,7 +66,7 @@ export default function FooterMenu() {
           {isDropdownOpen && (
             <div className="footer-menu-dropdown">
               <nav className="footer-menu-list">
-                {menuLinks.map((link: any, idx: number) => {
+                {menuLinks.map((link, idx: number) => {
                   if (link.divider) {
                     return (
                       <div key={idx} className="footer-menu-divider-label">

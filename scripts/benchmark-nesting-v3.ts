@@ -15,21 +15,6 @@ const OUT_DIR = join(__dirname, "cnc-examples-output");
 const OUT_JSON = join(OUT_DIR, "NESTING_V32_BENCHMARK_REPORT.json");
 const OUT_TXT = join(OUT_DIR, "NESTING_V32_BENCHMARK_REPORT.txt");
 
-function buildScenarioFromTest1Scaled(): Scenario {
-  const base = [
-    { nome: "Painel A", boxId: "T1", largura: 1500, altura: 200, esp: 19, qty: 22 },
-    { nome: "Painel B", boxId: "T1", largura: 1200, altura: 250, esp: 19, qty: 18 },
-    { nome: "Painel C", boxId: "T1", largura: 900, altura: 300, esp: 19, qty: 24 },
-    { nome: "Painel D", boxId: "T1", largura: 600, altura: 400, esp: 19, qty: 16 },
-    { nome: "Painel E", boxId: "T1", largura: 450, altura: 350, esp: 19, qty: 20 },
-  ];
-  return {
-    name: "TEST1_SCALED_MIX",
-    sheet: { largura_mm: 2750, altura_mm: 1830, espessura_mm: 19 },
-    items: base,
-  };
-}
-
 function buildScenarioIndustrialDense(): Scenario {
   return {
     name: "INDUSTRIAL_DENSE",

@@ -749,7 +749,6 @@ export class Viewer {
   }
 
   setCameraFrontView() {
-    console.log("CAMERA MOVE", "setCameraFrontView");
     this.cameraManager.setPosition(0, 2.2, 6);
     this.updateCameraTarget();
   }
@@ -1301,7 +1300,6 @@ export class Viewer {
   setCameraView(
     preset: "top" | "bottom" | "front" | "back" | "right" | "left" | "isometric"
   ): void {
-    console.log("CAMERA MOVE", `setCameraView:${preset}`);
     const centerX = this.roomBounds?.centerX ?? 0;
     const centerZ = this.roomBounds?.centerZ ?? 0;
     const minX = this.roomBounds?.minX ?? -2;
@@ -2375,26 +2373,6 @@ export class Viewer {
         if (fillLight.intensity <= 0) fillLight.intensity = 0.15;
         if (ambient.intensity <= 0) ambient.intensity = 0.4;
         if (hemisphere.intensity <= 0) hemisphere.intensity = 0.35;
-        if (import.meta.env.PROD) {
-          console.log(
-            "[Viewer] Lights:",
-            "key", keyLight.intensity,
-            "fill", fillLight.intensity,
-            "ambient", ambient.intensity,
-            "hemi", hemisphere.intensity,
-            "| Exposure:", this.rendererManager.renderer.toneMappingExposure
-          );
-          const first = this.boxes.values().next().value;
-          if (first?.material?.material instanceof THREE.MeshStandardMaterial) {
-            const m = first.material.material;
-            console.log(
-              "[Viewer] Material sample:",
-              "color", m.color.getStyle(),
-              "roughness", m.roughness,
-              "envMapIntensity", m.envMapIntensity
-            );
-          }
-        }
       }
       if (this.cameraManager.camera.position.y < 0.3) {
         this.cameraManager.camera.position.y = 0.3;

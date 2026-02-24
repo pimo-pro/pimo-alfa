@@ -9,7 +9,7 @@ import { INITIAL_MATERIAL_PRESETS } from "./presets";
 const DEFAULT_PRESET_ID = "branco_liso";
 
 /** Store em memória (cópia dos iniciais para permitir register/update/delete). */
-let store: Map<string, MaterialPreset> = new Map(
+const store: Map<string, MaterialPreset> = new Map(
   INITIAL_MATERIAL_PRESETS.map((p) => [p.id, { ...p }])
 );
 

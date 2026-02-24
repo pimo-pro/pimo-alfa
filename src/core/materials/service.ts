@@ -177,7 +177,7 @@ export function getMaterialDisplayInfo(materialIdOrLabel: string): MaterialDispl
     return {
       label: m.label,
       espessura: Number(m.espessura) || FALLBACK_ESPESSURA,
-      precoPorM2: Number(m.precoPorM2) ?? FALLBACK_PRECO,
+      precoPorM2: Number(m.precoPorM2 ?? FALLBACK_PRECO),
       categoryId: m.categoryId,
       materialId: m.id,
     };
@@ -206,7 +206,7 @@ export function getIndustrialMaterial(materialIdOrLabel: string): MaterialIndust
     return {
       nome: m.label,
       espessuraPadrao: Number(m.espessura) || FALLBACK_ESPESSURA,
-      custo_m2: Number(m.precoPorM2) ?? FALLBACK_PRECO,
+      custo_m2: Number(m.precoPorM2 ?? FALLBACK_PRECO),
       larguraChapa: CHAPA_PADRAO_LARGURA,
       alturaChapa: CHAPA_PADRAO_ALTURA,
     };
@@ -376,7 +376,7 @@ export function importMaterialsFromJson(
       color: typeof item.color === "string" ? item.color : undefined,
       textureUrl: typeof item.textureUrl === "string" ? item.textureUrl : undefined,
       espessura: typeof item.espessura === "number" ? item.espessura : Number(item.espessura) || 18,
-      precoPorM2: typeof item.precoPorM2 === "number" ? item.precoPorM2 : Number(item.precoPorM2) ?? 0,
+      precoPorM2: typeof item.precoPorM2 === "number" ? item.precoPorM2 : Number(item.precoPorM2 ?? 0),
       industrialMaterialId: typeof item.industrialMaterialId === "string" ? item.industrialMaterialId || undefined : undefined,
       visualPresetId: typeof item.visualPresetId === "string" ? item.visualPresetId || undefined : undefined,
     };

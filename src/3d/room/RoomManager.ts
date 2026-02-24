@@ -30,9 +30,9 @@ export type WallEntryForViewer = {
  */
 export interface IRoomManagerViewer {
   setRoomFromManager(
-    walls: WallEntryForViewer[],
-    bounds: RoomBounds,
-    group: THREE.Group
+    _walls: WallEntryForViewer[],
+    _bounds: RoomBounds,
+    _group: THREE.Group
   ): void;
   clearRoomFromManager(): void;
 }
