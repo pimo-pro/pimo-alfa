@@ -225,6 +225,13 @@ const createDoorOrDrawerForBox = (
   };
 };
 
+const getSelectedOrFirstWorkspaceBox = (state: ProjectState): WorkspaceBox | undefined => {
+  return (
+    state.workspaceBoxes.find((box) => box.id === state.selectedWorkspaceBoxId) ??
+    state.workspaceBoxes[0]
+  );
+};
+
 const readStoredProjects = (): StoredProject[] => {
   const raw = safeGetItem(PROJECTS_STORAGE_KEY);
   const parsed = safeParseJson<StoredProject[]>(raw);
@@ -1041,7 +1048,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     addDoorOrDrawer: (type) => {
       updateProject((prev) => {
-        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
         if (!selected) return prev;
         const nextItem = createDoorOrDrawerForBox(selected, type);
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
@@ -1052,6 +1059,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           workspaceBoxes,
+          selectedWorkspaceBoxId: selected.id,
+          selectedCaixaId: selected.id,
           changelog: appendChangelog(prev.changelog, {
             timestamp: new Date(),
             type: "box",
@@ -1063,7 +1072,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     removeDoorOrDrawer: (id) => {
       updateProject((prev) => {
-        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
         if (!selected) return prev;
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === selected.id
@@ -1073,6 +1082,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           workspaceBoxes,
+          selectedWorkspaceBoxId: selected.id,
+          selectedCaixaId: selected.id,
           changelog: appendChangelog(prev.changelog, {
             timestamp: new Date(),
             type: "box",
@@ -1084,7 +1095,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     updateDoorOrDrawer: (id, partial) => {
       updateProject((prev) => {
-        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
         if (!selected) return prev;
         const workspaceBoxes = prev.workspaceBoxes.map((box) => {
           if (box.id !== selected.id) return box;
@@ -1114,6 +1125,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           workspaceBoxes,
+          selectedWorkspaceBoxId: selected.id,
+          selectedCaixaId: selected.id,
           changelog: appendChangelog(prev.changelog, {
             timestamp: new Date(),
             type: "box",
@@ -1125,7 +1138,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     toggleDoorOrDrawer: (id) => {
       updateProject((prev) => {
-        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
         if (!selected) return prev;
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === selected.id
@@ -1135,6 +1148,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           workspaceBoxes,
+          selectedWorkspaceBoxId: selected.id,
+          selectedCaixaId: selected.id,
           changelog: appendChangelog(prev.changelog, {
             timestamp: new Date(),
             type: "box",
@@ -1146,7 +1161,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     generateDoorsAndDrawersForSelectedBox: () => {
       updateProject((prev) => {
-        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
         if (!selected) return prev;
         const generated = generateDoorsAndDrawersForBox({
           ...selected,
@@ -1158,6 +1173,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           workspaceBoxes,
+          selectedWorkspaceBoxId: selected.id,
+          selectedCaixaId: selected.id,
           changelog: appendChangelog(prev.changelog, {
             timestamp: new Date(),
             type: "box",

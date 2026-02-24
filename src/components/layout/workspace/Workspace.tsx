@@ -221,7 +221,9 @@ export default function Workspace({
 
 const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: number; height: number; depth: number } | null>(null);
   const [selectedBoxOverlayPosition, setSelectedBoxOverlayPosition] = useState<{ x: number; y: number } | null>(null);
-  const selectedWorkspaceBox = project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId);
+  const selectedWorkspaceBox =
+    project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId) ??
+    project.workspaceBoxes[0];
   const isSelectMode = (project.activeViewerTool ?? "select") === "select";
 
   useEffect(() => {

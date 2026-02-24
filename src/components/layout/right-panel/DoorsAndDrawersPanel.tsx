@@ -7,9 +7,9 @@ const openDirections: DoorOrDrawerOpenDirection[] = ["left", "right", "up", "dow
 
 export default function DoorsAndDrawersPanel() {
   const { project, actions } = useProject();
-  const selectedBox = project.workspaceBoxes.find(
-    (box) => box.id === project.selectedWorkspaceBoxId
-  );
+  const selectedBox =
+    project.workspaceBoxes.find((box) => box.id === project.selectedWorkspaceBoxId) ??
+    project.workspaceBoxes[0];
   const items = selectedBox?.doorsAndDrawers ?? [];
 
   const handleNumber =
