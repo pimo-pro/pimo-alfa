@@ -41,6 +41,7 @@ type DocStat = {
 };
 
 const files = import.meta.glob("../**/*.{ts,tsx,js,jsx,css,html}", { eager: false });
+const PAINEL_OBSERVER_THRESHOLDS: number[] = [0, 0.05, 0.15, 0.3, 0.5, 0.75, 1];
 
 const computeStats = (boxCount: number): DocStat[] => {
   // Valores atualizados manualmente (contagem real de arquivos .ts, .tsx, .js, .jsx)
@@ -69,6 +70,14 @@ export default function PainelReferencia() {
   const [roadmapPhases, setRoadmapPhases] = useState(() => getRoadmap());
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeNavId, setActiveNavId] = useState<string | null>(null);
+  const anchorIdToIndex = useMemo(
+    () => new Map(PANEL_NAV_ITEMS.map((item, index) => [item.anchorId, index])),
+    []
+  );
+  const anchorIdToNavId = useMemo(
+    () => new Map(PANEL_NAV_ITEMS.map((item) => [item.anchorId, item.id])),
+    []
+  );
 
   const scrollToSection = useCallback((anchorId: string, navId?: string) => {
     const el = document.getElementById(anchorId);
@@ -118,24 +127,30 @@ export default function PainelReferencia() {
   useEffect(() => {
     const contentEl = document.querySelector("[data-painel-content]");
     if (!contentEl) return;
-    const anchorIdToIndex = new Map(PANEL_NAV_ITEMS.map((n, i) => [n.anchorId, i]));
     const MIN_RATIO = 0.1;
     const observer = new IntersectionObserver(
       (entries) => {
-        const intersecting = entries
-          .filter((e) => e.isIntersecting && e.intersectionRatio >= MIN_RATIO)
-          .map((e) => ({ id: e.target.id, ratio: e.intersectionRatio }))
-          .filter((x) => anchorIdToIndex.has(x.id));
-        if (intersecting.length === 0) return;
-        const topmost = intersecting.sort(
-          (a, b) => (anchorIdToIndex.get(a.id) ?? 0) - (anchorIdToIndex.get(b.id) ?? 0)
-        )[0];
-        const navItem = PANEL_NAV_ITEMS.find((n) => n.anchorId === topmost.id);
-        if (navItem) {
-          setActiveNavId((prev) => (prev === navItem.id ? prev : navItem.id));
+        let topmostAnchorId: string | null = null;
+        let topmostIndex = Number.POSITIVE_INFINITY;
+
+        for (const entry of entries) {
+          if (!entry.isIntersecting || entry.intersectionRatio < MIN_RATIO) continue;
+          const anchorId = entry.target.id;
+          const index = anchorIdToIndex.get(anchorId);
+          if (index === undefined) continue;
+          if (index < topmostIndex) {
+            topmostIndex = index;
+            topmostAnchorId = anchorId;
+          }
+        }
+
+        if (!topmostAnchorId) return;
+        const navId = anchorIdToNavId.get(topmostAnchorId);
+        if (navId) {
+          setActiveNavId((prev) => (prev === navId ? prev : navId));
         }
       },
-      { root: contentEl, rootMargin: "-8% 0px -50% 0px", threshold: [0, 0.05, 0.15, 0.3, 0.5, 0.75, 1] }
+      { root: contentEl, rootMargin: "-8% 0px -50% 0px", threshold: PAINEL_OBSERVER_THRESHOLDS }
     );
     const timeout = setTimeout(() => {
       PANEL_NAV_ITEMS.forEach(({ anchorId }) => {
@@ -147,7 +162,7 @@ export default function PainelReferencia() {
       clearTimeout(timeout);
       observer.disconnect();
     };
-  }, []);
+  }, [anchorIdToIndex, anchorIdToNavId]);
 
   const currentPhase = getCurrentPhase(roadmapPhases);
   const currentPhaseProgress = getPhaseProgress(currentPhase);
@@ -177,9 +192,9 @@ export default function PainelReferencia() {
     [project.changelog]
   );
 
-  const refreshDocumentation = () => {
+  const refreshDocumentation = useCallback(() => {
     actions.logChangelog("Painel de Referência atualizado");
-  };
+  }, [actions]);
 
   return (
     <main

@@ -66,6 +66,11 @@ const DEFAULT_WALL: Omit<Wall, "id"> = {
   openings: [],
 };
 
+const logWallStore = (event: string, payload?: Record<string, unknown>) => {
+  if (!import.meta.env.DEV) return;
+  console.info("[wallStore]", event, payload ?? {});
+};
+
 /**
  * Layout alinhado à origem da sala (0,0). Piso = [0→W]×[0→D] em cm.
  * Posições são centros de cada parede; em metros ficam [0→width]×[0→depth].
@@ -74,7 +79,7 @@ const DEFAULT_WALL: Omit<Wall, "id"> = {
 function computeConnectedLayout(walls: Wall[]): Array<{ x: number; z: number; rotation: number }> {
   if (walls.length === 0) return [];
   const n = Math.min(4, walls.length);
-const lengths = walls.map((wall) => wall.lengthCm ?? DEFAULT_WALL.lengthCm);
+  const lengths = walls.map((wall) => wall.lengthCm ?? DEFAULT_WALL.lengthCm);
   const L0 = lengths[0];
   const L1 = lengths[1] ?? L0;
   const W = L0;
@@ -152,6 +157,7 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
 
   updateWall: (id: string, patch: Partial<Wall>, options = {}) => {
     const { walls } = get();
+    if (!id || !walls.some((wall) => wall.id === id)) return;
     const nextWalls = walls.map((wall) =>
       wall.id === id ? { ...wall, ...patch } : wall
     );
@@ -205,6 +211,7 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
     if (snap) {
       const dx = snap.to.x - snap.from.x;
       const dz = snap.to.z - snap.from.z;
+      logWallStore("snap-applied", { wallId, dx, dz, distance: bestDistance });
       isSnapping = true;
       get().updateWall(
         wallId,
@@ -242,7 +249,10 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
   },
 
   loadRoomConfig: (snapshot) => {
-    if (!snapshot || !Array.isArray(snapshot.walls) || snapshot.walls.length === 0) return;
+    if (!snapshot || !Array.isArray(snapshot.walls) || snapshot.walls.length === 0) {
+      logWallStore("invalid-room-config", { hasSnapshot: Boolean(snapshot) });
+      return;
+    }
     const walls = applyLayoutIfMissing(snapshot.walls);
     const mainWallIndex = Math.max(0, Math.min(3, (snapshot as { mainWallIndex?: number }).mainWallIndex ?? 0)) as 0 | 1 | 2 | 3;
     set({

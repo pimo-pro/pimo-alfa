@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import TemplatesManager from "../components/admin/TemplatesManager";
 import CADModelsManager from "../components/admin/CADModelsManager";
@@ -10,8 +10,9 @@ import RulesProfilesPage from "../components/admin/RulesProfilesPage";
 import DeployAdminPage from "../components/admin/DeployAdminPage";
 import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage";
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
-import ProjectProgress from "./ProjectProgress";
-import PainelReferencia from "./PainelReferencia";
+
+const ProjectProgress = lazy(() => import("./ProjectProgress"));
+const PainelReferencia = lazy(() => import("./PainelReferencia"));
 
 const sidebarItems = [
   "Dashboard",
@@ -131,9 +132,13 @@ export default function AdminPanel() {
           ) : active === "Deploy" ? (
             <DeployAdminPage />
           ) : active === "Project Progress" ? (
-            <ProjectProgress />
+            <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
+              <ProjectProgress />
+            </Suspense>
           ) : active === "Painel Referência" ? (
-            <PainelReferencia />
+            <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
+              <PainelReferencia />
+            </Suspense>
           ) : (
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
               Módulo em construção.

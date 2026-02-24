@@ -7,20 +7,21 @@ import BottomPanel from "./components/layout/bottom-panel/BottomPanel";
 import Workspace from "./components/layout/workspace/Workspace";
 import Footer from "./components/layout/footer/Footer";
 import WhatsAppButton from "./components/layout/WhatsAppButton";
-import PainelReferencia from "./pages/PainelReferencia";
-import SobreNos from "./pages/SobreNos";
-import Documentacao from "./pages/Documentacao";
-import AdminPanel from "./pages/AdminPanel";
-import ProjectProgress from "./pages/ProjectProgress";
-import DevPimoTest from "./__dev__/DevPimoTest";
 import { PimoViewerProvider } from "./context/PimoViewerContext";
 import { ProjectProvider } from "./context/ProjectProvider";
 import { MaterialProvider } from "./context/materialContext";
 import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
+
+const PainelReferencia = lazy(() => import("./pages/PainelReferencia"));
+const SobreNos = lazy(() => import("./pages/SobreNos"));
+const Documentacao = lazy(() => import("./pages/Documentacao"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
+const DevPimoTest = lazy(() => import("./__dev__/DevPimoTest"));
 
 export default function App() {
   const [leftOpen, setLeftOpen] = useState(true);
@@ -160,18 +161,22 @@ export default function App() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia ? (
-            <PainelReferencia />
-          ) : showSystemDocs ? (
-            <Documentacao />
-          ) : showAdmin ? (
-            <AdminPanel />
-          ) : showProjectProgress ? (
-            <ProjectProgress />
-          ) : showDevTest ? (
-            <DevPimoTest />
-          ) : showAbout ? (
-            <SobreNos />
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAbout ? (
+            <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
+              {showPainelReferencia ? (
+                <PainelReferencia />
+              ) : showSystemDocs ? (
+                <Documentacao />
+              ) : showAdmin ? (
+                <AdminPanel />
+              ) : showProjectProgress ? (
+                <ProjectProgress />
+              ) : showDevTest ? (
+                <DevPimoTest />
+              ) : (
+                <SobreNos />
+              )}
+            </Suspense>
           ) : (
             <ToolbarModalProvider>
             <div className="app-panels">

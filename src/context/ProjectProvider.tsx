@@ -37,6 +37,11 @@ const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
 const AUTO_SAVE_INTERVAL_MS = 3000;
 const MAX_HISTORY = 40;
 
+const logProjectProvider = (event: string, payload?: Record<string, unknown>) => {
+  if (!import.meta.env.DEV) return;
+  console.info("[ProjectProvider]", event, payload ?? {});
+};
+
 const getSpawnFromSelectedWall = (
   _dimensoes: { largura: number; profundidade: number; altura: number }
 ): { posicaoX_mm: number; posicaoZ_mm: number; rotacaoY: number } | null => null;
@@ -241,7 +246,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         ? (snap as ProjectSnapshot).viewerSnapshot
         : null;
     const restored = reviveState(projectState);
-    if (restored) setProject(applyResultados(restored));
+    if (restored) {
+      logProjectProvider("autosave-restored", {
+        boxes: restored.workspaceBoxes?.length ?? 0,
+        hasViewerSnapshot: Boolean(viewerSnapshot),
+      });
+      setProject(applyResultados(restored));
+    }
     if (viewerSnapshot) viewerSync.restoreViewerSnapshot(viewerSnapshot);
   }, [viewerSync]);
 
@@ -1294,7 +1305,10 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       const stored = readStoredProjects();
       const entryIndex = stored.findIndex((item) => item.id === id);
       const entry = stored[entryIndex];
-      if (!entry) return;
+      if (!entry) {
+        logProjectProvider("load-project-miss", { id });
+        return;
+      }
       const snapshot = entry.snapshot as ProjectSnapshot | ProjectState | unknown;
       const projectState = snapshot && typeof snapshot === "object" && "projectState" in snapshot
         ? (snapshot as ProjectSnapshot).projectState
@@ -1315,6 +1329,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       viewerSync.restoreViewerSnapshot(viewerSnapshot ?? null);
       const restored = reviveState(projectState);
       if (!restored) return;
+      logProjectProvider("project-loaded", { id, boxes: restored.workspaceBoxes?.length ?? 0 });
       updateProject(() => applyResultados(restored));
     },
     loadProjectFromTemplate: (templateId) => {

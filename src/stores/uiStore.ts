@@ -15,17 +15,49 @@ export interface UiStoreState {
   clearSelection: () => void;
 }
 
+const logUiStore = (event: string, payload?: Record<string, unknown>) => {
+  if (!import.meta.env.DEV) return;
+  console.info("[uiStore]", event, payload ?? {});
+};
+
+function isValidSelectedObject(value: SelectedObject): boolean {
+  if (!value || typeof value !== "object" || typeof value.type !== "string") return false;
+  if (value.type === "none") return true;
+  return typeof (value as { id?: unknown }).id === "string" && (value as { id: string }).id.trim().length > 0;
+}
+
 export const uiStore = createStore<UiStoreState>((set) => ({
   selectedTool: "home",
   selectedObject: { type: "none" },
   setSelectedTool: (toolId) => {
-    set({ selectedTool: toolId });
+    set((state) => {
+      if (state.selectedTool === toolId) return state;
+      return { ...state, selectedTool: toolId };
+    });
   },
   setSelectedObject: (selected) => {
-    set({ selectedObject: selected });
+    if (!isValidSelectedObject(selected)) {
+      logUiStore("invalid-selected-object", { selected });
+      return;
+    }
+    set((state) => {
+      if (
+        state.selectedObject.type === selected.type &&
+        ((state.selectedObject.type === "none" && selected.type === "none") ||
+          (state.selectedObject.type !== "none" &&
+            selected.type !== "none" &&
+            state.selectedObject.id === selected.id))
+      ) {
+        return state;
+      }
+      return { ...state, selectedObject: selected };
+    });
   },
   clearSelection: () => {
-    set({ selectedObject: { type: "none" } });
+    set((state) => {
+      if (state.selectedObject.type === "none") return state;
+      return { ...state, selectedObject: { type: "none" } };
+    });
   },
 }));
 

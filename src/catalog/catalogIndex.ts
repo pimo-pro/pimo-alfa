@@ -18,6 +18,9 @@ export const CATALOG_ITEMS: CatalogItem[] = BASE_CABINET_MODELS.map((m) => ({
   descricao: m.nome,
 }));
 
+const CATALOG_BY_ID = new Map(CATALOG_ITEMS.map((item) => [item.id, item]));
+const CATALOG_CATEGORIES = Array.from(new Set(CATALOG_ITEMS.map((item) => item.categoria))).sort();
+
 /**
  * Retorna todos os itens de uma categoria específica
  */
@@ -29,18 +32,14 @@ export function getCatalogItemsByCategory(categoria: string): CatalogItem[] {
  * Retorna um item do catálogo por ID
  */
 export function getCatalogItemById(id: string): CatalogItem | undefined {
-  return CATALOG_ITEMS.find((item) => item.id === id);
+  return CATALOG_BY_ID.get(id);
 }
 
 /**
  * Retorna todas as categorias únicas do catálogo
  */
 export function getCatalogCategories(): string[] {
-  const categorias = new Set<string>();
-  CATALOG_ITEMS.forEach((item) => {
-    categorias.add(item.categoria);
-  });
-  return Array.from(categorias).sort();
+  return CATALOG_CATEGORIES;
 }
 
 /**

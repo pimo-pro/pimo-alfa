@@ -38,37 +38,51 @@ const normalize = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
+const categoriaIdCache = new Map<string, string>();
+
 const resolveCategoriaId = (categoria?: string | null): string => {
-  const cat = normalize(categoria ?? "");
+  const source = categoria ?? "";
+  const cached = categoriaIdCache.get(source);
+  if (cached) return cached;
+  const cat = normalize(source);
+  let resolved = "outros";
   if (!cat) return "outros";
-  if (cat.includes("base")) return "cozinha";
-  if (cat.includes("cozinha")) return "cozinha";
-  if (cat.includes("roupeiro") || cat.includes("guarda-roupa") || cat.includes("guarda roupa")) return "roupeiro";
-  if (cat.includes("banheiro") || cat.includes("wc")) return "banheiro";
-  if (cat.includes("infantil") || cat.includes("quarto infantil") || cat.includes("quarto-infantil")) return "infantil";
-  if (cat.includes("quarto")) return "quarto";
-  if (cat.includes("sala") || cat.includes("living")) return "sala";
-  if (cat.includes("escritorio") || cat.includes("office")) return "escritorio";
-  return "outros";
+  if (cat.includes("base") || cat.includes("cozinha")) resolved = "cozinha";
+  else if (cat.includes("roupeiro") || cat.includes("guarda-roupa") || cat.includes("guarda roupa")) resolved = "roupeiro";
+  else if (cat.includes("banheiro") || cat.includes("wc")) resolved = "banheiro";
+  else if (cat.includes("infantil") || cat.includes("quarto infantil") || cat.includes("quarto-infantil")) resolved = "infantil";
+  else if (cat.includes("quarto")) resolved = "quarto";
+  else if (cat.includes("sala") || cat.includes("living")) resolved = "sala";
+  else if (cat.includes("escritorio") || cat.includes("office")) resolved = "escritorio";
+  categoriaIdCache.set(source, resolved);
+  return resolved;
 };
 
 const getTemplateDimensions = (template: DesignTemplate) => {
   if (!template.boxes?.length) return null;
-  const xs = template.boxes.map((b) => [b.posicaoX_mm, b.posicaoX_mm + b.dimensoes.largura]);
-  const ys = template.boxes.map((b) => {
-    const y = b.posicaoY_mm ?? 0;
-    return [y, y + b.dimensoes.altura];
-  });
-  const zs = template.boxes.map((b) => {
-    const z = b.posicaoZ_mm ?? 0;
-    return [z, z + b.dimensoes.profundidade];
-  });
-  const minX = Math.min(...xs.map((v) => v[0]));
-  const maxX = Math.max(...xs.map((v) => v[1]));
-  const minY = Math.min(...ys.map((v) => v[0]));
-  const maxY = Math.max(...ys.map((v) => v[1]));
-  const minZ = Math.min(...zs.map((v) => v[0]));
-  const maxZ = Math.max(...zs.map((v) => v[1]));
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  let minZ = Number.POSITIVE_INFINITY;
+  let maxZ = Number.NEGATIVE_INFINITY;
+
+  for (const box of template.boxes) {
+    const x0 = box.posicaoX_mm;
+    const y0 = box.posicaoY_mm ?? 0;
+    const z0 = box.posicaoZ_mm ?? 0;
+    const x1 = x0 + box.dimensoes.largura;
+    const y1 = y0 + box.dimensoes.altura;
+    const z1 = z0 + box.dimensoes.profundidade;
+
+    if (x0 < minX) minX = x0;
+    if (x1 > maxX) maxX = x1;
+    if (y0 < minY) minY = y0;
+    if (y1 > maxY) maxY = y1;
+    if (z0 < minZ) minZ = z0;
+    if (z1 > maxZ) maxZ = z1;
+  }
+
   return {
     largura_mm: Math.max(0, Math.round(maxX - minX)),
     altura_mm: Math.max(0, Math.round(maxY - minY)),
