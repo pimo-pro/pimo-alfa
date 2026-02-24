@@ -19,6 +19,19 @@ export default function FileManager() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          fontSize: 12,
+          color: "var(--text-muted)",
+          padding: "8px 10px",
+          borderRadius: "var(--radius)",
+          border: "1px dashed rgba(255,255,255,0.16)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
+        Painel em desenvolvimento: visualização local da estrutura e regras de bloqueio.
+        Operações reais de ficheiros/backend ainda não estão implementadas.
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
           <input

@@ -46,10 +46,26 @@ export default function DeployAdminPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Deploy Diário</h1>
       </div>
 
+      <div
+        style={{
+          maxWidth: 600,
+          marginBottom: 16,
+          fontSize: 12,
+          color: "var(--text-muted)",
+          padding: "8px 10px",
+          borderRadius: "var(--radius)",
+          border: "1px dashed rgba(245, 158, 11, 0.35)",
+          background: "rgba(245, 158, 11, 0.08)",
+        }}
+      >
+        Painel experimental: simulação local de histórico de deploy.
+        TODO: integrar backend real antes de qualquer uso em produção.
+      </div>
+
       <div style={{ maxWidth: 600, display: "flex", flexDirection: "column", gap: 20 }}>
         <Panel
           title="Publicar versão do dia"
-          description="Gera uma nova versão, faz backup da atual, build e deploy para a Hostinger."
+          description="Simula o registo de uma nova versão no histórico local (sem deploy real)."
         >
           <button
             type="button"

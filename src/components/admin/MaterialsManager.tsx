@@ -1,3 +1,20 @@
+/**
+ * LEGACY / DEPRECATED
+ * ---------------------------------------------------------------------------
+ * Este componente foi removido do fluxo principal do Admin para evitar
+ * duplicação de CRUD de materiais e múltiplas fontes de verdade.
+ *
+ * Motivo:
+ * - A gestão principal de materiais deve acontecer em
+ *   `src/pages/admin/materials/GestaoMateriaisPage.tsx` (CRUD moderno).
+ * - A vista `Materiais & Fabricação` permanece como complementar
+ *   (visual/manufatura), sem substituir o CRUD principal.
+ *
+ * Nota:
+ * - Mantido temporariamente apenas por compatibilidade histórica.
+ * - NÃO utilizar para novas funcionalidades.
+ * ---------------------------------------------------------------------------
+ */
 import { useMemo, useState } from "react";
 import Panel from "../ui/Panel";
 import type { MaterialIndustrial, IndustrialTool } from "../../core/manufacturing/materials";

@@ -14,27 +14,66 @@ import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
 const PainelReferencia = lazy(() => import("./PainelReferencia"));
 
-const sidebarItems = [
-  "Dashboard",
-  "Materials",
-  "Materiais & Fabricação",
-  "Ferragens",
-  "Templates",
-  "CAD Models",
-  "Regras",
-  "Regras Dinâmicas",
-  "Perfis de Regras",
-  "Component Types",
-  "Gestor de Ficheiros",
-  "Project Progress",
-  "Painel Referência",
-  "Pricing",
-  "System Settings",
-  "Users",
+type AdminTab =
+  | "Materials"
+  | "Materiais & Fabricação"
+  | "Ferragens"
+  | "Templates"
+  | "CAD Models"
+  | "Regras"
+  | "Regras Dinâmicas"
+  | "Perfis de Regras"
+  | "Component Types"
+  | "Gestor de Ficheiros"
+  | "Deploy"
+  | "Project Progress"
+  | "Painel Referência";
+
+type AdminMenuEntry =
+  | { type: "group"; label: string }
+  | { type: "item"; id: AdminTab; label: string; badge?: string; disabled?: boolean };
+
+const ADMIN_ACTIVE_TAB_STORAGE_KEY = "pimo_admin_active_tab";
+const DEFAULT_ADMIN_TAB: AdminTab = "Materials";
+
+const adminMenu: AdminMenuEntry[] = [
+  { type: "group", label: "Configuração" },
+  { type: "item", id: "Materials", label: "Materials" },
+  { type: "item", id: "Materiais & Fabricação", label: "Materiais & Fabricação" },
+  { type: "item", id: "Ferragens", label: "Ferragens" },
+  { type: "item", id: "Component Types", label: "Component Types" },
+  { type: "item", id: "Regras", label: "Regras" },
+  { type: "item", id: "Regras Dinâmicas", label: "Regras Dinâmicas" },
+  { type: "item", id: "Perfis de Regras", label: "Perfis de Regras" },
+  { type: "group", label: "Catálogo / Modelos" },
+  { type: "item", id: "CAD Models", label: "CAD Models" },
+  { type: "item", id: "Templates", label: "Templates" },
+  { type: "group", label: "Operações / Diagnóstico" },
+  { type: "item", id: "Gestor de Ficheiros", label: "Gestor de Ficheiros" },
+  { type: "item", id: "Deploy", label: "Deploy", badge: "Experimental" },
+  { type: "item", id: "Project Progress", label: "Project Progress" },
+  { type: "item", id: "Painel Referência", label: "Painel Referência" },
 ];
 
+const adminVisibleTabs = new Set<AdminTab>(
+  adminMenu.filter((entry): entry is Extract<AdminMenuEntry, { type: "item" }> => entry.type === "item").map((entry) => entry.id)
+);
+
+// Módulos planeados (futuro): manter fora do menu até fluxo real.
+// Dashboard, Pricing, System Settings e Users permanecem ocultos por enquanto.
+const ADMIN_PLANNED_HIDDEN_MODULES = ["Dashboard", "Pricing", "System Settings", "Users"] as const;
+void ADMIN_PLANNED_HIDDEN_MODULES;
+
 export default function AdminPanel() {
-  const [active, setActive] = useState("Materials");
+  const [active, setActive] = useState<AdminTab>(() => {
+    const saved = localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY) as AdminTab | null;
+    return saved && adminVisibleTabs.has(saved) ? saved : DEFAULT_ADMIN_TAB;
+  });
+
+  const setActiveTab = (next: AdminTab) => {
+    setActive(next);
+    localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, next);
+  };
 
   return (
     <main
@@ -62,13 +101,32 @@ export default function AdminPanel() {
         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
           Admin Panel
         </div>
-        {sidebarItems.map((item) => {
-          const isDisabled = item === "Users";
-          const isActive = active === item;
+        {adminMenu.map((entry, index) => {
+          if (entry.type === "group") {
+            return (
+              <div
+                key={`group-${entry.label}-${index}`}
+                style={{
+                  marginTop: index === 0 ? 4 : 10,
+                  marginBottom: 2,
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.6,
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                }}
+              >
+                {entry.label}
+              </div>
+            );
+          }
+
+          const isActive = active === entry.id;
+          const isDisabled = entry.disabled === true;
           return (
             <button
-              key={item}
-              onClick={() => !isDisabled && setActive(item)}
+              key={entry.id}
+              onClick={() => !isDisabled && setActiveTab(entry.id)}
               style={{
                 textAlign: "left",
                 padding: "8px 10px",
@@ -79,9 +137,27 @@ export default function AdminPanel() {
                 fontSize: 12,
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 opacity: isDisabled ? 0.4 : 1,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              {item}
+              <span>{entry.label}</span>
+              {entry.badge ? (
+                <span
+                  style={{
+                    fontSize: 10,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: "rgba(245, 158, 11, 0.2)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "var(--text-main)",
+                  }}
+                >
+                  {entry.badge}
+                </span>
+              ) : null}
             </button>
           );
         })}
