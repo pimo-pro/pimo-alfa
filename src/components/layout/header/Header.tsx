@@ -5,6 +5,7 @@ interface HeaderProps {
   painelReferenciaOpen: boolean;
   onToggleProjectProgress?: () => void;
   projectProgressOpen?: boolean;
+  routeTitle?: string;
 }
 
 export default function Header({
@@ -12,6 +13,7 @@ export default function Header({
   painelReferenciaOpen,
   onToggleProjectProgress,
   projectProgressOpen,
+  routeTitle,
 }: HeaderProps) {
   return (
     <header
@@ -28,7 +30,7 @@ export default function Header({
       <div
         style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
         onClick={() => {
-          window.history.pushState({}, "", "/");
+          window.history.pushState({}, "", "/projects");
           window.dispatchEvent(new PopStateEvent("popstate"));
         }}
       >
@@ -61,7 +63,7 @@ export default function Header({
         }}
       >
         <span style={{ color: "var(--text-muted)" }}>🌐 Idioma: PT</span>
-        <span style={{ color: "var(--text-main)" }}>📁 Projetos</span>
+        <span style={{ color: "var(--text-main)" }}>📍 {routeTitle ?? "Projetos"}</span>
         <button
           onClick={onToggleProjectProgress}
           style={{
@@ -74,7 +76,7 @@ export default function Header({
             cursor: "pointer",
           }}
         >
-          {projectProgressOpen ? "Voltar ao App" : "Progresso do Projeto"}
+          {projectProgressOpen ? "Abrir Design" : "Ir para Projetos"}
         </button>
         <button
           onClick={onTogglePainelReferencia}
@@ -88,7 +90,7 @@ export default function Header({
             cursor: "pointer",
           }}
         >
-          {painelReferenciaOpen ? "Voltar ao App" : "Painel de Referência"}
+          {painelReferenciaOpen ? "Abrir Design" : "Ir para Configurações"}
         </button>
       </div>
     </header>
