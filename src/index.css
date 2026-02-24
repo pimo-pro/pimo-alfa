@@ -802,6 +802,38 @@ body {
   pointer-events: none;
 }
 
+.door-drawer-overlay {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.door-drawer-item {
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(30, 41, 59, 0.45);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transform-origin: left center;
+  transition: transform 0.22s ease, background 0.22s ease, border-color 0.22s ease;
+}
+
+.door-drawer-item--door {
+  border-color: rgba(56, 189, 248, 0.55);
+}
+
+.door-drawer-item--drawer {
+  border-color: rgba(34, 197, 94, 0.55);
+}
+
+.door-drawer-item--open {
+  background: rgba(56, 189, 248, 0.15);
+}
+
 .workspace-placeholder {
   position: relative;
   width: 100%;

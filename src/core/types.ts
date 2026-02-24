@@ -1,4 +1,5 @@
 import type { Group } from "three";
+import type { DoorOrDrawer } from "../models/DoorOrDrawer";
 
 export interface Material {
   tipo: string;
@@ -198,6 +199,8 @@ export interface BoxModule {
   alturaGaveta: number;
   /** IDs únicos por peça (cima, fundo, laterais, costa, prateleiras, portas, gavetas). */
   panelIds?: BoxPanelIds;
+  /** Portas e gavetas configuráveis para UI/visualização local. */
+  doorsAndDrawers: DoorOrDrawer[];
   ferragens: Acessorio[];
   cutList: CutListItem[];
   cutListComPreco: CutListItemComPreco[];
@@ -248,6 +251,8 @@ export interface WorkspaceBox {
   autoRotateEnabled?: boolean;
   /** IDs únicos e estáveis por peça (cima, fundo, laterais, costa, prateleiras, portas, gavetas). Evita duplicate key no React. */
   panelIds?: BoxPanelIds;
+  /** Portas e gavetas configuráveis para UI/visualização local. */
+  doorsAndDrawers: DoorOrDrawer[];
   /** Id do material (CRUD) ou label legado. Usado para resolver material no Viewer e em exports. */
   material?: string;
 }

@@ -11,6 +11,7 @@ import { useMultiBoxManager } from "../../../core/multibox";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import ViewerToolbar from "../viewer-toolbar/ViewerToolbar";
 import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
+import DoorDrawerRenderer from "./DoorDrawerRenderer";
 import type { ViewerOptions } from "../../../3d/core/Viewer";
 import {
   toPlacedModelMm,
@@ -220,6 +221,7 @@ export default function Workspace({
 
 const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: number; height: number; depth: number } | null>(null);
   const [selectedBoxOverlayPosition, setSelectedBoxOverlayPosition] = useState<{ x: number; y: number } | null>(null);
+  const selectedWorkspaceBox = project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId);
   const isSelectMode = (project.activeViewerTool ?? "select") === "select";
 
   useEffect(() => {
@@ -402,6 +404,9 @@ return (
               height: typeof viewerHeight === "number" ? `${viewerHeight}px` : "100%",
             }}
           />
+          {selectedWorkspaceBox && (
+            <DoorDrawerRenderer items={selectedWorkspaceBox.doorsAndDrawers ?? []} />
+          )}
         </div>
 {isSelectMode && (selectedBoxDimensions || project.selectedWorkspaceBoxId) && selectedBoxOverlayPosition && (() => {
             const selectedBox = project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId);

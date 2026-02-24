@@ -17,6 +17,7 @@ import type { RuleViolation } from "../core/rules/types";
 import type { LayoutWarnings } from "../core/layout/layoutWarnings";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
+import type { DoorOrDrawer, DoorOrDrawerOpenDirection } from "../models/DoorOrDrawer";
 
 export interface ProjectState {
   projectName: string;
@@ -343,6 +344,24 @@ export interface ProjectActions {
   setWorkspaceBoxNome: (_boxId: string, _nome: string) => void;
   /** Define o material da caixa (id do CRUD ou label legado). */
   setWorkspaceBoxMaterial: (_boxId: string, _materialId: string) => void;
+  /** Adiciona porta ou gaveta na caixa selecionada. */
+  addDoorOrDrawer: (_type: "door" | "drawer") => void;
+  /** Remove porta/gaveta da caixa selecionada. */
+  removeDoorOrDrawer: (_id: string) => void;
+  /** Atualiza propriedades de porta/gaveta na caixa selecionada. */
+  updateDoorOrDrawer: (
+    _id: string,
+    _partial: Partial<
+      Pick<
+        DoorOrDrawer,
+        "width" | "height" | "depth" | "thickness" | "offsetX" | "offsetY" | "offsetZ"
+      > & { openDirection: DoorOrDrawerOpenDirection }
+    >
+  ) => void;
+  /** Abre/fecha porta/gaveta na caixa selecionada. */
+  toggleDoorOrDrawer: (_id: string) => void;
+  /** Gera automaticamente portas e gavetas para a caixa selecionada. */
+  generateDoorsAndDrawersForSelectedBox: () => void;
   toggleWorkspaceRotation: (_boxId: string) => void;
   rotateWorkspaceBox: (_boxId: string) => void;
   gerarDesign: () => void;

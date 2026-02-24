@@ -74,6 +74,7 @@ const createBox = (
   portaTipo: "porta_simples",
   gavetas: 1,
   alturaGaveta: 200,
+  doorsAndDrawers: [],
   ferragens: [],
   cutList: [],
   cutListComPreco: [],
@@ -154,6 +155,7 @@ export const createWorkspaceBox = (
     feetEnabled,
     autoRotateEnabled: true,
     panelIds,
+    doorsAndDrawers: [],
   };
 };
 
@@ -416,6 +418,7 @@ const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     gavetas: box.gavetas,
     alturaGaveta: box.alturaGaveta,
     panelIds,
+    doorsAndDrawers: box.doorsAndDrawers ?? [],
     material: box.material,
   };
 };

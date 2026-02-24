@@ -31,6 +31,9 @@ import { ensureBoxPanelIds } from "../core/box/panelIds";
 import { safeGetItem, safeParseJson, safeSetItem } from "../utils/storage";
 import { useViewerSync } from "../hooks/useViewerSync";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
+import type { DoorOrDrawer } from "../models/DoorOrDrawer";
+import { generateDoorsAndDrawersForBox } from "../services/doorDrawerGenerator";
+import { toggleDoorOrDrawer as toggleDoorOrDrawerItems } from "../services/doorDrawerActions";
 
 const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
@@ -96,8 +99,9 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
           .map((box: WorkspaceBox & { modelId?: string | null }) => {
             const models =
               box.models ?? (box.modelId != null ? [{ id: `${box.id}-model-1`, modelId: box.modelId }] : []);
+            const doorsAndDrawers = Array.isArray(box.doorsAndDrawers) ? box.doorsAndDrawers : [];
             const { modelId: _modelId, ...rest } = box;
-            return { ...rest, models };
+            return { ...rest, models, doorsAndDrawers };
           })
           .filter((box) => {
             if (!box?.id || typeof box.id !== "string") return false;
@@ -192,6 +196,34 @@ function normalizeExtractedParts(
   }
   return out;
 }
+
+const createDoorOrDrawerForBox = (
+  box: WorkspaceBox,
+  type: "door" | "drawer"
+): DoorOrDrawer => {
+  const thickness = Math.max(1, box.espessura || 18);
+  const width = Math.max(80, box.dimensoes.largura - thickness * 2);
+  const height = type === "door" ? Math.max(120, box.dimensoes.altura - thickness * 2) : 200;
+  const depth = type === "door" ? thickness : Math.max(80, box.dimensoes.profundidade - thickness);
+  const id =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `dd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return {
+    id,
+    parentBoxId: box.id,
+    type,
+    width,
+    height,
+    depth,
+    thickness,
+    openDirection: type === "door" ? "right" : "pull",
+    isOpen: false,
+    offsetX: 0,
+    offsetY: 0,
+    offsetZ: 2,
+  };
+};
 
 const readStoredProjects = (): StoredProject[] => {
   const raw = safeGetItem(PROJECTS_STORAGE_KEY);
@@ -518,6 +550,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           posicaoY_mm: selected.posicaoY_mm ?? (selected.dimensoes?.altura ?? 400) / 2,
           posicaoZ_mm: 0,
           models: (selected.models ?? []).map((m, i) => ({ ...m, id: `${newBoxId}-model-${Date.now()}-${i}` })),
+          doorsAndDrawers: (selected.doorsAndDrawers ?? []).map((item) => ({
+            ...item,
+            id:
+              typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID()
+                : `dd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            parentBoxId: newBoxId,
+          })),
           panelIds: ensureBoxPanelIds(undefined, {
             prateleiras: selected.prateleiras,
             portaTipo: selected.portaTipo,
@@ -999,6 +1039,134 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
+    addDoorOrDrawer: (type) => {
+      updateProject((prev) => {
+        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        if (!selected) return prev;
+        const nextItem = createDoorOrDrawerForBox(selected, type);
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? { ...box, doorsAndDrawers: [...(box.doorsAndDrawers ?? []), nextItem] }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: `${type === "door" ? "Porta" : "Gaveta"} adicionada`,
+          }),
+        };
+      });
+    },
+
+    removeDoorOrDrawer: (id) => {
+      updateProject((prev) => {
+        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? { ...box, doorsAndDrawers: (box.doorsAndDrawers ?? []).filter((item) => item.id !== id) }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Porta/Gaveta removida",
+          }),
+        };
+      });
+    },
+
+    updateDoorOrDrawer: (id, partial) => {
+      updateProject((prev) => {
+        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+          if (box.id !== selected.id) return box;
+          return {
+            ...box,
+            doorsAndDrawers: (box.doorsAndDrawers ?? []).map((item) => {
+              if (item.id !== id) return item;
+              return {
+                ...item,
+                ...partial,
+                width:
+                  partial.width !== undefined ? Math.max(1, Number(partial.width) || item.width) : item.width,
+                height:
+                  partial.height !== undefined
+                    ? Math.max(1, Number(partial.height) || item.height)
+                    : item.height,
+                depth:
+                  partial.depth !== undefined ? Math.max(1, Number(partial.depth) || item.depth) : item.depth,
+                thickness:
+                  partial.thickness !== undefined
+                    ? Math.max(1, Number(partial.thickness) || item.thickness)
+                    : item.thickness,
+              };
+            }),
+          };
+        });
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Porta/Gaveta editada",
+          }),
+        };
+      });
+    },
+
+    toggleDoorOrDrawer: (id) => {
+      updateProject((prev) => {
+        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? { ...box, doorsAndDrawers: toggleDoorOrDrawerItems(id)(box.doorsAndDrawers ?? []) }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Porta/Gaveta aberta/fechada",
+          }),
+        };
+      });
+    },
+
+    generateDoorsAndDrawersForSelectedBox: () => {
+      updateProject((prev) => {
+        const selected = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        if (!selected) return prev;
+        const generated = generateDoorsAndDrawersForBox({
+          ...selected,
+          doorsAndDrawers: selected.doorsAndDrawers ?? [],
+        });
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id ? { ...box, doorsAndDrawers: generated } : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Portas e gavetas geradas automaticamente",
+          }),
+        };
+      });
+    },
+
     toggleWorkspaceRotation: (boxId) => {
       updateProject((prev) => {
         const workspaceBoxes = prev.workspaceBoxes.map((box) => {
@@ -1359,6 +1527,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
           rotacaoY: 0,
           manualPosition: true,
           panelIds: ensureBoxPanelIds(undefined, { prateleiras, portaTipo, gavetas }),
+          doorsAndDrawers: [],
         };
       });
       const firstId = workspaceBoxes[0].id;

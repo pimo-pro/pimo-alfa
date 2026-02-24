@@ -12,6 +12,7 @@ import { runCutLayout, cutlistToPieces } from "../../../core/cutlayout/cutLayout
 import { buildCncFromCutlistItems } from "../../../core/cnc/cncPipeline";
 import type { GerarArquivoConteudo } from "./GerarArquivoModal";
 import GerarArquivoModal from "./GerarArquivoModal";
+import DoorsAndDrawersPanel from "./DoorsAndDrawersPanel";
 
 export default function RightPanel() {
   const { project, actions } = useProject();
@@ -198,6 +199,8 @@ const doc = buildCutLayoutPdf(result);
             onExportarCnc={onExportarCnc}
           />
         )}
+
+        <DoorsAndDrawersPanel />
 
       </div>
     </aside>
