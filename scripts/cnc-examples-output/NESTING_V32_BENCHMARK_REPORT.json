@@ -1,0 +1,469 @@
+{
+  "title": "Nesting v3.2 Benchmark (v2 vs v3 vs v3.1 vs v3.2)",
+  "generatedAt": "2026-02-24T09:20:40.038Z",
+  "scenarios": [
+    {
+      "scenario": "TEST1_SCALED_MIX",
+      "pieceCount": 100,
+      "v2": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 6426360,
+        "score": 16114864
+      },
+      "v3": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 6426360,
+        "score": 16114864
+      },
+      "v31": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 6426360,
+        "score": 16114864
+      },
+      "v32": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 48653500,
+        "score": 243015176.10873595
+      },
+      "compactness": {
+        "v2": 0.9407,
+        "v3": 0.9407,
+        "v31": 0.9407,
+        "v32": 0.7565
+      },
+      "deltas": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV31": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV32": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 42227140,
+        "scoreImprovement": -226900312.10873595,
+        "scoreImprovementPercent": -1408.019,
+        "scoreImprovementVsV31": -226900312.10873595,
+        "scoreImprovementVsV31Percent": -1408.019
+      },
+      "metaDiagnostics": {
+        "iterations": 220,
+        "bestScore": 16114864,
+        "initialScore": 16114864,
+        "improvementPercent": 0,
+        "acceptedMoves": 22,
+        "totalMoves": 220,
+        "initialSolutions": 1,
+        "winningSeed": 1337,
+        "winningStrategy": "shelf",
+        "winningBinHeuristic": "firstFit",
+        "convexHullWasteBySheet": [
+          0.03453631395926478,
+          0.06995608544461003,
+          0.04201172379533035,
+          0.010208047690014902,
+          0.10492786885245901,
+          0.011093591654247392,
+          0.0013412816691505216
+        ],
+        "fragmentationScore": 0.2860243055555556,
+        "pocketsCount": 4,
+        "linearGapScore": 2664.4800000000096,
+        "compactnessScore": 6.584940314826308
+      },
+      "metaDiagnosticsV31": {
+        "iterations": 480,
+        "bestScore": 16114864,
+        "initialScore": 16114864,
+        "improvementPercent": 0,
+        "acceptedMoves": 107,
+        "totalMoves": 480,
+        "initialSolutions": 8,
+        "winningSeed": 20260301,
+        "winningStrategy": "shelf",
+        "winningBinHeuristic": "firstFit",
+        "convexHullWasteBySheet": [
+          0.03453631395926478,
+          0.06995608544461003,
+          0.04201172379533035,
+          0.010208047690014902,
+          0.10492786885245901,
+          0.011093591654247392,
+          0.0013412816691505216
+        ],
+        "fragmentationScore": 0.2860243055555556,
+        "pocketsCount": 4,
+        "linearGapScore": 2664.4800000000096,
+        "compactnessScore": 6.584940314826308
+      },
+      "metaDiagnosticsV32": {
+        "iterations": 800,
+        "bestScore": 26633289.273947135,
+        "initialScore": 37311075.219810314,
+        "improvementPercent": 28.618,
+        "acceptedMoves": 40,
+        "totalMoves": 800,
+        "initialSolutions": 10,
+        "winningSeed": 20260302,
+        "winningStrategy": "skyline",
+        "winningBinHeuristic": "bestFit",
+        "convexHullWasteBySheet": [
+          0.17161847988077497,
+          0.24931743666169895,
+          0.13029925484351715,
+          0.17820417287630402,
+          0.23122146050670642,
+          0.14299493293591653,
+          0.18527511177347242
+        ],
+        "fragmentationScore": 0.7855902777777777,
+        "pocketsCount": 7,
+        "linearGapScore": 1236.5599999999997,
+        "compactnessScore": 5.295723127856259
+      },
+      "v3Winner": {
+        "strategy": "shelf",
+        "binHeuristic": "firstFit"
+      },
+      "v31Winner": {
+        "strategy": "shelf",
+        "binHeuristic": "firstFit"
+      },
+      "v32Winner": {
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      }
+    },
+    {
+      "scenario": "INDUSTRIAL_DENSE",
+      "pieceCount": 142,
+      "v2": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 3202800,
+        "score": 14200620
+      },
+      "v3": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 3202800,
+        "score": 14200620
+      },
+      "v31": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 3202800,
+        "score": 14200620
+      },
+      "v32": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 68076000,
+        "score": 305789588.0349005
+      },
+      "compactness": {
+        "v2": 0.954,
+        "v3": 0.954,
+        "v31": 0.954,
+        "v32": 0.9172
+      },
+      "deltas": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV31": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV32": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 64873200,
+        "scoreImprovement": -291588968.0349005,
+        "scoreImprovementPercent": -2053.354,
+        "scoreImprovementVsV31": -291588968.0349005,
+        "scoreImprovementVsV31Percent": -2053.354
+      },
+      "metaDiagnostics": {
+        "iterations": 220,
+        "bestScore": 14200620,
+        "initialScore": 14200620,
+        "improvementPercent": 0,
+        "acceptedMoves": 29,
+        "totalMoves": 220,
+        "initialSolutions": 1,
+        "winningSeed": 1337,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit",
+        "convexHullWasteBySheet": [
+          0.026468852459016392,
+          0.026468852459016392,
+          0.022336214605067062,
+          0.018799304520615998,
+          0.02981510183805266,
+          0.01857625434674615,
+          0.017889716840536512,
+          0.05500506706408346,
+          0.04794962742175857
+        ],
+        "fragmentationScore": 0.3585069444444445,
+        "pocketsCount": 3,
+        "linearGapScore": 844.4,
+        "compactnessScore": 8.586253376635982
+      },
+      "metaDiagnosticsV31": {
+        "iterations": 480,
+        "bestScore": 14200620,
+        "initialScore": 14200620,
+        "improvementPercent": 0,
+        "acceptedMoves": 196,
+        "totalMoves": 480,
+        "initialSolutions": 8,
+        "winningSeed": 20260301,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit",
+        "convexHullWasteBySheet": [
+          0.026468852459016392,
+          0.026468852459016392,
+          0.022336214605067062,
+          0.018799304520615998,
+          0.02981510183805266,
+          0.01857625434674615,
+          0.017889716840536512,
+          0.05500506706408346,
+          0.04794962742175857
+        ],
+        "fragmentationScore": 0.3585069444444445,
+        "pocketsCount": 3,
+        "linearGapScore": 844.4,
+        "compactnessScore": 8.586253376635982
+      },
+      "metaDiagnosticsV32": {
+        "iterations": 800,
+        "bestScore": 19022840.965147357,
+        "initialScore": 20809577.713416852,
+        "improvementPercent": 8.586,
+        "acceptedMoves": 47,
+        "totalMoves": 800,
+        "initialSolutions": 10,
+        "winningSeed": 20260309,
+        "winningStrategy": "skyline",
+        "winningBinHeuristic": "bestFit",
+        "convexHullWasteBySheet": [
+          0.025929756582215597,
+          0.025929756582215597,
+          0.09391813214108297,
+          0.0682589170392449,
+          0.043608643815201194,
+          0.04452886239443617,
+          0.04968147044212618,
+          0.06808186785891704,
+          0.13171535022354694
+        ],
+        "fragmentationScore": 0.57421875,
+        "pocketsCount": 2,
+        "linearGapScore": 590.1999999999998,
+        "compactnessScore": 8.255100697785116
+      },
+      "v3Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      },
+      "v31Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      },
+      "v32Winner": {
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      }
+    },
+    {
+      "scenario": "VARIED_CUTS",
+      "pieceCount": 142,
+      "v2": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 4576630,
+        "score": 15521537
+      },
+      "v3": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 4576630,
+        "score": 15521537
+      },
+      "v31": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 4576630,
+        "score": 15521537
+      },
+      "v32": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 2435670,
+        "score": 25066387.267249748
+      },
+      "compactness": {
+        "v2": 0.9102,
+        "v3": 0.9102,
+        "v31": 0.9102,
+        "v32": 0.8482
+      },
+      "deltas": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV31": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV32": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": -2140960,
+        "scoreImprovement": -9544850.267249748,
+        "scoreImprovementPercent": -61.494,
+        "scoreImprovementVsV31": -9544850.267249748,
+        "scoreImprovementVsV31Percent": -61.494
+      },
+      "metaDiagnostics": {
+        "iterations": 220,
+        "bestScore": 15521537,
+        "initialScore": 15521537,
+        "improvementPercent": 0,
+        "acceptedMoves": 17,
+        "totalMoves": 220,
+        "initialSolutions": 1,
+        "winningSeed": 1337,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit",
+        "convexHullWasteBySheet": [
+          0.021129657228017885,
+          0.021129657228017885,
+          0.01653224043715847,
+          0.04594058618976652,
+          0.051354396423248884,
+          0.036788176850471935,
+          0.049525782414307,
+          0.07108226527570789
+        ],
+        "fragmentationScore": 0.37239583333333337,
+        "pocketsCount": 14,
+        "linearGapScore": 1994.3000000000047,
+        "compactnessScore": 7.28156681095674
+      },
+      "metaDiagnosticsV31": {
+        "iterations": 480,
+        "bestScore": 15521537,
+        "initialScore": 15521537,
+        "improvementPercent": 0,
+        "acceptedMoves": 121,
+        "totalMoves": 480,
+        "initialSolutions": 8,
+        "winningSeed": 20260301,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit",
+        "convexHullWasteBySheet": [
+          0.021129657228017885,
+          0.021129657228017885,
+          0.01653224043715847,
+          0.04594058618976652,
+          0.051354396423248884,
+          0.036788176850471935,
+          0.049525782414307,
+          0.07108226527570789
+        ],
+        "fragmentationScore": 0.37239583333333337,
+        "pocketsCount": 14,
+        "linearGapScore": 1994.3000000000047,
+        "compactnessScore": 7.28156681095674
+      },
+      "metaDiagnosticsV32": {
+        "iterations": 800,
+        "bestScore": 23327226.730016526,
+        "initialScore": 25066387.267249748,
+        "improvementPercent": 6.938,
+        "acceptedMoves": 47,
+        "totalMoves": 800,
+        "initialSolutions": 10,
+        "winningSeed": 20260308,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "bestFit",
+        "convexHullWasteBySheet": [
+          0.17088196721311474,
+          0.1628461003477397,
+          0.17088196721311474,
+          0.16066845504222554,
+          0.15289657228017883,
+          0.1124488822652757,
+          0.10286994535519126,
+          0.04196691505216096
+        ],
+        "fragmentationScore": 0.6527777777777777,
+        "pocketsCount": 9,
+        "linearGapScore": 932.4999999999994,
+        "compactnessScore": 6.785769268167362
+      },
+      "v3Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      },
+      "v31Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      },
+      "v32Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "bestFit"
+      }
+    }
+  ],
+  "summary": {
+    "totalScenarios": 3,
+    "improvedScenariosV3": 0,
+    "improvedScenariosV31": 0,
+    "improvedScenariosV32": 0,
+    "panelReductionsV31": [],
+    "wasteReductionsV31": [],
+    "panelReductionsV32": [],
+    "wasteReductionsV32": []
+  }
+}

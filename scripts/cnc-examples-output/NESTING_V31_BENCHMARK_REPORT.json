@@ -1,0 +1,226 @@
+{
+  "title": "Nesting v3.1 Benchmark (v2 vs v3 vs v3.1)",
+  "generatedAt": "2026-02-24T08:50:19.965Z",
+  "scenarios": [
+    {
+      "scenario": "TEST1_SCALED_MIX",
+      "pieceCount": 100,
+      "v2": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 6426360,
+        "score": 16114864
+      },
+      "v3": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 6426360,
+        "score": 16114864
+      },
+      "v31": {
+        "totalSheets": 7,
+        "totalUsedArea": 25470000,
+        "wasteArea": 9757500,
+        "usefulLeftoverArea": 6426360,
+        "score": 16114864
+      },
+      "deltas": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV31": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "metaDiagnostics": {
+        "iterations": 220,
+        "bestScore": 16114864,
+        "initialScore": 16114864,
+        "improvementPercent": 0,
+        "acceptedMoves": 22,
+        "totalMoves": 220,
+        "initialSolutions": 1,
+        "winningSeed": 1337,
+        "winningStrategy": "shelf",
+        "winningBinHeuristic": "firstFit"
+      },
+      "metaDiagnosticsV31": {
+        "iterations": 2520,
+        "bestScore": 16114864,
+        "initialScore": 16114864,
+        "improvementPercent": 0,
+        "acceptedMoves": 202,
+        "totalMoves": 2520,
+        "initialSolutions": 14,
+        "winningSeed": 20260301,
+        "winningStrategy": "shelf",
+        "winningBinHeuristic": "firstFit"
+      },
+      "v3Winner": {
+        "strategy": "shelf",
+        "binHeuristic": "firstFit"
+      },
+      "v31Winner": {
+        "strategy": "shelf",
+        "binHeuristic": "firstFit"
+      }
+    },
+    {
+      "scenario": "INDUSTRIAL_DENSE",
+      "pieceCount": 142,
+      "v2": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 3202800,
+        "score": 14200620
+      },
+      "v3": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 3202800,
+        "score": 14200620
+      },
+      "v31": {
+        "totalSheets": 9,
+        "totalUsedArea": 39771600,
+        "wasteArea": 5520900,
+        "usefulLeftoverArea": 3202800,
+        "score": 14200620
+      },
+      "deltas": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV31": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "metaDiagnostics": {
+        "iterations": 220,
+        "bestScore": 14200620,
+        "initialScore": 14200620,
+        "improvementPercent": 0,
+        "acceptedMoves": 29,
+        "totalMoves": 220,
+        "initialSolutions": 1,
+        "winningSeed": 1337,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit"
+      },
+      "metaDiagnosticsV31": {
+        "iterations": 2520,
+        "bestScore": 14200620,
+        "initialScore": 14200620,
+        "improvementPercent": 0,
+        "acceptedMoves": 458,
+        "totalMoves": 2520,
+        "initialSolutions": 14,
+        "winningSeed": 20260301,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit"
+      },
+      "v3Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      },
+      "v31Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      }
+    },
+    {
+      "scenario": "VARIED_CUTS",
+      "pieceCount": 142,
+      "v2": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 4576630,
+        "score": 15521537
+      },
+      "v3": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 4576630,
+        "score": 15521537
+      },
+      "v31": {
+        "totalSheets": 8,
+        "totalUsedArea": 32280800,
+        "wasteArea": 7979200,
+        "usefulLeftoverArea": 4576630,
+        "score": 15521537
+      },
+      "deltas": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "deltasV31": {
+        "panelReduction": 0,
+        "wasteReduction": 0,
+        "usefulLeftoverIncrease": 0,
+        "scoreImprovement": 0,
+        "scoreImprovementPercent": 0
+      },
+      "metaDiagnostics": {
+        "iterations": 220,
+        "bestScore": 15521537,
+        "initialScore": 15521537,
+        "improvementPercent": 0,
+        "acceptedMoves": 17,
+        "totalMoves": 220,
+        "initialSolutions": 1,
+        "winningSeed": 1337,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit"
+      },
+      "metaDiagnosticsV31": {
+        "iterations": 2520,
+        "bestScore": 15521537,
+        "initialScore": 15521537,
+        "improvementPercent": 0,
+        "acceptedMoves": 297,
+        "totalMoves": 2520,
+        "initialSolutions": 14,
+        "winningSeed": 20260301,
+        "winningStrategy": "guillotine",
+        "winningBinHeuristic": "firstFit"
+      },
+      "v3Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      },
+      "v31Winner": {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit"
+      }
+    }
+  ],
+  "summary": {
+    "totalScenarios": 3,
+    "improvedScenariosV3": 0,
+    "improvedScenariosV31": 0,
+    "panelReductionsV31": [],
+    "wasteReductionsV31": []
+  }
+}

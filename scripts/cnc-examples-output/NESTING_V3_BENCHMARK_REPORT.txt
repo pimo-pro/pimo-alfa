@@ -1,0 +1,21 @@
+BENCHMARK NESTING V3 (SA + LNS)
+
+[TEST1_SCALED_MIX] peças=100
+v2: chapas=7 desperdício=9757500 sobra_útil=6426360 score=16114864
+v3: chapas=7 desperdício=9757500 sobra_útil=6426360 score=16114864
+delta: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
+meta: iterações=220 melhor=16114864 inicial=16114864 melhoria=0%
+
+[INDUSTRIAL_DENSE] peças=142
+v2: chapas=9 desperdício=5520900 sobra_útil=3202800 score=14200620
+v3: chapas=9 desperdício=5520900 sobra_útil=3202800 score=14200620
+delta: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
+meta: iterações=220 melhor=14200620 inicial=14200620 melhoria=0%
+
+[VARIED_CUTS] peças=142
+v2: chapas=8 desperdício=7979200 sobra_útil=4576630 score=15521537
+v3: chapas=8 desperdício=7979200 sobra_útil=4576630 score=15521537
+delta: chapas=0 desperdício=0 sobra_útil=0 score=0 (0%)
+meta: iterações=220 melhor=15521537 inicial=15521537 melhoria=0%
+
+Cenários com melhoria: 0/3

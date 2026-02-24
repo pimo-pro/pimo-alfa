@@ -116,71 +116,58 @@ function buildSideBlock(
 }
 
 /**
- * Gera TCN para um conjunto de sheets da mesma espessura.
- * - Header: DL, DH, DS (DS = espessura).
- * - SIDE#1 com W#81 iniciais (primeira peça) dentro do bloco; LF/HF/SF = dimensões da chapa.
+ * Gera TCN para um painel (sheet) único.
+ * - Header: DL, DH, DS do próprio painel.
+ * - SIDE#1 com operações W#81/W#89/W#2201 somente das peças desse painel.
  * - Final: SIDE#3, SIDE#4, SIDE#5, SIDE#6, SIDE#2 no mesmo padrão.
  */
-export function generateTcnForThickness(
-  sheetResults: SheetResult[],
-  thicknessMm: number,
+export function generateTcnForPanel(
+  sheetResult: SheetResult,
   _kerf_mm = 3,
-  acamBaseName = "Sheet"
+  acamName = "Sheet"
 ): string {
   const lines: string[] = [];
   lines.push(HEADER);
 
+  const thicknessMm = sheetResult.sheet.espessura_mm;
   const zCut = -thicknessMm;
   const zTool = Number(Math.abs(zCut).toFixed(2));
 
-  sheetResults.forEach((sheetResult, index) => {
-    const sheet = sheetResult.sheet;
-    const dl = sheet.largura_mm;
-    const dh = sheet.altura_mm;
-    const ds = thicknessMm;
-
-    lines.push(`$=Acam Name=${acamBaseName}_${index + 1}`);
-    lines.push(
-      `::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`
-    );
-
-    if (index === 0) {
-      lines.push("VAR{");
-      lines.push("}VAR");
-      lines.push("OPTI{");
-      lines.push("}OPTI");
-    }
-
-    const placements = sheetResult.placements.filter((pl) =>
-      isPlacementInsideSheet(
-        pl.x_mm,
-        pl.y_mm,
-        pl.largura_mm,
-        pl.altura_mm,
-        sheet.largura_mm,
-        sheet.altura_mm
-      )
-    );
-    const sideInnerLines: string[] = [];
-    placements.forEach((pl) => {
-      const w = pl.largura_mm;
-      const h = pl.altura_mm;
-      const x = pl.x_mm;
-      const y = pl.y_mm;
-      const points = buildContourPoints(x, y, w, h, zCut);
-      const firstPoint = points[0];
-      sideInnerLines.push(buildW81(points, Z_SAFETY_MM));
-      sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zTool));
-      sideInnerLines.push(buildW2201(points, zCut));
-    });
-
-    lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
-  });
-
-  const sheet = sheetResults[0]?.sheet;
-  const dl = sheet?.largura_mm ?? 2750;
-  const dh = sheet?.altura_mm ?? 1830;
+  const sheet = sheetResult.sheet;
+  const dl = sheet.largura_mm;
+  const dh = sheet.altura_mm;
   const ds = thicknessMm;
+
+  lines.push(`$=Acam Name=${acamName}`);
+  lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
+  lines.push("VAR{");
+  lines.push("}VAR");
+  lines.push("OPTI{");
+  lines.push("}OPTI");
+
+  const placements = sheetResult.placements.filter((pl) =>
+    isPlacementInsideSheet(
+      pl.x_mm,
+      pl.y_mm,
+      pl.largura_mm,
+      pl.altura_mm,
+      sheet.largura_mm,
+      sheet.altura_mm
+    )
+  );
+  const sideInnerLines: string[] = [];
+  placements.forEach((pl) => {
+    const w = pl.largura_mm;
+    const h = pl.altura_mm;
+    const x = pl.x_mm;
+    const y = pl.y_mm;
+    const points = buildContourPoints(x, y, w, h, zCut);
+    const firstPoint = points[0];
+    sideInnerLines.push(buildW81(points, Z_SAFETY_MM));
+    sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zTool));
+    sideInnerLines.push(buildW2201(points, zCut));
+  });
+  lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
 
   lines.push(...buildSideBlock(3, dl, ds, dh, [], false));
   lines.push(...buildSideBlock(4, dh, ds, dl, [], false));

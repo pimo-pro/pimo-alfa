@@ -25,6 +25,8 @@ export type CncDrillOperation = {
 };
 
 export type CncExportFile = {
+  filenameBase: string;
+  panelIndex: number;
   thicknessMm: number;
   tcn: string;
   kdt: string;

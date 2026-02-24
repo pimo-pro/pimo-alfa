@@ -86,6 +86,7 @@
   },
   "generatedFiles": {
     "tcn": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1 FINAL.tcn",
-    "txt": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1 FINAL.txt"
+    "txt": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1 FINAL.txt",
+    "perPanelDir": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-output\\TEST_1_FINAL"
   }
 }

@@ -1,0 +1,20 @@
+BENCHMARK COMPARATIVO - TEST 1
+Baseline antigo: 1 chapa(s) | desperdício=4 642 500 mm2 | sobra útil=3 934 500 mm2 | score=5 249 050
+Nesting v2: 1 chapa(s) | desperdício=4 642 500 mm2 | sobra útil=4 300 500 mm2 | score=5 212 450
+Vencedora: skyline+firstFit (score=5 212 450)
+Melhoria chapas: +0
+Melhoria desperdício: +0 mm2
+Melhoria sobra útil: +366 000 mm2
+Delta utilização: +0 p.p.
+
+Ranking de estratégias (v2):
+1. skyline+firstFit | score=5 212 450 | chapas=1 | desperdício=4 642 500 mm2 | sobra útil=4 300 500 mm2
+2. skyline+bestFit | score=5 249 050 | chapas=1 | desperdício=4 642 500 mm2 | sobra útil=3 934 500 mm2
+3. shelf+bestFit | score=5 249 250 | chapas=1 | desperdício=4 642 500 mm2 | sobra útil=3 932 500 mm2
+4. guillotine+bestFit | score=5 249 250 | chapas=1 | desperdício=4 642 500 mm2 | sobra útil=3 932 500 mm2
+5. shelf+firstFit | score=5 267 899 | chapas=1 | desperdício=4 642 500 mm2 | sobra útil=3 746 010 mm2
+6. guillotine+firstFit | score=5 267 899 | chapas=1 | desperdício=4 642 500 mm2 | sobra útil=3 746 010 mm2
+
+Oportunidades:
+- Ainda existe área residual; testar meta-heurísticas (LNS/simulated annealing) pode reduzir desperdício adicional.
+- A melhor e a segunda melhor estratégia estão muito próximas; vale testar mais variações por ordem de peças.

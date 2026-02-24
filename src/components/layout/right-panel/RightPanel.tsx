@@ -123,7 +123,7 @@ const doc = buildCutLayoutPdf(result);
     const cnc = cncBundle.cnc;
     const urls: string[] = [];
     for (const file of cnc.files) {
-      const base = `job_${slug}_${file.thicknessMm}mm`;
+      const base = file.filenameBase || `${slug}_panel_${file.panelIndex}`;
       const tcnBlob = new Blob([file.tcn], { type: "text/plain" });
       const kdtBlob = new Blob([file.kdt], { type: "text/xml" });
       const tcnUrl = URL.createObjectURL(tcnBlob);

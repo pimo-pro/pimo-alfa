@@ -1,0 +1,184 @@
+{
+  "scenario": "TEST 1",
+  "input": {
+    "sourceFile": "C:\\Users\\Mofreita\\pimo-v3\\scripts\\cnc-examples-output\\TEST 1.txt",
+    "pieceCount": 2,
+    "sheet": {
+      "dl": 2750,
+      "dh": 1830,
+      "ds": 19
+    }
+  },
+  "benchmark": {
+    "baselineOld": {
+      "description": "Engine antigo (equivalente): skyline + bestFit",
+      "metrics": {
+        "totalSheets": 1,
+        "totalUsedArea": 390000,
+        "totalWasteArea": 4642500,
+        "usefulLeftoverArea": 3934500,
+        "utilizationPercent": 7.75,
+        "selectedStrategy": "skyline",
+        "selectedBinHeuristic": "bestFit",
+        "selectedScore": 5249050,
+        "trialRuns": [
+          {
+            "strategy": "skyline",
+            "binHeuristic": "bestFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 3934500,
+            "score": 5249050
+          }
+        ]
+      }
+    },
+    "nestingV2": {
+      "description": "Nesting Engine v2 (multi-heurística)",
+      "metrics": {
+        "totalSheets": 1,
+        "totalUsedArea": 390000,
+        "totalWasteArea": 4642500,
+        "usefulLeftoverArea": 4300500,
+        "utilizationPercent": 7.75,
+        "selectedStrategy": "skyline",
+        "selectedBinHeuristic": "firstFit",
+        "selectedScore": 5212450,
+        "trialRuns": [
+          {
+            "strategy": "skyline",
+            "binHeuristic": "bestFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 3934500,
+            "score": 5249050
+          },
+          {
+            "strategy": "skyline",
+            "binHeuristic": "firstFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 4300500,
+            "score": 5212450
+          },
+          {
+            "strategy": "shelf",
+            "binHeuristic": "bestFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 3932500,
+            "score": 5249250
+          },
+          {
+            "strategy": "shelf",
+            "binHeuristic": "firstFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 3746010,
+            "score": 5267899
+          },
+          {
+            "strategy": "guillotine",
+            "binHeuristic": "bestFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 3932500,
+            "score": 5249250
+          },
+          {
+            "strategy": "guillotine",
+            "binHeuristic": "firstFit",
+            "sheetCount": 1,
+            "usedArea": 390000,
+            "wasteArea": 4642500,
+            "usefulLeftoverArea": 3746010,
+            "score": 5267899
+          }
+        ]
+      }
+    },
+    "strategyRanking": [
+      {
+        "strategy": "skyline",
+        "binHeuristic": "firstFit",
+        "sheetCount": 1,
+        "usedArea": 390000,
+        "wasteArea": 4642500,
+        "usefulLeftoverArea": 4300500,
+        "score": 5212450
+      },
+      {
+        "strategy": "skyline",
+        "binHeuristic": "bestFit",
+        "sheetCount": 1,
+        "usedArea": 390000,
+        "wasteArea": 4642500,
+        "usefulLeftoverArea": 3934500,
+        "score": 5249050
+      },
+      {
+        "strategy": "shelf",
+        "binHeuristic": "bestFit",
+        "sheetCount": 1,
+        "usedArea": 390000,
+        "wasteArea": 4642500,
+        "usefulLeftoverArea": 3932500,
+        "score": 5249250
+      },
+      {
+        "strategy": "guillotine",
+        "binHeuristic": "bestFit",
+        "sheetCount": 1,
+        "usedArea": 390000,
+        "wasteArea": 4642500,
+        "usefulLeftoverArea": 3932500,
+        "score": 5249250
+      },
+      {
+        "strategy": "shelf",
+        "binHeuristic": "firstFit",
+        "sheetCount": 1,
+        "usedArea": 390000,
+        "wasteArea": 4642500,
+        "usefulLeftoverArea": 3746010,
+        "score": 5267899
+      },
+      {
+        "strategy": "guillotine",
+        "binHeuristic": "firstFit",
+        "sheetCount": 1,
+        "usedArea": 390000,
+        "wasteArea": 4642500,
+        "usefulLeftoverArea": 3746010,
+        "score": 5267899
+      }
+    ],
+    "winner": {
+      "strategy": "skyline",
+      "binHeuristic": "firstFit",
+      "sheetCount": 1,
+      "usedArea": 390000,
+      "wasteArea": 4642500,
+      "usefulLeftoverArea": 4300500,
+      "score": 5212450
+    },
+    "improvements": {
+      "panelsDelta": 0,
+      "wasteAreaDelta": 0,
+      "usefulLeftoverDelta": 366000,
+      "utilizationDeltaPercent": 0,
+      "scoreDelta": 36600
+    },
+    "opportunities": [
+      "Ainda existe área residual; testar meta-heurísticas (LNS/simulated annealing) pode reduzir desperdício adicional.",
+      "A melhor e a segunda melhor estratégia estão muito próximas; vale testar mais variações por ordem de peças."
+    ]
+  },
+  "generatedAt": "2026-02-24T08:34:16.182Z"
+}

@@ -16,6 +16,7 @@ type ParsedPiece = {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const INPUT_FILE = join(__dirname, "cnc-examples-output", "TEST 1.txt");
 const OUT_DIR = join(__dirname, "cnc-examples-output");
+const OUT_PROJECT_DIR = join(__dirname, "cnc-output", "TEST_1_FINAL");
 
 function parseHeader(content: string): { dl: number; dh: number; ds: number } {
   const m = content.match(/::UNm\s+DL=(\d+)\s+DH=(\d+)\s+DS=(\d+)/);
@@ -136,6 +137,7 @@ function analyzeTcnCompatibility(tcn: string, dl: number, dh: number) {
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
+  await mkdir(OUT_PROJECT_DIR, { recursive: true });
   const raw = await readFile(INPUT_FILE, "utf8");
   const { dl, dh, ds } = parseHeader(raw);
   const parsedPieces = parsePiecesFromTcn(raw, ds);
@@ -169,8 +171,14 @@ async function main() {
   });
 
   const cnc = exportCncFiles({ projectName: "TEST_1_FINAL" }, result, []);
-  const cncFile = cnc.files.find((f) => f.thicknessMm === ds) ?? cnc.files[0];
-  if (!cncFile) throw new Error("Nenhum arquivo CNC foi gerado.");
+  if (cnc.files.length === 0) throw new Error("Nenhum arquivo CNC foi gerado.");
+
+  for (const file of cnc.files) {
+    const panelTcnPath = join(OUT_PROJECT_DIR, `${file.filenameBase}.tcn`);
+    await writeFile(panelTcnPath, file.tcn, "utf8");
+  }
+
+  const cncFile = cnc.files[0];
 
   const finalTcnPath = join(OUT_DIR, "TEST 1 FINAL.tcn");
   const finalTxtPath = join(OUT_DIR, "TEST 1 FINAL.txt");
@@ -235,6 +243,7 @@ async function main() {
     generatedFiles: {
       tcn: finalTcnPath,
       txt: finalTxtPath,
+      perPanelDir: OUT_PROJECT_DIR,
     },
   };
 

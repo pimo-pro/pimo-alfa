@@ -10,7 +10,9 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT_DIR = join(__dirname, "cnc-examples-output");
+const OUT_ROOT = join(__dirname, "cnc-output");
+const PROJECT_NAME = "job_exemplo";
+const OUT_DIR = join(OUT_ROOT, PROJECT_NAME);
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
@@ -54,10 +56,10 @@ async function main() {
     espessura_mm: 19,
   });
 
-  const cnc = exportCncFiles(null, layoutResult, []);
+  const cnc = exportCncFiles({ projectName: PROJECT_NAME }, layoutResult, []);
 
   for (const file of cnc.files) {
-    const base = `job_exemplo_${file.thicknessMm}mm`;
+    const base = file.filenameBase;
     const tcnPath = join(OUT_DIR, `${base}.tcn`);
     const kdtPath = join(OUT_DIR, `${base}.kdt`);
     await writeFile(tcnPath, file.tcn, "utf8");

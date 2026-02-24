@@ -55,11 +55,41 @@ export type CutLayoutResult = {
   diagnostics?: {
     flow: {
       skylineEnabled: boolean;
+      shelfEnabled?: boolean;
+      guillotineEnabled?: boolean;
       reorderEnabled: boolean;
       gapFillEnabled: boolean;
       gapFillAttempts: number;
       rescueAttempts: number;
       rotationPreferenceMode: "auto" | "aggressive" | "disabled";
+      selectedStrategy?: "skyline" | "shelf" | "guillotine";
+      selectedBinHeuristic?: "firstFit" | "bestFit";
+    };
+    trialRuns?: Array<{
+      strategy: "skyline" | "shelf" | "guillotine";
+      binHeuristic: "firstFit" | "bestFit";
+      sheetCount: number;
+      usedArea: number;
+      wasteArea: number;
+      usefulLeftoverArea: number;
+      score: number;
+    }>;
+    metaHeuristics?: {
+      iterations: number;
+      bestScore: number;
+      initialScore: number;
+      improvementPercent: number;
+      acceptedMoves: number;
+      totalMoves: number;
+      initialSolutions?: number;
+      winningSeed?: number;
+      winningStrategy?: "skyline" | "shelf" | "guillotine";
+      winningBinHeuristic?: "firstFit" | "bestFit";
+      convexHullWasteBySheet?: number[];
+      fragmentationScore?: number;
+      pocketsCount?: number;
+      linearGapScore?: number;
+      compactnessScore?: number;
     };
     rejectedByLimit: Array<{
       partName: string;
