@@ -11,6 +11,7 @@ import type { FerragemIndustrial } from "../../core/industriais/ferragensIndustr
 import { gerarFerragensIndustriais, agruparPorComponente } from "../../core/industriais/ferragensIndustriais";
 import { useComponentTypes } from "../../hooks/useComponentTypes";
 import { useFerragens } from "../../hooks/useFerragens";
+import { useToast } from "../../context/ToastContext";
 
 const CATEGORIAS: ComponentType["categoria"][] = ["estrutura", "porta", "gaveta", "acabamento"];
 const LADOS_OPCOES = ["direita", "esquerda", "topo", "fundo"];
@@ -22,6 +23,7 @@ const TIPOS_CONEXAO: NonNullable<ComponentType["regras_de_montagem"]>[number]["t
 ];
 
 export default function ComponentTypesAdminPage() {
+  const { showToast } = useToast();
   const { componentTypes, setComponentTypes } = useComponentTypes();
   const { ferragens } = useFerragens();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export default function ComponentTypesAdminPage() {
     aparece_no_pdf: true,
   });
   const [saveFeedback, setSaveFeedback] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const updateOne = (id: string, patch: Partial<ComponentType>) => {
     setComponentTypes((prev) =>
@@ -48,11 +51,11 @@ export default function ComponentTypesAdminPage() {
 
   const handleAddNew = () => {
     if (!newItem.id.trim() || !newItem.nome.trim()) {
-      alert("Preencha id e nome.");
+      showToast("Preencha id e nome.", "warning");
       return;
     }
     if (componentTypes.some((c) => c.id === newItem.id.trim())) {
-      alert("Já existe um tipo com este id.");
+      showToast("Já existe um tipo com este id.", "warning");
       return;
     }
     const item: ComponentType = {
@@ -73,11 +76,14 @@ export default function ComponentTypesAdminPage() {
       aparece_no_cutlist: true,
       aparece_no_pdf: true,
     });
+    showToast("Component Type adicionado com sucesso.", "info");
   };
 
   const handleResetDefaults = () => {
-    if (!confirm("Repor todos os Component Types para os valores padrão? As alterações atuais serão perdidas.")) return;
+    if (!confirmResetOpen) return;
     setComponentTypes(JSON.parse(JSON.stringify(COMPONENT_TYPES_DEFAULT)));
+    setConfirmResetOpen(false);
+    showToast("Component Types repostos para padrão.", "info");
   };
 
   const labelStyle = { fontSize: 11, color: "var(--text-muted)", marginBottom: 4 };
@@ -108,7 +114,7 @@ export default function ComponentTypesAdminPage() {
           <button
             type="button"
             className="button button-ghost"
-            onClick={handleResetDefaults}
+            onClick={() => setConfirmResetOpen(true)}
           >
             Repor padrão
           </button>
@@ -117,6 +123,24 @@ export default function ComponentTypesAdminPage() {
           )}
         </div>
       </div>
+
+      {confirmResetOpen && (
+        <Panel title="Confirmação de reset">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Repor todos os Component Types para os valores padrão? As alterações atuais serão perdidas.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="button" onClick={handleResetDefaults}>
+                Confirmar reset
+              </button>
+              <button type="button" className="button button-ghost" onClick={() => setConfirmResetOpen(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       <Panel title="Ferragens Industriais (preview)">
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>

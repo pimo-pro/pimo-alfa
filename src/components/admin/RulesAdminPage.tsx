@@ -8,12 +8,15 @@ import { useProject } from "../../context/useProject";
 import { defaultRulesConfig } from "../../core/rules/rulesConfig";
 import type { RulesConfig, PortaRange, PeRange } from "../../core/rules/rulesConfig";
 import Panel from "../ui/Panel";
+import { useToast } from "../../context/ToastContext";
 
 export default function RulesAdminPage() {
+  const { showToast } = useToast();
   const { project, actions } = useProject();
   const perfilAtivoId = project.rulesProfiles.perfilAtivoId;
   const [rules, setRules] = useState<RulesConfig>(project.rules);
   const [isSaved, setIsSaved] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   useEffect(() => {
     setRules(project.rules);
@@ -22,14 +25,17 @@ export default function RulesAdminPage() {
   const handleSave = () => {
     actions.updateRulesInProfile(perfilAtivoId, rules);
     setIsSaved(true);
+    showToast("Regras do perfil guardadas com sucesso.", "info");
     setTimeout(() => setIsSaved(false), 2000);
   };
 
   const handleReset = () => {
-    if (!confirm("Repor as regras deste perfil para os valores padrão?")) return;
+    if (!confirmResetOpen) return;
     const defaults = JSON.parse(JSON.stringify(defaultRulesConfig)) as RulesConfig;
     setRules(defaults);
     actions.updateRulesInProfile(perfilAtivoId, defaults);
+    setConfirmResetOpen(false);
+    showToast("Regras repostas para o padrão.", "info");
   };
 
   const updatePortaRange = (index: number, field: keyof PortaRange, value: number) => {
@@ -46,7 +52,7 @@ export default function RulesAdminPage() {
 
   const removePortaRange = (index: number) => {
     if (rules.portas.ranges.length <= 1) {
-      alert("Deve existir pelo menos um range.");
+      showToast("Deve existir pelo menos um range.", "warning");
       return;
     }
     const next = rules.portas.ranges.filter((_, i) => i !== index);
@@ -67,7 +73,7 @@ export default function RulesAdminPage() {
 
   const removePeRange = (index: number) => {
     if (rules.pes.ranges.length <= 1) {
-      alert("Deve existir pelo menos um range.");
+      showToast("Deve existir pelo menos um range.", "warning");
       return;
     }
     const next = rules.pes.ranges.filter((_, i) => i !== index);
@@ -77,9 +83,9 @@ export default function RulesAdminPage() {
   return (
     <div style={{ padding: 24, overflowY: "auto", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Regras Dinâmicas</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Regras do Perfil Ativo</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={handleReset} className="button button-ghost">
+          <button type="button" onClick={() => setConfirmResetOpen(true)} className="button button-ghost">
             Repor Defaults
           </button>
           <button
@@ -92,6 +98,24 @@ export default function RulesAdminPage() {
           </button>
         </div>
       </div>
+
+      {confirmResetOpen && (
+        <Panel title="Confirmar reposição">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Repor as regras deste perfil para os valores padrão?
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="button" onClick={handleReset}>
+                Confirmar
+              </button>
+              <button type="button" className="button button-ghost" onClick={() => setConfirmResetOpen(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       <div style={{ maxWidth: 900, display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Regras da Porta */}

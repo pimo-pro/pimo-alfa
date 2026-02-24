@@ -3,50 +3,74 @@
  * Listar, selecionar, criar, duplicar, editar e remover perfis.
  */
 
+import { useState } from "react";
 import { useProject } from "../../context/useProject";
 import { DEFAULT_PROFILE_ID, resetProfiles } from "../../core/rules/rulesProfilesStorage";
 import type { RulesProfile } from "../../core/rules/rulesProfiles";
 import Panel from "../ui/Panel";
+import { useToast } from "../../context/ToastContext";
 
 export default function RulesProfilesPage() {
+  const { showToast } = useToast();
   const { project, actions } = useProject();
   const { rulesProfiles } = project;
   const { perfis, perfilAtivoId } = rulesProfiles;
   const perfilAtivo = perfis.find((p) => p.id === perfilAtivoId);
+  const [newProfileName, setNewProfileName] = useState("");
+  const [duplicateNameById, setDuplicateNameById] = useState<Record<string, string>>({});
+  const [confirmResetProfilesOpen, setConfirmResetProfilesOpen] = useState(false);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
   const handleSetActive = (id: string) => {
     actions.setActiveRulesProfile(id);
   };
 
   const handleAddProfile = () => {
-    const nome = prompt("Nome do novo perfil:", "Novo Perfil");
-    if (!nome?.trim()) return;
-    actions.addRulesProfile({ nome: nome.trim() });
+    const nome = newProfileName.trim();
+    if (!nome) {
+      showToast("Defina o nome do novo perfil.", "warning");
+      return;
+    }
+    actions.addRulesProfile({ nome });
+    setNewProfileName("");
+    showToast("Perfil criado com sucesso.", "info");
   };
 
   const handleDuplicate = (profile: RulesProfile) => {
-    const nome = prompt("Nome da cópia:", `${profile.nome} (cópia)`);
-    if (!nome?.trim()) return;
+    const nome = (duplicateNameById[profile.id] ?? `${profile.nome} (cópia)`).trim();
+    if (!nome) {
+      showToast("Defina o nome da cópia.", "warning");
+      return;
+    }
     actions.addRulesProfile({
-      nome: nome.trim(),
+      nome,
       descricao: profile.descricao,
       rules: JSON.parse(JSON.stringify(profile.rules)),
     });
+    setDuplicateNameById((prev) => ({ ...prev, [profile.id]: `${profile.nome} (cópia)` }));
+    showToast("Perfil duplicado com sucesso.", "info");
   };
 
   const handleResetProfiles = () => {
-    if (!confirm("Repor todos os perfis para os valores padrão? Os perfis personalizados serão perdidos.")) return;
+    if (!confirmResetProfilesOpen) return;
     const config = resetProfiles();
     actions.setRulesProfilesConfig(config);
+    setConfirmResetProfilesOpen(false);
+    showToast("Perfis repostos para os valores padrão.", "info");
   };
 
   const handleRemove = (id: string) => {
     if (id === DEFAULT_PROFILE_ID) {
-      alert("O perfil Padrão não pode ser removido.");
+      showToast("O perfil Padrão não pode ser removido.", "warning");
       return;
     }
-    if (!confirm("Remover este perfil? Esta ação não pode ser desfeita.")) return;
+    if (pendingRemoveId !== id) {
+      setPendingRemoveId(id);
+      return;
+    }
     actions.removeRulesProfile(id);
+    setPendingRemoveId(null);
+    showToast("Perfil removido com sucesso.", "info");
   };
 
   return (
@@ -54,7 +78,7 @@ export default function RulesProfilesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Perfis de Regras</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={handleResetProfiles} className="button button-ghost">
+          <button type="button" onClick={() => setConfirmResetProfilesOpen(true)} className="button button-ghost">
             Repor Defaults
           </button>
           <button type="button" onClick={handleAddProfile} className="button button-primary">
@@ -63,9 +87,42 @@ export default function RulesProfilesPage() {
         </div>
       </div>
 
+      <Panel title="Criar novo perfil">
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            className="input"
+            value={newProfileName}
+            onChange={(e) => setNewProfileName(e.target.value)}
+            placeholder="Nome do novo perfil"
+            style={{ minWidth: 220 }}
+          />
+          <button type="button" className="button" onClick={handleAddProfile}>
+            Criar perfil
+          </button>
+        </div>
+      </Panel>
+
+      {confirmResetProfilesOpen && (
+        <Panel title="Confirmar reposição">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Repor todos os perfis para os valores padrão? Os perfis personalizados serão perdidos.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="button" onClick={handleResetProfiles}>
+                Confirmar
+              </button>
+              <button type="button" className="button button-ghost" onClick={() => setConfirmResetProfilesOpen(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Panel>
+      )}
+
       <Panel
         title="Perfil ativo"
-        description="As regras do perfil ativo são aplicadas em todo o projeto. Edite em Regras Dinâmicas."
+        description="As regras do perfil ativo são aplicadas em todo o projeto. Edite em Configuração de Regras."
       >
         <div style={{ fontSize: 14, color: "var(--text-main)" }}>
           {perfilAtivo ? (
@@ -119,6 +176,15 @@ export default function RulesProfilesPage() {
                 >
                   Duplicar
                 </button>
+                <input
+                  className="input"
+                  value={duplicateNameById[p.id] ?? `${p.nome} (cópia)`}
+                  onChange={(e) =>
+                    setDuplicateNameById((prev) => ({ ...prev, [p.id]: e.target.value }))
+                  }
+                  style={{ width: 170, fontSize: 11, padding: "4px 8px" }}
+                  placeholder="Nome da cópia"
+                />
                 {p.id !== DEFAULT_PROFILE_ID && (
                   <button
                     type="button"
@@ -126,7 +192,7 @@ export default function RulesProfilesPage() {
                     className="button button-ghost"
                     style={{ padding: "6px 10px", fontSize: 12, color: "var(--red)" }}
                   >
-                    Remover
+                    {pendingRemoveId === p.id ? "Confirmar remoção" : "Remover"}
                   </button>
                 )}
               </div>
@@ -136,7 +202,7 @@ export default function RulesProfilesPage() {
       </Panel>
 
       <div style={{ marginTop: 16, fontSize: 12, color: "var(--text-muted)" }}>
-        Para editar as regras do perfil ativo, use a secção <strong>Regras Dinâmicas</strong> no menu.
+        Para editar as regras do perfil ativo, use a secção <strong>Configuração de Regras</strong> no menu.
       </div>
     </div>
   );

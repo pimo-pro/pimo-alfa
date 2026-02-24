@@ -10,6 +10,7 @@ import RulesProfilesPage from "../components/admin/RulesProfilesPage";
 import DeployAdminPage from "../components/admin/DeployAdminPage";
 import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage";
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
+import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
 const PainelReferencia = lazy(() => import("./PainelReferencia"));
@@ -21,13 +22,14 @@ type AdminTab =
   | "Templates"
   | "CAD Models"
   | "Regras"
-  | "Regras Dinâmicas"
+  | "Configuração de Regras"
   | "Perfis de Regras"
   | "Component Types"
   | "Gestor de Ficheiros"
   | "Deploy"
   | "Project Progress"
-  | "Painel Referência";
+  | "Painel Referência"
+  | "System Settings";
 
 type AdminMenuEntry =
   | { type: "group"; label: string }
@@ -43,7 +45,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Ferragens", label: "Ferragens" },
   { type: "item", id: "Component Types", label: "Component Types" },
   { type: "item", id: "Regras", label: "Regras" },
-  { type: "item", id: "Regras Dinâmicas", label: "Regras Dinâmicas" },
+  { type: "item", id: "Configuração de Regras", label: "Configuração de Regras" },
   { type: "item", id: "Perfis de Regras", label: "Perfis de Regras" },
   { type: "group", label: "Catálogo / Modelos" },
   { type: "item", id: "CAD Models", label: "CAD Models" },
@@ -51,6 +53,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "group", label: "Operações / Diagnóstico" },
   { type: "item", id: "Gestor de Ficheiros", label: "Gestor de Ficheiros" },
   { type: "item", id: "Deploy", label: "Deploy", badge: "Experimental" },
+  { type: "item", id: "System Settings", label: "System Settings" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
 ];
@@ -60,8 +63,8 @@ const adminVisibleTabs = new Set<AdminTab>(
 );
 
 // Módulos planeados (futuro): manter fora do menu até fluxo real.
-// Dashboard, Pricing, System Settings e Users permanecem ocultos por enquanto.
-const ADMIN_PLANNED_HIDDEN_MODULES = ["Dashboard", "Pricing", "System Settings", "Users"] as const;
+// Dashboard, Pricing e Users permanecem ocultos por enquanto.
+const ADMIN_PLANNED_HIDDEN_MODULES = ["Dashboard", "Pricing", "Users"] as const;
 void ADMIN_PLANNED_HIDDEN_MODULES;
 
 export default function AdminPanel() {
@@ -197,7 +200,7 @@ export default function AdminPanel() {
             <CADModelsManager />
           ) : active === "Regras" ? (
             <RulesManager />
-          ) : active === "Regras Dinâmicas" ? (
+          ) : active === "Configuração de Regras" ? (
             <RulesAdminPage />
           ) : active === "Perfis de Regras" ? (
             <RulesProfilesPage />
@@ -207,6 +210,8 @@ export default function AdminPanel() {
             <FileManager />
           ) : active === "Deploy" ? (
             <DeployAdminPage />
+          ) : active === "System Settings" ? (
+            <SystemSettingsBase />
           ) : active === "Project Progress" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <ProjectProgress />

@@ -12,6 +12,7 @@ import { ProjectProvider } from "./context/ProjectProvider";
 import { MaterialProvider } from "./context/materialContext";
 import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
+import { SettingsProvider } from "./context/SettingsContext";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
@@ -136,6 +137,7 @@ export default function App() {
 
   return (
     <ProjectProvider>
+      <SettingsProvider>
         <MaterialProvider>
           <ToastProvider>
             <PimoViewerProvider>
@@ -269,6 +271,7 @@ export default function App() {
             </PimoViewerProvider>
           </ToastProvider>
         </MaterialProvider>
+      </SettingsProvider>
     </ProjectProvider>
   );
 }

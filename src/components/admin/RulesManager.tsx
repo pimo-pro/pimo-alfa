@@ -85,7 +85,7 @@ export default function RulesManager() {
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
       <Panel
-        title="Regras dinâmicas por modelo GLB"
+        title="Configuração de Regras por Modelo GLB"
         description="Defina regras de dimensão, material e compatibilidade por modelo. As regras são validadas quando o modelo está numa caixa."
       />
       <Panel title="Selecionar modelo">

@@ -90,6 +90,7 @@ export default function GestaoMateriaisPage() {
   const [importJson, setImportJson] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...materials];
@@ -207,15 +208,20 @@ export default function GestaoMateriaisPage() {
   };
 
   const handleDelete = (id: string, label: string) => {
-    if (!window.confirm(`Eliminar o material "${label}"?`)) return;
-    const removed = deleteMaterialFn(id);
+    setPendingDelete({ id, label });
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const removed = deleteMaterialFn(pendingDelete.id);
     if (removed) {
       reload();
-      if (panelOpen && editingId === id) closePanel();
+      if (panelOpen && editingId === pendingDelete.id) closePanel();
       showToast("Material eliminado.", "info");
     } else {
       showToast("Não foi possível eliminar o material.", "error");
     }
+    setPendingDelete(null);
   };
 
   const handleDuplicate = (id: string) => {
@@ -298,6 +304,28 @@ export default function GestaoMateriaisPage() {
           </button>
         </div>
       </div>
+
+      {pendingDelete && (
+        <Panel title="Confirmação de remoção">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Eliminar o material "{pendingDelete.label}"?
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="button" onClick={confirmDelete}>
+                Confirmar remoção
+              </button>
+              <button
+                type="button"
+                className="button button-ghost"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       {showImport && (
         <Panel title="Importar materiais (JSON)">

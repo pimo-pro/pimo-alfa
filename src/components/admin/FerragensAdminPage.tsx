@@ -7,6 +7,7 @@ import { useState } from "react";
 import Panel from "../ui/Panel";
 import type { Ferragem } from "../../core/ferragens/ferragens";
 import { useFerragens } from "../../hooks/useFerragens";
+import { useToast } from "../../context/ToastContext";
 
 const CATEGORIAS: Ferragem["categoria"][] = [
   "parafuso",
@@ -19,9 +20,11 @@ const CATEGORIAS: Ferragem["categoria"][] = [
 ];
 
 export default function FerragensAdminPage() {
+  const { showToast } = useToast();
   const { ferragens, setFerragens } = useFerragens();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [form, setForm] = useState<Ferragem>({
     id: "",
     nome: "",
@@ -49,11 +52,11 @@ export default function FerragensAdminPage() {
 
   const handleAddNew = () => {
     if (!form.id.trim() || !form.nome.trim()) {
-      alert("Preencha id e nome.");
+      showToast("Preencha id e nome.", "warning");
       return;
     }
     if (ferragens.some((f) => f.id === form.id.trim())) {
-      alert("Já existe uma ferragem com este id.");
+      showToast("Já existe uma ferragem com este id.", "warning");
       return;
     }
     const newFerragem: Ferragem = {
@@ -66,11 +69,18 @@ export default function FerragensAdminPage() {
     setFerragens((prev) => [...prev, newFerragem]);
     setAddingNew(false);
     setForm({ id: "", nome: "", categoria: "parafuso", medidas: "", descricao: "" });
+    showToast("Ferragem adicionada com sucesso.", "info");
   };
 
   const handleRemove = (id: string) => {
-    if (!confirm("Remover esta ferragem?")) return;
-    setFerragens((prev) => prev.filter((f) => f.id !== id));
+    setPendingRemoveId(id);
+  };
+
+  const confirmRemove = () => {
+    if (!pendingRemoveId) return;
+    setFerragens((prev) => prev.filter((f) => f.id !== pendingRemoveId));
+    setPendingRemoveId(null);
+    showToast("Ferragem removida.", "info");
   };
 
   const labelStyle = { fontSize: 11, color: "var(--text-muted)", marginBottom: 4 };
@@ -89,6 +99,24 @@ export default function FerragensAdminPage() {
           Adicionar Ferragem
         </button>
       </div>
+
+      {pendingRemoveId && (
+        <Panel title="Confirmação de remoção">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Remover esta ferragem?
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="button" onClick={confirmRemove}>
+                Confirmar remoção
+              </button>
+              <button type="button" className="button button-ghost" onClick={() => setPendingRemoveId(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       {addingNew && (
         <Panel title="Nova Ferragem">
