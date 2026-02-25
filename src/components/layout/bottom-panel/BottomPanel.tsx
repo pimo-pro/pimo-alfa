@@ -26,8 +26,8 @@ export default function BottomPanel() {
   // boxes em useMemo para referência estável e evitar reexecução dos useMemo abaixo a cada render
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const cutlist = useMemo(
-    () => cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId),
-    [boxes, project.rules, project.materialId]
+    () => cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId, project.projectName),
+    [boxes, project.rules, project.materialId, project.projectName]
   );
   const ferragens = useMemo(() => ferragensFromBoxes(boxes, project.rules), [boxes, project.rules]);
   const totalPecas = cutlist.reduce((sum, item) => sum + item.quantidade, 0);

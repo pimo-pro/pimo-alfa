@@ -56,6 +56,69 @@ export type RulesConfig = {
     profundidadeFuro: number;
     /** Diâmetro dos furos (mm). */
     diametroFuro: number;
+    /** Configuração técnica completa por tipo de furação. */
+    tecnicos: {
+      cavilha: {
+        enabled: boolean;
+        distanciaFrente: number;
+        distanciaFundo: number;
+        distanciaLateral: number;
+        distanciaTopo: number;
+        distanciaBase: number;
+        offsetLateral: number;
+        aplicarEm: {
+          cima: boolean;
+          fundo: boolean;
+          lateralEsquerda: boolean;
+          lateralDireita: boolean;
+        };
+        diametro: number;
+        profundidade: number;
+      };
+      parafuso: {
+        enabled: boolean;
+        distanciaFrente: number;
+        distanciaFundo: number;
+        distanciaLateral: number;
+        offsetDaCavilha: number;
+        aplicarEm: {
+          cima: boolean;
+          fundo: boolean;
+        };
+        diametro: number;
+        profundidade: number;
+        profundidadeIgualEspessura: boolean;
+      };
+      dobradica: {
+        enabled: boolean;
+        distanciaBordaLateral: number;
+        offsetSuperior: number;
+        offsetInferior: number;
+        numeroPorPorta: number;
+        offsetsVerticaisMm: number[];
+        diametro: number;
+        profundidade: number;
+      };
+      corredica: {
+        enabled: boolean;
+        offsetFrente: number;
+        offsetFundo: number;
+        alturaRelativaFundo: number;
+        offsetVerticalAdicional: number;
+        diametro: number;
+        profundidade: number;
+      };
+      prateleira: {
+        enabled: boolean;
+        margemTopo: number;
+        margemBase: number;
+        recuoBorda: number;
+        espacamento: number;
+        numeroFurosPorColuna: number;
+        diametro: number;
+        profundidade: number;
+      };
+    };
   };
   madeira: {
     /** Espessura fixa da COSTA (mm). */
@@ -64,6 +127,24 @@ export type RulesConfig = {
     calcularAlturaLaterais: boolean;
     /** Se true, profundidade das peças não muda com dimensões (futuro uso). */
     profundidadeFixa: boolean;
+  };
+  qrcode: {
+    tamanhoQr: number;
+    tamanhoTexto: number;
+    modoPrefixoProjeto: "auto" | "3" | "2+2" | "1+1+1";
+    reiniciarContagemEm99: boolean;
+  };
+  etiqueta: {
+    larguraMm: number;
+    alturaMm: number;
+    bordaPx: number;
+    margemInternaMm: number;
+    tamanhoQr: number;
+    tamanhoTexto: number;
+    mostrarLogo: boolean;
+    mostrarMaterial: boolean;
+    mostrarDimensoes: boolean;
+    mostrarReferencia: boolean;
   };
 };
 
@@ -100,11 +181,91 @@ export const defaultRulesConfig: RulesConfig = {
     distanciaEntreFuros: 50,
     profundidadeFuro: 10,
     diametroFuro: 5,
+    tecnicos: {
+      cavilha: {
+        enabled: true,
+        distanciaFrente: 60,
+        distanciaFundo: 60,
+        distanciaLateral: 60,
+        distanciaTopo: 60,
+        distanciaBase: 60,
+        offsetLateral: 0,
+        aplicarEm: {
+          cima: true,
+          fundo: true,
+          lateralEsquerda: true,
+          lateralDireita: true,
+        },
+        diametro: 10,
+        profundidade: 10,
+      },
+      parafuso: {
+        enabled: true,
+        distanciaFrente: 40,
+        distanciaFundo: 40,
+        distanciaLateral: 60,
+        offsetDaCavilha: 20,
+        aplicarEm: {
+          cima: true,
+          fundo: true,
+        },
+        diametro: 4,
+        profundidade: 19,
+        profundidadeIgualEspessura: true,
+      },
+      dobradica: {
+        enabled: true,
+        distanciaBordaLateral: 22,
+        offsetSuperior: 100,
+        offsetInferior: 100,
+        numeroPorPorta: 2,
+        offsetsVerticaisMm: [],
+        diametro: 35,
+        profundidade: 12,
+      },
+      corredica: {
+        enabled: true,
+        offsetFrente: 37,
+        offsetFundo: 37,
+        alturaRelativaFundo: 37,
+        offsetVerticalAdicional: 0,
+        diametro: 5,
+        profundidade: 10,
+      },
+      prateleira: {
+        enabled: true,
+        margemTopo: 80,
+        margemBase: 80,
+        recuoBorda: 37,
+        espacamento: 32,
+        numeroFurosPorColuna: 0,
+        diametro: 5,
+        profundidade: 8,
+      },
+    },
   },
   madeira: {
     espessuraCosta: 10,
     calcularAlturaLaterais: true,
     profundidadeFixa: true,
+  },
+  qrcode: {
+    tamanhoQr: 18,
+    tamanhoTexto: 8,
+    modoPrefixoProjeto: "auto",
+    reiniciarContagemEm99: true,
+  },
+  etiqueta: {
+    larguraMm: 100,
+    alturaMm: 50,
+    bordaPx: 1,
+    margemInternaMm: 2,
+    tamanhoQr: 28,
+    tamanhoTexto: 8,
+    mostrarLogo: true,
+    mostrarMaterial: true,
+    mostrarDimensoes: true,
+    mostrarReferencia: true,
   },
 };
 
@@ -145,7 +306,18 @@ export function calcularPosicoesFurosVerticais(
   alturaTotalMm: number,
   rules: RulesConfig
 ): number[] {
-  const { margemTopo, margemBase, distanciaEntreFuros } = rules.furos;
+  if (!rules || !rules.furos || !rules.furos.tecnicos || !rules.furos.tecnicos.prateleira) {
+    return [];
+  }
+  const p = rules.furos.tecnicos.prateleira;
+  const margemTopo = (p.margemTopo ?? rules.furos.margemTopo) || 0;
+  const margemBase = (p.margemBase ?? rules.furos.margemBase) || 0;
+  const distanciaEntreFuros = (p.espacamento ?? rules.furos.distanciaEntreFuros) || 0;
+  
+  if (!Number.isFinite(alturaTotalMm) || alturaTotalMm <= 0) {
+    return [];
+  }
+  
   const posicoes: number[] = [];
   let y = margemTopo;
   while (y <= alturaTotalMm - margemBase) {

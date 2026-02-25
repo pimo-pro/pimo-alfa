@@ -25,15 +25,13 @@ import {
   getSelectedWorkspaceBox,
   recomputeState,
 } from "./projectState";
-import { getTemplateById } from "../templates/templatesIndex";
+import { getTemplateById, } from "../templates/templatesIndex";
 import { getBaseCabinetById, modelToPortaTipo } from "../core/baseCabinets";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
 import { safeGetItem, safeParseJson, safeSetItem } from "../utils/storage";
 import { useViewerSync } from "../hooks/useViewerSync";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
-import type { DoorOrDrawer } from "../models/DoorOrDrawer";
-import { generateDoorsAndDrawersForBox } from "../services/doorDrawerGenerator";
-import { toggleDoorOrDrawer as toggleDoorOrDrawerItems } from "../services/doorDrawerActions";
+import { regenerateLayersForBox, createManualDoor, createManualDrawer, applyDrawerTypeRules } from "../services/boxLayersService";
 
 const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
@@ -99,9 +97,8 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
           .map((box: WorkspaceBox & { modelId?: string | null }) => {
             const models =
               box.models ?? (box.modelId != null ? [{ id: `${box.id}-model-1`, modelId: box.modelId }] : []);
-            const doorsAndDrawers = Array.isArray(box.doorsAndDrawers) ? box.doorsAndDrawers : [];
             const { modelId: _modelId, ...rest } = box;
-            return { ...rest, models, doorsAndDrawers };
+            return { ...rest, models };
           })
           .filter((box) => {
             if (!box?.id || typeof box.id !== "string") return false;
@@ -197,33 +194,6 @@ function normalizeExtractedParts(
   return out;
 }
 
-const createDoorOrDrawerForBox = (
-  box: WorkspaceBox,
-  type: "door" | "drawer"
-): DoorOrDrawer => {
-  const thickness = Math.max(1, box.espessura || 18);
-  const width = Math.max(80, box.dimensoes.largura - thickness * 2);
-  const height = type === "door" ? Math.max(120, box.dimensoes.altura - thickness * 2) : 200;
-  const depth = type === "door" ? thickness : Math.max(80, box.dimensoes.profundidade - thickness);
-  const id =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `dd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return {
-    id,
-    parentBoxId: box.id,
-    type,
-    width,
-    height,
-    depth,
-    thickness,
-    openDirection: type === "door" ? "right" : "pull",
-    isOpen: false,
-    offsetX: 0,
-    offsetY: 0,
-    offsetZ: 2,
-  };
-};
 
 const getSelectedOrFirstWorkspaceBox = (state: ProjectState): WorkspaceBox | undefined => {
   return (
@@ -391,11 +361,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     setDimensoes: (dimensoes) => {
       updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === prev.selectedWorkspaceBoxId
-            ? { ...box, dimensoes: { ...box.dimensoes, ...dimensoes } }
-            : box
-        );
+        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+          if (box.id !== prev.selectedWorkspaceBoxId) return box;
+          const updatedBox = { ...box, dimensoes: { ...box.dimensoes, ...dimensoes } };
+          const layers = regenerateLayersForBox(updatedBox);
+          return { ...updatedBox, ...layers };
+        });
         return recomputeState(
           prev,
           {
@@ -452,10 +423,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
         }
         if (defaultModel) newBox.baseCabinetId = defaultModel.id;
-        newBox.doorsAndDrawers = generateDoorsAndDrawersForBox({
-          ...newBox,
-          doorsAndDrawers: newBox.doorsAndDrawers ?? [],
-        });
         const nextWorkspaceBoxes = [...prev.workspaceBoxes, newBox];
         const nextPrev = { ...prev, workspaceBoxes: nextWorkspaceBoxes };
         const boxes = buildBoxesFromWorkspace(nextPrev);
@@ -527,10 +494,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
         }
         newBox.baseCabinetId = baseModel.id;
-        newBox.doorsAndDrawers = generateDoorsAndDrawersForBox({
-          ...newBox,
-          doorsAndDrawers: newBox.doorsAndDrawers ?? [],
-        });
 
         const nextWorkspaceBoxes = [...prev.workspaceBoxes, newBox];
         const nextPrev = { ...prev, workspaceBoxes: nextWorkspaceBoxes };
@@ -571,14 +534,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           posicaoY_mm: selected.posicaoY_mm ?? (selected.dimensoes?.altura ?? 400) / 2,
           posicaoZ_mm: 0,
           models: (selected.models ?? []).map((m, i) => ({ ...m, id: `${newBoxId}-model-${Date.now()}-${i}` })),
-          doorsAndDrawers: (selected.doorsAndDrawers ?? []).map((item) => ({
-            ...item,
-            id:
-              typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-                ? crypto.randomUUID()
-                : `dd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            parentBoxId: newBoxId,
-          })),
           panelIds: ensureBoxPanelIds(undefined, {
             prateleiras: selected.prateleiras,
             portaTipo: selected.portaTipo,
@@ -871,23 +826,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === prev.selectedWorkspaceBoxId
-            ? (() => {
-                const updatedBox = {
+            ? {
+                ...box,
+                prateleiras: valor,
+                gavetas: valor > 0 ? 0 : box.gavetas,
+                drawersLayer: valor > 0 ? [] : box.drawersLayer,
+                panelIds: ensureBoxPanelIds(box.panelIds, {
                   ...box,
                   prateleiras: valor,
-                  panelIds: ensureBoxPanelIds(box.panelIds, {
-                    ...box,
-                    prateleiras: valor,
-                  }),
-                };
-                return {
-                  ...updatedBox,
-                  doorsAndDrawers: generateDoorsAndDrawersForBox({
-                    ...updatedBox,
-                    doorsAndDrawers: updatedBox.doorsAndDrawers ?? [],
-                  }),
-                };
-              })()
+                  gavetas: valor > 0 ? 0 : box.gavetas,
+                }),
+              }
             : box
         );
         return recomputeState(
@@ -908,27 +857,27 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setGavetas: (quantidade) => {
       const valor = Math.max(0, Math.floor(quantidade));
       updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === prev.selectedWorkspaceBoxId
-            ? (() => {
-                const updatedBox = {
-                  ...box,
-                  gavetas: valor,
-                  panelIds: ensureBoxPanelIds(box.panelIds, {
-                    ...box,
-                    gavetas: valor,
-                  }),
-                };
-                return {
-                  ...updatedBox,
-                  doorsAndDrawers: generateDoorsAndDrawersForBox({
-                    ...updatedBox,
-                    doorsAndDrawers: updatedBox.doorsAndDrawers ?? [],
-                  }),
-                };
-              })()
-            : box
-        );
+        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+          if (box.id === prev.selectedWorkspaceBoxId) {
+            const updatedBox = {
+              ...box,
+              gavetas: valor,
+              portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
+              prateleiras: valor > 0 ? 0 : box.prateleiras,
+              doorsLayer: valor > 0 ? [] : box.doorsLayer,
+              panelIds: ensureBoxPanelIds(box.panelIds, {
+                ...box,
+                gavetas: valor,
+                portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
+                prateleiras: valor > 0 ? 0 : box.prateleiras,
+              }),
+            };
+            // Regenerar layers quando gavetas mudam
+            const layers = regenerateLayersForBox(updatedBox);
+            return { ...updatedBox, ...layers };
+          }
+          return box;
+        });
         return recomputeState(
           prev,
           {
@@ -944,29 +893,39 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
+    setDrawerHeightMode: (mode) => {
+      updateProject((prev) => {
+        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+          if (box.id !== prev.selectedWorkspaceBoxId) return box;
+          const updatedBox = { ...box, drawerHeightMode: mode };
+          const layers = regenerateLayersForBox(updatedBox);
+          return { ...updatedBox, ...layers };
+        });
+        return recomputeState(prev, { workspaceBoxes }, true);
+      });
+    },
+
     setPortaTipo: (portaTipo) => {
       updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === prev.selectedWorkspaceBoxId
-            ? (() => {
-                const updatedBox = {
-                  ...box,
-                  portaTipo,
-                  panelIds: ensureBoxPanelIds(box.panelIds, {
-                    ...box,
-                    portaTipo,
-                  }),
-                };
-                return {
-                  ...updatedBox,
-                  doorsAndDrawers: generateDoorsAndDrawersForBox({
-                    ...updatedBox,
-                    doorsAndDrawers: updatedBox.doorsAndDrawers ?? [],
-                  }),
-                };
-              })()
-            : box
-        );
+        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+          if (box.id === prev.selectedWorkspaceBoxId) {
+            const updatedBox = {
+              ...box,
+              portaTipo,
+              gavetas: portaTipo === "sem_porta" ? box.gavetas : 0,
+              drawersLayer: portaTipo === "sem_porta" ? box.drawersLayer : [],
+              panelIds: ensureBoxPanelIds(box.panelIds, {
+                ...box,
+                portaTipo,
+                gavetas: portaTipo === "sem_porta" ? box.gavetas : 0,
+              }),
+            };
+            // Regenerar layers quando portaTipo muda
+            const layers = regenerateLayersForBox(updatedBox);
+            return { ...updatedBox, ...layers };
+          }
+          return box;
+        });
         return recomputeState(prev, { workspaceBoxes }, true);
       });
     },
@@ -1062,9 +1021,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     setWorkspaceBoxDimensoes: (boxId, dimensoes) => {
       updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === boxId ? { ...box, dimensoes: { ...box.dimensoes, ...dimensoes } } : box
-        );
+        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+          if (box.id !== boxId) return box;
+          const updatedBox = { ...box, dimensoes: { ...box.dimensoes, ...dimensoes } };
+          const layers = regenerateLayersForBox(updatedBox);
+          return { ...updatedBox, ...layers };
+        });
         return recomputeState(prev, { workspaceBoxes }, true);
       });
     },
@@ -1084,144 +1046,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           box.id === boxId ? { ...box, material: materialId } : box
         );
         return { ...prev, workspaceBoxes };
-      });
-    },
-
-    addDoorOrDrawer: (type) => {
-      updateProject((prev) => {
-        const selected = getSelectedOrFirstWorkspaceBox(prev);
-        if (!selected) return prev;
-        const nextItem = createDoorOrDrawerForBox(selected, type);
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === selected.id
-            ? { ...box, doorsAndDrawers: [...(box.doorsAndDrawers ?? []), nextItem] }
-            : box
-        );
-        return {
-          ...prev,
-          workspaceBoxes,
-          selectedWorkspaceBoxId: selected.id,
-          selectedCaixaId: selected.id,
-          changelog: appendChangelog(prev.changelog, {
-            timestamp: new Date(),
-            type: "box",
-            message: `${type === "door" ? "Porta" : "Gaveta"} adicionada`,
-          }),
-        };
-      });
-    },
-
-    removeDoorOrDrawer: (id) => {
-      updateProject((prev) => {
-        const selected = getSelectedOrFirstWorkspaceBox(prev);
-        if (!selected) return prev;
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === selected.id
-            ? { ...box, doorsAndDrawers: (box.doorsAndDrawers ?? []).filter((item) => item.id !== id) }
-            : box
-        );
-        return {
-          ...prev,
-          workspaceBoxes,
-          selectedWorkspaceBoxId: selected.id,
-          selectedCaixaId: selected.id,
-          changelog: appendChangelog(prev.changelog, {
-            timestamp: new Date(),
-            type: "box",
-            message: "Porta/Gaveta removida",
-          }),
-        };
-      });
-    },
-
-    updateDoorOrDrawer: (id, partial) => {
-      updateProject((prev) => {
-        const selected = getSelectedOrFirstWorkspaceBox(prev);
-        if (!selected) return prev;
-        const workspaceBoxes = prev.workspaceBoxes.map((box) => {
-          if (box.id !== selected.id) return box;
-          return {
-            ...box,
-            doorsAndDrawers: (box.doorsAndDrawers ?? []).map((item) => {
-              if (item.id !== id) return item;
-              return {
-                ...item,
-                ...partial,
-                width:
-                  partial.width !== undefined ? Math.max(1, Number(partial.width) || item.width) : item.width,
-                height:
-                  partial.height !== undefined
-                    ? Math.max(1, Number(partial.height) || item.height)
-                    : item.height,
-                depth:
-                  partial.depth !== undefined ? Math.max(1, Number(partial.depth) || item.depth) : item.depth,
-                thickness:
-                  partial.thickness !== undefined
-                    ? Math.max(1, Number(partial.thickness) || item.thickness)
-                    : item.thickness,
-              };
-            }),
-          };
-        });
-        return {
-          ...prev,
-          workspaceBoxes,
-          selectedWorkspaceBoxId: selected.id,
-          selectedCaixaId: selected.id,
-          changelog: appendChangelog(prev.changelog, {
-            timestamp: new Date(),
-            type: "box",
-            message: "Porta/Gaveta editada",
-          }),
-        };
-      });
-    },
-
-    toggleDoorOrDrawer: (id) => {
-      updateProject((prev) => {
-        const selected = getSelectedOrFirstWorkspaceBox(prev);
-        if (!selected) return prev;
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === selected.id
-            ? { ...box, doorsAndDrawers: toggleDoorOrDrawerItems(id)(box.doorsAndDrawers ?? []) }
-            : box
-        );
-        return {
-          ...prev,
-          workspaceBoxes,
-          selectedWorkspaceBoxId: selected.id,
-          selectedCaixaId: selected.id,
-          changelog: appendChangelog(prev.changelog, {
-            timestamp: new Date(),
-            type: "box",
-            message: "Porta/Gaveta aberta/fechada",
-          }),
-        };
-      });
-    },
-
-    generateDoorsAndDrawersForSelectedBox: () => {
-      updateProject((prev) => {
-        const selected = getSelectedOrFirstWorkspaceBox(prev);
-        if (!selected) return prev;
-        const generated = generateDoorsAndDrawersForBox({
-          ...selected,
-          doorsAndDrawers: selected.doorsAndDrawers ?? [],
-        });
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === selected.id ? { ...box, doorsAndDrawers: generated } : box
-        );
-        return {
-          ...prev,
-          workspaceBoxes,
-          selectedWorkspaceBoxId: selected.id,
-          selectedCaixaId: selected.id,
-          changelog: appendChangelog(prev.changelog, {
-            timestamp: new Date(),
-            type: "box",
-            message: "Portas e gavetas geradas automaticamente",
-          }),
-        };
       });
     },
 
@@ -1585,7 +1409,8 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
           rotacaoY: 0,
           manualPosition: true,
           panelIds: ensureBoxPanelIds(undefined, { prateleiras, portaTipo, gavetas }),
-          doorsAndDrawers: [],
+          doorsLayer: [],
+          drawersLayer: [],
         };
       });
       const firstId = workspaceBoxes[0].id;
@@ -1713,6 +1538,353 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       const stored = readStoredProjects();
       const nextStored = stored.filter((item) => item.id !== id);
       writeStoredProjects(nextStored);
+    },
+
+    addDoorLayerItem: () => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const newDoor = createManualDoor(selected);
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                gavetas: 0,
+                portaTipo: box.portaTipo === "sem_porta" ? "porta_simples" : box.portaTipo,
+                drawersLayer: [],
+                doorsLayer: [...(box.doorsLayer ?? []), newDoor],
+                panelIds: ensureBoxPanelIds(box.panelIds, {
+                  ...box,
+                  gavetas: 0,
+                  portaTipo: box.portaTipo === "sem_porta" ? "porta_simples" : box.portaTipo,
+                }),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Porta adicionada",
+          }),
+        };
+      });
+    },
+
+    addDrawerLayerItem: () => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const newDrawer = createManualDrawer(selected);
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                portaTipo: "sem_porta" as const,
+                prateleiras: 0,
+                doorsLayer: [],
+                gavetas: (box.drawersLayer?.length ?? 0) + 1,
+                drawersLayer: [...(box.drawersLayer ?? []), newDrawer],
+                panelIds: ensureBoxPanelIds(box.panelIds, {
+                  ...box,
+                  portaTipo: "sem_porta" as const,
+                  prateleiras: 0,
+                  gavetas: (box.drawersLayer?.length ?? 0) + 1,
+                }),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Gaveta adicionada",
+          }),
+        };
+      });
+    },
+
+    removeDoorLayerItem: (id) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? { ...box, doorsLayer: (box.doorsLayer ?? []).filter((item) => item.id !== id) }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Porta removida",
+          }),
+        };
+      });
+    },
+
+    removeDrawerLayerItem: (id) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? (() => {
+                const nextDrawers = (box.drawersLayer ?? []).filter((item) => item.id !== id);
+                return {
+                  ...box,
+                  drawersLayer: nextDrawers,
+                  gavetas: nextDrawers.length,
+                  panelIds: ensureBoxPanelIds(box.panelIds, {
+                    ...box,
+                    gavetas: nextDrawers.length,
+                  }),
+                };
+              })()
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Gaveta removida",
+          }),
+        };
+      });
+    },
+
+    updateDoorLayerItem: (id, partial) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                doorsLayer: (box.doorsLayer ?? []).map((item) =>
+                  item.id === id ? { ...item, ...partial } : item
+                ),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Porta atualizada",
+          }),
+        };
+      });
+    },
+
+    updateDrawerLayerItem: (id, partial) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                drawersLayer: (() => {
+                  const updated = (box.drawersLayer ?? []).map((item) =>
+                    item.id === id ? { ...item, ...partial } : item
+                  );
+                  const heightChanged = "height" in partial;
+                  const mode = box.drawerHeightMode ?? "equal";
+                  let next = updated.map((item) =>
+                    item.id === id ? applyDrawerTypeRules(box, item) : item
+                  );
+                  if (heightChanged && mode === "custom") {
+                    let offsetY = 0;
+                    const availableHeight = Math.max(1, box.dimensoes.altura - 10);
+                    next = next.map((item) => {
+                      const height = Number.isFinite(item.height) && item.height > 0
+                        ? item.height
+                        : availableHeight / Math.max(1, next.length);
+                      const posY = -box.dimensoes.altura / 2 + 10 + offsetY + height / 2;
+                      offsetY += height;
+                      return { ...item, height, posY };
+                    });
+                  }
+                  return next;
+                })(),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Gaveta atualizada",
+          }),
+        };
+      });
+    },
+
+    setDoorLayerItemOpen: (id, isOpen) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const target = (selected.doorsLayer ?? []).find((item) => item.id === id);
+        const isDoubleDoor = selected.portaTipo === "porta_dupla" || target?.groupType === "dupla";
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                doorsLayer: (box.doorsLayer ?? []).map((item) =>
+                  isDoubleDoor ? { ...item, isOpen } : item.id === id ? { ...item, isOpen } : item
+                ),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+        };
+      });
+    },
+
+    setDrawerLayerItemOpen: (id, isOpen) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                drawersLayer: (box.drawersLayer ?? []).map((item) =>
+                  item.id === id ? applyDrawerTypeRules(box, { ...item, isOpen }) : item
+                ),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+        };
+      });
+    },
+
+    setDoorLayerItemMaterial: (id, materialId) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                doorsLayer: (box.doorsLayer ?? []).map((item) =>
+                  item.id === id ? { ...item, materialId } : item
+                ),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Material da porta atualizado",
+          }),
+        };
+      });
+    },
+
+    setDrawerLayerItemMaterial: (id, materialId) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                drawersLayer: (box.drawersLayer ?? []).map((item) =>
+                  item.id === id ? { ...item, materialId } : item
+                ),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Material da gaveta atualizado",
+          }),
+        };
+      });
+    },
+
+    setDoorLayerItemDirection: (id, direction) => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? {
+                ...box,
+                doorsLayer: (box.doorsLayer ?? []).map((item) =>
+                  item.id === id ? { ...item, openDirection: direction } : item
+                ),
+              }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Direção de abertura da porta atualizada",
+          }),
+        };
+      });
+    },
+
+    regenerateBoxLayersForSelectedBox: () => {
+      updateProject((prev) => {
+        const selected = getSelectedOrFirstWorkspaceBox(prev);
+        if (!selected) return prev;
+        const normalized = {
+          ...selected,
+          ...(selected.gavetas > 0
+            ? { portaTipo: "sem_porta" as const, prateleiras: 0, doorsLayer: [] }
+            : selected.portaTipo !== "sem_porta"
+              ? { gavetas: 0, drawersLayer: [] }
+              : selected.prateleiras > 0
+                ? { gavetas: 0, drawersLayer: [] }
+                : null),
+        };
+        const layers = regenerateLayersForBox(normalized);
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === selected.id
+            ? { ...box, ...normalized, ...layers }
+            : box
+        );
+        return {
+          ...prev,
+          workspaceBoxes,
+          changelog: appendChangelog(prev.changelog, {
+            timestamp: new Date(),
+            type: "box",
+            message: "Portas e gavetas regeneradas automaticamente",
+          }),
+        };
+      });
     },
   };
 

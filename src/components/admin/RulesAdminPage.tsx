@@ -80,6 +80,25 @@ export default function RulesAdminPage() {
     setRules((prev) => ({ ...prev, pes: { ...prev.pes, ranges: next } }));
   };
 
+  const updateTecnico = <K extends keyof RulesConfig["furos"]["tecnicos"]>(
+    key: K,
+    patch: Partial<RulesConfig["furos"]["tecnicos"][K]>
+  ) => {
+    setRules((prev) => ({
+      ...prev,
+      furos: {
+        ...prev.furos,
+        tecnicos: {
+          ...prev.furos.tecnicos,
+          [key]: {
+            ...prev.furos.tecnicos[key],
+            ...patch,
+          },
+        },
+      },
+    }));
+  };
+
   return (
     <div style={{ padding: 24, overflowY: "auto", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -157,6 +176,15 @@ export default function RulesAdminPage() {
             <button type="button" onClick={addPortaRange} className="button button-ghost" style={{ marginTop: 4 }}>
               + Adicionar range
             </button>
+          </div>
+        </Panel>
+
+        <Panel
+          title="Configuração de Portas e Gavetas (Novo Sistema)"
+          description="Parâmetros globais do sistema por camadas. Integração ativa com DoorsLayer/DrawersLayer."
+        >
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            Esta secção permanece como fonte de configuração global e está ligada ao novo sistema de camadas.
           </div>
         </Panel>
 
@@ -310,6 +338,82 @@ export default function RulesAdminPage() {
           </div>
         </Panel>
 
+        <Panel title="Furação Técnica – Component Types" description="Configuração completa dos tipos de furação técnica">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Cavilha</div>
+              <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.cavilha.enabled} onChange={(e) => updateTecnico("cavilha", { enabled: e.target.checked })} /> Ativar</label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Dist. frente <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.distanciaFrente} onChange={(e) => updateTecnico("cavilha", { distanciaFrente: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. fundo <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.distanciaFundo} onChange={(e) => updateTecnico("cavilha", { distanciaFundo: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Offset lateral <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.offsetLateral} onChange={(e) => updateTecnico("cavilha", { offsetLateral: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Diâmetro <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.diametro} onChange={(e) => updateTecnico("cavilha", { diametro: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Profundidade <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.profundidade} onChange={(e) => updateTecnico("cavilha", { profundidade: Number(e.target.value) })} /></label>
+              </div>
+              <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
+                <label><input type="checkbox" checked={rules.furos.tecnicos.cavilha.aplicarEm.cima} onChange={(e) => updateTecnico("cavilha", { aplicarEm: { ...rules.furos.tecnicos.cavilha.aplicarEm, cima: e.target.checked } })} /> cima</label>
+                <label><input type="checkbox" checked={rules.furos.tecnicos.cavilha.aplicarEm.fundo} onChange={(e) => updateTecnico("cavilha", { aplicarEm: { ...rules.furos.tecnicos.cavilha.aplicarEm, fundo: e.target.checked } })} /> fundo</label>
+                <label><input type="checkbox" checked={rules.furos.tecnicos.cavilha.aplicarEm.lateralEsquerda} onChange={(e) => updateTecnico("cavilha", { aplicarEm: { ...rules.furos.tecnicos.cavilha.aplicarEm, lateralEsquerda: e.target.checked } })} /> lateral esquerda</label>
+                <label><input type="checkbox" checked={rules.furos.tecnicos.cavilha.aplicarEm.lateralDireita} onChange={(e) => updateTecnico("cavilha", { aplicarEm: { ...rules.furos.tecnicos.cavilha.aplicarEm, lateralDireita: e.target.checked } })} /> lateral direita</label>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Parafuso</div>
+              <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.parafuso.enabled} onChange={(e) => updateTecnico("parafuso", { enabled: e.target.checked })} /> Ativar</label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Dist. frente <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.distanciaFrente} onChange={(e) => updateTecnico("parafuso", { distanciaFrente: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. fundo <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.distanciaFundo} onChange={(e) => updateTecnico("parafuso", { distanciaFundo: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Offset cavilha <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.offsetDaCavilha} onChange={(e) => updateTecnico("parafuso", { offsetDaCavilha: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Diâmetro <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.diametro} onChange={(e) => updateTecnico("parafuso", { diametro: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Profundidade <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.profundidade} onChange={(e) => updateTecnico("parafuso", { profundidade: Number(e.target.value) })} /></label>
+              </div>
+              <div style={{ marginTop: 8, display: "flex", gap: 12, fontSize: 12 }}>
+                <label><input type="checkbox" checked={rules.furos.tecnicos.parafuso.aplicarEm.cima} onChange={(e) => updateTecnico("parafuso", { aplicarEm: { ...rules.furos.tecnicos.parafuso.aplicarEm, cima: e.target.checked } })} /> cima</label>
+                <label><input type="checkbox" checked={rules.furos.tecnicos.parafuso.aplicarEm.fundo} onChange={(e) => updateTecnico("parafuso", { aplicarEm: { ...rules.furos.tecnicos.parafuso.aplicarEm, fundo: e.target.checked } })} /> fundo</label>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Dobradiça</div>
+              <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.dobradica.enabled} onChange={(e) => updateTecnico("dobradica", { enabled: e.target.checked })} /> Ativar</label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(6, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Diâm. taça <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.diametro} onChange={(e) => updateTecnico("dobradica", { diametro: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Prof. taça <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.profundidade} onChange={(e) => updateTecnico("dobradica", { profundidade: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. borda <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaBordaLateral} onChange={(e) => updateTecnico("dobradica", { distanciaBordaLateral: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Offset sup. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetSuperior} onChange={(e) => updateTecnico("dobradica", { offsetSuperior: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Offset inf. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetInferior} onChange={(e) => updateTecnico("dobradica", { offsetInferior: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Qtd/porta <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.numeroPorPorta} onChange={(e) => updateTecnico("dobradica", { numeroPorPorta: Number(e.target.value) })} /></label>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Corrediça</div>
+              <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.corredica.enabled} onChange={(e) => updateTecnico("corredica", { enabled: e.target.checked })} /> Ativar</label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Altura (mm) <input className="input input-xs" type="number" value={rules.furos.tecnicos.corredica.alturaRelativaFundo} onChange={(e) => updateTecnico("corredica", { alturaRelativaFundo: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. frente <input className="input input-xs" type="number" value={rules.furos.tecnicos.corredica.offsetFrente} onChange={(e) => updateTecnico("corredica", { offsetFrente: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. fundo <input className="input input-xs" type="number" value={rules.furos.tecnicos.corredica.offsetFundo} onChange={(e) => updateTecnico("corredica", { offsetFundo: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Offset vertical <input className="input input-xs" type="number" value={rules.furos.tecnicos.corredica.offsetVerticalAdicional} onChange={(e) => updateTecnico("corredica", { offsetVerticalAdicional: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Diâmetro <input className="input input-xs" type="number" value={rules.furos.tecnicos.corredica.diametro} onChange={(e) => updateTecnico("corredica", { diametro: Number(e.target.value) })} /></label>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Prateleira</div>
+              <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.prateleira.enabled} onChange={(e) => updateTecnico("prateleira", { enabled: e.target.checked })} /> Ativar</label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(6, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Diâmetro <input className="input input-xs" type="number" value={rules.furos.tecnicos.prateleira.diametro} onChange={(e) => updateTecnico("prateleira", { diametro: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Profundidade <input className="input input-xs" type="number" value={rules.furos.tecnicos.prateleira.profundidade} onChange={(e) => updateTecnico("prateleira", { profundidade: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Espaçamento <input className="input input-xs" type="number" value={rules.furos.tecnicos.prateleira.espacamento} onChange={(e) => updateTecnico("prateleira", { espacamento: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Recuo superior <input className="input input-xs" type="number" value={rules.furos.tecnicos.prateleira.margemTopo} onChange={(e) => updateTecnico("prateleira", { margemTopo: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Recuo inferior <input className="input input-xs" type="number" value={rules.furos.tecnicos.prateleira.margemBase} onChange={(e) => updateTecnico("prateleira", { margemBase: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Furos/coluna <input className="input input-xs" type="number" value={rules.furos.tecnicos.prateleira.numeroFurosPorColuna} onChange={(e) => updateTecnico("prateleira", { numeroFurosPorColuna: Number(e.target.value) })} /></label>
+              </div>
+            </div>
+          </div>
+        </Panel>
+
         {/* Regras de Madeira / Estrutura */}
         <Panel title="Regras de Madeira / Estrutura" description="COSTA, laterais, profundidade">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -339,6 +443,37 @@ export default function RulesAdminPage() {
               />
               Profundidade fixa (não muda com dimensões)
             </label>
+          </div>
+        </Panel>
+
+        <Panel title="Etiquetas Oficiais (Brother QL-1060N)" description="Configuração da etiqueta 100x50mm para impressão industrial">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(140px, 1fr))", gap: 8 }}>
+              <label style={{ fontSize: 12 }}>Largura (mm)
+                <input className="input input-xs" type="number" value={rules.etiqueta.larguraMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, larguraMm: Number(e.target.value) } }))} />
+              </label>
+              <label style={{ fontSize: 12 }}>Altura (mm)
+                <input className="input input-xs" type="number" value={rules.etiqueta.alturaMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, alturaMm: Number(e.target.value) } }))} />
+              </label>
+              <label style={{ fontSize: 12 }}>Borda (px)
+                <input className="input input-xs" type="number" value={rules.etiqueta.bordaPx} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, bordaPx: Number(e.target.value) } }))} />
+              </label>
+              <label style={{ fontSize: 12 }}>Margem interna (mm)
+                <input className="input input-xs" type="number" value={rules.etiqueta.margemInternaMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, margemInternaMm: Number(e.target.value) } }))} />
+              </label>
+              <label style={{ fontSize: 12 }}>Tamanho QR (mm)
+                <input className="input input-xs" type="number" value={rules.etiqueta.tamanhoQr} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, tamanhoQr: Number(e.target.value) } }))} />
+              </label>
+              <label style={{ fontSize: 12 }}>Tamanho texto
+                <input className="input input-xs" type="number" value={rules.etiqueta.tamanhoTexto} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, tamanhoTexto: Number(e.target.value) } }))} />
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
+              <label><input type="checkbox" checked={rules.etiqueta.mostrarLogo} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarLogo: e.target.checked } }))} /> Mostrar logo</label>
+              <label><input type="checkbox" checked={rules.etiqueta.mostrarMaterial} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarMaterial: e.target.checked } }))} /> Mostrar material</label>
+              <label><input type="checkbox" checked={rules.etiqueta.mostrarDimensoes} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarDimensoes: e.target.checked } }))} /> Mostrar dimensões</label>
+              <label><input type="checkbox" checked={rules.etiqueta.mostrarReferencia} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarReferencia: e.target.checked } }))} /> Mostrar referência</label>
+            </div>
           </div>
         </Panel>
       </div>

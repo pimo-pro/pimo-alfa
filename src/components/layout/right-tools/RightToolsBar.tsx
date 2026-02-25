@@ -65,7 +65,12 @@ export default function RightToolsBar() {
   // boxes em useMemo para referência estável e evitar reexecução dos useMemo abaixo a cada render
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const cutlistFromBoxes = useMemo(() => {
-    const parametric = cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId);
+    const parametric = cutlistComPrecoFromBoxes(
+      boxes,
+      project.rules,
+      project.materialId,
+      project.projectName
+    );
     const extracted = boxes.flatMap((box) =>
       Object.values(project.extractedPartsByBoxId?.[box.id] ?? {}).flat()
     );
@@ -199,7 +204,12 @@ export default function RightToolsBar() {
 
     // Single Source of Truth: cutlist, ferragens e precos derivados de project.boxes
     const boxes = project.boxes ?? [];
-    const cutlistFromBoxes = cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId);
+    const cutlistFromBoxes = cutlistComPrecoFromBoxes(
+      boxes,
+      project.rules,
+      project.materialId,
+      project.projectName
+    );
     const ferragensFromBoxesList = ferragensFromBoxes(boxes, project.rules);
     const totalPecasFromBoxes =
       cutlistFromBoxes.length > 0

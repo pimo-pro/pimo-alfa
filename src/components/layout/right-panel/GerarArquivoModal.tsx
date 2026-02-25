@@ -15,6 +15,7 @@ type Props = {
   onAmbos: () => void;
   onLayoutCorte: () => void;
   onExportarCnc: () => void;
+  onEtiquetas: () => void;
 };
 
 const labelStyle = { fontSize: 12, color: "var(--text-main)" };
@@ -29,6 +30,7 @@ export default function GerarArquivoModal({
   onAmbos,
   onLayoutCorte,
   onExportarCnc,
+  onEtiquetas,
 }: Props) {
   const [conteudo, setConteudo] = useState<GerarArquivoConteudo>("cutlist");
   const [download, setDownload] = useState(true);
@@ -127,6 +129,9 @@ export default function GerarArquivoModal({
               </button>
               <button type="button" className="modal-action" style={{ width: "100%", fontSize: 12, opacity: 0.9 }} onClick={() => { onLayoutCorte(); onClose(); }}>
                 Layout de Corte PRO
+              </button>
+              <button type="button" className="modal-action" style={{ width: "100%", fontSize: 12, fontWeight: 600 }} onClick={() => { onEtiquetas(); onClose(); }}>
+                Gerar Etiquetas (PDF)
               </button>
               <button type="button" className="modal-action" style={{ width: "100%", fontSize: 12, fontWeight: 600 }} onClick={() => { onExportarCnc(); onClose(); }}>
                 Exportar CNC (TCN + KDT)

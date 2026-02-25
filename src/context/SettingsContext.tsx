@@ -42,6 +42,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       materiais: { ...settings.materiais, ...(patch.materiais ?? {}) },
       cnc: { ...settings.cnc, ...(patch.cnc ?? {}) },
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
+      portas: { ...settings.portas, ...(patch.portas ?? {}) },
+      gavetas: { ...settings.gavetas, ...(patch.gavetas ?? {}) },
       viewer: { ...settings.viewer, ...(patch.viewer ?? {}) },
     };
     const result = saveSettings(merged);
@@ -59,6 +61,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       materiais: { ...settings.materiais, ...(patch.materiais ?? {}) },
       cnc: { ...settings.cnc, ...(patch.cnc ?? {}) },
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
+      portas: { ...settings.portas, ...(patch.portas ?? {}) },
+      gavetas: { ...settings.gavetas, ...(patch.gavetas ?? {}) },
       viewer: { ...settings.viewer, ...(patch.viewer ?? {}) },
     };
     return validateSettings(merged);

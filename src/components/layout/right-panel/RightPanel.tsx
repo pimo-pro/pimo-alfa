@@ -8,11 +8,12 @@ import {
 import { buildTechnicalPdf } from "../../../core/pdf/pdfTechnical";
 import { buildCutlistPdf } from "../../../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../../../core/pdf/pdfUnified";
+import { buildEtiquetasPdf } from "../../../core/pdf/pdfEtiquetas";
 import { runCutLayout, cutlistToPieces } from "../../../core/cutlayout/cutLayoutEngine";
 import { buildCncFromCutlistItems } from "../../../core/cnc/cncPipeline";
 import type { GerarArquivoConteudo } from "./GerarArquivoModal";
 import GerarArquivoModal from "./GerarArquivoModal";
-import DoorsAndDrawersPanel from "./DoorsAndDrawersPanel";
+import BoxLayersPanel from "./BoxLayersPanel";
 
 export default function RightPanel() {
   const { project, actions } = useProject();
@@ -78,13 +79,27 @@ export default function RightPanel() {
     doc.save(`${slug}_completo.pdf`);
   };
 
+  const onEtiquetas = () => {
+    if (!hasBoxes) {
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
+      return;
+    }
+    const doc = buildEtiquetasPdf(pdfProject());
+    doc.save(`${slug}_etiquetas.pdf`);
+  };
+
 
   const onLayoutCorte = async () => {
     if (!hasBoxes) {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const parametric = cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId);
+    const parametric = cutlistComPrecoFromBoxes(
+      boxes,
+      project.rules,
+      project.materialId,
+      project.projectName
+    );
     const extracted = boxes.flatMap((b) =>
       Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
     );
@@ -113,7 +128,12 @@ const doc = buildCutLayoutPdf(result);
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const parametric = cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId);
+    const parametric = cutlistComPrecoFromBoxes(
+      boxes,
+      project.rules,
+      project.materialId,
+      project.projectName
+    );
     const extracted = boxes.flatMap((b) =>
       Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
     );
@@ -196,11 +216,12 @@ const doc = buildCutLayoutPdf(result);
             onCutlist={onCutlist}
             onAmbos={onAmbos}
             onLayoutCorte={onLayoutCorte}
+            onEtiquetas={onEtiquetas}
             onExportarCnc={onExportarCnc}
           />
         )}
 
-        <DoorsAndDrawersPanel />
+        <BoxLayersPanel />
 
       </div>
     </aside>

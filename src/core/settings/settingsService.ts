@@ -40,6 +40,19 @@ export interface SettingsSchema {
     permitirRotacaoGlobal: boolean;
     prioridadeAproveitamento: "area" | "chapas" | "balanceado";
   };
+  portas: {
+    portaGapVerticalMm: number;
+    portaGapHorizontalMm: number;
+    portaGapDuplaMm: number;
+    portaPosZOffsetMm: number;
+  };
+  gavetas: {
+    gavetaNormalBaseEspessuraMm: number;
+    gavetaProBaseEspessuraMm: number;
+    gavetaFolgaLateralMm: number;
+    gavetaProfundidadesDisponiveisMm: number[];
+    gavetaAlturaModoPadrao: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  };
   viewer: {
     qualidade: "baixa" | "media" | "alta";
     luzIntensidade: number;
@@ -81,6 +94,19 @@ export const settingsDefaults: SettingsSchema = {
     permitirRotacaoGlobal: true,
     prioridadeAproveitamento: "balanceado",
   },
+  portas: {
+    portaGapVerticalMm: 1,
+    portaGapHorizontalMm: 1,
+    portaGapDuplaMm: 2,
+    portaPosZOffsetMm: 9,
+  },
+  gavetas: {
+    gavetaNormalBaseEspessuraMm: 10,
+    gavetaProBaseEspessuraMm: 0,
+    gavetaFolgaLateralMm: 7,
+    gavetaProfundidadesDisponiveisMm: [250, 300, 350, 400, 450, 500, 550, 600],
+    gavetaAlturaModoPadrao: "equal",
+  },
   viewer: {
     qualidade: "alta",
     luzIntensidade: 1,
@@ -100,6 +126,14 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const toNumber = (value: unknown, fallback: number) =>
   Number.isFinite(Number(value)) ? Number(value) : fallback;
+const normalizeDepths = (value: unknown, fallback: number[]) => {
+  if (!Array.isArray(value)) return fallback;
+  const parsed = value
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0)
+    .sort((a, b) => a - b);
+  return parsed.length > 0 ? parsed : fallback;
+};
 
 function deepMergeSettings(
   base: SettingsSchema,
@@ -114,6 +148,8 @@ function deepMergeSettings(
     materiais: { ...base.materiais, ...(isObject(patch.materiais) ? patch.materiais : {}) },
     cnc: { ...base.cnc, ...(isObject(patch.cnc) ? patch.cnc : {}) },
     nesting: { ...base.nesting, ...(isObject(patch.nesting) ? patch.nesting : {}) },
+    portas: { ...base.portas, ...(isObject(patch.portas) ? patch.portas : {}) },
+    gavetas: { ...base.gavetas, ...(isObject(patch.gavetas) ? patch.gavetas : {}) },
     viewer: { ...base.viewer, ...(isObject(patch.viewer) ? patch.viewer : {}) },
   };
 }
@@ -165,6 +201,37 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         merged.nesting.prioridadeAproveitamento === "area" || merged.nesting.prioridadeAproveitamento === "chapas"
           ? merged.nesting.prioridadeAproveitamento
           : "balanceado",
+    },
+    portas: {
+      portaGapVerticalMm: clamp(toNumber(merged.portas.portaGapVerticalMm, settingsDefaults.portas.portaGapVerticalMm), 0, 20),
+      portaGapHorizontalMm: clamp(toNumber(merged.portas.portaGapHorizontalMm, settingsDefaults.portas.portaGapHorizontalMm), 0, 20),
+      portaGapDuplaMm: clamp(toNumber(merged.portas.portaGapDuplaMm, settingsDefaults.portas.portaGapDuplaMm), 0, 50),
+      portaPosZOffsetMm: clamp(toNumber(merged.portas.portaPosZOffsetMm, settingsDefaults.portas.portaPosZOffsetMm), 0, 50),
+    },
+    gavetas: {
+      gavetaNormalBaseEspessuraMm: clamp(
+        toNumber(merged.gavetas.gavetaNormalBaseEspessuraMm, settingsDefaults.gavetas.gavetaNormalBaseEspessuraMm),
+        0,
+        50
+      ),
+      gavetaProBaseEspessuraMm: clamp(
+        toNumber(merged.gavetas.gavetaProBaseEspessuraMm, settingsDefaults.gavetas.gavetaProBaseEspessuraMm),
+        0,
+        50
+      ),
+      gavetaFolgaLateralMm: clamp(
+        toNumber(merged.gavetas.gavetaFolgaLateralMm, settingsDefaults.gavetas.gavetaFolgaLateralMm),
+        0,
+        30
+      ),
+      gavetaProfundidadesDisponiveisMm: normalizeDepths(
+        merged.gavetas.gavetaProfundidadesDisponiveisMm,
+        settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm
+      ),
+      gavetaAlturaModoPadrao:
+        merged.gavetas.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || merged.gavetas.gavetaAlturaModoPadrao === "custom"
+          ? merged.gavetas.gavetaAlturaModoPadrao
+          : "equal",
     },
     viewer: {
       qualidade: merged.viewer.qualidade === "baixa" || merged.viewer.qualidade === "media" ? merged.viewer.qualidade : "alta",

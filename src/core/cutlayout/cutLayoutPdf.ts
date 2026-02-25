@@ -97,6 +97,14 @@ function renderSheetPage(
     doc.setLineWidth(0.25);
     doc.rect(px, py, pw, ph, "FD");
 
+    // Display piece number if available
+    if (pl.pieceNumber) {
+      doc.setFontSize(10);
+      doc.setTextColor(220, 38, 38);
+      doc.setFont("helvetica", "bold");
+      doc.text(`#${pl.pieceNumber}`, px + 2, py - 2);
+    }
+
     const label = `${pl.partName}`.slice(0, 12);
     const dimLabel = `${Math.round(pl.largura_mm)}×${Math.round(pl.altura_mm)}`;
     if (pw > 15 && ph > 8) {
@@ -104,6 +112,11 @@ function renderSheetPage(
       doc.setTextColor(30, 64, 175);
       doc.text(label, px + 2, py + ph / 2 - 2);
       doc.text(dimLabel, px + 2, py + ph / 2 + 2);
+      if (pl.shortCode) {
+        doc.setFontSize(5);
+        doc.setTextColor(100, 100, 100);
+        doc.text(pl.shortCode, px + 2, py + ph - 2);
+      }
       if (pl.rotacao === 90) {
         doc.text("90°", px + pw - 8, py + 6);
       }

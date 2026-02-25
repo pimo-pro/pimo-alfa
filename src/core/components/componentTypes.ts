@@ -25,6 +25,12 @@ export interface ComponentType {
     profundidade?: number;
     quantidade_por_lado?: number;
     aplicar_em: string[];
+    face?: "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
+    distancia_frente_mm?: number;
+    distancia_fundo_mm?: number;
+    distancia_lateral_mm?: number;
+    espacamento_mm?: number;
+    offset_mm?: number;
   }>;
 
   regras_de_montagem?: Array<{

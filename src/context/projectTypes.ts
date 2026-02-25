@@ -17,7 +17,7 @@ import type { RuleViolation } from "../core/rules/types";
 import type { LayoutWarnings } from "../core/layout/layoutWarnings";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
-import type { DoorOrDrawer, DoorOrDrawerOpenDirection } from "../models/DoorOrDrawer";
+import type { DoorLayerItem, DrawerLayerItem, LayerOpenDirection } from "../models/BoxLayers";
 
 export interface ProjectState {
   projectName: string;
@@ -316,6 +316,7 @@ export interface ProjectActions {
   renameBox: (_nome: string) => void;
   setPrateleiras: (_quantidade: number) => void;
   setGavetas: (_quantidade: number) => void;
+  setDrawerHeightMode: (_mode: "equal" | "top_small_mid_medium_bottom_large" | "custom") => void;
   setPortaTipo: (_portaTipo: BoxModule["portaTipo"]) => void;
   setTipoBorda: (_tipoBorda: TipoBorda) => void;
   setTipoFundo: (_tipoFundo: TipoFundo) => void;
@@ -344,24 +345,18 @@ export interface ProjectActions {
   setWorkspaceBoxNome: (_boxId: string, _nome: string) => void;
   /** Define o material da caixa (id do CRUD ou label legado). */
   setWorkspaceBoxMaterial: (_boxId: string, _materialId: string) => void;
-  /** Adiciona porta ou gaveta na caixa selecionada. */
-  addDoorOrDrawer: (_type: "door" | "drawer") => void;
-  /** Remove porta/gaveta da caixa selecionada. */
-  removeDoorOrDrawer: (_id: string) => void;
-  /** Atualiza propriedades de porta/gaveta na caixa selecionada. */
-  updateDoorOrDrawer: (
-    _id: string,
-    _partial: Partial<
-      Pick<
-        DoorOrDrawer,
-        "width" | "height" | "depth" | "thickness" | "offsetX" | "offsetY" | "offsetZ"
-      > & { openDirection: DoorOrDrawerOpenDirection }
-    >
-  ) => void;
-  /** Abre/fecha porta/gaveta na caixa selecionada. */
-  toggleDoorOrDrawer: (_id: string) => void;
-  /** Gera automaticamente portas e gavetas para a caixa selecionada. */
-  generateDoorsAndDrawersForSelectedBox: () => void;
+  addDoorLayerItem: () => void;
+  addDrawerLayerItem: () => void;
+  removeDoorLayerItem: (_id: string) => void;
+  removeDrawerLayerItem: (_id: string) => void;
+  updateDoorLayerItem: (_id: string, _partial: Partial<DoorLayerItem>) => void;
+  updateDrawerLayerItem: (_id: string, _partial: Partial<DrawerLayerItem>) => void;
+  setDoorLayerItemOpen: (_id: string, _isOpen: boolean) => void;
+  setDrawerLayerItemOpen: (_id: string, _isOpen: boolean) => void;
+  setDoorLayerItemMaterial: (_id: string, _materialId: string) => void;
+  setDrawerLayerItemMaterial: (_id: string, _materialId: string) => void;
+  setDoorLayerItemDirection: (_id: string, _direction: Exclude<LayerOpenDirection, "pull">) => void;
+  regenerateBoxLayersForSelectedBox: () => void;
   toggleWorkspaceRotation: (_boxId: string) => void;
   rotateWorkspaceBox: (_boxId: string) => void;
   gerarDesign: () => void;

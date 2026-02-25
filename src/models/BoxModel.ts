@@ -1,6 +1,7 @@
 import type { WorkspaceBox } from "../core/types";
-import type { DoorOrDrawer } from "./DoorOrDrawer";
+import type { DoorLayerItem, DrawerLayerItem } from "./BoxLayers";
 
 export interface BoxModel extends WorkspaceBox {
-  doorsAndDrawers: DoorOrDrawer[];
+  doorsLayer: DoorLayerItem[];
+  drawersLayer: DrawerLayerItem[];
 }

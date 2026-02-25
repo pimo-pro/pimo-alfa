@@ -3,6 +3,9 @@ import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
+import { calcularPosicoesFurosVerticais } from "../rules/rulesConfig";
+import { calculateTechnicalDrillingsForPiece } from "../drilling/drillingService";
+import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 
 /**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
@@ -31,7 +34,54 @@ export function cutlistComPrecoFromBox(
     faceMaterials: { top: visualMaterial, front: visualMaterial } as { top?: typeof visualMaterial; front?: typeof visualMaterial },
   };
 
+  const makeVerticalHolesForPanel = (largura: number, altura: number) => {
+    if (!rules || !rules.furos) return [];
+    try {
+      const ys = calcularPosicoesFurosVerticais(altura, rules);
+      const diam = Math.max(0.5, rules.furos.diametroFuro || 5);
+      const radius = diam / 2;
+      const recuoRaw = rules.furos.recuoBorda || 50;
+      const recuo = Math.min(Math.max(recuoRaw, radius), Math.max(radius, largura - radius));
+      const prof = rules.furos.profundidadeFuro || 10;
+      const holes: NonNullable<CutListItemComPreco["furacoes"]> = [];
+      for (const y of ys) {
+        const ySafe = Math.min(Math.max(y, radius), Math.max(radius, altura - radius));
+        holes.push({ x: recuo, y: ySafe, diametro: diam, profundidade: prof, tipo: "vertical" });
+        holes.push({
+          x: Math.min(Math.max(largura - recuo, radius), Math.max(radius, largura - radius)),
+          y: ySafe,
+          diametro: diam,
+          profundidade: prof,
+          tipo: "vertical",
+        });
+      }
+      return holes;
+    } catch (err) {
+      console.warn("[cutlistFromBoxes] Error generating vertical holes:", err);
+      return [];
+    }
+  };
+
+  const makeTechnicalHolesForPanel = (tipo: string, largura: number, altura: number, espessura: number) => {
+    if (!rules || !Number.isFinite(largura) || !Number.isFinite(altura) || !Number.isFinite(espessura)) {
+      return [];
+    }
+    try {
+      return calculateTechnicalDrillingsForPiece(
+        { tipo, largura, altura, espessura },
+        rules
+      );
+    } catch (err) {
+      console.warn(`[cutlistFromBoxes] Error generating technical holes for ${tipo}:`, err);
+      return [];
+    }
+  };
+
   modelo.paineis.forEach((p) => {
+    if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
+      console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
+      return;
+    }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
     items.push({
       ...baseItem,
@@ -49,10 +99,19 @@ export function cutlistComPrecoFromBox(
       grainDirection,
       precoUnitario: p.quantidade > 0 ? p.custo / p.quantidade : 0,
       precoTotal: p.custo,
+      furacoes:
+        p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita"
+          ? makeVerticalHolesForPanel(p.largura_mm, p.altura_mm)
+          : undefined,
+      furacoesTecnicas: makeTechnicalHolesForPanel(p.tipo, p.largura_mm, p.altura_mm, p.espessura_mm),
     });
   });
 
   modelo.portas.forEach((p) => {
+    if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
+      console.warn("[cutlistFromBoxes] Skipping invalid porta:", p);
+      return;
+    }
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -69,10 +128,15 @@ export function cutlistComPrecoFromBox(
       grainDirection: "none" as GrainDirection,
       precoUnitario: p.custo,
       precoTotal: p.custo,
+      furacoesTecnicas: makeTechnicalHolesForPanel(p.tipo, p.largura_mm, p.altura_mm, p.espessura_mm),
     });
   });
 
   modelo.gavetas.forEach((p) => {
+    if (!p || !p.id || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.profundidade_mm) || !Number.isFinite(p.espessura_mm)) {
+      console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
+      return;
+    }
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -89,6 +153,7 @@ export function cutlistComPrecoFromBox(
       grainDirection: "none" as GrainDirection,
       precoUnitario: p.custo,
       precoTotal: p.custo,
+      furacoesTecnicas: makeTechnicalHolesForPanel("gaveta", p.largura_mm, p.altura_mm, p.espessura_mm),
     });
   });
 
@@ -101,9 +166,15 @@ export function cutlistComPrecoFromBox(
 export function cutlistComPrecoFromBoxes(
   boxes: BoxModule[],
   rules: RulesConfig,
-  projectMaterialId?: string
+  projectMaterialId?: string,
+  projectName = "Projeto"
 ): CutListItemComPreco[] {
-  return boxes.flatMap((box) => cutlistComPrecoFromBox(box, rules, projectMaterialId));
+  const raw = boxes.flatMap((box) => cutlistComPrecoFromBox(box, rules, projectMaterialId));
+  return attachQrCodesToCutlist(raw, {
+    projectName,
+    boxes,
+    rules,
+  });
 }
 
 /**

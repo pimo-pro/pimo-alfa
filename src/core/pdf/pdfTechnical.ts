@@ -58,7 +58,12 @@ export function renderProjectSummary(doc: jsPDF, project: ProjectForPdf): void {
   doc.text(`Total de caixas: ${project.boxes.length}`, MARGIN, y);
   y += 6;
 
-  const cutlist = cutlistComPrecoFromBoxes(project.boxes, project.rules, project.materialId);
+  const cutlist = cutlistComPrecoFromBoxes(
+    project.boxes,
+    project.rules,
+    project.materialId,
+    project.projectName
+  );
   const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0);
   doc.text(`Total de peças: ${totalPecas > 0 ? totalPecas : "—"}`, MARGIN, y);
   y += 10;

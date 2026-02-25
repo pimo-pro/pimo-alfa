@@ -145,7 +145,12 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
   y += 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const cutlist = cutlistComPrecoFromBoxes(project.boxes, project.rules, project.materialId);
+  const cutlist = cutlistComPrecoFromBoxes(
+    project.boxes,
+    project.rules,
+    project.materialId,
+    project.projectName
+  );
   const extracted = (project.extractedPartsByBoxId ?? {});
   const extractedList = project.boxes.flatMap((b) =>
     Object.values(extracted[b.id] ?? {}).flat()

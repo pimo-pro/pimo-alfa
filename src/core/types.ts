@@ -1,5 +1,5 @@
 import type { Group } from "three";
-import type { DoorOrDrawer } from "../models/DoorOrDrawer";
+import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
 
 export interface Material {
   tipo: string;
@@ -49,6 +49,17 @@ export interface PieceFaceMaterials {
   back?: LayoutVisualMaterial;
 }
 
+export type DrillType = "cavilha" | "parafuso" | "dobradica" | "corredica" | "prateleira";
+export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
+export interface TechnicalDrillHole {
+  x: number;
+  y: number;
+  diametro: number;
+  profundidade: number;
+  tipo: DrillType;
+  face: DrillFace;
+}
+
 export interface CutListItem {
   id: string;
   nome: string;
@@ -79,6 +90,22 @@ export interface CutListItem {
   uvRotationOverride?: number;
   /** Materiais por face (preparação para texturas por face). */
   faceMaterials?: PieceFaceMaterials;
+  /** Furos opcionais para representação técnica/PDF. */
+  furacoes?: Array<{
+    x: number;
+    y: number;
+    diametro: number;
+    profundidade?: number;
+    tipo?: "vertical" | "horizontal";
+  }>;
+  /** Furação técnica parametrizada para cutlist/PDF/drill. */
+  furacoesTecnicas?: TechnicalDrillHole[];
+  /** Código curto legível para fábrica. */
+  shortCode?: string;
+  /** QR em SVG contendo o shortCode/carga técnica. */
+  qrSvg?: string;
+  /** Índice sequencial da peça no ciclo 1..99. */
+  pieceNumber?: number;
 }
 
 /** Instância de um modelo CAD (GLB) associada a uma caixa. */
@@ -197,10 +224,14 @@ export interface BoxModule {
   portaTipo: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
   gavetas: number;
   alturaGaveta: number;
+  drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  drawerType?: "normal" | "pro";
   /** IDs únicos por peça (cima, fundo, laterais, costa, prateleiras, portas, gavetas). */
   panelIds?: BoxPanelIds;
-  /** Portas e gavetas configuráveis para UI/visualização local. */
-  doorsAndDrawers: DoorOrDrawer[];
+  /** Camada de portas da caixa. */
+  doorsLayer: DoorLayerItem[];
+  /** Camada de gavetas da caixa. */
+  drawersLayer: DrawerLayerItem[];
   ferragens: Acessorio[];
   cutList: CutListItem[];
   cutListComPreco: CutListItemComPreco[];
@@ -223,6 +254,8 @@ export interface WorkspaceBox {
   portaTipo: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
   gavetas: number;
   alturaGaveta: number;
+  drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  drawerType?: "normal" | "pro";
   posicaoX_mm: number;
   posicaoY_mm: number;
   /** Posição Z em mm (para manipulação 3D no viewer). */
@@ -251,8 +284,10 @@ export interface WorkspaceBox {
   autoRotateEnabled?: boolean;
   /** IDs únicos e estáveis por peça (cima, fundo, laterais, costa, prateleiras, portas, gavetas). Evita duplicate key no React. */
   panelIds?: BoxPanelIds;
-  /** Portas e gavetas configuráveis para UI/visualização local. */
-  doorsAndDrawers: DoorOrDrawer[];
+  /** Camada de portas da caixa. */
+  doorsLayer: DoorLayerItem[];
+  /** Camada de gavetas da caixa. */
+  drawersLayer: DrawerLayerItem[];
   /** Id do material (CRUD) ou label legado. Usado para resolver material no Viewer e em exports. */
   material?: string;
 }

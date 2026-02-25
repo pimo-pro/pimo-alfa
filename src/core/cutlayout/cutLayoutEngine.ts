@@ -16,12 +16,15 @@ import type {
 import type { LayoutVisualMaterial } from "../types";
 
 const DEFAULT_KERF_MM = 3;
+const SAFETY_MARGIN_MM = 5;
 const MIN_UTILIZATION_PERCENT = 0.8;
 const MAIN_SEARCH_WINDOW = 32;
 const DEFAULT_ROTATION_WEIGHT = 0.35;
 const DEFAULT_ROTATION_PENALTY = 0.25;
 const DEFAULT_ROTATION_MODE: RotationPreferenceMode = "auto";
 const EPS = 0.001;
+const LAST_SHEET_SMALL_PART_THRESHOLD_MM2 = 120000; // ~350x350
+const LAST_SHEET_MICRO_ADJUST_MM = 3;
 
 type RotationPreferenceMode = "auto" | "aggressive" | "disabled";
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
@@ -176,6 +179,71 @@ function overlaps(x: number, y: number, w: number, h: number, placed: PlacedRect
   return false;
 }
 
+function computePlacementBounds(placements: CutPlacement[]): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} | null {
+  if (placements.length === 0) return null;
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const p of placements) {
+    minX = Math.min(minX, p.x_mm);
+    minY = Math.min(minY, p.y_mm);
+    maxX = Math.max(maxX, p.x_mm + p.largura_mm);
+    maxY = Math.max(maxY, p.y_mm + p.altura_mm);
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function applySafetyMarginWhereCutExists(
+  placements: CutPlacement[],
+  sheet: SheetDefinition,
+  marginMm: number = SAFETY_MARGIN_MM
+): CutPlacement[] {
+  if (placements.length === 0) return placements;
+  const bounds = computePlacementBounds(placements);
+  if (!bounds) return placements;
+
+  // Regra pedida:
+  // - top <= margin => move para baixo
+  // - right >= width - margin => move para esquerda
+  // - left <= margin => move para direita
+  // - bottom >= height - margin => move para cima
+  const touchesTop = bounds.minY <= marginMm;
+  const touchesRight = bounds.maxX >= sheet.largura_mm - marginMm;
+  const touchesLeft = bounds.minX <= marginMm;
+  const touchesBottom = bounds.maxY >= sheet.altura_mm - marginMm;
+
+  const dx = (touchesLeft ? marginMm : 0) - (touchesRight ? marginMm : 0);
+  const dy = (touchesTop ? marginMm : 0) - (touchesBottom ? marginMm : 0);
+  if (Math.abs(dx) < EPS && Math.abs(dy) < EPS) return placements;
+
+  const shifted = placements.map((p) => ({
+    ...p,
+    x_mm: p.x_mm + dx,
+    y_mm: p.y_mm + dy,
+  }));
+
+  // Proteção: se a translação gerar invalidade geométrica, mantém layout original.
+  // Não altera lógica de nesting, só pós-ajuste seguro.
+  const rects: PlacedRect[] = [];
+  for (const p of shifted) {
+    if (!isInsideSheet(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, sheet)) {
+      return placements;
+    }
+    if (overlaps(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, rects, 0)) {
+      return placements;
+    }
+    rects.push({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm });
+  }
+
+  return shifted;
+}
+
 function expandPieces(pieces: CutPiece[]): CutPiece[] {
   const out: CutPiece[] = [];
   for (const p of pieces) {
@@ -214,8 +282,15 @@ function reorderPieces(pieces: CutPiece[], mode: ReorderMode = "production"): Cu
       const matA = a.materialId ?? "";
       const matB = b.materialId ?? "";
       if (matA !== matB) return matA.localeCompare(matB);
+      // Ordenação inteligente: área desc, depois maior lado, depois menor lado.
       const areaDiff = getPieceArea(b) - getPieceArea(a);
       if (areaDiff !== 0) return areaDiff;
+      const bMax = Math.max(b.largura_mm, b.altura_mm);
+      const aMax = Math.max(a.largura_mm, a.altura_mm);
+      if (bMax !== aMax) return bMax - aMax;
+      const bMin = Math.min(b.largura_mm, b.altura_mm);
+      const aMin = Math.min(a.largura_mm, a.altura_mm);
+      if (bMin !== aMin) return bMin - aMin;
       return getPieceAspectRatio(b) - getPieceAspectRatio(a);
     }
 
@@ -223,6 +298,261 @@ function reorderPieces(pieces: CutPiece[], mode: ReorderMode = "production"): Cu
     if (areaDiff !== 0) return areaDiff;
     return getPieceAspectRatio(b) - getPieceAspectRatio(a);
   });
+}
+
+function buildCandidateCoordinates(
+  placed: CutPlacement[],
+  pieceW: number,
+  pieceH: number,
+  sheet: SheetDefinition,
+  kerf: number
+): Array<{ x: number; y: number }> {
+  const xs = new Set<number>([0, Math.max(0, sheet.largura_mm - pieceW)]);
+  const ys = new Set<number>([0, Math.max(0, sheet.altura_mm - pieceH)]);
+  for (const p of placed) {
+    xs.add(Math.max(0, p.x_mm + p.largura_mm + kerf));
+    ys.add(Math.max(0, p.y_mm + p.altura_mm + kerf));
+    xs.add(Math.max(0, p.x_mm - pieceW - kerf));
+    ys.add(Math.max(0, p.y_mm - pieceH - kerf));
+  }
+  const out: Array<{ x: number; y: number }> = [];
+  const xList = Array.from(xs).filter((x) => x + pieceW <= sheet.largura_mm + EPS);
+  const yList = Array.from(ys).filter((y) => y + pieceH <= sheet.altura_mm + EPS);
+  for (const x of xList) {
+    for (const y of yList) out.push({ x, y });
+  }
+  return out;
+}
+
+function computePlacementCompactnessScore(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  sheet: SheetDefinition
+): number {
+  const rightSlack = Math.max(0, sheet.largura_mm - (x + w));
+  const topSlack = Math.max(0, sheet.altura_mm - (y + h));
+  const localWaste = rightSlack * h + topSlack * w;
+  const compactBonus = 1 - (x / Math.max(1, sheet.largura_mm)) * 0.35 - (y / Math.max(1, sheet.altura_mm)) * 0.65;
+  return compactBonus * 100000 - localWaste;
+}
+
+function findBestResidualPlacement(
+  target: CutPlacement,
+  existing: CutPlacement[],
+  sheet: SheetDefinition,
+  kerf: number
+): CutPlacement | null {
+  const variants = [
+    { w: target.largura_mm, h: target.altura_mm, rotacao: target.rotacao },
+    { w: target.altura_mm, h: target.largura_mm, rotacao: target.rotacao === 90 ? 0 : 90 },
+  ].filter((v, i, arr) => i === 0 || v.w !== arr[0].w || v.h !== arr[0].h);
+
+  const placedRects = existing.map((p) => ({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm }));
+  let best: CutPlacement | null = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const v of variants) {
+    const coords = buildCandidateCoordinates(existing, v.w, v.h, sheet, kerf);
+    for (const c of coords) {
+      if (!isInsideSheet(c.x, c.y, v.w, v.h, sheet)) continue;
+      if (overlaps(c.x, c.y, v.w, v.h, placedRects, kerf)) continue;
+      const score = computePlacementCompactnessScore(c.x, c.y, v.w, v.h, sheet);
+      if (score > bestScore) {
+        bestScore = score;
+        best = {
+          ...target,
+          x_mm: c.x,
+          y_mm: c.y,
+          largura_mm: v.w,
+          altura_mm: v.h,
+          rotacao: v.rotacao,
+        };
+      }
+    }
+  }
+  return best;
+}
+
+function getSheetBoundingBox(placements: CutPlacement[]) {
+  if (placements.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0, area: 0 };
+  const minX = Math.min(...placements.map((p) => p.x_mm));
+  const minY = Math.min(...placements.map((p) => p.y_mm));
+  const maxX = Math.max(...placements.map((p) => p.x_mm + p.largura_mm));
+  const maxY = Math.max(...placements.map((p) => p.y_mm + p.altura_mm));
+  return { minX, minY, maxX, maxY, area: Math.max(1, (maxX - minX) * (maxY - minY)) };
+}
+
+function tryMicroAdjustLastSheet(placements: CutPlacement[], sheet: SheetDefinition): CutPlacement[] {
+  if (placements.length <= 1) return placements;
+  const adjusted = placements.map((p) => ({ ...p }));
+  const offsets = [-LAST_SHEET_MICRO_ADJUST_MM, -2, -1, 1, 2, LAST_SHEET_MICRO_ADJUST_MM];
+  const startBox = getSheetBoundingBox(adjusted);
+  let currentScore = -startBox.area;
+  for (let i = 0; i < adjusted.length; i++) {
+    const p = adjusted[i];
+    let bestX = p.x_mm;
+    let bestY = p.y_mm;
+    let bestScore = currentScore;
+    for (const dx of offsets) {
+      for (const dy of offsets) {
+        const nx = p.x_mm + dx;
+        const ny = p.y_mm + dy;
+        if (!isInsideSheet(nx, ny, p.largura_mm, p.altura_mm, sheet)) continue;
+        const others: PlacedRect[] = adjusted
+          .filter((_, idx) => idx !== i)
+          .map((o) => ({ x: o.x_mm, y: o.y_mm, w: o.largura_mm, h: o.altura_mm }));
+        if (overlaps(nx, ny, p.largura_mm, p.altura_mm, others, 0)) continue;
+        const trial = adjusted.map((o, idx) => (idx === i ? { ...o, x_mm: nx, y_mm: ny } : o));
+        const box = getSheetBoundingBox(trial);
+        const score = -box.area;
+        if (score > bestScore) {
+          bestScore = score;
+          bestX = nx;
+          bestY = ny;
+        }
+      }
+    }
+    if (bestX !== p.x_mm || bestY !== p.y_mm) {
+      adjusted[i] = { ...adjusted[i], x_mm: bestX, y_mm: bestY };
+      currentScore = bestScore;
+    }
+  }
+  return adjusted;
+}
+
+function tryLocalRotationRefine(placements: CutPlacement[], sheet: SheetDefinition, kerf: number): CutPlacement[] {
+  if (placements.length <= 1) return placements;
+  const refined = placements.map((p) => ({ ...p }));
+  for (let i = 0; i < refined.length; i++) {
+    const p = refined[i];
+    if (Math.abs(p.largura_mm - p.altura_mm) < EPS) continue;
+    const others = refined.filter((_, idx) => idx !== i).map((o) => ({ ...o }));
+    const rotatedCandidate = findBestResidualPlacement(
+      {
+        ...p,
+        largura_mm: p.altura_mm,
+        altura_mm: p.largura_mm,
+        rotacao: p.rotacao === 90 ? 0 : 90,
+      },
+      others,
+      sheet,
+      kerf
+    );
+    if (!rotatedCandidate) continue;
+    const oldScore = computePlacementCompactnessScore(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, sheet);
+    const newScore = computePlacementCompactnessScore(
+      rotatedCandidate.x_mm,
+      rotatedCandidate.y_mm,
+      rotatedCandidate.largura_mm,
+      rotatedCandidate.altura_mm,
+      sheet
+    );
+    if (newScore > oldScore) refined[i] = rotatedCandidate;
+  }
+  return refined;
+}
+
+function trySwapSmallPieceToPrevious(
+  previous: SheetResult[],
+  lastPlacements: CutPlacement[],
+  sheet: SheetDefinition,
+  kerf: number
+): { moved: boolean; lastPlacements: CutPlacement[] } {
+  const smallLast = [...lastPlacements]
+    .filter((p) => p.largura_mm * p.altura_mm <= LAST_SHEET_SMALL_PART_THRESHOLD_MM2)
+    .sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm);
+
+  for (const target of smallLast) {
+    for (let sIdx = 0; sIdx < previous.length; sIdx++) {
+      const sheetRes = previous[sIdx];
+      const candidates = [...sheetRes.placements]
+        .sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm)
+        .slice(0, 6);
+      for (const victim of candidates) {
+        const kept = sheetRes.placements.filter((p) => p !== victim);
+        const fitTarget = findBestResidualPlacement(target, kept, sheet, kerf);
+        if (!fitTarget) continue;
+        const nextLastBase = lastPlacements.filter((p) => p !== target);
+        const fitVictimInLast = findBestResidualPlacement(victim, nextLastBase, sheet, kerf);
+        if (!fitVictimInLast) continue;
+        sheetRes.placements = [...kept, { ...fitTarget, sheetIndex: sIdx }];
+        return {
+          moved: true,
+          lastPlacements: [...nextLastBase, { ...fitVictimInLast, sheetIndex: previous.length }],
+        };
+      }
+    }
+  }
+
+  return { moved: false, lastPlacements };
+}
+
+function optimizeLastSheetLocally(
+  sheets: SheetResult[],
+  sheet: SheetDefinition,
+  kerf: number,
+  scoreModel: ScoreModel
+): SheetResult[] {
+  if (sheets.length <= 1) return sheets;
+  const cloned = cloneSheets(sheets);
+  const lastIndex = cloned.length - 1;
+  const last = cloned[lastIndex];
+  const previous = cloned.slice(0, lastIndex);
+  if (last.placements.length === 0) return cloned;
+
+  const movable = [...last.placements].sort(
+    (a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm
+  );
+  const remain = new Set(last.placements.map((_p, i) => i));
+  const movedToPrev: CutPlacement[] = [];
+
+  for (const piece of movable) {
+    const area = piece.largura_mm * piece.altura_mm;
+    if (area > LAST_SHEET_SMALL_PART_THRESHOLD_MM2) continue;
+    let moved = false;
+    for (let sIdx = 0; sIdx < previous.length; sIdx++) {
+      const targetSheet = previous[sIdx];
+      const fit = findBestResidualPlacement(piece, targetSheet.placements, sheet, kerf);
+      if (!fit) continue;
+      targetSheet.placements.push({ ...fit, sheetIndex: sIdx });
+      movedToPrev.push(piece);
+      moved = true;
+      break;
+    }
+    if (moved) {
+      const idx = last.placements.findIndex((p) => p === piece);
+      if (idx >= 0) remain.delete(idx);
+    }
+  }
+
+  if (movedToPrev.length === 0) return cloned;
+  let nextLastPlacements = last.placements.filter((_p, idx) => remain.has(idx));
+  const swapAttempt = trySwapSmallPieceToPrevious(previous, nextLastPlacements, sheet, kerf);
+  if (swapAttempt.moved) nextLastPlacements = swapAttempt.lastPlacements;
+  nextLastPlacements = tryLocalRotationRefine(nextLastPlacements, sheet, kerf);
+  nextLastPlacements = tryMicroAdjustLastSheet(nextLastPlacements, sheet);
+  if (nextLastPlacements.length === 0) {
+    const compact = previous.map((s, idx) => ({
+      sheet: { ...s.sheet },
+      placements: s.placements.map((p) => ({ ...p, sheetIndex: idx })),
+    }));
+    return compact;
+  }
+
+  const baseMetrics = computeSolutionMetrics(cloned, sheet, scoreModel);
+  const candidateSheets = [
+    ...previous.map((s, idx) => ({
+      sheet: { ...s.sheet },
+      placements: s.placements.map((p) => ({ ...p, sheetIndex: idx })),
+    })),
+    {
+      sheet: { ...sheet },
+      placements: nextLastPlacements.map((p) => ({ ...p, sheetIndex: previous.length })),
+    },
+  ];
+  const candidateMetrics = computeSolutionMetrics(candidateSheets, sheet, scoreModel);
+  return candidateMetrics.score <= baseMetrics.score ? candidateSheets : cloned;
 }
 
 function scoreOrientationFit(
@@ -281,6 +611,12 @@ function chooseOrientationWithRotationBias(
     rotationDelta,
     alternativeRotationAvailable: true,
   };
+}
+
+function pickBestCandidateByRotation(candidates: PlacementCandidate[], rotation: 0 | 90): PlacementCandidate | null {
+  const pool = candidates.filter((c) => c.rotation === rotation);
+  if (pool.length === 0) return null;
+  return pool.sort((a, b) => b.orientationScore - a.orientationScore || a.y - b.y || a.x - b.x)[0];
 }
 
 function getSkylineHeight(skyline: SkylineSegment[], xStart: number, width: number): number {
@@ -383,8 +719,8 @@ function findPlacementSkyline(
   }
 
   if (candidates.length === 0) return null;
-  const normal = candidates.find((c) => c.rotation === 0) ?? null;
-  const rotated = candidates.find((c) => c.rotation === 90) ?? null;
+  const normal = pickBestCandidateByRotation(candidates, 0);
+  const rotated = pickBestCandidateByRotation(candidates, 90);
   const picked = chooseOrientationWithRotationBias(normal, rotated, cfg);
   if (bin === "firstFit" && picked) return picked;
 
@@ -448,8 +784,8 @@ function findPlacementShelf(
 
   if (candidates.length === 0) return null;
   if (bin === "firstFit") {
-    const normal = candidates.find((c) => c.rotation === 0) ?? null;
-    const rotated = candidates.find((c) => c.rotation === 90) ?? null;
+    const normal = pickBestCandidateByRotation(candidates, 0);
+    const rotated = pickBestCandidateByRotation(candidates, 90);
     return chooseOrientationWithRotationBias(normal, rotated, cfg);
   }
 
@@ -517,8 +853,8 @@ function findPlacementGuillotine(
 
   if (candidates.length === 0) return null;
   if (bin === "firstFit") {
-    const normal = candidates.find((c) => c.rotation === 0) ?? null;
-    const rotated = candidates.find((c) => c.rotation === 90) ?? null;
+    const normal = pickBestCandidateByRotation(candidates, 0);
+    const rotated = pickBestCandidateByRotation(candidates, 90);
     return chooseOrientationWithRotationBias(normal, rotated, cfg);
   }
 
@@ -644,6 +980,10 @@ function pickBestPieceForSheet(
   if (remaining.length === 0) return null;
   const currentUtil = calculateSheetUtilization(placedRects, sheet.largura_mm, sheet.altura_mm);
   const limit = Math.max(1, Math.min(searchWindow, remaining.length));
+  const dynamicLimit =
+    bin === "bestFit"
+      ? Math.min(remaining.length, Math.max(limit, Math.floor(limit * 2.4)))
+      : limit;
 
   if (bin === "firstFit") {
     for (let i = 0; i < limit; i++) {
@@ -663,7 +1003,7 @@ function pickBestPieceForSheet(
   }
 
   let best: { index: number; placement: PlacementCandidate; score: number } | null = null;
-  for (let i = 0; i < limit; i++) {
+  for (let i = 0; i < dynamicLimit; i++) {
     const placement = findPlacementForPiece(
       remaining[i],
       strategy,
@@ -726,9 +1066,10 @@ function layoutFromPlacements(
   const validSheets: SheetResult[] = [];
 
   for (const s of grouped) {
+    const withSafetyMargin = applySafetyMarginWhereCutExists(s.placements, sheet, SAFETY_MARGIN_MM);
     const valid: CutPlacement[] = [];
     const rects: PlacedRect[] = [];
-    for (const p of s.placements) {
+    for (const p of withSafetyMargin) {
       const inside = isInsideSheet(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, sheet);
       const collides = overlaps(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, rects, 0);
       if (!inside || collides) {
@@ -1363,6 +1704,8 @@ function simulateTrialForGroup(
         partName: piece.partName,
         materialId: piece.materialId,
         materialName: piece.materialName,
+        pieceNumber: piece.pieceNumber,
+        shortCode: piece.shortCode,
       });
       placedRects.push({ x: best.placement.x, y: best.placement.y, w: best.placement.w, h: best.placement.h });
       state = updateStrategyState(trial.strategy, state, best.placement, kerf);
@@ -1455,6 +1798,8 @@ function simulateTrialForGroup(
             partName: piece.partName,
             materialId: piece.materialId,
             materialName: piece.materialName,
+            pieceNumber: piece.pieceNumber,
+            shortCode: piece.shortCode,
           });
           placedRects.push({
             x: rescue.placement.x,
@@ -1468,13 +1813,17 @@ function simulateTrialForGroup(
       }
     }
 
-    sheets.push({ sheet: { ...sheet }, placements });
+    sheets.push({
+      sheet: { ...sheet },
+      placements: applySafetyMarginWhereCutExists(placements, sheet, SAFETY_MARGIN_MM),
+    });
   }
 
-  const metrics = computeSolutionMetrics(sheets, sheet, scoreModel);
+  const optimizedSheets = optimizeLastSheetLocally(sheets, sheet, kerf, scoreModel);
+  const metrics = computeSolutionMetrics(optimizedSheets, sheet, scoreModel);
 
   return {
-    sheets,
+    sheets: optimizedSheets,
     rejectedByLimit: collectDiagnostics ? rejectedByLimit : [],
     gapFillPlacements: collectDiagnostics ? gapFillPlacements : [],
     gapFillAttempts,
@@ -1516,6 +1865,8 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
         visualMaterial: item.visualMaterial,
         uvScaleOverride: item.uvScaleOverride,
         uvRotationOverride: item.uvRotationOverride,
+        pieceNumber: (item as any).pieceNumber,
+        shortCode: (item as any).shortCode,
       });
     }
     return pieces;

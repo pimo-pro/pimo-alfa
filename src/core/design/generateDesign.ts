@@ -8,6 +8,7 @@ import type {
   Peca,
 } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
+import { applyDrillingsToCutListItems } from "../drilling/drillingService";
 
 /**
  * Gera acessórios básicos (placeholder)
@@ -198,7 +199,8 @@ export function generateDesign(
     },
   };
 
-  const cutList = Array.from(cutListMap.values());
+  const cutListBase = Array.from(cutListMap.values());
+  const cutList = applyDrillingsToCutListItems(cutListBase, rules);
 
   // 🔥 gerar acessórios
   const acessorios = gerarAcessorios(tipoProjeto, material, dimensoes, quantidade);

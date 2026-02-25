@@ -289,6 +289,110 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
+      <Panel title="Portas (gaps e offsets)" description="Parâmetros de folgas e posicionamento das portas.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          <NumberField
+            label="Gap vertical (mm)"
+            value={draft.portas.portaGapVerticalMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, portas: { ...prev.portas, portaGapVerticalMm: value } }))
+            }
+          />
+          <NumberField
+            label="Gap horizontal (mm)"
+            value={draft.portas.portaGapHorizontalMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, portas: { ...prev.portas, portaGapHorizontalMm: value } }))
+            }
+          />
+          <NumberField
+            label="Gap porta dupla (mm)"
+            value={draft.portas.portaGapDuplaMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, portas: { ...prev.portas, portaGapDuplaMm: value } }))
+            }
+          />
+          <NumberField
+            label="Offset posZ (mm)"
+            value={draft.portas.portaPosZOffsetMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, portas: { ...prev.portas, portaPosZOffsetMm: value } }))
+            }
+          />
+        </div>
+      </Panel>
+
+      <Panel title="Gavetas" description="Parâmetros de construção e distribuição de alturas.">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          <NumberField
+            label="Base gaveta normal (mm)"
+            value={draft.gavetas.gavetaNormalBaseEspessuraMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaNormalBaseEspessuraMm: value } }))
+            }
+          />
+          <NumberField
+            label="Base gaveta PRO (mm)"
+            value={draft.gavetas.gavetaProBaseEspessuraMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaProBaseEspessuraMm: value } }))
+            }
+          />
+          <NumberField
+            label="Folga lateral (mm)"
+            value={draft.gavetas.gavetaFolgaLateralMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaFolgaLateralMm: value } }))
+            }
+          />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Profundidades disponiveis (mm)</span>
+            <input
+              className="input"
+              value={draft.gavetas.gavetaProfundidadesDisponiveisMm.join(", ")}
+              onChange={(e) => {
+                const values = e.target.value
+                  .split(",")
+                  .map((item) => Number(item.trim()))
+                  .filter((item) => Number.isFinite(item) && item > 0);
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaProfundidadesDisponiveisMm: values },
+                }));
+              }}
+              placeholder="250, 300, 350, 400"
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Modo de altura</span>
+            <select
+              className="input"
+              value={draft.gavetas.gavetaAlturaModoPadrao}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: {
+                    ...prev.gavetas,
+                    gavetaAlturaModoPadrao: e.target.value as SettingsSchema["gavetas"]["gavetaAlturaModoPadrao"],
+                  },
+                }))
+              }
+            >
+              <option value="equal">Todas iguais</option>
+              <option value="top_small_mid_medium_bottom_large">Topo pequeno, meio medio, baixo grande</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+        </div>
+      </Panel>
+
       <Panel title="Viewer" description="Qualidade visual e opções de visualização do ambiente 3D.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>

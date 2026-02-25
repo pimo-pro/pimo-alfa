@@ -30,6 +30,10 @@ export type CutPiece = {
   uvScaleOverride?: { x: number; y: number };
   /** Override de rotação UV por peça (graus). */
   uvRotationOverride?: number;
+  /** Número sequencial da peça (1-99). */
+  pieceNumber?: number;
+  /** Código curto legível para fábrica (ex.: PRJBXPO1). */
+  shortCode?: string;
 };
 
 export type CutPlacement = {
@@ -43,6 +47,10 @@ export type CutPlacement = {
   partName: string;
   materialId?: string;
   materialName?: string;
+  /** Número sequencial da peça (1-99). */
+  pieceNumber?: number;
+  /** Código curto legível para fábrica. */
+  shortCode?: string;
 };
 
 export type SheetResult = {

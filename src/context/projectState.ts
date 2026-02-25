@@ -32,6 +32,7 @@ import { loadProfiles } from "../core/rules/rulesProfilesStorage";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { getCatalogGlbPath } from "../core/glb/glbRegistry";
+import { regenerateLayersForBox } from "../services/boxLayersService";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
 function getRulesFromProfiles(config: RulesProfilesConfig) {
@@ -74,10 +75,11 @@ const createBox = (
   portaTipo: "porta_simples",
   gavetas: 1,
   alturaGaveta: 200,
-  doorsAndDrawers: [],
   ferragens: [],
   cutList: [],
   cutListComPreco: [],
+  doorsLayer: [],
+  drawersLayer: [],
   estrutura3D: {
     pecas: [],
     dimensoesTotais: {
@@ -98,6 +100,8 @@ export type CreateWorkspaceBoxOverrides = {
   prateleiras?: number;
   portaTipo?: WorkspaceBox["portaTipo"];
   gavetas?: number;
+  drawerHeightMode?: WorkspaceBox["drawerHeightMode"];
+  drawerType?: WorkspaceBox["drawerType"];
   panelIds?: WorkspaceBox["panelIds"];
   cabinetType?: "lower" | "upper";
   pe_cm?: number;
@@ -116,9 +120,21 @@ export const createWorkspaceBox = (
   catalogItemId?: string,
   overrides?: CreateWorkspaceBoxOverrides
 ): WorkspaceBox => {
-  const prateleiras = overrides?.prateleiras ?? 0;
-  const portaTipo = overrides?.portaTipo ?? "sem_porta";
-  const gavetas = overrides?.gavetas ?? 0;
+  let prateleiras = overrides?.prateleiras ?? 0;
+  let portaTipo = overrides?.portaTipo ?? "sem_porta";
+  let gavetas = overrides?.gavetas ?? 0;
+  if (gavetas > 0) {
+    portaTipo = "sem_porta";
+    prateleiras = 0;
+  }
+  if (portaTipo !== "sem_porta") {
+    gavetas = 0;
+  }
+  if (prateleiras > 0) {
+    gavetas = 0;
+  }
+  const drawerHeightMode = overrides?.drawerHeightMode ?? "equal";
+  const drawerType = overrides?.drawerType ?? "normal";
   const panelIds = ensureBoxPanelIds(overrides?.panelIds, { prateleiras, portaTipo, gavetas });
   const cabinetType = overrides?.cabinetType;
   const pe_cm = overrides?.pe_cm;
@@ -131,7 +147,8 @@ export const createWorkspaceBox = (
       : cabinetType === "upper"
         ? 1500 + alturaMm / 2
         : 0;
-  return {
+  
+  const tempBox: WorkspaceBox = {
     id,
     nome,
     dimensoes,
@@ -143,6 +160,8 @@ export const createWorkspaceBox = (
     portaTipo,
     gavetas,
     alturaGaveta: 200,
+    drawerHeightMode,
+    drawerType,
     posicaoX_mm,
     posicaoY_mm,
     posicaoZ_mm: 0,
@@ -155,7 +174,15 @@ export const createWorkspaceBox = (
     feetEnabled,
     autoRotateEnabled: true,
     panelIds,
-    doorsAndDrawers: [],
+    doorsLayer: [],
+    drawersLayer: [],
+  };
+  
+  // Regenerate layers based on portaTipo and gavetas
+  const layers = regenerateLayersForBox(tempBox);
+  return {
+    ...tempBox,
+    ...layers,
   };
 };
 
@@ -418,8 +445,9 @@ const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     gavetas: box.gavetas,
     alturaGaveta: box.alturaGaveta,
     panelIds,
-    doorsAndDrawers: box.doorsAndDrawers ?? [],
     material: box.material,
+    doorsLayer: box.doorsLayer ?? [],
+    drawersLayer: box.drawersLayer ?? [],
   };
 };
 

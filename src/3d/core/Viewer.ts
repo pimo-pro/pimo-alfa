@@ -875,17 +875,18 @@ export class Viewer {
     const structureChanged =
       dimensionsChanged ||
       opts.shelves !== undefined ||
-      opts.doors !== undefined ||
-      opts.drawers !== undefined ||
-      opts.hingeType !== undefined ||
-      opts.runnerType !== undefined ||
-      opts.doorDrawerItems !== undefined;
-    if (import.meta.env.DEV && opts.doorDrawerItems !== undefined) {
-      console.log("[DoorDrawer][Viewer.updateBox] input", {
+      opts.doorLayerItems !== undefined ||
+      opts.drawerLayerItems !== undefined;
+    if (
+      import.meta.env.DEV &&
+      (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
+    ) {
+      console.log("[BoxLayers][Viewer.updateBox] input", {
         boxId: id,
         cadOnly: entry.cadOnly === true,
         structureChanged,
-        doorDrawerItemsCount: opts.doorDrawerItems?.length ?? 0,
+        doorLayerItemsCount: opts.doorLayerItems?.length ?? 0,
+        drawerLayerItemsCount: opts.drawerLayerItems?.length ?? 0,
       });
     }
 
@@ -894,8 +895,9 @@ export class Viewer {
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
       depth = Math.max(0.001, opts.depth ?? opts.size ?? depth);
       heightChanged = height !== entry.height;
-      const hasDoorDrawerUpdate = opts.doorDrawerItems !== undefined;
-      if (entry.cadOnly && !hasDoorDrawerUpdate) {
+      const hasLayerUpdate =
+        opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined;
+      if (entry.cadOnly && !hasLayerUpdate) {
         if (!entry.manualPosition) {
           entry.mesh.position.y = height / 2;
         }
@@ -906,16 +908,17 @@ export class Viewer {
           depth: opts.depth ?? depth,
           thickness: opts.thickness,
           shelves: opts.shelves,
-          doors: opts.doors,
-          hingeType: opts.hingeType,
-          drawers: opts.drawers,
-          runnerType: opts.runnerType,
-          doorDrawerItems: opts.doorDrawerItems,
+          doorLayerItems: opts.doorLayerItems,
+          drawerLayerItems: opts.drawerLayerItems,
         };
-        if (import.meta.env.DEV && opts.doorDrawerItems !== undefined) {
-          console.log("[DoorDrawer][Viewer.updateBox] rebuild -> updateBoxGroup", {
+        if (
+          import.meta.env.DEV &&
+          (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
+        ) {
+          console.log("[BoxLayers][Viewer.updateBox] rebuild -> updateBoxGroup", {
             boxId: id,
-            fullOptsDoorDrawerCount: fullOpts.doorDrawerItems?.length ?? 0,
+            fullOptsDoorLayerCount: fullOpts.doorLayerItems?.length ?? 0,
+            fullOptsDrawerLayerCount: fullOpts.drawerLayerItems?.length ?? 0,
           });
         }
         const updated =

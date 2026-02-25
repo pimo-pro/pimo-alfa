@@ -86,7 +86,6 @@ export const useCalculadoraSync = (
       currentIds.add(wsBox.id);
       nextState.set(wsBox.id, { index });
       const posRot = getBoxPositionAndRotation(wsBox);
-      console.log("[SYNC][doorDrawerItems]", wsBox?.doorsAndDrawers);
 
       const widthMm = Number.isFinite(wsBox.dimensoes?.largura) ? wsBox.dimensoes.largura : undefined;
       const heightMm = Number.isFinite(wsBox.dimensoes?.altura) ? wsBox.dimensoes.altura : undefined;
@@ -113,12 +112,20 @@ export const useCalculadoraSync = (
       const pe_cm = wsBox?.pe_cm;
       const feetEnabled = wsBox?.feetEnabled ?? true;
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
-      const doorDrawerItems = wsBox?.doorsAndDrawers ?? [];
+      const doorLayerItems = wsBox?.doorsLayer ?? [];
+      const drawerLayerItems = wsBox?.drawersLayer ?? [];
       const useCabinetLock = cabinetType === "lower" && feetEnabled;
       const cabinetOpts: Partial<BoxOptions> = useCabinetLock
         ? { cabinetType, pe_cm, feetEnabled }
         : { cabinetType: null, feetEnabled };
       const rotateOpts = autoRotateEnabled === false ? { autoRotateEnabled: false } : {};
+      const cutlistByTipo = new Map((box?.cutList ?? []).map((item) => [item.tipo, item]));
+      const drillMarkersByPanel = {
+        cima: cutlistByTipo.get("cima")?.furacoesTecnicas ?? [],
+        fundo: cutlistByTipo.get("fundo")?.furacoesTecnicas ?? [],
+        lateral_esquerda: cutlistByTipo.get("lateral_esquerda")?.furacoesTecnicas ?? [],
+        lateral_direita: cutlistByTipo.get("lateral_direita")?.furacoesTecnicas ?? [],
+      };
       if (!stateRef.current.has(wsBox.id)) {
         api.addBox(wsBox.id, {
           width,
@@ -131,7 +138,9 @@ export const useCalculadoraSync = (
           cadOnly,
           ...cabinetOpts,
           ...rotateOpts,
-          doorDrawerItems,
+          doorLayerItems,
+          drawerLayerItems,
+          drillMarkersByPanel,
           ...posRot,
         });
       } else {
@@ -145,7 +154,9 @@ export const useCalculadoraSync = (
           index,
           ...cabinetOpts,
           ...rotateOpts,
-          doorDrawerItems,
+          doorLayerItems,
+          drawerLayerItems,
+          drillMarkersByPanel,
           ...posRot,
         });
       }

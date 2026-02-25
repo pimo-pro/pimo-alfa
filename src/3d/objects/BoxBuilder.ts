@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { createWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibrary";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
-import type { DoorOrDrawer } from "../../models/DoorOrDrawer";
+import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
+import type { TechnicalDrillHole } from "../../core/types";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -29,16 +30,9 @@ export type BoxOptions = {
   thickness?: number;
   /** Número de prateleiras internas (geradas dentro da caixa). */
   shelves?: number;
-  /** Número de portas (0, 1 ou 2). */
-  doors?: number;
-  /** Tipo de dobradiça (futuro uso). */
-  hingeType?: string;
-  /** Número de gavetas (0+). */
-  drawers?: number;
-  /** Itens customizados de portas/gavetas para renderização no módulo. */
-  doorDrawerItems?: DoorOrDrawer[];
-  /** Tipo de corrediça (futuro uso). */
-  runnerType?: string;
+  doorLayerItems?: DoorLayerItem[];
+  drawerLayerItems?: DrawerLayerItem[];
+  drillMarkersByPanel?: Record<string, TechnicalDrillHole[]>;
   /** Se true, não cria geometria paramétrica; o grupo serve apenas para o(s) modelo(s) GLB (caixa = GLB). */
   cadOnly?: boolean;
   /** Rotação Y em radianos (manipulação visual). */
@@ -82,11 +76,13 @@ const BACK_THICKNESS_M = SYSTEM_BACK_MM / 1000;
 const SHELF_WIDTH_CLEARANCE_M = 0.002;
 /** Profundidade interna antes da costa (costa 10 mm atrás). */
 const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
-/** Gap entre folhas de porta (m). */
-const DOOR_GAP_M = 0.002;
-/** Folga traseira da gaveta (m). */
-const DRAWER_CLEARANCE_M = 0.01;
-
+const DOOR_ANIMATION_DURATION_MS = 2000;
+const doorOpenState = new Map<string, boolean>();
+const doorRotationState = new Map<string, number>();
+const doorAnimationRaf = new Map<string, number>();
+const easeInOutCubic = (t: number) => (t < 0.5
+  ? 4 * t * t * t
+  : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const resolveDimensions = (options: BoxOptions = {}) => {
   const size = options.size ?? 1;
   const width = options.width ?? size;
@@ -157,9 +153,10 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
 
 type PanelType = "left" | "right" | "top" | "bottom" | "back" | "front";
 
-type DoorDrawerSpec = {
+type DoorSpec = {
   id: string;
-  type: "door" | "drawer";
+  type: "door";
+  groupType?: "simples" | "dupla";
   widthM: number;
   heightM: number;
   thicknessM: number;
@@ -167,139 +164,66 @@ type DoorDrawerSpec = {
   y: number;
   z: number;
   rotY: number;
-  openDirection: DoorOrDrawer["openDirection"];
-  hingeSide?: DoorOrDrawer["hingeSide"];
-  pivot?: DoorOrDrawer["pivot"];
+  openDirection: DoorLayerItem["openDirection"];
+  hingeSide: DoorLayerItem["hingeSide"];
+  pivot: DoorLayerItem["pivot"];
   isOpen: boolean;
 };
 
-function buildDoorObjects(
-  width: number,
-  height: number,
-  depth: number,
-  doorCount: number,
-  material: THREE.Material
-): THREE.Object3D[] {
-  const count = Math.max(0, Math.floor(doorCount));
-  if (count < 1) return [];
-  const usableWidth = width - DOOR_GAP_M * (count - 1);
-  const doorWidth = usableWidth / count;
-  const doorZ = depth / 2 + THICKNESS_M / 2;
-  if (import.meta.env.DEV) {
-    console.log("[DoorBuilder] computed", { width, count, gap: DOOR_GAP_M, usableWidth, doorWidth });
-  }
-  const objects: THREE.Object3D[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const localStartX = i * (doorWidth + DOOR_GAP_M);
-    const centeredX = -width / 2 + doorWidth / 2 + localStartX;
-    const hingeSide: "left" | "right" = count === 1 ? "left" : i === 0 ? "left" : "right";
-    const pivot = new THREE.Group();
-    pivot.name = `door-builder-${i}`;
-    const mesh = createPanel(doorWidth, height, THICKNESS_M, `door-leaf-${i}`, "front", {
-      singleMaterial: material,
-    });
-    mesh.position.set(hingeSide === "left" ? doorWidth / 2 : -doorWidth / 2, 0, 0);
-    pivot.position.set(centeredX, 0, doorZ);
-    pivot.add(mesh);
-    objects.push(pivot);
-    if (import.meta.env.DEV) {
-      console.log("[DoorBuilder] final position", {
-        index: i,
-        hingeSide,
-        pivot: hingeSide === "left" ? "left-edge" : "right-edge",
-        localStartX,
-        centeredX,
-        y: 0,
-        z: doorZ,
-      });
-    }
-  }
-  return objects;
+type DrawerSpec = {
+  id: string;
+  type: "drawer";
+  widthM: number;
+  heightM: number;
+  depthM: number;
+  frontThicknessM: number;
+  x: number;
+  y: number;
+  z: number;
+  rotY: number;
+  isOpen: boolean;
+  pullDistanceM: number;
+};
+
+function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
+  return items.map((item) => ({
+    id: item.id,
+    type: "door",
+    groupType: item.groupType,
+    widthM: Math.max(0.001, item.width / 1000),
+    heightM: Math.max(0.001, item.height / 1000),
+    thicknessM: Math.max(0.001, item.thickness / 1000),
+    x: (item.posX ?? 0) / 1000,
+    y: (item.posY ?? 0) / 1000,
+    z: (item.posZ ?? 0) / 1000,
+    rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
+    openDirection: item.openDirection,
+    hingeSide: item.hingeSide,
+    pivot: item.pivot,
+    isOpen: Boolean(item.isOpen),
+  }));
 }
 
-function buildDrawerObjects(
-  width: number,
-  height: number,
-  depth: number,
-  drawerCount: number,
-  material: THREE.Material
-): THREE.Object3D[] {
-  const count = Math.max(0, Math.floor(drawerCount));
-  if (count < 1) return [];
-  const drawerWidth = width;
-  const drawerHeight = Math.max(0.001, height / count);
-  const drawerDepth = Math.max(0.001, depth - DRAWER_CLEARANCE_M);
-  const frontZ = depth / 2 + THICKNESS_M / 2;
-  if (import.meta.env.DEV) {
-    console.log("[DrawerBuilder] computed", { drawerWidth, drawerHeight, drawerDepth, count });
-  }
-  const objects: THREE.Object3D[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const posY = -height / 2 + i * drawerHeight + drawerHeight / 2;
-    const group = new THREE.Group();
-    group.name = `drawer-builder-${i}`;
-    group.position.set(0, posY, 0);
-
-    const body = createPanel(drawerWidth, drawerHeight, drawerDepth, `drawer-body-${i}`, "front", {
-      singleMaterial: material,
-    });
-    body.position.set(0, 0, depth / 2 - drawerDepth / 2);
-    group.add(body);
-
-    const front = createPanel(drawerWidth, drawerHeight, THICKNESS_M, `drawer-front-${i}`, "front", {
-      singleMaterial: material,
-    });
-    front.position.set(0, 0, frontZ);
-    group.add(front);
-    objects.push(group);
-    if (import.meta.env.DEV) {
-      console.log("[DrawerBuilder] final position", {
-        index: i,
-        x: 0,
-        y: posY,
-        z: frontZ,
-      });
-    }
-  }
-  return objects;
+function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
+  return items.map((item) => ({
+    id: item.id,
+    type: "drawer",
+    widthM: Math.max(0.001, item.width / 1000),
+    heightM: Math.max(0.001, item.height / 1000),
+    depthM: Math.max(0.001, item.depth / 1000),
+    frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
+    x: (item.posX ?? 0) / 1000,
+    y: (item.posY ?? 0) / 1000,
+    z: (item.posZ ?? 0) / 1000,
+    rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
+    isOpen: Boolean(item.isOpen),
+    pullDistanceM: Math.max(0, (item.pullDistanceMm ?? 0) / 1000),
+  }));
 }
 
-function buildDoorDrawerSpecs(depth: number, items: DoorOrDrawer[]): DoorDrawerSpec[] {
-  return items.map((item) => {
-    const widthM = Math.max(0.001, (item.width ?? 1) / 1000);
-    const heightM = Math.max(0.001, (item.height ?? 1) / 1000);
-    const thicknessM = Math.max(0.001, (item.thickness ?? 18) / 1000);
-    const hasExplicitPos =
-      item.posX !== undefined &&
-      item.posY !== undefined &&
-      item.posZ !== undefined;
-    const x = hasExplicitPos ? (item.posX ?? 0) / 1000 : (item.offsetX ?? 0) / 1000;
-    const y = hasExplicitPos ? (item.posY ?? 0) / 1000 : (item.offsetY ?? 0) / 1000;
-    const openPushM = item.isOpen && (item.type === "drawer" || item.openDirection === "pull") ? 0.03 : 0;
-    const z = hasExplicitPos
-      ? (item.posZ ?? 0) / 1000 + openPushM
-      : depth / 2 + thicknessM / 2 + ((item.offsetZ ?? 0) / 1000) + openPushM;
-    return {
-      id: item.id,
-      type: item.type,
-      widthM,
-      heightM,
-      thicknessM,
-      x,
-      y,
-      z,
-      rotY: Number.isFinite(item.rotY) ? (item.rotY as number) : 0,
-      openDirection: item.openDirection,
-      hingeSide: item.hingeSide,
-      pivot: item.pivot,
-      isOpen: item.isOpen,
-    };
-  });
-}
-
-function createDoorOrDrawerObject(spec: DoorDrawerSpec, material: THREE.Material): THREE.Object3D {
+function createDoorObject(spec: DoorSpec, material: THREE.Material): THREE.Object3D {
   if (import.meta.env.DEV) {
-    console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] create", {
+    console.log("[BoxLayers][BoxBuilder.createDoorObject] create", {
       id: spec.id,
       type: spec.type,
       widthM: spec.widthM,
@@ -316,49 +240,14 @@ function createDoorOrDrawerObject(spec: DoorDrawerSpec, material: THREE.Material
     spec.widthM,
     spec.heightM,
     spec.thicknessM,
-    `dd-item-${spec.id}`,
+    `door-leaf-${spec.id}`,
     "front",
     { singleMaterial: material }
   );
 
-  if (spec.type === "drawer" || spec.openDirection === "pull") {
-    mesh.position.set(spec.x, spec.y, spec.z);
-    if (spec.rotY !== 0) mesh.rotation.y = spec.rotY;
-    if (import.meta.env.DEV) {
-      console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] drawer final position", {
-        id: spec.id,
-        position: mesh.position.toArray(),
-      });
-    }
-    return mesh;
-  }
-
-  if (spec.openDirection === "up" || spec.openDirection === "down") {
-    const pivot = new THREE.Group();
-    pivot.name = `dd-pivot-${spec.id}`;
-    mesh.position.set(0, spec.openDirection === "up" ? -spec.heightM / 2 : spec.heightM / 2, 0);
-    pivot.position.set(spec.x, spec.y, spec.z);
-    if (spec.rotY !== 0) pivot.rotation.y = spec.rotY;
-    if (spec.isOpen) {
-      pivot.rotation.x = spec.openDirection === "up" ? -0.45 : 0.45;
-    }
-    pivot.add(mesh);
-    if (import.meta.env.DEV) {
-      console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] hinge-X final position", {
-        id: spec.id,
-        pivotPosition: pivot.position.toArray(),
-        meshLocalPosition: mesh.position.toArray(),
-      });
-    }
-    return pivot;
-  }
-
   const pivot = new THREE.Group();
-  pivot.name = `dd-pivot-${spec.id}`;
-  const resolvedHingeSide =
-    spec.hingeSide ??
-    (spec.pivot === "left-edge" ? "left" : spec.pivot === "right-edge" ? "right" : undefined) ??
-    (spec.openDirection === "left" ? "left" : "right");
+  pivot.name = `door-layer-${spec.id}`;
+  const resolvedHingeSide = spec.hingeSide;
   if (spec.pivot === "left-edge" || resolvedHingeSide === "left") {
     mesh.position.set(spec.widthM / 2, 0, 0);
   } else if (spec.pivot === "right-edge" || resolvedHingeSide === "right") {
@@ -368,19 +257,141 @@ function createDoorOrDrawerObject(spec: DoorDrawerSpec, material: THREE.Material
   }
   pivot.position.set(spec.x, spec.y, spec.z);
   if (spec.rotY !== 0) pivot.rotation.y = spec.rotY;
-  if (spec.isOpen) {
-    const openSign = resolvedHingeSide === "left" ? -1 : 1;
-    pivot.rotation.y += openSign * 0.5;
+  const baseRotationY = pivot.rotation.y;
+  const openSign = resolvedHingeSide === "right" ? 1 : -1;
+  const targetRotationY = spec.isOpen
+    ? baseRotationY + openSign * (Math.PI / 2)
+    : baseRotationY;
+  const prevIsOpen = doorOpenState.get(spec.id);
+  const prevRotation = doorRotationState.get(spec.id);
+  const startRotation: number = Number.isFinite(prevRotation) ? (prevRotation as number) : baseRotationY;
+  const shouldAnimate = prevIsOpen === undefined ? spec.isOpen : prevIsOpen !== spec.isOpen;
+
+  if (Number.isFinite(prevRotation)) {
+    pivot.rotation.y = startRotation;
   }
+
+  if (shouldAnimate) {
+    const existingRaf = doorAnimationRaf.get(spec.id);
+    if (existingRaf != null) cancelAnimationFrame(existingRaf);
+    const start = performance.now();
+    console.log("door animation start", { id: spec.id, targetRotationY });
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - start) / DOOR_ANIMATION_DURATION_MS);
+      const eased = easeInOutCubic(t);
+      pivot.rotation.y = startRotation + (targetRotationY - startRotation) * eased;
+      if (t < 1) {
+        doorAnimationRaf.set(spec.id, requestAnimationFrame(animate));
+      } else {
+        doorAnimationRaf.delete(spec.id);
+        console.log("door animation end", { id: spec.id, targetRotationY });
+      }
+    };
+    doorAnimationRaf.set(spec.id, requestAnimationFrame(animate));
+  } else {
+    pivot.rotation.y = targetRotationY;
+  }
+
+  doorOpenState.set(spec.id, spec.isOpen);
+  doorRotationState.set(spec.id, targetRotationY);
+  pivot.userData.doorLayerId = spec.id;
+  mesh.userData.doorLayerId = spec.id;
   pivot.add(mesh);
   if (import.meta.env.DEV) {
-    console.log("[DoorDrawer][BoxBuilder.createDoorOrDrawerObject] hinge-Y final position", {
+    const finalCenter = new THREE.Vector3()
+      .copy(mesh.position)
+      .applyEuler(pivot.rotation)
+      .add(pivot.position);
+    console.log("[BoxLayers][BoxBuilder.createDoorObject] final", {
+      id: spec.id,
+      type: spec.groupType ?? "door",
+      posX: finalCenter.x,
+      posY: finalCenter.y,
+      posZ: finalCenter.z,
+      width: spec.widthM,
+      height: spec.heightM,
+      depth: spec.thicknessM,
+    });
+  }
+  if (import.meta.env.DEV) {
+    console.log("[BoxLayers][BoxBuilder.createDoorObject] hinge-Y final position", {
       id: spec.id,
       pivotPosition: pivot.position.toArray(),
       meshLocalPosition: mesh.position.toArray(),
     });
   }
   return pivot;
+}
+
+function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
+  const group = new THREE.Group();
+  group.name = `drawer-layer-${spec.id}`;
+  group.position.set(spec.x, spec.y, spec.z + (spec.isOpen ? spec.pullDistanceM : 0));
+  if (spec.rotY !== 0) {
+    group.rotation.y = spec.rotY;
+  }
+
+  const front = createPanel(
+    spec.widthM,
+    spec.heightM,
+    spec.frontThicknessM,
+    `drawer-front-${spec.id}`,
+    "front",
+    { singleMaterial: material }
+  );
+  front.position.set(0, 0, 0);
+  front.userData.drawerLayerId = spec.id;
+  group.userData.drawerLayerId = spec.id;
+  group.add(front);
+
+  if (import.meta.env.DEV) {
+    console.log("[BoxLayers][BoxBuilder.createDrawerObject] final", {
+      id: spec.id,
+      type: "drawer",
+      posX: group.position.x,
+      posY: group.position.y,
+      posZ: group.position.z,
+      width: spec.widthM,
+      height: spec.heightM,
+      depth: spec.depthM,
+    });
+  }
+
+  return group;
+}
+
+function createDrillMarker(radiusM: number, depthM: number, color = "#2563eb"): THREE.Mesh {
+  const geometry = new THREE.CylinderGeometry(Math.max(0.0004, radiusM), Math.max(0.0004, radiusM), Math.max(0.001, depthM), 10);
+  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.1 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = "drill-marker";
+  return mesh;
+}
+
+function addDrillMarkersToPanel(panel: THREE.Mesh, panelType: string, holes: TechnicalDrillHole[] | undefined) {
+  if (!holes || holes.length === 0) return;
+  const size = new THREE.Vector3();
+  new THREE.Box3().setFromObject(panel).getSize(size);
+  const panelW = panelType === "left" || panelType === "right" ? size.z : size.x;
+  const panelH = panelType === "top" || panelType === "bottom" ? size.z : size.y;
+  for (const h of holes) {
+    const r = Math.max(0.0005, h.diametro / 2000);
+    const d = Math.max(0.001, h.profundidade / 1000);
+    const marker = createDrillMarker(r, d);
+    const lx = (h.x / 1000) - panelW / 2;
+    const ly = panelH / 2 - (h.y / 1000);
+    if (panelType === "top" || panelType === "bottom") {
+      marker.rotation.x = Math.PI / 2;
+      marker.position.set(lx, 0, ly);
+    } else if (panelType === "left" || panelType === "right") {
+      marker.rotation.z = Math.PI / 2;
+      marker.position.set(0, ly, lx);
+    } else {
+      marker.position.set(lx, ly, 0);
+    }
+    marker.userData.isDrillMarker = true;
+    panel.add(marker);
+  }
 }
 
 let cachedFallbackMaterial: THREE.MeshStandardMaterial | null = null;
@@ -473,6 +484,11 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     p.position.set(pos[0], pos[1], pos[2]);
     root.add(p);
   });
+  const drillMap = opts.drillMarkersByPanel ?? {};
+  addDrillMarkersToPanel(panels.top, "top", drillMap.cima);
+  addDrillMarkersToPanel(panels.bottom, "bottom", drillMap.fundo);
+  addDrillMarkersToPanel(panels.left, "left", drillMap.lateral_esquerda);
+  addDrillMarkersToPanel(panels.right, "right", drillMap.lateral_direita);
 
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   if (shelfCount > 0) {
@@ -485,37 +501,10 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     });
   }
 
-  const customDoorDrawers = Array.isArray(opts.doorDrawerItems) ? opts.doorDrawerItems : [];
-  if (import.meta.env.DEV && customDoorDrawers.length > 0) {
-    console.log("[DoorDrawer][BoxBuilder.buildBox] doorDrawerItems received", {
-      count: customDoorDrawers.length,
-      width,
-      height,
-      depth,
-    });
-  }
-  if (customDoorDrawers.length > 0) {
-    const specs = buildDoorDrawerSpecs(depth, customDoorDrawers);
-    specs.forEach((spec) => {
-      const object = createDoorOrDrawerObject(spec, baseMaterial);
-      root.add(object);
-      if (import.meta.env.DEV) {
-        console.log("[DoorDrawer][BoxBuilder.buildBox] object added to root", {
-          id: spec.id,
-          objectName: object.name,
-          rootChildrenCount: root.children.length,
-        });
-      }
-    });
-  } else {
-    const doorCount = Math.max(0, Math.floor(opts.doors ?? 0));
-    const doorObjects = buildDoorObjects(width, height, depth, doorCount, baseMaterial);
-    doorObjects.forEach((obj) => root.add(obj));
-
-    const drawerCount = Math.max(0, Math.floor(opts.drawers ?? 0));
-    const drawerObjects = buildDrawerObjects(width, height, depth, drawerCount, baseMaterial);
-    drawerObjects.forEach((obj) => root.add(obj));
-  }
+  const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
+  const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
+  doorSpecs.forEach((spec) => root.add(createDoorObject(spec, baseMaterial)));
+  drawerSpecs.forEach((spec) => root.add(createDrawerObject(spec, baseMaterial)));
 
   root.position.set(0, 0, 0);
 
@@ -619,16 +608,19 @@ function updatePanelGeometry(panel: THREE.Mesh, width: number, height: number, d
 }
 
 /** Compatível com o Viewer: devolve o grupo raiz do módulo (CIMA, FUNDO, LAT ESQ, LAT DIR, COSTA). */
-export const buildBoxLegacy = (options?: BoxOptions | null) => {
+export const buildBoxGroup = (options?: BoxOptions | null) => {
   const opts = options ?? {};
   const model = buildBox(opts);
   return model.root;
 };
 
+// Alias de compatibilidade interna para chamadas antigas em outros módulos.
+export const buildBoxLegacy = buildBoxGroup;
+
 const PANEL_NAMES = ["left", "right", "top", "bottom", "back"] as const;
 
 /**
- * Atualiza um grupo criado por buildBoxLegacy: geometria e posição de cada painel por nome (regras de marcenaria).
+ * Atualiza um grupo criado por buildBoxGroup: geometria e posição de cada painel por nome (regras de marcenaria).
  * Sincroniza também prateleiras (shelf-0, shelf-1, ...) quando options.shelves é fornecido.
  */
 export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null): { width: number; height: number; depth: number } {
@@ -637,29 +629,26 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const specs = getPanelSpecs(width, height, depth);
 
   const toRemove: THREE.Object3D[] = [];
+  const isGeneratedLayerName = (name: string) =>
+    name.startsWith("shelf-") ||
+    name.startsWith("door-leaf-") ||
+    name.startsWith("door-layer-") ||
+    name.startsWith("drawer-layer-") ||
+    name.startsWith("drawer-front-") ||
+    name.startsWith("drawer-body-");
   group.children.forEach((child) => {
-    if (!(child instanceof THREE.Mesh) || !child.geometry) return;
     const name = child.name;
-    if (PANEL_NAMES.includes(name as (typeof PANEL_NAMES)[number])) {
+    if (child instanceof THREE.Mesh && child.geometry && PANEL_NAMES.includes(name as (typeof PANEL_NAMES)[number])) {
       const spec = specs[name as keyof typeof specs];
       if (spec) {
         updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
         child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+        const oldMarkers = child.children.filter((c) => c.userData?.isDrillMarker);
+        oldMarkers.forEach((m) => child.remove(m));
       }
       return;
     }
-    if (
-      name.startsWith("shelf-") ||
-      name.startsWith("door-") ||
-      name.startsWith("door-builder-") ||
-      name.startsWith("door-leaf-") ||
-      name.startsWith("drawer-") ||
-      name.startsWith("drawer-builder-") ||
-      name.startsWith("drawer-body-") ||
-      name.startsWith("drawer-front-") ||
-      name.startsWith("dd-item-") ||
-      name.startsWith("dd-pivot-")
-    ) {
+    if (isGeneratedLayerName(name)) {
       toRemove.push(child);
     }
   });
@@ -669,45 +658,25 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
   const baseMaterial = group.children[0] instanceof THREE.Mesh ? (group.children[0] as THREE.Mesh).material : getFallbackPBRMaterial();
   const mat = Array.isArray(baseMaterial) ? baseMaterial[0] : baseMaterial;
+  const drillMap = opts.drillMarkersByPanel ?? {};
+  const topPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "top") as THREE.Mesh | undefined;
+  const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
+  const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
+  const rightPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "right") as THREE.Mesh | undefined;
+  if (topPanel) addDrillMarkersToPanel(topPanel, "top", drillMap.cima);
+  if (bottomPanel) addDrillMarkersToPanel(bottomPanel, "bottom", drillMap.fundo);
+  if (leftPanel) addDrillMarkersToPanel(leftPanel, "left", drillMap.lateral_esquerda);
+  if (rightPanel) addDrillMarkersToPanel(rightPanel, "right", drillMap.lateral_direita);
   shelfSpecs.forEach((spec, i) => {
     const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: mat as THREE.Material });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     group.add(mesh);
   });
 
-  const customDoorDrawers = Array.isArray(opts.doorDrawerItems) ? opts.doorDrawerItems : [];
-  if (import.meta.env.DEV && opts.doorDrawerItems !== undefined) {
-    console.log("[DoorDrawer][BoxBuilder.updateBoxGroup] input", {
-      groupName: group.name,
-      customDoorDrawersCount: customDoorDrawers.length,
-      groupChildrenCountBefore: group.children.length,
-      width,
-      height,
-      depth,
-    });
-  }
-  if (customDoorDrawers.length > 0) {
-    const specs = buildDoorDrawerSpecs(depth, customDoorDrawers);
-    specs.forEach((spec) => {
-      const object = createDoorOrDrawerObject(spec, mat as THREE.Material);
-      group.add(object);
-      if (import.meta.env.DEV) {
-        console.log("[DoorDrawer][BoxBuilder.updateBoxGroup] object added to group", {
-          id: spec.id,
-          objectName: object.name,
-          groupChildrenCountAfterAdd: group.children.length,
-        });
-      }
-    });
-  } else {
-    const doorCount = Math.max(0, Math.floor(opts.doors ?? 0));
-    const doorObjects = buildDoorObjects(width, height, depth, doorCount, mat as THREE.Material);
-    doorObjects.forEach((obj) => group.add(obj));
-
-    const drawerCount = Math.max(0, Math.floor(opts.drawers ?? 0));
-    const drawerObjects = buildDrawerObjects(width, height, depth, drawerCount, mat as THREE.Material);
-    drawerObjects.forEach((obj) => group.add(obj));
-  }
+  const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
+  const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
+  doorSpecs.forEach((spec) => group.add(createDoorObject(spec, mat as THREE.Material)));
+  drawerSpecs.forEach((spec) => group.add(createDrawerObject(spec, mat as THREE.Material)));
 
   return { width, height, depth };
 }
