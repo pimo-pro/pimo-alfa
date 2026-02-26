@@ -175,14 +175,27 @@ export default function ProjectProgress() {
   }, []);
 
   const formattedChangelog = useMemo(
-    () =>
-      project.changelog
+    () => {
+      const asTime = (value: unknown): number => {
+        const parsed = new Date(value as string | number | Date).getTime();
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+      return project.changelog
         .slice(0, 15)
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .map((entry) => ({
+          ...entry,
+          timestamp: entry.timestamp ?? Date.now(),
+        }))
+        .sort((a, b) => {
+          const ta = asTime(a.timestamp);
+          const tb = asTime(b.timestamp);
+          return tb - ta;
+        })
         .map((entry) => ({
           ...entry,
           time: new Date(entry.timestamp).toLocaleString("pt-PT"),
-        })),
+        }));
+    },
     [project.changelog]
   );
 
