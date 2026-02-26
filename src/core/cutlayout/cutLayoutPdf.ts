@@ -112,11 +112,6 @@ function renderSheetPage(
       doc.setTextColor(30, 64, 175);
       doc.text(label, px + 2, py + ph / 2 - 2);
       doc.text(dimLabel, px + 2, py + ph / 2 + 2);
-      if (pl.shortCode) {
-        doc.setFontSize(5);
-        doc.setTextColor(100, 100, 100);
-        doc.text(pl.shortCode, px + 2, py + ph - 2);
-      }
       if (pl.rotacao === 90) {
         doc.text("90°", px + pw - 8, py + 6);
       }

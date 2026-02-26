@@ -8,44 +8,89 @@ type ProjectQrContext = {
   rules: RulesConfig;
 };
 
-const sanitize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
-
-function projectPrefix(projectName: string, mode?: RulesConfig["qrcode"]["modoPrefixoProjeto"]): string {
-  const words = projectName?.trim?.().split(/\s+/).filter(Boolean).map(sanitize).filter(Boolean) ?? [];
-  if (words.length === 0) return "prj";
-  const safeMode = mode ?? "auto";
-  const selectedMode = safeMode === "auto"
-    ? (words.length === 1 ? "3" : words.length === 2 ? "2+2" : "1+1+1")
-    : safeMode;
-  if (selectedMode === "3") return (words[0] || "prj").slice(0, 3).padEnd(3, "x");
-  if (selectedMode === "2+2") return `${(words[0] || "x").slice(0, 2)}${(words[1] || "x").slice(0, 2)}`;
-  return words.map((w) => w[0]).join("").slice(0, 4).padEnd(3, "x");
-}
-
-function pieceTypeAbbr(tipo: string): string {
-  const t = sanitize(tipo);
-  if (t === "cima") return "ci";
-  if (t === "fundo") return "fu";
-  if (t === "lateralesquerda") return "le";
-  if (t === "lateraldireita") return "ld";
-  if (t === "prateleira") return "pr";
-  if (t.includes("porta")) return "po";
-  if (t.includes("gaveta")) return "ga";
-  return t.slice(0, 2).padEnd(2, "x");
-}
-
-function orientationAbbr(nome: string, tipo: string): string {
-  const n = sanitize(`${nome} ${tipo}`);
-  if (n.includes("esquerda") || n.includes("_esq")) return "e";
-  if (n.includes("direita") || n.includes("_dir")) return "d";
-  if (n.includes("frente") || n.includes("_frente")) return "f";
-  if (n.includes("tras") || n.includes("costa") || n.includes("_fundo")) return "t";
-  return "";
-}
-
 function cyclicPieceNumber(index0: number, restart99: boolean): number {
   if (!restart99) return index0 + 1;
   return (index0 % 99) + 1;
+}
+
+function normalizePieceDigits(value: number): 2 | 3 {
+  if (!Number.isFinite(value)) return 3;
+  if (value <= 2) return 2;
+  return 3;
+}
+
+function getPieceSuffix(pieceNumber: number, pieceDigits: 2 | 3): string {
+  const maxNumber = 10 ** pieceDigits - 1;
+  const safeNumber = ((Math.max(1, Math.floor(pieceNumber)) - 1) % maxNumber) + 1;
+  return String(safeNumber).padStart(pieceDigits, "0");
+}
+
+export function getPieceLabel(pieceNumber: number, rules?: RulesConfig): string {
+  const pieceDigits = normalizePieceDigits(rules?.qrcode?.numeroDigitosPeca ?? 3);
+  return `P-${getPieceSuffix(pieceNumber, pieceDigits)}`;
+}
+
+const ETIQUETA_CODE_MAX_LENGTH = 14;
+
+/**
+ * Gera o código curto da etiqueta com 4 partes fixas (máx. 14 caracteres, sempre lowercase):
+ * 1) Projeto: 3 a 5 letras iniciais
+ * 2) Caixa: 2 letras
+ * 3) Peça: 3 letras iniciais (ignorando espaços)
+ * 4) Número: 2 dígitos (01-09) ou 3 dígitos (010-999)
+ *
+ * Se ultrapassar 14 caracteres, reduz na ordem:
+ * - primeiro a peça (3→2→1)
+ * - depois o projeto (5→4→3)
+ */
+export function generateEtiquetaCode(
+  projectName: string,
+  boxName: string,
+  pieceName: string,
+  pieceNumber: number
+): string {
+  const toLow = (s: string) => String(s || "").toLowerCase();
+  const projRaw = toLow(projectName || "projeto").replace(/\s/g, "");
+  const boxRaw = toLow(boxName || "xx");
+  const pieceRaw = toLow(pieceName || "pec").replace(/\s/g, "");
+
+  let projLen = Math.min(5, Math.max(3, projRaw.length));
+  let proj = projRaw.slice(0, projLen).padEnd(projLen, projRaw[0] || "x");
+  const box = boxRaw.slice(0, 2).padEnd(2, "x");
+  let pieceLen = 3;
+  let piece = pieceRaw.slice(0, pieceLen).padEnd(pieceLen, pieceRaw[0] || "x");
+
+  const n = Math.max(1, Math.floor(pieceNumber));
+  const num = n < 10 ? String(n).padStart(2, "0") : String(n).padStart(3, "0");
+
+  let code = `${proj}${box}${piece}${num}`;
+
+  while (code.length > ETIQUETA_CODE_MAX_LENGTH && pieceLen > 0) {
+    pieceLen -= 1;
+    piece = pieceRaw.slice(0, pieceLen).padEnd(pieceLen, pieceRaw[0] || "x");
+    code = `${proj}${box}${piece}${num}`;
+  }
+  while (code.length > ETIQUETA_CODE_MAX_LENGTH && projLen > 3) {
+    projLen -= 1;
+    proj = projRaw.slice(0, projLen).padEnd(projLen, projRaw[0] || "x");
+    code = `${proj}${box}${piece}${num}`;
+  }
+
+  return code.slice(0, ETIQUETA_CODE_MAX_LENGTH);
+}
+
+export function buildLocalQrPayload(
+  piece: CutListItemComPreco,
+  project: ProjectQrContext,
+  pieceNumber: number
+): string {
+  const boxNome = project.boxes.find((b) => b.id === piece.boxId)?.nome ?? piece.boxId ?? "xx";
+  return generateEtiquetaCode(
+    project.projectName ?? "PROJETO",
+    boxNome,
+    piece.nome ?? "peca",
+    pieceNumber
+  );
 }
 
 export function generateShortCodeForPiece(
@@ -58,16 +103,15 @@ export function generateShortCodeForPiece(
   }
   
   try {
-    const projectName = project.projectName ?? "Projeto";
-    const qrcodeMode = project.rules?.qrcode?.modoPrefixoProjeto ?? "auto";
     const restartAt99 = project.rules?.qrcode?.reiniciarContagemEm99 ?? true;
-    
-    const prefix = projectPrefix(projectName, qrcodeMode);
-    const boxName = sanitize(project.boxes?.find?.((b) => b?.id === piece.boxId)?.nome ?? piece.boxId ?? "bx");
-    const pieceAbbr = pieceTypeAbbr(piece.tipo);
-    const o = orientationAbbr(piece.nome ?? "", piece.tipo);
     const number = cyclicPieceNumber(pieceIndex0, restartAt99);
-    const shortCode = `${prefix}${boxName}${pieceAbbr}${o}${number}`;
+    const boxNome = project.boxes.find((b) => b.id === piece.boxId)?.nome ?? piece.boxId ?? "xx";
+    const shortCode = generateEtiquetaCode(
+      project.projectName ?? "PROJETO",
+      boxNome,
+      piece.nome ?? "peca",
+      number
+    );
     return { shortCode, pieceNumber: number };
   } catch (err) {
     console.warn("[qrcodeService] Error generating short code:", err);
@@ -75,11 +119,13 @@ export function generateShortCodeForPiece(
   }
 }
 
-export function generateQrCodeSvg(shortCode: string): string {
-  const qr = qrcode(0, "M");
-  qr.addData(shortCode);
+type QrErrorLevel = "L" | "M" | "Q" | "H";
+
+export function generateQrCodeSvg(content: string, errorLevel: QrErrorLevel = "M", margin = 0): string {
+  const qr = qrcode(0, errorLevel);
+  qr.addData(content);
   qr.make();
-  return qr.createSvgTag({ scalable: true, margin: 0 });
+  return qr.createSvgTag({ scalable: true, margin });
 }
 
 export function attachQrCodesToCutlist(
@@ -100,11 +146,15 @@ export function attachQrCodesToCutlist(
     
     try {
       const generated = generateShortCodeForPiece(item, project, idx);
+      const qrPayload = buildLocalQrPayload(item, project, generated.pieceNumber);
       return {
         ...item,
         shortCode: generated.shortCode,
         pieceNumber: generated.pieceNumber,
-        qrSvg: generated.shortCode !== "ERR" ? generateQrCodeSvg(generated.shortCode) : "",
+        qrSvg:
+          generated.shortCode !== "ERR"
+            ? generateQrCodeSvg(qrPayload)
+            : "",
       };
     } catch (err) {
       console.warn(`[qrcodeService] Error attaching QR code to item ${idx}:`, err);

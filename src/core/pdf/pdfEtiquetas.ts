@@ -3,6 +3,7 @@ import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildLocalQrPayload } from "../qrcode/qrcodeService";
 
 export type ProjectForEtiquetasPdf = {
   projectName: string;
@@ -85,7 +86,7 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
   doc.setTextColor(10, 10, 10);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  if (cfg.mostrarLogo) {
+  if (cfg.mostrarLogoEmpresa && cfg.mostrarLogo) {
     doc.text("pi", margin, y);
   }
 
@@ -100,12 +101,19 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
 
   const qrX = margin;
   const qrY = y + 1.5;
-  const shortCode = item.shortCode ?? `N${item.pieceNumber ?? "-"}`;
-  drawQrFromCode(doc, shortCode, qrX, qrY, qrSize);
+  const pieceNumber = Number(item.pieceNumber ?? 0);
+  const etiquetaCode = buildLocalQrPayload(item, {
+    projectName: project.projectName,
+    boxes: project.boxes,
+    rules: project.rules,
+  }, pieceNumber);
+  drawQrFromCode(doc, etiquetaCode, qrX, qrY, qrSize);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(bodySize + 1);
-  doc.text(shortCode, qrX, qrY + qrSize + 4.2);
+  if (project.rules.qrcode.mostrarTextoAbaixoQr) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(bodySize + 1);
+    doc.text(etiquetaCode, qrX, qrY + qrSize + 4.2);
+  }
 
   let rightY = qrY + 1;
   const rightX = qrX + qrSize + 4;
@@ -123,8 +131,10 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
     );
     rightY += 4.2;
   }
-  doc.setFont("helvetica", "bold");
-  doc.text(`N${item.pieceNumber ?? "-"}`, rightX, rightY);
+  if (project.rules.qrcode.destacarNumeroPeca) {
+    doc.setFont("helvetica", "bold");
+    doc.text(etiquetaCode, rightX, rightY);
+  }
 }
 
 export function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): jsPDF {

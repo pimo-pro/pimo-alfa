@@ -9,6 +9,7 @@ import { defaultRulesConfig, normalizeRulesConfig } from "../../core/rules/rules
 import type { RulesConfig, PortaRange, PeRange } from "../../core/rules/rulesConfig";
 import Panel from "../ui/Panel";
 import { useToast } from "../../context/ToastContext";
+import qrcode from "qrcode-generator";
 
 export default function RulesAdminPage() {
   const { showToast } = useToast();
@@ -98,6 +99,28 @@ export default function RulesAdminPage() {
       },
     }));
   };
+
+  const pieceDigits = rules.qrcode.numeroDigitosPeca;
+  const piecePreview = String(5).padStart(pieceDigits, "0");
+  const previewLabel = `P-${piecePreview}`;
+  const previewQrPayload = [
+    `Projeto: ${project.projectName || "PROJETO"}`,
+    "Caixa: Caixa 1",
+    "Peça: Prateleira",
+    "Madeira: MDF Branco",
+    "Medidas: 600x400x18mm",
+    `N: ${previewLabel}`,
+  ].join(" | ");
+  const previewQrSvg = (() => {
+    try {
+      const qr = qrcode(0, "M");
+      qr.addData(previewQrPayload);
+      qr.make();
+      return qr.createSvgTag({ scalable: true, margin: 0 });
+    } catch {
+      return "";
+    }
+  })();
 
   return (
     <div style={{ padding: 24, overflowY: "auto", height: "100%" }}>
@@ -446,33 +469,99 @@ export default function RulesAdminPage() {
           </div>
         </Panel>
 
-        <Panel title="Etiquetas Oficiais (Brother QL-1060N)" description="Configuração da etiqueta 100x50mm para impressão industrial">
+        <Panel title="QR N" description="Configuração simples do QR local e destaque do número da peça.">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(140px, 1fr))", gap: 8 }}>
-              <label style={{ fontSize: 12 }}>Largura (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.larguraMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, larguraMm: Number(e.target.value) } }))} />
+            <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(160px, 1fr))", gap: 8 }}>
+              <label style={{ fontSize: 12 }}>Tamanho do QR (mm)
+                <input className="input input-xs" type="number" value={rules.qrcode.tamanhoQr} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, tamanhoQr: Number(e.target.value) } }))} />
               </label>
-              <label style={{ fontSize: 12 }}>Altura (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.alturaMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, alturaMm: Number(e.target.value) } }))} />
+              <label style={{ fontSize: 12 }}>Tamanho do texto
+                <input className="input input-xs" type="number" value={rules.qrcode.tamanhoTexto} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, tamanhoTexto: Number(e.target.value) } }))} />
               </label>
-              <label style={{ fontSize: 12 }}>Borda (px)
-                <input className="input input-xs" type="number" value={rules.etiqueta.bordaPx} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, bordaPx: Number(e.target.value) } }))} />
+              <label style={{ fontSize: 12 }}>Dígitos número peça
+                <select className="input input-xs" value={rules.qrcode.numeroDigitosPeca} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, numeroDigitosPeca: Number(e.target.value) as 2 | 3 } }))}>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                </select>
               </label>
-              <label style={{ fontSize: 12 }}>Margem interna (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.margemInternaMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, margemInternaMm: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Tamanho QR (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.tamanhoQr} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, tamanhoQr: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Tamanho texto
-                <input className="input input-xs" type="number" value={rules.etiqueta.tamanhoTexto} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, tamanhoTexto: Number(e.target.value) } }))} />
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginTop: 20 }}>
+                <input type="checkbox" checked={rules.qrcode.mostrarTextoAbaixoQr} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, mostrarTextoAbaixoQr: e.target.checked } }))} />
+                Mostrar texto abaixo do QR
               </label>
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarLogo} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarLogo: e.target.checked } }))} /> Mostrar logo</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarMaterial} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarMaterial: e.target.checked } }))} /> Mostrar material</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarDimensoes} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarDimensoes: e.target.checked } }))} /> Mostrar dimensões</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarReferencia} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarReferencia: e.target.checked } }))} /> Mostrar referência</label>
+              <label><input type="checkbox" checked={rules.qrcode.destacarNumeroPeca} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, destacarNumeroPeca: e.target.checked } }))} /> Mostrar número da peça em destaque</label>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Pré-visualização do número de peça: <strong>{previewLabel}</strong>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() =>
+                    setRules((prev) => ({
+                      ...prev,
+                      qrcode: { ...defaultRulesConfig.qrcode },
+                    }))
+                  }
+                >
+                  Reverter seção
+                </button>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => handleSave()}
+                >
+                  Salvar seção
+                </button>
+              </div>
+            </div>
+            <div
+              style={{
+                border: "1px dashed rgba(255,255,255,0.2)",
+                borderRadius: 8,
+                padding: 10,
+                display: "flex",
+                gap: 12,
+                alignItems: "flex-start",
+              }}
+            >
+              <div style={{ fontSize: 12, color: "var(--text-muted)", minWidth: 70 }}>Preview</div>
+              <div
+                style={{
+                  width: Math.max(140, rules.etiqueta.larguraMm * 1.8),
+                  minHeight: Math.max(80, rules.etiqueta.alturaMm * 1.6),
+                  border: `${Math.max(1, rules.etiqueta.bordaPx)}px solid rgba(255,255,255,0.28)`,
+                  borderRadius: 6,
+                  padding: 8,
+                  display: "grid",
+                  gridTemplateColumns: rules.etiqueta.posicaoLogo === "acima" ? "1fr" : "auto 1fr",
+                  gap: 8,
+                  background: "rgba(10,10,10,0.35)",
+                }}
+              >
+                {rules.etiqueta.mostrarLogoEmpresa ? (
+                  <div style={{ alignSelf: "start", justifySelf: "start" }}>
+                    {rules.etiqueta.logoDataUrl ? (
+                      <img src={rules.etiqueta.logoDataUrl} alt="logo etiqueta" style={{ height: 26, maxWidth: 80, objectFit: "contain" }} />
+                    ) : (
+                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>LOGO</div>
+                    )}
+                  </div>
+                ) : null}
+                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 8, alignItems: "start" }}>
+                  <div
+                    style={{ width: 62, height: 62, background: "#fff", padding: 2 }}
+                    dangerouslySetInnerHTML={{ __html: previewQrSvg }}
+                  />
+                  <div style={{ fontSize: Math.max(11, rules.qrcode.tamanhoTexto + 2) }}>
+                    {rules.qrcode.destacarNumeroPeca ? <div style={{ fontWeight: 700, marginBottom: 4 }}>{previewLabel}</div> : null}
+                    {rules.qrcode.mostrarTextoAbaixoQr ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Projeto/Caixa/Peça/Madeira/Medidas</div> : null}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Panel>

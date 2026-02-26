@@ -131,7 +131,9 @@ export type RulesConfig = {
   qrcode: {
     tamanhoQr: number;
     tamanhoTexto: number;
-    modoPrefixoProjeto: "auto" | "3" | "2+2" | "1+1+1";
+    mostrarTextoAbaixoQr: boolean;
+    destacarNumeroPeca: boolean;
+    numeroDigitosPeca: 2 | 3;
     reiniciarContagemEm99: boolean;
   };
   etiqueta: {
@@ -142,6 +144,9 @@ export type RulesConfig = {
     tamanhoQr: number;
     tamanhoTexto: number;
     mostrarLogo: boolean;
+    mostrarLogoEmpresa: boolean;
+    logoDataUrl?: string;
+    posicaoLogo: "esquerda" | "direita" | "acima";
     mostrarMaterial: boolean;
     mostrarDimensoes: boolean;
     mostrarReferencia: boolean;
@@ -252,7 +257,9 @@ export const defaultRulesConfig: RulesConfig = {
   qrcode: {
     tamanhoQr: 18,
     tamanhoTexto: 8,
-    modoPrefixoProjeto: "auto",
+    mostrarTextoAbaixoQr: true,
+    destacarNumeroPeca: true,
+    numeroDigitosPeca: 3,
     reiniciarContagemEm99: true,
   },
   etiqueta: {
@@ -262,7 +269,10 @@ export const defaultRulesConfig: RulesConfig = {
     margemInternaMm: 2,
     tamanhoQr: 28,
     tamanhoTexto: 8,
-    mostrarLogo: true,
+    mostrarLogo: false,
+    mostrarLogoEmpresa: false,
+    logoDataUrl: "",
+    posicaoLogo: "esquerda",
     mostrarMaterial: true,
     mostrarDimensoes: true,
     mostrarReferencia: true,
@@ -347,6 +357,16 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
     qrcode: {
       ...defaults.qrcode,
       ...(isObject(src.qrcode) ? src.qrcode : {}),
+      mostrarTextoAbaixoQr:
+        (isObject(src.qrcode) ? src.qrcode : {}).mostrarTextoAbaixoQr == null
+          ? defaults.qrcode.mostrarTextoAbaixoQr
+          : Boolean((isObject(src.qrcode) ? src.qrcode : {}).mostrarTextoAbaixoQr),
+      destacarNumeroPeca:
+        (isObject(src.qrcode) ? src.qrcode : {}).destacarNumeroPeca == null
+          ? defaults.qrcode.destacarNumeroPeca
+          : Boolean((isObject(src.qrcode) ? src.qrcode : {}).destacarNumeroPeca),
+      numeroDigitosPeca:
+        Number((isObject(src.qrcode) ? src.qrcode : {}).numeroDigitosPeca) <= 2 ? 2 : 3,
     },
     etiqueta: {
       ...defaults.etiqueta,
