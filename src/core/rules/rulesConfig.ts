@@ -131,21 +131,18 @@ export type RulesConfig = {
   qrcode: {
     tamanhoQr: number;
     tamanhoTexto: number;
-    modoPrefixoProjeto: "auto" | "3" | "2+2" | "1+1+1";
+    mostrarTextoAbaixoQr: boolean;
+    destacarNumeroPeca: boolean;
+    numeroDigitosPeca: 2 | 3;
     reiniciarContagemEm99: boolean;
   };
   etiqueta: {
-    tamanhoEtiquetaPreset: "pequena" | "media" | "grande" | "custom";
     larguraMm: number;
     alturaMm: number;
     bordaPx: number;
     margemInternaMm: number;
     tamanhoQr: number;
     tamanhoTexto: number;
-    modoExibicaoQr: "url_completa" | "token_curto";
-    formatoNumeroExibido: "peca_apenas" | "token_peca" | "token_apenas";
-    numeroDigitosPeca: 2 | 3 | 4;
-    templateNumero: string;
     mostrarLogo: boolean;
     mostrarLogoEmpresa: boolean;
     logoDataUrl?: string;
@@ -260,21 +257,18 @@ export const defaultRulesConfig: RulesConfig = {
   qrcode: {
     tamanhoQr: 18,
     tamanhoTexto: 8,
-    modoPrefixoProjeto: "auto",
+    mostrarTextoAbaixoQr: true,
+    destacarNumeroPeca: true,
+    numeroDigitosPeca: 3,
     reiniciarContagemEm99: true,
   },
   etiqueta: {
-    tamanhoEtiquetaPreset: "media",
     larguraMm: 100,
     alturaMm: 50,
     bordaPx: 1,
     margemInternaMm: 2,
     tamanhoQr: 28,
     tamanhoTexto: 8,
-    modoExibicaoQr: "token_curto",
-    formatoNumeroExibido: "peca_apenas",
-    numeroDigitosPeca: 3,
-    templateNumero: "#{piece}",
     mostrarLogo: false,
     mostrarLogoEmpresa: false,
     logoDataUrl: "",
@@ -298,17 +292,6 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
   const src = input as Record<string, unknown>;
   const defaults = defaultRulesConfig;
   const asObject = (value: unknown): Record<string, unknown> => (isObject(value) ? value : {});
-  const toNumber = (value: unknown, fallback: number) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : fallback;
-  };
-  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-  const normalizePieceDigits = (value: unknown): 2 | 3 | 4 => {
-    const n = Math.trunc(toNumber(value, 3));
-    if (n <= 2) return 2;
-    if (n >= 4) return 4;
-    return 3;
-  };
   const furosSrc = asObject(src.furos);
   const tecnicosSrc = asObject(furosSrc.tecnicos);
 
@@ -374,47 +357,21 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
     qrcode: {
       ...defaults.qrcode,
       ...(isObject(src.qrcode) ? src.qrcode : {}),
+      mostrarTextoAbaixoQr:
+        (isObject(src.qrcode) ? src.qrcode : {}).mostrarTextoAbaixoQr == null
+          ? defaults.qrcode.mostrarTextoAbaixoQr
+          : Boolean((isObject(src.qrcode) ? src.qrcode : {}).mostrarTextoAbaixoQr),
+      destacarNumeroPeca:
+        (isObject(src.qrcode) ? src.qrcode : {}).destacarNumeroPeca == null
+          ? defaults.qrcode.destacarNumeroPeca
+          : Boolean((isObject(src.qrcode) ? src.qrcode : {}).destacarNumeroPeca),
+      numeroDigitosPeca:
+        Number((isObject(src.qrcode) ? src.qrcode : {}).numeroDigitosPeca) <= 2 ? 2 : 3,
     },
-    etiqueta: (() => {
-      const merged = {
-        ...defaults.etiqueta,
-        ...(isObject(src.etiqueta) ? src.etiqueta : {}),
-      } as RulesConfig["etiqueta"];
-      const preset = merged.tamanhoEtiquetaPreset;
-      const tamanhoEtiquetaPreset: RulesConfig["etiqueta"]["tamanhoEtiquetaPreset"] =
-        preset === "pequena" || preset === "grande" || preset === "custom" ? preset : "media";
-      const modoExibicaoQr: RulesConfig["etiqueta"]["modoExibicaoQr"] =
-        merged.modoExibicaoQr === "url_completa" ? "url_completa" : "token_curto";
-      const formatoNumeroExibido: RulesConfig["etiqueta"]["formatoNumeroExibido"] =
-        merged.formatoNumeroExibido === "token_peca"
-          ? "token_peca"
-          : merged.formatoNumeroExibido === "token_apenas"
-            ? "token_apenas"
-            : "peca_apenas";
-      const posicaoLogo: RulesConfig["etiqueta"]["posicaoLogo"] =
-        merged.posicaoLogo === "direita" || merged.posicaoLogo === "acima" ? merged.posicaoLogo : "esquerda";
-      return {
-        ...merged,
-        tamanhoEtiquetaPreset,
-        larguraMm: clamp(toNumber(merged.larguraMm, defaults.etiqueta.larguraMm), 20, 250),
-        alturaMm: clamp(toNumber(merged.alturaMm, defaults.etiqueta.alturaMm), 20, 250),
-        bordaPx: clamp(toNumber(merged.bordaPx, defaults.etiqueta.bordaPx), 0, 6),
-        margemInternaMm: clamp(toNumber(merged.margemInternaMm, defaults.etiqueta.margemInternaMm), 0, 20),
-        tamanhoQr: clamp(toNumber(merged.tamanhoQr, defaults.etiqueta.tamanhoQr), 8, 80),
-        tamanhoTexto: clamp(toNumber(merged.tamanhoTexto, defaults.etiqueta.tamanhoTexto), 6, 18),
-        modoExibicaoQr,
-        formatoNumeroExibido,
-        numeroDigitosPeca: normalizePieceDigits(merged.numeroDigitosPeca),
-        templateNumero:
-          typeof merged.templateNumero === "string" && merged.templateNumero.trim()
-            ? merged.templateNumero.trim().slice(0, 24)
-            : defaults.etiqueta.templateNumero,
-        mostrarLogo: Boolean(merged.mostrarLogo),
-        mostrarLogoEmpresa: Boolean(merged.mostrarLogoEmpresa),
-        logoDataUrl: typeof merged.logoDataUrl === "string" ? merged.logoDataUrl : "",
-        posicaoLogo,
-      };
-    })(),
+    etiqueta: {
+      ...defaults.etiqueta,
+      ...(isObject(src.etiqueta) ? src.etiqueta : {}),
+    },
   };
 }
 

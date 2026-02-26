@@ -9,7 +9,7 @@ import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco, TechnicalDrillHole } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
-import { buildQrPayload, formatLabelNumber } from "../qrcode/qrcodeService";
+import { buildLocalQrPayload } from "../qrcode/qrcodeService";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -79,7 +79,7 @@ function renderQrLayer(
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
   project: ProjectForPdf
 ) {
-  const withQr = parts.filter((p) => Boolean(p.shortCode));
+  const withQr = parts.filter((p) => Number.isFinite(p.pieceNumber) && (p.pieceNumber ?? 0) > 0);
   if (withQr.length === 0) return;
   doc.addPage("a4", "landscape");
   let y = MARGIN;
@@ -89,7 +89,7 @@ function renderQrLayer(
   y += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Rastreio de fábrica: QR + código curto legível por humanos.", MARGIN, y);
+  doc.text("Rastreio local: QR com código curto da etiqueta.", MARGIN, y);
   y += 8;
 
   const pageW = doc.internal.pageSize.getWidth();
@@ -111,25 +111,24 @@ function renderQrLayer(
 
     const qrX = x + 2;
     const qrY = rowY + 10;
-    const qrPayload = p.shortCode ? buildQrPayload(p.shortCode, project.rules) : "";
-    if (p.shortCode) {
-      drawQrFromCode(doc, qrPayload, qrX, qrY, qrSize);
-    } else {
-      doc.setDrawColor(180, 180, 180);
-      doc.rect(qrX, qrY, qrSize, qrSize);
-      doc.text("QR", qrX + qrSize / 2 - 2, qrY + qrSize / 2);
-    }
+    const pieceNumber = Number(p.pieceNumber ?? 0);
+    const etiquetaCode = buildLocalQrPayload(
+      p,
+      { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
+      pieceNumber
+    );
+    drawQrFromCode(doc, etiquetaCode, qrX, qrY, qrSize);
 
-    doc.setFontSize(textSize);
-    doc.setFont("helvetica", "bold");
-    doc.text(p.shortCode ?? "-", qrX + qrSize + 3, qrY + 6);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    const labelNumber =
-      p.shortCode && Number.isFinite(p.pieceNumber)
-        ? formatLabelNumber(p.shortCode, Number(p.pieceNumber), project.rules)
-        : "-";
-    doc.text(`Nº peça: ${labelNumber}`, qrX + qrSize + 3, qrY + 11);
+    if (project.rules.qrcode.mostrarTextoAbaixoQr) {
+      doc.setFontSize(textSize);
+      doc.setFont("helvetica", "bold");
+      doc.text(etiquetaCode, qrX + qrSize + 3, qrY + 6);
+    }
+    if (project.rules.qrcode.destacarNumeroPeca) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.text(`Nº: ${etiquetaCode}`, qrX + qrSize + 3, qrY + 11);
+    }
 
     col += 1;
     if (col > 2) {

@@ -10,7 +10,6 @@ import type { RulesConfig, PortaRange, PeRange } from "../../core/rules/rulesCon
 import Panel from "../ui/Panel";
 import { useToast } from "../../context/ToastContext";
 import qrcode from "qrcode-generator";
-import { buildQrPayload, formatLabelNumber } from "../../core/qrcode/qrcodeService";
 
 export default function RulesAdminPage() {
   const { showToast } = useToast();
@@ -101,13 +100,17 @@ export default function RulesAdminPage() {
     }));
   };
 
-  const pieceDigits = rules.etiqueta.numeroDigitosPeca;
+  const pieceDigits = rules.qrcode.numeroDigitosPeca;
   const piecePreview = String(5).padStart(pieceDigits, "0");
-  const tokenPrefixLen = Math.max(1, 10 - pieceDigits);
-  const tokenPrefix = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".slice(0, tokenPrefixLen);
-  const previewToken = `${tokenPrefix}${piecePreview}`.slice(0, 10);
-  const previewQrPayload = buildQrPayload(previewToken, rules);
-  const previewLabelNumber = formatLabelNumber(previewToken, 5, rules);
+  const previewLabel = `P-${piecePreview}`;
+  const previewQrPayload = [
+    `Projeto: ${project.projectName || "PROJETO"}`,
+    "Caixa: Caixa 1",
+    "Peça: Prateleira",
+    "Madeira: MDF Branco",
+    "Medidas: 600x400x18mm",
+    `N: ${previewLabel}`,
+  ].join(" | ");
   const previewQrSvg = (() => {
     try {
       const qr = qrcode(0, "M");
@@ -466,180 +469,32 @@ export default function RulesAdminPage() {
           </div>
         </Panel>
 
-        <Panel title="Configurações → QR N / Etiqueta" description="Token curto (máx. 10), exibição e preview da etiqueta.">
+        <Panel title="QR N" description="Configuração simples do QR local e destaque do número da peça.">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(160px, 1fr))", gap: 8 }}>
-              <label style={{ fontSize: 12 }}>Preset tamanho
-                <select
-                  className="input input-xs"
-                  value={rules.etiqueta.tamanhoEtiquetaPreset}
-                  onChange={(e) => {
-                    const preset = e.target.value as RulesConfig["etiqueta"]["tamanhoEtiquetaPreset"];
-                    const dimensionsByPreset: Record<"pequena" | "media" | "grande", { w: number; h: number }> = {
-                      pequena: { w: 70, h: 35 },
-                      media: { w: 100, h: 50 },
-                      grande: { w: 120, h: 62 },
-                    };
-                    const dims = preset === "custom" ? null : dimensionsByPreset[preset];
-                    setRules((prev) => ({
-                      ...prev,
-                      etiqueta: {
-                        ...prev.etiqueta,
-                        tamanhoEtiquetaPreset: preset,
-                        larguraMm: dims ? dims.w : prev.etiqueta.larguraMm,
-                        alturaMm: dims ? dims.h : prev.etiqueta.alturaMm,
-                      },
-                    }));
-                  }}
-                >
-                  <option value="pequena">Pequena</option>
-                  <option value="media">Média</option>
-                  <option value="grande">Grande</option>
-                  <option value="custom">Custom</option>
-                </select>
+              <label style={{ fontSize: 12 }}>Tamanho do QR (mm)
+                <input className="input input-xs" type="number" value={rules.qrcode.tamanhoQr} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, tamanhoQr: Number(e.target.value) } }))} />
               </label>
-              <label style={{ fontSize: 12 }}>Largura (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.larguraMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, larguraMm: Number(e.target.value) } }))} />
+              <label style={{ fontSize: 12 }}>Tamanho do texto
+                <input className="input input-xs" type="number" value={rules.qrcode.tamanhoTexto} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, tamanhoTexto: Number(e.target.value) } }))} />
               </label>
-              <label style={{ fontSize: 12 }}>Altura (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.alturaMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, alturaMm: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Borda (px)
-                <input className="input input-xs" type="number" value={rules.etiqueta.bordaPx} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, bordaPx: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Margem interna (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.margemInternaMm} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, margemInternaMm: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Tamanho QR (mm)
-                <input className="input input-xs" type="number" value={rules.etiqueta.tamanhoQr} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, tamanhoQr: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Tamanho texto
-                <input className="input input-xs" type="number" value={rules.etiqueta.tamanhoTexto} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, tamanhoTexto: Number(e.target.value) } }))} />
-              </label>
-              <label style={{ fontSize: 12 }}>Modo de exibição do QR
-                <select
-                  className="input input-xs"
-                  value={rules.etiqueta.modoExibicaoQr}
-                  onChange={(e) =>
-                    setRules((prev) => ({
-                      ...prev,
-                      etiqueta: {
-                        ...prev.etiqueta,
-                        modoExibicaoQr: e.target.value as RulesConfig["etiqueta"]["modoExibicaoQr"],
-                      },
-                    }))
-                  }
-                >
-                  <option value="url_completa">Mostrar URL completa</option>
-                  <option value="token_curto">Mostrar token curto apenas</option>
-                </select>
-              </label>
-              <label style={{ fontSize: 12 }}>Formato número sob QR
-                <select
-                  className="input input-xs"
-                  value={rules.etiqueta.formatoNumeroExibido}
-                  onChange={(e) =>
-                    setRules((prev) => ({
-                      ...prev,
-                      etiqueta: {
-                        ...prev.etiqueta,
-                        formatoNumeroExibido: e.target.value as RulesConfig["etiqueta"]["formatoNumeroExibido"],
-                      },
-                    }))
-                  }
-                >
-                  <option value="peca_apenas">Peça apenas</option>
-                  <option value="token_peca">Token + peça</option>
-                  <option value="token_apenas">Token apenas</option>
-                </select>
-              </label>
-              <label style={{ fontSize: 12 }}>Dígitos reservados peça
-                <select
-                  className="input input-xs"
-                  value={rules.etiqueta.numeroDigitosPeca}
-                  onChange={(e) =>
-                    setRules((prev) => ({
-                      ...prev,
-                      etiqueta: {
-                        ...prev.etiqueta,
-                        numeroDigitosPeca: Number(e.target.value) as 2 | 3 | 4,
-                      },
-                    }))
-                  }
-                >
+              <label style={{ fontSize: 12 }}>Dígitos número peça
+                <select className="input input-xs" value={rules.qrcode.numeroDigitosPeca} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, numeroDigitosPeca: Number(e.target.value) as 2 | 3 } }))}>
                   <option value={2}>2</option>
                   <option value={3}>3</option>
-                  <option value={4}>4</option>
                 </select>
               </label>
-              <label style={{ fontSize: 12 }}>Template curto número
-                <input
-                  className="input input-xs"
-                  value={rules.etiqueta.templateNumero}
-                  onChange={(e) =>
-                    setRules((prev) => ({
-                      ...prev,
-                      etiqueta: {
-                        ...prev.etiqueta,
-                        templateNumero: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="#{piece} / P-{piece} / {piece}"
-                />
-              </label>
-              <label style={{ fontSize: 12 }}>Posição do logo
-                <select
-                  className="input input-xs"
-                  value={rules.etiqueta.posicaoLogo}
-                  onChange={(e) =>
-                    setRules((prev) => ({
-                      ...prev,
-                      etiqueta: {
-                        ...prev.etiqueta,
-                        posicaoLogo: e.target.value as RulesConfig["etiqueta"]["posicaoLogo"],
-                      },
-                    }))
-                  }
-                >
-                  <option value="esquerda">Esquerda</option>
-                  <option value="direita">Direita</option>
-                  <option value="acima">Acima</option>
-                </select>
-              </label>
-              <label style={{ fontSize: 12 }}>Logo (PNG/SVG)
-                <input
-                  className="input input-xs"
-                  type="file"
-                  accept="image/png,image/svg+xml"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      setRules((prev) => ({
-                        ...prev,
-                        etiqueta: {
-                          ...prev.etiqueta,
-                          logoDataUrl: typeof reader.result === "string" ? reader.result : "",
-                        },
-                      }));
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                />
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginTop: 20 }}>
+                <input type="checkbox" checked={rules.qrcode.mostrarTextoAbaixoQr} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, mostrarTextoAbaixoQr: e.target.checked } }))} />
+                Mostrar texto abaixo do QR
               </label>
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarLogoEmpresa} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarLogoEmpresa: e.target.checked } }))} /> Mostrar logo da empresa</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarLogo} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarLogo: e.target.checked } }))} /> Mostrar área de logo</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarMaterial} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarMaterial: e.target.checked } }))} /> Mostrar material</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarDimensoes} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarDimensoes: e.target.checked } }))} /> Mostrar dimensões</label>
-              <label><input type="checkbox" checked={rules.etiqueta.mostrarReferencia} onChange={(e) => setRules((prev) => ({ ...prev, etiqueta: { ...prev.etiqueta, mostrarReferencia: e.target.checked } }))} /> Mostrar referência</label>
+              <label><input type="checkbox" checked={rules.qrcode.destacarNumeroPeca} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, destacarNumeroPeca: e.target.checked } }))} /> Mostrar número da peça em destaque</label>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Token preview: <strong>{previewToken}</strong> (máx 10 chars, sufixo peça: {piecePreview})
+                Pré-visualização do número de peça: <strong>{previewLabel}</strong>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
@@ -648,7 +503,7 @@ export default function RulesAdminPage() {
                   onClick={() =>
                     setRules((prev) => ({
                       ...prev,
-                      etiqueta: { ...defaultRulesConfig.etiqueta },
+                      qrcode: { ...defaultRulesConfig.qrcode },
                     }))
                   }
                 >
@@ -701,13 +556,9 @@ export default function RulesAdminPage() {
                     style={{ width: 62, height: 62, background: "#fff", padding: 2 }}
                     dangerouslySetInnerHTML={{ __html: previewQrSvg }}
                   />
-                  <div style={{ fontSize: Math.max(11, rules.etiqueta.tamanhoTexto + 2) }}>
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{previewLabelNumber}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                      {rules.etiqueta.modoExibicaoQr === "url_completa"
-                        ? `https://YOUR_DOMAIN/q/${previewToken}`
-                        : previewToken}
-                    </div>
+                  <div style={{ fontSize: Math.max(11, rules.qrcode.tamanhoTexto + 2) }}>
+                    {rules.qrcode.destacarNumeroPeca ? <div style={{ fontWeight: 700, marginBottom: 4 }}>{previewLabel}</div> : null}
+                    {rules.qrcode.mostrarTextoAbaixoQr ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Projeto/Caixa/Peça/Madeira/Medidas</div> : null}
                   </div>
                 </div>
               </div>
