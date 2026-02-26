@@ -11,9 +11,9 @@ import DeployAdminPage from "../components/admin/DeployAdminPage";
 import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage";
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
+import PainelReferencia from "./PainelReferencia";
 
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
-const PainelReferencia = lazy(() => import("./PainelReferencia"));
 
 type AdminTab =
   | "Materials"

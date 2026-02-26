@@ -16,8 +16,8 @@ import { SettingsProvider } from "./context/SettingsContext";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
+import PainelReferencia from "./pages/PainelReferencia";
 
-const PainelReferencia = lazy(() => import("./pages/PainelReferencia"));
 const SobreNos = lazy(() => import("./pages/SobreNos"));
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
