@@ -53,6 +53,24 @@ export interface SettingsSchema {
     gavetaProfundidadesDisponiveisMm: number[];
     gavetaAlturaModoPadrao: "equal" | "top_small_mid_medium_bottom_large" | "custom";
   };
+  ferragens: {
+    cavilha: {
+      diametro: number;
+      profundidade: number;
+      distanciaBorda: number;
+      ativo: boolean;
+    };
+    parafuso: {
+      diametro: number;
+      comprimento: number;
+      ativo: boolean;
+    };
+    corredica: {
+      tipo: string;
+      folga: number;
+      ativo: boolean;
+    };
+  };
   viewer: {
     qualidade: "baixa" | "media" | "alta";
     luzIntensidade: number;
@@ -107,6 +125,24 @@ export const settingsDefaults: SettingsSchema = {
     gavetaProfundidadesDisponiveisMm: [250, 300, 350, 400, 450, 500, 550, 600],
     gavetaAlturaModoPadrao: "equal",
   },
+  ferragens: {
+    cavilha: {
+      diametro: 8,
+      profundidade: 30,
+      distanciaBorda: 37,
+      ativo: true,
+    },
+    parafuso: {
+      diametro: 4,
+      comprimento: 30,
+      ativo: true,
+    },
+    corredica: {
+      tipo: "telescopica",
+      folga: 7,
+      ativo: true,
+    },
+  },
   viewer: {
     qualidade: "alta",
     luzIntensidade: 1,
@@ -150,6 +186,28 @@ function deepMergeSettings(
     nesting: { ...base.nesting, ...(isObject(patch.nesting) ? patch.nesting : {}) },
     portas: { ...base.portas, ...(isObject(patch.portas) ? patch.portas : {}) },
     gavetas: { ...base.gavetas, ...(isObject(patch.gavetas) ? patch.gavetas : {}) },
+    ferragens: {
+      ...base.ferragens,
+      ...(isObject(patch.ferragens) ? patch.ferragens : {}),
+      cavilha: {
+        ...base.ferragens.cavilha,
+        ...(isObject((patch.ferragens as Record<string, unknown> | undefined)?.cavilha)
+          ? (patch.ferragens as Record<string, unknown>).cavilha as Record<string, unknown>
+          : {}),
+      },
+      parafuso: {
+        ...base.ferragens.parafuso,
+        ...(isObject((patch.ferragens as Record<string, unknown> | undefined)?.parafuso)
+          ? (patch.ferragens as Record<string, unknown>).parafuso as Record<string, unknown>
+          : {}),
+      },
+      corredica: {
+        ...base.ferragens.corredica,
+        ...(isObject((patch.ferragens as Record<string, unknown> | undefined)?.corredica)
+          ? (patch.ferragens as Record<string, unknown>).corredica as Record<string, unknown>
+          : {}),
+      },
+    },
     viewer: { ...base.viewer, ...(isObject(patch.viewer) ? patch.viewer : {}) },
   };
 }
@@ -232,6 +290,51 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         merged.gavetas.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || merged.gavetas.gavetaAlturaModoPadrao === "custom"
           ? merged.gavetas.gavetaAlturaModoPadrao
           : "equal",
+    },
+    ferragens: {
+      cavilha: {
+        diametro: clamp(
+          toNumber(merged.ferragens.cavilha.diametro, settingsDefaults.ferragens.cavilha.diametro),
+          1,
+          50
+        ),
+        profundidade: clamp(
+          toNumber(merged.ferragens.cavilha.profundidade, settingsDefaults.ferragens.cavilha.profundidade),
+          1,
+          100
+        ),
+        distanciaBorda: clamp(
+          toNumber(merged.ferragens.cavilha.distanciaBorda, settingsDefaults.ferragens.cavilha.distanciaBorda),
+          0,
+          200
+        ),
+        ativo: Boolean(merged.ferragens.cavilha.ativo),
+      },
+      parafuso: {
+        diametro: clamp(
+          toNumber(merged.ferragens.parafuso.diametro, settingsDefaults.ferragens.parafuso.diametro),
+          1,
+          20
+        ),
+        comprimento: clamp(
+          toNumber(merged.ferragens.parafuso.comprimento, settingsDefaults.ferragens.parafuso.comprimento),
+          1,
+          200
+        ),
+        ativo: Boolean(merged.ferragens.parafuso.ativo),
+      },
+      corredica: {
+        tipo:
+          typeof merged.ferragens.corredica.tipo === "string" && merged.ferragens.corredica.tipo.trim()
+            ? merged.ferragens.corredica.tipo.trim()
+            : settingsDefaults.ferragens.corredica.tipo,
+        folga: clamp(
+          toNumber(merged.ferragens.corredica.folga, settingsDefaults.ferragens.corredica.folga),
+          0,
+          50
+        ),
+        ativo: Boolean(merged.ferragens.corredica.ativo),
+      },
     },
     viewer: {
       qualidade: merged.viewer.qualidade === "baixa" || merged.viewer.qualidade === "media" ? merged.viewer.qualidade : "alta",

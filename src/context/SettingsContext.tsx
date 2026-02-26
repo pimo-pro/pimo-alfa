@@ -44,6 +44,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
       portas: { ...settings.portas, ...(patch.portas ?? {}) },
       gavetas: { ...settings.gavetas, ...(patch.gavetas ?? {}) },
+      ferragens: {
+        ...settings.ferragens,
+        ...(patch.ferragens ?? {}),
+        cavilha: { ...settings.ferragens.cavilha, ...(patch.ferragens?.cavilha ?? {}) },
+        parafuso: { ...settings.ferragens.parafuso, ...(patch.ferragens?.parafuso ?? {}) },
+        corredica: { ...settings.ferragens.corredica, ...(patch.ferragens?.corredica ?? {}) },
+      },
       viewer: { ...settings.viewer, ...(patch.viewer ?? {}) },
     };
     const result = saveSettings(merged);
@@ -63,6 +70,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
       portas: { ...settings.portas, ...(patch.portas ?? {}) },
       gavetas: { ...settings.gavetas, ...(patch.gavetas ?? {}) },
+      ferragens: {
+        ...settings.ferragens,
+        ...(patch.ferragens ?? {}),
+        cavilha: { ...settings.ferragens.cavilha, ...(patch.ferragens?.cavilha ?? {}) },
+        parafuso: { ...settings.ferragens.parafuso, ...(patch.ferragens?.parafuso ?? {}) },
+        corredica: { ...settings.ferragens.corredica, ...(patch.ferragens?.corredica ?? {}) },
+      },
       viewer: { ...settings.viewer, ...(patch.viewer ?? {}) },
     };
     return validateSettings(merged);

@@ -13,6 +13,12 @@ import type { TechnicalDrillHole } from "../../core/types";
  * - Cima/fundo: largura total × profundidade total × 19 mm.
  * - Laterais: DENTRO; altura = altura - 38 mm, profundidade = total, espessura 19 mm.
  * - Prateleiras: DENTRO; largura = largura - 2 mm, profundidade = profundidade - 10 mm, 19 mm.
+ * 
+ * GAVETAS:
+ * - Cálculos delegados ao domínio: src/core/drawers/
+ * - BoxBuilder apenas renderiza LayerItems já calculados
+ * - Lógica de dimensões, folgas e movimento está no domínio
+ * 
  * updateBoxGroup: apenas atualiza geometria/posição por nome; não recria IDs.
  */
 export type BoxOptions = {
@@ -77,9 +83,13 @@ const SHELF_WIDTH_CLEARANCE_M = 0.002;
 /** Profundidade interna antes da costa (costa 10 mm atrás). */
 const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
 const DOOR_ANIMATION_DURATION_MS = 2000;
+const DRAWER_ANIMATION_DURATION_MS = 1500;
 const doorOpenState = new Map<string, boolean>();
 const doorRotationState = new Map<string, number>();
 const doorAnimationRaf = new Map<string, number>();
+const drawerOpenState = new Map<string, boolean>();
+const drawerPositionState = new Map<string, number>();
+const drawerAnimationRaf = new Map<string, number>();
 const easeInOutCubic = (t: number) => (t < 0.5
   ? 4 * t * t * t
   : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -173,10 +183,46 @@ type DoorSpec = {
 type DrawerSpec = {
   id: string;
   type: "drawer";
+  // Dimensões da frente (cobre toda a abertura)
   widthM: number;
   heightM: number;
   depthM: number;
   frontThicknessM: number;
+  // Dimensões do corpo
+  bodyWidthM?: number;
+  bodyHeightM?: number;
+  bodyDepthM?: number;
+  // Dimensões das peças
+  leftSideWidthM?: number;
+  leftSideHeightM?: number;
+  leftSideDepthM?: number;
+  rightSideWidthM?: number;
+  rightSideHeightM?: number;
+  rightSideDepthM?: number;
+  backWidthM?: number;
+  backHeightM?: number;
+  backThicknessM?: number;
+  bottomWidthM?: number;
+  bottomDepthM?: number;
+  bottomThicknessM?: number;
+  sideThicknessM?: number;
+  // Posicoes locais das pecas
+  frontPosX?: number;
+  frontPosY?: number;
+  frontPosZ?: number;
+  leftSidePosX?: number;
+  leftSidePosY?: number;
+  leftSidePosZ?: number;
+  rightSidePosX?: number;
+  rightSidePosY?: number;
+  rightSidePosZ?: number;
+  bottomPosX?: number;
+  bottomPosY?: number;
+  bottomPosZ?: number;
+  backPosX?: number;
+  backPosY?: number;
+  backPosZ?: number;
+  // Posição e estado
   x: number;
   y: number;
   z: number;
@@ -204,14 +250,58 @@ function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
   }));
 }
 
+/**
+ * Converte DrawerLayerItem[] para DrawerSpec[] (formato Three.js)
+ * 
+ * NOTA: Não faz cálculos! Apenas converte mm -> metros.
+ * Todos os cálculos de dimensões estão em src/core/drawers/
+ */
 function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
   return items.map((item) => ({
     id: item.id,
     type: "drawer",
+    // Frente
     widthM: Math.max(0.001, item.width / 1000),
     heightM: Math.max(0.001, item.height / 1000),
     depthM: Math.max(0.001, item.depth / 1000),
     frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
+    // Corpo
+    bodyWidthM: item.bodyWidth ? Math.max(0.001, item.bodyWidth / 1000) : undefined,
+    bodyHeightM: item.bodyHeight ? Math.max(0.001, item.bodyHeight / 1000) : undefined,
+    bodyDepthM: item.bodyDepth ? Math.max(0.001, item.bodyDepth / 1000) : undefined,
+    // Laterais
+    leftSideWidthM: item.leftSideWidth ? Math.max(0.001, item.leftSideWidth / 1000) : undefined,
+    leftSideHeightM: item.leftSideHeight ? Math.max(0.001, item.leftSideHeight / 1000) : undefined,
+    leftSideDepthM: item.leftSideDepth ? Math.max(0.001, item.leftSideDepth / 1000) : undefined,
+    rightSideWidthM: item.rightSideWidth ? Math.max(0.001, item.rightSideWidth / 1000) : undefined,
+    rightSideHeightM: item.rightSideHeight ? Math.max(0.001, item.rightSideHeight / 1000) : undefined,
+    rightSideDepthM: item.rightSideDepth ? Math.max(0.001, item.rightSideDepth / 1000) : undefined,
+    // Traseira
+    backWidthM: item.backWidth ? Math.max(0.001, item.backWidth / 1000) : undefined,
+    backHeightM: item.backHeight ? Math.max(0.001, item.backHeight / 1000) : undefined,
+    backThicknessM: item.backThickness ? Math.max(0.001, item.backThickness / 1000) : undefined,
+    // Fundo
+    bottomWidthM: item.bottomWidth ? Math.max(0.001, item.bottomWidth / 1000) : undefined,
+    bottomDepthM: item.bottomDepth ? Math.max(0.001, item.bottomDepth / 1000) : undefined,
+    bottomThicknessM: item.bottomThickness ? Math.max(0.001, item.bottomThickness / 1000) : undefined,
+    // Posicoes locais das pecas
+    frontPosX: Number.isFinite(item.frontPosX) ? (item.frontPosX as number) / 1000 : undefined,
+    frontPosY: Number.isFinite(item.frontPosY) ? (item.frontPosY as number) / 1000 : undefined,
+    frontPosZ: Number.isFinite(item.frontPosZ) ? (item.frontPosZ as number) / 1000 : undefined,
+    leftSidePosX: Number.isFinite(item.leftSidePosX) ? (item.leftSidePosX as number) / 1000 : undefined,
+    leftSidePosY: Number.isFinite(item.leftSidePosY) ? (item.leftSidePosY as number) / 1000 : undefined,
+    leftSidePosZ: Number.isFinite(item.leftSidePosZ) ? (item.leftSidePosZ as number) / 1000 : undefined,
+    rightSidePosX: Number.isFinite(item.rightSidePosX) ? (item.rightSidePosX as number) / 1000 : undefined,
+    rightSidePosY: Number.isFinite(item.rightSidePosY) ? (item.rightSidePosY as number) / 1000 : undefined,
+    rightSidePosZ: Number.isFinite(item.rightSidePosZ) ? (item.rightSidePosZ as number) / 1000 : undefined,
+    bottomPosX: Number.isFinite(item.bottomPosX) ? (item.bottomPosX as number) / 1000 : undefined,
+    bottomPosY: Number.isFinite(item.bottomPosY) ? (item.bottomPosY as number) / 1000 : undefined,
+    bottomPosZ: Number.isFinite(item.bottomPosZ) ? (item.bottomPosZ as number) / 1000 : undefined,
+    backPosX: Number.isFinite(item.backPosX) ? (item.backPosX as number) / 1000 : undefined,
+    backPosY: Number.isFinite(item.backPosY) ? (item.backPosY as number) / 1000 : undefined,
+    backPosZ: Number.isFinite(item.backPosZ) ? (item.backPosZ as number) / 1000 : undefined,
+    sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
+    // Posição
     x: (item.posX ?? 0) / 1000,
     y: (item.posY ?? 0) / 1000,
     z: (item.posZ ?? 0) / 1000,
@@ -323,14 +413,76 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material): THREE.Objec
   return pivot;
 }
 
+/**
+ * Renderiza uma gaveta no Three.js
+ * 
+ * NOTA: Não faz cálculos de dimensões! Apenas renderiza.
+ * - Cálculos de folgas, gaps e dimensões: src/core/drawers/DrawerParametrics
+ * - Lógica de movimento: src/core/drawers/DrawerMotionService
+ * - Geração: src/core/drawers/DrawerGenerationService
+ * 
+ * Esta função apenas:
+ * 1. Cria geometrias Three.js
+ * 2. Posiciona peças
+ * 3. Anima com requestAnimationFrame
+ */
 function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
+  // Grupo principal (posição base da gaveta - no centro do box)
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
-  group.position.set(spec.x, spec.y, spec.z + (spec.isOpen ? spec.pullDistanceM : 0));
+  group.position.set(spec.x, spec.y, spec.z);
   if (spec.rotY !== 0) {
     group.rotation.y = spec.rotY;
   }
 
+  // ===== GRUPO MÓVEL (FRENTE + CORPO) =====
+  // TUDO se move junto ao abrir/fechar
+  const drawerGroup = new THREE.Group();
+  drawerGroup.name = `drawer-body-${spec.id}`;
+  
+  // Animação suave do deslocamento ao abrir
+  const targetPullOffset = spec.isOpen ? spec.pullDistanceM : 0;
+  const prevIsOpen = drawerOpenState.get(spec.id);
+  const prevPosition = drawerPositionState.get(spec.id);
+  const startPosition = Number.isFinite(prevPosition) ? (prevPosition as number) : 0;
+  const shouldAnimate = prevIsOpen === undefined ? spec.isOpen : prevIsOpen !== spec.isOpen;
+
+  if (Number.isFinite(prevPosition)) {
+    drawerGroup.position.set(0, 0, startPosition);
+  } else {
+    drawerGroup.position.set(0, 0, targetPullOffset);
+  }
+
+  if (shouldAnimate) {
+    const existingRaf = drawerAnimationRaf.get(spec.id);
+    if (existingRaf != null) cancelAnimationFrame(existingRaf);
+    const start = performance.now();
+    const targetPosition = targetPullOffset;
+    console.log("drawer animation start", { id: spec.id, targetPosition, startPosition });
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - start) / DRAWER_ANIMATION_DURATION_MS);
+      const eased = easeInOutCubic(t);
+      drawerGroup.position.z = startPosition + (targetPosition - startPosition) * eased;
+      if (t < 1) {
+        drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
+      } else {
+        drawerAnimationRaf.delete(spec.id);
+        console.log("drawer animation end", { id: spec.id, finalPosition: drawerGroup.position.z });
+      }
+    };
+    drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
+  } else {
+    drawerGroup.position.z = targetPullOffset;
+  }
+
+  drawerOpenState.set(spec.id, spec.isOpen);
+  drawerPositionState.set(spec.id, drawerGroup.position.z);
+
+  drawerGroup.userData.drawerLayerId = spec.id;
+  drawerGroup.userData.drawerPart = "body";
+
+  // ===== FRENTE DA GAVETA =====
+  // A frente fica colada ao corpo e flush no plano frontal
   const front = createPanel(
     spec.widthM,
     spec.heightM,
@@ -339,10 +491,152 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
     "front",
     { singleMaterial: material }
   );
-  front.position.set(0, 0, 0);
+  if (
+    Number.isFinite(spec.frontPosX) &&
+    Number.isFinite(spec.frontPosY) &&
+    Number.isFinite(spec.frontPosZ)
+  ) {
+    front.position.set(spec.frontPosX as number, spec.frontPosY as number, spec.frontPosZ as number);
+  } else {
+    front.position.set(0, 0, spec.frontThicknessM / 2);
+  }
   front.userData.drawerLayerId = spec.id;
+  front.userData.drawerPart = "front";
+  drawerGroup.add(front);
+
+  // ===== CORPO DA GAVETA =====
+  if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
+    const bodyOffsetZ = -(spec.bodyDepthM / 2 + spec.frontThicknessM);
+
+    
+    // ===== LATERAL ESQUERDA =====
+    if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
+      const leftSide = createPanel(
+        spec.leftSideWidthM,
+        spec.leftSideHeightM,
+        spec.leftSideDepthM,
+        `drawer-left-${spec.id}`,
+        "left",
+        { singleMaterial: material }
+      );
+      if (
+        Number.isFinite(spec.leftSidePosX) &&
+        Number.isFinite(spec.leftSidePosY) &&
+        Number.isFinite(spec.leftSidePosZ)
+      ) {
+        leftSide.position.set(
+          spec.leftSidePosX as number,
+          spec.leftSidePosY as number,
+          spec.leftSidePosZ as number
+        );
+      } else {
+        leftSide.position.set(
+          -spec.bodyWidthM / 2 + spec.leftSideWidthM / 2,
+          0,
+          bodyOffsetZ
+        );
+      }
+      leftSide.userData.drawerPart = "left-side";
+      drawerGroup.add(leftSide);
+    }
+
+    // ===== LATERAL DIREITA =====
+    if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
+      const rightSide = createPanel(
+        spec.rightSideWidthM,
+        spec.rightSideHeightM,
+        spec.rightSideDepthM,
+        `drawer-right-${spec.id}`,
+        "right",
+        { singleMaterial: material }
+      );
+      if (
+        Number.isFinite(spec.rightSidePosX) &&
+        Number.isFinite(spec.rightSidePosY) &&
+        Number.isFinite(spec.rightSidePosZ)
+      ) {
+        rightSide.position.set(
+          spec.rightSidePosX as number,
+          spec.rightSidePosY as number,
+          spec.rightSidePosZ as number
+        );
+      } else {
+        rightSide.position.set(
+          spec.bodyWidthM / 2 - spec.rightSideWidthM / 2,
+          0,
+          bodyOffsetZ
+        );
+      }
+      rightSide.userData.drawerPart = "right-side";
+      drawerGroup.add(rightSide);
+    }
+
+    // ===== FUNDO =====
+    if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
+      const bottom = createPanel(
+        spec.bottomWidthM,
+        spec.bottomThicknessM,
+        spec.bottomDepthM,
+        `drawer-bottom-${spec.id}`,
+        "bottom",
+        { singleMaterial: material }
+      );
+      if (
+        Number.isFinite(spec.bottomPosX) &&
+        Number.isFinite(spec.bottomPosY) &&
+        Number.isFinite(spec.bottomPosZ)
+      ) {
+        bottom.position.set(
+          spec.bottomPosX as number,
+          spec.bottomPosY as number,
+          spec.bottomPosZ as number
+        );
+      } else {
+        bottom.position.set(
+          0,
+          -spec.bodyHeightM / 2 + spec.bottomThicknessM / 2,
+          bodyOffsetZ
+        );
+      }
+      bottom.userData.drawerPart = "bottom";
+      drawerGroup.add(bottom);
+    }
+
+    // ===== TRASEIRA =====
+    if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
+      const back = createPanel(
+        spec.backWidthM,
+        spec.backHeightM,
+        spec.backThicknessM,
+        `drawer-back-${spec.id}`,
+        "back",
+        { singleMaterial: material }
+      );
+      if (
+        Number.isFinite(spec.backPosX) &&
+        Number.isFinite(spec.backPosY) &&
+        Number.isFinite(spec.backPosZ)
+      ) {
+        back.position.set(
+          spec.backPosX as number,
+          spec.backPosY as number,
+          spec.backPosZ as number
+        );
+      } else {
+        back.position.set(
+          0,
+          0,
+          bodyOffsetZ - spec.bodyDepthM / 2 + spec.backThicknessM / 2
+        );
+      }
+      back.userData.drawerPart = "back";
+      drawerGroup.add(back);
+    }
+  }
+
+  group.add(drawerGroup);
+
   group.userData.drawerLayerId = spec.id;
-  group.add(front);
 
   if (import.meta.env.DEV) {
     console.log("[BoxLayers][BoxBuilder.createDrawerObject] final", {
@@ -351,9 +645,12 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
       posX: group.position.x,
       posY: group.position.y,
       posZ: group.position.z,
-      width: spec.widthM,
-      height: spec.heightM,
-      depth: spec.depthM,
+      frontWidth: spec.widthM,
+      frontHeight: spec.heightM,
+      bodyWidth: spec.bodyWidthM,
+      bodyDepth: spec.bodyDepthM,
+      isOpen: spec.isOpen,
+      pullDistance: spec.pullDistanceM,
     });
   }
 

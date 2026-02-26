@@ -1,6 +1,12 @@
 import type { WorkspaceBox } from "../core/types";
 import { getSettings } from "../core/settings/settingsService";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
+import {
+  generateDrawerGroup,
+  drawerGroupToLayerItems,
+  drawerToLayerItem,
+  type DrawerGenerationConfig,
+} from "../core/drawers";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -20,98 +26,41 @@ const clamp = (value: number, min: number) => Math.max(min, Number.isFinite(valu
 
 const defaultDoorMaterial = "";
 const defaultDrawerMaterial = "";
-const DRAWER_BASE_OFFSET_MM = 10;
-const DRAWER_BACK_CLEARANCE_MM = 10;
 
-const resolveDrawerDepth = (boxDepth: number, frontThickness: number, availableDepths: number[]) => {
-  const maxDepth = Math.max(MM_EPS, boxDepth - DRAWER_BACK_CLEARANCE_MM - frontThickness);
-  const sorted = [...availableDepths].filter((d) => d > 0).sort((a, b) => a - b);
-  const candidate = sorted.filter((d) => d <= maxDepth).pop();
-  return candidate ?? Math.max(MM_EPS, Math.min(maxDepth, sorted[0] ?? maxDepth));
-};
-
+/**
+ * Aplica regras de tipo de gaveta (delegando ao domínio de drawers)
+ * @deprecated Use generateDrawerGroup from drawers domain instead
+ */
 export const applyDrawerTypeRules = (
   box: WorkspaceBox,
   drawer: DrawerLayerItem,
   settings = getSettings()
 ): DrawerLayerItem => {
-  const thickness = clamp(box.espessura, 18);
+  // Delegando ao domínio de drawers
   const drawerSettings = settings.gavetas;
-  const resolvedType = drawer.type ?? drawer.drawerType ?? box.drawerType ?? "normal";
-  const sideGap = clamp(drawerSettings.gavetaFolgaLateralMm, 0);
-  const frontThickness = thickness;
-  const baseThickness =
-    resolvedType === "pro" && drawerSettings.gavetaProBaseEspessuraMm > 0
-      ? drawerSettings.gavetaProBaseEspessuraMm
-      : resolvedType === "pro"
-        ? thickness
-        : clamp(drawerSettings.gavetaNormalBaseEspessuraMm, 0);
-  const sideMaterial: "wood" | "aluminum" = resolvedType === "pro" ? "aluminum" : "wood";
-  const sideThickness = resolvedType === "pro" ? 0 : thickness;
-  const backThickness = thickness;
-  const drawerWidth = clamp(box.dimensoes.largura - (2 * thickness) - (2 * sideGap), MM_EPS);
-  const depth = resolveDrawerDepth(
-    box.dimensoes.profundidade,
-    frontThickness,
-    drawerSettings.gavetaProfundidadesDisponiveisMm
-  );
-  // Position drawer front at the box surface: 
-  // Box front is at +boxDepth/2. The front panel's front face should be at that position.
-  // Since front panel is centered at group.z with thickness/2 extending outward, group.z = boxDepth/2 - frontThickness/2
-  const posZ = box.dimensoes.profundidade / 2 - frontThickness / 2;
-  const pullDistanceMm = Math.max(0, depth - frontThickness);
-
-  return {
-    ...drawer,
-    type: resolvedType,
-    sideMaterial,
-    bottomThickness: baseThickness,
-    sideThickness,
-    backThickness,
-    width: drawerWidth,
-    depth,
-    frontThickness,
-    posZ,
-    pullDistanceMm,
+  const config: DrawerGenerationConfig = {
+    boxWidth: box.dimensoes.largura,
+    boxHeight: box.dimensoes.altura,
+    boxDepth: box.dimensoes.profundidade,
+    boxThickness: box.espessura || 18,
+    boxId: box.id,
+    drawerCount: 1,
+    drawerType: drawer.type ?? drawer.drawerType ?? box.drawerType ?? "normal",
+    heightMode: "equal",
+    customHeights: [drawer.height],
+    availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+    materialId: drawer.materialId,
   };
-};
 
-const resolveDrawerHeights = (
-  count: number,
-  totalHeight: number,
-  mode: "equal" | "top_small_mid_medium_bottom_large" | "custom",
-  customHeights?: number[]
-) => {
-  if (count <= 0) return [] as number[];
-  if (mode === "custom" && customHeights && customHeights.length > 0) {
-    const heights = Array.from({ length: count }, (_, index) => {
-      const value = customHeights[index];
-      return Number.isFinite(value) && value > 0 ? value : totalHeight / count;
-    });
-    return heights;
-  }
-  if (mode === "equal" || count === 1) {
-    const each = totalHeight / count;
-    return Array.from({ length: count }, () => each);
-  }
+  const group = generateDrawerGroup(config);
+  const layerItem = drawerToLayerItem(group.drawers[0]);
 
-  if (count === 2) {
-    const top = totalHeight * 0.4;
-    const bottom = totalHeight - top;
-    return [top, bottom];
-  }
-
-  const topWeight = 0.2;
-  const bottomWeight = 0.4;
-  const middleWeight = 1 - topWeight - bottomWeight;
-  const middleCount = count - 2;
-  const middleEach = middleWeight / middleCount;
-  const weights = [topWeight, ...Array.from({ length: middleCount }, () => middleEach), bottomWeight];
-  const heights = weights.map((w) => w * totalHeight);
-  const sum = heights.reduce((acc, value) => acc + value, 0);
-  const diff = totalHeight - sum;
-  heights[heights.length - 1] += diff;
-  return heights;
+  // Preserva estado de abertura
+  return {
+    ...layerItem,
+    isOpen: drawer.isOpen,
+    posY: drawer.posY,
+  };
 };
 
 export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
@@ -209,61 +158,37 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
   if (hasDrawers) {
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";
-    const sideGap = clamp(drawerSettings.gavetaFolgaLateralMm, 0);
-    const frontThickness = thickness;
-    const baseThickness =
-      drawerType === "pro" && drawerSettings.gavetaProBaseEspessuraMm > 0
-        ? drawerSettings.gavetaProBaseEspessuraMm
-        : drawerType === "pro"
-          ? thickness
-          : clamp(drawerSettings.gavetaNormalBaseEspessuraMm, 0);
-    const sideMaterial = drawerType === "pro" ? "aluminum" : "wood";
-    const sideThickness = drawerType === "pro" ? 0 : thickness;
-    const backThickness = thickness;
-    const drawerWidth = clamp(boxWidth - (2 * thickness) - (2 * sideGap), MM_EPS);
-    const availableHeight = Math.max(MM_EPS, boxHeight - DRAWER_BASE_OFFSET_MM);
     const mode = box.drawerHeightMode ?? drawerSettings.gavetaAlturaModoPadrao;
     const customHeights = mode === "custom" ? (box.drawersLayer ?? []).map((item) => item.height) : undefined;
-    const heights = resolveDrawerHeights(drawerCount, availableHeight, mode, customHeights);
-    const depth = resolveDrawerDepth(
+
+    // Usar o domínio de drawers para gerar gavetas
+    const config: DrawerGenerationConfig = {
+      boxWidth,
+      boxHeight,
       boxDepth,
-      frontThickness,
-      drawerSettings.gavetaProfundidadesDisponiveisMm
-    );
-    let offsetY = 0;
-    for (let i = 0; i < drawerCount; i += 1) {
-      const drawerHeight = heights[i] ?? availableHeight / drawerCount;
-      const posY = -boxHeight / 2 + DRAWER_BASE_OFFSET_MM + offsetY + drawerHeight / 2;
+      boxThickness: thickness,
+      boxId: box.id,
+      drawerCount,
+      drawerType,
+      heightMode: mode,
+      customHeights,
+      availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+      materialId: defaultDrawerMaterial,
+    };
+
+    const drawerGroup = generateDrawerGroup(config);
+    const generatedDrawers = drawerGroupToLayerItems(drawerGroup);
+
+    // Preserva estado de abertura das gavetas existentes
+    for (let i = 0; i < generatedDrawers.length; i++) {
       const existing = (box.drawersLayer ?? [])[i];
-      const drawerTypeResolved = existing?.type ?? existing?.drawerType ?? drawerType;
-      const isOpen = existing?.isOpen ?? false;
-      const materialId = existing?.materialId ?? defaultDrawerMaterial;
-      const pullDistanceMm = existing?.pullDistanceMm ?? Math.max(0, depth - frontThickness);
-      const resolved = applyDrawerTypeRules(box, {
-        id: createId("drawer"),
-        parentBoxId: box.id,
-        type: drawerTypeResolved,
-        drawerType: drawerTypeResolved,
-        sideMaterial,
-        bottomThickness: baseThickness,
-        sideThickness,
-        backThickness,
-        width: drawerWidth,
-        height: drawerHeight,
-        depth,
-        frontThickness,
-        materialId,
-        openDirection: "pull",
-        isOpen,
-        pullDistanceMm,
-        posX: 0,
-        posY,
-        posZ: 0,
-        rotY: 0,
-      });
-      drawersLayer.push(resolved);
-      offsetY += drawerHeight;
+      if (existing) {
+        generatedDrawers[i].isOpen = existing.isOpen ?? false;
+        generatedDrawers[i].materialId = existing.materialId ?? defaultDrawerMaterial;
+      }
     }
+
+    drawersLayer.push(...generatedDrawers);
   }
 
   for (const door of doorsLayer) {
@@ -322,45 +247,22 @@ export function createManualDrawer(box: WorkspaceBox): DrawerLayerItem {
   const thickness = clamp(box.espessura, 18);
   const drawerSettings = settings.gavetas;
   const drawerType = box.drawerType ?? "normal";
-  const sideGap = clamp(drawerSettings.gavetaFolgaLateralMm, 0);
-  const frontThickness = thickness;
-  const baseThickness =
-    drawerType === "pro" && drawerSettings.gavetaProBaseEspessuraMm > 0
-      ? drawerSettings.gavetaProBaseEspessuraMm
-      : drawerType === "pro"
-        ? thickness
-        : clamp(drawerSettings.gavetaNormalBaseEspessuraMm, 0);
-  const sideMaterial: "wood" | "aluminum" = drawerType === "pro" ? "aluminum" : "wood";
-  const sideThickness = drawerType === "pro" ? 0 : thickness;
-  const backThickness = thickness;
-  const availableHeight = Math.max(MM_EPS, box.dimensoes.altura - DRAWER_BASE_OFFSET_MM);
   const mode = box.drawerHeightMode ?? drawerSettings.gavetaAlturaModoPadrao;
-  const drawerHeight = resolveDrawerHeights(1, availableHeight, mode)[0] ?? availableHeight;
-  const depth = resolveDrawerDepth(
-    box.dimensoes.profundidade,
-    frontThickness,
-    drawerSettings.gavetaProfundidadesDisponiveisMm
-  );
-  const draft = {
-    id: createId("drawer"),
-    parentBoxId: box.id,
-    type: drawerType,
-    sideMaterial,
-    bottomThickness: baseThickness,
-    sideThickness,
-    backThickness,
-    width: clamp(box.dimensoes.largura - (2 * thickness) - (2 * sideGap), 80),
-    height: drawerHeight,
-    depth,
-    frontThickness,
+
+  // Usar o domínio de drawers
+  const config: DrawerGenerationConfig = {
+    boxWidth: box.dimensoes.largura,
+    boxHeight: box.dimensoes.altura,
+    boxDepth: box.dimensoes.profundidade,
+    boxThickness: thickness,
+    boxId: box.id,
+    drawerCount: 1,
+    drawerType,
+    heightMode: mode,
+    availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
     materialId: defaultDrawerMaterial,
-    openDirection: "pull",
-    isOpen: false,
-    pullDistanceMm: Math.max(0, depth - frontThickness),
-    posX: 0,
-    posY: -box.dimensoes.altura / 2 + DRAWER_BASE_OFFSET_MM + drawerHeight / 2,
-    posZ: 0,
-    rotY: 0,
-  } as DrawerLayerItem;
-  return applyDrawerTypeRules(box, draft);
+  };
+
+  const drawerGroup = generateDrawerGroup(config);
+  return drawerToLayerItem(drawerGroup.drawers[0]);
 }

@@ -269,6 +269,92 @@ export const defaultRulesConfig: RulesConfig = {
   },
 };
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * Normaliza regras vindas de versões antigas, garantindo estrutura completa.
+ * Evita crashes em telas que acessam chaves profundas (ex.: furos.tecnicos.cavilha).
+ */
+export function normalizeRulesConfig(input: unknown): RulesConfig {
+  if (!isObject(input)) return JSON.parse(JSON.stringify(defaultRulesConfig)) as RulesConfig;
+
+  const src = input as Record<string, unknown>;
+  const defaults = defaultRulesConfig;
+  const asObject = (value: unknown): Record<string, unknown> => (isObject(value) ? value : {});
+  const furosSrc = asObject(src.furos);
+  const tecnicosSrc = asObject(furosSrc.tecnicos);
+
+  const base = {
+    ...defaults,
+    ...src,
+  } as RulesConfig;
+
+  return {
+    ...base,
+    portas: {
+      ...defaults.portas,
+      ...(isObject(src.portas) ? src.portas : {}),
+    },
+    prateleiras: {
+      ...defaults.prateleiras,
+      ...(isObject(src.prateleiras) ? src.prateleiras : {}),
+    },
+    pes: {
+      ...defaults.pes,
+      ...(isObject(src.pes) ? src.pes : {}),
+    },
+    altura: {
+      ...defaults.altura,
+      ...(isObject(src.altura) ? src.altura : {}),
+    },
+    largura: {
+      ...defaults.largura,
+      ...(isObject(src.largura) ? src.largura : {}),
+    },
+    furos: {
+      ...defaults.furos,
+      ...furosSrc,
+      tecnicos: {
+        ...defaults.furos.tecnicos,
+        ...tecnicosSrc,
+        cavilha: {
+          ...defaults.furos.tecnicos.cavilha,
+          ...asObject(tecnicosSrc.cavilha),
+        },
+        parafuso: {
+          ...defaults.furos.tecnicos.parafuso,
+          ...asObject(tecnicosSrc.parafuso),
+        },
+        dobradica: {
+          ...defaults.furos.tecnicos.dobradica,
+          ...asObject(tecnicosSrc.dobradica),
+        },
+        corredica: {
+          ...defaults.furos.tecnicos.corredica,
+          ...asObject(tecnicosSrc.corredica),
+        },
+        prateleira: {
+          ...defaults.furos.tecnicos.prateleira,
+          ...asObject(tecnicosSrc.prateleira),
+        },
+      },
+    },
+    madeira: {
+      ...defaults.madeira,
+      ...(isObject(src.madeira) ? src.madeira : {}),
+    },
+    qrcode: {
+      ...defaults.qrcode,
+      ...(isObject(src.qrcode) ? src.qrcode : {}),
+    },
+    etiqueta: {
+      ...defaults.etiqueta,
+      ...(isObject(src.etiqueta) ? src.etiqueta : {}),
+    },
+  };
+}
+
 /**
  * Calcula o número de dobradiças para uma porta com base na altura (cm).
  */

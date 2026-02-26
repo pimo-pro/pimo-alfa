@@ -29,15 +29,16 @@ import {
 } from "../core/layout/layoutWarnings";
 import { mmToM } from "../utils/units";
 import { loadProfiles } from "../core/rules/rulesProfilesStorage";
-import { defaultRulesConfig } from "../core/rules/rulesConfig";
+import { defaultRulesConfig, normalizeRulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { getCatalogGlbPath } from "../core/glb/glbRegistry";
 import { regenerateLayersForBox } from "../services/boxLayersService";
+import { extractDrawerCutlistFromLayerItems } from "../services/drawerCutlistAdapter";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
 function getRulesFromProfiles(config: RulesProfilesConfig) {
   const perfil = config.perfis.find((p) => p.id === config.perfilAtivoId);
-  return perfil?.rules ?? defaultRulesConfig;
+  return normalizeRulesConfig(perfil?.rules ?? defaultRulesConfig);
 }
 
 const defaultMaterial: Material = {
@@ -357,14 +358,22 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
     prev.rules
   );
 
-  const cutListComPreco = calcularPrecoCutList(design.cutList);
+  // Extrai peças das gavetas se existirem
+  const drawerCutlist = (box.drawersLayer && box.drawersLayer.length > 0)
+    ? extractDrawerCutlistFromLayerItems(box.drawersLayer, prev.material.tipo)
+    : [];
+
+  // Combina cutlist parametrica com cutlist das gavetas
+  const combinedCutList = [...design.cutList, ...drawerCutlist];
+
+  const cutListComPreco = calcularPrecoCutList(combinedCutList);
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
   const ferragens = buildFerragens(box.prateleiras, box.portaTipo, box.gavetas);
 
   return {
     ...box,
     ferragens,
-    cutList: design.cutList,
+    cutList: combinedCutList,
     cutListComPreco,
     estrutura3D: design.estrutura3D,
     precoTotalPecas,

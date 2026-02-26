@@ -4,6 +4,7 @@
  */
 
 import { defaultProfilesConfig, DEFAULT_PROFILE_ID, type RulesProfilesConfig } from "./rulesProfiles";
+import { normalizeRulesConfig } from "./rulesConfig";
 
 const PROFILES_STORAGE_KEY = "pimo-rules-profiles-v1";
 
@@ -16,7 +17,11 @@ export function loadProfiles(): RulesProfilesConfig {
     if (!stored) return defaultProfilesConfig;
     const parsed = JSON.parse(stored) as RulesProfilesConfig;
     // Garantir que existe pelo menos um perfil e que perfilAtivoId é válido
-    const perfis = Array.isArray(parsed.perfis) && parsed.perfis.length > 0 ? parsed.perfis : defaultProfilesConfig.perfis;
+    const perfisRaw = Array.isArray(parsed.perfis) && parsed.perfis.length > 0 ? parsed.perfis : defaultProfilesConfig.perfis;
+    const perfis = perfisRaw.map((perfil) => ({
+      ...perfil,
+      rules: normalizeRulesConfig(perfil.rules),
+    }));
     const perfilAtivoId =
       perfis.some((p) => p.id === parsed.perfilAtivoId) ? parsed.perfilAtivoId : perfis[0].id;
     return { perfis, perfilAtivoId };

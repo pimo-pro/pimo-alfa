@@ -27,10 +27,42 @@ export interface DrawerLayerItem {
   bottomThickness?: number;
   sideThickness?: number;
   backThickness?: number;
+  // Dimensões da FRENTE (cobre toda a abertura do box)
   width: number;
   height: number;
   depth: number;
   frontThickness: number;
+  // Dimensões do CORPO (interno, com folgas para corrediças)
+  bodyWidth?: number;
+  bodyHeight?: number;
+  bodyDepth?: number;
+  // Dimensões das peças individuais (calculadas automaticamente)
+  leftSideWidth?: number;
+  leftSideHeight?: number;
+  leftSideDepth?: number;
+  rightSideWidth?: number;
+  rightSideHeight?: number;
+  rightSideDepth?: number;
+  backWidth?: number;
+  backHeight?: number;
+  bottomWidth?: number;
+  bottomDepth?: number;
+  // Posicoes locais das pecas (mm)
+  frontPosX?: number;
+  frontPosY?: number;
+  frontPosZ?: number;
+  leftSidePosX?: number;
+  leftSidePosY?: number;
+  leftSidePosZ?: number;
+  rightSidePosX?: number;
+  rightSidePosY?: number;
+  rightSidePosZ?: number;
+  bottomPosX?: number;
+  bottomPosY?: number;
+  bottomPosZ?: number;
+  backPosX?: number;
+  backPosY?: number;
+  backPosZ?: number;
   materialId?: string;
   openDirection: "pull";
   isOpen: boolean;

@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useProject } from "../../context/useProject";
-import { defaultRulesConfig } from "../../core/rules/rulesConfig";
+import { defaultRulesConfig, normalizeRulesConfig } from "../../core/rules/rulesConfig";
 import type { RulesConfig, PortaRange, PeRange } from "../../core/rules/rulesConfig";
 import Panel from "../ui/Panel";
 import { useToast } from "../../context/ToastContext";
@@ -14,12 +14,12 @@ export default function RulesAdminPage() {
   const { showToast } = useToast();
   const { project, actions } = useProject();
   const perfilAtivoId = project.rulesProfiles.perfilAtivoId;
-  const [rules, setRules] = useState<RulesConfig>(project.rules);
+  const [rules, setRules] = useState<RulesConfig>(normalizeRulesConfig(project.rules));
   const [isSaved, setIsSaved] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   useEffect(() => {
-    setRules(project.rules);
+    setRules(normalizeRulesConfig(project.rules));
   }, [project.rules, perfilAtivoId]);
 
   const handleSave = () => {

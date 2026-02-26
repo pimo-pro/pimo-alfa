@@ -5,7 +5,7 @@ import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import type { BoxModelInstance, WorkspaceBox } from "../core/types";
 import { saveProfiles } from "../core/rules/rulesProfilesStorage";
 import { DEFAULT_PROFILE_ID } from "../core/rules/rulesProfilesStorage";
-import { defaultRulesConfig, type RulesConfig } from "../core/rules/rulesConfig";
+import { defaultRulesConfig, normalizeRulesConfig, type RulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfile, RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { ProjectContext } from "./projectContext";
 import type {
@@ -154,7 +154,7 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
 function getRulesFromRestored(restored: Partial<ProjectState> & { rules?: RulesConfig }): RulesConfig {
   const config = restored.rulesProfiles ?? defaultState.rulesProfiles;
   const perfil = config.perfis.find((p) => p.id === config.perfilAtivoId);
-  return perfil?.rules ?? (restored.rules as RulesConfig | undefined) ?? defaultState.rules;
+  return normalizeRulesConfig(perfil?.rules ?? (restored.rules as RulesConfig | undefined) ?? defaultState.rules);
 }
 
 function getNextWorkspaceBoxId(
@@ -1213,14 +1213,15 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
     },
     updateRules: (rules: RulesConfig) => {
       updateProject((prev) => {
+        const normalizedRules = normalizeRulesConfig(rules);
         const profiles = prev.rulesProfiles;
         const idx = profiles.perfis.findIndex((p) => p.id === profiles.perfilAtivoId);
-        if (idx < 0) return { ...prev, rules };
+        if (idx < 0) return { ...prev, rules: normalizedRules };
         const nextPerfis = [...profiles.perfis];
-        nextPerfis[idx] = { ...nextPerfis[idx], rules };
+        nextPerfis[idx] = { ...nextPerfis[idx], rules: normalizedRules };
         const nextConfig = { ...profiles, perfis: nextPerfis };
         saveProfiles(nextConfig);
-        return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
+        return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: normalizedRules });
       }, false);
     },
     setActiveRulesProfile: (id: string) => {
@@ -1229,21 +1230,22 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         if (!profiles.perfis.some((p) => p.id === id)) return prev;
         const nextConfig = { ...profiles, perfilAtivoId: id };
         const perfil = nextConfig.perfis.find((p) => p.id === id);
-        const rules = perfil?.rules ?? prev.rules;
+        const rules = normalizeRulesConfig(perfil?.rules ?? prev.rules);
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
       }, false);
     },
     updateRulesInProfile: (profileId: string, rules: RulesConfig) => {
       updateProject((prev) => {
+        const normalizedRules = normalizeRulesConfig(rules);
         const profiles = prev.rulesProfiles;
         const idx = profiles.perfis.findIndex((p) => p.id === profileId);
         if (idx < 0) return prev;
         const nextPerfis = [...profiles.perfis];
-        nextPerfis[idx] = { ...nextPerfis[idx], rules };
+        nextPerfis[idx] = { ...nextPerfis[idx], rules: normalizedRules };
         const nextConfig = { ...profiles, perfis: nextPerfis };
         const isActive = profiles.perfilAtivoId === profileId;
-        const nextRules = isActive ? rules : prev.rules;
+        const nextRules = isActive ? normalizedRules : prev.rules;
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: nextRules });
       }, false);
@@ -1255,7 +1257,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
           id,
           nome: profile.nome,
           descricao: profile.descricao,
-          rules: profile.rules ?? JSON.parse(JSON.stringify(defaultRulesConfig)),
+          rules: normalizeRulesConfig(profile.rules ?? JSON.parse(JSON.stringify(defaultRulesConfig))),
         };
         const nextConfig = {
           ...prev.rulesProfiles,
@@ -1268,8 +1270,13 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
     setRulesProfilesConfig: (config: RulesProfilesConfig) => {
       updateProject((prev) => {
         const perfil = config.perfis.find((p) => p.id === config.perfilAtivoId);
-        const rules = perfil?.rules ?? prev.rules;
-        return applyResultados({ ...prev, rulesProfiles: config, rules });
+        const normalizedConfig: RulesProfilesConfig = {
+          ...config,
+          perfis: config.perfis.map((p) => ({ ...p, rules: normalizeRulesConfig(p.rules) })),
+        };
+        const normalizedActive = normalizedConfig.perfis.find((p) => p.id === normalizedConfig.perfilAtivoId);
+        const rules = normalizeRulesConfig(normalizedActive?.rules ?? perfil?.rules ?? prev.rules);
+        return applyResultados({ ...prev, rulesProfiles: normalizedConfig, rules });
       }, false);
     },
     setProjectRulesProfile: (id: string) => {
@@ -1279,7 +1286,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         return applyResultados({
           ...prev,
           rulesProfileId: id,
-          rules: perfil.rules,
+          rules: normalizeRulesConfig(perfil.rules),
         });
       }, false);
     },
@@ -1296,7 +1303,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
           perfilAtivoId: newActiveId,
         };
         const perfil = nextPerfis.find((p) => p.id === newActiveId);
-        const rules = perfil?.rules ?? prev.rules;
+        const rules = normalizeRulesConfig(perfil?.rules ?? prev.rules);
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
       }, false);
