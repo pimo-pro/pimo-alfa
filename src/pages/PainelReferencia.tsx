@@ -184,10 +184,14 @@ export default function PainelReferencia() {
     () =>
       project.changelog
         .slice()
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .sort((a, b) => {
+          const ta = new Date(a.timestamp ?? Date.now()).getTime();
+          const tb = new Date(b.timestamp ?? Date.now()).getTime();
+          return tb - ta;
+        })
         .map((entry) => ({
           ...entry,
-          time: formatDateTime(entry.timestamp),
+          time: formatDateTime(new Date(entry.timestamp ?? Date.now())),
         })),
     [project.changelog]
   );
