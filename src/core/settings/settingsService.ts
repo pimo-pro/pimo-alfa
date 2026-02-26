@@ -29,6 +29,10 @@ export interface SettingsSchema {
     categoriaPadraoId: string;
     presetVisualPadraoId: string;
     materialIndustrialPadraoId: string;
+    sheetWidthMm: number;
+    sheetHeightMm: number;
+    sheetThicknessMm: number;
+    sheetName: string;
   };
   cnc: {
     profundidadeCortePadraoMm: number;
@@ -101,6 +105,10 @@ export const settingsDefaults: SettingsSchema = {
     categoriaPadraoId: "mdf",
     presetVisualPadraoId: "mdf_branco",
     materialIndustrialPadraoId: "MDF Branco",
+    sheetWidthMm: 2750,
+    sheetHeightMm: 1830,
+    sheetThicknessMm: 18,
+    sheetName: "MDF Branco 18mm",
   },
   cnc: {
     profundidadeCortePadraoMm: 18,
@@ -246,6 +254,25 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       materialIndustrialPadraoId: typeof merged.materiais.materialIndustrialPadraoId === "string" && merged.materiais.materialIndustrialPadraoId.trim()
         ? merged.materiais.materialIndustrialPadraoId.trim()
         : settingsDefaults.materiais.materialIndustrialPadraoId,
+      sheetWidthMm: clamp(
+        toNumber(merged.materiais.sheetWidthMm, settingsDefaults.materiais.sheetWidthMm),
+        500,
+        10000
+      ),
+      sheetHeightMm: clamp(
+        toNumber(merged.materiais.sheetHeightMm, settingsDefaults.materiais.sheetHeightMm),
+        500,
+        10000
+      ),
+      sheetThicknessMm: clamp(
+        toNumber(merged.materiais.sheetThicknessMm, settingsDefaults.materiais.sheetThicknessMm),
+        1,
+        120
+      ),
+      sheetName:
+        typeof merged.materiais.sheetName === "string" && merged.materiais.sheetName.trim()
+          ? merged.materiais.sheetName.trim()
+          : settingsDefaults.materiais.sheetName,
     },
     cnc: {
       profundidadeCortePadraoMm: clamp(toNumber(merged.cnc.profundidadeCortePadraoMm, settingsDefaults.cnc.profundidadeCortePadraoMm), 0, 200),

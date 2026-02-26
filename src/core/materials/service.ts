@@ -22,6 +22,7 @@ import {
   CHAPA_PADRAO_ALTURA,
   MATERIAIS_INDUSTRIAIS,
 } from "../manufacturing/materials";
+import { getSettings } from "../settings/settingsService";
 
 const STORAGE_KEY = "pimo_materials_crud_v1";
 
@@ -194,8 +195,16 @@ export function getMaterialDisplayInfo(materialIdOrLabel: string): MaterialDispl
  * Usa CRUD quando existe; senão resolve por nome na lista industrial (legado).
  */
 export function getIndustrialMaterial(materialIdOrLabel: string): MaterialIndustrial {
+  const runtimeSettings = getSettings();
+  const settingsSheetWidth = runtimeSettings.materiais.sheetWidthMm;
+  const settingsSheetHeight = runtimeSettings.materiais.sheetHeightMm;
   if (!materialIdOrLabel || typeof materialIdOrLabel !== "string") {
-    return getIndustrialByName(FALLBACK_LABEL);
+    const fallback = getIndustrialByName(FALLBACK_LABEL);
+    return {
+      ...fallback,
+      larguraChapa: settingsSheetWidth,
+      alturaChapa: settingsSheetHeight,
+    };
   }
   const m = getMaterialByIdOrLabel(materialIdOrLabel);
   if (m) {
@@ -207,11 +216,16 @@ export function getIndustrialMaterial(materialIdOrLabel: string): MaterialIndust
       nome: m.label,
       espessuraPadrao: Number(m.espessura) || FALLBACK_ESPESSURA,
       custo_m2: Number(m.precoPorM2 ?? FALLBACK_PRECO),
-      larguraChapa: CHAPA_PADRAO_LARGURA,
-      alturaChapa: CHAPA_PADRAO_ALTURA,
+      larguraChapa: settingsSheetWidth || CHAPA_PADRAO_LARGURA,
+      alturaChapa: settingsSheetHeight || CHAPA_PADRAO_ALTURA,
     };
   }
-  return getIndustrialByName(materialIdOrLabel);
+  const legacy = getIndustrialByName(materialIdOrLabel);
+  return {
+    ...legacy,
+    larguraChapa: settingsSheetWidth || legacy.larguraChapa || CHAPA_PADRAO_LARGURA,
+    alturaChapa: settingsSheetHeight || legacy.alturaChapa || CHAPA_PADRAO_ALTURA,
+  };
 }
 
 /** Mapeamento label/nome → id usado pelo Viewer (MaterialLibrary). Compatível com MATERIAIS_PBR_IDS. */

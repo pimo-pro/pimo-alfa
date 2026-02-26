@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { useToast } from "../../../context/ToastContext";
+import { useSettings } from "../../../context/SettingsContext";
 import {
   cutlistComPrecoFromBoxes,
 } from "../../../core/manufacturing/cutlistFromBoxes";
@@ -17,6 +18,7 @@ import BoxLayersPanel from "./BoxLayersPanel";
 
 export default function RightPanel() {
   const { project, actions } = useProject();
+  const { settings } = useSettings();
   const { openModal } = useToolbarModal();
   const { showToast } = useToast();
   const boxes = project.boxes ?? [];
@@ -111,7 +113,12 @@ export default function RightPanel() {
     }
     const result = runCutLayout(
       pieces,
-      { largura_mm: 2750, altura_mm: 1830, espessura_mm: 19 },
+      {
+        largura_mm: settings.materiais.sheetWidthMm,
+        altura_mm: settings.materiais.sheetHeightMm,
+        espessura_mm: settings.materiais.sheetThicknessMm,
+        materialName: settings.materiais.sheetName,
+      },
       {
         rotationPreferenceMode: "aggressive",
         rotationWeight: 0.8,
@@ -138,7 +145,12 @@ const doc = buildCutLayoutPdf(result);
       Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
     );
     const allItems = [...parametric, ...extracted].map((p) => ({ ...p, boxId: p.boxId ?? "" }));
-    const cncBundle = buildCncFromCutlistItems(project, allItems);
+    const cncBundle = buildCncFromCutlistItems(project, allItems, {
+      largura_mm: settings.materiais.sheetWidthMm,
+      altura_mm: settings.materiais.sheetHeightMm,
+      espessura_mm: settings.materiais.sheetThicknessMm,
+      materialName: settings.materiais.sheetName,
+    });
     if (!cncBundle) {
       showToast("Nenhuma peça na cutlist para exportar CNC.", "warning");
       return;

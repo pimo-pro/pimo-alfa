@@ -222,6 +222,38 @@ export default function SystemSettingsBase() {
               }
             />
           </label>
+          <NumberField
+            label="Largura do painel (mm)"
+            value={draft.materiais.sheetWidthMm}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, materiais: { ...prev.materiais, sheetWidthMm: value } }))
+            }
+          />
+          <NumberField
+            label="Altura do painel (mm)"
+            value={draft.materiais.sheetHeightMm}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, materiais: { ...prev.materiais, sheetHeightMm: value } }))
+            }
+          />
+          <NumberField
+            label="Espessura padrão (mm)"
+            value={draft.materiais.sheetThicknessMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, materiais: { ...prev.materiais, sheetThicknessMm: value } }))
+            }
+          />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome do material/chapa</span>
+            <input
+              className="input"
+              value={draft.materiais.sheetName}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, materiais: { ...prev.materiais, sheetName: e.target.value } }))
+              }
+            />
+          </label>
         </div>
       </Panel>
 
