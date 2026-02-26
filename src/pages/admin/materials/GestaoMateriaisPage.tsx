@@ -74,6 +74,11 @@ export default function GestaoMateriaisPage() {
     textureUrl: "",
     espessura: 18,
     precoPorM2: 0,
+    sheetWidthMm: 2750,
+    sheetHeightMm: 1830,
+    sheetThicknessMm: 18,
+    sheetWeightKg: undefined,
+    sheetDensity: undefined,
     industrialMaterialId: "",
     visualPresetId: "",
   });
@@ -154,6 +159,11 @@ export default function GestaoMateriaisPage() {
       textureUrl: "",
       espessura: 18,
       precoPorM2: 0,
+      sheetWidthMm: 2750,
+      sheetHeightMm: 1830,
+      sheetThicknessMm: 18,
+      sheetWeightKg: undefined,
+      sheetDensity: undefined,
       industrialMaterialId: "",
       visualPresetId: "",
     });
@@ -172,6 +182,11 @@ export default function GestaoMateriaisPage() {
         textureUrl: m.textureUrl,
         espessura: m.espessura,
         precoPorM2: m.precoPorM2,
+        sheetWidthMm: m.sheetWidthMm ?? 2750,
+        sheetHeightMm: m.sheetHeightMm ?? 1830,
+        sheetThicknessMm: m.sheetThicknessMm ?? 18,
+        sheetWeightKg: m.sheetWeightKg,
+        sheetDensity: m.sheetDensity,
         industrialMaterialId: m.industrialMaterialId,
         visualPresetId: m.visualPresetId,
       });
@@ -191,6 +206,15 @@ export default function GestaoMateriaisPage() {
     textureUrl: form.textureUrl,
     espessura: Number(form.espessura) || 18,
     precoPorM2: Number(form.precoPorM2 ?? 0),
+    sheetWidthMm: Number(form.sheetWidthMm) || 2750,
+    sheetHeightMm: Number(form.sheetHeightMm) || 1830,
+    sheetThicknessMm: Number(form.sheetThicknessMm) || 18,
+    sheetWeightKg: form.sheetWeightKg === undefined || form.sheetWeightKg === null
+      ? undefined
+      : Number(form.sheetWeightKg),
+    sheetDensity: form.sheetDensity === undefined || form.sheetDensity === null
+      ? undefined
+      : Number(form.sheetDensity),
     industrialMaterialId: form.industrialMaterialId || undefined,
     visualPresetId: form.visualPresetId || undefined,
   });
@@ -725,6 +749,83 @@ export default function GestaoMateriaisPage() {
                 value={form.precoPorM2 ?? ""}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, precoPorM2: e.target.value ? Number(e.target.value) : undefined }))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div>
+              <div style={labelStyle}>Largura da chapa (mm)</div>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                placeholder="2750"
+                value={form.sheetWidthMm ?? ""}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, sheetWidthMm: e.target.value ? Number(e.target.value) : undefined }))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div>
+              <div style={labelStyle}>Altura da chapa (mm)</div>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                placeholder="1830"
+                value={form.sheetHeightMm ?? ""}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, sheetHeightMm: e.target.value ? Number(e.target.value) : undefined }))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div>
+              <div style={labelStyle}>Espessura da chapa (mm)</div>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                placeholder="18"
+                value={form.sheetThicknessMm ?? ""}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, sheetThicknessMm: e.target.value ? Number(e.target.value) : undefined }))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div>
+              <div style={labelStyle}>Peso da chapa (kg) — opcional</div>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Ex.: 65"
+                value={form.sheetWeightKg ?? ""}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, sheetWeightKg: e.target.value ? Number(e.target.value) : undefined }))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div>
+              <div style={labelStyle}>Densidade (kg/m³) — opcional</div>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Ex.: 700"
+                value={form.sheetDensity ?? ""}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, sheetDensity: e.target.value ? Number(e.target.value) : undefined }))
                 }
                 style={{ width: "100%" }}
               />

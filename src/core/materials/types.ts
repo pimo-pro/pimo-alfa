@@ -51,6 +51,15 @@ export interface MaterialRecord {
   textureUrl?: string;
   espessura?: number;
   precoPorM2?: number;
+  /** Dimensões reais da chapa para este material (mm). */
+  sheetWidthMm?: number;
+  sheetHeightMm?: number;
+  /** Espessura real da chapa (mm), pode diferir da espessura da peça. */
+  sheetThicknessMm?: number;
+  /** Peso total da chapa (kg). */
+  sheetWeightKg?: number;
+  /** Densidade do material (kg/m³). */
+  sheetDensity?: number;
   /** Id do material industrial (ligação). */
   industrialMaterialId?: string;
   /** Id do preset visual (ligação). */

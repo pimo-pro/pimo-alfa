@@ -17,6 +17,10 @@ export type CutPiece = {
   largura_mm: number;
   altura_mm: number;
   espessura_mm: number;
+  /** Dimensões reais da chapa para este material/lote. */
+  sheetWidthMm?: number;
+  sheetHeightMm?: number;
+  sheetThicknessMm?: number;
   quantidade: number;
   boxId: string;
   partName: string;

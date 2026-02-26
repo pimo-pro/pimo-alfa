@@ -14,6 +14,7 @@ import type {
   CutLayoutResult,
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial } from "../types";
+import { getMaterialByIdOrLabel } from "../materials/service";
 
 const DEFAULT_KERF_MM = 3;
 const SAFETY_MARGIN_MM = 5;
@@ -95,6 +96,9 @@ export type CutlistItemForPieces = {
   nome: string;
   material?: string;
   materialId?: string;
+  sheetWidthMm?: number;
+  sheetHeightMm?: number;
+  sheetThicknessMm?: number;
   grainDirection?: "length" | "width" | "horizontal" | "vertical" | "none";
   visualMaterial?: LayoutVisualMaterial;
   uvScaleOverride?: { x: number; y: number };
@@ -1846,6 +1850,11 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const largura = Math.round(Math.max(dims[0] ?? 1, 1));
     const altura = Math.round(Math.max(dims[1] ?? 1, 1));
     const esp = item.espessura ?? 19;
+    const materialRef = item.materialId ?? item.material;
+    const materialRecord = materialRef ? getMaterialByIdOrLabel(String(materialRef)) : null;
+    const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);
+    const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);
+    const sheetThicknessMm = Number(item.sheetThicknessMm ?? materialRecord?.sheetThicknessMm);
     const g = item.grainDirection;
     const grainDirection: "length" | "width" | undefined =
       g === "length" || g === "width" ? g : g === "horizontal" ? "length" : g === "vertical" ? "width" : undefined;
@@ -1856,6 +1865,9 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
         largura_mm: largura,
         altura_mm: altura,
         espessura_mm: Number(esp) || 19,
+        sheetWidthMm: Number.isFinite(sheetWidthMm) && sheetWidthMm > 0 ? sheetWidthMm : undefined,
+        sheetHeightMm: Number.isFinite(sheetHeightMm) && sheetHeightMm > 0 ? sheetHeightMm : undefined,
+        sheetThicknessMm: Number.isFinite(sheetThicknessMm) && sheetThicknessMm > 0 ? sheetThicknessMm : undefined,
         quantidade: 1,
         boxId: item.boxId ?? "",
         partName: item.nome,
@@ -1961,10 +1973,13 @@ export function runCutLayout(
     const materialId = options?.groupByThicknessOnly
       ? (sheetDef.materialId ?? groupPieces[0]?.materialId ?? "material")
       : key.split("|")[0];
+    const perMaterialWidth = Number(groupPieces[0]?.sheetWidthMm);
+    const perMaterialHeight = Number(groupPieces[0]?.sheetHeightMm);
+    const perMaterialSheetThickness = Number(groupPieces[0]?.sheetThicknessMm);
     const sheet: SheetDefinition = {
-      largura_mm: options?.sheetLargura_mm ?? sheetDef.largura_mm,
-      altura_mm: options?.sheetAltura_mm ?? sheetDef.altura_mm,
-      espessura_mm: Number(espStr) || sheetDef.espessura_mm,
+      largura_mm: options?.sheetLargura_mm ?? (perMaterialWidth > 0 ? perMaterialWidth : sheetDef.largura_mm),
+      altura_mm: options?.sheetAltura_mm ?? (perMaterialHeight > 0 ? perMaterialHeight : sheetDef.altura_mm),
+      espessura_mm: perMaterialSheetThickness > 0 ? perMaterialSheetThickness : (Number(espStr) || sheetDef.espessura_mm),
       materialId: materialId !== "material" ? materialId : sheetDef.materialId,
       materialName: groupPieces[0]?.materialName ?? sheetDef.materialName,
     };
