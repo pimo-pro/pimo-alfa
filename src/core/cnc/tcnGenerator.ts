@@ -5,6 +5,7 @@
  */
 
 import type { SheetResult } from "../cutlayout/cutLayoutTypes";
+import type { CncDrillOperation } from "./cncTypes";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -90,6 +91,16 @@ function buildW2201(
   }).join("\n");
 }
 
+function buildDrillLines(drills: CncDrillOperation[]): string[] {
+  const lines: string[] = [];
+  for (const d of drills) {
+    lines.push(
+      `DRILL X=${fmt(d.x)} Y=${fmt(d.y)} DIAMETER=${fmt(d.diametro)} DEPTH=${fmt(d.profundidade)}`
+    );
+  }
+  return lines;
+}
+
 /**
  * Gera bloco SIDE#N no formato exato da máquina.
  * Fecha diretamente com "}SIDE" (sem linha "}" isolada). Entre blocos: }SIDE + SIDE#N{
@@ -156,6 +167,7 @@ export function generateTcnForPanel(
     )
   );
   const sideInnerLines: string[] = [];
+  const drills: CncDrillOperation[] = [];
   placements.forEach((pl) => {
     const w = pl.largura_mm;
     const h = pl.altura_mm;
@@ -166,7 +178,18 @@ export function generateTcnForPanel(
     sideInnerLines.push(buildW81(points, Z_SAFETY_MM));
     sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zTool));
     sideInnerLines.push(buildW2201(points, zCut));
+    for (const hole of pl.holes ?? []) {
+      drills.push({
+        x: pl.x_mm + hole.x,
+        y: pl.y_mm + hole.y,
+        z: 0,
+        diametro: hole.diameter,
+        profundidade: Math.min(hole.depth, thicknessMm),
+        tipo: "vertical",
+      });
+    }
   });
+  sideInnerLines.push(...buildDrillLines(drills));
   lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
 
   lines.push(...buildSideBlock(3, dl, ds, dh, [], false));

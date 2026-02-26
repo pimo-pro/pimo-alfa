@@ -122,6 +122,20 @@ function renderSheetPage(
       }
       doc.setTextColor(0, 0, 0);
     }
+
+    // Furos da peça no layout PRO (círculos em escala).
+    const holes = pl.holes ?? [];
+    if (holes.length > 0) {
+      doc.setDrawColor(220, 38, 38);
+      doc.setLineWidth(0.2);
+      for (const h of holes) {
+        const hx = px + h.x * scale;
+        const hy = py + h.y * scale;
+        const hr = Math.max(0.25, (h.diameter / 2) * scale);
+        doc.circle(hx, hy, hr);
+      }
+      doc.setDrawColor(30, 64, 175);
+    }
   }
 
   y = originY + drawH + 10;

@@ -77,12 +77,24 @@ export function cutlistComPrecoFromBox(
     }
   };
 
+  const toNormalizedHoles = (
+    furacoesTecnicas: ReturnType<typeof makeTechnicalHolesForPanel>
+  ): NonNullable<CutListItemComPreco["holes"]> => (
+    furacoesTecnicas.map((h) => ({
+      x: h.x,
+      y: h.y,
+      diameter: h.diametro,
+      depth: h.profundidade,
+    }))
+  );
+
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
       return;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
+    const furacoesTecnicas = makeTechnicalHolesForPanel(p.tipo, p.largura_mm, p.altura_mm, p.espessura_mm);
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -103,7 +115,8 @@ export function cutlistComPrecoFromBox(
         p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita"
           ? makeVerticalHolesForPanel(p.largura_mm, p.altura_mm)
           : undefined,
-      furacoesTecnicas: makeTechnicalHolesForPanel(p.tipo, p.largura_mm, p.altura_mm, p.espessura_mm),
+      furacoesTecnicas,
+      holes: toNormalizedHoles(furacoesTecnicas),
     });
   });
 
@@ -112,6 +125,7 @@ export function cutlistComPrecoFromBox(
       console.warn("[cutlistFromBoxes] Skipping invalid porta:", p);
       return;
     }
+    const furacoesTecnicas = makeTechnicalHolesForPanel(p.tipo, p.largura_mm, p.altura_mm, p.espessura_mm);
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -128,7 +142,8 @@ export function cutlistComPrecoFromBox(
       grainDirection: "none" as GrainDirection,
       precoUnitario: p.custo,
       precoTotal: p.custo,
-      furacoesTecnicas: makeTechnicalHolesForPanel(p.tipo, p.largura_mm, p.altura_mm, p.espessura_mm),
+      furacoesTecnicas,
+      holes: toNormalizedHoles(furacoesTecnicas),
     });
   });
 
@@ -137,6 +152,7 @@ export function cutlistComPrecoFromBox(
       console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
       return;
     }
+    const furacoesTecnicas = makeTechnicalHolesForPanel("gaveta", p.largura_mm, p.altura_mm, p.espessura_mm);
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -153,7 +169,8 @@ export function cutlistComPrecoFromBox(
       grainDirection: "none" as GrainDirection,
       precoUnitario: p.custo,
       precoTotal: p.custo,
-      furacoesTecnicas: makeTechnicalHolesForPanel("gaveta", p.largura_mm, p.altura_mm, p.espessura_mm),
+      furacoesTecnicas,
+      holes: toNormalizedHoles(furacoesTecnicas),
     });
   });
 

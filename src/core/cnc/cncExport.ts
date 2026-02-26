@@ -60,16 +60,29 @@ export function exportCncFiles(
 function buildBasicDrillOperationsFromSheet(sheetResult: SheetResult): CncDrillOperation[] {
   const ops: CncDrillOperation[] = [];
   for (const pl of sheetResult.placements) {
-    const x = pl.x_mm;
-    const y = pl.y_mm;
-    const w = pl.largura_mm;
-    const h = pl.altura_mm;
+    const holes = pl.holes ?? [];
+    if (holes.length > 0) {
+      holes.forEach((h) => {
+        const safeDepth = Math.min(Math.max(0.5, Number(h.depth) || 0), sheetResult.sheet.espessura_mm);
+        ops.push({
+          x: pl.x_mm + h.x,
+          y: pl.y_mm + h.y,
+          z: 0,
+          diametro: Number(h.diameter) || 5,
+          profundidade: safeDepth,
+          tipo: "vertical",
+        });
+      });
+      continue;
+    }
+
+    // Fallback legado para peças sem furação definida.
     const margin = 25;
     const points: Array<{ x: number; y: number }> = [
-      { x: x + margin, y: y + margin },
-      { x: x + w - margin, y: y + margin },
-      { x: x + w - margin, y: y + h - margin },
-      { x: x + margin, y: y + h - margin },
+      { x: pl.x_mm + margin, y: pl.y_mm + margin },
+      { x: pl.x_mm + pl.largura_mm - margin, y: pl.y_mm + margin },
+      { x: pl.x_mm + pl.largura_mm - margin, y: pl.y_mm + pl.altura_mm - margin },
+      { x: pl.x_mm + margin, y: pl.y_mm + pl.altura_mm - margin },
     ];
     points.forEach((p) => {
       ops.push({

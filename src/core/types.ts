@@ -60,6 +60,13 @@ export interface TechnicalDrillHole {
   face: DrillFace;
 }
 
+export interface DrillHole {
+  x: number;
+  y: number;
+  diameter: number;
+  depth: number;
+}
+
 export interface CutListItem {
   id: string;
   nome: string;
@@ -100,6 +107,8 @@ export interface CutListItem {
   }>;
   /** Furação técnica parametrizada para cutlist/PDF/drill. */
   furacoesTecnicas?: TechnicalDrillHole[];
+  /** Furação normalizada para layout/cnc (formato unificado). */
+  holes?: DrillHole[];
   /** Código curto legível para fábrica. */
   shortCode?: string;
   /** QR em SVG contendo o shortCode/carga técnica. */

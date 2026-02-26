@@ -33,6 +33,9 @@ export function generateKdt(panel: CncPanel, drills: CncDrillOperation[]): strin
     lines.push(`  <Depth>${fmt(op.profundidade)}</Depth>`);
     lines.push(`  <Diameter>${fmt(op.diametro)}</Diameter>`);
     lines.push("</CAD>");
+    lines.push(
+      `Bore, X=${fmt(op.x)}, Y=${fmt(op.y)}, Dia=${fmt(op.diametro)}, Depth=${fmt(op.profundidade)}`
+    );
   }
 
   return lines.join("\n");

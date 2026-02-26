@@ -10,7 +10,7 @@ export const DEFAULT_CNC_SHEET: SheetDefinition = {
 };
 
 export const DEFAULT_CNC_LAYOUT_OPTIONS: CutLayoutEngineOptions = {
-  groupByThicknessOnly: true,
+  groupByThicknessOnly: false,
   rotationPreferenceMode: "aggressive",
   rotationWeight: 0.8,
   rotationPenalty: 0.45,

@@ -26,6 +26,12 @@ export type CutPiece = {
   partName: string;
   materialId?: string;
   materialName?: string;
+  holes?: Array<{
+    x: number;
+    y: number;
+    diameter: number;
+    depth: number;
+  }>;
   /** Comprimento ao longo da fibra (length) = horizontal; width = vertical. */
   grainDirection?: "length" | "width";
   /** Material visual para preview / aplicação no Viewer (MaterialLibrary v2). */
@@ -51,6 +57,12 @@ export type CutPlacement = {
   partName: string;
   materialId?: string;
   materialName?: string;
+  holes?: Array<{
+    x: number;
+    y: number;
+    diameter: number;
+    depth: number;
+  }>;
   /** Número sequencial da peça (1-99). */
   pieceNumber?: number;
   /** Código curto legível para fábrica. */

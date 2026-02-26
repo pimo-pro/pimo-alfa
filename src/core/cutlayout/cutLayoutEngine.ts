@@ -96,6 +96,9 @@ export type CutlistItemForPieces = {
   nome: string;
   material?: string;
   materialId?: string;
+  holes?: Array<{ x: number; y: number; diameter: number; depth: number }>;
+  furacoes?: Array<{ x: number; y: number; diametro: number; profundidade?: number }>;
+  furacoesTecnicas?: Array<{ x: number; y: number; diametro: number; profundidade: number }>;
   sheetWidthMm?: number;
   sheetHeightMm?: number;
   sheetThicknessMm?: number;
@@ -1708,6 +1711,7 @@ function simulateTrialForGroup(
         partName: piece.partName,
         materialId: piece.materialId,
         materialName: piece.materialName,
+        holes: piece.holes,
         pieceNumber: piece.pieceNumber,
         shortCode: piece.shortCode,
       });
@@ -1757,6 +1761,7 @@ function simulateTrialForGroup(
           partName: target.partName,
           materialId: target.materialId,
           materialName: target.materialName,
+          holes: target.holes,
         });
         placedRects.push({ x: fit.x, y: fit.y, w: fit.w, h: fit.h });
         state = updateStrategyState(trial.strategy, state, fit, kerf);
@@ -1802,6 +1807,7 @@ function simulateTrialForGroup(
             partName: piece.partName,
             materialId: piece.materialId,
             materialName: piece.materialName,
+            holes: piece.holes,
             pieceNumber: piece.pieceNumber,
             shortCode: piece.shortCode,
           });
@@ -1855,6 +1861,34 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);
     const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);
     const sheetThicknessMm = Number(item.sheetThicknessMm ?? materialRecord?.sheetThicknessMm);
+    const normalizedHoles: Array<{ x: number; y: number; diameter: number; depth: number }> = [];
+    for (const h of item.holes ?? []) {
+      const x = Number(h?.x);
+      const y = Number(h?.y);
+      const diameter = Number(h?.diameter);
+      const depth = Number(h?.depth);
+      if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
+        normalizedHoles.push({ x, y, diameter, depth });
+      }
+    }
+    for (const h of item.furacoesTecnicas ?? []) {
+      const x = Number(h?.x);
+      const y = Number(h?.y);
+      const diameter = Number(h?.diametro);
+      const depth = Number(h?.profundidade);
+      if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
+        normalizedHoles.push({ x, y, diameter, depth });
+      }
+    }
+    for (const h of item.furacoes ?? []) {
+      const x = Number(h?.x);
+      const y = Number(h?.y);
+      const diameter = Number(h?.diametro);
+      const depth = Number(h?.profundidade ?? (Number(esp) || 19));
+      if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
+        normalizedHoles.push({ x, y, diameter, depth });
+      }
+    }
     const g = item.grainDirection;
     const grainDirection: "length" | "width" | undefined =
       g === "length" || g === "width" ? g : g === "horizontal" ? "length" : g === "vertical" ? "width" : undefined;
@@ -1873,6 +1907,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
         partName: item.nome,
         materialId: item.materialId ?? item.material,
         materialName: item.material,
+        holes: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         grainDirection,
         visualMaterial: item.visualMaterial,
         uvScaleOverride: item.uvScaleOverride,

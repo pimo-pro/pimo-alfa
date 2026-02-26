@@ -63,6 +63,8 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   if (!rules?.furos?.tecnicos?.cavilha) return;
   const cfg = rules.furos.tecnicos.cavilha;
   if (!cfg.enabled) return;
+  const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 10;
+  const profundidade = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : 8;
   const face = getInternalFace(piece.tipo);
   const xLeft = cfg.distanciaLateral + cfg.offsetLateral;
   const xRight = piece.largura - cfg.distanciaLateral - cfg.offsetLateral;
@@ -72,10 +74,10 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
     (piece.tipo === "cima" && cfg.aplicarEm.cima) ||
     (piece.tipo === "fundo" && cfg.aplicarEm.fundo)
   ) {
-    pushHole(out, piece, xLeft, yFront, cfg.diametro, cfg.profundidade, "cavilha", face);
-    pushHole(out, piece, xLeft, yBack, cfg.diametro, cfg.profundidade, "cavilha", face);
-    pushHole(out, piece, xRight, yFront, cfg.diametro, cfg.profundidade, "cavilha", face);
-    pushHole(out, piece, xRight, yBack, cfg.diametro, cfg.profundidade, "cavilha", face);
+    pushHole(out, piece, xLeft, yFront, diametro, profundidade, "cavilha", face);
+    pushHole(out, piece, xLeft, yBack, diametro, profundidade, "cavilha", face);
+    pushHole(out, piece, xRight, yFront, diametro, profundidade, "cavilha", face);
+    pushHole(out, piece, xRight, yBack, diametro, profundidade, "cavilha", face);
   }
   if (
     (piece.tipo === "lateral_esquerda" && cfg.aplicarEm.lateralEsquerda) ||
@@ -83,10 +85,10 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   ) {
     const yTop = cfg.distanciaTopo;
     const yBottom = piece.altura - cfg.distanciaBase;
-    pushHole(out, piece, yFront, yTop, cfg.diametro, cfg.profundidade, "cavilha", face);
-    pushHole(out, piece, yBack, yTop, cfg.diametro, cfg.profundidade, "cavilha", face);
-    pushHole(out, piece, yFront, yBottom, cfg.diametro, cfg.profundidade, "cavilha", face);
-    pushHole(out, piece, yBack, yBottom, cfg.diametro, cfg.profundidade, "cavilha", face);
+    pushHole(out, piece, yFront, yTop, diametro, profundidade, "cavilha", face);
+    pushHole(out, piece, yBack, yTop, diametro, profundidade, "cavilha", face);
+    pushHole(out, piece, yFront, yBottom, diametro, profundidade, "cavilha", face);
+    pushHole(out, piece, yBack, yBottom, diametro, profundidade, "cavilha", face);
   }
 }
 
@@ -100,15 +102,17 @@ function calcParafuso(piece: PieceInput, rules: RulesConfig, out: TechnicalDrill
   ) return;
   if (piece.tipo !== "cima" && piece.tipo !== "fundo") return;
   const face = getInternalFace(piece.tipo);
+  const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 5;
   const xLeft = cfg.distanciaLateral + cfg.offsetDaCavilha;
   const xRight = piece.largura - cfg.distanciaLateral - cfg.offsetDaCavilha;
   const yFront = cfg.distanciaFrente;
   const yBack = piece.altura - cfg.distanciaFundo;
-  const depth = cfg.profundidadeIgualEspessura ? piece.espessura : cfg.profundidade;
-  pushHole(out, piece, xLeft, yFront, cfg.diametro, depth, "parafuso", face);
-  pushHole(out, piece, xLeft, yBack, cfg.diametro, depth, "parafuso", face);
-  pushHole(out, piece, xRight, yFront, cfg.diametro, depth, "parafuso", face);
-  pushHole(out, piece, xRight, yBack, cfg.diametro, depth, "parafuso", face);
+  const cfgDepth = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : piece.espessura;
+  const depth = cfg.profundidadeIgualEspessura ? piece.espessura : Math.min(piece.espessura, cfgDepth);
+  pushHole(out, piece, xLeft, yFront, diametro, depth, "parafuso", face);
+  pushHole(out, piece, xLeft, yBack, diametro, depth, "parafuso", face);
+  pushHole(out, piece, xRight, yFront, diametro, depth, "parafuso", face);
+  pushHole(out, piece, xRight, yBack, diametro, depth, "parafuso", face);
 }
 
 function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
