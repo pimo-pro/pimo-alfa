@@ -11,14 +11,14 @@ import { buildCutlistPdf } from "../../../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../../../core/pdf/pdfUnified";
 import { buildEtiquetasPdf } from "../../../core/pdf/pdfEtiquetas";
 import { runCutLayout, cutlistToPieces } from "../../../core/cutlayout/cutLayoutEngine";
-import { buildCncFromCutlistItems } from "../../../core/cnc/cncPipeline";
+import { buildCncFromCutlistItems, getSheetDefinitionFromSettings } from "../../../core/cnc/cncPipeline";
 import type { GerarArquivoConteudo } from "./GerarArquivoModal";
 import GerarArquivoModal from "./GerarArquivoModal";
 import BoxLayersPanel from "./BoxLayersPanel";
 
 export default function RightPanel() {
   const { project, actions } = useProject();
-  const { settings } = useSettings();
+  useSettings();
   const { openModal } = useToolbarModal();
   const { showToast } = useToast();
   const boxes = project.boxes ?? [];
@@ -111,20 +111,11 @@ export default function RightPanel() {
       showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
       return;
     }
-    const result = runCutLayout(
-      pieces,
-      {
-        largura_mm: settings.materiais.sheetWidthMm,
-        altura_mm: settings.materiais.sheetHeightMm,
-        espessura_mm: settings.materiais.sheetThicknessMm,
-        materialName: settings.materiais.sheetName,
-      },
-      {
-        rotationPreferenceMode: "aggressive",
-        rotationWeight: 0.8,
-        rotationPenalty: 0.45,
-      }
-    );
+    const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
+      rotationPreferenceMode: "aggressive",
+      rotationWeight: 0.8,
+      rotationPenalty: 0.45,
+    });
     const { buildCutLayoutPdf } = await import("../../../core/cutlayout/cutLayoutPdf");
 const doc = buildCutLayoutPdf(result);
     doc.save(`${slug}_layout_corte.pdf`);
@@ -145,12 +136,7 @@ const doc = buildCutLayoutPdf(result);
       Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
     );
     const allItems = [...parametric, ...extracted].map((p) => ({ ...p, boxId: p.boxId ?? "" }));
-    const cncBundle = buildCncFromCutlistItems(project, allItems, {
-      largura_mm: settings.materiais.sheetWidthMm,
-      altura_mm: settings.materiais.sheetHeightMm,
-      espessura_mm: settings.materiais.sheetThicknessMm,
-      materialName: settings.materiais.sheetName,
-    });
+    const cncBundle = buildCncFromCutlistItems(project, allItems);
     if (!cncBundle) {
       showToast("Nenhuma peça na cutlist para exportar CNC.", "warning");
       return;

@@ -15,9 +15,6 @@ export interface SettingsSchema {
     debugMode: boolean;
   };
   fabrica: {
-    larguraChapaPadraoMm: number;
-    alturaChapaPadraoMm: number;
-    espessuraPadraoMm: number;
     toleranciaCorteMm: number;
   };
   precos: {
@@ -91,9 +88,6 @@ export const settingsDefaults: SettingsSchema = {
     debugMode: false,
   },
   fabrica: {
-    larguraChapaPadraoMm: 2750,
-    alturaChapaPadraoMm: 1830,
-    espessuraPadraoMm: 18,
     toleranciaCorteMm: 0.2,
   },
   precos: {
@@ -234,9 +228,6 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       debugMode: Boolean(merged.geral.debugMode),
     },
     fabrica: {
-      larguraChapaPadraoMm: clamp(toNumber(merged.fabrica.larguraChapaPadraoMm, settingsDefaults.fabrica.larguraChapaPadraoMm), 500, 10000),
-      alturaChapaPadraoMm: clamp(toNumber(merged.fabrica.alturaChapaPadraoMm, settingsDefaults.fabrica.alturaChapaPadraoMm), 500, 10000),
-      espessuraPadraoMm: clamp(toNumber(merged.fabrica.espessuraPadraoMm, settingsDefaults.fabrica.espessuraPadraoMm), 1, 120),
       toleranciaCorteMm: clamp(toNumber(merged.fabrica.toleranciaCorteMm, settingsDefaults.fabrica.toleranciaCorteMm), 0, 10),
     },
     precos: {
@@ -370,7 +361,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
     },
   };
 
-  if (normalized.fabrica.espessuraPadraoMm > normalized.fabrica.larguraChapaPadraoMm) {
+  if (normalized.materiais.sheetThicknessMm > normalized.materiais.sheetWidthMm) {
     errors.push("Espessura padrão da fábrica parece inválida para a largura de chapa.");
   }
 
@@ -379,7 +370,20 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
 
 export function migrateSettings(raw: unknown): SettingsSchema {
   if (!isObject(raw)) return settingsDefaults;
-  const patched = deepMergeSettings(settingsDefaults, raw);
+  const rawObj = raw as Record<string, unknown>;
+  const rawFabrica = isObject(rawObj.fabrica) ? (rawObj.fabrica as Record<string, unknown>) : {};
+  const rawMateriais = isObject(rawObj.materiais) ? (rawObj.materiais as Record<string, unknown>) : {};
+  const migratedMateriais: Record<string, unknown> = { ...rawMateriais };
+  if (migratedMateriais.sheetWidthMm == null && rawFabrica.larguraChapaPadraoMm != null) {
+    migratedMateriais.sheetWidthMm = rawFabrica.larguraChapaPadraoMm;
+  }
+  if (migratedMateriais.sheetHeightMm == null && rawFabrica.alturaChapaPadraoMm != null) {
+    migratedMateriais.sheetHeightMm = rawFabrica.alturaChapaPadraoMm;
+  }
+  if (migratedMateriais.sheetThicknessMm == null && rawFabrica.espessuraPadraoMm != null) {
+    migratedMateriais.sheetThicknessMm = rawFabrica.espessuraPadraoMm;
+  }
+  const patched = deepMergeSettings(settingsDefaults, { ...rawObj, materiais: migratedMateriais });
   // Reservado para futuras versões de schema.
   return validateSettings({ ...patched, schemaVersion: SETTINGS_SCHEMA_VERSION }).normalized;
 }

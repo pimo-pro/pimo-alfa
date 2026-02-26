@@ -16,19 +16,23 @@ export const DEFAULT_CNC_LAYOUT_OPTIONS: CutLayoutEngineOptions = {
   rotationPenalty: 0.45,
 };
 
+export function getSheetDefinitionFromSettings(): SheetDefinition {
+  const runtimeSettings = getSettings();
+  return {
+    largura_mm: runtimeSettings.materiais.sheetWidthMm,
+    altura_mm: runtimeSettings.materiais.sheetHeightMm,
+    espessura_mm: runtimeSettings.materiais.sheetThicknessMm,
+    materialName: runtimeSettings.materiais.sheetName,
+  };
+}
+
 export function buildCncFromCutlistItems(
   project: unknown,
   items: CutlistItemForPieces[],
   sheet?: SheetDefinition,
   layoutOptions: CutLayoutEngineOptions = DEFAULT_CNC_LAYOUT_OPTIONS
 ) {
-  const runtimeSettings = getSettings();
-  const resolvedSheet: SheetDefinition = sheet ?? {
-    largura_mm: runtimeSettings.materiais.sheetWidthMm,
-    altura_mm: runtimeSettings.materiais.sheetHeightMm,
-    espessura_mm: runtimeSettings.materiais.sheetThicknessMm,
-    materialName: runtimeSettings.materiais.sheetName,
-  };
+  const resolvedSheet: SheetDefinition = sheet ?? getSheetDefinitionFromSettings();
   const pieces = cutlistToPieces(items);
   if (pieces.length === 0) {
     return null;

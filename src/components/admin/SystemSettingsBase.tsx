@@ -57,8 +57,8 @@ export default function SystemSettingsBase() {
     if (!validation.normalized.geral.locale.trim()) {
       nextErrors["geral.locale"] = "Locale é obrigatório.";
     }
-    if (validation.normalized.fabrica.espessuraPadraoMm <= 0) {
-      nextErrors["fabrica.espessuraPadraoMm"] = "Espessura deve ser maior que zero.";
+    if (validation.normalized.materiais.sheetThicknessMm <= 0) {
+      nextErrors["materiais.sheetThicknessMm"] = "Espessura da chapa deve ser maior que zero.";
     }
     setFieldErrors(nextErrors);
     const result = updateSettings(validation.normalized);
@@ -136,28 +136,8 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Fábrica (dimensões e tolerâncias)" description="Parâmetros padrão para dimensões de chapa e tolerâncias produtivas.">
+      <Panel title="Fábrica (tolerâncias)" description="Parâmetros de tolerância produtiva. O tamanho da chapa está em Materiais.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-          <NumberField
-            label="Largura chapa padrão (mm)"
-            value={draft.fabrica.larguraChapaPadraoMm}
-            onChange={(value) => setDraft((prev) => ({ ...prev, fabrica: { ...prev.fabrica, larguraChapaPadraoMm: value } }))}
-          />
-          <NumberField
-            label="Altura chapa padrão (mm)"
-            value={draft.fabrica.alturaChapaPadraoMm}
-            onChange={(value) => setDraft((prev) => ({ ...prev, fabrica: { ...prev.fabrica, alturaChapaPadraoMm: value } }))}
-          />
-          <NumberField
-            label="Espessura padrão (mm)"
-            value={draft.fabrica.espessuraPadraoMm}
-            onChange={(value) => setDraft((prev) => ({ ...prev, fabrica: { ...prev.fabrica, espessuraPadraoMm: value } }))}
-          />
-          {fieldErrors["fabrica.espessuraPadraoMm"] ? (
-            <span style={{ ...adminFieldErrorStyle, gridColumn: "1 / -1" }}>
-              {fieldErrors["fabrica.espessuraPadraoMm"]}
-            </span>
-          ) : null}
           <NumberField
             label="Tolerância de corte (mm)"
             value={draft.fabrica.toleranciaCorteMm}
@@ -244,6 +224,11 @@ export default function SystemSettingsBase() {
               setDraft((prev) => ({ ...prev, materiais: { ...prev.materiais, sheetThicknessMm: value } }))
             }
           />
+          {fieldErrors["materiais.sheetThicknessMm"] ? (
+            <span style={{ ...adminFieldErrorStyle, gridColumn: "1 / -1" }}>
+              {fieldErrors["materiais.sheetThicknessMm"]}
+            </span>
+          ) : null}
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome do material/chapa</span>
             <input
