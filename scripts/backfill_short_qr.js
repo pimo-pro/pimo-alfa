@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-const { randomBytes } = require("crypto");
+import { randomBytes } from "node:crypto";
 
 const TOKEN_MAX_LEN = 10;
 const ALNUM = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -43,7 +43,8 @@ async function main() {
   const pieceDigits = normalizePieceDigits(process.env.PIECE_DIGITS);
   let Pool;
   try {
-    ({ Pool } = require("pg"));
+    const pg = await import("pg");
+    Pool = pg.Pool;
   } catch (err) {
     console.error("Dependência pg não encontrada. Instale com: npm i pg");
     process.exit(1);
