@@ -65,6 +65,10 @@ export interface DrillHole {
   y: number;
   diameter: number;
   depth: number;
+  /** Tipo de furo para cores no Layout. */
+  holeType?: DrillType;
+  /** Se true, furo perfurável pelo topo (emissão TCN). */
+  topDrillable?: boolean;
 }
 
 export interface CutListItem {

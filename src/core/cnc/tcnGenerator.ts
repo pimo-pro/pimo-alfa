@@ -2,6 +2,11 @@
  * Geração de ficheiro TCN (Nesting) — padrão ALBATROS/EDICAD.
  * Blocos SIDE no formato exato da máquina: }SIDE, SIDE#N{ $=top ::LF=DL HF=DH SF=DS ::NSEQ=N }.
  * LF/HF/SF = dimensões da chapa (DL, DH, DS). W#81 iniciais dentro de SIDE#1.
+ *
+ * Estrutura preparada para furos superiores (top drilling):
+ * - Furação apenas pela parte superior (top).
+ * - Sem furação lateral. Sem ficheiros de drill separados.
+ * - Furos futuros serão emitidos via buildDrillLines() / pl.holes no mesmo .tcn.
  */
 
 import type { SheetResult } from "../cutlayout/cutLayoutTypes";
@@ -74,29 +79,48 @@ function buildW81(points: Array<{ x: number; y: number; z: number }>, zSafety: n
 }
 
 /**
- * W#2201 no formato original ALBATROS/EDICAD:
- * W#2201{ ::WTl #8015=0 #1=<X> #2=<Y> #3=<Z> [#2008=8] }W
- * - primeiro ponto: inclui #2008=8
- * - último ponto (retorno): #3=10 (saída)
+ * W#81 para furação superior (top drilling).
+ * Formato: W#81{ ::WTs WS=1 #8015=0 #1=<X> #2=<Y> #3=<Z> #1002=<DIAMETRO> #2008=<FEED> #2002=<RPM> #201=1 #203=1 #1001=0 }W
+ * 
+ * Parâmetros:
+ * - #1: coordenada X (mm)
+ * - #2: coordenada Y (mm)
+ * - #3: profundidade Z (negativo, ex: -13 para 13mm de profundidade)
+ * - #1002: diâmetro da broca (mm)
+ * - #2008: feed rate (mm/min, ex: 1000)
+ * - #2002: rotação (RPM, ex: 18000)
  */
-function buildW2201(
-  points: Array<{ x: number; y: number; z: number }>,
-  zCut: number
-): string {
-  const lastIndex = points.length - 1;
-  return points.map((p, i) => {
-    const z = i === lastIndex ? 10 : zCut;
-    const startFlag = i === 0 ? " #2008=8" : "";
-    return `W#2201{ ::WTl #8015=0 #1=${fmt(p.x)} #2=${fmt(p.y)} #3=${fmtZ(z)}${startFlag} }W`;
-  }).join("\n");
+function buildW81Drill(x: number, y: number, zDepth: number, diameter: number): string {
+  const feedRate = 1000;
+  const rpm = 18000;
+  return `W#81{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmtZ(zDepth)} #1002=${fmt(diameter)} #2008=${feedRate} #2002=${rpm} #201=1 #203=1 #1001=0 }W`;
 }
 
+/**
+ * W#2201 no formato ALBATROS/EDICAD para contorno de corte.
+ */
+function buildW2201(points: Array<{ x: number; y: number; z: number }>, zCut: number): string {
+  const lastIndex = points.length - 1;
+  return points
+    .map((p, i) => {
+      const z = i === lastIndex ? 10 : zCut;
+      const startFlag = i === 0 ? " #2008=8" : "";
+      return `W#2201{ ::WTl #8015=0 #1=${fmt(p.x)} #2=${fmt(p.y)} #3=${fmtZ(z)}${startFlag} }W`;
+    })
+    .join("\n");
+}
+
+/**
+ * Gera linhas de furação para o bloco SIDE#1.
+ * Cada furo gera uma operação W#81 com formato ALBATROS/EDICAD.
+ * Apenas furação vertical (top drilling) é suportada.
+ */
 function buildDrillLines(drills: CncDrillOperation[]): string[] {
   const lines: string[] = [];
   for (const d of drills) {
-    lines.push(
-      `DRILL X=${fmt(d.x)} Y=${fmt(d.y)} DIAMETER=${fmt(d.diametro)} DEPTH=${fmt(d.profundidade)}`
-    );
+    if (d.tipo !== "vertical") continue; // Apenas furação superior
+    const zDepth = -Math.abs(d.profundidade);
+    lines.push(buildW81Drill(d.x, d.y, zDepth, d.diametro));
   }
   return lines;
 }
@@ -168,17 +192,12 @@ export function generateTcnForPanel(
   );
   const sideInnerLines: string[] = [];
   const drills: CncDrillOperation[] = [];
+  
+  // Primeiro: coletar apenas furos superiores (topDrillable) de todas as peças
   placements.forEach((pl) => {
-    const w = pl.largura_mm;
-    const h = pl.altura_mm;
-    const x = pl.x_mm;
-    const y = pl.y_mm;
-    const points = buildContourPoints(x, y, w, h, zCut);
-    const firstPoint = points[0];
-    sideInnerLines.push(buildW81(points, Z_SAFETY_MM));
-    sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zTool));
-    sideInnerLines.push(buildW2201(points, zCut));
     for (const hole of pl.holes ?? []) {
+      const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
+      if (!topDrillable) continue;
       drills.push({
         x: pl.x_mm + hole.x,
         y: pl.y_mm + hole.y,
@@ -189,7 +208,23 @@ export function generateTcnForPanel(
       });
     }
   });
+  
+  // Segundo: inserir operações de furação no início do bloco SIDE#1
   sideInnerLines.push(...buildDrillLines(drills));
+  
+  // Terceiro: operações de corte para cada peça
+  placements.forEach((pl) => {
+    const w = pl.largura_mm;
+    const h = pl.altura_mm;
+    const x = pl.x_mm;
+    const y = pl.y_mm;
+    const points = buildContourPoints(x, y, w, h, zCut);
+    const firstPoint = points[0];
+    sideInnerLines.push(buildW81(points, Z_SAFETY_MM));
+    sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zTool));
+    sideInnerLines.push(buildW2201(points, zCut));
+  });
+  
   lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
 
   lines.push(...buildSideBlock(3, dl, ds, dh, [], false));

@@ -66,6 +66,8 @@ export type RulesConfig = {
         distanciaTopo: number;
         distanciaBase: number;
         offsetLateral: number;
+        /** Linha de furação: offset da borda esquerda/direita (meio espessura ≈ 9mm). */
+        offsetDaBorda: number;
         aplicarEm: {
           cima: boolean;
           fundo: boolean;
@@ -77,8 +79,12 @@ export type RulesConfig = {
       };
       parafuso: {
         enabled: boolean;
+        /** Distância da frente até o parafuso (mm). */
         distanciaFrente: number;
+        /** Distância do fundo até o parafuso (mm). */
         distanciaFundo: number;
+        /** Linha de furação: offset da borda (default 9mm = meio espessura). */
+        offsetDaBorda: number;
         distanciaLateral: number;
         offsetDaCavilha: number;
         aplicarEm: {
@@ -91,7 +97,13 @@ export type RulesConfig = {
       };
       dobradica: {
         enabled: boolean;
+        /** Distância do centro do furo até a borda (lado da dobradiça), mm. */
+        distanciaCentroDaBorda: number;
         distanciaBordaLateral: number;
+        /** Distância da dobradiça ao topo (mm). */
+        distanciaDobradiçaTopo: number;
+        /** Distância da dobradiça ao fundo (mm). */
+        distanciaDobradiçaFundo: number;
         offsetSuperior: number;
         offsetInferior: number;
         numeroPorPorta: number;
@@ -114,8 +126,28 @@ export type RulesConfig = {
         margemBase: number;
         recuoBorda: number;
         espacamento: number;
+        /** Espaçamento vertical (sistema 32mm). */
+        espacamentoVertical: number;
         numeroFurosPorColuna: number;
+        minFurosPorColuna: number;
+        maxFurosPorColuna: number;
         diametro: number;
+        profundidade: number;
+      };
+      /** Furos superiores nas próprias prateleiras (top drilling). */
+      shelfTop: {
+        enabled: boolean;
+        /** Distância da borda frontal (mm). */
+        distanciaFrente: number;
+        /** Distância da borda traseira (mm). */
+        distanciaFundo: number;
+        /** Distância da borda esquerda (mm). */
+        distanciaEsquerda: number;
+        /** Distância da borda direita (mm). */
+        distanciaDireita: number;
+        /** Diâmetro do furo (mm). */
+        diametro: number;
+        /** Profundidade do furo (mm, negativo no TCN). */
         profundidade: number;
       };
     };
@@ -195,6 +227,7 @@ export const defaultRulesConfig: RulesConfig = {
         distanciaTopo: 60,
         distanciaBase: 60,
         offsetLateral: 0,
+        offsetDaBorda: 9,
         aplicarEm: {
           cima: true,
           fundo: true,
@@ -208,6 +241,7 @@ export const defaultRulesConfig: RulesConfig = {
         enabled: true,
         distanciaFrente: 40,
         distanciaFundo: 40,
+        offsetDaBorda: 9,
         distanciaLateral: 60,
         offsetDaCavilha: 20,
         aplicarEm: {
@@ -220,13 +254,16 @@ export const defaultRulesConfig: RulesConfig = {
       },
       dobradica: {
         enabled: true,
+        distanciaCentroDaBorda: 21.5,
         distanciaBordaLateral: 22,
+        distanciaDobradiçaTopo: 100,
+        distanciaDobradiçaFundo: 100,
         offsetSuperior: 100,
         offsetInferior: 100,
         numeroPorPorta: 2,
         offsetsVerticaisMm: [],
         diametro: 35,
-        profundidade: 12,
+        profundidade: 12.5,
       },
       corredica: {
         enabled: true,
@@ -239,13 +276,25 @@ export const defaultRulesConfig: RulesConfig = {
       },
       prateleira: {
         enabled: true,
-        margemTopo: 80,
-        margemBase: 80,
+        margemTopo: 200,
+        margemBase: 200,
         recuoBorda: 37,
         espacamento: 32,
+        espacamentoVertical: 32,
         numeroFurosPorColuna: 0,
+        minFurosPorColuna: 6,
+        maxFurosPorColuna: 40,
         diametro: 5,
-        profundidade: 8,
+        profundidade: 13,
+      },
+      shelfTop: {
+        enabled: false,
+        distanciaFrente: 37,
+        distanciaFundo: 37,
+        distanciaEsquerda: 37,
+        distanciaDireita: 37,
+        diametro: 5,
+        profundidade: 13,
       },
     },
   },
@@ -347,6 +396,10 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
         prateleira: {
           ...defaults.furos.tecnicos.prateleira,
           ...asObject(tecnicosSrc.prateleira),
+        },
+        shelfTop: {
+          ...defaults.furos.tecnicos.shelfTop,
+          ...asObject(tecnicosSrc.shelfTop),
         },
       },
     },

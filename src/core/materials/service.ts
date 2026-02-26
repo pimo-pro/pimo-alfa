@@ -24,9 +24,9 @@ import {
 } from "../manufacturing/materials";
 
 const STORAGE_KEY = "pimo_materials_crud_v1";
-const DEFAULT_SHEET_WIDTH_MM = 2750;
-const DEFAULT_SHEET_HEIGHT_MM = 1830;
-const DEFAULT_SHEET_THICKNESS_MM = 18;
+const DEFAULT_SHEET_WIDTH_MM = 2800;
+const DEFAULT_SHEET_HEIGHT_MM = 2070;
+const DEFAULT_SHEET_THICKNESS_MM = 19;
 
 /** Categoria usada para materiais migrados da lista industrial. */
 const MIGRATED_CATEGORY_ID = "industrial";

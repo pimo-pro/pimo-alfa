@@ -3,6 +3,8 @@
  * Estrutura base de configurações globais (persistência + validação + migração leve).
  */
 
+import { PANEL_DEFAULTS } from "../panel/panelConstants";
+
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 const SETTINGS_SCHEMA_VERSION = 1;
 
@@ -77,6 +79,33 @@ export interface SettingsSchema {
     luzIntensidade: number;
     mostrarGrid: boolean;
   };
+  furação: {
+    parafuso: {
+      distanciaFrenteParafuso: number;
+      distanciaFrenteCavilha: number;
+      offsetDaBorda: number;
+    };
+    prateleira: {
+      margemTop: number;
+      margemBottom: number;
+      minFuros: number;
+      maxFuros: number;
+      espacamentoVertical: number;
+    };
+    dobradica: {
+      distanciaCentroDaBorda: number;
+      distanciaDobradiçaTopo: number;
+      distanciaDobradiçaFundo: number;
+    };
+  };
+  etiquetasQr: {
+    /** Ativar QR com logo integrado */
+    logoAtivado: boolean;
+    /** Data URL da imagem do logo (PNG com fundo transparente) */
+    logoDataUrl?: string;
+    /** Tamanho do logo em percentual (10-30%) */
+    logoTamanhoPorcento: number;
+  };
 }
 
 export const settingsDefaults: SettingsSchema = {
@@ -99,10 +128,10 @@ export const settingsDefaults: SettingsSchema = {
     categoriaPadraoId: "mdf",
     presetVisualPadraoId: "mdf_branco",
     materialIndustrialPadraoId: "MDF Branco",
-    sheetWidthMm: 2750,
-    sheetHeightMm: 1830,
-    sheetThicknessMm: 18,
-    sheetName: "MDF Branco 18mm",
+    sheetWidthMm: PANEL_DEFAULTS.largura_mm,
+    sheetHeightMm: PANEL_DEFAULTS.altura_mm,
+    sheetThicknessMm: PANEL_DEFAULTS.espessura_mm,
+    sheetName: "MDF Branco 19mm",
   },
   cnc: {
     profundidadeCortePadraoMm: 18,
@@ -149,6 +178,30 @@ export const settingsDefaults: SettingsSchema = {
     qualidade: "alta",
     luzIntensidade: 1,
     mostrarGrid: true,
+  },
+  furação: {
+    parafuso: {
+      distanciaFrenteParafuso: 40,
+      distanciaFrenteCavilha: 60,
+      offsetDaBorda: 9,
+    },
+    prateleira: {
+      margemTop: 200,
+      margemBottom: 200,
+      minFuros: 6,
+      maxFuros: 40,
+      espacamentoVertical: 32,
+    },
+    dobradica: {
+      distanciaCentroDaBorda: 21.5,
+      distanciaDobradiçaTopo: 100,
+      distanciaDobradiçaFundo: 100,
+    },
+  },
+  etiquetasQr: {
+    logoAtivado: false,
+    logoDataUrl: undefined,
+    logoTamanhoPorcento: 20,
   },
 };
 
@@ -211,6 +264,29 @@ function deepMergeSettings(
       },
     },
     viewer: { ...base.viewer, ...(isObject(patch.viewer) ? patch.viewer : {}) },
+    furação: {
+      ...base.furação,
+      ...(isObject(patch.furação) ? patch.furação : {}),
+      parafuso: {
+        ...base.furação.parafuso,
+        ...(isObject((patch.furação as Record<string, unknown> | undefined)?.parafuso)
+          ? (patch.furação as Record<string, unknown>).parafuso as Record<string, unknown>
+          : {}),
+      },
+      prateleira: {
+        ...base.furação.prateleira,
+        ...(isObject((patch.furação as Record<string, unknown> | undefined)?.prateleira)
+          ? (patch.furação as Record<string, unknown>).prateleira as Record<string, unknown>
+          : {}),
+      },
+      dobradica: {
+        ...base.furação.dobradica,
+        ...(isObject((patch.furação as Record<string, unknown> | undefined)?.dobradica)
+          ? (patch.furação as Record<string, unknown>).dobradica as Record<string, unknown>
+          : {}),
+      },
+    },
+    etiquetasQr: { ...base.etiquetasQr, ...(isObject(patch.etiquetasQr) ? patch.etiquetasQr : {}) },
   };
 }
 
@@ -358,6 +434,62 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       qualidade: merged.viewer.qualidade === "baixa" || merged.viewer.qualidade === "media" ? merged.viewer.qualidade : "alta",
       luzIntensidade: clamp(toNumber(merged.viewer.luzIntensidade, settingsDefaults.viewer.luzIntensidade), 0, 4),
       mostrarGrid: Boolean(merged.viewer.mostrarGrid),
+    },
+    furação: {
+      parafuso: {
+        distanciaFrenteParafuso: clamp(
+          toNumber(merged.furação?.parafuso?.distanciaFrenteParafuso, settingsDefaults.furação.parafuso.distanciaFrenteParafuso),
+          5,
+          200
+        ),
+        distanciaFrenteCavilha: clamp(
+          toNumber(merged.furação?.parafuso?.distanciaFrenteCavilha, settingsDefaults.furação.parafuso.distanciaFrenteCavilha),
+          5,
+          200
+        ),
+        offsetDaBorda: clamp(
+          toNumber(merged.furação?.parafuso?.offsetDaBorda, settingsDefaults.furação.parafuso.offsetDaBorda),
+          3,
+          50
+        ),
+      },
+      prateleira: {
+        margemTop: clamp(toNumber(merged.furação?.prateleira?.margemTop, settingsDefaults.furação.prateleira.margemTop), 0, 500),
+        margemBottom: clamp(toNumber(merged.furação?.prateleira?.margemBottom, settingsDefaults.furação.prateleira.margemBottom), 0, 500),
+        minFuros: clamp(toNumber(merged.furação?.prateleira?.minFuros, settingsDefaults.furação.prateleira.minFuros), 2, 100),
+        maxFuros: clamp(toNumber(merged.furação?.prateleira?.maxFuros, settingsDefaults.furação.prateleira.maxFuros), 2, 100),
+        espacamentoVertical: clamp(
+          toNumber(merged.furação?.prateleira?.espacamentoVertical, settingsDefaults.furação.prateleira.espacamentoVertical),
+          16,
+          64
+        ),
+      },
+      dobradica: {
+        distanciaCentroDaBorda: clamp(
+          toNumber(merged.furação?.dobradica?.distanciaCentroDaBorda, settingsDefaults.furação.dobradica.distanciaCentroDaBorda),
+          15,
+          35
+        ),
+        distanciaDobradiçaTopo: clamp(
+          toNumber(merged.furação?.dobradica?.distanciaDobradiçaTopo, settingsDefaults.furação.dobradica.distanciaDobradiçaTopo),
+          20,
+          300
+        ),
+        distanciaDobradiçaFundo: clamp(
+          toNumber(merged.furação?.dobradica?.distanciaDobradiçaFundo, settingsDefaults.furação.dobradica.distanciaDobradiçaFundo),
+          20,
+          300
+        ),
+      },
+    },
+    etiquetasQr: {
+      logoAtivado: Boolean(merged.etiquetasQr?.logoAtivado ?? settingsDefaults.etiquetasQr.logoAtivado),
+      logoDataUrl: typeof merged.etiquetasQr?.logoDataUrl === "string" ? merged.etiquetasQr.logoDataUrl : undefined,
+      logoTamanhoPorcento: clamp(
+        toNumber(merged.etiquetasQr?.logoTamanhoPorcento, settingsDefaults.etiquetasQr.logoTamanhoPorcento),
+        10,
+        30
+      ),
     },
   };
 

@@ -31,6 +31,8 @@ export type CutPiece = {
     y: number;
     diameter: number;
     depth: number;
+    holeType?: string;
+    topDrillable?: boolean;
   }>;
   /** Comprimento ao longo da fibra (length) = horizontal; width = vertical. */
   grainDirection?: "length" | "width";
@@ -62,6 +64,8 @@ export type CutPlacement = {
     y: number;
     diameter: number;
     depth: number;
+    holeType?: string;
+    topDrillable?: boolean;
   }>;
   /** Número sequencial da peça (1-99). */
   pieceNumber?: number;

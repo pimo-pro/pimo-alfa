@@ -15,6 +15,11 @@ export type CncCutOperation = {
   ferramenta?: string;
 };
 
+/**
+ * Operação de furação CNC.
+ * tipo "vertical" = furação superior (top drilling) — única suportada no .tcn.
+ * tipo "horizontal" = reservado; sem furação lateral no sistema atual.
+ */
 export type CncDrillOperation = {
   x: number;
   y: number;

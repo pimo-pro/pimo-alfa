@@ -1861,14 +1861,28 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);
     const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);
     const sheetThicknessMm = Number(item.sheetThicknessMm ?? materialRecord?.sheetThicknessMm);
-    const normalizedHoles: Array<{ x: number; y: number; diameter: number; depth: number }> = [];
+    const seen = new Set<string>();
+    const normalizedHoles: Array<{
+      x: number;
+      y: number;
+      diameter: number;
+      depth: number;
+      holeType?: string;
+      topDrillable?: boolean;
+    }> = [];
+    const add = (x: number, y: number, d: number, dep: number, ht?: string, td?: boolean) => {
+      const k = `${x.toFixed(1)}_${y.toFixed(1)}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      normalizedHoles.push({ x, y, diameter: d, depth: dep, holeType: ht, topDrillable: td });
+    };
     for (const h of item.holes ?? []) {
       const x = Number(h?.x);
       const y = Number(h?.y);
       const diameter = Number(h?.diameter);
       const depth = Number(h?.depth);
       if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
-        normalizedHoles.push({ x, y, diameter, depth });
+        add(x, y, diameter, depth, (h as { holeType?: string })?.holeType, (h as { topDrillable?: boolean })?.topDrillable);
       }
     }
     for (const h of item.furacoesTecnicas ?? []) {
@@ -1876,8 +1890,10 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
       const y = Number(h?.y);
       const diameter = Number(h?.diametro);
       const depth = Number(h?.profundidade);
+      const ht = "tipo" in h ? (h as { tipo?: string }).tipo : undefined;
+      const face = "face" in h ? (h as { face?: string }).face : undefined;
       if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
-        normalizedHoles.push({ x, y, diameter, depth });
+        add(x, y, diameter, depth, ht, face === "cima" || face === "fundo");
       }
     }
     for (const h of item.furacoes ?? []) {
@@ -1886,7 +1902,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
       const diameter = Number(h?.diametro);
       const depth = Number(h?.profundidade ?? (Number(esp) || 19));
       if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
-        normalizedHoles.push({ x, y, diameter, depth });
+        add(x, y, diameter, depth, undefined, (h as { tipo?: string })?.tipo === "vertical");
       }
     }
     const g = item.grainDirection;

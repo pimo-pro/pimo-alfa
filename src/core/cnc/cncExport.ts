@@ -55,45 +55,26 @@ export function exportCncFiles(
 }
 
 /**
- * Operações básicas de furação para um único painel.
+ * Operações de furação superior (top drilling) para um único painel.
+ * Apenas furos com topDrillable=true são emitidos. Sem fallback de 4 cantos.
  */
 function buildBasicDrillOperationsFromSheet(sheetResult: SheetResult): CncDrillOperation[] {
   const ops: CncDrillOperation[] = [];
   for (const pl of sheetResult.placements) {
     const holes = pl.holes ?? [];
-    if (holes.length > 0) {
-      holes.forEach((h) => {
-        const safeDepth = Math.min(Math.max(0.5, Number(h.depth) || 0), sheetResult.sheet.espessura_mm);
-        ops.push({
-          x: pl.x_mm + h.x,
-          y: pl.y_mm + h.y,
-          z: 0,
-          diametro: Number(h.diameter) || 5,
-          profundidade: safeDepth,
-          tipo: "vertical",
-        });
-      });
-      continue;
-    }
-
-    // Fallback legado para peças sem furação definida.
-    const margin = 25;
-    const points: Array<{ x: number; y: number }> = [
-      { x: pl.x_mm + margin, y: pl.y_mm + margin },
-      { x: pl.x_mm + pl.largura_mm - margin, y: pl.y_mm + margin },
-      { x: pl.x_mm + pl.largura_mm - margin, y: pl.y_mm + pl.altura_mm - margin },
-      { x: pl.x_mm + margin, y: pl.y_mm + pl.altura_mm - margin },
-    ];
-    points.forEach((p) => {
+    for (const h of holes) {
+      const topDrillable = (h as { topDrillable?: boolean }).topDrillable;
+      if (!topDrillable) continue;
+      const safeDepth = Math.min(Math.max(0.5, Number(h.depth) || 0), sheetResult.sheet.espessura_mm);
       ops.push({
-        x: p.x,
-        y: p.y,
+        x: pl.x_mm + h.x,
+        y: pl.y_mm + h.y,
         z: 0,
-        diametro: 5,
-        profundidade: 10,
+        diametro: Number(h.diameter) || 5,
+        profundidade: safeDepth,
         tipo: "vertical",
       });
-    });
+    }
   }
   return ops;
 }

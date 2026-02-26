@@ -8,8 +8,10 @@ import autoTable from "jspdf-autotable";
 import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco, TechnicalDrillHole } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
+import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload } from "../qrcode/qrcodeService";
+import { generateQrCanvasWithLogo } from "../qrcode/qrcodeLogoService";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -17,6 +19,7 @@ export type ProjectForPdf = {
   rules: RulesConfig;
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
+  settings?: SettingsSchema; // Configurações para logo QR
 };
 
 const MARGIN = 14;
@@ -74,7 +77,37 @@ function drawQrFromCode(doc: jsPDF, code: string, x: number, y: number, size: nu
   }
 }
 
-function renderQrLayer(
+async function drawQrWithLogoOrFallback(
+  doc: jsPDF,
+  code: string,
+  x: number,
+  y: number,
+  size: number,
+  settings?: SettingsSchema
+) {
+  // Se logo está desativado, usa fallback ao QR simples
+  if (!settings?.etiquetasQr?.logoAtivado || !settings?.etiquetasQr?.logoDataUrl) {
+    drawQrFromCode(doc, code, x, y, size);
+    return;
+  }
+
+  try {
+    // Tenta gerar QR com logo
+    const canvas = await generateQrCanvasWithLogo(code, size * 10, {
+      logoDataUrl: settings.etiquetasQr.logoDataUrl,
+      logoSizePercent: settings.etiquetasQr.logoTamanhoPorcento,
+    });
+
+    // Converte canvas para data URL e insere no PDF
+    const imgData = canvas.toDataURL("image/png");
+    doc.addImage(imgData, "PNG", x, y, size, size);
+  } catch {
+    // Em caso de erro, volta a usar QR simples
+    drawQrFromCode(doc, code, x, y, size);
+  }
+}
+
+async function renderQrLayer(
   doc: jsPDF,
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
   project: ProjectForPdf
@@ -117,7 +150,9 @@ function renderQrLayer(
       { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
       pieceNumber
     );
-    drawQrFromCode(doc, etiquetaCode, qrX, qrY, qrSize);
+    
+    // Usa novo serviço com suporte a logo
+    await drawQrWithLogoOrFallback(doc, etiquetaCode, qrX, qrY, qrSize, project.settings);
 
     if (project.rules.qrcode.mostrarTextoAbaixoQr) {
       doc.setFontSize(textSize);
@@ -305,7 +340,7 @@ function renderFurosLayer(
  * Gera PDF de cutlist.
  * @param existingDoc Se fornecido, adiciona as páginas ao documento existente.
  */
-export function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF {
+export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {
   const doc = existingDoc ?? new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   if (existingDoc) {
@@ -335,7 +370,7 @@ export function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): js
   const parts = getFullCutlist(project);
   y = renderCutlistTable(doc, parts, y);
   renderFurosLayer(doc, parts, MARGIN);
-  renderQrLayer(doc, parts, project);
+  await renderQrLayer(doc, parts, project);
 
   return doc;
 }

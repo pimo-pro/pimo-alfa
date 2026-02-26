@@ -1,3 +1,5 @@
+import { PANEL_DEFAULTS } from "../panel/panelConstants";
+
 /** IDs dos materiais PBR reais (acabamento visual) */
 export type MaterialPbrId =
   | "carvalho_natural"
@@ -31,18 +33,18 @@ export type MaterialIndustrial = {
   densidade?: number;
 };
 
-// Chapa padrão: 2850 x 2100 mm
-export const CHAPA_PADRAO_LARGURA = 2850;
-export const CHAPA_PADRAO_ALTURA = 2100;
+/** Chapa padrão MDF PT (LF×HF) */
+export const CHAPA_PADRAO_LARGURA = PANEL_DEFAULTS.largura_mm;
+export const CHAPA_PADRAO_ALTURA = PANEL_DEFAULTS.altura_mm;
 // Densidade padrão MDF: ~750 kg/m³
 export const DENSIDADE_PADRAO = 750;
 
 export const MATERIAIS_INDUSTRIAIS: MaterialIndustrial[] = [
-  { nome: "MDF Branco", espessuraPadrao: 19, custo_m2: 35, larguraChapa: 2850, alturaChapa: 2100, densidade: 750 },
-  { nome: "Carvalho", espessuraPadrao: 20, custo_m2: 45, larguraChapa: 2850, alturaChapa: 2100, densidade: 720 },
-  { nome: "Lacado", espessuraPadrao: 20, custo_m2: 90, larguraChapa: 2850, alturaChapa: 2100, densidade: 750 },
-  { nome: "Contraplacado", espessuraPadrao: 19, custo_m2: 68, larguraChapa: 2850, alturaChapa: 2100, densidade: 600 },
-  { nome: "Melamina", espessuraPadrao: 19, custo_m2: 22, larguraChapa: 2850, alturaChapa: 2100, densidade: 700 },
+  { nome: "MDF Branco", espessuraPadrao: PANEL_DEFAULTS.espessura_mm, custo_m2: 35, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 750 },
+  { nome: "Carvalho", espessuraPadrao: 20, custo_m2: 45, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 720 },
+  { nome: "Lacado", espessuraPadrao: 20, custo_m2: 90, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 750 },
+  { nome: "Contraplacado", espessuraPadrao: 19, custo_m2: 68, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 600 },
+  { nome: "Melamina", espessuraPadrao: 19, custo_m2: 22, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 700 },
 ];
 
 /**

@@ -118,16 +118,35 @@ function renderSheetPage(
       doc.setTextColor(0, 0, 0);
     }
 
-    // Furos da peça no layout PRO (círculos em escala).
+    // Furos da peça no layout PRO (círculos em escala), cores por tipo.
     const holes = pl.holes ?? [];
     if (holes.length > 0) {
-      doc.setDrawColor(220, 38, 38);
-      doc.setLineWidth(0.2);
       for (const h of holes) {
         const hx = px + h.x * scale;
         const hy = py + h.y * scale;
         const hr = Math.max(0.25, (h.diameter / 2) * scale);
-        doc.circle(hx, hy, hr);
+        const ht = (h as { holeType?: string }).holeType;
+        if (ht === "prateleira") {
+          doc.setDrawColor(34, 197, 94);
+          doc.setFillColor(34, 197, 94);
+        } else if (ht === "dobradica") {
+          doc.setDrawColor(249, 115, 22);
+          doc.setFillColor(249, 115, 22);
+        } else if (ht === "cavilha") {
+          doc.setDrawColor(59, 130, 246);
+          doc.setFillColor(59, 130, 246);
+        } else if (ht === "parafuso") {
+          doc.setDrawColor(107, 114, 128);
+          doc.setFillColor(107, 114, 128);
+        } else if (ht === "corredica") {
+          doc.setDrawColor(168, 85, 247);
+          doc.setFillColor(168, 85, 247);
+        } else {
+          doc.setDrawColor(220, 38, 38);
+          doc.setFillColor(220, 38, 38);
+        }
+        doc.setLineWidth(0.3);
+        doc.circle(hx, hy, hr, "FD");
       }
       doc.setDrawColor(30, 64, 175);
     }
@@ -141,4 +160,9 @@ function renderSheetPage(
     MARGIN,
     y
   );
+  y += 4;
+  doc.setFontSize(7);
+  doc.setTextColor(120, 120, 120);
+  doc.text("🟢 Prateleira | 🟠 Dobradiça | 🔵 Cavilha | ⚫ Parafuso | 🟣 Corrediça | 🔴 Outros", MARGIN, y);
+  doc.setTextColor(0, 0, 0);
 }

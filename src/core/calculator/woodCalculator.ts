@@ -1,4 +1,5 @@
 import type { Dimensoes, ProjetoConfig, ResultadosCalculo } from "../types";
+import { PANEL_DEFAULTS } from "../panel/panelConstants";
 
 /**
  * Calcula o número de peças necessárias para um projeto
@@ -33,8 +34,8 @@ export function calcularNumeroPecas(
 export function calcularNumeroPaineis(
   dimensoes: Dimensoes,
   quantidade: number,
-  larguraPadraoPainel: number = 1830, // mm (largura padrão de painel MDF)
-  alturaPadraoPainel: number = 2750 // mm (altura padrão de painel MDF)
+  larguraPadraoPainel: number = PANEL_DEFAULTS.largura_mm,
+  alturaPadraoPainel: number = PANEL_DEFAULTS.altura_mm
 ): number {
   // Calcula quantos painéis são necessários baseado nas dimensões
   // Otimização simples: calcula áreas necessárias vs área disponível por painel
@@ -83,8 +84,8 @@ export function calcularAreaTotal(
 export function calcularDesperdicio(
   areaTotal: number,
   numeroPaineis: number,
-  larguraPadraoPainel: number = 1830,
-  alturaPadraoPainel: number = 2750
+  larguraPadraoPainel: number = 2800,
+  alturaPadraoPainel: number = 2070
 ): { desperdicio: number; percentual: number } {
   const areaPorPainel = (larguraPadraoPainel * alturaPadraoPainel) / 1000000; // m²
   const areaTotalPaineis = numeroPaineis * areaPorPainel;

@@ -186,9 +186,9 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
  * Gera PDF unificado: Técnico + Cutlist + Painéis + Portas (se existir) + Gavetas (se existir)
  * + Ferragens Industriais + Totais e Resumo Financeiro.
  */
-export function buildUnifiedPdf(project: ProjectForPdfWithExtracted): jsPDF {
+export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Promise<jsPDF> {
   const doc = buildTechnicalPdf(project);
-  buildCutlistPdf(project, doc);
+  await buildCutlistPdf(project, doc);
   addPainéisSection(doc, project);
   addPortasSection(doc, project);
   addGavetasSection(doc, project);

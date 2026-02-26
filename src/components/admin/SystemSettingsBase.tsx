@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Panel from "../ui/Panel";
 import { useSettings } from "../../context/SettingsContext";
 import type { SettingsSchema } from "../../core/settings/settingsService";
+import { PANEL_PRESETS } from "../../core/panel/panelConstants";
 import {
   AdminPageHeader,
   AdminStickyActionBar,
@@ -202,6 +203,44 @@ export default function SystemSettingsBase() {
               }
             />
           </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: "1 / -1" }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tamanho do painel (LF×HF×SF)</span>
+            <select
+              className="input"
+              value={
+                PANEL_PRESETS.find(
+                  (p) =>
+                    p.lf === draft.materiais.sheetWidthMm &&
+                    p.hf === draft.materiais.sheetHeightMm &&
+                    p.sf === draft.materiais.sheetThicknessMm
+                )?.id ?? "custom"
+              }
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "custom") return;
+                const preset = PANEL_PRESETS.find((p) => p.id === val);
+                if (preset) {
+                  setDraft((prev) => ({
+                    ...prev,
+                    materiais: {
+                      ...prev.materiais,
+                      sheetWidthMm: preset.lf,
+                      sheetHeightMm: preset.hf,
+                      sheetThicknessMm: preset.sf,
+                      sheetName: `MDF ${preset.sf}mm (${preset.lf}×${preset.hf})`,
+                    },
+                  }));
+                }
+              }}
+            >
+              {PANEL_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+              <option value="custom">Personalizado</option>
+            </select>
+          </label>
           <NumberField
             label="Largura do painel (mm)"
             value={draft.materiais.sheetWidthMm}
@@ -239,6 +278,158 @@ export default function SystemSettingsBase() {
               }
             />
           </label>
+        </div>
+      </Panel>
+
+      <Panel title="Regras de Furação" description="Posicionamento de parafuso, cavilha, prateleira e dobradiça (override sobre regras do projeto).">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Parafuso + Cavilha (união topo/base)</span>
+          <NumberField
+            label="Distância frente parafuso (mm)"
+            value={draft.furação?.parafuso?.distanciaFrenteParafuso ?? 40}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  parafuso: { ...p.furação?.parafuso, distanciaFrenteParafuso: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Distância frente cavilha (mm)"
+            value={draft.furação?.parafuso?.distanciaFrenteCavilha ?? 60}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  parafuso: { ...p.furação?.parafuso, distanciaFrenteCavilha: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Offset da borda (mm)"
+            value={draft.furação?.parafuso?.offsetDaBorda ?? 9}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  parafuso: { ...p.furação?.parafuso, offsetDaBorda: v },
+                },
+              }))
+            }
+          />
+          <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Furos de prateleira (sistema 32mm)</span>
+          <NumberField
+            label="Margem topo (mm)"
+            value={draft.furação?.prateleira?.margemTop ?? 200}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  prateleira: { ...p.furação?.prateleira, margemTop: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Margem fundo (mm)"
+            value={draft.furação?.prateleira?.margemBottom ?? 200}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  prateleira: { ...p.furação?.prateleira, margemBottom: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Min furos/coluna"
+            value={draft.furação?.prateleira?.minFuros ?? 6}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  prateleira: { ...p.furação?.prateleira, minFuros: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Max furos/coluna"
+            value={draft.furação?.prateleira?.maxFuros ?? 40}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  prateleira: { ...p.furação?.prateleira, maxFuros: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Espaçamento vertical (mm)"
+            value={draft.furação?.prateleira?.espacamentoVertical ?? 32}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  prateleira: { ...p.furação?.prateleira, espacamentoVertical: v },
+                },
+              }))
+            }
+          />
+          <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Dobradiça</span>
+          <NumberField
+            label="Distância centro–borda (mm)"
+            value={draft.furação?.dobradica?.distanciaCentroDaBorda ?? 21.5}
+            step={0.5}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradica: { ...p.furação?.dobradica, distanciaCentroDaBorda: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Distância dobradiça topo (mm)"
+            value={draft.furação?.dobradica?.distanciaDobradiçaTopo ?? 100}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradica: { ...p.furação?.dobradica, distanciaDobradiçaTopo: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Distância dobradiça fundo (mm)"
+            value={draft.furação?.dobradica?.distanciaDobradiçaFundo ?? 100}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradica: { ...p.furação?.dobradica, distanciaDobradiçaFundo: v },
+                },
+              }))
+            }
+          />
         </div>
       </Panel>
 
@@ -445,6 +636,82 @@ export default function SystemSettingsBase() {
             />
             Mostrar grid
           </label>
+        </div>
+      </Panel>
+
+      <Panel title="Etiquetas QR com Logo" description="Configuração de logo integrado nos QR codes das etiquetas de peças.">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.etiquetasQr.logoAtivado}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  etiquetasQr: { ...prev.etiquetasQr, logoAtivado: e.target.checked },
+                }))
+              }
+            />
+            Ativar QR com logo integrado
+          </label>
+
+          {draft.etiquetasQr.logoAtivado && (
+            <>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Upload de Logo (PNG com fundo transparente)</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string;
+                        setDraft((prev) => ({
+                          ...prev,
+                          etiquetasQr: { ...prev.etiquetasQr, logoDataUrl: dataUrl },
+                        }));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                {draft.etiquetasQr.logoDataUrl && (
+                  <img
+                    src={draft.etiquetasQr.logoDataUrl}
+                    alt="Logo preview"
+                    style={{
+                      maxWidth: "100px",
+                      maxHeight: "100px",
+                      marginTop: 8,
+                      borderRadius: 4,
+                      border: "1px solid rgba(0,0,0,0.1)",
+                    }}
+                  />
+                )}
+              </label>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  Tamanho do logo: {draft.etiquetasQr.logoTamanhoPorcento}% (10-30%)
+                </span>
+                <input
+                  type="range"
+                  min="10"
+                  max="30"
+                  value={draft.etiquetasQr.logoTamanhoPorcento}
+                  onChange={(e) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      etiquetasQr: { ...prev.etiquetasQr, logoTamanhoPorcento: Number(e.target.value) },
+                    }))
+                  }
+                  style={{ width: "100%" }}
+                />
+              </label>
+            </>
+          )}
         </div>
       </Panel>
     </div>

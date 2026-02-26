@@ -26,11 +26,11 @@ export default function RightPanel() {
   const slug = (project.projectName || "projeto").replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
   const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
 
-  const handleGerarArquivoConfirm = (opcoes: { conteudo: GerarArquivoConteudo; download: boolean }) => {
+  const handleGerarArquivoConfirm = async (opcoes: { conteudo: GerarArquivoConteudo; download: boolean }) => {
   if (!opcoes.download || !hasBoxes) return;
 
   if (opcoes.conteudo === "cutlist") {
-    actions.exportarPDF();
+    await actions.exportarPDF();
     return;
   }
 
@@ -40,9 +40,9 @@ export default function RightPanel() {
   }
 
   if (opcoes.conteudo === "ambos") {
-    actions.exportarPDF();
+    await actions.exportarPDF();
     actions.exportarPdfTecnico();
-    actions.exportarPdfUnificado();
+    await actions.exportarPdfUnificado();
   }
 };
 
@@ -63,31 +63,46 @@ export default function RightPanel() {
     doc.save(`${slug}_tecnico.pdf`);
   };
 
-  const onCutlist = () => {
+  const onCutlist = async () => {
     if (!hasBoxes) {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const doc = buildCutlistPdf(pdfProject());
-    doc.save(`${slug}_cutlist.pdf`);
+    try {
+      const doc = await buildCutlistPdf(pdfProject());
+      doc.save(`${slug}_cutlist.pdf`);
+    } catch (err) {
+      console.error("Erro ao gerar PDF de cutlist:", err);
+      showToast("Erro ao gerar PDF.", "error");
+    }
   };
 
-  const onAmbos = () => {
+  const onAmbos = async () => {
     if (!hasBoxes) {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const doc = buildUnifiedPdf(pdfProject());
-    doc.save(`${slug}_completo.pdf`);
+    try {
+      const doc = await buildUnifiedPdf(pdfProject());
+      doc.save(`${slug}_completo.pdf`);
+    } catch (err) {
+      console.error("Erro ao gerar PDF unificado:", err);
+      showToast("Erro ao gerar PDF.", "error");
+    }
   };
 
-  const onEtiquetas = () => {
+  const onEtiquetas = async () => {
     if (!hasBoxes) {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const doc = buildEtiquetasPdf(pdfProject());
-    doc.save(`${slug}_etiquetas.pdf`);
+    try {
+      const doc = await buildEtiquetasPdf(pdfProject());
+      doc.save(`${slug}_etiquetas.pdf`);
+    } catch (err) {
+      console.error("Erro ao gerar PDF de etiquetas:", err);
+      showToast("Erro ao gerar PDF.", "error");
+    }
   };
 
 

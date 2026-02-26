@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
+import { getSettings } from "../core/settings/settingsService";
 import type { BoxModelInstance, WorkspaceBox } from "../core/types";
 import { saveProfiles } from "../core/rules/rulesProfilesStorage";
 import { DEFAULT_PROFILE_ID } from "../core/rules/rulesProfilesStorage";
@@ -1139,7 +1140,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
-    exportarPDF: () => {
+    exportarPDF: async () => {
       const currentProject = projectRef.current;
       const boxesToExport = currentProject.boxes ?? [];
       if (boxesToExport.length === 0) {
@@ -1153,8 +1154,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         boxes: boxesToExport,
         rules: currentProject.rules,
         extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        settings: getSettings(),
       };
-      const doc = buildCutlistPdf(pdfProject);
+      const doc = await buildCutlistPdf(pdfProject);
       doc.save(`${safeName}_cutlist.pdf`);
     },
 
@@ -1174,7 +1176,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       doc.save(`${safeName}_tecnico.pdf`);
     },
 
-    exportarPdfUnificado: () => {
+    exportarPdfUnificado: async () => {
       const currentProject = projectRef.current;
       const boxesToExport = currentProject.boxes ?? [];
       if (boxesToExport.length === 0) {
@@ -1189,8 +1191,9 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         rules: currentProject.rules,
         materialId: currentProject.materialId,
         extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        settings: getSettings(),
       };
-      const doc = buildUnifiedPdf(pdfProject);
+      const doc = await buildUnifiedPdf(pdfProject);
       doc.save(`${safeName}_completo.pdf`);
     },
 

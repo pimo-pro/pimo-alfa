@@ -3,21 +3,63 @@ import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
-import { calcularPosicoesFurosVerticais } from "../rules/rulesConfig";
-import { calculateTechnicalDrillingsForPiece } from "../drilling/drillingService";
+import { calculateTechnicalDrillingsForPiece, isTopDrillable } from "../drilling/drillingService";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
+import { getSettings } from "../settings/settingsService";
 
 /**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
  * Usa gerarModeloIndustrial com rules do projeto. Material = label do CRUD ou legado.
  * Preenche materialId, visualMaterial, grainDirection e opcionalmente faceMaterials (Layout Engine / MaterialLibrary v2).
  */
+function mergeFuraçãoIntoRules(rules: RulesConfig): RulesConfig {
+  const settings = getSettings();
+  const fu = settings?.furação;
+  if (!fu?.parafuso || !fu?.prateleira || !fu?.dobradica) return rules;
+  return {
+    ...rules,
+    furos: {
+      ...rules.furos,
+      tecnicos: {
+        ...rules.furos.tecnicos,
+        parafuso: {
+          ...rules.furos.tecnicos.parafuso,
+          distanciaFrente: fu.parafuso.distanciaFrenteParafuso,
+          distanciaFundo: fu.parafuso.distanciaFrenteParafuso,
+          offsetDaBorda: fu.parafuso.offsetDaBorda,
+        },
+        cavilha: {
+          ...rules.furos.tecnicos.cavilha,
+          distanciaFrente: fu.parafuso.distanciaFrenteCavilha,
+          distanciaFundo: fu.parafuso.distanciaFrenteCavilha,
+          offsetDaBorda: fu.parafuso.offsetDaBorda,
+        },
+        prateleira: {
+          ...rules.furos.tecnicos.prateleira,
+          margemTopo: fu.prateleira.margemTop,
+          margemBase: fu.prateleira.margemBottom,
+          minFurosPorColuna: fu.prateleira.minFuros,
+          maxFurosPorColuna: fu.prateleira.maxFuros,
+          espacamentoVertical: fu.prateleira.espacamentoVertical,
+        },
+        dobradica: {
+          ...rules.furos.tecnicos.dobradica,
+          distanciaCentroDaBorda: fu.dobradica.distanciaCentroDaBorda,
+          distanciaDobradiçaTopo: fu.dobradica.distanciaDobradiçaTopo,
+          distanciaDobradiçaFundo: fu.dobradica.distanciaDobradiçaFundo,
+        },
+      },
+    },
+  };
+}
+
 export function cutlistComPrecoFromBox(
   box: BoxModule,
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
-  const modelo = gerarModeloIndustrial(box, rules);
+  const effRules = mergeFuraçãoIntoRules(rules);
+  const modelo = gerarModeloIndustrial(box, effRules);
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
   const matInfo = getMaterialDisplayInfo(materialId || "MDF Branco");
   const material = matInfo.label;
@@ -34,42 +76,14 @@ export function cutlistComPrecoFromBox(
     faceMaterials: { top: visualMaterial, front: visualMaterial } as { top?: typeof visualMaterial; front?: typeof visualMaterial },
   };
 
-  const makeVerticalHolesForPanel = (largura: number, altura: number) => {
-    if (!rules || !rules.furos) return [];
-    try {
-      const ys = calcularPosicoesFurosVerticais(altura, rules);
-      const diam = Math.max(0.5, rules.furos.diametroFuro || 5);
-      const radius = diam / 2;
-      const recuoRaw = rules.furos.recuoBorda || 50;
-      const recuo = Math.min(Math.max(recuoRaw, radius), Math.max(radius, largura - radius));
-      const prof = rules.furos.profundidadeFuro || 10;
-      const holes: NonNullable<CutListItemComPreco["furacoes"]> = [];
-      for (const y of ys) {
-        const ySafe = Math.min(Math.max(y, radius), Math.max(radius, altura - radius));
-        holes.push({ x: recuo, y: ySafe, diametro: diam, profundidade: prof, tipo: "vertical" });
-        holes.push({
-          x: Math.min(Math.max(largura - recuo, radius), Math.max(radius, largura - radius)),
-          y: ySafe,
-          diametro: diam,
-          profundidade: prof,
-          tipo: "vertical",
-        });
-      }
-      return holes;
-    } catch (err) {
-      console.warn("[cutlistFromBoxes] Error generating vertical holes:", err);
-      return [];
-    }
-  };
-
   const makeTechnicalHolesForPanel = (tipo: string, largura: number, altura: number, espessura: number) => {
-    if (!rules || !Number.isFinite(largura) || !Number.isFinite(altura) || !Number.isFinite(espessura)) {
+    if (!effRules || !Number.isFinite(largura) || !Number.isFinite(altura) || !Number.isFinite(espessura)) {
       return [];
     }
     try {
       return calculateTechnicalDrillingsForPiece(
         { tipo, largura, altura, espessura },
-        rules
+        effRules
       );
     } catch (err) {
       console.warn(`[cutlistFromBoxes] Error generating technical holes for ${tipo}:`, err);
@@ -79,14 +93,15 @@ export function cutlistComPrecoFromBox(
 
   const toNormalizedHoles = (
     furacoesTecnicas: ReturnType<typeof makeTechnicalHolesForPanel>
-  ): NonNullable<CutListItemComPreco["holes"]> => (
+  ): import("../types").DrillHole[] =>
     furacoesTecnicas.map((h) => ({
       x: h.x,
       y: h.y,
       diameter: h.diametro,
       depth: h.profundidade,
-    }))
-  );
+      holeType: h.tipo as import("../types").DrillType,
+      topDrillable: isTopDrillable(h.face),
+    }));
 
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
@@ -111,10 +126,6 @@ export function cutlistComPrecoFromBox(
       grainDirection,
       precoUnitario: p.quantidade > 0 ? p.custo / p.quantidade : 0,
       precoTotal: p.custo,
-      furacoes:
-        p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita"
-          ? makeVerticalHolesForPanel(p.largura_mm, p.altura_mm)
-          : undefined,
       furacoesTecnicas,
       holes: toNormalizedHoles(furacoesTecnicas),
     });

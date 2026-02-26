@@ -2,8 +2,10 @@ import jsPDF from "jspdf";
 import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
+import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload } from "../qrcode/qrcodeService";
+import { generateQrCanvasWithLogo } from "../qrcode/qrcodeLogoService";
 
 export type ProjectForEtiquetasPdf = {
   projectName: string;
@@ -11,6 +13,7 @@ export type ProjectForEtiquetasPdf = {
   rules: RulesConfig;
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
+  settings?: SettingsSchema; // Configurações para logo QR
 };
 
 type LabelItem = CutListItemComPreco & {
@@ -69,7 +72,37 @@ function drawQrFromCode(doc: jsPDF, code: string, x: number, y: number, size: nu
   }
 }
 
-function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiquetasPdf) {
+async function drawQrWithLogoOrFallback(
+  doc: jsPDF,
+  code: string,
+  x: number,
+  y: number,
+  size: number,
+  settings?: SettingsSchema
+) {
+  // Se logo está desativado, usa fallback ao QR simples
+  if (!settings?.etiquetasQr?.logoAtivado || !settings?.etiquetasQr?.logoDataUrl) {
+    drawQrFromCode(doc, code, x, y, size);
+    return;
+  }
+
+  try {
+    // Tenta gerar QR com logo
+    const canvas = await generateQrCanvasWithLogo(code, size * 10, {
+      logoDataUrl: settings.etiquetasQr.logoDataUrl,
+      logoSizePercent: settings.etiquetasQr.logoTamanhoPorcento,
+    });
+
+    // Converte canvas para data URL e insere no PDF
+    const imgData = canvas.toDataURL("image/png");
+    doc.addImage(imgData, "PNG", x, y, size, size);
+  } catch {
+    // Em caso de erro, volta a usar QR simples
+    drawQrFromCode(doc, code, x, y, size);
+  }
+}
+
+async function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiquetasPdf) {
   const cfg = project.rules.etiqueta;
   const width = cfg.larguraMm;
   const height = cfg.alturaMm;
@@ -107,7 +140,9 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
     boxes: project.boxes,
     rules: project.rules,
   }, pieceNumber);
-  drawQrFromCode(doc, etiquetaCode, qrX, qrY, qrSize);
+  
+  // Usa novo serviço com suporte a logo
+  await drawQrWithLogoOrFallback(doc, etiquetaCode, qrX, qrY, qrSize, project.settings);
 
   if (project.rules.qrcode.mostrarTextoAbaixoQr) {
     doc.setFont("helvetica", "bold");
@@ -137,7 +172,7 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
   }
 }
 
-export function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): jsPDF {
+export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
   const cfg = project.rules.etiqueta;
   const doc = new jsPDF({
     orientation: "landscape",
@@ -146,9 +181,10 @@ export function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): jsPDF {
   });
 
   const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project));
-  ordered.forEach((item, idx) => {
+  for (let idx = 0; idx < ordered.length; idx++) {
+    const item = ordered[idx];
     if (idx > 0) doc.addPage([cfg.larguraMm, cfg.alturaMm], "landscape");
-    renderEtiquetaPage(doc, item, project);
-  });
+    await renderEtiquetaPage(doc, item, project);
+  }
   return doc;
 }

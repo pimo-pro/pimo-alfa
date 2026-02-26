@@ -2,11 +2,12 @@ import { cutlistToPieces, runCutLayout, type CutLayoutEngineOptions, type Cutlis
 import type { SheetDefinition } from "../cutlayout/cutLayoutTypes";
 import { exportCncFiles } from "./cncExport";
 import { getSettings } from "../settings/settingsService";
+import { PANEL_DEFAULTS } from "../panel/panelConstants";
 
 export const DEFAULT_CNC_SHEET: SheetDefinition = {
-  largura_mm: 2750,
-  altura_mm: 1830,
-  espessura_mm: 19,
+  largura_mm: PANEL_DEFAULTS.largura_mm,
+  altura_mm: PANEL_DEFAULTS.altura_mm,
+  espessura_mm: PANEL_DEFAULTS.espessura_mm,
 };
 
 export const DEFAULT_CNC_LAYOUT_OPTIONS: CutLayoutEngineOptions = {
