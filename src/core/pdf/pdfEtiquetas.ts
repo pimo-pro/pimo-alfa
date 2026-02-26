@@ -3,6 +3,7 @@ import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildQrPayload, formatLabelNumber } from "../qrcode/qrcodeService";
 
 export type ProjectForEtiquetasPdf = {
   projectName: string;
@@ -85,7 +86,7 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
   doc.setTextColor(10, 10, 10);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  if (cfg.mostrarLogo) {
+  if (cfg.mostrarLogoEmpresa && cfg.mostrarLogo) {
     doc.text("pi", margin, y);
   }
 
@@ -101,11 +102,18 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
   const qrX = margin;
   const qrY = y + 1.5;
   const shortCode = item.shortCode ?? `N${item.pieceNumber ?? "-"}`;
-  drawQrFromCode(doc, shortCode, qrX, qrY, qrSize);
+  const qrPayload = buildQrPayload(shortCode, project.rules);
+  drawQrFromCode(doc, qrPayload, qrX, qrY, qrSize);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(bodySize + 1);
-  doc.text(shortCode, qrX, qrY + qrSize + 4.2);
+  doc.text(
+    cfg.modoExibicaoQr === "url_completa"
+      ? `https://YOUR_DOMAIN/q/${shortCode}`
+      : shortCode,
+    qrX,
+    qrY + qrSize + 4.2
+  );
 
   let rightY = qrY + 1;
   const rightX = qrX + qrSize + 4;
@@ -124,7 +132,11 @@ function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiq
     rightY += 4.2;
   }
   doc.setFont("helvetica", "bold");
-  doc.text(`N${item.pieceNumber ?? "-"}`, rightX, rightY);
+  const pieceNumber = Number(item.pieceNumber ?? 0);
+  const formatted = shortCode
+    ? formatLabelNumber(shortCode, pieceNumber, project.rules)
+    : `N${item.pieceNumber ?? "-"}`;
+  doc.text(formatted, rightX, rightY);
 }
 
 export function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): jsPDF {

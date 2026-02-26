@@ -9,6 +9,7 @@ import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco, TechnicalDrillHole } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildQrPayload, formatLabelNumber } from "../qrcode/qrcodeService";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -110,8 +111,9 @@ function renderQrLayer(
 
     const qrX = x + 2;
     const qrY = rowY + 10;
+    const qrPayload = p.shortCode ? buildQrPayload(p.shortCode, project.rules) : "";
     if (p.shortCode) {
-      drawQrFromCode(doc, p.shortCode, qrX, qrY, qrSize);
+      drawQrFromCode(doc, qrPayload, qrX, qrY, qrSize);
     } else {
       doc.setDrawColor(180, 180, 180);
       doc.rect(qrX, qrY, qrSize, qrSize);
@@ -123,7 +125,11 @@ function renderQrLayer(
     doc.text(p.shortCode ?? "-", qrX + qrSize + 3, qrY + 6);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.text(`Nº peça: ${p.pieceNumber ?? "-"}`, qrX + qrSize + 3, qrY + 11);
+    const labelNumber =
+      p.shortCode && Number.isFinite(p.pieceNumber)
+        ? formatLabelNumber(p.shortCode, Number(p.pieceNumber), project.rules)
+        : "-";
+    doc.text(`Nº peça: ${labelNumber}`, qrX + qrSize + 3, qrY + 11);
 
     col += 1;
     if (col > 2) {
