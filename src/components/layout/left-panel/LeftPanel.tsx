@@ -10,6 +10,7 @@ import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
 import PainelMoveisUnificado from "./PainelMoveisUnificado";
 import PainelModelosDaCaixa from "./PainelModelosDaCaixa";
 import { useUiStore } from "../../../stores/uiStore";
+import { useWallStore } from "../../../stores/wallStore";
 import { useToast } from "../../../context/ToastContext";
 import { listMaterials, getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
 
@@ -24,6 +25,8 @@ const DEFAULT_ROOM_HEIGHT_M = 2.7;
 
 function PainelSala() {
   const { viewerApi } = usePimoViewerContext();
+  const mainWallIndex = useWallStore((state) => state.mainWallIndex);
+  const setMainWallIndex = useWallStore((state) => state.setMainWallIndex);
   const [widthM, setWidthM] = useState(DEFAULT_ROOM_WIDTH_M);
   const [depthM, setDepthM] = useState(DEFAULT_ROOM_DEPTH_M);
   const [heightM, setHeightM] = useState(DEFAULT_ROOM_HEIGHT_M);
@@ -153,6 +156,30 @@ function PainelSala() {
             >
               Adicionar Parede
             </button>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                marginTop: 2,
+              }}
+            >
+              <label style={{ fontSize: 12, color: "var(--text-main)" }}>Parede principal</label>
+              <select
+                className="input input-sm"
+                value={mainWallIndex}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  if (!Number.isFinite(next)) return;
+                  setMainWallIndex(Math.max(0, Math.min(3, next)) as 0 | 1 | 2 | 3);
+                }}
+              >
+                <option value={0}>Frontal</option>
+                <option value={1}>Direita</option>
+                <option value={2}>Traseira</option>
+                <option value={3}>Esquerda</option>
+              </select>
+            </div>
             <button
               type="button"
               onClick={() => {
