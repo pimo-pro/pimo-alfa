@@ -75,7 +75,7 @@ export default function RightToolsBar() {
       Object.values(project.extractedPartsByBoxId?.[box.id] ?? {}).flat()
     );
     return [...parametric, ...extracted];
-  }, [boxes, project.extractedPartsByBoxId, project.rules]);
+  }, [boxes, project.extractedPartsByBoxId, project.materialId, project.projectName, project.rules]);
   const ferragensFromBoxesList = useMemo(
     () => ferragensFromBoxes(boxes, project.rules),
     [boxes, project.rules]

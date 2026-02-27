@@ -221,6 +221,7 @@ export default function EtiquetaDesignerPage() {
   }, [
     isDragging,
     isResizing,
+    historyIndex,
     selectedId,
     dragStart,
     resizeStart,

@@ -169,7 +169,7 @@ export const useCalculadoraSync = (
     });
 
     stateRef.current = nextState;
-  }, [materialName, projectMaterialId]);
+  }, [materialName]);
 
   useEffect(() => {
     // Só sincronizar quando o viewer estiver explicitamente pronto

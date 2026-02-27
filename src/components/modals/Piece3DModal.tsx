@@ -138,7 +138,7 @@ export default function Piece3DModal({
       });
       loaded?.textures?.forEach((t) => t.dispose());
     };
-  }, [box, open]);
+  }, [box, materialTipo, open]);
 
   if (!box || !open) return null;
 

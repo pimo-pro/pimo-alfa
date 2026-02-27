@@ -3,7 +3,7 @@
  * Mostra última versão, histórico e botão para publicar.
  */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { generateVersionLabel } from "../../core/deploy/versioning";
 import { getDeploymentHistory, logDeployment } from "../../core/deploy/deployLog";
 import Panel from "../ui/Panel";
@@ -12,7 +12,7 @@ export default function DeployAdminPage() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [lastAction, setLastAction] = useState<string | null>(null);
 
-  const history = useMemo(() => getDeploymentHistory(), [lastAction]);
+  const history = getDeploymentHistory();
   const lastDeploy = history[0];
 
   const handlePublish = async () => {
