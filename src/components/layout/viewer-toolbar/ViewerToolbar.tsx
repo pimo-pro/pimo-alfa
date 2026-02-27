@@ -103,6 +103,23 @@ export default function ViewerToolbar() {
           ⚡
         </span>
       </button>
+      <button
+        type="button"
+        className="button button-primary"
+        onClick={() => actions.gerarDesign()}
+        disabled={project.estaCarregando}
+        style={{
+          marginLeft: "auto",
+          background: project.estaCarregando
+            ? "rgba(59, 130, 246, 0.5)"
+            : "var(--blue-light)",
+          cursor: project.estaCarregando ? "not-allowed" : "pointer",
+          padding: "8px 12px",
+          height: "auto",
+        }}
+      >
+        {project.estaCarregando ? "A Calcular..." : "Gerar Design 3D"}
+      </button>
     </div>
   );
 }

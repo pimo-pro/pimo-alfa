@@ -298,6 +298,20 @@ export default function Tools3DToolbar({
           </div>
         </>
       )}
+
+      <button
+        type="button"
+        className="button button-primary"
+        style={{
+          marginLeft: "auto",
+          background: "linear-gradient(90deg, #22c55e, #38bdf8)",
+          padding: "8px 12px",
+          height: "auto",
+        }}
+        onClick={() => window.dispatchEvent(new Event("pimo:open-gerar-arquivo-modal"))}
+      >
+        Gerar Arquivo
+      </button>
     </div>
   );
 }

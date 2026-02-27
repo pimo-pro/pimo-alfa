@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { useToast } from "../../../context/ToastContext";
@@ -25,6 +25,12 @@ export default function RightPanel() {
   const hasBoxes = boxes.length > 0;
   const slug = (project.projectName || "projeto").replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
   const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
+
+  useEffect(() => {
+    const handleOpenGerarArquivo = () => setShowGerarArquivoModal(true);
+    window.addEventListener("pimo:open-gerar-arquivo-modal", handleOpenGerarArquivo);
+    return () => window.removeEventListener("pimo:open-gerar-arquivo-modal", handleOpenGerarArquivo);
+  }, []);
 
   const handleGerarArquivoConfirm = async (opcoes: { conteudo: GerarArquivoConteudo; download: boolean }) => {
   if (!opcoes.download || !hasBoxes) return;
@@ -182,36 +188,6 @@ const doc = buildCutLayoutPdf(result);
       <div className="design-panel-header">
         <div className="section-title">Ações</div>
         <p className="design-panel-subtitle">Exportação e operações do projeto atual.</p>
-      </div>
-
-      <div className="right-panel-action-rows" aria-label="Ações rápidas">
-        <div className="right-panel-action-row right-panel-action-row--top">
-          <button
-            onClick={() => actions.gerarDesign()}
-            disabled={project.estaCarregando}
-            className="button button-primary"
-            style={{
-              background: project.estaCarregando
-                ? "rgba(59, 130, 246, 0.5)"
-                : "var(--blue-light)",
-              cursor: project.estaCarregando ? "not-allowed" : "pointer",
-            }}
-          >
-            {project.estaCarregando ? "A Calcular..." : "Gerar Design 3D"}
-          </button>
-        </div>
-
-        <div className="right-panel-action-row right-panel-action-row--bottom">
-          <button
-            onClick={() => setShowGerarArquivoModal(true)}
-            className="button button-primary"
-            style={{
-              background: "linear-gradient(90deg, #22c55e, #38bdf8)",
-            }}
-          >
-            Gerar Arquivo
-          </button>
-        </div>
       </div>
 
       <div className="stack-tight">
