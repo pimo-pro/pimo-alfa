@@ -169,6 +169,8 @@ export class Viewer {
   private reflectionsEnabled = false;
   private reflectionFrameCounter = 0;
   private photoModeEnabled = false;
+  private explodedViewEnabled = false;
+  private explodedViewIntensity = 0.35;
   private readonly baseToneMappingExposure: number;
 
   private selectedWallIndex: number | null = null;
@@ -1102,6 +1104,25 @@ export class Viewer {
     return this.photoModeEnabled;
   }
 
+  setExplodedViewEnabled(enabled: boolean): void {
+    this.explodedViewEnabled = Boolean(enabled);
+    this.applyExplodedViewForAllBoxes();
+  }
+
+  getExplodedViewEnabled(): boolean {
+    return this.explodedViewEnabled;
+  }
+
+  setExplodedViewIntensity(value: number): void {
+    const clamped = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+    this.explodedViewIntensity = clamped;
+    this.applyExplodedViewForAllBoxes();
+  }
+
+  getExplodedViewIntensity(): number {
+    return this.explodedViewIntensity;
+  }
+
   capturePhotoDataUrl(format: "png" | "jpg" = "png", quality = 0.92): string | null {
     const renderer = this.rendererManager.renderer;
     renderer.render(this.sceneManager.scene, this.cameraManager.camera);
@@ -1177,6 +1198,57 @@ export class Viewer {
 
   private applyPanelVisibilityForAllBoxes(): void {
     this.boxes.forEach((entry) => this.applyPanelVisibilityForObject(entry.mesh));
+  }
+
+  private isExplodableMesh(node: THREE.Mesh): boolean {
+    if (node.userData?.isPanelEdgeOverlay === true) return false;
+    if (node.userData?.isDrillMarker === true) return false;
+    if (node.userData?.panelType != null) return true;
+    if (node.userData?.doorLayerId != null) return true;
+    if (node.userData?.drawerPart != null) return true;
+    return node.name.startsWith("shelf-") || node.name.startsWith("door-leaf-") || node.name.startsWith("drawer-");
+  }
+
+  private getExplodedDirection(node: THREE.Mesh): THREE.Vector3 {
+    const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
+    if (panelType === "left") return new THREE.Vector3(-1, 0, 0);
+    if (panelType === "right") return new THREE.Vector3(1, 0, 0);
+    if (panelType === "top") return new THREE.Vector3(0, 1, 0);
+    if (panelType === "bottom") return new THREE.Vector3(0, -1, 0);
+    if (panelType === "back") return new THREE.Vector3(0, 0, -1);
+    const base = node.userData?.explodedBasePosition as THREE.Vector3 | undefined;
+    if (base instanceof THREE.Vector3 && base.lengthSq() > 1e-8) {
+      return base.clone().normalize();
+    }
+    const localPos = node.position.clone();
+    if (localPos.lengthSq() > 1e-8) {
+      return localPos.normalize();
+    }
+    return new THREE.Vector3(0, 0, -1);
+  }
+
+  private applyExplodedViewForObject(root: THREE.Object3D): void {
+    const offsetDistance = this.explodedViewIntensity * 0.2;
+    root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      if (!this.isExplodableMesh(node)) return;
+
+      const storedBase = node.userData?.explodedBasePosition as THREE.Vector3 | undefined;
+      const basePosition = storedBase instanceof THREE.Vector3 ? storedBase : node.position.clone();
+      node.userData.explodedBasePosition = basePosition.clone();
+
+      if (!this.explodedViewEnabled || offsetDistance <= 0) {
+        node.position.copy(basePosition);
+        return;
+      }
+
+      const direction = this.getExplodedDirection(node);
+      node.position.copy(basePosition).addScaledVector(direction, offsetDistance);
+    });
+  }
+
+  private applyExplodedViewForAllBoxes(): void {
+    this.boxes.forEach((entry) => this.applyExplodedViewForObject(entry.mesh));
   }
 
   setPanelEdgesVisible(visible: boolean): void {
@@ -1307,6 +1379,7 @@ export class Viewer {
     this.sceneManager.add(box);
     this.applyPanelIdsToBox(box, id, opts.panelIds);
     this.applyPanelVisibilityForObject(box);
+    this.applyExplodedViewForObject(box);
     this.applyBackgroundMode();
     this.applyMaterialQualityProfile();
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
@@ -1452,6 +1525,7 @@ export class Viewer {
     }
     this.applyRotationIfNeeded(entry.mesh, opts.rotationY);
     this.applyPanelIdsToBox(entry.mesh, id, opts.panelIds);
+    this.applyExplodedViewForObject(entry.mesh);
     if (opts.costaRotationY !== undefined) {
       (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
         Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;

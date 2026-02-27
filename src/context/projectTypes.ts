@@ -32,6 +32,8 @@ export type UltraPerformanceModeOptions = {
 export type ViewerSettings = {
   showPanelEdges: boolean;
   hiddenPanels: string[];
+  explodedViewEnabled: boolean;
+  explodedViewIntensity: number;
   hideAllPanels: boolean;
   showCeiling: boolean;
   wallEditMode: boolean;

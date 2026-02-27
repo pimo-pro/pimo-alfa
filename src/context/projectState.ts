@@ -59,6 +59,8 @@ const defaultTipoFundo: TipoFundo = "recuado";
 const defaultViewerSettings: ViewerSettings = {
   showPanelEdges: true,
   hiddenPanels: [],
+  explodedViewEnabled: false,
+  explodedViewIntensity: 0.35,
   hideAllPanels: false,
   showCeiling: true,
   wallEditMode: false,

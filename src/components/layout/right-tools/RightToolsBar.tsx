@@ -440,6 +440,30 @@ export default function RightToolsBar() {
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
             <input
               type="checkbox"
+              checked={project.viewerSettings.explodedViewEnabled}
+              onChange={(e) => actions.setViewerSettings({ explodedViewEnabled: e.target.checked })}
+            />
+            Exploded View
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, marginBottom: 8 }}>
+            Intensidade Exploded ({Math.round(project.viewerSettings.explodedViewIntensity * 100)}%)
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={project.viewerSettings.explodedViewIntensity}
+              disabled={!project.viewerSettings.explodedViewEnabled}
+              onChange={(e) =>
+                actions.setViewerSettings({
+                  explodedViewIntensity: Math.max(0, Math.min(1, Number.parseFloat(e.target.value) || 0)),
+                })
+              }
+            />
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
+            <input
+              type="checkbox"
               checked={project.viewerSettings.ultraPerformanceModeOptions.enabled}
               onChange={(e) =>
                 actions.setViewerSettings({

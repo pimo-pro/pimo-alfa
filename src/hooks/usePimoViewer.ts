@@ -119,6 +119,10 @@ type PimoViewerAPI = {
   setPhotoModeEnabled?: (_enabled: boolean) => void;
   getPhotoModeEnabled?: () => boolean;
   capturePhotoDataUrl?: (_format?: "png" | "jpg", _quality?: number) => string | null;
+  setExplodedViewEnabled?: (_enabled: boolean) => void;
+  getExplodedViewEnabled?: () => boolean;
+  setExplodedViewIntensity?: (_value: number) => void;
+  getExplodedViewIntensity?: () => number;
 };
 
 export const usePimoViewer = (
@@ -597,6 +601,24 @@ export const usePimoViewer = (
     return viewerRef.current?.capturePhotoDataUrl?.(format, quality) ?? null;
   }, []);
 
+  const setExplodedViewEnabled = useCallback((enabled: boolean) => {
+    viewerRef.current?.setExplodedViewEnabled?.(enabled);
+  }, []);
+
+  const getExplodedViewEnabled = useCallback(
+    () => viewerRef.current?.getExplodedViewEnabled?.() ?? false,
+    []
+  );
+
+  const setExplodedViewIntensity = useCallback((value: number) => {
+    viewerRef.current?.setExplodedViewIntensity?.(value);
+  }, []);
+
+  const getExplodedViewIntensity = useCallback(
+    () => viewerRef.current?.getExplodedViewIntensity?.() ?? 0.35,
+    []
+  );
+
   const updateRoomElementConfig = useCallback(
     (elementId: string, config: DoorWindowConfig) =>
       viewerRef.current?.updateRoomElementConfig?.(elementId, config) ?? false,
@@ -704,6 +726,10 @@ export const usePimoViewer = (
       setPhotoModeEnabled,
       getPhotoModeEnabled,
       capturePhotoDataUrl,
+      setExplodedViewEnabled,
+      getExplodedViewEnabled,
+      setExplodedViewIntensity,
+      getExplodedViewIntensity,
     }),
     [
       viewerReady,
@@ -791,6 +817,10 @@ export const usePimoViewer = (
       setPhotoModeEnabled,
       getPhotoModeEnabled,
       capturePhotoDataUrl,
+      setExplodedViewEnabled,
+      getExplodedViewEnabled,
+      setExplodedViewIntensity,
+      getExplodedViewIntensity,
     ]
   );
 };
