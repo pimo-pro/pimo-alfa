@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useProject } from "../../../context/useProject";
-import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { useToast } from "../../../context/ToastContext";
 import { useSettings } from "../../../context/SettingsContext";
 import {
@@ -19,7 +18,6 @@ import BoxLayersPanel from "./BoxLayersPanel";
 export default function RightPanel() {
   const { project, actions } = useProject();
   useSettings();
-  const { openModal } = useToolbarModal();
   const { showToast } = useToast();
   const boxes = project.boxes ?? [];
   const hasBoxes = boxes.length > 0;
@@ -191,15 +189,6 @@ const doc = buildCutLayoutPdf(result);
       </div>
 
       <div className="stack-tight">
-        <button
-          type="button"
-          className="button button-ghost"
-          style={{ width: "100%", marginBottom: 8 }}
-          onClick={() => openModal("image")}
-        >
-          Abrir Photo Mode
-        </button>
-
         {showGerarArquivoModal && (
           <GerarArquivoModal
             onClose={() => setShowGerarArquivoModal(false)}

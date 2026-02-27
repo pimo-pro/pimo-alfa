@@ -752,6 +752,80 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.viewer-toolbar-popover-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.viewer-toolbar-popover-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.5);
+}
+
+.photo-mode-popover-list {
+  width: 380px;
+  max-height: 72vh;
+  overflow-y: auto;
+  gap: 12px;
+}
+
+.photo-mode-option-button {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.photo-mode-option-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.photo-mode-option-state {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.photo-mode-mode-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-mode-mode-button {
+  min-width: 150px;
+  height: 42px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.photo-mode-action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-mode-action-button {
+  min-width: 120px;
+  height: 42px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .viewer-toolbar-action-container {
   margin-left: auto;
   display: flex;
@@ -759,11 +833,17 @@ body {
   flex-shrink: 0;
 }
 
-.viewer-toolbar .viewer-toolbar-primary-action {
+.viewer-toolbar .viewer-action-button,
+.tools-3d-toolbar .viewer-action-button {
   flex-shrink: 0;
   min-width: 180px;
   width: auto;
+  height: auto;
+  padding: 8px 12px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .viewer-toolbar button[aria-pressed="true"],

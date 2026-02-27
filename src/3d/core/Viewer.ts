@@ -3052,8 +3052,16 @@ export class Viewer {
     const preset: ViewerCameraPreset = options.preset ?? "current";
     const applyWatermark = options.watermark ?? false;
     const format: ViewerRenderFormat = options.format ?? "png";
-    const quality = format === "jpg" ? Math.max(0.1, Math.min(options.quality ?? 0.92, 1)) : 1;
-    const shadowFactor = THREE.MathUtils.clamp(options.shadowIntensity ?? 1, 0, 1);
+    const advancedRealism = Boolean(options.advancedRealism && options.mode !== "lines");
+    const qualityBase = Math.max(0.1, Math.min(options.quality ?? 0.92, 1));
+    const quality = format === "jpg"
+      ? (advancedRealism ? Math.max(qualityBase, 0.97) : qualityBase)
+      : 1;
+    const shadowBase = THREE.MathUtils.clamp(options.shadowIntensity ?? 1, 0, 1);
+    const shadowFactor = advancedRealism ? Math.max(shadowBase, 0.9) : shadowBase;
+    const supersampleScale = advancedRealism ? 1.5 : 1;
+    const renderWidth = Math.max(1, Math.round(width * supersampleScale));
+    const renderHeight = Math.max(1, Math.round(height * supersampleScale));
     const renderer = this.rendererManager.renderer;
     const scene = this.sceneManager.scene;
     const camera = this.cameraManager.camera;
@@ -3071,6 +3079,11 @@ export class Viewer {
       rim: this.lights.rimLight.intensity,
       castShadow: this.lights.keyLight.castShadow,
       shadowRadius: this.lights.keyLight.shadow.radius,
+    };
+    const originalRendererState = {
+      toneMappingExposure: renderer.toneMappingExposure,
+      shadowEnabled: renderer.shadowMap.enabled,
+      shadowType: renderer.shadowMap.type,
     };
 
     const applyPresetCamera = () => {
@@ -3109,12 +3122,24 @@ export class Viewer {
 
     const applyShadowIntensity = () => {
       const eased = 0.4 + shadowFactor * 0.6;
-      this.lights.keyLight.intensity = originalLightState.key * eased;
-      this.lights.fillLight.intensity = originalLightState.fill * (0.6 + shadowFactor * 0.4);
-      this.lights.ambient.intensity = originalLightState.ambient * (0.7 + shadowFactor * 0.3);
-      this.lights.rimLight.intensity = originalLightState.rim * (0.5 + shadowFactor * 0.5);
-      this.lights.keyLight.castShadow = shadowFactor > 0.15 ? originalLightState.castShadow : false;
-      this.lights.keyLight.shadow.radius = originalLightState.shadowRadius * (0.5 + shadowFactor * 0.5);
+      if (advancedRealism) {
+        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.2);
+        this.lights.fillLight.intensity = originalLightState.fill * (0.45 + shadowFactor * 0.25);
+        this.lights.ambient.intensity = originalLightState.ambient * (0.52 + shadowFactor * 0.16);
+        this.lights.rimLight.intensity = originalLightState.rim * (0.65 + shadowFactor * 0.35);
+        this.lights.keyLight.castShadow = true;
+        this.lights.keyLight.shadow.radius = Math.max(1.5, originalLightState.shadowRadius * 1.2);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMappingExposure = originalRendererState.toneMappingExposure * 1.06;
+      } else {
+        this.lights.keyLight.intensity = originalLightState.key * eased;
+        this.lights.fillLight.intensity = originalLightState.fill * (0.6 + shadowFactor * 0.4);
+        this.lights.ambient.intensity = originalLightState.ambient * (0.7 + shadowFactor * 0.3);
+        this.lights.rimLight.intensity = originalLightState.rim * (0.5 + shadowFactor * 0.5);
+        this.lights.keyLight.castShadow = shadowFactor > 0.15 ? originalLightState.castShadow : false;
+        this.lights.keyLight.shadow.radius = originalLightState.shadowRadius * (0.5 + shadowFactor * 0.5);
+      }
     };
 
     applyPresetCamera();
@@ -3127,7 +3152,7 @@ export class Viewer {
     const prevBackground = scene.background;
     const prevEnvironment = scene.environment;
 
-    const renderTarget = new THREE.WebGLRenderTarget(width, height, {
+    const renderTarget = new THREE.WebGLRenderTarget(renderWidth, renderHeight, {
       depthBuffer: true,
       stencilBuffer: false,
       type: THREE.UnsignedByteType,
@@ -3163,26 +3188,40 @@ export class Viewer {
 
       renderer.render(scene, camera);
 
-      const buffer = new Uint8Array(width * height * 4);
-      renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+      const buffer = new Uint8Array(renderWidth * renderHeight * 4);
+      renderer.readRenderTargetPixels(renderTarget, 0, 0, renderWidth, renderHeight, buffer);
 
       const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = renderWidth;
+      canvas.height = renderHeight;
       const context = canvas.getContext("2d");
       if (!context) {
         return null;
       }
-      const imageData = context.createImageData(width, height);
-      for (let y = 0; y < height; y++) {
-        const srcOffset = (height - y - 1) * width * 4;
-        const dstOffset = y * width * 4;
-        imageData.data.set(buffer.subarray(srcOffset, srcOffset + width * 4), dstOffset);
+      const imageData = context.createImageData(renderWidth, renderHeight);
+      for (let y = 0; y < renderHeight; y++) {
+        const srcOffset = (renderHeight - y - 1) * renderWidth * 4;
+        const dstOffset = y * renderWidth * 4;
+        imageData.data.set(buffer.subarray(srcOffset, srcOffset + renderWidth * 4), dstOffset);
       }
       context.putImageData(imageData, 0, 0);
 
+      let exportCanvas = canvas;
+      if (advancedRealism && (renderWidth !== width || renderHeight !== height)) {
+        const downscaled = document.createElement("canvas");
+        downscaled.width = width;
+        downscaled.height = height;
+        const downscaledContext = downscaled.getContext("2d");
+        if (downscaledContext) {
+          downscaledContext.imageSmoothingEnabled = true;
+          downscaledContext.imageSmoothingQuality = "high";
+          downscaledContext.drawImage(canvas, 0, 0, width, height);
+          exportCanvas = downscaled;
+        }
+      }
+
       if (applyWatermark) {
-        await applyImageWatermark(canvas, {
+        await applyImageWatermark(exportCanvas, {
           opacity: 0.15,
           position: "bottom-right",
           widthPercent: 0.12,
@@ -3191,8 +3230,8 @@ export class Viewer {
 
       const dataUrl =
         format === "jpg"
-          ? canvas.toDataURL("image/jpeg", quality)
-          : canvas.toDataURL("image/png", 1);
+          ? exportCanvas.toDataURL("image/jpeg", quality)
+          : exportCanvas.toDataURL("image/png", 1);
       return { dataUrl, width, height };
     } finally {
       camera.position.copy(originalCameraPosition);
@@ -3209,6 +3248,9 @@ export class Viewer {
       this.lights.rimLight.intensity = originalLightState.rim;
       this.lights.keyLight.castShadow = originalLightState.castShadow;
       this.lights.keyLight.shadow.radius = originalLightState.shadowRadius;
+      renderer.toneMappingExposure = originalRendererState.toneMappingExposure;
+      renderer.shadowMap.enabled = originalRendererState.shadowEnabled;
+      renderer.shadowMap.type = originalRendererState.shadowType;
       swappedMaterials.forEach(({ mesh, material }) => {
         mesh.material = material;
       });

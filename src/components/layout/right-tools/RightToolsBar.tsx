@@ -17,12 +17,6 @@ import type {
   UltraPerformanceInternalMode,
   ViewerBackgroundMode,
   ViewerMaterialQuality,
-  ViewerRenderBackground,
-  ViewerRenderMode,
-  ViewerRenderResult,
-  ViewerRenderSize,
-  ViewerCameraPreset,
-  ViewerRenderFormat,
 } from "../../../context/projectTypes";
 
 type SendMethod = "whatsapp" | "email" | "download";
@@ -34,6 +28,15 @@ type SendSelections = {
   cutlist: boolean;
   ferragens: boolean;
   precos: boolean;
+};
+
+const defaultSendSelections: SendSelections = {
+  image: true,
+  viewerSnapshot: true,
+  projectSnapshot: true,
+  cutlist: true,
+  ferragens: true,
+  precos: true,
 };
 
 const boxCardStyle: React.CSSProperties = {
@@ -78,7 +81,7 @@ const panelKeyByType = {
 
 export default function RightToolsBar() {
   const { actions, project } = useProject();
-  const { startLoading, stopLoading, showToast } = useToast();
+  const { showToast } = useToast();
   const { viewerApi } = usePimoViewerContext();
   const { modal, openModal, closeModal } = useToolbarModal();
   const workspaceBoxes = project.workspaceBoxes;
@@ -107,37 +110,18 @@ export default function RightToolsBar() {
   const totalFerragens =
     ferragensFromBoxesList.reduce((sum, a) => sum + a.quantidade, 0);
   const totalItens = totalPecas + totalFerragens;
-  const [savedProjects, setSavedProjects] = useState(actions.listSavedProjects());
+  const [savedProjects, setSavedProjects] = useState(() => actions.listSavedProjects());
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [renderSize, setRenderSize] = useState<ViewerRenderSize>("medium");
-  const [renderPreset, setRenderPreset] = useState<ViewerCameraPreset>("current");
-  const [renderBackground, setRenderBackground] =
-    useState<ViewerRenderBackground>("white");
-  const [renderMode, setRenderMode] = useState<ViewerRenderMode>("pbr");
-  const [renderWatermark, setRenderWatermark] = useState<boolean>(false);
-  const [renderShadowIntensity, setRenderShadowIntensity] = useState<number>(0.85);
-  const [renderFormat, setRenderFormat] = useState<ViewerRenderFormat>("png");
-  const [renderQuality, setRenderQuality] = useState<number>(0.92);
-  const [renderLoading, setRenderLoading] = useState(false);
-  const [renderResult, setRenderResult] = useState<ViewerRenderResult | null>(null);
   const [photoCaptureUrl, setPhotoCaptureUrl] = useState<string | null>(null);
   const [pieceSearch, setPieceSearch] = useState("");
   const [sendMethod, setSendMethod] = useState<SendMethod>("download");
-  const [sendSelections, setSendSelections] = useState<SendSelections>({
-    image: true,
-    viewerSnapshot: true,
-    projectSnapshot: true,
-    cutlist: true,
-    ferragens: true,
-    precos: true,
-  });
+  const [sendSelections, setSendSelections] = useState<SendSelections>(defaultSendSelections);
   const [integrationMessage, setIntegrationMessage] = useState("");
   const [showPiece3DModal, setShowPiece3DModal] = useState(false);
   const modalTitle = useMemo(() => {
     if (modal === "projects") return "Projetos salvos";
     if (modal === "2d") return "2D Viewer";
-    if (modal === "image") return "Photo Mode";
     if (modal === "send") return "Enviar";
     if (modal === "integration") return "Integração";
     if (modal === "validation") return "Validação do Projeto";
@@ -200,46 +184,18 @@ export default function RightToolsBar() {
   };
 
   useEffect(() => {
-    if (modal === "projects") {
-      setSavedProjects(actions.listSavedProjects());
-      setRenamingId(null);
-      setRenameValue("");
-    }
-  }, [modal, actions]);
-
-  useEffect(() => {
-    if (modal === "send") {
-      setSendMethod("download");
-      setSendSelections({
-        image: true,
-        viewerSnapshot: true,
-        projectSnapshot: true,
-        cutlist: true,
-        ferragens: true,
-        precos: true,
-      });
-      setIntegrationMessage("");
-    }
-  }, [modal]);
-
-  useEffect(() => {
-    if (modal === "image") {
-      setRenderResult(null);
-      setRenderLoading(false);
-      setRenderSize("medium");
-      setRenderPreset("current");
-      setRenderBackground("white");
-      setRenderMode("pbr");
-      setRenderWatermark(false);
-      setRenderShadowIntensity(1);
-      setRenderFormat("png");
-      setRenderQuality(0.92);
-    }
-  }, [modal]);
-
-  useEffect(() => {
     actions.runProjectValidation();
   }, [actions, project.workspaceBoxes, project.boxes]);
+
+  const refreshSavedProjects = () => {
+    setSavedProjects(actions.listSavedProjects());
+  };
+
+  const resetSendState = () => {
+    setSendMethod("download");
+    setSendSelections(defaultSendSelections);
+    setIntegrationMessage("");
+  };
 
   const toggleSendSelection = (key: keyof SendSelections) => {
     setSendSelections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -283,7 +239,7 @@ export default function RightToolsBar() {
     }
 
     if (sendSelections.image) {
-      payload.imagem = renderResult?.dataUrl ?? null;
+      payload.imagem = photoCaptureUrl ?? null;
     }
 
     // Single Source of Truth: cutlist, ferragens e precos derivados de project.boxes
@@ -363,7 +319,16 @@ export default function RightToolsBar() {
     openModal("integration");
   };
 
-  const handleCloseModal = () => closeModal();
+  const handleCloseModal = () => {
+    if (modal === "projects") {
+      setRenamingId(null);
+      setRenameValue("");
+    }
+    if (modal === "send" || modal === "integration") {
+      resetSendState();
+    }
+    closeModal();
+  };
 
   return (
     <>
@@ -439,14 +404,6 @@ export default function RightToolsBar() {
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
             <input
               type="checkbox"
-              checked={project.viewerSettings.photoModeEnabled}
-              onChange={(e) => actions.setViewerSettings({ photoModeEnabled: e.target.checked })}
-            />
-            Photo Mode ativo
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
-            <input
-              type="checkbox"
               checked={project.viewerSettings.explodedViewEnabled}
               onChange={(e) => actions.setViewerSettings({ explodedViewEnabled: e.target.checked })}
             />
@@ -502,51 +459,6 @@ export default function RightToolsBar() {
               <option value="aggressive">Aggressive</option>
             </select>
           </label>
-          {project.viewerSettings.photoModeEnabled && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  style={{ fontSize: 11, padding: "4px 8px" }}
-                  onClick={() => {
-                    const dataUrl = viewerApi?.capturePhotoDataUrl?.("png", 1);
-                    if (dataUrl) setPhotoCaptureUrl(dataUrl);
-                  }}
-                >
-                  Capturar PNG
-                </button>
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  style={{ fontSize: 11, padding: "4px 8px" }}
-                  onClick={() => {
-                    const dataUrl = viewerApi?.capturePhotoDataUrl?.("jpg", 0.92);
-                    if (dataUrl) setPhotoCaptureUrl(dataUrl);
-                  }}
-                >
-                  Capturar JPG
-                </button>
-              </div>
-              {photoCaptureUrl && (
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  style={{ fontSize: 11, padding: "4px 8px", alignSelf: "flex-start" }}
-                  onClick={() => {
-                    const link = document.createElement("a");
-                    link.href = photoCaptureUrl;
-                    link.download = photoCaptureUrl.startsWith("data:image/jpeg")
-                      ? "pimo-photo-mode.jpg"
-                      : "pimo-photo-mode.png";
-                    link.click();
-                  }}
-                >
-                  Baixar última captura
-                </button>
-              )}
-            </div>
-          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <strong style={{ fontSize: 12 }}>Peças (painéis)</strong>
             <button
@@ -802,7 +714,7 @@ export default function RightToolsBar() {
                   className="modal-action"
                   onClick={() => {
                     actions.createNewProject();
-                    setSavedProjects(actions.listSavedProjects());
+                    refreshSavedProjects();
                   }}
                 >
                   Criar novo projeto
@@ -827,7 +739,7 @@ export default function RightToolsBar() {
                                 className="modal-action"
                                 onClick={() => {
                                   actions.renameProject(project.id, renameValue);
-                                  setSavedProjects(actions.listSavedProjects());
+                                  refreshSavedProjects();
                                   setRenamingId(null);
                                   setRenameValue("");
                                 }}
@@ -865,7 +777,7 @@ export default function RightToolsBar() {
                             className="modal-action"
                             onClick={() => {
                               actions.loadProjectSnapshot(project.id);
-                              setSavedProjects(actions.listSavedProjects());
+                              refreshSavedProjects();
                               closeModal();
                             }}
                           >
@@ -887,7 +799,7 @@ export default function RightToolsBar() {
                             style={{ borderColor: "rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.18)" }}
                             onClick={() => {
                               actions.deleteProject(project.id);
-                              setSavedProjects(actions.listSavedProjects());
+                              refreshSavedProjects();
                             }}
                           >
                             Excluir
@@ -937,246 +849,6 @@ export default function RightToolsBar() {
                   Voltar ao 3D
                 </button>
               </div>
-            ) : modal === "image" ? (
-              <div className="modal-list">
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Tamanho da imagem</div>
-                    <div className="modal-list-meta">
-                      Defina a resolução final da captura
-                    </div>
-                  </div>
-                  <select
-                    className="select select-xs"
-                    value={renderSize}
-                    onChange={(event) =>
-                      setRenderSize(event.target.value as ViewerRenderSize)
-                    }
-                  >
-                    <option value="small">Pequeno (1280×720)</option>
-                    <option value="medium">Médio (1600×900)</option>
-                    <option value="large">Grande (1920×1080)</option>
-                    <option value="4k">4K (3840×2160)</option>
-                  </select>
-                </div>
-
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Ângulo</div>
-                    <div className="modal-list-meta">
-                      Utilize presets rápidos ou mantenha a câmera atual
-                    </div>
-                  </div>
-                  <select
-                    className="select select-xs"
-                    value={renderPreset}
-                    onChange={(event) =>
-                      setRenderPreset(event.target.value as ViewerCameraPreset)
-                    }
-                  >
-                    <option value="current">Usar câmera atual</option>
-                    <option value="front">Frontal</option>
-                    <option value="top">Topo</option>
-                    <option value="iso1">Isométrico 1</option>
-                    <option value="iso2">Isométrico 2</option>
-                  </select>
-                </div>
-
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Fundo</div>
-                    <div className="modal-list-meta">
-                      Utilize transparência para composições externas
-                    </div>
-                  </div>
-                  <select
-                    className="select select-xs"
-                    value={renderBackground}
-                    onChange={(event) =>
-                      setRenderBackground(event.target.value as ViewerRenderBackground)
-                    }
-                  >
-                    <option value="white">Branco</option>
-                    <option value="transparent">Transparente</option>
-                  </select>
-                </div>
-
-                <label
-                  className="modal-list-item"
-                  style={{ cursor: "pointer", alignItems: "center" }}
-                >
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Marca d’água</div>
-                    <div className="modal-list-meta">
-                      Adicionar selo “PIMO” no canto inferior direito
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={renderWatermark}
-                    onChange={() => setRenderWatermark((prev) => !prev)}
-                  />
-                </label>
-
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Sombras</div>
-                    <div className="modal-list-meta">
-                      Ajuste a intensidade das sombras antes do render
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={renderShadowIntensity}
-                      onChange={(event) =>
-                        setRenderShadowIntensity(parseFloat(event.target.value))
-                      }
-                      style={{ flex: 1 }}
-                    />
-                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                      {Math.round(renderShadowIntensity * 100)}%
-                    </span>
-                  </div>
-                </div>
-
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Modo de renderização</div>
-                    <div className="modal-list-meta">
-                      Escolha entre visual realista ou linhas técnicas
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {[
-                      ["pbr", "Realista (PBR)"],
-                      ["lines", "Linhas (outline)"],
-                    ].map(([mode, label]) => {
-                      const active = renderMode === mode;
-                      return (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setRenderMode(mode as ViewerRenderMode)}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: 6,
-                            border: active
-                              ? "1px solid rgba(56,189,248,0.8)"
-                              : "1px solid rgba(148,163,184,0.4)",
-                            background: active ? "rgba(56,189,248,0.16)" : "transparent",
-                            color: "var(--text-primary)",
-                            fontSize: 12,
-                            cursor: "pointer",
-                          }}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Formato</div>
-                    <div className="modal-list-meta">
-                      Escolha entre PNG (transparência) ou JPG (mais leve)
-                    </div>
-                  </div>
-                  <select
-                    className="select select-xs"
-                    value={renderFormat}
-                    onChange={(event) =>
-                      setRenderFormat(event.target.value as ViewerRenderFormat)
-                    }
-                  >
-                    <option value="png">PNG (sem perdas)</option>
-                    <option value="jpg">JPG (compressão)</option>
-                  </select>
-                </div>
-
-                {renderFormat === "jpg" && (
-                  <div className="modal-list-item">
-                    <div className="modal-list-info">
-                      <div className="modal-list-title">Qualidade do JPG</div>
-                      <div className="modal-list-meta">
-                        100% = melhor qualidade, arquivos maiores
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <input
-                        type="range"
-                        min={0.1}
-                        max={1}
-                        step={0.05}
-                        value={renderQuality}
-                        onChange={(event) =>
-                          setRenderQuality(parseFloat(event.target.value))
-                        }
-                        style={{ flex: 1 }}
-                      />
-                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        {Math.round(renderQuality * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  className="modal-action"
-                  disabled={renderLoading}
-                  onClick={async () => {
-                    const loadingId = startLoading("A gerar imagem do Viewer...");
-                    setRenderLoading(true);
-                    setRenderResult(null);
-                    try {
-                      const result = await null;
-                      if (result) {
-                        setRenderResult(result);
-                        showToast("Imagem gerada com sucesso.", "info", 1400);
-                      }
-                    } catch {
-                      showToast("Erro ao gerar imagem do Viewer.", "error");
-                    } finally {
-                      setRenderLoading(false);
-                      stopLoading(loadingId);
-                    }
-                  }}
-                >
-                  {renderLoading ? "Gerando..." : "Gerar imagem"}
-                </button>
-
-                {renderResult && (
-                  <div className="modal-placeholder">
-                    <img
-                      src={renderResult.dataUrl}
-                      alt="Pré-visualização do render"
-                      style={{ maxWidth: "100%", borderRadius: 8 }}
-                    />
-                    <div className="modal-list-meta" style={{ marginTop: 8 }}>
-                      {renderResult.width}×{renderResult.height}px
-                    </div>
-                    <button
-                      type="button"
-                      className="modal-action"
-                      onClick={() => {
-                        const link = document.createElement("a");
-                        link.href = renderResult.dataUrl;
-                        const extension = renderFormat === "jpg" ? "jpg" : "png";
-                        link.download = `pimo-render-${renderResult.width}x${renderResult.height}.${extension}`;
-                        link.click();
-                      }}
-                    >
-                      Baixar imagem
-                    </button>
-                  </div>
-                )}
-              </div>
             ) : modal === "send" ? (
               <div className="modal-list">
                 <div className="modal-list-item">
@@ -1215,20 +887,21 @@ export default function RightToolsBar() {
                     <div className="modal-list-info">
                       <div className="modal-list-title">Imagem renderizada</div>
                       <div className="modal-list-meta">
-                        {renderResult
-                          ? `Pronta (${renderResult.width}x${renderResult.height})`
-                          : "Nenhuma imagem disponível"}
+                        {photoCaptureUrl
+                          ? "Captura pronta para download"
+                          : "Capture uma imagem no Photo Mode da toolbar"}
                       </div>
                     </div>
-                    {renderResult ? (
+                    {photoCaptureUrl ? (
                       <button
                         type="button"
                         className="modal-action"
                         onClick={() => {
-                        const link = document.createElement("a");
-                          link.href = renderResult.dataUrl;
-                        const extension = renderFormat === "jpg" ? "jpg" : "png";
-                        link.download = `pimo-render-${renderResult.width}x${renderResult.height}.${extension}`;
+                          const link = document.createElement("a");
+                          link.href = photoCaptureUrl;
+                          link.download = photoCaptureUrl.startsWith("data:image/jpeg")
+                            ? "pimo-photo.jpg"
+                            : "pimo-photo.png";
                           link.click();
                         }}
                       >
@@ -1238,25 +911,17 @@ export default function RightToolsBar() {
                       <button
                         type="button"
                         className="modal-action"
-                        disabled={renderLoading}
-                        onClick={async () => {
-                          const loadingId = startLoading("A gerar imagem do Viewer...");
-                          setRenderLoading(true);
-                          try {
-                            const result = await null;
-                            if (result) {
-                              setRenderResult(result);
-                              showToast("Imagem gerada com sucesso.", "info", 1400);
-                            }
-                          } catch {
-                            showToast("Erro ao gerar imagem do Viewer.", "error");
-                          } finally {
-                            setRenderLoading(false);
-                            stopLoading(loadingId);
+                        onClick={() => {
+                          const dataUrl = viewerApi?.capturePhotoDataUrl?.("png", 1);
+                          if (dataUrl) {
+                            setPhotoCaptureUrl(dataUrl);
+                            showToast("Captura pronta para envio.", "info", 1400);
+                          } else {
+                            showToast("Não foi possível capturar a imagem do Viewer.", "warning");
                           }
                         }}
                       >
-                        {renderLoading ? "Gerando..." : "Gerar agora"}
+                        Capturar agora
                       </button>
                     )}
                   </div>
