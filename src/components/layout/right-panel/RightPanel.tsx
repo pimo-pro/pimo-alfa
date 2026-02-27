@@ -184,22 +184,37 @@ const doc = buildCutLayoutPdf(result);
         <p className="design-panel-subtitle">Exportação e operações do projeto atual.</p>
       </div>
 
-      <div className="stack-tight">
-        {/* Gerar Design 3D */}
-        <button
-          onClick={() => actions.gerarDesign()}
-          disabled={project.estaCarregando}
-          className="button button-primary"
-          style={{
-            background: project.estaCarregando
-              ? "rgba(59, 130, 246, 0.5)"
-              : "var(--blue-light)",
-            cursor: project.estaCarregando ? "not-allowed" : "pointer",
-          }}
-        >
-          {project.estaCarregando ? "A Calcular..." : "Gerar Design 3D"}
-        </button>
+      <div className="right-panel-action-rows" aria-label="Ações rápidas">
+        <div className="right-panel-action-row right-panel-action-row--top">
+          <button
+            onClick={() => actions.gerarDesign()}
+            disabled={project.estaCarregando}
+            className="button button-primary"
+            style={{
+              background: project.estaCarregando
+                ? "rgba(59, 130, 246, 0.5)"
+                : "var(--blue-light)",
+              cursor: project.estaCarregando ? "not-allowed" : "pointer",
+            }}
+          >
+            {project.estaCarregando ? "A Calcular..." : "Gerar Design 3D"}
+          </button>
+        </div>
 
+        <div className="right-panel-action-row right-panel-action-row--bottom">
+          <button
+            onClick={() => setShowGerarArquivoModal(true)}
+            className="button button-primary"
+            style={{
+              background: "linear-gradient(90deg, #22c55e, #38bdf8)",
+            }}
+          >
+            Gerar Arquivo
+          </button>
+        </div>
+      </div>
+
+      <div className="stack-tight">
         <button
           type="button"
           className="button button-ghost"
@@ -207,17 +222,6 @@ const doc = buildCutLayoutPdf(result);
           onClick={() => openModal("image")}
         >
           Abrir Photo Mode
-        </button>
-
-        <button
-          onClick={() => setShowGerarArquivoModal(true)}
-          className="button button-primary"
-          style={{
-            width: "100%",
-            background: "linear-gradient(90deg, #22c55e, #38bdf8)",
-          }}
-        >
-          Gerar Arquivo
         </button>
 
         {showGerarArquivoModal && (
