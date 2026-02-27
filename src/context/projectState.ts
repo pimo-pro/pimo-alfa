@@ -226,6 +226,7 @@ export const defaultState: ProjectState = {
   selectedModelInstanceId: null,
   resultados: null,
   ultimaAtualizacao: null,
+  lastAutosaveTime: null,
   design: null,
   cutList: null,
   cutListComPreco: null,

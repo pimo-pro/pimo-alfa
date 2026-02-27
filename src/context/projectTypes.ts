@@ -84,6 +84,8 @@ export interface ProjectState {
 
   resultados: ResultadosCalculo | null;
   ultimaAtualizacao: Date | null;
+  /** Último instante de auto-save (ISO string). */
+  lastAutosaveTime: string | null;
 
   design: Design | null;
   cutList: CutListItem[] | null;
@@ -442,6 +444,8 @@ export interface ProjectActions {
   undo: () => void;
   redo: () => void;
   saveProjectSnapshot: () => void;
+  /** Cria backup manual dedicado (independente do autosave regular). */
+  saveManualBackupSnapshot: () => void;
   loadProjectSnapshot: (_id: string) => void;
   /** Carrega projeto a partir de um template (limpa sala, caixas e substitui pelo layout do modelo). */
   loadProjectFromTemplate: (_templateId: string) => void;

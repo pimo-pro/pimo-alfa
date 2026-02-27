@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
@@ -39,7 +39,8 @@ import { validateProject } from "../core/validation/validateProject";
 
 const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
-const AUTO_SAVE_INTERVAL_MS = 3000;
+const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
+const AUTO_SAVE_BASE_DEBOUNCE_MS = 1200;
 const MAX_HISTORY = 40;
 
 const logProjectProvider = (event: string, payload?: Record<string, unknown>) => {
@@ -135,6 +136,13 @@ type AutosaveEntry = {
   savedAt: string;
 };
 
+type ManualBackupEntry = {
+  id: string;
+  name: string;
+  savedAt: string;
+  snapshot: ProjectSnapshot;
+};
+
 type StoredProject = {
   id: string;
   name: string;
@@ -152,6 +160,11 @@ const serializeState = (state: ProjectState): unknown => {
       return value;
     })
   );
+};
+
+const serializeStateForAutosave = (state: ProjectState): unknown => {
+  const { lastAutosaveTime: _lastAutosaveTime, ...rest } = state;
+  return serializeState(rest as ProjectState);
 };
 
 const reviveState = (snapshot: unknown): ProjectState | null => {
@@ -233,6 +246,8 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
     dimensoes: { ...defaultState.dimensoes, ...restored.dimensoes },
     extractedPartsByBoxId,
     selectedModelInstanceId: restored.selectedModelInstanceId ?? null,
+    lastAutosaveTime:
+      typeof restored.lastAutosaveTime === "string" ? restored.lastAutosaveTime : null,
     ruleViolations: Array.isArray(restored.ruleViolations) ? restored.ruleViolations : [],
     modelPositionsByBoxId:
       restored.modelPositionsByBoxId && typeof restored.modelPositionsByBoxId === "object"
@@ -349,6 +364,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const undoStackRef = useRef<ProjectState[]>([]);
   const redoStackRef = useRef<ProjectState[]>([]);
   const hasRestoredAutosaveRef = useRef(false);
+  const autosaveTimerRef = useRef<number | null>(null);
+  const pendingAutosaveRef = useRef(false);
+  const lastAutosaveFingerprintRef = useRef<string>("");
 
   // Restaurar último projeto (autosave) ao abrir a página (apenas uma vez)
   useEffect(() => {
@@ -380,7 +398,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         hasViewerSnapshot: Boolean(viewerSnapshot),
         hasRoomSnapshot: Boolean(roomSnapshot),
       });
-      setProject(applyResultados(restored));
+      setProject(applyResultados({ ...restored, lastAutosaveTime: parsed.savedAt ?? restored.lastAutosaveTime }));
     }
     if (hasRoomSnapshot) {
       if (roomSnapshot) {
@@ -392,24 +410,67 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (viewerSnapshot) viewerSync.restoreViewerSnapshot(viewerSnapshot);
   }, [viewerSync]);
 
-  // Auto-save a cada 2–5 segundos (localStorage); não altera o save manual
-  useEffect(() => {
-    const tick = () => {
-      const proj = projectRef.current;
-      if (proj.workspaceBoxes.length === 0) return;
-      const snapshot: ProjectSnapshot = {
-        projectState: serializeState(proj),
-        viewerSnapshot: viewerSync.saveViewerSnapshot(),
-        roomSnapshot: captureRoomSnapshot(),
-      };
-      safeSetItem(
-        AUTOSAVE_STORAGE_KEY,
-        JSON.stringify({ snapshot, savedAt: new Date().toISOString() } as AutosaveEntry)
-      );
+  const performAutosave = useCallback(() => {
+    const proj = projectRef.current;
+    if (proj.workspaceBoxes.length === 0) return;
+    if (proj.estaCarregando) {
+      pendingAutosaveRef.current = true;
+      return;
+    }
+    const snapshot: ProjectSnapshot = {
+      projectState: serializeStateForAutosave(proj),
+      viewerSnapshot: viewerSync.saveViewerSnapshot(),
+      roomSnapshot: captureRoomSnapshot(),
     };
-    const id = setInterval(tick, AUTO_SAVE_INTERVAL_MS);
-    return () => clearInterval(id);
+    const savedAt = new Date().toISOString();
+    safeSetItem(
+      AUTOSAVE_STORAGE_KEY,
+      JSON.stringify({ snapshot, savedAt } as AutosaveEntry)
+    );
+    pendingAutosaveRef.current = false;
+    setProject((prev) => (prev.lastAutosaveTime === savedAt ? prev : { ...prev, lastAutosaveTime: savedAt }));
   }, [viewerSync]);
+
+  const scheduleAutosave = useCallback((ms: number) => {
+    if (autosaveTimerRef.current != null) {
+      window.clearTimeout(autosaveTimerRef.current);
+    }
+    autosaveTimerRef.current = window.setTimeout(() => {
+      autosaveTimerRef.current = null;
+      performAutosave();
+    }, ms);
+  }, [performAutosave]);
+
+  useEffect(() => {
+    const proj = project;
+    if ((proj.workspaceBoxes?.length ?? 0) === 0) return;
+    const fingerprint = JSON.stringify(serializeStateForAutosave(proj));
+    if (fingerprint === lastAutosaveFingerprintRef.current) return;
+    lastAutosaveFingerprintRef.current = fingerprint;
+
+    const boxCount = proj.workspaceBoxes.length;
+    const debounceMs = proj.estaCarregando
+      ? AUTO_SAVE_BASE_DEBOUNCE_MS * 2
+      : boxCount > 12
+        ? AUTO_SAVE_BASE_DEBOUNCE_MS * 2
+        : AUTO_SAVE_BASE_DEBOUNCE_MS;
+    scheduleAutosave(debounceMs);
+  }, [project, scheduleAutosave]);
+
+  useEffect(() => {
+    if (project.estaCarregando) return;
+    if (pendingAutosaveRef.current) {
+      scheduleAutosave(450);
+    }
+  }, [project.estaCarregando, scheduleAutosave]);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current != null) {
+        window.clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, []);
 
   // Aviso antes de fechar/atualizar/navegar para fora
   useEffect(() => {
@@ -1528,6 +1589,24 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       };
       const existing = readStoredProjects();
       writeStoredProjects([entry, ...existing].slice(0, 50));
+    },
+    saveManualBackupSnapshot: () => {
+      const snapshot: ProjectSnapshot = {
+        projectState: serializeState(projectRef.current),
+        viewerSnapshot: viewerSync.saveViewerSnapshot(),
+        roomSnapshot: captureRoomSnapshot(),
+      };
+      const savedAt = new Date().toISOString();
+      const backup: ManualBackupEntry = {
+        id: `backup-${Date.now()}`,
+        name: projectRef.current.projectName?.trim() || "Projeto",
+        savedAt,
+        snapshot,
+      };
+      const existing = safeParseJson<ManualBackupEntry[]>(safeGetItem(MANUAL_BACKUPS_STORAGE_KEY));
+      const next = Array.isArray(existing) ? [backup, ...existing].slice(0, 100) : [backup];
+      safeSetItem(MANUAL_BACKUPS_STORAGE_KEY, JSON.stringify(next));
+      setProject((prev) => ({ ...prev, lastAutosaveTime: savedAt }));
     },
     loadProjectSnapshot: (id) => {
       const stored = readStoredProjects();

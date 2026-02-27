@@ -691,6 +691,20 @@ export default function RightToolsBar() {
               ))
             )}
           </div>
+          <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
+            Último autosave: {project.lastAutosaveTime ? new Date(project.lastAutosaveTime).toLocaleString() : "—"}
+          </div>
+          <button
+            type="button"
+            className="button button-ghost"
+            style={{ marginTop: 8, fontSize: 11, padding: "4px 8px" }}
+            onClick={() => {
+              actions.saveManualBackupSnapshot();
+              showToast("Backup manual criado.", "info", 1600);
+            }}
+          >
+            Criar Backup Manual
+          </button>
         </div>
 
         {/* Lista de Caixas - último bloco do painel direito */}
