@@ -233,10 +233,14 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     const settings = project.viewerSettings;
     viewerApi.setPanelEdgesVisible?.(settings.showPanelEdges);
     viewerApi.setAllPanelsHidden?.(settings.hideAllPanels);
-    const panels: Array<"left" | "right" | "top" | "bottom" | "back"> = ["left", "right", "top", "bottom", "back"];
-    panels.forEach((panel) => {
-      viewerApi.setPanelHidden?.(panel, settings.hiddenPanels.includes(panel));
-    });
+    if (viewerApi.setHiddenPanels) {
+      viewerApi.setHiddenPanels(settings.hiddenPanels);
+    } else {
+      const panels: Array<"left" | "right" | "top" | "bottom" | "back"> = ["left", "right", "top", "bottom", "back"];
+      panels.forEach((panel) => {
+        viewerApi.setPanelHidden?.(panel, settings.hiddenPanels.includes(panel));
+      });
+    }
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
     viewerApi.setMousePreset?.(settings.mousePreset);

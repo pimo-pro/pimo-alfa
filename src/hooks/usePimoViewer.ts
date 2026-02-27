@@ -103,6 +103,8 @@ type PimoViewerAPI = {
   showRoom?: () => void;
   setPanelEdgesVisible?: (_visible: boolean) => void;
   setPanelHidden?: (_panel: "left" | "right" | "top" | "bottom" | "back", _hidden: boolean) => void;
+  setHiddenPanels?: (_keys: string[]) => void;
+  getHiddenPanels?: () => string[];
   setAllPanelsHidden?: (_hidden: boolean) => void;
   setRoomCeilingVisible?: (_visible: boolean) => void;
   setWallEditMode?: (_enabled: boolean) => void;
@@ -525,6 +527,15 @@ export const usePimoViewer = (
     viewerRef.current?.setPanelHidden?.(panel, hidden);
   }, []);
 
+  const setHiddenPanels = useCallback((keys: string[]) => {
+    viewerRef.current?.setHiddenPanels?.(keys);
+  }, []);
+
+  const getHiddenPanels = useCallback(
+    () => viewerRef.current?.getHiddenPanels?.() ?? [],
+    []
+  );
+
   const setAllPanelsHidden = useCallback((hidden: boolean) => {
     viewerRef.current?.setAllPanelsHidden?.(hidden);
   }, []);
@@ -677,6 +688,8 @@ export const usePimoViewer = (
       showRoom,
       setPanelEdgesVisible,
       setPanelHidden,
+      setHiddenPanels,
+      getHiddenPanels,
       setAllPanelsHidden,
       setRoomCeilingVisible,
       setWallEditMode,
@@ -762,6 +775,8 @@ export const usePimoViewer = (
       showRoom,
       setPanelEdgesVisible,
       setPanelHidden,
+      setHiddenPanels,
+      getHiddenPanels,
       setAllPanelsHidden,
       setRoomCeilingVisible,
       setWallEditMode,

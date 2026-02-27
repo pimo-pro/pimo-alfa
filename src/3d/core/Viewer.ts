@@ -22,6 +22,7 @@ import type { MaterialSet } from "../materials/MaterialLibrary";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { updateBoxGeometry, updateBoxGroup, buildBoxLegacy } from "../objects/BoxBuilder";
 import type { BoxOptions } from "../objects/BoxBuilder";
+import type { BoxPanelIds } from "../../core/types";
 import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import type { EnvironmentOptions } from "./Environment";
@@ -158,7 +159,7 @@ export class Viewer {
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
   private onRoomElementTransform: ((_elementId: string, _config: DoorWindowConfig) => void) | null = null;
   private panelEdgesVisible = true;
-  private hiddenPanels = new Set<"left" | "right" | "top" | "bottom" | "back">();
+  private hiddenPanels = new Set<string>();
   private hideAllPanels = false;
   private roomCeilingVisible = true;
   private wallEditMode = false;
@@ -1135,12 +1136,40 @@ export class Viewer {
     overlay.visible = visible;
   }
 
+  private getPanelVisibilityKey(node: THREE.Object3D, panelType: "left" | "right" | "top" | "bottom" | "back"): string {
+    const panelId = node.userData?.panelId as string | undefined;
+    if (panelId && panelId.trim().length > 0) return panelId;
+    const boxId = this.getBoxIdByMesh(node);
+    if (boxId && boxId.trim().length > 0) return `${boxId}:${panelType}`;
+    return panelType;
+  }
+
+  private applyPanelIdsToBox(root: THREE.Object3D, boxId: string, panelIds?: Partial<BoxPanelIds> | null): void {
+    const panelIdByType: Partial<Record<"left" | "right" | "top" | "bottom" | "back", string | undefined>> = {
+      left: panelIds?.lateral_esquerda,
+      right: panelIds?.lateral_direita,
+      top: panelIds?.cima,
+      bottom: panelIds?.fundo,
+      back: panelIds?.costa,
+    };
+
+    root.traverse((node) => {
+      node.userData.boxId = boxId;
+      if (!(node instanceof THREE.Mesh)) return;
+      const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
+      if (!panelType) return;
+      const specificId = panelIdByType[panelType];
+      node.userData.panelId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
+    });
+  }
+
   private applyPanelVisibilityForObject(root: THREE.Object3D): void {
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
       if (!panelType) return;
-      const hidden = this.hideAllPanels || this.hiddenPanels.has(panelType);
+      const panelKey = this.getPanelVisibilityKey(node, panelType);
+      const hidden = this.hideAllPanels || this.hiddenPanels.has(panelType) || this.hiddenPanels.has(panelKey);
       node.visible = !hidden;
       this.ensurePanelEdges(node, this.panelEdgesVisible && !hidden);
     });
@@ -1159,6 +1188,15 @@ export class Viewer {
     if (hidden) this.hiddenPanels.add(panel);
     else this.hiddenPanels.delete(panel);
     this.applyPanelVisibilityForAllBoxes();
+  }
+
+  setHiddenPanels(keys: string[]): void {
+    this.hiddenPanels = new Set((keys ?? []).filter((item) => typeof item === "string" && item.trim().length > 0));
+    this.applyPanelVisibilityForAllBoxes();
+  }
+
+  getHiddenPanels(): string[] {
+    return Array.from(this.hiddenPanels);
   }
 
   setAllPanelsHidden(hidden: boolean): void {
@@ -1267,6 +1305,7 @@ export class Viewer {
       material,
     });
     this.sceneManager.add(box);
+    this.applyPanelIdsToBox(box, id, opts.panelIds);
     this.applyPanelVisibilityForObject(box);
     this.applyBackgroundMode();
     this.applyMaterialQualityProfile();
@@ -1412,6 +1451,7 @@ export class Viewer {
       entry.mesh.position.y = height / 2;
     }
     this.applyRotationIfNeeded(entry.mesh, opts.rotationY);
+    this.applyPanelIdsToBox(entry.mesh, id, opts.panelIds);
     if (opts.costaRotationY !== undefined) {
       (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
         Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;

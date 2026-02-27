@@ -59,6 +59,22 @@ const boxCardRowStyle: React.CSSProperties = {
   flexWrap: "wrap",
 };
 
+const panelLabels: Record<"left" | "right" | "top" | "bottom" | "back", string> = {
+  left: "Lateral Esq",
+  right: "Lateral Dir",
+  top: "Topo",
+  bottom: "Fundo",
+  back: "Costa",
+};
+
+const panelKeyByType = {
+  left: "lateral_esquerda",
+  right: "lateral_direita",
+  top: "cima",
+  bottom: "fundo",
+  back: "costa",
+} as const;
+
 export default function RightToolsBar() {
   const { actions, project } = useProject();
   const { viewerApi } = usePimoViewerContext();
@@ -104,6 +120,7 @@ export default function RightToolsBar() {
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderResult, setRenderResult] = useState<ViewerRenderResult | null>(null);
   const [photoCaptureUrl, setPhotoCaptureUrl] = useState<string | null>(null);
+  const [pieceSearch, setPieceSearch] = useState("");
   const [sendMethod, setSendMethod] = useState<SendMethod>("download");
   const [sendSelections, setSendSelections] = useState<SendSelections>({
     image: true,
@@ -131,20 +148,52 @@ export default function RightToolsBar() {
     const selectedBoxCutList = project.boxes.find((b) => b.id === project.selectedWorkspaceBoxId)?.cutList;
     return buildViewerDrillMarkersByPanel(selectedBoxCutList);
   }, [project.boxes, project.selectedWorkspaceBoxId]);
-  const panelLabels: Record<"left" | "right" | "top" | "bottom" | "back", string> = {
-    left: "Lateral Esq",
-    right: "Lateral Dir",
-    top: "Topo",
-    bottom: "Fundo",
-    back: "Costa",
-  };
-
   const toggleHiddenPanel = (panel: "left" | "right" | "top" | "bottom" | "back") => {
     const current = project.viewerSettings.hiddenPanels;
     const next = current.includes(panel)
       ? current.filter((item) => item !== panel)
       : [...current, panel];
     actions.setViewerSettings({ hiddenPanels: next });
+  };
+
+  const panelVisibilityEntries = useMemo(() => {
+    return workspaceBoxes.flatMap((box) => {
+      return (Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
+        const panelKey = panelKeyByType[panel];
+        const panelIdFromBox = box.panelIds?.[panelKey];
+        const pieceId =
+          typeof panelIdFromBox === "string" && panelIdFromBox.trim().length > 0
+            ? panelIdFromBox
+            : `${box.id}:${panel}`;
+        return {
+          id: pieceId,
+          panel,
+          boxId: box.id,
+          boxName: box.nome,
+          label: panelLabels[panel],
+          searchText: `${box.nome} ${panelLabels[panel]} ${box.id}`.toLowerCase(),
+        };
+      });
+    });
+  }, [workspaceBoxes]);
+
+  const filteredPanelVisibilityEntries = useMemo(() => {
+    const query = pieceSearch.trim().toLowerCase();
+    if (!query) return panelVisibilityEntries;
+    return panelVisibilityEntries.filter((entry) => entry.searchText.includes(query));
+  }, [panelVisibilityEntries, pieceSearch]);
+
+  const toggleHiddenPiece = (pieceId: string) => {
+    const current = project.viewerSettings.hiddenPanels;
+    const next = current.includes(pieceId)
+      ? current.filter((item) => item !== pieceId)
+      : [...current, pieceId];
+    actions.setViewerSettings({ hiddenPanels: next });
+  };
+
+  const isPieceHidden = (pieceId: string, panel: "left" | "right" | "top" | "bottom" | "back") => {
+    const hidden = project.viewerSettings.hiddenPanels;
+    return hidden.includes(pieceId) || hidden.includes(panel);
   };
 
   useEffect(() => {
@@ -467,7 +516,25 @@ export default function RightToolsBar() {
               )}
             </div>
           )}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <strong style={{ fontSize: 12 }}>Peças (painéis)</strong>
+            <button
+              type="button"
+              className="button button-ghost"
+              style={{ fontSize: 11, padding: "4px 8px" }}
+              onClick={() => actions.setViewerSettings({ hiddenPanels: [] })}
+            >
+              Mostrar tudo
+            </button>
+          </div>
+          <input
+            className="input input-sm"
+            placeholder="Buscar peça (caixa ou painel)"
+            value={pieceSearch}
+            onChange={(event) => setPieceSearch(event.target.value)}
+            style={{ marginBottom: 8 }}
+          />
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             {(Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
               const isHidden = project.viewerSettings.hiddenPanels.includes(panel);
               return (
@@ -478,10 +545,61 @@ export default function RightToolsBar() {
                   style={{ fontSize: 11, padding: "4px 8px", opacity: isHidden ? 0.65 : 1 }}
                   onClick={() => toggleHiddenPanel(panel)}
                 >
-                  {isHidden ? "Mostrar" : "Esconder"} {panelLabels[panel]}
+                  {isHidden ? "Mostrar" : "Esconder"} todas: {panelLabels[panel]}
                 </button>
               );
             })}
+          </div>
+          <div
+            style={{
+              maxHeight: 180,
+              overflowY: "auto",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              padding: 8,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            {filteredPanelVisibilityEntries.length === 0 ? (
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Nenhuma peça encontrada.</div>
+            ) : (
+              filteredPanelVisibilityEntries.map((entry) => {
+                const hiddenGlobally = project.viewerSettings.hiddenPanels.includes(entry.panel);
+                const hidden = isPieceHidden(entry.id, entry.panel);
+                return (
+                  <label
+                    key={`panel-piece-${entry.id}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      fontSize: 11,
+                      opacity: hidden ? 0.65 : 1,
+                    }}
+                  >
+                    <span style={{ color: "var(--text-muted)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {entry.boxName} · {entry.label}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={!hidden}
+                      disabled={hiddenGlobally}
+                      onChange={() => toggleHiddenPiece(entry.id)}
+                      title={
+                        hiddenGlobally
+                          ? "Tipo de painel está escondido globalmente"
+                          : hidden
+                            ? "Mostrar peça"
+                            : "Esconder peça"
+                      }
+                    />
+                  </label>
+                );
+              })
+            )}
           </div>
         </div>
 

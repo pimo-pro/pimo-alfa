@@ -31,7 +31,7 @@ export type UltraPerformanceModeOptions = {
 
 export type ViewerSettings = {
   showPanelEdges: boolean;
-  hiddenPanels: Array<"left" | "right" | "top" | "bottom" | "back">;
+  hiddenPanels: string[];
   hideAllPanels: boolean;
   showCeiling: boolean;
   wallEditMode: boolean;
