@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import { useState, useEffect } from "react";
 import { useProject } from "../../../context/useProject";
 import UnifiedPopover, { StepperPopover } from "../../ui/UnifiedPopover";

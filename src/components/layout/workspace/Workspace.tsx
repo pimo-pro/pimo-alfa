@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/immutability */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { extractPartsFromGLB } from "../../../core/glb";

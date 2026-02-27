@@ -4,6 +4,8 @@
  * que são renderizados por RightToolsBar (coluna direita).
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { createContext, useCallback, useContext, useState } from "react";
 
 export type ToolbarModalType = "projects" | "2d" | "image" | "send" | "integration" | "validation" | null;

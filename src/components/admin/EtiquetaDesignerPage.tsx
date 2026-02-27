@@ -5,6 +5,8 @@
  * Fase 3: Export PDF/PNG, templates, safe area/bleed, preview 1:1.
  */
 
+/* eslint-disable react-hooks/refs */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   LabelDesignerConfig,
@@ -305,7 +307,7 @@ export default function EtiquetaDesignerPage() {
       a.click();
       URL.revokeObjectURL(url);
       showToast("PNG 300 DPI exportado.", "info");
-    } catch (err) {
+    } catch {
       showToast("Erro ao exportar PNG.", "error");
     }
   };

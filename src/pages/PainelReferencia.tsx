@@ -172,6 +172,7 @@ export default function PainelReferencia() {
     () => computeStats(project.boxes.length),
     [project.boxes.length]
   );
+  const fallbackTimestampMs = 0;
 
   const formatDateTime = (date: Date) => {
     const pad = (value: number) => String(value).padStart(2, "0");
@@ -185,13 +186,13 @@ export default function PainelReferencia() {
       project.changelog
         .slice()
         .sort((a, b) => {
-          const ta = new Date(a.timestamp ?? Date.now()).getTime();
-          const tb = new Date(b.timestamp ?? Date.now()).getTime();
+          const ta = new Date(a.timestamp ?? fallbackTimestampMs).getTime();
+          const tb = new Date(b.timestamp ?? fallbackTimestampMs).getTime();
           return tb - ta;
         })
         .map((entry) => ({
           ...entry,
-          time: formatDateTime(new Date(entry.timestamp ?? Date.now())),
+          time: formatDateTime(new Date(entry.timestamp ?? fallbackTimestampMs)),
         })),
     [project.changelog]
   );

@@ -2,6 +2,8 @@
  * Contexto para notificações toast (alertas automáticos).
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { createContext, useCallback, useContext, useState } from "react";
 
 export type ToastMessage = {

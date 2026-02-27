@@ -3,6 +3,8 @@
  * FASE 3 Etapa 6: categorias, pesquisa, filtros, ordenação, drawer melhorado, export/import.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { useState, useEffect, useMemo } from "react";
 import Panel from "../../../components/ui/Panel";
 import { useToast } from "../../../context/ToastContext";

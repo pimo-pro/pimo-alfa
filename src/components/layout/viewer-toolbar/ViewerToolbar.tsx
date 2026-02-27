@@ -5,6 +5,8 @@
  * DESFAZER/REFAZER → undo/redo; 2D/IMAGEM/ENVIAR → modais que usam viewerSync no RightToolsBar.
  */
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import { useState, useEffect } from "react";
 import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";

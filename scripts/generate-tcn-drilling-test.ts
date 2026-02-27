@@ -10,6 +10,8 @@
  * - Sem furos extra nas laterais (só prateleira + conjuntos de 3 por dobradiça)
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

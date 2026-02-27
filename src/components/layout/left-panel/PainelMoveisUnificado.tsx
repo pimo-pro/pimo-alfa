@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";

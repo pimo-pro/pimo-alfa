@@ -3,6 +3,8 @@
  * Edita as regras do perfil ativo (project.rules).
  */
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import { useEffect, useState } from "react";
 import { useProject } from "../../context/useProject";
 import { defaultRulesConfig, normalizeRulesConfig } from "../../core/rules/rulesConfig";

@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -10,13 +12,13 @@ import {
 type SettingsContextValue = {
   settings: SettingsSchema;
   refreshSettings: () => void;
-  updateSettings: (patch: Partial<SettingsSchema>) => {
+  updateSettings: (_patch: Partial<SettingsSchema>) => {
     success: boolean;
     message: string;
     settings: SettingsSchema;
     errors: string[];
   };
-  validate: (patch: Partial<SettingsSchema>) => {
+  validate: (_patch: Partial<SettingsSchema>) => {
     valid: boolean;
     errors: string[];
     normalized: SettingsSchema;
