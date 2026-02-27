@@ -3,6 +3,11 @@ import { defaultLabelDesignerConfig } from "./labelDesignerDefaults";
 
 const LABEL_DESIGNER_STORAGE_KEY = "pimo_label_designer_config";
 
+function toFiniteNumber(value: unknown, fallback: number): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 export function loadLabelDesignerConfig(): LabelDesignerConfig {
   try {
     const raw = localStorage.getItem(LABEL_DESIGNER_STORAGE_KEY);
@@ -34,26 +39,26 @@ export function importLabelDesignerConfig(json: string): LabelDesignerConfig | n
 function normalizeConfig(c: Partial<LabelDesignerConfig>): LabelDesignerConfig {
   const def = defaultLabelDesignerConfig;
   return {
-    widthMm: Number(c.widthMm) || def.widthMm,
-    heightMm: Number(c.heightMm) || def.heightMm,
+    widthMm: toFiniteNumber(c.widthMm, def.widthMm),
+    heightMm: toFiniteNumber(c.heightMm, def.heightMm),
     orientation: c.orientation === "vertical" ? "vertical" : "horizontal",
-    marginTopMm: Number(c.marginTopMm) ?? def.marginTopMm,
-    marginRightMm: Number(c.marginRightMm) ?? def.marginRightMm,
-    marginBottomMm: Number(c.marginBottomMm) ?? def.marginBottomMm,
-    marginLeftMm: Number(c.marginLeftMm) ?? def.marginLeftMm,
+    marginTopMm: toFiniteNumber(c.marginTopMm, def.marginTopMm),
+    marginRightMm: toFiniteNumber(c.marginRightMm, def.marginRightMm),
+    marginBottomMm: toFiniteNumber(c.marginBottomMm, def.marginBottomMm),
+    marginLeftMm: toFiniteNumber(c.marginLeftMm, def.marginLeftMm),
     backgroundColor: typeof c.backgroundColor === "string" ? c.backgroundColor : def.backgroundColor,
     borderColor: typeof c.borderColor === "string" ? c.borderColor : def.borderColor,
-    borderWidthMm: Number(c.borderWidthMm) ?? def.borderWidthMm,
-    borderRadiusMm: Number(c.borderRadiusMm) ?? def.borderRadiusMm,
+    borderWidthMm: toFiniteNumber(c.borderWidthMm, def.borderWidthMm),
+    borderRadiusMm: toFiniteNumber(c.borderRadiusMm, def.borderRadiusMm),
     logoDataUrl: typeof c.logoDataUrl === "string" ? c.logoDataUrl : def.logoDataUrl,
     snapToGrid: c.snapToGrid ?? def.snapToGrid,
-    gridSizeMm: Number(c.gridSizeMm) || def.gridSizeMm || 5,
+    gridSizeMm: toFiniteNumber(c.gridSizeMm, def.gridSizeMm || 5),
     showGrid: c.showGrid ?? def.showGrid,
     showSmartGuides: c.showSmartGuides ?? def.showSmartGuides,
     showSafeArea: c.showSafeArea ?? def.showSafeArea,
-    safeAreaMm: Number(c.safeAreaMm) ?? def.safeAreaMm ?? 3,
+    safeAreaMm: toFiniteNumber(c.safeAreaMm, def.safeAreaMm ?? 3),
     showBleed: c.showBleed ?? def.showBleed,
-    bleedMm: Number(c.bleedMm) ?? def.bleedMm ?? 3,
+    bleedMm: toFiniteNumber(c.bleedMm, def.bleedMm ?? 3),
     elements: Array.isArray(c.elements)
       ? c.elements.map((e) => normalizeElement(e))
       : def.elements,
@@ -64,21 +69,21 @@ function normalizeElement(e: Partial<LabelDesignerConfig["elements"][0]>): Label
   const base = {
     id: typeof e?.id === "string" ? e.id : `el-${Math.random().toString(36).slice(2, 9)}`,
     type: (e?.type ?? "projeto") as LabelDesignerConfig["elements"][0]["type"],
-    x: Number(e?.x) ?? 0,
-    y: Number(e?.y) ?? 0,
-    width: Number(e?.width) ?? 50,
-    height: Number(e?.height) ?? 8,
-    rotation: Number(e?.rotation) ?? 0,
+    x: toFiniteNumber(e?.x, 0),
+    y: toFiniteNumber(e?.y, 0),
+    width: toFiniteNumber(e?.width, 50),
+    height: toFiniteNumber(e?.height, 8),
+    rotation: toFiniteNumber(e?.rotation, 0),
     visible: e?.visible !== false,
   };
   if (base.type === "qr") {
     const qe = e as { qrSizeMm?: number; qrErrorLevel?: string; qrMarginMm?: number; opacity?: number };
     return {
       ...base,
-      qrSizeMm: Number(qe?.qrSizeMm) || base.width,
+      qrSizeMm: toFiniteNumber(qe?.qrSizeMm, base.width),
       qrErrorLevel: qe?.qrErrorLevel === "L" || qe?.qrErrorLevel === "Q" || qe?.qrErrorLevel === "H" ? qe.qrErrorLevel : "M",
-      qrMarginMm: Number(qe?.qrMarginMm) ?? 0,
-      opacity: Math.max(0, Math.min(1, Number(qe?.opacity) ?? 1)),
+      qrMarginMm: toFiniteNumber(qe?.qrMarginMm, 0),
+      opacity: Math.max(0, Math.min(1, toFiniteNumber(qe?.opacity, 1))),
     } as LabelDesignerConfig["elements"][0];
   }
   if (base.type === "logo") {
@@ -89,7 +94,7 @@ function normalizeElement(e: Partial<LabelDesignerConfig["elements"][0]>): Label
       logoTintColor: typeof le?.logoTintColor === "string" ? le.logoTintColor : undefined,
       logoBlendMode: le?.logoBlendMode === "multiply" || le?.logoBlendMode === "overlay" ? le.logoBlendMode : "normal",
       logoMaskShape: le?.logoMaskShape === "circle" || le?.logoMaskShape === "square" || le?.logoMaskShape === "rounded" ? le.logoMaskShape : "none",
-      opacity: Math.max(0, Math.min(1, Number(le?.opacity) ?? 1)),
+      opacity: Math.max(0, Math.min(1, toFiniteNumber(le?.opacity, 1))),
     } as LabelDesignerConfig["elements"][0];
   }
   const te = e as {
@@ -108,17 +113,17 @@ function normalizeElement(e: Partial<LabelDesignerConfig["elements"][0]>): Label
   };
   return {
     ...base,
-    fontSize: Number(te?.fontSize) ?? 8,
+    fontSize: toFiniteNumber(te?.fontSize, 8),
     fontFamily: typeof te?.fontFamily === "string" ? te.fontFamily : "Helvetica",
     fontWeight: te?.fontWeight === "bold" ? "bold" : "normal",
     color: typeof te?.color === "string" ? te.color : "#111",
     alignment: (te?.alignment === "center" || te?.alignment === "right" ? te.alignment : "left") as "left" | "center" | "right",
-    opacity: Math.max(0, Math.min(1, Number(te?.opacity) ?? 1)),
-    letterSpacing: Number(te?.letterSpacing) ?? 0,
-    lineHeight: Number(te?.lineHeight) ?? 1.2,
+    opacity: Math.max(0, Math.min(1, toFiniteNumber(te?.opacity, 1))),
+    letterSpacing: toFiniteNumber(te?.letterSpacing, 0),
+    lineHeight: toFiniteNumber(te?.lineHeight, 1.2),
     backgroundColor: typeof te?.backgroundColor === "string" ? te.backgroundColor : undefined,
     borderColor: typeof te?.borderColor === "string" ? te.borderColor : undefined,
-    borderWidthMm: Number(te?.borderWidthMm) ?? 0,
-    borderRadiusMm: Number(te?.borderRadiusMm) ?? 0,
+    borderWidthMm: toFiniteNumber(te?.borderWidthMm, 0),
+    borderRadiusMm: toFiniteNumber(te?.borderRadiusMm, 0),
   } as LabelDesignerConfig["elements"][0];
 }

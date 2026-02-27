@@ -1150,13 +1150,9 @@ function computeSolutionMetrics(
   };
 }
 
-function randomInt(maxExclusive: number): number {
-  return Math.floor(Math.random() * Math.max(1, maxExclusive));
-}
-
 type SeededRng = {
   next: () => number;
-  int: (maxExclusive: number) => number;
+  int: (_maxExclusive: number) => number;
 };
 
 type SheetAdvancedMetrics = {
@@ -1651,7 +1647,7 @@ function simulateTrialForGroup(
   score: number;
   advanced: GlobalScoreMetrics["advanced"];
 } {
-  let remaining = forceInputOrder ? pieces.map((p) => ({ ...p })) : reorderPieces(pieces, "production");
+  const remaining = forceInputOrder ? pieces.map((p) => ({ ...p })) : reorderPieces(pieces, "production");
   const sheets: SheetResult[] = [];
   const rejectedByLimit: Array<{ partName: string; boxId: string; largura_mm: number; altura_mm: number; reason: string }> = [];
   const gapFillPlacements: Array<{
@@ -1668,8 +1664,8 @@ function simulateTrialForGroup(
   let rescueAttempts = 0;
 
   while (remaining.length > 0) {
-    let placements: CutPlacement[] = [];
-    let placedRects: PlacedRect[] = [];
+    const placements: CutPlacement[] = [];
+    const placedRects: PlacedRect[] = [];
     let state = initStrategyState(trial.strategy, sheet);
     const sheetIndex = sheets.length;
 
@@ -1909,6 +1905,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const grainDirection: "length" | "width" | undefined =
       g === "length" || g === "width" ? g : g === "horizontal" ? "length" : g === "vertical" ? "width" : undefined;
     const pieces: CutPiece[] = [];
+    const itemWithMeta = item as typeof item & { pieceNumber?: number; shortCode?: string };
     const qty = Math.max(1, Number(item.quantidade) || 1);
     for (let i = 0; i < qty; i++) {
       pieces.push({
@@ -1928,8 +1925,8 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
         visualMaterial: item.visualMaterial,
         uvScaleOverride: item.uvScaleOverride,
         uvRotationOverride: item.uvRotationOverride,
-        pieceNumber: (item as any).pieceNumber,
-        shortCode: (item as any).shortCode,
+        pieceNumber: itemWithMeta.pieceNumber,
+        shortCode: itemWithMeta.shortCode,
       });
     }
     return pieces;
@@ -2166,10 +2163,12 @@ export function runCutLayout(
       }
     }
 
-    diagnostics && (diagnostics.flow.selectedStrategy = bestRun.strategy);
-    diagnostics && (diagnostics.flow.selectedBinHeuristic = bestRun.binHeuristic);
-    diagnostics && (diagnostics.flow.gapFillAttempts += bestRun.gapFillAttempts);
-    diagnostics && (diagnostics.flow.rescueAttempts += bestRun.rescueAttempts);
+    if (diagnostics) {
+      diagnostics.flow.selectedStrategy = bestRun.strategy;
+      diagnostics.flow.selectedBinHeuristic = bestRun.binHeuristic;
+      diagnostics.flow.gapFillAttempts += bestRun.gapFillAttempts;
+      diagnostics.flow.rescueAttempts += bestRun.rescueAttempts;
+    }
     diagnostics?.rejectedByLimit.push(...bestRun.rejectedByLimit);
     diagnostics?.gapFillPlacements.push(...bestRun.gapFillPlacements);
     finalSheets.push(...bestRun.sheets);

@@ -12,13 +12,13 @@ import { computeLayout } from "./service";
  * @placeholder Retorno estático.
  */
 export function useLayoutEngine(
-  _boxes: LayoutBoxInput[],
-  _options?: LayoutEngineOptions
+  boxes: LayoutBoxInput[],
+  options?: LayoutEngineOptions
 ): {
   result: LayoutResult;
   recompute: () => void;
 } {
-  const result = useMemo(() => computeLayout(_boxes, _options), [_boxes, _options]);
+  const result = useMemo(() => computeLayout(boxes, options), [boxes, options]);
   const recompute = useCallback(() => {
     // FASE 3: implementar (invalidate cache / recalcular)
   }, []);
@@ -32,5 +32,5 @@ export function useLayoutEngine(
 export function useLayoutCollisions(_boxes: LayoutBoxInput[]): {
   collisions: Array<{ a: string; b: string }>;
 } {
-  return useMemo(() => ({ collisions: [] }), [_boxes]);
+  return { collisions: [] };
 }

@@ -69,12 +69,12 @@ export function createDrawerAnimation(
   drawer: Drawer,
   targetIsOpen: boolean,
   durationMs: number = 1500,
-  easingFn: (t: number) => number = easeInOutCubic
+  easingFn: (_t: number) => number = easeInOutCubic
 ): {
   startProgress: number;
   targetProgress: number;
   duration: number;
-  easing: (t: number) => number;
+  easing: (_t: number) => number;
 } {
   const startProgress = drawer.motion.openProgress;
   const targetProgress = targetIsOpen ? 1 : 0;
