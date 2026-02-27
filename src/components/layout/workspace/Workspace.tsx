@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/immutability */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { extractPartsFromGLB } from "../../../core/glb";
@@ -39,7 +37,7 @@ export default function Workspace({
 }: WorkspaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { project, actions, viewerSync } = useProject();
-  const { showToast } = useToast();
+  const { showToast, startLoading, stopLoading } = useToast();
   const viewerOptionsStable = useMemo(
     () => ({
       background: viewerBackground,
@@ -347,68 +345,83 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
   }, [project.workspaceBoxes, project.boxes, showToast]);
 
   useEffect(() => {
+    if (viewerApi.viewerReady) {
+      showToast("Viewer pronto.", "info", 1400);
+    }
+  }, [viewerApi.viewerReady, showToast]);
+
+  useEffect(() => {
     viewerApi.setOnModelLoaded((boxId, modelInstanceId, object) => {
-      const scene = object as THREE.Object3D;
-      const parts = extractPartsFromGLB(scene);
-      const materialTipo = projectRef.current.material.tipo;
-      const espessura = projectRef.current.material.espessura;
-      const items = glbPartsToCutListItems(parts, boxId, modelInstanceId, materialTipo, espessura);
-      const withPreco = calcularPrecoCutList(items);
-      actions.setExtractedPartsForBox(boxId, modelInstanceId, withPreco);
+      const loadingId = startLoading("A processar modelo no Viewer...");
+      try {
+        const scene = object as THREE.Object3D;
+        const parts = extractPartsFromGLB(scene);
+        const materialTipo = projectRef.current.material.tipo;
+        const espessura = projectRef.current.material.espessura;
+        const items = glbPartsToCutListItems(parts, boxId, modelInstanceId, materialTipo, espessura);
+        const withPreco = calcularPrecoCutList(items);
+        actions.setExtractedPartsForBox(boxId, modelInstanceId, withPreco);
 
-      const box = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
-      const modelId = box?.models?.find((m) => m.id === modelInstanceId)?.modelId;
-      const isCatalogModel = modelId?.startsWith("catalog:");
-      scene.updateMatrixWorld(true);
-      const bbox = new THREE.Box3().setFromObject(scene);
-      const size = new THREE.Vector3();
-      bbox.getSize(size);
-      const modelSizeMm = {
-        largura: Math.max(1, mToMm(size.x)),
-        altura: Math.max(1, mToMm(size.y)),
-        profundidade: Math.max(1, mToMm(size.z)),
-      };
+        const box = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
+        const modelId = box?.models?.find((m) => m.id === modelInstanceId)?.modelId;
+        const isCatalogModel = modelId?.startsWith("catalog:");
+        scene.updateMatrixWorld(true);
+        const bbox = new THREE.Box3().setFromObject(scene);
+        const size = new THREE.Vector3();
+        bbox.getSize(size);
+        const modelSizeMm = {
+          largura: Math.max(1, mToMm(size.x)),
+          altura: Math.max(1, mToMm(size.y)),
+          profundidade: Math.max(1, mToMm(size.z)),
+        };
 
-      // Caixa CAD-only: dimensões vêm do GLB; atualizar estado para cut list, lista de caixas e reflow
-      const isCadOnlyBox =
-        box && (box.models?.length ?? 0) > 0 && box.prateleiras === 0 && box.gavetas === 0;
-      if (isCadOnlyBox && !isCatalogModel) {
-        actions.setWorkspaceBoxDimensoes(boxId, modelSizeMm);
-        if (modelId) {
-          const cadModel = getModelo(modelId);
-          if (cadModel?.nome) actions.setWorkspaceBoxNome(boxId, cadModel.nome);
+        // Caixa CAD-only: dimensões vêm do GLB; atualizar estado para cut list, lista de caixas e reflow
+        const isCadOnlyBox =
+          box && (box.models?.length ?? 0) > 0 && box.prateleiras === 0 && box.gavetas === 0;
+        if (isCadOnlyBox && !isCatalogModel) {
+          actions.setWorkspaceBoxDimensoes(boxId, modelSizeMm);
+          if (modelId) {
+            const cadModel = getModelo(modelId);
+            if (cadModel?.nome) actions.setWorkspaceBoxNome(boxId, cadModel.nome);
+          }
+          showToast("Modelo processado com sucesso.", "info", 1400);
+          return;
         }
-        return;
+
+        const boxDims = viewerApi.getBoxDimensions(boxId);
+        if (!boxDims || !modelId) return;
+
+        const list = viewerApi.listModels(boxId) ?? [];
+        const placedModels = list
+          .filter((m) => m.id !== modelInstanceId)
+          .map((m) => {
+            const pos = viewerApi.getModelPosition(boxId, m.id);
+            const sz = viewerApi.getModelBoundingBoxSize(boxId, m.id);
+            const otherModelId = box?.models?.find((x) => x.id === m.id)?.modelId ?? m.id;
+            if (!pos || !sz) return null;
+            return toPlacedModelMm(m.id, otherModelId, pos, sz, boxDims);
+          })
+          .filter(Boolean) as ReturnType<typeof toPlacedModelMm>[];
+
+        const result = computeAutoPositionLocal(
+          boxDims,
+          placedModels,
+          modelId,
+          modelSizeMm,
+          modelInstanceId
+        );
+        const positionLocal = positionMmToLocalM(result.positionMm, boxDims);
+        viewerApi.setModelPosition(boxId, modelInstanceId, positionLocal);
+        actions.setModelPositionInBox(boxId, modelInstanceId, positionLocal);
+        showToast("Modelo posicionado automaticamente.", "info", 1400);
+      } catch {
+        showToast("Falha ao processar o modelo carregado.", "error");
+      } finally {
+        stopLoading(loadingId);
       }
-
-      const boxDims = viewerApi.getBoxDimensions(boxId);
-      if (!boxDims || !modelId) return;
-
-      const list = viewerApi.listModels(boxId) ?? [];
-      const placedModels = list
-        .filter((m) => m.id !== modelInstanceId)
-        .map((m) => {
-          const pos = viewerApi.getModelPosition(boxId, m.id);
-          const sz = viewerApi.getModelBoundingBoxSize(boxId, m.id);
-          const otherModelId = box?.models?.find((x) => x.id === m.id)?.modelId ?? m.id;
-          if (!pos || !sz) return null;
-          return toPlacedModelMm(m.id, otherModelId, pos, sz, boxDims);
-        })
-        .filter(Boolean) as ReturnType<typeof toPlacedModelMm>[];
-
-      const result = computeAutoPositionLocal(
-        boxDims,
-        placedModels,
-        modelId,
-        modelSizeMm,
-        modelInstanceId
-      );
-      const positionLocal = positionMmToLocalM(result.positionMm, boxDims);
-      viewerApi.setModelPosition(boxId, modelInstanceId, positionLocal);
-      actions.setModelPositionInBox(boxId, modelInstanceId, positionLocal);
     });
     return () => viewerApi.setOnModelLoaded(null);
-  }, [actions, viewerApi]);
+  }, [actions, viewerApi, startLoading, stopLoading, showToast]);
 
 return (
     <main

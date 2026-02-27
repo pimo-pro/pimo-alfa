@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProject } from "../../../context/useProject";
+import { useToast } from "../../../context/ToastContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import {
@@ -77,6 +78,7 @@ const panelKeyByType = {
 
 export default function RightToolsBar() {
   const { actions, project } = useProject();
+  const { startLoading, stopLoading, showToast } = useToast();
   const { viewerApi } = usePimoViewerContext();
   const { modal, openModal, closeModal } = useToolbarModal();
   const workspaceBoxes = project.workspaceBoxes;
@@ -1115,15 +1117,20 @@ export default function RightToolsBar() {
                   className="modal-action"
                   disabled={renderLoading}
                   onClick={async () => {
+                    const loadingId = startLoading("A gerar imagem do Viewer...");
                     setRenderLoading(true);
                     setRenderResult(null);
                     try {
                       const result = await null;
                       if (result) {
                         setRenderResult(result);
+                        showToast("Imagem gerada com sucesso.", "info", 1400);
                       }
+                    } catch {
+                      showToast("Erro ao gerar imagem do Viewer.", "error");
                     } finally {
                       setRenderLoading(false);
+                      stopLoading(loadingId);
                     }
                   }}
                 >
@@ -1219,14 +1226,19 @@ export default function RightToolsBar() {
                         className="modal-action"
                         disabled={renderLoading}
                         onClick={async () => {
+                          const loadingId = startLoading("A gerar imagem do Viewer...");
                           setRenderLoading(true);
                           try {
                             const result = await null;
                             if (result) {
                               setRenderResult(result);
+                              showToast("Imagem gerada com sucesso.", "info", 1400);
                             }
+                          } catch {
+                            showToast("Erro ao gerar imagem do Viewer.", "error");
                           } finally {
                             setRenderLoading(false);
+                            stopLoading(loadingId);
                           }
                         }}
                       >
