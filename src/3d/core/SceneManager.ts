@@ -15,6 +15,7 @@ export class SceneManager {
   private reflectionsEnabled = false;
   private reflectionCubeTarget: THREE.WebGLCubeRenderTarget | null = null;
   private reflectionCubeCamera: THREE.CubeCamera | null = null;
+  private materialQuality: "standard" | "premium" | "lacquered" = "standard";
 
   constructor(options: SceneOptions = {}) {
     this.scene = new THREE.Scene();
@@ -60,6 +61,23 @@ export class SceneManager {
     if (typeof options.roughness === "number") material.roughness = options.roughness;
     if (typeof options.metalness === "number") material.metalness = options.metalness;
     material.needsUpdate = true;
+  }
+
+  setMaterialQuality(quality: "standard" | "premium" | "lacquered") {
+    this.materialQuality = quality;
+    if (quality === "premium") {
+      this.setGroundAppearance({ color: "#d8dee8", roughness: 0.78, metalness: 0.06 });
+      return;
+    }
+    if (quality === "lacquered") {
+      this.setGroundAppearance({ color: "#e5e7eb", roughness: 0.7, metalness: 0.1 });
+      return;
+    }
+    this.setGroundAppearance({ color: "#d4dae2", roughness: 0.92, metalness: 0 });
+  }
+
+  getMaterialQuality(): "standard" | "premium" | "lacquered" {
+    return this.materialQuality;
   }
 
   private ensureReflectionProbe(renderer: THREE.WebGLRenderer) {

@@ -28,6 +28,7 @@ import type { EnvironmentOptions } from "./Environment";
 import type {
   UltraPerformanceModeOptions,
   ViewerBackgroundMode,
+  ViewerMaterialQuality,
   ViewerMousePreset,
   ViewerRenderOptions,
   ViewerRenderResult,
@@ -163,6 +164,7 @@ export class Viewer {
   private wallEditMode = false;
   private mousePreset: ViewerMousePreset = "cad";
   private backgroundMode: ViewerBackgroundMode = "studio";
+  private materialQuality: ViewerMaterialQuality = "standard";
   private reflectionsEnabled = false;
   private reflectionFrameCounter = 0;
   private photoModeEnabled = false;
@@ -236,6 +238,16 @@ export class Viewer {
     string,
     { roughness: number; metalness: number; envMapIntensity: number; flatShading: boolean }
   >();
+  private materialQualityState = new Map<
+    string,
+    {
+      roughness: number;
+      metalness: number;
+      envMapIntensity: number;
+      map: THREE.Texture | null;
+    }
+  >();
+  private premiumTexture: THREE.CanvasTexture | null = null;
   private _diagnosticsLogged = false;
   /** Evita aplicar rotação duplicada no mesmo mesh. */
   private appliedRotationByMeshUuid = new Map<string, number>();
@@ -939,6 +951,83 @@ export class Viewer {
       node.material.metalness = 0.05;
       node.material.needsUpdate = true;
     });
+    this.sceneManager.setMaterialQuality(this.materialQuality);
+  }
+
+  private getPremiumTexture(): THREE.CanvasTexture {
+    if (this.premiumTexture) return this.premiumTexture;
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      this.premiumTexture = new THREE.CanvasTexture(canvas);
+      return this.premiumTexture;
+    }
+    const gradient = ctx.createLinearGradient(0, 0, 128, 128);
+    gradient.addColorStop(0, "#f8fafc");
+    gradient.addColorStop(1, "#dbe4ef");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 22; i += 1) {
+      const x = Math.random() * 128;
+      const y = Math.random() * 128;
+      const len = 18 + Math.random() * 30;
+      ctx.strokeStyle = `rgba(148,163,184,${0.05 + Math.random() * 0.08})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + len, y + Math.random() * 6 - 3);
+      ctx.stroke();
+    }
+    this.premiumTexture = new THREE.CanvasTexture(canvas);
+    this.premiumTexture.wrapS = THREE.RepeatWrapping;
+    this.premiumTexture.wrapT = THREE.RepeatWrapping;
+    this.premiumTexture.repeat.set(1.2, 1.2);
+    this.premiumTexture.needsUpdate = true;
+    return this.premiumTexture;
+  }
+
+  private applyMaterialQualityProfile(): void {
+    const premiumMap = this.materialQuality === "premium" ? this.getPremiumTexture() : null;
+    this.sceneManager.root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((material) => {
+        if (!(material instanceof THREE.MeshStandardMaterial)) return;
+        if (!this.materialQualityState.has(material.uuid)) {
+          this.materialQualityState.set(material.uuid, {
+            roughness: material.roughness,
+            metalness: material.metalness,
+            envMapIntensity: material.envMapIntensity,
+            map: material.map,
+          });
+        }
+        const original = this.materialQualityState.get(material.uuid);
+        if (!original) return;
+        if (this.materialQuality === "standard") {
+          material.roughness = original.roughness;
+          material.metalness = original.metalness;
+          material.envMapIntensity = original.envMapIntensity;
+          material.map = original.map;
+          material.needsUpdate = true;
+          return;
+        }
+        if (this.materialQuality === "lacquered") {
+          material.roughness = Math.min(original.roughness, 0.18);
+          material.metalness = Math.max(original.metalness, 0.1);
+          material.envMapIntensity = Math.max(original.envMapIntensity, 1.1);
+          material.map = null;
+          material.needsUpdate = true;
+          return;
+        }
+        material.roughness = Math.max(0.24, original.roughness * 0.8);
+        material.metalness = Math.max(0.04, original.metalness * 1.1);
+        material.envMapIntensity = Math.max(original.envMapIntensity, 0.78);
+        material.map = premiumMap;
+        material.needsUpdate = true;
+      });
+    });
   }
 
   setBackgroundMode(mode: ViewerBackgroundMode): void {
@@ -949,6 +1038,17 @@ export class Viewer {
 
   getBackgroundMode(): ViewerBackgroundMode {
     return this.backgroundMode;
+  }
+
+  setMaterialQuality(quality: ViewerMaterialQuality): void {
+    this.materialQuality =
+      quality === "premium" || quality === "lacquered" ? quality : "standard";
+    this.sceneManager.setMaterialQuality(this.materialQuality);
+    this.applyMaterialQualityProfile();
+  }
+
+  getMaterialQuality(): ViewerMaterialQuality {
+    return this.materialQuality;
   }
 
   private getReflectionProbeCenter(): { x: number; y: number; z: number } {
@@ -1169,6 +1269,7 @@ export class Viewer {
     this.sceneManager.add(box);
     this.applyPanelVisibilityForObject(box);
     this.applyBackgroundMode();
+    this.applyMaterialQualityProfile();
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
       // auto-rotate disabled — centralizado no snapping
       // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
@@ -1279,6 +1380,7 @@ export class Viewer {
     }
     if (opts.materialName && !entry.cadOnly) {
       this.updateBoxMaterial(id, opts.materialName);
+      this.applyMaterialQualityProfile();
     }
     if (opts.cabinetType !== undefined) {
       entry.cabinetType =
@@ -1634,6 +1736,7 @@ export class Viewer {
     this.roomBoxCeiling = ceiling;
     this.setRoomCeilingVisible(this.roomCeilingVisible);
     this.applyBackgroundMode();
+    this.applyMaterialQualityProfile();
   }
 
   setRoomBounds(bounds: {
@@ -3074,6 +3177,11 @@ export class Viewer {
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();
+    this.materialQualityState.clear();
+    if (this.premiumTexture) {
+      this.premiumTexture.dispose();
+      this.premiumTexture = null;
+    }
 
     this.sceneManager.dispose();
     this.rendererManager.dispose();

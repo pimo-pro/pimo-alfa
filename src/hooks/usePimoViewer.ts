@@ -5,6 +5,7 @@ import type { ViewerOptions } from "../3d/core/Viewer";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
   ViewerBackgroundMode,
+  ViewerMaterialQuality,
   UltraPerformanceModeOptions,
   DoorWindowConfig,
   RoomConfig,
@@ -109,6 +110,8 @@ type PimoViewerAPI = {
   getMousePreset?: () => ViewerMousePreset;
   setBackgroundMode?: (_mode: ViewerBackgroundMode) => void;
   getBackgroundMode?: () => ViewerBackgroundMode;
+  setMaterialQuality?: (_quality: ViewerMaterialQuality) => void;
+  getMaterialQuality?: () => ViewerMaterialQuality;
   setReflectionsEnabled?: (_enabled: boolean) => void;
   getReflectionsEnabled?: () => boolean;
   setPhotoModeEnabled?: (_enabled: boolean) => void;
@@ -552,6 +555,15 @@ export const usePimoViewer = (
     []
   );
 
+  const setMaterialQuality = useCallback((quality: ViewerMaterialQuality) => {
+    viewerRef.current?.setMaterialQuality?.(quality);
+  }, []);
+
+  const getMaterialQuality = useCallback(
+    () => viewerRef.current?.getMaterialQuality?.() ?? "standard",
+    []
+  );
+
   const setReflectionsEnabled = useCallback((enabled: boolean) => {
     viewerRef.current?.setReflectionsEnabled?.(enabled);
   }, []);
@@ -672,6 +684,8 @@ export const usePimoViewer = (
       getMousePreset,
       setBackgroundMode,
       getBackgroundMode,
+      setMaterialQuality,
+      getMaterialQuality,
       setReflectionsEnabled,
       getReflectionsEnabled,
       setPhotoModeEnabled,
@@ -755,6 +769,8 @@ export const usePimoViewer = (
       getMousePreset,
       setBackgroundMode,
       getBackgroundMode,
+      setMaterialQuality,
+      getMaterialQuality,
       setReflectionsEnabled,
       getReflectionsEnabled,
       setPhotoModeEnabled,

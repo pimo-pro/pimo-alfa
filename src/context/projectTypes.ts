@@ -21,6 +21,7 @@ import type { DoorLayerItem, DrawerLayerItem, LayerOpenDirection } from "../mode
 
 export type ViewerMousePreset = "cad" | "classic";
 export type ViewerBackgroundMode = "studio" | "white" | "dark" | "woodFloor";
+export type ViewerMaterialQuality = "standard" | "premium" | "lacquered";
 export type UltraPerformanceInternalMode = "balanced" | "flat2" | "aggressive";
 
 export type UltraPerformanceModeOptions = {
@@ -36,6 +37,7 @@ export type ViewerSettings = {
   wallEditMode: boolean;
   mousePreset: ViewerMousePreset;
   backgroundMode: ViewerBackgroundMode;
+  materialQuality: ViewerMaterialQuality;
   enableReflections: boolean;
   photoModeEnabled: boolean;
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;

@@ -64,6 +64,7 @@ const defaultViewerSettings: ViewerSettings = {
   wallEditMode: false,
   mousePreset: "cad",
   backgroundMode: "studio",
+  materialQuality: "standard",
   enableReflections: false,
   photoModeEnabled: false,
   ultraPerformanceModeOptions: {

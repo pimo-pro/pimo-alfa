@@ -4,6 +4,7 @@ import type {
   DoorWindowConfig,
   RoomConfig,
   UltraPerformanceModeOptions,
+  ViewerMaterialQuality,
   ViewerMousePreset,
   ViewerBackgroundMode,
   ViewerRenderOptions,
@@ -104,6 +105,8 @@ export type PimoViewerApi = {
   getMousePreset?: () => ViewerMousePreset;
   setBackgroundMode?: (_mode: ViewerBackgroundMode) => void;
   getBackgroundMode?: () => ViewerBackgroundMode;
+  setMaterialQuality?: (_quality: ViewerMaterialQuality) => void;
+  getMaterialQuality?: () => ViewerMaterialQuality;
   setReflectionsEnabled?: (_enabled: boolean) => void;
   getReflectionsEnabled?: () => boolean;
   setPhotoModeEnabled?: (_enabled: boolean) => void;

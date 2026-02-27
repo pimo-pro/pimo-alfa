@@ -15,6 +15,7 @@ import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drilli
 import type {
   UltraPerformanceInternalMode,
   ViewerBackgroundMode,
+  ViewerMaterialQuality,
   ViewerRenderBackground,
   ViewerRenderMode,
   ViewerRenderResult,
@@ -325,6 +326,18 @@ export default function RightToolsBar() {
               <option value="white">White</option>
               <option value="dark">Dark</option>
               <option value="woodFloor">Wood Floor</option>
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, marginBottom: 8 }}>
+            Qualidade de material
+            <select
+              value={project.viewerSettings.materialQuality}
+              onChange={(e) => actions.setViewerSettings({ materialQuality: e.target.value as ViewerMaterialQuality })}
+              className="input input-sm"
+            >
+              <option value="standard">Standard</option>
+              <option value="premium">Premium (PBR)</option>
+              <option value="lacquered">Lacado</option>
             </select>
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
