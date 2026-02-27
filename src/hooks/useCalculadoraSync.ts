@@ -3,6 +3,7 @@ import type { BoxModule, WorkspaceBox } from "../core/types";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import { mmToM } from "../utils/units";
 import { getViewerMaterialId } from "../core/materials/service";
+import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 
 type ViewerApi = {
   addBox: (_id: string, _options?: BoxOptions) => boolean;
@@ -119,13 +120,7 @@ export const useCalculadoraSync = (
         ? { cabinetType, pe_cm, feetEnabled }
         : { cabinetType: null, feetEnabled };
       const rotateOpts = autoRotateEnabled === false ? { autoRotateEnabled: false } : {};
-      const cutlistByTipo = new Map((box?.cutList ?? []).map((item) => [item.tipo, item]));
-      const drillMarkersByPanel = {
-        cima: cutlistByTipo.get("cima")?.furacoesTecnicas ?? [],
-        fundo: cutlistByTipo.get("fundo")?.furacoesTecnicas ?? [],
-        lateral_esquerda: cutlistByTipo.get("lateral_esquerda")?.furacoesTecnicas ?? [],
-        lateral_direita: cutlistByTipo.get("lateral_direita")?.furacoesTecnicas ?? [],
-      };
+      const drillMarkersByPanel = buildViewerDrillMarkersByPanel(box?.cutList);
       if (!stateRef.current.has(wsBox.id)) {
         api.addBox(wsBox.id, {
           width,

@@ -3,7 +3,7 @@ import { createWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibrary";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
-import type { TechnicalDrillHole } from "../../core/types";
+import type { TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -38,7 +38,7 @@ export type BoxOptions = {
   shelves?: number;
   doorLayerItems?: DoorLayerItem[];
   drawerLayerItems?: DrawerLayerItem[];
-  drillMarkersByPanel?: Record<string, TechnicalDrillHole[]>;
+  drillMarkersByPanel?: ViewerDrillMarkersByPanel;
   /** Se true, não cria geometria paramétrica; o grupo serve apenas para o(s) modelo(s) GLB (caixa = GLB). */
   cadOnly?: boolean;
   /** Rotação Y em radianos (manipulação visual). */

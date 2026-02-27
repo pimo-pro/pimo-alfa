@@ -1,4 +1,11 @@
-import type { DrillHole, DrillType, TechnicalDrillHole } from "../../core/types";
+import type {
+  CutListItem,
+  DrillHole,
+  DrillType,
+  OperationResult,
+  TechnicalDrillHole,
+  ViewerDrillMarkersByPanel,
+} from "../../core/types";
 import type { RulesConfig } from "../../core/rules/rulesConfig";
 import { MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM, getHingeYPositions, normalizeRulesConfig } from "../../core/rules/rulesConfig";
 import { getSettings } from "../../core/settings/settingsService";
@@ -17,6 +24,13 @@ export type PanelDrillingOutput = {
   holes: DrillHole[];
   hingePositionsMm?: number[];
   shelfHolePositions?: number[];
+};
+
+const EMPTY_VIEWER_DRILL_MARKERS: ViewerDrillMarkersByPanel = {
+  cima: [],
+  fundo: [],
+  lateral_esquerda: [],
+  lateral_direita: [],
 };
 
 const clampNumber = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
@@ -173,8 +187,16 @@ export function buildPanelDrilling(
   input: PanelDrillingInput,
   rules: RulesConfig
 ): PanelDrillingOutput {
+  const result = buildPanelDrillingResult(input, rules);
+  return result.success ? result.data ?? { furacoesTecnicas: [], holes: [] } : { furacoesTecnicas: [], holes: [] };
+}
+
+export function buildPanelDrillingResult(
+  input: PanelDrillingInput,
+  rules: RulesConfig
+): OperationResult<PanelDrillingOutput> {
   if (!Number.isFinite(input.larguraMm) || !Number.isFinite(input.alturaMm) || !Number.isFinite(input.espessuraMm)) {
-    return { furacoesTecnicas: [], holes: [] };
+    return { success: false, error: "Dimensões inválidas para cálculo de furação." };
   }
 
   const isLateral = input.tipo === "lateral_esquerda" || input.tipo === "lateral_direita";
@@ -204,14 +226,42 @@ export function buildPanelDrilling(
     );
   } catch (err) {
     console.warn(`[drillingAdapter] Error generating technical holes for ${input.tipo}:`, err);
+    return { success: false, error: `Erro ao gerar furação para painel ${input.tipo}.` };
   }
 
   const shelfHolePositions = getShelfHolePositions(furacoesTecnicas);
 
   return {
-    furacoesTecnicas,
-    holes: toNormalizedHoles(furacoesTecnicas),
-    hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
-    shelfHolePositions: shelfHolePositions.length > 0 ? shelfHolePositions : undefined,
+    success: true,
+    data: {
+      furacoesTecnicas,
+      holes: toNormalizedHoles(furacoesTecnicas),
+      hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
+      shelfHolePositions: shelfHolePositions.length > 0 ? shelfHolePositions : undefined,
+    },
+  };
+}
+
+export function buildViewerDrillMarkersByPanel(cutList: CutListItem[] | undefined): ViewerDrillMarkersByPanel {
+  const result = buildViewerDrillMarkersByPanelResult(cutList);
+  return result.success ? result.data ?? EMPTY_VIEWER_DRILL_MARKERS : EMPTY_VIEWER_DRILL_MARKERS;
+}
+
+export function buildViewerDrillMarkersByPanelResult(
+  cutList: CutListItem[] | undefined
+): OperationResult<ViewerDrillMarkersByPanel> {
+  if (!Array.isArray(cutList) || cutList.length === 0) {
+    return { success: true, data: EMPTY_VIEWER_DRILL_MARKERS };
+  }
+
+  const byType = new Map(cutList.map((item) => [item.tipo, item]));
+  return {
+    success: true,
+    data: {
+      cima: byType.get("cima")?.furacoesTecnicas ?? [],
+      fundo: byType.get("fundo")?.furacoesTecnicas ?? [],
+      lateral_esquerda: byType.get("lateral_esquerda")?.furacoesTecnicas ?? [],
+      lateral_direita: byType.get("lateral_direita")?.furacoesTecnicas ?? [],
+    },
   };
 }

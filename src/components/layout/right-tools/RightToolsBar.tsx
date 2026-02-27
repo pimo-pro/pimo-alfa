@@ -11,6 +11,7 @@ import {
   calcularPrecoTotalProjeto,
 } from "../../../core/pricing/pricing";
 import Piece3DModal from "../../modals/Piece3DModal";
+import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
 import type {
   ViewerRenderBackground,
   ViewerRenderMode,
@@ -118,6 +119,14 @@ export default function RightToolsBar() {
     if (modal === "integration") return "Integração";
     return "";
   }, [modal]);
+  const selectedWorkspaceBox = useMemo(
+    () => project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId) ?? null,
+    [project.selectedWorkspaceBoxId, project.workspaceBoxes]
+  );
+  const selectedViewerDrillMarkers = useMemo(() => {
+    const selectedBoxCutList = project.boxes.find((b) => b.id === project.selectedWorkspaceBoxId)?.cutList;
+    return buildViewerDrillMarkersByPanel(selectedBoxCutList);
+  }, [project.boxes, project.selectedWorkspaceBoxId]);
 
   useEffect(() => {
     if (modal === "projects") {
@@ -887,7 +896,8 @@ export default function RightToolsBar() {
 
       {showPiece3DModal && (
         <Piece3DModal
-          box={project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId) ?? null}
+          box={selectedWorkspaceBox}
+          drillingByPanel={selectedViewerDrillMarkers}
           materialTipo={project.material.tipo}
           open={showPiece3DModal}
           onClose={() => setShowPiece3DModal(false)}

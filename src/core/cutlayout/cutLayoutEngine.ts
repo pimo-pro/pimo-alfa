@@ -13,7 +13,7 @@ import type {
   SheetResult,
   CutLayoutResult,
 } from "./cutLayoutTypes";
-import type { LayoutVisualMaterial } from "../types";
+import type { LayoutVisualMaterial, OperationResult } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
 
 const DEFAULT_KERF_MM = 3;
@@ -2179,4 +2179,18 @@ export function runCutLayout(
   }
 
   return diagnostics ? { sheets: finalSheets, diagnostics } : { sheets: finalSheets };
+}
+
+export function runCutLayoutResult(
+  pieces: CutPiece[],
+  sheetDef: SheetDefinition,
+  options?: CutLayoutEngineOptions
+): OperationResult<CutLayoutResult> {
+  try {
+    const data = runCutLayout(pieces, sheetDef, options);
+    return { success: true, data };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha ao executar cut layout.";
+    return { success: false, error: message };
+  }
 }

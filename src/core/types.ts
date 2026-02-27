@@ -57,6 +57,7 @@ export interface PieceFaceMaterials {
 
 export type DrillType = "cavilha" | "parafuso" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira";
 export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
+export type DrillPanelKey = "cima" | "fundo" | "lateral_esquerda" | "lateral_direita";
 export interface TechnicalDrillHole {
   x: number;
   y: number;
@@ -65,6 +66,8 @@ export interface TechnicalDrillHole {
   tipo: DrillType;
   face: DrillFace;
 }
+
+export type ViewerDrillMarkersByPanel = Record<DrillPanelKey, TechnicalDrillHole[]>;
 
 export interface DrillHole {
   x: number;

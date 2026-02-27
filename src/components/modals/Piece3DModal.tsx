@@ -10,10 +10,11 @@ import { buildBoxLegacy } from "../../3d/objects/BoxBuilder";
 import { createWoodMaterial } from "../../3d/materials/WoodMaterial";
 import { getMaterialPreset, defaultMaterialSet, mergeMaterialSet } from "../../3d/materials/MaterialLibrary";
 import { mmToM } from "../../utils/units";
-import type { WorkspaceBox } from "../../core/types";
+import type { ViewerDrillMarkersByPanel, WorkspaceBox } from "../../core/types";
 
 type Piece3DModalProps = {
   box: WorkspaceBox | null;
+  drillingByPanel?: ViewerDrillMarkersByPanel;
   materialTipo?: string;
   /** Se false, não renderiza o modal (evita criar canvas antes de abrir). */
   open?: boolean;
@@ -34,6 +35,7 @@ function materialNameToPreset(name: string): string {
 
 export default function Piece3DModal({
   box,
+  drillingByPanel: _drillingByPanel,
   materialTipo = "MDF Branco",
   open = true,
   onClose,

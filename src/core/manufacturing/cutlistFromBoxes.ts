@@ -9,7 +9,7 @@ import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
-import { buildEffectiveDrillingRules, buildPanelDrilling } from "../../modules/drilling/drillingAdapter";
+import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 
 /**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
@@ -50,7 +50,7 @@ export function cutlistComPrecoFromBox(
       return;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
-    const drillingData = buildPanelDrilling(
+    const drillingResult = buildPanelDrillingResult(
       {
         tipo: p.tipo,
         larguraMm: p.largura_mm,
@@ -60,6 +60,9 @@ export function cutlistComPrecoFromBox(
       },
       effRules
     );
+    const drillingData = drillingResult.success
+      ? drillingResult.data ?? { furacoesTecnicas: [], holes: [] }
+      : { furacoesTecnicas: [], holes: [] };
 
     items.push({
       ...baseItem,
@@ -92,7 +95,7 @@ export function cutlistComPrecoFromBox(
       console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
       return;
     }
-    const drillingData = buildPanelDrilling(
+    const drillingResult = buildPanelDrillingResult(
       {
         tipo: "gaveta",
         larguraMm: p.largura_mm,
@@ -101,6 +104,9 @@ export function cutlistComPrecoFromBox(
       },
       effRules
     );
+    const drillingData = drillingResult.success
+      ? drillingResult.data ?? { furacoesTecnicas: [], holes: [] }
+      : { furacoesTecnicas: [], holes: [] };
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
