@@ -11,6 +11,7 @@ import type { RulesProfile, RulesProfilesConfig } from "../core/rules/rulesProfi
 import { ProjectContext } from "./projectContext";
 import type {
   ProjectActions,
+  RoomSnapshot,
   ProjectSnapshot,
   ProjectState,
   SavedProjectInfo,
@@ -81,6 +82,19 @@ const getSpawnFromSelectedWall = (
     posicaoX_mm: wallX_mm + normal.x * offsetMm,
     posicaoZ_mm: wallZ_mm + normal.z * offsetMm,
     rotacaoY: rotacaoByWall[wallIndex] ?? 0,
+  };
+};
+
+const captureRoomSnapshot = (): RoomSnapshot | null => {
+  const state = wallStore.getState();
+  if (!state.walls || state.walls.length === 0) return null;
+  return {
+    walls: state.walls.map((wall) => ({
+      ...wall,
+      openings: (wall.openings ?? []).map((opening) => ({ ...opening })),
+    })),
+    selectedWallId: state.selectedWallId,
+    mainWallIndex: Math.max(0, Math.min(3, state.mainWallIndex ?? 0)),
   };
 };
 
@@ -259,6 +273,7 @@ const readStoredProjects = (): StoredProject[] => {
       snapshot: item.snapshot ?? {
         projectState: serializeState(defaultState),
         viewerSnapshot: null,
+        roomSnapshot: null,
       },
     };
   });
@@ -301,13 +316,28 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       snap && typeof snap === "object" && "viewerSnapshot" in snap
         ? (snap as ProjectSnapshot).viewerSnapshot
         : null;
+    const hasRoomSnapshot = Boolean(
+      snap && typeof snap === "object" && "roomSnapshot" in snap
+    );
+    const roomSnapshot =
+      snap && typeof snap === "object" && "roomSnapshot" in snap
+        ? (snap as ProjectSnapshot).roomSnapshot
+        : undefined;
     const restored = reviveState(projectState);
     if (restored) {
       logProjectProvider("autosave-restored", {
         boxes: restored.workspaceBoxes?.length ?? 0,
         hasViewerSnapshot: Boolean(viewerSnapshot),
+        hasRoomSnapshot: Boolean(roomSnapshot),
       });
       setProject(applyResultados(restored));
+    }
+    if (hasRoomSnapshot) {
+      if (roomSnapshot) {
+        wallStore.getState().loadRoomConfig(roomSnapshot);
+      } else {
+        wallStore.getState().clearRoom();
+      }
     }
     if (viewerSnapshot) viewerSync.restoreViewerSnapshot(viewerSnapshot);
   }, [viewerSync]);
@@ -320,6 +350,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       const snapshot: ProjectSnapshot = {
         projectState: serializeState(proj),
         viewerSnapshot: viewerSync.saveViewerSnapshot(),
+        roomSnapshot: captureRoomSnapshot(),
       };
       safeSetItem(
         AUTOSAVE_STORAGE_KEY,
@@ -1400,6 +1431,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       const snapshot: ProjectSnapshot = {
         projectState: serializeState(project),
         viewerSnapshot: viewerSync.saveViewerSnapshot(),
+        roomSnapshot: captureRoomSnapshot(),
       };
       const name = project.projectName?.trim() || "Projeto";
       const timestamp = new Date().toISOString();
@@ -1429,6 +1461,13 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         snapshot && typeof snapshot === "object" && "viewerSnapshot" in snapshot
           ? (snapshot as ProjectSnapshot).viewerSnapshot
           : null;
+      const hasRoomSnapshot = Boolean(
+        snapshot && typeof snapshot === "object" && "roomSnapshot" in snapshot
+      );
+      const roomSnapshot =
+        snapshot && typeof snapshot === "object" && "roomSnapshot" in snapshot
+          ? (snapshot as ProjectSnapshot).roomSnapshot
+          : undefined;
       const updatedEntry = {
         ...entry,
         updatedAt: new Date().toISOString(),
@@ -1442,6 +1481,13 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
       const restored = reviveState(projectState);
       if (!restored) return;
       logProjectProvider("project-loaded", { id, boxes: restored.workspaceBoxes?.length ?? 0 });
+      if (hasRoomSnapshot) {
+        if (roomSnapshot) {
+          wallStore.getState().loadRoomConfig(roomSnapshot);
+        } else {
+          wallStore.getState().clearRoom();
+        }
+      }
       updateProject(() => applyResultados(restored));
     },
     loadProjectFromTemplate: (templateId) => {
@@ -1576,6 +1622,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         snapshot: {
           projectState: serializeState(freshState),
           viewerSnapshot: null,
+          roomSnapshot: null,
         },
       };
       viewerSync.restoreViewerSnapshot(null);
