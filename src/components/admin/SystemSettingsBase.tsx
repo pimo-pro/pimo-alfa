@@ -389,7 +389,77 @@ export default function SystemSettingsBase() {
               }))
             }
           />
-          <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Dobradiça</span>
+          <NumberField
+            label="Distância da borda (offset horizontal, mm)"
+            value={draft.furação?.prateleira?.distanciaDaBorda ?? 37}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  prateleira: { ...p.furação?.prateleira, distanciaDaBorda: v },
+                },
+              }))
+            }
+          />
+          <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Regras de Dobradiça (Porta)</span>
+          <NumberField
+            label="Dist. topo (mm)"
+            value={draft.furação?.dobradica?.distanciaDobradiçaTopo ?? 100}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradica: { ...p.furação?.dobradica, distanciaDobradiçaTopo: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Dist. fundo (mm)"
+            value={draft.furação?.dobradica?.distanciaDobradiçaFundo ?? 100}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradica: { ...p.furação?.dobradica, distanciaDobradiçaFundo: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Número por porta"
+            value={draft.furação?.dobradica?.numeroPorPorta ?? 2}
+            min={2}
+            max={6}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradica: { ...p.furação?.dobradica, numeroPorPorta: v },
+                },
+              }))
+            }
+          />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.furação?.dobradica?.distribuicaoAutomatica ?? true}
+              onChange={(e) =>
+                setDraft((p) => ({
+                  ...p,
+                  furação: {
+                    ...p.furação,
+                    dobradica: { ...p.furação?.dobradica, distribuicaoAutomatica: e.target.checked },
+                  },
+                }))
+              }
+            />
+            Distribuição automática (distTopo/distFundo/proporcional)
+          </label>
           <NumberField
             label="Distância centro–borda (mm)"
             value={draft.furação?.dobradica?.distanciaCentroDaBorda ?? 21.5}
@@ -404,28 +474,94 @@ export default function SystemSettingsBase() {
               }))
             }
           />
+          <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Dobradiça — fixação na lateral (2 calço + 1 parafuso união)</span>
           <NumberField
-            label="Distância dobradiça topo (mm)"
-            value={draft.furação?.dobradica?.distanciaDobradiçaTopo ?? 100}
+            label="Distância da borda — calço (mm)"
+            value={draft.furação?.dobradicaFixacao?.distanciaDaBordaCalco ?? 37}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
                 furação: {
                   ...p.furação,
-                  dobradica: { ...p.furação?.dobradica, distanciaDobradiçaTopo: v },
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, distanciaDaBordaCalco: v },
                 },
               }))
             }
           />
           <NumberField
-            label="Distância dobradiça fundo (mm)"
-            value={draft.furação?.dobradica?.distanciaDobradiçaFundo ?? 100}
+            label="Distância da borda — parafuso união (mm)"
+            value={draft.furação?.dobradicaFixacao?.distanciaDaBordaParafusoUniao ?? 53}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
                 furação: {
                   ...p.furação,
-                  dobradica: { ...p.furação?.dobradica, distanciaDobradiçaFundo: v },
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, distanciaDaBordaParafusoUniao: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Distância entre furos — calço (mm)"
+            value={draft.furação?.dobradicaFixacao?.distanciaEntreFurosCalco ?? 32}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, distanciaEntreFurosCalco: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Diâmetro calço (mm)"
+            value={draft.furação?.dobradicaFixacao?.diametro ?? 5}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, diametro: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Profundidade calço (mm)"
+            value={draft.furação?.dobradicaFixacao?.profundidadeFuro ?? 12}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, profundidadeFuro: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Diâmetro parafuso união (mm)"
+            value={draft.furação?.dobradicaFixacao?.diametroParafusoUniao ?? 5}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, diametroParafusoUniao: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Profundidade parafuso união (mm)"
+            value={draft.furação?.dobradicaFixacao?.profundidadeParafusoUniao ?? 12}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  dobradicaFixacao: { ...p.furação?.dobradicaFixacao, profundidadeParafusoUniao: v },
                 },
               }))
             }

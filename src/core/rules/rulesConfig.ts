@@ -97,7 +97,6 @@ export type RulesConfig = {
       };
       dobradica: {
         enabled: boolean;
-        /** Distância do centro do furo até a borda (lado da dobradiça), mm. */
         distanciaCentroDaBorda: number;
         distanciaBordaLateral: number;
         /** Distância da dobradiça ao topo (mm). */
@@ -107,6 +106,8 @@ export type RulesConfig = {
         offsetSuperior: number;
         offsetInferior: number;
         numeroPorPorta: number;
+        /** Se true, posições Y calculadas por distTopo/distFundo/proporcional; se false, usa offsetsVerticaisMm. */
+        distribuicaoAutomatica: boolean;
         offsetsVerticaisMm: number[];
         diametro: number;
         profundidade: number;
@@ -124,15 +125,40 @@ export type RulesConfig = {
         enabled: boolean;
         margemTopo: number;
         margemBase: number;
+        /** Distância da borda frontal à linha de furos (mm). */
+        margemFrente: number;
+        /** Distância da borda traseira à linha de furos (mm). */
+        margemFundo: number;
+        /** Offset horizontal dos furos (linha frente e fundo). */
         recuoBorda: number;
+        distanciaDaBorda: number;
         espacamento: number;
-        /** Espaçamento vertical (sistema 32mm). */
         espacamentoVertical: number;
         numeroFurosPorColuna: number;
         minFurosPorColuna: number;
         maxFurosPorColuna: number;
         diametro: number;
         profundidade: number;
+      };
+      /** Furos de fixação da dobradiça na lateral: 2 do calço + 1 parafuso de união. */
+      dobradica_fixacao: {
+        enabled: boolean;
+        /** Distância da borda interna ao eixo dos 2 furos do calço (mm). */
+        distanciaDaBordaCalco: number;
+        /** Distância da borda interna ao eixo do furo de parafuso de união (mm). */
+        distanciaDaBordaParafusoUniao: number;
+        /** Distância entre os 2 furos do calço (mm). */
+        distanciaEntreFurosCalco: number;
+        diametro: number;
+        profundidadeFuro: number;
+        /** Diâmetro do furo de parafuso de união (mm). */
+        diametroParafusoUniao: number;
+        /** Profundidade do furo de parafuso de união (mm). */
+        profundidadeParafusoUniao: number;
+        /** @deprecated Use distanciaDaBordaCalco */
+        distanciaDaBorda?: number;
+        /** @deprecated Use distanciaEntreFurosCalco */
+        distanciaEntreFuros?: number;
       };
       /** Furos superiores nas próprias prateleiras (top drilling). */
       shelfTop: {
@@ -261,6 +287,7 @@ export const defaultRulesConfig: RulesConfig = {
         offsetSuperior: 100,
         offsetInferior: 100,
         numeroPorPorta: 2,
+        distribuicaoAutomatica: true,
         offsetsVerticaisMm: [],
         diametro: 35,
         profundidade: 12.5,
@@ -278,7 +305,10 @@ export const defaultRulesConfig: RulesConfig = {
         enabled: true,
         margemTopo: 200,
         margemBase: 200,
+        margemFrente: 60,
+        margemFundo: 60,
         recuoBorda: 37,
+        distanciaDaBorda: 60,
         espacamento: 32,
         espacamentoVertical: 32,
         numeroFurosPorColuna: 0,
@@ -286,6 +316,16 @@ export const defaultRulesConfig: RulesConfig = {
         maxFurosPorColuna: 40,
         diametro: 5,
         profundidade: 13,
+      },
+      dobradica_fixacao: {
+        enabled: true,
+        distanciaDaBordaCalco: 37,
+        distanciaDaBordaParafusoUniao: 53,
+        distanciaEntreFurosCalco: 32,
+        diametro: 5,
+        profundidadeFuro: 12,
+        diametroParafusoUniao: 5,
+        profundidadeParafusoUniao: 12,
       },
       shelfTop: {
         enabled: false,
@@ -397,6 +437,18 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
           ...defaults.furos.tecnicos.prateleira,
           ...asObject(tecnicosSrc.prateleira),
         },
+        dobradica_fixacao: {
+          ...defaults.furos.tecnicos.dobradica_fixacao,
+          ...asObject(tecnicosSrc.dobradica_fixacao),
+          distanciaDaBordaCalco:
+            (asObject(tecnicosSrc.dobradica_fixacao).distanciaDaBordaCalco as number) ??
+            (asObject(tecnicosSrc.dobradica_fixacao).distanciaDaBorda as number) ??
+            defaults.furos.tecnicos.dobradica_fixacao.distanciaDaBordaCalco,
+          distanciaEntreFurosCalco:
+            (asObject(tecnicosSrc.dobradica_fixacao).distanciaEntreFurosCalco as number) ??
+            (asObject(tecnicosSrc.dobradica_fixacao).distanciaEntreFuros as number) ??
+            defaults.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco,
+        },
         shelfTop: {
           ...defaults.furos.tecnicos.shelfTop,
           ...asObject(tecnicosSrc.shelfTop),
@@ -434,6 +486,59 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
 export function getNumDobradicas(alturaCm: number, rules: RulesConfig): number {
   const range = rules.portas.ranges.find((r) => alturaCm >= r.min && alturaCm <= r.max);
   return range?.dobradicas ?? 2;
+}
+
+/** Distância mínima (mm) da dobradiça ao fundo da porta para evitar dobradiça colada ao chão. */
+const MIN_DIST_FUNDO_DOBRADICA_MM = 50;
+/** Margem mínima (mm) ao topo e ao fundo do painel (porta e lateral) para posição das dobradiças. */
+export const MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM = 70;
+
+/**
+ * Calcula as posições Y (mm) das dobradiças na porta/lateral.
+ * Regra industrial: mínimo 2 dobradiças; primeira e última a ≥70 mm do topo e do fundo.
+ * 2: Y_top = max(distTopo, 70), Y_bottom = altura − max(distFundo, 70)
+ * 3: + Y_mid = (Y_top + Y_bottom) / 2
+ * 4: + Y_mid1 e Y_mid2 a 1/3 e 2/3 entre topo e fundo.
+ */
+export function getHingeYPositions(
+  alturaMm: number,
+  numHinges: number,
+  rules: RulesConfig
+): number[] {
+  const cfg = rules?.furos?.tecnicos?.dobradica;
+  if (!cfg || alturaMm <= 0) return [];
+  const n = Math.max(2, numHinges);
+  const distTopo = cfg.distanciaDobradiçaTopo ?? cfg.offsetSuperior ?? 100;
+  const distFundo = cfg.distanciaDobradiçaFundo ?? cfg.offsetInferior ?? 100;
+  const margem = MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM;
+  const distFundoSafe = Math.max(distFundo, MIN_DIST_FUNDO_DOBRADICA_MM, margem);
+  const yFirst = Math.max(distTopo, margem);
+  const yLast = Math.max(yFirst + 60, alturaMm - distFundoSafe);
+
+  const useManual =
+    cfg.distribuicaoAutomatica === false &&
+    Array.isArray(cfg.offsetsVerticaisMm) &&
+    cfg.offsetsVerticaisMm.length >= n;
+  if (useManual) {
+    return cfg.offsetsVerticaisMm!.slice(0, n);
+  }
+
+  if (n === 2) return [yFirst, yLast];
+  if (n === 3) {
+    const yMid = (yFirst + yLast) / 2;
+    return [yFirst, yMid, yLast];
+  }
+  if (n === 4) {
+    const step = (yLast - yFirst) / 3;
+    return [yFirst, yFirst + step, yFirst + step * 2, yLast];
+  }
+  const result: number[] = [yFirst];
+  for (let i = 1; i < n - 1; i++) {
+    const t = i / (n - 1);
+    result.push(yFirst + (yLast - yFirst) * t);
+  }
+  result.push(yLast);
+  return result;
 }
 
 /**

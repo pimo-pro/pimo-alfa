@@ -1,0 +1,42 @@
+=== RELATÓRIO DE VALIDAÇÃO - FURAÇÃO LATERAL + PORTA ===
+
+PORTAS GERADAS (tipos e quantidades)
+  Módulo 1 (porta simples): porta_simples × 1 (total: 1)
+  Módulo 2 (porta dupla):   porta_dupla × 2 (total: 2)
+
+POSIÇÕES Y DAS DOBRADIÇAS
+  Na porta (35 mm) — Módulo 1: 100, 697 mm
+  Na lateral (fixação) — Módulo 1: 84, 100, 116, 660, 676, 692 mm
+  Na porta (35 mm) — Módulo 2: 100, 797 mm
+  Na lateral (fixação) — Módulo 2: 84, 100, 116, 760, 776, 792 mm
+  (Mínimo 70 mm do topo e do fundo do painel.)
+
+1) LATERAL DIREITA
+   - Furos de prateleira: 24
+   - Número de linhas (X distintos): 2 (esperado: 2)
+   - Posições X (frente / fundo): 60, 340 mm (esperado: 60 e 340)
+   - Margem 70 mm (dobradiças): porta OK, lateral OK
+   - Margem 60 mm (prateleira frente/fundo): OK
+   - Posições Y (altura): 12
+   - Espaçamento entre Y (mm): 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9
+   - Espaçamento min/max (30–50 mm): 32.9 / 32.9
+   - Furos fixação (2 calço + 1 parafuso união por dobradiça): 4 calço + 2 união
+   - Conjuntos de 3 furos por dobradiça: 2 (esperado: = nº dobradiças porta)
+   - X calço (mm): 37 (esperado: 37)
+   - X parafuso união (mm): 53 (esperado: 53)
+   - Diâmetro calço: 5 mm, profundidade: 12 mm
+   - Furos 'outros' na lateral: 0 (esperado: 0)
+
+2) PORTA
+   - Furos dobradiça 35 mm: 2 (mínimo 2)
+   - Posições (x, y): (575.5, 100), (575.5, 697)
+   - Diâmetro: 35 mm (esperado: 35)
+   - Profundidade: 12.5 mm (esperado: 12–13)
+
+3) TCN
+   - Ficheiro: C:\Users\Mofreita\pimo-v3\scripts\cnc-examples-output\TCN_DRILLING_TEST.tcn
+   - Chapas: 1
+
+4) MÓDULO 2 (PORTA DUPLA)
+   - Lateral: total 36 (prateleira: 30, calço: 4, parafuso união: 2, outros: 0)
+   - Portas: 2, dobradiças por porta: 2, 2

@@ -91,11 +91,32 @@ export interface SettingsSchema {
       minFuros: number;
       maxFuros: number;
       espacamentoVertical: number;
+      /** Offset horizontal dos furos (linha frente e fundo), mm. */
+      distanciaDaBorda: number;
     };
     dobradica: {
       distanciaCentroDaBorda: number;
+      /** Distância da dobradiça ao topo (mm). */
       distanciaDobradiçaTopo: number;
+      /** Distância da dobradiça ao fundo (mm). */
       distanciaDobradiçaFundo: number;
+      /** Número de dobradiças por porta. */
+      numeroPorPorta: number;
+      /** Se true, distribui Y automaticamente (distTopo/distFundo/proporcional); se false, usa offsetsVerticaisMm quando definido. */
+      distribuicaoAutomatica: boolean;
+    };
+    /** Regras de fixação da dobradiça na lateral: 2 furos calço + 1 parafuso união. */
+    dobradicaFixacao: {
+      /** Distância da borda ao eixo dos 2 furos do calço (mm). */
+      distanciaDaBordaCalco: number;
+      /** Distância da borda ao eixo do furo de parafuso de união (mm). */
+      distanciaDaBordaParafusoUniao: number;
+      /** Distância entre os 2 furos do calço (mm). */
+      distanciaEntreFurosCalco: number;
+      profundidadeFuro: number;
+      diametro: number;
+      diametroParafusoUniao: number;
+      profundidadeParafusoUniao: number;
     };
   };
   etiquetasQr: {
@@ -191,11 +212,23 @@ export const settingsDefaults: SettingsSchema = {
       minFuros: 6,
       maxFuros: 40,
       espacamentoVertical: 32,
+      distanciaDaBorda: 37,
     },
     dobradica: {
       distanciaCentroDaBorda: 21.5,
       distanciaDobradiçaTopo: 100,
       distanciaDobradiçaFundo: 100,
+      numeroPorPorta: 2,
+      distribuicaoAutomatica: true,
+    },
+    dobradicaFixacao: {
+      distanciaDaBordaCalco: 37,
+      distanciaDaBordaParafusoUniao: 53,
+      distanciaEntreFurosCalco: 32,
+      profundidadeFuro: 12,
+      diametro: 5,
+      diametroParafusoUniao: 5,
+      profundidadeParafusoUniao: 12,
     },
   },
   etiquetasQr: {
@@ -283,6 +316,12 @@ function deepMergeSettings(
         ...base.furação.dobradica,
         ...(isObject((patch.furação as Record<string, unknown> | undefined)?.dobradica)
           ? (patch.furação as Record<string, unknown>).dobradica as Record<string, unknown>
+          : {}),
+      },
+      dobradicaFixacao: {
+        ...base.furação.dobradicaFixacao,
+        ...(isObject((patch.furação as Record<string, unknown> | undefined)?.dobradicaFixacao)
+          ? (patch.furação as Record<string, unknown>).dobradicaFixacao as Record<string, unknown>
           : {}),
       },
     },
@@ -463,6 +502,11 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
           16,
           64
         ),
+        distanciaDaBorda: clamp(
+          toNumber(merged.furação?.prateleira?.distanciaDaBorda, settingsDefaults.furação.prateleira.distanciaDaBorda),
+          5,
+          80
+        ),
       },
       dobradica: {
         distanciaCentroDaBorda: clamp(
@@ -480,6 +524,45 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
           20,
           300
         ),
+        numeroPorPorta: clamp(
+          toNumber(merged.furação?.dobradica?.numeroPorPorta, settingsDefaults.furação.dobradica.numeroPorPorta),
+          1,
+          6
+        ),
+        distribuicaoAutomatica: Boolean(merged.furação?.dobradica?.distribuicaoAutomatica ?? settingsDefaults.furação.dobradica.distribuicaoAutomatica),
+      },
+      dobradicaFixacao: {
+        distanciaDaBordaCalco: clamp(
+          toNumber(
+            (merged.furação?.dobradicaFixacao as Record<string, unknown> | undefined)?.distanciaDaBordaCalco ??
+              (merged.furação?.dobradicaFixacao as Record<string, unknown> | undefined)?.distanciaDaBorda,
+            settingsDefaults.furação.dobradicaFixacao.distanciaDaBordaCalco
+          ),
+          5,
+          80
+        ),
+        distanciaDaBordaParafusoUniao: clamp(
+          toNumber(merged.furação?.dobradicaFixacao?.distanciaDaBordaParafusoUniao, settingsDefaults.furação.dobradicaFixacao.distanciaDaBordaParafusoUniao),
+          10,
+          100
+        ),
+        distanciaEntreFurosCalco: clamp(
+          toNumber(
+            (merged.furação?.dobradicaFixacao as Record<string, unknown> | undefined)?.distanciaEntreFurosCalco ??
+              (merged.furação?.dobradicaFixacao as Record<string, unknown> | undefined)?.distanciaEntreFuros,
+            settingsDefaults.furação.dobradicaFixacao.distanciaEntreFurosCalco
+          ),
+          10,
+          80
+        ),
+        profundidadeFuro: clamp(
+          toNumber(merged.furação?.dobradicaFixacao?.profundidadeFuro, settingsDefaults.furação.dobradicaFixacao.profundidadeFuro),
+          5,
+          25
+        ),
+        diametro: clamp(toNumber(merged.furação?.dobradicaFixacao?.diametro, settingsDefaults.furação.dobradicaFixacao.diametro), 3, 10),
+        diametroParafusoUniao: clamp(toNumber(merged.furação?.dobradicaFixacao?.diametroParafusoUniao, settingsDefaults.furação.dobradicaFixacao.diametroParafusoUniao), 3, 10),
+        profundidadeParafusoUniao: clamp(toNumber(merged.furação?.dobradicaFixacao?.profundidadeParafusoUniao, settingsDefaults.furação.dobradicaFixacao.profundidadeParafusoUniao), 5, 25),
       },
     },
     etiquetasQr: {

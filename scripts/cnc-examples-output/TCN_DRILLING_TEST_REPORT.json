@@ -1,0 +1,148 @@
+{
+  "geradoEm": "2026-02-27T10:10:25.363Z",
+  "portasGeradas": {
+    "modulo1": {
+      "lista": [
+        {
+          "tipo": "porta_simples",
+          "quantidade": 1
+        }
+      ],
+      "total": 1
+    },
+    "modulo2": {
+      "lista": [
+        {
+          "tipo": "porta_dupla",
+          "quantidade": 2
+        }
+      ],
+      "total": 2
+    }
+  },
+  "modulo1_portaSimples": {
+    "box": {
+      "id": "test-box-1",
+      "dimensoes": {
+        "largura": 600,
+        "altura": 800,
+        "profundidade": 400
+      },
+      "prateleiras": 2,
+      "portaTipo": "porta_simples"
+    },
+    "posicoesYDobradicaPorta": [
+      100,
+      697
+    ],
+    "posicoesYDobradicaLateral": [
+      84,
+      100,
+      116,
+      660,
+      676,
+      692
+    ],
+    "lateral_direita": {
+      "dimensoes": {
+        "largura": 400,
+        "altura": 762,
+        "profundidade": 19
+      },
+      "totalFuros": 30,
+      "porTipo": {
+        "prateleira": 24,
+        "dobradica_fixacao": 4,
+        "dobradica_parafuso_uniao": 2,
+        "outros": 0
+      },
+      "validacaoPrateleira": {
+        "numLinhasX": 2,
+        "xValores": [
+          60,
+          340
+        ],
+        "xFrenteMm": 60,
+        "xFundoMm": 340,
+        "margem60Ok": true,
+        "numPosicoesY": 12,
+        "espacamentoMin": 32.90909090909088,
+        "espacamentoMax": 32.90909090909099
+      },
+      "validacaoFixacao": {
+        "numConjuntos3Furos": 2,
+        "numFurosCalco": 4,
+        "numFurosParafusoUniao": 2,
+        "xCalco": 37,
+        "xParafusoUniao": 53,
+        "posicoesY": [
+          84,
+          100,
+          116,
+          660,
+          676,
+          692
+        ],
+        "diametroCalco": 5,
+        "profundidadeCalco": 12,
+        "todasDentroDaAltura": true,
+        "margem70Ok": true
+      }
+    },
+    "porta": {
+      "dimensoes": {
+        "largura": 597,
+        "altura": 797,
+        "profundidade": 19
+      },
+      "totalFuros": 2,
+      "validacaoDobradica": {
+        "numFuros": 2,
+        "minEsperado": 2,
+        "posicoes": [
+          {
+            "x": 575.5,
+            "y": 100
+          },
+          {
+            "x": 575.5,
+            "y": 697
+          }
+        ],
+        "posicoesY": [
+          100,
+          697
+        ],
+        "diametro": 35,
+        "profundidade": 12.5,
+        "margem70Ok": true
+      }
+    }
+  },
+  "modulo2_portaDupla": {
+    "posicoesYDobradicaPorta": [
+      100,
+      797
+    ],
+    "posicoesYDobradicaLateral": [
+      84,
+      100,
+      116,
+      760,
+      776,
+      792
+    ],
+    "lateral_direita": {
+      "totalFuros": 36,
+      "prateleira": 30,
+      "dobradica_fixacao": 4,
+      "dobradica_parafuso_uniao": 2,
+      "outros": 0
+    },
+    "portas": 2,
+    "dobradicaPorPorta": [
+      2,
+      2
+    ]
+  }
+}

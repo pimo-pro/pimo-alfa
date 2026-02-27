@@ -132,6 +132,12 @@ function renderSheetPage(
         } else if (ht === "dobradica") {
           doc.setDrawColor(249, 115, 22);
           doc.setFillColor(249, 115, 22);
+        } else if (ht === "dobradica_fixacao") {
+          doc.setDrawColor(234, 88, 12);
+          doc.setFillColor(234, 88, 12);
+        } else if (ht === "dobradica_parafuso_uniao") {
+          doc.setDrawColor(180, 83, 9);
+          doc.setFillColor(251, 146, 60);
         } else if (ht === "cavilha") {
           doc.setDrawColor(59, 130, 246);
           doc.setFillColor(59, 130, 246);
@@ -163,6 +169,6 @@ function renderSheetPage(
   y += 4;
   doc.setFontSize(7);
   doc.setTextColor(120, 120, 120);
-  doc.text("🟢 Prateleira | 🟠 Dobradiça | 🔵 Cavilha | ⚫ Parafuso | 🟣 Corrediça | 🔴 Outros", MARGIN, y);
+  doc.text("🟢 Prateleira | 🟠 Dobradiça | 🟧 Fixação dobradiça | 🔵 Cavilha | ⚫ Parafuso | 🟣 Corrediça | 🔴 Outros", MARGIN, y);
   doc.setTextColor(0, 0, 0);
 }

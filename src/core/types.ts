@@ -49,7 +49,7 @@ export interface PieceFaceMaterials {
   back?: LayoutVisualMaterial;
 }
 
-export type DrillType = "cavilha" | "parafuso" | "dobradica" | "corredica" | "prateleira";
+export type DrillType = "cavilha" | "parafuso" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira";
 export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
 export interface TechnicalDrillHole {
   x: number;

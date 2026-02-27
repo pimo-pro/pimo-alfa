@@ -406,7 +406,7 @@ export default function RulesAdminPage() {
                 <label style={{ fontSize: 12 }}>Dist. borda <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaBordaLateral} onChange={(e) => updateTecnico("dobradica", { distanciaBordaLateral: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Offset sup. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetSuperior} onChange={(e) => updateTecnico("dobradica", { offsetSuperior: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Offset inf. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetInferior} onChange={(e) => updateTecnico("dobradica", { offsetInferior: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Qtd/porta <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.numeroPorPorta} onChange={(e) => updateTecnico("dobradica", { numeroPorPorta: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Qtd/porta <input className="input input-xs" type="number" min={2} value={rules.furos.tecnicos.dobradica.numeroPorPorta} onChange={(e) => updateTecnico("dobradica", { numeroPorPorta: Math.max(2, Number(e.target.value)) })} /></label>
               </div>
             </div>
 
