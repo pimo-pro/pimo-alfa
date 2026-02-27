@@ -5,6 +5,7 @@ import type { ViewerOptions } from "../3d/core/Viewer";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
   ViewerBackgroundMode,
+  UltraPerformanceModeOptions,
   DoorWindowConfig,
   RoomConfig,
   ViewerMousePreset,
@@ -56,6 +57,8 @@ type PimoViewerAPI = {
   renderScene: (_options: ViewerRenderOptions) => Promise<ViewerRenderResult | null>;
   setUltraPerformanceMode: (_active: boolean) => void;
   getUltraPerformanceMode: () => boolean;
+  setUltraPerformanceModeOptions?: (_options: UltraPerformanceModeOptions) => void;
+  getUltraPerformanceModeOptions?: () => UltraPerformanceModeOptions;
   createRoom: (_config: RoomConfig) => void;
   removeRoom: () => void;
   selectWallByIndex: (_index: number | null) => void;
@@ -368,6 +371,19 @@ export const usePimoViewer = (
     []
   );
 
+  const setUltraPerformanceModeOptions = useCallback((options: UltraPerformanceModeOptions) => {
+    viewerRef.current?.setUltraPerformanceModeOptions?.(options);
+  }, []);
+
+  const getUltraPerformanceModeOptions = useCallback(
+    () =>
+      viewerRef.current?.getUltraPerformanceModeOptions?.() ?? {
+        enabled: false,
+        mode: "balanced",
+      },
+    []
+  );
+
   const createRoom = useCallback((config: RoomConfig) => {
     viewerRef.current?.createRoom(config);
   }, []);
@@ -615,6 +631,8 @@ export const usePimoViewer = (
       renderScene,
       setUltraPerformanceMode,
       getUltraPerformanceMode,
+      setUltraPerformanceModeOptions,
+      getUltraPerformanceModeOptions,
       createRoom,
       removeRoom,
       selectWallByIndex,
@@ -696,6 +714,8 @@ export const usePimoViewer = (
       renderScene,
       setUltraPerformanceMode,
       getUltraPerformanceMode,
+      setUltraPerformanceModeOptions,
+      getUltraPerformanceModeOptions,
       createRoom,
       removeRoom,
       selectWallByIndex,

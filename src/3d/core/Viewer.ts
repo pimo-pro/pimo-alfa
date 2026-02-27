@@ -26,6 +26,7 @@ import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import type { EnvironmentOptions } from "./Environment";
 import type {
+  UltraPerformanceModeOptions,
   ViewerBackgroundMode,
   ViewerMousePreset,
   ViewerRenderOptions,
@@ -208,6 +209,10 @@ export class Viewer {
   private mainComposer: EffectComposer | null = null;
   private mainBloomPass: UnrealBloomPass | null = null;
   private ultraPerformanceMode = false;
+  private ultraPerformanceModeOptions: UltraPerformanceModeOptions = {
+    enabled: false,
+    mode: "balanced",
+  };
   private defaultPixelRatio: number;
   private defaultGroundSize: number;
   private ultraLightState: {
@@ -227,6 +232,10 @@ export class Viewer {
     shadowRadius: number;
   } | null = null;
   private readonly LIGHT_LERP_FACTOR = 0.14;
+  private ultraMaterialState = new Map<
+    string,
+    { roughness: number; metalness: number; envMapIntensity: number; flatShading: boolean }
+  >();
   private _diagnosticsLogged = false;
   /** Evita aplicar rotação duplicada no mesmo mesh. */
   private appliedRotationByMeshUuid = new Map<string, number>();
@@ -376,6 +385,14 @@ export class Viewer {
   setUltraPerformanceMode(active: boolean): void {
     if (this.ultraPerformanceMode === active) return;
     this.ultraPerformanceMode = active;
+    this.ultraPerformanceModeOptions = {
+      ...this.ultraPerformanceModeOptions,
+      enabled: active,
+    };
+
+    const mode = this.ultraPerformanceModeOptions.mode;
+    const isAggressive = mode === "aggressive";
+    const isFlat2 = mode === "flat2" || mode === "aggressive";
 
     if (active) {
       if (!this.ultraLightState) {
@@ -389,15 +406,20 @@ export class Viewer {
         };
       }
       this.ultraLightTarget = {
-        key: this.ultraLightState.key * 0.65,
-        fill: this.ultraLightState.fill * 0.6,
-        ambient: this.ultraLightState.ambient * 0.7,
-        rim: this.ultraLightState.rim * 0.4,
-        castShadow: false,
-        shadowRadius: 0.5,
+        key: this.ultraLightState.key * (isAggressive ? 0.55 : 0.65),
+        fill: this.ultraLightState.fill * (isAggressive ? 0.45 : 0.6),
+        ambient: this.ultraLightState.ambient * (isAggressive ? 0.6 : 0.7),
+        rim: this.ultraLightState.rim * (isAggressive ? 0.25 : 0.4),
+        castShadow: isAggressive ? false : false,
+        shadowRadius: isAggressive ? 0.3 : 0.5,
       };
-      const performanceRatio = this.isMobile ? 0.9 : 1.1;
+      const performanceRatio = isAggressive
+        ? (this.isMobile ? 0.75 : 0.9)
+        : this.isMobile
+          ? 0.9
+          : 1.1;
       this.rendererManager.renderer.setPixelRatio(performanceRatio);
+      this.applyUltraMaterialProfile(isFlat2, isAggressive);
     } else {
       if (this.ultraLightState) {
         this.ultraLightTarget = { ...this.ultraLightState };
@@ -406,9 +428,69 @@ export class Viewer {
       }
       this.ultraLightState = null;
       this.rendererManager.renderer.setPixelRatio(this.defaultPixelRatio);
+      this.applyUltraMaterialProfile(false, false);
     }
 
     this.updateCanvasSize();
+  }
+
+  setUltraPerformanceModeOptions(options: UltraPerformanceModeOptions): void {
+    const nextMode =
+      options.mode === "flat2" || options.mode === "aggressive" || options.mode === "balanced"
+        ? options.mode
+        : "balanced";
+    this.ultraPerformanceModeOptions = {
+      enabled: Boolean(options.enabled),
+      mode: nextMode,
+    };
+    if (this.ultraPerformanceMode !== this.ultraPerformanceModeOptions.enabled) {
+      this.setUltraPerformanceMode(this.ultraPerformanceModeOptions.enabled);
+      return;
+    }
+    if (this.ultraPerformanceMode) {
+      this.setUltraPerformanceMode(false);
+      this.setUltraPerformanceMode(true);
+    }
+  }
+
+  getUltraPerformanceModeOptions(): UltraPerformanceModeOptions {
+    return { ...this.ultraPerformanceModeOptions };
+  }
+
+  private applyUltraMaterialProfile(flat2Active: boolean, aggressive: boolean): void {
+    this.sceneManager.root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((material) => {
+        if (!(material instanceof THREE.MeshStandardMaterial)) return;
+        if (!this.ultraMaterialState.has(material.uuid)) {
+          this.ultraMaterialState.set(material.uuid, {
+            roughness: material.roughness,
+            metalness: material.metalness,
+            envMapIntensity: material.envMapIntensity,
+            flatShading: material.flatShading,
+          });
+        }
+        const original = this.ultraMaterialState.get(material.uuid);
+        if (!original) return;
+        if (!flat2Active) {
+          material.roughness = original.roughness;
+          material.metalness = original.metalness;
+          material.envMapIntensity = original.envMapIntensity;
+          material.flatShading = original.flatShading;
+          material.needsUpdate = true;
+          return;
+        }
+        material.roughness = aggressive ? 1 : 0.95;
+        material.metalness = 0;
+        material.envMapIntensity = aggressive ? 0 : 0.06;
+        material.flatShading = true;
+        material.needsUpdate = true;
+      });
+    });
+    if (!flat2Active) {
+      this.ultraMaterialState.clear();
+    }
   }
 
   private lerpLightsToTarget(): void {

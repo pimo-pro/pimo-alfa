@@ -3,6 +3,7 @@ import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
   DoorWindowConfig,
   RoomConfig,
+  UltraPerformanceModeOptions,
   ViewerMousePreset,
   ViewerBackgroundMode,
   ViewerRenderOptions,
@@ -40,6 +41,8 @@ export type PimoViewerApi = {
   renderScene?: (_options: ViewerRenderOptions) => Promise<ViewerRenderResult | null>;
   setUltraPerformanceMode?: (_active: boolean) => void;
   getUltraPerformanceMode?: () => boolean;
+  setUltraPerformanceModeOptions?: (_options: UltraPerformanceModeOptions) => void;
+  getUltraPerformanceModeOptions?: () => UltraPerformanceModeOptions;
   createRoom?: (_config: RoomConfig) => void;
   removeRoom?: () => void;
   setRoomBounds?: (_bounds: {

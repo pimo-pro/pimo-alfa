@@ -66,6 +66,10 @@ const defaultViewerSettings: ViewerSettings = {
   backgroundMode: "studio",
   enableReflections: false,
   photoModeEnabled: false,
+  ultraPerformanceModeOptions: {
+    enabled: false,
+    mode: "balanced",
+  },
 };
 
 const createBox = (

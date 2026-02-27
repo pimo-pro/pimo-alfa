@@ -173,6 +173,10 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
     viewerSettings: {
       ...defaultState.viewerSettings,
       ...(restored.viewerSettings ?? {}),
+      ultraPerformanceModeOptions: {
+        ...defaultState.viewerSettings.ultraPerformanceModeOptions,
+        ...(restored.viewerSettings?.ultraPerformanceModeOptions ?? {}),
+      },
     },
     workspaceBoxes,
     selectedWorkspaceBoxId: workspaceBoxes.length ? (restored.selectedWorkspaceBoxId ?? workspaceBoxes[0].id) : "",

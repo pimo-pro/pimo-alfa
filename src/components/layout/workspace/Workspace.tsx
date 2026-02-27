@@ -243,6 +243,11 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     viewerApi.setBackgroundMode?.(settings.backgroundMode);
     viewerApi.setReflectionsEnabled?.(settings.enableReflections);
     viewerApi.setPhotoModeEnabled?.(settings.photoModeEnabled);
+    if (viewerApi.setUltraPerformanceModeOptions) {
+      viewerApi.setUltraPerformanceModeOptions(settings.ultraPerformanceModeOptions);
+    } else {
+      viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
+    }
   }, [
     project.viewerSettings,
     viewerApi,

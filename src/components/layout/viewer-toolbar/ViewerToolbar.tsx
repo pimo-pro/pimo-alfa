@@ -5,9 +5,6 @@
  * DESFAZER/REFAZER → undo/redo; 2D/IMAGEM/ENVIAR → modais que usam viewerSync no RightToolsBar.
  */
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import { useState, useEffect } from "react";
 import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
@@ -16,16 +13,10 @@ import type { ToolbarActionId } from "../../../constants/toolbarConfig";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 
 export default function ViewerToolbar() {
-  const { actions, viewerSync } = useProject();
+  const { actions, project } = useProject();
   const { openModal } = useToolbarModal();
   const { viewerApi } = usePimoViewerContext();
-  const [ultraModeEnabled, setUltraModeEnabled] = useState(false);
-
-  useEffect(() => {
-    if (viewerSync?.getUltraPerformanceMode) {
-      setUltraModeEnabled(viewerSync.getUltraPerformanceMode());
-    }
-  }, [viewerSync]);
+  const ultraModeEnabled = project.viewerSettings.ultraPerformanceModeOptions.enabled;
 
   const handleAction = (id: ToolbarActionId) => {
     if (id === "projeto") {
@@ -64,10 +55,13 @@ export default function ViewerToolbar() {
   };
 
   const toggleUltraPerformance = () => {
-    if (!viewerSync?.setUltraPerformanceMode) return;
     const next = !ultraModeEnabled;
-    viewerSync.setUltraPerformanceMode(next);
-    setUltraModeEnabled(next);
+    actions.setViewerSettings({
+      ultraPerformanceModeOptions: {
+        ...project.viewerSettings.ultraPerformanceModeOptions,
+        enabled: next,
+      },
+    });
   };
 
   return (

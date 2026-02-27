@@ -13,6 +13,7 @@ import {
 import Piece3DModal from "../../modals/Piece3DModal";
 import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
 import type {
+  UltraPerformanceInternalMode,
   ViewerBackgroundMode,
   ViewerRenderBackground,
   ViewerRenderMode,
@@ -373,6 +374,40 @@ export default function RightToolsBar() {
               onChange={(e) => actions.setViewerSettings({ photoModeEnabled: e.target.checked })}
             />
             Photo Mode ativo
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.ultraPerformanceModeOptions.enabled}
+              onChange={(e) =>
+                actions.setViewerSettings({
+                  ultraPerformanceModeOptions: {
+                    ...project.viewerSettings.ultraPerformanceModeOptions,
+                    enabled: e.target.checked,
+                  },
+                })
+              }
+            />
+            Ultra Performance
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, marginBottom: 8 }}>
+            Modo Ultra
+            <select
+              value={project.viewerSettings.ultraPerformanceModeOptions.mode}
+              onChange={(e) =>
+                actions.setViewerSettings({
+                  ultraPerformanceModeOptions: {
+                    ...project.viewerSettings.ultraPerformanceModeOptions,
+                    mode: e.target.value as UltraPerformanceInternalMode,
+                  },
+                })
+              }
+              className="input input-sm"
+            >
+              <option value="balanced">Balanced</option>
+              <option value="flat2">Flat 2.0</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
           </label>
           {project.viewerSettings.photoModeEnabled && (
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
