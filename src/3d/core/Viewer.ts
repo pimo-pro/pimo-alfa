@@ -162,6 +162,8 @@ export class Viewer {
   private wallEditMode = false;
   private mousePreset: ViewerMousePreset = "cad";
   private backgroundMode: ViewerBackgroundMode = "studio";
+  private reflectionsEnabled = false;
+  private reflectionFrameCounter = 0;
 
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
@@ -862,6 +864,45 @@ export class Viewer {
 
   getBackgroundMode(): ViewerBackgroundMode {
     return this.backgroundMode;
+  }
+
+  private getReflectionProbeCenter(): { x: number; y: number; z: number } {
+    if (this.roomBounds) {
+      return {
+        x: this.roomBounds.centerX,
+        y: Math.max(0.8, this.roomBounds.minY + (this.roomBounds.maxY - this.roomBounds.minY) * 0.45),
+        z: this.roomBounds.centerZ,
+      };
+    }
+    if (this.boxes.size > 0) {
+      this._boundingBox.makeEmpty();
+      this.boxes.forEach((entry) => {
+        this._boundingBox.expandByObject(entry.mesh);
+      });
+      this._boundingBox.getCenter(this._center);
+      return { x: this._center.x, y: Math.max(0.8, this._center.y), z: this._center.z };
+    }
+    return { x: 0, y: 1.2, z: 0 };
+  }
+
+  private updateReflectionProbe(force = false): void {
+    if (!this.reflectionsEnabled) return;
+    this.sceneManager.updateReflectionProbe(this.rendererManager.renderer, {
+      center: this.getReflectionProbeCenter(),
+      force,
+    });
+  }
+
+  setReflectionsEnabled(enabled: boolean): void {
+    this.reflectionsEnabled = Boolean(enabled);
+    this.sceneManager.setReflectionsEnabled(this.reflectionsEnabled, this.rendererManager.renderer);
+    if (this.reflectionsEnabled) {
+      this.updateReflectionProbe(true);
+    }
+  }
+
+  getReflectionsEnabled(): boolean {
+    return this.reflectionsEnabled;
   }
 
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
@@ -2614,6 +2655,14 @@ export class Viewer {
         }
         this.selectionOutlineMaterial.opacity = Math.max(0, Math.min(1, this.outlineCurrentOpacity));
         this.selectionOutlineMaterial.needsUpdate = true;
+      }
+
+      if (this.reflectionsEnabled) {
+        this.reflectionFrameCounter += 1;
+        if (this.reflectionFrameCounter >= 24) {
+          this.reflectionFrameCounter = 0;
+          this.updateReflectionProbe(false);
+        }
       }
 
       if (this.wallSelectionOutline && this.wallSelectionOutlineMaterial) {

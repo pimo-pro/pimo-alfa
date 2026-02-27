@@ -357,6 +357,14 @@ export default function RightToolsBar() {
             />
             Modo edição de paredes
           </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.enableReflections}
+              onChange={(e) => actions.setViewerSettings({ enableReflections: e.target.checked })}
+            />
+            Reflexos dinâmicos (probe)
+          </label>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {(Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
               const isHidden = project.viewerSettings.hiddenPanels.includes(panel);

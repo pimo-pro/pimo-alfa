@@ -241,6 +241,7 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     viewerApi.setWallEditMode?.(settings.wallEditMode);
     viewerApi.setMousePreset?.(settings.mousePreset);
     viewerApi.setBackgroundMode?.(settings.backgroundMode);
+    viewerApi.setReflectionsEnabled?.(settings.enableReflections);
   }, [
     project.viewerSettings,
     viewerApi,

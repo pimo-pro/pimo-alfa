@@ -106,6 +106,8 @@ type PimoViewerAPI = {
   getMousePreset?: () => ViewerMousePreset;
   setBackgroundMode?: (_mode: ViewerBackgroundMode) => void;
   getBackgroundMode?: () => ViewerBackgroundMode;
+  setReflectionsEnabled?: (_enabled: boolean) => void;
+  getReflectionsEnabled?: () => boolean;
 };
 
 export const usePimoViewer = (
@@ -531,6 +533,15 @@ export const usePimoViewer = (
     []
   );
 
+  const setReflectionsEnabled = useCallback((enabled: boolean) => {
+    viewerRef.current?.setReflectionsEnabled?.(enabled);
+  }, []);
+
+  const getReflectionsEnabled = useCallback(
+    () => viewerRef.current?.getReflectionsEnabled?.() ?? false,
+    []
+  );
+
   const updateRoomElementConfig = useCallback(
     (elementId: string, config: DoorWindowConfig) =>
       viewerRef.current?.updateRoomElementConfig?.(elementId, config) ?? false,
@@ -627,6 +638,8 @@ export const usePimoViewer = (
       getMousePreset,
       setBackgroundMode,
       getBackgroundMode,
+      setReflectionsEnabled,
+      getReflectionsEnabled,
     }),
     [
       viewerReady,
@@ -703,6 +716,8 @@ export const usePimoViewer = (
       getMousePreset,
       setBackgroundMode,
       getBackgroundMode,
+      setReflectionsEnabled,
+      getReflectionsEnabled,
     ]
   );
 };

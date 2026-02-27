@@ -101,6 +101,8 @@ export type PimoViewerApi = {
   getMousePreset?: () => ViewerMousePreset;
   setBackgroundMode?: (_mode: ViewerBackgroundMode) => void;
   getBackgroundMode?: () => ViewerBackgroundMode;
+  setReflectionsEnabled?: (_enabled: boolean) => void;
+  getReflectionsEnabled?: () => boolean;
 };
 
 export type PimoViewerContextValue = {

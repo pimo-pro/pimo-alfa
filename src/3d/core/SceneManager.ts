@@ -12,6 +12,9 @@ export class SceneManager {
   readonly root: THREE.Group;
   private ground: THREE.Mesh | null = null;
   private grid: THREE.GridHelper | null = null;
+  private reflectionsEnabled = false;
+  private reflectionCubeTarget: THREE.WebGLCubeRenderTarget | null = null;
+  private reflectionCubeCamera: THREE.CubeCamera | null = null;
 
   constructor(options: SceneOptions = {}) {
     this.scene = new THREE.Scene();
@@ -59,6 +62,74 @@ export class SceneManager {
     material.needsUpdate = true;
   }
 
+  private ensureReflectionProbe(renderer: THREE.WebGLRenderer) {
+    if (this.reflectionCubeCamera && this.reflectionCubeTarget) return;
+    const isWebGL2 = renderer.capabilities.isWebGL2;
+    const size = isWebGL2 ? 256 : 128;
+    this.reflectionCubeTarget = new THREE.WebGLCubeRenderTarget(size, {
+      type: isWebGL2 ? THREE.HalfFloatType : THREE.UnsignedByteType,
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+      magFilter: THREE.LinearFilter,
+      colorSpace: THREE.SRGBColorSpace,
+    });
+    this.reflectionCubeCamera = new THREE.CubeCamera(0.1, 200, this.reflectionCubeTarget);
+    this.scene.add(this.reflectionCubeCamera);
+  }
+
+  private disposeReflectionProbe() {
+    if (this.reflectionCubeCamera) {
+      this.scene.remove(this.reflectionCubeCamera);
+      this.reflectionCubeCamera = null;
+    }
+    if (this.reflectionCubeTarget) {
+      this.reflectionCubeTarget.dispose();
+      this.reflectionCubeTarget = null;
+    }
+  }
+
+  setReflectionsEnabled(enabled: boolean, renderer: THREE.WebGLRenderer) {
+    this.reflectionsEnabled = Boolean(enabled);
+    if (!this.reflectionsEnabled) {
+      this.scene.environment = null;
+      this.disposeReflectionProbe();
+      return;
+    }
+    this.ensureReflectionProbe(renderer);
+    this.updateReflectionProbe(renderer, { force: true });
+  }
+
+  getReflectionsEnabled(): boolean {
+    return this.reflectionsEnabled;
+  }
+
+  updateReflectionProbe(
+    renderer: THREE.WebGLRenderer,
+    options?: { center?: { x: number; y: number; z: number }; force?: boolean }
+  ) {
+    if (!this.reflectionsEnabled) return;
+    this.ensureReflectionProbe(renderer);
+    if (!this.reflectionCubeCamera || !this.reflectionCubeTarget) return;
+
+    const center = options?.center ?? { x: 0, y: 1.2, z: 0 };
+    this.reflectionCubeCamera.position.set(center.x, center.y, center.z);
+    this.reflectionCubeCamera.update(renderer, this.scene);
+    this.scene.environment = this.reflectionCubeTarget.texture;
+    if (options?.force) {
+      this.scene.traverse((node) => {
+        if (!(node instanceof THREE.Mesh)) return;
+        const mat = node.material;
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => {
+            if (m instanceof THREE.MeshStandardMaterial) m.needsUpdate = true;
+          });
+        } else if (mat instanceof THREE.MeshStandardMaterial) {
+          mat.needsUpdate = true;
+        }
+      });
+    }
+  }
+
   dispose() {
     this.root.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -86,5 +157,6 @@ export class SceneManager {
         this.ground.material.dispose();
       }
     }
+    this.disposeReflectionProbe();
   }
 }

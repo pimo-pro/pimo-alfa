@@ -30,6 +30,7 @@ export type ViewerSettings = {
   wallEditMode: boolean;
   mousePreset: ViewerMousePreset;
   backgroundMode: ViewerBackgroundMode;
+  enableReflections: boolean;
 };
 
 export interface ProjectState {
