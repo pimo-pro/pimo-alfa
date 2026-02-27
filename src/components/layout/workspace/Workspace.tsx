@@ -240,6 +240,7 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
     viewerApi.setMousePreset?.(settings.mousePreset);
+    viewerApi.setBackgroundMode?.(settings.backgroundMode);
   }, [
     project.viewerSettings,
     viewerApi,

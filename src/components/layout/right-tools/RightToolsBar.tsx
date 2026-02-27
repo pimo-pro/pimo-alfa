@@ -13,6 +13,7 @@ import {
 import Piece3DModal from "../../modals/Piece3DModal";
 import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
 import type {
+  ViewerBackgroundMode,
   ViewerRenderBackground,
   ViewerRenderMode,
   ViewerRenderResult,
@@ -311,6 +312,19 @@ export default function RightToolsBar() {
         <div className="right-tools-card" style={{ marginTop: 0 }}>
           <div className="right-tools-card-title">Viewer Settings</div>
           <div className="right-tools-card-description">Controles da Fase 3 (preparação visual).</div>
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, marginBottom: 8 }}>
+            Background
+            <select
+              value={project.viewerSettings.backgroundMode}
+              onChange={(e) => actions.setViewerSettings({ backgroundMode: e.target.value as ViewerBackgroundMode })}
+              className="input input-sm"
+            >
+              <option value="studio">Studio</option>
+              <option value="white">White</option>
+              <option value="dark">Dark</option>
+              <option value="woodFloor">Wood Floor</option>
+            </select>
+          </label>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
             <input
               type="checkbox"

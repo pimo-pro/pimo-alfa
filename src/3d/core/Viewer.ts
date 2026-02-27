@@ -26,6 +26,7 @@ import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import type { EnvironmentOptions } from "./Environment";
 import type {
+  ViewerBackgroundMode,
   ViewerMousePreset,
   ViewerRenderOptions,
   ViewerRenderResult,
@@ -160,6 +161,7 @@ export class Viewer {
   private roomCeilingVisible = true;
   private wallEditMode = false;
   private mousePreset: ViewerMousePreset = "cad";
+  private backgroundMode: ViewerBackgroundMode = "studio";
 
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
@@ -294,6 +296,7 @@ export class Viewer {
       ? null
       : new Controls(this.cameraManager.camera, this.rendererManager.renderer.domElement, options.controls);
     this.applyMousePresetToControls();
+    this.applyBackgroundMode();
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -785,6 +788,82 @@ export class Viewer {
     return this.mousePreset;
   }
 
+  private applyBackgroundMode(): void {
+    const renderer = this.rendererManager.renderer;
+    const mode = this.backgroundMode;
+    const sceneBackgroundByMode: Record<ViewerBackgroundMode, string> = {
+      studio: "#0f172a",
+      white: "#ffffff",
+      dark: "#020617",
+      woodFloor: "#f8fafc",
+    };
+    const clearColor = sceneBackgroundByMode[mode];
+    this.sceneManager.setBackground(clearColor);
+    renderer.setClearColor(clearColor, 1);
+
+    if (mode === "woodFloor") {
+      this.sceneManager.setGroundAppearance({
+        color: "#9a7452",
+        roughness: 0.9,
+        metalness: 0.02,
+      });
+    } else if (mode === "dark") {
+      this.sceneManager.setGroundAppearance({
+        color: "#1f2937",
+        roughness: 0.92,
+        metalness: 0,
+      });
+    } else if (mode === "white") {
+      this.sceneManager.setGroundAppearance({
+        color: "#e5e7eb",
+        roughness: 0.92,
+        metalness: 0,
+      });
+    } else {
+      this.sceneManager.setGroundAppearance({
+        color: "#d4dae2",
+        roughness: 0.92,
+        metalness: 0,
+      });
+    }
+
+    const roomFloorColor = mode === "woodFloor"
+      ? "#b08968"
+      : mode === "dark"
+        ? "#374151"
+        : mode === "white"
+          ? "#f3f4f6"
+          : "#d1d5db";
+    const roomFloorRoughness = mode === "woodFloor" ? 0.82 : 0.75;
+
+    if (this.roomBoxFloor?.material instanceof THREE.MeshStandardMaterial) {
+      this.roomBoxFloor.material.color.set(roomFloorColor);
+      this.roomBoxFloor.material.roughness = roomFloorRoughness;
+      this.roomBoxFloor.material.metalness = 0.05;
+      this.roomBoxFloor.material.needsUpdate = true;
+    }
+
+    this.sceneManager.root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      if (node.userData?.isRoomFloor !== true) return;
+      if (!(node.material instanceof THREE.MeshStandardMaterial)) return;
+      node.material.color.set(roomFloorColor);
+      node.material.roughness = roomFloorRoughness;
+      node.material.metalness = 0.05;
+      node.material.needsUpdate = true;
+    });
+  }
+
+  setBackgroundMode(mode: ViewerBackgroundMode): void {
+    this.backgroundMode =
+      mode === "white" || mode === "dark" || mode === "woodFloor" ? mode : "studio";
+    this.applyBackgroundMode();
+  }
+
+  getBackgroundMode(): ViewerBackgroundMode {
+    return this.backgroundMode;
+  }
+
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
     const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
     if (existing) {
@@ -940,6 +1019,7 @@ export class Viewer {
     });
     this.sceneManager.add(box);
     this.applyPanelVisibilityForObject(box);
+    this.applyBackgroundMode();
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
       // auto-rotate disabled — centralizado no snapping
       // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
@@ -1404,6 +1484,7 @@ export class Viewer {
     this.roomBoxFloor = floor;
     this.roomBoxCeiling = ceiling;
     this.setRoomCeilingVisible(this.roomCeilingVisible);
+    this.applyBackgroundMode();
   }
 
   setRoomBounds(bounds: {

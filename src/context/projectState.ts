@@ -63,6 +63,7 @@ const defaultViewerSettings: ViewerSettings = {
   showCeiling: true,
   wallEditMode: false,
   mousePreset: "cad",
+  backgroundMode: "studio",
 };
 
 const createBox = (

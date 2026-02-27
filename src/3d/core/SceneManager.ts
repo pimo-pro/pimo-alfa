@@ -45,6 +45,20 @@ export class SceneManager {
     this.ground.position.set(x, 0, z);
   }
 
+  setBackground(color: string | null) {
+    this.scene.background = color ? new THREE.Color(color) : null;
+  }
+
+  setGroundAppearance(options: { color?: string; roughness?: number; metalness?: number }) {
+    if (!this.ground) return;
+    const material = this.ground.material;
+    if (!(material instanceof THREE.MeshStandardMaterial)) return;
+    if (options.color) material.color.set(options.color);
+    if (typeof options.roughness === "number") material.roughness = options.roughness;
+    if (typeof options.metalness === "number") material.metalness = options.metalness;
+    material.needsUpdate = true;
+  }
+
   dispose() {
     this.root.traverse((child) => {
       if (child instanceof THREE.Mesh) {

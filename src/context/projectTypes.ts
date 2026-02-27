@@ -20,6 +20,7 @@ import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import type { DoorLayerItem, DrawerLayerItem, LayerOpenDirection } from "../models/BoxLayers";
 
 export type ViewerMousePreset = "cad" | "classic";
+export type ViewerBackgroundMode = "studio" | "white" | "dark" | "woodFloor";
 
 export type ViewerSettings = {
   showPanelEdges: boolean;
@@ -28,6 +29,7 @@ export type ViewerSettings = {
   showCeiling: boolean;
   wallEditMode: boolean;
   mousePreset: ViewerMousePreset;
+  backgroundMode: ViewerBackgroundMode;
 };
 
 export interface ProjectState {

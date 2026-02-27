@@ -4,6 +4,7 @@ import type {
   DoorWindowConfig,
   RoomConfig,
   ViewerMousePreset,
+  ViewerBackgroundMode,
   ViewerRenderOptions,
   ViewerRenderResult,
 } from "./projectTypes";
@@ -98,6 +99,8 @@ export type PimoViewerApi = {
   setWallEditMode?: (_enabled: boolean) => void;
   setMousePreset?: (_preset: ViewerMousePreset) => void;
   getMousePreset?: () => ViewerMousePreset;
+  setBackgroundMode?: (_mode: ViewerBackgroundMode) => void;
+  getBackgroundMode?: () => ViewerBackgroundMode;
 };
 
 export type PimoViewerContextValue = {

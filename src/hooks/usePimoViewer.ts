@@ -4,6 +4,7 @@ import { Viewer } from "../3d/core/Viewer";
 import type { ViewerOptions } from "../3d/core/Viewer";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
+  ViewerBackgroundMode,
   DoorWindowConfig,
   RoomConfig,
   ViewerMousePreset,
@@ -103,6 +104,8 @@ type PimoViewerAPI = {
   setWallEditMode?: (_enabled: boolean) => void;
   setMousePreset?: (_preset: ViewerMousePreset) => void;
   getMousePreset?: () => ViewerMousePreset;
+  setBackgroundMode?: (_mode: ViewerBackgroundMode) => void;
+  getBackgroundMode?: () => ViewerBackgroundMode;
 };
 
 export const usePimoViewer = (
@@ -519,6 +522,15 @@ export const usePimoViewer = (
     []
   );
 
+  const setBackgroundMode = useCallback((mode: ViewerBackgroundMode) => {
+    viewerRef.current?.setBackgroundMode?.(mode);
+  }, []);
+
+  const getBackgroundMode = useCallback(
+    () => viewerRef.current?.getBackgroundMode?.() ?? "studio",
+    []
+  );
+
   const updateRoomElementConfig = useCallback(
     (elementId: string, config: DoorWindowConfig) =>
       viewerRef.current?.updateRoomElementConfig?.(elementId, config) ?? false,
@@ -613,6 +625,8 @@ export const usePimoViewer = (
       setWallEditMode,
       setMousePreset,
       getMousePreset,
+      setBackgroundMode,
+      getBackgroundMode,
     }),
     [
       viewerReady,
@@ -687,6 +701,8 @@ export const usePimoViewer = (
       setWallEditMode,
       setMousePreset,
       getMousePreset,
+      setBackgroundMode,
+      getBackgroundMode,
     ]
   );
 };
