@@ -752,6 +752,20 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.viewer-toolbar-action-container {
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.viewer-toolbar .viewer-toolbar-primary-action {
+  flex-shrink: 0;
+  min-width: 180px;
+  width: auto;
+  white-space: nowrap;
+}
+
 .viewer-toolbar button[aria-pressed="true"],
 .tools-3d-toolbar button[aria-pressed="true"] {
   background: rgba(56, 189, 248, 0.2) !important;
