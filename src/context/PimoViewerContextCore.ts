@@ -3,6 +3,7 @@ import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
   DoorWindowConfig,
   RoomConfig,
+  ViewerMousePreset,
   ViewerRenderOptions,
   ViewerRenderResult,
 } from "./projectTypes";
@@ -90,6 +91,13 @@ export type PimoViewerApi = {
   getRoomVisible?: () => boolean;
   hideRoom?: () => void;
   showRoom?: () => void;
+  setPanelEdgesVisible?: (_visible: boolean) => void;
+  setPanelHidden?: (_panel: "left" | "right" | "top" | "bottom" | "back", _hidden: boolean) => void;
+  setAllPanelsHidden?: (_hidden: boolean) => void;
+  setRoomCeilingVisible?: (_visible: boolean) => void;
+  setWallEditMode?: (_enabled: boolean) => void;
+  setMousePreset?: (_preset: ViewerMousePreset) => void;
+  getMousePreset?: () => ViewerMousePreset;
 };
 
 export type PimoViewerContextValue = {

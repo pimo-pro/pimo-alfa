@@ -6,6 +6,7 @@ import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
   DoorWindowConfig,
   RoomConfig,
+  ViewerMousePreset,
   ViewerRenderOptions,
   ViewerRenderResult,
 } from "../context/projectTypes";
@@ -95,6 +96,13 @@ type PimoViewerAPI = {
   getRoomVisible?: () => boolean;
   hideRoom?: () => void;
   showRoom?: () => void;
+  setPanelEdgesVisible?: (_visible: boolean) => void;
+  setPanelHidden?: (_panel: "left" | "right" | "top" | "bottom" | "back", _hidden: boolean) => void;
+  setAllPanelsHidden?: (_hidden: boolean) => void;
+  setRoomCeilingVisible?: (_visible: boolean) => void;
+  setWallEditMode?: (_enabled: boolean) => void;
+  setMousePreset?: (_preset: ViewerMousePreset) => void;
+  getMousePreset?: () => ViewerMousePreset;
 };
 
 export const usePimoViewer = (
@@ -482,6 +490,35 @@ export const usePimoViewer = (
     viewerRef.current?.showRoom?.();
   }, []);
 
+  const setPanelEdgesVisible = useCallback((visible: boolean) => {
+    viewerRef.current?.setPanelEdgesVisible?.(visible);
+  }, []);
+
+  const setPanelHidden = useCallback((panel: "left" | "right" | "top" | "bottom" | "back", hidden: boolean) => {
+    viewerRef.current?.setPanelHidden?.(panel, hidden);
+  }, []);
+
+  const setAllPanelsHidden = useCallback((hidden: boolean) => {
+    viewerRef.current?.setAllPanelsHidden?.(hidden);
+  }, []);
+
+  const setRoomCeilingVisible = useCallback((visible: boolean) => {
+    viewerRef.current?.setRoomCeilingVisible?.(visible);
+  }, []);
+
+  const setWallEditMode = useCallback((enabled: boolean) => {
+    viewerRef.current?.setWallEditMode?.(enabled);
+  }, []);
+
+  const setMousePreset = useCallback((preset: ViewerMousePreset) => {
+    viewerRef.current?.setMousePreset?.(preset);
+  }, []);
+
+  const getMousePreset = useCallback(
+    () => viewerRef.current?.getMousePreset?.() ?? "cad",
+    []
+  );
+
   const updateRoomElementConfig = useCallback(
     (elementId: string, config: DoorWindowConfig) =>
       viewerRef.current?.updateRoomElementConfig?.(elementId, config) ?? false,
@@ -569,6 +606,13 @@ export const usePimoViewer = (
       getRoomVisible,
       hideRoom,
       showRoom,
+      setPanelEdgesVisible,
+      setPanelHidden,
+      setAllPanelsHidden,
+      setRoomCeilingVisible,
+      setWallEditMode,
+      setMousePreset,
+      getMousePreset,
     }),
     [
       viewerReady,
@@ -636,6 +680,13 @@ export const usePimoViewer = (
       getRoomVisible,
       hideRoom,
       showRoom,
+      setPanelEdgesVisible,
+      setPanelHidden,
+      setAllPanelsHidden,
+      setRoomCeilingVisible,
+      setWallEditMode,
+      setMousePreset,
+      getMousePreset,
     ]
   );
 };

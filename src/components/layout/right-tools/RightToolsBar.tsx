@@ -127,6 +127,21 @@ export default function RightToolsBar() {
     const selectedBoxCutList = project.boxes.find((b) => b.id === project.selectedWorkspaceBoxId)?.cutList;
     return buildViewerDrillMarkersByPanel(selectedBoxCutList);
   }, [project.boxes, project.selectedWorkspaceBoxId]);
+  const panelLabels: Record<"left" | "right" | "top" | "bottom" | "back", string> = {
+    left: "Lateral Esq",
+    right: "Lateral Dir",
+    top: "Topo",
+    bottom: "Fundo",
+    back: "Costa",
+  };
+
+  const toggleHiddenPanel = (panel: "left" | "right" | "top" | "bottom" | "back") => {
+    const current = project.viewerSettings.hiddenPanels;
+    const next = current.includes(panel)
+      ? current.filter((item) => item !== panel)
+      : [...current, panel];
+    actions.setViewerSettings({ hiddenPanels: next });
+  };
 
   useEffect(() => {
     if (modal === "projects") {
@@ -294,6 +309,59 @@ export default function RightToolsBar() {
     <>
       <aside className="right-tools-bar" aria-label="Resultados e modais">
         <div className="right-tools-card" style={{ marginTop: 0 }}>
+          <div className="right-tools-card-title">Viewer Settings</div>
+          <div className="right-tools-card-description">Controles da Fase 3 (preparação visual).</div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.showPanelEdges}
+              onChange={(e) => actions.setViewerSettings({ showPanelEdges: e.target.checked })}
+            />
+            Mostrar arestas dos painéis
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.hideAllPanels}
+              onChange={(e) => actions.setViewerSettings({ hideAllPanels: e.target.checked })}
+            />
+            Esconder todos os painéis
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.showCeiling}
+              onChange={(e) => actions.setViewerSettings({ showCeiling: e.target.checked })}
+            />
+            Mostrar teto da sala
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.wallEditMode}
+              onChange={(e) => actions.setViewerSettings({ wallEditMode: e.target.checked })}
+            />
+            Modo edição de paredes
+          </label>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {(Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
+              const isHidden = project.viewerSettings.hiddenPanels.includes(panel);
+              return (
+                <button
+                  key={`panel-toggle-${panel}`}
+                  type="button"
+                  className="button button-ghost"
+                  style={{ fontSize: 11, padding: "4px 8px", opacity: isHidden ? 0.65 : 1 }}
+                  onClick={() => toggleHiddenPanel(panel)}
+                >
+                  {isHidden ? "Mostrar" : "Esconder"} {panelLabels[panel]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="right-tools-card" style={{ marginTop: 16 }}>
           <div className="right-tools-card-title">Resultados Atuais</div>
           <div className="right-tools-card-description">Resumo rápido do projeto em edição.</div>
           <div className="right-tools-card-row">

@@ -19,6 +19,17 @@ import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import type { DoorLayerItem, DrawerLayerItem, LayerOpenDirection } from "../models/BoxLayers";
 
+export type ViewerMousePreset = "cad" | "classic";
+
+export type ViewerSettings = {
+  showPanelEdges: boolean;
+  hiddenPanels: Array<"left" | "right" | "top" | "bottom" | "back">;
+  hideAllPanels: boolean;
+  showCeiling: boolean;
+  wallEditMode: boolean;
+  mousePreset: ViewerMousePreset;
+};
+
 export interface ProjectState {
   projectName: string;
   tipoProjeto: string;
@@ -61,6 +72,9 @@ export interface ProjectState {
 
   /** Ferramenta 3D ativa no Viewer: select, move, rotate. Opcional para compatibilidade com snapshots antigos. */
   activeViewerTool?: "select" | "move" | "rotate";
+
+  /** Configurações visuais/controle do viewer (fase 3). */
+  viewerSettings: ViewerSettings;
 
   /** Perfis de regras: lista de perfis + perfil ativo. */
   rulesProfiles: RulesProfilesConfig;
@@ -367,6 +381,8 @@ export interface ProjectActions {
   logChangelog: (_message: string) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: "select" | "move" | "rotate") => void;
+  /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */
+  setViewerSettings: (_partial: Partial<ViewerSettings>) => void;
   /** Atualiza regras dinâmicas; guarda no LocalStorage e força recalcular caixas. */
   updateRules: (_rules: RulesConfig) => void;
   /** Define o perfil de regras ativo; recalcula todas as caixas. */

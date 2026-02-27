@@ -211,6 +211,7 @@ export default function Workspace({
   }, [project.activeViewerTool, viewerSync]);
 
   const [lockEnabled, setLockEnabledState] = useState(false);
+  const [mouseMenuPosition, setMouseMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const toggleLock = useCallback(() => {
     const next = !lockEnabled;
     setLockEnabledState(next);
@@ -227,6 +228,22 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
   useEffect(() => {
     viewerSync.setDimensionsOverlayVisible(isSelectMode);
   }, [isSelectMode, viewerSync]);
+
+  useEffect(() => {
+    const settings = project.viewerSettings;
+    viewerApi.setPanelEdgesVisible?.(settings.showPanelEdges);
+    viewerApi.setAllPanelsHidden?.(settings.hideAllPanels);
+    const panels: Array<"left" | "right" | "top" | "bottom" | "back"> = ["left", "right", "top", "bottom", "back"];
+    panels.forEach((panel) => {
+      viewerApi.setPanelHidden?.(panel, settings.hiddenPanels.includes(panel));
+    });
+    viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
+    viewerApi.setWallEditMode?.(settings.wallEditMode);
+    viewerApi.setMousePreset?.(settings.mousePreset);
+  }, [
+    project.viewerSettings,
+    viewerApi,
+  ]);
 
 // Overlay de dimensões: cache em refs para evitar loop (setState nos "last" recriava o callback e retriggava o useEffect).
   const lastBoxIdRef = useRef<string | null>(null);
@@ -379,7 +396,14 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
   }, [actions, viewerApi]);
 
 return (
-    <main className="workspace-root" style={{ position: "relative", zIndex: 0 }} aria-label="Área de design 3D">
+    <main
+      className="workspace-root"
+      style={{ position: "relative", zIndex: 0 }}
+      aria-label="Área de design 3D"
+      onPointerDown={() => {
+        if (mouseMenuPosition) setMouseMenuPosition(null);
+      }}
+    >
       <div className="workspace-canvas">
         <div className="workspace-toolbars" style={{ display: "flex", flexDirection: "column" }}>
           <ViewerToolbar />
@@ -397,6 +421,10 @@ return (
 <div className="workspace-viewer" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
           <div
             ref={containerRef}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setMouseMenuPosition({ x: event.clientX, y: event.clientY });
+            }}
             style={{
               flex: 1,
               minHeight: 0,
@@ -404,6 +432,51 @@ return (
               height: typeof viewerHeight === "number" ? `${viewerHeight}px` : "100%",
             }}
           />
+          {mouseMenuPosition && (
+            <div
+              role="menu"
+              aria-label="Mouse settings"
+              style={{
+                position: "fixed",
+                left: mouseMenuPosition.x,
+                top: mouseMenuPosition.y,
+                transform: "translate(8px, 8px)",
+                minWidth: 160,
+                background: "rgba(15, 23, 42, 0.95)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 8,
+                padding: 8,
+                zIndex: 60,
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="button button-ghost"
+                style={{ justifyContent: "flex-start", fontSize: 12 }}
+                onClick={() => {
+                  actions.setViewerSettings({ mousePreset: "cad" });
+                  setMouseMenuPosition(null);
+                }}
+              >
+                {project.viewerSettings.mousePreset === "cad" ? "✓ " : ""}Mouse CAD
+              </button>
+              <button
+                type="button"
+                className="button button-ghost"
+                style={{ justifyContent: "flex-start", fontSize: 12 }}
+                onClick={() => {
+                  actions.setViewerSettings({ mousePreset: "classic" });
+                  setMouseMenuPosition(null);
+                }}
+              >
+                {project.viewerSettings.mousePreset === "classic" ? "✓ " : ""}Mouse Classic
+              </button>
+            </div>
+          )}
         </div>
 {isSelectMode && (selectedBoxDimensions || project.selectedWorkspaceBoxId) && selectedBoxOverlayPosition && (() => {
             const selectedBox = project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId);

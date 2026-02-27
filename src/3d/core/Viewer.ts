@@ -26,6 +26,7 @@ import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import type { EnvironmentOptions } from "./Environment";
 import type {
+  ViewerMousePreset,
   ViewerRenderOptions,
   ViewerRenderResult,
   ViewerCameraPreset,
@@ -153,6 +154,12 @@ export class Viewer {
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
   private onRoomElementTransform: ((_elementId: string, _config: DoorWindowConfig) => void) | null = null;
+  private panelEdgesVisible = true;
+  private hiddenPanels = new Set<"left" | "right" | "top" | "bottom" | "back">();
+  private hideAllPanels = false;
+  private roomCeilingVisible = true;
+  private wallEditMode = false;
+  private mousePreset: ViewerMousePreset = "cad";
 
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
@@ -286,6 +293,7 @@ export class Viewer {
     this.controls = options.enableControls === false
       ? null
       : new Controls(this.cameraManager.camera, this.rendererManager.renderer.domElement, options.controls);
+    this.applyMousePresetToControls();
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -313,6 +321,7 @@ export class Viewer {
     this.wallGizmo = new WallGizmo(this.cameraManager.camera);
     this.wallGizmo.setOnTransform(() => this.notifyWallTransform());
     this.sceneManager.scene.add(this.wallGizmo.group);
+    this.setWallEditMode(false);
 
     this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
     if (import.meta.env.DEV) {
@@ -753,6 +762,109 @@ export class Viewer {
     this.updateCameraTarget();
   }
 
+  private applyMousePresetToControls(): void {
+    const controls = this.controls?.controls;
+    if (!controls) return;
+    if (this.mousePreset === "classic") {
+      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+      controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+      controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+      return;
+    }
+    controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+    controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+    controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+  }
+
+  setMousePreset(preset: ViewerMousePreset): void {
+    this.mousePreset = preset === "classic" ? "classic" : "cad";
+    this.applyMousePresetToControls();
+  }
+
+  getMousePreset(): ViewerMousePreset {
+    return this.mousePreset;
+  }
+
+  private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
+    const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
+    if (existing) {
+      mesh.remove(existing);
+      existing.geometry.dispose();
+      if (!Array.isArray(existing.material)) {
+        existing.material.dispose();
+      }
+    }
+    const geometry = new THREE.EdgesGeometry(mesh.geometry);
+    const material = new THREE.LineBasicMaterial({
+      color: new THREE.Color("#0f172a"),
+      transparent: true,
+      opacity: 0.35,
+    });
+    const overlay = new THREE.LineSegments(geometry, material);
+    overlay.userData.isPanelEdgeOverlay = true;
+    overlay.raycast = () => null;
+    mesh.add(overlay);
+    overlay.visible = visible;
+  }
+
+  private applyPanelVisibilityForObject(root: THREE.Object3D): void {
+    root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
+      if (!panelType) return;
+      const hidden = this.hideAllPanels || this.hiddenPanels.has(panelType);
+      node.visible = !hidden;
+      this.ensurePanelEdges(node, this.panelEdgesVisible && !hidden);
+    });
+  }
+
+  private applyPanelVisibilityForAllBoxes(): void {
+    this.boxes.forEach((entry) => this.applyPanelVisibilityForObject(entry.mesh));
+  }
+
+  setPanelEdgesVisible(visible: boolean): void {
+    this.panelEdgesVisible = Boolean(visible);
+    this.applyPanelVisibilityForAllBoxes();
+  }
+
+  setPanelHidden(panel: "left" | "right" | "top" | "bottom" | "back", hidden: boolean): void {
+    if (hidden) this.hiddenPanels.add(panel);
+    else this.hiddenPanels.delete(panel);
+    this.applyPanelVisibilityForAllBoxes();
+  }
+
+  setAllPanelsHidden(hidden: boolean): void {
+    this.hideAllPanels = Boolean(hidden);
+    this.applyPanelVisibilityForAllBoxes();
+  }
+
+  setRoomCeilingVisible(visible: boolean): void {
+    this.roomCeilingVisible = Boolean(visible);
+    if (this.roomBoxCeiling) {
+      this.roomBoxCeiling.visible = this.roomCeilingVisible;
+    }
+    if (this.roomBoxGroup) {
+      this.roomBoxGroup.traverse((node) => {
+        if (!(node instanceof THREE.Mesh)) return;
+        if (node.userData?.isRoomCeiling === true) {
+          node.visible = this.roomCeilingVisible;
+        }
+      });
+    }
+  }
+
+  setWallEditMode(enabled: boolean): void {
+    this.wallEditMode = Boolean(enabled);
+    if (this.wallGizmo) {
+      this.wallGizmo.group.visible = this.wallEditMode;
+      if (!this.wallEditMode) this.wallGizmo.detach();
+      if (this.wallEditMode && this.selectedWallIndex !== null) {
+        const wall = this.roomBoxWalls.find((w) => w.id === this.selectedWallIndex)?.mesh;
+        if (wall) this.wallGizmo.attach(wall);
+      }
+    }
+  }
+
   addBox(id: string, options: BoxOptions = {}): boolean {
     if (this.boxes.has(id)) return false;
     const opts = options ?? {};
@@ -827,6 +939,7 @@ export class Viewer {
       material,
     });
     this.sceneManager.add(box);
+    this.applyPanelVisibilityForObject(box);
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
       // auto-rotate disabled — centralizado no snapping
       // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
@@ -925,6 +1038,7 @@ export class Viewer {
           entry.mesh instanceof THREE.Group
             ? updateBoxGroup(entry.mesh, fullOpts)
             : updateBoxGeometry(entry.mesh as THREE.Mesh, fullOpts);
+        this.applyPanelVisibilityForObject(entry.mesh);
         width = updated.width;
         height = updated.height;
         depth = updated.depth;
@@ -1174,10 +1288,11 @@ export class Viewer {
     this.roomBounds = bounds;
     this.sceneManager.root.add(group);
     this.sceneManager.setGroundSize(
-      Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) * 1.5,
-      Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) * 1.5
+      Math.max(bounds.maxX - bounds.minX, 0.01),
+      Math.max(bounds.maxZ - bounds.minZ, 0.01)
     );
     this.sceneManager.setGroundPosition(bounds.centerX, bounds.centerZ);
+    this.setRoomCeilingVisible(this.roomCeilingVisible);
   }
 
   /** Chamado pelo RoomManager quando a sala é removida. Remove o grupo da cena e limpa estado. */
@@ -1288,6 +1403,7 @@ export class Viewer {
     ];
     this.roomBoxFloor = floor;
     this.roomBoxCeiling = ceiling;
+    this.setRoomCeilingVisible(this.roomCeilingVisible);
   }
 
   setRoomBounds(bounds: {
@@ -1412,7 +1528,7 @@ export class Viewer {
   selectWallByIndex(index: number | null): void {
     this.selectedWallIndex = index !== null && this.roomBoxWalls.some((w) => w.id === index) ? index : null;
     if (this.wallGizmo) {
-      if (this.selectedWallIndex !== null) {
+      if (this.wallEditMode && this.selectedWallIndex !== null) {
         const wall = this.roomBoxWalls.find((w) => w.id === this.selectedWallIndex)?.mesh;
         if (wall) this.wallGizmo.attach(wall);
       } else {
@@ -1849,7 +1965,7 @@ export class Viewer {
       this.selectedWallIndex = wallId;
       this.selectedRoomElementId = null;
       const wall = this.roomBoxWalls.find((w) => w.id === wallId)?.mesh;
-      if (this.wallGizmo && wall) this.wallGizmo.attach(wall);
+      if (this.wallGizmo && wall && this.wallEditMode) this.wallGizmo.attach(wall);
       this.refreshTransformControlsAttachment();
       this.refreshOutlineTarget();
       this.onBoxSelected?.(null);

@@ -120,6 +120,10 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
   return {
     ...defaultState,
     ...restored,
+    viewerSettings: {
+      ...defaultState.viewerSettings,
+      ...(restored.viewerSettings ?? {}),
+    },
     workspaceBoxes,
     selectedWorkspaceBoxId: workspaceBoxes.length ? (restored.selectedWorkspaceBoxId ?? workspaceBoxes[0].id) : "",
     selectedCaixaId: workspaceBoxes.length ? (restored.selectedCaixaId ?? workspaceBoxes[0].id) : "",
@@ -1213,6 +1217,18 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
     setActiveTool: (mode) => {
       updateProject((prev) => ({ ...prev, activeViewerTool: mode }), false);
       viewerSync.setActiveTool(mode);
+    },
+    setViewerSettings: (partial) => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          viewerSettings: {
+            ...prev.viewerSettings,
+            ...partial,
+          },
+        }),
+        false
+      );
     },
     updateRules: (rules: RulesConfig) => {
       updateProject((prev) => {

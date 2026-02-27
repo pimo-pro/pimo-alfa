@@ -20,7 +20,7 @@ import type {
   WorkspaceBox,
 } from "../core/types";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
-import type { ProjectState } from "./projectTypes";
+import type { ProjectState, ViewerSettings } from "./projectTypes";
 import { safeGetItem, safeParseJson } from "../utils/storage";
 import { validateBoxModels } from "../core/rules/validation";
 import {
@@ -55,6 +55,15 @@ const defaultDimensoes: Dimensoes = {
 
 const defaultTipoBorda: TipoBorda = "reta";
 const defaultTipoFundo: TipoFundo = "recuado";
+
+const defaultViewerSettings: ViewerSettings = {
+  showPanelEdges: true,
+  hiddenPanels: [],
+  hideAllPanels: false,
+  showCeiling: true,
+  wallEditMode: false,
+  mousePreset: "cad",
+};
 
 const createBox = (
   id: string,
@@ -220,6 +229,7 @@ export const defaultState: ProjectState = {
   precoTotalAcessorios: null,
   precoTotalProjeto: null,
   activeViewerTool: "select",
+  viewerSettings: defaultViewerSettings,
   rulesProfiles: loadProfiles(),
   rules: getRulesFromProfiles(loadProfiles()),
   rulesProfileId: undefined,
