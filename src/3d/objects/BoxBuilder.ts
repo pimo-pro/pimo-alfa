@@ -781,7 +781,12 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     p.position.set(pos[0], pos[1], pos[2]);
     root.add(p);
   });
-  const drillMap = opts.drillMarkersByPanel ?? {};
+  const drillMap: ViewerDrillMarkersByPanel = opts.drillMarkersByPanel ?? {
+    cima: [],
+    fundo: [],
+    lateral_esquerda: [],
+    lateral_direita: [],
+  };
   addDrillMarkersToPanel(panels.top, "top", drillMap.cima);
   addDrillMarkersToPanel(panels.bottom, "bottom", drillMap.fundo);
   addDrillMarkersToPanel(panels.left, "left", drillMap.lateral_esquerda);
@@ -955,7 +960,12 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
   const baseMaterial = group.children[0] instanceof THREE.Mesh ? (group.children[0] as THREE.Mesh).material : getFallbackPBRMaterial();
   const mat = Array.isArray(baseMaterial) ? baseMaterial[0] : baseMaterial;
-  const drillMap = opts.drillMarkersByPanel ?? {};
+  const drillMap: ViewerDrillMarkersByPanel = opts.drillMarkersByPanel ?? {
+    cima: [],
+    fundo: [],
+    lateral_esquerda: [],
+    lateral_direita: [],
+  };
   const topPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "top") as THREE.Mesh | undefined;
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
   const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
