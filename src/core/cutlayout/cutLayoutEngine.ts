@@ -1155,6 +1155,10 @@ type SeededRng = {
   int: (_maxExclusive: number) => number;
 };
 
+function randomInt(maxExclusive: number): number {
+  return Math.floor(Math.random() * Math.max(1, maxExclusive));
+}
+
 type SheetAdvancedMetrics = {
   convexHullWaste: number;
   fragmentationScore: number;
