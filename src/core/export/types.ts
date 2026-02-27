@@ -1,3 +1,5 @@
+import type { OperationResult } from "../types";
+
 /**
  * FASE 3 — Export Engine
  * Tipos e interfaces principais (placeholders).
@@ -16,13 +18,7 @@ export interface ExportOptions {
 }
 
 /** Resultado de uma operação de exportação. */
-export interface ExportResult {
-  success: boolean;
-  /** URL do blob ou path do ficheiro gerado. */
-  outputUrl?: string;
-  /** Mensagem de erro se success === false. */
-  error?: string;
-}
+export type ExportResult = OperationResult<{ outputUrl?: string }>;
 
 /** Configuração do motor de exportação. */
 export interface ExportEngineConfig {

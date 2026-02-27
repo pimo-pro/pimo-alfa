@@ -1,6 +1,12 @@
 import type { Group } from "three";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
 
+export type OperationResult<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+
 export interface Material {
   tipo: string;
   espessura: number;

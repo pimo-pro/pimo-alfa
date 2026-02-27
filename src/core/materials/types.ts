@@ -1,3 +1,5 @@
+import type { OperationResult } from "../types";
+
 /**
  * FASE 3 — Materials System
  * Tipos e interfaces principais (placeholders).
@@ -89,8 +91,4 @@ export interface MaterialDisplayInfo {
 }
 
 /** Resultado padrão de operações CRUD de material. */
-export type MaterialResult = {
-  success: boolean;
-  material?: MaterialRecord;
-  error?: string;
-};
+export type MaterialResult = OperationResult<MaterialRecord>;

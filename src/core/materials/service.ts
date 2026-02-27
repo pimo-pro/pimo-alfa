@@ -320,7 +320,7 @@ export function createMaterial(data: CreateMaterialData): MaterialResult {
   };
   list.push(record);
   saveToStorage(list);
-  return { success: true, material: record };
+  return { success: true, data: record };
 }
 
 /**
@@ -347,7 +347,7 @@ export function updateMaterial(
   }
   list[index] = merged;
   saveToStorage(list);
-  return { success: true, material: merged };
+  return { success: true, data: merged };
 }
 
 /**
@@ -444,7 +444,7 @@ export function importMaterialsFromJson(
     const result = createMaterial({ ...data, espessura, precoPorM2 });
     if (result.success) {
       imported++;
-      if (result.material?.label) existingLabels.add(result.material.label.trim().toLowerCase());
+      if (result.data?.label) existingLabels.add(result.data.label.trim().toLowerCase());
     } else {
       const errorMessage = result.error ?? "Erro ao importar material.";
       errors.push(`Item ${i + 1} (${label}): ${errorMessage}`);

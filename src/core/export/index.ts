@@ -4,6 +4,6 @@
  */
 
 export * from "./types";
-export * from "./service";
+export * from "./exportService";
 export * from "./hooks";
 export * from "./utils";

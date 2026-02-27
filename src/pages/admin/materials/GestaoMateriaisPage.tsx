@@ -256,8 +256,8 @@ export default function GestaoMateriaisPage() {
     }
     reload();
     showToast("Material duplicado.", "info");
-    if (result.material?.id) {
-      openEdit(result.material.id);
+    if (result.data?.id) {
+      openEdit(result.data.id);
     }
   };
 
