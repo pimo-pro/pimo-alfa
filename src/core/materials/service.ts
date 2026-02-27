@@ -12,6 +12,7 @@ import type {
   UpdateMaterialData,
   MaterialValidationResult,
   MaterialDisplayInfo,
+  MaterialResult,
 } from "./types";
 import type { ApplyMaterialOptions } from "./types";
 import type { BoxModule } from "../types";
@@ -294,7 +295,7 @@ export function getViewerMaterialId(materialIdOrLabel: string): string {
  * Cria um novo material. Gera id único. Valida campos obrigatórios.
  * Presets visuais e materiais industriais são guardados como referências (string id/label).
  */
-export function createMaterial(data: CreateMaterialData): { success: true; material: MaterialRecord } | { success: false; error: string } {
+export function createMaterial(data: CreateMaterialData): MaterialResult {
   const validation = validateMaterialData(data);
   if (!validation.valid) {
     return { success: false, error: validation.error ?? "Dados inválidos." };
@@ -328,7 +329,7 @@ export function createMaterial(data: CreateMaterialData): { success: true; mater
 export function updateMaterial(
   id: string,
   data: UpdateMaterialData
-): { success: true; material: MaterialRecord } | { success: false; error: string } {
+): MaterialResult {
   const list = loadFromStorage();
   const index = list.findIndex((m) => m.id === id);
   if (index === -1) {
@@ -363,7 +364,7 @@ export function deleteMaterial(id: string): boolean {
 /**
  * Duplica um material: cria novo registo com os mesmos dados e id gerado.
  */
-export function duplicateMaterial(id: string): { success: true; material: MaterialRecord } | { success: false; error: string } {
+export function duplicateMaterial(id: string): MaterialResult {
   const list = loadFromStorage();
   const source = list.find((m) => m.id === id);
   if (!source) return { success: false, error: "Material não encontrado." };
@@ -443,9 +444,10 @@ export function importMaterialsFromJson(
     const result = createMaterial({ ...data, espessura, precoPorM2 });
     if (result.success) {
       imported++;
-      if (result.material.label) existingLabels.add(result.material.label.trim().toLowerCase());
+      if (result.material?.label) existingLabels.add(result.material.label.trim().toLowerCase());
     } else {
-      errors.push(`Item ${i + 1} (${label}): ${result.error}`);
+      const errorMessage = result.error ?? "Erro ao importar material.";
+      errors.push(`Item ${i + 1} (${label}): ${errorMessage}`);
     }
   }
   return { imported, errors };

@@ -113,6 +113,10 @@ export interface CutListItem {
   furacoesTecnicas?: TechnicalDrillHole[];
   /** Furação normalizada para layout/cnc (formato unificado). */
   holes?: DrillHole[];
+  /** Posições Y das dobradiças aplicadas à peça (mm), quando aplicável. */
+  hingePositionsMm?: number[];
+  /** Posições Y dos furos de prateleira aplicados à peça (mm), quando aplicável. */
+  shelfHolePositions?: number[];
   /** Código curto legível para fábrica. */
   shortCode?: string;
   /** QR em SVG contendo o shortCode/carga técnica. */

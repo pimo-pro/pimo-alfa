@@ -204,13 +204,13 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
   if (piece.tipo !== "lateral_esquerda" && piece.tipo !== "lateral_direita") return;
 
   const face = piece.tipo === "lateral_esquerda" ? "direita" : "esquerda";
-  let xCalco = cfg.distanciaDaBordaCalco ?? (cfg as any).distanciaDaBorda ?? 37;
+  let xCalco = cfg.distanciaDaBordaCalco ?? cfg.distanciaDaBorda ?? 37;
   let xUniao = cfg.distanciaDaBordaParafusoUniao ?? 53;
   if (piece.tipo === "lateral_esquerda") {
     xCalco = piece.largura - xCalco;
     xUniao = piece.largura - xUniao;
   }
-  const distEntre = cfg.distanciaEntreFurosCalco ?? (cfg as any).distanciaEntreFuros ?? 32;
+  const distEntre = cfg.distanciaEntreFurosCalco ?? cfg.distanciaEntreFuros ?? 32;
   const halfDist = distEntre / 2;
   const diametroCalco = cfg.diametro ?? 5;
   const profundidadeCalco = cfg.profundidadeFuro ?? 12;

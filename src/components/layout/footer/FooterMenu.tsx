@@ -3,7 +3,9 @@ import "./footerMenu.css";
 
 export default function FooterMenu() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  type FooterMenuLink = { label: string; href: string; divider?: false } | { divider: true; label: string };
+  type FooterMenuLink = { label: string; href: string; divider?: false } | { divider: true; label: string; href?: string };
+  const isFooterNavLink = (link: FooterMenuLink): link is { label: string; href: string; divider?: false } =>
+    typeof link.href === "string";
 
   const menuLinks: FooterMenuLink[] = [
     { label: "Ajuda", href: "#" },
@@ -67,7 +69,7 @@ export default function FooterMenu() {
             <div className="footer-menu-dropdown">
               <nav className="footer-menu-list">
                 {menuLinks.map((link, idx: number) => {
-                  if (link.divider) {
+                  if (!isFooterNavLink(link)) {
                     return (
                       <div key={idx} className="footer-menu-divider-label">
                         {link.label}

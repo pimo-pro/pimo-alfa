@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { MaterialRecord, CreateMaterialData, UpdateMaterialData } from "./types";
+import type { MaterialRecord, CreateMaterialData, UpdateMaterialData, MaterialResult } from "./types";
 import {
   listMaterials,
   getMaterialByIdOrLabel,
@@ -46,13 +46,13 @@ export function useSaveMaterial(): {
   save: (
     _data: CreateMaterialData | (UpdateMaterialData & { id?: string }),
     _editingId: string | null
-  ) => { success: true; material: MaterialRecord } | { success: false; error: string };
+  ) => MaterialResult;
 } {
   const save = useCallback(
     (
       data: CreateMaterialData | (UpdateMaterialData & { id?: string }),
       editingId: string | null
-    ): { success: true; material: MaterialRecord } | { success: false; error: string } => {
+    ): MaterialResult => {
       if (editingId) {
         const { id: _id, ...rest } = data as UpdateMaterialData & { id?: string };
         return updateMaterial(editingId, rest);

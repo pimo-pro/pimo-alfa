@@ -222,13 +222,13 @@ export default function GestaoMateriaisPage() {
   const handleSave = () => {
     const data = buildFormData();
     const result = save(data, editingId);
-    if (result.success) {
-      reload();
-      closePanel();
-      showToast(editingId ? "Material atualizado com sucesso." : "Material criado com sucesso.", "info");
-    } else {
+    if (!result.success) {
       showToast(result.error ?? "Erro ao guardar.", "error");
+      return;
     }
+    reload();
+    closePanel();
+    showToast(editingId ? "Material atualizado com sucesso." : "Material criado com sucesso.", "info");
   };
 
   const handleDelete = (id: string, label: string) => {
@@ -250,12 +250,14 @@ export default function GestaoMateriaisPage() {
 
   const handleDuplicate = (id: string) => {
     const result = duplicateMaterial(id);
-    if (result.success) {
-      reload();
-      showToast("Material duplicado.", "info");
-      openEdit(result.material.id);
-    } else {
+    if (!result.success) {
       showToast(result.error ?? "Erro ao duplicar.", "error");
+      return;
+    }
+    reload();
+    showToast("Material duplicado.", "info");
+    if (result.material?.id) {
+      openEdit(result.material.id);
     }
   };
 

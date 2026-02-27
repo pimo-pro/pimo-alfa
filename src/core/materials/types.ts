@@ -87,3 +87,10 @@ export interface MaterialDisplayInfo {
   /** Id do material (CRUD) para referência. */
   materialId?: string;
 }
+
+/** Resultado padrão de operações CRUD de material. */
+export type MaterialResult = {
+  success: boolean;
+  material?: MaterialRecord;
+  error?: string;
+};

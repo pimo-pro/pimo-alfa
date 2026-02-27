@@ -1,7 +1,13 @@
-import type { AcessorioComPreco, BoxModule, CutListItemComPreco, GrainDirection } from "../types";
+import type {
+  AcessorioComPreco,
+  BoxModule,
+  CutListItemComPreco,
+  GrainDirection,
+  TechnicalDrillHole,
+} from "../types";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import { getHingeYPositions, MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM } from "../rules/rulesConfig";
-import type { RulesConfig } from "../rules/rulesConfig";
+import { normalizeRulesConfig, type RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calculateTechnicalDrillingsForPiece, isTopDrillable } from "../drilling/drillingService";
@@ -13,62 +19,106 @@ import { getSettings } from "../settings/settingsService";
  * Usa gerarModeloIndustrial com rules do projeto. Material = label do CRUD ou legado.
  * Preenche materialId, visualMaterial, grainDirection e opcionalmente faceMaterials (Layout Engine / MaterialLibrary v2).
  */
+const clampNumber = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
+
+function toFiniteNumber(value: unknown, fallback: number): number {
+  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
 function mergeFuraçãoIntoRules(rules: RulesConfig): RulesConfig {
+  const normalizedRules = normalizeRulesConfig(rules);
   const settings = getSettings();
   const fu = settings?.furação;
-  if (!fu?.parafuso || !fu?.prateleira || !fu?.dobradica) return rules;
+  if (!fu?.parafuso || !fu?.prateleira || !fu?.dobradica) return normalizedRules;
+
   const pr = fu.prateleira;
   const df = fu.dobradicaFixacao;
+  const minFuros = clampNumber(toFiniteNumber(pr.minFuros, normalizedRules.furos.tecnicos.prateleira.minFurosPorColuna), 2, 100);
+  const maxFurosRaw = clampNumber(toFiniteNumber(pr.maxFuros, normalizedRules.furos.tecnicos.prateleira.maxFurosPorColuna), 2, 100);
+  const maxFuros = Math.max(minFuros, maxFurosRaw);
+  const distanciaDaBorda = clampNumber(
+    toFiniteNumber(pr.distanciaDaBorda, normalizedRules.furos.tecnicos.prateleira.distanciaDaBorda),
+    5,
+    120
+  );
+
   return {
-    ...rules,
+    ...normalizedRules,
     furos: {
-      ...rules.furos,
+      ...normalizedRules.furos,
       tecnicos: {
-        ...rules.furos.tecnicos,
+        ...normalizedRules.furos.tecnicos,
         parafuso: {
-          ...rules.furos.tecnicos.parafuso,
+          ...normalizedRules.furos.tecnicos.parafuso,
           distanciaFrente: fu.parafuso.distanciaFrenteParafuso,
           distanciaFundo: fu.parafuso.distanciaFrenteParafuso,
           offsetDaBorda: fu.parafuso.offsetDaBorda,
         },
         cavilha: {
-          ...rules.furos.tecnicos.cavilha,
+          ...normalizedRules.furos.tecnicos.cavilha,
           distanciaFrente: fu.parafuso.distanciaFrenteCavilha,
           distanciaFundo: fu.parafuso.distanciaFrenteCavilha,
           offsetDaBorda: fu.parafuso.offsetDaBorda,
         },
         prateleira: {
-          ...rules.furos.tecnicos.prateleira,
+          ...normalizedRules.furos.tecnicos.prateleira,
           margemTopo: pr.margemTop,
           margemBase: pr.margemBottom,
-          minFurosPorColuna: pr.minFuros,
-          maxFurosPorColuna: pr.maxFuros,
+          margemFrente: distanciaDaBorda,
+          margemFundo: distanciaDaBorda,
+          minFurosPorColuna: minFuros,
+          maxFurosPorColuna: maxFuros,
           espacamentoVertical: pr.espacamentoVertical,
-          distanciaDaBorda: pr.distanciaDaBorda ?? rules.furos.tecnicos.prateleira.distanciaDaBorda ?? 37,
+          distanciaDaBorda,
         },
         dobradica: {
-          ...rules.furos.tecnicos.dobradica,
+          ...normalizedRules.furos.tecnicos.dobradica,
           distanciaCentroDaBorda: fu.dobradica.distanciaCentroDaBorda,
           distanciaDobradiçaTopo: fu.dobradica.distanciaDobradiçaTopo,
           distanciaDobradiçaFundo: fu.dobradica.distanciaDobradiçaFundo,
-          numeroPorPorta: Math.max(2, fu.dobradica.numeroPorPorta ?? rules.furos.tecnicos.dobradica.numeroPorPorta ?? 2),
-          distribuicaoAutomatica: fu.dobradica.distribuicaoAutomatica ?? rules.furos.tecnicos.dobradica.distribuicaoAutomatica ?? true,
+          numeroPorPorta: Math.max(2, fu.dobradica.numeroPorPorta ?? normalizedRules.furos.tecnicos.dobradica.numeroPorPorta ?? 2),
+          distribuicaoAutomatica: fu.dobradica.distribuicaoAutomatica ?? normalizedRules.furos.tecnicos.dobradica.distribuicaoAutomatica ?? true,
         },
         ...(df && {
           dobradica_fixacao: {
-            ...rules.furos.tecnicos.dobradica_fixacao,
-            distanciaDaBordaCalco: df.distanciaDaBordaCalco ?? rules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaCalco,
-            distanciaDaBordaParafusoUniao: df.distanciaDaBordaParafusoUniao ?? rules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaParafusoUniao,
-            distanciaEntreFurosCalco: df.distanciaEntreFurosCalco ?? rules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco,
+            ...normalizedRules.furos.tecnicos.dobradica_fixacao,
+            distanciaDaBordaCalco: df.distanciaDaBordaCalco ?? normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaCalco,
+            distanciaDaBordaParafusoUniao: df.distanciaDaBordaParafusoUniao ?? normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaParafusoUniao,
+            distanciaEntreFurosCalco: df.distanciaEntreFurosCalco ?? normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco,
             profundidadeFuro: df.profundidadeFuro,
-            diametro: df.diametro ?? rules.furos.tecnicos.dobradica_fixacao.diametro,
-            diametroParafusoUniao: df.diametroParafusoUniao ?? rules.furos.tecnicos.dobradica_fixacao.diametroParafusoUniao,
-            profundidadeParafusoUniao: df.profundidadeParafusoUniao ?? rules.furos.tecnicos.dobradica_fixacao.profundidadeParafusoUniao,
+            diametro: df.diametro ?? normalizedRules.furos.tecnicos.dobradica_fixacao.diametro,
+            diametroParafusoUniao: df.diametroParafusoUniao ?? normalizedRules.furos.tecnicos.dobradica_fixacao.diametroParafusoUniao,
+            profundidadeParafusoUniao: df.profundidadeParafusoUniao ?? normalizedRules.furos.tecnicos.dobradica_fixacao.profundidadeParafusoUniao,
           },
         }),
       },
     },
   };
+}
+
+function sanitizeHingePositions(
+  positions: number[] | undefined,
+  alturaRefMm: number,
+  distEntreFurosCalcoMm: number
+): number[] {
+  if (!Array.isArray(positions) || !Number.isFinite(alturaRefMm) || alturaRefMm <= 0) return [];
+  const margin = MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM;
+  const halfFixationDist = Math.max(0, distEntreFurosCalcoMm / 2);
+  const minY = margin + halfFixationDist;
+  const maxY = Math.max(minY, alturaRefMm - margin - halfFixationDist);
+
+  return positions
+    .map((y) => Number(y))
+    .filter((y) => Number.isFinite(y))
+    .map((y) => clampNumber(y, minY, maxY));
+}
+
+function getShelfHolePositions(holes: TechnicalDrillHole[]): number[] {
+  const yValues = holes
+    .filter((h) => h.tipo === "prateleira")
+    .map((h) => Number(h.y))
+    .filter((y) => Number.isFinite(y));
+  return Array.from(new Set(yValues.map((y) => Number(y.toFixed(3))))).sort((a, b) => a - b);
 }
 
 export function cutlistComPrecoFromBox(
@@ -125,7 +175,7 @@ export function cutlistComPrecoFromBox(
     altura: number,
     espessura: number,
     contexto?: { hingePositionsMm?: number[] }
-  ) => {
+  ): TechnicalDrillHole[] => {
     if (!effRules || !Number.isFinite(largura) || !Number.isFinite(altura) || !Number.isFinite(espessura)) {
       return [];
     }
@@ -140,9 +190,7 @@ export function cutlistComPrecoFromBox(
     }
   };
 
-  const toNormalizedHoles = (
-    furacoesTecnicas: ReturnType<typeof makeTechnicalHolesForPanel>
-  ): import("../types").DrillHole[] =>
+  const toNormalizedHoles = (furacoesTecnicas: TechnicalDrillHole[]): import("../types").DrillHole[] =>
     furacoesTecnicas.map((h) => {
       const ht = h.tipo as import("../types").DrillType;
       const topByFace = isTopDrillable(h.face);
@@ -162,6 +210,12 @@ export function cutlistComPrecoFromBox(
       };
     });
 
+  const firstDoorPanel = modelo.paineis.find(
+    (panel) => panel.tipo === "porta_dupla" || panel.tipo === "porta_simples" || panel.tipo === "porta_correr"
+  );
+  const doorHeightMm = firstDoorPanel?.altura_mm ?? (modelo.portas.length > 0 ? modelo.portas[0].altura_mm : undefined);
+  const distEntreFixacao = effRules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco;
+
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
@@ -169,20 +223,30 @@ export function cutlistComPrecoFromBox(
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
     const isLateral = p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita";
-    const primeiroPainelPorta = modelo.paineis.find((p) => p.tipo === "porta_dupla" || p.tipo === "porta_simples" || p.tipo === "porta_correr");
-    const alturaPorta = primeiroPainelPorta?.altura_mm ?? (modelo.portas.length > 0 ? modelo.portas[0].altura_mm : undefined);
-    const { hingePositionsLateral } =
-      isLateral && Number.isFinite(alturaPorta)
-        ? getHingePositionsFromDoorHeight(alturaPorta, p.altura_mm)
-        : { hingePositionsLateral: undefined as number[] | undefined };
-    const hingePositions = hingePositionsLateral?.length ? hingePositionsLateral : undefined;
+    const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
+
+    let hingePositions: number[] = [];
+    if (isLateral && Number.isFinite(doorHeightMm)) {
+      const { hingePositionsLateral } = getHingePositionsFromDoorHeight(Number(doorHeightMm), p.altura_mm);
+      hingePositions = sanitizeHingePositions(hingePositionsLateral, p.altura_mm, distEntreFixacao);
+    } else if (isDoor) {
+      const rawDoorHinges = getHingeYPositions(
+        p.altura_mm,
+        effRules.furos.tecnicos.dobradica.numeroPorPorta,
+        effRules
+      );
+      hingePositions = sanitizeHingePositions(rawDoorHinges, p.altura_mm, distEntreFixacao);
+    }
+
     const furacoesTecnicas = makeTechnicalHolesForPanel(
       p.tipo,
       p.largura_mm,
       p.altura_mm,
       p.espessura_mm,
-      hingePositions?.length ? { hingePositionsMm: hingePositions } : { hingePositionsMm: [] }
+      hingePositions.length > 0 ? { hingePositionsMm: hingePositions } : undefined
     );
+    const shelfHolePositions = getShelfHolePositions(furacoesTecnicas);
+
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -201,6 +265,8 @@ export function cutlistComPrecoFromBox(
       precoTotal: p.custo,
       furacoesTecnicas,
       holes: toNormalizedHoles(furacoesTecnicas),
+      hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
+      shelfHolePositions: shelfHolePositions.length > 0 ? shelfHolePositions : undefined,
     });
   });
 
@@ -212,7 +278,7 @@ export function cutlistComPrecoFromBox(
       console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
       return;
     }
-    const furacoesTecnicas = makeTechnicalHolesForPanel("gaveta", p.largura_mm, p.altura_mm, p.espessura_mm, { hingePositionsMm: [] });
+    const furacoesTecnicas = makeTechnicalHolesForPanel("gaveta", p.largura_mm, p.altura_mm, p.espessura_mm);
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -231,6 +297,8 @@ export function cutlistComPrecoFromBox(
       precoTotal: p.custo,
       furacoesTecnicas,
       holes: toNormalizedHoles(furacoesTecnicas),
+      hingePositionsMm: undefined,
+      shelfHolePositions: undefined,
     });
   });
 
