@@ -29,6 +29,24 @@ export type UltraPerformanceModeOptions = {
   mode: UltraPerformanceInternalMode;
 };
 
+export type ProjectValidationSeverity = "error" | "warning";
+
+export type ProjectValidationItem = {
+  id: string;
+  type: string;
+  message: string;
+  severity: ProjectValidationSeverity;
+  boxId?: string;
+  boxNome?: string;
+};
+
+export type ProjectValidationSummary = {
+  items: ProjectValidationItem[];
+  hasErrors: boolean;
+  hasWarnings: boolean;
+  updatedAt: string | null;
+};
+
 export type ViewerSettings = {
   showPanelEdges: boolean;
   hiddenPanels: string[];
@@ -90,6 +108,9 @@ export interface ProjectState {
 
   /** Configurações visuais/controle do viewer (fase 3). */
   viewerSettings: ViewerSettings;
+
+  /** Resultado da validação global do projeto (avisos/erros). */
+  projectValidation: ProjectValidationSummary;
 
   /** Perfis de regras: lista de perfis + perfil ativo. */
   rulesProfiles: RulesProfilesConfig;
@@ -414,6 +435,10 @@ export interface ProjectActions {
   setProjectRulesProfile: (_id: string) => void;
   /** Recalcula todas as caixas com as regras atuais (após updateRules). */
   recalculateAllBoxes: () => void;
+  /** Executa validação global e atualiza lista de avisos/erros no estado. */
+  runProjectValidation: () => void;
+  /** Limpa lista de validação do projeto. */
+  clearProjectValidation: () => void;
   undo: () => void;
   redo: () => void;
   saveProjectSnapshot: () => void;

@@ -138,6 +138,7 @@ export default function RightToolsBar() {
     if (modal === "image") return "Photo Mode";
     if (modal === "send") return "Enviar";
     if (modal === "integration") return "Integração";
+    if (modal === "validation") return "Validação do Projeto";
     return "";
   }, [modal]);
   const selectedWorkspaceBox = useMemo(
@@ -233,6 +234,10 @@ export default function RightToolsBar() {
       setRenderQuality(0.92);
     }
   }, [modal]);
+
+  useEffect(() => {
+    actions.runProjectValidation();
+  }, [actions, project.workspaceBoxes, project.boxes]);
 
   const toggleSendSelection = (key: keyof SendSelections) => {
     setSendSelections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -641,6 +646,48 @@ export default function RightToolsBar() {
           <div className="right-tools-card-row">
             <span>Total de itens</span>
             <strong>{totalItens}</strong>
+          </div>
+        </div>
+
+        <div className="right-tools-card" style={{ marginTop: 16 }}>
+          <div className="right-tools-card-title">Validação do Projeto</div>
+          <div className="right-tools-card-description">Erros e avisos estruturais detectados.</div>
+          <div className="right-tools-card-row">
+            <span>Erros</span>
+            <strong>{project.projectValidation.items.filter((item) => item.severity === "error").length}</strong>
+          </div>
+          <div className="right-tools-card-row">
+            <span>Avisos</span>
+            <strong>{project.projectValidation.items.filter((item) => item.severity === "warning").length}</strong>
+          </div>
+          <div style={{ display: "flex", gap: 6, marginTop: 8, marginBottom: 8 }}>
+            <button
+              type="button"
+              className="button button-ghost"
+              style={{ fontSize: 11, padding: "4px 8px" }}
+              onClick={() => actions.runProjectValidation()}
+            >
+              Revalidar
+            </button>
+            <button
+              type="button"
+              className="button button-ghost"
+              style={{ fontSize: 11, padding: "4px 8px" }}
+              onClick={() => openModal("validation")}
+            >
+              Ver lista
+            </button>
+          </div>
+          <div style={{ maxHeight: 120, overflowY: "auto", fontSize: 11, color: "var(--text-muted)" }}>
+            {project.projectValidation.items.length === 0 ? (
+              <div>Sem avisos no momento.</div>
+            ) : (
+              project.projectValidation.items.slice(0, 4).map((item) => (
+                <div key={`validation-preview-${item.id}`} style={{ marginBottom: 4 }}>
+                  [{item.severity === "error" ? "Erro" : "Aviso"}] {item.message}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -1223,6 +1270,22 @@ export default function RightToolsBar() {
               </div>
             ) : modal === "integration" ? (
               <div className="modal-placeholder">{integrationMessage}</div>
+            ) : modal === "validation" ? (
+              <div className="modal-list" style={{ gap: 8 }}>
+                {project.projectValidation.items.length === 0 ? (
+                  <div className="modal-empty">Sem erros/avisos de validação.</div>
+                ) : (
+                  project.projectValidation.items.map((item) => (
+                    <div key={`validation-item-${item.id}`} className="modal-list-item">
+                      <div className="modal-list-info">
+                        <strong>{item.severity === "error" ? "Erro" : "Aviso"}</strong>
+                        <span>{item.message}</span>
+                        {item.boxNome ? <small>Caixa: {item.boxNome}</small> : null}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             ) : null}
           </div>
         </div>

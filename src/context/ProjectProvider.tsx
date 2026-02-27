@@ -35,6 +35,7 @@ import { useViewerSync } from "../hooks/useViewerSync";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
 import { regenerateLayersForBox, createManualDoor, createManualDrawer, applyDrawerTypeRules } from "../services/boxLayersService";
 import { wallStore } from "../stores/wallStore";
+import { validateProject } from "../core/validation/validateProject";
 
 const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
@@ -95,6 +96,37 @@ const captureRoomSnapshot = (): RoomSnapshot | null => {
     })),
     selectedWallId: state.selectedWallId,
     mainWallIndex: Math.max(0, Math.min(3, state.mainWallIndex ?? 0)),
+  };
+};
+
+const buildRoomConfigFromStore = () => {
+  const state = wallStore.getState();
+  const walls = state.walls ?? [];
+  if (!walls.length) return null;
+  return {
+    numWalls: (Math.max(3, Math.min(4, walls.length)) as 3 | 4),
+    walls: walls.slice(0, 4).map((wall) => ({
+      id: wall.id,
+      position: {
+        x: (wall.position?.x ?? 0) * 10,
+        z: (wall.position?.z ?? 0) * 10,
+      },
+      rotation: Number.isFinite(wall.rotation) ? (wall.rotation as number) : 0,
+      lengthMm: (wall.lengthCm ?? 0) * 10,
+      heightMm: (wall.heightCm ?? 0) * 10,
+      thicknessMm: (wall.thicknessCm ?? 0) * 10,
+      color: wall.color,
+      openings: (wall.openings ?? []).map((opening) => ({
+        id: opening.id,
+        type: opening.type,
+        widthMm: opening.widthMm,
+        heightMm: opening.heightMm,
+        floorOffsetMm: opening.floorOffsetMm,
+        horizontalOffsetMm: opening.horizontalOffsetMm,
+        modelId: opening.modelId,
+      })),
+    })),
+    selectedWallId: state.selectedWallId,
   };
 };
 
@@ -178,6 +210,20 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
         ...(restored.viewerSettings?.ultraPerformanceModeOptions ?? {}),
       },
     },
+    projectValidation:
+      restored.projectValidation &&
+      typeof restored.projectValidation === "object" &&
+      Array.isArray(restored.projectValidation.items)
+        ? {
+            items: restored.projectValidation.items,
+            hasErrors: Boolean(restored.projectValidation.hasErrors),
+            hasWarnings: Boolean(restored.projectValidation.hasWarnings),
+            updatedAt:
+              typeof restored.projectValidation.updatedAt === "string"
+                ? restored.projectValidation.updatedAt
+                : null,
+          }
+        : defaultState.projectValidation,
     workspaceBoxes,
     selectedWorkspaceBoxId: workspaceBoxes.length ? (restored.selectedWorkspaceBoxId ?? workspaceBoxes[0].id) : "",
     selectedCaixaId: workspaceBoxes.length ? (restored.selectedCaixaId ?? workspaceBoxes[0].id) : "",
@@ -1062,6 +1108,40 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     setLayoutWarnings: (warnings) => {
       updateProject((prev) => ({ ...prev, layoutWarnings: warnings }));
+    },
+
+    runProjectValidation: () => {
+      updateProject((prev) => {
+        const result = validateProject({
+          workspaceBoxes: prev.workspaceBoxes ?? [],
+          boxes: prev.boxes ?? [],
+          roomConfig: buildRoomConfigFromStore(),
+        });
+        return {
+          ...prev,
+          projectValidation: {
+            items: result.items,
+            hasErrors: result.hasErrors,
+            hasWarnings: result.hasWarnings,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+      }, false);
+    },
+
+    clearProjectValidation: () => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          projectValidation: {
+            items: [],
+            hasErrors: false,
+            hasWarnings: false,
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+        false
+      );
     },
 
     updateWorkspacePosition: (boxId, posicaoX_mm) => {
