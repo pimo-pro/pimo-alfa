@@ -71,6 +71,12 @@ const logWallStore = (event: string, payload?: Record<string, unknown>) => {
   console.info("[wallStore]", event, payload ?? {});
 };
 
+const clampMainWallIndex = (index: number, wallsLength: number): 0 | 1 | 2 | 3 => {
+  if (wallsLength <= 0) return 0;
+  const maxIndex = Math.max(0, Math.min(3, wallsLength - 1));
+  return Math.max(0, Math.min(maxIndex, index)) as 0 | 1 | 2 | 3;
+};
+
 /**
  * Layout alinhado à origem da sala (0,0). Piso = [0→W]×[0→D] em cm.
  * Posições são centros de cada parede; em metros ficam [0→width]×[0→depth].
@@ -128,7 +134,10 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
   snapThreshold: 10,
 
   setMainWallIndex: (index) => {
-    set({ mainWallIndex: Math.max(0, Math.min(3, index)) as 0 | 1 | 2 | 3 });
+    const { walls } = get();
+    const nextMainWallIndex = clampMainWallIndex(index, walls.length);
+    const selectedWallId = walls[nextMainWallIndex]?.id ?? null;
+    set({ mainWallIndex: nextMainWallIndex, selectedWallId });
   },
 
   createWall: () => {
@@ -145,14 +154,15 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
 
   /** Remove parede sempre por wall.id (nunca por índice). Preserva ordem das restantes e recalcula layout. */
   removeWall: (id: string) => {
-    const { walls, selectedWallId } = get();
+    const { walls, selectedWallId, mainWallIndex } = get();
     if (!walls.some((w) => w.id === id)) return;
     const nextWalls = applyLayoutIfMissing(walls.filter((wall) => wall.id !== id));
+    const nextMainWallIndex = clampMainWallIndex(mainWallIndex, nextWalls.length);
     const nextSelected =
       selectedWallId === id
-        ? nextWalls[0]?.id ?? null
+        ? nextWalls[nextMainWallIndex]?.id ?? nextWalls[0]?.id ?? null
         : selectedWallId;
-    set({ walls: nextWalls, selectedWallId: nextSelected });
+    set({ walls: nextWalls, selectedWallId: nextSelected, mainWallIndex: nextMainWallIndex });
   },
 
   updateWall: (id: string, patch: Partial<Wall>, options = {}) => {
@@ -228,18 +238,23 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
     const w2: Wall = { id: `wall-${Date.now()}-2`, ...DEFAULT_WALL, openings: [] };
     const w3: Wall = { id: `wall-${Date.now()}-3`, ...DEFAULT_WALL, openings: [] };
     const withLayout = applyLayoutIfMissing([w1, w2, w3]);
-    set({ walls: withLayout, selectedWallId: withLayout[0]?.id ?? null });
+    set({ walls: withLayout, selectedWallId: withLayout[0]?.id ?? null, mainWallIndex: 0 });
   },
   clearRoom: () => {
-    set({ walls: [], selectedWallId: null });
+    set({ walls: [], selectedWallId: null, mainWallIndex: 0 });
   },
 
   setNumWalls: (n: 3 | 4) => {
-    const { walls } = get();
+    const { walls, mainWallIndex } = get();
     if (n === walls.length) return;
     if (n === 3 && walls.length === 4) {
       const next = walls.slice(0, 3);
-      set({ walls: applyLayoutIfMissing(next), selectedWallId: next[0]?.id ?? null });
+      const nextMainWallIndex = clampMainWallIndex(mainWallIndex, next.length);
+      set({
+        walls: applyLayoutIfMissing(next),
+        selectedWallId: next[nextMainWallIndex]?.id ?? next[0]?.id ?? null,
+        mainWallIndex: nextMainWallIndex,
+      });
       return;
     }
     if (n === 4 && walls.length === 3) {
@@ -254,12 +269,15 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
       return;
     }
     const walls = applyLayoutIfMissing(snapshot.walls);
-    const mainWallIndex = Math.max(0, Math.min(3, (snapshot as { mainWallIndex?: number }).mainWallIndex ?? 0)) as 0 | 1 | 2 | 3;
+    const mainWallIndex = clampMainWallIndex(
+      (snapshot as { mainWallIndex?: number }).mainWallIndex ?? 0,
+      walls.length
+    );
     set({
       walls,
       selectedWallId: snapshot.selectedWallId && walls.some((w) => w.id === snapshot.selectedWallId)
         ? snapshot.selectedWallId
-        : walls[0]?.id ?? null,
+        : walls[mainWallIndex]?.id ?? walls[0]?.id ?? null,
       mainWallIndex,
     });
   },
