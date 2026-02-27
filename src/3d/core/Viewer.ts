@@ -164,6 +164,8 @@ export class Viewer {
   private backgroundMode: ViewerBackgroundMode = "studio";
   private reflectionsEnabled = false;
   private reflectionFrameCounter = 0;
+  private photoModeEnabled = false;
+  private readonly baseToneMappingExposure: number;
 
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
@@ -259,6 +261,7 @@ export class Viewer {
       shadowMapSize,
     });
     this.defaultPixelRatio = this.rendererManager.renderer.getPixelRatio();
+    this.baseToneMappingExposure = this.rendererManager.renderer.toneMappingExposure;
     this.selectionOutlineMaterial = new THREE.LineBasicMaterial({
       color: new THREE.Color("#7dd3fc"),
       linewidth: 1,
@@ -903,6 +906,29 @@ export class Viewer {
 
   getReflectionsEnabled(): boolean {
     return this.reflectionsEnabled;
+  }
+
+  setPhotoModeEnabled(enabled: boolean): void {
+    this.photoModeEnabled = Boolean(enabled);
+    this.rendererManager.renderer.toneMappingExposure = this.photoModeEnabled
+      ? Math.max(this.baseToneMappingExposure, 1.15)
+      : this.baseToneMappingExposure;
+  }
+
+  getPhotoModeEnabled(): boolean {
+    return this.photoModeEnabled;
+  }
+
+  capturePhotoDataUrl(format: "png" | "jpg" = "png", quality = 0.92): string | null {
+    const renderer = this.rendererManager.renderer;
+    renderer.render(this.sceneManager.scene, this.cameraManager.camera);
+    const canvas = renderer.domElement;
+    if (!canvas) return null;
+    if (format === "jpg") {
+      const clampedQuality = Math.max(0.1, Math.min(1, quality));
+      return canvas.toDataURL("image/jpeg", clampedQuality);
+    }
+    return canvas.toDataURL("image/png", 1);
   }
 
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {

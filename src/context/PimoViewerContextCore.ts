@@ -103,6 +103,9 @@ export type PimoViewerApi = {
   getBackgroundMode?: () => ViewerBackgroundMode;
   setReflectionsEnabled?: (_enabled: boolean) => void;
   getReflectionsEnabled?: () => boolean;
+  setPhotoModeEnabled?: (_enabled: boolean) => void;
+  getPhotoModeEnabled?: () => boolean;
+  capturePhotoDataUrl?: (_format?: "png" | "jpg", _quality?: number) => string | null;
 };
 
 export type PimoViewerContextValue = {

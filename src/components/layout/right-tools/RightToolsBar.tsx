@@ -101,6 +101,7 @@ export default function RightToolsBar() {
   const [renderQuality, setRenderQuality] = useState<number>(0.92);
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderResult, setRenderResult] = useState<ViewerRenderResult | null>(null);
+  const [photoCaptureUrl, setPhotoCaptureUrl] = useState<string | null>(null);
   const [sendMethod, setSendMethod] = useState<SendMethod>("download");
   const [sendSelections, setSendSelections] = useState<SendSelections>({
     image: true,
@@ -365,6 +366,59 @@ export default function RightToolsBar() {
             />
             Reflexos dinâmicos (probe)
           </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              checked={project.viewerSettings.photoModeEnabled}
+              onChange={(e) => actions.setViewerSettings({ photoModeEnabled: e.target.checked })}
+            />
+            Photo Mode ativo
+          </label>
+          {project.viewerSettings.photoModeEnabled && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  style={{ fontSize: 11, padding: "4px 8px" }}
+                  onClick={() => {
+                    const dataUrl = viewerApi?.capturePhotoDataUrl?.("png", 1);
+                    if (dataUrl) setPhotoCaptureUrl(dataUrl);
+                  }}
+                >
+                  Capturar PNG
+                </button>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  style={{ fontSize: 11, padding: "4px 8px" }}
+                  onClick={() => {
+                    const dataUrl = viewerApi?.capturePhotoDataUrl?.("jpg", 0.92);
+                    if (dataUrl) setPhotoCaptureUrl(dataUrl);
+                  }}
+                >
+                  Capturar JPG
+                </button>
+              </div>
+              {photoCaptureUrl && (
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  style={{ fontSize: 11, padding: "4px 8px", alignSelf: "flex-start" }}
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = photoCaptureUrl;
+                    link.download = photoCaptureUrl.startsWith("data:image/jpeg")
+                      ? "pimo-photo-mode.jpg"
+                      : "pimo-photo-mode.png";
+                    link.click();
+                  }}
+                >
+                  Baixar última captura
+                </button>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {(Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
               const isHidden = project.viewerSettings.hiddenPanels.includes(panel);

@@ -65,6 +65,7 @@ const defaultViewerSettings: ViewerSettings = {
   mousePreset: "cad",
   backgroundMode: "studio",
   enableReflections: false,
+  photoModeEnabled: false,
 };
 
 const createBox = (

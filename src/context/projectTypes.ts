@@ -31,6 +31,7 @@ export type ViewerSettings = {
   mousePreset: ViewerMousePreset;
   backgroundMode: ViewerBackgroundMode;
   enableReflections: boolean;
+  photoModeEnabled: boolean;
 };
 
 export interface ProjectState {

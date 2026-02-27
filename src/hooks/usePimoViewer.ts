@@ -108,6 +108,9 @@ type PimoViewerAPI = {
   getBackgroundMode?: () => ViewerBackgroundMode;
   setReflectionsEnabled?: (_enabled: boolean) => void;
   getReflectionsEnabled?: () => boolean;
+  setPhotoModeEnabled?: (_enabled: boolean) => void;
+  getPhotoModeEnabled?: () => boolean;
+  capturePhotoDataUrl?: (_format?: "png" | "jpg", _quality?: number) => string | null;
 };
 
 export const usePimoViewer = (
@@ -542,6 +545,19 @@ export const usePimoViewer = (
     []
   );
 
+  const setPhotoModeEnabled = useCallback((enabled: boolean) => {
+    viewerRef.current?.setPhotoModeEnabled?.(enabled);
+  }, []);
+
+  const getPhotoModeEnabled = useCallback(
+    () => viewerRef.current?.getPhotoModeEnabled?.() ?? false,
+    []
+  );
+
+  const capturePhotoDataUrl = useCallback((format: "png" | "jpg" = "png", quality = 0.92) => {
+    return viewerRef.current?.capturePhotoDataUrl?.(format, quality) ?? null;
+  }, []);
+
   const updateRoomElementConfig = useCallback(
     (elementId: string, config: DoorWindowConfig) =>
       viewerRef.current?.updateRoomElementConfig?.(elementId, config) ?? false,
@@ -640,6 +656,9 @@ export const usePimoViewer = (
       getBackgroundMode,
       setReflectionsEnabled,
       getReflectionsEnabled,
+      setPhotoModeEnabled,
+      getPhotoModeEnabled,
+      capturePhotoDataUrl,
     }),
     [
       viewerReady,
@@ -718,6 +737,9 @@ export const usePimoViewer = (
       getBackgroundMode,
       setReflectionsEnabled,
       getReflectionsEnabled,
+      setPhotoModeEnabled,
+      getPhotoModeEnabled,
+      capturePhotoDataUrl,
     ]
   );
 };
