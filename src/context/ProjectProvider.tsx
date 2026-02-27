@@ -33,6 +33,7 @@ import { safeGetItem, safeParseJson, safeSetItem } from "../utils/storage";
 import { useViewerSync } from "../hooks/useViewerSync";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
 import { regenerateLayersForBox, createManualDoor, createManualDrawer, applyDrawerTypeRules } from "../services/boxLayersService";
+import { wallStore } from "../stores/wallStore";
 
 const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
@@ -45,8 +46,43 @@ const logProjectProvider = (event: string, payload?: Record<string, unknown>) =>
 };
 
 const getSpawnFromSelectedWall = (
-  _dimensoes: { largura: number; profundidade: number; altura: number }
-): { posicaoX_mm: number; posicaoZ_mm: number; rotacaoY: number } | null => null;
+  dimensoes: { largura: number; profundidade: number; altura: number }
+): { posicaoX_mm: number; posicaoZ_mm: number; rotacaoY: number } | null => {
+  const state = wallStore.getState();
+  const walls = state.walls ?? [];
+  if (!walls.length) return null;
+
+  const selectedIndex = state.selectedWallId
+    ? walls.findIndex((wall) => wall.id === state.selectedWallId)
+    : -1;
+  const wallIndex = selectedIndex >= 0 ? selectedIndex : Math.max(0, Math.min(3, state.mainWallIndex ?? 0));
+  const wall = walls[wallIndex];
+  if (!wall?.position) return null;
+
+  const offsetMm = Math.max(20, (dimensoes.profundidade ?? 0) / 2 + 20);
+  const rotacaoByWall: Record<number, number> = {
+    0: 0,
+    1: -Math.PI / 2,
+    2: Math.PI,
+    3: Math.PI / 2,
+  };
+  const normalByWall: Record<number, { x: number; z: number }> = {
+    0: { x: 0, z: 1 },
+    1: { x: -1, z: 0 },
+    2: { x: 0, z: -1 },
+    3: { x: 1, z: 0 },
+  };
+
+  const normal = normalByWall[wallIndex] ?? { x: 0, z: 1 };
+  const wallX_mm = (wall.position.x ?? 0) * 10;
+  const wallZ_mm = (wall.position.z ?? 0) * 10;
+
+  return {
+    posicaoX_mm: wallX_mm + normal.x * offsetMm,
+    posicaoZ_mm: wallZ_mm + normal.z * offsetMm,
+    rotacaoY: rotacaoByWall[wallIndex] ?? 0,
+  };
+};
 
 type AutosaveEntry = {
   snapshot: ProjectSnapshot;
