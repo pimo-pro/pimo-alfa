@@ -210,6 +210,11 @@ export default function Workspace({
 
   const [lockEnabled, setLockEnabledState] = useState(false);
   const [mouseMenuPosition, setMouseMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const handleToolSelect = useCallback((toolId: string) => {
+    if (toolId === "select" || toolId === "move" || toolId === "rotate") {
+      actions.setActiveTool(toolId);
+    }
+  }, [actions]);
   const toggleLock = useCallback(() => {
     const next = !lockEnabled;
     setLockEnabledState(next);
@@ -222,6 +227,8 @@ export default function Workspace({
 const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: number; height: number; depth: number } | null>(null);
   const [selectedBoxOverlayPosition, setSelectedBoxOverlayPosition] = useState<{ x: number; y: number } | null>(null);
   const isSelectMode = (project.activeViewerTool ?? "select") === "select";
+  const hasShownViewerReadyToastRef = useRef(false);
+  const lastValidationToastRef = useRef<string>("");
 
   useEffect(() => {
     viewerSync.setDimensionsOverlayVisible(isSelectMode);
@@ -322,11 +329,17 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     projectRef.current = project;
   }, [project]);
 
+  const workspacePositionKey = useMemo(
+    () => JSON.stringify(project.workspaceBoxes.map((b) => [b.id, b.posicaoX_mm, b.posicaoY_mm, b.posicaoZ_mm])),
+    [project.workspaceBoxes]
+  );
   const prevBoxesRef = useRef<string>("");
   useEffect(() => {
-    const key = JSON.stringify(
-      project.workspaceBoxes.map((b) => [b.id, b.posicaoX_mm, b.posicaoY_mm, b.posicaoZ_mm])
-    );
+    const key = workspacePositionKey;
+    if (project.estaCarregando) {
+      prevBoxesRef.current = key;
+      return;
+    }
     if (prevBoxesRef.current && prevBoxesRef.current !== key) {
       const errors = validateProjectLight({
         workspaceBoxes: project.workspaceBoxes,
@@ -335,18 +348,34 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
       });
       const msg = errors[0]?.message;
       if (msg) {
-        if (errors.some((e) => e.type === "out_of_room")) showToast("Peça fora da sala", "error");
-        else if (errors.some((e) => e.type === "collision")) showToast("Colisão detectada", "error");
-        else if (errors.some((e) => e.type === "missing_ferragens")) showToast("Ferragens incompletas", "warning");
-        else showToast(msg, "warning");
+        const toastMessage = errors.some((e) => e.type === "out_of_room")
+          ? "Peça fora da sala"
+          : errors.some((e) => e.type === "collision")
+            ? "Colisão detectada"
+            : errors.some((e) => e.type === "missing_ferragens")
+              ? "Ferragens incompletas"
+              : msg;
+        if (lastValidationToastRef.current !== toastMessage) {
+          lastValidationToastRef.current = toastMessage;
+          if (errors.some((e) => e.type === "out_of_room" || e.type === "collision")) {
+            showToast(toastMessage, "error");
+          } else {
+            showToast(toastMessage, "warning");
+          }
+        }
       }
     }
     prevBoxesRef.current = key;
-  }, [project.workspaceBoxes, project.boxes, showToast]);
+  }, [workspacePositionKey, project.estaCarregando, project.workspaceBoxes, project.boxes, showToast]);
 
   useEffect(() => {
     if (viewerApi.viewerReady) {
-      showToast("Viewer pronto.", "info", 1400);
+      if (!hasShownViewerReadyToastRef.current) {
+        hasShownViewerReadyToastRef.current = true;
+        showToast("Viewer pronto.", "info", 1400);
+      }
+    } else {
+      hasShownViewerReadyToastRef.current = false;
     }
   }, [viewerApi.viewerReady, showToast]);
 
@@ -437,11 +466,7 @@ return (
           <ViewerToolbar />
           <Tools3DToolbar
             activeTool={project.activeViewerTool ?? "select"}
-            onToolSelect={(toolId) => {
-              if (toolId === "select" || toolId === "move" || toolId === "rotate") {
-                actions.setActiveTool(toolId);
-              }
-            }}
+            onToolSelect={handleToolSelect}
             lockEnabled={lockEnabled}
             onToggleLock={toggleLock}
           />
@@ -460,6 +485,12 @@ return (
               height: typeof viewerHeight === "number" ? `${viewerHeight}px` : "100%",
             }}
           />
+          {!viewerApi.viewerReady && (
+            <div className="workspace-loading-overlay" aria-live="polite">
+              <span className="workspace-loading-spinner" aria-hidden="true" />
+              <span>A carregar viewer 3D...</span>
+            </div>
+          )}
           {mouseMenuPosition && (
             <div
               role="menu"

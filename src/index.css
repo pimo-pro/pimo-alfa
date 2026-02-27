@@ -800,6 +800,38 @@ body {
   position: relative;
 }
 
+.workspace-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(2, 6, 23, 0.3);
+  color: var(--text-main);
+  font-size: 13px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.workspace-loading-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  animation: workspace-spin 0.9s linear infinite;
+}
+
+@keyframes workspace-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .workspace-empty-overlay {
   position: absolute;
   inset: 0;
