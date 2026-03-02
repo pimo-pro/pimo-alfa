@@ -1,8 +1,7 @@
 import Header from "./components/layout/header/Header";
 import LeftToolbar from "./components/layout/left-toolbar/LeftToolbar";
 import LeftPanel from "./components/layout/left-panel/LeftPanel";
-import RightPanel from "./components/layout/right-panel/RightPanel";
-import RightToolsBar from "./components/layout/right-tools/RightToolsBar";
+import ToolbarModals from "./components/layout/ToolbarModals";
 import BottomPanel from "./components/layout/bottom-panel/BottomPanel";
 import Workspace from "./components/layout/workspace/Workspace";
 import Footer from "./components/layout/footer/Footer";
@@ -29,7 +28,6 @@ export default function App() {
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
   const clearSelection = useUiStore((state) => state.clearSelection);
-  const [rightOpen] = useState(true);
   const [leftWidth, setLeftWidth] = useState(260);
   const [showBottom] = useState(true);
   const resizeState = useRef({
@@ -217,30 +215,15 @@ export default function App() {
                 )}
               </div>
 
-              {/* WORKSPACE — camada inferior (z-index: 0) para não cobrir modais/popovers */}
+              {/* WORKSPACE — ocupa todo o espaço à direita do painel esquerdo */}
               <Workspace
                 viewerBackground={VIEWER_BACKGROUND}
                 viewerHeight="100%"
                 viewerOptions={viewerOptions}
               />
 
-              {/* RIGHT PANEL */}
-              <div
-                className="panel panel-shell panel-shell--side right-panel panel-shell-right"
-                style={{
-                  width: rightOpen ? 260 : 0,
-                  minWidth: rightOpen ? 260 : 0,
-                  overflow: "hidden",
-                  transition: "width 0.2s ease",
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                <div className="right-panel-stack" data-material-panel>
-                  <RightPanel />
-                  <RightToolsBar />
-                </div>
-              </div>
+              {/* Modais da toolbar (Projetos, Enviar, etc.) — sem painel direito */}
+              <ToolbarModals />
             </div>
             </ToolbarModalProvider>
           )}

@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
-import { useProject } from "../../../context/useProject";
-import { useToast } from "../../../context/ToastContext";
-import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
-import { useToolbarModal } from "../../../context/ToolbarModalContext";
+import { useProject } from "../../context/useProject";
+import { useToast } from "../../context/ToastContext";
+import { usePimoViewerContext } from "../../hooks/usePimoViewerContext";
+import { useToolbarModal } from "../../context/ToolbarModalContext";
 import {
   cutlistComPrecoFromBoxes,
   ferragensFromBoxes,
-} from "../../../core/manufacturing/cutlistFromBoxes";
+} from "../../core/manufacturing/cutlistFromBoxes";
 import {
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
-} from "../../../core/pricing/pricing";
-import Piece3DModal from "../../modals/Piece3DModal";
-import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
+} from "../../core/pricing/pricing";
+import Piece3DModal from "../modals/Piece3DModal";
+import { buildViewerDrillMarkersByPanel } from "../../modules/drilling/drillingAdapter";
 
 type SendMethod = "whatsapp" | "email" | "download";
 
@@ -34,12 +34,15 @@ const defaultSendSelections: SendSelections = {
   precos: true,
 };
 
-export default function RightToolsBar() {
+/**
+ * Renderiza os modais abertos pela ViewerToolbar (Projetos, 2D, Enviar, etc.).
+ * Mantido após remoção do painel direito para que os botões da toolbar continuem a funcionar.
+ */
+export default function ToolbarModals() {
   const { actions, project } = useProject();
   const { showToast } = useToast();
   const { viewerApi } = usePimoViewerContext();
   const { modal, openModal, closeModal } = useToolbarModal();
-  // Single Source of Truth: Resultados Atuais derivados de project.boxes (não project.resultados/acessorios)
   const [savedProjects, setSavedProjects] = useState(() => actions.listSavedProjects());
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -118,7 +121,6 @@ export default function RightToolsBar() {
       payload.imagem = photoCaptureUrl ?? null;
     }
 
-    // Single Source of Truth: cutlist, ferragens e precos derivados de project.boxes
     const boxes = project.boxes ?? [];
     const cutlistFromBoxes = cutlistComPrecoFromBoxes(
       boxes,
@@ -208,9 +210,6 @@ export default function RightToolsBar() {
 
   return (
     <>
-      <aside className="right-tools-bar" aria-label="Resultados e modais">
-      </aside>
-
       {modal && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-card">
@@ -330,32 +329,16 @@ export default function RightToolsBar() {
                   <div className="modal-list-title">Selecionar ângulo</div>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className="modal-action"
-                    onClick={() => {}}
-                  >
+                  <button type="button" className="modal-action" onClick={() => {}}>
                     Top
                   </button>
-                  <button
-                    type="button"
-                    className="modal-action"
-                    onClick={() => {}}
-                  >
+                  <button type="button" className="modal-action" onClick={() => {}}>
                     Front
                   </button>
-                  <button
-                    type="button"
-                    className="modal-action"
-                    onClick={() => {}}
-                  >
+                  <button type="button" className="modal-action" onClick={() => {}}>
                     Left
                   </button>
-                  <button
-                    type="button"
-                    className="modal-action"
-                    onClick={() => {}}
-                  >
+                  <button type="button" className="modal-action" onClick={() => {}}>
                     Right
                   </button>
                 </div>

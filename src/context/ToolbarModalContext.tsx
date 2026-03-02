@@ -1,7 +1,7 @@
 /**
  * Contexto para modais da toolbar do Viewer.
  * Permite que ViewerToolbar (no topo do Viewer) abra modais
- * que são renderizados por RightToolsBar (coluna direita).
+ * que são renderizados por ToolbarModals (overlay no layout principal).
  */
 
 /* eslint-disable react-refresh/only-export-components */
