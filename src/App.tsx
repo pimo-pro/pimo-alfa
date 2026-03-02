@@ -2,9 +2,11 @@ import Header from "./components/layout/header/Header";
 import LeftToolbar from "./components/layout/left-toolbar/LeftToolbar";
 import LeftPanel from "./components/layout/left-panel/LeftPanel";
 import ToolbarModals from "./components/layout/ToolbarModals";
-import BottomPanel from "./components/layout/bottom-panel/BottomPanel";
 import Workspace from "./components/layout/workspace/Workspace";
 import Footer from "./components/layout/footer/Footer";
+import BottomInfoToolbar from "./components/layout/bottom-info-toolbar/BottomInfoToolbar";
+import BottomInfoPanelsOverlay from "./components/layout/bottom-info-toolbar/BottomInfoPanelsOverlay";
+import { BottomInfoProvider } from "./context/BottomInfoContext";
 import WhatsAppButton from "./components/layout/WhatsAppButton";
 import { PimoViewerProvider } from "./context/PimoViewerContext";
 import { ProjectProvider } from "./context/ProjectProvider";
@@ -29,7 +31,6 @@ export default function App() {
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
   const clearSelection = useUiStore((state) => state.clearSelection);
   const [leftWidth, setLeftWidth] = useState(260);
-  const [showBottom] = useState(true);
   const resizeState = useRef({
     active: false,
     startX: 0,
@@ -178,69 +179,76 @@ export default function App() {
               )}
             </Suspense>
           ) : (
-            <ToolbarModalProvider>
-            <div className="app-panels">
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <LeftToolbar
-                  selectedId={leftPanelTab}
-                  onSelect={(id) => {
-                    setLeftPanelTab(id);
-                    clearSelection();
-                    if (!leftOpen) setLeftOpen(true);
+            <BottomInfoProvider>
+              <ToolbarModalProvider>
+                <div
+                  className="app-main-content-fixed"
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: "flex",
+                    flexDirection: "column",
                   }}
-                />
-              </div>
-              {/* LEFT PANEL */}
-              <div
-                className="panel panel-shell panel-shell--side left-panel panel-shell-left"
-                style={{
-                  width: leftOpen ? leftWidth : 0,
-                  minWidth: leftOpen ? leftWidth : 0,
-                  maxWidth: leftOpen ? leftWidth : 0,
-                  overflow: "hidden",
-                  transition: "width 0.2s ease",
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                <LeftPanel activeTab={leftPanelTab} />
-                {leftOpen && (
+                >
                   <div
-                    className="panel-resizer"
-                    onPointerDown={handleResizeStart}
-                    onPointerMove={handleResizeMove}
-                    onPointerUp={handleResizeEnd}
-                    onPointerCancel={handleResizeEnd}
-                  />
-                )}
-              </div>
-
-              {/* WORKSPACE — ocupa todo o espaço à direita do painel esquerdo */}
-              <Workspace
-                viewerBackground={VIEWER_BACKGROUND}
-                viewerHeight="100%"
-                viewerOptions={viewerOptions}
-              />
-
-              {/* Modais da toolbar (Projetos, Enviar, etc.) — sem painel direito */}
-              <ToolbarModals />
-            </div>
-            </ToolbarModalProvider>
+                    style={{
+                      position: "relative",
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div className="app-panels" style={{ flex: 1, minHeight: 0 }}>
+                      <div style={{ position: "relative", zIndex: 1 }}>
+                        <LeftToolbar
+                          selectedId={leftPanelTab}
+                          onSelect={(id) => {
+                            setLeftPanelTab(id);
+                            clearSelection();
+                            if (!leftOpen) setLeftOpen(true);
+                          }}
+                        />
+                      </div>
+                      <div
+                        className="panel panel-shell panel-shell--side left-panel panel-shell-left"
+                        style={{
+                          width: leftOpen ? leftWidth : 0,
+                          minWidth: leftOpen ? leftWidth : 0,
+                          maxWidth: leftOpen ? leftWidth : 0,
+                          overflow: "hidden",
+                          transition: "width 0.2s ease",
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
+                        <LeftPanel activeTab={leftPanelTab} />
+                        {leftOpen && (
+                          <div
+                            className="panel-resizer"
+                            onPointerDown={handleResizeStart}
+                            onPointerMove={handleResizeMove}
+                            onPointerUp={handleResizeEnd}
+                            onPointerCancel={handleResizeEnd}
+                          />
+                        )}
+                      </div>
+                      <Workspace
+                        viewerBackground={VIEWER_BACKGROUND}
+                        viewerHeight="100%"
+                        viewerOptions={viewerOptions}
+                      />
+                      <ToolbarModals />
+                    </div>
+                    <BottomInfoPanelsOverlay />
+                  </div>
+                  <BottomInfoToolbar />
+                </div>
+              </ToolbarModalProvider>
+            </BottomInfoProvider>
           )}
         </div>
-
-        {/* BOTTOM PANEL */}
-        {!showPainelReferencia && !showAbout && !showSystemDocs && !showAdmin && !showProjectProgress && (
-          <div
-            className={
-              showBottom
-                ? "panel panel-shell panel-shell--bottom bottom-panel-shell"
-                : "panel panel-shell panel-shell--bottom bottom-panel-shell bottom-panel-hidden"
-            }
-          >
-            <BottomPanel />
-          </div>
-        )}
 
         <Footer
           onShowAbout={navigateToAbout}

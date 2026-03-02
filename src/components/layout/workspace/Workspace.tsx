@@ -498,6 +498,7 @@ return (
               minHeight: 0,
               width: "100%",
               height: typeof viewerHeight === "number" ? `${viewerHeight}px` : "100%",
+              overflow: "hidden",
             }}
           />
           {!viewerApi.viewerReady && (

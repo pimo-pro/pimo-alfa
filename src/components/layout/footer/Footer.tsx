@@ -8,6 +8,7 @@ export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin }: F
   return (
     <footer
       style={{
+        flexShrink: 0,
         minHeight: 40,
         background: "#050816",
         borderTop: "1px solid var(--border)",

@@ -1,45 +1,40 @@
-import { useMemo } from "react";
 import Panel from "../ui/Panel";
-import { useProject } from "../../context/useProject";
-import { gerarModeloIndustrial } from "../../core/manufacturing/boxManufacturing";
+import { useCutlistData } from "../../hooks/useCutlistData";
 import type { FerragemIndustrial } from "../../core/industriais/ferragensIndustriais";
-import { gerarFerragensIndustriais, agruparPorComponente } from "../../core/industriais/ferragensIndustriais";
-import { useComponentTypes } from "../../hooks/useComponentTypes";
-import { useFerragens } from "../../hooks/useFerragens";
 
-const tableStyle = {
+const tableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
   fontSize: 12,
-} as const;
+};
 
-const headerCellStyle = {
+const headerCellStyle: React.CSSProperties = {
   padding: "6px 6px",
-  textAlign: "left" as const,
+  textAlign: "left",
   color: "var(--text-muted)",
   fontWeight: 600,
   borderBottom: "1px solid rgba(255,255,255,0.08)",
 };
 
-const bodyCellStyle = {
+const bodyCellStyle: React.CSSProperties = {
   padding: "6px 6px",
   color: "var(--text-main)",
   borderBottom: "1px solid rgba(255,255,255,0.05)",
 };
 
-const costCellStyle = {
+const costCellStyle: React.CSSProperties = {
   ...bodyCellStyle,
-  textAlign: "right" as const,
+  textAlign: "right",
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
 };
 
-const totalValueStyle = {
+const totalValueStyle: React.CSSProperties = {
   color: "rgba(74, 222, 128, 0.9)",
-  textAlign: "right" as const,
+  textAlign: "right",
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
 };
 
-const sectionTitleStyle = {
+const sectionTitleStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
   color: "var(--text-main)",
@@ -53,20 +48,24 @@ const aplicacaoFerragens: Record<string, string> = {
 };
 
 export default function CutlistPanel() {
-  const { project } = useProject();
-  const { componentTypes } = useComponentTypes();
-  const { ferragens } = useFerragens();
-  // Single Source of Truth: TODAS as caixas de project.boxes (não apenas a selecionada)
-  const boxes = project.boxes ?? [];
-
-  const ferragensIndustriaisDetalhado = useMemo(
-    () => gerarFerragensIndustriais(componentTypes, ferragens),
-    [componentTypes, ferragens]
-  );
-  const ferragensPorComponente = useMemo(
-    () => agruparPorComponente(ferragensIndustriaisDetalhado),
-    [ferragensIndustriaisDetalhado]
-  );
+  const data = useCutlistData();
+  const {
+    boxes,
+    allPaineis,
+    allPortas,
+    allGavetas,
+    allFerragens,
+    ferragensIndustriaisDetalhado,
+    ferragensPorComponente,
+    totalAreaM2,
+    totalPecas,
+    totalFerragensQty,
+    custoTotalPaineis,
+    custoTotalPortas,
+    custoTotalGavetas,
+    custoTotalFerragens,
+    custoTotal,
+  } = data;
 
   if (boxes.length === 0) {
     return (
@@ -77,52 +76,6 @@ export default function CutlistPanel() {
       </Panel>
     );
   }
-
-  // Totais agregados de TODAS as caixas (project.boxes)
-  let totalAreaMm2 = 0;
-  let totalPaineisQty = 0;
-  let totalPortasQty = 0;
-  let totalGavetasQty = 0;
-  let totalFerragensQty = 0;
-  let custoTotalPaineis = 0;
-  let custoTotalPortas = 0;
-  let custoTotalGavetas = 0;
-  let custoTotalFerragens = 0;
-  const allPaineis: Array<{ key: string; boxNome: string; tipo: string; largura_mm: number; altura_mm: number; espessura_mm: number; orientacaoFibra: string; quantidade: number; custo: number }> = [];
-  const allPortas: Array<{ key: string; boxNome: string; tipo: string; largura_mm: number; altura_mm: number; espessura_mm: number; dobradicas: number; custo: number }> = [];
-  const allGavetas: Array<{ key: string; boxNome: string; largura_mm: number; altura_mm: number; profundidade_mm: number; espessura_mm: number; corrediças: number; custo: number }> = [];
-  const allFerragens: Array<{ key: string; boxNome: string; tipo: string; quantidade: number; custo: number }> = [];
-
-  boxes.forEach((box) => {
-    const modelo = gerarModeloIndustrial(box, project.rules);
-    const boxNome = box.nome || box.id;
-    totalAreaMm2 += modelo.cutlist.areaTotal_mm2;
-    modelo.paineis.forEach((p) => {
-      totalPaineisQty += p.quantidade;
-      custoTotalPaineis += p.custo;
-      allPaineis.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
-    });
-    modelo.portas.forEach((p) => {
-      totalPortasQty += 1;
-      custoTotalPortas += p.custo;
-      allPortas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
-    });
-    modelo.gavetas.forEach((p) => {
-      totalGavetasQty += 1;
-      custoTotalGavetas += p.custo;
-      allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
-    });
-    modelo.ferragens.forEach((f) => {
-      totalFerragensQty += f.quantidade;
-      custoTotalFerragens += f.custo;
-      allFerragens.push({ ...f, key: `${box.id}-${f.id}`, boxNome });
-    });
-  });
-
-  const totalPecas = totalPaineisQty + totalPortasQty + totalGavetasQty;
-  const totalAreaM2 = totalAreaMm2 / 1_000_000;
-  const custoTotal =
-    custoTotalPaineis + custoTotalPortas + custoTotalGavetas + custoTotalFerragens;
 
   return (
     <Panel title="Cutlist Industrial">
@@ -151,9 +104,7 @@ export default function CutlistPanel() {
                   <td style={bodyCellStyle}>{painel.altura_mm}</td>
                   <td style={bodyCellStyle}>{painel.espessura_mm}</td>
                   <td style={bodyCellStyle}>{painel.orientacaoFibra}</td>
-                  <td style={{ ...bodyCellStyle, textAlign: "center" }}>
-                    {painel.quantidade}
-                  </td>
+                  <td style={{ ...bodyCellStyle, textAlign: "center" }}>{painel.quantidade}</td>
                   <td style={costCellStyle}>{painel.custo.toFixed(2)} €</td>
                 </tr>
               ))}
@@ -228,9 +179,7 @@ export default function CutlistPanel() {
         <div>
           <div style={sectionTitleStyle}>Ferragens Industriais (todas as caixas)</div>
           {allFerragens.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              Sem ferragens.
-            </div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Sem ferragens.</div>
           ) : (
             <table style={tableStyle}>
               <thead>
@@ -247,12 +196,8 @@ export default function CutlistPanel() {
                   <tr key={ferragem.key}>
                     <td style={bodyCellStyle}>{ferragem.boxNome}</td>
                     <td style={bodyCellStyle}>{ferragem.tipo}</td>
-                    <td style={{ ...bodyCellStyle, textAlign: "center" }}>
-                      {ferragem.quantidade}
-                    </td>
-                    <td style={bodyCellStyle}>
-                      {aplicacaoFerragens[ferragem.tipo] ?? "Geral"}
-                    </td>
+                    <td style={{ ...bodyCellStyle, textAlign: "center" }}>{ferragem.quantidade}</td>
+                    <td style={bodyCellStyle}>{aplicacaoFerragens[ferragem.tipo] ?? "Geral"}</td>
                     <td style={costCellStyle}>{ferragem.custo.toFixed(2)} €</td>
                   </tr>
                 ))}
@@ -306,9 +251,7 @@ export default function CutlistPanel() {
                         {itens.map((item, idx) => (
                           <tr key={`${componenteId}-${idx}`}>
                             <td style={bodyCellStyle}>{item.ferragem_id}</td>
-                            <td style={{ ...bodyCellStyle, textAlign: "center" }}>
-                              {item.quantidade}
-                            </td>
+                            <td style={{ ...bodyCellStyle, textAlign: "center" }}>{item.quantidade}</td>
                             <td style={bodyCellStyle}>
                               {item.aplicar_em.length > 0 ? item.aplicar_em.join(", ") : "—"}
                             </td>
@@ -358,13 +301,7 @@ export default function CutlistPanel() {
             <span>Custo total de ferragens:</span>
             <span style={totalValueStyle}>{custoTotalFerragens.toFixed(2)} €</span>
           </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontWeight: 700,
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
             <span>Custo total do projeto:</span>
             <span style={totalValueStyle}>{custoTotal.toFixed(2)} €</span>
           </div>

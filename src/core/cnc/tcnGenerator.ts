@@ -1,12 +1,16 @@
 /**
- * Geração de ficheiro TCN (Nesting) — padrão ALBATROS/EDICAD.
- * Blocos SIDE no formato exato da máquina: }SIDE, SIDE#N{ $=top ::LF=DL HF=DH SF=DS ::NSEQ=N }.
- * LF/HF/SF = dimensões da chapa (DL, DH, DS). W#81 iniciais dentro de SIDE#1.
+ * Geração de ficheiro TCN (Nesting) — compatível HARNNETT TRACK (TPA/WSCM).
+ * Padrão ALBATROS/EDICAD. Blocos SIDE: }SIDE, SIDE#N{ $=top ::LF=DL HF=DH SF=DS ::NSEQ=N }.
  *
- * Estrutura preparada para furos superiores (top drilling):
- * - Furação apenas pela parte superior (top).
- * - Sem furação lateral. Sem ficheiros de drill separados.
- * - Furos futuros serão emitidos via buildDrillLines() / pl.holes no mesmo .tcn.
+ * Regras HARNNETT TRACK:
+ * - Modo CENTERLINE: todas as coordenadas X/Y representam o centro da ferramenta.
+ *   Não se aplica compensação manual; não se emitem G41, G42 ou G40.
+ * - Corte EXTERNO: #40=1 no bloco de operação (compensação para fora com diâmetro real).
+ * - Ferramenta padrão: #205=113 (diâmetro real medido automaticamente pela máquina).
+ * - Espaçamento mínimo entre peças: 15 mm (margem de segurança).
+ * - Estrutura por operação de corte: W#89 (início) + W#2201 (segmentos lineares); Z negativo = profundidade total.
+ *
+ * Furação: apenas top drilling (W#81); furos emitidos via buildDrillLines() no mesmo .tcn.
  */
 
 import type { SheetResult } from "../cutlayout/cutLayoutTypes";
@@ -29,6 +33,17 @@ const intVal = (n: number) => Math.round(Number.isFinite(n) ? n : 0);
 const Z_SAFETY_MM = 10;
 const EPSILON_MM = 0.001;
 
+/** Espaçamento mínimo entre peças (mm) — HARNNETT TRACK: margem para diâmetro real da ferramenta. */
+const MIN_SPACING_BETWEEN_PIECES_MM = 15;
+
+/** Diâmetro nominal ferramenta 113 (mm) — usado para inset centerline quando kerf não definido. */
+const TOOL_113_NOMINAL_DIAMETER_MM = 12;
+
+/**
+ * Gera pontos do contorno em modo CENTERLINE: path do centro da ferramenta (corte externo).
+ * A máquina compensa para fora (#40=1) com o diâmetro real; as coordenadas são sempre o centro.
+ * Inset = toolRadius para que o bordo da ferramenta fique no bordo da peça.
+ */
 function buildContourPoints(
   x: number,
   y: number,
@@ -37,31 +52,35 @@ function buildContourPoints(
   z: number,
   toolRadiusMm: number
 ): Array<{ x: number; y: number; z: number }> {
-  const offset = Math.max(0, toolRadiusMm);
-  const ox = x - offset;
-  const oy = y - offset;
-  const ow = w + offset * 2;
-  const oh = h + offset * 2;
+  const r = Math.max(0, toolRadiusMm);
+  const insetX = Math.min(r, w / 2 - EPSILON_MM);
+  const insetY = Math.min(r, h / 2 - EPSILON_MM);
+  const x0 = x + insetX;
+  const y0 = y + insetY;
+  const x1 = x + w - insetX;
+  const y1 = y + h - insetY;
   return [
-    { x: ox, y: oy, z },
-    { x: ox + ow, y: oy, z },
-    { x: ox + ow, y: oy + oh, z },
-    { x: ox, y: oy + oh, z },
-    { x: ox, y: oy, z },
+    { x: x0, y: y0, z },
+    { x: x1, y: y0, z },
+    { x: x1, y: y1, z },
+    { x: x0, y: y1, z },
+    { x: x0, y: y0, z },
   ];
 }
 
-function rectsOverlap(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): boolean {
-  return a.x < b.x + b.w - EPSILON_MM && a.x + a.w > b.x + EPSILON_MM && a.y < b.y + b.h - EPSILON_MM && a.y + a.h > b.y + EPSILON_MM;
+/** Distância mínima entre dois retângulos (borda a borda). Se se sobrepõem, devolve 0. */
+function rectDistance(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): number {
+  const dx = Math.max(0, Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w)));
+  const dy = Math.max(0, Math.max(a.y - (b.y + b.h), b.y - (a.y + a.h)));
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 function sanitizePlacementsForTcn(
   placements: SheetResult["placements"],
-  sheet: SheetResult["sheet"],
-  toolRadiusMm: number
+  sheet: SheetResult["sheet"]
 ): SheetResult["placements"] {
   const unique: SheetResult["placements"] = [];
-  const contourRects: Array<{ x: number; y: number; w: number; h: number }> = [];
+  const placedRects: Array<{ x: number; y: number; w: number; h: number }> = [];
   const signatures = new Set<string>();
 
   for (const pl of placements) {
@@ -74,18 +93,12 @@ function sanitizePlacementsForTcn(
 
     if (!isPlacementInsideSheet(x, y, w, h, sheet.largura_mm, sheet.altura_mm)) continue;
 
-    const contourRect = {
-      x: x - toolRadiusMm,
-      y: y - toolRadiusMm,
-      w: w + toolRadiusMm * 2,
-      h: h + toolRadiusMm * 2,
-    };
-
-    const hasOverlap = contourRects.some((r) => rectsOverlap(r, contourRect));
-    if (hasOverlap) continue;
+    const rect = { x, y, w, h };
+    const tooClose = placedRects.some((r) => rectDistance(r, rect) < MIN_SPACING_BETWEEN_PIECES_MM - EPSILON_MM);
+    if (tooClose) continue;
 
     signatures.add(signature);
-    contourRects.push(contourRect);
+    placedRects.push(rect);
     unique.push(pl);
   }
 
@@ -108,9 +121,9 @@ function isPlacementInsideSheet(
   return true;
 }
 
-/** Bloco W#89 no formato ALBATROS real. */
-function buildToolBlock(x: number, y: number, z: number): string {
-  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(z)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
+/** Bloco W#89 (início de operação de corte) — HARNNETT: #40=1 corte externo, #205=113 ferramenta. */
+function buildToolBlock(x: number, y: number, zSafe: number): string {
+  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
 }
 
 /**
@@ -199,9 +212,9 @@ function buildSideBlock(
 }
 
 /**
- * Gera TCN para um painel (sheet) único.
+ * Gera TCN para um painel (sheet) único (HARNNETT TRACK).
  * - Header: DL, DH, DS do próprio painel.
- * - SIDE#1 com operações W#81/W#89/W#2201 somente das peças desse painel.
+ * - SIDE#1: furação W#81 (top drilling) + corte W#89 + W#2201 por peça (centerline, #40=1, #205=113).
  * - Final: SIDE#3, SIDE#4, SIDE#5, SIDE#6, SIDE#2 no mesmo padrão.
  */
 export function generateTcnForPanel(
@@ -214,7 +227,7 @@ export function generateTcnForPanel(
 
   const thicknessMm = sheetResult.sheet.espessura_mm;
   const zCut = -thicknessMm;
-  const zTool = Number(Math.abs(zCut).toFixed(2));
+  const zSafe = Z_SAFETY_MM; // Z de segurança no W#89 (acima do material)
 
   const sheet = sheetResult.sheet;
   const dl = sheet.largura_mm;
@@ -230,7 +243,7 @@ export function generateTcnForPanel(
 
   const runtimeSettings = getSettings();
   const cutterDiameterMm = Math.max(0, Number(runtimeSettings.nesting.kerfPadraoMm) || 0);
-  const effectiveCutterDiameterMm = cutterDiameterMm > 0 ? cutterDiameterMm : 3;
+  const effectiveCutterDiameterMm = cutterDiameterMm > 0 ? cutterDiameterMm : TOOL_113_NOMINAL_DIAMETER_MM;
   const toolRadiusMm = effectiveCutterDiameterMm / 2;
 
   const placements = sheetResult.placements.filter((pl) =>
@@ -243,7 +256,7 @@ export function generateTcnForPanel(
       sheet.altura_mm
     )
   );
-  const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet, toolRadiusMm);
+  const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet);
   const sideInnerLines: string[] = [];
   const drills: CncDrillOperation[] = [];
   
@@ -266,7 +279,7 @@ export function generateTcnForPanel(
   // Segundo: inserir operações de furação no início do bloco SIDE#1
   sideInnerLines.push(...buildDrillLines(drills));
   
-  // Terceiro: operações de corte para cada peça
+  // Terceiro: operações de corte (apenas W#89 + W#2201 por peça — HARNNETT TRACK)
   sanitizedPlacements.forEach((pl) => {
     const w = pl.largura_mm;
     const h = pl.altura_mm;
@@ -274,8 +287,7 @@ export function generateTcnForPanel(
     const y = pl.y_mm;
     const points = buildContourPoints(x, y, w, h, zCut, toolRadiusMm);
     const firstPoint = points[0];
-    sideInnerLines.push(buildW81(points, Z_SAFETY_MM));
-    sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zTool));
+    sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zSafe));
     sideInnerLines.push(buildW2201(points, zCut));
   });
   

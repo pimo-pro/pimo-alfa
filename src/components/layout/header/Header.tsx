@@ -16,6 +16,7 @@ export default function Header({
   return (
     <header
       style={{
+        flexShrink: 0,
         height: "56px",
         background: `linear-gradient(90deg, var(--black), var(--navy))`,
         borderBottom: "1px solid var(--border)",
