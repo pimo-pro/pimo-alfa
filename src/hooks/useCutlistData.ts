@@ -6,7 +6,6 @@
 import { useMemo } from "react";
 import { useProject } from "../context/useProject";
 import { gerarModeloIndustrial } from "../core/manufacturing/boxManufacturing";
-import type { FerragemIndustrial } from "../core/industriais/ferragensIndustriais";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../core/industriais/ferragensIndustriais";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";

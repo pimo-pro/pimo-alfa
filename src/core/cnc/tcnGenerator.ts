@@ -127,19 +127,6 @@ function buildToolBlock(x: number, y: number, zSafe: number): string {
 }
 
 /**
- * W#81 no formato exato da máquina (evita Erro 284).
- * Formato: W#81{ ::WTs WS=1 #8015=0 #1=<X> #2=<Y> #3=<Z> #1002=10 #201=1 #203=1 #1001=0 }W
- */
-function buildW81(points: Array<{ x: number; y: number; z: number }>, zSafety: number): string {
-  return points
-    .map(
-      (p) =>
-        `W#81{ ::WTs WS=1 #8015=0 #1=${fmt(p.x)} #2=${fmt(p.y)} #3=${fmt(zSafety)} #1002=10 #201=1 #203=1 #1001=0 }W`
-    )
-    .join("\n");
-}
-
-/**
  * W#81 para furação superior (top drilling).
  * Formato: W#81{ ::WTs WS=1 #8015=0 #1=<X> #2=<Y> #3=<Z> #1002=<DIAMETRO> #2008=<FEED> #2002=<RPM> #201=1 #203=1 #1001=0 }W
  * 
