@@ -14,17 +14,6 @@ export default function FooterMenu() {
     { label: "Documentação do Sistema", href: "/documentacao" },
     { label: "Admin", href: "/admin" },
     { label: "Sobre Nós", href: "/sobre-nos" },
-    { divider: true, label: "Páginas Internas (Dev)" },
-    { label: "Admin Panel", href: "/admin" },
-    { label: "Documentação", href: "/documentacao" },
-    { label: "Workspace", href: "/" },
-    { label: "Cutlist", href: "#" },
-    { label: "Settings", href: "#" },
-    { label: "Templates", href: "#" },
-    { label: "CAD Models", href: "#" },
-    { label: "Pricing", href: "#" },
-    { label: "System Settings", href: "#" },
-    { label: "Users", href: "#" },
   ];
 
   const handleLinkClick = (href: string) => {
