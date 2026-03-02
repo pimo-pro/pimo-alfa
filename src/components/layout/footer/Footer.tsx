@@ -64,37 +64,6 @@ export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin }: F
         >
           Sobre Nós
         </span>
-        <span
-          style={{
-            width: 1,
-            height: 18,
-            background: "rgba(148,163,184,0.35)",
-            display: "inline-block",
-          }}
-        />
-        <span
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            fontSize: 10,
-            color: "#94a3b8",
-          }}
-        >
-          <span style={{ fontWeight: 600 }}>Páginas Internas (Dev)</span>
-          <span style={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: "2px 12px" }}>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/admin">• Admin Panel</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/documentacao">• Documentação</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/">• Workspace</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/cutlist">• Cutlist</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/settings">• Settings</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/templates">• Templates</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/cad-models">• CAD Models</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/pricing">• Pricing</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/system-settings">• System Settings</a>
-            <a style={{ color: "#94a3b8", textDecoration: "none" }} href="/users">• Users</a>
-          </span>
-        </span>
       </span>
     </footer>
   );
