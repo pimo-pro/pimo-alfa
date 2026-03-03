@@ -4,16 +4,20 @@
  *
  * Regras HARNNETT TRACK:
  * - Modo CENTERLINE: todas as coordenadas X/Y representam o centro da ferramenta.
- *   Não se aplica compensação manual; não se emitem G41, G42 ou G40.
- * - Corte EXTERNO: #40=1 no bloco de operação (compensação para fora com diâmetro real).
- * - Ferramenta padrão: #205=113 (diâmetro real medido automaticamente pela máquina).
+ *   A máquina NÃO usa compensação no controle (sem G41/G42/G40). A compensação é feita
+ *   integralmente no CAM: as coordenadas do TCN já vêm com o contorno compensado geometricamente.
+ * - Corte EXTERNO: contorno da peça com offset para FORA (outset = +raio da fresa), para que a
+ *   borda de corte fique exatamente na linha teórica da peça.
+ * - Corte INTERNO (rasgos/recortes): contorno com offset para DENTRO (inset = -raio da fresa).
+ * - #40=1 no bloco W#89 indica semanticamente "corte externo"; não é compensação no controlo.
+ * - Ferramenta padrão: #205=113 (diâmetro nominal 12 mm para cálculo do offset).
  * - Espaçamento mínimo entre peças: 15 mm (margem de segurança).
  * - Estrutura por operação de corte: W#89 (início) + W#2201 (segmentos lineares); Z negativo = profundidade total.
  *
  * Furação: apenas top drilling (W#81); furos emitidos via buildDrillLines() no mesmo .tcn.
  */
 
-import type { SheetResult } from "../cutlayout/cutLayoutTypes";
+import type { SheetResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
 import { getSettings } from "../settings/settingsService";
 
@@ -36,17 +40,32 @@ const EPSILON_MM = 0.001;
 /** Espaçamento mínimo entre peças (mm) — HARNNETT TRACK: margem para diâmetro real da ferramenta. */
 const MIN_SPACING_BETWEEN_PIECES_MM = 15;
 
-/** Diâmetro nominal ferramenta 113 (mm) — usado para outset do toolpath quando kerf não definido. */
+/** Diâmetro nominal ferramenta 113 (mm) — fallback quando diâmetro não está definido nas definições. */
 const TOOL_113_NOMINAL_DIAMETER_MM = 12;
+
+/** Diâmetro mínimo para compensação geométrica (evitar raio 0). */
+const MIN_TOOL_DIAMETER_MM = 1;
+
+/**
+ * Devolve o diâmetro da fresa a usar para compensação geométrica no CAM (mm).
+ * Nunca devolve 0: usa definições ou fallback nominal (ferramenta 113 = 12 mm).
+ */
+function getContourToolDiameterMm(settings: { nesting?: { kerfPadraoMm?: number }; cnc?: { diametroFresaContornoMm?: number } }): number {
+  const fromCnc = Number(settings?.cnc?.diametroFresaContornoMm);
+  if (Number.isFinite(fromCnc) && fromCnc > 0) return Math.max(MIN_TOOL_DIAMETER_MM, fromCnc);
+  const fromNesting = Number(settings?.nesting?.kerfPadraoMm);
+  if (Number.isFinite(fromNesting) && fromNesting > 0) return Math.max(MIN_TOOL_DIAMETER_MM, fromNesting);
+  return TOOL_113_NOMINAL_DIAMETER_MM;
+}
 
 /**
  * Gera pontos do contorno em modo CENTERLINE para corte EXTERNO (outsideCut).
- * (x, y, w, h) = retângulo da PEÇA na chapa. O centro da ferramenta deve circular FORA da peça.
- * Offset OUTWARD pelo raio da ferramenta: toolpath = peça outset por toolRadiusMm.
- * Assim a borda de corte fica exatamente no contorno da peça e a margem de segurança fica para fora.
+ * (x, y, w, h) = retângulo da PEÇA na chapa (linha teórica). O centro da ferramenta circula FORA da peça.
+ * Compensação geométrica: offset para FORA pelo raio da ferramenta (outset = +raio).
+ * Assim a borda de corte fica exatamente no contorno da peça; sem G41/G42 no controlo.
  * Ordem dos pontos: CCW com a peça à direita (contorno externo).
  */
-function buildContourPoints(
+function buildExternalContourPoints(
   x: number,
   y: number,
   w: number,
@@ -64,6 +83,35 @@ function buildContourPoints(
     { x: x1, y: y0, z },
     { x: x1, y: y1, z },
     { x: x0, y: y1, z },
+    { x: x0, y: y0, z },
+  ];
+}
+
+/**
+ * Gera pontos do contorno para corte INTERNO (rasgos, recortes).
+ * Compensação geométrica: offset para DENTRO pelo raio da ferramenta (inset = -raio).
+ * (x, y, w, h) = retângulo teórico do recorte; o centro da ferramenta circula no interior.
+ * Ordem: CW com o material à direita (contorno interno). Para um retângulo interno.
+ */
+function buildInternalContourPoints(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  z: number,
+  toolRadiusMm: number
+): Array<{ x: number; y: number; z: number }> {
+  const inset = Math.max(0, toolRadiusMm);
+  if (w <= 2 * inset || h <= 2 * inset) return []; // recorte demasiado pequeno para esta fresa
+  const x0 = x + inset;
+  const y0 = y + inset;
+  const x1 = x + w - inset;
+  const y1 = y + h - inset;
+  return [
+    { x: x0, y: y0, z },
+    { x: x0, y: y1, z },
+    { x: x1, y: y1, z },
+    { x: x1, y: y0, z },
     { x: x0, y: y0, z },
   ];
 }
@@ -229,9 +277,8 @@ export function generateTcnForPanel(
   lines.push("}OPTI");
 
   const runtimeSettings = getSettings();
-  const cutterDiameterMm = Math.max(0, Number(runtimeSettings.nesting.kerfPadraoMm) || 0);
-  const effectiveCutterDiameterMm = cutterDiameterMm > 0 ? cutterDiameterMm : TOOL_113_NOMINAL_DIAMETER_MM;
-  const toolRadiusMm = effectiveCutterDiameterMm / 2;
+  const toolDiameterMm = getContourToolDiameterMm(runtimeSettings);
+  const toolRadiusMm = toolDiameterMm / 2;
 
   const placements = sheetResult.placements.filter((pl) =>
     isPlacementInsideSheet(
@@ -266,16 +313,35 @@ export function generateTcnForPanel(
   // Segundo: inserir operações de furação no início do bloco SIDE#1
   sideInnerLines.push(...buildDrillLines(drills));
   
-  // Terceiro: operações de corte (apenas W#89 + W#2201 por peça — HARNNETT TRACK)
+  // Terceiro: operações de corte — contorno EXTERNO já compensado para fora (+raio), sem G41/G42
   sanitizedPlacements.forEach((pl) => {
     const w = pl.largura_mm;
     const h = pl.altura_mm;
     const x = pl.x_mm;
     const y = pl.y_mm;
-    const points = buildContourPoints(x, y, w, h, zCut, toolRadiusMm);
+    const points = buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm);
     const firstPoint = points[0];
     sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zSafe));
     sideInnerLines.push(buildW2201(points, zCut));
+    // Contornos internos (rasgos, recortes): compensação para DENTRO (-raio)
+    const innerContours = pl.innerContours;
+    if (innerContours?.length) {
+      for (const rect of innerContours) {
+        const innerPoints = buildInternalContourPoints(
+          pl.x_mm + rect.x_mm,
+          pl.y_mm + rect.y_mm,
+          rect.largura_mm,
+          rect.altura_mm,
+          zCut,
+          toolRadiusMm
+        );
+        if (innerPoints.length > 0) {
+          const first = innerPoints[0];
+          sideInnerLines.push(buildToolBlock(first.x, first.y, zSafe));
+          sideInnerLines.push(buildW2201(innerPoints, zCut));
+        }
+      }
+    }
   });
   
   lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));

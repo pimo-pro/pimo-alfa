@@ -816,8 +816,6 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   if (!carved?.geometry) return;
 
   carved.geometry.computeVertexNormals();
-  const faceNormalsCapable = carved.geometry as THREE.BufferGeometry & { computeFaceNormals?: () => void };
-  faceNormalsCapable.computeFaceNormals?.();
   if (!carved.geometry.attributes.uv2 && carved.geometry.attributes.uv) {
     carved.geometry.setAttribute("uv2", carved.geometry.attributes.uv.clone());
   }
@@ -852,17 +850,6 @@ function getEdgeMaterial(): THREE.MeshStandardMaterial {
   });
   cachedEdgeMaterial = material;
   return material;
-}
-
-function applyPanelPolygonOffset(material: THREE.Material | THREE.Material[]) {
-  const materials = Array.isArray(material) ? material : [material];
-  materials.forEach((mat) => {
-    if (!(mat instanceof THREE.MeshStandardMaterial)) return;
-    mat.polygonOffset = true;
-    mat.polygonOffsetFactor = 1;
-    mat.polygonOffsetUnits = 1;
-    mat.needsUpdate = true;
-  });
 }
 
 /**
@@ -1031,7 +1018,6 @@ function createPanel(
   const material = isEdgeFace
     ? [resolved.edgeMaterial, resolved.faceMaterial]
     : resolved.singleMaterial;
-  applyPanelPolygonOffset(material);
   const mesh = new THREE.Mesh(geometry, material as THREE.Material);
   mesh.name = name;
   mesh.userData.panelType = panelType;

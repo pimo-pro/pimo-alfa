@@ -281,7 +281,7 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Regras de Furação" description="Posicionamento de parafuso, cavilha, prateleira e dobradiça (override sobre regras do projeto).">
+      <Panel title="Configurações de Furação" description="Distâncias e posicionamento de furos (parafuso, cavilha, prateleira, dobradiça). Alinhado ao 3D, Layout de Corte PRO e TCN.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Parafuso + Cavilha (união topo/base)</span>
           <NumberField
@@ -390,8 +390,8 @@ export default function SystemSettingsBase() {
             }
           />
           <NumberField
-            label="Distância da borda (offset horizontal, mm)"
-            value={draft.furação?.prateleira?.distanciaDaBorda ?? 37}
+            label="Distância frente/fundo – prateleira (mm)"
+            value={draft.furação?.prateleira?.distanciaDaBorda ?? 60}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
@@ -476,8 +476,8 @@ export default function SystemSettingsBase() {
           />
           <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Dobradiça — fixação na lateral (2 calço + 1 parafuso união)</span>
           <NumberField
-            label="Distância da borda — calço (mm)"
-            value={draft.furação?.dobradicaFixacao?.distanciaDaBordaCalco ?? 37}
+            label="Distância da borda frontal — dobradiça (mm)"
+            value={draft.furação?.dobradicaFixacao?.distanciaDaBordaCalco ?? 16}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
@@ -569,7 +569,7 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="CNC (offsets e tolerâncias)" description="Parâmetros padrão de corte, offset e tolerância para operação CNC.">
+      <Panel title="CNC (offsets e tolerâncias)" description="Parâmetros padrão de corte, offset e tolerância para operação CNC. Compensação de ferramenta é feita no CAM (contorno já compensado no TCN); a máquina não usa G41/G42.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <NumberField
             label="Profundidade corte padrão (mm)"
@@ -582,6 +582,13 @@ export default function SystemSettingsBase() {
             value={draft.cnc.offsetFerramentaPadraoMm}
             step={0.1}
             onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, offsetFerramentaPadraoMm: value } }))}
+          />
+          <NumberField
+            label="Diâmetro fresa contorno (mm)"
+            value={draft.cnc.diametroFresaContornoMm}
+            step={0.5}
+            min={0}
+            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, diametroFresaContornoMm: value } }))}
           />
           <NumberField
             label="Tolerância posicionamento (mm)"

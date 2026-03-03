@@ -71,6 +71,8 @@ export type CutPlacement = {
   pieceNumber?: number;
   /** Código curto legível para fábrica. */
   shortCode?: string;
+  /** Contornos internos (rasgos, recortes) — coordenadas relativas à peça (x_mm, y_mm). No TCN são compensados para dentro (-raio da fresa). */
+  innerContours?: Array<{ x_mm: number; y_mm: number; largura_mm: number; altura_mm: number }>;
 };
 
 export type SheetResult = {

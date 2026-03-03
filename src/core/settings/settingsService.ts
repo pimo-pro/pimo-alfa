@@ -37,6 +37,8 @@ export interface SettingsSchema {
     profundidadeCortePadraoMm: number;
     offsetFerramentaPadraoMm: number;
     toleranciaPosicionamentoMm: number;
+    /** Diâmetro da fresa para compensação geométrica no TCN (contorno já compensado no CAM; 0 = usar Kerf padrão ou 12 mm). */
+    diametroFresaContornoMm: number;
   };
   nesting: {
     kerfPadraoMm: number;
@@ -158,6 +160,7 @@ export const settingsDefaults: SettingsSchema = {
     profundidadeCortePadraoMm: 18,
     offsetFerramentaPadraoMm: 0,
     toleranciaPosicionamentoMm: 0.1,
+    diametroFresaContornoMm: 0,
   },
   nesting: {
     kerfPadraoMm: 3,
@@ -212,10 +215,10 @@ export const settingsDefaults: SettingsSchema = {
       minFuros: 6,
       maxFuros: 40,
       espacamentoVertical: 32,
-      distanciaDaBorda: 37,
+      distanciaDaBorda: 60,
     },
     dobradica: {
-      distanciaCentroDaBorda: 21.5,
+      distanciaCentroDaBorda: 22.5,
       distanciaDobradiçaTopo: 100,
       distanciaDobradiçaFundo: 100,
       numeroPorPorta: 2,
@@ -384,6 +387,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       profundidadeCortePadraoMm: clamp(toNumber(merged.cnc.profundidadeCortePadraoMm, settingsDefaults.cnc.profundidadeCortePadraoMm), 0, 200),
       offsetFerramentaPadraoMm: clamp(toNumber(merged.cnc.offsetFerramentaPadraoMm, settingsDefaults.cnc.offsetFerramentaPadraoMm), -50, 50),
       toleranciaPosicionamentoMm: clamp(toNumber(merged.cnc.toleranciaPosicionamentoMm, settingsDefaults.cnc.toleranciaPosicionamentoMm), 0, 10),
+      diametroFresaContornoMm: clamp(toNumber(merged.cnc.diametroFresaContornoMm, settingsDefaults.cnc.diametroFresaContornoMm), 0, 30),
     },
     nesting: {
       kerfPadraoMm: clamp(toNumber(merged.nesting.kerfPadraoMm, settingsDefaults.nesting.kerfPadraoMm), 0, 20),
