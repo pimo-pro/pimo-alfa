@@ -4,6 +4,8 @@ import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import { mmToM } from "../utils/units";
 import { getViewerMaterialId } from "../core/materials/service";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
+import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
+import type { RulesConfig } from "../core/rules/rulesConfig";
 
 type ViewerApi = {
   addBox: (_id: string, _options?: BoxOptions) => boolean;
@@ -59,6 +61,8 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     cabinetType: wsBox.cabinetType,
     feetEnabled: wsBox.feetEnabled,
     pe_cm: wsBox.pe_cm,
+    feetHeight: wsBox.feetHeight,
+    feetOffsetFront: wsBox.feetOffsetFront,
   });
 }
 
@@ -95,7 +99,9 @@ export const useCalculadoraSync = (
   /** Quando true, o viewer está montado e pronto para receber caixas. */
   viewerReady?: boolean,
   /** Id do material do projeto (CRUD); usado quando a caixa não tem material próprio. */
-  projectMaterialId?: string
+  projectMaterialId?: string,
+  /** Regras do projeto; usadas para gerar cutlist com drillHoles quando box.cutList não está populado. */
+  rules?: RulesConfig
 ) => {
   const boxesRef = useRef<BoxModule[]>(boxes);
   const workspaceBoxesRef = useRef<WorkspaceBox[]>(workspaceBoxes);
@@ -159,17 +165,25 @@ export const useCalculadoraSync = (
 
       const shelves = Number.isFinite(wsBox.prateleiras) ? Math.max(0, wsBox.prateleiras) : undefined;
       const cabinetType = wsBox?.cabinetType === "lower" || wsBox?.cabinetType === "upper" ? wsBox.cabinetType : undefined;
-      const pe_cm = wsBox?.pe_cm;
-      const feetEnabled = wsBox?.feetEnabled ?? true;
+      const feetHeight = Math.max(40, wsBox?.feetHeight ?? ((wsBox?.pe_cm ?? 10) * 10));
+      const feetOffsetFront = Math.max(0, wsBox?.feetOffsetFront ?? 100);
+      const pe_cm = feetHeight / 10;
+      const feetEnabled = wsBox?.feetEnabled ?? (cabinetType === "lower");
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
       const doorLayerItems = wsBox?.doorsLayer ?? [];
       const drawerLayerItems = wsBox?.drawersLayer ?? [];
       const useCabinetLock = cabinetType === "lower" && feetEnabled;
       const cabinetOpts: Partial<BoxOptions> = useCabinetLock
-        ? { cabinetType, pe_cm, feetEnabled }
-        : { cabinetType: null, feetEnabled };
+        ? { cabinetType, pe_cm, feetEnabled, feetHeight, feetOffsetFront }
+        : { cabinetType: null, pe_cm, feetEnabled, feetHeight, feetOffsetFront };
       const rotateOpts = autoRotateEnabled === false ? { autoRotateEnabled: false } : {};
-      const drillMarkersByPanel = buildViewerDrillMarkersByPanel(box?.cutList);
+      const cutListForBox =
+        box?.cutList && box.cutList.length > 0
+          ? box.cutList
+          : box && rules
+            ? cutlistComPrecoFromBox(box, rules)
+            : [];
+      const drillMarkersByPanel = buildViewerDrillMarkersByPanel(cutListForBox);
       if (!stateRef.current.has(wsBox.id)) {
         api.addBox(wsBox.id, {
           width,
@@ -233,7 +247,7 @@ export const useCalculadoraSync = (
     });
 
     stateRef.current = nextState;
-  }, [materialName]);
+  }, [materialName, rules]);
 
   useEffect(() => {
     // Só sincronizar quando o viewer estiver explicitamente pronto

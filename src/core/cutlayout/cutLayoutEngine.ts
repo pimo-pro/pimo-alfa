@@ -1878,9 +1878,18 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
       seen.add(k);
       normalizedHoles.push({ x, y, diameter: d, depth: dep, holeType: ht, topDrillable: td });
     };
+    // Quando as dimensões são reordenadas (largura < altura → peça fica altura×largura no layout),
+    // as coordenadas dos furos (x,y) estão no espaço (largura, altura) do painel; no layout o eixo X
+    // corresponde à altura e o Y à largura → trocar (x,y) para (y,x) para alinhar ao Layout de Corte PRO.
+    const origL = Number(item.dimensoes?.largura) || 0;
+    const origA = Number(item.dimensoes?.altura) || 0;
+    const dimensionsSwapped = origL > 0 && origA > 0 && origL < origA;
     for (const h of item.drillHoles ?? []) {
-      const x = Number(h?.x);
-      const y = Number(h?.y);
+      let x = Number(h?.x);
+      let y = Number(h?.y);
+      if (dimensionsSwapped) {
+        [x, y] = [y, x];
+      }
       const diameter = Number(h?.diameter);
       const depth = Number(h?.depth);
       if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {

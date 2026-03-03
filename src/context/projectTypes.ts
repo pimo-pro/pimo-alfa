@@ -369,6 +369,8 @@ export interface ProjectActions {
       manualPosition?: boolean;
       autoRotateEnabled?: boolean;
       feetEnabled?: boolean;
+      feetHeight?: number;
+      feetOffsetFront?: number;
     }
   ) => void;
   /** Atualiza dimensões da caixa a partir do bbox do GLB (caixas CAD-only). */

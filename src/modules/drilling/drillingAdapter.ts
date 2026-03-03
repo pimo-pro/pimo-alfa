@@ -30,6 +30,7 @@ const EMPTY_VIEWER_DRILL_MARKERS: ViewerDrillMarkersByPanel = {
   fundo: [],
   lateral_esquerda: [],
   lateral_direita: [],
+  porta: [],
 };
 
 const clampNumber = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
@@ -126,7 +127,7 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
   const minFuros = clampNumber(toFiniteNumber(pr.minFuros, normalizedRules.furos.tecnicos.prateleira.minFurosPorColuna), 2, 100);
   const maxFurosRaw = clampNumber(toFiniteNumber(pr.maxFuros, normalizedRules.furos.tecnicos.prateleira.maxFurosPorColuna), 2, 100);
   const maxFuros = Math.max(minFuros, maxFurosRaw);
-  const distanciaDaBorda = clampNumber(
+  const distanciaDaBordaPrateleira = clampNumber(
     toFiniteNumber(pr.distanciaDaBorda, normalizedRules.furos.tecnicos.prateleira.distanciaDaBorda),
     5,
     120
@@ -154,16 +155,16 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
           ...normalizedRules.furos.tecnicos.prateleira,
           margemTopo: pr.margemTop,
           margemBase: pr.margemBottom,
-          margemFrente: distanciaDaBorda,
-          margemFundo: distanciaDaBorda,
+          margemFrente: distanciaDaBordaPrateleira,
+          margemFundo: distanciaDaBordaPrateleira,
           minFurosPorColuna: minFuros,
           maxFurosPorColuna: maxFuros,
           espacamentoVertical: pr.espacamentoVertical,
-          distanciaDaBorda,
+          distanciaDaBorda: distanciaDaBordaPrateleira,
         },
         dobradica: {
           ...normalizedRules.furos.tecnicos.dobradica,
-          distanciaCentroDaBorda: fu.dobradica.distanciaCentroDaBorda,
+          distanciaCentroDaBorda: toFiniteNumber(fu.dobradica.distanciaCentroDaBorda, normalizedRules.furos.tecnicos.dobradica.distanciaCentroDaBorda) || 22.5,
           distanciaDobradiçaTopo: fu.dobradica.distanciaDobradiçaTopo,
           distanciaDobradiçaFundo: fu.dobradica.distanciaDobradiçaFundo,
           numeroPorPorta: Math.max(2, fu.dobradica.numeroPorPorta ?? normalizedRules.furos.tecnicos.dobradica.numeroPorPorta ?? 2),
@@ -173,9 +174,20 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
         ...(df && {
           dobradica_fixacao: {
             ...normalizedRules.furos.tecnicos.dobradica_fixacao,
-            distanciaDaBordaCalco: df.distanciaDaBordaCalco ?? normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaCalco,
-            distanciaDaBordaParafusoUniao:
-              df.distanciaDaBordaParafusoUniao ?? normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaParafusoUniao,
+            distanciaDaBordaCalco: clampNumber(
+              toFiniteNumber(df.distanciaDaBordaCalco, normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaCalco),
+              10,
+              80
+            ),
+            // Parafuso união: sempre 53 mm (padrão ferragem). Valor 60 = legado (regra de prateleira) → forçar 53.
+            distanciaDaBordaParafusoUniao: (() => {
+              const v = toFiniteNumber(
+                df.distanciaDaBordaParafusoUniao,
+                normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaDaBordaParafusoUniao
+              );
+              const legacyShelf = Math.abs(v - 60) < 1;
+              return clampNumber(legacyShelf ? 53 : (v || 53), 20, 120);
+            })(),
             distanciaEntreFurosCalco:
               df.distanciaEntreFurosCalco ?? normalizedRules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco,
             profundidadeFuro: df.profundidadeFuro,
@@ -274,8 +286,14 @@ export function buildViewerDrillMarkersByPanelResult(
   }
 
   const byType = new Map(cutList.map((item) => [item.tipo, item]));
+  const doorTipos = ["porta_simples", "porta_dupla", "porta_correr"];
+  const firstDoorItem = cutList.find((item) => doorTipos.includes(item.tipo));
 
   const getHolesFor = (tipo: keyof ViewerDrillMarkersByPanel): TechnicalDrillHole[] => {
+    if (tipo === "porta") {
+      if (!firstDoorItem?.drillHoles?.length) return [];
+      return panelDrillHolesToTechnical(firstDoorItem.drillHoles, "tras");
+    }
     const item = byType.get(tipo);
     if (!item?.drillHoles?.length) return [];
     const face: DrillFace =
@@ -290,6 +308,7 @@ export function buildViewerDrillMarkersByPanelResult(
       fundo: getHolesFor("fundo"),
       lateral_esquerda: getHolesFor("lateral_esquerda"),
       lateral_direita: getHolesFor("lateral_direita"),
+      porta: getHolesFor("porta"),
     },
   };
 }

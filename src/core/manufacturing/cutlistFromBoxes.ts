@@ -164,6 +164,16 @@ export function ferragensFromBoxes(boxes: BoxModule[], rules: RulesConfig): Aces
         tipo: f.tipo,
       });
     }
+    if (box.cabinetType === "lower" && box.feetEnabled !== false) {
+      acc.push({
+        id: `${box.id}-pe-cozinha-regulavel`,
+        nome: "Pé de cozinha regulável",
+        quantidade: 4,
+        precoUnitario: 0,
+        precoTotal: 0,
+        tipo: "pe_regulavel",
+      });
+    }
   }
   return acc;
 }

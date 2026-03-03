@@ -619,7 +619,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         newBox.posicaoZ_mm = spawn?.posicaoZ_mm ?? 0;
         newBox.cabinetType = "lower";
         newBox.feetEnabled = true;
-        newBox.posicaoY_mm = 10 * 10 + dimensoes.altura / 2;
+        newBox.feetHeight = 100;
+        newBox.feetOffsetFront = 100;
+        newBox.pe_cm = (newBox.feetHeight ?? 100) / 10;
+        newBox.posicaoY_mm = (newBox.feetHeight ?? 100) + dimensoes.altura / 2;
         if (spawn) {
           newBox.rotacaoY = spawn.rotacaoY;
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
@@ -1143,6 +1146,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           if (partial.manualPosition !== undefined) next.manualPosition = partial.manualPosition;
           if (partial.autoRotateEnabled !== undefined) next.autoRotateEnabled = partial.autoRotateEnabled;
           if (partial.feetEnabled !== undefined) next.feetEnabled = partial.feetEnabled;
+          if (partial.feetHeight !== undefined) {
+            const feetHeight = Math.max(40, partial.feetHeight);
+            next.feetHeight = feetHeight;
+            next.pe_cm = feetHeight / 10;
+          }
+          if (partial.feetOffsetFront !== undefined) {
+            next.feetOffsetFront = Math.max(0, partial.feetOffsetFront);
+          }
 
           return next;
         });

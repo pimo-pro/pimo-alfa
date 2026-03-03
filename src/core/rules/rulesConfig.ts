@@ -97,6 +97,7 @@ export type RulesConfig = {
       };
       dobradica: {
         enabled: boolean;
+        /** Distância da borda da porta ao centro do caneco (mm). Padrão 22.5. */
         distanciaCentroDaBorda: number;
         distanciaBordaLateral: number;
         /** Distância da dobradiça ao topo (mm). */
@@ -109,8 +110,18 @@ export type RulesConfig = {
         /** Se true, posições Y calculadas por distTopo/distFundo/proporcional; se false, usa offsetsVerticaisMm. */
         distribuicaoAutomatica: boolean;
         offsetsVerticaisMm: number[];
+        /** Diâmetro do furo do caneco (mm). Padrão 35. */
         diametro: number;
+        /** Profundidade do furo do caneco (mm). Padrão 13. */
         profundidade: number;
+        /** Distância da borda da porta ao CENTRO de cada furo de fixação (mm). Padrão 28. */
+        distanciaFurosFixacaoBorda: number;
+        /** Distância entre os CENTROS dos dois furos de fixação na porta (mm). Padrão 52. */
+        distanciaEntreFurosFixacao: number;
+        /** Diâmetro dos furos de fixação na porta (mm). Padrão 10. */
+        diametroFurosFixacao: number;
+        /** Profundidade dos furos de fixação na porta (mm). Padrão 12. */
+        profundidadeFurosFixacao: number;
       };
       corredica: {
         enabled: boolean;
@@ -280,8 +291,8 @@ export const defaultRulesConfig: RulesConfig = {
       },
       dobradica: {
         enabled: true,
-        distanciaCentroDaBorda: 21.5,
-        distanciaBordaLateral: 22,
+        distanciaCentroDaBorda: 22.5,
+        distanciaBordaLateral: 22.5,
         distanciaDobradiçaTopo: 100,
         distanciaDobradiçaFundo: 100,
         offsetSuperior: 100,
@@ -290,7 +301,11 @@ export const defaultRulesConfig: RulesConfig = {
         distribuicaoAutomatica: true,
         offsetsVerticaisMm: [],
         diametro: 35,
-        profundidade: 12.5,
+        profundidade: 13,
+        distanciaFurosFixacaoBorda: 28,
+        distanciaEntreFurosFixacao: 52,
+        diametroFurosFixacao: 10,
+        profundidadeFurosFixacao: 12,
       },
       corredica: {
         enabled: true,
@@ -444,6 +459,11 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
             (asObject(tecnicosSrc.dobradica_fixacao).distanciaDaBordaCalco as number) ??
             (asObject(tecnicosSrc.dobradica_fixacao).distanciaDaBorda as number) ??
             defaults.furos.tecnicos.dobradica_fixacao.distanciaDaBordaCalco,
+          distanciaDaBordaParafusoUniao: (() => {
+            const v = (asObject(tecnicosSrc.dobradica_fixacao).distanciaDaBordaParafusoUniao as number) ??
+              defaults.furos.tecnicos.dobradica_fixacao.distanciaDaBordaParafusoUniao;
+            return Math.abs(v - 60) < 1 ? 53 : v;
+          })(),
           distanciaEntreFurosCalco:
             (asObject(tecnicosSrc.dobradica_fixacao).distanciaEntreFurosCalco as number) ??
             (asObject(tecnicosSrc.dobradica_fixacao).distanciaEntreFuros as number) ??

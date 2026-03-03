@@ -400,15 +400,23 @@ export default function RulesAdminPage() {
             </div>
 
             <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Dobradiça</div>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Dobradiça (porta + caixa)</div>
               <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.dobradica.enabled} onChange={(e) => updateTecnico("dobradica", { enabled: e.target.checked })} /> Ativar</label>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Caneco (porta): taça 35 mm</div>
               <div className="form-grid" style={{ gridTemplateColumns: "repeat(6, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
-                <label style={{ fontSize: 12 }}>Diâm. taça <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.diametro} onChange={(e) => updateTecnico("dobradica", { diametro: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Prof. taça <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.profundidade} onChange={(e) => updateTecnico("dobradica", { profundidade: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Dist. borda <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaBordaLateral} onChange={(e) => updateTecnico("dobradica", { distanciaBordaLateral: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Diâm. caneco <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.diametro} onChange={(e) => updateTecnico("dobradica", { diametro: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Prof. caneco <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.profundidade} onChange={(e) => updateTecnico("dobradica", { profundidade: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. centro caneco <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaCentroDaBorda ?? rules.furos.tecnicos.dobradica.distanciaBordaLateral} onChange={(e) => updateTecnico("dobradica", { distanciaCentroDaBorda: Number(e.target.value), distanciaBordaLateral: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Offset sup. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetSuperior} onChange={(e) => updateTecnico("dobradica", { offsetSuperior: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Offset inf. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetInferior} onChange={(e) => updateTecnico("dobradica", { offsetInferior: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Qtd/porta <input className="input input-xs" type="number" min={2} value={rules.furos.tecnicos.dobradica.numeroPorPorta} onChange={(e) => updateTecnico("dobradica", { numeroPorPorta: Math.max(2, Number(e.target.value)) })} /></label>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>Furos de fixação na porta (medidas ao centro do furo)</div>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(140px, 1fr))", gap: 8, marginTop: 4 }}>
+                <label style={{ fontSize: 12 }}>Dist. borda → centro (mm) <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaFurosFixacaoBorda ?? 28} onChange={(e) => updateTecnico("dobradica", { distanciaFurosFixacaoBorda: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Entre centros (mm) <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaEntreFurosFixacao ?? 52} onChange={(e) => updateTecnico("dobradica", { distanciaEntreFurosFixacao: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Diâm. fixação <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.diametroFurosFixacao ?? 10} onChange={(e) => updateTecnico("dobradica", { diametroFurosFixacao: Number(e.target.value) })} /></label>
+                <label style={{ fontSize: 12 }}>Prof. fixação <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.profundidadeFurosFixacao ?? 12} onChange={(e) => updateTecnico("dobradica", { profundidadeFurosFixacao: Number(e.target.value) })} /></label>
               </div>
             </div>
 

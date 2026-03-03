@@ -22,7 +22,7 @@ import type { MaterialSet } from "../materials/MaterialLibrary";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { updateBoxGeometry, updateBoxGroup, buildBoxLegacy } from "../objects/BoxBuilder";
 import type { BoxOptions } from "../objects/BoxBuilder";
-import type { BoxPanelIds } from "../../core/types";
+import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import type { EnvironmentOptions } from "./Environment";
@@ -105,8 +105,11 @@ export class Viewer {
       manualPosition?: boolean;
       cabinetType?: "lower" | "upper";
       pe_cm?: number;
+      feetHeight?: number;
+      feetOffsetFront?: number;
       feetEnabled?: boolean;
       autoRotateEnabled?: boolean;
+      drillMarkersByPanel?: ViewerDrillMarkersByPanel;
       cadModels: Array<{
         id: string;
         object: THREE.Object3D;
@@ -1217,6 +1220,154 @@ export class Viewer {
     return this.explodedViewIntensity;
   }
 
+  /** Espessura dos painéis em metros (19 mm), alinhada ao BoxBuilder. */
+  private static readonly PANEL_THICKNESS_M = 0.019;
+  /** Espessura da costa em metros (10 mm). */
+  private static readonly PANEL_BACK_THICKNESS_M = 0.01;
+  /** Segmentos por círculo de furo no contorno. */
+  private static readonly HOLE_CIRCLE_SEGMENTS = 16;
+  /** Deslocamento do overlay para o lado interno do painel (m), evita ghosting e garante visibilidade dentro do móvel. */
+  private static readonly OVERLAY_INSET_M = 0.0001;
+  /** Ângulo mínimo (graus) para EdgesGeometry em portas/gavetas/prateleiras. */
+  private static readonly FALLBACK_EDGES_ANGLE_DEG = 25;
+
+  /** Material do overlay de bordas: evita ghosting (polygonOffset) e reforça visibilidade. */
+  private static getPanelEdgeOverlayMaterial(): THREE.LineBasicMaterial {
+    return new THREE.LineBasicMaterial({
+      color: new THREE.Color("#000000"),
+      transparent: true,
+      opacity: 0.8,
+      linewidth: 2,
+      depthTest: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+  }
+
+  /**
+   * Gera geometria de LineSegments apenas com o contorno real do painel (retângulo da face)
+   * e os contornos dos furos, em espaço local do painel. Não usa a malha CSG.
+   */
+  private static createContourEdgesGeometry(
+    panelType: "left" | "right" | "top" | "bottom" | "back",
+    width: number,
+    height: number,
+    depth: number,
+    holes: TechnicalDrillHole[]
+  ): THREE.BufferGeometry {
+    const t = Viewer.PANEL_THICKNESS_M;
+    const bt = Viewer.PANEL_BACK_THICKNESS_M;
+    const sideH = Math.max(0.001, height - 2 * t);
+    const segs: number[] = [];
+
+    const pushSegment = (x1: number, y1: number, z1: number, x2: number, y2: number, z2: number) => {
+      segs.push(x1, y1, z1, x2, y2, z2);
+    };
+
+    // Face interna = lado que olha para dentro do móvel. Overlay deslocado de OVERLAY_INSET_M para dentro.
+    if (panelType === "top") {
+      const w2 = width / 2;
+      const d2 = depth / 2;
+      const y0 = -t / 2 - Viewer.OVERLAY_INSET_M;
+      pushSegment(-w2, y0, -d2, w2, y0, -d2);
+      pushSegment(w2, y0, -d2, w2, y0, d2);
+      pushSegment(w2, y0, d2, -w2, y0, d2);
+      pushSegment(-w2, y0, d2, -w2, y0, -d2);
+      const panelW = width;
+      const panelH = depth;
+      for (const hole of holes) {
+        const a = hole.x / 1000 - panelW / 2;
+        const b = panelH / 2 - hole.y / 1000;
+        const r = Math.max(0.0005, hole.diametro / 2000);
+        for (let i = 0; i < Viewer.HOLE_CIRCLE_SEGMENTS; i++) {
+          const t0 = (i * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          const t1 = ((i + 1) * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          pushSegment(
+            a + r * Math.cos(t0), y0, b + r * Math.sin(t0),
+            a + r * Math.cos(t1), y0, b + r * Math.sin(t1)
+          );
+        }
+      }
+    } else if (panelType === "bottom") {
+      const w2 = width / 2;
+      const d2 = depth / 2;
+      const y0 = t / 2 + Viewer.OVERLAY_INSET_M;
+      pushSegment(-w2, y0, -d2, w2, y0, -d2);
+      pushSegment(w2, y0, -d2, w2, y0, d2);
+      pushSegment(w2, y0, d2, -w2, y0, d2);
+      pushSegment(-w2, y0, d2, -w2, y0, -d2);
+      const panelW = width;
+      const panelH = depth;
+      for (const hole of holes) {
+        const a = hole.x / 1000 - panelW / 2;
+        const b = panelH / 2 - hole.y / 1000;
+        const r = Math.max(0.0005, hole.diametro / 2000);
+        for (let i = 0; i < Viewer.HOLE_CIRCLE_SEGMENTS; i++) {
+          const t0 = (i * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          const t1 = ((i + 1) * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          pushSegment(
+            a + r * Math.cos(t0), y0, b + r * Math.sin(t0),
+            a + r * Math.cos(t1), y0, b + r * Math.sin(t1)
+          );
+        }
+      }
+    } else if (panelType === "left") {
+      const sh2 = sideH / 2;
+      const d2 = depth / 2;
+      const x0 = t / 2 + Viewer.OVERLAY_INSET_M;
+      pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
+      pushSegment(x0, sh2, -d2, x0, sh2, d2);
+      pushSegment(x0, sh2, d2, x0, -sh2, d2);
+      pushSegment(x0, -sh2, d2, x0, -sh2, -d2);
+      const panelW = depth;
+      const panelH = sideH;
+      for (const hole of holes) {
+        const a = hole.x / 1000 - panelW / 2;
+        const b = panelH / 2 - hole.y / 1000;
+        const r = Math.max(0.0005, hole.diametro / 2000);
+        for (let i = 0; i < Viewer.HOLE_CIRCLE_SEGMENTS; i++) {
+          const t0 = (i * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          const t1 = ((i + 1) * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
+        }
+      }
+    } else if (panelType === "right") {
+      const sh2 = sideH / 2;
+      const d2 = depth / 2;
+      const x0 = -t / 2 - Viewer.OVERLAY_INSET_M;
+      pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
+      pushSegment(x0, sh2, -d2, x0, sh2, d2);
+      pushSegment(x0, sh2, d2, x0, -sh2, d2);
+      pushSegment(x0, -sh2, d2, x0, -sh2, -d2);
+      const panelW = depth;
+      const panelH = sideH;
+      for (const hole of holes) {
+        const a = hole.x / 1000 - panelW / 2;
+        const b = panelH / 2 - hole.y / 1000;
+        const r = Math.max(0.0005, hole.diametro / 2000);
+        for (let i = 0; i < Viewer.HOLE_CIRCLE_SEGMENTS; i++) {
+          const t0 = (i * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          const t1 = ((i + 1) * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
+        }
+      }
+    } else {
+      const w2 = width / 2;
+      const h2 = height / 2;
+      const z0 = bt / 2 + Viewer.OVERLAY_INSET_M;
+      pushSegment(-w2, -h2, z0, w2, -h2, z0);
+      pushSegment(w2, -h2, z0, w2, h2, z0);
+      pushSegment(w2, h2, z0, -w2, h2, z0);
+      pushSegment(-w2, h2, z0, -w2, -h2, z0);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(segs), 3));
+    geo.computeBoundingSphere();
+    return geo;
+  }
+
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
     const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
     if (existing) {
@@ -1226,17 +1377,65 @@ export class Viewer {
         existing.material.dispose();
       }
     }
-    const geometry = new THREE.EdgesGeometry(mesh.geometry);
-    const material = new THREE.LineBasicMaterial({
-      color: new THREE.Color("#0f172a"),
-      transparent: true,
-      opacity: 0.35,
-    });
-    const overlay = new THREE.LineSegments(geometry, material);
-    overlay.userData.isPanelEdgeOverlay = true;
-    overlay.raycast = () => null;
-    mesh.add(overlay);
-    overlay.visible = visible;
+    const panelType = mesh.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
+    const boxId = mesh.userData?.boxId as string | undefined;
+    const entry = boxId ? this.boxes.get(boxId) : undefined;
+    const structuralPanelNames = new Set(["left", "right", "top", "bottom", "back"]);
+    const isStructuralPanel = mesh.name && structuralPanelNames.has(mesh.name);
+    if (
+      panelType &&
+      isStructuralPanel &&
+      entry &&
+      Number.isFinite(entry.width) &&
+      Number.isFinite(entry.height) &&
+      Number.isFinite(entry.depth)
+    ) {
+      const drillMap: ViewerDrillMarkersByPanel | undefined = entry.drillMarkersByPanel;
+      const holes =
+        panelType === "top"
+          ? (drillMap?.cima ?? [])
+          : panelType === "bottom"
+            ? (drillMap?.fundo ?? [])
+            : panelType === "left"
+              ? (drillMap?.lateral_esquerda ?? [])
+              : panelType === "right"
+                ? (drillMap?.lateral_direita ?? [])
+                : [];
+      const geometry = Viewer.createContourEdgesGeometry(
+        panelType,
+        entry.width,
+        entry.height,
+        entry.depth,
+        holes
+      );
+      const material = Viewer.getPanelEdgeOverlayMaterial();
+      const overlay = new THREE.LineSegments(geometry, material);
+      overlay.userData.isPanelEdgeOverlay = true;
+      overlay.raycast = () => null;
+      mesh.add(overlay);
+      overlay.visible = visible;
+    } else {
+      const isDoorOrDrawerOrShelf =
+        (mesh.name && (
+          mesh.name.startsWith("door-leaf-") ||
+          mesh.name.startsWith("shelf-") ||
+          mesh.name.startsWith("drawer-")
+        )) ||
+        mesh.userData?.doorLayerId != null ||
+        mesh.userData?.drawerPart != null;
+      if (isDoorOrDrawerOrShelf && mesh.geometry) {
+        const geometry = new THREE.EdgesGeometry(
+          mesh.geometry,
+          Viewer.FALLBACK_EDGES_ANGLE_DEG
+        );
+        const material = Viewer.getPanelEdgeOverlayMaterial();
+        const overlay = new THREE.LineSegments(geometry, material);
+        overlay.userData.isPanelEdgeOverlay = true;
+        overlay.raycast = () => null;
+        mesh.add(overlay);
+        overlay.visible = visible;
+      }
+    }
   }
 
   private getPanelVisibilityKey(node: THREE.Object3D, panelType: "left" | "right" | "top" | "bottom" | "back"): string {
@@ -1270,9 +1469,18 @@ export class Viewer {
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
-      if (!panelType) return;
-      const panelKey = this.getPanelVisibilityKey(node, panelType);
-      const hidden = this.hideAllPanels || this.hiddenPanels.has(panelType) || this.hiddenPanels.has(panelKey);
+      const isDoorOrDrawerOrShelf =
+        (node.name &&
+          (node.name.startsWith("door-leaf-") ||
+            node.name.startsWith("shelf-") ||
+            node.name.startsWith("drawer-"))) ||
+        node.userData?.doorLayerId != null ||
+        node.userData?.drawerPart != null;
+      if (!panelType && !isDoorOrDrawerOrShelf) return;
+      const panelKey = panelType ? this.getPanelVisibilityKey(node, panelType) : "";
+      const hidden =
+        this.hideAllPanels ||
+        (panelType != null && (this.hiddenPanels.has(panelType) || this.hiddenPanels.has(panelKey)));
       node.visible = !hidden;
       this.ensurePanelEdges(node, this.panelEdgesVisible && !hidden);
     });
@@ -1440,11 +1648,13 @@ export class Viewer {
       opts.cabinetType === "lower" || opts.cabinetType === "upper"
         ? opts.cabinetType
         : undefined;
-    const feetEnabled = opts.feetEnabled ?? true;
+    const feetEnabled = opts.feetEnabled ?? (cabinetType === "lower");
+    const feetHeight = Math.max(40, opts.feetHeight ?? ((opts.pe_cm ?? Viewer.HEIGHT_BASE_CM) * 10));
+    const feetOffsetFront = Math.max(0, opts.feetOffsetFront ?? 100);
     if (cabinetType === "lower" && feetEnabled) {
       position = {
         ...position,
-        y: this.getFixedYForCabinet({ height, cabinetType, pe_cm: opts.pe_cm }),
+        y: this.getFixedYForCabinet({ height, cabinetType, pe_cm: feetHeight / 10 }),
       };
     }
     box.position.set(position.x, position.y, position.z);
@@ -1459,12 +1669,19 @@ export class Viewer {
       cadOnly: cadOnly || undefined,
       manualPosition,
       cabinetType: cabinetType ?? undefined,
-      pe_cm: opts.pe_cm,
+      pe_cm: feetHeight / 10,
+      feetHeight,
+      feetOffsetFront,
       feetEnabled,
       autoRotateEnabled: opts.autoRotateEnabled !== false,
       cadModels: [],
       material,
+      drillMarkersByPanel: opts.drillMarkersByPanel,
     });
+    const createdEntry = this.boxes.get(id);
+    if (createdEntry) {
+      this.syncFeetVisualForBox(createdEntry);
+    }
     this.sceneManager.add(box);
     this.applyPanelIdsToBox(box, id, opts.panelIds);
     this.applyPanelVisibilityForObject(box);
@@ -1662,6 +1879,13 @@ export class Viewer {
           : undefined;
     }
     if (opts.pe_cm !== undefined) entry.pe_cm = opts.pe_cm;
+    if (opts.feetHeight !== undefined) {
+      entry.feetHeight = Math.max(40, opts.feetHeight);
+      entry.pe_cm = entry.feetHeight / 10;
+    }
+    if (opts.feetOffsetFront !== undefined) {
+      entry.feetOffsetFront = Math.max(0, opts.feetOffsetFront);
+    }
     if (opts.feetEnabled !== undefined) entry.feetEnabled = opts.feetEnabled;
     if (opts.autoRotateEnabled !== undefined) entry.autoRotateEnabled = opts.autoRotateEnabled;
     if (entry.manualPosition && !opts.position) {
@@ -1702,6 +1926,10 @@ export class Viewer {
     entry.width = width;
     entry.height = height;
     entry.depth = depth;
+    this.syncFeetVisualForBox(entry);
+    if (opts.drillMarkersByPanel !== undefined) {
+      entry.drillMarkersByPanel = opts.drillMarkersByPanel;
+    }
     if (this.lockEnabled) this.applyFloorConstraint(entry.mesh);
     if (dimensionsChanged && entry.cadOnly) {
       entry.cadModels.forEach((model) => {
@@ -2642,6 +2870,12 @@ export class Viewer {
     return entry.cabinetType === "lower" && entry.feetEnabled !== false;
   }
 
+  private shouldRenderFeet(entry: {
+    feetEnabled?: boolean;
+  }): boolean {
+    return entry.feetEnabled === true;
+  }
+
   /** Altura Y (m) fixa para caixas inferiores com pés ativos. */
   private getFixedYForCabinet(entry: {
     height: number;
@@ -2658,6 +2892,141 @@ export class Viewer {
       return baseM + h / 2;
     }
     return h / 2;
+  }
+
+  private removeFeetVisual(root: THREE.Object3D): void {
+    const existing = root.getObjectByName("kitchen-feet-group");
+    if (!existing) return;
+    root.remove(existing);
+    const disposedGeometries = new Set<THREE.BufferGeometry>();
+    const disposedMaterials = new Set<THREE.Material>();
+    existing.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      if (node.geometry && !disposedGeometries.has(node.geometry)) {
+        node.geometry.dispose();
+        disposedGeometries.add(node.geometry);
+      }
+      if (Array.isArray(node.material)) {
+        node.material.forEach((material) => {
+          if (!disposedMaterials.has(material)) {
+            material.dispose();
+            disposedMaterials.add(material);
+          }
+        });
+      } else if (node.material && !disposedMaterials.has(node.material)) {
+        node.material.dispose();
+        disposedMaterials.add(node.material);
+      }
+    });
+  }
+
+  private createKitchenFeetGroup(
+    width: number,
+    height: number,
+    depth: number,
+    feetHeightM: number,
+    feetOffsetFrontM: number
+  ): THREE.Group {
+    const group = new THREE.Group();
+    group.name = "kitchen-feet-group";
+    group.userData.isKitchenFeet = true;
+
+    const headHeight = 0.012;
+    const baseHeight = 0.008;
+    const bodyHeight = Math.max(0.02, feetHeightM - headHeight - baseHeight);
+    const headSize = 0.036;
+    const bodyRadius = 0.012;
+    const baseRadius = 0.03;
+
+    const metalMat = new THREE.MeshStandardMaterial({
+      color: 0x9ca3af,
+      roughness: 0.32,
+      metalness: 0.82,
+    });
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: 0x1f2937,
+      roughness: 0.85,
+      metalness: 0.1,
+    });
+
+    const headGeometry = new THREE.BoxGeometry(headSize, headHeight, headSize);
+    const bodyGeometry = new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyHeight, 18);
+    const baseGeometry = new THREE.CylinderGeometry(baseRadius, baseRadius, baseHeight, 22);
+
+    const createFoot = () => {
+      const foot = new THREE.Group();
+      const topY = -height / 2;
+      const head = new THREE.Mesh(headGeometry, metalMat);
+      head.position.y = topY - headHeight / 2;
+      head.castShadow = true;
+      head.receiveShadow = true;
+
+      const body = new THREE.Mesh(bodyGeometry, metalMat);
+      body.position.y = topY - headHeight - bodyHeight / 2;
+      body.castShadow = true;
+      body.receiveShadow = true;
+
+      const base = new THREE.Mesh(baseGeometry, baseMat);
+      base.position.y = topY - headHeight - bodyHeight - baseHeight / 2;
+      base.castShadow = true;
+      base.receiveShadow = true;
+
+      foot.add(head, body, base);
+      return foot;
+    };
+
+    const widthInsetLimit = Math.max(0.02, width / 2 - baseRadius - 0.005);
+    const depthInsetLimit = Math.max(0.02, depth / 2 - baseRadius - 0.005);
+    const sideInset = Math.min(Viewer.FEET_SIDE_INSET_M, widthInsetLimit);
+    const frontInset = Math.min(Math.max(0, feetOffsetFrontM), depthInsetLimit);
+    const backInset = Math.min(Viewer.FEET_BACK_INSET_M, depthInsetLimit);
+
+    const xLeft = -width / 2 + sideInset;
+    const xRight = width / 2 - sideInset;
+    const zFront = depth / 2 - frontInset;
+    const zBack = -depth / 2 + backInset;
+
+    const placements: Array<{ x: number; z: number }> = [
+      { x: xLeft, z: zFront },
+      { x: xRight, z: zFront },
+      { x: xLeft, z: zBack },
+      { x: xRight, z: zBack },
+    ];
+
+    placements.forEach(({ x, z }) => {
+      const foot = createFoot();
+      foot.position.set(x, 0, z);
+      group.add(foot);
+    });
+
+    return group;
+  }
+
+  private syncFeetVisualForBox(
+    entry: {
+      mesh: THREE.Object3D;
+      width: number;
+      height: number;
+      depth: number;
+      cabinetType?: "lower" | "upper";
+      pe_cm?: number;
+      feetHeight?: number;
+      feetOffsetFront?: number;
+      feetEnabled?: boolean;
+    }
+  ): void {
+    this.removeFeetVisual(entry.mesh);
+    if (!this.shouldRenderFeet(entry)) return;
+    const feetHeightMm = Math.max(40, entry.feetHeight ?? ((entry.pe_cm ?? Viewer.HEIGHT_BASE_CM) * 10));
+    const feetOffsetFrontMm = Math.max(0, entry.feetOffsetFront ?? (Viewer.FEET_FRONT_INSET_M * 1000));
+    const feet = this.createKitchenFeetGroup(
+      entry.width,
+      entry.height,
+      entry.depth,
+      feetHeightMm / 1000,
+      feetOffsetFrontMm / 1000
+    );
+    entry.mesh.add(feet);
   }
 
   private getNextBoxIndex() {
@@ -3136,6 +3505,12 @@ export class Viewer {
   private static readonly HEIGHT_BASE_CM = 10;
   /** Altura em cm do piso à base da caixa superior (wall cabinet). */
   private static readonly HEIGHT_UPPER_CM = 150;
+  /** Recuo frontal dos pés (m): 100 mm. */
+  private static readonly FEET_FRONT_INSET_M = 0.1;
+  /** Recuo traseiro dos pés (m). */
+  private static readonly FEET_BACK_INSET_M = 0.06;
+  /** Recuo lateral dos pés (m). */
+  private static readonly FEET_SIDE_INSET_M = 0.06;
 
   /**
    * Caixa segue lógica da sala apenas quando está dentro ou encostada ao perímetro em X/Z.

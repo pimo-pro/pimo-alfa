@@ -54,6 +54,10 @@ export type BoxOptions = {
   cabinetType?: "lower" | "upper" | null;
   /** Altura do pé (PE) em cm para caixas inferiores; base da caixa fica a PE cm do piso (default 10). */
   pe_cm?: number;
+  /** Altura dos pés em mm (controle do utilizador). */
+  feetHeight?: number;
+  /** Recuo frontal dos pés em mm (controle do utilizador). */
+  feetOffsetFront?: number;
   /** Ativa/desativa os pés de 10 cm para caixas inferiores. */
   feetEnabled?: boolean;
   /** Se false, o viewer não altera rotation.y (modo manual; botão RODAR). Default true. */
@@ -320,7 +324,7 @@ function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
   }));
 }
 
-function createDoorObject(spec: DoorSpec, material: THREE.Material): THREE.Object3D {
+function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]): THREE.Object3D {
   if (import.meta.env.DEV) {
     console.log("[BoxLayers][BoxBuilder.createDoorObject] create", {
       id: spec.id,
@@ -343,6 +347,9 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material): THREE.Objec
     "front",
     { singleMaterial: material }
   );
+  if (doorHoles?.length) {
+    applyDrillHolesToPanelGeometry(mesh, "front", doorHoles);
+  }
 
   const pivot = new THREE.Group();
   pivot.name = `door-layer-${spec.id}`;
@@ -727,8 +734,18 @@ function getInwardAxisForHole(panelType: PanelType, hole: TechnicalDrillHole): T
     return new THREE.Vector3(0, -1, 0);
   }
   if (panelType === "left" || panelType === "right") {
-    if (hole.face === "esquerda") return new THREE.Vector3(1, 0, 0);
-    return new THREE.Vector3(-1, 0, 0);
+    if (panelType === "left") {
+      if (hole.face === "esquerda") return new THREE.Vector3(1, 0, 0);
+      return new THREE.Vector3(-1, 0, 0);
+    }
+    // Lateral direita: rotation Y=PI + Z=PI faz a face interna ficar em -X local; entrar em -X e perfurar em +X.
+    if (hole.face === "esquerda") return new THREE.Vector3(-1, 0, 0);
+    return new THREE.Vector3(1, 0, 0);
+  }
+  // Porta (front): face "tras" = lado da dobradiça (que encosta na caixa); furo entra por essa face.
+  if (panelType === "front") {
+    if (hole.face === "tras") return new THREE.Vector3(0, 0, -1);
+    return new THREE.Vector3(0, 0, 1);
   }
   if (hole.face === "tras") return new THREE.Vector3(0, 0, 1);
   return new THREE.Vector3(0, 0, -1);
@@ -908,11 +925,18 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     back: createPanel(specs.back.size[0], specs.back.size[1], specs.back.size[2], "back", "back", panelOptions("back")),
   };
 
+  panels.right.rotation.y = Math.PI;
+  panels.right.rotation.z = Math.PI;
+
   (panelTypes as readonly string[]).forEach((key) => {
     const k = key as keyof typeof panels;
     const p = panels[k];
     const pos = specs[k].pos;
     p.position.set(pos[0], pos[1], pos[2]);
+    if (k === "right") {
+      p.rotation.y = Math.PI;
+      p.rotation.z = Math.PI;
+    }
     root.add(p);
   });
   const drillMap: ViewerDrillMarkersByPanel = opts.drillMarkersByPanel ?? {
@@ -920,6 +944,7 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     fundo: [],
     lateral_esquerda: [],
     lateral_direita: [],
+    porta: [],
   };
   applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
   applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
@@ -939,7 +964,7 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
 
   const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
   const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
-  doorSpecs.forEach((spec) => root.add(createDoorObject(spec, baseMaterial)));
+  doorSpecs.forEach((spec) => root.add(createDoorObject(spec, baseMaterial, drillMap.porta)));
   drawerSpecs.forEach((spec) => root.add(createDrawerObject(spec, baseMaterial)));
 
   root.position.set(0, 0, 0);
@@ -963,6 +988,13 @@ export const updateBoxModel = (model: BoxModel, options: BoxOptions = {}): BoxMo
     const [px, py, pz] = specs[key].pos;
     updatePanelGeometry(model.panels[key], wx, hy, dz);
     model.panels[key].position.set(px, py, pz);
+    if (key === "right") {
+      model.panels[key].rotation.y = Math.PI;
+      model.panels[key].rotation.z = Math.PI;
+    } else {
+      model.panels[key].rotation.y = 0;
+      model.panels[key].rotation.z = 0;
+    }
   });
 
   if (opts.material != null) {
@@ -1091,6 +1123,13 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     if (!spec) continue;
     updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
     child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+    if (panelName === "right") {
+      child.rotation.y = Math.PI;
+      child.rotation.z = Math.PI;
+    } else {
+      child.rotation.y = 0;
+      child.rotation.z = 0;
+    }
     // Limpar base da vista explodida para que o Viewer use esta nova posição (evita que applyExplodedViewForObject restaure posição antiga).
     delete (child.userData as Record<string, unknown>).explodedBasePosition;
     child.updateMatrix();
@@ -1104,6 +1143,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     fundo: [],
     lateral_esquerda: [],
     lateral_direita: [],
+    porta: [],
   };
   const topPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "top") as THREE.Mesh | undefined;
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
@@ -1121,7 +1161,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
 
   const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
   const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
-  doorSpecs.forEach((spec) => group.add(createDoorObject(spec, mat as THREE.Material)));
+  doorSpecs.forEach((spec) => group.add(createDoorObject(spec, mat as THREE.Material, drillMap.porta)));
   drawerSpecs.forEach((spec) => group.add(createDrawerObject(spec, mat as THREE.Material)));
 
   group.updateMatrixWorld(true);

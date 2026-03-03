@@ -813,8 +813,14 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
         </div>
       )}
 
-      {selectedBox?.cabinetType === "lower" && (
+      {selectedBox && (
         <Panel title="Pés">
+          {(() => {
+            const feetHeightMm = Math.max(40, selectedBox.feetHeight ?? ((selectedBox.pe_cm ?? 10) * 10));
+            const feetOffsetFrontMm = Math.max(0, selectedBox.feetOffsetFront ?? 100);
+            const shouldLockY = selectedBox.cabinetType === "lower";
+            return (
+              <>
           <label
             style={{
               display: "flex",
@@ -834,10 +840,10 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
                   y_mm?: number;
                   manualPosition?: boolean;
                 } = { feetEnabled: nextEnabled };
-                if (nextEnabled) {
-                  partial.y_mm = ((selectedBox.pe_cm ?? 10) * 10) + selectedBox.dimensoes.altura / 2;
+                if (nextEnabled && shouldLockY) {
+                  partial.y_mm = feetHeightMm + selectedBox.dimensoes.altura / 2;
                   partial.manualPosition = false;
-                } else {
+                } else if (!nextEnabled && shouldLockY) {
                   partial.manualPosition = true;
                 }
                 actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
@@ -846,9 +852,62 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
             Ativar pés
           </label>
 
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+            <div className="panel-field-row">
+              <label className="panel-label" style={{ minWidth: 110 }}>Altura (mm)</label>
+              <input
+                type="number"
+                min={40}
+                step={1}
+                value={feetHeightMm}
+                onChange={(e) => {
+                  const nextHeight = Number(e.target.value);
+                  if (!Number.isFinite(nextHeight)) return;
+                  const clamped = Math.max(40, Math.round(nextHeight));
+                  const partial: {
+                    feetHeight: number;
+                    y_mm?: number;
+                    manualPosition?: boolean;
+                  } = {
+                    feetHeight: clamped,
+                  };
+                  if (selectedBox.feetEnabled !== false && shouldLockY) {
+                    partial.y_mm = clamped + selectedBox.dimensoes.altura / 2;
+                    partial.manualPosition = false;
+                  }
+                  actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
+                }}
+                className="input input-sm"
+                style={{ width: 110 }}
+              />
+            </div>
+
+            <div className="panel-field-row">
+              <label className="panel-label" style={{ minWidth: 110 }}>Recuo frontal (mm)</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={feetOffsetFrontMm}
+                onChange={(e) => {
+                  const nextOffset = Number(e.target.value);
+                  if (!Number.isFinite(nextOffset)) return;
+                  actions.updateWorkspaceBoxTransform(selectedBox.id, {
+                    feetOffsetFront: Math.max(0, Math.round(nextOffset)),
+                  });
+                }}
+                className="input input-sm"
+                style={{ width: 110 }}
+              />
+            </div>
+          </div>
+
           <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-            Com pés desativados, a caixa move livremente no eixo Y (sem atravessar o chão).
+            Pés fixos em 4 unidades por caixa (controle de quantidade reservado para futura versão).
           </p>
+              </>
+            );
+          })()}
         </Panel>
       )}
 

@@ -2,6 +2,10 @@
  * Sistema de furação baseado em regras de marcenaria.
  * Top drilling apenas: furos pela parte superior.
  * Sem furação lateral. Sem ficheiros de drill separados.
+ *
+ * Alinhado ao BoxBuilder/Viewer 3D, Layout de Corte PRO e TCN: as mesmas regras e distâncias
+ * (margemFrente/margemFundo, distanciaDaBordaCalco, etc.) são a fonte única para furos.
+ * Lateral direita: face interna = "esquerda"; coordenadas (x,y) iguais às da esquerda (x = profundidade, y = altura).
  */
 
 import type { RulesConfig } from "../rules/rulesConfig";
@@ -113,22 +117,37 @@ function calcParafuso(piece: PieceInput, rules: RulesConfig, out: TechnicalDrill
   pushHole(out, piece, xRight, yBack, diametro, depth, "parafuso", face);
 }
 
-/** Furos da casa da dobradiça na porta: 35 mm, 12–13 mm prof, posições Y por getHingeYPositions. */
+/**
+ * Furação da dobradiça na porta (todas as medidas ao CENTRO do furo):
+ * - Caneco: Ø35 mm, 13 mm prof., centro a 22.5 mm da borda da porta.
+ * - Dois furos de fixação: centro a 28 mm da borda, 52 mm entre centros, Ø10 mm, 12 mm prof.
+ */
 function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.dobradica) return;
   const cfg = rules.furos.tecnicos.dobradica;
   if (!cfg.enabled) return;
   if (!piece.tipo.startsWith("porta")) return;
   const face: DrillFace = "tras";
-  const distCentroBorda = cfg.distanciaCentroDaBorda ?? cfg.distanciaBordaLateral ?? 21.5;
+  const distCentroCaneco = Number(cfg.distanciaCentroDaBorda) || cfg.distanciaBordaLateral || 22.5;
   const numHinges = Math.max(2, cfg.numeroPorPorta ?? 2);
   const offsets = getHingeYPositions(piece.altura, numHinges, rules);
   if (offsets.length === 0) return;
-  const x = piece.largura - distCentroBorda;
-  const diametro = cfg.diametro ?? 35;
-  const profundidade = Math.min(piece.espessura, cfg.profundidade ?? 13);
+
+  const xCaneco = piece.largura - distCentroCaneco;
+  const diametroCaneco = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 35;
+  const profundidadeCaneco = Math.min(piece.espessura, Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : 13);
+
+  const distCentroFixacao = Number(cfg.distanciaFurosFixacaoBorda) > 0 ? Number(cfg.distanciaFurosFixacaoBorda) : 28;
+  const distEntreCentrosFixacao = Number(cfg.distanciaEntreFurosFixacao) > 0 ? Number(cfg.distanciaEntreFurosFixacao) : 52;
+  const halfFix = distEntreCentrosFixacao / 2;
+  const xFixacao = piece.largura - distCentroFixacao;
+  const diametroFixacao = Number(cfg.diametroFurosFixacao) > 0 ? Number(cfg.diametroFurosFixacao) : 10;
+  const profundidadeFixacao = Math.min(piece.espessura, Number(cfg.profundidadeFurosFixacao) > 0 ? Number(cfg.profundidadeFurosFixacao) : 12);
+
   for (const oy of offsets) {
-    pushHole(out, piece, x, oy, diametro, profundidade, "dobradica", face);
+    pushHole(out, piece, xCaneco, oy, diametroCaneco, profundidadeCaneco, "dobradica", face, true);
+    pushHole(out, piece, xFixacao, oy - halfFix, diametroFixacao, profundidadeFixacao, "dobradica_fixacao", face, true);
+    pushHole(out, piece, xFixacao, oy + halfFix, diametroFixacao, profundidadeFixacao, "dobradica_fixacao", face, true);
   }
 }
 
@@ -196,15 +215,22 @@ function calcPrateleira32mm(piece: PieceInput, rules: RulesConfig, out: Technica
   }
 }
 
-/** Furos de fixação da dobradiça na lateral: 3 por dobradiça (2 calço + 1 parafuso união). Lateral esquerda com X espelhado. */
+/** Furos de fixação da dobradiça na lateral: 3 por dobradiça (2 principais calço + 1 parafuso união). Padrão ferragem: 37 mm da borda lateral (calço), 53 mm da borda frontal (parafuso união), 16 mm entre eles. */
+const DEFAULTS_DOBRADICA_FIXACAO = {
+  distanciaDaBordaCalco: 37,
+  distanciaDaBordaParafusoUniao: 53,
+} as const;
+
 function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   const cfg = rules?.furos?.tecnicos?.dobradica_fixacao;
   if (!cfg?.enabled) return;
   if (piece.tipo !== "lateral_esquerda" && piece.tipo !== "lateral_direita") return;
 
   const face = piece.tipo === "lateral_esquerda" ? "direita" : "esquerda";
-  let xCalco = cfg.distanciaDaBordaCalco ?? cfg.distanciaDaBorda ?? 37;
-  let xUniao = cfg.distanciaDaBordaParafusoUniao ?? 53;
+  let xCalco = Number(cfg.distanciaDaBordaCalco);
+  if (!Number.isFinite(xCalco) || xCalco <= 0) xCalco = DEFAULTS_DOBRADICA_FIXACAO.distanciaDaBordaCalco;
+  let xUniao = Number(cfg.distanciaDaBordaParafusoUniao);
+  if (!Number.isFinite(xUniao) || xUniao <= 0) xUniao = DEFAULTS_DOBRADICA_FIXACAO.distanciaDaBordaParafusoUniao;
   if (piece.tipo === "lateral_esquerda") {
     xCalco = piece.largura - xCalco;
     xUniao = piece.largura - xUniao;

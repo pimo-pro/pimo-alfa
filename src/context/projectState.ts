@@ -125,6 +125,8 @@ export type CreateWorkspaceBoxOverrides = {
   panelIds?: WorkspaceBox["panelIds"];
   cabinetType?: "lower" | "upper";
   pe_cm?: number;
+  feetHeight?: number;
+  feetOffsetFront?: number;
   feetEnabled?: boolean;
 };
 
@@ -157,13 +159,14 @@ export const createWorkspaceBox = (
   const drawerType = overrides?.drawerType ?? "normal";
   const panelIds = ensureBoxPanelIds(overrides?.panelIds, { prateleiras, portaTipo, gavetas });
   const cabinetType = overrides?.cabinetType;
-  const pe_cm = overrides?.pe_cm;
-  const feetEnabled =
-    overrides?.feetEnabled ?? (cabinetType === "lower" ? true : undefined);
+  const feetHeight = Math.max(40, overrides?.feetHeight ?? ((overrides?.pe_cm ?? 10) * 10));
+  const pe_cm = feetHeight / 10;
+  const feetOffsetFront = Math.max(0, overrides?.feetOffsetFront ?? 100);
+  const feetEnabled = overrides?.feetEnabled ?? (cabinetType === "lower");
   const alturaMm = dimensoes?.altura ?? 0;
   const posicaoY_mm =
     cabinetType === "lower" && feetEnabled !== false
-      ? (pe_cm ?? 10) * 10 + alturaMm / 2
+      ? (feetHeight ?? 100) + alturaMm / 2
       : cabinetType === "upper"
         ? 1500 + alturaMm / 2
         : 0;
@@ -191,6 +194,8 @@ export const createWorkspaceBox = (
     catalogItemId,
     cabinetType,
     pe_cm,
+    feetHeight,
+    feetOffsetFront,
     feetEnabled,
     autoRotateEnabled: true,
     panelIds,
@@ -389,7 +394,20 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
 
   const cutListComPreco = calcularPrecoCutList(combinedCutList);
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
-  const ferragens = buildFerragens(box.prateleiras, box.portaTipo, box.gavetas);
+  const ferragensBase = buildFerragens(box.prateleiras, box.portaTipo, box.gavetas);
+  const ferragens =
+    box.cabinetType === "lower" && box.feetEnabled !== false
+      ? [
+          ...ferragensBase,
+          {
+            id: "pe-cozinha-regulavel",
+            nome: "Pé de cozinha regulável",
+            tipo: "pe_regulavel",
+            quantidade: 4,
+            precoUnitario: 0,
+          },
+        ]
+      : ferragensBase;
 
   return {
     ...box,
@@ -474,6 +492,11 @@ const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     portaTipo: box.portaTipo,
     gavetas: box.gavetas,
     alturaGaveta: box.alturaGaveta,
+    cabinetType: box.cabinetType,
+    pe_cm: box.pe_cm,
+    feetHeight: box.feetHeight,
+    feetOffsetFront: box.feetOffsetFront,
+    feetEnabled: box.feetEnabled,
     panelIds,
     material: box.material,
     doorsLayer: box.doorsLayer ?? [],

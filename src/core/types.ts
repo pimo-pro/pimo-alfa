@@ -57,7 +57,7 @@ export interface PieceFaceMaterials {
 
 export type DrillType = "cavilha" | "parafuso" | "minifix" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira";
 export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
-export type DrillPanelKey = "cima" | "fundo" | "lateral_esquerda" | "lateral_direita";
+export type DrillPanelKey = "cima" | "fundo" | "lateral_esquerda" | "lateral_direita" | "porta";
 export interface TechnicalDrillHole {
   x: number;
   y: number;
@@ -254,6 +254,16 @@ export interface BoxModule {
   alturaGaveta: number;
   drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
   drawerType?: "normal" | "pro";
+  /** Tipo de armário para recursos visuais e acessórios (inferior/superior). */
+  cabinetType?: "lower" | "upper";
+  /** Altura do pé (PE) em cm para armários inferiores. */
+  pe_cm?: number;
+  /** Altura dos pés em mm (controle de UI/Viewer). */
+  feetHeight?: number;
+  /** Recuo frontal dos pés em mm (controle de UI/Viewer). */
+  feetOffsetFront?: number;
+  /** Ativa/desativa pés visuais e ferragens de pé para armários inferiores. */
+  feetEnabled?: boolean;
   /** IDs únicos por peça (cima, fundo, laterais, costa, prateleiras, portas, gavetas). */
   panelIds?: BoxPanelIds;
   /** Camada de portas da caixa. */
@@ -306,6 +316,10 @@ export interface WorkspaceBox {
   cabinetType?: "lower" | "upper";
   /** Altura do pé (PE) em cm para caixas inferiores; base da caixa fica a PE cm do piso (default 10). */
   pe_cm?: number;
+  /** Altura dos pés em mm (default 100). */
+  feetHeight?: number;
+  /** Recuo frontal dos pés em mm (default 100). */
+  feetOffsetFront?: number;
   /** Ativa/desativa os pés de 10 cm para caixas inferiores. */
   feetEnabled?: boolean;
   /** Se false, o viewer não altera rotation.y (modo manual; ativado pelo botão RODAR). Default true. */
