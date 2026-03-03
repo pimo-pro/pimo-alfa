@@ -28,7 +28,6 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
   const [advancedRealism, setAdvancedRealism] = useState<boolean>(false);
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderResult, setRenderResult] = useState<ViewerRenderResult | null>(null);
-  const [captureResult, setCaptureResult] = useState<string | null>(null);
 
   const handleRenderImage = async () => {
     if (!viewerApi?.renderScene) {
@@ -64,20 +63,6 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
       setRenderLoading(false);
       stopLoading(loadingId);
     }
-  };
-
-  const handleCaptureCurrent = () => {
-    if (!viewerApi?.capturePhotoDataUrl) {
-      showToast("Captura rápida indisponível neste Viewer.", "warning");
-      return;
-    }
-    const dataUrl = viewerApi.capturePhotoDataUrl(renderFormat, renderQuality);
-    if (!dataUrl) {
-      showToast("Não foi possível capturar a imagem atual.", "error");
-      return;
-    }
-    setCaptureResult(dataUrl);
-    showToast("Captura realizada com sucesso.", "info", 1400);
   };
 
   const downloadDataUrl = (dataUrl: string, width?: number, height?: number) => {
@@ -129,7 +114,7 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
       <div className="modal-list-item">
         <div className="modal-list-info">
           <div className="modal-list-title">Fundo</div>
-          <div className="modal-list-meta">Utilize transparência para composições externas</div>
+          <div className="modal-list-meta">Escolha fundo normal ou exportação recortada do projeto</div>
         </div>
         <select
           className="select select-xs"
@@ -138,6 +123,7 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
         >
           <option value="white">Branco</option>
           <option value="transparent">Transparente</option>
+          <option value="project-transparent">Exportar Projeto (sem chão e sem fundo)</option>
         </select>
       </div>
 
@@ -252,9 +238,6 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
         <button type="button" className="button photo-mode-action-button" disabled={renderLoading} onClick={handleRenderImage}>
           {renderLoading ? "Gerando..." : "Gerar imagem"}
         </button>
-        <button type="button" className="button photo-mode-action-button" onClick={handleCaptureCurrent}>
-          Capturar atual
-        </button>
         <button type="button" className="button button-ghost photo-mode-action-button" onClick={onClose}>
           Fechar
         </button>
@@ -276,14 +259,6 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
         </div>
       )}
 
-      {captureResult && (
-        <div className="modal-placeholder">
-          <img src={captureResult} alt="Pré-visualização da captura" style={{ maxWidth: "100%", borderRadius: 8 }} />
-          <button type="button" className="button photo-mode-action-button" onClick={() => downloadDataUrl(captureResult)}>
-            Baixar captura
-          </button>
-        </div>
-      )}
     </div>
   );
 }

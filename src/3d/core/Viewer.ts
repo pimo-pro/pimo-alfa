@@ -1217,18 +1217,6 @@ export class Viewer {
     return this.explodedViewIntensity;
   }
 
-  capturePhotoDataUrl(format: "png" | "jpg" = "png", quality = 0.92): string | null {
-    const renderer = this.rendererManager.renderer;
-    renderer.render(this.sceneManager.scene, this.cameraManager.camera);
-    const canvas = renderer.domElement;
-    if (!canvas) return null;
-    if (format === "jpg") {
-      const clampedQuality = Math.max(0.1, Math.min(1, quality));
-      return canvas.toDataURL("image/jpeg", clampedQuality);
-    }
-    return canvas.toDataURL("image/png", 1);
-  }
-
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
     const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
     if (existing) {
@@ -3524,13 +3512,15 @@ export class Viewer {
     const preset: ViewerCameraPreset = options.preset ?? "current";
     const applyWatermark = options.watermark ?? false;
     const format: ViewerRenderFormat = options.format ?? "png";
+    const isolatedProject = options.background === "project-transparent";
+    const transparentBackground = options.background === "transparent" || isolatedProject;
     const advancedRealism = Boolean(options.advancedRealism && options.mode !== "lines");
     const qualityBase = Math.max(0.1, Math.min(options.quality ?? 0.92, 1));
     const quality = format === "jpg"
       ? (advancedRealism ? Math.max(qualityBase, 0.97) : qualityBase)
       : 1;
     const shadowBase = THREE.MathUtils.clamp(options.shadowIntensity ?? 1, 0, 1);
-    const shadowFactor = advancedRealism ? Math.max(shadowBase, 0.9) : shadowBase;
+    const shadowFactor = advancedRealism ? Math.max(shadowBase, 0.86) : shadowBase;
     const supersampleScale = advancedRealism ? 1.5 : 1;
     const renderWidth = Math.max(1, Math.round(width * supersampleScale));
     const renderHeight = Math.max(1, Math.round(height * supersampleScale));
@@ -3556,6 +3546,20 @@ export class Viewer {
       toneMappingExposure: renderer.toneMappingExposure,
       shadowEnabled: renderer.shadowMap.enabled,
       shadowType: renderer.shadowMap.type,
+    };
+
+    const originalGroundVisible = this.sceneManager.getGroundVisible();
+    const originalGridVisible = this.sceneManager.getGridVisible();
+    const originalRoomBuilderVisible = this.roomBuilder.getGroup().visible;
+    const originalRoomWallVisibility = this.roomBoxWalls.map((wall) => ({
+      mesh: wall.mesh,
+      visible: wall.mesh.visible,
+    }));
+    const originalOverlayVisibility = {
+      selectionOutline: this.selectionOutline?.visible ?? false,
+      wallSelectionOutline: this.wallSelectionOutline?.visible ?? false,
+      dimensionsOverlay: this.dimensionsOverlayGroup?.visible ?? false,
+      wallGizmo: this.wallGizmo?.group.visible ?? false,
     };
 
     const applyPresetCamera = () => {
@@ -3593,17 +3597,17 @@ export class Viewer {
     };
 
     const applyShadowIntensity = () => {
-      const eased = 0.4 + shadowFactor * 0.6;
+      const eased = 0.45 + shadowFactor * 0.55;
       if (advancedRealism) {
-        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.2);
-        this.lights.fillLight.intensity = originalLightState.fill * (0.45 + shadowFactor * 0.25);
-        this.lights.ambient.intensity = originalLightState.ambient * (0.52 + shadowFactor * 0.16);
-        this.lights.rimLight.intensity = originalLightState.rim * (0.65 + shadowFactor * 0.35);
+        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.08);
+        this.lights.fillLight.intensity = originalLightState.fill * (0.7 + shadowFactor * 0.25);
+        this.lights.ambient.intensity = originalLightState.ambient * (0.82 + shadowFactor * 0.14);
+        this.lights.rimLight.intensity = originalLightState.rim * (0.78 + shadowFactor * 0.22);
         this.lights.keyLight.castShadow = true;
-        this.lights.keyLight.shadow.radius = Math.max(1.5, originalLightState.shadowRadius * 1.2);
+        this.lights.keyLight.shadow.radius = Math.max(2, originalLightState.shadowRadius * 1.18);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMappingExposure = originalRendererState.toneMappingExposure * 1.06;
+        renderer.toneMappingExposure = Math.max(originalRendererState.toneMappingExposure, 1.07);
       } else {
         this.lights.keyLight.intensity = originalLightState.key * eased;
         this.lights.fillLight.intensity = originalLightState.fill * (0.6 + shadowFactor * 0.4);
@@ -3614,11 +3618,28 @@ export class Viewer {
       }
     };
 
+    const applyIsolatedProjectMode = () => {
+      if (!isolatedProject) return;
+      this.sceneManager.setGroundVisible(false);
+      this.sceneManager.setGridVisible(false);
+      this.roomBuilder.getGroup().visible = false;
+      this.roomBoxWalls.forEach((wall) => {
+        wall.mesh.visible = false;
+      });
+      if (this.selectionOutline) this.selectionOutline.visible = false;
+      if (this.wallSelectionOutline) this.wallSelectionOutline.visible = false;
+      if (this.dimensionsOverlayGroup) this.dimensionsOverlayGroup.visible = false;
+      if (this.wallGizmo?.group) this.wallGizmo.group.visible = false;
+      renderer.shadowMap.enabled = false;
+    };
+
     applyPresetCamera();
     applyShadowIntensity();
+    applyIsolatedProjectMode();
 
     const prevPixelRatio = renderer.getPixelRatio();
     const prevRenderTarget = renderer.getRenderTarget();
+    const prevRendererSize = renderer.getSize(new THREE.Vector2());
     const prevClearColor = renderer.getClearColor(new THREE.Color()).clone();
     const prevClearAlpha = renderer.getClearAlpha();
     const prevBackground = scene.background;
@@ -3635,9 +3656,8 @@ export class Viewer {
 
     try {
       renderer.setPixelRatio(1);
-      renderer.setRenderTarget(renderTarget);
 
-      if (options.background === "white") {
+      if (!transparentBackground) {
         renderer.setClearColor("#ffffff", 1);
         scene.background = new THREE.Color("#ffffff");
       } else {
@@ -3658,27 +3678,66 @@ export class Viewer {
         scene.environment = null;
       }
 
-      renderer.render(scene, camera);
+      let exportCanvas: HTMLCanvasElement;
+      const canUseLiveComposer = options.mode === "pbr" && !transparentBackground;
+      if (canUseLiveComposer) {
+        renderer.setRenderTarget(null);
+        renderer.setSize(renderWidth, renderHeight, false);
+        camera.aspect = renderWidth / Math.max(1, renderHeight);
+        camera.updateProjectionMatrix();
+        this.updateShowcaseComposerSize();
+        this.updateMainComposerSize();
 
-      const buffer = new Uint8Array(renderWidth * renderHeight * 4);
-      renderer.readRenderTargetPixels(renderTarget, 0, 0, renderWidth, renderHeight, buffer);
+        if (advancedRealism) {
+          if (!this.composer) this.initShowcaseComposer();
+          if (this.bloomPass) {
+            this.bloomPass.strength = 0.16;
+            this.bloomPass.radius = 0.34;
+            this.bloomPass.threshold = 0.88;
+          }
+          this.composer?.render();
+        } else {
+          if (!this.mainComposer) this.initMainComposer();
+          if (this.mainBloomPass) {
+            this.mainBloomPass.strength = 0.06;
+            this.mainBloomPass.radius = 0.4;
+            this.mainBloomPass.threshold = 0.86;
+          }
+          this.mainComposer?.render();
+        }
 
-      const canvas = document.createElement("canvas");
-      canvas.width = renderWidth;
-      canvas.height = renderHeight;
-      const context = canvas.getContext("2d");
-      if (!context) {
-        return null;
+        const snapCanvas = renderer.domElement;
+        const offscreen = document.createElement("canvas");
+        offscreen.width = renderWidth;
+        offscreen.height = renderHeight;
+        const offscreenCtx = offscreen.getContext("2d");
+        if (!offscreenCtx) return null;
+        offscreenCtx.drawImage(snapCanvas, 0, 0, renderWidth, renderHeight);
+        exportCanvas = offscreen;
+      } else {
+        renderer.setRenderTarget(renderTarget);
+        renderer.render(scene, camera);
+
+        const buffer = new Uint8Array(renderWidth * renderHeight * 4);
+        renderer.readRenderTargetPixels(renderTarget, 0, 0, renderWidth, renderHeight, buffer);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = renderWidth;
+        canvas.height = renderHeight;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          return null;
+        }
+        const imageData = context.createImageData(renderWidth, renderHeight);
+        for (let y = 0; y < renderHeight; y++) {
+          const srcOffset = (renderHeight - y - 1) * renderWidth * 4;
+          const dstOffset = y * renderWidth * 4;
+          imageData.data.set(buffer.subarray(srcOffset, srcOffset + renderWidth * 4), dstOffset);
+        }
+        context.putImageData(imageData, 0, 0);
+        exportCanvas = canvas;
       }
-      const imageData = context.createImageData(renderWidth, renderHeight);
-      for (let y = 0; y < renderHeight; y++) {
-        const srcOffset = (renderHeight - y - 1) * renderWidth * 4;
-        const dstOffset = y * renderWidth * 4;
-        imageData.data.set(buffer.subarray(srcOffset, srcOffset + renderWidth * 4), dstOffset);
-      }
-      context.putImageData(imageData, 0, 0);
 
-      let exportCanvas = canvas;
       if (advancedRealism && (renderWidth !== width || renderHeight !== height)) {
         const downscaled = document.createElement("canvas");
         downscaled.width = width;
@@ -3687,7 +3746,7 @@ export class Viewer {
         if (downscaledContext) {
           downscaledContext.imageSmoothingEnabled = true;
           downscaledContext.imageSmoothingQuality = "high";
-          downscaledContext.drawImage(canvas, 0, 0, width, height);
+          downscaledContext.drawImage(exportCanvas, 0, 0, width, height);
           exportCanvas = downscaled;
         }
       }
@@ -3723,6 +3782,16 @@ export class Viewer {
       renderer.toneMappingExposure = originalRendererState.toneMappingExposure;
       renderer.shadowMap.enabled = originalRendererState.shadowEnabled;
       renderer.shadowMap.type = originalRendererState.shadowType;
+      this.sceneManager.setGroundVisible(originalGroundVisible);
+      this.sceneManager.setGridVisible(originalGridVisible);
+      this.roomBuilder.getGroup().visible = originalRoomBuilderVisible;
+      originalRoomWallVisibility.forEach(({ mesh, visible }) => {
+        mesh.visible = visible;
+      });
+      if (this.selectionOutline) this.selectionOutline.visible = originalOverlayVisibility.selectionOutline;
+      if (this.wallSelectionOutline) this.wallSelectionOutline.visible = originalOverlayVisibility.wallSelectionOutline;
+      if (this.dimensionsOverlayGroup) this.dimensionsOverlayGroup.visible = originalOverlayVisibility.dimensionsOverlay;
+      if (this.wallGizmo?.group) this.wallGizmo.group.visible = originalOverlayVisibility.wallGizmo;
       swappedMaterials.forEach(({ mesh, material }) => {
         mesh.material = material;
       });
@@ -3730,10 +3799,12 @@ export class Viewer {
         linesMaterial.dispose();
       }
       renderer.setRenderTarget(prevRenderTarget);
+      renderer.setSize(prevRendererSize.x, prevRendererSize.y, false);
       renderer.setPixelRatio(prevPixelRatio);
       renderer.setClearColor(prevClearColor, prevClearAlpha);
       scene.background = prevBackground;
       scene.environment = prevEnvironment;
+      this.updateCanvasSize();
       renderTarget.dispose();
     }
   }

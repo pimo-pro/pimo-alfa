@@ -408,13 +408,31 @@ export default function ToolbarModals() {
                       <button
                         type="button"
                         className="modal-action"
-                        onClick={() => {
-                          const dataUrl = viewerApi?.capturePhotoDataUrl?.("png", 1);
-                          if (dataUrl) {
-                            setPhotoCaptureUrl(dataUrl);
-                            showToast("Captura pronta para envio.", "info", 1400);
-                          } else {
-                            showToast("Não foi possível capturar a imagem do Viewer.", "warning");
+                        onClick={async () => {
+                          if (!viewerApi?.renderScene) {
+                            showToast("Renderizador indisponível para captura.", "warning");
+                            return;
+                          }
+                          try {
+                            const result = await viewerApi.renderScene({
+                              size: "large",
+                              preset: "current",
+                              background: "white",
+                              mode: "pbr",
+                              watermark: false,
+                              shadowIntensity: 1,
+                              format: "png",
+                              quality: 1,
+                              advancedRealism: true,
+                            });
+                            if (result?.dataUrl) {
+                              setPhotoCaptureUrl(result.dataUrl);
+                              showToast("Captura pronta para envio.", "info", 1400);
+                            } else {
+                              showToast("Não foi possível capturar a imagem do Viewer.", "warning");
+                            }
+                          } catch {
+                            showToast("Erro ao gerar imagem para envio.", "error");
                           }
                         }}
                       >

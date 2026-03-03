@@ -115,7 +115,6 @@ export type PimoViewerApi = {
   getReflectionsEnabled?: () => boolean;
   setPhotoModeEnabled?: (_enabled: boolean) => void;
   getPhotoModeEnabled?: () => boolean;
-  capturePhotoDataUrl?: (_format?: "png" | "jpg", _quality?: number) => string | null;
   setExplodedViewEnabled?: (_enabled: boolean) => void;
   getExplodedViewEnabled?: () => boolean;
   setExplodedViewIntensity?: (_value: number) => void;

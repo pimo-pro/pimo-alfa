@@ -63,6 +63,24 @@ export class SceneManager {
     material.needsUpdate = true;
   }
 
+  setGroundVisible(visible: boolean) {
+    if (!this.ground) return;
+    this.ground.visible = visible;
+  }
+
+  getGroundVisible(): boolean {
+    return this.ground?.visible ?? false;
+  }
+
+  setGridVisible(visible: boolean) {
+    if (!this.grid) return;
+    this.grid.visible = visible;
+  }
+
+  getGridVisible(): boolean {
+    return this.grid?.visible ?? false;
+  }
+
   setMaterialQuality(quality: "standard" | "premium" | "lacquered") {
     this.materialQuality = quality;
     if (quality === "premium") {

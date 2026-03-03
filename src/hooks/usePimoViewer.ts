@@ -120,7 +120,6 @@ type PimoViewerAPI = {
   getReflectionsEnabled?: () => boolean;
   setPhotoModeEnabled?: (_enabled: boolean) => void;
   getPhotoModeEnabled?: () => boolean;
-  capturePhotoDataUrl?: (_format?: "png" | "jpg", _quality?: number) => string | null;
   setExplodedViewEnabled?: (_enabled: boolean) => void;
   getExplodedViewEnabled?: () => boolean;
   setExplodedViewIntensity?: (_value: number) => void;
@@ -620,10 +619,6 @@ export const usePimoViewer = (
     []
   );
 
-  const capturePhotoDataUrl = useCallback((format: "png" | "jpg" = "png", quality = 0.92) => {
-    return viewerRef.current?.capturePhotoDataUrl?.(format, quality) ?? null;
-  }, []);
-
   const setExplodedViewEnabled = useCallback((enabled: boolean) => {
     viewerRef.current?.setExplodedViewEnabled?.(enabled);
   }, []);
@@ -750,7 +745,6 @@ export const usePimoViewer = (
       getReflectionsEnabled,
       setPhotoModeEnabled,
       getPhotoModeEnabled,
-      capturePhotoDataUrl,
       setExplodedViewEnabled,
       getExplodedViewEnabled,
       setExplodedViewIntensity,
@@ -843,7 +837,6 @@ export const usePimoViewer = (
       getReflectionsEnabled,
       setPhotoModeEnabled,
       getPhotoModeEnabled,
-      capturePhotoDataUrl,
       setExplodedViewEnabled,
       getExplodedViewEnabled,
       setExplodedViewIntensity,
