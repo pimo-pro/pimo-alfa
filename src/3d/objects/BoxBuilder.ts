@@ -324,6 +324,23 @@ function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
   }));
 }
 
+function mapDoorHolesByHingeSide(
+  holes: TechnicalDrillHole[] | undefined,
+  doorWidthM: number,
+  hingeSide: "left" | "right"
+): TechnicalDrillHole[] {
+  if (!holes?.length) return [];
+  const doorWidthMm = Math.max(0, doorWidthM * 1000);
+  if (hingeSide === "right") {
+    return holes.map((hole) => ({ ...hole, face: "tras" }));
+  }
+  return holes.map((hole) => ({
+    ...hole,
+    x: doorWidthMm - hole.x,
+    face: "tras",
+  }));
+}
+
 function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]): THREE.Object3D {
   if (import.meta.env.DEV) {
     console.log("[BoxLayers][BoxBuilder.createDoorObject] create", {
@@ -339,20 +356,6 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
       isOpen: spec.isOpen,
     });
   }
-  const mesh = createPanel(
-    spec.widthM,
-    spec.heightM,
-    spec.thicknessM,
-    `door-leaf-${spec.id}`,
-    "front",
-    { singleMaterial: material }
-  );
-  if (doorHoles?.length) {
-    applyDrillHolesToPanelGeometry(mesh, "front", doorHoles);
-  }
-
-  const pivot = new THREE.Group();
-  pivot.name = `door-layer-${spec.id}`;
   const resolvedOpenDirection =
     spec.openDirection === "left" ||
     spec.openDirection === "right" ||
@@ -366,13 +369,30 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
       : spec.openDirection === "right"
         ? "right"
         : "left";
+  const effectiveDoorHoles = mapDoorHolesByHingeSide(doorHoles, spec.widthM, resolvedHingeSide);
+
+  const mesh = createPanel(
+    spec.widthM,
+    spec.heightM,
+    spec.thicknessM,
+    `door-leaf-${spec.id}`,
+    "front",
+    { singleMaterial: material }
+  );
+  if (effectiveDoorHoles.length > 0) {
+    applyDrillHolesToPanelGeometry(mesh, "front", effectiveDoorHoles);
+  }
+
+  const pivot = new THREE.Group();
+  pivot.name = `door-layer-${spec.id}`;
+  const isVerticalOpening = resolvedOpenDirection === "up" || resolvedOpenDirection === "down";
   if (spec.pivot === "top-edge" || resolvedOpenDirection === "up") {
     mesh.position.set(0, -spec.heightM / 2, 0);
   } else if (spec.pivot === "bottom-edge" || resolvedOpenDirection === "down") {
     mesh.position.set(0, spec.heightM / 2, 0);
-  } else if (spec.pivot === "left-edge" || resolvedHingeSide === "left") {
+  } else if (!isVerticalOpening && resolvedHingeSide === "left") {
     mesh.position.set(spec.widthM / 2, 0, 0);
-  } else if (spec.pivot === "right-edge" || resolvedHingeSide === "right") {
+  } else if (!isVerticalOpening && resolvedHingeSide === "right") {
     mesh.position.set(-spec.widthM / 2, 0, 0);
   } else {
     mesh.position.set(spec.openDirection === "left" ? spec.widthM / 2 : -spec.widthM / 2, 0, 0);
@@ -436,6 +456,7 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
   mesh.userData.doorLayerId = spec.id;
   mesh.userData.openDirection = resolvedOpenDirection;
   mesh.userData.hingeSide = resolvedHingeSide;
+  mesh.userData.doorHolesEffective = effectiveDoorHoles;
   pivot.add(mesh);
   if (import.meta.env.DEV) {
     const finalCenter = new THREE.Vector3()
@@ -744,8 +765,8 @@ function getInwardAxisForHole(panelType: PanelType, hole: TechnicalDrillHole): T
   }
   // Porta (front): face "tras" = lado da dobradiça (que encosta na caixa); furo entra por essa face.
   if (panelType === "front") {
-    if (hole.face === "tras") return new THREE.Vector3(0, 0, -1);
-    return new THREE.Vector3(0, 0, 1);
+    if (hole.face === "tras") return new THREE.Vector3(0, 0, 1);
+    return new THREE.Vector3(0, 0, -1);
   }
   if (hole.face === "tras") return new THREE.Vector3(0, 0, 1);
   return new THREE.Vector3(0, 0, -1);

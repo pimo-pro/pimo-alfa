@@ -1250,7 +1250,7 @@ export class Viewer {
    * e os contornos dos furos, em espaço local do painel. Não usa a malha CSG.
    */
   private static createContourEdgesGeometry(
-    panelType: "left" | "right" | "top" | "bottom" | "back",
+    panelType: "left" | "right" | "top" | "bottom" | "back" | "front",
     width: number,
     height: number,
     depth: number,
@@ -1352,6 +1352,30 @@ export class Viewer {
           pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
         }
       }
+    } else if (panelType === "front") {
+      const w2 = width / 2;
+      const h2 = height / 2;
+      const z0 = -depth / 2 - Viewer.OVERLAY_INSET_M;
+      pushSegment(-w2, -h2, z0, w2, -h2, z0);
+      pushSegment(w2, -h2, z0, w2, h2, z0);
+      pushSegment(w2, h2, z0, -w2, h2, z0);
+      pushSegment(-w2, h2, z0, -w2, -h2, z0);
+
+      const panelW = width;
+      const panelH = height;
+      for (const hole of holes) {
+        const a = hole.x / 1000 - panelW / 2;
+        const b = panelH / 2 - hole.y / 1000;
+        const r = Math.max(0.0005, hole.diametro / 2000);
+        for (let i = 0; i < Viewer.HOLE_CIRCLE_SEGMENTS; i++) {
+          const t0 = (i * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          const t1 = ((i + 1) * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
+          pushSegment(
+            a + r * Math.cos(t0), b + r * Math.sin(t0), z0,
+            a + r * Math.cos(t1), b + r * Math.sin(t1), z0
+          );
+        }
+      }
     } else {
       const w2 = width / 2;
       const h2 = height / 2;
@@ -1415,6 +1439,9 @@ export class Viewer {
       mesh.add(overlay);
       overlay.visible = visible;
     } else {
+      const isDoor =
+        (mesh.name && mesh.name.startsWith("door-leaf-")) ||
+        mesh.userData?.doorLayerId != null;
       const isDoorOrDrawerOrShelf =
         (mesh.name && (
           mesh.name.startsWith("door-leaf-") ||
@@ -1423,11 +1450,30 @@ export class Viewer {
         )) ||
         mesh.userData?.doorLayerId != null ||
         mesh.userData?.drawerPart != null;
-      if (isDoorOrDrawerOrShelf && mesh.geometry) {
-        const geometry = new THREE.EdgesGeometry(
-          mesh.geometry,
-          Viewer.FALLBACK_EDGES_ANGLE_DEG
+      if (isDoor && mesh.geometry) {
+        mesh.geometry.computeBoundingBox();
+        const bb = mesh.geometry.boundingBox;
+        const size = new THREE.Vector3();
+        bb?.getSize(size);
+        const holeData = mesh.userData?.doorHolesEffective;
+        const holes = Array.isArray(holeData)
+          ? (holeData.filter((h) => h && Number.isFinite(h.x) && Number.isFinite(h.y)) as TechnicalDrillHole[])
+          : [];
+        const geometry = Viewer.createContourEdgesGeometry(
+          "front",
+          Math.max(0.001, size.x),
+          Math.max(0.001, size.y),
+          Math.max(0.001, size.z),
+          holes
         );
+        const material = Viewer.getPanelEdgeOverlayMaterial();
+        const overlay = new THREE.LineSegments(geometry, material);
+        overlay.userData.isPanelEdgeOverlay = true;
+        overlay.raycast = () => null;
+        mesh.add(overlay);
+        overlay.visible = visible;
+      } else if (isDoorOrDrawerOrShelf && mesh.geometry) {
+        const geometry = new THREE.EdgesGeometry(mesh.geometry, Viewer.FALLBACK_EDGES_ANGLE_DEG);
         const material = Viewer.getPanelEdgeOverlayMaterial();
         const overlay = new THREE.LineSegments(geometry, material);
         overlay.userData.isPanelEdgeOverlay = true;
