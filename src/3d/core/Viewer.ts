@@ -1529,6 +1529,7 @@ export class Viewer {
       opts.shelves !== undefined ||
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
+      opts.drillMarkersByPanel !== undefined ||
       opts.thickness !== undefined;
     if (onlyTransform && !hasStructureOpts) {
       if (entry.manualPosition && !opts.position) {
@@ -1576,7 +1577,8 @@ export class Viewer {
       dimensionsChanged ||
       opts.shelves !== undefined ||
       opts.doorLayerItems !== undefined ||
-      opts.drawerLayerItems !== undefined;
+      opts.drawerLayerItems !== undefined ||
+      opts.drillMarkersByPanel !== undefined;
     if (
       import.meta.env.DEV &&
       (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
@@ -1596,7 +1598,9 @@ export class Viewer {
       depth = Math.max(0.001, opts.depth ?? opts.size ?? depth);
       heightChanged = height !== entry.height;
       const hasLayerUpdate =
-        opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined;
+        opts.doorLayerItems !== undefined ||
+        opts.drawerLayerItems !== undefined ||
+        opts.drillMarkersByPanel !== undefined;
       // Só pular updateBoxGroup para caixa CAD-only quando não há alteração de dimensões nem de portas/gavetas.
       if (entry.cadOnly && !hasLayerUpdate && !dimensionsChanged) {
         if (!entry.manualPosition) {
@@ -1612,6 +1616,7 @@ export class Viewer {
           shelves: opts.shelves,
           doorLayerItems: opts.doorLayerItems,
           drawerLayerItems: opts.drawerLayerItems,
+          drillMarkersByPanel: opts.drillMarkersByPanel,
         };
         if (import.meta.env.DEV && dimensionsChanged) {
           console.log("[Viewer.updateBox] updateBoxGroup chamado (dimensões alteradas)", {
