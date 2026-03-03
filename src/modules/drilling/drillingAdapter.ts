@@ -19,6 +19,7 @@ export type PanelDrillingInput = {
   alturaMm: number;
   espessuraMm: number;
   doorHeightMm?: number;
+  hingeSide?: "left" | "right";
 };
 
 export type PanelDrillingOutput = {
@@ -75,7 +76,8 @@ function getHingePositionsFromDoorHeight(
   const yMinSafe = yMinLateral + halfDistHoles;
   const yMaxSafe = Math.max(yMinSafe, yMaxLateral - halfDistHoles);
 
-  return doorPositions.map((y) => Math.max(yMinSafe, Math.min(yMaxSafe, y)));
+  const centerOffset = (lateralHeightMm - doorHeightMm) / 2;
+  return doorPositions.map((y) => Math.max(yMinSafe, Math.min(yMaxSafe, y + centerOffset)));
 }
 
 /** Mapeia DrillFace (geometria) para face do painel A/B (A = frente/cima/exterior, B = fundo/tras/interior). */
@@ -240,6 +242,7 @@ export function buildPanelDrillingResult(
         largura: input.larguraMm,
         altura: input.alturaMm,
         espessura: input.espessuraMm,
+        hingeSide: input.hingeSide,
         hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
       },
       rules
@@ -288,16 +291,19 @@ export function buildViewerDrillMarkersByPanelResult(
   const byType = new Map(cutList.map((item) => [item.tipo, item]));
   const doorTipos = ["porta_simples", "porta_dupla", "porta_correr"];
   const firstDoorItem = cutList.find((item) => doorTipos.includes(item.tipo));
+  const canonicalDoorItem =
+    cutList.find((item) => item.tipo === "porta_dupla" && /-(2|02)$/.test(String(item.id ?? ""))) ??
+    firstDoorItem;
 
   const getHolesFor = (tipo: keyof ViewerDrillMarkersByPanel): TechnicalDrillHole[] => {
     if (tipo === "porta") {
-      if (!firstDoorItem?.drillHoles?.length) return [];
-      return panelDrillHolesToTechnical(firstDoorItem.drillHoles, "tras");
+      if (!canonicalDoorItem?.drillHoles?.length) return [];
+      return panelDrillHolesToTechnical(canonicalDoorItem.drillHoles, "tras");
     }
     const item = byType.get(tipo);
     if (!item?.drillHoles?.length) return [];
     const face: DrillFace =
-      tipo === "cima" ? "cima" : tipo === "fundo" ? "fundo" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
+      tipo === "cima" ? "fundo" : tipo === "fundo" ? "cima" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
     return panelDrillHolesToTechnical(item.drillHoles, face);
   };
 

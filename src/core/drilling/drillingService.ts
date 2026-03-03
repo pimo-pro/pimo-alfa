@@ -33,11 +33,26 @@ type PieceInput = {
   largura: number;
   altura: number;
   espessura: number;
+  hingeSide?: "left" | "right";
   /** Posições Y das dobradiças na porta (mm). Usado para furos de fixação na lateral. */
   hingePositionsMm?: number[];
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const SENSYS_8645I_C00 = {
+  canecoDiametroMm: 35,
+  canecoProfundidadeMm: 13,
+  canecoCentroBordaMm: 22.5,
+  fixacaoPortaDiametroMm: 10,
+  fixacaoPortaProfundidadeMm: 12,
+  fixacaoPortaCentroBordaMm: 28,
+  fixacaoPortaEntreCentrosMm: 52,
+  calcoLateralBordaMm: 37,
+  uniaoLateralBordaMm: 53,
+  lateralDiametroMm: 5,
+  lateralProfundidadeMm: 12,
+} as const;
 
 function pushHole(
   out: TechnicalDrillHole[],
@@ -128,21 +143,34 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   if (!cfg.enabled) return;
   if (!piece.tipo.startsWith("porta")) return;
   const face: DrillFace = "tras";
-  const distCentroCaneco = Number(cfg.distanciaCentroDaBorda) || cfg.distanciaBordaLateral || 22.5;
+  const distCentroCaneco = Number(cfg.distanciaCentroDaBorda) || cfg.distanciaBordaLateral || SENSYS_8645I_C00.canecoCentroBordaMm;
   const numHinges = Math.max(2, cfg.numeroPorPorta ?? 2);
   const offsets = getHingeYPositions(piece.altura, numHinges, rules);
   if (offsets.length === 0) return;
 
-  const xCaneco = piece.largura - distCentroCaneco;
-  const diametroCaneco = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 35;
-  const profundidadeCaneco = Math.min(piece.espessura, Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : 13);
+  const hingeSide = piece.hingeSide === "left" ? "left" : "right";
+  const xCaneco = hingeSide === "left" ? distCentroCaneco : piece.largura - distCentroCaneco;
+  const diametroCaneco = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : SENSYS_8645I_C00.canecoDiametroMm;
+  const profundidadeCaneco = Math.min(
+    piece.espessura,
+    Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : SENSYS_8645I_C00.canecoProfundidadeMm
+  );
 
-  const distCentroFixacao = Number(cfg.distanciaFurosFixacaoBorda) > 0 ? Number(cfg.distanciaFurosFixacaoBorda) : 28;
-  const distEntreCentrosFixacao = Number(cfg.distanciaEntreFurosFixacao) > 0 ? Number(cfg.distanciaEntreFurosFixacao) : 52;
+  const distCentroFixacao = Number(cfg.distanciaFurosFixacaoBorda) > 0
+    ? Number(cfg.distanciaFurosFixacaoBorda)
+    : SENSYS_8645I_C00.fixacaoPortaCentroBordaMm;
+  const distEntreCentrosFixacao = Number(cfg.distanciaEntreFurosFixacao) > 0
+    ? Number(cfg.distanciaEntreFurosFixacao)
+    : SENSYS_8645I_C00.fixacaoPortaEntreCentrosMm;
   const halfFix = distEntreCentrosFixacao / 2;
-  const xFixacao = piece.largura - distCentroFixacao;
-  const diametroFixacao = Number(cfg.diametroFurosFixacao) > 0 ? Number(cfg.diametroFurosFixacao) : 10;
-  const profundidadeFixacao = Math.min(piece.espessura, Number(cfg.profundidadeFurosFixacao) > 0 ? Number(cfg.profundidadeFurosFixacao) : 12);
+  const xFixacao = hingeSide === "left" ? distCentroFixacao : piece.largura - distCentroFixacao;
+  const diametroFixacao = Number(cfg.diametroFurosFixacao) > 0
+    ? Number(cfg.diametroFurosFixacao)
+    : SENSYS_8645I_C00.fixacaoPortaDiametroMm;
+  const profundidadeFixacao = Math.min(
+    piece.espessura,
+    Number(cfg.profundidadeFurosFixacao) > 0 ? Number(cfg.profundidadeFurosFixacao) : SENSYS_8645I_C00.fixacaoPortaProfundidadeMm
+  );
 
   for (const oy of offsets) {
     pushHole(out, piece, xCaneco, oy, diametroCaneco, profundidadeCaneco, "dobradica", face, true);
@@ -217,8 +245,8 @@ function calcPrateleira32mm(piece: PieceInput, rules: RulesConfig, out: Technica
 
 /** Furos de fixação da dobradiça na lateral: 3 por dobradiça (2 principais calço + 1 parafuso união). Padrão ferragem: 37 mm da borda lateral (calço), 53 mm da borda frontal (parafuso união), 16 mm entre eles. */
 const DEFAULTS_DOBRADICA_FIXACAO = {
-  distanciaDaBordaCalco: 37,
-  distanciaDaBordaParafusoUniao: 53,
+  distanciaDaBordaCalco: SENSYS_8645I_C00.calcoLateralBordaMm,
+  distanciaDaBordaParafusoUniao: SENSYS_8645I_C00.uniaoLateralBordaMm,
 } as const;
 
 function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
@@ -237,10 +265,10 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
   }
   const distEntre = cfg.distanciaEntreFurosCalco ?? cfg.distanciaEntreFuros ?? 32;
   const halfDist = distEntre / 2;
-  const diametroCalco = cfg.diametro ?? 5;
-  const profundidadeCalco = cfg.profundidadeFuro ?? 12;
-  const diametroUniao = cfg.diametroParafusoUniao ?? 5;
-  const profundidadeUniao = cfg.profundidadeParafusoUniao ?? 12;
+  const diametroCalco = cfg.diametro ?? SENSYS_8645I_C00.lateralDiametroMm;
+  const profundidadeCalco = cfg.profundidadeFuro ?? SENSYS_8645I_C00.lateralProfundidadeMm;
+  const diametroUniao = cfg.diametroParafusoUniao ?? SENSYS_8645I_C00.lateralDiametroMm;
+  const profundidadeUniao = cfg.profundidadeParafusoUniao ?? SENSYS_8645I_C00.lateralProfundidadeMm;
 
   const hinges = piece.hingePositionsMm ?? [];
   for (const hingeY of hinges) {

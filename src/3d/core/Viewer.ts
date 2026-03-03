@@ -1236,7 +1236,7 @@ export class Viewer {
     return new THREE.LineBasicMaterial({
       color: new THREE.Color("#000000"),
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.9,
       linewidth: 2,
       depthTest: true,
       polygonOffset: true,
@@ -1355,11 +1355,16 @@ export class Viewer {
     } else if (panelType === "front") {
       const w2 = width / 2;
       const h2 = height / 2;
-      const z0 = -depth / 2 - Viewer.OVERLAY_INSET_M;
-      pushSegment(-w2, -h2, z0, w2, -h2, z0);
-      pushSegment(w2, -h2, z0, w2, h2, z0);
-      pushSegment(w2, h2, z0, -w2, h2, z0);
-      pushSegment(-w2, h2, z0, -w2, -h2, z0);
+      const zInside = -depth / 2 - Viewer.OVERLAY_INSET_M;
+      const zOutside = depth / 2 + Viewer.OVERLAY_INSET_M;
+      pushSegment(-w2, -h2, zInside, w2, -h2, zInside);
+      pushSegment(w2, -h2, zInside, w2, h2, zInside);
+      pushSegment(w2, h2, zInside, -w2, h2, zInside);
+      pushSegment(-w2, h2, zInside, -w2, -h2, zInside);
+      pushSegment(-w2, -h2, zOutside, w2, -h2, zOutside);
+      pushSegment(w2, -h2, zOutside, w2, h2, zOutside);
+      pushSegment(w2, h2, zOutside, -w2, h2, zOutside);
+      pushSegment(-w2, h2, zOutside, -w2, -h2, zOutside);
 
       const panelW = width;
       const panelH = height;
@@ -1371,8 +1376,8 @@ export class Viewer {
           const t0 = (i * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
           const t1 = ((i + 1) * 2 * Math.PI) / Viewer.HOLE_CIRCLE_SEGMENTS;
           pushSegment(
-            a + r * Math.cos(t0), b + r * Math.sin(t0), z0,
-            a + r * Math.cos(t1), b + r * Math.sin(t1), z0
+            a + r * Math.cos(t0), b + r * Math.sin(t0), zInside,
+            a + r * Math.cos(t1), b + r * Math.sin(t1), zInside
           );
         }
       }
