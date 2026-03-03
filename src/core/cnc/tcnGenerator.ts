@@ -36,13 +36,15 @@ const EPSILON_MM = 0.001;
 /** Espaçamento mínimo entre peças (mm) — HARNNETT TRACK: margem para diâmetro real da ferramenta. */
 const MIN_SPACING_BETWEEN_PIECES_MM = 15;
 
-/** Diâmetro nominal ferramenta 113 (mm) — usado para inset centerline quando kerf não definido. */
+/** Diâmetro nominal ferramenta 113 (mm) — usado para outset do toolpath quando kerf não definido. */
 const TOOL_113_NOMINAL_DIAMETER_MM = 12;
 
 /**
- * Gera pontos do contorno em modo CENTERLINE: path do centro da ferramenta (corte externo).
- * A máquina compensa para fora (#40=1) com o diâmetro real; as coordenadas são sempre o centro.
- * Inset = toolRadius para que o bordo da ferramenta fique no bordo da peça.
+ * Gera pontos do contorno em modo CENTERLINE para corte EXTERNO (outsideCut).
+ * (x, y, w, h) = retângulo da PEÇA na chapa. O centro da ferramenta deve circular FORA da peça.
+ * Offset OUTWARD pelo raio da ferramenta: toolpath = peça outset por toolRadiusMm.
+ * Assim a borda de corte fica exatamente no contorno da peça e a margem de segurança fica para fora.
+ * Ordem dos pontos: CCW com a peça à direita (contorno externo).
  */
 function buildContourPoints(
   x: number,
@@ -52,13 +54,11 @@ function buildContourPoints(
   z: number,
   toolRadiusMm: number
 ): Array<{ x: number; y: number; z: number }> {
-  const r = Math.max(0, toolRadiusMm);
-  const insetX = Math.min(r, w / 2 - EPSILON_MM);
-  const insetY = Math.min(r, h / 2 - EPSILON_MM);
-  const x0 = x + insetX;
-  const y0 = y + insetY;
-  const x1 = x + w - insetX;
-  const y1 = y + h - insetY;
+  const outset = Math.max(0, toolRadiusMm);
+  const x0 = x - outset;
+  const y0 = y - outset;
+  const x1 = x + w + outset;
+  const y1 = y + h + outset;
   return [
     { x: x0, y: y0, z },
     { x: x1, y: y0, z },
@@ -201,7 +201,7 @@ function buildSideBlock(
 /**
  * Gera TCN para um painel (sheet) único (HARNNETT TRACK).
  * - Header: DL, DH, DS do próprio painel.
- * - SIDE#1: furação W#81 (top drilling) + corte W#89 + W#2201 por peça (centerline, #40=1, #205=113).
+ * - SIDE#1: furação W#81 (top drilling) + corte W#89 + W#2201 por peça (toolpath externo outset, #40=1, #205=113).
  * - Final: SIDE#3, SIDE#4, SIDE#5, SIDE#6, SIDE#2 no mesmo padrão.
  */
 export function generateTcnForPanel(
@@ -247,7 +247,7 @@ export function generateTcnForPanel(
   const sideInnerLines: string[] = [];
   const drills: CncDrillOperation[] = [];
   
-  // Primeiro: coletar apenas furos superiores (topDrillable) de todas as peças
+  // Furos vêm exclusivamente dos painéis (panel.drillHoles → cutlistToPieces → placement.holes)
   sanitizedPlacements.forEach((pl) => {
     for (const hole of pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;

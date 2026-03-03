@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { CSG } from "three-csg-ts";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { createWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibrary";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
@@ -85,6 +87,12 @@ const SHELF_WIDTH_CLEARANCE_M = 0.002;
 const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
 const DOOR_ANIMATION_DURATION_MS = 2000;
 const DRAWER_ANIMATION_DURATION_MS = 1500;
+const DRILL_MIN_RADIUS_M = 0.0005;
+const DRILL_MIN_DEPTH_M = 0.0008;
+const DRILL_CSG_EPSILON_M = 0.00035;
+const DRILL_BEVEL_MAX_M = 0.0018;
+const DRILL_BEVEL_RATIO = 0.18;
+const DRILL_SEGMENTS = 16;
 const doorOpenState = new Map<string, boolean>();
 const doorRotationState = new Map<string, { x: number; y: number }>();
 const doorAnimationRaf = new Map<string, number>();
@@ -692,38 +700,129 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
   return group;
 }
 
-function createDrillMarker(radiusM: number, depthM: number, color = "#2563eb"): THREE.Mesh {
-  const geometry = new THREE.CylinderGeometry(Math.max(0.0004, radiusM), Math.max(0.0004, radiusM), Math.max(0.001, depthM), 10);
-  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.1 });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = "drill-marker";
-  return mesh;
+function getPanelDimensionsFromGeometry(panel: THREE.Mesh, panelType: PanelType): {
+  width: number;
+  height: number;
+  thickness: number;
+} {
+  panel.geometry.computeBoundingBox();
+  const box = panel.geometry.boundingBox;
+  if (!box) {
+    return { width: 0, height: 0, thickness: THICKNESS_M };
+  }
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  if (panelType === "left" || panelType === "right") {
+    return { width: size.z, height: size.y, thickness: size.x };
+  }
+  if (panelType === "top" || panelType === "bottom") {
+    return { width: size.x, height: size.z, thickness: size.y };
+  }
+  return { width: size.x, height: size.y, thickness: size.z };
 }
 
-function addDrillMarkersToPanel(panel: THREE.Mesh, panelType: string, holes: TechnicalDrillHole[] | undefined) {
-  if (!holes || holes.length === 0) return;
-  const size = new THREE.Vector3();
-  new THREE.Box3().setFromObject(panel).getSize(size);
-  const panelW = panelType === "left" || panelType === "right" ? size.z : size.x;
-  const panelH = panelType === "top" || panelType === "bottom" ? size.z : size.y;
-  for (const h of holes) {
-    const r = Math.max(0.0005, h.diametro / 2000);
-    const d = Math.max(0.001, h.profundidade / 1000);
-    const marker = createDrillMarker(r, d);
-    const lx = (h.x / 1000) - panelW / 2;
-    const ly = panelH / 2 - (h.y / 1000);
-    if (panelType === "top" || panelType === "bottom") {
-      marker.rotation.x = Math.PI / 2;
-      marker.position.set(lx, 0, ly);
-    } else if (panelType === "left" || panelType === "right") {
-      marker.rotation.z = Math.PI / 2;
-      marker.position.set(0, ly, lx);
-    } else {
-      marker.position.set(lx, ly, 0);
-    }
-    marker.userData.isDrillMarker = true;
-    panel.add(marker);
+function getInwardAxisForHole(panelType: PanelType, hole: TechnicalDrillHole): THREE.Vector3 {
+  if (panelType === "top" || panelType === "bottom") {
+    if (hole.face === "fundo") return new THREE.Vector3(0, 1, 0);
+    return new THREE.Vector3(0, -1, 0);
   }
+  if (panelType === "left" || panelType === "right") {
+    if (hole.face === "esquerda") return new THREE.Vector3(1, 0, 0);
+    return new THREE.Vector3(-1, 0, 0);
+  }
+  if (hole.face === "tras") return new THREE.Vector3(0, 0, 1);
+  return new THREE.Vector3(0, 0, -1);
+}
+
+function getHole2DLocalPosition(
+  panelType: PanelType,
+  panelWidth: number,
+  panelHeight: number,
+  hole: TechnicalDrillHole
+): { a: number; b: number } {
+  const a = (hole.x / 1000) - panelWidth / 2;
+  const b = panelHeight / 2 - (hole.y / 1000);
+  if (panelType === "left" || panelType === "right") {
+    return { a: a, b };
+  }
+  return { a, b };
+}
+
+function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes: TechnicalDrillHole[]): THREE.BufferGeometry[] {
+  const { width, height, thickness } = getPanelDimensionsFromGeometry(panel, panelType);
+  if (width <= 0 || height <= 0 || thickness <= 0) return [];
+  const validDepthMax = Math.max(DRILL_MIN_DEPTH_M, thickness + DRILL_CSG_EPSILON_M * 2);
+  const geometries: THREE.BufferGeometry[] = [];
+  const quat = new THREE.Quaternion();
+
+  for (const hole of holes) {
+    const radius = Math.max(DRILL_MIN_RADIUS_M, hole.diametro / 2000);
+    const nominalDepth = Math.max(DRILL_MIN_DEPTH_M, hole.profundidade / 1000);
+    const holeDepth = Math.min(validDepthMax, nominalDepth + DRILL_CSG_EPSILON_M * 2);
+    const bevelDepth = Math.min(
+      DRILL_BEVEL_MAX_M,
+      Math.max(0.00045, Math.min(holeDepth * DRILL_BEVEL_RATIO, thickness * 0.35))
+    );
+    const bevelRadius = radius + Math.min(0.0009, Math.max(0.00025, radius * 0.32));
+    const axisInward = getInwardAxisForHole(panelType, hole).normalize();
+    quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisInward);
+
+    const { a, b } = getHole2DLocalPosition(panelType, width, height, hole);
+    const entryOffset = thickness / 2;
+    const entry = new THREE.Vector3();
+
+    if (panelType === "top" || panelType === "bottom") {
+      entry.set(a, axisInward.y < 0 ? entryOffset : -entryOffset, b);
+    } else if (panelType === "left" || panelType === "right") {
+      entry.set(axisInward.x < 0 ? entryOffset : -entryOffset, b, a);
+    } else {
+      entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
+    }
+
+    const holeCenter = entry.clone().add(axisInward.clone().multiplyScalar(holeDepth * 0.5 - DRILL_CSG_EPSILON_M));
+    const cutterMain = new THREE.CylinderGeometry(radius, radius, holeDepth, DRILL_SEGMENTS, 1, false);
+    cutterMain.applyQuaternion(quat);
+    cutterMain.translate(holeCenter.x, holeCenter.y, holeCenter.z);
+    geometries.push(cutterMain);
+
+    if (bevelDepth < holeDepth - 0.00015) {
+      const bevelCenter = entry.clone().add(axisInward.clone().multiplyScalar(bevelDepth * 0.5 - DRILL_CSG_EPSILON_M));
+      const bevel = new THREE.CylinderGeometry(bevelRadius, radius, bevelDepth, DRILL_SEGMENTS, 1, false);
+      bevel.applyQuaternion(quat);
+      bevel.translate(bevelCenter.x, bevelCenter.y, bevelCenter.z);
+      geometries.push(bevel);
+    }
+  }
+
+  return geometries;
+}
+
+function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType, holes: TechnicalDrillHole[] | undefined) {
+  if (!holes || holes.length === 0) return;
+  const cutGeometries = buildDrillCutGeometries(panelType, panel, holes);
+  if (cutGeometries.length === 0) return;
+
+  const mergedCutters = mergeGeometries(cutGeometries, false);
+  cutGeometries.forEach((geometry) => geometry.dispose());
+  if (!mergedCutters) return;
+
+  const sourceMesh = new THREE.Mesh(panel.geometry.clone(), panel.material as THREE.Material | THREE.Material[]);
+  const cutterMesh = new THREE.Mesh(mergedCutters, new THREE.MeshStandardMaterial());
+  sourceMesh.updateMatrix();
+  cutterMesh.updateMatrix();
+
+  const carved = CSG.subtract(sourceMesh, cutterMesh);
+  mergedCutters.dispose();
+  if (!carved?.geometry) return;
+
+  carved.geometry.computeVertexNormals();
+  if (!carved.geometry.attributes.uv2 && carved.geometry.attributes.uv) {
+    carved.geometry.setAttribute("uv2", carved.geometry.attributes.uv.clone());
+  }
+  panel.geometry.dispose();
+  panel.geometry = carved.geometry;
+  panel.castShadow = true;
+  panel.receiveShadow = true;
 }
 
 let cachedFallbackMaterial: THREE.MeshStandardMaterial | null = null;
@@ -822,10 +921,10 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     lateral_esquerda: [],
     lateral_direita: [],
   };
-  addDrillMarkersToPanel(panels.top, "top", drillMap.cima);
-  addDrillMarkersToPanel(panels.bottom, "bottom", drillMap.fundo);
-  addDrillMarkersToPanel(panels.left, "left", drillMap.lateral_esquerda);
-  addDrillMarkersToPanel(panels.right, "right", drillMap.lateral_direita);
+  applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
+  applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
+  applyDrillHolesToPanelGeometry(panels.left, "left", drillMap.lateral_esquerda);
+  applyDrillHolesToPanelGeometry(panels.right, "right", drillMap.lateral_direita);
 
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   if (shelfCount > 0) {
@@ -995,8 +1094,6 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     // Limpar base da vista explodida para que o Viewer use esta nova posição (evita que applyExplodedViewForObject restaure posição antiga).
     delete (child.userData as Record<string, unknown>).explodedBasePosition;
     child.updateMatrix();
-    const oldMarkers = child.children.filter((c) => c.userData?.isDrillMarker);
-    oldMarkers.forEach((m) => child.remove(m));
   }
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
@@ -1012,10 +1109,10 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
   const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
   const rightPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "right") as THREE.Mesh | undefined;
-  if (topPanel) addDrillMarkersToPanel(topPanel, "top", drillMap.cima);
-  if (bottomPanel) addDrillMarkersToPanel(bottomPanel, "bottom", drillMap.fundo);
-  if (leftPanel) addDrillMarkersToPanel(leftPanel, "left", drillMap.lateral_esquerda);
-  if (rightPanel) addDrillMarkersToPanel(rightPanel, "right", drillMap.lateral_direita);
+  if (topPanel) applyDrillHolesToPanelGeometry(topPanel, "top", drillMap.cima);
+  if (bottomPanel) applyDrillHolesToPanelGeometry(bottomPanel, "bottom", drillMap.fundo);
+  if (leftPanel) applyDrillHolesToPanelGeometry(leftPanel, "left", drillMap.lateral_esquerda);
+  if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", drillMap.lateral_direita);
   shelfSpecs.forEach((spec, i) => {
     const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: mat as THREE.Material });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);

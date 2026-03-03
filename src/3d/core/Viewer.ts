@@ -1190,7 +1190,7 @@ export class Viewer {
   setPhotoModeEnabled(enabled: boolean): void {
     this.photoModeEnabled = Boolean(enabled);
     this.rendererManager.renderer.toneMappingExposure = this.photoModeEnabled
-      ? Math.max(this.baseToneMappingExposure, 1.15)
+      ? Math.max(this.baseToneMappingExposure, 1.2)
       : this.baseToneMappingExposure;
   }
 
@@ -3597,24 +3597,27 @@ export class Viewer {
     };
 
     const applyShadowIntensity = () => {
-      const eased = 0.45 + shadowFactor * 0.55;
+      const eased = 0.55 + shadowFactor * 0.45;
+      const photoExposure = 1.22;
       if (advancedRealism) {
-        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.08);
-        this.lights.fillLight.intensity = originalLightState.fill * (0.7 + shadowFactor * 0.25);
-        this.lights.ambient.intensity = originalLightState.ambient * (0.82 + shadowFactor * 0.14);
-        this.lights.rimLight.intensity = originalLightState.rim * (0.78 + shadowFactor * 0.22);
+        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.25);
+        this.lights.fillLight.intensity = originalLightState.fill * (0.85 + shadowFactor * 0.3);
+        this.lights.ambient.intensity = originalLightState.ambient * (0.95 + shadowFactor * 0.15);
+        this.lights.rimLight.intensity = originalLightState.rim * (0.9 + shadowFactor * 0.25);
         this.lights.keyLight.castShadow = true;
-        this.lights.keyLight.shadow.radius = Math.max(2, originalLightState.shadowRadius * 1.18);
+        this.lights.keyLight.shadow.radius = Math.max(4, originalLightState.shadowRadius * 1.6);
+        this.lights.keyLight.shadow.bias = -0.0001;
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMappingExposure = Math.max(originalRendererState.toneMappingExposure, 1.07);
+        renderer.toneMappingExposure = Math.max(originalRendererState.toneMappingExposure, photoExposure);
       } else {
-        this.lights.keyLight.intensity = originalLightState.key * eased;
-        this.lights.fillLight.intensity = originalLightState.fill * (0.6 + shadowFactor * 0.4);
-        this.lights.ambient.intensity = originalLightState.ambient * (0.7 + shadowFactor * 0.3);
-        this.lights.rimLight.intensity = originalLightState.rim * (0.5 + shadowFactor * 0.5);
+        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.12);
+        this.lights.fillLight.intensity = originalLightState.fill * (0.75 + shadowFactor * 0.4);
+        this.lights.ambient.intensity = originalLightState.ambient * (0.85 + shadowFactor * 0.25);
+        this.lights.rimLight.intensity = originalLightState.rim * (0.65 + shadowFactor * 0.5);
         this.lights.keyLight.castShadow = shadowFactor > 0.15 ? originalLightState.castShadow : false;
-        this.lights.keyLight.shadow.radius = originalLightState.shadowRadius * (0.5 + shadowFactor * 0.5);
+        this.lights.keyLight.shadow.radius = Math.max(3, originalLightState.shadowRadius * (0.7 + shadowFactor * 0.6));
+        renderer.toneMappingExposure = Math.max(originalRendererState.toneMappingExposure, 1.12);
       }
     };
 
@@ -3657,13 +3660,14 @@ export class Viewer {
     try {
       renderer.setPixelRatio(1);
 
-      if (!transparentBackground) {
-        renderer.setClearColor("#ffffff", 1);
-        scene.background = new THREE.Color("#ffffff");
-      } else {
-        renderer.setClearColor("#000000", 0);
+      if (transparentBackground) {
+        renderer.setClearColor(0x000000, 0);
         scene.background = null;
+      } else if (options.background === "white") {
+        renderer.setClearColor(0xffffff, 1);
+        scene.background = new THREE.Color(0xffffff);
       }
+      // "hdri": mantém scene.background e scene.environment atuais (fundo padrão do sistema)
 
       if (options.mode === "lines") {
         linesMaterial = new THREE.MeshBasicMaterial({ color: 0x111111, wireframe: true });

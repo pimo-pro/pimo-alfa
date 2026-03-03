@@ -60,9 +60,9 @@ export function cutlistComPrecoFromBox(
       },
       effRules
     );
-    const drillingData = drillingResult.success
-      ? drillingResult.data ?? { furacoesTecnicas: [], holes: [] }
-      : { furacoesTecnicas: [], holes: [] };
+    const drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
+      ? drillingResult.data.drillHoles
+      : [];
 
     items.push({
       ...baseItem,
@@ -80,10 +80,7 @@ export function cutlistComPrecoFromBox(
       grainDirection,
       precoUnitario: p.quantidade > 0 ? p.custo / p.quantidade : 0,
       precoTotal: p.custo,
-      furacoesTecnicas: drillingData.furacoesTecnicas,
-      holes: drillingData.holes,
-      hingePositionsMm: drillingData.hingePositionsMm,
-      shelfHolePositions: drillingData.shelfHolePositions,
+      drillHoles,
     });
   });
 
@@ -104,9 +101,10 @@ export function cutlistComPrecoFromBox(
       },
       effRules
     );
-    const drillingData = drillingResult.success
-      ? drillingResult.data ?? { furacoesTecnicas: [], holes: [] }
-      : { furacoesTecnicas: [], holes: [] };
+    const drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
+      ? drillingResult.data.drillHoles
+      : [];
+
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -123,10 +121,7 @@ export function cutlistComPrecoFromBox(
       grainDirection: "none" as GrainDirection,
       precoUnitario: p.custo,
       precoTotal: p.custo,
-      furacoesTecnicas: drillingData.furacoesTecnicas,
-      holes: drillingData.holes,
-      hingePositionsMm: drillingData.hingePositionsMm,
-      shelfHolePositions: drillingData.shelfHolePositions,
+      drillHoles,
     });
   });
 

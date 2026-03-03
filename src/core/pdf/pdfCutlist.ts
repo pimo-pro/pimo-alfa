@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import qrcode from "qrcode-generator";
-import type { BoxModule, CutListItemComPreco, TechnicalDrillHole } from "../types";
+import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
@@ -228,15 +228,8 @@ function drawFurosForPart(
   drawW: number,
   drawH: number
 ) {
-  const technicalHoles = part.furacoesTecnicas ?? [];
-  const holes = technicalHoles.length > 0
-    ? technicalHoles.map((h: TechnicalDrillHole) => ({
-        x: h.x,
-        y: h.y,
-        diametro: h.diametro,
-        profundidade: h.profundidade,
-      }))
-    : (part.furacoes ?? []);
+  const drillHoles = part.drillHoles ?? [];
+  const holes = drillHoles.map((h) => ({ x: h.x, y: h.y, diametro: h.diameter, profundidade: h.depth }));
   if (holes.length === 0) return;
   const scale = Math.min(
     drawW / Math.max(1, part.dimensoes.largura),
@@ -286,7 +279,7 @@ function renderFurosLayer(
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
   startY: number
 ) {
-  const withHoles = parts.filter((p) => (p.furacoes?.length ?? 0) > 0);
+  const withHoles = parts.filter((p) => (p.drillHoles?.length ?? 0) > 0);
   if (withHoles.length === 0) return;
   doc.addPage("a4", "landscape");
   let y = startY;

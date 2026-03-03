@@ -155,7 +155,7 @@ export type Viewer2DAngle = "top" | "front" | "left" | "right";
 
 export type ViewerRenderSize = "small" | "medium" | "large" | "4k";
 
-export type ViewerRenderBackground = "white" | "transparent" | "project-transparent";
+export type ViewerRenderBackground = "white" | "transparent" | "hdri" | "project-transparent";
 
 export type ViewerRenderMode = "pbr" | "lines";
 

@@ -114,16 +114,17 @@ export default function PhotoModePopoverContent({ onClose }: Props) {
       <div className="modal-list-item">
         <div className="modal-list-info">
           <div className="modal-list-title">Fundo</div>
-          <div className="modal-list-meta">Escolha fundo normal ou exportação recortada do projeto</div>
+          <div className="modal-list-meta">Branco, transparente (PNG) ou ambiente HDRI do sistema</div>
         </div>
         <select
           className="select select-xs"
           value={renderBackground}
           onChange={(event) => setRenderBackground(event.target.value as ViewerRenderBackground)}
         >
-          <option value="white">Branco</option>
-          <option value="transparent">Transparente</option>
-          <option value="project-transparent">Exportar Projeto (sem chão e sem fundo)</option>
+          <option value="white">Branco puro</option>
+          <option value="transparent">Transparente (PNG com alpha)</option>
+          <option value="hdri">Fundo padrão do sistema (HDRI)</option>
+          <option value="project-transparent">Exportar projeto (sem chão nem fundo)</option>
         </select>
       </div>
 

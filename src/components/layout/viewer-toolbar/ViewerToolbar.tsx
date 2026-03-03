@@ -312,7 +312,7 @@ export default function ViewerToolbar() {
                 </span>
               </button>
               {photoModeOpen && (
-                <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Photo Mode">
+                <div className="viewer-toolbar-popover-panel photo-mode-panel" role="dialog" aria-label="Photo Mode">
                   <PhotoModePopoverContent onClose={() => setPhotoModeOpen(false)} />
                 </div>
               )}

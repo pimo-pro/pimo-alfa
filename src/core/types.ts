@@ -55,7 +55,7 @@ export interface PieceFaceMaterials {
   back?: LayoutVisualMaterial;
 }
 
-export type DrillType = "cavilha" | "parafuso" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira";
+export type DrillType = "cavilha" | "parafuso" | "minifix" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira";
 export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
 export type DrillPanelKey = "cima" | "fundo" | "lateral_esquerda" | "lateral_direita";
 export interface TechnicalDrillHole {
@@ -76,6 +76,22 @@ export interface DrillHole {
   depth: number;
   /** Tipo de furo para cores no Layout. */
   holeType?: DrillType;
+  /** Se true, furo perfurável pelo topo (emissão TCN). */
+  topDrillable?: boolean;
+}
+
+/** Furo real do painel: geometria de fabricação (fonte única para Layout PRO e TCN). */
+export type PanelFace = "A" | "B";
+
+export interface PanelDrillHole {
+  x: number;
+  y: number;
+  diameter: number;
+  depth: number;
+  /** Tipo: cavilha, parafuso, minifix, dobradiça, prateleira, etc. */
+  holeType?: DrillType;
+  /** Face do painel (A ou B). */
+  face?: PanelFace;
   /** Se true, furo perfurável pelo topo (emissão TCN). */
   topDrillable?: boolean;
 }
@@ -110,22 +126,8 @@ export interface CutListItem {
   uvRotationOverride?: number;
   /** Materiais por face (preparação para texturas por face). */
   faceMaterials?: PieceFaceMaterials;
-  /** Furos opcionais para representação técnica/PDF. */
-  furacoes?: Array<{
-    x: number;
-    y: number;
-    diametro: number;
-    profundidade?: number;
-    tipo?: "vertical" | "horizontal";
-  }>;
-  /** Furação técnica parametrizada para cutlist/PDF/drill. */
-  furacoesTecnicas?: TechnicalDrillHole[];
-  /** Furação normalizada para layout/cnc (formato unificado). */
-  holes?: DrillHole[];
-  /** Posições Y das dobradiças aplicadas à peça (mm), quando aplicável. */
-  hingePositionsMm?: number[];
-  /** Posições Y dos furos de prateleira aplicados à peça (mm), quando aplicável. */
-  shelfHolePositions?: number[];
+  /** Furos reais do painel: geometria de fabricação (fonte única para Layout de Corte PRO, TCN e Viewer). */
+  drillHoles?: PanelDrillHole[];
   /** Código curto legível para fábrica. */
   shortCode?: string;
   /** QR em SVG contendo o shortCode/carga técnica. */

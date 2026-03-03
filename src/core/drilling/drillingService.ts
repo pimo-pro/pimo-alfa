@@ -4,10 +4,9 @@
  * Sem furação lateral. Sem ficheiros de drill separados.
  */
 
-import type { CncDrillOperation } from "../cnc/cncTypes";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getHingeYPositions } from "../rules/rulesConfig";
-import type { CutListItem, DrillFace, DrillType, TechnicalDrillHole } from "../types";
+import type { CutListItem, DrillFace, DrillType, PanelDrillHole, PanelFace, TechnicalDrillHole } from "../types";
 
 export type PieceType =
   | "cima"
@@ -245,6 +244,34 @@ export function calculateTechnicalDrillingsForPiece(
   return out;
 }
 
+function drillFaceToPanelFace(face: DrillFace): PanelFace {
+  switch (face) {
+    case "frente":
+    case "cima":
+    case "esquerda":
+      return "A";
+    default:
+      return "B";
+  }
+}
+
+function technicalToPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[]): PanelDrillHole[] {
+  return furacoesTecnicas.map((h) => ({
+    x: h.x,
+    y: h.y,
+    diameter: h.diametro,
+    depth: h.profundidade,
+    holeType: h.tipo,
+    face: drillFaceToPanelFace(h.face),
+    topDrillable:
+      isTopDrillable(h.face) ||
+      h.tipo === "dobradica" ||
+      h.tipo === "dobradica_fixacao" ||
+      h.tipo === "dobradica_parafuso_uniao" ||
+      h.tipo === "prateleira",
+  }));
+}
+
 export function applyDrillingsToCutListItems(items: CutListItem[], rules: RulesConfig): CutListItem[] {
   return items.map((item) => {
     if (!item || !item.tipo || !item.dimensoes) return item;
@@ -259,34 +286,11 @@ export function applyDrillingsToCutListItems(items: CutListItem[], rules: RulesC
     );
     return {
       ...item,
-      furacoesTecnicas,
-      furacoes: furacoesTecnicas.map((h) => ({
-        x: h.x,
-        y: h.y,
-        diametro: h.diametro,
-        profundidade: h.profundidade,
-        tipo: (h.face === "cima" || h.face === "fundo" ? "vertical" : "horizontal") as "vertical" | "horizontal",
-      })),
+      drillHoles: technicalToPanelDrillHoles(furacoesTecnicas),
     };
   });
 }
 
 export function isTopDrillable(face: DrillFace): boolean {
   return face === "cima" || face === "fundo";
-}
-
-export function mapDrillingsToCncOperations(
-  holes: TechnicalDrillHole[],
-  panelThickness: number
-): CncDrillOperation[] {
-  return holes
-    .filter((h) => isTopDrillable(h.face))
-    .map((h) => ({
-      x: h.x,
-      y: h.y,
-      z: 0,
-      diametro: h.diametro,
-      profundidade: Math.min(h.profundidade, panelThickness),
-      tipo: "vertical" as const,
-    }));
 }

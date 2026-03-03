@@ -1,8 +1,10 @@
 import type {
   CutListItem,
-  DrillHole,
+  DrillFace,
   DrillType,
   OperationResult,
+  PanelDrillHole,
+  PanelFace,
   TechnicalDrillHole,
   ViewerDrillMarkersByPanel,
 } from "../../core/types";
@@ -20,10 +22,7 @@ export type PanelDrillingInput = {
 };
 
 export type PanelDrillingOutput = {
-  furacoesTecnicas: TechnicalDrillHole[];
-  holes: DrillHole[];
-  hingePositionsMm?: number[];
-  shelfHolePositions?: number[];
+  drillHoles: PanelDrillHole[];
 };
 
 const EMPTY_VIEWER_DRILL_MARKERS: ViewerDrillMarkersByPanel = {
@@ -78,15 +77,23 @@ function getHingePositionsFromDoorHeight(
   return doorPositions.map((y) => Math.max(yMinSafe, Math.min(yMaxSafe, y)));
 }
 
-function getShelfHolePositions(holes: TechnicalDrillHole[]): number[] {
-  const yValues = holes
-    .filter((h) => h.tipo === "prateleira")
-    .map((h) => Number(h.y))
-    .filter((y) => Number.isFinite(y));
-  return Array.from(new Set(yValues.map((y) => Number(y.toFixed(3))))).sort((a, b) => a - b);
+/** Mapeia DrillFace (geometria) para face do painel A/B (A = frente/cima/exterior, B = fundo/tras/interior). */
+function drillFaceToPanelFace(face: DrillFace): PanelFace {
+  switch (face) {
+    case "frente":
+    case "cima":
+    case "esquerda":
+      return "A";
+    case "tras":
+    case "fundo":
+    case "direita":
+    default:
+      return "B";
+  }
 }
 
-function toNormalizedHoles(furacoesTecnicas: TechnicalDrillHole[]): DrillHole[] {
+/** Converte furação técnica em furos reais do painel (com face A/B). */
+function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[]): PanelDrillHole[] {
   return furacoesTecnicas.map((h) => {
     const holeType = h.tipo as DrillType;
     const topByFace = isTopDrillable(h.face);
@@ -102,6 +109,7 @@ function toNormalizedHoles(furacoesTecnicas: TechnicalDrillHole[]): DrillHole[] 
       diameter: h.diametro,
       depth: h.profundidade,
       holeType,
+      face: drillFaceToPanelFace(h.face),
       topDrillable,
     };
   });
@@ -188,7 +196,7 @@ export function buildPanelDrilling(
   rules: RulesConfig
 ): PanelDrillingOutput {
   const result = buildPanelDrillingResult(input, rules);
-  return result.success ? result.data ?? { furacoesTecnicas: [], holes: [] } : { furacoesTecnicas: [], holes: [] };
+  return result.success ? result.data ?? { drillHoles: [] } : { drillHoles: [] };
 }
 
 export function buildPanelDrillingResult(
@@ -229,15 +237,10 @@ export function buildPanelDrillingResult(
     return { success: false, error: `Erro ao gerar furação para painel ${input.tipo}.` };
   }
 
-  const shelfHolePositions = getShelfHolePositions(furacoesTecnicas);
-
   return {
     success: true,
     data: {
-      furacoesTecnicas,
-      holes: toNormalizedHoles(furacoesTecnicas),
-      hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
-      shelfHolePositions: shelfHolePositions.length > 0 ? shelfHolePositions : undefined,
+      drillHoles: toPanelDrillHoles(furacoesTecnicas),
     },
   };
 }
@@ -245,6 +248,22 @@ export function buildPanelDrillingResult(
 export function buildViewerDrillMarkersByPanel(cutList: CutListItem[] | undefined): ViewerDrillMarkersByPanel {
   const result = buildViewerDrillMarkersByPanelResult(cutList);
   return result.success ? result.data ?? EMPTY_VIEWER_DRILL_MARKERS : EMPTY_VIEWER_DRILL_MARKERS;
+}
+
+/** Converte PanelDrillHole[] em TechnicalDrillHole[] para o viewer (face padrão por painel). */
+function panelDrillHolesToTechnical(
+  holes: PanelDrillHole[] | undefined,
+  defaultFace: DrillFace
+): TechnicalDrillHole[] {
+  if (!holes?.length) return [];
+  return holes.map((h) => ({
+    x: h.x,
+    y: h.y,
+    diametro: h.diameter,
+    profundidade: h.depth,
+    tipo: (h.holeType ?? "parafuso") as DrillType,
+    face: defaultFace,
+  }));
 }
 
 export function buildViewerDrillMarkersByPanelResult(
@@ -255,13 +274,22 @@ export function buildViewerDrillMarkersByPanelResult(
   }
 
   const byType = new Map(cutList.map((item) => [item.tipo, item]));
+
+  const getHolesFor = (tipo: keyof ViewerDrillMarkersByPanel): TechnicalDrillHole[] => {
+    const item = byType.get(tipo);
+    if (!item?.drillHoles?.length) return [];
+    const face: DrillFace =
+      tipo === "cima" ? "cima" : tipo === "fundo" ? "fundo" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
+    return panelDrillHolesToTechnical(item.drillHoles, face);
+  };
+
   return {
     success: true,
     data: {
-      cima: byType.get("cima")?.furacoesTecnicas ?? [],
-      fundo: byType.get("fundo")?.furacoesTecnicas ?? [],
-      lateral_esquerda: byType.get("lateral_esquerda")?.furacoesTecnicas ?? [],
-      lateral_direita: byType.get("lateral_direita")?.furacoesTecnicas ?? [],
+      cima: getHolesFor("cima"),
+      fundo: getHolesFor("fundo"),
+      lateral_esquerda: getHolesFor("lateral_esquerda"),
+      lateral_direita: getHolesFor("lateral_direita"),
     },
   };
 }

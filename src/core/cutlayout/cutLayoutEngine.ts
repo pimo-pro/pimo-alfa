@@ -88,6 +88,16 @@ export type CutLayoutEngineOptions = {
   scoreModel?: ScoreModel;
 };
 
+/** Formato de furo para layout/TCN (normalizado a partir de drillHoles ou legado). */
+export type NormalizedHoleForPiece = {
+  x: number;
+  y: number;
+  diameter: number;
+  depth: number;
+  holeType?: string;
+  topDrillable?: boolean;
+};
+
 export type CutlistItemForPieces = {
   dimensoes: { largura: number; altura: number; profundidade: number };
   espessura: number;
@@ -96,9 +106,8 @@ export type CutlistItemForPieces = {
   nome: string;
   material?: string;
   materialId?: string;
-  holes?: Array<{ x: number; y: number; diameter: number; depth: number }>;
-  furacoes?: Array<{ x: number; y: number; diametro: number; profundidade?: number }>;
-  furacoesTecnicas?: Array<{ x: number; y: number; diametro: number; profundidade: number }>;
+  /** Furos reais do painel (fonte única para Layout PRO e TCN). */
+  drillHoles?: Array<{ x: number; y: number; diameter: number; depth: number; holeType?: string; face?: string; topDrillable?: boolean }>;
   sheetWidthMm?: number;
   sheetHeightMm?: number;
   sheetThicknessMm?: number;
@@ -1862,47 +1871,20 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);
     const sheetThicknessMm = Number(item.sheetThicknessMm ?? materialRecord?.sheetThicknessMm);
     const seen = new Set<string>();
-    const normalizedHoles: Array<{
-      x: number;
-      y: number;
-      diameter: number;
-      depth: number;
-      holeType?: string;
-      topDrillable?: boolean;
-    }> = [];
+    const normalizedHoles: NormalizedHoleForPiece[] = [];
     const add = (x: number, y: number, d: number, dep: number, ht?: string, td?: boolean) => {
       const k = `${x.toFixed(1)}_${y.toFixed(1)}`;
       if (seen.has(k)) return;
       seen.add(k);
       normalizedHoles.push({ x, y, diameter: d, depth: dep, holeType: ht, topDrillable: td });
     };
-    for (const h of item.holes ?? []) {
+    for (const h of item.drillHoles ?? []) {
       const x = Number(h?.x);
       const y = Number(h?.y);
       const diameter = Number(h?.diameter);
       const depth = Number(h?.depth);
       if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
         add(x, y, diameter, depth, (h as { holeType?: string })?.holeType, (h as { topDrillable?: boolean })?.topDrillable);
-      }
-    }
-    for (const h of item.furacoesTecnicas ?? []) {
-      const x = Number(h?.x);
-      const y = Number(h?.y);
-      const diameter = Number(h?.diametro);
-      const depth = Number(h?.profundidade);
-      const ht = "tipo" in h ? (h as { tipo?: string }).tipo : undefined;
-      const face = "face" in h ? (h as { face?: string }).face : undefined;
-      if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
-        add(x, y, diameter, depth, ht, face === "cima" || face === "fundo");
-      }
-    }
-    for (const h of item.furacoes ?? []) {
-      const x = Number(h?.x);
-      const y = Number(h?.y);
-      const diameter = Number(h?.diametro);
-      const depth = Number(h?.profundidade ?? (Number(esp) || 19));
-      if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
-        add(x, y, diameter, depth, undefined, (h as { tipo?: string })?.tipo === "vertical");
       }
     }
     const g = item.grainDirection;
