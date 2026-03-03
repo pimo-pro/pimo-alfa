@@ -20,6 +20,7 @@
 import type { SheetResult } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
 import { getSettings } from "../settings/settingsService";
+import { CUT_LAYOUT_SAFETY_MARGIN_MM, toLayoutAbsoluteX } from "../cutlayout/layoutCoordinateSystem";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -36,6 +37,7 @@ const intVal = (n: number) => Math.round(Number.isFinite(n) ? n : 0);
 /** Z de segurança (acima do material). */
 const Z_SAFETY_MM = 10;
 const EPSILON_MM = 0.001;
+type ContourPoint = { x: number; y: number; z: number };
 
 /** Espaçamento mínimo entre peças (mm) — HARNNETT TRACK: margem para diâmetro real da ferramenta. */
 const MIN_SPACING_BETWEEN_PIECES_MM = 15;
@@ -45,6 +47,33 @@ const TOOL_113_NOMINAL_DIAMETER_MM = 12;
 
 /** Diâmetro mínimo para compensação geométrica (evitar raio 0). */
 const MIN_TOOL_DIAMETER_MM = 1;
+const EXTERNAL_OFFSET_SIGN = 1;
+const INTERNAL_OFFSET_SIGN = -1;
+
+function computeSignedArea2D(points: ContourPoint[]): number {
+  if (points.length < 3) return 0;
+  const isClosed = points[0].x === points[points.length - 1].x && points[0].y === points[points.length - 1].y;
+  const ring = isClosed ? points.slice(0, -1) : points;
+  if (ring.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
+    sum += a.x * b.y - b.x * a.y;
+  }
+  return sum / 2;
+}
+
+function normalizeContourWinding(points: ContourPoint[], expected: "CW" | "CCW"): ContourPoint[] {
+  if (points.length < 4) return points;
+  const isClockwise = computeSignedArea2D(points) < 0;
+  const shouldBeClockwise = expected === "CW";
+  if (isClockwise === shouldBeClockwise) return points;
+  const isClosed = points[0].x === points[points.length - 1].x && points[0].y === points[points.length - 1].y;
+  const ring = isClosed ? points.slice(0, -1) : points.slice();
+  ring.reverse();
+  return isClosed ? [...ring, ring[0]] : ring;
+}
 
 /**
  * Devolve o diâmetro da fresa a usar para compensação geométrica no CAM (mm).
@@ -72,19 +101,21 @@ function buildExternalContourPoints(
   h: number,
   z: number,
   toolRadiusMm: number
-): Array<{ x: number; y: number; z: number }> {
-  const outset = Math.max(0, toolRadiusMm);
+) : ContourPoint[] {
+  const signedOffsetMm = EXTERNAL_OFFSET_SIGN * Math.abs(toolRadiusMm);
+  const outset = Math.max(0, signedOffsetMm);
   const x0 = x - outset;
   const y0 = y - outset;
   const x1 = x + w + outset;
   const y1 = y + h + outset;
-  return [
+  const points: ContourPoint[] = [
     { x: x0, y: y0, z },
     { x: x1, y: y0, z },
     { x: x1, y: y1, z },
     { x: x0, y: y1, z },
     { x: x0, y: y0, z },
   ];
+  return normalizeContourWinding(points, "CW");
 }
 
 /**
@@ -100,20 +131,22 @@ function buildInternalContourPoints(
   h: number,
   z: number,
   toolRadiusMm: number
-): Array<{ x: number; y: number; z: number }> {
-  const inset = Math.max(0, toolRadiusMm);
+): ContourPoint[] {
+  const signedOffsetMm = INTERNAL_OFFSET_SIGN * Math.abs(toolRadiusMm);
+  const inset = Math.max(0, Math.abs(signedOffsetMm));
   if (w <= 2 * inset || h <= 2 * inset) return []; // recorte demasiado pequeno para esta fresa
   const x0 = x + inset;
   const y0 = y + inset;
   const x1 = x + w - inset;
   const y1 = y + h - inset;
-  return [
+  const points: ContourPoint[] = [
     { x: x0, y: y0, z },
     { x: x0, y: y1, z },
     { x: x1, y: y1, z },
     { x: x1, y: y0, z },
     { x: x0, y: y0, z },
   ];
+  return normalizeContourWinding(points, "CCW");
 }
 
 /** Distância mínima entre dois retângulos (borda a borda). Se se sobrepõem, devolve 0. */
@@ -163,10 +196,23 @@ function isPlacementInsideSheet(
 ): boolean {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) return false;
   if (w <= 0 || h <= 0) return false;
-  if (x < -EPSILON_MM || y < -EPSILON_MM) return false;
-  if (x + w > sheetW + EPSILON_MM) return false;
-  if (y + h > sheetH + EPSILON_MM) return false;
+  const margin = CUT_LAYOUT_SAFETY_MARGIN_MM;
+  if (x < margin - EPSILON_MM || y < margin - EPSILON_MM) return false;
+  if (x + w > sheetW - margin + EPSILON_MM) return false;
+  if (y + h > sheetH - margin + EPSILON_MM) return false;
   return true;
+}
+
+function mapContourToLayoutCoordinates(
+  points: ContourPoint[],
+  sheetWidthMm: number,
+  expected: "CW" | "CCW"
+): ContourPoint[] {
+  const mapped = points.map((point) => ({
+    ...point,
+    x: toLayoutAbsoluteX(point.x, sheetWidthMm),
+  }));
+  return normalizeContourWinding(mapped, expected);
 }
 
 /** Bloco W#89 (início de operação de corte) — HARNNETT: #40=1 corte externo, #205=113 ferramenta. */
@@ -265,6 +311,7 @@ export function generateTcnForPanel(
   const zSafe = Z_SAFETY_MM; // Z de segurança no W#89 (acima do material)
 
   const sheet = sheetResult.sheet;
+  const sheetWidthMm = sheet.largura_mm;
   const dl = sheet.largura_mm;
   const dh = sheet.altura_mm;
   const ds = thicknessMm;
@@ -300,7 +347,7 @@ export function generateTcnForPanel(
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
       if (!topDrillable) continue;
       drills.push({
-        x: pl.x_mm + hole.x,
+        x: toLayoutAbsoluteX(pl.x_mm + hole.x, sheetWidthMm),
         y: pl.y_mm + hole.y,
         z: 0,
         diametro: hole.diameter,
@@ -319,7 +366,11 @@ export function generateTcnForPanel(
     const h = pl.altura_mm;
     const x = pl.x_mm;
     const y = pl.y_mm;
-    const points = buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm);
+    const points = mapContourToLayoutCoordinates(
+      buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm),
+      sheetWidthMm,
+      "CW"
+    );
     const firstPoint = points[0];
     sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zSafe));
     sideInnerLines.push(buildW2201(points, zCut));
@@ -327,13 +378,17 @@ export function generateTcnForPanel(
     const innerContours = pl.innerContours;
     if (innerContours?.length) {
       for (const rect of innerContours) {
-        const innerPoints = buildInternalContourPoints(
-          pl.x_mm + rect.x_mm,
-          pl.y_mm + rect.y_mm,
-          rect.largura_mm,
-          rect.altura_mm,
-          zCut,
-          toolRadiusMm
+        const innerPoints = mapContourToLayoutCoordinates(
+          buildInternalContourPoints(
+            pl.x_mm + rect.x_mm,
+            pl.y_mm + rect.y_mm,
+            rect.largura_mm,
+            rect.altura_mm,
+            zCut,
+            toolRadiusMm
+          ),
+          sheetWidthMm,
+          "CCW"
         );
         if (innerPoints.length > 0) {
           const first = innerPoints[0];

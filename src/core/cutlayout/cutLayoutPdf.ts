@@ -5,6 +5,7 @@
 
 import jsPDF from "jspdf";
 import type { CutLayoutResult, SheetResult } from "./cutLayoutTypes";
+import { toLayoutAbsoluteX, toLayoutPlacementX } from "./layoutCoordinateSystem";
 
 const MARGIN = 14;
 const DRAW_W = 180;
@@ -87,7 +88,7 @@ function renderSheetPage(
   doc.setTextColor(0, 0, 0);
 
   for (const pl of placements) {
-    const px = originX + pl.x_mm * scale;
+    const px = originX + toLayoutPlacementX(pl.x_mm, pl.largura_mm, sheet.largura_mm) * scale;
     const py = originY + pl.y_mm * scale;
     const pw = pl.largura_mm * scale;
     const ph = pl.altura_mm * scale;
@@ -122,7 +123,8 @@ function renderSheetPage(
     const holes = pl.holes ?? [];
     if (holes.length > 0) {
       for (const h of holes) {
-        const hx = px + h.x * scale;
+        const hxAbs = toLayoutAbsoluteX(pl.x_mm + h.x, sheet.largura_mm);
+        const hx = originX + hxAbs * scale;
         const hy = py + h.y * scale;
         const hr = Math.max(0.25, (h.diameter / 2) * scale);
         const ht = (h as { holeType?: string }).holeType;

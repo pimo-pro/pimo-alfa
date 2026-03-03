@@ -15,9 +15,9 @@ import type {
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial, OperationResult } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
+import { CUT_LAYOUT_SAFETY_MARGIN_MM } from "./layoutCoordinateSystem";
 
 const DEFAULT_KERF_MM = 3;
-const SAFETY_MARGIN_MM = 5;
 const MIN_UTILIZATION_PERCENT = 0.8;
 const MAIN_SEARCH_WINDOW = 32;
 const DEFAULT_ROTATION_WEIGHT = 0.35;
@@ -180,6 +180,30 @@ function isInsideSheet(x: number, y: number, w: number, h: number, sheet: SheetD
   return true;
 }
 
+function createUsableSheetArea(sheet: SheetDefinition, marginMm: number): SheetDefinition {
+  return {
+    ...sheet,
+    largura_mm: Math.max(1, sheet.largura_mm - marginMm * 2),
+    altura_mm: Math.max(1, sheet.altura_mm - marginMm * 2),
+  };
+}
+
+function applyFixedMarginOffset(
+  sheets: SheetResult[],
+  physicalSheet: SheetDefinition,
+  marginMm: number
+): SheetResult[] {
+  return sheets.map((s, idx) => ({
+    sheet: { ...physicalSheet },
+    placements: s.placements.map((p) => ({
+      ...p,
+      x_mm: p.x_mm + marginMm,
+      y_mm: p.y_mm + marginMm,
+      sheetIndex: idx,
+    })),
+  }));
+}
+
 function overlaps(x: number, y: number, w: number, h: number, placed: PlacedRect[], kerf: number): boolean {
   const margin = kerf / 2;
   for (const r of placed) {
@@ -193,71 +217,6 @@ function overlaps(x: number, y: number, w: number, h: number, placed: PlacedRect
     }
   }
   return false;
-}
-
-function computePlacementBounds(placements: CutPlacement[]): {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-} | null {
-  if (placements.length === 0) return null;
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  for (const p of placements) {
-    minX = Math.min(minX, p.x_mm);
-    minY = Math.min(minY, p.y_mm);
-    maxX = Math.max(maxX, p.x_mm + p.largura_mm);
-    maxY = Math.max(maxY, p.y_mm + p.altura_mm);
-  }
-  return { minX, minY, maxX, maxY };
-}
-
-function applySafetyMarginWhereCutExists(
-  placements: CutPlacement[],
-  sheet: SheetDefinition,
-  marginMm: number = SAFETY_MARGIN_MM
-): CutPlacement[] {
-  if (placements.length === 0) return placements;
-  const bounds = computePlacementBounds(placements);
-  if (!bounds) return placements;
-
-  // Regra pedida:
-  // - top <= margin => move para baixo
-  // - right >= width - margin => move para esquerda
-  // - left <= margin => move para direita
-  // - bottom >= height - margin => move para cima
-  const touchesTop = bounds.minY <= marginMm;
-  const touchesRight = bounds.maxX >= sheet.largura_mm - marginMm;
-  const touchesLeft = bounds.minX <= marginMm;
-  const touchesBottom = bounds.maxY >= sheet.altura_mm - marginMm;
-
-  const dx = (touchesLeft ? marginMm : 0) - (touchesRight ? marginMm : 0);
-  const dy = (touchesTop ? marginMm : 0) - (touchesBottom ? marginMm : 0);
-  if (Math.abs(dx) < EPS && Math.abs(dy) < EPS) return placements;
-
-  const shifted = placements.map((p) => ({
-    ...p,
-    x_mm: p.x_mm + dx,
-    y_mm: p.y_mm + dy,
-  }));
-
-  // Proteção: se a translação gerar invalidade geométrica, mantém layout original.
-  // Não altera lógica de nesting, só pós-ajuste seguro.
-  const rects: PlacedRect[] = [];
-  for (const p of shifted) {
-    if (!isInsideSheet(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, sheet)) {
-      return placements;
-    }
-    if (overlaps(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, rects, 0)) {
-      return placements;
-    }
-    rects.push({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm });
-  }
-
-  return shifted;
 }
 
 function expandPieces(pieces: CutPiece[]): CutPiece[] {
@@ -1082,7 +1041,7 @@ function layoutFromPlacements(
   const validSheets: SheetResult[] = [];
 
   for (const s of grouped) {
-    const withSafetyMargin = applySafetyMarginWhereCutExists(s.placements, sheet, SAFETY_MARGIN_MM);
+    const withSafetyMargin = s.placements;
     const valid: CutPlacement[] = [];
     const rects: PlacedRect[] = [];
     for (const p of withSafetyMargin) {
@@ -1834,7 +1793,7 @@ function simulateTrialForGroup(
 
     sheets.push({
       sheet: { ...sheet },
-      placements: applySafetyMarginWhereCutExists(placements, sheet, SAFETY_MARGIN_MM),
+      placements,
     });
   }
 
@@ -2026,6 +1985,8 @@ export function runCutLayout(
       materialId: materialId !== "material" ? materialId : sheetDef.materialId,
       materialName: groupPieces[0]?.materialName ?? sheetDef.materialName,
     };
+    const marginMm = CUT_LAYOUT_SAFETY_MARGIN_MM;
+    const placementSheet = createUsableSheetArea(sheet, marginMm);
     const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
 
     let bestRun:
@@ -2038,7 +1999,7 @@ export function runCutLayout(
     for (const trial of trials) {
       const run = simulateTrialForGroup(
         groupPieces,
-        sheet,
+        placementSheet,
         kerf,
         minUtilizationPercent,
         rotationCfg,
@@ -2096,7 +2057,7 @@ export function runCutLayout(
 
         const seededRun = simulateTrialForGroup(
           shuffledPieces,
-          sheet,
+          placementSheet,
           kerf,
           minUtilizationPercent,
           seededRotationCfg,
@@ -2108,7 +2069,7 @@ export function runCutLayout(
         const startSheets = seededRun.sheets.length > 0 ? seededRun.sheets : bestRun.sheets;
         const local = optimizeWithMetaHeuristics(
           startSheets,
-          sheet,
+          placementSheet,
           kerf,
           minUtilizationPercent,
           seededRotationCfg,
@@ -2117,7 +2078,7 @@ export function runCutLayout(
           strategyPool,
           scoreModel
         );
-        const localScore = computeSolutionMetrics(local.sheets, sheet, scoreModel).score;
+        const localScore = computeSolutionMetrics(local.sheets, placementSheet, scoreModel).score;
         globalAcceptedMoves += local.diagnostics.acceptedMoves;
         if (localScore < globalBestScore) {
           globalBestScore = localScore;
@@ -2135,7 +2096,7 @@ export function runCutLayout(
         bestRun.binHeuristic = winningBin;
       }
       if (diagnostics && isDevRuntime()) {
-        const advanced = computeSolutionMetrics(globalBestSheets, sheet, scoreModel).advanced;
+        const advanced = computeSolutionMetrics(globalBestSheets, placementSheet, scoreModel).advanced;
         diagnostics.metaHeuristics = {
           iterations: metaCfg.iterations * startCount,
           bestScore: Math.min(baselineRefScore, globalBestScore),
@@ -2166,7 +2127,7 @@ export function runCutLayout(
     }
     diagnostics?.rejectedByLimit.push(...bestRun.rejectedByLimit);
     diagnostics?.gapFillPlacements.push(...bestRun.gapFillPlacements);
-    finalSheets.push(...bestRun.sheets);
+    finalSheets.push(...applyFixedMarginOffset(bestRun.sheets, sheet, marginMm));
   }
 
   return diagnostics ? { sheets: finalSheets, diagnostics } : { sheets: finalSheets };
