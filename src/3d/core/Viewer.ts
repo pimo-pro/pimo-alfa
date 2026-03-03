@@ -1226,7 +1226,16 @@ export class Viewer {
         existing.material.dispose();
       }
     }
-    const geometry = new THREE.EdgesGeometry(mesh.geometry);
+    const bbox = new THREE.Box3().setFromBufferAttribute(mesh.geometry.getAttribute("position") as THREE.BufferAttribute);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const geometry = new THREE.EdgesGeometry(
+      new THREE.BoxGeometry(
+        Math.max(0.0005, size.x),
+        Math.max(0.0005, size.y),
+        Math.max(0.0005, size.z)
+      )
+    );
     const material = new THREE.LineBasicMaterial({
       color: new THREE.Color("#0f172a"),
       transparent: true,
