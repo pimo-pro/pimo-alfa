@@ -1,4 +1,4 @@
-name: Deploy via FTPS
+name: Deploy via SFTP
 
 on:
   push:
@@ -9,23 +9,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # 👈 ضرورية للسماح للـ bot بعمل push و tags
+      contents: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install dependencies
         run: npm install
 
-      # 👇 خطوة تنظيف Git قبل bump version — ضرورية 100%
       - name: Prepare Git for version bump
         run: |
           git config user.name "github-actions"
@@ -41,14 +40,16 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload via FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      # SFTP (porta 22). Secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD. Se a Hostinger usar outra porta (ex.: 2222), adicione secret FTP_PORT e altere a linha port abaixo para: port: ${{ secrets.FTP_PORT }}
+      - name: Upload via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: dist/
-          server-dir: /public_html/
-          dangerous-clean-slate: true
+          port: 22
+          local_path: './dist/*'
+          remote_path: '/public_html/'
+          sftp_only: true
+          delete_remote_files: true
+          sftpArgs: '-o ConnectTimeout=30 -o StrictHostKeyChecking=no'
