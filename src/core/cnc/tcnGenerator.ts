@@ -17,7 +17,7 @@
  * Furação: apenas top drilling (W#81); furos emitidos via buildDrillLines() no mesmo .tcn.
  */
 
-import type { SheetResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
+import type { SheetResult } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
 import { getSettings } from "../settings/settingsService";
 
