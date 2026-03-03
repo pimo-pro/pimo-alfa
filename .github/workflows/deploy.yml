@@ -8,14 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -25,29 +20,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Prepare Git for version bump
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "ci: auto commit before version bump" || echo "no changes"
-
-      - name: Auto bump version
-        run: |
-          npm version patch
-          git push --follow-tags
-
       - name: Build
         run: npm run build
 
-      # SFTP. Secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_PORT (Hostinger = 2222).
+      # SFTP. Secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD. Porta de teste: 65002.
       - name: Upload via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port: ${{ secrets.FTP_PORT }}
+          port: 65002
           local_path: './dist/*'
           remote_path: '/public_html/'
           sftp_only: true
