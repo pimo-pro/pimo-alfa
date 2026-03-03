@@ -40,14 +40,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      # SFTP (porta 22). Secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD. Se a Hostinger usar outra porta (ex.: 2222), adicione secret FTP_PORT e altere a linha port abaixo para: port: ${{ secrets.FTP_PORT }}
+      # SFTP. Secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_PORT (Hostinger = 2222).
       - name: Upload via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
+          port: ${{ secrets.FTP_PORT }}
           local_path: './dist/*'
           remote_path: '/public_html/'
           sftp_only: true
