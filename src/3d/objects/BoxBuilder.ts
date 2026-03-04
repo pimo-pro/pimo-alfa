@@ -89,6 +89,8 @@ const BACK_THICKNESS_M = SYSTEM_BACK_MM / 1000;
 const SHELF_WIDTH_CLEARANCE_M = 0.002;
 /** Profundidade interna antes da costa (costa 10 mm atrás). */
 const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
+/** Offset visual (1 mm) para dentro: evita Z-fighting entre prateleiras e paredes internas; não altera medidas/cutlist/CNC. */
+const SHELF_VISUAL_INSET_M = 0.001;
 const DOOR_ANIMATION_DURATION_MS = 2000;
 const DRAWER_ANIMATION_DURATION_MS = 1500;
 const DRILL_MIN_RADIUS_M = 0.0005;
@@ -153,13 +155,13 @@ function getPanelSpecs(width: number, height: number, depth: number) {
 
 /**
  * Prateleiras: DENTRO da caixa. largura = width - 2 mm, profundidade = depth - 10 mm, espessura 19 mm.
- * Posição z: centrada na profundidade útil (face interior até costa).
+ * Posição z: centrada na profundidade útil + SHELF_VISUAL_INSET_M para evitar Z-fighting com a costa.
  */
 function getShelfSpecs(width: number, height: number, depth: number, count: number) {
   const shelfWidth = Math.max(0.001, width - SHELF_WIDTH_CLEARANCE_M);
   const shelfDepth = Math.max(0.001, depth - SHELF_DEPTH_CLEARANCE_M);
   const interiorHeight = Math.max(0.001, height - 2 * THICKNESS_M);
-  const centerZ = -depth / 2 + shelfDepth / 2;
+  const centerZ = -depth / 2 + shelfDepth / 2 + SHELF_VISUAL_INSET_M;
   const specs: { size: [number, number, number]; pos: [number, number, number] }[] = [];
   if (count < 1) return specs;
   const spacing = interiorHeight / (count + 1);
@@ -749,27 +751,13 @@ function getPanelDimensionsFromGeometry(panel: THREE.Mesh, panelType: PanelType)
   return { width: size.x, height: size.y, thickness: size.z };
 }
 
-function getInwardAxisForHole(panelType: PanelType, hole: TechnicalDrillHole): THREE.Vector3 {
-  if (panelType === "top" || panelType === "bottom") {
-    if (hole.face === "fundo") return new THREE.Vector3(0, 1, 0);
-    return new THREE.Vector3(0, -1, 0);
-  }
-  if (panelType === "left" || panelType === "right") {
-    if (panelType === "left") {
-      if (hole.face === "esquerda") return new THREE.Vector3(1, 0, 0);
-      return new THREE.Vector3(-1, 0, 0);
-    }
-    // Lateral direita: rotation Y=PI + Z=PI faz a face interna ficar em -X local; entrar em -X e perfurar em +X.
-    if (hole.face === "esquerda") return new THREE.Vector3(-1, 0, 0);
-    return new THREE.Vector3(1, 0, 0);
-  }
-  // Porta (front): face "tras" = lado da dobradiça (que encosta na caixa); furo entra por essa face.
-  if (panelType === "front") {
-    if (hole.face === "tras") return new THREE.Vector3(0, 0, 1);
-    return new THREE.Vector3(0, 0, -1);
-  }
-  if (hole.face === "tras") return new THREE.Vector3(0, 0, 1);
-  return new THREE.Vector3(0, 0, -1);
+function getInwardAxisForHole(panelType: PanelType, _hole: TechnicalDrillHole): THREE.Vector3 {
+  if (panelType === "top") return new THREE.Vector3(0, -1, 0);
+  if (panelType === "bottom") return new THREE.Vector3(0, 1, 0);
+  if (panelType === "left") return new THREE.Vector3(1, 0, 0);
+  if (panelType === "right") return new THREE.Vector3(-1, 0, 0);
+  if (panelType === "front") return new THREE.Vector3(0, 0, 1);
+  return new THREE.Vector3(0, 0, 1);
 }
 
 function getHole2DLocalPosition(
@@ -1077,6 +1065,19 @@ function createPanel(
   mesh.userData.thinAxis = getThinAxisForPanel(panelType);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
+  // FrontSide: só a face externa projeta sombra; faces internas não projetam para o exterior (reduz bleeding em ângulos extremos).
+  const panelShadowSide = THREE.FrontSide;
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach((mat) => {
+      if (mat instanceof THREE.Material) {
+        mat.shadowSide = panelShadowSide;
+        mat.needsUpdate = true;
+      }
+    });
+  } else if (mesh.material instanceof THREE.Material) {
+    mesh.material.shadowSide = panelShadowSide;
+    mesh.material.needsUpdate = true;
+  }
   return mesh;
 }
 

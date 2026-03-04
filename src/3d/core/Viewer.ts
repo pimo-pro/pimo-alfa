@@ -293,7 +293,7 @@ export class Viewer {
       ...options.renderer,
       clearColor: background,
     });
-    const shadowMapSize = this.isMobile ? 512 : (options.lights?.shadowMapSize ?? 2048);
+    const shadowMapSize = this.isMobile ? 1024 : (options.lights?.shadowMapSize ?? 4096);
     this.lights = new Lights(this.sceneManager.scene, {
       ...options.lights,
       shadowMapSize,
@@ -418,7 +418,7 @@ export class Viewer {
   setMode(mode: "performance" | "showcase", turntable = false): void {
     this.currentMode = mode;
     this.turntableEnabled = mode === "showcase" && turntable;
-    this.lights.setShadowMapSize(this.isMobile ? 512 : 2048);
+    this.lights.setShadowMapSize(this.isMobile ? 1024 : 4096);
     if (mode === "showcase") {
       if (!this.composer) {
         this.initShowcaseComposer();

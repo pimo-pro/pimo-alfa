@@ -295,16 +295,22 @@ export function buildViewerDrillMarkersByPanelResult(
     cutList.find((item) => item.tipo === "porta_dupla" && /-(2|02)$/.test(String(item.id ?? ""))) ??
     firstDoorItem;
 
+  /** Filtra furos da face externa (A): no Viewer mostramos apenas os da face interna (B) para não desenhar furos no exterior da caixa. */
+  const onlyInternalFaceHoles = (holes: PanelDrillHole[]): PanelDrillHole[] =>
+    holes.filter((h) => h.face !== "A");
+
   const getHolesFor = (tipo: keyof ViewerDrillMarkersByPanel): TechnicalDrillHole[] => {
     if (tipo === "porta") {
       if (!canonicalDoorItem?.drillHoles?.length) return [];
-      return panelDrillHolesToTechnical(canonicalDoorItem.drillHoles, "tras");
+      return panelDrillHolesToTechnical(onlyInternalFaceHoles(canonicalDoorItem.drillHoles), "tras");
     }
     const item = byType.get(tipo);
     if (!item?.drillHoles?.length) return [];
     const face: DrillFace =
       tipo === "cima" ? "fundo" : tipo === "fundo" ? "cima" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
-    return panelDrillHolesToTechnical(item.drillHoles, face);
+    // lateral_direita: convenção A/B diferente — não aplicar onlyInternalFaceHoles para manter furos válidos.
+    const holesToUse = tipo === "lateral_direita" ? item.drillHoles : onlyInternalFaceHoles(item.drillHoles);
+    return panelDrillHolesToTechnical(holesToUse, face);
   };
 
   return {

@@ -13,7 +13,7 @@ export type LightsOptions = {
   fillLightColor?: number;
   /** Luz de contorno (rim) — atrás do módulo, destaca bordas. */
   rimLightIntensity?: number;
-  /** Resolução do shadow map (2048 para qualidade, 1024 para performance). */
+  /** Resolução do shadow map (4096 desktop, 1024 mobile — definido pelo Viewer). */
   shadowMapSize?: number;
   shadowBias?: number;
   shadowNormalBias?: number;
@@ -43,26 +43,28 @@ export class Lights {
       options.hemisphereIntensity ?? 0.4
     );
 
-    // Key light: frontal diagonal, cor levemente quente, ângulo suave
+    // Key light: frontal diagonal, cor levemente quente; posição e alvo para não atravessar o interior da caixa
     this.keyLight = new THREE.DirectionalLight(
       options.keyLightColor ?? 0xfff8f0,
       options.keyLightIntensity ?? 0.62
     );
-    this.keyLight.position.set(4.2, 5.5, 4.2);
+    this.keyLight.position.set(5, 6, 5);
+    this.keyLight.target.position.set(0, 0.5, 0);
+    scene.add(this.keyLight.target);
     this.keyLight.castShadow = true;
-    const shadowSize = options.shadowMapSize ?? 2048;
+    const shadowSize = options.shadowMapSize ?? 4096;
     this.keyLight.shadow.mapSize.width = shadowSize;
     this.keyLight.shadow.mapSize.height = shadowSize;
-    this.keyLight.shadow.radius = options.shadowRadius ?? 4;
-    this.keyLight.shadow.bias = options.shadowBias ?? 0.0008;
-    this.keyLight.shadow.normalBias = options.shadowNormalBias ?? 0.03;
-    // Frustum ampliado para suportar múltiplas caixas lado a lado
-    this.keyLight.shadow.camera.near = 0.1;
-    this.keyLight.shadow.camera.far = 20;
-    this.keyLight.shadow.camera.left = -4;
-    this.keyLight.shadow.camera.right = 4;
-    this.keyLight.shadow.camera.top = 3;
-    this.keyLight.shadow.camera.bottom = -2;
+    this.keyLight.shadow.radius = options.shadowRadius ?? 3;
+    this.keyLight.shadow.bias = options.shadowBias ?? 0.003;
+    this.keyLight.shadow.normalBias = options.shadowNormalBias ?? 0.12;
+    // Frustum apertado alinhado ao volume da(s) caixa(s): reduz bleeding quando a câmara está longe
+    this.keyLight.shadow.camera.near = 0.05;
+    this.keyLight.shadow.camera.far = 8;
+    this.keyLight.shadow.camera.left = -1.5;
+    this.keyLight.shadow.camera.right = 1.5;
+    this.keyLight.shadow.camera.top = 1.5;
+    this.keyLight.shadow.camera.bottom = -1.5;
 
     // Fill light: secundária suave, reduz áreas escuras, sem sombras
     this.fillLight = new THREE.DirectionalLight(

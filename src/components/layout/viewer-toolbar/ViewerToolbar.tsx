@@ -9,12 +9,8 @@ import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import { VIEWER_TOOLBAR_ITEMS } from "../../../constants/toolbarConfig";
 import type { ToolbarActionId } from "../../../constants/toolbarConfig";
-import type {
-  UltraPerformanceInternalMode,
-  ViewerBackgroundMode,
-  ViewerMaterialQuality,
-} from "../../../context/projectTypes";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
+import DisplayMenuButton from "../topbar/DisplayMenuButton";
 import PhotoModePopoverContent from "./PhotoModePopoverContent";
 
 const panelLabels: Record<"left" | "right" | "top" | "bottom" | "back", string> = {
@@ -37,18 +33,11 @@ export default function ViewerToolbar() {
   const { actions, project } = useProject();
   const { openModal } = useToolbarModal();
   const { viewerApi } = usePimoViewerContext();
-  const ultraModeEnabled = project.viewerSettings.ultraPerformanceModeOptions.enabled;
   const [photoModeOpen, setPhotoModeOpen] = useState(false);
-  const [backgroundMenuOpen, setBackgroundMenuOpen] = useState(false);
-  const [materialMenuOpen, setMaterialMenuOpen] = useState(false);
-  const [ultraModeMenuOpen, setUltraModeMenuOpen] = useState(false);
   const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
   const [piecesMenuOpen, setPiecesMenuOpen] = useState(false);
   const [pieceSearch, setPieceSearch] = useState("");
   const photoModeContainerRef = useRef<HTMLDivElement | null>(null);
-  const backgroundMenuRef = useRef<HTMLDivElement | null>(null);
-  const materialMenuRef = useRef<HTMLDivElement | null>(null);
-  const ultraModeMenuRef = useRef<HTMLDivElement | null>(null);
   const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
   const piecesMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -94,19 +83,10 @@ export default function ViewerToolbar() {
   }, [photoModeOpen]);
 
   useEffect(() => {
-    if (!photoModeOpen && !backgroundMenuOpen && !materialMenuOpen && !ultraModeMenuOpen && !visibilityMenuOpen && !piecesMenuOpen) return;
+    if (!photoModeOpen && !visibilityMenuOpen && !piecesMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!photoModeContainerRef.current?.contains(event.target as Node)) {
         setPhotoModeOpen(false);
-      }
-      if (!backgroundMenuRef.current?.contains(event.target as Node)) {
-        setBackgroundMenuOpen(false);
-      }
-      if (!materialMenuRef.current?.contains(event.target as Node)) {
-        setMaterialMenuOpen(false);
-      }
-      if (!ultraModeMenuRef.current?.contains(event.target as Node)) {
-        setUltraModeMenuOpen(false);
       }
       if (!visibilityMenuRef.current?.contains(event.target as Node)) {
         setVisibilityMenuOpen(false);
@@ -117,7 +97,7 @@ export default function ViewerToolbar() {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [photoModeOpen, backgroundMenuOpen, materialMenuOpen, ultraModeMenuOpen, visibilityMenuOpen, piecesMenuOpen]);
+  }, [photoModeOpen, visibilityMenuOpen, piecesMenuOpen]);
 
   // Cleanup apenas no unmount: desativar photo mode. Refs evitam dep de actions/viewerApi que mudam a cada render.
   useEffect(() => {
@@ -163,65 +143,10 @@ export default function ViewerToolbar() {
     }
   };
 
-  const toggleUltraPerformance = () => {
-    const next = !ultraModeEnabled;
-    actions.setViewerSettings({
-      ultraPerformanceModeOptions: {
-        ...project.viewerSettings.ultraPerformanceModeOptions,
-        enabled: next,
-      },
-    });
-  };
-
   const togglePhotoMenu = () => {
     setPhotoModeOpen((prev) => {
       const next = !prev;
       if (next) {
-        setBackgroundMenuOpen(false);
-        setMaterialMenuOpen(false);
-        setUltraModeMenuOpen(false);
-        setVisibilityMenuOpen(false);
-        setPiecesMenuOpen(false);
-      }
-      return next;
-    });
-  };
-
-  const toggleBackgroundMenu = () => {
-    setBackgroundMenuOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setPhotoModeOpen(false);
-        setMaterialMenuOpen(false);
-        setUltraModeMenuOpen(false);
-        setVisibilityMenuOpen(false);
-        setPiecesMenuOpen(false);
-      }
-      return next;
-    });
-  };
-
-  const toggleMaterialMenu = () => {
-    setMaterialMenuOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setPhotoModeOpen(false);
-        setBackgroundMenuOpen(false);
-        setUltraModeMenuOpen(false);
-        setVisibilityMenuOpen(false);
-        setPiecesMenuOpen(false);
-      }
-      return next;
-    });
-  };
-
-  const toggleUltraModeMenu = () => {
-    setUltraModeMenuOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setPhotoModeOpen(false);
-        setBackgroundMenuOpen(false);
-        setMaterialMenuOpen(false);
         setVisibilityMenuOpen(false);
         setPiecesMenuOpen(false);
       }
@@ -234,9 +159,6 @@ export default function ViewerToolbar() {
       const next = !prev;
       if (next) {
         setPhotoModeOpen(false);
-        setBackgroundMenuOpen(false);
-        setMaterialMenuOpen(false);
-        setUltraModeMenuOpen(false);
         setPiecesMenuOpen(false);
       }
       return next;
@@ -248,9 +170,6 @@ export default function ViewerToolbar() {
       const next = !prev;
       if (next) {
         setPhotoModeOpen(false);
-        setBackgroundMenuOpen(false);
-        setMaterialMenuOpen(false);
-        setUltraModeMenuOpen(false);
         setVisibilityMenuOpen(false);
       }
       return next;
@@ -276,19 +195,6 @@ export default function ViewerToolbar() {
   const isPieceHidden = (pieceId: string, panel: "left" | "right" | "top" | "bottom" | "back") => {
     const hidden = project.viewerSettings.hiddenPanels;
     return hidden.includes(pieceId) || hidden.includes(panel);
-  };
-
-  const restoreDefaultVisualMode = () => {
-    actions.setViewerSettings({
-      backgroundMode: "studio",
-      materialQuality: "standard",
-      enableReflections: false,
-      ultraPerformanceModeOptions: {
-        enabled: false,
-        mode: "balanced",
-      },
-    });
-    setUltraModeMenuOpen(false);
   };
 
   return (
@@ -336,142 +242,7 @@ export default function ViewerToolbar() {
         );
       })}
       <RoomIconButton />
-      <button
-        type="button"
-        title={ultraModeEnabled ? "Desativar Ultra Performance" : "Ativar Ultra Performance"}
-        aria-label={ultraModeEnabled ? "Desativar Ultra Performance" : "Ativar Ultra Performance"}
-        onClick={toggleUltraPerformance}
-        style={{
-          fontSize: 12,
-          opacity: viewerApi ? 1 : 0.5,
-        }}
-      >
-        <span
-          className="viewer-toolbar-icon"
-          aria-hidden
-          style={{
-            opacity: ultraModeEnabled ? 1 : 0.8,
-            fontWeight: ultraModeEnabled ? 700 : 400,
-            color: ultraModeEnabled ? "#facc15" : "inherit",
-          }}
-        >
-          ⚡
-        </span>
-      </button>
-      <div ref={backgroundMenuRef} className="viewer-toolbar-popover-anchor">
-        <button
-          type="button"
-          title="Background"
-          aria-label="Background"
-          aria-haspopup="dialog"
-          aria-expanded={backgroundMenuOpen}
-          aria-pressed={backgroundMenuOpen}
-          onClick={toggleBackgroundMenu}
-          style={{ fontSize: 12 }}
-        >
-          <span className="viewer-toolbar-icon" aria-hidden>
-            🌄
-          </span>
-        </button>
-        {backgroundMenuOpen && (
-          <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Background">
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, minWidth: 220 }}>
-              Background
-              <select
-                value={project.viewerSettings.backgroundMode}
-                onChange={(e) => actions.setViewerSettings({ backgroundMode: e.target.value as ViewerBackgroundMode })}
-                className="input input-sm"
-              >
-                <option value="studio">Studio</option>
-                <option value="white">White</option>
-                <option value="dark">Dark</option>
-                <option value="woodFloor">Wood Floor</option>
-              </select>
-            </label>
-          </div>
-        )}
-      </div>
-      <div ref={materialMenuRef} className="viewer-toolbar-popover-anchor">
-        <button
-          type="button"
-          title="Qualidade de material"
-          aria-label="Qualidade de material"
-          aria-haspopup="dialog"
-          aria-expanded={materialMenuOpen}
-          aria-pressed={materialMenuOpen}
-          onClick={toggleMaterialMenu}
-          style={{ fontSize: 12 }}
-        >
-          <span className="viewer-toolbar-icon" aria-hidden>
-            ✨
-          </span>
-        </button>
-        {materialMenuOpen && (
-          <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Qualidade de material">
-            <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, minWidth: 220 }}>
-              Qualidade de material
-              <select
-                value={project.viewerSettings.materialQuality}
-                onChange={(e) => actions.setViewerSettings({ materialQuality: e.target.value as ViewerMaterialQuality })}
-                className="input input-sm"
-              >
-                <option value="standard">Standard</option>
-                <option value="premium">Premium (PBR)</option>
-                <option value="lacquered">Lacado</option>
-              </select>
-            </label>
-          </div>
-        )}
-      </div>
-      <div ref={ultraModeMenuRef} className="viewer-toolbar-popover-anchor">
-        <button
-          type="button"
-          title="Modo Ultra"
-          aria-label="Modo Ultra"
-          aria-haspopup="dialog"
-          aria-expanded={ultraModeMenuOpen}
-          aria-pressed={ultraModeMenuOpen}
-          onClick={toggleUltraModeMenu}
-          style={{ fontSize: 12 }}
-        >
-          <span className="viewer-toolbar-icon" aria-hidden>
-            ⚙
-          </span>
-        </button>
-        {ultraModeMenuOpen && (
-          <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Modo Ultra">
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 240 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12 }}>
-                Modo Ultra
-                <select
-                  value={project.viewerSettings.ultraPerformanceModeOptions.mode}
-                  onChange={(e) =>
-                    actions.setViewerSettings({
-                      ultraPerformanceModeOptions: {
-                        ...project.viewerSettings.ultraPerformanceModeOptions,
-                        mode: e.target.value as UltraPerformanceInternalMode,
-                      },
-                    })
-                  }
-                  className="input input-sm"
-                >
-                  <option value="balanced">Balanced</option>
-                  <option value="flat2">Flat 2.0</option>
-                  <option value="aggressive">Aggressive</option>
-                </select>
-              </label>
-              <button
-                type="button"
-                className="button button-ghost"
-                style={{ fontSize: 12, padding: "6px 10px", width: "100%" }}
-                onClick={restoreDefaultVisualMode}
-              >
-                Restaurar visual padrão
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <DisplayMenuButton />
       <div ref={visibilityMenuRef} className="viewer-toolbar-popover-anchor">
         <button
           type="button"

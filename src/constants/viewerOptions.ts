@@ -16,9 +16,9 @@ export const DEFAULT_VIEWER_OPTIONS: Omit<ViewerOptions, "background" | "skipIni
     keyLightIntensity: 0.62,
     fillLightIntensity: 0.18,
     rimLightIntensity: 0.14,
-    shadowMapSize: 2048,
-    shadowBias: 0.0008,
-    shadowNormalBias: 0.03,
+    shadowMapSize: 4096,
+    shadowBias: 0.003,
+    shadowNormalBias: 0.12,
     shadowRadius: 4,
   },
   camera: {
@@ -30,7 +30,7 @@ export const DEFAULT_VIEWER_OPTIONS: Omit<ViewerOptions, "background" | "skipIni
   controls: {
     enableDamping: true,
     dampingFactor: 0.08,
-    minDistance: 1.0,
+    minDistance: 0.01,
     maxDistance: 40,
     minPolarAngle: Math.PI * 0.02,
     maxPolarAngle: Math.PI * 0.98,
