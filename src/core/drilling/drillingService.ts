@@ -40,18 +40,43 @@ type PieceInput = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const SENSYS_8645I_C00 = {
+/**
+ * Modelo 2D dobradiça Sensys 8645i (lado da porta):
+ * - Copo: Ø35 mm, profundidade 13 mm, distância da borda 3 mm (inset) → centro do copo ≈ 22.5 mm.
+ * - Dois furos de fixação a 52 mm entre si.
+ * Usado para gerar furos na porta (master); laterais copiam posições.
+ */
+export const SENSYS_8645I_DOOR = {
   canecoDiametroMm: 35,
   canecoProfundidadeMm: 13,
+  /** Distância da borda da porta ao centro do copo (mm). Padrão industrial 22.5 (≈ 3 mm inset + semi-diâmetro). */
   canecoCentroBordaMm: 22.5,
+  distânciaBordaMm: 3,
   fixacaoPortaDiametroMm: 10,
   fixacaoPortaProfundidadeMm: 12,
   fixacaoPortaCentroBordaMm: 28,
   fixacaoPortaEntreCentrosMm: 52,
-  calcoLateralBordaMm: 37,
-  uniaoLateralBordaMm: 53,
+} as const;
+
+/**
+ * Base C00 (lado da caixa): retângulo 3D simples, 2 furos a 32 mm entre si, 37 mm da borda, altura 5–8 mm.
+ */
+export const SENSYS_BASE_C00 = {
+  distanciaDaBordaMm: 37,
+  distanciaEntreFurosCalcoMm: 32,
+  alturaPeçaMm: 6,
   lateralDiametroMm: 5,
   lateralProfundidadeMm: 12,
+  uniaoLateralBordaMm: 53,
+} as const;
+
+/** @deprecated Use SENSYS_8645I_DOOR e SENSYS_BASE_C00 */
+const SENSYS_8645I_C00 = {
+  ...SENSYS_8645I_DOOR,
+  calcoLateralBordaMm: SENSYS_BASE_C00.distanciaDaBordaMm,
+  uniaoLateralBordaMm: SENSYS_BASE_C00.uniaoLateralBordaMm,
+  lateralDiametroMm: SENSYS_BASE_C00.lateralDiametroMm,
+  lateralProfundidadeMm: SENSYS_BASE_C00.lateralProfundidadeMm,
 } as const;
 
 function pushHole(
@@ -148,8 +173,8 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   const offsets = getHingeYPositions(piece.altura, numHinges, rules);
   if (offsets.length === 0) return;
 
-  const hingeSide = piece.hingeSide === "left" ? "left" : "right";
-  const xCaneco = hingeSide === "left" ? distCentroCaneco : piece.largura - distCentroCaneco;
+  const hingeSide = piece.hingeSide === "left" || piece.hingeSide === "right" ? piece.hingeSide : "left";
+  const xCaneco = hingeSide === "left" ? piece.largura - distCentroCaneco : piece.largura - distCentroCaneco;
   const diametroCaneco = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : SENSYS_8645I_C00.canecoDiametroMm;
   const profundidadeCaneco = Math.min(
     piece.espessura,
@@ -163,7 +188,7 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
     ? Number(cfg.distanciaEntreFurosFixacao)
     : SENSYS_8645I_C00.fixacaoPortaEntreCentrosMm;
   const halfFix = distEntreCentrosFixacao / 2;
-  const xFixacao = hingeSide === "left" ? distCentroFixacao : piece.largura - distCentroFixacao;
+  const xFixacao = hingeSide === "left" ? piece.largura - distCentroFixacao : piece.largura - distCentroFixacao;
   const diametroFixacao = Number(cfg.diametroFurosFixacao) > 0
     ? Number(cfg.diametroFurosFixacao)
     : SENSYS_8645I_C00.fixacaoPortaDiametroMm;

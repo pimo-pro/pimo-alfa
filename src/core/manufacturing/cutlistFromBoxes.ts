@@ -43,20 +43,32 @@ export function cutlistComPrecoFromBox(
     (panel) => panel.tipo === "porta_dupla" || panel.tipo === "porta_simples" || panel.tipo === "porta_correr"
   );
   const doorHeightMm = firstDoorPanel?.altura_mm ?? (modelo.portas.length > 0 ? modelo.portas[0].altura_mm : undefined);
+  const doorsLayer = box.doorsLayer ?? [];
+  const hasDoorLeft = doorsLayer.some((d) => d.hingeSide === "left");
+  const hasDoorRight = doorsLayer.some((d) => d.hingeSide === "right");
 
+  let doorPanelIndex = 0;
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
       return;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
+    const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
+    const isLateralLeft = p.tipo === "lateral_esquerda";
+    const isLateralRight = p.tipo === "lateral_direita";
+    const hingeSide = isDoor && doorsLayer[doorPanelIndex] ? doorsLayer[doorPanelIndex].hingeSide : undefined;
+    if (isDoor) doorPanelIndex += 1;
+    const doorHeightForLateral =
+      isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
     const drillingResult = buildPanelDrillingResult(
       {
         tipo: p.tipo,
         larguraMm: p.largura_mm,
         alturaMm: p.altura_mm,
         espessuraMm: p.espessura_mm,
-        doorHeightMm,
+        doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
+        hingeSide,
       },
       effRules
     );

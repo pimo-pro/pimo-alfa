@@ -1101,7 +1101,9 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
 
   const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
   const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
-  doorSpecs.forEach((spec) => root.add(createDoorObject(spec, baseMaterial, drillMap.porta)));
+  doorSpecs.forEach((spec, doorIndex) =>
+    root.add(createDoorObject(spec, baseMaterial, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta))
+  );
   drawerSpecs.forEach((spec) => root.add(createDrawerObject(spec, baseMaterial)));
 
   root.position.set(0, 0, 0);
@@ -1311,7 +1313,9 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
 
   const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
   const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
-  doorSpecs.forEach((spec) => group.add(createDoorObject(spec, mat as THREE.Material, drillMap.porta)));
+  doorSpecs.forEach((spec, doorIndex) =>
+    group.add(createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta))
+  );
   drawerSpecs.forEach((spec) => group.add(createDrawerObject(spec, mat as THREE.Material)));
 
   group.updateMatrixWorld(true);

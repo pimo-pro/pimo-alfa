@@ -67,7 +67,10 @@ export interface TechnicalDrillHole {
   face: DrillFace;
 }
 
-export type ViewerDrillMarkersByPanel = Record<DrillPanelKey, TechnicalDrillHole[]>;
+export interface ViewerDrillMarkersByPanel extends Record<DrillPanelKey, TechnicalDrillHole[]> {
+  /** Furos por porta (índice = ordem da porta). Quando definido, cada porta usa apenas os seus furos. */
+  portaPerDoor?: TechnicalDrillHole[][];
+}
 
 export interface DrillHole {
   x: number;
