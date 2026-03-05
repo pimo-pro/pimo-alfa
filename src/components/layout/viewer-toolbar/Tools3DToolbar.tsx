@@ -257,7 +257,30 @@ export default function Tools3DToolbar({
           </div>
         )}
       </div>
-      
+
+      <button
+        type="button"
+        className="viewer-action-icon"
+        title={project.viewerSettings.highlightEnabled ? "Highlight ON (clique para desativar)" : "Highlight OFF (clique para ativar)"}
+        aria-label={project.viewerSettings.highlightEnabled ? "Desativar highlight" : "Ativar highlight"}
+        aria-pressed={project.viewerSettings.highlightEnabled}
+        onClick={() => actions.toggleHighlight()}
+        style={{
+          ...toolbarButtonStyle,
+          background: project.viewerSettings.highlightEnabled ? "rgba(77, 163, 255, 0.25)" : "transparent",
+        }}
+        onMouseEnter={(e) => {
+          if (!project.viewerSettings.highlightEnabled) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+        }}
+        onMouseLeave={(e) => {
+          if (!project.viewerSettings.highlightEnabled) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 3l2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1z" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      </button>
       
       {selectedBoxId && (
         <>

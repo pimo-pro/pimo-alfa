@@ -69,6 +69,7 @@ const defaultViewerSettings: ViewerSettings = {
   materialQuality: "standard",
   enableReflections: false,
   photoModeEnabled: false,
+  highlightEnabled: false,
   ultraPerformanceModeOptions: {
     enabled: false,
     mode: "balanced",

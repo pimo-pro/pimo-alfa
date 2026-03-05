@@ -56,6 +56,7 @@ import {
   type RoomBounds,
   type WallEntryForViewer,
 } from "../room/RoomManager";
+import { HighlightManager } from "./HighlightManager";
 import {
   applyVisualMaterialToMesh as applyVisualMaterialToMeshV2,
   type VisualMaterial,
@@ -206,6 +207,9 @@ export class Viewer {
   /** Outline da parede selecionada (Room Box). */
   private wallSelectionOutline: THREE.BoxHelper | null = null;
   private wallSelectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
+  /** Highlight por mesh (hover + seleção): portas, gavetas, painéis, furos. Só ativo quando highlightEnabled. */
+  private highlightManager: HighlightManager | null = null;
+  private highlightEnabled = false;
   /** Gizmo para mover e rotacionar paredes (handles X/Z e rotação). */
   private wallGizmo: WallGizmo | null = null;
   private wallGizmoDragging = false;
@@ -330,6 +334,8 @@ export class Viewer {
     this.wallSelectionOutline.visible = false;
     this.sceneManager.scene.add(this.wallSelectionOutline);
 
+    this.highlightManager = new HighlightManager(this.sceneManager.scene);
+
     this.roomBuilder = new RoomBuilder();
     this.sceneManager.add(this.roomBuilder.getGroup());
 
@@ -402,7 +408,7 @@ export class Viewer {
 
     this.rendererManager.renderer.domElement.addEventListener("click", this.handleCanvasClick);
     this.rendererManager.renderer.domElement.addEventListener("dblclick", this.handleCanvasDoubleClick);
-    this.rendererManager.renderer.domElement.addEventListener("pointerdown", this.handleCanvasPointerDown);
+    this.rendererManager.renderer.domElement.addEventListener("pointerdown", this.handleCanvasPointerDown, true);
     this.rendererManager.renderer.domElement.addEventListener("pointermove", this.handleCanvasPointerMove);
     this.rendererManager.renderer.domElement.addEventListener("pointerup", this.handleCanvasPointerUp);
     this.rendererManager.renderer.domElement.addEventListener("pointerleave", this.handleCanvasPointerLeave);
@@ -1206,6 +1212,12 @@ export class Viewer {
     this.applyExplodedViewForAllBoxes();
   }
 
+  setHighlightEnabled(enabled: boolean): void {
+    this.highlightEnabled = Boolean(enabled);
+    this.highlightManager?.setEnabled(this.highlightEnabled);
+    this.applyPanelVisibilityForAllBoxes();
+  }
+
   getExplodedViewEnabled(): boolean {
     return this.explodedViewEnabled;
   }
@@ -1442,7 +1454,7 @@ export class Viewer {
       overlay.userData.isPanelEdgeOverlay = true;
       overlay.raycast = () => null;
       mesh.add(overlay);
-      overlay.visible = visible;
+      overlay.visible = visible && !this.highlightEnabled;
     } else {
       const isDoor =
         (mesh.name && mesh.name.startsWith("door-leaf-")) ||
@@ -1476,7 +1488,7 @@ export class Viewer {
         overlay.userData.isPanelEdgeOverlay = true;
         overlay.raycast = () => null;
         mesh.add(overlay);
-        overlay.visible = visible;
+        overlay.visible = visible && !this.highlightEnabled;
       } else if (isDoorOrDrawerOrShelf && mesh.geometry) {
         const geometry = new THREE.EdgesGeometry(mesh.geometry, Viewer.FALLBACK_EDGES_ANGLE_DEG);
         const material = Viewer.getPanelEdgeOverlayMaterial();
@@ -1484,7 +1496,7 @@ export class Viewer {
         overlay.userData.isPanelEdgeOverlay = true;
         overlay.raycast = () => null;
         mesh.add(overlay);
-        overlay.visible = visible;
+        overlay.visible = visible && !this.highlightEnabled;
       }
     }
   }
@@ -3154,6 +3166,18 @@ export class Viewer {
       this.suppressNextCanvasClick = false;
       return;
     }
+    if (this.highlightEnabled && this.highlightManager) {
+      const hits = this.getHighlightIntersects(event);
+      const mesh = this.highlightManager.getSelectableMeshFromIntersects(hits);
+      if (mesh) {
+        this.highlightManager.setSelected(mesh);
+        const boxId = this.getBoxIdByMesh(mesh);
+        if (boxId != null) this.setSelectedBox(boxId);
+        this.onRoomElementSelected?.(null);
+        this.onWallSelected?.(null);
+        return;
+      }
+    }
     if (this.placementMode && this.onRoomElementPlaced) {
       const hit = this.getWallHitAtPointer(event);
       if (hit) {
@@ -3231,6 +3255,21 @@ export class Viewer {
       clientX: event.clientX,
       clientY: event.clientY,
     });
+    if (event.button === 0 && this.highlightEnabled && this.highlightManager) {
+      const hits = this.getHighlightIntersects(event);
+      const mesh = this.highlightManager.getSelectableMeshFromIntersects(hits);
+      if (mesh) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.highlightManager.setSelected(mesh);
+        const boxId = this.getBoxIdByMesh(mesh);
+        if (boxId != null) this.setSelectedBox(boxId);
+        this.onRoomElementSelected?.(null);
+        this.onWallSelected?.(null);
+        this.suppressNextCanvasClick = true;
+        return;
+      }
+    }
     if (event.button === 0) {
       const boxId = this.getBoxIdAtPointer(event);
       if (boxId != null && boxId !== this.selectedBoxId) {
@@ -3296,11 +3335,20 @@ export class Viewer {
       gizmoHits: this.getTransformGizmoIntersections(event),
     });
     if (this.transformControlsDragging) return;
+    if (this.highlightEnabled && this.highlightManager) {
+      const hits = this.getHighlightIntersects(event);
+      const mesh = this.highlightManager.getSelectableMeshFromIntersects(hits);
+      this.highlightManager.setHovered(mesh);
+      const boxId = mesh ? this.getBoxIdByMesh(mesh) : null;
+      this.setHoveredBox(boxId);
+      return;
+    }
     const id = this.getBoxIdAtPointer(event);
     this.setHoveredBox(id);
   };
 
   private handleCanvasPointerLeave = () => {
+    if (this.highlightEnabled && this.highlightManager) this.highlightManager.setHovered(null);
     this.setHoveredBox(null);
   };
 
@@ -3694,6 +3742,27 @@ export class Viewer {
     this.refreshOutlineTarget();
   }
 
+  /** Raízes para raycaster do highlight (caixas + sala). */
+  private getHighlightRaycastRoots(): THREE.Object3D[] {
+    const roots: THREE.Object3D[] = [];
+    this.boxes.forEach((entry) => roots.push(entry.mesh));
+    roots.push(this.roomBuilder.getGroup());
+    return roots;
+  }
+
+  private getHighlightIntersects(event: { clientX: number; clientY: number }): THREE.Intersection[] {
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return [];
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.pointer.set(x, y);
+    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
+    this.raycaster.layers.set(0);
+    const roots = this.getHighlightRaycastRoots();
+    return this.raycaster.intersectObjects(roots, true);
+  }
+
   private getBoxIdAtPointer(event: { clientX: number; clientY: number }) {
     const canvas = this.rendererManager.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
@@ -3872,6 +3941,8 @@ export class Viewer {
         this.selectionOutlineMaterial.opacity = Math.max(0, Math.min(1, this.outlineCurrentOpacity));
         this.selectionOutlineMaterial.needsUpdate = true;
       }
+
+      this.highlightManager?.update();
 
       if (this.reflectionsEnabled) {
         this.reflectionFrameCounter += 1;
@@ -4264,7 +4335,7 @@ export class Viewer {
     const canvas = this.rendererManager.renderer.domElement;
     canvas.removeEventListener("click", this.handleCanvasClick);
     canvas.removeEventListener("dblclick", this.handleCanvasDoubleClick);
-    canvas.removeEventListener("pointerdown", this.handleCanvasPointerDown);
+    canvas.removeEventListener("pointerdown", this.handleCanvasPointerDown, true);
     canvas.removeEventListener("pointermove", this.handleCanvasPointerMove);
     canvas.removeEventListener("pointerup", this.handleCanvasPointerUp);
     canvas.removeEventListener("pointerleave", this.handleCanvasPointerLeave);
@@ -4299,6 +4370,10 @@ export class Viewer {
       }
       this.wallSelectionOutline = null;
       this.wallSelectionOutlineMaterial = null;
+    }
+    if (this.highlightManager) {
+      this.highlightManager.dispose();
+      this.highlightManager = null;
     }
     if (this.dimensionsOverlayLines) {
       this.dimensionsOverlayLines.geometry.dispose();

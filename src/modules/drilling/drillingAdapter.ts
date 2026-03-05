@@ -19,7 +19,9 @@ export type PanelDrillingInput = {
   alturaMm: number;
   espessuraMm: number;
   doorHeightMm?: number;
-  hingeSide?: "left" | "right";
+  /** Largura da porta (mm). Para hingeSide top/bottom: posições ao longo da largura; usado em cima/fundo para copiar da porta. */
+  doorWidthMm?: number;
+  hingeSide?: "left" | "right" | "top" | "bottom";
 };
 
 export type PanelDrillingOutput = {
@@ -79,6 +81,30 @@ function getHingePositionsFromDoorHeight(
 
   const centerOffset = (lateralHeightMm - doorHeightMm) / 2;
   return doorPositions.map((y) => Math.max(yMinSafe, Math.min(yMaxSafe, y + centerOffset)));
+}
+
+/** Posições X (mm) para furação top/bottom: porta = master, painel cima/fundo copia. Mesma lógica que getHingePositionsFromDoorHeight mas ao longo da largura. */
+function getHingePositionsFromDoorWidth(
+  rules: RulesConfig,
+  doorWidthMm: number,
+  panelWidthMm: number
+): number[] {
+  if (!Number.isFinite(doorWidthMm) || doorWidthMm <= 0) return [];
+  const numHinges = rules.furos?.tecnicos?.dobradica?.numeroPorPorta ?? 2;
+  const doorPositions = getHingeYPositions(doorWidthMm, numHinges, rules);
+  if (doorPositions.length === 0) return [];
+  if (!Number.isFinite(panelWidthMm) || panelWidthMm <= 0) return doorPositions;
+
+  const margem = MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM;
+  const xMinPanel = margem;
+  const xMaxPanel = Math.max(xMinPanel, panelWidthMm - margem);
+  const distEntreCalco = rules.furos?.tecnicos?.dobradica_fixacao?.distanciaEntreFurosCalco ?? 32;
+  const halfDistHoles = distEntreCalco / 2;
+  const xMinSafe = xMinPanel + halfDistHoles;
+  const xMaxSafe = Math.max(xMinSafe, xMaxPanel - halfDistHoles);
+
+  const centerOffset = (panelWidthMm - doorWidthMm) / 2;
+  return doorPositions.map((x) => Math.max(xMinSafe, Math.min(xMaxSafe, x + centerOffset)));
 }
 
 /** Mapeia DrillFace (geometria) para face do painel A/B (A = frente/cima/exterior, B = fundo/tras/interior). */
@@ -234,15 +260,32 @@ export function buildPanelDrillingResult(
 
   const isLateral = input.tipo === "lateral_esquerda" || input.tipo === "lateral_direita";
   const isDoor = input.tipo === "porta_simples" || input.tipo === "porta_dupla" || input.tipo === "porta_correr";
+  const isTopPanel = input.tipo === "cima";
+  const isBottomPanel = input.tipo === "fundo";
   const distEntreFixacao = rules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco;
+  const numHinges = rules.furos.tecnicos.dobradica.numeroPorPorta;
 
   let hingePositions: number[] = [];
+  /* Laterais (left/right): posições Y copiadas da altura da porta. */
   if (isLateral && Number.isFinite(input.doorHeightMm)) {
     const lateralPositions = getHingePositionsFromDoorHeight(rules, Number(input.doorHeightMm), input.alturaMm);
     hingePositions = sanitizeHingePositions(lateralPositions, input.alturaMm, distEntreFixacao);
   } else if (isDoor) {
-    const rawDoorHinges = getHingeYPositions(input.alturaMm, rules.furos.tecnicos.dobradica.numeroPorPorta, rules);
-    hingePositions = sanitizeHingePositions(rawDoorHinges, input.alturaMm, distEntreFixacao);
+    /* Porta: top/bottom = posições ao longo da largura (X); left/right = ao longo da altura (Y). */
+    if (input.hingeSide === "top" || input.hingeSide === "bottom") {
+      const rawDoorHinges = getHingeYPositions(input.larguraMm, numHinges, rules);
+      hingePositions = sanitizeHingePositions(rawDoorHinges, input.larguraMm, distEntreFixacao);
+    } else {
+      const rawDoorHinges = getHingeYPositions(input.alturaMm, numHinges, rules);
+      hingePositions = sanitizeHingePositions(rawDoorHinges, input.alturaMm, distEntreFixacao);
+    }
+  } else if ((isTopPanel && input.hingeSide === "top") || (isBottomPanel && input.hingeSide === "bottom")) {
+    /* Painel cima/fundo: posições X copiadas da largura da porta (porta = master). Fallback: usar largura do painel. */
+    const refWidthMm = Number.isFinite(input.doorWidthMm) ? Number(input.doorWidthMm) : input.larguraMm;
+    if (Number.isFinite(refWidthMm) && refWidthMm > 0) {
+      const panelPositions = getHingePositionsFromDoorWidth(rules, refWidthMm, input.larguraMm);
+      hingePositions = sanitizeHingePositions(panelPositions, input.larguraMm, distEntreFixacao);
+    }
   }
 
   let furacoesTecnicas: TechnicalDrillHole[] = [];

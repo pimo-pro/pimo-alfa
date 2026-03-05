@@ -46,6 +46,9 @@ export function cutlistComPrecoFromBox(
   const doorsLayer = box.doorsLayer ?? [];
   const hasDoorLeft = doorsLayer.some((d) => d.hingeSide === "left");
   const hasDoorRight = doorsLayer.some((d) => d.hingeSide === "right");
+  const hasDoorTop = doorsLayer.some((d) => d.hingeSide === "top");
+  const hasDoorBottom = doorsLayer.some((d) => d.hingeSide === "bottom");
+  const doorWidthMm = firstDoorPanel?.largura_mm;
 
   let doorPanelIndex = 0;
   modelo.paineis.forEach((p) => {
@@ -57,10 +60,21 @@ export function cutlistComPrecoFromBox(
     const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
     const isLateralLeft = p.tipo === "lateral_esquerda";
     const isLateralRight = p.tipo === "lateral_direita";
-    const hingeSide = isDoor && doorsLayer[doorPanelIndex] ? doorsLayer[doorPanelIndex].hingeSide : undefined;
+    const isTopPanel = p.tipo === "cima";
+    const isBottomPanel = p.tipo === "fundo";
+    const hingeSide =
+      isDoor && doorsLayer[doorPanelIndex]
+        ? doorsLayer[doorPanelIndex].hingeSide
+        : isTopPanel && hasDoorTop
+          ? "top"
+          : isBottomPanel && hasDoorBottom
+            ? "bottom"
+            : undefined;
     if (isDoor) doorPanelIndex += 1;
     const doorHeightForLateral =
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
+    const doorWidthForTopBottom =
+      (isTopPanel && hasDoorTop) || (isBottomPanel && hasDoorBottom) ? doorWidthMm : undefined;
     const drillingResult = buildPanelDrillingResult(
       {
         tipo: p.tipo,
@@ -68,6 +82,7 @@ export function cutlistComPrecoFromBox(
         alturaMm: p.altura_mm,
         espessuraMm: p.espessura_mm,
         doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
+        doorWidthMm: doorWidthForTopBottom,
         hingeSide,
       },
       effRules

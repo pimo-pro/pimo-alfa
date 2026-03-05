@@ -10,7 +10,7 @@ export interface DoorLayerItem {
   materialId?: string;
   openDirection: Exclude<LayerOpenDirection, "pull">;
   isOpen: boolean;
-  hingeSide: "left" | "right";
+  hingeSide: "left" | "right" | "top" | "bottom";
   pivot: "left-edge" | "right-edge" | "top-edge" | "bottom-edge";
   posX: number;
   posY: number;

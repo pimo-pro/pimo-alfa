@@ -42,6 +42,8 @@ export type ViewerSettings = {
   materialQuality: ViewerMaterialQuality;
   enableReflections: boolean;
   photoModeEnabled: boolean;
+  /** Highlight 3D: hover/click em elementos selecionáveis (portas, gavetas, painéis, furos). */
+  highlightEnabled: boolean;
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;
 };
 
@@ -247,6 +249,8 @@ export type ViewerApi = {
   getSelectedBoxScreenPosition: () => { x: number; y: number } | null;
   /** Maior X (borda direita) das caixas no viewer, em metros. Usado para posicionar nova caixa ao lado. */
   getRightmostX: () => number;
+  /** Ativa/desativa highlight por mesh (hover + seleção). */
+  setHighlightEnabled?: (_enabled: boolean) => void;
 };
 
 /** Snapshot da sala (paredes + seleção) para persistir com o projeto. */
@@ -403,6 +407,8 @@ export interface ProjectActions {
   setActiveTool: (_mode: "select" | "move" | "rotate") => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */
   setViewerSettings: (_partial: Partial<ViewerSettings>) => void;
+  /** Alterna highlight 3D (hover/click em elementos). */
+  toggleHighlight: () => void;
   /** Atualiza regras dinâmicas; guarda no LocalStorage e força recalcular caixas. */
   updateRules: (_rules: RulesConfig) => void;
   /** Define o perfil de regras ativo; recalcula todas as caixas. */

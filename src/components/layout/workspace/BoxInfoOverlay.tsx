@@ -1,0 +1,41 @@
+import { useProject } from "../../../context/useProject";
+import { useSelectedBoxInfo } from "../../../hooks/useSelectedBoxInfo";
+
+/**
+ * Overlay no canto inferior esquerdo da área de visualização 3D (viewport).
+ * Exibe apenas texto: L, A, P e rotação da caixa selecionada.
+ * Deve ser filho direto do container do viewport (position: relative) para position: absolute funcionar corretamente.
+ */
+export default function BoxInfoOverlay() {
+  const { project, viewerSync } = useProject();
+  const isSelectMode = (project.activeViewerTool ?? "select") === "select";
+  const info = useSelectedBoxInfo(project, viewerSync);
+
+  if (!isSelectMode || !info) return null;
+
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        bottom: 10,
+        left: 10,
+        zIndex: 5,
+        pointerEvents: "none",
+        fontSize: 12,
+        color: "#fff",
+        background: "none",
+        padding: 0,
+        margin: 0,
+        fontFamily: "var(--font-sans, system-ui, sans-serif)",
+        lineHeight: 1.4,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <div>L {info.L.toFixed(2)} m</div>
+      <div>A {info.A.toFixed(2)} m</div>
+      <div>P {info.P.toFixed(2)} m</div>
+      <div>Rotação: {info.rotationDeg.toFixed(0)}°</div>
+    </div>
+  );
+}

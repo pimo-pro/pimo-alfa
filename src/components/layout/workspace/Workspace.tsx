@@ -24,6 +24,7 @@ import { useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
 import GerarArquivoModal from "../right-panel/GerarArquivoModal";
+import BoxInfoOverlay from "./BoxInfoOverlay";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -264,14 +265,11 @@ export default function Workspace({
     }
   }, [lockEnabled, viewerSync, project.selectedWorkspaceBoxId, actions]);
 
-const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: number; height: number; depth: number } | null>(null);
-  const [selectedBoxOverlayPosition, setSelectedBoxOverlayPosition] = useState<{ x: number; y: number } | null>(null);
-  const isSelectMode = (project.activeViewerTool ?? "select") === "select";
-  const hasShownViewerReadyToastRef = useRef(false);
+const hasShownViewerReadyToastRef = useRef(false);
 
   useEffect(() => {
-    viewerSync.setDimensionsOverlayVisible(isSelectMode);
-  }, [isSelectMode, viewerSync]);
+    viewerSync.setDimensionsOverlayVisible(false);
+  }, [viewerSync]);
 
   useEffect(() => {
     const settings = project.viewerSettings;
@@ -294,6 +292,7 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     viewerApi.setPhotoModeEnabled?.(settings.photoModeEnabled);
     viewerApi.setExplodedViewEnabled?.(settings.explodedViewEnabled);
     viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
+    viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
     if (viewerApi.setUltraPerformanceModeOptions) {
       viewerApi.setUltraPerformanceModeOptions(settings.ultraPerformanceModeOptions);
     } else {
@@ -304,66 +303,7 @@ const [selectedBoxDimensions, setSelectedBoxDimensions] = useState<{ width: numb
     viewerApi,
   ]);
 
-// Overlay de dimensões: cache em refs para evitar loop (setState nos "last" recriava o callback e retriggava o useEffect).
-  const lastBoxIdRef = useRef<string | null>(null);
-  const lastDimensionsRef = useRef<{ width: number; height: number; depth: number } | null>(null);
-  const lastOverlayPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const rafIdRef = useRef<number | null>(null);
-  const updateOverlayPositionRef = useRef<() => void>(() => {});
-
-  const updateOverlayPosition = useCallback(() => {
-    if (!isSelectMode || !viewerSync) return;
-
-    const currentBoxId = projectRef.current.selectedWorkspaceBoxId;
-    const currentDimensions = viewerSync.getSelectedBoxDimensions();
-    const currentOverlayPosition = viewerSync.getSelectedBoxScreenPosition();
-
-    const lastBoxId = lastBoxIdRef.current;
-    const lastDimensions = lastDimensionsRef.current;
-    const lastOverlayPosition = lastOverlayPositionRef.current;
-
-    const boxChanged = currentBoxId !== lastBoxId;
-    const dimensionsChanged = currentDimensions?.width !== lastDimensions?.width ||
-      currentDimensions?.height !== lastDimensions?.height ||
-      currentDimensions?.depth !== lastDimensions?.depth;
-    const positionChanged = currentOverlayPosition?.x !== lastOverlayPosition?.x ||
-      currentOverlayPosition?.y !== lastOverlayPosition?.y;
-
-    if (boxChanged || dimensionsChanged || positionChanged) {
-      if (currentDimensions && currentOverlayPosition) {
-        setSelectedBoxDimensions(currentDimensions);
-        setSelectedBoxOverlayPosition(currentOverlayPosition);
-      } else {
-        setSelectedBoxDimensions(null);
-        setSelectedBoxOverlayPosition(null);
-      }
-      lastBoxIdRef.current = currentBoxId;
-      lastDimensionsRef.current = currentDimensions;
-      lastOverlayPositionRef.current = currentOverlayPosition;
-
-      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = requestAnimationFrame(() => {
-        rafIdRef.current = null;
-        updateOverlayPositionRef.current();
-      });
-    }
-  }, [isSelectMode, viewerSync]);
-
-  updateOverlayPositionRef.current = updateOverlayPosition;
-
-  useEffect(() => {
-    if (isSelectMode) {
-      updateOverlayPosition();
-    }
-    return () => {
-      if (rafIdRef.current != null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-    };
-  }, [isSelectMode, updateOverlayPosition]);
-
-  const projectRef = useRef(project);
+const projectRef = useRef(project);
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
@@ -501,6 +441,7 @@ return (
               overflow: "hidden",
             }}
           />
+          <BoxInfoOverlay />
           {!viewerApi.viewerReady && (
             <div className="workspace-loading-overlay" aria-live="polite">
               <span className="workspace-loading-spinner" aria-hidden="true" />
@@ -553,49 +494,6 @@ return (
             </div>
           )}
         </div>
-{isSelectMode && (selectedBoxDimensions || project.selectedWorkspaceBoxId) && selectedBoxOverlayPosition && (() => {
-            const selectedBox = project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId);
-            const rotacaoY_rad = selectedBox?.rotacaoY ?? 0;
-            const rotacaoGraus = rotacaoY_rad * (180 / Math.PI);
-const { x, y } = selectedBoxOverlayPosition;
-            return (
-<div
-                className="dimensions-overlay"
-                style={{
-                  position: "absolute",
-                  left: x,
-                  top: y - 4,
-                  transform: "translate(-50%, -115%)",
-                  pointerEvents: "none",
-                  padding: "8px 12px",
-                  background: "rgba(15, 23, 42, 0.55)",
-                  backdropFilter: "blur(6px)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: 10,
-                  fontSize: 12,
-                  color: "var(--text-main, #f1f5f9)",
-                  fontFamily: "var(--font-sans)",
-                  fontWeight: 500,
-                  letterSpacing: "0.3px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  whiteSpace: "nowrap",
-                  zIndex: 10,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-                }}
-              >
-                <span>Rotação: {rotacaoGraus.toFixed(0)}°</span>
-                {selectedBoxDimensions && (
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <span>L {selectedBoxDimensions.width.toFixed(2)} m</span>
-                    <span>A {selectedBoxDimensions.height.toFixed(2)} m</span>
-                    <span>P {selectedBoxDimensions.depth.toFixed(2)} m</span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
       </div>
     </main>
       {showGerarArquivoModal && (

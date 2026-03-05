@@ -346,7 +346,8 @@ export const defaultRulesConfig: RulesConfig = {
         diametro: 5,
         profundidadeFuro: 12,
         diametroParafusoUniao: 5,
-        profundidadeParafusoUniao: 12,
+        /** Terceiro furo: apenas marcation (0.5 mm). Não estrutural. */
+        profundidadeParafusoUniao: 0.5,
       },
       shelfTop: {
         enabled: false,

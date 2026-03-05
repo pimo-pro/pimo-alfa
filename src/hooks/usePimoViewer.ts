@@ -124,6 +124,7 @@ type PimoViewerAPI = {
   getExplodedViewEnabled?: () => boolean;
   setExplodedViewIntensity?: (_value: number) => void;
   getExplodedViewIntensity?: () => number;
+  setHighlightEnabled?: (_enabled: boolean) => void;
 };
 
 export const usePimoViewer = (
@@ -632,6 +633,10 @@ export const usePimoViewer = (
     viewerRef.current?.setExplodedViewIntensity?.(value);
   }, []);
 
+  const setHighlightEnabled = useCallback((enabled: boolean) => {
+    viewerRef.current?.setHighlightEnabled?.(enabled);
+  }, []);
+
   const getExplodedViewIntensity = useCallback(
     () => viewerRef.current?.getExplodedViewIntensity?.() ?? 0.35,
     []
@@ -749,6 +754,7 @@ export const usePimoViewer = (
       getExplodedViewEnabled,
       setExplodedViewIntensity,
       getExplodedViewIntensity,
+      setHighlightEnabled,
     }),
     [
       viewerReady,
@@ -841,6 +847,7 @@ export const usePimoViewer = (
       getExplodedViewEnabled,
       setExplodedViewIntensity,
       getExplodedViewIntensity,
+      setHighlightEnabled,
     ]
   );
 };

@@ -130,5 +130,8 @@ export function createViewerApiAdapter(
     getRightmostX: (): number => {
       return pimoApi.getRightmostX?.() ?? -0.1;
     },
+    setHighlightEnabled: (enabled: boolean): void => {
+      pimoApi.setHighlightEnabled?.(enabled);
+    },
   };
 }

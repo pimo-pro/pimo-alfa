@@ -1367,6 +1367,18 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         false
       );
     },
+    toggleHighlight: () => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          viewerSettings: {
+            ...prev.viewerSettings,
+            highlightEnabled: !prev.viewerSettings.highlightEnabled,
+          },
+        }),
+        false
+      );
+    },
     updateRules: (rules: RulesConfig) => {
       updateProject((prev) => {
         const normalizedRules = normalizeRulesConfig(rules);
@@ -2050,10 +2062,14 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
                               ? item.posY + item.height / 2
                               : item.posY;
 
-                        const nextHingeSide =
+                        const nextHingeSide: "left" | "right" | "top" | "bottom" =
                           direction === "left" || direction === "right"
                             ? direction
-                            : (item.hingeSide ?? "left");
+                            : direction === "up"
+                              ? "top"
+                              : direction === "down"
+                                ? "bottom"
+                                : (item.hingeSide ?? "left");
                         const nextPivot: "left-edge" | "right-edge" | "top-edge" | "bottom-edge" =
                           direction === "left"
                             ? "left-edge"
@@ -2089,7 +2105,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
               }
             : box
         );
-        return {
+        const nextPrev = {
           ...prev,
           workspaceBoxes,
           changelog: appendChangelog(prev.changelog, {
@@ -2097,6 +2113,24 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
             type: "box",
             message: "Direção de abertura da porta atualizada",
           }),
+        };
+        /* Recalcular design 3D (caixas, cutlist, furos) para que os furos da caixa (cima/fundo/laterais) atualizem imediatamente com o novo hingeSide. */
+        const boxes = buildBoxesFromWorkspace(nextPrev);
+        const selectedWorkspace = getSelectedWorkspaceBox(nextPrev);
+        const selectedBoxId =
+          boxes.find((box) => box.id === selectedWorkspace?.id)?.id ?? boxes[0]?.id ?? "";
+        const nextState = {
+          ...nextPrev,
+          boxes,
+          selectedBoxId,
+          dimensoes:
+            selectedWorkspace?.dimensoes ??
+            boxes.find((box) => box.id === selectedBoxId)?.dimensoes ??
+            nextPrev.dimensoes,
+        };
+        return {
+          ...nextState,
+          ...buildDesignState(nextState),
         };
       });
     },

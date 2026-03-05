@@ -252,7 +252,8 @@ export const settingsDefaults: SettingsSchema = {
       profundidadeFuro: 12,
       diametro: 5,
       diametroParafusoUniao: 5,
-      profundidadeParafusoUniao: 12,
+      /** Terceiro furo: apenas marcation (0.5 mm). Não estrutural. */
+      profundidadeParafusoUniao: 0.5,
     },
   },
   etiquetasQr: {
@@ -631,7 +632,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         ),
         diametro: clamp(toNumber(merged.furação?.dobradicaFixacao?.diametro, settingsDefaults.furação.dobradicaFixacao.diametro), 3, 10),
         diametroParafusoUniao: clamp(toNumber(merged.furação?.dobradicaFixacao?.diametroParafusoUniao, settingsDefaults.furação.dobradicaFixacao.diametroParafusoUniao), 3, 10),
-        profundidadeParafusoUniao: clamp(toNumber(merged.furação?.dobradicaFixacao?.profundidadeParafusoUniao, settingsDefaults.furação.dobradicaFixacao.profundidadeParafusoUniao), 5, 25),
+        profundidadeParafusoUniao: clamp(toNumber(merged.furação?.dobradicaFixacao?.profundidadeParafusoUniao, settingsDefaults.furação.dobradicaFixacao.profundidadeParafusoUniao), 0.5, 25),
       },
     },
     etiquetasQr: {

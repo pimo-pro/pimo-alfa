@@ -21,6 +21,7 @@ import type { SheetResult } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
 import { getSettings } from "../settings/settingsService";
 import { CUT_LAYOUT_SAFETY_MARGIN_MM, toLayoutAbsoluteX } from "../cutlayout/layoutCoordinateSystem";
+import { DOBRADICA_TERCEIRO_FURO } from "../drilling/drillingService";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -346,12 +347,14 @@ export function generateTcnForPanel(
     for (const hole of pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
       if (!topDrillable) continue;
+      const holeType = (hole as { holeType?: string }).holeType;
+      const isTerceiroFuroDobradica = holeType === "dobradica_parafuso_uniao";
       drills.push({
         x: toLayoutAbsoluteX(pl.x_mm + hole.x, sheetWidthMm),
         y: pl.y_mm + hole.y,
         z: 0,
-        diametro: hole.diameter,
-        profundidade: Math.min(hole.depth, thicknessMm),
+        diametro: isTerceiroFuroDobradica ? DOBRADICA_TERCEIRO_FURO.diametroMm : hole.diameter,
+        profundidade: isTerceiroFuroDobradica ? DOBRADICA_TERCEIRO_FURO.profundidadeMm : Math.min(hole.depth, thicknessMm),
         tipo: "vertical",
       });
     }

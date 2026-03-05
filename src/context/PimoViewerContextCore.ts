@@ -118,6 +118,8 @@ export type PimoViewerApi = {
   setExplodedViewEnabled?: (_enabled: boolean) => void;
   getExplodedViewEnabled?: () => boolean;
   setExplodedViewIntensity?: (_value: number) => void;
+  /** Ativa/desativa highlight por mesh (hover + seleção em portas, gavetas, painéis, furos). */
+  setHighlightEnabled?: (_enabled: boolean) => void;
   getExplodedViewIntensity?: () => number;
 };
 
