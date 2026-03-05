@@ -86,6 +86,24 @@ const getSpawnFromSelectedWall = (
   };
 };
 
+const UPPER_FLOOR_DEFAULT_MM = 1500;
+const UPPER_STANDARD_GAP_MM = 680;
+const UPPER_COUNTERTOP_MM = 0;
+
+const isLowerCabinet = (box: WorkspaceBox): boolean =>
+  box.cabinetType === "lower" || (box.cabinetType == null && box.feetEnabled !== false);
+
+const isUpperCabinet = (box: WorkspaceBox): boolean => box.cabinetType === "upper";
+
+const getBoxLeftMm = (box: WorkspaceBox): number =>
+  (box.posicaoX_mm ?? 0) - (box.dimensoes?.largura ?? 0) / 2;
+
+const getBoxRightMm = (box: WorkspaceBox): number =>
+  (box.posicaoX_mm ?? 0) + (box.dimensoes?.largura ?? 0) / 2;
+
+const getBoxTopMm = (box: WorkspaceBox): number =>
+  (box.posicaoY_mm ?? 0) + (box.dimensoes?.altura ?? 0) / 2;
+
 const captureRoomSnapshot = (): RoomSnapshot | null => {
   const state = wallStore.getState();
   if (!state.walls || state.walls.length === 0) return null;
@@ -584,6 +602,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     addWorkspaceBoxFromCatalog: (catalogItemId) => {
       const baseModel = getBaseCabinetById(catalogItemId);
       if (!baseModel) return;
+      const isUpperModel = baseModel.categoria === "upper";
       const rightmostX_m = viewerSync.getRightmostX();
       updateProject((prev) => {
         const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
@@ -596,8 +615,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           profundidade: baseModel.depthMm,
         };
         const spawn = getSpawnFromSelectedWall(dimensoes);
-        const posicaoX_mm =
-          spawn?.posicaoX_mm ?? (rightmostX_m + 0.1) * 1000 + dimensoes.largura / 2;
+        const lowerBoxes = prev.workspaceBoxes.filter(isLowerCabinet);
+        const upperBoxes = prev.workspaceBoxes.filter(isUpperCabinet);
+
+        let posicaoX_mm = spawn?.posicaoX_mm ?? (rightmostX_m + 0.1) * 1000 + dimensoes.largura / 2;
+        if (isUpperModel) {
+          if (upperBoxes.length > 0) {
+            const rightmostUpper = upperBoxes.reduce((max, box) => Math.max(max, getBoxRightMm(box)), Number.NEGATIVE_INFINITY);
+            posicaoX_mm = rightmostUpper + 100 + dimensoes.largura / 2;
+          } else if (lowerBoxes.length > 0) {
+            const firstLowerLeft = lowerBoxes.reduce((min, box) => Math.min(min, getBoxLeftMm(box)), Number.POSITIVE_INFINITY);
+            posicaoX_mm = firstLowerLeft + dimensoes.largura / 2;
+          }
+        }
 
         const newBox = createWorkspaceBox(
           newBoxId,
@@ -613,16 +643,39 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             prateleiras: baseModel.shelves,
             portaTipo: modelToPortaTipo(baseModel.doors),
             gavetas: baseModel.drawers,
+            cabinetType: isUpperModel ? "upper" : "lower",
+            feetEnabled: !isUpperModel,
+            feetHeight: 100,
+            feetOffsetFront: 100,
           }
         );
         newBox.manualPosition = true;
         newBox.posicaoZ_mm = spawn?.posicaoZ_mm ?? 0;
-        newBox.cabinetType = "lower";
-        newBox.feetEnabled = true;
-        newBox.feetHeight = 100;
-        newBox.feetOffsetFront = 100;
-        newBox.pe_cm = (newBox.feetHeight ?? 100) / 10;
-        newBox.posicaoY_mm = (newBox.feetHeight ?? 100) + dimensoes.altura / 2;
+        if (isUpperModel) {
+          newBox.cabinetType = "upper";
+          newBox.feetEnabled = false;
+          newBox.feetHeight = 0;
+          newBox.feetOffsetFront = 100;
+          newBox.pe_cm = 0;
+          if (lowerBoxes.length > 0) {
+            const lowerTopMm = lowerBoxes.reduce((max, box) => Math.max(max, getBoxTopMm(box)), Number.NEGATIVE_INFINITY);
+            const upperBottomMm = lowerTopMm + UPPER_COUNTERTOP_MM + UPPER_STANDARD_GAP_MM;
+            newBox.posicaoY_mm = upperBottomMm + dimensoes.altura / 2;
+            if (!spawn) {
+              const anchorLower = lowerBoxes.reduce((best, box) => (getBoxLeftMm(box) < getBoxLeftMm(best) ? box : best), lowerBoxes[0]);
+              newBox.posicaoZ_mm = anchorLower.posicaoZ_mm ?? 0;
+            }
+          } else {
+            newBox.posicaoY_mm = UPPER_FLOOR_DEFAULT_MM + dimensoes.altura / 2;
+          }
+        } else {
+          newBox.cabinetType = "lower";
+          newBox.feetEnabled = true;
+          newBox.feetHeight = 100;
+          newBox.feetOffsetFront = 100;
+          newBox.pe_cm = (newBox.feetHeight ?? 100) / 10;
+          newBox.posicaoY_mm = (newBox.feetHeight ?? 100) + dimensoes.altura / 2;
+        }
         if (spawn) {
           newBox.rotacaoY = spawn.rotacaoY;
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
@@ -643,7 +696,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             changelog: appendChangelog(prev.changelog, {
               timestamp: new Date(),
               type: "box",
-              message: `Base cabinet adicionado: ${baseModel.nome}`,
+              message: `${isUpperModel ? "Upper cabinet" : "Base cabinet"} adicionado: ${baseModel.nome}`,
             }),
             selectedModelInstanceId: null,
           },

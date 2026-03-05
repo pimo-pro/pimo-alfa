@@ -25,8 +25,10 @@ export interface BaseCabinetModel {
   cornerRight?: boolean;
   /** Canto esquerdo (L). */
   cornerLeft?: boolean;
+  /** Grupo organizacional do catalogo (somente UI). */
+  grupoCatalogo?: "br" | "pt";
   /** Categoria para filtro na UI. */
-  categoria: "base";
+  categoria: "base" | "upper";
 }
 
 export type PortaTipoFromModel = "sem_porta" | "porta_simples" | "porta_dupla";

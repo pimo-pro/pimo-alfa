@@ -12,6 +12,11 @@ import {
 // keep this file UI-only; do not change selectedTool here
 
 const PAGE_SIZE = 10;
+const CATALOG_GROUPS = [
+  { id: "todos", label: "Todos" },
+  { id: "br", label: "branco (br)" },
+  { id: "pt", label: "carve (pt)" },
+] as const;
 
 const getTipoLabel = (tipo: UnifiedModelItem["tipo"]) => {
   if (tipo === "pronto") return "Pronto";
@@ -24,6 +29,7 @@ export default function PainelMoveisUnificado() {
   const { models: cadModels, reload: reloadCadModels } = useCadModels();
   const [termoBusca, setTermoBusca] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todos");
+  const [grupoCatalogoSelecionado, setGrupoCatalogoSelecionado] = useState<(typeof CATALOG_GROUPS)[number]["id"]>("todos");
   const [itensVisiveis, setItensVisiveis] = useState(PAGE_SIZE);
 
   useEffect(() => {
@@ -39,17 +45,21 @@ export default function PainelMoveisUnificado() {
       if (categoriaSelecionada !== "todos" && item.categoriaId !== categoriaSelecionada) {
         return false;
       }
+      if (grupoCatalogoSelecionado !== "todos") {
+        if (item.tipo !== "3d") return false;
+        if (item.grupoCatalogo !== grupoCatalogoSelecionado) return false;
+      }
       if (!termo) return true;
       return (
         item.nome.toLowerCase().includes(termo) ||
         (item.descricao ?? "").toLowerCase().includes(termo)
       );
     });
-  }, [categoriaSelecionada, itensUnificados, termoBusca]);
+  }, [categoriaSelecionada, grupoCatalogoSelecionado, itensUnificados, termoBusca]);
 
   useEffect(() => {
     setItensVisiveis(PAGE_SIZE);
-  }, [categoriaSelecionada, termoBusca]);
+  }, [categoriaSelecionada, grupoCatalogoSelecionado, termoBusca]);
 
   const handleAddItem = useCallback((item: UnifiedModelItem) => {
     if (item.tipo === "pronto") {
@@ -127,6 +137,40 @@ export default function PainelMoveisUnificado() {
           </div>
 
           <Panel title="Catálogo" description={`${itensFiltrados.length} item(ns) disponíveis`}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+              <label
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  fontWeight: 500,
+                }}
+              >
+                Grupos de modelos
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {CATALOG_GROUPS.map((group) => {
+                  const isSelected = grupoCatalogoSelecionado === group.id;
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setGrupoCatalogoSelecionado(group.id)}
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: 11,
+                        borderRadius: 999,
+                        border: `1px solid ${isSelected ? "var(--primary)" : "var(--border)"}`,
+                        background: isSelected ? "rgba(59,130,246,0.2)" : "var(--surface)",
+                        color: "var(--text-main)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {group.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {itensFiltrados.length === 0 ? (
               <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
                 Nenhum item encontrado com os filtros selecionados.
@@ -215,6 +259,20 @@ export default function PainelMoveisUnificado() {
                           >
                             {info}
                           </div>
+                          {item.tipo === "3d" && item.grupoCatalogo && (
+                            <div
+                              style={{
+                                fontSize: 9,
+                                color: "var(--text-muted)",
+                                opacity: 0.9,
+                                whiteSpace: "nowrap",
+                                textOverflow: "ellipsis",
+                                overflow: "hidden",
+                              }}
+                            >
+                              Grupo: {item.grupoCatalogo === "br" ? "branco (br)" : "carve (pt)"}
+                            </div>
+                          )}
                           {item.descricao && (
                             <div
                               style={{

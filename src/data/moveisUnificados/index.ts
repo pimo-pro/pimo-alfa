@@ -12,6 +12,7 @@ export type UnifiedModelItem = {
   nome: string;
   categoria: string;
   categoriaId: string;
+  grupoCatalogo?: "br" | "pt";
   descricao?: string;
   thumbnailUrl?: string | null;
   dimensoes?: { largura_mm: number; altura_mm: number; profundidade_mm: number };
@@ -47,7 +48,7 @@ const resolveCategoriaId = (categoria?: string | null): string => {
   const cat = normalize(source);
   let resolved = "outros";
   if (!cat) return "outros";
-  if (cat.includes("base") || cat.includes("cozinha")) resolved = "cozinha";
+  if (cat.includes("base") || cat.includes("upper") || cat.includes("cozinha")) resolved = "cozinha";
   else if (cat.includes("roupeiro") || cat.includes("guarda-roupa") || cat.includes("guarda roupa")) resolved = "roupeiro";
   else if (cat.includes("banheiro") || cat.includes("wc")) resolved = "banheiro";
   else if (cat.includes("infantil") || cat.includes("quarto infantil") || cat.includes("quarto-infantil")) resolved = "infantil";
@@ -114,6 +115,7 @@ export const buildUnifiedMoveis = (cadModels: CadModel[] = []): UnifiedModelItem
     nome: item.nome,
     categoria: item.categoria,
     categoriaId: resolveCategoriaId(item.categoria),
+    grupoCatalogo: item.grupoCatalogo,
     descricao: item.descricao,
     thumbnailUrl: item.thumbnailUrl ?? null,
     dimensoes: {

@@ -9,7 +9,8 @@ import { BASE_CABINET_MODELS } from "../core/baseCabinets";
 export const CATALOG_ITEMS: CatalogItem[] = BASE_CABINET_MODELS.map((m) => ({
   id: m.id,
   nome: m.nome,
-  categoria: "base",
+  categoria: m.categoria,
+  grupoCatalogo: m.grupoCatalogo ?? (/^[AB]\d+\b/i.test(m.nome) ? "br" : undefined),
   dimensoesDefault: {
     largura_mm: m.widthMm,
     altura_mm: m.heightMm,
