@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { useProject } from "../../context/useProject";
+import { useSettings } from "../../context/SettingsContext";
 import { defaultRulesConfig, normalizeRulesConfig } from "../../core/rules/rulesConfig";
 import type { RulesConfig, PortaRange, PeRange } from "../../core/rules/rulesConfig";
 import Panel from "../ui/Panel";
@@ -16,8 +17,10 @@ import qrcode from "qrcode-generator";
 export default function RulesAdminPage() {
   const { showToast } = useToast();
   const { project, actions } = useProject();
+  const { settings, updateSettings } = useSettings();
   const perfilAtivoId = project.rulesProfiles.perfilAtivoId;
   const [rules, setRules] = useState<RulesConfig>(normalizeRulesConfig(project.rules));
+  const drillingConfig = settings?.furação;
   const [isSaved, setIsSaved] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
@@ -26,7 +29,25 @@ export default function RulesAdminPage() {
   }, [project.rules, perfilAtivoId]);
 
   const handleSave = () => {
-    actions.updateRulesInProfile(perfilAtivoId, rules);
+    // Distâncias e sideOffset cavilha/parafuso vêm sempre das configurações globais (não persistir overrides por projeto)
+    const cavilhaFront = drillingConfig?.cavilha?.frontDistance ?? 60;
+    const cavilhaBack = drillingConfig?.cavilha?.backDistance ?? 60;
+    const cavilhaSide = drillingConfig?.cavilha?.sideOffset ?? 9.5;
+    const parafusoFront = drillingConfig?.parafuso?.frontDistance ?? 90;
+    const parafusoBack = drillingConfig?.parafuso?.backDistance ?? 90;
+    const parafusoSide = drillingConfig?.parafuso?.sideOffset ?? 9.5;
+    const rulesToSave: RulesConfig = {
+      ...rules,
+      furos: {
+        ...rules.furos,
+        tecnicos: {
+          ...rules.furos.tecnicos,
+          cavilha: { ...rules.furos.tecnicos.cavilha, distanciaFrente: cavilhaFront, distanciaFundo: cavilhaBack, sideOffset: cavilhaSide },
+          parafuso: { ...rules.furos.tecnicos.parafuso, distanciaFrente: parafusoFront, distanciaFundo: parafusoBack, sideOffset: parafusoSide },
+        },
+      },
+    };
+    actions.updateRulesInProfile(perfilAtivoId, rulesToSave);
     setIsSaved(true);
     showToast("Regras do perfil guardadas com sucesso.", "info");
     setTimeout(() => setIsSaved(false), 2000);
@@ -363,14 +384,15 @@ export default function RulesAdminPage() {
           </div>
         </Panel>
 
-        <Panel title="Furação Técnica – Component Types" description="Configuração completa dos tipos de furação técnica">
+        <Panel title="Furação Técnica – Component Types" description="Configuração completa dos tipos de furação técnica. Distâncias cavilha/parafuso são globais (aplicadas a todos os projetos).">
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
               <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Cavilha</div>
               <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.cavilha.enabled} onChange={(e) => updateTecnico("cavilha", { enabled: e.target.checked })} /> Ativar</label>
-              <div className="form-grid" style={{ gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
-                <label style={{ fontSize: 12 }}>Dist. frente <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.distanciaFrente} onChange={(e) => updateTecnico("cavilha", { distanciaFrente: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Dist. fundo <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.distanciaFundo} onChange={(e) => updateTecnico("cavilha", { distanciaFundo: Number(e.target.value) })} /></label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(6, minmax(100px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Dist. frente (global) <input className="input input-xs" type="number" value={drillingConfig?.cavilha?.frontDistance ?? 60} onChange={(e) => updateSettings({ furação: { cavilha: { frontDistance: Number(e.target.value), backDistance: drillingConfig?.cavilha?.backDistance ?? 60, sideOffset: drillingConfig?.cavilha?.sideOffset ?? 9.5 } } })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. fundo (global) <input className="input input-xs" type="number" value={drillingConfig?.cavilha?.backDistance ?? 60} onChange={(e) => updateSettings({ furação: { cavilha: { frontDistance: drillingConfig?.cavilha?.frontDistance ?? 60, backDistance: Number(e.target.value), sideOffset: drillingConfig?.cavilha?.sideOffset ?? 9.5 } } })} /></label>
+                <label style={{ fontSize: 12 }}>Side offset (global) <input className="input input-xs" type="number" value={drillingConfig?.cavilha?.sideOffset ?? 9.5} onChange={(e) => updateSettings({ furação: { cavilha: { frontDistance: drillingConfig?.cavilha?.frontDistance ?? 60, backDistance: drillingConfig?.cavilha?.backDistance ?? 60, sideOffset: Number(e.target.value) } } })} /></label>
                 <label style={{ fontSize: 12 }}>Offset lateral <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.offsetLateral} onChange={(e) => updateTecnico("cavilha", { offsetLateral: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Diâmetro <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.diametro} onChange={(e) => updateTecnico("cavilha", { diametro: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Profundidade <input className="input input-xs" type="number" value={rules.furos.tecnicos.cavilha.profundidade} onChange={(e) => updateTecnico("cavilha", { profundidade: Number(e.target.value) })} /></label>
@@ -386,9 +408,10 @@ export default function RulesAdminPage() {
             <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
               <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Parafuso</div>
               <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.parafuso.enabled} onChange={(e) => updateTecnico("parafuso", { enabled: e.target.checked })} /> Ativar</label>
-              <div className="form-grid" style={{ gridTemplateColumns: "repeat(5, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
-                <label style={{ fontSize: 12 }}>Dist. frente <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.distanciaFrente} onChange={(e) => updateTecnico("parafuso", { distanciaFrente: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Dist. fundo <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.distanciaFundo} onChange={(e) => updateTecnico("parafuso", { distanciaFundo: Number(e.target.value) })} /></label>
+              <div className="form-grid" style={{ gridTemplateColumns: "repeat(6, minmax(100px, 1fr))", gap: 8, marginTop: 8 }}>
+                <label style={{ fontSize: 12 }}>Dist. frente (global) <input className="input input-xs" type="number" value={drillingConfig?.parafuso?.frontDistance ?? 90} onChange={(e) => updateSettings({ furação: { parafuso: { frontDistance: Number(e.target.value), backDistance: drillingConfig?.parafuso?.backDistance ?? 90, offsetDaBorda: drillingConfig?.parafuso?.offsetDaBorda ?? 9, sideOffset: drillingConfig?.parafuso?.sideOffset ?? 9.5 } } })} /></label>
+                <label style={{ fontSize: 12 }}>Dist. fundo (global) <input className="input input-xs" type="number" value={drillingConfig?.parafuso?.backDistance ?? 90} onChange={(e) => updateSettings({ furação: { parafuso: { frontDistance: drillingConfig?.parafuso?.frontDistance ?? 90, backDistance: Number(e.target.value), offsetDaBorda: drillingConfig?.parafuso?.offsetDaBorda ?? 9, sideOffset: drillingConfig?.parafuso?.sideOffset ?? 9.5 } } })} /></label>
+                <label style={{ fontSize: 12 }}>Side offset (global) <input className="input input-xs" type="number" value={drillingConfig?.parafuso?.sideOffset ?? 9.5} onChange={(e) => updateSettings({ furação: { parafuso: { frontDistance: drillingConfig?.parafuso?.frontDistance ?? 90, backDistance: drillingConfig?.parafuso?.backDistance ?? 90, offsetDaBorda: drillingConfig?.parafuso?.offsetDaBorda ?? 9, sideOffset: Number(e.target.value) } } })} /></label>
                 <label style={{ fontSize: 12 }}>Offset cavilha <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.offsetDaCavilha} onChange={(e) => updateTecnico("parafuso", { offsetDaCavilha: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Diâmetro <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.diametro} onChange={(e) => updateTecnico("parafuso", { diametro: Number(e.target.value) })} /></label>
                 <label style={{ fontSize: 12 }}>Profundidade <input className="input input-xs" type="number" value={rules.furos.tecnicos.parafuso.profundidade} onChange={(e) => updateTecnico("parafuso", { profundidade: Number(e.target.value) })} /></label>

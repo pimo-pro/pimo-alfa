@@ -135,6 +135,14 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
     120
   );
 
+  // Distâncias e sideOffset de parafuso e cavilha vêm SEMPRE das configurações globais (sem overrides por projeto)
+  const parafusoFront = toFiniteNumber(fu.parafuso.frontDistance, 90);
+  const parafusoBack = toFiniteNumber(fu.parafuso.backDistance, 90);
+  const parafusoSideOffset = toFiniteNumber(fu.parafuso.sideOffset, 9.5);
+  const cavilhaFront = toFiniteNumber(fu.cavilha?.frontDistance, 60);
+  const cavilhaBack = toFiniteNumber(fu.cavilha?.backDistance, 60);
+  const cavilhaSideOffset = toFiniteNumber(fu.cavilha?.sideOffset, 9.5);
+
   return {
     ...normalizedRules,
     furos: {
@@ -143,15 +151,17 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
         ...normalizedRules.furos.tecnicos,
         parafuso: {
           ...normalizedRules.furos.tecnicos.parafuso,
-          distanciaFrente: fu.parafuso.distanciaFrenteParafuso,
-          distanciaFundo: fu.parafuso.distanciaFrenteParafuso,
+          distanciaFrente: parafusoFront,
+          distanciaFundo: parafusoBack,
           offsetDaBorda: fu.parafuso.offsetDaBorda,
+          sideOffset: parafusoSideOffset,
         },
         cavilha: {
           ...normalizedRules.furos.tecnicos.cavilha,
-          distanciaFrente: fu.parafuso.distanciaFrenteCavilha,
-          distanciaFundo: fu.parafuso.distanciaFrenteCavilha,
+          distanciaFrente: cavilhaFront,
+          distanciaFundo: cavilhaBack,
           offsetDaBorda: fu.parafuso.offsetDaBorda,
+          sideOffset: cavilhaSideOffset,
         },
         prateleira: {
           ...normalizedRules.furos.tecnicos.prateleira,

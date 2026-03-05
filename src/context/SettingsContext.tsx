@@ -9,16 +9,24 @@ import {
   type SettingsSchema,
 } from "../core/settings/settingsService";
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends (infer U)[]
+    ? U[]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K];
+};
+
 type SettingsContextValue = {
   settings: SettingsSchema;
   refreshSettings: () => void;
-  updateSettings: (_patch: Partial<SettingsSchema>) => {
+  updateSettings: (_patch: DeepPartial<SettingsSchema>) => {
     success: boolean;
     message: string;
     settings: SettingsSchema;
     errors: string[];
   };
-  validate: (_patch: Partial<SettingsSchema>) => {
+  validate: (_patch: DeepPartial<SettingsSchema>) => {
     valid: boolean;
     errors: string[];
     normalized: SettingsSchema;
@@ -34,7 +42,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(getSettings());
   }, []);
 
-  const updateSettings = useCallback((patch: Partial<SettingsSchema>) => {
+  const updateSettings = useCallback((patch: DeepPartial<SettingsSchema>) => {
     const merged = {
       ...settings,
       ...patch,
@@ -54,13 +62,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         corredica: { ...settings.ferragens.corredica, ...(patch.ferragens?.corredica ?? {}) },
       },
       viewer: { ...settings.viewer, ...(patch.viewer ?? {}) },
+      furação: {
+        ...settings.furação,
+        ...(patch.furação ?? {}),
+        parafuso: { ...settings.furação.parafuso, ...(patch.furação?.parafuso ?? {}) },
+        cavilha: { ...settings.furação.cavilha, ...(patch.furação?.cavilha ?? {}) },
+      },
     };
-    const result = saveSettings(merged);
+    const result = saveSettings(merged as SettingsSchema);
     setSettings(result.settings);
     return result;
   }, [settings]);
 
-  const validate = useCallback((patch: Partial<SettingsSchema>) => {
+  const validate = useCallback((patch: DeepPartial<SettingsSchema>) => {
     const merged = {
       ...settings,
       ...patch,
@@ -80,8 +94,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         corredica: { ...settings.ferragens.corredica, ...(patch.ferragens?.corredica ?? {}) },
       },
       viewer: { ...settings.viewer, ...(patch.viewer ?? {}) },
+      furação: {
+        ...settings.furação,
+        ...(patch.furação ?? {}),
+        parafuso: { ...settings.furação.parafuso, ...(patch.furação?.parafuso ?? {}) },
+        cavilha: { ...settings.furação.cavilha, ...(patch.furação?.cavilha ?? {}) },
+      },
     };
-    return validateSettings(merged);
+    return validateSettings(merged as SettingsSchema);
   }, [settings]);
 
   const value = useMemo<SettingsContextValue>(

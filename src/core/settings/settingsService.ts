@@ -82,10 +82,25 @@ export interface SettingsSchema {
     mostrarGrid: boolean;
   };
   furação: {
+    /** Distâncias de furação parafuso (mm). Aplicadas globalmente a todos os projetos. */
     parafuso: {
-      distanciaFrenteParafuso: number;
-      distanciaFrenteCavilha: number;
+      /** Distância da frente ao eixo do parafuso (mm). Padrão industrial 90. */
+      frontDistance: number;
+      /** Distância do fundo ao eixo do parafuso (mm). Padrão industrial 90. */
+      backDistance: number;
+      /** Offset da borda (linha de furação), mm. */
       offsetDaBorda: number;
+      /** Distância do centro do furo à borda lateral da peça (mm). Padrão industrial 9.5. */
+      sideOffset: number;
+    };
+    /** Distâncias de furação cavilha (mm). Aplicadas globalmente a todos os projetos. */
+    cavilha: {
+      /** Distância da frente ao eixo da cavilha (mm). Padrão industrial 60. */
+      frontDistance: number;
+      /** Distância do fundo ao eixo da cavilha (mm). Padrão industrial 60. */
+      backDistance: number;
+      /** Distância do centro do furo à borda lateral da peça (mm). Padrão industrial 9.5. */
+      sideOffset: number;
     };
     prateleira: {
       margemTop: number;
@@ -205,9 +220,15 @@ export const settingsDefaults: SettingsSchema = {
   },
   furação: {
     parafuso: {
-      distanciaFrenteParafuso: 40,
-      distanciaFrenteCavilha: 60,
+      frontDistance: 90,
+      backDistance: 90,
       offsetDaBorda: 9,
+      sideOffset: 9.5,
+    },
+    cavilha: {
+      frontDistance: 60,
+      backDistance: 60,
+      sideOffset: 9.5,
     },
     prateleira: {
       margemTop: 200,
@@ -307,6 +328,12 @@ function deepMergeSettings(
         ...base.furação.parafuso,
         ...(isObject((patch.furação as Record<string, unknown> | undefined)?.parafuso)
           ? (patch.furação as Record<string, unknown>).parafuso as Record<string, unknown>
+          : {}),
+      },
+      cavilha: {
+        ...base.furação.cavilha,
+        ...(isObject((patch.furação as Record<string, unknown> | undefined)?.cavilha)
+          ? (patch.furação as Record<string, unknown>).cavilha as Record<string, unknown>
           : {}),
       },
       prateleira: {
@@ -480,18 +507,56 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
     },
     furação: {
       parafuso: {
-        distanciaFrenteParafuso: clamp(
-          toNumber(merged.furação?.parafuso?.distanciaFrenteParafuso, settingsDefaults.furação.parafuso.distanciaFrenteParafuso),
+        frontDistance: clamp(
+          toNumber(
+            merged.furação?.parafuso?.frontDistance ??
+              (merged.furação?.parafuso as Record<string, unknown> | undefined)?.distanciaFrenteParafuso,
+            settingsDefaults.furação.parafuso.frontDistance
+          ),
           5,
-          200
+          500
         ),
-        distanciaFrenteCavilha: clamp(
-          toNumber(merged.furação?.parafuso?.distanciaFrenteCavilha, settingsDefaults.furação.parafuso.distanciaFrenteCavilha),
+        backDistance: clamp(
+          toNumber(
+            merged.furação?.parafuso?.backDistance ??
+              (merged.furação?.parafuso as Record<string, unknown> | undefined)?.distanciaFrenteParafuso,
+            settingsDefaults.furação.parafuso.backDistance
+          ),
           5,
-          200
+          500
         ),
         offsetDaBorda: clamp(
           toNumber(merged.furação?.parafuso?.offsetDaBorda, settingsDefaults.furação.parafuso.offsetDaBorda),
+          3,
+          50
+        ),
+        sideOffset: clamp(
+          toNumber(merged.furação?.parafuso?.sideOffset, settingsDefaults.furação.parafuso.sideOffset),
+          3,
+          50
+        ),
+      },
+      cavilha: {
+        frontDistance: clamp(
+          toNumber(
+            merged.furação?.cavilha?.frontDistance ??
+              (merged.furação?.parafuso as Record<string, unknown> | undefined)?.distanciaFrenteCavilha,
+            settingsDefaults.furação.cavilha.frontDistance
+          ),
+          5,
+          500
+        ),
+        backDistance: clamp(
+          toNumber(
+            merged.furação?.cavilha?.backDistance ??
+              (merged.furação?.parafuso as Record<string, unknown> | undefined)?.distanciaFrenteCavilha,
+            settingsDefaults.furação.cavilha.backDistance
+          ),
+          5,
+          500
+        ),
+        sideOffset: clamp(
+          toNumber(merged.furação?.cavilha?.sideOffset, settingsDefaults.furação.cavilha.sideOffset),
           3,
           50
         ),
@@ -616,6 +681,11 @@ export function getSettings(): SettingsSchema {
   } catch {
     return settingsDefaults;
   }
+}
+
+/** Configuração global de furação (parafuso/cavilha). Usada pelo drillingAdapter e pela UI; aplicada a todos os projetos. */
+export function getDrillingConfig(): SettingsSchema["furação"] {
+  return getSettings().furação;
 }
 
 export function saveSettings(settings: Partial<SettingsSchema> | SettingsSchema): {

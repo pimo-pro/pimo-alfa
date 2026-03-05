@@ -95,11 +95,11 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 8;
   const profundidade = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : Math.min(13, piece.espessura);
   const face = getInternalFace(piece.tipo);
-  const offsetBorda = cfg.offsetDaBorda ?? 9;
+  const sideOffset = cfg.sideOffset ?? 9.5;
 
   if ((piece.tipo === "cima" || piece.tipo === "fundo") && (cfg.aplicarEm.cima || cfg.aplicarEm.fundo)) {
-    const xLeft = offsetBorda;
-    const xRight = piece.largura - offsetBorda;
+    const xLeft = sideOffset;
+    const xRight = piece.largura - sideOffset;
     const yFront = cfg.distanciaFrente ?? 60;
     const yBack = piece.altura - (cfg.distanciaFundo ?? 60);
     pushHole(out, piece, xLeft, yFront, diametro, profundidade, "cavilha", face);
@@ -121,9 +121,9 @@ function calcParafuso(piece: PieceInput, rules: RulesConfig, out: TechnicalDrill
   const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 4;
   const cfgDepth = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : piece.espessura;
   const depth = cfg.profundidadeIgualEspessura ? piece.espessura : Math.min(piece.espessura, cfgDepth);
-  const offsetBorda = cfg.offsetDaBorda ?? 9;
-  const xLeft = offsetBorda;
-  const xRight = piece.largura - offsetBorda;
+  const sideOffset = cfg.sideOffset ?? 9.5;
+  const xLeft = sideOffset;
+  const xRight = piece.largura - sideOffset;
   const yFront = cfg.distanciaFrente ?? 40;
   const yBack = piece.altura - (cfg.distanciaFundo ?? 40);
   pushHole(out, piece, xLeft, yFront, diametro, depth, "parafuso", face);

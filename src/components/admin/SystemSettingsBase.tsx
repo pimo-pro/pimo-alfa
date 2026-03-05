@@ -286,26 +286,26 @@ export default function SystemSettingsBase() {
           <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Parafuso + Cavilha (união topo/base)</span>
           <NumberField
             label="Distância frente parafuso (mm)"
-            value={draft.furação?.parafuso?.distanciaFrenteParafuso ?? 40}
+            value={draft.furação?.parafuso?.frontDistance ?? 40}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
                 furação: {
                   ...p.furação,
-                  parafuso: { ...p.furação?.parafuso, distanciaFrenteParafuso: v },
+                  parafuso: { ...p.furação?.parafuso, frontDistance: v },
                 },
               }))
             }
           />
           <NumberField
             label="Distância frente cavilha (mm)"
-            value={draft.furação?.parafuso?.distanciaFrenteCavilha ?? 60}
+            value={draft.furação?.cavilha?.frontDistance ?? 60}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
                 furação: {
                   ...p.furação,
-                  parafuso: { ...p.furação?.parafuso, distanciaFrenteCavilha: v },
+                  cavilha: { ...p.furação?.cavilha, frontDistance: v },
                 },
               }))
             }

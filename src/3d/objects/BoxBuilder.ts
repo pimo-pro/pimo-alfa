@@ -781,43 +781,131 @@ function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes:
   const geometries: THREE.BufferGeometry[] = [];
   const quat = new THREE.Quaternion();
 
-  for (const hole of holes) {
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] buildDrillCutGeometries", {
+      panelType,
+      holesCount: holes.length,
+      panelDimensions: { width, height, thickness },
+    });
+  }
+
+  for (let holeIndex = 0; holeIndex < holes.length; holeIndex++) {
+    const hole = holes[holeIndex];
     const radius = Math.max(DRILL_MIN_RADIUS_M, hole.diametro / 2000);
-    const nominalDepth = Math.max(DRILL_MIN_DEPTH_M, hole.profundidade / 1000);
-    const holeDepth = Math.min(validDepthMax, nominalDepth + DRILL_CSG_EPSILON_M * 2);
+    const profundidadeRealM = Math.max(DRILL_MIN_DEPTH_M, hole.profundidade / 1000);
+
+    const isTopOrBottom = panelType === "top" || panelType === "bottom";
+    const isNonThrough = hole.tipo === "cavilha" || hole.tipo === "parafuso";
+    const isLeftOrRight = panelType === "left" || panelType === "right";
+    const isShelfOrHinge =
+      hole.tipo === "prateleira" ||
+      hole.tipo === "dobradica" ||
+      hole.tipo === "dobradica_fixacao" ||
+      hole.tipo === "dobradica_parafuso_uniao";
+    const isLeftOrRightShelfOrHinge = isLeftOrRight && isShelfOrHinge;
+
+    // Altura do cilindro: profundidade real do furo; em top/bottom não-passantes e left/right prateleira/dobradiça, limitar à espessura
+    const cylinderHeight =
+      isTopOrBottom && isNonThrough
+        ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
+        : isLeftOrRightShelfOrHinge
+          ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
+          : Math.max(DRILL_MIN_DEPTH_M, Math.min(validDepthMax, profundidadeRealM));
+
     const bevelDepth = Math.min(
       DRILL_BEVEL_MAX_M,
-      Math.max(0.00045, Math.min(holeDepth * DRILL_BEVEL_RATIO, thickness * 0.35))
+      Math.max(0.00045, Math.min(cylinderHeight * DRILL_BEVEL_RATIO, thickness * 0.35))
     );
     const bevelRadius = radius + Math.min(0.0009, Math.max(0.00025, radius * 0.32));
-    const axisInward = getInwardAxisForHole(panelType, hole).normalize();
-    quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisInward);
-
     const { a, b } = getHole2DLocalPosition(panelType, width, height, hole);
     const entryOffset = thickness / 2;
     const entry = new THREE.Vector3();
+    let axisInward: THREE.Vector3;
 
     if (panelType === "top" || panelType === "bottom") {
-      entry.set(a, axisInward.y < 0 ? entryOffset : -entryOffset, b);
-    } else if (panelType === "left" || panelType === "right") {
-      entry.set(axisInward.x < 0 ? entryOffset : -entryOffset, b, a);
+      if (hole.face === "fundo") {
+        entry.set(a, -entryOffset, b);
+        axisInward = new THREE.Vector3(0, 1, 0);
+      } else if (hole.face === "cima") {
+        entry.set(a, entryOffset, b);
+        axisInward = new THREE.Vector3(0, -1, 0);
+      } else {
+        if (panelType === "top") {
+          entry.set(a, -entryOffset, b);
+          axisInward = new THREE.Vector3(0, 1, 0);
+        } else {
+          entry.set(a, entryOffset, b);
+          axisInward = new THREE.Vector3(0, -1, 0);
+        }
+      }
     } else {
-      entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
+      axisInward = getInwardAxisForHole(panelType, hole).normalize();
+      if (panelType === "left") {
+        // left: face "direita" = interna (+thickness/2), face "esquerda" = externa (-thickness/2)
+        entry.set(hole.face === "direita" ? entryOffset : -entryOffset, b, a);
+      } else if (panelType === "right") {
+        // right: face "esquerda" = interna (-thickness/2), face "direita" = externa (+thickness/2)
+        entry.set(hole.face === "esquerda" ? -entryOffset : entryOffset, b, a);
+      } else {
+        entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
+      }
+    }
+    quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisInward);
+
+    if (import.meta.env.DEV) {
+      const cylDir = new THREE.Vector3(0, 1, 0).applyQuaternion(quat.clone());
+      console.log("[DRILL-DIAG] cylinderTransform", {
+        panelType,
+        holeIndex,
+        entryPoint: entry.clone(),
+        axisInward: axisInward.clone(),
+        quaternion: quat.clone(),
+        cylinderDirectionAfterRotation: cylDir,
+      });
     }
 
-    const holeCenter = entry.clone().add(axisInward.clone().multiplyScalar(holeDepth * 0.5 - DRILL_CSG_EPSILON_M));
-    const cutterMain = new THREE.CylinderGeometry(radius, radius, holeDepth, DRILL_SEGMENTS, 1, false);
+    // Centro do cilindro: na face (entry) + metade da profundidade para dentro
+    const holeCenter = entry.clone().add(axisInward.clone().multiplyScalar(cylinderHeight / 2));
+    const cutterMain = new THREE.CylinderGeometry(radius, radius, cylinderHeight, DRILL_SEGMENTS, 1, false);
     cutterMain.applyQuaternion(quat);
     cutterMain.translate(holeCenter.x, holeCenter.y, holeCenter.z);
     geometries.push(cutterMain);
 
-    if (bevelDepth < holeDepth - 0.00015) {
-      const bevelCenter = entry.clone().add(axisInward.clone().multiplyScalar(bevelDepth * 0.5 - DRILL_CSG_EPSILON_M));
+    const hasBevel = bevelDepth < cylinderHeight - 0.00015;
+    const addBevel =
+      hasBevel && !(isTopOrBottom && isNonThrough) && !isLeftOrRightShelfOrHinge;
+    if (addBevel) {
+      const bevelCenter = entry.clone().add(axisInward.clone().multiplyScalar(bevelDepth / 2));
       const bevel = new THREE.CylinderGeometry(bevelRadius, radius, bevelDepth, DRILL_SEGMENTS, 1, false);
       bevel.applyQuaternion(quat);
       bevel.translate(bevelCenter.x, bevelCenter.y, bevelCenter.z);
       geometries.push(bevel);
     }
+
+    const cylindersPerHole = addBevel ? 2 : 1;
+    if (import.meta.env.DEV) {
+      const holeId = (hole as TechnicalDrillHole & { id?: unknown }).id ?? `hole-${holeIndex}`;
+      const entryPoint = { x: entry.x, y: entry.y, z: entry.z };
+      const axisInwardLog = { x: axisInward.x, y: axisInward.y, z: axisInward.z };
+      console.log("[DRILL-DIAG] hole", {
+        panelType,
+        holeIndex,
+        holeId,
+        entryPoint,
+        axisInward: axisInwardLog,
+        cylindersPerHole,
+        holeType: hole.tipo,
+        face: hole.face,
+      });
+    }
+  }
+
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] buildDrillCutGeometries result", {
+      panelType,
+      totalCylinders: geometries.length,
+      expectedRange: `[${holes.length}, ${holes.length * 2}]`,
+    });
   }
 
   return geometries;
@@ -825,8 +913,30 @@ function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes:
 
 function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType, holes: TechnicalDrillHole[] | undefined) {
   if (!holes || holes.length === 0) return;
+
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] applyDrillHolesToPanelGeometry ENTRADA", {
+      panelType,
+      panelName: panel.name,
+      holesReceived: holes.length,
+      holeFaces: holes.map((h) => h.face),
+      holeTypes: holes.map((h) => h.tipo),
+    });
+  }
+
   const cutGeometries = buildDrillCutGeometries(panelType, panel, holes);
   if (cutGeometries.length === 0) return;
+
+  panel.geometry.computeBoundingBox();
+  const bboxBefore = panel.geometry.boundingBox;
+  if (import.meta.env.DEV && bboxBefore) {
+    console.log("[DRILL-DIAG] panel bbox ANTES do CSG", {
+      panelType,
+      min: bboxBefore.min.toArray(),
+      max: bboxBefore.max.toArray(),
+      totalCylindersToSubtract: cutGeometries.length,
+    });
+  }
 
   const mergedCutters = mergeGeometries(cutGeometries, false);
   cutGeometries.forEach((geometry) => geometry.dispose());
@@ -841,6 +951,16 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   mergedCutters.dispose();
   if (!carved?.geometry) return;
 
+  carved.geometry.computeBoundingBox();
+  const bboxAfter = carved.geometry.boundingBox;
+  if (import.meta.env.DEV && bboxAfter) {
+    console.log("[DRILL-DIAG] panel bbox DEPOIS do CSG", {
+      panelType,
+      min: bboxAfter.min.toArray(),
+      max: bboxAfter.max.toArray(),
+    });
+  }
+
   carved.geometry.computeVertexNormals();
   if (!carved.geometry.attributes.uv2 && carved.geometry.attributes.uv) {
     carved.geometry.setAttribute("uv2", carved.geometry.attributes.uv.clone());
@@ -849,6 +969,14 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   panel.geometry = carved.geometry;
   panel.castShadow = true;
   panel.receiveShadow = true;
+
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] applyDrillHolesToPanelGeometry SAÍDA", {
+      panelType,
+      holesApplied: holes.length,
+      meshUpdated: true,
+    });
+  }
 }
 
 let cachedFallbackMaterial: THREE.MeshStandardMaterial | null = null;

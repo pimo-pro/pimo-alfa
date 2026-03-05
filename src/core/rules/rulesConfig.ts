@@ -68,6 +68,8 @@ export type RulesConfig = {
         offsetLateral: number;
         /** Linha de furação: offset da borda esquerda/direita (meio espessura ≈ 9mm). */
         offsetDaBorda: number;
+        /** Distância do centro do furo à borda lateral (mm). Padrão 9.5. */
+        sideOffset: number;
         aplicarEm: {
           cima: boolean;
           fundo: boolean;
@@ -85,6 +87,8 @@ export type RulesConfig = {
         distanciaFundo: number;
         /** Linha de furação: offset da borda (default 9mm = meio espessura). */
         offsetDaBorda: number;
+        /** Distância do centro do furo à borda lateral (mm). Padrão 9.5. */
+        sideOffset: number;
         distanciaLateral: number;
         offsetDaCavilha: number;
         aplicarEm: {
@@ -265,6 +269,7 @@ export const defaultRulesConfig: RulesConfig = {
         distanciaBase: 60,
         offsetLateral: 0,
         offsetDaBorda: 9,
+        sideOffset: 9.5,
         aplicarEm: {
           cima: true,
           fundo: true,
@@ -279,6 +284,7 @@ export const defaultRulesConfig: RulesConfig = {
         distanciaFrente: 40,
         distanciaFundo: 40,
         offsetDaBorda: 9,
+        sideOffset: 9.5,
         distanciaLateral: 60,
         offsetDaCavilha: 20,
         aplicarEm: {
