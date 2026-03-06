@@ -216,6 +216,42 @@ function mapContourToLayoutCoordinates(
   return normalizeContourWinding(mapped, expected);
 }
 
+/**
+ * Transforma coordenadas do referencial canto inferior-esquerdo (0,0) para canto superior-direito.
+ * Usado apenas na escrita do TCN; não altera lógica interna, furos, faces nem regras de drilling.
+ * X_new = MaxWidth − X_old, Y_new = MaxHeight − Y_old.
+ */
+function flipPointToTopRightAnchor(x: number, y: number, maxWidth: number, maxHeight: number): { x: number; y: number } {
+  return { x: maxWidth - x, y: maxHeight - y };
+}
+
+/**
+ * Aplica flip de anchor a uma lista de pontos de contorno (X_new = maxW - X_old, Y_new = maxH - Y_old).
+ *
+ * O winding do contorno define o lado da compensação da ferramenta na CNC; o flip de coordenadas
+ * inverte naturalmente o sentido do contorno. Por isso o tratamento difere:
+ * - external = true (contorno externo): não invertemos a ordem dos pontos; a reflexão inverte o
+ *   winding (CW→CCW), mantendo o lado de compensação correto (corte por fora da peça).
+ * - external = false (contorno interno / pocket): invertemos a ordem para repor CCW e manter
+ *   corte por dentro do rasgo.
+ *
+ * Documentado para evitar regressões em alterações futuras (comportamento validado na CNC).
+ */
+function flipContourPointsToTopRightAnchor(
+  points: ContourPoint[],
+  maxWidth: number,
+  maxHeight: number,
+  external: boolean
+): ContourPoint[] {
+  const flipped = points.map((p) => ({
+    ...p,
+    x: maxWidth - p.x,
+    y: maxHeight - p.y,
+  }));
+  if (!external) flipped.reverse();
+  return flipped;
+}
+
 /** Bloco W#89 (início de operação de corte) — HARNNETT: #40=1 corte externo, #205=113 ferramenta. */
 function buildToolBlock(x: number, y: number, zSafe: number): string {
   return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
@@ -298,11 +334,15 @@ function buildSideBlock(
  * - Header: DL, DH, DS do próprio painel.
  * - SIDE#1: furação W#81 (top drilling) + corte W#89 + W#2201 por peça (toolpath externo outset, #40=1, #205=113).
  * - Final: SIDE#3, SIDE#4, SIDE#5, SIDE#6, SIDE#2 no mesmo padrão.
+ * - Anchor: peças posicionadas com referência no canto superior-direito (X_new = anchorMaxW - X_old, Y_new = anchorMaxH - Y_old).
+ *   Se anchorMaxWidth/anchorMaxHeight não forem passados, usa as dimensões do próprio painel.
  */
 export function generateTcnForPanel(
   sheetResult: SheetResult,
   _kerf_mm = 3,
-  acamName = "Sheet"
+  acamName = "Sheet",
+  anchorMaxWidth?: number,
+  anchorMaxHeight?: number
 ): string {
   const lines: string[] = [];
   lines.push(HEADER);
@@ -316,6 +356,10 @@ export function generateTcnForPanel(
   const dl = sheet.largura_mm;
   const dh = sheet.altura_mm;
   const ds = thicknessMm;
+
+  /** Dimensões para anchor no canto superior-direito (baseado no maior painel do conjunto quando passado). */
+  const maxW = anchorMaxWidth ?? sheet.largura_mm;
+  const maxH = anchorMaxHeight ?? sheet.altura_mm;
 
   lines.push(`$=Acam Name=${acamName}`);
   lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
@@ -349,9 +393,12 @@ export function generateTcnForPanel(
       if (!topDrillable) continue;
       const holeType = (hole as { holeType?: string }).holeType;
       const isTerceiroFuroDobradica = holeType === "dobradica_parafuso_uniao";
+      const xAbs = toLayoutAbsoluteX(pl.x_mm + hole.x, sheetWidthMm);
+      const yAbs = pl.y_mm + hole.y;
+      const { x: xFlipped, y: yFlipped } = flipPointToTopRightAnchor(xAbs, yAbs, maxW, maxH);
       drills.push({
-        x: toLayoutAbsoluteX(pl.x_mm + hole.x, sheetWidthMm),
-        y: pl.y_mm + hole.y,
+        x: xFlipped,
+        y: yFlipped,
         z: 0,
         diametro: isTerceiroFuroDobradica ? DOBRADICA_TERCEIRO_FURO.diametroMm : hole.diameter,
         profundidade: isTerceiroFuroDobradica ? DOBRADICA_TERCEIRO_FURO.profundidadeMm : Math.min(hole.depth, thicknessMm),
@@ -369,11 +416,12 @@ export function generateTcnForPanel(
     const h = pl.altura_mm;
     const x = pl.x_mm;
     const y = pl.y_mm;
-    const points = mapContourToLayoutCoordinates(
+    const pointsLayout = mapContourToLayoutCoordinates(
       buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm),
       sheetWidthMm,
       "CW"
     );
+    const points = flipContourPointsToTopRightAnchor(pointsLayout, maxW, maxH, true);
     const firstPoint = points[0];
     sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zSafe));
     sideInnerLines.push(buildW2201(points, zCut));
@@ -381,7 +429,7 @@ export function generateTcnForPanel(
     const innerContours = pl.innerContours;
     if (innerContours?.length) {
       for (const rect of innerContours) {
-        const innerPoints = mapContourToLayoutCoordinates(
+        const innerPointsLayout = mapContourToLayoutCoordinates(
           buildInternalContourPoints(
             pl.x_mm + rect.x_mm,
             pl.y_mm + rect.y_mm,
@@ -393,7 +441,8 @@ export function generateTcnForPanel(
           sheetWidthMm,
           "CCW"
         );
-        if (innerPoints.length > 0) {
+        if (innerPointsLayout.length > 0) {
+          const innerPoints = flipContourPointsToTopRightAnchor(innerPointsLayout, maxW, maxH, false);
           const first = innerPoints[0];
           sideInnerLines.push(buildToolBlock(first.x, first.y, zSafe));
           sideInnerLines.push(buildW2201(innerPoints, zCut));

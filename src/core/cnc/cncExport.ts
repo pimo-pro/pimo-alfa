@@ -29,6 +29,14 @@ export function exportCncFiles(
     .replace(/^_+|_+$/g, "")
     .slice(0, 40) || "Sheet";
 
+  /** Maior painel do conjunto: usado como referência para anchor top-right no TCN (X_new = maxW - X_old, Y_new = maxH - Y_old). */
+  const maxSheetWidth = layoutResult.sheets.length
+    ? Math.max(...layoutResult.sheets.map((s) => s.sheet.largura_mm))
+    : 0;
+  const maxSheetHeight = layoutResult.sheets.length
+    ? Math.max(...layoutResult.sheets.map((s) => s.sheet.altura_mm))
+    : 0;
+
   const files: CncExportFile[] = [];
   layoutResult.sheets.forEach((sheetResult, index) => {
     const sheet = sheetResult.sheet;
@@ -46,7 +54,7 @@ export function exportCncFiles(
       filenameBase,
       panelIndex,
       thicknessMm,
-      tcn: generateTcnForPanel(sheetResult, 3, filenameBase),
+      tcn: generateTcnForPanel(sheetResult, 3, filenameBase, maxSheetWidth, maxSheetHeight),
       kdt: generateKdt(panel, drillsForPanel),
     });
   });
