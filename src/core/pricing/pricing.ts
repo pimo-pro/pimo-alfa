@@ -1,4 +1,5 @@
 import type { CutListItem, CutListItemComPreco } from "../types";
+import { listOfficialMaterials, resolveMaterial } from "../materials/materials.api";
 
 // Interface para preço de material
 interface PrecoMaterial {
@@ -7,37 +8,28 @@ interface PrecoMaterial {
   precoPorM2: number; // euros por m²
 }
 
-// Base de dados de preços por material e espessura
-const PRECOS_MATERIAIS: PrecoMaterial[] = [
-  // MDF
-  { material: "MDF", espessura: 12, precoPorM2: 18.0 },
-  { material: "MDF", espessura: 16, precoPorM2: 22.0 },
-  { material: "MDF", espessura: 18, precoPorM2: 25.0 },
-  { material: "MDF", espessura: 19, precoPorM2: 26.0 },
-  { material: "MDF", espessura: 25, precoPorM2: 32.0 },
-  
-  // Plywood
-  { material: "Plywood", espessura: 12, precoPorM2: 24.0 },
-  { material: "Plywood", espessura: 16, precoPorM2: 28.0 },
-  { material: "Plywood", espessura: 18, precoPorM2: 32.0 },
-  { material: "Plywood", espessura: 25, precoPorM2: 42.0 },
-  
-  // Pinho
-  { material: "Pinho", espessura: 16, precoPorM2: 30.0 },
-  { material: "Pinho", espessura: 18, precoPorM2: 35.0 },
-  { material: "Pinho", espessura: 25, precoPorM2: 48.0 },
-  
-  // Carvalho
-  { material: "Carvalho", espessura: 18, precoPorM2: 65.0 },
-  { material: "Carvalho", espessura: 25, precoPorM2: 85.0 },
-];
+// Preços derivados da API oficial (somente madeira).
+const PRECOS_MATERIAIS: PrecoMaterial[] = listOfficialMaterials()
+  .filter((m) => m.industrial && m.industrialDefaults)
+  .flatMap((m) => {
+    const baseEsp = Number(m.industrialDefaults?.espessuraPadrao) || 19;
+    const basePreco = Number(m.industrialDefaults?.custo_m2) || 0;
+    const espessuras = [12, 16, 18, 19, 25];
+    return espessuras.map((esp) => ({
+      material: m.label,
+      espessura: esp,
+      precoPorM2: Number((basePreco * (esp / baseEsp)).toFixed(2)),
+    }));
+  });
 
 /**
  * Obtém o preço por m² de um material e espessura específicos
  */
 export function getPrecoPorMaterial(material: string, espessura: number): number {
+  const resolved = resolveMaterial(material);
+  const effectiveMaterial = resolved?.label ?? material;
   const preco = PRECOS_MATERIAIS.find(
-    (p) => p.material === material && p.espessura === espessura
+    (p) => p.material === effectiveMaterial && p.espessura === espessura
   );
 
   if (preco) {
@@ -45,7 +37,7 @@ export function getPrecoPorMaterial(material: string, espessura: number): number
   }
 
   // Se não encontrar, retorna um preço padrão baseado no material
-  const precoPadrao = PRECOS_MATERIAIS.find((p) => p.material === material);
+  const precoPadrao = PRECOS_MATERIAIS.find((p) => p.material === effectiveMaterial);
   if (precoPadrao) {
     // Ajusta o preço proporcionalmente à espessura
     const fatorEspessura = espessura / precoPadrao.espessura;

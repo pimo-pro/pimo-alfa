@@ -158,7 +158,7 @@ export const useCalculadoraSync = (
         box?.material ??
         projectMaterialIdRef.current ??
         materialName ??
-        "MDF Branco";
+        "mdf_branco";
       const resolvedMaterialName = getViewerMaterialId(effectiveMaterial);
       const cadOnly =
         (wsBox.models?.length ?? 0) > 0 && wsBox.prateleiras === 0 && wsBox.gavetas === 0;

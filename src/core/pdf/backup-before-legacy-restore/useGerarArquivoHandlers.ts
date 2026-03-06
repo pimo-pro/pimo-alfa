@@ -1,9 +1,14 @@
+/**
+ * BACKUP: versão atual antes da restauração do modelo legado (usa buildTechnicalPdf no onPdfTecnico).
+ * Copiar para: src/hooks/useGerarArquivoHandlers.ts
+ */
+
 import { useCallback } from "react";
 import { useProject } from "../context/useProject";
 import { useToast } from "../context/ToastContext";
 import { useSettings } from "../context/SettingsContext";
 import { cutlistComPrecoFromBoxes } from "../core/manufacturing/cutlistFromBoxes";
-import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
+import { buildTechnicalPdf } from "../core/pdf/pdfTechnical";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import { buildEtiquetasPdf } from "../core/pdf/pdfEtiquetas";
@@ -61,10 +66,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const proj = pdfProject();
-    const doc = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
-      materialId: proj.materialId,
-    });
+    const doc = buildTechnicalPdf(pdfProject());
     doc.save(`${slug}_tecnico.pdf`);
   }, [hasBoxes, showToast, pdfProject, slug]);
 
@@ -112,7 +114,7 @@ export function useGerarArquivoHandlers() {
 
   const onLayoutCorte = useCallback(async () => {
     if (!hasBoxes) {
-      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
+      showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
       return;
     }
     const parametric = cutlistComPrecoFromBoxes(

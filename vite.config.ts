@@ -1,12 +1,66 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { buildMaterialsApiPayload } from './src/server/materialsApi'
 
 const buildVersion = `${process.env.npm_package_version ?? '0.0.0'}+${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)}`;
 
 // https://vite.dev/config/
 export default defineConfig({
   base: "/",
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'materials-api-middleware',
+      configureServer(server) {
+        server.middlewares.use('/api/materials', (req, res) => {
+          if (req.method === 'OPTIONS') {
+            res.statusCode = 200;
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+            res.end(JSON.stringify({ ok: true }));
+            return;
+          }
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify({ ok: false, error: 'Method not allowed' }));
+            return;
+          }
+          res.statusCode = 200;
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(buildMaterialsApiPayload()));
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use('/api/materials', (req, res) => {
+          if (req.method === 'OPTIONS') {
+            res.statusCode = 200;
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+            res.end(JSON.stringify({ ok: true }));
+            return;
+          }
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify({ ok: false, error: 'Method not allowed' }));
+            return;
+          }
+          res.statusCode = 200;
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(buildMaterialsApiPayload()));
+        });
+      },
+    },
+  ],
   define: {
     __PIMO_VERSION__: JSON.stringify(buildVersion),
   },

@@ -1,15 +1,17 @@
 /**
- * PDF Cutlist — tabela de peças para corte (modelo legado v2.8.9).
- * Colunas: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N QR.
+ * BACKUP: versão atual antes da restauração do modelo legado v2.8.9.
+ * PDF Cutlist — tabela de peças para corte.
  */
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import qrcode from "qrcode-generator";
-import type { BoxModule, CutListItemComPreco, TechnicalDrillHole } from "../types";
+import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
+import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload } from "../qrcode/qrcodeService";
+import { generateQrCanvasWithLogo } from "../qrcode/qrcodeLogoService";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -17,7 +19,7 @@ export type ProjectForPdf = {
   rules: RulesConfig;
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
-  settings?: unknown;
+  settings?: SettingsSchema;
 };
 
 const MARGIN = 14;
@@ -74,7 +76,32 @@ function drawQrFromCode(doc: jsPDF, code: string, x: number, y: number, size: nu
   }
 }
 
-function renderQrLayer(
+async function drawQrWithLogoOrFallback(
+  doc: jsPDF,
+  code: string,
+  x: number,
+  y: number,
+  size: number,
+  settings?: SettingsSchema
+) {
+  if (!settings?.etiquetasQr?.logoAtivado || !settings?.etiquetasQr?.logoDataUrl) {
+    drawQrFromCode(doc, code, x, y, size);
+    return;
+  }
+
+  try {
+    const canvas = await generateQrCanvasWithLogo(code, size * 10, {
+      logoDataUrl: settings.etiquetasQr.logoDataUrl,
+      logoSizePercent: settings.etiquetasQr.logoTamanhoPorcento,
+    });
+    const imgData = canvas.toDataURL("image/png");
+    doc.addImage(imgData, "PNG", x, y, size, size);
+  } catch {
+    drawQrFromCode(doc, code, x, y, size);
+  }
+}
+
+async function renderQrLayer(
   doc: jsPDF,
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
   project: ProjectForPdf
@@ -89,7 +116,7 @@ function renderQrLayer(
   y += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Mesmo código das etiquetas (projeto / caixa / peça / número).", MARGIN, y);
+  doc.text("Rastreio local: QR com código curto da etiqueta.", MARGIN, y);
   y += 8;
 
   const pageW = doc.internal.pageSize.getWidth();
@@ -112,17 +139,22 @@ function renderQrLayer(
     const qrX = x + 2;
     const qrY = rowY + 10;
     const pieceNumber = Number(p.pieceNumber ?? 0);
-    const qrPayload = buildLocalQrPayload(
+    const etiquetaCode = buildLocalQrPayload(
       p,
       { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
       pieceNumber
     );
-    drawQrFromCode(doc, qrPayload, qrX, qrY, qrSize);
+    await drawQrWithLogoOrFallback(doc, etiquetaCode, qrX, qrY, qrSize, project.settings);
 
     if (project.rules.qrcode.mostrarTextoAbaixoQr) {
-      doc.setFontSize(Math.min(5, textSize));
+      doc.setFontSize(textSize);
+      doc.setFont("helvetica", "bold");
+      doc.text(etiquetaCode, qrX + qrSize + 3, qrY + 6);
+    }
+    if (project.rules.qrcode.destacarNumeroPeca) {
       doc.setFont("helvetica", "normal");
-      doc.text(qrPayload, qrX + qrSize + 2, qrY + 6, { maxWidth: cardW - qrSize - 6 });
+      doc.setFontSize(7);
+      doc.text(`Nº: ${etiquetaCode}`, qrX + qrSize + 3, qrY + 11);
     }
 
     col += 1;
@@ -137,125 +169,44 @@ function renderQrLayer(
   }
 }
 
-/** Detecta se o contexto (projeto/caixa/peça) é de cozinha para regra da coluna Borda. */
-function isCozinhaContext(
-  project: ProjectForPdf,
-  p: CutListItemComPreco & { boxNome?: string; tipoBorda?: string }
-): boolean {
-  const proj = (project.projectName ?? "").toLowerCase();
-  const boxNome = (p.boxNome ?? "").toLowerCase();
-  const material = (p.material ?? "").toLowerCase();
-  return proj.includes("cozinha") || boxNome.includes("cozinha") || material.includes("cozinha");
-}
-
-/**
- * Renderiza tabela de cutlist.
- * Ordem: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N QR.
- * Borda: 10 mm → "—"; cozinha + reta → "ALL"; demais → tipoBorda ou "todos os lados".
- * N QR: código da etiqueta (mesmo padrão das etiquetas), com quebra de linha.
- */
 export function renderCutlistTable(
   doc: jsPDF,
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
-  project: ProjectForPdf,
   startY: number
 ): number {
-  const head = [
-    "Caixa",
-    "Peça",
-    "Qtd",
-    "L×A×P (mm)",
-    "Borda (fita)",
-    "Limpeza",
-    "Montagem",
-    "Verificação",
-    "OBSERVAÇÕES",
-    "N QR",
-  ];
-  const body = parts.map((p, idx) => {
-    let bordaFita: string;
-    if (p.espessura === 10) {
-      bordaFita = "—";
-    } else {
-      const raw = p.tipoBorda ?? "todos os lados";
-      if (raw === "reta" && isCozinhaContext(project, p)) {
-        bordaFita = "ALL";
-      } else {
-        bordaFita = raw;
-      }
-    }
-    const pieceNumber = Number(p.pieceNumber ?? 0) || idx + 1;
-    const nQr = buildLocalQrPayload(
-      p,
-      { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
-      pieceNumber
-    );
-    return [
-      p.boxNome ?? "—",
-      p.nome,
-      String(p.quantidade),
-      `${p.dimensoes.largura}×${p.dimensoes.altura}×${p.dimensoes.profundidade}`,
-      bordaFita,
-      "",
-      "",
-      "",
-      "",
-      nQr,
-    ];
-  });
+  const head = ["Caixa", "Peça", "L×A×P (mm)", "Borda (fita)", "Qtd", "Observações"];
+  const body = parts.map((p) => [
+    p.boxNome ?? "—",
+    p.nome,
+    `${p.dimensoes.largura}×${p.dimensoes.altura}×${p.dimensoes.profundidade}`,
+    p.tipoBorda ?? "reta",
+    String(p.quantidade),
+    "",
+  ]);
 
   if (body.length === 0) {
-    body.push(["Nenhuma peça", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
+    body.push(["Nenhuma peça", "—", "—", "—", "—", "—"]);
   }
 
   autoTable(doc, {
     head: [head],
     body,
     startY,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: HEADER_COLOR, fontSize: 7 },
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: HEADER_COLOR },
     margin: { left: MARGIN, right: MARGIN },
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 32 },
-      2: { cellWidth: 10 },
+      0: { cellWidth: 35 },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 45 },
       3: { cellWidth: 28 },
       4: { cellWidth: 18 },
-      5: { cellWidth: 14 },
-      6: { cellWidth: 14 },
-      7: { cellWidth: 16 },
-      8: { cellWidth: 22 },
-      9: { cellWidth: 70, overflow: "linebreak", cellPadding: 1.5 },
+      5: { cellWidth: "auto" },
     },
   });
 
   const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? startY;
   return finalY;
-}
-
-type HoleLike = { x: number; y: number; diametro: number; profundidade: number };
-
-function getHolesForPart(part: CutListItemComPreco): HoleLike[] {
-  const drillHoles = part.drillHoles ?? [];
-  if (drillHoles.length > 0) {
-    return drillHoles.map((h) => ({
-      x: h.x,
-      y: h.y,
-      diametro: h.diameter,
-      profundidade: h.depth,
-    }));
-  }
-  const technicalHoles = (part as CutListItemComPreco & { furacoesTecnicas?: TechnicalDrillHole[] }).furacoesTecnicas ?? [];
-  if (technicalHoles.length > 0) {
-    return technicalHoles.map((h) => ({
-      x: h.x,
-      y: h.y,
-      diametro: h.diametro,
-      profundidade: h.profundidade,
-    }));
-  }
-  const furacoes = (part as CutListItemComPreco & { furacoes?: HoleLike[] }).furacoes ?? [];
-  return furacoes;
 }
 
 function drawFurosForPart(
@@ -266,7 +217,8 @@ function drawFurosForPart(
   drawW: number,
   drawH: number
 ) {
-  const holes = getHolesForPart(part);
+  const drillHoles = part.drillHoles ?? [];
+  const holes = drillHoles.map((h) => ({ x: h.x, y: h.y, diametro: h.diameter, profundidade: h.depth }));
   if (holes.length === 0) return;
   const scale = Math.min(
     drawW / Math.max(1, part.dimensoes.largura),
@@ -315,12 +267,7 @@ function renderFurosLayer(
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
   startY: number
 ) {
-  const withHoles = parts.filter((p) => {
-    if ((p.drillHoles?.length ?? 0) > 0) return true;
-    if (((p as CutListItemComPreco & { furacoesTecnicas?: unknown[] }).furacoesTecnicas?.length ?? 0) > 0) return true;
-    if (((p as CutListItemComPreco & { furacoes?: unknown[] }).furacoes?.length ?? 0) > 0) return true;
-    return false;
-  });
+  const withHoles = parts.filter((p) => (p.drillHoles?.length ?? 0) > 0);
   if (withHoles.length === 0) return;
   doc.addPage("a4", "landscape");
   let y = startY;
@@ -346,7 +293,7 @@ function renderFurosLayer(
     doc.setFontSize(8);
     doc.text(`${p.boxNome ?? "—"} · ${p.nome}`, x + 2, rowY + 4);
     doc.text(
-      `${p.dimensoes.largura}x${p.dimensoes.altura} mm · orientação de referência 0º`,
+      `${p.dimensoes.largura}x${p.dimensoes.altura} mm · orientação de referência 0°`,
       x + 2,
       rowY + 8
     );
@@ -370,7 +317,7 @@ function renderFurosLayer(
   }
 }
 
-function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF {
+export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {
   const doc = existingDoc ?? new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   if (existingDoc) {
@@ -398,17 +345,9 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
   y += 12;
 
   const parts = getFullCutlist(project);
-  y = renderCutlistTable(doc, parts, project, y);
+  y = renderCutlistTable(doc, parts, y);
   renderFurosLayer(doc, parts, MARGIN);
-  renderQrLayer(doc, parts, project);
+  await renderQrLayer(doc, parts, project);
 
   return doc;
-}
-
-/**
- * Gera PDF de cutlist (modelo legado v2.8.9). API async para compatibilidade com fluxo atual.
- * @param existingDoc Se fornecido, adiciona as páginas ao documento existente.
- */
-export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {
-  return Promise.resolve(buildCutlistPdfSync(project, existingDoc));
 }

@@ -11,6 +11,7 @@ import { createWoodMaterial } from "../../3d/materials/WoodMaterial";
 import { getMaterialPreset, defaultMaterialSet, mergeMaterialSet } from "../../3d/materials/MaterialLibrary";
 import { mmToM } from "../../utils/units";
 import type { ViewerDrillMarkersByPanel, WorkspaceBox } from "../../core/types";
+import { getViewerMaterialId } from "../../core/materials/service";
 
 type Piece3DModalProps = {
   box: WorkspaceBox | null;
@@ -21,22 +22,10 @@ type Piece3DModalProps = {
   onClose: () => void;
 };
 
-function materialNameToPreset(name: string): string {
-  const m: Record<string, string> = {
-    "MDF Branco": "mdf_branco",
-    "MDF Cinza": "mdf_cinza",
-    "MDF Preto": "mdf_preto",
-    "Carvalho Natural": "carvalho_natural",
-    "Carvalho Escuro": "carvalho_escuro",
-    "Nogueira": "nogueira",
-  };
-  return m[name] ?? "mdf_branco";
-}
-
 export default function Piece3DModal({
   box,
   drillingByPanel: _drillingByPanel,
-  materialTipo = "MDF Branco",
+  materialTipo = "mdf_branco",
   open = true,
   onClose,
 }: Piece3DModalProps) {
@@ -49,7 +38,7 @@ export default function Piece3DModal({
     const h = mmToM(box.dimensoes.altura);
     const d = mmToM(box.dimensoes.profundidade);
     const thickness = mmToM(box.espessura ?? 19);
-    const preset = materialNameToPreset(box.models?.[0]?.material ?? materialTipo);
+    const preset = getViewerMaterialId(box.models?.[0]?.material ?? materialTipo);
     const materialSet = mergeMaterialSet(defaultMaterialSet);
     const matPreset = getMaterialPreset(materialSet, preset);
     const loaded = matPreset?.options

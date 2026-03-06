@@ -1,11 +1,11 @@
 /**
  * PDF Unificado — Cutlist Industrial, Painéis, Portas, Gavetas, Ferragens, Totais, Resumo Financeiro.
- * Cada seção só é incluída se houver conteúdo real.
+ * BACKUP: versão atual antes da restauração do modelo legado (usa buildTechnicalPdf).
  */
 
 import type jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { gerarPdfTecnicoCompleto } from "./gerarPdfTecnico";
+import { buildTechnicalPdf } from "./pdfTechnical";
 import { buildCutlistPdf } from "./pdfCutlist";
 import type { ProjectForPdf } from "./pdfTechnical";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
@@ -187,9 +187,7 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
  * + Ferragens Industriais + Totais e Resumo Financeiro.
  */
 export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Promise<jsPDF> {
-  const doc = gerarPdfTecnicoCompleto(project.boxes, project.rules, project.projectName, {
-    materialId: project.materialId,
-  });
+  const doc = buildTechnicalPdf(project);
   await buildCutlistPdf(project, doc);
   addPainéisSection(doc, project);
   addPortasSection(doc, project);

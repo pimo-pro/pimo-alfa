@@ -82,7 +82,7 @@ export const mdfLibrary: MdfMaterial[] = [
   },
   {
     id: "mdf-branco",
-    nome: "Branco",
+    nome: "MDF Branco",
     corBase: "#ffffff",
     texturas: {
       map: "/textures/mdf/branco/base.jpg",

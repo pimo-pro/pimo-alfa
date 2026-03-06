@@ -40,7 +40,13 @@ type DocStat = {
   value: number;
 };
 
-const files = import.meta.glob("../**/*.{ts,tsx,js,jsx,css,html}", { eager: false });
+const files = import.meta.glob(
+  [
+    "../**/*.{ts,tsx,js,jsx,css,html}",
+    "!../core/pdf/backup-before-legacy-restore/**",
+  ],
+  { eager: false }
+);
 const PAINEL_OBSERVER_THRESHOLDS: number[] = [0, 0.05, 0.15, 0.3, 0.5, 0.75, 1];
 
 const computeStats = (boxCount: number): DocStat[] => {

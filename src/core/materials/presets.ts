@@ -18,60 +18,50 @@ export interface MaterialPreset {
 export type MaterialPresetRecord = Record<string, MaterialPreset>;
 
 const DEFAULT_UV_SCALE = { x: 1, y: 1 };
-const DEFAULT_ROUGHNESS = 0.6;
 const DEFAULT_METALLIC = 0;
 
 /** Presets iniciais (carregados estaticamente). */
 export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
   {
-    id: "madeira_clara",
-    name: "Madeira Clara",
-    color: "#e8dcc8",
+    id: "mdf_branco",
+    name: "MDF Branco",
+    color: "#f2f0eb",
     uvScale: DEFAULT_UV_SCALE,
     uvRotation: 0,
-    roughness: DEFAULT_ROUGHNESS,
+    roughness: 0.52,
     metallic: DEFAULT_METALLIC,
   },
   {
-    id: "madeira_escura",
-    name: "Madeira Escura",
-    color: "#5c4033",
+    id: "mdf_cinza",
+    name: "MDF Cinza",
+    color: "#9ca3af",
     uvScale: DEFAULT_UV_SCALE,
     uvRotation: 0,
-    roughness: 0.65,
+    roughness: 0.55,
     metallic: DEFAULT_METALLIC,
   },
   {
-    id: "branco_liso",
-    name: "Branco Liso",
-    color: "#f5f5f5",
+    id: "mdf_preto",
+    name: "MDF Preto",
+    color: "#1f2937",
     uvScale: DEFAULT_UV_SCALE,
     uvRotation: 0,
-    roughness: 0.4,
+    roughness: 0.58,
     metallic: DEFAULT_METALLIC,
-  },
-  {
-    id: "preto_fosco",
-    name: "Preto Fosco",
-    color: "#2a2a2a",
-    uvScale: DEFAULT_UV_SCALE,
-    uvRotation: 0,
-    roughness: 0.85,
-    metallic: DEFAULT_METALLIC,
-  },
-  {
-    id: "cinza_industrial",
-    name: "Cinza Industrial",
-    color: "#6b7280",
-    uvScale: DEFAULT_UV_SCALE,
-    uvRotation: 0,
-    roughness: 0.7,
-    metallic: 0.1,
   },
   {
     id: "carvalho_natural",
-    name: "Carvalho Natural",
-    color: "#c9a227",
+    name: "Carvalho",
+    color: "#c9a27a",
+    uvScale: DEFAULT_UV_SCALE,
+    uvRotation: 0,
+    roughness: 0.55,
+    metallic: DEFAULT_METALLIC,
+  },
+  {
+    id: "nogueira",
+    name: "Nogueira",
+    color: "#8a5a2b",
     uvScale: DEFAULT_UV_SCALE,
     uvRotation: 0,
     roughness: 0.55,

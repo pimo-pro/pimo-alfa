@@ -1,17 +1,17 @@
 /**
- * PDF Técnico Industrial — tabela única estilo Excel (modelo legado v1.9).
+ * PDF Técnico Industrial — tabela única estilo Excel.
  * Uma única página landscape com todas as peças do projeto.
  */
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import type { ComponentType } from "../components/componentTypes";
-import type { BoxModule } from "../types";
-import type { RulesConfig } from "../rules/rulesConfig";
-import { gerarModeloIndustrial } from "../manufacturing/boxManufacturing";
-import { safeGetItem } from "../../utils/storage";
-import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
-import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
+import type { ComponentType } from "../src/core/components/componentTypes";
+import type { BoxModule } from "../src/core/types";
+import type { RulesConfig } from "../src/core/rules/rulesConfig";
+import { gerarModeloIndustrial } from "../src/core/manufacturing/boxManufacturing";
+import { safeGetItem } from "../src/utils/storage";
+import { COMPONENT_TYPES_DEFAULT } from "../src/core/components/componentTypes";
+import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../src/core/manufacturing/materials";
 
 const MARGIN = 12;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
@@ -53,6 +53,7 @@ interface LinhaPeca {
   larg: number;
   esp: number;
   nesting: string;
+  cnc: string;
   drill: string;
   o2: string;
   o3: string;
@@ -112,11 +113,6 @@ function getFurosLados(componentType: ComponentType): Set<string> {
   return lados;
 }
 
-/** Furos laterais = fundo, esquerda ou direita (não topo). Topo = Nesting. Drill só "X" se houver lateral. */
-function temFurosLaterais(ladosFuro: Set<string>): boolean {
-  return ladosFuro.has("fundo") || ladosFuro.has("esquerda") || ladosFuro.has("direita");
-}
-
 function construirLinhas(
   boxes: BoxModule[],
   rules: RulesConfig,
@@ -141,7 +137,7 @@ function construirLinhas(
   for (let boxIdx = 0; boxIdx < boxes.length; boxIdx++) {
     const box = boxes[boxIdx];
     const modelo = gerarModeloIndustrial(box, rules);
-    const material = box.material ?? "mdf_branco";
+    const material = box.material ?? "MDF Branco";
     const boxNum = boxIdx + 1;
     let prateleiraCount = 0;
     let gavetaCount = 0;
@@ -169,6 +165,7 @@ function construirLinhas(
     }
   }
 
+  // Ordenar: por caixa, depois por espessura, depois por nome
   pecasCompletas.sort((a, b) => {
     const boxCmp = (a.box.nome || a.box.id).localeCompare(b.box.nome || b.box.id);
     if (boxCmp !== 0) return boxCmp;
@@ -182,13 +179,12 @@ function construirLinhas(
   for (const p of pecasCompletas) {
     const componentId = TIPO_TO_COMPONENT_ID[p.tipo] ?? p.tipo;
     const ct = ctById[componentId];
+    const recebeFuros = ct?.recebe_furos ?? false;
     const ladosFuro = ct ? getFurosLados(ct) : new Set<string>();
 
     const materialStr = formatMaterial(p.material, p.esp, materials);
-    const temFurosLateraisPiece = temFurosLaterais(ladosFuro);
+    const temFuros = recebeFuros || ladosFuro.size > 0;
     const key = `${p.refPeca}|${p.larg}|${p.comp}|${p.esp}|${materialStr}|${p.box.id}`;
-    const esp10 = p.esp === 10;
-    const o2o5 = esp10 ? "" : "X";
 
     const exist = agrupado.get(key);
     if (exist) {
@@ -202,11 +198,12 @@ function construirLinhas(
         larg: p.larg,
         esp: p.esp,
         nesting: "X",
-        drill: temFurosLateraisPiece ? "X" : "",
-        o2: o2o5,
-        o3: o2o5,
-        o4: o2o5,
-        o5: o2o5,
+        cnc: temFuros ? "X" : "",
+        drill: temFuros ? "X" : "",
+        o2: "",
+        o3: "",
+        o4: "",
+        o5: "",
         f2: ladosFuro.has("topo") ? "X" : "",
         f3: ladosFuro.has("fundo") ? "X" : "",
         f4: ladosFuro.has("esquerda") ? "X" : "",
@@ -230,6 +227,7 @@ function construirLinhas(
     return a.refPeca.localeCompare(b.refPeca);
   });
 
+  // Renumerar N QR
   resultado.forEach((r, i) => {
     r.nQr = i + 1;
   });
@@ -237,16 +235,27 @@ function construirLinhas(
   return resultado;
 }
 
+/**
+ * Gera a Página 2 do PDF com preços (futura implementação).
+ * Preparado para: resumo financeiro, custos por caixa.
+ */
 function gerarPdfPrecos(doc: jsPDF, boxes: BoxModule[], rules: RulesConfig): void {
+  // TODO: doc.addPage("a4", "landscape"); adicionarResumoFinanceiro(doc, dados); adicionarCustosPorCaixa(doc, boxes, rules);
   adicionarResumoFinanceiro(doc, null);
   adicionarCustosPorCaixa(doc, boxes, rules);
 }
 
+/**
+ * Adiciona secção de resumo financeiro ao PDF (futura implementação).
+ */
 function adicionarResumoFinanceiro(doc: jsPDF, dados: unknown): void {
   void doc;
   void dados;
 }
 
+/**
+ * Adiciona custos por caixa ao PDF (futura implementação).
+ */
 function adicionarCustosPorCaixa(doc: jsPDF, boxes: BoxModule[], rules: RulesConfig): void {
   void doc;
   void boxes;
@@ -257,7 +266,7 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
   const seen = new Set<string>();
   const acc: string[] = [];
   for (const box of boxes) {
-    const mat = box.material ?? "mdf_branco";
+    const mat = box.material ?? "MDF Branco";
     const esp = box.espessura > 0 ? box.espessura : 18;
     const matInfo = materials.find((m) => m.nome === mat) ?? getMaterial(mat);
     const cor = matInfo.cor ?? "";
@@ -271,15 +280,14 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
 }
 
 /**
- * Gera PDF técnico industrial em tabela única (landscape) — modelo legado v1.9.
+ * Gera PDF técnico industrial em tabela única (landscape).
  * @param opcoes.incluirPaginaPrecos — quando true (futuro), adiciona Página 2 com preços
- * @param opcoes.materialId — ignorado no modelo legado (compatibilidade com ProjectProvider)
  */
 export function gerarPdfTecnicoCompleto(
   boxes: BoxModule[],
   rules: RulesConfig,
   projectName: string,
-  opcoes?: { incluirPaginaPrecos?: boolean; materialId?: string }
+  opcoes?: { incluirPaginaPrecos?: boolean }
 ): jsPDF {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const componentTypes = loadComponentTypesFromStorage();
@@ -287,6 +295,7 @@ export function gerarPdfTecnicoCompleto(
 
   let y = MARGIN;
 
+  // ——— Cabeçalho ———
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
   doc.text("PIMO Studio", MARGIN, y);
@@ -301,6 +310,7 @@ export function gerarPdfTecnicoCompleto(
   doc.text(`Acabamento: ${acabamentos.length > 0 ? acabamentos.join(" | ") : "—"}`, MARGIN, y);
   y += 12;
 
+  // ——— Tabela industrial ———
   const linhas = construirLinhas(boxes, rules, componentTypes, materials);
 
   const head = [
@@ -311,6 +321,7 @@ export function gerarPdfTecnicoCompleto(
     "LARG",
     "ESP",
     "NESTING",
+    "CNC",
     "Drill",
     "O2",
     "O3",
@@ -324,17 +335,18 @@ export function gerarPdfTecnicoCompleto(
     "N QR",
   ];
 
+  // Construir body com linhas de separação entre caixas
   const bodyRows: string[][] = [];
   const separatorRowIndices = new Set<number>();
   let prevBoxIndex = 0;
 
   if (linhas.length === 0) {
-    bodyRows.push(["Nenhuma peça", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
+    bodyRows.push(["Nenhuma peça", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
   } else {
     for (const r of linhas) {
       if (prevBoxIndex > 0 && prevBoxIndex !== r.boxIndex) {
         separatorRowIndices.add(bodyRows.length);
-        bodyRows.push(["—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
+        bodyRows.push(["—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
       }
       prevBoxIndex = r.boxIndex;
       bodyRows.push([
@@ -345,6 +357,7 @@ export function gerarPdfTecnicoCompleto(
         String(r.larg),
         String(r.esp),
         r.nesting,
+        r.cnc,
         r.drill,
         r.o2,
         r.o3,
@@ -384,7 +397,7 @@ export function gerarPdfTecnicoCompleto(
       5: { cellWidth: 12 },
       6: { cellWidth: 14 },
       7: { cellWidth: 10 },
-      8: { cellWidth: 8 },
+      8: { cellWidth: 10 },
       9: { cellWidth: 8 },
       10: { cellWidth: 8 },
       11: { cellWidth: 8 },
@@ -392,11 +405,16 @@ export function gerarPdfTecnicoCompleto(
       13: { cellWidth: 8 },
       14: { cellWidth: 8 },
       15: { cellWidth: 8 },
-      16: { cellWidth: 25 },
-      17: { cellWidth: 12 },
+      16: { cellWidth: 8 },
+      17: { cellWidth: 25 },
+      18: { cellWidth: 12 },
     },
   });
 
+  const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
+  y = lastY + 8;
+
+  // Rodapé
   doc.setFontSize(9);
   doc.setTextColor(128, 128, 128);
   doc.text(
@@ -406,9 +424,11 @@ export function gerarPdfTecnicoCompleto(
   );
   doc.setTextColor(0, 0, 0);
 
+  // Futura Página 2 (preços) — preparado para gerarPdfPrecos, adicionarResumoFinanceiro, adicionarCustosPorCaixa
   if (opcoes?.incluirPaginaPrecos) {
     gerarPdfPrecos(doc, boxes, rules);
   }
 
   return doc;
 }
+

@@ -21,3 +21,4 @@ export {
   getDefaultPreset,
 } from "./presetService";
 export * from "./materialLibraryV2";
+export * from "./materials.api";

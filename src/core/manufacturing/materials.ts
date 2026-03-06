@@ -1,4 +1,9 @@
 import { PANEL_DEFAULTS } from "../panel/panelConstants";
+import {
+  getDefaultOfficialMaterial,
+  listIndustrialWoodMaterials,
+  resolveMaterial,
+} from "../materials/materials.api";
 
 /** IDs dos materiais PBR reais (acabamento visual) */
 export type MaterialPbrId =
@@ -10,8 +15,8 @@ export type MaterialPbrId =
   | "mdf_preto";
 
 export const MATERIAIS_PBR_OPCOES: { id: MaterialPbrId; label: string }[] = [
-  { id: "carvalho_natural", label: "Carvalho Natural" },
-  { id: "carvalho_escuro", label: "Carvalho Escuro" },
+  { id: "carvalho_natural", label: "Carvalho" },
+  { id: "carvalho_escuro", label: "Carvalho" },
   { id: "nogueira", label: "Nogueira" },
   { id: "mdf_branco", label: "MDF Branco" },
   { id: "mdf_cinza", label: "MDF Cinza" },
@@ -39,13 +44,15 @@ export const CHAPA_PADRAO_ALTURA = PANEL_DEFAULTS.altura_mm;
 // Densidade padrão MDF: ~750 kg/m³
 export const DENSIDADE_PADRAO = 750;
 
-export const MATERIAIS_INDUSTRIAIS: MaterialIndustrial[] = [
-  { nome: "MDF Branco", espessuraPadrao: PANEL_DEFAULTS.espessura_mm, custo_m2: 35, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 750 },
-  { nome: "Carvalho", espessuraPadrao: 20, custo_m2: 45, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 720 },
-  { nome: "Lacado", espessuraPadrao: 20, custo_m2: 90, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 750 },
-  { nome: "Contraplacado", espessuraPadrao: 19, custo_m2: 68, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 600 },
-  { nome: "Melamina", espessuraPadrao: 19, custo_m2: 22, larguraChapa: PANEL_DEFAULTS.largura_mm, alturaChapa: PANEL_DEFAULTS.altura_mm, densidade: 700 },
-];
+export const MATERIAIS_INDUSTRIAIS: MaterialIndustrial[] = listIndustrialWoodMaterials().map((m) => ({
+  nome: m.label,
+  espessuraPadrao: m.industrialDefaults?.espessuraPadrao ?? PANEL_DEFAULTS.espessura_mm,
+  custo_m2: m.industrialDefaults?.custo_m2 ?? 0,
+  materialPbrId: (m.viewerMaterialId as MaterialPbrId | undefined) ?? undefined,
+  larguraChapa: m.industrialDefaults?.larguraChapa ?? PANEL_DEFAULTS.largura_mm,
+  alturaChapa: m.industrialDefaults?.alturaChapa ?? PANEL_DEFAULTS.altura_mm,
+  densidade: m.industrialDefaults?.densidade ?? DENSIDADE_PADRAO,
+}));
 
 /**
  * Ferramentas industriais (serras, fresas, etc.)
@@ -68,8 +75,29 @@ export const FERRAMENTAS_INDUSTRIAIS_PADRAO: IndustrialTool[] = [
 
 export const getMaterial = (nome?: string): MaterialIndustrial => {
   if (nome) {
+    const resolved = resolveMaterial(nome);
+    if (resolved?.industrial) {
+      return {
+        nome: resolved.label,
+        espessuraPadrao: resolved.industrialDefaults?.espessuraPadrao ?? PANEL_DEFAULTS.espessura_mm,
+        custo_m2: resolved.industrialDefaults?.custo_m2 ?? 0,
+        materialPbrId: (resolved.viewerMaterialId as MaterialPbrId | undefined) ?? undefined,
+        larguraChapa: resolved.industrialDefaults?.larguraChapa ?? PANEL_DEFAULTS.largura_mm,
+        alturaChapa: resolved.industrialDefaults?.alturaChapa ?? PANEL_DEFAULTS.altura_mm,
+        densidade: resolved.industrialDefaults?.densidade ?? DENSIDADE_PADRAO,
+      };
+    }
     const found = MATERIAIS_INDUSTRIAIS.find((material) => material.nome === nome);
     if (found) return found;
   }
-  return MATERIAIS_INDUSTRIAIS[0];
+  const fallback = getDefaultOfficialMaterial();
+  return {
+    nome: fallback.label,
+    espessuraPadrao: fallback.industrialDefaults?.espessuraPadrao ?? PANEL_DEFAULTS.espessura_mm,
+    custo_m2: fallback.industrialDefaults?.custo_m2 ?? 0,
+    materialPbrId: (fallback.viewerMaterialId as MaterialPbrId | undefined) ?? "mdf_branco",
+    larguraChapa: fallback.industrialDefaults?.larguraChapa ?? PANEL_DEFAULTS.largura_mm,
+    alturaChapa: fallback.industrialDefaults?.alturaChapa ?? PANEL_DEFAULTS.altura_mm,
+    densidade: fallback.industrialDefaults?.densidade ?? DENSIDADE_PADRAO,
+  };
 };

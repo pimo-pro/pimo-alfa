@@ -15,10 +15,79 @@ import { useWallStore } from "../../../stores/wallStore";
 import { useToast } from "../../../context/ToastContext";
 import { listMaterials, getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
 import { cutlistComPrecoFromBoxes, ferragensFromBoxes } from "../../../core/manufacturing/cutlistFromBoxes";
+import { MATERIAIS_INDUSTRIAIS } from "../../../core/manufacturing/materials";
 
 export type LeftPanelProps = {
   activeTab?: string;
 };
+
+type MaterialOption = {
+  id: string;
+  label: string;
+  color?: string;
+  espessura?: number;
+  precoPorM2?: number;
+};
+
+function normalizeApiMaterial(item: unknown): MaterialOption | null {
+  if (!item || typeof item !== "object") return null;
+  const row = item as Record<string, unknown>;
+  const id = row.id;
+  const label = row.label;
+  if (typeof id !== "string" || typeof label !== "string") return null;
+  return {
+    id,
+    label,
+    color: typeof row.color === "string" ? row.color : undefined,
+    espessura: Number.isFinite(Number(row.espessura)) ? Number(row.espessura) : undefined,
+    precoPorM2: Number.isFinite(Number(row.precoPorM2)) ? Number(row.precoPorM2) : undefined,
+  };
+}
+
+function fallbackMaterialsFromLocalStorage(): MaterialOption[] {
+  const fromCrud = listMaterials().map((m) => ({
+    id: m.id,
+    label: m.label,
+    color: m.color,
+    espessura: m.espessura,
+    precoPorM2: m.precoPorM2,
+  }));
+  if (fromCrud.length > 0) return fromCrud;
+
+  try {
+    const raw = localStorage.getItem("pimo_admin_materials");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const row = item as Record<string, unknown>;
+        const nome = row.nome;
+        if (typeof nome !== "string") return null;
+        return {
+          id: nome,
+          label: nome,
+          color: typeof row.cor === "string" ? row.cor : undefined,
+          espessura: Number.isFinite(Number(row.espessuraPadrao)) ? Number(row.espessuraPadrao) : undefined,
+          precoPorM2: Number.isFinite(Number(row.custo_m2)) ? Number(row.custo_m2) : undefined,
+        } as MaterialOption;
+      })
+      .filter((v): v is MaterialOption => Boolean(v));
+  } catch {
+    return [];
+  }
+}
+
+function defaultIndustrialMaterials(): MaterialOption[] {
+  return MATERIAIS_INDUSTRIAIS.map((m) => ({
+    id: m.nome,
+    label: m.nome,
+    color: m.cor,
+    espessura: m.espessuraPadrao,
+    precoPorM2: m.custo_m2,
+  }));
+}
 
 /** Dimensões padrão da sala: 4m × 5m × 2.7m */
 const DEFAULT_ROOM_WIDTH_M = 4;
@@ -311,8 +380,9 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
   const [editingBoxName, setEditingBoxName] = useState("");
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [materialsList, setMaterialsList] = useState<MaterialOption[]>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
   const { viewerApi } = usePimoViewerContext();
-  const materialsList = listMaterials();
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const cutlistFromBoxes = useMemo(() => {
     const parametric = cutlistComPrecoFromBoxes(
@@ -333,6 +403,53 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const totalPecas = cutlistFromBoxes.reduce((sum, item) => sum + item.quantidade, 0);
   const totalFerragens = ferragensFromBoxesList.reduce((sum, item) => sum + item.quantidade, 0);
   const totalItens = totalPecas + totalFerragens;
+
+  useEffect(() => {
+    if (!materialModalOpen) return;
+    let active = true;
+
+    const loadMaterials = async () => {
+      setMaterialsLoading(true);
+
+      // 1) API real (online)
+      try {
+        const response = await fetch("/api/materials", { method: "GET" });
+        if (response.ok) {
+          const payload = (await response.json()) as unknown;
+          const rows = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).materials)
+            ? ((payload as Record<string, unknown>).materials as unknown[])
+            : Array.isArray(payload)
+              ? payload
+              : [];
+          const normalized = rows.map((row) => normalizeApiMaterial(row)).filter((row): row is MaterialOption => Boolean(row));
+          if (normalized.length > 0) {
+            if (active) setMaterialsList(normalized);
+            if (active) setMaterialsLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // fallback abaixo
+      }
+
+      // 2) localStorage
+      const fromLocalStorage = fallbackMaterialsFromLocalStorage();
+      if (fromLocalStorage.length > 0) {
+        if (active) setMaterialsList(fromLocalStorage);
+        if (active) setMaterialsLoading(false);
+        return;
+      }
+
+      // 3) defaults industriais
+      if (active) setMaterialsList(defaultIndustrialMaterials());
+      if (active) setMaterialsLoading(false);
+    };
+
+    void loadMaterials();
+    return () => {
+      active = false;
+    };
+  }, [materialModalOpen]);
 
   // Footer removed - buttons now in main content area
 
@@ -754,6 +871,11 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
               </button>
             </div>
             <div style={{ padding: "0 16px 16px", overflowY: "auto", flex: 1 }}>
+              {materialsLoading && (
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
+                  A carregar materiais...
+                </p>
+              )}
               {materialsList.length === 0 ? (
                 <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
                   Nenhum material no registo. Adicione em Admin → Materials.
@@ -819,6 +941,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
             const feetHeightMm = Math.max(40, selectedBox.feetHeight ?? ((selectedBox.pe_cm ?? 10) * 10));
             const feetOffsetFrontMm = Math.max(0, selectedBox.feetOffsetFront ?? 100);
             const shouldLockY = selectedBox.cabinetType === "lower";
+            const feetEnabled = selectedBox.feetEnabled !== false;
             return (
               <>
           <label
@@ -832,7 +955,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
           >
             <input
               type="checkbox"
-              checked={selectedBox.feetEnabled !== false}
+              checked={feetEnabled}
               onChange={(e) => {
                 const nextEnabled = e.target.checked;
                 const partial: {
@@ -852,6 +975,8 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
             Ativar pés
           </label>
 
+          {feetEnabled && (
+          <>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
             <div className="panel-field-row">
               <label className="panel-label" style={{ minWidth: 110 }}>Altura (mm)</label>
@@ -905,6 +1030,8 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
           <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
             Pés fixos em 4 unidades por caixa (controle de quantidade reservado para futura versão).
           </p>
+          </>
+          )}
               </>
             );
           })()}

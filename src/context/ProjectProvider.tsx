@@ -1679,7 +1679,7 @@ const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
         ...defaultState,
         projectName: template.nome,
         material: template.materialPadrao
-          ? { tipo: "MDF Branco", espessura: 19, precoPorM2: 25, ...template.materialPadrao }
+          ? { tipo: "mdf_branco", espessura: 19, precoPorM2: 25, ...template.materialPadrao }
           : defaultState.material,
         workspaceBoxes,
         selectedWorkspaceBoxId: firstId,

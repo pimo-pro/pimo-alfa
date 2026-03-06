@@ -18,6 +18,10 @@ import { autoArrangeModels } from "../../../core/layout/smartArrange";
 import { snapPosition } from "../../../core/rules/positioning";
 import { positionMmToLocalM } from "../../../core/layout/viewerLayoutAdapter";
 import { getViewerMaterialId } from "../../../core/materials/service";
+import { listOfficialMaterials, resolveMaterial } from "../../../core/materials/materials.api";
+
+const OFFICIAL_WOOD_OPTIONS = listOfficialMaterials();
+const VISUAL_WOOD_OPTIONS = OFFICIAL_WOOD_OPTIONS.filter((m) => m.visual);
 export default function PainelModelosDaCaixa() {
   const { project, actions } = useProject();
   const { viewerApi } = usePimoViewerContext();
@@ -52,7 +56,8 @@ export default function PainelModelosDaCaixa() {
             const cad = cadModels.find((c) => c.id === instance.modelId);
             const nome = instance.nome ?? cad?.nome ?? instance.modelId;
             const categoria = instance.categoria ?? cad?.categoria ?? "";
-            const material = instance.material ?? project.material.tipo;
+            const rawMaterial = instance.material ?? project.material.tipo;
+            const material = resolveMaterial(rawMaterial)?.canonicalId ?? rawMaterial;
             return (
               <li
                 key={instance.id}
@@ -114,11 +119,9 @@ export default function PainelModelosDaCaixa() {
                       className="select"
                       style={{ flex: 1 }}
                     >
-                      <option value="MDF">MDF</option>
-                      <option value="Contraplacado">Contraplacado</option>
-                      <option value="Carvalho">Carvalho</option>
-                      <option value="Faia">Faia</option>
-                      <option value="Pinho">Pinho</option>
+                      {OFFICIAL_WOOD_OPTIONS.map((m) => (
+                        <option key={m.canonicalId} value={m.canonicalId}>{m.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="panel-field-row">
@@ -213,12 +216,9 @@ export default function PainelModelosDaCaixa() {
                 className="select"
                 style={{ width: "100%" }}
               >
-                <option value="Carvalho Natural">Carvalho Natural</option>
-                <option value="Carvalho Escuro">Carvalho Escuro</option>
-                <option value="Nogueira">Nogueira</option>
-                <option value="MDF Branco">MDF Branco</option>
-                <option value="MDF Cinza">MDF Cinza</option>
-                <option value="MDF Preto">MDF Preto</option>
+                {VISUAL_WOOD_OPTIONS.map((m) => (
+                  <option key={m.canonicalId} value={m.canonicalId}>{m.label}</option>
+                ))}
               </select>
               <select
                 value={selectedBox?.espessura ?? project.material.espessura}

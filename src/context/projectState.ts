@@ -34,6 +34,7 @@ import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { getCatalogGlbPath } from "../core/glb/glbRegistry";
 import { regenerateLayersForBox } from "../services/boxLayersService";
 import { extractDrawerCutlistFromLayerItems } from "../services/drawerCutlistAdapter";
+import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
 function getRulesFromProfiles(config: RulesProfilesConfig) {
@@ -41,10 +42,11 @@ function getRulesFromProfiles(config: RulesProfilesConfig) {
   return normalizeRulesConfig(perfil?.rules ?? defaultRulesConfig);
 }
 
+const defaultOfficialMaterial = getDefaultOfficialMaterial();
 const defaultMaterial: Material = {
-  tipo: "MDF Branco",
-  espessura: 19,
-  precoPorM2: 25.0,
+  tipo: defaultOfficialMaterial.canonicalId,
+  espessura: defaultOfficialMaterial.industrialDefaults?.espessuraPadrao ?? 19,
+  precoPorM2: defaultOfficialMaterial.industrialDefaults?.custo_m2 ?? 25.0,
 };
 
 const defaultDimensoes: Dimensoes = {

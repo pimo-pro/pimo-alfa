@@ -96,7 +96,7 @@ function getArrayPanelId(box: BoxModule, kind: "prateleiras" | "portas" | "gavet
 const getEspessura = (box: BoxModule) => (box.espessura > 0 ? box.espessura : SYSTEM_THICKNESS_MM);
 /** Nome do material (CRUD ou legado) para painéis/custos. */
 const getNomeMaterial = (box: BoxModule) =>
-  getIndustrialMaterial(getMaterialForBox(box, undefined) || "MDF Branco").nome;
+  getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco").nome;
 /** Profundidade útil (sem costa): profundidade_total - 10 mm. */
 const PROFUNDIDADE_UTIL_MM = SYSTEM_BACK_MM;
 
@@ -295,7 +295,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     }
   }
 
-  const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "MDF Branco");
+  const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
   return paineis.map((painel) => ({
     ...painel,
     custo: calcularCustoPainel(painel, materialInfo) * painel.quantidade,
@@ -362,7 +362,7 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
   const folga = 2;
   const tipoPorta: PortaIndustrial["tipo"] = "overlay";
   const { larguraInterna, alturaInterna } = getDimensoesInternas(box, espessura);
-  const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "MDF Branco");
+  const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
   const larguraBase =
     tipoPorta === "overlay"
       ? larguraInterna + folga * 2
@@ -429,7 +429,7 @@ export function gerarGavetas(box: BoxModule, _rules: RulesConfig): GavetaIndustr
   const folga = 2;
   const tipoPorta: "overlay" | "inset" = "overlay";
   const { larguraInterna, alturaInterna } = getDimensoesInternas(box, espessura);
-  const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "MDF Branco");
+  const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
   const larguraGaveta = clampPositive(larguraInterna - recuoLateral * 2);
   const alturaGaveta = clampPositive(alturaInterna - 40);
   const profundidadeTotal = Number(box.dimensoes.profundidade) || 0;

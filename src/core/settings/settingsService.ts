@@ -165,7 +165,7 @@ export const settingsDefaults: SettingsSchema = {
   materiais: {
     categoriaPadraoId: "mdf",
     presetVisualPadraoId: "mdf_branco",
-    materialIndustrialPadraoId: "MDF Branco",
+    materialIndustrialPadraoId: "mdf_branco",
     sheetWidthMm: PANEL_DEFAULTS.largura_mm,
     sheetHeightMm: PANEL_DEFAULTS.altura_mm,
     sheetThicknessMm: PANEL_DEFAULTS.espessura_mm,

@@ -21,8 +21,12 @@ import {
   getMaterial as getIndustrialByName,
   CHAPA_PADRAO_LARGURA,
   CHAPA_PADRAO_ALTURA,
-  MATERIAIS_INDUSTRIAIS,
 } from "../manufacturing/materials";
+import {
+  getDefaultOfficialMaterial,
+  listIndustrialWoodMaterials,
+  resolveMaterial,
+} from "./materials.api";
 
 const STORAGE_KEY = "pimo_materials_crud_v1";
 const DEFAULT_SHEET_WIDTH_MM = 2800;
@@ -72,12 +76,6 @@ function saveToStorage(data: MaterialRecord[]): void {
   }
 }
 
-/** Mapeamento nome industrial → id PBR visual (Viewer). */
-const INDUSTRIAL_TO_PBR: Record<string, string> = {
-  "MDF Branco": "mdf_branco",
-  Carvalho: "carvalho_natural",
-};
-
 /**
  * Migra materiais antigos (MATERIAIS_INDUSTRIAIS) para o CRUD.
  * Insere apenas os que ainda não existem (por label, case-insensitive).
@@ -86,22 +84,22 @@ const INDUSTRIAL_TO_PBR: Record<string, string> = {
 export function migrateMaterialsFromLegacy(): { migrated: number; skipped: number } {
   let migrated = 0;
   let skipped = 0;
-  for (const ind of MATERIAIS_INDUSTRIAIS) {
-    const existing = getMaterialByIdOrLabel(ind.nome);
+  for (const ind of listIndustrialWoodMaterials()) {
+    const existing = getMaterialByIdOrLabel(ind.label);
     if (existing) {
       skipped++;
       continue;
     }
     const result = createMaterial({
-      label: ind.nome,
+      label: ind.label,
       categoryId: MIGRATED_CATEGORY_ID,
-      espessura: ind.espessuraPadrao,
-      precoPorM2: ind.custo_m2,
-      sheetWidthMm: Number(ind.larguraChapa) || DEFAULT_SHEET_WIDTH_MM,
-      sheetHeightMm: Number(ind.alturaChapa) || DEFAULT_SHEET_HEIGHT_MM,
-      sheetThicknessMm: Number(ind.espessuraPadrao) || DEFAULT_SHEET_THICKNESS_MM,
-      industrialMaterialId: ind.nome,
-      visualPresetId: INDUSTRIAL_TO_PBR[ind.nome] ?? undefined,
+      espessura: ind.industrialDefaults?.espessuraPadrao ?? DEFAULT_SHEET_THICKNESS_MM,
+      precoPorM2: ind.industrialDefaults?.custo_m2 ?? 0,
+      sheetWidthMm: Number(ind.industrialDefaults?.larguraChapa) || DEFAULT_SHEET_WIDTH_MM,
+      sheetHeightMm: Number(ind.industrialDefaults?.alturaChapa) || DEFAULT_SHEET_HEIGHT_MM,
+      sheetThicknessMm: Number(ind.industrialDefaults?.espessuraPadrao) || DEFAULT_SHEET_THICKNESS_MM,
+      industrialMaterialId: ind.canonicalId,
+      visualPresetId: ind.viewerMaterialId ?? undefined,
     });
     if (result.success) migrated++;
   }
@@ -166,11 +164,27 @@ export function getMaterialByIdOrLabel(idOuLabel: string): MaterialRecord | null
   if (!idOuLabel || typeof idOuLabel !== "string") return null;
   const list = loadFromStorage();
   const lower = idOuLabel.trim().toLowerCase();
-  return (
+  const fromStorage = (
     list.find(
       (m) => m.id.toLowerCase() === lower || (m.label && m.label.trim().toLowerCase() === lower)
     ) ?? null
   );
+  if (fromStorage) return fromStorage;
+
+  const official = resolveMaterial(idOuLabel);
+  if (!official) return null;
+  return {
+    id: official.canonicalId,
+    label: official.label,
+    categoryId: "industrial",
+    espessura: official.industrialDefaults?.espessuraPadrao ?? DEFAULT_SHEET_THICKNESS_MM,
+    precoPorM2: official.industrialDefaults?.custo_m2 ?? 0,
+    sheetWidthMm: official.industrialDefaults?.larguraChapa ?? DEFAULT_SHEET_WIDTH_MM,
+    sheetHeightMm: official.industrialDefaults?.alturaChapa ?? DEFAULT_SHEET_HEIGHT_MM,
+    sheetThicknessMm: official.industrialDefaults?.espessuraPadrao ?? DEFAULT_SHEET_THICKNESS_MM,
+    industrialMaterialId: official.canonicalId,
+    visualPresetId: official.viewerMaterialId,
+  };
 }
 
 /**
@@ -188,7 +202,7 @@ export function getMaterialForBox(
   return projectMaterialId ?? "";
 }
 
-const FALLBACK_LABEL = "MDF Branco";
+const FALLBACK_LABEL = getDefaultOfficialMaterial().label;
 const FALLBACK_ESPESSURA = 18;
 const FALLBACK_PRECO = 0;
 
@@ -248,6 +262,18 @@ export function getIndustrialMaterial(materialIdOrLabel: string): MaterialIndust
       alturaChapa: Number(m.sheetHeightMm) || CHAPA_PADRAO_ALTURA,
     };
   }
+  const official = resolveMaterial(materialIdOrLabel);
+  if (official?.industrial) {
+    return {
+      nome: official.label,
+      espessuraPadrao: official.industrialDefaults?.espessuraPadrao ?? FALLBACK_ESPESSURA,
+      custo_m2: official.industrialDefaults?.custo_m2 ?? FALLBACK_PRECO,
+      larguraChapa: official.industrialDefaults?.larguraChapa ?? CHAPA_PADRAO_LARGURA,
+      alturaChapa: official.industrialDefaults?.alturaChapa ?? CHAPA_PADRAO_ALTURA,
+      densidade: official.industrialDefaults?.densidade,
+      materialPbrId: official.viewerMaterialId as MaterialIndustrial["materialPbrId"],
+    };
+  }
   const legacy = getIndustrialByName(materialIdOrLabel);
   return {
     ...legacy,
@@ -256,39 +282,16 @@ export function getIndustrialMaterial(materialIdOrLabel: string): MaterialIndust
   };
 }
 
-/** Mapeamento label/nome → id usado pelo Viewer (MaterialLibrary). Compatível com MATERIAIS_PBR_IDS. */
-const VIEWER_MATERIAL_ID_MAP: Record<string, string> = {
-  "carvalho natural": "carvalho_natural",
-  carvalho_natural: "carvalho_natural",
-  carvalho: "carvalho_natural",
-  "carvalho escuro": "carvalho_escuro",
-  carvalho_escuro: "carvalho_escuro",
-  nogueira: "nogueira",
-  "mdf branco": "mdf_branco",
-  mdf_branco: "mdf_branco",
-  mdf: "mdf_branco",
-  "mdf cinza": "mdf_cinza",
-  mdf_cinza: "mdf_cinza",
-  "mdf preto": "mdf_preto",
-  mdf_preto: "mdf_preto",
-  preto: "mdf_preto",
-};
-
 /**
  * Converte id/label do CRUD (ou string legada) no materialName aceite pelo Viewer (MaterialLibrary).
  * Não altera MaterialLibrary nem WoodMaterial; apenas devolve a string a passar em updateBox(..., { materialName }).
  */
 export function getViewerMaterialId(materialIdOrLabel: string): string {
-  if (!materialIdOrLabel || typeof materialIdOrLabel !== "string") {
-    return "mdf_branco";
-  }
+  const official = resolveMaterial(materialIdOrLabel);
+  if (official?.viewerMaterialId) return official.viewerMaterialId;
   const m = getMaterialByIdOrLabel(materialIdOrLabel);
-  if (m?.industrialMaterialId) {
-    const lower = m.industrialMaterialId.trim().toLowerCase();
-    return VIEWER_MATERIAL_ID_MAP[lower] ?? m.industrialMaterialId;
-  }
-  const labelOrId = (m?.label ?? materialIdOrLabel).trim().toLowerCase();
-  return VIEWER_MATERIAL_ID_MAP[labelOrId] ?? "mdf_branco";
+  if (m?.visualPresetId) return m.visualPresetId;
+  return "mdf_branco";
 }
 
 /**

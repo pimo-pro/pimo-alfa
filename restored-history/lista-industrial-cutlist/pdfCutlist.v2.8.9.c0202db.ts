@@ -1,6 +1,6 @@
-/**
- * PDF Cutlist — tabela de peças para corte (modelo legado v2.8.9).
- * Colunas: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N QR.
+﻿/**
+ * PDF Cutlist ÔÇö tabela de pe├ºas para corte.
+ * Caixa, Pe├ºa, Dimens├Áes, Borda (fita), Quantidade, Observa├º├Áes.
  */
 
 import jsPDF from "jspdf";
@@ -17,12 +17,12 @@ export type ProjectForPdf = {
   rules: RulesConfig;
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
-  settings?: unknown;
 };
 
 const MARGIN = 14;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
 
+/** Junta cutlist param├®trica + pe├ºas extra├¡das (GLB). */
 function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { boxNome: string; tipoBorda?: string }> {
   const parametric = cutlistComPrecoFromBoxes(
     project.boxes,
@@ -36,7 +36,7 @@ function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { b
     const box = boxById.get(p.boxId ?? "");
     return {
       ...p,
-      boxNome: box?.nome ?? p.boxId ?? "—",
+      boxNome: box?.nome ?? p.boxId ?? "ÔÇö",
       tipoBorda: box?.tipoBorda,
     };
   });
@@ -85,11 +85,11 @@ function renderQrLayer(
   let y = MARGIN;
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
-  doc.text("Cutlist - QR Codes por Peça", MARGIN, y);
+  doc.text("Cutlist - QR Codes por Pe├ºa", MARGIN, y);
   y += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Mesmo código das etiquetas (projeto / caixa / peça / número).", MARGIN, y);
+  doc.text("Rastreio local: QR com c├│digo curto da etiqueta.", MARGIN, y);
   y += 8;
 
   const pageW = doc.internal.pageSize.getWidth();
@@ -106,23 +106,28 @@ function renderQrLayer(
     doc.setDrawColor(180, 180, 180);
     doc.rect(x, rowY, cardW, cardH);
     doc.setFontSize(8);
-    doc.text(`${p.boxNome ?? "—"} · ${p.nome}`, x + 2, rowY + 4);
+    doc.text(`${p.boxNome ?? "ÔÇö"} ┬À ${p.nome}`, x + 2, rowY + 4);
     doc.text(`${p.dimensoes.largura}x${p.dimensoes.altura} mm`, x + 2, rowY + 8);
 
     const qrX = x + 2;
     const qrY = rowY + 10;
     const pieceNumber = Number(p.pieceNumber ?? 0);
-    const qrPayload = buildLocalQrPayload(
+    const etiquetaCode = buildLocalQrPayload(
       p,
       { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
       pieceNumber
     );
-    drawQrFromCode(doc, qrPayload, qrX, qrY, qrSize);
+    drawQrFromCode(doc, etiquetaCode, qrX, qrY, qrSize);
 
     if (project.rules.qrcode.mostrarTextoAbaixoQr) {
-      doc.setFontSize(Math.min(5, textSize));
+      doc.setFontSize(textSize);
+      doc.setFont("helvetica", "bold");
+      doc.text(etiquetaCode, qrX + qrSize + 3, qrY + 6);
+    }
+    if (project.rules.qrcode.destacarNumeroPeca) {
       doc.setFont("helvetica", "normal");
-      doc.text(qrPayload, qrX + qrSize + 2, qrY + 6, { maxWidth: cardW - qrSize - 6 });
+      doc.setFontSize(7);
+      doc.text(`N┬║: ${etiquetaCode}`, qrX + qrSize + 3, qrY + 11);
     }
 
     col += 1;
@@ -137,125 +142,47 @@ function renderQrLayer(
   }
 }
 
-/** Detecta se o contexto (projeto/caixa/peça) é de cozinha para regra da coluna Borda. */
-function isCozinhaContext(
-  project: ProjectForPdf,
-  p: CutListItemComPreco & { boxNome?: string; tipoBorda?: string }
-): boolean {
-  const proj = (project.projectName ?? "").toLowerCase();
-  const boxNome = (p.boxNome ?? "").toLowerCase();
-  const material = (p.material ?? "").toLowerCase();
-  return proj.includes("cozinha") || boxNome.includes("cozinha") || material.includes("cozinha");
-}
-
 /**
  * Renderiza tabela de cutlist.
- * Ordem: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N QR.
- * Borda: 10 mm → "—"; cozinha + reta → "ALL"; demais → tipoBorda ou "todos os lados".
- * N QR: código da etiqueta (mesmo padrão das etiquetas), com quebra de linha.
  */
 export function renderCutlistTable(
   doc: jsPDF,
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
-  project: ProjectForPdf,
   startY: number
 ): number {
-  const head = [
-    "Caixa",
-    "Peça",
-    "Qtd",
-    "L×A×P (mm)",
-    "Borda (fita)",
-    "Limpeza",
-    "Montagem",
-    "Verificação",
-    "OBSERVAÇÕES",
-    "N QR",
-  ];
-  const body = parts.map((p, idx) => {
-    let bordaFita: string;
-    if (p.espessura === 10) {
-      bordaFita = "—";
-    } else {
-      const raw = p.tipoBorda ?? "todos os lados";
-      if (raw === "reta" && isCozinhaContext(project, p)) {
-        bordaFita = "ALL";
-      } else {
-        bordaFita = raw;
-      }
-    }
-    const pieceNumber = Number(p.pieceNumber ?? 0) || idx + 1;
-    const nQr = buildLocalQrPayload(
-      p,
-      { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
-      pieceNumber
-    );
-    return [
-      p.boxNome ?? "—",
-      p.nome,
-      String(p.quantidade),
-      `${p.dimensoes.largura}×${p.dimensoes.altura}×${p.dimensoes.profundidade}`,
-      bordaFita,
-      "",
-      "",
-      "",
-      "",
-      nQr,
-    ];
-  });
+  const head = ["Caixa", "Pe├ºa", "L├ùA├ùP (mm)", "Borda (fita)", "Qtd", "Observa├º├Áes"];
+  const body = parts.map((p) => [
+    p.boxNome ?? "ÔÇö",
+    p.nome,
+    `${p.dimensoes.largura}├ù${p.dimensoes.altura}├ù${p.dimensoes.profundidade}`,
+    p.tipoBorda ?? "reta",
+    String(p.quantidade),
+    "",
+  ]);
 
   if (body.length === 0) {
-    body.push(["Nenhuma peça", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
+    body.push(["Nenhuma pe├ºa", "ÔÇö", "ÔÇö", "ÔÇö", "ÔÇö", "ÔÇö"]);
   }
 
   autoTable(doc, {
     head: [head],
     body,
     startY,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: HEADER_COLOR, fontSize: 7 },
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: HEADER_COLOR },
     margin: { left: MARGIN, right: MARGIN },
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 32 },
-      2: { cellWidth: 10 },
+      0: { cellWidth: 35 },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 45 },
       3: { cellWidth: 28 },
       4: { cellWidth: 18 },
-      5: { cellWidth: 14 },
-      6: { cellWidth: 14 },
-      7: { cellWidth: 16 },
-      8: { cellWidth: 22 },
-      9: { cellWidth: 70, overflow: "linebreak", cellPadding: 1.5 },
+      5: { cellWidth: "auto" },
     },
   });
 
   const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? startY;
   return finalY;
-}
-
-type HoleLike = { x: number; y: number; diametro: number; profundidade: number };
-
-function getHolesForPart(part: CutListItemComPreco): HoleLike[] {
-  const drillHoles = part.drillHoles ?? [];
-  if (drillHoles.length > 0) {
-    return drillHoles.map((h) => ({
-      x: h.x,
-      y: h.y,
-      diametro: h.diameter,
-      profundidade: h.depth,
-    }));
-  }
-  const technicalHoles = (part as CutListItemComPreco & { furacoesTecnicas?: TechnicalDrillHole[] }).furacoesTecnicas ?? [];
-  if (technicalHoles.length > 0) {
-    return technicalHoles.map((h) => ({
-      x: h.x,
-      y: h.y,
-      diametro: h.diametro,
-      profundidade: h.profundidade,
-    }));
-  }
-  const furacoes = (part as CutListItemComPreco & { furacoes?: HoleLike[] }).furacoes ?? [];
-  return furacoes;
 }
 
 function drawFurosForPart(
@@ -266,7 +193,15 @@ function drawFurosForPart(
   drawW: number,
   drawH: number
 ) {
-  const holes = getHolesForPart(part);
+  const technicalHoles = part.furacoesTecnicas ?? [];
+  const holes = technicalHoles.length > 0
+    ? technicalHoles.map((h: TechnicalDrillHole) => ({
+        x: h.x,
+        y: h.y,
+        diametro: h.diametro,
+        profundidade: h.profundidade,
+      }))
+    : (part.furacoes ?? []);
   if (holes.length === 0) return;
   const scale = Math.min(
     drawW / Math.max(1, part.dimensoes.largura),
@@ -282,6 +217,7 @@ function drawFurosForPart(
   doc.setDrawColor(30, 64, 175);
   doc.setTextColor(31, 41, 55);
   doc.setFontSize(7);
+  // Seta de orienta├º├úo do topo da pe├ºa.
   const arrowX = offsetX + Math.max(6, pieceW - 10);
   const arrowY = Math.max(startY + 4, offsetY - 2);
   doc.line(arrowX, arrowY + 4, arrowX, arrowY);
@@ -300,9 +236,9 @@ function drawFurosForPart(
     const dRight = Math.max(0, part.dimensoes.largura - hx);
     const dTop = hy;
     const dBottom = Math.max(0, part.dimensoes.altura - hy);
-    const depthLabel = Number.isFinite(h.profundidade) ? ` · P:${h.profundidade}` : "";
+    const depthLabel = Number.isFinite(h.profundidade) ? ` ┬À P:${h.profundidade}` : "";
     doc.text(
-      `Ø${h.diametro}${depthLabel}  E:${Math.round(dLeft)} D:${Math.round(dRight)} T:${Math.round(dTop)} B:${Math.round(dBottom)}`,
+      `├ÿ${h.diametro}${depthLabel}  E:${Math.round(dLeft)} D:${Math.round(dRight)} T:${Math.round(dTop)} B:${Math.round(dBottom)}`,
       Math.min(startX + drawW - 2, cx + r + 1.2),
       Math.max(startY + 2, cy - r - 0.8),
       { align: "right" }
@@ -315,12 +251,7 @@ function renderFurosLayer(
   parts: Array<CutListItemComPreco & { boxNome?: string; tipoBorda?: string }>,
   startY: number
 ) {
-  const withHoles = parts.filter((p) => {
-    if ((p.drillHoles?.length ?? 0) > 0) return true;
-    if (((p as CutListItemComPreco & { furacoesTecnicas?: unknown[] }).furacoesTecnicas?.length ?? 0) > 0) return true;
-    if (((p as CutListItemComPreco & { furacoes?: unknown[] }).furacoes?.length ?? 0) > 0) return true;
-    return false;
-  });
+  const withHoles = parts.filter((p) => (p.furacoes?.length ?? 0) > 0);
   if (withHoles.length === 0) return;
   doc.addPage("a4", "landscape");
   let y = startY;
@@ -330,7 +261,7 @@ function renderFurosLayer(
   y += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Furação Técnica: círculos em escala real da peça e cotas às bordas.", MARGIN, y);
+  doc.text("Fura├º├úo T├®cnica: c├¡rculos em escala real da pe├ºa e cotas ├ás bordas.", MARGIN, y);
   y += 8;
 
   const pageW = doc.internal.pageSize.getWidth();
@@ -344,9 +275,9 @@ function renderFurosLayer(
     doc.setDrawColor(180, 180, 180);
     doc.rect(x, rowY, cardW, cardH);
     doc.setFontSize(8);
-    doc.text(`${p.boxNome ?? "—"} · ${p.nome}`, x + 2, rowY + 4);
+    doc.text(`${p.boxNome ?? "ÔÇö"} ┬À ${p.nome}`, x + 2, rowY + 4);
     doc.text(
-      `${p.dimensoes.largura}x${p.dimensoes.altura} mm · orientação de referência 0º`,
+      `${p.dimensoes.largura}x${p.dimensoes.altura} mm ┬À orienta├º├úo de refer├¬ncia 0┬░`,
       x + 2,
       rowY + 8
     );
@@ -370,7 +301,11 @@ function renderFurosLayer(
   }
 }
 
-function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF {
+/**
+ * Gera PDF de cutlist.
+ * @param existingDoc Se fornecido, adiciona as p├íginas ao documento existente.
+ */
+export function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF {
   const doc = existingDoc ?? new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   if (existingDoc) {
@@ -398,17 +333,9 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
   y += 12;
 
   const parts = getFullCutlist(project);
-  y = renderCutlistTable(doc, parts, project, y);
+  y = renderCutlistTable(doc, parts, y);
   renderFurosLayer(doc, parts, MARGIN);
   renderQrLayer(doc, parts, project);
 
   return doc;
-}
-
-/**
- * Gera PDF de cutlist (modelo legado v2.8.9). API async para compatibilidade com fluxo atual.
- * @param existingDoc Se fornecido, adiciona as páginas ao documento existente.
- */
-export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {
-  return Promise.resolve(buildCutlistPdfSync(project, existingDoc));
 }

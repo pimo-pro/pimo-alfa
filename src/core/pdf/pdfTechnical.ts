@@ -81,7 +81,7 @@ export function renderProjectSummary(doc: jsPDF, project: ProjectForPdf): void {
     }
     const dims = box.dimensoes;
     const materialId = getMaterialForBox(box, project.materialId);
-    const matInfo = getMaterialDisplayInfo(materialId || "MDF Branco");
+    const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
     doc.text(
       `${i + 1}. ${box.nome} — ${dims.largura}×${dims.altura}×${dims.profundidade} mm | ${matInfo.label} | ${box.espessura ?? matInfo.espessura} mm`,
       MARGIN,
@@ -115,7 +115,7 @@ export function renderBoxTechnicalPage(
   y += 7;
 
   const materialId = getMaterialForBox(box, projectMaterialId);
-  const matInfo = getMaterialDisplayInfo(materialId || "MDF Branco");
+  const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
   const espessura = box.espessura ?? matInfo.espessura;
   doc.text(`Material: ${matInfo.label} | Espessura: ${espessura} mm | Preço: ${matInfo.precoPorM2} €/m²`, MARGIN, y);
   y += 7;

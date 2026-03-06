@@ -30,7 +30,7 @@ export const BOX_DEFAULTS = {
   ESPESSURA_MAX_MM: 25,
   TIPO_BORDA: "reta" as TipoBorda,
   TIPO_FUNDO: "recuado" as TipoFundo,
-  MATERIAL: "MDF",
+  MATERIAL: "mdf_branco",
 } as const;
 
 /** Cria um BoxParams com valores padrão; overrides parciais permitidos. */

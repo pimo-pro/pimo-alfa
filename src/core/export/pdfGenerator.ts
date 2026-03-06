@@ -56,7 +56,7 @@ export function gerarPdfIndustrial(
     );
 
     const materialId = getMaterialForBox(box, projectMaterialId);
-    const matInfo = getMaterialDisplayInfo(materialId || "MDF Branco");
+    const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
     autoTable(doc, {
       head: [[
         "Material",

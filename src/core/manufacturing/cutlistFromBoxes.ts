@@ -24,7 +24,7 @@ export function cutlistComPrecoFromBox(
   const effRules = buildEffectiveDrillingRules(rules);
   const modelo = gerarModeloIndustrial(box, effRules);
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
-  const matInfo = getMaterialDisplayInfo(materialId || "MDF Branco");
+  const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
   const material = matInfo.label;
   const visualMaterial = materialId
     ? getVisualMaterialForBox(box, projectMaterialId)
