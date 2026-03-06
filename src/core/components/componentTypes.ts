@@ -178,6 +178,7 @@ export const COMPONENT_TYPES_DEFAULT: ComponentType[] = [
     ],
   },
   base("gaveta_fundo", "Gaveta fundo", "gaveta", true, LADOS_PADRAO),
+  base("gaveta_traseira", "Gaveta traseira", "gaveta", true, LADOS_PADRAO),
   base("remate_cima", "Remate cima", "acabamento", false),
   base("remate_lado", "Remate lado", "acabamento", false),
   base("remate_completo", "Remate completo", "acabamento", false),

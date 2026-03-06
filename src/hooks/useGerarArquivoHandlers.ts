@@ -67,6 +67,42 @@ function getSheetSemanticPieceName(
   return fallbackName;
 }
 
+/** Sanitiza um path/nome para entrada no ZIP: sem caracteres inválidos, sem segmentos vazios. */
+function sanitizeZipPath(path: string): string {
+  if (typeof path !== "string" || path.trim() === "") return "ficheiro";
+  return path
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((seg) =>
+      seg
+        .replace(/[<>:"|?*\x00-\x1f]/g, "_")
+        .replace(/\s+/g, "_")
+        .replace(/^\.+/, "")
+        .trim()
+    )
+    .filter((s) => s.length > 0)
+    .join("/") || "ficheiro";
+}
+
+/** Adiciona um PDF ao ZIP apenas se o documento e o blob forem válidos. Retorna true se adicionou. */
+function safeAddPdf(
+  zip: JSZip,
+  zipPath: string,
+  doc: { output: (type: string) => ArrayBuffer | Uint8Array } | null | undefined
+): boolean {
+  if (!doc || typeof doc.output !== "function") return false;
+  const safePath = sanitizeZipPath(zipPath);
+  if (!safePath) return false;
+  try {
+    const blob = pdfToBlob(doc);
+    if (!blob || blob.size === 0) return false;
+    zip.file(safePath, blob);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useGerarArquivoHandlers() {
   const { project } = useProject();
   useSettings();
@@ -217,35 +253,42 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    try {
+      const parametric = cutlistComPrecoFromBoxes(
+        boxes,
+        project.rules,
+        project.materialId,
+        project.projectName
+      );
+      const extracted = boxes.flatMap((b) =>
+        Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
+      );
+      const allItems = [...parametric, ...extracted].map((p) => ({
+        ...p,
+        boxId: p.boxId ?? "",
+      }));
 
-    const parametric = cutlistComPrecoFromBoxes(
-      boxes,
-      project.rules,
-      project.materialId,
-      project.projectName
-    );
-    const extracted = boxes.flatMap((b) =>
-      Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
-    );
-    const allItems = [...parametric, ...extracted].map((p) => ({
-      ...p,
-      boxId: p.boxId ?? "",
-    }));
+      const pieces = cutlistToPieces(allItems);
+      if (pieces.length === 0) {
+        showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
+        return;
+      }
 
-    const pieces = cutlistToPieces(allItems);
-    if (pieces.length === 0) {
-      showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
-      return;
+      const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
+        rotationPreferenceMode: "aggressive",
+        rotationWeight: 0.8,
+        rotationPenalty: 0.45,
+      });
+      const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+      const doc = buildCutLayoutPdf(result);
+      const fileName = `${slug}_layout_corte_pro.pdf`;
+      doc.save(fileName);
+      showToast("Layout de Corte PRO gerado.", "info");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Layout de Corte PRO:", err);
+      showToast(`Layout de Corte PRO: falha — ${msg}`, "error");
     }
-
-    const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
-      rotationPreferenceMode: "aggressive",
-      rotationWeight: 0.8,
-      rotationPenalty: 0.45,
-    });
-    const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-    const doc = buildCutLayoutPdf(result);
-    doc.save(`${slug}_layout_corte_pro.pdf`);
   }, [
     hasBoxes,
     showToast,
@@ -313,37 +356,80 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+
+    type StepError = { step: string; message: string; detail?: string };
+    const errors: StepError[] = [];
+    const zip = new JSZip();
+    const proj = pdfProject();
+
+    const parametric = cutlistComPrecoFromBoxes(
+      boxes,
+      project.rules,
+      project.materialId,
+      project.projectName
+    );
+    const extracted = boxes.flatMap((b) =>
+      Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
+    );
+    const allItems = [...parametric, ...extracted].map((p) => ({
+      ...p,
+      boxId: p.boxId ?? "",
+    }));
+
+    const safeSlug = sanitizeZipPath(slug) || "projeto";
+
+    // --- Cutlist PDF ---
     try {
-      const zip = new JSZip();
-      const proj = pdfProject();
-
       const docCutlist = await buildCutlistPdf(proj);
-      zip.file(`${slug}_cutlist.pdf`, pdfToBlob(docCutlist));
+      if (!safeAddPdf(zip, `${safeSlug}_cutlist.pdf`, docCutlist)) {
+        errors.push({ step: "Cutlist PDF", message: "Documento ou blob inválido." });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "Cutlist PDF", message: msg });
+      console.error("Full export: Cutlist PDF", err);
+    }
 
+    // --- PDF Técnico ---
+    try {
       const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
         materialId: proj.materialId,
       });
-      zip.file(`${slug}_tecnico.pdf`, pdfToBlob(docTecnico));
+      if (!safeAddPdf(zip, `${safeSlug}_tecnico.pdf`, docTecnico)) {
+        errors.push({ step: "PDF Técnico", message: "Documento ou blob inválido." });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "PDF Técnico", message: msg });
+      console.error("Full export: PDF Técnico", err);
+    }
 
+    // --- Unificado ---
+    try {
       const docUnificado = await buildUnifiedPdf(proj);
-      zip.file(`${slug}_unificado.pdf`, pdfToBlob(docUnificado));
+      if (!safeAddPdf(zip, `${safeSlug}_unificado.pdf`, docUnificado)) {
+        errors.push({ step: "PDF Unificado", message: "Documento ou blob inválido." });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "PDF Unificado", message: msg });
+      console.error("Full export: PDF Unificado", err);
+    }
 
+    // --- Etiquetas ---
+    try {
       const docEtiquetas = await buildEtiquetasPdf(proj);
-      zip.file(`${slug}_etiquetas.pdf`, pdfToBlob(docEtiquetas));
+      if (!safeAddPdf(zip, `${safeSlug}_etiquetas.pdf`, docEtiquetas)) {
+        errors.push({ step: "PDF Etiquetas", message: "Documento ou blob inválido." });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "PDF Etiquetas", message: msg });
+      console.error("Full export: PDF Etiquetas", err);
+    }
 
-      const parametric = cutlistComPrecoFromBoxes(
-        boxes,
-        project.rules,
-        project.materialId,
-        project.projectName
-      );
-      const extracted = boxes.flatMap((b) =>
-        Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
-      );
-      const allItems = [...parametric, ...extracted].map((p) => ({
-        ...p,
-        boxId: p.boxId ?? "",
-      }));
+    // --- Layout de Corte (e Layout de Corte PRO) ---
+    try {
       const pieces = cutlistToPieces(allItems);
       if (pieces.length > 0) {
         const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
@@ -353,23 +439,39 @@ export function useGerarArquivoHandlers() {
         });
         const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
         const docLayout = buildCutLayoutPdf(result);
-        zip.file(`${slug}_layout_corte.pdf`, pdfToBlob(docLayout));
-        zip.file(`${slug}_layout_corte_pro.pdf`, pdfToBlob(docLayout));
+        const addedLayout = safeAddPdf(zip, `${safeSlug}_layout_corte.pdf`, docLayout);
+        const addedPro = safeAddPdf(zip, `${safeSlug}_layout_corte_pro.pdf`, docLayout);
+        if (!addedLayout || !addedPro) {
+          errors.push({ step: "Layout de Corte PRO", message: "Falha ao adicionar PDF ao ZIP." });
+        }
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "Layout de Corte PRO", message: msg });
+      console.error("Full export: Layout de Corte", err);
+    }
 
+    // --- CNC (TCN + KDT) ---
+    try {
       const cncBundle = buildCncFromCutlistItems(project, allItems);
-      if (cncBundle) {
+      if (cncBundle && cncBundle.cnc?.files?.length) {
         const usedTcnNamesByPath = new Set<string>();
         const thicknessBucketsInCnc = new Set<string>();
         for (const file of cncBundle.cnc.files) {
+          if (!file || file.tcn == null || file.kdt == null) {
+            errors.push({
+              step: "CNC",
+              message: `Painel ${file?.panelIndex ?? "?"} sem TCN ou KDT.`,
+            });
+            continue;
+          }
           const fallbackPiece = file.filenameBase || `panel_${file.panelIndex}`;
-          const sheetResult = cncBundle.layoutResult.sheets[file.panelIndex - 1];
+          const sheetResult = cncBundle.layoutResult?.sheets?.[file.panelIndex - 1];
           const semanticPieceName = getSheetSemanticPieceName(sheetResult?.placements, fallbackPiece);
           const thicknessBucket = formatThicknessBucket(file.thicknessMm);
           thicknessBucketsInCnc.add(thicknessBucket);
           const base = buildIndustrialBaseName(slug, file.thicknessMm, semanticPieceName, fallbackPiece);
 
-          // Evita sobrescrever no ZIP quando várias chapas resultam no mesmo nome semântico.
           let finalBase = base;
           let dedupeIndex = 2;
           while (usedTcnNamesByPath.has(`cnc/${thicknessBucket}/tcn/${finalBase}`)) {
@@ -378,38 +480,77 @@ export function useGerarArquivoHandlers() {
           }
           usedTcnNamesByPath.add(`cnc/${thicknessBucket}/tcn/${finalBase}`);
 
-          zip.file(`cnc/${thicknessBucket}/tcn/${finalBase}.tcn`, file.tcn);
-          zip.file(`cnc/${thicknessBucket}/tcn/${finalBase}.kdt`, file.kdt);
+          const tcnPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}.tcn`);
+          const kdtPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}.kdt`);
+          if (tcnPathFinal && typeof file.tcn === "string") {
+            zip.file(tcnPathFinal, file.tcn);
+          }
+          if (kdtPathFinal && typeof file.kdt === "string") {
+            zip.file(kdtPathFinal, file.kdt);
+          }
         }
-        // Garante estrutura industrial completa por espessura, mesmo sem XML DRILL.
         for (const thicknessBucket of thicknessBucketsInCnc) {
-          zip.folder(`cnc/${thicknessBucket}/drill`);
+          const folderPath = sanitizeZipPath(`cnc/${thicknessBucket}/drill`);
+          if (folderPath) zip.folder(folderPath);
         }
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "CNC (TCN/KDT)", message: msg });
+      console.error("Full export: CNC", err);
+    }
 
+    // --- DRILL (XML) ---
+    try {
       const drillFiles = buildDrillFilesForProject(allItems, {
         projectName: project.projectName ?? "Projeto",
         boxes: project.boxes,
         rules: project.rules,
       });
-      for (const f of drillFiles) {
+      for (let i = 0; i < drillFiles.length; i++) {
+        const f = drillFiles[i];
+        if (!f || typeof f.xml !== "string") {
+          errors.push({ step: "DRILL", message: `Ficheiro DRILL ${i + 1} sem conteúdo XML.` });
+          continue;
+        }
         const thicknessBucket = formatThicknessBucket(f.thicknessMm);
         const fallbackPiece = f.filenameBase || "peca";
         const base = buildIndustrialBaseName(slug, f.thicknessMm, f.partName, fallbackPiece);
-        zip.file(`cnc/${thicknessBucket}/drill/${base}.xml`, f.xml);
+        const path = sanitizeZipPath(`cnc/${thicknessBucket}/drill/${base}.xml`);
+        if (path) zip.file(path, f.xml);
       }
-
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${slug}_completo.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Arquivo completo (ZIP) gerado.", "info");
     } catch (err) {
-      console.error("Erro ao gerar arquivo completo:", err);
-      showToast("Erro ao gerar arquivo completo.", "error");
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "DRILL (XML)", message: msg });
+      console.error("Full export: DRILL", err);
+    }
+
+    // --- Gerar e descarregar ZIP ---
+    try {
+      const blob = await zip.generateAsync({ type: "blob" });
+      if (!blob || blob.size === 0) {
+        errors.push({ step: "ZIP", message: "ZIP gerado está vazio ou inválido." });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${safeSlug}_completo.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ step: "ZIP (generateAsync)", message: msg });
+      console.error("Full export: zip.generateAsync", err);
+    }
+
+    if (errors.length > 0) {
+      const first = errors[0];
+      const detail = `${first.step}: ${first.message}`;
+      console.error("Erro ao gerar arquivo completo:", errors);
+      showToast(`Erro ao gerar arquivo completo — ${detail}`, "error");
+    } else {
+      showToast("Arquivo completo (ZIP) gerado.", "info");
     }
   }, [
     hasBoxes,

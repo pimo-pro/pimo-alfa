@@ -3,7 +3,8 @@
 **Versão:** 1.0  
 **Data:** Fevereiro 2026  
 **Autor:** Análise Técnica Sênior  
-**Status:** Conclusão da Análise Abrangente
+**Status:** Conclusão da Análise Abrangente  
+**Pipeline e faces:** fonte da verdade em `docs/matriz-faces-A-B-FINAL.md`; cutlist única em `cutlistFromBoxes` + `buildBoxDesign`.
 
 ---
 
@@ -157,7 +158,6 @@ c:\Users\Mofreita\pimo-v3\
 │   │   │   └── woodCalculator.ts        # Cálculo de madeira e peças
 │   │   │
 │   │   ├── design/
-│   │   │   ├── generateDesign.ts        # Geração automática de design
 │   │   │   ├── ferragens.ts             # Cálculo de ferragens
 │   │   │   └── acessorios.ts            # Cálculo de acessórios
 │   │   │
@@ -425,10 +425,10 @@ O projeto segue um padrão **moderno React com separação de camadas**:
 workspaceBoxes (EditávelUI)
     ↓ [buildBoxesFromWorkspace]
 boxes[] (BoxModule[])
-    ↓ [generateDesign + calcularProjeto]
-design[] + resultados
+    ↓ [buildDesignState: cutlistFromBoxes + extractDrawerCutlist]
+cutList[] + cutListComPreco + ferragens
     ↓ [glbExtraction if CAD]
-cutList[] + extractedPartsByBoxId
+extractedPartsByBoxId
     ↓ [Viewer sync]
 Visualização 3D atualizada
 ```

@@ -1,5 +1,5 @@
 /**
- * PDF Cutlist — tabela de peças para corte (modelo legado v2.8.9).
+ * PDF Cutlist — tabela de peças para corte (cutlistFromBoxes, modelo FINAL).
  * Colunas: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N QR.
  */
 
@@ -406,7 +406,7 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
 }
 
 /**
- * Gera PDF de cutlist (modelo legado v2.8.9). API async para compatibilidade com fluxo atual.
+ * Gera PDF de cutlist (cutlistFromBoxes). API async para compatibilidade com fluxo atual.
  * @param existingDoc Se fornecido, adiciona as páginas ao documento existente.
  */
 export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {

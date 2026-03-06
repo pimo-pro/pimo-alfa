@@ -10,8 +10,9 @@ export class RendererManager {
   readonly renderer: THREE.WebGLRenderer;
 
   constructor(container: HTMLElement, options: RendererOptions = {}) {
+    const antialias = options.antialias !== false;
     this.renderer = new THREE.WebGLRenderer({
-      antialias: options.antialias ?? true,
+      antialias,
       alpha: false,
       powerPreference: "high-performance",
     });
@@ -20,14 +21,20 @@ export class RendererManager {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
     this.renderer.setPixelRatio(Math.min(dpr, isMobile ? 1.1 : 1.6));
     this.renderer.setSize(container.clientWidth, container.clientHeight, false);
+
+    // --- Qualidade visual: gamma, contraste, sombras, antialiasing ---
     if ("outputColorSpace" in this.renderer) {
-      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      (this.renderer as THREE.WebGLRenderer).outputColorSpace = THREE.SRGBColorSpace;
     }
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    const exposure = options.toneMappingExposure ?? 1.05;
-    this.renderer.toneMappingExposure = exposure <= 0 ? 1.05 : exposure;
+    const exposure = options.toneMappingExposure != null && options.toneMappingExposure > 0
+      ? options.toneMappingExposure
+      : 1.0;
+    this.renderer.toneMappingExposure = exposure;
+
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
     if (options.clearColor) {
       this.renderer.setClearColor(options.clearColor);
     }

@@ -66,9 +66,8 @@
 
 | Ficheiro | Conteúdo |
 |----------|----------|
-| **`src/core/design/generateDesign.ts`** | Cutlist com `material: material.tipo` (material de projeto). |
+| **`src/core/manufacturing/cutlistFromBoxes.ts`** | Fonte única de cutlist; material por peça (getMaterialForBox, getMaterialDisplayInfo). Ver `docs/matriz-faces-A-B-FINAL.md`. |
 | **`src/core/manufacturing/boxManufacturing.ts`** | `getNomeMaterial(box)`, `getMaterial(painel.material)`, `calcularCustoPainel(painel, material)`. Painéis com `material: material.nome`. |
-| **`src/core/manufacturing/cutlistFromBoxes.ts`** | `material = box.material ?? "MDF Branco"`; peças com `material`. |
 | **`src/core/cutlayout/cutLayoutEngine.ts`** | `materialId`, `materialName` em peças e folhas; agrupamento por material/espessura. |
 | **`src/core/cutlayout/cutLayoutTypes.ts`** | `materialId?`, `materialName?` em tipos de peça/folha. |
 | **`src/core/cutlayout/cutLayoutPdf.ts`** | Título por material: `materialId ?? materialName ?? "Material"`. |
@@ -125,7 +124,7 @@ Resumo: o viewer usa apenas **MaterialLibrary** (3d/materials) + **WoodMaterial*
 - **Nível projeto**
   - `project.material`: `Material` em `ProjectState` (tipo, espessura, precoPorM2). Fonte única para “material padrão” do projeto e para a UI do painel esquerdo (PainelModelosDaCaixa).
 - **Nível caixa (design)**
-  - `project.boxes[].material`: `string | undefined` em `BoxModule`. Preenchido pelo design (ex.: `material.tipo` em generateDesign). Usado em cutlist, PDF, manufacturing, pricing, regras.
+  - `project.boxes[].material`: `string | undefined` em `BoxModule`. Preenchido pelo pipeline de cutlist (cutlistFromBoxes, getMaterialForBox). Usado em cutlist, PDF, manufacturing, pricing, regras.
 - **Nível workspace**
   - `WorkspaceBox` **não tem** campo `material`. O material visual da caixa no viewer vem de:
     - sincronização com `project.boxes` (useCalculadoraSync) que passa `materialName: box.material ?? ...` para `updateBox`;

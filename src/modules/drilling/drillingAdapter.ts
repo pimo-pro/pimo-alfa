@@ -4,14 +4,14 @@ import type {
   DrillType,
   OperationResult,
   PanelDrillHole,
-  PanelFace,
   TechnicalDrillHole,
   ViewerDrillMarkersByPanel,
 } from "../../core/types";
 import type { RulesConfig } from "../../core/rules/rulesConfig";
 import { MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM, getHingeYPositions, normalizeRulesConfig } from "../../core/rules/rulesConfig";
 import { getSettings } from "../../core/settings/settingsService";
-import { calculateTechnicalDrillingsForPiece, isTopDrillable } from "../../core/drilling/drillingService";
+import type { PieceType } from "../../core/drilling/drillingService";
+import { calculateTechnicalDrillingsForPiece, drillFaceToPanelFace, isTopDrillable } from "../../core/drilling/drillingService";
 
 export type PanelDrillingInput = {
   tipo: string;
@@ -107,23 +107,8 @@ function getHingePositionsFromDoorWidth(
   return doorPositions.map((x) => Math.max(xMinSafe, Math.min(xMaxSafe, x + centerOffset)));
 }
 
-/** Mapeia DrillFace (geometria) para face do painel A/B (A = frente/cima/exterior, B = fundo/tras/interior). */
-function drillFaceToPanelFace(face: DrillFace): PanelFace {
-  switch (face) {
-    case "frente":
-    case "cima":
-    case "esquerda":
-      return "A";
-    case "tras":
-    case "fundo":
-    case "direita":
-    default:
-      return "B";
-  }
-}
-
-/** Converte furação técnica em furos reais do painel (com face A/B). */
-function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[]): PanelDrillHole[] {
+/** Converte furação técnica em furos reais do painel (face A/B via drillingService — docs/matriz-faces-A-B-FINAL.md). */
+function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[], pieceType: PieceType): PanelDrillHole[] {
   return furacoesTecnicas.map((h) => {
     const holeType = h.tipo as DrillType;
     const topByFace = isTopDrillable(h.face);
@@ -139,7 +124,7 @@ function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[]): PanelDrillHo
       diameter: h.diametro,
       depth: h.profundidade,
       holeType,
-      face: drillFaceToPanelFace(h.face),
+      face: drillFaceToPanelFace(h.face, pieceType),
       topDrillable,
     };
   });
@@ -309,7 +294,7 @@ export function buildPanelDrillingResult(
   return {
     success: true,
     data: {
-      drillHoles: toPanelDrillHoles(furacoesTecnicas),
+      drillHoles: toPanelDrillHoles(furacoesTecnicas, input.tipo as PieceType),
     },
   };
 }
@@ -369,13 +354,8 @@ export function buildViewerDrillMarkersByPanelResult(
     if (!item?.drillHoles?.length) return [];
     const face: DrillFace =
       tipo === "cima" ? "fundo" : tipo === "fundo" ? "cima" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
-    // Cima: face interna = B (onlyInternalFaceHoles). Fundo: face interna = topo do painel = A, não filtrar.
-    const holesToUse =
-      tipo === "lateral_direita"
-        ? item.drillHoles
-        : tipo === "fundo"
-          ? item.drillHoles
-          : onlyInternalFaceHoles(item.drillHoles);
+    // Modelo unificado (docs/matriz-faces-A-B-FINAL.md): Viewer mostra apenas face interna (B) em todos os painéis.
+    const holesToUse = onlyInternalFaceHoles(item.drillHoles);
     return panelDrillHolesToTechnical(holesToUse, face);
   };
 

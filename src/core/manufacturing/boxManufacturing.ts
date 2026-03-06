@@ -100,13 +100,19 @@ const getNomeMaterial = (box: BoxModule) =>
 /** Profundidade útil (sem costa): profundidade_total - 10 mm. */
 const PROFUNDIDADE_UTIL_MM = SYSTEM_BACK_MM;
 
-/** Nomes finais e fixos para exibição (UI, PDF). COSTA sem espessura ao lado do nome. */
+/** Nomes finais e fixos para exibição (UI, PDF). COSTA sem espessura ao lado do nome. Gavetas e prateleira: docs/matriz-faces-A-B-FINAL.md. */
 export const PIECE_LABELS: Record<string, string> = {
   cima: "Cima",
   fundo: "Fundo",
   lateral_esquerda: "Lateral esquerda",
   lateral_direita: "Lateral direita",
   COSTA: "COSTA",
+  prateleira: "Prateleira",
+  gaveta_frente: "Gaveta frente",
+  gaveta_lat_esq: "Gaveta lateral esquerda",
+  gaveta_lat_dir: "Gaveta lateral direita",
+  gaveta_fundo: "Gaveta fundo",
+  gaveta_traseira: "Gaveta traseira",
 };
 export function getPieceLabel(tipo: string): string {
   return PIECE_LABELS[tipo] ?? tipo;
@@ -223,7 +229,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     custo: 0,
   });
 
-  // 3.4 Prateleiras: DENTRO; largura = width − 2 mm, profundidade = depth − 10 mm, espessura 19 mm
+  // 3.4 Prateleiras: DENTRO; largura = width − 2 mm, profundidade = depth − 10 mm, espessura 19 mm. Tipo único "prateleira" (FINAL).
   if (box.prateleiras > 0) {
     const larguraPrateleira = clampPositive(largura - 2);
     const profundidadePrateleira = clampPositive(profundidade - PROFUNDIDADE_UTIL_MM);

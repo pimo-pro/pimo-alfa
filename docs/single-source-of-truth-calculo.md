@@ -1,9 +1,11 @@
 # Single Source of Truth – Cálculo Real (Antes / Depois)
 
+**Fonte da verdade (faces e pipeline):** `docs/matriz-faces-A-B-FINAL.md`. Cálculo real: `cutlistFromBoxes` + `buildBoxDesign`.
+
 ## Por que “Resultados Atuais” mudava e o resto não?
 
 - **Resultados Atuais** (card no RightToolsBar) lia `project.resultados?.numeroPecas` e `project.acessorios?.reduce(...)`.
-- `project.resultados` e `project.acessorios` só são preenchidos quando o utilizador clica em **“Gerar Design 3D”** (ação `gerarDesign()`), que chama `buildDesignState(prev)` e atualiza o estado com os resultados do design antigo (`calcularResultadosBoxes`, `generateDesign`, etc.).
+- `project.resultados` e `project.acessorios` só são preenchidos quando o utilizador clica em **“Gerar Design 3D”** (ação `gerarDesign()`), que chama `buildDesignState(prev)` e atualiza o estado com o pipeline moderno: `buildBoxDesign` usa `cutlistComPrecoFromBox` e `extractDrawerCutlistFromLayerItems`; fonte única em `cutlistFromBoxes.ts`. Referência: `docs/matriz-faces-A-B-FINAL.md`.
 - Ao **adicionar ou duplicar caixas**, o estado atualizado era apenas:
   - `project.workspaceBoxes`
   - `project.boxes = buildBoxesFromWorkspace(...)`

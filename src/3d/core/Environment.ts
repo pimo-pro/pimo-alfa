@@ -18,7 +18,7 @@ export const createGround = (options: EnvironmentOptions = {}) => {
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(size, size), material);
   ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
+  ground.receiveShadow = true; // Sombras reais no Viewer: chão recebe sombra dos módulos
   return ground;
 };
 

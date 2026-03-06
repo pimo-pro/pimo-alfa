@@ -2,24 +2,24 @@ import type { ViewerOptions } from "../3d/core/Viewer";
 
 /**
  * Configurações padronizadas do viewer 3D — modo principal.
- * Iluminação equilibrada, sombras suaves, materiais PBR, tone mapping e câmera fluida.
+ * Iluminação equilibrada, sombras soft (PCF), tone mapping e gamma para qualidade visual.
  */
 export const DEFAULT_VIEWER_OPTIONS: Omit<ViewerOptions, "background" | "skipInitialBox"> = {
   enableControls: true,
   renderer: {
     antialias: true,
-    toneMappingExposure: 1.05,
+    toneMappingExposure: 1.0,
   },
   lights: {
-    ambientIntensity: 0.32,
-    hemisphereIntensity: 0.4,
-    keyLightIntensity: 0.62,
-    fillLightIntensity: 0.18,
+    ambientIntensity: 0.4,
+    hemisphereIntensity: 0.48,
+    keyLightIntensity: 0.48,
+    fillLightIntensity: 0.24,
     rimLightIntensity: 0.14,
     shadowMapSize: 4096,
-    shadowBias: 0.003,
-    shadowNormalBias: 0.12,
-    shadowRadius: 4,
+    shadowBias: -0.0002,
+    shadowNormalBias: 0.06,
+    shadowRadius: 6,
   },
   camera: {
     fov: 45,

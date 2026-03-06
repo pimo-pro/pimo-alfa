@@ -1,3 +1,5 @@
+# [OBSOLETO - Fase 6] O conteúdo do backup foi removido; o pipeline usa apenas cutlistFromBoxes.
+# Este script mantido apenas como referência histórica. Não executar.
 # Restaura os arquivos atuais de PDF/Cut List, Modal e hook a partir do backup
 # criado antes da restauração do modelo legado. Execute na raiz do projeto:
 #   .\scripts\restore-pdf-atual.ps1

@@ -100,14 +100,14 @@ export const painelReferenciaSections: DocSection[] = [
     title: "Cálculo do caixote (costa fixa 10mm)",
     description: "COSTA com espessura fixa de 10 mm; CIMA e FUNDO são a base estrutural.",
     internals: "Altura das laterais = altura_total - (espessura_cima + espessura_fundo). COSTA sempre 10 mm; não mostrar espessura ao lado do nome.",
-    files: ["src/core/design/generateDesign.ts"],
-    interactions: "Cut list alimenta pricing e exportação.",
+    files: ["src/core/manufacturing/boxManufacturing.ts", "src/core/manufacturing/cutlistFromBoxes.ts"],
+    interactions: "Cut list alimenta pricing e exportação (pipeline único, modelo FINAL).",
   },
   {
     title: "Prateleiras com cálculo automático",
     description: "Permite qualquer número de prateleiras por caixote.",
     internals: "Cada prateleira gera uma peça com largura interna e espessura do caixote.",
-    files: ["src/core/design/generateDesign.ts", "src/components/layout/left-panel/LeftPanel.tsx"],
+    files: ["src/core/manufacturing/boxManufacturing.ts", "src/components/layout/left-panel/LeftPanel.tsx"],
     interactions: "Altera cut list e preço.",
   },
   {

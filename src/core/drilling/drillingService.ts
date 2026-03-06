@@ -1,16 +1,18 @@
 /**
  * Sistema de furação baseado em regras de marcenaria.
- * Top drilling apenas: furos pela parte superior.
- * Sem furação lateral. Sem ficheiros de drill separados.
+ * Fonte única para cálculo de furos e mapeamento DrillFace ↔ PanelFace (A/B).
+ * Referência: docs/matriz-faces-A-B-FINAL.md — face interna = B, face externa = A.
  *
- * Alinhado ao BoxBuilder/Viewer 3D, Layout de Corte PRO e TCN: as mesmas regras e distâncias
- * (margemFrente/margemFundo, distanciaDaBordaCalco, etc.) são a fonte única para furos.
- * Lateral direita: face interna = "esquerda"; coordenadas (x,y) iguais às da esquerda (x = profundidade, y = altura).
+ * Top drilling: furos pela parte superior (topDrillable). Alinhado ao BoxBuilder/Viewer 3D,
+ * Layout de Corte PRO e TCN: mesmas regras e distâncias (margemFrente/margemFundo, etc.).
+ *
+ * Prateleira (modelo mínimo FINAL): face interna = B = face que olha para baixo (interior da caixa);
+ * face externa = A = face que olha para cima. getInternalFace("prateleira") = "fundo".
  */
 
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getHingeYPositions } from "../rules/rulesConfig";
-import type { CutListItem, DrillFace, DrillType, PanelDrillHole, PanelFace, TechnicalDrillHole } from "../types";
+import type { DrillFace, DrillType, PanelFace, TechnicalDrillHole } from "../types";
 
 export type PieceType =
   | "cima"
@@ -26,6 +28,8 @@ export type PieceType =
   | "gaveta_frente"
   | "gaveta_lat_esq"
   | "gaveta_lat_dir"
+  | "gaveta_fundo"
+  | "gaveta_traseira"
   | string;
 
 type PieceInput = {
@@ -113,12 +117,22 @@ function pushHole(
   });
 }
 
-function getInternalFace(pieceType: PieceType): DrillFace {
+/**
+ * Face geométrica (DrillFace) que é a face interna do painel (lado para dentro do móvel).
+ * Única fonte para semântica A/B: essa face recebe PanelFace "B"; as demais "A".
+ */
+export function getInternalFace(pieceType: PieceType): DrillFace {
   if (pieceType === "cima") return "fundo";
   if (pieceType === "fundo") return "cima";
   if (pieceType === "lateral_esquerda") return "direita";
   if (pieceType === "lateral_direita") return "esquerda";
-  if (pieceType.startsWith("porta") || pieceType === "gaveta" || pieceType.startsWith("gaveta")) return "frente";
+  if (pieceType.startsWith("porta")) return "tras";
+  if (pieceType === "gaveta_lat_esq") return "direita";
+  if (pieceType === "gaveta_lat_dir") return "esquerda";
+  if (pieceType === "gaveta_frente" || pieceType === "gaveta") return "tras";
+  if (pieceType === "gaveta_fundo") return "cima";   // face interior = topo do painel (lado para dentro da gaveta)
+  if (pieceType === "gaveta_traseira") return "frente"; // face interior = frente do painel (lado para dentro da gaveta)
+  if (pieceType === "prateleira") return "fundo";   // FINAL: face interna = baixo (B), face externa = cima (A)
   return "frente";
 }
 
@@ -397,51 +411,12 @@ export function calculateTechnicalDrillingsForPiece(
   return out;
 }
 
-function drillFaceToPanelFace(face: DrillFace): PanelFace {
-  switch (face) {
-    case "frente":
-    case "cima":
-    case "esquerda":
-      return "A";
-    default:
-      return "B";
-  }
-}
-
-function technicalToPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[]): PanelDrillHole[] {
-  return furacoesTecnicas.map((h) => ({
-    x: h.x,
-    y: h.y,
-    diameter: h.diametro,
-    depth: h.profundidade,
-    holeType: h.tipo,
-    face: drillFaceToPanelFace(h.face),
-    topDrillable:
-      isTopDrillable(h.face) ||
-      h.tipo === "dobradica" ||
-      h.tipo === "dobradica_fixacao" ||
-      h.tipo === "dobradica_parafuso_uniao" ||
-      h.tipo === "prateleira",
-  }));
-}
-
-export function applyDrillingsToCutListItems(items: CutListItem[], rules: RulesConfig): CutListItem[] {
-  return items.map((item) => {
-    if (!item || !item.tipo || !item.dimensoes) return item;
-    const furacoesTecnicas = calculateTechnicalDrillingsForPiece(
-      {
-        tipo: item.tipo,
-        largura: item.dimensoes.largura ?? 0,
-        altura: item.dimensoes.altura ?? 0,
-        espessura: item.espessura ?? 0,
-      },
-      rules
-    );
-    return {
-      ...item,
-      drillHoles: technicalToPanelDrillHoles(furacoesTecnicas),
-    };
-  });
+/**
+ * Converte DrillFace (geometria) em PanelFace (A/B). Regra FINAL: face interna do painel = B.
+ * Única fonte desta conversão no projeto; drillingAdapter reutiliza esta função.
+ */
+export function drillFaceToPanelFace(face: DrillFace, pieceType: PieceType): PanelFace {
+  return face === getInternalFace(pieceType) ? "B" : "A";
 }
 
 export function isTopDrillable(face: DrillFace): boolean {

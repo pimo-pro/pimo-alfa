@@ -27,6 +27,7 @@ export class SceneManager {
 
     const environment = options.environment ?? {};
     this.ground = createGround(environment);
+    this.ground.receiveShadow = true;
     this.scene.add(this.ground);
     if (environment.showGrid) {
       this.grid = createGrid(environment);

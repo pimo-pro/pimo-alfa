@@ -31,22 +31,23 @@ export class Lights {
   readonly rimLight: THREE.DirectionalLight;
 
   constructor(scene: THREE.Scene, options: LightsOptions = {}) {
-    // Ambient reduzido para não “lavar” as cores do MDF
+    // Ambient suave: iluminação base sem “lavar” as cores do MDF
     this.ambient = new THREE.AmbientLight(
       0xffffff,
-      options.ambientIntensity ?? 0.32
+      options.ambientIntensity ?? 0.4
     );
 
+    // Hemisphere: equilíbrio céu/chão, sem sombras duras
     this.hemisphere = new THREE.HemisphereLight(
       options.hemisphereSkyColor ?? 0xe8eeff,
       options.hemisphereGroundColor ?? 0xebeef2,
-      options.hemisphereIntensity ?? 0.4
+      options.hemisphereIntensity ?? 0.48
     );
 
-    // Key light: frontal diagonal, cor levemente quente; posição e alvo para não atravessar o interior da caixa
+    // Key light: frontal diagonal, intensidade moderada para evitar brilho excessivo; projeta sombra
     this.keyLight = new THREE.DirectionalLight(
       options.keyLightColor ?? 0xfff8f0,
-      options.keyLightIntensity ?? 0.62
+      options.keyLightIntensity ?? 0.48
     );
     this.keyLight.position.set(5, 6, 5);
     this.keyLight.target.position.set(0, 0.5, 0);
@@ -55,26 +56,25 @@ export class Lights {
     const shadowSize = options.shadowMapSize ?? 4096;
     this.keyLight.shadow.mapSize.width = shadowSize;
     this.keyLight.shadow.mapSize.height = shadowSize;
-    this.keyLight.shadow.radius = options.shadowRadius ?? 3;
-    this.keyLight.shadow.bias = options.shadowBias ?? 0.003;
-    this.keyLight.shadow.normalBias = options.shadowNormalBias ?? 0.12;
-    // Frustum apertado alinhado ao volume da(s) caixa(s): reduz bleeding quando a câmara está longe
-    this.keyLight.shadow.camera.near = 0.05;
-    this.keyLight.shadow.camera.far = 8;
-    this.keyLight.shadow.camera.left = -1.5;
-    this.keyLight.shadow.camera.right = 1.5;
-    this.keyLight.shadow.camera.top = 1.5;
-    this.keyLight.shadow.camera.bottom = -1.5;
+    this.keyLight.shadow.radius = options.shadowRadius ?? 6;
+    this.keyLight.shadow.bias = options.shadowBias ?? -0.0002;
+    this.keyLight.shadow.normalBias = options.shadowNormalBias ?? 0.06;
+    this.keyLight.shadow.camera.near = 0.1;
+    this.keyLight.shadow.camera.far = 25;
+    this.keyLight.shadow.camera.left = -8;
+    this.keyLight.shadow.camera.right = 8;
+    this.keyLight.shadow.camera.top = 8;
+    this.keyLight.shadow.camera.bottom = -8;
 
-    // Fill light: secundária suave, reduz áreas escuras, sem sombras
+    // Fill light: suave, reduz áreas escuras, sem sombras
     this.fillLight = new THREE.DirectionalLight(
       options.fillLightColor ?? 0xe8ecf1,
-      options.fillLightIntensity ?? 0.15
+      options.fillLightIntensity ?? 0.24
     );
     this.fillLight.position.set(-3, 3, 2.5);
 
     // Rim light: atrás do módulo, destaca bordas
-    const rimIntensity = options.rimLightIntensity ?? 0.16;
+    const rimIntensity = options.rimLightIntensity ?? 0.14;
     this.rimLight = new THREE.DirectionalLight(0xffffff, rimIntensity);
     this.rimLight.position.set(-2, 2.5, -4);
 

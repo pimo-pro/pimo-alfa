@@ -470,8 +470,8 @@ export class Viewer {
         fill: this.ultraLightState.fill * (isAggressive ? 0.45 : 0.6),
         ambient: this.ultraLightState.ambient * (isAggressive ? 0.6 : 0.7),
         rim: this.ultraLightState.rim * (isAggressive ? 0.25 : 0.4),
-        castShadow: isAggressive ? false : false,
-        shadowRadius: isAggressive ? 0.3 : 0.5,
+        castShadow: isAggressive ? false : true,
+        shadowRadius: isAggressive ? 0.3 : 4,
       };
       const performanceRatio = isAggressive
         ? (this.isMobile ? 0.75 : 0.9)
@@ -3980,6 +3980,12 @@ export class Viewer {
         this.cameraManager.camera.position.y = 0.3;
       }
       this.controls?.update();
+      if (!this.ultraPerformanceMode) {
+        const r = this.rendererManager.renderer;
+        r.shadowMap.enabled = true;
+        if (r.shadowMap.type !== THREE.PCFSoftShadowMap) r.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.lights.keyLight.castShadow = true;
+      }
       this.lerpLightsToTarget();
       this.updateDimensionsOverlay();
       this.updateWallVisibilityBasedOnCamera();

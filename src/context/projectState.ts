@@ -1,6 +1,7 @@
 import { calcularProjeto } from "../core/calculator/woodCalculator";
-import { generateDesign } from "../core/design/generateDesign";
 import { buildFerragens } from "../core/design/ferragens";
+import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
+import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../modules/drilling/drillingAdapter";
 import {
   calcularPrecoCutList,
   calcularPrecoTotalPecas,
@@ -374,27 +375,33 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
     };
   }
 
-  const design = generateDesign(
-    prev.tipoProjeto,
-    prev.material,
-    box.dimensoes,
-    prev.quantidade,
-    box.espessura,
-    box.prateleiras,
-    box.portaTipo,
-    box.gavetas,
-    box.alturaGaveta,
-    prev.rules
-  );
+  // Pipeline moderno: cutlistFromBoxes é a única fonte de peças paramétricas (modelo FINAL).
+  const parametricFromBox = cutlistComPrecoFromBox(box, prev.rules, prev.materialId);
+  const hasDrawers = (box.drawersLayer?.length ?? 0) > 0;
+  const parametricFiltered = hasDrawers
+    ? parametricFromBox.filter((item) => item.tipo !== "gaveta_frente" && item.tipo !== "gaveta")
+    : parametricFromBox;
 
-  // Extrai peças das gavetas se existirem
-  const drawerCutlist = (box.drawersLayer && box.drawersLayer.length > 0)
-    ? extractDrawerCutlistFromLayerItems(box.drawersLayer, prev.material.tipo)
+  const drawerCutlist = hasDrawers
+    ? extractDrawerCutlistFromLayerItems(box.drawersLayer!, prev.material.tipo)
     : [];
+  const effRules = buildEffectiveDrillingRules(prev.rules);
+  const drawerWithHoles = drawerCutlist.map((item) => {
+    const result = buildPanelDrillingResult(
+      {
+        tipo: item.tipo,
+        larguraMm: item.dimensoes.largura,
+        alturaMm: item.dimensoes.altura,
+        espessuraMm: item.espessura,
+      },
+      effRules
+    );
+    const drillHoles =
+      result.success && result.data?.drillHoles?.length ? result.data.drillHoles : [];
+    return { ...item, drillHoles };
+  });
 
-  // Combina cutlist parametrica com cutlist das gavetas
-  const combinedCutList = [...design.cutList, ...drawerCutlist];
-
+  const combinedCutList = [...parametricFiltered, ...drawerWithHoles];
   const cutListComPreco = calcularPrecoCutList(combinedCutList);
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
   const ferragensBase = buildFerragens(box.prateleiras, box.portaTipo, box.gavetas);
@@ -417,7 +424,7 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
     ferragens,
     cutList: combinedCutList,
     cutListComPreco,
-    estrutura3D: design.estrutura3D,
+    estrutura3D: null,
     precoTotalPecas,
   };
 };

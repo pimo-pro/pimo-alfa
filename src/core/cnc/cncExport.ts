@@ -87,36 +87,3 @@ function buildBasicDrillOperationsFromSheet(sheetResult: SheetResult): CncDrillO
   return ops;
 }
 
-/**
- * Operações básicas de furação (placeholder):
- * 4 furos nos cantos de cada peça. Usado para compatibilidade; export usa buildBasicDrillOperationsFromSheets por espessura.
- */
-export function buildBasicDrillOperations(layoutResult: CutLayoutResult): CncDrillOperation[] {
-  const ops: CncDrillOperation[] = [];
-  for (const sheet of layoutResult.sheets) {
-    for (const pl of sheet.placements) {
-      const x = pl.x_mm;
-      const y = pl.y_mm;
-      const w = pl.largura_mm;
-      const h = pl.altura_mm;
-      const margin = 25;
-      const points: Array<{ x: number; y: number }> = [
-        { x: x + margin, y: y + margin },
-        { x: x + w - margin, y: y + margin },
-        { x: x + w - margin, y: y + h - margin },
-        { x: x + margin, y: y + h - margin },
-      ];
-      points.forEach((p) => {
-        ops.push({
-          x: p.x,
-          y: p.y,
-          z: 0,
-          diametro: 5,
-          profundidade: 10,
-          tipo: "vertical",
-        });
-      });
-    }
-  }
-  return ops;
-}

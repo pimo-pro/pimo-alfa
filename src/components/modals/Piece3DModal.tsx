@@ -6,7 +6,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildBoxLegacy } from "../../3d/objects/BoxBuilder";
+import { buildBoxGroup } from "../../3d/objects/BoxBuilder";
 import { createWoodMaterial } from "../../3d/materials/WoodMaterial";
 import { getMaterialPreset, defaultMaterialSet, mergeMaterialSet } from "../../3d/materials/MaterialLibrary";
 import { mmToM } from "../../utils/units";
@@ -71,7 +71,7 @@ export default function Piece3DModal({
       material: loaded?.material ?? undefined,
       materialName: preset,
     };
-    const boxMesh = buildBoxLegacy(boxOpts);
+    const boxMesh = buildBoxGroup(boxOpts);
     boxMesh.position.set(0, h / 2, 0);
     boxMesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {

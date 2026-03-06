@@ -1,6 +1,8 @@
 /**
  * Exportação DRILL: gera ficheiros XML por peça para furos laterais de cavilha.
  * Não altera TCN/Nesting. Estrutura de saída: /drill/XML/<qrCode>.xml.
+ * Modelo de faces: apenas furos com holeType "cavilha" e topDrillable === false (face B / lateral),
+ * conforme docs/matriz-faces-A-B-FINAL.md. Não usa PanelFace na exportação.
  */
 
 import type { CutListItemComPreco } from "../types";

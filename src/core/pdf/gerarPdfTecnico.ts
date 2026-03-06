@@ -1,6 +1,6 @@
 /**
- * PDF Técnico Industrial — tabela única estilo Excel (modelo legado v1.9).
- * Uma única página landscape com todas as peças do projeto.
+ * PDF Técnico Industrial — tabela única estilo Excel.
+ * Uma única página landscape com todas as peças do projeto (modelo FINAL).
  */
 
 import jsPDF from "jspdf";
@@ -28,6 +28,10 @@ const TIPO_TO_REF_NAME: Record<string, string> = {
   porta_simples: "PORTA_SIMPLES",
   porta_correr: "PORTA_CORRER",
   gaveta_frente: "GAVETA_FRENTE",
+  gaveta_lat_esq: "GAVETA_LAT_ESQ",
+  gaveta_lat_dir: "GAVETA_LAT_DIR",
+  gaveta_fundo: "GAVETA_FUNDO",
+  gaveta_traseira: "GAVETA_TRASEIRA",
 };
 
 /** Mapeamento tipo peça (boxManufacturing) → id componentType */
@@ -42,6 +46,10 @@ const TIPO_TO_COMPONENT_ID: Record<string, string> = {
   porta_simples: "porta",
   porta_correr: "porta",
   gaveta_frente: "gaveta_frente",
+  gaveta_lat_esq: "gaveta_lat_esq",
+  gaveta_lat_dir: "gaveta_lat_dir",
+  gaveta_fundo: "gaveta_fundo",
+  gaveta_traseira: "gaveta_traseira",
 };
 
 interface LinhaPeca {
@@ -271,9 +279,9 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
 }
 
 /**
- * Gera PDF técnico industrial em tabela única (landscape) — modelo legado v1.9.
+ * Gera PDF técnico industrial em tabela única (landscape).
  * @param opcoes.incluirPaginaPrecos — quando true (futuro), adiciona Página 2 com preços
- * @param opcoes.materialId — ignorado no modelo legado (compatibilidade com ProjectProvider)
+ * @param opcoes.materialId — opcional (compatibilidade com ProjectProvider)
  */
 export function gerarPdfTecnicoCompleto(
   boxes: BoxModule[],

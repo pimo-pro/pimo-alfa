@@ -27,7 +27,7 @@ src/
 │   └── materialContext.tsx, useMaterial.ts
 ├── core/                  # Lógica de negócio
 │   ├── calculator/        # woodCalculator
-│   ├── design/            # generateDesign, ferragens, acessorios
+│   ├── design/            # ferragens, acessorios (cutlist em manufacturing/cutlistFromBoxes)
 │   ├── glb/               # extractPartsFromGLB, glbPartsToCutList
 │   ├── layout/            # layoutWarnings, viewerLayoutAdapter
 │   ├── manufacturing/     # boxManufacturing, cutlistFromBoxes

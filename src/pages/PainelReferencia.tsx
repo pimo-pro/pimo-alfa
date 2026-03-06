@@ -44,6 +44,9 @@ const files = import.meta.glob(
   [
     "../**/*.{ts,tsx,js,jsx,css,html}",
     "!../core/pdf/backup-before-legacy-restore/**",
+    "!../**/*.test.{ts,tsx,js,jsx}",
+    "!../**/*.spec.{ts,tsx,js,jsx}",
+    "!../validation/**",
   ],
   { eager: false }
 );

@@ -1,8 +1,9 @@
 /**
  * Conversão: DrawerLayerItem[] → CutListItem[]
- * 
- * Extrai TODAS as peças das gavetas (frente, laterais, fundo, traseira)
- * para aparecerem na lista de corte (cutlist) e no PDF técnico.
+ *
+ * Extrai todas as subpeças das gavetas (frente, laterais, fundo, traseira) para a cutlist.
+ * Taxonomia unificada (docs/matriz-faces-A-B-FINAL.md): gaveta_frente, gaveta_lat_esq,
+ * gaveta_lat_dir, gaveta_fundo, gaveta_traseira.
  */
 
 import type { CutListItem } from "../core/types";
@@ -53,7 +54,7 @@ export function drawerLayerItemToCutList(
       },
       espessura: item.leftSideWidth,
       material: materialType,
-      tipo: "gaveta_lateral_esquerda",
+      tipo: "gaveta_lat_esq",
       sourceType: "parametric",
       boxId: item.parentBoxId,
       materialId: item.materialId,
@@ -74,7 +75,7 @@ export function drawerLayerItemToCutList(
       },
       espessura: item.rightSideWidth,
       material: materialType,
-      tipo: "gaveta_lateral_direita",
+      tipo: "gaveta_lat_dir",
       sourceType: "parametric",
       boxId: item.parentBoxId,
       materialId: item.materialId,
