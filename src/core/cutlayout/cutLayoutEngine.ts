@@ -16,6 +16,7 @@ import type {
 import type { LayoutVisualMaterial, OperationResult } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
 import { CUT_LAYOUT_SAFETY_MARGIN_MM } from "./layoutCoordinateSystem";
+import { SYSTEM_BACK_MM } from "../baseCabinets";
 
 const DEFAULT_KERF_MM = 3;
 const MIN_UTILIZATION_PERCENT = 0.8;
@@ -1823,12 +1824,24 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const dims = raw.length >= 2 ? [...raw].sort((a, b) => b - a) : [Math.max(raw[0] ?? 1, 1), 1];
     const largura = Math.round(Math.max(dims[0] ?? 1, 1));
     const altura = Math.round(Math.max(dims[1] ?? 1, 1));
-    const esp = item.espessura ?? 19;
+    const tipoToken = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
+    const nomeToken = String(item.nome ?? "").trim().toLowerCase();
+    const isCosta = tipoToken === "costa" || nomeToken === "costa";
+    const rawEsp = Number(item.espessura ?? item.dimensoes?.profundidade);
+    // Regra industrial fixa: COSTA sempre 10mm (SYSTEM_BACK_MM).
+    const esp = isCosta
+      ? SYSTEM_BACK_MM
+      : (Number.isFinite(rawEsp) && rawEsp > 0 ? rawEsp : 19);
     const materialRef = item.materialId ?? item.material;
     const materialRecord = materialRef ? getMaterialByIdOrLabel(String(materialRef)) : null;
     const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);
     const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);
-    const sheetThicknessMm = Number(item.sheetThicknessMm ?? materialRecord?.sheetThicknessMm);
+    // A espessura da peça deve ser a fonte principal para o pipeline CNC.
+    // Só respeitar sheetThicknessMm quando vier explicitamente no item.
+    const explicitSheetThickness = Number(item.sheetThicknessMm);
+    const sheetThicknessMm = Number.isFinite(explicitSheetThickness) && explicitSheetThickness > 0
+      ? explicitSheetThickness
+      : esp;
     const seen = new Set<string>();
     const normalizedHoles: NormalizedHoleForPiece[] = [];
     const add = (x: number, y: number, d: number, dep: number, ht?: string, td?: boolean) => {
@@ -1865,7 +1878,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
       pieces.push({
         largura_mm: largura,
         altura_mm: altura,
-        espessura_mm: Number(esp) || 19,
+        espessura_mm: esp,
         sheetWidthMm: Number.isFinite(sheetWidthMm) && sheetWidthMm > 0 ? sheetWidthMm : undefined,
         sheetHeightMm: Number.isFinite(sheetHeightMm) && sheetHeightMm > 0 ? sheetHeightMm : undefined,
         sheetThicknessMm: Number.isFinite(sheetThicknessMm) && sheetThicknessMm > 0 ? sheetThicknessMm : undefined,

@@ -499,14 +499,13 @@ return (
       {showGerarArquivoModal && (
         <GerarArquivoModal
           onClose={() => setShowGerarArquivoModal(false)}
-          onConfirm={gerarArquivoHandlers.handleGerarArquivoConfirm}
           hasBoxes={gerarArquivoHandlers.hasBoxes}
-          onPdfTecnico={gerarArquivoHandlers.onPdfTecnico}
           onCutlist={gerarArquivoHandlers.onCutlist}
+          onPdfTecnico={gerarArquivoHandlers.onPdfTecnico}
+          onUnificado={gerarArquivoHandlers.onUnificado}
           onAmbos={gerarArquivoHandlers.onAmbos}
-          onLayoutCorte={gerarArquivoHandlers.onLayoutCorte}
-          onEtiquetas={gerarArquivoHandlers.onEtiquetas}
-          onExportarCnc={gerarArquivoHandlers.onExportarCnc}
+          onLayoutCortePro={gerarArquivoHandlers.onLayoutCortePro}
+          onArquivoCompleto={gerarArquivoHandlers.onArquivoCompleto}
         />
       )}
     </>

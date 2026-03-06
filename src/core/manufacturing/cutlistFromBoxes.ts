@@ -10,6 +10,7 @@ import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/material
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
+import { addMateDowelHolesToBoxItems } from "../drill/dowelJoints";
 
 /**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
@@ -152,7 +153,7 @@ export function cutlistComPrecoFromBox(
     });
   });
 
-  return items;
+  return addMateDowelHolesToBoxItems(items);
 }
 
 /**

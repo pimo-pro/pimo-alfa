@@ -610,6 +610,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
         );
       }
       leftSide.userData.drawerPart = "left-side";
+      leftSide.userData.drawerLayerId = spec.id;
       drawerGroup.add(leftSide);
     }
 
@@ -641,6 +642,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
         );
       }
       rightSide.userData.drawerPart = "right-side";
+      rightSide.userData.drawerLayerId = spec.id;
       drawerGroup.add(rightSide);
     }
 
@@ -672,6 +674,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
         );
       }
       bottom.userData.drawerPart = "bottom";
+      bottom.userData.drawerLayerId = spec.id;
       drawerGroup.add(bottom);
     }
 
@@ -703,6 +706,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
         );
       }
       back.userData.drawerPart = "back";
+      back.userData.drawerLayerId = spec.id;
       drawerGroup.add(back);
     }
   }
@@ -1095,6 +1099,7 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     shelfSpecs.forEach((spec, i) => {
       const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
       mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+      mesh.userData.shelfIndex = i;
       root.add(mesh);
     });
   }
@@ -1308,6 +1313,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   shelfSpecs.forEach((spec, i) => {
     const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: mat as THREE.Material });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+    mesh.userData.shelfIndex = i;
     group.add(mesh);
   });
 

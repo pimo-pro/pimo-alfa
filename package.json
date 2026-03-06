@@ -16,6 +16,7 @@
     "@types/three": "^0.182.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
+    "jszip": "^3.10.1",
     "pg": "^8.19.0",
     "qrcode-generator": "^2.0.4",
     "react": "^19.2.0",

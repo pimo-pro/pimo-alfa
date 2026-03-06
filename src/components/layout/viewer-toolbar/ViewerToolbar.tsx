@@ -3,7 +3,7 @@
  * Ações principais do projeto + controle de Photo Mode via popover no ícone da câmera.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
@@ -13,61 +13,14 @@ import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
 import PhotoModePopoverContent from "./PhotoModePopoverContent";
 
-const panelLabels: Record<"left" | "right" | "top" | "bottom" | "back", string> = {
-  left: "Lateral Esq",
-  right: "Lateral Dir",
-  top: "Topo",
-  bottom: "Fundo",
-  back: "Costa",
-};
-
-const panelKeyByType = {
-  left: "lateral_esquerda",
-  right: "lateral_direita",
-  top: "cima",
-  bottom: "fundo",
-  back: "costa",
-} as const;
-
 export default function ViewerToolbar() {
   const { actions, project } = useProject();
   const { openModal } = useToolbarModal();
   const { viewerApi } = usePimoViewerContext();
   const [photoModeOpen, setPhotoModeOpen] = useState(false);
   const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
-  const [piecesMenuOpen, setPiecesMenuOpen] = useState(false);
-  const [pieceSearch, setPieceSearch] = useState("");
   const photoModeContainerRef = useRef<HTMLDivElement | null>(null);
   const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
-  const piecesMenuRef = useRef<HTMLDivElement | null>(null);
-
-  const workspaceBoxes = project.workspaceBoxes ?? [];
-  const panelVisibilityEntries = useMemo(() => {
-    return workspaceBoxes.flatMap((box) => {
-      return (Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
-        const panelKey = panelKeyByType[panel];
-        const panelIdFromBox = box.panelIds?.[panelKey];
-        const pieceId =
-          typeof panelIdFromBox === "string" && panelIdFromBox.trim().length > 0
-            ? panelIdFromBox
-            : `${box.id}:${panel}`;
-        return {
-          id: pieceId,
-          panel,
-          boxId: box.id,
-          boxName: box.nome,
-          label: panelLabels[panel],
-          searchText: `${box.nome} ${panelLabels[panel]} ${box.id}`.toLowerCase(),
-        };
-      });
-    });
-  }, [workspaceBoxes]);
-
-  const filteredPanelVisibilityEntries = useMemo(() => {
-    const query = pieceSearch.trim().toLowerCase();
-    if (!query) return panelVisibilityEntries;
-    return panelVisibilityEntries.filter((entry) => entry.searchText.includes(query));
-  }, [panelVisibilityEntries, pieceSearch]);
 
   const actionsRef = useRef(actions);
   const viewerApiRef = useRef(viewerApi);
@@ -83,7 +36,7 @@ export default function ViewerToolbar() {
   }, [photoModeOpen]);
 
   useEffect(() => {
-    if (!photoModeOpen && !visibilityMenuOpen && !piecesMenuOpen) return;
+    if (!photoModeOpen && !visibilityMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!photoModeContainerRef.current?.contains(event.target as Node)) {
         setPhotoModeOpen(false);
@@ -91,13 +44,10 @@ export default function ViewerToolbar() {
       if (!visibilityMenuRef.current?.contains(event.target as Node)) {
         setVisibilityMenuOpen(false);
       }
-      if (!piecesMenuRef.current?.contains(event.target as Node)) {
-        setPiecesMenuOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [photoModeOpen, visibilityMenuOpen, piecesMenuOpen]);
+  }, [photoModeOpen, visibilityMenuOpen]);
 
   // Cleanup apenas no unmount: desativar photo mode. Refs evitam dep de actions/viewerApi que mudam a cada render.
   useEffect(() => {
@@ -148,7 +98,6 @@ export default function ViewerToolbar() {
       const next = !prev;
       if (next) {
         setVisibilityMenuOpen(false);
-        setPiecesMenuOpen(false);
       }
       return next;
     });
@@ -159,42 +108,9 @@ export default function ViewerToolbar() {
       const next = !prev;
       if (next) {
         setPhotoModeOpen(false);
-        setPiecesMenuOpen(false);
       }
       return next;
     });
-  };
-
-  const togglePiecesMenu = () => {
-    setPiecesMenuOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setPhotoModeOpen(false);
-        setVisibilityMenuOpen(false);
-      }
-      return next;
-    });
-  };
-
-  const toggleHiddenPanel = (panel: "left" | "right" | "top" | "bottom" | "back") => {
-    const current = project.viewerSettings.hiddenPanels;
-    const next = current.includes(panel)
-      ? current.filter((item) => item !== panel)
-      : [...current, panel];
-    actions.setViewerSettings({ hiddenPanels: next });
-  };
-
-  const toggleHiddenPiece = (pieceId: string) => {
-    const current = project.viewerSettings.hiddenPanels;
-    const next = current.includes(pieceId)
-      ? current.filter((item) => item !== pieceId)
-      : [...current, pieceId];
-    actions.setViewerSettings({ hiddenPanels: next });
-  };
-
-  const isPieceHidden = (pieceId: string, panel: "left" | "right" | "top" | "bottom" | "back") => {
-    const hidden = project.viewerSettings.hiddenPanels;
-    return hidden.includes(pieceId) || hidden.includes(panel);
   };
 
   return (
@@ -301,113 +217,6 @@ export default function ViewerToolbar() {
                 />
                 Reflexos dinâmicos (probe)
               </label>
-            </div>
-          </div>
-        )}
-      </div>
-      <div ref={piecesMenuRef} className="viewer-toolbar-popover-anchor">
-        <button
-          type="button"
-          title="Peças (painéis)"
-          aria-label="Peças (painéis)"
-          aria-haspopup="dialog"
-          aria-expanded={piecesMenuOpen}
-          aria-pressed={piecesMenuOpen}
-          onClick={togglePiecesMenu}
-          style={{ fontSize: 12 }}
-        >
-          <span className="viewer-toolbar-icon" aria-hidden>
-            🧱
-          </span>
-        </button>
-        {piecesMenuOpen && (
-          <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Peças (painéis)">
-            <div style={{ minWidth: 340 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <strong style={{ fontSize: 12 }}>Peças (painéis)</strong>
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  style={{ fontSize: 11, padding: "4px 8px" }}
-                  onClick={() => actions.setViewerSettings({ hiddenPanels: [] })}
-                >
-                  Mostrar tudo
-                </button>
-              </div>
-              <input
-                className="input input-sm"
-                placeholder="Buscar peça (caixa ou painel)"
-                value={pieceSearch}
-                onChange={(event) => setPieceSearch(event.target.value)}
-                style={{ marginBottom: 8 }}
-              />
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                {(Object.keys(panelLabels) as Array<"left" | "right" | "top" | "bottom" | "back">).map((panel) => {
-                  const isHidden = project.viewerSettings.hiddenPanels.includes(panel);
-                  return (
-                    <button
-                      key={`toolbar-panel-toggle-${panel}`}
-                      type="button"
-                      className="button button-ghost"
-                      style={{ fontSize: 11, padding: "4px 8px", opacity: isHidden ? 0.65 : 1 }}
-                      onClick={() => toggleHiddenPanel(panel)}
-                    >
-                      {isHidden ? "Mostrar" : "Esconder"} todas: {panelLabels[panel]}
-                    </button>
-                  );
-                })}
-              </div>
-              <div
-                style={{
-                  maxHeight: 180,
-                  overflowY: "auto",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 8,
-                  padding: 8,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                }}
-              >
-                {filteredPanelVisibilityEntries.length === 0 ? (
-                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Nenhuma peça encontrada.</div>
-                ) : (
-                  filteredPanelVisibilityEntries.map((entry) => {
-                    const hiddenGlobally = project.viewerSettings.hiddenPanels.includes(entry.panel);
-                    const hidden = isPieceHidden(entry.id, entry.panel);
-                    return (
-                      <label
-                        key={`toolbar-panel-piece-${entry.id}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 8,
-                          fontSize: 11,
-                          opacity: hidden ? 0.65 : 1,
-                        }}
-                      >
-                        <span style={{ color: "var(--text-muted)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {entry.boxName} · {entry.label}
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={!hidden}
-                          disabled={hiddenGlobally}
-                          onChange={() => toggleHiddenPiece(entry.id)}
-                          title={
-                            hiddenGlobally
-                              ? "Tipo de painel está escondido globalmente"
-                              : hidden
-                                ? "Mostrar peça"
-                                : "Esconder peça"
-                          }
-                        />
-                      </label>
-                    );
-                  })
-                )}
-              </div>
             </div>
           </div>
         )}

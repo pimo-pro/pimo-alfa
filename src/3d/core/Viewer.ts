@@ -1509,6 +1509,33 @@ export class Viewer {
     return panelType;
   }
 
+  private getAnyVisibilityKey(node: THREE.Object3D): string | null {
+    const panelId = node.userData?.panelId as string | undefined;
+    if (panelId && panelId.trim().length > 0) return panelId;
+
+    const doorLayerId = node.userData?.doorLayerId as string | undefined;
+    if (doorLayerId && doorLayerId.trim().length > 0) return `door:${doorLayerId}`;
+
+    const drawerLayerId = node.userData?.drawerLayerId as string | undefined;
+    const drawerPart = node.userData?.drawerPart as string | undefined;
+    if (drawerLayerId && drawerLayerId.trim().length > 0) {
+      return `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
+    }
+
+    const shelfIndexValue = node.userData?.shelfIndex;
+    const shelfIndex = typeof shelfIndexValue === "number"
+      ? shelfIndexValue
+      : typeof node.name === "string"
+        ? Number((node.name.match(/shelf-(\d+)/)?.[1] ?? "NaN"))
+        : Number.NaN;
+    if (Number.isFinite(shelfIndex)) {
+      const boxId = this.getBoxIdByMesh(node) ?? "box";
+      return `shelf:${boxId}:${shelfIndex}`;
+    }
+
+    return null;
+  }
+
   private applyPanelIdsToBox(root: THREE.Object3D, boxId: string, panelIds?: Partial<BoxPanelIds> | null): void {
     const panelIdByType: Partial<Record<"left" | "right" | "top" | "bottom" | "back", string | undefined>> = {
       left: panelIds?.lateral_esquerda,
@@ -1522,9 +1549,37 @@ export class Viewer {
       node.userData.boxId = boxId;
       if (!(node instanceof THREE.Mesh)) return;
       const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
-      if (!panelType) return;
-      const specificId = panelIdByType[panelType];
-      node.userData.panelId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
+      if (panelType) {
+        const specificId = panelIdByType[panelType];
+        node.userData.panelId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
+        return;
+      }
+
+      const doorLayerId = node.userData?.doorLayerId as string | undefined;
+      if (doorLayerId && doorLayerId.trim().length > 0) {
+        node.userData.panelId = `door:${doorLayerId}`;
+        return;
+      }
+
+      const drawerLayerId = node.userData?.drawerLayerId as string | undefined;
+      const drawerPart = node.userData?.drawerPart as string | undefined;
+      if (drawerLayerId && drawerLayerId.trim().length > 0) {
+        node.userData.panelId = `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
+        return;
+      }
+
+      const shelfIndexValue = node.userData?.shelfIndex;
+      const shelfIndex = typeof shelfIndexValue === "number"
+        ? shelfIndexValue
+        : typeof node.name === "string"
+          ? Number((node.name.match(/shelf-(\d+)/)?.[1] ?? "NaN"))
+          : Number.NaN;
+      if (Number.isFinite(shelfIndex)) {
+        const indexedId = panelIds?.prateleiras?.[shelfIndex as number];
+        node.userData.panelId = indexedId && indexedId.trim().length > 0
+          ? indexedId
+          : `shelf:${boxId}:${shelfIndex}`;
+      }
     });
   }
 
@@ -1540,10 +1595,13 @@ export class Viewer {
         node.userData?.doorLayerId != null ||
         node.userData?.drawerPart != null;
       if (!panelType && !isDoorOrDrawerOrShelf) return;
-      const panelKey = panelType ? this.getPanelVisibilityKey(node, panelType) : "";
+      const panelKey = panelType
+        ? this.getPanelVisibilityKey(node, panelType)
+        : this.getAnyVisibilityKey(node) ?? "";
       const hidden =
         this.hideAllPanels ||
-        (panelType != null && (this.hiddenPanels.has(panelType) || this.hiddenPanels.has(panelKey)));
+        (panelType != null && this.hiddenPanels.has(panelType)) ||
+        (panelKey.length > 0 && this.hiddenPanels.has(panelKey));
       node.visible = !hidden;
       this.ensurePanelEdges(node, this.panelEdgesVisible && !hidden);
     });

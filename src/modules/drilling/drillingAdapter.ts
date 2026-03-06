@@ -369,7 +369,13 @@ export function buildViewerDrillMarkersByPanelResult(
     if (!item?.drillHoles?.length) return [];
     const face: DrillFace =
       tipo === "cima" ? "fundo" : tipo === "fundo" ? "cima" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
-    const holesToUse = tipo === "lateral_direita" ? item.drillHoles : onlyInternalFaceHoles(item.drillHoles);
+    // Cima: face interna = B (onlyInternalFaceHoles). Fundo: face interna = topo do painel = A, não filtrar.
+    const holesToUse =
+      tipo === "lateral_direita"
+        ? item.drillHoles
+        : tipo === "fundo"
+          ? item.drillHoles
+          : onlyInternalFaceHoles(item.drillHoles);
     return panelDrillHolesToTechnical(holesToUse, face);
   };
 
