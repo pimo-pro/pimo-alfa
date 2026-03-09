@@ -1950,19 +1950,6 @@ export class Viewer {
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
       opts.drillMarkersByPanel !== undefined;
-    if (
-      import.meta.env.DEV &&
-      (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
-    ) {
-      devLogger.debug("[BoxLayers][Viewer.updateBox] input", {
-        boxId: id,
-        cadOnly: entry.cadOnly === true,
-        structureChanged,
-        doorLayerItemsCount: opts.doorLayerItems?.length ?? 0,
-        drawerLayerItemsCount: opts.drawerLayerItems?.length ?? 0,
-      });
-    }
-
     if (structureChanged) {
       width = Math.max(0.001, opts.width ?? opts.size ?? width);
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
@@ -1990,23 +1977,7 @@ export class Viewer {
           drillMarkersByPanel: opts.drillMarkersByPanel,
         };
         if (import.meta.env.DEV && dimensionsChanged) {
-          devLogger.debug("[Viewer.updateBox] updateBoxGroup chamado (dimensões alteradas)", {
-            boxId: id,
-            width,
-            height,
-            depth,
-            isGroup: entry.mesh instanceof THREE.Group,
-          });
-        }
-        if (
-          import.meta.env.DEV &&
-          (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
-        ) {
-          devLogger.debug("[BoxLayers][Viewer.updateBox] rebuild -> updateBoxGroup", {
-            boxId: id,
-            fullOptsDoorLayerCount: fullOpts.doorLayerItems?.length ?? 0,
-            fullOptsDrawerLayerCount: fullOpts.drawerLayerItems?.length ?? 0,
-          });
+          devLogger.debug("[Viewer.updateBox] updateBoxGroup (dimensões alteradas)", { boxId: id, width, height, depth });
         }
         const updated =
           entry.mesh instanceof THREE.Group

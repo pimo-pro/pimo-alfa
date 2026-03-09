@@ -266,6 +266,27 @@ function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
   }));
 }
 
+/** Fingerprint do spec da porta para detectar alterações (ex.: isOpen); quando muda, recriamos só essa porta. */
+const DOOR_SPEC_FINGERPRINT_KEY = "doorSpecFingerprint";
+
+function getDoorSpecFingerprint(spec: DoorSpec): string {
+  return JSON.stringify({
+    id: spec.id,
+    widthM: spec.widthM,
+    heightM: spec.heightM,
+    thicknessM: spec.thicknessM,
+    x: spec.x,
+    y: spec.y,
+    z: spec.z,
+    rotY: spec.rotY,
+    openDirection: spec.openDirection,
+    hingeSide: spec.hingeSide,
+    pivot: spec.pivot,
+    isOpen: spec.isOpen,
+    groupType: spec.groupType,
+  });
+}
+
 /**
  * Converte DrawerLayerItem[] para DrawerSpec[] (formato Three.js)
  * 
@@ -1245,55 +1266,35 @@ export const buildBoxLegacy = buildBoxGroup;
 
 const PANEL_NAMES = ["left", "right", "top", "bottom", "back"] as const;
 
+/** Dimensões aplicadas na última chamada a updateBoxGroup (para evitar rebuild completo quando só portas/gavetas mudam). */
+const LAST_DIMS_KEY = "lastUpdateBoxGroupDimensions";
+
+function dimensionsEqual(
+  a: { width: number; height: number; depth: number },
+  b: { width: number; height: number; depth: number }
+): boolean {
+  return (
+    Math.abs(a.width - b.width) < 1e-9 &&
+    Math.abs(a.height - b.height) < 1e-9 &&
+    Math.abs(a.depth - b.depth) < 1e-9
+  );
+}
+
 /**
- * Atualiza um grupo criado por buildBoxGroup: geometria e posição de cada painel por nome (regras de marcenaria).
- * Todas as peças estruturais (laterais, base, tampo, fundo) são recalculadas a partir das dimensões atuais.
- * Sincroniza também prateleiras (shelf-0, shelf-1, ...) quando options.shelves é fornecido.
+ * Atualiza um grupo criado por buildBoxGroup: geometria e posição de cada painel por nome.
+ * Atualização incremental: só altera painéis estruturais quando as dimensões mudam; para portas,
+ * gavetas e prateleiras remove apenas os que deixaram de ser necessários e adiciona apenas os novos,
+ * evitando loops com useCalculadoraSync e storms de efeitos passivos.
  */
 export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null): { width: number; height: number; depth: number } {
   const opts = options ?? {};
   const { width, height, depth } = resolveDimensions(opts);
-  if (import.meta.env.DEV) {
-    devLogger.warn("[BoxBuilder.updateBoxGroup] chamado — dimensões", { width, height, depth, childNames: group.children.map((c) => c.name) });
-  }
+  const dims = { width, height, depth };
+  const lastDims = (group.userData as Record<string, unknown>)[LAST_DIMS_KEY] as { width: number; height: number; depth: number } | undefined;
+  const dimensionsUnchanged = lastDims != null && dimensionsEqual(lastDims, dims);
+  (group.userData as Record<string, unknown>)[LAST_DIMS_KEY] = dims;
+
   const specs = getPanelSpecs(width, height, depth);
-
-  const toRemove: THREE.Object3D[] = [];
-  const isGeneratedLayerName = (name: string) =>
-    name.startsWith("shelf-") ||
-    name.startsWith("door-leaf-") ||
-    name.startsWith("door-layer-") ||
-    name.startsWith("drawer-layer-") ||
-    name.startsWith("drawer-front-") ||
-    name.startsWith("drawer-body-");
-
-  // Marcar e remover elementos gerados (prateleiras, portas, gavetas) para recriar depois
-  group.children.forEach((child) => {
-    if (isGeneratedLayerName(child.name)) toRemove.push(child);
-  });
-  toRemove.forEach((c) => group.remove(c));
-
-  // Atualizar cada painel estrutural explicitamente por nome: geometria e posição sempre derivadas das dimensões atuais
-  for (const panelName of PANEL_NAMES) {
-    const child = group.children.find((c) => c.name === panelName);
-    if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
-    const spec = specs[panelName];
-    if (!spec) continue;
-    updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
-    child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-    if (panelName === "right") {
-      child.rotation.y = Math.PI;
-      child.rotation.z = Math.PI;
-    } else {
-      child.rotation.y = 0;
-      child.rotation.z = 0;
-    }
-    // Limpar base da vista explodida para que o Viewer use esta nova posição (evita que applyExplodedViewForObject restaure posição antiga).
-    delete (child.userData as Record<string, unknown>).explodedBasePosition;
-    child.updateMatrix();
-  }
-  const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
-  const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
   const baseMaterial = group.children[0] instanceof THREE.Mesh ? (group.children[0] as THREE.Mesh).material : getFallbackPBRMaterial();
   const mat = Array.isArray(baseMaterial) ? baseMaterial[0] : baseMaterial;
   const drillMap: ViewerDrillMarkersByPanel = opts.drillMarkersByPanel ?? {
@@ -1303,6 +1304,28 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     lateral_direita: [],
     porta: [],
   };
+
+  // 1) Painéis estruturais: só atualizar geometria/posição quando as dimensões mudaram
+  if (!dimensionsUnchanged) {
+    for (const panelName of PANEL_NAMES) {
+      const child = group.children.find((c) => c.name === panelName);
+      if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
+      const spec = specs[panelName];
+      if (!spec) continue;
+      updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
+      child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+      if (panelName === "right") {
+        child.rotation.y = Math.PI;
+        child.rotation.z = Math.PI;
+      } else {
+        child.rotation.y = 0;
+        child.rotation.z = 0;
+      }
+      delete (child.userData as Record<string, unknown>).explodedBasePosition;
+      child.updateMatrix();
+    }
+  }
+
   const topPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "top") as THREE.Mesh | undefined;
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
   const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
@@ -1311,19 +1334,66 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   if (bottomPanel) applyDrillHolesToPanelGeometry(bottomPanel, "bottom", drillMap.fundo);
   if (leftPanel) applyDrillHolesToPanelGeometry(leftPanel, "left", drillMap.lateral_esquerda);
   if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", drillMap.lateral_direita);
+
+  // 2) Incremental: portas — remover só as que já não são necessárias; adicionar só as que faltam
+  const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
+  const requiredDoorIds = new Set(doorSpecs.map((s) => s.id));
+  const existingDoorNames = group.children
+    .filter((c) => c.name.startsWith("door-layer-"))
+    .map((c) => c.name);
+  for (const name of existingDoorNames) {
+    const id = name.replace("door-layer-", "");
+    if (!requiredDoorIds.has(id)) {
+      const obj = group.children.find((c) => c.name === name);
+      if (obj) group.remove(obj);
+    }
+  }
+  const existingDoorIds = new Set(existingDoorNames.map((n) => n.replace("door-layer-", "")));
+  doorSpecs.forEach((spec, doorIndex) => {
+    if (existingDoorIds.has(spec.id)) return;
+    group.add(createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
+  });
+
+  // 3) Incremental: gavetas — remover só as que já não são necessárias; adicionar só as que faltam
+  const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
+  const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
+  const existingDrawerNames = group.children
+    .filter((c) => c.name.startsWith("drawer-layer-"))
+    .map((c) => c.name);
+  for (const name of existingDrawerNames) {
+    const id = name.replace("drawer-layer-", "");
+    if (!requiredDrawerIds.has(id)) {
+      const obj = group.children.find((c) => c.name === name);
+      if (obj) group.remove(obj);
+    }
+  }
+  const existingDrawerIds = new Set(existingDrawerNames.map((n) => n.replace("drawer-layer-", "")));
+  drawerSpecs.forEach((spec) => {
+    if (existingDrawerIds.has(spec.id)) return;
+    group.add(createDrawerObject(spec, mat as THREE.Material));
+  });
+
+  // 4) Prateleiras: quantidade fixa por índice; remover em excesso e adicionar em falta
+  const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
+  const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
+  const existingShelfIndices = group.children
+    .filter((c) => /^shelf-\d+$/.test(c.name))
+    .map((c) => parseInt(c.name.replace("shelf-", ""), 10))
+    .filter((n) => Number.isFinite(n));
+  for (const i of existingShelfIndices) {
+    if (i >= shelfCount) {
+      const obj = group.children.find((c) => c.name === `shelf-${i}`);
+      if (obj) group.remove(obj);
+    }
+  }
+  const existingShelfSet = new Set(existingShelfIndices.filter((i) => i < shelfCount));
   shelfSpecs.forEach((spec, i) => {
+    if (existingShelfSet.has(i)) return;
     const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: mat as THREE.Material });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.shelfIndex = i;
     group.add(mesh);
   });
-
-  const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
-  const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
-  doorSpecs.forEach((spec, doorIndex) =>
-    group.add(createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta))
-  );
-  drawerSpecs.forEach((spec) => group.add(createDrawerObject(spec, mat as THREE.Material)));
 
   group.updateMatrixWorld(true);
   return { width, height, depth };
