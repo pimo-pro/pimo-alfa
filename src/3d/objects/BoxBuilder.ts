@@ -266,7 +266,7 @@ function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
   }));
 }
 
-/** Fingerprint do spec da porta para detectar alterações (ex.: isOpen); quando muda, recriamos só essa porta. */
+/** Fingerprint do spec da porta para detectar alterações e recriar apenas a porta alterada. */
 const DOOR_SPEC_FINGERPRINT_KEY = "doorSpecFingerprint";
 
 function getDoorSpecFingerprint(spec: DoorSpec): string {
@@ -1335,7 +1335,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   if (leftPanel) applyDrillHolesToPanelGeometry(leftPanel, "left", drillMap.lateral_esquerda);
   if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", drillMap.lateral_direita);
 
-  // 2) Incremental: portas — remover só as que já não são necessárias; adicionar só as que faltam
+  // 2) Incremental: portas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa porta
   const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
   const requiredDoorIds = new Set(doorSpecs.map((s) => s.id));
   const existingDoorNames = group.children
@@ -1348,10 +1348,17 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
       if (obj) group.remove(obj);
     }
   }
-  const existingDoorIds = new Set(existingDoorNames.map((n) => n.replace("door-layer-", "")));
   doorSpecs.forEach((spec, doorIndex) => {
-    if (existingDoorIds.has(spec.id)) return;
-    group.add(createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
+    const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
+    const newFingerprint = getDoorSpecFingerprint(spec);
+    if (existingDoor) {
+      const storedFingerprint = existingDoor.userData[DOOR_SPEC_FINGERPRINT_KEY] as string | undefined;
+      if (storedFingerprint === newFingerprint) return;
+      group.remove(existingDoor);
+    }
+    const newDoor = createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
+    (newDoor.userData as Record<string, unknown>)[DOOR_SPEC_FINGERPRINT_KEY] = newFingerprint;
+    group.add(newDoor);
   });
 
   // 3) Incremental: gavetas — remover só as que já não são necessárias; adicionar só as que faltam
