@@ -29,4 +29,6 @@ export interface ViewerBoxEntry {
     path: string;
   }>;
   material: LoadedWoodMaterial | null;
+  /** Material aplicado (viewerMaterialId); usado ao reaplicar ao trocar de modo. */
+  materialName?: string;
 }

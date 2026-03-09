@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Room } from "./Room";
+import { getSceneMaterialConfig } from "../viewer-engine/materials";
 
 const WALL_THICKNESS_M = 0.12;
 
@@ -10,27 +11,37 @@ export interface WallMaterialOptions {
   color?: number;
 }
 
+/** Cria um material de parede a partir da config de cena (MaterialEngine). */
+function createWallMaterialFromConfig(
+  config: { color: number; roughness: number; metalness: number; transparent: boolean; opacity: number },
+  overrides: WallMaterialOptions = {}
+): THREE.MeshStandardMaterial {
+  const {
+    doubleSide = true,
+    transparent = config.transparent,
+    opacity = config.opacity,
+    color = config.color,
+  } = overrides;
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: config.roughness,
+    metalness: config.metalness,
+    side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+    transparent,
+    opacity,
+  });
+}
+
 /**
  * Aplica material às paredes (MeshStandardMaterial, DoubleSide, transparent).
+ * Usa getSceneMaterialConfig() como padrão.
  */
 export function applyWallMaterial(
   mesh: THREE.Mesh,
   options: WallMaterialOptions = {}
 ): void {
-  const {
-    doubleSide = true,
-    transparent = true,
-    opacity = 0.6,
-    color = 0xd1d5db,
-  } = options;
-  const mat = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.75,
-    metalness: 0.05,
-    side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
-    transparent,
-    opacity,
-  });
+  const config = getSceneMaterialConfig();
+  const mat = createWallMaterialFromConfig(config.wall, options);
   if (mesh.material) {
     if (Array.isArray(mesh.material)) {
       mesh.material.forEach((m) => m.dispose());
@@ -43,17 +54,16 @@ export function applyWallMaterial(
 
 /**
  * Cria as 4 paredes principais para uma sala (front, right, back, left).
- * Não adiciona à cena; apenas cria os meshes com userData (wallId 0–3, isMainWall, etc.).
+ * Usa um único material partilhado da config de cena (MaterialEngine); sem criação redundante.
  */
 export function createMainWalls(room: Room): THREE.Mesh[] {
   const t = WALL_THICKNESS_M;
   const { width, depth, height, minX, maxX, minZ, maxZ, centerX, centerZ, minY } = room;
   const yCenter = minY + height / 2;
+  const config = getSceneMaterialConfig();
+  const wallMat = createWallMaterialFromConfig(config.wall, { opacity: 0.6 });
 
-  const front = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, t),
-    new THREE.MeshStandardMaterial()
-  );
+  const front = new THREE.Mesh(new THREE.BoxGeometry(width, height, t), wallMat);
   front.position.set(centerX, yCenter, minZ - t / 2);
   front.userData.wallId = 0;
   front.userData.wallNormal = new THREE.Vector3(0, 0, -1);
@@ -62,12 +72,8 @@ export function createMainWalls(room: Room): THREE.Mesh[] {
   front.userData.wallLengthMm = width * 1000;
   front.userData.wallHeightMm = height * 1000;
   front.userData.wallThicknessM = t;
-  applyWallMaterial(front, { opacity: 0.6, color: 0xd1d5db });
 
-  const right = new THREE.Mesh(
-    new THREE.BoxGeometry(depth, height, t),
-    new THREE.MeshStandardMaterial()
-  );
+  const right = new THREE.Mesh(new THREE.BoxGeometry(depth, height, t), wallMat);
   right.rotation.y = Math.PI / 2;
   right.position.set(maxX + t / 2, yCenter, centerZ);
   right.userData.wallId = 1;
@@ -77,12 +83,8 @@ export function createMainWalls(room: Room): THREE.Mesh[] {
   right.userData.wallLengthMm = depth * 1000;
   right.userData.wallHeightMm = height * 1000;
   right.userData.wallThicknessM = t;
-  applyWallMaterial(right, { opacity: 0.6, color: 0xd1d5db });
 
-  const back = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, t),
-    new THREE.MeshStandardMaterial()
-  );
+  const back = new THREE.Mesh(new THREE.BoxGeometry(width, height, t), wallMat);
   back.position.set(centerX, yCenter, maxZ + t / 2);
   back.userData.wallId = 2;
   back.userData.wallNormal = new THREE.Vector3(0, 0, 1);
@@ -91,12 +93,8 @@ export function createMainWalls(room: Room): THREE.Mesh[] {
   back.userData.wallLengthMm = width * 1000;
   back.userData.wallHeightMm = height * 1000;
   back.userData.wallThicknessM = t;
-  applyWallMaterial(back, { opacity: 0.6, color: 0xd1d5db });
 
-  const left = new THREE.Mesh(
-    new THREE.BoxGeometry(depth, height, t),
-    new THREE.MeshStandardMaterial()
-  );
+  const left = new THREE.Mesh(new THREE.BoxGeometry(depth, height, t), wallMat);
   left.rotation.y = Math.PI / 2;
   left.position.set(minX - t / 2, yCenter, centerZ);
   left.userData.wallId = 3;
@@ -106,7 +104,6 @@ export function createMainWalls(room: Room): THREE.Mesh[] {
   left.userData.wallLengthMm = depth * 1000;
   left.userData.wallHeightMm = height * 1000;
   left.userData.wallThicknessM = t;
-  applyWallMaterial(left, { opacity: 0.6, color: 0xd1d5db });
 
   return [front, right, back, left];
 }
@@ -152,20 +149,17 @@ export function positionMainWalls(room: Room, walls: THREE.Mesh[]): void {
   (left.userData.wallHeightMm as number) = height * 1000;
 }
 
-/** Cor das paredes extras (cinza claro, distinta das principais). */
-const EXTRA_WALL_COLOR = 0x9ca3af;
-
 /**
  * Cria uma parede extra (livre). Dimensões padrão; posição (0,0,0) para o caller posicionar.
+ * Usa config.wallExtra da cena (MaterialEngine).
  */
 export function createExtraWall(id: number): THREE.Mesh {
   const length = 2;
   const height = 2.7;
   const t = WALL_THICKNESS_M;
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(length, height, t),
-    new THREE.MeshStandardMaterial()
-  );
+  const config = getSceneMaterialConfig();
+  const mat = createWallMaterialFromConfig(config.wallExtra, { opacity: 0.6 });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(length, height, t), mat);
   mesh.position.set(0, height / 2, 0);
   mesh.userData.wallId = id;
   mesh.userData.wallNormal = new THREE.Vector3(0, 0, 1);
@@ -174,7 +168,6 @@ export function createExtraWall(id: number): THREE.Mesh {
   mesh.userData.wallLengthMm = length * 1000;
   mesh.userData.wallHeightMm = height * 1000;
   mesh.userData.wallThicknessM = t;
-  applyWallMaterial(mesh, { opacity: 0.6, color: EXTRA_WALL_COLOR });
   return mesh;
 }
 

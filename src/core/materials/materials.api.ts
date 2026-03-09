@@ -105,7 +105,7 @@ export const OFFICIAL_WOOD_MATERIALS_SEED: OfficialWoodMaterial[] = [
       { name: "Carvalho", origin: ["industrial", "pricing", "ui"], action: "manter" },
       { name: "Carvalho Natural", origin: ["visual", "ui"], action: "mesclar" },
       { name: "Carvalho Escuro", origin: ["visual", "ui"], action: "mesclar" },
-      { name: "Madeira - Carvalho", origin: ["materialPresets"], action: "mesclar" },
+      { name: "Madeira - Carvalho", origin: ["presets"], action: "mesclar" },
       { name: "carvalho_natural", origin: ["viewer"], action: "mesclar" },
       { name: "carvalho_escuro", origin: ["viewer"], action: "mesclar" }
     ],
@@ -142,7 +142,7 @@ export const OFFICIAL_WOOD_MATERIALS_SEED: OfficialWoodMaterial[] = [
     },
     aliases: [
       { name: "Pinho", origin: ["pricing", "ui"], action: "manter" },
-      { name: "Madeira - Pinho", origin: ["materialPresets"], action: "mesclar" }
+      { name: "Madeira - Pinho", origin: ["presets"], action: "mesclar" }
     ]
   },
   {

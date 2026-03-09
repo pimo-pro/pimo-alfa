@@ -1,5 +1,6 @@
 import type { WoodMaterialOptions } from "./WoodMaterial";
-import { listOfficialMaterials, resolveMaterial } from "../../core/materials/materials.api";
+import { getAllPresets } from "../../core/materials/presetService";
+import { resolveMaterial } from "../../core/materials/materials.api";
 
 export type MaterialPreset = {
   name: string;
@@ -8,68 +9,71 @@ export type MaterialPreset = {
 
 export type MaterialSet = Record<string, MaterialPreset>;
 
-/** IDs dos materiais (cor sólida, sem texturas). */
+/** IDs dos materiais (Wood Pack 9 + fallback). Fonte única: presets.ts via presetService. */
 export const MATERIAIS_PBR_IDS = [
-  "carvalho_natural",
-  "carvalho_escuro",
-  "nogueira",
   "mdf_branco",
   "mdf_cinza",
   "mdf_preto",
+  "hdf_lacado",
+  "hdf_cru",
+  "carvalho_natural",
+  "madeira_carvalho",
+  "pinho_natural",
+  "madeira_pinho",
 ] as const;
 
 export type MaterialPbrId = (typeof MATERIAIS_PBR_IDS)[number];
 
-export const MATERIAIS_PBR_LABELS: Record<MaterialPbrId, string> = {
-  carvalho_natural: "Carvalho",
-  carvalho_escuro: "Carvalho",
-  nogueira: "Nogueira",
-  mdf_branco: "MDF Branco",
-  mdf_cinza: "MDF Cinza",
-  mdf_preto: "MDF Preto",
-};
+function buildPbrLabels(): Record<MaterialPbrId, string> {
+  const presets = getAllPresets();
+  const map = new Map(presets.map((p) => [p.id, p.name]));
+  return {
+    mdf_branco: map.get("mdf_branco") ?? "MDF Branco",
+    mdf_cinza: map.get("mdf_cinza") ?? "Cinza",
+    mdf_preto: map.get("mdf_preto") ?? "Preto",
+    hdf_lacado: map.get("hdf_lacado") ?? "HDF Lacado",
+    hdf_cru: map.get("hdf_cru") ?? "HDF Cru",
+    carvalho_natural: map.get("carvalho_natural") ?? "Carvalho Natural",
+    madeira_carvalho: map.get("madeira_carvalho") ?? "Madeira Carvalho",
+    pinho_natural: map.get("pinho_natural") ?? "Pinho Natural",
+    madeira_pinho: map.get("madeira_pinho") ?? "Madeira Pinho",
+  };
+}
+export const MATERIAIS_PBR_LABELS: Record<MaterialPbrId, string> = buildPbrLabels();
 
 export function resolveMaterialId(nome: string): MaterialPbrId {
   const resolved = resolveMaterial(nome);
-  const viewer = resolved?.viewerMaterialId;
-  if (!viewer) return "mdf_branco";
-  if (MATERIAIS_PBR_IDS.includes(viewer as MaterialPbrId)) return viewer as MaterialPbrId;
+  const viewer = resolved?.viewerMaterialId?.trim();
+  if (viewer && MATERIAIS_PBR_IDS.includes(viewer as MaterialPbrId)) return viewer as MaterialPbrId;
   return "mdf_branco";
 }
 
-/** Materiais sólidos (cor, roughness, metalness, envMapIntensity). Sem texturas. */
-export const defaultMaterialSet: MaterialSet = listOfficialMaterials()
-  .filter((m) => m.visual && m.viewerMaterialId)
-  .reduce<MaterialSet>((acc, material) => {
-    const id = material.viewerMaterialId as MaterialPbrId;
-    if (!MATERIAIS_PBR_IDS.includes(id)) return acc;
-    acc[id] = {
-      name: id,
+/** Materiais a partir do presetService (fonte única). Cor + PBR; sem texturas no fallback. */
+function buildDefaultMaterialSet(): MaterialSet {
+  const presets = getAllPresets();
+  const set: MaterialSet = {};
+  for (const p of presets) {
+    if (!p?.id) continue;
+    set[p.id] = {
+      name: p.name,
       options: {
-        color:
-          id === "carvalho_natural"
-            ? "#c9a27a"
-            : id === "carvalho_escuro"
-              ? "#5c3d2e"
-              : id === "nogueira"
-                ? "#8a5a2b"
-                : id === "mdf_cinza"
-                  ? "#9ca3af"
-                  : id === "mdf_preto"
-                    ? "#1f2937"
-                    : "#f2f0eb",
-        metalness: 0,
-        roughness: 0.55,
+        color: p.color ?? "#f2f0eb",
+        metalness: p.metallic ?? 0,
+        roughness: p.roughness ?? 0.55,
         envMapIntensity: 0.4,
       },
     };
-    return acc;
-  }, {
-    mdf_branco: {
-      name: "mdf_branco",
+  }
+  if (!set.mdf_branco) {
+    set.mdf_branco = {
+      name: "MDF Branco",
       options: { color: "#f2f0eb", metalness: 0, roughness: 0.52, envMapIntensity: 0.4 },
-    },
-  });
+    };
+  }
+  return set;
+}
+
+export const defaultMaterialSet: MaterialSet = buildDefaultMaterialSet();
 
 export function getMaterialPreset(materialSet: MaterialSet, idOrName: string): MaterialPreset | null {
   const resolved = resolveMaterialId(idOrName);

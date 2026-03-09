@@ -1,6 +1,6 @@
 import { createContext } from "react";
 import type { MaterialSystemState } from "./materialUtils";
-import type { MaterialCategory } from "../core/materials/materialPresets";
+import type { MaterialCategory } from "./materialUtils";
 import type { MaterialCategoryConfig, ModelPart } from "./materialUtils";
 
 type MaterialContextValue = {

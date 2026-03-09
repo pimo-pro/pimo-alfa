@@ -29,9 +29,19 @@ import type { IViewerEventEngine } from "./events/EventEngineTypes";
 import { ViewerTools } from "./tools";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
 
-import { createWoodMaterial, type LoadedWoodMaterial } from "../materials/WoodMaterial";
-import { defaultMaterialSet, getMaterialPreset, mergeMaterialSet } from "../materials/MaterialLibrary";
+import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
+import { defaultMaterialSet, mergeMaterialSet } from "../materials/MaterialLibrary";
 import type { MaterialSet } from "../materials/MaterialLibrary";
+import {
+  loadMaterial as materialEngineLoadMaterial,
+  getMaterialMode,
+  setMaterialMode as materialEngineSetMaterialMode,
+  getSceneMaterialConfig,
+  getSharedPanelEdgeMaterial,
+  disposeSharedPanelEdgeMaterial,
+} from "./materials";
+import type { MaterialMode } from "./materials";
+import type { ViewerBoxEntry } from "./types";
 import { updateBoxGeometry, updateBoxGroup, buildBoxLegacy } from "../objects/BoxBuilder";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
@@ -101,42 +111,8 @@ export class ViewerCore {
   private resizeObserver: ResizeObserver | null = null;
   private rafId: number | null = null;
   private boxManager = new ViewerBoxManager();
-  private get boxes(): Map<string, {
-    mesh: THREE.Object3D;
-    width: number;
-    height: number;
-    depth: number;
-    index: number;
-    cadOnly?: boolean;
-    manualPosition?: boolean;
-    cabinetType?: "lower" | "upper";
-    pe_cm?: number;
-    feetHeight?: number;
-    feetOffsetFront?: number;
-    feetEnabled?: boolean;
-    autoRotateEnabled?: boolean;
-    drillMarkersByPanel?: ViewerDrillMarkersByPanel;
-    cadModels: Array<{ id: string; object: THREE.Object3D; path: string }>;
-    material: LoadedWoodMaterial | null;
-  }> {
-    return this.boxManager.getBoxes() as Map<string, {
-      mesh: THREE.Object3D;
-      width: number;
-      height: number;
-      depth: number;
-      index: number;
-      cadOnly?: boolean;
-      manualPosition?: boolean;
-      cabinetType?: "lower" | "upper";
-      pe_cm?: number;
-      feetHeight?: number;
-      feetOffsetFront?: number;
-      feetEnabled?: boolean;
-      autoRotateEnabled?: boolean;
-      drillMarkersByPanel?: ViewerDrillMarkersByPanel;
-      cadModels: Array<{ id: string; object: THREE.Object3D; path: string }>;
-      material: LoadedWoodMaterial | null;
-    }>;
+  private get boxes(): Map<string, ViewerBoxEntry> {
+    return this.boxManager.getBoxes();
   }
   private materialSet: MaterialSet;
   private defaultMaterialName = "mdf_branco";
@@ -842,7 +818,9 @@ export class ViewerCore {
     if (!entry) return;
     const nextMaterial = this.loadMaterial(materialName);
     if (!nextMaterial) return;
-    
+
+    entry.materialName = materialName;
+
     // Atualizar material de todos os painéis do caixote
     if (entry.mesh instanceof THREE.Group) {
       entry.mesh.traverse((child) => {
@@ -853,7 +831,7 @@ export class ViewerCore {
     } else if (entry.mesh instanceof THREE.Mesh) {
       entry.mesh.material = nextMaterial.material;
     }
-    
+
     if (this.viewerState.getSelectedBox() === id) {
       this.refreshOutlineTarget();
     }
@@ -865,6 +843,26 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === id) {
       this.refreshOutlineTarget();
     }
+  }
+
+  /** Reaplica materiais a todas as caixas (ao trocar modo performance/showcase/realistic). */
+  reapplyAllBoxMaterials(): void {
+    this.boxes.forEach((entry, id) => {
+      const name = entry.materialName ?? this.defaultMaterialName;
+      this.updateBoxMaterial(id, name);
+    });
+  }
+
+  /**
+   * Define o modo de materiais (performance/showcase/realistic) e reaplica a todas as caixas.
+   */
+  setMaterialMode(mode: MaterialMode): void {
+    materialEngineSetMaterialMode(mode);
+    this.reapplyAllBoxMaterials();
+  }
+
+  getMaterialMode(): MaterialMode {
+    return getMaterialMode();
   }
 
   /**
@@ -1158,6 +1156,13 @@ export class ViewerCore {
       quality === "premium" || quality === "lacquered" ? quality : "standard";
     this.sceneManager.setMaterialQuality(this.materialQuality);
     this.applyMaterialQualityProfile();
+    const mode: MaterialMode =
+      this.materialQuality === "premium"
+        ? "showcase"
+        : this.materialQuality === "lacquered"
+          ? "realistic"
+          : "performance";
+    this.setMaterialMode(mode);
   }
 
   getMaterialQuality(): ViewerMaterialQuality {
@@ -1250,18 +1255,9 @@ export class ViewerCore {
   /** Ângulo mínimo (graus) para EdgesGeometry em portas/gavetas/prateleiras. */
   private static readonly FALLBACK_EDGES_ANGLE_DEG = 25;
 
-  /** Material do overlay de bordas: evita ghosting (polygonOffset) e reforça visibilidade. */
+  /** Material partilhado do overlay de bordas (MaterialEngine). */
   private static getPanelEdgeOverlayMaterial(): THREE.LineBasicMaterial {
-    return new THREE.LineBasicMaterial({
-      color: new THREE.Color("#000000"),
-      transparent: true,
-      opacity: 0.9,
-      linewidth: 2,
-      depthTest: true,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    });
+    return getSharedPanelEdgeMaterial();
   }
 
   /**
@@ -1421,7 +1417,8 @@ export class ViewerCore {
     if (existing) {
       mesh.remove(existing);
       existing.geometry.dispose();
-      if (!Array.isArray(existing.material)) {
+      const shared = getSharedPanelEdgeMaterial();
+      if (!Array.isArray(existing.material) && existing.material !== shared) {
         existing.material.dispose();
       }
     }
@@ -1731,12 +1728,12 @@ export class ViewerCore {
 
     let box: THREE.Object3D;
     let material: LoadedWoodMaterial | null = null;
+    const materialName = opts.materialName ?? this.defaultMaterialName;
 
     if (cadOnly) {
       box = new THREE.Group();
       box.name = id;
     } else {
-      const materialName = opts.materialName ?? this.defaultMaterialName;
       material = this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
       const boxOptions: BoxOptions = {
         ...opts,
@@ -1805,6 +1802,7 @@ export class ViewerCore {
       cadModels: [],
       material,
       drillMarkersByPanel: opts.drillMarkersByPanel,
+      materialName: materialName,
     });
     const createdEntry = this.boxes.get(id);
     if (createdEntry) {
@@ -2279,12 +2277,14 @@ export class ViewerCore {
     const depth = Math.max(0.01, maxZ - minZ);
     const height = Math.max(0.01, maxY - minY);
     const t = ViewerCore.ROOM_WALL_THICKNESS_M;
+    const sceneConfig = getSceneMaterialConfig();
+    const roomBoxConfig = sceneConfig.roomBox;
     const wallMat = new THREE.MeshStandardMaterial({
-      color: 0xd1d5db,
-      roughness: 0.75,
-      metalness: 0.05,
-      transparent: true,
-      opacity: 0.8,
+      color: roomBoxConfig.color,
+      roughness: roomBoxConfig.roughness,
+      metalness: roomBoxConfig.metalness,
+      transparent: roomBoxConfig.transparent,
+      opacity: roomBoxConfig.opacity,
     });
 
     const group = new THREE.Group();
@@ -3585,10 +3585,9 @@ export class ViewerCore {
     this.onRoomElementTransform(this.viewerState.getSelectedRoomElementId(), config);
   }
 
-  private loadMaterial(materialName: string) {
-    const preset = getMaterialPreset(this.materialSet, materialName);
-    if (!preset?.options) return null;
-    return createWoodMaterial({}, { ...preset.options });
+  private loadMaterial(materialName: string): LoadedWoodMaterial | null {
+    const result = materialEngineLoadMaterial(materialName, getMaterialMode());
+    return result as LoadedWoodMaterial | null;
   }
 
   /** Delega ao ViewerTools. */
@@ -4264,6 +4263,7 @@ export class ViewerCore {
       this.premiumTexture.dispose();
       this.premiumTexture = null;
     }
+    disposeSharedPanelEdgeMaterial();
 
     this.sceneManager.dispose();
     this.rendererManager.dispose();

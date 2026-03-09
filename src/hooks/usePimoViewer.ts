@@ -117,6 +117,9 @@ type PimoViewerAPI = {
   getBackgroundMode?: () => ViewerBackgroundMode;
   setMaterialQuality?: (_quality: ViewerMaterialQuality) => void;
   getMaterialQuality?: () => ViewerMaterialQuality;
+  updateBoxMaterial?: (_boxId: string, _materialId: string) => void;
+  setMaterialMode?: (_mode: "performance" | "showcase" | "realistic") => void;
+  getMaterialMode?: () => "performance" | "showcase" | "realistic";
   setReflectionsEnabled?: (_enabled: boolean) => void;
   getReflectionsEnabled?: () => boolean;
   setPhotoModeEnabled?: (_enabled: boolean) => void;
@@ -616,6 +619,22 @@ export const usePimoViewer = (
     []
   );
 
+  const updateBoxMaterial = useCallback((boxId: string, materialId: string) => {
+    viewerRef.current?.updateBoxMaterial?.(boxId, materialId);
+  }, []);
+
+  const setMaterialMode = useCallback(
+    (mode: "performance" | "showcase" | "realistic") => {
+      viewerRef.current?.setMaterialMode?.(mode);
+    },
+    []
+  );
+
+  const getMaterialMode = useCallback(
+    () => viewerRef.current?.getMaterialMode?.() ?? "performance",
+    []
+  );
+
   const setReflectionsEnabled = useCallback((enabled: boolean) => {
     viewerRef.current?.setReflectionsEnabled?.(enabled);
   }, []);
@@ -763,6 +782,9 @@ export const usePimoViewer = (
       getBackgroundMode,
       setMaterialQuality,
       getMaterialQuality,
+      updateBoxMaterial,
+      setMaterialMode,
+      getMaterialMode,
       setReflectionsEnabled,
       getReflectionsEnabled,
       setPhotoModeEnabled,
@@ -859,6 +881,9 @@ export const usePimoViewer = (
       getBackgroundMode,
       setMaterialQuality,
       getMaterialQuality,
+      updateBoxMaterial,
+      setMaterialMode,
+      getMaterialMode,
       setReflectionsEnabled,
       getReflectionsEnabled,
       setPhotoModeEnabled,

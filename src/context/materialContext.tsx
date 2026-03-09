@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { safeGetItem, safeParseJson, safeSetItem } from "../utils/storage";
-import type { MaterialCategory } from "../core/materials/materialPresets";
-import { getPresetById } from "../core/materials/materialPresets";
+import type { MaterialCategory } from "./materialUtils";
+import { getPresetById } from "../core/materials/presetService";
 import type { MaterialCategoryConfig, MaterialSystemState, ModelPart } from "./materialUtils";
 import { MATERIAL_STORAGE_KEY, normalizeMaterialState } from "./materialUtils";
 import { MaterialContext } from "./materialContextInstance";
@@ -19,18 +19,20 @@ export function MaterialProvider({ children }: { children: ReactNode }) {
 
   const setCategoryPreset = useCallback((category: MaterialCategory, presetId: string) => {
     const preset = getPresetById(presetId);
-    if (!preset) return;
     setState((prev) => ({
       ...prev,
       categories: {
         ...prev.categories,
         [category]: {
           ...prev.categories[category],
-          presetId: preset.id,
-          roughness: preset.defaults.roughness,
-          metalness: preset.defaults.metalness,
-          envMapIntensity: preset.defaults.envMapIntensity,
-          color: preset.defaults.color,
+          presetId,
+          ...(preset
+            ? {
+                roughness: preset.roughness ?? prev.categories[category].roughness,
+                metalness: preset.metallic ?? prev.categories[category].metalness,
+                color: preset.color ?? prev.categories[category].color,
+              }
+            : {}),
         },
       },
     }));

@@ -1,5 +1,4 @@
 import { Suspense, lazy, useState } from "react";
-import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import TemplatesManager from "../components/admin/TemplatesManager";
 import CADModelsManager from "../components/admin/CADModelsManager";
 import MaterialsManufacturing from "../components/admin/MaterialsManufacturing";
@@ -17,7 +16,6 @@ import PainelReferencia from "./PainelReferencia";
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
 
 type AdminTab =
-  | "Materials"
   | "Materiais & Fabricação"
   | "Ferragens"
   | "Templates"
@@ -38,11 +36,10 @@ type AdminMenuEntry =
   | { type: "item"; id: AdminTab; label: string; badge?: string; disabled?: boolean };
 
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = "pimo_admin_active_tab";
-const DEFAULT_ADMIN_TAB: AdminTab = "Materials";
+const DEFAULT_ADMIN_TAB: AdminTab = "Materiais & Fabricação";
 
 const adminMenu: AdminMenuEntry[] = [
   { type: "group", label: "Configuração" },
-  { type: "item", id: "Materials", label: "Materials" },
   { type: "item", id: "Materiais & Fabricação", label: "Materiais & Fabricação" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
   { type: "item", id: "Component Types", label: "Component Types" },
@@ -62,7 +59,6 @@ const adminMenu: AdminMenuEntry[] = [
 ];
 
 const menuIconByTab: Partial<Record<AdminTab, string>> = {
-  "Materials": "🧱",
   "Materiais & Fabricação": "🪵",
   "Ferragens": "🔩",
   "Component Types": "🧩",
@@ -213,9 +209,7 @@ export default function AdminPanel() {
             {active}
           </div>
 
-          {active === "Materials" ? (
-            <GestaoMateriaisPage />
-          ) : active === "Materiais & Fabricação" ? (
+          {active === "Materiais & Fabricação" ? (
             <MaterialsManufacturing />
           ) : active === "Ferragens" ? (
             <FerragensAdminPage />

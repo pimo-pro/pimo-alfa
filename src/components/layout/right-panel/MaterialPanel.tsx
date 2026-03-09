@@ -1,22 +1,53 @@
 import { useState } from "react";
 import Panel from "../../ui/Panel";
 import { useProject } from "../../../context/useProject";
-import type { MaterialCategory } from "../../../core/materials/materialPresets";
-import type { ModelPart } from "../../../context/materialUtils";
-import {
-  materialCategoryOptions,
-  modelPartOptions,
-} from "../../../context/materialUtils";
 import { useMaterial } from "../../../context/useMaterial";
-import { getPresetById, getPresetsByCategory } from "../../../core/materials/materialPresets";
+import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
+import {
+  getPresetsForUI,
+  getPreset,
+  invalidatePresetRegistry,
+} from "../../../3d/viewer-engine/materials";
+import { updatePreset } from "../../../core/materials/presetService";
+import { materialCategoryOptions } from "../../../context/materialUtils";
 
 export default function MaterialPanel() {
-  const { actions } = useProject();
-  const { state, setAssignment, setCategoryOverrides, setCategoryPreset } = useMaterial();
-  const [activeCategory, setActiveCategory] = useState(materialCategoryOptions[0].id);
+  const { actions, project } = useProject();
+  const { state, setCategoryOverrides, setCategoryPreset } = useMaterial();
+  const { viewerApi } = usePimoViewerContext();
+  const [activeCategory] = useState(materialCategoryOptions[0].id);
   const currentConfig = state.categories[activeCategory];
-  const presets = getPresetsByCategory(activeCategory);
-  const activePreset = getPresetById(currentConfig.presetId) ?? presets[0];
+  const presets = getPresetsForUI();
+  const activePresetDef = currentConfig.presetId
+    ? getPreset(currentConfig.presetId)
+    : null;
+  const selectedBoxId = project.selectedWorkspaceBoxId ?? null;
+
+  const applyMaterialToViewer = (presetId: string) => {
+    if (selectedBoxId && viewerApi?.updateBoxMaterial) {
+      viewerApi.updateBoxMaterial(selectedBoxId, presetId);
+    }
+  };
+
+  const handlePresetChange = (presetId: string) => {
+    setCategoryPreset(activeCategory, presetId);
+    actions.logChangelog(`Preset aplicado: ${presetId}`);
+    if (selectedBoxId) {
+      actions.setWorkspaceBoxMaterial(selectedBoxId, presetId);
+    }
+    applyMaterialToViewer(presetId);
+  };
+
+  const handleOverride = (
+    overrides: { roughness?: number; metalness?: number; envMapIntensity?: number; color?: string }
+  ) => {
+    setCategoryOverrides(activeCategory, overrides);
+    if (currentConfig.presetId) {
+      updatePreset(currentConfig.presetId, overrides);
+      invalidatePresetRegistry();
+      applyMaterialToViewer(currentConfig.presetId);
+    }
+  };
 
   return (
     <Panel title="Materiais">
@@ -24,15 +55,7 @@ export default function MaterialPanel() {
         <div className="form-grid">
           <label className="stack-tight">
             <span className="muted-text">Tipo de material</span>
-            <select
-              value={activeCategory}
-              onChange={(event) => {
-                const next = event.target.value as typeof activeCategory;
-                setActiveCategory(next);
-                actions.logChangelog(`Material ativo: ${next}`);
-              }}
-              className="select"
-            >
+            <select value={activeCategory} className="select" disabled>
               {materialCategoryOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.label}
@@ -44,15 +67,12 @@ export default function MaterialPanel() {
             <span className="muted-text">Preset</span>
             <select
               value={currentConfig.presetId}
-              onChange={(event) => {
-                setCategoryPreset(activeCategory, event.target.value);
-                actions.logChangelog(`Preset aplicado: ${event.target.value}`);
-              }}
+              onChange={(event) => handlePresetChange(event.target.value)}
               className="select"
             >
               {presets.map((preset) => (
                 <option key={preset.id} value={preset.id}>
-                  {preset.label}
+                  {preset.name}
                 </option>
               ))}
             </select>
@@ -63,10 +83,13 @@ export default function MaterialPanel() {
           <div
             className="texture-preview-image"
             style={{
-              backgroundImage: `url(${activePreset?.maps.map})`,
+              backgroundColor: activePresetDef?.baseColor ?? "#f2f0eb",
+              ...(activePresetDef?.textureUrl
+                ? { backgroundImage: `url(${activePresetDef.textureUrl})` }
+                : {}),
             }}
           />
-          <div className="muted-text-xs">Preview do mapa base</div>
+          <div className="muted-text-xs">Preview (cor ou textura)</div>
         </div>
 
         <div className="form-grid">
@@ -79,9 +102,7 @@ export default function MaterialPanel() {
               step="0.01"
               value={currentConfig.roughness}
               onChange={(event) =>
-                setCategoryOverrides(activeCategory, {
-                  roughness: Number(event.target.value),
-                })
+                handleOverride({ roughness: Number(event.target.value) })
               }
             />
           </label>
@@ -94,9 +115,7 @@ export default function MaterialPanel() {
               step="0.01"
               value={currentConfig.metalness}
               onChange={(event) =>
-                setCategoryOverrides(activeCategory, {
-                  metalness: Number(event.target.value),
-                })
+                handleOverride({ metalness: Number(event.target.value) })
               }
             />
           </label>
@@ -112,7 +131,7 @@ export default function MaterialPanel() {
               step="0.01"
               value={currentConfig.envMapIntensity}
               onChange={(event) =>
-                setCategoryOverrides(activeCategory, {
+                handleOverride({
                   envMapIntensity: Number(event.target.value),
                 })
               }
@@ -124,41 +143,17 @@ export default function MaterialPanel() {
               type="color"
               value={currentConfig.color}
               onChange={(event) =>
-                setCategoryOverrides(activeCategory, {
-                  color: event.target.value,
-                })
+                handleOverride({ color: event.target.value })
               }
             />
           </label>
         </div>
 
-        <div className="panel-divider" />
-
-        <div className="stack-tight">
-          <div className="section-title">Aplicar em partes</div>
-          {modelPartOptions.map((part) => {
-            const partId = part.id as ModelPart;
-            return (
-            <label key={part.id} className="panel-field-row">
-              <span className="panel-label">{part.label}</span>
-              <select
-                className="select select-xs"
-                value={state.assignments[partId]}
-                onChange={(event) => {
-                  setAssignment(partId, event.target.value as MaterialCategory);
-                  actions.logChangelog(`Material aplicado: ${part.label}`);
-                }}
-              >
-                {materialCategoryOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          );
-          })}
-        </div>
+        {selectedBoxId && (
+          <div className="muted-text-xs">
+            Material aplicado à caixa selecionada em tempo real.
+          </div>
+        )}
       </div>
     </Panel>
   );

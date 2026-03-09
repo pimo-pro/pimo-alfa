@@ -1,6 +1,7 @@
 /**
- * FASE 4 — Etapa 8 (Parte 1): Material Presets Engine.
- * Estrutura centralizada para presets visuais (base do futuro MaterialLibrary v2, Textures, UV Mapping).
+ * Wood Pack — 9 materiais (fonte única para MaterialEngine e Materiais & Fabricação).
+ * viewerMaterialId único; texturas em public/textures/wood/<id>-base.jpg e <id>-normal.jpg.
+ * Estrutura preparada para WebP no futuro (sem implementar).
  */
 
 export interface MaterialPreset {
@@ -17,54 +18,102 @@ export interface MaterialPreset {
 
 export type MaterialPresetRecord = Record<string, MaterialPreset>;
 
-const DEFAULT_UV_SCALE = { x: 1, y: 1 };
-const DEFAULT_METALLIC = 0;
+const D = { x: 1, y: 1 };
+const M = 0;
 
-/** Presets iniciais (carregados estaticamente). */
+/** 9 presets Wood Pack — único centro de definição de materiais visuais. */
 export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
   {
     id: "mdf_branco",
     name: "MDF Branco",
     color: "#f2f0eb",
-    uvScale: DEFAULT_UV_SCALE,
+    uvScale: D,
     uvRotation: 0,
     roughness: 0.52,
-    metallic: DEFAULT_METALLIC,
+    metallic: M,
   },
   {
     id: "mdf_cinza",
-    name: "MDF Cinza",
+    name: "Cinza",
     color: "#9ca3af",
-    uvScale: DEFAULT_UV_SCALE,
+    uvScale: D,
     uvRotation: 0,
     roughness: 0.55,
-    metallic: DEFAULT_METALLIC,
+    metallic: M,
   },
   {
     id: "mdf_preto",
-    name: "MDF Preto",
+    name: "Preto",
     color: "#1f2937",
-    uvScale: DEFAULT_UV_SCALE,
+    uvScale: D,
     uvRotation: 0,
     roughness: 0.58,
-    metallic: DEFAULT_METALLIC,
+    metallic: M,
+  },
+  {
+    id: "hdf_lacado",
+    name: "HDF Lacado",
+    color: "#f5f5f0",
+    uvScale: D,
+    uvRotation: 0,
+    roughness: 0.35,
+    metallic: 0.08,
+    textureUrl: "/textures/wood/hdf_lacado-base.jpg",
+    normalMapUrl: "/textures/wood/hdf_lacado-normal.jpg",
+  },
+  {
+    id: "hdf_cru",
+    name: "HDF Cru",
+    color: "#e8e4dc",
+    uvScale: D,
+    uvRotation: 0,
+    roughness: 0.6,
+    metallic: M,
+    textureUrl: "/textures/wood/hdf_cru-base.jpg",
+    normalMapUrl: "/textures/wood/hdf_cru-normal.jpg",
   },
   {
     id: "carvalho_natural",
-    name: "Carvalho",
+    name: "Carvalho Natural",
     color: "#c9a27a",
-    uvScale: DEFAULT_UV_SCALE,
+    uvScale: { x: 2, y: 2 },
     uvRotation: 0,
     roughness: 0.55,
-    metallic: DEFAULT_METALLIC,
+    metallic: M,
+    textureUrl: "/textures/wood/carvalho_natural-base.jpg",
+    normalMapUrl: "/textures/wood/carvalho_natural-normal.jpg",
   },
   {
-    id: "nogueira",
-    name: "Nogueira",
-    color: "#8a5a2b",
-    uvScale: DEFAULT_UV_SCALE,
+    id: "madeira_carvalho",
+    name: "Madeira Carvalho",
+    color: "#b8956a",
+    uvScale: { x: 2, y: 2 },
     uvRotation: 0,
     roughness: 0.55,
-    metallic: DEFAULT_METALLIC,
+    metallic: M,
+    textureUrl: "/textures/wood/madeira_carvalho-base.jpg",
+    normalMapUrl: "/textures/wood/madeira_carvalho-normal.jpg",
+  },
+  {
+    id: "pinho_natural",
+    name: "Pinho Natural",
+    color: "#e0c38d",
+    uvScale: { x: 3, y: 3 },
+    uvRotation: 0,
+    roughness: 0.5,
+    metallic: M,
+    textureUrl: "/textures/wood/pinho_natural-base.jpg",
+    normalMapUrl: "/textures/wood/pinho_natural-normal.jpg",
+  },
+  {
+    id: "madeira_pinho",
+    name: "Madeira Pinho",
+    color: "#d4b896",
+    uvScale: { x: 3, y: 3 },
+    uvRotation: 0,
+    roughness: 0.52,
+    metallic: M,
+    textureUrl: "/textures/wood/madeira_pinho-base.jpg",
+    normalMapUrl: "/textures/wood/madeira_pinho-normal.jpg",
   },
 ];

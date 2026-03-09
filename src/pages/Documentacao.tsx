@@ -268,7 +268,6 @@ export default function Documentacao() {
           {"\n"}- src/components/three/ThreeViewer.tsx
           {"\n"}- src/pages/ProjectRoadmap.tsx
           {"\n"}- src/core/docs/projectRoadmap.ts
-          {"\n"}- src/core/materials/materialPresets.ts
           {"\n"}- src/context/materialContext.tsx
           {"\n"}- src/context/materialContextInstance.ts
           {"\n"}- src/context/materialUtils.ts
