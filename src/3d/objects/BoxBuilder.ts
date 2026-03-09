@@ -1336,6 +1336,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", drillMap.lateral_direita);
 
   // 2) Incremental: portas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa porta
+  const doorFpKey = DOOR_SPEC_FINGERPRINT_KEY;
   const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
   const requiredDoorIds = new Set(doorSpecs.map((s) => s.id));
   const existingDoorNames = group.children
@@ -1349,15 +1350,15 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     }
   }
   doorSpecs.forEach((spec, doorIndex) => {
-    const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
     const newFingerprint = getDoorSpecFingerprint(spec);
+    const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
     if (existingDoor) {
-      const storedFingerprint = existingDoor.userData[DOOR_SPEC_FINGERPRINT_KEY] as string | undefined;
+      const storedFingerprint = existingDoor.userData[doorFpKey] as string | undefined;
       if (storedFingerprint === newFingerprint) return;
       group.remove(existingDoor);
     }
     const newDoor = createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
-    (newDoor.userData as Record<string, unknown>)[DOOR_SPEC_FINGERPRINT_KEY] = newFingerprint;
+    (newDoor.userData as Record<string, unknown>)[doorFpKey] = newFingerprint;
     group.add(newDoor);
   });
 
