@@ -56,7 +56,7 @@ export function useCutlistData() {
   const { project } = useProject();
   const { componentTypes } = useComponentTypes();
   const { ferragens } = useFerragens();
-  const boxes = project.boxes ?? [];
+  const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
 
   const ferragensIndustriaisDetalhado = useMemo(
     () => gerarFerragensIndustriais(componentTypes, ferragens),
@@ -133,7 +133,7 @@ export function useCutlistData() {
       custoTotalFerragens,
       custoTotal,
     };
-  }, [boxes, project.rules]);
+  }, [boxes, project.rules, ferragensIndustriaisDetalhado, ferragensPorComponente]);
 
   return aggregated;
 }

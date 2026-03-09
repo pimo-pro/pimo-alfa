@@ -6,6 +6,7 @@ import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibr
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
+import { devLogger } from "../../utils/devLogger";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -345,7 +346,7 @@ function mapDoorHolesByHingeSide(
 
 function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]): THREE.Object3D {
   if (import.meta.env.DEV) {
-    console.log("[BoxLayers][BoxBuilder.createDoorObject] create", {
+    devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] create", {
       id: spec.id,
       type: spec.type,
       widthM: spec.widthM,
@@ -431,7 +432,7 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
     const existingRaf = doorAnimationRaf.get(spec.id);
     if (existingRaf != null) cancelAnimationFrame(existingRaf);
     const start = performance.now();
-    console.log("door animation start", { id: spec.id, targetRotation });
+    devLogger.debug("door animation start", { id: spec.id, targetRotation });
     const animate = (now: number) => {
       const t = Math.min(1, (now - start) / DOOR_ANIMATION_DURATION_MS);
       const eased = easeInOutCubic(t);
@@ -441,7 +442,7 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
         doorAnimationRaf.set(spec.id, requestAnimationFrame(animate));
       } else {
         doorAnimationRaf.delete(spec.id);
-        console.log("door animation end", { id: spec.id, targetRotation });
+        devLogger.debug("door animation end", { id: spec.id, targetRotation });
       }
     };
     doorAnimationRaf.set(spec.id, requestAnimationFrame(animate));
@@ -465,7 +466,7 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
       .copy(mesh.position)
       .applyEuler(pivot.rotation)
       .add(pivot.position);
-    console.log("[BoxLayers][BoxBuilder.createDoorObject] final", {
+    devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] final", {
       id: spec.id,
       type: spec.groupType ?? "door",
       posX: finalCenter.x,
@@ -477,7 +478,7 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
     });
   }
   if (import.meta.env.DEV) {
-    console.log("[BoxLayers][BoxBuilder.createDoorObject] hinge-Y final position", {
+    devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] hinge-Y final position", {
       id: spec.id,
       pivotPosition: pivot.position.toArray(),
       meshLocalPosition: mesh.position.toArray(),
@@ -531,7 +532,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
     if (existingRaf != null) cancelAnimationFrame(existingRaf);
     const start = performance.now();
     const targetPosition = targetPullOffset;
-    console.log("drawer animation start", { id: spec.id, targetPosition, startPosition });
+    devLogger.debug("drawer animation start", { id: spec.id, targetPosition, startPosition });
     const animate = (now: number) => {
       const t = Math.min(1, (now - start) / DRAWER_ANIMATION_DURATION_MS);
       const eased = easeInOutCubic(t);
@@ -540,7 +541,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
         drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
       } else {
         drawerAnimationRaf.delete(spec.id);
-        console.log("drawer animation end", { id: spec.id, finalPosition: drawerGroup.position.z });
+        devLogger.debug("drawer animation end", { id: spec.id, finalPosition: drawerGroup.position.z });
       }
     };
     drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
@@ -716,7 +717,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
   group.userData.drawerLayerId = spec.id;
 
   if (import.meta.env.DEV) {
-    console.log("[BoxLayers][BoxBuilder.createDrawerObject] final", {
+    devLogger.debug("[BoxLayers][BoxBuilder.createDrawerObject] final", {
       id: spec.id,
       type: "drawer",
       posX: group.position.x,
@@ -786,7 +787,7 @@ function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes:
   const quat = new THREE.Quaternion();
 
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] buildDrillCutGeometries", {
+    devLogger.debug("[DRILL-DIAG] buildDrillCutGeometries", {
       panelType,
       holesCount: holes.length,
       panelDimensions: { width, height, thickness },
@@ -858,7 +859,7 @@ function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes:
 
     if (import.meta.env.DEV) {
       const cylDir = new THREE.Vector3(0, 1, 0).applyQuaternion(quat.clone());
-      console.log("[DRILL-DIAG] cylinderTransform", {
+      devLogger.debug("[DRILL-DIAG] cylinderTransform", {
         panelType,
         holeIndex,
         entryPoint: entry.clone(),
@@ -891,7 +892,7 @@ function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes:
       const holeId = (hole as TechnicalDrillHole & { id?: unknown }).id ?? `hole-${holeIndex}`;
       const entryPoint = { x: entry.x, y: entry.y, z: entry.z };
       const axisInwardLog = { x: axisInward.x, y: axisInward.y, z: axisInward.z };
-      console.log("[DRILL-DIAG] hole", {
+      devLogger.debug("[DRILL-DIAG] hole", {
         panelType,
         holeIndex,
         holeId,
@@ -905,7 +906,7 @@ function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes:
   }
 
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] buildDrillCutGeometries result", {
+    devLogger.debug("[DRILL-DIAG] buildDrillCutGeometries result", {
       panelType,
       totalCylinders: geometries.length,
       expectedRange: `[${holes.length}, ${holes.length * 2}]`,
@@ -919,7 +920,7 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   if (!holes || holes.length === 0) return;
 
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] applyDrillHolesToPanelGeometry ENTRADA", {
+    devLogger.debug("[DRILL-DIAG] applyDrillHolesToPanelGeometry ENTRADA", {
       panelType,
       panelName: panel.name,
       holesReceived: holes.length,
@@ -934,7 +935,7 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   panel.geometry.computeBoundingBox();
   const bboxBefore = panel.geometry.boundingBox;
   if (import.meta.env.DEV && bboxBefore) {
-    console.log("[DRILL-DIAG] panel bbox ANTES do CSG", {
+    devLogger.debug("[DRILL-DIAG] panel bbox ANTES do CSG", {
       panelType,
       min: bboxBefore.min.toArray(),
       max: bboxBefore.max.toArray(),
@@ -958,7 +959,7 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   carved.geometry.computeBoundingBox();
   const bboxAfter = carved.geometry.boundingBox;
   if (import.meta.env.DEV && bboxAfter) {
-    console.log("[DRILL-DIAG] panel bbox DEPOIS do CSG", {
+    devLogger.debug("[DRILL-DIAG] panel bbox DEPOIS do CSG", {
       panelType,
       min: bboxAfter.min.toArray(),
       max: bboxAfter.max.toArray(),
@@ -975,7 +976,7 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   panel.receiveShadow = true;
 
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] applyDrillHolesToPanelGeometry SAÍDA", {
+    devLogger.debug("[DRILL-DIAG] applyDrillHolesToPanelGeometry SAÍDA", {
       panelType,
       holesApplied: holes.length,
       meshUpdated: true,
@@ -1253,7 +1254,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const opts = options ?? {};
   const { width, height, depth } = resolveDimensions(opts);
   if (import.meta.env.DEV) {
-    console.warn("[BoxBuilder.updateBoxGroup] chamado — dimensões", { width, height, depth, childNames: group.children.map((c) => c.name) });
+    devLogger.warn("[BoxBuilder.updateBoxGroup] chamado — dimensões", { width, height, depth, childNames: group.children.map((c) => c.name) });
   }
   const specs = getPanelSpecs(width, height, depth);
 

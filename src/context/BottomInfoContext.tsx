@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 /**
  * Contexto para a barra de informação inferior (BottomInfoToolbar).
  * Controla qual painel está aberto: apenas um por vez; toggle ao clicar no mesmo botão.

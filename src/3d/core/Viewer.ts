@@ -56,11 +56,13 @@ import {
   type RoomBounds,
   type WallEntryForViewer,
 } from "../room/RoomManager";
+import { ViewerBoxManager, SnapshotRenderer } from "./viewer/index";
 import { HighlightManager } from "./HighlightManager";
 import {
   applyVisualMaterialToMesh as applyVisualMaterialToMeshV2,
   type VisualMaterial,
 } from "../../core/materials/materialLibraryV2";
+import { devLogger } from "../../utils/devLogger";
 
 /**
  * Interface multi-box do Viewer:
@@ -94,9 +96,26 @@ export class Viewer {
   private controls: Controls | null;
   private resizeObserver: ResizeObserver | null = null;
   private rafId: number | null = null;
-  private boxes = new Map<
-    string,
-    {
+  private boxManager = new ViewerBoxManager();
+  private get boxes(): Map<string, {
+    mesh: THREE.Object3D;
+    width: number;
+    height: number;
+    depth: number;
+    index: number;
+    cadOnly?: boolean;
+    manualPosition?: boolean;
+    cabinetType?: "lower" | "upper";
+    pe_cm?: number;
+    feetHeight?: number;
+    feetOffsetFront?: number;
+    feetEnabled?: boolean;
+    autoRotateEnabled?: boolean;
+    drillMarkersByPanel?: ViewerDrillMarkersByPanel;
+    cadModels: Array<{ id: string; object: THREE.Object3D; path: string }>;
+    material: LoadedWoodMaterial | null;
+  }> {
+    return this.boxManager.getBoxes() as Map<string, {
       mesh: THREE.Object3D;
       width: number;
       height: number;
@@ -111,14 +130,10 @@ export class Viewer {
       feetEnabled?: boolean;
       autoRotateEnabled?: boolean;
       drillMarkersByPanel?: ViewerDrillMarkersByPanel;
-      cadModels: Array<{
-        id: string;
-        object: THREE.Object3D;
-        path: string;
-      }>;
+      cadModels: Array<{ id: string; object: THREE.Object3D; path: string }>;
       material: LoadedWoodMaterial | null;
-    }
-  >();
+    }>;
+  }
   private materialSet: MaterialSet;
   private defaultMaterialName = "mdf_branco";
   private boxGap = 0;
@@ -222,6 +237,8 @@ export class Viewer {
 
   /** Gestor da sala única (4 paredes principais + extras + piso + lock). */
   private roomManager: RoomManager | null = null;
+  /** Snapshot/restore e vista 2D (câmera). */
+  private snapshotRenderer: SnapshotRenderer | null = null;
   /** Overlay de debug do snapping (somente DEV). */
   private snapDebugOverlay: SnapDebugOverlay | null = null;
   private lastSnapDebugData: SnapDebugData | null = null;
@@ -403,6 +420,22 @@ export class Viewer {
     if (import.meta.env.DEV) {
       this.snapDebugOverlay = new SnapDebugOverlay();
     }
+
+    this.snapshotRenderer = new SnapshotRenderer({
+      getCamera: () => ({
+        position: this.cameraManager.camera.position,
+        quaternion: this.cameraManager.camera.quaternion,
+        zoom: "zoom" in this.cameraManager.camera ? (this.cameraManager.camera as { zoom: number }).zoom : 1,
+        type: this.cameraManager.camera.type,
+      }),
+      getControls: () =>
+        this.controls?.controls
+          ? { target: this.controls.controls.target, update: () => this.controls!.controls!.update() }
+          : null,
+      getScene: () => this.sceneManager.scene,
+      getRenderer: () => this.rendererManager.renderer,
+      getContainer: () => this.container,
+    });
 
     this.updateCameraTarget();
 
@@ -956,7 +989,7 @@ export class Viewer {
     if (!this.transformDiagnosticsEnabled) return;
     const orbit = this.controls?.controls;
     const target = this.transformControls?.object ?? null;
-    console.log(`[Viewer][TransformDiag] ${event}`, {
+    devLogger.debug(`[Viewer][TransformDiag] ${event}`, {
       mode: this.transformMode,
       dragging: this.transformControlsDragging,
       selectedBoxId: this.selectedBoxId,
@@ -1780,8 +1813,8 @@ export class Viewer {
     }
     box.position.set(position.x, position.y, position.z);
     this.applyRotationIfNeeded(box, opts.rotationY);
-    // Registar em this.boxes ANTES de adicionar à cena (getRightmostX e restante lógica usam este mapa).
-    this.boxes.set(id, {
+    // Registar no BoxManager ANTES de adicionar à cena (getRightmostX e restante lógica usam este mapa).
+    this.boxManager.addEntry(id, {
       mesh: box,
       width,
       height,
@@ -1830,7 +1863,7 @@ export class Viewer {
     const opts = options ?? {};
     const hasDimOpts = opts.width !== undefined || opts.height !== undefined || opts.depth !== undefined || opts.size !== undefined;
     if (import.meta.env.DEV && hasDimOpts) {
-      console.log("[Viewer.updateBox] chamado com dimensões", { id, entry: !!entry, width: opts.width, height: opts.height, depth: opts.depth });
+      devLogger.debug("[Viewer.updateBox] chamado com dimensões", { id, entry: !!entry, width: opts.width, height: opts.height, depth: opts.depth });
     }
     if (!entry) return false;
     if (
@@ -1921,7 +1954,7 @@ export class Viewer {
       import.meta.env.DEV &&
       (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
     ) {
-      console.log("[BoxLayers][Viewer.updateBox] input", {
+      devLogger.debug("[BoxLayers][Viewer.updateBox] input", {
         boxId: id,
         cadOnly: entry.cadOnly === true,
         structureChanged,
@@ -1957,7 +1990,7 @@ export class Viewer {
           drillMarkersByPanel: opts.drillMarkersByPanel,
         };
         if (import.meta.env.DEV && dimensionsChanged) {
-          console.log("[Viewer.updateBox] updateBoxGroup chamado (dimensões alteradas)", {
+          devLogger.debug("[Viewer.updateBox] updateBoxGroup chamado (dimensões alteradas)", {
             boxId: id,
             width,
             height,
@@ -1969,7 +2002,7 @@ export class Viewer {
           import.meta.env.DEV &&
           (opts.doorLayerItems !== undefined || opts.drawerLayerItems !== undefined)
         ) {
-          console.log("[BoxLayers][Viewer.updateBox] rebuild -> updateBoxGroup", {
+          devLogger.debug("[BoxLayers][Viewer.updateBox] rebuild -> updateBoxGroup", {
             boxId: id,
             fullOptsDoorLayerCount: fullOpts.doorLayerItems?.length ?? 0,
             fullOptsDrawerLayerCount: fullOpts.drawerLayerItems?.length ?? 0,
@@ -2130,7 +2163,7 @@ export class Viewer {
     if (entry.material) {
       entry.material.textures.forEach((texture) => texture.dispose());
     }
-    this.boxes.delete(id);
+    this.boxManager.removeEntry(id);
     this.appliedRotationByMeshUuid.delete(entry.mesh.uuid);
     this.reflowBoxes();
     this.updateCameraTarget();
@@ -2833,28 +2866,7 @@ export class Viewer {
    * manualPosition === true: NUNCA alterar position.x, position.y nem position.z.
    */
   reflowBoxes() {
-    let cursorX = 0;
-    const ordered = Array.from(this.boxes.values()).sort((a, b) => a.index - b.index);
-    ordered.forEach((entry) => {
-      let w: number;
-      if (!entry.cadOnly && entry.mesh) {
-        entry.mesh.updateMatrixWorld(true);
-        this._boundingBox.setFromObject(entry.mesh);
-        this._boundingBox.getSize(this._size);
-        w = Math.max(this._size.x, 0.001);
-      } else {
-        w = Math.max(Number(entry.width) || 0.001, 0.001);
-      }
-      entry.mesh.frustumCulled = false;
-      if (entry.manualPosition) {
-        // Nunca alterar position: caixa posicionada pelo ProjectProvider (rightmost + 0.1, Y=altura/2, Z=0).
-      } else {
-        entry.mesh.position.x = cursorX + w / 2;
-        entry.mesh.position.z = 0;
-      }
-      entry.mesh.updateMatrixWorld();
-      cursorX += w + this.boxGap;
-    });
+    this.boxManager.reflowBoxes(this.boxGap);
   }
 
   private updateCameraTarget() {
@@ -4067,6 +4079,22 @@ export class Viewer {
     this.rafId = requestAnimationFrame(animate);
   }
 
+  saveSnapshot(): import("../../context/projectTypes").ViewerSnapshot | null {
+    return this.snapshotRenderer?.saveSnapshot() ?? null;
+  }
+
+  restoreSnapshot(snapshot: import("../../context/projectTypes").ViewerSnapshot | null): void {
+    this.snapshotRenderer?.restoreSnapshot(snapshot);
+  }
+
+  enable2DView(angle: import("../../context/projectTypes").Viewer2DAngle): void {
+    this.snapshotRenderer?.enable2DView(angle);
+  }
+
+  disable2DView(): void {
+    this.snapshotRenderer?.disable2DView();
+  }
+
   async renderScene(options: ViewerRenderOptions): Promise<ViewerRenderResult | null> {
     const sizeMap: Record<ViewerRenderOptions["size"], [number, number]> = {
       small: [1280, 720],
@@ -4416,6 +4444,7 @@ export class Viewer {
       this.roomManager.removeRoom();
       this.roomManager = null;
     }
+    this.snapshotRenderer = null;
     if (this.selectionOutline) {
       this.sceneManager.scene.remove(this.selectionOutline);
       this.selectionOutline.geometry.dispose();

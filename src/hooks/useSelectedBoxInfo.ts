@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectState, ViewerSync } from "../context/projectTypes";
 
+const SELECTED_BOX_POLL_MS = 120;
+
 export type SelectedBoxInfo = {
   L: number;
   A: number;
@@ -21,26 +23,27 @@ export function useSelectedBoxInfo(
   const projectRef = useRef(project);
   const viewerSyncRef = useRef(viewerSync);
   const lastRef = useRef<SelectedBoxInfo | null>(null);
-  const rafIdRef = useRef<number | null>(null);
-
-  projectRef.current = project;
-  viewerSyncRef.current = viewerSync;
+  const intervalIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const selectedBoxId = project.selectedWorkspaceBoxId;
-    if (!selectedBoxId || !viewerSyncRef.current) {
-      setInfo(null);
-      lastRef.current = null;
-      return;
-    }
+    projectRef.current = project;
+    viewerSyncRef.current = viewerSync;
+  }, [project, viewerSync]);
 
+  useEffect(() => {
     const tick = () => {
       const sync = viewerSyncRef.current;
       const proj = projectRef.current;
-      if (!sync || proj.selectedWorkspaceBoxId !== selectedBoxId) {
-        rafIdRef.current = requestAnimationFrame(tick);
+      const selectedBoxId = proj.selectedWorkspaceBoxId;
+
+      if (!sync || !selectedBoxId) {
+        if (lastRef.current !== null) {
+          lastRef.current = null;
+          setInfo(null);
+        }
         return;
       }
+
       const dims = sync.getSelectedBoxDimensions();
       const box = proj.workspaceBoxes.find((b) => b.id === selectedBoxId);
       const rotRad = box?.rotacaoY ?? 0;
@@ -69,17 +72,18 @@ export function useSelectedBoxInfo(
           setInfo(next);
         }
       }
-      rafIdRef.current = requestAnimationFrame(tick);
     };
 
-    rafIdRef.current = requestAnimationFrame(tick);
+    tick();
+    intervalIdRef.current = window.setInterval(tick, SELECTED_BOX_POLL_MS);
+
     return () => {
-      if (rafIdRef.current != null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+      if (intervalIdRef.current != null) {
+        window.clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
       }
     };
-  }, [project.selectedWorkspaceBoxId]);
+  }, [project.selectedWorkspaceBoxId, viewerSync]);
 
   return info;
 }

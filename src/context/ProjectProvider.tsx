@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
-import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
-import { getSettings } from "../core/settings/settingsService";
 import type { BoxModelInstance, WorkspaceBox } from "../core/types";
 import { saveProfiles } from "../core/rules/rulesProfilesStorage";
 import { DEFAULT_PROFILE_ID } from "../core/rules/rulesProfilesStorage";
@@ -32,14 +29,14 @@ import { getBaseCabinetById, modelToPortaTipo } from "../core/baseCabinets";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
 import { safeGetItem, safeParseJson, safeSetItem } from "../utils/storage";
 import { useViewerSync } from "../hooks/useViewerSync";
+import { useProjectExportActions } from "./hooks/useProjectExportActions";
+import { useProjectPersistence } from "./hooks/useProjectPersistence";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
 import { regenerateLayersForBox, createManualDoor, createManualDrawer, applyDrawerTypeRules } from "../services/boxLayersService";
 import { wallStore } from "../stores/wallStore";
 
 const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
-const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
 const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
-const AUTO_SAVE_BASE_DEBOUNCE_MS = 1200;
 const MAX_HISTORY = 40;
 
 const logProjectProvider = (event: string, payload?: Record<string, unknown>) => {
@@ -115,11 +112,6 @@ const captureRoomSnapshot = (): RoomSnapshot | null => {
     selectedWallId: state.selectedWallId,
     mainWallIndex: Math.max(0, Math.min(3, state.mainWallIndex ?? 0)),
   };
-};
-
-type AutosaveEntry = {
-  snapshot: ProjectSnapshot;
-  savedAt: string;
 };
 
 type ManualBackupEntry = {
@@ -327,129 +319,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     projectRef.current = project;
   }, [project]);
   const viewerSync = useViewerSync(project);
+  const exportActions = useProjectExportActions({ projectRef });
   const undoStackRef = useRef<ProjectState[]>([]);
   const redoStackRef = useRef<ProjectState[]>([]);
-  const hasRestoredAutosaveRef = useRef(false);
-  const autosaveTimerRef = useRef<number | null>(null);
-  const pendingAutosaveRef = useRef(false);
-  const lastAutosaveFingerprintRef = useRef<string>("");
 
-  // Restaurar último projeto (autosave) ao abrir a página (apenas uma vez)
-  useEffect(() => {
-    if (hasRestoredAutosaveRef.current) return;
-    hasRestoredAutosaveRef.current = true;
-    const raw = safeGetItem(AUTOSAVE_STORAGE_KEY);
-    const parsed = safeParseJson<AutosaveEntry>(raw);
-    if (!parsed?.snapshot) return;
-    const snap = parsed.snapshot as ProjectSnapshot;
-    const projectState =
-      snap && typeof snap === "object" && "projectState" in snap
-        ? (snap as ProjectSnapshot).projectState
-        : null;
-    const viewerSnapshot =
-      snap && typeof snap === "object" && "viewerSnapshot" in snap
-        ? (snap as ProjectSnapshot).viewerSnapshot
-        : null;
-    const hasRoomSnapshot = Boolean(
-      snap && typeof snap === "object" && "roomSnapshot" in snap
-    );
-    const roomSnapshot =
-      snap && typeof snap === "object" && "roomSnapshot" in snap
-        ? (snap as ProjectSnapshot).roomSnapshot
-        : undefined;
-    const restored = reviveState(projectState);
-    if (restored) {
-      logProjectProvider("autosave-restored", {
-        boxes: restored.workspaceBoxes?.length ?? 0,
-        hasViewerSnapshot: Boolean(viewerSnapshot),
-        hasRoomSnapshot: Boolean(roomSnapshot),
-      });
-      setProject(applyResultados({ ...restored, lastAutosaveTime: parsed.savedAt ?? restored.lastAutosaveTime }));
-    }
-    if (hasRoomSnapshot) {
-      if (roomSnapshot) {
-        wallStore.getState().loadRoomConfig(roomSnapshot);
-      } else {
-        wallStore.getState().clearRoom();
-      }
-    }
-    if (viewerSnapshot) viewerSync.restoreViewerSnapshot(viewerSnapshot);
-  }, [viewerSync]);
-
-  const performAutosave = useCallback(() => {
-    const proj = projectRef.current;
-    if (proj.workspaceBoxes.length === 0) return;
-    if (proj.estaCarregando) {
-      pendingAutosaveRef.current = true;
-      return;
-    }
-    const snapshot: ProjectSnapshot = {
-      projectState: serializeStateForAutosave(proj),
-      viewerSnapshot: viewerSync.saveViewerSnapshot(),
-      roomSnapshot: captureRoomSnapshot(),
-    };
-    const savedAt = new Date().toISOString();
-    safeSetItem(
-      AUTOSAVE_STORAGE_KEY,
-      JSON.stringify({ snapshot, savedAt } as AutosaveEntry)
-    );
-    pendingAutosaveRef.current = false;
-    setProject((prev) => (prev.lastAutosaveTime === savedAt ? prev : { ...prev, lastAutosaveTime: savedAt }));
-  }, [viewerSync]);
-
-  const scheduleAutosave = useCallback((ms: number) => {
-    if (autosaveTimerRef.current != null) {
-      window.clearTimeout(autosaveTimerRef.current);
-    }
-    autosaveTimerRef.current = window.setTimeout(() => {
-      autosaveTimerRef.current = null;
-      performAutosave();
-    }, ms);
-  }, [performAutosave]);
-
-  useEffect(() => {
-    const proj = project;
-    if ((proj.workspaceBoxes?.length ?? 0) === 0) return;
-    const fingerprint = JSON.stringify(serializeStateForAutosave(proj));
-    if (fingerprint === lastAutosaveFingerprintRef.current) return;
-    lastAutosaveFingerprintRef.current = fingerprint;
-
-    const boxCount = proj.workspaceBoxes.length;
-    const debounceMs = proj.estaCarregando
-      ? AUTO_SAVE_BASE_DEBOUNCE_MS * 2
-      : boxCount > 12
-        ? AUTO_SAVE_BASE_DEBOUNCE_MS * 2
-        : AUTO_SAVE_BASE_DEBOUNCE_MS;
-    scheduleAutosave(debounceMs);
-  }, [project, scheduleAutosave]);
-
-  useEffect(() => {
-    if (project.estaCarregando) return;
-    if (pendingAutosaveRef.current) {
-      scheduleAutosave(450);
-    }
-  }, [project.estaCarregando, scheduleAutosave]);
-
-  useEffect(() => {
-    return () => {
-      if (autosaveTimerRef.current != null) {
-        window.clearTimeout(autosaveTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Aviso antes de fechar/atualizar/navegar para fora
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      const proj = projectRef.current;
-      if (proj.workspaceBoxes.length > 0) {
-        e.preventDefault();
-        e.returnValue = "Você perderá o seu projeto atual. Deseja continuar?";
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, []);
+  const persistenceApi = useMemo(
+    () => ({
+      serializeForAutosave: (state: ProjectState) => serializeStateForAutosave(state),
+      revive: (snap: unknown) => reviveState(snap),
+      captureRoomSnapshot,
+      applyResultados: (state: ProjectState) => applyResultados(state),
+    }),
+    []
+  );
+  useProjectPersistence(project, setProject, viewerSync, persistenceApi);
 
   const pushState = (state: ProjectState) => {
     const snapshot = reviveState(serializeState(state));
@@ -1334,62 +1217,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
-    exportarPDF: async () => {
-      const currentProject = projectRef.current;
-      const boxesToExport = currentProject.boxes ?? [];
-      if (boxesToExport.length === 0) {
-        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
-        return;
-      }
-      const projectName = currentProject.projectName?.trim() || "Projeto";
-      const safeName = projectName.replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
-      const pdfProject = {
-        projectName,
-        boxes: boxesToExport,
-        rules: currentProject.rules,
-        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
-        settings: getSettings(),
-      };
-      const doc = await buildCutlistPdf(pdfProject);
-      doc.save(`${safeName}_cutlist.pdf`);
-    },
-
-    exportarPdfTecnico: async () => {
-      const currentProject = projectRef.current;
-      const boxesToExport = currentProject.boxes ?? [];
-      if (boxesToExport.length === 0) {
-        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
-        return;
-      }
-const projectName = currentProject.projectName?.trim() || "Projeto";
-const safeName = projectName.replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
-const { gerarPdfTecnicoCompleto } = await import("../core/pdf/gerarPdfTecnico");
-      const doc = gerarPdfTecnicoCompleto(boxesToExport, currentProject.rules, projectName, {
-        materialId: currentProject.materialId,
-      });
-      doc.save(`${safeName}_tecnico.pdf`);
-    },
-
-    exportarPdfUnificado: async () => {
-      const currentProject = projectRef.current;
-      const boxesToExport = currentProject.boxes ?? [];
-      if (boxesToExport.length === 0) {
-        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
-        return;
-      }
-      const projectName = currentProject.projectName?.trim() || "Projeto";
-      const safeName = projectName.replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
-      const pdfProject = {
-        projectName,
-        boxes: boxesToExport,
-        rules: currentProject.rules,
-        materialId: currentProject.materialId,
-        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
-        settings: getSettings(),
-      };
-      const doc = await buildUnifiedPdf(pdfProject);
-      doc.save(`${safeName}_completo.pdf`);
-    },
+    exportarPDF: exportActions.exportarPDF,
+    exportarPdfTecnico: exportActions.exportarPdfTecnico,
+    exportarPdfUnificado: exportActions.exportarPdfUnificado,
 
     logChangelog: (message) => {
       updateProject(

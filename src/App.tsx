@@ -23,7 +23,9 @@ const SobreNos = lazy(() => import("./pages/SobreNos"));
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
-const DevPimoTest = lazy(() => import("./__dev__/DevPimoTest"));
+const DevPimoTest = import.meta.env.DEV
+  ? lazy(() => import("./__dev__/DevPimoTest"))
+  : null;
 
 export default function App() {
   const [leftOpen, setLeftOpen] = useState(true);
@@ -72,7 +74,10 @@ export default function App() {
       const isSystemDocs = window.location.pathname === "/documentacao";
       const isAdmin = window.location.pathname === "/admin";
       const isProjectProgress = window.location.pathname === "/project-progress";
-      const isDevTest = window.location.pathname === "/dev-test";
+      if (!import.meta.env.DEV && window.location.pathname === "/dev-test") {
+        window.history.replaceState({}, "", "/");
+      }
+      const isDevTest = import.meta.env.DEV && window.location.pathname === "/dev-test";
       const isPainelReferencia = window.location.pathname === "/painel-referencia";
       setShowAbout(isAbout);
       setShowSystemDocs(isSystemDocs);
@@ -172,7 +177,7 @@ export default function App() {
                 <AdminPanel />
               ) : showProjectProgress ? (
                 <ProjectProgress />
-              ) : showDevTest ? (
+              ) : showDevTest && DevPimoTest ? (
                 <DevPimoTest />
               ) : (
                 <SobreNos />

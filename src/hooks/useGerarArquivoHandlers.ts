@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import JSZip from "jszip";
 import { useProject } from "../context/useProject";
 import { useToast } from "../context/ToastContext";
@@ -14,8 +14,9 @@ import {
   getSheetDefinitionFromSettings,
 } from "../core/cnc/cncPipeline";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
+import { devLogger } from "../utils/devLogger";
 
-function pdfToBlob(doc: { output: (type: string) => ArrayBuffer | Uint8Array }): Blob {
+function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
   const arr = doc.output("arraybuffer");
   const buffer = arr instanceof ArrayBuffer ? arr : new Uint8Array(arr).buffer;
   return new Blob([buffer], { type: "application/pdf" });
@@ -70,12 +71,20 @@ function getSheetSemanticPieceName(
 /** Sanitiza um path/nome para entrada no ZIP: sem caracteres inválidos, sem segmentos vazios. */
 function sanitizeZipPath(path: string): string {
   if (typeof path !== "string" || path.trim() === "") return "ficheiro";
+  const sanitizeSegment = (segment: string): string =>
+    Array.from(segment)
+      .map((char) => {
+        const code = char.charCodeAt(0);
+        if (code < 32 || "<>:\"|?*".includes(char)) return "_";
+        return char;
+      })
+      .join("");
+
   return path
     .replace(/\\/g, "/")
     .split("/")
     .map((seg) =>
-      seg
-        .replace(/[<>:"|?*\x00-\x1f]/g, "_")
+      sanitizeSegment(seg)
         .replace(/\s+/g, "_")
         .replace(/^\.+/, "")
         .trim()
@@ -88,7 +97,7 @@ function sanitizeZipPath(path: string): string {
 function safeAddPdf(
   zip: JSZip,
   zipPath: string,
-  doc: { output: (type: string) => ArrayBuffer | Uint8Array } | null | undefined
+  doc: { output: (_type: string) => ArrayBuffer | Uint8Array } | null | undefined
 ): boolean {
   if (!doc || typeof doc.output !== "function") return false;
   const safePath = sanitizeZipPath(zipPath);
@@ -107,7 +116,7 @@ export function useGerarArquivoHandlers() {
   const { project } = useProject();
   useSettings();
   const { showToast } = useToast();
-  const boxes = project.boxes ?? [];
+  const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const hasBoxes = boxes.length > 0;
   const slug =
     (project.projectName || "projeto")
@@ -146,7 +155,7 @@ export function useGerarArquivoHandlers() {
       const doc = await buildCutlistPdf(pdfProject());
       doc.save(`${slug}_cutlist.pdf`);
     } catch (err) {
-      console.error("Erro ao gerar PDF de cutlist:", err);
+      devLogger.error("Erro ao gerar PDF de cutlist:", err);
       showToast("Erro ao gerar PDF.", "error");
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
@@ -161,7 +170,7 @@ export function useGerarArquivoHandlers() {
       const doc = await buildUnifiedPdf(pdfProject());
       doc.save(`${slug}_unificado.pdf`);
     } catch (err) {
-      console.error("Erro ao gerar PDF unificado:", err);
+      devLogger.error("Erro ao gerar PDF unificado:", err);
       showToast("Erro ao gerar PDF unificado.", "error");
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
@@ -184,7 +193,7 @@ export function useGerarArquivoHandlers() {
       docUnificado.save(`${slug}_unificado.pdf`);
       showToast("Cutlist, PDF Técnico e Unificado gerados.", "info");
     } catch (err) {
-      console.error("Erro ao gerar PDFs:", err);
+      devLogger.error("Erro ao gerar PDFs:", err);
       showToast("Erro ao gerar PDFs.", "error");
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
@@ -198,7 +207,7 @@ export function useGerarArquivoHandlers() {
       const doc = await buildEtiquetasPdf(pdfProject());
       doc.save(`${slug}_etiquetas.pdf`);
     } catch (err) {
-      console.error("Erro ao gerar PDF de etiquetas:", err);
+      devLogger.error("Erro ao gerar PDF de etiquetas:", err);
       showToast("Erro ao gerar PDF.", "error");
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
@@ -286,7 +295,7 @@ export function useGerarArquivoHandlers() {
       showToast("Layout de Corte PRO gerado.", "info");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("Layout de Corte PRO:", err);
+      devLogger.error("Layout de Corte PRO:", err);
       showToast(`Layout de Corte PRO: falha — ${msg}`, "error");
     }
   }, [
@@ -387,7 +396,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "Cutlist PDF", message: msg });
-      console.error("Full export: Cutlist PDF", err);
+      devLogger.error("Full export: Cutlist PDF", err);
     }
 
     // --- PDF Técnico ---
@@ -401,7 +410,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "PDF Técnico", message: msg });
-      console.error("Full export: PDF Técnico", err);
+      devLogger.error("Full export: PDF Técnico", err);
     }
 
     // --- Unificado ---
@@ -413,7 +422,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "PDF Unificado", message: msg });
-      console.error("Full export: PDF Unificado", err);
+      devLogger.error("Full export: PDF Unificado", err);
     }
 
     // --- Etiquetas ---
@@ -425,7 +434,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "PDF Etiquetas", message: msg });
-      console.error("Full export: PDF Etiquetas", err);
+      devLogger.error("Full export: PDF Etiquetas", err);
     }
 
     // --- Layout de Corte (e Layout de Corte PRO) ---
@@ -448,7 +457,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "Layout de Corte PRO", message: msg });
-      console.error("Full export: Layout de Corte", err);
+      devLogger.error("Full export: Layout de Corte", err);
     }
 
     // --- CNC (TCN + KDT) ---
@@ -497,7 +506,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "CNC (TCN/KDT)", message: msg });
-      console.error("Full export: CNC", err);
+      devLogger.error("Full export: CNC", err);
     }
 
     // --- DRILL (XML) ---
@@ -522,7 +531,7 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "DRILL (XML)", message: msg });
-      console.error("Full export: DRILL", err);
+      devLogger.error("Full export: DRILL", err);
     }
 
     // --- Gerar e descarregar ZIP ---
@@ -541,13 +550,13 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "ZIP (generateAsync)", message: msg });
-      console.error("Full export: zip.generateAsync", err);
+      devLogger.error("Full export: zip.generateAsync", err);
     }
 
     if (errors.length > 0) {
       const first = errors[0];
       const detail = `${first.step}: ${first.message}`;
-      console.error("Erro ao gerar arquivo completo:", errors);
+      devLogger.error("Erro ao gerar arquivo completo:", errors);
       showToast(`Erro ao gerar arquivo completo — ${detail}`, "error");
     } else {
       showToast("Arquivo completo (ZIP) gerado.", "info");
@@ -558,10 +567,6 @@ export function useGerarArquivoHandlers() {
     pdfProject,
     slug,
     boxes,
-    project.rules,
-    project.materialId,
-    project.projectName,
-    project.extractedPartsByBoxId,
     project,
   ]);
 

@@ -4,11 +4,13 @@ import type {
   DoorWindowConfig,
   RoomConfig,
   UltraPerformanceModeOptions,
+  Viewer2DAngle,
   ViewerMaterialQuality,
   ViewerMousePreset,
   ViewerBackgroundMode,
   ViewerRenderOptions,
   ViewerRenderResult,
+  ViewerSnapshot,
 } from "./projectTypes";
 import type { Viewer } from "../3d/core/Viewer";
 
@@ -40,6 +42,10 @@ export type PimoViewerApi = {
   getCurrentMode?: () => "performance" | "showcase";
   setMode?: (_mode: "performance" | "showcase", _turntable?: boolean) => void;
   renderScene?: (_options: ViewerRenderOptions) => Promise<ViewerRenderResult | null>;
+  saveSnapshot?: () => ViewerSnapshot | null;
+  restoreSnapshot?: (_snapshot: ViewerSnapshot | null) => void;
+  enable2DView?: (_angle: Viewer2DAngle) => void;
+  disable2DView?: () => void;
   setUltraPerformanceMode?: (_active: boolean) => void;
   getUltraPerformanceMode?: () => boolean;
   setUltraPerformanceModeOptions?: (_options: UltraPerformanceModeOptions) => void;

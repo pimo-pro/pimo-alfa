@@ -197,7 +197,7 @@ export default function BottomInfoToolbar() {
   const resizeStartTopRef = useRef(56);
   const isResizingPanelRef = useRef(false);
 
-  const workspaceBoxes = project.workspaceBoxes ?? [];
+  const workspaceBoxes = useMemo(() => project.workspaceBoxes ?? [], [project.workspaceBoxes]);
   const panelVisibilityEntries = useMemo(() => {
     return workspaceBoxes.flatMap((box) => {
       const entries: Array<{
@@ -330,11 +330,6 @@ export default function BottomInfoToolbar() {
   }, []);
 
   useEffect(() => {
-    if (!componentsPanelOpen) return;
-    setComponentsPanelTop(layoutInsets.top);
-  }, [componentsPanelOpen, layoutInsets.top]);
-
-  useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
       if (!isResizingPanelRef.current) return;
       const delta = event.clientY - resizeStartYRef.current;
@@ -363,6 +358,7 @@ export default function BottomInfoToolbar() {
 
   const openPecasPaineisPanel = () => {
     setComponentsPopoverOpen(false);
+    setComponentsPanelTop(layoutInsets.top);
     setComponentsPanelOpen(true);
   };
 

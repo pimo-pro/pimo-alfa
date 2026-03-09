@@ -7,6 +7,7 @@ import {
   drawerToLayerItem,
   type DrawerGenerationConfig,
 } from "../core/drawers";
+import { devLogger } from "../utils/devLogger";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -192,7 +193,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
   }
 
   for (const door of doorsLayer) {
-    console.log("door", {
+    devLogger.debug("door", {
       posX: door.posX,
       posY: door.posY,
       posZ: door.posZ,
@@ -203,7 +204,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
   }
 
   for (const drawer of drawersLayer) {
-    console.log("drawer", {
+    devLogger.debug("drawer", {
       posX: drawer.posX,
       posY: drawer.posY,
       posZ: drawer.posZ,

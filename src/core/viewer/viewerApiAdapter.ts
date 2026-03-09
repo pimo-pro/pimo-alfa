@@ -28,21 +28,19 @@ export function createViewerApiAdapter(
   if (!pimoApi) return null;
 
   return {
-    saveSnapshot: (): ViewerSnapshot | null => {
-      // TODO: implementar no Viewer quando suportar serialização de estado da câmera
-      return null;
+    saveSnapshot: (): ViewerSnapshot | null =>
+      pimoApi.saveSnapshot?.() ?? null,
+
+    restoreSnapshot: (snapshot: ViewerSnapshot | null): void => {
+      pimoApi.restoreSnapshot?.(snapshot);
     },
 
-    restoreSnapshot: (_snapshot: ViewerSnapshot | null): void => {
-      // TODO: implementar no Viewer quando suportar restauração
-    },
-
-    enable2DView: (_angle: "top" | "front" | "left" | "right"): void => {
-      // TODO: implementar no Viewer — fixar câmera em ângulo ortográfico
+    enable2DView: (angle: "top" | "front" | "left" | "right"): void => {
+      pimoApi.enable2DView?.(angle);
     },
 
     disable2DView: (): void => {
-      // TODO: implementar no Viewer — restaurar controle orbit
+      pimoApi.disable2DView?.();
     },
 
     renderScene: (options: ViewerRenderOptions): Promise<ViewerRenderResult | null> => {

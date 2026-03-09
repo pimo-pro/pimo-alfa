@@ -4,14 +4,16 @@ import { Viewer } from "../3d/core/Viewer";
 import type { ViewerOptions } from "../3d/core/Viewer";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
+  Viewer2DAngle,
   ViewerBackgroundMode,
   ViewerMaterialQuality,
+  ViewerRenderOptions,
+  ViewerRenderResult,
+  ViewerSnapshot,
   UltraPerformanceModeOptions,
   DoorWindowConfig,
   RoomConfig,
   ViewerMousePreset,
-  ViewerRenderOptions,
-  ViewerRenderResult,
 } from "../context/projectTypes";
 
 type PimoViewerAPI = {
@@ -394,6 +396,23 @@ export const usePimoViewer = (
     []
   );
 
+  const saveSnapshot = useCallback(
+    () => viewerRef.current?.saveSnapshot?.() ?? null,
+    []
+  );
+
+  const restoreSnapshot = useCallback((snapshot: ViewerSnapshot | null) => {
+    viewerRef.current?.restoreSnapshot?.(snapshot);
+  }, []);
+
+  const enable2DView = useCallback((angle: Viewer2DAngle) => {
+    viewerRef.current?.enable2DView?.(angle);
+  }, []);
+
+  const disable2DView = useCallback(() => {
+    viewerRef.current?.disable2DView?.();
+  }, []);
+
   const setUltraPerformanceMode = useCallback((active: boolean) => {
     viewerRef.current?.setUltraPerformanceMode?.(active);
   }, []);
@@ -699,6 +718,10 @@ export const usePimoViewer = (
       getCurrentMode,
       setMode,
       renderScene,
+      saveSnapshot,
+      restoreSnapshot,
+      enable2DView,
+      disable2DView,
       setUltraPerformanceMode,
       getUltraPerformanceMode,
       setUltraPerformanceModeOptions,
@@ -792,6 +815,10 @@ export const usePimoViewer = (
       getCurrentMode,
       setMode,
       renderScene,
+      saveSnapshot,
+      restoreSnapshot,
+      enable2DView,
+      disable2DView,
       setUltraPerformanceMode,
       getUltraPerformanceMode,
       setUltraPerformanceModeOptions,

@@ -12,6 +12,7 @@ import { MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM, getHingeYPositions, normalizeRulesC
 import { getSettings } from "../../core/settings/settingsService";
 import type { PieceType } from "../../core/drilling/drillingService";
 import { calculateTechnicalDrillingsForPiece, drillFaceToPanelFace, isTopDrillable } from "../../core/drilling/drillingService";
+import { devLogger } from "../../utils/devLogger";
 
 export type PanelDrillingInput = {
   tipo: string;
@@ -287,7 +288,7 @@ export function buildPanelDrillingResult(
       rules
     );
   } catch (err) {
-    console.warn(`[drillingAdapter] Error generating technical holes for ${input.tipo}:`, err);
+      devLogger.warn(`[drillingAdapter] Error generating technical holes for ${input.tipo}:`, err);
     return { success: false, error: `Erro ao gerar furação para painel ${input.tipo}.` };
   }
 

@@ -1,0 +1,75 @@
+/**
+ * Ações de exportação (PDF cutlist, técnico, unificado).
+ * Extraído do ProjectProvider para reduzir complexidade.
+ */
+
+import { useCallback } from "react";
+import { buildCutlistPdf } from "../../core/pdf/pdfCutlist";
+import { buildUnifiedPdf } from "../../core/pdf/pdfUnified";
+import { getSettings } from "../../core/settings/settingsService";
+import type { ProjectState } from "../projectTypes";
+
+export interface UseProjectExportActionsParams {
+  projectRef: React.MutableRefObject<ProjectState>;
+}
+
+const safeProjectName = (name: string): string =>
+  name.replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s+/g, "_") || "projeto";
+
+export function useProjectExportActions({ projectRef }: UseProjectExportActionsParams) {
+  return {
+    exportarPDF: useCallback(async () => {
+      const currentProject = projectRef.current;
+      const boxesToExport = currentProject.boxes ?? [];
+      if (boxesToExport.length === 0) {
+        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+        return;
+      }
+      const projectName = currentProject.projectName?.trim() || "Projeto";
+      const pdfProject = {
+        projectName,
+        boxes: boxesToExport,
+        rules: currentProject.rules,
+        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        settings: getSettings(),
+      };
+      const doc = await buildCutlistPdf(pdfProject);
+      doc.save(`${safeProjectName(projectName)}_cutlist.pdf`);
+    }, [projectRef]),
+
+    exportarPdfTecnico: useCallback(async () => {
+      const currentProject = projectRef.current;
+      const boxesToExport = currentProject.boxes ?? [];
+      if (boxesToExport.length === 0) {
+        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+        return;
+      }
+      const projectName = currentProject.projectName?.trim() || "Projeto";
+      const { gerarPdfTecnicoCompleto } = await import("../../core/pdf/gerarPdfTecnico");
+      const doc = gerarPdfTecnicoCompleto(boxesToExport, currentProject.rules, projectName, {
+        materialId: currentProject.materialId,
+      });
+      doc.save(`${safeProjectName(projectName)}_tecnico.pdf`);
+    }, [projectRef]),
+
+    exportarPdfUnificado: useCallback(async () => {
+      const currentProject = projectRef.current;
+      const boxesToExport = currentProject.boxes ?? [];
+      if (boxesToExport.length === 0) {
+        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+        return;
+      }
+      const projectName = currentProject.projectName?.trim() || "Projeto";
+      const pdfProject = {
+        projectName,
+        boxes: boxesToExport,
+        rules: currentProject.rules,
+        materialId: currentProject.materialId,
+        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        settings: getSettings(),
+      };
+      const doc = await buildUnifiedPdf(pdfProject);
+      doc.save(`${safeProjectName(projectName)}_completo.pdf`);
+    }, [projectRef]),
+  };
+}

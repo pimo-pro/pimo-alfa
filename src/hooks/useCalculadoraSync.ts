@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import { mmToM } from "../utils/units";
+import { devLogger } from "../utils/devLogger";
 import { getViewerMaterialId } from "../core/materials/service";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
@@ -211,7 +212,7 @@ export const useCalculadoraSync = (
           api.updateBox(wsBox.id, { ...posRot });
         } else {
           if (import.meta.env.DEV) {
-            console.log("[useCalculadoraSync] estrutura mudou, chamando updateBox com dimensões", {
+            devLogger.debug("[useCalculadoraSync] estrutura mudou, chamando updateBox com dimensões", {
               boxId: wsBox.id,
               width,
               height,
