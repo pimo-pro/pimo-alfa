@@ -519,7 +519,7 @@ export default function PainelReferencia() {
             <strong>Contexts, managers e viewerApiAdapter</strong>
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
               ProjectProvider (estado) → Workspace (monta) → MultiBoxManager (sync) → Viewer (render).
-              PimoViewerContext regista viewerApi; useViewerSync regista viewerApiAdapter para snapshot/2D/render.
+              PimoViewerContext regista viewerApi; useViewerSync regista viewerApiAdapter para snapshot/render.
               Workspace conecta todos no mount.
             </div>
           </div>
@@ -601,7 +601,7 @@ export default function PainelReferencia() {
           <div>
             <strong>Lazy Loading de Texturas e HDRI</strong>
             <div style={{ marginTop: 4, color: "var(--text-muted)" }}>
-              Local: src/3d/core/Environment.ts, src/3d/materials/MaterialLibrary.ts
+              Local: src/3d/viewer-engine/environment/Environment.ts, src/3d/materials/MaterialLibrary.ts
             </div>
             <div style={{ marginTop: 4 }}>
               Estratégia: carregar apenas essencial no início, HDRI no modo Showcase, texturas PBR sob demanda
@@ -794,7 +794,7 @@ UI (addWorkspaceBox) → ProjectContext.actions → sincronização automática`
           {"\n"}- Verificação de consistência: Arquitetura, Sidebar, Roadmap, documentação automática e painelReferenciaSections validados; build estável.
           {"\n"}- Auditoria: todos os pontos (1–6) confirmados; nenhuma alteração necessária.
           {"\n"}- Verificação contínua: consistência geral, Sidebar, Roadmap, documentação automática e painelReferenciaSections; build estável.
-          {"\n"}- Melhorias UI/UX: ViewerToolbar no topo do Viewer (PROJETO, SALVAR, DESFAZER, REFAZER, 2D, IMAGEM, ENVIAR) com ícones e tooltips.
+          {"\n"}- Melhorias UI/UX: ViewerToolbar no topo do Viewer (PROJETO, SALVAR, DESFAZER, REFAZER, IMAGEM, ENVIAR) com ícones e tooltips.
           {"\n"}- Tools3DToolbar: Select, Move, Rotate (Scale, Orbit, Pan preparados); eventos padronizados tool:select, tool:move, etc.
           {"\n"}- Renomeação de caixas: duplo-clique em Calculadora para editar nome; setWorkspaceBoxNome; persistência no ProjectProvider.
           {"\n"}- Secções Tipo de Projeto, Material, Tipo de borda, Tipo de fundo movidas para «Modelos na caixa» com accordion.

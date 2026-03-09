@@ -3,7 +3,6 @@ import type {
   DoorWindowConfig,
   ProjectState,
   RoomConfig,
-  Viewer2DAngle,
   ViewerApi,
   ViewerRenderOptions,
   ViewerRenderResult,
@@ -22,14 +21,6 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
 
   const restoreViewerSnapshot = useCallback((snapshot: ViewerSnapshot | null) => {
     viewerApiRef.current?.restoreSnapshot(snapshot);
-  }, []);
-
-  const enable2DView = useCallback((angle: Viewer2DAngle) => {
-    viewerApiRef.current?.enable2DView(angle);
-  }, []);
-
-  const disable2DView = useCallback(() => {
-    viewerApiRef.current?.disable2DView();
   }, []);
 
   const renderScene = useCallback(
@@ -118,6 +109,12 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
     []
   );
 
+  const subscribeSelectedBoxChange = useCallback(
+    (callback: (id: string | null) => void) =>
+      viewerApiRef.current?.subscribeSelectedBoxChange?.(callback) ?? (() => {}),
+    []
+  );
+
   const setDimensionsOverlayVisible = useCallback((visible: boolean) => {
     viewerApiRef.current?.setDimensionsOverlayVisible(visible);
   }, []);
@@ -144,8 +141,6 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
     registerViewerApi: (api) => {
       viewerApiRef.current = api;
     },
-    enable2DView,
-    disable2DView,
     renderScene,
     setActiveTool,
     setUltraPerformanceMode,
@@ -162,6 +157,7 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
     getLockEnabled,
     getCombinedBoundingBox,
     getSelectedBoxDimensions,
+    subscribeSelectedBoxChange,
     setDimensionsOverlayVisible,
     getDimensionsOverlayVisible,
     getSelectedBoxScreenPosition,

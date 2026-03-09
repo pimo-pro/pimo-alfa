@@ -119,8 +119,8 @@ export const MODULES: ModuleRef[] = [
   { id: "multibox", name: "MultiBoxManager", path: "src/core/multibox/", responsibility: "Sincronizar workspaceBoxes com Viewer via useCalculadoraSync e useCadModelsSync", relatedModules: ["viewer", "workspace", "project-provider"] },
   { id: "viewer", name: "Viewer 3D", path: "src/3d/core/Viewer.ts", responsibility: "Renderização 3D, múltiplos boxes, modelos GLB", relatedModules: ["multibox", "pimo-viewer-context"] },
   { id: "workspace", name: "Workspace", path: "src/components/layout/workspace/Workspace.tsx", responsibility: "Inicializa Viewer, MultiBoxManager, viewerApiAdapter; monta cena principal", relatedModules: ["multibox", "viewer", "viewer-adapter"] },
-  { id: "viewer-adapter", name: "viewerApiAdapter", path: "src/core/viewer/viewerApiAdapter.ts", responsibility: "Adapta PimoViewerApi para ViewerApi (snapshot, 2D, render); stubs documentados", relatedModules: ["viewer-sync", "workspace"] },
-  { id: "viewer-sync", name: "useViewerSync", path: "src/hooks/useViewerSync.ts", responsibility: "Expõe notifyChange e callbacks de snapshot/2D/render ao ProjectContext", relatedModules: ["viewer-adapter", "project-provider"] },
+  { id: "viewer-adapter", name: "viewerApiAdapter", path: "src/core/viewer/viewerApiAdapter.ts", responsibility: "Adapta PimoViewerApi para ViewerApi (snapshot, render); stubs documentados", relatedModules: ["viewer-sync", "workspace"] },
+  { id: "viewer-sync", name: "useViewerSync", path: "src/hooks/useViewerSync.ts", responsibility: "Expõe notifyChange e callbacks de snapshot/render ao ProjectContext", relatedModules: ["viewer-adapter", "project-provider"] },
   { id: "pimo-viewer-context", name: "PimoViewerContext", path: "src/context/PimoViewerContext.tsx", responsibility: "Registo e acesso à API do Viewer (registerViewerApi, viewerApi)", relatedModules: ["viewer", "workspace"] },
   { id: "project-roadmap", name: "ProjectRoadmap", path: "src/core/docs/projectRoadmap.ts", responsibility: "Fases, tarefas e progresso do projeto", relatedModules: ["progresso-resumo"] },
   { id: "progresso-resumo", name: "progressoResumo", path: "src/core/docs/progressoResumo.ts", responsibility: "Tarefas concluídas, em andamento e próximas etapas", relatedModules: ["project-roadmap"] },
@@ -132,7 +132,7 @@ export const DATA_FLOWS: DataFlowRef[] = [
   { id: "flow-2", name: "workspaceBoxes → useCalculadoraSync → viewerApi", from: "ProjectContext.workspaceBoxes", to: "viewerApi.addBox/updateBox/removeBox", description: "Sincronização de boxes paramétricos" },
   { id: "flow-3", name: "workspaceBoxes → useCadModelsSync → viewerApi", from: "ProjectContext.workspaceBoxes", to: "viewerApi.addModelToBox/removeModelFromBox", description: "Sincronização de modelos GLB" },
   { id: "flow-4", name: "UI → actions → ProjectContext", from: "UI (addWorkspaceBox)", to: "ProjectContext.actions", description: "Ações do utilizador disparam atualização de estado" },
-  { id: "flow-5", name: "Workspace → viewerApiAdapter → viewerSync", from: "Workspace", to: "useViewerSync", description: "Registo do adapter para snapshot/2D/render" },
+  { id: "flow-5", name: "Workspace → viewerApiAdapter → viewerSync", from: "Workspace", to: "useViewerSync", description: "Registo do adapter para snapshot/render" },
 ];
 
 /** Estrutura de pastas atualizada (principais) */

@@ -4,7 +4,6 @@ import { Viewer } from "../3d/core/Viewer";
 import type { ViewerOptions } from "../3d/core/Viewer";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import type {
-  Viewer2DAngle,
   ViewerBackgroundMode,
   ViewerMaterialQuality,
   ViewerRenderOptions,
@@ -405,14 +404,6 @@ export const usePimoViewer = (
     viewerRef.current?.restoreSnapshot?.(snapshot);
   }, []);
 
-  const enable2DView = useCallback((angle: Viewer2DAngle) => {
-    viewerRef.current?.enable2DView?.(angle);
-  }, []);
-
-  const disable2DView = useCallback(() => {
-    viewerRef.current?.disable2DView?.();
-  }, []);
-
   const setUltraPerformanceMode = useCallback((active: boolean) => {
     viewerRef.current?.setUltraPerformanceMode?.(active);
   }, []);
@@ -495,6 +486,10 @@ export const usePimoViewer = (
     () => viewerRef.current?.getSelectedBoxDimensions?.() ?? null,
     []
   );
+
+  const subscribeSelectedBoxChange = useCallback((callback: (id: string | null) => void) => {
+    return viewerRef.current?.subscribeSelectedBoxChange(callback) ?? (() => {});
+  }, []);
 
   const setDimensionsOverlayVisible = useCallback((visible: boolean) => {
     viewerRef.current?.setDimensionsOverlayVisible(visible);
@@ -720,8 +715,6 @@ export const usePimoViewer = (
       renderScene,
       saveSnapshot,
       restoreSnapshot,
-      enable2DView,
-      disable2DView,
       setUltraPerformanceMode,
       getUltraPerformanceMode,
       setUltraPerformanceModeOptions,
@@ -740,6 +733,7 @@ export const usePimoViewer = (
       getLockEnabled,
       getCombinedBoundingBox,
       getSelectedBoxDimensions,
+      subscribeSelectedBoxChange,
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
       getSelectedBoxScreenPosition,
@@ -817,8 +811,6 @@ export const usePimoViewer = (
       renderScene,
       saveSnapshot,
       restoreSnapshot,
-      enable2DView,
-      disable2DView,
       setUltraPerformanceMode,
       getUltraPerformanceMode,
       setUltraPerformanceModeOptions,
@@ -837,6 +829,7 @@ export const usePimoViewer = (
       getLockEnabled,
       getCombinedBoundingBox,
       getSelectedBoxDimensions,
+      subscribeSelectedBoxChange,
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
       getSelectedBoxScreenPosition,

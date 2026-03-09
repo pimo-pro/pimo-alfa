@@ -4,7 +4,7 @@
  */
 
 import * as THREE from "three";
-import type { ViewerBoxEntry } from "./types";
+import type { ViewerBoxEntry } from "../types";
 
 export class ViewerBoxManager {
   private readonly boxes = new Map<string, ViewerBoxEntry>();

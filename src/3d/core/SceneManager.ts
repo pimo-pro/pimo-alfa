@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { createGround, createGrid } from "./Environment";
-import type { EnvironmentOptions } from "./Environment";
+import { createGround, createGrid } from "../viewer-engine/environment";
+import type { EnvironmentOptions } from "../viewer-engine/environment";
 
 export type SceneOptions = {
   background?: string;
@@ -26,12 +26,14 @@ export class SceneManager {
     this.scene.add(this.root);
 
     const environment = options.environment ?? {};
-    this.ground = createGround(environment);
-    this.ground.receiveShadow = true;
-    this.scene.add(this.ground);
+    const ground = createGround(environment);
+    ground.receiveShadow = true;
+    this.ground = ground;
+    this.scene.add(ground);
     if (environment.showGrid) {
-      this.grid = createGrid(environment);
-      this.scene.add(this.grid);
+      const grid = createGrid(environment);
+      this.grid = grid;
+      this.scene.add(grid);
     }
   }
 

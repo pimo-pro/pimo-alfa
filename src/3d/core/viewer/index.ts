@@ -1,12 +1,11 @@
 /**
- * Módulos do viewer: BoxManager, RoomManager, SelectionManager, GlbLoader, SnapshotRenderer.
- * O Viewer principal orquestra estes módulos e mantém a API externa estável.
+ * Módulos do viewer: re-exporta do viewer-engine para compatibilidade de imports.
+ * Etapa 4: RoomManager e SelectionManager migrados para viewer-engine.
  */
-
-export { ViewerBoxManager } from "./BoxManager";
-export { ViewerRoomManager } from "./ViewerRoomManager";
-export { ViewerSelectionManager } from "./SelectionManager";
-export { SnapshotRenderer } from "./SnapshotRenderer";
-export { addModelToBox, type GlbLoaderAddOptions } from "./GlbLoader";
-export type { ViewerBoxEntry } from "./types";
-export type { SnapshotRendererHost, CameraState } from "./SnapshotRenderer";
+export { ViewerRoomManager } from "../../viewer-engine/room";
+export { ViewerSelectionManager } from "../../viewer-engine/selection";
+export { ViewerBoxManager } from "../../viewer-engine/box";
+export { SnapshotRenderer } from "../../viewer-engine/snapshot";
+export { addModelToBox, type GlbLoaderAddOptions } from "../../viewer-engine/loader";
+export type { ViewerBoxEntry } from "../../viewer-engine/types";
+export type { SnapshotRendererHost } from "../../viewer-engine/snapshot";

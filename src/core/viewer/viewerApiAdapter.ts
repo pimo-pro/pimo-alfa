@@ -20,7 +20,7 @@ function toolModeToTransformMode(mode: ViewerToolMode): "translate" | "rotate" |
  * Adaptador que converte PimoViewerApi para ViewerApi.
  * Permite que useViewerSync (ProjectContext) utilize o viewer registrado via PimoViewerContext.
  *
- * setTool liga às ferramentas reais do Viewer (setTransformMode). Snapshot/2D/render são stubs.
+ * setTool liga às ferramentas reais do Viewer (setTransformMode). Snapshot/render delegam ao viewer.
  */
 export function createViewerApiAdapter(
   pimoApi: PimoViewerApi | null
@@ -33,14 +33,6 @@ export function createViewerApiAdapter(
 
     restoreSnapshot: (snapshot: ViewerSnapshot | null): void => {
       pimoApi.restoreSnapshot?.(snapshot);
-    },
-
-    enable2DView: (angle: "top" | "front" | "left" | "right"): void => {
-      pimoApi.enable2DView?.(angle);
-    },
-
-    disable2DView: (): void => {
-      pimoApi.disable2DView?.();
     },
 
     renderScene: (options: ViewerRenderOptions): Promise<ViewerRenderResult | null> => {
@@ -116,6 +108,8 @@ export function createViewerApiAdapter(
       return bbox ? { width: bbox.width, height: bbox.height, depth: bbox.depth } : null;
     },
     getSelectedBoxDimensions: () => pimoApi.getSelectedBoxDimensions?.() ?? null,
+    subscribeSelectedBoxChange: (callback: (id: string | null) => void): (() => void) =>
+      pimoApi.subscribeSelectedBoxChange?.(callback) ?? (() => {}),
     setDimensionsOverlayVisible: (visible: boolean): void => {
       pimoApi.setDimensionsOverlayVisible?.(visible);
     },

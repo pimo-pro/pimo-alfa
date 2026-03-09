@@ -31,7 +31,7 @@ export class Lights {
   readonly rimLight: THREE.DirectionalLight;
 
   constructor(scene: THREE.Scene, options: LightsOptions = {}) {
-    // Ambient suave: iluminação base sem “lavar” as cores do MDF
+    // Ambient suave: iluminação base sem "lavar" as cores do MDF
     this.ambient = new THREE.AmbientLight(
       0xffffff,
       options.ambientIntensity ?? 0.4

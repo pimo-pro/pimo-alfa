@@ -32,7 +32,6 @@ const PROJECT_SECTIONS = [
       { label: "Ferramentas de controle (Move, Rotate, Select)", status: "in-progress" },
       { label: "Sistema de materiais PBR (Physically Based Rendering)", status: "in-progress" },
       { label: "Simulação HDRI e iluminação avançada", status: "planned" },
-      { label: "Vistas bidimensionais (2D Views)", status: "completed" },
     ],
   },
   {

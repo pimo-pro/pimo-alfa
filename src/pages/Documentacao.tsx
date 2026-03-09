@@ -97,7 +97,6 @@ export default function Documentacao() {
           {"\n"}- saveViewerSnapshot/restauração do Viewer implementados (estado real).
           {"\n"}- Save/Load agora inclui snapshot do Viewer.
           {"\n"}- Project Manager com lista de projetos, criar/renomear/excluir/carregar.
-          {"\n"}- 2D Viewer com câmera orthographic e seleção de ângulo.
           {"\n"}- Render de imagem com captura estática do ThreeViewer.
           {"\n"}- Aplicação de materiais por partes (madeira, metal, vidro, etc.).
           {"\n"}- materialContext separado em Provider/Hook e utilitários dedicados.
@@ -137,7 +136,6 @@ export default function Documentacao() {
           {"\n"}- Preparar base para snapshots sem alterar a renderização.
           {"\n"}- Persistir o estado real do Viewer sem alterar o visual atual.
           {"\n"}- Permitir gestão completa de projetos locais.
-          {"\n"}- Adicionar visualização 2D sem alterar a lógica da cena.
           {"\n"}- Exportar imagem sem alterar a renderização em tempo real.
           {"\n"}- Melhorar leitura espacial com grid leve e chão PBR.
           {"\n"}- Reduzir o tamanho dos bundles com chunking controlado.
@@ -176,7 +174,6 @@ export default function Documentacao() {
           {"\n"}- Camada de snapshots do Viewer adicionada (placeholder).
           {"\n"}- Snapshot real do Viewer integrado ao Save/Load.
           {"\n"}- Project Manager integrado ao ProjectProvider.
-          {"\n"}- Modo 2D integrado ao ThreeViewer.
           {"\n"}- Render de imagem integrado ao Viewer via API.
           {"\n"}- Contexto de materiais isolado para compatibilidade com fast refresh.
           {"\n\n"}Fluxos atualizados:
@@ -192,13 +189,12 @@ export default function Documentacao() {
           {"\n"}- Itens do Left-Left apenas abrem visualmente o painel esquerdo atual.
           {"\n"}- Itens do Right-Tools Bar disparam ações e modais rápidos.
           {"\n"}- Right-Tools agora estica botões por coluna e ajusta colunas em telas grandes.
-          {"\n"}- Modais de PROJETO/2D/IMAGEM/ENVIAR têm ações reais e placeholders de integração.
+          {"\n"}- Modais de PROJETO/IMAGEM/ENVIAR têm ações reais e placeholders de integração.
           {"\n"}- Undo/Redo atua sobre o estado global do projeto.
           {"\n"}- notifyChange preparado para integração com o ThreeViewer.
           {"\n"}- Undo/Redo dispara restoreViewerSnapshot sem efeitos visuais.
           {"\n"}- Save/Load restaura câmera, objetos e materiais no Viewer.
           {"\n"}- Modal PROJETO permite criar, renomear, excluir e carregar projetos.
-          {"\n"}- Modal 2D permite alternar ângulo e retornar ao modo 3D.
           {"\n"}- Modal IMAGEM permite gerar e baixar a captura da cena.
           {"\n"}- Modal ENVIAR permite selecionar conteúdo e método de envio.
           {"\n"}- Pacote de envio gera JSON composto com snapshots e dados do projeto.

@@ -4,7 +4,7 @@
  */
 
 import type * as THREE from "three";
-import type { ViewerBoxEntry } from "./types";
+import type { ViewerBoxEntry } from "../types";
 
 export interface GlbLoaderAddOptions {
   getEntry: (_boxId: string) => ViewerBoxEntry | undefined;

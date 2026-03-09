@@ -1,5 +1,5 @@
 /**
- * Tipos compartilhados pelos módulos do viewer (BoxManager, SelectionManager, etc.).
+ * Tipos compartilhados pelos módulos do viewer-engine (BoxManager, loader, etc.).
  * Mantém a API externa do Viewer estável.
  */
 

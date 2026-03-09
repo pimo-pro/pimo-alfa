@@ -22,7 +22,7 @@ export const EM_ANDAMENTO: ProgressoItem[] = [
   { id: "ea-1", titulo: "Preparação para integração do configurador 3D com o MultiBoxManager." },
   {
     id: "ea-2",
-    titulo: "Expansão futura do viewer para snapshot, 2D e renderização (stubs documentados).",
+    titulo: "Expansão futura do viewer para snapshot e renderização (stubs documentados).",
   },
 ];
 

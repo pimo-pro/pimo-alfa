@@ -60,7 +60,7 @@ export const painelReferenciaSections: DocSection[] = [
   },
   {
     title: "ViewerToolbar e Tools3DToolbar",
-    description: "Toolbar superior do Viewer com ações (PROJETO, SALVAR, 2D, etc.) e ferramentas 3D (Select, Move, Rotate).",
+    description: "Toolbar superior do Viewer com ações (PROJETO, SALVAR, etc.) e ferramentas 3D (Select, Move, Rotate).",
     internals:
       "ViewerToolbar: ícones pequenos com tooltips; aciona viewerApiAdapter via ToolbarModalContext. " +
       "Tools3DToolbar: emite tool:select, tool:move, tool:rotate (Scale, Orbit, Pan preparados). " +
@@ -164,7 +164,7 @@ export const painelReferenciaSections: DocSection[] = [
   {
     title: "Viewer Sync e viewerApiAdapter",
     description: "Fluxo de sincronização Viewer ↔ ProjectContext.",
-    internals: "useViewerSync, createViewerApiAdapter; snapshot/2D/render com stubs.",
+    internals: "useViewerSync, createViewerApiAdapter; snapshot/render com stubs.",
     files: ["src/hooks/useViewerSync.ts", "src/core/viewer/viewerApiAdapter.ts", "src/components/layout/workspace/Workspace.tsx"],
     interactions: "Workspace regista adapter em viewerSync e PimoViewerContext.",
   },

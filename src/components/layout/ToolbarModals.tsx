@@ -35,7 +35,7 @@ const defaultSendSelections: SendSelections = {
 };
 
 /**
- * Renderiza os modais abertos pela ViewerToolbar (Projetos, 2D, Enviar, etc.).
+ * Renderiza os modais abertos pela ViewerToolbar (Projetos, Enviar, etc.).
  * Mantido após remoção do painel direito para que os botões da toolbar continuem a funcionar.
  */
 export default function ToolbarModals() {
@@ -53,7 +53,6 @@ export default function ToolbarModals() {
   const [showPiece3DModal, setShowPiece3DModal] = useState(false);
   const modalTitle = useMemo(() => {
     if (modal === "projects") return "Projetos salvos";
-    if (modal === "2d") return "2D Viewer";
     if (modal === "send") return "Enviar";
     if (modal === "integration") return "Integração";
     return "";
@@ -322,29 +321,6 @@ export default function ToolbarModals() {
                     </div>
                   ))
                 )}
-              </div>
-            ) : modal === "2d" ? (
-              <div className="modal-list">
-                <div className="modal-list-item">
-                  <div className="modal-list-title">Selecionar ângulo</div>
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" className="modal-action" onClick={() => {}}>
-                    Top
-                  </button>
-                  <button type="button" className="modal-action" onClick={() => {}}>
-                    Front
-                  </button>
-                  <button type="button" className="modal-action" onClick={() => {}}>
-                    Left
-                  </button>
-                  <button type="button" className="modal-action" onClick={() => {}}>
-                    Right
-                  </button>
-                </div>
-                <button type="button" className="modal-close" onClick={() => {}}>
-                  Voltar ao 3D
-                </button>
               </div>
             ) : modal === "send" ? (
               <div className="modal-list">

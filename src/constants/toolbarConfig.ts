@@ -13,7 +13,6 @@ export type ToolbarActionId =
   | "salvar"
   | "desfazer"
   | "refazer"
-  | "2d"
   | "imagem"
   | "enviar";
 
@@ -30,7 +29,6 @@ export const VIEWER_TOOLBAR_ITEMS: Array<{
   { id: "salvar", label: "SALVAR", icon: "S", tooltip: "Guardar snapshot" },
   { id: "desfazer", label: "DESFAZER", icon: "⟲", tooltip: "Desfazer" },
   { id: "refazer", label: "REFAZER", icon: "⟳", tooltip: "Refazer" },
-  { id: "2d", label: "2D", icon: "2D", tooltip: "Vista 2D" },
   { id: "imagem", label: "PHOTO", icon: "📷", tooltip: "Photo Mode" },
   { id: "reset-camera", label: "RESET", icon: "⌖", tooltip: "Reset Camera – Vista frontal centralizada" },
   { id: "enviar", label: "ENVIAR", icon: "↗", tooltip: "Enviar pacote" },

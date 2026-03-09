@@ -249,7 +249,7 @@ export default function Workspace({
     viewerSyncRef.current.setActiveTool(mode);
   }, [project.activeViewerTool]);
 
-  const [lockEnabled, setLockEnabledState] = useState(false);
+  const [lockEnabled, setLockEnabledState] = useState(true);
   const [mouseMenuPosition, setMouseMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const handleToolSelect = useCallback((toolId: string) => {
     if (toolId === "select" || toolId === "move" || toolId === "rotate") {

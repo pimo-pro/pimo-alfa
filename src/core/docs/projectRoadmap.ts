@@ -374,8 +374,8 @@ const basePhases: Phase[] = [
       },
       {
         id: "phase5_task_viewer_stubs",
-        title: "Expansão viewer: snapshot, 2D e renderização",
-        description: "Implementar stubs documentados no viewerApiAdapter (snapshot, vistas 2D, render).",
+        title: "Expansão viewer: snapshot e renderização",
+        description: "Implementar stubs documentados no viewerApiAdapter (snapshot, render).",
         status: "in_progress",
       },
     ],

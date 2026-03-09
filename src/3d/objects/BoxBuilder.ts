@@ -287,6 +287,25 @@ function getDoorSpecFingerprint(spec: DoorSpec): string {
   });
 }
 
+/** Fingerprint do spec da gaveta para detectar alterações (ex.: isOpen); quando muda, recriamos só essa gaveta. */
+const DRAWER_SPEC_FINGERPRINT_KEY = "drawerSpecFingerprint";
+
+function getDrawerSpecFingerprint(spec: DrawerSpec): string {
+  return JSON.stringify({
+    id: spec.id,
+    widthM: spec.widthM,
+    heightM: spec.heightM,
+    depthM: spec.depthM,
+    frontThicknessM: spec.frontThicknessM,
+    x: spec.x,
+    y: spec.y,
+    z: spec.z,
+    rotY: spec.rotY,
+    isOpen: spec.isOpen,
+    pullDistanceM: spec.pullDistanceM,
+  });
+}
+
 /**
  * Converte DrawerLayerItem[] para DrawerSpec[] (formato Three.js)
  * 
@@ -1109,12 +1128,17 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     lateral_direita: [],
     porta: [],
   };
+  const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
+  const hasDrawers = (opts.drawerLayerItems?.length ?? 0) > 0;
+  const useLateralShelfHoles = shelfCount > 0 && !hasDrawers;
+  const lateralLeftHoles = useLateralShelfHoles ? drillMap.lateral_esquerda : [];
+  const lateralRightHoles = useLateralShelfHoles ? drillMap.lateral_direita : [];
+
   applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
   applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
-  applyDrillHolesToPanelGeometry(panels.left, "left", drillMap.lateral_esquerda);
-  applyDrillHolesToPanelGeometry(panels.right, "right", drillMap.lateral_direita);
+  applyDrillHolesToPanelGeometry(panels.left, "left", lateralLeftHoles);
+  applyDrillHolesToPanelGeometry(panels.right, "right", lateralRightHoles);
 
-  const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   if (shelfCount > 0) {
     const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
     const shelfMat = baseMaterial;
@@ -1304,6 +1328,11 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     lateral_direita: [],
     porta: [],
   };
+  const shelfCountForDrill = Math.max(0, Math.floor(opts.shelves ?? 0));
+  const hasDrawersForDrill = (opts.drawerLayerItems?.length ?? 0) > 0;
+  const useLateralShelfHoles = shelfCountForDrill > 0 && !hasDrawersForDrill;
+  const lateralLeftHoles = useLateralShelfHoles ? drillMap.lateral_esquerda : [];
+  const lateralRightHoles = useLateralShelfHoles ? drillMap.lateral_direita : [];
 
   // 1) Painéis estruturais: só atualizar geometria/posição quando as dimensões mudaram
   if (!dimensionsUnchanged) {
@@ -1330,10 +1359,32 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
   const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
   const rightPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "right") as THREE.Mesh | undefined;
+
+  if (!useLateralShelfHoles) {
+    if (leftPanel) {
+      const leftSpec = specs.left;
+      updatePanelGeometry(leftPanel, leftSpec.size[0], leftSpec.size[1], leftSpec.size[2]);
+      leftPanel.position.set(leftSpec.pos[0], leftSpec.pos[1], leftSpec.pos[2]);
+      leftPanel.rotation.y = 0;
+      leftPanel.rotation.z = 0;
+      delete (leftPanel.userData as Record<string, unknown>).explodedBasePosition;
+      leftPanel.updateMatrix();
+    }
+    if (rightPanel) {
+      const rightSpec = specs.right;
+      updatePanelGeometry(rightPanel, rightSpec.size[0], rightSpec.size[1], rightSpec.size[2]);
+      rightPanel.position.set(rightSpec.pos[0], rightSpec.pos[1], rightSpec.pos[2]);
+      rightPanel.rotation.y = Math.PI;
+      rightPanel.rotation.z = Math.PI;
+      delete (rightPanel.userData as Record<string, unknown>).explodedBasePosition;
+      rightPanel.updateMatrix();
+    }
+  }
+
   if (topPanel) applyDrillHolesToPanelGeometry(topPanel, "top", drillMap.cima);
   if (bottomPanel) applyDrillHolesToPanelGeometry(bottomPanel, "bottom", drillMap.fundo);
-  if (leftPanel) applyDrillHolesToPanelGeometry(leftPanel, "left", drillMap.lateral_esquerda);
-  if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", drillMap.lateral_direita);
+  if (leftPanel) applyDrillHolesToPanelGeometry(leftPanel, "left", lateralLeftHoles);
+  if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", lateralRightHoles);
 
   // 2) Incremental: portas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa porta
   const doorFpKey = DOOR_SPEC_FINGERPRINT_KEY;
@@ -1362,7 +1413,8 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     group.add(newDoor);
   });
 
-  // 3) Incremental: gavetas — remover só as que já não são necessárias; adicionar só as que faltam
+  // 3) Incremental: gavetas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa gaveta
+  const drawerFpKey = DRAWER_SPEC_FINGERPRINT_KEY;
   const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
   const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
   const existingDrawerNames = group.children
@@ -1375,10 +1427,17 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
       if (obj) group.remove(obj);
     }
   }
-  const existingDrawerIds = new Set(existingDrawerNames.map((n) => n.replace("drawer-layer-", "")));
   drawerSpecs.forEach((spec) => {
-    if (existingDrawerIds.has(spec.id)) return;
-    group.add(createDrawerObject(spec, mat as THREE.Material));
+    const newFingerprint = getDrawerSpecFingerprint(spec);
+    const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
+    if (existingDrawer) {
+      const storedFingerprint = existingDrawer.userData[drawerFpKey] as string | undefined;
+      if (storedFingerprint === newFingerprint) return;
+      group.remove(existingDrawer);
+    }
+    const newDrawer = createDrawerObject(spec, mat as THREE.Material);
+    (newDrawer.userData as Record<string, unknown>)[drawerFpKey] = newFingerprint;
+    group.add(newDrawer);
   });
 
   // 4) Prateleiras: quantidade fixa por índice; remover em excesso e adicionar em falta

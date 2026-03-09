@@ -1,0 +1,5 @@
+/**
+ * Módulo de ferramentas do Viewer Engine (TransformControls, outline, move/rotate).
+ */
+export { ViewerTools } from "./ViewerTools";
+export type { IViewerToolsEngine } from "./ToolsEngineTypes";

@@ -40,7 +40,7 @@ const toolbarButtonStyle = {
 export default function Tools3DToolbar({
   activeTool = "select",
   onToolSelect,
-  lockEnabled = false,
+  lockEnabled = true,
   onToggleLock,
 }: Tools3DToolbarProps) {
   const { project, actions } = useProject();

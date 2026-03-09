@@ -153,8 +153,6 @@ export type ViewerSnapshot = {
   };
 };
 
-export type Viewer2DAngle = "top" | "front" | "left" | "right";
-
 export type ViewerRenderSize = "small" | "medium" | "large" | "4k";
 
 export type ViewerRenderBackground = "white" | "transparent" | "hdri" | "project-transparent";
@@ -218,8 +216,6 @@ export type DoorWindowConfig = {
 export type ViewerApi = {
   saveSnapshot: () => ViewerSnapshot | null;
   restoreSnapshot: (_snapshot: ViewerSnapshot | null) => void;
-  enable2DView: (_angle: Viewer2DAngle) => void;
-  disable2DView: () => void;
   renderScene: (_options: ViewerRenderOptions) => Promise<ViewerRenderResult | null>;
   /** Define a ferramenta ativa no Viewer (select = sem gizmo, move = translate, rotate = rotate). */
   setTool: (_mode: ViewerToolMode) => void;
@@ -243,6 +239,8 @@ export type ViewerApi = {
   getLockEnabled: () => boolean;
   getCombinedBoundingBox: () => { width: number; height: number; depth: number } | null;
   getSelectedBoxDimensions: () => { width: number; height: number; depth: number } | null;
+  /** Subscreve alterações da caixa selecionada (seleção ou updateBox na caixa selecionada). Retorna função para cancelar. */
+  subscribeSelectedBoxChange?: (_callback: (_id: string | null) => void) => () => void;
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */
@@ -290,8 +288,6 @@ export type ViewerSync = {
   saveViewerSnapshot: () => ViewerSnapshot | null;
   restoreViewerSnapshot: (_snapshot: ViewerSnapshot | null) => void;
   registerViewerApi: (_api: ViewerApi | null) => void;
-  enable2DView: (_angle: Viewer2DAngle) => void;
-  disable2DView: () => void;
   renderScene: (_options: ViewerRenderOptions) => Promise<ViewerRenderResult | null>;
   /** Define a ferramenta 3D ativa (select, move, rotate); aplica à caixa selecionada. */
   setActiveTool: (_mode: ViewerToolMode) => void;
@@ -313,6 +309,7 @@ export type ViewerSync = {
   getLockEnabled: () => boolean;
   getCombinedBoundingBox: () => { width: number; height: number; depth: number } | null;
   getSelectedBoxDimensions: () => { width: number; height: number; depth: number } | null;
+  subscribeSelectedBoxChange?: (_callback: (_id: string | null) => void) => () => void;
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
   getSelectedBoxScreenPosition: () => { x: number; y: number } | null;

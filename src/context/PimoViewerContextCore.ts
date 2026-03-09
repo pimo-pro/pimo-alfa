@@ -4,7 +4,6 @@ import type {
   DoorWindowConfig,
   RoomConfig,
   UltraPerformanceModeOptions,
-  Viewer2DAngle,
   ViewerMaterialQuality,
   ViewerMousePreset,
   ViewerBackgroundMode,
@@ -44,8 +43,6 @@ export type PimoViewerApi = {
   renderScene?: (_options: ViewerRenderOptions) => Promise<ViewerRenderResult | null>;
   saveSnapshot?: () => ViewerSnapshot | null;
   restoreSnapshot?: (_snapshot: ViewerSnapshot | null) => void;
-  enable2DView?: (_angle: Viewer2DAngle) => void;
-  disable2DView?: () => void;
   setUltraPerformanceMode?: (_active: boolean) => void;
   getUltraPerformanceMode?: () => boolean;
   setUltraPerformanceModeOptions?: (_options: UltraPerformanceModeOptions) => void;
@@ -81,6 +78,8 @@ export type PimoViewerApi = {
   getLockEnabled?: () => boolean;
   getCombinedBoundingBox?: () => { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; width: number; height: number; depth: number } | null;
   getSelectedBoxDimensions?: () => { width: number; height: number; depth: number } | null;
+  /** Subscreve alterações da caixa selecionada (seleção ou updateBox na caixa selecionada). Retorna função para cancelar. */
+  subscribeSelectedBoxChange?: (_callback: (_id: string | null) => void) => () => void;
   setDimensionsOverlayVisible?: (_visible: boolean) => void;
   getDimensionsOverlayVisible?: () => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */

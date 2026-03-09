@@ -8,6 +8,7 @@ import { useProject } from "../../../context/useProject";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import { VIEWER_TOOLBAR_ITEMS } from "../../../constants/toolbarConfig";
+import { clearPimoStorage } from "../../../core/persistence/storageKeys";
 import type { ToolbarActionId } from "../../../constants/toolbarConfig";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
@@ -67,7 +68,7 @@ export default function ViewerToolbar() {
       return;
     }
     if (id === "novo") {
-      localStorage.clear();
+      clearPimoStorage();
       window.location.reload();
       return;
     }
@@ -81,10 +82,6 @@ export default function ViewerToolbar() {
     }
     if (id === "refazer") {
       actions.redo();
-      return;
-    }
-    if (id === "2d") {
-      openModal("2d");
       return;
     }
     if (id === "enviar") {
