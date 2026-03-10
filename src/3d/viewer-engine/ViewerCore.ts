@@ -825,11 +825,14 @@ export class ViewerCore {
     if (entry.mesh instanceof THREE.Group) {
       entry.mesh.traverse((child) => {
         if (child instanceof THREE.Mesh) {
+          if (this.isKitchenFeetNode(child)) return;
           child.material = nextMaterial.material;
         }
       });
     } else if (entry.mesh instanceof THREE.Mesh) {
-      entry.mesh.material = nextMaterial.material;
+      if (!this.isKitchenFeetNode(entry.mesh)) {
+        entry.mesh.material = nextMaterial.material;
+      }
     }
 
     if (this.viewerState.getSelectedBox() === id) {
@@ -843,6 +846,17 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === id) {
       this.refreshOutlineTarget();
     }
+  }
+
+  private isKitchenFeetNode(node: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = node;
+    while (current) {
+      if (current.userData?.isKitchenFeet === true || current.name === "kitchen-feet-group") {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
   }
 
   /** Reaplica materiais a todas as caixas (ao trocar modo performance/showcase/realistic). */
@@ -2982,12 +2996,12 @@ export class ViewerCore {
     const baseRadius = 0.03;
 
     const metalMat = new THREE.MeshStandardMaterial({
-      color: 0x9ca3af,
+      color: 0x000000,
       roughness: 0.32,
       metalness: 0.82,
     });
     const baseMat = new THREE.MeshStandardMaterial({
-      color: 0x1f2937,
+      color: 0x000000,
       roughness: 0.85,
       metalness: 0.1,
     });
