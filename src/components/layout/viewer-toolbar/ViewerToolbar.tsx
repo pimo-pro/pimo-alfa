@@ -225,9 +225,8 @@ export default function ViewerToolbar() {
           onClick={() => actions.gerarDesign()}
           disabled={project.estaCarregando}
           style={{
-            background: project.estaCarregando
-              ? "rgba(59, 130, 246, 0.5)"
-              : "var(--blue-light)",
+            background: "var(--blue-light)",
+            opacity: project.estaCarregando ? 0.7 : 1,
             cursor: project.estaCarregando ? "not-allowed" : "pointer",
           }}
         >

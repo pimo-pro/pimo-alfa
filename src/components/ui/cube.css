@@ -29,7 +29,7 @@
 
 .face.front {
   background: color-mix(in srgb, var(--cube-color, #87CEEB) 20%, transparent);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--cube-face-border, var(--border));
   opacity: 0.24;
 }
 
@@ -37,7 +37,7 @@
   position: absolute;
   width: 90px;
   height: 26px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--cube-shadow);
   filter: blur(26px);
   border-radius: 999px;
   bottom: 6px;

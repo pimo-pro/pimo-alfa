@@ -1,16 +1,4 @@
 :root {
-  --black: #0b0f17;
-  --navy: #0f172a;
-  --blue-dark: #1e293b;
-  --blue-mid: #273d63;
-  --blue-light: #3b82f6;
-
-  --glass: rgba(255,255,255,0.06);
-  --border: rgba(255,255,255,0.12);
-
-  --text-main: #e2e8f0;
-  --text-muted: #94a3b8;
-
   --radius: 6px;
 
   /* Espaçamento unificado: toolbars e painéis */
@@ -18,6 +6,208 @@
   --space-toolbar-padding-y: 6px;
   --space-toolbar-padding-x: 10px;
   --size-toolbar-icon: 28px;
+}
+
+/* ========== TEMA ESCURO (padrão) ========== */
+.theme-dark {
+  --black: #0b0f17;
+  --navy: #0f172a;
+  --blue-dark: #1e293b;
+  --blue-mid: #273d63;
+  --blue-light: #3b82f6;
+  --glass: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.12);
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --primary: #38bdf8;
+
+  --bg-toolbar: rgba(15, 23, 42, 0.92);
+  --border-toolbar: rgba(255, 255, 255, 0.06);
+  --bg-item-hover: rgba(255, 255, 255, 0.07);
+  --border-item-hover: rgba(255, 255, 255, 0.1);
+  --bg-selected: rgba(56, 189, 248, 0.08);
+  --border-selected: rgba(56, 189, 248, 0.35);
+  --bg-selected-icon: rgba(56, 189, 248, 0.15);
+  --bg-icon: rgba(255, 255, 255, 0.05);
+  --border-icon: rgba(255, 255, 255, 0.12);
+  --bg-icon-hover: rgba(255, 255, 255, 0.08);
+  --border-icon-hover: rgba(255, 255, 255, 0.18);
+  --overlay-backdrop: rgba(2, 6, 23, 0.65);
+  --modal-bg: rgba(15, 23, 42, 0.98);
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --modal-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --btn-ghost-bg: rgba(255, 255, 255, 0.06);
+  --btn-ghost-border: rgba(255, 255, 255, 0.12);
+  --list-item-bg: rgba(255, 255, 255, 0.03);
+  --list-item-border: rgba(255, 255, 255, 0.08);
+  --panel-footer-bg: rgba(15, 23, 42, 0.6);
+  --panel-footer-border: rgba(255, 255, 255, 0.08);
+  --divider: rgba(255,255,255,0.06);
+  --card-bg: rgba(255,255,255,0.03);
+  --card-border: rgba(255,255,255,0.06);
+  --input-bg: rgba(255,255,255,0.05);
+  --input-border: rgba(255,255,255,0.12);
+  --button-ghost-bg: rgba(255,255,255,0.04);
+  --button-ghost-border: rgba(255,255,255,0.08);
+  --button-ghost-hover: rgba(255,255,255,0.12);
+  --panel-left-bg: rgba(15,23,42,0.96);
+  --panel-left-shadow: 1px 0 0 rgba(255, 255, 255, 0.04);
+  --workspace-gradient-start: #1e293b;
+  --workspace-gradient-end: #0b0f17;
+  --toolbar-border: rgba(255, 255, 255, 0.08);
+  --viewer-toolbar-bg: rgba(15, 23, 42, 0.85);
+  --viewer-toolbar-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  --viewer-toolbar-inset: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  --viewer-toolbar-icon: #f1f5f9;
+  --viewer-toolbar-hover-bg: rgba(255, 255, 255, 0.08);
+  --popover-bg: rgba(15, 23, 42, 0.98);
+  --popover-border: rgba(255, 255, 255, 0.12);
+  --popover-shadow: 0 18px 40px rgba(2, 6, 23, 0.5);
+  --scrollbar-track: rgba(255, 255, 255, 0.04);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --toolbar-pressed-bg: rgba(56, 189, 248, 0.2);
+  --toolbar-pressed-ring: rgba(56, 189, 248, 0.5);
+  --focus-ring: rgba(255, 255, 255, 0.3);
+  --piece-toolbar-bg: rgba(15, 23, 42, 0.75);
+  --loading-overlay: rgba(2, 6, 23, 0.3);
+  --spinner-border: rgba(255, 255, 255, 0.35);
+  --spinner-top: rgba(255, 255, 255, 0.95);
+  --door-drawer-bg: rgba(30, 41, 59, 0.45);
+  --door-drawer-border: rgba(148, 163, 184, 0.5);
+  --door-drawer-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  --door-drawer-accent: rgba(56, 189, 248, 0.55);
+  --door-drawer-open: rgba(56, 189, 248, 0.15);
+  --snapline: rgba(59,130,246,0.5);
+  --drag-outline: rgba(59,130,246,0.6);
+  --workspace-footer-bg: rgba(8,12,22,0.85);
+  --workspace-footer-border: rgba(255,255,255,0.06);
+  --bottom-panel-bg: rgba(15, 23, 42, 0.98);
+  --roadmap-row-bg: rgba(255,255,255,0.02);
+  --roadmap-row-border: rgba(255,255,255,0.06);
+  --roadmap-header-bg: rgba(255,255,255,0.06);
+  --stat-card-bg: rgba(255,255,255,0.04);
+  --stat-card-border: rgba(255,255,255,0.08);
+  --progress-track-bg: rgba(255,255,255,0.08);
+  --timeline-item-bg: rgba(255,255,255,0.03);
+  --timeline-item-border: rgba(255,255,255,0.08);
+  --task-row-bg: rgba(255,255,255,0.03);
+  --task-row-border: rgba(255,255,255,0.08);
+  --texture-preview-border: rgba(255,255,255,0.08);
+  --status-todo-bg: rgba(148, 163, 184, 0.15);
+  --status-todo-color: #94a3b8;
+  --status-todo-border: rgba(148, 163, 184, 0.35);
+  --status-progress-bg: rgba(234, 179, 8, 0.15);
+  --status-progress-color: #facc15;
+  --status-progress-border: rgba(234, 179, 8, 0.4);
+  --status-done-bg: rgba(34, 197, 94, 0.18);
+  --status-done-color: #4ade80;
+  --status-done-border: rgba(34, 197, 94, 0.45);
+  --accent-button-bg: rgba(59,130,246,0.2);
+  --accent-button-border: rgba(59,130,246,0.4);
+  --panel-resizer-hover: rgba(59,130,246,0.2);
+  --cube-face-border: rgba(255, 255, 255, 0.12);
+  --cube-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ========== TEMA CLARO (invertido) ========== */
+.theme-light {
+  --black: #f8fafc;
+  --navy: #f1f5f9;
+  --blue-dark: #e2e8f0;
+  --blue-mid: #cbd5e1;
+  --blue-light: #2563eb;
+  --glass: rgba(0,0,0,0.06);
+  --border: rgba(0,0,0,0.12);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --primary: #2563eb;
+
+  --bg-toolbar: rgba(241, 245, 249, 0.98);
+  --border-toolbar: rgba(0, 0, 0, 0.06);
+  --bg-item-hover: rgba(0, 0, 0, 0.07);
+  --border-item-hover: rgba(0, 0, 0, 0.1);
+  --bg-selected: rgba(59, 130, 246, 0.15);
+  --border-selected: rgba(59, 130, 246, 0.4);
+  --bg-selected-icon: rgba(59, 130, 246, 0.25);
+  --bg-icon: rgba(0, 0, 0, 0.05);
+  --border-icon: rgba(0, 0, 0, 0.12);
+  --bg-icon-hover: rgba(0, 0, 0, 0.08);
+  --border-icon-hover: rgba(0, 0, 0, 0.18);
+  --overlay-backdrop: rgba(0, 0, 0, 0.4);
+  --modal-bg: rgba(255, 255, 255, 0.98);
+  --modal-border: rgba(0, 0, 0, 0.1);
+  --modal-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+  --btn-ghost-bg: rgba(0, 0, 0, 0.06);
+  --btn-ghost-border: rgba(0, 0, 0, 0.12);
+  --list-item-bg: rgba(0, 0, 0, 0.03);
+  --list-item-border: rgba(0, 0, 0, 0.08);
+  --panel-footer-bg: rgba(241, 245, 249, 0.8);
+  --panel-footer-border: rgba(0, 0, 0, 0.08);
+  --divider: rgba(0,0,0,0.06);
+  --card-bg: rgba(0,0,0,0.03);
+  --card-border: rgba(0,0,0,0.06);
+  --input-bg: rgba(0,0,0,0.05);
+  --input-border: rgba(0,0,0,0.12);
+  --button-ghost-bg: rgba(0,0,0,0.04);
+  --button-ghost-border: rgba(0,0,0,0.08);
+  --button-ghost-hover: rgba(0,0,0,0.12);
+  --panel-left-bg: rgba(241, 245, 249, 0.98);
+  --panel-left-shadow: 1px 0 0 rgba(0, 0, 0, 0.04);
+  --workspace-gradient-start: #e2e8f0;
+  --workspace-gradient-end: #f1f5f9;
+  --toolbar-border: rgba(0, 0, 0, 0.08);
+  --viewer-toolbar-bg: rgba(255, 255, 255, 0.9);
+  --viewer-toolbar-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  --viewer-toolbar-inset: inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  --viewer-toolbar-icon: #0f172a;
+  --viewer-toolbar-hover-bg: rgba(0, 0, 0, 0.08);
+  --popover-bg: rgba(255, 255, 255, 0.98);
+  --popover-border: rgba(0, 0, 0, 0.12);
+  --popover-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  --scrollbar-track: rgba(0, 0, 0, 0.04);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --toolbar-pressed-bg: rgba(59, 130, 246, 0.2);
+  --toolbar-pressed-ring: rgba(59, 130, 246, 0.5);
+  --focus-ring: rgba(0, 0, 0, 0.4);
+  --piece-toolbar-bg: rgba(255, 255, 255, 0.9);
+  --loading-overlay: rgba(255, 255, 255, 0.5);
+  --spinner-border: rgba(0, 0, 0, 0.2);
+  --spinner-top: rgba(0, 0, 0, 0.8);
+  --door-drawer-bg: rgba(255, 255, 255, 0.7);
+  --door-drawer-border: rgba(100, 116, 139, 0.5);
+  --door-drawer-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  --door-drawer-accent: rgba(37, 99, 235, 0.6);
+  --door-drawer-open: rgba(59, 130, 246, 0.2);
+  --snapline: rgba(59,130,246,0.5);
+  --drag-outline: rgba(59,130,246,0.6);
+  --workspace-footer-bg: rgba(241, 245, 249, 0.95);
+  --workspace-footer-border: rgba(0,0,0,0.06);
+  --bottom-panel-bg: rgba(255, 255, 255, 0.98);
+  --roadmap-row-bg: rgba(0,0,0,0.02);
+  --roadmap-row-border: rgba(0,0,0,0.06);
+  --roadmap-header-bg: rgba(0,0,0,0.06);
+  --stat-card-bg: rgba(0,0,0,0.03);
+  --stat-card-border: rgba(0,0,0,0.08);
+  --progress-track-bg: rgba(0,0,0,0.08);
+  --timeline-item-bg: rgba(0,0,0,0.03);
+  --timeline-item-border: rgba(0,0,0,0.08);
+  --task-row-bg: rgba(0,0,0,0.03);
+  --task-row-border: rgba(0,0,0,0.08);
+  --texture-preview-border: rgba(0,0,0,0.08);
+  --status-todo-bg: rgba(148, 163, 184, 0.2);
+  --status-todo-color: #64748b;
+  --status-todo-border: rgba(148, 163, 184, 0.4);
+  --status-progress-bg: rgba(234, 179, 8, 0.2);
+  --status-progress-color: #ca8a04;
+  --status-progress-border: rgba(234, 179, 8, 0.5);
+  --status-done-bg: rgba(34, 197, 94, 0.2);
+  --status-done-color: #16a34a;
+  --status-done-border: rgba(34, 197, 94, 0.5);
+  --accent-button-bg: rgba(59,130,246,0.2);
+  --accent-button-border: rgba(59,130,246,0.5);
+  --panel-resizer-hover: rgba(59,130,246,0.25);
+  --cube-face-border: rgba(0, 0, 0, 0.12);
+  --cube-shadow: rgba(0, 0, 0, 0.15);
 }
 
 /* Layout fixo: sem scroll global; cada área com scroll interno */
@@ -88,8 +278,8 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  background: rgba(15, 23, 42, 0.92);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-toolbar);
+  border-right: 1px solid var(--border-toolbar);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -117,41 +307,41 @@ body {
 }
 
 .left-toolbar-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--bg-item-hover);
+  border-color: var(--border-item-hover);
 }
 
 .left-toolbar-item--selected {
-  background: rgba(56, 189, 248, 0.08);
-  border-color: rgba(56, 189, 248, 0.35);
-  color: var(--primary, #38bdf8);
+  background: var(--bg-selected);
+  border-color: var(--border-selected);
+  color: var(--primary);
 }
 
 .left-toolbar-item--selected .left-toolbar-icon {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: rgba(56, 189, 248, 0.35);
-  color: var(--primary, #38bdf8);
+  background: var(--bg-selected-icon);
+  border-color: var(--border-selected);
+  color: var(--primary);
 }
 
 .left-toolbar-icon {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-icon);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-icon);
   color: var(--text-main);
   backdrop-filter: blur(4px);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .left-toolbar-item:hover .left-toolbar-icon {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--bg-icon-hover);
+  border-color: var(--border-icon-hover);
 }
 
 .left-toolbar-label {
@@ -166,13 +356,13 @@ body {
 }
 
 .left-toolbar-item--selected .left-toolbar-label {
-  color: var(--primary, #38bdf8);
+  color: var(--primary);
 }
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.65);
+  background: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -182,11 +372,11 @@ body {
 .modal-card {
   width: 440px;
   max-width: 90vw;
-  background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
   border-radius: 14px;
   padding: 16px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--modal-shadow);
 }
 
 .modal-header {
@@ -204,8 +394,8 @@ body {
 
 .modal-close {
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-icon);
+  background: var(--btn-ghost-bg);
   color: var(--text-main);
   font-size: 12px;
   padding: 6px 10px;
@@ -224,8 +414,8 @@ body {
   justify-content: space-between;
   gap: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--list-item-border);
+  background: var(--list-item-bg);
   padding: 10px 12px;
 }
 
@@ -243,8 +433,8 @@ body {
 
 .modal-action {
   border-radius: 8px;
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid var(--accent-button-border);
+  background: var(--accent-button-bg);
   color: var(--text-main);
   font-size: 12px;
   padding: 6px 10px;
@@ -319,8 +509,8 @@ body {
 .left-panel-footer {
   flex-shrink: 0;
   padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 23, 42, 0.6);
+  border-top: 1px solid var(--panel-footer-border);
+  background: var(--panel-footer-bg);
 }
 
 .panel-shell--bottom {
@@ -365,7 +555,7 @@ body {
 
 .panel-divider {
   height: 1px;
-  background: rgba(255,255,255,0.06);
+  background: var(--divider);
 }
 
 .muted-text {
@@ -389,8 +579,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius);
   padding: 8px 10px;
   font-size: 12px;
@@ -402,8 +592,8 @@ body {
 
 .input {
   width: 100%;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   color: var(--text-main);
   padding: 8px 10px;
   border-radius: var(--radius);
@@ -432,8 +622,8 @@ body {
 }
 
 .button {
-  background: rgba(59,130,246,0.2);
-  border: 1px solid rgba(59,130,246,0.4);
+  background: var(--accent-button-bg);
+  border: 1px solid var(--accent-button-border);
   color: var(--text-main);
   padding: 8px 12px;
   border-radius: var(--radius);
@@ -442,12 +632,12 @@ body {
 }
 
 .button-ghost {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--button-ghost-bg);
+  border: 1px solid var(--button-ghost-border);
 }
 
 .button-ghost:hover {
-  background: rgba(255,255,255,0.12);
+  background: var(--button-ghost-hover);
 }
 
 .button-primary {
@@ -506,13 +696,13 @@ body {
 }
 
 .panel-resizer:hover {
-  background: rgba(59,130,246,0.2);
+  background: var(--panel-resizer-hover);
 }
 
 .panel-shell-left {
-  background: rgba(15,23,42,0.96);
+  background: var(--panel-left-bg);
   border-right: 1px solid var(--border);
-  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04);
+  box-shadow: var(--panel-left-shadow);
 }
 
 .design-panel-header {
@@ -542,8 +732,8 @@ body {
 
 .panel-button {
   width: 100%;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--button-ghost-bg);
+  border: 1px solid var(--button-ghost-border);
   color: var(--text-main);
   padding: 6px 8px;
   border-radius: var(--radius);
@@ -590,7 +780,7 @@ body {
   flex: 1 1 0;
   min-width: 0;
   min-height: 0;
-  background: radial-gradient(circle at top, #1e293b, #0b0f17 60%);
+  background: radial-gradient(circle at top, var(--workspace-gradient-start), var(--workspace-gradient-end) 60%);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -611,7 +801,7 @@ body {
   flex-shrink: 0;
   position: relative;
   z-index: 2;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: var(--viewer-toolbar-shadow);
 }
 
 /* ViewerToolbar: ícones com cor clara visível no fundo escuro */
@@ -620,15 +810,17 @@ body {
   align-items: center;
   gap: var(--space-toolbar-gap);
   padding: var(--space-toolbar-padding-y) var(--space-toolbar-padding-x);
-  background: rgba(15, 23, 42, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--viewer-toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
 }
 .tools-3d-toolbar {
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  background: var(--viewer-toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
+  box-shadow: var(--viewer-toolbar-inset);
 }
 
 .viewer-toolbar .viewer-toolbar-icon {
-  color: #f1f5f9;
+  color: var(--viewer-toolbar-icon);
   transition: color 0.15s ease, opacity 0.15s ease;
 }
 
@@ -651,7 +843,7 @@ body {
 }
 
 .viewer-toolbar button:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--viewer-toolbar-hover-bg);
 }
 
 .viewer-toolbar-popover-anchor {
@@ -666,9 +858,9 @@ body {
   z-index: 30;
   padding: 16px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.98);
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.5);
+  border: 1px solid var(--popover-border);
+  background: var(--popover-bg);
+  box-shadow: var(--popover-shadow);
 }
 
 .viewer-toolbar-popover-panel.photo-mode-panel {
@@ -698,12 +890,12 @@ body {
 }
 
 .photo-mode-popover-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--scrollbar-track);
   border-radius: 3px;
 }
 
 .photo-mode-popover-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
@@ -754,7 +946,7 @@ body {
   flex-wrap: wrap;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--list-item-border);
 }
 
 .photo-mode-action-button {
@@ -786,12 +978,12 @@ body {
 
 .viewer-toolbar button[aria-pressed="true"],
 .tools-3d-toolbar button[aria-pressed="true"] {
-  background: rgba(56, 189, 248, 0.2) !important;
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.5);
+  background: var(--toolbar-pressed-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--toolbar-pressed-ring);
 }
 
 .viewer-toolbar button:focus-visible {
-  outline: 1px solid rgba(255, 255, 255, 0.3);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -814,8 +1006,8 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(15, 23, 42, 0.75);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--piece-toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
 }
 
 .workspace-piece-toolbar .icon-button {
@@ -841,7 +1033,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(2, 6, 23, 0.3);
+  background: var(--loading-overlay);
   color: var(--text-main);
   font-size: 13px;
   z-index: 5;
@@ -852,8 +1044,8 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--spinner-border);
+  border-top-color: var(--spinner-top);
   animation: workspace-spin 0.9s linear infinite;
 }
 
@@ -890,15 +1082,15 @@ body {
 
 .door-drawer-item {
   border-radius: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(30, 41, 59, 0.45);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--door-drawer-border);
+  background: var(--door-drawer-bg);
+  box-shadow: var(--door-drawer-shadow);
   transform-origin: left center;
   transition: transform 0.22s ease, background 0.22s ease, border-color 0.22s ease;
 }
 
 .door-drawer-item--door {
-  border-color: rgba(56, 189, 248, 0.55);
+  border-color: var(--door-drawer-accent);
 }
 
 .door-drawer-item--drawer {
@@ -906,7 +1098,7 @@ body {
 }
 
 .door-drawer-item--open {
-  background: rgba(56, 189, 248, 0.15);
+  background: var(--door-drawer-open);
 }
 
 .workspace-placeholder {
@@ -931,7 +1123,7 @@ body {
   left: 50%;
   top: 50%;
   height: 160px;
-  border-left: 1px dashed rgba(59,130,246,0.5);
+  border-left: 1px dashed var(--snapline);
   pointer-events: none;
 }
 
@@ -947,7 +1139,7 @@ body {
 }
 
 .workspace-cube.is-dragging {
-  outline: 2px solid rgba(59,130,246,0.6);
+  outline: 2px solid var(--drag-outline);
   transition: none;
 }
 
@@ -955,8 +1147,8 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-icon);
+  background: var(--bg-icon);
   color: var(--text-main);
   cursor: pointer;
   font-size: 11px;
@@ -970,8 +1162,8 @@ body {
 .workspace-footer {
   width: 100%;
   padding: 12px 16px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  background: rgba(8,12,22,0.85);
+  border-top: 1px solid var(--workspace-footer-border);
+  background: var(--workspace-footer-bg);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -992,7 +1184,7 @@ body {
 .bottom-panel-root {
   height: auto;
   min-height: 120px;
-  background: rgba(15, 23, 42, 0.98);
+  background: var(--bottom-panel-bg);
   border-top: 1px solid var(--border);
   padding: 12px 18px;
   display: grid;
@@ -1038,7 +1230,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: radial-gradient(circle at top, #1e293b, #0b0f17 60%);
+  background: radial-gradient(circle at top, var(--workspace-gradient-start), var(--workspace-gradient-end) 60%);
   overflow-y: auto;
   scroll-behavior: smooth;
 }
@@ -1061,14 +1253,14 @@ body {
   gap: 12px;
   align-items: center;
   padding: 8px 10px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--roadmap-row-border);
   border-radius: var(--radius);
-  background: rgba(255,255,255,0.02);
+  background: var(--roadmap-row-bg);
   font-size: 12px;
 }
 
 .roadmap-header {
-  background: rgba(255,255,255,0.06);
+  background: var(--roadmap-header-bg);
   font-weight: 600;
 }
 
@@ -1089,21 +1281,21 @@ body {
 }
 
 .status-todo {
-  background: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
-  border-color: rgba(148, 163, 184, 0.35);
+  background: var(--status-todo-bg);
+  color: var(--status-todo-color);
+  border-color: var(--status-todo-border);
 }
 
 .status-in_progress {
-  background: rgba(234, 179, 8, 0.15);
-  color: #facc15;
-  border-color: rgba(234, 179, 8, 0.4);
+  background: var(--status-progress-bg);
+  color: var(--status-progress-color);
+  border-color: var(--status-progress-border);
 }
 
 .status-done {
-  background: rgba(34, 197, 94, 0.18);
-  color: #4ade80;
-  border-color: rgba(34, 197, 94, 0.45);
+  background: var(--status-done-bg);
+  color: var(--status-done-color);
+  border-color: var(--status-done-border);
 }
 
 .roadmap-cell {
@@ -1129,8 +1321,8 @@ body {
   gap: 6px;
   padding: 10px 12px;
   border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--stat-card-border);
+  background: var(--stat-card-bg);
 }
 
 .stat-value {
@@ -1143,7 +1335,7 @@ body {
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: var(--progress-track-bg);
   overflow: hidden;
 }
 
@@ -1172,8 +1364,8 @@ body {
   gap: 6px;
   padding: 10px 12px;
   border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--timeline-item-border);
+  background: var(--timeline-item-bg);
 }
 
 .timeline-title {
@@ -1213,8 +1405,8 @@ body {
   gap: 10px;
   padding: 10px 12px;
   border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--task-row-border);
+  background: var(--task-row-bg);
 }
 
 .task-status {
@@ -1241,7 +1433,7 @@ body {
   width: 100%;
   height: 96px;
   border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--texture-preview-border);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

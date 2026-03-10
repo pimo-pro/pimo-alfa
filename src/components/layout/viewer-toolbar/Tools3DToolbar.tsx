@@ -96,8 +96,6 @@ export default function Tools3DToolbar({
         alignItems: "center",
         gap: 4,
         padding: "6px 10px",
-        background: "rgba(15, 23, 42, 0.85)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       {TOOLS_3D_ITEMS.map((item) => {
@@ -120,17 +118,17 @@ export default function Tools3DToolbar({
               justifyContent: "center",
               border: "none",
               borderRadius: 4,
-              background: isActive ? "rgba(59, 130, 246, 0.25)" : "transparent",
+              background: isActive ? "var(--toolbar-pressed-bg)" : "transparent",
               color: isEnabled ? "var(--text-main)" : "var(--text-muted)",
               fontSize: 12,
               cursor: isEnabled ? "pointer" : "default",
               opacity: isEnabled ? 1 : 0.5,
             }}
             onMouseEnter={(e) => {
-              if (isEnabled) e.currentTarget.style.background = isActive ? "rgba(59, 130, 246, 0.35)" : "rgba(255,255,255,0.06)";
+              if (isEnabled) e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "var(--viewer-toolbar-hover-bg)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = isActive ? "rgba(59, 130, 246, 0.25)" : "transparent";
+              e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
             }}
           >
             {item.icon}
@@ -146,7 +144,7 @@ export default function Tools3DToolbar({
           onClick={onToggleLock}
           style={{
             ...toolbarButtonStyle,
-            background: lockEnabled ? "rgba(59, 130, 246, 0.25)" : "transparent",
+            background: lockEnabled ? "var(--toolbar-pressed-bg)" : "transparent",
           }}
         >
           🔒
@@ -165,10 +163,10 @@ export default function Tools3DToolbar({
           }}
           style={{
             ...toolbarButtonStyle,
-            background: showCameraMenu ? "rgba(59, 130, 246, 0.25)" : "transparent",
+            background: showCameraMenu ? "var(--toolbar-pressed-bg)" : "transparent",
           }}
           onMouseEnter={(e) => {
-            if (!showCameraMenu) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            if (!showCameraMenu) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
           }}
           onMouseLeave={(e) => {
             if (!showCameraMenu) e.currentTarget.style.background = "transparent";
@@ -201,10 +199,10 @@ export default function Tools3DToolbar({
           }}
           style={{
             ...toolbarButtonStyle,
-            background: showExplodedMenu ? "rgba(59, 130, 246, 0.25)" : "transparent",
+            background: showExplodedMenu ? "var(--toolbar-pressed-bg)" : "transparent",
           }}
           onMouseEnter={(e) => {
-            if (!showExplodedMenu) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            if (!showExplodedMenu) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
           }}
           onMouseLeave={(e) => {
             if (!showExplodedMenu) e.currentTarget.style.background = "transparent";
@@ -223,10 +221,10 @@ export default function Tools3DToolbar({
               marginTop: 4,
               minWidth: 240,
               padding: 10,
-              background: "rgba(15, 23, 42, 0.98)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--popover-bg)",
+              border: "1px solid var(--popover-border)",
               borderRadius: 8,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+              boxShadow: "var(--popover-shadow)",
               zIndex: 1000,
             }}
           >
@@ -298,7 +296,7 @@ export default function Tools3DToolbar({
             }}
             style={{ ...toolbarButtonStyle, background: "transparent" }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+              e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
@@ -315,10 +313,10 @@ export default function Tools3DToolbar({
               onClick={() => setShowRotationPopup((v) => !v)}
               style={{
                 ...toolbarButtonStyle,
-                background: showRotationPopup ? "rgba(59, 130, 246, 0.25)" : "transparent",
+                background: showRotationPopup ? "var(--toolbar-pressed-bg)" : "transparent",
               }}
               onMouseEnter={(e) => {
-                if (!showRotationPopup) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                if (!showRotationPopup) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
               }}
               onMouseLeave={(e) => {
                 if (!showRotationPopup) e.currentTarget.style.background = "transparent";
@@ -384,8 +382,8 @@ export default function Tools3DToolbar({
                     padding: "4px 6px",
                     fontSize: 12,
                     color: "var(--text-main)",
-                    background: "rgba(0,0,0,0.3)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "var(--input-bg)",
+                    border: "1px solid var(--input-border)",
                     borderRadius: 4,
                     boxSizing: "border-box",
                   }}
@@ -399,10 +397,7 @@ export default function Tools3DToolbar({
       <button
         type="button"
         className="button button-primary viewer-action-button"
-        style={{
-          marginLeft: "auto",
-          background: "linear-gradient(90deg, #22c55e, #38bdf8)",
-        }}
+        style={{ marginLeft: "auto" }}
         onClick={() => window.dispatchEvent(new Event("pimo:open-gerar-arquivo-modal"))}
       >
         Gerar Arquivo

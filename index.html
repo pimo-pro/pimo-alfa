@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo-pi.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      /* Tema aplicado antes do bundle: evita quadrado preto e flash do Viewer */
+      .theme-dark { --navy: #0f172a; --black: #0b0f17; --text-main: #e2e8f0; --text-muted: #94a3b8; --border: rgba(255,255,255,0.12); --button-ghost-bg: rgba(255,255,255,0.04); --radius: 6px; }
+      .theme-light { --navy: #f1f5f9; --black: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --border: rgba(0,0,0,0.12); --button-ghost-bg: rgba(0,0,0,0.04); --radius: 6px; }
+    </style>
+    <script>
+      (function () {
+        var t = localStorage.getItem("pimo-theme");
+        document.documentElement.classList.add(t === "light" ? "theme-light" : "theme-dark");
+      })();
+    </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-800KERMEV7"></script>
     <script>

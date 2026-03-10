@@ -14,6 +14,7 @@ import { MaterialProvider } from "./context/materialContext";
 import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
 import { SettingsProvider } from "./context/SettingsContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
@@ -140,6 +141,7 @@ export default function App() {
   };
 
   return (
+    <ThemeProvider>
     <ProjectProvider>
       <SettingsProvider>
         <MaterialProvider>
@@ -269,5 +271,6 @@ export default function App() {
         </MaterialProvider>
       </SettingsProvider>
     </ProjectProvider>
+    </ThemeProvider>
   );
 }

@@ -31,10 +31,10 @@ export default function CameraViewMenu({ onSelect, onClose }: CameraViewMenuProp
         marginTop: 4,
         minWidth: 220,
         padding: "6px 0",
-        background: "rgba(15, 23, 42, 0.98)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        background: "var(--popover-bg)",
+        border: "1px solid var(--popover-border)",
         borderRadius: 8,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+        boxShadow: "var(--popover-shadow)",
         zIndex: 1000,
       }}
     >
@@ -59,7 +59,7 @@ export default function CameraViewMenu({ onSelect, onClose }: CameraViewMenuProp
             cursor: "pointer",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "transparent";
