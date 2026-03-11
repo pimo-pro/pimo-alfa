@@ -91,7 +91,7 @@ export class EdgeOutlineSystem {
       color: 0x000000,
       linewidth: 1,
       transparent: false,
-      depthTest: false,
+      depthTest: true,
       depthWrite: false,
       toneMapped: false,
     });
