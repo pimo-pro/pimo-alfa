@@ -19,6 +19,10 @@ export type PanelDrillingInput = {
   larguraMm: number;
   alturaMm: number;
   espessuraMm: number;
+  /** Contexto do módulo: há prateleiras paramétricas. */
+  hasShelves?: boolean;
+  /** Contexto do módulo: há gavetas (qualquer tipo). */
+  hasDrawers?: boolean;
   doorHeightMm?: number;
   /** Largura da porta (mm). Para hingeSide top/bottom: posições ao longo da largura; usado em cima/fundo para copiar da porta. */
   doorWidthMm?: number;
@@ -274,6 +278,11 @@ export function buildPanelDrillingResult(
     }
   }
 
+  const shelfHolesEnabled =
+    input.hasShelves === undefined && input.hasDrawers === undefined
+      ? true
+      : input.hasShelves === true && input.hasDrawers !== true;
+
   let furacoesTecnicas: TechnicalDrillHole[] = [];
   try {
     furacoesTecnicas = calculateTechnicalDrillingsForPiece(
@@ -282,6 +291,7 @@ export function buildPanelDrillingResult(
         largura: input.larguraMm,
         altura: input.alturaMm,
         espessura: input.espessuraMm,
+        shelfHolesEnabled,
         hingeSide: input.hingeSide,
         hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
       },

@@ -140,6 +140,58 @@ describe("Fase 7 — Furação por tipo (buildPanelDrillingResult)", () => {
   });
 });
 
+describe("Fase 7 — Regra de furos de prateleira por contexto do módulo", () => {
+  const rules = defaultRulesConfig;
+  const lateralInput = {
+    tipo: "lateral_esquerda",
+    larguraMm: 600,
+    alturaMm: 800,
+    espessuraMm: 19,
+  };
+
+  it("gera furos de prateleira quando há prateleiras e não há gavetas", () => {
+    const result = buildPanelDrillingResult(
+      {
+        ...lateralInput,
+        hasShelves: true,
+        hasDrawers: false,
+      },
+      rules
+    );
+    expect(result.success).toBe(true);
+    const holes = result.data?.drillHoles ?? [];
+    expect(holes.some((h) => h.holeType === "prateleira")).toBe(true);
+  });
+
+  it("não gera furos de prateleira quando não há prateleiras", () => {
+    const result = buildPanelDrillingResult(
+      {
+        ...lateralInput,
+        hasShelves: false,
+        hasDrawers: false,
+      },
+      rules
+    );
+    expect(result.success).toBe(true);
+    const holes = result.data?.drillHoles ?? [];
+    expect(holes.some((h) => h.holeType === "prateleira")).toBe(false);
+  });
+
+  it("não gera furos de prateleira quando há gavetas, mesmo com prateleiras", () => {
+    const result = buildPanelDrillingResult(
+      {
+        ...lateralInput,
+        hasShelves: true,
+        hasDrawers: true,
+      },
+      rules
+    );
+    expect(result.success).toBe(true);
+    const holes = result.data?.drillHoles ?? [];
+    expect(holes.some((h) => h.holeType === "prateleira")).toBe(false);
+  });
+});
+
 // --- 5) DRILL: apenas cavilha e topDrillable === false ---
 
 describe("Fase 7 — DRILL export (cavilha, topDrillable false)", () => {

@@ -1440,22 +1440,12 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     group.add(newDrawer);
   });
 
-  // 4) Prateleiras: quantidade fixa por índice; remover em excesso e adicionar em falta
+  // 4) Prateleiras: sempre recalcular e recriar para evitar herança de posição antiga em runtime
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
-  const existingShelfIndices = group.children
-    .filter((c) => /^shelf-\d+$/.test(c.name))
-    .map((c) => parseInt(c.name.replace("shelf-", ""), 10))
-    .filter((n) => Number.isFinite(n));
-  for (const i of existingShelfIndices) {
-    if (i >= shelfCount) {
-      const obj = group.children.find((c) => c.name === `shelf-${i}`);
-      if (obj) group.remove(obj);
-    }
-  }
-  const existingShelfSet = new Set(existingShelfIndices.filter((i) => i < shelfCount));
+  const existingShelves = group.children.filter((c) => /^shelf-\d+$/.test(c.name));
+  existingShelves.forEach((obj) => group.remove(obj));
   shelfSpecs.forEach((spec, i) => {
-    if (existingShelfSet.has(i)) return;
     const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: mat as THREE.Material });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.shelfIndex = i;

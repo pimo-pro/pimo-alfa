@@ -31,6 +31,10 @@ export function cutlistComPrecoFromBox(
     ? getVisualMaterialForBox(box, projectMaterialId)
     : getFallbackMaterial();
   const items: CutListItemComPreco[] = [];
+  const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
+  const hasDrawers =
+    Math.max(0, Math.floor(box.gavetas ?? 0)) > 0 ||
+    (Array.isArray(box.drawersLayer) && box.drawersLayer.length > 0);
 
   const baseItem = {
     sourceType: "parametric" as const,
@@ -82,6 +86,8 @@ export function cutlistComPrecoFromBox(
         larguraMm: p.largura_mm,
         alturaMm: p.altura_mm,
         espessuraMm: p.espessura_mm,
+        hasShelves,
+        hasDrawers,
         doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
         doorWidthMm: doorWidthForTopBottom,
         hingeSide,
@@ -126,6 +132,8 @@ export function cutlistComPrecoFromBox(
         larguraMm: p.largura_mm,
         alturaMm: p.altura_mm,
         espessuraMm: p.espessura_mm,
+        hasShelves,
+        hasDrawers,
       },
       effRules
     );

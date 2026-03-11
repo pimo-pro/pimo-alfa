@@ -385,6 +385,7 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
   const drawerCutlist = hasDrawers
     ? extractDrawerCutlistFromLayerItems(box.drawersLayer!, prev.material.tipo)
     : [];
+  const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
   const effRules = buildEffectiveDrillingRules(prev.rules);
   const drawerWithHoles = drawerCutlist.map((item) => {
     const result = buildPanelDrillingResult(
@@ -393,6 +394,8 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
         larguraMm: item.dimensoes.largura,
         alturaMm: item.dimensoes.altura,
         espessuraMm: item.espessura,
+        hasShelves,
+        hasDrawers,
       },
       effRules
     );

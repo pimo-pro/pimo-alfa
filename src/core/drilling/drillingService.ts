@@ -37,6 +37,8 @@ type PieceInput = {
   largura: number;
   altura: number;
   espessura: number;
+  /** Se false, desativa explicitamente os furos de prateleira para a peça. */
+  shelfHolesEnabled?: boolean;
   hingeSide?: "left" | "right" | "top" | "bottom";
   /** Posições Y das dobradiças na porta (mm). Usado para furos de fixação na lateral (left/right). */
   /** Posições X (mm) para top/bottom: usadas em cima/fundo. */
@@ -273,6 +275,7 @@ function calcPrateleira32mm(piece: PieceInput, rules: RulesConfig, out: Technica
   if (!rules?.furos?.tecnicos?.prateleira) return;
   const cfg = rules.furos.tecnicos.prateleira;
   if (!cfg.enabled) return;
+  if (piece.shelfHolesEnabled === false) return;
   if (piece.tipo !== "lateral_esquerda" && piece.tipo !== "lateral_direita") return;
   const face = piece.tipo === "lateral_esquerda" ? "direita" : "esquerda";
 
