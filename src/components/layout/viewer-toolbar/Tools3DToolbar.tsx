@@ -279,6 +279,30 @@ export default function Tools3DToolbar({
           <circle cx="12" cy="12" r="2" />
         </svg>
       </button>
+
+      <button
+        type="button"
+        className="viewer-action-icon"
+        title={project.viewerSettings.rulerEnabled ? "Régua ON (clique para desativar)" : "Régua OFF (clique para ativar)"}
+        aria-label={project.viewerSettings.rulerEnabled ? "Desativar régua" : "Ativar régua"}
+        aria-pressed={project.viewerSettings.rulerEnabled}
+        onClick={() => actions.toggleRuler()}
+        style={{
+          ...toolbarButtonStyle,
+          background: project.viewerSettings.rulerEnabled ? "rgba(77, 163, 255, 0.25)" : "transparent",
+        }}
+        onMouseEnter={(e) => {
+          if (!project.viewerSettings.rulerEnabled) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+        }}
+        onMouseLeave={(e) => {
+          if (!project.viewerSettings.rulerEnabled) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M4 12h16" />
+          <path d="M5 14v-4M8 14v-4M11 14v-2M14 14v-4M17 14v-4M20 14v-4" />
+        </svg>
+      </button>
       
       {selectedBoxId && (
         <>

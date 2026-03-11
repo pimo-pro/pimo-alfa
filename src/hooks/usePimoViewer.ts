@@ -14,6 +14,7 @@ import type {
   RoomConfig,
   ViewerMousePreset,
 } from "../context/projectTypes";
+import type { RulerEdgePickResult } from "../3d/viewer-engine/ruler";
 
 type PimoViewerAPI = {
   viewerRef: React.MutableRefObject<Viewer | null>;
@@ -90,6 +91,8 @@ type PimoViewerAPI = {
   getSelectedBoxDimensions: () => { width: number; height: number; depth: number } | null;
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
+  getSelectedBoxScreenPosition?: () => { x: number; y: number } | null;
+  projectWorldToScreen?: (_worldPoint: import("three").Vector3) => { x: number; y: number } | null;
   getRightmostX: () => number;
   setManualWallHidden?: (_active: boolean) => void;
   getManualWallHidden?: () => boolean;
@@ -129,6 +132,24 @@ type PimoViewerAPI = {
   setExplodedViewIntensity?: (_value: number) => void;
   getExplodedViewIntensity?: () => number;
   setHighlightEnabled?: (_enabled: boolean) => void;
+  setRulerEnabled?: (_enabled: boolean) => void;
+  getRulerEdgeAtPointer?: (_event: { clientX: number; clientY: number }) => RulerEdgePickResult | null;
+  getBoxIdByMesh?: (_mesh: import("three").Object3D) => string | null;
+  getRulerMeasurements?: (_referenceBoxId: string | null) => import("../3d/viewer-engine/ruler").RulerManagerResult;
+  setOnRulerTick?: (_callback: (() => void) | null) => void;
+  getInternalRulerPickAtPointer?: (_event: { clientX: number; clientY: number }) => import("../3d/viewer-engine/ruler").InternalRulerPickResult | null;
+  cycleInternalRulerSelection?: (_result: import("../3d/viewer-engine/ruler").InternalRulerPickResult) => void;
+  clearInternalRulerSelection?: () => void;
+  getInternalRulerMeasurement?: () => { pointA: import("three").Vector3; pointB: import("three").Vector3; distanceMm: number } | null;
+};
+
+const EMPTY_RULER_RESULT: import("../3d/viewer-engine/ruler").RulerManagerResult = {
+  horizontalLeft: null,
+  horizontalRight: null,
+  front: null,
+  back: null,
+  floor: null,
+  ceiling: null,
 };
 
 export const usePimoViewer = (
@@ -508,6 +529,12 @@ export const usePimoViewer = (
     []
   );
 
+  const projectWorldToScreen = useCallback(
+    (worldPoint: import("three").Vector3) =>
+      viewerRef.current?.projectWorldToScreen?.(worldPoint) ?? null,
+    []
+  );
+
   const getRightmostX = useCallback(
     () => viewerRef.current?.getRightmostX?.() ?? -0.1,
     []
@@ -670,6 +697,51 @@ export const usePimoViewer = (
     viewerRef.current?.setHighlightEnabled?.(enabled);
   }, []);
 
+  const setRulerEnabled = useCallback((enabled: boolean) => {
+    viewerRef.current?.setRulerEnabled?.(enabled);
+  }, []);
+
+  const getRulerEdgeAtPointer = useCallback(
+    (event: { clientX: number; clientY: number }) =>
+      viewerRef.current?.getRulerEdgeAtPointer?.(event) ?? null,
+    []
+  );
+
+  const getBoxIdByMesh = useCallback(
+    (mesh: import("three").Object3D) =>
+      viewerRef.current?.getBoxIdByMeshPublic?.(mesh) ?? null,
+    []
+  );
+
+  const getRulerMeasurements = useCallback(
+    (referenceBoxId: string | null) =>
+      viewerRef.current?.getRulerMeasurements?.(referenceBoxId) ?? EMPTY_RULER_RESULT,
+    []
+  );
+
+  const setOnRulerTick = useCallback((callback: (() => void) | null) => {
+    viewerRef.current?.setOnRulerTick?.(callback);
+  }, []);
+
+  const getInternalRulerPickAtPointer = useCallback(
+    (event: { clientX: number; clientY: number }) =>
+      viewerRef.current?.getInternalRulerPickAtPointer?.(event) ?? null,
+    []
+  );
+  const cycleInternalRulerSelection = useCallback(
+    (result: import("../3d/viewer-engine/ruler").InternalRulerPickResult) => {
+      viewerRef.current?.cycleInternalRulerSelection?.(result);
+    },
+    []
+  );
+  const clearInternalRulerSelection = useCallback(() => {
+    viewerRef.current?.clearInternalRulerSelection?.();
+  }, []);
+  const getInternalRulerMeasurement = useCallback(
+    () => viewerRef.current?.getInternalRulerMeasurement?.() ?? null,
+    []
+  );
+
   const getExplodedViewIntensity = useCallback(
     () => viewerRef.current?.getExplodedViewIntensity?.() ?? 0.35,
     []
@@ -756,6 +828,7 @@ export const usePimoViewer = (
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
       getSelectedBoxScreenPosition,
+      projectWorldToScreen,
       getRightmostX,
       setManualWallHidden,
       getManualWallHidden,
@@ -794,6 +867,11 @@ export const usePimoViewer = (
       setExplodedViewIntensity,
       getExplodedViewIntensity,
       setHighlightEnabled,
+      setRulerEnabled,
+      getRulerEdgeAtPointer,
+      getBoxIdByMesh,
+      getRulerMeasurements,
+      setOnRulerTick,
     }),
     [
       viewerReady,
@@ -855,6 +933,7 @@ export const usePimoViewer = (
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
       getSelectedBoxScreenPosition,
+      projectWorldToScreen,
       getRightmostX,
       setManualWallHidden,
       getManualWallHidden,
@@ -893,6 +972,15 @@ export const usePimoViewer = (
       setExplodedViewIntensity,
       getExplodedViewIntensity,
       setHighlightEnabled,
+      setRulerEnabled,
+      getRulerEdgeAtPointer,
+      getBoxIdByMesh,
+      getRulerMeasurements,
+      setOnRulerTick,
+      getInternalRulerPickAtPointer,
+      cycleInternalRulerSelection,
+      clearInternalRulerSelection,
+      getInternalRulerMeasurement,
     ]
   );
 };

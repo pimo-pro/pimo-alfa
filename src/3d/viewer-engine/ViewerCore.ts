@@ -29,6 +29,13 @@ import { EventsManager } from "./events";
 import type { IViewerEventEngine } from "./events/EventEngineTypes";
 import { ViewerTools } from "./tools";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
+import {
+  getRulerEdgeAtPointer as rulerGetEdgeAtPointer,
+  getRulerMeasurementsFromManager,
+  pickInternalAtPointer,
+  SelectionManager,
+} from "./ruler";
+import type { RulerEdgePickResult, RulerManagerResult, InternalRulerPickResult } from "./ruler";
 
 import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, mergeMaterialSet } from "../materials/MaterialLibrary";
@@ -156,6 +163,8 @@ export class ViewerCore {
   private outlineCurrentOpacity = 0;
   private outlineTargetOpacity = 0;
   private onRoomElementPlaced: ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null = null;
+  private onRulerTick: (() => void) | null = null;
+  private readonly internalRulerSelection = new SelectionManager();
   private onRoomElementSelected: ((_data: { elementId: string; wallId: number; type: "door" | "window"; config: DoorWindowConfig } | null) => void) | null = null;
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
@@ -680,11 +689,21 @@ export class ViewerCore {
       max.y,
       (min.z + max.z) * 0.5
     );
-    topCenter.project(this.cameraManager.camera);
+    return this.projectWorldToScreen(topCenter);
+  }
+
+  /**
+   * Projeta um ponto 3D (mundial) em coordenadas de ecrã (pixels relativos ao container do viewer).
+   * Retorna null se o ponto estiver atrás da câmera.
+   */
+  projectWorldToScreen(worldPoint: THREE.Vector3): { x: number; y: number } | null {
+    if (!this.container) return null;
+    const p = worldPoint.clone().project(this.cameraManager.camera);
+    if (p.z > 1) return null;
     const w = this.container.clientWidth || 1;
     const h = this.container.clientHeight || 1;
-    const x = (topCenter.x + 1) * 0.5 * w;
-    const y = (1 - topCenter.y) * 0.5 * h;
+    const x = (p.x + 1) * 0.5 * w;
+    const y = (1 - p.y) * 0.5 * h;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
     return { x, y };
   }
@@ -1246,6 +1265,11 @@ export class ViewerCore {
     this.viewerState.setHighlightEnabled(Boolean(enabled));
     this.highlightManager?.setEnabled(this.viewerState.getHighlightEnabled());
     this.applyPanelVisibilityForAllBoxes();
+  }
+
+  /** Ativa/desativa modo régua (estado apenas; medição a implementar). */
+  setRulerEnabled(enabled: boolean): void {
+    this.viewerState.setRulerEnabled(Boolean(enabled));
   }
 
   getExplodedViewEnabled(): boolean {
@@ -2552,6 +2576,11 @@ export class ViewerCore {
     this.onBoxSelected = callback;
   }
 
+  /** Chamado a cada frame quando a régua está ativa e há caixa selecionada ou em drag (para atualização em tempo real). */
+  setOnRulerTick(callback: (() => void) | null): void {
+    this.onRulerTick = callback;
+  }
+
   setOnDoorLayerDoubleClick(callback: ((_boxId: string, _doorLayerId: string) => void) | null): void {
     this.onDoorLayerDoubleClick = callback;
   }
@@ -3665,6 +3694,131 @@ export class ViewerCore {
     return this.getBoxIdByMesh(hits[0].object);
   }
 
+  /**
+   * Edge Picking para o modo régua: retorna o edge (ou vértice) mais próximo do cursor.
+   * Só produz resultado quando rulerEnabled; caso contrário retorna null.
+   */
+  getRulerEdgeAtPointer(event: { clientX: number; clientY: number }): RulerEdgePickResult | null {
+    if (!this.viewerState.getRulerEnabled()) return null;
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.pointer.set(x, y);
+    const roots = this.getHighlightRaycastRoots();
+    const getBboxRoot = (hitObject: THREE.Object3D): THREE.Object3D => {
+      const boxId = this.getBoxIdByMesh(hitObject);
+      if (boxId) {
+        const entry = this.boxes.get(boxId);
+        if (entry?.mesh) return entry.mesh;
+      }
+      return hitObject;
+    };
+    return rulerGetEdgeAtPointer(
+      this.raycaster,
+      this.pointer,
+      this.cameraManager.camera,
+      roots,
+      getBboxRoot
+    );
+  }
+
+  /** Picking interno (vértice/edge/face) apenas em meshes de caixas. Para régua interna. */
+  getInternalRulerPickAtPointer(event: { clientX: number; clientY: number }): InternalRulerPickResult | null {
+    if (!this.viewerState.getRulerEnabled()) return null;
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.pointer.set(x, y);
+    const boxRoots: THREE.Object3D[] = [];
+    this.boxes.forEach((entry) => {
+      if (entry.mesh) boxRoots.push(entry.mesh);
+    });
+    const snapRadiusM = this.viewerState.getRulerSnapRadiusMm() / 1000;
+    return pickInternalAtPointer(this.raycaster, this.pointer, this.cameraManager.camera, boxRoots, snapRadiusM);
+  }
+
+  /** Ciclo A -> B -> limpar; chamado quando o utilizador clica num elemento interno. */
+  cycleInternalRulerSelection(result: InternalRulerPickResult): void {
+    this.internalRulerSelection.cycleSelection(result);
+  }
+
+  /** Limpa seleção interna (A e B). */
+  clearInternalRulerSelection(): void {
+    this.internalRulerSelection.clear();
+  }
+
+  /** Retorna A e B atuais (para overlay). */
+  getInternalRulerA(): InternalRulerPickResult | null {
+    return this.internalRulerSelection.getA();
+  }
+
+  getInternalRulerB(): InternalRulerPickResult | null {
+    return this.internalRulerSelection.getB();
+  }
+
+  /** Medição A↔B em mm quando ambos definidos. */
+  getInternalRulerMeasurement(): { pointA: THREE.Vector3; pointB: THREE.Vector3; distanceMm: number } | null {
+    return this.internalRulerSelection.getMeasurement();
+  }
+
+  /**
+   * Obtém boxId a partir de um mesh (para uso externo, ex.: régua).
+   */
+  getBoxIdByMeshPublic(mesh: THREE.Object3D): string | null {
+    return this.getBoxIdByMesh(mesh);
+  }
+
+  /**
+   * Mediçõees automáticas (RulerManager): candidatas horizontal esq/dir, frente/trás, chão/teto.
+   */
+  getRulerMeasurements(referenceBoxId: string | null): RulerManagerResult {
+    const empty: RulerManagerResult = {
+      horizontalLeft: null,
+      horizontalRight: null,
+      front: null,
+      back: null,
+      floor: null,
+      ceiling: null,
+    };
+    if (!referenceBoxId) return empty;
+    const entry = this.boxes.get(referenceBoxId);
+    if (!entry?.mesh) return empty;
+    entry.mesh.updateMatrixWorld(true);
+    this._boundingBox.setFromObject(entry.mesh);
+    const box: { min: THREE.Vector3; max: THREE.Vector3; center: THREE.Vector3 } = {
+      min: this._boundingBox.min.clone(),
+      max: this._boundingBox.max.clone(),
+      center: this._boundingBox.getCenter(new THREE.Vector3()),
+    };
+    const roomBounds = this.roomBounds
+      ? {
+          minX: this.roomBounds.minX,
+          maxX: this.roomBounds.maxX,
+          minY: this.roomBounds.minY,
+          maxY: this.roomBounds.maxY,
+          minZ: this.roomBounds.minZ,
+          maxZ: this.roomBounds.maxZ,
+        }
+      : null;
+    const otherBoxes = Array.from(this.boxes.entries())
+      .filter(([id]) => id !== referenceBoxId)
+      .map(([, e]) => {
+        e.mesh.updateMatrixWorld(true);
+        this._boxSingle.setFromObject(e.mesh);
+        return {
+          min: this._boxSingle.min.clone(),
+          max: this._boxSingle.max.clone(),
+          centerX: (this._boxSingle.min.x + this._boxSingle.max.x) * 0.5,
+        };
+      })
+      .sort((a, b) => a.centerX - b.centerX);
+    return getRulerMeasurementsFromManager(box, roomBounds, otherBoxes);
+  }
+
   private getDoorLayerIdByMesh(mesh: THREE.Object3D): string | null {
     let current: THREE.Object3D | null = mesh;
     while (current) {
@@ -3834,6 +3988,14 @@ export class ViewerCore {
 
       this.highlightManager?.update();
       this.edgeOutlineSystem?.update();
+
+      if (
+        this.viewerState.getRulerEnabled() &&
+        (this.viewerState.getTransformControlsDragging() || this.viewerState.getSelectedBox()) &&
+        this.onRulerTick
+      ) {
+        this.onRulerTick();
+      }
 
       if (this.reflectionsEnabled) {
         this.reflectionFrameCounter += 1;
