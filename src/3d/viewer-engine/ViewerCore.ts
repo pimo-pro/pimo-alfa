@@ -21,6 +21,7 @@ import type { ControlsOptions } from "./controls";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
+import { EdgeOutlineSystem } from "../outline";
 import { getPointerNdc } from "./utils";
 import type { EnvironmentOptions } from "./environment";
 import { ViewerState } from "./state";
@@ -196,6 +197,8 @@ export class ViewerCore {
   private wallSelectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
   /** Highlight por mesh (hover + seleção): portas, gavetas, painéis, furos. Só ativo quando highlightEnabled. */
   private highlightManager: HighlightManager | null = null;
+  /** Outline global e isolado: apenas visual, usado para mostrar arestas das peças. */
+  private edgeOutlineSystem: EdgeOutlineSystem | null = null;
   /** Gizmo para mover e rotacionar paredes (handles X/Z e rotação). */
   private wallGizmo: WallGizmo | null = null;
   private transformDiagnosticsEnabled = false;
@@ -322,6 +325,7 @@ export class ViewerCore {
     this.sceneManager.scene.add(this.wallSelectionOutline);
 
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
+    this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
 
     this.roomBuilder = new RoomBuilder();
     this.sceneManager.add(this.roomBuilder.getGroup());
@@ -1826,6 +1830,7 @@ export class ViewerCore {
     this.applyPanelIdsToBox(box, id, opts.panelIds);
     this.applyPanelVisibilityForObject(box);
     this.applyExplodedViewForObject(box);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
     this.applyBackgroundMode();
     this.applyMaterialQualityProfile();
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
@@ -1916,6 +1921,7 @@ export class ViewerCore {
         entry.manualPosition = opts.manualPosition;
       }
       entry.mesh.updateMatrixWorld(true);
+      this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
       return true;
     }
 
@@ -2075,6 +2081,7 @@ export class ViewerCore {
         }
       });
     }
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
     return true;
   }
 
@@ -2096,6 +2103,7 @@ export class ViewerCore {
     }
     this.clearModelsFromBox(id);
     this.sceneManager.root.remove(entry.mesh);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
     
     // Dispose corretamente para grupos e meshes
     if (entry.mesh instanceof THREE.Group) {
@@ -2615,6 +2623,7 @@ export class ViewerCore {
           object.position.set(0, entry.height / 2, 0);
         }
         entry.cadModels.push({ id, object, path: modelPath });
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
         this.onModelLoaded?.(boxId, id, object);
       })
       .catch(() => {
@@ -2674,6 +2683,7 @@ export class ViewerCore {
     if (model.object.parent) {
       model.object.parent.remove(model.object);
     }
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
     this.disposeObject(model.object);
     return true;
   }
@@ -2688,6 +2698,7 @@ export class ViewerCore {
       this.disposeObject(model.object);
     });
     entry.cadModels = [];
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
   }
 
   listModels(boxId: string): Array<{ id: string; path: string }> | null {
@@ -3822,6 +3833,7 @@ export class ViewerCore {
       }
 
       this.highlightManager?.update();
+      this.edgeOutlineSystem?.update();
 
       if (this.reflectionsEnabled) {
         this.reflectionFrameCounter += 1;
@@ -4259,6 +4271,10 @@ export class ViewerCore {
     if (this.highlightManager) {
       this.highlightManager.dispose();
       this.highlightManager = null;
+    }
+    if (this.edgeOutlineSystem) {
+      this.edgeOutlineSystem.dispose();
+      this.edgeOutlineSystem = null;
     }
     if (this.dimensionsOverlayLines) {
       this.dimensionsOverlayLines.geometry.dispose();
