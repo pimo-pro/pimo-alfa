@@ -63,6 +63,8 @@ export type BoxOptions = {
   feetEnabled?: boolean;
   /** Se false, o viewer não altera rotation.y (modo manual; botão RODAR). Default true. */
   autoRotateEnabled?: boolean;
+  /** Se true, a peça não pode ser movida nem transformada (apenas selecionável). */
+  locked?: boolean;
 };
 
 export type BoxModel = {

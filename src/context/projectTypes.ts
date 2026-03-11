@@ -384,6 +384,8 @@ export interface ProjectActions {
   setWorkspaceBoxNome: (_boxId: string, _nome: string) => void;
   /** Define o material da caixa (id do CRUD ou label legado). */
   setWorkspaceBoxMaterial: (_boxId: string, _materialId: string) => void;
+  /** Bloqueia ou desbloqueia a peça (impede movimento e transformações quando locked). */
+  setWorkspaceBoxLocked: (_boxId: string, _locked: boolean) => void;
   addDoorLayerItem: () => void;
   addDrawerLayerItem: () => void;
   removeDoorLayerItem: (_id: string) => void;

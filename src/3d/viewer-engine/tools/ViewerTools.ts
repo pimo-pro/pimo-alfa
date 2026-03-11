@@ -24,6 +24,13 @@ export class ViewerTools {
     if (selectedBoxId && mode) {
       const entry = e.getBoxEntry(selectedBoxId);
       if (entry) {
+        if (entry.locked) {
+          controls.detach();
+          e.applyTransformControlsMouseGuard();
+          e.logTransformDiagnostic("detach-box-locked", { boxId: selectedBoxId });
+          e.setTransformHelperVisible(false);
+          return;
+        }
         entry.mesh.matrixAutoUpdate = true;
         entry.mesh.updateMatrixWorld(true);
         controls.detach();

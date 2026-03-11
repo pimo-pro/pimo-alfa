@@ -4,7 +4,7 @@
 
 export { getRulerEdgeAtPointer } from "./EdgePicker";
 export { getRulerMeasurements as getRulerMeasurementsFromManager } from "./RulerManager";
-export { pickInternalAtPointer, SNAP_RADIUS_M } from "./InternalPicker";
+export { pickInternalAtPointer } from "./InternalPicker";
 export { SelectionManager } from "./SelectionManager";
 export {
   distancePointToPoint,
@@ -21,6 +21,5 @@ export type {
   RulerPickType,
   InternalRulerPickType,
   InternalRulerPickResult,
-  SnapType,
 } from "./types";
 export type { RulerManagerBoxData, RulerManagerOtherBox, RulerManagerRoomBounds } from "./RulerManager";

@@ -55,26 +55,9 @@ export type RulerManagerResult = {
 /** Tipo do elemento interno pickado: vértice, edge, face ou furo. */
 export type InternalRulerPickType = "vertex" | "edge" | "face" | "hole";
 
-/** Tipo de snap aplicado (Smart Snapping). */
-export type SnapType =
-  | "vertex"
-  | "edgeMidpoint"
-  | "edgeIntersection"
-  | "holeCenter"
-  | "faceCenter"
-  | "partReference"
-  | "alignment";
-
-/** Resultado do picking interno: ponto efetivo (já snapado se aplicável), tipo e referência ao mesh. */
+/** Resultado do picking interno: ponto 3D exato, tipo e referência ao mesh (para highlight). */
 export type InternalRulerPickResult = {
-  /** Ponto final a usar para medição e A/B (snapado se houve snap, senão original). */
   point: THREE.Vector3;
-  /** Ponto original do raycast (antes do snap). */
-  pointOriginal: THREE.Vector3;
-  /** Ponto snapado (null se nenhum candidato dentro do raio). */
-  pointSnapped: THREE.Vector3 | null;
-  /** Tipo de snap aplicado (null se sem snap). */
-  snapType: SnapType | null;
   type: InternalRulerPickType;
   object: THREE.Object3D;
   /** Índices dos vértices a destacar (1 para vertex, 2 para edge, 3 para face). */

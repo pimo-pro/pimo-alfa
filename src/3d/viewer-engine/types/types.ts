@@ -22,6 +22,8 @@ export interface ViewerBoxEntry {
   feetOffsetFront?: number;
   feetEnabled?: boolean;
   autoRotateEnabled?: boolean;
+  /** Se true, a peça não pode ser movida nem transformada (apenas selecionável). */
+  locked?: boolean;
   drillMarkersByPanel?: ViewerDrillMarkersByPanel;
   cadModels: Array<{
     id: string;

@@ -243,6 +243,8 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnBoxTransform((boxId, position, rotationY) => {
+      const box = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
+      if (box?.locked) return;
       actionsRef.current.updateWorkspaceBoxTransform(boxId, {
         x_mm: mToMm(position.x),
         y_mm: mToMm(position.y),
@@ -320,6 +322,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     if (!project.viewerSettings.rulerEnabled) {
       setRulerHoverResult(null);
       setRulerAnchorResult(null);
+      setInternalRulerHoverResult(null);
       viewerApi.clearInternalRulerSelection?.();
     }
   }, [project.viewerSettings.rulerEnabled, viewerApi]);

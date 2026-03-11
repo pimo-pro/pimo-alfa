@@ -172,7 +172,7 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
             const models =
               box.models ?? (box.modelId != null ? [{ id: `${box.id}-model-1`, modelId: box.modelId }] : []);
             const { modelId: _modelId, ...rest } = box;
-            return { ...rest, models };
+            return { ...rest, models, locked: rest.locked === true };
           })
           .filter((box) => {
             if (!box?.id || typeof box.id !== "string") return false;
@@ -1061,8 +1061,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     updateWorkspacePosition: (boxId, posicaoX_mm) => {
       updateProject(
         (prev) => {
-          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-            box.id === boxId ? { ...box, posicaoX_mm } : box
+          const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+          if (box?.locked) return prev;
+          const workspaceBoxes = prev.workspaceBoxes.map((b) =>
+            b.id === boxId ? { ...b, posicaoX_mm } : b
           );
           return { ...prev, workspaceBoxes };
         },
@@ -1072,6 +1074,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     updateWorkspaceBoxTransform: (boxId, partial) => {
       updateProject((prev) => {
+        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (box?.locked) return prev;
         const workspaceBoxes = prev.workspaceBoxes.map((box) => {
           if (box.id !== boxId) return box;
           const next = { ...box };
@@ -1099,6 +1103,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     setWorkspaceBoxDimensoes: (boxId, dimensoes) => {
       updateProject((prev) => {
+        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (box?.locked) return prev;
         const workspaceBoxes = prev.workspaceBoxes.map((box) => {
           if (box.id !== boxId) return box;
           const updatedBox = { ...box, dimensoes: { ...box.dimensoes, ...dimensoes } };
@@ -1127,8 +1133,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
+    setWorkspaceBoxLocked: (boxId, locked) => {
+      updateProject((prev) => {
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === boxId ? { ...box, locked } : box
+        );
+        return { ...prev, workspaceBoxes };
+      });
+    },
+
     toggleWorkspaceRotation: (boxId) => {
       updateProject((prev) => {
+        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (box?.locked) return prev;
         const workspaceBoxes = prev.workspaceBoxes.map((box) => {
           if (box.id !== boxId) return box;
           const currentRad = box.rotacaoY ?? 0;

@@ -335,6 +335,8 @@ export interface WorkspaceBox {
   drawersLayer: DrawerLayerItem[];
   /** Id do material (CRUD) ou label legado. Usado para resolver material no Viewer e em exports. */
   material?: string;
+  /** Se true, a peça não pode ser movida, redimensionada nem transformada (apenas selecionável para medição). */
+  locked?: boolean;
 }
 
 export interface ProjetoConfig {

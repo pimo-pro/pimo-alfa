@@ -16,8 +16,6 @@ export class ViewerState {
   private placementMode: PlacementMode = null;
   private highlightEnabled = false;
   private rulerEnabled = false;
-  /** Raio de snap da régua interna em mm (12–20). */
-  private rulerSnapRadiusMm = 15;
   private suppressNextCanvasClick = false;
   private transformControlsDragging = false;
   private wallGizmoDragging = false;
@@ -85,13 +83,6 @@ export class ViewerState {
   }
   setRulerEnabled(v: boolean): void {
     this.rulerEnabled = v;
-  }
-
-  getRulerSnapRadiusMm(): number {
-    return this.rulerSnapRadiusMm;
-  }
-  setRulerSnapRadiusMm(mm: number): void {
-    this.rulerSnapRadiusMm = Math.max(8, Math.min(25, mm));
   }
 
   getSuppressNextCanvasClick(): boolean {

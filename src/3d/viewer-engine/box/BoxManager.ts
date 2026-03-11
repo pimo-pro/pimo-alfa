@@ -45,7 +45,7 @@ export class ViewerBoxManager {
         w = Math.max(Number(entry.width) || 0.001, 0.001);
       }
       entry.mesh.frustumCulled = false;
-      if (!entry.manualPosition) {
+      if (!entry.manualPosition && !entry.locked) {
         entry.mesh.position.x = cursorX + w / 2;
         entry.mesh.position.z = 0;
       }

@@ -178,6 +178,7 @@ export const useCalculadoraSync = (
         ? { cabinetType, pe_cm, feetEnabled, feetHeight, feetOffsetFront }
         : { cabinetType: null, pe_cm, feetEnabled, feetHeight, feetOffsetFront };
       const rotateOpts = autoRotateEnabled === false ? { autoRotateEnabled: false } : {};
+      const locked = wsBox.locked === true;
       const cutListForBox =
         box?.cutList && box.cutList.length > 0
           ? box.cutList
@@ -198,6 +199,7 @@ export const useCalculadoraSync = (
           cadOnly,
           ...cabinetOpts,
           ...rotateOpts,
+          locked,
           doorLayerItems,
           drawerLayerItems,
           drillMarkersByPanel,
@@ -209,7 +211,7 @@ export const useCalculadoraSync = (
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
           // Apenas posição/rotação mudaram (ex.: drag no viewer). Só atualizar transform para não disparar rebuild (updateBoxGroup/createDoorObject).
-          api.updateBox(wsBox.id, { ...posRot });
+          api.updateBox(wsBox.id, { ...posRot, locked });
         } else {
           if (import.meta.env.DEV) {
             devLogger.debug("[useCalculadoraSync] estrutura mudou, chamando updateBox com dimensões", {
@@ -230,6 +232,7 @@ export const useCalculadoraSync = (
             index,
             ...cabinetOpts,
             ...rotateOpts,
+            locked,
             doorLayerItems,
             drawerLayerItems,
             drillMarkersByPanel,

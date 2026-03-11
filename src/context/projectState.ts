@@ -206,6 +206,7 @@ export const createWorkspaceBox = (
     panelIds,
     doorsLayer: [],
     drawersLayer: [],
+    locked: false,
   };
   
   // Regenerate layers based on portaTipo and gavetas

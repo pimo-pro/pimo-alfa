@@ -10,7 +10,7 @@ export interface IViewerToolsEngine {
   getTransformControlsHelper(): THREE.Object3D | null;
   getCurrentTool(): TransformMode;
   getSelectedBoxId(): string | null;
-  getBoxEntry(id: string): { mesh: THREE.Object3D; width: number; height: number; depth: number } | undefined;
+  getBoxEntry(id: string): { mesh: THREE.Object3D; width: number; height: number; depth: number; locked?: boolean } | undefined;
   getSelectedWallIndex(): number | null;
   getRoomBoxWalls(): { id: number; mesh: THREE.Mesh }[];
   getSelectedRoomElementId(): string | null;

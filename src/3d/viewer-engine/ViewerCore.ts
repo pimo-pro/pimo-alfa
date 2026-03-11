@@ -1841,6 +1841,7 @@ export class ViewerCore {
       feetOffsetFront,
       feetEnabled,
       autoRotateEnabled: opts.autoRotateEnabled !== false,
+      locked: opts.locked === true,
       cadModels: [],
       material,
       drillMarkersByPanel: opts.drillMarkersByPanel,
@@ -1944,6 +1945,9 @@ export class ViewerCore {
       if (opts.manualPosition !== undefined) {
         entry.manualPosition = opts.manualPosition;
       }
+      if (opts.locked !== undefined) {
+        entry.locked = opts.locked === true;
+      }
       entry.mesh.updateMatrixWorld(true);
       this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
       return true;
@@ -2029,6 +2033,7 @@ export class ViewerCore {
     }
     if (opts.feetEnabled !== undefined) entry.feetEnabled = opts.feetEnabled;
     if (opts.autoRotateEnabled !== undefined) entry.autoRotateEnabled = opts.autoRotateEnabled;
+    if (opts.locked !== undefined) entry.locked = opts.locked === true;
     if (entry.manualPosition && !opts.position) {
       // Nunca alterar position.x/y/z quando manualPosition sem opts.position explícito.
     } else if (opts.position && !this.shouldUseFeetLock(entry)) {
@@ -3737,8 +3742,7 @@ export class ViewerCore {
     this.boxes.forEach((entry) => {
       if (entry.mesh) boxRoots.push(entry.mesh);
     });
-    const snapRadiusM = this.viewerState.getRulerSnapRadiusMm() / 1000;
-    return pickInternalAtPointer(this.raycaster, this.pointer, this.cameraManager.camera, boxRoots, snapRadiusM);
+    return pickInternalAtPointer(this.raycaster, this.pointer, this.cameraManager.camera, boxRoots);
   }
 
   /** Ciclo A -> B -> limpar; chamado quando o utilizador clica num elemento interno. */

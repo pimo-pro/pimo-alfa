@@ -46,8 +46,10 @@ export default function Tools3DToolbar({
   const { project, actions } = useProject();
   const { viewerApi } = usePimoViewerContext() ?? {};
   
-  const enabledTools: Tool3DId[] = ["select", "move", "rotate"];
   const selectedBoxId = project.selectedWorkspaceBoxId;
+  const selectedBox = selectedBoxId ? project.workspaceBoxes.find((b) => b.id === selectedBoxId) : undefined;
+  const isPieceLocked = selectedBox?.locked === true;
+  const enabledTools: Tool3DId[] = isPieceLocked ? ["select"] : ["select", "move", "rotate"];
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showExplodedMenu, setShowExplodedMenu] = useState(false);
   const [showRotationPopup, setShowRotationPopup] = useState(false);
@@ -308,9 +310,11 @@ export default function Tools3DToolbar({
         <>
           <button
             type="button"
-            title="Rotar 90° à direita"
+            title={isPieceLocked ? "Peça bloqueada" : "Rotar 90° à direita"}
             aria-label="Rotar 90° à direita"
+            disabled={isPieceLocked}
             onClick={() => {
+              if (isPieceLocked) return;
               const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
               const currentRad = box?.rotacaoY ?? 0;
               actions.updateWorkspaceBoxTransform(selectedBoxId, {
@@ -318,7 +322,12 @@ export default function Tools3DToolbar({
                 manualPosition: true,
               });
             }}
-            style={{ ...toolbarButtonStyle, background: "transparent" }}
+            style={{
+              ...toolbarButtonStyle,
+              background: "transparent",
+              opacity: isPieceLocked ? 0.5 : 1,
+              cursor: isPieceLocked ? "not-allowed" : "pointer",
+            }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
             }}
@@ -331,13 +340,16 @@ export default function Tools3DToolbar({
           <div ref={rotationPopupRef} style={{ position: "relative", display: "inline-flex", marginLeft: 2 }}>
             <button
               type="button"
-              title="Definir rotação (graus)"
+              title={isPieceLocked ? "Peça bloqueada" : "Definir rotação (graus)"}
               aria-label="Definir rotação em graus"
               aria-expanded={showRotationPopup}
-              onClick={() => setShowRotationPopup((v) => !v)}
+              disabled={isPieceLocked}
+              onClick={() => !isPieceLocked && setShowRotationPopup((v) => !v)}
               style={{
                 ...toolbarButtonStyle,
                 background: showRotationPopup ? "var(--toolbar-pressed-bg)" : "transparent",
+                opacity: isPieceLocked ? 0.5 : 1,
+                cursor: isPieceLocked ? "not-allowed" : "pointer",
               }}
               onMouseEnter={(e) => {
                 if (!showRotationPopup) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";

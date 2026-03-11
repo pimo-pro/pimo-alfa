@@ -872,6 +872,10 @@ export const usePimoViewer = (
       getBoxIdByMesh,
       getRulerMeasurements,
       setOnRulerTick,
+      getInternalRulerPickAtPointer,
+      cycleInternalRulerSelection,
+      clearInternalRulerSelection,
+      getInternalRulerMeasurement,
     }),
     [
       viewerReady,
