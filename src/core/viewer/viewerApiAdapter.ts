@@ -125,5 +125,8 @@ export function createViewerApiAdapter(
     setHighlightEnabled: (enabled: boolean): void => {
       pimoApi.setHighlightEnabled?.(enabled);
     },
+    setRulerEnabled: (enabled: boolean): void => {
+      pimoApi.setRulerEnabled?.(enabled);
+    },
   };
 }

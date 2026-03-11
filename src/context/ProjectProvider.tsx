@@ -1262,6 +1262,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         false
       );
     },
+    toggleRuler: () => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          viewerSettings: {
+            ...prev.viewerSettings,
+            rulerEnabled: !prev.viewerSettings.rulerEnabled,
+          },
+        }),
+        false
+      );
+    },
     updateRules: (rules: RulesConfig) => {
       updateProject((prev) => {
         const normalizedRules = normalizeRulesConfig(rules);

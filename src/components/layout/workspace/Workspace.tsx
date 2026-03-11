@@ -25,6 +25,13 @@ import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
 import GerarArquivoModal from "../right-panel/GerarArquivoModal";
 import BoxInfoOverlay from "./BoxInfoOverlay";
+import RulerLabelsOverlay from "./RulerLabelsOverlay";
+import {
+  type RulerEdgePickResult,
+  type InternalRulerPickResult,
+  distancePointToPoint,
+  type RulerManagerMeasurement,
+} from "../../../3d/viewer-engine/ruler";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -34,7 +41,7 @@ type WorkspaceProps = {
 
 export default function Workspace({
   viewerBackground,
-  viewerHeight = "100%",
+  viewerHeight: _viewerHeight = "100%",
   viewerOptions,
 }: WorkspaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +69,11 @@ export default function Workspace({
 
   const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
   const gerarArquivoHandlers = useGerarArquivoHandlers();
+  const [rulerHoverResult, setRulerHoverResult] = useState<RulerEdgePickResult | null>(null);
+  const [rulerAnchorResult, setRulerAnchorResult] = useState<RulerEdgePickResult | null>(null);
+  const [rulerTick, setRulerTick] = useState(0);
+  const [internalRulerVersion, setInternalRulerVersion] = useState(0);
+  const [internalRulerHoverResult, setInternalRulerHoverResult] = useState<InternalRulerPickResult | null>(null);
 
   useEffect(() => {
     const handleOpenGerarArquivo = () => setShowGerarArquivoModal(true);
@@ -293,6 +305,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setExplodedViewEnabled?.(settings.explodedViewEnabled);
     viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
     viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
+    viewerApi.setRulerEnabled?.(settings.rulerEnabled);
     if (viewerApi.setUltraPerformanceModeOptions) {
       viewerApi.setUltraPerformanceModeOptions(settings.ultraPerformanceModeOptions);
     } else {
@@ -303,7 +316,62 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi,
   ]);
 
-const projectRef = useRef(project);
+  useEffect(() => {
+    if (!project.viewerSettings.rulerEnabled) {
+      setRulerHoverResult(null);
+      setRulerAnchorResult(null);
+      viewerApi.clearInternalRulerSelection?.();
+    }
+  }, [project.viewerSettings.rulerEnabled, viewerApi]);
+
+  useEffect(() => {
+    if (!viewerApi.setOnRulerTick) return;
+    viewerApi.setOnRulerTick(() => setRulerTick((t) => t + 1));
+    return () => viewerApi.setOnRulerTick?.(null);
+  }, [viewerApi]);
+
+  const handleRulerPointerMove = useCallback(
+    (event: React.PointerEvent) => {
+      if (!project.viewerSettings.rulerEnabled) return;
+      if (viewerApi.getRulerEdgeAtPointer) {
+        const result = viewerApi.getRulerEdgeAtPointer({ clientX: event.clientX, clientY: event.clientY });
+        setRulerHoverResult(result);
+      }
+      const internal = viewerApi.getInternalRulerPickAtPointer?.({ clientX: event.clientX, clientY: event.clientY }) ?? null;
+      setInternalRulerHoverResult(internal);
+    },
+    [project.viewerSettings.rulerEnabled, viewerApi]
+  );
+
+  const handleRulerClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!project.viewerSettings.rulerEnabled) return;
+      const internal = viewerApi.getInternalRulerPickAtPointer?.({ clientX: event.clientX, clientY: event.clientY });
+      if (internal) {
+        viewerApi.cycleInternalRulerSelection?.(internal);
+        setInternalRulerVersion((v) => v + 1);
+        return;
+      }
+      viewerApi.clearInternalRulerSelection?.();
+      setInternalRulerVersion((v) => v + 1);
+      const result = viewerApi.getRulerEdgeAtPointer?.({ clientX: event.clientX, clientY: event.clientY }) ?? null;
+      setRulerAnchorResult(result);
+    },
+    [project.viewerSettings.rulerEnabled, viewerApi]
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && project.viewerSettings.rulerEnabled) {
+        viewerApi.clearInternalRulerSelection?.();
+        setInternalRulerVersion((v) => v + 1);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [project.viewerSettings.rulerEnabled, viewerApi]);
+
+  const projectRef = useRef(project);
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
@@ -311,6 +379,47 @@ const projectRef = useRef(project);
   const workspacePositionKey = useMemo(
     () => JSON.stringify(project.workspaceBoxes.map((b) => [b.id, b.posicaoX_mm, b.posicaoY_mm, b.posicaoZ_mm])),
     [project.workspaceBoxes]
+  );
+
+  const rulerReferenceBoxId = useMemo(() => {
+    const fromHover = rulerHoverResult?.object
+      ? viewerApi.getBoxIdByMesh?.(rulerHoverResult.object)
+      : null;
+    return fromHover ?? project.selectedWorkspaceBoxId ?? null;
+  }, [rulerHoverResult, project.selectedWorkspaceBoxId, viewerApi]);
+
+  const rulerMeasurements = useMemo(() => {
+    if (!project.viewerSettings.rulerEnabled || !rulerReferenceBoxId || !viewerApi.getRulerMeasurements)
+      return {
+        horizontalLeft: null,
+        horizontalRight: null,
+        front: null,
+        back: null,
+        floor: null,
+        ceiling: null,
+      };
+    return viewerApi.getRulerMeasurements(rulerReferenceBoxId);
+  }, [
+    project.viewerSettings.rulerEnabled,
+    rulerReferenceBoxId,
+    viewerApi,
+    workspacePositionKey,
+    rulerTick,
+  ]);
+
+  const rulerManualMeasurement = useMemo((): RulerManagerMeasurement | null => {
+    if (!project.viewerSettings.rulerEnabled || !rulerAnchorResult || !rulerHoverResult) return null;
+    const res = distancePointToPoint(rulerAnchorResult.point, rulerHoverResult.point);
+    return {
+      distanceMm: Math.round(res.distance * 1000),
+      pointA: res.pointA.clone(),
+      pointB: res.pointB.clone(),
+    };
+  }, [project.viewerSettings.rulerEnabled, rulerAnchorResult, rulerHoverResult]);
+
+  const rulerInternalMeasurement = useMemo(
+    () => viewerApi.getInternalRulerMeasurement?.() ?? null,
+    [viewerApi, internalRulerVersion]
   );
   const prevBoxesRef = useRef<string>("");
   useEffect(() => {
@@ -428,20 +537,47 @@ return (
         </div>
 <div className="workspace-viewer" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
           <div
-            ref={containerRef}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              setMouseMenuPosition({ x: event.clientX, y: event.clientY });
-            }}
             style={{
+              position: "relative",
               flex: 1,
               minHeight: 0,
-              width: "100%",
-              height: typeof viewerHeight === "number" ? `${viewerHeight}px` : "100%",
-              overflow: "hidden",
             }}
-          />
-          <BoxInfoOverlay />
+          >
+            <div
+              ref={containerRef}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setMouseMenuPosition({ x: event.clientX, y: event.clientY });
+              }}
+              onPointerMove={handleRulerPointerMove}
+              onClick={handleRulerClick}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                overflow: "hidden",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+              }}
+              aria-hidden
+            >
+              <BoxInfoOverlay />
+              <RulerLabelsOverlay
+                rulerEnabled={project.viewerSettings.rulerEnabled}
+                rulerMeasurements={rulerMeasurements}
+                manualMeasurement={rulerManualMeasurement}
+                internalMeasurement={rulerInternalMeasurement}
+                hoverSnapPoint={internalRulerHoverResult?.point ?? null}
+                projectWorldToScreen={(p) => viewerApi.projectWorldToScreen?.(p) ?? null}
+              />
+            </div>
+          </div>
           {!viewerApi.viewerReady && (
             <div className="workspace-loading-overlay" aria-live="polite">
               <span className="workspace-loading-spinner" aria-hidden="true" />

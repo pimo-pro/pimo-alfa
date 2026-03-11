@@ -12,6 +12,7 @@ import type {
   ViewerSnapshot,
 } from "./projectTypes";
 import type { Viewer } from "../3d/core/Viewer";
+import type { RulerEdgePickResult } from "../3d/viewer-engine/ruler";
 
 export type PimoViewerApi = {
   viewerRef: React.MutableRefObject<Viewer | null>;
@@ -84,6 +85,8 @@ export type PimoViewerApi = {
   getDimensionsOverlayVisible?: () => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */
   getSelectedBoxScreenPosition?: () => { x: number; y: number } | null;
+  /** Projeta um ponto 3D (mundial) em pixels relativos ao container. Retorna null se atrás da câmera. */
+  projectWorldToScreen?: (_worldPoint: import("three").Vector3) => { x: number; y: number } | null;
   getRightmostX?: () => number;
   /** Reposiciona a câmera numa vista pré-definida (top, bottom, front, back, right, left, isometric). */
   setCameraView?: (_preset: "top" | "bottom" | "front" | "back" | "right" | "left" | "isometric") => void;
@@ -128,6 +131,21 @@ export type PimoViewerApi = {
   setExplodedViewIntensity?: (_value: number) => void;
   /** Ativa/desativa highlight por mesh (hover + seleção em portas, gavetas, painéis, furos). */
   setHighlightEnabled?: (_enabled: boolean) => void;
+  /** Ativa/desativa modo régua (medição). */
+  setRulerEnabled?: (_enabled: boolean) => void;
+  /** Edge Picking: retorna o edge (ou vértice) mais próximo do cursor quando o modo régua está ativo. */
+  getRulerEdgeAtPointer?: (_event: { clientX: number; clientY: number }) => RulerEdgePickResult | null;
+  /** Obtém boxId a partir de um mesh (para régua: referência a partir do hover). */
+  getBoxIdByMesh?: (_mesh: import("three").Object3D) => string | null;
+  /** Mediçõees automáticas (RulerManager): candidatas em mm. */
+  getRulerMeasurements?: (_referenceBoxId: string | null) => import("../3d/viewer-engine/ruler").RulerManagerResult;
+  /** Callback chamado a cada frame durante drag com régua ativa (atualização em tempo real). */
+  setOnRulerTick?: (_callback: (() => void) | null) => void;
+  /** Régua interna: picking vértice/edge/face dentro do box. */
+  getInternalRulerPickAtPointer?: (_event: { clientX: number; clientY: number }) => import("../3d/viewer-engine/ruler").InternalRulerPickResult | null;
+  cycleInternalRulerSelection?: (_result: import("../3d/viewer-engine/ruler").InternalRulerPickResult) => void;
+  clearInternalRulerSelection?: () => void;
+  getInternalRulerMeasurement?: () => { pointA: import("three").Vector3; pointB: import("three").Vector3; distanceMm: number } | null;
   getExplodedViewIntensity?: () => number;
 };
 

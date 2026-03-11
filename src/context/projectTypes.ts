@@ -44,6 +44,8 @@ export type ViewerSettings = {
   photoModeEnabled: boolean;
   /** Highlight 3D: hover/click em elementos selecionáveis (portas, gavetas, painéis, furos). */
   highlightEnabled: boolean;
+  /** Régua: modo de medição (UI apenas; medição a implementar). */
+  rulerEnabled: boolean;
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;
 };
 
@@ -249,6 +251,8 @@ export type ViewerApi = {
   getRightmostX: () => number;
   /** Ativa/desativa highlight por mesh (hover + seleção). */
   setHighlightEnabled?: (_enabled: boolean) => void;
+  /** Ativa/desativa modo régua (medição). */
+  setRulerEnabled?: (_enabled: boolean) => void;
 };
 
 /** Snapshot da sala (paredes + seleção) para persistir com o projeto. */
@@ -406,6 +410,8 @@ export interface ProjectActions {
   setViewerSettings: (_partial: Partial<ViewerSettings>) => void;
   /** Alterna highlight 3D (hover/click em elementos). */
   toggleHighlight: () => void;
+  /** Alterna modo régua (medição). */
+  toggleRuler: () => void;
   /** Atualiza regras dinâmicas; guarda no LocalStorage e força recalcular caixas. */
   updateRules: (_rules: RulesConfig) => void;
   /** Define o perfil de regras ativo; recalcula todas as caixas. */
