@@ -203,6 +203,26 @@ export default function ContextMenu({ position, onClose, contextMenuLayerTarget 
           <span>Excluir peça</span>
         </button>
       )}
+      {selectedBoxId && (
+        <button
+          type="button"
+          role="menuitem"
+          style={itemStyle}
+          onClick={() => {
+            actions.alignFrontWithNeighbor(selectedBoxId);
+            onClose();
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <span aria-hidden>↔</span>
+          <span>Alinhar pela frente do box ao lado</span>
+        </button>
+      )}
       {(showDoorMaterial || showDrawerMaterial) && (
         <div
           style={{ position: "relative" }}

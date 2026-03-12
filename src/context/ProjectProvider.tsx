@@ -1185,6 +1185,33 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
+    alignFrontWithNeighbor: (boxId) => {
+      updateProject((prev) => {
+        const selected = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (!selected?.dimensoes?.profundidade || selected.locked) return prev;
+        const others = prev.workspaceBoxes.filter((b) => b.id !== boxId && b.dimensoes?.profundidade != null);
+        if (others.length === 0) return prev;
+        const selectedX = selected.posicaoX_mm ?? 0;
+        let nearest = others[0];
+        let minDistX = Math.abs((nearest.posicaoX_mm ?? 0) - selectedX);
+        for (let i = 1; i < others.length; i++) {
+          const distX = Math.abs((others[i].posicaoX_mm ?? 0) - selectedX);
+          if (distX < minDistX) {
+            minDistX = distX;
+            nearest = others[i];
+          }
+        }
+        const neighborProf = nearest.dimensoes?.profundidade ?? 0;
+        const neighborFrontZ = (nearest.posicaoZ_mm ?? 0) + neighborProf / 2;
+        const selectedProf = selected.dimensoes.profundidade ?? 0;
+        const newZ = neighborFrontZ - selectedProf / 2;
+        const workspaceBoxes = prev.workspaceBoxes.map((b) =>
+          b.id === boxId ? { ...b, posicaoZ_mm: newZ, manualPosition: true } : b
+        );
+        return { ...prev, workspaceBoxes };
+      }, false);
+    },
+
     setDoorMaterial: (boxId, doorLayerId, material) => {
       updateProject((prev) => {
         const box = prev.workspaceBoxes.find((b) => b.id === boxId);

@@ -393,6 +393,8 @@ export interface ProjectActions {
   setWorkspaceBoxMaterial: (_boxId: string, _materialId: string) => void;
   /** Bloqueia ou desbloqueia a peça (impede movimento e transformações quando locked). */
   setWorkspaceBoxLocked: (_boxId: string, _locked: boolean) => void;
+  /** Alinha a frente do box (eixo Z) com a frente do box vizinho mais próximo no eixo X. */
+  alignFrontWithNeighbor: (_boxId: string) => void;
   addDoorLayerItem: () => void;
   addDrawerLayerItem: () => void;
   removeDoorLayerItem: (_id: string) => void;
