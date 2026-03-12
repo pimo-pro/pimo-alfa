@@ -5,9 +5,10 @@ interface FooterProps {
   onShowAbout?: () => void;
   onShowSystemDocs?: () => void;
   onShowAdmin?: () => void;
+  onShowAjuda?: () => void;
 }
 
-export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin }: FooterProps) {
+export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin, onShowAjuda }: FooterProps) {
   const [versionInfo, setVersionInfo] = useState({
     version: "V4.1.0.2.6",
     updatedAt: "12.03.2026 12:08",
@@ -128,7 +129,19 @@ export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin }: F
           columnGap: 8,
         }}
       >
-        <span style={{ cursor: "pointer" }}>Ajuda</span>
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={onShowAjuda}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              onShowAjuda?.();
+            }
+          }}
+        >
+          Ajuda
+        </span>
         <span style={{ cursor: "pointer" }}>Contacto</span>
         <span style={{ cursor: "pointer" }}>Documentação</span>
         <span

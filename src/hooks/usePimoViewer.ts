@@ -121,6 +121,8 @@ type PimoViewerAPI = {
   setMaterialQuality?: (_quality: ViewerMaterialQuality) => void;
   getMaterialQuality?: () => ViewerMaterialQuality;
   updateBoxMaterial?: (_boxId: string, _materialId: string) => void;
+  updateDoorMaterial?: (_boxId: string, _doorLayerId: string, _materialId: string) => void;
+  updateDrawerMaterial?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
   setMaterialMode?: (_mode: "performance" | "showcase" | "realistic") => void;
   getMaterialMode?: () => "performance" | "showcase" | "realistic";
   setReflectionsEnabled?: (_enabled: boolean) => void;
@@ -656,6 +658,20 @@ export const usePimoViewer = (
     viewerRef.current?.updateBoxMaterial?.(boxId, materialId);
   }, []);
 
+  const updateDoorMaterial = useCallback(
+    (boxId: string, doorLayerId: string, materialId: string) => {
+      viewerRef.current?.updateDoorMaterial?.(boxId, doorLayerId, materialId);
+    },
+    []
+  );
+
+  const updateDrawerMaterial = useCallback(
+    (boxId: string, drawerLayerId: string, materialId: string) => {
+      viewerRef.current?.updateDrawerMaterial?.(boxId, drawerLayerId, materialId);
+    },
+    []
+  );
+
   const setMaterialMode = useCallback(
     (mode: "performance" | "showcase" | "realistic") => {
       viewerRef.current?.setMaterialMode?.(mode);
@@ -863,6 +879,8 @@ export const usePimoViewer = (
       setMaterialQuality,
       getMaterialQuality,
       updateBoxMaterial,
+      updateDoorMaterial,
+      updateDrawerMaterial,
       setMaterialMode,
       getMaterialMode,
       setReflectionsEnabled,
@@ -973,6 +991,8 @@ export const usePimoViewer = (
       setMaterialQuality,
       getMaterialQuality,
       updateBoxMaterial,
+      updateDoorMaterial,
+      updateDrawerMaterial,
       setMaterialMode,
       getMaterialMode,
       setReflectionsEnabled,

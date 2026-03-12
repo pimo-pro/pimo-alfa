@@ -37,7 +37,11 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     hingeSide: door.hingeSide,
     pivot: door.pivot,
     material: door.material,
+    materialId: door.materialId,
   }));
+  if (import.meta.env.DEV && doors.length > 0) {
+    console.log("[DOOR-MAT] getStructureFingerprint doorSig", { boxId: wsBox.id, doorSig });
+  }
   const drawerSig = drawers.map((drawer) => ({
     id: drawer.id,
     width: drawer.width,
@@ -136,6 +140,15 @@ export const useCalculadoraSync = (
     if (!api) return;
     const currentBoxes = boxesRef.current ?? [];
     const wsBoxes = workspaceBoxesRef.current ?? [];
+    if (import.meta.env.DEV && wsBoxes.length > 0) {
+      console.log("[DOOR-MAT] syncFromCalculator INÍCIO — wsBoxes (ref) door materials", {
+        wsBoxesCount: wsBoxes.length,
+        porBox: wsBoxes.map((ws) => ({
+          boxId: ws.id,
+          doors: (ws.doorsLayer ?? []).map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
+        })),
+      });
+    }
     const boxById = new Map(currentBoxes.map((box) => [box.id, box]));
     const nextState = new Map<string, BoxState>();
     const currentIds = new Set<string>();
@@ -175,6 +188,12 @@ export const useCalculadoraSync = (
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
       const doorLayerItems = wsBox?.doorsLayer ?? [];
       const drawerLayerItems = wsBox?.drawersLayer ?? [];
+      if (import.meta.env.DEV && doorLayerItems.length > 0) {
+        console.log("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
+          boxId: wsBox.id,
+          doorLayerItems: doorLayerItems.map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
+        });
+      }
       const useCabinetLock = cabinetType === "lower" && feetEnabled;
       const cabinetOpts: Partial<BoxOptions> = useCabinetLock
         ? { cabinetType, pe_cm, feetEnabled, feetHeight, feetOffsetFront }
@@ -212,10 +231,20 @@ export const useCalculadoraSync = (
         const structureFingerprint = getStructureFingerprint(wsBox);
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
+          if (import.meta.env.DEV && (wsBox?.doorsLayer?.length ?? 0) > 0) {
+            console.log("[DOOR-MAT] useCalculadoraSync SKIP full update (fingerprint igual) — só posRot", {
+              boxId: wsBox.id,
+              doorMaterials: wsBox.doorsLayer?.map((d) => ({ id: d.id, material: d.material })),
+            });
+          }
           // Apenas posição/rotação mudaram (ex.: drag no viewer). Só atualizar transform para não disparar rebuild (updateBoxGroup/createDoorObject).
           api.updateBox(wsBox.id, { ...posRot, locked });
         } else {
           if (import.meta.env.DEV) {
+            console.log("[DOOR-MAT] useCalculadoraSync FULL updateBox (fingerprint mudou)", {
+              boxId: wsBox.id,
+              doorLayerItems: (wsBox.doorsLayer ?? []).map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
+            });
             devLogger.debug("[useCalculadoraSync] estrutura mudou, chamando updateBox com dimensões", {
               boxId: wsBox.id,
               width,

@@ -18,6 +18,10 @@ export type ContextMenuProps = {
   onClose: () => void;
   /** Alvo do clique direito: porta ou gaveta (para mostrar item "Alterar material"). */
   contextMenuLayerTarget?: ContextMenuLayerTarget;
+  /** Chamado após alterar material da porta (para atualizar o viewer imediatamente). */
+  onDoorMaterialChange?: (boxId: string, doorLayerId: string, materialId: string) => void;
+  /** Chamado após alterar material da gaveta (para atualizar o viewer imediatamente). */
+  onDrawerMaterialChange?: (boxId: string, drawerLayerId: string, materialId: string) => void;
 };
 
 /** Materiais oficiais do projeto (mesma lista do módulo); apenas labels para o picker. */
@@ -58,7 +62,13 @@ const itemStyle: React.CSSProperties = {
  * Mostra: Bloquear/Desbloquear peça (se houver peça selecionada) e modo do mouse (CAD / Classic).
  * Fecha ao clicar fora, pressionar ESC ou ao escolher uma ação.
  */
-export default function ContextMenu({ position, onClose, contextMenuLayerTarget = null }: ContextMenuProps) {
+export default function ContextMenu({
+  position,
+  onClose,
+  contextMenuLayerTarget = null,
+  onDoorMaterialChange,
+  onDrawerMaterialChange,
+}: ContextMenuProps) {
   const { project, actions } = useProject();
   const menuRef = useRef<HTMLDivElement>(null);
   const [materialSubmenuOpen, setMaterialSubmenuOpen] = useState<"door" | "drawer" | null>(null);
@@ -266,9 +276,9 @@ export default function ContextMenu({ position, onClose, contextMenuLayerTarget 
                   onClick={() => {
                     const canonicalId = m.canonicalId;
                     if (contextMenuLayerTarget?.type === "door" && contextMenuLayerTarget.doorLayerId) {
-                      actions.setDoorMaterial(contextMenuLayerTarget.boxId, contextMenuLayerTarget.doorLayerId, canonicalId);
+                      onDoorMaterialChange?.(contextMenuLayerTarget.boxId, contextMenuLayerTarget.doorLayerId, canonicalId);
                     } else if (contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId) {
-                      actions.setDrawerMaterial(contextMenuLayerTarget.boxId, contextMenuLayerTarget.drawerLayerId, canonicalId);
+                      onDrawerMaterialChange?.(contextMenuLayerTarget.boxId, contextMenuLayerTarget.drawerLayerId, canonicalId);
                     }
                     onClose();
                   }}

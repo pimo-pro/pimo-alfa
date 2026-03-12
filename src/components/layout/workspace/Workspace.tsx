@@ -558,6 +558,13 @@ return (
               onContextMenu={(event) => {
                 event.preventDefault();
                 const hit = (viewerApi as { getContextMenuLayerHit?: (_event: unknown) => typeof contextMenuLayerTarget }).getContextMenuLayerHit?.(event) ?? null;
+                if (import.meta.env.DEV && hit?.type === "door" && hit?.doorLayerId) {
+                  console.log("[DOOR-MAT] Workspace onContextMenu — hit recebido (será usado no menu)", {
+                    boxId: hit.boxId,
+                    doorLayerId: hit.doorLayerId,
+                    type: hit.type,
+                  });
+                }
                 setContextMenuLayerTarget(hit);
                 setMouseMenuPosition({ x: event.clientX, y: event.clientY });
               }}
@@ -604,6 +611,20 @@ return (
                 setContextMenuLayerTarget(null);
               }}
               contextMenuLayerTarget={contextMenuLayerTarget}
+              onDoorMaterialChange={(boxId, doorLayerId, materialId) => {
+                if (import.meta.env.DEV) {
+                  console.log("[DOOR-MAT] 1 Workspace.onDoorMaterialChange", { boxId, doorLayerId, materialId, when: "before setState" });
+                }
+                actions.setDoorMaterial(boxId, doorLayerId, materialId);
+                viewerApi.updateDoorMaterial?.(boxId, doorLayerId, materialId);
+                if (import.meta.env.DEV) {
+                  console.log("[DOOR-MAT] 2 Workspace.onDoorMaterialChange done (viewer updated)", { boxId, doorLayerId, materialId });
+                }
+              }}
+              onDrawerMaterialChange={(boxId, drawerLayerId, materialId) => {
+                actions.setDrawerMaterial(boxId, drawerLayerId, materialId);
+                viewerApi.updateDrawerMaterial?.(boxId, drawerLayerId, materialId);
+              }}
             />
           )}
         </div>

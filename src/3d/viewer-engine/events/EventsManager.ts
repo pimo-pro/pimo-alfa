@@ -145,6 +145,12 @@ export class EventsManager {
 
   private handleCanvasPointerDown(event: PointerEvent): void {
     const e = this.engine;
+    if (import.meta.env.DEV && event.button === 2) {
+      console.log("[DOOR-MAT] handleCanvasPointerDown — botão direito (context menu virá a seguir)", {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
     e.logTransformDiagnostic("pointerDown", {
       pointerType: event.pointerType,
       button: event.button,

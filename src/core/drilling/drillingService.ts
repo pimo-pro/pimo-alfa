@@ -11,7 +11,7 @@
  */
 
 import type { RulesConfig } from "../rules/rulesConfig";
-import { getHingeYPositions } from "../rules/rulesConfig";
+import { getNumDobradicas, getHingeYPositions } from "../rules/rulesConfig";
 import type { DrillFace, DrillType, PanelFace, TechnicalDrillHole } from "../types";
 
 export type PieceType =
@@ -197,7 +197,12 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   if (!piece.tipo.startsWith("porta")) return;
   const face: DrillFace = "tras";
   const distCentroCaneco = Number(cfg.distanciaCentroDaBorda) || cfg.distanciaBordaLateral || SENSYS_8645I_C00.canecoCentroBordaMm;
-  const numHinges = Math.max(2, cfg.numeroPorPorta ?? 2);
+  // Regras da Porta: número de dobradiças por altura/largura (cm). Fallback: config técnica.
+  const numHinges =
+    piece.hingeSide === "top" || piece.hingeSide === "bottom"
+      ? getNumDobradicas(piece.largura / 10, rules)
+      : getNumDobradicas(piece.altura / 10, rules);
+  const numHingesClamped = Math.max(2, numHinges);
   const diametroCaneco = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : SENSYS_8645I_C00.canecoDiametroMm;
   const profundidadeCaneco = Math.min(
     piece.espessura,
@@ -221,7 +226,7 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   /* Porta superior ou inferior: dobradiça na borda top/bottom (eixo Y fixo, posições ao longo da largura = X).
    * Convenção: Y=0 no topo da peça, Y cresce para baixo. Borda superior = Y pequeno, borda inferior = Y grande. */
   if (piece.hingeSide === "top" || piece.hingeSide === "bottom") {
-    const offsetsX = getHingeYPositions(piece.largura, numHinges, rules);
+    const offsetsX = getHingeYPositions(piece.largura, numHingesClamped, rules);
     if (offsetsX.length === 0) return;
     /* top = borda SUPERIOR = menor Y → y = dist. bottom = borda INFERIOR = maior Y → y = altura - dist. */
     const yCaneco = piece.hingeSide === "top" ? distCentroCaneco : piece.altura - distCentroCaneco;
@@ -236,7 +241,7 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
 
   /* Laterais (left/right): comportamento existente inalterado. */
   const hingeSide = piece.hingeSide === "left" || piece.hingeSide === "right" ? piece.hingeSide : "left";
-  const offsets = getHingeYPositions(piece.altura, numHinges, rules);
+  const offsets = getHingeYPositions(piece.altura, numHingesClamped, rules);
   if (offsets.length === 0) return;
   const xCaneco = hingeSide === "left" ? piece.largura - distCentroCaneco : piece.largura - distCentroCaneco;
   const xFixacao = hingeSide === "left" ? piece.largura - distCentroFixacao : piece.largura - distCentroFixacao;
@@ -345,7 +350,7 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
 
   /* Painel inferior (hingeSide bottom): furos de fixação da base da dobradiça no fundo. X = cópia da porta (porta = master), Y = dist da borda da dobradiça (frente). */
   if (piece.tipo === "fundo" && piece.hingeSide === "bottom") {
-    const numHinges = Math.max(2, rules?.furos?.tecnicos?.dobradica?.numeroPorPorta ?? 2);
+    const numHinges = Math.max(2, getNumDobradicas(piece.largura / 10, rules));
     const positionsX = (piece.hingePositionsMm?.length ?? 0) > 0
       ? piece.hingePositionsMm!
       : getHingeYPositions(piece.largura, numHinges, rules);

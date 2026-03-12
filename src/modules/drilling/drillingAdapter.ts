@@ -8,7 +8,12 @@ import type {
   ViewerDrillMarkersByPanel,
 } from "../../core/types";
 import type { RulesConfig } from "../../core/rules/rulesConfig";
-import { MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM, getHingeYPositions, normalizeRulesConfig } from "../../core/rules/rulesConfig";
+import {
+  getNumDobradicas,
+  MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM,
+  getHingeYPositions,
+  normalizeRulesConfig,
+} from "../../core/rules/rulesConfig";
 import { getSettings } from "../../core/settings/settingsService";
 import type { PieceType } from "../../core/drilling/drillingService";
 import { calculateTechnicalDrillingsForPiece, drillFaceToPanelFace, isTopDrillable } from "../../core/drilling/drillingService";
@@ -71,7 +76,7 @@ function getHingePositionsFromDoorHeight(
   lateralHeightMm: number
 ): number[] {
   if (!Number.isFinite(doorHeightMm) || doorHeightMm <= 0) return [];
-  const numHinges = rules.furos?.tecnicos?.dobradica?.numeroPorPorta ?? 2;
+  const numHinges = getNumDobradicas(doorHeightMm / 10, rules);
   const doorPositions = getHingeYPositions(doorHeightMm, numHinges, rules);
   if (doorPositions.length === 0) return [];
   if (!Number.isFinite(lateralHeightMm) || lateralHeightMm <= 0) return doorPositions;
@@ -95,7 +100,7 @@ function getHingePositionsFromDoorWidth(
   panelWidthMm: number
 ): number[] {
   if (!Number.isFinite(doorWidthMm) || doorWidthMm <= 0) return [];
-  const numHinges = rules.furos?.tecnicos?.dobradica?.numeroPorPorta ?? 2;
+  const numHinges = getNumDobradicas(doorWidthMm / 10, rules);
   const doorPositions = getHingeYPositions(doorWidthMm, numHinges, rules);
   if (doorPositions.length === 0) return [];
   if (!Number.isFinite(panelWidthMm) || panelWidthMm <= 0) return doorPositions;
@@ -253,7 +258,13 @@ export function buildPanelDrillingResult(
   const isTopPanel = input.tipo === "cima";
   const isBottomPanel = input.tipo === "fundo";
   const distEntreFixacao = rules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco;
-  const numHinges = rules.furos.tecnicos.dobradica.numeroPorPorta;
+  // Regras da Porta (Configuração de Regras → Regras da Porta): número de dobradiças por altura/largura da porta.
+  const numHingesForDoor = isDoor
+    ? (input.hingeSide === "top" || input.hingeSide === "bottom"
+        ? getNumDobradicas(input.larguraMm / 10, rules)
+        : getNumDobradicas(input.alturaMm / 10, rules))
+    : 0;
+  const numHinges = isDoor ? numHingesForDoor : rules.furos.tecnicos.dobradica.numeroPorPorta;
 
   let hingePositions: number[] = [];
   /* Laterais (left/right): posições Y copiadas da altura da porta. */

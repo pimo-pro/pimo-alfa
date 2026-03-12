@@ -1213,17 +1213,51 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     },
 
     setDoorMaterial: (boxId, doorLayerId, material) => {
+      if (import.meta.env.DEV) {
+        console.log("[DOOR-MAT] 3 ProjectProvider.setDoorMaterial ENTRADA", { boxId, doorLayerId, material });
+      }
       updateProject((prev) => {
         const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (import.meta.env.DEV && box) {
+          const doorIds = (box.doorsLayer ?? []).map((d) => d.id);
+          console.debug("[ProjectProvider.setDoorMaterial] doorLayerId (comparar com viewer)", {
+            boxId,
+            doorLayerId,
+            material,
+            doorIdsNoBox: doorIds,
+            match: doorIds.includes(doorLayerId),
+          });
+        }
         if (!box) return prev;
+        const doorBefore = (box.doorsLayer ?? []).find((d) => d.id === doorLayerId);
+        if (import.meta.env.DEV) {
+          console.log("[DOOR-MAT] 4 ProjectProvider.setDoorMaterial door ANTES", {
+            boxId,
+            doorLayerId,
+            materialAntes: doorBefore?.material ?? doorBefore?.materialId,
+            materialNovo: material,
+          });
+        }
+        // Atualizar DoorLayerItem (fonte de verdade): material e materialId para persistir em rebuilds/sync.
         const doorsLayer = (box.doorsLayer ?? []).map((door) =>
-          door.id === doorLayerId ? { ...door, material } : door
+          door.id === doorLayerId ? { ...door, material, materialId: material } : door
         );
         const workspaceBoxes = prev.workspaceBoxes.map((b) =>
           b.id === boxId ? { ...b, doorsLayer } : b
         );
+        if (import.meta.env.DEV) {
+          const doorAfter = doorsLayer.find((d) => d.id === doorLayerId);
+          console.log("[DOOR-MAT] 5 ProjectProvider.setDoorMaterial door DEPOIS (estado que será commitado)", {
+            boxId,
+            doorLayerId,
+            materialEmDoorsLayer: doorAfter?.material ?? doorAfter?.materialId,
+          });
+        }
         return { ...prev, workspaceBoxes };
       });
+      if (import.meta.env.DEV) {
+        console.log("[DOOR-MAT] 6 ProjectProvider.setDoorMaterial updateProject callback agendado");
+      }
     },
 
     setDrawerMaterial: (boxId, drawerLayerId, material) => {

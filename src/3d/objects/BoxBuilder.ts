@@ -182,7 +182,12 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
 
 type PanelType = "left" | "right" | "top" | "bottom" | "back" | "front";
 
-type DoorSpec = {
+/**
+ * Especificação de porta para o Viewer 3D (derivada de DoorLayerItem).
+ * Única fonte de verdade para dados é DoorLayerItem; DoorSpec é a projeção em metros para render.
+ * buildDoorSpecs() converte DoorLayerItem[] → DoorSpec[].
+ */
+export type DoorSpec = {
   id: string;
   type: "door";
   groupType?: "simples" | "dupla";
@@ -250,6 +255,7 @@ type DrawerSpec = {
   pullDistanceM: number;
 };
 
+/** Converte o modelo de porta (DoorLayerItem) para especificação de render (DoorSpec). Ordem preservada. */
 function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
   return items.map((item) => ({
     id: item.id,
@@ -389,7 +395,12 @@ function mapDoorHolesByHingeSide(
   }));
 }
 
-function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]): THREE.Object3D {
+/**
+ * Cria o objeto 3D da porta (grupo pivot + mesh do painel + furos).
+ * Todos os nós recebem userData.doorLayerId para seleção, context menu e outline.
+ * O ViewerCore deve chamar applyPanelIdsToBox no boxGroup após adicionar a porta, para definir userData.boxId.
+ */
+export function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]): THREE.Object3D {
   if (import.meta.env.DEV) {
     devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] create", {
       id: spec.id,
@@ -431,8 +442,27 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
     applyDrillHolesToPanelGeometry(mesh, "front", effectiveDoorHoles);
   }
 
+  // Garantir userData.doorLayerId e doorPart em todos os objetos relevantes
+  mesh.userData.doorLayerId = spec.id;
+  mesh.userData.doorPart = "panel";
+
   const pivot = new THREE.Group();
   pivot.name = `door-layer-${spec.id}`;
+  pivot.userData.doorLayerId = spec.id;
+  pivot.userData.openDirection = resolvedOpenDirection;
+  pivot.userData.hingeSide = resolvedHingeSide;
+  pivot.userData.pivot = spec.pivot;
+  pivot.userData.isOpen = spec.isOpen;
+
+  // Propagação de userData para seleção/outline/context menu: todos os descendentes têm doorLayerId.
+  pivot.traverse((obj) => {
+    if (obj instanceof THREE.Mesh || obj instanceof THREE.Group) {
+      obj.userData = obj.userData || {};
+      obj.userData.doorLayerId = spec.id;
+      if (obj === mesh) obj.userData.doorPart = "panel";
+    }
+  });
+
   const isVerticalOpening = resolvedOpenDirection === "up" || resolvedOpenDirection === "down";
   if (spec.pivot === "top-edge" || resolvedOpenDirection === "up") {
     mesh.position.set(0, -spec.heightM / 2, 0);
@@ -498,14 +528,20 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
 
   doorOpenState.set(spec.id, spec.isOpen);
   doorRotationState.set(spec.id, targetRotation);
-  pivot.userData.doorLayerId = spec.id;
-  pivot.userData.openDirection = resolvedOpenDirection;
-  pivot.userData.hingeSide = resolvedHingeSide;
-  mesh.userData.doorLayerId = spec.id;
   mesh.userData.openDirection = resolvedOpenDirection;
   mesh.userData.hingeSide = resolvedHingeSide;
   mesh.userData.doorHolesEffective = effectiveDoorHoles;
   pivot.add(mesh);
+  if (import.meta.env.DEV) {
+    devLogger.debug("[createDoorObject] nome do grupo e userData (para diagnóstico updateDoorMaterial)", {
+      specId: spec.id,
+      groupName: pivot.name,
+      expectedGroupName: `door-layer-${spec.id}`,
+      groupUserDataDoorLayerId: pivot.userData.doorLayerId,
+      meshUserDataDoorLayerId: mesh.userData.doorLayerId,
+      meshUuid: (mesh as THREE.Mesh).uuid,
+    });
+  }
   if (import.meta.env.DEV) {
     const finalCenter = new THREE.Vector3()
       .copy(mesh.position)
@@ -530,6 +566,40 @@ function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: 
     });
   }
   return pivot;
+}
+
+const _sizeForDoorSpec = new THREE.Vector3();
+
+/**
+ * Extrai um DoorSpec a partir de um grupo de porta existente (door-layer-*).
+ * Usado pelo ViewerCore para reconstruir a porta com novo material (novo uuid) e evitar cache de rotação.
+ */
+export function getDoorSpecFromGroup(group: THREE.Group): DoorSpec | null {
+  const id = group.userData?.doorLayerId as string | undefined;
+  if (!id || typeof id !== "string") return null;
+  const mesh = group.children.find((c) => c instanceof THREE.Mesh && (c as THREE.Mesh).geometry) as THREE.Mesh | undefined;
+  if (!mesh?.geometry?.boundingBox) return null;
+  mesh.geometry.computeBoundingBox();
+  mesh.geometry.boundingBox.getSize(_sizeForDoorSpec);
+  const openDirection = (group.userData?.openDirection as DoorSpec["openDirection"]) ?? "left";
+  const hingeSide = (group.userData?.hingeSide as DoorSpec["hingeSide"]) ?? "left";
+  const pivot = (group.userData?.pivot as DoorSpec["pivot"]) ?? "left-edge";
+  const isOpen = Boolean(group.userData?.isOpen);
+  return {
+    id,
+    type: "door",
+    widthM: Math.max(0.001, _sizeForDoorSpec.x),
+    heightM: Math.max(0.001, _sizeForDoorSpec.y),
+    thicknessM: Math.max(0.001, _sizeForDoorSpec.z),
+    x: group.position.x,
+    y: group.position.y,
+    z: group.position.z,
+    rotY: group.rotation.y,
+    openDirection,
+    hingeSide,
+    pivot,
+    isOpen,
+  };
 }
 
 /**
@@ -1174,9 +1244,9 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
   const doorSpecs = buildDoorSpecs(doorLayerItems);
   const drawerSpecs = buildDrawerSpecs(drawerLayerItems);
   doorSpecs.forEach((spec, doorIndex) => {
-    const doorMaterial = doorLayerItems[doorIndex]?.material
-      ? getMaterialForOfficialId(doorLayerItems[doorIndex].material!)
-      : baseMaterial;
+    const item = doorLayerItems[doorIndex];
+    const materialId = item?.material ?? item?.materialId ?? getDefaultOfficialMaterial().canonicalId;
+    const doorMaterial = getMaterialForOfficialId(materialId);
     root.add(createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
   });
   drawerSpecs.forEach((spec, drawerIndex) => {
@@ -1418,6 +1488,12 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   // 2) Incremental: portas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa porta
   const doorFpKey = DOOR_SPEC_FINGERPRINT_KEY;
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
+  if (import.meta.env.DEV && doorLayerItems.length > 0) {
+    console.log("[DOOR-MAT] BoxBuilder.updateBoxGroup doorLayerItems recebidos", {
+      count: doorLayerItems.length,
+      items: doorLayerItems.map((d, i) => ({ index: i, id: d.id, material: d.material, materialId: d.materialId })),
+    });
+  }
   const doorSpecs = buildDoorSpecs(doorLayerItems);
   const requiredDoorIds = new Set(doorSpecs.map((s) => s.id));
   const existingDoorNames = group.children
@@ -1431,7 +1507,17 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     }
   }
   doorSpecs.forEach((spec, doorIndex) => {
-    const materialName = doorLayerItems[doorIndex]?.material ?? getDefaultOfficialMaterial().canonicalId;
+    const item = doorLayerItems[doorIndex];
+    const materialName = item?.material ?? item?.materialId ?? getDefaultOfficialMaterial().canonicalId;
+    if (import.meta.env.DEV) {
+      console.log("[DOOR-MAT] BoxBuilder.updateBoxGroup porta", {
+        doorIndex,
+        specId: spec.id,
+        materialNameUsado: materialName,
+        itemMaterial: item?.material,
+        itemMaterialId: item?.materialId,
+      });
+    }
     const newFingerprint = getDoorSpecFingerprint(spec, materialName);
     const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
     if (existingDoor) {

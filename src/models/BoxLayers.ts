@@ -1,5 +1,10 @@
 export type LayerOpenDirection = "left" | "right" | "up" | "down" | "pull";
 
+/**
+ * Modelo unificado de porta (fonte de verdade para estado e UI).
+ * Usado por: ProjectProvider (estado), Configuração de Regras → Regras da Porta, painéis de layers.
+ * A camada de visualização (BoxBuilder) converte para DoorSpec (metros) para o Three.js.
+ */
 export interface DoorLayerItem {
   id: string;
   parentBoxId: string;

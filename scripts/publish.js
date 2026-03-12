@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 
 const rootDir = process.cwd();
 const versionFilePath = path.join(rootDir, "version.json");
@@ -51,18 +52,25 @@ const nextData = {
 
 fs.writeFileSync(versionFilePath, `${JSON.stringify(nextData, null, 2)}\n`, "utf8");
 
-const commands = [
-  "npm run build",
-  "git add .",
-  `git commit -m \"auto publish ${nextVersion}\"`,
-  `git tag ${nextVersion}`,
-  "git push",
-  `git push origin ${nextVersion}`,
-];
+
+function runStep(description, command) {
+  console.log(description);
+  try {
+    execSync(command, { stdio: "inherit" });
+  } catch (err) {
+    console.error(`Erro ao executar: ${command}`);
+    process.exit(1);
+  }
+}
 
 console.log(`Nova versao preparada: ${nextVersion}`);
 console.log(`updatedAt: ${nextUpdatedAt}`);
-console.log("Comandos sugeridos (nao executados):");
-for (const command of commands) {
-  console.log(command);
-}
+
+runStep("Executando build...", "npm run build");
+runStep("Adicionando arquivos ao git...", "git add .");
+runStep("Criando commit...", `git commit -m "auto publish ${nextVersion}"`);
+runStep("Criando tag...", `git tag ${nextVersion}`);
+runStep("Enviando push...", "git push");
+runStep("Enviando push da tag...", `git push origin ${nextVersion}`);
+
+console.log("Publicação concluída.");

@@ -50,7 +50,7 @@ import {
 } from "./materials";
 import type { MaterialMode } from "./materials";
 import type { ViewerBoxEntry } from "./types";
-import { updateBoxGeometry, updateBoxGroup, buildBoxLegacy } from "../objects/BoxBuilder";
+import { updateBoxGeometry, updateBoxGroup, buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { RoomBuilder } from "../room/RoomBuilder";
@@ -185,6 +185,16 @@ export class ViewerCore {
 
   /** Lock: quando ativo, impede que caixas entrem uma na outra e respeitam limites da sala (colisão). Ativado por padrão. */
   private lockEnabled = true;
+  /** Shift-Lock: durante o drag de um box, se Shift estiver pressionado, bloqueia o movimento no eixo Z. */
+  private shiftKeyHeld = false;
+  /** Z do box ao iniciar o drag (para Shift-Lock); em metros. */
+  private dragStartZForShiftLock: number | undefined = undefined;
+  private boundShiftKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Shift") this.shiftKeyHeld = true;
+  };
+  private boundShiftKeyUp = (e: KeyboardEvent) => {
+    if (e.key === "Shift") this.shiftKeyHeld = false;
+  };
   /** Quando lock desativado: caixas que intersectam paredes (para destaque vermelho). */
   private boxesIntersectingWalls = new Set<string>();
   /** Parede escondida manualmente (se existir). */
@@ -357,10 +367,15 @@ export class ViewerCore {
     this.transformControls.showY = true;
     this.transformControls.showZ = true;
     this.transformControls.addEventListener("mouseDown", () => {
+      if (this.viewerState.getSelectedBox()) {
+        const obj = this.transformControls!.object;
+        if (obj && "position" in obj) this.dragStartZForShiftLock = (obj as THREE.Object3D).position.z;
+      }
       this.viewerState.setTransformControlsDragging(true);
       this.logTransformDiagnostic("dragStart(mouseDown)");
     });
     this.transformControls.addEventListener("mouseUp", () => {
+      this.dragStartZForShiftLock = undefined;
       this.viewerState.setTransformControlsDragging(false);
       this.viewerState.setSuppressNextCanvasClick(true);
       this.viewerTools.applyCurrentTool();
@@ -370,6 +385,7 @@ export class ViewerCore {
       this.logTransformDiagnostic("dragEnd(mouseUp)");
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
+      if (!event.value) this.dragStartZForShiftLock = undefined;
       this.viewerState.setTransformControlsDragging(Boolean(event.value));
       this.logTransformDiagnostic("dragging-changed", {
         value: Boolean(event.value),
@@ -383,6 +399,15 @@ export class ViewerCore {
       }
     });
     this.transformControls.addEventListener("objectChange", () => {
+      if (
+        this.viewerState.getTransformControlsDragging() &&
+        this.viewerState.getSelectedBox() &&
+        this.shiftKeyHeld &&
+        this.dragStartZForShiftLock !== undefined
+      ) {
+        const obj = this.transformControls!.object;
+        if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
+      }
       this.viewerTools.applyCurrentTool();
       this.logTransformDiagnostic("drag(objectChange)");
     });
@@ -427,6 +452,8 @@ export class ViewerCore {
 
     this.start();
     window.addEventListener("resize", this.updateCanvasSize);
+    window.addEventListener("keydown", this.boundShiftKeyDown);
+    window.addEventListener("keyup", this.boundShiftKeyUp);
   }
 
   getCurrentMode(): "performance" | "showcase" {
@@ -888,6 +915,100 @@ export class ViewerCore {
       const name = entry.materialName ?? this.defaultMaterialName;
       this.updateBoxMaterial(id, name);
     });
+  }
+
+  /**
+   * Aplica um material a uma porta específica (por boxId e doorLayerId).
+   * Localiza o grupo door-layer-{doorLayerId}, extrai DoorSpec, remove a porta antiga, cria nova com createDoorObject
+   * preservando doorHoles e aplica applyPanelIdsToBox para manter userData.boxId/doorLayerId para seleção e outline.
+   */
+  updateDoorMaterial(boxId: string, doorLayerId: string, materialName: string): void {
+    if (import.meta.env.DEV) {
+      console.log("[DOOR-MAT] ViewerCore.updateDoorMaterial", { boxId, doorLayerId, materialName });
+    }
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    const nextMaterial = this.loadMaterial(materialName);
+    if (!nextMaterial) return;
+    const boxGroup = entry.mesh;
+    if (!(boxGroup instanceof THREE.Group)) return;
+
+    const doorLayerNames = boxGroup.children
+      .filter((c) => c.name.startsWith("door-layer-"))
+      .map((c) => c.name);
+    const expectedName = `door-layer-${doorLayerId}`;
+    const oldDoorGroup = boxGroup.children.find(
+      (c) => c.name === expectedName
+    ) as THREE.Group | undefined;
+
+    if (import.meta.env.DEV) {
+      devLogger.debug("[updateDoorMaterial] diagnóstico", {
+        boxId,
+        doorLayerIdRecebido: doorLayerId,
+        gruposDoorLayerNoBox: doorLayerNames,
+        nomeEsperado: expectedName,
+        encontrouGrupo: Boolean(oldDoorGroup),
+        meshUuidAntes: oldDoorGroup
+          ? (() => {
+              let u: string | null = null;
+              oldDoorGroup.traverse((n) => {
+                if (n instanceof THREE.Mesh) u = n.uuid;
+              });
+              return u;
+            })()
+          : null,
+      });
+    }
+
+    if (!oldDoorGroup) return;
+    const spec = getDoorSpecFromGroup(oldDoorGroup);
+    if (!spec) return;
+    let doorHoles: TechnicalDrillHole[] | undefined;
+    oldDoorGroup.traverse((node) => {
+      if (node instanceof THREE.Mesh && this.appliedRotationByMeshUuid.has(node.uuid)) {
+        this.appliedRotationByMeshUuid.delete(node.uuid);
+      }
+      const ud = (node as THREE.Object3D & { userData: { doorHolesEffective?: TechnicalDrillHole[] } }).userData;
+      if (Array.isArray(ud?.doorHolesEffective)) doorHoles = ud.doorHolesEffective;
+    });
+    boxGroup.remove(oldDoorGroup);
+    const newDoor = createDoorObject(spec, nextMaterial.material as THREE.Material, doorHoles);
+    boxGroup.add(newDoor);
+    this.applyPanelIdsToBox(boxGroup, boxId);
+    this.applyPanelVisibilityForObject(boxGroup);
+    if (import.meta.env.DEV) {
+      let newMeshUuid: string | null = null;
+      newDoor.traverse((n) => {
+        if (n instanceof THREE.Mesh) newMeshUuid = n.uuid;
+      });
+      devLogger.debug("[updateDoorMaterial] porta reconstruída", {
+        boxId,
+        doorLayerId,
+        newMeshUuid,
+        groupName: newDoor.name,
+        groupUserDataDoorLayerId: (newDoor as THREE.Object3D & { userData: { doorLayerId?: string } }).userData?.doorLayerId,
+      });
+    }
+    if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
+  }
+
+  /**
+   * Aplica um material à frente de uma gaveta (por boxId e drawerLayerId).
+   * Usado quando o utilizador altera o material da gaveta pelo menu de contexto.
+   */
+  updateDrawerMaterial(boxId: string, drawerLayerId: string, materialName: string): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    const nextMaterial = this.loadMaterial(materialName);
+    if (!nextMaterial) return;
+    entry.mesh.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const ud = (child as THREE.Mesh & { userData: { drawerLayerId?: string; drawerPart?: string } }).userData;
+        if (ud?.drawerLayerId === drawerLayerId && ud?.drawerPart === "front")
+          (child as THREE.Mesh).material = nextMaterial.material;
+      }
+    });
+    if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
 
   /**
@@ -1919,6 +2040,9 @@ export class ViewerCore {
       opts.drillMarkersByPanel !== undefined ||
       opts.thickness !== undefined;
     if (onlyTransform && !hasStructureOpts) {
+      if (import.meta.env.DEV) {
+        console.log("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
+      }
       if (entry.manualPosition && !opts.position) {
         // nada a alterar
       } else if (opts.position && !this.shouldUseFeetLock(entry)) {
@@ -1996,6 +2120,12 @@ export class ViewerCore {
           drawerLayerItems: opts.drawerLayerItems,
           drillMarkersByPanel: opts.drillMarkersByPanel,
         };
+        if (import.meta.env.DEV && (opts.doorLayerItems?.length ?? 0) > 0) {
+          console.log("[DOOR-MAT] ViewerCore.updateBox fullOpts.doorLayerItems", {
+            boxId: id,
+            doorLayerItems: opts.doorLayerItems?.map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
+          });
+        }
         if (import.meta.env.DEV && dimensionsChanged) {
           devLogger.debug("[ViewerCore.updateBox] updateBoxGroup (dimensões alteradas)", { boxId: id, width, height, depth });
         }
@@ -3696,7 +3826,23 @@ export class ViewerCore {
     });
     const hits = this.raycaster.intersectObjects(roots, true);
     if (!hits.length) return null;
-    return this.getBoxIdByMesh(hits[0].object);
+    const firstHit = hits[0].object;
+    const doorLayerIdAtPointer = this.getDoorLayerIdByMesh(firstHit);
+    if (import.meta.env.DEV && doorLayerIdAtPointer) {
+      const boxIdFirst = this.getBoxIdByMesh(firstHit);
+      const entry = boxIdFirst ? this.boxes.get(boxIdFirst) : undefined;
+      const doorIndex = entry?.mesh
+        ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerIdAtPointer}`)
+        : -1;
+      console.log("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
+        boxId: boxIdFirst,
+        doorLayerId: doorLayerIdAtPointer,
+        specId: doorLayerIdAtPointer,
+        doorIndex,
+        hitObjectName: firstHit.name,
+      });
+    }
+    return this.getBoxIdByMesh(firstHit);
   }
 
   /**
@@ -3823,6 +3969,7 @@ export class ViewerCore {
     return getRulerMeasurementsFromManager(box, roomBounds, otherBoxes);
   }
 
+  /** Obtém doorLayerId subindo na hierarquia (mesh → pivot door-layer-* → …). Usado por getContextMenuLayerHit e getDoorHitAtPointer. */
   private getDoorLayerIdByMesh(mesh: THREE.Object3D): string | null {
     let current: THREE.Object3D | null = mesh;
     while (current) {
@@ -3866,6 +4013,21 @@ export class ViewerCore {
       if (!doorLayerId) continue;
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
+      const entry = this.boxes.get(boxId);
+      const doorNames = entry?.mesh ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).map((c) => c.name) : [];
+      const doorIndex = entry?.mesh
+        ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerId}`)
+        : -1;
+      if (import.meta.env.DEV) {
+        console.log("[DOOR-MAT] getDoorHitAtPointer (double-click/raycast)", {
+          boxId,
+          doorLayerId,
+          specId: doorLayerId,
+          doorIndex,
+          doorNamesNoBox: doorNames,
+          hitObjectName: hit.object.name,
+        });
+      }
       return { boxId, doorLayerId };
     }
     return null;
@@ -3873,7 +4035,8 @@ export class ViewerCore {
 
   /**
    * Retorna o alvo do ponteiro para o menu de contexto: porta, gaveta ou null (módulo/canvas).
-   * Usado para mostrar "Alterar material da porta/gaveta" apenas quando o clique foi numa porta ou gaveta.
+   * Raycast nos boxes; para o primeiro hit que tenha getDoorLayerIdByMesh ou getDrawerLayerIdByMesh, devolve boxId + type + doorLayerId/drawerLayerId.
+   * Depende de userData.doorLayerId propagado em createDoorObject e de userData.boxId em applyPanelIdsToBox.
    */
   getContextMenuLayerHit(event: { clientX: number; clientY: number }): {
     boxId: string;
@@ -3898,7 +4061,34 @@ export class ViewerCore {
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
       const doorLayerId = this.getDoorLayerIdByMesh(hit.object);
-      if (doorLayerId) return { boxId, type: "door", doorLayerId };
+      if (doorLayerId) {
+        const entry = this.boxes.get(boxId);
+        const doorNames = entry?.mesh ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).map((c) => c.name) : [];
+        const doorIndex = entry?.mesh
+          ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerId}`)
+          : -1;
+        if (import.meta.env.DEV) {
+          console.log("[DOOR-MAT] getContextMenuLayerHit — porta selecionada pelo raycaster (menu contexto)", {
+            boxId,
+            doorLayerId,
+            specId: doorLayerId,
+            doorIndex,
+            doorNamesNoBox: doorNames,
+            hitObjectName: hit.object.name,
+            hitObjectUserDataDoorLayerId: (hit.object as THREE.Object3D & { userData: { doorLayerId?: string } }).userData?.doorLayerId,
+          });
+        }
+        if (import.meta.env.DEV) {
+          devLogger.debug("[getContextMenuLayerHit] porta clicada (enviado para o menu)", {
+            boxId,
+            doorLayerId,
+            hitObjectName: hit.object.name,
+            hitObjectUuid: hit.object.uuid,
+            hitObjectUserDataDoorLayerId: (hit.object as THREE.Object3D & { userData: { doorLayerId?: string } }).userData?.doorLayerId,
+          });
+        }
+        return { boxId, type: "door", doorLayerId };
+      }
       const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
       if (drawerLayerId) return { boxId, type: "drawer", drawerLayerId };
       return null;
@@ -4433,6 +4623,8 @@ export class ViewerCore {
       cancelAnimationFrame(this.rafId);
     }
     window.removeEventListener("resize", this.updateCanvasSize);
+    window.removeEventListener("keydown", this.boundShiftKeyDown);
+    window.removeEventListener("keyup", this.boundShiftKeyUp);
     this.resizeObserver?.disconnect();
     this.disposeComposer();
     this.disposeMainComposer();

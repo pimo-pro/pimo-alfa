@@ -19,6 +19,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
+import Ajuda from "./pages/Ajuda";
 
 const SobreNos = lazy(() => import("./pages/SobreNos"));
 const Documentacao = lazy(() => import("./pages/Documentacao"));
@@ -67,6 +68,7 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showProjectProgress, setShowProjectProgress] = useState(false);
   const [showDevTest, setShowDevTest] = useState(false);
+  const [showAjuda, setShowAjuda] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
 
   useEffect(() => {
@@ -80,12 +82,14 @@ export default function App() {
       }
       const isDevTest = import.meta.env.DEV && window.location.pathname === "/dev-test";
       const isPainelReferencia = window.location.pathname === "/painel-referencia";
+      const isAjuda = window.location.pathname === "/ajuda";
       setShowAbout(isAbout);
       setShowSystemDocs(isSystemDocs);
       setShowAdmin(isAdmin);
       setShowProjectProgress(isProjectProgress);
       setShowDevTest(isDevTest);
       setShowPainelReferencia(isPainelReferencia);
+      setShowAjuda(isAjuda);
     };
     syncRoute();
     window.addEventListener("popstate", syncRoute);
@@ -119,6 +123,17 @@ export default function App() {
     setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
+  };
+
+  const navigateToAjuda = () => {
+    window.history.pushState({}, "", "/ajuda");
+    setShowAjuda(true);
+    setShowAbout(false);
+    setShowSystemDocs(false);
+    setShowAdmin(false);
+    setShowProjectProgress(false);
+    setShowDevTest(false);
+    setShowPainelReferencia(false);
   };
 
   const navigateToPainelReferencia = () => {
@@ -169,7 +184,7 @@ export default function App() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAbout ? (
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAbout || showAjuda ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
@@ -181,6 +196,8 @@ export default function App() {
                 <ProjectProgress />
               ) : showDevTest && DevPimoTest ? (
                 <DevPimoTest />
+              ) : showAjuda ? (
+                <Ajuda />
               ) : (
                 <SobreNos />
               )}
@@ -261,6 +278,7 @@ export default function App() {
           onShowAbout={navigateToAbout}
           onShowSystemDocs={navigateToSystemDocs}
           onShowAdmin={navigateToAdmin}
+          onShowAjuda={navigateToAjuda}
         />
 
         <WhatsAppButton />

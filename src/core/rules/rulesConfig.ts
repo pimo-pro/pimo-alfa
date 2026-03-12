@@ -509,6 +509,7 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
 
 /**
  * Calcula o número de dobradiças para uma porta com base na altura (cm).
+ * Usado por: Configuração de Regras → Regras da Porta (UI); drillingAdapter e boxManufacturing para furos no Viewer e cutlist.
  */
 export function getNumDobradicas(alturaCm: number, rules: RulesConfig): number {
   const range = rules.portas.ranges.find((r) => alturaCm >= r.min && alturaCm <= r.max);
@@ -526,6 +527,7 @@ export const MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM = 70;
  * 2: Y_top = max(distTopo, 70), Y_bottom = altura − max(distFundo, 70)
  * 3: + Y_mid = (Y_top + Y_bottom) / 2
  * 4: + Y_mid1 e Y_mid2 a 1/3 e 2/3 entre topo e fundo.
+ * O número de dobradiças (numHinges) deve vir de getNumDobradicas(alturaCm, rules) para respeitar Regras da Porta.
  */
 export function getHingeYPositions(
   alturaMm: number,
