@@ -103,12 +103,13 @@ export default function Tools3DToolbar({
       {TOOLS_3D_ITEMS.map((item) => {
         const isActive = activeTool === item.id;
         const isEnabled = enabledTools.includes(item.id);
+        const title = !isEnabled && isPieceLocked ? "Peça bloqueada" : item.tooltip;
         return (
           <button
             key={item.id}
             type="button"
-            title={item.tooltip}
-            aria-label={item.tooltip}
+            title={title}
+            aria-label={title}
             aria-pressed={isActive}
             disabled={!isEnabled}
             onClick={() => isEnabled && handleToolSelect(item.id, item.eventKey)}

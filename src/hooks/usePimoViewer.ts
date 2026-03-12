@@ -20,8 +20,8 @@ type PimoViewerAPI = {
   viewerRef: React.MutableRefObject<Viewer | null>;
   viewerReady: boolean;
   selectedBoxId: string | null;
-  onBoxSelected: (_callback: (_id: string | null) => void) => void;
-  setOnBoxSelected: (_callback: (_id: string | null) => void) => void;
+  onBoxSelected: (_callback: (_id: string | null, _options?: { shiftKey?: boolean }) => void) => void;
+  setOnBoxSelected: (_callback: (_id: string | null, _options?: { shiftKey?: boolean }) => void) => void;
   setOnDoorLayerDoubleClick: (_callback: ((_boxId: string, _doorLayerId: string) => void) | null) => void;
   selectBox: (_id: string | null) => void;
   addBox: (_id: string, _options?: BoxOptions) => boolean;
@@ -160,7 +160,7 @@ export const usePimoViewer = (
   const optionsRef = useRef(options);
   const [viewerReady, setViewerReady] = useState(false);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
-  const onBoxSelectedRef = useRef<((_id: string | null) => void) | null>(null);
+  const onBoxSelectedRef = useRef<((_id: string | null, _options?: { shiftKey?: boolean }) => void) | null>(null);
   const onDoorLayerDoubleClickRef = useRef<((_boxId: string, _doorLayerId: string) => void) | null>(null);
   const preReadyRotationAttemptsRef = useRef<Map<string, number>>(new Map());
   const preReadyLastLogRef = useRef(0);
@@ -181,9 +181,9 @@ export const usePimoViewer = (
     }
 
     viewerRef.current = new Viewer(container, optionsRef.current ?? {});
-    viewerRef.current.setOnBoxSelected((id) => {
+    viewerRef.current.setOnBoxSelected((id, options) => {
       setSelectedBoxId(id);
-      onBoxSelectedRef.current?.(id);
+      onBoxSelectedRef.current?.(id, options);
     });
     viewerRef.current.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
       onDoorLayerDoubleClickRef.current?.(boxId, doorLayerId);
@@ -201,7 +201,7 @@ export const usePimoViewer = (
     };
   }, [containerRef]);
 
-  const setOnBoxSelected = useCallback((_callback: (_id: string | null) => void) => {
+  const setOnBoxSelected = useCallback((_callback: (_id: string | null, _options?: { shiftKey?: boolean }) => void) => {
     onBoxSelectedRef.current = _callback;
   }, []);
 

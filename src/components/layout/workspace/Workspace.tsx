@@ -17,7 +17,7 @@ import {
   positionMmToLocalM,
   computeAutoPositionLocal,
 } from "../../../core/layout/viewerLayoutAdapter";
-import { mToMm } from "../../../utils/units";
+import { mToMm, mmToM } from "../../../utils/units";
 import { getModelo } from "../../../core/cad/cadModels";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
 import { useUiStore } from "../../../stores/uiStore";
@@ -25,6 +25,7 @@ import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
 import GerarArquivoModal from "../right-panel/GerarArquivoModal";
 import BoxInfoOverlay from "./BoxInfoOverlay";
+import ContextMenu from "./ContextMenu";
 import RulerLabelsOverlay from "./RulerLabelsOverlay";
 import {
   type RulerEdgePickResult,
@@ -109,19 +110,17 @@ export default function Workspace({
   });
 
   useEffect(() => {
-    viewerApi.setOnBoxSelected((boxId) => {
+    viewerApi.setOnBoxSelected((boxId, options) => {
       if (boxId) {
-        if (project.selectedWorkspaceBoxId !== boxId) {
-          actions.selectBox(boxId);
-        }
+        actions.selectBox(boxId, options);
         return;
       }
-      if (project.selectedWorkspaceBoxId != null) {
+      if (project.selectedWorkspaceBoxId != null || (project.selectedWorkspaceBoxIds?.length ?? 0) > 0) {
         actions.clearSelection();
         clearUiSelection();
       }
     });
-  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId]);
+  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, project.selectedWorkspaceBoxIds]);
 
   useEffect(() => {
     viewerApi.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
@@ -243,8 +242,14 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnBoxTransform((boxId, position, rotationY) => {
-      const box = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
+      const project = projectRef.current;
+      const box = project.workspaceBoxes.find((b) => b.id === boxId);
       if (box?.locked) return;
+      const groupId = project.selectedGroupId;
+      const group = groupId ? (project.groups ?? []).find((g) => g.id === groupId) : null;
+      const groupBoxIds = group?.boxIds ?? [];
+      const others = groupBoxIds.filter((id) => id !== boxId);
+
       actionsRef.current.updateWorkspaceBoxTransform(boxId, {
         x_mm: mToMm(position.x),
         y_mm: mToMm(position.y),
@@ -252,6 +257,33 @@ export default function Workspace({
         rotacaoY_rad: rotationY,
         manualPosition: true,
       });
+
+      if (others.length > 0) {
+        const primaryBox = project.workspaceBoxes.find((b) => b.id === boxId);
+        const oldPx = mmToM(primaryBox?.posicaoX_mm ?? 0);
+        const oldPy = mmToM(primaryBox?.posicaoY_mm ?? 0);
+        const oldPz = mmToM(primaryBox?.posicaoZ_mm ?? 0);
+        const oldRot = primaryBox?.rotacaoY ?? 0;
+        const dx = position.x - oldPx;
+        const dy = position.y - oldPy;
+        const dz = position.z - oldPz;
+        const dRot = rotationY - oldRot;
+        others.forEach((otherId) => {
+          const ob = project.workspaceBoxes.find((b) => b.id === otherId);
+          if (ob?.locked) return;
+          const ox = mmToM(ob.posicaoX_mm ?? 0);
+          const oy = mmToM(ob.posicaoY_mm ?? 0);
+          const oz = mmToM(ob.posicaoZ_mm ?? 0);
+          const orot = ob.rotacaoY ?? 0;
+          actionsRef.current.updateWorkspaceBoxTransform(otherId, {
+            x_mm: mToMm(ox + dx),
+            y_mm: mToMm(oy + dy),
+            z_mm: mToMm(oz + dz),
+            rotacaoY_rad: orot + dRot,
+            manualPosition: true,
+          });
+        });
+      }
     });
   }, [viewerApi]);
 
@@ -588,49 +620,10 @@ return (
             </div>
           )}
           {mouseMenuPosition && (
-            <div
-              role="menu"
-              aria-label="Mouse settings"
-              style={{
-                position: "fixed",
-                left: mouseMenuPosition.x,
-                top: mouseMenuPosition.y,
-                transform: "translate(8px, 8px)",
-                minWidth: 160,
-                background: "var(--popover-bg)",
-                border: "1px solid var(--popover-border)",
-                borderRadius: 8,
-                padding: 8,
-                zIndex: 60,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="button button-ghost"
-                style={{ justifyContent: "flex-start", fontSize: 12 }}
-                onClick={() => {
-                  actions.setViewerSettings({ mousePreset: "cad" });
-                  setMouseMenuPosition(null);
-                }}
-              >
-                {project.viewerSettings.mousePreset === "cad" ? "✓ " : ""}Mouse CAD
-              </button>
-              <button
-                type="button"
-                className="button button-ghost"
-                style={{ justifyContent: "flex-start", fontSize: 12 }}
-                onClick={() => {
-                  actions.setViewerSettings({ mousePreset: "classic" });
-                  setMouseMenuPosition(null);
-                }}
-              >
-                {project.viewerSettings.mousePreset === "classic" ? "✓ " : ""}Mouse Classic
-              </button>
-            </div>
+            <ContextMenu
+              position={mouseMenuPosition}
+              onClose={() => setMouseMenuPosition(null)}
+            />
           )}
         </div>
       </div>

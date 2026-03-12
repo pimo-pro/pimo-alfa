@@ -30,7 +30,7 @@ export type PimoViewerApi = {
   getModelPosition: (_boxId: string, _modelId: string) => { x: number; y: number; z: number } | null;
   getModelBoundingBoxSize: (_boxId: string, _modelId: string) => { width: number; height: number; depth: number } | null;
   setModelPosition: (_boxId: string, _modelId: string, _position: { x: number; y: number; z: number }) => boolean;
-  setOnBoxSelected: (_callback: (_id: string | null) => void) => void;
+  setOnBoxSelected: (_callback: (_id: string | null, _options?: { shiftKey?: boolean }) => void) => void;
   setOnModelLoaded: (_callback: ((_boxId: string, _modelId: string, _object: unknown) => void) | null) => void;
   setOnBoxTransform: (_callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotationY: number) => void) | null) => void;
   setTransformMode: (_mode: "translate" | "rotate" | null) => void;

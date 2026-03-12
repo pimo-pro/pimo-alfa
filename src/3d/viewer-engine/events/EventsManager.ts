@@ -74,7 +74,7 @@ export class EventsManager {
       if (mesh) {
         e.getHighlightManager()!.setSelected(mesh);
         const boxId = e.getBoxIdByMesh(mesh);
-        if (boxId != null) e.setSelectedBox(boxId);
+        if (boxId != null) e.setSelectedBox(boxId, { shiftKey: event.shiftKey });
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         return;
@@ -96,7 +96,7 @@ export class EventsManager {
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
       e.setHoveredBox(boxId);
-      e.setSelectedBox(boxId);
+      e.setSelectedBox(boxId, { shiftKey: event.shiftKey });
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
       return;
@@ -172,7 +172,7 @@ export class EventsManager {
         event.stopPropagation();
         e.getHighlightManager()!.setSelected(mesh);
         const boxId = e.getBoxIdByMesh(mesh);
-        if (boxId != null) e.setSelectedBox(boxId);
+        if (boxId != null) e.setSelectedBox(boxId, { shiftKey: event.shiftKey });
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.setSuppressNextCanvasClick(true);
@@ -186,7 +186,7 @@ export class EventsManager {
         event.preventDefault();
         event.stopPropagation();
         e.setHoveredBox(boxId);
-        e.setSelectedBox(boxId);
+        e.setSelectedBox(boxId, { shiftKey: event.shiftKey });
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.logTransformDiagnostic("box-selected-pointerDown-other-box", {
@@ -197,7 +197,7 @@ export class EventsManager {
       }
       if (boxId != null) {
         e.setHoveredBox(boxId);
-        e.setSelectedBox(boxId);
+        e.setSelectedBox(boxId, { shiftKey: event.shiftKey });
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.logTransformDiagnostic("box-selected-pointerDown", { boxId });

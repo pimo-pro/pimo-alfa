@@ -144,7 +144,7 @@ export class ViewerCore {
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
   private readonly viewerState = new ViewerState();
-  private onBoxSelected: ((_id: string | null) => void) | null = null;
+  private onBoxSelected: ((_id: string | null, _options?: { shiftKey?: boolean }) => void) | null = null;
   private readonly selectedBoxChangeListeners = new Set<(id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
@@ -2577,7 +2577,7 @@ export class ViewerCore {
     this.viewerState.setSelectedRoomElementId(null);
   }
 
-  setOnBoxSelected(callback: (_id: string | null) => void): void {
+  setOnBoxSelected(callback: (_id: string | null, _options?: { shiftKey?: boolean }) => void): void {
     this.onBoxSelected = callback;
   }
 
@@ -3211,7 +3211,7 @@ export class ViewerCore {
       getHighlightManager: () => self.highlightManager,
       getHighlightIntersects: (e) => self.getHighlightIntersects(e),
       getBoxIdByMesh: (mesh) => self.getBoxIdByMesh(mesh),
-      setSelectedBox: (id) => self.setSelectedBox(id),
+      setSelectedBox: (id, options) => self.setSelectedBox(id, options),
       setHoveredBox: (id) => self.setHoveredBox(id),
       getOnRoomElementSelected: () => self.onRoomElementSelected,
       getOnWallSelected: () => self.onWallSelected,
@@ -3302,9 +3302,9 @@ export class ViewerCore {
     return null;
   }
 
-  private setSelectedBox(id: string | null) {
-    if (this.viewerState.getSelectedBox() === id) {
-      this.onBoxSelected?.(id);
+  private setSelectedBox(id: string | null, options?: { shiftKey?: boolean }) {
+    if (this.viewerState.getSelectedBox() === id && !options?.shiftKey) {
+      this.onBoxSelected?.(id, options);
       return;
     }
     this.viewerState.setSelectedBox(id);
@@ -3312,7 +3312,7 @@ export class ViewerCore {
     this.viewerState.setSelectedRoomElementId(null);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
-    this.onBoxSelected?.(id);
+    this.onBoxSelected?.(id, options);
     this.selectedBoxChangeListeners.forEach((cb) => {
       try {
         cb(id);
