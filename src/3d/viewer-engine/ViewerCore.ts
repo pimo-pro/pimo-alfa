@@ -144,7 +144,7 @@ export class ViewerCore {
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
   private readonly viewerState = new ViewerState();
-  private onBoxSelected: ((_id: string | null, _options?: { shiftKey?: boolean }) => void) | null = null;
+  private onBoxSelected: ((_id: string | null) => void) | null = null;
   private readonly selectedBoxChangeListeners = new Set<(id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
@@ -2577,7 +2577,7 @@ export class ViewerCore {
     this.viewerState.setSelectedRoomElementId(null);
   }
 
-  setOnBoxSelected(callback: (_id: string | null, _options?: { shiftKey?: boolean }) => void): void {
+  setOnBoxSelected(callback: (_id: string | null) => void): void {
     this.onBoxSelected = callback;
   }
 
@@ -3211,7 +3211,7 @@ export class ViewerCore {
       getHighlightManager: () => self.highlightManager,
       getHighlightIntersects: (e) => self.getHighlightIntersects(e),
       getBoxIdByMesh: (mesh) => self.getBoxIdByMesh(mesh),
-      setSelectedBox: (id, options) => self.setSelectedBox(id, options),
+      setSelectedBox: (id) => self.setSelectedBox(id),
       setHoveredBox: (id) => self.setHoveredBox(id),
       getOnRoomElementSelected: () => self.onRoomElementSelected,
       getOnWallSelected: () => self.onWallSelected,
@@ -3302,9 +3302,9 @@ export class ViewerCore {
     return null;
   }
 
-  private setSelectedBox(id: string | null, options?: { shiftKey?: boolean }) {
-    if (this.viewerState.getSelectedBox() === id && !options?.shiftKey) {
-      this.onBoxSelected?.(id, options);
+  private setSelectedBox(id: string | null) {
+    if (this.viewerState.getSelectedBox() === id) {
+      this.onBoxSelected?.(id);
       return;
     }
     this.viewerState.setSelectedBox(id);
@@ -3312,7 +3312,7 @@ export class ViewerCore {
     this.viewerState.setSelectedRoomElementId(null);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
-    this.onBoxSelected?.(id, options);
+    this.onBoxSelected?.(id);
     this.selectedBoxChangeListeners.forEach((cb) => {
       try {
         cb(id);
@@ -3835,6 +3835,18 @@ export class ViewerCore {
     return null;
   }
 
+  private getDrawerLayerIdByMesh(mesh: THREE.Object3D): string | null {
+    let current: THREE.Object3D | null = mesh;
+    while (current) {
+      const drawerLayerId = current.userData?.drawerLayerId;
+      if (typeof drawerLayerId === "string" && drawerLayerId.length > 0) {
+        return drawerLayerId;
+      }
+      current = current.parent;
+    }
+    return null;
+  }
+
   private getDoorHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null {
     const canvas = this.rendererManager.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
@@ -3855,6 +3867,41 @@ export class ViewerCore {
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
       return { boxId, doorLayerId };
+    }
+    return null;
+  }
+
+  /**
+   * Retorna o alvo do ponteiro para o menu de contexto: porta, gaveta ou null (módulo/canvas).
+   * Usado para mostrar "Alterar material da porta/gaveta" apenas quando o clique foi numa porta ou gaveta.
+   */
+  getContextMenuLayerHit(event: { clientX: number; clientY: number }): {
+    boxId: string;
+    type: "door" | "drawer";
+    doorLayerId?: string;
+    drawerLayerId?: string;
+  } | null {
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.pointer.set(x, y);
+    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
+    this.raycaster.layers.set(0);
+    const roots: THREE.Object3D[] = [];
+    this.boxes.forEach((entry) => {
+      roots.push(entry.mesh);
+    });
+    const hits = this.raycaster.intersectObjects(roots, true);
+    for (const hit of hits) {
+      const boxId = this.getBoxIdByMesh(hit.object);
+      if (!boxId) continue;
+      const doorLayerId = this.getDoorLayerIdByMesh(hit.object);
+      if (doorLayerId) return { boxId, type: "door", doorLayerId };
+      const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
+      if (drawerLayerId) return { boxId, type: "drawer", drawerLayerId };
+      return null;
     }
     return null;
   }

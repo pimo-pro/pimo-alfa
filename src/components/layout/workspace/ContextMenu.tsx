@@ -1,14 +1,27 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
+import { listOfficialMaterials } from "../../../core/materials/materials.api";
 
 export type ContextMenuPosition = { x: number; y: number } | null;
+
+export type ContextMenuLayerTarget = {
+  boxId: string;
+  type: "door" | "drawer";
+  doorLayerId?: string;
+  drawerLayerId?: string;
+} | null;
 
 export type ContextMenuProps = {
   /** Posição do canto superior esquerdo do menu (clientX, clientY). null = não exibir. */
   position: ContextMenuPosition;
   /** Chamado ao fechar o menu (clique fora, ESC ou após ação). */
   onClose: () => void;
+  /** Alvo do clique direito: porta ou gaveta (para mostrar item "Alterar material"). */
+  contextMenuLayerTarget?: ContextMenuLayerTarget;
 };
+
+/** Materiais oficiais do projeto (mesma lista do módulo); apenas labels para o picker. */
+const OFFICIAL_MATERIALS = listOfficialMaterials();
 
 const menuStyle: React.CSSProperties = {
   position: "fixed",
@@ -45,37 +58,22 @@ const itemStyle: React.CSSProperties = {
  * Mostra: Bloquear/Desbloquear peça (se houver peça selecionada) e modo do mouse (CAD / Classic).
  * Fecha ao clicar fora, pressionar ESC ou ao escolher uma ação.
  */
-export default function ContextMenu({ position, onClose }: ContextMenuProps) {
+export default function ContextMenu({ position, onClose, contextMenuLayerTarget = null }: ContextMenuProps) {
   const { project, actions } = useProject();
   const menuRef = useRef<HTMLDivElement>(null);
+  const [materialSubmenuOpen, setMaterialSubmenuOpen] = useState<"door" | "drawer" | null>(null);
 
   const selectedBoxId = project.selectedWorkspaceBoxId ?? "";
-  const rawSelectedIds = project.selectedWorkspaceBoxIds;
-  const selectedWorkspaceBoxIds = Array.isArray(rawSelectedIds)
-    ? rawSelectedIds
-    : selectedBoxId
-      ? [selectedBoxId]
-      : [];
-  const selectedGroupId = project.selectedGroupId ?? null;
   const selectedBox = selectedBoxId
     ? project.workspaceBoxes.find((b) => b.id === selectedBoxId)
     : undefined;
   const locked = selectedBox?.locked === true;
   const mousePreset = project.viewerSettings.mousePreset ?? "cad";
-  const hasMultiSelect = selectedWorkspaceBoxIds.length >= 2;
-  const isGroupSelected = selectedGroupId != null;
-  const showAgrupar = hasMultiSelect && !isGroupSelected;
-  const showDesagrupar = isGroupSelected;
 
-  if (import.meta.env.DEV && position) {
-    console.log("[ContextMenu]", {
-      selectedWorkspaceBoxIds,
-      selectedGroupId,
-      hasMultiSelect,
-      showAgrupar,
-      showDesagrupar,
-    });
-  }
+  const isDoorTarget = contextMenuLayerTarget?.type === "door" && contextMenuLayerTarget.doorLayerId != null;
+  const isDrawerTarget = contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId != null;
+  const showDoorMaterial = isDoorTarget;
+  const showDrawerMaterial = isDrawerTarget;
 
   useEffect(() => {
     if (!position) return;
@@ -90,7 +88,10 @@ export default function ContextMenu({ position, onClose }: ContextMenuProps) {
     if (!position) return;
     const handlePointerDown = (e: MouseEvent) => {
       const el = menuRef.current;
-      if (el && !el.contains(e.target as Node)) onClose();
+      if (el && !el.contains(e.target as Node)) {
+        onClose();
+        setMaterialSubmenuOpen(null);
+      }
     };
     // Pequeno atraso para não fechar no mesmo evento que abriu
     const t = setTimeout(() => {
@@ -202,46 +203,68 @@ export default function ContextMenu({ position, onClose }: ContextMenuProps) {
           <span>Excluir peça</span>
         </button>
       )}
-      {showAgrupar && (
-        <button
-          type="button"
-          role="menuitem"
-          title="Use Shift para selecionar várias peças"
-          style={itemStyle}
-          onClick={() => {
-            actions.createGroup();
-            onClose();
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-          }}
+      {(showDoorMaterial || showDrawerMaterial) && (
+        <div
+          style={{ position: "relative" }}
+          onMouseEnter={() => setMaterialSubmenuOpen(showDoorMaterial ? "door" : "drawer")}
+          onMouseLeave={() => setMaterialSubmenuOpen(null)}
         >
-          <span aria-hidden>🔗</span>
-          <span>Agrupar peças</span>
-        </button>
-      )}
-      {showDesagrupar && (
-        <button
-          type="button"
-          role="menuitem"
-          style={itemStyle}
-          onClick={() => {
-            actions.ungroup();
-            onClose();
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-          }}
-        >
-          <span aria-hidden>🔀</span>
-          <span>Desagrupar</span>
-        </button>
+          <button
+            type="button"
+            role="menuitem"
+            style={itemStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <span aria-hidden>🎨</span>
+            <span>{showDoorMaterial ? "Alterar material da porta" : "Alterar material da gaveta"}</span>
+          </button>
+          {materialSubmenuOpen && (
+            <div
+              role="menu"
+              aria-label="Materiais"
+              style={{
+                ...menuStyle,
+                position: "absolute",
+                left: "100%",
+                top: 0,
+                marginLeft: 4,
+                minWidth: 140,
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {OFFICIAL_MATERIALS.map((m) => (
+                <button
+                  key={m.canonicalId}
+                  type="button"
+                  role="menuitem"
+                  style={itemStyle}
+                  onClick={() => {
+                    const canonicalId = m.canonicalId;
+                    if (contextMenuLayerTarget?.type === "door" && contextMenuLayerTarget.doorLayerId) {
+                      actions.setDoorMaterial(contextMenuLayerTarget.boxId, contextMenuLayerTarget.doorLayerId, canonicalId);
+                    } else if (contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId) {
+                      actions.setDrawerMaterial(contextMenuLayerTarget.boxId, contextMenuLayerTarget.drawerLayerId, canonicalId);
+                    }
+                    onClose();
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       {selectedBoxId && (
         <div

@@ -12,7 +12,6 @@ import type {
   ProjectSnapshot,
   ProjectState,
   SavedProjectInfo,
-  WorkspaceGroup,
 } from "./projectTypes";
 import {
   applyResultados,
@@ -204,13 +203,6 @@ const reviveState = (snapshot: unknown): ProjectState | null => {
     },
     workspaceBoxes,
     selectedWorkspaceBoxId: workspaceBoxes.length ? (restored.selectedWorkspaceBoxId ?? workspaceBoxes[0].id) : "",
-    selectedWorkspaceBoxIds: Array.isArray(restored.selectedWorkspaceBoxIds)
-      ? restored.selectedWorkspaceBoxIds.filter((id: string) => workspaceBoxes.some((b) => b.id === id))
-      : (restored.selectedWorkspaceBoxId && workspaceBoxes.some((b) => b.id === restored.selectedWorkspaceBoxId)
-          ? [restored.selectedWorkspaceBoxId]
-          : []),
-    selectedGroupId: restored.selectedGroupId ?? null,
-    groups: Array.isArray(restored.groups) ? restored.groups : [],
     selectedCaixaId: workspaceBoxes.length ? (restored.selectedCaixaId ?? workspaceBoxes[0].id) : "",
     selectedBoxId: workspaceBoxes.length ? (restored.selectedBoxId ?? "") : "",
     material: { ...defaultState.material, ...restored.material },
@@ -627,8 +619,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             workspaceBoxes: nextWorkspaceBoxes,
             boxes,
             selectedWorkspaceBoxId: newBox.id,
-            selectedWorkspaceBoxIds: [newBox.id],
-            selectedGroupId: null,
             selectedCaixaId: newBox.id,
             selectedCaixaModelUrl: null,
             selectedModelInstanceId: null,
@@ -680,8 +670,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             workspaceBoxes: nextWorkspaceBoxes,
             boxes,
             selectedWorkspaceBoxId: newBox.id,
-            selectedWorkspaceBoxIds: [newBox.id],
-            selectedGroupId: null,
             selectedCaixaId: newBox.id,
             selectedCaixaModelUrl: null,
             selectedModelInstanceId: null,
@@ -703,22 +691,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const filtered = prev.workspaceBoxes.filter(
           (box) => box.id !== prev.selectedWorkspaceBoxId
         );
-        const removedId = prev.selectedWorkspaceBoxId;
-        const groups = (prev.groups ?? [])
-          .map((g) => ({ ...g, boxIds: g.boxIds.filter((id) => id !== removedId) }))
-          .filter((g) => g.boxIds.length >= 2);
         const nextSelected = filtered[0];
-        const nextPrev = { ...prev, workspaceBoxes: filtered, groups };
+        const nextPrev = { ...prev, workspaceBoxes: filtered };
         const boxes = buildBoxesFromWorkspace(nextPrev);
         return recomputeState(
           prev,
           {
             workspaceBoxes: filtered,
-            groups,
             boxes,
             selectedWorkspaceBoxId: nextSelected?.id ?? "",
-            selectedWorkspaceBoxIds: nextSelected ? [nextSelected.id] : [],
-            selectedGroupId: null,
             selectedCaixaId: nextSelected?.id ?? "",
             selectedBoxId: nextSelected?.id ?? prev.selectedBoxId ?? "",
             selectedCaixaModelUrl: null,
@@ -743,11 +724,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const filtered = prev.workspaceBoxes.filter((box) => box.id !== boxId);
         if (filtered.length === prev.workspaceBoxes.length) return prev;
-        const groups = (prev.groups ?? [])
-          .map((g) => ({ ...g, boxIds: g.boxIds.filter((id) => id !== boxId) }))
-          .filter((g) => g.boxIds.length >= 2);
         const nextSelected = filtered[0];
-        const nextPrev = { ...prev, workspaceBoxes: filtered, groups };
+        const nextPrev = { ...prev, workspaceBoxes: filtered };
         const boxes = buildBoxesFromWorkspace(nextPrev);
         const extractedRest = Object.fromEntries(
           Object.entries(prev.extractedPartsByBoxId ?? {}).filter(([k]) => k !== boxId)
@@ -757,12 +735,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           prev,
           {
             workspaceBoxes: filtered,
-            groups,
             boxes,
             extractedPartsByBoxId: extractedRest,
             selectedWorkspaceBoxId: nextSelected?.id ?? "",
-            selectedWorkspaceBoxIds: nextSelected ? [nextSelected.id] : [],
-            selectedGroupId: null,
             selectedCaixaId: nextSelected?.id ?? "",
             selectedBoxId: nextSelected ? (prev.selectedBoxId === boxId ? nextSelected.id : prev.selectedBoxId) : "",
             selectedCaixaModelUrl: null,
@@ -779,47 +754,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       });
     },
 
-    selectBox: (boxId, options) => {
-      const shiftKey = options?.shiftKey === true;
+    selectBox: (boxId) => {
       updateProject((prev) => {
         const selected = prev.workspaceBoxes.find((box) => box.id === boxId);
         if (!selected) return prev;
-        const groups = prev.groups ?? [];
-        const currentIds = prev.selectedWorkspaceBoxIds ?? (prev.selectedWorkspaceBoxId ? [prev.selectedWorkspaceBoxId] : []);
-
-        let nextIds: string[];
-        let nextGroupId: string | null = null;
-
-        if (shiftKey) {
-          const idx = currentIds.indexOf(boxId);
-          if (idx >= 0) {
-            nextIds = currentIds.filter((_, i) => i !== idx);
-          } else {
-            nextIds = [...currentIds, boxId];
-          }
-        } else {
-          const group = groups.find((g) => g.boxIds.includes(boxId));
-          if (group) {
-            nextIds = [...group.boxIds];
-            nextGroupId = group.id;
-          } else {
-            nextIds = [boxId];
-          }
-        }
-
-        const primaryId = nextIds[0] ?? "";
-        const primaryBox = prev.workspaceBoxes.find((b) => b.id === primaryId);
         return recomputeState(
           prev,
           {
-            selectedWorkspaceBoxId: primaryId,
-            selectedWorkspaceBoxIds: nextIds,
-            selectedGroupId: nextGroupId,
-            selectedBoxId: prev.boxes.find((box) => box.id === primaryId) ? primaryId : prev.selectedBoxId,
-            selectedCaixaId: primaryId,
+            selectedWorkspaceBoxId: boxId,
+            selectedBoxId: prev.boxes.find((box) => box.id === boxId) ? boxId : prev.selectedBoxId,
+            selectedCaixaId: boxId,
             selectedCaixaModelUrl: null,
             selectedModelInstanceId: null,
-            dimensoes: primaryBox?.dimensoes ?? prev.dimensoes,
+            dimensoes: selected.dimensoes ?? prev.dimensoes,
           },
           true
         );
@@ -832,8 +779,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           prev,
           {
             selectedWorkspaceBoxId: "",
-            selectedWorkspaceBoxIds: [],
-            selectedGroupId: null,
             selectedCaixaId: "",
             selectedBoxId: "",
             selectedCaixaModelUrl: null,
@@ -842,58 +787,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           true
         )
       );
-    },
-
-    createGroup: () => {
-      updateProject((prev) => {
-        const ids = prev.selectedWorkspaceBoxIds ?? (prev.selectedWorkspaceBoxId ? [prev.selectedWorkspaceBoxId] : []);
-        if (ids.length < 2) return prev;
-        const toGroup = ids.filter((id) => prev.workspaceBoxes.some((b) => b.id === id));
-        if (toGroup.length < 2) return prev;
-        const groupId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-        const newGroup: WorkspaceGroup = { id: groupId, boxIds: toGroup };
-        const toGroupSet = new Set(toGroup);
-        const groups = [
-          ...(prev.groups ?? []).map((g) => ({
-            ...g,
-            boxIds: g.boxIds.filter((id) => !toGroupSet.has(id)),
-          })),
-          newGroup,
-        ].filter((g) => g.boxIds.length >= 2);
-        return recomputeState(
-          prev,
-          {
-            groups,
-            selectedGroupId: groupId,
-            selectedWorkspaceBoxIds: toGroup,
-            selectedWorkspaceBoxId: toGroup[0],
-            selectedCaixaId: toGroup[0],
-          },
-          true
-        );
-      });
-    },
-
-    ungroup: () => {
-      updateProject((prev) => {
-        const groupId = prev.selectedGroupId;
-        if (!groupId) return prev;
-        const group = (prev.groups ?? []).find((g) => g.id === groupId);
-        if (!group) return prev;
-        const groups = (prev.groups ?? []).filter((g) => g.id !== groupId);
-        const firstId = group.boxIds[0] ?? "";
-        return recomputeState(
-          prev,
-          {
-            groups,
-            selectedGroupId: null,
-            selectedWorkspaceBoxIds: group.boxIds,
-            selectedWorkspaceBoxId: firstId,
-            selectedCaixaId: firstId,
-          },
-          true
-        );
-      });
     },
 
     addModelToBox: (caixaId, cadModelId) => {
@@ -1287,6 +1180,34 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const workspaceBoxes = prev.workspaceBoxes.map((box) =>
           box.id === boxId ? { ...box, locked } : box
+        );
+        return { ...prev, workspaceBoxes };
+      });
+    },
+
+    setDoorMaterial: (boxId, doorLayerId, material) => {
+      updateProject((prev) => {
+        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (!box) return prev;
+        const doorsLayer = (box.doorsLayer ?? []).map((door) =>
+          door.id === doorLayerId ? { ...door, material } : door
+        );
+        const workspaceBoxes = prev.workspaceBoxes.map((b) =>
+          b.id === boxId ? { ...b, doorsLayer } : b
+        );
+        return { ...prev, workspaceBoxes };
+      });
+    },
+
+    setDrawerMaterial: (boxId, drawerLayerId, material) => {
+      updateProject((prev) => {
+        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+        if (!box) return prev;
+        const drawersLayer = (box.drawersLayer ?? []).map((drawer) =>
+          drawer.id === drawerLayerId ? { ...drawer, material } : drawer
+        );
+        const workspaceBoxes = prev.workspaceBoxes.map((b) =>
+          b.id === boxId ? { ...b, drawersLayer } : b
         );
         return { ...prev, workspaceBoxes };
       });
@@ -1692,7 +1613,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           : defaultState.material,
         workspaceBoxes,
         selectedWorkspaceBoxId: firstId,
-        selectedWorkspaceBoxIds: [firstId],
         selectedCaixaId: firstId,
         selectedBoxId: "",
         selectedCaixaModelUrl: null,

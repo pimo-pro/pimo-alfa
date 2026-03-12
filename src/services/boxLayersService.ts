@@ -8,6 +8,7 @@ import {
   type DrawerGenerationConfig,
 } from "../core/drawers";
 import { devLogger } from "../utils/devLogger";
+import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -25,8 +26,8 @@ const createId = (prefix: string) => {
 
 const clamp = (value: number, min: number) => Math.max(min, Number.isFinite(value) ? value : min);
 
-const defaultDoorMaterial = "";
-const defaultDrawerMaterial = "";
+const defaultDoorMaterial = getDefaultOfficialMaterial().canonicalId;
+const defaultDrawerMaterial = getDefaultOfficialMaterial().canonicalId;
 
 /**
  * Aplica regras de tipo de gaveta (delegando ao domínio de drawers)
@@ -105,6 +106,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
           height: doorHeight,
           thickness,
           materialId: defaultDoorMaterial,
+          material: defaultDoorMaterial,
           openDirection: "left",
           isOpen: false,
           hingeSide: "left",
@@ -122,6 +124,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
           height: doorHeight,
           thickness,
           materialId: defaultDoorMaterial,
+          material: defaultDoorMaterial,
           openDirection: "right",
           isOpen: false,
           hingeSide: "right",
@@ -143,6 +146,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
         height: doorHeight,
         thickness,
         materialId: defaultDoorMaterial,
+        material: defaultDoorMaterial,
         openDirection: "left",
         isOpen: false,
         hingeSide: "left",
@@ -186,6 +190,9 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
       if (existing) {
         generatedDrawers[i].isOpen = existing.isOpen ?? false;
         generatedDrawers[i].materialId = existing.materialId ?? defaultDrawerMaterial;
+        generatedDrawers[i].material = existing.material ?? defaultDrawerMaterial;
+      } else {
+        generatedDrawers[i].material = defaultDrawerMaterial;
       }
     }
 
@@ -232,6 +239,7 @@ export function createManualDoor(box: WorkspaceBox): DoorLayerItem {
     height: doorHeight,
     thickness,
     materialId: defaultDoorMaterial,
+    material: defaultDoorMaterial,
     openDirection: "left",
     isOpen: false,
     hingeSide: "left",
@@ -265,5 +273,5 @@ export function createManualDrawer(box: WorkspaceBox): DrawerLayerItem {
   };
 
   const drawerGroup = generateDrawerGroup(config);
-  return drawerToLayerItem(drawerGroup.drawers[0]);
+  return { ...drawerToLayerItem(drawerGroup.drawers[0]), material: defaultDrawerMaterial };
 }

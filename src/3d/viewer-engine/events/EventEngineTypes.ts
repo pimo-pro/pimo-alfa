@@ -32,11 +32,11 @@ export interface IViewerEventEngine {
   } | null;
   getHighlightIntersects(event: { clientX: number; clientY: number }): THREE.Intersection[];
   getBoxIdByMesh(mesh: THREE.Object3D): string | null;
-  setSelectedBox(id: string | null, options?: { shiftKey?: boolean }): void;
+  setSelectedBox(id: string | null): void;
   setHoveredBox(id: string | null): void;
   getOnRoomElementSelected(): ((data: RoomElementHit | null) => void) | null;
   getOnWallSelected(): ((wallId: number | null) => void) | null;
-  getOnBoxSelected(): ((id: string | null, options?: { shiftKey?: boolean }) => void) | null;
+  getOnBoxSelected(): ((id: string | null) => void) | null;
   getPlacementMode(): "door" | "window" | null;
   getOnRoomElementPlaced(): ((wallId: number, config: DoorWindowConfig, type: "door" | "window") => void) | null;
   getWallHitAtPointer(event: { clientX: number; clientY: number }): WallHit | null;

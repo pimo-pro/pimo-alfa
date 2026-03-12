@@ -7,6 +7,7 @@ import type {
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
+import { resolveMaterial, getDefaultOfficialMaterial } from "../materials/materials.api";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
@@ -75,6 +76,12 @@ export function cutlistComPrecoFromBox(
           : isBottomPanel && hasDoorBottom
             ? "bottom"
             : undefined;
+    const doorOfficial = isDoor && doorsLayer[doorPanelIndex]?.material
+      ? resolveMaterial(doorsLayer[doorPanelIndex].material)
+      : null;
+    const itemMaterial = isDoor
+      ? (doorOfficial?.label ?? doorsLayer[doorPanelIndex]?.material ?? getDefaultOfficialMaterial().label)
+      : material;
     if (isDoor) doorPanelIndex += 1;
     const doorHeightForLateral =
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
@@ -109,7 +116,7 @@ export function cutlistComPrecoFromBox(
         profundidade: p.espessura_mm,
       },
       espessura: p.espessura_mm,
-      material: p.material,
+      material: itemMaterial,
       tipo: p.tipo,
       grainDirection,
       precoUnitario: p.quantidade > 0 ? p.custo / p.quantidade : 0,
@@ -121,7 +128,8 @@ export function cutlistComPrecoFromBox(
   // Portas já vêm em modelo.paineis (porta_simples, porta_dupla, porta_correr); não duplicar a partir de modelo.portas
   // (modelo.portas é usado apenas para custos/ferragens; a cutlist de peças usa apenas paineis)
 
-  modelo.gavetas.forEach((p) => {
+  const drawersLayer = box.drawersLayer ?? [];
+  modelo.gavetas.forEach((p, gavetaIndex) => {
     if (!p || !p.id || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.profundidade_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
       return;
@@ -141,6 +149,8 @@ export function cutlistComPrecoFromBox(
       ? drillingResult.data.drillHoles
       : [];
 
+    const drawerOfficial = resolveMaterial(drawersLayer[gavetaIndex]?.material ?? "");
+    const drawerMaterial = drawerOfficial?.label ?? drawersLayer[gavetaIndex]?.material ?? getDefaultOfficialMaterial().label;
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -152,7 +162,7 @@ export function cutlistComPrecoFromBox(
         profundidade: p.profundidade_mm,
       },
       espessura: p.espessura_mm,
-      material,
+      material: drawerMaterial,
       tipo: "gaveta",
       grainDirection: "none" as GrainDirection,
       precoUnitario: p.custo,

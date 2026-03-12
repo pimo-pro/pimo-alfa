@@ -9,20 +9,33 @@ export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin }: F
     <footer
       style={{
         flexShrink: 0,
-        minHeight: 40,
+        minHeight: 32,
         background: "#050816",
         borderTop: "1px solid var(--border)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "8px 18px",
-        fontSize: 11,
+        flexWrap: "wrap",
+        rowGap: 3,
+        columnGap: 10,
+        padding: "3px 12px",
+        fontSize: "clamp(10px, 1.3vw, 11px)",
+        lineHeight: 1.2,
         color: "var(--text-muted)",
       }}
     >
-      <span>© 2026 PIMO Studio — Crafted by Khaled</span>
+      <span style={{ whiteSpace: "nowrap" }}>© 2026 PIMO Studio — Crafted by Khaled</span>
 
-      <span style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+      <span
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          flexWrap: "wrap",
+          rowGap: 3,
+          columnGap: 8,
+        }}
+      >
         <span style={{ cursor: "pointer" }}>Ajuda</span>
         <span style={{ cursor: "pointer" }}>Contacto</span>
         <span style={{ cursor: "pointer" }}>Documentação</span>

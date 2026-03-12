@@ -324,31 +324,43 @@ export function useGerarArquivoHandlers() {
       ...p,
       boxId: p.boxId ?? "",
     }));
-    const cncBundle = buildCncFromCutlistItems(project, allItems);
-    if (!cncBundle) {
+
+    // Agrupar por material: cada material gera ficheiros TCN independentes (ex.: Madeira.tcn, Branco.tcn).
+    const byMaterial = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      const key = (item.material ?? "Módulo").trim() || "Módulo";
+      if (!byMaterial.has(key)) byMaterial.set(key, []);
+      byMaterial.get(key)!.push(item);
+    }
+
+    const urls: string[] = [];
+    for (const [materialName, itemsForMaterial] of byMaterial) {
+      const cncBundle = buildCncFromCutlistItems(project, itemsForMaterial);
+      if (!cncBundle) continue;
+      const cnc = cncBundle.cnc;
+      const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
+      for (const file of cnc.files) {
+        const base = cnc.files.length === 1
+          ? safeMaterialName
+          : `${safeMaterialName}_${file.panelIndex}`;
+        const tcnBlob = new Blob([file.tcn], { type: "text/plain" });
+        const kdtBlob = new Blob([file.kdt], { type: "text/xml" });
+        const tcnUrl = URL.createObjectURL(tcnBlob);
+        const kdtUrl = URL.createObjectURL(kdtBlob);
+        urls.push(tcnUrl, kdtUrl);
+        const link1 = document.createElement("a");
+        link1.href = tcnUrl;
+        link1.download = `${base}.tcn`;
+        link1.click();
+        const link2 = document.createElement("a");
+        link2.href = kdtUrl;
+        link2.download = `${base}.kdt`;
+        link2.click();
+      }
+    }
+    if (urls.length === 0) {
       showToast("Nenhuma peça na cutlist para exportar CNC.", "warning");
       return;
-    }
-    const cnc = cncBundle.cnc;
-    const urls: string[] = [];
-    for (const file of cnc.files) {
-      const fallbackPiece = file.filenameBase || `panel_${file.panelIndex}`;
-      const sheetResult = cncBundle.layoutResult.sheets[file.panelIndex - 1];
-      const semanticPieceName = getSheetSemanticPieceName(sheetResult?.placements, fallbackPiece);
-      const base = buildIndustrialBaseName(slug, file.thicknessMm, semanticPieceName, fallbackPiece);
-      const tcnBlob = new Blob([file.tcn], { type: "text/plain" });
-      const kdtBlob = new Blob([file.kdt], { type: "text/xml" });
-      const tcnUrl = URL.createObjectURL(tcnBlob);
-      const kdtUrl = URL.createObjectURL(kdtBlob);
-      urls.push(tcnUrl, kdtUrl);
-      const link1 = document.createElement("a");
-      link1.href = tcnUrl;
-      link1.download = `${base}.tcn`;
-      link1.click();
-      const link2 = document.createElement("a");
-      link2.href = kdtUrl;
-      link2.download = `${base}.kdt`;
-      link2.click();
     }
     setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
   }, [
@@ -460,12 +472,20 @@ export function useGerarArquivoHandlers() {
       devLogger.error("Full export: Layout de Corte", err);
     }
 
-    // --- CNC (TCN + KDT) ---
+    // --- CNC (TCN + KDT): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
     try {
-      const cncBundle = buildCncFromCutlistItems(project, allItems);
-      if (cncBundle && cncBundle.cnc?.files?.length) {
-        const usedTcnNamesByPath = new Set<string>();
-        const thicknessBucketsInCnc = new Set<string>();
+      const byMaterial = new Map<string, typeof allItems>();
+      for (const item of allItems) {
+        const key = (item.material ?? "Módulo").trim() || "Módulo";
+        if (!byMaterial.has(key)) byMaterial.set(key, []);
+        byMaterial.get(key)!.push(item);
+      }
+      const usedTcnNamesByPath = new Set<string>();
+      const thicknessBucketsInCnc = new Set<string>();
+      for (const [materialName, itemsForMaterial] of byMaterial) {
+        const cncBundle = buildCncFromCutlistItems(project, itemsForMaterial);
+        if (!cncBundle?.cnc?.files?.length) continue;
+        const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
         for (const file of cncBundle.cnc.files) {
           if (!file || file.tcn == null || file.kdt == null) {
             errors.push({
@@ -474,13 +494,9 @@ export function useGerarArquivoHandlers() {
             });
             continue;
           }
-          const fallbackPiece = file.filenameBase || `panel_${file.panelIndex}`;
-          const sheetResult = cncBundle.layoutResult?.sheets?.[file.panelIndex - 1];
-          const semanticPieceName = getSheetSemanticPieceName(sheetResult?.placements, fallbackPiece);
           const thicknessBucket = formatThicknessBucket(file.thicknessMm);
           thicknessBucketsInCnc.add(thicknessBucket);
-          const base = buildIndustrialBaseName(slug, file.thicknessMm, semanticPieceName, fallbackPiece);
-
+          const base = cncBundle.cnc.files.length === 1 ? safeMaterialName : `${safeMaterialName}_${file.panelIndex}`;
           let finalBase = base;
           let dedupeIndex = 2;
           while (usedTcnNamesByPath.has(`cnc/${thicknessBucket}/tcn/${finalBase}`)) {
@@ -498,10 +514,10 @@ export function useGerarArquivoHandlers() {
             zip.file(kdtPathFinal, file.kdt);
           }
         }
-        for (const thicknessBucket of thicknessBucketsInCnc) {
-          const folderPath = sanitizeZipPath(`cnc/${thicknessBucket}/drill`);
-          if (folderPath) zip.folder(folderPath);
-        }
+      }
+      for (const thicknessBucket of thicknessBucketsInCnc) {
+        const folderPath = sanitizeZipPath(`cnc/${thicknessBucket}/drill`);
+        if (folderPath) zip.folder(folderPath);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

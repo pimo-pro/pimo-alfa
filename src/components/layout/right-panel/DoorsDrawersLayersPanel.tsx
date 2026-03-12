@@ -6,6 +6,7 @@
 import React, { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
 import type { DoorLayerItem, DrawerLayerItem } from "../../../models/BoxLayers";
+import { resolveMaterial, getDefaultOfficialMaterial } from "../../../core/materials/materials.api";
 
 export function DoorsDrawersLayersPanel() {
   const { project, actions } = useProject();
@@ -68,8 +69,8 @@ export function DoorsDrawersLayersPanel() {
           <p style={{ fontSize: 11, color: "#999", fontStyle: "italic", margin: 0 }}>Nenhuma porta</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            {doorsLayer.map((door) => (
-              <DoorLayerRow key={door.id} door={door} actions={actions} />
+            {doorsLayer.map((door, index) => (
+              <DoorLayerRow key={door.id} door={door} index={index} actions={actions} />
             ))}
           </div>
         )}
@@ -114,8 +115,8 @@ export function DoorsDrawersLayersPanel() {
           <p style={{ fontSize: 11, color: "#999", fontStyle: "italic", margin: 0 }}>Nenhuma gaveta</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            {drawersLayer.map((drawer) => (
-              <DrawerLayerRow key={drawer.id} drawer={drawer} actions={actions} drawerHeightMode={drawerHeightMode} />
+            {drawersLayer.map((drawer, index) => (
+              <DrawerLayerRow key={drawer.id} drawer={drawer} index={index} actions={actions} drawerHeightMode={drawerHeightMode} />
             ))}
           </div>
         )}
@@ -125,8 +126,11 @@ export function DoorsDrawersLayersPanel() {
 }
 const DoorLayerRow: React.FC<{
   door: DoorLayerItem;
+  index: number;
   actions: ReturnType<typeof useProject>["actions"];
-}> = ({ door, actions }) => {
+}> = ({ door, index, actions }) => {
+  const materialLabel = resolveMaterial(door.material ?? "")?.label ?? door.material ?? getDefaultOfficialMaterial().label;
+  const label = `Porta ${String(index + 1).padStart(2, "0")} — ${materialLabel}`;
   return (
     <div
       style={{
@@ -155,13 +159,11 @@ const DoorLayerRow: React.FC<{
         {door.isOpen ? "◐" : "○"}
       </button>
 
-      {/* Info dimensões */}
+      {/* Info: nome + material e dimensões */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontFamily: "monospace", fontWeight: 500 }}>
-          {door.width.toFixed(0)}×{door.height.toFixed(0)}
-        </span>
+        <span style={{ fontWeight: 500 }}>{label}</span>
         <span style={{ color: "#666", marginLeft: "4px", fontSize: 10 }}>
-          ({door.openDirection})
+          {door.width.toFixed(0)}×{door.height.toFixed(0)} ({door.openDirection})
         </span>
       </div>
 
@@ -185,10 +187,13 @@ const DoorLayerRow: React.FC<{
 
 const DrawerLayerRow: React.FC<{
   drawer: DrawerLayerItem;
+  index: number;
   actions: ReturnType<typeof useProject>["actions"];
   drawerHeightMode: "equal" | "top_small_mid_medium_bottom_large" | "custom";
-}> = ({ drawer, actions, drawerHeightMode }) => {
+}> = ({ drawer, index, actions, drawerHeightMode }) => {
   const drawerType = drawer.type ?? drawer.drawerType ?? "normal";
+  const materialLabel = resolveMaterial(drawer.material ?? "")?.label ?? drawer.material ?? getDefaultOfficialMaterial().label;
+  const label = `Gaveta ${String(index + 1).padStart(2, "0")} — ${materialLabel}`;
   return (
     <div
       style={{
@@ -217,13 +222,11 @@ const DrawerLayerRow: React.FC<{
         {drawer.isOpen ? "◐" : "○"}
       </button>
 
-      {/* Info dimensões */}
+      {/* Info: nome + material e dimensões */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontFamily: "monospace", fontWeight: 500 }}>
-          {drawer.width.toFixed(0)}×{drawer.height.toFixed(0)}
-        </span>
+        <span style={{ fontWeight: 500 }}>{label}</span>
         <span style={{ color: "#666", marginLeft: "4px", fontSize: 10 }}>
-          x{drawer.pullDistanceMm.toFixed(0)}mm
+          {drawer.width.toFixed(0)}×{drawer.height.toFixed(0)} x{drawer.pullDistanceMm.toFixed(0)}mm
         </span>
       </div>
 

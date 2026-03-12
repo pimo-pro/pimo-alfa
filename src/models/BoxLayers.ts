@@ -8,6 +8,8 @@ export interface DoorLayerItem {
   height: number;
   thickness: number;
   materialId?: string;
+  /** ID canónico do material oficial (mesmo do módulo). Ex.: "mdf_branco", "carvalho". Valor padrão: getDefaultOfficialMaterial().canonicalId. */
+  material?: string;
   openDirection: Exclude<LayerOpenDirection, "pull">;
   isOpen: boolean;
   hingeSide: "left" | "right" | "top" | "bottom";
@@ -64,6 +66,8 @@ export interface DrawerLayerItem {
   backPosY?: number;
   backPosZ?: number;
   materialId?: string;
+  /** ID canónico do material oficial (mesmo do módulo). Ex.: "mdf_branco", "carvalho". Valor padrão: getDefaultOfficialMaterial().canonicalId. */
+  material?: string;
   openDirection: "pull";
   isOpen: boolean;
   pullDistanceMm: number;

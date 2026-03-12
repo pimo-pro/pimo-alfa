@@ -36,6 +36,7 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     openDirection: door.openDirection,
     hingeSide: door.hingeSide,
     pivot: door.pivot,
+    material: door.material,
   }));
   const drawerSig = drawers.map((drawer) => ({
     id: drawer.id,
@@ -49,6 +50,7 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     rotY: drawer.rotY,
     isOpen: drawer.isOpen,
     pullDistanceMm: drawer.pullDistanceMm,
+    material: drawer.material,
   }));
   return JSON.stringify({
     w: d?.largura,

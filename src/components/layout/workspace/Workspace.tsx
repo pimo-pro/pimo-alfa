@@ -110,17 +110,17 @@ export default function Workspace({
   });
 
   useEffect(() => {
-    viewerApi.setOnBoxSelected((boxId, options) => {
+    viewerApi.setOnBoxSelected((boxId) => {
       if (boxId) {
-        actions.selectBox(boxId, options);
+        actions.selectBox(boxId);
         return;
       }
-      if (project.selectedWorkspaceBoxId != null || (project.selectedWorkspaceBoxIds?.length ?? 0) > 0) {
+      if (project.selectedWorkspaceBoxId != null && project.selectedWorkspaceBoxId !== "") {
         actions.clearSelection();
         clearUiSelection();
       }
     });
-  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, project.selectedWorkspaceBoxIds]);
+  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId]);
 
   useEffect(() => {
     viewerApi.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
@@ -245,11 +245,6 @@ export default function Workspace({
       const project = projectRef.current;
       const box = project.workspaceBoxes.find((b) => b.id === boxId);
       if (box?.locked) return;
-      const groupId = project.selectedGroupId;
-      const group = groupId ? (project.groups ?? []).find((g) => g.id === groupId) : null;
-      const groupBoxIds = group?.boxIds ?? [];
-      const others = groupBoxIds.filter((id) => id !== boxId);
-
       actionsRef.current.updateWorkspaceBoxTransform(boxId, {
         x_mm: mToMm(position.x),
         y_mm: mToMm(position.y),
@@ -257,33 +252,6 @@ export default function Workspace({
         rotacaoY_rad: rotationY,
         manualPosition: true,
       });
-
-      if (others.length > 0) {
-        const primaryBox = project.workspaceBoxes.find((b) => b.id === boxId);
-        const oldPx = mmToM(primaryBox?.posicaoX_mm ?? 0);
-        const oldPy = mmToM(primaryBox?.posicaoY_mm ?? 0);
-        const oldPz = mmToM(primaryBox?.posicaoZ_mm ?? 0);
-        const oldRot = primaryBox?.rotacaoY ?? 0;
-        const dx = position.x - oldPx;
-        const dy = position.y - oldPy;
-        const dz = position.z - oldPz;
-        const dRot = rotationY - oldRot;
-        others.forEach((otherId) => {
-          const ob = project.workspaceBoxes.find((b) => b.id === otherId);
-          if (ob?.locked) return;
-          const ox = mmToM(ob.posicaoX_mm ?? 0);
-          const oy = mmToM(ob.posicaoY_mm ?? 0);
-          const oz = mmToM(ob.posicaoZ_mm ?? 0);
-          const orot = ob.rotacaoY ?? 0;
-          actionsRef.current.updateWorkspaceBoxTransform(otherId, {
-            x_mm: mToMm(ox + dx),
-            y_mm: mToMm(oy + dy),
-            z_mm: mToMm(oz + dz),
-            rotacaoY_rad: orot + dRot,
-            manualPosition: true,
-          });
-        });
-      }
     });
   }, [viewerApi]);
 
@@ -297,6 +265,12 @@ export default function Workspace({
 
   const [lockEnabled, setLockEnabledState] = useState(true);
   const [mouseMenuPosition, setMouseMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenuLayerTarget, setContextMenuLayerTarget] = useState<{
+    boxId: string;
+    type: "door" | "drawer";
+    doorLayerId?: string;
+    drawerLayerId?: string;
+  } | null>(null);
   const handleToolSelect = useCallback((toolId: string) => {
     if (toolId === "select" || toolId === "move" || toolId === "rotate") {
       actions.setActiveTool(toolId);
@@ -558,6 +532,7 @@ return (
       aria-label="Área de design 3D"
       onPointerDown={() => {
         if (mouseMenuPosition) setMouseMenuPosition(null);
+        setContextMenuLayerTarget(null);
       }}
     >
       <div className="workspace-canvas">
@@ -582,6 +557,8 @@ return (
               ref={containerRef}
               onContextMenu={(event) => {
                 event.preventDefault();
+                const hit = viewerApi.getContextMenuLayerHit?.(event) ?? null;
+                setContextMenuLayerTarget(hit);
                 setMouseMenuPosition({ x: event.clientX, y: event.clientY });
               }}
               onPointerMove={handleRulerPointerMove}
@@ -622,7 +599,11 @@ return (
           {mouseMenuPosition && (
             <ContextMenu
               position={mouseMenuPosition}
-              onClose={() => setMouseMenuPosition(null)}
+              onClose={() => {
+                setMouseMenuPosition(null);
+                setContextMenuLayerTarget(null);
+              }}
+              contextMenuLayerTarget={contextMenuLayerTarget}
             />
           )}
         </div>

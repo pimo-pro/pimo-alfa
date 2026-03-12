@@ -50,11 +50,6 @@ export type ViewerSettings = {
 };
 
 /** Grupo de peças no workspace (mover/rotacionar em conjunto). */
-export interface WorkspaceGroup {
-  id: string;
-  boxIds: string[];
-}
-
 export interface ProjectState {
   projectName: string;
   tipoProjeto: string;
@@ -102,13 +97,6 @@ export interface ProjectState {
 
   /** Configurações visuais/controle do viewer (fase 3). */
   viewerSettings: ViewerSettings;
-
-  /** IDs das peças atualmente selecionadas (multi-seleção com Shift). */
-  selectedWorkspaceBoxIds?: string[];
-  /** ID do grupo selecionado (quando a seleção é um grupo). null = seleção livre. */
-  selectedGroupId?: string | null;
-  /** Grupos de peças (agrupamento para mover/rotacionar em conjunto). */
-  groups?: WorkspaceGroup[];
 
   /** Perfis de regras: lista de perfis + perfil ativo. */
   rulesProfiles: RulesProfilesConfig;
@@ -352,12 +340,8 @@ export interface ProjectActions {
   removeBox: () => void;
   removeWorkspaceBox: () => void;
   removeWorkspaceBoxById: (_boxId: string) => void;
-  selectBox: (_boxId: string, _options?: { shiftKey?: boolean }) => void;
+  selectBox: (_boxId: string) => void;
   clearSelection: () => void;
-  /** Cria grupo com as peças atualmente selecionadas (2+). */
-  createGroup: () => void;
-  /** Remove o grupo selecionado; as peças continuam selecionadas. */
-  ungroup: () => void;
   /** Adiciona um modelo CAD (por id do catálogo) à caixa. */
   addModelToBox: (_caixaId: string, _cadModelId: string) => void;
   /** Cria uma nova caixa no workspace com o modelo CAD (modelo = Box completo). */
@@ -380,6 +364,10 @@ export interface ProjectActions {
   clearExtractedPartsForBox: (_boxId: string, _modelInstanceId?: string) => void;
   setModelPositionInBox: (_boxId: string, _modelInstanceId: string, _position: { x: number; y: number; z: number }) => void;
   setLayoutWarnings: (_warnings: LayoutWarnings) => void;
+  /** Altera o material simples da porta (Material Picker: Madeira, Branco, etc.). */
+  setDoorMaterial: (_boxId: string, _doorLayerId: string, _material: string) => void;
+  /** Altera o material simples da gaveta (Material Picker: Madeira, Branco, etc.). */
+  setDrawerMaterial: (_boxId: string, _drawerLayerId: string, _material: string) => void;
   /** Atualiza posição X da caixa no workspace (mm). Fonte única para atualização de posição. */
   updateWorkspacePosition: (_boxId: string, _posicaoX_mm: number) => void;
   /** Atualiza posição/rotação/manual da caixa no viewer (manipulação visual; não altera cut list). */

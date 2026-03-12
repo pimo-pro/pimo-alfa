@@ -3,6 +3,7 @@ import { CSG } from "three-csg-ts";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { createWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibrary";
+import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
@@ -271,7 +272,7 @@ function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
 /** Fingerprint do spec da porta para detectar alterações e recriar apenas a porta alterada. */
 const DOOR_SPEC_FINGERPRINT_KEY = "doorSpecFingerprint";
 
-function getDoorSpecFingerprint(spec: DoorSpec): string {
+function getDoorSpecFingerprint(spec: DoorSpec, materialName?: string): string {
   return JSON.stringify({
     id: spec.id,
     widthM: spec.widthM,
@@ -286,13 +287,14 @@ function getDoorSpecFingerprint(spec: DoorSpec): string {
     pivot: spec.pivot,
     isOpen: spec.isOpen,
     groupType: spec.groupType,
+    material: materialName ?? getDefaultOfficialMaterial().canonicalId,
   });
 }
 
 /** Fingerprint do spec da gaveta para detectar alterações (ex.: isOpen); quando muda, recriamos só essa gaveta. */
 const DRAWER_SPEC_FINGERPRINT_KEY = "drawerSpecFingerprint";
 
-function getDrawerSpecFingerprint(spec: DrawerSpec): string {
+function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): string {
   return JSON.stringify({
     id: spec.id,
     widthM: spec.widthM,
@@ -305,6 +307,7 @@ function getDrawerSpecFingerprint(spec: DrawerSpec): string {
     rotY: spec.rotY,
     isOpen: spec.isOpen,
     pullDistanceM: spec.pullDistanceM,
+    material: materialName ?? getDefaultOfficialMaterial().canonicalId,
   });
 }
 
@@ -1040,6 +1043,20 @@ function getFallbackPBRMaterial(): THREE.MeshStandardMaterial {
 
 let cachedEdgeMaterial: THREE.MeshStandardMaterial | null = null;
 
+const officialMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
+
+/** Material PBR para porta/gaveta: usa a mesma MaterialLibrary do módulo (id/label oficial). */
+function getMaterialForOfficialId(idOrLabel: string): THREE.MeshStandardMaterial {
+  const key = (idOrLabel ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
+  let mat = officialMaterialCache.get(key);
+  if (mat) return mat;
+  const preset = getMaterialPreset(defaultMaterialSet, key);
+  const options = preset?.options ?? { color: "#f2f0eb", roughness: 0.55, metalness: 0 };
+  const { material } = createWoodMaterial({}, { ...options });
+  officialMaterialCache.set(key, material);
+  return material;
+}
+
 /** Material para arestas (corte) — cor ligeiramente mais escura, sem texturas. */
 function getEdgeMaterial(): THREE.MeshStandardMaterial {
   if (cachedEdgeMaterial) return cachedEdgeMaterial;
@@ -1152,12 +1169,22 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     });
   }
 
-  const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
-  const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
-  doorSpecs.forEach((spec, doorIndex) =>
-    root.add(createDoorObject(spec, baseMaterial, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta))
-  );
-  drawerSpecs.forEach((spec) => root.add(createDrawerObject(spec, baseMaterial)));
+  const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
+  const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
+  const doorSpecs = buildDoorSpecs(doorLayerItems);
+  const drawerSpecs = buildDrawerSpecs(drawerLayerItems);
+  doorSpecs.forEach((spec, doorIndex) => {
+    const doorMaterial = doorLayerItems[doorIndex]?.material
+      ? getMaterialForOfficialId(doorLayerItems[doorIndex].material!)
+      : baseMaterial;
+    root.add(createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
+  });
+  drawerSpecs.forEach((spec, drawerIndex) => {
+    const drawerMaterial = drawerLayerItems[drawerIndex]?.material
+      ? getMaterialForOfficialId(drawerLayerItems[drawerIndex].material!)
+      : baseMaterial;
+    root.add(createDrawerObject(spec, drawerMaterial as THREE.Material));
+  });
 
   root.position.set(0, 0, 0);
 
@@ -1390,7 +1417,8 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
 
   // 2) Incremental: portas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa porta
   const doorFpKey = DOOR_SPEC_FINGERPRINT_KEY;
-  const doorSpecs = buildDoorSpecs(Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : []);
+  const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
+  const doorSpecs = buildDoorSpecs(doorLayerItems);
   const requiredDoorIds = new Set(doorSpecs.map((s) => s.id));
   const existingDoorNames = group.children
     .filter((c) => c.name.startsWith("door-layer-"))
@@ -1403,21 +1431,24 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     }
   }
   doorSpecs.forEach((spec, doorIndex) => {
-    const newFingerprint = getDoorSpecFingerprint(spec);
+    const materialName = doorLayerItems[doorIndex]?.material ?? getDefaultOfficialMaterial().canonicalId;
+    const newFingerprint = getDoorSpecFingerprint(spec, materialName);
     const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
     if (existingDoor) {
       const storedFingerprint = existingDoor.userData[doorFpKey] as string | undefined;
       if (storedFingerprint === newFingerprint) return;
       group.remove(existingDoor);
     }
-    const newDoor = createDoorObject(spec, mat as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
+    const doorMaterial = getMaterialForOfficialId(materialName);
+    const newDoor = createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
     (newDoor.userData as Record<string, unknown>)[doorFpKey] = newFingerprint;
     group.add(newDoor);
   });
 
   // 3) Incremental: gavetas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa gaveta
   const drawerFpKey = DRAWER_SPEC_FINGERPRINT_KEY;
-  const drawerSpecs = buildDrawerSpecs(Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : []);
+  const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
+  const drawerSpecs = buildDrawerSpecs(drawerLayerItems);
   const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
   const existingDrawerNames = group.children
     .filter((c) => c.name.startsWith("drawer-layer-"))
@@ -1429,15 +1460,17 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
       if (obj) group.remove(obj);
     }
   }
-  drawerSpecs.forEach((spec) => {
-    const newFingerprint = getDrawerSpecFingerprint(spec);
+  drawerSpecs.forEach((spec, drawerIndex) => {
+    const materialName = drawerLayerItems[drawerIndex]?.material ?? getDefaultOfficialMaterial().canonicalId;
+    const newFingerprint = getDrawerSpecFingerprint(spec, materialName);
     const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
     if (existingDrawer) {
       const storedFingerprint = existingDrawer.userData[drawerFpKey] as string | undefined;
       if (storedFingerprint === newFingerprint) return;
       group.remove(existingDrawer);
     }
-    const newDrawer = createDrawerObject(spec, mat as THREE.Material);
+    const drawerMaterial = getMaterialForOfficialId(materialName);
+    const newDrawer = createDrawerObject(spec, drawerMaterial as THREE.Material);
     (newDrawer.userData as Record<string, unknown>)[drawerFpKey] = newFingerprint;
     group.add(newDrawer);
   });
