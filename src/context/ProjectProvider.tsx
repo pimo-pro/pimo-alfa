@@ -848,7 +848,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updateProject((prev) => {
         const ids = prev.selectedWorkspaceBoxIds ?? (prev.selectedWorkspaceBoxId ? [prev.selectedWorkspaceBoxId] : []);
         if (ids.length < 2) return prev;
-        const existingIds = new Set((prev.groups ?? []).flatMap((g) => g.boxIds));
         const toGroup = ids.filter((id) => prev.workspaceBoxes.some((b) => b.id === id));
         if (toGroup.length < 2) return prev;
         const groupId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
