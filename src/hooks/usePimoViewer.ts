@@ -181,9 +181,9 @@ export const usePimoViewer = (
     }
 
     viewerRef.current = new Viewer(container, optionsRef.current ?? {});
-    viewerRef.current.setOnBoxSelected((id, options) => {
+    viewerRef.current.setOnBoxSelected((id) => {
       setSelectedBoxId(id);
-      onBoxSelectedRef.current?.(id, options);
+      onBoxSelectedRef.current?.(id);
     });
     viewerRef.current.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
       onDoorLayerDoubleClickRef.current?.(boxId, doorLayerId);
@@ -996,3 +996,4 @@ export const usePimoViewer = (
     ]
   );
 };
+

@@ -51,23 +51,6 @@ function buildIndustrialBaseName(
   return `${safeSlug}_${safeThickness}_${safePieceName}`;
 }
 
-function getSheetSemanticPieceName(
-  placements: Array<{ partName?: string }> | undefined,
-  fallbackName: string
-): string {
-  const uniqueNames = Array.from(
-    new Set(
-      (placements ?? [])
-        .map((p) => (typeof p.partName === "string" ? p.partName.trim() : ""))
-        .filter((name) => name.length > 0)
-    )
-  );
-
-  if (uniqueNames.length === 1) return uniqueNames[0];
-  if (uniqueNames.length > 1) return `${uniqueNames[0]}_mix_${uniqueNames.length}_pecas`;
-  return fallbackName;
-}
-
 /** Sanitiza um path/nome para entrada no ZIP: sem caracteres inválidos, sem segmentos vazios. */
 function sanitizeZipPath(path: string): string {
   if (typeof path !== "string" || path.trim() === "") return "ficheiro";

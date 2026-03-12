@@ -17,7 +17,7 @@ import {
   positionMmToLocalM,
   computeAutoPositionLocal,
 } from "../../../core/layout/viewerLayoutAdapter";
-import { mToMm, mmToM } from "../../../utils/units";
+import { mToMm } from "../../../utils/units";
 import { getModelo } from "../../../core/cad/cadModels";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
 import { useUiStore } from "../../../stores/uiStore";
@@ -557,7 +557,7 @@ return (
               ref={containerRef}
               onContextMenu={(event) => {
                 event.preventDefault();
-                const hit = viewerApi.getContextMenuLayerHit?.(event) ?? null;
+                const hit = (viewerApi as { getContextMenuLayerHit?: (_event: unknown) => typeof contextMenuLayerTarget }).getContextMenuLayerHit?.(event) ?? null;
                 setContextMenuLayerTarget(hit);
                 setMouseMenuPosition({ x: event.clientX, y: event.clientY });
               }}
@@ -624,3 +624,4 @@ return (
     </>
   );
 }
+
