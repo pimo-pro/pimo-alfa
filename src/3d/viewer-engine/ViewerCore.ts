@@ -871,17 +871,25 @@ export class ViewerCore {
 
     entry.materialName = materialName;
 
-    // Atualizar material de todos os painéis do caixote
+    // Atualizar material apenas dos painéis da caixa (left, right, top, bottom, back) e prateleiras.
+    // Nunca aplicar à porta (userData.doorLayerId) nem à frente de gaveta (drawerPart === "front") para evitar compartilhamento.
+    const isDoorOrDrawerFront = (node: THREE.Object3D): boolean => {
+      const ud = (node as THREE.Mesh & { userData: { doorLayerId?: string; drawerPart?: string } }).userData;
+      return ud?.doorLayerId != null || ud?.drawerPart === "front";
+    };
+
     if (entry.mesh instanceof THREE.Group) {
       entry.mesh.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           if (this.isKitchenFeetNode(child)) return;
-          child.material = nextMaterial.material;
+          if (isDoorOrDrawerFront(child)) return;
+          const boxMaterial = nextMaterial.material.clone();
+          child.material = boxMaterial;
         }
       });
     } else if (entry.mesh instanceof THREE.Mesh) {
       if (!this.isKitchenFeetNode(entry.mesh)) {
-        entry.mesh.material = nextMaterial.material;
+        entry.mesh.material = nextMaterial.material.clone();
       }
     }
 
@@ -972,8 +980,16 @@ export class ViewerCore {
       if (Array.isArray(ud?.doorHolesEffective)) doorHoles = ud.doorHolesEffective;
     });
     boxGroup.remove(oldDoorGroup);
-    const newDoor = createDoorObject(spec, nextMaterial.material as THREE.Material, doorHoles);
+    const doorMat = (nextMaterial.material as THREE.Material).clone();
+    const newDoor = createDoorObject(spec, doorMat, doorHoles);
     boxGroup.add(newDoor);
+    if (import.meta.env.DEV) {
+      console.log("[DOOR-MAT] Material aplicado independentemente:", {
+        id: doorLayerId,
+        material: (doorMat as THREE.Material).uuid,
+        textura: materialName,
+      });
+    }
     this.applyPanelIdsToBox(boxGroup, boxId);
     this.applyPanelVisibilityForObject(boxGroup);
     if (import.meta.env.DEV) {
@@ -1001,11 +1017,12 @@ export class ViewerCore {
     if (!entry) return;
     const nextMaterial = this.loadMaterial(materialName);
     if (!nextMaterial) return;
+    const drawerMat = (nextMaterial.material as THREE.Material).clone();
     entry.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         const ud = (child as THREE.Mesh & { userData: { drawerLayerId?: string; drawerPart?: string } }).userData;
         if (ud?.drawerLayerId === drawerLayerId && ud?.drawerPart === "front")
-          (child as THREE.Mesh).material = nextMaterial.material;
+          (child as THREE.Mesh).material = drawerMat;
       }
     });
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();

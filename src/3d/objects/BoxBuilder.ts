@@ -1181,7 +1181,7 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
   const specs = getPanelSpecs(width, height, depth);
   const panelTypes = ["left", "top", "bottom", "right", "back"] as const;
 
-  const getMaterial = (_panelType: PanelType) => baseMaterial;
+  const getMaterial = (_panelType: PanelType) => baseMaterial.clone();
 
   const panelOptions = (panelType: PanelType): PanelMaterialOptions =>
     useDefaultMDF
@@ -1230,8 +1230,8 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
 
   if (shelfCount > 0) {
     const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
-    const shelfMat = baseMaterial;
     shelfSpecs.forEach((spec, i) => {
+      const shelfMat = baseMaterial.clone();
       const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
       mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
       mesh.userData.shelfIndex = i;
@@ -1247,13 +1247,13 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     const item = doorLayerItems[doorIndex];
     const materialId = item?.material ?? item?.materialId ?? getDefaultOfficialMaterial().canonicalId;
     const doorMaterial = getMaterialForOfficialId(materialId);
-    root.add(createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
+    root.add(createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
   });
   drawerSpecs.forEach((spec, drawerIndex) => {
     const drawerMaterial = drawerLayerItems[drawerIndex]?.material
       ? getMaterialForOfficialId(drawerLayerItems[drawerIndex].material!)
       : baseMaterial;
-    root.add(createDrawerObject(spec, drawerMaterial as THREE.Material));
+    root.add(createDrawerObject(spec, (drawerMaterial as THREE.Material).clone()));
   });
 
   root.position.set(0, 0, 0);
@@ -1526,7 +1526,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
       group.remove(existingDoor);
     }
     const doorMaterial = getMaterialForOfficialId(materialName);
-    const newDoor = createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
+    const newDoor = createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
     (newDoor.userData as Record<string, unknown>)[doorFpKey] = newFingerprint;
     group.add(newDoor);
   });
@@ -1556,7 +1556,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
       group.remove(existingDrawer);
     }
     const drawerMaterial = getMaterialForOfficialId(materialName);
-    const newDrawer = createDrawerObject(spec, drawerMaterial as THREE.Material);
+    const newDrawer = createDrawerObject(spec, (drawerMaterial as THREE.Material).clone());
     (newDrawer.userData as Record<string, unknown>)[drawerFpKey] = newFingerprint;
     group.add(newDrawer);
   });
@@ -1567,7 +1567,8 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const existingShelves = group.children.filter((c) => /^shelf-\d+$/.test(c.name));
   existingShelves.forEach((obj) => group.remove(obj));
   shelfSpecs.forEach((spec, i) => {
-    const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: mat as THREE.Material });
+    const shelfMat = (mat as THREE.Material).clone();
+    const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.shelfIndex = i;
     group.add(mesh);
