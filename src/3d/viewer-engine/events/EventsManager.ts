@@ -14,11 +14,11 @@ export class EventsManager {
   /** True quando o pointerdown foi fora do gizmo (arrastar = orbit/pan câmera). */
   private isDraggingCamera = false;
   private boundHandlers: {
-    click: (event: MouseEvent) => void;
-    dblclick: (event: MouseEvent) => void;
-    pointerdown: (event: PointerEvent) => void;
-    pointermove: (event: PointerEvent) => void;
-    pointerup: (event: PointerEvent) => void;
+    click: (_event: MouseEvent) => void;
+    dblclick: (_event: MouseEvent) => void;
+    pointerdown: (_event: PointerEvent) => void;
+    pointermove: (_event: PointerEvent) => void;
+    pointerup: (_event: PointerEvent) => void;
     pointerleave: () => void;
   } | null = null;
 

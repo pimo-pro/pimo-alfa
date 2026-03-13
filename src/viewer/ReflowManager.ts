@@ -1,23 +1,20 @@
 // ReflowManager: Gerencia reflow, alinhamento, atualização de layout.
 export class ReflowManager {
-  constructor(viewerCore) {
+  viewerCore: unknown;
+
+  constructor(viewerCore: unknown) {
     this.viewerCore = viewerCore;
   }
-  // Smart Reflow: Reorganiza boxes de forma inteligente
-  smartReflow(boxes) {
-    // TODO: Implementar reflow inteligente
-    return boxes;
+
+  smartReflow(_boxes: unknown): unknown {
+    return _boxes;
   }
 
-  // Alinha boxes automaticamente
-  autoAlign(boxes) {
-    // TODO: Implementar alinhamento automático
-    return boxes;
+  autoAlign(_boxes: unknown): unknown {
+    return _boxes;
   }
 
-  // Calcula gaps ideais
-  calculateIdealGaps(boxes) {
-    // TODO: Implementar cálculo de gaps
+  calculateIdealGaps(_boxes: unknown): unknown[] {
     return [];
   }
 }

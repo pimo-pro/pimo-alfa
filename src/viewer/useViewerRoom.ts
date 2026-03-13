@@ -1,47 +1,8 @@
 /**
  * Hook especializado para sala e paredes no viewer.
- * Obtém a API de sala a partir de window.viewerCore.
- * Sempre chama useMemo com dependência [viewerCore]. NOOP e API real têm exatamente a mesma forma.
+ * Obtém a API de sala a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
  */
 import { useMemo } from "react";
-
-declare global {
-  interface Window {
-    viewerCore?: {
-      createRoom?: (...args: unknown[]) => unknown;
-      removeRoom?: (...args: unknown[]) => unknown;
-      roomManager?: {
-        createRoom?: (...args: unknown[]) => unknown;
-        removeRoom?: (...args: unknown[]) => unknown;
-        addDoorToRoom?: (...args: unknown[]) => unknown;
-        addWindowToRoom?: (...args: unknown[]) => unknown;
-        getRoomExists?: () => boolean;
-        getRoomDimensions?: () => unknown;
-        getRoomVisible?: () => boolean;
-        hideRoom?: () => void;
-        showRoom?: () => void;
-      };
-      selectWallByIndex?: (index: number | null) => void;
-      selectRoomElementById?: (elementId: string | null) => void;
-      setPlacementMode?: (mode: "door" | "window" | null) => void;
-      setOnRoomElementPlaced?: (callback: unknown) => void;
-      setOnRoomElementSelected?: (callback: unknown) => void;
-      updateRoomElementConfig?: (...args: unknown[]) => unknown;
-      setRoomBounds?: (bounds: unknown) => void;
-      clearRoomBounds?: () => void;
-      getRoomExists?: () => boolean;
-      getRoomDimensions?: () => unknown;
-      getRoomVisible?: () => boolean;
-      hideRoom?: () => void;
-      showRoom?: () => void;
-      addDoorToRoom?: (...args: unknown[]) => unknown;
-      addWindowToRoom?: (...args: unknown[]) => unknown;
-      setOnWallSelected?: (callback: ((wallId: number | null) => void) | null) => void;
-      setOnWallTransform?: (callback: ((wallIndex: number, position: { x: number; z: number }, rotation: number) => void) | null) => void;
-      setOnRoomElementTransform?: (callback: ((elementId: string, config: unknown) => void) | null) => void;
-    };
-  }
-}
 
 const NOOP = () => {};
 const NOOP_RETURN_FALSE = () => false;
@@ -79,11 +40,11 @@ export function useViewerRoom() {
     if (!viewerCore) return ROOM_NOOP_API;
 
     const room = viewerCore.roomManager;
-    const bind = (fn: ((...args: unknown[]) => unknown) | undefined, target: unknown) =>
+    const bind = (fn: ((..._args: unknown[]) => unknown) | undefined, target: unknown) =>
       fn ? fn.bind(target) : NOOP;
-    const bindCore = (fn: ((...args: unknown[]) => unknown) | undefined) =>
+    const bindCore = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       bind(fn, viewerCore);
-    const bindRoom = (fn: ((...args: unknown[]) => unknown) | undefined) =>
+    const bindRoom = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       room && fn ? fn.bind(room) : NOOP;
 
     return {

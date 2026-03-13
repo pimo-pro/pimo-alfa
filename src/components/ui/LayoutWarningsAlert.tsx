@@ -45,7 +45,7 @@ function LayoutWarningsAlertComponent({ warnings, boxId }: Props) {
             outOfBounds: warnings.outOfBounds.filter((o) => o.boxId === boxId),
           }
         : { collisions: [] as typeof warnings.collisions, outOfBounds: [] as typeof warnings.outOfBounds },
-    [boxId, warnings.collisions, warnings.outOfBounds]
+    [boxId, warnings]
   );
   const hasAny = forBox.collisions.length > 0 || forBox.outOfBounds.length > 0;
   if (!hasAny) return null;

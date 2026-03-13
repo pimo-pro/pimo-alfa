@@ -5,7 +5,7 @@ import { Viewer } from "../3d/core/Viewer";
 export type ThreeViewerProps = {
   height?: number | string;
   backgroundColor?: string;
-  viewerOptions?: any;
+  viewerOptions?: Record<string, unknown>;
 };
 
 export default function ThreeViewer({

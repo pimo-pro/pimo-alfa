@@ -129,7 +129,7 @@ function pickClosestEdge(
   }
 
   const edges = getEdgesForObject(object);
-  let bestPoint = new THREE.Vector3();
+  const bestPoint = new THREE.Vector3();
   let bestDistSq = Infinity;
   for (const { start, end } of edges) {
     closestPointOnSegment(start, end, hitPoint, _point);
@@ -157,7 +157,7 @@ export function getRulerEdgeAtPointer(
   pointer: THREE.Vector2,
   camera: THREE.Camera,
   roots: THREE.Object3D[],
-  getBboxRoot?: (hitObject: THREE.Object3D) => THREE.Object3D
+  getBboxRoot?: (_hitObject: THREE.Object3D) => THREE.Object3D
 ): RulerEdgePickResult | null {
   raycaster.setFromCamera(pointer, camera);
   raycaster.layers.set(0);

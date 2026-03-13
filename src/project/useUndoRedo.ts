@@ -15,7 +15,7 @@ export function useUndoRedo() {
     redoStackRef.current = [];
   };
 
-  const undo = (current: ProjectState, setProject: (s: ProjectState) => void) => {
+  const undo = (current: ProjectState, setProject: (_s: ProjectState) => void) => {
     if (!undoStackRef.current.length) return;
     const [prev, ...rest] = undoStackRef.current;
     undoStackRef.current = rest;
@@ -23,7 +23,7 @@ export function useUndoRedo() {
     setProject(prev);
   };
 
-  const redo = (current: ProjectState, setProject: (s: ProjectState) => void) => {
+  const redo = (current: ProjectState, setProject: (_s: ProjectState) => void) => {
     if (!redoStackRef.current.length) return;
     const [next, ...rest] = redoStackRef.current;
     redoStackRef.current = rest;

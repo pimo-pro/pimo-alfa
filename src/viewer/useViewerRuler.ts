@@ -22,19 +22,19 @@ const RULER_NOOP_API = {
 } as const;
 
 export function useViewerRuler(viewerCore: {
-  getRulerEdgeAtPointer?: (event: { clientX: number; clientY: number }) => unknown;
-  getRulerMeasurements?: (referenceBoxId: string | null) => unknown;
-  setRulerEnabled?: (enabled: boolean) => void;
-  getInternalRulerPickAtPointer?: (event: { clientX: number; clientY: number }) => unknown;
-  cycleInternalRulerSelection?: (result: unknown) => void;
+  getRulerEdgeAtPointer?: (_event: { clientX: number; clientY: number }) => unknown;
+  getRulerMeasurements?: (_referenceBoxId: string | null) => unknown;
+  setRulerEnabled?: (_enabled: boolean) => void;
+  getInternalRulerPickAtPointer?: (_event: { clientX: number; clientY: number }) => unknown;
+  cycleInternalRulerSelection?: (_result: unknown) => void;
   clearInternalRulerSelection?: () => void;
   getInternalRulerMeasurement?: () => unknown;
-  setOnRulerTick?: (callback: (() => void) | null) => void;
+  setOnRulerTick?: (_callback: (() => void) | null) => void;
 } | null | undefined) {
   return useMemo(() => {
     if (!viewerCore) return RULER_NOOP_API;
 
-    const bind = (fn: ((...args: unknown[]) => unknown) | undefined) =>
+    const bind = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;
 
     return {

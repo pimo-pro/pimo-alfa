@@ -110,7 +110,7 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
   );
 
   const subscribeSelectedBoxChange = useCallback(
-    (callback: (id: string | null) => void) =>
+    (callback: (_id: string | null) => void) =>
       viewerApiRef.current?.subscribeSelectedBoxChange?.(callback) ?? (() => {}),
     []
   );

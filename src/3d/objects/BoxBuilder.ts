@@ -1118,7 +1118,7 @@ const officialMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
 /** Material PBR para porta/gaveta: usa a mesma MaterialLibrary do módulo (id/label oficial). */
 function getMaterialForOfficialId(idOrLabel: string): THREE.MeshStandardMaterial {
   const key = (idOrLabel ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
-  let mat = officialMaterialCache.get(key);
+  const mat = officialMaterialCache.get(key);
   if (mat) return mat;
   const preset = getMaterialPreset(defaultMaterialSet, key);
   const options = preset?.options ?? { color: "#f2f0eb", roughness: 0.55, metalness: 0 };

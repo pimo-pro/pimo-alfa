@@ -108,7 +108,7 @@ export function createViewerApiAdapter(
       return bbox ? { width: bbox.width, height: bbox.height, depth: bbox.depth } : null;
     },
     getSelectedBoxDimensions: () => pimoApi.getSelectedBoxDimensions?.() ?? null,
-    subscribeSelectedBoxChange: (callback: (id: string | null) => void): (() => void) =>
+    subscribeSelectedBoxChange: (callback: (_id: string | null) => void): (() => void) =>
       pimoApi.subscribeSelectedBoxChange?.(callback) ?? (() => {}),
     setDimensionsOverlayVisible: (visible: boolean): void => {
       pimoApi.setDimensionsOverlayVisible?.(visible);

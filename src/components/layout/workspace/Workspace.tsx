@@ -37,7 +37,7 @@ import {
 type WorkspaceProps = {
   viewerBackground?: string;
   viewerHeight?: number | string;
-  viewerOptions?: any;
+  viewerOptions?: Record<string, unknown>;
 };
 
 export default function Workspace({
@@ -72,8 +72,8 @@ export default function Workspace({
   const gerarArquivoHandlers = useGerarArquivoHandlers();
   const [rulerHoverResult, setRulerHoverResult] = useState<RulerEdgePickResult | null>(null);
   const [rulerAnchorResult, setRulerAnchorResult] = useState<RulerEdgePickResult | null>(null);
-  const [rulerTick, setRulerTick] = useState(0);
-  const [internalRulerVersion, setInternalRulerVersion] = useState(0);
+  const [, setRulerTick] = useState(0);
+  const [, setInternalRulerVersion] = useState(0);
   const [internalRulerHoverResult, setInternalRulerHoverResult] = useState<InternalRulerPickResult | null>(null);
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
 
@@ -87,7 +87,7 @@ export default function Workspace({
         if (!mounted) return;
         const core = new ViewerCore(container, viewerOptionsStable as Record<string, unknown>);
         viewerCoreInstanceRef.current = core;
-        (window as Window & { viewerCore?: any }).viewerCore = core;
+        window.viewerCore = core as typeof window.viewerCore;
       })
       .catch((err) => {
         if (import.meta.env.DEV) {
@@ -134,7 +134,7 @@ export default function Workspace({
 
   // MultiBoxManager: sincroniza workspaceBoxes ↔ viewer; addBox/removeBox delegam a actions
   useMultiBoxManager({
-    viewerApi,
+    viewerApi: viewerApi as import("../../../core/multibox/types").MultiBoxViewerApi,
     project,
     actions,
   });
@@ -335,17 +335,17 @@ const hasShownViewerReadyToastRef = useRef(false);
     }
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
-    viewerApi.setMousePreset?.();
-    viewerApi.setBackgroundMode?.();
-    viewerApi.setMaterialQuality?.();
-    viewerApi.setReflectionsEnabled?.();
-    viewerApi.setPhotoModeEnabled?.();
-    viewerApi.setExplodedViewEnabled?.();
-    viewerApi.setExplodedViewIntensity?.();
-    viewerApi.setHighlightEnabled?.();
-    viewerApi.setRulerEnabled?.();
-    viewerApi.setUltraPerformanceModeOptions?.();
-    viewerApi.setUltraPerformanceMode?.();
+    viewerApi.setMousePreset?.(settings.mousePreset);
+    viewerApi.setBackgroundMode?.(settings.backgroundMode);
+    viewerApi.setMaterialQuality?.(settings.materialQuality);
+    viewerApi.setReflectionsEnabled?.(settings.enableReflections);
+    viewerApi.setPhotoModeEnabled?.(settings.photoModeEnabled);
+    viewerApi.setExplodedViewEnabled?.(settings.explodedViewEnabled);
+    viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
+    viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
+    viewerApi.setRulerEnabled?.(settings.rulerEnabled);
+    viewerApi.setUltraPerformanceModeOptions?.(settings.ultraPerformanceModeOptions);
+    viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
   }, [
     project.viewerSettings,
     viewerApi,
@@ -435,13 +435,7 @@ const hasShownViewerReadyToastRef = useRef(false);
         ceiling: null,
       };
     return viewerApi.getRulerMeasurements(rulerReferenceBoxId);
-  }, [
-    project.viewerSettings.rulerEnabled,
-    rulerReferenceBoxId,
-    viewerApi,
-    workspacePositionKey,
-    rulerTick,
-  ]);
+  }, [project.viewerSettings.rulerEnabled, rulerReferenceBoxId, viewerApi]);
 
   const rulerManualMeasurement = useMemo((): RulerManagerMeasurement | null => {
     if (!project.viewerSettings.rulerEnabled || !rulerAnchorResult || !rulerHoverResult) return null;
@@ -455,7 +449,7 @@ const hasShownViewerReadyToastRef = useRef(false);
 
   const rulerInternalMeasurement = useMemo(
     () => viewerApi.getInternalRulerMeasurement?.() ?? null,
-    [viewerApi, internalRulerVersion]
+    [viewerApi]
   );
   const prevBoxesRef = useRef<string>("");
   useEffect(() => {

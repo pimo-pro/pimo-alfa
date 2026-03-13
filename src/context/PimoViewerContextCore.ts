@@ -16,6 +16,8 @@ import type { RulerEdgePickResult } from "../3d/viewer-engine/ruler";
 
 export type PimoViewerApi = {
   viewerRef: React.MutableRefObject<Viewer | null>;
+  /** True quando window.viewerCore está montado e pronto. */
+  viewerReady?: boolean;
   addBox: (_id: string, _options?: BoxOptions) => boolean;
   removeBox: (_id: string) => boolean;
   updateBox: (_id: string, _options: Partial<BoxOptions>) => boolean;
@@ -33,6 +35,7 @@ export type PimoViewerApi = {
   setOnBoxSelected: (_callback: (_id: string | null) => void) => void;
   setOnModelLoaded: (_callback: ((_boxId: string, _modelId: string, _object: unknown) => void) | null) => void;
   setOnBoxTransform: (_callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotationY: number) => void) | null) => void;
+  setOnDoorLayerDoubleClick?: (_callback: ((_boxId: string, _doorLayerId: string) => void) | null) => void;
   setTransformMode: (_mode: "translate" | "rotate" | null) => void;
   selectBox?: (_id: string | null) => void;
   highlightBox?: (_id: string | null) => void;

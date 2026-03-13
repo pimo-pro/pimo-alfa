@@ -16,7 +16,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const { project, setProject, projectRef } = useProjectState();
   useEffect(() => {
     projectRef.current = project;
-  }, [project]);
+  }, [project, projectRef]);
   const viewerSync = useViewerSync(project);
   const exportActions = useProjectExportActions({ projectRef });
   useProjectPersistence(project, setProject, viewerSync, {
@@ -30,7 +30,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const redoStackRef = useRef<ProjectState[]>([]);
 
   const updateProject = useCallback(
-    (fn: (prev: ProjectState) => ProjectState, pushUndo?: boolean) => {
+    (fn: (_prev: ProjectState) => ProjectState, pushUndo?: boolean) => {
       setProject((prev) => {
         const next = fn(prev);
         if (pushUndo) {

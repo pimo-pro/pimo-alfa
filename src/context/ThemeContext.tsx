@@ -33,7 +33,7 @@ export function applyThemeToDocument(theme: ThemeId) {
 
 type ThemeContextValue = {
   theme: ThemeId;
-  setTheme: (theme: ThemeId) => void;
+  setTheme: (_theme: ThemeId) => void;
   toggleTheme: () => void;
 };
 

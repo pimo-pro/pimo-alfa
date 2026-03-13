@@ -1,29 +1,24 @@
 // CollisionManager: Gerencia colisões, detecção, bounding boxes.
 export class CollisionManager {
-  constructor() {
-    // viewerCore removido: não utilizado
+  viewerCore: unknown;
+
+  constructor(viewerCore?: unknown) {
+    this.viewerCore = viewerCore;
   }
-  // Smart Snapping: Detecta pontos de snap inteligentes
-  smartSnap(box, candidates) {
-    // TODO: Implementar algoritmo de snapping inteligente
+
+  smartSnap(_box: unknown, _candidates: unknown): null {
     return null;
   }
 
-  // Collision Prediction: Prediz colisões futuras
-  predictCollision(box, movement) {
-    // TODO: Implementar predição de colisão
+  predictCollision(_box: unknown, _movement: unknown): false {
     return false;
   }
 
-  // Detecta colisão entre boxes
-  detectCollision(boxA, boxB) {
-    // TODO: Implementar detecção de colisão
+  detectCollision(_boxA: unknown, _boxB: unknown): false {
     return false;
   }
 
-  // Resolve colisão
-  resolveCollision(boxA, boxB) {
-    // TODO: Implementar resolução de colisão
+  resolveCollision(_boxA: unknown, _boxB: unknown): null {
     return null;
   }
 }

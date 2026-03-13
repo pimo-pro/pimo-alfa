@@ -346,13 +346,7 @@ export function useGerarArquivoHandlers() {
       return;
     }
     setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
-  }, [
-    hasBoxes,
-    showToast,
-    project,
-    boxes,
-    slug,
-  ]);
+  }, [hasBoxes, showToast, project, boxes]);
 
   /** Gera todos os arquivos disponíveis, coloca numa pasta (ZIP) e descarrega. */
   const onArquivoCompleto = useCallback(async () => {

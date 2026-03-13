@@ -38,7 +38,7 @@ export type RulerLabelsOverlayProps = {
   internalMeasurement: { pointA: THREE.Vector3; pointB: THREE.Vector3; distanceMm: number } | null;
   /** Ponto de snap no hover (highlight ciano); em coordenadas mundo. */
   hoverSnapPoint: THREE.Vector3 | null;
-  projectWorldToScreen: (worldPoint: THREE.Vector3) => { x: number; y: number } | null;
+  projectWorldToScreen: (_worldPoint: THREE.Vector3) => { x: number; y: number } | null;
 };
 
 /** Aplica regras de exibição e devolve a lista de medições a mostrar. */

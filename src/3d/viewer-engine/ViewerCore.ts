@@ -145,7 +145,7 @@ export class ViewerCore {
   private pointer = new THREE.Vector2();
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
-  private readonly selectedBoxChangeListeners = new Set<(id: string | null) => void>();
+  private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotationY: number) => void) | null = null;
@@ -2766,7 +2766,7 @@ export class ViewerCore {
    * Subscreve alterações da caixa selecionada (mudança de seleção ou updateBox na caixa selecionada).
    * Retorna função para cancelar a assinatura.
    */
-  subscribeSelectedBoxChange(callback: (id: string | null) => void): () => void {
+  subscribeSelectedBoxChange(callback: (_id: string | null) => void): () => void {
     this.selectedBoxChangeListeners.add(callback);
     return () => {
       this.selectedBoxChangeListeners.delete(callback);
@@ -3361,76 +3361,74 @@ export class ViewerCore {
 
   /** API mínima para o EventsManager (handlers de canvas). */
   private getEventEngineApi(): IViewerEventEngine {
-    const self = this;
     return {
-      getCanvas: () => self.rendererManager.renderer.domElement,
-      getTransformControlsDragging: () => self.viewerState.getTransformControlsDragging(),
-      getSuppressNextCanvasClick: () => self.viewerState.getSuppressNextCanvasClick(),
-      setSuppressNextCanvasClick: (v) => { self.viewerState.setSuppressNextCanvasClick(v); },
-      getHighlightEnabled: () => self.viewerState.getHighlightEnabled(),
-      getHighlightManager: () => self.highlightManager,
-      getHighlightIntersects: (e) => self.getHighlightIntersects(e),
-      getBoxIdByMesh: (mesh) => self.getBoxIdByMesh(mesh),
-      setSelectedBox: (id) => self.setSelectedBox(id),
-      setHoveredBox: (id) => self.setHoveredBox(id),
-      getOnRoomElementSelected: () => self.onRoomElementSelected,
-      getOnWallSelected: () => self.onWallSelected,
-      getOnBoxSelected: () => self.onBoxSelected,
-      getPlacementMode: () => self.viewerState.getPlacementMode(),
-      getOnRoomElementPlaced: () => self.onRoomElementPlaced,
-      getWallHitAtPointer: (e) => self.getWallHitAtPointer(e),
-      getRoomBuilder: () => self.roomBuilder,
-      setPlacementMode: (mode) => self.viewerState.setPlacementMode(mode),
-      getBoxIdAtPointer: (e) => self.getBoxIdAtPointer(e),
-      getSelectedBoxId: () => self.viewerState.getSelectedBox(),
-      getRoomElementAtPointer: (e) => self.getRoomElementAtPointer(e),
-      getSelectedWallIndex: () => self.viewerState.getSelectedWallIndex(),
-      setSelectedWallIndex: (v) => { self.viewerState.setSelectedWallIndex(v); },
-      getSelectedRoomElementId: () => self.viewerState.getSelectedRoomElementId(),
-      setSelectedRoomElementId: (v) => { self.viewerState.setSelectedRoomElementId(v); },
-      refreshTransformControlsAttachment: () => self.refreshTransformControlsAttachment(),
-      refreshOutlineTarget: () => self.refreshOutlineTarget(),
-      getRoomBoxWalls: () => self.roomBoxWalls,
-      getWallGizmo: () => self.wallGizmo,
-      getWallEditMode: () => self.viewerState.getWallEditMode(),
-      getWallIdAtPointer: (e) => self.getWallIdAtPointer(e),
-      logTransformDiagnostic: (name, data) => self.logTransformDiagnostic(name, data),
-      getTransformGizmoIntersections: (e) => self.getTransformGizmoIntersections(e),
-      getWallGizmoDragging: () => self.viewerState.getWallGizmoDragging(),
-      setWallGizmoDragging: (v) => { self.viewerState.setWallGizmoDragging(v); },
-      getDoorHitAtPointer: (e) => self.getDoorHitAtPointer(e),
-      getOnDoorLayerDoubleClick: () => self.onDoorLayerDoubleClick,
+      getCanvas: () => this.rendererManager.renderer.domElement,
+      getTransformControlsDragging: () => this.viewerState.getTransformControlsDragging(),
+      getSuppressNextCanvasClick: () => this.viewerState.getSuppressNextCanvasClick(),
+      setSuppressNextCanvasClick: (v) => { this.viewerState.setSuppressNextCanvasClick(v); },
+      getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
+      getHighlightManager: () => this.highlightManager,
+      getHighlightIntersects: (e) => this.getHighlightIntersects(e),
+      getBoxIdByMesh: (mesh) => this.getBoxIdByMesh(mesh),
+      setSelectedBox: (id) => this.setSelectedBox(id),
+      setHoveredBox: (id) => this.setHoveredBox(id),
+      getOnRoomElementSelected: () => this.onRoomElementSelected,
+      getOnWallSelected: () => this.onWallSelected,
+      getOnBoxSelected: () => this.onBoxSelected,
+      getPlacementMode: () => this.viewerState.getPlacementMode(),
+      getOnRoomElementPlaced: () => this.onRoomElementPlaced,
+      getWallHitAtPointer: (e) => this.getWallHitAtPointer(e),
+      getRoomBuilder: () => this.roomBuilder,
+      setPlacementMode: (mode) => this.viewerState.setPlacementMode(mode),
+      getBoxIdAtPointer: (e) => this.getBoxIdAtPointer(e),
+      getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      getRoomElementAtPointer: (e) => this.getRoomElementAtPointer(e),
+      getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
+      setSelectedWallIndex: (v) => { this.viewerState.setSelectedWallIndex(v); },
+      getSelectedRoomElementId: () => this.viewerState.getSelectedRoomElementId(),
+      setSelectedRoomElementId: (v) => { this.viewerState.setSelectedRoomElementId(v); },
+      refreshTransformControlsAttachment: () => this.refreshTransformControlsAttachment(),
+      refreshOutlineTarget: () => this.refreshOutlineTarget(),
+      getRoomBoxWalls: () => this.roomBoxWalls,
+      getWallGizmo: () => this.wallGizmo,
+      getWallEditMode: () => this.viewerState.getWallEditMode(),
+      getWallIdAtPointer: (e) => this.getWallIdAtPointer(e),
+      logTransformDiagnostic: (name, data) => this.logTransformDiagnostic(name, data),
+      getTransformGizmoIntersections: (e) => this.getTransformGizmoIntersections(e),
+      getWallGizmoDragging: () => this.viewerState.getWallGizmoDragging(),
+      setWallGizmoDragging: (v) => { this.viewerState.setWallGizmoDragging(v); },
+      getDoorHitAtPointer: (e) => this.getDoorHitAtPointer(e),
+      getOnDoorLayerDoubleClick: () => this.onDoorLayerDoubleClick,
       setCameraControlsEnabled: (enabled) => {
-        if (self.controls?.controls) self.controls.controls.enabled = enabled;
+        if (this.controls?.controls) this.controls.controls.enabled = enabled;
       },
     };
   }
 
   /** API mínima para o ViewerTools (attachment, outline, clamp). */
   private getToolsEngineApi(): IViewerToolsEngine {
-    const self = this;
     return {
-      getTransformControls: () => self.transformControls,
-      getTransformControlsHelper: () => self.transformControlsHelper,
-      getCurrentTool: () => self.viewerState.getCurrentTool(),
-      getSelectedBoxId: () => self.viewerState.getSelectedBox(),
-      getBoxEntry: (id) => self.boxes.get(id),
-      getSelectedWallIndex: () => self.viewerState.getSelectedWallIndex(),
-      getRoomBoxWalls: () => self.roomBoxWalls,
-      getSelectedRoomElementId: () => self.viewerState.getSelectedRoomElementId(),
-      getRoomElementById: (id) => self.roomBuilder.getElementById(id),
-      getTransformGizmoSizeForBox: (entry) => self.getTransformGizmoSizeForBox(entry),
+      getTransformControls: () => this.transformControls,
+      getTransformControlsHelper: () => this.transformControlsHelper,
+      getCurrentTool: () => this.viewerState.getCurrentTool(),
+      getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      getBoxEntry: (id) => this.boxes.get(id),
+      getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
+      getRoomBoxWalls: () => this.roomBoxWalls,
+      getSelectedRoomElementId: () => this.viewerState.getSelectedRoomElementId(),
+      getRoomElementById: (id) => this.roomBuilder.getElementById(id),
+      getTransformGizmoSizeForBox: (entry) => this.getTransformGizmoSizeForBox(entry),
       setTransformHelperVisible: (visible) => {
-        if (self.transformControlsHelper) self.transformControlsHelper.visible = visible;
+        if (this.transformControlsHelper) this.transformControlsHelper.visible = visible;
       },
-      applyTransformControlsMouseGuard: () => self.applyTransformControlsMouseGuard(),
-      logTransformDiagnostic: (name, data) => self.logTransformDiagnostic(name, data),
-      getSelectionOutline: () => self.selectionOutline,
-      getSelectionOutlineMaterial: () => self.selectionOutlineMaterial,
-      getHoveredBoxId: () => self.viewerState.getHoveredBox(),
-      getBoxesIntersectingWalls: () => self.boxesIntersectingWalls,
-      setOutlineTarget: (mesh, opacity, colorHex) => self.setOutlineTarget(mesh, opacity, colorHex),
-      clampTransform: () => self.clampTransform(),
+      applyTransformControlsMouseGuard: () => this.applyTransformControlsMouseGuard(),
+      logTransformDiagnostic: (name, data) => this.logTransformDiagnostic(name, data),
+      getSelectionOutline: () => this.selectionOutline,
+      getSelectionOutlineMaterial: () => this.selectionOutlineMaterial,
+      getHoveredBoxId: () => this.viewerState.getHoveredBox(),
+      getBoxesIntersectingWalls: () => this.boxesIntersectingWalls,
+      setOutlineTarget: (mesh, opacity, colorHex) => this.setOutlineTarget(mesh, opacity, colorHex),
+      clampTransform: () => this.clampTransform(),
     };
   }
 

@@ -1,23 +1,20 @@
 // ToolsManager: Gerencia ferramentas, seleção, transformações.
 export class ToolsManager {
-  constructor(viewerCore) {
+  viewerCore: unknown;
+
+  constructor(viewerCore: unknown) {
     this.viewerCore = viewerCore;
   }
-  // Smart Selection: Seleção avançada de boxes
-  smartSelect(criteria) {
-    // TODO: Implementar seleção inteligente
+
+  smartSelect(_criteria: unknown): unknown[] {
     return [];
   }
 
-  // Ferramenta de medição
-  measure(box) {
-    // TODO: Implementar ferramenta de medição
+  measure(_box: unknown): null {
     return null;
   }
 
-  // Histórico de seleção
-  selectionHistory() {
-    // TODO: Implementar histórico de seleção
+  selectionHistory(): unknown[] {
     return [];
   }
 }

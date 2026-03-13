@@ -11,51 +11,33 @@ export class ViewerCore {
   collisionManager: CollisionManager;
   reflowManager: ReflowManager;
   toolsManager: ToolsManager;
-  materialsManager: any;
-  rulerManager: any;
-  // ...outros managers
+  materialsManager: Record<string, unknown>;
+  rulerManager: Record<string, unknown>;
+
   constructor() {
     this.roomManager = new RoomManager(this);
     this.snapshotManager = new SnapshotManager(this);
     this.collisionManager = new CollisionManager(this);
     this.reflowManager = new ReflowManager(this);
     this.toolsManager = new ToolsManager(this);
-    this.materialsManager = { // stub: implement real manager
-      updateBoxMaterial: (boxId, materialId) => { void boxId; void materialId; return true; },
-      updateDoorMaterial: (doorId, materialId) => { void doorId; void materialId; return true; },
-      updateDrawerMaterial: (drawerId, materialId) => { void drawerId; void materialId; return true; },
-      setMaterialMode: (mode) => {
-        // TODO: Implementar modo de material
-        return mode;
-      },
-      getMaterialMode: () => {
-        // TODO: Retornar modo de material
-        return "default";
-      },
-      setMaterialQuality: (quality) => {
-        // TODO: Implementar qualidade de material
-        return quality;
-      },
-      getMaterialQuality: () => {
-        // TODO: Retornar qualidade de material
-        return "standard";
-      },
-      applyMaterialPreset: (presetId) => {
-        // TODO: Aplicar preset de material
-        return presetId;
-      },
+    this.materialsManager = {
+      updateBoxMaterial: (_boxId: string, _materialId: string) => true,
+      updateDoorMaterial: (_doorId: string, _materialId: string) => true,
+      updateDrawerMaterial: (_drawerId: string, _materialId: string) => true,
+      setMaterialMode: (mode: unknown) => mode,
+      getMaterialMode: () => "default",
+      setMaterialQuality: (quality: unknown) => quality,
+      getMaterialQuality: () => "standard",
+      applyMaterialPreset: (presetId: unknown) => presetId,
     };
-    this.rulerManager = { // stub: implement real manager
-      getRulerEdgeAtPointer: (pointer) => { void pointer; return null; },
+    this.rulerManager = {
+      getRulerEdgeAtPointer: (_pointer: unknown) => null,
       getRulerMeasurements: () => {
         // TODO: Implementar obtenção de medidas da régua
         return [];
       },
-      setRulerEnabled: (enabled) => {
-        // TODO: Implementar ativação da régua
-        return enabled;
-      },
-      getInternalRulerPickAtPointer: (pointer) => { void pointer; return null; },
+      setRulerEnabled: (enabled: unknown) => enabled,
+      getInternalRulerPickAtPointer: (_pointer: unknown) => null,
       cycleInternalRulerSelection: () => {
         // TODO: Implementar ciclo de seleção interna da régua
         return true;
@@ -69,7 +51,5 @@ export class ViewerCore {
         return null;
       },
     };
-    // ...outros managers
   }
-  // Métodos públicos delegam para managers
 }

@@ -30,7 +30,7 @@ interface CutListBoxCardProps {
   title: string;
   summary: BoxSummary;
   isSelected: boolean;
-  onSelect: (boxId: string) => void;
+  onSelect: (_boxId: string) => void;
   onDuplicate: () => void;
   onRemove: () => void;
 }

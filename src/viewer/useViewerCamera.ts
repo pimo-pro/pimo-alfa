@@ -1,22 +1,8 @@
 /**
  * Hook especializado para câmera do viewer.
- * Obtém a API de câmera a partir de window.viewerCore.
- * Sempre chama useMemo com dependência [viewerCore]. NOOP e API real têm exatamente a mesma forma.
+ * Obtém a API de câmera a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
  */
 import { useMemo } from "react";
-
-declare global {
-  interface Window {
-    viewerCore?: {
-      setCameraView?: (preset: "top" | "bottom" | "front" | "back" | "right" | "left" | "isometric") => void;
-      resetCamera?: () => void;
-      getCameraPosition?: () => unknown;
-      setCameraPosition?: (...args: unknown[]) => void;
-      setCameraZoom?: (...args: unknown[]) => void;
-      getCameraZoom?: () => unknown;
-    };
-  }
-}
 
 const NOOP = () => {};
 const NOOP_RETURN_UNDEFINED = () => undefined;
@@ -38,7 +24,7 @@ export function useViewerCamera() {
   return useMemo(() => {
     if (!viewerCore) return CAMERA_NOOP_API;
 
-    const bind = (fn: ((...args: unknown[]) => unknown) | undefined) =>
+    const bind = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;
 
     return {

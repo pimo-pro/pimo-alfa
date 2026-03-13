@@ -10,8 +10,7 @@ export function useMaterialSelection(project: ProjectState) {
   return useMemo(() => ({
     selectedMaterial: project.material,
     selectMaterial: (material: Material) => {
-      // TODO: Implementar seleção real de material
-      project.material = material;
+      // TODO: Implementar seleção real de material (via actions quando disponível)
       return material;
     },
     listMaterials: () => {

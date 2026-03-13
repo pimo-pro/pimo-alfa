@@ -19,9 +19,9 @@ export type ContextMenuProps = {
   /** Alvo do clique direito: porta ou gaveta (para mostrar item "Alterar material"). */
   contextMenuLayerTarget?: ContextMenuLayerTarget;
   /** Chamado após alterar material da porta (para atualizar o viewer imediatamente). */
-  onDoorMaterialChange?: (boxId: string, doorLayerId: string, materialId: string) => void;
+  onDoorMaterialChange?: (_boxId: string, _doorLayerId: string, _materialId: string) => void;
   /** Chamado após alterar material da gaveta (para atualizar o viewer imediatamente). */
-  onDrawerMaterialChange?: (boxId: string, drawerLayerId: string, materialId: string) => void;
+  onDrawerMaterialChange?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
 };
 
 /** Materiais oficiais do projeto (mesma lista do módulo); apenas labels para o picker. */

@@ -7,8 +7,8 @@
 export type ViewerCoreInstance = { dispose: () => void };
 
 export type ViewerCoreConstructor = new (
-  container: HTMLElement,
-  options?: Record<string, unknown>
+  _container: HTMLElement,
+  _options?: Record<string, unknown>
 ) => ViewerCoreInstance;
 
 /**

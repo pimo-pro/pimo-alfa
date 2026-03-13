@@ -1,23 +1,20 @@
 // SnapshotManager: Gerencia snapshots, save/restore, histórico visual.
 export class SnapshotManager {
-  constructor(viewerCore) {
+  viewerCore: unknown;
+
+  constructor(viewerCore: unknown) {
     this.viewerCore = viewerCore;
   }
-  // Measurement Guides/History: Salva guia de medidas
-  saveMeasurementGuide(guide) {
-    // TODO: Implementar save de guia de medidas
+
+  saveMeasurementGuide(_guide: unknown): true {
     return true;
   }
 
-  // Ruler Evolution: Salva estado da régua
-  saveRulerState(state) {
-    // TODO: Implementar save de estado da régua
+  saveRulerState(_state: unknown): true {
     return true;
   }
 
-  // Histórico visual
-  getHistory() {
-    // TODO: Implementar histórico visual
+  getHistory(): unknown[] {
     return [];
   }
 }

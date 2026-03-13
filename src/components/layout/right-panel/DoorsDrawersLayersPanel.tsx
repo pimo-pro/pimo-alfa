@@ -25,7 +25,10 @@ export function DoorsDrawersLayersPanel() {
   }, [project.workspaceBoxes, project.selectedWorkspaceBoxId]);
 
   const doorsLayer = selectedBox?.doorsLayer ?? [];
-  const drawersLayer = selectedBox?.drawersLayer ?? [];
+  const drawersLayer = useMemo(
+    () => selectedBox?.drawersLayer ?? [],
+    [selectedBox?.drawersLayer]
+  );
   const drawerHeightMode = selectedBox?.drawerHeightMode ?? "equal";
   const drawerHeightsTotal = useMemo(
     () =>
@@ -171,8 +174,8 @@ export function DoorsDrawersLayersPanel() {
 interface DoorLayerRowProps {
   door: DoorLayerItem;
   index: number;
-  onToggleOpen: (id: string, isOpen: boolean) => void;
-  onRemove: (id: string) => void;
+  onToggleOpen: (_id: string, _isOpen: boolean) => void;
+  onRemove: (_id: string) => void;
 }
 
 const DoorLayerRow = memo(function DoorLayerRow({ door, index, onToggleOpen, onRemove }: DoorLayerRowProps) {
@@ -221,10 +224,10 @@ interface DrawerLayerRowProps {
   drawer: DrawerLayerItem;
   index: number;
   drawerHeightMode: "equal" | "top_small_mid_medium_bottom_large" | "custom";
-  onToggleOpen: (id: string, isOpen: boolean) => void;
-  onUpdateHeight: (id: string, height: number) => void;
-  onUpdateType: (id: string, type: "normal" | "pro") => void;
-  onRemove: (id: string) => void;
+  onToggleOpen: (_id: string, _isOpen: boolean) => void;
+  onUpdateHeight: (_id: string, _height: number) => void;
+  onUpdateType: (_id: string, _type: "normal" | "pro") => void;
+  onRemove: (_id: string) => void;
 }
 
 const DrawerLayerRow = memo(function DrawerLayerRow({

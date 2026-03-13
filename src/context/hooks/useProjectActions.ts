@@ -14,6 +14,7 @@ import type {
   ProjectSnapshot,
   ProjectState,
   SavedProjectInfo,
+  ViewerToolMode,
 } from "../projectTypes";
 import {
   applyResultados,
@@ -70,7 +71,7 @@ function logProjectProvider(_event: string, _data?: object): void {
 }
 
 export type UseProjectActionsParams = {
-  updateProject: (fn: (prev: ProjectState) => ProjectState, pushUndo?: boolean) => void;
+  updateProject: (_fn: (_prev: ProjectState) => ProjectState, _pushUndo?: boolean) => void;
   setProject: React.Dispatch<React.SetStateAction<ProjectState>>;
   viewerSync: import("../projectTypes").ViewerSync;
   exportActions: ReturnType<typeof import("./useProjectExportActions").useProjectExportActions>;
@@ -477,7 +478,7 @@ a.addBox = () => {
         );
         return recomputeState(prev, { workspaceBoxes }, true);
       });
-    },
+    };
 
     /** Cria uma nova caixa no workspace contendo apenas o modelo CAD (cada modelo CAD = uma caixa completa). Dimensões placeholder até o GLB carregar. */
     a.addCadModelAsNewBox = (cadModelId) => {
@@ -1042,9 +1043,9 @@ a.addBox = () => {
       });
     };
 
-    a.exportarPDF = exportActions.exportarPDF,
-    a.exportarPdfTecnico = exportActions.exportarPdfTecnico,
-    a.exportarPdfUnificado = exportActions.exportarPdfUnificado,
+    a.exportarPDF = exportActions.exportarPDF;
+    a.exportarPdfTecnico = exportActions.exportarPdfTecnico;
+    a.exportarPdfUnificado = exportActions.exportarPdfUnificado;
 
     a.logChangelog = (message) => {
       updateProject(
@@ -1058,11 +1059,13 @@ a.addBox = () => {
         }),
         false
       );
-    },
-    a.setActiveTool = (mode) => {
+    };
+
+    a.setActiveTool = (mode: ViewerToolMode) => {
       updateProject((prev) => ({ ...prev, activeViewerTool: mode }), false);
       viewerSync.setActiveTool(mode);
-    },
+    };
+
     a.setViewerSettings = (partial) => {
       updateProject(
         (prev) => ({
@@ -1074,7 +1077,8 @@ a.addBox = () => {
         }),
         false
       );
-    },
+    };
+
     a.toggleHighlight = () => {
       updateProject(
         (prev) => ({
@@ -1086,7 +1090,8 @@ a.addBox = () => {
         }),
         false
       );
-    },
+    };
+
     a.toggleRuler = () => {
       updateProject(
         (prev) => ({
@@ -1098,7 +1103,8 @@ a.addBox = () => {
         }),
         false
       );
-    },
+    };
+
     a.updateRules = (rules: RulesConfig) => {
       updateProject((prev) => {
         const normalizedRules = normalizeRulesConfig(rules);
@@ -1111,7 +1117,8 @@ a.addBox = () => {
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: normalizedRules });
       }, false);
-    },
+    };
+
     a.setActiveRulesProfile = (id: string) => {
       updateProject((prev) => {
         const profiles = prev.rulesProfiles;
@@ -1122,7 +1129,8 @@ a.addBox = () => {
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
       }, false);
-    },
+    };
+
     a.updateRulesInProfile = (profileId: string, rules: RulesConfig) => {
       updateProject((prev) => {
         const normalizedRules = normalizeRulesConfig(rules);
@@ -1137,7 +1145,8 @@ a.addBox = () => {
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: nextRules });
       }, false);
-    },
+    };
+
     a.addRulesProfile = (profile: { nome: string; descricao?: string; rules?: RulesConfig }) => {
       updateProject((prev) => {
         const id = `profile-${Date.now()}`;
@@ -1154,7 +1163,8 @@ a.addBox = () => {
         saveProfiles(nextConfig);
         return { ...prev, rulesProfiles: nextConfig };
       }, false);
-    },
+    };
+
     a.setRulesProfilesConfig = (config: RulesProfilesConfig) => {
       updateProject((prev) => {
         const perfil = config.perfis.find((p) => p.id === config.perfilAtivoId);
@@ -1166,7 +1176,8 @@ a.addBox = () => {
         const rules = normalizeRulesConfig(normalizedActive?.rules ?? perfil?.rules ?? prev.rules);
         return applyResultados({ ...prev, rulesProfiles: normalizedConfig, rules });
       }, false);
-    },
+    };
+
     a.setProjectRulesProfile = (id: string) => {
       updateProject((prev) => {
         const perfil = prev.rulesProfiles.perfis.find((p) => p.id === id);
@@ -1177,7 +1188,8 @@ a.addBox = () => {
           rules: normalizeRulesConfig(perfil.rules),
         });
       }, false);
-    },
+    };
+
     a.removeRulesProfile = (id: string) => {
       if (id === DEFAULT_PROFILE_ID) return;
       updateProject((prev) => {
@@ -1195,12 +1207,14 @@ a.addBox = () => {
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
       }, false);
-    },
+    };
+
     a.recalculateAllBoxes = () => {
       updateProject((prev) => {
         return applyResultados(prev);
       });
-    },
+    };
+
     a.undo = () => {
       updateProject(
         (prev) => {
@@ -1214,7 +1228,8 @@ a.addBox = () => {
         },
         false
       );
-    },
+    };
+
     a.redo = () => {
       updateProject(
         (prev) => {
@@ -1228,7 +1243,8 @@ a.addBox = () => {
         },
         false
       );
-    },
+    };
+
     a.saveProjectSnapshot = () => {
       const snapshot: ProjectSnapshot = {
         projectState: serializeState(projectRef.current),
@@ -1246,7 +1262,8 @@ a.addBox = () => {
       };
       const existing = readStoredProjects();
       writeStoredProjects([entry, ...existing].slice(0, 50));
-    },
+    };
+
     a.saveManualBackupSnapshot = () => {
       const snapshot: ProjectSnapshot = {
         projectState: serializeState(projectRef.current),
@@ -1264,7 +1281,8 @@ a.addBox = () => {
       const next = Array.isArray(existing) ? [backup, ...existing].slice(0, 100) : [backup];
       safeSetItem(MANUAL_BACKUPS_STORAGE_KEY, JSON.stringify(next));
       setProject((prev) => ({ ...prev, lastAutosaveTime: savedAt }));
-    },
+    };
+
     a.loadProjectSnapshot = (id) => {
       const stored = readStoredProjects();
       const entryIndex = stored.findIndex((item) => item.id === id);
@@ -1309,7 +1327,8 @@ a.addBox = () => {
         }
       }
       updateProject(() => applyResultados(restored));
-    },
+    };
+
     a.loadProjectFromTemplate = (templateId) => {
       const template = getTemplateById(templateId);
       if (!template || !template.boxes.length) return;
@@ -1362,7 +1381,8 @@ a.addBox = () => {
       undoStackRef.current = [];
       redoStackRef.current = [];
       updateProject(() => applied, false);
-    },
+    };
+
     a.addTemplateAsNewBox = (templateId) => {
       const template = getTemplateById(templateId);
       if (!template || !template.boxes.length) return;
@@ -1421,7 +1441,8 @@ a.addBox = () => {
           true
         );
       });
-    },
+    };
+
     a.listSavedProjects = (): SavedProjectInfo[] => {
       return readStoredProjects().map(({ id, name, createdAt, updatedAt }) => ({
         id,
@@ -1429,7 +1450,8 @@ a.addBox = () => {
         createdAt,
         updatedAt,
       }));
-    },
+    };
+
     a.createNewProject = () => {
       const freshState = applyResultados(defaultState);
       const timestamp = new Date().toISOString();
@@ -1450,7 +1472,8 @@ a.addBox = () => {
       const existing = readStoredProjects();
       writeStoredProjects([entry, ...existing].slice(0, 50));
       updateProject(() => freshState, false);
-    },
+    };
+
     a.renameProject = (id, name) => {
       const trimmed = name.trim();
       if (!trimmed) return;
@@ -1461,7 +1484,8 @@ a.addBox = () => {
           : item
       );
       writeStoredProjects(nextStored);
-    },
+    };
+
     a.deleteProject = (id) => {
       const stored = readStoredProjects();
       const nextStored = stored.filter((item) => item.id !== id);
@@ -1887,5 +1911,5 @@ a.addBox = () => {
     };
 
     return a;
-  }, [updateProject, viewerSync, exportActions, setProject]);
+  }, [updateProject, viewerSync, exportActions, setProject, undoStackRef, redoStackRef, projectRef]);
 }

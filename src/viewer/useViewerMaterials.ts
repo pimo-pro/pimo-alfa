@@ -1,24 +1,8 @@
 /**
  * Hook especializado para materiais no viewer.
- * Obtém a API de materiais a partir de window.viewerCore.
- * Sempre chama useMemo com dependência [viewerCore]. NOOP e API real têm exatamente a mesma forma.
+ * Obtém a API de materiais a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
  */
 import { useMemo } from "react";
-
-declare global {
-  interface Window {
-    viewerCore?: {
-      updateBoxMaterial?: (id: string, materialName: string) => void;
-      updateDoorMaterial?: (boxId: string, doorLayerId: string, materialName: string) => void;
-      updateDrawerMaterial?: (boxId: string, drawerLayerId: string, materialName: string) => void;
-      setMaterialMode?: (mode: unknown) => void;
-      getMaterialMode?: () => unknown;
-      setMaterialQuality?: (quality: unknown) => void;
-      getMaterialQuality?: () => unknown;
-      applyMaterialPreset?: (presetId: unknown) => void;
-    };
-  }
-}
 
 const NOOP = () => {};
 const NOOP_RETURN_UNDEFINED = () => undefined;
@@ -42,7 +26,7 @@ export function useViewerMaterials() {
   return useMemo(() => {
     if (!viewerCore) return MATERIALS_NOOP_API;
 
-    const bind = (fn: ((...args: unknown[]) => unknown) | undefined) =>
+    const bind = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;
 
     return {
