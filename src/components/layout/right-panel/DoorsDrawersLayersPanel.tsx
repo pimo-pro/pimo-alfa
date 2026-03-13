@@ -1,12 +1,21 @@
 /**
  * Doors & Drawers Layers Panel
- * UI لcomunication de controle de portas e gavetas
+ * UI para controle de portas e gavetas da caixa selecionada.
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, memo, useCallback } from "react";
 import { useProject } from "../../../context/useProject";
 import type { DoorLayerItem, DrawerLayerItem } from "../../../models/BoxLayers";
 import { resolveMaterial, getDefaultOfficialMaterial } from "../../../core/materials/materials.api";
+
+const emptyStateStyle: React.CSSProperties = {
+  padding: 16,
+  fontSize: 12,
+  color: "var(--text-muted)",
+  textAlign: "center",
+  background: "rgba(255,255,255,0.02)",
+  borderRadius: "var(--radius)",
+};
 
 export function DoorsDrawersLayersPanel() {
   const { project, actions } = useProject();
@@ -18,9 +27,10 @@ export function DoorsDrawersLayersPanel() {
   const doorsLayer = selectedBox?.doorsLayer ?? [];
   const drawersLayer = selectedBox?.drawersLayer ?? [];
   const drawerHeightMode = selectedBox?.drawerHeightMode ?? "equal";
-  const drawerHeightsTotal = drawersLayer.reduce(
-    (sum, item) => sum + (Number.isFinite(item.height) ? item.height : 0),
-    0
+  const drawerHeightsTotal = useMemo(
+    () =>
+      drawersLayer.reduce((sum, item) => sum + (Number.isFinite(item.height) ? item.height : 0), 0),
+    [drawersLayer]
   );
   const drawerAvailableHeight = selectedBox
     ? Math.max(0, selectedBox.dimensoes.altura - 10)
@@ -28,10 +38,29 @@ export function DoorsDrawersLayersPanel() {
   const exceedsDrawerSpace =
     drawerHeightMode === "custom" && drawerHeightsTotal > drawerAvailableHeight;
 
+  const onDoorToggleOpen = useCallback(
+    (id: string, isOpen: boolean) => actions.setDoorLayerItemOpen?.(id, isOpen),
+    [actions]
+  );
+  const onDoorRemove = useCallback((id: string) => actions.removeDoorLayerItem?.(id), [actions]);
+  const onDrawerToggleOpen = useCallback(
+    (id: string, isOpen: boolean) => actions.setDrawerLayerItemOpen?.(id, isOpen),
+    [actions]
+  );
+  const onDrawerUpdateHeight = useCallback(
+    (id: string, height: number) => actions.updateDrawerLayerItem?.(id, { height }),
+    [actions]
+  );
+  const onDrawerUpdateType = useCallback(
+    (id: string, type: "normal" | "pro") => actions.updateDrawerLayerItem?.(id, { type }),
+    [actions]
+  );
+  const onDrawerRemove = useCallback((id: string) => actions.removeDrawerLayerItem?.(id), [actions]);
+
   if (!selectedBox) {
     return (
-      <div style={{ padding: "16px", fontSize: 12, color: "#666" }}>
-        Selecione uma caixa para gerenciar portas e gavetas
+      <div style={emptyStateStyle}>
+        Selecione uma caixa no workspace para gerir portas e gavetas.
       </div>
     );
   }
@@ -70,7 +99,13 @@ export function DoorsDrawersLayersPanel() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {doorsLayer.map((door, index) => (
-              <DoorLayerRow key={door.id} door={door} index={index} actions={actions} />
+              <DoorLayerRow
+                key={door.id}
+                door={door}
+                index={index}
+                onToggleOpen={onDoorToggleOpen}
+                onRemove={onDoorRemove}
+              />
             ))}
           </div>
         )}
@@ -116,7 +151,16 @@ export function DoorsDrawersLayersPanel() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {drawersLayer.map((drawer, index) => (
-              <DrawerLayerRow key={drawer.id} drawer={drawer} index={index} actions={actions} drawerHeightMode={drawerHeightMode} />
+              <DrawerLayerRow
+                key={drawer.id}
+                drawer={drawer}
+                index={index}
+                drawerHeightMode={drawerHeightMode}
+                onToggleOpen={onDrawerToggleOpen}
+                onUpdateHeight={onDrawerUpdateHeight}
+                onUpdateType={onDrawerUpdateType}
+                onRemove={onDrawerRemove}
+              />
             ))}
           </div>
         )}
@@ -124,11 +168,14 @@ export function DoorsDrawersLayersPanel() {
     </div>
   );
 }
-const DoorLayerRow: React.FC<{
+interface DoorLayerRowProps {
   door: DoorLayerItem;
   index: number;
-  actions: ReturnType<typeof useProject>["actions"];
-}> = ({ door, index, actions }) => {
+  onToggleOpen: (id: string, isOpen: boolean) => void;
+  onRemove: (id: string) => void;
+}
+
+const DoorLayerRow = memo(function DoorLayerRow({ door, index, onToggleOpen, onRemove }: DoorLayerRowProps) {
   const materialLabel = resolveMaterial(door.material ?? "")?.label ?? door.material ?? getDefaultOfficialMaterial().label;
   const label = `Porta ${String(index + 1).padStart(2, "0")} — ${materialLabel}`;
   return (
@@ -144,53 +191,51 @@ const DoorLayerRow: React.FC<{
         fontSize: 11,
       }}
     >
-      {/* Toggle Open */}
       <button
-        onClick={() => actions.setDoorLayerItemOpen?.(door.id, !door.isOpen)}
+        onClick={() => onToggleOpen(door.id, !door.isOpen)}
         className="button button-ghost"
-        style={{
-          padding: "2px 4px",
-          minWidth: "24px",
-          fontSize: 12,
-          fontWeight: "bold",
-        }}
+        style={{ padding: "2px 4px", minWidth: "24px", fontSize: 12, fontWeight: "bold" }}
         title={door.isOpen ? "Fechar" : "Abrir"}
       >
         {door.isOpen ? "◐" : "○"}
       </button>
-
-      {/* Info: nome + material e dimensões */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontWeight: 500 }}>{label}</span>
         <span style={{ color: "#666", marginLeft: "4px", fontSize: 10 }}>
           {door.width.toFixed(0)}×{door.height.toFixed(0)} ({door.openDirection})
         </span>
       </div>
-
-      {/* Delete */}
       <button
-        onClick={() => actions.removeDoorLayerItem?.(door.id)}
+        onClick={() => onRemove(door.id)}
         className="button button-ghost"
-        style={{
-          padding: "2px 4px",
-          color: "#d32f2f",
-          fontSize: 14,
-          fontWeight: "bold",
-        }}
+        style={{ padding: "2px 4px", color: "#d32f2f", fontSize: 14, fontWeight: "bold" }}
         title="Remover"
       >
         ×
       </button>
     </div>
   );
-};
+});
 
-const DrawerLayerRow: React.FC<{
+interface DrawerLayerRowProps {
   drawer: DrawerLayerItem;
   index: number;
-  actions: ReturnType<typeof useProject>["actions"];
   drawerHeightMode: "equal" | "top_small_mid_medium_bottom_large" | "custom";
-}> = ({ drawer, index, actions, drawerHeightMode }) => {
+  onToggleOpen: (id: string, isOpen: boolean) => void;
+  onUpdateHeight: (id: string, height: number) => void;
+  onUpdateType: (id: string, type: "normal" | "pro") => void;
+  onRemove: (id: string) => void;
+}
+
+const DrawerLayerRow = memo(function DrawerLayerRow({
+  drawer,
+  index,
+  drawerHeightMode,
+  onToggleOpen,
+  onUpdateHeight,
+  onUpdateType,
+  onRemove,
+}: DrawerLayerRowProps) {
   const drawerType = drawer.type ?? drawer.drawerType ?? "normal";
   const materialLabel = resolveMaterial(drawer.material ?? "")?.label ?? drawer.material ?? getDefaultOfficialMaterial().label;
   const label = `Gaveta ${String(index + 1).padStart(2, "0")} — ${materialLabel}`;
@@ -207,64 +252,47 @@ const DrawerLayerRow: React.FC<{
         fontSize: 11,
       }}
     >
-      {/* Toggle Open */}
       <button
-        onClick={() => actions.setDrawerLayerItemOpen?.(drawer.id, !drawer.isOpen)}
+        onClick={() => onToggleOpen(drawer.id, !drawer.isOpen)}
         className="button button-ghost"
-        style={{
-          padding: "2px 4px",
-          minWidth: "24px",
-          fontSize: 12,
-          fontWeight: "bold",
-        }}
+        style={{ padding: "2px 4px", minWidth: "24px", fontSize: 12, fontWeight: "bold" }}
         title={drawer.isOpen ? "Fechar" : "Abrir"}
       >
         {drawer.isOpen ? "◐" : "○"}
       </button>
-
-      {/* Info: nome + material e dimensões */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontWeight: 500 }}>{label}</span>
         <span style={{ color: "#666", marginLeft: "4px", fontSize: 10 }}>
           {drawer.width.toFixed(0)}×{drawer.height.toFixed(0)} x{drawer.pullDistanceMm.toFixed(0)}mm
         </span>
       </div>
-
       {drawerHeightMode === "custom" ? (
         <input
           className="input input-xs"
           type="number"
           value={drawer.height}
-          onChange={(e) => actions.updateDrawerLayerItem?.(drawer.id, { height: Number(e.target.value) })}
+          onChange={(e) => onUpdateHeight(drawer.id, Number(e.target.value))}
           title="Altura da gaveta (mm)"
           style={{ width: 72 }}
         />
       ) : null}
-
       <select
         className="input input-xs"
         value={drawerType}
-        onChange={(e) => actions.updateDrawerLayerItem?.(drawer.id, { type: e.target.value as "normal" | "pro" })}
+        onChange={(e) => onUpdateType(drawer.id, e.target.value as "normal" | "pro")}
         title="Tipo de gaveta"
       >
         <option value="normal">Normal</option>
         <option value="pro">PRO</option>
       </select>
-
-      {/* Delete */}
       <button
-        onClick={() => actions.removeDrawerLayerItem?.(drawer.id)}
+        onClick={() => onRemove(drawer.id)}
         className="button button-ghost"
-        style={{
-          padding: "2px 4px",
-          color: "#d32f2f",
-          fontSize: 14,
-          fontWeight: "bold",
-        }}
+        style={{ padding: "2px 4px", color: "#d32f2f", fontSize: 14, fontWeight: "bold" }}
         title="Remover"
       >
         ×
       </button>
     </div>
   );
-};
+});

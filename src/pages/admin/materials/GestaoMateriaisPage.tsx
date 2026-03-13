@@ -504,10 +504,20 @@ export default function GestaoMateriaisPage() {
 
       <Panel title="Materiais existentes">
         {filteredAndSorted.length === 0 ? (
-          <div style={{ fontSize: 12, color: "var(--text-muted)", padding: 16 }}>
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--text-muted)",
+              padding: 24,
+              textAlign: "center",
+              background: "rgba(255,255,255,0.02)",
+              borderRadius: "var(--radius)",
+              border: "1px dashed rgba(255,255,255,0.08)",
+            }}
+          >
             {materials.length === 0
-              ? "Nenhum material registado. Use \"Adicionar Material\" para criar."
-              : "Nenhum material corresponde aos filtros."}
+              ? "Nenhum material registado. Use \"Adicionar Material\" para criar o primeiro."
+              : "Nenhum material corresponde aos filtros aplicados. Ajuste a pesquisa ou os filtros."}
           </div>
         ) : (
           <div

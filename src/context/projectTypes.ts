@@ -49,7 +49,10 @@ export type ViewerSettings = {
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;
 };
 
-/** Grupo de peças no workspace (mover/rotacionar em conjunto). */
+/**
+ * Estado global do projeto: caixas, workspace, material, regras, design e cutlist.
+ * Fonte única para o Provider; não modificar estrutura sem atualizar ProjectContext.
+ */
 export interface ProjectState {
   projectName: string;
   tipoProjeto: string;

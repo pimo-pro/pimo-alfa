@@ -1,10 +1,9 @@
-import type { ViewerOptions } from "../3d/core/Viewer";
 
 /**
  * Configurações padronizadas do viewer 3D — modo principal.
  * Iluminação equilibrada, sombras soft (PCF), tone mapping e gamma para qualidade visual.
  */
-export const DEFAULT_VIEWER_OPTIONS: Omit<ViewerOptions, "background" | "skipInitialBox"> = {
+export const DEFAULT_VIEWER_OPTIONS = {
   enableControls: true,
   renderer: {
     antialias: true,

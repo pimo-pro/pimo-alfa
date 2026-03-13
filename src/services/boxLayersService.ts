@@ -26,8 +26,9 @@ const createId = (prefix: string) => {
 
 const clamp = (value: number, min: number) => Math.max(min, Number.isFinite(value) ? value : min);
 
-const defaultDoorMaterial = getDefaultOfficialMaterial().canonicalId;
-const defaultDrawerMaterial = getDefaultOfficialMaterial().canonicalId;
+const _defaultMaterial = getDefaultOfficialMaterial();
+const defaultDoorMaterial = _defaultMaterial.canonicalId;
+const defaultDrawerMaterial = _defaultMaterial.canonicalId;
 
 /**
  * Aplica regras de tipo de gaveta (delegando ao domínio de drawers)
@@ -199,26 +200,13 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
     drawersLayer.push(...generatedDrawers);
   }
 
-  for (const door of doorsLayer) {
-    devLogger.debug("door", {
-      posX: door.posX,
-      posY: door.posY,
-      posZ: door.posZ,
-      width: door.width,
-      height: door.height,
-      depth: door.thickness,
-    });
-  }
-
-  for (const drawer of drawersLayer) {
-    devLogger.debug("drawer", {
-      posX: drawer.posX,
-      posY: drawer.posY,
-      posZ: drawer.posZ,
-      width: drawer.width,
-      height: drawer.height,
-      depth: drawer.depth,
-    });
+  if (import.meta.env.DEV) {
+    for (const door of doorsLayer) {
+      devLogger.debug("door", { posX: door.posX, posY: door.posY, posZ: door.posZ, width: door.width, height: door.height, depth: door.thickness });
+    }
+    for (const drawer of drawersLayer) {
+      devLogger.debug("drawer", { posX: drawer.posX, posY: drawer.posY, posZ: drawer.posZ, width: drawer.width, height: drawer.height, depth: drawer.depth });
+    }
   }
 
   return { doorsLayer, drawersLayer };

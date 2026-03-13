@@ -297,7 +297,7 @@ export const useCalculadoraSync = (
 
   useEffect(() => {
     const api = viewerApiRef.current;
-    if (gap !== undefined && Number.isFinite(gap) && api) {
+    if (gap !== undefined && Number.isFinite(gap) && api && typeof api.setBoxGap === "function") {
       api.setBoxGap(gap);
     }
   }, [gap]);

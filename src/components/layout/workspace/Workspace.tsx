@@ -11,7 +11,7 @@ import { useMultiBoxManager } from "../../../core/multibox";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import ViewerToolbar from "../viewer-toolbar/ViewerToolbar";
 import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
-import type { ViewerOptions } from "../../../3d/core/Viewer";
+import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
 import {
   toPlacedModelMm,
   positionMmToLocalM,
@@ -37,7 +37,7 @@ import {
 type WorkspaceProps = {
   viewerBackground?: string;
   viewerHeight?: number | string;
-  viewerOptions?: Omit<ViewerOptions, "background">;
+  viewerOptions?: any;
 };
 
 export default function Workspace({
@@ -58,7 +58,7 @@ export default function Workspace({
     }),
     [viewerBackground, viewerOptions]
   );
-  const viewerApi = usePimoViewer(containerRef, viewerOptionsStable);
+  const viewerApi = usePimoViewer();
   const { registerViewerApi } = usePimoViewerContext();
   const isRoomOpen = useWallStore((state) => state.isOpen);
   const walls = useWallStore((state) => state.walls);
@@ -75,6 +75,36 @@ export default function Workspace({
   const [rulerTick, setRulerTick] = useState(0);
   const [internalRulerVersion, setInternalRulerVersion] = useState(0);
   const [internalRulerHoverResult, setInternalRulerHoverResult] = useState<InternalRulerPickResult | null>(null);
+  const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
+
+  // Montar ViewerCore no container via import dinâmico (evita 500 ao servir ViewerCore.ts estático).
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let mounted = true;
+    loadViewerCore()
+      .then((ViewerCore) => {
+        if (!mounted) return;
+        const core = new ViewerCore(container, viewerOptionsStable as Record<string, unknown>);
+        viewerCoreInstanceRef.current = core;
+        (window as Window & { viewerCore?: any }).viewerCore = core;
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) {
+          console.error("[Workspace] Falha ao carregar viewer-engine:", err);
+        }
+      });
+    return () => {
+      mounted = false;
+      const core = viewerCoreInstanceRef.current;
+      viewerCoreInstanceRef.current = null;
+      if (core?.dispose) {
+        core.dispose();
+      }
+      (window as Window & { viewerCore?: unknown }).viewerCore = undefined;
+      // viewerMounted removido
+    };
+  }, [viewerOptionsStable]);
 
   useEffect(() => {
     const handleOpenGerarArquivo = () => setShowGerarArquivoModal(true);
@@ -305,20 +335,17 @@ const hasShownViewerReadyToastRef = useRef(false);
     }
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
-    viewerApi.setMousePreset?.(settings.mousePreset);
-    viewerApi.setBackgroundMode?.(settings.backgroundMode);
-    viewerApi.setMaterialQuality?.(settings.materialQuality);
-    viewerApi.setReflectionsEnabled?.(settings.enableReflections);
-    viewerApi.setPhotoModeEnabled?.(settings.photoModeEnabled);
-    viewerApi.setExplodedViewEnabled?.(settings.explodedViewEnabled);
-    viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
-    viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
-    viewerApi.setRulerEnabled?.(settings.rulerEnabled);
-    if (viewerApi.setUltraPerformanceModeOptions) {
-      viewerApi.setUltraPerformanceModeOptions(settings.ultraPerformanceModeOptions);
-    } else {
-      viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
-    }
+    viewerApi.setMousePreset?.();
+    viewerApi.setBackgroundMode?.();
+    viewerApi.setMaterialQuality?.();
+    viewerApi.setReflectionsEnabled?.();
+    viewerApi.setPhotoModeEnabled?.();
+    viewerApi.setExplodedViewEnabled?.();
+    viewerApi.setExplodedViewIntensity?.();
+    viewerApi.setHighlightEnabled?.();
+    viewerApi.setRulerEnabled?.();
+    viewerApi.setUltraPerformanceModeOptions?.();
+    viewerApi.setUltraPerformanceMode?.();
   }, [
     project.viewerSettings,
     viewerApi,
@@ -557,7 +584,7 @@ return (
               ref={containerRef}
               onContextMenu={(event) => {
                 event.preventDefault();
-                const hit = (viewerApi as { getContextMenuLayerHit?: (_event: unknown) => typeof contextMenuLayerTarget }).getContextMenuLayerHit?.(event) ?? null;
+                const hit = viewerApi.getContextMenuLayerHit?.(event) ?? null;
                 if (import.meta.env.DEV && hit?.type === "door" && hit?.doorLayerId) {
                   console.log("[DOOR-MAT] Workspace onContextMenu — hit recebido (será usado no menu)", {
                     boxId: hit.boxId,

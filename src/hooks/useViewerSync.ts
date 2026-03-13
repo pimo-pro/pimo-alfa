@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type {
   DoorWindowConfig,
   ProjectState,
@@ -14,7 +14,7 @@ import type {
 /**
  * Hook que fornece a interface ViewerSync para o ProjectContext.
  * O viewer real é registrado via registerViewerApi pelo Workspace (adapter de PimoViewerApi).
- * Fluxo: Workspace → createViewerApiAdapter → viewerSync.registerViewerApi(adapter)
+ * Retorno memoizado para evitar re-renders desnecessários em consumidores (ex.: useMemo das actions).
  */
 export const useViewerSync = (_project: ProjectState): ViewerSync => {
   const viewerApiRef = useRef<ViewerApi | null>(null);
@@ -134,33 +134,69 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
     []
   );
 
-  return {
-    notifyChangeSignal: _project,
-    saveViewerSnapshot: () => viewerApiRef.current?.saveSnapshot() ?? null,
-    restoreViewerSnapshot,
-    registerViewerApi: (api) => {
-      viewerApiRef.current = api;
-    },
-    renderScene,
-    setActiveTool,
-    setUltraPerformanceMode,
-    getUltraPerformanceMode,
-    createRoom,
-    removeRoom,
-    setPlacementMode,
-    addDoorToRoom,
-    addWindowToRoom,
-    setOnRoomElementPlaced,
-    setOnRoomElementSelected,
-    updateRoomElementConfig,
-    setLockEnabled,
-    getLockEnabled,
-    getCombinedBoundingBox,
-    getSelectedBoxDimensions,
-    subscribeSelectedBoxChange,
-    setDimensionsOverlayVisible,
-    getDimensionsOverlayVisible,
-    getSelectedBoxScreenPosition,
-    getRightmostX,
-  };
+  const saveViewerSnapshot = useCallback(
+    () => viewerApiRef.current?.saveSnapshot() ?? null,
+    []
+  );
+
+  const registerViewerApi = useCallback((api: ViewerApi | null) => {
+    viewerApiRef.current = api;
+  }, []);
+
+  return useMemo<ViewerSync>(
+    () => ({
+      notifyChangeSignal: _project,
+      saveViewerSnapshot,
+      restoreViewerSnapshot,
+      registerViewerApi,
+      renderScene,
+      setActiveTool,
+      setUltraPerformanceMode,
+      getUltraPerformanceMode,
+      createRoom,
+      removeRoom,
+      setPlacementMode,
+      addDoorToRoom,
+      addWindowToRoom,
+      setOnRoomElementPlaced,
+      setOnRoomElementSelected,
+      updateRoomElementConfig,
+      setLockEnabled,
+      getLockEnabled,
+      getCombinedBoundingBox,
+      getSelectedBoxDimensions,
+      subscribeSelectedBoxChange,
+      setDimensionsOverlayVisible,
+      getDimensionsOverlayVisible,
+      getSelectedBoxScreenPosition,
+      getRightmostX,
+    }),
+    [
+      _project,
+      saveViewerSnapshot,
+      restoreViewerSnapshot,
+      registerViewerApi,
+      renderScene,
+      setActiveTool,
+      setUltraPerformanceMode,
+      getUltraPerformanceMode,
+      createRoom,
+      removeRoom,
+      setPlacementMode,
+      addDoorToRoom,
+      addWindowToRoom,
+      setOnRoomElementPlaced,
+      setOnRoomElementSelected,
+      updateRoomElementConfig,
+      setLockEnabled,
+      getLockEnabled,
+      getCombinedBoundingBox,
+      getSelectedBoxDimensions,
+      subscribeSelectedBoxChange,
+      setDimensionsOverlayVisible,
+      getDimensionsOverlayVisible,
+      getSelectedBoxScreenPosition,
+      getRightmostX,
+    ]
+  );
 };

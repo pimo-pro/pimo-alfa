@@ -252,8 +252,10 @@ export const defaultState: ProjectState = {
   precoTotalProjeto: null,
   activeViewerTool: "select",
   viewerSettings: defaultViewerSettings,
-  rulesProfiles: loadProfiles(),
-  rules: getRulesFromProfiles(loadProfiles()),
+  ...((): { rulesProfiles: RulesProfilesConfig; rules: ReturnType<typeof normalizeRulesConfig> } => {
+    const profiles = loadProfiles();
+    return { rulesProfiles: profiles, rules: getRulesFromProfiles(profiles) };
+  })(),
   rulesProfileId: undefined,
   estaCarregando: false,
   erro: null,
@@ -533,9 +535,15 @@ function getModelDimensoesFromExtracted(
     out[boxId] = {};
     for (const [instanceId, parts] of Object.entries(byInstance)) {
       if (!Array.isArray(parts) || parts.length === 0) continue;
-      const largura = Math.max(...parts.map((p) => p.dimensoes.largura));
-      const altura = Math.max(...parts.map((p) => p.dimensoes.altura));
-      const profundidade = Math.max(...parts.map((p) => p.dimensoes.profundidade));
+      let largura = 0;
+      let altura = 0;
+      let profundidade = 0;
+      for (const p of parts) {
+        const d = p.dimensoes;
+        if (d.largura > largura) largura = d.largura;
+        if (d.altura > altura) altura = d.altura;
+        if (d.profundidade > profundidade) profundidade = d.profundidade;
+      }
       out[boxId][instanceId] = { largura, altura, profundidade };
     }
   }
@@ -646,6 +654,7 @@ export const buildDesignState = (prev: ProjectState): Partial<ProjectState> => {
 
   const ruleViolations = computeRuleViolations(prev);
   const layoutWarnings = computeLayoutWarningsFromState(prev);
+  const now = new Date();
 
   return {
     boxes,
@@ -653,7 +662,7 @@ export const buildDesignState = (prev: ProjectState): Partial<ProjectState> => {
       cutList: cutListComPreco,
       estrutura3D: selectedDesign.estrutura3D,
       acessorios: selectedDesign.ferragens,
-      timestamp: new Date(),
+      timestamp: now,
     },
     cutList: cutListComPreco,
     cutListComPreco,
@@ -665,7 +674,7 @@ export const buildDesignState = (prev: ProjectState): Partial<ProjectState> => {
     precoTotalAcessorios,
     precoTotalProjeto,
     resultados,
-    ultimaAtualizacao: new Date(),
+    ultimaAtualizacao: now,
     estaCarregando: false,
     erro: null,
   };

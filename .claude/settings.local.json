@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.tsx\" -type f | head -30 | xargs grep -l \"React\\\\.memo\\\\|useCallback\\\\|useMemo\" 2>/dev/null | head -20)",
+      "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | wc -l && find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | xargs wc -l | tail -1)",
+      "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | xargs wc -l | sort -n | tail -30)"
+    ]
+  }
+}

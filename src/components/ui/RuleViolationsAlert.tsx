@@ -2,6 +2,7 @@
  * Exibe avisos de violação de regras dinâmicas para a caixa selecionada.
  */
 
+import { memo, useMemo } from "react";
 import type { RuleViolation } from "../../core/rules/types";
 
 type Props = {
@@ -16,8 +17,11 @@ const severityStyle: Record<string, { bg: string; border: string; icon: string }
   info: { bg: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", icon: "i" },
 };
 
-export default function RuleViolationsAlert({ violations, boxId, onEditRules }: Props) {
-  const forBox = boxId ? violations.filter((v) => v.boxId === boxId) : [];
+function RuleViolationsAlertComponent({ violations, boxId, onEditRules }: Props) {
+  const forBox = useMemo(
+    () => (boxId ? violations.filter((v) => v.boxId === boxId) : []),
+    [boxId, violations]
+  );
   if (forBox.length === 0) return null;
 
   return (
@@ -70,3 +74,5 @@ export default function RuleViolationsAlert({ violations, boxId, onEditRules }: 
     </div>
   );
 }
+
+export default memo(RuleViolationsAlertComponent);

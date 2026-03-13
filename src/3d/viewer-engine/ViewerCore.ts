@@ -118,8 +118,8 @@ export class ViewerCore {
   private controls: Controls | null;
   private resizeObserver: ResizeObserver | null = null;
   private rafId: number | null = null;
-  private boxManager = new ViewerBoxManager();
-  private get boxes(): Map<string, ViewerBoxEntry> {
+  private readonly boxManager = new ViewerBoxManager();
+  get boxes(): Map<string, ViewerBoxEntry> {
     return this.boxManager.getBoxes();
   }
   private materialSet: MaterialSet;
@@ -221,6 +221,8 @@ export class ViewerCore {
   /** Gizmo para mover e rotacionar paredes (handles X/Z e rotação). */
   private wallGizmo: WallGizmo | null = null;
   private transformDiagnosticsEnabled = false;
+  /** Quando true, permite logs de debug (ex.: getBoxIdAtPointer). Ativar manualmente para diagnóstico. */
+  private debugMode = false;
   private eventsManager: EventsManager | null = null;
   private readonly viewerTools = new ViewerTools(() => this.getToolsEngineApi());
 
@@ -2936,10 +2938,21 @@ export class ViewerCore {
     return true;
   }
 
-  setBoxGap(gap: number) {
+  setBoxGap(gap: number): boolean {
     this.boxGap = Math.max(0, gap);
     this.reflowBoxes();
     this.updateCameraTarget();
+    return true;
+  }
+
+  /** Alias para compatibilidade com useCalculadoraSync. */
+  setBoxSpacing(spacing: number): boolean {
+    return this.setBoxGap(spacing);
+  }
+
+  /** Alias para compatibilidade com useCalculadoraSync. */
+  updateBoxSpacing(spacing: number): boolean {
+    return this.setBoxGap(spacing);
   }
 
   /**
@@ -3845,19 +3858,21 @@ export class ViewerCore {
     if (!hits.length) return null;
     const firstHit = hits[0].object;
     const doorLayerIdAtPointer = this.getDoorLayerIdByMesh(firstHit);
-    if (import.meta.env.DEV && doorLayerIdAtPointer) {
+    if (doorLayerIdAtPointer) {
       const boxIdFirst = this.getBoxIdByMesh(firstHit);
       const entry = boxIdFirst ? this.boxes.get(boxIdFirst) : undefined;
       const doorIndex = entry?.mesh
         ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerIdAtPointer}`)
         : -1;
-      console.log("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
-        boxId: boxIdFirst,
-        doorLayerId: doorLayerIdAtPointer,
-        specId: doorLayerIdAtPointer,
-        doorIndex,
-        hitObjectName: firstHit.name,
-      });
+      if (import.meta.env.DEV && this.debugMode) {
+        console.log("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
+          boxId: boxIdFirst,
+          doorLayerId: doorLayerIdAtPointer,
+          specId: doorLayerIdAtPointer,
+          doorIndex,
+          hitObjectName: firstHit.name,
+        });
+      }
     }
     return this.getBoxIdByMesh(firstHit);
   }

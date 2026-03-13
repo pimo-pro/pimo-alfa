@@ -16,9 +16,11 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
 export const TEMPLATES: DesignTemplate[] = [];
 
 export function getTemplatesByCategory(categoria: TemplateCategory): DesignTemplate[] {
+  if (TEMPLATES.length === 0) return [];
   return TEMPLATES.filter((t) => t.categoria === categoria);
 }
 
 export function getTemplateById(id: string): DesignTemplate | undefined {
+  if (TEMPLATES.length === 0) return undefined;
   return TEMPLATES.find((t) => t.id === id);
 }

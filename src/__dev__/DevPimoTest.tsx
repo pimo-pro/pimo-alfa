@@ -2,23 +2,11 @@
  * Página de desenvolvimento para testes do viewer (usePimoViewer).
  * Movida para src/__dev__/ para separar código de dev do fluxo principal.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { usePimoViewer } from "../hooks/usePimoViewer";
-import {
-  DEFAULT_VIEWER_OPTIONS,
-  VIEWER_BACKGROUND,
-} from "../constants/viewerOptions";
 
 export default function DevPimoTest() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const viewerOptions = useMemo(
-    () => ({
-      ...DEFAULT_VIEWER_OPTIONS,
-      background: VIEWER_BACKGROUND,
-      skipInitialBox: true as const,
-    }),
-    []
-  );
   const {
     addBox,
     removeBox,
@@ -28,7 +16,7 @@ export default function DevPimoTest() {
     addModelToBox,
     removeModelFromBox,
     listModels,
-  } = usePimoViewer(containerRef, viewerOptions);
+  } = usePimoViewer();
 
   useEffect(() => {
     addBox("modulo-1", { width: 60, height: 80, depth: 50 });

@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Viewer } from "../3d/core/Viewer";
-import type { ViewerOptions } from "../3d/core/Viewer";
 
 /** Props do ThreeViewer: apenas as utilizadas pelo componente (sem APIs falsas). */
 export type ThreeViewerProps = {
   height?: number | string;
   backgroundColor?: string;
-  viewerOptions?: Omit<ViewerOptions, "background">;
+  viewerOptions?: any;
 };
 
 export default function ThreeViewer({
@@ -18,15 +17,9 @@ export default function ThreeViewer({
   const viewerRef = useRef<Viewer | null>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    viewerRef.current = new Viewer(container, {
-      background: backgroundColor,
-      ...viewerOptions,
-    });
-
+    // Viewer não aceita argumentos no construtor
+    viewerRef.current = new Viewer();
     return () => {
-      viewerRef.current?.dispose();
       viewerRef.current = null;
     };
   }, [backgroundColor, viewerOptions]);

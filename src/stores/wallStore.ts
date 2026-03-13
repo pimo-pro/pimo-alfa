@@ -171,8 +171,9 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
     const nextWalls = walls.map((wall) =>
       wall.id === id ? { ...wall, ...patch } : wall
     );
-    set({ walls: applyLayoutIfMissing(nextWalls) });
-    void options;
+    set({
+      walls: options.skipSnap ? nextWalls : applyLayoutIfMissing(nextWalls),
+    });
   },
 
   selectWall: (id: string | null) => {
@@ -233,10 +234,10 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
   },
 
   resetRoom: () => {
-    set({ walls: [], selectedWallId: null });
-    const w1: Wall = { id: `wall-${Date.now()}-1`, ...DEFAULT_WALL, openings: [] };
-    const w2: Wall = { id: `wall-${Date.now()}-2`, ...DEFAULT_WALL, openings: [] };
-    const w3: Wall = { id: `wall-${Date.now()}-3`, ...DEFAULT_WALL, openings: [] };
+    const ts = Date.now();
+    const w1: Wall = { id: `wall-${ts}-1`, ...DEFAULT_WALL, openings: [] };
+    const w2: Wall = { id: `wall-${ts}-2`, ...DEFAULT_WALL, openings: [] };
+    const w3: Wall = { id: `wall-${ts}-3`, ...DEFAULT_WALL, openings: [] };
     const withLayout = applyLayoutIfMissing([w1, w2, w3]);
     set({ walls: withLayout, selectedWallId: withLayout[0]?.id ?? null, mainWallIndex: 0 });
   },
