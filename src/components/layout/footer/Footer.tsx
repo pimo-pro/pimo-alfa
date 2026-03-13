@@ -44,7 +44,7 @@ export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin, onS
       }}
     >
       <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <span style={{ color: "var(--text-main)", fontWeight: 600 }}>{version}</span>
+        <span style={{ color: "var(--text-main)", fontWeight: "inherit" }}>{version}</span>
         <span>© 2026 PIMO Studio — Crafted by Khaled</span>
       </span>
 
