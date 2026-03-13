@@ -51,14 +51,16 @@ export function useViewerBoxes() {
     const fromCore = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;
 
-    const wrapBool = (fn: ((..._a: unknown[]) => unknown) | undefined) =>
-      fn ? (...args: unknown[]) => { (fn as (..._a: unknown[]) => void)(...args); return true; } : NOOP_RETURN_FALSE;
+    /** Métodos que devem retornar boolean e serem chamados com this=viewerCore. */
+    const bindBool = (fn: ((...a: unknown[]) => boolean) | undefined) =>
+      fn ? fn.bind(viewerCore) : NOOP_RETURN_FALSE;
+
     return {
-      addBox: wrapBool(viewerCore.addBox),
-      removeBox: wrapBool(viewerCore.removeBox),
-      updateBox: wrapBool(viewerCore.updateBox),
-      setBoxIndex: wrapBool(viewerCore.setBoxIndex),
-      setBoxPosition: wrapBool(viewerCore.setBoxPosition),
+      addBox: bindBool(viewerCore.addBox as ((...a: unknown[]) => boolean) | undefined),
+      removeBox: bindBool(viewerCore.removeBox as ((...a: unknown[]) => boolean) | undefined),
+      updateBox: bindBool(viewerCore.updateBox as ((...a: unknown[]) => boolean) | undefined),
+      setBoxIndex: bindBool(viewerCore.setBoxIndex as ((...a: unknown[]) => boolean) | undefined),
+      setBoxPosition: bindBool(viewerCore.setBoxPosition as ((...a: unknown[]) => boolean) | undefined),
       setBoxGap: fromCore(viewerCore.setBoxGap),
       setBoxSpacing: fromCore(viewerCore.setBoxSpacing),
       updateBoxSpacing: fromCore(viewerCore.updateBoxSpacing),
@@ -68,14 +70,14 @@ export function useViewerBoxes() {
       setOnModelLoaded: fromCore(viewerCore.setOnModelLoaded),
       selectBox: fromCore(viewerCore.selectBox),
       setTransformMode: fromCore(viewerCore.setTransformMode),
-      addModelToBox: wrapBool(viewerCore.addModelToBox),
-      removeModelFromBox: wrapBool(viewerCore.removeModelFromBox),
+      addModelToBox: bindBool(viewerCore.addModelToBox as ((...a: unknown[]) => boolean) | undefined),
+      removeModelFromBox: bindBool(viewerCore.removeModelFromBox as ((...a: unknown[]) => boolean) | undefined),
       clearModelsFromBox: fromCore(viewerCore.clearModelsFromBox),
       listModels: fromCore(viewerCore.listModels),
       getBoxDimensions: fromCore(viewerCore.getBoxDimensions),
       getModelPosition: fromCore(viewerCore.getModelPosition),
       getModelBoundingBoxSize: fromCore(viewerCore.getModelBoundingBoxSize),
-      setModelPosition: wrapBool(viewerCore.setModelPosition),
+      setModelPosition: bindBool(viewerCore.setModelPosition as ((...a: unknown[]) => boolean) | undefined),
       getContextMenuLayerHit: viewerCore.getContextMenuLayerHit
         ? viewerCore.getContextMenuLayerHit.bind(viewerCore)
         : NOOP_RETURN_NULL,

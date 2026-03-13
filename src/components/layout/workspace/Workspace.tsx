@@ -76,11 +76,14 @@ export default function Workspace({
   const [, setInternalRulerVersion] = useState(0);
   const [internalRulerHoverResult, setInternalRulerHoverResult] = useState<InternalRulerPickResult | null>(null);
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
+  const [, setViewerMounted] = useState(false);
 
   // Montar ViewerCore no container via import dinâmico (evita 500 ao servir ViewerCore.ts estático).
+  // viewerMounted força re-render para que usePimoViewer leia window.viewerCore e viewerReady fique true só após o core estar pronto.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    setViewerMounted(false);
     let mounted = true;
     loadViewerCore()
       .then((ViewerCore) => {
@@ -88,6 +91,7 @@ export default function Workspace({
         const core = new ViewerCore(container, viewerOptionsStable as Record<string, unknown>);
         viewerCoreInstanceRef.current = core;
         window.viewerCore = core as typeof window.viewerCore;
+        setViewerMounted(true);
       })
       .catch((err) => {
         if (import.meta.env.DEV) {
@@ -102,7 +106,7 @@ export default function Workspace({
         core.dispose();
       }
       (window as Window & { viewerCore?: unknown }).viewerCore = undefined;
-      // viewerMounted removido
+      setViewerMounted(false);
     };
   }, [viewerOptionsStable]);
 

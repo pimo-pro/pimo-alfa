@@ -1901,6 +1901,11 @@ export class ViewerCore {
   }
 
   addBox(id: string, options: BoxOptions = {}): boolean {
+    if (this.boxes == null || this.boxManager == null) {
+      throw new Error(
+        "ViewerCore not ready: boxes/boxManager not initialized. Ensure viewerReady is true before calling addBox."
+      );
+    }
     if (this.boxes.has(id)) return false;
     const opts = options ?? {};
     const cadOnly = opts.cadOnly === true;
