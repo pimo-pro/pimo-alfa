@@ -20,6 +20,7 @@ import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOpt
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
 import Ajuda from "./pages/Ajuda";
+import UserProjectsPage from "./pages/UserProjectsPage";
 
 const SobreNos = lazy(() => import("./pages/SobreNos"));
 const Documentacao = lazy(() => import("./pages/Documentacao"));
@@ -69,6 +70,7 @@ export default function App() {
   const [showProjectProgress, setShowProjectProgress] = useState(false);
   const [showDevTest, setShowDevTest] = useState(false);
   const [showAjuda, setShowAjuda] = useState(false);
+  const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export default function App() {
       const isDevTest = import.meta.env.DEV && window.location.pathname === "/dev-test";
       const isPainelReferencia = window.location.pathname === "/painel-referencia";
       const isAjuda = window.location.pathname === "/ajuda";
+      const isUserProjects = window.location.pathname === "/meus-projetos";
       setShowAbout(isAbout);
       setShowSystemDocs(isSystemDocs);
       setShowAdmin(isAdmin);
@@ -90,6 +93,7 @@ export default function App() {
       setShowDevTest(isDevTest);
       setShowPainelReferencia(isPainelReferencia);
       setShowAjuda(isAjuda);
+      setShowUserProjects(isUserProjects);
     };
     syncRoute();
     window.addEventListener("popstate", syncRoute);
@@ -100,6 +104,12 @@ export default function App() {
     window.history.pushState({}, "", "/sobre-nos");
     setShowAbout(true);
     setShowSystemDocs(false);
+    setShowAdmin(false);
+    setShowProjectProgress(false);
+    setShowPainelReferencia(false);
+    setShowAjuda(false);
+    setShowDevTest(false);
+    setShowUserProjects(false);
   };
 
   const navigateToSystemDocs = () => {
@@ -107,6 +117,11 @@ export default function App() {
     setShowSystemDocs(true);
     setShowAbout(false);
     setShowAdmin(false);
+    setShowProjectProgress(false);
+    setShowPainelReferencia(false);
+    setShowAjuda(false);
+    setShowDevTest(false);
+    setShowUserProjects(false);
   };
 
   const navigateToAdmin = () => {
@@ -115,6 +130,10 @@ export default function App() {
     setShowAbout(false);
     setShowSystemDocs(false);
     setShowProjectProgress(false);
+    setShowPainelReferencia(false);
+    setShowAjuda(false);
+    setShowDevTest(false);
+    setShowUserProjects(false);
   };
 
   const navigateToProjectProgress = () => {
@@ -123,6 +142,10 @@ export default function App() {
     setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
+    setShowPainelReferencia(false);
+    setShowAjuda(false);
+    setShowDevTest(false);
+    setShowUserProjects(false);
   };
 
   const navigateToAjuda = () => {
@@ -134,6 +157,7 @@ export default function App() {
     setShowProjectProgress(false);
     setShowDevTest(false);
     setShowPainelReferencia(false);
+    setShowUserProjects(false);
   };
 
   const navigateToPainelReferencia = () => {
@@ -143,10 +167,27 @@ export default function App() {
     setShowSystemDocs(false);
     setShowAdmin(false);
     setShowProjectProgress(false);
+    setShowAjuda(false);
+    setShowDevTest(false);
+    setShowUserProjects(false);
   };
 
   const navigateToApp = () => {
     window.history.pushState({}, "", "/");
+    setShowAbout(false);
+    setShowSystemDocs(false);
+    setShowAdmin(false);
+    setShowProjectProgress(false);
+    setShowDevTest(false);
+    setShowPainelReferencia(false);
+    setShowAjuda(false);
+    setShowUserProjects(false);
+  };
+
+  const navigateToUserProjects = () => {
+    window.history.pushState({}, "", "/meus-projetos");
+    setShowUserProjects(true);
+    setShowAjuda(false);
     setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
@@ -184,7 +225,7 @@ export default function App() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAbout || showAjuda ? (
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAbout || showAjuda || showUserProjects ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
@@ -198,6 +239,8 @@ export default function App() {
                 <DevPimoTest />
               ) : showAjuda ? (
                 <Ajuda />
+              ) : showUserProjects ? (
+                <UserProjectsPage />
               ) : (
                 <SobreNos />
               )}
@@ -279,6 +322,7 @@ export default function App() {
           onShowSystemDocs={navigateToSystemDocs}
           onShowAdmin={navigateToAdmin}
           onShowAjuda={navigateToAjuda}
+          onShowUserProjects={navigateToUserProjects}
         />
 
         <WhatsAppButton />

@@ -1,0 +1,1057 @@
+{
+  "id": "project-1773662865769-dl34ex",
+  "name": "Novo Projeto",
+  "sequence": 5,
+  "createdAt": "2026-03-16T12:07:45.769Z",
+  "updatedAt": "2026-03-16T12:07:45.769Z",
+  "ownerId": "usuario-local",
+  "ownerName": "Utilizador Local",
+  "thumbnailDataUrl": null,
+  "snapshot": {
+    "projectState": {
+      "projectName": "Novo Projeto",
+      "tipoProjeto": "Estante de Parede – 3 Portas",
+      "material": {
+        "tipo": "mdf_branco",
+        "espessura": 19,
+        "precoPorM2": 35
+      },
+      "materialId": "",
+      "dimensoes": {
+        "largura": 1800,
+        "altura": 2000,
+        "profundidade": 400
+      },
+      "quantidade": 1,
+      "boxes": [],
+      "selectedBoxId": "",
+      "workspaceBoxes": [],
+      "selectedWorkspaceBoxId": "",
+      "selectedCaixaId": "",
+      "selectedCaixaModelUrl": null,
+      "selectedModelInstanceId": null,
+      "resultados": {
+        "numeroPecas": 15,
+        "numeroPaineis": 2,
+        "areaTotal": 9.04,
+        "desperdicio": 2.552,
+        "desperdicioPercentual": 22.02,
+        "precoMaterial": 316.4,
+        "precoFinal": 348.04
+      },
+      "ultimaAtualizacao": "2026-03-16T12:07:45.761Z",
+      "lastAutosaveTime": null,
+      "design": null,
+      "cutList": null,
+      "cutListComPreco": null,
+      "extractedPartsByBoxId": {},
+      "ruleViolations": [],
+      "modelPositionsByBoxId": {},
+      "layoutWarnings": {
+        "collisions": [],
+        "outOfBounds": []
+      },
+      "estrutura3D": null,
+      "acessorios": null,
+      "precoTotalPecas": null,
+      "precoTotalAcessorios": null,
+      "precoTotalProjeto": null,
+      "activeViewerTool": "select",
+      "viewerSettings": {
+        "showPanelEdges": true,
+        "hiddenPanels": [],
+        "explodedViewEnabled": false,
+        "explodedViewIntensity": 0.35,
+        "hideAllPanels": false,
+        "showCeiling": true,
+        "wallEditMode": false,
+        "mousePreset": "cad",
+        "backgroundMode": "studio",
+        "materialQuality": "standard",
+        "enableReflections": false,
+        "photoModeEnabled": false,
+        "highlightEnabled": false,
+        "rulerEnabled": false,
+        "ultraPerformanceModeOptions": {
+          "enabled": false,
+          "mode": "balanced"
+        }
+      },
+      "rulesProfiles": {
+        "perfis": [
+          {
+            "id": "padrao",
+            "nome": "Padrão",
+            "descricao": "Regras padrão da fábrica",
+            "rules": {
+              "portas": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 50,
+                    "dobradicas": 2
+                  },
+                  {
+                    "min": 51,
+                    "max": 100,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 101,
+                    "max": 150,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "dobradicas": 4
+                  }
+                ]
+              },
+              "prateleiras": {
+                "suportesPorPrateleira": 4
+              },
+              "pes": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 90,
+                    "pes": 4
+                  },
+                  {
+                    "min": 91,
+                    "max": 150,
+                    "pes": 6
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "pes": 8
+                  }
+                ]
+              },
+              "altura": {
+                "divisorTransversalMin": 150
+              },
+              "largura": {
+                "divisorLongitudinalMin": 150
+              },
+              "furos": {
+                "margemTopo": 200,
+                "margemBase": 200,
+                "recuoBorda": 50,
+                "distanciaEntreFuros": 50,
+                "profundidadeFuro": 10,
+                "diametroFuro": 5,
+                "tecnicos": {
+                  "cavilha": {
+                    "enabled": true,
+                    "distanciaFrente": 60,
+                    "distanciaFundo": 60,
+                    "distanciaLateral": 60,
+                    "distanciaTopo": 60,
+                    "distanciaBase": 60,
+                    "offsetLateral": 0,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true,
+                      "lateralEsquerda": true,
+                      "lateralDireita": true
+                    },
+                    "diametro": 10,
+                    "profundidade": 10
+                  },
+                  "parafuso": {
+                    "enabled": true,
+                    "distanciaFrente": 40,
+                    "distanciaFundo": 40,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "distanciaLateral": 60,
+                    "offsetDaCavilha": 20,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true
+                    },
+                    "diametro": 4,
+                    "profundidade": 19,
+                    "profundidadeIgualEspessura": true
+                  },
+                  "dobradica": {
+                    "enabled": true,
+                    "distanciaCentroDaBorda": 22.5,
+                    "distanciaBordaLateral": 22.5,
+                    "distanciaDobradiçaTopo": 100,
+                    "distanciaDobradiçaFundo": 100,
+                    "offsetSuperior": 100,
+                    "offsetInferior": 100,
+                    "numeroPorPorta": 2,
+                    "distribuicaoAutomatica": true,
+                    "offsetsVerticaisMm": [],
+                    "diametro": 35,
+                    "profundidade": 13,
+                    "distanciaFurosFixacaoBorda": 28,
+                    "distanciaEntreFurosFixacao": 52,
+                    "diametroFurosFixacao": 10,
+                    "profundidadeFurosFixacao": 12
+                  },
+                  "corredica": {
+                    "enabled": true,
+                    "offsetFrente": 37,
+                    "offsetFundo": 37,
+                    "alturaRelativaFundo": 37,
+                    "offsetVerticalAdicional": 0,
+                    "diametro": 5,
+                    "profundidade": 10
+                  },
+                  "prateleira": {
+                    "enabled": true,
+                    "margemTopo": 200,
+                    "margemBase": 200,
+                    "margemFrente": 60,
+                    "margemFundo": 60,
+                    "recuoBorda": 37,
+                    "distanciaDaBorda": 60,
+                    "espacamento": 32,
+                    "espacamentoVertical": 32,
+                    "numeroFurosPorColuna": 0,
+                    "minFurosPorColuna": 6,
+                    "maxFurosPorColuna": 40,
+                    "diametro": 5,
+                    "profundidade": 13
+                  },
+                  "dobradica_fixacao": {
+                    "enabled": true,
+                    "distanciaDaBordaCalco": 37,
+                    "distanciaDaBordaParafusoUniao": 53,
+                    "distanciaEntreFurosCalco": 32,
+                    "diametro": 5,
+                    "profundidadeFuro": 12,
+                    "diametroParafusoUniao": 5,
+                    "profundidadeParafusoUniao": 0.5
+                  },
+                  "shelfTop": {
+                    "enabled": false,
+                    "distanciaFrente": 37,
+                    "distanciaFundo": 37,
+                    "distanciaEsquerda": 37,
+                    "distanciaDireita": 37,
+                    "diametro": 5,
+                    "profundidade": 13
+                  }
+                }
+              },
+              "madeira": {
+                "espessuraCosta": 10,
+                "calcularAlturaLaterais": true,
+                "profundidadeFixa": true
+              },
+              "qrcode": {
+                "tamanhoQr": 18,
+                "tamanhoTexto": 8,
+                "mostrarTextoAbaixoQr": true,
+                "destacarNumeroPeca": true,
+                "numeroDigitosPeca": 3,
+                "reiniciarContagemEm99": true
+              },
+              "etiqueta": {
+                "larguraMm": 100,
+                "alturaMm": 50,
+                "bordaPx": 1,
+                "margemInternaMm": 2,
+                "tamanhoQr": 28,
+                "tamanhoTexto": 8,
+                "mostrarLogo": false,
+                "mostrarLogoEmpresa": false,
+                "logoDataUrl": "",
+                "posicaoLogo": "esquerda",
+                "mostrarMaterial": true,
+                "mostrarDimensoes": true,
+                "mostrarReferencia": true
+              }
+            }
+          },
+          {
+            "id": "portugal",
+            "nome": "Portugal",
+            "descricao": "Regras para mercado português",
+            "rules": {
+              "portas": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 50,
+                    "dobradicas": 2
+                  },
+                  {
+                    "min": 51,
+                    "max": 100,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 101,
+                    "max": 150,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "dobradicas": 4
+                  }
+                ]
+              },
+              "prateleiras": {
+                "suportesPorPrateleira": 4
+              },
+              "pes": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 90,
+                    "pes": 4
+                  },
+                  {
+                    "min": 91,
+                    "max": 150,
+                    "pes": 6
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "pes": 8
+                  }
+                ]
+              },
+              "altura": {
+                "divisorTransversalMin": 150
+              },
+              "largura": {
+                "divisorLongitudinalMin": 150
+              },
+              "furos": {
+                "margemTopo": 200,
+                "margemBase": 200,
+                "recuoBorda": 50,
+                "distanciaEntreFuros": 50,
+                "profundidadeFuro": 10,
+                "diametroFuro": 5,
+                "tecnicos": {
+                  "cavilha": {
+                    "enabled": true,
+                    "distanciaFrente": 60,
+                    "distanciaFundo": 60,
+                    "distanciaLateral": 60,
+                    "distanciaTopo": 60,
+                    "distanciaBase": 60,
+                    "offsetLateral": 0,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true,
+                      "lateralEsquerda": true,
+                      "lateralDireita": true
+                    },
+                    "diametro": 10,
+                    "profundidade": 10
+                  },
+                  "parafuso": {
+                    "enabled": true,
+                    "distanciaFrente": 40,
+                    "distanciaFundo": 40,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "distanciaLateral": 60,
+                    "offsetDaCavilha": 20,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true
+                    },
+                    "diametro": 4,
+                    "profundidade": 19,
+                    "profundidadeIgualEspessura": true
+                  },
+                  "dobradica": {
+                    "enabled": true,
+                    "distanciaCentroDaBorda": 22.5,
+                    "distanciaBordaLateral": 22.5,
+                    "distanciaDobradiçaTopo": 100,
+                    "distanciaDobradiçaFundo": 100,
+                    "offsetSuperior": 100,
+                    "offsetInferior": 100,
+                    "numeroPorPorta": 2,
+                    "distribuicaoAutomatica": true,
+                    "offsetsVerticaisMm": [],
+                    "diametro": 35,
+                    "profundidade": 13,
+                    "distanciaFurosFixacaoBorda": 28,
+                    "distanciaEntreFurosFixacao": 52,
+                    "diametroFurosFixacao": 10,
+                    "profundidadeFurosFixacao": 12
+                  },
+                  "corredica": {
+                    "enabled": true,
+                    "offsetFrente": 37,
+                    "offsetFundo": 37,
+                    "alturaRelativaFundo": 37,
+                    "offsetVerticalAdicional": 0,
+                    "diametro": 5,
+                    "profundidade": 10
+                  },
+                  "prateleira": {
+                    "enabled": true,
+                    "margemTopo": 200,
+                    "margemBase": 200,
+                    "margemFrente": 60,
+                    "margemFundo": 60,
+                    "recuoBorda": 37,
+                    "distanciaDaBorda": 60,
+                    "espacamento": 32,
+                    "espacamentoVertical": 32,
+                    "numeroFurosPorColuna": 0,
+                    "minFurosPorColuna": 6,
+                    "maxFurosPorColuna": 40,
+                    "diametro": 5,
+                    "profundidade": 13
+                  },
+                  "dobradica_fixacao": {
+                    "enabled": true,
+                    "distanciaDaBordaCalco": 37,
+                    "distanciaDaBordaParafusoUniao": 53,
+                    "distanciaEntreFurosCalco": 32,
+                    "diametro": 5,
+                    "profundidadeFuro": 12,
+                    "diametroParafusoUniao": 5,
+                    "profundidadeParafusoUniao": 0.5
+                  },
+                  "shelfTop": {
+                    "enabled": false,
+                    "distanciaFrente": 37,
+                    "distanciaFundo": 37,
+                    "distanciaEsquerda": 37,
+                    "distanciaDireita": 37,
+                    "diametro": 5,
+                    "profundidade": 13
+                  }
+                }
+              },
+              "madeira": {
+                "espessuraCosta": 10,
+                "calcularAlturaLaterais": true,
+                "profundidadeFixa": true
+              },
+              "qrcode": {
+                "tamanhoQr": 18,
+                "tamanhoTexto": 8,
+                "mostrarTextoAbaixoQr": true,
+                "destacarNumeroPeca": true,
+                "numeroDigitosPeca": 3,
+                "reiniciarContagemEm99": true
+              },
+              "etiqueta": {
+                "larguraMm": 100,
+                "alturaMm": 50,
+                "bordaPx": 1,
+                "margemInternaMm": 2,
+                "tamanhoQr": 28,
+                "tamanhoTexto": 8,
+                "mostrarLogo": false,
+                "mostrarLogoEmpresa": false,
+                "logoDataUrl": "",
+                "posicaoLogo": "esquerda",
+                "mostrarMaterial": true,
+                "mostrarDimensoes": true,
+                "mostrarReferencia": true
+              }
+            }
+          },
+          {
+            "id": "cliente-a",
+            "nome": "Cliente A",
+            "descricao": "Regras específicas do Cliente A",
+            "rules": {
+              "portas": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 50,
+                    "dobradicas": 2
+                  },
+                  {
+                    "min": 51,
+                    "max": 100,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 101,
+                    "max": 150,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "dobradicas": 4
+                  }
+                ]
+              },
+              "prateleiras": {
+                "suportesPorPrateleira": 4
+              },
+              "pes": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 90,
+                    "pes": 4
+                  },
+                  {
+                    "min": 91,
+                    "max": 150,
+                    "pes": 6
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "pes": 8
+                  }
+                ]
+              },
+              "altura": {
+                "divisorTransversalMin": 150
+              },
+              "largura": {
+                "divisorLongitudinalMin": 150
+              },
+              "furos": {
+                "margemTopo": 200,
+                "margemBase": 200,
+                "recuoBorda": 50,
+                "distanciaEntreFuros": 50,
+                "profundidadeFuro": 10,
+                "diametroFuro": 5,
+                "tecnicos": {
+                  "cavilha": {
+                    "enabled": true,
+                    "distanciaFrente": 60,
+                    "distanciaFundo": 60,
+                    "distanciaLateral": 60,
+                    "distanciaTopo": 60,
+                    "distanciaBase": 60,
+                    "offsetLateral": 0,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true,
+                      "lateralEsquerda": true,
+                      "lateralDireita": true
+                    },
+                    "diametro": 10,
+                    "profundidade": 10
+                  },
+                  "parafuso": {
+                    "enabled": true,
+                    "distanciaFrente": 40,
+                    "distanciaFundo": 40,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "distanciaLateral": 60,
+                    "offsetDaCavilha": 20,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true
+                    },
+                    "diametro": 4,
+                    "profundidade": 19,
+                    "profundidadeIgualEspessura": true
+                  },
+                  "dobradica": {
+                    "enabled": true,
+                    "distanciaCentroDaBorda": 22.5,
+                    "distanciaBordaLateral": 22.5,
+                    "distanciaDobradiçaTopo": 100,
+                    "distanciaDobradiçaFundo": 100,
+                    "offsetSuperior": 100,
+                    "offsetInferior": 100,
+                    "numeroPorPorta": 2,
+                    "distribuicaoAutomatica": true,
+                    "offsetsVerticaisMm": [],
+                    "diametro": 35,
+                    "profundidade": 13,
+                    "distanciaFurosFixacaoBorda": 28,
+                    "distanciaEntreFurosFixacao": 52,
+                    "diametroFurosFixacao": 10,
+                    "profundidadeFurosFixacao": 12
+                  },
+                  "corredica": {
+                    "enabled": true,
+                    "offsetFrente": 37,
+                    "offsetFundo": 37,
+                    "alturaRelativaFundo": 37,
+                    "offsetVerticalAdicional": 0,
+                    "diametro": 5,
+                    "profundidade": 10
+                  },
+                  "prateleira": {
+                    "enabled": true,
+                    "margemTopo": 200,
+                    "margemBase": 200,
+                    "margemFrente": 60,
+                    "margemFundo": 60,
+                    "recuoBorda": 37,
+                    "distanciaDaBorda": 60,
+                    "espacamento": 32,
+                    "espacamentoVertical": 32,
+                    "numeroFurosPorColuna": 0,
+                    "minFurosPorColuna": 6,
+                    "maxFurosPorColuna": 40,
+                    "diametro": 5,
+                    "profundidade": 13
+                  },
+                  "dobradica_fixacao": {
+                    "enabled": true,
+                    "distanciaDaBordaCalco": 37,
+                    "distanciaDaBordaParafusoUniao": 53,
+                    "distanciaEntreFurosCalco": 32,
+                    "diametro": 5,
+                    "profundidadeFuro": 12,
+                    "diametroParafusoUniao": 5,
+                    "profundidadeParafusoUniao": 0.5
+                  },
+                  "shelfTop": {
+                    "enabled": false,
+                    "distanciaFrente": 37,
+                    "distanciaFundo": 37,
+                    "distanciaEsquerda": 37,
+                    "distanciaDireita": 37,
+                    "diametro": 5,
+                    "profundidade": 13
+                  }
+                }
+              },
+              "madeira": {
+                "espessuraCosta": 10,
+                "calcularAlturaLaterais": true,
+                "profundidadeFixa": true
+              },
+              "qrcode": {
+                "tamanhoQr": 18,
+                "tamanhoTexto": 8,
+                "mostrarTextoAbaixoQr": true,
+                "destacarNumeroPeca": true,
+                "numeroDigitosPeca": 3,
+                "reiniciarContagemEm99": true
+              },
+              "etiqueta": {
+                "larguraMm": 100,
+                "alturaMm": 50,
+                "bordaPx": 1,
+                "margemInternaMm": 2,
+                "tamanhoQr": 28,
+                "tamanhoTexto": 8,
+                "mostrarLogo": false,
+                "mostrarLogoEmpresa": false,
+                "logoDataUrl": "",
+                "posicaoLogo": "esquerda",
+                "mostrarMaterial": true,
+                "mostrarDimensoes": true,
+                "mostrarReferencia": true
+              }
+            }
+          },
+          {
+            "id": "cliente-b",
+            "nome": "Cliente B",
+            "descricao": "Regras específicas do Cliente B",
+            "rules": {
+              "portas": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 50,
+                    "dobradicas": 2
+                  },
+                  {
+                    "min": 51,
+                    "max": 100,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 101,
+                    "max": 150,
+                    "dobradicas": 3
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "dobradicas": 4
+                  }
+                ]
+              },
+              "prateleiras": {
+                "suportesPorPrateleira": 4
+              },
+              "pes": {
+                "ranges": [
+                  {
+                    "min": 10,
+                    "max": 90,
+                    "pes": 4
+                  },
+                  {
+                    "min": 91,
+                    "max": 150,
+                    "pes": 6
+                  },
+                  {
+                    "min": 151,
+                    "max": 200,
+                    "pes": 8
+                  }
+                ]
+              },
+              "altura": {
+                "divisorTransversalMin": 150
+              },
+              "largura": {
+                "divisorLongitudinalMin": 150
+              },
+              "furos": {
+                "margemTopo": 200,
+                "margemBase": 200,
+                "recuoBorda": 50,
+                "distanciaEntreFuros": 50,
+                "profundidadeFuro": 10,
+                "diametroFuro": 5,
+                "tecnicos": {
+                  "cavilha": {
+                    "enabled": true,
+                    "distanciaFrente": 60,
+                    "distanciaFundo": 60,
+                    "distanciaLateral": 60,
+                    "distanciaTopo": 60,
+                    "distanciaBase": 60,
+                    "offsetLateral": 0,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true,
+                      "lateralEsquerda": true,
+                      "lateralDireita": true
+                    },
+                    "diametro": 10,
+                    "profundidade": 10
+                  },
+                  "parafuso": {
+                    "enabled": true,
+                    "distanciaFrente": 40,
+                    "distanciaFundo": 40,
+                    "offsetDaBorda": 9,
+                    "sideOffset": 9.5,
+                    "distanciaLateral": 60,
+                    "offsetDaCavilha": 20,
+                    "aplicarEm": {
+                      "cima": true,
+                      "fundo": true
+                    },
+                    "diametro": 4,
+                    "profundidade": 19,
+                    "profundidadeIgualEspessura": true
+                  },
+                  "dobradica": {
+                    "enabled": true,
+                    "distanciaCentroDaBorda": 22.5,
+                    "distanciaBordaLateral": 22.5,
+                    "distanciaDobradiçaTopo": 100,
+                    "distanciaDobradiçaFundo": 100,
+                    "offsetSuperior": 100,
+                    "offsetInferior": 100,
+                    "numeroPorPorta": 2,
+                    "distribuicaoAutomatica": true,
+                    "offsetsVerticaisMm": [],
+                    "diametro": 35,
+                    "profundidade": 13,
+                    "distanciaFurosFixacaoBorda": 28,
+                    "distanciaEntreFurosFixacao": 52,
+                    "diametroFurosFixacao": 10,
+                    "profundidadeFurosFixacao": 12
+                  },
+                  "corredica": {
+                    "enabled": true,
+                    "offsetFrente": 37,
+                    "offsetFundo": 37,
+                    "alturaRelativaFundo": 37,
+                    "offsetVerticalAdicional": 0,
+                    "diametro": 5,
+                    "profundidade": 10
+                  },
+                  "prateleira": {
+                    "enabled": true,
+                    "margemTopo": 200,
+                    "margemBase": 200,
+                    "margemFrente": 60,
+                    "margemFundo": 60,
+                    "recuoBorda": 37,
+                    "distanciaDaBorda": 60,
+                    "espacamento": 32,
+                    "espacamentoVertical": 32,
+                    "numeroFurosPorColuna": 0,
+                    "minFurosPorColuna": 6,
+                    "maxFurosPorColuna": 40,
+                    "diametro": 5,
+                    "profundidade": 13
+                  },
+                  "dobradica_fixacao": {
+                    "enabled": true,
+                    "distanciaDaBordaCalco": 37,
+                    "distanciaDaBordaParafusoUniao": 53,
+                    "distanciaEntreFurosCalco": 32,
+                    "diametro": 5,
+                    "profundidadeFuro": 12,
+                    "diametroParafusoUniao": 5,
+                    "profundidadeParafusoUniao": 0.5
+                  },
+                  "shelfTop": {
+                    "enabled": false,
+                    "distanciaFrente": 37,
+                    "distanciaFundo": 37,
+                    "distanciaEsquerda": 37,
+                    "distanciaDireita": 37,
+                    "diametro": 5,
+                    "profundidade": 13
+                  }
+                }
+              },
+              "madeira": {
+                "espessuraCosta": 10,
+                "calcularAlturaLaterais": true,
+                "profundidadeFixa": true
+              },
+              "qrcode": {
+                "tamanhoQr": 18,
+                "tamanhoTexto": 8,
+                "mostrarTextoAbaixoQr": true,
+                "destacarNumeroPeca": true,
+                "numeroDigitosPeca": 3,
+                "reiniciarContagemEm99": true
+              },
+              "etiqueta": {
+                "larguraMm": 100,
+                "alturaMm": 50,
+                "bordaPx": 1,
+                "margemInternaMm": 2,
+                "tamanhoQr": 28,
+                "tamanhoTexto": 8,
+                "mostrarLogo": false,
+                "mostrarLogoEmpresa": false,
+                "logoDataUrl": "",
+                "posicaoLogo": "esquerda",
+                "mostrarMaterial": true,
+                "mostrarDimensoes": true,
+                "mostrarReferencia": true
+              }
+            }
+          }
+        ],
+        "perfilAtivoId": "padrao"
+      },
+      "rules": {
+        "portas": {
+          "ranges": [
+            {
+              "min": 10,
+              "max": 50,
+              "dobradicas": 2
+            },
+            {
+              "min": 51,
+              "max": 100,
+              "dobradicas": 3
+            },
+            {
+              "min": 101,
+              "max": 150,
+              "dobradicas": 3
+            },
+            {
+              "min": 151,
+              "max": 200,
+              "dobradicas": 4
+            }
+          ]
+        },
+        "prateleiras": {
+          "suportesPorPrateleira": 4
+        },
+        "pes": {
+          "ranges": [
+            {
+              "min": 10,
+              "max": 90,
+              "pes": 4
+            },
+            {
+              "min": 91,
+              "max": 150,
+              "pes": 6
+            },
+            {
+              "min": 151,
+              "max": 200,
+              "pes": 8
+            }
+          ]
+        },
+        "altura": {
+          "divisorTransversalMin": 150
+        },
+        "largura": {
+          "divisorLongitudinalMin": 150
+        },
+        "furos": {
+          "margemTopo": 200,
+          "margemBase": 200,
+          "recuoBorda": 50,
+          "distanciaEntreFuros": 50,
+          "profundidadeFuro": 10,
+          "diametroFuro": 5,
+          "tecnicos": {
+            "cavilha": {
+              "enabled": true,
+              "distanciaFrente": 60,
+              "distanciaFundo": 60,
+              "distanciaLateral": 60,
+              "distanciaTopo": 60,
+              "distanciaBase": 60,
+              "offsetLateral": 0,
+              "offsetDaBorda": 9,
+              "sideOffset": 9.5,
+              "aplicarEm": {
+                "cima": true,
+                "fundo": true,
+                "lateralEsquerda": true,
+                "lateralDireita": true
+              },
+              "diametro": 10,
+              "profundidade": 10
+            },
+            "parafuso": {
+              "enabled": true,
+              "distanciaFrente": 40,
+              "distanciaFundo": 40,
+              "offsetDaBorda": 9,
+              "sideOffset": 9.5,
+              "distanciaLateral": 60,
+              "offsetDaCavilha": 20,
+              "aplicarEm": {
+                "cima": true,
+                "fundo": true
+              },
+              "diametro": 4,
+              "profundidade": 19,
+              "profundidadeIgualEspessura": true
+            },
+            "dobradica": {
+              "enabled": true,
+              "distanciaCentroDaBorda": 22.5,
+              "distanciaBordaLateral": 22.5,
+              "distanciaDobradiçaTopo": 100,
+              "distanciaDobradiçaFundo": 100,
+              "offsetSuperior": 100,
+              "offsetInferior": 100,
+              "numeroPorPorta": 2,
+              "distribuicaoAutomatica": true,
+              "offsetsVerticaisMm": [],
+              "diametro": 35,
+              "profundidade": 13,
+              "distanciaFurosFixacaoBorda": 28,
+              "distanciaEntreFurosFixacao": 52,
+              "diametroFurosFixacao": 10,
+              "profundidadeFurosFixacao": 12
+            },
+            "corredica": {
+              "enabled": true,
+              "offsetFrente": 37,
+              "offsetFundo": 37,
+              "alturaRelativaFundo": 37,
+              "offsetVerticalAdicional": 0,
+              "diametro": 5,
+              "profundidade": 10
+            },
+            "prateleira": {
+              "enabled": true,
+              "margemTopo": 200,
+              "margemBase": 200,
+              "margemFrente": 60,
+              "margemFundo": 60,
+              "recuoBorda": 37,
+              "distanciaDaBorda": 60,
+              "espacamento": 32,
+              "espacamentoVertical": 32,
+              "numeroFurosPorColuna": 0,
+              "minFurosPorColuna": 6,
+              "maxFurosPorColuna": 40,
+              "diametro": 5,
+              "profundidade": 13
+            },
+            "dobradica_fixacao": {
+              "enabled": true,
+              "distanciaDaBordaCalco": 37,
+              "distanciaDaBordaParafusoUniao": 53,
+              "distanciaEntreFurosCalco": 32,
+              "diametro": 5,
+              "profundidadeFuro": 12,
+              "diametroParafusoUniao": 5,
+              "profundidadeParafusoUniao": 0.5
+            },
+            "shelfTop": {
+              "enabled": false,
+              "distanciaFrente": 37,
+              "distanciaFundo": 37,
+              "distanciaEsquerda": 37,
+              "distanciaDireita": 37,
+              "diametro": 5,
+              "profundidade": 13
+            }
+          }
+        },
+        "madeira": {
+          "espessuraCosta": 10,
+          "calcularAlturaLaterais": true,
+          "profundidadeFixa": true
+        },
+        "qrcode": {
+          "tamanhoQr": 18,
+          "tamanhoTexto": 8,
+          "mostrarTextoAbaixoQr": true,
+          "destacarNumeroPeca": true,
+          "numeroDigitosPeca": 3,
+          "reiniciarContagemEm99": true
+        },
+        "etiqueta": {
+          "larguraMm": 100,
+          "alturaMm": 50,
+          "bordaPx": 1,
+          "margemInternaMm": 2,
+          "tamanhoQr": 28,
+          "tamanhoTexto": 8,
+          "mostrarLogo": false,
+          "mostrarLogoEmpresa": false,
+          "logoDataUrl": "",
+          "posicaoLogo": "esquerda",
+          "mostrarMaterial": true,
+          "mostrarDimensoes": true,
+          "mostrarReferencia": true
+        }
+      },
+      "estaCarregando": false,
+      "erro": null,
+      "changelog": []
+    },
+    "viewerSnapshot": null,
+    "roomSnapshot": null
+  }
+}

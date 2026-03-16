@@ -304,6 +304,9 @@ export interface WorkspaceBox {
   rotacaoY_90: boolean;
   /** Rotação Y em radianos (manipulação visual no viewer; não altera cut list). */
   rotacaoY?: number;
+  /** Rotação X e Z em radianos (manipulação visual; rotação completa 3D). */
+  rotacaoX?: number;
+  rotacaoZ?: number;
   /**
    * Direção da "costa" (parte traseira) da caixa em radianos: 0 | π/2 | π | -π/2.
    * Usado no auto-rotate ao encostar na parede: finalRotationY = wall.rotation.y + costaRotationY.

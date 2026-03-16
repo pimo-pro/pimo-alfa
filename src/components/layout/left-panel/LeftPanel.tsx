@@ -5,7 +5,7 @@ import { useProject } from "../../../context/useProject";
 import UnifiedPopover, { StepperPopover } from "../../ui/UnifiedPopover";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import Panel from "../../ui/Panel";
-import { mmToM } from "../../../utils/units";
+import { NumericInput } from "../../ui/NumericInput";
 import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
 import PainelMoveisUnificado from "./PainelMoveisUnificado";
 import PainelModelosDaCaixa from "./PainelModelosDaCaixa";
@@ -16,6 +16,7 @@ import { useToast } from "../../../context/ToastContext";
 import { listMaterials, getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
 import { cutlistComPrecoFromBoxes, ferragensFromBoxes } from "../../../core/manufacturing/cutlistFromBoxes";
 import { MATERIAIS_INDUSTRIAIS } from "../../../core/manufacturing/materials";
+import type { SavedProjectInfo } from "../../../context/projectTypes";
 
 export type LeftPanelProps = {
   activeTab?: string;
@@ -94,6 +95,8 @@ const DEFAULT_ROOM_WIDTH_M = 4;
 const DEFAULT_ROOM_DEPTH_M = 5;
 const DEFAULT_ROOM_HEIGHT_M = 2.7;
 
+type RoomType = "closed" | "open";
+
 function PainelSala() {
   const { viewerApi } = usePimoViewerContext();
   const mainWallIndex = useWallStore((state) => state.mainWallIndex);
@@ -101,6 +104,7 @@ function PainelSala() {
   const [widthM, setWidthM] = useState(DEFAULT_ROOM_WIDTH_M);
   const [depthM, setDepthM] = useState(DEFAULT_ROOM_DEPTH_M);
   const [heightM, setHeightM] = useState(DEFAULT_ROOM_HEIGHT_M);
+  const [roomType, setRoomType] = useState<RoomType>("closed");
   const [roomExistsState, setRoomExistsState] = useState(false);
   const [roomVisibleState, setRoomVisibleState] = useState(true);
 
@@ -127,7 +131,8 @@ function PainelSala() {
     const w = Math.max(0.5, Math.min(50, widthM));
     const d = Math.max(0.5, Math.min(50, depthM));
     const h = Math.max(0.5, Math.min(10, heightM));
-    viewerApi?.createRoomWithDimensions?.(w, d, h);
+    const numWalls = roomType === "open" ? 3 : 4;
+    viewerApi?.createRoomWithDimensions?.(w, d, h, numWalls);
     setRoomExistsState(true);
     setRoomVisibleState(true);
   };
@@ -201,14 +206,27 @@ function PainelSala() {
       </Panel>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
         {!roomExists ? (
-          <button
-            type="button"
-            onClick={handleCreate}
-            className="button button-primary"
-            style={{ width: "100%" }}
-          >
-            Criar Sala
-          </button>
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+              <label style={{ fontSize: 12, color: "var(--text-main)" }}>Tipo de sala</label>
+              <select
+                className="input input-sm"
+                value={roomType}
+                onChange={(e) => setRoomType(e.target.value as RoomType)}
+              >
+                <option value="closed">Sala fechada (4 paredes)</option>
+                <option value="open">Sala de estar (3 paredes, aberta)</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleCreate}
+              className="button button-primary"
+              style={{ width: "100%" }}
+            >
+              Criar Sala
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -382,6 +400,8 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [materialsList, setMaterialsList] = useState<MaterialOption[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [savedRecentProjects, setSavedRecentProjects] = useState<SavedProjectInfo[]>([]);
+  const [loadingSavedRecent, setLoadingSavedRecent] = useState(false);
   const { viewerApi } = usePimoViewerContext();
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const cutlistFromBoxes = useMemo(() => {
@@ -450,6 +470,23 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       active = false;
     };
   }, [materialModalOpen]);
+
+  useEffect(() => {
+    let active = true;
+    const loadRecent = async () => {
+      setLoadingSavedRecent(true);
+      try {
+        const projects = await actions.listSavedProjects("mine");
+        if (active) setSavedRecentProjects(projects.slice(0, 4));
+      } finally {
+        if (active) setLoadingSavedRecent(false);
+      }
+    };
+    void loadRecent();
+    return () => {
+      active = false;
+    };
+  }, [actions, project.lastAutosaveTime]);
 
   // Footer removed - buttons now in main content area
 
@@ -591,12 +628,12 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
         </Panel>
         <button
           type="button"
-          onClick={() => actions.gerarDesign()}
+          onClick={() => void actions.gerarESalvarDesign()}
           disabled={project.estaCarregando}
           className="button button-primary"
           style={{ width: "100%", marginTop: 8 }}
         >
-          {project.estaCarregando ? "A calcular…" : "Gerar Design 3D"}
+          {project.estaCarregando ? "A calcular…" : "Gerar e Salvar Design"}
         </button>
       </aside>
         </div>
@@ -693,6 +730,27 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
             <Panel title="Notas">
               <NotesField projectName={project.projectName} />
             </Panel>
+            <Panel title="Projetos Salvos" description="Últimos 4 projetos do utilizador">
+              {loadingSavedRecent ? (
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>A carregar...</p>
+              ) : savedRecentProjects.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Sem projetos guardados.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {savedRecentProjects.map((saved) => (
+                    <button
+                      key={saved.id}
+                      type="button"
+                      className="panel-button"
+                      style={{ textAlign: "left", width: "100%" }}
+                      onClick={() => void actions.loadProjectSnapshot(saved.id)}
+                    >
+                      {saved.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Panel>
           </aside>
         </div>
       </div>
@@ -774,64 +832,37 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <Panel title="Dimensões" description="Valores em milímetros">
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div className="panel-field-row">
-            <span className="panel-label">
-              Largura:
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="number"
-                value={selectedBox?.dimensoes.largura ?? project.dimensoes.largura}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  actions.setDimensoes({ largura: value });
-                  if (project.selectedWorkspaceBoxId) {
-                    viewerApi?.updateBox(project.selectedWorkspaceBoxId, { width: mmToM(value) });
-                  }
-                }}
-                className="input input-xs"
-              />
-              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>mm</span>
-            </div>
+            <span className="panel-label">Largura:</span>
+            <NumericInput
+              value={selectedBox?.dimensoes.largura ?? project.dimensoes.largura}
+              onChange={(value) => {
+                actions.setDimensoes({ largura: value });
+              }}
+              className="input input-xs"
+              unit="mm"
+            />
           </div>
           <div className="panel-field-row">
-            <span className="panel-label">
-              Altura:
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="number"
-                value={selectedBox?.dimensoes.altura ?? project.dimensoes.altura}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  actions.setDimensoes({ altura: value });
-                  if (project.selectedWorkspaceBoxId) {
-                    viewerApi?.updateBox(project.selectedWorkspaceBoxId, { height: mmToM(value) });
-                  }
-                }}
-                className="input input-xs"
-              />
-              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>mm</span>
-            </div>
+            <span className="panel-label">Altura:</span>
+            <NumericInput
+              value={selectedBox?.dimensoes.altura ?? project.dimensoes.altura}
+              onChange={(value) => {
+                actions.setDimensoes({ altura: value });
+              }}
+              className="input input-xs"
+              unit="mm"
+            />
           </div>
           <div className="panel-field-row">
-            <span className="panel-label">
-              Profundidade:
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="number"
-                value={selectedBox?.dimensoes.profundidade ?? project.dimensoes.profundidade}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  actions.setDimensoes({ profundidade: value });
-                  if (project.selectedWorkspaceBoxId) {
-                    viewerApi?.updateBox(project.selectedWorkspaceBoxId, { depth: mmToM(value) });
-                  }
-                }}
-                className="input input-xs"
-              />
-              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>mm</span>
-            </div>
+            <span className="panel-label">Profundidade:</span>
+            <NumericInput
+              value={selectedBox?.dimensoes.profundidade ?? project.dimensoes.profundidade}
+              onChange={(value) => {
+                actions.setDimensoes({ profundidade: value });
+              }}
+              className="input input-xs"
+              unit="mm"
+            />
           </div>
         </div>
       </Panel>
@@ -965,7 +996,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
                 } = { feetEnabled: nextEnabled };
                 if (nextEnabled && shouldLockY) {
                   partial.y_mm = feetHeightMm + selectedBox.dimensoes.altura / 2;
-                  partial.manualPosition = false;
+                  partial.manualPosition = true;
                 } else if (!nextEnabled && shouldLockY) {
                   partial.manualPosition = true;
                 }
@@ -980,25 +1011,18 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
             <div className="panel-field-row">
               <label className="panel-label" style={{ minWidth: 110 }}>Altura (mm)</label>
-              <input
-                type="number"
-                min={40}
-                step={1}
+              <NumericInput
                 value={feetHeightMm}
-                onChange={(e) => {
-                  const nextHeight = Number(e.target.value);
-                  if (!Number.isFinite(nextHeight)) return;
-                  const clamped = Math.max(40, Math.round(nextHeight));
+                min={40}
+                onChange={(clamped) => {
                   const partial: {
                     feetHeight: number;
                     y_mm?: number;
                     manualPosition?: boolean;
-                  } = {
-                    feetHeight: clamped,
-                  };
+                  } = { feetHeight: clamped };
                   if (selectedBox.feetEnabled !== false && shouldLockY) {
                     partial.y_mm = clamped + selectedBox.dimensoes.altura / 2;
-                    partial.manualPosition = false;
+                    partial.manualPosition = true;
                   }
                   actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
                 }}
@@ -1009,16 +1033,12 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
 
             <div className="panel-field-row">
               <label className="panel-label" style={{ minWidth: 110 }}>Recuo frontal (mm)</label>
-              <input
-                type="number"
-                min={0}
-                step={1}
+              <NumericInput
                 value={feetOffsetFrontMm}
-                onChange={(e) => {
-                  const nextOffset = Number(e.target.value);
-                  if (!Number.isFinite(nextOffset)) return;
+                min={0}
+                onChange={(value) => {
                   actions.updateWorkspaceBoxTransform(selectedBox.id, {
-                    feetOffsetFront: Math.max(0, Math.round(nextOffset)),
+                    feetOffsetFront: Math.max(0, Math.round(value)),
                   });
                 }}
                 className="input input-sm"

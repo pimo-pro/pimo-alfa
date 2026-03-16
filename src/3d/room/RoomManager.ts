@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Room, DEFAULT_ROOM_WIDTH, DEFAULT_ROOM_DEPTH, DEFAULT_ROOM_HEIGHT } from "./Room";
+import type { RoomNumWalls } from "./WallFactory";
 import {
   createMainWalls,
   createExtraWall,
@@ -61,13 +62,14 @@ export class RoomManager {
   createRoom(
     width = DEFAULT_ROOM_WIDTH,
     depth = DEFAULT_ROOM_DEPTH,
-    height = DEFAULT_ROOM_HEIGHT
+    height = DEFAULT_ROOM_HEIGHT,
+    numWalls: RoomNumWalls = 4
   ): void {
     this.removeRoom();
     this.room = new Room(width, depth, height);
-    this.wallsMain = createMainWalls(this.room);
+    this.wallsMain = createMainWalls(this.room, numWalls);
     this.wallsExtra = [];
-    this.nextExtraWallId = 4;
+    this.nextExtraWallId = numWalls >= 4 ? 4 : 3;
     this.group.clear();
 
     this.wallsMain.forEach((mesh) => this.group.add(mesh));
@@ -190,7 +192,7 @@ export class RoomManager {
     position: { x: number; z: number },
     _rotationDeg: number
   ): void {
-    if (!this.room || !this.locked || wallIndex < 0 || wallIndex > 3) return;
+    if (!this.room || !this.locked || wallIndex < 0 || wallIndex >= this.wallsMain.length) return;
 
     const t = WALL_THICKNESS_M;
     const { minX, maxX, minZ, maxZ } = this.room;

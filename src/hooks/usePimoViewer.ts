@@ -18,6 +18,15 @@ type ViewerCoreRuler = {
   setOnRulerTick?: (_callback: (() => void) | null) => void;
 } | null | undefined;
 
+/** Nomes de métodos do viewerCore que devem ser expostos na API (override dos stubs). */
+const VIEWER_CORE_SETTING_METHODS = [
+  "setPanelEdgesVisible", "setAllPanelsHidden", "setHiddenPanels", "setPanelHidden",
+  "setRoomCeilingVisible", "setWallEditMode", "setMousePreset", "setBackgroundMode",
+  "setMaterialQuality", "setReflectionsEnabled", "setPhotoModeEnabled",
+  "setExplodedViewEnabled", "setExplodedViewIntensity", "setHighlightEnabled", "setRulerEnabled",
+  "setUltraPerformanceModeOptions", "setUltraPerformanceMode",
+] as const;
+
 /** Stubs para métodos opcionais de PimoViewerApi não expostos pelos hooks (settings, etc.). */
 const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   setPanelEdgesVisible: () => {},
@@ -65,6 +74,13 @@ export function usePimoViewer() {
         ...camera,
         ...materials,
         ...ruler,
+        ...(viewerCore
+          ? VIEWER_CORE_SETTING_METHODS.reduce<Record<string, unknown>>((acc, name) => {
+              const fn = (viewerCore as Record<string, unknown>)[name];
+              if (typeof fn === "function") acc[name] = fn.bind(viewerCore);
+              return acc;
+            }, {})
+          : {}),
       }) as PimoViewerApi,
     [boxes, room, camera, materials, ruler, viewerCore]
   );

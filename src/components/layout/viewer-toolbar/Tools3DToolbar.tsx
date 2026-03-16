@@ -7,10 +7,10 @@
 import { useState, useRef, useEffect } from "react";
 import { TOOLS_3D_ITEMS } from "../../../constants/toolbarConfig";
 import type { Tool3DId } from "../../../constants/toolbarConfig";
- 
 import { useProject } from "../../../context/useProject";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import CameraViewMenu from "./CameraViewMenu";
+import { NumericInput } from "../../ui/NumericInput";
 
 export type Tools3DToolbarProps = {
   /** Ferramenta ativa (controlado pelo estado global). */
@@ -52,40 +52,39 @@ export default function Tools3DToolbar({
   const enabledTools: Tool3DId[] = isPieceLocked ? ["select"] : ["select", "move", "rotate"];
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showExplodedMenu, setShowExplodedMenu] = useState(false);
-  const [showRotationPopup, setShowRotationPopup] = useState(false);
-  
+  const [showRotationMenu, setShowRotationMenu] = useState(false);
+
   const cameraMenuRef = useRef<HTMLDivElement>(null);
   const explodedMenuRef = useRef<HTMLDivElement>(null);
-  const rotationPopupRef = useRef<HTMLDivElement>(null);
-  const rotationInputRef = useRef<HTMLInputElement>(null);
+  const rotationMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!showCameraMenu && !showExplodedMenu) return;
+    if (!showCameraMenu && !showExplodedMenu && !showRotationMenu) return;
     const close = (e: MouseEvent) => {
       if (cameraMenuRef.current && !cameraMenuRef.current.contains(e.target as Node)) setShowCameraMenu(false);
       if (explodedMenuRef.current && !explodedMenuRef.current.contains(e.target as Node)) setShowExplodedMenu(false);
+      if (rotationMenuRef.current && !rotationMenuRef.current.contains(e.target as Node)) setShowRotationMenu(false);
     };
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
-  }, [showCameraMenu, showExplodedMenu]);
+  }, [showCameraMenu, showExplodedMenu, showRotationMenu]);
 
   useEffect(() => {
-    if (!showRotationPopup) return;
-    const close = (e: MouseEvent) => {
-      if (rotationPopupRef.current && !rotationPopupRef.current.contains(e.target as Node)) setShowRotationPopup(false);
-    };
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [showRotationPopup]);
-
-  useEffect(() => {
-    if (showRotationPopup) rotationInputRef.current?.focus();
-  }, [showRotationPopup]);
-
-  
+    if (activeTool !== "rotate") setShowRotationMenu(false);
+  }, [activeTool]);
 
   const handleToolSelect = (id: Tool3DId, eventKey: string) => {
     onToolSelect?.(id, eventKey);
+  };
+
+  const handleRotateClick = () => {
+    if (!enabledTools.includes("rotate")) return;
+    if (activeTool === "rotate" && showRotationMenu) {
+      setShowRotationMenu(false);
+      return;
+    }
+    handleToolSelect("rotate", "tool:rotate");
+    if (selectedBoxId) setShowRotationMenu(true);
   };
 
   return (
@@ -104,38 +103,129 @@ export default function Tools3DToolbar({
         const isActive = activeTool === item.id;
         const isEnabled = enabledTools.includes(item.id);
         const title = !isEnabled && isPieceLocked ? "Peça bloqueada" : item.tooltip;
+        const isRotate = item.id === "rotate";
         return (
-          <button
+          <div
             key={item.id}
-            type="button"
-            title={title}
-            aria-label={title}
-            aria-pressed={isActive}
-            disabled={!isEnabled}
-            onClick={() => isEnabled && handleToolSelect(item.id, item.eventKey)}
-            style={{
-              width: 28,
-              height: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "none",
-              borderRadius: 4,
-              background: isActive ? "var(--toolbar-pressed-bg)" : "transparent",
-              color: isEnabled ? "var(--text-main)" : "var(--text-muted)",
-              fontSize: 12,
-              cursor: isEnabled ? "pointer" : "default",
-              opacity: isEnabled ? 1 : 0.5,
-            }}
-            onMouseEnter={(e) => {
-              if (isEnabled) e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "var(--viewer-toolbar-hover-bg)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
-            }}
+            ref={isRotate ? rotationMenuRef : undefined}
+            style={isRotate ? { position: "relative", display: "inline-flex" } : undefined}
           >
-            {item.icon}
-          </button>
+            <button
+              type="button"
+              title={title}
+              aria-label={title}
+              aria-pressed={isActive}
+              aria-expanded={isRotate ? showRotationMenu : undefined}
+              disabled={!isEnabled}
+              onClick={() => {
+                if (!isEnabled) return;
+                if (isRotate) handleRotateClick();
+                else handleToolSelect(item.id, item.eventKey);
+              }}
+              style={{
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                borderRadius: 4,
+                background: isActive ? "var(--toolbar-pressed-bg)" : "transparent",
+                color: isEnabled ? "var(--text-main)" : "var(--text-muted)",
+                fontSize: 12,
+                cursor: isEnabled ? "pointer" : "default",
+                opacity: isEnabled ? 1 : 0.5,
+              }}
+              onMouseEnter={(e) => {
+                if (isEnabled) e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "var(--viewer-toolbar-hover-bg)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
+              }}
+            >
+              {item.icon}
+            </button>
+            {isRotate && selectedBoxId && showRotationMenu && (() => {
+              const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
+              const radToDeg = (r: number) => Math.round((r * 180) / Math.PI);
+              const degToRad = (d: number) => (d * Math.PI) / 180;
+              const rotX = box?.rotacaoX ?? 0;
+              const rotY = box?.rotacaoY ?? 0;
+              const rotZ = box?.rotacaoZ ?? 0;
+              const updateRotation = (partial: { rotacaoX_rad?: number; rotacaoY_rad?: number; rotacaoZ_rad?: number }) => {
+                actions.updateWorkspaceBoxTransform(selectedBoxId, {
+                  ...partial,
+                  manualPosition: true,
+                });
+              };
+              return (
+                <div
+                  role="dialog"
+                  aria-label="Rotação"
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    marginTop: 4,
+                    padding: 12,
+                    background: "var(--popover-bg)",
+                    border: "1px solid var(--popover-border)",
+                    borderRadius: 8,
+                    boxShadow: "var(--popover-shadow)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    minWidth: 200,
+                    zIndex: 1000,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="button button-ghost button-sm"
+                    style={{ width: "100%" }}
+                    onClick={() => {
+                      updateRotation({ rotacaoY_rad: rotY + Math.PI / 2 });
+                    }}
+                  >
+                    90° direita
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#ef4444", minWidth: 20 }}>X</span>
+                    <NumericInput
+                      value={radToDeg(rotX)}
+                      min={-360}
+                      max={360}
+                      onChange={(v) => updateRotation({ rotacaoX_rad: degToRad(v) })}
+                      className="input input-xs"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#22c55e", minWidth: 20 }}>Y</span>
+                    <NumericInput
+                      value={radToDeg(rotY)}
+                      min={-360}
+                      max={360}
+                      onChange={(v) => updateRotation({ rotacaoY_rad: degToRad(v) })}
+                      className="input input-xs"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#3b82f6", minWidth: 20 }}>Z</span>
+                    <NumericInput
+                      value={radToDeg(rotZ)}
+                      min={-360}
+                      max={360}
+                      onChange={(v) => updateRotation({ rotacaoZ_rad: degToRad(v) })}
+                      className="input input-xs"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         );
       })}
       {onToggleLock != null && (
@@ -306,130 +396,6 @@ export default function Tools3DToolbar({
           <path d="M5 14v-4M8 14v-4M11 14v-2M14 14v-4M17 14v-4M20 14v-4" />
         </svg>
       </button>
-      
-      {selectedBoxId && (
-        <>
-          <button
-            type="button"
-            title={isPieceLocked ? "Peça bloqueada" : "Rotar 90° à direita"}
-            aria-label="Rotar 90° à direita"
-            disabled={isPieceLocked}
-            onClick={() => {
-              if (isPieceLocked) return;
-              const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
-              const currentRad = box?.rotacaoY ?? 0;
-              actions.updateWorkspaceBoxTransform(selectedBoxId, {
-                rotacaoY_rad: currentRad + Math.PI / 2,
-                manualPosition: true,
-              });
-            }}
-            style={{
-              ...toolbarButtonStyle,
-              background: "transparent",
-              opacity: isPieceLocked ? 0.5 : 1,
-              cursor: isPieceLocked ? "not-allowed" : "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            ⟳
-          </button>
-          <div ref={rotationPopupRef} style={{ position: "relative", display: "inline-flex", marginLeft: 2 }}>
-            <button
-              type="button"
-              title={isPieceLocked ? "Peça bloqueada" : "Definir rotação (graus)"}
-              aria-label="Definir rotação em graus"
-              aria-expanded={showRotationPopup}
-              disabled={isPieceLocked}
-              onClick={() => !isPieceLocked && setShowRotationPopup((v) => !v)}
-              style={{
-                ...toolbarButtonStyle,
-                background: showRotationPopup ? "var(--toolbar-pressed-bg)" : "transparent",
-                opacity: isPieceLocked ? 0.5 : 1,
-                cursor: isPieceLocked ? "not-allowed" : "pointer",
-              }}
-              onMouseEnter={(e) => {
-                if (!showRotationPopup) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
-              }}
-              onMouseLeave={(e) => {
-                if (!showRotationPopup) e.currentTarget.style.background = "transparent";
-              }}
-            >
-              ∠
-            </button>
-            {showRotationPopup && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  marginTop: 4,
-                  padding: 8,
-                  background: "rgba(15, 23, 42, 0.98)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 6,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  minWidth: 120,
-                  zIndex: 1000,
-                }}
-              >
-                <label style={{ fontSize: 11, color: "var(--text-muted)" }}>Rotação (°)</label>
-                <input
-                  ref={rotationInputRef}
-                  type="number"
-                  min={-360}
-                  max={360}
-                  step={1}
-                  defaultValue={
-                    Math.round(
-                      ((project.workspaceBoxes.find((b) => b.id === selectedBoxId)?.rotacaoY ?? 0) * 180) / Math.PI
-                    )
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const v = Number((e.target as HTMLInputElement).value);
-                      if (Number.isFinite(v)) {
-                        actions.updateWorkspaceBoxTransform(selectedBoxId, {
-                          rotacaoY_rad: (v * Math.PI) / 180,
-                          manualPosition: true,
-                        });
-                        setShowRotationPopup(false);
-                      }
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v)) {
-                      actions.updateWorkspaceBoxTransform(selectedBoxId, {
-                        rotacaoY_rad: (v * Math.PI) / 180,
-                        manualPosition: true,
-                      });
-                    }
-                    setShowRotationPopup(false);
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "4px 6px",
-                    fontSize: 12,
-                    color: "var(--text-main)",
-                    background: "var(--input-bg)",
-                    border: "1px solid var(--input-border)",
-                    borderRadius: 4,
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </>
-      )}
 
       <button
         type="button"

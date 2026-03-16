@@ -52,11 +52,14 @@ export function applyWallMaterial(
   mesh.material = mat;
 }
 
+export type RoomNumWalls = 3 | 4;
+
 /**
- * Cria as 4 paredes principais para uma sala (front, right, back, left).
- * Usa um único material partilhado da config de cena (MaterialEngine); sem criação redundante.
+ * Cria as paredes principais para uma sala.
+ * numWalls === 4: front, right, back, left (sala fechada).
+ * numWalls === 3: front, right, left (sala de estar / aberta, sem parede traseira).
  */
-export function createMainWalls(room: Room): THREE.Mesh[] {
+export function createMainWalls(room: Room, numWalls: RoomNumWalls = 4): THREE.Mesh[] {
   const t = WALL_THICKNESS_M;
   const { width, depth, height, minX, maxX, minZ, maxZ, centerX, centerZ, minY } = room;
   const yCenter = minY + height / 2;
@@ -84,41 +87,49 @@ export function createMainWalls(room: Room): THREE.Mesh[] {
   right.userData.wallHeightMm = height * 1000;
   right.userData.wallThicknessM = t;
 
-  const back = new THREE.Mesh(new THREE.BoxGeometry(width, height, t), wallMat);
-  back.position.set(centerX, yCenter, maxZ + t / 2);
-  back.userData.wallId = 2;
-  back.userData.wallNormal = new THREE.Vector3(0, 0, 1);
-  back.userData.isRoomWall = true;
-  back.userData.isMainWall = true;
-  back.userData.wallLengthMm = width * 1000;
-  back.userData.wallHeightMm = height * 1000;
-  back.userData.wallThicknessM = t;
+  const walls: THREE.Mesh[] = [front, right];
+
+  if (numWalls >= 4) {
+    const back = new THREE.Mesh(new THREE.BoxGeometry(width, height, t), wallMat);
+    back.position.set(centerX, yCenter, maxZ + t / 2);
+    back.userData.wallId = 2;
+    back.userData.wallNormal = new THREE.Vector3(0, 0, 1);
+    back.userData.isRoomWall = true;
+    back.userData.isMainWall = true;
+    back.userData.wallLengthMm = width * 1000;
+    back.userData.wallHeightMm = height * 1000;
+    back.userData.wallThicknessM = t;
+    walls.push(back);
+  }
 
   const left = new THREE.Mesh(new THREE.BoxGeometry(depth, height, t), wallMat);
   left.rotation.y = Math.PI / 2;
   left.position.set(minX - t / 2, yCenter, centerZ);
-  left.userData.wallId = 3;
+  left.userData.wallId = numWalls >= 4 ? 3 : 2;
   left.userData.wallNormal = new THREE.Vector3(1, 0, 0);
   left.userData.isRoomWall = true;
   left.userData.isMainWall = true;
   left.userData.wallLengthMm = depth * 1000;
   left.userData.wallHeightMm = height * 1000;
   left.userData.wallThicknessM = t;
+  walls.push(left);
 
-  return [front, right, back, left];
+  return walls;
 }
 
 /**
- * Reposiciona as 4 paredes principais conforme as dimensões da sala.
- * Atualiza posição, rotação e geometria (comprimento) de cada parede.
+ * Reposiciona as paredes principais conforme as dimensões da sala.
+ * Suporta 3 paredes (sala aberta: front, right, left) ou 4 (sala fechada: front, right, back, left).
  */
 export function positionMainWalls(room: Room, walls: THREE.Mesh[]): void {
-  if (walls.length < 4) return;
+  if (walls.length < 3) return;
   const t = WALL_THICKNESS_M;
   const { width, depth, minX, maxX, minZ, maxZ, centerX, centerZ, minY, height } = room;
   const yCenter = minY + height / 2;
-
-  const [front, right, back, left] = walls;
+  const front = walls[0];
+  const right = walls[1];
+  const back = walls.length >= 4 ? walls[2] : null;
+  const left = walls.length >= 4 ? walls[3] : walls[2];
 
   front.geometry.dispose();
   front.geometry = new THREE.BoxGeometry(width, height, t);
@@ -134,12 +145,14 @@ export function positionMainWalls(room: Room, walls: THREE.Mesh[]): void {
   (right.userData.wallLengthMm as number) = depth * 1000;
   (right.userData.wallHeightMm as number) = height * 1000;
 
-  back.geometry.dispose();
-  back.geometry = new THREE.BoxGeometry(width, height, t);
-  back.position.set(centerX, yCenter, maxZ + t / 2);
-  back.rotation.y = 0;
-  (back.userData.wallLengthMm as number) = width * 1000;
-  (back.userData.wallHeightMm as number) = height * 1000;
+  if (back) {
+    back.geometry.dispose();
+    back.geometry = new THREE.BoxGeometry(width, height, t);
+    back.position.set(centerX, yCenter, maxZ + t / 2);
+    back.rotation.y = 0;
+    (back.userData.wallLengthMm as number) = width * 1000;
+    (back.userData.wallHeightMm as number) = height * 1000;
+  }
 
   left.geometry.dispose();
   left.geometry = new THREE.BoxGeometry(depth, height, t);

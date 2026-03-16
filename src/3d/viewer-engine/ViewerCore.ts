@@ -50,7 +50,7 @@ import {
 } from "./materials";
 import type { MaterialMode } from "./materials";
 import type { ViewerBoxEntry } from "./types";
-import { updateBoxGeometry, updateBoxGroup, buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
+import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { RoomBuilder } from "../room/RoomBuilder";
@@ -148,7 +148,7 @@ export class ViewerCore {
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
-  private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotationY: number) => void) | null = null;
+  private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
   private transformControls: TransformControls | null = null;
   /** Helper (Object3D) retornado por getHelper(); é o que é adicionado à cena e tem .visible. */
   private transformControlsHelper: THREE.Object3D | null = null;
@@ -1092,20 +1092,33 @@ export class ViewerCore {
     console.groupEnd();
   }
 
-  private applyRotationIfNeeded(mesh: THREE.Object3D | null | undefined, rotationY?: number): void {
-    if (!mesh) return;
-    if (rotationY == null || !Number.isFinite(rotationY)) return;
-    const previous = this.appliedRotationByMeshUuid.get(mesh.uuid);
-    if (previous != null && Math.abs(previous - rotationY) < 1e-6) {
-      this.incrementRotationDiagnostics(mesh.uuid, "duplicateSkipped");
-      this.logRotationDiagnosticsIfNeeded();
-      return;
+  private applyRotationIfNeeded(
+    mesh: THREE.Object3D | null | undefined,
+    rotation?: { x?: number; y?: number; z?: number }
+  ): void {
+    if (!mesh || !rotation) return;
+    let applied = false;
+    if (rotation.x != null && Number.isFinite(rotation.x)) {
+      mesh.rotation.x = rotation.x;
+      applied = true;
     }
-    mesh.rotation.y = rotationY;
-    mesh.updateMatrixWorld();
-    this.appliedRotationByMeshUuid.set(mesh.uuid, rotationY);
-    this.incrementRotationDiagnostics(mesh.uuid, "applied");
-    this.logRotationDiagnosticsIfNeeded();
+    if (rotation.y != null && Number.isFinite(rotation.y)) {
+      const previous = this.appliedRotationByMeshUuid.get(mesh.uuid);
+      if (previous == null || Math.abs(previous - rotation.y) >= 1e-6) {
+        mesh.rotation.y = rotation.y;
+        this.appliedRotationByMeshUuid.set(mesh.uuid, rotation.y);
+        applied = true;
+      }
+    }
+    if (rotation.z != null && Number.isFinite(rotation.z)) {
+      mesh.rotation.z = rotation.z;
+      applied = true;
+    }
+    if (applied) {
+      mesh.updateMatrixWorld();
+      this.incrementRotationDiagnostics(mesh.uuid, "applied");
+      this.logRotationDiagnosticsIfNeeded();
+    }
   }
 
   setCameraFrontView() {
@@ -1970,7 +1983,11 @@ export class ViewerCore {
       };
     }
     box.position.set(position.x, position.y, position.z);
-    this.applyRotationIfNeeded(box, opts.rotationY);
+    this.applyRotationIfNeeded(box, {
+      x: opts.rotationX,
+      y: opts.rotationY,
+      z: opts.rotationZ,
+    });
     // Registar no BoxManager ANTES de adicionar à cena (getRightmostX e restante lógica usam este mapa).
     this.boxManager.addEntry(id, {
       mesh: box,
@@ -2050,7 +2067,9 @@ export class ViewerCore {
     // Atualização apenas de posição/rotação (ex.: após drag ou sync do projeto). Não fazer rebuild (updateBoxGroup/createDoorObject).
     const onlyTransform =
       opts.position !== undefined ||
+      opts.rotationX !== undefined ||
       opts.rotationY !== undefined ||
+      opts.rotationZ !== undefined ||
       opts.manualPosition !== undefined ||
       opts.costaRotationY !== undefined;
     const hasStructureOpts =
@@ -2085,7 +2104,11 @@ export class ViewerCore {
       } else if (opts.position) {
         entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
       }
-      this.applyRotationIfNeeded(entry.mesh, opts.rotationY);
+      this.applyRotationIfNeeded(entry.mesh, {
+        x: opts.rotationX,
+        y: opts.rotationY,
+        z: opts.rotationZ,
+      });
       if (opts.costaRotationY !== undefined) {
         (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
           Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
@@ -2133,34 +2156,81 @@ export class ViewerCore {
           entry.mesh.position.y = height / 2;
         }
       } else {
-        // Dimensões já resolvidas acima (width/height/depth); garantir que o BoxBuilder receba sempre os valores atuais para recalcular todas as peças.
-        const fullOpts: Partial<BoxOptions> = {
-          width,
-          height,
-          depth,
-          thickness: opts.thickness,
-          shelves: opts.shelves,
-          doorLayerItems: opts.doorLayerItems,
-          drawerLayerItems: opts.drawerLayerItems,
-          drillMarkersByPanel: opts.drillMarkersByPanel,
+        // Reconstrução completa do mesh: remover o antigo, dispor, criar novo do zero.
+        // drillMarkersByPanel deve vir em opts (sync); fallback para entry para não perder furações.
+        // [CORRIGIDO 2026-03] Sempre usar drillMarkersByPanel explícito do options, ou vazio.
+        // Nunca usar entry.drillMarkersByPanel como fallback: isso evita furos congelados ou desatualizados.
+        // O mesh é sempre reconstruído com o estado mais recente vindo do sync.
+        const emptyDrillMarkers: ViewerDrillMarkersByPanel = {
+          cima: [],
+          fundo: [],
+          lateral_esquerda: [],
+          lateral_direita: [],
+          porta: [],
         };
-        if (import.meta.env.DEV && (opts.doorLayerItems?.length ?? 0) > 0) {
-          console.log("[DOOR-MAT] ViewerCore.updateBox fullOpts.doorLayerItems", {
-            boxId: id,
-            doorLayerItems: opts.doorLayerItems?.map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
-          });
+        const drillMarkers: ViewerDrillMarkersByPanel =
+          opts.drillMarkersByPanel ?? emptyDrillMarkers;
+        const savedPosition = new THREE.Vector3().setFromMatrixPosition(entry.mesh.matrixWorld);
+        const savedQuaternion = new THREE.Quaternion().copy(entry.mesh.quaternion);
+        const savedCostaRotationY = (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData?.costaRotationY;
+
+        // Desanexar modelos CAD antes de dispor o mesh (não dispor os GLBs).
+        const cadModels = entry.cadModels ? [...entry.cadModels] : [];
+        cadModels.forEach((m) => {
+          if (m.object.parent) m.object.parent.remove(m.object);
+        });
+
+        this.appliedRotationByMeshUuid.delete(entry.mesh.uuid);
+        this.disposeBoxMeshFromScene(entry.mesh);
+
+        let newBox: THREE.Object3D;
+        if (entry.cadOnly) {
+          newBox = new THREE.Group();
+          newBox.name = id;
+        } else {
+          const materialName = opts.materialName ?? entry.materialName ?? this.defaultMaterialName;
+          const loadedMat = entry.material ?? this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
+          const boxOptions: BoxOptions = {
+            width,
+            height,
+            depth,
+            thickness: opts.thickness ?? 0.019,
+            shelves: opts.shelves,
+            doorLayerItems: opts.doorLayerItems,
+            drawerLayerItems: opts.drawerLayerItems,
+            drillMarkersByPanel: drillMarkers,
+            materialName,
+          };
+          if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
+          newBox = buildBoxLegacy(boxOptions);
+          if (!entry.material && loadedMat) entry.material = loadedMat;
         }
+
+        newBox.frustumCulled = false;
+        newBox.matrixAutoUpdate = true;
+        newBox.visible = true;
+        newBox.layers.set(0);
+        newBox.traverse((child) => child.layers.set(0));
+        newBox.userData.boxId = id;
+        newBox.userData.costaRotationY =
+          opts.costaRotationY != null && Number.isFinite(opts.costaRotationY)
+            ? opts.costaRotationY
+            : savedCostaRotationY ?? 0;
+        newBox.position.copy(savedPosition);
+        newBox.quaternion.copy(savedQuaternion);
+
+        entry.mesh = newBox;
+        entry.drillMarkersByPanel = drillMarkers;
+
+        this.sceneManager.root.add(newBox);
+        cadModels.forEach((m) => newBox.add(m.object));
+
         if (import.meta.env.DEV && dimensionsChanged) {
-          devLogger.debug("[ViewerCore.updateBox] updateBoxGroup (dimensões alteradas)", { boxId: id, width, height, depth });
+          devLogger.debug("[ViewerCore.updateBox] mesh reconstruído (estrutura alterada)", { boxId: id, width, height, depth });
         }
-        const updated =
-          entry.mesh instanceof THREE.Group
-            ? updateBoxGroup(entry.mesh, fullOpts)
-            : updateBoxGeometry(entry.mesh as THREE.Mesh, fullOpts);
-        this.applyPanelVisibilityForObject(entry.mesh);
-        width = updated.width;
-        height = updated.height;
-        depth = updated.depth;
+        // [CORRIGIDO 2026-03] Forçar rebuild completo do Scene Graph após mesh rebuild (sem alterar transforms ou offsets)
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+        this.requestRender();
       }
     }
     if (opts.index !== undefined && opts.index !== entry.index) {
@@ -2211,7 +2281,11 @@ export class ViewerCore {
     if (dimensionsChanged && !entry.manualPosition && !this.shouldUseFeetLock(entry)) {
       entry.mesh.position.y = height / 2;
     }
-    this.applyRotationIfNeeded(entry.mesh, opts.rotationY);
+    this.applyRotationIfNeeded(entry.mesh, {
+      x: opts.rotationX,
+      y: opts.rotationY,
+      z: opts.rotationZ,
+    });
     this.applyPanelIdsToBox(entry.mesh, id, opts.panelIds);
     this.applyExplodedViewForObject(entry.mesh);
     if (opts.costaRotationY !== undefined) {
@@ -2229,6 +2303,13 @@ export class ViewerCore {
     this.syncFeetVisualForBox(entry);
     if (opts.drillMarkersByPanel !== undefined) {
       entry.drillMarkersByPanel = opts.drillMarkersByPanel;
+    }
+    // Recriar overlays de bordas/furos no mesh reconstruído (structureChanged).
+    // applyPanelVisibilityForObject lê entry.drillMarkersByPanel (já atualizado acima)
+    // e mesh.userData.boxId (setado por applyPanelIdsToBox). Deve ser chamado aqui,
+    // pois updateBox não chama applyPanelVisibilityForObject (diferente de addBox).
+    if (structureChanged) {
+      this.applyPanelVisibilityForObject(entry.mesh);
     }
     if (this.lockEnabled) this.applyFloorConstraint(entry.mesh);
     if (dimensionsChanged && entry.cadOnly) {
@@ -2265,7 +2346,53 @@ export class ViewerCore {
       });
     }
     this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+
+    // Forçar render imediato após alteração estrutural (rebuild do mesh) para que furações e geometria nova apareçam sem segunda ação.
+    if (structureChanged) {
+      this.requestRender();
+    }
     return true;
+  }
+
+  /** Agenda um frame de render no próximo requestAnimationFrame. Usado após rebuild de mesh para atualizar a tela imediatamente. */
+  private requestRender(): void {
+    if (this.rafId == null) return;
+    requestAnimationFrame(() => this.renderOneFrame());
+  }
+
+  /** Executa um único frame de render (mesma lógica do loop de animação). */
+  private renderOneFrame(): void {
+    if (this.viewerState.getCurrentMode() === "showcase" && this.composer && this.bokehPass) {
+      this._boundingBox.makeEmpty();
+      this.boxes.forEach((entry) => {
+        this._boundingBox.expandByObject(entry.mesh);
+      });
+      this._boundingBox.getCenter(this._center);
+      const cam = this.cameraManager.camera;
+      const focusDist = cam.position.distanceTo(this._center);
+      (this.bokehPass as { uniforms: Record<string, { value: number }> }).uniforms["focus"].value = focusDist;
+      if (this.turntableEnabled && this.controls?.controls) {
+        const target = this.controls.controls.target;
+        const dx = cam.position.x - target.x;
+        const dz = cam.position.z - target.z;
+        const angle = this.turntableSpeed * 0.01;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        cam.position.x = target.x + dx * cos - dz * sin;
+        cam.position.z = target.z + dx * sin + dz * cos;
+        cam.lookAt(target);
+      }
+      this.composer.render();
+    } else if (!this.ultraPerformanceMode) {
+      if (!this.mainComposer) this.initMainComposer();
+      if (this.mainComposer) {
+        this.mainComposer.render();
+      } else {
+        this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera);
+      }
+    } else {
+      this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera);
+    }
   }
 
   setBoxIndex(id: string, index: number): boolean {
@@ -2278,6 +2405,31 @@ export class ViewerCore {
     return true;
   }
 
+  /** Remove e dispõe geometrias/materiais do mesh da cena (não dispõe entry.material, que é cache). */
+  private disposeBoxMeshFromScene(mesh: THREE.Object3D): void {
+    if (mesh.parent) mesh.parent.remove(mesh);
+    const disposedGeometries = new Set<THREE.BufferGeometry>();
+    const disposedMaterials = new Set<THREE.Material>();
+    mesh.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      if (node.geometry && !disposedGeometries.has(node.geometry)) {
+        node.geometry.dispose();
+        disposedGeometries.add(node.geometry);
+      }
+      if (Array.isArray(node.material)) {
+        node.material.forEach((m) => {
+          if (!disposedMaterials.has(m)) {
+            m.dispose();
+            disposedMaterials.add(m);
+          }
+        });
+      } else if (node.material && !disposedMaterials.has(node.material)) {
+        node.material.dispose();
+        disposedMaterials.add(node.material);
+      }
+    });
+  }
+
   removeBox(id: string): boolean {
     const entry = this.boxes.get(id);
     if (!entry) return false;
@@ -2285,38 +2437,8 @@ export class ViewerCore {
       this.setSelectedBox(null);
     }
     this.clearModelsFromBox(id);
-    this.sceneManager.root.remove(entry.mesh);
+    this.disposeBoxMeshFromScene(entry.mesh);
     this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
-    
-    // Dispose corretamente para grupos e meshes
-    if (entry.mesh instanceof THREE.Group) {
-      entry.mesh.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          if (child.geometry) {
-            child.geometry.dispose();
-          }
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach((material) => material.dispose());
-            } else {
-              child.material.dispose();
-            }
-          }
-        }
-      });
-    } else if (entry.mesh instanceof THREE.Mesh) {
-      if (entry.mesh.geometry) {
-        entry.mesh.geometry.dispose();
-      }
-      if (entry.mesh.material) {
-        if (Array.isArray(entry.mesh.material)) {
-          entry.mesh.material.forEach((material) => material.dispose());
-        } else {
-          entry.mesh.material.dispose();
-        }
-      }
-    }
-    
     if (entry.material) {
       entry.material.textures.forEach((texture) => texture.dispose());
     }
@@ -2336,13 +2458,14 @@ export class ViewerCore {
     this.clearRoomBounds();
   }
 
-  /** Cria a sala com o sistema RoomManager (4 paredes + piso, dimensões editáveis). */
+  /** Cria a sala com o sistema RoomManager. numWalls: 4 = fechada, 3 = sala de estar (aberta, sem parede traseira). */
   createRoomWithDimensions(
     width: number,
     depth: number,
-    height: number
+    height: number,
+    numWalls?: 3 | 4
   ): void {
-    this.roomManager?.createRoom(width, depth, height);
+    this.roomManager?.createRoom(width, depth, height, numWalls ?? 4);
   }
 
   removeRoom(): void {
@@ -2748,7 +2871,7 @@ export class ViewerCore {
     this.onModelLoaded = callback;
   }
 
-  setOnBoxTransform(callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotationY: number) => void) | null): void {
+  setOnBoxTransform(callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null): void {
     this.onBoxTransform = callback;
   }
 
@@ -3532,8 +3655,7 @@ export class ViewerCore {
           }
           this.updateBoxesIntersectingWalls();
         } else if (this.viewerState.getCurrentTool() === "rotate") {
-          obj.rotation.x = 0;
-          obj.rotation.z = 0;
+          // Rotação completa X/Y/Z mantida; estado persiste via onBoxTransform
         }
         return;
       }
@@ -3739,7 +3861,8 @@ export class ViewerCore {
     const entry = this.boxes.get(this.viewerState.getSelectedBox());
     if (!entry) return;
     const { x, y, z } = entry.mesh.position;
-    this.onBoxTransform?.(this.viewerState.getSelectedBox(), { x, y, z }, entry.mesh.rotation.y);
+    const r = entry.mesh.rotation;
+    this.onBoxTransform?.(this.viewerState.getSelectedBox(), { x, y, z }, { x: r.x, y: r.y, z: r.z });
   }
 
   private clearSnapState(object: THREE.Object3D): void {

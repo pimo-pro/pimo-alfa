@@ -34,7 +34,7 @@ export type PimoViewerApi = {
   setModelPosition: (_boxId: string, _modelId: string, _position: { x: number; y: number; z: number }) => boolean;
   setOnBoxSelected: (_callback: (_id: string | null) => void) => void;
   setOnModelLoaded: (_callback: ((_boxId: string, _modelId: string, _object: unknown) => void) | null) => void;
-  setOnBoxTransform: (_callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotationY: number) => void) | null) => void;
+  setOnBoxTransform: (_callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null) => void;
   setOnDoorLayerDoubleClick?: (_callback: ((_boxId: string, _doorLayerId: string) => void) | null) => void;
   setTransformMode: (_mode: "translate" | "rotate" | null) => void;
   selectBox?: (_id: string | null) => void;
@@ -106,7 +106,7 @@ export type PimoViewerApi = {
   setManualWallHidden?: (_active: boolean) => void;
   getManualWallHidden?: () => boolean;
   /** Sala (RoomManager): criar com dimensões, remover, adicionar parede, lock. */
-  createRoomWithDimensions?: (_width: number, _depth: number, _height: number) => void;
+  createRoomWithDimensions?: (_width: number, _depth: number, _height: number, _numWalls?: 3 | 4) => void;
   setRoomDimensions?: (_width: number, _depth: number, _height: number) => void;
   addExtraWall?: () => void;
   setRoomLocked?: (_locked: boolean) => void;

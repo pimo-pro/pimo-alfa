@@ -46,12 +46,9 @@ import {
 } from "../projectHelpers";
 import {
   captureRoomSnapshot,
-  readStoredProjects,
-  writeStoredProjects,
   serializeState,
   reviveState,
   MANUAL_BACKUPS_STORAGE_KEY,
-  type StoredProject,
   type ManualBackupEntry,
 } from "../projectPersistence";
 import {
@@ -61,6 +58,14 @@ import {
   applyDrawerTypeRules,
 } from "../../services/boxLayersService";
 import { wallStore } from "../../stores/wallStore";
+import { getCurrentProjectUser } from "../../core/projects/currentUser";
+import {
+  deleteProjectById,
+  listProjects,
+  loadProjectRecord,
+  renameProjectById,
+  saveProject,
+} from "../../core/projects/projectsClient";
 
 const MAX_HISTORY = 40;
 
@@ -93,7 +98,52 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
 
   return useMemo(() => {
     const a = {} as ProjectActions;
-a.addBox = () => {
+    const buildGeneratedState = (prev: ProjectState): ProjectState => {
+      let prevAdjusted = prev;
+      if (!prev.workspaceBoxes || prev.workspaceBoxes.length === 0) {
+        const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
+        const newBox = createWorkspaceBox(
+          newBoxId,
+          "Caixa 1",
+          prev.dimensoes,
+          prev.material.espessura,
+          0,
+          []
+        );
+        prevAdjusted = {
+          ...prev,
+          workspaceBoxes: [newBox],
+          selectedWorkspaceBoxId: newBox.id,
+          selectedCaixaId: newBox.id,
+          selectedBoxId: newBox.id,
+        };
+      }
+      const boxes = buildBoxesFromWorkspace(prevAdjusted);
+      const selectedWorkspace = getSelectedWorkspaceBox(prevAdjusted);
+      const selectedBoxId =
+        boxes.find((box) => box.id === selectedWorkspace?.id)?.id ?? boxes[0]?.id ?? "";
+      const nextState = {
+        ...prevAdjusted,
+        boxes,
+        selectedBoxId,
+        dimensoes:
+          selectedWorkspace?.dimensoes ??
+          boxes.find((box) => box.id === selectedBoxId)?.dimensoes ??
+          prevAdjusted.dimensoes,
+      };
+      return {
+        ...nextState,
+        ...buildDesignState(nextState),
+        changelog: appendChangelog(prev.changelog, {
+          timestamp: new Date(),
+          type: "calc",
+          message: prev.workspaceBoxes?.length
+            ? "Caixotes recalculados e projeto guardado"
+            : "Nova caixa criada, design gerado e projeto guardado",
+        }),
+      };
+    };
+    a.addBox = () => {
       updateProject((prev) => {
         const rightmostX_m = viewerSync.getRightmostX();
         const { id: newBoxId, index: nextIndex } = getNextWorkspaceBoxId(prev.workspaceBoxes);
@@ -103,6 +153,7 @@ a.addBox = () => {
         const spawn = getSpawnFromSelectedWall(dimensoes);
         const posicaoX_mm =
           spawn?.posicaoX_mm ?? (rightmostX_m + 0.1) * 1000 + dimensoes.largura / 2;
+        const feetHeightMm = 100;
         const newBox = createWorkspaceBox(
           newBoxId,
           defaultModel?.nome ?? `Caixa ${nextIndex}`,
@@ -113,17 +164,23 @@ a.addBox = () => {
           "reta",
           "recuado",
           defaultModel?.id,
-          defaultModel
-            ? {
-                prateleiras: defaultModel.prateleiras,
-                portaTipo: defaultModel.portaTipo,
-                gavetas: defaultModel.gavetas,
-              }
-            : undefined
+          {
+            ...(defaultModel
+              ? {
+                  prateleiras: defaultModel.prateleiras,
+                  portaTipo: defaultModel.portaTipo,
+                  gavetas: defaultModel.gavetas,
+                }
+              : {}),
+            cabinetType: "lower",
+            feetEnabled: true,
+            feetHeight: feetHeightMm,
+            feetOffsetFront: 100,
+          }
         );
         newBox.manualPosition = true;
         newBox.posicaoZ_mm = spawn?.posicaoZ_mm ?? 0;
-        newBox.posicaoY_mm = dimensoes.altura / 2;
+        newBox.posicaoY_mm = feetHeightMm + dimensoes.altura / 2;
         if (spawn) {
           newBox.rotacaoY = spawn.rotacaoY;
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
@@ -435,8 +492,27 @@ a.addBox = () => {
       updateProject((prev) => {
         const selected = prev.workspaceBoxes.find((box) => box.id === boxId);
         if (!selected) return prev;
+        // Módulo de chão (lower): ativar pés por padrão e fixar posição Y para nunca descer ao trocar seleção
+        const isLower = selected.cabinetType === "lower";
+        const feetHeight = Math.max(40, selected.feetHeight ?? (selected.pe_cm ?? 10) * 10);
+        const alturaMm = selected.dimensoes?.altura ?? 0;
+        const fixedY = feetHeight + alturaMm / 2;
+        const workspaceBoxes =
+          isLower && selected.feetEnabled !== false
+            ? prev.workspaceBoxes.map((b) =>
+                b.id !== boxId
+                  ? b
+                  : {
+                      ...b,
+                      feetEnabled: true,
+                      manualPosition: true,
+                      posicaoY_mm: b.posicaoY_mm != null && b.posicaoY_mm > 0 ? b.posicaoY_mm : fixedY,
+                      posicaoZ_mm: b.posicaoZ_mm ?? 0,
+                    }
+              )
+            : prev.workspaceBoxes;
         return recomputeState(
-          prev,
+          { ...prev, workspaceBoxes },
           {
             selectedWorkspaceBoxId: boxId,
             selectedBoxId: prev.boxes.find((box) => box.id === boxId) ? boxId : prev.selectedBoxId,
@@ -802,7 +878,9 @@ a.addBox = () => {
           if (partial.x_mm !== undefined) next.posicaoX_mm = partial.x_mm;
           if (partial.y_mm !== undefined) next.posicaoY_mm = partial.y_mm;
           if (partial.z_mm !== undefined) next.posicaoZ_mm = partial.z_mm ?? 0;
+          if (partial.rotacaoX_rad !== undefined) next.rotacaoX = partial.rotacaoX_rad;
           if (partial.rotacaoY_rad !== undefined) next.rotacaoY = partial.rotacaoY_rad;
+          if (partial.rotacaoZ_rad !== undefined) next.rotacaoZ = partial.rotacaoZ_rad;
           if (partial.manualPosition !== undefined) next.manualPosition = partial.manualPosition;
           if (partial.autoRotateEnabled !== undefined) next.autoRotateEnabled = partial.autoRotateEnabled;
           if (partial.feetEnabled !== undefined) next.feetEnabled = partial.feetEnabled;
@@ -819,6 +897,26 @@ a.addBox = () => {
         });
         return { ...prev, workspaceBoxes };
       }, false);
+    };
+
+    /** Atualiza dimensões: se houver módulo selecionado, atualiza a workspace box (regenera portas/gavetas e layout);
+     * o useCalculadoraSync envia ao viewer um updateBox completo com drillMarkersByPanel recalculados (furações paramétricas). */
+    a.setDimensoes = (dimensoes) => {
+      updateProject((prev) => {
+        const boxId = prev.selectedWorkspaceBoxId;
+        if (boxId) {
+          const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+          if (box?.locked) return prev;
+          const workspaceBoxes = prev.workspaceBoxes.map((b) => {
+            if (b.id !== boxId) return b;
+            const updatedBox = { ...b, dimensoes: { ...b.dimensoes, ...dimensoes } };
+            const layers = regenerateLayersForBox(updatedBox);
+            return { ...updatedBox, ...layers };
+          });
+          return recomputeState(prev, { workspaceBoxes }, true);
+        }
+        return recomputeState(prev, { dimensoes: { ...prev.dimensoes, ...dimensoes } }, true);
+      });
     };
 
     a.setWorkspaceBoxDimensoes = (boxId, dimensoes) => {
@@ -983,48 +1081,7 @@ a.addBox = () => {
     a.gerarDesign = () => {
       updateProject((prev) => {
         try {
-          let prevAdjusted = prev;
-          // Se não há caixas, criar uma nova antes de gerar o design
-          if (!prev.workspaceBoxes || prev.workspaceBoxes.length === 0) {
-            const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
-            const newBox = createWorkspaceBox(
-              newBoxId,
-              "Caixa 1",
-              prev.dimensoes,
-              prev.material.espessura,
-              0,
-              []
-            );
-            prevAdjusted = {
-              ...prev,
-              workspaceBoxes: [newBox],
-              selectedWorkspaceBoxId: newBox.id,
-              selectedCaixaId: newBox.id,
-              selectedBoxId: newBox.id,
-            };
-          }
-          const boxes = buildBoxesFromWorkspace(prevAdjusted);
-          const selectedWorkspace = getSelectedWorkspaceBox(prevAdjusted);
-          const selectedBoxId =
-            boxes.find((box) => box.id === selectedWorkspace?.id)?.id ?? boxes[0]?.id ?? "";
-          const nextState = {
-            ...prevAdjusted,
-            boxes,
-            selectedBoxId,
-            dimensoes:
-              selectedWorkspace?.dimensoes ??
-              boxes.find((box) => box.id === selectedBoxId)?.dimensoes ??
-              prevAdjusted.dimensoes,
-          };
-          return {
-            ...nextState,
-            ...buildDesignState(nextState),
-            changelog: appendChangelog(prev.changelog, {
-              timestamp: new Date(),
-              type: "calc",
-              message: prev.workspaceBoxes?.length ? "Caixotes recalculados" : "Nova caixa criada e design gerado",
-            }),
-          };
+          return buildGeneratedState(prev);
         } catch (error) {
           return {
             ...prev,
@@ -1041,6 +1098,58 @@ a.addBox = () => {
           };
         }
       });
+    };
+
+    a.gerarESalvarDesign = async () => {
+      let generatedState: ProjectState | null = null;
+      updateProject((prev) => {
+        try {
+          const next = buildGeneratedState(prev);
+          generatedState = next;
+          return next;
+        } catch (error) {
+          return {
+            ...prev,
+            erro: error instanceof Error ? error.message : "Erro ao gerar design",
+          };
+        }
+      });
+
+      if (!generatedState) return;
+
+      let thumbnailDataUrl: string | null = null;
+      try {
+        const render = await viewerSync.renderScene({
+          size: "small",
+          background: "white",
+          mode: "pbr",
+          preset: "iso1",
+          watermark: false,
+          shadowIntensity: 1,
+          format: "jpg",
+          quality: 0.72,
+          advancedRealism: false,
+        });
+        thumbnailDataUrl = render?.dataUrl ?? null;
+      } catch {
+        thumbnailDataUrl = null;
+      }
+
+      const snapshot: ProjectSnapshot = {
+        projectState: serializeState(generatedState),
+        viewerSnapshot: viewerSync.saveViewerSnapshot(),
+        roomSnapshot: captureRoomSnapshot(),
+      };
+      const currentUser = getCurrentProjectUser();
+      const saved = await saveProject({
+        name: generatedState.projectName,
+        ownerId: currentUser.ownerId,
+        ownerName: currentUser.ownerName,
+        snapshot,
+        thumbnailDataUrl,
+      });
+      if (!saved) return;
+      setProject((prev) => ({ ...prev, lastAutosaveTime: saved.updatedAt }));
     };
 
     a.exportarPDF = exportActions.exportarPDF;
@@ -1251,17 +1360,14 @@ a.addBox = () => {
         viewerSnapshot: viewerSync.saveViewerSnapshot(),
         roomSnapshot: captureRoomSnapshot(),
       };
-      const name = projectRef.current.projectName?.trim() || "Projeto";
-      const timestamp = new Date().toISOString();
-      const entry: StoredProject = {
-        id: `project-${Date.now()}`,
-        name,
-        createdAt: timestamp,
-        updatedAt: timestamp,
+      const currentUser = getCurrentProjectUser();
+      void saveProject({
+        name: projectRef.current.projectName?.trim() || "Projeto",
+        ownerId: currentUser.ownerId,
+        ownerName: currentUser.ownerName,
         snapshot,
-      };
-      const existing = readStoredProjects();
-      writeStoredProjects([entry, ...existing].slice(0, 50));
+        thumbnailDataUrl: null,
+      });
     };
 
     a.saveManualBackupSnapshot = () => {
@@ -1283,45 +1389,19 @@ a.addBox = () => {
       setProject((prev) => ({ ...prev, lastAutosaveTime: savedAt }));
     };
 
-    a.loadProjectSnapshot = (id) => {
-      const stored = readStoredProjects();
-      const entryIndex = stored.findIndex((item) => item.id === id);
-      const entry = stored[entryIndex];
+    a.loadProjectSnapshot = async (id) => {
+      const entry = await loadProjectRecord(id);
       if (!entry) {
         logProjectProvider("load-project-miss", { id });
         return;
       }
-      const snapshot = entry.snapshot as ProjectSnapshot | ProjectState | unknown;
-      const projectState = snapshot && typeof snapshot === "object" && "projectState" in snapshot
-        ? (snapshot as ProjectSnapshot).projectState
-        : snapshot;
-      const viewerSnapshot =
-        snapshot && typeof snapshot === "object" && "viewerSnapshot" in snapshot
-          ? (snapshot as ProjectSnapshot).viewerSnapshot
-          : null;
-      const hasRoomSnapshot = Boolean(
-        snapshot && typeof snapshot === "object" && "roomSnapshot" in snapshot
-      );
-      const roomSnapshot =
-        snapshot && typeof snapshot === "object" && "roomSnapshot" in snapshot
-          ? (snapshot as ProjectSnapshot).roomSnapshot
-          : undefined;
-      const updatedEntry = {
-        ...entry,
-        updatedAt: new Date().toISOString(),
-      };
-      if (entryIndex >= 0) {
-        const nextStored = [...stored];
-        nextStored[entryIndex] = updatedEntry;
-        writeStoredProjects(nextStored);
-      }
-      viewerSync.restoreViewerSnapshot(viewerSnapshot ?? null);
-      const restored = reviveState(projectState);
+      viewerSync.restoreViewerSnapshot((entry.snapshot.viewerSnapshot ?? null) as ProjectSnapshot["viewerSnapshot"]);
+      const restored = reviveState(entry.snapshot.projectState);
       if (!restored) return;
       logProjectProvider("project-loaded", { id, boxes: restored.workspaceBoxes?.length ?? 0 });
-      if (hasRoomSnapshot) {
-        if (roomSnapshot) {
-          wallStore.getState().loadRoomConfig(roomSnapshot);
+      if (entry.snapshot.roomSnapshot !== undefined) {
+        if (entry.snapshot.roomSnapshot) {
+          wallStore.getState().loadRoomConfig(entry.snapshot.roomSnapshot as import("../projectTypes").RoomSnapshot);
         } else {
           wallStore.getState().clearRoom();
         }
@@ -1443,53 +1523,45 @@ a.addBox = () => {
       });
     };
 
-    a.listSavedProjects = (): SavedProjectInfo[] => {
-      return readStoredProjects().map(({ id, name, createdAt, updatedAt }) => ({
-        id,
-        name,
-        createdAt,
-        updatedAt,
-      }));
+    a.listSavedProjects = async (scope = "mine"): Promise<SavedProjectInfo[]> => {
+      const currentUser = getCurrentProjectUser();
+      const ownerId = scope === "mine" ? currentUser.ownerId : undefined;
+      return listProjects(scope, ownerId);
     };
 
-    a.createNewProject = () => {
+    a.createNewProject = async () => {
       const freshState = applyResultados(defaultState);
-      const timestamp = new Date().toISOString();
-      const entry: StoredProject = {
-        id: `project-${Date.now()}`,
-        name: freshState.projectName,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        snapshot: {
-          projectState: serializeState(freshState),
-          viewerSnapshot: null,
-          roomSnapshot: null,
-        },
+      const snapshot: ProjectSnapshot = {
+        projectState: serializeState(freshState),
+        viewerSnapshot: null,
+        roomSnapshot: null,
       };
+      const currentUser = getCurrentProjectUser();
+      const saved = await saveProject({
+        name: freshState.projectName,
+        ownerId: currentUser.ownerId,
+        ownerName: currentUser.ownerName,
+        snapshot,
+        thumbnailDataUrl: null,
+      });
+      if (!saved) return null;
+
       viewerSync.restoreViewerSnapshot(null);
+      wallStore.getState().clearRoom();
       undoStackRef.current = [];
       redoStackRef.current = [];
-      const existing = readStoredProjects();
-      writeStoredProjects([entry, ...existing].slice(0, 50));
-      updateProject(() => freshState, false);
+      updateProject(() => ({ ...freshState, lastAutosaveTime: saved.updatedAt }), false);
+      return saved;
     };
 
-    a.renameProject = (id, name) => {
+    a.renameProject = async (id, name) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      const stored = readStoredProjects();
-      const nextStored = stored.map((item) =>
-        item.id === id
-          ? { ...item, name: trimmed, updatedAt: new Date().toISOString() }
-          : item
-      );
-      writeStoredProjects(nextStored);
+      await renameProjectById(id, { name: trimmed });
     };
 
-    a.deleteProject = (id) => {
-      const stored = readStoredProjects();
-      const nextStored = stored.filter((item) => item.id !== id);
-      writeStoredProjects(nextStored);
+    a.deleteProject = async (id) => {
+      await deleteProjectById(id);
     };
 
     a.addDoorLayerItem = () => {

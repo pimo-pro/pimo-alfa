@@ -116,8 +116,12 @@ export interface ProjectState {
 export type SavedProjectInfo = {
   id: string;
   name: string;
+  sequence: number;
   createdAt: string;
   updatedAt: string;
+  ownerId: string;
+  ownerName: string;
+  thumbnailDataUrl: string | null;
 };
 
 export type ViewerSnapshot = {
@@ -257,6 +261,10 @@ export type ViewerApi = {
   setHighlightEnabled?: (_enabled: boolean) => void;
   /** Ativa/desativa modo régua (medição). */
   setRulerEnabled?: (_enabled: boolean) => void;
+  /** Ativa/desativa vista explodida. */
+  setExplodedViewEnabled?: (_enabled: boolean) => void;
+  /** Intensidade da vista explodida (0–1). */
+  setExplodedViewIntensity?: (_value: number) => void;
 };
 
 /** Snapshot da sala (paredes + seleção) para persistir com o projeto. */
@@ -380,7 +388,9 @@ export interface ProjectActions {
       x_mm?: number;
       y_mm?: number;
       z_mm?: number;
+      rotacaoX_rad?: number;
       rotacaoY_rad?: number;
+      rotacaoZ_rad?: number;
       manualPosition?: boolean;
       autoRotateEnabled?: boolean;
       feetEnabled?: boolean;
@@ -413,6 +423,7 @@ export interface ProjectActions {
   toggleWorkspaceRotation: (_boxId: string) => void;
   rotateWorkspaceBox: (_boxId: string) => void;
   gerarDesign: () => void;
+  gerarESalvarDesign: () => Promise<void>;
   exportarPDF: () => void;
   exportarPdfTecnico: () => void;
   /** Gera PDF unificado (Técnico + Cutlist em um único ficheiro). */
@@ -447,15 +458,15 @@ export interface ProjectActions {
   saveProjectSnapshot: () => void;
   /** Cria backup manual dedicado (independente do autosave regular). */
   saveManualBackupSnapshot: () => void;
-  loadProjectSnapshot: (_id: string) => void;
+  loadProjectSnapshot: (_id: string) => Promise<void>;
   /** Carrega projeto a partir de um template (limpa sala, caixas e substitui pelo layout do modelo). */
   loadProjectFromTemplate: (_templateId: string) => void;
   /** Adiciona um template como novas caixas no workspace (não substitui o projeto). */
   addTemplateAsNewBox: (_templateId: string) => void;
-  listSavedProjects: () => SavedProjectInfo[];
-  createNewProject: () => void;
-  renameProject: (_id: string, _name: string) => void;
-  deleteProject: (_id: string) => void;
+  listSavedProjects: (_scope?: "mine" | "all") => Promise<SavedProjectInfo[]>;
+  createNewProject: () => Promise<SavedProjectInfo | null>;
+  renameProject: (_id: string, _name: string) => Promise<void>;
+  deleteProject: (_id: string) => Promise<void>;
 }
 
 export interface ProjectContextProps {

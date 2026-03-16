@@ -289,10 +289,9 @@ export function buildPanelDrillingResult(
     }
   }
 
-  const shelfHolesEnabled =
-    input.hasShelves === undefined && input.hasDrawers === undefined
-      ? true
-      : input.hasShelves === true && input.hasDrawers !== true;
+  // Corrigido: furos de prateleira devem ser gerados sempre que hasShelves === true
+  // (mesmo que haja gavetas, pois muitos projetos permitem prateleiras acima de gavetas)
+  const shelfHolesEnabled = input.hasShelves === true;
 
   let furacoesTecnicas: TechnicalDrillHole[] = [];
   try {
@@ -349,6 +348,15 @@ export function buildViewerDrillMarkersByPanelResult(
     return { success: true, data: EMPTY_VIEWER_DRILL_MARKERS };
   }
 
+  if (import.meta.env.DEV) {
+    // Log cutlist recebido
+    console.log("[DRILL-DIAG] buildViewerDrillMarkersByPanelResult: cutList recebido", cutList.map(item => ({
+      id: item.id,
+      tipo: item.tipo,
+      drillHoles: item.drillHoles,
+    })));
+  }
+
   const byType = new Map(cutList.map((item) => [item.tipo, item]));
   const doorTipos = ["porta_simples", "porta_dupla", "porta_correr"];
   const doorItemsInOrder = cutList.filter((item) => doorTipos.includes(item.tipo));
@@ -381,15 +389,20 @@ export function buildViewerDrillMarkersByPanelResult(
     return panelDrillHolesToTechnical(holesToUse, face);
   };
 
+  const result = {
+    cima: getHolesFor("cima"),
+    fundo: getHolesFor("fundo"),
+    lateral_esquerda: getHolesFor("lateral_esquerda"),
+    lateral_direita: getHolesFor("lateral_direita"),
+    porta: portaMerged,
+    portaPerDoor: portaPerDoor.length > 0 ? portaPerDoor : undefined,
+  };
+  if (import.meta.env.DEV) {
+    // Log resultado do mapeamento
+    console.log("[DRILL-DIAG] buildViewerDrillMarkersByPanelResult: drillMarkersByPanel gerado", result);
+  }
   return {
     success: true,
-    data: {
-      cima: getHolesFor("cima"),
-      fundo: getHolesFor("fundo"),
-      lateral_esquerda: getHolesFor("lateral_esquerda"),
-      lateral_direita: getHolesFor("lateral_direita"),
-      porta: portaMerged,
-      portaPerDoor: portaPerDoor.length > 0 ? portaPerDoor : undefined,
-    },
+    data: result,
   };
 }

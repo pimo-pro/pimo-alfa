@@ -128,5 +128,11 @@ export function createViewerApiAdapter(
     setRulerEnabled: (enabled: boolean): void => {
       pimoApi.setRulerEnabled?.(enabled);
     },
+    setExplodedViewEnabled: (enabled: boolean): void => {
+      pimoApi.setExplodedViewEnabled?.(enabled);
+    },
+    setExplodedViewIntensity: (value: number): void => {
+      pimoApi.setExplodedViewIntensity?.(value);
+    },
   };
 }

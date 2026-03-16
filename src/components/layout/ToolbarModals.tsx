@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProject } from "../../context/useProject";
+import type { SavedProjectInfo } from "../../context/projectTypes";
 import { useToast } from "../../context/ToastContext";
 import { usePimoViewerContext } from "../../hooks/usePimoViewerContext";
 import { useToolbarModal } from "../../context/ToolbarModalContext";
@@ -43,7 +44,8 @@ export default function ToolbarModals() {
   const { showToast } = useToast();
   const { viewerApi } = usePimoViewerContext();
   const { modal, openModal, closeModal } = useToolbarModal();
-  const [savedProjects, setSavedProjects] = useState(() => actions.listSavedProjects());
+  const [savedProjects, setSavedProjects] = useState<SavedProjectInfo[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [photoCaptureUrl, setPhotoCaptureUrl] = useState<string | null>(null);
@@ -65,9 +67,22 @@ export default function ToolbarModals() {
     const selectedBoxCutList = project.boxes.find((b) => b.id === project.selectedWorkspaceBoxId)?.cutList;
     return buildViewerDrillMarkersByPanel(selectedBoxCutList);
   }, [project.boxes, project.selectedWorkspaceBoxId]);
-  const refreshSavedProjects = () => {
-    setSavedProjects(actions.listSavedProjects());
+  const refreshSavedProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const items = await actions.listSavedProjects("mine");
+      setSavedProjects(items);
+    } finally {
+      setLoadingProjects(false);
+    }
   };
+
+  useEffect(() => {
+    if (modal === "projects") {
+      void refreshSavedProjects();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modal]);
 
   const resetSendState = () => {
     setSendMethod("download");
@@ -225,13 +240,21 @@ export default function ToolbarModals() {
                   type="button"
                   className="modal-action"
                   onClick={() => {
-                    actions.createNewProject();
-                    refreshSavedProjects();
+                    void actions.createNewProject().then((created) => {
+                      if (created) {
+                        showToast("Novo projeto criado e guardado.", "info");
+                      } else {
+                        showToast("Falha ao criar projeto.", "error");
+                      }
+                      void refreshSavedProjects();
+                    });
                   }}
                 >
                   Criar novo projeto
                 </button>
-                {savedProjects.length === 0 ? (
+                {loadingProjects ? (
+                  <div className="modal-empty">A carregar projetos...</div>
+                ) : savedProjects.length === 0 ? (
                   <div className="modal-empty">Nenhum projeto salvo ainda.</div>
                 ) : (
                   savedProjects.map((project) => (
@@ -250,8 +273,9 @@ export default function ToolbarModals() {
                                 type="button"
                                 className="modal-action"
                                 onClick={() => {
-                                  actions.renameProject(project.id, renameValue);
-                                  refreshSavedProjects();
+                                  void actions.renameProject(project.id, renameValue).then(() => {
+                                    void refreshSavedProjects();
+                                  });
                                   setRenamingId(null);
                                   setRenameValue("");
                                 }}
@@ -288,8 +312,8 @@ export default function ToolbarModals() {
                             type="button"
                             className="modal-action"
                             onClick={() => {
-                              actions.loadProjectSnapshot(project.id);
-                              refreshSavedProjects();
+                              void actions.loadProjectSnapshot(project.id);
+                              void refreshSavedProjects();
                               closeModal();
                             }}
                           >
@@ -310,8 +334,9 @@ export default function ToolbarModals() {
                             className="modal-action"
                             style={{ borderColor: "rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.18)" }}
                             onClick={() => {
-                              actions.deleteProject(project.id);
-                              refreshSavedProjects();
+                              void actions.deleteProject(project.id).then(() => {
+                                void refreshSavedProjects();
+                              });
                             }}
                           >
                             Excluir

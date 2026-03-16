@@ -26,7 +26,7 @@ declare global {
       updateBoxSpacing?: (spacing: number) => void;
       setOnBoxSelected?: (callback: (id: string | null) => void) => void;
       setOnDoorLayerDoubleClick?: (callback: ((boxId: string, doorLayerId: string) => void) | null) => void;
-      setOnBoxTransform?: (callback: ((boxId: string, position: { x: number; y: number; z: number }, rotationY: number) => void) | null) => void;
+      setOnBoxTransform?: (callback: ((boxId: string, position: { x: number; y: number; z: number }, rotation: { x: number; y: number; z: number }) => void) | null) => void;
       setOnModelLoaded?: (callback: ((boxId: string, modelId: string, object: unknown) => void) | null) => void;
       selectBox?: (id: string | null) => void;
       setTransformMode?: (mode: "translate" | "rotate" | null) => void;

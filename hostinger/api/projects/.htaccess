@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Mantém ficheiros físicos acessíveis diretamente.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Encaminha /api/projects e /api/projects/{id} para o front controller.
+RewriteRule ^(.*)$ index.php?path=$1 [QSA,L]

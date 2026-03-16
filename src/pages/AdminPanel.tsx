@@ -11,6 +11,7 @@ import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import EtiquetaDesignerPage from "../components/admin/EtiquetaDesignerPage";
+import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
 
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
@@ -29,7 +30,8 @@ type AdminTab =
   | "Project Progress"
   | "Painel Referência"
   | "System Settings"
-  | "Etiqueta / QR N";
+  | "Etiqueta / QR N"
+  | "Projetos Salvos";
 
 type AdminMenuEntry =
   | { type: "group"; label: string }
@@ -54,6 +56,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Deploy", label: "Deploy", badge: "Experimental" },
   { type: "item", id: "System Settings", label: "System Settings" },
   { type: "item", id: "Etiqueta / QR N", label: "Etiqueta / QR N" },
+  { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
 ];
@@ -71,6 +74,7 @@ const menuIconByTab: Partial<Record<AdminTab, string>> = {
   "Deploy": "🧪",
   "System Settings": "🛠️",
   "Etiqueta / QR N": "🏷️",
+  "Projetos Salvos": "💾",
   "Project Progress": "📈",
   "Painel Referência": "📖",
 };
@@ -237,6 +241,8 @@ export default function AdminPanel() {
             </Suspense>
           ) : active === "Etiqueta / QR N" ? (
             <EtiquetaDesignerPage />
+          ) : active === "Projetos Salvos" ? (
+            <SavedProjectsAdminPage />
           ) : active === "Painel Referência" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <PainelReferencia />

@@ -23,8 +23,18 @@ export function cutlistComPrecoFromBox(
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: box recebido", box);
+    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: rules recebido", rules);
+  }
   const effRules = buildEffectiveDrillingRules(rules);
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: effRules", effRules);
+  }
   const modelo = gerarModeloIndustrial(box, effRules);
+  if (import.meta.env.DEV) {
+    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: modelo.paineis", modelo.paineis);
+  }
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
   const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
   const material = matInfo.label;
@@ -104,7 +114,14 @@ export function cutlistComPrecoFromBox(
     const drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
       ? drillingResult.data.drillHoles
       : [];
-
+    if (import.meta.env.DEV) {
+      // Log de diagnóstico dos furos gerados para cada painel
+      console.log("[DRILL-DIAG] cutlistComPrecoFromBox: drillHoles para painel", {
+        painelId: p.id,
+        tipo: p.tipo,
+        drillHoles,
+      });
+    }
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,

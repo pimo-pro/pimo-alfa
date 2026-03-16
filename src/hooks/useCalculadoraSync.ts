@@ -73,19 +73,37 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
   });
 }
 
-/** Posição EXCLUSIVAMENTE do projeto. manualPosition === true: X = rightmost+100mm, Y = altura/2, Z = 0 (definidos no ProjectProvider). */
+/** Posição do projeto. Sempre envia posição para módulos de chão (lower) e quando manual/feet ativos, para preservar Y/Z ao trocar seleção. */
 function getBoxPositionAndRotation(workspaceBox: WorkspaceBox | undefined): Partial<BoxOptions> {
   if (!workspaceBox) return {};
   const opts: Partial<BoxOptions> = {};
-  if (workspaceBox.manualPosition === true) {
+  const isLower = workspaceBox.cabinetType === "lower";
+  const feetOn = workspaceBox.feetEnabled !== false && isLower;
+  const shouldSendPosition =
+    workspaceBox.manualPosition === true ||
+    (workspaceBox.feetEnabled === true && workspaceBox.posicaoY_mm != null && workspaceBox.posicaoY_mm > 0) ||
+    isLower; // sempre enviar posição para módulos de chão, para nunca resetar Y/Z
+  if (shouldSendPosition) {
     const x = mmToM(workspaceBox.posicaoX_mm ?? 0);
     const z = mmToM(workspaceBox.posicaoZ_mm ?? 0);
     const alturaMm = workspaceBox.dimensoes?.altura ?? 0;
-    const yMm = (workspaceBox.posicaoY_mm != null && workspaceBox.posicaoY_mm > 0) ? workspaceBox.posicaoY_mm : alturaMm / 2;
+    const feetHeight = Math.max(40, workspaceBox.feetHeight ?? (workspaceBox.pe_cm ?? 10) * 10);
+    const yMm =
+      feetOn && (workspaceBox.posicaoY_mm == null || workspaceBox.posicaoY_mm <= 0)
+        ? feetHeight + alturaMm / 2
+        : workspaceBox.posicaoY_mm != null && workspaceBox.posicaoY_mm > 0
+          ? workspaceBox.posicaoY_mm
+          : alturaMm / 2;
     const y = mmToM(yMm);
     opts.position = { x, y, z };
+    if (workspaceBox.rotacaoX != null && Number.isFinite(workspaceBox.rotacaoX)) {
+      opts.rotationX = workspaceBox.rotacaoX;
+    }
     if (workspaceBox.rotacaoY != null && Number.isFinite(workspaceBox.rotacaoY)) {
       opts.rotationY = workspaceBox.rotacaoY;
+    }
+    if (workspaceBox.rotacaoZ != null && Number.isFinite(workspaceBox.rotacaoZ)) {
+      opts.rotationZ = workspaceBox.rotacaoZ;
     }
     if (workspaceBox.costaRotationY != null && Number.isFinite(workspaceBox.costaRotationY)) {
       opts.costaRotationY = workspaceBox.costaRotationY;
@@ -119,6 +137,13 @@ export const useCalculadoraSync = (
   /** Última estrutura conhecida por box id; quando igual, só enviamos position/rotation para evitar rebuild no Viewer. */
   const lastStructureFingerprintRef = useRef<Map<string, string>>(new Map());
 
+  // Atualizar refs durante o render para que o effect de sync use sempre boxes/workspaceBoxes mais recentes
+  // (evita condição de corrida em que o effect roda antes dos refs serem atualizados).
+  boxesRef.current = boxes;
+  workspaceBoxesRef.current = workspaceBoxes;
+  viewerApiRef.current = viewerApi;
+  projectMaterialIdRef.current = projectMaterialId;
+
   useEffect(() => {
     projectMaterialIdRef.current = projectMaterialId;
   }, [projectMaterialId]);
@@ -126,14 +151,6 @@ export const useCalculadoraSync = (
   useEffect(() => {
     viewerApiRef.current = viewerApi;
   }, [viewerApi]);
-
-  useEffect(() => {
-    boxesRef.current = boxes;
-  }, [boxes]);
-
-  useEffect(() => {
-    workspaceBoxesRef.current = workspaceBoxes;
-  }, [workspaceBoxes]);
 
   const syncFromCalculator = useCallback(() => {
     const api = viewerApiRef.current;
@@ -200,12 +217,11 @@ export const useCalculadoraSync = (
         : { cabinetType: null, pe_cm, feetEnabled, feetHeight, feetOffsetFront };
       const rotateOpts = autoRotateEnabled === false ? { autoRotateEnabled: false } : {};
       const locked = wsBox.locked === true;
+      // [CORRIGIDO 2026-03] Sempre recalcular cutlist a partir do box atual (dimensões + layers) para furações paramétricas.
+      // drillMarkersByPanel deve SEMPRE ser recalculado e passado explicitamente para updateBox.
+      // Nunca usar valor antigo/cached: isso garante atualização 100% paramétrica e elimina furos congelados.
       const cutListForBox =
-        box?.cutList && box.cutList.length > 0
-          ? box.cutList
-          : box && rules
-            ? cutlistComPrecoFromBox(box, rules)
-            : [];
+        box && rules ? cutlistComPrecoFromBox(box, rules) : [];
       const drillMarkersByPanel = buildViewerDrillMarkersByPanel(cutListForBox);
       if (!stateRef.current.has(wsBox.id)) {
         api.addBox(wsBox.id, {

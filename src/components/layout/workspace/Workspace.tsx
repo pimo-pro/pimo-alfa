@@ -275,7 +275,7 @@ export default function Workspace({
   }, [project.selectedWorkspaceBoxId, viewerApi]);
 
   useEffect(() => {
-    viewerApi.setOnBoxTransform((boxId, position, rotationY) => {
+    viewerApi.setOnBoxTransform((boxId, position, rotation) => {
       const project = projectRef.current;
       const box = project.workspaceBoxes.find((b) => b.id === boxId);
       if (box?.locked) return;
@@ -283,7 +283,9 @@ export default function Workspace({
         x_mm: mToMm(position.x),
         y_mm: mToMm(position.y),
         z_mm: mToMm(position.z),
-        rotacaoY_rad: rotationY,
+        rotacaoX_rad: rotation.x,
+        rotacaoY_rad: rotation.y,
+        rotacaoZ_rad: rotation.z,
         manualPosition: true,
       });
     });

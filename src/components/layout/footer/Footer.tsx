@@ -6,9 +6,16 @@ interface FooterProps {
   onShowSystemDocs?: () => void;
   onShowAdmin?: () => void;
   onShowAjuda?: () => void;
+  onShowUserProjects?: () => void;
 }
 
-export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin, onShowAjuda }: FooterProps) {
+export default function Footer({
+  onShowAbout,
+  onShowSystemDocs,
+  onShowAdmin,
+  onShowAjuda,
+  onShowUserProjects,
+}: FooterProps) {
   const [version, setVersion] = useState("V4.1.0.2.6");
 
   useEffect(() => {
@@ -58,6 +65,19 @@ export default function Footer({ onShowAbout, onShowSystemDocs, onShowAdmin, onS
           columnGap: 8,
         }}
       >
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={onShowUserProjects}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              onShowUserProjects?.();
+            }
+          }}
+        >
+          Meus Projetos
+        </span>
         <span
           style={{ cursor: "pointer" }}
           onClick={onShowAjuda}

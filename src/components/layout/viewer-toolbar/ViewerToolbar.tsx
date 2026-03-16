@@ -72,10 +72,6 @@ export default function ViewerToolbar() {
       window.location.reload();
       return;
     }
-    if (id === "salvar") {
-      actions.saveProjectSnapshot();
-      return;
-    }
     if (id === "desfazer") {
       actions.undo();
       return;
@@ -222,7 +218,7 @@ export default function ViewerToolbar() {
         <button
           type="button"
           className="button button-primary viewer-action-button"
-          onClick={() => actions.gerarDesign()}
+          onClick={() => void actions.gerarESalvarDesign()}
           disabled={project.estaCarregando}
           style={{
             background: "var(--blue-light)",
@@ -230,7 +226,7 @@ export default function ViewerToolbar() {
             cursor: project.estaCarregando ? "not-allowed" : "pointer",
           }}
         >
-          {project.estaCarregando ? "A Calcular..." : "Gerar Design 3D"}
+          {project.estaCarregando ? "A Calcular..." : "Gerar e Salvar Design"}
         </button>
       </div>
     </div>

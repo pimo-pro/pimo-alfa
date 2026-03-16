@@ -46,8 +46,10 @@ export type BoxOptions = {
   panelIds?: BoxPanelIds;
   /** Se true, não cria geometria paramétrica; o grupo serve apenas para o(s) modelo(s) GLB (caixa = GLB). */
   cadOnly?: boolean;
-  /** Rotação Y em radianos (manipulação visual). */
+  /** Rotação em radianos (manipulação visual 3D). */
+  rotationX?: number;
   rotationY?: number;
+  rotationZ?: number;
   /** Direção da costa (parte traseira) em radianos: 0 | π/2 | π | -π/2. Auto-rotate alinha costa à parede. */
   costaRotationY?: number;
   /** Se true, o viewer não reposiciona esta caixa no reflow. */
