@@ -6,10 +6,7 @@ import type {
   SavedProjectRecord,
 } from "./types";
 
-const PROJECTS_API_BASE =
-  (typeof import.meta !== "undefined" && (import.meta.env?.VITE_PROJECTS_API_BASE as string | undefined))
-    ?.trim()
-    .replace(/\/$/, "") || "https://pimo.pro/api/projects/index.php";
+const PROJECTS_API_BASE = "https://pimo.pro/api/projects/index.php";
 const LEGACY_LOCAL_PROJECTS_KEY = "pimo_saved_projects";
 const LEGACY_SYNC_DONE_KEY = "pimo_projects_remote_sync_done_v1";
 let legacySyncPromise: Promise<void> | null = null;
@@ -110,15 +107,9 @@ function toRecordFromProjectData(project: PimoProjectData): SavedProjectRecord {
   };
 }
 
-function buildProjectsUrl(path = "", query?: URLSearchParams): string {
-  // Corrigido: endpoint permanente da API
-  const normalizedPath = path ? `/${path}` : "";
+function buildProjectsUrl(query?: URLSearchParams): string {
   const queryString = query && query.toString() ? `?${query.toString()}` : "";
-  // Sempre termina em index.php
-  if (PROJECTS_API_BASE.endsWith("index.php")) {
-    return `${PROJECTS_API_BASE}${normalizedPath}${queryString}`;
-  }
-  return `${PROJECTS_API_BASE}/index.php${normalizedPath}${queryString}`;
+  return `${PROJECTS_API_BASE}${queryString}`;
 }
 
 function readCurrentUserForSync(): { ownerId: string; ownerName: string } {
@@ -193,7 +184,7 @@ export async function listProjects(
   await ensureLegacySync();
   const params = new URLSearchParams({ scope });
   if (ownerId) params.set("ownerId", ownerId);
-  const response = await fetch(buildProjectsUrl("", params));
+  const response = await fetch(buildProjectsUrl(params));
   if (!response.ok) return [];
   const payload = (await toJson(response)) as { projects?: unknown[] } | null;
   const rows = Array.isArray(payload?.projects) ? payload.projects : [];
@@ -232,7 +223,8 @@ export async function listProjects(
 
 export async function loadProjectRecord(id: string): Promise<SavedProjectRecord | null> {
   await ensureLegacySync();
-  const response = await fetch(buildProjectsUrl(encodeURIComponent(id)));
+  const params = new URLSearchParams({ action: "load", id });
+  const response = await fetch(buildProjectsUrl(params));
   if (!response.ok) return null;
   const payload = (await toJson(response)) as { project?: unknown } | null;
   const row = asObject(payload?.project);
@@ -269,7 +261,8 @@ export async function saveProject(request: SaveProjectRequest): Promise<SavedPro
 
 export async function renameProjectById(id: string, body: RenameProjectRequest): Promise<boolean> {
   await ensureLegacySync();
-  const response = await fetch(buildProjectsUrl(encodeURIComponent(id)), {
+  const params = new URLSearchParams({ action: "update", id });
+  const response = await fetch(buildProjectsUrl(params), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -279,6 +272,15 @@ export async function renameProjectById(id: string, body: RenameProjectRequest):
 
 export async function deleteProjectById(id: string): Promise<boolean> {
   await ensureLegacySync();
-  const response = await fetch(buildProjectsUrl(encodeURIComponent(id)), { method: "DELETE" });
+  const params = new URLSearchParams({ action: "delete", id });
+  const response = await fetch(buildProjectsUrl(params), { method: "DELETE" });
   return response.ok;
 }
+
+// Aliases explícitos para serviços/hooks que usam nomes semânticos.
+export const fetchProjects = listProjects;
+export const createProject = saveProject;
+export const updateProject = renameProjectById;
+export const deleteProject = deleteProjectById;
+export const saveDesign = saveProject;
+export const loadDesign = loadProjectRecord;
