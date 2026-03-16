@@ -257,10 +257,10 @@ export default function ToolbarModals() {
                 ) : savedProjects.length === 0 ? (
                   <div className="modal-empty">Nenhum projeto salvo ainda.</div>
                 ) : (
-                  savedProjects.map((project) => (
-                    <div key={project.id} className="modal-list-item">
+                  savedProjects.map((projectItem) => (
+                    <div key={projectItem.id} className="modal-list-item">
                       <div className="modal-list-info">
-                        {renamingId === project.id ? (
+                        {renamingId === projectItem.id ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             <input
                               className="input input-sm"
@@ -273,7 +273,7 @@ export default function ToolbarModals() {
                                 type="button"
                                 className="modal-action"
                                 onClick={() => {
-                                  void actions.renameProject(project.id, renameValue).then(() => {
+                                  void actions.renameProject(projectItem.id, renameValue).then(() => {
                                     void refreshSavedProjects();
                                   });
                                   setRenamingId(null);
@@ -296,23 +296,23 @@ export default function ToolbarModals() {
                           </div>
                         ) : (
                           <>
-                            <div className="modal-list-title">{project.name}</div>
+                            <div className="modal-list-title">{projectItem.name}</div>
                             <div className="modal-list-meta">
-                              Criado: {new Date(project.createdAt).toLocaleString("pt-PT")}
+                              Criado: {new Date(projectItem.createdAt).toLocaleString("pt-PT")}
                             </div>
                             <div className="modal-list-meta">
-                              Atualizado: {new Date(project.updatedAt).toLocaleString("pt-PT")}
+                              Atualizado: {new Date(projectItem.updatedAt).toLocaleString("pt-PT")}
                             </div>
                           </>
                         )}
                       </div>
-                      {renamingId !== project.id && (
+                      {renamingId !== projectItem.id && (
                         <div style={{ display: "flex", gap: 6 }}>
                           <button
                             type="button"
                             className="modal-action"
                             onClick={() => {
-                              void actions.loadProjectSnapshot(project.id);
+                              void actions.loadProjectSnapshot(projectItem.id);
                               void refreshSavedProjects();
                               closeModal();
                             }}
@@ -323,8 +323,8 @@ export default function ToolbarModals() {
                             type="button"
                             className="modal-action"
                             onClick={() => {
-                              setRenamingId(project.id);
-                              setRenameValue(project.name);
+                              setRenamingId(projectItem.id);
+                              setRenameValue(projectItem.name);
                             }}
                           >
                             Renomear
@@ -334,7 +334,7 @@ export default function ToolbarModals() {
                             className="modal-action"
                             style={{ borderColor: "rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.18)" }}
                             onClick={() => {
-                              void actions.deleteProject(project.id).then(() => {
+                              void actions.deleteProject(projectItem.id).then(() => {
                                 void refreshSavedProjects();
                               });
                             }}

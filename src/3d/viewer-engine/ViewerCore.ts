@@ -1417,12 +1417,18 @@ export class ViewerCore {
   setHighlightEnabled(enabled: boolean): void {
     this.viewerState.setHighlightEnabled(Boolean(enabled));
     this.highlightManager?.setEnabled(this.viewerState.getHighlightEnabled());
+    this.refreshOutlineTarget();
     this.applyPanelVisibilityForAllBoxes();
   }
 
-  /** Ativa/desativa modo régua (estado apenas; medição a implementar). */
+  /** Ativa/desativa modo régua e limpa seleção interna ao desativar. */
   setRulerEnabled(enabled: boolean): void {
-    this.viewerState.setRulerEnabled(Boolean(enabled));
+    const next = Boolean(enabled);
+    this.viewerState.setRulerEnabled(next);
+    if (!next) {
+      this.internalRulerSelection.clear();
+      this.onRulerTick?.();
+    }
   }
 
   getExplodedViewEnabled(): boolean {

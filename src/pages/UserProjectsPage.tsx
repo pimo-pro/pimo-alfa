@@ -104,10 +104,10 @@ export default function UserProjectsPage() {
                       />
                     ) : null}
                     <div>
-                    <div style={{ fontWeight: 600 }}>{project.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                      #{project.sequence} · {new Date(project.createdAt).toLocaleString("pt-PT")}
-                    </div>
+                      <div style={{ fontWeight: 600 }}>{project.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                        #{project.sequence} · {new Date(project.createdAt).toLocaleString("pt-PT")}
+                      </div>
                     </div>
                   </div>
                   <button

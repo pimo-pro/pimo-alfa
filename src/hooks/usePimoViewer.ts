@@ -27,6 +27,22 @@ const VIEWER_CORE_SETTING_METHODS = [
   "setUltraPerformanceModeOptions", "setUltraPerformanceMode",
 ] as const;
 
+/**
+ * Métodos utilitários do viewerCore que não vêm dos hooks especializados
+ * (e eram servidos por stubs), mas são usados por overlays/medição/sync.
+ */
+const VIEWER_CORE_UTILITY_METHODS = [
+  "getRightmostX",
+  "getSelectedBoxDimensions",
+  "subscribeSelectedBoxChange",
+  "setDimensionsOverlayVisible",
+  "getDimensionsOverlayVisible",
+  "getSelectedBoxScreenPosition",
+  "projectWorldToScreen",
+  "setManualWallHidden",
+  "getManualWallHidden",
+] as const;
+
 /** Stubs para métodos opcionais de PimoViewerApi não expostos pelos hooks (settings, etc.). */
 const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   setPanelEdgesVisible: () => {},
@@ -75,12 +91,19 @@ export function usePimoViewer() {
         ...materials,
         ...ruler,
         ...(viewerCore
-          ? VIEWER_CORE_SETTING_METHODS.reduce<Record<string, unknown>>((acc, name) => {
+          ? [
+              ...VIEWER_CORE_SETTING_METHODS,
+              ...VIEWER_CORE_UTILITY_METHODS,
+            ].reduce<Record<string, unknown>>((acc, name) => {
               const fn = (viewerCore as Record<string, unknown>)[name];
               if (typeof fn === "function") acc[name] = fn.bind(viewerCore);
               return acc;
             }, {})
           : {}),
+        getBoxIdByMesh:
+          viewerCore && typeof (viewerCore as { getBoxIdByMeshPublic?: unknown }).getBoxIdByMeshPublic === "function"
+            ? (viewerCore as { getBoxIdByMeshPublic: (..._args: unknown[]) => unknown }).getBoxIdByMeshPublic.bind(viewerCore)
+            : PIMO_VIEWER_STUBS.getBoxIdByMesh,
       }) as PimoViewerApi,
     [boxes, room, camera, materials, ruler, viewerCore]
   );

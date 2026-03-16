@@ -19,7 +19,9 @@ export class EventsManager {
     pointerdown: (_event: PointerEvent) => void;
     pointermove: (_event: PointerEvent) => void;
     pointerup: (_event: PointerEvent) => void;
+    pointercancel: (_event: PointerEvent) => void;
     pointerleave: () => void;
+    blur: () => void;
   } | null = null;
 
   constructor(engine: IViewerEventEngine) {
@@ -30,7 +32,9 @@ export class EventsManager {
       pointerdown: this.handleCanvasPointerDown.bind(this),
       pointermove: this.handleCanvasPointerMove.bind(this),
       pointerup: this.handleCanvasPointerUp.bind(this),
+      pointercancel: this.handleCanvasPointerUp.bind(this),
       pointerleave: this.handleCanvasPointerLeave.bind(this),
+      blur: this.handleWindowBlur.bind(this),
     };
   }
 
@@ -45,6 +49,9 @@ export class EventsManager {
     canvas.addEventListener("pointerdown", h.pointerdown, true);
     canvas.addEventListener("pointermove", h.pointermove);
     canvas.addEventListener("pointerup", h.pointerup);
+    window.addEventListener("pointerup", h.pointerup);
+    window.addEventListener("pointercancel", h.pointercancel);
+    window.addEventListener("blur", h.blur);
     canvas.addEventListener("pointerleave", h.pointerleave);
   }
 
@@ -57,6 +64,9 @@ export class EventsManager {
     this.canvas.removeEventListener("pointerdown", h.pointerdown, true);
     this.canvas.removeEventListener("pointermove", h.pointermove);
     this.canvas.removeEventListener("pointerup", h.pointerup);
+    window.removeEventListener("pointerup", h.pointerup);
+    window.removeEventListener("pointercancel", h.pointercancel);
+    window.removeEventListener("blur", h.blur);
     this.canvas.removeEventListener("pointerleave", h.pointerleave);
     this.canvas = null;
   }
@@ -287,5 +297,13 @@ export class EventsManager {
       e.getHighlightManager()!.setHovered(null);
     }
     e.setHoveredBox(null);
+  }
+
+  private handleWindowBlur(): void {
+    const e = this.engine;
+    this.isDraggingGizmo = false;
+    this.isDraggingCamera = false;
+    e.setWallGizmoDragging(false);
+    e.setCameraControlsEnabled(true);
   }
 }

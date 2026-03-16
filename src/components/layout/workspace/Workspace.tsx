@@ -385,8 +385,9 @@ const hasShownViewerReadyToastRef = useRef(false);
     [project.viewerSettings.rulerEnabled, viewerApi]
   );
 
-  const handleRulerClick = useCallback(
-    (event: React.MouseEvent) => {
+  const handleRulerPointerDownCapture = useCallback(
+    (event: React.PointerEvent) => {
+      if (event.button !== 0) return;
       if (!project.viewerSettings.rulerEnabled) return;
       const internal = viewerApi.getInternalRulerPickAtPointer?.({ clientX: event.clientX, clientY: event.clientY });
       if (internal) {
@@ -596,7 +597,7 @@ return (
                 setMouseMenuPosition({ x: event.clientX, y: event.clientY });
               }}
               onPointerMove={handleRulerPointerMove}
-              onClick={handleRulerClick}
+              onPointerDownCapture={handleRulerPointerDownCapture}
               style={{
                 position: "absolute",
                 inset: 0,
