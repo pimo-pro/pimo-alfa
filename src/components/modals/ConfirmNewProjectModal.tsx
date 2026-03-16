@@ -17,7 +17,7 @@ export default function ConfirmNewProjectModal({ open, onSave, onDiscard, onCanc
           <button type="button" className="modal-close" onClick={onCancel} aria-label="Fechar">×</button>
         </div>
         <div style={{ marginBottom: 16, fontSize: 13 }}>
-          Existem alterações não guardadas no projeto atual.<br />Deseja guardar antes de criar um novo projeto?
+          Deseja guardar antes de criar um novo?
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button className="modal-action" onClick={onSave}>Guardar e criar novo</button>

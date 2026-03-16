@@ -65,6 +65,7 @@ import {
   loadProjectRecord,
   renameProjectById,
   saveProject,
+  saveSnapshot,
 } from "../../core/projects/projectsClient";
 
 const MAX_HISTORY = 40;
@@ -1148,8 +1149,19 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         snapshot,
         thumbnailDataUrl,
       });
-      if (!saved) return;
-      setProject((prev) => ({ ...prev, lastAutosaveTime: saved.updatedAt }));
+
+      await saveSnapshot({
+        name: generatedState.projectName,
+        ownerId: currentUser.ownerId,
+        ownerName: currentUser.ownerName,
+        snapshot,
+        thumbnailDataUrl: null,
+      });
+
+      setProject((prev) => ({
+        ...prev,
+        lastAutosaveTime: saved?.updatedAt ?? new Date().toISOString(),
+      }));
     };
 
     a.exportarPDF = exportActions.exportarPDF;
@@ -1361,7 +1373,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         roomSnapshot: captureRoomSnapshot(),
       };
       const currentUser = getCurrentProjectUser();
-      void saveProject({
+      void saveSnapshot({
         name: projectRef.current.projectName?.trim() || "Projeto",
         ownerId: currentUser.ownerId,
         ownerName: currentUser.ownerName,
