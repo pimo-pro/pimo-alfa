@@ -174,7 +174,11 @@ export default function ViewerToolbar() {
                 <input
                   type="checkbox"
                   checked={project.viewerSettings.showPanelEdges}
-                  onChange={(e) => actions.setViewerSettings({ showPanelEdges: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    actions.setViewerSettings({ showPanelEdges: checked });
+                    viewerApi?.setPanelEdgesVisible?.(checked);
+                  }}
                 />
                 Mostrar arestas dos painéis
               </label>
@@ -182,7 +186,11 @@ export default function ViewerToolbar() {
                 <input
                   type="checkbox"
                   checked={project.viewerSettings.hideAllPanels}
-                  onChange={(e) => actions.setViewerSettings({ hideAllPanels: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    actions.setViewerSettings({ hideAllPanels: checked });
+                    viewerApi?.setAllPanelsHidden?.(checked);
+                  }}
                 />
                 Esconder todos os painéis
               </label>
@@ -190,7 +198,11 @@ export default function ViewerToolbar() {
                 <input
                   type="checkbox"
                   checked={project.viewerSettings.showCeiling}
-                  onChange={(e) => actions.setViewerSettings({ showCeiling: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    actions.setViewerSettings({ showCeiling: checked });
+                    viewerApi?.setRoomCeilingVisible?.(checked);
+                  }}
                 />
                 Mostrar teto da sala
               </label>
@@ -198,7 +210,11 @@ export default function ViewerToolbar() {
                 <input
                   type="checkbox"
                   checked={project.viewerSettings.wallEditMode}
-                  onChange={(e) => actions.setViewerSettings({ wallEditMode: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    actions.setViewerSettings({ wallEditMode: checked });
+                    viewerApi?.setWallEditMode?.(checked);
+                  }}
                 />
                 Modo edição de paredes
               </label>
@@ -206,7 +222,11 @@ export default function ViewerToolbar() {
                 <input
                   type="checkbox"
                   checked={project.viewerSettings.enableReflections}
-                  onChange={(e) => actions.setViewerSettings({ enableReflections: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    actions.setViewerSettings({ enableReflections: checked });
+                    viewerApi?.setReflectionsEnabled?.(checked);
+                  }}
                 />
                 Reflexos dinâmicos (probe)
               </label>

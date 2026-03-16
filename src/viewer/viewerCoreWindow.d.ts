@@ -45,7 +45,12 @@ declare global {
       getCameraZoom?: () => unknown;
       // Room (useViewerRoom)
       createRoom?: (...args: unknown[]) => unknown;
+      createRoomWithDimensions?: (...args: unknown[]) => unknown;
       removeRoom?: (...args: unknown[]) => unknown;
+      setRoomDimensions?: (...args: unknown[]) => unknown;
+      addExtraWall?: (...args: unknown[]) => unknown;
+      setRoomLocked?: (locked: boolean) => void;
+      getRoomLocked?: () => boolean;
       roomManager?: {
         createRoom?: (...args: unknown[]) => unknown;
         removeRoom?: (...args: unknown[]) => unknown;

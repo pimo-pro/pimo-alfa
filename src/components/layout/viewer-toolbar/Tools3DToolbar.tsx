@@ -325,7 +325,11 @@ export default function Tools3DToolbar({
               <input
                 type="checkbox"
                 checked={project.viewerSettings.explodedViewEnabled}
-                onChange={(e) => actions.setViewerSettings({ explodedViewEnabled: e.target.checked })}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  actions.setViewerSettings({ explodedViewEnabled: enabled });
+                  viewerApi?.setExplodedViewEnabled?.(enabled);
+                }}
               />
               Exploded View
             </label>
@@ -338,11 +342,11 @@ export default function Tools3DToolbar({
                 step={0.01}
                 value={project.viewerSettings.explodedViewIntensity}
                 disabled={!project.viewerSettings.explodedViewEnabled}
-                onChange={(e) =>
-                  actions.setViewerSettings({
-                    explodedViewIntensity: Math.max(0, Math.min(1, Number.parseFloat(e.target.value) || 0)),
-                  })
-                }
+                onChange={(e) => {
+                  const intensity = Math.max(0, Math.min(1, Number.parseFloat(e.target.value) || 0));
+                  actions.setViewerSettings({ explodedViewIntensity: intensity });
+                  viewerApi?.setExplodedViewIntensity?.(intensity);
+                }}
               />
             </label>
           </div>
@@ -355,7 +359,11 @@ export default function Tools3DToolbar({
         title={project.viewerSettings.highlightEnabled ? "Highlight ON (clique para desativar)" : "Highlight OFF (clique para ativar)"}
         aria-label={project.viewerSettings.highlightEnabled ? "Desativar highlight" : "Ativar highlight"}
         aria-pressed={project.viewerSettings.highlightEnabled}
-        onClick={() => actions.toggleHighlight()}
+        onClick={() => {
+          const next = !project.viewerSettings.highlightEnabled;
+          actions.toggleHighlight();
+          viewerApi?.setHighlightEnabled?.(next);
+        }}
         style={{
           ...toolbarButtonStyle,
           background: project.viewerSettings.highlightEnabled ? "rgba(77, 163, 255, 0.25)" : "transparent",
@@ -379,7 +387,11 @@ export default function Tools3DToolbar({
         title={project.viewerSettings.rulerEnabled ? "Régua ON (clique para desativar)" : "Régua OFF (clique para ativar)"}
         aria-label={project.viewerSettings.rulerEnabled ? "Desativar régua" : "Ativar régua"}
         aria-pressed={project.viewerSettings.rulerEnabled}
-        onClick={() => actions.toggleRuler()}
+        onClick={() => {
+          const next = !project.viewerSettings.rulerEnabled;
+          actions.toggleRuler();
+          viewerApi?.setRulerEnabled?.(next);
+        }}
         style={{
           ...toolbarButtonStyle,
           background: project.viewerSettings.rulerEnabled ? "rgba(77, 163, 255, 0.25)" : "transparent",

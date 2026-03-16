@@ -9,7 +9,7 @@ import type {
 const PROJECTS_API_BASE =
   (typeof import.meta !== "undefined" && (import.meta.env?.VITE_PROJECTS_API_BASE as string | undefined))
     ?.trim()
-    .replace(/\/$/, "") || "https://pimo.pro/api/projects";
+    .replace(/\/$/, "") || "https://pimo.pro/api/projects/index.php";
 const LEGACY_LOCAL_PROJECTS_KEY = "pimo_saved_projects";
 const LEGACY_SYNC_DONE_KEY = "pimo_projects_remote_sync_done_v1";
 let legacySyncPromise: Promise<void> | null = null;
@@ -111,9 +111,14 @@ function toRecordFromProjectData(project: PimoProjectData): SavedProjectRecord {
 }
 
 function buildProjectsUrl(path = "", query?: URLSearchParams): string {
+  // Corrigido: endpoint permanente da API
   const normalizedPath = path ? `/${path}` : "";
   const queryString = query && query.toString() ? `?${query.toString()}` : "";
-  return `${PROJECTS_API_BASE}${normalizedPath}${queryString}`;
+  // Sempre termina em index.php
+  if (PROJECTS_API_BASE.endsWith("index.php")) {
+    return `${PROJECTS_API_BASE}${normalizedPath}${queryString}`;
+  }
+  return `${PROJECTS_API_BASE}/index.php${normalizedPath}${queryString}`;
 }
 
 function readCurrentUserForSync(): { ownerId: string; ownerName: string } {

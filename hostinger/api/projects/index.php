@@ -2,14 +2,13 @@
 declare(strict_types=1);
 
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=utf-8");
 
-if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+if (($_SERVER["REQUEST_METHOD"] ?? "") === "OPTIONS") {
     http_response_code(200);
-    echo json_encode(["ok" => true], JSON_UNESCAPED_UNICODE);
-    exit;
+    exit();
 }
 
 const MAX_PROJECTS = 2000;

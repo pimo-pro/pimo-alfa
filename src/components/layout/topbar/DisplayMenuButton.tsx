@@ -5,9 +5,11 @@ import type {
   ViewerMaterialQuality,
 } from "../../../context/projectTypes";
 import { useProject } from "../../../context/useProject";
+import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 
 export default function DisplayMenuButton() {
   const { actions, project } = useProject();
+  const { viewerApi } = usePimoViewerContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -32,6 +34,11 @@ export default function DisplayMenuButton() {
         enabled: next,
       },
     });
+    viewerApi?.setUltraPerformanceModeOptions?.({
+      ...project.viewerSettings.ultraPerformanceModeOptions,
+      enabled: next,
+    });
+    viewerApi?.setUltraPerformanceMode?.(next);
   };
 
   const restoreDefaultVisualMode = () => {
@@ -44,6 +51,14 @@ export default function DisplayMenuButton() {
         mode: "balanced",
       },
     });
+    viewerApi?.setBackgroundMode?.("studio");
+    viewerApi?.setMaterialQuality?.("standard");
+    viewerApi?.setReflectionsEnabled?.(false);
+    viewerApi?.setUltraPerformanceModeOptions?.({
+      enabled: false,
+      mode: "balanced",
+    });
+    viewerApi?.setUltraPerformanceMode?.(false);
     setMenuOpen(false);
   };
 
@@ -80,7 +95,11 @@ export default function DisplayMenuButton() {
               Background
               <select
                 value={project.viewerSettings.backgroundMode}
-                onChange={(e) => actions.setViewerSettings({ backgroundMode: e.target.value as ViewerBackgroundMode })}
+                onChange={(e) => {
+                  const value = e.target.value as ViewerBackgroundMode;
+                  actions.setViewerSettings({ backgroundMode: value });
+                  viewerApi?.setBackgroundMode?.(value);
+                }}
                 className="input input-sm"
               >
                 <option value="studio">Studio</option>
@@ -94,7 +113,11 @@ export default function DisplayMenuButton() {
               Qualidade de Material
               <select
                 value={project.viewerSettings.materialQuality}
-                onChange={(e) => actions.setViewerSettings({ materialQuality: e.target.value as ViewerMaterialQuality })}
+                onChange={(e) => {
+                  const value = e.target.value as ViewerMaterialQuality;
+                  actions.setViewerSettings({ materialQuality: value });
+                  viewerApi?.setMaterialQuality?.(value);
+                }}
                 className="input input-sm"
               >
                 <option value="standard">Standard</option>
@@ -108,13 +131,20 @@ export default function DisplayMenuButton() {
               <select
                 value={project.viewerSettings.ultraPerformanceModeOptions.mode}
                 onChange={(e) =>
+                {
+                  const mode = e.target.value as UltraPerformanceInternalMode;
                   actions.setViewerSettings({
                     ultraPerformanceModeOptions: {
                       enabled: true,
-                      mode: e.target.value as UltraPerformanceInternalMode,
+                      mode,
                     },
-                  })
-                }
+                  });
+                  viewerApi?.setUltraPerformanceModeOptions?.({
+                    enabled: true,
+                    mode,
+                  });
+                  viewerApi?.setUltraPerformanceMode?.(true);
+                }}
                 className="input input-sm"
               >
                 <option value="balanced">Balanced</option>
