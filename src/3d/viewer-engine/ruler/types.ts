@@ -40,6 +40,13 @@ export type RulerManagerMeasurement = {
   pointB: THREE.Vector3;
 };
 
+/** Ponto de ancoragem válido para a régua manual (nunca no vazio). */
+export type RulerManagerAnchor = {
+  point: THREE.Vector3;
+  object: THREE.Object3D;
+  type: RulerPickType;
+};
+
 /** Resultado bruto do RulerManager: todas as medições candidatas. */
 export type RulerManagerResult = {
   horizontalLeft: RulerManagerMeasurement | null;
@@ -48,6 +55,21 @@ export type RulerManagerResult = {
   back: RulerManagerMeasurement | null;
   floor: RulerManagerMeasurement | null;
   ceiling: RulerManagerMeasurement | null;
+};
+
+/** Dependências injetadas no novo RulerManager. */
+export type RulerManagerDependencies = {
+  scene: THREE.Scene;
+  camera: THREE.Camera;
+  transformControls: import("three/examples/jsm/controls/TransformControls.js").TransformControls | null;
+  viewerBoxManager: import("../box/BoxManager").ViewerBoxManager;
+  roomManager: import("../../room/RoomManager").RoomManager | null;
+};
+
+export type RulerManagerSnapshot = {
+  auto: RulerManagerResult;
+  manual: RulerManagerMeasurement | null;
+  manualEnabled: boolean;
 };
 
 // --- Régua interna (medição dentro do box) ---

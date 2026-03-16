@@ -30,8 +30,7 @@ import type { IViewerEventEngine } from "./events/EventEngineTypes";
 import { ViewerTools } from "./tools";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
 import {
-  getRulerEdgeAtPointer as rulerGetEdgeAtPointer,
-  getRulerMeasurementsFromManager,
+  RulerManager,
   pickInternalAtPointer,
   SelectionManager,
 } from "./ruler";
@@ -164,6 +163,7 @@ export class ViewerCore {
   private outlineTargetOpacity = 0;
   private onRoomElementPlaced: ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null = null;
   private onRulerTick: (() => void) | null = null;
+  private rulerManager: RulerManager | null = null;
   private readonly internalRulerSelection = new SelectionManager();
   private onRoomElementSelected: ((_data: { elementId: string; wallId: number; type: "door" | "window"; config: DoorWindowConfig } | null) => void) | null = null;
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
@@ -413,6 +413,12 @@ export class ViewerCore {
       this.viewerTools.applyCurrentTool();
       this.logTransformDiagnostic("drag(objectChange)");
     });
+    this.transformControls.addEventListener("change", () => {
+      this.rulerManager?.updateMeasurements();
+      if (this.viewerState.getRulerEnabled()) {
+        this.onRulerTick?.();
+      }
+    });
     this.transformControlsHelper = this.transformControls.getHelper();
     this.transformControlsHelper.visible = false;
     this.sceneManager.scene.add(this.transformControlsHelper);
@@ -427,6 +433,13 @@ export class ViewerCore {
     this.setWallEditMode(false);
 
     this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
+    this.rulerManager = new RulerManager({
+      scene: this.sceneManager.scene,
+      camera: this.cameraManager.camera,
+      transformControls: this.transformControls,
+      viewerBoxManager: this.boxManager,
+      roomManager: this.roomManager,
+    });
     if (import.meta.env.DEV) {
       this.snapDebugOverlay = new SnapDebugOverlay();
     }
@@ -1425,6 +1438,9 @@ export class ViewerCore {
   setRulerEnabled(enabled: boolean): void {
     const next = Boolean(enabled);
     this.viewerState.setRulerEnabled(next);
+    this.rendererManager.renderer.domElement.style.cursor = next ? "crosshair" : "";
+    if (next) this.rulerManager?.enable();
+    else this.rulerManager?.disable();
     if (!next) {
       this.internalRulerSelection.clear();
       this.onRulerTick?.();
@@ -3962,6 +3978,13 @@ export class ViewerCore {
 
   private getHighlightIntersects(event: { clientX: number; clientY: number }): THREE.Intersection[] {
     const canvas = this.rendererManager.renderer.domElement;
+    if (this.viewerState.getRulerEnabled()) {
+      const evtType = "type" in event ? (event as { type?: string }).type : undefined;
+      if (evtType === "pointermove") {
+        this.rulerManager?.onPointerMove(event, canvas);
+      }
+      return [];
+    }
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return [];
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -3975,6 +3998,17 @@ export class ViewerCore {
 
   private getBoxIdAtPointer(event: { clientX: number; clientY: number }) {
     const canvas = this.rendererManager.renderer.domElement;
+    if (this.viewerState.getRulerEnabled()) {
+      const evtType = "type" in event ? (event as { type?: string }).type : undefined;
+      if (evtType === "pointerdown") {
+        this.rulerManager?.onPointerDown(event, canvas);
+        this.viewerState.setSuppressNextCanvasClick(true);
+      } else {
+        this.rulerManager?.onPointerMove(event, canvas);
+      }
+      this.onRulerTick?.();
+      return null;
+    }
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -4016,27 +4050,13 @@ export class ViewerCore {
   getRulerEdgeAtPointer(event: { clientX: number; clientY: number }): RulerEdgePickResult | null {
     if (!this.viewerState.getRulerEnabled()) return null;
     const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    const roots = this.getHighlightRaycastRoots();
-    const getBboxRoot = (hitObject: THREE.Object3D): THREE.Object3D => {
-      const boxId = this.getBoxIdByMesh(hitObject);
-      if (boxId) {
-        const entry = this.boxes.get(boxId);
-        if (entry?.mesh) return entry.mesh;
-      }
-      return hitObject;
+    const anchor = this.rulerManager?.getSnapPoint(event, canvas);
+    if (!anchor) return null;
+    return {
+      point: anchor.point.clone(),
+      object: anchor.object,
+      type: anchor.type,
     };
-    return rulerGetEdgeAtPointer(
-      this.raycaster,
-      this.pointer,
-      this.cameraManager.camera,
-      roots,
-      getBboxRoot
-    );
   }
 
   /** Picking interno (vértice/edge/face) apenas em meshes de caixas. Para régua interna. */
@@ -4076,7 +4096,7 @@ export class ViewerCore {
 
   /** Medição A↔B em mm quando ambos definidos. */
   getInternalRulerMeasurement(): { pointA: THREE.Vector3; pointB: THREE.Vector3; distanceMm: number } | null {
-    return this.internalRulerSelection.getMeasurement();
+    return this.rulerManager?.getManualMeasurement() ?? this.internalRulerSelection.getMeasurement();
   }
 
   /**
@@ -4090,47 +4110,16 @@ export class ViewerCore {
    * Mediçõees automáticas (RulerManager): candidatas horizontal esq/dir, frente/trás, chão/teto.
    */
   getRulerMeasurements(referenceBoxId: string | null): RulerManagerResult {
-    const empty: RulerManagerResult = {
-      horizontalLeft: null,
-      horizontalRight: null,
-      front: null,
-      back: null,
-      floor: null,
-      ceiling: null,
-    };
-    if (!referenceBoxId) return empty;
-    const entry = this.boxes.get(referenceBoxId);
-    if (!entry?.mesh) return empty;
-    entry.mesh.updateMatrixWorld(true);
-    this._boundingBox.setFromObject(entry.mesh);
-    const box: { min: THREE.Vector3; max: THREE.Vector3; center: THREE.Vector3 } = {
-      min: this._boundingBox.min.clone(),
-      max: this._boundingBox.max.clone(),
-      center: this._boundingBox.getCenter(new THREE.Vector3()),
-    };
-    const roomBounds = this.roomBounds
-      ? {
-          minX: this.roomBounds.minX,
-          maxX: this.roomBounds.maxX,
-          minY: this.roomBounds.minY,
-          maxY: this.roomBounds.maxY,
-          minZ: this.roomBounds.minZ,
-          maxZ: this.roomBounds.maxZ,
-        }
-      : null;
-    const otherBoxes = Array.from(this.boxes.entries())
-      .filter(([id]) => id !== referenceBoxId)
-      .map(([, e]) => {
-        e.mesh.updateMatrixWorld(true);
-        this._boxSingle.setFromObject(e.mesh);
-        return {
-          min: this._boxSingle.min.clone(),
-          max: this._boxSingle.max.clone(),
-          centerX: (this._boxSingle.min.x + this._boxSingle.max.x) * 0.5,
-        };
-      })
-      .sort((a, b) => a.centerX - b.centerX);
-    return getRulerMeasurementsFromManager(box, roomBounds, otherBoxes);
+    return (
+      this.rulerManager?.getAutoMeasurements(referenceBoxId) ?? {
+        horizontalLeft: null,
+        horizontalRight: null,
+        front: null,
+        back: null,
+        floor: null,
+        ceiling: null,
+      }
+    );
   }
 
   /** Obtém doorLayerId subindo na hierarquia (mesh → pivot door-layer-* → …). Usado por getContextMenuLayerHit e getDoorHitAtPointer. */
@@ -4815,6 +4804,10 @@ export class ViewerCore {
     if (this.roomManager) {
       this.roomManager.removeRoom();
       this.roomManager = null;
+    }
+    if (this.rulerManager) {
+      this.rulerManager.dispose();
+      this.rulerManager = null;
     }
     this.snapshotRenderer = null;
     this.selectedBoxChangeListeners.clear();

@@ -1,19 +1,21 @@
 /**
- * Funções utilitárias para cálculo de distâncias no sistema de régua.
- * Ponto↔ponto, ponto↔segmento, segmento↔segmento.
+ * Utilitários de medição em world-space para a régua.
+ * Todas as distâncias são calculadas em metros e convertidas para mm na apresentação.
  */
 
 import * as THREE from "three";
 import type { RulerDistanceResult, RulerMeasurementType } from "./types";
 
+export const M_TO_MM = 1000;
+const EPS = 1e-9;
 const _v0 = new THREE.Vector3();
 const _v1 = new THREE.Vector3();
 const _closest = new THREE.Vector3();
 
-/**
- * Deriva o tipo de medição a partir do vetor direção (B - A).
- * horizontal = dominante em X, vertical = dominante em Y, profundidade = dominante em Z.
- */
+export function toMmRound(meters: number): number {
+  return Math.round(meters * M_TO_MM);
+}
+
 export function getMeasurementType(delta: THREE.Vector3): RulerMeasurementType {
   const ax = Math.abs(delta.x);
   const ay = Math.abs(delta.y);
@@ -23,50 +25,35 @@ export function getMeasurementType(delta: THREE.Vector3): RulerMeasurementType {
   return "horizontal";
 }
 
-/**
- * Ponto mais próximo no segmento [segStart, segEnd] ao ponto p (clamp ao segmento).
- */
-function closestPointOnSegment(
+export function closestPointOnSegment(
   segStart: THREE.Vector3,
   segEnd: THREE.Vector3,
-  p: THREE.Vector3,
+  point: THREE.Vector3,
   out: THREE.Vector3
 ): void {
   _v0.subVectors(segEnd, segStart);
-  _v1.subVectors(p, segStart);
-  const len = _v0.length();
-  if (len < 1e-8) {
+  _v1.subVectors(point, segStart);
+  const lenSq = _v0.lengthSq();
+  if (lenSq < EPS) {
     out.copy(segStart);
     return;
   }
-  let t = _v1.dot(_v0) / (len * len);
+  let t = _v1.dot(_v0) / lenSq;
   t = Math.max(0, Math.min(1, t));
   out.copy(segStart).addScaledVector(_v0, t);
 }
 
-/**
- * Distância entre dois pontos.
- * Retorna distância em metros, pointA = pA, pointB = pB, e o tipo de medição segundo a direção.
- */
-export function distancePointToPoint(
-  pA: THREE.Vector3,
-  pB: THREE.Vector3
-): RulerDistanceResult {
+export function distancePointToPoint(pA: THREE.Vector3, pB: THREE.Vector3): RulerDistanceResult {
   const distance = pA.distanceTo(pB);
   _v0.subVectors(pB, pA);
-  const measurementType = distance < 1e-9 ? "horizontal" : getMeasurementType(_v0);
   return {
     distance,
     pointA: pA.clone(),
     pointB: pB.clone(),
-    measurementType,
+    measurementType: distance < EPS ? "horizontal" : getMeasurementType(_v0),
   };
 }
 
-/**
- * Distância entre um ponto e um segmento (edge).
- * pointA = ponto dado, pointB = ponto mais próximo no segmento.
- */
 export function distancePointToSegment(
   point: THREE.Vector3,
   segStart: THREE.Vector3,
@@ -75,20 +62,14 @@ export function distancePointToSegment(
   closestPointOnSegment(segStart, segEnd, point, _closest);
   const distance = point.distanceTo(_closest);
   _v0.subVectors(_closest, point);
-  const measurementType = distance < 1e-9 ? "horizontal" : getMeasurementType(_v0);
   return {
     distance,
     pointA: point.clone(),
     pointB: _closest.clone(),
-    measurementType,
+    measurementType: distance < EPS ? "horizontal" : getMeasurementType(_v0),
   };
 }
 
-/**
- * Distância entre dois segmentos (edge ↔ edge).
- * Retorna os dois pontos mais próximos (um em cada segmento) e a distância entre eles.
- * Usa resolução analítica; quando segmentos são paralelos, testa extremos.
- */
 export function distanceSegmentToSegment(
   seg1Start: THREE.Vector3,
   seg1End: THREE.Vector3,
@@ -110,11 +91,10 @@ export function distanceSegmentToSegment(
   let t: number;
 
   if (det < 1e-12) {
-    // Segmentos (quase) paralelos: testar s=0, s=1 e t=0, t=1 e ficar com o par de menor distância
     let bestDistSq = Infinity;
     let bestS = 0;
     let bestT = 0;
-    const tryPair = (sVal: number, tVal: number) => {
+    const test = (sVal: number, tVal: number) => {
       const pa = new THREE.Vector3().copy(seg1Start).addScaledVector(u, sVal);
       const pb = new THREE.Vector3().copy(seg2Start).addScaledVector(v, tVal);
       const dsq = pa.distanceToSquared(pb);
@@ -125,35 +105,49 @@ export function distanceSegmentToSegment(
       }
     };
     if (c > 1e-12) {
-      tryPair(0, Math.max(0, Math.min(1, e / c)));
-      tryPair(1, Math.max(0, Math.min(1, (b + e) / c)));
+      test(0, Math.max(0, Math.min(1, e / c)));
+      test(1, Math.max(0, Math.min(1, (b + e) / c)));
     } else {
-      tryPair(0, 0);
-      tryPair(1, 0);
+      test(0, 0);
+      test(1, 0);
     }
     if (a > 1e-12) {
-      tryPair(Math.max(0, Math.min(1, -d / a)), 0);
-      tryPair(Math.max(0, Math.min(1, (b - d) / a)), 1);
+      test(Math.max(0, Math.min(1, -d / a)), 0);
+      test(Math.max(0, Math.min(1, (b - d) / a)), 1);
     }
     s = bestS;
     t = bestT;
   } else {
-    s = (b * e - c * d) / det;
-    t = (a * e - b * d) / det;
-    s = Math.max(0, Math.min(1, s));
-    t = Math.max(0, Math.min(1, t));
+    s = Math.max(0, Math.min(1, (b * e - c * d) / det));
+    t = Math.max(0, Math.min(1, (a * e - b * d) / det));
   }
 
   const pointA = new THREE.Vector3().copy(seg1Start).addScaledVector(u, s);
   const pointB = new THREE.Vector3().copy(seg2Start).addScaledVector(v, t);
   const distance = pointA.distanceTo(pointB);
   const delta = new THREE.Vector3().subVectors(pointB, pointA);
-  const measurementType = distance < 1e-9 ? "horizontal" : getMeasurementType(delta);
-
   return {
     distance,
     pointA,
     pointB,
-    measurementType,
+    measurementType: distance < EPS ? "horizontal" : getMeasurementType(delta),
   };
+}
+
+export function buildWorldBox(object: THREE.Object3D): THREE.Box3 {
+  const box = new THREE.Box3();
+  object.updateMatrixWorld(true);
+  box.setFromObject(object);
+  return box;
+}
+
+export function overlapRange(aMin: number, aMax: number, bMin: number, bMax: number): [number, number] | null {
+  const min = Math.max(aMin, bMin);
+  const max = Math.min(aMax, bMax);
+  if (max < min) return null;
+  return [min, max];
+}
+
+export function centerOfRange(min: number, max: number): number {
+  return (min + max) * 0.5;
 }

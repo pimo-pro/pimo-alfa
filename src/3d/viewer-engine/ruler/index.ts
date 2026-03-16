@@ -4,6 +4,7 @@
 
 export { getRulerEdgeAtPointer } from "./EdgePicker";
 export { getRulerMeasurements as getRulerMeasurementsFromManager } from "./RulerManager";
+export { RulerManager } from "./RulerManager";
 export { pickInternalAtPointer } from "./InternalPicker";
 export { SelectionManager } from "./SelectionManager";
 export {
@@ -17,6 +18,9 @@ export type {
   RulerEdgePickResult,
   RulerManagerMeasurement,
   RulerManagerResult,
+  RulerManagerAnchor,
+  RulerManagerDependencies,
+  RulerManagerSnapshot,
   RulerMeasurementType,
   RulerPickType,
   InternalRulerPickType,
