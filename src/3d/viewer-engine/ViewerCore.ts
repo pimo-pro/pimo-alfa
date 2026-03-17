@@ -401,6 +401,8 @@ export class ViewerCore {
         if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
       }
       this.viewerTools.applyCurrentTool();
+      // Keep external listeners (Workspace/RulerSystem) in sync during drag.
+      this.notifyBoxTransform();
       this.logTransformDiagnostic("drag(objectChange)");
     });
     this.transformControls.addEventListener("change", () => {
