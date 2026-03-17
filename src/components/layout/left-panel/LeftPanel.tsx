@@ -633,7 +633,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
           className="button button-primary"
           style={{ width: "100%", marginTop: 8 }}
         >
-          {project.estaCarregando ? "A calcular…" : "Gerar e Salvar Design"}
+          Gerar e Salvar Design
         </button>
       </aside>
         </div>

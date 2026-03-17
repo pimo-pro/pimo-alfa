@@ -15,7 +15,6 @@ export class ViewerState {
   private transformMode: TransformMode = null;
   private placementMode: PlacementMode = null;
   private highlightEnabled = false;
-  private rulerEnabled = false;
   private suppressNextCanvasClick = false;
   private transformControlsDragging = false;
   private wallGizmoDragging = false;
@@ -76,13 +75,6 @@ export class ViewerState {
   }
   setHighlightEnabled(v: boolean): void {
     this.highlightEnabled = v;
-  }
-
-  getRulerEnabled(): boolean {
-    return this.rulerEnabled;
-  }
-  setRulerEnabled(v: boolean): void {
-    this.rulerEnabled = v;
   }
 
   getSuppressNextCanvasClick(): boolean {

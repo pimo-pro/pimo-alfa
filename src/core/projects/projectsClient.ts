@@ -593,7 +593,10 @@ export function subscribeProjectsSyncStatus(
   };
 }
 
-export function saveProjectOffline(request: SaveProjectRequest): SavedProjectRecord {
+export function saveProjectOffline(
+  request: SaveProjectRequest,
+  source: "project" | "snapshot" = "project"
+): SavedProjectRecord {
   ensureSyncLoopStarted();
   const timestamp = nowIso();
   const id = makeId("local");
@@ -615,13 +618,13 @@ export function saveProjectOffline(request: SaveProjectRequest): SavedProjectRec
   writeOfflineProjects(projects);
   setSyncStatus({
     state: "saved_local",
-    message: "Guardado localmente",
+    message: source === "snapshot" ? "Snapshot criado" : "Projeto guardado localmente",
   });
   return toSavedRecordFromOffline(record);
 }
 
 export function saveSnapshotOffline(request: SaveProjectRequest): SavedProjectRecord {
-  return saveProjectOffline(request);
+  return saveProjectOffline(request, "snapshot");
 }
 
 export function loadProjectsOffline(
@@ -837,7 +840,7 @@ export async function syncQueue(): Promise<void> {
         if (entry.retries >= 5) {
           setSyncStatus({
             state: "error",
-            message: `Erro ao sincronizar: ${nextQueue[index].lastError ?? "desconhecido"}`,
+            message: "Erro ao sincronizar",
           });
           break;
         }

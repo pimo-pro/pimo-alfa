@@ -5,14 +5,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
+import { useToast } from "../../../context/ToastContext";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import { VIEWER_TOOLBAR_ITEMS } from "../../../constants/toolbarConfig";
-import {
-  getProjectsSyncStatus,
-  subscribeProjectsSyncStatus,
-  type ProjectsSyncStatus,
-} from "../../../core/projects/projectsClient";
+import { subscribeProjectsSyncStatus } from "../../../core/projects/projectsClient";
 import type { ToolbarActionId } from "../../../constants/toolbarConfig";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
@@ -21,15 +18,16 @@ import ConfirmNewProjectModal from "../../modals/ConfirmNewProjectModal";
 
 export default function ViewerToolbar() {
   const { actions, project } = useProject();
+  const { showToast } = useToast();
   const { openModal } = useToolbarModal();
   const { viewerApi } = usePimoViewerContext();
   const [photoModeOpen, setPhotoModeOpen] = useState(false);
   const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<ProjectsSyncStatus>(() => getProjectsSyncStatus());
   const photoModeContainerRef = useRef<HTMLDivElement | null>(null);
   const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
   const autosaveRunningRef = useRef(false);
+  const lastToastKeyRef = useRef<string>("");
 
   const actionsRef = useRef(actions);
   const viewerApiRef = useRef(viewerApi);
@@ -67,9 +65,40 @@ export default function ViewerToolbar() {
   }, []);
 
   useEffect(() => {
-    const unsub = subscribeProjectsSyncStatus((status) => setSyncStatus(status));
+    const unsub = subscribeProjectsSyncStatus((status) => {
+      const baseKey = `${status.state}|${status.pending}|${status.message}|${status.online}`;
+      if (lastToastKeyRef.current === baseKey) return;
+      lastToastKeyRef.current = baseKey;
+
+      if (status.state === "saved_local") {
+        showToast("Guardado", "info", 2200);
+        if (status.message === "Projeto guardado localmente" || status.message === "Snapshot criado") {
+          showToast(status.message, "info", 2800);
+        }
+        return;
+      }
+      if (status.state === "syncing") {
+        showToast("A sincronizar...", "info", 2200);
+        return;
+      }
+      if (!status.online || status.state === "awaiting_network") {
+        showToast("Offline (guardado localmente)", "warning", 3200);
+        return;
+      }
+      if (status.state === "idle" && status.pending > 0) {
+        showToast(`${status.pending} operação(ões) pendente(s)`, "warning", 3200);
+        return;
+      }
+      if (status.state === "synced" && status.pending === 0) {
+        showToast("Sincronizado", "info", 2200);
+        return;
+      }
+      if (status.state === "error") {
+        showToast("Erro ao sincronizar", "error", 4000);
+      }
+    });
     return () => unsub();
-  }, []);
+  }, [showToast]);
 
   const hasUnsavedChanges = useMemo(() => {
     if (!project.lastAutosaveTime) return true;
@@ -80,12 +109,6 @@ export default function ViewerToolbar() {
       return Number.isFinite(ts) && ts > savedAt;
     });
   }, [project.lastAutosaveTime, project.changelog]);
-
-  const saveButtonMiniStatus = useMemo(() => {
-    if (syncStatus.state === "syncing") return "A sincronizar...";
-    if (!syncStatus.online || syncStatus.state === "awaiting_network") return "Offline (guardado localmente)";
-    return "Guardado";
-  }, [syncStatus]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -309,36 +332,10 @@ export default function ViewerToolbar() {
             background: "var(--blue-light)",
             opacity: project.estaCarregando ? 0.7 : 1,
             cursor: project.estaCarregando ? "not-allowed" : "pointer",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            lineHeight: 1.1,
           }}
         >
-          <span>{project.estaCarregando ? "A calcular..." : "Gerar e Salvar Design"}</span>
-          <span style={{ fontSize: 11, opacity: 0.9 }}>{saveButtonMiniStatus}</span>
+          Gerar e Salvar Design
         </button>
-        <span
-          title={`${syncStatus.pending} operação(ões) pendente(s)`}
-          aria-label={`${syncStatus.pending} operação(ões) pendente(s)`}
-          style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4 }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              display: "inline-block",
-              background:
-                syncStatus.state === "error"
-                  ? "#ef4444"
-                  : syncStatus.state === "awaiting_network"
-                    ? "#f59e0b"
-                    : "#22c55e",
-            }}
-          />
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{syncStatus.pending}</span>
-        </span>
       </div>
       <ConfirmNewProjectModal
         open={confirmNewOpen}

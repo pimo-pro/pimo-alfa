@@ -31,18 +31,3 @@ export { ViewerState } from "./state";
 export type { TransformMode, PlacementMode, ViewerRenderMode } from "./state";
 export { ViewerTools } from "./tools";
 export type { IViewerToolsEngine } from "./tools";
-export {
-  getRulerEdgeAtPointer,
-  distancePointToPoint,
-  distancePointToSegment,
-  distanceSegmentToSegment,
-  getMeasurementType,
-} from "./ruler";
-export type {
-  RulerDistanceResult,
-  RulerEdgePickResult,
-  RulerManagerMeasurement,
-  RulerManagerResult,
-  RulerMeasurementType,
-  RulerPickType,
-} from "./ruler";

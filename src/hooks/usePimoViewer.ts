@@ -3,27 +3,15 @@ import { useViewerBoxes } from "../viewer/useViewerBoxes";
 import { useViewerRoom } from "../viewer/useViewerRoom";
 import { useViewerCamera } from "../viewer/useViewerCamera";
 import { useViewerMaterials } from "../viewer/useViewerMaterials";
-import { useViewerRuler } from "../viewer/useViewerRuler";
 import type { Viewer } from "../3d/core/Viewer";
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
-
-type ViewerCoreRuler = {
-  getRulerEdgeAtPointer?: (_event: { clientX: number; clientY: number }) => unknown;
-  getRulerMeasurements?: (_referenceBoxId: string | null) => unknown;
-  setRulerEnabled?: (_enabled: boolean) => void;
-  getInternalRulerPickAtPointer?: (_event: { clientX: number; clientY: number }) => unknown;
-  cycleInternalRulerSelection?: (_result: unknown) => void;
-  clearInternalRulerSelection?: () => void;
-  getInternalRulerMeasurement?: () => unknown;
-  setOnRulerTick?: (_callback: (() => void) | null) => void;
-} | null | undefined;
 
 /** Nomes de métodos do viewerCore que devem ser expostos na API (override dos stubs). */
 const VIEWER_CORE_SETTING_METHODS = [
   "setPanelEdgesVisible", "setAllPanelsHidden", "setHiddenPanels", "setPanelHidden",
   "setRoomCeilingVisible", "setWallEditMode", "setMousePreset", "setBackgroundMode",
   "setMaterialQuality", "setReflectionsEnabled", "setPhotoModeEnabled",
-  "setExplodedViewEnabled", "setExplodedViewIntensity", "setHighlightEnabled", "setRulerEnabled",
+  "setExplodedViewEnabled", "setExplodedViewIntensity", "setHighlightEnabled",
   "setUltraPerformanceModeOptions", "setUltraPerformanceMode",
 ] as const;
 
@@ -76,7 +64,6 @@ export function usePimoViewer() {
   const materials = useViewerMaterials();
   const viewerCore =
     typeof window !== "undefined" ? window.viewerCore : undefined;
-  const ruler = useViewerRuler(viewerCore as ViewerCoreRuler);
   const viewerRef = useRef<Viewer | null>(null);
 
   return useMemo(
@@ -89,7 +76,6 @@ export function usePimoViewer() {
         ...room,
         ...camera,
         ...materials,
-        ...ruler,
         ...(viewerCore
           ? [
               ...VIEWER_CORE_SETTING_METHODS,
@@ -105,6 +91,6 @@ export function usePimoViewer() {
             ? (viewerCore as { getBoxIdByMeshPublic: (..._args: unknown[]) => unknown }).getBoxIdByMeshPublic.bind(viewerCore)
             : PIMO_VIEWER_STUBS.getBoxIdByMesh,
       }) as PimoViewerApi,
-    [boxes, room, camera, materials, ruler, viewerCore]
+    [boxes, room, camera, materials, viewerCore]
   );
 }

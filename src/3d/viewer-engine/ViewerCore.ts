@@ -29,12 +29,6 @@ import { EventsManager } from "./events";
 import type { IViewerEventEngine } from "./events/EventEngineTypes";
 import { ViewerTools } from "./tools";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
-import {
-  RulerManager,
-  pickInternalAtPointer,
-  SelectionManager,
-} from "./ruler";
-import type { RulerEdgePickResult, RulerManagerResult, InternalRulerPickResult } from "./ruler";
 
 import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, mergeMaterialSet } from "../materials/MaterialLibrary";
@@ -162,9 +156,6 @@ export class ViewerCore {
   private outlineCurrentOpacity = 0;
   private outlineTargetOpacity = 0;
   private onRoomElementPlaced: ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null = null;
-  private onRulerTick: (() => void) | null = null;
-  private rulerManager: RulerManager | null = null;
-  private readonly internalRulerSelection = new SelectionManager();
   private onRoomElementSelected: ((_data: { elementId: string; wallId: number; type: "door" | "window"; config: DoorWindowConfig } | null) => void) | null = null;
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
@@ -414,10 +405,7 @@ export class ViewerCore {
       this.logTransformDiagnostic("drag(objectChange)");
     });
     this.transformControls.addEventListener("change", () => {
-      this.rulerManager?.updateMeasurements();
-      if (this.viewerState.getRulerEnabled()) {
-        this.onRulerTick?.();
-      }
+      // no-op para régua antiga removida
     });
     this.transformControlsHelper = this.transformControls.getHelper();
     this.transformControlsHelper.visible = false;
@@ -433,13 +421,6 @@ export class ViewerCore {
     this.setWallEditMode(false);
 
     this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
-    this.rulerManager = new RulerManager({
-      scene: this.sceneManager.scene,
-      camera: this.cameraManager.camera,
-      transformControls: this.transformControls,
-      viewerBoxManager: this.boxManager,
-      roomManager: this.roomManager,
-    });
     if (import.meta.env.DEV) {
       this.snapDebugOverlay = new SnapDebugOverlay();
     }
@@ -1434,17 +1415,9 @@ export class ViewerCore {
     this.applyPanelVisibilityForAllBoxes();
   }
 
-  /** Ativa/desativa modo régua e limpa seleção interna ao desativar. */
+  /** Compatibilidade: modo régua legado removido. */
   setRulerEnabled(enabled: boolean): void {
-    const next = Boolean(enabled);
-    this.viewerState.setRulerEnabled(next);
-    this.rendererManager.renderer.domElement.style.cursor = next ? "crosshair" : "";
-    if (next) this.rulerManager?.enable();
-    else this.rulerManager?.disable();
-    if (!next) {
-      this.internalRulerSelection.clear();
-      this.onRulerTick?.();
-    }
+    this.rendererManager.renderer.domElement.style.cursor = Boolean(enabled) ? "crosshair" : "";
   }
 
   getExplodedViewEnabled(): boolean {
@@ -2880,9 +2853,9 @@ export class ViewerCore {
     this.onBoxSelected = callback;
   }
 
-  /** Chamado a cada frame quando a régua está ativa e há caixa selecionada ou em drag (para atualização em tempo real). */
+  /** Compatibilidade com API antiga da régua. */
   setOnRulerTick(callback: (() => void) | null): void {
-    this.onRulerTick = callback;
+    void callback;
   }
 
   setOnDoorLayerDoubleClick(callback: ((_boxId: string, _doorLayerId: string) => void) | null): void {
@@ -3978,13 +3951,6 @@ export class ViewerCore {
 
   private getHighlightIntersects(event: { clientX: number; clientY: number }): THREE.Intersection[] {
     const canvas = this.rendererManager.renderer.domElement;
-    if (this.viewerState.getRulerEnabled()) {
-      const evtType = "type" in event ? (event as { type?: string }).type : undefined;
-      if (evtType === "pointermove") {
-        this.rulerManager?.onPointerMove(event, canvas);
-      }
-      return [];
-    }
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return [];
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -3998,17 +3964,6 @@ export class ViewerCore {
 
   private getBoxIdAtPointer(event: { clientX: number; clientY: number }) {
     const canvas = this.rendererManager.renderer.domElement;
-    if (this.viewerState.getRulerEnabled()) {
-      const evtType = "type" in event ? (event as { type?: string }).type : undefined;
-      if (evtType === "pointerdown") {
-        this.rulerManager?.onPointerDown(event, canvas);
-        this.viewerState.setSuppressNextCanvasClick(true);
-      } else {
-        this.rulerManager?.onPointerMove(event, canvas);
-      }
-      this.onRulerTick?.();
-      return null;
-    }
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -4043,60 +3998,28 @@ export class ViewerCore {
     return this.getBoxIdByMesh(firstHit);
   }
 
-  /**
-   * Edge Picking para o modo régua: retorna o edge (ou vértice) mais próximo do cursor.
-   * Só produz resultado quando rulerEnabled; caso contrário retorna null.
-   */
-  getRulerEdgeAtPointer(event: { clientX: number; clientY: number }): RulerEdgePickResult | null {
-    if (!this.viewerState.getRulerEnabled()) return null;
-    const canvas = this.rendererManager.renderer.domElement;
-    const anchor = this.rulerManager?.getSnapPoint(event, canvas);
-    if (!anchor) return null;
-    return {
-      point: anchor.point.clone(),
-      object: anchor.object,
-      type: anchor.type,
-    };
+  getRulerEdgeAtPointer(_event: { clientX: number; clientY: number }): null {
+    return null;
   }
 
-  /** Picking interno (vértice/edge/face) apenas em meshes de caixas. Para régua interna. */
-  getInternalRulerPickAtPointer(event: { clientX: number; clientY: number }): InternalRulerPickResult | null {
-    if (!this.viewerState.getRulerEnabled()) return null;
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    const boxRoots: THREE.Object3D[] = [];
-    this.boxes.forEach((entry) => {
-      if (entry.mesh) boxRoots.push(entry.mesh);
-    });
-    return pickInternalAtPointer(this.raycaster, this.pointer, this.cameraManager.camera, boxRoots);
+  getInternalRulerPickAtPointer(_event: { clientX: number; clientY: number }): null {
+    return null;
   }
 
-  /** Ciclo A -> B -> limpar; chamado quando o utilizador clica num elemento interno. */
-  cycleInternalRulerSelection(result: InternalRulerPickResult): void {
-    this.internalRulerSelection.cycleSelection(result);
+  cycleInternalRulerSelection(_result: unknown): void {}
+
+  clearInternalRulerSelection(): void {}
+
+  getInternalRulerA(): null {
+    return null;
   }
 
-  /** Limpa seleção interna (A e B). */
-  clearInternalRulerSelection(): void {
-    this.internalRulerSelection.clear();
+  getInternalRulerB(): null {
+    return null;
   }
 
-  /** Retorna A e B atuais (para overlay). */
-  getInternalRulerA(): InternalRulerPickResult | null {
-    return this.internalRulerSelection.getA();
-  }
-
-  getInternalRulerB(): InternalRulerPickResult | null {
-    return this.internalRulerSelection.getB();
-  }
-
-  /** Medição A↔B em mm quando ambos definidos. */
-  getInternalRulerMeasurement(): { pointA: THREE.Vector3; pointB: THREE.Vector3; distanceMm: number } | null {
-    return this.rulerManager?.getManualMeasurement() ?? this.internalRulerSelection.getMeasurement();
+  getInternalRulerMeasurement(): null {
+    return null;
   }
 
   /**
@@ -4106,20 +4029,22 @@ export class ViewerCore {
     return this.getBoxIdByMesh(mesh);
   }
 
-  /**
-   * Mediçõees automáticas (RulerManager): candidatas horizontal esq/dir, frente/trás, chão/teto.
-   */
-  getRulerMeasurements(referenceBoxId: string | null): RulerManagerResult {
-    return (
-      this.rulerManager?.getAutoMeasurements(referenceBoxId) ?? {
-        horizontalLeft: null,
-        horizontalRight: null,
-        front: null,
-        back: null,
-        floor: null,
-        ceiling: null,
-      }
-    );
+  getRulerMeasurements(_referenceBoxId: string | null): {
+    horizontalLeft: null;
+    horizontalRight: null;
+    front: null;
+    back: null;
+    floor: null;
+    ceiling: null;
+  } {
+    return {
+      horizontalLeft: null,
+      horizontalRight: null,
+      front: null,
+      back: null,
+      floor: null,
+      ceiling: null,
+    };
   }
 
   /** Obtém doorLayerId subindo na hierarquia (mesh → pivot door-layer-* → …). Usado por getContextMenuLayerHit e getDoorHitAtPointer. */
@@ -4382,14 +4307,6 @@ export class ViewerCore {
 
       this.highlightManager?.update();
       this.edgeOutlineSystem?.update();
-
-      if (
-        this.viewerState.getRulerEnabled() &&
-        (this.viewerState.getTransformControlsDragging() || this.viewerState.getSelectedBox()) &&
-        this.onRulerTick
-      ) {
-        this.onRulerTick();
-      }
 
       if (this.reflectionsEnabled) {
         this.reflectionFrameCounter += 1;
@@ -4804,10 +4721,6 @@ export class ViewerCore {
     if (this.roomManager) {
       this.roomManager.removeRoom();
       this.roomManager = null;
-    }
-    if (this.rulerManager) {
-      this.rulerManager.dispose();
-      this.rulerManager = null;
     }
     this.snapshotRenderer = null;
     this.selectedBoxChangeListeners.clear();

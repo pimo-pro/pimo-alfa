@@ -31,25 +31,9 @@ export class ViewerCore {
       applyMaterialPreset: (presetId: unknown) => presetId,
     };
     this.rulerManager = {
-      getRulerEdgeAtPointer: (_pointer: unknown) => null,
-      getRulerMeasurements: () => {
-        // TODO: Implementar obtenção de medidas da régua
-        return [];
-      },
-      setRulerEnabled: (enabled: unknown) => enabled,
-      getInternalRulerPickAtPointer: (_pointer: unknown) => null,
-      cycleInternalRulerSelection: () => {
-        // TODO: Implementar ciclo de seleção interna da régua
-        return true;
-      },
-      clearInternalRulerSelection: () => {
-        // TODO: Implementar limpeza de seleção interna
-        return true;
-      },
-      getInternalRulerMeasurement: () => {
-        // TODO: Implementar obtenção de medida interna
-        return null;
-      },
+      setMode: (mode: unknown) => mode,
+      clearMeasurements: () => true,
+      toggleLayer: () => true,
     };
   }
 }

@@ -259,8 +259,6 @@ export type ViewerApi = {
   getRightmostX: () => number;
   /** Ativa/desativa highlight por mesh (hover + seleção). */
   setHighlightEnabled?: (_enabled: boolean) => void;
-  /** Ativa/desativa modo régua (medição). */
-  setRulerEnabled?: (_enabled: boolean) => void;
   /** Ativa/desativa vista explodida. */
   setExplodedViewEnabled?: (_enabled: boolean) => void;
   /** Intensidade da vista explodida (0–1). */

@@ -388,9 +388,7 @@ export default function Tools3DToolbar({
         aria-label={project.viewerSettings.rulerEnabled ? "Desativar régua" : "Ativar régua"}
         aria-pressed={project.viewerSettings.rulerEnabled}
         onClick={() => {
-          const next = !project.viewerSettings.rulerEnabled;
           actions.toggleRuler();
-          viewerApi?.setRulerEnabled?.(next);
         }}
         style={{
           ...toolbarButtonStyle,

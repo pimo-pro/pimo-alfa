@@ -26,13 +26,7 @@ import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers"
 import GerarArquivoModal from "../right-panel/GerarArquivoModal";
 import BoxInfoOverlay from "./BoxInfoOverlay";
 import ContextMenu from "./ContextMenu";
-import RulerLabelsOverlay from "./RulerLabelsOverlay";
-import {
-  type RulerEdgePickResult,
-  type InternalRulerPickResult,
-  distancePointToPoint,
-  type RulerManagerMeasurement,
-} from "../../../3d/viewer-engine/ruler";
+import { RulerSystem } from "../../../core/ruler/RulerSystem";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -70,12 +64,18 @@ export default function Workspace({
 
   const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
   const gerarArquivoHandlers = useGerarArquivoHandlers();
-  const [rulerHoverResult, setRulerHoverResult] = useState<RulerEdgePickResult | null>(null);
-  const [rulerAnchorResult, setRulerAnchorResult] = useState<RulerEdgePickResult | null>(null);
-  const [, setRulerTick] = useState(0);
-  const [, setInternalRulerVersion] = useState(0);
-  const [internalRulerHoverResult, setInternalRulerHoverResult] = useState<InternalRulerPickResult | null>(null);
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
+  const rulerSystemRef = useRef<RulerSystem | null>(null);
+  const projectRef = useRef(project);
+  const keyboardMoveRef = useRef<{
+    activeKey: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | null;
+    accelTimeoutId: number | null;
+    repeatIntervalId: number | null;
+  }>({
+    activeKey: null,
+    accelTimeoutId: null,
+    repeatIntervalId: null,
+  });
   const [, setViewerMounted] = useState(false);
 
   // Montar ViewerCore no container via import dinâmico (evita 500 ao servir ViewerCore.ts estático).
@@ -288,6 +288,7 @@ export default function Workspace({
         rotacaoZ_rad: rotation.z,
         manualPosition: true,
       });
+      rulerSystemRef.current?.notifyDrag(boxId);
     });
   }, [viewerApi]);
 
@@ -297,6 +298,7 @@ export default function Workspace({
   useEffect(() => {
     const mode = project.activeViewerTool ?? "select";
     viewerSyncRef.current.setActiveTool(mode);
+    rulerSystemRef.current?.clearMeasurements();
   }, [project.activeViewerTool]);
 
   const [lockEnabled, setLockEnabledState] = useState(true);
@@ -349,7 +351,6 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setExplodedViewEnabled?.(settings.explodedViewEnabled);
     viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
     viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
-    viewerApi.setRulerEnabled?.(settings.rulerEnabled);
     viewerApi.setUltraPerformanceModeOptions?.(settings.ultraPerformanceModeOptions);
     viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
   }, [
@@ -358,106 +359,171 @@ const hasShownViewerReadyToastRef = useRef(false);
   ]);
 
   useEffect(() => {
-    if (!project.viewerSettings.rulerEnabled) {
-      setRulerHoverResult(null);
-      setRulerAnchorResult(null);
-      setInternalRulerHoverResult(null);
-      viewerApi.clearInternalRulerSelection?.();
-    }
-  }, [project.viewerSettings.rulerEnabled, viewerApi]);
-
-  useEffect(() => {
-    if (!viewerApi.setOnRulerTick) return;
-    viewerApi.setOnRulerTick(() => setRulerTick((t) => t + 1));
-    return () => viewerApi.setOnRulerTick?.(null);
+    const host = containerRef.current;
+    const viewerCore = window.viewerCore as {
+      sceneManager?: { scene?: THREE.Scene };
+      cameraManager?: { camera?: THREE.Camera };
+      getBoxIdByMeshPublic?: (_mesh: THREE.Object3D) => string | null;
+      boxes?: Map<string, { mesh?: THREE.Object3D }>;
+    } | undefined;
+    if (!host || !viewerCore?.sceneManager?.scene || !viewerCore?.cameraManager?.camera) return;
+    rulerSystemRef.current?.dispose();
+    rulerSystemRef.current = new RulerSystem({
+      host,
+      getScene: () => viewerCore.sceneManager?.scene ?? null,
+      getCamera: () => viewerCore.cameraManager?.camera ?? null,
+      projectWorldToScreen: (p) => viewerApi.projectWorldToScreen?.(p) ?? null,
+      applyDistanceDeltaMm: (deltaMm) => {
+        const currentProject = projectRef.current;
+        const id = currentProject.selectedWorkspaceBoxId;
+        if (!id) return;
+        const current = currentProject.workspaceBoxes.find((b) => b.id === id);
+        if (!current) return;
+        actionsRef.current.updateWorkspaceBoxTransform(id, {
+          x_mm: (current.posicaoX_mm ?? 0) + deltaMm.x,
+          y_mm: (current.posicaoY_mm ?? 0) + deltaMm.y,
+          z_mm: (current.posicaoZ_mm ?? 0) + deltaMm.z,
+          manualPosition: true,
+        });
+      },
+      getMovableObjects: () => {
+        const scene = viewerCore.sceneManager?.scene;
+        if (!scene) return [];
+        const out: THREE.Object3D[] = [];
+        const seen = new Set<string>();
+        const boxesMap = viewerCore.boxes;
+        if (boxesMap instanceof Map) {
+          boxesMap.forEach((entry, boxId) => {
+            const mesh = entry?.mesh;
+            if (!mesh || seen.has(`box:${boxId}`)) return;
+            seen.add(`box:${boxId}`);
+            out.push(mesh);
+          });
+        }
+        scene.traverse((obj) => {
+          const wallId = obj.userData?.wallId;
+          if (typeof wallId !== "string") return;
+          const key = `wall:${wallId}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push(obj);
+        });
+        return out;
+      },
+      getMovableObjectById: (boxId) => {
+        if (!boxId) return null;
+        const mesh = viewerCore.boxes?.get(boxId)?.mesh;
+        return mesh ?? null;
+      },
+      getActiveBoxId: () => projectRef.current.selectedWorkspaceBoxId || null,
+    });
+    return () => {
+      rulerSystemRef.current?.dispose();
+      rulerSystemRef.current = null;
+    };
   }, [viewerApi]);
 
-  const handleRulerPointerMove = useCallback(
-    (event: React.PointerEvent) => {
-      if (!project.viewerSettings.rulerEnabled) return;
-      if (viewerApi.getRulerEdgeAtPointer) {
-        const result = viewerApi.getRulerEdgeAtPointer({ clientX: event.clientX, clientY: event.clientY });
-        setRulerHoverResult(result);
-      }
-      const internal = viewerApi.getInternalRulerPickAtPointer?.({ clientX: event.clientX, clientY: event.clientY }) ?? null;
-      setInternalRulerHoverResult(internal);
-    },
-    [project.viewerSettings.rulerEnabled, viewerApi]
-  );
-
-  const handleRulerPointerDownCapture = useCallback(
-    (event: React.PointerEvent) => {
-      if (event.button !== 0) return;
-      if (!project.viewerSettings.rulerEnabled) return;
-      const internal = viewerApi.getInternalRulerPickAtPointer?.({ clientX: event.clientX, clientY: event.clientY });
-      if (internal) {
-        viewerApi.cycleInternalRulerSelection?.(internal);
-        setInternalRulerVersion((v) => v + 1);
-        return;
-      }
-      viewerApi.clearInternalRulerSelection?.();
-      setInternalRulerVersion((v) => v + 1);
-      const result = viewerApi.getRulerEdgeAtPointer?.({ clientX: event.clientX, clientY: event.clientY }) ?? null;
-      setRulerAnchorResult(result);
-    },
-    [project.viewerSettings.rulerEnabled, viewerApi]
-  );
-
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && project.viewerSettings.rulerEnabled) {
-        viewerApi.clearInternalRulerSelection?.();
-        setInternalRulerVersion((v) => v + 1);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [project.viewerSettings.rulerEnabled, viewerApi]);
+    rulerSystemRef.current?.setMode(project.viewerSettings.rulerEnabled ? "ON" : "OFF");
+  }, [project.viewerSettings.rulerEnabled]);
 
-  const projectRef = useRef(project);
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
+
+  useEffect(() => {
+    const clearKeyboardMoveTimers = () => {
+      const state = keyboardMoveRef.current;
+      if (state.accelTimeoutId != null) {
+        window.clearTimeout(state.accelTimeoutId);
+        state.accelTimeoutId = null;
+      }
+      if (state.repeatIntervalId != null) {
+        window.clearInterval(state.repeatIntervalId);
+        state.repeatIntervalId = null;
+      }
+      state.activeKey = null;
+    };
+
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName.toLowerCase();
+      return tag === "input" || tag === "textarea" || target.isContentEditable;
+    };
+
+    const performMoveStep = (key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight", stepMm: number) => {
+      const currentProject = projectRef.current;
+      const boxId = currentProject.selectedWorkspaceBoxId;
+      if (!boxId) return;
+      const box = currentProject.workspaceBoxes.find((b) => b.id === boxId);
+      if (!box || box.locked) return;
+      const delta =
+        key === "ArrowUp"
+          ? { x: 0, y: stepMm }
+          : key === "ArrowDown"
+            ? { x: 0, y: -stepMm }
+            : key === "ArrowLeft"
+              ? { x: -stepMm, y: 0 }
+              : { x: stepMm, y: 0 };
+      actionsRef.current.updateWorkspaceBoxTransform(boxId, {
+        x_mm: (box.posicaoX_mm ?? 0) + delta.x,
+        y_mm: (box.posicaoY_mm ?? 0) + delta.y,
+        manualPosition: true,
+      });
+      rulerSystemRef.current?.notifyDrag(boxId);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown" && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const key = event.key;
+      const state = keyboardMoveRef.current;
+      if (state.activeKey === key) return;
+      clearKeyboardMoveTimers();
+      state.activeKey = key;
+      performMoveStep(key, 1);
+      state.accelTimeoutId = window.setTimeout(() => {
+        state.repeatIntervalId = window.setInterval(() => {
+          if (keyboardMoveRef.current.activeKey !== key) return;
+          performMoveStep(key, 10);
+        }, 40);
+      }, 200);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const state = keyboardMoveRef.current;
+      if (state.activeKey == null) return;
+      if (event.key !== state.activeKey) return;
+      clearKeyboardMoveTimers();
+      if (!projectRef.current.viewerSettings.rulerEnabled) {
+        rulerSystemRef.current?.clearMeasurements();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      clearKeyboardMoveTimers();
+      if (!projectRef.current.viewerSettings.rulerEnabled) {
+        rulerSystemRef.current?.clearMeasurements();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleWindowBlur);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleWindowBlur);
+      clearKeyboardMoveTimers();
+    };
+  }, []);
 
   const workspacePositionKey = useMemo(
     () => JSON.stringify(project.workspaceBoxes.map((b) => [b.id, b.posicaoX_mm, b.posicaoY_mm, b.posicaoZ_mm])),
     [project.workspaceBoxes]
   );
 
-  const rulerReferenceBoxId = useMemo(() => {
-    const fromHover = rulerHoverResult?.object
-      ? viewerApi.getBoxIdByMesh?.(rulerHoverResult.object)
-      : null;
-    return fromHover ?? project.selectedWorkspaceBoxId ?? null;
-  }, [rulerHoverResult, project.selectedWorkspaceBoxId, viewerApi]);
-
-  const rulerMeasurements = useMemo(() => {
-    if (!project.viewerSettings.rulerEnabled || !rulerReferenceBoxId || !viewerApi.getRulerMeasurements)
-      return {
-        horizontalLeft: null,
-        horizontalRight: null,
-        front: null,
-        back: null,
-        floor: null,
-        ceiling: null,
-      };
-    return viewerApi.getRulerMeasurements(rulerReferenceBoxId);
-  }, [project.viewerSettings.rulerEnabled, rulerReferenceBoxId, viewerApi]);
-
-  const rulerManualMeasurement = useMemo((): RulerManagerMeasurement | null => {
-    if (!project.viewerSettings.rulerEnabled || !rulerAnchorResult || !rulerHoverResult) return null;
-    const res = distancePointToPoint(rulerAnchorResult.point, rulerHoverResult.point);
-    return {
-      distanceMm: Math.round(res.distance * 1000),
-      pointA: res.pointA.clone(),
-      pointB: res.pointB.clone(),
-    };
-  }, [project.viewerSettings.rulerEnabled, rulerAnchorResult, rulerHoverResult]);
-
-  const rulerInternalMeasurement = useMemo(
-    () => viewerApi.getInternalRulerMeasurement?.() ?? null,
-    [viewerApi]
-  );
   const prevBoxesRef = useRef<string>("");
   useEffect(() => {
     const key = workspacePositionKey;
@@ -596,8 +662,6 @@ return (
                 setContextMenuLayerTarget(hit);
                 setMouseMenuPosition({ x: event.clientX, y: event.clientY });
               }}
-              onPointerMove={handleRulerPointerMove}
-              onPointerDownCapture={handleRulerPointerDownCapture}
               style={{
                 position: "absolute",
                 inset: 0,
@@ -615,14 +679,6 @@ return (
               aria-hidden
             >
               <BoxInfoOverlay />
-              <RulerLabelsOverlay
-                rulerEnabled={project.viewerSettings.rulerEnabled}
-                rulerMeasurements={rulerMeasurements}
-                manualMeasurement={rulerManualMeasurement}
-                internalMeasurement={rulerInternalMeasurement}
-                hoverSnapPoint={internalRulerHoverResult?.point ?? null}
-                projectWorldToScreen={(p) => viewerApi.projectWorldToScreen?.(p) ?? null}
-              />
             </div>
           </div>
           {!viewerApi.viewerReady && (
