@@ -380,7 +380,6 @@ export default function Tools3DToolbar({
           <circle cx="12" cy="12" r="2" />
         </svg>
       </button>
-
       <button
         type="button"
         className="viewer-action-icon"

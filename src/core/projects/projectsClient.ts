@@ -45,11 +45,16 @@ export type ProjectsSyncStatus = {
   state: "idle" | "saved_local" | "syncing" | "awaiting_network" | "synced" | "error";
   message: string;
   lastSyncAt: string | null;
+  hasActiveSyncError: boolean;
+  retryInMs: number | null;
 };
 
 let legacyMigrationDone = false;
 let syncLoopStarted = false;
 let syncInProgress = false;
+let syncRetryAttempt = 0;
+let nextRetryAtMs = 0;
+let retryTimerId: number | null = null;
 const syncStatusListeners = new Set<(_status: ProjectsSyncStatus) => void>();
 let syncStatus: ProjectsSyncStatus = {
   online: typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -57,6 +62,8 @@ let syncStatus: ProjectsSyncStatus = {
   state: "idle",
   message: "Pronto",
   lastSyncAt: null,
+  hasActiveSyncError: false,
+  retryInMs: null,
 };
 
 function toJson(response: Response): Promise<unknown> {
@@ -330,19 +337,40 @@ function setSyncStatus(patch: Partial<ProjectsSyncStatus>): void {
 
 function refreshPendingStatus(): void {
   const pending = readSyncQueue().length;
+  if (syncStatus.hasActiveSyncError && pending > 0) {
+    const remaining = nextRetryAtMs > 0 ? Math.max(0, nextRetryAtMs - Date.now()) : null;
+    setSyncStatus({
+      pending,
+      state: "error",
+      message: "Erro ao sincronizar",
+      hasActiveSyncError: true,
+      retryInMs: remaining,
+    });
+    return;
+  }
   if (!isOnline() && pending > 0) {
     setSyncStatus({
       pending,
       state: "awaiting_network",
       message: `${pending} operação(ões) pendente(s)`,
+      hasActiveSyncError: false,
+      retryInMs: null,
     });
     return;
   }
   if (pending === 0) {
+    syncRetryAttempt = 0;
+    nextRetryAtMs = 0;
+    if (retryTimerId != null && typeof window !== "undefined") {
+      window.clearTimeout(retryTimerId);
+      retryTimerId = null;
+    }
     setSyncStatus({
       pending,
       state: "synced",
       message: "Sincronizado",
+      hasActiveSyncError: false,
+      retryInMs: null,
     });
     return;
   }
@@ -350,7 +378,28 @@ function refreshPendingStatus(): void {
     pending,
     state: "idle",
     message: `${pending} operação(ões) pendente(s)`,
+    hasActiveSyncError: false,
+    retryInMs: null,
   });
+}
+
+function getRetryDelayMs(attempt: number): number {
+  if (attempt <= 1) return 60000;
+  if (attempt === 2) return 120000;
+  if (attempt === 3) return 300000;
+  return 600000;
+}
+
+function scheduleRetry(delayMs: number): void {
+  if (typeof window === "undefined") return;
+  if (retryTimerId != null) {
+    window.clearTimeout(retryTimerId);
+    retryTimerId = null;
+  }
+  retryTimerId = window.setTimeout(() => {
+    retryTimerId = null;
+    void syncQueue();
+  }, delayMs);
 }
 
 function enqueueSyncOperation(entry: Omit<SyncQueueEntry, "id" | "createdAt" | "updatedAt" | "retries" | "lastError">): void {
@@ -742,6 +791,7 @@ async function loadProjectFromServerAndMerge(id: string): Promise<SavedProjectRe
 export async function syncQueue(): Promise<void> {
   ensureSyncLoopStarted();
   if (syncInProgress) return;
+  if (syncStatus.hasActiveSyncError && nextRetryAtMs > Date.now()) return;
   const queue = readSyncQueue();
   if (queue.length === 0) {
     refreshPendingStatus();
@@ -756,11 +806,13 @@ export async function syncQueue(): Promise<void> {
     state: "syncing",
     pending: queue.length,
     message: "A sincronizar...",
+    retryInMs: null,
   });
 
   try {
     const projects = readOfflineProjects();
     const nextQueue = [...queue];
+    let hadError = false;
     for (let index = 0; index < nextQueue.length; ) {
       const entry = nextQueue[index];
       const projectIdx = projects.findIndex((project) => project.id === entry.projectId);
@@ -830,6 +882,7 @@ export async function syncQueue(): Promise<void> {
 
         nextQueue.splice(index, 1);
       } catch (error) {
+        hadError = true;
         nextQueue[index] = {
           ...entry,
           retries: entry.retries + 1,
@@ -837,24 +890,44 @@ export async function syncQueue(): Promise<void> {
           lastError: error instanceof Error ? error.message : "Erro de sincronização",
         };
         if (!isOnline()) break;
-        if (entry.retries >= 5) {
-          setSyncStatus({
-            state: "error",
-            message: "Erro ao sincronizar",
-          });
-          break;
-        }
+        syncRetryAttempt += 1;
+        const delayMs = getRetryDelayMs(syncRetryAttempt);
+        nextRetryAtMs = Date.now() + delayMs;
+        scheduleRetry(delayMs);
+        setSyncStatus({
+          pending: nextQueue.length,
+          state: "error",
+          message: "Erro ao sincronizar",
+          hasActiveSyncError: true,
+          retryInMs: delayMs,
+        });
         break;
       }
     }
 
     writeOfflineProjects(projects);
     writeSyncQueue(nextQueue);
+    const hasPending = nextQueue.length > 0;
+    if (!hasPending) {
+      syncRetryAttempt = 0;
+      nextRetryAtMs = 0;
+      if (retryTimerId != null && typeof window !== "undefined") {
+        window.clearTimeout(retryTimerId);
+        retryTimerId = null;
+      }
+    }
+    const activeError = hasPending ? hadError : false;
     setSyncStatus({
       pending: nextQueue.length,
-      state: nextQueue.length === 0 ? "synced" : "idle",
-      message: nextQueue.length === 0 ? "Sincronizado" : `${nextQueue.length} operação(ões) pendente(s)`,
+      state: hasPending ? (activeError ? "error" : "idle") : "synced",
+      message: hasPending
+        ? (activeError ? "Erro ao sincronizar" : `${nextQueue.length} operação(ões) pendente(s)`)
+        : "Sincronizado",
       lastSyncAt: nowIso(),
+      hasActiveSyncError: activeError,
+      retryInMs: hasPending && activeError
+        ? Math.max(0, nextRetryAtMs - Date.now())
+        : null,
     });
   } finally {
     syncInProgress = false;

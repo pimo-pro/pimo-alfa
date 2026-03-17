@@ -27,7 +27,11 @@ export default function ViewerToolbar() {
   const photoModeContainerRef = useRef<HTMLDivElement | null>(null);
   const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
   const autosaveRunningRef = useRef(false);
-  const lastToastKeyRef = useRef<string>("");
+  const lastErrorToastAtRef = useRef(0);
+  const lastPendingToastAtRef = useRef(0);
+  const lastOfflineToastAtRef = useRef(0);
+  const lastSavedLocalToastKeyRef = useRef<string>("");
+  const previousSyncStateRef = useRef<string>("");
 
   const actionsRef = useRef(actions);
   const viewerApiRef = useRef(viewerApi);
@@ -66,35 +70,48 @@ export default function ViewerToolbar() {
 
   useEffect(() => {
     const unsub = subscribeProjectsSyncStatus((status) => {
-      const baseKey = `${status.state}|${status.pending}|${status.message}|${status.online}`;
-      if (lastToastKeyRef.current === baseKey) return;
-      lastToastKeyRef.current = baseKey;
+      const now = Date.now();
+      const syncStateKey = `${status.state}|${status.pending}|${status.online}`;
+      const isStateTransition = previousSyncStateRef.current !== syncStateKey;
+      previousSyncStateRef.current = syncStateKey;
 
       if (status.state === "saved_local") {
+        const baseKey = `${status.state}|${status.message}`;
+        if (lastSavedLocalToastKeyRef.current === baseKey) return;
+        lastSavedLocalToastKeyRef.current = baseKey;
         showToast("Guardado", "info", 2200);
         if (status.message === "Projeto guardado localmente" || status.message === "Snapshot criado") {
           showToast(status.message, "info", 2800);
         }
         return;
       }
-      if (status.state === "syncing") {
-        showToast("A sincronizar...", "info", 2200);
-        return;
-      }
+
       if (!status.online || status.state === "awaiting_network") {
-        showToast("Offline (guardado localmente)", "warning", 3200);
+        if (now - lastOfflineToastAtRef.current >= 60000) {
+          lastOfflineToastAtRef.current = now;
+          showToast("Offline (guardado localmente)", "warning", 3200);
+        }
         return;
       }
-      if (status.state === "idle" && status.pending > 0) {
-        showToast(`${status.pending} operação(ões) pendente(s)`, "warning", 3200);
-        return;
-      }
-      if (status.state === "synced" && status.pending === 0) {
-        showToast("Sincronizado", "info", 2200);
-        return;
-      }
+
       if (status.state === "error") {
-        showToast("Erro ao sincronizar", "error", 4000);
+        if (isStateTransition || now - lastErrorToastAtRef.current >= 60000) {
+          lastErrorToastAtRef.current = now;
+          showToast("Erro ao sincronizar", "error", 4000);
+        }
+        return;
+      }
+
+      if (status.state === "idle" && status.pending > 0) {
+        if (isStateTransition || now - lastPendingToastAtRef.current >= 60000) {
+          lastPendingToastAtRef.current = now;
+          showToast(`${status.pending} operação(ões) pendente(s)`, "warning", 3200);
+        }
+        return;
+      }
+
+      if (status.state === "synced" && status.pending === 0 && isStateTransition) {
+        showToast("Sincronizado", "info", 2200);
       }
     });
     return () => unsub();

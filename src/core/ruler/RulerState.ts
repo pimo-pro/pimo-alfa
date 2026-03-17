@@ -3,7 +3,17 @@ import type { Vector3 } from "three";
 export type RulerMode = "OFF" | "ON";
 export type MeasurementType = "horizontal" | "vertical" | "diagonal";
 
-export type SnapKind = "box-center" | "box-edge" | "box-corner" | "wall-center" | "surface" | "point";
+export type SnapKind =
+  | "box-vertex"
+  | "box-edge"
+  | "box-face"
+  | "box-face-center"
+  | "box-center"
+  | "hole-center"
+  | "wall-plane"
+  | "wall-center"
+  | "floor-plane"
+  | "point";
 
 export interface MeasurementAnchor {
   objectId: string | null;

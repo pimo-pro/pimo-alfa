@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { snapToNearest } from "./RulerGeometry";
+import { snapToNearest, type SnapPresetName } from "./RulerGeometry";
 import { RulerLogic } from "./RulerLogic";
 import type { RulerMode } from "./RulerState";
 import { RulerUIOverlay } from "./RulerUIOverlay";
@@ -25,6 +25,8 @@ export class RulerSystem {
   private enabled = true;
   private lastRaycastHitObject: THREE.Object3D | null = null;
   private draggingOff = false;
+  private snapPreset: SnapPresetName = "normal";
+  private hoverSnap: ReturnType<typeof snapToNearest> | null = null;
   private lastRenderedMeasurements: Array<{
     start: THREE.Vector3;
     end: THREE.Vector3;
@@ -42,14 +44,21 @@ export class RulerSystem {
       project: deps.projectWorldToScreen,
       getCamera: deps.getCamera,
     });
+    if (typeof window !== "undefined") {
+      const savedPreset = window.localStorage.getItem("pimo_ruler_snap_preset");
+      if (savedPreset === "fino" || savedPreset === "normal" || savedPreset === "agressivo") {
+        this.snapPreset = savedPreset;
+      }
+    }
     deps.host.addEventListener("pointerdown", this.onPointerDown, { capture: true, passive: true });
     deps.host.addEventListener("pointermove", this.onPointerMove, { capture: true, passive: true });
     deps.host.addEventListener("pointerup", this.onPointerUp, { capture: true, passive: true });
     deps.host.addEventListener("dblclick", this.onLabelDoubleClick, { capture: true });
+    this.overlay.setMeasurementPanelVisible(false);
     this.loop();
   }
 
-  private getPointFromEvent(event: PointerEvent): THREE.Vector3 | null {
+  private getSnapFromEvent(event: PointerEvent): ReturnType<typeof snapToNearest> | null {
     const scene = this.deps.getScene();
     const camera = this.deps.getCamera();
     if (!scene || !camera) return null;
@@ -57,19 +66,18 @@ export class RulerSystem {
     if (rect.width <= 0 || rect.height <= 0) return null;
     this.pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, camera);
-    const hits = this.raycaster.intersectObjects(scene.children, true);
+    const hits = this.raycaster
+      .intersectObjects(scene.children, true)
+      .filter((hit) => (hit.object as THREE.Mesh).isMesh && hit.object.visible !== false && !hit.object.userData?.isPanelEdgeOverlay);
     this.lastRaycastHitObject = hits[0]?.object ?? null;
-    if (hits[0]?.point) return hits[0].point.clone();
     const fallbackY = this.logic.state.startPoint?.y ?? 0;
-    const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -fallbackY);
-    const planeHit = new THREE.Vector3();
-    return this.raycaster.ray.intersectPlane(dragPlane, planeHit) ? planeHit.clone() : null;
+    return snapToNearest(this.raycaster, scene, fallbackY, this.snapPreset);
   }
 
   private onPointerDown = (event: PointerEvent): void => {
     if (!this.enabled) return;
     if (this.logic.state.mode === "OFF") {
-      this.getPointFromEvent(event);
+      this.getSnapFromEvent(event);
       if (!this.lastRaycastHitObject) {
         this.draggingOff = false;
         this.logic.clearAutoMeasurement();
@@ -78,10 +86,9 @@ export class RulerSystem {
       return;
     }
     if (this.logic.state.mode !== "ON") return;
-    const scene = this.deps.getScene();
-    const point = this.getPointFromEvent(event);
-    if (!scene || !point) return;
-    const snap = snapToNearest(point, scene);
+    const snap = this.hoverSnap ?? this.getSnapFromEvent(event);
+    if (!snap) return;
+    this.hoverSnap = snap;
     // Sem preventDefault/stopPropagation: Viewer mantém drag/orbit normais.
     this.logic.handlePointerDown(snap.point, snap.anchor);
   };
@@ -98,10 +105,10 @@ export class RulerSystem {
       return;
     }
     if (this.logic.state.mode !== "ON") return;
-    const scene = this.deps.getScene();
-    const point = this.getPointFromEvent(event);
-    if (!scene || !point) return;
-    const snap = snapToNearest(point, scene);
+    const snap = this.getSnapFromEvent(event);
+    if (!snap) return;
+    if (!this.logic.isAnchorAllowed(snap.anchor)) return;
+    this.hoverSnap = snap;
     // Apenas leitura de evento; não bloquear fluxo do Viewer.
     this.logic.handlePointerMove(snap.point, snap.anchor);
   };
@@ -116,10 +123,9 @@ export class RulerSystem {
       return;
     }
     if (this.logic.state.mode !== "ON") return;
-    const scene = this.deps.getScene();
-    const point = this.getPointFromEvent(event);
-    if (!scene || !point) return;
-    const snap = snapToNearest(point, scene);
+    const snap = this.hoverSnap ?? this.getSnapFromEvent(event);
+    if (!snap) return;
+    if (!this.logic.isAnchorAllowed(snap.anchor)) return;
     this.logic.handlePointerUp(snap.point, snap.anchor);
   };
 
@@ -151,6 +157,8 @@ export class RulerSystem {
 
   private loop = (): void => {
     const frames = [];
+    const snapVisuals = [];
+    this.overlay.updateMeasurementPanel(this.logic.getManualMeasurementMetrics());
     const shouldRenderOff = this.logic.state.mode === "OFF" && this.draggingOff && this.logic.autoMeasurements.length > 0;
     if (shouldRenderOff) {
       frames.push(...this.logic.autoMeasurements);
@@ -170,6 +178,15 @@ export class RulerSystem {
         type: this.logic.state.measurementType,
       });
     }
+    if (this.logic.state.mode === "ON") {
+      if (this.hoverSnap) {
+        snapVisuals.push({
+          kind: this.hoverSnap.visual.kind,
+          color: this.hoverSnap.visual.color,
+          points: this.hoverSnap.visual.points.map((p) => p.clone()),
+        });
+      }
+    }
     this.lastRenderedMeasurements = frames.map((m) => ({
       start: m.start.clone(),
       end: m.end.clone(),
@@ -178,8 +195,8 @@ export class RulerSystem {
       type: (m.type ?? "horizontal") as "horizontal" | "vertical" | "diagonal",
       label: m.label,
     }));
-    if (shouldRenderOff || shouldRenderOn) {
-      this.overlay.render(frames);
+    if (shouldRenderOff || shouldRenderOn || snapVisuals.length > 0) {
+      this.overlay.render(frames, snapVisuals);
     } else {
       this.overlay.clear();
     }
@@ -188,6 +205,13 @@ export class RulerSystem {
 
   setMode(mode: RulerMode): void {
     this.logic.setMode(mode);
+    this.overlay.setMeasurementPanelVisible(mode === "ON");
+    if (mode === "ON") {
+      this.overlay.updateMeasurementPanel(this.logic.getManualMeasurementMetrics());
+    }
+    if (mode !== "ON") {
+      this.hoverSnap = null;
+    }
     if (mode === "OFF") {
       this.overlay.clear();
     }
@@ -195,6 +219,13 @@ export class RulerSystem {
 
   clearMeasurements(): void {
     this.logic.clearMeasurements();
+  }
+
+  setSnapPreset(preset: SnapPresetName): void {
+    this.snapPreset = preset;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("pimo_ruler_snap_preset", preset);
+    }
   }
 
   toggleLayer(): void {
