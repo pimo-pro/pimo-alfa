@@ -25,8 +25,8 @@ export const VIEWER_TOOLBAR_ITEMS: Array<{
 }> = [
   { id: "projeto", label: "PROJETO", icon: "P", tooltip: "Projetos salvos" },
   { id: "novo", label: "NOVO", icon: "N", tooltip: "Limpar dados locais e iniciar sessão nova" },
-  { id: "desfazer", label: "DESFAZER", icon: "⟲", tooltip: "Desfazer" },
-  { id: "refazer", label: "REFAZER", icon: "⟳", tooltip: "Refazer" },
+  { id: "desfazer", label: "DESFAZER", icon: "⟲", tooltip: "Desfazer (Ctrl+Z)" },
+  { id: "refazer", label: "REFAZER", icon: "⟳", tooltip: "Refazer (Ctrl+Shift+Z)" },
   { id: "imagem", label: "PHOTO", icon: "📷", tooltip: "Photo Mode" },
   { id: "reset-camera", label: "RESET", icon: "⌖", tooltip: "Reset Camera – Vista frontal centralizada" },
   { id: "enviar", label: "ENVIAR", icon: "↗", tooltip: "Enviar pacote" },

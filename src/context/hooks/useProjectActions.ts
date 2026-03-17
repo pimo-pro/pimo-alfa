@@ -67,8 +67,7 @@ import {
   saveProject,
   saveSnapshot,
 } from "../../core/projects/projectsClient";
-
-const MAX_HISTORY = 40;
+import { HISTORY_MAX_ENTRIES } from "../historyConfig";
 
 function logProjectProvider(_event: string, _data?: object): void {
   if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
@@ -1343,7 +1342,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
           const [next, ...rest] = undoStackRef.current;
           undoStackRef.current = rest;
           const currentSnapshot = reviveState(serializeState(prev)) ?? prev;
-          redoStackRef.current = [currentSnapshot, ...redoStackRef.current].slice(0, MAX_HISTORY);
+          redoStackRef.current = [currentSnapshot, ...redoStackRef.current].slice(0, HISTORY_MAX_ENTRIES);
           viewerSync.restoreViewerSnapshot(null);
           return applyResultados(next);
         },
@@ -1358,7 +1357,29 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
           const [next, ...rest] = redoStackRef.current;
           redoStackRef.current = rest;
           const currentSnapshot = reviveState(serializeState(prev)) ?? prev;
-          undoStackRef.current = [currentSnapshot, ...undoStackRef.current].slice(0, MAX_HISTORY);
+          undoStackRef.current = [currentSnapshot, ...undoStackRef.current].slice(0, HISTORY_MAX_ENTRIES);
+          viewerSync.restoreViewerSnapshot(null);
+          return applyResultados(next);
+        },
+        false
+      );
+    };
+
+    a.goToHistory = (index) => {
+      updateProject(
+        (prev) => {
+          const past = [...undoStackRef.current].reverse();
+          const future = [...redoStackRef.current];
+          const timeline = [...past, prev, ...future];
+          if (!timeline.length) return prev;
+          const currentIndex = past.length;
+          const safeIndex = Math.max(0, Math.min(timeline.length - 1, Math.floor(index)));
+          if (safeIndex === currentIndex) return prev;
+          const next = timeline[safeIndex];
+          const nextUndo = timeline.slice(0, safeIndex).reverse();
+          const nextRedo = timeline.slice(safeIndex + 1);
+          undoStackRef.current = nextUndo.slice(0, HISTORY_MAX_ENTRIES);
+          redoStackRef.current = nextRedo.slice(0, HISTORY_MAX_ENTRIES);
           viewerSync.restoreViewerSnapshot(null);
           return applyResultados(next);
         },

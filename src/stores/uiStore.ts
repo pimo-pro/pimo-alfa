@@ -23,7 +23,7 @@ const logUiStore = (event: string, payload?: Record<string, unknown>) => {
 function isValidSelectedObject(value: SelectedObject): boolean {
   if (!value || typeof value !== "object" || typeof value.type !== "string") return false;
   if (value.type === "none") return true;
-  return typeof (value as { id?: unknown }).id === "string" && (value as { id: string }).id.trim().length > 0;
+  return typeof (value as { id?: unknown }).id === "string" && ((value as { id: string }).id?.trim()?.length ?? 0) > 0;
 }
 
 export const uiStore = createStore<UiStoreState>((set) => ({

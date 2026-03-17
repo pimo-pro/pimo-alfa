@@ -222,17 +222,17 @@ function readOfflineProjects(): OfflineProjectRecord[] {
     .map((row) => {
       const obj = asObject(row);
       if (!obj) return null;
-      const id = typeof obj.id === "string" && obj.id.trim().length > 0 ? obj.id : makeId("local");
+      const id = typeof obj.id === "string" && (obj.id?.trim()?.length ?? 0) > 0 ? obj.id : makeId("local");
       const createdAt = toIsoOrNow(obj.createdAt);
       const updatedAt = toIsoOrNow(obj.updatedAt);
       const snapshotObj = asObject(obj.snapshot);
       if (!snapshotObj) return null;
       return {
         id,
-        remoteId: typeof obj.remoteId === "string" && obj.remoteId.trim().length > 0 ? obj.remoteId : null,
-        name: typeof obj.name === "string" && obj.name.trim().length > 0 ? obj.name : "Projeto",
-        ownerId: typeof obj.ownerId === "string" && obj.ownerId.trim().length > 0 ? obj.ownerId : "usuario-local",
-        ownerName: typeof obj.ownerName === "string" && obj.ownerName.trim().length > 0 ? obj.ownerName : "Utilizador Local",
+        remoteId: typeof obj.remoteId === "string" && (obj.remoteId?.trim()?.length ?? 0) > 0 ? obj.remoteId : null,
+        name: typeof obj.name === "string" && (obj.name?.trim()?.length ?? 0) > 0 ? obj.name : "Projeto",
+        ownerId: typeof obj.ownerId === "string" && (obj.ownerId?.trim()?.length ?? 0) > 0 ? obj.ownerId : "usuario-local",
+        ownerName: typeof obj.ownerName === "string" && (obj.ownerName?.trim()?.length ?? 0) > 0 ? obj.ownerName : "Utilizador Local",
         createdAt,
         updatedAt,
         thumbnailDataUrl:
@@ -553,7 +553,7 @@ function migrateLegacyLocalProjectsOnce(): void {
   parsed.forEach((item) => {
     const row = asObject(item);
     if (!row) return;
-    const id = typeof row.id === "string" && row.id.trim().length > 0 ? row.id : makeId("legacy");
+    const id = typeof row.id === "string" && (row.id?.trim()?.length ?? 0) > 0 ? row.id : makeId("legacy");
     if (byId.has(id)) return;
     const snapshotObj = asObject(row.snapshot);
     if (!snapshotObj) return;
@@ -600,7 +600,7 @@ function ensureSyncLoopStarted(): void {
 }
 
 function resolveProjectIdForRemote(project: OfflineProjectRecord): string | null {
-  if (project.remoteId && project.remoteId.trim().length > 0) return project.remoteId;
+  if (project.remoteId && (project.remoteId?.trim()?.length ?? 0) > 0) return project.remoteId;
   if (!project.id.startsWith("local-") && !project.id.startsWith("legacy-")) return project.id;
   return null;
 }

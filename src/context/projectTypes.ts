@@ -453,6 +453,8 @@ export interface ProjectActions {
   recalculateAllBoxes: () => void;
   undo: () => void;
   redo: () => void;
+  /** Navega para um estado específico da timeline de histórico. */
+  goToHistory: (_index: number) => void;
   saveProjectSnapshot: () => void;
   /** Cria backup manual dedicado (independente do autosave regular). */
   saveManualBackupSnapshot: () => void;
@@ -467,8 +469,26 @@ export interface ProjectActions {
   deleteProject: (_id: string) => Promise<void>;
 }
 
+export type ProjectHistoryEntry = {
+  id: string;
+  actionName: string;
+  timestamp: string | null;
+  actionType: "move" | "resize" | "add" | "remove" | "height" | "other";
+};
+
+export type ProjectHistoryController = {
+  entries: ProjectHistoryEntry[];
+  currentIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  goTo: (_index: number) => void;
+};
+
 export interface ProjectContextProps {
   project: ProjectState;
   actions: ProjectActions;
   viewerSync: ViewerSync;
+  history: ProjectHistoryController;
 }

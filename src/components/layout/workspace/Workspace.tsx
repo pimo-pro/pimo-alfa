@@ -475,6 +475,22 @@ const hasShownViewerReadyToastRef = useRef(false);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return;
+      const keyLower = event.key.toLowerCase();
+      const ctrlOrMeta = event.ctrlKey || event.metaKey;
+      if (ctrlOrMeta && !event.altKey && keyLower === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          actionsRef.current.redo();
+        } else {
+          actionsRef.current.undo();
+        }
+        return;
+      }
+      if (ctrlOrMeta && !event.altKey && keyLower === "y") {
+        event.preventDefault();
+        actionsRef.current.redo();
+        return;
+      }
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown" && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       const key = event.key;

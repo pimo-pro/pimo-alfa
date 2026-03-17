@@ -10,6 +10,21 @@ import { createPortal } from "react-dom";
 import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomInfoContext";
 import { useProject } from "../../../context/useProject";
 
+type HistoryFilter = "all" | "move" | "resize" | "add" | "remove" | "height" | "other";
+
+const HISTORY_FILTER_STORAGE_KEY = "pimo_history_filter";
+const HISTORY_PANEL_POSITION_STORAGE_KEY = "pimo_history_panel_position";
+
+const HISTORY_FILTER_OPTIONS: Array<{ value: HistoryFilter; label: string }> = [
+  { value: "all", label: "Todas as ações" },
+  { value: "move", label: "Movimentações" },
+  { value: "resize", label: "Redimensionamentos" },
+  { value: "add", label: "Adições" },
+  { value: "remove", label: "Remoções" },
+  { value: "height", label: "Alterações de altura" },
+  { value: "other", label: "Outras ações" },
+];
+
 const panelLabels: Record<"left" | "right" | "top" | "bottom" | "back", string> = {
   left: "Lateral Esq",
   right: "Lateral Dir",
@@ -93,6 +108,10 @@ const componentsButtonStyle: React.CSSProperties = {
   color: "var(--text-muted)",
 };
 
+const historyButtonStyle: React.CSSProperties = {
+  ...componentsButtonStyle,
+};
+
 const componentsPopoverStyle: React.CSSProperties = {
   position: "absolute",
   right: 0,
@@ -118,6 +137,38 @@ const componentsSidePanelStyle: React.CSSProperties = {
   flexDirection: "column",
   overflow: "hidden",
   zIndex: 45,
+};
+
+const historyPanelStyle: React.CSSProperties = {
+  position: "fixed",
+  width: 320,
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(7, 11, 24, 0.88)",
+  boxShadow: "0 14px 34px rgba(0,0,0,0.4)",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  zIndex: 46,
+};
+
+const historyPanelHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  padding: "10px 12px",
+  borderBottom: "1px solid rgba(255,255,255,0.12)",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--text-main)",
+  cursor: "move",
+  userSelect: "none",
+};
+
+const historyPanelBodyStyle: React.CSSProperties = {
+  padding: 8,
+  overflowY: "auto",
 };
 
 const componentsSidePanelResizeHandleStyle: React.CSSProperties = {
@@ -186,13 +237,44 @@ const piecePanelHeaderButtonStyle: React.CSSProperties = {
 
 export default function BottomInfoToolbar() {
   const { openPanel, togglePanel } = useBottomInfo();
-  const { actions, project } = useProject();
+  const { actions, project, history } = useProject();
   const [componentsPopoverOpen, setComponentsPopoverOpen] = useState(false);
   const [componentsPanelOpen, setComponentsPanelOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [historyPanelPosition, setHistoryPanelPosition] = useState<{ x: number; y: number } | null>(() => {
+    const raw = window.localStorage.getItem(HISTORY_PANEL_POSITION_STORAGE_KEY);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as { x?: unknown; y?: unknown };
+      if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return null;
+      if (!Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return null;
+      return { x: parsed.x, y: parsed.y };
+    } catch {
+      return null;
+    }
+  });
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>(() => {
+    const raw = window.localStorage.getItem(HISTORY_FILTER_STORAGE_KEY);
+    if (
+      raw === "all" ||
+      raw === "move" ||
+      raw === "resize" ||
+      raw === "add" ||
+      raw === "remove" ||
+      raw === "height" ||
+      raw === "other"
+    ) {
+      return raw;
+    }
+    return "all";
+  });
   const [pieceSearch, setPieceSearch] = useState("");
   const [layoutInsets, setLayoutInsets] = useState({ top: 56, bottom: 42 });
   const [componentsPanelTop, setComponentsPanelTop] = useState(56);
   const componentsGroupRef = useRef<HTMLDivElement | null>(null);
+  const historyHeaderRef = useRef<HTMLDivElement | null>(null);
+  const historyDragOffsetRef = useRef({ x: 0, y: 0 });
+  const historyDraggingRef = useRef(false);
   const resizeStartYRef = useRef(0);
   const resizeStartTopRef = useRef(56);
   const isResizingPanelRef = useRef(false);
@@ -213,7 +295,7 @@ export default function BottomInfoToolbar() {
         const panelKey = panelKeyByType[panel];
         const panelIdFromBox = box.panelIds?.[panelKey];
         const pieceId =
-          typeof panelIdFromBox === "string" && panelIdFromBox.trim().length > 0
+          typeof panelIdFromBox === "string" && (panelIdFromBox?.trim()?.length ?? 0) > 0
             ? panelIdFromBox
             : `${box.id}:${panel}`;
         entries.push({
@@ -230,7 +312,7 @@ export default function BottomInfoToolbar() {
       const shelfCount = Math.max(shelfIds.length, Math.max(0, Math.floor(box.prateleiras ?? 0)));
       for (let i = 0; i < shelfCount; i++) {
         const configuredId = shelfIds[i];
-        const pieceId = configuredId && configuredId.trim().length > 0 ? configuredId : `shelf:${box.id}:${i}`;
+        const pieceId = (configuredId?.trim()?.length ?? 0) > 0 ? configuredId : `shelf:${box.id}:${i}`;
         const label = `Prateleira ${i + 1}`;
         entries.push({
           id: pieceId,
@@ -246,7 +328,7 @@ export default function BottomInfoToolbar() {
         doorIds.add(`door:${door.id}`);
       }
       Array.from(doorIds)
-        .filter((id) => id.trim().length > 0)
+        .filter((id) => (id?.trim()?.length ?? 0) > 0)
         .forEach((id, idx) => {
           const label = `Porta ${idx + 1}`;
           entries.push({
@@ -282,6 +364,21 @@ export default function BottomInfoToolbar() {
     return panelVisibilityEntries.filter((entry) => entry.searchText.includes(query));
   }, [panelVisibilityEntries, pieceSearch]);
 
+  const clampHistoryPanelPosition = (position: { x: number; y: number }) => {
+    const panelWidth = 320;
+    const panelHeight = Math.min(520, Math.max(220, window.innerHeight - layoutInsets.top - layoutInsets.bottom - 24));
+    return {
+      x: Math.max(8, Math.min(window.innerWidth - panelWidth - 8, position.x)),
+      y: Math.max(layoutInsets.top + 4, Math.min(window.innerHeight - layoutInsets.bottom - panelHeight - 4, position.y)),
+    };
+  };
+
+  const filteredHistoryEntries = useMemo(() => {
+    const indexed = history.entries.map((entry, idx) => ({ entry, idx }));
+    if (historyFilter === "all") return indexed;
+    return indexed.filter(({ entry }) => entry.actionType === historyFilter);
+  }, [history.entries, historyFilter]);
+
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (!componentsGroupRef.current) return;
@@ -300,6 +397,68 @@ export default function BottomInfoToolbar() {
       document.removeEventListener("keydown", handleEsc);
     };
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter);
+  }, [historyFilter]);
+
+  useEffect(() => {
+    if (!historyPanelPosition) return;
+    window.localStorage.setItem(HISTORY_PANEL_POSITION_STORAGE_KEY, JSON.stringify(historyPanelPosition));
+  }, [historyPanelPosition]);
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName.toLowerCase();
+      return tag === "input" || tag === "textarea" || target.isContentEditable;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (isEditableTarget(event.target)) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key.toLowerCase() !== "h") return;
+      event.preventDefault();
+      if (historyPanelOpen) {
+        setHistoryPanelOpen(false);
+      } else {
+        if (!historyPanelPosition) {
+          const panelWidth = 320;
+          const defaultPos = clampHistoryPanelPosition({
+            x: window.innerWidth - panelWidth - 16,
+            y: Math.max(layoutInsets.top + 10, 80),
+          });
+          setHistoryPanelPosition(defaultPos);
+        }
+        setHistoryPanelOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [historyPanelOpen, historyPanelPosition, layoutInsets.bottom, layoutInsets.top]);
+
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      if (!historyDraggingRef.current || !historyPanelPosition) return;
+      const next = clampHistoryPanelPosition({
+        x: event.clientX - historyDragOffsetRef.current.x,
+        y: event.clientY - historyDragOffsetRef.current.y,
+      });
+      setHistoryPanelPosition(next);
+    };
+    const onPointerUp = () => {
+      historyDraggingRef.current = false;
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [historyPanelPosition, layoutInsets.bottom, layoutInsets.top]);
 
   useEffect(() => {
     const updateLayoutInsets = () => {
@@ -360,6 +519,29 @@ export default function BottomInfoToolbar() {
     setComponentsPopoverOpen(false);
     setComponentsPanelTop(layoutInsets.top);
     setComponentsPanelOpen(true);
+  };
+
+  const openHistoryPanel = () => {
+    const panelWidth = 320;
+    const defaultPosition = clampHistoryPanelPosition({
+      x: window.innerWidth - panelWidth - 16,
+      y: Math.max(layoutInsets.top + 10, 80),
+    });
+    setHistoryPanelPosition((prev) => (prev ? clampHistoryPanelPosition(prev) : defaultPosition));
+    setHistoryPanelOpen(true);
+  };
+
+  const onHistoryDragStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!historyPanelOpen) return;
+    const panel = historyHeaderRef.current?.closest("aside");
+    if (!(panel instanceof HTMLElement)) return;
+    const rect = panel.getBoundingClientRect();
+    historyDragOffsetRef.current = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+    historyDraggingRef.current = true;
+    document.body.style.userSelect = "none";
   };
 
   const handlePanelResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -526,6 +708,95 @@ export default function BottomInfoToolbar() {
     </aside>
   );
 
+  const historyPanelMaxHeight = Math.min(520, Math.max(220, window.innerHeight - layoutInsets.top - layoutInsets.bottom - 24));
+
+  const historyPanel = historyPanelPosition ? (
+    <aside
+      aria-label="Painel de histórico"
+      style={{
+        ...historyPanelStyle,
+        left: historyPanelPosition.x,
+        top: historyPanelPosition.y,
+        maxHeight: historyPanelMaxHeight,
+      }}
+    >
+      <div ref={historyHeaderRef} style={historyPanelHeaderStyle} onPointerDown={onHistoryDragStart}>
+        <span>Histórico</span>
+        <button
+          type="button"
+          aria-label="Fechar histórico"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => setHistoryPanelOpen(false)}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "rgba(255,255,255,0.05)",
+            color: "var(--text-muted)",
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <div style={historyPanelBodyStyle}>
+        <div style={{ marginBottom: 8 }}>
+          <select
+            aria-label="Filtrar histórico"
+            value={historyFilter}
+            onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}
+            className="input input-sm"
+            style={{ width: "100%" }}
+          >
+            {HISTORY_FILTER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {filteredHistoryEntries.length === 0 ? (
+          <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Sem histórico disponível.</div>
+        ) : (
+          filteredHistoryEntries.map(({ entry, idx }) => {
+            const isCurrent = idx === history.currentIndex;
+            const label = entry.actionName?.trim() || "Alteração";
+            const timestampMs = entry.timestamp ? Date.parse(entry.timestamp) : Number.NaN;
+            const timestampText = Number.isFinite(timestampMs)
+              ? new Date(timestampMs).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
+              : "";
+            return (
+              <button
+                key={`${entry.id}-${idx}`}
+                type="button"
+                onClick={() => history.goTo(idx)}
+                style={{
+                  width: "100%",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 8,
+                  background: isCurrent ? "rgba(59, 130, 246, 0.25)" : "rgba(255,255,255,0.03)",
+                  color: "var(--text-main)",
+                  textAlign: "left",
+                  padding: "8px 10px",
+                  marginBottom: 6,
+                  cursor: "pointer",
+                }}
+                title={`Ir para: ${label}`}
+                aria-label={`Ir para histórico: ${label}`}
+              >
+                <div style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 500 }}>{label}</div>
+                {timestampText ? (
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{timestampText}</div>
+                ) : null}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </aside>
+  ) : null;
+
   return (
     <>
       <div
@@ -593,6 +864,31 @@ export default function BottomInfoToolbar() {
             </svg>
             componentes
           </button>
+          <button
+            type="button"
+            title="Histórico de alterações"
+            aria-label="Histórico de alterações"
+            aria-pressed={historyPanelOpen}
+            onClick={() => {
+              if (historyPanelOpen) setHistoryPanelOpen(false);
+              else openHistoryPanel();
+            }}
+            style={{
+              ...historyButtonStyle,
+              marginLeft: 4,
+              background: historyPanelOpen ? "rgba(59, 130, 246, 0.2)" : "transparent",
+              color: historyPanelOpen ? "var(--text-main)" : "var(--text-muted)",
+            }}
+            onMouseEnter={(e) => {
+              if (!historyPanelOpen) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+              else e.currentTarget.style.background = "rgba(59, 130, 246, 0.28)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = historyPanelOpen ? "rgba(59, 130, 246, 0.2)" : "transparent";
+            }}
+          >
+            Histórico
+          </button>
 
           {componentsPopoverOpen && (
             <div role="menu" aria-label="Menu componentes" style={componentsPopoverStyle}>
@@ -603,6 +899,7 @@ export default function BottomInfoToolbar() {
       </div>
 
       {componentsPanelOpen ? createPortal(componentsSidePanel, document.body) : null}
+      {historyPanelOpen && historyPanel ? createPortal(historyPanel, document.body) : null}
     </>
   );
 }
