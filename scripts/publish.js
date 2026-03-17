@@ -53,14 +53,32 @@ function runStep(description, command) {
   }
 }
 
+function runOutput(command) {
+  try {
+    return execSync(command, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  } catch {
+    return "";
+  }
+}
+
 console.log(`Nova versao: ${nextVersion}`);
 console.log(`updatedAt: ${nextData.updatedAt}`);
 
 runStep("Executando build...", "npm run build");
 runStep("Adicionando arquivos ao git...", "git add .");
 runStep("Criando commit...", `git commit -m "Publicação automática"`);
-runStep("Criando tag...", `git tag ${nextVersion}`);
-runStep("Enviando push...", "git push");
-runStep("Enviando push das tags...", "git push --tags");
+const localTagRef = runOutput(`git rev-parse -q --verify refs/tags/${nextVersion}`);
+if (!localTagRef) {
+  runStep("Criando tag...", `git tag ${nextVersion}`);
+} else {
+  console.log(`Tag local já existe: ${nextVersion} (reutilizando)`);
+}
+runStep("Enviando push...", "git push origin HEAD");
+const remoteTagRef = runOutput(`git ls-remote --tags origin refs/tags/${nextVersion}`);
+if (!remoteTagRef) {
+  runStep("Enviando push da nova tag...", `git push origin refs/tags/${nextVersion}`);
+} else {
+  console.log(`Tag já existe no remoto: ${nextVersion} (sem erro)`);
+}
 
 console.log("Publicação concluída.");
