@@ -1491,7 +1491,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   const doorFpKey = DOOR_SPEC_FINGERPRINT_KEY;
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
   if (import.meta.env.DEV && doorLayerItems.length > 0) {
-    console.log("[DOOR-MAT] BoxBuilder.updateBoxGroup doorLayerItems recebidos", {
+    devLogger.debug("[DOOR-MAT] BoxBuilder.updateBoxGroup doorLayerItems recebidos", {
       count: doorLayerItems.length,
       items: doorLayerItems.map((d, i) => ({ index: i, id: d.id, material: d.material, materialId: d.materialId })),
     });
@@ -1512,7 +1512,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     const item = doorLayerItems[doorIndex];
     const materialName = item?.material ?? item?.materialId ?? getDefaultOfficialMaterial().canonicalId;
     if (import.meta.env.DEV) {
-      console.log("[DOOR-MAT] BoxBuilder.updateBoxGroup porta", {
+      devLogger.debug("[DOOR-MAT] BoxBuilder.updateBoxGroup porta", {
         doorIndex,
         specId: spec.id,
         materialNameUsado: materialName,

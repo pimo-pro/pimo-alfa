@@ -7,16 +7,13 @@ import type { ProjectState } from "../context/projectTypes";
 export function useProjectExport(projectRef: React.MutableRefObject<ProjectState>) {
   // FASE 5: Exportação real do projeto
   return useMemo(() => ({
-    exportProject: () => {
+    exportProject: (_projectRef = projectRef) => {
       // TODO: Implementar exportação real
-      return JSON.stringify(projectRef.current);
+      throw new Error("Not implemented yet: export project to final output format");
     },
-    generatePayload: () => {
+    generatePayload: (_projectRef = projectRef) => {
       // TODO: Gerar payload real para export
-      return {
-        state: projectRef.current,
-        timestamp: Date.now(),
-      };
+      throw new Error("Not implemented yet: generate export payload for project");
     },
   }), [projectRef]);
 }

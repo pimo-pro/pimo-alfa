@@ -9,6 +9,7 @@
  */
 export async function uploadBackupToGoogleDrive(_filePath: string, _version: string): Promise<void> {
   // TODO: Google Drive API
+  throw new Error("Not implemented yet: upload backup file to Google Drive");
 }
 
 /**
@@ -23,4 +24,5 @@ export async function listCloudBackups(): Promise<string[]> {
  */
 export async function restoreCloudBackup(_version: string): Promise<void> {
   // TODO: Download e extrair
+  throw new Error("Not implemented yet: download and restore cloud backup version");
 }

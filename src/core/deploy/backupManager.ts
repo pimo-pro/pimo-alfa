@@ -15,7 +15,7 @@
  */
 export async function createBackup(_version: string): Promise<void> {
   // TODO: Executar no servidor via deploy.sh
-  // Ex.: zip -r backups/backup-${version}.zip dist/
+  throw new Error("Not implemented yet: create backup zip on server before deploy");
 }
 
 /**
@@ -31,4 +31,5 @@ export async function listBackups(): Promise<string[]> {
  */
 export async function restoreBackup(_version: string): Promise<void> {
   // TODO: Implementar restauro
+  throw new Error("Not implemented yet: restore selected backup version on server");
 }

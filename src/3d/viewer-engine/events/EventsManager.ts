@@ -5,6 +5,7 @@
 
 import { getPointerNdc } from "../utils";
 import type { IViewerEventEngine } from "./EventEngineTypes";
+import { devLogger } from "../../../utils/devLogger";
 
 export class EventsManager {
   private readonly engine: IViewerEventEngine;
@@ -156,7 +157,7 @@ export class EventsManager {
   private handleCanvasPointerDown(event: PointerEvent): void {
     const e = this.engine;
     if (import.meta.env.DEV && event.button === 2) {
-      console.log("[DOOR-MAT] handleCanvasPointerDown — botão direito (context menu virá a seguir)", {
+      devLogger.debug("[DOOR-MAT] handleCanvasPointerDown — botão direito (context menu virá a seguir)", {
         clientX: event.clientX,
         clientY: event.clientY,
       });

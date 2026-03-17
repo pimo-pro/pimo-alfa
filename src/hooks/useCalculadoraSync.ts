@@ -40,7 +40,7 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     materialId: door.materialId,
   }));
   if (import.meta.env.DEV && doors.length > 0) {
-    console.log("[DOOR-MAT] getStructureFingerprint doorSig", { boxId: wsBox.id, doorSig });
+    devLogger.debug("[DOOR-MAT] getStructureFingerprint doorSig", { boxId: wsBox.id, doorSig });
   }
   const drawerSig = drawers.map((drawer) => ({
     id: drawer.id,
@@ -158,7 +158,7 @@ export const useCalculadoraSync = (
     const currentBoxes = boxesRef.current ?? [];
     const wsBoxes = workspaceBoxesRef.current ?? [];
     if (import.meta.env.DEV && wsBoxes.length > 0) {
-      console.log("[DOOR-MAT] syncFromCalculator INÍCIO — wsBoxes (ref) door materials", {
+      devLogger.debug("[DOOR-MAT] syncFromCalculator INÍCIO — wsBoxes (ref) door materials", {
         wsBoxesCount: wsBoxes.length,
         porBox: wsBoxes.map((ws) => ({
           boxId: ws.id,
@@ -206,7 +206,7 @@ export const useCalculadoraSync = (
       const doorLayerItems = wsBox?.doorsLayer ?? [];
       const drawerLayerItems = wsBox?.drawersLayer ?? [];
       if (import.meta.env.DEV && doorLayerItems.length > 0) {
-        console.log("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
+        devLogger.debug("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
           boxId: wsBox.id,
           doorLayerItems: doorLayerItems.map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
         });
@@ -248,7 +248,7 @@ export const useCalculadoraSync = (
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
           if (import.meta.env.DEV && (wsBox?.doorsLayer?.length ?? 0) > 0) {
-            console.log("[DOOR-MAT] useCalculadoraSync SKIP full update (fingerprint igual) — só posRot", {
+            devLogger.debug("[DOOR-MAT] useCalculadoraSync SKIP full update (fingerprint igual) — só posRot", {
               boxId: wsBox.id,
               doorMaterials: wsBox.doorsLayer?.map((d) => ({ id: d.id, material: d.material })),
             });
@@ -257,7 +257,7 @@ export const useCalculadoraSync = (
           api.updateBox(wsBox.id, { ...posRot, locked });
         } else {
           if (import.meta.env.DEV) {
-            console.log("[DOOR-MAT] useCalculadoraSync FULL updateBox (fingerprint mudou)", {
+            devLogger.debug("[DOOR-MAT] useCalculadoraSync FULL updateBox (fingerprint mudou)", {
               boxId: wsBox.id,
               doorLayerItems: (wsBox.doorsLayer ?? []).map((d) => ({ id: d.id, material: d.material, materialId: d.materialId })),
             });

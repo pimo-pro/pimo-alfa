@@ -9,13 +9,13 @@ export function useMaterialSelection(project: ProjectState) {
   // FASE 5: Seleção real de material
   return useMemo(() => ({
     selectedMaterial: project.material,
-    selectMaterial: (material: Material) => {
+    selectMaterial: (_material: Material) => {
       // TODO: Implementar seleção real de material (via actions quando disponível)
-      return material;
+      throw new Error("Not implemented yet: select material through project actions");
     },
     listMaterials: () => {
       // TODO: Retornar lista real de materiais
-      return [project.material];
+      throw new Error("Not implemented yet: list available materials from material catalog");
     },
   }), [project]);
 }

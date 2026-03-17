@@ -27,6 +27,7 @@ import GerarArquivoModal from "../right-panel/GerarArquivoModal";
 import BoxInfoOverlay from "./BoxInfoOverlay";
 import ContextMenu from "./ContextMenu";
 import { RulerSystem } from "../../../core/ruler/RulerSystem";
+import { devLogger } from "../../../utils/devLogger";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -669,7 +670,7 @@ return (
                 event.preventDefault();
                 const hit = viewerApi.getContextMenuLayerHit?.(event) ?? null;
                 if (import.meta.env.DEV && hit?.type === "door" && hit?.doorLayerId) {
-                  console.log("[DOOR-MAT] Workspace onContextMenu — hit recebido (será usado no menu)", {
+                  devLogger.debug("[DOOR-MAT] Workspace onContextMenu — hit recebido (será usado no menu)", {
                     boxId: hit.boxId,
                     doorLayerId: hit.doorLayerId,
                     type: hit.type,
@@ -713,12 +714,12 @@ return (
               contextMenuLayerTarget={contextMenuLayerTarget}
               onDoorMaterialChange={(boxId, doorLayerId, materialId) => {
                 if (import.meta.env.DEV) {
-                  console.log("[DOOR-MAT] 1 Workspace.onDoorMaterialChange", { boxId, doorLayerId, materialId, when: "before setState" });
+                  devLogger.debug("[DOOR-MAT] 1 Workspace.onDoorMaterialChange", { boxId, doorLayerId, materialId, when: "before setState" });
                 }
                 actions.setDoorMaterial(boxId, doorLayerId, materialId);
                 viewerApi.updateDoorMaterial?.(boxId, doorLayerId, materialId);
                 if (import.meta.env.DEV) {
-                  console.log("[DOOR-MAT] 2 Workspace.onDoorMaterialChange done (viewer updated)", { boxId, doorLayerId, materialId });
+                  devLogger.debug("[DOOR-MAT] 2 Workspace.onDoorMaterialChange done (viewer updated)", { boxId, doorLayerId, materialId });
                 }
               }}
               onDrawerMaterialChange={(boxId, drawerLayerId, materialId) => {

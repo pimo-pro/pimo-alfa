@@ -1,3 +1,13 @@
 export { useProjectExportActions } from "./useProjectExportActions";
 export { useProjectPersistence, type ProjectPersistenceApi } from "./useProjectPersistence";
 export { useProjectBoxActions, type UseProjectBoxActionsDeps } from "./useProjectBoxActions";
+export { useProjectActions } from "./useProjectActions";
+export { useHistoryActions } from "./useHistoryActions";
+export { useProjectIoActions } from "./useProjectIoActions";
+export { useLayerActions } from "./useLayerActions";
+export { useBoxCrudActions } from "./useBoxCrudActions";
+export { useBoxTransformActions } from "./useBoxTransformActions";
+export { useCadModelActions } from "./useCadModelActions";
+export { useRulesActions } from "./useRulesActions";
+export { useViewerUiActions } from "./useViewerUiActions";
+export { useDesignActions } from "./useDesignActions";

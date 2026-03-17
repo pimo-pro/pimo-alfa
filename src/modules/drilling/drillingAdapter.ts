@@ -350,7 +350,7 @@ export function buildViewerDrillMarkersByPanelResult(
 
   if (import.meta.env.DEV) {
     // Log cutlist recebido
-    console.log("[DRILL-DIAG] buildViewerDrillMarkersByPanelResult: cutList recebido", cutList.map(item => ({
+    devLogger.debug("[DRILL-DIAG] buildViewerDrillMarkersByPanelResult: cutList recebido", cutList.map(item => ({
       id: item.id,
       tipo: item.tipo,
       drillHoles: item.drillHoles,
@@ -399,7 +399,7 @@ export function buildViewerDrillMarkersByPanelResult(
   };
   if (import.meta.env.DEV) {
     // Log resultado do mapeamento
-    console.log("[DRILL-DIAG] buildViewerDrillMarkersByPanelResult: drillMarkersByPanel gerado", result);
+    devLogger.debug("[DRILL-DIAG] buildViewerDrillMarkersByPanelResult: drillMarkersByPanel gerado", result);
   }
   return {
     success: true,

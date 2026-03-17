@@ -12,6 +12,7 @@ import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/mater
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { addMateDowelHolesToBoxItems } from "../drill/dowelJoints";
+import { devLogger } from "../../utils/devLogger";
 
 /**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
@@ -24,16 +25,16 @@ export function cutlistComPrecoFromBox(
   projectMaterialId?: string
 ): CutListItemComPreco[] {
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: box recebido", box);
-    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: rules recebido", rules);
+    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: box recebido", box);
+    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: rules recebido", rules);
   }
   const effRules = buildEffectiveDrillingRules(rules);
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: effRules", effRules);
+    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: effRules", effRules);
   }
   const modelo = gerarModeloIndustrial(box, effRules);
   if (import.meta.env.DEV) {
-    console.log("[DRILL-DIAG] cutlistComPrecoFromBox: modelo.paineis", modelo.paineis);
+    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: modelo.paineis", modelo.paineis);
   }
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
   const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
@@ -116,7 +117,7 @@ export function cutlistComPrecoFromBox(
       : [];
     if (import.meta.env.DEV) {
       // Log de diagnóstico dos furos gerados para cada painel
-      console.log("[DRILL-DIAG] cutlistComPrecoFromBox: drillHoles para painel", {
+      devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: drillHoles para painel", {
         painelId: p.id,
         tipo: p.tipo,
         drillHoles,

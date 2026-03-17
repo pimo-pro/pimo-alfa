@@ -61,8 +61,6 @@ import type {
   ViewerMousePreset,
   ViewerRenderOptions,
   ViewerRenderResult,
-  ViewerCameraPreset,
-  ViewerRenderFormat,
 } from "../../context/projectTypes";
 import { loadGLB } from "../../core/glb/glbLoader";
 import {
@@ -70,16 +68,14 @@ import {
   type VisualMaterial,
 } from "../../core/materials/materialLibraryV2";
 import { snapHorizontalOffset } from "../../utils/openingConstraints";
-import { applyImageWatermark } from "../../utils/watermark";
 import { devLogger } from "../../utils/devLogger";
 import { WallGizmo } from "../gizmos/WallGizmo";
 import { updateWallCulling } from "../visibility/WallRaycastCulling";
-import {
-  keepModelInsideRoom,
-  preventModelWallIntersection,
-} from "../collision/ModelCollision";
-import { snapModelToNearestWall, type SnapDebugData } from "../snapping/ModelWallSnap";
+import type { SnapDebugData } from "../snapping/ModelWallSnap";
 import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
+import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
+import { TransformConstraints } from "./constraints/TransformConstraints";
+import { LegacyRulerAdapter } from "./legacy/LegacyRulerAdapter";
 
 /**
  * ViewerCore: orquestrador do motor 3D.
@@ -277,6 +273,9 @@ export class ViewerCore {
   /** Diagnóstico DEV: contadores por mesh.uuid. */
   private rotationDiagnosticsByUuid = new Map<string, { applied: number; duplicateSkipped: number }>();
   private rotationDiagnosticsLastLogTs = 0;
+  private renderExporter!: ViewerRenderExporter;
+  private constraints!: TransformConstraints;
+  private legacyRuler!: LegacyRulerAdapter;
 
   constructor(container: HTMLElement, options: ViewerOptions = {}) {
     if (!container) {
@@ -439,6 +438,48 @@ export class ViewerCore {
       getScene: () => this.sceneManager.scene,
       getRenderer: () => this.rendererManager.renderer,
       getContainer: () => this.container,
+    });
+
+    this.constraints = new TransformConstraints();
+    this.legacyRuler = new LegacyRulerAdapter();
+    this.renderExporter = new ViewerRenderExporter({
+      getBoxes: () => this.boxes,
+      getRenderer: () => this.rendererManager.renderer,
+      getScene: () => this.sceneManager.scene,
+      getCamera: () => this.cameraManager.camera,
+      getControls: () =>
+        this.controls?.controls
+          ? { target: this.controls.controls.target, update: () => this.controls!.controls!.update() }
+          : null,
+      getLights: () => ({
+        keyLight: this.lights.keyLight,
+        fillLight: this.lights.fillLight,
+        ambient: this.lights.ambient,
+        rimLight: this.lights.rimLight,
+      }),
+      getGroundVisible: () => this.sceneManager.getGroundVisible(),
+      setGroundVisible: (visible) => this.sceneManager.setGroundVisible(visible),
+      getGridVisible: () => this.sceneManager.getGridVisible(),
+      setGridVisible: (visible) => this.sceneManager.setGridVisible(visible),
+      getRoomGroup: () => this.roomBuilder.getGroup(),
+      getRoomWalls: () => this.roomBoxWalls,
+      getSelectionOutline: () => this.selectionOutline,
+      getWallSelectionOutline: () => this.wallSelectionOutline,
+      getDimensionsOverlayGroup: () => this.dimensionsOverlayGroup,
+      getWallGizmoGroup: () => this.wallGizmo?.group ?? null,
+      ensureShowcaseComposer: () => {
+        if (!this.composer) this.initShowcaseComposer();
+      },
+      ensureMainComposer: () => {
+        if (!this.mainComposer) this.initMainComposer();
+      },
+      getShowcaseComposer: () => this.composer,
+      getMainComposer: () => this.mainComposer,
+      getShowcaseBloomPass: () => this.bloomPass,
+      getMainBloomPass: () => this.mainBloomPass,
+      updateShowcaseComposerSize: () => this.updateShowcaseComposerSize(),
+      updateMainComposerSize: () => this.updateMainComposerSize(),
+      updateCanvasSize: () => this.updateCanvasSize(),
     });
 
     this.updateCameraTarget();
@@ -928,7 +969,7 @@ export class ViewerCore {
    */
   updateDoorMaterial(boxId: string, doorLayerId: string, materialName: string): void {
     if (import.meta.env.DEV) {
-      console.log("[DOOR-MAT] ViewerCore.updateDoorMaterial", { boxId, doorLayerId, materialName });
+      devLogger.debug("[DOOR-MAT] ViewerCore.updateDoorMaterial", { boxId, doorLayerId, materialName });
     }
     const entry = this.boxes.get(boxId);
     if (!entry) return;
@@ -980,7 +1021,7 @@ export class ViewerCore {
     const newDoor = createDoorObject(spec, doorMat, doorHoles);
     boxGroup.add(newDoor);
     if (import.meta.env.DEV) {
-      console.log("[DOOR-MAT] Material aplicado independentemente:", {
+      devLogger.debug("[DOOR-MAT] Material aplicado independentemente:", {
         id: doorLayerId,
         material: (doorMat as THREE.Material).uuid,
         textura: materialName,
@@ -2079,7 +2120,7 @@ export class ViewerCore {
       opts.thickness !== undefined;
     if (onlyTransform && !hasStructureOpts) {
       if (import.meta.env.DEV) {
-        console.log("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
+        devLogger.debug("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
       }
       if (entry.manualPosition && !opts.position) {
         // nada a alterar
@@ -3605,106 +3646,26 @@ export class ViewerCore {
 
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
-    if (!this.transformControls) return;
-    const obj = this.transformControls.object;
-    if (!obj) return;
-    if (this.viewerState.getSelectedBox() && this.boxes.has(this.viewerState.getSelectedBox())) {
-      const entry = this.boxes.get(this.viewerState.getSelectedBox())!;
-      if (obj === entry.mesh) {
-        if (this.viewerState.getCurrentTool() === "translate") {
-          const snapData = obj.userData as Record<string, unknown>;
-          const currentPos = obj.position.clone();
-          const lastPos =
-            snapData.lastSnapPosition instanceof THREE.Vector3
-              ? snapData.lastSnapPosition.clone()
-              : currentPos.clone();
-          const movementDirection = currentPos.sub(lastPos);
-          if (movementDirection.lengthSq() > 1e-10) {
-            movementDirection.normalize();
-          }
-          snapData.movementDirection = movementDirection.clone();
-          snapData.lastSnapPosition = obj.position.clone();
-
-          obj.updateMatrixWorld(true);
-          this.applyFloorConstraint(obj);
-          if (this.lockEnabled) {
-            this.applyCollisionConstraint(obj);
-          }
-          if (this.roomBounds && this.lockEnabled && this.isMeshInsideOrTouchingRoom(obj)) {
-            const wallsMain = this.roomBoxWalls
-              .map((w) => w.mesh)
-              .filter((w) => w.userData?.isMainWall === true);
-            const allRoomWalls = this.roomBoxWalls.map((w) => w.mesh);
-
-            const snapResult = snapModelToNearestWall(obj, wallsMain);
-            this.lastSnapDebugData = snapResult.debug;
-            preventModelWallIntersection(obj, allRoomWalls);
-            keepModelInsideRoom(obj, this.roomBounds);
-            this.applyRoomConstraint(obj, { ignoreY: entry.manualPosition });
-          } else {
-            this.clearSnapState(obj);
-            this.lastSnapDebugData = null;
-          }
-          if (this.shouldUseFeetLock(entry) && !entry.manualPosition) {
-            obj.position.y = this.getFixedYForCabinet(entry);
-          }
-          this.updateBoxesIntersectingWalls();
-        } else if (this.viewerState.getCurrentTool() === "rotate") {
-          // Rotação completa X/Y/Z mantida; estado persiste via onBoxTransform
-        }
-        return;
-      }
-    }
-    if (this.viewerState.getSelectedWallIndex() !== null && this.roomBoxWalls.find((w) => w.id === this.viewerState.getSelectedWallIndex())?.mesh === obj) {
-      if (this.viewerState.getCurrentTool() === "translate") {
-        const wall = obj as THREE.Mesh;
-        const heightM = ((wall.userData.wallHeightMm as number | undefined) ?? 2700) * 0.001;
-        if (wall.position.y < heightM / 2) wall.position.y = heightM / 2;
-      } else if (this.viewerState.getCurrentTool() === "rotate") {
-        (obj as THREE.Mesh).rotation.x = 0;
-        (obj as THREE.Mesh).rotation.z = 0;
-      }
-    }
-  }
-
-  /** Lock ON: impede interpenetração em X, Y e Z (várias passagens até não haver sobreposição). */
-  private applyCollisionConstraint(movingMesh: THREE.Object3D): void {
-    const maxIterations = 8;
-    for (let iter = 0; iter < maxIterations; iter++) {
-      movingMesh.updateMatrixWorld(true);
-      const movingBox = new THREE.Box3().setFromObject(movingMesh);
-      let anyOverlap = false;
-      this.boxes.forEach((entry, boxId) => {
-        if (boxId === this.viewerState.getSelectedBox()) return;
-        entry.mesh.updateMatrixWorld(true);
-        const otherBox = new THREE.Box3().setFromObject(entry.mesh);
-        if (!movingBox.intersectsBox(otherBox)) return;
-        anyOverlap = true;
-
-        const overlapX = Math.max(0, Math.min(movingBox.max.x, otherBox.max.x) - Math.max(movingBox.min.x, otherBox.min.x));
-        const overlapZ = Math.max(0, Math.min(movingBox.max.z, otherBox.max.z) - Math.max(movingBox.min.z, otherBox.min.z));
-        const overlapY = Math.max(0, Math.min(movingBox.max.y, otherBox.max.y) - Math.max(movingBox.min.y, otherBox.min.y));
-        const minOverlap = Math.min(overlapX, overlapZ, overlapY);
-        if (minOverlap <= 0) return;
-
-        const movingCenter = new THREE.Vector3();
-        movingBox.getCenter(movingCenter);
-        const otherCenter = new THREE.Vector3();
-        otherBox.getCenter(otherCenter);
-
-        if (minOverlap === overlapX) {
-          const move = movingCenter.x < otherCenter.x ? otherBox.min.x - movingBox.max.x : otherBox.max.x - movingBox.min.x;
-          movingMesh.position.x += move;
-        } else if (minOverlap === overlapZ) {
-          const move = movingCenter.z < otherCenter.z ? otherBox.min.z - movingBox.max.z : otherBox.max.z - movingBox.min.z;
-          movingMesh.position.z += move;
-        } else {
-          const move = movingCenter.y < otherCenter.y ? otherBox.min.y - movingBox.max.y : otherBox.max.y - movingBox.min.y;
-          movingMesh.position.y += move;
-        }
-      });
-      if (!anyOverlap) break;
-    }
+    this.constraints.clampTransform({
+      transformControls: this.transformControls,
+      selectedBoxId: this.viewerState.getSelectedBox(),
+      selectedWallIndex: this.viewerState.getSelectedWallIndex(),
+      boxes: this.boxes,
+      currentTool: this.viewerState.getCurrentTool(),
+      lockEnabled: this.lockEnabled,
+      roomBounds: this.roomBounds,
+      roomBoxWalls: this.roomBoxWalls,
+      applyFloorConstraint: (obj) => this.applyFloorConstraint(obj),
+      applyRoomConstraint: (obj, options) => this.applyRoomConstraint(obj, options),
+      isMeshInsideOrTouchingRoom: (obj) => this.isMeshInsideOrTouchingRoom(obj),
+      clearSnapState: (obj) => this.clearSnapState(obj),
+      shouldUseFeetLock: (entry) => this.shouldUseFeetLock(entry),
+      getFixedYForCabinet: (entry) => this.getFixedYForCabinet(entry),
+      updateBoxesIntersectingWalls: () => this.updateBoxesIntersectingWalls(),
+      setLastSnapDebugData: (data) => {
+        this.lastSnapDebugData = data;
+      },
+    });
   }
 
   /** Atualiza o conjunto de caixas que intersectam paredes (para destaque quando lock desativado). */
@@ -3986,7 +3947,7 @@ export class ViewerCore {
         ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerIdAtPointer}`)
         : -1;
       if (import.meta.env.DEV && this.debugMode) {
-        console.log("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
+        devLogger.debug("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
           boxId: boxIdFirst,
           doorLayerId: doorLayerIdAtPointer,
           specId: doorLayerIdAtPointer,
@@ -3998,28 +3959,57 @@ export class ViewerCore {
     return this.getBoxIdByMesh(firstHit);
   }
 
+  /**
+   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
+   * Located in: src/core/ruler/RulerSystem.ts
+   * Do NOT call this method. It will be removed in a future cleanup.
+   */
   getRulerEdgeAtPointer(_event: { clientX: number; clientY: number }): null {
-    return null;
+    return this.legacyRuler.getRulerEdgeAtPointer(_event);
   }
 
+  /**
+   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
+   * Located in: src/core/ruler/RulerSystem.ts
+   * Do NOT call this method. It will be removed in a future cleanup.
+   */
   getInternalRulerPickAtPointer(_event: { clientX: number; clientY: number }): null {
-    return null;
+    return this.legacyRuler.getInternalRulerPickAtPointer(_event);
   }
 
-  cycleInternalRulerSelection(_result: unknown): void {}
+  cycleInternalRulerSelection(_result: unknown): void {
+    this.legacyRuler.cycleInternalRulerSelection(_result);
+  }
 
-  clearInternalRulerSelection(): void {}
+  clearInternalRulerSelection(): void {
+    this.legacyRuler.clearInternalRulerSelection();
+  }
 
+  /**
+   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
+   * Located in: src/core/ruler/RulerSystem.ts
+   * Do NOT call this method. It will be removed in a future cleanup.
+   */
   getInternalRulerA(): null {
-    return null;
+    return this.legacyRuler.getInternalRulerA();
   }
 
+  /**
+   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
+   * Located in: src/core/ruler/RulerSystem.ts
+   * Do NOT call this method. It will be removed in a future cleanup.
+   */
   getInternalRulerB(): null {
-    return null;
+    return this.legacyRuler.getInternalRulerB();
   }
 
+  /**
+   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
+   * Located in: src/core/ruler/RulerSystem.ts
+   * Do NOT call this method. It will be removed in a future cleanup.
+   */
   getInternalRulerMeasurement(): null {
-    return null;
+    return this.legacyRuler.getInternalRulerMeasurement();
   }
 
   /**
@@ -4029,6 +4019,11 @@ export class ViewerCore {
     return this.getBoxIdByMesh(mesh);
   }
 
+  /**
+   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
+   * Located in: src/core/ruler/RulerSystem.ts
+   * Do NOT call this method. It will be removed in a future cleanup.
+   */
   getRulerMeasurements(_referenceBoxId: string | null): {
     horizontalLeft: null;
     horizontalRight: null;
@@ -4037,14 +4032,7 @@ export class ViewerCore {
     floor: null;
     ceiling: null;
   } {
-    return {
-      horizontalLeft: null,
-      horizontalRight: null,
-      front: null,
-      back: null,
-      floor: null,
-      ceiling: null,
-    };
+    return this.legacyRuler.getRulerMeasurements(_referenceBoxId);
   }
 
   /** Obtém doorLayerId subindo na hierarquia (mesh → pivot door-layer-* → …). Usado por getContextMenuLayerHit e getDoorHitAtPointer. */
@@ -4097,7 +4085,7 @@ export class ViewerCore {
         ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerId}`)
         : -1;
       if (import.meta.env.DEV) {
-        console.log("[DOOR-MAT] getDoorHitAtPointer (double-click/raycast)", {
+        devLogger.debug("[DOOR-MAT] getDoorHitAtPointer (double-click/raycast)", {
           boxId,
           doorLayerId,
           specId: doorLayerId,
@@ -4146,7 +4134,7 @@ export class ViewerCore {
           ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerId}`)
           : -1;
         if (import.meta.env.DEV) {
-          console.log("[DOOR-MAT] getContextMenuLayerHit — porta selecionada pelo raycaster (menu contexto)", {
+          devLogger.debug("[DOOR-MAT] getContextMenuLayerHit — porta selecionada pelo raycaster (menu contexto)", {
             boxId,
             doorLayerId,
             specId: doorLayerId,
@@ -4377,315 +4365,7 @@ export class ViewerCore {
 
 
   async renderScene(options: ViewerRenderOptions): Promise<ViewerRenderResult | null> {
-    const sizeMap: Record<ViewerRenderOptions["size"], [number, number]> = {
-      small: [1280, 720],
-      medium: [1600, 900],
-      large: [1920, 1080],
-      "4k": [3840, 2160],
-    };
-    const [width, height] = sizeMap[options.size] ?? sizeMap.medium;
-    const preset: ViewerCameraPreset = options.preset ?? "current";
-    const applyWatermark = options.watermark ?? false;
-    const format: ViewerRenderFormat = options.format ?? "png";
-    const isolatedProject = options.background === "project-transparent";
-    const transparentBackground = options.background === "transparent" || isolatedProject;
-    const advancedRealism = Boolean(options.advancedRealism && options.mode !== "lines");
-    const qualityBase = Math.max(0.1, Math.min(options.quality ?? 0.92, 1));
-    const quality = format === "jpg"
-      ? (advancedRealism ? Math.max(qualityBase, 0.97) : qualityBase)
-      : 1;
-    const shadowBase = THREE.MathUtils.clamp(options.shadowIntensity ?? 1, 0, 1);
-    const shadowFactor = advancedRealism ? Math.max(shadowBase, 0.86) : shadowBase;
-    const supersampleScale = advancedRealism ? 1.5 : 1;
-    const renderWidth = Math.max(1, Math.round(width * supersampleScale));
-    const renderHeight = Math.max(1, Math.round(height * supersampleScale));
-    const renderer = this.rendererManager.renderer;
-    const scene = this.sceneManager.scene;
-    const camera = this.cameraManager.camera;
-    const controls = this.controls?.controls ?? null;
-
-    const originalCameraPosition = camera.position.clone();
-    const originalCameraQuaternion = camera.quaternion.clone();
-    const originalCameraZoom = camera.zoom;
-    const originalControlsTarget = controls ? controls.target.clone() : null;
-
-    const originalLightState = {
-      key: this.lights.keyLight.intensity,
-      fill: this.lights.fillLight.intensity,
-      ambient: this.lights.ambient.intensity,
-      rim: this.lights.rimLight.intensity,
-      castShadow: this.lights.keyLight.castShadow,
-      shadowRadius: this.lights.keyLight.shadow.radius,
-    };
-    const originalRendererState = {
-      toneMappingExposure: renderer.toneMappingExposure,
-      shadowEnabled: renderer.shadowMap.enabled,
-      shadowType: renderer.shadowMap.type,
-    };
-
-    const originalGroundVisible = this.sceneManager.getGroundVisible();
-    const originalGridVisible = this.sceneManager.getGridVisible();
-    const originalRoomBuilderVisible = this.roomBuilder.getGroup().visible;
-    const originalRoomWallVisibility = this.roomBoxWalls.map((wall) => ({
-      mesh: wall.mesh,
-      visible: wall.mesh.visible,
-    }));
-    const originalOverlayVisibility = {
-      selectionOutline: this.selectionOutline?.visible ?? false,
-      wallSelectionOutline: this.wallSelectionOutline?.visible ?? false,
-      dimensionsOverlay: this.dimensionsOverlayGroup?.visible ?? false,
-      wallGizmo: this.wallGizmo?.group.visible ?? false,
-    };
-
-    const applyPresetCamera = () => {
-    if (preset === "current") return;
-    if (this.boxes.size === 0) return;
-
-    this._boundingBox.makeEmpty();
-    this.boxes.forEach((entry) => {
-      this._boundingBox.expandByObject(entry.mesh);
-    });
-    if (this._boundingBox.isEmpty()) return;
-    this._boundingBox.getCenter(this._center);
-    this._boundingBox.getSize(this._size);
-    const center = this._center.clone();
-    const maxDim = Math.max(this._size.x, this._size.y, this._size.z, 1);
-    const distance = maxDim * 1.8;
-
-    const offsets: Record<ViewerCameraPreset, THREE.Vector3> = {
-      current: new THREE.Vector3().copy(camera.position),
-      front: new THREE.Vector3(0, maxDim * 0.35, distance),
-      top: new THREE.Vector3(0, distance, 0.001),
-      iso1: new THREE.Vector3(distance * 0.9, distance * 0.7, distance * 0.9),
-      iso2: new THREE.Vector3(-distance * 0.75, distance * 0.65, distance * 0.9),
-    };
-
-    const offset = offsets[preset] ?? offsets.current;
-    camera.position.set(center.x + offset.x, center.y + offset.y, center.z + offset.z);
-
-    camera.lookAt(center);
-    camera.updateMatrixWorld(true);
-    if (controls) {
-      controls.target.copy(center);
-      controls.update();
-    }
-    };
-
-    const applyShadowIntensity = () => {
-      const eased = 0.55 + shadowFactor * 0.45;
-      const photoExposure = 1.22;
-      if (advancedRealism) {
-        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.25);
-        this.lights.fillLight.intensity = originalLightState.fill * (0.85 + shadowFactor * 0.3);
-        this.lights.ambient.intensity = originalLightState.ambient * (0.95 + shadowFactor * 0.15);
-        this.lights.rimLight.intensity = originalLightState.rim * (0.9 + shadowFactor * 0.25);
-        this.lights.keyLight.castShadow = true;
-        this.lights.keyLight.shadow.radius = Math.max(4, originalLightState.shadowRadius * 1.6);
-        this.lights.keyLight.shadow.bias = -0.0001;
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMappingExposure = Math.max(originalRendererState.toneMappingExposure, photoExposure);
-      } else {
-        this.lights.keyLight.intensity = originalLightState.key * (eased * 1.12);
-        this.lights.fillLight.intensity = originalLightState.fill * (0.75 + shadowFactor * 0.4);
-        this.lights.ambient.intensity = originalLightState.ambient * (0.85 + shadowFactor * 0.25);
-        this.lights.rimLight.intensity = originalLightState.rim * (0.65 + shadowFactor * 0.5);
-        this.lights.keyLight.castShadow = shadowFactor > 0.15 ? originalLightState.castShadow : false;
-        this.lights.keyLight.shadow.radius = Math.max(3, originalLightState.shadowRadius * (0.7 + shadowFactor * 0.6));
-        renderer.toneMappingExposure = Math.max(originalRendererState.toneMappingExposure, 1.12);
-      }
-    };
-
-    const applyIsolatedProjectMode = () => {
-      if (!isolatedProject) return;
-      this.sceneManager.setGroundVisible(false);
-      this.sceneManager.setGridVisible(false);
-      this.roomBuilder.getGroup().visible = false;
-      this.roomBoxWalls.forEach((wall) => {
-        wall.mesh.visible = false;
-      });
-      if (this.selectionOutline) this.selectionOutline.visible = false;
-      if (this.wallSelectionOutline) this.wallSelectionOutline.visible = false;
-      if (this.dimensionsOverlayGroup) this.dimensionsOverlayGroup.visible = false;
-      if (this.wallGizmo?.group) this.wallGizmo.group.visible = false;
-      renderer.shadowMap.enabled = false;
-    };
-
-    applyPresetCamera();
-    applyShadowIntensity();
-    applyIsolatedProjectMode();
-
-    const prevPixelRatio = renderer.getPixelRatio();
-    const prevRenderTarget = renderer.getRenderTarget();
-    const prevRendererSize = renderer.getSize(new THREE.Vector2());
-    const prevClearColor = renderer.getClearColor(new THREE.Color()).clone();
-    const prevClearAlpha = renderer.getClearAlpha();
-    const prevBackground = scene.background;
-    const prevEnvironment = scene.environment;
-
-    const renderTarget = new THREE.WebGLRenderTarget(renderWidth, renderHeight, {
-      depthBuffer: true,
-      stencilBuffer: false,
-      type: THREE.UnsignedByteType,
-    });
-
-    const swappedMaterials: Array<{ mesh: THREE.Mesh; material: THREE.Material | THREE.Material[] }> = [];
-    let linesMaterial: THREE.MeshBasicMaterial | null = null;
-
-    try {
-      renderer.setPixelRatio(1);
-
-      if (transparentBackground) {
-        renderer.setClearColor(0x000000, 0);
-        scene.background = null;
-      } else if (options.background === "white") {
-        renderer.setClearColor(0xffffff, 1);
-        scene.background = new THREE.Color(0xffffff);
-      }
-      // "hdri": mantém scene.background e scene.environment atuais (fundo padrão do sistema)
-
-      if (options.mode === "lines") {
-        linesMaterial = new THREE.MeshBasicMaterial({ color: 0x111111, wireframe: true });
-        this.boxes.forEach((entry) => {
-          entry.mesh.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              swappedMaterials.push({ mesh: child, material: child.material });
-              child.material = linesMaterial!;
-            }
-          });
-        });
-        scene.environment = null;
-      }
-
-      let exportCanvas: HTMLCanvasElement;
-      const canUseLiveComposer = options.mode === "pbr" && !transparentBackground;
-      if (canUseLiveComposer) {
-        renderer.setRenderTarget(null);
-        renderer.setSize(renderWidth, renderHeight, false);
-        camera.aspect = renderWidth / Math.max(1, renderHeight);
-        camera.updateProjectionMatrix();
-        this.updateShowcaseComposerSize();
-        this.updateMainComposerSize();
-
-        if (advancedRealism) {
-          if (!this.composer) this.initShowcaseComposer();
-          if (this.bloomPass) {
-            this.bloomPass.strength = 0.16;
-            this.bloomPass.radius = 0.34;
-            this.bloomPass.threshold = 0.88;
-          }
-          this.composer?.render();
-        } else {
-          if (!this.mainComposer) this.initMainComposer();
-          if (this.mainBloomPass) {
-            this.mainBloomPass.strength = 0.06;
-            this.mainBloomPass.radius = 0.4;
-            this.mainBloomPass.threshold = 0.86;
-          }
-          this.mainComposer?.render();
-        }
-
-        const snapCanvas = renderer.domElement;
-        const offscreen = document.createElement("canvas");
-        offscreen.width = renderWidth;
-        offscreen.height = renderHeight;
-        const offscreenCtx = offscreen.getContext("2d");
-        if (!offscreenCtx) return null;
-        offscreenCtx.drawImage(snapCanvas, 0, 0, renderWidth, renderHeight);
-        exportCanvas = offscreen;
-      } else {
-        renderer.setRenderTarget(renderTarget);
-        renderer.render(scene, camera);
-
-        const buffer = new Uint8Array(renderWidth * renderHeight * 4);
-        renderer.readRenderTargetPixels(renderTarget, 0, 0, renderWidth, renderHeight, buffer);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = renderWidth;
-        canvas.height = renderHeight;
-        const context = canvas.getContext("2d");
-        if (!context) {
-          return null;
-        }
-        const imageData = context.createImageData(renderWidth, renderHeight);
-        for (let y = 0; y < renderHeight; y++) {
-          const srcOffset = (renderHeight - y - 1) * renderWidth * 4;
-          const dstOffset = y * renderWidth * 4;
-          imageData.data.set(buffer.subarray(srcOffset, srcOffset + renderWidth * 4), dstOffset);
-        }
-        context.putImageData(imageData, 0, 0);
-        exportCanvas = canvas;
-      }
-
-      if (advancedRealism && (renderWidth !== width || renderHeight !== height)) {
-        const downscaled = document.createElement("canvas");
-        downscaled.width = width;
-        downscaled.height = height;
-        const downscaledContext = downscaled.getContext("2d");
-        if (downscaledContext) {
-          downscaledContext.imageSmoothingEnabled = true;
-          downscaledContext.imageSmoothingQuality = "high";
-          downscaledContext.drawImage(exportCanvas, 0, 0, width, height);
-          exportCanvas = downscaled;
-        }
-      }
-
-      if (applyWatermark) {
-        await applyImageWatermark(exportCanvas, {
-          opacity: 0.15,
-          position: "bottom-right",
-          widthPercent: 0.12,
-        });
-      }
-
-      const dataUrl =
-        format === "jpg"
-          ? exportCanvas.toDataURL("image/jpeg", quality)
-          : exportCanvas.toDataURL("image/png", 1);
-      return { dataUrl, width, height };
-    } finally {
-      camera.position.copy(originalCameraPosition);
-      camera.quaternion.copy(originalCameraQuaternion);
-      camera.zoom = originalCameraZoom;
-      camera.updateProjectionMatrix();
-      if (controls && originalControlsTarget) {
-        controls.target.copy(originalControlsTarget);
-        controls.update();
-      }
-      this.lights.keyLight.intensity = originalLightState.key;
-      this.lights.fillLight.intensity = originalLightState.fill;
-      this.lights.ambient.intensity = originalLightState.ambient;
-      this.lights.rimLight.intensity = originalLightState.rim;
-      this.lights.keyLight.castShadow = originalLightState.castShadow;
-      this.lights.keyLight.shadow.radius = originalLightState.shadowRadius;
-      renderer.toneMappingExposure = originalRendererState.toneMappingExposure;
-      renderer.shadowMap.enabled = originalRendererState.shadowEnabled;
-      renderer.shadowMap.type = originalRendererState.shadowType;
-      this.sceneManager.setGroundVisible(originalGroundVisible);
-      this.sceneManager.setGridVisible(originalGridVisible);
-      this.roomBuilder.getGroup().visible = originalRoomBuilderVisible;
-      originalRoomWallVisibility.forEach(({ mesh, visible }) => {
-        mesh.visible = visible;
-      });
-      if (this.selectionOutline) this.selectionOutline.visible = originalOverlayVisibility.selectionOutline;
-      if (this.wallSelectionOutline) this.wallSelectionOutline.visible = originalOverlayVisibility.wallSelectionOutline;
-      if (this.dimensionsOverlayGroup) this.dimensionsOverlayGroup.visible = originalOverlayVisibility.dimensionsOverlay;
-      if (this.wallGizmo?.group) this.wallGizmo.group.visible = originalOverlayVisibility.wallGizmo;
-      swappedMaterials.forEach(({ mesh, material }) => {
-        mesh.material = material;
-      });
-      if (linesMaterial) {
-        linesMaterial.dispose();
-      }
-      renderer.setRenderTarget(prevRenderTarget);
-      renderer.setSize(prevRendererSize.x, prevRendererSize.y, false);
-      renderer.setPixelRatio(prevPixelRatio);
-      renderer.setClearColor(prevClearColor, prevClearAlpha);
-      scene.background = prevBackground;
-      scene.environment = prevEnvironment;
-      this.updateCanvasSize();
-      renderTarget.dispose();
-    }
+    return this.renderExporter.renderScene(options);
   }
 
   dispose() {
