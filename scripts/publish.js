@@ -1,6 +1,6 @@
 /**
- * Publicação com versionamento definitivo: V{MAJOR}.{MINOR}.{PATCH}.{YYYYMMDD}.{HHMM}
- * Exemplo: V4.1.0.20260313.1534
+ * Publicação com versionamento definitivo: v{A}.{MMDD}.{HHMM}
+ * Exemplo: v6.0316.1542
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -13,14 +13,13 @@ function pad2(value) {
   return String(value).padStart(2, "0");
 }
 
-function getVersionWithTimestamp() {
+
+function getShortVersion() {
   const now = new Date();
-  const yyyymmdd =
-    now.getFullYear() +
-    pad2(now.getMonth() + 1) +
-    pad2(now.getDate());
+  const year = String(now.getFullYear()).slice(-1); // último dígito do ano
+  const mmdd = pad2(now.getMonth() + 1) + pad2(now.getDate());
   const hhmm = pad2(now.getHours()) + pad2(now.getMinutes());
-  return `${yyyymmdd}.${hhmm}`;
+  return `v${year}.${mmdd}.${hhmm}`;
 }
 
 if (!fs.existsSync(versionFilePath)) {
@@ -30,9 +29,7 @@ if (!fs.existsSync(versionFilePath)) {
 const currentRaw = fs.readFileSync(versionFilePath, "utf8");
 const currentData = JSON.parse(currentRaw);
 const now = new Date();
-const baseVersion = (currentData.version || "V4.1.0").replace(/\.\d{8}\.\d{4}$/, "");
-const timestamp = getVersionWithTimestamp();
-const nextVersion = `${baseVersion}.${timestamp}`;
+const nextVersion = getShortVersion();
 const updatedAt = `${pad2(now.getDate())}.${pad2(now.getMonth() + 1)}.${now.getFullYear()} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
 
 const nextData = {
@@ -60,6 +57,7 @@ function runOutput(command) {
     return "";
   }
 }
+
 
 console.log(`Nova versao: ${nextVersion}`);
 console.log(`updatedAt: ${nextData.updatedAt}`);
