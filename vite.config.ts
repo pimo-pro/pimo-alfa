@@ -6,7 +6,7 @@ const buildVersion = `${process.env.npm_package_version ?? '0.0.0'}+${(process.e
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: "/",
+  base: '/pimo-criativo/',
   plugins: [
     react(),
     {
