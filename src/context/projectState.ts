@@ -474,6 +474,8 @@ const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     material: box.material,
     doorsLayer: box.doorsLayer ?? [],
     drawersLayer: box.drawersLayer ?? [],
+    catalogItemId: box.catalogItemId,
+    baseCabinetId: box.baseCabinetId,
   };
 };
 

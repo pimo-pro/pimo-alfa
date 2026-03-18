@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { WorkspaceBox } from "../../core/types";
 import { getBaseCabinetById, modelToPortaTipo } from "../../core/baseCabinets";
 import { ensureBoxPanelIds } from "../../core/box/panelIds";
+import { getSettings } from "../../core/settings/settingsService";
 import type { ProjectActions } from "../projectTypes";
 import { appendChangelog, buildBoxesFromWorkspace, getSelectedWorkspaceBox } from "../projectState";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../projectHelpers";
 import { createWorkspaceBox, recomputeState } from "../projectState";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
+import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 
 export type BoxCrudActions = Pick<
   ProjectActions,
@@ -115,12 +117,17 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
       const baseModel = getBaseCabinetById(catalogItemId);
       if (!baseModel) return;
       const isUpperModel = baseModel.categoria === "upper";
+      const isPiModel = isPiBaseCabinetId(baseModel.id) || baseModel.grupoCatalogo === "pi";
+      const piSettings = getSettings().modeloPI;
       const rightmostX_m = viewerSync.getRightmostX();
       updateProject((prev) => {
         const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
-        const baseEspessura =
+        const baseEspessuraDefault =
           prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId)?.espessura ??
           prev.material.espessura;
+        const baseEspessura = isPiModel
+          ? Math.max(10, Number(piSettings?.espessuraMadeiraMm) || baseEspessuraDefault)
+          : baseEspessuraDefault;
         const dimensoes = {
           largura: baseModel.widthMm,
           altura: baseModel.heightMm,
@@ -160,11 +167,12 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
           {
             prateleiras: baseModel.shelves,
             portaTipo: modelToPortaTipo(baseModel.doors),
-            gavetas: baseModel.drawers,
+            gavetas: isPiModel ? Math.max(1, Math.min(4, Number(piSettings?.numeroGavetas) || 3)) : baseModel.drawers,
             cabinetType: isUpperModel ? "upper" : "lower",
             feetEnabled: !isUpperModel,
             feetHeight: 100,
             feetOffsetFront: 100,
+            drawerHeightMode: isPiModel ? "custom" : "equal",
           }
         );
         newBox.manualPosition = true;

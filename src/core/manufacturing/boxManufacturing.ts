@@ -4,6 +4,8 @@ import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../baseCabinets";
+import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 
 type PainelIndustrial = {
   id: string;
@@ -152,6 +154,14 @@ export function gerarModeloIndustrial(box: BoxModule, rules: RulesConfig): Model
 }
 
 export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustrial[] {
+  if (isPiBaseCabinetId(box.baseCabinetId)) {
+    const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+    return gerarPaineisPi(box).map((painel) => ({
+      ...painel,
+      custo: calcularCustoPainel(painel, materialInfo) * painel.quantidade,
+    }));
+  }
+
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = Number(box.dimensoes.altura) || 0;
   const profundidade = Number(box.dimensoes.profundidade) || 0;
@@ -309,6 +319,10 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 }
 
 export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndustrial[] {
+  if (isPiBaseCabinetId(box.baseCabinetId)) {
+    return gerarFerragensPi(box, rules);
+  }
+
   const ferragens: FerragemIndustrial[] = [];
   const tabela: Record<string, number> = {
     dobradicas: 2.5,
@@ -429,6 +443,21 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
 }
 
 export function gerarGavetas(box: BoxModule, _rules: RulesConfig): GavetaIndustrial[] {
+  if (isPiBaseCabinetId(box.baseCabinetId)) {
+    const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+    return gerarGavetasPi(box).map((gaveta) => ({
+      ...gaveta,
+      custo: calcularCustoPainel(
+        {
+          largura_mm: gaveta.largura_mm,
+          altura_mm: gaveta.altura_mm,
+          material: material.nome,
+        } as PainelIndustrial,
+        material
+      ),
+    }));
+  }
+
   if (box.gavetas <= 0) return [];
   const espessura = getEspessura(box);
   const recuoLateral = 13;

@@ -15,6 +15,7 @@ const CATALOG_GROUPS = [
   { id: "todos", label: "Todos" },
   { id: "br", label: "branco (br)" },
   { id: "pt", label: "carve (pt)" },
+  { id: "pi", label: "pi" },
 ] as const;
 
 const getTipoLabel = (tipo: UnifiedModelItem["tipo"]) => {
@@ -264,7 +265,7 @@ export default function PainelMoveisUnificado() {
                                 overflow: "hidden",
                               }}
                             >
-                              Grupo: {item.grupoCatalogo === "br" ? "branco (br)" : "carve (pt)"}
+                              Grupo: {item.grupoCatalogo === "br" ? "branco (br)" : item.grupoCatalogo === "pt" ? "carve (pt)" : "pi"}
                             </div>
                           )}
                           {item.descricao && (

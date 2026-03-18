@@ -11,7 +11,7 @@ export type UnifiedModelItem = {
   nome: string;
   categoria: string;
   categoriaId: string;
-  grupoCatalogo?: "br" | "pt";
+  grupoCatalogo?: "br" | "pt" | "pi";
   descricao?: string;
   thumbnailUrl?: string | null;
   dimensoes?: { largura_mm: number; altura_mm: number; profundidade_mm: number };

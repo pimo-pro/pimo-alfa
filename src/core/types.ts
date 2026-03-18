@@ -273,6 +273,10 @@ export interface BoxModule {
   doorsLayer: DoorLayerItem[];
   /** Camada de gavetas da caixa. */
   drawersLayer: DrawerLayerItem[];
+  /** ID do item de catálogo que originou a caixa. */
+  catalogItemId?: string;
+  /** ID do modelo base que originou a caixa. */
+  baseCabinetId?: string;
   ferragens: Acessorio[];
   cutList: CutListItem[];
   cutListComPreco: CutListItemComPreco[];

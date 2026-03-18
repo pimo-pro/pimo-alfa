@@ -3,6 +3,7 @@ import type {
   BoxModule,
   CutListItemComPreco,
   GrainDirection,
+  PanelDrillHole,
 } from "../types";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
@@ -13,6 +14,9 @@ import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { addMateDowelHolesToBoxItems } from "../drill/dowelJoints";
 import { devLogger } from "../../utils/devLogger";
+import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
+import { getSettings } from "../settings/settingsService";
 
 /**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
@@ -98,23 +102,38 @@ export function cutlistComPrecoFromBox(
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
     const doorWidthForTopBottom =
       (isTopPanel && hasDoorTop) || (isBottomPanel && hasDoorBottom) ? doorWidthMm : undefined;
-    const drillingResult = buildPanelDrillingResult(
-      {
-        tipo: p.tipo,
-        larguraMm: p.largura_mm,
+    let drillHoles: PanelDrillHole[] = [];
+    const isPiModel = isPiBaseCabinetId(box.baseCabinetId);
+    if (isPiModel && (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")) {
+      const piSettings = getSettings().modeloPI;
+      drillHoles = buildPiUniversalLateralDrilling({
         alturaMm: p.altura_mm,
-        espessuraMm: p.espessura_mm,
+        profundidadeMm: p.largura_mm,
+        side: p.tipo === "lateral_esquerda" ? "left" : "right",
+        numeroGavetas: Math.max(1, Math.min(4, Number(piSettings?.numeroGavetas) || 3)),
         hasShelves,
-        hasDrawers,
-        doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
-        doorWidthMm: doorWidthForTopBottom,
-        hingeSide,
-      },
-      effRules
-    );
-    const drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
-      ? drillingResult.data.drillHoles
-      : [];
+        hasDoors: box.portaTipo !== "sem_porta",
+        piSettings,
+      });
+    } else {
+      const drillingResult = buildPanelDrillingResult(
+        {
+          tipo: p.tipo,
+          larguraMm: p.largura_mm,
+          alturaMm: p.altura_mm,
+          espessuraMm: p.espessura_mm,
+          hasShelves,
+          hasDrawers,
+          doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
+          doorWidthMm: doorWidthForTopBottom,
+          hingeSide,
+        },
+        effRules
+      );
+      drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
+        ? drillingResult.data.drillHoles
+        : [];
+    }
     if (import.meta.env.DEV) {
       // Log de diagnóstico dos furos gerados para cada painel
       devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: drillHoles para painel", {

@@ -54,6 +54,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
       portas: { ...settings.portas, ...(patch.portas ?? {}) },
       gavetas: { ...settings.gavetas, ...(patch.gavetas ?? {}) },
+      modeloPI: { ...settings.modeloPI, ...(patch.modeloPI ?? {}) },
       ferragens: {
         ...settings.ferragens,
         ...(patch.ferragens ?? {}),
@@ -86,6 +87,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
       portas: { ...settings.portas, ...(patch.portas ?? {}) },
       gavetas: { ...settings.gavetas, ...(patch.gavetas ?? {}) },
+      modeloPI: { ...settings.modeloPI, ...(patch.modeloPI ?? {}) },
       ferragens: {
         ...settings.ferragens,
         ...(patch.ferragens ?? {}),

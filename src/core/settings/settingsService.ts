@@ -4,6 +4,12 @@
  */
 
 import { PANEL_DEFAULTS } from "../panel/panelConstants";
+import {
+  PI_MODEL_DEFAULT_SETTINGS,
+  clampPiNumeroGavetas,
+  type PiSistemaGaveta,
+  type PiTipoFrente,
+} from "../../data/moveisUnificados/pi/settings";
 
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 const SETTINGS_SCHEMA_VERSION = 1;
@@ -57,6 +63,16 @@ export interface SettingsSchema {
     gavetaFolgaLateralMm: number;
     gavetaProfundidadesDisponiveisMm: number[];
     gavetaAlturaModoPadrao: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  };
+  modeloPI: {
+    espessuraMadeiraMm: number;
+    ativarFuracaoPrateleiras: boolean;
+    ativarFuracaoDobradicas: boolean;
+    ativarFuracaoGavetas: boolean;
+    sistemaGavetas: PiSistemaGaveta;
+    comprimentoCorredicaMm: number;
+    numeroGavetas: number;
+    tipoFrente: PiTipoFrente;
   };
   ferragens: {
     cavilha: {
@@ -195,6 +211,9 @@ export const settingsDefaults: SettingsSchema = {
     gavetaProfundidadesDisponiveisMm: [250, 300, 350, 400, 450, 500, 550, 600],
     gavetaAlturaModoPadrao: "equal",
   },
+  modeloPI: {
+    ...PI_MODEL_DEFAULT_SETTINGS,
+  },
   ferragens: {
     cavilha: {
       diametro: 8,
@@ -299,6 +318,7 @@ function deepMergeSettings(
     nesting: { ...base.nesting, ...(isObject(patch.nesting) ? patch.nesting : {}) },
     portas: { ...base.portas, ...(isObject(patch.portas) ? patch.portas : {}) },
     gavetas: { ...base.gavetas, ...(isObject(patch.gavetas) ? patch.gavetas : {}) },
+    modeloPI: { ...base.modeloPI, ...(isObject(patch.modeloPI) ? patch.modeloPI : {}) },
     ferragens: {
       ...base.ferragens,
       ...(isObject(patch.ferragens) ? patch.ferragens : {}),
@@ -455,6 +475,38 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         merged.gavetas.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || merged.gavetas.gavetaAlturaModoPadrao === "custom"
           ? merged.gavetas.gavetaAlturaModoPadrao
           : "equal",
+    },
+    modeloPI: {
+      espessuraMadeiraMm: clamp(
+        toNumber(merged.modeloPI?.espessuraMadeiraMm, PI_MODEL_DEFAULT_SETTINGS.espessuraMadeiraMm),
+        10,
+        40
+      ),
+      ativarFuracaoPrateleiras: Boolean(
+        merged.modeloPI?.ativarFuracaoPrateleiras ?? PI_MODEL_DEFAULT_SETTINGS.ativarFuracaoPrateleiras
+      ),
+      ativarFuracaoDobradicas: Boolean(
+        merged.modeloPI?.ativarFuracaoDobradicas ?? PI_MODEL_DEFAULT_SETTINGS.ativarFuracaoDobradicas
+      ),
+      ativarFuracaoGavetas: Boolean(
+        merged.modeloPI?.ativarFuracaoGavetas ?? PI_MODEL_DEFAULT_SETTINGS.ativarFuracaoGavetas
+      ),
+      sistemaGavetas:
+        merged.modeloPI?.sistemaGavetas === "AvanTech YOU XL" || merged.modeloPI?.sistemaGavetas === "AvanTech YOU M"
+          ? merged.modeloPI.sistemaGavetas
+          : "AvanTech YOU L",
+      comprimentoCorredicaMm: clamp(
+        toNumber(merged.modeloPI?.comprimentoCorredicaMm, PI_MODEL_DEFAULT_SETTINGS.comprimentoCorredicaMm),
+        250,
+        650
+      ),
+      numeroGavetas: clampPiNumeroGavetas(
+        toNumber(merged.modeloPI?.numeroGavetas, PI_MODEL_DEFAULT_SETTINGS.numeroGavetas)
+      ),
+      tipoFrente:
+        merged.modeloPI?.tipoFrente === "inset" || merged.modeloPI?.tipoFrente === "overlay"
+          ? merged.modeloPI.tipoFrente
+          : "full_overlay",
     },
     ferragens: {
       cavilha: {

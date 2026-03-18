@@ -744,6 +744,117 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
+      <Panel title="Modelo PI" description="Configurações do módulo paramétrico PI (base de cozinha).">
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          <NumberField
+            label="Espessura da madeira (mm)"
+            value={draft.modeloPI.espessuraMadeiraMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, modeloPI: { ...prev.modeloPI, espessuraMadeiraMm: value } }))
+            }
+          />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.modeloPI.ativarFuracaoPrateleiras}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, modeloPI: { ...prev.modeloPI, ativarFuracaoPrateleiras: e.target.checked } }))
+              }
+            />
+            Ativar furação de prateleiras
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.modeloPI.ativarFuracaoDobradicas}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, modeloPI: { ...prev.modeloPI, ativarFuracaoDobradicas: e.target.checked } }))
+              }
+            />
+            Ativar furação de dobradiças
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.modeloPI.ativarFuracaoGavetas}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, modeloPI: { ...prev.modeloPI, ativarFuracaoGavetas: e.target.checked } }))
+              }
+            />
+            Ativar furação de gavetas
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Sistema de gavetas</span>
+            <select
+              className="input"
+              value={draft.modeloPI.sistemaGavetas}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  modeloPI: { ...prev.modeloPI, sistemaGavetas: e.target.value as SettingsSchema["modeloPI"]["sistemaGavetas"] },
+                }))
+              }
+            >
+              <option value="AvanTech YOU L">AvanTech YOU L</option>
+              <option value="AvanTech YOU XL">AvanTech YOU XL</option>
+              <option value="AvanTech YOU M">AvanTech YOU M</option>
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Comprimento nominal corrediça (mm)</span>
+            <select
+              className="input"
+              value={draft.modeloPI.comprimentoCorredicaMm}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  modeloPI: { ...prev.modeloPI, comprimentoCorredicaMm: Number(e.target.value) },
+                }))
+              }
+            >
+              {[250, 300, 350, 400, 450, 500, 550, 600, 650].map((size) => (
+                <option key={size} value={size}>{size}mm</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Número de gavetas</span>
+            <select
+              className="input"
+              value={draft.modeloPI.numeroGavetas}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  modeloPI: { ...prev.modeloPI, numeroGavetas: Number(e.target.value) },
+                }))
+              }
+            >
+              {[1, 2, 3, 4].map((qty) => (
+                <option key={qty} value={qty}>{qty}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tipo de frente</span>
+            <select
+              className="input"
+              value={draft.modeloPI.tipoFrente}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  modeloPI: { ...prev.modeloPI, tipoFrente: e.target.value as SettingsSchema["modeloPI"]["tipoFrente"] },
+                }))
+              }
+            >
+              <option value="full_overlay">Full Overlay</option>
+              <option value="inset">Inset</option>
+              <option value="overlay">Overlay</option>
+            </select>
+          </label>
+        </div>
+      </Panel>
+
       <Panel title="Viewer" description="Qualidade visual e opções de visualização do ambiente 3D.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>

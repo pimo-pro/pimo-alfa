@@ -26,7 +26,7 @@ export interface BaseCabinetModel {
   /** Canto esquerdo (L). */
   cornerLeft?: boolean;
   /** Grupo organizacional do catalogo (somente UI). */
-  grupoCatalogo?: "br" | "pt";
+  grupoCatalogo?: "br" | "pt" | "pi";
   /** Categoria para filtro na UI. */
   categoria: "base" | "upper";
 }
