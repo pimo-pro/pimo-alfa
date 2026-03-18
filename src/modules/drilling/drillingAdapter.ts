@@ -289,9 +289,8 @@ export function buildPanelDrillingResult(
     }
   }
 
-  // Corrigido: furos de prateleira devem ser gerados sempre que hasShelves === true
-  // (mesmo que haja gavetas, pois muitos projetos permitem prateleiras acima de gavetas)
-  const shelfHolesEnabled = input.hasShelves === true;
+  // Shelf holes are disabled when drawers are present
+  const shelfHolesEnabled = input.hasShelves === true && !input.hasDrawers;
 
   let furacoesTecnicas: TechnicalDrillHole[] = [];
   try {
