@@ -21,7 +21,6 @@ import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
 import Ajuda from "./pages/Ajuda";
 import UserProjectsPage from "./pages/UserProjectsPage";
-import { usePiLoader, PT } from "@/components/PiLoader.jsx";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -31,7 +30,6 @@ const DevPimoTest = import.meta.env.DEV
   : null;
 
 export default function App() {
-  const { LoaderUI, show, hide } = usePiLoader();
   const [leftOpen, setLeftOpen] = useState(true);
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
@@ -72,61 +70,6 @@ export default function App() {
   const [showAjuda, setShowAjuda] = useState(false);
   const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
-
-  useEffect(() => {
-    let activeOperations = 0;
-    const beginOperation = (text: string) => {
-      activeOperations += 1;
-      show(text);
-    };
-    const finishOperation = () => {
-      activeOperations = Math.max(0, activeOperations - 1);
-      if (activeOperations === 0) {
-        hide();
-      }
-    };
-
-    const originalPushState = window.history.pushState.bind(window.history);
-    const originalReplaceState = window.history.replaceState.bind(window.history);
-    const originalFetch = window.fetch.bind(window);
-
-    window.history.pushState = ((data, unused, url) => {
-      beginOperation(PT.navegar);
-      originalPushState(data, unused, url);
-      requestAnimationFrame(() => requestAnimationFrame(finishOperation));
-    }) as History["pushState"];
-
-    window.history.replaceState = ((data, unused, url) => {
-      beginOperation(PT.navegar);
-      originalReplaceState(data, unused, url);
-      requestAnimationFrame(() => requestAnimationFrame(finishOperation));
-    }) as History["replaceState"];
-
-    const onSubmit = () => {
-      beginOperation(PT.guardar);
-      setTimeout(finishOperation, 600);
-    };
-
-    window.fetch = (async (...args: Parameters<typeof fetch>) => {
-      beginOperation(PT.processar);
-      try {
-        return await originalFetch(...args);
-      } finally {
-        finishOperation();
-      }
-    }) as typeof fetch;
-
-    document.addEventListener("submit", onSubmit, true);
-
-    return () => {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-      window.fetch = originalFetch;
-      document.removeEventListener("submit", onSubmit, true);
-      activeOperations = 0;
-      hide();
-    };
-  }, [hide, show]);
 
   useEffect(() => {
     const syncRoute = () => {
@@ -232,7 +175,6 @@ export default function App() {
 
   return (
     <ThemeProvider>
-    <LoaderUI />
     <ProjectProvider>
       <SettingsProvider>
         <MaterialProvider>
@@ -261,7 +203,7 @@ export default function App() {
         {/* MAIN AREA */}
         <div className="app-main">
           {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showUserProjects ? (
-            <Suspense fallback={null}>
+            <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
               ) : showSystemDocs ? (
