@@ -1,9 +1,8 @@
-import type { CadModel } from "../../core/cad/cadModels";
 import type { DesignTemplate } from "../../templates/types";
 import { TEMPLATES } from "../../templates/templatesIndex";
 import { CATALOG_ITEMS } from "../../catalog/catalogIndex";
 
-export type ModeloTipo = "pronto" | "3d" | "cad";
+export type ModeloTipo = "pronto" | "3d";
 
 export type UnifiedModelItem = {
   id: string;
@@ -91,7 +90,7 @@ const getTemplateDimensions = (template: DesignTemplate) => {
   };
 };
 
-export const buildUnifiedMoveis = (cadModels: CadModel[] = []): UnifiedModelItem[] => {
+export const buildUnifiedMoveis = (): UnifiedModelItem[] => {
   const templates = TEMPLATES.map((template) => {
     const categoriaId = resolveCategoriaId(template.categoria);
     const dims = getTemplateDimensions(template);
@@ -125,23 +124,5 @@ export const buildUnifiedMoveis = (cadModels: CadModel[] = []): UnifiedModelItem
     },
   }));
 
-  const cad = (cadModels ?? []).map((model) => ({
-    id: `cad:${model.id}`,
-    sourceId: model.id,
-    tipo: "cad" as const,
-    nome: model.nome,
-    categoria: model.categoria,
-    categoriaId: resolveCategoriaId(model.categoria),
-    descricao: model.descricao,
-    thumbnailUrl: null,
-    dimensoes: model.dimensions
-      ? {
-          largura_mm: model.dimensions.largura,
-          altura_mm: model.dimensions.altura,
-          profundidade_mm: model.dimensions.profundidade,
-        }
-      : undefined,
-  }));
-
-  return [...templates, ...catalogo3d, ...cad];
+  return [...templates, ...catalogo3d];
 };

@@ -1,11 +1,11 @@
 /**
- * Gestão de regras dinâmicas por modelo GLB (Admin).
+ * Gestão de regras dinâmicas por modelo de catálogo (Admin).
  * Permite adicionar, editar e ativar/desativar regras por modelo do catálogo.
  */
 
 import { useState } from "react";
 import Panel from "../ui/Panel";
-import { useCadModels } from "../../hooks/useCadModels";
+import { getBaseCabinets } from "../../core/baseCabinets";
 import {
   getModelRules,
   addModelRule,
@@ -24,7 +24,7 @@ function ruleId(): string {
 }
 
 export default function RulesManager() {
-  const { models: cadModels } = useCadModels();
+  const baseModels = getBaseCabinets();
   const [selectedModelId, setSelectedModelId] = useState<string>("");
   const [addKind, setAddKind] = useState<"dimension" | "material" | "compatibility">("dimension");
   const [dimension, setDimension] = useState<"largura" | "altura" | "profundidade">("altura");
@@ -34,7 +34,7 @@ export default function RulesManager() {
   const [maxInstances, setMaxInstances] = useState("1");
   const [, setRefresh] = useState(0);
 
-  const selectedModel = cadModels.find((c) => c.id === selectedModelId);
+  const selectedModel = baseModels.find((c) => c.id === selectedModelId);
   const modelRules = selectedModelId ? getModelRules(selectedModelId) : undefined;
   const rules = modelRules?.rules ?? [];
 
@@ -85,7 +85,7 @@ export default function RulesManager() {
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
       <Panel
-        title="Configuração de Regras por Modelo GLB"
+        title="Configuração de Regras por Modelo"
         description="Defina regras de dimensão, material e compatibilidade por modelo. As regras são validadas quando o modelo está numa caixa."
       />
       <Panel title="Selecionar modelo">
@@ -95,7 +95,7 @@ export default function RulesManager() {
           className="select"
         >
           <option value="">— Selecionar modelo —</option>
-          {cadModels.map((m) => (
+          {baseModels.map((m) => (
             <option key={m.id} value={m.id}>
               {m.nome} ({m.categoria})
             </option>

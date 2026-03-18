@@ -22,7 +22,6 @@ import type {
 } from "../core/types";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
 import type { ProjectState, ViewerSettings } from "./projectTypes";
-import { safeGetItem, safeParseJson } from "../utils/storage";
 import { validateBoxModels } from "../core/rules/validation";
 import {
   computeLayoutWarnings,
@@ -32,7 +31,6 @@ import { mmToM } from "../utils/units";
 import { loadProfiles } from "../core/rules/rulesProfilesStorage";
 import { defaultRulesConfig, normalizeRulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
-import { getCatalogGlbPath } from "../core/glb/glbRegistry";
 import { regenerateLayersForBox } from "../services/boxLayersService";
 import { extractDrawerCutlistFromLayerItems } from "../services/drawerCutlistAdapter";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
@@ -445,48 +443,6 @@ export const getSelectedWorkspaceBox = (state: ProjectState): WorkspaceBox | und
     state.workspaceBoxes.find((box) => box.id === state.selectedWorkspaceBoxId) ??
     state.workspaceBoxes[0]
   );
-};
-
-/** Base URL para resolver caminhos relativos (ex.: /models/x.glb). */
-function getBaseUrl(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.BASE_URL) {
-    const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
-    return base ? `${window.location.origin}${base}` : window.location.origin;
-  }
-  return window.location.origin;
-}
-
-export const getModelUrlFromStorage = (modelId?: string | null): string | null => {
-  if (!modelId) return null;
-  if (modelId.startsWith("catalog:")) {
-    const catalogItemId = modelId.replace("catalog:", "");
-    const catalogPath = getCatalogGlbPath(catalogItemId);
-    if (!catalogPath) return null;
-    if (
-      catalogPath.startsWith("data:") ||
-      catalogPath.startsWith("http://") ||
-      catalogPath.startsWith("https://")
-    ) {
-      return catalogPath;
-    }
-    const base = getBaseUrl();
-    const path = catalogPath.startsWith("/") ? catalogPath : `/${catalogPath}`;
-    return `${base}${path}`;
-  }
-  const stored = safeGetItem("pimo_admin_cad_models");
-  const parsed = safeParseJson<{ id?: string; arquivo?: string }[]>(stored);
-  if (!Array.isArray(parsed)) return null;
-  const found = parsed.find((item) => item.id === modelId);
-  const arquivo = found?.arquivo ?? null;
-  if (!arquivo) return null;
-  // Data URLs (base64) e URLs absolutas ficam como estão
-  if (arquivo.startsWith("data:") || arquivo.startsWith("http://") || arquivo.startsWith("https://")) {
-    return arquivo;
-  }
-  // Caminho relativo: garantir URL absoluta
-  const base = getBaseUrl();
-  const path = arquivo.startsWith("/") ? arquivo : `/${arquivo}`;
-  return `${base}${path}`;
 };
 
 const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {

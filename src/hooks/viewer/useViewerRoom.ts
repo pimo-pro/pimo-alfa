@@ -1,6 +1,6 @@
 /**
  * Hook especializado para sala e paredes no viewer.
- * Obtém a API de sala a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
+ * Obtém a API de sala a partir de window.viewerCore.
  */
 import { useMemo } from "react";
 
@@ -66,7 +66,8 @@ export function useViewerRoom() {
       selectRoomElementById: bindCore(viewerCore.selectRoomElementById) ?? NOOP,
       setPlacementMode: bindCore(viewerCore.setPlacementMode) ?? NOOP,
       addDoorToRoom: bindCore(viewerCore.addDoorToRoom) ?? bindRoom(room?.addDoorToRoom) ?? NOOP_RETURN_EMPTY,
-      addWindowToRoom: bindCore(viewerCore.addWindowToRoom) ?? bindRoom(room?.addWindowToRoom) ?? NOOP_RETURN_EMPTY,
+      addWindowToRoom:
+        bindCore(viewerCore.addWindowToRoom) ?? bindRoom(room?.addWindowToRoom) ?? NOOP_RETURN_EMPTY,
       setOnRoomElementPlaced: bindCore(viewerCore.setOnRoomElementPlaced) ?? NOOP,
       setOnRoomElementSelected: bindCore(viewerCore.setOnRoomElementSelected) ?? NOOP,
       setOnWallSelected: bindCore(viewerCore.setOnWallSelected) ?? NOOP,

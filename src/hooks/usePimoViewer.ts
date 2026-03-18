@@ -1,8 +1,8 @@
 import { useMemo, useRef } from "react";
-import { useViewerBoxes } from "../viewer/useViewerBoxes";
-import { useViewerRoom } from "../viewer/useViewerRoom";
-import { useViewerCamera } from "../viewer/useViewerCamera";
-import { useViewerMaterials } from "../viewer/useViewerMaterials";
+import { useViewerBoxes } from "./viewer/useViewerBoxes";
+import { useViewerRoom } from "./viewer/useViewerRoom";
+import { useViewerCamera } from "./viewer/useViewerCamera";
+import { useViewerMaterials } from "./viewer/useViewerMaterials";
 import type { Viewer } from "../3d/core/Viewer";
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 

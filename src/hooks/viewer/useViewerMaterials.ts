@@ -1,6 +1,6 @@
 /**
  * Hook especializado para materiais no viewer.
- * Obtém a API de materiais a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
+ * Obtém a API de materiais a partir de window.viewerCore.
  */
 import { useMemo } from "react";
 

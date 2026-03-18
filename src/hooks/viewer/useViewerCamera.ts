@@ -1,6 +1,6 @@
 /**
  * Hook especializado para câmera do viewer.
- * Obtém a API de câmera a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
+ * Obtém a API de câmera a partir de window.viewerCore.
  */
 import { useMemo } from "react";
 

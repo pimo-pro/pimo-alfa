@@ -1,18 +1,19 @@
 /**
  * Hook especializado para boxes no viewer.
- * Obtém a API de boxes a partir de window.viewerCore (ver viewerCoreWindow.d.ts).
+ * Obtém a API de boxes a partir de window.viewerCore.
  */
 import { useMemo } from "react";
 
 const NOOP = () => {};
 const NOOP_SELECT_BOX = () => {};
 const NOOP_RETURN_FALSE = () => false;
-const NOOP_RETURN_NULL = () => null as {
-  boxId: string;
-  type: "door" | "drawer";
-  doorLayerId?: string;
-  drawerLayerId?: string;
-} | null;
+const NOOP_RETURN_NULL = () =>
+  (null as {
+    boxId: string;
+    type: "door" | "drawer";
+    doorLayerId?: string;
+    drawerLayerId?: string;
+  } | null);
 
 /** API NOOP com exatamente as mesmas chaves que a API real. Referência estável. */
 const BOXES_NOOP_API = {
@@ -52,15 +53,15 @@ export function useViewerBoxes() {
       fn ? fn.bind(viewerCore) : NOOP;
 
     /** Métodos que devem retornar boolean e serem chamados com this=viewerCore. */
-    const bindBool = (fn: ((...a: unknown[]) => boolean) | undefined) =>
+    const bindBool = (fn: ((..._args: unknown[]) => boolean) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP_RETURN_FALSE;
 
     return {
-      addBox: bindBool(viewerCore.addBox as ((...a: unknown[]) => boolean) | undefined),
-      removeBox: bindBool(viewerCore.removeBox as ((...a: unknown[]) => boolean) | undefined),
-      updateBox: bindBool(viewerCore.updateBox as ((...a: unknown[]) => boolean) | undefined),
-      setBoxIndex: bindBool(viewerCore.setBoxIndex as ((...a: unknown[]) => boolean) | undefined),
-      setBoxPosition: bindBool(viewerCore.setBoxPosition as ((...a: unknown[]) => boolean) | undefined),
+      addBox: bindBool(viewerCore.addBox as ((..._args: unknown[]) => boolean) | undefined),
+      removeBox: bindBool(viewerCore.removeBox as ((..._args: unknown[]) => boolean) | undefined),
+      updateBox: bindBool(viewerCore.updateBox as ((..._args: unknown[]) => boolean) | undefined),
+      setBoxIndex: bindBool(viewerCore.setBoxIndex as ((..._args: unknown[]) => boolean) | undefined),
+      setBoxPosition: bindBool(viewerCore.setBoxPosition as ((..._args: unknown[]) => boolean) | undefined),
       setBoxGap: fromCore(viewerCore.setBoxGap),
       setBoxSpacing: fromCore(viewerCore.setBoxSpacing),
       updateBoxSpacing: fromCore(viewerCore.updateBoxSpacing),
@@ -70,14 +71,14 @@ export function useViewerBoxes() {
       setOnModelLoaded: fromCore(viewerCore.setOnModelLoaded),
       selectBox: fromCore(viewerCore.selectBox),
       setTransformMode: fromCore(viewerCore.setTransformMode),
-      addModelToBox: bindBool(viewerCore.addModelToBox as ((...a: unknown[]) => boolean) | undefined),
-      removeModelFromBox: bindBool(viewerCore.removeModelFromBox as ((...a: unknown[]) => boolean) | undefined),
+      addModelToBox: bindBool(viewerCore.addModelToBox as ((..._args: unknown[]) => boolean) | undefined),
+      removeModelFromBox: bindBool(viewerCore.removeModelFromBox as ((..._args: unknown[]) => boolean) | undefined),
       clearModelsFromBox: fromCore(viewerCore.clearModelsFromBox),
       listModels: fromCore(viewerCore.listModels),
       getBoxDimensions: fromCore(viewerCore.getBoxDimensions),
       getModelPosition: fromCore(viewerCore.getModelPosition),
       getModelBoundingBoxSize: fromCore(viewerCore.getModelBoundingBoxSize),
-      setModelPosition: bindBool(viewerCore.setModelPosition as ((...a: unknown[]) => boolean) | undefined),
+      setModelPosition: bindBool(viewerCore.setModelPosition as ((..._args: unknown[]) => boolean) | undefined),
       getContextMenuLayerHit: viewerCore.getContextMenuLayerHit
         ? viewerCore.getContextMenuLayerHit.bind(viewerCore)
         : NOOP_RETURN_NULL,

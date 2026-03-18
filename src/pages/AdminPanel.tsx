@@ -1,6 +1,5 @@
 import { Suspense, lazy, useState } from "react";
 import TemplatesManager from "../components/admin/TemplatesManager";
-import CADModelsManager from "../components/admin/CADModelsManager";
 import MaterialsManufacturing from "../components/admin/MaterialsManufacturing";
 import RulesManager from "../components/admin/RulesManager";
 import FileManager from "../components/admin/FileManager";
@@ -20,7 +19,6 @@ type AdminTab =
   | "Materiais & Fabricação"
   | "Ferragens"
   | "Templates"
-  | "CAD Models"
   | "Regras"
   | "Configuração de Regras"
   | "Perfis de Regras"
@@ -49,7 +47,6 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Configuração de Regras", label: "Configuração de Regras" },
   { type: "item", id: "Perfis de Regras", label: "Perfis de Regras" },
   { type: "group", label: "Catálogo / Modelos" },
-  { type: "item", id: "CAD Models", label: "CAD Models" },
   { type: "item", id: "Templates", label: "Templates" },
   { type: "group", label: "Operações / Diagnóstico" },
   { type: "item", id: "Gestor de Ficheiros", label: "Gestor de Ficheiros" },
@@ -68,7 +65,6 @@ const menuIconByTab: Partial<Record<AdminTab, string>> = {
   "Regras": "📏",
   "Configuração de Regras": "⚙️",
   "Perfis de Regras": "📚",
-  "CAD Models": "📦",
   "Templates": "🗂️",
   "Gestor de Ficheiros": "🗃️",
   "Deploy": "🧪",
@@ -219,8 +215,6 @@ export default function AdminPanel() {
             <FerragensAdminPage />
           ) : active === "Templates" ? (
             <TemplatesManager />
-          ) : active === "CAD Models" ? (
-            <CADModelsManager />
           ) : active === "Regras" ? (
             <RulesManager />
           ) : active === "Configuração de Regras" ? (

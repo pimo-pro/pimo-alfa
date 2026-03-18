@@ -11,7 +11,6 @@ import { useProjectIoActions } from "./useProjectIoActions";
 import { useLayerActions } from "./useLayerActions";
 import { useBoxCrudActions } from "./useBoxCrudActions";
 import { useBoxTransformActions } from "./useBoxTransformActions";
-import { useCadModelActions } from "./useCadModelActions";
 import { useRulesActions } from "./useRulesActions";
 import { useViewerUiActions } from "./useViewerUiActions";
 import { useDesignActions } from "./useDesignActions";
@@ -50,7 +49,6 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const layerActions = useLayerActions(executionContext);
   const boxCrudActions = useBoxCrudActions(executionContext);
   const boxTransformActions = useBoxTransformActions(executionContext);
-  const cadModelActions = useCadModelActions(executionContext);
   const rulesActions = useRulesActions(executionContext);
   const viewerUiActions = useViewerUiActions(executionContext);
   const designActions = useDesignActions(executionContext);
@@ -86,7 +84,6 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         layerActions,
         boxCrudActions,
         boxTransformActions,
-        cadModelActions,
         rulesActions,
         viewerUiActions,
         designActions
@@ -98,7 +95,6 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       layerActions,
       boxCrudActions,
       boxTransformActions,
-      cadModelActions,
       rulesActions,
       viewerUiActions,
       designActions,

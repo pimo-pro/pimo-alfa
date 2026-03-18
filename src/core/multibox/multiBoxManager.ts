@@ -3,7 +3,7 @@
  *
  * Responsabilidades:
  * - Armazenar/obter lista de boxes (via ProjectContext.workspaceBoxes)
- * - Emitir operações para o viewer (addBox, updateBox, removeBox) via useCalculadoraSync e useCadModelsSync
+ * - Emitir operações para o viewer (addBox, updateBox, removeBox) via useCalculadoraSync
  * - Sincronizar com o ProjectContext
  *
  * Fluxo: ProjectContext.workspaceBoxes → [sync] → Viewer
@@ -15,7 +15,6 @@
 
 import { useCallback } from "react";
 import { useCalculadoraSync } from "../../hooks/useCalculadoraSync";
-import { useCadModelsSync } from "../../hooks/useCadModelsSync";
 import type { ProjectActions, ProjectState } from "../../context/projectTypes";
 import type { MultiBoxManagerApi, MultiBoxViewerApi } from "./types";
 
@@ -28,7 +27,7 @@ export type UseMultiBoxManagerParams = {
 /**
  * Hook que inicializa o MultiBoxManager e conecta ao Viewer e ProjectContext.
  *
- * - Sincroniza workspaceBoxes → viewer (boxes + modelos GLB)
+ * - Sincroniza workspaceBoxes → viewer (boxes paramétricas)
  * - Expõe addBox, removeBox, selectBox, listBoxes para a UI
  *
  * @example
@@ -67,12 +66,6 @@ export function useMultiBoxManager({
     viewerReady,
     project.materialId,
     project.rules
-  );
-
-  useCadModelsSync(
-    project.workspaceBoxes,
-    viewerApi,
-    viewerReady
   );
 
   const addBox = useCallback(() => {

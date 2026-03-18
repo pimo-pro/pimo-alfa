@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
-import { useCadModels } from "../../../hooks/useCadModels";
 import {
   buildUnifiedMoveis,
   getCategoriasMoveis,
@@ -20,24 +19,18 @@ const CATALOG_GROUPS = [
 
 const getTipoLabel = (tipo: UnifiedModelItem["tipo"]) => {
   if (tipo === "pronto") return "Pronto";
-  if (tipo === "3d") return "3D";
-  return "CAD";
+  return "3D";
 };
 
 export default function PainelMoveisUnificado() {
   const { actions } = useProject();
-  const { models: cadModels, reload: reloadCadModels } = useCadModels();
   const [termoBusca, setTermoBusca] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todos");
   const [grupoCatalogoSelecionado, setGrupoCatalogoSelecionado] = useState<(typeof CATALOG_GROUPS)[number]["id"]>("todos");
   const [itensVisiveis, setItensVisiveis] = useState(PAGE_SIZE);
 
-  useEffect(() => {
-    reloadCadModels();
-  }, [reloadCadModels]);
-
   const categorias = useMemo(() => getCategoriasMoveis(), []);
-  const itensUnificados = useMemo(() => buildUnifiedMoveis(cadModels), [cadModels]);
+  const itensUnificados = useMemo(() => buildUnifiedMoveis(), []);
 
   const itensFiltrados = useMemo(() => {
     const termo = termoBusca.trim().toLowerCase();
@@ -70,7 +63,8 @@ export default function PainelMoveisUnificado() {
       actions.addWorkspaceBoxFromCatalog(item.sourceId);
       return;
     }
-    actions.addCadModelAsNewBox(item.sourceId);
+    // Catálogo unificado sem fluxo CAD/GLB legado.
+    return;
   }, [actions]);
 
   const itensPaginados = itensFiltrados.slice(0, itensVisiveis);

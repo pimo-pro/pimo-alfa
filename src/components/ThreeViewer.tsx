@@ -17,9 +17,14 @@ export default function ThreeViewer({
   const viewerRef = useRef<Viewer | null>(null);
 
   useEffect(() => {
-    // Viewer não aceita argumentos no construtor
-    viewerRef.current = new Viewer();
+    const container = containerRef.current;
+    if (!container) return;
+    viewerRef.current = new Viewer(container, {
+      background: backgroundColor,
+      ...(viewerOptions ?? {}),
+    });
     return () => {
+      viewerRef.current?.dispose?.();
       viewerRef.current = null;
     };
   }, [backgroundColor, viewerOptions]);

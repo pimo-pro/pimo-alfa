@@ -7,7 +7,6 @@ export { useProjectIoActions } from "./useProjectIoActions";
 export { useLayerActions } from "./useLayerActions";
 export { useBoxCrudActions } from "./useBoxCrudActions";
 export { useBoxTransformActions } from "./useBoxTransformActions";
-export { useCadModelActions } from "./useCadModelActions";
 export { useRulesActions } from "./useRulesActions";
 export { useViewerUiActions } from "./useViewerUiActions";
 export { useDesignActions } from "./useDesignActions";
