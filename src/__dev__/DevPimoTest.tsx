@@ -13,7 +13,6 @@ export default function DevPimoTest() {
     updateBox,
     setBoxIndex,
     setBoxGap,
-    addModelToBox,
     removeModelFromBox,
     listModels,
   } = usePimoViewer();
@@ -23,9 +22,7 @@ export default function DevPimoTest() {
     addBox("modulo-2", { width: 40, height: 60, depth: 50 });
     updateBox("modulo-1", { width: 70 });
     setBoxIndex("modulo-2", 0);
-    addModelToBox("modulo-1", "/models/prateleira.glb");
     setBoxGap(5);
-    console.log("Models modulo-1:", listModels("modulo-1"));
     const models = listModels("modulo-1");
     if (models?.length) {
       removeModelFromBox("modulo-1", models[0].id);
@@ -37,7 +34,6 @@ export default function DevPimoTest() {
     updateBox,
     setBoxIndex,
     setBoxGap,
-    addModelToBox,
     removeModelFromBox,
     listModels,
   ]);

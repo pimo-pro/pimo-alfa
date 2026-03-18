@@ -22,7 +22,6 @@ import PainelReferencia from "./pages/PainelReferencia";
 import Ajuda from "./pages/Ajuda";
 import UserProjectsPage from "./pages/UserProjectsPage";
 
-const SobreNos = lazy(() => import("./pages/SobreNos"));
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
@@ -64,7 +63,6 @@ export default function App() {
     resizeState.current.active = false;
   };
   const [showPainelReferencia, setShowPainelReferencia] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
   const [showSystemDocs, setShowSystemDocs] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showProjectProgress, setShowProjectProgress] = useState(false);
@@ -75,7 +73,6 @@ export default function App() {
 
   useEffect(() => {
     const syncRoute = () => {
-      const isAbout = window.location.pathname === "/sobre-nos";
       const isSystemDocs = window.location.pathname === "/documentacao";
       const isAdmin = window.location.pathname === "/admin";
       const isProjectProgress = window.location.pathname === "/project-progress";
@@ -86,7 +83,6 @@ export default function App() {
       const isPainelReferencia = window.location.pathname === "/painel-referencia";
       const isAjuda = window.location.pathname === "/ajuda";
       const isUserProjects = window.location.pathname === "/meus-projetos";
-      setShowAbout(isAbout);
       setShowSystemDocs(isSystemDocs);
       setShowAdmin(isAdmin);
       setShowProjectProgress(isProjectProgress);
@@ -100,22 +96,9 @@ export default function App() {
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
 
-  const navigateToAbout = () => {
-    window.history.pushState({}, "", "/sobre-nos");
-    setShowAbout(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
-  };
-
   const navigateToSystemDocs = () => {
     window.history.pushState({}, "", "/documentacao");
     setShowSystemDocs(true);
-    setShowAbout(false);
     setShowAdmin(false);
     setShowProjectProgress(false);
     setShowPainelReferencia(false);
@@ -127,7 +110,6 @@ export default function App() {
   const navigateToAdmin = () => {
     window.history.pushState({}, "", "/admin");
     setShowAdmin(true);
-    setShowAbout(false);
     setShowSystemDocs(false);
     setShowProjectProgress(false);
     setShowPainelReferencia(false);
@@ -139,7 +121,6 @@ export default function App() {
   const navigateToProjectProgress = () => {
     window.history.pushState({}, "", "/project-progress");
     setShowProjectProgress(true);
-    setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
     setShowPainelReferencia(false);
@@ -151,7 +132,6 @@ export default function App() {
   const navigateToAjuda = () => {
     window.history.pushState({}, "", "/ajuda");
     setShowAjuda(true);
-    setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
     setShowProjectProgress(false);
@@ -163,7 +143,6 @@ export default function App() {
   const navigateToPainelReferencia = () => {
     window.history.pushState({}, "", "/painel-referencia");
     setShowPainelReferencia(true);
-    setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
     setShowProjectProgress(false);
@@ -174,7 +153,6 @@ export default function App() {
 
   const navigateToApp = () => {
     window.history.pushState({}, "", "/");
-    setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
     setShowProjectProgress(false);
@@ -188,7 +166,6 @@ export default function App() {
     window.history.pushState({}, "", "/meus-projetos");
     setShowUserProjects(true);
     setShowAjuda(false);
-    setShowAbout(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
     setShowProjectProgress(false);
@@ -225,7 +202,7 @@ export default function App() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAbout || showAjuda || showUserProjects ? (
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showUserProjects ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
@@ -242,7 +219,7 @@ export default function App() {
               ) : showUserProjects ? (
                 <UserProjectsPage />
               ) : (
-                <SobreNos />
+                <Documentacao />
               )}
             </Suspense>
           ) : (
@@ -318,7 +295,6 @@ export default function App() {
         </div>
 
         <Footer
-          onShowAbout={navigateToAbout}
           onShowSystemDocs={navigateToSystemDocs}
           onShowAdmin={navigateToAdmin}
           onShowAjuda={navigateToAjuda}

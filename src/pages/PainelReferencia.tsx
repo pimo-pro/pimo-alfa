@@ -586,7 +586,7 @@ export default function PainelReferencia() {
             <strong>Responsabilidades:</strong>
             <ul style={{ margin: "4px 0 0 0", paddingLeft: 20 }}>
               <li>Sincronizar ProjectContext.workspaceBoxes com o Viewer</li>
-              <li>Encaminhar operações via useCalculadoraSync e useCadModelsSync</li>
+              <li>Encaminhar operações via useCalculadoraSync</li>
               <li>API: addBox, removeBox, selectBox, listBoxes</li>
             </ul>
           </div>
@@ -666,7 +666,6 @@ export default function PainelReferencia() {
             >
 {`Workspace → MultiBoxManager → Viewer
 ProjectContext.workspaceBoxes → useCalculadoraSync → viewerApi.addBox/updateBox/removeBox
-ProjectContext.workspaceBoxes → useCadModelsSync → viewerApi.addModelToBox/removeModelFromBox
 UI (addWorkspaceBox) → ProjectContext.actions → sincronização automática`}
             </pre>
           </div>

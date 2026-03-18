@@ -105,6 +105,23 @@ type RulerMeasurementHit = {
   end: THREE.Vector3;
 };
 
+type RulerMovementSource = "transform" | "external";
+
+type InternalEdgePick = {
+  id: string;
+  start: THREE.Vector3;
+  end: THREE.Vector3;
+};
+
+type InternalMeasurementState = {
+  edgeA: InternalEdgePick | null;
+  edgeB: InternalEdgePick | null;
+  hover: InternalEdgePick | null;
+  distanceM: number | null;
+  distanceStart: THREE.Vector3 | null;
+  distanceEnd: THREE.Vector3 | null;
+};
+
 export class ViewerCore {
   private container: HTMLElement;
   private sceneManager: SceneManager;
@@ -284,6 +301,35 @@ export class ViewerCore {
   private rulerOverlayCanvas: HTMLCanvasElement | null = null;
   private rulerOverlayCtx: CanvasRenderingContext2D | null = null;
   private rulerOverlayMeasurement: RulerMeasurementHit | null = null;
+  private lastSelectedBoxPositionForRuler: { boxId: string; x: number; y: number; z: number } | null = null;
+  private rulerLastMovementAtMs = 0;
+  private readonly rulerIdleClearDelayMs = 180;
+  private internalMeasurementCanvas: HTMLCanvasElement | null = null;
+  private internalMeasurementCtx: CanvasRenderingContext2D | null = null;
+  private internalMeasurementState: InternalMeasurementState = {
+    edgeA: null,
+    edgeB: null,
+    hover: null,
+    distanceM: null,
+    distanceStart: null,
+    distanceEnd: null,
+  };
+  private internalMeasurementEdgesCache = new Map<string, Array<{ a: THREE.Vector3; b: THREE.Vector3 }>>();
+  private internalMeasurementModeEnabled = false;
+  private internalMeasurementListenersAttached = false;
+  private boundInternalMeasurementPointerMove: ((event: PointerEvent) => void) | null = null;
+  private boundInternalMeasurementClick: ((event: MouseEvent) => void) | null = null;
+  private boundInternalMeasurementEsc: ((event: KeyboardEvent) => void) | null = null;
+
+  private static readonly INTERNAL_EDGE_COLOR_A = "#f59e0b";
+  private static readonly INTERNAL_EDGE_COLOR_B = "#22c55e";
+  private static readonly INTERNAL_EDGE_COLOR_HOVER = "rgba(56,189,248,0.85)";
+  private static readonly INTERNAL_EDGE_COLOR_MEASURE = "#ef4444";
+  private static readonly INTERNAL_EDGE_WIDTH_HOVER = 2;
+  private static readonly INTERNAL_EDGE_WIDTH_SELECTED = 3;
+  private static readonly INTERNAL_EDGE_WIDTH_MEASURE = 2;
+  private static readonly INTERNAL_EDGE_MIN_WORLD_M = 0.005;
+  private static readonly INTERNAL_EDGE_MIN_SCREEN_PX = 6;
 
   constructor(container: HTMLElement, options: ViewerOptions = {}) {
     if (!container) {
@@ -357,6 +403,7 @@ export class ViewerCore {
     this.applyMousePresetToControls();
     this.applyBackgroundMode();
     this.setupRulerOverlay();
+    this.setupInternalMeasurementSystem();
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -411,8 +458,8 @@ export class ViewerCore {
         if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
       }
       this.viewerTools.applyCurrentTool();
-      this.updateRulerDuringDrag();
-      // Keep external listeners (Workspace/RulerSystem) in sync during drag.
+      this.onRulerMovementTick("transform");
+      // Keep external listeners in sync during drag.
       this.notifyBoxTransform();
       this.logTransformDiagnostic("drag(objectChange)");
     });
@@ -748,6 +795,24 @@ export class ViewerCore {
     return this.dimensionsOverlayVisible;
   }
 
+  setInternalMeasurementMode(enabled: boolean): void {
+    this.internalMeasurementModeEnabled = Boolean(enabled);
+    if (!this.internalMeasurementModeEnabled) {
+      this.detachInternalMeasurementListeners();
+      this.clearInternalMeasurementSelection();
+      this.clearInternalMeasurementOverlayCanvas();
+      if (this.internalMeasurementCanvas) this.internalMeasurementCanvas.style.display = "none";
+    } else {
+      this.attachInternalMeasurementListeners();
+      if (this.internalMeasurementCanvas) this.internalMeasurementCanvas.style.display = "block";
+      this.drawInternalMeasurementOverlay();
+    }
+  }
+
+  getInternalMeasurementMode(): boolean {
+    return this.internalMeasurementModeEnabled;
+  }
+
   /**
    * Posição em pixels (relativa ao container do viewer) do topo-centro da caixa selecionada.
    * Usado para posicionar o overlay de texto (dimensões + rotação) acima da caixa.
@@ -822,7 +887,6 @@ export class ViewerCore {
   }
 
   private updateRulerDuringDrag(): void {
-    if (!this.viewerState.getTransformControlsDragging()) return;
     const selectedBoxId = this.viewerState.getSelectedBox();
     if (!selectedBoxId || !this.boxes.has(selectedBoxId)) {
       this.clearRulerOverlay();
@@ -842,6 +906,48 @@ export class ViewerCore {
     candidates.sort((a, b) => a.distanceM - b.distanceM);
     this.rulerOverlayMeasurement = candidates[0];
     this.drawRulerOverlay(this.rulerOverlayMeasurement);
+  }
+
+  private onRulerMovementTick(source: RulerMovementSource): void {
+    this.rulerLastMovementAtMs = performance.now();
+    if (source === "external") {
+      this.viewerState.setTransformControlsDragging(false);
+    }
+    this.updateRulerDuringDrag();
+  }
+
+  private syncRulerWithExternalSelectionMovement(): void {
+    if (this.viewerState.getTransformControlsDragging()) return;
+    const selectedBoxId = this.viewerState.getSelectedBox();
+    if (!selectedBoxId) {
+      this.lastSelectedBoxPositionForRuler = null;
+      return;
+    }
+    const entry = this.boxes.get(selectedBoxId);
+    if (!entry) {
+      this.lastSelectedBoxPositionForRuler = null;
+      return;
+    }
+    const p = entry.mesh.position;
+    const last = this.lastSelectedBoxPositionForRuler;
+    if (!last || last.boxId !== selectedBoxId) {
+      this.lastSelectedBoxPositionForRuler = { boxId: selectedBoxId, x: p.x, y: p.y, z: p.z };
+      return;
+    }
+    const moved =
+      Math.abs(last.x - p.x) > 1e-6 ||
+      Math.abs(last.y - p.y) > 1e-6 ||
+      Math.abs(last.z - p.z) > 1e-6;
+    if (!moved) return;
+    this.lastSelectedBoxPositionForRuler = { boxId: selectedBoxId, x: p.x, y: p.y, z: p.z };
+    this.onRulerMovementTick("external");
+  }
+
+  private clearRulerOverlayIfMovementIdle(nowMs: number): void {
+    if (!this.rulerOverlayMeasurement) return;
+    if (this.viewerState.getTransformControlsDragging()) return;
+    if (nowMs - this.rulerLastMovementAtMs <= this.rulerIdleClearDelayMs) return;
+    this.clearRulerOverlay();
   }
 
   private clearRulerOverlay(): void {
@@ -893,6 +999,399 @@ export class ViewerCore {
     ctx.strokeRect(mx - boxW / 2, labelY - boxH / 2, boxW, boxH);
     ctx.fillStyle = "#ffffff";
     ctx.fillText(label, mx, labelY);
+  }
+
+  private setupInternalMeasurementSystem(): void {
+    this.setupInternalMeasurementOverlay();
+    this.boundInternalMeasurementPointerMove = (event: PointerEvent) => {
+      this.handleInternalMeasurementPointerMove(event);
+    };
+    this.boundInternalMeasurementClick = (event: MouseEvent) => {
+      this.handleInternalMeasurementClick(event);
+    };
+    this.boundInternalMeasurementEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") this.clearInternalMeasurementSelection();
+    };
+    this.setInternalMeasurementMode(false);
+  }
+
+  private attachInternalMeasurementListeners(): void {
+    if (this.internalMeasurementListenersAttached) return;
+    const canvas = this.rendererManager.renderer.domElement;
+    if (this.boundInternalMeasurementPointerMove) {
+      canvas.addEventListener("pointermove", this.boundInternalMeasurementPointerMove);
+    }
+    if (this.boundInternalMeasurementClick) {
+      canvas.addEventListener("click", this.boundInternalMeasurementClick, true);
+    }
+    if (this.boundInternalMeasurementEsc) {
+      window.addEventListener("keydown", this.boundInternalMeasurementEsc);
+    }
+    this.internalMeasurementListenersAttached = true;
+  }
+
+  private detachInternalMeasurementListeners(): void {
+    if (!this.internalMeasurementListenersAttached) return;
+    const canvas = this.rendererManager.renderer.domElement;
+    if (this.boundInternalMeasurementPointerMove) {
+      canvas.removeEventListener("pointermove", this.boundInternalMeasurementPointerMove);
+    }
+    if (this.boundInternalMeasurementClick) {
+      canvas.removeEventListener("click", this.boundInternalMeasurementClick, true);
+    }
+    if (this.boundInternalMeasurementEsc) {
+      window.removeEventListener("keydown", this.boundInternalMeasurementEsc);
+    }
+    this.internalMeasurementListenersAttached = false;
+  }
+
+  private setupInternalMeasurementOverlay(): void {
+    if (this.internalMeasurementCanvas || !this.container) return;
+    if (window.getComputedStyle(this.container).position === "static") {
+      this.container.style.position = "relative";
+    }
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "absolute";
+    canvas.style.inset = "0";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "16";
+    canvas.style.background = "transparent";
+    this.container.appendChild(canvas);
+    this.internalMeasurementCanvas = canvas;
+    this.internalMeasurementCtx = canvas.getContext("2d");
+    this.resizeInternalMeasurementOverlay();
+  }
+
+  private resizeInternalMeasurementOverlay(): void {
+    if (!this.internalMeasurementCanvas || !this.container) return;
+    const w = Math.max(1, this.container.clientWidth || 1);
+    const h = Math.max(1, this.container.clientHeight || 1);
+    if (this.internalMeasurementCanvas.width !== w) this.internalMeasurementCanvas.width = w;
+    if (this.internalMeasurementCanvas.height !== h) this.internalMeasurementCanvas.height = h;
+  }
+
+  private handleInternalMeasurementPointerMove(event: PointerEvent): void {
+    if (!this.internalMeasurementModeEnabled) return;
+    if (this.viewerState.getTransformControlsDragging()) return;
+    const nextHover = this.pickInternalMeasurementEdge(event);
+    if ((this.internalMeasurementState.hover?.id ?? null) !== (nextHover?.id ?? null)) {
+      this.internalMeasurementState.hover = nextHover;
+      this.drawInternalMeasurementOverlay();
+    }
+  }
+
+  private handleInternalMeasurementClick(event: MouseEvent): void {
+    if (!this.internalMeasurementModeEnabled) return;
+    if (event.button !== 0) return;
+    if (this.viewerState.getTransformControlsDragging()) return;
+    const pick = this.pickInternalMeasurementEdge(event);
+    // Internal mode owns click interaction while active.
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    if (!pick) {
+      this.clearInternalMeasurementSelection();
+      return;
+    }
+    const state = this.internalMeasurementState;
+    if (state.edgeA && state.edgeB) {
+      state.edgeA = pick;
+      state.edgeB = null;
+      state.distanceM = null;
+      state.distanceStart = null;
+      state.distanceEnd = null;
+      this.drawInternalMeasurementOverlay();
+      return;
+    }
+    if (!state.edgeA) {
+      state.edgeA = pick;
+      state.edgeB = null;
+      state.distanceM = null;
+      state.distanceStart = null;
+      state.distanceEnd = null;
+      this.drawInternalMeasurementOverlay();
+      return;
+    }
+    if (state.edgeA.id === pick.id) {
+      // Mantém seleção atual; Edge B só limpa por ESC, clique fora ou nova medição.
+      return;
+    }
+    state.edgeB = pick;
+    const distance = this.computeClosestPointsBetweenSegments(
+      state.edgeA.start,
+      state.edgeA.end,
+      state.edgeB.start,
+      state.edgeB.end
+    );
+    state.distanceM = distance.distance;
+    state.distanceStart = distance.pointA;
+    state.distanceEnd = distance.pointB;
+    this.drawInternalMeasurementOverlay();
+  }
+
+  private clearInternalMeasurementSelection(): void {
+    this.internalMeasurementState.edgeA = null;
+    this.internalMeasurementState.edgeB = null;
+    this.internalMeasurementState.hover = null;
+    this.internalMeasurementState.distanceM = null;
+    this.internalMeasurementState.distanceStart = null;
+    this.internalMeasurementState.distanceEnd = null;
+    this.drawInternalMeasurementOverlay();
+  }
+
+  private clearInternalMeasurementOverlayCanvas(): void {
+    if (!this.internalMeasurementCanvas || !this.internalMeasurementCtx) return;
+    this.internalMeasurementCtx.clearRect(
+      0,
+      0,
+      this.internalMeasurementCanvas.width,
+      this.internalMeasurementCanvas.height
+    );
+  }
+
+  private pickInternalMeasurementEdge(event: { clientX: number; clientY: number }): InternalEdgePick | null {
+    const roots: THREE.Object3D[] = [];
+    this.boxes.forEach((entry) => roots.push(entry.mesh));
+    this.roomBoxWalls.forEach((w) => roots.push(w.mesh));
+    if (!roots.length) return null;
+
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.pointer.set(x, y);
+    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
+    const meshHits = this.raycaster.intersectObjects(roots, true);
+    if (!meshHits.length) return null;
+    const mesh = this.getInternalMeasurementMeshFromHit(meshHits[0].object);
+    if (!mesh || !(mesh.geometry instanceof THREE.BufferGeometry)) return null;
+    const segments = this.getInternalMeasurementSegments(mesh.geometry);
+    if (!segments.length) return null;
+
+    const cursor = new THREE.Vector2(event.clientX - rect.left, event.clientY - rect.top);
+    const a = new THREE.Vector3();
+    const b = new THREE.Vector3();
+    let bestPick: InternalEdgePick | null = null;
+    let bestDistancePxSq = Infinity;
+    for (let i = 0; i < segments.length; i += 1) {
+      a.copy(segments[i].a).applyMatrix4(mesh.matrixWorld);
+      b.copy(segments[i].b).applyMatrix4(mesh.matrixWorld);
+      const worldLen = a.distanceTo(b);
+      if (worldLen < ViewerCore.INTERNAL_EDGE_MIN_WORLD_M) continue;
+      const screenA = this.projectWorldToScreen(a);
+      const screenB = this.projectWorldToScreen(b);
+      if (!screenA || !screenB) continue;
+      const segScreenLen = Math.hypot(screenA.x - screenB.x, screenA.y - screenB.y);
+      if (segScreenLen < ViewerCore.INTERNAL_EDGE_MIN_SCREEN_PX) continue;
+      const distancePxSq = this.distancePointToSegment2DSq(cursor, screenA, screenB);
+      if (distancePxSq >= bestDistancePxSq) continue;
+      bestDistancePxSq = distancePxSq;
+      bestPick = {
+        id: `${mesh.uuid}:${i}`,
+        start: a.clone(),
+        end: b.clone(),
+      };
+    }
+    return bestPick;
+  }
+
+  private getInternalMeasurementMeshFromHit(object: THREE.Object3D): THREE.Mesh | null {
+    let current: THREE.Object3D | null = object;
+    while (current) {
+      if (current instanceof THREE.Mesh && current.geometry instanceof THREE.BufferGeometry) return current;
+      current = current.parent;
+    }
+    return null;
+  }
+
+  private getInternalMeasurementSegments(geometry: THREE.BufferGeometry): Array<{ a: THREE.Vector3; b: THREE.Vector3 }> {
+    const key = geometry.uuid;
+    const cached = this.internalMeasurementEdgesCache.get(key);
+    if (cached) return cached;
+    const edges = new THREE.EdgesGeometry(geometry, 1);
+    const attr = edges.getAttribute("position");
+    const out: Array<{ a: THREE.Vector3; b: THREE.Vector3 }> = [];
+    if (attr instanceof THREE.BufferAttribute) {
+      for (let i = 0; i < attr.count - 1; i += 2) {
+        out.push({
+          a: new THREE.Vector3().fromBufferAttribute(attr, i),
+          b: new THREE.Vector3().fromBufferAttribute(attr, i + 1),
+        });
+      }
+    }
+    edges.dispose();
+    this.internalMeasurementEdgesCache.set(key, out);
+    return out;
+  }
+
+  private distancePointToSegment2DSq(
+    point: THREE.Vector2,
+    a: { x: number; y: number },
+    b: { x: number; y: number }
+  ): number {
+    const abX = b.x - a.x;
+    const abY = b.y - a.y;
+    const apX = point.x - a.x;
+    const apY = point.y - a.y;
+    const abLenSq = abX * abX + abY * abY;
+    if (abLenSq <= 1e-8) return apX * apX + apY * apY;
+    const t = THREE.MathUtils.clamp((apX * abX + apY * abY) / abLenSq, 0, 1);
+    const cx = a.x + abX * t;
+    const cy = a.y + abY * t;
+    const dx = point.x - cx;
+    const dy = point.y - cy;
+    return dx * dx + dy * dy;
+  }
+
+  private computeClosestPointsBetweenSegments(
+    p1: THREE.Vector3,
+    q1: THREE.Vector3,
+    p2: THREE.Vector3,
+    q2: THREE.Vector3
+  ): { pointA: THREE.Vector3; pointB: THREE.Vector3; distance: number } {
+    const d1 = q1.clone().sub(p1);
+    const d2 = q2.clone().sub(p2);
+    const r = p1.clone().sub(p2);
+    const a = d1.dot(d1);
+    const e = d2.dot(d2);
+    const f = d2.dot(r);
+
+    let s = 0;
+    let t = 0;
+    const eps = 1e-10;
+    if (a <= eps && e <= eps) {
+      return { pointA: p1.clone(), pointB: p2.clone(), distance: p1.distanceTo(p2) };
+    }
+    if (a <= eps) {
+      s = 0;
+      t = THREE.MathUtils.clamp(f / e, 0, 1);
+    } else {
+      const c = d1.dot(r);
+      if (e <= eps) {
+        t = 0;
+        s = THREE.MathUtils.clamp(-c / a, 0, 1);
+      } else {
+        const b = d1.dot(d2);
+        const denom = a * e - b * b;
+        if (Math.abs(denom) > eps) {
+          s = THREE.MathUtils.clamp((b * f - c * e) / denom, 0, 1);
+        } else {
+          s = 0;
+        }
+        t = (b * s + f) / e;
+        if (t < 0) {
+          t = 0;
+          s = THREE.MathUtils.clamp(-c / a, 0, 1);
+        } else if (t > 1) {
+          t = 1;
+          s = THREE.MathUtils.clamp((b - c) / a, 0, 1);
+        }
+      }
+    }
+
+    const pointA = p1.clone().add(d1.clone().multiplyScalar(s));
+    const pointB = p2.clone().add(d2.clone().multiplyScalar(t));
+
+    // Robust fallback candidates (important for near-parallel or almost-degenerate segments).
+    const cands: Array<{ pointA: THREE.Vector3; pointB: THREE.Vector3 }> = [
+      { pointA, pointB },
+      { pointA: p1.clone(), pointB: this.closestPointOnSegment(p1, p2, q2) },
+      { pointA: q1.clone(), pointB: this.closestPointOnSegment(q1, p2, q2) },
+      { pointA: this.closestPointOnSegment(p2, p1, q1), pointB: p2.clone() },
+      { pointA: this.closestPointOnSegment(q2, p1, q1), pointB: q2.clone() },
+    ];
+
+    let best = cands[0];
+    let bestDist = best.pointA.distanceTo(best.pointB);
+    for (let i = 1; i < cands.length; i += 1) {
+      const d = cands[i].pointA.distanceTo(cands[i].pointB);
+      if (d < bestDist) {
+        best = cands[i];
+        bestDist = d;
+      }
+    }
+    return {
+      pointA: best.pointA,
+      pointB: best.pointB,
+      distance: bestDist,
+    };
+  }
+
+  private closestPointOnSegment(
+    point: THREE.Vector3,
+    segStart: THREE.Vector3,
+    segEnd: THREE.Vector3
+  ): THREE.Vector3 {
+    const seg = segEnd.clone().sub(segStart);
+    const lenSq = seg.lengthSq();
+    if (lenSq <= 1e-10) return segStart.clone();
+    const t = THREE.MathUtils.clamp(point.clone().sub(segStart).dot(seg) / lenSq, 0, 1);
+    return segStart.clone().add(seg.multiplyScalar(t));
+  }
+
+  private drawInternalMeasurementOverlay(): void {
+    if (!this.internalMeasurementModeEnabled) {
+      this.clearInternalMeasurementOverlayCanvas();
+      return;
+    }
+    this.resizeInternalMeasurementOverlay();
+    if (!this.internalMeasurementCanvas || !this.internalMeasurementCtx) return;
+    const ctx = this.internalMeasurementCtx;
+    ctx.clearRect(0, 0, this.internalMeasurementCanvas.width, this.internalMeasurementCanvas.height);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    const drawEdge = (edge: InternalEdgePick | null, color: string, width = 2) => {
+      if (!edge) return;
+      const a = this.projectWorldToScreen(edge.start);
+      const b = this.projectWorldToScreen(edge.end);
+      if (!a || !b) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    };
+
+    const state = this.internalMeasurementState;
+    if (!state.edgeA && !state.edgeB) {
+      drawEdge(state.hover, ViewerCore.INTERNAL_EDGE_COLOR_HOVER, ViewerCore.INTERNAL_EDGE_WIDTH_HOVER);
+      return;
+    }
+    if (state.hover && state.hover.id !== state.edgeA?.id && state.hover.id !== state.edgeB?.id) {
+      drawEdge(state.hover, ViewerCore.INTERNAL_EDGE_COLOR_HOVER, ViewerCore.INTERNAL_EDGE_WIDTH_HOVER);
+    }
+    drawEdge(state.edgeA, ViewerCore.INTERNAL_EDGE_COLOR_A, ViewerCore.INTERNAL_EDGE_WIDTH_SELECTED);
+    drawEdge(state.edgeB, ViewerCore.INTERNAL_EDGE_COLOR_B, ViewerCore.INTERNAL_EDGE_WIDTH_SELECTED);
+
+    if (
+      state.edgeA &&
+      state.edgeB &&
+      state.distanceM != null &&
+      state.distanceStart &&
+      state.distanceEnd
+    ) {
+      const a = this.projectWorldToScreen(state.distanceStart);
+      const b = this.projectWorldToScreen(state.distanceEnd);
+      if (!a || !b) return;
+      const distanceMm = Math.round(state.distanceM * 1000);
+      const label = `${distanceMm}`;
+      const mx = (a.x + b.x) * 0.5;
+      const my = (a.y + b.y) * 0.5;
+      ctx.strokeStyle = ViewerCore.INTERNAL_EDGE_COLOR_MEASURE;
+      ctx.lineWidth = ViewerCore.INTERNAL_EDGE_WIDTH_MEASURE;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.font = "600 12px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = ViewerCore.INTERNAL_EDGE_COLOR_MEASURE;
+      ctx.fillText(label, mx, my - 10);
+    }
   }
 
   private updateDimensionsOverlay(): void {
@@ -3753,6 +4252,18 @@ export class ViewerCore {
         /* ignore */
       }
     });
+    if (id == null) {
+      this.lastSelectedBoxPositionForRuler = null;
+      this.clearRulerOverlay();
+      return;
+    }
+    const entry = this.boxes.get(id);
+    if (entry) {
+      const p = entry.mesh.position;
+      this.lastSelectedBoxPositionForRuler = { boxId: id, x: p.x, y: p.y, z: p.z };
+    } else {
+      this.lastSelectedBoxPositionForRuler = null;
+    }
   }
 
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
@@ -3787,45 +4298,100 @@ export class ViewerCore {
 
     selectedEntry.mesh.updateMatrixWorld(true);
     const selectedBox = new THREE.Box3().setFromObject(selectedEntry.mesh);
-    const selectedCenter = selectedBox.getCenter(new THREE.Vector3());
     let best: RulerMeasurementHit | null = null;
 
     this.boxes.forEach((entry, id) => {
       if (id === selectedBoxId) return;
       entry.mesh.updateMatrixWorld(true);
       const otherBox = new THREE.Box3().setFromObject(entry.mesh);
-      const dx = selectedBox.max.x < otherBox.min.x
-        ? otherBox.min.x - selectedBox.max.x
-        : otherBox.max.x < selectedBox.min.x
-          ? selectedBox.min.x - otherBox.max.x
-          : 0;
-      const dy = selectedBox.max.y < otherBox.min.y
-        ? otherBox.min.y - selectedBox.max.y
-        : otherBox.max.y < selectedBox.min.y
-          ? selectedBox.min.y - otherBox.max.y
-          : 0;
-      const dz = selectedBox.max.z < otherBox.min.z
-        ? otherBox.min.z - selectedBox.max.z
-        : otherBox.max.z < selectedBox.min.z
-          ? selectedBox.min.z - otherBox.max.z
-          : 0;
-      const distanceM = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      if (distanceM < 1e-6) return;
+      const overlapY =
+        Math.min(selectedBox.max.y, otherBox.max.y) - Math.max(selectedBox.min.y, otherBox.min.y);
+      const overlapZ =
+        Math.min(selectedBox.max.z, otherBox.max.z) - Math.max(selectedBox.min.z, otherBox.min.z);
+      if (overlapY > 0 && overlapZ > 0) {
+        const yMid = (Math.max(selectedBox.min.y, otherBox.min.y) + Math.min(selectedBox.max.y, otherBox.max.y)) * 0.5;
+        const zMid = (Math.max(selectedBox.min.z, otherBox.min.z) + Math.min(selectedBox.max.z, otherBox.max.z)) * 0.5;
+        const y = THREE.MathUtils.clamp(yMid, selectedBox.min.y, selectedBox.max.y);
+        const z = THREE.MathUtils.clamp(zMid, selectedBox.min.z, selectedBox.max.z);
+        if (selectedBox.max.x <= otherBox.min.x) {
+          const distanceM = otherBox.min.x - selectedBox.max.x;
+          if (!best || distanceM < best.distanceM) {
+            best = {
+              kind: "box",
+              distanceM,
+              start: new THREE.Vector3(selectedBox.max.x, y, z),
+              end: new THREE.Vector3(otherBox.min.x, y, z),
+            };
+          }
+        } else if (otherBox.max.x <= selectedBox.min.x) {
+          const distanceM = selectedBox.min.x - otherBox.max.x;
+          if (!best || distanceM < best.distanceM) {
+            best = {
+              kind: "box",
+              distanceM,
+              start: new THREE.Vector3(selectedBox.min.x, y, z),
+              end: new THREE.Vector3(otherBox.max.x, y, z),
+            };
+          }
+        }
+      }
 
-      const otherCenter = otherBox.getCenter(new THREE.Vector3());
-      const start = new THREE.Vector3(
-        THREE.MathUtils.clamp(otherCenter.x, selectedBox.min.x, selectedBox.max.x),
-        THREE.MathUtils.clamp(otherCenter.y, selectedBox.min.y, selectedBox.max.y),
-        THREE.MathUtils.clamp(otherCenter.z, selectedBox.min.z, selectedBox.max.z)
-      );
-      const end = new THREE.Vector3(
-        THREE.MathUtils.clamp(selectedCenter.x, otherBox.min.x, otherBox.max.x),
-        THREE.MathUtils.clamp(selectedCenter.y, otherBox.min.y, otherBox.max.y),
-        THREE.MathUtils.clamp(selectedCenter.z, otherBox.min.z, otherBox.max.z)
-      );
+      const overlapX =
+        Math.min(selectedBox.max.x, otherBox.max.x) - Math.max(selectedBox.min.x, otherBox.min.x);
+      if (overlapX > 0 && overlapZ > 0) {
+        const xMid = (Math.max(selectedBox.min.x, otherBox.min.x) + Math.min(selectedBox.max.x, otherBox.max.x)) * 0.5;
+        const zMid = (Math.max(selectedBox.min.z, otherBox.min.z) + Math.min(selectedBox.max.z, otherBox.max.z)) * 0.5;
+        const x = THREE.MathUtils.clamp(xMid, selectedBox.min.x, selectedBox.max.x);
+        const z = THREE.MathUtils.clamp(zMid, selectedBox.min.z, selectedBox.max.z);
+        if (selectedBox.max.y <= otherBox.min.y) {
+          const distanceM = otherBox.min.y - selectedBox.max.y;
+          if (!best || distanceM < best.distanceM) {
+            best = {
+              kind: "box",
+              distanceM,
+              start: new THREE.Vector3(x, selectedBox.max.y, z),
+              end: new THREE.Vector3(x, otherBox.min.y, z),
+            };
+          }
+        } else if (otherBox.max.y <= selectedBox.min.y) {
+          const distanceM = selectedBox.min.y - otherBox.max.y;
+          if (!best || distanceM < best.distanceM) {
+            best = {
+              kind: "box",
+              distanceM,
+              start: new THREE.Vector3(x, selectedBox.min.y, z),
+              end: new THREE.Vector3(x, otherBox.max.y, z),
+            };
+          }
+        }
+      }
 
-      if (!best || distanceM < best.distanceM) {
-        best = { kind: "box", distanceM, start, end };
+      if (overlapX > 0 && overlapY > 0) {
+        const xMid = (Math.max(selectedBox.min.x, otherBox.min.x) + Math.min(selectedBox.max.x, otherBox.max.x)) * 0.5;
+        const yMid = (Math.max(selectedBox.min.y, otherBox.min.y) + Math.min(selectedBox.max.y, otherBox.max.y)) * 0.5;
+        const x = THREE.MathUtils.clamp(xMid, selectedBox.min.x, selectedBox.max.x);
+        const y = THREE.MathUtils.clamp(yMid, selectedBox.min.y, selectedBox.max.y);
+        if (selectedBox.max.z <= otherBox.min.z) {
+          const distanceM = otherBox.min.z - selectedBox.max.z;
+          if (!best || distanceM < best.distanceM) {
+            best = {
+              kind: "box",
+              distanceM,
+              start: new THREE.Vector3(x, y, selectedBox.max.z),
+              end: new THREE.Vector3(x, y, otherBox.min.z),
+            };
+          }
+        } else if (otherBox.max.z <= selectedBox.min.z) {
+          const distanceM = selectedBox.min.z - otherBox.max.z;
+          if (!best || distanceM < best.distanceM) {
+            best = {
+              kind: "box",
+              distanceM,
+              start: new THREE.Vector3(x, y, selectedBox.min.z),
+              end: new THREE.Vector3(x, y, otherBox.max.z),
+            };
+          }
+        }
       }
     });
     return best;
@@ -4199,87 +4765,10 @@ export class ViewerCore {
   }
 
   /**
-   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
-   * Located in: src/core/ruler/RulerSystem.ts
-   * Do NOT call this method. It will be removed in a future cleanup.
-   */
-  getRulerEdgeAtPointer(_event: { clientX: number; clientY: number }): null {
-    return null;
-  }
-
-  /**
-   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
-   * Located in: src/core/ruler/RulerSystem.ts
-   * Do NOT call this method. It will be removed in a future cleanup.
-   */
-  getInternalRulerPickAtPointer(_event: { clientX: number; clientY: number }): null {
-    return null;
-  }
-
-  cycleInternalRulerSelection(_result: unknown): void {
-    void _result;
-  }
-
-  clearInternalRulerSelection(): void {
-    // no-op
-  }
-
-  /**
-   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
-   * Located in: src/core/ruler/RulerSystem.ts
-   * Do NOT call this method. It will be removed in a future cleanup.
-   */
-  getInternalRulerA(): null {
-    return null;
-  }
-
-  /**
-   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
-   * Located in: src/core/ruler/RulerSystem.ts
-   * Do NOT call this method. It will be removed in a future cleanup.
-   */
-  getInternalRulerB(): null {
-    return null;
-  }
-
-  /**
-   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
-   * Located in: src/core/ruler/RulerSystem.ts
-   * Do NOT call this method. It will be removed in a future cleanup.
-   */
-  getInternalRulerMeasurement(): null {
-    return null;
-  }
-
-  /**
    * Obtém boxId a partir de um mesh (para uso externo, ex.: régua).
    */
   getBoxIdByMeshPublic(mesh: THREE.Object3D): string | null {
     return this.getBoxIdByMesh(mesh);
-  }
-
-  /**
-   * @deprecated LEGACY STUB — This method is no longer used by the new RulerSystem.
-   * Located in: src/core/ruler/RulerSystem.ts
-   * Do NOT call this method. It will be removed in a future cleanup.
-   */
-  getRulerMeasurements(_referenceBoxId: string | null): {
-    horizontalLeft: null;
-    horizontalRight: null;
-    front: null;
-    back: null;
-    floor: null;
-    ceiling: null;
-  } {
-    void _referenceBoxId;
-    return {
-      horizontalLeft: null,
-      horizontalRight: null,
-      front: null,
-      back: null,
-      floor: null,
-      ceiling: null,
-    };
   }
 
   /** Obtém doorLayerId subindo na hierarquia (mesh → pivot door-layer-* → …). Usado por getContextMenuLayerHit e getDoorHitAtPointer. */
@@ -4491,6 +4980,7 @@ export class ViewerCore {
     this.updateShowcaseComposerSize();
     this.updateMainComposerSize();
     this.resizeRulerOverlay();
+    this.resizeInternalMeasurementOverlay();
   };
 
   private start() {
@@ -4543,6 +5033,8 @@ export class ViewerCore {
 
       this.highlightManager?.update();
       this.edgeOutlineSystem?.update();
+      this.syncRulerWithExternalSelectionMovement();
+      this.clearRulerOverlayIfMovementIdle(performance.now());
 
       if (this.reflectionsEnabled) {
         this.reflectionFrameCounter += 1;
@@ -4637,6 +5129,19 @@ export class ViewerCore {
     }
     this.eventsManager?.unregister();
     this.eventsManager = null;
+    const viewerCanvas = this.rendererManager.renderer.domElement;
+    if (this.boundInternalMeasurementPointerMove) {
+      viewerCanvas.removeEventListener("pointermove", this.boundInternalMeasurementPointerMove);
+      this.boundInternalMeasurementPointerMove = null;
+    }
+    if (this.boundInternalMeasurementClick) {
+      viewerCanvas.removeEventListener("click", this.boundInternalMeasurementClick, true);
+      this.boundInternalMeasurementClick = null;
+    }
+    if (this.boundInternalMeasurementEsc) {
+      window.removeEventListener("keydown", this.boundInternalMeasurementEsc);
+      this.boundInternalMeasurementEsc = null;
+    }
     if (this.wallGizmo) {
       this.wallGizmo.dispose();
       this.sceneManager.scene.remove(this.wallGizmo.group);
@@ -4694,6 +5199,13 @@ export class ViewerCore {
       this.rulerOverlayCanvas = null;
       this.rulerOverlayCtx = null;
     }
+    this.clearInternalMeasurementSelection();
+    if (this.internalMeasurementCanvas) {
+      this.internalMeasurementCanvas.remove();
+      this.internalMeasurementCanvas = null;
+      this.internalMeasurementCtx = null;
+    }
+    this.internalMeasurementEdgesCache.clear();
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();

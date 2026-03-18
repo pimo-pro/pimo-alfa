@@ -38,13 +38,12 @@ export default function Documentacao() {
         </div>
       </Panel>
 
-      <Panel title="Atualizações recentes do layout, cadModels e Admin">
+      <Panel title="Atualizações recentes do layout e Admin">
         <div style={bodyTextStyle}>
           Mudanças aplicadas:
           {"\n"}- Painéis esquerdo/direito com largura estável (min-width quando abertos).
           {"\n"}- Painel inferior com altura fixa (min-height e altura base).
           {"\n"}- Painéis laterais com altura total e scroll interno, evitando colapso.
-          {"\n"}- Hook useCadModels centraliza leitura/gravação de modelos CAD.
           {"\n"}- Hooks useTemplates e useMaterials centralizam templates e materiais.
           {"\n"}- Hook useStoredList unifica a persistência de listas no storage.
           {"\n"}- Redução de estilos inline com classes CSS reutilizáveis.
@@ -109,7 +108,6 @@ export default function Documentacao() {
           {"\n\n"}Motivos técnicos:
           {"\n"}- Evitar variação de tamanho por conteúdo.
           {"\n"}- Evitar overflow escondido que impede renderização de listas.
-          {"\n"}- Evitar divergência de estado entre painéis ao mover cadModels.
           {"\n"}- Reduzir acoplamento entre Admin e storage.
           {"\n"}- Simplificar manutenção visual do Admin e painéis laterais.
           {"\n"}- Remover fluxo sem utilidade no estado atual do produto.
@@ -143,7 +141,6 @@ export default function Documentacao() {
           {"\n\n"}Decisões de arquitetura:
           {"\n"}- Layout principal controlado por flex e limites fixos.
           {"\n"}- Scroll concentrado nos painéis, não no body.
-          {"\n"}- Estado de cadModels centralizado em hook reutilizável.
           {"\n"}- Templates e materiais seguem o mesmo padrão de hook.
           {"\n"}- Persistência genérica extraída para useStoredList.
           {"\n"}- Estilos essenciais movidos para classes globais em index.css.
@@ -177,8 +174,6 @@ export default function Documentacao() {
           {"\n"}- Render de imagem integrado ao Viewer via API.
           {"\n"}- Contexto de materiais isolado para compatibilidade com fast refresh.
           {"\n\n"}Fluxos atualizados:
-          {"\n"}- Lista de cadModels renderiza de forma estável em qualquer painel.
-          {"\n"}- CadModels atualiza na UI após salvar no Admin.
           {"\n"}- Templates e materiais persistem via hooks e refletem no Admin.
           {"\n"}- Hooks agora compartilham a mesma base de persistência.
           {"\n"}- Bottom panel mantém altura constante, independentemente do conteúdo.
@@ -254,13 +249,11 @@ export default function Documentacao() {
           {"\n"}- Navegar a cena sem rotação automática.
           {"\n"}- Evitar regressões no build com configuração Vite otimizada.
           {"\n\n"}Arquivos modificados:
-          {"\n"}- src/hooks/useCadModels.ts
           {"\n"}- src/hooks/useTemplates.ts
           {"\n"}- src/hooks/useMaterials.ts
           {"\n"}- src/hooks/useStoredList.ts
           {"\n"}- src/components/layout/left-panel/LeftPanel.tsx
           {"\n"}- src/components/layout/right-panel/RightPanel.tsx
-          {"\n"}- src/components/admin/CADModelsManager.tsx
           {"\n"}- src/components/admin/TemplatesManager.tsx
           {"\n"}- src/components/admin/MaterialsManager.tsx
           {"\n"}- src/components/layout/workspace/Workspace.tsx
@@ -317,25 +310,6 @@ export default function Documentacao() {
           src/components/layout/workspace/Workspace.tsx,
           src/components/layout/bottom-panel/BottomPanel.tsx
         </div>
-      </Panel>
-
-      <Panel title="Hook useCadModels (exemplo de uso)">
-        <pre
-          style={{
-            margin: 0,
-            fontSize: 12,
-            lineHeight: 1.6,
-            color: "var(--text-main)",
-            whiteSpace: "pre-wrap",
-            fontFamily:
-              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-          }}
-        >
-{`const { models, setModels, reload } = useCadModels();
-// models alimenta selects e listas
-// setModels atualiza e persiste no storage
-// reload sincroniza com storage quando necessário`}
-        </pre>
       </Panel>
 
       <Panel title="Hooks useTemplates / useMaterials (exemplo)">

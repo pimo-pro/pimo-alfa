@@ -10,7 +10,6 @@ type AcoesMultiBoxProps = {
   updateBox: (_id: string, _options: Partial<BoxOptions>) => boolean;
   setBoxIndex: (_id: string, _index: number) => boolean;
   setBoxGap: (_gap: number) => void;
-  addModelToBox: (_boxId: string, _path: string) => boolean;
   removeModelFromBox: (_boxId: string, _modelId: string) => boolean;
   listModels: (_boxId: string) => Array<{ id: string; path: string }> | null;
 };
@@ -22,7 +21,6 @@ export default function AcoesMultiBox({
   updateBox,
   setBoxIndex,
   setBoxGap,
-  addModelToBox,
   removeModelFromBox,
   listModels,
 }: AcoesMultiBoxProps) {
@@ -77,11 +75,6 @@ export default function AcoesMultiBox({
     }
   }, [selectedBoxId, setBoxIndex]);
 
-  const handleAddModel = useCallback(() => {
-    if (!selectedBoxId) return;
-    addModelToBox(selectedBoxId, "/models/prateleira.glb");
-  }, [addModelToBox, selectedBoxId]);
-
   const handleRemoveModel = useCallback(() => {
     if (!selectedBoxId) return;
     const models = listModels(selectedBoxId);
@@ -118,9 +111,6 @@ export default function AcoesMultiBox({
       </button>
       <button type="button" onClick={handleMoveDown}>
         Mover para Baixo
-      </button>
-      <button type="button" onClick={handleAddModel}>
-        Adicionar Modelo
       </button>
       <button type="button" onClick={handleRemoveModel}>
         Remover Modelo

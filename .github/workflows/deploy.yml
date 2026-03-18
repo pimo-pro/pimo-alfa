@@ -1,13 +1,10 @@
+
 name: Publish and Deploy
 
 on:
   push:
     branches:
       - main
-      - refactor-final
-    tags:
-      - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -71,21 +68,5 @@ jobs:
           server-dir: /public_html/
           dangerous-clean-slate: true
 
-  release:
-    needs: build_deploy
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create GitHub Release from tag
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ needs.build_deploy.outputs.app_version }}
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          body: |
-            Publicação automática do PIMO.
 
-            - Versão: `${{ needs.build_deploy.outputs.app_version }}`
-            - Origem da versão: `${{ needs.build_deploy.outputs.version_source }}`
-            - Commit: `${{ github.sha }}`
 

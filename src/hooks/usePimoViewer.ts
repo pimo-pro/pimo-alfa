@@ -27,6 +27,8 @@ const VIEWER_CORE_UTILITY_METHODS = [
   "getDimensionsOverlayVisible",
   "getSelectedBoxScreenPosition",
   "projectWorldToScreen",
+  "setInternalMeasurementMode",
+  "getInternalMeasurementMode",
   "setManualWallHidden",
   "getManualWallHidden",
 ] as const;
@@ -51,6 +53,8 @@ const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   setUltraPerformanceMode: () => {},
   getBoxIdByMesh: () => null,
   projectWorldToScreen: () => null,
+  setInternalMeasurementMode: () => {},
+  getInternalMeasurementMode: () => false,
 };
 
 /**

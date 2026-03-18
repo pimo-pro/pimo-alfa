@@ -89,6 +89,9 @@ export type PimoViewerApi = {
   getSelectedBoxScreenPosition?: () => { x: number; y: number } | null;
   /** Projeta um ponto 3D (mundial) em pixels relativos ao container. Retorna null se atrás da câmera. */
   projectWorldToScreen?: (_worldPoint: import("three").Vector3) => { x: number; y: number } | null;
+  /** Ativa/desativa modo de medição interna por bordas (ferramenta CAD). */
+  setInternalMeasurementMode?: (_enabled: boolean) => void;
+  getInternalMeasurementMode?: () => boolean;
   /** Retorna o alvo do ponteiro para o menu de contexto: porta, gaveta ou null (módulo/canvas). */
   getContextMenuLayerHit?: (_event: { clientX: number; clientY: number }) => {
     boxId: string;

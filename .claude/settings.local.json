@@ -3,7 +3,15 @@
     "allow": [
       "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.tsx\" -type f | head -30 | xargs grep -l \"React\\\\.memo\\\\|useCallback\\\\|useMemo\" 2>/dev/null | head -20)",
       "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | wc -l && find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | xargs wc -l | tail -1)",
-      "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | xargs wc -l | sort -n | tail -30)"
+      "Bash(find /c/Users/Mofreita/pimo-v3/src -name \"*.ts\" -o -name \"*.tsx\" | xargs wc -l | sort -n | tail -30)",
+      "Bash(powershell -Command \"\\(Get-ChildItem -Recurse -Include *.ts,*.tsx -Path src | Measure-Object\\).Count\")",
+      "Bash(powershell -Command \"Get-ChildItem -Recurse -Include *.ts,*.tsx -Path src | ForEach-Object { $lines = \\(Get-Content $_.FullName\\).Count; if \\($lines -gt 300\\) { [PSCustomObject]@{Lines=$lines; File=$_.Name; Path=$_.FullName} } } | Sort-Object Lines -Descending | Format-Table -AutoSize\")",
+      "Bash(powershell -Command \"Get-Content ''src\\\\data\\\\moveisUnificados\\\\boxModelsRegistry.ts''\")",
+      "Bash(powershell -Command \"Select-String -Path src/**/*.ts,src/**/*.tsx -Pattern ''cadModels|glbRegistry|CADModelsManager|useCadModels|useCadModelsSync|glbLoader|\\\\.glb'' | Select-Object Filename, LineNumber, Line | Format-Table -AutoSize\")",
+      "Bash(powershell -Command \"Select-String -Path src/**/*.ts,src/**/*.tsx -Pattern ''DoorElement|WindowElement|BottomPanel|FooterMenu|useUndoRedo|pdfGenerator|storageKeys|rulesStorage|mdfLibrary|SobreNos|useMaterialSelection'' | Select-Object Filename, LineNumber, Line | Format-Table -AutoSize\")",
+      "Bash(powershell -Command \"Select-String -Path src/**/*.ts,src/**/*.tsx -Pattern ''console\\\\.\\(log|debug|info|warn|error\\)'' | Select-Object Filename, LineNumber, Line | Format-Table -AutoSize\")",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
