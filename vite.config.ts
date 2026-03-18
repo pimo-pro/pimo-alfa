@@ -1,12 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { buildMaterialsApiPayload } from './src/server/materialsApi'
+import { fileURLToPath, URL } from 'node:url'
 
 const buildVersion = `${process.env.npm_package_version ?? '0.0.0'}+${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)}`;
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/pimo-criativo/',
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   plugins: [
     react(),
     {
