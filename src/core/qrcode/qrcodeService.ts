@@ -128,6 +128,68 @@ export function generateQrCodeSvg(content: string, errorLevel: QrErrorLevel = "M
   return qr.createSvgTag({ scalable: true, margin });
 }
 
+export type QrLogoConfig = {
+  logoDataUrl?: string;
+  logoSizePercent?: number;
+  errorCorrection?: QrErrorLevel;
+};
+
+export async function generateQrCanvasWithLogo(
+  data: string,
+  size: number,
+  config: QrLogoConfig = {}
+): Promise<HTMLCanvasElement> {
+  const logoPercent = Math.min(30, Math.max(10, config.logoSizePercent ?? 20));
+  const qr = qrcode(0, config.errorCorrection ?? "H");
+  qr.addData(data);
+  qr.make();
+
+  const moduleCount = qr.getModuleCount();
+  const moduleSize = size / Math.max(1, moduleCount);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Failed to get 2D context from canvas");
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#000000";
+  for (let r = 0; r < moduleCount; r++) {
+    for (let c = 0; c < moduleCount; c++) {
+      if (!qr.isDark(r, c)) continue;
+      const x = c * moduleSize;
+      const y = r * moduleSize;
+      ctx.fillRect(x, y, moduleSize, moduleSize);
+    }
+  }
+
+  if (config.logoDataUrl) {
+    try {
+      const logoImg = new Image();
+      logoImg.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        logoImg.onload = () => resolve();
+        logoImg.onerror = () => reject(new Error("Failed to load logo image"));
+        logoImg.src = config.logoDataUrl!;
+      });
+
+      const logoDimension = (size * logoPercent) / 100;
+      const logoX = (size - logoDimension) / 2;
+      const logoY = (size - logoDimension) / 2;
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(logoX - 2, logoY - 2, logoDimension + 4, logoDimension + 4);
+      ctx.drawImage(logoImg, logoX, logoY, logoDimension, logoDimension);
+    } catch (err) {
+      console.warn("[qrcodeService] Failed to render logo:", err);
+    }
+  }
+
+  return canvas;
+}
+
 export function attachQrCodesToCutlist(
   items: CutListItemComPreco[],
   project: ProjectQrContext

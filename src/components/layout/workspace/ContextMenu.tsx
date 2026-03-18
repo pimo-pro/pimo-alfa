@@ -71,6 +71,7 @@ export default function ContextMenu({
 }: ContextMenuProps) {
   const { project, actions } = useProject();
   const menuRef = useRef<HTMLDivElement>(null);
+  const submenuCloseTimerRef = useRef<number | null>(null);
   const [materialSubmenuOpen, setMaterialSubmenuOpen] = useState<"door" | "drawer" | null>(null);
 
   const selectedBoxId = project.selectedWorkspaceBoxId ?? "";
@@ -84,6 +85,26 @@ export default function ContextMenu({
   const isDrawerTarget = contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId != null;
   const showDoorMaterial = isDoorTarget;
   const showDrawerMaterial = isDrawerTarget;
+  const submenuTarget = showDoorMaterial ? "door" : showDrawerMaterial ? "drawer" : null;
+
+  const clearSubmenuCloseTimer = () => {
+    if (submenuCloseTimerRef.current == null) return;
+    window.clearTimeout(submenuCloseTimerRef.current);
+    submenuCloseTimerRef.current = null;
+  };
+
+  const openMaterialSubmenu = () => {
+    clearSubmenuCloseTimer();
+    if (submenuTarget) setMaterialSubmenuOpen(submenuTarget);
+  };
+
+  const scheduleCloseMaterialSubmenu = () => {
+    clearSubmenuCloseTimer();
+    submenuCloseTimerRef.current = window.setTimeout(() => {
+      setMaterialSubmenuOpen(null);
+      submenuCloseTimerRef.current = null;
+    }, 140);
+  };
 
   useEffect(() => {
     if (!position) return;
@@ -93,6 +114,12 @@ export default function ContextMenu({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [position, onClose]);
+
+  useEffect(() => {
+    return () => {
+      clearSubmenuCloseTimer();
+    };
+  }, []);
 
   useEffect(() => {
     if (!position) return;
@@ -179,7 +206,7 @@ export default function ContextMenu({
           role="menuitem"
           style={itemStyle}
           onClick={() => {
-            actions.duplicateWorkspaceBoxAtOffset(50);
+            actions.duplicateWorkspaceBoxAtOffset(0);
             onClose();
           }}
           onMouseEnter={(e) => {
@@ -236,8 +263,8 @@ export default function ContextMenu({
       {(showDoorMaterial || showDrawerMaterial) && (
         <div
           style={{ position: "relative" }}
-          onMouseEnter={() => setMaterialSubmenuOpen(showDoorMaterial ? "door" : "drawer")}
-          onMouseLeave={() => setMaterialSubmenuOpen(null)}
+          onPointerEnter={openMaterialSubmenu}
+          onPointerLeave={scheduleCloseMaterialSubmenu}
         >
           <button
             type="button"
@@ -265,6 +292,8 @@ export default function ContextMenu({
                 marginLeft: 4,
                 minWidth: 140,
               }}
+              onPointerEnter={openMaterialSubmenu}
+              onPointerLeave={scheduleCloseMaterialSubmenu}
               onPointerDown={(e) => e.stopPropagation()}
             >
               {OFFICIAL_MATERIALS.map((m) => (

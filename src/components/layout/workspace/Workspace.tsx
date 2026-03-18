@@ -56,6 +56,8 @@ export default function Workspace({
   const gerarArquivoHandlers = useGerarArquivoHandlers();
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
   const projectRef = useRef(project);
+  const ctrlOrMetaPressedRef = useRef(false);
+  const multiSelectedBoxIdsRef = useRef<string[]>([]);
   const keyboardMoveRef = useRef<{
     activeKey: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | null;
     accelTimeoutId: number | null;
@@ -65,6 +67,7 @@ export default function Workspace({
     accelTimeoutId: null,
     repeatIntervalId: null,
   });
+  const [showKeyboardShortcutsHelp, setShowKeyboardShortcutsHelp] = useState(false);
   const [, setViewerMounted] = useState(false);
 
   // Montar ViewerCore no container via import dinâmico (evita 500 ao servir ViewerCore.ts estático).
@@ -135,15 +138,51 @@ export default function Workspace({
   useEffect(() => {
     viewerApi.setOnBoxSelected((boxId) => {
       if (boxId) {
+        if (ctrlOrMetaPressedRef.current) {
+          const currentSelection = multiSelectedBoxIdsRef.current;
+          const alreadySelected = currentSelection.includes(boxId);
+          const nextSelection = alreadySelected
+            ? currentSelection.filter((id) => id !== boxId)
+            : [...currentSelection, boxId];
+          multiSelectedBoxIdsRef.current = nextSelection;
+          if (alreadySelected) {
+            const fallbackBoxId = nextSelection[nextSelection.length - 1];
+            if (fallbackBoxId) {
+              actions.selectBox(fallbackBoxId);
+            } else {
+              actions.clearSelection();
+              clearUiSelection();
+            }
+            return;
+          }
+        } else {
+          multiSelectedBoxIdsRef.current = [boxId];
+        }
         actions.selectBox(boxId);
         return;
       }
       if (project.selectedWorkspaceBoxId != null && project.selectedWorkspaceBoxId !== "") {
+        multiSelectedBoxIdsRef.current = [];
         actions.clearSelection();
         clearUiSelection();
       }
     });
   }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId]);
+
+  useEffect(() => {
+    const selectedBoxId = project.selectedWorkspaceBoxId;
+    const validIds = new Set(project.workspaceBoxes.map((box) => box.id));
+    const filteredSelection = multiSelectedBoxIdsRef.current.filter((id) => validIds.has(id));
+    if (!selectedBoxId) {
+      multiSelectedBoxIdsRef.current = filteredSelection;
+      return;
+    }
+    if (filteredSelection.length <= 1 || !filteredSelection.includes(selectedBoxId)) {
+      multiSelectedBoxIdsRef.current = [selectedBoxId];
+      return;
+    }
+    multiSelectedBoxIdsRef.current = filteredSelection;
+  }, [project.selectedWorkspaceBoxId, project.workspaceBoxes]);
 
   useEffect(() => {
     viewerApi.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
@@ -262,6 +301,15 @@ export default function Workspace({
       viewerApi.selectBox(null);
     }
   }, [project.selectedWorkspaceBoxId, viewerApi]);
+
+  useEffect(() => {
+    if (!viewerApi.highlightBox) return;
+    if (!project.viewerSettings.highlightEnabled) {
+      viewerApi.highlightBox(null);
+      return;
+    }
+    viewerApi.highlightBox(project.selectedWorkspaceBoxId || null);
+  }, [project.viewerSettings.highlightEnabled, project.selectedWorkspaceBoxId, viewerApi]);
 
   useEffect(() => {
     viewerApi.setOnBoxTransform((boxId, position, rotation) => {
@@ -393,7 +441,13 @@ const hasShownViewerReadyToastRef = useRef(false);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return;
+      ctrlOrMetaPressedRef.current = event.ctrlKey || event.metaKey;
       const keyLower = event.key.toLowerCase();
+      if (event.key === "Alt" && !event.repeat) {
+        event.preventDefault();
+        setShowKeyboardShortcutsHelp((prev) => !prev);
+        return;
+      }
       const ctrlOrMeta = event.ctrlKey || event.metaKey;
       if (ctrlOrMeta && !event.altKey && keyLower === "z") {
         event.preventDefault();
@@ -407,6 +461,24 @@ const hasShownViewerReadyToastRef = useRef(false);
       if (ctrlOrMeta && !event.altKey && keyLower === "y") {
         event.preventDefault();
         actionsRef.current.redo();
+        return;
+      }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        const currentProject = projectRef.current;
+        const validIds = new Set(currentProject.workspaceBoxes.map((box) => box.id));
+        const multiSelectionIds = multiSelectedBoxIdsRef.current.filter((id) => validIds.has(id));
+        const selectedId = currentProject.selectedWorkspaceBoxId;
+        const idsToDelete = multiSelectionIds.length > 0
+          ? Array.from(new Set(multiSelectionIds))
+          : selectedId
+            ? [selectedId]
+            : [];
+        if (idsToDelete.length === 0) return;
+        for (const boxId of idsToDelete) {
+          actionsRef.current.removeWorkspaceBoxById(boxId);
+        }
+        multiSelectedBoxIdsRef.current = [];
         return;
       }
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown" && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -426,6 +498,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      ctrlOrMetaPressedRef.current = event.ctrlKey || event.metaKey;
       const state = keyboardMoveRef.current;
       if (state.activeKey == null) return;
       if (event.key !== state.activeKey) return;
@@ -433,6 +506,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     };
 
     const handleWindowBlur = () => {
+      ctrlOrMetaPressedRef.current = false;
       clearKeyboardMoveTimers();
     };
 
@@ -504,6 +578,9 @@ return (
           >
             <div
               ref={containerRef}
+              onPointerDownCapture={(event) => {
+                ctrlOrMetaPressedRef.current = event.ctrlKey || event.metaKey;
+              }}
               onContextMenu={(event) => {
                 event.preventDefault();
                 const hit = viewerApi.getContextMenuLayerHit?.(event) ?? null;
@@ -565,6 +642,34 @@ return (
                 viewerApi.updateDrawerMaterial?.(boxId, drawerLayerId, materialId);
               }}
             />
+          )}
+          {showKeyboardShortcutsHelp && (
+            <div
+              aria-live="polite"
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                zIndex: 120,
+                minWidth: 260,
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(8, 12, 26, 0.92)",
+                color: "var(--text-main)",
+                fontSize: 12,
+                lineHeight: 1.45,
+                pointerEvents: "none",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Atalhos do teclado</div>
+              <div>Ctrl+Z: Desfazer</div>
+              <div>Ctrl+Y: Refazer</div>
+              <div>Delete/Backspace: Excluir seleção</div>
+              <div>Ctrl+Click: Adicionar/remover da seleção</div>
+              <div>Setas: Mover caixa selecionada</div>
+              <div>Alt: Mostrar/ocultar esta ajuda</div>
+            </div>
           )}
         </div>
       </div>

@@ -37,6 +37,25 @@ export type BoxCrudActions = Pick<
   | "renameBox"
 >;
 
+const NEW_BOX_GAP_MM = 0;
+
+function getAdjacentPlacementMm(
+  referenceBox: WorkspaceBox,
+  targetDimensions: { largura: number },
+  gapMm = NEW_BOX_GAP_MM
+): { x_mm: number; z_mm: number } {
+  const referenceWidthMm = Math.max(0, referenceBox.dimensoes?.largura ?? 0);
+  const targetWidthMm = Math.max(0, targetDimensions.largura ?? 0);
+  const distanceMm = referenceWidthMm / 2 + targetWidthMm / 2 + Math.max(0, gapMm);
+  const rotationY = Number.isFinite(referenceBox.rotacaoY) ? (referenceBox.rotacaoY ?? 0) : 0;
+  const dirX = Math.cos(rotationY);
+  const dirZ = Math.sin(rotationY);
+  return {
+    x_mm: (referenceBox.posicaoX_mm ?? 0) + dirX * distanceMm,
+    z_mm: (referenceBox.posicaoZ_mm ?? 0) + dirZ * distanceMm,
+  };
+}
+
 export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudActions {
   const { updateProject, viewerSync } = ctx;
 
@@ -50,9 +69,13 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
         const defaultModel = prev.workspaceBoxes[0];
         const dimensoes = prev.dimensoes;
         const baseEspessura = prev.material.espessura;
+        const selectedReference = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const adjacentPlacement = selectedReference
+          ? getAdjacentPlacementMm(selectedReference, dimensoes)
+          : null;
         const spawn = getSpawnFromSelectedWall(dimensoes);
         const posicaoX_mm =
-          spawn?.posicaoX_mm ?? (rightmostX_m + 0.1) * 1000 + dimensoes.largura / 2;
+          adjacentPlacement?.x_mm ?? spawn?.posicaoX_mm ?? rightmostX_m * 1000 + dimensoes.largura / 2;
         const feetHeightMm = 100;
         const newBox = createWorkspaceBox(
           newBoxId,
@@ -79,8 +102,8 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
           }
         );
         newBox.manualPosition = true;
-        newBox.posicaoZ_mm = spawn?.posicaoZ_mm ?? 0;
-        newBox.posicaoY_mm = feetHeightMm + dimensoes.altura / 2;
+        newBox.posicaoZ_mm = adjacentPlacement?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
+        newBox.posicaoY_mm = selectedReference?.posicaoY_mm ?? feetHeightMm + dimensoes.altura / 2;
         if (spawn) {
           newBox.rotacaoY = spawn.rotacaoY;
           newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
@@ -133,18 +156,24 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
           altura: baseModel.heightMm,
           profundidade: baseModel.depthMm,
         };
+        const selectedReference = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+        const adjacentPlacement = selectedReference
+          ? getAdjacentPlacementMm(selectedReference, dimensoes)
+          : null;
         const spawn = getSpawnFromSelectedWall(dimensoes);
         const lowerBoxes = prev.workspaceBoxes.filter(isLowerCabinet);
         const upperBoxes = prev.workspaceBoxes.filter(isUpperCabinet);
 
-        let posicaoX_mm = spawn?.posicaoX_mm ?? (rightmostX_m + 0.1) * 1000 + dimensoes.largura / 2;
-        if (isUpperModel) {
+        let posicaoX_mm =
+          adjacentPlacement?.x_mm ?? spawn?.posicaoX_mm ?? rightmostX_m * 1000 + dimensoes.largura / 2;
+        let posicaoZ_mm = adjacentPlacement?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
+        if (isUpperModel && !adjacentPlacement) {
           if (upperBoxes.length > 0) {
             const rightmostUpper = upperBoxes.reduce(
               (max, box) => Math.max(max, getBoxRightMm(box)),
               Number.NEGATIVE_INFINITY
             );
-            posicaoX_mm = rightmostUpper + 100 + dimensoes.largura / 2;
+            posicaoX_mm = rightmostUpper + dimensoes.largura / 2;
           } else if (lowerBoxes.length > 0) {
             const firstLowerLeft = lowerBoxes.reduce(
               (min, box) => Math.min(min, getBoxLeftMm(box)),
@@ -176,7 +205,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
           }
         );
         newBox.manualPosition = true;
-        newBox.posicaoZ_mm = spawn?.posicaoZ_mm ?? 0;
+        newBox.posicaoZ_mm = posicaoZ_mm;
         if (isUpperModel) {
           newBox.cabinetType = "upper";
           newBox.feetEnabled = false;
@@ -238,20 +267,19 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
     };
 
     a.duplicateBox = () => {
-      const rightmostX_m = viewerSync.getRightmostX();
       updateProject((prev) => {
         const selected = getSelectedWorkspaceBox(prev);
         if (!selected) return prev;
         const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
-        const largura = selected.dimensoes?.largura ?? 400;
-        const posicaoX_mm = (rightmostX_m + 0.1) * 1000 + largura / 2;
+        const adjacentPlacement = getAdjacentPlacementMm(selected, selected.dimensoes ?? { largura: 400 });
         const newBox: WorkspaceBox = {
           ...selected,
           id: newBoxId,
           nome: `${selected.nome} (cópia)`,
-          posicaoX_mm,
+          posicaoX_mm: adjacentPlacement.x_mm,
           posicaoY_mm: selected.posicaoY_mm ?? (selected.dimensoes?.altura ?? 400) / 2,
-          posicaoZ_mm: 0,
+          posicaoZ_mm: adjacentPlacement.z_mm,
+          manualPosition: true,
           models: (selected.models ?? []).map((m, i) => ({ ...m, id: `${newBoxId}-model-${Date.now()}-${i}` })),
           panelIds: ensureBoxPanelIds(undefined, {
             prateleiras: selected.prateleiras,
@@ -286,18 +314,23 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
       a.duplicateBox();
     };
 
-    a.duplicateWorkspaceBoxAtOffset = (offsetXMm = 50) => {
+    a.duplicateWorkspaceBoxAtOffset = (offsetXMm = 0) => {
       updateProject((prev) => {
         const selected = getSelectedWorkspaceBox(prev);
         if (!selected) return prev;
         const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
+        const adjacentPlacement = getAdjacentPlacementMm(
+          selected,
+          selected.dimensoes ?? { largura: 400 },
+          offsetXMm
+        );
         const newBox: WorkspaceBox = {
           ...selected,
           id: newBoxId,
           nome: `${selected.nome} (cópia)`,
-          posicaoX_mm: (selected.posicaoX_mm ?? 0) + offsetXMm,
+          posicaoX_mm: adjacentPlacement.x_mm,
           posicaoY_mm: selected.posicaoY_mm ?? (selected.dimensoes?.altura ?? 400) / 2,
-          posicaoZ_mm: selected.posicaoZ_mm ?? 0,
+          posicaoZ_mm: adjacentPlacement.z_mm,
           manualPosition: true,
           locked: false,
           models: (selected.models ?? []).map((m, i) => ({

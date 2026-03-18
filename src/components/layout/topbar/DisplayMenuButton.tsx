@@ -26,19 +26,28 @@ export default function DisplayMenuButton() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  const toggleUltraPerformance = () => {
-    const next = !ultraModeEnabled;
-    actions.setViewerSettings({
-      ultraPerformanceModeOptions: {
-        ...project.viewerSettings.ultraPerformanceModeOptions,
-        enabled: next,
-      },
-    });
-    viewerApi?.setUltraPerformanceModeOptions?.({
+  const applyDisplayMode = (mode: "performance" | "quality") => {
+    const enablePerformance = mode === "performance";
+    const nextUltraOptions = {
       ...project.viewerSettings.ultraPerformanceModeOptions,
-      enabled: next,
+      enabled: enablePerformance,
+    };
+
+    actions.setViewerSettings({
+      ultraPerformanceModeOptions: nextUltraOptions,
+      // Performance força reflexos OFF para ganho real; qualidade preserva estado atual.
+      ...(enablePerformance ? { enableReflections: false } : {}),
     });
-    viewerApi?.setUltraPerformanceMode?.(next);
+
+    viewerApi?.setUltraPerformanceModeOptions?.(nextUltraOptions);
+    viewerApi?.setUltraPerformanceMode?.(enablePerformance);
+    if (enablePerformance) {
+      viewerApi?.setReflectionsEnabled?.(false);
+    }
+  };
+
+  const toggleUltraPerformance = () => {
+    applyDisplayMode(ultraModeEnabled ? "quality" : "performance");
   };
 
   const restoreDefaultVisualMode = () => {
@@ -82,6 +91,14 @@ export default function DisplayMenuButton() {
       {menuOpen && (
         <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Opções de exibição">
           <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 240 }}>
+            <button
+              type="button"
+              className="button button-ghost"
+              style={{ fontSize: 12, padding: "6px 10px", width: "100%" }}
+              onClick={toggleUltraPerformance}
+            >
+              {ultraModeEnabled ? "Modo de exibição: Qualidade" : "Modo de exibição: Performance"}
+            </button>
             <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
               <span>Ultra Performance</span>
               <input

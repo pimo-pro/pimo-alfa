@@ -4,8 +4,7 @@ import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
-import { buildLocalQrPayload } from "../qrcode/qrcodeService";
-import { generateQrCanvasWithLogo } from "../qrcode/qrcodeLogoService";
+import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
 
 export type ProjectForEtiquetasPdf = {
   projectName: string;
