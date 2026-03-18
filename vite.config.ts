@@ -7,7 +7,7 @@ const buildVersion = `${process.env.npm_package_version ?? '0.0.0'}+${(process.e
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/pimo-criativo/',
+  base: '/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
