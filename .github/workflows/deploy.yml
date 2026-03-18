@@ -1,29 +1,63 @@
-name: Deploy via FTP
+name: Publish and Deploy
 
 on:
   push:
     branches:
       - main
+      - refactor-final
+    tags:
+      - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  deploy:
+  build_deploy:
     runs-on: ubuntu-latest
+    outputs:
+      app_version: ${{ steps.meta.outputs.version }}
+      version_source: ${{ steps.meta.outputs.source }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20.19"
+          cache: "npm"
+
+      - name: Resolve version metadata
+        id: meta
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "source=tag" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="$(node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('version.json','utf8')); process.stdout.write(data.version || 'unknown');")"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "source=version.json" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Resolved version: $(cat "$GITHUB_OUTPUT" | tr '\n' ' ')"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pimo-dist-${{ github.run_number }}
+          path: |
+            dist/**
+            version.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -36,4 +70,22 @@ jobs:
           local-dir: dist/
           server-dir: /public_html/
           dangerous-clean-slate: true
+
+  release:
+    needs: build_deploy
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Release from tag
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ needs.build_deploy.outputs.app_version }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            Publicação automática do PIMO.
+
+            - Versão: `${{ needs.build_deploy.outputs.app_version }}`
+            - Origem da versão: `${{ needs.build_deploy.outputs.version_source }}`
+            - Commit: `${{ github.sha }}`
 
