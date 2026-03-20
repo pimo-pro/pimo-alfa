@@ -196,7 +196,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
           {
             prateleiras: baseModel.shelves,
             portaTipo: modelToPortaTipo(baseModel.doors),
-            gavetas: isPiModel ? Math.max(1, Math.min(4, Number(piSettings?.numeroGavetas) || 3)) : baseModel.drawers,
+            gavetas: isPiModel ? 0 : baseModel.drawers,
             cabinetType: isUpperModel ? "upper" : "lower",
             feetEnabled: !isUpperModel,
             feetHeight: 100,

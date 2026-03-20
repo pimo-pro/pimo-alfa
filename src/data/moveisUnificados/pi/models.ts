@@ -11,14 +11,14 @@ export const PI_BASE_FEET_HEIGHT_MM = 100;
 export const PI_BASE_TOTAL_HEIGHT_MM = PI_BASE_BOX_HEIGHT_MM + PI_BASE_FEET_HEIGHT_MM;
 
 export const PI_BASE_MODELS: BaseCabinetModel[] = PI_BASE_WIDTHS_MM.map((widthMm) => ({
-  id: `pi-base-${widthMm}-3gavetas`,
+  id: `pi-base-${widthMm}`,
   nome: `Base PI ${widthMm}mm`,
   widthMm,
   heightMm: PI_BASE_BOX_HEIGHT_MM,
   depthMm: PI_BASE_DEPTH_MM,
   doors: 0,
   shelves: 0,
-  drawers: 3,
+  drawers: 0,
   grupoCatalogo: "pi",
   categoria: "base",
 }));

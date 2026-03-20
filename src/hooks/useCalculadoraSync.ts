@@ -65,7 +65,6 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
           ativarFuracaoPrateleiras: m.ativarFuracaoPrateleiras,
           ativarFuracaoDobradicas: m.ativarFuracaoDobradicas,
           ativarFuracaoGavetas: m.ativarFuracaoGavetas,
-          numeroGavetas: m.numeroGavetas,
           comprimentoCorredicaMm: m.comprimentoCorredicaMm,
         }
       : null;

@@ -12,7 +12,7 @@ export type PiLateralDrillingInput = {
   alturaMm: number;
   profundidadeMm: number;
   side: PiLateralSide;
-  /** Número de linhas de corrediça: sempre a partir do modelo PI (settings), nunca de drawersLayer. */
+  /** Linhas de furação de corrediça: a partir da camada de gavetas; o caller usa min. 1 quando vazio (furação base). */
   numeroGavetasParaCorrediça: number;
   /**
    * Só afeta corrediça. Grelha 32 mm (prateleira) e furos de dobradiça seguem só `ativarFuracao*` do modelo.
@@ -180,7 +180,7 @@ export function buildPiUniversalLateralDrilling(input: PiLateralDrillingInput): 
     addHingeGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
   }
 
-  // Corrediça: sempre que ativo e não oculto; padrão só do modelo PI (nunca drawersLayer).
+  // Corrediça: sempre que ativo e não oculto; quantidade de linhas = numeroGavetasParaCorrediça (cutlist: max(1, |drawersLayer|)).
   if (s.ativarFuracaoGavetas && !input.piHideDrawerHoles) {
     addDrawerSlideHoles(holes, layout.runnerLinesYMm, input.profundidadeMm, input.side);
   }

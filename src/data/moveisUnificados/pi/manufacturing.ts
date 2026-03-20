@@ -59,14 +59,11 @@ export function getPiEspessuraMm(defaultEspessura: number): number {
 }
 
 export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
-  const settings = getPiSettings();
   const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco").nome;
   const espessura = getPiEspessuraMm(box.espessura);
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = PI_BASE_BOX_HEIGHT_MM;
   const profundidade = PI_BASE_DEPTH_MM;
-  const numeroGavetas = clampPiNumeroGavetas(settings.numeroGavetas);
-  const layout = buildPiDrawerLayoutForFronts(altura, numeroGavetas);
 
   const panels: PiPainelIndustrial[] = [
     {
@@ -126,12 +123,28 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
     },
   ];
 
+  const drawerLayers = box.drawersLayer ?? [];
+  if (drawerLayers.length === 0) {
+    return panels;
+  }
+
+  const n = clampPiNumeroGavetas(drawerLayers.length);
+  const layout = buildPiDrawerLayoutForFronts(altura, n);
   const gavetasIds = box.panelIds?.gavetas ?? [];
-  layout.frontHeightsMm.forEach((frontHeight, index) => {
+
+  drawerLayers.forEach((item, index) => {
+    const frontHeight =
+      Number.isFinite(item.height) && item.height > 0
+        ? Math.round(item.height)
+        : layout.frontHeightsMm[index] ?? layout.frontHeightsMm[layout.frontHeightsMm.length - 1];
+    const frontWidth =
+      Number.isFinite(item.width) && item.width > 0
+        ? Math.round(item.width)
+        : clampPositive(largura - FRONT_GAP_MM * 2);
     panels.push({
-      id: gavetasIds[index] ?? `pi-gaveta-frente-${index + 1}`,
+      id: gavetasIds[index] ?? item.id ?? `pi-gaveta-frente-${index + 1}`,
       tipo: "gaveta_frente",
-      largura_mm: clampPositive(largura - FRONT_GAP_MM * 2),
+      largura_mm: clampPositive(frontWidth),
       altura_mm: clampPositive(frontHeight),
       espessura_mm: espessura,
       material,
@@ -165,14 +178,15 @@ export function gerarGavetasPi(box: BoxModule): PiGavetaIndustrial[] {
   }));
 }
 
-export function gerarFerragensPi(_box: BoxModule, _rules: RulesConfig): PiFerragemIndustrial[] {
+export function gerarFerragensPi(box: BoxModule, _rules: RulesConfig): PiFerragemIndustrial[] {
+  const n = box.drawersLayer?.length ?? 0;
+  if (n === 0) return [];
   const settings = getPiSettings();
-  const numeroGavetas = clampPiNumeroGavetas(settings.numeroGavetas);
   return [
     {
       id: "pi-corredicas-actro-you",
       tipo: getDrawerSystemLabel(settings),
-      quantidade: numeroGavetas * 2,
+      quantidade: n * 2,
       custo: 0,
     },
   ];

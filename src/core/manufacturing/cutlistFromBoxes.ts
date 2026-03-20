@@ -111,7 +111,9 @@ export function cutlistComPrecoFromBox(
         alturaMm: p.altura_mm,
         profundidadeMm: p.largura_mm,
         side: p.tipo === "lateral_esquerda" ? "left" : "right",
-        numeroGavetasParaCorrediça: clampPiNumeroGavetas(Number(piSettings?.numeroGavetas) || 3),
+        numeroGavetasParaCorrediça: clampPiNumeroGavetas(
+          Math.max(1, box.drawersLayer?.length ?? 0)
+        ),
         piHideDrawerHoles: box.piHideDrawerHoles === true,
         piSettings: piSettings ?? {},
       });
