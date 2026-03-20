@@ -33,6 +33,8 @@ export interface Wall {
 export interface WallStoreState {
   /** Painel de sala (paredes) aberto na UI. */
   isOpen: boolean;
+  /** Incrementado em loadRoomConfig/clearRoom para o Workspace recriar a mesh 3D da sala após restaurar snapshot. */
+  roomMeshSyncToken: number;
   walls: Wall[];
   selectedWallId: string | null;
   /** Índice da parede principal (0..3). Parede onde se constrói a cozinha = "frente" lógica. Default 0. */
@@ -127,6 +129,7 @@ let isSnapping = false;
 
 export const wallStore = createStore<WallStoreState>((set, get) => ({
   isOpen: true,
+  roomMeshSyncToken: 0,
   walls: [],
   selectedWallId: null,
   mainWallIndex: 0,
@@ -242,7 +245,12 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
     set({ walls: withLayout, selectedWallId: withLayout[0]?.id ?? null, mainWallIndex: 0 });
   },
   clearRoom: () => {
-    set({ walls: [], selectedWallId: null, mainWallIndex: 0 });
+    set((s) => ({
+      walls: [],
+      selectedWallId: null,
+      mainWallIndex: 0,
+      roomMeshSyncToken: s.roomMeshSyncToken + 1,
+    }));
   },
 
   setNumWalls: (n: 3 | 4) => {
@@ -280,6 +288,7 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
         ? snapshot.selectedWallId
         : walls[mainWallIndex]?.id ?? walls[0]?.id ?? null,
       mainWallIndex,
+      roomMeshSyncToken: get().roomMeshSyncToken + 1,
     });
   },
 }));

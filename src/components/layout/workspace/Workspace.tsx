@@ -10,6 +10,7 @@ import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
 import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
 import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
+import { applyRoomMeshFromWallStore } from "../../../utils/roomMeshFromWallStore";
 import { useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
@@ -46,6 +47,7 @@ export default function Workspace({
   const { registerViewerApi } = usePimoViewerContext();
   const isRoomOpen = useWallStore((state) => state.isOpen);
   const walls = useWallStore((state) => state.walls);
+  const roomMeshSyncToken = useWallStore((state) => state.roomMeshSyncToken);
   const selectedWallId = useWallStore((state) => state.selectedWallId);
   const selectedObject = useUiStore((state) => state.selectedObject);
   const setSelectedObject = useUiStore((state) => state.setSelectedObject);
@@ -127,6 +129,11 @@ export default function Workspace({
 
   // Fluxo da sala é controlado exclusivamente pelo PainelSala (RoomManager).
   // Evita remoção/criação implícita da sala em mudanças de seleção do wallStore.
+
+  /** Após restaurar projeto/autosave (loadRoomConfig / clearRoom), recria ou remove a mesh da sala. */
+  useEffect(() => {
+    applyRoomMeshFromWallStore(viewerApi);
+  }, [viewerApi, roomMeshSyncToken]);
 
   // MultiBoxManager: sincroniza workspaceBoxes ↔ viewer; addBox/removeBox delegam a actions
   useMultiBoxManager({
