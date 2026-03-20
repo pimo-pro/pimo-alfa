@@ -23,10 +23,10 @@ export function computeSolutionMetrics(
   scoreModel: "legacy" | "v32",
   deps: {
     estimateUsefulLeftover: (
-      sheet: SheetDefinition,
-      placed: Array<{ x: number; y: number; w: number; h: number }>
+      _sheet: SheetDefinition,
+      _placed: Array<{ x: number; y: number; w: number; h: number }>
     ) => number;
-    computeSheetAdvancedMetrics: (sheet: SheetDefinition, placements: CutPlacement[]) => SheetAdvancedMetrics;
+    computeSheetAdvancedMetrics: (_sheet: SheetDefinition, _placements: CutPlacement[]) => SheetAdvancedMetrics;
   }
 ): GlobalScoreMetrics {
   const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);

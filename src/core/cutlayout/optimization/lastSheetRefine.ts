@@ -8,30 +8,30 @@ const LAST_SHEET_SMALL_PART_THRESHOLD_MM2 = 120000; // ~350x350
 const LAST_SHEET_MICRO_ADJUST_MM = 3;
 
 export type LastSheetRefineDeps = {
-  getSheetBoundingBox: (placements: CutPlacement[]) => {
+  getSheetBoundingBox: (_placements: CutPlacement[]) => {
     minX: number;
     minY: number;
     maxX: number;
     maxY: number;
     area: number;
   };
-  isInsideSheet: (x: number, y: number, w: number, h: number, sheet: SheetDefinition) => boolean;
-  overlaps: (x: number, y: number, w: number, h: number, placed: PlacedRect[], kerf: number) => boolean;
+  isInsideSheet: (_x: number, _y: number, _w: number, _h: number, _sheet: SheetDefinition) => boolean;
+  overlaps: (_x: number, _y: number, _w: number, _h: number, _placed: PlacedRect[], _kerf: number) => boolean;
   findBestResidualPlacement: (
-    target: CutPlacement,
-    existing: CutPlacement[],
-    sheet: SheetDefinition,
-    kerf: number
+    _target: CutPlacement,
+    _existing: CutPlacement[],
+    _sheet: SheetDefinition,
+    _kerf: number
   ) => CutPlacement | null;
   computePlacementCompactnessScore: (
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    sheet: SheetDefinition
+    _x: number,
+    _y: number,
+    _w: number,
+    _h: number,
+    _sheet: SheetDefinition
   ) => number;
-  cloneSheets: (sheets: SheetResult[]) => SheetResult[];
-  computeSolutionMetrics: (sheets: SheetResult[], sheet: SheetDefinition, scoreModel: ScoreModel) => { score: number };
+  cloneSheets: (_sheets: SheetResult[]) => SheetResult[];
+  computeSolutionMetrics: (_sheets: SheetResult[], _sheet: SheetDefinition, _scoreModel: ScoreModel) => { score: number };
 };
 
 export function tryMicroAdjustLastSheet(

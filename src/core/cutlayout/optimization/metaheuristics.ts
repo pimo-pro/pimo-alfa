@@ -22,25 +22,25 @@ export type MetaHeuristicsRuntimeOptions = Required<{
 }>;
 
 export type SimulateTrialForGroupFn = (
-  pieces: CutPiece[],
-  sheet: SheetDefinition,
-  kerf: number,
-  minUtilizationPercent: number,
-  rotationCfg: RotationScoringConfig,
-  trial: TrialConfig,
-  collectDiagnostics: boolean,
-  forceInputOrder?: boolean,
-  scoreModel?: ScoreModel
+  _pieces: CutPiece[],
+  _sheet: SheetDefinition,
+  _kerf: number,
+  _minUtilizationPercent: number,
+  _rotationCfg: RotationScoringConfig,
+  _trial: TrialConfig,
+  _collectDiagnostics: boolean,
+  _forceInputOrder?: boolean,
+  _scoreModel?: ScoreModel
 ) => { sheets: SheetResult[] };
 
 export type MetaheuristicsDeps = {
-  randomInt: (maxExclusive: number) => number;
-  createSeededRng: (seed: number) => SeededRng;
-  cloneSheets: (sheets: SheetResult[]) => SheetResult[];
-  flattenPlacements: (sheets: SheetResult[]) => CutPlacement[];
+  randomInt: (_maxExclusive: number) => number;
+  createSeededRng: (_seed: number) => SeededRng;
+  cloneSheets: (_sheets: SheetResult[]) => SheetResult[];
+  flattenPlacements: (_sheets: SheetResult[]) => CutPlacement[];
   layoutFromPlacements: (
-    placements: CutPlacement[],
-    sheet: SheetDefinition
+    _placements: CutPlacement[],
+    _sheet: SheetDefinition
   ) => {
     sheets: SheetResult[];
     rejectedByLimit: Array<{
@@ -52,14 +52,14 @@ export type MetaheuristicsDeps = {
     }>;
   };
   computeSolutionMetrics: (
-    sheets: SheetResult[],
-    sheet: SheetDefinition,
-    scoreModel: ScoreModel
+    _sheets: SheetResult[],
+    _sheet: SheetDefinition,
+    _scoreModel: ScoreModel
   ) => { score: number };
   simulateTrialForGroup: SimulateTrialForGroupFn;
 };
 
-type RngInt = { int: (maxExclusive: number) => number };
+type RngInt = { int: (_maxExclusive: number) => number };
 
 export function mutatePlacements(
   placements: CutPlacement[],

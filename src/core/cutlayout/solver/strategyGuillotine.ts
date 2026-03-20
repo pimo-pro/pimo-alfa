@@ -49,10 +49,10 @@ export function findPlacementGuillotine(
   cfg: RotationScoringConfig,
   bin: "firstFit" | "bestFit",
   deps: {
-    getOrientations: (piece: CutPiece, cfg: RotationScoringConfig) => Array<{ w: number; h: number; rotation: number }>;
-    scoreOrientationFit: (candidate: { x: number; y: number; w: number; h: number }, sheet: SheetDefinition) => number;
-    pickBestCandidateByRotation: (candidates: PlacementCandidate[], rotation: 0 | 90) => PlacementCandidate | null;
-    chooseOrientationWithRotationBias: (normal: PlacementCandidate | null, rotated: PlacementCandidate | null, cfg: RotationScoringConfig) => PlacementCandidate | null;
+    getOrientations: (_piece: CutPiece, _cfg: RotationScoringConfig) => Array<{ w: number; h: number; rotation: number }>;
+    scoreOrientationFit: (_candidate: { x: number; y: number; w: number; h: number }, _sheet: SheetDefinition) => number;
+    pickBestCandidateByRotation: (_candidates: PlacementCandidate[], _rotation: 0 | 90) => PlacementCandidate | null;
+    chooseOrientationWithRotationBias: (_normal: PlacementCandidate | null, _rotated: PlacementCandidate | null, _cfg: RotationScoringConfig) => PlacementCandidate | null;
   }
 ): PlacementCandidate | null {
   const candidates: PlacementCandidate[] = [];

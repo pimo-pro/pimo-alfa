@@ -5,7 +5,7 @@ export function runCutLayoutResult(
   pieces: CutPiece[],
   sheetDef: SheetDefinition,
   options: CutLayoutEngineOptions | undefined,
-  runCutLayout: (pieces: CutPiece[], sheetDef: SheetDefinition, options?: CutLayoutEngineOptions) => CutLayoutResult
+  runCutLayout: (_pieces: CutPiece[], _sheetDef: SheetDefinition, _options?: CutLayoutEngineOptions) => CutLayoutResult
 ): OperationResult<CutLayoutResult> {
   try {
     const data = runCutLayout(pieces, sheetDef, options);

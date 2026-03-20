@@ -37,7 +37,7 @@ export function scoreOrientationFit(
 export function getOrientations(
   piece: CutPiece,
   cfg: RotationScoringConfig,
-  isRotatablePiece: (piece: CutPiece) => boolean
+  isRotatablePiece: (_piece: CutPiece) => boolean
 ): Array<{ w: number; h: number; rotation: number }> {
   const list = [{ w: piece.largura_mm, h: piece.altura_mm, rotation: 0 }];
   const canRotate = cfg.rotationPreferenceMode !== "disabled" && isRotatablePiece(piece);

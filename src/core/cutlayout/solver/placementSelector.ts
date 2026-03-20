@@ -15,41 +15,41 @@ type StrategyState = StateSkyline | StateShelf | StateGuillotine;
 
 export type CutLayoutStrategyPlacementDeps = {
   findPlacementSkyline: (
-    piece: CutPiece,
-    sheet: SheetDefinition,
-    placed: PlacedRect[],
-    state: StateSkyline,
-    kerf: number,
-    cfg: RotationScoringConfig,
-    bin: BinHeuristic
+    _piece: CutPiece,
+    _sheet: SheetDefinition,
+    _placed: PlacedRect[],
+    _state: StateSkyline,
+    _kerf: number,
+    _cfg: RotationScoringConfig,
+    _bin: BinHeuristic
   ) => PlacementCandidate | null;
   findPlacementShelf: (
-    piece: CutPiece,
-    sheet: SheetDefinition,
-    placed: PlacedRect[],
-    state: StateShelf,
-    kerf: number,
-    cfg: RotationScoringConfig,
-    bin: BinHeuristic
+    _piece: CutPiece,
+    _sheet: SheetDefinition,
+    _placed: PlacedRect[],
+    _state: StateShelf,
+    _kerf: number,
+    _cfg: RotationScoringConfig,
+    _bin: BinHeuristic
   ) => PlacementCandidate | null;
   findPlacementGuillotine: (
-    piece: CutPiece,
-    sheet: SheetDefinition,
-    placed: PlacedRect[],
-    state: StateGuillotine,
-    kerf: number,
-    cfg: RotationScoringConfig,
-    bin: BinHeuristic
+    _piece: CutPiece,
+    _sheet: SheetDefinition,
+    _placed: PlacedRect[],
+    _state: StateGuillotine,
+    _kerf: number,
+    _cfg: RotationScoringConfig,
+    _bin: BinHeuristic
   ) => PlacementCandidate | null;
 };
 
 export type CutLayoutPlacementSelectorDeps = CutLayoutStrategyPlacementDeps & {
-  calculateSheetUtilization: (placedRects: PlacedRect[], sheetW: number, sheetH: number) => number;
+  calculateSheetUtilization: (_placedRects: PlacedRect[], _sheetW: number, _sheetH: number) => number;
   scorePlacement: (
-    sheet: SheetDefinition,
-    placement: PlacementCandidate,
-    currentUtilization: number,
-    rotationCfg: RotationScoringConfig
+    _sheet: SheetDefinition,
+    _placement: PlacementCandidate,
+    _currentUtilization: number,
+    _rotationCfg: RotationScoringConfig
   ) => number;
 };
 

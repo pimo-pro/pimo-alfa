@@ -58,35 +58,35 @@ type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
 
 export type RunCutLayoutDeps = {
-  expandPieces: (pieces: CutPiece[]) => CutPiece[];
-  groupByMaterialAndThickness: (pieces: CutPiece[]) => Map<string, CutPiece[]>;
-  groupByThicknessOnly: (pieces: CutPiece[]) => Map<string, CutPiece[]>;
-  createUsableSheetArea: (sheet: SheetDefinition, marginMm: number) => SheetDefinition;
-  applyFixedMarginOffset: (sheets: SheetResult[], physicalSheet: SheetDefinition, marginMm: number) => SheetResult[];
+  expandPieces: (_pieces: CutPiece[]) => CutPiece[];
+  groupByMaterialAndThickness: (_pieces: CutPiece[]) => Map<string, CutPiece[]>;
+  groupByThicknessOnly: (_pieces: CutPiece[]) => Map<string, CutPiece[]>;
+  createUsableSheetArea: (_sheet: SheetDefinition, _marginMm: number) => SheetDefinition;
+  applyFixedMarginOffset: (_sheets: SheetResult[], _physicalSheet: SheetDefinition, _marginMm: number) => SheetResult[];
   simulateTrialForGroup: (
-    pieces: CutPiece[],
-    sheet: SheetDefinition,
-    kerf: number,
-    minUtilizationPercent: number,
-    rotationCfg: RotationScoringConfig,
-    trial: CutLayoutTrialConfig,
-    collectDiagnostics: boolean,
-    forceInputOrder?: boolean,
-    scoreModel?: CutLayoutScoreModel
+    _pieces: CutPiece[],
+    _sheet: SheetDefinition,
+    _kerf: number,
+    _minUtilizationPercent: number,
+    _rotationCfg: RotationScoringConfig,
+    _trial: CutLayoutTrialConfig,
+    _collectDiagnostics: boolean,
+    _forceInputOrder?: boolean,
+    _scoreModel?: CutLayoutScoreModel
   ) => SimulateTrialForGroupResult;
-  cloneSheets: (sheets: SheetResult[]) => SheetResult[];
-  createSeededRng: (seed: number) => SeededRng;
-  shuffleArray: <T>(arr: T[], rng: SeededRng) => T[];
+  cloneSheets: (_sheets: SheetResult[]) => SheetResult[];
+  createSeededRng: (_seed: number) => SeededRng;
+  shuffleArray: <T>(_arr: T[], _rng: SeededRng) => T[];
   optimizeWithMetaHeuristics: (
-    initialSheets: SheetResult[],
-    sheet: SheetDefinition,
-    kerf: number,
-    minUtilizationPercent: number,
-    rotationCfg: RotationScoringConfig,
-    meta: Required<CutLayoutMetaHeuristicsOptions>,
-    seed?: number,
-    trialPool?: CutLayoutTrialConfig[],
-    scoreModel?: CutLayoutScoreModel
+    _initialSheets: SheetResult[],
+    _sheet: SheetDefinition,
+    _kerf: number,
+    _minUtilizationPercent: number,
+    _rotationCfg: RotationScoringConfig,
+    _meta: Required<CutLayoutMetaHeuristicsOptions>,
+    _seed?: number,
+    _trialPool?: CutLayoutTrialConfig[],
+    _scoreModel?: CutLayoutScoreModel
   ) => {
     sheets: SheetResult[];
     diagnostics: {
@@ -99,9 +99,9 @@ export type RunCutLayoutDeps = {
     };
   };
   computeSolutionMetrics: (
-    sheets: SheetResult[],
-    sheet: SheetDefinition,
-    scoreModel?: CutLayoutScoreModel
+    _sheets: SheetResult[],
+    _sheet: SheetDefinition,
+    _scoreModel?: CutLayoutScoreModel
   ) => GlobalScoreMetrics;
 };
 

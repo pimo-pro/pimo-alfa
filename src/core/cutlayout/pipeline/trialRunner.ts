@@ -31,39 +31,39 @@ export type SimulateTrialForGroupResult = {
 };
 
 export type SimulateTrialForGroupDeps = {
-  reorderPieces: (pieces: CutPiece[], mode: "production" | "gapFill") => CutPiece[];
-  initStrategyState: (strategy: CutLayoutTrialConfig["strategy"], sheet: SheetDefinition) => StrategyState;
+  reorderPieces: (_pieces: CutPiece[], _mode: "production" | "gapFill") => CutPiece[];
+  initStrategyState: (_strategy: CutLayoutTrialConfig["strategy"], _sheet: SheetDefinition) => StrategyState;
   pickBestPieceForSheet: (
-    remaining: CutPiece[],
-    sheet: SheetDefinition,
-    strategy: CutLayoutTrialConfig["strategy"],
-    state: StrategyState,
-    placedRects: PlacedRect[],
-    kerf: number,
-    searchWindow: number,
-    rotationCfg: RotationScoringConfig,
-    bin: CutLayoutTrialConfig["binHeuristic"]
+    _remaining: CutPiece[],
+    _sheet: SheetDefinition,
+    _strategy: CutLayoutTrialConfig["strategy"],
+    _state: StrategyState,
+    _placedRects: PlacedRect[],
+    _kerf: number,
+    _searchWindow: number,
+    _rotationCfg: RotationScoringConfig,
+    _bin: CutLayoutTrialConfig["binHeuristic"]
   ) => { index: number; placement: PlacementCandidate } | null;
-  isInsideSheet: (x: number, y: number, w: number, h: number, sheet: SheetDefinition) => boolean;
+  isInsideSheet: (_x: number, _y: number, _w: number, _h: number, _sheet: SheetDefinition) => boolean;
   updateStrategyState: (
-    strategy: CutLayoutTrialConfig["strategy"],
-    state: StrategyState,
-    placement: PlacementCandidate,
-    kerf: number
+    _strategy: CutLayoutTrialConfig["strategy"],
+    _state: StrategyState,
+    _placement: PlacementCandidate,
+    _kerf: number
   ) => StrategyState;
   findPlacementForPiece: (
-    piece: CutPiece,
-    strategy: CutLayoutTrialConfig["strategy"],
-    sheet: SheetDefinition,
-    placedRects: PlacedRect[],
-    state: StrategyState,
-    kerf: number,
-    rotationCfg: RotationScoringConfig,
-    bin: CutLayoutTrialConfig["binHeuristic"]
+    _piece: CutPiece,
+    _strategy: CutLayoutTrialConfig["strategy"],
+    _sheet: SheetDefinition,
+    _placedRects: PlacedRect[],
+    _state: StrategyState,
+    _kerf: number,
+    _rotationCfg: RotationScoringConfig,
+    _bin: CutLayoutTrialConfig["binHeuristic"]
   ) => PlacementCandidate | null;
-  calculateSheetUtilization: (placedRects: PlacedRect[], sheetW: number, sheetH: number) => number;
-  optimizeLastSheetLocally: (sheets: SheetResult[], sheet: SheetDefinition, kerf: number, scoreModel: ScoreModel) => SheetResult[];
-  computeSolutionMetrics: (sheets: SheetResult[], sheet: SheetDefinition, scoreModel: ScoreModel) => GlobalScoreMetrics;
+  calculateSheetUtilization: (_placedRects: PlacedRect[], _sheetW: number, _sheetH: number) => number;
+  optimizeLastSheetLocally: (_sheets: SheetResult[], _sheet: SheetDefinition, _kerf: number, _scoreModel: ScoreModel) => SheetResult[];
+  computeSolutionMetrics: (_sheets: SheetResult[], _sheet: SheetDefinition, _scoreModel: ScoreModel) => GlobalScoreMetrics;
 };
 
 export function simulateTrialForGroup(

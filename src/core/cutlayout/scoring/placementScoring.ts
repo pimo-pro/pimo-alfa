@@ -48,14 +48,14 @@ export function findBestResidualPlacement(
   sheet: SheetDefinition,
   kerf: number,
   deps: {
-    isInsideSheet: (x: number, y: number, w: number, h: number, sheet: SheetDefinition) => boolean;
+    isInsideSheet: (_x: number, _y: number, _w: number, _h: number, _sheet: SheetDefinition) => boolean;
     overlaps: (
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-      placed: Array<{ x: number; y: number; w: number; h: number }>,
-      kerf: number
+      _x: number,
+      _y: number,
+      _w: number,
+      _h: number,
+      _placed: Array<{ x: number; y: number; w: number; h: number }>,
+      _kerf: number
     ) => boolean;
   }
 ): CutPlacement | null {

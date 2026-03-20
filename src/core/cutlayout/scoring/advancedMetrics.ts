@@ -15,10 +15,10 @@ export function computeSheetAdvancedMetrics(
   sheet: SheetDefinition,
   placements: CutPlacement[],
   deps: {
-    rectArea: (r: PlacedRect) => number;
-    rectIntersectArea: (a: PlacedRect, b: PlacedRect) => number;
-    monotonicHull: (points: Array<{ x: number; y: number }>) => Array<{ x: number; y: number }>;
-    polygonArea: (poly: Array<{ x: number; y: number }>) => number;
+    rectArea: (_r: PlacedRect) => number;
+    rectIntersectArea: (_a: PlacedRect, _b: PlacedRect) => number;
+    monotonicHull: (_points: Array<{ x: number; y: number }>) => Array<{ x: number; y: number }>;
+    polygonArea: (_poly: Array<{ x: number; y: number }>) => number;
   }
 ): SheetAdvancedMetrics {
   if (placements.length === 0) {
