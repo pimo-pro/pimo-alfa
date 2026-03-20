@@ -21,6 +21,7 @@ export type { SnapshotRendererHost } from "./snapshot";
 export { addModelToBox, type GlbLoaderAddOptions } from "./loader";
 export type { ViewerBoxEntry } from "./types";
 export { ViewerSelectionManager } from "./selection";
+/** @deprecated LEGACY — ver `viewer-engine/room/ViewerRoomManager.ts`; não usado pelo ViewerCore. */
 export { ViewerRoomManager } from "./room";
 export { createGround, createGrid } from "./environment";
 export type { EnvironmentOptions } from "./environment";

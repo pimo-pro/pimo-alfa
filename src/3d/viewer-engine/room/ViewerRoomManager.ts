@@ -1,4 +1,8 @@
 /**
+ * @deprecated LEGACY — não utilizado pelo ViewerCore atual.
+ * A sala 3D é gerida por `RoomManager` + `ViewerCore.setRoomFromManager` / `RoomBuilder`.
+ * Mantido apenas para re-export estável em `3d/core/viewer` e documentação histórica; não integrar novo código aqui.
+ *
  * Estado e lógica da sala no viewer (grupo, paredes, bounds).
  * O RoomManager (room/RoomManager) chama setRoomFromManager no Viewer; o Viewer delega para aqui.
  */

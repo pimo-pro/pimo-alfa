@@ -2,6 +2,7 @@
  * Módulos do viewer: re-exporta do viewer-engine para compatibilidade de imports.
  * Etapa 4: RoomManager e SelectionManager migrados para viewer-engine.
  */
+/** @deprecated Re-export LEGACY — `ViewerRoomManager` não é usado pelo ViewerCore; ver viewer-engine/room/ViewerRoomManager.ts */
 export { ViewerRoomManager } from "../../viewer-engine/room";
 export { ViewerSelectionManager } from "../../viewer-engine/selection";
 export { ViewerBoxManager } from "../../viewer-engine/box";
