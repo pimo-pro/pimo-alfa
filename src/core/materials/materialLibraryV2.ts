@@ -10,6 +10,7 @@ import type { MaterialPreset } from "./presets";
 import { getMaterialForBox, getMaterialByIdOrLabel } from "./service";
 import { getPresetById, getDefaultPreset } from "./presetService";
 import type { BoxModule } from "../types";
+import { loadTextureAsync } from "../../3d/viewer-engine/materials/textureCache";
 
 /** Objeto visual final para renderização (cor, textura, UV, PBR). */
 export interface VisualMaterial {
@@ -67,7 +68,8 @@ export function getVisualMaterialForBox(
 
 /**
  * Cria um THREE.MeshStandardMaterial a partir de VisualMaterial (cor, roughness, metallic).
- * Textura é carregada de forma assíncrona; use applyVisualMaterialToMesh para aplicar também map/UV.
+ * Texturas (map) não são carregadas aqui — usam o mesmo `textureCache` do MaterialEngine em
+ * {@link applyVisualMaterialToMesh} (`loadTextureAsync`), evitando duplicar texturas em memória.
  */
 export function getThreeJsMaterial(visualMaterial: VisualMaterial): THREE.MeshStandardMaterial {
   const color = new THREE.Color(visualMaterial.color ?? "#f5f5f5");
@@ -122,13 +124,6 @@ export function getEffectiveUvRotationForPiece(piece: PieceWithMaterialFields): 
   return piece.visualMaterial?.uvRotation ?? 0;
 }
 
-/** TextureLoader partilhado para reutilização. */
-let textureLoader: THREE.TextureLoader | null = null;
-function getTextureLoader(): THREE.TextureLoader {
-  if (!textureLoader) textureLoader = new THREE.TextureLoader();
-  return textureLoader;
-}
-
 /**
  * Aplica o material visual a um mesh: cor base, roughness, metallic e, se existir textura, map + UV.
  * Não substitui o sistema atual do Viewer; uso opcional.
@@ -165,21 +160,15 @@ export function applyVisualMaterialToMesh(
     mat.needsUpdate = true;
 
     if (visualMaterial.textureUrl && visualMaterial.textureUrl.trim()) {
-      getTextureLoader().load(
-        visualMaterial.textureUrl.trim(),
-        (texture) => {
-          mat.map = texture;
-          texture.repeat.set(uvScale.x, uvScale.y);
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.rotation = (uvRotationDeg * Math.PI) / 180;
-          mat.needsUpdate = true;
-        },
-        undefined,
-        () => {
-          // Em caso de erro de carregamento, mantém apenas cor base
-        }
-      );
+      void loadTextureAsync(visualMaterial.textureUrl.trim()).then((texture) => {
+        if (!texture) return;
+        mat.map = texture;
+        texture.repeat.set(uvScale.x, uvScale.y);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.rotation = (uvRotationDeg * Math.PI) / 180;
+        mat.needsUpdate = true;
+      });
     }
   }
 }
