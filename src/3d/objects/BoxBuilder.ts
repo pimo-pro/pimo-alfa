@@ -13,6 +13,18 @@ import {
 } from "./BoxMaterialApplier";
 import { PanelFactory, type PanelType } from "./PanelFactory";
 import { applyDrillHolesToPanelGeometry } from "./DrillGeometryBuilder";
+import {
+  buildDoorSpecs as buildDoorSpecsFromFactory,
+  createDoorObject as createDoorObjectFromFactory,
+  getDoorSpecFingerprint as getDoorSpecFingerprintFromFactory,
+  getDoorSpecFromGroup as getDoorSpecFromGroupFromFactory,
+  mapDoorHolesByHingeSide as mapDoorHolesByHingeSideFromFactory,
+} from "./DoorFactory";
+import {
+  buildDrawerSpecs as buildDrawerSpecsFromFactory,
+  createDrawerObject as createDrawerObjectFromFactory,
+  getDrawerSpecFingerprint as getDrawerSpecFingerprintFromFactory,
+} from "./DrawerFactory";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -102,17 +114,6 @@ const SHELF_WIDTH_CLEARANCE_M = 0.002;
 const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
 /** Offset visual (1 mm) para dentro: evita Z-fighting entre prateleiras e paredes internas; não altera medidas/cutlist/CNC. */
 const SHELF_VISUAL_INSET_M = 0.001;
-const DOOR_ANIMATION_DURATION_MS = 2000;
-const DRAWER_ANIMATION_DURATION_MS = 1500;
-const doorOpenState = new Map<string, boolean>();
-const doorRotationState = new Map<string, { x: number; y: number }>();
-const doorAnimationRaf = new Map<string, number>();
-const drawerOpenState = new Map<string, boolean>();
-const drawerPositionState = new Map<string, number>();
-const drawerAnimationRaf = new Map<string, number>();
-const easeInOutCubic = (t: number) => (t < 0.5
-  ? 4 * t * t * t
-  : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const resolveDimensions = (options: BoxOptions = {}) => {
   const size = options.size ?? 1;
   const width = options.width ?? size;
@@ -258,64 +259,21 @@ type DrawerSpec = {
 
 /** Converte o modelo de porta (DoorLayerItem) para especificação de render (DoorSpec). Ordem preservada. */
 function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
-  return items.map((item) => ({
-    id: item.id,
-    type: "door",
-    groupType: item.groupType,
-    widthM: Math.max(0.001, item.width / 1000),
-    heightM: Math.max(0.001, item.height / 1000),
-    thicknessM: Math.max(0.001, item.thickness / 1000),
-    x: (item.posX ?? 0) / 1000,
-    y: (item.posY ?? 0) / 1000,
-    z: (item.posZ ?? 0) / 1000,
-    rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
-    openDirection: item.openDirection,
-    hingeSide: item.hingeSide,
-    pivot: item.pivot,
-    isOpen: Boolean(item.isOpen),
-  }));
+  return buildDoorSpecsFromFactory(items);
 }
 
 /** Fingerprint do spec da porta para detectar alterações e recriar apenas a porta alterada. */
 const DOOR_SPEC_FINGERPRINT_KEY = "doorSpecFingerprint";
 
 function getDoorSpecFingerprint(spec: DoorSpec, materialName?: string): string {
-  return JSON.stringify({
-    id: spec.id,
-    widthM: spec.widthM,
-    heightM: spec.heightM,
-    thicknessM: spec.thicknessM,
-    x: spec.x,
-    y: spec.y,
-    z: spec.z,
-    rotY: spec.rotY,
-    openDirection: spec.openDirection,
-    hingeSide: spec.hingeSide,
-    pivot: spec.pivot,
-    isOpen: spec.isOpen,
-    groupType: spec.groupType,
-    material: materialName ?? getDefaultOfficialMaterial().canonicalId,
-  });
+  return getDoorSpecFingerprintFromFactory(spec, materialName);
 }
 
 /** Fingerprint do spec da gaveta para detectar alterações (ex.: isOpen); quando muda, recriamos só essa gaveta. */
 const DRAWER_SPEC_FINGERPRINT_KEY = "drawerSpecFingerprint";
 
 function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): string {
-  return JSON.stringify({
-    id: spec.id,
-    widthM: spec.widthM,
-    heightM: spec.heightM,
-    depthM: spec.depthM,
-    frontThicknessM: spec.frontThicknessM,
-    x: spec.x,
-    y: spec.y,
-    z: spec.z,
-    rotY: spec.rotY,
-    isOpen: spec.isOpen,
-    pullDistanceM: spec.pullDistanceM,
-    material: materialName ?? getDefaultOfficialMaterial().canonicalId,
-  });
+  return getDrawerSpecFingerprintFromFactory(spec, materialName);
 }
 
 /**
@@ -325,58 +283,7 @@ function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): stri
  * Todos os cálculos de dimensões estão em src/core/drawers/
  */
 function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
-  return items.map((item) => ({
-    id: item.id,
-    type: "drawer",
-    // Frente
-    widthM: Math.max(0.001, item.width / 1000),
-    heightM: Math.max(0.001, item.height / 1000),
-    depthM: Math.max(0.001, item.depth / 1000),
-    frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
-    // Corpo
-    bodyWidthM: item.bodyWidth ? Math.max(0.001, item.bodyWidth / 1000) : undefined,
-    bodyHeightM: item.bodyHeight ? Math.max(0.001, item.bodyHeight / 1000) : undefined,
-    bodyDepthM: item.bodyDepth ? Math.max(0.001, item.bodyDepth / 1000) : undefined,
-    // Laterais
-    leftSideWidthM: item.leftSideWidth ? Math.max(0.001, item.leftSideWidth / 1000) : undefined,
-    leftSideHeightM: item.leftSideHeight ? Math.max(0.001, item.leftSideHeight / 1000) : undefined,
-    leftSideDepthM: item.leftSideDepth ? Math.max(0.001, item.leftSideDepth / 1000) : undefined,
-    rightSideWidthM: item.rightSideWidth ? Math.max(0.001, item.rightSideWidth / 1000) : undefined,
-    rightSideHeightM: item.rightSideHeight ? Math.max(0.001, item.rightSideHeight / 1000) : undefined,
-    rightSideDepthM: item.rightSideDepth ? Math.max(0.001, item.rightSideDepth / 1000) : undefined,
-    // Traseira
-    backWidthM: item.backWidth ? Math.max(0.001, item.backWidth / 1000) : undefined,
-    backHeightM: item.backHeight ? Math.max(0.001, item.backHeight / 1000) : undefined,
-    backThicknessM: item.backThickness ? Math.max(0.001, item.backThickness / 1000) : undefined,
-    // Fundo
-    bottomWidthM: item.bottomWidth ? Math.max(0.001, item.bottomWidth / 1000) : undefined,
-    bottomDepthM: item.bottomDepth ? Math.max(0.001, item.bottomDepth / 1000) : undefined,
-    bottomThicknessM: item.bottomThickness ? Math.max(0.001, item.bottomThickness / 1000) : undefined,
-    // Posicoes locais das pecas
-    frontPosX: Number.isFinite(item.frontPosX) ? (item.frontPosX as number) / 1000 : undefined,
-    frontPosY: Number.isFinite(item.frontPosY) ? (item.frontPosY as number) / 1000 : undefined,
-    frontPosZ: Number.isFinite(item.frontPosZ) ? (item.frontPosZ as number) / 1000 : undefined,
-    leftSidePosX: Number.isFinite(item.leftSidePosX) ? (item.leftSidePosX as number) / 1000 : undefined,
-    leftSidePosY: Number.isFinite(item.leftSidePosY) ? (item.leftSidePosY as number) / 1000 : undefined,
-    leftSidePosZ: Number.isFinite(item.leftSidePosZ) ? (item.leftSidePosZ as number) / 1000 : undefined,
-    rightSidePosX: Number.isFinite(item.rightSidePosX) ? (item.rightSidePosX as number) / 1000 : undefined,
-    rightSidePosY: Number.isFinite(item.rightSidePosY) ? (item.rightSidePosY as number) / 1000 : undefined,
-    rightSidePosZ: Number.isFinite(item.rightSidePosZ) ? (item.rightSidePosZ as number) / 1000 : undefined,
-    bottomPosX: Number.isFinite(item.bottomPosX) ? (item.bottomPosX as number) / 1000 : undefined,
-    bottomPosY: Number.isFinite(item.bottomPosY) ? (item.bottomPosY as number) / 1000 : undefined,
-    bottomPosZ: Number.isFinite(item.bottomPosZ) ? (item.bottomPosZ as number) / 1000 : undefined,
-    backPosX: Number.isFinite(item.backPosX) ? (item.backPosX as number) / 1000 : undefined,
-    backPosY: Number.isFinite(item.backPosY) ? (item.backPosY as number) / 1000 : undefined,
-    backPosZ: Number.isFinite(item.backPosZ) ? (item.backPosZ as number) / 1000 : undefined,
-    sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
-    // Posição
-    x: (item.posX ?? 0) / 1000,
-    y: (item.posY ?? 0) / 1000,
-    z: (item.posZ ?? 0) / 1000,
-    rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
-    isOpen: Boolean(item.isOpen),
-    pullDistanceM: Math.max(0, (item.pullDistanceMm ?? 0) / 1000),
-  }));
+  return buildDrawerSpecsFromFactory(items);
 }
 
 function mapDoorHolesByHingeSide(
@@ -384,16 +291,7 @@ function mapDoorHolesByHingeSide(
   doorWidthM: number,
   hingeSide: "left" | "right"
 ): TechnicalDrillHole[] {
-  if (!holes?.length) return [];
-  const doorWidthMm = Math.max(0, doorWidthM * 1000);
-  if (hingeSide === "right") {
-    return holes.map((hole) => ({ ...hole, face: "tras" }));
-  }
-  return holes.map((hole) => ({
-    ...hole,
-    x: doorWidthMm - hole.x,
-    face: "tras",
-  }));
+  return mapDoorHolesByHingeSideFromFactory(holes, doorWidthM, hingeSide);
 }
 
 /**
@@ -402,205 +300,15 @@ function mapDoorHolesByHingeSide(
  * O ViewerCore deve chamar applyPanelIdsToBox no boxGroup após adicionar a porta, para definir userData.boxId.
  */
 export function createDoorObject(spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]): THREE.Object3D {
-  if (import.meta.env.DEV) {
-    devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] create", {
-      id: spec.id,
-      type: spec.type,
-      widthM: spec.widthM,
-      heightM: spec.heightM,
-      thicknessM: spec.thicknessM,
-      x: spec.x,
-      y: spec.y,
-      z: spec.z,
-      openDirection: spec.openDirection,
-      isOpen: spec.isOpen,
-    });
-  }
-  const resolvedOpenDirection =
-    spec.openDirection === "left" ||
-    spec.openDirection === "right" ||
-    spec.openDirection === "up" ||
-    spec.openDirection === "down"
-      ? spec.openDirection
-      : "left";
-  const resolvedHingeSide =
-    spec.hingeSide === "left" || spec.hingeSide === "right"
-      ? spec.hingeSide
-      : spec.openDirection === "right"
-        ? "right"
-        : "left";
-  const effectiveDoorHoles = mapDoorHolesByHingeSide(doorHoles, spec.widthM, resolvedHingeSide);
-
-  const mesh = panelFactory.createPanel(
-    spec.widthM,
-    spec.heightM,
-    spec.thicknessM,
-    `door-leaf-${spec.id}`,
-    "front",
-    { singleMaterial: material }
-  );
-  if (effectiveDoorHoles.length > 0) {
-    applyDrillHolesToPanelGeometry(mesh, "front", effectiveDoorHoles);
-  }
-
-  // Garantir userData.doorLayerId e doorPart em todos os objetos relevantes
-  mesh.userData.doorLayerId = spec.id;
-  mesh.userData.doorPart = "panel";
-
-  const pivot = new THREE.Group();
-  pivot.name = `door-layer-${spec.id}`;
-  pivot.userData.doorLayerId = spec.id;
-  pivot.userData.openDirection = resolvedOpenDirection;
-  pivot.userData.hingeSide = resolvedHingeSide;
-  pivot.userData.pivot = spec.pivot;
-  pivot.userData.isOpen = spec.isOpen;
-
-  // Propagação de userData para seleção/outline/context menu: todos os descendentes têm doorLayerId.
-  pivot.traverse((obj) => {
-    if (obj instanceof THREE.Mesh || obj instanceof THREE.Group) {
-      obj.userData = obj.userData || {};
-      obj.userData.doorLayerId = spec.id;
-      if (obj === mesh) obj.userData.doorPart = "panel";
-    }
-  });
-
-  const isVerticalOpening = resolvedOpenDirection === "up" || resolvedOpenDirection === "down";
-  if (spec.pivot === "top-edge" || resolvedOpenDirection === "up") {
-    mesh.position.set(0, -spec.heightM / 2, 0);
-  } else if (spec.pivot === "bottom-edge" || resolvedOpenDirection === "down") {
-    mesh.position.set(0, spec.heightM / 2, 0);
-  } else if (!isVerticalOpening && resolvedHingeSide === "left") {
-    mesh.position.set(spec.widthM / 2, 0, 0);
-  } else if (!isVerticalOpening && resolvedHingeSide === "right") {
-    mesh.position.set(-spec.widthM / 2, 0, 0);
-  } else {
-    mesh.position.set(spec.openDirection === "left" ? spec.widthM / 2 : -spec.widthM / 2, 0, 0);
-  }
-  pivot.position.set(spec.x, spec.y, spec.z);
-  if (spec.rotY !== 0) pivot.rotation.y = spec.rotY;
-  const baseRotationY = pivot.rotation.y;
-  const baseRotationX = pivot.rotation.x;
-  const targetRotation = {
-    x:
-      resolvedOpenDirection === "up"
-        ? (spec.isOpen ? baseRotationX - Math.PI / 2 : baseRotationX)
-        : resolvedOpenDirection === "down"
-          ? (spec.isOpen ? baseRotationX + Math.PI / 2 : baseRotationX)
-          : baseRotationX,
-    y:
-      resolvedOpenDirection === "left" || resolvedOpenDirection === "right"
-        ? (spec.isOpen
-            ? baseRotationY + (resolvedHingeSide === "right" ? 1 : -1) * (Math.PI / 2)
-            : baseRotationY)
-        : baseRotationY,
-  };
-  const prevIsOpen = doorOpenState.get(spec.id);
-  const prevRotation = doorRotationState.get(spec.id);
-  const startRotation = prevRotation ?? { x: baseRotationX, y: baseRotationY };
-  const shouldAnimate = prevIsOpen === undefined ? spec.isOpen : prevIsOpen !== spec.isOpen;
-
-  if (prevRotation) {
-    pivot.rotation.x = startRotation.x;
-    pivot.rotation.y = startRotation.y;
-  }
-
-  if (shouldAnimate) {
-    const existingRaf = doorAnimationRaf.get(spec.id);
-    if (existingRaf != null) cancelAnimationFrame(existingRaf);
-    const start = performance.now();
-    devLogger.debug("door animation start", { id: spec.id, targetRotation });
-    const animate = (now: number) => {
-      const t = Math.min(1, (now - start) / DOOR_ANIMATION_DURATION_MS);
-      const eased = easeInOutCubic(t);
-      pivot.rotation.x = startRotation.x + (targetRotation.x - startRotation.x) * eased;
-      pivot.rotation.y = startRotation.y + (targetRotation.y - startRotation.y) * eased;
-      if (t < 1) {
-        doorAnimationRaf.set(spec.id, requestAnimationFrame(animate));
-      } else {
-        doorAnimationRaf.delete(spec.id);
-        devLogger.debug("door animation end", { id: spec.id, targetRotation });
-      }
-    };
-    doorAnimationRaf.set(spec.id, requestAnimationFrame(animate));
-  } else {
-    pivot.rotation.x = targetRotation.x;
-    pivot.rotation.y = targetRotation.y;
-  }
-
-  doorOpenState.set(spec.id, spec.isOpen);
-  doorRotationState.set(spec.id, targetRotation);
-  mesh.userData.openDirection = resolvedOpenDirection;
-  mesh.userData.hingeSide = resolvedHingeSide;
-  mesh.userData.doorHolesEffective = effectiveDoorHoles;
-  pivot.add(mesh);
-  if (import.meta.env.DEV) {
-    devLogger.debug("[createDoorObject] nome do grupo e userData (para diagnóstico updateDoorMaterial)", {
-      specId: spec.id,
-      groupName: pivot.name,
-      expectedGroupName: `door-layer-${spec.id}`,
-      groupUserDataDoorLayerId: pivot.userData.doorLayerId,
-      meshUserDataDoorLayerId: mesh.userData.doorLayerId,
-      meshUuid: (mesh as THREE.Mesh).uuid,
-    });
-  }
-  if (import.meta.env.DEV) {
-    const finalCenter = new THREE.Vector3()
-      .copy(mesh.position)
-      .applyEuler(pivot.rotation)
-      .add(pivot.position);
-    devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] final", {
-      id: spec.id,
-      type: spec.groupType ?? "door",
-      posX: finalCenter.x,
-      posY: finalCenter.y,
-      posZ: finalCenter.z,
-      width: spec.widthM,
-      height: spec.heightM,
-      depth: spec.thicknessM,
-    });
-  }
-  if (import.meta.env.DEV) {
-    devLogger.debug("[BoxLayers][BoxBuilder.createDoorObject] hinge-Y final position", {
-      id: spec.id,
-      pivotPosition: pivot.position.toArray(),
-      meshLocalPosition: mesh.position.toArray(),
-    });
-  }
-  return pivot;
+  return createDoorObjectFromFactory(spec, material, doorHoles);
 }
-
-const _sizeForDoorSpec = new THREE.Vector3();
 
 /**
  * Extrai um DoorSpec a partir de um grupo de porta existente (door-layer-*).
  * Usado pelo ViewerCore para reconstruir a porta com novo material (novo uuid) e evitar cache de rotação.
  */
 export function getDoorSpecFromGroup(group: THREE.Group): DoorSpec | null {
-  const id = group.userData?.doorLayerId as string | undefined;
-  if (!id || typeof id !== "string") return null;
-  const mesh = group.children.find((c) => c instanceof THREE.Mesh && (c as THREE.Mesh).geometry) as THREE.Mesh | undefined;
-  if (!mesh?.geometry?.boundingBox) return null;
-  mesh.geometry.computeBoundingBox();
-  mesh.geometry.boundingBox.getSize(_sizeForDoorSpec);
-  const openDirection = (group.userData?.openDirection as DoorSpec["openDirection"]) ?? "left";
-  const hingeSide = (group.userData?.hingeSide as DoorSpec["hingeSide"]) ?? "left";
-  const pivot = (group.userData?.pivot as DoorSpec["pivot"]) ?? "left-edge";
-  const isOpen = Boolean(group.userData?.isOpen);
-  return {
-    id,
-    type: "door",
-    widthM: Math.max(0.001, _sizeForDoorSpec.x),
-    heightM: Math.max(0.001, _sizeForDoorSpec.y),
-    thicknessM: Math.max(0.001, _sizeForDoorSpec.z),
-    x: group.position.x,
-    y: group.position.y,
-    z: group.position.z,
-    rotY: group.rotation.y,
-    openDirection,
-    hingeSide,
-    pivot,
-    isOpen,
-  };
+  return getDoorSpecFromGroupFromFactory(group);
 }
 
 /**
@@ -617,238 +325,7 @@ export function getDoorSpecFromGroup(group: THREE.Group): DoorSpec | null {
  * 3. Anima com requestAnimationFrame
  */
 function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
-  // Grupo principal (posição base da gaveta - no centro do box)
-  const group = new THREE.Group();
-  group.name = `drawer-layer-${spec.id}`;
-  group.position.set(spec.x, spec.y, spec.z);
-  if (spec.rotY !== 0) {
-    group.rotation.y = spec.rotY;
-  }
-
-  // ===== GRUPO MÓVEL (FRENTE + CORPO) =====
-  // TUDO se move junto ao abrir/fechar
-  const drawerGroup = new THREE.Group();
-  drawerGroup.name = `drawer-body-${spec.id}`;
-  
-  // Animação suave do deslocamento ao abrir
-  const targetPullOffset = spec.isOpen ? spec.pullDistanceM : 0;
-  const prevIsOpen = drawerOpenState.get(spec.id);
-  const prevPosition = drawerPositionState.get(spec.id);
-  const startPosition = Number.isFinite(prevPosition) ? (prevPosition as number) : 0;
-  const shouldAnimate = prevIsOpen === undefined ? spec.isOpen : prevIsOpen !== spec.isOpen;
-
-  if (Number.isFinite(prevPosition)) {
-    drawerGroup.position.set(0, 0, startPosition);
-  } else {
-    drawerGroup.position.set(0, 0, targetPullOffset);
-  }
-
-  if (shouldAnimate) {
-    const existingRaf = drawerAnimationRaf.get(spec.id);
-    if (existingRaf != null) cancelAnimationFrame(existingRaf);
-    const start = performance.now();
-    const targetPosition = targetPullOffset;
-    devLogger.debug("drawer animation start", { id: spec.id, targetPosition, startPosition });
-    const animate = (now: number) => {
-      const t = Math.min(1, (now - start) / DRAWER_ANIMATION_DURATION_MS);
-      const eased = easeInOutCubic(t);
-      drawerGroup.position.z = startPosition + (targetPosition - startPosition) * eased;
-      if (t < 1) {
-        drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
-      } else {
-        drawerAnimationRaf.delete(spec.id);
-        devLogger.debug("drawer animation end", { id: spec.id, finalPosition: drawerGroup.position.z });
-      }
-    };
-    drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
-  } else {
-    drawerGroup.position.z = targetPullOffset;
-  }
-
-  drawerOpenState.set(spec.id, spec.isOpen);
-  drawerPositionState.set(spec.id, drawerGroup.position.z);
-
-  drawerGroup.userData.drawerLayerId = spec.id;
-  drawerGroup.userData.drawerPart = "body";
-
-  // ===== FRENTE DA GAVETA =====
-  // A frente fica colada ao corpo e flush no plano frontal
-  const front = panelFactory.createPanel(
-    spec.widthM,
-    spec.heightM,
-    spec.frontThicknessM,
-    `drawer-front-${spec.id}`,
-    "front",
-    { singleMaterial: material }
-  );
-  if (
-    Number.isFinite(spec.frontPosX) &&
-    Number.isFinite(spec.frontPosY) &&
-    Number.isFinite(spec.frontPosZ)
-  ) {
-    front.position.set(spec.frontPosX as number, spec.frontPosY as number, spec.frontPosZ as number);
-  } else {
-    front.position.set(0, 0, spec.frontThicknessM / 2);
-  }
-  front.userData.drawerLayerId = spec.id;
-  front.userData.drawerPart = "front";
-  drawerGroup.add(front);
-
-  // ===== CORPO DA GAVETA =====
-  if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
-    const bodyOffsetZ = -(spec.bodyDepthM / 2 + spec.frontThicknessM);
-
-    
-    // ===== LATERAL ESQUERDA =====
-    if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
-      const leftSide = panelFactory.createPanel(
-        spec.leftSideWidthM,
-        spec.leftSideHeightM,
-        spec.leftSideDepthM,
-        `drawer-left-${spec.id}`,
-        "left",
-        { singleMaterial: material }
-      );
-      if (
-        Number.isFinite(spec.leftSidePosX) &&
-        Number.isFinite(spec.leftSidePosY) &&
-        Number.isFinite(spec.leftSidePosZ)
-      ) {
-        leftSide.position.set(
-          spec.leftSidePosX as number,
-          spec.leftSidePosY as number,
-          spec.leftSidePosZ as number
-        );
-      } else {
-        leftSide.position.set(
-          -spec.bodyWidthM / 2 + spec.leftSideWidthM / 2,
-          0,
-          bodyOffsetZ
-        );
-      }
-      leftSide.userData.drawerPart = "left-side";
-      leftSide.userData.drawerLayerId = spec.id;
-      drawerGroup.add(leftSide);
-    }
-
-    // ===== LATERAL DIREITA =====
-    if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
-      const rightSide = panelFactory.createPanel(
-        spec.rightSideWidthM,
-        spec.rightSideHeightM,
-        spec.rightSideDepthM,
-        `drawer-right-${spec.id}`,
-        "right",
-        { singleMaterial: material }
-      );
-      if (
-        Number.isFinite(spec.rightSidePosX) &&
-        Number.isFinite(spec.rightSidePosY) &&
-        Number.isFinite(spec.rightSidePosZ)
-      ) {
-        rightSide.position.set(
-          spec.rightSidePosX as number,
-          spec.rightSidePosY as number,
-          spec.rightSidePosZ as number
-        );
-      } else {
-        rightSide.position.set(
-          spec.bodyWidthM / 2 - spec.rightSideWidthM / 2,
-          0,
-          bodyOffsetZ
-        );
-      }
-      rightSide.userData.drawerPart = "right-side";
-      rightSide.userData.drawerLayerId = spec.id;
-      drawerGroup.add(rightSide);
-    }
-
-    // ===== FUNDO =====
-    if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
-      const bottom = panelFactory.createPanel(
-        spec.bottomWidthM,
-        spec.bottomThicknessM,
-        spec.bottomDepthM,
-        `drawer-bottom-${spec.id}`,
-        "bottom",
-        { singleMaterial: material }
-      );
-      if (
-        Number.isFinite(spec.bottomPosX) &&
-        Number.isFinite(spec.bottomPosY) &&
-        Number.isFinite(spec.bottomPosZ)
-      ) {
-        bottom.position.set(
-          spec.bottomPosX as number,
-          spec.bottomPosY as number,
-          spec.bottomPosZ as number
-        );
-      } else {
-        bottom.position.set(
-          0,
-          -spec.bodyHeightM / 2 + spec.bottomThicknessM / 2,
-          bodyOffsetZ
-        );
-      }
-      bottom.userData.drawerPart = "bottom";
-      bottom.userData.drawerLayerId = spec.id;
-      drawerGroup.add(bottom);
-    }
-
-    // ===== TRASEIRA =====
-    if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
-      const back = panelFactory.createPanel(
-        spec.backWidthM,
-        spec.backHeightM,
-        spec.backThicknessM,
-        `drawer-back-${spec.id}`,
-        "back",
-        { singleMaterial: material }
-      );
-      if (
-        Number.isFinite(spec.backPosX) &&
-        Number.isFinite(spec.backPosY) &&
-        Number.isFinite(spec.backPosZ)
-      ) {
-        back.position.set(
-          spec.backPosX as number,
-          spec.backPosY as number,
-          spec.backPosZ as number
-        );
-      } else {
-        back.position.set(
-          0,
-          0,
-          bodyOffsetZ - spec.bodyDepthM / 2 + spec.backThicknessM / 2
-        );
-      }
-      back.userData.drawerPart = "back";
-      back.userData.drawerLayerId = spec.id;
-      drawerGroup.add(back);
-    }
-  }
-
-  group.add(drawerGroup);
-
-  group.userData.drawerLayerId = spec.id;
-
-  if (import.meta.env.DEV) {
-    devLogger.debug("[BoxLayers][BoxBuilder.createDrawerObject] final", {
-      id: spec.id,
-      type: "drawer",
-      posX: group.position.x,
-      posY: group.position.y,
-      posZ: group.position.z,
-      frontWidth: spec.widthM,
-      frontHeight: spec.heightM,
-      bodyWidth: spec.bodyWidthM,
-      bodyDepth: spec.bodyDepthM,
-      isOpen: spec.isOpen,
-      pullDistance: spec.pullDistanceM,
-    });
-  }
-
-  return group;
+  return createDrawerObjectFromFactory(spec, material);
 }
 
 export const buildBox = (options: BoxOptions = {}): BoxModel => {
