@@ -13,6 +13,8 @@ const VIEWER_CORE_SETTING_METHODS = [
   "setMaterialQuality", "setReflectionsEnabled", "setPhotoModeEnabled",
   "setExplodedViewEnabled", "setExplodedViewIntensity", "setHighlightEnabled",
   "setUltraPerformanceModeOptions", "setUltraPerformanceMode",
+  "setLockEnabled",
+  "highlightBox",
 ] as const;
 
 /**
@@ -31,6 +33,12 @@ const VIEWER_CORE_UTILITY_METHODS = [
   "getInternalMeasurementMode",
   "setManualWallHidden",
   "getManualWallHidden",
+  "renderScene",
+  "saveSnapshot",
+  "restoreSnapshot",
+  "getUltraPerformanceMode",
+  "getLockEnabled",
+  "getCombinedBoundingBox",
 ] as const;
 
 /** Stubs para métodos opcionais de PimoViewerApi não expostos pelos hooks (settings, etc.). */
