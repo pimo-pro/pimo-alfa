@@ -9,7 +9,6 @@ import {
   remoteListProjects,
   remoteLoadProjectRecord,
   remoteRenameProject,
-  remoteSaveProject,
   type ProjectsApiDeps,
 } from "./projectsApi";
 import {
@@ -27,43 +26,25 @@ import {
 } from "./projectsMappers";
 import {
   compareByUpdatedDesc,
-  migrateLegacyLocalProjectsOnce,
   projectMatchesId,
   readOfflineProjects,
   readSyncQueue,
   writeOfflineProjects,
   writeSyncQueue,
   type OfflineProjectRecord,
-  type SyncQueueEntry,
 } from "./projectsOfflineStore";
-
-const SYNC_INTERVAL_MS = 15000;
-
-export type ProjectsSyncStatus = {
-  online: boolean;
-  pending: number;
-  state: "idle" | "saved_local" | "syncing" | "awaiting_network" | "synced" | "error";
-  message: string;
-  lastSyncAt: string | null;
-  hasActiveSyncError: boolean;
-  retryInMs: number | null;
-};
-
-let syncLoopStarted = false;
-let syncInProgress = false;
-let syncRetryAttempt = 0;
-let nextRetryAtMs = 0;
-let retryTimerId: number | null = null;
-const syncStatusListeners = new Set<(_status: ProjectsSyncStatus) => void>();
-let syncStatus: ProjectsSyncStatus = {
-  online: typeof navigator !== "undefined" ? navigator.onLine : true,
-  pending: 0,
-  state: "idle",
-  message: "Pronto",
-  lastSyncAt: null,
-  hasActiveSyncError: false,
-  retryInMs: null,
-};
+import {
+  buildSaveRequestFromOffline,
+  enqueueSyncOperation,
+  ensureProjectsSyncStarted,
+  getProjectsSyncStatus,
+  markDeletedIfNoPending,
+  notifyLocalSaveStatus,
+  subscribeProjectsSyncStatus,
+  syncQueue,
+} from "./projectsSyncEngine";
+export type { ProjectsSyncStatus } from "./projectsSyncEngine";
+export { getProjectsSyncStatus, subscribeProjectsSyncStatus, syncQueue } from "./projectsSyncEngine";
 
 const projectsApiDeps: ProjectsApiDeps = {
   buildPimoProjectDataFromRequest,
@@ -73,186 +54,11 @@ const projectsApiDeps: ProjectsApiDeps = {
   nowIso,
 };
 
-
-function hasPendingOperation(projectId: string): boolean {
-  return readSyncQueue().some((entry) => entry.projectId === projectId);
-}
-
-function setSyncStatus(patch: Partial<ProjectsSyncStatus>): void {
-  syncStatus = {
-    ...syncStatus,
-    ...patch,
-    online: isOnline(),
-  };
-  syncStatusListeners.forEach((listener) => {
-    try {
-      listener(syncStatus);
-    } catch {
-      /* ignore */
-    }
-  });
-}
-
-function refreshPendingStatus(): void {
-  const pending = readSyncQueue().length;
-  if (syncStatus.hasActiveSyncError && pending > 0) {
-    const remaining = nextRetryAtMs > 0 ? Math.max(0, nextRetryAtMs - Date.now()) : null;
-    setSyncStatus({
-      pending,
-      state: "error",
-      message: "Erro ao sincronizar",
-      hasActiveSyncError: true,
-      retryInMs: remaining,
-    });
-    return;
-  }
-  if (!isOnline() && pending > 0) {
-    setSyncStatus({
-      pending,
-      state: "awaiting_network",
-      message: `${pending} operação(ões) pendente(s)`,
-      hasActiveSyncError: false,
-      retryInMs: null,
-    });
-    return;
-  }
-  if (pending === 0) {
-    syncRetryAttempt = 0;
-    nextRetryAtMs = 0;
-    if (retryTimerId != null && typeof window !== "undefined") {
-      window.clearTimeout(retryTimerId);
-      retryTimerId = null;
-    }
-    setSyncStatus({
-      pending,
-      state: "synced",
-      message: "Sincronizado",
-      hasActiveSyncError: false,
-      retryInMs: null,
-    });
-    return;
-  }
-  setSyncStatus({
-    pending,
-    state: "idle",
-    message: `${pending} operação(ões) pendente(s)`,
-    hasActiveSyncError: false,
-    retryInMs: null,
-  });
-}
-
-function getRetryDelayMs(attempt: number): number {
-  if (attempt <= 1) return 60000;
-  if (attempt === 2) return 120000;
-  if (attempt === 3) return 300000;
-  return 600000;
-}
-
-function scheduleRetry(delayMs: number): void {
-  if (typeof window === "undefined") return;
-  if (retryTimerId != null) {
-    window.clearTimeout(retryTimerId);
-    retryTimerId = null;
-  }
-  retryTimerId = window.setTimeout(() => {
-    retryTimerId = null;
-    void syncQueue();
-  }, delayMs);
-}
-
-function enqueueSyncOperation(entry: Omit<SyncQueueEntry, "id" | "createdAt" | "updatedAt" | "retries" | "lastError">): void {
-  const queue = readSyncQueue();
-  queue.push({
-    id: makeId("sync"),
-    projectId: entry.projectId,
-    op: entry.op,
-    payload: entry.payload ?? {},
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-    retries: 0,
-    lastError: null,
-  });
-  writeSyncQueue(queue);
-  setSyncStatus({
-    pending: queue.length,
-    state: isOnline() ? "saved_local" : "awaiting_network",
-    message: isOnline() ? "Guardado localmente. A sincronizar..." : "Guardado localmente. Sem internet.",
-  });
-}
-
-function markDeletedIfNoPending(projectId: string): void {
-  if (hasPendingOperation(projectId)) return;
-  const projects = readOfflineProjects();
-  const next = projects.filter((p) => p.id !== projectId);
-  if (next.length !== projects.length) {
-    writeOfflineProjects(next);
-  }
-}
-
-function buildSaveRequestFromOffline(project: OfflineProjectRecord): SaveProjectRequest {
-  return {
-    name: project.name,
-    ownerId: project.ownerId,
-    ownerName: project.ownerName,
-    snapshot: project.snapshot,
-    thumbnailDataUrl: project.thumbnailDataUrl,
-  };
-}
-
-function ensureSyncLoopStarted(): void {
-  if (syncLoopStarted) return;
-  syncLoopStarted = true;
-  migrateLegacyLocalProjectsOnce({
-    enqueueSyncOperation,
-    buildSaveRequestFromOffline,
-  });
-  if (typeof window !== "undefined") {
-    window.addEventListener("online", () => {
-      setSyncStatus({ online: true });
-      void syncQueue();
-    });
-    window.addEventListener("offline", () => {
-      refreshPendingStatus();
-    });
-    setInterval(() => {
-      void syncQueue();
-    }, SYNC_INTERVAL_MS);
-    void syncQueue();
-  }
-}
-
-function resolveProjectIdForRemote(project: OfflineProjectRecord): string | null {
-  if (project.remoteId && (project.remoteId?.trim()?.length ?? 0) > 0) return project.remoteId;
-  if (!project.id.startsWith("local-") && !project.id.startsWith("legacy-")) return project.id;
-  return null;
-}
-
-export function getProjectsSyncStatus(): ProjectsSyncStatus {
-  ensureSyncLoopStarted();
-  refreshPendingStatus();
-  return syncStatus;
-}
-
-export function subscribeProjectsSyncStatus(
-  listener: (_status: ProjectsSyncStatus) => void
-): () => void {
-  ensureSyncLoopStarted();
-  syncStatusListeners.add(listener);
-  try {
-    listener(syncStatus);
-  } catch {
-    /* ignore */
-  }
-  return () => {
-    syncStatusListeners.delete(listener);
-  };
-}
-
 export function saveProjectOffline(
   request: SaveProjectRequest,
   source: "project" | "snapshot" = "project"
 ): SavedProjectRecord {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const timestamp = nowIso();
   const id = makeId("local");
   const record: OfflineProjectRecord = {
@@ -271,10 +77,8 @@ export function saveProjectOffline(
   const projects = readOfflineProjects();
   projects.push(record);
   writeOfflineProjects(projects);
-  setSyncStatus({
-    state: "saved_local",
-    message: source === "snapshot" ? "Snapshot criado" : "Projeto guardado localmente",
-  });
+  void source;
+  notifyLocalSaveStatus(record.id);
   return toSavedRecordFromOffline(record);
 }
 
@@ -286,7 +90,7 @@ export function loadProjectsOffline(
   scope: "mine" | "all",
   ownerId?: string
 ): SavedProjectMeta[] {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const projects = readOfflineProjects()
     .filter((project) => !project.deleted)
     .filter((project) => {
@@ -394,152 +198,6 @@ async function loadProjectFromServerAndMerge(id: string): Promise<SavedProjectRe
   return toSavedRecordFromOffline(projects[idx]);
 }
 
-export async function syncQueue(): Promise<void> {
-  ensureSyncLoopStarted();
-  if (syncInProgress) return;
-  if (syncStatus.hasActiveSyncError && nextRetryAtMs > Date.now()) return;
-  const queue = readSyncQueue();
-  if (queue.length === 0) {
-    refreshPendingStatus();
-    return;
-  }
-  if (!isOnline()) {
-    refreshPendingStatus();
-    return;
-  }
-  syncInProgress = true;
-  setSyncStatus({
-    state: "syncing",
-    pending: queue.length,
-    message: "A sincronizar...",
-    retryInMs: null,
-  });
-
-  try {
-    const projects = readOfflineProjects();
-    const nextQueue = [...queue];
-    let hadError = false;
-    for (let index = 0; index < nextQueue.length; ) {
-      const entry = nextQueue[index];
-      const projectIdx = projects.findIndex((project) => project.id === entry.projectId);
-      const project = projectIdx >= 0 ? projects[projectIdx] : null;
-      try {
-        if (entry.op === "save" || entry.op === "snapshot") {
-          if (!project) {
-            nextQueue.splice(index, 1);
-            continue;
-          }
-          const requestObj = asObject(entry.payload.request);
-          const request = requestObj
-            ? (requestObj as SaveProjectRequest)
-            : buildSaveRequestFromOffline(project);
-          const saved = await remoteSaveProject(request, projectsApiDeps);
-          if (!saved) {
-            throw new Error("Falha ao guardar no servidor");
-          }
-          projects[projectIdx] = {
-            ...project,
-            remoteId: saved.id,
-            name: saved.name,
-            ownerId: saved.ownerId,
-            ownerName: saved.ownerName,
-            updatedAt: toIsoOrNow(saved.updatedAt),
-            thumbnailDataUrl: saved.thumbnailDataUrl ?? project.thumbnailDataUrl,
-            lastSyncedAt: nowIso(),
-            deleted: false,
-          };
-          nextQueue.splice(index, 1);
-          continue;
-        }
-
-        if (entry.op === "rename") {
-          if (!project) {
-            nextQueue.splice(index, 1);
-            continue;
-          }
-          const remoteId = resolveProjectIdForRemote(project);
-          if (!remoteId) {
-            nextQueue.splice(index, 1);
-            continue;
-          }
-          const body = asObject(entry.payload.body) as RenameProjectRequest | null;
-          const name = body?.name ?? project.name;
-          const ok = await remoteRenameProject(remoteId, { name });
-          if (!ok) throw new Error("Falha ao renomear no servidor");
-          projects[projectIdx] = { ...project, lastSyncedAt: nowIso(), updatedAt: nowIso() };
-          nextQueue.splice(index, 1);
-          continue;
-        }
-
-        if (entry.op === "delete") {
-          if (!project) {
-            nextQueue.splice(index, 1);
-            continue;
-          }
-          const remoteId = resolveProjectIdForRemote(project);
-          if (remoteId) {
-            const ok = await remoteDeleteProject(remoteId);
-            if (!ok) throw new Error("Falha ao apagar no servidor");
-          }
-          projects.splice(projectIdx, 1);
-          nextQueue.splice(index, 1);
-          continue;
-        }
-
-        nextQueue.splice(index, 1);
-      } catch (error) {
-        hadError = true;
-        nextQueue[index] = {
-          ...entry,
-          retries: entry.retries + 1,
-          updatedAt: nowIso(),
-          lastError: error instanceof Error ? error.message : "Erro de sincronização",
-        };
-        if (!isOnline()) break;
-        syncRetryAttempt += 1;
-        const delayMs = getRetryDelayMs(syncRetryAttempt);
-        nextRetryAtMs = Date.now() + delayMs;
-        scheduleRetry(delayMs);
-        setSyncStatus({
-          pending: nextQueue.length,
-          state: "error",
-          message: "Erro ao sincronizar",
-          hasActiveSyncError: true,
-          retryInMs: delayMs,
-        });
-        break;
-      }
-    }
-
-    writeOfflineProjects(projects);
-    writeSyncQueue(nextQueue);
-    const hasPending = nextQueue.length > 0;
-    if (!hasPending) {
-      syncRetryAttempt = 0;
-      nextRetryAtMs = 0;
-      if (retryTimerId != null && typeof window !== "undefined") {
-        window.clearTimeout(retryTimerId);
-        retryTimerId = null;
-      }
-    }
-    const activeError = hasPending ? hadError : false;
-    setSyncStatus({
-      pending: nextQueue.length,
-      state: hasPending ? (activeError ? "error" : "idle") : "synced",
-      message: hasPending
-        ? (activeError ? "Erro ao sincronizar" : `${nextQueue.length} operação(ões) pendente(s)`)
-        : "Sincronizado",
-      lastSyncAt: nowIso(),
-      hasActiveSyncError: activeError,
-      retryInMs: hasPending && activeError
-        ? Math.max(0, nextRetryAtMs - Date.now())
-        : null,
-    });
-  } finally {
-    syncInProgress = false;
-  }
-}
-
 async function attemptBackgroundProjectRefresh(id: string): Promise<void> {
   if (!isOnline()) return;
   try {
@@ -553,10 +211,10 @@ export async function listProjects(
   scope: "mine" | "all",
   ownerId?: string
 ): Promise<SavedProjectMeta[]> {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const offline = loadProjectsOffline(scope, ownerId);
   if (!isOnline()) {
-    refreshPendingStatus();
+    getProjectsSyncStatus();
     return offline;
   }
   try {
@@ -570,7 +228,7 @@ export async function listProjects(
 }
 
 export async function loadProjectRecord(id: string): Promise<SavedProjectRecord | null> {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const projects = readOfflineProjects();
   const local = projects.find((project) => !project.deleted && projectMatchesId(project, id)) ?? null;
   if (local) {
@@ -586,7 +244,7 @@ export async function loadProjectRecord(id: string): Promise<SavedProjectRecord 
 }
 
 export async function saveProject(request: SaveProjectRequest): Promise<SavedProjectMeta | null> {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const savedLocal = saveProjectOffline(request);
   enqueueSyncOperation({
     projectId: readOfflineProjects().find((item) => projectMatchesId(item, savedLocal.id))?.id ?? savedLocal.id,
@@ -610,7 +268,7 @@ export async function saveProject(request: SaveProjectRequest): Promise<SavedPro
 }
 
 export async function renameProjectById(id: string, body: RenameProjectRequest): Promise<boolean> {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const projects = readOfflineProjects();
   const idx = projects.findIndex((project) => projectMatchesId(project, id));
   if (idx >= 0) {
@@ -639,7 +297,7 @@ export async function renameProjectById(id: string, body: RenameProjectRequest):
 }
 
 export async function deleteProjectById(id: string): Promise<boolean> {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const projects = readOfflineProjects();
   const idx = projects.findIndex((project) => projectMatchesId(project, id));
   if (idx >= 0) {
@@ -670,7 +328,7 @@ export async function deleteProjectById(id: string): Promise<boolean> {
 }
 
 export async function saveSnapshot(request: SaveProjectRequest): Promise<SavedProjectMeta | null> {
-  ensureSyncLoopStarted();
+  ensureProjectsSyncStarted();
   const savedLocal = saveSnapshotOffline(request);
   enqueueSyncOperation({
     projectId: readOfflineProjects().find((item) => projectMatchesId(item, savedLocal.id))?.id ?? savedLocal.id,
