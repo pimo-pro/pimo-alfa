@@ -66,6 +66,10 @@ import {
   updateStrategyState as updateStrategyStateSolver,
 } from "./solver/strategyState";
 import {
+  findPlacementForPiece as findPlacementForPieceSelector,
+  pickBestPieceForSheet as pickBestPieceForSheetSelector,
+} from "./solver/placementSelector";
+import {
   buildCandidateCoordinates as buildCandidateCoordinatesScoring,
   computePlacementCompactnessScore as computePlacementCompactnessScoreScoring,
   findBestResidualPlacement as findBestResidualPlacementScoring,
@@ -600,13 +604,11 @@ function findPlacementForPiece(
   rotationCfg: RotationScoringConfig,
   bin: BinHeuristic
 ): PlacementCandidate | null {
-  if (strategy === "skyline") {
-    return findPlacementSkyline(piece, sheet, placedRects, state as StateSkyline, kerf, rotationCfg, bin);
-  }
-  if (strategy === "shelf") {
-    return findPlacementShelf(piece, sheet, placedRects, state as StateShelf, kerf, rotationCfg, bin);
-  }
-  return findPlacementGuillotine(piece, sheet, placedRects, state as StateGuillotine, kerf, rotationCfg, bin);
+  return findPlacementForPieceSelector(piece, strategy, sheet, placedRects, state, kerf, rotationCfg, bin, {
+    findPlacementSkyline,
+    findPlacementShelf,
+    findPlacementGuillotine,
+  });
 }
 
 function initStrategyState(strategy: PlacementStrategy, sheet: SheetDefinition): StrategyState {
@@ -633,48 +635,24 @@ function pickBestPieceForSheet(
   rotationCfg: RotationScoringConfig,
   bin: BinHeuristic
 ): { index: number; placement: PlacementCandidate } | null {
-  if (remaining.length === 0) return null;
-  const currentUtil = calculateSheetUtilization(placedRects, sheet.largura_mm, sheet.altura_mm);
-  const limit = Math.max(1, Math.min(searchWindow, remaining.length));
-  const dynamicLimit =
-    bin === "bestFit"
-      ? Math.min(remaining.length, Math.max(limit, Math.floor(limit * 2.4)))
-      : limit;
-
-  if (bin === "firstFit") {
-    for (let i = 0; i < limit; i++) {
-      const placement = findPlacementForPiece(
-        remaining[i],
-        strategy,
-        sheet,
-        placedRects,
-        state,
-        kerf,
-        rotationCfg,
-        bin
-      );
-      if (placement) return { index: i, placement };
+  return pickBestPieceForSheetSelector(
+    remaining,
+    sheet,
+    strategy,
+    state,
+    placedRects,
+    kerf,
+    searchWindow,
+    rotationCfg,
+    bin,
+    {
+      findPlacementSkyline,
+      findPlacementShelf,
+      findPlacementGuillotine,
+      calculateSheetUtilization,
+      scorePlacement,
     }
-    return null;
-  }
-
-  let best: { index: number; placement: PlacementCandidate; score: number } | null = null;
-  for (let i = 0; i < dynamicLimit; i++) {
-    const placement = findPlacementForPiece(
-      remaining[i],
-      strategy,
-      sheet,
-      placedRects,
-      state,
-      kerf,
-      rotationCfg,
-      bin
-    );
-    if (!placement) continue;
-    const score = scorePlacement(sheet, placement, currentUtil, rotationCfg);
-    if (!best || score > best.score) best = { index: i, placement, score };
-  }
-  return best ? { index: best.index, placement: best.placement } : null;
+  );
 }
 
 function estimateUsefulLeftover(sheet: SheetDefinition, placed: PlacedRect[]): number {
