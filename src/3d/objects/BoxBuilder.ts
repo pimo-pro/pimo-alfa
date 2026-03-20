@@ -1,13 +1,18 @@
 import * as THREE from "three";
 import { CSG } from "three-csg-ts";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { createWoodMaterial } from "../materials/WoodMaterial";
-import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibrary";
 import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { devLogger } from "../../utils/devLogger";
+import {
+  getEdgeMaterial,
+  getFallbackPBRMaterial,
+  getMaterialForOfficialId,
+  resolvePanelMaterialOptions,
+  type PanelMaterialOptions,
+} from "./BoxMaterialApplier";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -1101,46 +1106,6 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
   }
 }
 
-let cachedFallbackMaterial: THREE.MeshStandardMaterial | null = null;
-
-/** Material PBR de fallback (MDF Branco) — cor sólida, sem texturas. */
-function getFallbackPBRMaterial(): THREE.MeshStandardMaterial {
-  if (cachedFallbackMaterial) return cachedFallbackMaterial;
-  const preset = getMaterialPreset(defaultMaterialSet, "mdf_branco");
-  if (!preset?.options) throw new Error("MaterialLibrary: mdf_branco preset required");
-  const { material } = createWoodMaterial({}, { ...preset.options });
-  cachedFallbackMaterial = material;
-  return material;
-}
-
-let cachedEdgeMaterial: THREE.MeshStandardMaterial | null = null;
-
-const officialMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
-
-/** Material PBR para porta/gaveta: usa a mesma MaterialLibrary do módulo (id/label oficial). */
-function getMaterialForOfficialId(idOrLabel: string): THREE.MeshStandardMaterial {
-  const key = (idOrLabel ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
-  const mat = officialMaterialCache.get(key);
-  if (mat) return mat;
-  const preset = getMaterialPreset(defaultMaterialSet, key);
-  const options = preset?.options ?? { color: "#f2f0eb", roughness: 0.55, metalness: 0 };
-  const { material } = createWoodMaterial({}, { ...options });
-  officialMaterialCache.set(key, material);
-  return material;
-}
-
-/** Material para arestas (corte) — cor ligeiramente mais escura, sem texturas. */
-function getEdgeMaterial(): THREE.MeshStandardMaterial {
-  if (cachedEdgeMaterial) return cachedEdgeMaterial;
-  const preset = getMaterialPreset(defaultMaterialSet, "mdf_branco");
-  if (!preset?.options) throw new Error("MaterialLibrary: mdf_branco required");
-  const { material } = createWoodMaterial({}, {
-    ...preset.options,
-    color: "#b8a898",
-  });
-  cachedEdgeMaterial = material;
-  return material;
-}
 
 /**
  * Eixo da espessura do painel: 0 = X (left/right), 1 = Y (top/bottom), 2 = Z (back).
@@ -1298,26 +1263,6 @@ export const updateBoxModel = (model: BoxModel, options: BoxOptions = {}): BoxMo
   return model;
 };
 
-type PanelMaterialOptions =
-  | { singleMaterial: THREE.Material }
-  | { edgeMaterial: THREE.Material; faceMaterial: THREE.Material };
-
-/** Garante que options tem sempre material/edgeMaterial válidos; nunca usa 'in' em undefined. */
-function resolvePanelMaterialOptions(
-  options: PanelMaterialOptions | null | undefined,
-  _panelType: PanelType
-): PanelMaterialOptions {
-  if (options != null && typeof options === "object") {
-    const hasEdge = "edgeMaterial" in options && options.edgeMaterial != null && options.faceMaterial != null;
-    if (hasEdge) return { edgeMaterial: options.edgeMaterial, faceMaterial: options.faceMaterial };
-    const single = "singleMaterial" in options ? options.singleMaterial : null;
-    if (single != null) return { singleMaterial: single };
-  }
-  return {
-    edgeMaterial: getEdgeMaterial(),
-    faceMaterial: getFallbackPBRMaterial(),
-  };
-}
 
 function createPanel(
   width: number,
