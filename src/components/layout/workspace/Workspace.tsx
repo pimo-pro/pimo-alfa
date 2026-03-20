@@ -33,6 +33,7 @@ export default function Workspace({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { project, actions, viewerSync } = useProject();
   const actionsRef = useRef(actions);
+  // eslint-disable-next-line react-hooks/refs -- intencional: espelho em ref com o `actions` mais recente para listeners/efeitos sem re-inscrever em cada mudança de identidade.
   actionsRef.current = actions;
   const { showToast } = useToast();
   const viewerOptionsStable = useMemo(
@@ -338,6 +339,7 @@ export default function Workspace({
 
   // Aplicar ferramenta 3D ativa ao Viewer (select/move/rotate). Só depender de activeViewerTool para não reaplicar a cada mudança de viewerSync (ex.: após rotacionar) e permitir que o gizmo desapareça ao clicar em "Selecionar".
   const viewerSyncRef = useRef(viewerSync);
+  // eslint-disable-next-line react-hooks/refs -- intencional: espelho em ref com o `viewerSync` mais recente; o efeito abaixo depende só de activeViewerTool (ver comentário).
   viewerSyncRef.current = viewerSync;
   useEffect(() => {
     const mode = project.activeViewerTool ?? "select";

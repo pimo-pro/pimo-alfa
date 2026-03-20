@@ -5,7 +5,7 @@
  * Estilo alinhado ao Tools3DToolbar.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomInfoContext";
 import { useProject } from "../../../context/useProject";
@@ -364,14 +364,17 @@ export default function BottomInfoToolbar() {
     return panelVisibilityEntries.filter((entry) => entry.searchText.includes(query));
   }, [panelVisibilityEntries, pieceSearch]);
 
-  const clampHistoryPanelPosition = (position: { x: number; y: number }) => {
-    const panelWidth = 320;
-    const panelHeight = Math.min(520, Math.max(220, window.innerHeight - layoutInsets.top - layoutInsets.bottom - 24));
-    return {
-      x: Math.max(8, Math.min(window.innerWidth - panelWidth - 8, position.x)),
-      y: Math.max(layoutInsets.top + 4, Math.min(window.innerHeight - layoutInsets.bottom - panelHeight - 4, position.y)),
-    };
-  };
+  const clampHistoryPanelPosition = useCallback(
+    (position: { x: number; y: number }) => {
+      const panelWidth = 320;
+      const panelHeight = Math.min(520, Math.max(220, window.innerHeight - layoutInsets.top - layoutInsets.bottom - 24));
+      return {
+        x: Math.max(8, Math.min(window.innerWidth - panelWidth - 8, position.x)),
+        y: Math.max(layoutInsets.top + 4, Math.min(window.innerHeight - layoutInsets.bottom - panelHeight - 4, position.y)),
+      };
+    },
+    [layoutInsets.top, layoutInsets.bottom]
+  );
 
   const filteredHistoryEntries = useMemo(() => {
     const indexed = history.entries.map((entry, idx) => ({ entry, idx }));
@@ -435,7 +438,7 @@ export default function BottomInfoToolbar() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [historyPanelOpen, historyPanelPosition, layoutInsets.bottom, layoutInsets.top]);
+  }, [historyPanelOpen, historyPanelPosition, layoutInsets.bottom, layoutInsets.top, clampHistoryPanelPosition]);
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
@@ -458,7 +461,7 @@ export default function BottomInfoToolbar() {
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [historyPanelPosition, layoutInsets.bottom, layoutInsets.top]);
+  }, [historyPanelPosition, layoutInsets.bottom, layoutInsets.top, clampHistoryPanelPosition]);
 
   useEffect(() => {
     const updateLayoutInsets = () => {

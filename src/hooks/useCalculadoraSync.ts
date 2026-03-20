@@ -139,10 +139,12 @@ export const useCalculadoraSync = (
 
   // Atualizar refs durante o render para que o effect de sync use sempre boxes/workspaceBoxes mais recentes
   // (evita condição de corrida em que o effect roda antes dos refs serem atualizados).
+  /* eslint-disable react-hooks/refs -- intencional: atualizar refs no render para o sync ver sempre o último estado antes do efeito (evita corrida; ver comentário acima). */
   boxesRef.current = boxes;
   workspaceBoxesRef.current = workspaceBoxes;
   viewerApiRef.current = viewerApi;
   projectMaterialIdRef.current = projectMaterialId;
+  /* eslint-enable react-hooks/refs */
 
   useEffect(() => {
     projectMaterialIdRef.current = projectMaterialId;
