@@ -1,21 +1,35 @@
 import * as THREE from "three";
-
-type AnyBoxOptions = any;
-type AnyBoxModel = any;
+import type { PanelMaterialOptions } from "./BoxMaterialApplier";
+import type { BoxModel, BoxOptions, BoxPanelLayoutSpecs } from "./BoxBuilder";
+import type { DoorSpec } from "./DoorFactory";
+import type { DrawerSpec } from "./DrawerFactory";
+import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
+import type { TechnicalDrillHole } from "../../core/types";
+import type { PanelType } from "./PanelFactory";
 
 type BoxUpdaterDeps = {
-  resolveDimensions: (options?: AnyBoxOptions) => { width: number; height: number; depth: number };
-  getPanelSpecs: (width: number, height: number, depth: number) => any;
+  resolveDimensions: (options?: BoxOptions) => { width: number; height: number; depth: number };
+  getPanelSpecs: (width: number, height: number, depth: number) => BoxPanelLayoutSpecs;
   getShelfSpecs: (width: number, height: number, depth: number, shelves?: number) => Array<{ size: [number, number, number]; pos: [number, number, number] }>;
-  panelFactory: { createPanel: (...args: any[]) => THREE.Mesh; updatePanelGeometry: (mesh: THREE.Mesh, w: number, h: number, d: number) => void };
+  panelFactory: {
+    createPanel: (
+      width: number,
+      height: number,
+      depth: number,
+      name: string,
+      panelType: PanelType,
+      options?: PanelMaterialOptions | null
+    ) => THREE.Mesh;
+    updatePanelGeometry: (mesh: THREE.Mesh, w: number, h: number, d: number) => void;
+  };
   getFallbackPBRMaterial: () => THREE.Material;
-  applyDrillHolesToPanelGeometry: (panel: THREE.Mesh, panelType: any, holes: any[] | undefined) => void;
-  buildDoorSpecs: (items: any[]) => any[];
-  buildDrawerSpecs: (items: any[]) => any[];
-  getDoorSpecFingerprint: (spec: any, materialName?: string) => string;
-  getDrawerSpecFingerprint: (spec: any, materialName?: string) => string;
-  createDoorObject: (spec: any, material: THREE.Material, doorHoles?: any[]) => THREE.Object3D;
-  createDrawerObject: (spec: any, material: THREE.Material) => THREE.Object3D;
+  applyDrillHolesToPanelGeometry: (panel: THREE.Mesh, panelType: PanelType, holes: TechnicalDrillHole[] | undefined) => void;
+  buildDoorSpecs: (items: DoorLayerItem[]) => DoorSpec[];
+  buildDrawerSpecs: (items: DrawerLayerItem[]) => DrawerSpec[];
+  getDoorSpecFingerprint: (spec: DoorSpec, materialName?: string) => string;
+  getDrawerSpecFingerprint: (spec: DrawerSpec, materialName?: string) => string;
+  createDoorObject: (spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
+  createDrawerObject: (spec: DrawerSpec, material: THREE.Material) => THREE.Object3D;
   getMaterialForOfficialId: (idOrLabel: string) => THREE.Material;
   getDefaultOfficialMaterialId: () => string;
   thicknessM: number;
@@ -29,7 +43,7 @@ export function dimensionsEqual(a: { width: number; height: number; depth: numbe
   return Math.abs(a.width - b.width) < 1e-9 && Math.abs(a.height - b.height) < 1e-9 && Math.abs(a.depth - b.depth) < 1e-9;
 }
 
-export function updateBoxModelWithDeps(model: AnyBoxModel, options: AnyBoxOptions, deps: BoxUpdaterDeps): AnyBoxModel {
+export function updateBoxModelWithDeps(model: BoxModel, options: BoxOptions | undefined, deps: BoxUpdaterDeps): BoxModel {
   const opts = options ?? {};
   const { width, height, depth } = deps.resolveDimensions(opts);
   const material = opts.material ?? model.panels.left.material;
@@ -48,12 +62,16 @@ export function updateBoxModelWithDeps(model: AnyBoxModel, options: AnyBoxOption
       model.panels[key].rotation.z = 0;
     }
   });
-  if (opts.material != null) Object.values(model.panels).forEach((panel: any) => (panel.material = material));
+  if (opts.material != null) {
+    Object.values(model.panels).forEach((panel) => {
+      (panel as THREE.Mesh).material = material as THREE.Material;
+    });
+  }
   model.dimensions = { width, height, depth, thickness: deps.thicknessM };
   return model;
 }
 
-export function updateBoxGroupWithDeps(group: THREE.Group, options: AnyBoxOptions, deps: BoxUpdaterDeps): { width: number; height: number; depth: number } {
+export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions | undefined, deps: BoxUpdaterDeps): { width: number; height: number; depth: number } {
   const opts = options ?? {};
   const { width, height, depth } = deps.resolveDimensions(opts);
   const dims = { width, height, depth };
@@ -75,7 +93,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: AnyBoxOption
     for (const panelName of deps.panelNames) {
       const child = group.children.find((c) => c.name === panelName);
       if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
-      const spec = specs[panelName];
+      const spec = specs[panelName as keyof BoxPanelLayoutSpecs];
       if (!spec) continue;
       deps.panelFactory.updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
       child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
@@ -127,12 +145,13 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: AnyBoxOption
     const item = doorLayerItems[doorIndex];
     const materialName = item?.material ?? item?.materialId ?? deps.getDefaultOfficialMaterialId();
     const newFingerprint = deps.getDoorSpecFingerprint(spec, materialName);
-    const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as any;
-    if (existingDoor?.userData?.[deps.doorSpecFingerprintKey] === newFingerprint) return;
+    const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D | undefined;
+    const doorUserData = existingDoor?.userData as Record<string, unknown> | undefined;
+    if (doorUserData?.[deps.doorSpecFingerprintKey] === newFingerprint) return;
     if (existingDoor) group.remove(existingDoor);
     const doorMaterial = deps.getMaterialForOfficialId(materialName);
     const newDoor = deps.createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
-    (newDoor.userData as any)[deps.doorSpecFingerprintKey] = newFingerprint;
+    (newDoor.userData as Record<string, unknown>)[deps.doorSpecFingerprintKey] = newFingerprint;
     group.add(newDoor);
   });
 
@@ -146,12 +165,13 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: AnyBoxOption
   drawerSpecs.forEach((spec, drawerIndex) => {
     const materialName = drawerLayerItems[drawerIndex]?.material ?? deps.getDefaultOfficialMaterialId();
     const newFingerprint = deps.getDrawerSpecFingerprint(spec, materialName);
-    const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as any;
-    if (existingDrawer?.userData?.[deps.drawerSpecFingerprintKey] === newFingerprint) return;
+    const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
+    const drawerUserData = existingDrawer?.userData as Record<string, unknown> | undefined;
+    if (drawerUserData?.[deps.drawerSpecFingerprintKey] === newFingerprint) return;
     if (existingDrawer) group.remove(existingDrawer);
     const drawerMaterial = deps.getMaterialForOfficialId(materialName);
     const newDrawer = deps.createDrawerObject(spec, (drawerMaterial as THREE.Material).clone());
-    (newDrawer.userData as any)[deps.drawerSpecFingerprintKey] = newFingerprint;
+    (newDrawer.userData as Record<string, unknown>)[deps.drawerSpecFingerprintKey] = newFingerprint;
     group.add(newDrawer);
   });
 
@@ -169,7 +189,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: AnyBoxOption
   return { width, height, depth };
 }
 
-export function updateBoxGeometryWithDeps(mesh: THREE.Mesh, options: AnyBoxOptions, deps: BoxUpdaterDeps): { width: number; height: number; depth: number } {
+export function updateBoxGeometryWithDeps(mesh: THREE.Mesh, options: BoxOptions | undefined, deps: BoxUpdaterDeps): { width: number; height: number; depth: number } {
   const { width, height, depth } = deps.resolveDimensions(options);
   mesh.geometry.dispose();
   const geometry = new THREE.BoxGeometry(width, height, depth);

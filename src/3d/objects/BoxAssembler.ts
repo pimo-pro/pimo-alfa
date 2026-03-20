@@ -1,27 +1,39 @@
 import * as THREE from "three";
-
-type AnyBoxOptions = any;
-type AnyBoxModel = any;
-type AnyPanelType = "left" | "right" | "top" | "bottom" | "back" | "front";
+import type { PanelMaterialOptions } from "./BoxMaterialApplier";
+import type { BoxModel, BoxOptions, BoxPanelLayoutSpecs } from "./BoxBuilder";
+import type { DoorSpec } from "./DoorFactory";
+import type { DrawerSpec } from "./DrawerFactory";
+import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
+import type { TechnicalDrillHole } from "../../core/types";
+import type { PanelType } from "./PanelFactory";
 
 type BoxAssemblerDeps = {
-  resolveDimensions: (options?: AnyBoxOptions) => { width: number; height: number; depth: number };
-  getPanelSpecs: (width: number, height: number, depth: number) => any;
+  resolveDimensions: (options?: BoxOptions) => { width: number; height: number; depth: number };
+  getPanelSpecs: (width: number, height: number, depth: number) => BoxPanelLayoutSpecs;
   getShelfSpecs: (width: number, height: number, depth: number, shelves?: number) => Array<{ size: [number, number, number]; pos: [number, number, number] }>;
-  panelFactory: { createPanel: (...args: any[]) => THREE.Mesh };
+  panelFactory: {
+    createPanel: (
+      width: number,
+      height: number,
+      depth: number,
+      name: string,
+      panelType: PanelType,
+      options?: PanelMaterialOptions | null
+    ) => THREE.Mesh;
+  };
   getFallbackPBRMaterial: () => THREE.Material;
   getEdgeMaterial: () => THREE.Material;
-  applyDrillHolesToPanelGeometry: (panel: THREE.Mesh, panelType: AnyPanelType, holes: any[] | undefined) => void;
-  buildDoorSpecs: (items: any[]) => any[];
-  buildDrawerSpecs: (items: any[]) => any[];
-  createDoorObject: (spec: any, material: THREE.Material, doorHoles?: any[]) => THREE.Object3D;
-  createDrawerObject: (spec: any, material: THREE.Material) => THREE.Object3D;
+  applyDrillHolesToPanelGeometry: (panel: THREE.Mesh, panelType: PanelType, holes: TechnicalDrillHole[] | undefined) => void;
+  buildDoorSpecs: (items: DoorLayerItem[]) => DoorSpec[];
+  buildDrawerSpecs: (items: DrawerLayerItem[]) => DrawerSpec[];
+  createDoorObject: (spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
+  createDrawerObject: (spec: DrawerSpec, material: THREE.Material) => THREE.Object3D;
   getMaterialForOfficialId: (idOrLabel: string) => THREE.Material;
   getDefaultOfficialMaterialId: () => string;
   thicknessM: number;
 };
 
-export function buildBoxWithDeps(options: AnyBoxOptions, deps: BoxAssemblerDeps): AnyBoxModel {
+export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssemblerDeps): BoxModel {
   const opts = options ?? {};
   const { width, height, depth } = deps.resolveDimensions(opts);
   const useDefaultMDF = opts.material == null;
@@ -31,8 +43,8 @@ export function buildBoxWithDeps(options: AnyBoxOptions, deps: BoxAssemblerDeps)
   root.name = "box-model";
   const specs = deps.getPanelSpecs(width, height, depth);
   const panelTypes = ["left", "top", "bottom", "right", "back"] as const;
-  const getMaterial = (_panelType: AnyPanelType) => baseMaterial.clone();
-  const panelOptions = (panelType: AnyPanelType) =>
+  const getMaterial = (_panelType: PanelType) => baseMaterial.clone();
+  const panelOptions = (panelType: PanelType) =>
     useDefaultMDF
       ? { edgeMaterial: deps.getEdgeMaterial(), faceMaterial: getMaterial(panelType) }
       : { singleMaterial: getMaterial(panelType) };
@@ -99,6 +111,6 @@ export function buildBoxWithDeps(options: AnyBoxOptions, deps: BoxAssemblerDeps)
   return { root, panels, dimensions: { width, height, depth, thickness: deps.thicknessM } };
 }
 
-export function buildBoxGroupWithDeps(options: AnyBoxOptions, deps: BoxAssemblerDeps): THREE.Group {
+export function buildBoxGroupWithDeps(options: BoxOptions | undefined, deps: BoxAssemblerDeps): THREE.Group {
   return buildBoxWithDeps(options ?? {}, deps).root;
 }

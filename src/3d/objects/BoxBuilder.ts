@@ -162,6 +162,8 @@ function getPanelSpecs(width: number, height: number, depth: number) {
   };
 }
 
+export type BoxPanelLayoutSpecs = ReturnType<typeof getPanelSpecs>;
+
 /**
  * Prateleiras: DENTRO da caixa. largura = width - 2 mm, profundidade = depth - 10 mm, espessura 19 mm.
  * Posição z: centrada na profundidade útil + SHELF_VISUAL_INSET_M para evitar Z-fighting com a costa.
