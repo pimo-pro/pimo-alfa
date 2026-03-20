@@ -1533,7 +1533,7 @@ export class ViewerCore {
 
   /** LEGACY: compatibilidade com API antiga; não ativa o modo régua antigo. */
   setRulerEnabled(enabled: boolean): void {
-    this.rendererManager.renderer.domElement.style.cursor = Boolean(enabled) ? "crosshair" : "";
+    this.rendererManager.renderer.domElement.style.cursor = enabled ? "crosshair" : "";
   }
 
   getExplodedViewEnabled(): boolean {

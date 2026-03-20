@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-
 import { useEffect, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";

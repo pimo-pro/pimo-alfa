@@ -166,7 +166,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
 
         let posicaoX_mm =
           adjacentPlacement?.x_mm ?? spawn?.posicaoX_mm ?? rightmostX_m * 1000 + dimensoes.largura / 2;
-        let posicaoZ_mm = adjacentPlacement?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
+        const posicaoZ_mm = adjacentPlacement?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
         if (isUpperModel && !adjacentPlacement) {
           if (upperBoxes.length > 0) {
             const rightmostUpper = upperBoxes.reduce(

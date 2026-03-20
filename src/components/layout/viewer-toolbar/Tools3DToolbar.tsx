@@ -52,7 +52,8 @@ export default function Tools3DToolbar({
   const enabledTools: Tool3DId[] = isPieceLocked ? ["select"] : ["select", "move", "rotate"];
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showExplodedMenu, setShowExplodedMenu] = useState(false);
-  const [showRotationMenu, setShowRotationMenu] = useState(false);
+  const [rotationMenuOpen, setRotationMenuOpen] = useState(false);
+  const showRotationMenu = activeTool === "rotate" && rotationMenuOpen;
 
   const cameraMenuRef = useRef<HTMLDivElement>(null);
   const explodedMenuRef = useRef<HTMLDivElement>(null);
@@ -63,28 +64,25 @@ export default function Tools3DToolbar({
     const close = (e: MouseEvent) => {
       if (cameraMenuRef.current && !cameraMenuRef.current.contains(e.target as Node)) setShowCameraMenu(false);
       if (explodedMenuRef.current && !explodedMenuRef.current.contains(e.target as Node)) setShowExplodedMenu(false);
-      if (rotationMenuRef.current && !rotationMenuRef.current.contains(e.target as Node)) setShowRotationMenu(false);
+      if (rotationMenuRef.current && !rotationMenuRef.current.contains(e.target as Node)) setRotationMenuOpen(false);
     };
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, [showCameraMenu, showExplodedMenu, showRotationMenu]);
 
-  useEffect(() => {
-    if (activeTool !== "rotate") setShowRotationMenu(false);
-  }, [activeTool]);
-
   const handleToolSelect = (id: Tool3DId, eventKey: string) => {
+    if (id !== "rotate") setRotationMenuOpen(false);
     onToolSelect?.(id, eventKey);
   };
 
   const handleRotateClick = () => {
     if (!enabledTools.includes("rotate")) return;
-    if (activeTool === "rotate" && showRotationMenu) {
-      setShowRotationMenu(false);
+    if (activeTool === "rotate" && rotationMenuOpen) {
+      setRotationMenuOpen(false);
       return;
     }
     handleToolSelect("rotate", "tool:rotate");
-    if (selectedBoxId) setShowRotationMenu(true);
+    if (selectedBoxId) setRotationMenuOpen(true);
   };
 
   return (
