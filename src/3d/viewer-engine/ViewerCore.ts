@@ -75,6 +75,9 @@ import type { SnapDebugData } from "../snapping/ModelWallSnap";
 import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
+import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
+import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
+import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
 
 /**
  * ViewerCore: orquestrador do motor 3D.
@@ -98,30 +101,6 @@ export type ViewerOptions = {
   skipInitialBox?: boolean;
 };
 
-type RulerMeasurementHit = {
-  kind: "box" | "wall" | "floor";
-  distanceM: number;
-  start: THREE.Vector3;
-  end: THREE.Vector3;
-};
-
-type RulerMovementSource = "transform" | "external";
-
-type InternalEdgePick = {
-  id: string;
-  start: THREE.Vector3;
-  end: THREE.Vector3;
-};
-
-type InternalMeasurementState = {
-  edgeA: InternalEdgePick | null;
-  edgeB: InternalEdgePick | null;
-  hover: InternalEdgePick | null;
-  distanceM: number | null;
-  distanceStart: THREE.Vector3 | null;
-  distanceEnd: THREE.Vector3 | null;
-};
-
 export class ViewerCore {
   private container: HTMLElement;
   private sceneManager: SceneManager;
@@ -129,7 +108,6 @@ export class ViewerCore {
   private rendererManager: RendererManager;
   private controls: Controls | null;
   private resizeObserver: ResizeObserver | null = null;
-  private rafId: number | null = null;
   private readonly boxManager = new ViewerBoxManager();
   get boxes(): Map<string, ViewerBoxEntry> {
     return this.boxManager.getBoxes();
@@ -170,7 +148,6 @@ export class ViewerCore {
   private readonly _boxSingle = new THREE.Box3();
   private readonly _frustum = new THREE.Frustum();
   private readonly _projScreenMatrix = new THREE.Matrix4();
-  private _initialCanvasSizeDone = false;
   private readonly isMobile: boolean;
   private outlineCurrentOpacity = 0;
   private outlineTargetOpacity = 0;
@@ -179,9 +156,6 @@ export class ViewerCore {
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
   private onRoomElementTransform: ((_elementId: string, _config: DoorWindowConfig) => void) | null = null;
-  private panelEdgesVisible = true;
-  private hiddenPanels = new Set<string>();
-  private hideAllPanels = false;
   private roomCeilingVisible = true;
   private mousePreset: ViewerMousePreset = "cad";
   private backgroundMode: ViewerBackgroundMode = "studio";
@@ -189,8 +163,6 @@ export class ViewerCore {
   private reflectionsEnabled = false;
   private reflectionFrameCounter = 0;
   private photoModeEnabled = false;
-  private explodedViewEnabled = false;
-  private explodedViewIntensity = 0.35;
   private readonly baseToneMappingExposure: number;
 
   // Lock: impede colisoes entre caixas e respeita os limites da sala.
@@ -298,38 +270,9 @@ export class ViewerCore {
   private rotationDiagnosticsLastLogTs = 0;
   private renderExporter!: ViewerRenderExporter;
   private constraints!: TransformConstraints;
-  private rulerOverlayCanvas: HTMLCanvasElement | null = null;
-  private rulerOverlayCtx: CanvasRenderingContext2D | null = null;
-  private rulerOverlayMeasurement: RulerMeasurementHit | null = null;
-  private lastSelectedBoxPositionForRuler: { boxId: string; x: number; y: number; z: number } | null = null;
-  private rulerLastMovementAtMs = 0;
-  private readonly rulerIdleClearDelayMs = 180;
-  private internalMeasurementCanvas: HTMLCanvasElement | null = null;
-  private internalMeasurementCtx: CanvasRenderingContext2D | null = null;
-  private internalMeasurementState: InternalMeasurementState = {
-    edgeA: null,
-    edgeB: null,
-    hover: null,
-    distanceM: null,
-    distanceStart: null,
-    distanceEnd: null,
-  };
-  private internalMeasurementEdgesCache = new Map<string, Array<{ a: THREE.Vector3; b: THREE.Vector3 }>>();
-  private internalMeasurementModeEnabled = false;
-  private internalMeasurementListenersAttached = false;
-  private boundInternalMeasurementPointerMove: ((event: PointerEvent) => void) | null = null;
-  private boundInternalMeasurementClick: ((event: MouseEvent) => void) | null = null;
-  private boundInternalMeasurementEsc: ((event: KeyboardEvent) => void) | null = null;
-
-  private static readonly INTERNAL_EDGE_COLOR_A = "#f59e0b";
-  private static readonly INTERNAL_EDGE_COLOR_B = "#22c55e";
-  private static readonly INTERNAL_EDGE_COLOR_HOVER = "rgba(56,189,248,0.85)";
-  private static readonly INTERNAL_EDGE_COLOR_MEASURE = "#ef4444";
-  private static readonly INTERNAL_EDGE_WIDTH_HOVER = 2;
-  private static readonly INTERNAL_EDGE_WIDTH_SELECTED = 3;
-  private static readonly INTERNAL_EDGE_WIDTH_MEASURE = 2;
-  private static readonly INTERNAL_EDGE_MIN_WORLD_M = 0.005;
-  private static readonly INTERNAL_EDGE_MIN_SCREEN_PX = 6;
+  private measurementOverlay!: ViewerMeasurementOverlay;
+  private panelVisibility!: ViewerPanelVisibility;
+  private runtimeLoop!: ViewerRuntimeLoop;
 
   constructor(container: HTMLElement, options: ViewerOptions = {}) {
     if (!container) {
@@ -391,6 +334,12 @@ export class ViewerCore {
 
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
     this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
+    this.panelVisibility = new ViewerPanelVisibility({
+      getBoxes: () => this.boxes,
+      getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
+      getBoxIdByMesh: (mesh) => this.getBoxIdByMesh(mesh),
+      getSharedPanelEdgeMaterial: () => getSharedPanelEdgeMaterial(),
+    });
 
     this.roomBuilder = new RoomBuilder();
     this.sceneManager.add(this.roomBuilder.getGroup());
@@ -402,8 +351,21 @@ export class ViewerCore {
       : new Controls(this.cameraManager.camera, this.rendererManager.renderer.domElement, options.controls);
     this.applyMousePresetToControls();
     this.applyBackgroundMode();
-    this.setupRulerOverlay();
-    this.setupInternalMeasurementSystem();
+    this.measurementOverlay = new ViewerMeasurementOverlay({
+      getCamera: () => this.cameraManager.camera,
+      getCanvas: () => this.rendererManager.renderer.domElement,
+      getContainer: () => this.container,
+      getRaycaster: () => this.raycaster,
+      getPointer: () => this.pointer,
+      getBoxes: () => this.boxes,
+      getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      getRoomWalls: () => this.roomBoxWalls,
+      isTransformDragging: () => this.viewerState.getTransformControlsDragging(),
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+      getNearestBoxDistance: () => this.computeDistanceToNearestBox(),
+      getNearestWallDistance: () => this.computeDistanceToNearestWall(),
+      getFloorDistance: () => this.computeDistanceToFloor(),
+    });
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -439,7 +401,7 @@ export class ViewerCore {
         value: Boolean(event.value),
       });
       if (!event.value) {
-        this.clearRulerOverlay();
+        this.measurementOverlay.clearRulerOverlay();
         this.viewerState.setSuppressNextCanvasClick(true);
         this.viewerTools.applyCurrentTool();
         this.notifyBoxTransform();
@@ -458,7 +420,7 @@ export class ViewerCore {
         if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
       }
       this.viewerTools.applyCurrentTool();
-      this.onRulerMovementTick("transform");
+      this.measurementOverlay.onRulerMovementTick("transform");
       // Keep external listeners in sync during drag.
       this.notifyBoxTransform();
       this.logTransformDiagnostic("drag(objectChange)");
@@ -539,6 +501,35 @@ export class ViewerCore {
       updateShowcaseComposerSize: () => this.updateShowcaseComposerSize(),
       updateMainComposerSize: () => this.updateMainComposerSize(),
       updateCanvasSize: () => this.updateCanvasSize(),
+    });
+    this.runtimeLoop = new ViewerRuntimeLoop({
+      getRenderer: () => this.rendererManager.renderer,
+      renderScene: () => this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera),
+      getCamera: () => this.cameraManager.camera,
+      setCameraAspect: (aspect) => {
+        this.cameraManager.camera.aspect = aspect;
+      },
+      updateCameraProjection: () => this.cameraManager.camera.updateProjectionMatrix(),
+      getContainer: () => this.container,
+      ensureShowcaseComposer: () => {
+        if (!this.composer) this.initShowcaseComposer();
+      },
+      ensureMainComposer: () => {
+        if (!this.mainComposer) this.initMainComposer();
+      },
+      getShowcaseComposer: () => this.composer,
+      getMainComposer: () => this.mainComposer,
+      getBokehPass: () => this.bokehPass,
+      updateShowcaseComposerSize: () => this.updateShowcaseComposerSize(),
+      updateMainComposerSize: () => this.updateMainComposerSize(),
+      getCurrentMode: () => this.viewerState.getCurrentMode(),
+      isUltraPerformanceMode: () => this.ultraPerformanceMode,
+      isTurntableEnabled: () => this.turntableEnabled && this.viewerState.getCurrentMode() === "showcase",
+      getTurntableSpeed: () => this.turntableSpeed,
+      getTurntableTarget: () => this.controls?.controls?.target?.clone() ?? null,
+      getBoxes: () => this.boxes,
+      onBeforeRenderTick: () => this.onBeforeRenderTick(),
+      onAfterRenderTick: () => this.onAfterRenderTick(),
     });
 
     this.updateCameraTarget();
@@ -796,21 +787,11 @@ export class ViewerCore {
   }
 
   setInternalMeasurementMode(enabled: boolean): void {
-    this.internalMeasurementModeEnabled = Boolean(enabled);
-    if (!this.internalMeasurementModeEnabled) {
-      this.detachInternalMeasurementListeners();
-      this.clearInternalMeasurementSelection();
-      this.clearInternalMeasurementOverlayCanvas();
-      if (this.internalMeasurementCanvas) this.internalMeasurementCanvas.style.display = "none";
-    } else {
-      this.attachInternalMeasurementListeners();
-      if (this.internalMeasurementCanvas) this.internalMeasurementCanvas.style.display = "block";
-      this.drawInternalMeasurementOverlay();
-    }
+    this.measurementOverlay.setInternalMeasurementMode(enabled);
   }
 
   getInternalMeasurementMode(): boolean {
-    return this.internalMeasurementModeEnabled;
+    return this.measurementOverlay.getInternalMeasurementMode();
   }
 
   /**
@@ -859,539 +840,6 @@ export class ViewerCore {
     this.dimensionsOverlayLines = new THREE.LineSegments(geo, mat);
     this.dimensionsOverlayGroup.add(this.dimensionsOverlayLines);
     this.dimensionsOverlayGroup.visible = this.dimensionsOverlayVisible;
-  }
-
-  private setupRulerOverlay(): void {
-    if (this.rulerOverlayCanvas || !this.container) return;
-    if (window.getComputedStyle(this.container).position === "static") {
-      this.container.style.position = "relative";
-    }
-    const canvas = document.createElement("canvas");
-    canvas.style.position = "absolute";
-    canvas.style.inset = "0";
-    canvas.style.pointerEvents = "none";
-    canvas.style.zIndex = "14";
-    canvas.style.background = "transparent";
-    this.container.appendChild(canvas);
-    this.rulerOverlayCanvas = canvas;
-    this.rulerOverlayCtx = canvas.getContext("2d");
-    this.resizeRulerOverlay();
-  }
-
-  private resizeRulerOverlay(): void {
-    if (!this.rulerOverlayCanvas || !this.container) return;
-    const w = Math.max(1, this.container.clientWidth || 1);
-    const h = Math.max(1, this.container.clientHeight || 1);
-    if (this.rulerOverlayCanvas.width !== w) this.rulerOverlayCanvas.width = w;
-    if (this.rulerOverlayCanvas.height !== h) this.rulerOverlayCanvas.height = h;
-  }
-
-  private updateRulerDuringDrag(): void {
-    const selectedBoxId = this.viewerState.getSelectedBox();
-    if (!selectedBoxId || !this.boxes.has(selectedBoxId)) {
-      this.clearRulerOverlay();
-      return;
-    }
-    const candidates: RulerMeasurementHit[] = [];
-    const nearestBox = this.computeDistanceToNearestBox();
-    const nearestWall = this.computeDistanceToNearestWall();
-    const floor = this.computeDistanceToFloor();
-    if (nearestBox) candidates.push(nearestBox);
-    if (nearestWall) candidates.push(nearestWall);
-    if (floor) candidates.push(floor);
-    if (!candidates.length) {
-      this.clearRulerOverlay();
-      return;
-    }
-    candidates.sort((a, b) => a.distanceM - b.distanceM);
-    this.rulerOverlayMeasurement = candidates[0];
-    this.drawRulerOverlay(this.rulerOverlayMeasurement);
-  }
-
-  private onRulerMovementTick(source: RulerMovementSource): void {
-    this.rulerLastMovementAtMs = performance.now();
-    if (source === "external") {
-      this.viewerState.setTransformControlsDragging(false);
-    }
-    this.updateRulerDuringDrag();
-  }
-
-  private syncRulerWithExternalSelectionMovement(): void {
-    if (this.viewerState.getTransformControlsDragging()) return;
-    const selectedBoxId = this.viewerState.getSelectedBox();
-    if (!selectedBoxId) {
-      this.lastSelectedBoxPositionForRuler = null;
-      return;
-    }
-    const entry = this.boxes.get(selectedBoxId);
-    if (!entry) {
-      this.lastSelectedBoxPositionForRuler = null;
-      return;
-    }
-    const p = entry.mesh.position;
-    const last = this.lastSelectedBoxPositionForRuler;
-    if (!last || last.boxId !== selectedBoxId) {
-      this.lastSelectedBoxPositionForRuler = { boxId: selectedBoxId, x: p.x, y: p.y, z: p.z };
-      return;
-    }
-    const moved =
-      Math.abs(last.x - p.x) > 1e-6 ||
-      Math.abs(last.y - p.y) > 1e-6 ||
-      Math.abs(last.z - p.z) > 1e-6;
-    if (!moved) return;
-    this.lastSelectedBoxPositionForRuler = { boxId: selectedBoxId, x: p.x, y: p.y, z: p.z };
-    this.onRulerMovementTick("external");
-  }
-
-  private clearRulerOverlayIfMovementIdle(nowMs: number): void {
-    if (!this.rulerOverlayMeasurement) return;
-    if (this.viewerState.getTransformControlsDragging()) return;
-    if (nowMs - this.rulerLastMovementAtMs <= this.rulerIdleClearDelayMs) return;
-    this.clearRulerOverlay();
-  }
-
-  private clearRulerOverlay(): void {
-    this.rulerOverlayMeasurement = null;
-    if (!this.rulerOverlayCtx || !this.rulerOverlayCanvas) return;
-    this.rulerOverlayCtx.clearRect(0, 0, this.rulerOverlayCanvas.width, this.rulerOverlayCanvas.height);
-  }
-
-  private drawRulerOverlay(hit: RulerMeasurementHit | null): void {
-    this.resizeRulerOverlay();
-    if (!this.rulerOverlayCtx || !this.rulerOverlayCanvas) return;
-    const ctx = this.rulerOverlayCtx;
-    ctx.clearRect(0, 0, this.rulerOverlayCanvas.width, this.rulerOverlayCanvas.height);
-    if (!hit) return;
-    const a = this.projectWorldToScreen(hit.start);
-    const b = this.projectWorldToScreen(hit.end);
-    if (!a || !b) return;
-    const distanceMm = Math.round(hit.distanceM * 1000);
-    const mx = (a.x + b.x) * 0.5;
-    const my = (a.y + b.y) * 0.5;
-    const label = `${distanceMm} mm`;
-
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-
-    ctx.fillStyle = "#ef4444";
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, 3, 0, Math.PI * 2);
-    ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.font = "600 12px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const padX = 6;
-    const padY = 4;
-    const textWidth = ctx.measureText(label).width;
-    const boxW = textWidth + padX * 2;
-    const boxH = 18 + padY;
-    const labelY = my - 14;
-    ctx.fillStyle = "rgba(17, 24, 39, 0.9)";
-    ctx.fillRect(mx - boxW / 2, labelY - boxH / 2, boxW, boxH);
-    ctx.strokeStyle = "rgba(255,255,255,0.3)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(mx - boxW / 2, labelY - boxH / 2, boxW, boxH);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(label, mx, labelY);
-  }
-
-  private setupInternalMeasurementSystem(): void {
-    this.setupInternalMeasurementOverlay();
-    this.boundInternalMeasurementPointerMove = (event: PointerEvent) => {
-      this.handleInternalMeasurementPointerMove(event);
-    };
-    this.boundInternalMeasurementClick = (event: MouseEvent) => {
-      this.handleInternalMeasurementClick(event);
-    };
-    this.boundInternalMeasurementEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") this.clearInternalMeasurementSelection();
-    };
-    this.setInternalMeasurementMode(false);
-  }
-
-  private attachInternalMeasurementListeners(): void {
-    if (this.internalMeasurementListenersAttached) return;
-    const canvas = this.rendererManager.renderer.domElement;
-    if (this.boundInternalMeasurementPointerMove) {
-      canvas.addEventListener("pointermove", this.boundInternalMeasurementPointerMove);
-    }
-    if (this.boundInternalMeasurementClick) {
-      canvas.addEventListener("click", this.boundInternalMeasurementClick, true);
-    }
-    if (this.boundInternalMeasurementEsc) {
-      window.addEventListener("keydown", this.boundInternalMeasurementEsc);
-    }
-    this.internalMeasurementListenersAttached = true;
-  }
-
-  private detachInternalMeasurementListeners(): void {
-    if (!this.internalMeasurementListenersAttached) return;
-    const canvas = this.rendererManager.renderer.domElement;
-    if (this.boundInternalMeasurementPointerMove) {
-      canvas.removeEventListener("pointermove", this.boundInternalMeasurementPointerMove);
-    }
-    if (this.boundInternalMeasurementClick) {
-      canvas.removeEventListener("click", this.boundInternalMeasurementClick, true);
-    }
-    if (this.boundInternalMeasurementEsc) {
-      window.removeEventListener("keydown", this.boundInternalMeasurementEsc);
-    }
-    this.internalMeasurementListenersAttached = false;
-  }
-
-  private setupInternalMeasurementOverlay(): void {
-    if (this.internalMeasurementCanvas || !this.container) return;
-    if (window.getComputedStyle(this.container).position === "static") {
-      this.container.style.position = "relative";
-    }
-    const canvas = document.createElement("canvas");
-    canvas.style.position = "absolute";
-    canvas.style.inset = "0";
-    canvas.style.pointerEvents = "none";
-    canvas.style.zIndex = "16";
-    canvas.style.background = "transparent";
-    this.container.appendChild(canvas);
-    this.internalMeasurementCanvas = canvas;
-    this.internalMeasurementCtx = canvas.getContext("2d");
-    this.resizeInternalMeasurementOverlay();
-  }
-
-  private resizeInternalMeasurementOverlay(): void {
-    if (!this.internalMeasurementCanvas || !this.container) return;
-    const w = Math.max(1, this.container.clientWidth || 1);
-    const h = Math.max(1, this.container.clientHeight || 1);
-    if (this.internalMeasurementCanvas.width !== w) this.internalMeasurementCanvas.width = w;
-    if (this.internalMeasurementCanvas.height !== h) this.internalMeasurementCanvas.height = h;
-  }
-
-  private handleInternalMeasurementPointerMove(event: PointerEvent): void {
-    if (!this.internalMeasurementModeEnabled) return;
-    if (this.viewerState.getTransformControlsDragging()) return;
-    const nextHover = this.pickInternalMeasurementEdge(event);
-    if ((this.internalMeasurementState.hover?.id ?? null) !== (nextHover?.id ?? null)) {
-      this.internalMeasurementState.hover = nextHover;
-      this.drawInternalMeasurementOverlay();
-    }
-  }
-
-  private handleInternalMeasurementClick(event: MouseEvent): void {
-    if (!this.internalMeasurementModeEnabled) return;
-    if (event.button !== 0) return;
-    if (this.viewerState.getTransformControlsDragging()) return;
-    const pick = this.pickInternalMeasurementEdge(event);
-    // Internal mode owns click interaction while active.
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    if (!pick) {
-      this.clearInternalMeasurementSelection();
-      return;
-    }
-    const state = this.internalMeasurementState;
-    if (state.edgeA && state.edgeB) {
-      state.edgeA = pick;
-      state.edgeB = null;
-      state.distanceM = null;
-      state.distanceStart = null;
-      state.distanceEnd = null;
-      this.drawInternalMeasurementOverlay();
-      return;
-    }
-    if (!state.edgeA) {
-      state.edgeA = pick;
-      state.edgeB = null;
-      state.distanceM = null;
-      state.distanceStart = null;
-      state.distanceEnd = null;
-      this.drawInternalMeasurementOverlay();
-      return;
-    }
-    if (state.edgeA.id === pick.id) {
-      // Mantém seleção atual; Edge B só limpa por ESC, clique fora ou nova medição.
-      return;
-    }
-    state.edgeB = pick;
-    const distance = this.computeClosestPointsBetweenSegments(
-      state.edgeA.start,
-      state.edgeA.end,
-      state.edgeB.start,
-      state.edgeB.end
-    );
-    state.distanceM = distance.distance;
-    state.distanceStart = distance.pointA;
-    state.distanceEnd = distance.pointB;
-    this.drawInternalMeasurementOverlay();
-  }
-
-  private clearInternalMeasurementSelection(): void {
-    this.internalMeasurementState.edgeA = null;
-    this.internalMeasurementState.edgeB = null;
-    this.internalMeasurementState.hover = null;
-    this.internalMeasurementState.distanceM = null;
-    this.internalMeasurementState.distanceStart = null;
-    this.internalMeasurementState.distanceEnd = null;
-    this.drawInternalMeasurementOverlay();
-  }
-
-  private clearInternalMeasurementOverlayCanvas(): void {
-    if (!this.internalMeasurementCanvas || !this.internalMeasurementCtx) return;
-    this.internalMeasurementCtx.clearRect(
-      0,
-      0,
-      this.internalMeasurementCanvas.width,
-      this.internalMeasurementCanvas.height
-    );
-  }
-
-  private pickInternalMeasurementEdge(event: { clientX: number; clientY: number }): InternalEdgePick | null {
-    const roots: THREE.Object3D[] = [];
-    this.boxes.forEach((entry) => roots.push(entry.mesh));
-    this.roomBoxWalls.forEach((w) => roots.push(w.mesh));
-    if (!roots.length) return null;
-
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    const meshHits = this.raycaster.intersectObjects(roots, true);
-    if (!meshHits.length) return null;
-    const mesh = this.getInternalMeasurementMeshFromHit(meshHits[0].object);
-    if (!mesh || !(mesh.geometry instanceof THREE.BufferGeometry)) return null;
-    const segments = this.getInternalMeasurementSegments(mesh.geometry);
-    if (!segments.length) return null;
-
-    const cursor = new THREE.Vector2(event.clientX - rect.left, event.clientY - rect.top);
-    const a = new THREE.Vector3();
-    const b = new THREE.Vector3();
-    let bestPick: InternalEdgePick | null = null;
-    let bestDistancePxSq = Infinity;
-    for (let i = 0; i < segments.length; i += 1) {
-      a.copy(segments[i].a).applyMatrix4(mesh.matrixWorld);
-      b.copy(segments[i].b).applyMatrix4(mesh.matrixWorld);
-      const worldLen = a.distanceTo(b);
-      if (worldLen < ViewerCore.INTERNAL_EDGE_MIN_WORLD_M) continue;
-      const screenA = this.projectWorldToScreen(a);
-      const screenB = this.projectWorldToScreen(b);
-      if (!screenA || !screenB) continue;
-      const segScreenLen = Math.hypot(screenA.x - screenB.x, screenA.y - screenB.y);
-      if (segScreenLen < ViewerCore.INTERNAL_EDGE_MIN_SCREEN_PX) continue;
-      const distancePxSq = this.distancePointToSegment2DSq(cursor, screenA, screenB);
-      if (distancePxSq >= bestDistancePxSq) continue;
-      bestDistancePxSq = distancePxSq;
-      bestPick = {
-        id: `${mesh.uuid}:${i}`,
-        start: a.clone(),
-        end: b.clone(),
-      };
-    }
-    return bestPick;
-  }
-
-  private getInternalMeasurementMeshFromHit(object: THREE.Object3D): THREE.Mesh | null {
-    let current: THREE.Object3D | null = object;
-    while (current) {
-      if (current instanceof THREE.Mesh && current.geometry instanceof THREE.BufferGeometry) return current;
-      current = current.parent;
-    }
-    return null;
-  }
-
-  private getInternalMeasurementSegments(geometry: THREE.BufferGeometry): Array<{ a: THREE.Vector3; b: THREE.Vector3 }> {
-    const key = geometry.uuid;
-    const cached = this.internalMeasurementEdgesCache.get(key);
-    if (cached) return cached;
-    const edges = new THREE.EdgesGeometry(geometry, 1);
-    const attr = edges.getAttribute("position");
-    const out: Array<{ a: THREE.Vector3; b: THREE.Vector3 }> = [];
-    if (attr instanceof THREE.BufferAttribute) {
-      for (let i = 0; i < attr.count - 1; i += 2) {
-        out.push({
-          a: new THREE.Vector3().fromBufferAttribute(attr, i),
-          b: new THREE.Vector3().fromBufferAttribute(attr, i + 1),
-        });
-      }
-    }
-    edges.dispose();
-    this.internalMeasurementEdgesCache.set(key, out);
-    return out;
-  }
-
-  private distancePointToSegment2DSq(
-    point: THREE.Vector2,
-    a: { x: number; y: number },
-    b: { x: number; y: number }
-  ): number {
-    const abX = b.x - a.x;
-    const abY = b.y - a.y;
-    const apX = point.x - a.x;
-    const apY = point.y - a.y;
-    const abLenSq = abX * abX + abY * abY;
-    if (abLenSq <= 1e-8) return apX * apX + apY * apY;
-    const t = THREE.MathUtils.clamp((apX * abX + apY * abY) / abLenSq, 0, 1);
-    const cx = a.x + abX * t;
-    const cy = a.y + abY * t;
-    const dx = point.x - cx;
-    const dy = point.y - cy;
-    return dx * dx + dy * dy;
-  }
-
-  private computeClosestPointsBetweenSegments(
-    p1: THREE.Vector3,
-    q1: THREE.Vector3,
-    p2: THREE.Vector3,
-    q2: THREE.Vector3
-  ): { pointA: THREE.Vector3; pointB: THREE.Vector3; distance: number } {
-    const d1 = q1.clone().sub(p1);
-    const d2 = q2.clone().sub(p2);
-    const r = p1.clone().sub(p2);
-    const a = d1.dot(d1);
-    const e = d2.dot(d2);
-    const f = d2.dot(r);
-
-    let s = 0;
-    let t = 0;
-    const eps = 1e-10;
-    if (a <= eps && e <= eps) {
-      return { pointA: p1.clone(), pointB: p2.clone(), distance: p1.distanceTo(p2) };
-    }
-    if (a <= eps) {
-      s = 0;
-      t = THREE.MathUtils.clamp(f / e, 0, 1);
-    } else {
-      const c = d1.dot(r);
-      if (e <= eps) {
-        t = 0;
-        s = THREE.MathUtils.clamp(-c / a, 0, 1);
-      } else {
-        const b = d1.dot(d2);
-        const denom = a * e - b * b;
-        if (Math.abs(denom) > eps) {
-          s = THREE.MathUtils.clamp((b * f - c * e) / denom, 0, 1);
-        } else {
-          s = 0;
-        }
-        t = (b * s + f) / e;
-        if (t < 0) {
-          t = 0;
-          s = THREE.MathUtils.clamp(-c / a, 0, 1);
-        } else if (t > 1) {
-          t = 1;
-          s = THREE.MathUtils.clamp((b - c) / a, 0, 1);
-        }
-      }
-    }
-
-    const pointA = p1.clone().add(d1.clone().multiplyScalar(s));
-    const pointB = p2.clone().add(d2.clone().multiplyScalar(t));
-
-    // Robust fallback candidates (important for near-parallel or almost-degenerate segments).
-    const cands: Array<{ pointA: THREE.Vector3; pointB: THREE.Vector3 }> = [
-      { pointA, pointB },
-      { pointA: p1.clone(), pointB: this.closestPointOnSegment(p1, p2, q2) },
-      { pointA: q1.clone(), pointB: this.closestPointOnSegment(q1, p2, q2) },
-      { pointA: this.closestPointOnSegment(p2, p1, q1), pointB: p2.clone() },
-      { pointA: this.closestPointOnSegment(q2, p1, q1), pointB: q2.clone() },
-    ];
-
-    let best = cands[0];
-    let bestDist = best.pointA.distanceTo(best.pointB);
-    for (let i = 1; i < cands.length; i += 1) {
-      const d = cands[i].pointA.distanceTo(cands[i].pointB);
-      if (d < bestDist) {
-        best = cands[i];
-        bestDist = d;
-      }
-    }
-    return {
-      pointA: best.pointA,
-      pointB: best.pointB,
-      distance: bestDist,
-    };
-  }
-
-  private closestPointOnSegment(
-    point: THREE.Vector3,
-    segStart: THREE.Vector3,
-    segEnd: THREE.Vector3
-  ): THREE.Vector3 {
-    const seg = segEnd.clone().sub(segStart);
-    const lenSq = seg.lengthSq();
-    if (lenSq <= 1e-10) return segStart.clone();
-    const t = THREE.MathUtils.clamp(point.clone().sub(segStart).dot(seg) / lenSq, 0, 1);
-    return segStart.clone().add(seg.multiplyScalar(t));
-  }
-
-  private drawInternalMeasurementOverlay(): void {
-    if (!this.internalMeasurementModeEnabled) {
-      this.clearInternalMeasurementOverlayCanvas();
-      return;
-    }
-    this.resizeInternalMeasurementOverlay();
-    if (!this.internalMeasurementCanvas || !this.internalMeasurementCtx) return;
-    const ctx = this.internalMeasurementCtx;
-    ctx.clearRect(0, 0, this.internalMeasurementCanvas.width, this.internalMeasurementCanvas.height);
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-
-    const drawEdge = (edge: InternalEdgePick | null, color: string, width = 2) => {
-      if (!edge) return;
-      const a = this.projectWorldToScreen(edge.start);
-      const b = this.projectWorldToScreen(edge.end);
-      if (!a || !b) return;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    };
-
-    const state = this.internalMeasurementState;
-    if (!state.edgeA && !state.edgeB) {
-      drawEdge(state.hover, ViewerCore.INTERNAL_EDGE_COLOR_HOVER, ViewerCore.INTERNAL_EDGE_WIDTH_HOVER);
-      return;
-    }
-    if (state.hover && state.hover.id !== state.edgeA?.id && state.hover.id !== state.edgeB?.id) {
-      drawEdge(state.hover, ViewerCore.INTERNAL_EDGE_COLOR_HOVER, ViewerCore.INTERNAL_EDGE_WIDTH_HOVER);
-    }
-    drawEdge(state.edgeA, ViewerCore.INTERNAL_EDGE_COLOR_A, ViewerCore.INTERNAL_EDGE_WIDTH_SELECTED);
-    drawEdge(state.edgeB, ViewerCore.INTERNAL_EDGE_COLOR_B, ViewerCore.INTERNAL_EDGE_WIDTH_SELECTED);
-
-    if (
-      state.edgeA &&
-      state.edgeB &&
-      state.distanceM != null &&
-      state.distanceStart &&
-      state.distanceEnd
-    ) {
-      const a = this.projectWorldToScreen(state.distanceStart);
-      const b = this.projectWorldToScreen(state.distanceEnd);
-      if (!a || !b) return;
-      const distanceMm = Math.round(state.distanceM * 1000);
-      const label = `${distanceMm}`;
-      const mx = (a.x + b.x) * 0.5;
-      const my = (a.y + b.y) * 0.5;
-      ctx.strokeStyle = ViewerCore.INTERNAL_EDGE_COLOR_MEASURE;
-      ctx.lineWidth = ViewerCore.INTERNAL_EDGE_WIDTH_MEASURE;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-      ctx.font = "600 12px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = ViewerCore.INTERNAL_EDGE_COLOR_MEASURE;
-      ctx.fillText(label, mx, my - 10);
-    }
   }
 
   private updateDimensionsOverlay(): void {
@@ -2055,8 +1503,7 @@ export class ViewerCore {
   }
 
   setExplodedViewEnabled(enabled: boolean): void {
-    this.explodedViewEnabled = Boolean(enabled);
-    this.applyExplodedViewForAllBoxes();
+    this.panelVisibility.setExplodedViewEnabled(enabled);
   }
 
   setHighlightEnabled(enabled: boolean): void {
@@ -2072,464 +1519,51 @@ export class ViewerCore {
   }
 
   getExplodedViewEnabled(): boolean {
-    return this.explodedViewEnabled;
+    return this.panelVisibility.getExplodedViewEnabled();
   }
 
   setExplodedViewIntensity(value: number): void {
-    const clamped = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
-    this.explodedViewIntensity = clamped;
-    this.applyExplodedViewForAllBoxes();
+    this.panelVisibility.setExplodedViewIntensity(value);
   }
 
   getExplodedViewIntensity(): number {
-    return this.explodedViewIntensity;
-  }
-
-  /** Espessura dos painéis em metros (19 mm), alinhada ao BoxBuilder. */
-  private static readonly PANEL_THICKNESS_M = 0.019;
-  /** Espessura da costa em metros (10 mm). */
-  private static readonly PANEL_BACK_THICKNESS_M = 0.01;
-  /** Segmentos por círculo de furo no contorno. */
-  private static readonly HOLE_CIRCLE_SEGMENTS = 16;
-  /** Deslocamento do overlay para o lado interno do painel (m), evita ghosting e garante visibilidade dentro do móvel. */
-  private static readonly OVERLAY_INSET_M = 0.0001;
-  /** Ângulo mínimo (graus) para EdgesGeometry em portas/gavetas/prateleiras. */
-  private static readonly FALLBACK_EDGES_ANGLE_DEG = 25;
-
-  /** Material partilhado do overlay de bordas (MaterialEngine). */
-  private static getPanelEdgeOverlayMaterial(): THREE.LineBasicMaterial {
-    return getSharedPanelEdgeMaterial();
-  }
-
-  /**
-   * Gera geometria de LineSegments apenas com o contorno real do painel (retângulo da face)
-   * e os contornos dos furos, em espaço local do painel. Não usa a malha CSG.
-   */
-  private static createContourEdgesGeometry(
-    panelType: "left" | "right" | "top" | "bottom" | "back" | "front",
-    width: number,
-    height: number,
-    depth: number,
-    holes: TechnicalDrillHole[]
-  ): THREE.BufferGeometry {
-    const t = ViewerCore.PANEL_THICKNESS_M;
-    const bt = ViewerCore.PANEL_BACK_THICKNESS_M;
-    const sideH = Math.max(0.001, height - 2 * t);
-    const segs: number[] = [];
-
-    const pushSegment = (x1: number, y1: number, z1: number, x2: number, y2: number, z2: number) => {
-      segs.push(x1, y1, z1, x2, y2, z2);
-    };
-
-    // Face interna = lado que olha para dentro do móvel. Overlay deslocado de OVERLAY_INSET_M para dentro.
-    if (panelType === "top") {
-      const w2 = width / 2;
-      const d2 = depth / 2;
-      const y0 = -t / 2 - ViewerCore.OVERLAY_INSET_M;
-      pushSegment(-w2, y0, -d2, w2, y0, -d2);
-      pushSegment(w2, y0, -d2, w2, y0, d2);
-      pushSegment(w2, y0, d2, -w2, y0, d2);
-      pushSegment(-w2, y0, d2, -w2, y0, -d2);
-      const panelW = width;
-      const panelH = depth;
-      for (const hole of holes) {
-        const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
-        const r = Math.max(0.0005, hole.diametro / 2000);
-        for (let i = 0; i < ViewerCore.HOLE_CIRCLE_SEGMENTS; i++) {
-          const t0 = (i * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          const t1 = ((i + 1) * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          pushSegment(
-            a + r * Math.cos(t0), y0, b + r * Math.sin(t0),
-            a + r * Math.cos(t1), y0, b + r * Math.sin(t1)
-          );
-        }
-      }
-    } else if (panelType === "bottom") {
-      const w2 = width / 2;
-      const d2 = depth / 2;
-      const y0 = t / 2 + ViewerCore.OVERLAY_INSET_M;
-      pushSegment(-w2, y0, -d2, w2, y0, -d2);
-      pushSegment(w2, y0, -d2, w2, y0, d2);
-      pushSegment(w2, y0, d2, -w2, y0, d2);
-      pushSegment(-w2, y0, d2, -w2, y0, -d2);
-      const panelW = width;
-      const panelH = depth;
-      for (const hole of holes) {
-        const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
-        const r = Math.max(0.0005, hole.diametro / 2000);
-        for (let i = 0; i < ViewerCore.HOLE_CIRCLE_SEGMENTS; i++) {
-          const t0 = (i * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          const t1 = ((i + 1) * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          pushSegment(
-            a + r * Math.cos(t0), y0, b + r * Math.sin(t0),
-            a + r * Math.cos(t1), y0, b + r * Math.sin(t1)
-          );
-        }
-      }
-    } else if (panelType === "left") {
-      const sh2 = sideH / 2;
-      const d2 = depth / 2;
-      const x0 = t / 2 + ViewerCore.OVERLAY_INSET_M;
-      pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
-      pushSegment(x0, sh2, -d2, x0, sh2, d2);
-      pushSegment(x0, sh2, d2, x0, -sh2, d2);
-      pushSegment(x0, -sh2, d2, x0, -sh2, -d2);
-      const panelW = depth;
-      const panelH = sideH;
-      for (const hole of holes) {
-        const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
-        const r = Math.max(0.0005, hole.diametro / 2000);
-        for (let i = 0; i < ViewerCore.HOLE_CIRCLE_SEGMENTS; i++) {
-          const t0 = (i * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          const t1 = ((i + 1) * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
-        }
-      }
-    } else if (panelType === "right") {
-      const sh2 = sideH / 2;
-      const d2 = depth / 2;
-      const x0 = -t / 2 - ViewerCore.OVERLAY_INSET_M;
-      pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
-      pushSegment(x0, sh2, -d2, x0, sh2, d2);
-      pushSegment(x0, sh2, d2, x0, -sh2, d2);
-      pushSegment(x0, -sh2, d2, x0, -sh2, -d2);
-      const panelW = depth;
-      const panelH = sideH;
-      for (const hole of holes) {
-        const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
-        const r = Math.max(0.0005, hole.diametro / 2000);
-        for (let i = 0; i < ViewerCore.HOLE_CIRCLE_SEGMENTS; i++) {
-          const t0 = (i * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          const t1 = ((i + 1) * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
-        }
-      }
-    } else if (panelType === "front") {
-      const w2 = width / 2;
-      const h2 = height / 2;
-      const zInside = -depth / 2 - ViewerCore.OVERLAY_INSET_M;
-      const zOutside = depth / 2 + ViewerCore.OVERLAY_INSET_M;
-      pushSegment(-w2, -h2, zInside, w2, -h2, zInside);
-      pushSegment(w2, -h2, zInside, w2, h2, zInside);
-      pushSegment(w2, h2, zInside, -w2, h2, zInside);
-      pushSegment(-w2, h2, zInside, -w2, -h2, zInside);
-      pushSegment(-w2, -h2, zOutside, w2, -h2, zOutside);
-      pushSegment(w2, -h2, zOutside, w2, h2, zOutside);
-      pushSegment(w2, h2, zOutside, -w2, h2, zOutside);
-      pushSegment(-w2, h2, zOutside, -w2, -h2, zOutside);
-
-      const panelW = width;
-      const panelH = height;
-      for (const hole of holes) {
-        const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
-        const r = Math.max(0.0005, hole.diametro / 2000);
-        for (let i = 0; i < ViewerCore.HOLE_CIRCLE_SEGMENTS; i++) {
-          const t0 = (i * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          const t1 = ((i + 1) * 2 * Math.PI) / ViewerCore.HOLE_CIRCLE_SEGMENTS;
-          pushSegment(
-            a + r * Math.cos(t0), b + r * Math.sin(t0), zInside,
-            a + r * Math.cos(t1), b + r * Math.sin(t1), zInside
-          );
-        }
-      }
-    } else {
-      const w2 = width / 2;
-      const h2 = height / 2;
-      const z0 = bt / 2 + ViewerCore.OVERLAY_INSET_M;
-      pushSegment(-w2, -h2, z0, w2, -h2, z0);
-      pushSegment(w2, -h2, z0, w2, h2, z0);
-      pushSegment(w2, h2, z0, -w2, h2, z0);
-      pushSegment(-w2, h2, z0, -w2, -h2, z0);
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(segs), 3));
-    geo.computeBoundingSphere();
-    return geo;
-  }
-
-  private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
-    const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
-    if (existing) {
-      mesh.remove(existing);
-      existing.geometry.dispose();
-      const shared = getSharedPanelEdgeMaterial();
-      if (!Array.isArray(existing.material) && existing.material !== shared) {
-        existing.material.dispose();
-      }
-    }
-    const panelType = mesh.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
-    const boxId = mesh.userData?.boxId as string | undefined;
-    const entry = boxId ? this.boxes.get(boxId) : undefined;
-    const structuralPanelNames = new Set(["left", "right", "top", "bottom", "back"]);
-    const isStructuralPanel = mesh.name && structuralPanelNames.has(mesh.name);
-    if (
-      panelType &&
-      isStructuralPanel &&
-      entry &&
-      Number.isFinite(entry.width) &&
-      Number.isFinite(entry.height) &&
-      Number.isFinite(entry.depth)
-    ) {
-      const drillMap: ViewerDrillMarkersByPanel | undefined = entry.drillMarkersByPanel;
-      const holes =
-        panelType === "top"
-          ? (drillMap?.cima ?? [])
-          : panelType === "bottom"
-            ? (drillMap?.fundo ?? [])
-            : panelType === "left"
-              ? (drillMap?.lateral_esquerda ?? [])
-              : panelType === "right"
-                ? (drillMap?.lateral_direita ?? [])
-                : [];
-      const geometry = ViewerCore.createContourEdgesGeometry(
-        panelType,
-        entry.width,
-        entry.height,
-        entry.depth,
-        holes
-      );
-      const material = ViewerCore.getPanelEdgeOverlayMaterial();
-      const overlay = new THREE.LineSegments(geometry, material);
-      overlay.userData.isPanelEdgeOverlay = true;
-      overlay.raycast = () => null;
-      mesh.add(overlay);
-      overlay.visible = visible && !this.viewerState.getHighlightEnabled();
-    } else {
-      const isDoor =
-        (mesh.name && mesh.name.startsWith("door-leaf-")) ||
-        mesh.userData?.doorLayerId != null;
-      const isDoorOrDrawerOrShelf =
-        (mesh.name && (
-          mesh.name.startsWith("door-leaf-") ||
-          mesh.name.startsWith("shelf-") ||
-          mesh.name.startsWith("drawer-")
-        )) ||
-        mesh.userData?.doorLayerId != null ||
-        mesh.userData?.drawerPart != null;
-      if (isDoor && mesh.geometry) {
-        mesh.geometry.computeBoundingBox();
-        const bb = mesh.geometry.boundingBox;
-        const size = new THREE.Vector3();
-        bb?.getSize(size);
-        const holeData = mesh.userData?.doorHolesEffective;
-        const holes = Array.isArray(holeData)
-          ? (holeData.filter((h) => h && Number.isFinite(h.x) && Number.isFinite(h.y)) as TechnicalDrillHole[])
-          : [];
-        const geometry = ViewerCore.createContourEdgesGeometry(
-          "front",
-          Math.max(0.001, size.x),
-          Math.max(0.001, size.y),
-          Math.max(0.001, size.z),
-          holes
-        );
-        const material = ViewerCore.getPanelEdgeOverlayMaterial();
-        const overlay = new THREE.LineSegments(geometry, material);
-        overlay.userData.isPanelEdgeOverlay = true;
-        overlay.raycast = () => null;
-        mesh.add(overlay);
-        overlay.visible = visible && !this.viewerState.getHighlightEnabled();
-      } else if (isDoorOrDrawerOrShelf && mesh.geometry) {
-        const geometry = new THREE.EdgesGeometry(mesh.geometry, ViewerCore.FALLBACK_EDGES_ANGLE_DEG);
-        const material = ViewerCore.getPanelEdgeOverlayMaterial();
-        const overlay = new THREE.LineSegments(geometry, material);
-        overlay.userData.isPanelEdgeOverlay = true;
-        overlay.raycast = () => null;
-        mesh.add(overlay);
-        overlay.visible = visible && !this.viewerState.getHighlightEnabled();
-      }
-    }
-  }
-
-  private getPanelVisibilityKey(node: THREE.Object3D, panelType: "left" | "right" | "top" | "bottom" | "back"): string {
-    const panelId = node.userData?.panelId as string | undefined;
-    if (panelId && panelId.trim().length > 0) return panelId;
-    const boxId = this.getBoxIdByMesh(node);
-    if (boxId && boxId.trim().length > 0) return `${boxId}:${panelType}`;
-    return panelType;
-  }
-
-  private getAnyVisibilityKey(node: THREE.Object3D): string | null {
-    const panelId = node.userData?.panelId as string | undefined;
-    if (panelId && panelId.trim().length > 0) return panelId;
-
-    const doorLayerId = node.userData?.doorLayerId as string | undefined;
-    if (doorLayerId && doorLayerId.trim().length > 0) return `door:${doorLayerId}`;
-
-    const drawerLayerId = node.userData?.drawerLayerId as string | undefined;
-    const drawerPart = node.userData?.drawerPart as string | undefined;
-    if (drawerLayerId && drawerLayerId.trim().length > 0) {
-      return `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
-    }
-
-    const shelfIndexValue = node.userData?.shelfIndex;
-    const shelfIndex = typeof shelfIndexValue === "number"
-      ? shelfIndexValue
-      : typeof node.name === "string"
-        ? Number((node.name.match(/shelf-(\d+)/)?.[1] ?? "NaN"))
-        : Number.NaN;
-    if (Number.isFinite(shelfIndex)) {
-      const boxId = this.getBoxIdByMesh(node) ?? "box";
-      return `shelf:${boxId}:${shelfIndex}`;
-    }
-
-    return null;
+    return this.panelVisibility.getExplodedViewIntensity();
   }
 
   private applyPanelIdsToBox(root: THREE.Object3D, boxId: string, panelIds?: Partial<BoxPanelIds> | null): void {
-    const panelIdByType: Partial<Record<"left" | "right" | "top" | "bottom" | "back", string | undefined>> = {
-      left: panelIds?.lateral_esquerda,
-      right: panelIds?.lateral_direita,
-      top: panelIds?.cima,
-      bottom: panelIds?.fundo,
-      back: panelIds?.costa,
-    };
-
-    root.traverse((node) => {
-      node.userData.boxId = boxId;
-      if (!(node instanceof THREE.Mesh)) return;
-      const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
-      if (panelType) {
-        const specificId = panelIdByType[panelType];
-        node.userData.panelId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
-        return;
-      }
-
-      const doorLayerId = node.userData?.doorLayerId as string | undefined;
-      if (doorLayerId && doorLayerId.trim().length > 0) {
-        node.userData.panelId = `door:${doorLayerId}`;
-        return;
-      }
-
-      const drawerLayerId = node.userData?.drawerLayerId as string | undefined;
-      const drawerPart = node.userData?.drawerPart as string | undefined;
-      if (drawerLayerId && drawerLayerId.trim().length > 0) {
-        node.userData.panelId = `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
-        return;
-      }
-
-      const shelfIndexValue = node.userData?.shelfIndex;
-      const shelfIndex = typeof shelfIndexValue === "number"
-        ? shelfIndexValue
-        : typeof node.name === "string"
-          ? Number((node.name.match(/shelf-(\d+)/)?.[1] ?? "NaN"))
-          : Number.NaN;
-      if (Number.isFinite(shelfIndex)) {
-        const indexedId = panelIds?.prateleiras?.[shelfIndex as number];
-        node.userData.panelId = indexedId && indexedId.trim().length > 0
-          ? indexedId
-          : `shelf:${boxId}:${shelfIndex}`;
-      }
-    });
+    this.panelVisibility.applyPanelIdsToBox(root, boxId, panelIds);
   }
 
   private applyPanelVisibilityForObject(root: THREE.Object3D): void {
-    root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
-      const isDoorOrDrawerOrShelf =
-        (node.name &&
-          (node.name.startsWith("door-leaf-") ||
-            node.name.startsWith("shelf-") ||
-            node.name.startsWith("drawer-"))) ||
-        node.userData?.doorLayerId != null ||
-        node.userData?.drawerPart != null;
-      if (!panelType && !isDoorOrDrawerOrShelf) return;
-      const panelKey = panelType
-        ? this.getPanelVisibilityKey(node, panelType)
-        : this.getAnyVisibilityKey(node) ?? "";
-      const hidden =
-        this.hideAllPanels ||
-        (panelType != null && this.hiddenPanels.has(panelType)) ||
-        (panelKey.length > 0 && this.hiddenPanels.has(panelKey));
-      node.visible = !hidden;
-      this.ensurePanelEdges(node, this.panelEdgesVisible && !hidden);
-    });
+    this.panelVisibility.applyPanelVisibilityForObject(root);
   }
 
   private applyPanelVisibilityForAllBoxes(): void {
-    this.boxes.forEach((entry) => this.applyPanelVisibilityForObject(entry.mesh));
-  }
-
-  private isExplodableMesh(node: THREE.Mesh): boolean {
-    if (node.userData?.isPanelEdgeOverlay === true) return false;
-    if (node.userData?.isDrillMarker === true) return false;
-    if (node.userData?.panelType != null) return true;
-    if (node.userData?.doorLayerId != null) return true;
-    if (node.userData?.drawerPart != null) return true;
-    return node.name.startsWith("shelf-") || node.name.startsWith("door-leaf-") || node.name.startsWith("drawer-");
-  }
-
-  private getExplodedDirection(node: THREE.Mesh): THREE.Vector3 {
-    const panelType = node.userData?.panelType as "left" | "right" | "top" | "bottom" | "back" | undefined;
-    if (panelType === "left") return new THREE.Vector3(-1, 0, 0);
-    if (panelType === "right") return new THREE.Vector3(1, 0, 0);
-    if (panelType === "top") return new THREE.Vector3(0, 1, 0);
-    if (panelType === "bottom") return new THREE.Vector3(0, -1, 0);
-    if (panelType === "back") return new THREE.Vector3(0, 0, -1);
-    const base = node.userData?.explodedBasePosition as THREE.Vector3 | undefined;
-    if (base instanceof THREE.Vector3 && base.lengthSq() > 1e-8) {
-      return base.clone().normalize();
-    }
-    const localPos = node.position.clone();
-    if (localPos.lengthSq() > 1e-8) {
-      return localPos.normalize();
-    }
-    return new THREE.Vector3(0, 0, -1);
+    this.panelVisibility.applyPanelVisibilityForAllBoxes();
   }
 
   private applyExplodedViewForObject(root: THREE.Object3D): void {
-    const offsetDistance = this.explodedViewIntensity * 0.2;
-    root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      if (!this.isExplodableMesh(node)) return;
-
-      const storedBase = node.userData?.explodedBasePosition as THREE.Vector3 | undefined;
-      const basePosition = storedBase instanceof THREE.Vector3 ? storedBase : node.position.clone();
-      node.userData.explodedBasePosition = basePosition.clone();
-
-      if (!this.explodedViewEnabled || offsetDistance <= 0) {
-        node.position.copy(basePosition);
-        return;
-      }
-
-      const direction = this.getExplodedDirection(node);
-      node.position.copy(basePosition).addScaledVector(direction, offsetDistance);
-    });
-  }
-
-  private applyExplodedViewForAllBoxes(): void {
-    this.boxes.forEach((entry) => this.applyExplodedViewForObject(entry.mesh));
+    this.panelVisibility.applyExplodedViewForObject(root);
   }
 
   setPanelEdgesVisible(visible: boolean): void {
-    this.panelEdgesVisible = Boolean(visible);
-    this.applyPanelVisibilityForAllBoxes();
+    this.panelVisibility.setPanelEdgesVisible(visible);
   }
 
   setPanelHidden(panel: "left" | "right" | "top" | "bottom" | "back", hidden: boolean): void {
-    if (hidden) this.hiddenPanels.add(panel);
-    else this.hiddenPanels.delete(panel);
-    this.applyPanelVisibilityForAllBoxes();
+    this.panelVisibility.setPanelHidden(panel, hidden);
   }
 
   setHiddenPanels(keys: string[]): void {
-    this.hiddenPanels = new Set((keys ?? []).filter((item) => typeof item === "string" && item.trim().length > 0));
-    this.applyPanelVisibilityForAllBoxes();
+    this.panelVisibility.setHiddenPanels(keys);
   }
 
   getHiddenPanels(): string[] {
-    return Array.from(this.hiddenPanels);
+    return this.panelVisibility.getHiddenPanels();
   }
 
   setAllPanelsHidden(hidden: boolean): void {
-    this.hideAllPanels = Boolean(hidden);
-    this.applyPanelVisibilityForAllBoxes();
+    this.panelVisibility.setAllPanelsHidden(hidden);
   }
 
   setRoomCeilingVisible(visible: boolean): void {
@@ -3002,43 +2036,7 @@ export class ViewerCore {
 
   /** Agenda um frame de render no próximo requestAnimationFrame. Usado após rebuild de mesh para atualizar a tela imediatamente. */
   private requestRender(): void {
-    if (this.rafId == null) return;
-    requestAnimationFrame(() => this.renderOneFrame());
-  }
-
-  /** Executa um único frame de render (mesma lógica do loop de animação). */
-  private renderOneFrame(): void {
-    if (this.viewerState.getCurrentMode() === "showcase" && this.composer && this.bokehPass) {
-      this._boundingBox.makeEmpty();
-      this.boxes.forEach((entry) => {
-        this._boundingBox.expandByObject(entry.mesh);
-      });
-      this._boundingBox.getCenter(this._center);
-      const cam = this.cameraManager.camera;
-      const focusDist = cam.position.distanceTo(this._center);
-      (this.bokehPass as { uniforms: Record<string, { value: number }> }).uniforms["focus"].value = focusDist;
-      if (this.turntableEnabled && this.controls?.controls) {
-        const target = this.controls.controls.target;
-        const dx = cam.position.x - target.x;
-        const dz = cam.position.z - target.z;
-        const angle = this.turntableSpeed * 0.01;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        cam.position.x = target.x + dx * cos - dz * sin;
-        cam.position.z = target.z + dx * sin + dz * cos;
-        cam.lookAt(target);
-      }
-      this.composer.render();
-    } else if (!this.ultraPerformanceMode) {
-      if (!this.mainComposer) this.initMainComposer();
-      if (this.mainComposer) {
-        this.mainComposer.render();
-      } else {
-        this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera);
-      }
-    } else {
-      this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera);
-    }
+    this.runtimeLoop.requestRender();
   }
 
   setBoxIndex(id: string, index: number): boolean {
@@ -4253,17 +3251,10 @@ export class ViewerCore {
       }
     });
     if (id == null) {
-      this.lastSelectedBoxPositionForRuler = null;
-      this.clearRulerOverlay();
+      this.measurementOverlay.onSelectionChanged(null);
       return;
     }
-    const entry = this.boxes.get(id);
-    if (entry) {
-      const p = entry.mesh.position;
-      this.lastSelectedBoxPositionForRuler = { boxId: id, x: p.x, y: p.y, z: p.z };
-    } else {
-      this.lastSelectedBoxPositionForRuler = null;
-    }
+    this.measurementOverlay.onSelectionChanged(id);
   }
 
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
@@ -4971,128 +3962,85 @@ export class ViewerCore {
   }
 
   private updateCanvasSize = () => {
-    if (!this.container) return;
-    const w = this.container.clientWidth ?? 1;
-    const h = this.container.clientHeight ?? 1;
-    this.rendererManager.renderer.setSize(w, h);
-    this.cameraManager.camera.aspect = w / h;
-    this.cameraManager.camera.updateProjectionMatrix();
-    this.updateShowcaseComposerSize();
-    this.updateMainComposerSize();
-    this.resizeRulerOverlay();
-    this.resizeInternalMeasurementOverlay();
+    this.runtimeLoop.onResize();
+    this.measurementOverlay.resize();
   };
 
   private start() {
-    const animate = () => {
-      if (this.container && !this._initialCanvasSizeDone) {
-        this.updateCanvasSize();
-        this._initialCanvasSizeDone = true;
-      }
-      if (!this._diagnosticsLogged) {
-        this._diagnosticsLogged = true;
-        const exp = this.rendererManager.renderer.toneMappingExposure;
-        if (exp <= 0) {
-          this.rendererManager.renderer.toneMappingExposure = 1.05;
-        }
-        const { keyLight, fillLight, ambient, hemisphere } = this.lights;
-        if (keyLight.intensity <= 0) keyLight.intensity = 0.55;
-        if (fillLight.intensity <= 0) fillLight.intensity = 0.15;
-        if (ambient.intensity <= 0) ambient.intensity = 0.4;
-        if (hemisphere.intensity <= 0) hemisphere.intensity = 0.35;
-      }
-      if (this.cameraManager.camera.position.y < 0.3) {
-        this.cameraManager.camera.position.y = 0.3;
-      }
-      this.controls?.update();
-      if (!this.ultraPerformanceMode) {
-        const r = this.rendererManager.renderer;
-        r.shadowMap.enabled = true;
-        if (r.shadowMap.type !== THREE.PCFSoftShadowMap) r.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.lights.keyLight.castShadow = true;
-      }
-      this.lerpLightsToTarget();
-      this.updateDimensionsOverlay();
-      this.updateWallVisibilityBasedOnCamera();
-      this.wallGizmo?.update();
-      if (this.snapDebugOverlay && this.lastSnapDebugData) {
-        this.snapDebugOverlay.update(this.lastSnapDebugData);
-      }
-      if (this.selectionOutline && this.selectionOutlineMaterial) {
-        this.outlineCurrentOpacity += (this.outlineTargetOpacity - this.outlineCurrentOpacity) * 0.25;
-        const shouldShow = this.outlineCurrentOpacity > 0.02 && this.selectionOutlineTarget;
-        if (shouldShow && this.selectionOutlineTarget) {
-          this.selectionOutline.visible = true;
-          this.selectionOutline.update(this.selectionOutlineTarget);
-        } else if (!shouldShow) {
-          this.selectionOutline.visible = false;
-        }
-        this.selectionOutlineMaterial.opacity = Math.max(0, Math.min(1, this.outlineCurrentOpacity));
-        this.selectionOutlineMaterial.needsUpdate = true;
-      }
+    this.runtimeLoop.start();
+  }
 
-      this.highlightManager?.update();
-      this.edgeOutlineSystem?.update();
-      this.syncRulerWithExternalSelectionMovement();
-      this.clearRulerOverlayIfMovementIdle(performance.now());
-
-      if (this.reflectionsEnabled) {
-        this.reflectionFrameCounter += 1;
-        if (this.reflectionFrameCounter >= 24) {
-          this.reflectionFrameCounter = 0;
-          this.updateReflectionProbe(false);
-        }
+  private onBeforeRenderTick(): void {
+    if (!this._diagnosticsLogged) {
+      this._diagnosticsLogged = true;
+      const exp = this.rendererManager.renderer.toneMappingExposure;
+      if (exp <= 0) {
+        this.rendererManager.renderer.toneMappingExposure = 1.05;
       }
-
-      if (this.wallSelectionOutline && this.wallSelectionOutlineMaterial) {
-        const wallEntry = this.viewerState.getSelectedWallIndex() !== null
-          ? this.roomBoxWalls.find((w) => w.id === this.viewerState.getSelectedWallIndex())
-          : null;
-        if (wallEntry) {
-          this.wallSelectionOutline.visible = true;
-          this.wallSelectionOutline.update(wallEntry.mesh);
-        } else {
-          this.wallSelectionOutline.visible = false;
-        }
+      const { keyLight, fillLight, ambient, hemisphere } = this.lights;
+      if (keyLight.intensity <= 0) keyLight.intensity = 0.55;
+      if (fillLight.intensity <= 0) fillLight.intensity = 0.15;
+      if (ambient.intensity <= 0) ambient.intensity = 0.4;
+      if (hemisphere.intensity <= 0) hemisphere.intensity = 0.35;
+    }
+    if (this.cameraManager.camera.position.y < 0.3) {
+      this.cameraManager.camera.position.y = 0.3;
+    }
+    this.controls?.update();
+    if (!this.ultraPerformanceMode) {
+      const r = this.rendererManager.renderer;
+      r.shadowMap.enabled = true;
+      if (r.shadowMap.type !== THREE.PCFSoftShadowMap) r.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.lights.keyLight.castShadow = true;
+    }
+    this.lerpLightsToTarget();
+    this.updateDimensionsOverlay();
+    this.updateWallVisibilityBasedOnCamera();
+    this.wallGizmo?.update();
+    if (this.snapDebugOverlay && this.lastSnapDebugData) {
+      this.snapDebugOverlay.update(this.lastSnapDebugData);
+    }
+    if (this.selectionOutline && this.selectionOutlineMaterial) {
+      this.outlineCurrentOpacity += (this.outlineTargetOpacity - this.outlineCurrentOpacity) * 0.25;
+      const shouldShow = this.outlineCurrentOpacity > 0.02 && this.selectionOutlineTarget;
+      if (shouldShow && this.selectionOutlineTarget) {
+        this.selectionOutline.visible = true;
+        this.selectionOutline.update(this.selectionOutlineTarget);
+      } else if (!shouldShow) {
+        this.selectionOutline.visible = false;
       }
+      this.selectionOutlineMaterial.opacity = Math.max(0, Math.min(1, this.outlineCurrentOpacity));
+      this.selectionOutlineMaterial.needsUpdate = true;
+    }
 
-        if (this.viewerState.getCurrentMode() === "showcase" && this.composer && this.bokehPass) {
-        this._boundingBox.makeEmpty();
-        this.boxes.forEach((entry) => {
-          this._boundingBox.expandByObject(entry.mesh);
-        });
-        this._boundingBox.getCenter(this._center);
-        const cam = this.cameraManager.camera;
-        const focusDist = cam.position.distanceTo(this._center);
-        (this.bokehPass as { uniforms: Record<string, { value: number }> }).uniforms["focus"].value = focusDist;
+    this.highlightManager?.update();
+    this.edgeOutlineSystem?.update();
+    this.measurementOverlay.syncRulerWithExternalSelectionMovement();
+    this.measurementOverlay.clearRulerOverlayIfMovementIdle(performance.now());
 
-        if (this.turntableEnabled && this.controls?.controls && this.viewerState.getCurrentMode() === "showcase") {
-          const target = this.controls.controls.target;
-          const dx = cam.position.x - target.x;
-          const dz = cam.position.z - target.z;
-          const angle = this.turntableSpeed * 0.01;
-          const cos = Math.cos(angle);
-          const sin = Math.sin(angle);
-          cam.position.x = target.x + dx * cos - dz * sin;
-          cam.position.z = target.z + dx * sin + dz * cos;
-          cam.lookAt(target);
-        }
+    if (this.reflectionsEnabled) {
+      this.reflectionFrameCounter += 1;
+      if (this.reflectionFrameCounter >= 24) {
+        this.reflectionFrameCounter = 0;
+        this.updateReflectionProbe(false);
+      }
+    }
 
-        this.composer.render();
-      } else if (!this.ultraPerformanceMode) {
-        if (!this.mainComposer) this.initMainComposer();
-        if (this.mainComposer) {
-          this.mainComposer.render();
-        } else {
-          this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera);
-        }
+    if (this.wallSelectionOutline && this.wallSelectionOutlineMaterial) {
+      const wallEntry = this.viewerState.getSelectedWallIndex() !== null
+        ? this.roomBoxWalls.find((w) => w.id === this.viewerState.getSelectedWallIndex())
+        : null;
+      if (wallEntry) {
+        this.wallSelectionOutline.visible = true;
+        this.wallSelectionOutline.update(wallEntry.mesh);
       } else {
-        this.rendererManager.render(this.sceneManager.scene, this.cameraManager.camera);
+        this.wallSelectionOutline.visible = false;
       }
+    }
+  }
 
-      this.rafId = requestAnimationFrame(animate);
-    };
-    this.rafId = requestAnimationFrame(animate);
+  private onAfterRenderTick(): void {
+    // Hook reservado para pós-frame.
   }
 
   saveSnapshot(): import("../../context/projectTypes").ViewerSnapshot | null {
@@ -5109,9 +4057,7 @@ export class ViewerCore {
   }
 
   dispose() {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-    }
+    this.runtimeLoop.stop();
     window.removeEventListener("resize", this.updateCanvasSize);
     window.removeEventListener("keydown", this.boundShiftKeyDown);
     window.removeEventListener("keyup", this.boundShiftKeyUp);
@@ -5129,19 +4075,6 @@ export class ViewerCore {
     }
     this.eventsManager?.unregister();
     this.eventsManager = null;
-    const viewerCanvas = this.rendererManager.renderer.domElement;
-    if (this.boundInternalMeasurementPointerMove) {
-      viewerCanvas.removeEventListener("pointermove", this.boundInternalMeasurementPointerMove);
-      this.boundInternalMeasurementPointerMove = null;
-    }
-    if (this.boundInternalMeasurementClick) {
-      viewerCanvas.removeEventListener("click", this.boundInternalMeasurementClick, true);
-      this.boundInternalMeasurementClick = null;
-    }
-    if (this.boundInternalMeasurementEsc) {
-      window.removeEventListener("keydown", this.boundInternalMeasurementEsc);
-      this.boundInternalMeasurementEsc = null;
-    }
     if (this.wallGizmo) {
       this.wallGizmo.dispose();
       this.sceneManager.scene.remove(this.wallGizmo.group);
@@ -5193,19 +4126,7 @@ export class ViewerCore {
       this.dimensionsOverlayGroup = null;
       this.dimensionsOverlayLines = null;
     }
-    this.clearRulerOverlay();
-    if (this.rulerOverlayCanvas) {
-      this.rulerOverlayCanvas.remove();
-      this.rulerOverlayCanvas = null;
-      this.rulerOverlayCtx = null;
-    }
-    this.clearInternalMeasurementSelection();
-    if (this.internalMeasurementCanvas) {
-      this.internalMeasurementCanvas.remove();
-      this.internalMeasurementCanvas = null;
-      this.internalMeasurementCtx = null;
-    }
-    this.internalMeasurementEdgesCache.clear();
+    this.measurementOverlay.dispose();
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();
