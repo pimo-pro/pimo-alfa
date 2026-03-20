@@ -4,20 +4,7 @@ import type {
   SavedProjectMeta,
   SavedProjectRecord,
 } from "./types";
-
-export type OfflineProjectRecord = {
-  id: string;
-  remoteId: string | null;
-  name: string;
-  ownerId: string;
-  ownerName: string;
-  createdAt: string;
-  updatedAt: string;
-  thumbnailDataUrl: string | null;
-  snapshot: SaveProjectRequest["snapshot"];
-  deleted: boolean;
-  lastSyncedAt: string | null;
-};
+import type { OfflineProjectRecord } from "./projectsOfflineStore";
 
 export function nowIso(): string {
   return new Date().toISOString();
