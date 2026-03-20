@@ -5,8 +5,15 @@ import type {
   SavedProjectMeta,
   SavedProjectRecord,
 } from "./types";
+import {
+  remoteDeleteProject,
+  remoteListProjects,
+  remoteLoadProjectRecord,
+  remoteRenameProject,
+  remoteSaveProject,
+  type ProjectsApiDeps,
+} from "./projectsApi";
 
-const PROJECTS_API_BASE = "https://pimo.pro/api/projects/index.php";
 const LEGACY_LOCAL_PROJECTS_KEY = "pimo_saved_projects";
 const OFFLINE_PROJECTS_STORAGE_KEY = "pimo_offline_projects_v2";
 const SYNC_QUEUE_STORAGE_KEY = "pimo_projects_sync_queue_v1";
@@ -65,10 +72,6 @@ let syncStatus: ProjectsSyncStatus = {
   hasActiveSyncError: false,
   retryInMs: null,
 };
-
-function toJson(response: Response): Promise<unknown> {
-  return response.json().catch(() => null);
-}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -180,10 +183,13 @@ function toRecordFromProjectData(project: PimoProjectData): SavedProjectRecord {
   };
 }
 
-function buildProjectsUrl(query?: URLSearchParams): string {
-  const queryString = query && query.toString() ? `?${query.toString()}` : "";
-  return `${PROJECTS_API_BASE}${queryString}`;
-}
+const projectsApiDeps: ProjectsApiDeps = {
+  buildPimoProjectDataFromRequest,
+  asObject,
+  toMetaFromProjectData,
+  toRecordFromProjectData,
+  nowIso,
+};
 
 function readCurrentUser(): { ownerId: string; ownerName: string } {
   if (typeof localStorage === "undefined") {
@@ -441,98 +447,6 @@ function buildSaveRequestFromOffline(project: OfflineProjectRecord): SaveProject
   };
 }
 
-async function remoteSaveProject(request: SaveProjectRequest): Promise<SavedProjectMeta | null> {
-  const projectData = buildPimoProjectDataFromRequest(request);
-  const response = await fetch(buildProjectsUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(projectData),
-  });
-  if (!response.ok) return null;
-  const payload = (await toJson(response)) as { project?: unknown } | null;
-  const row = asObject(payload?.project);
-  if (!row) return null;
-  if ("sequence" in row || "ownerName" in row || "thumbnailDataUrl" in row) {
-    return row as unknown as SavedProjectMeta;
-  }
-  if ("ownerId" in row && "viewerSnapshot" in row && "settings" in row) {
-    return toMetaFromProjectData(row as unknown as PimoProjectData, 0);
-  }
-  return null;
-}
-
-async function remoteListProjects(scope: "mine" | "all", ownerId?: string): Promise<SavedProjectMeta[]> {
-  const params = new URLSearchParams({ scope });
-  if (ownerId) params.set("ownerId", ownerId);
-  const response = await fetch(buildProjectsUrl(params));
-  if (!response.ok) return [];
-  const payload = (await toJson(response)) as { projects?: unknown[] } | null;
-  const rows = Array.isArray(payload?.projects) ? payload.projects : [];
-  return rows
-    .map((item, index) => {
-      const row = asObject(item);
-      if (!row) return null;
-      if ("snapshot" in row || "ownerName" in row || "sequence" in row) {
-        const id = typeof row.id === "string" ? row.id : "";
-        const name = typeof row.name === "string" ? row.name : "Projeto";
-        if (!id) return null;
-        return {
-          id,
-          name,
-          sequence: Number.isFinite(Number(row.sequence)) ? Number(row.sequence) : index + 1,
-          createdAt: typeof row.createdAt === "string" ? row.createdAt : nowIso(),
-          updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : nowIso(),
-          ownerId: typeof row.ownerId === "string" ? row.ownerId : "usuario-local",
-          ownerName:
-            typeof row.ownerName === "string"
-              ? row.ownerName
-              : (typeof row.ownerId === "string" ? row.ownerId : "Utilizador"),
-          thumbnailDataUrl:
-            typeof row.thumbnailDataUrl === "string" || row.thumbnailDataUrl === null
-              ? (row.thumbnailDataUrl as string | null)
-              : null,
-        } satisfies SavedProjectMeta;
-      }
-      if ("ownerId" in row && "viewerSnapshot" in row && "settings" in row) {
-        return toMetaFromProjectData(row as unknown as PimoProjectData, index);
-      }
-      return null;
-    })
-    .filter((v): v is SavedProjectMeta => Boolean(v));
-}
-
-async function remoteLoadProjectRecord(id: string): Promise<SavedProjectRecord | null> {
-  const params = new URLSearchParams({ action: "load", id });
-  const response = await fetch(buildProjectsUrl(params));
-  if (!response.ok) return null;
-  const payload = (await toJson(response)) as { project?: unknown } | null;
-  const row = asObject(payload?.project);
-  if (!row) return null;
-  if ("snapshot" in row) {
-    return row as unknown as SavedProjectRecord;
-  }
-  if ("ownerId" in row && "viewerSnapshot" in row && "settings" in row) {
-    return toRecordFromProjectData(row as unknown as PimoProjectData);
-  }
-  return null;
-}
-
-async function remoteRenameProject(id: string, body: RenameProjectRequest): Promise<boolean> {
-  const params = new URLSearchParams({ action: "update", id });
-  const response = await fetch(buildProjectsUrl(params), {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return response.ok;
-}
-
-async function remoteDeleteProject(id: string): Promise<boolean> {
-  const params = new URLSearchParams({ action: "delete", id });
-  const response = await fetch(buildProjectsUrl(params), { method: "DELETE" });
-  return response.ok;
-}
-
 function migrateLegacyLocalProjectsOnce(): void {
   if (legacyMigrationDone) return;
   legacyMigrationDone = true;
@@ -754,7 +668,7 @@ async function mergeRemoteListIntoOffline(
 }
 
 async function loadProjectFromServerAndMerge(id: string): Promise<SavedProjectRecord | null> {
-  const remote = await remoteLoadProjectRecord(id);
+  const remote = await remoteLoadProjectRecord(id, projectsApiDeps);
   if (!remote) return null;
   const remoteOffline = buildOfflineFromRemote(remote);
   const projects = readOfflineProjects();
@@ -827,7 +741,7 @@ export async function syncQueue(): Promise<void> {
           const request = requestObj
             ? (requestObj as SaveProjectRequest)
             : buildSaveRequestFromOffline(project);
-          const saved = await remoteSaveProject(request);
+          const saved = await remoteSaveProject(request, projectsApiDeps);
           if (!saved) {
             throw new Error("Falha ao guardar no servidor");
           }
@@ -954,7 +868,7 @@ export async function listProjects(
     return offline;
   }
   try {
-    const remote = await remoteListProjects(scope, ownerId);
+    const remote = await remoteListProjects(scope, ownerId, projectsApiDeps);
     const merged = await mergeRemoteListIntoOffline(remote, scope, ownerId);
     void syncQueue();
     return merged;
