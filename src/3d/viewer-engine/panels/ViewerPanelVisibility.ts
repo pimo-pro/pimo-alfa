@@ -21,7 +21,7 @@ type PanelType = "left" | "right" | "top" | "bottom" | "back";
 type ViewerPanelVisibilityDeps = {
   getBoxes: () => Map<string, ViewerBoxLike>;
   getHighlightEnabled: () => boolean;
-  getBoxIdByMesh: (mesh: THREE.Object3D) => string | null;
+  getBoxIdByMesh: (_mesh: THREE.Object3D) => string | null;
   getSharedPanelEdgeMaterial: () => THREE.LineBasicMaterial;
 };
 

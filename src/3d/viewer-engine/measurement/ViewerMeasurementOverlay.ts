@@ -46,7 +46,7 @@ type ViewerMeasurementOverlayDeps = {
   getSelectedBoxId: () => string | null;
   getRoomWalls: () => WallLike[];
   isTransformDragging: () => boolean;
-  projectWorldToScreen: (worldPoint: THREE.Vector3) => { x: number; y: number } | null;
+  projectWorldToScreen: (_worldPoint: THREE.Vector3) => { x: number; y: number } | null;
   getNearestBoxDistance: () => RulerMeasurementHit | null;
   getNearestWallDistance: () => RulerMeasurementHit | null;
   getFloorDistance: () => RulerMeasurementHit | null;
@@ -76,9 +76,9 @@ export class ViewerMeasurementOverlay {
   private internalMeasurementEdgesCache = new Map<string, Array<{ a: THREE.Vector3; b: THREE.Vector3 }>>();
   private internalMeasurementModeEnabled = false;
   private internalMeasurementListenersAttached = false;
-  private boundInternalMeasurementPointerMove: ((event: PointerEvent) => void) | null = null;
-  private boundInternalMeasurementClick: ((event: MouseEvent) => void) | null = null;
-  private boundInternalMeasurementEsc: ((event: KeyboardEvent) => void) | null = null;
+  private boundInternalMeasurementPointerMove: ((_event: PointerEvent) => void) | null = null;
+  private boundInternalMeasurementClick: ((_event: MouseEvent) => void) | null = null;
+  private boundInternalMeasurementEsc: ((_event: KeyboardEvent) => void) | null = null;
 
   private static readonly INTERNAL_EDGE_COLOR_A = "#f59e0b";
   private static readonly INTERNAL_EDGE_COLOR_B = "#22c55e";

@@ -4,7 +4,10 @@ import type { PanelMaterialOptions } from "./BoxMaterialApplier";
 export type PanelType = "left" | "right" | "top" | "bottom" | "back" | "front";
 
 type PanelFactoryDeps = {
-  resolvePanelMaterialOptions: (options: PanelMaterialOptions | null | undefined, panelType: PanelType) => PanelMaterialOptions;
+  resolvePanelMaterialOptions: (
+    _options: PanelMaterialOptions | null | undefined,
+    _panelType: PanelType
+  ) => PanelMaterialOptions;
 };
 
 export class PanelFactory {

@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from "react";
 
 export type NumericInputProps = {
   value: number;
-  onChange: (value: number) => void;
+  onChange: (_value: number) => void;
   min?: number;
   max?: number;
   step?: number;
@@ -16,7 +16,7 @@ export type NumericInputProps = {
   /** Unidade exibida ao lado (ex.: "mm") */
   unit?: string;
   /** Se definido, formata o valor exibido quando não está em foco (ex.: 0 casas decimais). */
-  formatDisplay?: (n: number) => string;
+  formatDisplay?: (_n: number) => string;
 };
 
 export function NumericInput({

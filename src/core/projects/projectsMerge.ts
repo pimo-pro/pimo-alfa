@@ -21,7 +21,7 @@ export async function mergeRemoteListIntoOffline(
   remote: SavedProjectMeta[],
   scope: "mine" | "all",
   ownerId: string | undefined,
-  loadProjectsOffline: (scope: "mine" | "all", ownerId?: string) => SavedProjectMeta[]
+  loadProjectsOffline: (_scope: "mine" | "all", _ownerId?: string) => SavedProjectMeta[]
 ): Promise<SavedProjectMeta[]> {
   const local = loadProjectsOffline(scope, ownerId);
   if (remote.length === 0) return local;

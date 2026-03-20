@@ -4,7 +4,7 @@ export type MaterialPickerModalProps = {
   materialsLoading: boolean;
   materialsList: MaterialOption[];
   onClose: () => void;
-  onSelectMaterial: (material: MaterialOption) => void;
+  onSelectMaterial: (_material: MaterialOption) => void;
 };
 
 export function MaterialPickerModal({
