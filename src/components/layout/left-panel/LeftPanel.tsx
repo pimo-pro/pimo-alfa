@@ -15,16 +15,12 @@ import { useToast } from "../../../context/ToastContext";
 import { getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
 import { cutlistComPrecoFromBoxes, ferragensFromBoxes } from "../../../core/manufacturing/cutlistFromBoxes";
 import type { SavedProjectInfo } from "../../../context/projectTypes";
-import {
-  defaultIndustrialMaterials,
-  fallbackMaterialsFromLocalStorage,
-  normalizeApiMaterial,
-  type MaterialOption,
-} from "./materialOptions";
 import { InfoPanelContent } from "./InfoPanelContent";
 import { NotesField } from "./NotesField";
 import { PlaceholderLeftPanel } from "./PlaceholderLeftPanel";
 import { PainelSala } from "./PainelSala";
+import { MaterialPickerModal } from "./MaterialPickerModal";
+import { useMaterialsForPicker } from "./hooks/useMaterialsForPicker";
 
 export type LeftPanelProps = {
   activeTab?: string;
@@ -43,9 +39,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const selectedGavetas = selectedBox?.gavetas ?? 0;
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
   const [editingBoxName, setEditingBoxName] = useState("");
-  const [materialModalOpen, setMaterialModalOpen] = useState(false);
-  const [materialsList, setMaterialsList] = useState<MaterialOption[]>([]);
-  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const { materialModalOpen, setMaterialModalOpen, materialsList, materialsLoading } = useMaterialsForPicker();
   const [savedRecentProjects, setSavedRecentProjects] = useState<SavedProjectInfo[]>([]);
   const [loadingSavedRecent, setLoadingSavedRecent] = useState(false);
   const { viewerApi } = usePimoViewerContext();
@@ -69,53 +63,6 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const totalPecas = cutlistFromBoxes.reduce((sum, item) => sum + item.quantidade, 0);
   const totalFerragens = ferragensFromBoxesList.reduce((sum, item) => sum + item.quantidade, 0);
   const totalItens = totalPecas + totalFerragens;
-
-  useEffect(() => {
-    if (!materialModalOpen) return;
-    let active = true;
-
-    const loadMaterials = async () => {
-      setMaterialsLoading(true);
-
-      // 1) API real (online)
-      try {
-        const response = await fetch("/api/materials", { method: "GET" });
-        if (response.ok) {
-          const payload = (await response.json()) as unknown;
-          const rows = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).materials)
-            ? ((payload as Record<string, unknown>).materials as unknown[])
-            : Array.isArray(payload)
-              ? payload
-              : [];
-          const normalized = rows.map((row) => normalizeApiMaterial(row)).filter((row): row is MaterialOption => Boolean(row));
-          if (normalized.length > 0) {
-            if (active) setMaterialsList(normalized);
-            if (active) setMaterialsLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // fallback abaixo
-      }
-
-      // 2) localStorage
-      const fromLocalStorage = fallbackMaterialsFromLocalStorage();
-      if (fromLocalStorage.length > 0) {
-        if (active) setMaterialsList(fromLocalStorage);
-        if (active) setMaterialsLoading(false);
-        return;
-      }
-
-      // 3) defaults industriais
-      if (active) setMaterialsList(defaultIndustrialMaterials());
-      if (active) setMaterialsLoading(false);
-    };
-
-    void loadMaterials();
-    return () => {
-      active = false;
-    };
-  }, [materialModalOpen]);
 
   useEffect(() => {
     let active = true;
@@ -506,91 +453,19 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       )}
 
       {materialModalOpen && selectedBox && (
-        <div
-          className="modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setMaterialModalOpen(false)}
-        >
-          <div
-            className="modal-card"
-            style={{ maxWidth: 360, maxHeight: "80vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="modal-title">Selecionar Material</div>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setMaterialModalOpen(false)}
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ padding: "0 16px 16px", overflowY: "auto", flex: 1 }}>
-              {materialsLoading && (
-                <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
-                  A carregar materiais...
-                </p>
-              )}
-              {materialsList.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  Nenhum material no registo. Adicione em Admin → Materials.
-                </p>
-              ) : (
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {materialsList.map((m) => (
-                    <li key={m.id}>
-                      <button
-                        type="button"
-                        className="card"
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "10px 12px",
-                          textAlign: "left",
-                          cursor: "pointer",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          background: "rgba(255,255,255,0.04)",
-                        }}
-                        onClick={() => {
-                          actions.setWorkspaceBoxMaterial(selectedBox.id, m.id);
-                          viewerApi?.updateBox(selectedBox.id, {
-                            materialName: getViewerMaterialId(m.id),
-                          });
-                          showToast("Material aplicado à caixa.", "info");
-                          setMaterialModalOpen(false);
-                        }}
-                      >
-                        {m.color && (
-                          <span
-                            style={{
-                              width: 20,
-                              height: 20,
-                              borderRadius: 4,
-                              background: m.color,
-                              border: "1px solid rgba(255,255,255,0.2)",
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-main)" }}>{m.label}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                            {m.espessura ?? "—"} mm · {m.precoPorM2 ?? "—"} €/m²
-                          </div>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
+        <MaterialPickerModal
+          materialsLoading={materialsLoading}
+          materialsList={materialsList}
+          onClose={() => setMaterialModalOpen(false)}
+          onSelectMaterial={(m) => {
+            actions.setWorkspaceBoxMaterial(selectedBox.id, m.id);
+            viewerApi?.updateBox(selectedBox.id, {
+              materialName: getViewerMaterialId(m.id),
+            });
+            showToast("Material aplicado à caixa.", "info");
+            setMaterialModalOpen(false);
+          }}
+        />
       )}
 
       {selectedBox && (
