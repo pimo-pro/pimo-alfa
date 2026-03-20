@@ -2488,7 +2488,7 @@ export class ViewerCore {
     this.onWallSelected?.(this.viewerState.getSelectedWallIndex());
   }
 
-  /** Seleciona abertura (porta/janela) por id (ex.: ao clicar no painel). Permite mover/rodar com botões do topo. */
+  /** LEGACY / NO-OP: seleção de abertura por id descontinuada no fluxo atual. */
   selectRoomElementById(elementId: string | null): void {
     void elementId;
     this.viewerState.setSelectedRoomElementId(null);
@@ -2713,12 +2713,12 @@ export class ViewerCore {
     return true;
   }
 
-  /** Alias para compatibilidade com useCalculadoraSync. */
+  /** LEGACY: alias mantido para integração histórica com useCalculadoraSync. */
   setBoxSpacing(spacing: number): boolean {
     return this.setBoxGap(spacing);
   }
 
-  /** Alias para compatibilidade com useCalculadoraSync. */
+  /** LEGACY: alias mantido para integração histórica com useCalculadoraSync. */
   updateBoxSpacing(spacing: number): boolean {
     return this.setBoxGap(spacing);
   }
