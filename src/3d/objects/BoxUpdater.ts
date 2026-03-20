@@ -5,6 +5,7 @@ import type { DoorSpec } from "./DoorFactory";
 import type { DrawerSpec } from "./DrawerFactory";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { TechnicalDrillHole } from "../../core/types";
+import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import type { PanelType } from "./PanelFactory";
 
 type BoxUpdaterDeps = {
@@ -93,7 +94,9 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   const useLateralShelfHoles = shelfCountForDrill > 0 && !hasDrawersForDrill;
   const hasLateralDrillMarkers =
     (drillMap.lateral_esquerda?.length ?? 0) > 0 || (drillMap.lateral_direita?.length ?? 0) > 0;
-  const applyLateralDrillHoles = hasLateralDrillMarkers || useLateralShelfHoles;
+  const forcePiLateralDrillGeometry = isPiBaseCabinetId(opts.baseCabinetId);
+  const applyLateralDrillHoles =
+    forcePiLateralDrillGeometry || hasLateralDrillMarkers || useLateralShelfHoles;
   const lateralLeftHoles = applyLateralDrillHoles ? drillMap.lateral_esquerda : [];
   const lateralRightHoles = applyLateralDrillHoles ? drillMap.lateral_direita : [];
 

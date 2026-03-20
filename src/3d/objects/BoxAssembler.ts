@@ -5,6 +5,7 @@ import type { DoorSpec } from "./DoorFactory";
 import type { DrawerSpec } from "./DrawerFactory";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { TechnicalDrillHole } from "../../core/types";
+import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import type { PanelType } from "./PanelFactory";
 
 type BoxAssemblerDeps = {
@@ -82,7 +83,9 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const useLateralShelfHoles = shelfCount > 0 && !hasDrawers;
   const hasLateralDrillMarkers =
     (drillMap.lateral_esquerda?.length ?? 0) > 0 || (drillMap.lateral_direita?.length ?? 0) > 0;
-  const applyLateralDrillHoles = hasLateralDrillMarkers || useLateralShelfHoles;
+  const forcePiLateralDrillGeometry = isPiBaseCabinetId(opts.baseCabinetId);
+  const applyLateralDrillHoles =
+    forcePiLateralDrillGeometry || hasLateralDrillMarkers || useLateralShelfHoles;
   deps.applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
   deps.applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
   deps.applyDrillHolesToPanelGeometry(

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
+import { convertWorkspaceToBox } from "../context/projectState";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
@@ -21,7 +22,7 @@ type ViewerApi = {
 type BoxState = { index: number };
 
 /** Fingerprint da estrutura da caixa (dimensões, portas, gavetas, etc.) para evitar updateBox completo quando só posição/rotação mudou (ex.: após drag). */
-function getStructureFingerprint(wsBox: WorkspaceBox): string {
+function getStructureFingerprint(wsBox: WorkspaceBox, piLateralDrillCountSig?: string | null): string {
   const d = wsBox.dimensoes;
   const doors = wsBox.doorsLayer ?? [];
   const drawers = wsBox.drawersLayer ?? [];
@@ -78,6 +79,8 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     baseCabinetId: wsBox.baseCabinetId,
     piHideDrawerHoles: wsBox.piHideDrawerHoles === true,
     piDrillSig,
+    /** Evita update só posRot quando o cutlist/view ficou com furação lateral PI atrasada (ex. box ainda não existia em project.boxes). */
+    piLateralDrillCountSig: piLateralDrillCountSig ?? null,
     doors: doorSig,
     drawers: drawerSig,
     material: wsBox.material,
@@ -213,7 +216,10 @@ export const useCalculadoraSync = (
         "mdf_branco";
       const resolvedMaterialName = getViewerMaterialId(effectiveMaterial);
       const cadOnly =
-        (wsBox.models?.length ?? 0) > 0 && wsBox.prateleiras === 0 && wsBox.gavetas === 0;
+        !isPiBaseCabinetId(wsBox.baseCabinetId) &&
+        (wsBox.models?.length ?? 0) > 0 &&
+        wsBox.prateleiras === 0 &&
+        wsBox.gavetas === 0;
 
       const shelves = Number.isFinite(wsBox.prateleiras) ? Math.max(0, wsBox.prateleiras) : undefined;
       const cabinetType = wsBox?.cabinetType === "lower" || wsBox?.cabinetType === "upper" ? wsBox.cabinetType : undefined;
@@ -239,9 +245,12 @@ export const useCalculadoraSync = (
       // [CORRIGIDO 2026-03] Sempre recalcular cutlist a partir do box atual (dimensões + layers) para furações paramétricas.
       // drillMarkersByPanel deve SEMPRE ser recalculado e passado explicitamente para updateBox.
       // Nunca usar valor antigo/cached: isso garante atualização 100% paramétrica e elimina furos congelados.
-      const cutListForBox =
-        box && rules ? cutlistComPrecoFromBox(box, rules) : [];
+      const effectiveBox = box ?? convertWorkspaceToBox(wsBox);
+      const cutListForBox = rules ? cutlistComPrecoFromBox(effectiveBox, rules) : [];
       const drillMarkersByPanel = buildViewerDrillMarkersByPanel(cutListForBox);
+      const piLateralDrillCountSig = isPiBaseCabinetId(wsBox.baseCabinetId)
+        ? `${drillMarkersByPanel.lateral_esquerda?.length ?? 0}|${drillMarkersByPanel.lateral_direita?.length ?? 0}`
+        : null;
       if (!stateRef.current.has(wsBox.id)) {
         api.addBox(wsBox.id, {
           width,
@@ -253,6 +262,7 @@ export const useCalculadoraSync = (
           materialName: resolvedMaterialName,
           index,
           cadOnly,
+          baseCabinetId: wsBox.baseCabinetId,
           ...cabinetOpts,
           ...rotateOpts,
           locked,
@@ -261,9 +271,12 @@ export const useCalculadoraSync = (
           drillMarkersByPanel,
           ...posRot,
         });
-        lastStructureFingerprintRef.current.set(wsBox.id, getStructureFingerprint(wsBox));
+        lastStructureFingerprintRef.current.set(
+          wsBox.id,
+          getStructureFingerprint(wsBox, piLateralDrillCountSig)
+        );
       } else {
-        const structureFingerprint = getStructureFingerprint(wsBox);
+        const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig);
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
           if (import.meta.env.DEV && (wsBox?.doorsLayer?.length ?? 0) > 0) {
@@ -296,6 +309,7 @@ export const useCalculadoraSync = (
             shelves,
             materialName: resolvedMaterialName,
             index,
+            baseCabinetId: wsBox.baseCabinetId,
             ...cabinetOpts,
             ...rotateOpts,
             locked,

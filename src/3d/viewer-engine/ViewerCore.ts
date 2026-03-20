@@ -1706,6 +1706,7 @@ export class ViewerCore {
       material,
       drillMarkersByPanel: opts.drillMarkersByPanel,
       materialName: materialName,
+      baseCabinetId: opts.baseCabinetId,
     });
     const createdEntry = this.boxes.get(id);
     if (createdEntry) {
@@ -1761,6 +1762,9 @@ export class ViewerCore {
     if (opts.index !== undefined && (!Number.isFinite(opts.index) || opts.index < 0)) {
       return false;
     }
+    if (opts.baseCabinetId !== undefined) {
+      entry.baseCabinetId = opts.baseCabinetId;
+    }
 
     // Atualização apenas de posição/rotação (ex.: após drag ou sync do projeto). Não fazer rebuild (updateBoxGroup/createDoorObject).
     const onlyTransform =
@@ -1779,7 +1783,8 @@ export class ViewerCore {
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
       opts.drillMarkersByPanel !== undefined ||
-      opts.thickness !== undefined;
+      opts.thickness !== undefined ||
+      opts.baseCabinetId !== undefined;
     if (onlyTransform && !hasStructureOpts) {
       if (import.meta.env.DEV) {
         devLogger.debug("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
@@ -1838,7 +1843,8 @@ export class ViewerCore {
       opts.shelves !== undefined ||
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
-      opts.drillMarkersByPanel !== undefined;
+      opts.drillMarkersByPanel !== undefined ||
+      opts.baseCabinetId !== undefined;
     if (structureChanged) {
       width = Math.max(0.001, opts.width ?? opts.size ?? width);
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
@@ -1847,7 +1853,8 @@ export class ViewerCore {
       const hasLayerUpdate =
         opts.doorLayerItems !== undefined ||
         opts.drawerLayerItems !== undefined ||
-        opts.drillMarkersByPanel !== undefined;
+        opts.drillMarkersByPanel !== undefined ||
+        opts.baseCabinetId !== undefined;
       // Só pular updateBoxGroup para caixa CAD-only quando não há alteração de dimensões nem de portas/gavetas.
       if (entry.cadOnly && !hasLayerUpdate && !dimensionsChanged) {
         if (!entry.manualPosition) {
@@ -1898,6 +1905,7 @@ export class ViewerCore {
             drawerLayerItems: opts.drawerLayerItems,
             drillMarkersByPanel: drillMarkers,
             materialName,
+            baseCabinetId: opts.baseCabinetId ?? entry.baseCabinetId,
           };
           if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
           newBox = buildBoxLegacy(boxOptions);

@@ -88,6 +88,8 @@ export type BoxOptions = {
   autoRotateEnabled?: boolean;
   /** Se true, a peça não pode ser movida nem transformada (apenas selecionável). */
   locked?: boolean;
+  /** Modelo base (ex.: pi-base-600); usado pelo viewer para furação lateral PI sem depender de prateleiras/gavetas. */
+  baseCabinetId?: string;
 };
 
 export type BoxModel = {

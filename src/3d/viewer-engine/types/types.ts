@@ -33,4 +33,6 @@ export interface ViewerBoxEntry {
   material: LoadedWoodMaterial | null;
   /** Material aplicado (viewerMaterialId); usado ao reaplicar ao trocar de modo. */
   materialName?: string;
+  /** Id do modelo base (ex.: pi-base-*); furação lateral PI sempre aplicada no mesh. */
+  baseCabinetId?: string;
 }

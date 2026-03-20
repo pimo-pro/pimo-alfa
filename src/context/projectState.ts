@@ -447,7 +447,7 @@ export const getSelectedWorkspaceBox = (state: ProjectState): WorkspaceBox | und
   );
 };
 
-const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
+export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
   const panelIds = ensureBoxPanelIds(box.panelIds, {
     prateleiras: box.prateleiras,
     portaTipo: box.portaTipo,
