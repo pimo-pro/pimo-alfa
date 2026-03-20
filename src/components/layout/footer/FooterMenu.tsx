@@ -13,7 +13,6 @@ export default function FooterMenu() {
     { label: "Documentação", href: "/documentacao" },
     { label: "Documentação do Sistema", href: "/documentacao" },
     { label: "Admin", href: "/admin" },
-    { label: "Sobre Nós", href: "/sobre-nos" },
   ];
 
   const handleLinkClick = (href: string) => {
