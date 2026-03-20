@@ -13,6 +13,7 @@ import {
   resolvePanelMaterialOptions,
   type PanelMaterialOptions,
 } from "./BoxMaterialApplier";
+import { PanelFactory, type PanelType } from "./PanelFactory";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -187,7 +188,7 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
   return specs;
 }
 
-type PanelType = "left" | "right" | "top" | "bottom" | "back" | "front";
+const panelFactory = new PanelFactory({ resolvePanelMaterialOptions });
 
 /**
  * Especificação de porta para o Viewer 3D (derivada de DoorLayerItem).
@@ -437,7 +438,7 @@ export function createDoorObject(spec: DoorSpec, material: THREE.Material, doorH
         : "left";
   const effectiveDoorHoles = mapDoorHolesByHingeSide(doorHoles, spec.widthM, resolvedHingeSide);
 
-  const mesh = createPanel(
+  const mesh = panelFactory.createPanel(
     spec.widthM,
     spec.heightM,
     spec.thicknessM,
@@ -679,7 +680,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
 
   // ===== FRENTE DA GAVETA =====
   // A frente fica colada ao corpo e flush no plano frontal
-  const front = createPanel(
+  const front = panelFactory.createPanel(
     spec.widthM,
     spec.heightM,
     spec.frontThicknessM,
@@ -707,7 +708,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
     
     // ===== LATERAL ESQUERDA =====
     if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
-      const leftSide = createPanel(
+      const leftSide = panelFactory.createPanel(
         spec.leftSideWidthM,
         spec.leftSideHeightM,
         spec.leftSideDepthM,
@@ -739,7 +740,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
 
     // ===== LATERAL DIREITA =====
     if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
-      const rightSide = createPanel(
+      const rightSide = panelFactory.createPanel(
         spec.rightSideWidthM,
         spec.rightSideHeightM,
         spec.rightSideDepthM,
@@ -771,7 +772,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
 
     // ===== FUNDO =====
     if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
-      const bottom = createPanel(
+      const bottom = panelFactory.createPanel(
         spec.bottomWidthM,
         spec.bottomThicknessM,
         spec.bottomDepthM,
@@ -803,7 +804,7 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
 
     // ===== TRASEIRA =====
     if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
-      const back = createPanel(
+      const back = panelFactory.createPanel(
         spec.backWidthM,
         spec.backHeightM,
         spec.backThicknessM,
@@ -857,27 +858,6 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
   return group;
 }
 
-function getPanelDimensionsFromGeometry(panel: THREE.Mesh, panelType: PanelType): {
-  width: number;
-  height: number;
-  thickness: number;
-} {
-  panel.geometry.computeBoundingBox();
-  const box = panel.geometry.boundingBox;
-  if (!box) {
-    return { width: 0, height: 0, thickness: THICKNESS_M };
-  }
-  const size = new THREE.Vector3();
-  box.getSize(size);
-  if (panelType === "left" || panelType === "right") {
-    return { width: size.z, height: size.y, thickness: size.x };
-  }
-  if (panelType === "top" || panelType === "bottom") {
-    return { width: size.x, height: size.z, thickness: size.y };
-  }
-  return { width: size.x, height: size.y, thickness: size.z };
-}
-
 function getInwardAxisForHole(panelType: PanelType, _hole: TechnicalDrillHole): THREE.Vector3 {
   if (panelType === "top") return new THREE.Vector3(0, -1, 0);
   if (panelType === "bottom") return new THREE.Vector3(0, 1, 0);
@@ -902,7 +882,7 @@ function getHole2DLocalPosition(
 }
 
 function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh, holes: TechnicalDrillHole[]): THREE.BufferGeometry[] {
-  const { width, height, thickness } = getPanelDimensionsFromGeometry(panel, panelType);
+  const { width, height, thickness } = panelFactory.getPanelDimensionsFromGeometry(panel, panelType);
   if (width <= 0 || height <= 0 || thickness <= 0) return [];
   const validDepthMax = Math.max(DRILL_MIN_DEPTH_M, thickness + DRILL_CSG_EPSILON_M * 2);
   const geometries: THREE.BufferGeometry[] = [];
@@ -1107,35 +1087,6 @@ function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType,
 }
 
 
-/**
- * Eixo da espessura do painel: 0 = X (left/right), 1 = Y (top/bottom), 2 = Z (back).
- * BoxGeometry: faces 0,1 = ±X; 2,3 = ±Y; 4,5 = ±Z. Cada face = 6 índices.
- */
-function getThinAxisForPanel(panelType: PanelType): 0 | 1 | 2 {
-  if (panelType === "left" || panelType === "right") return 0;
-  if (panelType === "top" || panelType === "bottom") return 1;
-  return 2;
-}
-
-function createBoxGeometryWithEdgeGroups(
-  width: number,
-  height: number,
-  depth: number,
-  thinAxis: 0 | 1 | 2
-): THREE.BufferGeometry {
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-  if (!geometry.attributes.uv2 && geometry.attributes.uv) {
-    geometry.setAttribute("uv2", geometry.attributes.uv.clone());
-  }
-  geometry.clearGroups();
-  const edgeFaces = thinAxis === 0 ? [0, 1] : thinAxis === 1 ? [2, 3] : [4, 5];
-  for (let i = 0; i < 6; i++) {
-    const materialIndex = edgeFaces.includes(i) ? 0 : 1;
-    geometry.addGroup(i * 6, 6, materialIndex);
-  }
-  return geometry;
-}
-
 export const buildBox = (options: BoxOptions = {}): BoxModel => {
   const opts = options ?? {};
   const { width, height, depth } = resolveDimensions(opts);
@@ -1156,11 +1107,11 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
       : { singleMaterial: getMaterial(panelType) };
 
   const panels = {
-    left: createPanel(specs.left.size[0], specs.left.size[1], specs.left.size[2], "left", "left", panelOptions("left")),
-    right: createPanel(specs.right.size[0], specs.right.size[1], specs.right.size[2], "right", "right", panelOptions("right")),
-    top: createPanel(specs.top.size[0], specs.top.size[1], specs.top.size[2], "top", "top", panelOptions("top")),
-    bottom: createPanel(specs.bottom.size[0], specs.bottom.size[1], specs.bottom.size[2], "bottom", "bottom", panelOptions("bottom")),
-    back: createPanel(specs.back.size[0], specs.back.size[1], specs.back.size[2], "back", "back", panelOptions("back")),
+    left: panelFactory.createPanel(specs.left.size[0], specs.left.size[1], specs.left.size[2], "left", "left", panelOptions("left")),
+    right: panelFactory.createPanel(specs.right.size[0], specs.right.size[1], specs.right.size[2], "right", "right", panelOptions("right")),
+    top: panelFactory.createPanel(specs.top.size[0], specs.top.size[1], specs.top.size[2], "top", "top", panelOptions("top")),
+    bottom: panelFactory.createPanel(specs.bottom.size[0], specs.bottom.size[1], specs.bottom.size[2], "bottom", "bottom", panelOptions("bottom")),
+    back: panelFactory.createPanel(specs.back.size[0], specs.back.size[1], specs.back.size[2], "back", "back", panelOptions("back")),
   };
 
   panels.right.rotation.y = Math.PI;
@@ -1199,7 +1150,7 @@ export const buildBox = (options: BoxOptions = {}): BoxModel => {
     const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
     shelfSpecs.forEach((spec, i) => {
       const shelfMat = baseMaterial.clone();
-      const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
+      const mesh = panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
       mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
       mesh.userData.shelfIndex = i;
       root.add(mesh);
@@ -1242,7 +1193,7 @@ export const updateBoxModel = (model: BoxModel, options: BoxOptions = {}): BoxMo
   panelKeys.forEach((key) => {
     const [wx, hy, dz] = specs[key].size;
     const [px, py, pz] = specs[key].pos;
-    updatePanelGeometry(model.panels[key], wx, hy, dz);
+    panelFactory.updatePanelGeometry(model.panels[key], wx, hy, dz);
     model.panels[key].position.set(px, py, pz);
     if (key === "right") {
       model.panels[key].rotation.y = Math.PI;
@@ -1262,68 +1213,6 @@ export const updateBoxModel = (model: BoxModel, options: BoxOptions = {}): BoxMo
   model.dimensions = { width, height, depth, thickness: THICKNESS_M };
   return model;
 };
-
-
-function createPanel(
-  width: number,
-  height: number,
-  depth: number,
-  name: string,
-  panelType: PanelType,
-  options?: PanelMaterialOptions | null
-): THREE.Mesh {
-  const resolved = resolvePanelMaterialOptions(options, panelType);
-  const isEdgeFace = "edgeMaterial" in resolved;
-  const geometry = isEdgeFace
-    ? createBoxGeometryWithEdgeGroups(width, height, depth, getThinAxisForPanel(panelType))
-    : (() => {
-        const g = new THREE.BoxGeometry(width, height, depth);
-        if (!g.attributes.uv2 && g.attributes.uv) {
-          g.setAttribute("uv2", g.attributes.uv.clone());
-        }
-        return g;
-      })();
-  const material = isEdgeFace
-    ? [resolved.edgeMaterial, resolved.faceMaterial]
-    : resolved.singleMaterial;
-  const mesh = new THREE.Mesh(geometry, material as THREE.Material);
-  mesh.name = name;
-  mesh.userData.panelType = panelType;
-  mesh.userData.thinAxis = getThinAxisForPanel(panelType);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  // FrontSide: só a face externa projeta sombra; faces internas não projetam para o exterior (reduz bleeding em ângulos extremos).
-  const panelShadowSide = THREE.FrontSide;
-  if (Array.isArray(mesh.material)) {
-    mesh.material.forEach((mat) => {
-      if (mat instanceof THREE.Material) {
-        mat.shadowSide = panelShadowSide;
-        mat.needsUpdate = true;
-      }
-    });
-  } else if (mesh.material instanceof THREE.Material) {
-    mesh.material.shadowSide = panelShadowSide;
-    mesh.material.needsUpdate = true;
-  }
-  return mesh;
-}
-
-function updatePanelGeometry(panel: THREE.Mesh, width: number, height: number, depth: number) {
-  panel.geometry.dispose();
-  const thinAxis = panel.userData.thinAxis as 0 | 1 | 2 | undefined;
-  const useEdgeGroups = Array.isArray(panel.material) && panel.material.length === 2 && thinAxis !== undefined;
-  const geometry = useEdgeGroups
-    ? createBoxGeometryWithEdgeGroups(width, height, depth, thinAxis)
-    : (() => {
-        const g = new THREE.BoxGeometry(width, height, depth);
-        if (!g.attributes.uv2 && g.attributes.uv) {
-          g.setAttribute("uv2", g.attributes.uv.clone());
-        }
-        return g;
-      })();
-  panel.geometry = geometry;
-}
-
 /** Compatível com o Viewer: devolve o grupo raiz do módulo (CIMA, FUNDO, LAT ESQ, LAT DIR, COSTA). */
 export const buildBoxGroup = (options?: BoxOptions | null) => {
   const opts = options ?? {};
@@ -1387,7 +1276,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
       if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
       const spec = specs[panelName];
       if (!spec) continue;
-      updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
+      panelFactory.updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
       child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
       if (panelName === "right") {
         child.rotation.y = Math.PI;
@@ -1409,7 +1298,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   if (!useLateralShelfHoles) {
     if (leftPanel) {
       const leftSpec = specs.left;
-      updatePanelGeometry(leftPanel, leftSpec.size[0], leftSpec.size[1], leftSpec.size[2]);
+      panelFactory.updatePanelGeometry(leftPanel, leftSpec.size[0], leftSpec.size[1], leftSpec.size[2]);
       leftPanel.position.set(leftSpec.pos[0], leftSpec.pos[1], leftSpec.pos[2]);
       leftPanel.rotation.y = 0;
       leftPanel.rotation.z = 0;
@@ -1418,7 +1307,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
     }
     if (rightPanel) {
       const rightSpec = specs.right;
-      updatePanelGeometry(rightPanel, rightSpec.size[0], rightSpec.size[1], rightSpec.size[2]);
+      panelFactory.updatePanelGeometry(rightPanel, rightSpec.size[0], rightSpec.size[1], rightSpec.size[2]);
       rightPanel.position.set(rightSpec.pos[0], rightSpec.pos[1], rightSpec.pos[2]);
       rightPanel.rotation.y = Math.PI;
       rightPanel.rotation.z = Math.PI;
@@ -1515,7 +1404,7 @@ export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null):
   existingShelves.forEach((obj) => group.remove(obj));
   shelfSpecs.forEach((spec, i) => {
     const shelfMat = (mat as THREE.Material).clone();
-    const mesh = createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
+    const mesh = panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.shelfIndex = i;
     group.add(mesh);
