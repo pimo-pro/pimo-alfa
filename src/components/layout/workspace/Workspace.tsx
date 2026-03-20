@@ -10,7 +10,7 @@ import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
 import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
 import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
-import { applyRoomMeshFromWallStore } from "../../../utils/roomMeshFromWallStore";
+import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../../../utils/roomMeshFromWallStore";
 import { useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
@@ -130,9 +130,10 @@ export default function Workspace({
   // Fluxo da sala é controlado exclusivamente pelo PainelSala (RoomManager).
   // Evita remoção/criação implícita da sala em mudanças de seleção do wallStore.
 
-  /** Após restaurar projeto/autosave (loadRoomConfig / clearRoom), recria ou remove a mesh da sala. */
+  /** Após restaurar projeto/autosave (loadRoomConfig / clearRoom), recria ou remove a mesh da sala e as aberturas. */
   useEffect(() => {
     applyRoomMeshFromWallStore(viewerApi);
+    applyRoomOpeningsFromWallStore(viewerApi);
   }, [viewerApi, roomMeshSyncToken]);
 
   // MultiBoxManager: sincroniza workspaceBoxes ↔ viewer; addBox/removeBox delegam a actions

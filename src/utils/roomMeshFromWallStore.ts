@@ -1,6 +1,6 @@
 /**
- * Sincroniza a sala 3D (RoomManager) com o estado persistido em wallStore após loadRoomConfig / clearRoom.
- * Aberturas (openings) ficam apenas no store até F4 recriar geometria no RoomBuilder.
+ * Sincroniza a sala 3D (RoomManager) com o estado persistido em wallStore após loadRoomConfig / clearRoom
+ * e recria portas/janelas no RoomBuilder a partir das openings do snapshot.
  */
 
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
@@ -25,4 +25,28 @@ export function applyRoomMeshFromWallStore(
   const heightM = Math.max(0.5, dims.heightCm / 100);
   const numWalls: 3 | 4 = walls.length >= 4 ? 4 : 3;
   viewerApi.createRoomWithDimensions(widthM, depthM, heightM, numWalls);
+}
+
+/** Chamado após applyRoomMeshFromWallStore quando existe sala; preserva ids das openings para UI/sync. */
+export function applyRoomOpeningsFromWallStore(
+  viewerApi: Pick<PimoViewerApi, "addDoorToRoom" | "addWindowToRoom" | "getRoomExists"> | null | undefined
+): void {
+  if (!viewerApi?.addDoorToRoom || !viewerApi.addWindowToRoom) return;
+  if (!viewerApi.getRoomExists?.()) return;
+  const { walls } = wallStore.getState();
+  walls.forEach((wall, wallIndex) => {
+    for (const o of wall.openings ?? []) {
+      const config = {
+        widthMm: o.widthMm,
+        heightMm: o.heightMm,
+        floorOffsetMm: o.floorOffsetMm,
+        horizontalOffsetMm: o.horizontalOffsetMm,
+      };
+      if (o.type === "door") {
+        viewerApi.addDoorToRoom!(wallIndex, config, o.id);
+      } else {
+        viewerApi.addWindowToRoom!(wallIndex, config, o.id);
+      }
+    }
+  });
 }
