@@ -8,27 +8,32 @@ import type { TechnicalDrillHole } from "../../core/types";
 import type { PanelType } from "./PanelFactory";
 
 type BoxAssemblerDeps = {
-  resolveDimensions: (options?: BoxOptions) => { width: number; height: number; depth: number };
-  getPanelSpecs: (width: number, height: number, depth: number) => BoxPanelLayoutSpecs;
-  getShelfSpecs: (width: number, height: number, depth: number, shelves?: number) => Array<{ size: [number, number, number]; pos: [number, number, number] }>;
+  resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
+  getPanelSpecs: (_width: number, _height: number, _depth: number) => BoxPanelLayoutSpecs;
+  getShelfSpecs: (
+    _width: number,
+    _height: number,
+    _depth: number,
+    _shelves?: number
+  ) => Array<{ size: [number, number, number]; pos: [number, number, number] }>;
   panelFactory: {
     createPanel: (
-      width: number,
-      height: number,
-      depth: number,
-      name: string,
-      panelType: PanelType,
-      options?: PanelMaterialOptions | null
+      _width: number,
+      _height: number,
+      _depth: number,
+      _name: string,
+      _panelType: PanelType,
+      _options?: PanelMaterialOptions | null
     ) => THREE.Mesh;
   };
   getFallbackPBRMaterial: () => THREE.Material;
   getEdgeMaterial: () => THREE.Material;
-  applyDrillHolesToPanelGeometry: (panel: THREE.Mesh, panelType: PanelType, holes: TechnicalDrillHole[] | undefined) => void;
-  buildDoorSpecs: (items: DoorLayerItem[]) => DoorSpec[];
-  buildDrawerSpecs: (items: DrawerLayerItem[]) => DrawerSpec[];
-  createDoorObject: (spec: DoorSpec, material: THREE.Material, doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
-  createDrawerObject: (spec: DrawerSpec, material: THREE.Material) => THREE.Object3D;
-  getMaterialForOfficialId: (idOrLabel: string) => THREE.Material;
+  applyDrillHolesToPanelGeometry: (_panel: THREE.Mesh, _panelType: PanelType, _holes: TechnicalDrillHole[] | undefined) => void;
+  buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
+  buildDrawerSpecs: (_items: DrawerLayerItem[]) => DrawerSpec[];
+  createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
+  createDrawerObject: (_spec: DrawerSpec, _material: THREE.Material) => THREE.Object3D;
+  getMaterialForOfficialId: (_idOrLabel: string) => THREE.Material;
   getDefaultOfficialMaterialId: () => string;
   thicknessM: number;
 };

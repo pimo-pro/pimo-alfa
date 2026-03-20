@@ -362,7 +362,14 @@ function updateStrategyState(
   placement: PlacementCandidate,
   kerf: number
 ): StrategyState {
-  return updateStrategyStateSolver(strategy, state as any, placement as any, kerf) as StrategyState;
+  const solverPlacement = {
+    x: placement.x,
+    y: placement.y,
+    w: placement.w,
+    h: placement.h,
+    rotation: placement.rotation,
+  };
+  return updateStrategyStateSolver(strategy, state, solverPlacement, kerf) as StrategyState;
 }
 
 function findPlacementForPiece(

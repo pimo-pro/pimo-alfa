@@ -92,11 +92,25 @@ export function findPlacementSkyline(
   cfg: RotationScoringConfig,
   bin: "firstFit" | "bestFit",
   deps: {
-    getOrientations: (piece: CutPiece, cfg: RotationScoringConfig) => Array<{ w: number; h: number; rotation: number }>;
-    overlaps: (x: number, y: number, w: number, h: number, placed: Array<{ x: number; y: number; w: number; h: number }>, kerf: number) => boolean;
-    scoreOrientationFit: (candidate: { x: number; y: number; w: number; h: number }, sheet: SheetDefinition) => number;
-    pickBestCandidateByRotation: (candidates: PlacementCandidate[], rotation: 0 | 90) => PlacementCandidate | null;
-    chooseOrientationWithRotationBias: (normal: PlacementCandidate | null, rotated: PlacementCandidate | null, cfg: RotationScoringConfig) => PlacementCandidate | null;
+    getOrientations: (_piece: CutPiece, _cfg: RotationScoringConfig) => Array<{ w: number; h: number; rotation: number }>;
+    overlaps: (
+      _x: number,
+      _y: number,
+      _w: number,
+      _h: number,
+      _placed: Array<{ x: number; y: number; w: number; h: number }>,
+      _kerf: number
+    ) => boolean;
+    scoreOrientationFit: (
+      _candidate: { x: number; y: number; w: number; h: number },
+      _sheet: SheetDefinition
+    ) => number;
+    pickBestCandidateByRotation: (_candidates: PlacementCandidate[], _rotation: 0 | 90) => PlacementCandidate | null;
+    chooseOrientationWithRotationBias: (
+      _normal: PlacementCandidate | null,
+      _rotated: PlacementCandidate | null,
+      _cfg: RotationScoringConfig
+    ) => PlacementCandidate | null;
   }
 ): PlacementCandidate | null {
   const orientations = deps.getOrientations(piece, cfg);
