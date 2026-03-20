@@ -2124,6 +2124,11 @@ export class ViewerCore {
    * Fluxo de criação: createRoomWithDimensions -> RoomManager
    * Fluxo de restore: loadRoomConfig -> roomMeshSyncToken -> Workspace -> applyRoomMeshFromWallStore
    */
+  /**
+   * @deprecated Preferir `createRoomWithDimensions` no fluxo de UI (Painel Sala).
+   * Mantido para compatibilidade com `ViewerApi.createRoom(RoomConfig)` em fluxos programáticos/snapshot.
+   * Internamente este método converte `RoomConfig` para dimensões e delega em `createRoomWithDimensions`.
+   */
   createRoom(config: RoomConfig): void {
     const { walls, numWalls } = config;
     if (!walls?.length || walls.length < 3) {
