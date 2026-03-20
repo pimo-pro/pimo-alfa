@@ -92,6 +92,12 @@ import {
   computeSolutionMetrics as computeSolutionMetricsScoring,
   type GlobalScoreMetrics,
 } from "./scoring/solutionMetrics";
+import { optimizeLastSheetLocally as optimizeLastSheetLocallyOpt } from "./optimization/lastSheetRefine";
+import {
+  applyLnsRepack as applyLnsRepackOpt,
+  mutatePlacements as mutatePlacementsOpt,
+  optimizeWithMetaHeuristics as optimizeWithMetaHeuristicsOpt,
+} from "./optimization/metaheuristics";
 
 const DEFAULT_KERF_MM = 3;
 const MIN_UTILIZATION_PERCENT = 0.8;
@@ -99,10 +105,6 @@ const MAIN_SEARCH_WINDOW = 32;
 const DEFAULT_ROTATION_WEIGHT = 0.35;
 const DEFAULT_ROTATION_PENALTY = 0.25;
 const DEFAULT_ROTATION_MODE: RotationPreferenceMode = "auto";
-const EPS = 0.001;
-const LAST_SHEET_SMALL_PART_THRESHOLD_MM2 = 120000; // ~350x350
-const LAST_SHEET_MICRO_ADJUST_MM = 3;
-
 type RotationPreferenceMode = "auto" | "aggressive" | "disabled";
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
@@ -302,176 +304,21 @@ function getSheetBoundingBox(placements: CutPlacement[]) {
   return getSheetBoundingBoxScoring(placements);
 }
 
-function tryMicroAdjustLastSheet(placements: CutPlacement[], sheet: SheetDefinition): CutPlacement[] {
-  if (placements.length <= 1) return placements;
-  const adjusted = placements.map((p) => ({ ...p }));
-  const offsets = [-LAST_SHEET_MICRO_ADJUST_MM, -2, -1, 1, 2, LAST_SHEET_MICRO_ADJUST_MM];
-  const startBox = getSheetBoundingBox(adjusted);
-  let currentScore = -startBox.area;
-  for (let i = 0; i < adjusted.length; i++) {
-    const p = adjusted[i];
-    let bestX = p.x_mm;
-    let bestY = p.y_mm;
-    let bestScore = currentScore;
-    for (const dx of offsets) {
-      for (const dy of offsets) {
-        const nx = p.x_mm + dx;
-        const ny = p.y_mm + dy;
-        if (!isInsideSheet(nx, ny, p.largura_mm, p.altura_mm, sheet)) continue;
-        const others: PlacedRect[] = adjusted
-          .filter((_, idx) => idx !== i)
-          .map((o) => ({ x: o.x_mm, y: o.y_mm, w: o.largura_mm, h: o.altura_mm }));
-        if (overlaps(nx, ny, p.largura_mm, p.altura_mm, others, 0)) continue;
-        const trial = adjusted.map((o, idx) => (idx === i ? { ...o, x_mm: nx, y_mm: ny } : o));
-        const box = getSheetBoundingBox(trial);
-        const score = -box.area;
-        if (score > bestScore) {
-          bestScore = score;
-          bestX = nx;
-          bestY = ny;
-        }
-      }
-    }
-    if (bestX !== p.x_mm || bestY !== p.y_mm) {
-      adjusted[i] = { ...adjusted[i], x_mm: bestX, y_mm: bestY };
-      currentScore = bestScore;
-    }
-  }
-  return adjusted;
-}
-
-function tryLocalRotationRefine(placements: CutPlacement[], sheet: SheetDefinition, kerf: number): CutPlacement[] {
-  if (placements.length <= 1) return placements;
-  const refined = placements.map((p) => ({ ...p }));
-  for (let i = 0; i < refined.length; i++) {
-    const p = refined[i];
-    if (Math.abs(p.largura_mm - p.altura_mm) < EPS) continue;
-    const others = refined.filter((_, idx) => idx !== i).map((o) => ({ ...o }));
-    const rotatedCandidate = findBestResidualPlacement(
-      {
-        ...p,
-        largura_mm: p.altura_mm,
-        altura_mm: p.largura_mm,
-        rotacao: p.rotacao === 90 ? 0 : 90,
-      },
-      others,
-      sheet,
-      kerf
-    );
-    if (!rotatedCandidate) continue;
-    const oldScore = computePlacementCompactnessScore(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, sheet);
-    const newScore = computePlacementCompactnessScore(
-      rotatedCandidate.x_mm,
-      rotatedCandidate.y_mm,
-      rotatedCandidate.largura_mm,
-      rotatedCandidate.altura_mm,
-      sheet
-    );
-    if (newScore > oldScore) refined[i] = rotatedCandidate;
-  }
-  return refined;
-}
-
-function trySwapSmallPieceToPrevious(
-  previous: SheetResult[],
-  lastPlacements: CutPlacement[],
-  sheet: SheetDefinition,
-  kerf: number
-): { moved: boolean; lastPlacements: CutPlacement[] } {
-  const smallLast = [...lastPlacements]
-    .filter((p) => p.largura_mm * p.altura_mm <= LAST_SHEET_SMALL_PART_THRESHOLD_MM2)
-    .sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm);
-
-  for (const target of smallLast) {
-    for (let sIdx = 0; sIdx < previous.length; sIdx++) {
-      const sheetRes = previous[sIdx];
-      const candidates = [...sheetRes.placements]
-        .sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm)
-        .slice(0, 6);
-      for (const victim of candidates) {
-        const kept = sheetRes.placements.filter((p) => p !== victim);
-        const fitTarget = findBestResidualPlacement(target, kept, sheet, kerf);
-        if (!fitTarget) continue;
-        const nextLastBase = lastPlacements.filter((p) => p !== target);
-        const fitVictimInLast = findBestResidualPlacement(victim, nextLastBase, sheet, kerf);
-        if (!fitVictimInLast) continue;
-        sheetRes.placements = [...kept, { ...fitTarget, sheetIndex: sIdx }];
-        return {
-          moved: true,
-          lastPlacements: [...nextLastBase, { ...fitVictimInLast, sheetIndex: previous.length }],
-        };
-      }
-    }
-  }
-
-  return { moved: false, lastPlacements };
-}
-
 function optimizeLastSheetLocally(
   sheets: SheetResult[],
   sheet: SheetDefinition,
   kerf: number,
   scoreModel: ScoreModel
 ): SheetResult[] {
-  if (sheets.length <= 1) return sheets;
-  const cloned = cloneSheets(sheets);
-  const lastIndex = cloned.length - 1;
-  const last = cloned[lastIndex];
-  const previous = cloned.slice(0, lastIndex);
-  if (last.placements.length === 0) return cloned;
-
-  const movable = [...last.placements].sort(
-    (a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm
-  );
-  const remain = new Set(last.placements.map((_p, i) => i));
-  const movedToPrev: CutPlacement[] = [];
-
-  for (const piece of movable) {
-    const area = piece.largura_mm * piece.altura_mm;
-    if (area > LAST_SHEET_SMALL_PART_THRESHOLD_MM2) continue;
-    let moved = false;
-    for (let sIdx = 0; sIdx < previous.length; sIdx++) {
-      const targetSheet = previous[sIdx];
-      const fit = findBestResidualPlacement(piece, targetSheet.placements, sheet, kerf);
-      if (!fit) continue;
-      targetSheet.placements.push({ ...fit, sheetIndex: sIdx });
-      movedToPrev.push(piece);
-      moved = true;
-      break;
-    }
-    if (moved) {
-      const idx = last.placements.findIndex((p) => p === piece);
-      if (idx >= 0) remain.delete(idx);
-    }
-  }
-
-  if (movedToPrev.length === 0) return cloned;
-  let nextLastPlacements = last.placements.filter((_p, idx) => remain.has(idx));
-  const swapAttempt = trySwapSmallPieceToPrevious(previous, nextLastPlacements, sheet, kerf);
-  if (swapAttempt.moved) nextLastPlacements = swapAttempt.lastPlacements;
-  nextLastPlacements = tryLocalRotationRefine(nextLastPlacements, sheet, kerf);
-  nextLastPlacements = tryMicroAdjustLastSheet(nextLastPlacements, sheet);
-  if (nextLastPlacements.length === 0) {
-    const compact = previous.map((s, idx) => ({
-      sheet: { ...s.sheet },
-      placements: s.placements.map((p) => ({ ...p, sheetIndex: idx })),
-    }));
-    return compact;
-  }
-
-  const baseMetrics = computeSolutionMetrics(cloned, sheet, scoreModel);
-  const candidateSheets = [
-    ...previous.map((s, idx) => ({
-      sheet: { ...s.sheet },
-      placements: s.placements.map((p) => ({ ...p, sheetIndex: idx })),
-    })),
-    {
-      sheet: { ...sheet },
-      placements: nextLastPlacements.map((p) => ({ ...p, sheetIndex: previous.length })),
-    },
-  ];
-  const candidateMetrics = computeSolutionMetrics(candidateSheets, sheet, scoreModel);
-  return candidateMetrics.score <= baseMetrics.score ? candidateSheets : cloned;
+  return optimizeLastSheetLocallyOpt(sheets, sheet, kerf, scoreModel, {
+    getSheetBoundingBox,
+    isInsideSheet,
+    overlaps,
+    findBestResidualPlacement,
+    computePlacementCompactnessScore,
+    cloneSheets,
+    computeSolutionMetrics,
+  });
 }
 
 function scoreOrientationFit(
@@ -731,65 +578,7 @@ function mutatePlacements(
   _sheet: SheetDefinition,
   rng?: SeededRng
 ): CutPlacement[] {
-  const rnd = rng ?? { int: randomInt };
-  if (placements.length === 0) return placements.map((p) => ({ ...p }));
-  const out = placements.map((p) => ({ ...p }));
-  const bySheet = new Map<number, number[]>();
-  out.forEach((p, idx) => {
-    if (!bySheet.has(p.sheetIndex)) bySheet.set(p.sheetIndex, []);
-    bySheet.get(p.sheetIndex)!.push(idx);
-  });
-  const sheetKeys = Array.from(bySheet.keys());
-  if (sheetKeys.length === 0) return out;
-
-  if (move === "swapBetweenSheets" && sheetKeys.length >= 2) {
-    const sA = sheetKeys[rnd.int(sheetKeys.length)];
-    let sB = sheetKeys[rnd.int(sheetKeys.length)];
-    if (sA === sB && sheetKeys.length > 1) sB = sheetKeys[(sheetKeys.indexOf(sA) + 1) % sheetKeys.length];
-    const idxA = bySheet.get(sA)?.[rnd.int(bySheet.get(sA)!.length)];
-    const idxB = bySheet.get(sB)?.[rnd.int(bySheet.get(sB)!.length)];
-    if (idxA !== undefined && idxB !== undefined) {
-      const tmp = out[idxA];
-      out[idxA] = out[idxB];
-      out[idxB] = tmp;
-    }
-    return out;
-  }
-
-  if (move === "movePieceAcrossSheets" && sheetKeys.length >= 2) {
-    const from = sheetKeys[rnd.int(sheetKeys.length)];
-    let to = sheetKeys[rnd.int(sheetKeys.length)];
-    if (from === to && sheetKeys.length > 1) to = sheetKeys[(sheetKeys.indexOf(from) + 1) % sheetKeys.length];
-    const src = bySheet.get(from) ?? [];
-    if (src.length > 0) {
-      const idx = src[rnd.int(src.length)];
-      const [item] = out.splice(idx, 1);
-      const insertionBase = bySheet.get(to) ?? [];
-      const insertPos = insertionBase.length > 0 ? insertionBase[rnd.int(insertionBase.length)] : out.length;
-      out.splice(Math.min(insertPos, out.length), 0, item);
-    }
-    return out;
-  }
-
-  if (move === "reorderSheet") {
-    const targetSheet = sheetKeys[rnd.int(sheetKeys.length)];
-    const indices = [...(bySheet.get(targetSheet) ?? [])];
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = rnd.int(i + 1);
-      const a = indices[i];
-      const b = indices[j];
-      const tmp = out[a];
-      out[a] = out[b];
-      out[b] = tmp;
-    }
-    return out;
-  }
-
-  // flipRotation: move piece close to front/back to alter insertion dynamics.
-  const idx = rnd.int(out.length);
-  const [picked] = out.splice(idx, 1);
-  out.splice(rnd.int(2) === 0 ? 0 : out.length, 0, picked);
-  return out;
+  return mutatePlacementsOpt(placements, move, _sheet, rng, { randomInt });
 }
 
 function applyLnsRepack(
@@ -803,83 +592,22 @@ function applyLnsRepack(
   trialPool?: TrialConfig[],
   scoreModel: ScoreModel = "legacy"
 ): SheetResult[] {
-  const rnd = rng ?? { int: randomInt };
-  const all = placements.map((p) => ({ ...p }));
-  if (all.length === 0) return [];
-
-  // LNS destroy/repair guiado por hotspots de vazio:
-  // prioriza remoção em chapas com maior desperdício local.
-  const destroyCount = Math.max(1, Math.floor(all.length * destroyRatio));
-  const removed: CutPlacement[] = [];
-  const bySheet = new Map<number, CutPlacement[]>();
-  for (const p of all) {
-    if (!bySheet.has(p.sheetIndex)) bySheet.set(p.sheetIndex, []);
-    bySheet.get(p.sheetIndex)!.push(p);
-  }
-  const sheetHotspots = Array.from(bySheet.entries())
-    .map(([sheetIndex, list]) => {
-      const used = list.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
-      const area = Math.max(1, sheet.largura_mm * sheet.altura_mm);
-      const waste = area - used;
-      return { sheetIndex, waste };
-    })
-    .sort((a, b) => b.waste - a.waste);
-  const hotspotSet = new Set(sheetHotspots.slice(0, Math.max(1, Math.ceil(sheetHotspots.length / 2))).map((s) => s.sheetIndex));
-
-  for (let i = 0; i < destroyCount && all.length > 0; i++) {
-    const hotspotCandidates = all
-      .map((p, idx) => ({ idx, p }))
-      .filter((x) => hotspotSet.has(x.p.sheetIndex));
-    const pool = hotspotCandidates.length > 0 ? hotspotCandidates : all.map((p, idx) => ({ idx, p }));
-    const pick = pool[rnd.int(pool.length)];
-    removed.push(all[pick.idx]);
-    all.splice(pick.idx, 1);
-  }
-  for (const r of removed) {
-    const pos = rnd.int(all.length + 1);
-    all.splice(pos, 0, r);
-  }
-
-  const allPieces: CutPiece[] = all.map((p) => ({
-    largura_mm: p.largura_mm,
-    altura_mm: p.altura_mm,
-    espessura_mm: sheet.espessura_mm,
-    quantidade: 1,
-    boxId: p.boxId,
-    partName: p.partName,
-    materialId: p.materialId,
-    materialName: p.materialName,
-  }));
-
-  const candidateTrials: TrialConfig[] = trialPool && trialPool.length > 0 ? trialPool : [
-    { strategy: "skyline", binHeuristic: "firstFit" },
-    { strategy: "skyline", binHeuristic: "bestFit" },
-    { strategy: "shelf", binHeuristic: "firstFit" },
-    { strategy: "guillotine", binHeuristic: "firstFit" },
-  ];
-  let bestSheets: SheetResult[] = [];
-  let bestScore = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < Math.min(4, candidateTrials.length); i++) {
-    const trial = candidateTrials[(i + rnd.int(candidateTrials.length)) % candidateTrials.length];
-    const packed = simulateTrialForGroup(
-      allPieces,
-      sheet,
-      kerf,
-      minUtilizationPercent,
-      rotationCfg,
-      trial,
-      false,
-      true,
-      scoreModel
-    );
-    const score = computeSolutionMetrics(packed.sheets, sheet, scoreModel).score;
-    if (score < bestScore) {
-      bestScore = score;
-      bestSheets = packed.sheets;
+  return applyLnsRepackOpt(
+    placements,
+    sheet,
+    kerf,
+    minUtilizationPercent,
+    rotationCfg,
+    destroyRatio,
+    rng,
+    trialPool,
+    scoreModel,
+    {
+      randomInt,
+      simulateTrialForGroup,
+      computeSolutionMetrics,
     }
-  }
-  bestSheets.forEach((s, idx) => s.placements.forEach((p) => (p.sheetIndex = idx)));
-  return bestSheets;
+  );
 }
 
 function optimizeWithMetaHeuristics(
@@ -903,64 +631,26 @@ function optimizeWithMetaHeuristics(
     totalMoves: number;
   };
 } {
-  const rng = createSeededRng(seed);
-  let current = cloneSheets(initialSheets);
-  let currentMetrics = computeSolutionMetrics(current, sheet, scoreModel);
-  let best = cloneSheets(current);
-  let bestMetrics = { ...currentMetrics };
-  const initialMetrics = { ...currentMetrics };
-  let temp = meta.initialTemperature;
-  let acceptedMoves = 0;
-
-  const moves: MetaMove[] = ["swapBetweenSheets", "movePieceAcrossSheets", "reorderSheet", "flipRotation"];
-  for (let iter = 0; iter < meta.iterations; iter++) {
-    const move = moves[rng.int(moves.length)];
-    const basePlacements = flattenPlacements(current);
-    const mutated = mutatePlacements(basePlacements, move, sheet, rng);
-    let candidateSheets: SheetResult[] = applyLnsRepack(
-      mutated,
-      sheet,
-      kerf,
-      minUtilizationPercent,
-      rotationCfg,
-      meta.lnsDestroyRatio,
-      rng,
-      trialPool,
-      scoreModel
-    );
-    candidateSheets = layoutFromPlacements(flattenPlacements(candidateSheets), sheet).sheets;
-    if (candidateSheets.length === 0) continue;
-    const candidateMetrics = computeSolutionMetrics(candidateSheets, sheet, scoreModel);
-    const delta = candidateMetrics.score - currentMetrics.score;
-    const normalizedDelta = delta / 100000;
-    const accept = normalizedDelta <= 0 || Math.exp(-normalizedDelta / Math.max(0.001, temp)) > rng.next();
-    if (accept) {
-      current = cloneSheets(candidateSheets);
-      currentMetrics = candidateMetrics;
-      acceptedMoves++;
-      if (candidateMetrics.score < bestMetrics.score) {
-        best = cloneSheets(candidateSheets);
-        bestMetrics = { ...candidateMetrics };
-      }
+  return optimizeWithMetaHeuristicsOpt(
+    initialSheets,
+    sheet,
+    kerf,
+    minUtilizationPercent,
+    rotationCfg,
+    meta,
+    seed,
+    trialPool,
+    scoreModel,
+    {
+      randomInt,
+      createSeededRng,
+      cloneSheets,
+      flattenPlacements,
+      layoutFromPlacements,
+      computeSolutionMetrics,
+      simulateTrialForGroup,
     }
-    temp *= meta.coolingRate;
-  }
-
-  const improvementPercent =
-    initialMetrics.score > 0
-      ? Number((((initialMetrics.score - bestMetrics.score) / initialMetrics.score) * 100).toFixed(3))
-      : 0;
-  return {
-    sheets: bestMetrics.score <= initialMetrics.score ? best : cloneSheets(initialSheets),
-    diagnostics: {
-      iterations: meta.iterations,
-      bestScore: bestMetrics.score,
-      initialScore: initialMetrics.score,
-      improvementPercent,
-      acceptedMoves,
-      totalMoves: meta.iterations,
-    },
-  };
+  );
 }
 
 function simulateTrialForGroup(
