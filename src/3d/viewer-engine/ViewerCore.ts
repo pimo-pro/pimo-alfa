@@ -2116,8 +2116,25 @@ export class ViewerCore {
   }
 
   createRoom(config: RoomConfig): void {
-    void config;
-    this.clearRoomBounds();
+    const { walls, numWalls } = config;
+    if (!walls?.length || walls.length < 3) {
+      this.removeRoom();
+      return;
+    }
+    const w0 = walls[0]?.lengthMm ?? 3000;
+    const w2 = walls[Math.min(2, walls.length - 1)]?.lengthMm ?? w0;
+    const w1 = walls[1]?.lengthMm ?? w0;
+    const w3 = walls.length >= 4 ? (walls[3]?.lengthMm ?? w1) : w1;
+    const widthM = Math.max(0.1, (w0 + w2) / 2 / 1000);
+    const depthM = Math.max(0.1, (w1 + w3) / 2 / 1000);
+    const heightM = Math.max(
+      0.1,
+      ...walls.map((w) => (w.heightMm ?? 2800) / 1000),
+      2.8
+    );
+    const n: 3 | 4 =
+      numWalls === 3 || walls.length === 3 ? 3 : walls.length >= 4 ? 4 : 3;
+    this.createRoomWithDimensions(widthM, depthM, heightM, n);
   }
 
   /** Cria a sala com o sistema RoomManager. numWalls: 4 = fechada, 3 = sala de estar (aberta, sem parede traseira). */
