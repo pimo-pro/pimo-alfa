@@ -140,3 +140,39 @@ export type CutLayoutResult = {
     }>;
   };
 };
+
+/** Opções públicas do motor de nesting (runCutLayout / runCutLayoutResult). */
+export type CutLayoutRotationPreferenceMode = "auto" | "aggressive" | "disabled";
+
+export type CutLayoutTrialConfig = {
+  strategy: "skyline" | "shelf" | "guillotine";
+  binHeuristic: "firstFit" | "bestFit";
+};
+
+export type CutLayoutMetaHeuristicsOptions = {
+  enabled?: boolean;
+  iterations?: number;
+  initialTemperature?: number;
+  coolingRate?: number;
+  lnsDestroyRatio?: number;
+  multiStartCount?: number;
+  seedBase?: number;
+};
+
+export type CutLayoutScoreModel = "legacy" | "v32";
+
+export type CutLayoutEngineOptions = {
+  sheetLargura_mm?: number;
+  sheetAltura_mm?: number;
+  kerf_mm?: number;
+  minUtilizationPercent?: number;
+  rotationWeight?: number;
+  rotationPenalty?: number;
+  rotationPreferenceMode?: CutLayoutRotationPreferenceMode;
+  collectDiagnostics?: boolean;
+  groupByThicknessOnly?: boolean;
+  strategyTrials?: CutLayoutTrialConfig[];
+  useMetaHeuristics?: boolean;
+  metaHeuristics?: CutLayoutMetaHeuristicsOptions;
+  scoreModel?: CutLayoutScoreModel;
+};

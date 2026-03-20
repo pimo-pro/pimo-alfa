@@ -9,13 +9,16 @@
 import type {
   CutPiece,
   CutPlacement,
+  CutLayoutEngineOptions,
   SheetDefinition,
   SheetResult,
   CutLayoutResult,
+  CutLayoutMetaHeuristicsOptions as MetaHeuristicsOptions,
+  CutLayoutScoreModel as ScoreModel,
+  CutLayoutTrialConfig as TrialConfig,
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial, OperationResult } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
-import { CUT_LAYOUT_SAFETY_MARGIN_MM } from "./layoutCoordinateSystem";
 import { SYSTEM_BACK_MM } from "../baseCabinets";
 import {
   applyFixedMarginOffset as applyFixedMarginOffsetUtil,
@@ -98,14 +101,16 @@ import {
   mutatePlacements as mutatePlacementsOpt,
   optimizeWithMetaHeuristics as optimizeWithMetaHeuristicsOpt,
 } from "./optimization/metaheuristics";
+import {
+  simulateTrialForGroup as simulateTrialForGroupPipeline,
+  type SimulateTrialForGroupDeps,
+  type SimulateTrialForGroupResult,
+} from "./pipeline/trialRunner";
+import { runCutLayout as runCutLayoutPipeline, type RunCutLayoutDeps } from "./pipeline/layoutPipeline";
+import { runCutLayoutResult as runCutLayoutResultPipeline } from "./pipeline/resultWrapper";
 
-const DEFAULT_KERF_MM = 3;
-const MIN_UTILIZATION_PERCENT = 0.8;
-const MAIN_SEARCH_WINDOW = 32;
-const DEFAULT_ROTATION_WEIGHT = 0.35;
-const DEFAULT_ROTATION_PENALTY = 0.25;
-const DEFAULT_ROTATION_MODE: RotationPreferenceMode = "auto";
-type RotationPreferenceMode = "auto" | "aggressive" | "disabled";
+export type { CutLayoutEngineOptions } from "./cutLayoutTypes";
+
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
 type ReorderMode = "production" | "gapFill";
@@ -115,39 +120,7 @@ type SkylineSegment = { x: number; y: number };
 type Shelf = { y: number; height: number; nextX: number };
 type FreeRect = { x: number; y: number; w: number; h: number };
 
-type TrialConfig = {
-  strategy: PlacementStrategy;
-  binHeuristic: BinHeuristic;
-};
-
 type MetaMove = "swapBetweenSheets" | "movePieceAcrossSheets" | "reorderSheet" | "flipRotation";
-
-type MetaHeuristicsOptions = {
-  enabled?: boolean;
-  iterations?: number;
-  initialTemperature?: number;
-  coolingRate?: number;
-  lnsDestroyRatio?: number;
-  multiStartCount?: number;
-  seedBase?: number;
-};
-type ScoreModel = "legacy" | "v32";
-
-export type CutLayoutEngineOptions = {
-  sheetLargura_mm?: number;
-  sheetAltura_mm?: number;
-  kerf_mm?: number;
-  minUtilizationPercent?: number;
-  rotationWeight?: number;
-  rotationPenalty?: number;
-  rotationPreferenceMode?: RotationPreferenceMode;
-  collectDiagnostics?: boolean;
-  groupByThicknessOnly?: boolean;
-  strategyTrials?: TrialConfig[];
-  useMetaHeuristics?: boolean;
-  metaHeuristics?: MetaHeuristicsOptions;
-  scoreModel?: ScoreModel;
-};
 
 /** Formato de furo para layout/TCN (normalizado a partir de drillHoles ou legado). */
 export type NormalizedHoleForPiece = {
@@ -182,39 +155,6 @@ type StateSkyline = { skyline: SkylineSegment[] };
 type StateShelf = { shelves: Shelf[] };
 type StateGuillotine = { freeRects: FreeRect[] };
 type StrategyState = StateSkyline | StateShelf | StateGuillotine;
-
-function getDefaultTrials(): TrialConfig[] {
-  return [
-    { strategy: "skyline", binHeuristic: "bestFit" },
-    { strategy: "skyline", binHeuristic: "firstFit" },
-    { strategy: "shelf", binHeuristic: "bestFit" },
-    { strategy: "shelf", binHeuristic: "firstFit" },
-    { strategy: "guillotine", binHeuristic: "bestFit" },
-    { strategy: "guillotine", binHeuristic: "firstFit" },
-  ];
-}
-
-function getDefaultMetaOptions(
-  enabledFromFlag: boolean | undefined,
-  raw?: MetaHeuristicsOptions
-): Required<MetaHeuristicsOptions> {
-  return {
-    enabled: raw?.enabled ?? Boolean(enabledFromFlag),
-    iterations: Math.max(10, raw?.iterations ?? 180),
-    initialTemperature: Math.max(0.001, raw?.initialTemperature ?? 1.0),
-    coolingRate: Math.min(0.999, Math.max(0.8, raw?.coolingRate ?? 0.97)),
-    lnsDestroyRatio: Math.min(0.6, Math.max(0.05, raw?.lnsDestroyRatio ?? 0.2)),
-    multiStartCount: Math.min(50, Math.max(1, raw?.multiStartCount ?? 1)),
-    seedBase: Math.max(1, Math.floor(raw?.seedBase ?? 1337)),
-  };
-}
-
-function isDevRuntime(): boolean {
-  if (typeof process !== "undefined" && process?.env) {
-    return process.env.NODE_ENV !== "production";
-  }
-  return true;
-}
 
 function getPieceArea(piece: CutPiece): number {
   return getPieceAreaUtil(piece);
@@ -653,6 +593,18 @@ function optimizeWithMetaHeuristics(
   );
 }
 
+const SIMULATE_TRIAL_GROUP_DEPS: SimulateTrialForGroupDeps = {
+  reorderPieces,
+  initStrategyState,
+  pickBestPieceForSheet,
+  isInsideSheet,
+  updateStrategyState,
+  findPlacementForPiece,
+  calculateSheetUtilization,
+  optimizeLastSheetLocally,
+  computeSolutionMetrics,
+};
+
 function simulateTrialForGroup(
   pieces: CutPiece[],
   sheet: SheetDefinition,
@@ -663,219 +615,34 @@ function simulateTrialForGroup(
   collectDiagnostics: boolean,
   forceInputOrder: boolean = false,
   scoreModel: ScoreModel = "legacy"
-): {
-  sheets: SheetResult[];
-  rejectedByLimit: Array<{ partName: string; boxId: string; largura_mm: number; altura_mm: number; reason: string }>;
-  gapFillPlacements: Array<{
-    partName: string;
-    boxId: string;
-    sheetIndex: number;
-    rotacao: number;
-    x_mm: number;
-    y_mm: number;
-    largura_mm: number;
-    altura_mm: number;
-  }>;
-  gapFillAttempts: number;
-  rescueAttempts: number;
-  usedArea: number;
-  usefulLeftoverArea: number;
-  score: number;
-  advanced: GlobalScoreMetrics["advanced"];
-} {
-  const remaining = forceInputOrder ? pieces.map((p) => ({ ...p })) : reorderPieces(pieces, "production");
-  const sheets: SheetResult[] = [];
-  const rejectedByLimit: Array<{ partName: string; boxId: string; largura_mm: number; altura_mm: number; reason: string }> = [];
-  const gapFillPlacements: Array<{
-    partName: string;
-    boxId: string;
-    sheetIndex: number;
-    rotacao: number;
-    x_mm: number;
-    y_mm: number;
-    largura_mm: number;
-    altura_mm: number;
-  }> = [];
-  let gapFillAttempts = 0;
-  let rescueAttempts = 0;
-
-  while (remaining.length > 0) {
-    const placements: CutPlacement[] = [];
-    const placedRects: PlacedRect[] = [];
-    let state = initStrategyState(trial.strategy, sheet);
-    const sheetIndex = sheets.length;
-
-    while (remaining.length > 0) {
-      const best = pickBestPieceForSheet(
-        remaining,
-        sheet,
-        trial.strategy,
-        state,
-        placedRects,
-        kerf,
-        MAIN_SEARCH_WINDOW,
-        rotationCfg,
-        trial.binHeuristic
-      );
-      if (!best) break;
-
-      const piece = remaining[best.index];
-      if (!isInsideSheet(best.placement.x, best.placement.y, best.placement.w, best.placement.h, sheet)) {
-        rejectedByLimit.push({
-          partName: piece.partName,
-          boxId: piece.boxId,
-          largura_mm: piece.largura_mm,
-          altura_mm: piece.altura_mm,
-          reason: "invalid-placement-outside-sheet",
-        });
-        remaining.splice(best.index, 1);
-        continue;
-      }
-
-      placements.push({
-        x_mm: best.placement.x,
-        y_mm: best.placement.y,
-        largura_mm: best.placement.w,
-        altura_mm: best.placement.h,
-        rotacao: best.placement.rotation,
-        sheetIndex,
-        boxId: piece.boxId,
-        partName: piece.partName,
-        materialId: piece.materialId,
-        materialName: piece.materialName,
-        holes: piece.holes,
-        pieceNumber: piece.pieceNumber,
-        shortCode: piece.shortCode,
-      });
-      placedRects.push({ x: best.placement.x, y: best.placement.y, w: best.placement.w, h: best.placement.h });
-      state = updateStrategyState(trial.strategy, state, best.placement, kerf);
-      remaining.splice(best.index, 1);
-    }
-
-    if (remaining.length > 0 && placements.length === 0) {
-      rejectedByLimit.push({
-        partName: remaining[0].partName,
-        boxId: remaining[0].boxId,
-        largura_mm: remaining[0].largura_mm,
-        altura_mm: remaining[0].altura_mm,
-        reason: "piece-does-not-fit-empty-sheet",
-      });
-      remaining.shift();
-      continue;
-    }
-
-    if (remaining.length > 0) {
-      gapFillAttempts += 1;
-      const gapOrdered = reorderPieces(remaining, "gapFill");
-      for (let i = 0; i < gapOrdered.length; i++) {
-        const target = gapOrdered[i];
-        const originalIndex = remaining.findIndex((r) => r === target);
-        if (originalIndex < 0) continue;
-        const fit = findPlacementForPiece(
-          target,
-          trial.strategy,
-          sheet,
-          placedRects,
-          state,
-          kerf,
-          rotationCfg,
-          "bestFit"
-        );
-        if (!fit) continue;
-        placements.push({
-          x_mm: fit.x,
-          y_mm: fit.y,
-          largura_mm: fit.w,
-          altura_mm: fit.h,
-          rotacao: fit.rotation,
-          sheetIndex,
-          boxId: target.boxId,
-          partName: target.partName,
-          materialId: target.materialId,
-          materialName: target.materialName,
-          holes: target.holes,
-        });
-        placedRects.push({ x: fit.x, y: fit.y, w: fit.w, h: fit.h });
-        state = updateStrategyState(trial.strategy, state, fit, kerf);
-        gapFillPlacements.push({
-          partName: target.partName,
-          boxId: target.boxId,
-          sheetIndex,
-          rotacao: fit.rotation,
-          x_mm: fit.x,
-          y_mm: fit.y,
-          largura_mm: fit.w,
-          altura_mm: fit.h,
-        });
-        remaining.splice(originalIndex, 1);
-      }
-    }
-
-    if (remaining.length > 0) {
-      const util = calculateSheetUtilization(placedRects, sheet.largura_mm, sheet.altura_mm);
-      if (util < minUtilizationPercent) {
-        rescueAttempts += 1;
-        const rescue = pickBestPieceForSheet(
-          remaining,
-          sheet,
-          trial.strategy,
-          state,
-          placedRects,
-          kerf,
-          remaining.length,
-          rotationCfg,
-          "bestFit"
-        );
-        if (rescue) {
-          const piece = remaining[rescue.index];
-          placements.push({
-            x_mm: rescue.placement.x,
-            y_mm: rescue.placement.y,
-            largura_mm: rescue.placement.w,
-            altura_mm: rescue.placement.h,
-            rotacao: rescue.placement.rotation,
-            sheetIndex,
-            boxId: piece.boxId,
-            partName: piece.partName,
-            materialId: piece.materialId,
-            materialName: piece.materialName,
-            holes: piece.holes,
-            pieceNumber: piece.pieceNumber,
-            shortCode: piece.shortCode,
-          });
-          placedRects.push({
-            x: rescue.placement.x,
-            y: rescue.placement.y,
-            w: rescue.placement.w,
-            h: rescue.placement.h,
-          });
-          state = updateStrategyState(trial.strategy, state, rescue.placement, kerf);
-          remaining.splice(rescue.index, 1);
-        }
-      }
-    }
-
-    sheets.push({
-      sheet: { ...sheet },
-      placements,
-    });
-  }
-
-  const optimizedSheets = optimizeLastSheetLocally(sheets, sheet, kerf, scoreModel);
-  const metrics = computeSolutionMetrics(optimizedSheets, sheet, scoreModel);
-
-  return {
-    sheets: optimizedSheets,
-    rejectedByLimit: collectDiagnostics ? rejectedByLimit : [],
-    gapFillPlacements: collectDiagnostics ? gapFillPlacements : [],
-    gapFillAttempts,
-    rescueAttempts,
-    usedArea: metrics.usedArea,
-    usefulLeftoverArea: metrics.usefulLeftoverArea,
-    score: metrics.score,
-    advanced: metrics.advanced,
-  };
+): SimulateTrialForGroupResult {
+  return simulateTrialForGroupPipeline(
+    pieces,
+    sheet,
+    kerf,
+    minUtilizationPercent,
+    rotationCfg,
+    trial,
+    collectDiagnostics,
+    forceInputOrder,
+    scoreModel,
+    SIMULATE_TRIAL_GROUP_DEPS
+  );
 }
+
+const RUN_CUT_LAYOUT_DEPS: RunCutLayoutDeps = {
+  expandPieces,
+  groupByMaterialAndThickness,
+  groupByThicknessOnly,
+  createUsableSheetArea,
+  applyFixedMarginOffset,
+  simulateTrialForGroup,
+  cloneSheets,
+  createSeededRng,
+  shuffleArray,
+  optimizeWithMetaHeuristics,
+  computeSolutionMetrics,
+};
 
 export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
   return items.flatMap((item) => {
@@ -968,245 +735,7 @@ export function runCutLayout(
   sheetDef: SheetDefinition,
   options?: CutLayoutEngineOptions
 ): CutLayoutResult {
-  const kerf = options?.kerf_mm ?? DEFAULT_KERF_MM;
-  const minUtilizationPercent = options?.minUtilizationPercent ?? MIN_UTILIZATION_PERCENT;
-  const rotationCfg: RotationScoringConfig = {
-    rotationWeight: options?.rotationWeight ?? DEFAULT_ROTATION_WEIGHT,
-    rotationPenalty: options?.rotationPenalty ?? DEFAULT_ROTATION_PENALTY,
-    rotationPreferenceMode: options?.rotationPreferenceMode ?? DEFAULT_ROTATION_MODE,
-  };
-
-  const grouped = (options?.groupByThicknessOnly ? groupByThicknessOnly : groupByMaterialAndThickness)(
-    expandPieces(pieces)
-  );
-  const trials = options?.strategyTrials && options.strategyTrials.length > 0 ? options.strategyTrials : getDefaultTrials();
-  const metaCfg = getDefaultMetaOptions(options?.useMetaHeuristics, options?.metaHeuristics);
-  const scoreModel: ScoreModel = options?.scoreModel ?? "legacy";
-
-  const finalSheets: SheetResult[] = [];
-  const diagnostics: CutLayoutResult["diagnostics"] | undefined = options?.collectDiagnostics
-    ? {
-      flow: {
-        skylineEnabled: true,
-        shelfEnabled: true,
-        guillotineEnabled: true,
-        reorderEnabled: true,
-        gapFillEnabled: true,
-        gapFillAttempts: 0,
-        rescueAttempts: 0,
-        rotationPreferenceMode: rotationCfg.rotationPreferenceMode,
-        selectedStrategy: "skyline" as PlacementStrategy,
-        selectedBinHeuristic: "bestFit" as BinHeuristic,
-      },
-      trialRuns: [] as Array<{
-        strategy: PlacementStrategy;
-        binHeuristic: BinHeuristic;
-        sheetCount: number;
-        usedArea: number;
-        wasteArea: number;
-        usefulLeftoverArea: number;
-        score: number;
-      }>,
-      metaHeuristics: isDevRuntime()
-        ? {
-          iterations: 0,
-          bestScore: 0,
-          initialScore: 0,
-          improvementPercent: 0,
-          acceptedMoves: 0,
-          totalMoves: 0,
-          initialSolutions: 0,
-          winningSeed: 0,
-          winningStrategy: "skyline",
-          winningBinHeuristic: "bestFit",
-          convexHullWasteBySheet: [] as number[],
-          fragmentationScore: 0,
-          pocketsCount: 0,
-          linearGapScore: 0,
-          compactnessScore: 0,
-        }
-        : undefined,
-      rejectedByLimit: [] as Array<{
-        partName: string;
-        boxId: string;
-        largura_mm: number;
-        altura_mm: number;
-        reason: string;
-      }>,
-      gapFillPlacements: [] as Array<{
-        partName: string;
-        boxId: string;
-        sheetIndex: number;
-        rotacao: number;
-        x_mm: number;
-        y_mm: number;
-        largura_mm: number;
-        altura_mm: number;
-      }>,
-    }
-    : undefined;
-
-  for (const [key, groupPieces] of grouped) {
-    const espStr = options?.groupByThicknessOnly ? key : key.split("|")[1];
-    const materialId = options?.groupByThicknessOnly
-      ? (sheetDef.materialId ?? groupPieces[0]?.materialId ?? "material")
-      : key.split("|")[0];
-    const perMaterialWidth = Number(groupPieces[0]?.sheetWidthMm);
-    const perMaterialHeight = Number(groupPieces[0]?.sheetHeightMm);
-    const perMaterialSheetThickness = Number(groupPieces[0]?.sheetThicknessMm);
-    const sheet: SheetDefinition = {
-      largura_mm: options?.sheetLargura_mm ?? (perMaterialWidth > 0 ? perMaterialWidth : sheetDef.largura_mm),
-      altura_mm: options?.sheetAltura_mm ?? (perMaterialHeight > 0 ? perMaterialHeight : sheetDef.altura_mm),
-      espessura_mm: perMaterialSheetThickness > 0 ? perMaterialSheetThickness : (Number(espStr) || sheetDef.espessura_mm),
-      materialId: materialId !== "material" ? materialId : sheetDef.materialId,
-      materialName: groupPieces[0]?.materialName ?? sheetDef.materialName,
-    };
-    const marginMm = CUT_LAYOUT_SAFETY_MARGIN_MM;
-    const placementSheet = createUsableSheetArea(sheet, marginMm);
-    const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
-
-    let bestRun:
-      | (ReturnType<typeof simulateTrialForGroup> & {
-        strategy: PlacementStrategy;
-        binHeuristic: BinHeuristic;
-      })
-      | null = null;
-
-    for (const trial of trials) {
-      const run = simulateTrialForGroup(
-        groupPieces,
-        placementSheet,
-        kerf,
-        minUtilizationPercent,
-        rotationCfg,
-        trial,
-        Boolean(options?.collectDiagnostics),
-        false,
-        scoreModel
-      );
-      const wasteArea = run.sheets.length * sheetArea - run.usedArea;
-      diagnostics?.trialRuns?.push({
-        strategy: trial.strategy,
-        binHeuristic: trial.binHeuristic,
-        sheetCount: run.sheets.length,
-        usedArea: run.usedArea,
-        wasteArea,
-        usefulLeftoverArea: run.usefulLeftoverArea,
-        score: run.score,
-      });
-      if (!bestRun || run.score < bestRun.score) {
-        bestRun = { ...run, strategy: trial.strategy, binHeuristic: trial.binHeuristic };
-      }
-    }
-
-    if (!bestRun) continue;
-
-    if (metaCfg.enabled && bestRun.sheets.length > 0) {
-      const baselineRefScore = bestRun.score;
-      const startCount = metaCfg.multiStartCount;
-      let globalBestSheets = cloneSheets(bestRun.sheets);
-      let globalBestScore = bestRun.score;
-      let globalAcceptedMoves = 0;
-      let winningSeed = metaCfg.seedBase;
-      let winningStrategy: PlacementStrategy = bestRun.strategy;
-      let winningBin: BinHeuristic = bestRun.binHeuristic;
-
-      const strategyPool: TrialConfig[] = [
-        { strategy: "skyline", binHeuristic: "firstFit" },
-        { strategy: "skyline", binHeuristic: "bestFit" },
-        { strategy: "shelf", binHeuristic: "firstFit" },
-        { strategy: "shelf", binHeuristic: "bestFit" },
-        { strategy: "guillotine", binHeuristic: "firstFit" },
-        { strategy: "guillotine", binHeuristic: "bestFit" },
-      ];
-
-      for (let si = 0; si < startCount; si++) {
-        const seed = metaCfg.seedBase + si;
-        const rng = createSeededRng(seed);
-        const initialTrial = strategyPool[rng.int(strategyPool.length)];
-        const shuffledPieces = shuffleArray(groupPieces, rng);
-        const rotationModes: RotationPreferenceMode[] = ["aggressive", "auto", "disabled"];
-        const seededRotationCfg: RotationScoringConfig = {
-          ...rotationCfg,
-          rotationPreferenceMode: rotationModes[rng.int(rotationModes.length)],
-        };
-
-        const seededRun = simulateTrialForGroup(
-          shuffledPieces,
-          placementSheet,
-          kerf,
-          minUtilizationPercent,
-          seededRotationCfg,
-          initialTrial,
-          false,
-          true,
-          scoreModel
-        );
-        const startSheets = seededRun.sheets.length > 0 ? seededRun.sheets : bestRun.sheets;
-        const local = optimizeWithMetaHeuristics(
-          startSheets,
-          placementSheet,
-          kerf,
-          minUtilizationPercent,
-          seededRotationCfg,
-          metaCfg,
-          seed,
-          strategyPool,
-          scoreModel
-        );
-        const localScore = computeSolutionMetrics(local.sheets, placementSheet, scoreModel).score;
-        globalAcceptedMoves += local.diagnostics.acceptedMoves;
-        if (localScore < globalBestScore) {
-          globalBestScore = localScore;
-          globalBestSheets = cloneSheets(local.sheets);
-          winningSeed = seed;
-          winningStrategy = initialTrial.strategy;
-          winningBin = initialTrial.binHeuristic;
-        }
-      }
-
-      if (globalBestScore <= baselineRefScore) {
-        bestRun.sheets = globalBestSheets;
-        bestRun.score = globalBestScore;
-        bestRun.strategy = winningStrategy;
-        bestRun.binHeuristic = winningBin;
-      }
-      if (diagnostics && isDevRuntime()) {
-        const advanced = computeSolutionMetrics(globalBestSheets, placementSheet, scoreModel).advanced;
-        diagnostics.metaHeuristics = {
-          iterations: metaCfg.iterations * startCount,
-          bestScore: Math.min(baselineRefScore, globalBestScore),
-          initialScore: baselineRefScore,
-          improvementPercent: baselineRefScore > 0
-            ? Number((((baselineRefScore - Math.min(baselineRefScore, globalBestScore)) / baselineRefScore) * 100).toFixed(3))
-            : 0,
-          acceptedMoves: globalAcceptedMoves,
-          totalMoves: metaCfg.iterations * startCount,
-          initialSolutions: startCount,
-          winningSeed,
-          winningStrategy,
-          winningBinHeuristic: winningBin,
-          convexHullWasteBySheet: advanced.perSheet.map((p) => p.convexHullWaste),
-          fragmentationScore: advanced.fragmentationScoreTotal,
-          pocketsCount: advanced.pocketsCountTotal,
-          linearGapScore: advanced.linearGapScoreTotal,
-          compactnessScore: advanced.compactnessScoreTotal,
-        };
-      }
-    }
-
-    if (diagnostics) {
-      diagnostics.flow.selectedStrategy = bestRun.strategy;
-      diagnostics.flow.selectedBinHeuristic = bestRun.binHeuristic;
-      diagnostics.flow.gapFillAttempts += bestRun.gapFillAttempts;
-      diagnostics.flow.rescueAttempts += bestRun.rescueAttempts;
-    }
-    diagnostics?.rejectedByLimit.push(...bestRun.rejectedByLimit);
-    diagnostics?.gapFillPlacements.push(...bestRun.gapFillPlacements);
-    finalSheets.push(...applyFixedMarginOffset(bestRun.sheets, sheet, marginMm));
-  }
-
-  return diagnostics ? { sheets: finalSheets, diagnostics } : { sheets: finalSheets };
+  return runCutLayoutPipeline(pieces, sheetDef, options, RUN_CUT_LAYOUT_DEPS);
 }
 
 export function runCutLayoutResult(
@@ -1214,11 +743,5 @@ export function runCutLayoutResult(
   sheetDef: SheetDefinition,
   options?: CutLayoutEngineOptions
 ): OperationResult<CutLayoutResult> {
-  try {
-    const data = runCutLayout(pieces, sheetDef, options);
-    return { success: true, data };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao executar cut layout.";
-    return { success: false, error: message };
-  }
+  return runCutLayoutResultPipeline(pieces, sheetDef, options, runCutLayout);
 }
