@@ -269,6 +269,13 @@ export class ViewerCore {
   private rotationDiagnosticsLastLogTs = 0;
   private renderExporter!: ViewerRenderExporter;
   private constraints!: TransformConstraints;
+  /**
+   * Fronteiras de integração extraídas do core:
+   * - measurementOverlay: régua/medição interna e overlays 2D.
+   * - panelVisibility: visibilidade de painéis, contornos e exploded view.
+   * - runtimeLoop: cadência de frame, resize e pipeline de render.
+   * O ViewerCore permanece como orquestrador e ponto único de composição.
+   */
   private measurementOverlay!: ViewerMeasurementOverlay;
   private panelVisibility!: ViewerPanelVisibility;
   private runtimeLoop!: ViewerRuntimeLoop;
