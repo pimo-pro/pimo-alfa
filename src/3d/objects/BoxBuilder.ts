@@ -25,6 +25,13 @@ import {
   createDrawerObject as createDrawerObjectFromFactory,
   getDrawerSpecFingerprint as getDrawerSpecFingerprintFromFactory,
 } from "./DrawerFactory";
+import { buildBoxGroupWithDeps, buildBoxWithDeps } from "./BoxAssembler";
+import {
+  dimensionsEqual as dimensionsEqualFromUpdater,
+  updateBoxGeometryWithDeps,
+  updateBoxGroupWithDeps,
+  updateBoxModelWithDeps,
+} from "./BoxUpdater";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -328,137 +335,35 @@ function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.O
   return createDrawerObjectFromFactory(spec, material);
 }
 
-export const buildBox = (options: BoxOptions = {}): BoxModel => {
-  const opts = options ?? {};
-  const { width, height, depth } = resolveDimensions(opts);
-  const useDefaultMDF = opts.material == null;
-  const baseMaterial: THREE.Material = opts.material ?? getFallbackPBRMaterial();
-
-  const root = new THREE.Group();
-  root.name = "box-model";
-
-  const specs = getPanelSpecs(width, height, depth);
-  const panelTypes = ["left", "top", "bottom", "right", "back"] as const;
-
-  const getMaterial = (_panelType: PanelType) => baseMaterial.clone();
-
-  const panelOptions = (panelType: PanelType): PanelMaterialOptions =>
-    useDefaultMDF
-      ? { edgeMaterial: getEdgeMaterial(), faceMaterial: getMaterial(panelType) }
-      : { singleMaterial: getMaterial(panelType) };
-
-  const panels = {
-    left: panelFactory.createPanel(specs.left.size[0], specs.left.size[1], specs.left.size[2], "left", "left", panelOptions("left")),
-    right: panelFactory.createPanel(specs.right.size[0], specs.right.size[1], specs.right.size[2], "right", "right", panelOptions("right")),
-    top: panelFactory.createPanel(specs.top.size[0], specs.top.size[1], specs.top.size[2], "top", "top", panelOptions("top")),
-    bottom: panelFactory.createPanel(specs.bottom.size[0], specs.bottom.size[1], specs.bottom.size[2], "bottom", "bottom", panelOptions("bottom")),
-    back: panelFactory.createPanel(specs.back.size[0], specs.back.size[1], specs.back.size[2], "back", "back", panelOptions("back")),
-  };
-
-  panels.right.rotation.y = Math.PI;
-  panels.right.rotation.z = Math.PI;
-
-  (panelTypes as readonly string[]).forEach((key) => {
-    const k = key as keyof typeof panels;
-    const p = panels[k];
-    const pos = specs[k].pos;
-    p.position.set(pos[0], pos[1], pos[2]);
-    if (k === "right") {
-      p.rotation.y = Math.PI;
-      p.rotation.z = Math.PI;
-    }
-    root.add(p);
-  });
-  const drillMap: ViewerDrillMarkersByPanel = opts.drillMarkersByPanel ?? {
-    cima: [],
-    fundo: [],
-    lateral_esquerda: [],
-    lateral_direita: [],
-    porta: [],
-  };
-  const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
-  const hasDrawers = (opts.drawerLayerItems?.length ?? 0) > 0;
-  const useLateralShelfHoles = shelfCount > 0 && !hasDrawers;
-  const lateralLeftHoles = useLateralShelfHoles ? drillMap.lateral_esquerda : [];
-  const lateralRightHoles = useLateralShelfHoles ? drillMap.lateral_direita : [];
-
-  applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
-  applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
-  applyDrillHolesToPanelGeometry(panels.left, "left", lateralLeftHoles);
-  applyDrillHolesToPanelGeometry(panels.right, "right", lateralRightHoles);
-
-  if (shelfCount > 0) {
-    const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
-    shelfSpecs.forEach((spec, i) => {
-      const shelfMat = baseMaterial.clone();
-      const mesh = panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
-      mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-      mesh.userData.shelfIndex = i;
-      root.add(mesh);
-    });
-  }
-
-  const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
-  const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
-  const doorSpecs = buildDoorSpecs(doorLayerItems);
-  const drawerSpecs = buildDrawerSpecs(drawerLayerItems);
-  doorSpecs.forEach((spec, doorIndex) => {
-    const item = doorLayerItems[doorIndex];
-    const materialId = item?.material ?? item?.materialId ?? getDefaultOfficialMaterial().canonicalId;
-    const doorMaterial = getMaterialForOfficialId(materialId);
-    root.add(createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
-  });
-  drawerSpecs.forEach((spec, drawerIndex) => {
-    const drawerMaterial = drawerLayerItems[drawerIndex]?.material
-      ? getMaterialForOfficialId(drawerLayerItems[drawerIndex].material!)
-      : baseMaterial;
-    root.add(createDrawerObject(spec, (drawerMaterial as THREE.Material).clone()));
-  });
-
-  root.position.set(0, 0, 0);
-
+function getAssemblerDeps() {
   return {
-    root,
-    panels,
-    dimensions: { width, height, depth, thickness: THICKNESS_M },
+    resolveDimensions,
+    getPanelSpecs,
+    getShelfSpecs,
+    panelFactory,
+    getFallbackPBRMaterial,
+    getEdgeMaterial,
+    applyDrillHolesToPanelGeometry,
+    buildDoorSpecs,
+    buildDrawerSpecs,
+    createDoorObject,
+    createDrawerObject,
+    getMaterialForOfficialId,
+    getDefaultOfficialMaterialId: () => getDefaultOfficialMaterial().canonicalId,
+    thicknessM: THICKNESS_M,
   };
+}
+
+export const buildBox = (options: BoxOptions = {}): BoxModel => {
+  return buildBoxWithDeps(options, getAssemblerDeps());
 };
 
 export const updateBoxModel = (model: BoxModel, options: BoxOptions = {}): BoxModel => {
-  const opts = options ?? {};
-  const { width, height, depth } = resolveDimensions(opts);
-  const material = opts.material ?? model.panels.left.material;
-  const specs = getPanelSpecs(width, height, depth);
-  const panelKeys: (keyof typeof model.panels)[] = ["left", "right", "top", "bottom", "back"];
-
-  panelKeys.forEach((key) => {
-    const [wx, hy, dz] = specs[key].size;
-    const [px, py, pz] = specs[key].pos;
-    panelFactory.updatePanelGeometry(model.panels[key], wx, hy, dz);
-    model.panels[key].position.set(px, py, pz);
-    if (key === "right") {
-      model.panels[key].rotation.y = Math.PI;
-      model.panels[key].rotation.z = Math.PI;
-    } else {
-      model.panels[key].rotation.y = 0;
-      model.panels[key].rotation.z = 0;
-    }
-  });
-
-  if (opts.material != null) {
-    Object.values(model.panels).forEach(panel => {
-      panel.material = material;
-    });
-  }
-
-  model.dimensions = { width, height, depth, thickness: THICKNESS_M };
-  return model;
+  return updateBoxModelWithDeps(model, options, getUpdaterDeps());
 };
 /** Compatível com o Viewer: devolve o grupo raiz do módulo (CIMA, FUNDO, LAT ESQ, LAT DIR, COSTA). */
 export const buildBoxGroup = (options?: BoxOptions | null) => {
-  const opts = options ?? {};
-  const model = buildBox(opts);
-  return model.root;
+  return buildBoxGroupWithDeps(options, getAssemblerDeps());
 };
 
 // Alias de compatibilidade interna para chamadas antigas em outros módulos.
@@ -473,11 +378,31 @@ function dimensionsEqual(
   a: { width: number; height: number; depth: number },
   b: { width: number; height: number; depth: number }
 ): boolean {
-  return (
-    Math.abs(a.width - b.width) < 1e-9 &&
-    Math.abs(a.height - b.height) < 1e-9 &&
-    Math.abs(a.depth - b.depth) < 1e-9
-  );
+  return dimensionsEqualFromUpdater(a, b);
+}
+
+function getUpdaterDeps() {
+  return {
+    resolveDimensions,
+    getPanelSpecs,
+    getShelfSpecs,
+    panelFactory,
+    getFallbackPBRMaterial,
+    applyDrillHolesToPanelGeometry,
+    buildDoorSpecs,
+    buildDrawerSpecs,
+    getDoorSpecFingerprint,
+    getDrawerSpecFingerprint,
+    createDoorObject,
+    createDrawerObject,
+    getMaterialForOfficialId,
+    getDefaultOfficialMaterialId: () => getDefaultOfficialMaterial().canonicalId,
+    thicknessM: THICKNESS_M,
+    panelNames: PANEL_NAMES,
+    lastDimsKey: LAST_DIMS_KEY,
+    doorSpecFingerprintKey: DOOR_SPEC_FINGERPRINT_KEY,
+    drawerSpecFingerprintKey: DRAWER_SPEC_FINGERPRINT_KEY,
+  };
 }
 
 /**
@@ -487,182 +412,10 @@ function dimensionsEqual(
  * evitando loops com useCalculadoraSync e storms de efeitos passivos.
  */
 export function updateBoxGroup(group: THREE.Group, options?: BoxOptions | null): { width: number; height: number; depth: number } {
-  const opts = options ?? {};
-  const { width, height, depth } = resolveDimensions(opts);
-  const dims = { width, height, depth };
-  const lastDims = (group.userData as Record<string, unknown>)[LAST_DIMS_KEY] as { width: number; height: number; depth: number } | undefined;
-  const dimensionsUnchanged = lastDims != null && dimensionsEqual(lastDims, dims);
-  (group.userData as Record<string, unknown>)[LAST_DIMS_KEY] = dims;
-
-  const specs = getPanelSpecs(width, height, depth);
-  const baseMaterial = group.children[0] instanceof THREE.Mesh ? (group.children[0] as THREE.Mesh).material : getFallbackPBRMaterial();
-  const mat = Array.isArray(baseMaterial) ? baseMaterial[0] : baseMaterial;
-  const drillMap: ViewerDrillMarkersByPanel = opts.drillMarkersByPanel ?? {
-    cima: [],
-    fundo: [],
-    lateral_esquerda: [],
-    lateral_direita: [],
-    porta: [],
-  };
-  const shelfCountForDrill = Math.max(0, Math.floor(opts.shelves ?? 0));
-  const hasDrawersForDrill = (opts.drawerLayerItems?.length ?? 0) > 0;
-  const useLateralShelfHoles = shelfCountForDrill > 0 && !hasDrawersForDrill;
-  const lateralLeftHoles = useLateralShelfHoles ? drillMap.lateral_esquerda : [];
-  const lateralRightHoles = useLateralShelfHoles ? drillMap.lateral_direita : [];
-
-  // 1) Painéis estruturais: só atualizar geometria/posição quando as dimensões mudaram
-  if (!dimensionsUnchanged) {
-    for (const panelName of PANEL_NAMES) {
-      const child = group.children.find((c) => c.name === panelName);
-      if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
-      const spec = specs[panelName];
-      if (!spec) continue;
-      panelFactory.updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
-      child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-      if (panelName === "right") {
-        child.rotation.y = Math.PI;
-        child.rotation.z = Math.PI;
-      } else {
-        child.rotation.y = 0;
-        child.rotation.z = 0;
-      }
-      delete (child.userData as Record<string, unknown>).explodedBasePosition;
-      child.updateMatrix();
-    }
-  }
-
-  const topPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "top") as THREE.Mesh | undefined;
-  const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
-  const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
-  const rightPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "right") as THREE.Mesh | undefined;
-
-  if (!useLateralShelfHoles) {
-    if (leftPanel) {
-      const leftSpec = specs.left;
-      panelFactory.updatePanelGeometry(leftPanel, leftSpec.size[0], leftSpec.size[1], leftSpec.size[2]);
-      leftPanel.position.set(leftSpec.pos[0], leftSpec.pos[1], leftSpec.pos[2]);
-      leftPanel.rotation.y = 0;
-      leftPanel.rotation.z = 0;
-      delete (leftPanel.userData as Record<string, unknown>).explodedBasePosition;
-      leftPanel.updateMatrix();
-    }
-    if (rightPanel) {
-      const rightSpec = specs.right;
-      panelFactory.updatePanelGeometry(rightPanel, rightSpec.size[0], rightSpec.size[1], rightSpec.size[2]);
-      rightPanel.position.set(rightSpec.pos[0], rightSpec.pos[1], rightSpec.pos[2]);
-      rightPanel.rotation.y = Math.PI;
-      rightPanel.rotation.z = Math.PI;
-      delete (rightPanel.userData as Record<string, unknown>).explodedBasePosition;
-      rightPanel.updateMatrix();
-    }
-  }
-
-  if (topPanel) applyDrillHolesToPanelGeometry(topPanel, "top", drillMap.cima);
-  if (bottomPanel) applyDrillHolesToPanelGeometry(bottomPanel, "bottom", drillMap.fundo);
-  if (leftPanel) applyDrillHolesToPanelGeometry(leftPanel, "left", lateralLeftHoles);
-  if (rightPanel) applyDrillHolesToPanelGeometry(rightPanel, "right", lateralRightHoles);
-
-  // 2) Incremental: portas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa porta
-  const doorFpKey = DOOR_SPEC_FINGERPRINT_KEY;
-  const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
-  if (import.meta.env.DEV && doorLayerItems.length > 0) {
-    devLogger.debug("[DOOR-MAT] BoxBuilder.updateBoxGroup doorLayerItems recebidos", {
-      count: doorLayerItems.length,
-      items: doorLayerItems.map((d, i) => ({ index: i, id: d.id, material: d.material, materialId: d.materialId })),
-    });
-  }
-  const doorSpecs = buildDoorSpecs(doorLayerItems);
-  const requiredDoorIds = new Set(doorSpecs.map((s) => s.id));
-  const existingDoorNames = group.children
-    .filter((c) => c.name.startsWith("door-layer-"))
-    .map((c) => c.name);
-  for (const name of existingDoorNames) {
-    const id = name.replace("door-layer-", "");
-    if (!requiredDoorIds.has(id)) {
-      const obj = group.children.find((c) => c.name === name);
-      if (obj) group.remove(obj);
-    }
-  }
-  doorSpecs.forEach((spec, doorIndex) => {
-    const item = doorLayerItems[doorIndex];
-    const materialName = item?.material ?? item?.materialId ?? getDefaultOfficialMaterial().canonicalId;
-    if (import.meta.env.DEV) {
-      devLogger.debug("[DOOR-MAT] BoxBuilder.updateBoxGroup porta", {
-        doorIndex,
-        specId: spec.id,
-        materialNameUsado: materialName,
-        itemMaterial: item?.material,
-        itemMaterialId: item?.materialId,
-      });
-    }
-    const newFingerprint = getDoorSpecFingerprint(spec, materialName);
-    const existingDoor = group.children.find((c) => c.name === `door-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
-    if (existingDoor) {
-      const storedFingerprint = existingDoor.userData[doorFpKey] as string | undefined;
-      if (storedFingerprint === newFingerprint) return;
-      group.remove(existingDoor);
-    }
-    const doorMaterial = getMaterialForOfficialId(materialName);
-    const newDoor = createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
-    (newDoor.userData as Record<string, unknown>)[doorFpKey] = newFingerprint;
-    group.add(newDoor);
-  });
-
-  // 3) Incremental: gavetas — remover as que já não são necessárias; se spec mudou (fingerprint), recriar só essa gaveta
-  const drawerFpKey = DRAWER_SPEC_FINGERPRINT_KEY;
-  const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
-  const drawerSpecs = buildDrawerSpecs(drawerLayerItems);
-  const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
-  const existingDrawerNames = group.children
-    .filter((c) => c.name.startsWith("drawer-layer-"))
-    .map((c) => c.name);
-  for (const name of existingDrawerNames) {
-    const id = name.replace("drawer-layer-", "");
-    if (!requiredDrawerIds.has(id)) {
-      const obj = group.children.find((c) => c.name === name);
-      if (obj) group.remove(obj);
-    }
-  }
-  drawerSpecs.forEach((spec, drawerIndex) => {
-    const materialName = drawerLayerItems[drawerIndex]?.material ?? getDefaultOfficialMaterial().canonicalId;
-    const newFingerprint = getDrawerSpecFingerprint(spec, materialName);
-    const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D & { userData: Record<string, unknown> } | undefined;
-    if (existingDrawer) {
-      const storedFingerprint = existingDrawer.userData[drawerFpKey] as string | undefined;
-      if (storedFingerprint === newFingerprint) return;
-      group.remove(existingDrawer);
-    }
-    const drawerMaterial = getMaterialForOfficialId(materialName);
-    const newDrawer = createDrawerObject(spec, (drawerMaterial as THREE.Material).clone());
-    (newDrawer.userData as Record<string, unknown>)[drawerFpKey] = newFingerprint;
-    group.add(newDrawer);
-  });
-
-  // 4) Prateleiras: sempre recalcular e recriar para evitar herança de posição antiga em runtime
-  const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
-  const shelfSpecs = getShelfSpecs(width, height, depth, shelfCount);
-  const existingShelves = group.children.filter((c) => /^shelf-\d+$/.test(c.name));
-  existingShelves.forEach((obj) => group.remove(obj));
-  shelfSpecs.forEach((spec, i) => {
-    const shelfMat = (mat as THREE.Material).clone();
-    const mesh = panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
-    mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-    mesh.userData.shelfIndex = i;
-    group.add(mesh);
-  });
-
-  group.updateMatrixWorld(true);
-  return { width, height, depth };
+  return updateBoxGroupWithDeps(group, options, getUpdaterDeps());
 }
 
 /** Atualiza um único Mesh (caixa sólida); compatibilidade com caixas não modulares. */
 export const updateBoxGeometry = (mesh: THREE.Mesh, options: BoxOptions = {}) => {
-  const { width, height, depth } = resolveDimensions(options);
-  mesh.geometry.dispose();
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-  if (!geometry.attributes.uv2 && geometry.attributes.uv) {
-    geometry.setAttribute("uv2", geometry.attributes.uv);
-  }
-  mesh.geometry = geometry;
-  return { width, height, depth };
+  return updateBoxGeometryWithDeps(mesh, options, getUpdaterDeps());
 };
