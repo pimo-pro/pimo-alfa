@@ -1509,7 +1509,7 @@ export class ViewerCore {
     this.applyPanelVisibilityForAllBoxes();
   }
 
-  /** Compatibilidade: modo régua legado removido. */
+  /** LEGACY: compatibilidade com API antiga; não ativa o modo régua antigo. */
   setRulerEnabled(enabled: boolean): void {
     this.rendererManager.renderer.domElement.style.cursor = Boolean(enabled) ? "crosshair" : "";
   }
@@ -2498,7 +2498,7 @@ export class ViewerCore {
     this.onBoxSelected = callback;
   }
 
-  /** Compatibilidade com API antiga da régua. */
+  /** LEGACY / NO-OP: callback legado da régua mantido apenas para compatibilidade externa. */
   setOnRulerTick(callback: (() => void) | null): void {
     void callback;
   }
