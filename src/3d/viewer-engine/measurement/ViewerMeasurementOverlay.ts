@@ -42,8 +42,6 @@ type ViewerMeasurementOverlayDeps = {
   getCamera: () => THREE.Camera;
   getCanvas: () => HTMLCanvasElement;
   getContainer: () => HTMLElement;
-  getRaycaster: () => THREE.Raycaster;
-  getPointer: () => THREE.Vector2;
   getBoxes: () => Map<string, BoxLike>;
   getSelectedBoxId: () => string | null;
   getRoomWalls: () => WallLike[];
@@ -57,6 +55,8 @@ type ViewerMeasurementOverlayDeps = {
 /** Módulo responsável por régua de movimento e medição interna entre arestas. */
 export class ViewerMeasurementOverlay {
   private readonly deps: ViewerMeasurementOverlayDeps;
+  private readonly raycaster = new THREE.Raycaster();
+  private readonly pointer = new THREE.Vector2();
   private rulerOverlayCanvas: HTMLCanvasElement | null = null;
   private rulerOverlayCtx: CanvasRenderingContext2D | null = null;
   private rulerOverlayMeasurement: RulerMeasurementHit | null = null;
@@ -460,11 +460,9 @@ export class ViewerMeasurementOverlay {
     if (rect.width <= 0 || rect.height <= 0) return null;
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    const pointer = this.deps.getPointer();
-    const raycaster = this.deps.getRaycaster();
-    pointer.set(x, y);
-    raycaster.setFromCamera(pointer, this.deps.getCamera());
-    const meshHits = raycaster.intersectObjects(roots, true);
+    this.pointer.set(x, y);
+    this.raycaster.setFromCamera(this.pointer, this.deps.getCamera());
+    const meshHits = this.raycaster.intersectObjects(roots, true);
     if (!meshHits.length) return null;
     const mesh = this.getInternalMeasurementMeshFromHit(meshHits[0].object);
     if (!mesh || !(mesh.geometry instanceof THREE.BufferGeometry)) return null;

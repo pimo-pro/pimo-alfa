@@ -377,8 +377,6 @@ export class ViewerCore {
       getCamera: () => this.cameraManager.camera,
       getCanvas: () => this.rendererManager.renderer.domElement,
       getContainer: () => this.container,
-      getRaycaster: () => this.raycaster,
-      getPointer: () => this.pointer,
       getBoxes: () => this.boxes,
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
       getRoomWalls: () => this.roomBoxWalls,
