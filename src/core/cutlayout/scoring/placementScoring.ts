@@ -1,0 +1,122 @@
+import type { CutPlacement, SheetDefinition } from "../cutLayoutTypes";
+import type { PlacementCandidate, RotationScoringConfig } from "./rotationScoring";
+
+const EPS = 0.001;
+const MIN_UTILIZATION_PERCENT = 0.8;
+
+export function buildCandidateCoordinates(
+  placed: CutPlacement[],
+  pieceW: number,
+  pieceH: number,
+  sheet: SheetDefinition,
+  kerf: number
+): Array<{ x: number; y: number }> {
+  const xs = new Set<number>([0, Math.max(0, sheet.largura_mm - pieceW)]);
+  const ys = new Set<number>([0, Math.max(0, sheet.altura_mm - pieceH)]);
+  for (const p of placed) {
+    xs.add(Math.max(0, p.x_mm + p.largura_mm + kerf));
+    ys.add(Math.max(0, p.y_mm + p.altura_mm + kerf));
+    xs.add(Math.max(0, p.x_mm - pieceW - kerf));
+    ys.add(Math.max(0, p.y_mm - pieceH - kerf));
+  }
+  const out: Array<{ x: number; y: number }> = [];
+  const xList = Array.from(xs).filter((x) => x + pieceW <= sheet.largura_mm + EPS);
+  const yList = Array.from(ys).filter((y) => y + pieceH <= sheet.altura_mm + EPS);
+  for (const x of xList) {
+    for (const y of yList) out.push({ x, y });
+  }
+  return out;
+}
+
+export function computePlacementCompactnessScore(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  sheet: SheetDefinition
+): number {
+  const rightSlack = Math.max(0, sheet.largura_mm - (x + w));
+  const topSlack = Math.max(0, sheet.altura_mm - (y + h));
+  const localWaste = rightSlack * h + topSlack * w;
+  const compactBonus = 1 - (x / Math.max(1, sheet.largura_mm)) * 0.35 - (y / Math.max(1, sheet.altura_mm)) * 0.65;
+  return compactBonus * 100000 - localWaste;
+}
+
+export function findBestResidualPlacement(
+  target: CutPlacement,
+  existing: CutPlacement[],
+  sheet: SheetDefinition,
+  kerf: number,
+  deps: {
+    isInsideSheet: (x: number, y: number, w: number, h: number, sheet: SheetDefinition) => boolean;
+    overlaps: (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      placed: Array<{ x: number; y: number; w: number; h: number }>,
+      kerf: number
+    ) => boolean;
+  }
+): CutPlacement | null {
+  const variants = [
+    { w: target.largura_mm, h: target.altura_mm, rotacao: target.rotacao },
+    { w: target.altura_mm, h: target.largura_mm, rotacao: target.rotacao === 90 ? 0 : 90 },
+  ].filter((v, i, arr) => i === 0 || v.w !== arr[0].w || v.h !== arr[0].h);
+
+  const placedRects = existing.map((p) => ({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm }));
+  let best: CutPlacement | null = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const v of variants) {
+    const coords = buildCandidateCoordinates(existing, v.w, v.h, sheet, kerf);
+    for (const c of coords) {
+      if (!deps.isInsideSheet(c.x, c.y, v.w, v.h, sheet)) continue;
+      if (deps.overlaps(c.x, c.y, v.w, v.h, placedRects, kerf)) continue;
+      const score = computePlacementCompactnessScore(c.x, c.y, v.w, v.h, sheet);
+      if (score > bestScore) {
+        bestScore = score;
+        best = {
+          ...target,
+          x_mm: c.x,
+          y_mm: c.y,
+          largura_mm: v.w,
+          altura_mm: v.h,
+          rotacao: v.rotacao,
+        };
+      }
+    }
+  }
+  return best;
+}
+
+export function getSheetBoundingBox(placements: CutPlacement[]) {
+  if (placements.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0, area: 0 };
+  const minX = Math.min(...placements.map((p) => p.x_mm));
+  const minY = Math.min(...placements.map((p) => p.y_mm));
+  const maxX = Math.max(...placements.map((p) => p.x_mm + p.largura_mm));
+  const maxY = Math.max(...placements.map((p) => p.y_mm + p.altura_mm));
+  return { minX, minY, maxX, maxY, area: Math.max(1, (maxX - minX) * (maxY - minY)) };
+}
+
+export function scorePlacement(
+  sheet: SheetDefinition,
+  placement: PlacementCandidate,
+  currentUtilization: number,
+  rotationCfg: RotationScoringConfig
+): number {
+  const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
+  const areaGain = (placement.w * placement.h) / sheetArea;
+  const bottomLeftBias =
+    1 - (placement.y / Math.max(1, sheet.altura_mm)) - (placement.x / Math.max(1, sheet.largura_mm)) * 0.5;
+  const expectedUtil = currentUtilization + areaGain;
+  const utilizationReward = expectedUtil >= MIN_UTILIZATION_PERCENT ? 0.4 : expectedUtil * 0.2;
+  let rotationScore = 0;
+  if (rotationCfg.rotationPreferenceMode !== "disabled") {
+    if (placement.rotation === 90) {
+      rotationScore += rotationCfg.rotationWeight * (1 + Math.max(0, placement.rotationDelta));
+    } else if (placement.alternativeRotationAvailable && placement.rotationDelta > 0) {
+      rotationScore -= rotationCfg.rotationPenalty * placement.rotationDelta;
+    }
+  }
+  return areaGain * 2.0 + bottomLeftBias * 0.3 + utilizationReward + placement.orientationScore * 0.25 + rotationScore;
+}

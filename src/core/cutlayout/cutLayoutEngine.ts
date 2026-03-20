@@ -65,6 +65,29 @@ import {
   initStrategyState as initStrategyStateSolver,
   updateStrategyState as updateStrategyStateSolver,
 } from "./solver/strategyState";
+import {
+  buildCandidateCoordinates as buildCandidateCoordinatesScoring,
+  computePlacementCompactnessScore as computePlacementCompactnessScoreScoring,
+  findBestResidualPlacement as findBestResidualPlacementScoring,
+  getSheetBoundingBox as getSheetBoundingBoxScoring,
+  scorePlacement as scorePlacementScoring,
+} from "./scoring/placementScoring";
+import {
+  chooseOrientationWithRotationBias as chooseOrientationWithRotationBiasScoring,
+  getOrientations as getOrientationsScoring,
+  pickBestCandidateByRotation as pickBestCandidateByRotationScoring,
+  scoreOrientationFit as scoreOrientationFitScoring,
+  type PlacementCandidate,
+  type RotationScoringConfig,
+} from "./scoring/rotationScoring";
+import {
+  computeSheetAdvancedMetrics as computeSheetAdvancedMetricsScoring,
+  type SheetAdvancedMetrics,
+} from "./scoring/advancedMetrics";
+import {
+  computeSolutionMetrics as computeSolutionMetricsScoring,
+  type GlobalScoreMetrics,
+} from "./scoring/solutionMetrics";
 
 const DEFAULT_KERF_MM = 3;
 const MIN_UTILIZATION_PERCENT = 0.8;
@@ -103,23 +126,6 @@ type MetaHeuristicsOptions = {
   seedBase?: number;
 };
 type ScoreModel = "legacy" | "v32";
-
-type RotationScoringConfig = {
-  rotationWeight: number;
-  rotationPenalty: number;
-  rotationPreferenceMode: RotationPreferenceMode;
-};
-
-type PlacementCandidate = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rotation: number;
-  orientationScore: number;
-  rotationDelta: number;
-  alternativeRotationAvailable: boolean;
-};
 
 export type CutLayoutEngineOptions = {
   sheetLargura_mm?: number;
@@ -263,21 +269,7 @@ function buildCandidateCoordinates(
   sheet: SheetDefinition,
   kerf: number
 ): Array<{ x: number; y: number }> {
-  const xs = new Set<number>([0, Math.max(0, sheet.largura_mm - pieceW)]);
-  const ys = new Set<number>([0, Math.max(0, sheet.altura_mm - pieceH)]);
-  for (const p of placed) {
-    xs.add(Math.max(0, p.x_mm + p.largura_mm + kerf));
-    ys.add(Math.max(0, p.y_mm + p.altura_mm + kerf));
-    xs.add(Math.max(0, p.x_mm - pieceW - kerf));
-    ys.add(Math.max(0, p.y_mm - pieceH - kerf));
-  }
-  const out: Array<{ x: number; y: number }> = [];
-  const xList = Array.from(xs).filter((x) => x + pieceW <= sheet.largura_mm + EPS);
-  const yList = Array.from(ys).filter((y) => y + pieceH <= sheet.altura_mm + EPS);
-  for (const x of xList) {
-    for (const y of yList) out.push({ x, y });
-  }
-  return out;
+  return buildCandidateCoordinatesScoring(placed, pieceW, pieceH, sheet, kerf);
 }
 
 function computePlacementCompactnessScore(
@@ -287,11 +279,7 @@ function computePlacementCompactnessScore(
   h: number,
   sheet: SheetDefinition
 ): number {
-  const rightSlack = Math.max(0, sheet.largura_mm - (x + w));
-  const topSlack = Math.max(0, sheet.altura_mm - (y + h));
-  const localWaste = rightSlack * h + topSlack * w;
-  const compactBonus = 1 - (x / Math.max(1, sheet.largura_mm)) * 0.35 - (y / Math.max(1, sheet.altura_mm)) * 0.65;
-  return compactBonus * 100000 - localWaste;
+  return computePlacementCompactnessScoreScoring(x, y, w, h, sheet);
 }
 
 function findBestResidualPlacement(
@@ -300,43 +288,14 @@ function findBestResidualPlacement(
   sheet: SheetDefinition,
   kerf: number
 ): CutPlacement | null {
-  const variants = [
-    { w: target.largura_mm, h: target.altura_mm, rotacao: target.rotacao },
-    { w: target.altura_mm, h: target.largura_mm, rotacao: target.rotacao === 90 ? 0 : 90 },
-  ].filter((v, i, arr) => i === 0 || v.w !== arr[0].w || v.h !== arr[0].h);
-
-  const placedRects = existing.map((p) => ({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm }));
-  let best: CutPlacement | null = null;
-  let bestScore = Number.NEGATIVE_INFINITY;
-  for (const v of variants) {
-    const coords = buildCandidateCoordinates(existing, v.w, v.h, sheet, kerf);
-    for (const c of coords) {
-      if (!isInsideSheet(c.x, c.y, v.w, v.h, sheet)) continue;
-      if (overlaps(c.x, c.y, v.w, v.h, placedRects, kerf)) continue;
-      const score = computePlacementCompactnessScore(c.x, c.y, v.w, v.h, sheet);
-      if (score > bestScore) {
-        bestScore = score;
-        best = {
-          ...target,
-          x_mm: c.x,
-          y_mm: c.y,
-          largura_mm: v.w,
-          altura_mm: v.h,
-          rotacao: v.rotacao,
-        };
-      }
-    }
-  }
-  return best;
+  return findBestResidualPlacementScoring(target, existing, sheet, kerf, {
+    isInsideSheet,
+    overlaps,
+  });
 }
 
 function getSheetBoundingBox(placements: CutPlacement[]) {
-  if (placements.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0, area: 0 };
-  const minX = Math.min(...placements.map((p) => p.x_mm));
-  const minY = Math.min(...placements.map((p) => p.y_mm));
-  const maxX = Math.max(...placements.map((p) => p.x_mm + p.largura_mm));
-  const maxY = Math.max(...placements.map((p) => p.y_mm + p.altura_mm));
-  return { minX, minY, maxX, maxY, area: Math.max(1, (maxX - minX) * (maxY - minY)) };
+  return getSheetBoundingBoxScoring(placements);
 }
 
 function tryMicroAdjustLastSheet(placements: CutPlacement[], sheet: SheetDefinition): CutPlacement[] {
@@ -515,22 +474,11 @@ function scoreOrientationFit(
   candidate: { x: number; y: number; w: number; h: number },
   sheet: SheetDefinition
 ): number {
-  const sheetW = Math.max(1, sheet.largura_mm);
-  const sheetH = Math.max(1, sheet.altura_mm);
-  const sheetArea = Math.max(1, sheetW * sheetH);
-  const rightSlack = Math.max(0, sheetW - (candidate.x + candidate.w));
-  const topSlack = Math.max(0, sheetH - (candidate.y + candidate.h));
-  const bottomLeft = 1 - (candidate.y / sheetH) * 0.7 - (candidate.x / sheetW) * 0.3;
-  const stripWaste = (rightSlack * candidate.h + topSlack * candidate.w) / sheetArea;
-  const fillQuality = 1 - stripWaste;
-  return bottomLeft * 0.55 + fillQuality * 0.45;
+  return scoreOrientationFitScoring(candidate, sheet);
 }
 
 function getOrientations(piece: CutPiece, cfg: RotationScoringConfig): Array<{ w: number; h: number; rotation: number }> {
-  const list = [{ w: piece.largura_mm, h: piece.altura_mm, rotation: 0 }];
-  const canRotate = cfg.rotationPreferenceMode !== "disabled" && isRotatablePiece(piece);
-  if (canRotate) list.push({ w: piece.altura_mm, h: piece.largura_mm, rotation: 90 });
-  return list;
+  return getOrientationsScoring(piece, cfg, isRotatablePiece);
 }
 
 function chooseOrientationWithRotationBias(
@@ -538,41 +486,11 @@ function chooseOrientationWithRotationBias(
   rotated: PlacementCandidate | null,
   cfg: RotationScoringConfig
 ): PlacementCandidate | null {
-  if (!normal && !rotated) return null;
-  if (normal && !rotated) return normal;
-  if (!normal && rotated) return rotated;
-
-  const normalScore = normal!.orientationScore;
-  const rotatedScore = rotated!.orientationScore;
-  const rotationDelta = rotatedScore - normalScore;
-  let adjustedNormal = normalScore;
-  let adjustedRotated = rotatedScore;
-
-  if (cfg.rotationPreferenceMode === "aggressive") {
-    adjustedRotated += cfg.rotationWeight;
-  } else if (cfg.rotationPreferenceMode === "auto") {
-    adjustedRotated += Math.max(0, rotationDelta) * cfg.rotationWeight;
-    if (rotationDelta > 0) adjustedNormal -= cfg.rotationPenalty * rotationDelta;
-  }
-
-  if (adjustedRotated > adjustedNormal) {
-    return {
-      ...rotated!,
-      rotationDelta,
-      alternativeRotationAvailable: true,
-    };
-  }
-  return {
-    ...normal!,
-    rotationDelta,
-    alternativeRotationAvailable: true,
-  };
+  return chooseOrientationWithRotationBiasScoring(normal, rotated, cfg);
 }
 
 function pickBestCandidateByRotation(candidates: PlacementCandidate[], rotation: 0 | 90): PlacementCandidate | null {
-  const pool = candidates.filter((c) => c.rotation === rotation);
-  if (pool.length === 0) return null;
-  return pool.sort((a, b) => b.orientationScore - a.orientationScore || a.y - b.y || a.x - b.x)[0];
+  return pickBestCandidateByRotationScoring(candidates, rotation);
 }
 
 function getSkylineHeight(skyline: SkylineSegment[], xStart: number, width: number): number {
@@ -701,21 +619,7 @@ function scorePlacement(
   currentUtilization: number,
   rotationCfg: RotationScoringConfig
 ): number {
-  const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
-  const areaGain = (placement.w * placement.h) / sheetArea;
-  const bottomLeftBias =
-    1 - (placement.y / Math.max(1, sheet.altura_mm)) - (placement.x / Math.max(1, sheet.largura_mm)) * 0.5;
-  const expectedUtil = currentUtilization + areaGain;
-  const utilizationReward = expectedUtil >= MIN_UTILIZATION_PERCENT ? 0.4 : expectedUtil * 0.2;
-  let rotationScore = 0;
-  if (rotationCfg.rotationPreferenceMode !== "disabled") {
-    if (placement.rotation === 90) {
-      rotationScore += rotationCfg.rotationWeight * (1 + Math.max(0, placement.rotationDelta));
-    } else if (placement.alternativeRotationAvailable && placement.rotationDelta > 0) {
-      rotationScore -= rotationCfg.rotationPenalty * placement.rotationDelta;
-    }
-  }
-  return areaGain * 2.0 + bottomLeftBias * 0.3 + utilizationReward + placement.orientationScore * 0.25 + rotationScore;
+  return scorePlacementScoring(sheet, placement, currentUtilization, rotationCfg);
 }
 
 function pickBestPieceForSheet(
@@ -799,82 +703,16 @@ function layoutFromPlacements(
   return layoutFromPlacementsUtil(placements, sheet);
 }
 
-function computeSolutionMetrics(
-  sheets: SheetResult[],
-  sheet: SheetDefinition,
-  scoreModel: ScoreModel = "legacy"
-): GlobalScoreMetrics {
-  const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
-  const usedArea = sheets.reduce((acc, s) => acc + s.placements.reduce((a, p) => a + p.largura_mm * p.altura_mm, 0), 0);
-  const usefulLeftoverArea = sheets.reduce((acc, s) => {
-    const rects = s.placements.map((p) => ({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm }));
-    return acc + estimateUsefulLeftover(sheet, rects);
-  }, 0);
-  const wasteArea = sheets.length * sheetArea - usedArea;
-  const perSheet = sheets.map((s) => computeSheetAdvancedMetrics(sheet, s.placements));
-  const convexHullWasteTotal = perSheet.reduce((acc, p) => acc + p.convexHullWaste, 0);
-  const fragmentationScoreTotal = perSheet.reduce((acc, p) => acc + p.fragmentationScore, 0);
-  const pocketsCountTotal = perSheet.reduce((acc, p) => acc + p.pocketsCount, 0);
-  const linearGapScoreTotal = perSheet.reduce((acc, p) => acc + p.linearGapScore, 0);
-  const compactnessScoreTotal = perSheet.reduce((acc, p) => acc + p.compactnessScore, 0);
-  const usefulRectangularScrapScoreTotal = perSheet.reduce((acc, p) => acc + p.usefulRectangularScrapScore, 0);
-
-  let score = sheets.length * 1_000_000 + wasteArea - usefulLeftoverArea * 0.1;
-  if (scoreModel === "v32") {
-    // v3.2: aumenta sensibilidade intra-chapa.
-    score += convexHullWasteTotal * 120_000;
-    score += fragmentationScoreTotal * 65_000;
-    score += pocketsCountTotal * 3_000;
-    score += linearGapScoreTotal * 8_000;
-    score -= compactnessScoreTotal * 22_000;
-    score -= usefulRectangularScrapScoreTotal * 35_000;
-  }
-
-  return {
-    usedArea,
-    wasteArea,
-    usefulLeftoverArea,
-    score,
-    advanced: {
-      convexHullWasteTotal,
-      fragmentationScoreTotal,
-      pocketsCountTotal,
-      linearGapScoreTotal,
-      compactnessScoreTotal,
-      usefulRectangularScrapScoreTotal,
-      perSheet,
-    },
-  };
+function computeSolutionMetrics(sheets: SheetResult[], sheet: SheetDefinition, scoreModel: ScoreModel = "legacy"): GlobalScoreMetrics {
+  return computeSolutionMetricsScoring(sheets, sheet, scoreModel, {
+    estimateUsefulLeftover,
+    computeSheetAdvancedMetrics,
+  });
 }
 
 function randomInt(maxExclusive: number): number {
   return randomIntUtil(maxExclusive);
 }
-
-type SheetAdvancedMetrics = {
-  convexHullWaste: number;
-  fragmentationScore: number;
-  pocketsCount: number;
-  linearGapScore: number;
-  compactnessScore: number;
-  usefulRectangularScrapScore: number;
-};
-
-type GlobalScoreMetrics = {
-  usedArea: number;
-  wasteArea: number;
-  usefulLeftoverArea: number;
-  score: number;
-  advanced: {
-    convexHullWasteTotal: number;
-    fragmentationScoreTotal: number;
-    pocketsCountTotal: number;
-    linearGapScoreTotal: number;
-    compactnessScoreTotal: number;
-    usefulRectangularScrapScoreTotal: number;
-    perSheet: SheetAdvancedMetrics[];
-  };
-};
 
 function createSeededRng(seed: number): SeededRng {
   return createSeededRngUtil(seed);
@@ -901,132 +739,12 @@ function polygonArea(poly: Array<{ x: number; y: number }>): number {
 }
 
 function computeSheetAdvancedMetrics(sheet: SheetDefinition, placements: CutPlacement[]): SheetAdvancedMetrics {
-  if (placements.length === 0) {
-    return {
-      convexHullWaste: 0,
-      fragmentationScore: 0,
-      pocketsCount: 0,
-      linearGapScore: 0,
-      compactnessScore: 0,
-      usefulRectangularScrapScore: 0,
-    };
-  }
-
-  const rects: PlacedRect[] = placements.map((p) => ({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm }));
-  const usedArea = rects.reduce((acc, r) => acc + rectArea(r), 0);
-  const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
-
-  // Convex hull waste.
-  const pts: Array<{ x: number; y: number }> = [];
-  for (const r of rects) {
-    pts.push({ x: r.x, y: r.y });
-    pts.push({ x: r.x + r.w, y: r.y });
-    pts.push({ x: r.x + r.w, y: r.y + r.h });
-    pts.push({ x: r.x, y: r.y + r.h });
-  }
-  const hull = monotonicHull(pts);
-  const hullArea = Math.max(usedArea, polygonArea(hull));
-  const convexHullWaste = Math.max(0, hullArea - usedArea);
-
-  // Coarse occupancy grid for pockets/gaps/fragmentation.
-  const grid = 48;
-  const cellW = sheet.largura_mm / grid;
-  const cellH = sheet.altura_mm / grid;
-  const occ: boolean[][] = Array.from({ length: grid }, () => Array.from({ length: grid }, () => false));
-  for (let gy = 0; gy < grid; gy++) {
-    for (let gx = 0; gx < grid; gx++) {
-      const cell: PlacedRect = { x: gx * cellW, y: gy * cellH, w: cellW, h: cellH };
-      let covered = false;
-      for (const r of rects) {
-        if (rectIntersectArea(cell, r) > cellW * cellH * 0.35) {
-          covered = true;
-          break;
-        }
-      }
-      occ[gy][gx] = covered;
-    }
-  }
-
-  // fragmentation: transitions occupied<->empty.
-  let transitions = 0;
-  for (let gy = 0; gy < grid; gy++) {
-    for (let gx = 0; gx < grid - 1; gx++) transitions += occ[gy][gx] === occ[gy][gx + 1] ? 0 : 1;
-  }
-  for (let gx = 0; gx < grid; gx++) {
-    for (let gy = 0; gy < grid - 1; gy++) transitions += occ[gy][gx] === occ[gy + 1][gx] ? 0 : 1;
-  }
-  const fragmentationScore = transitions / (grid * grid);
-
-  // pockets: empty components fully internal (not touching border).
-  const visited: boolean[][] = Array.from({ length: grid }, () => Array.from({ length: grid }, () => false));
-  let pocketsCount = 0;
-  for (let gy = 0; gy < grid; gy++) {
-    for (let gx = 0; gx < grid; gx++) {
-      if (visited[gy][gx] || occ[gy][gx]) continue;
-      const queue: Array<[number, number]> = [[gx, gy]];
-      visited[gy][gx] = true;
-      let touchesBorder = gx === 0 || gy === 0 || gx === grid - 1 || gy === grid - 1;
-      while (queue.length > 0) {
-        const [cx, cy] = queue.shift()!;
-        const nbs: Array<[number, number]> = [
-          [cx + 1, cy],
-          [cx - 1, cy],
-          [cx, cy + 1],
-          [cx, cy - 1],
-        ];
-        for (const [nx, ny] of nbs) {
-          if (nx < 0 || ny < 0 || nx >= grid || ny >= grid) continue;
-          if (visited[ny][nx] || occ[ny][nx]) continue;
-          visited[ny][nx] = true;
-          if (nx === 0 || ny === 0 || nx === grid - 1 || ny === grid - 1) touchesBorder = true;
-          queue.push([nx, ny]);
-        }
-      }
-      if (!touchesBorder) pocketsCount++;
-    }
-  }
-
-  // linear gaps: long empty runs in rows/cols.
-  let linearGapScore = 0;
-  for (let gy = 0; gy < grid; gy++) {
-    let run = 0;
-    for (let gx = 0; gx < grid; gx++) {
-      if (!occ[gy][gx]) run++;
-      else run = 0;
-      if (run >= 8) linearGapScore += run * 0.02;
-    }
-  }
-  for (let gx = 0; gx < grid; gx++) {
-    let run = 0;
-    for (let gy = 0; gy < grid; gy++) {
-      if (!occ[gy][gx]) run++;
-      else run = 0;
-      if (run >= 8) linearGapScore += run * 0.02;
-    }
-  }
-
-  // compactness bonus proxy.
-  const minX = Math.min(...rects.map((r) => r.x));
-  const minY = Math.min(...rects.map((r) => r.y));
-  const maxX = Math.max(...rects.map((r) => r.x + r.w));
-  const maxY = Math.max(...rects.map((r) => r.y + r.h));
-  const bboxArea = Math.max(1, (maxX - minX) * (maxY - minY));
-  const compactnessScore = usedArea / bboxArea;
-
-  // useful rectangular scraps: prefer large clean rectangles.
-  const rightStrip = Math.max(0, sheet.largura_mm - maxX) * sheet.altura_mm;
-  const topStrip = Math.max(0, sheet.altura_mm - maxY) * sheet.largura_mm;
-  const shortPenalty = Math.min(rightStrip, topStrip) * 0.35;
-  const usefulRectangularScrapScore = Math.max(0, Math.max(rightStrip, topStrip) - shortPenalty) / sheetArea;
-
-  return {
-    convexHullWaste: convexHullWaste / sheetArea,
-    fragmentationScore,
-    pocketsCount,
-    linearGapScore,
-    compactnessScore,
-    usefulRectangularScrapScore,
-  };
+  return computeSheetAdvancedMetricsScoring(sheet, placements, {
+    rectArea,
+    rectIntersectArea,
+    monotonicHull,
+    polygonArea,
+  });
 }
 
 function mutatePlacements(
