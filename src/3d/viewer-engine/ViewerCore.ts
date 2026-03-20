@@ -107,7 +107,6 @@ export class ViewerCore {
   private cameraManager: CameraManager;
   private rendererManager: RendererManager;
   private controls: Controls | null;
-  private resizeObserver: ResizeObserver | null = null;
   private readonly boxManager = new ViewerBoxManager();
   get boxes(): Map<string, ViewerBoxEntry> {
     return this.boxManager.getBoxes();
@@ -4058,7 +4057,6 @@ export class ViewerCore {
     window.removeEventListener("resize", this.updateCanvasSize);
     window.removeEventListener("keydown", this.boundShiftKeyDown);
     window.removeEventListener("keyup", this.boundShiftKeyUp);
-    this.resizeObserver?.disconnect();
     this.disposeComposer();
     this.disposeMainComposer();
     this.controls?.dispose();
