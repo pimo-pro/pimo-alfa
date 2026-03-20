@@ -511,9 +511,6 @@ export class ViewerCore {
       },
       updateCameraProjection: () => this.cameraManager.camera.updateProjectionMatrix(),
       getContainer: () => this.container,
-      ensureShowcaseComposer: () => {
-        if (!this.composer) this.initShowcaseComposer();
-      },
       ensureMainComposer: () => {
         if (!this.mainComposer) this.initMainComposer();
       },
