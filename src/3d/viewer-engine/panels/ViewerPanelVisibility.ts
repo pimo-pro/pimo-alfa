@@ -11,6 +11,13 @@ type ViewerBoxLike = {
 
 type PanelType = "left" | "right" | "top" | "bottom" | "back";
 
+/**
+ * Contrato de integração do módulo de visibilidade de painéis.
+ * Invariantes esperados em userData:
+ * - boxId identifica o box dono do mesh.
+ * - panelType mapeia para left/right/top/bottom/back quando aplicável.
+ * - doorLayerId/drawerLayerId/shelfIndex identificam camadas especiais.
+ */
 type ViewerPanelVisibilityDeps = {
   getBoxes: () => Map<string, ViewerBoxLike>;
   getHighlightEnabled: () => boolean;
@@ -80,6 +87,11 @@ export class ViewerPanelVisibility {
     return this.explodedViewIntensity;
   }
 
+  /**
+   * Precondições:
+   * - root deve ser a raiz do box com meshes de painel/porta/gaveta/prateleira.
+   * - boxId deve ser estável para manter chaves de visibilidade consistentes.
+   */
   applyPanelIdsToBox(root: THREE.Object3D, boxId: string, panelIds?: Partial<BoxPanelIds> | null): void {
     const panelIdByType: Partial<Record<PanelType, string | undefined>> = {
       left: panelIds?.lateral_esquerda,
@@ -127,6 +139,11 @@ export class ViewerPanelVisibility {
     });
   }
 
+  /**
+   * Precondições:
+   * - root deve ter userData.boxId preenchido (direto ou em ancestrais).
+   * - applyPanelIdsToBox deve ter sido aplicado para chaves panelId/panelType coerentes.
+   */
   applyPanelVisibilityForObject(root: THREE.Object3D): void {
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
