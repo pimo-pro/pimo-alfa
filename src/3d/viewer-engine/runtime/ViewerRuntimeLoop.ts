@@ -2,6 +2,14 @@ import * as THREE from "three";
 import type { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import type { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 
+/**
+ * Contrato do loop de runtime/render.
+ * Ordem por frame: onBeforeRenderTick() -> renderOneFrame() -> onAfterRenderTick().
+ * Invariantes:
+ * - O core fornece callbacks sem efeitos colaterais irreversíveis por frame.
+ * - ensureMainComposer/getMainComposer e getShowcaseComposer refletem o estado real do pipeline.
+ * - onResize() ajusta renderer/camera/composers; o módulo não observa DOM por conta própria.
+ */
 type ViewerRuntimeLoopDeps = {
   getRenderer: () => THREE.WebGLRenderer;
   renderScene: () => void;
@@ -25,6 +33,7 @@ type ViewerRuntimeLoopDeps = {
   onAfterRenderTick: () => void;
 };
 
+/** Responsável apenas pela cadência de frame e seleção do pipeline de render. */
 export class ViewerRuntimeLoop {
   private readonly deps: ViewerRuntimeLoopDeps;
   private rafId: number | null = null;
