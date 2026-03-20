@@ -28,10 +28,6 @@ const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
-import LandingDebugNav from "./landing/LandingDebugNav";
-const Concept1Modern = lazy(() => import("./landing/concept1-modern/index"));
-const Concept2Minimal = lazy(() => import("./landing/concept2-minimal/index"));
-const Concept3Creative = lazy(() => import("./landing/concept3-creative/index"));
 
 export default function App() {
   const [leftOpen, setLeftOpen] = useState(true);
@@ -73,17 +69,11 @@ export default function App() {
   const [showDevTest, setShowDevTest] = useState(false);
   const [showAjuda, setShowAjuda] = useState(false);
   const [showUserProjects, setShowUserProjects] = useState(false);
-  const [showLandingConcept1, setShowLandingConcept1] = useState(false);
-  const [showLandingConcept2, setShowLandingConcept2] = useState(false);
-  const [showLandingConcept3, setShowLandingConcept3] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
 
   useEffect(() => {
     const syncRoute = () => {
       const pathname = window.location.pathname;
-      setShowLandingConcept1(pathname === "/landing/concept1");
-      setShowLandingConcept2(pathname === "/landing/concept2");
-      setShowLandingConcept3(pathname === "/landing/concept3");
       const isSystemDocs = pathname === "/documentacao";
       const isAdmin = pathname === "/admin";
       const isProjectProgress = pathname === "/project-progress";

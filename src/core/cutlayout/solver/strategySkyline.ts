@@ -1,7 +1,5 @@
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
-const EPS = 0.001;
-
 type SkylineSegment = { x: number; y: number };
 type PlacementCandidate = {
   x: number;

@@ -28,14 +28,12 @@ import {
   expandPieces as expandPiecesUtil,
   flattenPlacements as flattenPlacementsUtil,
   getPieceArea as getPieceAreaUtil,
-  getPieceAspectRatio as getPieceAspectRatioUtil,
   groupByMaterialAndThickness as groupByMaterialAndThicknessUtil,
   groupByThicknessOnly as groupByThicknessOnlyUtil,
   isInsideSheet as isInsideSheetUtil,
   isRotatablePiece as isRotatablePieceUtil,
   layoutFromPlacements as layoutFromPlacementsUtil,
   overlaps as overlapsUtil,
-  partitionPlacementsIntoSheets as partitionPlacementsIntoSheetsUtil,
   reorderPieces as reorderPiecesUtil,
 } from "./utils/cutLayoutUtils";
 import {
@@ -53,7 +51,6 @@ import {
 import {
   findPlacementSkyline as findPlacementSkylineSolver,
   getCandidateX as getCandidateXSolver,
-  getSkylineHeight as getSkylineHeightSolver,
   getSkylineYAt as getSkylineYAtSolver,
   mergeSkylineSegments as mergeSkylineSegmentsSolver,
   updateSkyline as updateSkylineSolver,
@@ -62,7 +59,6 @@ import { findPlacementShelf as findPlacementShelfSolver } from "./solver/strateg
 import {
   findPlacementGuillotine as findPlacementGuillotineSolver,
   pruneContainedFreeRects as pruneContainedFreeRectsSolver,
-  splitGuillotineRect as splitGuillotineRectSolver,
 } from "./solver/strategyGuillotine";
 import {
   initStrategyState as initStrategyStateSolver,
@@ -156,12 +152,8 @@ type StateShelf = { shelves: Shelf[] };
 type StateGuillotine = { freeRects: FreeRect[] };
 type StrategyState = StateSkyline | StateShelf | StateGuillotine;
 
-function getPieceArea(piece: CutPiece): number {
+export function getPieceArea(piece: CutPiece): number {
   return getPieceAreaUtil(piece);
-}
-
-function getPieceAspectRatio(piece: CutPiece): number {
-  return getPieceAspectRatioUtil(piece);
 }
 
 function calculateSheetUtilization(placedRects: PlacedRect[], sheetW: number, sheetH: number): number {
@@ -208,7 +200,7 @@ function reorderPieces(pieces: CutPiece[], mode: ReorderMode = "production"): Cu
   return reorderPiecesUtil(pieces, mode);
 }
 
-function buildCandidateCoordinates(
+export function buildCandidateCoordinates(
   placed: CutPlacement[],
   pieceW: number,
   pieceH: number,
@@ -284,19 +276,15 @@ function pickBestCandidateByRotation(candidates: PlacementCandidate[], rotation:
   return pickBestCandidateByRotationScoring(candidates, rotation);
 }
 
-function getSkylineHeight(skyline: SkylineSegment[], xStart: number, width: number): number {
-  return getSkylineHeightSolver(skyline, xStart, width);
-}
-
-function getSkylineYAt(skyline: SkylineSegment[], x: number): number {
+export function getSkylineYAt(skyline: SkylineSegment[], x: number): number {
   return getSkylineYAtSolver(skyline, x);
 }
 
-function mergeSkylineSegments(segments: SkylineSegment[]): SkylineSegment[] {
+export function mergeSkylineSegments(segments: SkylineSegment[]): SkylineSegment[] {
   return mergeSkylineSegmentsSolver(segments);
 }
 
-function updateSkyline(
+export function updateSkyline(
   skyline: SkylineSegment[],
   x: number,
   y: number,
@@ -307,7 +295,7 @@ function updateSkyline(
   return updateSkylineSolver(skyline, x, y, w, h, kerf);
 }
 
-function getCandidateX(skyline: SkylineSegment[], sheetW: number, pieceW: number): number[] {
+export function getCandidateX(skyline: SkylineSegment[], sheetW: number, pieceW: number): number[] {
   return getCandidateXSolver(skyline, sheetW, pieceW);
 }
 
@@ -347,11 +335,7 @@ function findPlacementShelf(
   }) as PlacementCandidate | null;
 }
 
-function splitGuillotineRect(rect: FreeRect, w: number, h: number, kerf: number): FreeRect[] {
-  return splitGuillotineRectSolver(rect, w, h, kerf);
-}
-
-function pruneContainedFreeRects(rects: FreeRect[]): FreeRect[] {
+export function pruneContainedFreeRects(rects: FreeRect[]): FreeRect[] {
   return pruneContainedFreeRectsSolver(rects);
 }
 
@@ -454,13 +438,6 @@ function flattenPlacements(sheets: SheetResult[]): CutPlacement[] {
   return flattenPlacementsUtil(sheets);
 }
 
-function partitionPlacementsIntoSheets(
-  placements: CutPlacement[],
-  sheet: SheetDefinition
-): SheetResult[] {
-  return partitionPlacementsIntoSheetsUtil(placements, sheet);
-}
-
 function layoutFromPlacements(
   placements: CutPlacement[],
   sheet: SheetDefinition
@@ -512,7 +489,7 @@ function computeSheetAdvancedMetrics(sheet: SheetDefinition, placements: CutPlac
   });
 }
 
-function mutatePlacements(
+export function mutatePlacements(
   placements: CutPlacement[],
   move: MetaMove,
   _sheet: SheetDefinition,
@@ -521,7 +498,7 @@ function mutatePlacements(
   return mutatePlacementsOpt(placements, move, _sheet, rng, { randomInt });
 }
 
-function applyLnsRepack(
+export function applyLnsRepack(
   placements: CutPlacement[],
   sheet: SheetDefinition,
   kerf: number,

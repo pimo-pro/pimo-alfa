@@ -3,22 +3,19 @@ import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import { SYSTEM_THICKNESS_MM, SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
-import { devLogger } from "../../utils/devLogger";
 import {
   getEdgeMaterial,
   getFallbackPBRMaterial,
   getMaterialForOfficialId,
   resolvePanelMaterialOptions,
-  type PanelMaterialOptions,
 } from "./BoxMaterialApplier";
-import { PanelFactory, type PanelType } from "./PanelFactory";
+import { PanelFactory } from "./PanelFactory";
 import { applyDrillHolesToPanelGeometry } from "./DrillGeometryBuilder";
 import {
   buildDoorSpecs as buildDoorSpecsFromFactory,
   createDoorObject as createDoorObjectFromFactory,
   getDoorSpecFingerprint as getDoorSpecFingerprintFromFactory,
   getDoorSpecFromGroup as getDoorSpecFromGroupFromFactory,
-  mapDoorHolesByHingeSide as mapDoorHolesByHingeSideFromFactory,
 } from "./DoorFactory";
 import {
   buildDrawerSpecs as buildDrawerSpecsFromFactory,
@@ -27,7 +24,6 @@ import {
 } from "./DrawerFactory";
 import { buildBoxGroupWithDeps, buildBoxWithDeps } from "./BoxAssembler";
 import {
-  dimensionsEqual as dimensionsEqualFromUpdater,
   updateBoxGeometryWithDeps,
   updateBoxGroupWithDeps,
   updateBoxModelWithDeps,
@@ -293,14 +289,6 @@ function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
   return buildDrawerSpecsFromFactory(items);
 }
 
-function mapDoorHolesByHingeSide(
-  holes: TechnicalDrillHole[] | undefined,
-  doorWidthM: number,
-  hingeSide: "left" | "right"
-): TechnicalDrillHole[] {
-  return mapDoorHolesByHingeSideFromFactory(holes, doorWidthM, hingeSide);
-}
-
 /**
  * Cria o objeto 3D da porta (grupo pivot + mesh do painel + furos).
  * Todos os nós recebem userData.doorLayerId para seleção, context menu e outline.
@@ -373,13 +361,6 @@ const PANEL_NAMES = ["left", "right", "top", "bottom", "back"] as const;
 
 /** Dimensões aplicadas na última chamada a updateBoxGroup (para evitar rebuild completo quando só portas/gavetas mudam). */
 const LAST_DIMS_KEY = "lastUpdateBoxGroupDimensions";
-
-function dimensionsEqual(
-  a: { width: number; height: number; depth: number },
-  b: { width: number; height: number; depth: number }
-): boolean {
-  return dimensionsEqualFromUpdater(a, b);
-}
 
 function getUpdaterDeps() {
   return {

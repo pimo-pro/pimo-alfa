@@ -21,7 +21,6 @@ import {
   isOnline,
   makeId,
   nowIso,
-  toIsoOrNow,
   toMetaFromProjectData,
   toRecordFromProjectData,
   toSavedMetaFromOffline,
@@ -40,7 +39,6 @@ import {
   getProjectsSyncStatus,
   markDeletedIfNoPending,
   notifyLocalSaveStatus,
-  subscribeProjectsSyncStatus,
   syncQueue,
 } from "./projectsSyncEngine";
 export type { ProjectsSyncStatus } from "./projectsSyncEngine";
@@ -114,7 +112,7 @@ export async function listProjects(
   }
   try {
     const remote = await remoteListProjects(scope, ownerId, projectsApiDeps);
-    const merged = await mergeRemoteListIntoOffline(remote, scope, ownerId);
+    const merged = await mergeRemoteListIntoOffline(remote, scope, ownerId, loadProjectsOffline);
     void syncQueue();
     return merged;
   } catch {

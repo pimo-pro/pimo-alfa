@@ -15,7 +15,6 @@ import { getMaterialForBox, getMaterialByIdOrLabel } from "./service";
 import { getPresetById, getDefaultPreset } from "./presetService";
 import type { BoxModule } from "../types";
 import { loadTextureAsync } from "../../3d/viewer-engine/materials/textureCache";
-import { createWoodMaterial } from "../../3d/materials/WoodMaterial";
 
 /** Objeto visual final para renderização (cor, textura, UV, PBR). */
 export interface VisualMaterial {

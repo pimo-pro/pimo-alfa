@@ -45,7 +45,11 @@ export type ViewerRaycastSystemDeps = {
  * Reutiliza o mesmo Raycaster e Vector2 do core (não cria instâncias novas).
  */
 export class ViewerRaycastSystem {
-  constructor(private readonly deps: ViewerRaycastSystemDeps) {}
+  private readonly deps: ViewerRaycastSystemDeps;
+
+  constructor(deps: ViewerRaycastSystemDeps) {
+    this.deps = deps;
+  }
 
   getTransformGizmoIntersections(event: { clientX: number; clientY: number }): number {
     const helper = this.deps.getTransformControlsHelper();

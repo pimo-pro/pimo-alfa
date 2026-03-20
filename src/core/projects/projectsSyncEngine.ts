@@ -1,4 +1,4 @@
-import type { RenameProjectRequest, SaveProjectRequest, SavedProjectMeta } from "./types";
+import type { RenameProjectRequest, SaveProjectRequest } from "./types";
 import {
   remoteDeleteProject,
   remoteRenameProject,
