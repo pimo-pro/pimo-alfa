@@ -37,6 +37,7 @@ import {
   loadMaterial as materialEngineLoadMaterial,
   getMaterialMode,
   setMaterialMode as materialEngineSetMaterialMode,
+  setLacqueredClearcoatPipeline as materialEngineSetLacqueredClearcoatPipeline,
   getSceneMaterialConfig,
   getSharedPanelEdgeMaterial,
   disposeSharedPanelEdgeMaterial,
@@ -553,6 +554,8 @@ export class ViewerCore {
 
     this.eventsManager = new EventsManager(this.getEventEngineApi());
     this.eventsManager.register(this.rendererManager.renderer.domElement);
+
+    materialEngineSetLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
 
     this.start();
     window.addEventListener("resize", this.updateCanvasSize);
@@ -1450,6 +1453,7 @@ export class ViewerCore {
   setMaterialQuality(quality: ViewerMaterialQuality): void {
     this.materialQuality =
       quality === "premium" || quality === "lacquered" ? quality : "standard";
+    materialEngineSetLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
     this.sceneManager.setMaterialQuality(this.materialQuality);
     this.applyMaterialQualityProfile();
     const mode: MaterialMode =
@@ -3674,7 +3678,9 @@ export class ViewerCore {
   }
 
   private loadMaterial(materialName: string): LoadedWoodMaterial | null {
-    const result = materialEngineLoadMaterial(materialName, getMaterialMode());
+    const result = materialEngineLoadMaterial(materialName, getMaterialMode(), {
+      useLacqueredClearcoat: this.materialQuality === "lacquered",
+    });
     return result as LoadedWoodMaterial | null;
   }
 

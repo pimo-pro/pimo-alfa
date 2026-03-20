@@ -25,6 +25,12 @@ export interface MaterialPresetDefinition {
   rotation?: number;
 }
 
+/** Opções de construção de material (ex.: lacado com clearcoat físico). */
+export type BuildMaterialOptions = {
+  /** Quando true, usa MeshPhysicalMaterial com clearcoat (qualidade "lacado" no viewer). */
+  useLacqueredClearcoat?: boolean;
+};
+
 /** Mapas de textura carregados (para aplicar ao MeshStandardMaterial). */
 export interface TextureMaps {
   map?: THREE.Texture | null;
@@ -70,7 +76,7 @@ export interface SceneMaterialConfig {
 
 /** Resultado compatível com LoadedWoodMaterial para integração com ViewerCore. */
 export interface LoadedMaterialResult {
-  material: THREE.MeshStandardMaterial;
+  material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
   textures: THREE.Texture[];
   loadDetailMaps: () => Promise<void>;
   areDetailMapsLoaded: () => boolean;

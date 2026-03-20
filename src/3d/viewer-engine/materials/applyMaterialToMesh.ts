@@ -1,17 +1,19 @@
 /**
- * MaterialEngine — Aplica preset a um THREE.MeshStandardMaterial (cor, PBR, opcionalmente mapas).
- * performance: só cor + PBR. showcase/realistic: cor + PBR + map (e normalMap) quando existirem.
+ * MaterialEngine — Aplica preset a MeshStandardMaterial / MeshPhysicalMaterial (cor, PBR, opcionalmente mapas).
+ * performance: só cor + PBR. showcase/realistic: cor + PBR + map/normalMap/roughnessMap quando existirem no preset.
  */
 
 import * as THREE from "three";
 import type { MaterialPresetDefinition } from "./types";
 import { loadTextureAsync } from "./textureCache";
 
+type StandardOrPhysical = THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+
 /**
  * Aplica cor e PBR ao material (sempre).
  */
 export function applyColorAndPBRToMaterial(
-  mat: THREE.MeshStandardMaterial,
+  mat: StandardOrPhysical,
   preset: MaterialPresetDefinition
 ): void {
   mat.color.set(preset.baseColor);
@@ -26,7 +28,7 @@ export function applyColorAndPBRToMaterial(
 /**
  * Remove mapas do material (modo performance).
  */
-export function clearMapsFromMaterial(mat: THREE.MeshStandardMaterial): void {
+export function clearMapsFromMaterial(mat: StandardOrPhysical): void {
   mat.map = null;
   mat.normalMap = null;
   mat.roughnessMap = null;
@@ -38,32 +40,44 @@ export function clearMapsFromMaterial(mat: THREE.MeshStandardMaterial): void {
  * Carrega texturas de forma assíncrona; quando todas estiverem carregadas, aplica.
  */
 export function applyMapsToMaterialAsync(
-  mat: THREE.MeshStandardMaterial,
+  mat: StandardOrPhysical,
   preset: MaterialPresetDefinition
 ): void {
   const repeat = preset.repeat ?? { x: 1, y: 1 };
   const rotationRad = ((preset.rotation ?? 0) * Math.PI) / 180;
 
-  const apply = (mapTex: THREE.Texture | null, normalTex: THREE.Texture | null) => {
+  const applyUv = (tex: THREE.Texture) => {
+    tex.repeat.set(repeat.x, repeat.y);
+    tex.rotation = rotationRad;
+  };
+
+  const apply = (
+    mapTex: THREE.Texture | null,
+    normalTex: THREE.Texture | null,
+    roughnessTex: THREE.Texture | null
+  ) => {
     if (mapTex) {
       mat.map = mapTex;
-      mapTex.repeat.set(repeat.x, repeat.y);
-      mapTex.rotation = rotationRad;
+      applyUv(mapTex);
     }
     if (normalTex) {
       mat.normalMap = normalTex;
-      normalTex.repeat.set(repeat.x, repeat.y);
-      normalTex.rotation = rotationRad;
+      applyUv(normalTex);
+    }
+    if (roughnessTex) {
+      mat.roughnessMap = roughnessTex;
+      applyUv(roughnessTex);
     }
     mat.needsUpdate = true;
   };
 
-  if (preset.textureUrl || preset.normalMapUrl) {
+  if (preset.textureUrl || preset.normalMapUrl || preset.roughnessMapUrl) {
     Promise.all([
       preset.textureUrl ? loadTextureAsync(preset.textureUrl) : Promise.resolve(null),
       preset.normalMapUrl ? loadTextureAsync(preset.normalMapUrl) : Promise.resolve(null),
-    ]).then(([mapTex, normalTex]) => {
-      apply(mapTex ?? null, normalTex ?? null);
+      preset.roughnessMapUrl ? loadTextureAsync(preset.roughnessMapUrl) : Promise.resolve(null),
+    ]).then(([mapTex, normalTex, roughnessTex]) => {
+      apply(mapTex ?? null, normalTex ?? null, roughnessTex ?? null);
     });
   }
 }
@@ -73,7 +87,7 @@ export function applyMapsToMaterialAsync(
  */
 export function assignMaterialToMesh(
   mesh: THREE.Mesh,
-  material: THREE.MeshStandardMaterial
+  material: StandardOrPhysical
 ): void {
   if (Array.isArray(mesh.material)) {
     const arr = mesh.material as THREE.Material[];

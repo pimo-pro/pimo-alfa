@@ -4,7 +4,12 @@
  */
 
 import * as THREE from "three";
-import type { MaterialMode, MaterialPresetDefinition, LoadedMaterialResult } from "./types";
+import type {
+  MaterialMode,
+  MaterialPresetDefinition,
+  LoadedMaterialResult,
+  BuildMaterialOptions,
+} from "./types";
 import { getPreset, getDefaultPreset } from "./presetRegistry";
 import { getSceneMaterialConfig as getSceneConfig } from "./sceneMaterialConfig";
 import { createWoodMaterial } from "../../materials/WoodMaterial";
@@ -16,6 +21,20 @@ import {
 
 /** Modo global (default: performance para manter comportamento atual). */
 let currentMode: MaterialMode = "performance";
+
+/**
+ * Lacado (MeshPhysical + clearcoat): sincronizado pelo ViewerCore com `materialQuality === "lacquered"`.
+ * Usado por loadMaterial quando não há opção explícita (ex.: BoxMaterialApplier na construção).
+ */
+let lacqueredClearcoatPipeline = false;
+
+export function setLacqueredClearcoatPipeline(enabled: boolean): void {
+  lacqueredClearcoatPipeline = enabled;
+}
+
+export function getLacqueredClearcoatPipeline(): boolean {
+  return lacqueredClearcoatPipeline;
+}
 
 export function getMaterialMode(): MaterialMode {
   return currentMode;
@@ -33,23 +52,48 @@ export function loadPreset(materialId: string): MaterialPresetDefinition | null 
 }
 
 /**
- * Constrói um THREE.MeshStandardMaterial a partir do preset e modo.
- * performance: só cor + PBR (delega em createWoodMaterial).
- * showcase/realistic: cor + PBR + map/normalMap quando existirem no preset.
+ * Constrói MeshStandardMaterial ou MeshPhysicalMaterial (lacado + clearcoat) a partir do preset e modo.
+ * performance: só cor + PBR (delega em createWoodMaterial, salvo lacado explícito).
+ * showcase/realistic: cor + PBR + map/normalMap/roughnessMap quando existirem no preset.
  */
 export function buildThreeMaterial(
   preset: MaterialPresetDefinition,
-  mode: MaterialMode
+  mode: MaterialMode,
+  buildOptions?: BuildMaterialOptions
 ): LoadedMaterialResult {
+  const useLacquered = Boolean(buildOptions?.useLacqueredClearcoat);
   const options = {
     color: preset.baseColor,
     roughness: preset.roughness,
     metalness: preset.metalness,
     envMapIntensity: preset.envMapIntensity ?? 0.4,
   };
-  const { material, textures } = createWoodMaterial({}, options);
 
-  if (mode !== "performance" && (preset.textureUrl || preset.normalMapUrl)) {
+  let material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+  let textures: THREE.Texture[];
+
+  if (useLacquered) {
+    material = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(preset.baseColor),
+      roughness: preset.roughness,
+      metalness: preset.metalness,
+      envMapIntensity: preset.envMapIntensity ?? 0.4,
+      emissive: new THREE.Color(0x000000),
+      clearcoat: 1,
+      clearcoatRoughness: 0.12,
+    });
+    textures = [];
+  } else {
+    const created = createWoodMaterial({}, options);
+    material = created.material;
+    textures = created.textures;
+  }
+
+  const hasDetailMaps =
+    mode !== "performance" &&
+    (preset.textureUrl || preset.normalMapUrl || preset.roughnessMapUrl);
+
+  if (hasDetailMaps) {
     applyMapsToMaterialAsync(material, preset);
   } else {
     clearMapsFromMaterial(material);
@@ -69,10 +113,15 @@ export function buildThreeMaterial(
  */
 export function loadMaterial(
   materialId: string,
-  mode: MaterialMode = currentMode
+  mode: MaterialMode = currentMode,
+  buildOptions?: BuildMaterialOptions
 ): LoadedMaterialResult | null {
   const preset = getPreset(materialId) ?? getDefaultPreset();
-  return buildThreeMaterial(preset, mode);
+  const useClearcoat =
+    buildOptions?.useLacqueredClearcoat !== undefined
+      ? buildOptions.useLacqueredClearcoat
+      : lacqueredClearcoatPipeline;
+  return buildThreeMaterial(preset, mode, { useLacqueredClearcoat: useClearcoat });
 }
 
 /**

@@ -10,7 +10,8 @@ export type WoodMaterialOptions = {
 
 /** Resultado: material + array vazio de texturas e no-ops para compatibilidade. */
 export type LoadedWoodMaterial = {
-  material: THREE.MeshStandardMaterial;
+  /** MeshPhysicalMaterial (lacado) é subtipo em runtime; incluído para tipagem explícita. */
+  material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
   textures: THREE.Texture[];
   loadDetailMaps: () => Promise<void>;
   areDetailMapsLoaded: () => boolean;
