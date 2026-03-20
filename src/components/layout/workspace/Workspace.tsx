@@ -178,6 +178,18 @@ export default function Workspace({
     });
   }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId]);
 
+  /** GLB/CAD: ViewerCore chama após `addModelToBox` concluir o load (ver ViewerCore.addModelToBox). */
+  useEffect(() => {
+    viewerApi.setOnModelLoaded((boxId, modelId, _object) => {
+      if (import.meta.env.DEV) {
+        devLogger.debug("[Workspace] Modelo carregado no viewer", { boxId, modelId });
+      }
+    });
+    return () => {
+      viewerApi.setOnModelLoaded(null);
+    };
+  }, [viewerApi]);
+
   useEffect(() => {
     const selectedBoxId = project.selectedWorkspaceBoxId;
     const validIds = new Set(project.workspaceBoxes.map((box) => box.id));
