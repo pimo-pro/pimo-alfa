@@ -48,7 +48,15 @@ export interface WallStoreState {
   setOpen: (_isOpen: boolean) => void;
   /** Define qual parede é a parede frontal (principal) do projeto. */
   setMainWallIndex: (_index: 0 | 1 | 2 | 3) => void;
+  /**
+   * LEGACY / não ligado à UI (2026-03): inverte `snapEnabled`, mas nenhum painel chama `toggleSnap`.
+   * O layout da sala continua a ser imposto por `applyLayoutIfMissing` / `computeConnectedLayout` em `updateWall`.
+   */
   toggleSnap: () => void;
+  /**
+   * LEGACY / não ligado à UI: alinha extremos da parede `wallId` ao vértice mais próximo de outra parede (≤ `snapThreshold` cm),
+   * só quando `snapEnabled` é true. Não é invocado em lado nenhum; não substitui o layout em U automático.
+   */
   applySnapping: (_wallId: string) => void;
   /** Recria a sala com 3 paredes padrão (formato em "U"). */
   resetRoom: () => void;
@@ -187,10 +195,12 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
     set({ isOpen });
   },
 
+  /** @see WallStoreState.toggleSnap — LEGACY, sem botão na UI. */
   toggleSnap: () => {
     set((state) => ({ snapEnabled: !state.snapEnabled }));
   },
 
+  /** @see WallStoreState.applySnapping — LEGACY, sem gatilho na UI. */
   applySnapping: (wallId: string) => {
     const state = get();
     const { walls, snapEnabled, snapThreshold } = state;
