@@ -1156,8 +1156,9 @@ export class ViewerCore {
   }
 
   /**
-   * Aplica material visual (MaterialLibrary v2) a um mesh: cor base, roughness, metallic, e opcionalmente textura/UV.
-   * Não substitui updateBoxMaterial; uso opcional para integração com presets e texturas.
+   * Ponte opcional para {@link applyVisualMaterialToMesh} em materialLibrary v2 (LEGACY / dados CRUD).
+   * O fluxo principal de materiais das caixas no 3D é `updateBoxMaterial` → MaterialEngine.loadMaterial
+   * (presets viewer + modo performance/showcase/realistic). Não misturar os dois no mesmo mesh sem necessidade.
    */
   applyVisualMaterialToMesh(mesh: THREE.Mesh, visualMaterial: VisualMaterial): void {
     applyVisualMaterialToMeshV2(mesh, visualMaterial);

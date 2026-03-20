@@ -1,7 +1,11 @@
 /**
  * FASE 4 — Etapa 8 (Parte 2): MaterialLibrary v2.
- * Converte MaterialRecord + MaterialPreset em objeto visual completo para o Viewer.
- * Suporta cor base, textura, UV scale/rotation, roughness, metallic, normal map.
+ *
+ * LEGACY / caminho paralelo: orientado a MaterialRecord + presets de domínio (CRUD / caixas).
+ * Para materiais de caixas no viewer 3D, a fonte preferida é {@link loadMaterial} em
+ * `viewer-engine/materials/MaterialEngine` + `updateBoxMaterial` no ViewerCore.
+ * Este módulo mantém-se para integração dados→VisualMaterial e aplicação pontual em meshes
+ * (`applyVisualMaterialToMesh`), sem remover a API até uma fase futura de consolidação.
  */
 
 import * as THREE from "three";
@@ -11,6 +15,7 @@ import { getMaterialForBox, getMaterialByIdOrLabel } from "./service";
 import { getPresetById, getDefaultPreset } from "./presetService";
 import type { BoxModule } from "../types";
 import { loadTextureAsync } from "../../3d/viewer-engine/materials/textureCache";
+import { createWoodMaterial } from "../../3d/materials/WoodMaterial";
 
 /** Objeto visual final para renderização (cor, textura, UV, PBR). */
 export interface VisualMaterial {
@@ -125,8 +130,9 @@ export function getEffectiveUvRotationForPiece(piece: PieceWithMaterialFields): 
 }
 
 /**
- * Aplica o material visual a um mesh: cor base, roughness, metallic e, se existir textura, map + UV.
- * Não substitui o sistema atual do Viewer; uso opcional.
+ * LEGACY: aplicação pontual por `VisualMaterial` (domínio CRUD / layout).
+ * Não substitui `ViewerCore.updateBoxMaterial` nem `MaterialEngine.loadMaterial` — são o fluxo
+ * principal de materiais das caixas no viewer.
  * Se o mesh tiver material array (edge/face), aplica ao primeiro MeshStandardMaterial encontrado.
  */
 export function applyVisualMaterialToMesh(
