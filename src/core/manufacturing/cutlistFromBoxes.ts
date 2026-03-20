@@ -49,9 +49,11 @@ export function cutlistComPrecoFromBox(
     : getFallbackMaterial();
   const items: CutListItemComPreco[] = [];
   const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
-  const hasDrawers =
-    Math.max(0, Math.floor(box.gavetas ?? 0)) > 0 ||
-    (Array.isArray(box.drawersLayer) && box.drawersLayer.length > 0);
+  const drawersLayer = box.drawersLayer ?? [];
+  const isPiBox = isPiBaseCabinetId(box.baseCabinetId);
+  const hasDrawers = isPiBox
+    ? drawersLayer.length > 0
+    : Math.max(0, Math.floor(box.gavetas ?? 0)) > 0 || drawersLayer.length > 0;
 
   const baseItem = {
     sourceType: "parametric" as const,
@@ -73,10 +75,15 @@ export function cutlistComPrecoFromBox(
   const doorWidthMm = firstDoorPanel?.largura_mm;
 
   let doorPanelIndex = 0;
+  let piGavetaFrenteIndex = 0;
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
       return;
+    }
+    if (isPiBox && p.tipo === "gaveta_frente") {
+      if (piGavetaFrenteIndex >= drawersLayer.length) return;
+      piGavetaFrenteIndex += 1;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
     const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
@@ -104,8 +111,7 @@ export function cutlistComPrecoFromBox(
     const doorWidthForTopBottom =
       (isTopPanel && hasDoorTop) || (isBottomPanel && hasDoorBottom) ? doorWidthMm : undefined;
     let drillHoles: PanelDrillHole[] = [];
-    const isPiModel = isPiBaseCabinetId(box.baseCabinetId);
-    if (isPiModel && (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")) {
+    if (isPiBox && (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")) {
       const piSettings = getSettings().modeloPI;
       drillHoles = buildPiUniversalLateralDrilling({
         alturaMm: p.altura_mm,
@@ -167,8 +173,8 @@ export function cutlistComPrecoFromBox(
   // Portas já vêm em modelo.paineis (porta_simples, porta_dupla, porta_correr); não duplicar a partir de modelo.portas
   // (modelo.portas é usado apenas para custos/ferragens; a cutlist de peças usa apenas paineis)
 
-  const drawersLayer = box.drawersLayer ?? [];
   modelo.gavetas.forEach((p, gavetaIndex) => {
+    if (isPiBox && (drawersLayer.length === 0 || gavetaIndex >= drawersLayer.length)) return;
     if (!p || !p.id || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.profundidade_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
       return;

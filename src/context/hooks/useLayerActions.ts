@@ -254,15 +254,18 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 }
               : box
           );
-          return {
-            ...prev,
-            workspaceBoxes,
-            changelog: appendChangelog(prev.changelog, {
-              timestamp: new Date(),
-              type: "box",
-              message: "Gaveta adicionada",
-            }),
-          };
+          return recomputeState(
+            prev,
+            {
+              workspaceBoxes,
+              changelog: appendChangelog(prev.changelog, {
+                timestamp: new Date(),
+                type: "box",
+                message: "Gaveta adicionada",
+              }),
+            },
+            true
+          );
         });
       },
       removeDoorLayerItem: (id) => {
@@ -305,15 +308,18 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 })()
               : box
           );
-          return {
-            ...prev,
-            workspaceBoxes,
-            changelog: appendChangelog(prev.changelog, {
-              timestamp: new Date(),
-              type: "box",
-              message: "Gaveta removida",
-            }),
-          };
+          return recomputeState(
+            prev,
+            {
+              workspaceBoxes,
+              changelog: appendChangelog(prev.changelog, {
+                timestamp: new Date(),
+                type: "box",
+                message: "Gaveta removida",
+              }),
+            },
+            true
+          );
         });
       },
       updateDoorLayerItem: (id, partial) => {
@@ -376,15 +382,18 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 }
               : box
           );
-          return {
-            ...prev,
-            workspaceBoxes,
-            changelog: appendChangelog(prev.changelog, {
-              timestamp: new Date(),
-              type: "box",
-              message: "Gaveta atualizada",
-            }),
-          };
+          return recomputeState(
+            prev,
+            {
+              workspaceBoxes,
+              changelog: appendChangelog(prev.changelog, {
+                timestamp: new Date(),
+                type: "box",
+                message: "Gaveta atualizada",
+              }),
+            },
+            true
+          );
         });
       },
       setDoorLayerItemOpen: (id, isOpen) => {
