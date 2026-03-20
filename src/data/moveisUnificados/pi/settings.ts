@@ -23,6 +23,9 @@ export const PI_MODEL_DEFAULT_SETTINGS: PiModelSettings = {
   tipoFrente: "full_overlay",
 };
 
+/** Linhas de furação de corrediça nas laterais PI (superior / média / inferior); independente de `drawersLayer`. */
+export const PI_CORREDICA_DRILL_LINE_COUNT = 3;
+
 export function clampPiNumeroGavetas(value: number): number {
   return Math.min(4, Math.max(1, Math.round(value)));
 }

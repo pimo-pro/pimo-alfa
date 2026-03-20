@@ -1,5 +1,10 @@
 import type { DrillType, PanelDrillHole } from "../../../core/types";
-import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas, type PiModelSettings } from "./settings";
+import {
+  PI_CORREDICA_DRILL_LINE_COUNT,
+  PI_MODEL_DEFAULT_SETTINGS,
+  clampPiNumeroGavetas,
+  type PiModelSettings,
+} from "./settings";
 
 type PiLateralSide = "left" | "right";
 
@@ -12,10 +17,8 @@ export type PiLateralDrillingInput = {
   alturaMm: number;
   profundidadeMm: number;
   side: PiLateralSide;
-  /** Linhas de furação de corrediça: a partir da camada de gavetas; o caller usa min. 1 quando vazio (furação base). */
-  numeroGavetasParaCorrediça: number;
   /**
-   * Só afeta corrediça. Grelha 32 mm (prateleira) e furos de dobradiça seguem só `ativarFuracao*` do modelo.
+   * Só afeta corrediça (todas as linhas). Grelha 32 mm e dobradiça seguem só `ativarFuracao*` do modelo.
    */
   piHideDrawerHoles: boolean;
   /** Preferências PI (merge com defaults dentro de buildPiUniversalLateralDrilling). */
@@ -163,11 +166,7 @@ export function buildPiDrawerLayoutForFronts(alturaMm: number, numeroGavetas: nu
 export function buildPiUniversalLateralDrilling(input: PiLateralDrillingInput): PanelDrillHole[] {
   const holes: PanelDrillHole[] = [];
   const s = mergePiSettings(input.piSettings);
-  const nCorredica = clampPiNumeroGavetas(
-    Number.isFinite(input.numeroGavetasParaCorrediça)
-      ? input.numeroGavetasParaCorrediça
-      : s.numeroGavetas
-  );
+  const nCorredica = clampPiNumeroGavetas(PI_CORREDICA_DRILL_LINE_COUNT);
   const layout = getDrawerLayout(input.alturaMm, nCorredica);
 
   // Malha base 32 mm (tipo prateleira): parte fixa do módulo PI; independente de prateleiras/portas na UI.
@@ -180,7 +179,7 @@ export function buildPiUniversalLateralDrilling(input: PiLateralDrillingInput): 
     addHingeGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
   }
 
-  // Corrediça: sempre que ativo e não oculto; quantidade de linhas = numeroGavetasParaCorrediça (cutlist: max(1, |drawersLayer|)).
+  // Corrediça: sempre 3 linhas (PI_CORREDICA_DRILL_LINE_COUNT) quando ativo e não oculto; independente de gavetas na UI.
   if (s.ativarFuracaoGavetas && !input.piHideDrawerHoles) {
     addDrawerSlideHoles(holes, layout.runnerLinesYMm, input.profundidadeMm, input.side);
   }
