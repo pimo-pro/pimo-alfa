@@ -17,6 +17,36 @@ import type { LayoutVisualMaterial, OperationResult } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
 import { CUT_LAYOUT_SAFETY_MARGIN_MM } from "./layoutCoordinateSystem";
 import { SYSTEM_BACK_MM } from "../baseCabinets";
+import {
+  applyFixedMarginOffset as applyFixedMarginOffsetUtil,
+  cloneSheets as cloneSheetsUtil,
+  createUsableSheetArea as createUsableSheetAreaUtil,
+  estimateUsefulLeftover as estimateUsefulLeftoverUtil,
+  expandPieces as expandPiecesUtil,
+  flattenPlacements as flattenPlacementsUtil,
+  getPieceArea as getPieceAreaUtil,
+  getPieceAspectRatio as getPieceAspectRatioUtil,
+  groupByMaterialAndThickness as groupByMaterialAndThicknessUtil,
+  groupByThicknessOnly as groupByThicknessOnlyUtil,
+  isInsideSheet as isInsideSheetUtil,
+  isRotatablePiece as isRotatablePieceUtil,
+  layoutFromPlacements as layoutFromPlacementsUtil,
+  overlaps as overlapsUtil,
+  partitionPlacementsIntoSheets as partitionPlacementsIntoSheetsUtil,
+  reorderPieces as reorderPiecesUtil,
+} from "./utils/cutLayoutUtils";
+import {
+  createSeededRng as createSeededRngUtil,
+  randomInt as randomIntUtil,
+  shuffleArray as shuffleArrayUtil,
+  type SeededRng,
+} from "./utils/cutLayoutRng";
+import {
+  monotonicHull as monotonicHullUtil,
+  polygonArea as polygonAreaUtil,
+  rectArea as rectAreaUtil,
+  rectIntersectArea as rectIntersectAreaUtil,
+} from "./utils/cutLayoutGeometry";
 
 const DEFAULT_KERF_MM = 3;
 const MIN_UTILIZATION_PERCENT = 0.8;
@@ -157,13 +187,11 @@ function isDevRuntime(): boolean {
 }
 
 function getPieceArea(piece: CutPiece): number {
-  return Math.max(1, piece.largura_mm * piece.altura_mm);
+  return getPieceAreaUtil(piece);
 }
 
 function getPieceAspectRatio(piece: CutPiece): number {
-  const a = Math.max(piece.largura_mm, piece.altura_mm);
-  const b = Math.max(1, Math.min(piece.largura_mm, piece.altura_mm));
-  return a / b;
+  return getPieceAspectRatioUtil(piece);
 }
 
 function calculateSheetUtilization(placedRects: PlacedRect[], sheetW: number, sheetH: number): number {
@@ -173,20 +201,11 @@ function calculateSheetUtilization(placedRects: PlacedRect[], sheetW: number, sh
 }
 
 function isInsideSheet(x: number, y: number, w: number, h: number, sheet: SheetDefinition): boolean {
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) return false;
-  if (w <= 0 || h <= 0) return false;
-  if (x < -EPS || y < -EPS) return false;
-  if (x + w > sheet.largura_mm + EPS) return false;
-  if (y + h > sheet.altura_mm + EPS) return false;
-  return true;
+  return isInsideSheetUtil(x, y, w, h, sheet);
 }
 
 function createUsableSheetArea(sheet: SheetDefinition, marginMm: number): SheetDefinition {
-  return {
-    ...sheet,
-    largura_mm: Math.max(1, sheet.largura_mm - marginMm * 2),
-    altura_mm: Math.max(1, sheet.altura_mm - marginMm * 2),
-  };
+  return createUsableSheetAreaUtil(sheet, marginMm);
 }
 
 function applyFixedMarginOffset(
@@ -194,86 +213,29 @@ function applyFixedMarginOffset(
   physicalSheet: SheetDefinition,
   marginMm: number
 ): SheetResult[] {
-  return sheets.map((s, idx) => ({
-    sheet: { ...physicalSheet },
-    placements: s.placements.map((p) => ({
-      ...p,
-      x_mm: p.x_mm + marginMm,
-      y_mm: p.y_mm + marginMm,
-      sheetIndex: idx,
-    })),
-  }));
+  return applyFixedMarginOffsetUtil(sheets, physicalSheet, marginMm);
 }
 
 function overlaps(x: number, y: number, w: number, h: number, placed: PlacedRect[], kerf: number): boolean {
-  const margin = kerf / 2;
-  for (const r of placed) {
-    if (
-      x + w + margin > r.x - margin &&
-      r.x + r.w + margin > x - margin &&
-      y + h + margin > r.y - margin &&
-      r.y + r.h + margin > y - margin
-    ) {
-      return true;
-    }
-  }
-  return false;
+  return overlapsUtil(x, y, w, h, placed, kerf);
 }
 
 function expandPieces(pieces: CutPiece[]): CutPiece[] {
-  const out: CutPiece[] = [];
-  for (const p of pieces) {
-    for (let i = 0; i < (p.quantidade ?? 1); i++) {
-      out.push({ ...p, quantidade: 1 });
-    }
-  }
-  return out;
+  return expandPiecesUtil(pieces);
 }
 
 function groupByMaterialAndThickness(pieces: CutPiece[]): Map<string, CutPiece[]> {
-  const map = new Map<string, CutPiece[]>();
-  for (const p of pieces) {
-    const key = `${p.materialId ?? "material"}|${p.espessura_mm}`;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(p);
-  }
-  return map;
+  return groupByMaterialAndThicknessUtil(pieces);
 }
 
 function groupByThicknessOnly(pieces: CutPiece[]): Map<string, CutPiece[]> {
-  const map = new Map<string, CutPiece[]>();
-  for (const p of pieces) {
-    const key = String(p.espessura_mm);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(p);
-  }
-  return map;
+  return groupByThicknessOnlyUtil(pieces);
 }
 
-const isRotatablePiece = (piece: CutPiece): boolean => !piece.grainDirection && piece.largura_mm !== piece.altura_mm;
+const isRotatablePiece = (piece: CutPiece): boolean => isRotatablePieceUtil(piece);
 
 function reorderPieces(pieces: CutPiece[], mode: ReorderMode = "production"): CutPiece[] {
-  return [...pieces].sort((a, b) => {
-    if (mode === "production") {
-      const matA = a.materialId ?? "";
-      const matB = b.materialId ?? "";
-      if (matA !== matB) return matA.localeCompare(matB);
-      // Ordenação inteligente: área desc, depois maior lado, depois menor lado.
-      const areaDiff = getPieceArea(b) - getPieceArea(a);
-      if (areaDiff !== 0) return areaDiff;
-      const bMax = Math.max(b.largura_mm, b.altura_mm);
-      const aMax = Math.max(a.largura_mm, a.altura_mm);
-      if (bMax !== aMax) return bMax - aMax;
-      const bMin = Math.min(b.largura_mm, b.altura_mm);
-      const aMin = Math.min(a.largura_mm, a.altura_mm);
-      if (bMin !== aMin) return bMin - aMin;
-      return getPieceAspectRatio(b) - getPieceAspectRatio(a);
-    }
-
-    const areaDiff = getPieceArea(a) - getPieceArea(b);
-    if (areaDiff !== 0) return areaDiff;
-    return getPieceAspectRatio(b) - getPieceAspectRatio(a);
-  });
+  return reorderPiecesUtil(pieces, mode);
 }
 
 function buildCandidateCoordinates(
@@ -998,77 +960,29 @@ function pickBestPieceForSheet(
 }
 
 function estimateUsefulLeftover(sheet: SheetDefinition, placed: PlacedRect[]): number {
-  if (placed.length === 0) return sheet.largura_mm * sheet.altura_mm;
-  const maxX = Math.max(...placed.map((r) => r.x + r.w));
-  const maxY = Math.max(...placed.map((r) => r.y + r.h));
-  const rightStrip = Math.max(0, sheet.largura_mm - maxX) * sheet.altura_mm;
-  const topStrip = Math.max(0, sheet.altura_mm - maxY) * sheet.largura_mm;
-  return Math.max(rightStrip, topStrip);
+  return estimateUsefulLeftoverUtil(sheet, placed);
 }
 
 function cloneSheets(sheets: SheetResult[]): SheetResult[] {
-  return sheets.map((s) => ({
-    sheet: { ...s.sheet },
-    placements: s.placements.map((p) => ({ ...p })),
-  }));
+  return cloneSheetsUtil(sheets);
 }
 
 function flattenPlacements(sheets: SheetResult[]): CutPlacement[] {
-  return sheets.flatMap((s, sheetIndex) => s.placements.map((p) => ({ ...p, sheetIndex })));
+  return flattenPlacementsUtil(sheets);
 }
 
 function partitionPlacementsIntoSheets(
   placements: CutPlacement[],
   sheet: SheetDefinition
 ): SheetResult[] {
-  const groups = new Map<number, CutPlacement[]>();
-  for (const p of placements) {
-    if (!groups.has(p.sheetIndex)) groups.set(p.sheetIndex, []);
-    groups.get(p.sheetIndex)!.push(p);
-  }
-  const sorted = Array.from(groups.keys()).sort((a, b) => a - b);
-  return sorted.map((idx, normalizedIndex) => ({
-    sheet: { ...sheet },
-    placements: (groups.get(idx) ?? []).map((p) => ({ ...p, sheetIndex: normalizedIndex })),
-  }));
+  return partitionPlacementsIntoSheetsUtil(placements, sheet);
 }
 
 function layoutFromPlacements(
   placements: CutPlacement[],
   sheet: SheetDefinition
 ): { sheets: SheetResult[]; rejectedByLimit: Array<{ partName: string; boxId: string; largura_mm: number; altura_mm: number; reason: string }> } {
-  const rejectedByLimit: Array<{ partName: string; boxId: string; largura_mm: number; altura_mm: number; reason: string }> = [];
-  const grouped = partitionPlacementsIntoSheets(placements, sheet);
-  const validSheets: SheetResult[] = [];
-
-  for (const s of grouped) {
-    const withSafetyMargin = s.placements;
-    const valid: CutPlacement[] = [];
-    const rects: PlacedRect[] = [];
-    for (const p of withSafetyMargin) {
-      const inside = isInsideSheet(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, sheet);
-      const collides = overlaps(p.x_mm, p.y_mm, p.largura_mm, p.altura_mm, rects, 0);
-      if (!inside || collides) {
-        rejectedByLimit.push({
-          partName: p.partName,
-          boxId: p.boxId,
-          largura_mm: p.largura_mm,
-          altura_mm: p.altura_mm,
-          reason: !inside ? "meta-outside-sheet" : "meta-overlap",
-        });
-        continue;
-      }
-      valid.push(p);
-      rects.push({ x: p.x_mm, y: p.y_mm, w: p.largura_mm, h: p.altura_mm });
-    }
-    if (valid.length > 0) {
-      validSheets.push({
-        sheet: { ...sheet },
-        placements: valid.map((p) => ({ ...p, sheetIndex: validSheets.length })),
-      });
-    }
-  }
-  return { sheets: validSheets, rejectedByLimit };
+  return layoutFromPlacementsUtil(placements, sheet);
 }
 
 function computeSolutionMetrics(
@@ -1119,13 +1033,8 @@ function computeSolutionMetrics(
   };
 }
 
-type SeededRng = {
-  next: () => number;
-  int: (_maxExclusive: number) => number;
-};
-
 function randomInt(maxExclusive: number): number {
-  return Math.floor(Math.random() * Math.max(1, maxExclusive));
+  return randomIntUtil(maxExclusive);
 }
 
 type SheetAdvancedMetrics = {
@@ -1154,73 +1063,27 @@ type GlobalScoreMetrics = {
 };
 
 function createSeededRng(seed: number): SeededRng {
-  let state = (seed >>> 0) || 1;
-  const next = () => {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return ((state >>> 0) % 1_000_000) / 1_000_000;
-  };
-  return {
-    next,
-    int: (maxExclusive: number) => Math.floor(next() * Math.max(1, maxExclusive)),
-  };
+  return createSeededRngUtil(seed);
 }
 
 function shuffleArray<T>(arr: T[], rng: SeededRng): T[] {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = rng.int(i + 1);
-    const tmp = out[i];
-    out[i] = out[j];
-    out[j] = tmp;
-  }
-  return out;
+  return shuffleArrayUtil(arr, rng);
 }
 
 function rectArea(r: PlacedRect): number {
-  return Math.max(0, r.w) * Math.max(0, r.h);
+  return rectAreaUtil(r);
 }
 
 function rectIntersectArea(a: PlacedRect, b: PlacedRect): number {
-  const x1 = Math.max(a.x, b.x);
-  const y1 = Math.max(a.y, b.y);
-  const x2 = Math.min(a.x + a.w, b.x + b.w);
-  const y2 = Math.min(a.y + a.h, b.y + b.h);
-  if (x2 <= x1 || y2 <= y1) return 0;
-  return (x2 - x1) * (y2 - y1);
+  return rectIntersectAreaUtil(a, b);
 }
 
 function monotonicHull(points: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
-  if (points.length <= 1) return points;
-  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
-  const cross = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const lower: Array<{ x: number; y: number }> = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: Array<{ x: number; y: number }> = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  upper.pop();
-  lower.pop();
-  return lower.concat(upper);
+  return monotonicHullUtil(points);
 }
 
 function polygonArea(poly: Array<{ x: number; y: number }>): number {
-  if (poly.length < 3) return 0;
-  let sum = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i];
-    const b = poly[(i + 1) % poly.length];
-    sum += a.x * b.y - b.x * a.y;
-  }
-  return Math.abs(sum) / 2;
+  return polygonAreaUtil(poly);
 }
 
 function computeSheetAdvancedMetrics(sheet: SheetDefinition, placements: CutPlacement[]): SheetAdvancedMetrics {
