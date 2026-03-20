@@ -22,7 +22,7 @@ import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
 import { EdgeOutlineSystem } from "../outline";
-import { getPointerNdc } from "./utils";
+import { ViewerRaycastSystem } from "./raycast/ViewerRaycastSystem";
 import type { EnvironmentOptions } from "./environment";
 import { ViewerState } from "./state";
 import { EventsManager } from "./events";
@@ -132,6 +132,7 @@ export class ViewerCore {
   } | null = null;
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
+  private readonly raycastSystem: ViewerRaycastSystem;
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
@@ -340,15 +341,30 @@ export class ViewerCore {
 
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
     this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
-    this.panelVisibility = new ViewerPanelVisibility({
-      getBoxes: () => this.boxes,
-      getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
-      getBoxIdByMesh: (mesh) => this.getBoxIdByMesh(mesh),
-      getSharedPanelEdgeMaterial: () => getSharedPanelEdgeMaterial(),
-    });
 
     this.roomBuilder = new RoomBuilder();
     this.sceneManager.add(this.roomBuilder.getGroup());
+
+    this.raycastSystem = new ViewerRaycastSystem({
+      raycaster: this.raycaster,
+      pointer: this.pointer,
+      camera: this.cameraManager.camera,
+      getBoxes: () => this.boxes,
+      getRoomBoxWalls: () => this.roomBoxWalls,
+      getRoomBuilderGroup: () => this.roomBuilder.getGroup(),
+      getScene: () => this.sceneManager.scene,
+      getCanvas: () => this.rendererManager.renderer.domElement,
+      getRoomBounds: () => this.roomBounds,
+      getTransformControlsHelper: () => this.transformControlsHelper,
+      getDebugMode: () => this.debugMode,
+    });
+
+    this.panelVisibility = new ViewerPanelVisibility({
+      getBoxes: () => this.boxes,
+      getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
+      getBoxIdByMesh: (mesh) => this.raycastSystem.getBoxIdByMesh(mesh),
+      getSharedPanelEdgeMaterial: () => getSharedPanelEdgeMaterial(),
+    });
 
     this.materialSet = mergeMaterialSet(defaultMaterialSet);
 
@@ -1268,11 +1284,7 @@ export class ViewerCore {
   }
 
   private getTransformGizmoIntersections(event: { clientX: number; clientY: number }): number {
-    if (!this.transformControlsHelper || !this.transformControlsHelper.visible) return 0;
-    const { x, y } = getPointerNdc(this.rendererManager.renderer.domElement, event);
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    return this.raycaster.intersectObject(this.transformControlsHelper, true).length;
+    return this.raycastSystem.getTransformGizmoIntersections(event);
   }
 
   setMousePreset(preset: ViewerMousePreset): void {
@@ -3223,16 +3235,7 @@ export class ViewerCore {
 
   /** Obtém boxId a partir de um mesh (grupo ou filho/GLB); sobe na hierarquia até encontrar userData.boxId ou o grupo da caixa. */
   private getBoxIdByMesh(mesh: THREE.Object3D): string | null {
-    let current: THREE.Object3D | null = mesh;
-    while (current) {
-      const boxId = current.userData?.boxId as string | undefined;
-      if (boxId && this.boxes.has(boxId)) return boxId;
-      for (const [id, entry] of this.boxes.entries()) {
-        if (entry.mesh === current) return id;
-      }
-      current = current.parent;
-    }
-    return null;
+    return this.raycastSystem.getBoxIdByMesh(mesh);
   }
 
   private setSelectedBox(id: string | null) {
@@ -3506,20 +3509,7 @@ export class ViewerCore {
   }
 
   private getWallIdInFrontOfCamera(): number | null {
-    if (!this.roomBounds) return null;
-    const cam = this.cameraManager.camera;
-    const centerY = (this.roomBounds.minY + this.roomBounds.maxY) / 2;
-    const center = new THREE.Vector3(this.roomBounds.centerX, centerY, this.roomBounds.centerZ);
-    const dir = center.clone().sub(cam.position);
-    if (dir.lengthSq() < 1e-6) return null;
-    const roomWalls = this.roomBoxWalls.map((w) => w.mesh);
-    if (!roomWalls.length) return null;
-    this.raycaster.set(cam.position, dir.normalize());
-    const hits = this.raycaster.intersectObjects(roomWalls, false);
-    const hitWall = hits.length ? hits[0].object : null;
-    if (!hitWall) return null;
-    const entry = this.roomBoxWalls.find((w) => w.mesh === hitWall);
-    return entry?.id ?? null;
+    return this.raycastSystem.getWallIdInFrontOfCamera();
   }
 
   /** Esconde/mostra uma parede manualmente. Auto-hide continua ativo. */
@@ -3701,61 +3691,12 @@ export class ViewerCore {
     this.refreshOutlineTarget();
   }
 
-  /** Raízes para raycaster do highlight (caixas + sala). */
-  private getHighlightRaycastRoots(): THREE.Object3D[] {
-    const roots: THREE.Object3D[] = [];
-    this.boxes.forEach((entry) => roots.push(entry.mesh));
-    roots.push(this.roomBuilder.getGroup());
-    return roots;
-  }
-
   private getHighlightIntersects(event: { clientX: number; clientY: number }): THREE.Intersection[] {
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return [];
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    this.raycaster.layers.set(0);
-    const roots = this.getHighlightRaycastRoots();
-    return this.raycaster.intersectObjects(roots, true);
+    return this.raycastSystem.getHighlightIntersects(event);
   }
 
   private getBoxIdAtPointer(event: { clientX: number; clientY: number }) {
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    this.raycaster.layers.set(0);
-    const roots: THREE.Object3D[] = [];
-    this.boxes.forEach((entry) => {
-      roots.push(entry.mesh);
-    });
-    const hits = this.raycaster.intersectObjects(roots, true);
-    if (!hits.length) return null;
-    const firstHit = hits[0].object;
-    const doorLayerIdAtPointer = this.getDoorLayerIdByMesh(firstHit);
-    if (doorLayerIdAtPointer) {
-      const boxIdFirst = this.getBoxIdByMesh(firstHit);
-      const entry = boxIdFirst ? this.boxes.get(boxIdFirst) : undefined;
-      const doorIndex = entry?.mesh
-        ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerIdAtPointer}`)
-        : -1;
-      if (import.meta.env.DEV && this.debugMode) {
-        devLogger.debug("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
-          boxId: boxIdFirst,
-          doorLayerId: doorLayerIdAtPointer,
-          specId: doorLayerIdAtPointer,
-          doorIndex,
-          hitObjectName: firstHit.name,
-        });
-      }
-    }
-    return this.getBoxIdByMesh(firstHit);
+    return this.raycastSystem.getBoxIdAtPointer(event);
   }
 
   /**
@@ -3765,68 +3706,8 @@ export class ViewerCore {
     return this.getBoxIdByMesh(mesh);
   }
 
-  /** Obtém doorLayerId subindo na hierarquia (mesh → pivot door-layer-* → …). Usado por getContextMenuLayerHit e getDoorHitAtPointer. */
-  private getDoorLayerIdByMesh(mesh: THREE.Object3D): string | null {
-    let current: THREE.Object3D | null = mesh;
-    while (current) {
-      const doorLayerId = current.userData?.doorLayerId;
-      if (typeof doorLayerId === "string" && doorLayerId.length > 0) {
-        return doorLayerId;
-      }
-      current = current.parent;
-    }
-    return null;
-  }
-
-  private getDrawerLayerIdByMesh(mesh: THREE.Object3D): string | null {
-    let current: THREE.Object3D | null = mesh;
-    while (current) {
-      const drawerLayerId = current.userData?.drawerLayerId;
-      if (typeof drawerLayerId === "string" && drawerLayerId.length > 0) {
-        return drawerLayerId;
-      }
-      current = current.parent;
-    }
-    return null;
-  }
-
   private getDoorHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null {
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    this.raycaster.layers.set(0);
-    const roots: THREE.Object3D[] = [];
-    this.boxes.forEach((entry) => {
-      roots.push(entry.mesh);
-    });
-    const hits = this.raycaster.intersectObjects(roots, true);
-    for (const hit of hits) {
-      const doorLayerId = this.getDoorLayerIdByMesh(hit.object);
-      if (!doorLayerId) continue;
-      const boxId = this.getBoxIdByMesh(hit.object);
-      if (!boxId) continue;
-      const entry = this.boxes.get(boxId);
-      const doorNames = entry?.mesh ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).map((c) => c.name) : [];
-      const doorIndex = entry?.mesh
-        ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerId}`)
-        : -1;
-      if (import.meta.env.DEV) {
-        devLogger.debug("[DOOR-MAT] getDoorHitAtPointer (double-click/raycast)", {
-          boxId,
-          doorLayerId,
-          specId: doorLayerId,
-          doorIndex,
-          doorNamesNoBox: doorNames,
-          hitObjectName: hit.object.name,
-        });
-      }
-      return { boxId, doorLayerId };
-    }
-    return null;
+    return this.raycastSystem.getDoorHitAtPointer(event);
   }
 
   /**
@@ -3840,78 +3721,11 @@ export class ViewerCore {
     doorLayerId?: string;
     drawerLayerId?: string;
   } | null {
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    this.raycaster.layers.set(0);
-    const roots: THREE.Object3D[] = [];
-    this.boxes.forEach((entry) => {
-      roots.push(entry.mesh);
-    });
-    const hits = this.raycaster.intersectObjects(roots, true);
-    for (const hit of hits) {
-      const boxId = this.getBoxIdByMesh(hit.object);
-      if (!boxId) continue;
-      const doorLayerId = this.getDoorLayerIdByMesh(hit.object);
-      if (doorLayerId) {
-        const entry = this.boxes.get(boxId);
-        const doorNames = entry?.mesh ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).map((c) => c.name) : [];
-        const doorIndex = entry?.mesh
-          ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerId}`)
-          : -1;
-        if (import.meta.env.DEV) {
-          devLogger.debug("[DOOR-MAT] getContextMenuLayerHit — porta selecionada pelo raycaster (menu contexto)", {
-            boxId,
-            doorLayerId,
-            specId: doorLayerId,
-            doorIndex,
-            doorNamesNoBox: doorNames,
-            hitObjectName: hit.object.name,
-            hitObjectUserDataDoorLayerId: (hit.object as THREE.Object3D & { userData: { doorLayerId?: string } }).userData?.doorLayerId,
-          });
-        }
-        if (import.meta.env.DEV) {
-          devLogger.debug("[getContextMenuLayerHit] porta clicada (enviado para o menu)", {
-            boxId,
-            doorLayerId,
-            hitObjectName: hit.object.name,
-            hitObjectUuid: hit.object.uuid,
-            hitObjectUserDataDoorLayerId: (hit.object as THREE.Object3D & { userData: { doorLayerId?: string } }).userData?.doorLayerId,
-          });
-        }
-        return { boxId, type: "door", doorLayerId };
-      }
-      const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
-      if (drawerLayerId) return { boxId, type: "drawer", drawerLayerId };
-      return null;
-    }
-    return null;
+    return this.raycastSystem.getContextMenuLayerHit(event);
   }
 
   private getWallIdAtPointer(event: { clientX: number; clientY: number }): number | null {
-    const roomMeshes = this.roomBoxWalls.map((w) => w.mesh);
-    if (!roomMeshes.length) return null;
-
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    const hits = this.raycaster.intersectObjects(roomMeshes, true);
-    if (!hits.length) return null;
-
-    let current: THREE.Object3D | null = hits[0].object;
-    while (current) {
-      const wallId = (current as THREE.Mesh & { userData?: { wallId?: number } }).userData?.wallId;
-      if (typeof wallId === "number") return wallId;
-      current = current.parent;
-    }
-    return null;
+    return this.raycastSystem.getWallIdAtPointer(event);
   }
 
   private getWallHitAtPointer(_event: { clientX: number; clientY: number }): {
@@ -3929,39 +3743,7 @@ export class ViewerCore {
     type: "door" | "window";
     config: DoorWindowConfig;
   } | null {
-    const roomGroup = this.roomBuilder.getGroup();
-    const roomMeshes: THREE.Object3D[] = [];
-    roomGroup.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.userData?.isRoomElement === true) {
-        roomMeshes.push(child);
-      }
-    });
-    if (!roomMeshes.length) return null;
-
-    const canvas = this.rendererManager.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.pointer.set(x, y);
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    const hits = this.raycaster.intersectObjects(roomMeshes, true);
-    if (!hits.length) return null;
-
-    let current: THREE.Object3D | null = hits[0].object;
-    while (current) {
-      const elementId = current.userData?.elementId as string | undefined;
-      const elementType = current.userData?.elementType as "door" | "window" | undefined;
-      const config = current.userData?.config as DoorWindowConfig | undefined;
-      if (elementId && elementType && config) {
-        const wall = current.parent;
-        const wallId = wall?.userData?.wallId as number | undefined;
-        if (typeof wallId === "number") {
-          return { elementId, wallId, type: elementType, config: { ...config } };
-        }
-      }
-      current = current.parent;
-    }
-    return null;
+    return this.raycastSystem.getRoomElementAtPointer(event);
   }
 
   private updateCanvasSize = () => {
