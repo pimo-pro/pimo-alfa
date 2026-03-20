@@ -2115,6 +2115,15 @@ export class ViewerCore {
     Array.from(this.boxes.keys()).forEach((id) => this.removeBox(id));
   }
 
+  /*
+   * ROOM SYSTEM — 3 subsistemas complementares:
+   * 1. RoomManager: sala principal (paredes, piso)
+   * 2. RoomBuilder: aberturas (portas/janelas)
+   * 3. wallStore + roomMeshFromWallStore: persistência e restore automático
+   *
+   * Fluxo de criação: createRoomWithDimensions -> RoomManager
+   * Fluxo de restore: loadRoomConfig -> roomMeshSyncToken -> Workspace -> applyRoomMeshFromWallStore
+   */
   createRoom(config: RoomConfig): void {
     const { walls, numWalls } = config;
     if (!walls?.length || walls.length < 3) {
