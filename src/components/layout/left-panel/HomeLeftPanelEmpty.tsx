@@ -1,32 +1,18 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import { useEffect, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import type { SavedProjectInfo } from "../../../context/projectTypes";
 import { NotesField } from "./NotesField";
 
-export function HomeLeftPanelEmpty() {
-  const { project, actions } = useProject();
-  const [savedRecentProjects, setSavedRecentProjects] = useState<SavedProjectInfo[]>([]);
-  const [loadingSavedRecent, setLoadingSavedRecent] = useState(false);
+export type HomeLeftPanelEmptyProps = {
+  loadingSavedRecent: boolean;
+  savedRecentProjects: SavedProjectInfo[];
+};
 
-  useEffect(() => {
-    let active = true;
-    const loadRecent = async () => {
-      setLoadingSavedRecent(true);
-      try {
-        const projects = await actions.listSavedProjects("mine");
-        if (active) setSavedRecentProjects(projects.slice(0, 4));
-      } finally {
-        if (active) setLoadingSavedRecent(false);
-      }
-    };
-    void loadRecent();
-    return () => {
-      active = false;
-    };
-  }, [actions, project.lastAutosaveTime]);
+export function HomeLeftPanelEmpty({
+  loadingSavedRecent,
+  savedRecentProjects,
+}: HomeLeftPanelEmptyProps) {
+  const { project, actions } = useProject();
 
   return (
     <div className="left-panel-content">

@@ -65,3 +65,5 @@ export function useMaterialsForPicker() {
     materialsLoading,
   };
 }
+
+export type UseMaterialsForPickerResult = ReturnType<typeof useMaterialsForPicker>;

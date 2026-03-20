@@ -7,9 +7,13 @@ import BoxLayersPanel from "./BoxLayersPanel";
 import { useToast } from "../../../context/ToastContext";
 import { getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
 import { MaterialPickerModal } from "./MaterialPickerModal";
-import { useMaterialsForPicker } from "./hooks/useMaterialsForPicker";
+import type { UseMaterialsForPickerResult } from "./hooks/useMaterialsForPicker";
 
-export function HomeLeftPanelSelected() {
+export type HomeLeftPanelSelectedProps = {
+  materialsPicker: UseMaterialsForPickerResult;
+};
+
+export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelectedProps) {
   const { project, actions } = useProject();
   const { showToast } = useToast();
   const selectedBox = project.workspaceBoxes.find(
@@ -17,7 +21,7 @@ export function HomeLeftPanelSelected() {
   );
   const selectedPrateleiras = selectedBox?.prateleiras ?? 0;
   const selectedGavetas = selectedBox?.gavetas ?? 0;
-  const { materialModalOpen, setMaterialModalOpen, materialsList, materialsLoading } = useMaterialsForPicker();
+  const { materialModalOpen, setMaterialModalOpen, materialsList, materialsLoading } = materialsPicker;
   const { viewerApi } = usePimoViewerContext();
 
   return (
