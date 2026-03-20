@@ -47,6 +47,24 @@ import {
   rectArea as rectAreaUtil,
   rectIntersectArea as rectIntersectAreaUtil,
 } from "./utils/cutLayoutGeometry";
+import {
+  findPlacementSkyline as findPlacementSkylineSolver,
+  getCandidateX as getCandidateXSolver,
+  getSkylineHeight as getSkylineHeightSolver,
+  getSkylineYAt as getSkylineYAtSolver,
+  mergeSkylineSegments as mergeSkylineSegmentsSolver,
+  updateSkyline as updateSkylineSolver,
+} from "./solver/strategySkyline";
+import { findPlacementShelf as findPlacementShelfSolver } from "./solver/strategyShelf";
+import {
+  findPlacementGuillotine as findPlacementGuillotineSolver,
+  pruneContainedFreeRects as pruneContainedFreeRectsSolver,
+  splitGuillotineRect as splitGuillotineRectSolver,
+} from "./solver/strategyGuillotine";
+import {
+  initStrategyState as initStrategyStateSolver,
+  updateStrategyState as updateStrategyStateSolver,
+} from "./solver/strategyState";
 
 const DEFAULT_KERF_MM = 3;
 const MIN_UTILIZATION_PERCENT = 0.8;
@@ -558,33 +576,15 @@ function pickBestCandidateByRotation(candidates: PlacementCandidate[], rotation:
 }
 
 function getSkylineHeight(skyline: SkylineSegment[], xStart: number, width: number): number {
-  const xEnd = xStart + width;
-  let maxY = 0;
-  for (let i = 0; i < skyline.length - 1; i++) {
-    const segStart = skyline[i].x;
-    const segEnd = skyline[i + 1].x;
-    if (segEnd <= xStart || segStart >= xEnd) continue;
-    maxY = Math.max(maxY, skyline[i].y);
-  }
-  return maxY;
+  return getSkylineHeightSolver(skyline, xStart, width);
 }
 
 function getSkylineYAt(skyline: SkylineSegment[], x: number): number {
-  for (let i = 0; i < skyline.length - 1; i++) {
-    if (skyline[i].x <= x && x < skyline[i + 1].x) return skyline[i].y;
-  }
-  return skyline.length > 0 ? skyline[skyline.length - 1].y : 0;
+  return getSkylineYAtSolver(skyline, x);
 }
 
 function mergeSkylineSegments(segments: SkylineSegment[]): SkylineSegment[] {
-  if (segments.length <= 1) return segments;
-  const sorted = [...segments].sort((a, b) => a.x - b.x);
-  const out: SkylineSegment[] = [{ ...sorted[0] }];
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i].y === out[out.length - 1].y) continue;
-    out.push(sorted[i]);
-  }
-  return out;
+  return mergeSkylineSegmentsSolver(segments);
 }
 
 function updateSkyline(
@@ -595,32 +595,11 @@ function updateSkyline(
   h: number,
   kerf: number
 ): SkylineSegment[] {
-  const newH = y + h + kerf;
-  const xEnd = x + w;
-  const out: SkylineSegment[] = [];
-  let i = 0;
-  while (i < skyline.length && skyline[i].x < x) {
-    out.push(skyline[i]);
-    i++;
-  }
-  out.push({ x, y: newH });
-  const heightAtEnd = getSkylineYAt(skyline, xEnd);
-  while (i < skyline.length && skyline[i].x <= xEnd) i++;
-  out.push({ x: xEnd, y: heightAtEnd });
-  while (i < skyline.length) {
-    out.push(skyline[i]);
-    i++;
-  }
-  return mergeSkylineSegments(out);
+  return updateSkylineSolver(skyline, x, y, w, h, kerf);
 }
 
 function getCandidateX(skyline: SkylineSegment[], sheetW: number, pieceW: number): number[] {
-  const xs = new Set<number>();
-  xs.add(0);
-  for (const seg of skyline) {
-    if (seg.x >= 0 && seg.x <= sheetW - pieceW) xs.add(seg.x);
-  }
-  return Array.from(xs).sort((a, b) => a - b);
+  return getCandidateXSolver(skyline, sheetW, pieceW);
 }
 
 function findPlacementSkyline(
@@ -632,37 +611,13 @@ function findPlacementSkyline(
   cfg: RotationScoringConfig,
   bin: BinHeuristic
 ): PlacementCandidate | null {
-  const orientations = getOrientations(piece, cfg);
-  const candidates: PlacementCandidate[] = [];
-
-  for (const o of orientations) {
-    if (o.w > sheet.largura_mm || o.h > sheet.altura_mm) continue;
-    const xs = getCandidateX(state.skyline, sheet.largura_mm, o.w);
-    for (const x of xs) {
-      const y = getSkylineHeight(state.skyline, x, o.w);
-      if (y + o.h > sheet.altura_mm) continue;
-      if (overlaps(x, y, o.w, o.h, placed, kerf)) continue;
-      candidates.push({
-        x,
-        y,
-        w: o.w,
-        h: o.h,
-        rotation: o.rotation,
-        orientationScore: scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
-        rotationDelta: 0,
-        alternativeRotationAvailable: false,
-      });
-      if (bin === "firstFit") break;
-    }
-  }
-
-  if (candidates.length === 0) return null;
-  const normal = pickBestCandidateByRotation(candidates, 0);
-  const rotated = pickBestCandidateByRotation(candidates, 90);
-  const picked = chooseOrientationWithRotationBias(normal, rotated, cfg);
-  if (bin === "firstFit" && picked) return picked;
-
-  return candidates.sort((a, b) => a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore)[0];
+  return findPlacementSkylineSolver(piece, sheet, placed, state, kerf, cfg, bin, {
+    getOrientations,
+    overlaps,
+    scoreOrientationFit,
+    pickBestCandidateByRotation,
+    chooseOrientationWithRotationBias,
+  }) as PlacementCandidate | null;
 }
 
 function findPlacementShelf(
@@ -674,87 +629,21 @@ function findPlacementShelf(
   cfg: RotationScoringConfig,
   bin: BinHeuristic
 ): PlacementCandidate | null {
-  const candidates: PlacementCandidate[] = [];
-  const orientations = getOrientations(piece, cfg);
-  const sortedShelves = [...state.shelves].sort((a, b) => a.y - b.y);
-
-  for (const o of orientations) {
-    for (const shelf of sortedShelves) {
-      const x = shelf.nextX;
-      const y = shelf.y;
-      if (x + o.w > sheet.largura_mm + EPS) continue;
-      if (o.h > shelf.height + EPS) continue;
-      if (y + o.h > sheet.altura_mm + EPS) continue;
-      if (overlaps(x, y, o.w, o.h, placed, kerf)) continue;
-      candidates.push({
-        x,
-        y,
-        w: o.w,
-        h: o.h,
-        rotation: o.rotation,
-        orientationScore: scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
-        rotationDelta: 0,
-        alternativeRotationAvailable: false,
-      });
-      if (bin === "firstFit") break;
-    }
-
-    const maxY = state.shelves.length === 0
-      ? 0
-      : Math.max(...state.shelves.map((s) => s.y + s.height + kerf));
-    if (maxY + o.h <= sheet.altura_mm + EPS && o.w <= sheet.largura_mm + EPS) {
-      const x = 0;
-      const y = maxY;
-      if (!overlaps(x, y, o.w, o.h, placed, kerf)) {
-        candidates.push({
-          x,
-          y,
-          w: o.w,
-          h: o.h,
-          rotation: o.rotation,
-          orientationScore: scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
-          rotationDelta: 0,
-          alternativeRotationAvailable: false,
-        });
-      }
-    }
-  }
-
-  if (candidates.length === 0) return null;
-  if (bin === "firstFit") {
-    const normal = pickBestCandidateByRotation(candidates, 0);
-    const rotated = pickBestCandidateByRotation(candidates, 90);
-    return chooseOrientationWithRotationBias(normal, rotated, cfg);
-  }
-
-  return candidates.sort((a, b) => {
-    const remainingA = sheet.largura_mm - (a.x + a.w);
-    const remainingB = sheet.largura_mm - (b.x + b.w);
-    return remainingA - remainingB || a.y - b.y || a.x - b.x;
-  })[0];
+  return findPlacementShelfSolver(piece, sheet, placed, state, kerf, cfg, bin, {
+    getOrientations,
+    overlaps,
+    scoreOrientationFit,
+    pickBestCandidateByRotation,
+    chooseOrientationWithRotationBias,
+  }) as PlacementCandidate | null;
 }
 
 function splitGuillotineRect(rect: FreeRect, w: number, h: number, kerf: number): FreeRect[] {
-  const rightW = rect.w - w - kerf;
-  const topH = rect.h - h - kerf;
-  const result: FreeRect[] = [];
-  if (rightW > EPS) result.push({ x: rect.x + w + kerf, y: rect.y, w: rightW, h });
-  if (topH > EPS) result.push({ x: rect.x, y: rect.y + h + kerf, w: rect.w, h: topH });
-  if (rightW > EPS && topH > EPS) {
-    result.push({ x: rect.x + w + kerf, y: rect.y + h + kerf, w: rightW, h: topH });
-  }
-  return result;
+  return splitGuillotineRectSolver(rect, w, h, kerf);
 }
 
 function pruneContainedFreeRects(rects: FreeRect[]): FreeRect[] {
-  return rects.filter((r, _i) => {
-    for (let j = 0; j < rects.length; j++) {
-      if (_i === j) continue;
-      const o = rects[j];
-      if (r.x >= o.x && r.y >= o.y && r.x + r.w <= o.x + o.w && r.y + r.h <= o.y + o.h) return false;
-    }
-    return true;
-  });
+  return pruneContainedFreeRectsSolver(rects);
 }
 
 function findPlacementGuillotine(
@@ -766,41 +655,12 @@ function findPlacementGuillotine(
   cfg: RotationScoringConfig,
   bin: BinHeuristic
 ): PlacementCandidate | null {
-  const candidates: PlacementCandidate[] = [];
-  const orientations = getOrientations(piece, cfg);
-  const orderedFreeRects = [...state.freeRects].sort((a, b) => a.y - b.y || a.x - b.x);
-
-  for (const o of orientations) {
-    for (const fr of orderedFreeRects) {
-      if (o.w > fr.w + EPS || o.h > fr.h + EPS) continue;
-      const x = fr.x;
-      const y = fr.y;
-      candidates.push({
-        x,
-        y,
-        w: o.w,
-        h: o.h,
-        rotation: o.rotation,
-        orientationScore: scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
-        rotationDelta: 0,
-        alternativeRotationAvailable: false,
-      });
-      if (bin === "firstFit") break;
-    }
-  }
-
-  if (candidates.length === 0) return null;
-  if (bin === "firstFit") {
-    const normal = pickBestCandidateByRotation(candidates, 0);
-    const rotated = pickBestCandidateByRotation(candidates, 90);
-    return chooseOrientationWithRotationBias(normal, rotated, cfg);
-  }
-
-  return candidates.sort((a, b) => {
-    const wasteA = (sheet.largura_mm - (a.x + a.w)) + (sheet.altura_mm - (a.y + a.h));
-    const wasteB = (sheet.largura_mm - (b.x + b.w)) + (sheet.altura_mm - (b.y + b.h));
-    return wasteA - wasteB || a.y - b.y || a.x - b.x;
-  })[0];
+  return findPlacementGuillotineSolver(piece, sheet, _placed, state, _kerf, cfg, bin, {
+    getOrientations,
+    scoreOrientationFit,
+    pickBestCandidateByRotation,
+    chooseOrientationWithRotationBias,
+  }) as PlacementCandidate | null;
 }
 
 function updateStrategyState(
@@ -809,47 +669,7 @@ function updateStrategyState(
   placement: PlacementCandidate,
   kerf: number
 ): StrategyState {
-  if (strategy === "skyline") {
-    const sk = state as StateSkyline;
-    return {
-      skyline: updateSkyline(sk.skyline, placement.x, placement.y, placement.w, placement.h, kerf),
-    };
-  }
-  if (strategy === "shelf") {
-    const sh = state as StateShelf;
-    const shelves = [...sh.shelves];
-    const shelfIndex = shelves.findIndex((s) => Math.abs(s.y - placement.y) < EPS);
-    if (shelfIndex >= 0) {
-      shelves[shelfIndex] = {
-        ...shelves[shelfIndex],
-        height: Math.max(shelves[shelfIndex].height, placement.h),
-        nextX: placement.x + placement.w + kerf,
-      };
-    } else {
-      shelves.push({
-        y: placement.y,
-        height: placement.h,
-        nextX: placement.x + placement.w + kerf,
-      });
-    }
-    return { shelves };
-  }
-
-  const gu = state as StateGuillotine;
-  const freeRects = [...gu.freeRects];
-  const idx = freeRects.findIndex(
-    (r) =>
-      placement.x >= r.x - EPS &&
-      placement.y >= r.y - EPS &&
-      placement.x + placement.w <= r.x + r.w + EPS &&
-      placement.y + placement.h <= r.y + r.h + EPS
-  );
-  if (idx >= 0) {
-    const [used] = freeRects.splice(idx, 1);
-    const split = splitGuillotineRect(used, placement.w, placement.h, kerf);
-    freeRects.push(...split.filter((r) => r.w > EPS && r.h > EPS));
-  }
-  return { freeRects: pruneContainedFreeRects(freeRects) };
+  return updateStrategyStateSolver(strategy, state as any, placement as any, kerf) as StrategyState;
 }
 
 function findPlacementForPiece(
@@ -872,13 +692,7 @@ function findPlacementForPiece(
 }
 
 function initStrategyState(strategy: PlacementStrategy, sheet: SheetDefinition): StrategyState {
-  if (strategy === "skyline") {
-    return { skyline: [{ x: 0, y: 0 }, { x: sheet.largura_mm, y: 0 }] };
-  }
-  if (strategy === "shelf") {
-    return { shelves: [] };
-  }
-  return { freeRects: [{ x: 0, y: 0, w: sheet.largura_mm, h: sheet.altura_mm }] };
+  return initStrategyStateSolver(strategy, sheet) as StrategyState;
 }
 
 function scorePlacement(

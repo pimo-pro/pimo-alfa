@@ -1,0 +1,90 @@
+import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
+
+const EPS = 0.001;
+
+type FreeRect = { x: number; y: number; w: number; h: number };
+type PlacementCandidate = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rotation: number;
+  orientationScore: number;
+  rotationDelta: number;
+  alternativeRotationAvailable: boolean;
+};
+type RotationScoringConfig = {
+  rotationWeight: number;
+  rotationPenalty: number;
+  rotationPreferenceMode: "auto" | "aggressive" | "disabled";
+};
+
+export function splitGuillotineRect(rect: FreeRect, w: number, h: number, kerf: number): FreeRect[] {
+  const rightW = rect.w - w - kerf;
+  const topH = rect.h - h - kerf;
+  const result: FreeRect[] = [];
+  if (rightW > EPS) result.push({ x: rect.x + w + kerf, y: rect.y, w: rightW, h });
+  if (topH > EPS) result.push({ x: rect.x, y: rect.y + h + kerf, w: rect.w, h: topH });
+  if (rightW > EPS && topH > EPS) result.push({ x: rect.x + w + kerf, y: rect.y + h + kerf, w: rightW, h: topH });
+  return result;
+}
+
+export function pruneContainedFreeRects(rects: FreeRect[]): FreeRect[] {
+  return rects.filter((r, _i) => {
+    for (let j = 0; j < rects.length; j++) {
+      if (_i === j) continue;
+      const o = rects[j];
+      if (r.x >= o.x && r.y >= o.y && r.x + r.w <= o.x + o.w && r.y + r.h <= o.y + o.h) return false;
+    }
+    return true;
+  });
+}
+
+export function findPlacementGuillotine(
+  piece: CutPiece,
+  sheet: SheetDefinition,
+  _placed: Array<{ x: number; y: number; w: number; h: number }>,
+  state: { freeRects: FreeRect[] },
+  _kerf: number,
+  cfg: RotationScoringConfig,
+  bin: "firstFit" | "bestFit",
+  deps: {
+    getOrientations: (piece: CutPiece, cfg: RotationScoringConfig) => Array<{ w: number; h: number; rotation: number }>;
+    scoreOrientationFit: (candidate: { x: number; y: number; w: number; h: number }, sheet: SheetDefinition) => number;
+    pickBestCandidateByRotation: (candidates: PlacementCandidate[], rotation: 0 | 90) => PlacementCandidate | null;
+    chooseOrientationWithRotationBias: (normal: PlacementCandidate | null, rotated: PlacementCandidate | null, cfg: RotationScoringConfig) => PlacementCandidate | null;
+  }
+): PlacementCandidate | null {
+  const candidates: PlacementCandidate[] = [];
+  const orientations = deps.getOrientations(piece, cfg);
+  const orderedFreeRects = [...state.freeRects].sort((a, b) => a.y - b.y || a.x - b.x);
+  for (const o of orientations) {
+    for (const fr of orderedFreeRects) {
+      if (o.w > fr.w + EPS || o.h > fr.h + EPS) continue;
+      const x = fr.x;
+      const y = fr.y;
+      candidates.push({
+        x,
+        y,
+        w: o.w,
+        h: o.h,
+        rotation: o.rotation,
+        orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
+        rotationDelta: 0,
+        alternativeRotationAvailable: false,
+      });
+      if (bin === "firstFit") break;
+    }
+  }
+  if (candidates.length === 0) return null;
+  if (bin === "firstFit") {
+    const normal = deps.pickBestCandidateByRotation(candidates, 0);
+    const rotated = deps.pickBestCandidateByRotation(candidates, 90);
+    return deps.chooseOrientationWithRotationBias(normal, rotated, cfg);
+  }
+  return candidates.sort((a, b) => {
+    const wasteA = (sheet.largura_mm - (a.x + a.w)) + (sheet.altura_mm - (a.y + a.h));
+    const wasteB = (sheet.largura_mm - (b.x + b.w)) + (sheet.altura_mm - (b.y + b.h));
+    return wasteA - wasteB || a.y - b.y || a.x - b.x;
+  })[0];
+}
