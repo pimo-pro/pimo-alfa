@@ -12,11 +12,13 @@ import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import EtiquetaDesignerPage from "../components/admin/EtiquetaDesignerPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
+import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
 
 type AdminTab =
   | "Materiais & Fabricação"
+  | "Gestão de Materiais"
   | "Ferragens"
   | "Templates"
   | "Regras"
@@ -41,6 +43,7 @@ const DEFAULT_ADMIN_TAB: AdminTab = "Materiais & Fabricação";
 const adminMenu: AdminMenuEntry[] = [
   { type: "group", label: "Configuração" },
   { type: "item", id: "Materiais & Fabricação", label: "Materiais & Fabricação" },
+  { type: "item", id: "Gestão de Materiais", label: "Gestão de Materiais" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
   { type: "item", id: "Component Types", label: "Component Types" },
   { type: "item", id: "Regras", label: "Regras" },
@@ -60,6 +63,7 @@ const adminMenu: AdminMenuEntry[] = [
 
 const menuIconByTab: Partial<Record<AdminTab, string>> = {
   "Materiais & Fabricação": "🪵",
+  "Gestão de Materiais": "📋",
   "Ferragens": "🔩",
   "Component Types": "🧩",
   "Regras": "📏",
@@ -211,6 +215,8 @@ export default function AdminPanel() {
 
           {active === "Materiais & Fabricação" ? (
             <MaterialsManufacturing />
+          ) : active === "Gestão de Materiais" ? (
+            <GestaoMateriaisPage />
           ) : active === "Ferragens" ? (
             <FerragensAdminPage />
           ) : active === "Templates" ? (
