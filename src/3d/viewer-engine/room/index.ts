@@ -1,5 +1,4 @@
 /**
- * Módulo de estado da sala no viewer (grupo, paredes, bounds).
- * `ViewerRoomManager` é LEGACY — ver JSDoc no ficheiro; fluxo ativo = RoomManager no ViewerCore.
+ * Pasta room do viewer-engine intencionalmente vazia no runtime atual.
+ * O fluxo ativo da sala vive em `src/3d/room/RoomManager.ts` e no `ViewerCore`.
  */
-export { ViewerRoomManager } from "./ViewerRoomManager";
