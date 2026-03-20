@@ -1,5 +1,4 @@
 import type {
-  PimoProjectData,
   RenameProjectRequest,
   SaveProjectRequest,
   SavedProjectMeta,
@@ -13,6 +12,19 @@ import {
   remoteSaveProject,
   type ProjectsApiDeps,
 } from "./projectsApi";
+import {
+  asObject,
+  buildOfflineFromRemote,
+  buildPimoProjectDataFromRequest,
+  isOnline,
+  makeId,
+  nowIso,
+  toIsoOrNow,
+  toMetaFromProjectData,
+  toRecordFromProjectData,
+  toSavedMetaFromOffline,
+  toSavedRecordFromOffline,
+} from "./projectsMappers";
 
 const LEGACY_LOCAL_PROJECTS_KEY = "pimo_saved_projects";
 const OFFLINE_PROJECTS_STORAGE_KEY = "pimo_offline_projects_v2";
@@ -72,116 +84,6 @@ let syncStatus: ProjectsSyncStatus = {
   hasActiveSyncError: false,
   retryInMs: null,
 };
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function makeId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function isOnline(): boolean {
-  return typeof navigator === "undefined" ? true : navigator.onLine;
-}
-
-function toIsoOrNow(value: unknown): string {
-  if (typeof value !== "string") return nowIso();
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? nowIso() : new Date(parsed).toISOString();
-}
-
-function asObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
-function safeArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function projectStateFromSnapshot(snapshot: SaveProjectRequest["snapshot"]): Record<string, unknown> {
-  return asObject(snapshot.projectState) ?? {};
-}
-
-function buildPimoProjectDataFromRequest(request: SaveProjectRequest): PimoProjectData {
-  const now = new Date().toISOString();
-  const state = projectStateFromSnapshot(request.snapshot);
-  const stateViewer = asObject(state.viewerSettings);
-  const stateMaterials = asObject(state.material);
-  const room = request.snapshot.roomSnapshot ?? state["room"] ?? null;
-  const viewerSnapshot = request.snapshot.viewerSnapshot ?? null;
-  const boxes = state["workspaceBoxes"] ?? state["boxes"] ?? [];
-  const cutlist = safeArray(state["cutList"]);
-  const holes = cutlist.flatMap((item) => {
-    const row = asObject(item);
-    const drill = row ? row["drillHoles"] : null;
-    return Array.isArray(drill) ? drill : [];
-  });
-
-  return {
-    id: "",
-    name: (request.name ?? "").trim() || (String(state["projectName"] ?? "").trim() || "Projeto"),
-    ownerId: request.ownerId,
-    ownerName: request.ownerName ?? request.ownerId,
-    createdAt: now,
-    updatedAt: now,
-    room,
-    boxes,
-    shelves: state["shelves"] ?? [],
-    dividers: state["dividers"] ?? [],
-    centerDisplay: {
-      thumbnailDataUrl: request.thumbnailDataUrl ?? null,
-      projectName: state["projectName"] ?? request.name ?? "Projeto",
-    },
-    holes,
-    drillMarkers: state["drillMarkers"] ?? [],
-    materials: {
-      materialId: state["materialId"] ?? null,
-      material: stateMaterials ?? null,
-    },
-    viewerSnapshot,
-    settings: {
-      projectState: request.snapshot.projectState,
-      viewerSettings: stateViewer ?? null,
-      ownerName: request.ownerName ?? request.ownerId,
-      thumbnailDataUrl: request.thumbnailDataUrl ?? null,
-    },
-    thumbnailDataUrl: request.thumbnailDataUrl ?? null,
-  };
-}
-
-function toMetaFromProjectData(project: PimoProjectData, index: number): SavedProjectMeta {
-  return {
-    id: project.id,
-    name: project.name,
-    sequence: index + 1,
-    createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
-    ownerId: project.ownerId,
-    ownerName: project.ownerName ?? project.ownerId,
-    thumbnailDataUrl:
-      (asObject(project.centerDisplay)?.thumbnailDataUrl as string | null | undefined) ??
-      project.thumbnailDataUrl ??
-      null,
-  };
-}
-
-function toRecordFromProjectData(project: PimoProjectData): SavedProjectRecord {
-  const settingsObj = asObject(project.settings);
-  const projectState = settingsObj?.projectState ?? {};
-  const roomSnapshot = project.room ?? null;
-  const snapshot = {
-    projectState,
-    viewerSnapshot: project.viewerSnapshot ?? null,
-    roomSnapshot,
-  };
-  const meta = toMetaFromProjectData(project, 0);
-  return {
-    ...meta,
-    snapshot,
-    projectData: project,
-  };
-}
 
 const projectsApiDeps: ProjectsApiDeps = {
   buildPimoProjectDataFromRequest,
@@ -293,33 +195,6 @@ function compareByUpdatedDesc(a: { updatedAt: string }, b: { updatedAt: string }
 
 function projectMatchesId(project: OfflineProjectRecord, id: string): boolean {
   return project.id === id || project.remoteId === id;
-}
-
-function toSavedMetaFromOffline(project: OfflineProjectRecord, index: number): SavedProjectMeta {
-  return {
-    id: project.remoteId ?? project.id,
-    name: project.name,
-    sequence: index + 1,
-    createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
-    ownerId: project.ownerId,
-    ownerName: project.ownerName,
-    thumbnailDataUrl: project.thumbnailDataUrl,
-  };
-}
-
-function toSavedRecordFromOffline(project: OfflineProjectRecord): SavedProjectRecord {
-  return {
-    id: project.remoteId ?? project.id,
-    name: project.name,
-    sequence: 1,
-    createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
-    ownerId: project.ownerId,
-    ownerName: project.ownerName,
-    thumbnailDataUrl: project.thumbnailDataUrl,
-    snapshot: project.snapshot,
-  };
 }
 
 function hasPendingOperation(projectId: string): boolean {
@@ -517,22 +392,6 @@ function resolveProjectIdForRemote(project: OfflineProjectRecord): string | null
   if (project.remoteId && (project.remoteId?.trim()?.length ?? 0) > 0) return project.remoteId;
   if (!project.id.startsWith("local-") && !project.id.startsWith("legacy-")) return project.id;
   return null;
-}
-
-function buildOfflineFromRemote(record: SavedProjectRecord): OfflineProjectRecord {
-  return {
-    id: record.id,
-    remoteId: record.id,
-    name: record.name,
-    ownerId: record.ownerId,
-    ownerName: record.ownerName,
-    createdAt: toIsoOrNow(record.createdAt),
-    updatedAt: toIsoOrNow(record.updatedAt),
-    thumbnailDataUrl: record.thumbnailDataUrl ?? null,
-    snapshot: record.snapshot,
-    deleted: false,
-    lastSyncedAt: nowIso(),
-  };
 }
 
 export function getProjectsSyncStatus(): ProjectsSyncStatus {
