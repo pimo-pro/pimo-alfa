@@ -1,8 +1,13 @@
 import * as THREE from "three";
 import type { DoorWindowConfig } from "../../room/types";
+import {
+  DEFAULT_DOOR_CONFIG,
+  DEFAULT_WINDOW_CONFIG,
+} from "../../room/types";
 import type { ViewerBoxEntry } from "../types";
 import { getPointerNdc } from "../utils";
 import { devLogger } from "../../../utils/devLogger";
+import { clampOpeningToWall } from "../../../utils/openingConstraints";
 
 /** Limites da sala (m) usados por getWallIdInFrontOfCamera — espelha o campo em ViewerCore. */
 export type ViewerRaycastRoomBounds = {
@@ -56,6 +61,7 @@ export class ViewerRaycastSystem {
     const roots: THREE.Object3D[] = [];
     this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
     roots.push(this.deps.getRoomBuilderGroup());
+    this.deps.getRoomBoxWalls().forEach((w) => roots.push(w.mesh));
     return roots;
   }
 
@@ -253,6 +259,59 @@ export class ViewerRaycastSystem {
     return null;
   }
 
+  getWallPlacementHit(
+    event: { clientX: number; clientY: number },
+    placementType: "door" | "window"
+  ): { wallId: number; config: DoorWindowConfig; type: "door" | "window" } | null {
+    const base: DoorWindowConfig =
+      placementType === "door" ? { ...DEFAULT_DOOR_CONFIG } : { ...DEFAULT_WINDOW_CONFIG };
+    const wallEntries = this.deps.getRoomBoxWalls();
+    const roomMeshes = wallEntries.map((w) => w.mesh);
+    if (!roomMeshes.length) return null;
+
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    const hits = this.deps.raycaster.intersectObjects(roomMeshes, true);
+    if (!hits.length) return null;
+
+    let current: THREE.Object3D | null = hits[0].object;
+    let wallMesh: THREE.Mesh | null = null;
+    let wallId: number | undefined;
+    while (current) {
+      const wid = (current as THREE.Mesh & { userData?: { wallId?: number } }).userData?.wallId;
+      if (typeof wid === "number") {
+        wallId = wid;
+        wallMesh = current as THREE.Mesh;
+        break;
+      }
+      current = current.parent;
+    }
+    if (wallId === undefined || !wallMesh) return null;
+
+    const wallLenMm = (wallMesh.userData.wallLengthMm as number | undefined) ?? 3000;
+    const wallHeightMm = (wallMesh.userData.wallHeightMm as number | undefined) ?? 2800;
+    const wallLenM = wallLenMm / 1000;
+    const wallHM = wallHeightMm / 1000;
+    const local = wallMesh.worldToLocal(hits[0].point.clone());
+
+    const horizontalOffsetMm = (local.x + wallLenM / 2) * 1000 - base.widthMm / 2;
+    const floorOffsetMm = (local.y + wallHM / 2) * 1000 - base.heightMm / 2;
+    const clamped = clampOpeningToWall(
+      { ...base, horizontalOffsetMm, floorOffsetMm },
+      wallLenMm,
+      wallHeightMm
+    );
+    return {
+      wallId,
+      config: { ...base, horizontalOffsetMm: clamped.horizontalOffsetMm, floorOffsetMm: clamped.floorOffsetMm },
+      type: placementType,
+    };
+  }
+
   getWallIdAtPointer(event: { clientX: number; clientY: number }): number | null {
     const roomMeshes = this.deps.getRoomBoxWalls().map((w) => w.mesh);
     if (!roomMeshes.length) return null;
@@ -299,13 +358,16 @@ export class ViewerRaycastSystem {
     type: "door" | "window";
     config: DoorWindowConfig;
   } | null {
-    const roomGroup = this.deps.getRoomBuilderGroup();
     const roomMeshes: THREE.Object3D[] = [];
-    roomGroup.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.userData?.isRoomElement === true) {
-        roomMeshes.push(child);
-      }
-    });
+    const collect = (root: THREE.Object3D) => {
+      root.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.userData?.isRoomElement === true) {
+          roomMeshes.push(child);
+        }
+      });
+    };
+    collect(this.deps.getRoomBuilderGroup());
+    this.deps.getRoomBoxWalls().forEach((w) => collect(w.mesh));
     if (!roomMeshes.length) return null;
 
     const canvas = this.deps.getCanvas();
@@ -323,10 +385,13 @@ export class ViewerRaycastSystem {
       const elementType = current.userData?.elementType as "door" | "window" | undefined;
       const config = current.userData?.config as DoorWindowConfig | undefined;
       if (elementId && elementType && config) {
-        const wall = current.parent;
-        const wallId = wall?.userData?.wallId as number | undefined;
-        if (typeof wallId === "number") {
-          return { elementId, wallId, type: elementType, config: { ...config } };
+        let wall: THREE.Object3D | null = current.parent;
+        while (wall) {
+          const wallId = wall.userData?.wallId as number | undefined;
+          if (typeof wallId === "number") {
+            return { elementId, wallId, type: elementType, config: { ...config } };
+          }
+          wall = wall.parent;
         }
       }
       current = current.parent;

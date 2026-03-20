@@ -65,8 +65,8 @@ export type PimoViewerApi = {
   /** Seleciona abertura (porta/janela) por id para mover/rodar com botões do topo. */
   selectRoomElementById?: (_elementId: string | null) => void;
   setPlacementMode?: (_mode: "door" | "window" | null) => void;
-  addDoorToRoom?: (_wallId: number, _config: DoorWindowConfig) => string;
-  addWindowToRoom?: (_wallId: number, _config: DoorWindowConfig) => string;
+  addDoorToRoom?: (_wallId: number, _config: DoorWindowConfig, _elementId?: string) => string;
+  addWindowToRoom?: (_wallId: number, _config: DoorWindowConfig, _elementId?: string) => string;
   setOnRoomElementPlaced?: (
     _cb: ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null
   ) => void;

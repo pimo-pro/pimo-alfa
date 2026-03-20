@@ -74,12 +74,12 @@ export function createViewerApiAdapter(
       pimoApi.setPlacementMode?.(mode);
     },
 
-    addDoorToRoom: (wallId: number, config: DoorWindowConfig): string => {
-      return pimoApi.addDoorToRoom?.(wallId, config) ?? "";
+    addDoorToRoom: (wallId: number, config: DoorWindowConfig, elementId?: string): string => {
+      return pimoApi.addDoorToRoom?.(wallId, config, elementId) ?? "";
     },
 
-    addWindowToRoom: (wallId: number, config: DoorWindowConfig): string => {
-      return pimoApi.addWindowToRoom?.(wallId, config) ?? "";
+    addWindowToRoom: (wallId: number, config: DoorWindowConfig, elementId?: string): string => {
+      return pimoApi.addWindowToRoom?.(wallId, config, elementId) ?? "";
     },
 
     setOnRoomElementPlaced: (

@@ -343,7 +343,7 @@ export class ViewerCore {
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
     this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
 
-    this.roomBuilder = new RoomBuilder();
+    this.roomBuilder = new RoomBuilder(() => this.roomBoxWalls.map((w) => w.mesh));
     this.sceneManager.add(this.roomBuilder.getGroup());
 
     this.raycastSystem = new ViewerRaycastSystem({
@@ -2252,6 +2252,7 @@ export class ViewerCore {
 
   /** Chamado pelo RoomManager quando a sala é removida. Remove o grupo da cena e limpa estado. */
   clearRoomFromManager(): void {
+    this.roomBuilder.clearRoom(true);
     if (this.roomBoxGroup) {
       this.sceneManager.root.remove(this.roomBoxGroup);
     }
@@ -2499,12 +2500,12 @@ export class ViewerCore {
     return this.roomBuilder.updateElementConfig(elementId, config);
   }
 
-  addDoorToRoom(wallId: number, config: DoorWindowConfig): string {
-    return this.roomBuilder.addDoorByIndex(wallId, config);
+  addDoorToRoom(wallId: number, config: DoorWindowConfig, elementId?: string): string {
+    return this.roomBuilder.addDoorByIndex(wallId, config, elementId);
   }
 
-  addWindowToRoom(wallId: number, config: DoorWindowConfig): string {
-    return this.roomBuilder.addWindowByIndex(wallId, config);
+  addWindowToRoom(wallId: number, config: DoorWindowConfig, elementId?: string): string {
+    return this.roomBuilder.addWindowByIndex(wallId, config, elementId);
   }
 
   getRoomWalls(): THREE.Mesh[] {
@@ -2527,10 +2528,10 @@ export class ViewerCore {
     this.onWallSelected?.(this.viewerState.getSelectedWallIndex());
   }
 
-  /** LEGACY / NO-OP: seleção de abertura por id descontinuada no fluxo atual. */
   selectRoomElementById(elementId: string | null): void {
-    void elementId;
-    this.viewerState.setSelectedRoomElementId(null);
+    this.viewerState.setSelectedRoomElementId(elementId);
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
   }
 
   setOnBoxSelected(callback: (_id: string | null) => void): void {
@@ -3750,13 +3751,14 @@ export class ViewerCore {
     return this.raycastSystem.getWallIdAtPointer(event);
   }
 
-  private getWallHitAtPointer(_event: { clientX: number; clientY: number }): {
+  private getWallHitAtPointer(event: { clientX: number; clientY: number }): {
     wallId: number;
     config: DoorWindowConfig;
     type: "door" | "window";
   } | null {
-    // Room Box não suporta abertura posicionada por clique.
-    return null;
+    const mode = this.viewerState.getPlacementMode();
+    if (!mode || !this.onRoomElementPlaced) return null;
+    return this.raycastSystem.getWallPlacementHit(event, mode);
   }
 
   private getRoomElementAtPointer(event: { clientX: number; clientY: number }): {

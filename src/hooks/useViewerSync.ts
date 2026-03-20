@@ -55,14 +55,14 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
   }, []);
 
   const addDoorToRoom = useCallback(
-    (wallId: number, config: DoorWindowConfig) =>
-      viewerApiRef.current?.addDoorToRoom?.(wallId, config) ?? "",
+    (wallId: number, config: DoorWindowConfig, elementId?: string) =>
+      viewerApiRef.current?.addDoorToRoom?.(wallId, config, elementId) ?? "",
     []
   );
 
   const addWindowToRoom = useCallback(
-    (wallId: number, config: DoorWindowConfig) =>
-      viewerApiRef.current?.addWindowToRoom?.(wallId, config) ?? "",
+    (wallId: number, config: DoorWindowConfig, elementId?: string) =>
+      viewerApiRef.current?.addWindowToRoom?.(wallId, config, elementId) ?? "",
     []
   );
 

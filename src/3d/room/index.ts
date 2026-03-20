@@ -8,5 +8,5 @@ export {
   WALL_THICKNESS_M,
   type WallMaterialOptions,
 } from "./WallFactory";
-export { RoomBuilder, ROOM_BUILDER_DISABLED } from "./RoomBuilder";
+export { RoomBuilder } from "./RoomBuilder";
 export * from "./types";
