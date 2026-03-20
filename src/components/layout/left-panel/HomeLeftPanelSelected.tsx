@@ -8,6 +8,7 @@ import { useToast } from "../../../context/ToastContext";
 import { getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
 import { MaterialPickerModal } from "./MaterialPickerModal";
 import type { UseMaterialsForPickerResult } from "./hooks/useMaterialsForPicker";
+import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
 
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
@@ -283,6 +284,32 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
               </div>
 
               <BoxLayersPanel embedded />
+            </Panel>
+          )}
+
+          {selectedBox && isPiBaseCabinetId(selectedBox.baseCabinetId) && (
+            <Panel
+              title="Furação PI (laterais)"
+              description="A grelha 32 mm e os furos de dobradiça são fixos do módulo. Opcional: ocultar só corrediça na visualização e na lista."
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 12,
+                  color: "var(--text-main)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedBox.piHideDrawerHoles === true}
+                  onChange={(e) =>
+                    actions.setWorkspaceBoxPiHideDrawerHoles(selectedBox.id, e.target.checked)
+                  }
+                />
+                Ocultar furos de corrediça (laterais)
+              </label>
             </Panel>
           )}
 

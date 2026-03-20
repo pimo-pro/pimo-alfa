@@ -80,10 +80,21 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   const hasDrawers = (opts.drawerLayerItems?.length ?? 0) > 0;
   const useLateralShelfHoles = shelfCount > 0 && !hasDrawers;
+  const hasLateralDrillMarkers =
+    (drillMap.lateral_esquerda?.length ?? 0) > 0 || (drillMap.lateral_direita?.length ?? 0) > 0;
+  const applyLateralDrillHoles = hasLateralDrillMarkers || useLateralShelfHoles;
   deps.applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
   deps.applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
-  deps.applyDrillHolesToPanelGeometry(panels.left, "left", useLateralShelfHoles ? drillMap.lateral_esquerda : []);
-  deps.applyDrillHolesToPanelGeometry(panels.right, "right", useLateralShelfHoles ? drillMap.lateral_direita : []);
+  deps.applyDrillHolesToPanelGeometry(
+    panels.left,
+    "left",
+    applyLateralDrillHoles ? drillMap.lateral_esquerda : []
+  );
+  deps.applyDrillHolesToPanelGeometry(
+    panels.right,
+    "right",
+    applyLateralDrillHoles ? drillMap.lateral_direita : []
+  );
 
   if (shelfCount > 0) {
     deps.getShelfSpecs(width, height, depth, shelfCount).forEach((spec, i) => {

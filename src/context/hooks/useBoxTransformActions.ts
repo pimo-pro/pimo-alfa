@@ -13,6 +13,7 @@ export type BoxTransformActions = Pick<
   | "setWorkspaceBoxNome"
   | "setWorkspaceBoxMaterial"
   | "setWorkspaceBoxLocked"
+  | "setWorkspaceBoxPiHideDrawerHoles"
   | "setTipoBorda"
   | "setTipoFundo"
   | "alignFrontWithNeighbor"
@@ -130,6 +131,15 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
           box.id === boxId ? { ...box, locked } : box
         );
         return { ...prev, workspaceBoxes };
+      });
+    };
+
+    a.setWorkspaceBoxPiHideDrawerHoles = (boxId, hide) => {
+      updateProject((prev) => {
+        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+          box.id === boxId ? { ...box, piHideDrawerHoles: hide } : box
+        );
+        return recomputeState(prev, { workspaceBoxes }, true);
       });
     };
 

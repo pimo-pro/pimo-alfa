@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
+import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
+import { getSettings } from "../core/settings/settingsService";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import { mmToM } from "../utils/units";
 import { devLogger } from "../utils/devLogger";
@@ -56,11 +58,27 @@ function getStructureFingerprint(wsBox: WorkspaceBox): string {
     pullDistanceMm: drawer.pullDistanceMm,
     material: drawer.material,
   }));
+  const m = getSettings().modeloPI;
+  const piDrillSig =
+    isPiBaseCabinetId(wsBox.baseCabinetId) && m
+      ? {
+          ativarFuracaoPrateleiras: m.ativarFuracaoPrateleiras,
+          ativarFuracaoDobradicas: m.ativarFuracaoDobradicas,
+          ativarFuracaoGavetas: m.ativarFuracaoGavetas,
+          numeroGavetas: m.numeroGavetas,
+          comprimentoCorredicaMm: m.comprimentoCorredicaMm,
+        }
+      : null;
+
   return JSON.stringify({
     w: d?.largura,
     h: d?.altura,
     p: d?.profundidade,
     shelves: wsBox.prateleiras,
+    portaTipo: wsBox.portaTipo,
+    baseCabinetId: wsBox.baseCabinetId,
+    piHideDrawerHoles: wsBox.piHideDrawerHoles === true,
+    piDrillSig,
     doors: doorSig,
     drawers: drawerSig,
     material: wsBox.material,

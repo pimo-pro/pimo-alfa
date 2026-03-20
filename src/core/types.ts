@@ -277,6 +277,10 @@ export interface BoxModule {
   catalogItemId?: string;
   /** ID do modelo base que originou a caixa. */
   baseCabinetId?: string;
+  /**
+   * PI: oculta apenas furos de corrediça nas laterais (settings). Não afeta grelha 32 mm nem dobradiça.
+   */
+  piHideDrawerHoles?: boolean;
   ferragens: Acessorio[];
   cutList: CutListItem[];
   cutListComPreco: CutListItemComPreco[];
@@ -322,6 +326,10 @@ export interface WorkspaceBox {
   catalogItemId?: string;
   /** ID do modelo Base Cabinet que originou esta caixa (para expansão: guardar como modelo personalizado). */
   baseCabinetId?: string;
+  /**
+   * PI: oculta apenas furos de corrediça nas laterais. Grelha e dobradiça mantêm-se conforme modelo PI.
+   */
+  piHideDrawerHoles?: boolean;
   /** Tipo de armário para altura automática: inferior (base) ou superior (parede). */
   cabinetType?: "lower" | "upper";
   /** Altura do pé (PE) em cm para caixas inferiores; base da caixa fica a PE cm do piso (default 10). */

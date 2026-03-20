@@ -1,5 +1,5 @@
 import type { DrillType, PanelDrillHole } from "../../../core/types";
-import type { PiModelSettings } from "./settings";
+import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas, type PiModelSettings } from "./settings";
 
 type PiLateralSide = "left" | "right";
 
@@ -12,10 +12,14 @@ export type PiLateralDrillingInput = {
   alturaMm: number;
   profundidadeMm: number;
   side: PiLateralSide;
-  numeroGavetas: number;
-  hasShelves: boolean;
-  hasDoors: boolean;
-  piSettings: PiModelSettings;
+  /** Número de linhas de corrediça: sempre a partir do modelo PI (settings), nunca de drawersLayer. */
+  numeroGavetasParaCorrediça: number;
+  /**
+   * Só afeta corrediça. Grelha 32 mm (prateleira) e furos de dobradiça seguem só `ativarFuracao*` do modelo.
+   */
+  piHideDrawerHoles: boolean;
+  /** Preferências PI (merge com defaults dentro de buildPiUniversalLateralDrilling). */
+  piSettings: Partial<PiModelSettings> | PiModelSettings;
 };
 
 const GRID_STEP_MM = 32;
@@ -36,6 +40,27 @@ const HINGE_TARGETS_MM = [100, 400, 700] as const;
 const roundToNearestGrid = (value: number) => Math.round(value / GRID_STEP_MM) * GRID_STEP_MM;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+function mergePiSettings(partial: Partial<PiModelSettings> | PiModelSettings): PiModelSettings {
+  return {
+    ...PI_MODEL_DEFAULT_SETTINGS,
+    ...partial,
+    numeroGavetas: clampPiNumeroGavetas(
+      partial?.numeroGavetas ?? PI_MODEL_DEFAULT_SETTINGS.numeroGavetas
+    ),
+  };
+}
+
+/** Paridade com `toPanelDrillHoles` (drillingAdapter) para TCN / layout. */
+function isPiHoleTopDrillableForTcn(holeType: DrillType): boolean {
+  return (
+    holeType === "dobradica" ||
+    holeType === "dobradica_fixacao" ||
+    holeType === "dobradica_parafuso_uniao" ||
+    holeType === "prateleira" ||
+    holeType === "corredica"
+  );
+}
+
 function addHole(
   holes: PanelDrillHole[],
   x: number,
@@ -51,7 +76,7 @@ function addHole(
     depth,
     holeType,
     face,
-    topDrillable: false,
+    topDrillable: isPiHoleTopDrillableForTcn(holeType),
   });
 }
 
@@ -137,16 +162,26 @@ export function buildPiDrawerLayoutForFronts(alturaMm: number, numeroGavetas: nu
 
 export function buildPiUniversalLateralDrilling(input: PiLateralDrillingInput): PanelDrillHole[] {
   const holes: PanelDrillHole[] = [];
-  const layout = getDrawerLayout(input.alturaMm, input.numeroGavetas);
+  const s = mergePiSettings(input.piSettings);
+  const nCorredica = clampPiNumeroGavetas(
+    Number.isFinite(input.numeroGavetasParaCorrediça)
+      ? input.numeroGavetasParaCorrediça
+      : s.numeroGavetas
+  );
+  const layout = getDrawerLayout(input.alturaMm, nCorredica);
 
-  // Painel lateral universal: a malha 32mm (frente/fundo) é sempre gerada.
-  addUniversalGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
+  // Malha base 32 mm (tipo prateleira): parte fixa do módulo PI; independente de prateleiras/portas na UI.
+  if (s.ativarFuracaoPrateleiras) {
+    addUniversalGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
+  }
 
-  if (input.piSettings.ativarFuracaoDobradicas && input.hasDoors) {
+  // Furos de dobradiça nas posições PI: base do módulo; independente de portaTipo / doorsLayer.
+  if (s.ativarFuracaoDobradicas) {
     addHingeGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
   }
 
-  if (input.piSettings.ativarFuracaoGavetas) {
+  // Corrediça: sempre que ativo e não oculto; padrão só do modelo PI (nunca drawersLayer).
+  if (s.ativarFuracaoGavetas && !input.piHideDrawerHoles) {
     addDrawerSlideHoles(holes, layout.runnerLinesYMm, input.profundidadeMm, input.side);
   }
 

@@ -16,6 +16,7 @@ import { addMateDowelHolesToBoxItems } from "../drill/dowelJoints";
 import { devLogger } from "../../utils/devLogger";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
+import { clampPiNumeroGavetas } from "../../data/moveisUnificados/pi/settings";
 import { getSettings } from "../settings/settingsService";
 
 /**
@@ -110,10 +111,9 @@ export function cutlistComPrecoFromBox(
         alturaMm: p.altura_mm,
         profundidadeMm: p.largura_mm,
         side: p.tipo === "lateral_esquerda" ? "left" : "right",
-        numeroGavetas: Math.max(1, Math.min(4, Number(piSettings?.numeroGavetas) || 3)),
-        hasShelves,
-        hasDoors: box.portaTipo !== "sem_porta",
-        piSettings,
+        numeroGavetasParaCorrediça: clampPiNumeroGavetas(Number(piSettings?.numeroGavetas) || 3),
+        piHideDrawerHoles: box.piHideDrawerHoles === true,
+        piSettings: piSettings ?? {},
       });
     } else {
       const drillingResult = buildPanelDrillingResult(

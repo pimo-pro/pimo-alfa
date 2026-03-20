@@ -91,8 +91,11 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   const shelfCountForDrill = Math.max(0, Math.floor(opts.shelves ?? 0));
   const hasDrawersForDrill = (opts.drawerLayerItems?.length ?? 0) > 0;
   const useLateralShelfHoles = shelfCountForDrill > 0 && !hasDrawersForDrill;
-  const lateralLeftHoles = useLateralShelfHoles ? drillMap.lateral_esquerda : [];
-  const lateralRightHoles = useLateralShelfHoles ? drillMap.lateral_direita : [];
+  const hasLateralDrillMarkers =
+    (drillMap.lateral_esquerda?.length ?? 0) > 0 || (drillMap.lateral_direita?.length ?? 0) > 0;
+  const applyLateralDrillHoles = hasLateralDrillMarkers || useLateralShelfHoles;
+  const lateralLeftHoles = applyLateralDrillHoles ? drillMap.lateral_esquerda : [];
+  const lateralRightHoles = applyLateralDrillHoles ? drillMap.lateral_direita : [];
 
   if (!dimensionsUnchanged) {
     for (const panelName of deps.panelNames) {
@@ -118,7 +121,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
   const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
   const rightPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "right") as THREE.Mesh | undefined;
-  if (!useLateralShelfHoles) {
+  if (!applyLateralDrillHoles) {
     if (leftPanel) {
       const leftSpec = specs.left;
       deps.panelFactory.updatePanelGeometry(leftPanel, leftSpec.size[0], leftSpec.size[1], leftSpec.size[2]);

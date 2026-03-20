@@ -131,6 +131,7 @@ export type CreateWorkspaceBoxOverrides = {
   feetHeight?: number;
   feetOffsetFront?: number;
   feetEnabled?: boolean;
+  piHideDrawerHoles?: boolean;
 };
 
 export const createWorkspaceBox = (
@@ -205,6 +206,7 @@ export const createWorkspaceBox = (
     doorsLayer: [],
     drawersLayer: [],
     locked: false,
+    piHideDrawerHoles: overrides?.piHideDrawerHoles === true,
   };
   
   // Regenerate layers based on portaTipo and gavetas
@@ -476,6 +478,7 @@ const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     drawersLayer: box.drawersLayer ?? [],
     catalogItemId: box.catalogItemId,
     baseCabinetId: box.baseCabinetId,
+    piHideDrawerHoles: box.piHideDrawerHoles === true,
   };
 };
 
