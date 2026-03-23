@@ -14,7 +14,7 @@ export function useViewerUiActions(ctx: ProjectActionsExecutionContext): ViewerU
     const a = {} as ViewerUiActions;
 
     a.setActiveTool = (mode: ViewerToolMode) => {
-      updateProject((prev) => ({ ...prev, activeViewerTool: mode }), false);
+      updateProject((prev) => ({ ...prev, activeViewerTool: mode }), true);
       viewerSync.setActiveTool(mode);
     };
 
@@ -27,7 +27,7 @@ export function useViewerUiActions(ctx: ProjectActionsExecutionContext): ViewerU
             ...partial,
           },
         }),
-        false
+        true
       );
     };
 
@@ -40,7 +40,7 @@ export function useViewerUiActions(ctx: ProjectActionsExecutionContext): ViewerU
             highlightEnabled: !prev.viewerSettings.highlightEnabled,
           },
         }),
-        false
+        true
       );
     };
 
@@ -53,12 +53,13 @@ export function useViewerUiActions(ctx: ProjectActionsExecutionContext): ViewerU
             rulerEnabled: !prev.viewerSettings.rulerEnabled,
           },
         }),
-        false
+        true
       );
     };
 
     a.setLayoutWarnings = (warnings) => {
-      updateProject((prev) => ({ ...prev, layoutWarnings: warnings }));
+      // Derived warnings update frequently; keep out of undo/redo.
+      updateProject((prev) => ({ ...prev, layoutWarnings: warnings }), false);
     };
 
     return a;

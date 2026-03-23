@@ -68,41 +68,47 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
     const a = {} as DesignActions;
 
     a.gerarDesign = () => {
-      updateProject((prev) => {
-        try {
-          return buildGeneratedState(prev);
-        } catch (error) {
-          return {
-            ...prev,
-            design: null,
-            cutList: null,
-            cutListComPreco: null,
-            estrutura3D: null,
-            acessorios: null,
-            precoTotalPecas: null,
-            precoTotalAcessorios: null,
-            precoTotalProjeto: null,
-            estaCarregando: false,
-            erro: error instanceof Error ? error.message : "Erro ao gerar design",
-          };
-        }
-      });
+      updateProject(
+        (prev) => {
+          try {
+            return buildGeneratedState(prev);
+          } catch (error) {
+            return {
+              ...prev,
+              design: null,
+              cutList: null,
+              cutListComPreco: null,
+              estrutura3D: null,
+              acessorios: null,
+              precoTotalPecas: null,
+              precoTotalAcessorios: null,
+              precoTotalProjeto: null,
+              estaCarregando: false,
+              erro: error instanceof Error ? error.message : "Erro ao gerar design",
+            };
+          }
+        },
+        true
+      );
     };
 
     a.gerarESalvarDesign = async () => {
       let generatedState: ProjectState | null = null;
-      updateProject((prev) => {
-        try {
-          const next = buildGeneratedState(prev);
-          generatedState = next;
-          return next;
-        } catch (error) {
-          return {
-            ...prev,
-            erro: error instanceof Error ? error.message : "Erro ao gerar design",
-          };
-        }
-      });
+      updateProject(
+        (prev) => {
+          try {
+            const next = buildGeneratedState(prev);
+            generatedState = next;
+            return next;
+          } catch (error) {
+            return {
+              ...prev,
+              erro: error instanceof Error ? error.message : "Erro ao gerar design",
+            };
+          }
+        },
+        true
+      );
 
       if (!generatedState) return;
 
@@ -153,7 +159,7 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
     };
 
     a.recalculateAllBoxes = () => {
-      updateProject((prev) => applyResultados(prev));
+      updateProject((prev) => applyResultados(prev), true);
     };
 
     return a;

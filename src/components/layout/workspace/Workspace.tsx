@@ -60,6 +60,7 @@ export default function Workspace({
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
   const projectRef = useRef(project);
   const ctrlOrMetaPressedRef = useRef(false);
+  const pointerToggleSelectionRef = useRef(false);
   const multiSelectedBoxIdsRef = useRef<string[]>([]);
   const keyboardMoveRef = useRef<{
     activeKey: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | null;
@@ -156,7 +157,8 @@ export default function Workspace({
         });
       }
       if (boxId) {
-        if (ctrlOrMetaPressedRef.current) {
+        const toggleSelection = pointerToggleSelectionRef.current || ctrlOrMetaPressedRef.current;
+        if (toggleSelection) {
           const currentSelection = multiSelectedBoxIdsRef.current;
           const alreadySelected = currentSelection.includes(boxId);
           const nextSelection = alreadySelected
@@ -196,6 +198,7 @@ export default function Workspace({
             selectedToolAfter: afterUi.selectedTool,
           });
         }
+        pointerToggleSelectionRef.current = false;
         return;
       }
       if (project.selectedWorkspaceBoxId != null && project.selectedWorkspaceBoxId !== "") {
@@ -215,6 +218,7 @@ export default function Workspace({
           });
         }
       }
+      pointerToggleSelectionRef.current = false;
     });
   }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, setSelectedObject, setSelectedTool]);
 
@@ -653,6 +657,13 @@ return (
               ref={containerRef}
               onPointerDownCapture={(event) => {
                 ctrlOrMetaPressedRef.current = event.ctrlKey || event.metaKey;
+                pointerToggleSelectionRef.current = event.ctrlKey || event.metaKey;
+              }}
+              onMouseDownCapture={(event) => {
+                pointerToggleSelectionRef.current = event.ctrlKey || event.metaKey;
+              }}
+              onClickCapture={(event) => {
+                pointerToggleSelectionRef.current = event.ctrlKey || event.metaKey;
               }}
               onContextMenu={(event) => {
                 event.preventDefault();

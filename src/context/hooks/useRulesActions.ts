@@ -34,7 +34,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const nextConfig = { ...profiles, perfis: nextPerfis };
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: normalizedRules });
-      }, false);
+      }, true);
     };
 
     a.setActiveRulesProfile = (id: string) => {
@@ -46,7 +46,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const rules = normalizeRulesConfig(perfil?.rules ?? prev.rules);
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
-      }, false);
+      }, true);
     };
 
     a.updateRulesInProfile = (profileId: string, rules: RulesConfig) => {
@@ -62,7 +62,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const nextRules = isActive ? normalizedRules : prev.rules;
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: nextRules });
-      }, false);
+      }, true);
     };
 
     a.addRulesProfile = (profile: { nome: string; descricao?: string; rules?: RulesConfig }) => {
@@ -80,7 +80,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         };
         saveProfiles(nextConfig);
         return { ...prev, rulesProfiles: nextConfig };
-      }, false);
+      }, true);
     };
 
     a.setRulesProfilesConfig = (config: RulesProfilesConfig) => {
@@ -93,7 +93,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const normalizedActive = normalizedConfig.perfis.find((p) => p.id === normalizedConfig.perfilAtivoId);
         const rules = normalizeRulesConfig(normalizedActive?.rules ?? perfil?.rules ?? prev.rules);
         return applyResultados({ ...prev, rulesProfiles: normalizedConfig, rules });
-      }, false);
+      }, true);
     };
 
     a.setProjectRulesProfile = (id: string) => {
@@ -105,7 +105,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
           rulesProfileId: id,
           rules: normalizeRulesConfig(perfil.rules),
         });
-      }, false);
+      }, true);
     };
 
     a.removeRulesProfile = (id: string) => {
@@ -123,7 +123,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const rules = normalizeRulesConfig(perfil?.rules ?? prev.rules);
         saveProfiles(nextConfig);
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
-      }, false);
+      }, true);
     };
 
     return a;

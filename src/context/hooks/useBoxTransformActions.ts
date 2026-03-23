@@ -28,35 +28,41 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
     const a = {} as BoxTransformActions;
 
     a.setDimensoes = (dimensoes) => {
-      updateProject((prev) => {
-        const boxId = prev.selectedWorkspaceBoxId;
-        if (boxId) {
+      updateProject(
+        (prev) => {
+          const boxId = prev.selectedWorkspaceBoxId;
+          if (boxId) {
+            const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+            if (box?.locked) return prev;
+            const workspaceBoxes = prev.workspaceBoxes.map((b) => {
+              if (b.id !== boxId) return b;
+              const updatedBox = { ...b, dimensoes: { ...b.dimensoes, ...dimensoes } };
+              const layers = regenerateLayersForBox(updatedBox);
+              return { ...updatedBox, ...layers };
+            });
+            return recomputeState(prev, { workspaceBoxes }, true);
+          }
+          return recomputeState(prev, { dimensoes: { ...prev.dimensoes, ...dimensoes } }, true);
+        },
+        true
+      );
+    };
+
+    a.setWorkspaceBoxDimensoes = (boxId, dimensoes) => {
+      updateProject(
+        (prev) => {
           const box = prev.workspaceBoxes.find((b) => b.id === boxId);
           if (box?.locked) return prev;
-          const workspaceBoxes = prev.workspaceBoxes.map((b) => {
-            if (b.id !== boxId) return b;
-            const updatedBox = { ...b, dimensoes: { ...b.dimensoes, ...dimensoes } };
+          const workspaceBoxes = prev.workspaceBoxes.map((boxItem) => {
+            if (boxItem.id !== boxId) return boxItem;
+            const updatedBox = { ...boxItem, dimensoes: { ...boxItem.dimensoes, ...dimensoes } };
             const layers = regenerateLayersForBox(updatedBox);
             return { ...updatedBox, ...layers };
           });
           return recomputeState(prev, { workspaceBoxes }, true);
-        }
-        return recomputeState(prev, { dimensoes: { ...prev.dimensoes, ...dimensoes } }, true);
-      });
-    };
-
-    a.setWorkspaceBoxDimensoes = (boxId, dimensoes) => {
-      updateProject((prev) => {
-        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
-        if (box?.locked) return prev;
-        const workspaceBoxes = prev.workspaceBoxes.map((boxItem) => {
-          if (boxItem.id !== boxId) return boxItem;
-          const updatedBox = { ...boxItem, dimensoes: { ...boxItem.dimensoes, ...dimensoes } };
-          const layers = regenerateLayersForBox(updatedBox);
-          return { ...updatedBox, ...layers };
-        });
-        return recomputeState(prev, { workspaceBoxes }, true);
-      });
+        },
+        true
+      );
     };
 
     a.updateWorkspacePosition = (boxId, posicaoX_mm) => {
@@ -108,57 +114,75 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
     };
 
     a.setWorkspaceBoxNome = (boxId, nome) => {
-      updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === boxId ? { ...box, nome } : box
-        );
-        return { ...prev, workspaceBoxes };
-      });
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? { ...box, nome } : box
+          );
+          return { ...prev, workspaceBoxes };
+        },
+        true
+      );
     };
 
     a.setWorkspaceBoxMaterial = (boxId, materialId) => {
-      updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === boxId ? { ...box, material: materialId } : box
-        );
-        return { ...prev, workspaceBoxes };
-      });
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? { ...box, material: materialId } : box
+          );
+          return { ...prev, workspaceBoxes };
+        },
+        true
+      );
     };
 
     a.setWorkspaceBoxLocked = (boxId, locked) => {
-      updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === boxId ? { ...box, locked } : box
-        );
-        return { ...prev, workspaceBoxes };
-      });
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? { ...box, locked } : box
+          );
+          return { ...prev, workspaceBoxes };
+        },
+        true
+      );
     };
 
     a.setWorkspaceBoxPiHideDrawerHoles = (boxId, hide) => {
-      updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === boxId ? { ...box, piHideDrawerHoles: hide } : box
-        );
-        return recomputeState(prev, { workspaceBoxes }, true);
-      });
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? { ...box, piHideDrawerHoles: hide } : box
+          );
+          return recomputeState(prev, { workspaceBoxes }, true);
+        },
+        true
+      );
     };
 
     a.setTipoBorda = (tipoBorda) => {
-      updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === prev.selectedWorkspaceBoxId ? { ...box, tipoBorda } : box
-        );
-        return recomputeState(prev, { workspaceBoxes }, true);
-      });
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === prev.selectedWorkspaceBoxId ? { ...box, tipoBorda } : box
+          );
+          return recomputeState(prev, { workspaceBoxes }, true);
+        },
+        true
+      );
     };
 
     a.setTipoFundo = (tipoFundo) => {
-      updateProject((prev) => {
-        const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-          box.id === prev.selectedWorkspaceBoxId ? { ...box, tipoFundo } : box
-        );
-        return recomputeState(prev, { workspaceBoxes }, true);
-      });
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === prev.selectedWorkspaceBoxId ? { ...box, tipoFundo } : box
+          );
+          return recomputeState(prev, { workspaceBoxes }, true);
+        },
+        true
+      );
     };
 
     a.alignFrontWithNeighbor = (boxId) => {
@@ -189,33 +213,36 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
           );
           return { ...prev, workspaceBoxes };
         },
-        false
+        true
       );
     };
 
     a.toggleWorkspaceRotation = (boxId) => {
-      updateProject((prev) => {
-        const box = prev.workspaceBoxes.find((b) => b.id === boxId);
-        if (box?.locked) return prev;
-        const workspaceBoxes = prev.workspaceBoxes.map((boxItem) => {
-          if (boxItem.id !== boxId) return boxItem;
-          const currentRad = boxItem.rotacaoY ?? 0;
-          let nextRad = currentRad + Math.PI / 2;
-          let deg = (nextRad * 180) / Math.PI;
-          deg = Math.round(deg / 90) * 90;
-          deg = ((deg % 360) + 360) % 360;
-          if (deg === 360) deg = 0;
-          nextRad = (deg * Math.PI) / 180;
-          return {
-            ...boxItem,
-            rotacaoY_90: !boxItem.rotacaoY_90,
-            rotacaoY: nextRad,
-            autoRotateEnabled: false,
-            manualPosition: true,
-          };
-        });
-        return { ...prev, workspaceBoxes };
-      });
+      updateProject(
+        (prev) => {
+          const box = prev.workspaceBoxes.find((b) => b.id === boxId);
+          if (box?.locked) return prev;
+          const workspaceBoxes = prev.workspaceBoxes.map((boxItem) => {
+            if (boxItem.id !== boxId) return boxItem;
+            const currentRad = boxItem.rotacaoY ?? 0;
+            let nextRad = currentRad + Math.PI / 2;
+            let deg = (nextRad * 180) / Math.PI;
+            deg = Math.round(deg / 90) * 90;
+            deg = ((deg % 360) + 360) % 360;
+            if (deg === 360) deg = 0;
+            nextRad = (deg * Math.PI) / 180;
+            return {
+              ...boxItem,
+              rotacaoY_90: !boxItem.rotacaoY_90,
+              rotacaoY: nextRad,
+              autoRotateEnabled: false,
+              manualPosition: true,
+            };
+          });
+          return { ...prev, workspaceBoxes };
+        },
+        true
+      );
     };
 
     a.rotateWorkspaceBox = (boxId) => {
