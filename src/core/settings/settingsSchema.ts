@@ -1,0 +1,281 @@
+/**
+ * Schema e valores por defeito das configurações globais.
+ */
+
+import { PANEL_DEFAULTS } from "../panel/panelConstants";
+import {
+  PI_MODEL_DEFAULT_SETTINGS,
+  type PiSistemaGaveta,
+  type PiTipoFrente,
+} from "../../data/moveisUnificados/pi/settings";
+
+export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
+export const SETTINGS_SCHEMA_VERSION = 1;
+
+export interface SettingsSchema {
+  schemaVersion: number;
+  geral: {
+    locale: string;
+    theme: "dark" | "light" | "system";
+    autosaveEnabled: boolean;
+    debugMode: boolean;
+  };
+  fabrica: {
+    toleranciaCorteMm: number;
+  };
+  precos: {
+    margemPercentual: number;
+    multiplicadorBase: number;
+    valorHoraMaquina: number;
+  };
+  materiais: {
+    categoriaPadraoId: string;
+    presetVisualPadraoId: string;
+    materialIndustrialPadraoId: string;
+    sheetWidthMm: number;
+    sheetHeightMm: number;
+    sheetThicknessMm: number;
+    sheetName: string;
+  };
+  cnc: {
+    profundidadeCortePadraoMm: number;
+    offsetFerramentaPadraoMm: number;
+    toleranciaPosicionamentoMm: number;
+    /** Diâmetro da fresa para compensação geométrica no TCN (contorno já compensado no CAM; 0 = usar Kerf padrão ou 12 mm). */
+    diametroFresaContornoMm: number;
+  };
+  nesting: {
+    kerfPadraoMm: number;
+    permitirRotacaoGlobal: boolean;
+    prioridadeAproveitamento: "area" | "chapas" | "balanceado";
+  };
+  portas: {
+    portaGapVerticalMm: number;
+    portaGapHorizontalMm: number;
+    portaGapDuplaMm: number;
+    portaPosZOffsetMm: number;
+  };
+  gavetas: {
+    gavetaNormalBaseEspessuraMm: number;
+    gavetaProBaseEspessuraMm: number;
+    gavetaFolgaLateralMm: number;
+    gavetaProfundidadesDisponiveisMm: number[];
+    gavetaAlturaModoPadrao: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  };
+  modeloPI: {
+    espessuraMadeiraMm: number;
+    ativarFuracaoPrateleiras: boolean;
+    ativarFuracaoDobradicas: boolean;
+    ativarFuracaoGavetas: boolean;
+    sistemaGavetas: PiSistemaGaveta;
+    comprimentoCorredicaMm: number;
+    numeroGavetas: number;
+    tipoFrente: PiTipoFrente;
+  };
+  ferragens: {
+    cavilha: {
+      diametro: number;
+      profundidade: number;
+      distanciaBorda: number;
+      ativo: boolean;
+    };
+    parafuso: {
+      diametro: number;
+      comprimento: number;
+      ativo: boolean;
+    };
+    corredica: {
+      tipo: string;
+      folga: number;
+      ativo: boolean;
+    };
+  };
+  viewer: {
+    qualidade: "baixa" | "media" | "alta";
+    luzIntensidade: number;
+    mostrarGrid: boolean;
+  };
+  furação: {
+    /** Distâncias de furação parafuso (mm). Aplicadas globalmente a todos os projetos. */
+    parafuso: {
+      /** Distância da frente ao eixo do parafuso (mm). Padrão industrial 90. */
+      frontDistance: number;
+      /** Distância do fundo ao eixo do parafuso (mm). Padrão industrial 90. */
+      backDistance: number;
+      /** Offset da borda (linha de furação), mm. */
+      offsetDaBorda: number;
+      /** Distância do centro do furo à borda lateral da peça (mm). Padrão industrial 9.5. */
+      sideOffset: number;
+    };
+    /** Distâncias de furação cavilha (mm). Aplicadas globalmente a todos os projetos. */
+    cavilha: {
+      /** Distância da frente ao eixo da cavilha (mm). Padrão industrial 60. */
+      frontDistance: number;
+      /** Distância do fundo ao eixo da cavilha (mm). Padrão industrial 60. */
+      backDistance: number;
+      /** Distância do centro do furo à borda lateral da peça (mm). Padrão industrial 9.5. */
+      sideOffset: number;
+    };
+    prateleira: {
+      margemTop: number;
+      margemBottom: number;
+      minFuros: number;
+      maxFuros: number;
+      espacamentoVertical: number;
+      /** Offset horizontal dos furos (linha frente e fundo), mm. */
+      distanciaDaBorda: number;
+    };
+    dobradica: {
+      distanciaCentroDaBorda: number;
+      /** Distância da dobradiça ao topo (mm). */
+      distanciaDobradiçaTopo: number;
+      /** Distância da dobradiça ao fundo (mm). */
+      distanciaDobradiçaFundo: number;
+      /** Número de dobradiças por porta. */
+      numeroPorPorta: number;
+      /** Se true, distribui Y automaticamente (distTopo/distFundo/proporcional); se false, usa offsetsVerticaisMm quando definido. */
+      distribuicaoAutomatica: boolean;
+    };
+    /** Regras de fixação da dobradiça na lateral: 2 furos calço + 1 parafuso união. */
+    dobradicaFixacao: {
+      /** Distância da borda ao eixo dos 2 furos do calço (mm). */
+      distanciaDaBordaCalco: number;
+      /** Distância da borda ao eixo do furo de parafuso de união (mm). */
+      distanciaDaBordaParafusoUniao: number;
+      /** Distância entre os 2 furos do calço (mm). */
+      distanciaEntreFurosCalco: number;
+      profundidadeFuro: number;
+      diametro: number;
+      diametroParafusoUniao: number;
+      profundidadeParafusoUniao: number;
+    };
+  };
+  etiquetasQr: {
+    /** Ativar QR com logo integrado */
+    logoAtivado: boolean;
+    /** Data URL da imagem do logo (PNG com fundo transparente) */
+    logoDataUrl?: string;
+    /** Tamanho do logo em percentual (10-30%) */
+    logoTamanhoPorcento: number;
+  };
+}
+
+export const settingsDefaults: SettingsSchema = {
+  schemaVersion: SETTINGS_SCHEMA_VERSION,
+  geral: {
+    locale: "pt-PT",
+    theme: "dark",
+    autosaveEnabled: true,
+    debugMode: false,
+  },
+  fabrica: {
+    toleranciaCorteMm: 0.2,
+  },
+  precos: {
+    margemPercentual: 20,
+    multiplicadorBase: 1,
+    valorHoraMaquina: 35,
+  },
+  materiais: {
+    categoriaPadraoId: "mdf",
+    presetVisualPadraoId: "mdf_branco",
+    materialIndustrialPadraoId: "mdf_branco",
+    sheetWidthMm: PANEL_DEFAULTS.largura_mm,
+    sheetHeightMm: PANEL_DEFAULTS.altura_mm,
+    sheetThicknessMm: PANEL_DEFAULTS.espessura_mm,
+    sheetName: "MDF Branco 19mm",
+  },
+  cnc: {
+    profundidadeCortePadraoMm: 18,
+    offsetFerramentaPadraoMm: 0,
+    toleranciaPosicionamentoMm: 0.1,
+    diametroFresaContornoMm: 0,
+  },
+  nesting: {
+    kerfPadraoMm: 3,
+    permitirRotacaoGlobal: true,
+    prioridadeAproveitamento: "balanceado",
+  },
+  portas: {
+    portaGapVerticalMm: 1,
+    portaGapHorizontalMm: 1,
+    portaGapDuplaMm: 2,
+    portaPosZOffsetMm: 9,
+  },
+  gavetas: {
+    gavetaNormalBaseEspessuraMm: 10,
+    gavetaProBaseEspessuraMm: 0,
+    gavetaFolgaLateralMm: 7,
+    gavetaProfundidadesDisponiveisMm: [250, 300, 350, 400, 450, 500, 550, 600],
+    gavetaAlturaModoPadrao: "equal",
+  },
+  modeloPI: {
+    ...PI_MODEL_DEFAULT_SETTINGS,
+  },
+  ferragens: {
+    cavilha: {
+      diametro: 8,
+      profundidade: 30,
+      distanciaBorda: 37,
+      ativo: true,
+    },
+    parafuso: {
+      diametro: 4,
+      comprimento: 30,
+      ativo: true,
+    },
+    corredica: {
+      tipo: "telescopica",
+      folga: 7,
+      ativo: true,
+    },
+  },
+  viewer: {
+    qualidade: "alta",
+    luzIntensidade: 1,
+    mostrarGrid: true,
+  },
+  furação: {
+    parafuso: {
+      frontDistance: 90,
+      backDistance: 90,
+      offsetDaBorda: 9,
+      sideOffset: 9.5,
+    },
+    cavilha: {
+      frontDistance: 60,
+      backDistance: 60,
+      sideOffset: 9.5,
+    },
+    prateleira: {
+      margemTop: 200,
+      margemBottom: 200,
+      minFuros: 6,
+      maxFuros: 40,
+      espacamentoVertical: 32,
+      distanciaDaBorda: 60,
+    },
+    dobradica: {
+      distanciaCentroDaBorda: 22.5,
+      distanciaDobradiçaTopo: 100,
+      distanciaDobradiçaFundo: 100,
+      numeroPorPorta: 2,
+      distribuicaoAutomatica: true,
+    },
+    dobradicaFixacao: {
+      distanciaDaBordaCalco: 37,
+      distanciaDaBordaParafusoUniao: 53,
+      distanciaEntreFurosCalco: 32,
+      profundidadeFuro: 12,
+      diametro: 5,
+      diametroParafusoUniao: 5,
+      /** Terceiro furo: apenas marcation (0.5 mm). Não estrutural. */
+      profundidadeParafusoUniao: 0.5,
+    },
+  },
+  etiquetasQr: {
+    logoAtivado: false,
+    logoDataUrl: undefined,
+    logoTamanhoPorcento: 20,
+  },
+};
