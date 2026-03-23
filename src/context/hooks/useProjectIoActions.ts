@@ -29,6 +29,7 @@ export type ProjectIoActions = Pick<
   | "loadProjectSnapshot"
   | "listSavedProjects"
   | "createNewProject"
+  | "setProjectName"
   | "renameProject"
   | "deleteProject"
 >;
@@ -105,6 +106,9 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         const currentUser = getCurrentProjectUser();
         const ownerId = scope === "mine" ? currentUser.ownerId : undefined;
         return listProjects(scope, ownerId);
+      },
+      setProjectName: (name: string) => {
+        updateProject((prev) => ({ ...prev, projectName: name }), true);
       },
       createNewProject: async () => {
         const freshState = applyResultados(defaultState);

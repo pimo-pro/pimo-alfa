@@ -5,6 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
+import { defaultState } from "../../../context/projectState";
+import { useWallStore } from "../../../stores/wallStore";
 import { useToast } from "../../../context/ToastContext";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
@@ -117,6 +119,8 @@ export default function ViewerToolbar() {
     return () => unsub();
   }, [showToast]);
 
+  const wallCount = useWallStore((s) => s.walls.length);
+
   const hasUnsavedChanges = useMemo(() => {
     if (!project.lastAutosaveTime) return true;
     const savedAt = Date.parse(project.lastAutosaveTime);
@@ -126,6 +130,14 @@ export default function ViewerToolbar() {
       return Number.isFinite(ts) && ts > savedAt;
     });
   }, [project.lastAutosaveTime, project.changelog]);
+
+  /** Modal "Novo Projeto" quando há conteúdo real, não só changelog/autosave. */
+  const projectHasNonDefaultState = useMemo(() => {
+    if (project.workspaceBoxes.length > 0) return true;
+    if ((project.projectName?.trim() || "") !== defaultState.projectName) return true;
+    if (wallCount >= 3) return true;
+    return false;
+  }, [project.workspaceBoxes.length, project.projectName, wallCount]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -155,7 +167,7 @@ export default function ViewerToolbar() {
       return;
     }
     if (id === "novo") {
-      if (hasUnsavedChanges) {
+      if (projectHasNonDefaultState) {
         setConfirmNewOpen(true);
       } else {
         void actions.createNewProject();

@@ -64,6 +64,13 @@ export interface WallStoreState {
   clearRoom: () => void;
   /** Define numWalls (3 ou 4); ajusta lista de paredes se necessário. */
   setNumWalls: (_n: 3 | 4) => void;
+  /**
+   * Substitui paredes por um retângulo fechado/aberto com dimensões explícitas (metros → layout em U).
+   * Incrementa `roomMeshSyncToken` para o Workspace recriar a mesh 3D.
+   */
+  setRoomLayoutFromMeters: (_widthM: number, _depthM: number, _heightM: number, _numWalls: 3 | 4) => void;
+  /** Atualiza comprimentos/altura das paredes existentes (mantém ids e aberturas). */
+  updateRoomDimensionsMeters: (_widthM: number, _depthM: number, _heightM: number) => void;
   /** Restaura estado a partir de snapshot (ex.: ao carregar projeto). */
   loadRoomConfig: (_snapshot: { walls: Wall[]; selectedWallId: string | null; mainWallIndex?: number } | null) => void;
 }
@@ -280,6 +287,48 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
       const newWall: Wall = { id: `wall-${Date.now()}-4`, ...DEFAULT_WALL, openings: [] };
       set({ walls: applyLayoutIfMissing([...walls, newWall]) });
     }
+  },
+
+  setRoomLayoutFromMeters: (widthM, depthM, heightM, numWalls) => {
+    const widthCm = Math.max(50, widthM * 100);
+    const depthCm = Math.max(50, depthM * 100);
+    const heightCm = Math.max(50, heightM * 100);
+    const ts = Date.now();
+    const mkWall = (lengthCm: number): Wall => ({
+      id: `wall-${ts}-${Math.random().toString(36).slice(2, 9)}`,
+      ...DEFAULT_WALL,
+      lengthCm,
+      heightCm,
+      openings: [],
+    });
+    const specs = numWalls >= 4 ? [widthCm, depthCm, widthCm, depthCm] : [widthCm, depthCm, widthCm];
+    const raw = specs.map((L) => mkWall(L));
+    const withLayout = applyLayoutIfMissing(raw);
+    set({
+      walls: withLayout,
+      selectedWallId: withLayout[0]?.id ?? null,
+      mainWallIndex: 0,
+      roomMeshSyncToken: get().roomMeshSyncToken + 1,
+    });
+  },
+
+  updateRoomDimensionsMeters: (widthM, depthM, heightM) => {
+    const { walls } = get();
+    if (walls.length < 3) return;
+    const widthCm = Math.max(50, widthM * 100);
+    const depthCm = Math.max(50, depthM * 100);
+    const heightCm = Math.max(50, heightM * 100);
+    const next = walls.map((wall, index) => {
+      let lengthCm = wall.lengthCm;
+      if (index === 0 || index === 2) lengthCm = widthCm;
+      else if (index === 1 || index === 3) lengthCm = depthCm;
+      return { ...wall, lengthCm, heightCm };
+    });
+    const withLayout = applyLayoutIfMissing(next);
+    set({
+      walls: withLayout,
+      roomMeshSyncToken: get().roomMeshSyncToken + 1,
+    });
   },
 
   loadRoomConfig: (snapshot) => {

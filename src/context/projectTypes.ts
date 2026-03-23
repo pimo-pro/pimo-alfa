@@ -396,6 +396,8 @@ export interface ProjectActions {
       feetOffsetFront?: number;
     }
   ) => void;
+  /** Move caixas que estão fora da sala persistida para dentro (empilhamento a partir do canto). */
+  repositionWorkspaceBoxesInsideRoom: () => void;
   /** Atualiza dimensões da caixa a partir do bbox do GLB (caixas CAD-only). */
   setWorkspaceBoxDimensoes: (_boxId: string, _dimensoes: { largura: number; altura: number; profundidade: number }) => void;
   /** Atualiza o nome da caixa (ex.: nome do modelo CAD). */

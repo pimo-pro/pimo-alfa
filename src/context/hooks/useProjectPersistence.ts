@@ -7,9 +7,17 @@ import { useCallback, useEffect, useRef } from "react";
 import { safeGetItem, safeSetItem } from "../../utils/storage";
 import { wallStore } from "../../stores/wallStore";
 import type { ProjectState, ProjectSnapshot, RoomSnapshot } from "../projectTypes";
+import { defaultState } from "../projectState";
 
 const AUTOSAVE_STORAGE_KEY = "pimo_autosave";
 const AUTO_SAVE_BASE_DEBOUNCE_MS = 1200;
+
+function isProjectCompletelyDefaultForPersistence(proj: ProjectState): boolean {
+  if ((proj.workspaceBoxes?.length ?? 0) > 0) return false;
+  if ((proj.projectName?.trim() || "") !== defaultState.projectName) return false;
+  if (wallStore.getState().walls.length >= 3) return false;
+  return true;
+}
 
 export type ProjectPersistenceApi = {
   serializeForAutosave: (_state: ProjectState) => unknown;
@@ -33,7 +41,7 @@ export function useProjectPersistence(
 
   const performAutosave = useCallback(() => {
     const proj = projectRef.current;
-    if (proj.workspaceBoxes.length === 0) return;
+    if (isProjectCompletelyDefaultForPersistence(proj)) return;
     if (proj.estaCarregando) {
       pendingAutosaveRef.current = true;
       return;
@@ -111,7 +119,7 @@ export function useProjectPersistence(
 
   useEffect(() => {
     const proj = project;
-    if ((proj.workspaceBoxes?.length ?? 0) === 0) return;
+    if (isProjectCompletelyDefaultForPersistence(proj)) return;
     const fingerprint = JSON.stringify(api.serializeForAutosave(proj));
     if (fingerprint === lastAutosaveFingerprintRef.current) return;
     lastAutosaveFingerprintRef.current = fingerprint;
@@ -142,7 +150,7 @@ export function useProjectPersistence(
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       const proj = projectRef.current;
-      if (proj.workspaceBoxes.length > 0) {
+      if (!isProjectCompletelyDefaultForPersistence(proj)) {
         e.preventDefault();
         e.returnValue = "Você perderá o seu projeto atual. Deseja continuar?";
       }

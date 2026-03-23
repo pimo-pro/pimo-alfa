@@ -20,6 +20,12 @@ import {
 import { createWorkspaceBox, recomputeState } from "../projectState";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import { wallStore } from "../../stores/wallStore";
+import {
+  getFloorBoundsMmFromWalls,
+  getRoomGridSpawnMm,
+  hasPersistedRoomWalls,
+} from "../../utils/roomWorkspaceBounds";
 
 export type BoxCrudActions = Pick<
   ProjectActions,
@@ -75,8 +81,23 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             ? getAdjacentPlacementMm(selectedReference, dimensoes)
             : null;
           const spawn = getSpawnFromSelectedWall(dimensoes);
+          const wallsState = wallStore.getState().walls;
+          const roomBounds = hasPersistedRoomWalls(wallsState) ? getFloorBoundsMmFromWalls(wallsState) : null;
+          const roomSpawn =
+            !adjacentPlacement && roomBounds
+              ? getRoomGridSpawnMm(
+                  prev.workspaceBoxes.length,
+                  dimensoes.largura,
+                  dimensoes.profundidade,
+                  roomBounds,
+                  0
+                )
+              : null;
           const posicaoX_mm =
-            adjacentPlacement?.x_mm ?? spawn?.posicaoX_mm ?? rightmostX_m * 1000 + dimensoes.largura / 2;
+            adjacentPlacement?.x_mm ??
+            roomSpawn?.x_mm ??
+            spawn?.posicaoX_mm ??
+            rightmostX_m * 1000 + dimensoes.largura / 2;
           const feetHeightMm = 100;
           const newBox = createWorkspaceBox(
             newBoxId,
@@ -103,9 +124,12 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             }
           );
           newBox.manualPosition = true;
-          newBox.posicaoZ_mm = adjacentPlacement?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
+          newBox.posicaoZ_mm = adjacentPlacement?.z_mm ?? roomSpawn?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
           newBox.posicaoY_mm = selectedReference?.posicaoY_mm ?? feetHeightMm + dimensoes.altura / 2;
-          if (spawn) {
+          if (roomSpawn) {
+            newBox.rotacaoY = roomSpawn.rotacaoY;
+            newBox.rotacaoY_90 = Math.round(Math.abs(roomSpawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
+          } else if (spawn) {
             newBox.rotacaoY = spawn.rotacaoY;
             newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
           }
@@ -165,12 +189,27 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             ? getAdjacentPlacementMm(selectedReference, dimensoes)
             : null;
           const spawn = getSpawnFromSelectedWall(dimensoes);
+          const wallsCatalog = wallStore.getState().walls;
+          const roomBoundsCatalog = hasPersistedRoomWalls(wallsCatalog) ? getFloorBoundsMmFromWalls(wallsCatalog) : null;
+          const roomSpawnCatalog =
+            !adjacentPlacement && roomBoundsCatalog
+              ? getRoomGridSpawnMm(
+                  prev.workspaceBoxes.length,
+                  dimensoes.largura,
+                  dimensoes.profundidade,
+                  roomBoundsCatalog,
+                  0
+                )
+              : null;
           const lowerBoxes = prev.workspaceBoxes.filter(isLowerCabinet);
           const upperBoxes = prev.workspaceBoxes.filter(isUpperCabinet);
 
           let posicaoX_mm =
-            adjacentPlacement?.x_mm ?? spawn?.posicaoX_mm ?? rightmostX_m * 1000 + dimensoes.largura / 2;
-          const posicaoZ_mm = adjacentPlacement?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
+            adjacentPlacement?.x_mm ??
+            roomSpawnCatalog?.x_mm ??
+            spawn?.posicaoX_mm ??
+            rightmostX_m * 1000 + dimensoes.largura / 2;
+          const posicaoZ_mm = adjacentPlacement?.z_mm ?? roomSpawnCatalog?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
           if (isUpperModel && !adjacentPlacement) {
             if (upperBoxes.length > 0) {
               const rightmostUpper = upperBoxes.reduce(
@@ -223,7 +262,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
               );
               const upperBottomMm = lowerTopMm + UPPER_COUNTERTOP_MM + UPPER_STANDARD_GAP_MM;
               newBox.posicaoY_mm = upperBottomMm + dimensoes.altura / 2;
-              if (!spawn) {
+              if (!spawn && !roomSpawnCatalog) {
                 const anchorLower = lowerBoxes.reduce(
                   (best, box) => (getBoxLeftMm(box) < getBoxLeftMm(best) ? box : best),
                   lowerBoxes[0]
@@ -241,7 +280,10 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             newBox.pe_cm = (newBox.feetHeight ?? 100) / 10;
             newBox.posicaoY_mm = (newBox.feetHeight ?? 100) + dimensoes.altura / 2;
           }
-          if (spawn) {
+          if (roomSpawnCatalog) {
+            newBox.rotacaoY = roomSpawnCatalog.rotacaoY;
+            newBox.rotacaoY_90 = Math.round(Math.abs(roomSpawnCatalog.rotacaoY) / (Math.PI / 2)) % 2 === 1;
+          } else if (spawn) {
             newBox.rotacaoY = spawn.rotacaoY;
             newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
           }

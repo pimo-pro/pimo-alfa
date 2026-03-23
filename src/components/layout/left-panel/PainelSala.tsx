@@ -1,9 +1,10 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from "react";
+import { useProject } from "../../../context/useProject";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import Panel from "../../ui/Panel";
-import { useWallStore } from "../../../stores/wallStore";
+import { useWallStore, wallStore } from "../../../stores/wallStore";
 
 /** Dimensões padrão da sala: 4m × 5m × 2.7m */
 const DEFAULT_ROOM_WIDTH_M = 4;
@@ -14,6 +15,7 @@ type RoomType = "closed" | "open";
 
 export function PainelSala() {
   const { viewerApi } = usePimoViewerContext();
+  const { actions } = useProject();
   const mainWallIndex = useWallStore((state) => state.mainWallIndex);
   const setMainWallIndex = useWallStore((state) => state.setMainWallIndex);
   const [widthM, setWidthM] = useState(DEFAULT_ROOM_WIDTH_M);
@@ -47,12 +49,18 @@ export function PainelSala() {
     const d = Math.max(0.5, Math.min(50, depthM));
     const h = Math.max(0.5, Math.min(10, heightM));
     const numWalls = roomType === "open" ? 3 : 4;
-    viewerApi?.createRoomWithDimensions?.(w, d, h, numWalls);
+    wallStore.getState().setRoomLayoutFromMeters(w, d, h, numWalls);
     setRoomExistsState(true);
     setRoomVisibleState(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        actions.repositionWorkspaceBoxesInsideRoom();
+      });
+    });
   };
 
   const handleRemove = () => {
+    wallStore.getState().clearRoom();
     viewerApi?.removeRoom?.();
     setRoomExistsState(false);
     setRoomVisibleState(false);
@@ -62,6 +70,7 @@ export function PainelSala() {
     const w = Math.max(0.5, Math.min(50, widthM));
     const d = Math.max(0.5, Math.min(50, depthM));
     const h = Math.max(0.5, Math.min(10, heightM));
+    wallStore.getState().updateRoomDimensionsMeters(w, d, h);
     viewerApi?.setRoomDimensions?.(w, d, h);
   };
 
