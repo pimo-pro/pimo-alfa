@@ -5,6 +5,9 @@ import type { RulesConfig } from "../rules/rulesConfig";
 import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
+import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
+
+const BRAND_RED_ETI: [number, number, number] = [139, 0, 0];
 
 export type ProjectForEtiquetasPdf = {
   projectName: string;
@@ -101,7 +104,12 @@ async function drawQrWithLogoOrFallback(
   }
 }
 
-async function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectForEtiquetasPdf) {
+async function renderEtiquetaPage(
+  doc: jsPDF,
+  item: LabelItem,
+  project: ProjectForEtiquetasPdf,
+  logoDataUrl: string | null
+) {
   const cfg = project.rules.etiqueta;
   const width = cfg.larguraMm;
   const height = cfg.alturaMm;
@@ -114,23 +122,27 @@ async function renderEtiquetaPage(doc: jsPDF, item: LabelItem, project: ProjectF
   doc.setLineWidth(borderMm);
   doc.rect(0.5, 0.5, width - 1, height - 1);
 
-  let y = margin + 2;
+  const logoSizeMm = Math.min(7, Math.max(4, Math.min(width * 0.2, height * 0.14)));
+  const logoX = margin;
+  const logoY = margin + 0.5;
+  drawLogoPiInBox(doc, logoDataUrl, logoX, logoY, logoSizeMm, BRAND_RED_ETI);
+
+  const ref = `${project.projectName || "PROJETO"}_${item.boxNome ?? item.boxId ?? "BOX"}_${item.pieceName ?? item.nome}`;
+  const refX = logoX + logoSizeMm + 2;
+  const refMaxW = Math.max(8, width - refX - margin);
+
   doc.setTextColor(10, 10, 10);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  if (cfg.mostrarLogoEmpresa && cfg.mostrarLogo) {
-    doc.text("pi", margin, y);
-  }
 
-  const ref = `${project.projectName || "PROJETO"}_${item.boxNome ?? item.boxId ?? "BOX"}_${item.pieceName ?? item.nome}`;
-  const refX = cfg.mostrarLogo ? margin + 8 : margin;
-  const refMaxW = width - refX - margin;
+  let headerBottom = logoY + logoSizeMm;
   if (cfg.mostrarReferencia) {
     const refLines = doc.splitTextToSize(ref.toUpperCase(), refMaxW);
-    doc.text(refLines.slice(0, 2), refX, y);
-    y += refLines.length > 1 ? 6 : 3.5;
+    doc.text(refLines.slice(0, 2), refX, logoY + 3.2);
+    headerBottom = Math.max(headerBottom, logoY + Math.min(refLines.length, 2) * 3.6 + 1);
   }
 
+  const y = headerBottom + 2;
   const qrX = margin;
   const qrY = y + 1.5;
   const pieceNumber = Number(item.pieceNumber ?? 0);
@@ -179,11 +191,12 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
     format: [cfg.larguraMm, cfg.alturaMm],
   });
 
+  const logoDataUrl = await loadLogoPiDataUrl();
   const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project));
   for (let idx = 0; idx < ordered.length; idx++) {
     const item = ordered[idx];
     if (idx > 0) doc.addPage([cfg.larguraMm, cfg.alturaMm], "landscape");
-    await renderEtiquetaPage(doc, item, project);
+    await renderEtiquetaPage(doc, item, project, logoDataUrl);
   }
   return doc;
 }

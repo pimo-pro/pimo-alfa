@@ -192,7 +192,7 @@ export function useGerarArquivoHandlers() {
     const { buildCutLayoutPdf } = await import(
       "../core/cutlayout/cutLayoutPdf"
     );
-    const doc = buildCutLayoutPdf(result);
+    const doc = await buildCutLayoutPdf(result, { projectName: project.projectName ?? "Projeto" });
     doc.save(`${slug}_layout_corte.pdf`);
   }, [
     hasBoxes,
@@ -238,7 +238,7 @@ export function useGerarArquivoHandlers() {
         rotationPenalty: 0.45,
       });
       const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-      const doc = buildCutLayoutPdf(result);
+      const doc = await buildCutLayoutPdf(result, { projectName: project.projectName ?? "Projeto" });
       const fileName = `${slug}_layout_corte_pro.pdf`;
       doc.save(fileName);
       showToast("Layout de Corte PRO gerado.", "info");
@@ -293,18 +293,12 @@ export function useGerarArquivoHandlers() {
           ? safeMaterialName
           : `${safeMaterialName}_${file.panelIndex}`;
         const tcnBlob = new Blob([file.tcn], { type: "text/plain" });
-        const kdtBlob = new Blob([file.kdt], { type: "text/xml" });
         const tcnUrl = URL.createObjectURL(tcnBlob);
-        const kdtUrl = URL.createObjectURL(kdtBlob);
-        urls.push(tcnUrl, kdtUrl);
+        urls.push(tcnUrl);
         const link1 = document.createElement("a");
         link1.href = tcnUrl;
         link1.download = `${base}.tcn`;
         link1.click();
-        const link2 = document.createElement("a");
-        link2.href = kdtUrl;
-        link2.download = `${base}.kdt`;
-        link2.click();
       }
     }
     if (urls.length === 0) {
@@ -402,10 +396,9 @@ export function useGerarArquivoHandlers() {
           rotationPenalty: 0.45,
         });
         const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-        const docLayout = buildCutLayoutPdf(result);
-        const addedLayout = safeAddPdf(zip, `${safeSlug}_layout_corte.pdf`, docLayout);
+        const docLayout = await buildCutLayoutPdf(result, { projectName: project.projectName ?? "Projeto" });
         const addedPro = safeAddPdf(zip, `${safeSlug}_layout_corte_pro.pdf`, docLayout);
-        if (!addedLayout || !addedPro) {
+        if (!addedPro) {
           errors.push({ step: "Layout de Corte PRO", message: "Falha ao adicionar PDF ao ZIP." });
         }
       }
@@ -415,7 +408,7 @@ export function useGerarArquivoHandlers() {
       devLogger.error("Full export: Layout de Corte", err);
     }
 
-    // --- CNC (TCN + KDT): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
+    // --- CNC (TCN): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
     try {
       const byMaterial = new Map<string, typeof allItems>();
       for (const item of allItems) {
@@ -424,21 +417,19 @@ export function useGerarArquivoHandlers() {
         byMaterial.get(key)!.push(item);
       }
       const usedTcnNamesByPath = new Set<string>();
-      const thicknessBucketsInCnc = new Set<string>();
       for (const [materialName, itemsForMaterial] of byMaterial) {
         const cncBundle = buildCncFromCutlistItems(project, itemsForMaterial);
         if (!cncBundle?.cnc?.files?.length) continue;
         const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
         for (const file of cncBundle.cnc.files) {
-          if (!file || file.tcn == null || file.kdt == null) {
+          if (!file || file.tcn == null) {
             errors.push({
               step: "CNC",
-              message: `Painel ${file?.panelIndex ?? "?"} sem TCN ou KDT.`,
+              message: `Painel ${file?.panelIndex ?? "?"} sem TCN.`,
             });
             continue;
           }
           const thicknessBucket = formatThicknessBucket(file.thicknessMm);
-          thicknessBucketsInCnc.add(thicknessBucket);
           const base = cncBundle.cnc.files.length === 1 ? safeMaterialName : `${safeMaterialName}_${file.panelIndex}`;
           let finalBase = base;
           let dedupeIndex = 2;
@@ -449,22 +440,14 @@ export function useGerarArquivoHandlers() {
           usedTcnNamesByPath.add(`cnc/${thicknessBucket}/tcn/${finalBase}`);
 
           const tcnPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}.tcn`);
-          const kdtPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}.kdt`);
           if (tcnPathFinal && typeof file.tcn === "string") {
             zip.file(tcnPathFinal, file.tcn);
           }
-          if (kdtPathFinal && typeof file.kdt === "string") {
-            zip.file(kdtPathFinal, file.kdt);
-          }
         }
-      }
-      for (const thicknessBucket of thicknessBucketsInCnc) {
-        const folderPath = sanitizeZipPath(`cnc/${thicknessBucket}/drill`);
-        if (folderPath) zip.folder(folderPath);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ step: "CNC (TCN/KDT)", message: msg });
+      errors.push({ step: "CNC (TCN)", message: msg });
       devLogger.error("Full export: CNC", err);
     }
 

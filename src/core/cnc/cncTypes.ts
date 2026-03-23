@@ -1,5 +1,5 @@
 /**
- * Tipos CNC (TCN + KDT).
+ * Tipos CNC (TCN).
  */
 
 export type CncPanel = {
@@ -34,7 +34,6 @@ export type CncExportFile = {
   panelIndex: number;
   thicknessMm: number;
   tcn: string;
-  kdt: string;
 };
 
 export type CncExportResult = {

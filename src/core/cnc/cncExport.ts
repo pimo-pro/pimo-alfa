@@ -1,15 +1,14 @@
 /**
- * Interface unificada para exportação CNC (TCN + KDT).
- * Gera um arquivo separado por painel (sheet): <project>_panel_<index>.tcn/.kdt.
+ * Interface unificada para exportação CNC (TCN).
+ * Gera um ficheiro por painel (chapa): <project>_panel_<index>.tcn.
  */
 
-import type { CutLayoutResult, SheetResult } from "../cutlayout/cutLayoutTypes";
-import type { CncDrillOperation, CncExportResult, CncExportFile, CncPanel } from "./cncTypes";
+import type { CutLayoutResult } from "../cutlayout/cutLayoutTypes";
+import type { CncDrillOperation, CncExportResult, CncExportFile } from "./cncTypes";
 import { generateTcnForPanel } from "./tcnGenerator";
-import { generateKdt } from "./kdtGenerator";
 
 /**
- * Gera um par TCN+KDT por painel.
+ * Gera um ficheiro TCN por painel.
  */
 export function exportCncFiles(
   _project: unknown,
@@ -43,47 +42,13 @@ export function exportCncFiles(
     const thicknessMm = sheet.espessura_mm;
     const panelIndex = index + 1;
     const filenameBase = `${acamBaseName}_panel_${panelIndex}`;
-    const panel: CncPanel = {
-      largura_mm: sheet.largura_mm,
-      altura_mm: sheet.altura_mm,
-      espessura_mm: thicknessMm,
-      materialId: sheet.materialId,
-    };
-    const drillsForPanel = buildBasicDrillOperationsFromSheet(sheetResult);
     files.push({
       filenameBase,
       panelIndex,
       thicknessMm,
       tcn: generateTcnForPanel(sheetResult, 3, filenameBase, maxSheetWidth, maxSheetHeight),
-      kdt: generateKdt(panel, drillsForPanel),
     });
   });
 
   return { files };
 }
-
-/**
- * Operações de furação superior (top drilling) para um único painel.
- * Apenas furos com topDrillable=true são emitidos. Sem fallback de 4 cantos.
- */
-function buildBasicDrillOperationsFromSheet(sheetResult: SheetResult): CncDrillOperation[] {
-  const ops: CncDrillOperation[] = [];
-  for (const pl of sheetResult.placements) {
-    const holes = pl.holes ?? [];
-    for (const h of holes) {
-      const topDrillable = (h as { topDrillable?: boolean }).topDrillable;
-      if (!topDrillable) continue;
-      const safeDepth = Math.min(Math.max(0.5, Number(h.depth) || 0), sheetResult.sheet.espessura_mm);
-      ops.push({
-        x: pl.x_mm + h.x,
-        y: pl.y_mm + h.y,
-        z: 0,
-        diametro: Number(h.diameter) || 5,
-        profundidade: safeDepth,
-        tipo: "vertical",
-      });
-    }
-  }
-  return ops;
-}
-
