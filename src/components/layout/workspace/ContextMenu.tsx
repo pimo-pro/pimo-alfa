@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 
@@ -22,6 +22,8 @@ export type ContextMenuProps = {
   onDoorMaterialChange?: (_boxId: string, _doorLayerId: string, _materialId: string) => void;
   /** Chamado após alterar material da gaveta (para atualizar o viewer imediatamente). */
   onDrawerMaterialChange?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
+  /** IDs de seleção atual (Ctrl+Click) para ações em lote. */
+  selectedBoxIds?: string[];
 };
 
 /** Materiais oficiais do projeto (mesma lista do módulo); apenas labels para o picker. */
@@ -57,6 +59,34 @@ const itemStyle: React.CSSProperties = {
   fontFamily: "inherit",
 };
 
+const ITEM_HEIGHT = 34;
+const MENU_MARGIN = 8;
+const MENU_MIN_WIDTH = 180;
+const SUBMENU_MIN_WIDTH = 160;
+
+type Placement = "right-down" | "right-up" | "left-down" | "left-up";
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function placeMenu(anchorX: number, anchorY: number, width: number, height: number): { left: number; top: number; placement: Placement } {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const preferRight = anchorX + width + MENU_MARGIN <= vw - MENU_MARGIN;
+  const preferDown = anchorY + height + MENU_MARGIN <= vh - MENU_MARGIN;
+  const left = preferRight
+    ? clamp(anchorX + MENU_MARGIN, MENU_MARGIN, vw - width - MENU_MARGIN)
+    : clamp(anchorX - width - MENU_MARGIN, MENU_MARGIN, vw - width - MENU_MARGIN);
+  const top = preferDown
+    ? clamp(anchorY + MENU_MARGIN, MENU_MARGIN, vh - height - MENU_MARGIN)
+    : clamp(anchorY - height - MENU_MARGIN, MENU_MARGIN, vh - height - MENU_MARGIN);
+  const placement: Placement = preferRight
+    ? (preferDown ? "right-down" : "right-up")
+    : (preferDown ? "left-down" : "left-up");
+  return { left, top, placement };
+}
+
 /**
  * Menu de contexto (clique direito) no Viewer/Workspace.
  * Mostra: Bloquear/Desbloquear peça (se houver peça selecionada) e modo do mouse (CAD / Classic).
@@ -68,11 +98,17 @@ export default function ContextMenu({
   contextMenuLayerTarget = null,
   onDoorMaterialChange,
   onDrawerMaterialChange,
+  selectedBoxIds = [],
 }: ContextMenuProps) {
   const { project, actions } = useProject();
   const menuRef = useRef<HTMLDivElement>(null);
+  const materialAnchorRef = useRef<HTMLDivElement>(null);
+  const mouseAnchorRef = useRef<HTMLDivElement>(null);
   const submenuCloseTimerRef = useRef<number | null>(null);
   const [materialSubmenuOpen, setMaterialSubmenuOpen] = useState<"door" | "drawer" | null>(null);
+  const [mouseSubmenuOpen, setMouseSubmenuOpen] = useState(false);
+  const [materialSubmenuPos, setMaterialSubmenuPos] = useState<{ left: number; top: number } | null>(null);
+  const [mouseSubmenuPos, setMouseSubmenuPos] = useState<{ left: number; top: number } | null>(null);
 
   const selectedBoxId = project.selectedWorkspaceBoxId ?? "";
   const selectedBox = selectedBoxId
@@ -80,6 +116,12 @@ export default function ContextMenu({
     : undefined;
   const locked = selectedBox?.locked === true;
   const mousePreset = project.viewerSettings.mousePreset ?? "cad";
+  const activeSelectedIds = useMemo(() => {
+    const fromContext = Array.isArray(selectedBoxIds) ? selectedBoxIds.filter(Boolean) : [];
+    if (fromContext.length > 0) return Array.from(new Set(fromContext));
+    if (!selectedBoxId) return [];
+    return [selectedBoxId];
+  }, [selectedBoxId, selectedBoxIds]);
 
   const isDoorTarget = contextMenuLayerTarget?.type === "door" && contextMenuLayerTarget.doorLayerId != null;
   const isDrawerTarget = contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId != null;
@@ -95,7 +137,12 @@ export default function ContextMenu({
 
   const openMaterialSubmenu = () => {
     clearSubmenuCloseTimer();
-    if (submenuTarget) setMaterialSubmenuOpen(submenuTarget);
+    if (!submenuTarget || !materialAnchorRef.current) return;
+    const rect = materialAnchorRef.current.getBoundingClientRect();
+    const estimatedHeight = OFFICIAL_MATERIALS.length * ITEM_HEIGHT + 16;
+    const nextPos = placeMenu(rect.right, rect.top, SUBMENU_MIN_WIDTH, estimatedHeight);
+    setMaterialSubmenuPos({ left: nextPos.left, top: nextPos.top });
+    setMaterialSubmenuOpen(submenuTarget);
   };
 
   const scheduleCloseMaterialSubmenu = () => {
@@ -128,6 +175,7 @@ export default function ContextMenu({
       if (el && !el.contains(e.target as Node)) {
         onClose();
         setMaterialSubmenuOpen(null);
+        setMouseSubmenuOpen(false);
       }
     };
     // Pequeno atraso para não fechar no mesmo evento que abriu
@@ -141,6 +189,33 @@ export default function ContextMenu({
   }, [position, onClose]);
 
   if (!position) return null;
+  const baseItems = selectedBoxId ? 6 : 1;
+  const maybeMaterial = (showDoorMaterial || showDrawerMaterial) ? 1 : 0;
+  const estimatedMainHeight = (baseItems + maybeMaterial + 1) * ITEM_HEIGHT + 16;
+  const mainPos = placeMenu(position.x, position.y, MENU_MIN_WIDTH, estimatedMainHeight);
+  const canAlignBottom = activeSelectedIds.length > 0;
+
+  const renderMousePresetItem = (preset: "cad" | "classic" | "orbital", label: string) => (
+    <button
+      key={preset}
+      type="button"
+      role="menuitem"
+      style={itemStyle}
+      onClick={() => {
+        actions.setViewerSettings({ mousePreset: preset });
+        onClose();
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "transparent";
+      }}
+    >
+      <span style={{ width: 16, textAlign: "center" }}>{mousePreset === preset ? "✓" : ""}</span>
+      <span>{label}</span>
+    </button>
+  );
 
   return (
     <div
@@ -149,9 +224,9 @@ export default function ContextMenu({
       aria-label="Menu de contexto"
       style={{
         ...menuStyle,
-        left: position.x,
-        top: position.y,
-        transform: "translate(8px, 8px)",
+        left: mainPos.left,
+        top: mainPos.top,
+        minWidth: MENU_MIN_WIDTH,
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
@@ -260,8 +335,30 @@ export default function ContextMenu({
           <span>Alinhar pela frente do box ao lado</span>
         </button>
       )}
+      {selectedBoxId && (
+        <button
+          type="button"
+          role="menuitem"
+          style={itemStyle}
+          onClick={() => {
+            actions.alignBottomSelectedBoxes(activeSelectedIds);
+            onClose();
+          }}
+          disabled={!canAlignBottom}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <span aria-hidden>⬇</span>
+          <span>Alinhar Baixo</span>
+        </button>
+      )}
       {(showDoorMaterial || showDrawerMaterial) && (
         <div
+          ref={materialAnchorRef}
           style={{ position: "relative" }}
           onPointerEnter={openMaterialSubmenu}
           onPointerLeave={scheduleCloseMaterialSubmenu}
@@ -279,18 +376,18 @@ export default function ContextMenu({
           >
             <span aria-hidden>🎨</span>
             <span>{showDoorMaterial ? "Alterar material da porta" : "Alterar material da gaveta"}</span>
+            <span style={{ marginLeft: "auto" }}>▶</span>
           </button>
-          {materialSubmenuOpen && (
+          {materialSubmenuOpen && materialSubmenuPos && (
             <div
               role="menu"
               aria-label="Materiais"
               style={{
                 ...menuStyle,
-                position: "absolute",
-                left: "100%",
-                top: 0,
-                marginLeft: 4,
-                minWidth: 140,
+                position: "fixed",
+                left: materialSubmenuPos.left,
+                top: materialSubmenuPos.top,
+                minWidth: SUBMENU_MIN_WIDTH,
               }}
               onPointerEnter={openMaterialSubmenu}
               onPointerLeave={scheduleCloseMaterialSubmenu}
@@ -335,42 +432,63 @@ export default function ContextMenu({
           aria-hidden
         />
       )}
-      <button
-        type="button"
-        role="menuitem"
-        style={itemStyle}
-        onClick={() => {
-          actions.setViewerSettings({ mousePreset: "cad" });
-          onClose();
+      <div
+        ref={mouseAnchorRef}
+        style={{ position: "relative" }}
+        onPointerEnter={() => {
+          const rect = mouseAnchorRef.current?.getBoundingClientRect();
+          if (rect) {
+            const nextPos = placeMenu(rect.right, rect.top, SUBMENU_MIN_WIDTH, 3 * ITEM_HEIGHT + 16);
+            setMouseSubmenuPos({ left: nextPos.left, top: nextPos.top });
+          }
+          setMouseSubmenuOpen(true);
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-        }}
+        onPointerLeave={() => setMouseSubmenuOpen(false)}
       >
-        <span style={{ width: 16, textAlign: "center" }}>{mousePreset === "cad" ? "✓" : ""}</span>
-        <span>Mouse CAD</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        style={itemStyle}
-        onClick={() => {
-          actions.setViewerSettings({ mousePreset: "classic" });
-          onClose();
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-        }}
-      >
-        <span style={{ width: 16, textAlign: "center" }}>{mousePreset === "classic" ? "✓" : ""}</span>
-        <span>Mouse Classic</span>
-      </button>
+        <button
+          type="button"
+          role="menuitem"
+          style={itemStyle}
+          onClick={() => {
+            const rect = mouseAnchorRef.current?.getBoundingClientRect();
+            if (rect) {
+              const nextPos = placeMenu(rect.right, rect.top, SUBMENU_MIN_WIDTH, 3 * ITEM_HEIGHT + 16);
+              setMouseSubmenuPos({ left: nextPos.left, top: nextPos.top });
+            }
+            setMouseSubmenuOpen((prev) => !prev);
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <span aria-hidden>🖱️</span>
+          <span>Modo do Mouse</span>
+          <span style={{ marginLeft: "auto" }}>▶</span>
+        </button>
+        {mouseSubmenuOpen && mouseSubmenuPos && (
+          <div
+            role="menu"
+            aria-label="Modo do mouse"
+            style={{
+              ...menuStyle,
+              position: "fixed",
+              left: mouseSubmenuPos.left,
+              top: mouseSubmenuPos.top,
+              minWidth: SUBMENU_MIN_WIDTH,
+            }}
+            onPointerEnter={() => setMouseSubmenuOpen(true)}
+            onPointerLeave={() => setMouseSubmenuOpen(false)}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {renderMousePresetItem("cad", "Mouse CAD")}
+            {renderMousePresetItem("classic", "Mouse Classic")}
+            {renderMousePresetItem("orbital", "Mouse Orbital (sem botão direito)")}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

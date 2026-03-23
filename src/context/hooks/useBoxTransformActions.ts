@@ -26,6 +26,7 @@ export type BoxTransformActions = Pick<
   | "setTipoBorda"
   | "setTipoFundo"
   | "alignFrontWithNeighbor"
+  | "alignBottomSelectedBoxes"
   | "toggleWorkspaceRotation"
   | "rotateWorkspaceBox"
 >;
@@ -261,6 +262,57 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
           const newZ = neighborFrontZ - selectedProf / 2;
           const workspaceBoxes = prev.workspaceBoxes.map((b) =>
             b.id === boxId ? { ...b, posicaoZ_mm: newZ, manualPosition: true } : b
+          );
+          return { ...prev, workspaceBoxes };
+        },
+        true
+      );
+    };
+
+    a.alignBottomSelectedBoxes = (boxIds) => {
+      updateProject(
+        (prev) => {
+          const sel = prev.selectedWorkspaceBoxId?.trim();
+          const boxId = sel || (boxIds ?? []).find((id) => id?.trim());
+          if (!boxId) return prev;
+
+          const subject = prev.workspaceBoxes.find((b) => b.id === boxId);
+          if (!subject || subject.locked) return prev;
+
+          const getBottomY = (box: typeof subject) => {
+            const y = box.posicaoY_mm ?? 0;
+            const h = box.dimensoes?.altura ?? 0;
+            return y - h / 2;
+          };
+
+          const distSqXZ = (a: typeof subject, b: typeof subject) => {
+            const dx = (a.posicaoX_mm ?? 0) - (b.posicaoX_mm ?? 0);
+            const dz = (a.posicaoZ_mm ?? 0) - (b.posicaoZ_mm ?? 0);
+            return dx * dx + dz * dz;
+          };
+
+          const others = prev.workspaceBoxes.filter((b) => b.id !== boxId);
+          let targetBottomY = 0;
+          if (others.length > 0) {
+            let nearest = others[0];
+            let best = distSqXZ(subject, nearest);
+            for (let i = 1; i < others.length; i++) {
+              const o = others[i];
+              const d = distSqXZ(subject, o);
+              if (d < best) {
+                best = d;
+                nearest = o;
+              }
+            }
+            targetBottomY = getBottomY(nearest);
+          }
+
+          const h = subject.dimensoes?.altura ?? 0;
+          const nextY = targetBottomY + h / 2;
+          if ((subject.posicaoY_mm ?? 0) === nextY) return prev;
+
+          const workspaceBoxes = prev.workspaceBoxes.map((b) =>
+            b.id === boxId ? { ...b, posicaoY_mm: nextY, manualPosition: true } : b
           );
           return { ...prev, workspaceBoxes };
         },

@@ -56,6 +56,7 @@ export default function Workspace({
   const setSelectedTool = useUiStore((state) => state.setSelectedTool);
 
   const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
+  const [contextSelectedBoxIds, setContextSelectedBoxIds] = useState<string[]>([]);
   const gerarArquivoHandlers = useGerarArquivoHandlers();
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
   const projectRef = useRef(project);
@@ -455,7 +456,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     }
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
-    viewerApi.setMousePreset?.(settings.mousePreset);
+    viewerApi.setMousePreset?.(settings.mousePreset === "orbital" ? "classic" : settings.mousePreset);
     viewerApi.setBackgroundMode?.(settings.backgroundMode);
     viewerApi.setMaterialQuality?.(settings.materialQuality);
     viewerApi.setReflectionsEnabled?.(settings.enableReflections);
@@ -633,6 +634,7 @@ return (
       onPointerDown={() => {
         if (mouseMenuPosition) setMouseMenuPosition(null);
         setContextMenuLayerTarget(null);
+        setContextSelectedBoxIds([]);
       }}
     >
       <div className="workspace-canvas">
@@ -676,6 +678,7 @@ return (
                   });
                 }
                 setContextMenuLayerTarget(hit);
+                setContextSelectedBoxIds([...multiSelectedBoxIdsRef.current]);
                 setMouseMenuPosition({ x: event.clientX, y: event.clientY });
               }}
               style={{
@@ -709,6 +712,7 @@ return (
               onClose={() => {
                 setMouseMenuPosition(null);
                 setContextMenuLayerTarget(null);
+                setContextSelectedBoxIds([]);
               }}
               contextMenuLayerTarget={contextMenuLayerTarget}
               onDoorMaterialChange={(boxId, doorLayerId, materialId) => {
@@ -725,6 +729,7 @@ return (
                 actions.setDrawerMaterial(boxId, drawerLayerId, materialId);
                 viewerApi.updateDrawerMaterial?.(boxId, drawerLayerId, materialId);
               }}
+              selectedBoxIds={contextSelectedBoxIds}
             />
           )}
           {showKeyboardShortcutsHelp && (

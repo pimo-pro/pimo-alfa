@@ -19,7 +19,7 @@ import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import type { DoorLayerItem, DrawerLayerItem, LayerOpenDirection } from "../models/BoxLayers";
 
-export type ViewerMousePreset = "cad" | "classic";
+export type ViewerMousePreset = "cad" | "classic" | "orbital";
 export type ViewerBackgroundMode = "studio" | "white" | "dark" | "woodFloor";
 export type ViewerMaterialQuality = "standard" | "premium" | "lacquered";
 export type UltraPerformanceInternalMode = "balanced" | "flat2" | "aggressive";
@@ -410,6 +410,8 @@ export interface ProjectActions {
   setWorkspaceBoxPiHideDrawerHoles: (_boxId: string, _hide: boolean) => void;
   /** Alinha a frente do box (eixo Z) com a frente do box vizinho mais próximo no eixo X. */
   alignFrontWithNeighbor: (_boxId: string) => void;
+  /** Alinha a base da caixa selecionada à base da vizinha mais próxima no plano XZ (só Y); sem outras caixas, chão em Y=0. */
+  alignBottomSelectedBoxes: (_boxIds: string[]) => void;
   addDoorLayerItem: () => void;
   addDrawerLayerItem: () => void;
   removeDoorLayerItem: (_id: string) => void;
