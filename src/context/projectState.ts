@@ -1,5 +1,5 @@
 import { calcularProjeto } from "../core/calculator/woodCalculator";
-import { buildFerragens } from "../core/design/ferragens";
+import { buildFerragens } from "../core/ferragens/ferragens";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../modules/drilling/drillingAdapter";
 import {

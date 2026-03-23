@@ -1,9 +1,0 @@
-body { font-family: 'Montserrat', Arial, sans-serif; margin: 0; background: #f9fafb; color: #222; }
-.creative-hero { background: linear-gradient(90deg, #ffb347 60%, #4f8cff 100%); color: #fff; padding: 3rem 2rem; text-align: center; }
-.start-btn { margin-top: 1.5rem; padding: 0.75rem 2rem; background: #222; color: #fff; border-radius: 24px; border: none; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-.start-btn:hover { background: #4f8cff; }
-.creative-features { display: flex; justify-content: center; gap: 2rem; margin: 2rem 0; }
-.feature { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.5rem; width: 220px; }
-.creative-demo { text-align: center; margin: 2rem 0; }
-#demoArea { width: 320px; height: 120px; margin: 0 auto; background: #e0e7ff; border-radius: 12px; position: relative; }
-footer { background: #222; color: #fff; text-align: center; padding: 1rem; margin-top: 2rem; }
