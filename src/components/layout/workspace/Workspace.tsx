@@ -54,6 +54,7 @@ export default function Workspace({
   const setSelectedObject = useUiStore((state) => state.setSelectedObject);
   const clearUiSelection = useUiStore((state) => state.clearSelection);
   const setSelectedTool = useUiStore((state) => state.setSelectedTool);
+  const photoModePanelOpen = useUiStore((state) => state.photoModePanelOpen);
 
   const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
   const [contextSelectedBoxIds, setContextSelectedBoxIds] = useState<string[]>([]);
@@ -457,7 +458,9 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
     viewerApi.setMousePreset?.(settings.mousePreset === "orbital" ? "classic" : settings.mousePreset);
-    viewerApi.setBackgroundMode?.(settings.backgroundMode);
+    if (!photoModePanelOpen) {
+      viewerApi.setBackgroundMode?.(settings.backgroundMode);
+    }
     viewerApi.setMaterialQuality?.(settings.materialQuality);
     viewerApi.setReflectionsEnabled?.(settings.enableReflections);
     viewerApi.setPhotoModeEnabled?.(settings.photoModeEnabled);
@@ -467,10 +470,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setInternalMeasurementMode?.(settings.rulerEnabled);
     viewerApi.setUltraPerformanceModeOptions?.(settings.ultraPerformanceModeOptions);
     viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
-  }, [
-    project.viewerSettings,
-    viewerApi,
-  ]);
+  }, [project.viewerSettings, viewerApi, photoModePanelOpen]);
 
   useEffect(() => {
     projectRef.current = project;

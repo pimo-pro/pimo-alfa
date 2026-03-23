@@ -163,7 +163,7 @@ export type ViewerSnapshot = {
   };
 };
 
-export type ViewerRenderSize = "small" | "medium" | "large" | "4k";
+export type ViewerRenderSize = "small" | "medium" | "large" | "4k" | "viewport";
 
 export type ViewerRenderBackground = "white" | "transparent" | "hdri" | "project-transparent";
 
@@ -183,6 +183,9 @@ export type ViewerRenderOptions = {
   format?: ViewerRenderFormat;
   quality?: number;
   advancedRealism?: boolean;
+  /** Exportação em wireframe (desenho de linhas); ignora `mode` e usa `lineDrawingBackground`. */
+  lineDrawingExport?: boolean;
+  lineDrawingBackground?: "white" | "transparent";
 };
 
 export type ViewerRenderResult = {

@@ -10,6 +10,9 @@ export type SelectedObject =
 export interface UiStoreState {
   selectedTool: string;
   selectedObject: SelectedObject;
+  /** Painel esquerdo: definições de captura (Photo Mode); o viewport principal é a pré-visualização. */
+  photoModePanelOpen: boolean;
+  setPhotoModePanelOpen: (_open: boolean) => void;
   setSelectedTool: (_toolId: string) => void;
   setSelectedObject: (_selected: SelectedObject) => void;
   clearSelection: () => void;
@@ -29,6 +32,13 @@ function isValidSelectedObject(value: SelectedObject): boolean {
 export const uiStore = createStore<UiStoreState>((set) => ({
   selectedTool: "home",
   selectedObject: { type: "none" },
+  photoModePanelOpen: false,
+  setPhotoModePanelOpen: (open) => {
+    set((state) => {
+      if (state.photoModePanelOpen === open) return state;
+      return { ...state, photoModePanelOpen: open };
+    });
+  },
   setSelectedTool: (toolId) => {
     set((state) => {
       if (state.selectedTool === toolId) return state;

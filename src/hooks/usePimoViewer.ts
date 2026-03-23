@@ -10,11 +10,13 @@ import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 const VIEWER_CORE_SETTING_METHODS = [
   "setPanelEdgesVisible", "setAllPanelsHidden", "setHiddenPanels", "setPanelHidden",
   "setRoomCeilingVisible", "setWallEditMode", "setMousePreset", "setBackgroundMode",
+  "getBackgroundMode",
   "setMaterialQuality", "setReflectionsEnabled", "setPhotoModeEnabled",
   "setExplodedViewEnabled", "setExplodedViewIntensity", "setHighlightEnabled",
   "setUltraPerformanceModeOptions", "setUltraPerformanceMode",
   "setLockEnabled",
   "highlightBox",
+  "setMode", "setShowcaseMode", "getCurrentMode", "getShowcaseMode",
 ] as const;
 
 /**
@@ -51,9 +53,14 @@ const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   setWallEditMode: () => {},
   setMousePreset: () => {},
   setBackgroundMode: () => {},
+  getBackgroundMode: () => "studio" as const,
   setMaterialQuality: () => {},
   setReflectionsEnabled: () => {},
   setPhotoModeEnabled: () => {},
+  setMode: () => {},
+  setShowcaseMode: () => {},
+  getCurrentMode: () => "performance" as const,
+  getShowcaseMode: () => false,
   setExplodedViewEnabled: () => {},
   setExplodedViewIntensity: () => {},
   setHighlightEnabled: () => {},

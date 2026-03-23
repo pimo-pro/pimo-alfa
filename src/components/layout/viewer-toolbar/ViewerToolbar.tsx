@@ -1,6 +1,6 @@
 /**
  * Toolbar superior do Viewer.
- * Ações principais do projeto + controle de Photo Mode via popover no ícone da câmera.
+ * Ações principais do projeto + Photo Mode (abre painel esquerdo).
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,12 +10,12 @@ import { useWallStore } from "../../../stores/wallStore";
 import { useToast } from "../../../context/ToastContext";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
+import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { VIEWER_TOOLBAR_ITEMS } from "../../../constants/toolbarConfig";
 import { subscribeProjectsSyncStatus } from "../../../core/projects/projectsClient";
 import type { ToolbarActionId } from "../../../constants/toolbarConfig";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
-import PhotoModePopoverContent from "./PhotoModePopoverContent";
 import ConfirmNewProjectModal from "../../modals/ConfirmNewProjectModal";
 
 export default function ViewerToolbar() {
@@ -23,10 +23,10 @@ export default function ViewerToolbar() {
   const { showToast } = useToast();
   const { openModal } = useToolbarModal();
   const { viewerApi } = usePimoViewerContext();
-  const [photoModeOpen, setPhotoModeOpen] = useState(false);
+  const photoModePanelOpen = useUiStore((s) => s.photoModePanelOpen);
+  const setPhotoModePanelOpen = useUiStore((s) => s.setPhotoModePanelOpen);
   const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
-  const photoModeContainerRef = useRef<HTMLDivElement | null>(null);
   const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
   const autosaveRunningRef = useRef(false);
   const lastErrorToastAtRef = useRef(0);
@@ -42,31 +42,29 @@ export default function ViewerToolbar() {
     viewerApiRef.current = viewerApi;
   }, [actions, viewerApi]);
 
-  // Sincronizar photoModeOpen com viewer e projeto apenas quando photoModeOpen mudar (não quando actions/viewerApi mudarem, para evitar loop).
+  // Sincronizar painel foto com viewer e projeto (evitar loop: só quando photoModePanelOpen mudar).
   useEffect(() => {
-    viewerApiRef.current?.setPhotoModeEnabled?.(photoModeOpen);
-    actionsRef.current.setViewerSettings({ photoModeEnabled: photoModeOpen });
-  }, [photoModeOpen]);
+    viewerApiRef.current?.setPhotoModeEnabled?.(photoModePanelOpen);
+    actionsRef.current.setViewerSettings({ photoModeEnabled: photoModePanelOpen });
+  }, [photoModePanelOpen]);
 
   useEffect(() => {
-    if (!photoModeOpen && !visibilityMenuOpen) return;
+    if (!visibilityMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (!photoModeContainerRef.current?.contains(event.target as Node)) {
-        setPhotoModeOpen(false);
-      }
       if (!visibilityMenuRef.current?.contains(event.target as Node)) {
         setVisibilityMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [photoModeOpen, visibilityMenuOpen]);
+  }, [visibilityMenuOpen]);
 
-  // Cleanup apenas no unmount: desativar photo mode. Refs evitam dep de actions/viewerApi que mudam a cada render.
+  // Cleanup no unmount: fechar painel foto e desativar no viewer.
   useEffect(() => {
     return () => {
       viewerApiRef.current?.setPhotoModeEnabled?.(false);
       actionsRef.current.setViewerSettings({ photoModeEnabled: false });
+      uiStore.getState().setPhotoModePanelOpen(false);
     };
   }, []);
 
@@ -204,20 +202,15 @@ export default function ViewerToolbar() {
   };
 
   const togglePhotoMenu = () => {
-    setPhotoModeOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setVisibilityMenuOpen(false);
-      }
-      return next;
-    });
+    setPhotoModePanelOpen(!photoModePanelOpen);
+    setVisibilityMenuOpen(false);
   };
 
   const toggleVisibilityMenu = () => {
     setVisibilityMenuOpen((prev) => {
       const next = !prev;
       if (next) {
-        setPhotoModeOpen(false);
+        setPhotoModePanelOpen(false);
       }
       return next;
     });
@@ -228,27 +221,19 @@ export default function ViewerToolbar() {
       {VIEWER_TOOLBAR_ITEMS.map((item) => {
         if (item.id === "imagem") {
           return (
-            <div key={item.id} ref={photoModeContainerRef} className="viewer-toolbar-popover-anchor">
-              <button
-                type="button"
-                title={item.tooltip}
-                aria-label={item.tooltip}
-                aria-haspopup="dialog"
-                aria-expanded={photoModeOpen}
-                aria-pressed={photoModeOpen}
-                onClick={togglePhotoMenu}
-                style={{ fontSize: 12 }}
-              >
-                <span className="viewer-toolbar-icon" aria-hidden>
-                  {item.icon}
-                </span>
-              </button>
-              {photoModeOpen && (
-                <div className="viewer-toolbar-popover-panel photo-mode-panel" role="dialog" aria-label="Photo Mode">
-                  <PhotoModePopoverContent onClose={() => setPhotoModeOpen(false)} />
-                </div>
-              )}
-            </div>
+            <button
+              key={item.id}
+              type="button"
+              title={item.tooltip}
+              aria-label={item.tooltip}
+              aria-pressed={photoModePanelOpen}
+              onClick={togglePhotoMenu}
+              style={{ fontSize: 12 }}
+            >
+              <span className="viewer-toolbar-icon" aria-hidden>
+                {item.icon}
+              </span>
+            </button>
           );
         }
 

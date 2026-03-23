@@ -12,12 +12,14 @@ import { LeftPanelCalculadora } from "./LeftPanelCalculadora";
 import { HomeLeftPanelEmpty } from "./HomeLeftPanelEmpty";
 import { HomeLeftPanelSelected } from "./HomeLeftPanelSelected";
 import { useMaterialsForPicker } from "./hooks/useMaterialsForPicker";
+import PhotoModeSettingsContent from "./PhotoModeSettingsContent";
 
 export type LeftPanelProps = {
   activeTab?: string;
 };
 
 export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
+  const photoModePanelOpen = useUiStore((state) => state.photoModePanelOpen);
   const selectedTool = useUiStore((state) => state.selectedTool);
   const { project, actions } = useProject();
   const selectedBox = project.workspaceBoxes.find(
@@ -53,6 +55,16 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const resolvedTabRaw = selectedTool ?? activeTab;
   const resolvedTab =
     resolvedTabRaw === LEFT_TOOLBAR_IDS.LAYOUT ? LEFT_TOOLBAR_IDS.HOME : resolvedTabRaw;
+
+  if (photoModePanelOpen) {
+    return (
+      <div className="left-panel-content">
+        <div className="left-panel-scroll">
+          <PhotoModeSettingsContent />
+        </div>
+      </div>
+    );
+  }
 
   // Móveis = painel unificado
   if (resolvedTab === LEFT_TOOLBAR_IDS.MOVEIS) {

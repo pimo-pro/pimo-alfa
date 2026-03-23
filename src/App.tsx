@@ -34,6 +34,8 @@ export default function App() {
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
   const clearSelection = useUiStore((state) => state.clearSelection);
+  const photoModePanelOpen = useUiStore((state) => state.photoModePanelOpen);
+  const setPhotoModePanelOpen = useUiStore((state) => state.setPhotoModePanelOpen);
   const [leftWidth, setLeftWidth] = useState(260);
   const resizeState = useRef({
     active: false,
@@ -250,6 +252,9 @@ export default function App() {
                         <LeftToolbar
                           selectedId={leftPanelTab}
                           onSelect={(id) => {
+                            if (photoModePanelOpen) {
+                              setPhotoModePanelOpen(false);
+                            }
                             setLeftPanelTab(id);
                             clearSelection();
                             if (!leftOpen) setLeftOpen(true);

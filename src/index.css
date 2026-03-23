@@ -505,6 +505,21 @@ body {
   flex-direction: column;
 }
 
+/* Photo Mode: preenche a altura do painel; definições com scroll, ação no rodapé */
+.photo-mode-settings-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.photo-mode-settings-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 /* Rodapé fixo no fundo do painel esquerdo (botão Criar Caixa) */
 .left-panel-footer {
   flex-shrink: 0;

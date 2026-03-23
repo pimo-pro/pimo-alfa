@@ -1,10 +1,13 @@
 import * as THREE from "three";
 import type { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import type { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { applyImageWatermark } from "../../../utils/watermark";
+import { applyLogoPiPhotoWatermark } from "../../../utils/watermark";
+import { createCabinetSilhouetteLines, disposeSilhouetteObject } from "../../../core/viewer/photoModeSilhouette";
 import type {
   ViewerCameraPreset,
   ViewerRenderFormat,
+  ViewerRenderBackground,
+  ViewerRenderMode,
   ViewerRenderOptions,
   ViewerRenderResult,
 } from "../../../context/projectTypes";
@@ -53,19 +56,45 @@ export class ViewerRenderExporter {
   }
 
   async renderScene(options: ViewerRenderOptions): Promise<ViewerRenderResult | null> {
-    const sizeMap: Record<ViewerRenderOptions["size"], [number, number]> = {
+    const sizeMap: Record<Exclude<ViewerRenderOptions["size"], "viewport">, [number, number]> = {
       small: [1280, 720],
       medium: [1600, 900],
       large: [1920, 1080],
       "4k": [3840, 2160],
     };
-    const [width, height] = sizeMap[options.size] ?? sizeMap.medium;
+    const rendererForSize = this.deps.getRenderer();
+    let width: number;
+    let height: number;
+    if (options.size === "viewport") {
+      const el = rendererForSize.domElement;
+      const pr = Math.max(0.5, rendererForSize.getPixelRatio() || 1);
+      let cw = el.clientWidth;
+      let ch = el.clientHeight;
+      if (cw < 2 || ch < 2) {
+        cw = Math.round((el.width || 960) / pr);
+        ch = Math.round((el.height || 540) / pr);
+      }
+      width = Math.max(2, Math.floor(cw));
+      height = Math.max(2, Math.floor(ch));
+    } else {
+      const tuple = sizeMap[options.size] ?? sizeMap.medium;
+      width = tuple[0];
+      height = tuple[1];
+    }
+    const lineExport = Boolean(options.lineDrawingExport);
+    const lineBg = options.lineDrawingBackground ?? "white";
+    const effectiveBackground: ViewerRenderBackground = lineExport
+      ? lineBg === "transparent"
+        ? "transparent"
+        : "white"
+      : options.background;
+    const effectiveMode: ViewerRenderMode = lineExport ? "lines" : options.mode;
     const preset: ViewerCameraPreset = options.preset ?? "current";
     const applyWatermark = options.watermark ?? false;
     const format: ViewerRenderFormat = options.format ?? "png";
-    const isolatedProject = options.background === "project-transparent";
-    const transparentBackground = options.background === "transparent" || isolatedProject;
-    const advancedRealism = Boolean(options.advancedRealism && options.mode !== "lines");
+    const isolatedProject = effectiveBackground === "project-transparent";
+    const transparentBackground = effectiveBackground === "transparent" || isolatedProject;
+    const advancedRealism = Boolean(options.advancedRealism && effectiveMode !== "lines");
     const qualityBase = Math.max(0.1, Math.min(options.quality ?? 0.92, 1));
     const quality = format === "jpg" ? (advancedRealism ? Math.max(qualityBase, 0.97) : qualityBase) : 1;
     const shadowBase = THREE.MathUtils.clamp(options.shadowIntensity ?? 1, 0, 1);
@@ -73,7 +102,7 @@ export class ViewerRenderExporter {
     const supersampleScale = advancedRealism ? 1.5 : 1;
     const renderWidth = Math.max(1, Math.round(width * supersampleScale));
     const renderHeight = Math.max(1, Math.round(height * supersampleScale));
-    const renderer = this.deps.getRenderer();
+    const renderer = rendererForSize;
     const scene = this.deps.getScene();
     const camera = this.deps.getCamera();
     const controls = this.deps.getControls();
@@ -216,8 +245,8 @@ export class ViewerRenderExporter {
       type: THREE.UnsignedByteType,
     });
 
-    const swappedMaterials: Array<{ mesh: THREE.Mesh; material: THREE.Material | THREE.Material[] }> = [];
-    let linesMaterial: THREE.MeshBasicMaterial | null = null;
+    const silhouetteLines: THREE.LineSegments[] = [];
+    const meshVisibilityRestore: Array<{ mesh: THREE.Object3D; visible: boolean }> = [];
 
     try {
       renderer.setPixelRatio(1);
@@ -225,26 +254,26 @@ export class ViewerRenderExporter {
       if (transparentBackground) {
         renderer.setClearColor(0x000000, 0);
         scene.background = null;
-      } else if (options.background === "white") {
+      } else if (effectiveBackground === "white") {
         renderer.setClearColor(0xffffff, 1);
         scene.background = new THREE.Color(0xffffff);
       }
 
-      if (options.mode === "lines") {
-        linesMaterial = new THREE.MeshBasicMaterial({ color: 0x111111, wireframe: true });
-        boxes.forEach((entry) => {
-          entry.mesh.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              swappedMaterials.push({ mesh: child, material: child.material });
-              child.material = linesMaterial!;
-            }
-          });
-        });
+      if (effectiveMode === "lines") {
         scene.environment = null;
+        boxes.forEach((entry) => {
+          meshVisibilityRestore.push({ mesh: entry.mesh, visible: entry.mesh.visible });
+          const sil = createCabinetSilhouetteLines(entry.mesh);
+          entry.mesh.visible = false;
+          if (sil) {
+            scene.add(sil);
+            silhouetteLines.push(sil);
+          }
+        });
       }
 
       let exportCanvas: HTMLCanvasElement;
-      const canUseLiveComposer = options.mode === "pbr" && !transparentBackground;
+      const canUseLiveComposer = effectiveMode === "pbr" && !transparentBackground;
       if (canUseLiveComposer) {
         renderer.setRenderTarget(null);
         renderer.setSize(renderWidth, renderHeight, false);
@@ -317,10 +346,10 @@ export class ViewerRenderExporter {
       }
 
       if (applyWatermark) {
-        await applyImageWatermark(exportCanvas, {
-          opacity: 0.15,
+        await applyLogoPiPhotoWatermark(exportCanvas, {
+          opacity: 0.75,
           position: "bottom-right",
-          widthPercent: 0.12,
+          widthPercent: 0.08,
         });
       }
 
@@ -357,10 +386,13 @@ export class ViewerRenderExporter {
       if (wallSelectionOutline) wallSelectionOutline.visible = originalOverlayVisibility.wallSelectionOutline;
       if (dimensionsOverlayGroup) dimensionsOverlayGroup.visible = originalOverlayVisibility.dimensionsOverlay;
       if (wallGizmoGroup) wallGizmoGroup.visible = originalOverlayVisibility.wallGizmo;
-      swappedMaterials.forEach(({ mesh, material }) => {
-        mesh.material = material;
+      silhouetteLines.forEach((sil) => {
+        scene.remove(sil);
+        disposeSilhouetteObject(sil);
       });
-      if (linesMaterial) linesMaterial.dispose();
+      meshVisibilityRestore.forEach(({ mesh, visible }) => {
+        mesh.visible = visible;
+      });
       renderer.setRenderTarget(prevRenderTarget);
       renderer.setSize(prevRendererSize.x, prevRendererSize.y, false);
       renderer.setPixelRatio(prevPixelRatio);
