@@ -83,12 +83,17 @@ export class EventsManager {
       const hits = e.getHighlightIntersects(event);
       const mesh = e.getHighlightManager()!.getSelectableMeshFromIntersects(hits);
       if (mesh) {
-        e.getHighlightManager()!.setSelected(mesh);
         const boxId = e.getBoxIdByMesh(mesh);
-        if (boxId != null) e.setSelectedBox(boxId);
-        e.getOnRoomElementSelected()?.(null);
-        e.getOnWallSelected()?.(null);
-        return;
+        if (boxId == null) {
+          // Não consumir o clique quando o highlight acertar um mesh que não pertence a box.
+          // Permite fallback para raycast normal de box/sala/parede.
+        } else {
+          e.getHighlightManager()!.setSelected(mesh);
+          e.setSelectedBox(boxId);
+          e.getOnRoomElementSelected()?.(null);
+          e.getOnWallSelected()?.(null);
+          return;
+        }
       }
     }
     if (e.getPlacementMode() && e.getOnRoomElementPlaced()) {
@@ -156,6 +161,15 @@ export class EventsManager {
 
   private handleCanvasPointerDown(event: PointerEvent): void {
     const e = this.engine;
+    if (import.meta.env.DEV) {
+      devLogger.debug("[SELECTION][EventsManager] pointerdown:start", {
+        button: event.button,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        selectedBoxBefore: e.getSelectedBoxId(),
+        suppressNextCanvasClickBefore: e.getSuppressNextCanvasClick(),
+      });
+    }
     if (import.meta.env.DEV && event.button === 2) {
       devLogger.debug("[DOOR-MAT] handleCanvasPointerDown — botão direito (context menu virá a seguir)", {
         clientX: event.clientX,
@@ -185,27 +199,54 @@ export class EventsManager {
       const hits = e.getHighlightIntersects(event);
       const mesh = e.getHighlightManager()!.getSelectableMeshFromIntersects(hits);
       if (mesh) {
-        event.preventDefault();
-        event.stopPropagation();
-        e.getHighlightManager()!.setSelected(mesh);
         const boxId = e.getBoxIdByMesh(mesh);
-        if (boxId != null) e.setSelectedBox(boxId);
-        e.getOnRoomElementSelected()?.(null);
-        e.getOnWallSelected()?.(null);
-        e.setSuppressNextCanvasClick(true);
-        return;
+        if (boxId != null) {
+          event.preventDefault();
+          event.stopPropagation();
+          e.getHighlightManager()!.setSelected(mesh);
+          e.setSelectedBox(boxId);
+          e.getOnRoomElementSelected()?.(null);
+          e.getOnWallSelected()?.(null);
+          e.setSuppressNextCanvasClick(true);
+          return;
+        }
       }
     }
     if (event.button === 0) {
       const boxId = e.getBoxIdAtPointer(event);
+      if (import.meta.env.DEV) {
+        devLogger.debug("[SELECTION][EventsManager] pointerdown:boxId do raycast", {
+          boxId,
+          selectedBoxBeforeSet: e.getSelectedBoxId(),
+        });
+      }
       if (boxId != null && boxId !== e.getSelectedBoxId()) {
         const previousSelected = e.getSelectedBoxId();
         event.preventDefault();
         event.stopPropagation();
         e.setHoveredBox(boxId);
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox BEFORE", {
+            boxId,
+            previousSelected,
+          });
+        }
         e.setSelectedBox(boxId);
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox AFTER", {
+            boxId,
+            selectedBoxAfterSet: e.getSelectedBoxId(),
+          });
+        }
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
+        e.setSuppressNextCanvasClick(true);
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] suppressNextCanvasClick=true", {
+            reason: "selected-other-box-on-pointerdown",
+            boxId,
+          });
+        }
         e.logTransformDiagnostic("box-selected-pointerDown-other-box", {
           boxId,
           previousSelected,
@@ -213,11 +254,33 @@ export class EventsManager {
         return;
       }
       if (boxId != null) {
+        event.preventDefault();
+        event.stopPropagation();
         e.setHoveredBox(boxId);
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox BEFORE", {
+            boxId,
+            previousSelected: e.getSelectedBoxId(),
+          });
+        }
         e.setSelectedBox(boxId);
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox AFTER", {
+            boxId,
+            selectedBoxAfterSet: e.getSelectedBoxId(),
+          });
+        }
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
+        e.setSuppressNextCanvasClick(true);
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] suppressNextCanvasClick=true", {
+            reason: "selected-box-on-pointerdown",
+            boxId,
+          });
+        }
         e.logTransformDiagnostic("box-selected-pointerDown", { boxId });
+        return;
       }
     }
     if (e.getSelectedWallIndex() === null || !e.getWallGizmo()) {

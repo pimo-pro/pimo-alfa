@@ -103,6 +103,9 @@ export class ViewerPanelVisibility {
 
     root.traverse((node) => {
       node.userData.boxId = boxId;
+      if (node.layers && typeof node.layers.set === "function") {
+        node.layers.set(0);
+      }
       if (!(node instanceof THREE.Mesh)) return;
       const panelType = node.userData?.panelType as PanelType | undefined;
       if (panelType) {

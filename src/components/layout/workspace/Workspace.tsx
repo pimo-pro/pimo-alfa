@@ -11,7 +11,7 @@ import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
 import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
 import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../../../utils/roomMeshFromWallStore";
-import { useUiStore } from "../../../stores/uiStore";
+import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
 import GerarArquivoModal from "../right-panel/GerarArquivoModal";
@@ -146,6 +146,15 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnBoxSelected((boxId) => {
+      if (import.meta.env.DEV) {
+        const beforeUi = uiStore.getState();
+        devLogger.debug("[SELECTION][Workspace] onBoxSelected:entrada", {
+          boxId,
+          selectedObjectBefore: beforeUi.selectedObject,
+          selectedToolBefore: beforeUi.selectedTool,
+          projectSelectedWorkspaceBoxIdBefore: project.selectedWorkspaceBoxId,
+        });
+      }
       if (boxId) {
         if (ctrlOrMetaPressedRef.current) {
           const currentSelection = multiSelectedBoxIdsRef.current;
@@ -167,16 +176,47 @@ export default function Workspace({
         } else {
           multiSelectedBoxIdsRef.current = [boxId];
         }
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][Workspace] onBoxSelected:actions.selectBox", {
+            boxId,
+          });
+        }
         actions.selectBox(boxId);
+        setSelectedObject({ type: "box", id: boxId });
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][Workspace] selectedObject:set box", {
+            boxId,
+          });
+        }
+        setSelectedTool("home");
+        if (import.meta.env.DEV) {
+          const afterUi = uiStore.getState();
+          devLogger.debug("[SELECTION][Workspace] modo painel -> box/home", {
+            selectedObjectAfter: afterUi.selectedObject,
+            selectedToolAfter: afterUi.selectedTool,
+          });
+        }
         return;
       }
       if (project.selectedWorkspaceBoxId != null && project.selectedWorkspaceBoxId !== "") {
         multiSelectedBoxIdsRef.current = [];
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][Workspace] onBoxSelected:null -> clearSelection", {
+            projectSelectedWorkspaceBoxIdBeforeClear: project.selectedWorkspaceBoxId,
+          });
+        }
         actions.clearSelection();
         clearUiSelection();
+        if (import.meta.env.DEV) {
+          const afterUi = uiStore.getState();
+          devLogger.debug("[SELECTION][Workspace] after clearSelection", {
+            selectedObjectAfterClear: afterUi.selectedObject,
+            selectedToolAfterClear: afterUi.selectedTool,
+          });
+        }
       }
     });
-  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId]);
+  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, setSelectedObject, setSelectedTool]);
 
   /** GLB/CAD: ViewerCore chama após `addModelToBox` concluir o load (ver ViewerCore.addModelToBox). */
   useEffect(() => {
@@ -266,7 +306,20 @@ export default function Workspace({
   useEffect(() => {
     viewerApi.setOnRoomElementSelected?.((roomElement) => {
       if (roomElement == null) {
-        clearUiSelection();
+        const currentSelectedObject = uiStore.getState().selectedObject;
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][Workspace] onRoomElementSelected:null", {
+            selectedObjectBefore: currentSelectedObject,
+          });
+        }
+        if (currentSelectedObject.type === "roomElement" || currentSelectedObject.type === "wall") {
+          if (import.meta.env.DEV) {
+            devLogger.debug("[SELECTION][Workspace] onRoomElementSelected:null -> clearUiSelection", {
+              reason: "current selection is room/wall",
+            });
+          }
+          clearUiSelection();
+        }
         return;
       }
       actions.clearSelection();
@@ -325,11 +378,9 @@ export default function Workspace({
 
   useEffect(() => {
     if (!viewerApi.highlightBox) return;
-    if (!project.viewerSettings.highlightEnabled) {
-      viewerApi.highlightBox(null);
-      return;
-    }
-    viewerApi.highlightBox(project.selectedWorkspaceBoxId || null);
+    if (!project.viewerSettings.highlightEnabled) return;
+    if (!project.selectedWorkspaceBoxId) return;
+    viewerApi.highlightBox(project.selectedWorkspaceBoxId);
   }, [project.viewerSettings.highlightEnabled, project.selectedWorkspaceBoxId, viewerApi]);
 
   useEffect(() => {

@@ -137,26 +137,72 @@ export class ViewerRaycastSystem {
       roots.push(entry.mesh);
     });
     const hits = this.deps.raycaster.intersectObjects(roots, true);
+    if (import.meta.env.DEV) {
+      const hitsDebug = hits.map((hit, index) => ({
+        index,
+        objectName: hit.object.name,
+        objectUuid: hit.object.uuid,
+        distance: hit.distance,
+        hasBoxIdInHierarchy: this.getBoxIdByMesh(hit.object),
+        hasDoorLayerIdInHierarchy: this.getDoorLayerIdByMesh(hit.object),
+      }));
+      devLogger.debug("[SELECTION][Raycast] getBoxIdAtPointer hits", {
+        totalHits: hits.length,
+        hits: hitsDebug,
+      });
+    }
     if (!hits.length) return null;
-    const firstHit = hits[0].object;
-    const doorLayerIdAtPointer = this.getDoorLayerIdByMesh(firstHit);
-    if (doorLayerIdAtPointer) {
-      const boxIdFirst = this.getBoxIdByMesh(firstHit);
-      const entry = boxIdFirst ? boxes.get(boxIdFirst) : undefined;
+    for (const hit of hits) {
+      const candidate = hit.object;
+      const boxIdCandidate = this.getBoxIdByMesh(candidate);
+      if (!boxIdCandidate) continue;
+      if (import.meta.env.DEV) {
+        devLogger.debug("[SELECTION][Raycast] primeiro hit com boxId", {
+          boxIdCandidate,
+          candidateName: candidate.name,
+          candidateUuid: candidate.uuid,
+        });
+      }
+      const doorLayerIdAtPointer = this.getDoorLayerIdByMesh(candidate);
+      if (!doorLayerIdAtPointer) {
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][Raycast] mesh final resolvido", {
+            boxId: boxIdCandidate,
+            meshName: candidate.name,
+            meshUuid: candidate.uuid,
+          });
+        }
+        return boxIdCandidate;
+      }
+      const entry = boxes.get(boxIdCandidate);
       const doorIndex = entry?.mesh
         ? entry.mesh.children.filter((c) => c.name.startsWith("door-layer-")).findIndex((c) => c.name === `door-layer-${doorLayerIdAtPointer}`)
         : -1;
       if (import.meta.env.DEV && this.deps.getDebugMode()) {
         devLogger.debug("[DOOR-MAT] getBoxIdAtPointer — primeiro hit é porta (clique simples)", {
-          boxId: boxIdFirst,
+          boxId: boxIdCandidate,
           doorLayerId: doorLayerIdAtPointer,
           specId: doorLayerIdAtPointer,
           doorIndex,
-          hitObjectName: firstHit.name,
+          hitObjectName: candidate.name,
         });
       }
+      if (import.meta.env.DEV) {
+        devLogger.debug("[SELECTION][Raycast] mesh final resolvido (porta)", {
+          boxId: boxIdCandidate,
+          meshName: candidate.name,
+          meshUuid: candidate.uuid,
+          doorLayerIdAtPointer,
+        });
+      }
+      return boxIdCandidate;
     }
-    return this.getBoxIdByMesh(firstHit);
+    if (import.meta.env.DEV) {
+      devLogger.debug("[SELECTION][Raycast] nenhum hit válido com boxId", {
+        totalHits: hits.length,
+      });
+    }
+    return null;
   }
 
   getDoorHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null {

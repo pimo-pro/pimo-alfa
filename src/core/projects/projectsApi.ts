@@ -8,6 +8,15 @@ import type {
 
 const PROJECTS_API_BASE = "https://pimo.pro/api/projects/index.php";
 
+function isDevelopmentRuntime(): boolean {
+  if (typeof import.meta !== "undefined" && Boolean(import.meta.env?.DEV)) return true;
+  if (typeof process !== "undefined") {
+    const nodeEnv = (process as { env?: { NODE_ENV?: string } }).env?.NODE_ENV;
+    return nodeEnv === "development";
+  }
+  return false;
+}
+
 export function toJson(response: Response): Promise<unknown> {
   return response.json().catch(() => null);
 }
@@ -29,6 +38,7 @@ export async function remoteSaveProject(
   request: SaveProjectRequest,
   deps: ProjectsApiDeps
 ): Promise<SavedProjectMeta | null> {
+  if (isDevelopmentRuntime()) return null;
   const projectData = deps.buildPimoProjectDataFromRequest(request);
   const response = await fetch(buildProjectsUrl(), {
     method: "POST",
@@ -53,6 +63,7 @@ export async function remoteListProjects(
   ownerId: string | undefined,
   deps: ProjectsApiDeps
 ): Promise<SavedProjectMeta[]> {
+  if (isDevelopmentRuntime()) return [];
   const params = new URLSearchParams({ scope });
   if (ownerId) params.set("ownerId", ownerId);
   const response = await fetch(buildProjectsUrl(params));
@@ -96,6 +107,7 @@ export async function remoteLoadProjectRecord(
   id: string,
   deps: ProjectsApiDeps
 ): Promise<SavedProjectRecord | null> {
+  if (isDevelopmentRuntime()) return null;
   const params = new URLSearchParams({ action: "load", id });
   const response = await fetch(buildProjectsUrl(params));
   if (!response.ok) return null;
@@ -115,6 +127,7 @@ export async function remoteRenameProject(
   id: string,
   body: RenameProjectRequest
 ): Promise<boolean> {
+  if (isDevelopmentRuntime()) return false;
   const params = new URLSearchParams({ action: "update", id });
   const response = await fetch(buildProjectsUrl(params), {
     method: "PUT",
@@ -125,6 +138,7 @@ export async function remoteRenameProject(
 }
 
 export async function remoteDeleteProject(id: string): Promise<boolean> {
+  if (isDevelopmentRuntime()) return false;
   const params = new URLSearchParams({ action: "delete", id });
   const response = await fetch(buildProjectsUrl(params), { method: "DELETE" });
   return response.ok;

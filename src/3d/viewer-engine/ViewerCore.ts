@@ -45,6 +45,19 @@ import {
 import type { MaterialMode } from "./materials";
 import type { ViewerBoxEntry } from "./types";
 import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
+
+/**
+ * Propaga userData.boxId e layer 0 para todos os filhos do grupo da caixa.
+ */
+function tagBoxGroupWithId(group: THREE.Object3D, boxId: string) {
+  group.traverse((child) => {
+    child.userData = child.userData || {};
+    child.userData.boxId = boxId;
+    if (child.layers && typeof child.layers.set === "function") {
+      child.layers.set(0);
+    }
+  });
+}
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { RoomBuilder } from "../room/RoomBuilder";
@@ -1646,6 +1659,7 @@ export class ViewerCore {
         boxOptions.material = material.material;
       }
       box = buildBoxLegacy(boxOptions);
+      tagBoxGroupWithId(box, id);
     }
 
     box.frustumCulled = false;
@@ -1706,7 +1720,6 @@ export class ViewerCore {
       material,
       drillMarkersByPanel: opts.drillMarkersByPanel,
       materialName: materialName,
-      baseCabinetId: opts.baseCabinetId,
     });
     const createdEntry = this.boxes.get(id);
     if (createdEntry) {
@@ -1716,6 +1729,7 @@ export class ViewerCore {
     this.applyPanelIdsToBox(box, id, opts.panelIds);
     this.applyPanelVisibilityForObject(box);
     this.applyExplodedViewForObject(box);
+    tagBoxGroupWithId(box, id);
     this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
     this.applyBackgroundMode();
     this.applyMaterialQualityProfile();
@@ -1762,9 +1776,6 @@ export class ViewerCore {
     if (opts.index !== undefined && (!Number.isFinite(opts.index) || opts.index < 0)) {
       return false;
     }
-    if (opts.baseCabinetId !== undefined) {
-      entry.baseCabinetId = opts.baseCabinetId;
-    }
 
     // Atualização apenas de posição/rotação (ex.: após drag ou sync do projeto). Não fazer rebuild (updateBoxGroup/createDoorObject).
     const onlyTransform =
@@ -1783,8 +1794,7 @@ export class ViewerCore {
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
       opts.drillMarkersByPanel !== undefined ||
-      opts.thickness !== undefined ||
-      opts.baseCabinetId !== undefined;
+      opts.thickness !== undefined;
     if (onlyTransform && !hasStructureOpts) {
       if (import.meta.env.DEV) {
         devLogger.debug("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
@@ -1843,8 +1853,7 @@ export class ViewerCore {
       opts.shelves !== undefined ||
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
-      opts.drillMarkersByPanel !== undefined ||
-      opts.baseCabinetId !== undefined;
+      opts.drillMarkersByPanel !== undefined;
     if (structureChanged) {
       width = Math.max(0.001, opts.width ?? opts.size ?? width);
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
@@ -1853,8 +1862,7 @@ export class ViewerCore {
       const hasLayerUpdate =
         opts.doorLayerItems !== undefined ||
         opts.drawerLayerItems !== undefined ||
-        opts.drillMarkersByPanel !== undefined ||
-        opts.baseCabinetId !== undefined;
+        opts.drillMarkersByPanel !== undefined;
       // Só pular updateBoxGroup para caixa CAD-only quando não há alteração de dimensões nem de portas/gavetas.
       if (entry.cadOnly && !hasLayerUpdate && !dimensionsChanged) {
         if (!entry.manualPosition) {
@@ -1905,10 +1913,10 @@ export class ViewerCore {
             drawerLayerItems: opts.drawerLayerItems,
             drillMarkersByPanel: drillMarkers,
             materialName,
-            baseCabinetId: opts.baseCabinetId ?? entry.baseCabinetId,
           };
           if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
           newBox = buildBoxLegacy(boxOptions);
+          tagBoxGroupWithId(newBox, id);
           if (!entry.material && loadedMat) entry.material = loadedMat;
         }
 
@@ -2007,6 +2015,7 @@ export class ViewerCore {
     entry.height = height;
     entry.depth = depth;
     this.syncFeetVisualForBox(entry);
+    tagBoxGroupWithId(entry.mesh, id);
     if (opts.drillMarkersByPanel !== undefined) {
       entry.drillMarkersByPanel = opts.drillMarkersByPanel;
     }
@@ -2605,6 +2614,9 @@ export class ViewerCore {
 
   /** Aplica highlight na caixa (igual a selectBox; exposto para sincronização RightPanel ↔ Viewer). */
   highlightBox(id: string | null): void {
+    // Guard-rail: highlight nunca deve limpar seleção ativa.
+    // O clear de seleção deve ocorrer apenas por clique explícito fora de box (EventsManager).
+    if (id == null) return;
     this.setSelectedBox(id);
   }
 
@@ -2623,6 +2635,9 @@ export class ViewerCore {
         entry.mesh.add(object);
         object.traverse((child) => {
           child.userData.boxId = boxId;
+          if (child.layers && typeof child.layers.set === "function") {
+            child.layers.set(0);
+          }
         });
         if (isCatalogModel) {
           object.userData.isCatalogGlb = true;
@@ -3282,7 +3297,28 @@ export class ViewerCore {
   }
 
   private setSelectedBox(id: string | null) {
+    if (import.meta.env.DEV) {
+      devLogger.debug("[SELECTION][ViewerCore] setSelectedBox:entrada", {
+        nextBoxId: id,
+        currentSelectionBefore: this.viewerState.getSelectedBox(),
+        callerStack:
+          id == null
+            ? new Error("[SELECTION] setSelectedBox(null) trace").stack
+            : undefined,
+      });
+    }
     if (this.viewerState.getSelectedBox() === id) {
+      if (import.meta.env.DEV) {
+        devLogger.debug("[SELECTION][ViewerCore] setSelectedBox:sem-mudanca", {
+          sameBoxId: id,
+        });
+      }
+      if (import.meta.env.DEV) {
+        devLogger.debug("[SELECTION][ViewerCore] onBoxSelected:emit", {
+          boxId: id,
+          reason: "same-selection-short-circuit",
+        });
+      }
       this.onBoxSelected?.(id);
       return;
     }
@@ -3291,6 +3327,15 @@ export class ViewerCore {
     this.viewerState.setSelectedRoomElementId(null);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
+    if (import.meta.env.DEV) {
+      devLogger.debug("[SELECTION][ViewerCore] setSelectedBox:apos-update-state", {
+        nextBoxId: id,
+        currentSelectionAfter: this.viewerState.getSelectedBox(),
+      });
+      devLogger.debug("[SELECTION][ViewerCore] onBoxSelected:emit", {
+        boxId: id,
+      });
+    }
     this.onBoxSelected?.(id);
     this.selectedBoxChangeListeners.forEach((cb) => {
       try {

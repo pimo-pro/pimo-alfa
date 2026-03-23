@@ -29,6 +29,11 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const [loadingSavedRecent, setLoadingSavedRecent] = useState(false);
 
   useEffect(() => {
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
+      setSavedRecentProjects([]);
+      setLoadingSavedRecent(false);
+      return;
+    }
     let active = true;
     const loadRecent = async () => {
       setLoadingSavedRecent(true);
