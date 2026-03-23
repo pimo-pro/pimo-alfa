@@ -15,21 +15,12 @@ import {
 } from "../core/cnc/cncPipeline";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
+import { sanitizeIndustrialToken, sanitizeZipPath } from "../utils/sanitization";
 
 function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
   const arr = doc.output("arraybuffer");
   const buffer = arr instanceof ArrayBuffer ? arr : new Uint8Array(arr).buffer;
   return new Blob([buffer], { type: "application/pdf" });
-}
-
-function sanitizeIndustrialToken(value: string): string {
-  const normalized = value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return normalized || "item";
 }
 
 function formatThicknessBucket(thicknessMm: number): string {
@@ -49,31 +40,6 @@ function buildIndustrialBaseName(
   const safePieceName = sanitizeIndustrialToken(pieceName || fallbackName);
   const safeThickness = formatThicknessBucket(thicknessMm);
   return `${safeSlug}_${safeThickness}_${safePieceName}`;
-}
-
-/** Sanitiza um path/nome para entrada no ZIP: sem caracteres inválidos, sem segmentos vazios. */
-function sanitizeZipPath(path: string): string {
-  if (typeof path !== "string" || path.trim() === "") return "ficheiro";
-  const sanitizeSegment = (segment: string): string =>
-    Array.from(segment)
-      .map((char) => {
-        const code = char.charCodeAt(0);
-        if (code < 32 || "<>:\"|?*".includes(char)) return "_";
-        return char;
-      })
-      .join("");
-
-  return path
-    .replace(/\\/g, "/")
-    .split("/")
-    .map((seg) =>
-      sanitizeSegment(seg)
-        .replace(/\s+/g, "_")
-        .replace(/^\.+/, "")
-        .trim()
-    )
-    .filter((s) => s.length > 0)
-    .join("/") || "ficheiro";
 }
 
 /** Adiciona um PDF ao ZIP apenas se o documento e o blob forem válidos. Retorna true se adicionou. */

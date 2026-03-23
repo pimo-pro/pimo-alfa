@@ -5,6 +5,7 @@
 
 import Panel from "../ui/Panel";
 import { useCutlistData } from "../../hooks/useCutlistData";
+import { formatCurrency } from "../../utils/formatting";
 
 const aplicacaoFerragens: Record<string, string> = {
   dobradicas: "Portas",
@@ -77,7 +78,7 @@ export default function FerragensPanel() {
                 <td style={bodyCellStyle}>{ferragem.tipo}</td>
                 <td style={{ ...bodyCellStyle, textAlign: "center" }}>{ferragem.quantidade}</td>
                 <td style={bodyCellStyle}>{aplicacaoFerragens[ferragem.tipo] ?? "Geral"}</td>
-                <td style={costCellStyle}>{ferragem.custo.toFixed(2)} €</td>
+                <td style={costCellStyle}>{formatCurrency(ferragem.custo)}</td>
               </tr>
             ))}
           </tbody>

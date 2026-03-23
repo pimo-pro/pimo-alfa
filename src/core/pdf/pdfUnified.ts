@@ -14,6 +14,7 @@ import {
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
 } from "../pricing/pricing";
+import { formatCurrency } from "../../utils/formatting";
 
 /** ProjectForPdf compatível com pdfCutlist (extractedPartsByBoxId opcional). */
 export type ProjectForPdfWithExtracted = ProjectForPdf & {
@@ -93,7 +94,7 @@ function addFerragensSection(doc: jsPDF, project: ProjectForPdfWithExtracted): v
   const body = lista.map((a) => [
     a.nome,
     String(a.quantidade),
-    a.precoTotal != null ? `€ ${a.precoTotal.toFixed(2)}` : "—",
+    formatCurrency(a.precoTotal, { placement: "prefix", empty: "—" }),
   ]);
   autoTable(doc, {
     head,
@@ -115,7 +116,7 @@ function addFerragensDetalhadoSection(doc: jsPDF, project: ProjectForPdfWithExtr
         box.nome ?? box.id,
         a.nome,
         String(a.quantidade),
-        a.precoTotal != null ? `€ ${a.precoTotal.toFixed(2)}` : "—",
+        formatCurrency(a.precoTotal, { placement: "prefix", empty: "—" }),
       ]);
     }
   }
@@ -175,11 +176,23 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
   const totalFerragensPreco = ferragens.reduce((s, a) => s + (a.precoTotal ?? 0), 0);
   const baseTotal = totalPecasPreco + totalFerragensPreco;
   const totalProjeto = baseTotal > 0 ? calcularPrecoTotalProjeto(baseTotal) : 0;
-  doc.text(`Total peças: € ${totalPecasPreco.toFixed(2)}`, MARGIN, y);
+  doc.text(
+    `Total peças: ${formatCurrency(totalPecasPreco, { placement: "prefix", empty: "—" })}`,
+    MARGIN,
+    y
+  );
   y += 6;
-  doc.text(`Total ferragens: € ${totalFerragensPreco.toFixed(2)}`, MARGIN, y);
+  doc.text(
+    `Total ferragens: ${formatCurrency(totalFerragensPreco, { placement: "prefix", empty: "—" })}`,
+    MARGIN,
+    y
+  );
   y += 6;
-  doc.text(`Total projeto (c/ margem): € ${totalProjeto.toFixed(2)}`, MARGIN, y);
+  doc.text(
+    `Total projeto (c/ margem): ${formatCurrency(totalProjeto, { placement: "prefix", empty: "—" })}`,
+    MARGIN,
+    y
+  );
 }
 
 /**

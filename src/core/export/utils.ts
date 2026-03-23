@@ -5,13 +5,7 @@
 
 import type { ExportFormat } from "./types";
 
-/**
- * Gera nome de ficheiro seguro a partir de string.
- * @placeholder Sem lógica real.
- */
-export function sanitizeExportFilename(_name: string): string {
-  return _name.replace(/[^\p{L}\p{N}\s_-]/gu, "").trim() || "export";
-}
+export { sanitizeExportFilename } from "../../utils/sanitization";
 
 /**
  * MIME type associado ao formato.

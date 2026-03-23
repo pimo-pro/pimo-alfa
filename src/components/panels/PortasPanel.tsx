@@ -5,6 +5,7 @@
 
 import Panel from "../ui/Panel";
 import { useCutlistData } from "../../hooks/useCutlistData";
+import { formatCurrency } from "../../utils/formatting";
 
 const tableStyle: React.CSSProperties = {
   width: "100%",
@@ -80,7 +81,7 @@ export default function PortasPanel() {
               <td style={bodyCellStyle}>{porta.altura_mm}</td>
               <td style={bodyCellStyle}>{porta.espessura_mm}</td>
               <td style={{ ...bodyCellStyle, textAlign: "center" }}>{porta.dobradicas}</td>
-              <td style={costCellStyle}>{porta.custo.toFixed(2)} €</td>
+              <td style={costCellStyle}>{formatCurrency(porta.custo)}</td>
             </tr>
           ))}
         </tbody>

@@ -1,5 +1,6 @@
 import Panel from "../ui/Panel";
 import { useCutlistData } from "../../hooks/useCutlistData";
+import { formatCurrency } from "../../utils/formatting";
 import type { FerragemIndustrial } from "../../core/industriais/ferragensIndustriais";
 
 const tableStyle: React.CSSProperties = {
@@ -105,7 +106,7 @@ export default function CutlistPanel() {
                   <td style={bodyCellStyle}>{painel.espessura_mm}</td>
                   <td style={bodyCellStyle}>{painel.orientacaoFibra}</td>
                   <td style={{ ...bodyCellStyle, textAlign: "center" }}>{painel.quantidade}</td>
-                  <td style={costCellStyle}>{painel.custo.toFixed(2)} €</td>
+                  <td style={costCellStyle}>{formatCurrency(painel.custo)}</td>
                 </tr>
               ))}
             </tbody>
@@ -136,7 +137,7 @@ export default function CutlistPanel() {
                     <td style={bodyCellStyle}>{porta.altura_mm}</td>
                     <td style={bodyCellStyle}>{porta.espessura_mm}</td>
                     <td style={{ ...bodyCellStyle, textAlign: "center" }}>{porta.dobradicas}</td>
-                    <td style={costCellStyle}>{porta.custo.toFixed(2)} €</td>
+                    <td style={costCellStyle}>{formatCurrency(porta.custo)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -168,7 +169,7 @@ export default function CutlistPanel() {
                     <td style={bodyCellStyle}>{gaveta.profundidade_mm}</td>
                     <td style={bodyCellStyle}>{gaveta.espessura_mm}</td>
                     <td style={{ ...bodyCellStyle, textAlign: "center" }}>{gaveta.corrediças}</td>
-                    <td style={costCellStyle}>{gaveta.custo.toFixed(2)} €</td>
+                    <td style={costCellStyle}>{formatCurrency(gaveta.custo)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -198,7 +199,7 @@ export default function CutlistPanel() {
                     <td style={bodyCellStyle}>{ferragem.tipo}</td>
                     <td style={{ ...bodyCellStyle, textAlign: "center" }}>{ferragem.quantidade}</td>
                     <td style={bodyCellStyle}>{aplicacaoFerragens[ferragem.tipo] ?? "Geral"}</td>
-                    <td style={costCellStyle}>{ferragem.custo.toFixed(2)} €</td>
+                    <td style={costCellStyle}>{formatCurrency(ferragem.custo)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -287,23 +288,23 @@ export default function CutlistPanel() {
           <div>Quantidade total de ferragens: {totalFerragensQty}</div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Custo total de painéis:</span>
-            <span style={totalValueStyle}>{custoTotalPaineis.toFixed(2)} €</span>
+            <span style={totalValueStyle}>{formatCurrency(custoTotalPaineis)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Custo total de portas:</span>
-            <span style={totalValueStyle}>{custoTotalPortas.toFixed(2)} €</span>
+            <span style={totalValueStyle}>{formatCurrency(custoTotalPortas)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Custo total de gavetas:</span>
-            <span style={totalValueStyle}>{custoTotalGavetas.toFixed(2)} €</span>
+            <span style={totalValueStyle}>{formatCurrency(custoTotalGavetas)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Custo total de ferragens:</span>
-            <span style={totalValueStyle}>{custoTotalFerragens.toFixed(2)} €</span>
+            <span style={totalValueStyle}>{formatCurrency(custoTotalFerragens)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
             <span>Custo total do projeto:</span>
-            <span style={totalValueStyle}>{custoTotal.toFixed(2)} €</span>
+            <span style={totalValueStyle}>{formatCurrency(custoTotal)}</span>
           </div>
         </div>
       </div>

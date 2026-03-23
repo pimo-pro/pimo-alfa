@@ -20,6 +20,7 @@ import {
   DENSIDADE_PADRAO,
 } from "../../core/manufacturing/materials";
 import { useMaterials } from "../../hooks/useMaterials";
+import { formatCurrency } from "../../utils/formatting";
 
 const microTextStyle: React.CSSProperties = { fontSize: 12, lineHeight: 1.4, color: "var(--text-muted)" };
 
@@ -124,43 +125,43 @@ export default function ResumoFinanceiroPanel() {
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Materiais</span>
           <span style={{ color: "var(--text-main)" }}>
-            {custoMateriais !== null ? `${custoMateriais.toFixed(2)} €` : "--"}
+            {formatCurrency(custoMateriais)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Peças</span>
           <span style={{ color: "var(--text-main)" }}>
-            {custoPecas !== null ? `${custoPecas.toFixed(2)} €` : "--"}
+            {formatCurrency(custoPecas)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Ferragens</span>
           <span style={{ color: "var(--text-main)" }}>
-            {custoFerragens !== null ? `${custoFerragens.toFixed(2)} €` : "--"}
+            {formatCurrency(custoFerragens)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Montagem</span>
           <span style={{ color: "var(--text-main)" }}>
-            {custoMontagem !== null ? `${custoMontagem.toFixed(2)} €` : "--"}
+            {formatCurrency(custoMontagem)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
           <span style={{ color: "var(--text-main)" }}>Total geral</span>
           <span style={{ color: "var(--blue-light)" }}>
-            {precoTotal !== null ? `${precoTotal.toFixed(2)} €` : "--"}
+            {formatCurrency(precoTotal)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Preço por peça</span>
           <span style={{ color: "var(--text-main)" }}>
-            {precoPorPeca !== null ? `${precoPorPeca.toFixed(2)} €` : "--"}
+            {formatCurrency(precoPorPeca)}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Preço por caixa</span>
           <span style={{ color: "var(--text-main)" }}>
-            {precoPorCaixa !== null ? `${precoPorCaixa.toFixed(2)} €` : "--"}
+            {formatCurrency(precoPorCaixa)}
           </span>
         </div>
       </div>

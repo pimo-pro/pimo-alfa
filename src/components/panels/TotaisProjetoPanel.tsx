@@ -5,6 +5,7 @@
 
 import Panel from "../ui/Panel";
 import { useCutlistData } from "../../hooks/useCutlistData";
+import { formatCurrency } from "../../utils/formatting";
 
 const sectionTitleStyle: React.CSSProperties = {
   fontSize: 13,
@@ -58,23 +59,23 @@ export default function TotaisProjetoPanel() {
         <div>Quantidade total de ferragens: {totalFerragensQty}</div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Custo total de painéis:</span>
-          <span style={totalValueStyle}>{custoTotalPaineis.toFixed(2)} €</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotalPaineis)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Custo total de portas:</span>
-          <span style={totalValueStyle}>{custoTotalPortas.toFixed(2)} €</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotalPortas)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Custo total de gavetas:</span>
-          <span style={totalValueStyle}>{custoTotalGavetas.toFixed(2)} €</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotalGavetas)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Custo total de ferragens:</span>
-          <span style={totalValueStyle}>{custoTotalFerragens.toFixed(2)} €</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotalFerragens)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
           <span>Custo total do projeto:</span>
-          <span style={totalValueStyle}>{custoTotal.toFixed(2)} €</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotal)}</span>
         </div>
       </div>
     </Panel>
