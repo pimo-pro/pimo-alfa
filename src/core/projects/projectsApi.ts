@@ -6,15 +6,23 @@ import type {
   SavedProjectRecord,
 } from "./types";
 
-const PROJECTS_API_BASE = "https://pimo.pro/api/projects/index.php";
+/** Caminho da API no mesmo host da app (evita mistura de subdomínios e facilita staging). */
+const PROJECTS_API_PATH = "/api/projects/index.php";
+
+/**
+ * Base da API de projetos: sempre o origin atual em browser (produção em pimo.pro, preview, etc.).
+ * Não usar `process.env.NODE_ENV` aqui — polyfills no cliente podem marcar "development" por engano e
+ * desativar POST/PUT/DELETE enquanto GET (outros módulos) continua a aparecer no Network.
+ */
+export function resolveProjectsApiBase(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return new URL(PROJECTS_API_PATH, window.location.origin).href;
+  }
+  return `https://pimo.pro${PROJECTS_API_PATH}`;
+}
 
 function isDevelopmentRuntime(): boolean {
-  if (typeof import.meta !== "undefined" && Boolean(import.meta.env?.DEV)) return true;
-  if (typeof process !== "undefined") {
-    const nodeEnv = (process as { env?: { NODE_ENV?: string } }).env?.NODE_ENV;
-    return nodeEnv === "development";
-  }
-  return false;
+  return Boolean(import.meta.env?.DEV);
 }
 
 export function toJson(response: Response): Promise<unknown> {
@@ -23,7 +31,7 @@ export function toJson(response: Response): Promise<unknown> {
 
 export function buildProjectsUrl(query?: URLSearchParams): string {
   const queryString = query && query.toString() ? `?${query.toString()}` : "";
-  return `${PROJECTS_API_BASE}${queryString}`;
+  return `${resolveProjectsApiBase()}${queryString}`;
 }
 
 export type ProjectsApiDeps = {

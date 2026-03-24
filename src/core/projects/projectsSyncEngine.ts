@@ -159,10 +159,19 @@ export function enqueueSyncOperation(entry: Omit<SyncQueueEntry, "id" | "created
     lastError: null,
   });
   writeSyncQueue(queue);
+  // Nova operação do utilizador: não deixar backoff de uma falha antiga bloquear POST/PUT/DELETE indefinidamente.
+  if (retryTimerId != null && typeof window !== "undefined") {
+    window.clearTimeout(retryTimerId);
+    retryTimerId = null;
+  }
+  syncRetryAttempt = 0;
+  nextRetryAtMs = 0;
   setSyncStatus({
     pending: queue.length,
     state: isOnline() ? "saved_local" : "awaiting_network",
     message: isOnline() ? "Guardado localmente. A sincronizar..." : "Guardado localmente. Sem internet.",
+    hasActiveSyncError: false,
+    retryInMs: null,
   });
 }
 
