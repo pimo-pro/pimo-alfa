@@ -283,9 +283,12 @@ export async function syncQueue(): Promise<void> {
             continue;
           }
           const requestObj = asObject(entry.payload.request);
-          const request = requestObj
+          const baseRequest = requestObj
             ? (requestObj as SaveProjectRequest)
             : buildSaveRequestFromOffline(project);
+          const request: SaveProjectRequest = project.remoteId
+            ? { ...baseRequest, remoteProjectId: project.remoteId }
+            : baseRequest;
           const saved = await remoteSaveProject(request, projectsApiDeps);
           if (!saved) {
             throw new Error("Falha ao guardar no servidor");

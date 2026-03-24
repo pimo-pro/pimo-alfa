@@ -43,8 +43,11 @@ import {
   disposeSharedPanelEdgeMaterial,
 } from "./materials";
 import type { MaterialMode } from "./materials";
+import type { BoxOptions } from "../objects/BoxBuilder";
 import type { ViewerBoxEntry } from "./types";
+import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
+import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 
 /**
  * Propaga userData.boxId e layer 0 para todos os filhos do grupo da caixa.
@@ -58,8 +61,6 @@ function tagBoxGroupWithId(group: THREE.Object3D, boxId: string) {
     }
   });
 }
-import type { BoxOptions } from "../objects/BoxBuilder";
-import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import {
@@ -1207,8 +1208,13 @@ export class ViewerCore {
     });
     boxGroup.remove(oldDoorGroup);
     const doorMat = (nextMaterial.material as THREE.Material).clone();
-    const newDoor = createDoorObject(spec, doorMat, doorHoles);
+    const newDoor = createDoorObject(
+      spec,
+      doorMat,
+      filterTechnicalDrillHolesForViewerMesh(doorHoles)
+    );
     boxGroup.add(newDoor);
+    this.applyViewerDrillHoleSceneRules(newDoor);
     if (import.meta.env.DEV) {
       devLogger.debug("[DOOR-MAT] Material aplicado independentemente:", {
         id: doorLayerId,
@@ -1744,6 +1750,13 @@ export class ViewerCore {
       box.name = id;
     } else {
       material = this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
+      const emptyDrill: ViewerDrillMarkersByPanel = {
+        cima: [],
+        fundo: [],
+        lateral_esquerda: [],
+        lateral_direita: [],
+        porta: [],
+      };
       const boxOptions: BoxOptions = {
         ...opts,
         width: opts.width ?? 1,
@@ -1752,6 +1765,7 @@ export class ViewerCore {
         thickness: opts.thickness ?? 0.019,
         index: opts.index,
         materialName,
+        drillMarkersByPanel: filterViewerDrillMarkersForMesh(opts.drillMarkersByPanel ?? emptyDrill),
       };
       if (material?.material != null) {
         boxOptions.material = material.material;
@@ -1769,6 +1783,7 @@ export class ViewerCore {
     box.traverse((child) => {
       child.layers.set(0);
     });
+    this.applyViewerDrillHoleSceneRules(box);
     box.userData.costaRotationY =
       opts.costaRotationY != null && Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
     const baseY = height / 2;
@@ -2009,7 +2024,7 @@ export class ViewerCore {
             shelves: opts.shelves,
             doorLayerItems: opts.doorLayerItems,
             drawerLayerItems: opts.drawerLayerItems,
-            drillMarkersByPanel: drillMarkers,
+            drillMarkersByPanel: filterViewerDrillMarkersForMesh(drillMarkers),
             materialName,
           };
           if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
@@ -2023,6 +2038,7 @@ export class ViewerCore {
         newBox.visible = true;
         newBox.layers.set(0);
         newBox.traverse((child) => child.layers.set(0));
+        this.applyViewerDrillHoleSceneRules(newBox);
         newBox.userData.boxId = id;
         newBox.userData.costaRotationY =
           opts.costaRotationY != null && Number.isFinite(opts.costaRotationY)
@@ -2180,6 +2196,21 @@ export class ViewerCore {
     this.reflowBoxes();
     this.updateCameraTarget();
     return true;
+  }
+
+  /**
+   * Objetos marcados como furo CNC auxiliar (malha dedicada): invisíveis e sem raycast.
+   * Os furos estruturais em painéis são filtrados antes do CSG via viewerCncDrillFilter.
+   */
+  private applyViewerDrillHoleSceneRules(root: THREE.Object3D): void {
+    root.traverse((node) => {
+      if (node.userData?.isDrillHole === true) {
+        node.visible = false;
+        if (node instanceof THREE.Mesh) {
+          node.raycast = () => null;
+        }
+      }
+    });
   }
 
   /** Remove e dispõe geometrias/materiais do mesh da cena (não dispõe entry.material, que é cache). */

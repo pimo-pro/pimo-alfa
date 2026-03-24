@@ -51,8 +51,9 @@ export function buildPimoProjectDataFromRequest(request: SaveProjectRequest): Pi
     return Array.isArray(drill) ? drill : [];
   });
 
+  const remoteId = (request.remoteProjectId ?? "").trim();
   return {
-    id: "",
+    id: remoteId,
     name: (request.name ?? "").trim() || (String(state["projectName"] ?? "").trim() || "Projeto"),
     ownerId: request.ownerId,
     ownerName: request.ownerName ?? request.ownerId,

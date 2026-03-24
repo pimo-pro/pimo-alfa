@@ -46,6 +46,8 @@ export type SaveProjectRequest = {
   ownerName?: string;
   snapshot: PersistedProjectSnapshot;
   thumbnailDataUrl?: string | null;
+  /** Id no servidor (após primeiro sync); enviado no POST para atualizar o mesmo ficheiro. */
+  remoteProjectId?: string;
 };
 
 export type RenameProjectRequest = {

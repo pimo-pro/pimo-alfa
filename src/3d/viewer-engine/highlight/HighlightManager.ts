@@ -12,7 +12,8 @@ function isSelectable(node: THREE.Object3D): boolean {
   if (ud.panelType != null) return true;
   if (ud.doorLayerId != null) return true;
   if (ud.drawerPart != null) return true;
-  if (ud.isDrillMarker === true) return true;
+  if (ud.isDrillMarker === true) return false;
+  if (ud.isDrillHole === true) return false;
   if (ud.doorHolesEffective != null) return true;
   if (ud.isRoomElement === true) return true;
   const name = (node as { name?: string }).name;

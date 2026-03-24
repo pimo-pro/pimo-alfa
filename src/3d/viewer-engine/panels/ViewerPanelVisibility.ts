@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../../core/types";
+import { filterTechnicalDrillHolesForViewerMesh } from "../drill/viewerCncDrillFilter";
 
 type ViewerBoxLike = {
   mesh: THREE.Object3D;
@@ -370,7 +371,7 @@ export class ViewerPanelVisibility {
       Number.isFinite(entry.depth)
     ) {
       const drillMap: ViewerDrillMarkersByPanel | undefined = entry.drillMarkersByPanel;
-      const holes =
+      const holesRaw =
         panelType === "top"
           ? (drillMap?.cima ?? [])
           : panelType === "bottom"
@@ -380,6 +381,7 @@ export class ViewerPanelVisibility {
               : panelType === "right"
                 ? (drillMap?.lateral_direita ?? [])
                 : [];
+      const holes = filterTechnicalDrillHolesForViewerMesh(holesRaw);
       const geometry = ViewerPanelVisibility.createContourEdgesGeometry(
         panelType,
         entry.width,
@@ -411,9 +413,10 @@ export class ViewerPanelVisibility {
         const size = new THREE.Vector3();
         bb?.getSize(size);
         const holeData = mesh.userData?.doorHolesEffective;
-        const holes = Array.isArray(holeData)
+        const holesRaw = Array.isArray(holeData)
           ? (holeData.filter((h) => h && Number.isFinite(h.x) && Number.isFinite(h.y)) as TechnicalDrillHole[])
           : [];
+        const holes = filterTechnicalDrillHolesForViewerMesh(holesRaw);
         const geometry = ViewerPanelVisibility.createContourEdgesGeometry(
           "front",
           Math.max(0.001, size.x),

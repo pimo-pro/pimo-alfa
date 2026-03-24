@@ -18,6 +18,7 @@ function hasVisibleAncestors(node: THREE.Object3D): boolean {
 function isWoodPieceMesh(mesh: THREE.Mesh): boolean {
   const ud = (mesh as THREE.Mesh & { userData?: Record<string, unknown> }).userData ?? {};
   if (ud.isDrillMarker === true) return false;
+  if (ud.isDrillHole === true) return false;
   if (ud.isPanelEdgeOverlay === true) return false;
   if (ud.isEdgeOutlineOverlay === true) return false;
   if (ud.isRoomElement === true) return false;
