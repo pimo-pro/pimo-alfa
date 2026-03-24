@@ -470,6 +470,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setInternalMeasurementMode?.(settings.rulerEnabled);
     viewerApi.setUltraPerformanceModeOptions?.(settings.ultraPerformanceModeOptions);
     viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
+    viewerApi.setGlobalLightIntensity?.(settings.globalLightIntensity);
   }, [project.viewerSettings, viewerApi, photoModePanelOpen]);
 
   useEffect(() => {

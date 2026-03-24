@@ -90,8 +90,31 @@ import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
 import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
+import {
+  floorClearanceMeasurement,
+  nearestBoxGapBetweenPair,
+  nearestWallMeasurement,
+  type Aabb3,
+  type ParametricRulerHit,
+} from "./measurement/parametricDimensions";
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
 import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
+
+function aabb3FromThreeBox3(b: THREE.Box3): Aabb3 {
+  return {
+    min: { x: b.min.x, y: b.min.y, z: b.min.z },
+    max: { x: b.max.x, y: b.max.y, z: b.max.z },
+  };
+}
+
+function parametricRulerHitToThree(hit: ParametricRulerHit): RulerMeasurementHit {
+  return {
+    kind: hit.kind,
+    distanceM: hit.distanceM,
+    start: new THREE.Vector3(hit.start.x, hit.start.y, hit.start.z),
+    end: new THREE.Vector3(hit.end.x, hit.end.y, hit.end.z),
+  };
+}
 
 /**
  * ViewerCore: orquestrador do motor 3D.
@@ -176,8 +199,17 @@ export class ViewerCore {
   private materialQuality: ViewerMaterialQuality = "standard";
   private reflectionsEnabled = false;
   private reflectionFrameCounter = 0;
+  private reflectionUpdateIntervalFrames = 24;
   private photoModeEnabled = false;
   private readonly baseToneMappingExposure: number;
+  private globalLightIntensity = 1;
+  private readonly baseLightIntensities: {
+    ambient: number;
+    hemisphere: number;
+    key: number;
+    fill: number;
+    rim: number;
+  };
 
   // Lock: impede colisoes entre caixas e respeita os limites da sala.
   private lockEnabled = true;
@@ -253,6 +285,11 @@ export class ViewerCore {
     castShadow: boolean;
     shadowRadius: number;
   } | null = null;
+  private ultraRenderState: {
+    materialQuality: ViewerMaterialQuality;
+    reflectionsEnabled: boolean;
+    toneMappingExposure: number;
+  } | null = null;
   private ultraLightTarget: {
     key: number;
     fill: number;
@@ -304,6 +341,7 @@ export class ViewerCore {
     this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       userAgent ?? ""
     );
+    this.reflectionUpdateIntervalFrames = this.isMobile ? 36 : 24;
     this.container = container;
     const background = options.background ?? options.scene?.background;
     this.sceneManager = new SceneManager({
@@ -321,6 +359,13 @@ export class ViewerCore {
       ...options.lights,
       shadowMapSize,
     });
+    this.baseLightIntensities = {
+      ambient: this.lights.ambient.intensity,
+      hemisphere: this.lights.hemisphere.intensity,
+      key: this.lights.keyLight.intensity,
+      fill: this.lights.fillLight.intensity,
+      rim: this.lights.rimLight.intensity,
+    };
     this.defaultPixelRatio = this.rendererManager.renderer.getPixelRatio();
     this.baseToneMappingExposure = this.rendererManager.renderer.toneMappingExposure;
     this.selectionOutlineMaterial = new THREE.LineBasicMaterial({
@@ -601,6 +646,45 @@ export class ViewerCore {
     return this.viewerState.getCurrentMode() === "showcase";
   }
 
+  private clampGlobalLightIntensity(value: number): number {
+    return Math.min(1.4, Math.max(0.6, Number.isFinite(value) ? value : 1));
+  }
+
+  private getScaledLightProfile(profile: {
+    key: number;
+    fill: number;
+    ambient: number;
+    rim: number;
+    castShadow: boolean;
+    shadowRadius: number;
+  }) {
+    const factor = this.globalLightIntensity;
+    return {
+      ...profile,
+      key: profile.key * factor,
+      fill: profile.fill * factor,
+      ambient: profile.ambient * factor,
+      rim: profile.rim * factor,
+    };
+  }
+
+  setGlobalLightIntensity(value: number): void {
+    this.globalLightIntensity = this.clampGlobalLightIntensity(value);
+    if (this.ultraPerformanceMode && this.ultraLightTarget && this.ultraLightState) {
+      this.ultraLightTarget = this.getScaledLightProfile(this.ultraLightState);
+      return;
+    }
+    this.lights.ambient.intensity = this.baseLightIntensities.ambient * this.globalLightIntensity;
+    this.lights.hemisphere.intensity = this.baseLightIntensities.hemisphere * this.globalLightIntensity;
+    this.lights.keyLight.intensity = this.baseLightIntensities.key * this.globalLightIntensity;
+    this.lights.fillLight.intensity = this.baseLightIntensities.fill * this.globalLightIntensity;
+    this.lights.rimLight.intensity = this.baseLightIntensities.rim * this.globalLightIntensity;
+  }
+
+  getGlobalLightIntensity(): number {
+    return this.globalLightIntensity;
+  }
+
   setUltraPerformanceMode(active: boolean): void {
     if (this.ultraPerformanceMode === active) return;
     this.ultraPerformanceMode = active;
@@ -611,41 +695,55 @@ export class ViewerCore {
 
     const mode = this.ultraPerformanceModeOptions.mode;
     const isAggressive = mode === "aggressive";
-    const isFlat2 = mode === "flat2" || mode === "aggressive";
+    const isFlat2 = mode === "flat2";
 
     if (active) {
       if (!this.ultraLightState) {
         this.ultraLightState = {
-          key: this.lights.keyLight.intensity,
-          fill: this.lights.fillLight.intensity,
-          ambient: this.lights.ambient.intensity,
-          rim: this.lights.rimLight.intensity,
+          key: this.baseLightIntensities.key * (isAggressive ? 1.08 : 1.18),
+          fill: this.baseLightIntensities.fill * (isAggressive ? 1.03 : 1.12),
+          ambient: this.baseLightIntensities.ambient * (isAggressive ? 1.02 : 1.08),
+          rim: this.baseLightIntensities.rim * (isAggressive ? 0.95 : 1.2),
           castShadow: this.lights.keyLight.castShadow,
-          shadowRadius: this.lights.keyLight.shadow.radius,
+          shadowRadius: isAggressive ? 4.5 : 6.5,
         };
       }
-      this.ultraLightTarget = {
-        key: this.ultraLightState.key * (isAggressive ? 0.55 : 0.65),
-        fill: this.ultraLightState.fill * (isAggressive ? 0.45 : 0.6),
-        ambient: this.ultraLightState.ambient * (isAggressive ? 0.6 : 0.7),
-        rim: this.ultraLightState.rim * (isAggressive ? 0.25 : 0.4),
-        castShadow: isAggressive ? false : true,
-        shadowRadius: isAggressive ? 0.3 : 4,
-      };
-      const performanceRatio = isAggressive
-        ? (this.isMobile ? 0.75 : 0.9)
-        : this.isMobile
-          ? 0.9
-          : 1.1;
-      this.rendererManager.renderer.setPixelRatio(performanceRatio);
-      this.applyUltraMaterialProfile(isFlat2, isAggressive);
+      this.ultraLightTarget = this.getScaledLightProfile(this.ultraLightState);
+      this.lights.keyLight.castShadow = true;
+      this.lights.keyLight.shadow.radius = this.ultraLightTarget.shadowRadius;
+      this.reflectionUpdateIntervalFrames = this.isMobile ? 30 : 18;
+
+      if (!this.ultraRenderState) {
+        this.ultraRenderState = {
+          materialQuality: this.materialQuality,
+          reflectionsEnabled: this.reflectionsEnabled,
+          toneMappingExposure: this.rendererManager.renderer.toneMappingExposure,
+        };
+      }
+
+      this.setMaterialQuality("lacquered");
+      this.setReflectionsEnabled(true);
+      this.rendererManager.renderer.toneMappingExposure = Math.max(this.baseToneMappingExposure, 1.08);
+
+      const optimizedRatio = this.isMobile
+        ? Math.min(this.defaultPixelRatio, 0.95)
+        : Math.min(this.defaultPixelRatio, 1.2);
+      this.rendererManager.renderer.setPixelRatio(optimizedRatio);
+      this.applyUltraMaterialProfile(isFlat2, false);
     } else {
       if (this.ultraLightState) {
-        this.ultraLightTarget = { ...this.ultraLightState };
+        this.ultraLightTarget = this.getScaledLightProfile(this.ultraLightState);
       } else {
         this.ultraLightTarget = null;
       }
+      this.reflectionUpdateIntervalFrames = this.isMobile ? 36 : 24;
       this.ultraLightState = null;
+      if (this.ultraRenderState) {
+        this.setMaterialQuality(this.ultraRenderState.materialQuality);
+        this.setReflectionsEnabled(this.ultraRenderState.reflectionsEnabled);
+        this.rendererManager.renderer.toneMappingExposure = this.ultraRenderState.toneMappingExposure;
+        this.ultraRenderState = null;
+      }
       this.rendererManager.renderer.setPixelRatio(this.defaultPixelRatio);
       this.applyUltraMaterialProfile(false, false);
     }
@@ -3382,104 +3480,18 @@ export class ViewerCore {
     if (!selectedEntry) return null;
 
     selectedEntry.mesh.updateMatrixWorld(true);
-    const selectedBox = new THREE.Box3().setFromObject(selectedEntry.mesh);
-    let best: RulerMeasurementHit | null = null;
+    const selectedThree = new THREE.Box3().setFromObject(selectedEntry.mesh);
+    const selectedAabb = aabb3FromThreeBox3(selectedThree);
 
+    let best: ParametricRulerHit | null = null;
     this.boxes.forEach((entry, id) => {
       if (id === selectedBoxId) return;
       entry.mesh.updateMatrixWorld(true);
-      const otherBox = new THREE.Box3().setFromObject(entry.mesh);
-      const overlapY =
-        Math.min(selectedBox.max.y, otherBox.max.y) - Math.max(selectedBox.min.y, otherBox.min.y);
-      const overlapZ =
-        Math.min(selectedBox.max.z, otherBox.max.z) - Math.max(selectedBox.min.z, otherBox.min.z);
-      if (overlapY > 0 && overlapZ > 0) {
-        const yMid = (Math.max(selectedBox.min.y, otherBox.min.y) + Math.min(selectedBox.max.y, otherBox.max.y)) * 0.5;
-        const zMid = (Math.max(selectedBox.min.z, otherBox.min.z) + Math.min(selectedBox.max.z, otherBox.max.z)) * 0.5;
-        const y = THREE.MathUtils.clamp(yMid, selectedBox.min.y, selectedBox.max.y);
-        const z = THREE.MathUtils.clamp(zMid, selectedBox.min.z, selectedBox.max.z);
-        if (selectedBox.max.x <= otherBox.min.x) {
-          const distanceM = otherBox.min.x - selectedBox.max.x;
-          if (!best || distanceM < best.distanceM) {
-            best = {
-              kind: "box",
-              distanceM,
-              start: new THREE.Vector3(selectedBox.max.x, y, z),
-              end: new THREE.Vector3(otherBox.min.x, y, z),
-            };
-          }
-        } else if (otherBox.max.x <= selectedBox.min.x) {
-          const distanceM = selectedBox.min.x - otherBox.max.x;
-          if (!best || distanceM < best.distanceM) {
-            best = {
-              kind: "box",
-              distanceM,
-              start: new THREE.Vector3(selectedBox.min.x, y, z),
-              end: new THREE.Vector3(otherBox.max.x, y, z),
-            };
-          }
-        }
-      }
-
-      const overlapX =
-        Math.min(selectedBox.max.x, otherBox.max.x) - Math.max(selectedBox.min.x, otherBox.min.x);
-      if (overlapX > 0 && overlapZ > 0) {
-        const xMid = (Math.max(selectedBox.min.x, otherBox.min.x) + Math.min(selectedBox.max.x, otherBox.max.x)) * 0.5;
-        const zMid = (Math.max(selectedBox.min.z, otherBox.min.z) + Math.min(selectedBox.max.z, otherBox.max.z)) * 0.5;
-        const x = THREE.MathUtils.clamp(xMid, selectedBox.min.x, selectedBox.max.x);
-        const z = THREE.MathUtils.clamp(zMid, selectedBox.min.z, selectedBox.max.z);
-        if (selectedBox.max.y <= otherBox.min.y) {
-          const distanceM = otherBox.min.y - selectedBox.max.y;
-          if (!best || distanceM < best.distanceM) {
-            best = {
-              kind: "box",
-              distanceM,
-              start: new THREE.Vector3(x, selectedBox.max.y, z),
-              end: new THREE.Vector3(x, otherBox.min.y, z),
-            };
-          }
-        } else if (otherBox.max.y <= selectedBox.min.y) {
-          const distanceM = selectedBox.min.y - otherBox.max.y;
-          if (!best || distanceM < best.distanceM) {
-            best = {
-              kind: "box",
-              distanceM,
-              start: new THREE.Vector3(x, selectedBox.min.y, z),
-              end: new THREE.Vector3(x, otherBox.max.y, z),
-            };
-          }
-        }
-      }
-
-      if (overlapX > 0 && overlapY > 0) {
-        const xMid = (Math.max(selectedBox.min.x, otherBox.min.x) + Math.min(selectedBox.max.x, otherBox.max.x)) * 0.5;
-        const yMid = (Math.max(selectedBox.min.y, otherBox.min.y) + Math.min(selectedBox.max.y, otherBox.max.y)) * 0.5;
-        const x = THREE.MathUtils.clamp(xMid, selectedBox.min.x, selectedBox.max.x);
-        const y = THREE.MathUtils.clamp(yMid, selectedBox.min.y, selectedBox.max.y);
-        if (selectedBox.max.z <= otherBox.min.z) {
-          const distanceM = otherBox.min.z - selectedBox.max.z;
-          if (!best || distanceM < best.distanceM) {
-            best = {
-              kind: "box",
-              distanceM,
-              start: new THREE.Vector3(x, y, selectedBox.max.z),
-              end: new THREE.Vector3(x, y, otherBox.min.z),
-            };
-          }
-        } else if (otherBox.max.z <= selectedBox.min.z) {
-          const distanceM = selectedBox.min.z - otherBox.max.z;
-          if (!best || distanceM < best.distanceM) {
-            best = {
-              kind: "box",
-              distanceM,
-              start: new THREE.Vector3(x, y, selectedBox.min.z),
-              end: new THREE.Vector3(x, y, otherBox.max.z),
-            };
-          }
-        }
-      }
+      const otherAabb = aabb3FromThreeBox3(new THREE.Box3().setFromObject(entry.mesh));
+      const hit = nearestBoxGapBetweenPair(selectedAabb, otherAabb);
+      if (hit && (!best || hit.distanceM < best.distanceM)) best = hit;
     });
-    return best;
+    return best ? parametricRulerHitToThree(best) : null;
   }
 
   private computeDistanceToNearestWall(): RulerMeasurementHit | null {
@@ -3489,52 +3501,14 @@ export class ViewerCore {
     if (!selectedEntry || !this.roomBounds) return null;
 
     selectedEntry.mesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(selectedEntry.mesh);
-    const centerY = (box.min.y + box.max.y) * 0.5;
-    const centerX = (box.min.x + box.max.x) * 0.5;
-    const centerZ = (box.min.z + box.max.z) * 0.5;
-    const candidates: RulerMeasurementHit[] = [];
-
-    const distMinX = box.min.x - this.roomBounds.minX;
-    if (distMinX >= 0) {
-      candidates.push({
-        kind: "wall",
-        distanceM: distMinX,
-        start: new THREE.Vector3(box.min.x, centerY, centerZ),
-        end: new THREE.Vector3(this.roomBounds.minX, centerY, centerZ),
-      });
-    }
-    const distMaxX = this.roomBounds.maxX - box.max.x;
-    if (distMaxX >= 0) {
-      candidates.push({
-        kind: "wall",
-        distanceM: distMaxX,
-        start: new THREE.Vector3(box.max.x, centerY, centerZ),
-        end: new THREE.Vector3(this.roomBounds.maxX, centerY, centerZ),
-      });
-    }
-    const distMinZ = box.min.z - this.roomBounds.minZ;
-    if (distMinZ >= 0) {
-      candidates.push({
-        kind: "wall",
-        distanceM: distMinZ,
-        start: new THREE.Vector3(centerX, centerY, box.min.z),
-        end: new THREE.Vector3(centerX, centerY, this.roomBounds.minZ),
-      });
-    }
-    const distMaxZ = this.roomBounds.maxZ - box.max.z;
-    if (distMaxZ >= 0) {
-      candidates.push({
-        kind: "wall",
-        distanceM: distMaxZ,
-        start: new THREE.Vector3(centerX, centerY, box.max.z),
-        end: new THREE.Vector3(centerX, centerY, this.roomBounds.maxZ),
-      });
-    }
-
-    if (!candidates.length) return null;
-    candidates.sort((a, b) => a.distanceM - b.distanceM);
-    return candidates[0];
+    const boxAabb = aabb3FromThreeBox3(new THREE.Box3().setFromObject(selectedEntry.mesh));
+    const hit = nearestWallMeasurement(boxAabb, {
+      minX: this.roomBounds.minX,
+      maxX: this.roomBounds.maxX,
+      minZ: this.roomBounds.minZ,
+      maxZ: this.roomBounds.maxZ,
+    });
+    return hit ? parametricRulerHitToThree(hit) : null;
   }
 
   private computeDistanceToFloor(): RulerMeasurementHit | null {
@@ -3544,18 +3518,10 @@ export class ViewerCore {
     if (!selectedEntry) return null;
 
     selectedEntry.mesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(selectedEntry.mesh);
+    const boxAabb = aabb3FromThreeBox3(new THREE.Box3().setFromObject(selectedEntry.mesh));
     const floorY = this.roomBounds?.minY ?? 0;
-    const distanceM = box.min.y - floorY;
-    if (distanceM < 1e-6) return null;
-    const centerX = (box.min.x + box.max.x) * 0.5;
-    const centerZ = (box.min.z + box.max.z) * 0.5;
-    return {
-      kind: "floor",
-      distanceM,
-      start: new THREE.Vector3(centerX, box.min.y, centerZ),
-      end: new THREE.Vector3(centerX, floorY, centerZ),
-    };
+    const hit = floorClearanceMeasurement(boxAabb, floorY);
+    return hit ? parametricRulerHitToThree(hit) : null;
   }
 
   /** Atualiza o conjunto de caixas que intersectam paredes (para destaque quando lock desativado). */
@@ -3896,7 +3862,7 @@ export class ViewerCore {
 
     if (this.reflectionsEnabled) {
       this.reflectionFrameCounter += 1;
-      if (this.reflectionFrameCounter >= 24) {
+      if (this.reflectionFrameCounter >= this.reflectionUpdateIntervalFrames) {
         this.reflectionFrameCounter = 0;
         this.updateReflectionProbe(false);
       }

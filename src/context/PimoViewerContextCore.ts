@@ -50,6 +50,8 @@ export type PimoViewerApi = {
   getUltraPerformanceMode?: () => boolean;
   setUltraPerformanceModeOptions?: (_options: UltraPerformanceModeOptions) => void;
   getUltraPerformanceModeOptions?: () => UltraPerformanceModeOptions;
+  setGlobalLightIntensity?: (_value: number) => void;
+  getGlobalLightIntensity?: () => number;
   createRoom?: (_config: RoomConfig) => void;
   removeRoom?: () => void;
   setRoomBounds?: (_bounds: {

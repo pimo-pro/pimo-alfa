@@ -92,6 +92,8 @@ declare global {
       setMaterialQuality?: (quality: unknown) => void;
       getMaterialQuality?: () => unknown;
       applyMaterialPreset?: (presetId: unknown) => void;
+      setGlobalLightIntensity?: (value: number) => void;
+      getGlobalLightIntensity?: () => number;
     };
   }
 }

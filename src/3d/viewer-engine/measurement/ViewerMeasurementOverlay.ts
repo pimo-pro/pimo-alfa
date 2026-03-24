@@ -1,4 +1,14 @@
 import * as THREE from "three";
+import {
+  closestPointsBetweenSegments3D,
+  distancePointToSegment2DSquared,
+  shortestByDistanceM,
+  worldMetersToLabelMm,
+} from "./parametricDimensions";
+
+function vec3FromThree(v: THREE.Vector3): { x: number; y: number; z: number } {
+  return { x: v.x, y: v.y, z: v.z };
+}
 
 export type RulerMeasurementHit = {
   kind: "box" | "wall" | "floor";
@@ -249,12 +259,12 @@ export class ViewerMeasurementOverlay {
     if (nearestBox) candidates.push(nearestBox);
     if (nearestWall) candidates.push(nearestWall);
     if (floor) candidates.push(floor);
-    if (!candidates.length) {
+    const chosen = shortestByDistanceM(candidates);
+    if (!chosen) {
       this.clearRulerOverlay();
       return;
     }
-    candidates.sort((a, b) => a.distanceM - b.distanceM);
-    this.rulerOverlayMeasurement = candidates[0];
+    this.rulerOverlayMeasurement = chosen;
     this.drawRulerOverlay(this.rulerOverlayMeasurement);
   }
 
@@ -267,7 +277,7 @@ export class ViewerMeasurementOverlay {
     const a = this.deps.projectWorldToScreen(hit.start);
     const b = this.deps.projectWorldToScreen(hit.end);
     if (!a || !b) return;
-    const distanceMm = Math.round(hit.distanceM * 1000);
+    const distanceMm = worldMetersToLabelMm(hit.distanceM);
     const mx = (a.x + b.x) * 0.5;
     const my = (a.y + b.y) * 0.5;
     const label = `${distanceMm} mm`;
@@ -417,15 +427,15 @@ export class ViewerMeasurementOverlay {
     }
     if (state.edgeA.id === pick.id) return;
     state.edgeB = pick;
-    const distance = this.computeClosestPointsBetweenSegments(
-      state.edgeA.start,
-      state.edgeA.end,
-      state.edgeB.start,
-      state.edgeB.end
+    const distance = closestPointsBetweenSegments3D(
+      vec3FromThree(state.edgeA.start),
+      vec3FromThree(state.edgeA.end),
+      vec3FromThree(state.edgeB.start),
+      vec3FromThree(state.edgeB.end)
     );
     state.distanceM = distance.distance;
-    state.distanceStart = distance.pointA;
-    state.distanceEnd = distance.pointB;
+    state.distanceStart = new THREE.Vector3(distance.pointA.x, distance.pointA.y, distance.pointA.z);
+    state.distanceEnd = new THREE.Vector3(distance.pointB.x, distance.pointB.y, distance.pointB.z);
     this.drawInternalMeasurementOverlay();
   }
 
@@ -484,7 +494,14 @@ export class ViewerMeasurementOverlay {
       if (!screenA || !screenB) continue;
       const segScreenLen = Math.hypot(screenA.x - screenB.x, screenA.y - screenB.y);
       if (segScreenLen < ViewerMeasurementOverlay.INTERNAL_EDGE_MIN_SCREEN_PX) continue;
-      const distancePxSq = this.distancePointToSegment2DSq(cursor, screenA, screenB);
+      const distancePxSq = distancePointToSegment2DSquared(
+        cursor.x,
+        cursor.y,
+        screenA.x,
+        screenA.y,
+        screenB.x,
+        screenB.y
+      );
       if (distancePxSq >= bestDistancePxSq) continue;
       bestDistancePxSq = distancePxSq;
       bestPick = {
@@ -523,109 +540,6 @@ export class ViewerMeasurementOverlay {
     edges.dispose();
     this.internalMeasurementEdgesCache.set(key, out);
     return out;
-  }
-
-  private distancePointToSegment2DSq(
-    point: THREE.Vector2,
-    a: { x: number; y: number },
-    b: { x: number; y: number }
-  ): number {
-    const abX = b.x - a.x;
-    const abY = b.y - a.y;
-    const apX = point.x - a.x;
-    const apY = point.y - a.y;
-    const abLenSq = abX * abX + abY * abY;
-    if (abLenSq <= 1e-8) return apX * apX + apY * apY;
-    const t = THREE.MathUtils.clamp((apX * abX + apY * abY) / abLenSq, 0, 1);
-    const cx = a.x + abX * t;
-    const cy = a.y + abY * t;
-    const dx = point.x - cx;
-    const dy = point.y - cy;
-    return dx * dx + dy * dy;
-  }
-
-  private computeClosestPointsBetweenSegments(
-    p1: THREE.Vector3,
-    q1: THREE.Vector3,
-    p2: THREE.Vector3,
-    q2: THREE.Vector3
-  ): { pointA: THREE.Vector3; pointB: THREE.Vector3; distance: number } {
-    const d1 = q1.clone().sub(p1);
-    const d2 = q2.clone().sub(p2);
-    const r = p1.clone().sub(p2);
-    const a = d1.dot(d1);
-    const e = d2.dot(d2);
-    const f = d2.dot(r);
-
-    let s = 0;
-    let t = 0;
-    const eps = 1e-10;
-    if (a <= eps && e <= eps) {
-      return { pointA: p1.clone(), pointB: p2.clone(), distance: p1.distanceTo(p2) };
-    }
-    if (a <= eps) {
-      s = 0;
-      t = THREE.MathUtils.clamp(f / e, 0, 1);
-    } else {
-      const c = d1.dot(r);
-      if (e <= eps) {
-        t = 0;
-        s = THREE.MathUtils.clamp(-c / a, 0, 1);
-      } else {
-        const b = d1.dot(d2);
-        const denom = a * e - b * b;
-        if (Math.abs(denom) > eps) {
-          s = THREE.MathUtils.clamp((b * f - c * e) / denom, 0, 1);
-        } else {
-          s = 0;
-        }
-        t = (b * s + f) / e;
-        if (t < 0) {
-          t = 0;
-          s = THREE.MathUtils.clamp(-c / a, 0, 1);
-        } else if (t > 1) {
-          t = 1;
-          s = THREE.MathUtils.clamp((b - c) / a, 0, 1);
-        }
-      }
-    }
-
-    const pointA = p1.clone().add(d1.clone().multiplyScalar(s));
-    const pointB = p2.clone().add(d2.clone().multiplyScalar(t));
-    const cands: Array<{ pointA: THREE.Vector3; pointB: THREE.Vector3 }> = [
-      { pointA, pointB },
-      { pointA: p1.clone(), pointB: this.closestPointOnSegment(p1, p2, q2) },
-      { pointA: q1.clone(), pointB: this.closestPointOnSegment(q1, p2, q2) },
-      { pointA: this.closestPointOnSegment(p2, p1, q1), pointB: p2.clone() },
-      { pointA: this.closestPointOnSegment(q2, p1, q1), pointB: q2.clone() },
-    ];
-
-    let best = cands[0];
-    let bestDist = best.pointA.distanceTo(best.pointB);
-    for (let i = 1; i < cands.length; i += 1) {
-      const d = cands[i].pointA.distanceTo(cands[i].pointB);
-      if (d < bestDist) {
-        best = cands[i];
-        bestDist = d;
-      }
-    }
-    return {
-      pointA: best.pointA,
-      pointB: best.pointB,
-      distance: bestDist,
-    };
-  }
-
-  private closestPointOnSegment(
-    point: THREE.Vector3,
-    segStart: THREE.Vector3,
-    segEnd: THREE.Vector3
-  ): THREE.Vector3 {
-    const seg = segEnd.clone().sub(segStart);
-    const lenSq = seg.lengthSq();
-    if (lenSq <= 1e-10) return segStart.clone();
-    const t = THREE.MathUtils.clamp(point.clone().sub(segStart).dot(seg) / lenSq, 0, 1);
-    return segStart.clone().add(seg.multiplyScalar(t));
   }
 
   private drawInternalMeasurementOverlay(): void {
@@ -674,7 +588,7 @@ export class ViewerMeasurementOverlay {
       const a = this.deps.projectWorldToScreen(state.distanceStart);
       const b = this.deps.projectWorldToScreen(state.distanceEnd);
       if (!a || !b) return;
-      const distanceMm = Math.round(state.distanceM * 1000);
+      const distanceMm = worldMetersToLabelMm(state.distanceM);
       const label = `${distanceMm}`;
       const mx = (a.x + b.x) * 0.5;
       const my = (a.y + b.y) * 0.5;

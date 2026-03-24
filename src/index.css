@@ -991,6 +991,89 @@ body {
   justify-content: center;
 }
 
+.viewer-display-mode-button {
+  min-height: 34px;
+  border: 1px solid var(--toolbar-border);
+  transition: background 0.18s ease, transform 0.08s ease, opacity 0.2s ease;
+}
+
+.viewer-display-mode-button:hover {
+  background: var(--viewer-toolbar-hover-bg);
+}
+
+.viewer-display-mode-button:active {
+  transform: translateY(1px);
+}
+
+.viewer-display-mode-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.display-quality-panel {
+  min-width: 300px;
+}
+
+/* Botões do popover não devem herdar o tamanho fixo de ícone da .viewer-toolbar */
+.viewer-toolbar .display-quality-panel button {
+  width: auto;
+  height: auto;
+  min-width: 0;
+}
+
+.display-quality-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.display-quality-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.display-quality-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--list-item-border);
+}
+
+.display-quality-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.display-quality-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.display-quality-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.display-quality-field select:disabled,
+.display-quality-field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.viewer-display-reset-button:hover {
+  background: var(--viewer-toolbar-hover-bg);
+}
+
 .viewer-toolbar button[aria-pressed="true"],
 .tools-3d-toolbar button[aria-pressed="true"] {
   background: var(--toolbar-pressed-bg) !important;

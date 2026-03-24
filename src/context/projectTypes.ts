@@ -47,6 +47,8 @@ export type ViewerSettings = {
   /** Régua: modo de medição (UI apenas; medição a implementar). */
   rulerEnabled: boolean;
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;
+  /** Multiplicador global da iluminação (0.6 - 1.4). */
+  globalLightIntensity: number;
 };
 
 /**
@@ -233,6 +235,7 @@ export type ViewerApi = {
   /** Define a ferramenta ativa no Viewer (select = sem gizmo, move = translate, rotate = rotate). */
   setTool: (_mode: ViewerToolMode) => void;
   setUltraPerformanceMode: (_active: boolean) => void;
+  setGlobalLightIntensity?: (_value: number) => void;
   getUltraPerformanceMode: () => boolean;
   createRoom: (_config: RoomConfig) => void;
   removeRoom: () => void;
