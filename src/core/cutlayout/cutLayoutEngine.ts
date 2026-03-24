@@ -671,6 +671,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
     const origA = Number(item.dimensoes?.altura) || 0;
     const dimensionsSwapped = origL > 0 && origA > 0 && origL < origA;
     for (const h of item.drillHoles ?? []) {
+      if ((h as { holeType?: string }).holeType === "cavilha" && (h as { topDrillable?: boolean }).topDrillable === false) continue;
       let x = Number(h?.x);
       let y = Number(h?.y);
       if (dimensionsSwapped) {
