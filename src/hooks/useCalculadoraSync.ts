@@ -10,7 +10,6 @@ import { getViewerMaterialId } from "../core/materials/service";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import type { RulesConfig } from "../core/rules/rulesConfig";
-import type { ViewerDrillMarkersByPanel } from "../core/types";
 
 type ViewerApi = {
   addBox: (_id: string, _options?: BoxOptions) => boolean;
@@ -25,8 +24,7 @@ type BoxState = { index: number };
 /** Fingerprint da estrutura da caixa (dimensões, portas, gavetas, etc.) para evitar updateBox completo quando só posição/rotação mudou (ex.: após drag). */
 function getStructureFingerprint(
   wsBox: WorkspaceBox,
-  piLateralDrillCountSig?: string | null,
-  drillMarkersByPanel?: ViewerDrillMarkersByPanel
+  piLateralDrillCountSig?: string | null
 ): string {
   const d = wsBox.dimensoes;
   const doors = wsBox.doorsLayer ?? [];
@@ -86,9 +84,6 @@ function getStructureFingerprint(
     piDrillSig,
     /** Evita update só posRot quando o cutlist/view ficou com furação lateral PI atrasada (ex. box ainda não existia em project.boxes). */
     piLateralDrillCountSig: piLateralDrillCountSig ?? null,
-    drillSig: drillMarkersByPanel
-      ? `${drillMarkersByPanel.lateral_esquerda?.length ?? 0}|${drillMarkersByPanel.lateral_direita?.length ?? 0}|${drillMarkersByPanel.cima?.length ?? 0}|${drillMarkersByPanel.fundo?.length ?? 0}`
-      : null,
     doors: doorSig,
     drawers: drawerSig,
     material: wsBox.material,
@@ -281,10 +276,10 @@ export const useCalculadoraSync = (
         });
         lastStructureFingerprintRef.current.set(
           wsBox.id,
-          getStructureFingerprint(wsBox, piLateralDrillCountSig, drillMarkersByPanel)
+          getStructureFingerprint(wsBox, piLateralDrillCountSig)
         );
       } else {
-        const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig, drillMarkersByPanel);
+        const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig);
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
           if (import.meta.env.DEV && (wsBox?.doorsLayer?.length ?? 0) > 0) {
