@@ -15,6 +15,7 @@ import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../mod
 import { devLogger } from "../../utils/devLogger";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
+import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
 
 /**
@@ -210,6 +211,27 @@ export function cutlistComPrecoFromBox(
       drillHoles,
     });
   });
+
+  for (const item of items) {
+    if (item.tipo !== "lateral_esquerda" && item.tipo !== "lateral_direita") continue;
+
+    const panelLength = item.dimensoes?.altura ?? 0;
+    if (panelLength <= 0) continue;
+
+    const dowelHoles = calcLateralDowelHoles(panelLength);
+
+    const newHoles: PanelDrillHole[] = dowelHoles.map((h) => ({
+      x: h.x,
+      y: h.edge === "top" ? panelLength : 0,
+      diameter: h.diameter,
+      depth: h.depth,
+      holeType: "cavilha" as const,
+      topDrillable: false,
+      face: "B" as const,
+    }));
+
+    item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
+  }
 
   return items;
 }

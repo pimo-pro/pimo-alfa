@@ -13,6 +13,7 @@ import {
   buildCncFromCutlistItems,
   getSheetDefinitionFromSettings,
 } from "../core/cnc/cncPipeline";
+import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
 import { sanitizeZipPath } from "../utils/sanitization";
 
@@ -302,7 +303,7 @@ export function useGerarArquivoHandlers() {
       return;
     }
 
-    type StepError = { step: string; message: string; detail?: string };
+    type StepError = { step: string; message?: string; error?: string; detail?: string };
     const errors: StepError[] = [];
     const zip = new JSZip();
     const proj = pdfProject();
@@ -438,6 +439,21 @@ export function useGerarArquivoHandlers() {
       devLogger.error("Full export: CNC", err);
     }
 
+    // --- DRILL (XML): um ficheiro por lateral ---
+    try {
+      const drillFiles = buildDrillFilesForProject(allItems, {
+        projectName: project.projectName ?? "Projeto",
+        boxes: boxes ?? [],
+        rules: project.rules,
+      });
+      for (const f of drillFiles) {
+        const path = `drill/XML/${f.filenameBase}.xml`;
+        zip.file(path, f.xml);
+      }
+    } catch (err) {
+      errors.push({ step: "DRILL (XML)", error: String(err) });
+    }
+
     // --- Gerar e descarregar ZIP ---
     try {
       const blob = await zip.generateAsync({ type: "blob" });
@@ -459,7 +475,7 @@ export function useGerarArquivoHandlers() {
 
     if (errors.length > 0) {
       const first = errors[0];
-      const detail = `${first.step}: ${first.message}`;
+      const detail = `${first.step}: ${first.message ?? first.error ?? "Erro desconhecido"}`;
       devLogger.error("Erro ao gerar arquivo completo:", errors);
       showToast(`Erro ao gerar arquivo completo — ${detail}`, "error");
     } else {

@@ -122,6 +122,13 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
         }
       }
     } else {
+      if (
+        (panelType === "left" || panelType === "right") &&
+        hole.tipo === "cavilha"
+      ) {
+        continue; // furos de cavilha lateral: visualização 3D desactivada temporariamente
+      }
+
       axisInward = getInwardAxisForHole(panelType, hole).normalize();
       if (panelType === "left") {
         entry.set(hole.face === "direita" ? entryOffset : -entryOffset, b, a);

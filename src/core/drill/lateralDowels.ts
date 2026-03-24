@@ -1,0 +1,42 @@
+import type { CutListItemComPreco } from "../types";
+import {
+  DRILL_DOWEL_DIAMETER_MM,
+  DRILL_DOWEL_DEPTH_MM,
+  getDrillFrontDistance,
+  getDrillBackDistance,
+} from "./drillConfig";
+
+export type LateralDowelHole = {
+  x: number; // posição ao longo do comprimento da lateral (mm)
+  edge: "top" | "bottom"; // top = ligação a cima, bottom = ligação a fundo
+  diameter: number;
+  depth: number;
+};
+
+/**
+ * Calcula os 4 furos de cavilha para uma peça lateral.
+ * x1 = frontDistance (ex: 60mm)
+ * x2 = panelLength - backDistance (ex: panelLength - 60mm)
+ * edge "top" = borda superior (ligação a cima)
+ * edge "bottom" = borda inferior (ligação a fundo)
+ */
+export function calcLateralDowelHoles(panelLengthMm: number): LateralDowelHole[] {
+  const front = getDrillFrontDistance();
+  const back = getDrillBackDistance();
+  const x1 = front;
+  const x2 = panelLengthMm - back;
+  const holes: LateralDowelHole[] = [
+    { x: x1, edge: "top", diameter: DRILL_DOWEL_DIAMETER_MM, depth: DRILL_DOWEL_DEPTH_MM },
+    { x: x2, edge: "top", diameter: DRILL_DOWEL_DIAMETER_MM, depth: DRILL_DOWEL_DEPTH_MM },
+    { x: x1, edge: "bottom", diameter: DRILL_DOWEL_DIAMETER_MM, depth: DRILL_DOWEL_DEPTH_MM },
+    { x: x2, edge: "bottom", diameter: DRILL_DOWEL_DIAMETER_MM, depth: DRILL_DOWEL_DEPTH_MM },
+  ];
+  return holes;
+}
+
+/**
+ * Devolve true se o item é uma peça lateral (esquerda ou direita).
+ */
+export function isLateralPanel(item: CutListItemComPreco): boolean {
+  return item.tipo === "lateral_esquerda" || item.tipo === "lateral_direita";
+}
