@@ -122,27 +122,13 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
         }
       }
     } else {
-      if (
-        (panelType === "left" || panelType === "right") &&
-        hole.tipo === "cavilha" &&
-        (hole.face === "cima" || hole.face === "fundo")
-      ) {
-        const isCima = hole.face === "cima";
-        axisInward = new THREE.Vector3(0, isCima ? -1 : 1, 0);
-        entry.set(
-          panelType === "left" ? -entryOffset : entryOffset,
-          isCima ? height / 2 : -height / 2,
-          (hole.x / 1000) - width / 2
-        );
+      axisInward = getInwardAxisForHole(panelType, hole).normalize();
+      if (panelType === "left") {
+        entry.set(hole.face === "direita" ? entryOffset : -entryOffset, b, a);
+      } else if (panelType === "right") {
+        entry.set(hole.face === "esquerda" ? -entryOffset : entryOffset, b, a);
       } else {
-        axisInward = getInwardAxisForHole(panelType, hole).normalize();
-        if (panelType === "left") {
-          entry.set(hole.face === "direita" ? entryOffset : -entryOffset, b, a);
-        } else if (panelType === "right") {
-          entry.set(hole.face === "esquerda" ? -entryOffset : entryOffset, b, a);
-        } else {
-          entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
-        }
+        entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
       }
     }
     quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisInward);

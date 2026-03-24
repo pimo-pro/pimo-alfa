@@ -45,23 +45,6 @@ type BoxUpdaterDeps = {
   drawerSpecFingerprintKey: string;
 };
 
-function mapLateralCavilhaHolesForViewer(
-  holes: TechnicalDrillHole[] | undefined,
-  thicknessM: number
-): TechnicalDrillHole[] {
-  if (!holes?.length) return [];
-  const centerThicknessMm = (thicknessM * 1000) / 2;
-  return holes.map((h) => {
-    if (h.tipo !== "cavilha") return h;
-    return {
-      ...h,
-      face: h.y === 0 ? "fundo" : "cima",
-      x: h.x,
-      y: centerThicknessMm,
-    };
-  });
-}
-
 export function dimensionsEqual(a: { width: number; height: number; depth: number }, b: { width: number; height: number; depth: number }): boolean {
   return Math.abs(a.width - b.width) < 1e-9 && Math.abs(a.height - b.height) < 1e-9 && Math.abs(a.depth - b.depth) < 1e-9;
 }
@@ -115,10 +98,10 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   const applyLateralDrillHoles =
     forcePiLateralDrillGeometry || hasLateralDrillMarkers || useLateralShelfHoles;
   const lateralLeftHoles = applyLateralDrillHoles
-    ? mapLateralCavilhaHolesForViewer(drillMap.lateral_esquerda, deps.thicknessM)
+    ? drillMap.lateral_esquerda
     : [];
   const lateralRightHoles = applyLateralDrillHoles
-    ? mapLateralCavilhaHolesForViewer(drillMap.lateral_direita, deps.thicknessM)
+    ? drillMap.lateral_direita
     : [];
 
   if (!dimensionsUnchanged) {

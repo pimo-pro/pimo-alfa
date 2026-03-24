@@ -12,7 +12,6 @@ import { resolveMaterial, getDefaultOfficialMaterial } from "../materials/materi
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
-import { addMateDowelHolesToBoxItems } from "../drill/dowelJoints";
 import { devLogger } from "../../utils/devLogger";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
@@ -212,7 +211,7 @@ export function cutlistComPrecoFromBox(
     });
   });
 
-  return addMateDowelHolesToBoxItems(items);
+  return items;
 }
 
 /**

@@ -13,9 +13,8 @@ import {
   buildCncFromCutlistItems,
   getSheetDefinitionFromSettings,
 } from "../core/cnc/cncPipeline";
-import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
-import { sanitizeIndustrialToken, sanitizeZipPath } from "../utils/sanitization";
+import { sanitizeZipPath } from "../utils/sanitization";
 
 function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
   const arr = doc.output("arraybuffer");
@@ -28,18 +27,6 @@ function formatThicknessBucket(thicknessMm: number): string {
   const rounded = Math.round(thicknessMm * 100) / 100;
   const label = Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(".", "_");
   return `${label}mm`;
-}
-
-function buildIndustrialBaseName(
-  projectSlug: string,
-  thicknessMm: number,
-  pieceName: string,
-  fallbackName: string
-): string {
-  const safeSlug = sanitizeIndustrialToken(projectSlug);
-  const safePieceName = sanitizeIndustrialToken(pieceName || fallbackName);
-  const safeThickness = formatThicknessBucket(thicknessMm);
-  return `${safeSlug}_${safeThickness}_${safePieceName}`;
 }
 
 /** Adiciona um PDF ao ZIP apenas se o documento e o blob forem válidos. Retorna true se adicionou. */
@@ -449,31 +436,6 @@ export function useGerarArquivoHandlers() {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ step: "CNC (TCN)", message: msg });
       devLogger.error("Full export: CNC", err);
-    }
-
-    // --- DRILL (XML) ---
-    try {
-      const drillFiles = buildDrillFilesForProject(allItems, {
-        projectName: project.projectName ?? "Projeto",
-        boxes: project.boxes,
-        rules: project.rules,
-      });
-      for (let i = 0; i < drillFiles.length; i++) {
-        const f = drillFiles[i];
-        if (!f || typeof f.xml !== "string") {
-          errors.push({ step: "DRILL", message: `Ficheiro DRILL ${i + 1} sem conteúdo XML.` });
-          continue;
-        }
-        const thicknessBucket = formatThicknessBucket(f.thicknessMm);
-        const fallbackPiece = f.filenameBase || "peca";
-        const base = buildIndustrialBaseName(slug, f.thicknessMm, f.partName, fallbackPiece);
-        const path = sanitizeZipPath(`cnc/${thicknessBucket}/drill/${base}.xml`);
-        if (path) zip.file(path, f.xml);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ step: "DRILL (XML)", message: msg });
-      devLogger.error("Full export: DRILL", err);
     }
 
     // --- Gerar e descarregar ZIP ---

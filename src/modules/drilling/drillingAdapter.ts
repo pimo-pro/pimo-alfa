@@ -381,35 +381,6 @@ export function buildViewerDrillMarkersByPanelResult(
     if (tipo === "porta") return portaMerged;
     const item = byType.get(tipo);
     if (!item?.drillHoles?.length) return [];
-    const isLateral = tipo === "lateral_esquerda" || tipo === "lateral_direita";
-    if (isLateral) {
-      const holesToUse = onlyInternalFaceHoles(item.drillHoles);
-      const lateralFace: DrillFace = tipo === "lateral_esquerda" ? "direita" : "esquerda";
-      const mapped: TechnicalDrillHole[] = [];
-      for (const h of holesToUse) {
-        const isLateralDowel = h.holeType === "cavilha" && h.topDrillable === false;
-        if (isLateralDowel) {
-          mapped.push({
-            x: h.x,
-            y: h.y,
-            diametro: h.diameter,
-            profundidade: h.depth,
-            tipo: "cavilha",
-            face: h.y === 0 ? "fundo" : "cima",
-          });
-          continue;
-        }
-        mapped.push({
-          x: h.x,
-          y: h.y,
-          diametro: h.diameter,
-          profundidade: h.depth,
-          tipo: (h.holeType ?? "parafuso") as DrillType,
-          face: lateralFace,
-        });
-      }
-      return mapped;
-    }
     const face: DrillFace =
       tipo === "cima" ? "fundo" : tipo === "fundo" ? "cima" : tipo === "lateral_esquerda" ? "direita" : "esquerda";
     // Modelo unificado (docs/matriz-faces-A-B-FINAL.md): Viewer mostra apenas face interna (B) em todos os painéis.

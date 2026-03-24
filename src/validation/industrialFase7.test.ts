@@ -18,7 +18,6 @@ import {
   buildViewerDrillMarkersByPanelResult,
 } from "../modules/drilling/drillingAdapter";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
-import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import type { BoxModule, CutListItem } from "../core/types";
 
@@ -192,41 +191,7 @@ describe("Fase 7 — Regra de furos de prateleira por contexto do módulo", () =
   });
 });
 
-// --- 5) DRILL: apenas cavilha e topDrillable === false ---
-
-describe("Fase 7 — DRILL export (cavilha, topDrillable false)", () => {
-  it("buildDrillFilesForProject filtra cavilha e topDrillable false", () => {
-    const items: Parameters<typeof buildDrillFilesForProject>[0] = [
-      {
-        id: "p1",
-        nome: "Lateral",
-        quantidade: 1,
-        dimensoes: { largura: 400, altura: 600, profundidade: 19 },
-        espessura: 19,
-        material: "MDF",
-        tipo: "lateral_esquerda",
-        shortCode: "P1",
-        drillHoles: [
-          { x: 9.5, y: 60, diameter: 8, depth: 13, holeType: "cavilha", face: "B", topDrillable: false },
-        ],
-        precoUnitario: 0,
-        precoTotal: 0,
-        pieceNumber: 1,
-      },
-    ];
-    const project = {
-      projectName: "Test",
-      boxes: [] as BoxModule[],
-      rules: defaultRulesConfig,
-    };
-    const files = buildDrillFilesForProject(items, project);
-    expect(files.length).toBe(1);
-    expect(files[0].xml).toContain("Horizontal Hole");
-    expect(files[0].xml).toContain("KDTPanelFormat");
-  });
-});
-
-// --- 6) Viewer: overlay apenas face B (onlyInternalFaceHoles) ---
+// --- 5) Viewer: overlay apenas face B (onlyInternalFaceHoles) ---
 
 describe("Fase 7 — Viewer (overlay apenas face B)", () => {
   it("buildViewerDrillMarkersByPanelResult filtra furos face A (mostra só B)", () => {
@@ -252,7 +217,7 @@ describe("Fase 7 — Viewer (overlay apenas face B)", () => {
   });
 });
 
-// --- 7) Cutlist: cutlistFromBoxes gera peças corretas (caixa mínima) ---
+// --- 6) Cutlist: cutlistFromBoxes gera peças corretas (caixa mínima) ---
 
 describe("Fase 7 — Cutlist (cutlistFromBoxes)", () => {
   it("caixa mínima gera cima, fundo, laterais, COSTA", () => {
