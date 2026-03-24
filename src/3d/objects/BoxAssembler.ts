@@ -39,6 +39,23 @@ type BoxAssemblerDeps = {
   thicknessM: number;
 };
 
+function mapLateralCavilhaHolesForViewer(
+  holes: TechnicalDrillHole[] | undefined,
+  thicknessM: number
+): TechnicalDrillHole[] {
+  if (!holes?.length) return [];
+  const centerThicknessMm = (thicknessM * 1000) / 2;
+  return holes.map((h) => {
+    if (h.tipo !== "cavilha") return h;
+    return {
+      ...h,
+      face: h.y === 0 ? "fundo" : "cima",
+      x: h.x,
+      y: centerThicknessMm,
+    };
+  });
+}
+
 export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssemblerDeps): BoxModel {
   const opts = options ?? {};
   const { width, height, depth } = deps.resolveDimensions(opts);
@@ -86,18 +103,16 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const forcePiLateralDrillGeometry = isPiBaseCabinetId(opts.baseCabinetId);
   const applyLateralDrillHoles =
     forcePiLateralDrillGeometry || hasLateralDrillMarkers || useLateralShelfHoles;
+  const lateralLeftHoles = applyLateralDrillHoles
+    ? mapLateralCavilhaHolesForViewer(drillMap.lateral_esquerda, deps.thicknessM)
+    : [];
+  const lateralRightHoles = applyLateralDrillHoles
+    ? mapLateralCavilhaHolesForViewer(drillMap.lateral_direita, deps.thicknessM)
+    : [];
   deps.applyDrillHolesToPanelGeometry(panels.top, "top", drillMap.cima);
   deps.applyDrillHolesToPanelGeometry(panels.bottom, "bottom", drillMap.fundo);
-  deps.applyDrillHolesToPanelGeometry(
-    panels.left,
-    "left",
-    applyLateralDrillHoles ? drillMap.lateral_esquerda : []
-  );
-  deps.applyDrillHolesToPanelGeometry(
-    panels.right,
-    "right",
-    applyLateralDrillHoles ? drillMap.lateral_direita : []
-  );
+  deps.applyDrillHolesToPanelGeometry(panels.left, "left", lateralLeftHoles);
+  deps.applyDrillHolesToPanelGeometry(panels.right, "right", lateralRightHoles);
 
   if (shelfCount > 0) {
     deps.getShelfSpecs(width, height, depth, shelfCount).forEach((spec, i) => {

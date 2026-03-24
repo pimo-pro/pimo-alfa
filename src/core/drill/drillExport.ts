@@ -13,8 +13,9 @@ import { buildLocalQrPayload } from "../qrcode/qrcodeService";
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
 /**
- * Cada peça lateral tem furação dos dois lados: 2 furos na borda esquerda (Quadrant=2) e
- * 2 na borda direita (Quadrant=1), nas mesmas posições Y1. Total 4 furos, sempre de fora para dentro, X1=0.
+ * Cada furo lateral de cavilha é exportado como furo vertical.
+ * X1 segue o comprimento da peça (PanelLength).
+ * Y1 usa o sistema da máquina: topo = T/2, fundo = PanelWidth - T/2.
  */
 function buildXmlContent(
   panelLength: number,
@@ -29,22 +30,17 @@ function buildXmlContent(
   lines.push(`  <PanelThickness>${fmt(panelThickness)}</PanelThickness>`);
   lines.push("</PANEL>");
 
-  const z1 = panelThickness / 2;
   for (const h of holes) {
-    const y1 = fmt(h.x);
-    for (const quadrant of [2, 1] as const) {
-      lines.push("<CAD>");
-      lines.push("  <TypeNo>2</TypeNo>");
-      lines.push("  <TypeName>Horizontal Hole</TypeName>");
-      lines.push(`  <Quadrant>${quadrant}</Quadrant>`);
-      lines.push(`  <Z1>${fmt(z1)}</Z1>`);
-      lines.push("  <X1>0.00</X1>");
-      lines.push(`  <Y1>${y1}</Y1>`);
-      lines.push(`  <Depth>${fmt(h.depth)}</Depth>`);
-      lines.push(`  <Diameter>${fmt(h.diameter)}</Diameter>`);
-      lines.push("  <Enable>1</Enable>");
-      lines.push("</CAD>");
-    }
+    const y1 = h.y === 0 ? panelThickness / 2 : panelWidth - panelThickness / 2;
+    lines.push("<CAD>");
+    lines.push("  <TypeNo>1</TypeNo>");
+    lines.push("  <TypeName>Vertical Hole</TypeName>");
+    lines.push(`  <X1>${fmt(h.x)}</X1>`);
+    lines.push(`  <Y1>${fmt(y1)}</Y1>`);
+    lines.push(`  <Depth>${fmt(h.depth)}</Depth>`);
+    lines.push(`  <Diameter>${fmt(h.diameter)}</Diameter>`);
+    lines.push("  <Enable>1</Enable>");
+    lines.push("</CAD>");
   }
   const body = lines.join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<KDTPanelFormat>\n${body}\n</KDTPanelFormat>`;
@@ -82,11 +78,13 @@ export function buildDrillFilesForProject(
     const lateralCavilhas = (item.drillHoles ?? []).filter(
       (h) => h.holeType === "cavilha" && h.topDrillable === false
     );
-    const seenY = new Set<number>();
+    const seenXY = new Set<string>();
     const uniqueCavilhas = lateralCavilhas.filter((h) => {
-      const key = Math.round(h.x * 10) / 10;
-      if (seenY.has(key)) return false;
-      seenY.add(key);
+      const keyX = Math.round(h.x * 10) / 10;
+      const keyY = Math.round(h.y * 10) / 10;
+      const key = `${keyX}|${keyY}`;
+      if (seenXY.has(key)) return false;
+      seenXY.add(key);
       return true;
     });
     if (uniqueCavilhas.length === 0) continue;
@@ -97,9 +95,9 @@ export function buildDrillFilesForProject(
       buildLocalQrPayload(item, project, pieceNumber);
     const filenameBase = sanitizeFilename(code);
 
-    const panelLength = item.dimensoes?.largura ?? 0;
-    const panelWidth = item.dimensoes?.altura ?? 0;
-    const panelThickness = Number(item.espessura ?? item.dimensoes?.profundidade) || 0;
+    const panelLength = item.dimensoes?.altura ?? 0;
+    const panelWidth = item.dimensoes?.largura ?? 0;
+    const panelThickness = Number(item.espessura) || 0;
 
     const holes = uniqueCavilhas.map((h) => ({
       x: h.x,
