@@ -2,7 +2,8 @@ import type { CutListItemComPreco } from "../types";
 import type { BoxModule } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { buildLocalQrPayload } from "../qrcode/qrcodeService";
-import { calcLateralDowelHoles, isLateralPanel } from "./lateralDowels";
+import { isLateralPanel } from "./lateralDowels";
+import { getDrillBackDistance, getDrillFrontDistance } from "./drillConfig";
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
@@ -23,9 +24,13 @@ function sanitizeFilename(code: string): string {
 function buildXmlForLateral(
   panelLength: number,
   panelWidth: number,
-  panelThickness: number
+  panelThickness: number,
+  frontDist: number,
+  backDist: number
 ): string {
-  const holes = calcLateralDowelHoles(panelLength);
+  const z1 = fmt(panelThickness / 2);
+  const y1Front = frontDist;
+  const y1Back = panelWidth - backDist;
   const lines: string[] = [];
 
   lines.push(" <PANEL>");
@@ -34,19 +39,34 @@ function buildXmlForLateral(
   lines.push(`  <PanelThickness>${fmt(panelThickness)}</PanelThickness>`);
   lines.push(" </PANEL>");
 
-  for (const h of holes) {
-    const x1 = h.x;
-    const y1 = h.edge === "top" ? panelThickness / 2 : panelWidth - panelThickness / 2;
-
-    lines.push("<CAD>");
-    lines.push("  <TypeNo>1</TypeNo>");
-    lines.push("  <TypeName>Vertical Hole</TypeName>");
-    lines.push(`  <X1>${fmt(x1)}</X1>`);
+  // Quadrant 2 — borda esquerda (X1=0), 2 furos: frente e fundo
+  for (const y1 of [y1Front, y1Back]) {
+    lines.push(" <CAD>");
+    lines.push("  <TypeNo>2</TypeNo>");
+    lines.push("  <TypeName>Horizontal Hole</TypeName>");
+    lines.push("  <X1>0.00</X1>");
     lines.push(`  <Y1>${fmt(y1)}</Y1>`);
-    lines.push(`  <Depth>${fmt(h.depth)}</Depth>`);
-    lines.push(`  <Diameter>${fmt(h.diameter)}</Diameter>`);
+    lines.push(`  <Z1>${z1}</Z1>`);
+    lines.push("  <Quadrant>2</Quadrant>");
+    lines.push("  <Depth>30.00</Depth>");
+    lines.push("  <Diameter>10.00</Diameter>");
     lines.push("  <Enable>1</Enable>");
-    lines.push("</CAD>");
+    lines.push(" </CAD>");
+  }
+
+  // Quadrant 1 — borda direita (X1=L), 2 furos: frente e fundo
+  for (const y1 of [y1Front, y1Back]) {
+    lines.push(" <CAD>");
+    lines.push("  <TypeNo>2</TypeNo>");
+    lines.push("  <TypeName>Horizontal Hole</TypeName>");
+    lines.push(`  <X1>${fmt(panelLength)}</X1>`);
+    lines.push(`  <Y1>${fmt(y1)}</Y1>`);
+    lines.push(`  <Z1>${z1}</Z1>`);
+    lines.push("  <Quadrant>1</Quadrant>");
+    lines.push("  <Depth>30.00</Depth>");
+    lines.push("  <Diameter>10.00</Diameter>");
+    lines.push("  <Enable>1</Enable>");
+    lines.push(" </CAD>");
   }
 
   const body = lines.join("\n");
@@ -76,6 +96,8 @@ export function buildDrillFilesForProject(
   project: ProjectContext
 ): DrillExportFile[] {
   const out: DrillExportFile[] = [];
+  const frontDist = getDrillFrontDistance();
+  const backDist = getDrillBackDistance();
 
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
@@ -95,7 +117,7 @@ export function buildDrillFilesForProject(
       filenameBase,
       partName: item.nome,
       thicknessMm: panelThickness,
-      xml: buildXmlForLateral(panelLength, panelWidth, panelThickness),
+      xml: buildXmlForLateral(panelLength, panelWidth, panelThickness, frontDist, backDist),
     });
   }
 
