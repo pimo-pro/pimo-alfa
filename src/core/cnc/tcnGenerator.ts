@@ -36,12 +36,19 @@ const fmtZ = (n: number) => {
 const intVal = (n: number) => Math.round(Number.isFinite(n) ? n : 0);
 
 /** Z de segurança (acima do material). */
-const Z_SAFETY_MM = 10;
+let Z_SAFETY_MM = 10;
 const EPSILON_MM = 0.001;
 type ContourPoint = { x: number; y: number; z: number };
 
 /** Espaçamento mínimo entre peças (mm) — HARNNETT TRACK: margem para diâmetro real da ferramenta. */
-const MIN_SPACING_BETWEEN_PIECES_MM = 15;
+let MIN_SPACING_BETWEEN_PIECES_MM = 15;
+let TOOL_FEED_RATE = 8;
+let TOOL_RPM = 21000;
+let DRILL_FEED_RATE = 1000;
+let DRILL_RPM = 18000;
+let TCN_METODO: "v1_corner" | "v2_midstart" = "v1_corner";
+let CONTOUR_ENTRY: "corner" | "midside" = "corner";
+let CONTOUR_CLOSE_EXPLICIT = false;
 
 /** Diâmetro nominal ferramenta 113 (mm) — fallback quando diâmetro não está definido nas definições. */
 const TOOL_113_NOMINAL_DIAMETER_MM = 12;
@@ -115,6 +122,36 @@ function buildExternalContourPoints(
     { x: x1, y: y1, z },
     { x: x0, y: y1, z },
     { x: x0, y: y0, z },
+  ];
+  return normalizeContourWinding(points, "CW");
+}
+
+/**
+ * [v2] Contorno externo com entrada pelo MEIO da aresta inferior.
+ * Resolve instabilidade em peças pequenas (entrada pelo canto atacava pouco material).
+ * Fecho explícito: último ponto == primeiro ponto → quadrado 100% fechado.
+ */
+function buildExternalContourPointsMidStart(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  z: number,
+  toolRadiusMm: number
+): ContourPoint[] {
+  const outset = Math.max(0, Math.abs(toolRadiusMm));
+  const x0 = x - outset;
+  const y0 = y - outset;
+  const x1 = x + w + outset;
+  const y1 = y + h + outset;
+  const midX = (x0 + x1) / 2;
+  const points: ContourPoint[] = [
+    { x: midX, y: y0, z },
+    { x: x0, y: y0, z },
+    { x: x0, y: y1, z },
+    { x: x1, y: y1, z },
+    { x: x1, y: y0, z },
+    { x: midX, y: y0, z },
   ];
   return normalizeContourWinding(points, "CW");
 }
@@ -254,7 +291,7 @@ function flipContourPointsToTopRightAnchor(
 
 /** Bloco W#89 (início de operação de corte) — HARNNETT: #40=1 corte externo, #205=113 ferramenta. */
 function buildToolBlock(x: number, y: number, zSafe: number): string {
-  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
+  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=${TOOL_RPM} #40=1 }W`;
 }
 
 /**
@@ -270,20 +307,22 @@ function buildToolBlock(x: number, y: number, zSafe: number): string {
  * - #2002: rotação (RPM, ex: 18000)
  */
 function buildW81Drill(x: number, y: number, zDepth: number, diameter: number): string {
-  const feedRate = 1000;
-  const rpm = 18000;
-  return `W#81{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmtZ(zDepth)} #1002=${fmt(diameter)} #2008=${feedRate} #2002=${rpm} #201=1 #203=1 #1001=0 }W`;
+  return `W#81{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmtZ(zDepth)} #1002=${fmt(diameter)} #2008=${DRILL_FEED_RATE} #2002=${DRILL_RPM} #201=1 #203=1 #1001=0 }W`;
 }
 
 /**
  * W#2201 no formato ALBATROS/EDICAD para contorno de corte.
  */
-function buildW2201(points: Array<{ x: number; y: number; z: number }>, zCut: number): string {
+function buildW2201(
+  points: Array<{ x: number; y: number; z: number }>,
+  zCut: number,
+  zSafe: number
+): string {
   const lastIndex = points.length - 1;
   return points
     .map((p, i) => {
-      const z = i === lastIndex ? 10 : zCut;
-      const startFlag = i === 0 ? " #2008=8" : "";
+      const z = i === lastIndex ? zSafe : zCut;
+      const startFlag = i === 0 ? ` #2008=${TOOL_FEED_RATE}` : "";
       return `W#2201{ ::WTl #8015=0 #1=${fmt(p.x)} #2=${fmt(p.y)} #3=${fmtZ(z)}${startFlag} }W`;
     })
     .join("\n");
@@ -347,6 +386,17 @@ export function generateTcnForPanel(
   const lines: string[] = [];
   lines.push(HEADER);
 
+  const settings = getSettings();
+  Z_SAFETY_MM = settings?.cnc?.zSafetyMm ?? 10;
+  MIN_SPACING_BETWEEN_PIECES_MM = settings?.cnc?.minSpacingMm ?? 15;
+  TOOL_FEED_RATE = settings?.cnc?.toolFeedRate ?? 8;
+  TOOL_RPM = settings?.cnc?.toolRpm ?? 21000;
+  DRILL_FEED_RATE = settings?.cnc?.drillFeedRate ?? 1000;
+  DRILL_RPM = settings?.cnc?.drillRpm ?? 18000;
+  TCN_METODO = settings?.cnc?.tcnMetodo ?? "v1_corner";
+  CONTOUR_ENTRY = settings?.cnc?.contourEntryMode ?? "corner";
+  CONTOUR_CLOSE_EXPLICIT = settings?.cnc?.contourCloseExplicit ?? false;
+
   const thicknessMm = sheetResult.sheet.espessura_mm;
   const zCut = -thicknessMm;
   const zSafe = Z_SAFETY_MM; // Z de segurança no W#89 (acima do material)
@@ -368,8 +418,7 @@ export function generateTcnForPanel(
   lines.push("OPTI{");
   lines.push("}OPTI");
 
-  const runtimeSettings = getSettings();
-  const toolDiameterMm = getContourToolDiameterMm(runtimeSettings);
+  const toolDiameterMm = getContourToolDiameterMm(settings);
   const toolRadiusMm = toolDiameterMm / 2;
 
   const placements = sheetResult.placements.filter((pl) =>
@@ -416,15 +465,23 @@ export function generateTcnForPanel(
     const h = pl.altura_mm;
     const x = pl.x_mm;
     const y = pl.y_mm;
-    const pointsLayout = mapContourToLayoutCoordinates(
-      buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm),
-      sheetWidthMm,
-      "CW"
-    );
+    // Seleção do método de contorno conforme definições
+    const useV2 = TCN_METODO === "v2_midstart" || CONTOUR_ENTRY === "midside";
+    const contour = useV2
+      ? buildExternalContourPointsMidStart(x, y, w, h, zCut, toolRadiusMm)
+      : buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm);
+    if (CONTOUR_CLOSE_EXPLICIT && contour.length > 0) {
+      const first = contour[0];
+      const last = contour[contour.length - 1];
+      if (first.x !== last.x || first.y !== last.y) {
+        contour.push({ ...first });
+      }
+    }
+    const pointsLayout = mapContourToLayoutCoordinates(contour, sheetWidthMm, "CW");
     const points = flipContourPointsToTopRightAnchor(pointsLayout, maxW, maxH, true);
     const firstPoint = points[0];
     sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zSafe));
-    sideInnerLines.push(buildW2201(points, zCut));
+    sideInnerLines.push(buildW2201(points, zCut, Z_SAFETY_MM));
     // Contornos internos (rasgos, recortes): compensação para DENTRO (-raio)
     const innerContours = pl.innerContours;
     if (innerContours?.length) {
@@ -445,7 +502,7 @@ export function generateTcnForPanel(
           const innerPoints = flipContourPointsToTopRightAnchor(innerPointsLayout, maxW, maxH, false);
           const first = innerPoints[0];
           sideInnerLines.push(buildToolBlock(first.x, first.y, zSafe));
-          sideInnerLines.push(buildW2201(innerPoints, zCut));
+          sideInnerLines.push(buildW2201(innerPoints, zCut, Z_SAFETY_MM));
         }
       }
     }

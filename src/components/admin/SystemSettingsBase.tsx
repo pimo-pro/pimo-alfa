@@ -70,6 +70,36 @@ export default function SystemSettingsBase() {
     }
   };
 
+  const exportTcnProfile = () => {
+    const payload = {
+      version: "1.0",
+      date: new Date().toISOString(),
+      description: "Perfil de definições TCN exportado do pimo-v3",
+      settings: {
+        cnc: {
+          tcnMetodo: draft.cnc.tcnMetodo,
+          zSafetyMm: draft.cnc.zSafetyMm,
+          minSpacingMm: draft.cnc.minSpacingMm,
+          diametroFresaContornoMm: draft.cnc.diametroFresaContornoMm,
+          contourEntryMode: draft.cnc.contourEntryMode,
+          contourCloseExplicit: draft.cnc.contourCloseExplicit,
+          toolFeedRate: draft.cnc.toolFeedRate,
+          toolRpm: draft.cnc.toolRpm,
+          drillFeedRate: draft.cnc.drillFeedRate,
+          drillRpm: draft.cnc.drillRpm,
+        },
+      },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tcn-profile-${stamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={{ ...adminPageShellStyle, maxWidth: 980 }}>
       <AdminPageHeader
@@ -569,8 +599,53 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="CNC (offsets e tolerâncias)" description="Parâmetros padrão de corte, offset e tolerância para operação CNC. Compensação de ferramenta é feita no CAM (contorno já compensado no TCN); a máquina não usa G41/G42.">
+      <Panel title="Fabricação / TCN" description="Parâmetros de geração TCN para contorno, segurança e velocidades de corte/furação.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Método de geração do contorno</span>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+              <input
+                type="radio"
+                name="tcn-metodo"
+                checked={draft.cnc.tcnMetodo === "v1_corner"}
+                onChange={() =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    cnc: { ...prev.cnc, tcnMetodo: "v1_corner", contourEntryMode: "corner" },
+                  }))
+                }
+              />
+              v1 - Entrada pelo canto (original)
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+              <input
+                type="radio"
+                name="tcn-metodo"
+                checked={draft.cnc.tcnMetodo === "v2_midstart"}
+                onChange={() =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    cnc: { ...prev.cnc, tcnMetodo: "v2_midstart", contourEntryMode: "midside" },
+                  }))
+                }
+              />
+              v2 - Entrada pelo meio da aresta (recomendado)
+            </label>
+          </div>
+          <NumberField
+            label="Z de segurança (mm)"
+            value={draft.cnc.zSafetyMm}
+            step={0.1}
+            min={0}
+            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, zSafetyMm: value } }))}
+          />
+          <NumberField
+            label="Espaçamento mínimo entre peças (mm)"
+            value={draft.cnc.minSpacingMm}
+            step={0.5}
+            min={0}
+            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, minSpacingMm: value } }))}
+          />
           <NumberField
             label="Profundidade corte padrão (mm)"
             value={draft.cnc.profundidadeCortePadraoMm}
@@ -596,6 +671,62 @@ export default function SystemSettingsBase() {
             step={0.01}
             onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toleranciaPosicionamentoMm: value } }))}
           />
+          <details style={{ gridColumn: "1 / -1" }}>
+            <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--text-muted)" }}>
+              Parâmetros avançados (expandir)
+            </summary>
+            <div
+              className="form-grid"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 10 }}
+            >
+              <NumberField
+                label="Feed rate corte (#2008)"
+                value={draft.cnc.toolFeedRate}
+                step={1}
+                min={1}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toolFeedRate: value } }))}
+              />
+              <NumberField
+                label="RPM corte (#2002)"
+                value={draft.cnc.toolRpm}
+                step={100}
+                min={1000}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toolRpm: value } }))}
+              />
+              <NumberField
+                label="Feed rate furação"
+                value={draft.cnc.drillFeedRate}
+                step={10}
+                min={1}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, drillFeedRate: value } }))}
+              />
+              <NumberField
+                label="RPM furação"
+                value={draft.cnc.drillRpm}
+                step={100}
+                min={1000}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, drillRpm: value } }))}
+              />
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={draft.cnc.contourCloseExplicit}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, contourCloseExplicit: e.target.checked } }))
+                  }
+                />
+                Fechar contorno explicitamente
+              </label>
+            </div>
+          </details>
+          <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
+            <button type="button" className="button button-primary" onClick={applyAndSave}>
+              Guardar definições
+            </button>
+            <button type="button" className="button button-ghost" onClick={exportTcnProfile}>
+              Exportar perfil JSON
+            </button>
+          </div>
         </div>
       </Panel>
 
@@ -966,6 +1097,122 @@ export default function SystemSettingsBase() {
               </label>
             </>
           )}
+        </div>
+      </Panel>
+      <Panel
+        title="Fabricação / TCN"
+        description="Parâmetros de geração do ficheiro TCN para a máquina CNC. Alterações aplicam-se na próxima exportação."
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 8 }}>
+              Método de geração do contorno
+            </span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
+                  value="v1_corner"
+                  checked={draft.cnc.tcnMetodo === "v1_corner"}
+                  onChange={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      cnc: { ...prev.cnc, tcnMetodo: "v1_corner", contourEntryMode: "corner" },
+                    }))
+                  }
+                />
+                <span><strong>v1</strong> — Entrada pelo canto (método original)</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
+                  value="v2_midstart"
+                  checked={draft.cnc.tcnMetodo === "v2_midstart"}
+                  onChange={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      cnc: { ...prev.cnc, tcnMetodo: "v2_midstart", contourEntryMode: "midside" },
+                    }))
+                  }
+                />
+                <span><strong>v2</strong> — Entrada pelo meio da aresta (recomendado)</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+            <NumberField
+              label="Z de segurança (mm)"
+              value={draft.cnc.zSafetyMm ?? 10}
+              min={5} max={50} step={1}
+              onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, zSafetyMm: value } }))}
+            />
+            <NumberField
+              label="Espaçamento mínimo entre peças (mm)"
+              value={draft.cnc.minSpacingMm ?? 15}
+              min={5} max={100} step={1}
+              onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, minSpacingMm: value } }))}
+            />
+            <NumberField
+              label="Diâmetro fresa contorno (mm)"
+              value={draft.cnc.diametroFresaContornoMm ?? 12}
+              min={1} max={50} step={0.5}
+              onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, diametroFresaContornoMm: value } }))}
+            />
+          </div>
+
+          <details>
+            <summary style={{ fontSize: 12, color: "var(--text-muted)", cursor: "pointer", userSelect: "none" }}>
+              Parâmetros avançados (feed rate, RPM, fecho de contorno)
+            </summary>
+            <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 12 }}>
+              <NumberField
+                label="Feed rate corte — #2008"
+                value={draft.cnc.toolFeedRate ?? 8}
+                min={1} max={100} step={1}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toolFeedRate: value } }))}
+              />
+              <NumberField
+                label="RPM corte — #2002"
+                value={draft.cnc.toolRpm ?? 21000}
+                min={1000} max={30000} step={500}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toolRpm: value } }))}
+              />
+              <NumberField
+                label="Feed rate furação (mm/min)"
+                value={draft.cnc.drillFeedRate ?? 1000}
+                min={100} max={5000} step={100}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, drillFeedRate: value } }))}
+              />
+              <NumberField
+                label="RPM furação"
+                value={draft.cnc.drillRpm ?? 18000}
+                min={1000} max={30000} step={500}
+                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, drillRpm: value } }))}
+              />
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={draft.cnc.contourCloseExplicit ?? false}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, contourCloseExplicit: e.target.checked } }))
+                  }
+                />
+                Fechar contorno explicitamente
+              </label>
+            </div>
+          </details>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="button button-primary" onClick={applyAndSave}>
+              Guardar definições
+            </button>
+            <button type="button" className="button button-ghost" onClick={exportTcnProfile}>
+              Exportar perfil JSON
+            </button>
+          </div>
         </div>
       </Panel>
     </div>
