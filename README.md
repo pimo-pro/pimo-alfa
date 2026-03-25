@@ -1,3 +1,66 @@
+# PIMO v3 — Deploy Frontend (Hostinger) + Backend (Render)
+
+Este repositório contém:
+
+- **Frontend** (Vite/React) na raiz
+- **Backend Node.js** em `backend/` (Express) para `/api/projects` e `/api/materials`
+
+## Publicar o backend no Render
+
+### Opção A) Blueprint com `render.yaml`
+
+O ficheiro `backend/render.yaml` já está preparado com:
+
+- `rootDir: backend`
+- `buildCommand: npm install && npm run build`
+- `startCommand: npm run start`
+- env vars: `PORT`, `PIMO_PROJECTS_DATA_DIR`
+
+No Render:
+
+- Crie um **New → Blueprint**
+- Selecione este repositório
+- Confirme que o serviço chama **`pimo-backend`**
+
+### Variáveis de ambiente (Render)
+
+- **`PORT`**: o Render injeta automaticamente; pode deixar como está.
+- **`PIMO_PROJECTS_DATA_DIR`**: diretório para gravar os projetos em JSON.
+  - No Render, use um caminho persistente (ex.: `/var/data/pimo/projects`) e conecte um **Disk** ao serviço.
+
+## Configurar o frontend para usar o backend do Render
+
+O frontend lê a variável `VITE_API_URL` para chamar a API:
+
+- projetos: `VITE_API_URL + /api/projects/index.php`
+- materiais: `VITE_API_URL + /api/materials`
+
+### Em produção (Hostinger)
+
+No build do frontend, defina:
+
+- **`VITE_API_URL=https://pimo-backend.onrender.com`**
+
+No repositório, existe um `.env` para desenvolvimento e um `.env.example` como referência.
+
+## Testar o fluxo completo
+
+1. **Backend**: abra `GET /health` no serviço do Render para confirmar que está online.
+2. **Frontend**: abra o site em `pimo.pro`.
+3. DevTools → Network:
+   - Abrir modal de materiais → deve fazer `GET {VITE_API_URL}/api/materials`
+   - Clicar **“Gerar e Salvar Design”** → deve fazer `POST {VITE_API_URL}/api/projects/index.php`
+4. Testar também:
+   - listar projetos → `GET .../api/projects/index.php?scope=mine&ownerId=...`
+   - carregar projeto → `GET ...?action=load&id=...`
+   - renomear → `PUT ...?action=update&id=...`
+   - apagar → `DELETE ...?action=delete&id=...`
+
+## Publicar o frontend no Hostinger
+
+- Defina `VITE_API_URL` no ambiente de build (ou no `.env` antes de correr `npm run build`).
+- Faça upload de `dist/` para o `public_html` do domínio.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

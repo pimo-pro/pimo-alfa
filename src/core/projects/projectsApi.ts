@@ -5,6 +5,7 @@ import type {
   SavedProjectMeta,
   SavedProjectRecord,
 } from "./types";
+import { buildApiUrl } from "../../config/api";
 
 /** Caminho da API no mesmo host da app (evita mistura de subdomínios e facilita staging). */
 const PROJECTS_API_PATH = "/api/projects/index.php";
@@ -15,14 +16,7 @@ const PROJECTS_API_PATH = "/api/projects/index.php";
  * desativar POST/PUT/DELETE enquanto GET (outros módulos) continua a aparecer no Network.
  */
 export function resolveProjectsApiBase(): string {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return new URL(PROJECTS_API_PATH, window.location.origin).href;
-  }
-  return `https://pimo.pro${PROJECTS_API_PATH}`;
-}
-
-function isDevelopmentRuntime(): boolean {
-  return Boolean(import.meta.env?.DEV);
+  return buildApiUrl(PROJECTS_API_PATH);
 }
 
 export function toJson(response: Response): Promise<unknown> {
@@ -46,7 +40,7 @@ export async function remoteSaveProject(
   request: SaveProjectRequest,
   deps: ProjectsApiDeps
 ): Promise<SavedProjectMeta | null> {
-  if (isDevelopmentRuntime()) return null;
+  // Em DEV também pode salvar remoto (Render), então não bloquear aqui.
   const projectData = deps.buildPimoProjectDataFromRequest(request);
   const response = await fetch(buildProjectsUrl(), {
     method: "POST",
@@ -71,7 +65,7 @@ export async function remoteListProjects(
   ownerId: string | undefined,
   deps: ProjectsApiDeps
 ): Promise<SavedProjectMeta[]> {
-  if (isDevelopmentRuntime()) return [];
+  // Em DEV também pode listar remoto (Render), então não bloquear aqui.
   const params = new URLSearchParams({ scope });
   if (ownerId) params.set("ownerId", ownerId);
   const response = await fetch(buildProjectsUrl(params));
@@ -115,7 +109,7 @@ export async function remoteLoadProjectRecord(
   id: string,
   deps: ProjectsApiDeps
 ): Promise<SavedProjectRecord | null> {
-  if (isDevelopmentRuntime()) return null;
+  // Em DEV também pode carregar remoto (Render), então não bloquear aqui.
   const params = new URLSearchParams({ action: "load", id });
   const response = await fetch(buildProjectsUrl(params));
   if (!response.ok) return null;
@@ -135,7 +129,7 @@ export async function remoteRenameProject(
   id: string,
   body: RenameProjectRequest
 ): Promise<boolean> {
-  if (isDevelopmentRuntime()) return false;
+  // Em DEV também pode renomear remoto (Render), então não bloquear aqui.
   const params = new URLSearchParams({ action: "update", id });
   const response = await fetch(buildProjectsUrl(params), {
     method: "PUT",
@@ -146,7 +140,7 @@ export async function remoteRenameProject(
 }
 
 export async function remoteDeleteProject(id: string): Promise<boolean> {
-  if (isDevelopmentRuntime()) return false;
+  // Em DEV também pode apagar remoto (Render), então não bloquear aqui.
   const params = new URLSearchParams({ action: "delete", id });
   const response = await fetch(buildProjectsUrl(params), { method: "DELETE" });
   return response.ok;

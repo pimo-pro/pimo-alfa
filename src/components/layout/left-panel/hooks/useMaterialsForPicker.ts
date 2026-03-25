@@ -5,6 +5,7 @@ import {
   normalizeApiMaterial,
   type MaterialOption,
 } from "../materialOptions";
+import { buildApiUrl } from "../../../../config/api";
 
 export function useMaterialsForPicker() {
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
@@ -20,7 +21,7 @@ export function useMaterialsForPicker() {
 
       // 1) API real (online)
       try {
-        const response = await fetch("/api/materials", { method: "GET" });
+        const response = await fetch(buildApiUrl("/api/materials"), { method: "GET" });
         if (response.ok) {
           const payload = (await response.json()) as unknown;
           const rows = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).materials)

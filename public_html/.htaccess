@@ -1,0 +1,15 @@
+# PIMO — reescrita interna da API de projetos para o caminho real no servidor.
+# O browser continua a ver apenas /api/projects/... (sem [R], logo sem redirect).
+#
+# Se o Apache não aplicar caminhos absolutos do SO (alguns mod_rewrite tratam-nos como URL-path),
+# use uma ligação simbólica no DocumentRoot do domínio, por exemplo:
+#   ln -s /home/u100505900/public_html/api/projects /caminho/do/teu/public_html/api/projects
+# e remova ou comente a RewriteRule abaixo.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Mapeamento interno: /api/projects/<ficheiro> → backend no disco
+  RewriteRule ^api/projects/(.*)$ /home/u100505900/public_html/api/projects/$1 [L]
+</IfModule>
