@@ -63,7 +63,9 @@ console.log(`Nova versao: ${nextVersion}`);
 console.log(`updatedAt: ${nextData.updatedAt}`);
 
 runStep("Executando build...", "npm run build");
-runStep("Adicionando arquivos ao git...", "git add .");
+// Evitar adicionar repositórios embutidos (ex.: backend/ tem o seu próprio .git)
+// para não criar gitlinks/submodules acidentais no repo principal.
+runStep("Adicionando arquivos ao git...", "git add . \":(exclude)backend\"");
 runStep("Criando commit...", `git commit -m "Publicação automática"`);
 const localTagRef = runOutput(`git rev-parse -q --verify refs/tags/${nextVersion}`);
 if (!localTagRef) {
