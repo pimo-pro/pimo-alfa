@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { applyThemeVariables } from "../theme/theme";
 
 const STORAGE_KEY = "pimo-theme";
 export type ThemeId = "dark" | "light";
@@ -29,6 +30,7 @@ export function applyThemeToDocument(theme: ThemeId) {
   if (document.documentElement.classList.contains(nextClass)) return;
   document.documentElement.classList.remove("theme-dark", "theme-light");
   document.documentElement.classList.add(nextClass);
+  applyThemeVariables();
 }
 
 type ThemeContextValue = {
@@ -47,6 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!document.documentElement.classList.contains(expectedClass)) {
       applyThemeToDocument(theme);
     }
+    applyThemeVariables();
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {

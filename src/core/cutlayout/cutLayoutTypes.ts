@@ -26,6 +26,15 @@ export type CutPiece = {
   partName: string;
   materialId?: string;
   materialName?: string;
+  /** Alias explícito para manter semântica industrial após nesting/meta. */
+  drillHoles?: Array<{
+    x: number;
+    y: number;
+    diameter: number;
+    depth: number;
+    holeType?: string;
+    topDrillable?: boolean;
+  }>;
   holes?: Array<{
     x: number;
     y: number;
@@ -46,6 +55,8 @@ export type CutPiece = {
   pieceNumber?: number;
   /** Código curto legível para fábrica (ex.: PRJBXPO1). */
   shortCode?: string;
+  /** Metadados industriais adicionais (offsets, flags, regras aplicadas etc.). */
+  metadata?: Record<string, unknown>;
 };
 
 export type CutPlacement = {
@@ -59,6 +70,15 @@ export type CutPlacement = {
   partName: string;
   materialId?: string;
   materialName?: string;
+  /** Alias explícito para manter semântica industrial após nesting/meta. */
+  drillHoles?: Array<{
+    x: number;
+    y: number;
+    diameter: number;
+    depth: number;
+    holeType?: string;
+    topDrillable?: boolean;
+  }>;
   holes?: Array<{
     x: number;
     y: number;
@@ -71,6 +91,8 @@ export type CutPlacement = {
   pieceNumber?: number;
   /** Código curto legível para fábrica. */
   shortCode?: string;
+  /** Metadados industriais adicionais (offsets, flags, regras aplicadas etc.). */
+  metadata?: Record<string, unknown>;
   /** Contornos internos (rasgos, recortes) — coordenadas relativas à peça (x_mm, y_mm). No TCN são compensados para dentro (-raio da fresa). */
   innerContours?: Array<{ x_mm: number; y_mm: number; largura_mm: number; altura_mm: number }>;
 };
@@ -161,6 +183,15 @@ export type CutLayoutMetaHeuristicsOptions = {
 
 export type CutLayoutScoreModel = "legacy" | "v32";
 
+export type CutLayoutProgressEvent = {
+  phase: "prepare" | "trial" | "meta" | "finalize";
+  groupIndex: number;
+  groupCount: number;
+  stepIndex: number;
+  stepCount: number;
+  percent: number;
+};
+
 export type CutLayoutEngineOptions = {
   sheetLargura_mm?: number;
   sheetAltura_mm?: number;
@@ -175,4 +206,8 @@ export type CutLayoutEngineOptions = {
   useMetaHeuristics?: boolean;
   metaHeuristics?: CutLayoutMetaHeuristicsOptions;
   scoreModel?: CutLayoutScoreModel;
+  /** Quando true, normaliza placements para origem top-right após o packing. */
+  originTopRight?: boolean;
+  onProgress?: (_event: CutLayoutProgressEvent) => void;
+  shouldAbort?: () => boolean;
 };

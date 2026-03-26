@@ -138,6 +138,7 @@ export type CutlistItemForPieces = {
   materialId?: string;
   /** Furos reais do painel (fonte única para Layout PRO e TCN). */
   drillHoles?: Array<{ x: number; y: number; diameter: number; depth: number; holeType?: string; face?: string; topDrillable?: boolean }>;
+  metadata?: Record<string, unknown>;
   sheetWidthMm?: number;
   sheetHeightMm?: number;
   sheetThicknessMm?: number;
@@ -702,6 +703,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
         partName: item.nome,
         materialId: item.materialId ?? item.material,
         materialName: item.material,
+        drillHoles: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         holes: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         grainDirection,
         visualMaterial: item.visualMaterial,
@@ -709,6 +711,7 @@ export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
         uvRotationOverride: item.uvRotationOverride,
         pieceNumber: itemWithMeta.pieceNumber,
         shortCode: itemWithMeta.shortCode,
+        metadata: (item as { metadata?: Record<string, unknown> }).metadata,
       });
     }
     return pieces;

@@ -62,7 +62,14 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       offsetFerramentaPadraoMm: clamp(toNumber(merged.cnc.offsetFerramentaPadraoMm, settingsDefaults.cnc.offsetFerramentaPadraoMm), -50, 50),
       toleranciaPosicionamentoMm: clamp(toNumber(merged.cnc.toleranciaPosicionamentoMm, settingsDefaults.cnc.toleranciaPosicionamentoMm), 0, 10),
       diametroFresaContornoMm: clamp(toNumber(merged.cnc.diametroFresaContornoMm, settingsDefaults.cnc.diametroFresaContornoMm), 0, 30),
-      tcnMetodo: merged.cnc.tcnMetodo === "v2_midstart" ? "v2_midstart" : "v1_corner",
+      tcnMetodo:
+        merged.cnc.tcnMetodo === "v2_ramp" ||
+        merged.cnc.tcnMetodo === "v3_ramp_noflip" ||
+        merged.cnc.tcnMetodo === "v4_corner_noflip" ||
+        merged.cnc.tcnMetodo === "v5_ramp_noanchor" ||
+        merged.cnc.tcnMetodo === "v6_ramp"
+          ? merged.cnc.tcnMetodo
+          : "v1_corner",
       zSafetyMm: clamp(toNumber(merged.cnc.zSafetyMm, settingsDefaults.cnc.zSafetyMm), 0, 100),
       minSpacingMm: clamp(toNumber(merged.cnc.minSpacingMm, settingsDefaults.cnc.minSpacingMm), 0, 200),
       contourEntryMode: merged.cnc.contourEntryMode === "midside" ? "midside" : "corner",
@@ -71,6 +78,8 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       toolRpm: clamp(toNumber(merged.cnc.toolRpm, settingsDefaults.cnc.toolRpm), 1000, 50000),
       drillFeedRate: clamp(toNumber(merged.cnc.drillFeedRate, settingsDefaults.cnc.drillFeedRate), 1, 20000),
       drillRpm: clamp(toNumber(merged.cnc.drillRpm, settingsDefaults.cnc.drillRpm), 1000, 50000),
+      sheetMarginMm: clamp(toNumber(merged.cnc.sheetMarginMm, settingsDefaults.cnc.sheetMarginMm), 0, 100),
+      rampDistanceMm: clamp(toNumber(merged.cnc.rampDistanceMm, settingsDefaults.cnc.rampDistanceMm), 5, 100),
     },
     nesting: {
       kerfPadraoMm: clamp(toNumber(merged.nesting.kerfPadraoMm, settingsDefaults.nesting.kerfPadraoMm), 0, 20),

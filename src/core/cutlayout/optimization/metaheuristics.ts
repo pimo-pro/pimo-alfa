@@ -187,6 +187,11 @@ export function applyLnsRepack(
     partName: p.partName,
     materialId: p.materialId,
     materialName: p.materialName,
+    drillHoles: p.drillHoles ?? p.holes,
+    holes: p.holes ?? p.drillHoles,
+    pieceNumber: p.pieceNumber,
+    shortCode: p.shortCode,
+    metadata: p.metadata,
   }));
 
   const candidateTrials: TrialConfig[] = trialPool && trialPool.length > 0 ? trialPool : [

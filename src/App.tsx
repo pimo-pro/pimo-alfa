@@ -15,12 +15,27 @@ import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
 import Ajuda from "./pages/Ajuda";
 import UserProjectsPage from "./pages/UserProjectsPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import MePage from "./pages/MePage";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
+import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ManageUsersPage from "./pages/admin/ManageUsersPage";
+import ManageRolesPage from "./pages/admin/ManageRolesPage";
+import ManagePermissionsPage from "./pages/admin/ManagePermissionsPage";
+import { useAuth } from "./auth/useAuth";
+import "./components/ui/ui.css";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -29,7 +44,7 @@ const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
 
-export default function App() {
+function LegacyApp() {
   const [leftOpen, setLeftOpen] = useState(true);
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
@@ -177,7 +192,6 @@ export default function App() {
   };
 
   return (
-    <ThemeProvider>
     <ProjectProvider>
       <SettingsProvider>
         <MaterialProvider>
@@ -315,6 +329,86 @@ export default function App() {
         </MaterialProvider>
       </SettingsProvider>
     </ProjectProvider>
+  );
+}
+
+function ProtectedLayout() {
+  return (
+    <ProtectedRoute>
+      <Navbar />
+      <Outlet />
+    </ProtectedRoute>
+  );
+}
+
+function AppChromeLayout() {
+  return (
+    <div className="ui-app-frame">
+      <Header
+        onTogglePainelReferencia={() => {}}
+        painelReferenciaOpen={false}
+        onToggleProjectProgress={() => {}}
+        projectProgressOpen={false}
+      />
+      <main className="ui-app-frame__content">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function AdminRoute({ children }: { children: ReactElement }) {
+  const { user } = useAuth();
+  const canAccess = user?.role === "admin" || user?.role === "ultra+";
+  if (!canAccess) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <Routes>
+        <Route element={<AppChromeLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/me" element={<MePage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <ManageUsersPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/roles"
+              element={
+                <AdminRoute>
+                  <ManageRolesPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/permissions"
+              element={
+                <AdminRoute>
+                  <ManagePermissionsPage />
+                </AdminRoute>
+              }
+            />
+          </Route>
+        </Route>
+        <Route path="/" element={<LegacyApp />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </ThemeProvider>
   );
 }

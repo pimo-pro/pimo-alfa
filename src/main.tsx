@@ -1,8 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from "react-router-dom";
 import { applyThemeToDocument, readStoredTheme } from './context/ThemeContext'
 import './index.css'
 import App from './App.tsx'
+import { AuthProvider } from "./auth/AuthProvider";
 
 (window as Window & { PIMO_VERSION?: string }).PIMO_VERSION = __PIMO_VERSION__;
 
@@ -10,6 +12,10 @@ applyThemeToDocument(readStoredTheme());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
   </StrictMode>,
 )

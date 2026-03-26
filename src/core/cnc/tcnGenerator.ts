@@ -1,166 +1,257 @@
 /**
- * Geração de ficheiro TCN (Nesting) — compatível HARNNETT TRACK (TPA/WSCM).
- * Padrão ALBATROS/EDICAD. Blocos SIDE: }SIDE, SIDE#N{ $=top ::LF=DL HF=DH SF=DS ::NSEQ=N }.
+ * Gera??o de ficheiro TCN (Nesting) ? compat?vel HARNNETT TRACK (TPA/WSCM).
  *
- * Regras HARNNETT TRACK:
- * - Modo CENTERLINE: todas as coordenadas X/Y representam o centro da ferramenta.
- *   A máquina NÃO usa compensação no controle (sem G41/G42/G40). A compensação é feita
- *   integralmente no CAM: as coordenadas do TCN já vêm com o contorno compensado geometricamente.
- * - Corte EXTERNO: contorno da peça com offset para FORA (outset = +raio da fresa), para que a
- *   borda de corte fique exatamente na linha teórica da peça.
- * - Corte INTERNO (rasgos/recortes): contorno com offset para DENTRO (inset = -raio da fresa).
- * - #40=1 no bloco W#89 indica semanticamente "corte externo"; não é compensação no controlo.
- * - Ferramenta padrão: #205=113 (diâmetro nominal 12 mm para cálculo do offset).
- * - Espaçamento mínimo entre peças: 15 mm (margem de segurança).
- * - Estrutura por operação de corte: W#89 (início) + W#2201 (segmentos lineares); Z negativo = profundidade total.
- *
- * Furação: apenas top drilling (W#81); furos emitidos via buildDrillLines() no mesmo .tcn.
+ * Regras:
+ * - Contorno EXTERNO: compensa??o 100% geom?trica no TCN (sem G41/G42 na m?quina). Centro da fresa segue o percurso;
+ *   o ret?ngulo do percurso ? o da pe?a expandido de R para fora: x0'=x0-R, x1'=x1+R, y0'=y0-R, y1'=y1+R (nominal = canto inf.-esq. + largura/altura).
+ * - Entrada/sa?da: s? lados C (direita) ou D (esquerda); rampas Z ao longo da espessura (comprimento = DS mm).
+ * - Furos e contornos: mesma cadeia em todas as variantes ? placement (+ rota??o 90?) ? toLayoutAbsoluteX ? flip ?ncora topo-direito.
+ * - Espa?amento m?nimo entre pe?as: o valor em defini??es aplica-se ao espa?o entre contornos de ferramenta;
+ *   na filtragem usa-se gap m?nimo entre ret?ngulos de placement ? minSpacing + 2?raio (contorno exterior).
+ * - v2/v5: mesmo padr?o de rampa Z lateral (C/D) que v1; v2 for?a lado C, v5 lado D.
  */
 
 import type { SheetResult } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
+import { holeLocalToSheetOffsetMm, toLayoutAbsoluteX } from "../cutlayout/layoutCoordinateSystem";
 import { getSettings } from "../settings/settingsService";
-import { CUT_LAYOUT_SAFETY_MARGIN_MM, toLayoutAbsoluteX } from "../cutlayout/layoutCoordinateSystem";
-import { DOBRADICA_TERCEIRO_FURO } from "../drilling/drillingService";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
-const fmt = (n: number) => Number.isFinite(n) ? n.toFixed(2) : "0.00";
+const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 const fmtZ = (n: number) => {
   if (!Number.isFinite(n)) return "0";
   const rounded = Math.round(n);
   return Math.abs(n - rounded) < 0.0001 ? String(rounded) : n.toFixed(2);
 };
 
-/** Inteiro para DL/DH/DS/LF/HF/SF (ficheiro original usa sem decimais). */
 const intVal = (n: number) => Math.round(Number.isFinite(n) ? n : 0);
 
-/** Z de segurança (acima do material). */
-let Z_SAFETY_MM = 10;
+const Z_SAFETY_MM = 10;
 const EPSILON_MM = 0.001;
-type ContourPoint = { x: number; y: number; z: number };
 
-/** Espaçamento mínimo entre peças (mm) — HARNNETT TRACK: margem para diâmetro real da ferramenta. */
-let MIN_SPACING_BETWEEN_PIECES_MM = 15;
-let TOOL_FEED_RATE = 8;
-let TOOL_RPM = 21000;
-let DRILL_FEED_RATE = 1000;
-let DRILL_RPM = 18000;
-let TCN_METODO: "v1_corner" | "v2_midstart" = "v1_corner";
-let CONTOUR_ENTRY: "corner" | "midside" = "corner";
-let CONTOUR_CLOSE_EXPLICIT = false;
+const DEFAULT_MIN_SPACING_BETWEEN_PIECES_MM = 15;
 
-/** Diâmetro nominal ferramenta 113 (mm) — fallback quando diâmetro não está definido nas definições. */
 const TOOL_113_NOMINAL_DIAMETER_MM = 12;
-
-/** Diâmetro mínimo para compensação geométrica (evitar raio 0). */
 const MIN_TOOL_DIAMETER_MM = 1;
-const EXTERNAL_OFFSET_SIGN = 1;
-const INTERNAL_OFFSET_SIGN = -1;
-
-function computeSignedArea2D(points: ContourPoint[]): number {
-  if (points.length < 3) return 0;
-  const isClosed = points[0].x === points[points.length - 1].x && points[0].y === points[points.length - 1].y;
-  const ring = isClosed ? points.slice(0, -1) : points;
-  if (ring.length < 3) return 0;
-  let sum = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i];
-    const b = ring[(i + 1) % ring.length];
-    sum += a.x * b.y - b.x * a.y;
-  }
-  return sum / 2;
-}
-
-function normalizeContourWinding(points: ContourPoint[], expected: "CW" | "CCW"): ContourPoint[] {
-  if (points.length < 4) return points;
-  const isClockwise = computeSignedArea2D(points) < 0;
-  const shouldBeClockwise = expected === "CW";
-  if (isClockwise === shouldBeClockwise) return points;
-  const isClosed = points[0].x === points[points.length - 1].x && points[0].y === points[points.length - 1].y;
-  const ring = isClosed ? points.slice(0, -1) : points.slice();
-  ring.reverse();
-  return isClosed ? [...ring, ring[0]] : ring;
-}
+type TcnMetodo =
+  | "v1_corner"
+  | "v2_ramp"
+  | "v3_ramp_noflip"
+  | "v4_corner_noflip"
+  | "v5_ramp_noanchor"
+  | "v6_ramp";
 
 /**
- * Devolve o diâmetro da fresa a usar para compensação geométrica no CAM (mm).
- * Nunca devolve 0: usa definições ou fallback nominal (ferramenta 113 = 12 mm).
+ * Kerf usado no motor de nesting quando o resultado alimenta TCN/CNC:
+ * dist?ncia m?nima entre arestas das pe?as no layout tal que, com offset exterior +R,
+ * o espa?o entre contornos de ferramenta seja ? `cnc.minSpacingMm`.
  */
-function getContourToolDiameterMm(settings: { nesting?: { kerfPadraoMm?: number }; cnc?: { diametroFresaContornoMm?: number } }): number {
+export function getLayoutKerfMmForCncNesting(settings: {
+  cnc?: { diametroFresaContornoMm?: number; minSpacingMm?: number };
+} = getSettings()): number {
+  const toolRadiusMm = getContourToolDiameterMm(settings) / 2;
+  const minSpacingMm = Number.isFinite(Number(settings?.cnc?.minSpacingMm))
+    ? Math.max(0, Number(settings?.cnc?.minSpacingMm))
+    : DEFAULT_MIN_SPACING_BETWEEN_PIECES_MM;
+  return minSpacingMm + 2 * Math.max(0, toolRadiusMm);
+}
+
+function getContourToolDiameterMm(settings: {
+  cnc?: { diametroFresaContornoMm?: number };
+}): number {
   const fromCnc = Number(settings?.cnc?.diametroFresaContornoMm);
   if (Number.isFinite(fromCnc) && fromCnc > 0) return Math.max(MIN_TOOL_DIAMETER_MM, fromCnc);
-  const fromNesting = Number(settings?.nesting?.kerfPadraoMm);
-  if (Number.isFinite(fromNesting) && fromNesting > 0) return Math.max(MIN_TOOL_DIAMETER_MM, fromNesting);
   return TOOL_113_NOMINAL_DIAMETER_MM;
 }
 
 /**
- * Gera pontos do contorno em modo CENTERLINE para corte EXTERNO (outsideCut).
- * (x, y, w, h) = retângulo da PEÇA na chapa (linha teórica). O centro da ferramenta circula FORA da peça.
- * Compensação geométrica: offset para FORA pelo raio da ferramenta (outset = +raio).
- * Assim a borda de corte fica exatamente no contorno da peça; sem G41/G42 no controlo.
- * Ordem dos pontos: CCW com a peça à direita (contorno externo).
+ * Ret?ngulo do centro da fresa no contorno EXTERIOR: sempre FORA do ret?ngulo nominal da pe?a.
+ * Pe?a na chapa: canto inferior-esquerdo (x, y), largura w, altura h (Y+).
+ * R = raio da fresa (metade de `diametroFresaContornoMm`).
+ * Equivalente: x0'=x_nom-R, x1'=x_nom+w+R, y0'=y_nom-R, y1'=y_nom+h+R.
  */
-function buildExternalContourPoints(
+function rectToolCenterExteriorFromPlacementMm(
   x: number,
   y: number,
   w: number,
   h: number,
-  z: number,
-  toolRadiusMm: number
-) : ContourPoint[] {
-  const signedOffsetMm = EXTERNAL_OFFSET_SIGN * Math.abs(toolRadiusMm);
-  const outset = Math.max(0, signedOffsetMm);
-  const x0 = x - outset;
-  const y0 = y - outset;
-  const x1 = x + w + outset;
-  const y1 = y + h + outset;
-  const points: ContourPoint[] = [
-    { x: x0, y: y0, z },
-    { x: x1, y: y0, z },
-    { x: x1, y: y1, z },
-    { x: x0, y: y1, z },
-    { x: x0, y: y0, z },
-  ];
-  return normalizeContourWinding(points, "CW");
+  raioFresaMm: number
+): { x0: number; y0: number; x1: number; y1: number } {
+  const R = Math.max(0, raioFresaMm);
+  return {
+    x0: x - R,
+    y0: y - R,
+    x1: x + w + R,
+    y1: y + h + R,
+  };
+}
+
+function flipPointToTopRightAnchor(x: number, y: number, maxW: number, maxH: number): { x: number; y: number } {
+  return {
+    x: maxW - x,
+    y: maxH - y,
+  };
+}
+
+function toTopRightAnchoredPoint(
+  x: number,
+  y: number,
+  sheetWidthMm: number,
+  maxW: number,
+  maxH: number,
+  applyLayoutX: boolean
+): { x: number; y: number } {
+  const xForFlip = applyLayoutX ? toLayoutAbsoluteX(x, sheetWidthMm) : x;
+  return flipPointToTopRightAnchor(xForFlip, y, maxW, maxH);
 }
 
 /**
- * [v2] Contorno externo com entrada pelo MEIO da aresta inferior.
- * Resolve instabilidade em peças pequenas (entrada pelo canto atacava pouco material).
- * Fecho explícito: último ponto == primeiro ponto → quadrado 100% fechado.
+ * mapContourToLayoutCoordinates + flipContourPointsToTopRightAnchor (equivalente ao pipeline v1 original).
  */
-function buildExternalContourPointsMidStart(
+function mapContourToLayoutCoordinates(
+  points: Array<{ x: number; y: number; z: number }>,
+  sheetWidthMm: number,
+  _winding: "CW" | "CCW"
+): Array<{ x: number; y: number; z: number }> {
+  return points.map((p) => ({ ...p, x: toLayoutAbsoluteX(p.x, sheetWidthMm) }));
+}
+
+function flipContourPointsToTopRightAnchor(
+  points: Array<{ x: number; y: number; z: number }>,
+  maxW: number,
+  maxH: number,
+  _invert?: boolean
+): Array<{ x: number; y: number; z: number }> {
+  return points.map((p) => {
+    // Nesta etapa os pontos já estão no sistema de layout absoluto em X.
+    // Reutilizamos o utilitário unificado de ancoragem topo-direito sem reaplicar toLayoutAbsoluteX.
+    const f = toTopRightAnchoredPoint(p.x, p.y, 0, maxW, maxH, false);
+    return { x: f.x, y: f.y, z: p.z };
+  });
+}
+
+/** Igual ao layout_corte_pro (toLayoutAbsoluteX em X) + ?ncora topo-direito da m?quina. */
+function transformPlacementToTcn(
+  p: { x: number; y: number; z: number },
+  sheetWidthMm: number,
+  maxW: number,
+  maxH: number
+): { x: number; y: number; z: number } {
+  const afterLayout = mapContourToLayoutCoordinates([p], sheetWidthMm, "CW")[0];
+  const afterFlip = flipContourPointsToTopRightAnchor([afterLayout], maxW, maxH)[0];
+  return { x: afterFlip.x, y: afterFlip.y, z: p.z };
+}
+
+type LateralEdge = "right" | "left";
+
+/** Entrada apenas por aresta esquerda ou direita (nunca topo/fundo) ? evita mergulho junto a pe?as vizinhas em Y. */
+function pickLeftOrRightEdgeToSheetCenter(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  sheetW: number,
+  sheetH: number
+): LateralEdge {
+  const cx = sheetW / 2;
+  const cy = sheetH / 2;
+  const mxR = x1;
+  const myR = (y0 + y1) / 2;
+  const mxL = x0;
+  const myL = (y0 + y1) / 2;
+  const dR = (mxR - cx) * (mxR - cx) + (myR - cy) * (myR - cy);
+  const dL = (mxL - cx) * (mxL - cx) + (myL - cy) * (myL - cy);
+  return dR <= dL ? "right" : "left";
+}
+
+type LateralEntryVariant = "center" | "upperThird" | "lowerThird";
+
+/** Fim da rampa longitudinal (Y) a partir do ponto de entrada eyBase, sem movimentos extra em Z=0. */
+function pickRampEndYAlongVerticalEdge(eyBase: number, rampLen: number, yMin: number, yMax: number): number {
+  const R = Math.max(EPSILON_MM, rampLen);
+  const up = eyBase + R;
+  const down = eyBase - R;
+  if (up <= yMax + EPSILON_MM) return Math.min(up, yMax);
+  if (down >= yMin - EPSILON_MM) return Math.max(down, yMin);
+  const span = yMax - yMin;
+  if (span < EPSILON_MM) return eyBase;
+  return eyBase + R / 2 <= yMax ? Math.min(eyBase + R / 2, yMax) : Math.max(eyBase - R / 2, yMin);
+}
+
+/**
+ * Contorno exterior com rampas de Z ao longo do lado C (direita) ou D (esquerda).
+ * - C/D = arestas verticais (X fixo), rampa longitudinal = varia??o em Y, comprimento = rampLenMm (t?pico = espessura).
+ * - Per?metro completo em zCut sobre o ret?ngulo expandido (centro fresa fora da pe?a nominal).
+ * - Entrada: Z seguro ? Z=0 no meio do lado ? um ?nico segmento 0?zCut ao longo de rampLen (sem ida/volta em Z=0).
+ * - w89: aproxima??o em Z seguro ao ponto de entrada (meio do lado).
+ */
+function buildLateralContourPathWithZRamps(
   x: number,
   y: number,
   w: number,
   h: number,
-  z: number,
-  toolRadiusMm: number
-): ContourPoint[] {
-  const outset = Math.max(0, Math.abs(toolRadiusMm));
-  const x0 = x - outset;
-  const y0 = y - outset;
-  const x1 = x + w + outset;
-  const y1 = y + h + outset;
-  const midX = (x0 + x1) / 2;
-  const points: ContourPoint[] = [
-    { x: midX, y: y0, z },
-    { x: x0, y: y0, z },
-    { x: x0, y: y1, z },
-    { x: x1, y: y1, z },
-    { x: x1, y: y0, z },
-    { x: midX, y: y0, z },
-  ];
-  return normalizeContourWinding(points, "CW");
+  toolRadiusMm: number,
+  thicknessMm: number,
+  zSafe: number,
+  sheetW: number,
+  sheetH: number,
+  edgeMode: "closest" | "right" | "left",
+  entryVariant: LateralEntryVariant
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  const { x0, y0, x1, y1 } = rectToolCenterExteriorFromPlacementMm(x, y, w, h, toolRadiusMm);
+  const zCut = -Math.abs(thicknessMm);
+  const rampLen = Math.max(EPSILON_MM, Math.abs(thicknessMm));
+  const spanY = y1 - y0;
+
+  let side: LateralEdge;
+  if (edgeMode === "right") side = "right";
+  else if (edgeMode === "left") side = "left";
+  else side = pickLeftOrRightEdgeToSheetCenter(x0, y0, x1, y1, sheetW, sheetH);
+
+  let eyBase = (y0 + y1) / 2;
+  if (entryVariant === "upperThird") eyBase = y0 + spanY * (2 / 3);
+  if (entryVariant === "lowerThird") eyBase = y0 + spanY * (1 / 3);
+  const yRampEnd = pickRampEndYAlongVerticalEdge(eyBase, rampLen, y0, y1);
+
+  const path: Array<{ x: number; y: number; z: number }> = [];
+
+  if (side === "right") {
+    const entryX = x1;
+    const w89 = { x: entryX, y: eyBase };
+    path.push({ x: entryX, y: eyBase, z: zSafe });
+    path.push({ x: entryX, y: eyBase, z: 0 });
+    path.push({ x: entryX, y: yRampEnd, z: zCut });
+    path.push({ x: x1, y: y1, z: zCut });
+    path.push({ x: x0, y: y1, z: zCut });
+    path.push({ x: x0, y: y0, z: zCut });
+    path.push({ x: x1, y: y0, z: zCut });
+    // Regressa ao ponto D em zCut e faz rampa de saída D->E (zCut->0).
+    path.push({ x: entryX, y: eyBase, z: zCut });
+    path.push({ x: entryX, y: yRampEnd, z: 0 });
+    path.push({ x: entryX, y: yRampEnd, z: zSafe });
+    return { w89, path };
+  }
+
+  const entryX = x0;
+  const w89 = { x: entryX, y: eyBase };
+  path.push({ x: entryX, y: eyBase, z: zSafe });
+  path.push({ x: entryX, y: eyBase, z: 0 });
+  path.push({ x: entryX, y: yRampEnd, z: zCut });
+  path.push({ x: x0, y: y0, z: zCut });
+  path.push({ x: x1, y: y0, z: zCut });
+  path.push({ x: x1, y: y1, z: zCut });
+  path.push({ x: x0, y: y1, z: zCut });
+  // Regressa ao ponto D em zCut e faz rampa de saída D->E (zCut->0).
+  path.push({ x: entryX, y: eyBase, z: zCut });
+  path.push({ x: entryX, y: yRampEnd, z: 0 });
+  path.push({ x: entryX, y: yRampEnd, z: zSafe });
+  return { w89, path };
 }
 
 /**
- * Gera pontos do contorno para corte INTERNO (rasgos, recortes).
- * Compensação geométrica: offset para DENTRO pelo raio da ferramenta (inset = -raio).
- * (x, y, w, h) = retângulo teórico do recorte; o centro da ferramenta circula no interior.
- * Ordem: CW com o material à direita (contorno interno). Para um retângulo interno.
+ * Contorno interno (rasgo): centro da ferramenta DENTRO do v?o (inset = raio).
+ * Isto ? geometria de corte interno, n?o ?offset externo? do per?metro da pe?a.
  */
 function buildInternalContourPoints(
   x: number,
@@ -169,38 +260,43 @@ function buildInternalContourPoints(
   h: number,
   z: number,
   toolRadiusMm: number
-): ContourPoint[] {
-  const signedOffsetMm = INTERNAL_OFFSET_SIGN * Math.abs(toolRadiusMm);
-  const inset = Math.max(0, Math.abs(signedOffsetMm));
-  if (w <= 2 * inset || h <= 2 * inset) return []; // recorte demasiado pequeno para esta fresa
+): Array<{ x: number; y: number; z: number }> {
+  const inset = Math.max(0, toolRadiusMm);
+  if (w <= 2 * inset || h <= 2 * inset) return [];
   const x0 = x + inset;
   const y0 = y + inset;
   const x1 = x + w - inset;
   const y1 = y + h - inset;
-  const points: ContourPoint[] = [
+  return [
     { x: x0, y: y0, z },
     { x: x0, y: y1, z },
     { x: x1, y: y1, z },
     { x: x1, y: y0, z },
     { x: x0, y: y0, z },
   ];
-  return normalizeContourWinding(points, "CCW");
 }
 
-/** Distância mínima entre dois retângulos (borda a borda). Se se sobrepõem, devolve 0. */
 function rectDistance(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): number {
   const dx = Math.max(0, Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w)));
   const dy = Math.max(0, Math.max(a.y - (b.y + b.h), b.y - (a.y + a.h)));
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+/**
+ * Garante que o espa?amento entre contornos exteriores (centro ferramenta, offset +R para fora) n?o fique
+ * abaixo de `minSpacingMm`: exige dist?ncia entre ret?ngulos de pe?a ? minSpacingMm + 2?raio.
+ */
 function sanitizePlacementsForTcn(
   placements: SheetResult["placements"],
-  sheet: SheetResult["sheet"]
+  sheet: SheetResult["sheet"],
+  minSpacingMm: number,
+  toolRadiusMm: number,
+  sheetMarginMm: number
 ): SheetResult["placements"] {
   const unique: SheetResult["placements"] = [];
   const placedRects: Array<{ x: number; y: number; w: number; h: number }> = [];
   const signatures = new Set<string>();
+  const minEdgeGapMm = minSpacingMm + 2 * Math.max(0, toolRadiusMm);
 
   for (const pl of placements) {
     const x = pl.x_mm;
@@ -211,9 +307,20 @@ function sanitizePlacementsForTcn(
     if (signatures.has(signature)) continue;
 
     if (!isPlacementInsideSheet(x, y, w, h, sheet.largura_mm, sheet.altura_mm)) continue;
+    // Contorno externo (centro da ferramenta) também precisa caber na chapa, incluindo margem industrial.
+    const contour = rectToolCenterExteriorFromPlacementMm(x, y, w, h, toolRadiusMm);
+    const TOOL_EXIT_ALLOWANCE_MM = 1;
+    if (
+      contour.x0 < -TOOL_EXIT_ALLOWANCE_MM ||
+      contour.y0 < sheetMarginMm - EPSILON_MM ||
+      contour.x1 > sheet.largura_mm + TOOL_EXIT_ALLOWANCE_MM ||
+      contour.y1 > sheet.altura_mm - sheetMarginMm + EPSILON_MM
+    ) {
+      continue;
+    }
 
     const rect = { x, y, w, h };
-    const tooClose = placedRects.some((r) => rectDistance(r, rect) < MIN_SPACING_BETWEEN_PIECES_MM - EPSILON_MM);
+    const tooClose = placedRects.some((r) => rectDistance(r, rect) < minEdgeGapMm - EPSILON_MM);
     if (tooClose) continue;
 
     signatures.add(signature);
@@ -234,119 +341,54 @@ function isPlacementInsideSheet(
 ): boolean {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) return false;
   if (w <= 0 || h <= 0) return false;
-  const margin = CUT_LAYOUT_SAFETY_MARGIN_MM;
-  if (x < margin - EPSILON_MM || y < margin - EPSILON_MM) return false;
-  if (x + w > sheetW - margin + EPSILON_MM) return false;
-  if (y + h > sheetH - margin + EPSILON_MM) return false;
+  if (x < -EPSILON_MM || y < -EPSILON_MM) return false;
+  if (x + w > sheetW + EPSILON_MM) return false;
+  if (y + h > sheetH + EPSILON_MM) return false;
   return true;
 }
 
-function mapContourToLayoutCoordinates(
-  points: ContourPoint[],
-  sheetWidthMm: number,
-  expected: "CW" | "CCW"
-): ContourPoint[] {
-  const mapped = points.map((point) => ({
-    ...point,
-    x: toLayoutAbsoluteX(point.x, sheetWidthMm),
-  }));
-  return normalizeContourWinding(mapped, expected);
-}
-
-/**
- * Transforma coordenadas do referencial canto inferior-esquerdo (0,0) para canto superior-direito.
- * Usado apenas na escrita do TCN; não altera lógica interna, furos, faces nem regras de drilling.
- * X_new = MaxWidth − X_old, Y_new = MaxHeight − Y_old.
- */
-function flipPointToTopRightAnchor(x: number, y: number, maxWidth: number, maxHeight: number): { x: number; y: number } {
-  return { x: maxWidth - x, y: maxHeight - y };
-}
-
-/**
- * Aplica flip de anchor a uma lista de pontos de contorno (X_new = maxW - X_old, Y_new = maxH - Y_old).
- *
- * O winding do contorno define o lado da compensação da ferramenta na CNC; o flip de coordenadas
- * inverte naturalmente o sentido do contorno. Por isso o tratamento difere:
- * - external = true (contorno externo): não invertemos a ordem dos pontos; a reflexão inverte o
- *   winding (CW→CCW), mantendo o lado de compensação correto (corte por fora da peça).
- * - external = false (contorno interno / pocket): invertemos a ordem para repor CCW e manter
- *   corte por dentro do rasgo.
- *
- * Documentado para evitar regressões em alterações futuras (comportamento validado na CNC).
- */
-function flipContourPointsToTopRightAnchor(
-  points: ContourPoint[],
-  maxWidth: number,
-  maxHeight: number,
-  external: boolean
-): ContourPoint[] {
-  const flipped = points.map((p) => ({
-    ...p,
-    x: maxWidth - p.x,
-    y: maxHeight - p.y,
-  }));
-  if (!external) flipped.reverse();
-  return flipped;
-}
-
-/** Bloco W#89 (início de operação de corte) — HARNNETT: #40=1 corte externo, #205=113 ferramenta. */
 function buildToolBlock(x: number, y: number, zSafe: number): string {
-  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=${TOOL_RPM} #40=1 }W`;
+  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
 }
 
-/**
- * W#81 para furação superior (top drilling).
- * Formato: W#81{ ::WTs WS=1 #8015=0 #1=<X> #2=<Y> #3=<Z> #1002=<DIAMETRO> #2008=<FEED> #2002=<RPM> #201=1 #203=1 #1001=0 }W
- * 
- * Parâmetros:
- * - #1: coordenada X (mm)
- * - #2: coordenada Y (mm)
- * - #3: profundidade Z (negativo, ex: -13 para 13mm de profundidade)
- * - #1002: diâmetro da broca (mm)
- * - #2008: feed rate (mm/min, ex: 1000)
- * - #2002: rotação (RPM, ex: 18000)
- */
 function buildW81Drill(x: number, y: number, zDepth: number, diameter: number): string {
-  return `W#81{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmtZ(zDepth)} #1002=${fmt(diameter)} #2008=${DRILL_FEED_RATE} #2002=${DRILL_RPM} #201=1 #203=1 #1001=0 }W`;
+  const feedRate = 1000;
+  const rpm = 18000;
+  return `W#81{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmtZ(zDepth)} #1002=${fmt(diameter)} #2008=${feedRate} #2002=${rpm} #201=1 #203=1 #1001=0 }W`;
 }
 
-/**
- * W#2201 no formato ALBATROS/EDICAD para contorno de corte.
- */
-function buildW2201(
-  points: Array<{ x: number; y: number; z: number }>,
-  zCut: number,
-  zSafe: number
-): string {
-  const lastIndex = points.length - 1;
-  return points
+/** Usa Z de cada ponto (rampas 0??zCut); #2008=8 no primeiro movimento ?til ap?s aproxima??o em Z seguro. */
+function buildW2201(points: Array<{ x: number; y: number; z: number }>, zSafe: number): string {
+  const isSamePoint = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
+    Math.abs(a.x - b.x) < EPSILON_MM && Math.abs(a.y - b.y) < EPSILON_MM && Math.abs(a.z - b.z) < 0.02;
+
+  const compact: Array<{ x: number; y: number; z: number }> = [];
+  for (const p of points) {
+    const last = compact[compact.length - 1];
+    if (!last || !isSamePoint(last, p)) compact.push(p);
+  }
+  if (compact.length === 0) return "";
+
+  const feedStartIdx =
+    compact.length > 1 && Math.abs(compact[0].z - zSafe) < 0.02 ? 1 : 0;
+  return compact
     .map((p, i) => {
-      const z = i === lastIndex ? zSafe : zCut;
-      const startFlag = i === 0 ? ` #2008=${TOOL_FEED_RATE}` : "";
-      return `W#2201{ ::WTl #8015=0 #1=${fmt(p.x)} #2=${fmt(p.y)} #3=${fmtZ(z)}${startFlag} }W`;
+      const startFlag = i === feedStartIdx ? " #2008=8" : "";
+      return `W#2201{ ::WTl #8015=0 #1=${fmt(p.x)} #2=${fmt(p.y)} #3=${fmtZ(p.z)}${startFlag} }W`;
     })
     .join("\n");
 }
 
-/**
- * Gera linhas de furação para o bloco SIDE#1.
- * Cada furo gera uma operação W#81 com formato ALBATROS/EDICAD.
- * Apenas furação vertical (top drilling) é suportada.
- */
 function buildDrillLines(drills: CncDrillOperation[]): string[] {
   const lines: string[] = [];
   for (const d of drills) {
-    if (d.tipo !== "vertical") continue; // Apenas furação superior
+    if (d.tipo !== "vertical") continue;
     const zDepth = -Math.abs(d.profundidade);
     lines.push(buildW81Drill(d.x, d.y, zDepth, d.diametro));
   }
   return lines;
 }
 
-/**
- * Gera bloco SIDE#N no formato exato da máquina.
- * Fecha diretamente com "}SIDE" (sem linha "}" isolada). Entre blocos: }SIDE + SIDE#N{
- */
 function buildSideBlock(
   n: number,
   lf: number,
@@ -369,47 +411,26 @@ function buildSideBlock(
 }
 
 /**
- * Gera TCN para um painel (sheet) único (HARNNETT TRACK).
- * - Header: DL, DH, DS do próprio painel.
- * - SIDE#1: furação W#81 (top drilling) + corte W#89 + W#2201 por peça (toolpath externo outset, #40=1, #205=113).
- * - Final: SIDE#3, SIDE#4, SIDE#5, SIDE#6, SIDE#2 no mesmo padrão.
- * - Anchor: peças posicionadas com referência no canto superior-direito (X_new = anchorMaxW - X_old, Y_new = anchorMaxH - Y_old).
- *   Se anchorMaxWidth/anchorMaxHeight não forem passados, usa as dimensões do próprio painel.
+ * @param anchorMaxWidthMm ?ncora horizontal para flip topo-direito (usar DL da chapa deste painel = sheet.largura_mm)
+ * @param anchorMaxHeightMm ?ncora vertical (DH = sheet.altura_mm)
  */
 export function generateTcnForPanel(
   sheetResult: SheetResult,
   _kerf_mm = 3,
   acamName = "Sheet",
-  anchorMaxWidth?: number,
-  anchorMaxHeight?: number
+  anchorMaxWidthMm?: number,
+  anchorMaxHeightMm?: number
 ): string {
   const lines: string[] = [];
   lines.push(HEADER);
 
-  const settings = getSettings();
-  Z_SAFETY_MM = settings?.cnc?.zSafetyMm ?? 10;
-  MIN_SPACING_BETWEEN_PIECES_MM = settings?.cnc?.minSpacingMm ?? 15;
-  TOOL_FEED_RATE = settings?.cnc?.toolFeedRate ?? 8;
-  TOOL_RPM = settings?.cnc?.toolRpm ?? 21000;
-  DRILL_FEED_RATE = settings?.cnc?.drillFeedRate ?? 1000;
-  DRILL_RPM = settings?.cnc?.drillRpm ?? 18000;
-  TCN_METODO = settings?.cnc?.tcnMetodo ?? "v1_corner";
-  CONTOUR_ENTRY = settings?.cnc?.contourEntryMode ?? "corner";
-  CONTOUR_CLOSE_EXPLICIT = settings?.cnc?.contourCloseExplicit ?? false;
-
   const thicknessMm = sheetResult.sheet.espessura_mm;
   const zCut = -thicknessMm;
-  const zSafe = Z_SAFETY_MM; // Z de segurança no W#89 (acima do material)
 
   const sheet = sheetResult.sheet;
-  const sheetWidthMm = sheet.largura_mm;
   const dl = sheet.largura_mm;
   const dh = sheet.altura_mm;
   const ds = thicknessMm;
-
-  /** Dimensões para anchor no canto superior-direito (baseado no maior painel do conjunto quando passado). */
-  const maxW = anchorMaxWidth ?? sheet.largura_mm;
-  const maxH = anchorMaxHeight ?? sheet.altura_mm;
 
   lines.push(`$=Acam Name=${acamName}`);
   lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
@@ -418,96 +439,139 @@ export function generateTcnForPanel(
   lines.push("OPTI{");
   lines.push("}OPTI");
 
-  const toolDiameterMm = getContourToolDiameterMm(settings);
+  const runtimeSettings = getSettings();
+  const toolDiameterMm = getContourToolDiameterMm(runtimeSettings);
   const toolRadiusMm = toolDiameterMm / 2;
+  const tcnMetodo = (runtimeSettings?.cnc?.tcnMetodo ?? "v1_corner") as TcnMetodo;
+  const minSpacingMm = Number.isFinite(Number(runtimeSettings?.cnc?.minSpacingMm))
+    ? Math.max(0, Number(runtimeSettings?.cnc?.minSpacingMm))
+    : DEFAULT_MIN_SPACING_BETWEEN_PIECES_MM;
+  const sheetMarginMm = Number.isFinite(Number(runtimeSettings?.cnc?.sheetMarginMm))
+    ? Math.max(0, Number(runtimeSettings?.cnc?.sheetMarginMm))
+    : 10;
+  const zSafe =
+    Number.isFinite(Number(runtimeSettings?.cnc?.zSafetyMm)) && Number(runtimeSettings?.cnc?.zSafetyMm) > 0
+      ? Number(runtimeSettings?.cnc?.zSafetyMm)
+      : Z_SAFETY_MM;
+  const maxW =
+    anchorMaxWidthMm != null && anchorMaxWidthMm > 0 && Number.isFinite(anchorMaxWidthMm)
+      ? anchorMaxWidthMm
+      : sheet.largura_mm;
+  const maxH =
+    anchorMaxHeightMm != null && anchorMaxHeightMm > 0 && Number.isFinite(anchorMaxHeightMm)
+      ? anchorMaxHeightMm
+      : sheet.altura_mm;
+  const sheetW = sheet.largura_mm;
+  const sheetH = sheet.altura_mm;
 
   const placements = sheetResult.placements.filter((pl) =>
-    isPlacementInsideSheet(
-      pl.x_mm,
-      pl.y_mm,
-      pl.largura_mm,
-      pl.altura_mm,
-      sheet.largura_mm,
-      sheet.altura_mm
-    )
+    isPlacementInsideSheet(pl.x_mm, pl.y_mm, pl.largura_mm, pl.altura_mm, sheet.largura_mm, sheet.altura_mm)
   );
-  const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet);
+  const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet, minSpacingMm, toolRadiusMm, sheetMarginMm);
   const sideInnerLines: string[] = [];
-  const drills: CncDrillOperation[] = [];
-  
-  // Furos vêm exclusivamente dos painéis (panel.drillHoles → cutlistToPieces → placement.holes)
-  sanitizedPlacements.forEach((pl) => {
-    for (const hole of pl.holes ?? []) {
-      const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
-      if (!topDrillable) continue;
-      const holeType = (hole as { holeType?: string }).holeType;
-      const isTerceiroFuroDobradica = holeType === "dobradica_parafuso_uniao";
-      const xAbs = toLayoutAbsoluteX(pl.x_mm + hole.x, sheetWidthMm);
-      const yAbs = pl.y_mm + hole.y;
-      const { x: xFlipped, y: yFlipped } = flipPointToTopRightAnchor(xAbs, yAbs, maxW, maxH);
-      drills.push({
-        x: xFlipped,
-        y: yFlipped,
-        z: 0,
-        diametro: isTerceiroFuroDobradica ? DOBRADICA_TERCEIRO_FURO.diametroMm : hole.diameter,
-        profundidade: isTerceiroFuroDobradica ? DOBRADICA_TERCEIRO_FURO.profundidadeMm : Math.min(hole.depth, thicknessMm),
-        tipo: "vertical",
-      });
-    }
-  });
-  
-  // Segundo: inserir operações de furação no início do bloco SIDE#1
-  sideInnerLines.push(...buildDrillLines(drills));
-  
-  // Terceiro: operações de corte — contorno EXTERNO já compensado para fora (+raio), sem G41/G42
+
+  const pushLateralExteriorContour = (
+    px: number,
+    py: number,
+    pw: number,
+    ph: number,
+    edgeMode: "closest" | "right" | "left",
+    entryVariant: LateralEntryVariant
+  ) => {
+    const { w89, path } = buildLateralContourPathWithZRamps(
+      px,
+      py,
+      pw,
+      ph,
+      toolRadiusMm,
+      thicknessMm,
+      zSafe,
+      sheetW,
+      sheetH,
+      edgeMode,
+      entryVariant
+    );
+    const w89T = transformPlacementToTcn({ x: w89.x, y: w89.y, z: zSafe }, sheet.largura_mm, maxW, maxH);
+    const pathT = path.map((p) => transformPlacementToTcn(p, sheet.largura_mm, maxW, maxH));
+    sideInnerLines.push(buildToolBlock(w89T.x, w89T.y, zSafe));
+    sideInnerLines.push(buildW2201(pathT, zSafe));
+  };
+
   sanitizedPlacements.forEach((pl) => {
     const w = pl.largura_mm;
     const h = pl.altura_mm;
     const x = pl.x_mm;
     const y = pl.y_mm;
-    // Seleção do método de contorno conforme definições
-    const useV2 = TCN_METODO === "v2_midstart" || CONTOUR_ENTRY === "midside";
-    const contour = useV2
-      ? buildExternalContourPointsMidStart(x, y, w, h, zCut, toolRadiusMm)
-      : buildExternalContourPoints(x, y, w, h, zCut, toolRadiusMm);
-    if (CONTOUR_CLOSE_EXPLICIT && contour.length > 0) {
-      const first = contour[0];
-      const last = contour[contour.length - 1];
-      if (first.x !== last.x || first.y !== last.y) {
-        contour.push({ ...first });
+    const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
+
+    const drillsForPiece: CncDrillOperation[] = [];
+    for (const hole of pl.holes ?? []) {
+      const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
+      if (topDrillable === false) continue;
+      const off = holeLocalToSheetOffsetMm(hole.x, hole.y, rot);
+      const placementX = pl.x_mm + off.sx;
+      const placementY = pl.y_mm + off.sy;
+      const tcnPt = transformPlacementToTcn({ x: placementX, y: placementY, z: 0 }, sheet.largura_mm, maxW, maxH);
+      drillsForPiece.push({
+        x: tcnPt.x,
+        y: tcnPt.y,
+        z: 0,
+        diametro: hole.diameter,
+        profundidade: Math.min(hole.depth, thicknessMm),
+        tipo: "vertical",
+      });
+    }
+    const drillLines = buildDrillLines(drillsForPiece);
+
+    if (tcnMetodo === "v6_ramp") {
+      pushLateralExteriorContour(x, y, w, h, "right", "center");
+      sideInnerLines.push(...drillLines);
+    } else {
+      sideInnerLines.push(...drillLines);
+      if (tcnMetodo === "v2_ramp") {
+        pushLateralExteriorContour(x, y, w, h, "right", "center");
+      } else if (tcnMetodo === "v5_ramp_noanchor") {
+        pushLateralExteriorContour(x, y, w, h, "left", "center");
+      } else if (tcnMetodo === "v1_corner") {
+        // v1: referência industrial com entrada fixa no lado C (direita), ao centro.
+        pushLateralExteriorContour(x, y, w, h, "right", "center");
+      } else if (tcnMetodo === "v3_ramp_noflip") {
+        pushLateralExteriorContour(x, y, w, h, "left", "center");
+      } else if (tcnMetodo === "v4_corner_noflip") {
+        pushLateralExteriorContour(x, y, w, h, "left", "upperThird");
+      } else {
+        pushLateralExteriorContour(x, y, w, h, "closest", "center");
       }
     }
-    const pointsLayout = mapContourToLayoutCoordinates(contour, sheetWidthMm, "CW");
-    const points = flipContourPointsToTopRightAnchor(pointsLayout, maxW, maxH, true);
-    const firstPoint = points[0];
-    sideInnerLines.push(buildToolBlock(firstPoint.x, firstPoint.y, zSafe));
-    sideInnerLines.push(buildW2201(points, zCut, Z_SAFETY_MM));
-    // Contornos internos (rasgos, recortes): compensação para DENTRO (-raio)
+
     const innerContours = pl.innerContours;
     if (innerContours?.length) {
       for (const rect of innerContours) {
-        const innerPointsLayout = mapContourToLayoutCoordinates(
-          buildInternalContourPoints(
-            pl.x_mm + rect.x_mm,
-            pl.y_mm + rect.y_mm,
-            rect.largura_mm,
-            rect.altura_mm,
-            zCut,
-            toolRadiusMm
-          ),
-          sheetWidthMm,
-          "CCW"
+        const offR = holeLocalToSheetOffsetMm(rect.x_mm, rect.y_mm, rot);
+        const iw = rot === 90 ? rect.altura_mm : rect.largura_mm;
+        const ih = rot === 90 ? rect.largura_mm : rect.altura_mm;
+        const innerPointsRaw = buildInternalContourPoints(
+          pl.x_mm + offR.sx,
+          pl.y_mm + offR.sy,
+          iw,
+          ih,
+          zCut,
+          toolRadiusMm
         );
-        if (innerPointsLayout.length > 0) {
-          const innerPoints = flipContourPointsToTopRightAnchor(innerPointsLayout, maxW, maxH, false);
-          const first = innerPoints[0];
+        if (innerPointsRaw.length > 0) {
+          const innerPointsTcn = innerPointsRaw.map((p) => transformPlacementToTcn(p, sheet.largura_mm, maxW, maxH));
+          const first = innerPointsTcn[0];
+          const innerClosed = [
+            ...innerPointsTcn,
+            { x: first.x, y: first.y, z: zSafe },
+          ];
           sideInnerLines.push(buildToolBlock(first.x, first.y, zSafe));
-          sideInnerLines.push(buildW2201(innerPoints, zCut, Z_SAFETY_MM));
+          sideInnerLines.push(buildW2201(innerClosed, zSafe));
         }
       }
     }
   });
-  
+
   lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
 
   lines.push(...buildSideBlock(3, dl, ds, dh, [], false));

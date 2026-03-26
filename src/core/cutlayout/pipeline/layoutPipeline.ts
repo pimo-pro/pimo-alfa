@@ -3,6 +3,7 @@ import { CUT_LAYOUT_SAFETY_MARGIN_MM } from "../layoutCoordinateSystem";
 import type {
   CutPiece,
   CutLayoutEngineOptions,
+  CutLayoutProgressEvent,
   CutLayoutMetaHeuristicsOptions,
   CutLayoutResult,
   CutLayoutRotationPreferenceMode,
@@ -56,6 +57,61 @@ export function isDevRuntime(): boolean {
 
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
+type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_desc_soft";
+
+const MAX_NESTING_ATTEMPTS = 4;
+const ATTEMPT_TIMEOUT_MS = 1500;
+const META_MAX_MULTI_START = 4;
+const META_MAX_ITERATIONS = 36;
+
+function nowMs(): number {
+  if (typeof performance !== "undefined" && typeof performance.now === "function") {
+    return performance.now();
+  }
+  return Date.now();
+}
+
+function sortPiecesForAttempt(pieces: CutPiece[], mode: AttemptOrderMode): CutPiece[] {
+  const list = pieces.map((p) => ({ ...p }));
+  const area = (p: CutPiece) => p.largura_mm * p.altura_mm;
+  const maxSide = (p: CutPiece) => Math.max(p.largura_mm, p.altura_mm);
+  const minSide = (p: CutPiece) => Math.min(p.largura_mm, p.altura_mm);
+  list.sort((a, b) => {
+    if (mode === "area_desc") return area(b) - area(a) || maxSide(b) - maxSide(a);
+    if (mode === "max_side_desc") return maxSide(b) - maxSide(a) || area(b) - area(a);
+    if (mode === "min_side_desc") return minSide(b) - minSide(a) || area(b) - area(a);
+    return area(b) - area(a) || minSide(a) - minSide(b);
+  });
+  return list;
+}
+
+function mirrorPlacementHoles(
+  largura: number,
+  altura: number,
+  holes: Array<{ x: number; y: number; diameter: number; depth: number; holeType?: string; topDrillable?: boolean }> | undefined
+): Array<{ x: number; y: number; diameter: number; depth: number; holeType?: string; topDrillable?: boolean }> | undefined {
+  if (!holes?.length) return holes;
+  return holes.map((h) => ({
+    ...h,
+    x: Math.max(0, largura - Number(h.x ?? 0)),
+    y: Math.max(0, altura - Number(h.y ?? 0)),
+  }));
+}
+
+function normalizeSheetToTopRightOrigin(sheetResult: SheetResult): SheetResult {
+  const W = sheetResult.sheet.largura_mm;
+  const H = sheetResult.sheet.altura_mm;
+  return {
+    ...sheetResult,
+    placements: sheetResult.placements.map((pl) => ({
+      ...pl,
+      x_mm: W - (pl.x_mm + pl.largura_mm),
+      y_mm: H - (pl.y_mm + pl.altura_mm),
+      holes: mirrorPlacementHoles(pl.largura_mm, pl.altura_mm, pl.holes),
+      drillHoles: mirrorPlacementHoles(pl.largura_mm, pl.altura_mm, pl.drillHoles),
+    })),
+  };
+}
 
 export type RunCutLayoutDeps = {
   expandPieces: (_pieces: CutPiece[]) => CutPiece[];
@@ -111,6 +167,18 @@ export function runCutLayout(
   options: CutLayoutEngineOptions | undefined,
   deps: RunCutLayoutDeps
 ): CutLayoutResult {
+  const throwIfAbort = () => {
+    if (options?.shouldAbort?.()) {
+      const err = new Error("CutLayout aborted");
+      err.name = "CutLayoutAbortedError";
+      throw err;
+    }
+  };
+  const emitProgress = (event: CutLayoutProgressEvent) => {
+    options?.onProgress?.(event);
+  };
+
+  throwIfAbort();
   const kerf = options?.kerf_mm ?? DEFAULT_KERF_MM;
   const minUtilizationPercent = options?.minUtilizationPercent ?? MIN_UTILIZATION_PERCENT;
   const rotationCfg: RotationScoringConfig = {
@@ -124,7 +192,13 @@ export function runCutLayout(
   );
   const trials =
     options?.strategyTrials && options.strategyTrials.length > 0 ? options.strategyTrials : getDefaultTrials();
-  const metaCfg = getDefaultMetaOptions(options?.useMetaHeuristics, options?.metaHeuristics);
+  const rawMetaCfg = getDefaultMetaOptions(options?.useMetaHeuristics, options?.metaHeuristics);
+  const metaCfg: Required<CutLayoutMetaHeuristicsOptions> = {
+    ...rawMetaCfg,
+    enabled: false, // LNS/SA desactivado: causa instabilidade e excede budget de 3s
+    multiStartCount: Math.min(rawMetaCfg.multiStartCount, META_MAX_MULTI_START),
+    iterations: Math.min(rawMetaCfg.iterations, META_MAX_ITERATIONS),
+  };
   const scoreModel: CutLayoutScoreModel = options?.scoreModel ?? "legacy";
 
   const finalSheets: SheetResult[] = [];
@@ -190,7 +264,13 @@ export function runCutLayout(
       }
     : undefined;
 
-  for (const [key, groupPieces] of grouped) {
+  const groupedEntries = Array.from(grouped.entries());
+  const groupCount = Math.max(1, groupedEntries.length);
+  emitProgress({ phase: "prepare", groupIndex: 0, groupCount, stepIndex: 0, stepCount: 1, percent: 1 });
+
+  for (let groupIndex = 0; groupIndex < groupedEntries.length; groupIndex++) {
+    throwIfAbort();
+    const [key, groupPieces] = groupedEntries[groupIndex];
     const espStr = options?.groupByThicknessOnly ? key : key.split("|")[1];
     const materialId = options?.groupByThicknessOnly
       ? (sheetDef.materialId ?? groupPieces[0]?.materialId ?? "material")
@@ -216,19 +296,76 @@ export function runCutLayout(
         })
       | null = null;
 
-    for (const trial of trials) {
+    const attemptVariants: Array<{
+      orderMode: AttemptOrderMode;
+      trial: CutLayoutTrialConfig;
+      rotationMode: CutLayoutRotationPreferenceMode;
+    }> = [
+      { orderMode: "area_desc", trial: { strategy: "skyline", binHeuristic: "bestFit" }, rotationMode: "aggressive" },
+      { orderMode: "max_side_desc", trial: { strategy: "skyline", binHeuristic: "firstFit" }, rotationMode: "auto" },
+      { orderMode: "min_side_desc", trial: { strategy: "shelf", binHeuristic: "bestFit" }, rotationMode: "auto" },
+      { orderMode: "area_desc_soft", trial: { strategy: "guillotine", binHeuristic: "firstFit" }, rotationMode: "disabled" },
+    ];
+    const attempts = attemptVariants
+      .map((base, idx) => ({
+        ...base,
+        trial: trials[idx] ?? base.trial,
+      }))
+      .slice(0, MAX_NESTING_ATTEMPTS);
+
+    for (let ti = 0; ti < attempts.length; ti++) {
+      throwIfAbort();
+      const attempt = attempts[ti];
+      const trial = attempt.trial;
+      const trialPercent = ((groupIndex + (ti + 1) / Math.max(1, attempts.length)) / groupCount) * 60;
+      emitProgress({
+        phase: "trial",
+        groupIndex: groupIndex + 1,
+        groupCount,
+        stepIndex: ti + 1,
+        stepCount: attempts.length,
+        percent: Math.min(60, Math.max(1, trialPercent)),
+      });
+      const attemptStartedAt = nowMs();
+      const piecesForAttempt = sortPiecesForAttempt(groupPieces, attempt.orderMode);
+      const attemptRotationCfg: RotationScoringConfig = {
+        ...rotationCfg,
+        rotationPreferenceMode: attempt.rotationMode,
+      };
       const run = deps.simulateTrialForGroup(
-        groupPieces,
+        piecesForAttempt,
         placementSheet,
         kerf,
         minUtilizationPercent,
-        rotationCfg,
+        attemptRotationCfg,
         trial,
         Boolean(options?.collectDiagnostics),
-        false,
+        true,
         scoreModel
       );
+      const elapsedMs = nowMs() - attemptStartedAt;
+      if (elapsedMs > ATTEMPT_TIMEOUT_MS) {
+        console.log(`[NESTING] Timeout na tentativa ${ti + 1} — descartada`);
+        continue;
+      }
       const wasteArea = run.sheets.length * sheetArea - run.usedArea;
+      const totalPlacements = run.sheets.reduce((acc, s) => acc + s.placements.length, 0);
+      const isValidRun = run.sheets.length > 0 && totalPlacements > 0;
+      console.log(`[NESTING] Tentativa ${ti + 1} concluída:`, {
+        score: run.score,
+        sheets: run.sheets.length,
+        placements: totalPlacements,
+        usedArea: run.usedArea,
+        wasteArea,
+        elapsedMs: Number(elapsedMs.toFixed(2)),
+        valid: isValidRun,
+        strategy: trial.strategy,
+        binHeuristic: trial.binHeuristic,
+        orderMode: attempt.orderMode,
+      });
+      if (!isValidRun) {
+        continue;
+      }
       diagnostics?.trialRuns?.push({
         strategy: trial.strategy,
         binHeuristic: trial.binHeuristic,
@@ -243,7 +380,30 @@ export function runCutLayout(
       }
     }
 
-    if (!bestRun) continue;
+    if (!bestRun) {
+      const fallbackTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "firstFit" };
+      const fallbackRun = deps.simulateTrialForGroup(
+        groupPieces,
+        placementSheet,
+        kerf,
+        minUtilizationPercent,
+        rotationCfg,
+        fallbackTrial,
+        Boolean(options?.collectDiagnostics),
+        false,
+        scoreModel
+      );
+      const fallbackPlacements = fallbackRun.sheets.reduce((acc, s) => acc + s.placements.length, 0);
+      if (fallbackRun.sheets.length > 0 && fallbackPlacements > 0) {
+        bestRun = {
+          ...fallbackRun,
+          strategy: fallbackTrial.strategy,
+          binHeuristic: fallbackTrial.binHeuristic,
+        };
+      } else {
+        continue;
+      }
+    }
 
     if (metaCfg.enabled && bestRun.sheets.length > 0) {
       const baselineRefScore = bestRun.score;
@@ -265,6 +425,17 @@ export function runCutLayout(
       ];
 
       for (let si = 0; si < startCount; si++) {
+        throwIfAbort();
+        const metaPercent =
+          60 + (((groupIndex + (si + 1) / Math.max(1, startCount)) / groupCount) * 35);
+        emitProgress({
+          phase: "meta",
+          groupIndex: groupIndex + 1,
+          groupCount,
+          stepIndex: si + 1,
+          stepCount: startCount,
+          percent: Math.min(95, Math.max(60, metaPercent)),
+        });
         const seed = metaCfg.seedBase + si;
         const rng = deps.createSeededRng(seed);
         const initialTrial = strategyPool[rng.int(strategyPool.length)];
@@ -353,8 +524,13 @@ export function runCutLayout(
     }
     diagnostics?.rejectedByLimit.push(...bestRun.rejectedByLimit);
     diagnostics?.gapFillPlacements.push(...bestRun.gapFillPlacements);
-    finalSheets.push(...deps.applyFixedMarginOffset(bestRun.sheets, sheet, marginMm));
+    const offsetSheets = deps.applyFixedMarginOffset(bestRun.sheets, sheet, marginMm);
+    const normalizedSheets = options?.originTopRight
+      ? offsetSheets.map((s) => normalizeSheetToTopRightOrigin(s))
+      : offsetSheets;
+    finalSheets.push(...normalizedSheets);
   }
 
+  emitProgress({ phase: "finalize", groupIndex: groupCount, groupCount, stepIndex: 1, stepCount: 1, percent: 100 });
   return diagnostics ? { sheets: finalSheets, diagnostics } : { sheets: finalSheets };
 }

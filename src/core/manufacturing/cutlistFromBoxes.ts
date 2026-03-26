@@ -74,15 +74,10 @@ export function cutlistComPrecoFromBox(
   const doorWidthMm = firstDoorPanel?.largura_mm;
 
   let doorPanelIndex = 0;
-  let piGavetaFrenteIndex = 0;
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
       return;
-    }
-    if (isPiBox && p.tipo === "gaveta_frente") {
-      if (piGavetaFrenteIndex >= drawersLayer.length) return;
-      piGavetaFrenteIndex += 1;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
     const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
@@ -164,53 +159,18 @@ export function cutlistComPrecoFromBox(
       precoTotal: p.custo,
       drillHoles,
     });
+    if (import.meta.env.DEV) {
+      console.log("[CUTLIST] painel gerado:", p.tipo, {
+        largura_mm: p.largura_mm,
+        altura_mm: p.altura_mm,
+        espessura_mm: p.espessura_mm,
+        quantidade: p.quantidade,
+      });
+    }
   });
 
   // Portas já vêm em modelo.paineis (porta_simples, porta_dupla, porta_correr); não duplicar a partir de modelo.portas
   // (modelo.portas é usado apenas para custos/ferragens; a cutlist de peças usa apenas paineis)
-
-  modelo.gavetas.forEach((p, gavetaIndex) => {
-    if (isPiBox && (drawersLayer.length === 0 || gavetaIndex >= drawersLayer.length)) return;
-    if (!p || !p.id || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.profundidade_mm) || !Number.isFinite(p.espessura_mm)) {
-      console.warn("[cutlistFromBoxes] Skipping invalid gaveta:", p);
-      return;
-    }
-    const drillingResult = buildPanelDrillingResult(
-      {
-        tipo: "gaveta",
-        larguraMm: p.largura_mm,
-        alturaMm: p.altura_mm,
-        espessuraMm: p.espessura_mm,
-        hasShelves,
-        hasDrawers,
-      },
-      effRules
-    );
-    const drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
-      ? drillingResult.data.drillHoles
-      : [];
-
-    const drawerOfficial = resolveMaterial(drawersLayer[gavetaIndex]?.material ?? "");
-    const drawerMaterial = drawerOfficial?.label ?? drawersLayer[gavetaIndex]?.material ?? getDefaultOfficialMaterial().label;
-    items.push({
-      ...baseItem,
-      id: `${box.id}-${p.id}`,
-      nome: "gaveta",
-      quantidade: 1,
-      dimensoes: {
-        largura: p.largura_mm,
-        altura: p.altura_mm,
-        profundidade: p.profundidade_mm,
-      },
-      espessura: p.espessura_mm,
-      material: drawerMaterial,
-      tipo: "gaveta",
-      grainDirection: "none" as GrainDirection,
-      precoUnitario: p.custo,
-      precoTotal: p.custo,
-      drillHoles,
-    });
-  });
 
   for (const item of items) {
     if (item.tipo !== "lateral_esquerda" && item.tipo !== "lateral_direita") continue;
@@ -233,6 +193,8 @@ export function cutlistComPrecoFromBox(
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
   }
 
+  console.log("[CUTLIST-FINAL] total:", items.length);
+  console.log("[CUTLIST-FINAL] tipos:", items.map((p) => p.tipo));
   return items;
 }
 

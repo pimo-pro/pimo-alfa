@@ -1,0 +1,33 @@
+---
+description: Diretrizes obrigatórias do Events System
+alwaysApply: true
+---
+
+# PIMO-Criativo — Events System
+
+Use `docs/PIMO-CRIATIVO-PLANO-EVENTS-SYSTEM.md` como referência obrigatória para qualquer implementação de eventos.
+
+## Regras obrigatórias
+
+- Proteger o sistema de eventos por feature flag global:
+  - `features.eventsSystem` com padrão `false`
+- Com feature flag desligada, o Events System deve ser no-op e não impactar o fluxo principal.
+- Nenhuma funcionalidade crítica pode depender exclusivamente do Events System nesta fase.
+- Toda integração deve passar por uma função central (ex.: `recordEvent`), sem gravação direta dispersa.
+- Manter implementação modular e desacoplada para facilitar testes e evolução.
+- Sempre que possível, incluir contexto de `factoryId` nos eventos.
+- Eventos iniciais recomendados:
+  - `USER_LOGIN`
+  - `USER_LOGOUT`
+  - `USER_ROLE_CHANGED`
+  - `PROJECT_CREATED`
+  - `PROJECT_UPDATED`
+  - `PROJECT_VISITED`
+  - `PROJECT_VISIBILITY_CHANGED`
+  - `FACTORY_USER_ADDED`
+
+## Alinhamento com o Master Plan
+
+- O Events System não pode atrasar ou bloquear a consolidação das fases 0 a 4.
+- Módulos avançados de automação/IA/plugins sobre eventos devem ser tratados como evolução futura.
+- Em caso de conflito, priorizar `docs/PIMO-CRIATIVO-MASTER-PLAN.md`.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Panel from "../ui/Panel";
 import { useSettings } from "../../context/SettingsContext";
-import type { SettingsSchema } from "../../core/settings/settingsService";
+import { getSettings, saveSettings, type SettingsSchema } from "../../core/settings/settingsService";
 import { PANEL_PRESETS } from "../../core/panel/panelConstants";
 import {
   AdminPageHeader,
@@ -10,6 +10,11 @@ import {
   adminPageShellStyle,
 } from "./AdminUi";
 import { useAdminFeedback } from "../../hooks/useAdminFeedback";
+import { useProject } from "../../context/useProject";
+import JSZip from "jszip";
+import { buildCncFromCutlistItems } from "../../core/cnc/cncPipeline";
+import type { CutlistItemForPieces } from "../../core/cutlayout/cutLayoutEngine";
+import { buildItemsForCncExport } from "../../hooks/useGerarArquivoHandlers";
 
 function NumberField({
   label,
@@ -45,8 +50,10 @@ function NumberField({
 export default function SystemSettingsBase() {
   const feedback = useAdminFeedback();
   const { settings, refreshSettings, updateSettings, validate } = useSettings();
+  const { project } = useProject();
   const [draft, setDraft] = useState<SettingsSchema>(settings);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isGeneratingVariants, setIsGeneratingVariants] = useState(false);
 
   useEffect(() => {
     setDraft(settings);
@@ -87,6 +94,8 @@ export default function SystemSettingsBase() {
           toolRpm: draft.cnc.toolRpm,
           drillFeedRate: draft.cnc.drillFeedRate,
           drillRpm: draft.cnc.drillRpm,
+          sheetMarginMm: draft.cnc.sheetMarginMm ?? 10,
+          rampDistanceMm: draft.cnc.rampDistanceMm ?? 20,
         },
       },
     };
@@ -98,6 +107,95 @@ export default function SystemSettingsBase() {
     a.download = `tcn-profile-${stamp}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const onDownloadAllVariants = async () => {
+    if (isGeneratingVariants) return;
+    if (!project.boxes?.length) {
+      feedback.warning("Nenhuma caixa no projeto atual para gerar TCN.");
+      return;
+    }
+
+    setIsGeneratingVariants(true);
+    feedback.success("Gerando variantes…");
+    const previousSettings = getSettings();
+    const variants = [
+      { metodo: "v1_corner" as const, file: "peça_v1.tcn" },
+      { metodo: "v2_ramp" as const, file: "peça_v2.tcn" },
+      { metodo: "v3_ramp_noflip" as const, file: "peça_v3.tcn" },
+      { metodo: "v4_corner_noflip" as const, file: "peça_v4.tcn" },
+      { metodo: "v5_ramp_noanchor" as const, file: "peça_v5.tcn" },
+      { metodo: "v6_ramp" as const, file: "peça_v6.tcn" },
+    ];
+
+    try {
+      console.log("Projeto atual:", project);
+      console.log("Parts extraídas:", project.extractedPartsByBoxId);
+      const allItems = buildItemsForCncExport(project, project.boxes) as CutlistItemForPieces[];
+      console.log("Cutlist:", allItems);
+      if (!allItems.length) {
+        feedback.warning("A cutlist está vazia. Nada para exportar.");
+        return;
+      }
+
+      const zip = new JSZip();
+      const arquivos: string[] = [];
+      for (const v of variants) {
+        console.log("Método atual:", v.metodo);
+        saveSettings({
+          ...previousSettings,
+          cnc: {
+            ...previousSettings.cnc,
+            ...draft.cnc,
+            tcnMetodo: v.metodo,
+          },
+        });
+
+        const byMaterial = new Map<string, typeof allItems>();
+        for (const item of allItems) {
+          const key = (item.material ?? "Módulo").trim() || "Módulo";
+          if (!byMaterial.has(key)) byMaterial.set(key, []);
+          byMaterial.get(key)!.push(item);
+        }
+
+        const contents: string[] = [];
+        for (const [, itemsForMaterial] of byMaterial) {
+          const cncBundle = buildCncFromCutlistItems(project, itemsForMaterial);
+          if (!cncBundle?.cnc?.files?.length) continue;
+          for (const file of cncBundle.cnc.files) {
+            console.log("TCN gerado:", file.tcn);
+            contents.push(file.tcn);
+            arquivos.push(file.filenameBase);
+          }
+        }
+
+        if (!contents.length) {
+          throw new Error(`Sem conteúdo TCN para ${v.file}.`);
+        }
+        zip.file(v.file, contents.join("\n\n"));
+      }
+      console.log("Total de painéis nas variantes:", arquivos.length);
+
+      const slug = (project.projectName ?? "Projeto")
+        .replace(/[^\p{L}\p{N}_-]+/gu, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 40) || "Projeto";
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}_variants_v1-v6.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      feedback.success("Download concluído.");
+    } catch (err) {
+      console.error("Erro ao gerar variantes:", err);
+      feedback.error("Erro ao gerar variantes. Ver console.");
+    } finally {
+      saveSettings(previousSettings);
+      setIsGeneratingVariants(false);
+    }
   };
 
   return (
@@ -336,6 +434,32 @@ export default function SystemSettingsBase() {
                 furação: {
                   ...p.furação,
                   cavilha: { ...p.furação?.cavilha, frontDistance: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Distância fundo cavilha (mm)"
+            value={draft.furação?.cavilha?.backDistance ?? 60}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  cavilha: { ...p.furação?.cavilha, backDistance: v },
+                },
+              }))
+            }
+          />
+          <NumberField
+            label="Cavilha cima/fundo — centro ao bordo lateral (mm)"
+            value={draft.furação?.cavilha?.sideOffset ?? 19}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                furação: {
+                  ...p.furação,
+                  cavilha: { ...p.furação?.cavilha, sideOffset: v },
                 },
               }))
             }
@@ -596,137 +720,6 @@ export default function SystemSettingsBase() {
               }))
             }
           />
-        </div>
-      </Panel>
-
-      <Panel title="Fabricação / TCN" description="Parâmetros de geração TCN para contorno, segurança e velocidades de corte/furação.">
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-          <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Método de geração do contorno</span>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-              <input
-                type="radio"
-                name="tcn-metodo"
-                checked={draft.cnc.tcnMetodo === "v1_corner"}
-                onChange={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    cnc: { ...prev.cnc, tcnMetodo: "v1_corner", contourEntryMode: "corner" },
-                  }))
-                }
-              />
-              v1 - Entrada pelo canto (original)
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-              <input
-                type="radio"
-                name="tcn-metodo"
-                checked={draft.cnc.tcnMetodo === "v2_midstart"}
-                onChange={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    cnc: { ...prev.cnc, tcnMetodo: "v2_midstart", contourEntryMode: "midside" },
-                  }))
-                }
-              />
-              v2 - Entrada pelo meio da aresta (recomendado)
-            </label>
-          </div>
-          <NumberField
-            label="Z de segurança (mm)"
-            value={draft.cnc.zSafetyMm}
-            step={0.1}
-            min={0}
-            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, zSafetyMm: value } }))}
-          />
-          <NumberField
-            label="Espaçamento mínimo entre peças (mm)"
-            value={draft.cnc.minSpacingMm}
-            step={0.5}
-            min={0}
-            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, minSpacingMm: value } }))}
-          />
-          <NumberField
-            label="Profundidade corte padrão (mm)"
-            value={draft.cnc.profundidadeCortePadraoMm}
-            step={0.1}
-            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, profundidadeCortePadraoMm: value } }))}
-          />
-          <NumberField
-            label="Offset ferramenta padrão (mm)"
-            value={draft.cnc.offsetFerramentaPadraoMm}
-            step={0.1}
-            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, offsetFerramentaPadraoMm: value } }))}
-          />
-          <NumberField
-            label="Diâmetro fresa contorno (mm)"
-            value={draft.cnc.diametroFresaContornoMm}
-            step={0.5}
-            min={0}
-            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, diametroFresaContornoMm: value } }))}
-          />
-          <NumberField
-            label="Tolerância posicionamento (mm)"
-            value={draft.cnc.toleranciaPosicionamentoMm}
-            step={0.01}
-            onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toleranciaPosicionamentoMm: value } }))}
-          />
-          <details style={{ gridColumn: "1 / -1" }}>
-            <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--text-muted)" }}>
-              Parâmetros avançados (expandir)
-            </summary>
-            <div
-              className="form-grid"
-              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 10 }}
-            >
-              <NumberField
-                label="Feed rate corte (#2008)"
-                value={draft.cnc.toolFeedRate}
-                step={1}
-                min={1}
-                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toolFeedRate: value } }))}
-              />
-              <NumberField
-                label="RPM corte (#2002)"
-                value={draft.cnc.toolRpm}
-                step={100}
-                min={1000}
-                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, toolRpm: value } }))}
-              />
-              <NumberField
-                label="Feed rate furação"
-                value={draft.cnc.drillFeedRate}
-                step={10}
-                min={1}
-                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, drillFeedRate: value } }))}
-              />
-              <NumberField
-                label="RPM furação"
-                value={draft.cnc.drillRpm}
-                step={100}
-                min={1000}
-                onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, drillRpm: value } }))}
-              />
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={draft.cnc.contourCloseExplicit}
-                  onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, contourCloseExplicit: e.target.checked } }))
-                  }
-                />
-                Fechar contorno explicitamente
-              </label>
-            </div>
-          </details>
-          <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
-            <button type="button" className="button button-primary" onClick={applyAndSave}>
-              Guardar definições
-            </button>
-            <button type="button" className="button button-ghost" onClick={exportTcnProfile}>
-              Exportar perfil JSON
-            </button>
-          </div>
         </div>
       </Panel>
 
@@ -1114,31 +1107,83 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v1_corner"
-                  checked={draft.cnc.tcnMetodo === "v1_corner"}
+                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v1_corner"}
                   onChange={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      cnc: { ...prev.cnc, tcnMetodo: "v1_corner", contourEntryMode: "corner" },
-                    }))
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v1_corner" } }))
                   }
                 />
-                <span><strong>v1</strong> — Entrada pelo canto (método original)</span>
+                <span><strong>v1</strong> — Método original (sem rampa)</span>
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="tcnMetodo"
-                  value="v2_midstart"
-                  checked={draft.cnc.tcnMetodo === "v2_midstart"}
+                  value="v2_ramp"
+                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v2_ramp"}
                   onChange={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      cnc: { ...prev.cnc, tcnMetodo: "v2_midstart", contourEntryMode: "midside" },
-                    }))
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v2_ramp" } }))
                   }
                 />
-                <span><strong>v2</strong> — Entrada pelo meio da aresta (recomendado)</span>
+                <span><strong>v2</strong> — Rampa entrada/saída (padrão HARNNETT TRACK real)</span>
               </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
+                  value="v3_ramp_noflip"
+                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v3_ramp_noflip"}
+                  onChange={() =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v3_ramp_noflip" } }))
+                  }
+                />
+                <span><strong>v3</strong> — Rampa sem duplo flip X</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
+                  value="v4_corner_noflip"
+                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v4_corner_noflip"}
+                  onChange={() =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v4_corner_noflip" } }))
+                  }
+                />
+                <span><strong>v4</strong> — Original sem duplo flip X</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
+                  value="v5_ramp_noanchor"
+                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v5_ramp_noanchor"}
+                  onChange={() =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v5_ramp_noanchor" } }))
+                  }
+                />
+                <span><strong>v5</strong> — Rampa sem anchor (XY originais)</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
+                  value="v6_ramp"
+                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v6_ramp"}
+                  onChange={() =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v6_ramp" } }))
+                  }
+                />
+                <span><strong>v6</strong> — Rampa Sheet_A1 (lado direito fixo + layout X)</span>
+              </label>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="button button-ghost"
+                onClick={onDownloadAllVariants}
+                disabled={isGeneratingVariants || !project.boxes?.length}
+              >
+                {isGeneratingVariants ? "Gerando variantes..." : "Download All Variants (v1…v6)"}
+              </button>
             </div>
           </div>
 
@@ -1152,7 +1197,7 @@ export default function SystemSettingsBase() {
             <NumberField
               label="Espaçamento mínimo entre peças (mm)"
               value={draft.cnc.minSpacingMm ?? 15}
-              min={5} max={100} step={1}
+              min={0} max={100} step={1}
               onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, minSpacingMm: value } }))}
             />
             <NumberField
@@ -1160,6 +1205,18 @@ export default function SystemSettingsBase() {
               value={draft.cnc.diametroFresaContornoMm ?? 12}
               min={1} max={50} step={0.5}
               onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, diametroFresaContornoMm: value } }))}
+            />
+            <NumberField
+              label="Margem de segurança da chapa (mm)"
+              value={draft.cnc.sheetMarginMm ?? 10}
+              min={0} max={100} step={1}
+              onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, sheetMarginMm: value } }))}
+            />
+            <NumberField
+              label="Distância de rampa entrada/saída (mm)"
+              value={draft.cnc.rampDistanceMm ?? 20}
+              min={5} max={100} step={1}
+              onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, rampDistanceMm: value } }))}
             />
           </div>
 

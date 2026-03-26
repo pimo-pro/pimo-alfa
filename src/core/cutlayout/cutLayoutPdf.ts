@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
-import { toLayoutAbsoluteX, toLayoutPlacementX } from "./layoutCoordinateSystem";
+import { holeLocalToSheetOffsetMm, toLayoutAbsoluteX, toLayoutPlacementX } from "./layoutCoordinateSystem";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
 
 /** A4 retrato: largura × altura (mm) */
@@ -37,6 +37,7 @@ const MIN_TABLE_SLICE_MM = TABLE_HEAD_H_MM + TABLE_ROW_H_MM + 6;
 export type CutLayoutPdfOptions = {
   projectName?: string;
   brandRight?: string;
+  nestingTopRightOrigin?: boolean;
 };
 
 type EdgeBands = { top?: boolean; right?: boolean; bottom?: boolean; left?: boolean };
@@ -168,7 +169,8 @@ function drawSheetDiagram(
   doc: jsPDF,
   sheetResult: SheetResult,
   originY: number,
-  maxDiagramHeightMm: number
+  maxDiagramHeightMm: number,
+  topRightOrigin: boolean
 ): { originX: number; originY: number; drawW: number; drawH: number; scale: number } {
   const { sheet, placements } = sheetResult;
   const maxW = INNER_W;
@@ -186,7 +188,7 @@ function drawSheetDiagram(
   type PlacedRect = { pl: CutPlacement; px: number; py: number; pw: number; ph: number };
   const layoutRects: PlacedRect[] = placements.map((pl) => ({
     pl,
-    px: originX + toLayoutPlacementX(pl.x_mm, pl.largura_mm, sheet.largura_mm) * scale,
+    px: originX + (topRightOrigin ? pl.x_mm : toLayoutPlacementX(pl.x_mm, pl.largura_mm, sheet.largura_mm)) * scale,
     py: originY + pl.y_mm * scale,
     pw: pl.largura_mm * scale,
     ph: pl.altura_mm * scale,
@@ -212,7 +214,7 @@ function drawSheetDiagram(
       doc.setFillColor(30, 30, 30);
       doc.setDrawColor(30, 30, 30);
       for (const h of holes) {
-        const hxAbs = toLayoutAbsoluteX(pl.x_mm + h.x, sheet.largura_mm);
+        const hxAbs = topRightOrigin ? (pl.x_mm + h.x) : toLayoutAbsoluteX(pl.x_mm + h.x, sheet.largura_mm);
         const hx = originX + hxAbs * scale;
         const hy = py + h.y * scale;
         const r = Math.max(0.35, Math.min(1.1, ((h.diameter ?? 5) / 2) * scale * 0.85));
@@ -261,7 +263,13 @@ export async function buildCutLayoutPdf(
 
     const yDiagramTop = drawPageHeader(doc, sheetResult, globalSheetIndex, opts, logoDataUrl);
     const maxDiagramH = computeDiagramMaxHeightMm(yDiagramTop);
-    const diagram = drawSheetDiagram(doc, sheetResult, yDiagramTop, maxDiagramH);
+    const diagram = drawSheetDiagram(
+      doc,
+      sheetResult,
+      yDiagramTop,
+      maxDiagramH,
+      Boolean(opts.nestingTopRightOrigin)
+    );
     const tableStartY = diagram.originY + diagram.drawH + GAP_DIAGRAM_TABLE;
 
     drawPieceTablePaginated(doc, sheetResult, tableStartY, globalSheetIndex);
@@ -352,9 +360,11 @@ function drawPieceTablePaginated(
         const holes = pl.holes ?? [];
         if (holes.length > 0) {
           doc.setFillColor(25, 25, 25);
+          const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
           for (const h of holes) {
-            const hx = rx + (h.x / pl.largura_mm) * rw;
-            const hy = ry + (h.y / pl.altura_mm) * rh;
+            const off = holeLocalToSheetOffsetMm(h.x, h.y, rot);
+            const hx = rx + (off.sx / pl.largura_mm) * rw;
+            const hy = ry + (off.sy / pl.altura_mm) * rh;
             const hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.largura_mm) * rw));
             doc.circle(hx, hy, hr, "F");
           }

@@ -145,7 +145,11 @@ export async function saveProject(request: SaveProjectRequest): Promise<SavedPro
     payload: { request },
   });
   if (isOnline()) {
-    await syncQueue();
+    try {
+      await syncQueue();
+    } catch (err) {
+      console.warn("[SYNC] saveProject continuou após erro de sync:", err);
+    }
   }
   const localMeta = loadProjectsOffline("all").find((item) => item.id === savedLocal.id);
   return localMeta ?? {
@@ -229,7 +233,11 @@ export async function saveSnapshot(request: SaveProjectRequest): Promise<SavedPr
     payload: { request },
   });
   if (isOnline()) {
-    await syncQueue();
+    try {
+      await syncQueue();
+    } catch (err) {
+      console.warn("[SYNC] saveSnapshot continuou após erro de sync:", err);
+    }
   }
   return loadProjectsOffline("all").find((item) => item.id === savedLocal.id) ?? null;
 }

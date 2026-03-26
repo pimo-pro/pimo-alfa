@@ -143,5 +143,9 @@ export async function remoteDeleteProject(id: string): Promise<boolean> {
   // Em DEV também pode apagar remoto (Render), então não bloquear aqui.
   const params = new URLSearchParams({ action: "delete", id });
   const response = await fetch(buildProjectsUrl(params), { method: "DELETE" });
+  if (response.status === 404) {
+    console.log("[SYNC] Ignorando 404 ao deletar projeto inexistente");
+    return true;
+  }
   return response.ok;
 }

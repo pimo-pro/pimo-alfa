@@ -138,7 +138,7 @@ export function getInternalFace(pieceType: PieceType): DrillFace {
   return "frente";
 }
 
-/** Furos de cavilha (dowel). União topo/base: linha a 9mm da borda, cavilha a 60mm da frente/fundo. */
+/** Furos de cavilha (dowel). Cima/fundo: eixo a 60 mm dos bordos frente/fundo; centro a sideOffset (padrão 19 mm) dos bordos esquerdo/direito (alinhamento com lateral 19 mm). */
 function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.cavilha) return;
   const cfg = rules.furos.tecnicos.cavilha;
@@ -146,13 +146,15 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 8;
   const profundidade = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : Math.min(13, piece.espessura);
   const face = getInternalFace(piece.tipo);
-  const sideOffset = cfg.sideOffset ?? 9.5;
+  const insetLateral = Number(cfg.sideOffset) > 0 ? Number(cfg.sideOffset) : 19;
 
   if ((piece.tipo === "cima" || piece.tipo === "fundo") && (cfg.aplicarEm.cima || cfg.aplicarEm.fundo)) {
-    const xLeft = sideOffset;
-    const xRight = piece.largura - sideOffset;
-    const yFront = cfg.distanciaFrente ?? 60;
-    const yBack = piece.altura - (cfg.distanciaFundo ?? 60);
+    const xLeft = insetLateral;
+    const xRight = piece.largura - insetLateral;
+    const distFrente = Number(cfg.distanciaFrente) > 0 ? Number(cfg.distanciaFrente) : 60;
+    const distFundo = Number(cfg.distanciaFundo) > 0 ? Number(cfg.distanciaFundo) : 60;
+    const yFront = distFrente;
+    const yBack = piece.altura - distFundo;
     pushHole(out, piece, xLeft, yFront, diametro, profundidade, "cavilha", face);
     pushHole(out, piece, xLeft, yBack, diametro, profundidade, "cavilha", face);
     pushHole(out, piece, xRight, yFront, diametro, profundidade, "cavilha", face);
@@ -196,7 +198,11 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   if (!cfg.enabled) return;
   if (!piece.tipo.startsWith("porta")) return;
   const face: DrillFace = "tras";
-  const distCentroCaneco = Number(cfg.distanciaCentroDaBorda) || cfg.distanciaBordaLateral || SENSYS_8645I_C00.canecoCentroBordaMm;
+  // Centro do caneco: referência geométrica principal (22.5 mm). Ignora legado ambíguo em distanciaBordaLateral.
+  const distCentroCaneco =
+    Number(cfg.distanciaCentroDaBorda) > 0
+      ? Number(cfg.distanciaCentroDaBorda)
+      : SENSYS_8645I_C00.canecoCentroBordaMm;
   // Regras da Porta: número de dobradiças por altura/largura (cm). Fallback: config técnica.
   const numHinges =
     piece.hingeSide === "top" || piece.hingeSide === "bottom"

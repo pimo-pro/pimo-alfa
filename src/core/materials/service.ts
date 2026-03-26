@@ -24,6 +24,7 @@ import {
 } from "../manufacturing/materials";
 import {
   getDefaultOfficialMaterial,
+  listOfficialMaterials,
   listIndustrialWoodMaterials,
   resolveMaterial,
 } from "./materials.api";
@@ -35,6 +36,127 @@ const DEFAULT_SHEET_THICKNESS_MM = 19;
 
 /** Categoria usada para materiais migrados da lista industrial. */
 const MIGRATED_CATEGORY_ID = "industrial";
+
+type MaterialSeed = Omit<MaterialRecord, "id">;
+
+const REQUIRED_MATERIAL_LABELS = new Set([
+  "MDF Branco",
+  "MDF Cinza",
+  "MDF Preto",
+  "Carvalho",
+  "Nogueira",
+  "Pinho",
+  "Faia",
+  "Contraplacado",
+  "Melamina",
+  "Lacado",
+  "MDF Clarus",
+  "MDF Noce",
+]);
+
+function categoryFromLabel(label: string): string {
+  const lower = label.trim().toLowerCase();
+  if (lower.includes("mdf")) return "mdf";
+  if (lower.includes("carvalho")) return "carvalho";
+  if (lower.includes("lacado")) return "lacado";
+  if (lower.includes("melamina")) return "melamina";
+  if (lower.includes("contraplacado")) return "contraplacado";
+  if (lower.includes("nogueira")) return "carvalho";
+  if (lower.includes("pinho")) return "carvalho";
+  if (lower.includes("faia")) return "carvalho";
+  if (lower.includes("costa")) return MIGRATED_CATEGORY_ID;
+  return "outros";
+}
+
+function buildRequiredMaterialSeeds(): MaterialSeed[] {
+  const official = listOfficialMaterials();
+  const fromOfficial = official
+    .filter((m) => REQUIRED_MATERIAL_LABELS.has(m.label))
+    .map<MaterialSeed>((m) => ({
+      label: m.label,
+      categoryId: categoryFromLabel(m.label),
+      color: undefined,
+      textureUrl: undefined,
+      espessura: Number(m.industrialDefaults?.espessuraPadrao) || DEFAULT_SHEET_THICKNESS_MM,
+      precoPorM2: Number(m.industrialDefaults?.custo_m2 ?? 0),
+      sheetWidthMm: Number(m.industrialDefaults?.larguraChapa) || DEFAULT_SHEET_WIDTH_MM,
+      sheetHeightMm: Number(m.industrialDefaults?.alturaChapa) || DEFAULT_SHEET_HEIGHT_MM,
+      sheetThicknessMm: Number(m.industrialDefaults?.espessuraPadrao) || DEFAULT_SHEET_THICKNESS_MM,
+      sheetWeightKg: undefined,
+      sheetDensity: Number.isFinite(Number(m.industrialDefaults?.densidade))
+        ? Number(m.industrialDefaults?.densidade)
+        : undefined,
+      industrialMaterialId: m.canonicalId,
+      visualPresetId: m.viewerMaterialId ?? undefined,
+    }));
+
+  // Chapa técnica típica para costas/fundos de 10 mm usada no CNC.
+  const costaSeed: MaterialSeed = {
+    label: "COSTA 10mm",
+    categoryId: MIGRATED_CATEGORY_ID,
+    color: "#f3f3f3",
+    textureUrl: undefined,
+    espessura: 10,
+    precoPorM2: 0,
+    sheetWidthMm: DEFAULT_SHEET_WIDTH_MM,
+    sheetHeightMm: DEFAULT_SHEET_HEIGHT_MM,
+    sheetThicknessMm: 10,
+    sheetWeightKg: undefined,
+    sheetDensity: undefined,
+    industrialMaterialId: "costa_10mm",
+    visualPresetId: undefined,
+  };
+
+  return [...fromOfficial, costaSeed];
+}
+
+function validPositive(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function ensureRequiredMaterialsCatalog(): { created: number; updated: number } {
+  const list = loadFromStorage();
+  const seeds = buildRequiredMaterialSeeds();
+  let created = 0;
+  let updated = 0;
+
+  for (const seed of seeds) {
+    const idx = list.findIndex((m) => (m.label ?? "").trim().toLowerCase() === seed.label.trim().toLowerCase());
+    if (idx === -1) {
+      const record: MaterialRecord = { id: generateId(), ...seed };
+      list.push(record);
+      created++;
+      continue;
+    }
+    const current = list[idx];
+    const next: MaterialRecord = {
+      ...current,
+      categoryId: current.categoryId || seed.categoryId,
+      color: current.color ?? seed.color,
+      textureUrl: current.textureUrl ?? seed.textureUrl,
+      espessura: validPositive(current.espessura) ?? seed.espessura,
+      precoPorM2: Number.isFinite(Number(current.precoPorM2)) ? Number(current.precoPorM2) : seed.precoPorM2,
+      sheetWidthMm: validPositive(current.sheetWidthMm) ?? seed.sheetWidthMm,
+      sheetHeightMm: validPositive(current.sheetHeightMm) ?? seed.sheetHeightMm,
+      sheetThicknessMm: validPositive(current.sheetThicknessMm) ?? seed.sheetThicknessMm,
+      sheetWeightKg: Number.isFinite(Number(current.sheetWeightKg)) ? Number(current.sheetWeightKg) : seed.sheetWeightKg,
+      sheetDensity: Number.isFinite(Number(current.sheetDensity)) ? Number(current.sheetDensity) : seed.sheetDensity,
+      industrialMaterialId: current.industrialMaterialId || seed.industrialMaterialId,
+      visualPresetId: current.visualPresetId || seed.visualPresetId,
+    };
+    const changed = JSON.stringify(current) !== JSON.stringify(next);
+    if (changed) {
+      list[idx] = next;
+      updated++;
+    }
+  }
+
+  if (created > 0 || updated > 0) {
+    saveToStorage(list);
+  }
+  return { created, updated };
+}
 
 function generateId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -82,28 +204,32 @@ function saveToStorage(data: MaterialRecord[]): void {
  * Não remove nem altera materiais industriais originais; não altera MaterialLibrary nem Viewer.
  */
 export function migrateMaterialsFromLegacy(): { migrated: number; skipped: number } {
+  const restored = ensureRequiredMaterialsCatalog();
   let migrated = 0;
   let skipped = 0;
-  for (const ind of listIndustrialWoodMaterials()) {
-    const existing = getMaterialByIdOrLabel(ind.label);
+  const legacyIndustrial = listIndustrialWoodMaterials();
+  const official = listOfficialMaterials();
+  const source = official.length > 0 ? official : legacyIndustrial;
+  for (const mat of source) {
+    const existing = getMaterialByIdOrLabel(mat.label);
     if (existing) {
       skipped++;
       continue;
     }
     const result = createMaterial({
-      label: ind.label,
-      categoryId: MIGRATED_CATEGORY_ID,
-      espessura: ind.industrialDefaults?.espessuraPadrao ?? DEFAULT_SHEET_THICKNESS_MM,
-      precoPorM2: ind.industrialDefaults?.custo_m2 ?? 0,
-      sheetWidthMm: Number(ind.industrialDefaults?.larguraChapa) || DEFAULT_SHEET_WIDTH_MM,
-      sheetHeightMm: Number(ind.industrialDefaults?.alturaChapa) || DEFAULT_SHEET_HEIGHT_MM,
-      sheetThicknessMm: Number(ind.industrialDefaults?.espessuraPadrao) || DEFAULT_SHEET_THICKNESS_MM,
-      industrialMaterialId: ind.canonicalId,
-      visualPresetId: ind.viewerMaterialId ?? undefined,
+      label: mat.label,
+      categoryId: mat.industrial ? MIGRATED_CATEGORY_ID : "outros",
+      espessura: mat.industrialDefaults?.espessuraPadrao ?? DEFAULT_SHEET_THICKNESS_MM,
+      precoPorM2: mat.industrialDefaults?.custo_m2 ?? 0,
+      sheetWidthMm: Number(mat.industrialDefaults?.larguraChapa) || DEFAULT_SHEET_WIDTH_MM,
+      sheetHeightMm: Number(mat.industrialDefaults?.alturaChapa) || DEFAULT_SHEET_HEIGHT_MM,
+      sheetThicknessMm: Number(mat.industrialDefaults?.espessuraPadrao) || DEFAULT_SHEET_THICKNESS_MM,
+      industrialMaterialId: mat.canonicalId,
+      visualPresetId: mat.viewerMaterialId ?? undefined,
     });
     if (result.success) migrated++;
   }
-  return { migrated, skipped };
+  return { migrated: migrated + restored.created + restored.updated, skipped };
 }
 
 /**
@@ -154,6 +280,7 @@ export function validateMaterialData(
  * Lista todos os materiais guardados (localStorage).
  */
 export function listMaterials(): MaterialRecord[] {
+  ensureRequiredMaterialsCatalog();
   return loadFromStorage();
 }
 

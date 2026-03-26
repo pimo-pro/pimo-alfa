@@ -138,9 +138,11 @@ export function simulateTrialForGroup(
         partName: piece.partName,
         materialId: piece.materialId,
         materialName: piece.materialName,
+        drillHoles: piece.drillHoles ?? piece.holes,
         holes: piece.holes,
         pieceNumber: piece.pieceNumber,
         shortCode: piece.shortCode,
+        metadata: piece.metadata,
       });
       placedRects.push({ x: best.placement.x, y: best.placement.y, w: best.placement.w, h: best.placement.h });
       state = deps.updateStrategyState(trial.strategy, state, best.placement, kerf);
@@ -188,7 +190,11 @@ export function simulateTrialForGroup(
           partName: target.partName,
           materialId: target.materialId,
           materialName: target.materialName,
+          drillHoles: target.drillHoles ?? target.holes,
           holes: target.holes,
+          pieceNumber: target.pieceNumber,
+          shortCode: target.shortCode,
+          metadata: target.metadata,
         });
         placedRects.push({ x: fit.x, y: fit.y, w: fit.w, h: fit.h });
         state = deps.updateStrategyState(trial.strategy, state, fit, kerf);
@@ -234,9 +240,11 @@ export function simulateTrialForGroup(
             partName: piece.partName,
             materialId: piece.materialId,
             materialName: piece.materialName,
+            drillHoles: piece.drillHoles ?? piece.holes,
             holes: piece.holes,
             pieceNumber: piece.pieceNumber,
             shortCode: piece.shortCode,
+            metadata: piece.metadata,
           });
           placedRects.push({
             x: rescue.placement.x,

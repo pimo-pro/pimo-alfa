@@ -1,0 +1,30 @@
+---
+description: Base arquitetural oficial do PIMO-Criativo
+alwaysApply: true
+---
+
+# Regra Mestra — PIMO-Criativo
+
+Use `docs/PIMO-CRIATIVO-MASTER-PLAN.md` como referência principal de arquitetura, fases e regras de produto.
+
+## Diretrizes obrigatórias
+
+- Respeitar os 5 roles fixos: `visitor`, `pro`, `ultra`, `ultra+`, `admin`.
+- Aplicar autorização por permissões efetivas:
+  - `effectivePermissions = (rolePermissions + extraPermissions) - removedPermissions`
+- Manter o conceito de fábrica como escopo lógico de usuários e projetos.
+- Preservar as regras de acesso:
+  - `admin` com acesso total
+  - `ultra+` com visão/gestão da própria fábrica
+  - `ultra`, `pro`, `visitor` com escopo de projetos próprios (salvo permissões explícitas)
+- Garantir compatibilidade incremental por fases, sem quebrar fases anteriores.
+- Não iniciar módulos avançados (`produção`, `IA`, `plugins`) antes de base sólida das fases 0 a 4.
+- Toda nova funcionalidade deve declarar:
+  - roles habilitados
+  - permissões necessárias
+- Manter terminologia do documento oficial em código e documentação.
+
+## Quando houver conflito
+
+1. Seguir o Master Plan como fonte de verdade.
+2. Se necessário, propor revisão explícita da seção impactada antes de alterar princípios.

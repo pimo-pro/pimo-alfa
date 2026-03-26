@@ -136,21 +136,30 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
         roomSnapshot: captureRoomSnapshot(),
       };
       const currentUser = getCurrentProjectUser();
-      const saved = await saveProject({
-        name: generatedState.projectName,
-        ownerId: currentUser.ownerId,
-        ownerName: currentUser.ownerName,
-        snapshot,
-        thumbnailDataUrl,
-      });
+      let saved: Awaited<ReturnType<typeof saveProject>> = null;
+      try {
+        saved = await saveProject({
+          name: generatedState.projectName,
+          ownerId: currentUser.ownerId,
+          ownerName: currentUser.ownerName,
+          snapshot,
+          thumbnailDataUrl,
+        });
+      } catch (err) {
+        console.warn("[SYNC] gerarESalvarDesign: saveProject falhou, seguindo fluxo", err);
+      }
 
-      await saveSnapshot({
-        name: generatedState.projectName,
-        ownerId: currentUser.ownerId,
-        ownerName: currentUser.ownerName,
-        snapshot,
-        thumbnailDataUrl: null,
-      });
+      try {
+        await saveSnapshot({
+          name: generatedState.projectName,
+          ownerId: currentUser.ownerId,
+          ownerName: currentUser.ownerName,
+          snapshot,
+          thumbnailDataUrl: null,
+        });
+      } catch (err) {
+        console.warn("[SYNC] gerarESalvarDesign: saveSnapshot falhou, seguindo fluxo", err);
+      }
 
       setProject((prev) => ({
         ...prev,

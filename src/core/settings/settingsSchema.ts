@@ -43,7 +43,13 @@ export interface SettingsSchema {
     toleranciaPosicionamentoMm: number;
     /** Diâmetro da fresa para compensação geométrica no TCN (contorno já compensado no CAM; 0 = usar Kerf padrão ou 12 mm). */
     diametroFresaContornoMm: number;
-    tcnMetodo: "v1_corner" | "v2_midstart";
+    tcnMetodo:
+      | "v1_corner"
+      | "v2_ramp"
+      | "v3_ramp_noflip"
+      | "v4_corner_noflip"
+      | "v5_ramp_noanchor"
+      | "v6_ramp";
     zSafetyMm: number;
     minSpacingMm: number;
     contourEntryMode: "corner" | "midside";
@@ -52,6 +58,8 @@ export interface SettingsSchema {
     toolRpm: number;
     drillFeedRate: number;
     drillRpm: number;
+    sheetMarginMm: number;
+    rampDistanceMm: number;
   };
   nesting: {
     kerfPadraoMm: number;
@@ -122,7 +130,7 @@ export interface SettingsSchema {
       frontDistance: number;
       /** Distância do fundo ao eixo da cavilha (mm). Padrão industrial 60. */
       backDistance: number;
-      /** Distância do centro do furo à borda lateral da peça (mm). Padrão industrial 9.5. */
+      /** Distância do centro do furo aos bordos esquerdo/direito em cima/fundo (mm). Padrão 19 (alinhamento com lateral 19 mm). */
       sideOffset: number;
     };
     prateleira: {
@@ -208,6 +216,8 @@ export const settingsDefaults: SettingsSchema = {
     toolRpm: 21000,
     drillFeedRate: 1000,
     drillRpm: 18000,
+    sheetMarginMm: 10,
+    rampDistanceMm: 20,
   },
   nesting: {
     kerfPadraoMm: 3,
@@ -263,7 +273,7 @@ export const settingsDefaults: SettingsSchema = {
     cavilha: {
       frontDistance: 60,
       backDistance: 60,
-      sideOffset: 9.5,
+      sideOffset: 19,
     },
     prateleira: {
       margemTop: 200,

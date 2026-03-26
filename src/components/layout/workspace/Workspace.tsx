@@ -764,6 +764,56 @@ return (
         </div>
       </div>
     </main>
+      {gerarArquivoHandlers.layoutProgress?.visible && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          style={{ zIndex: 1200 }}
+        >
+          <div className="modal-card" style={{ maxWidth: 460, width: "92vw" }}>
+            <div className="modal-header">
+              <div className="modal-title">Layout Industrial</div>
+            </div>
+            <div className="modal-list" style={{ padding: 16 }}>
+              <div style={{ fontSize: 13, marginBottom: 10 }}>
+                {gerarArquivoHandlers.layoutProgress.message || "Gerando layout industrial otimizado… aguarde."}
+              </div>
+              <div
+                style={{
+                  width: "100%",
+                  height: 10,
+                  borderRadius: 6,
+                  background: "rgba(255,255,255,0.15)",
+                  overflow: "hidden",
+                  marginBottom: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.max(2, Math.min(100, Math.round(gerarArquivoHandlers.layoutProgress.percent)))}%`,
+                    height: "100%",
+                    background: "var(--accent, #57a6ff)",
+                    transition: "width 140ms linear",
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                  {Math.round(gerarArquivoHandlers.layoutProgress.percent)}%
+                </span>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={gerarArquivoHandlers.cancelIndustrialLayout}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showGerarArquivoModal && (
         <GerarArquivoModal
           onClose={() => setShowGerarArquivoModal(false)}

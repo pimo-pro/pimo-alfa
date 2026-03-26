@@ -343,8 +343,17 @@ export async function syncQueue(): Promise<void> {
           }
           const remoteId = resolveProjectIdForRemote(project);
           if (remoteId) {
-            const ok = await remoteDeleteProject(remoteId);
-            if (!ok) throw new Error("Falha ao apagar no servidor");
+            try {
+              const ok = await remoteDeleteProject(remoteId);
+              if (!ok) {
+                console.warn("[SYNC] Falha ao apagar no servidor; seguindo com fluxo local", { remoteId });
+              }
+            } catch (deleteErr) {
+              console.warn("[SYNC] Erro no delete remoto; seguindo com fluxo local", {
+                remoteId,
+                error: deleteErr instanceof Error ? deleteErr.message : "erro desconhecido",
+              });
+            }
           }
           projects.splice(projectIdx, 1);
           nextQueue.splice(index, 1);

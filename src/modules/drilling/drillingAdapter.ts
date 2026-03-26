@@ -163,7 +163,7 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
   const parafusoSideOffset = toFiniteNumber(fu.parafuso.sideOffset, 9.5);
   const cavilhaFront = toFiniteNumber(fu.cavilha?.frontDistance, 60);
   const cavilhaBack = toFiniteNumber(fu.cavilha?.backDistance, 60);
-  const cavilhaSideOffset = toFiniteNumber(fu.cavilha?.sideOffset, 9.5);
+  const cavilhaSideOffset = toFiniteNumber(fu.cavilha?.sideOffset, 19);
 
   return {
     ...normalizedRules,

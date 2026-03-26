@@ -730,7 +730,7 @@ export default function GestaoMateriaisPage() {
               <input
                 className="input"
                 type="text"
-                placeholder="URL ou caminho — upload em breve"
+                placeholder="URL ou caminho — upload planejado"
                 value={form.textureUrl ?? ""}
                 onChange={(e) => setForm((prev) => ({ ...prev, textureUrl: e.target.value }))}
                 style={{ width: "100%" }}

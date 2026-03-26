@@ -67,7 +67,7 @@ export function InfoPanelContent() {
 
           {infoInnerTab === "tecnica" && (
             <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-              Documentação técnica em breve.
+              Documentação técnica em preparação.
             </p>
           )}
         </aside>

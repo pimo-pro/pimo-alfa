@@ -61,6 +61,34 @@ No repositório, existe um `.env` para desenvolvimento e um `.env.example` como 
 - Defina `VITE_API_URL` no ambiente de build (ou no `.env` antes de correr `npm run build`).
 - Faça upload de `dist/` para o `public_html` do domínio.
 
+## Arquitetura e Documento Normativo
+
+O arquivo `docs/PIMO-CRIATIVO-MASTER-PLAN.md` é a fonte de verdade arquitetural do projeto pimo-criativo.
+
+Todas as decisões de desenvolvimento (backend, frontend, permissões, roles, fábricas, fases e demais aspectos estruturais) devem seguir esse documento.
+
+Novas funcionalidades devem ser planejadas e implementadas em alinhamento com as fases definidas no master plan (FASE 0, FASE 1, FASE 2, etc.), mantendo evolução incremental e compatibilidade entre fases.
+
+Módulos avançados, como produção, IA e plugins, não devem ser iniciados antes da conclusão sólida das fases 0–4.
+
+Consulte `docs/PIMO-CRIATIVO-MASTER-PLAN.md` para detalhes completos de arquitetura, fases e regras do sistema.
+
+## Sistema de Eventos (Events System)
+
+O documento oficial do Sistema de Eventos está em `docs/PIMO-CRIATIVO-PLANO-EVENTS-SYSTEM.md`.
+
+O Sistema de Eventos faz parte da arquitetura oficial do projeto pimo-criativo e é controlado pela feature flag global `features.eventsSystem`.
+
+O valor padrão da flag é `false`, garantindo que o sistema permaneça inativo até ser explicitamente habilitado.
+
+Com a flag desligada, o comportamento é totalmente no-op, sem impacto no fluxo principal da aplicação.
+
+Nesta fase inicial, nenhuma funcionalidade crítica do sistema depende exclusivamente do Events System.
+
+Toda integração futura com eventos deve utilizar a função central (ex.: `recordEvent`), conforme definido no plano oficial.
+
+O desenvolvimento do Sistema de Eventos deve seguir as regras e fases definidas no Master Plan (`docs/PIMO-CRIATIVO-MASTER-PLAN.md`), e sua ativação deve ocorrer apenas após a consolidação das fases 0–4, conforme diretrizes arquiteturais.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

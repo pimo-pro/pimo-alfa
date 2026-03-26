@@ -103,7 +103,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     return (
       <PlaceholderLeftPanel
         title="Eletrodomésticos"
-        description="Modelos 3D de eletrodomésticos (em breve)."
+        description="Modelos 3D de eletrodomésticos em preparação."
       />
     );
   }
@@ -111,7 +111,7 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   // Acessórios — placeholder
   if (resolvedTab === LEFT_TOOLBAR_IDS.ACESSORIOS) {
     return (
-      <PlaceholderLeftPanel title="Acessórios" description="Acessórios (em breve)." />
+      <PlaceholderLeftPanel title="Acessórios" description="Acessórios em preparação." />
     );
   }
 
