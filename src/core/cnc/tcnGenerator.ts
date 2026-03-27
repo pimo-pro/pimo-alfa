@@ -224,12 +224,46 @@ function buildLateralContourPath(
   return { w89, path };
 }
 
-/** v1: direita, CW, centro lado C (50%). */
+/**
+ * v1 — Ramp em Y (protocolo fábrica).
+ * Entrada: x0 (borda direita física), eyBase = centro Y do contorno.
+ * W#89 approach: (x0, eyBase_layout + rampDist)  — acima do ponto de entrada.
+ * Ramp [0]: Y desce de approach para eyBase, X fixo em x0, #2008=8.
+ * Rect CW: (x0,y0)→(x1,y0)→(x1,y1)→(x0,y1) → fecha em (x0,eyBase).
+ * Exit [6]: Y continua 20mm abaixo de eyBase, Z=zCut (ainda a cortar).
+ * Lift [7]: Y continua mais rampDist abaixo, Z=zSafe.
+ */
 function buildContourPathV1(
   x: number, y: number, w: number, h: number,
   toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
 ): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
-  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "right", "sideC", "CW", rampDistMm);
+  const R      = Math.max(0, toolRadiusMm);
+  const x0     = x - R;         // borda direita física do contorno (entrada)
+  const x1     = x + w + R;     // borda esquerda física do contorno
+  const y0     = y - R;         // borda inferior do contorno (layout)
+  const y1     = y + h + R;     // borda superior do contorno (layout)
+  const eyBase = (y0 + y1) / 2; // centro Y — ponto de entrada na face
+  const zCut   = -Math.abs(thicknessMm);
+  const EXIT_OVERRUN_MM = 20;
+
+  // Approach ACIMA do eyBase em layout (menor Y_tcn = acima na chapa)
+  const w89 = { x: x0, y: eyBase + rampDistMm };
+
+  // Exit e lift continuam NO MESMO SENTIDO do ramp (para y0, afastando-se do approach)
+  const yExit = Math.max(y0, eyBase - EXIT_OVERRUN_MM);
+  const yLift = Math.max(y0, eyBase - EXIT_OVERRUN_MM - rampDistMm);
+
+  const path: Array<{ x: number; y: number; z: number }> = [
+    { x: x0, y: eyBase, z: zCut },  // [0] ramp end → #2008=8
+    { x: x0, y: y0,     z: zCut },  // [1] corner inferior lado entrada
+    { x: x1, y: y0,     z: zCut },  // [2] corner inferior lado oposto
+    { x: x1, y: y1,     z: zCut },  // [3] corner superior lado oposto
+    { x: x0, y: y1,     z: zCut },  // [4] corner superior lado entrada
+    { x: x0, y: eyBase, z: zCut },  // [5] fecha no centro (eyBase)
+    { x: x0, y: yExit,  z: zCut },  // [6] saída +20mm em Y, Z=zCut
+    { x: x0, y: yLift,  z: zSafe }, // [7] lift directo Z=+safe
+  ];
+  return { w89, path };
 }
 
 /** v2: direita, CW, 1/4 lado C (25%). */
@@ -314,7 +348,7 @@ function sanitizePlacementsForTcn(
   sheet: SheetResult["sheet"],
   minSpacingMm: number,
   toolRadiusMm: number,
-  _sheetMarginMm: number
+  sheetMarginMm: number
 ): SheetResult["placements"] {
   const unique: SheetResult["placements"] = [];
   const placedRects: Array<{ x: number; y: number; w: number; h: number }> = [];
@@ -330,14 +364,16 @@ function sanitizePlacementsForTcn(
     if (signatures.has(signature)) { console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: duplicado`); continue; }
 
     if (!isPlacementInsideSheet(x, y, w, h, sheet.largura_mm, sheet.altura_mm)) { console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: fora da chapa (${sheet.largura_mm}x${sheet.altura_mm})`); continue; }
-    // Contorno externo (centro da ferramenta) também precisa caber na chapa, incluindo margem industrial.
+    // Contorno exterior (centro fresa) deve caber na chapa — sem allowance.
+    // Peças cuja abordagem sairia da chapa são rejeitadas (evita W#89 fora dos limites).
     const contour = rectToolCenterExteriorFromPlacementMm(x, y, w, h, toolRadiusMm);
-    const TOOL_EXIT_ALLOWANCE_MM = 1;
+    // Margem mínima: a peça precisa de estar a pelo menos sheetMarginMm da borda da chapa.
+    const minFromEdge = Math.max(0, sheetMarginMm - toolRadiusMm);
     if (
-      contour.x0 < -TOOL_EXIT_ALLOWANCE_MM ||
-      contour.y0 < -TOOL_EXIT_ALLOWANCE_MM ||
-      contour.x1 > sheet.largura_mm + TOOL_EXIT_ALLOWANCE_MM ||
-      contour.y1 > sheet.altura_mm + TOOL_EXIT_ALLOWANCE_MM
+      contour.x0 < -minFromEdge ||
+      contour.y0 < -minFromEdge ||
+      contour.x1 > sheet.largura_mm + minFromEdge ||
+      contour.y1 > sheet.altura_mm + minFromEdge
     ) {
       console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: contorno fora (x0=${contour.x0.toFixed(2)} y0=${contour.y0.toFixed(2)} x1=${contour.x1.toFixed(2)} y1=${contour.y1.toFixed(2)} | chapa=${sheet.largura_mm}x${sheet.altura_mm})`);
       continue;
@@ -419,14 +455,16 @@ function buildSideBlock(
   hf: number,
   sf: number,
   innerLines: string[] = [],
-  leadingCloseSide: boolean = false
+  leadingCloseSide: boolean = false,
+  sideName: string = "top",
+  includeNseq: boolean = false
 ): string[] {
   const lines: string[] = [];
   if (leadingCloseSide) lines.push("}SIDE");
   lines.push(`SIDE#${n}{`);
-  lines.push("$=top");
+  lines.push(`$=${sideName}`);
   lines.push(`::LF=${intVal(lf)} HF=${intVal(hf)} SF=${intVal(sf)}`);
-  lines.push(`::NSEQ=${n}`);
+  if (includeNseq) lines.push(`::NSEQ=${n}`);
   for (const ln of innerLines) {
     if (ln !== "}") lines.push(ln);
   }
@@ -501,7 +539,10 @@ export function generateTcnForPanel(
   const pushContourFromPath = (
     result: { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> }
   ) => {
-    const w89T = transformPlacementToTcn({ x: result.w89.x, y: result.w89.y, z: zSafe }, sheet.largura_mm, maxW, maxH);
+    // Clamp approach (W#89) aos limites da chapa em coordenadas de layout — evita coordenadas fora da chapa na máquina
+    const w89x = Math.max(0, Math.min(result.w89.x, sheet.largura_mm));
+    const w89y = Math.max(0, Math.min(result.w89.y, sheet.altura_mm));
+    const w89T = transformPlacementToTcn({ x: w89x, y: w89y, z: zSafe }, sheet.largura_mm, maxW, maxH);
     const pathT = result.path.map((p) => transformPlacementToTcn(p, sheet.largura_mm, maxW, maxH));
     sideInnerLines.push(buildToolBlock(w89T.x, w89T.y, zSafe));
     sideInnerLines.push(buildW2201(pathT, zSafe));
@@ -579,13 +620,13 @@ export function generateTcnForPanel(
     }
   }
 
-  lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
+  lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true,  "top",    true));
 
-  lines.push(...buildSideBlock(3, dl, ds, dh, [], false));
-  lines.push(...buildSideBlock(4, dh, ds, dl, [], false));
-  lines.push(...buildSideBlock(5, dl, ds, dh, [], false));
-  lines.push(...buildSideBlock(6, dh, ds, dl, [], false));
-  lines.push(...buildSideBlock(2, dl, dh, ds, [], false));
+  lines.push(...buildSideBlock(3, dl, ds, dh, [], false, "front",  false));
+  lines.push(...buildSideBlock(4, dh, ds, dl, [], false, "right",  false));
+  lines.push(...buildSideBlock(5, dl, ds, dh, [], false, "back",   false));
+  lines.push(...buildSideBlock(6, dh, ds, dl, [], false, "left",   false));
+  lines.push(...buildSideBlock(2, dl, dh, ds, [], false, "bottom", false));
 
   return lines.join("\n");
 }
