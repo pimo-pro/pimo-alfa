@@ -7,6 +7,8 @@ interface FooterProps {
   onShowAdmin?: () => void;
   onShowAjuda?: () => void;
   onShowUserProjects?: () => void;
+  onShowProjectProgress?: () => void;
+  onShowPainelReferencia?: () => void;
 }
 
 export default function Footer({
@@ -15,6 +17,8 @@ export default function Footer({
   onShowAdmin,
   onShowAjuda,
   onShowUserProjects,
+  onShowProjectProgress,
+  onShowPainelReferencia,
 }: FooterProps) {
   const [version, setVersion] = useState("V4.1.0.2.6");
 
@@ -105,6 +109,32 @@ export default function Footer({
           }}
         >
           Documentação do Sistema
+        </span>
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={onShowProjectProgress}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              onShowProjectProgress?.();
+            }
+          }}
+        >
+          Progresso do Projeto
+        </span>
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={onShowPainelReferencia}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              onShowPainelReferencia?.();
+            }
+          }}
+        >
+          Painel de Referência
         </span>
         <span
           style={{ cursor: "pointer" }}

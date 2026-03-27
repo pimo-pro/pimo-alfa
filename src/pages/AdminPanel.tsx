@@ -98,6 +98,10 @@ export default function AdminPanel() {
     setActive(next);
     localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, next);
   };
+  const openSettingsPage = () => {
+    window.history.pushState({}, "", "/definicoes");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
 
   return (
     <main
@@ -126,6 +130,25 @@ export default function AdminPanel() {
         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
           Admin Panel
         </div>
+        <button
+          type="button"
+          onClick={openSettingsPage}
+          title="Abrir Definições"
+          aria-label="Abrir Definições"
+          style={{
+            textAlign: "left",
+            padding: "9px 10px",
+            borderRadius: "var(--radius)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--text-main)",
+            fontSize: 12,
+            cursor: "pointer",
+            marginBottom: 6,
+          }}
+        >
+          Ir para Definições
+        </button>
         {adminMenu.map((entry, index) => {
           if (entry.type === "group") {
             return (

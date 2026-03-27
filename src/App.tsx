@@ -22,6 +22,7 @@ import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
 import Ajuda from "./pages/Ajuda";
 import UserProjectsPage from "./pages/UserProjectsPage";
+import SettingsPage from "./pages/SettingsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import LoginPage from "./pages/LoginPage";
@@ -169,17 +170,6 @@ function LegacyApp() {
     setShowUserProjects(false);
   };
 
-  const navigateToApp = () => {
-    window.history.pushState({}, "", "/");
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowDevTest(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowUserProjects(false);
-  };
-
   const navigateToUserProjects = () => {
     window.history.pushState({}, "", "/meus-projetos");
     setShowUserProjects(true);
@@ -198,24 +188,7 @@ function LegacyApp() {
           <ToastProvider>
             <PimoViewerProvider>
             <div className="app-root">
-        <Header
-          onTogglePainelReferencia={() => {
-            if (showPainelReferencia) {
-              navigateToApp();
-            } else {
-              navigateToPainelReferencia();
-            }
-          }}
-          painelReferenciaOpen={showPainelReferencia}
-          onToggleProjectProgress={() => {
-            if (showProjectProgress) {
-              navigateToApp();
-            } else {
-              navigateToProjectProgress();
-            }
-          }}
-          projectProgressOpen={showProjectProgress}
-        />
+        <Header />
 
         {/* MAIN AREA */}
         <div className="app-main">
@@ -319,6 +292,8 @@ function LegacyApp() {
           onShowAdmin={navigateToAdmin}
           onShowAjuda={navigateToAjuda}
           onShowUserProjects={navigateToUserProjects}
+          onShowProjectProgress={navigateToProjectProgress}
+          onShowPainelReferencia={navigateToPainelReferencia}
         />
 
         <WhatsAppButton />
@@ -344,12 +319,7 @@ function ProtectedLayout() {
 function AppChromeLayout() {
   return (
     <div className="ui-app-frame">
-      <Header
-        onTogglePainelReferencia={() => {}}
-        painelReferenciaOpen={false}
-        onToggleProjectProgress={() => {}}
-        projectProgressOpen={false}
-      />
+      <Header />
       <main className="ui-app-frame__content">
         <Outlet />
       </main>
@@ -373,6 +343,16 @@ export default function App() {
       <Routes>
         <Route element={<AppChromeLayout />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/definicoes"
+            element={
+              <ProjectProvider>
+                <SettingsProvider>
+                  <SettingsPage />
+                </SettingsProvider>
+              </ProjectProvider>
+            }
+          />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route element={<ProtectedLayout />}>

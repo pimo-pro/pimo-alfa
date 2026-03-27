@@ -204,12 +204,31 @@ export class ViewerCore {
   private photoModeEnabled = false;
   private readonly baseToneMappingExposure: number;
   private globalLightIntensity = 1;
+  /** Intensidade das sombras (0–1); espelha `THREE.DirectionalLight.shadow.intensity`. */
+  private shadowIntensityValue = 1;
   private readonly baseLightIntensities: {
     ambient: number;
     hemisphere: number;
     key: number;
     fill: number;
     rim: number;
+  };
+
+  /** Configurações de exibição expostas ao exterior (ex.: `viewerCore.display.shadowIntensity`). */
+  readonly display!: {
+    get shadowIntensity(): number;
+    set shadowIntensity(value: number);
+  };
+
+  /** Eventos internos do Viewer Engine (extensão para automação/plugins). */
+  readonly events: {
+    emit: (event: string, ...args: unknown[]) => void;
+  } = {
+    emit: (event: string, ...args: unknown[]) => {
+      if (event === "shadowIntensityChanged") {
+        void args[0];
+      }
+    },
   };
 
   // Lock: impede colisoes entre caixas e respeita os limites da sala.
@@ -366,6 +385,15 @@ export class ViewerCore {
       key: this.lights.keyLight.intensity,
       fill: this.lights.fillLight.intensity,
       rim: this.lights.rimLight.intensity,
+    };
+    const engine = this;
+    this.display = {
+      get shadowIntensity() {
+        return engine.shadowIntensityValue;
+      },
+      set shadowIntensity(v: number) {
+        engine.updateShadowIntensity(v);
+      },
     };
     this.defaultPixelRatio = this.rendererManager.renderer.getPixelRatio();
     this.baseToneMappingExposure = this.rendererManager.renderer.toneMappingExposure;
@@ -684,6 +712,25 @@ export class ViewerCore {
 
   getGlobalLightIntensity(): number {
     return this.globalLightIntensity;
+  }
+
+  setShadowIntensity(value: number): void {
+    this.updateShadowIntensity(value);
+  }
+
+  getShadowIntensity(): number {
+    return this.shadowIntensityValue;
+  }
+
+  /**
+   * Aplica intensidade das sombras na luz principal (Three.js `shadow.intensity`) e agenda render.
+   */
+  updateShadowIntensity(value: number): void {
+    const clamped = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 1));
+    this.shadowIntensityValue = clamped;
+    this.lights.keyLight.shadow.intensity = clamped;
+    this.events.emit("shadowIntensityChanged", clamped);
+    this.requestRender();
   }
 
   setUltraPerformanceMode(active: boolean): void {

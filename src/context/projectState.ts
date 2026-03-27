@@ -77,6 +77,7 @@ const defaultViewerSettings: ViewerSettings = {
     mode: "balanced",
   },
   globalLightIntensity: 1,
+  shadowIntensity: 1,
 };
 
 const createBox = (

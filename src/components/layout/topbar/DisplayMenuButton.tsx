@@ -65,6 +65,7 @@ export default function DisplayMenuButton() {
         mode: "balanced",
       },
       globalLightIntensity: 1,
+      shadowIntensity: 1,
     });
     viewerApi?.setBackgroundMode?.("studio");
     viewerApi?.setMaterialQuality?.("standard");
@@ -75,6 +76,7 @@ export default function DisplayMenuButton() {
     });
     viewerApi?.setUltraPerformanceMode?.(false);
     viewerApi?.setGlobalLightIntensity?.(1);
+    viewerApi?.setShadowIntensity?.(1);
     setMenuOpen(false);
   };
 
@@ -217,6 +219,26 @@ export default function DisplayMenuButton() {
                     viewerApi?.setGlobalLightIntensity?.(value);
                   }}
                   title="Adjust main light intensity in real time."
+                />
+              </label>
+            </section>
+
+            <section className="display-quality-section" aria-label="Shadow Intensity">
+              <div className="display-quality-section-title">Shadow Intensity</div>
+              <label className="display-quality-field">
+                Shadow Intensity ({Math.round(project.viewerSettings.shadowIntensity * 100)}%)
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={project.viewerSettings.shadowIntensity}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    actions.setViewerSettings({ shadowIntensity: value });
+                    viewerApi?.setShadowIntensity?.(value);
+                  }}
+                  title="Ajusta a intensidade das sombras projetadas no ambiente 3D."
                 />
               </label>
             </section>

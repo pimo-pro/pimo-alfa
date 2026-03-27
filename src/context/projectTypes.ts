@@ -49,6 +49,8 @@ export type ViewerSettings = {
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;
   /** Multiplicador global da iluminação (0.6 - 1.4). */
   globalLightIntensity: number;
+  /** Intensidade das sombras projetadas pela luz principal (0 = desligado, 1 = 100%). */
+  shadowIntensity: number;
 };
 
 /**

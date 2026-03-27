@@ -94,6 +94,14 @@ declare global {
       applyMaterialPreset?: (presetId: unknown) => void;
       setGlobalLightIntensity?: (value: number) => void;
       getGlobalLightIntensity?: () => number;
+      setShadowIntensity?: (value: number) => void;
+      getShadowIntensity?: () => number;
+      display?: {
+        shadowIntensity: number;
+      };
+      events?: {
+        emit?: (event: string, ...args: unknown[]) => void;
+      };
     };
   }
 }

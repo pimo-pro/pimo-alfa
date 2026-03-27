@@ -178,8 +178,8 @@ function buildLateralContourPath(
 
   let eyBase: number;
   switch (eyBaseMode) {
-    case "sideC":      eyBase = y0 + spanY * 0.50; break; // v1 — centro lado C (50%)
-    case "sideD":      eyBase = y1 - spanY * 0.50; break; // v6 — centro lado D (entrada esq)
+    case "sideC":      eyBase = y0; break;               // v1 — lado C (borda do lado, Y_max)
+    case "sideD":      eyBase = y1; break;               // v6 — lado D (borda oposta, Y_min)
     case "upperThird": eyBase = y0 + spanY * 0.25; break; // v2 — 1/4 lado C
     case "lowerThird": eyBase = y0 + spanY * 0.75; break; // v3 — 3/4 lado C
     case "quarter":    eyBase = y0 + spanY * 0.33; break; // v4 — 1/3 lado C
@@ -190,10 +190,19 @@ function buildLateralContourPath(
   const entryX = side === "right" ? x1 : x0;
   const otherX = side === "right" ? x0 : x1;
 
-  // Ramp em X: approach antes da peca, saida apos fecho — Y sempre = eyBase
-  const xApproach = side === "right" ? entryX - rampDistMm : entryX + rampDistMm;
-  const xExit     = side === "right" ? entryX + EXIT_OVERRUN_MM : entryX - EXIT_OVERRUN_MM;
-  const xLift     = side === "right" ? xExit  + rampDistMm     : xExit  - rampDistMm;
+  // Ramp em X: approach rampDist antes da borda de entrada
+  const xApproach  = side === "right" ? entryX - rampDistMm : entryX + rampDistMm;
+  // Exit/lift ficam sempre dentro dos limites do contorno exterior (x0..x1)
+  const xExitRaw   = side === "right" ? entryX + EXIT_OVERRUN_MM : entryX - EXIT_OVERRUN_MM;
+  const xLiftRaw   = side === "right" ? xExitRaw + rampDistMm    : xExitRaw - rampDistMm;
+  // garantir que xExit e xLift são sempre pontos distintos e dentro do contorno
+  const xBound = side === "right" ? x1 : x0;
+  const xExit  = side === "right"
+    ? Math.min(xExitRaw, xBound - rampDistMm)  // deixa espaço para xLift
+    : Math.max(xExitRaw, xBound + rampDistMm);
+  const xLift  = side === "right"
+    ? Math.min(xLiftRaw, xBound)
+    : Math.max(xLiftRaw, xBound);
 
   // eyBase esta sempre entre y0 e y1 (nunca nos extremos) — sem risco de segmento zero
   // CW:  desce primeiro para y0 (corner1), sobe para y1 (corner2)

@@ -1,4 +1,5 @@
 import logoPimo from "../../../assets/logo-pi.png";
+import { useRef, type ReactNode } from "react";
 import { useTheme } from "../../../context/ThemeContext";
 
 function ThemeIconSun() {
@@ -18,20 +19,94 @@ function ThemeIconMoon() {
   );
 }
 
-interface HeaderProps {
-  onTogglePainelReferencia: () => void;
-  painelReferenciaOpen: boolean;
-  onToggleProjectProgress?: () => void;
-  projectProgressOpen?: boolean;
+function IconUser() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
+    </svg>
+  );
 }
 
-export default function Header({
-  onTogglePainelReferencia,
-  painelReferenciaOpen,
-  onToggleProjectProgress,
-  projectProgressOpen,
-}: HeaderProps) {
+function IconUpload() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 16V4" />
+      <path d="m7 9 5-5 5 5" />
+      <path d="M20 16v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3" />
+    </svg>
+  );
+}
+
+function IconProjects() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 7h18" />
+      <path d="M3 7l2-3h14l2 3" />
+      <rect x="3" y="7" width="18" height="14" rx="2" ry="2" />
+    </svg>
+  );
+}
+
+function IconSettings() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V22a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01A1.65 1.65 0 0 0 19.4 15z" />
+    </svg>
+  );
+}
+
+type HeaderActionButtonProps = {
+  title: string;
+  ariaLabel: string;
+  onClick?: () => void;
+  children: ReactNode;
+};
+
+function HeaderActionButton({ title, ariaLabel, onClick, children }: HeaderActionButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        minHeight: 36,
+        padding: "0 10px",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius)",
+        background: "var(--button-ghost-bg)",
+        color: "var(--text-main)",
+        cursor: "pointer",
+        fontSize: 13,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+export default function Header() {
   const { theme, toggleTheme } = useTheme();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const navigateInternal = (path: string) => {
+    window.history.pushState({}, "", path);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const handleLanguageControl = () => {
+    // Comportamento atual: app fixo em PT (sem troca ativa de idioma).
+  };
+
+  const handleProjectUpload = () => {
+    fileInputRef.current?.click();
+    console.log("[Header] Upload de projeto ainda não implementado.");
+  };
 
   return (
     <header
@@ -94,57 +169,56 @@ export default function Header({
           fontSize: 13,
         }}
       >
-        <button
-          type="button"
+        <HeaderActionButton
+          onClick={() => navigateInternal("/login")}
+          title="Abrir página de login"
+          ariaLabel="Abrir página de login"
+        >
+          <IconUser />
+        </HeaderActionButton>
+        <HeaderActionButton
+          onClick={() => navigateInternal("/definicoes")}
+          title="Abrir definições"
+          ariaLabel="Abrir definições"
+        >
+          <IconSettings />
+        </HeaderActionButton>
+        <HeaderActionButton
+          onClick={() => navigateInternal("/meus-projetos")}
+          title="Abrir meus projetos"
+          ariaLabel="Abrir meus projetos"
+        >
+          <IconProjects />
+        </HeaderActionButton>
+        <HeaderActionButton
+          onClick={handleProjectUpload}
+          title="Selecionar ficheiro de projeto"
+          ariaLabel="Selecionar ficheiro de projeto"
+        >
+          <IconUpload />
+        </HeaderActionButton>
+        <HeaderActionButton
+          onClick={handleLanguageControl}
+          title="Idioma atual: PT"
+          ariaLabel="Idioma atual PT"
+        >
+          🌐 PT
+        </HeaderActionButton>
+        <HeaderActionButton
           onClick={toggleTheme}
           title={theme === "dark" ? "Usar tema claro" : "Usar tema escuro"}
-          aria-label={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 36,
-            height: 36,
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius)",
-            background: "var(--button-ghost-bg)",
-            color: "var(--text-main)",
-            cursor: "pointer",
-          }}
+          ariaLabel={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
         >
           {theme === "dark" ? <ThemeIconSun /> : <ThemeIconMoon />}
-        </button>
-        <span style={{ color: "var(--text-muted)" }}>🌐 Idioma: PT</span>
-        <span style={{ color: "var(--text-main)" }}>📁 Projetos</span>
-        <button
-          onClick={onToggleProjectProgress}
-          style={{
-            background: projectProgressOpen ? "rgba(139,92,246,0.25)" : "var(--button-ghost-bg)",
-            border: "1px solid var(--button-ghost-border)",
-            color: "var(--text-main)",
-            padding: "6px 10px",
-            borderRadius: "var(--radius)",
-            fontSize: 13,
-            cursor: "pointer",
-          }}
-        >
-          {projectProgressOpen ? "Voltar ao App" : "Progresso do Projeto"}
-        </button>
-        <button
-          onClick={onTogglePainelReferencia}
-          style={{
-            background: painelReferenciaOpen ? "var(--accent-button-bg)" : "var(--button-ghost-bg)",
-            border: "1px solid var(--button-ghost-border)",
-            color: "var(--text-main)",
-            padding: "6px 10px",
-            borderRadius: "var(--radius)",
-            fontSize: 13,
-            cursor: "pointer",
-          }}
-        >
-          {painelReferenciaOpen ? "Voltar ao App" : "Painel de Referência"}
-        </button>
+        </HeaderActionButton>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        style={{ display: "none" }}
+        aria-hidden
+        tabIndex={-1}
+      />
     </header>
   );
 }
