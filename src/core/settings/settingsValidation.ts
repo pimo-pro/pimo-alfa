@@ -80,6 +80,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       drillRpm: clamp(toNumber(merged.cnc.drillRpm, settingsDefaults.cnc.drillRpm), 1000, 50000),
       sheetMarginMm: clamp(toNumber(merged.cnc.sheetMarginMm, settingsDefaults.cnc.sheetMarginMm), 0, 100),
       rampDistanceMm: clamp(toNumber(merged.cnc.rampDistanceMm, settingsDefaults.cnc.rampDistanceMm), 5, 100),
+      compensacaoFerramenta: merged.cnc.compensacaoFerramenta === "dentro" ? "dentro" : "fora",
     },
     nesting: {
       kerfPadraoMm: clamp(toNumber(merged.nesting.kerfPadraoMm, settingsDefaults.nesting.kerfPadraoMm), 0, 20),

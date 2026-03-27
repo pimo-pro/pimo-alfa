@@ -143,50 +143,22 @@ function transformPlacementToTcn(
   return { x: afterFlip.x, y: afterFlip.y, z: p.z };
 }
 
-type LateralEdge = "right" | "left";
+type ContourSide = "right" | "left";
+type ContourDirection = "CW" | "CCW";
+type ContourEyBaseMode = "sideC" | "sideD" | "center" | "upperThird" | "lowerThird" | "quarter";
 
 /** Entrada apenas por aresta esquerda ou direita (nunca topo/fundo) ? evita mergulho junto a pe?as vizinhas em Y. */
-function pickLeftOrRightEdgeToSheetCenter(
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  sheetW: number,
-  sheetH: number
-): LateralEdge {
-  const cx = sheetW / 2;
-  const cy = sheetH / 2;
-  const mxR = x1;
-  const myR = (y0 + y1) / 2;
-  const mxL = x0;
-  const myL = (y0 + y1) / 2;
-  const dR = (mxR - cx) * (mxR - cx) + (myR - cy) * (myR - cy);
-  const dL = (mxL - cx) * (mxL - cx) + (myL - cy) * (myL - cy);
-  return dR <= dL ? "right" : "left";
-}
-
-type LateralEntryVariant = "center" | "upperThird" | "lowerThird";
-
-/** Fim da rampa longitudinal (Y) a partir do ponto de entrada eyBase, sem movimentos extra em Z=0. */
-function pickRampEndYAlongVerticalEdge(eyBase: number, rampLen: number, yMin: number, yMax: number): number {
-  const R = Math.max(EPSILON_MM, rampLen);
-  const up = eyBase + R;
-  const down = eyBase - R;
-  if (up <= yMax + EPSILON_MM) return Math.min(up, yMax);
-  if (down >= yMin - EPSILON_MM) return Math.max(down, yMin);
-  const span = yMax - yMin;
-  if (span < EPSILON_MM) return eyBase;
-  return eyBase + R / 2 <= yMax ? Math.min(eyBase + R / 2, yMax) : Math.max(eyBase - R / 2, yMin);
-}
-
 /**
- * Contorno exterior com rampas de Z ao longo do lado C (direita) ou D (esquerda).
- * - C/D = arestas verticais (X fixo), rampa longitudinal = varia??o em Y, comprimento = rampLenMm (t?pico = espessura).
- * - Per?metro completo em zCut sobre o ret?ngulo expandido (centro fresa fora da pe?a nominal).
- * - Entrada: Z seguro ? Z=0 no meio do lado ? um ?nico segmento 0?zCut ao longo de rampLen (sem ida/volta em Z=0).
- * - w89: aproxima??o em Z seguro ao ponto de entrada (meio do lado).
+ * Builder central para os 6 variants v1-v6.
+ * Ramp industrial em X (Y fixo = eyBase), sem Z=0 intermedio:
+ *   w89 + [0]  approach em xApproach (antes da peca em X)
+ *   [1]        ramp: avanca rampDistMm em X ate entryX (X_first), Y fixo, desce para zCut  (#2008=8)
+ *   [2-5]      4 cantos do rectangulo exterior
+ *   [6]        fecha em entryX, Y_entry
+ *   [7]        avanca EXIT_OVERRUN_MM (20mm) em X, Z=zCut
+ *   [8]        lift directo para Z=safe (sem Z=0 intermedio)
  */
-function buildLateralContourPathWithZRamps(
+function buildLateralContourPath(
   x: number,
   y: number,
   w: number,
@@ -194,59 +166,101 @@ function buildLateralContourPathWithZRamps(
   toolRadiusMm: number,
   thicknessMm: number,
   zSafe: number,
-  sheetW: number,
-  sheetH: number,
-  edgeMode: "closest" | "right" | "left",
-  entryVariant: LateralEntryVariant
+  side: ContourSide,
+  eyBaseMode: ContourEyBaseMode,
+  direction: ContourDirection,
+  rampDistMm: number
 ): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
   const { x0, y0, x1, y1 } = rectToolCenterExteriorFromPlacementMm(x, y, w, h, toolRadiusMm);
   const zCut = -Math.abs(thicknessMm);
-  const rampLen = Math.max(EPSILON_MM, Math.abs(thicknessMm));
   const spanY = y1 - y0;
+  const EXIT_OVERRUN_MM = 20;
 
-  let side: LateralEdge;
-  if (edgeMode === "right") side = "right";
-  else if (edgeMode === "left") side = "left";
-  else side = pickLeftOrRightEdgeToSheetCenter(x0, y0, x1, y1, sheetW, sheetH);
-
-  let eyBase = (y0 + y1) / 2;
-  if (entryVariant === "upperThird") eyBase = y0 + spanY * (2 / 3);
-  if (entryVariant === "lowerThird") eyBase = y0 + spanY * (1 / 3);
-  const yRampEnd = pickRampEndYAlongVerticalEdge(eyBase, rampLen, y0, y1);
-
-  const path: Array<{ x: number; y: number; z: number }> = [];
-
-  if (side === "right") {
-    const entryX = x1;
-    const w89 = { x: entryX, y: eyBase };
-    path.push({ x: entryX, y: eyBase, z: zSafe });
-    path.push({ x: entryX, y: eyBase, z: 0 });
-    path.push({ x: entryX, y: yRampEnd, z: zCut });
-    path.push({ x: x1, y: y1, z: zCut });
-    path.push({ x: x0, y: y1, z: zCut });
-    path.push({ x: x0, y: y0, z: zCut });
-    path.push({ x: x1, y: y0, z: zCut });
-    // Regressa ao ponto D em zCut e faz rampa de saída D->E (zCut->0).
-    path.push({ x: entryX, y: eyBase, z: zCut });
-    path.push({ x: entryX, y: yRampEnd, z: 0 });
-    path.push({ x: entryX, y: yRampEnd, z: zSafe });
-    return { w89, path };
+  let eyBase: number;
+  switch (eyBaseMode) {
+    case "sideC":      eyBase = y0 + spanY * 0.50; break; // v1 — centro lado C (50%)
+    case "sideD":      eyBase = y1 - spanY * 0.50; break; // v6 — centro lado D (entrada esq)
+    case "upperThird": eyBase = y0 + spanY * 0.25; break; // v2 — 1/4 lado C
+    case "lowerThird": eyBase = y0 + spanY * 0.75; break; // v3 — 3/4 lado C
+    case "quarter":    eyBase = y0 + spanY * 0.33; break; // v4 — 1/3 lado C
+    default:           eyBase = y0 + spanY * 0.67; break; // "center" = v5 — 2/3 lado C
   }
 
-  const entryX = x0;
-  const w89 = { x: entryX, y: eyBase };
-  path.push({ x: entryX, y: eyBase, z: zSafe });
-  path.push({ x: entryX, y: eyBase, z: 0 });
-  path.push({ x: entryX, y: yRampEnd, z: zCut });
-  path.push({ x: x0, y: y0, z: zCut });
-  path.push({ x: x1, y: y0, z: zCut });
-  path.push({ x: x1, y: y1, z: zCut });
-  path.push({ x: x0, y: y1, z: zCut });
-  // Regressa ao ponto D em zCut e faz rampa de saída D->E (zCut->0).
-  path.push({ x: entryX, y: eyBase, z: zCut });
-  path.push({ x: entryX, y: yRampEnd, z: 0 });
-  path.push({ x: entryX, y: yRampEnd, z: zSafe });
+  // entryX = X_first (primeiro ponto de corte = bordo de entrada da peca + offset)
+  const entryX = side === "right" ? x1 : x0;
+  const otherX = side === "right" ? x0 : x1;
+
+  // Ramp em X: approach antes da peca, saida apos fecho — Y sempre = eyBase
+  const xApproach = side === "right" ? entryX - rampDistMm : entryX + rampDistMm;
+  const xExit     = side === "right" ? entryX + EXIT_OVERRUN_MM : entryX - EXIT_OVERRUN_MM;
+  const xLift     = side === "right" ? xExit  + rampDistMm     : xExit  - rampDistMm;
+
+  // eyBase esta sempre entre y0 e y1 (nunca nos extremos) — sem risco de segmento zero
+  // CW:  desce primeiro para y0 (corner1), sobe para y1 (corner2)
+  // CCW: sobe primeiro para y1 (corner1), desce para y0 (corner2)
+  const corner1Y = direction === "CW" ? y0 : y1;
+  const corner2Y = direction === "CW" ? y1 : y0;
+
+  const w89 = { x: xApproach, y: eyBase };
+  const path = [
+    { x: entryX,    y: eyBase,   z: zCut },  // [0] ramp em X, Y fixo (#2008=8)
+    { x: entryX,    y: corner1Y, z: zCut },  // [1] 1.o canto — lado entrada
+    { x: otherX,    y: corner1Y, z: zCut },  // [2] 1.o canto — lado oposto
+    { x: otherX,    y: corner2Y, z: zCut },  // [3] 2.o canto — lado oposto
+    { x: entryX,    y: corner2Y, z: zCut },  // [4] 2.o canto — lado entrada
+    { x: entryX,    y: eyBase,   z: zCut },  // [5] fecha em X_first, Y_entry
+    { x: xExit,     y: eyBase,   z: zCut },  // [6] +EXIT_OVERRUN em X, Z=zCut
+    { x: xLift,     y: eyBase,   z: zSafe }, // [7] lift directo para Z=safe
+  ];
   return { w89, path };
+}
+
+/** v1: direita, CW, centro lado C (50%). */
+function buildContourPathV1(
+  x: number, y: number, w: number, h: number,
+  toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "right", "sideC", "CW", rampDistMm);
+}
+
+/** v2: direita, CW, 1/4 lado C (25%). */
+function buildContourPathV2(
+  x: number, y: number, w: number, h: number,
+  toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "right", "upperThird", "CW", rampDistMm);
+}
+
+/** v3: direita, CW, 3/4 lado C (75%). */
+function buildContourPathV3(
+  x: number, y: number, w: number, h: number,
+  toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "right", "lowerThird", "CW", rampDistMm);
+}
+
+/** v4: direita, CW, 1/3 lado C (33%). */
+function buildContourPathV4(
+  x: number, y: number, w: number, h: number,
+  toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "right", "quarter", "CW", rampDistMm);
+}
+
+/** v5: direita, CW, 2/3 lado C (67%). */
+function buildContourPathV5(
+  x: number, y: number, w: number, h: number,
+  toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "right", "center", "CW", rampDistMm);
+}
+
+/** v6: esquerda, CW, centro lado D (entrada pela esquerda). */
+function buildContourPathV6(
+  x: number, y: number, w: number, h: number,
+  toolRadiusMm: number, thicknessMm: number, zSafe: number, rampDistMm: number
+): { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> } {
+  return buildLateralContourPath(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, "left", "sideD", "CW", rampDistMm);
 }
 
 /**
@@ -291,12 +305,12 @@ function sanitizePlacementsForTcn(
   sheet: SheetResult["sheet"],
   minSpacingMm: number,
   toolRadiusMm: number,
-  sheetMarginMm: number
+  _sheetMarginMm: number
 ): SheetResult["placements"] {
   const unique: SheetResult["placements"] = [];
   const placedRects: Array<{ x: number; y: number; w: number; h: number }> = [];
   const signatures = new Set<string>();
-  const minEdgeGapMm = minSpacingMm + 2 * Math.max(0, toolRadiusMm);
+
 
   for (const pl of placements) {
     const x = pl.x_mm;
@@ -304,24 +318,25 @@ function sanitizePlacementsForTcn(
     const w = pl.largura_mm;
     const h = pl.altura_mm;
     const signature = `${Math.round(x * 1000)}:${Math.round(y * 1000)}:${Math.round(w * 1000)}:${Math.round(h * 1000)}`;
-    if (signatures.has(signature)) continue;
+    if (signatures.has(signature)) { console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: duplicado`); continue; }
 
-    if (!isPlacementInsideSheet(x, y, w, h, sheet.largura_mm, sheet.altura_mm)) continue;
+    if (!isPlacementInsideSheet(x, y, w, h, sheet.largura_mm, sheet.altura_mm)) { console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: fora da chapa (${sheet.largura_mm}x${sheet.altura_mm})`); continue; }
     // Contorno externo (centro da ferramenta) também precisa caber na chapa, incluindo margem industrial.
     const contour = rectToolCenterExteriorFromPlacementMm(x, y, w, h, toolRadiusMm);
     const TOOL_EXIT_ALLOWANCE_MM = 1;
     if (
       contour.x0 < -TOOL_EXIT_ALLOWANCE_MM ||
-      contour.y0 < sheetMarginMm - EPSILON_MM ||
+      contour.y0 < -TOOL_EXIT_ALLOWANCE_MM ||
       contour.x1 > sheet.largura_mm + TOOL_EXIT_ALLOWANCE_MM ||
-      contour.y1 > sheet.altura_mm - sheetMarginMm + EPSILON_MM
+      contour.y1 > sheet.altura_mm + TOOL_EXIT_ALLOWANCE_MM
     ) {
+      console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: contorno fora (x0=${contour.x0.toFixed(2)} y0=${contour.y0.toFixed(2)} x1=${contour.x1.toFixed(2)} y1=${contour.y1.toFixed(2)} | chapa=${sheet.largura_mm}x${sheet.altura_mm})`);
       continue;
     }
 
     const rect = { x, y, w, h };
-    const tooClose = placedRects.some((r) => rectDistance(r, rect) < minEdgeGapMm - EPSILON_MM);
-    if (tooClose) continue;
+    const tooClose = placedRects.some((r) => rectDistance(r, rect) < minSpacingMm - EPSILON_MM);
+    if (tooClose) { console.log(`[SANITIZE] Peça rejeitada: x=${x} y=${y} w=${w} h=${h} | motivo: demasiado próxima (minSpacingMm=${minSpacingMm})`); continue; }
 
     signatures.add(signature);
     placedRects.push(rect);
@@ -348,7 +363,7 @@ function isPlacementInsideSheet(
 }
 
 function buildToolBlock(x: number, y: number, zSafe: number): string {
-  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmt(zSafe)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
+  return `W#89{ ::WTs WS=1 #8015=0 #1=${fmt(x)} #2=${fmt(y)} #3=${fmtZ(zSafe)} #205=113 #1001=100 #2005=3 #2002=21000 #40=1 }W`;
 }
 
 function buildW81Drill(x: number, y: number, zDepth: number, diameter: number): string {
@@ -442,6 +457,9 @@ export function generateTcnForPanel(
   const runtimeSettings = getSettings();
   const toolDiameterMm = getContourToolDiameterMm(runtimeSettings);
   const toolRadiusMm = toolDiameterMm / 2;
+  // compensacaoFerramenta: "fora" = offset exterior completo; "dentro" = 0 (sem offset)
+  const compensacaoFerramenta = runtimeSettings?.cnc?.compensacaoFerramenta ?? "fora";
+  const toolOffsetMm = compensacaoFerramenta === "dentro" ? 0 : toolRadiusMm;
   const tcnMetodo = (runtimeSettings?.cnc?.tcnMetodo ?? "v1_corner") as TcnMetodo;
   const minSpacingMm = Number.isFinite(Number(runtimeSettings?.cnc?.minSpacingMm))
     ? Math.max(0, Number(runtimeSettings?.cnc?.minSpacingMm))
@@ -453,6 +471,10 @@ export function generateTcnForPanel(
     Number.isFinite(Number(runtimeSettings?.cnc?.zSafetyMm)) && Number(runtimeSettings?.cnc?.zSafetyMm) > 0
       ? Number(runtimeSettings?.cnc?.zSafetyMm)
       : Z_SAFETY_MM;
+  const rampDistMm =
+    Number.isFinite(Number(runtimeSettings?.cnc?.rampDistanceMm)) && Number(runtimeSettings?.cnc?.rampDistanceMm) > 0
+      ? Number(runtimeSettings?.cnc?.rampDistanceMm)
+      : 16;
   const maxW =
     anchorMaxWidthMm != null && anchorMaxWidthMm > 0 && Number.isFinite(anchorMaxWidthMm)
       ? anchorMaxWidthMm
@@ -461,58 +483,31 @@ export function generateTcnForPanel(
     anchorMaxHeightMm != null && anchorMaxHeightMm > 0 && Number.isFinite(anchorMaxHeightMm)
       ? anchorMaxHeightMm
       : sheet.altura_mm;
-  const sheetW = sheet.largura_mm;
-  const sheetH = sheet.altura_mm;
-
   const placements = sheetResult.placements.filter((pl) =>
     isPlacementInsideSheet(pl.x_mm, pl.y_mm, pl.largura_mm, pl.altura_mm, sheet.largura_mm, sheet.altura_mm)
   );
   const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet, minSpacingMm, toolRadiusMm, sheetMarginMm);
   const sideInnerLines: string[] = [];
 
-  const pushLateralExteriorContour = (
-    px: number,
-    py: number,
-    pw: number,
-    ph: number,
-    edgeMode: "closest" | "right" | "left",
-    entryVariant: LateralEntryVariant
+  const pushContourFromPath = (
+    result: { w89: { x: number; y: number }; path: Array<{ x: number; y: number; z: number }> }
   ) => {
-    const { w89, path } = buildLateralContourPathWithZRamps(
-      px,
-      py,
-      pw,
-      ph,
-      toolRadiusMm,
-      thicknessMm,
-      zSafe,
-      sheetW,
-      sheetH,
-      edgeMode,
-      entryVariant
-    );
-    const w89T = transformPlacementToTcn({ x: w89.x, y: w89.y, z: zSafe }, sheet.largura_mm, maxW, maxH);
-    const pathT = path.map((p) => transformPlacementToTcn(p, sheet.largura_mm, maxW, maxH));
+    const w89T = transformPlacementToTcn({ x: result.w89.x, y: result.w89.y, z: zSafe }, sheet.largura_mm, maxW, maxH);
+    const pathT = result.path.map((p) => transformPlacementToTcn(p, sheet.largura_mm, maxW, maxH));
     sideInnerLines.push(buildToolBlock(w89T.x, w89T.y, zSafe));
     sideInnerLines.push(buildW2201(pathT, zSafe));
   };
 
-  sanitizedPlacements.forEach((pl) => {
-    const w = pl.largura_mm;
-    const h = pl.altura_mm;
-    const x = pl.x_mm;
-    const y = pl.y_mm;
+  // Loop 1 — todos os W#81 (furos) de todas as peças
+  const allDrillOps: CncDrillOperation[] = [];
+  for (const pl of sanitizedPlacements) {
     const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
-
-    const drillsForPiece: CncDrillOperation[] = [];
-    for (const hole of pl.holes ?? []) {
+    for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
       if (topDrillable === false) continue;
       const off = holeLocalToSheetOffsetMm(hole.x, hole.y, rot);
-      const placementX = pl.x_mm + off.sx;
-      const placementY = pl.y_mm + off.sy;
-      const tcnPt = transformPlacementToTcn({ x: placementX, y: placementY, z: 0 }, sheet.largura_mm, maxW, maxH);
-      drillsForPiece.push({
+      const tcnPt = transformPlacementToTcn({ x: pl.x_mm + off.sx, y: pl.y_mm + off.sy, z: 0 }, sheet.largura_mm, maxW, maxH);
+      allDrillOps.push({
         x: tcnPt.x,
         y: tcnPt.y,
         z: 0,
@@ -521,27 +516,30 @@ export function generateTcnForPanel(
         tipo: "vertical",
       });
     }
-    const drillLines = buildDrillLines(drillsForPiece);
+  }
+  sideInnerLines.push(...buildDrillLines(allDrillOps));
 
-    if (tcnMetodo === "v6_ramp") {
-      pushLateralExteriorContour(x, y, w, h, "right", "center");
-      sideInnerLines.push(...drillLines);
+  // Loop 2 — todos os W#89+W#2201 (contornos exteriores + rasgos interiores) de todas as peças
+  for (const pl of sanitizedPlacements) {
+    const w = pl.largura_mm;
+    const h = pl.altura_mm;
+    const x = pl.x_mm;
+    const y = pl.y_mm;
+    const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
+
+    if (tcnMetodo === "v2_ramp") {
+      pushContourFromPath(buildContourPathV2(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+    } else if (tcnMetodo === "v3_ramp_noflip") {
+      pushContourFromPath(buildContourPathV3(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+    } else if (tcnMetodo === "v4_corner_noflip") {
+      pushContourFromPath(buildContourPathV4(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+    } else if (tcnMetodo === "v5_ramp_noanchor") {
+      pushContourFromPath(buildContourPathV5(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+    } else if (tcnMetodo === "v6_ramp") {
+      pushContourFromPath(buildContourPathV6(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
     } else {
-      sideInnerLines.push(...drillLines);
-      if (tcnMetodo === "v2_ramp") {
-        pushLateralExteriorContour(x, y, w, h, "right", "center");
-      } else if (tcnMetodo === "v5_ramp_noanchor") {
-        pushLateralExteriorContour(x, y, w, h, "left", "center");
-      } else if (tcnMetodo === "v1_corner") {
-        // v1: referência industrial com entrada fixa no lado C (direita), ao centro.
-        pushLateralExteriorContour(x, y, w, h, "right", "center");
-      } else if (tcnMetodo === "v3_ramp_noflip") {
-        pushLateralExteriorContour(x, y, w, h, "left", "center");
-      } else if (tcnMetodo === "v4_corner_noflip") {
-        pushLateralExteriorContour(x, y, w, h, "left", "upperThird");
-      } else {
-        pushLateralExteriorContour(x, y, w, h, "closest", "center");
-      }
+      // v1_corner + fallback
+      pushContourFromPath(buildContourPathV1(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
     }
 
     const innerContours = pl.innerContours;
@@ -570,7 +568,7 @@ export function generateTcnForPanel(
         }
       }
     }
-  });
+  }
 
   lines.push(...buildSideBlock(1, dl, dh, ds, sideInnerLines, true));
 

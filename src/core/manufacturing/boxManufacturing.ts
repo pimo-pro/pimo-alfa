@@ -239,10 +239,10 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     custo: 0,
   });
 
-  // 3.4 Prateleiras: DENTRO; largura = width − 2 mm, profundidade = depth − 10 mm, espessura 19 mm. Tipo único "prateleira" (FINAL).
+  // 3.4 Prateleiras: DENTRO; largura = width − espessura×2 − 1 mm (folga lateral); profundidade = depth − COSTA − 5 mm (folga porta).
   if (box.prateleiras > 0) {
-    const larguraPrateleira = clampPositive(largura - 2);
-    const profundidadePrateleira = clampPositive(profundidade - PROFUNDIDADE_UTIL_MM);
+    const larguraPrateleira = clampPositive(largura - espessura * 2 - 1);
+    const profundidadePrateleira = clampPositive(profundidade - PROFUNDIDADE_UTIL_MM - 5);
     const nPrateleiras = Math.max(0, Math.floor(box.prateleiras));
     for (let i = 0; i < nPrateleiras; i++) {
       paineis.push({

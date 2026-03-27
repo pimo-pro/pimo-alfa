@@ -60,6 +60,8 @@ export interface SettingsSchema {
     drillRpm: number;
     sheetMarginMm: number;
     rampDistanceMm: number;
+    /** Compensação de ferramenta: "fora" = offset exterior completo (toolRadiusMm); "dentro" = sem offset (0). Default "fora". */
+    compensacaoFerramenta: "fora" | "dentro";
   };
   nesting: {
     kerfPadraoMm: number;
@@ -218,6 +220,7 @@ export const settingsDefaults: SettingsSchema = {
     drillRpm: 18000,
     sheetMarginMm: 10,
     rampDistanceMm: 20,
+    compensacaoFerramenta: "fora",
   },
   nesting: {
     kerfPadraoMm: 3,

@@ -88,6 +88,7 @@ export default function SystemSettingsBase() {
           zSafetyMm: draft.cnc.zSafetyMm,
           minSpacingMm: draft.cnc.minSpacingMm,
           diametroFresaContornoMm: draft.cnc.diametroFresaContornoMm,
+          compensacaoFerramenta: draft.cnc.compensacaoFerramenta,
           contourEntryMode: draft.cnc.contourEntryMode,
           contourCloseExplicit: draft.cnc.contourCloseExplicit,
           toolFeedRate: draft.cnc.toolFeedRate,
@@ -158,21 +159,28 @@ export default function SystemSettingsBase() {
           byMaterial.get(key)!.push(item);
         }
 
-        const contents: string[] = [];
-        for (const [, itemsForMaterial] of byMaterial) {
+        let filesAddedForVariant = 0;
+        for (const [materialKey, itemsForMaterial] of byMaterial) {
           const cncBundle = buildCncFromCutlistItems(project, itemsForMaterial);
           if (!cncBundle?.cnc?.files?.length) continue;
           for (const file of cncBundle.cnc.files) {
-            console.log("TCN gerado:", file.tcn);
-            contents.push(file.tcn);
-            arquivos.push(file.filenameBase);
+            const matSlug = materialKey
+              .replace(/[^\p{L}\p{N}_-]+/gu, "_")
+              .replace(/_+/g, "_")
+              .replace(/^_+|_+$/g, "")
+              .slice(0, 40) || "Material";
+            const espessura = Math.round(file.thicknessMm ?? 0);
+            const filename = `${matSlug}_${espessura}mm_panel_${file.panelIndex}_${v.metodo}.tcn`;
+            console.log("TCN gerado:", filename);
+            zip.file(filename, file.tcn);
+            arquivos.push(filename);
+            filesAddedForVariant++;
           }
         }
 
-        if (!contents.length) {
-          throw new Error(`Sem conteúdo TCN para ${v.file}.`);
+        if (filesAddedForVariant === 0) {
+          throw new Error(`Sem conteúdo TCN para variante ${v.metodo}.`);
         }
-        zip.file(v.file, contents.join("\n\n"));
       }
       console.log("Total de painéis nas variantes:", arquivos.length);
 
@@ -1218,6 +1226,36 @@ export default function SystemSettingsBase() {
               min={5} max={100} step={1}
               onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, rampDistanceMm: value } }))}
             />
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Compensação de ferramenta</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    cnc: {
+                      ...prev.cnc,
+                      compensacaoFerramenta: (prev.cnc.compensacaoFerramenta ?? "fora") === "fora" ? "dentro" : "fora",
+                    },
+                  }))
+                }
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: (draft.cnc.compensacaoFerramenta ?? "fora") === "fora" ? "#16a34a" : "#4b5563",
+                  color: "#fff",
+                  transition: "background 0.2s",
+                }}
+              >
+                {(draft.cnc.compensacaoFerramenta ?? "fora") === "fora"
+                  ? "Compensação: FORA da peça ✓"
+                  : "Compensação: DENTRO da peça"}
+              </button>
+            </div>
           </div>
 
           <details>
