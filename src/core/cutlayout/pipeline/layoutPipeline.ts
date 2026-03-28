@@ -1,5 +1,5 @@
 import type { SeededRng } from "../utils/cutLayoutRng";
-import { CUT_LAYOUT_SAFETY_MARGIN_MM } from "../layoutCoordinateSystem";
+import { getSheetSafetyMarginMm } from "../layoutCoordinateSystem";
 import type {
   CutPiece,
   CutLayoutEngineOptions,
@@ -285,7 +285,7 @@ export function runCutLayout(
       materialId: materialId !== "material" ? materialId : sheetDef.materialId,
       materialName: groupPieces[0]?.materialName ?? sheetDef.materialName,
     };
-    const marginMm = CUT_LAYOUT_SAFETY_MARGIN_MM;
+    const marginMm = getSheetSafetyMarginMm();
     const placementSheet = deps.createUsableSheetArea(sheet, marginMm);
     const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
 

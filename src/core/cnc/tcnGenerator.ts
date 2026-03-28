@@ -521,7 +521,7 @@ export function generateTcnForPanel(
   const rampDistMm =
     Number.isFinite(Number(runtimeSettings?.cnc?.rampDistanceMm)) && Number(runtimeSettings?.cnc?.rampDistanceMm) > 0
       ? Number(runtimeSettings?.cnc?.rampDistanceMm)
-      : 16;
+      : 20;
   const maxW =
     anchorMaxWidthMm != null && anchorMaxWidthMm > 0 && Number.isFinite(anchorMaxWidthMm)
       ? anchorMaxWidthMm
