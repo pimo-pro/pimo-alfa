@@ -239,7 +239,7 @@ export default function Tools3DToolbar({
             background: lockEnabled ? "var(--toolbar-pressed-bg)" : "transparent",
           }}
         >
-          🔒
+          <Icon name="lock3D" size={16} aria-hidden />
         </button>
       )}
       
@@ -264,10 +264,7 @@ export default function Tools3DToolbar({
             if (!showCameraMenu) e.currentTarget.style.background = "transparent";
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
+          <Icon name="camera" size={14} aria-hidden />
         </button>
         {showCameraMenu && (
           <CameraViewMenu
@@ -300,7 +297,7 @@ export default function Tools3DToolbar({
             if (!showExplodedMenu) e.currentTarget.style.background = "transparent";
           }}
         >
-          🧩
+          <Icon name="exploded" size={16} aria-hidden />
         </button>
         {showExplodedMenu && (
           <div
@@ -374,10 +371,7 @@ export default function Tools3DToolbar({
           if (!project.viewerSettings.highlightEnabled) e.currentTarget.style.background = "transparent";
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M12 3l2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1z" />
-          <circle cx="12" cy="12" r="2" />
-        </svg>
+        <Icon name="highlight" size={14} aria-hidden />
       </button>
       <button
         type="button"
@@ -399,10 +393,7 @@ export default function Tools3DToolbar({
           if (!project.viewerSettings.rulerEnabled) e.currentTarget.style.background = "transparent";
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M4 12h16" />
-          <path d="M5 14v-4M8 14v-4M11 14v-2M14 14v-4M17 14v-4M20 14v-4" />
-        </svg>
+        <Icon name="ruler" size={14} aria-hidden />
       </button>
 
       <button
