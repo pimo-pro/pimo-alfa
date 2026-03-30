@@ -6,6 +6,7 @@ import type {
 } from "../../../context/projectTypes";
 import { useProject } from "../../../context/useProject";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
+import { Icon } from "@/components/icons";
 
 const BACKGROUND_OPTIONS: Array<{ value: ViewerBackgroundMode; label: string; description: string }> = [
   { value: "studio", label: "Studio", description: "Equilibrado para trabalho diário." },
@@ -93,7 +94,7 @@ export default function DisplayMenuButton() {
         style={{ fontSize: 12 }}
       >
         <span className="viewer-toolbar-icon" aria-hidden>
-          ⚡
+          <Icon name="displayMenu" size={16} aria-hidden />
         </span>
       </button>
 
