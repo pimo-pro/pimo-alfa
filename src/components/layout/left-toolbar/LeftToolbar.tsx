@@ -1,7 +1,11 @@
+import type { IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
+
 export type LeftToolbarItem = {
   id: string;
   label: string;
   icon: string;
+  iconName: IconName;
   isHome?: boolean;
 };
 
@@ -19,13 +23,13 @@ export const LEFT_TOOLBAR_IDS = {
 } as const;
 
 const toolbarItems: LeftToolbarItem[] = [
-  { id: LEFT_TOOLBAR_IDS.HOME, label: "Início", icon: "π", isHome: true },
-  { id: LEFT_TOOLBAR_IDS.MOVEIS, label: "Móveis", icon: "M" },
-  { id: LEFT_TOOLBAR_IDS.MODELOS, label: "Modelos", icon: "◫" },
-  { id: LEFT_TOOLBAR_IDS.CALCULADORA, label: "Calculadora", icon: "⊕" },
-  { id: LEFT_TOOLBAR_IDS.ELETRO, label: "Eletro", icon: "E" },
-  { id: LEFT_TOOLBAR_IDS.ACESSORIOS, label: "Acessórios", icon: "A" },
-  { id: LEFT_TOOLBAR_IDS.INFO, label: "Info", icon: "?" },
+  { id: LEFT_TOOLBAR_IDS.HOME, label: "Início", icon: "π", iconName: "home", isHome: true },
+  { id: LEFT_TOOLBAR_IDS.MOVEIS, label: "Móveis", icon: "M", iconName: "furniture" },
+  { id: LEFT_TOOLBAR_IDS.MODELOS, label: "Modelos", icon: "◫", iconName: "models" },
+  { id: LEFT_TOOLBAR_IDS.CALCULADORA, label: "Calculadora", icon: "⊕", iconName: "calculator" },
+  { id: LEFT_TOOLBAR_IDS.ELETRO, label: "Eletro", icon: "E", iconName: "electro" },
+  { id: LEFT_TOOLBAR_IDS.ACESSORIOS, label: "Acessórios", icon: "A", iconName: "accessories" },
+  { id: LEFT_TOOLBAR_IDS.INFO, label: "Info", icon: "?", iconName: "info" },
 ];
 
 type LeftToolbarProps = {
@@ -56,7 +60,7 @@ export default function LeftToolbar({ selectedId, onSelect }: LeftToolbarProps) 
               aria-pressed={isSelected}
             >
               <span className="left-toolbar-icon" aria-hidden="true">
-                {item.icon}
+                <Icon name={item.iconName} size={16} aria-hidden />
               </span>
               <span className="left-toolbar-label">{item.label}</span>
             </button>
@@ -73,7 +77,7 @@ export default function LeftToolbar({ selectedId, onSelect }: LeftToolbarProps) 
             aria-pressed={isSelected}
           >
             <span className="left-toolbar-icon" aria-hidden="true">
-              {item.icon}
+              <Icon name={item.iconName} size={16} aria-hidden />
             </span>
             <span className="left-toolbar-label">{item.label}</span>
           </button>
