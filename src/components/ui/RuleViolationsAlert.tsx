@@ -4,6 +4,7 @@
 
 import { memo, useMemo } from "react";
 import type { RuleViolation } from "../../core/rules/types";
+import { Icon } from "@/components/icons";
 
 type Props = {
   violations: RuleViolation[];
@@ -11,10 +12,10 @@ type Props = {
   onEditRules?: () => void;
 };
 
-const severityStyle: Record<string, { bg: string; border: string; icon: string }> = {
-  error: { bg: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", icon: "⚠" },
-  warning: { bg: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.4)", icon: "!" },
-  info: { bg: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", icon: "i" },
+const severityStyle: Record<string, { bg: string; border: string; iconName: "alertError" | "alertWarning" | "alertInfo" }> = {
+  error: { bg: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", iconName: "alertError" },
+  warning: { bg: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.4)", iconName: "alertWarning" },
+  info: { bg: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", iconName: "alertInfo" },
 };
 
 function RuleViolationsAlertComponent({ violations, boxId, onEditRules }: Props) {
@@ -65,7 +66,9 @@ function RuleViolationsAlertComponent({ violations, boxId, onEditRules }: Props)
                 color: "var(--text-main)",
               }}
             >
-              <span style={{ marginRight: 6 }}>{style.icon}</span>
+              <span style={{ marginRight: 6 }} aria-hidden>
+                <Icon name={style.iconName} size={16} aria-hidden />
+              </span>
               {v.message}
             </li>
           );
