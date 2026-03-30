@@ -7,32 +7,52 @@ export const IconHome: FC<IconProps> = ({
   className,
   "aria-hidden": ariaHidden = true,
   title,
-}) => {
-  const dim = size ?? 24;
-  const fs = (15 / 24) * dim;
-  return (
-    <svg
-      width={dim}
-      height={dim}
-      viewBox="0 0 24 24"
+}) => (
+  <svg
+    width={size ?? 20}
+    height={size ?? 20}
+    viewBox="0 0 24 24"
+    fill="none"
+    className={className}
+    aria-hidden={ariaHidden}
+  >
+    {title ? <title>{title}</title> : null}
+    <line
+      x1="3"
+      y1="6"
+      x2="21"
+      y2="6"
+      stroke={color}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    />
+    <line
+      x1="6"
+      y1="6"
+      x2="6"
+      y2="20"
+      stroke={color}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    />
+    <line
+      x1="12"
+      y1="6"
+      x2="12"
+      y2="20"
+      stroke={color}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    />
+    <path
+      d="M6 13 Q9 17 12 13"
+      stroke={color}
+      strokeWidth={1.5}
       fill="none"
-      className={className}
-      aria-hidden={ariaHidden}
-    >
-      {title ? <title>{title}</title> : null}
-      <text
-        x="12"
-        y="16"
-        textAnchor="middle"
-        fontFamily="Georgia, serif"
-        fontSize={fs}
-        fill={color}
-      >
-        π
-      </text>
-    </svg>
-  );
-};
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 export const IconFurniture: FC<IconProps> = ({
   size,
