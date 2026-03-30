@@ -45,6 +45,7 @@ export type IconName =
   | "mouse"
   | "chevronRight"
   | "check"
+  | "close"
   | "undo"
   | "redo"
   | "photoMode"

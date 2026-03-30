@@ -41,6 +41,7 @@ import {
   IconMouse,
   IconChevronRight,
   IconCheck,
+  IconClose,
 } from "./groups/contextMenu";
 import {
   IconUndo,
@@ -109,6 +110,7 @@ export const iconRegistry: Record<IconName, FC<IconProps>> = {
   mouse: IconMouse,
   chevronRight: IconChevronRight,
   check: IconCheck,
+  close: IconClose,
   undo: IconUndo,
   redo: IconRedo,
   photoMode: IconPhotoMode,

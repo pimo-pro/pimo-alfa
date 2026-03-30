@@ -703,7 +703,7 @@ export default function BottomInfoToolbar() {
             cursor: "pointer",
           }}
         >
-          ×
+          <Icon name="close" size={14} aria-hidden />
         </button>
       </div>
       <div style={componentsSidePanelBodyStyle}>
@@ -741,7 +741,7 @@ export default function BottomInfoToolbar() {
             cursor: "pointer",
           }}
         >
-          ×
+          <Icon name="close" size={14} aria-hidden />
         </button>
       </div>
       <div style={historyPanelBodyStyle}>
