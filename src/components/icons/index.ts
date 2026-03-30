@@ -1,0 +1,12 @@
+export { Icon } from "./Icon";
+export { IconGallery } from "./IconGallery";
+export type { IconName, IconProps, IconComponentProps } from "./types";
+export * from "./groups/header";
+export * from "./groups/leftToolbar";
+export * from "./groups/viewer";
+export * from "./groups/contextMenu";
+export * from "./groups/toolbar";
+export * from "./groups/admin";
+export * from "./groups/alerts";
+export * from "./groups/social";
+export * from "./groups/manufacturing";

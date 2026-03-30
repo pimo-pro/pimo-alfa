@@ -1,0 +1,76 @@
+export interface IconProps {
+  size?: number;
+  color?: string;
+  className?: string;
+  "aria-hidden"?: boolean;
+  title?: string;
+}
+
+export interface IconComponentProps extends IconProps {
+  name: IconName;
+}
+
+export type IconName =
+  | "themeSun"
+  | "themeMoon"
+  | "user"
+  | "upload"
+  | "projects"
+  | "settings"
+  | "home"
+  | "furniture"
+  | "models"
+  | "calculator"
+  | "electro"
+  | "accessories"
+  | "info"
+  | "camera"
+  | "highlight"
+  | "ruler"
+  | "grid"
+  | "room"
+  | "orbit"
+  | "pan"
+  | "select"
+  | "move"
+  | "rotate"
+  | "delete"
+  | "rename"
+  | "duplicate"
+  | "lock"
+  | "unlock"
+  | "alignFront"
+  | "alignBottom"
+  | "material"
+  | "mouse"
+  | "chevronRight"
+  | "check"
+  | "undo"
+  | "redo"
+  | "photoMode"
+  | "resetCamera"
+  | "send"
+  | "displayMenu"
+  | "displayCheck"
+  | "lock3D"
+  | "exploded"
+  | "adminWood"
+  | "adminChecklist"
+  | "adminScrew"
+  | "adminPuzzle"
+  | "adminRuler"
+  | "adminSettings"
+  | "adminBook"
+  | "adminFolder"
+  | "adminArchive"
+  | "adminLab"
+  | "adminTools"
+  | "adminTag"
+  | "adminSave"
+  | "adminChart"
+  | "adminDocs"
+  | "alertWarning"
+  | "alertInfo"
+  | "alertError"
+  | "whatsapp"
+  | "blueprint";

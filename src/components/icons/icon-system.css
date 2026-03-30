@@ -1,0 +1,19 @@
+/**
+ * Variáveis do sistema de ícones PIMO.
+ * O projeto usa .theme-light / .theme-dark no documentElement (ThemeContext), não .dark.
+ * Este ficheiro é importado pelo módulo de ícones sem alterar index.css.
+ */
+
+.theme-light {
+  --icon-color: #475569;
+  --icon-color-active: #0f172a;
+  --icon-color-muted: #94a3b8;
+  --icon-color-accent: #3b82f6;
+}
+
+.theme-dark {
+  --icon-color: #94a3b8;
+  --icon-color-active: #f1f5f9;
+  --icon-color-muted: #475569;
+  --icon-color-accent: #3b82f6;
+}
