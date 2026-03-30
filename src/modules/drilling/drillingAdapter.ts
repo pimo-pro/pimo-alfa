@@ -267,10 +267,11 @@ export function buildPanelDrillingResult(
   const numHinges = isDoor ? numHingesForDoor : rules.furos.tecnicos.dobradica.numeroPorPorta;
 
   let hingePositions: number[] = [];
-  /* Laterais (left/right): posições Y copiadas da altura da porta. */
-  if (isLateral && Number.isFinite(input.doorHeightMm)) {
-    const lateralPositions = getHingePositionsFromDoorHeight(rules, Number(input.doorHeightMm), input.alturaMm);
-    hingePositions = sanitizeHingePositions(lateralPositions, input.alturaMm, distEntreFixacao);
+  if (isLateral) {
+    // Overlay doors: hinge positions are fixed distances from
+    // the lateral top/bottom edges — independent of door height
+    const rawLateralHinges = getHingeYPositions(input.alturaMm, numHinges, rules);
+    hingePositions = sanitizeHingePositions(rawLateralHinges, input.alturaMm, distEntreFixacao);
   } else if (isDoor) {
     /* Porta: top/bottom = posições ao longo da largura (X); left/right = ao longo da altura (Y). */
     if (input.hingeSide === "top" || input.hingeSide === "bottom") {
