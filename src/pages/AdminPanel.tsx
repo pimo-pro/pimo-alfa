@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState } from "react";
+import { Icon } from "@/components/icons";
 import TemplatesManager from "../components/admin/TemplatesManager";
 import MaterialsManufacturing from "../components/admin/MaterialsManufacturing";
 import RulesManager from "../components/admin/RulesManager";
@@ -61,22 +62,22 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
 ];
 
-const menuIconByTab: Partial<Record<AdminTab, string>> = {
-  "Materiais & Fabricação": "🪵",
-  "Gestão de Materiais": "📋",
-  "Ferragens": "🔩",
-  "Component Types": "🧩",
-  "Regras": "📏",
-  "Configuração de Regras": "⚙️",
-  "Perfis de Regras": "📚",
-  "Templates": "🗂️",
-  "Gestor de Ficheiros": "🗃️",
-  "Deploy": "🧪",
-  "System Settings": "🛠️",
-  "Etiqueta / QR N": "🏷️",
-  "Projetos Salvos": "💾",
-  "Project Progress": "📈",
-  "Painel Referência": "📖",
+const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]>> = {
+  "Materiais & Fabricação": "adminWood",
+  "Gestão de Materiais": "adminChecklist",
+  "Ferragens": "adminScrew",
+  "Component Types": "adminPuzzle",
+  "Regras": "adminRuler",
+  "Configuração de Regras": "adminSettings",
+  "Perfis de Regras": "adminBook",
+  "Templates": "adminFolder",
+  "Gestor de Ficheiros": "adminArchive",
+  "Deploy": "adminLab",
+  "System Settings": "adminTools",
+  "Etiqueta / QR N": "adminTag",
+  "Projetos Salvos": "adminSave",
+  "Project Progress": "adminChart",
+  "Painel Referência": "adminDocs",
 };
 
 const adminVisibleTabs = new Set<AdminTab>(
@@ -192,7 +193,9 @@ export default function AdminPanel() {
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span aria-hidden>{menuIconByTab[entry.id] ?? "•"}</span>
+                <span aria-hidden>
+                  {menuIconByTab[entry.id] ? <Icon name={menuIconByTab[entry.id]} size={16} aria-hidden /> : "•"}
+                </span>
                 <span>{entry.label}</span>
               </span>
               {entry.badge ? (
