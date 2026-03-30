@@ -5,6 +5,7 @@ import { wallStore, useWallStore } from "../../../stores/wallStore";
 import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { LEFT_TOOLBAR_IDS } from "../../layout/left-toolbar/LeftToolbar";
 import { hasPersistedRoomWalls } from "../../../utils/roomWorkspaceBounds";
+import { Icon } from "@/components/icons";
 
 /** Atalho na toolbar: mesmas dimensões padrão ao criar sala instantaneamente. */
 const DEFAULT_ROOM_WIDTH_M = 4;
@@ -57,7 +58,7 @@ export default function RoomIconButton() {
       }}
     >
       <span className="viewer-toolbar-icon" aria-hidden>
-        ▢
+        <Icon name="room" size={16} aria-hidden />
       </span>
     </button>
   );
