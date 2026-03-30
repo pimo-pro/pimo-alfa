@@ -182,7 +182,7 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
           ...normalizedRules.furos.tecnicos.cavilha,
           distanciaFrente: cavilhaFront,
           distanciaFundo: cavilhaBack,
-          offsetDaBorda: fu.parafuso.offsetDaBorda,
+          offsetDaBorda: fu.cavilha?.offsetDaBorda,
           sideOffset: cavilhaSideOffset,
         },
         prateleira: {
