@@ -9,6 +9,7 @@ import {
   FILE_MANAGER_HIDDEN_BY_DEFAULT,
   isUploadBlocked,
 } from "../../constants/fileManagerConfig";
+import { Icon } from "@/components/icons";
 
 export default function FileManager() {
   const [showHidden, setShowHidden] = useState(!FILE_MANAGER_HIDDEN_BY_DEFAULT);
@@ -54,7 +55,14 @@ export default function FileManager() {
         <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
           {items.map((item) => (
             <li key={item.path}>
-              {item.type === "folder" ? "📁" : "📄"}               {item.path}
+              <span aria-hidden style={{ display: "inline-flex", marginRight: 6 }}>
+                {item.type === "folder" ? (
+                  <Icon name="adminFolder" size={14} aria-hidden />
+                ) : (
+                  <Icon name="adminDocs" size={14} aria-hidden />
+                )}
+              </span>
+              {item.path}
               {("hidden" in item && item.hidden) ? (
                 <span style={{ color: "var(--text-muted)", fontSize: 11 }}> (oculto)</span>
               ) : null}
@@ -64,7 +72,11 @@ export default function FileManager() {
       </div>
       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
         Uploads bloqueados: .php, .phtml, .php3, .php4, .php5
-        {isUploadBlocked("test.php") && " ✓"}
+        {isUploadBlocked("test.php") && (
+          <span aria-hidden style={{ display: "inline-flex", marginLeft: 6 }}>
+            <Icon name="check" size={12} aria-hidden />
+          </span>
+        )}
       </div>
     </div>
   );
