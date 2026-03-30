@@ -11,6 +11,7 @@ import { useProject } from "../../../context/useProject";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import CameraViewMenu from "./CameraViewMenu";
 import { NumericInput } from "../../ui/NumericInput";
+import { Icon } from "@/components/icons";
 
 export type Tools3DToolbarProps = {
   /** Ferramenta ativa (controlado pelo estado global). */
@@ -141,7 +142,7 @@ export default function Tools3DToolbar({
                 e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
               }}
             >
-              {item.icon}
+              <Icon name={item.iconName} size={16} aria-hidden />
             </button>
             {isRotate && selectedBoxId && showRotationMenu && (() => {
               const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
