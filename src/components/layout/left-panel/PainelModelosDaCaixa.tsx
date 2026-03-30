@@ -14,6 +14,7 @@ import RuleViolationsAlert from "../../ui/RuleViolationsAlert";
 import LayoutWarningsAlert from "../../ui/LayoutWarningsAlert";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
+import { Icon } from "@/components/icons";
 
 const OFFICIAL_WOOD_OPTIONS = listOfficialMaterials();
 const VISUAL_WOOD_OPTIONS = OFFICIAL_WOOD_OPTIONS.filter((m) => m.visual);
@@ -62,7 +63,17 @@ export default function PainelModelosDaCaixa() {
             textAlign: "left",
           }}
         >
-          {accordionOpen ? "▼" : "▶"} {accordionOpen ? "Ocultar" : "Mostrar"} tipo, material, borda e fundo
+          <span
+            aria-hidden
+            style={{
+              display: "inline-flex",
+              marginRight: 6,
+              transform: accordionOpen ? "rotate(90deg)" : undefined,
+            }}
+          >
+            <Icon name="chevronRight" size={14} aria-hidden />
+          </span>
+          {accordionOpen ? "Ocultar" : "Mostrar"} tipo, material, borda e fundo
         </button>
         {accordionOpen && (
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
