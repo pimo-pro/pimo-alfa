@@ -10,7 +10,7 @@ import {
 } from "../../data/moveisUnificados/pi/settings";
 
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
-export const SETTINGS_SCHEMA_VERSION = 1;
+export const SETTINGS_SCHEMA_VERSION = 2;
 
 export interface SettingsSchema {
   schemaVersion: number;
@@ -276,7 +276,7 @@ export const settingsDefaults: SettingsSchema = {
     cavilha: {
       frontDistance: 60,
       backDistance: 60,
-      sideOffset: 19,
+      sideOffset: 9.5,
     },
     prateleira: {
       margemTop: 200,
