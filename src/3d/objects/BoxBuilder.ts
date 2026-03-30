@@ -28,6 +28,7 @@ import {
   updateBoxGroupWithDeps,
   updateBoxModelWithDeps,
 } from "./BoxUpdater";
+import { getWardrobeGroupFromBaseCabinetId, isWardrobeVerticalDividerEnabled } from "../../core/wardrobe/wardrobeRules";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -170,13 +171,71 @@ export type BoxPanelLayoutSpecs = ReturnType<typeof getPanelSpecs>;
  * Prateleiras: DENTRO da caixa. largura = width - 2 mm, profundidade = depth - 10 mm, espessura 19 mm.
  * Posição z: centrada na profundidade útil + SHELF_VISUAL_INSET_M para evitar Z-fighting com a costa.
  */
-function getShelfSpecs(width: number, height: number, depth: number, count: number) {
+function getShelfSpecs(width: number, height: number, depth: number, count: number, opts?: BoxOptions) {
   const shelfWidth = Math.max(0.001, width - SHELF_WIDTH_CLEARANCE_M);
   const shelfDepth = Math.max(0.001, depth - SHELF_DEPTH_CLEARANCE_M);
   const interiorHeight = Math.max(0.001, height - 2 * THICKNESS_M);
   const centerZ = -depth / 2 + shelfDepth / 2 + SHELF_VISUAL_INSET_M;
   const specs: { size: [number, number, number]; pos: [number, number, number] }[] = [];
   if (count < 1) return specs;
+
+  // Roupeiro: as prateleiras só existem na secção superior; as posições dependem do divisor horizontal e (quando aplicável) do divisor vertical.
+  const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(opts?.baseCabinetId);
+  if (wardrobeGroup) {
+    const feetHeightMm = Math.max(40, opts?.feetHeight ?? 100);
+    const heightMm = height * 1000;
+    const widthMm = width * 1000;
+    const thicknessMm = THICKNESS_M * 1000;
+
+    const computeUpperShelfCenterYLocal = (): number => {
+      if (wardrobeGroup === "T") return 0;
+      const dividerFromFloorMm = wardrobeGroup === "H" ? 1900 : 1600;
+      const lowerSectionHeightMm = dividerFromFloorMm - Math.max(0, feetHeightMm);
+      const safeLowerSectionHeightMm = Math.max(300, Math.min(heightMm - 300, lowerSectionHeightMm));
+      const dividerCenterLocalY_mm = -heightMm / 2 + safeLowerSectionHeightMm;
+
+      const upperInteriorLowerBound_mm = dividerCenterLocalY_mm + thicknessMm / 2;
+      const upperInteriorUpperBound_mm = heightMm / 2 - thicknessMm;
+      const upperInteriorHeight_mm = Math.max(1, upperInteriorUpperBound_mm - upperInteriorLowerBound_mm);
+      const upperShelfCenterYLocal_mm = upperInteriorLowerBound_mm + upperInteriorHeight_mm / 2;
+      return upperShelfCenterYLocal_mm / 1000;
+    };
+
+    const upperShelfCenterY = computeUpperShelfCenterYLocal();
+
+    if (wardrobeGroup === "T") {
+      specs.push({
+        size: [shelfWidth, THICKNESS_M, shelfDepth],
+        pos: [0, 0, centerZ],
+      });
+      return specs;
+    }
+
+    const verticalDividerEnabled = isWardrobeVerticalDividerEnabled(widthMm);
+    const shelfWidthPerSide = Math.max(0.001, (width - 3 * THICKNESS_M) / 2 - SHELF_WIDTH_CLEARANCE_M);
+    const leftCompartmentCenterX = -width / 4 + THICKNESS_M / 4;
+    const rightCompartmentCenterX = width / 4 - THICKNESS_M / 4;
+
+    // Quando vertical divisor existe (>= 800mm), o catálogo passa count=2 para representar “1 prateleira por lado”.
+    if (verticalDividerEnabled && count >= 2) {
+      specs.push({
+        size: [shelfWidthPerSide, THICKNESS_M, shelfDepth],
+        pos: [leftCompartmentCenterX, upperShelfCenterY, centerZ],
+      });
+      specs.push({
+        size: [shelfWidthPerSide, THICKNESS_M, shelfDepth],
+        pos: [rightCompartmentCenterX, upperShelfCenterY, centerZ],
+      });
+      return specs;
+    }
+
+    specs.push({
+      size: [shelfWidth, THICKNESS_M, shelfDepth],
+      pos: [0, upperShelfCenterY, centerZ],
+    });
+    return specs;
+  }
+
   const spacing = interiorHeight / (count + 1);
   const yMin = -height / 2 + THICKNESS_M + spacing;
   for (let i = 0; i < count; i++) {

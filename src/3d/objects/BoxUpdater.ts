@@ -6,6 +6,11 @@ import type { DrawerSpec } from "./DrawerFactory";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { TechnicalDrillHole } from "../../core/types";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import {
+  computeWardrobeLocalLayout,
+  getWardrobeGroupFromBaseCabinetId,
+  hasWardrobeLowerDrawers,
+} from "../../core/wardrobe/wardrobeRules";
 import type { PanelType } from "./PanelFactory";
 
 type BoxUpdaterDeps = {
@@ -15,7 +20,8 @@ type BoxUpdaterDeps = {
     _width: number,
     _height: number,
     _depth: number,
-    _shelves?: number
+    _shelves?: number,
+    _opts?: BoxOptions
   ) => Array<{ size: [number, number, number]; pos: [number, number, number] }>;
   panelFactory: {
     createPanel: (
@@ -90,8 +96,8 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   const mat = Array.isArray(baseMaterial) ? baseMaterial[0] : baseMaterial;
   const drillMap = opts.drillMarkersByPanel ?? { cima: [], fundo: [], lateral_esquerda: [], lateral_direita: [], porta: [] };
   const shelfCountForDrill = Math.max(0, Math.floor(opts.shelves ?? 0));
-  const hasDrawersForDrill = (opts.drawerLayerItems?.length ?? 0) > 0;
-  const useLateralShelfHoles = shelfCountForDrill > 0 && !hasDrawersForDrill;
+  // Roupeiro: prateleiras existem na zona superior mesmo que existam gavetas na zona inferior.
+  const useLateralShelfHoles = shelfCountForDrill > 0;
   const hasLateralDrillMarkers =
     (drillMap.lateral_esquerda?.length ?? 0) > 0 || (drillMap.lateral_direita?.length ?? 0) > 0;
   const forcePiLateralDrillGeometry = isPiBaseCabinetId(opts.baseCabinetId);
@@ -191,7 +197,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   });
 
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
-  const shelfSpecs = deps.getShelfSpecs(width, height, depth, shelfCount);
+  const shelfSpecs = deps.getShelfSpecs(width, height, depth, shelfCount, opts);
   group.children.filter((c) => /^shelf-\d+$/.test(c.name)).forEach((obj) => group.remove(obj));
   shelfSpecs.forEach((spec, i) => {
     const shelfMat = (mat as THREE.Material).clone();
@@ -200,6 +206,86 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     mesh.userData.shelfIndex = i;
     group.add(mesh);
   });
+
+  // Roupeiro (H/J): reconstruir divisores e varões de cabides na renderização incremental.
+  const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(opts.baseCabinetId);
+  if (wardrobeGroup && wardrobeGroup !== "T") {
+    group.children
+      .filter((c) => c.name.startsWith("wardrobe-divider-") || c.name.startsWith("wardrobe-rail-"))
+      .forEach((c) => group.remove(c));
+
+    const feetHeightMm = Math.max(40, opts.feetHeight ?? (opts.pe_cm ?? 10) * 10);
+    const widthMm = width * 1000;
+    const heightMm = height * 1000;
+    const depthMm = depth * 1000;
+
+    const layout = computeWardrobeLocalLayout({
+      baseCabinetId: opts.baseCabinetId,
+      widthMm,
+      heightMm,
+      depthMm,
+      feetHeightMm,
+    });
+
+    const dividerMat = mat as THREE.Material;
+
+    if (layout.horizontalDividerCenterY_mm != null) {
+      const dividerH = new THREE.Mesh(
+        new THREE.BoxGeometry(width, deps.thicknessM, depth),
+        dividerMat.clone()
+      );
+      dividerH.name = "wardrobe-divider-horizontal";
+      dividerH.position.set(0, layout.horizontalDividerCenterY_mm / 1000, 0);
+      group.add(dividerH);
+    }
+
+    if (layout.verticalDividerEnabled) {
+      const dividerV = new THREE.Mesh(
+        new THREE.BoxGeometry(deps.thicknessM, height, depth),
+        dividerMat.clone()
+      );
+      dividerV.name = "wardrobe-divider-vertical";
+      dividerV.position.set((layout.verticalDividerCenterX_mm ?? 0) / 1000, 0, 0);
+      group.add(dividerV);
+    }
+
+    const hasDrawersLower = hasWardrobeLowerDrawers(opts.baseCabinetId);
+    const railThicknessM = 6 / 1000;
+    const railRadiusM = Math.max(0.001, railThicknessM / 2);
+    const railZ = layout.shelfAndRailCenterZ_mm / 1000;
+    const railY = layout.lowerCabideCenterY_mm != null ? layout.lowerCabideCenterY_mm / 1000 : -height / 4;
+
+    const createRail = (name: string, x: number, lengthM: number) => {
+      const cyl = new THREE.Mesh(
+        new THREE.CylinderGeometry(railRadiusM, railRadiusM, Math.max(0.001, lengthM), 12),
+        dividerMat.clone()
+      );
+      cyl.name = name;
+      cyl.position.set(x, railY, railZ);
+      cyl.rotation.z = Math.PI / 2;
+      group.add(cyl);
+    };
+
+    if (layout.verticalDividerEnabled) {
+      const leftX = layout.leftCompartmentCenterX_mm / 1000;
+      const rightX = layout.rightCompartmentCenterX_mm / 1000;
+      const lenLeft = layout.railWidthPerSide_mm / 1000;
+      const lenRight = layout.railWidthPerSide_mm / 1000;
+      if (hasDrawersLower) {
+        createRail("wardrobe-rail-left", leftX, lenLeft);
+      } else {
+        createRail("wardrobe-rail-left", leftX, lenLeft);
+        createRail("wardrobe-rail-right", rightX, lenRight);
+      }
+    } else {
+      createRail("wardrobe-rail-center", 0, layout.railWidthFull_mm / 1000);
+    }
+  } else {
+    group.children
+      .filter((c) => c.name.startsWith("wardrobe-divider-") || c.name.startsWith("wardrobe-rail-"))
+      .forEach((c) => group.remove(c));
+  }
+
   group.updateMatrixWorld(true);
   return { width, height, depth };
 }

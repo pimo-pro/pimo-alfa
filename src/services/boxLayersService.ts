@@ -9,6 +9,13 @@ import {
 } from "../core/drawers";
 import { devLogger } from "../utils/devLogger";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
+import {
+  computeWardrobeLocalLayout,
+  getWardrobeDoorCountForWidth,
+  getWardrobeGroupFromBaseCabinetId,
+  hasWardrobeLowerDrawers,
+  isWardrobeModel,
+} from "../core/wardrobe/wardrobeRules";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -74,13 +81,13 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
   const thickness = clamp(box.espessura, 18);
 
   const drawerCount = Math.max(0, Math.floor(box.gavetas || 0));
-  const hasDrawers = drawerCount > 0 && box.portaTipo === "sem_porta" && (box.prateleiras ?? 0) === 0;
+  const hasDrawers = drawerCount > 0;
 
   const doorsLayer: DoorLayerItem[] = [];
   const drawersLayer: DrawerLayerItem[] = [];
 
-  // PORTAS: Só criar se explicitamente porta_simples ou porta_dupla e nao houver gavetas
-  if (!hasDrawers && (box.portaTipo === "porta_simples" || box.portaTipo === "porta_dupla")) {
+  // PORTAS: criar se portaTipo exigir (mesmo que existam gavetas/prateleiras).
+  if (box.portaTipo === "porta_simples" || box.portaTipo === "porta_dupla") {
     const gapVertical = clamp(settings.portas.portaGapVerticalMm, 0);
     const gapHorizontal = clamp(settings.portas.portaGapHorizontalMm, 0);
     const doorGap = clamp(settings.portas.portaGapDuplaMm, 0);
@@ -90,8 +97,46 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
     const doorPosY = 0;
     // Door posZ: fora da caixa (face frontal externa)
     const doorPosZ = boxDepth / 2 + clamp(settings.portas.portaPosZOffsetMm, 0);
+    const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(box.baseCabinetId);
+    // Regra de engenharia de portas (max 600mm por folha) aplica a todos os grupos de roupeiro (H/J/T).
+    const forcedDoorCount = wardrobeGroup ? getWardrobeDoorCountForWidth(boxWidth) : null;
 
-    if (box.portaTipo === "porta_dupla") {
+    if (forcedDoorCount === 3) {
+      const leafWidth = clamp((boxWidth - 2 * gapHorizontal - 2 * doorGap) / 3, MM_EPS);
+      const leftEdgeX = -boxWidth / 2 + gapHorizontal;
+      const makeDoor = (
+        idx: number,
+        openDirection: "left" | "right",
+        hingeSide: "left" | "right",
+        pivot: "left-edge" | "right-edge"
+      ) => {
+        const doorLeft = leftEdgeX + idx * (leafWidth + doorGap);
+        const pivotX = pivot === "left-edge" ? doorLeft : doorLeft + leafWidth;
+        doorsLayer.push({
+          id: createId("door"),
+          parentBoxId: box.id,
+          groupType: "dupla",
+          width: leafWidth,
+          height: doorHeight,
+          thickness,
+          materialId: defaultDoorMaterial,
+          material: defaultDoorMaterial,
+          openDirection,
+          isOpen: false,
+          hingeSide,
+          pivot,
+          posX: pivotX,
+          posY: doorPosY,
+          posZ: doorPosZ,
+          rotY: 0,
+        });
+      };
+
+      // Folha 1 (esquerda) abre para esquerda; folhas 2/3 para direita.
+      makeDoor(0, "left", "left", "left-edge");
+      makeDoor(1, "right", "right", "right-edge");
+      makeDoor(2, "right", "right", "right-edge");
+    } else if (box.portaTipo === "porta_dupla") {
       const leafWidth = clamp((boxWidth - 2 * gapHorizontal - doorGap) / 2, MM_EPS);
       const leftCenterX = -(leafWidth / 2 + doorGap / 2);
       const rightCenterX = leafWidth / 2 + doorGap / 2;
@@ -160,7 +205,9 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
     }
   }
 
-  // GAVETAS: Só criar se gavetas > 0 e sem portas/prateleiras
+  // GAVETAS:
+  // - Geral: gerar se gavetas > 0
+  // - Roupeiro H/J (cfg7/cfg8): gerar apenas no lado direito e apenas na zona inferior
   if (hasDrawers) {
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";
@@ -168,19 +215,54 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
     const customHeights = mode === "custom" ? (box.drawersLayer ?? []).map((item) => item.height) : undefined;
 
     // Usar o domínio de drawers para gerar gavetas
-    const config: DrawerGenerationConfig = {
-      boxWidth,
-      boxHeight,
-      boxDepth,
-      boxThickness: thickness,
-      boxId: box.id,
-      drawerCount,
-      drawerType,
-      heightMode: mode,
-      customHeights,
-      availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
-      materialId: defaultDrawerMaterial,
-    };
+    const isWardrobe = isWardrobeModel(box.baseCabinetId);
+    const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(box.baseCabinetId);
+    const shouldWardrobeLowerRightDrawers =
+      isWardrobe && wardrobeGroup !== "T" && hasWardrobeLowerDrawers(box.baseCabinetId) && boxWidth >= 1200;
+
+    const feetHeightMm = Math.max(40, box.feetHeight ?? (box.pe_cm ?? 10) * 10);
+
+    const config: DrawerGenerationConfig = (() => {
+      if (!shouldWardrobeLowerRightDrawers) {
+        return {
+          boxWidth,
+          boxHeight,
+          boxDepth,
+          boxThickness: thickness,
+          boxId: box.id,
+          drawerCount,
+          drawerType,
+          heightMode: mode,
+          customHeights,
+          availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+          materialId: defaultDrawerMaterial,
+        };
+      }
+
+      const layout = computeWardrobeLocalLayout({
+        baseCabinetId: box.baseCabinetId,
+        widthMm: boxWidth,
+        heightMm: boxHeight,
+        depthMm: boxDepth,
+        feetHeightMm,
+      });
+
+      return {
+        boxWidth: layout.drawerCompartmentBoxWidthForGen_mm ?? boxWidth,
+        boxHeight: layout.drawerCompartmentBoxHeightForGen_mm ?? boxHeight,
+        boxDepth,
+        boxThickness: thickness,
+        boxId: box.id,
+        drawerCount,
+        drawerType,
+        heightMode: "equal", // regra obrigatória: 3 gavetas, distribuídas uniformemente
+        availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+        materialId: defaultDrawerMaterial,
+        originX: layout.drawerOriginXLocal_mm ?? 0,
+        originY: layout.drawerOriginYLocal_mm ?? 0,
+        customHeights: undefined,
+      };
+    })();
 
     const drawerGroup = generateDrawerGroup(config);
     const generatedDrawers = drawerGroupToLayerItems(drawerGroup);

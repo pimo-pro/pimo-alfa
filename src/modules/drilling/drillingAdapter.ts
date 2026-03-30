@@ -271,7 +271,9 @@ export function buildPanelDrillingResult(
     }
   }
 
-  // Shelf holes are disabled when drawers are present
+  // Furos de prateleira: regra existente do motor (desativar quando há gavetas no mesmo módulo).
+  // Para roupeiros (gavetas só na zona inferior), o upstream deve passar hasDrawers=false
+  // ao calcular as furações das prateleiras.
   const shelfHolesEnabled = input.hasShelves === true && !input.hasDrawers;
 
   let furacoesTecnicas: TechnicalDrillHole[] = [];

@@ -36,6 +36,13 @@ export interface DrawerGenerationConfig {
   
   // Material
   materialId?: string;
+
+  /**
+   * Deslocamento do “origin” do conjunto de gavetas no sistema local do box (mm).
+   * Permite gerar gavetas apenas numa sub-região (ex.: lado direito de um divisor).
+   */
+  originX?: number;
+  originY?: number;
 }
 
 /**
@@ -55,6 +62,8 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     customHeights,
     availableDepths,
     materialId,
+    originX,
+    originY,
   } = config;
 
   // Dimensões internas do box
@@ -105,8 +114,8 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       boxId,
       specs,
       {
-        x: 0,
-        y: posY,
+        x: originX ?? 0,
+        y: (originY ?? 0) + posY,
         z: boxDepth / 2 - specs.front.thickness,
       },
       drawerType

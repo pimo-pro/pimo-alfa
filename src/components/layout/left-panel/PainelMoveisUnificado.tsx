@@ -23,11 +23,21 @@ const getTipoLabel = (tipo: UnifiedModelItem["tipo"]) => {
   return "3D";
 };
 
+type RoupeiroGroup = "H" | "J" | "T";
+
+function getRoupeiroGroupFromSourceId(sourceId: string): RoupeiroGroup | null {
+  if (sourceId.includes("roupeiro-h-2400")) return "H";
+  if (sourceId.includes("roupeiro-j-2000")) return "J";
+  if (sourceId.includes("roupeiro-t-600")) return "T";
+  return null;
+}
+
 export default function PainelMoveisUnificado() {
   const { actions } = useProject();
   const [termoBusca, setTermoBusca] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todos");
   const [grupoCatalogoSelecionado, setGrupoCatalogoSelecionado] = useState<(typeof CATALOG_GROUPS)[number]["id"]>("todos");
+  const [roupeiroGroupSelecionado, setRoupeiroGroupSelecionado] = useState<"todos" | RoupeiroGroup>("todos");
   const [itensVisiveis, setItensVisiveis] = useState(PAGE_SIZE);
 
   const categorias = useMemo(() => getCategoriasMoveis(), []);
@@ -43,17 +53,21 @@ export default function PainelMoveisUnificado() {
         if (item.tipo !== "3d") return false;
         if (item.grupoCatalogo !== grupoCatalogoSelecionado) return false;
       }
+      if (roupeiroGroupSelecionado !== "todos") {
+        const group = getRoupeiroGroupFromSourceId(item.sourceId);
+        if (group !== roupeiroGroupSelecionado) return false;
+      }
       if (!termo) return true;
       return (
         item.nome.toLowerCase().includes(termo) ||
         (item.descricao ?? "").toLowerCase().includes(termo)
       );
     });
-  }, [categoriaSelecionada, grupoCatalogoSelecionado, itensUnificados, termoBusca]);
+  }, [categoriaSelecionada, grupoCatalogoSelecionado, itensUnificados, termoBusca, roupeiroGroupSelecionado]);
 
   useEffect(() => {
     setItensVisiveis(PAGE_SIZE);
-  }, [categoriaSelecionada, grupoCatalogoSelecionado, termoBusca]);
+  }, [categoriaSelecionada, grupoCatalogoSelecionado, termoBusca, roupeiroGroupSelecionado]);
 
   const handleAddItem = useCallback((item: UnifiedModelItem) => {
     if (item.tipo === "pronto") {
@@ -161,6 +175,41 @@ export default function PainelMoveisUnificado() {
                       }}
                     >
                       {group.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+              <label
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  fontWeight: 500,
+                }}
+              >
+                Seções do Roupeiro (H/J/T)
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(["todos", "H", "J", "T"] as const).map((g) => {
+                  const isSelected = roupeiroGroupSelecionado === g;
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setRoupeiroGroupSelecionado(g)}
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: 11,
+                        borderRadius: 999,
+                        border: `1px solid ${isSelected ? "var(--primary)" : "var(--border)"}`,
+                        background: isSelected ? "rgba(59,130,246,0.2)" : "var(--surface)",
+                        color: "var(--text-main)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {g === "todos" ? "Todos" : `Grupo ${g}`}
                     </button>
                   );
                 })}

@@ -148,19 +148,9 @@ export const createWorkspaceBox = (
   catalogItemId?: string,
   overrides?: CreateWorkspaceBoxOverrides
 ): WorkspaceBox => {
-  let prateleiras = overrides?.prateleiras ?? 0;
-  let portaTipo = overrides?.portaTipo ?? "sem_porta";
-  let gavetas = overrides?.gavetas ?? 0;
-  if (gavetas > 0) {
-    portaTipo = "sem_porta";
-    prateleiras = 0;
-  }
-  if (portaTipo !== "sem_porta") {
-    gavetas = 0;
-  }
-  if (prateleiras > 0) {
-    gavetas = 0;
-  }
+  const prateleiras = overrides?.prateleiras ?? 0;
+  const portaTipo = overrides?.portaTipo ?? "sem_porta";
+  const gavetas = overrides?.gavetas ?? 0;
   const drawerHeightMode = overrides?.drawerHeightMode ?? "equal";
   const drawerType = overrides?.drawerType ?? "normal";
   const panelIds = ensureBoxPanelIds(overrides?.panelIds, { prateleiras, portaTipo, gavetas });

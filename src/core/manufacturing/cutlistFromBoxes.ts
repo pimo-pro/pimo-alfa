@@ -15,6 +15,7 @@ import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../mod
 import { devLogger } from "../../utils/devLogger";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
+import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
 
@@ -53,6 +54,8 @@ export function cutlistComPrecoFromBox(
   const hasDrawers = isPiBox
     ? drawersLayer.length > 0
     : Math.max(0, Math.floor(box.gavetas ?? 0)) > 0 || drawersLayer.length > 0;
+  // Roupeiros: gavetas apenas na zona inferior; furos 32mm de prateleira devem ser calculados sem “bloqueio” por gavetas.
+  const hasDrawersForShelfDrilling = isWardrobeModel(box.baseCabinetId) ? false : hasDrawers;
 
   const baseItem = {
     sourceType: "parametric" as const,
@@ -122,7 +125,7 @@ export function cutlistComPrecoFromBox(
           alturaMm: p.altura_mm,
           espessuraMm: p.espessura_mm,
           hasShelves,
-          hasDrawers,
+          hasDrawers: hasDrawersForShelfDrilling,
           doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
           doorWidthMm: doorWidthForTopBottom,
           hingeSide,

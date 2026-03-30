@@ -244,7 +244,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
               feetEnabled: !isUpperModel,
               feetHeight: 100,
               feetOffsetFront: 100,
-              drawerHeightMode: isPiModel ? "custom" : "equal",
+                  drawerHeightMode: isPiModel ? "custom" : "equal",
             }
           );
           newBox.manualPosition = true;
@@ -279,6 +279,11 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             newBox.feetOffsetFront = 100;
             newBox.pe_cm = (newBox.feetHeight ?? 100) / 10;
             newBox.posicaoY_mm = (newBox.feetHeight ?? 100) + dimensoes.altura / 2;
+          }
+
+          // Roupeiro T: unidades superiores devem ficar montadas a 2000mm do piso.
+          if (isUpperModel && baseModel.id.includes("roupeiro-t-600")) {
+            newBox.posicaoY_mm = 2000 + dimensoes.altura / 2;
           }
           if (roomSpawnCatalog) {
             newBox.rotacaoY = roomSpawnCatalog.rotacaoY;
