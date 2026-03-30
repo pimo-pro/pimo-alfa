@@ -36,6 +36,7 @@ import ManageUsersPage from "./pages/admin/ManageUsersPage";
 import ManageRolesPage from "./pages/admin/ManageRolesPage";
 import ManagePermissionsPage from "./pages/admin/ManagePermissionsPage";
 import { useAuth } from "./auth/useAuth";
+import { IconGallery } from "@/components/icons";
 import "./components/ui/ui.css";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
@@ -381,6 +382,14 @@ export default function App() {
               element={
                 <AdminRoute>
                   <ManagePermissionsPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/icons"
+              element={
+                <AdminRoute>
+                  <IconGallery />
                 </AdminRoute>
               }
             />
