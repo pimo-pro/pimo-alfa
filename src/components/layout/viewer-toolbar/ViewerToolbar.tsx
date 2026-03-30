@@ -17,6 +17,7 @@ import type { ToolbarActionId } from "../../../constants/toolbarConfig";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
 import ConfirmNewProjectModal from "../../modals/ConfirmNewProjectModal";
+import { Icon } from "@/components/icons";
 
 export default function ViewerToolbar() {
   const { actions, project } = useProject();
@@ -231,7 +232,7 @@ export default function ViewerToolbar() {
               style={{ fontSize: 12 }}
             >
               <span className="viewer-toolbar-icon" aria-hidden>
-                {item.icon}
+                <Icon name={item.iconName} size={16} aria-hidden />
               </span>
             </button>
           );
@@ -247,7 +248,7 @@ export default function ViewerToolbar() {
             style={{ fontSize: 12 }}
           >
             <span className="viewer-toolbar-icon" aria-hidden>
-              {item.icon}
+              <Icon name={item.iconName} size={16} aria-hidden />
             </span>
           </button>
         );
@@ -266,7 +267,7 @@ export default function ViewerToolbar() {
           style={{ fontSize: 12 }}
         >
           <span className="viewer-toolbar-icon" aria-hidden>
-            ☑
+            <Icon name="displayCheck" size={16} aria-hidden />
           </span>
         </button>
         {visibilityMenuOpen && (
