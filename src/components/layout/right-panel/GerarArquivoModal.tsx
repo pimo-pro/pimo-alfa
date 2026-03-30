@@ -2,6 +2,8 @@
  * Modal Gerar Arquivo — painel de botões para gerar Cutlist, PDF Técnico, Unificado, Ambos ou arquivo completo (ZIP).
  */
 
+import { Icon } from "@/components/icons";
+
 type Props = {
   onClose: () => void;
   hasBoxes: boolean;
@@ -84,7 +86,10 @@ export default function GerarArquivoModal({
             onClick={wrap(onLayoutCortePro)}
             disabled={!hasBoxes}
           >
-            📐 Layout de Corte PRO
+            <span aria-hidden style={{ display: "inline-flex", marginRight: 6 }}>
+              <Icon name="blueprint" size={14} aria-hidden />
+            </span>
+            Layout de Corte PRO
           </button>
           <button
             type="button"
