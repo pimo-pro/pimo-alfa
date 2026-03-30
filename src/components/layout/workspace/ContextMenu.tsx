@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
+import { Icon } from "@/components/icons";
 
 export type ContextMenuPosition = { x: number; y: number } | null;
 
@@ -212,7 +213,9 @@ export default function ContextMenu({
         e.currentTarget.style.background = "transparent";
       }}
     >
-      <span style={{ width: 16, textAlign: "center" }}>{mousePreset === preset ? "✓" : ""}</span>
+      <span style={{ width: 16, textAlign: "center" }} aria-hidden>
+        {mousePreset === preset ? <Icon name="check" size={12} aria-hidden /> : null}
+      </span>
       <span>{label}</span>
     </button>
   );
@@ -246,7 +249,9 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>{locked ? "🔓" : "🔒"}</span>
+          <span aria-hidden>
+            <Icon name={locked ? "unlock" : "lock"} size={14} aria-hidden />
+          </span>
           <span>{locked ? "Desbloquear peça" : "Bloquear peça"}</span>
         </button>
       )}
@@ -271,7 +276,9 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>✏️</span>
+          <span aria-hidden>
+            <Icon name="rename" size={14} aria-hidden />
+          </span>
           <span>Renomear peça</span>
         </button>
       )}
@@ -291,7 +298,9 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>📋</span>
+          <span aria-hidden>
+            <Icon name="duplicate" size={14} aria-hidden />
+          </span>
           <span>Duplicar peça</span>
         </button>
       )}
@@ -311,7 +320,9 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>🗑️</span>
+          <span aria-hidden>
+            <Icon name="delete" size={14} aria-hidden />
+          </span>
           <span>Excluir peça</span>
         </button>
       )}
@@ -331,7 +342,9 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>↔</span>
+          <span aria-hidden>
+            <Icon name="alignFront" size={14} aria-hidden />
+          </span>
           <span>Alinhar pela frente do box ao lado</span>
         </button>
       )}
@@ -352,7 +365,9 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>⬇</span>
+          <span aria-hidden>
+            <Icon name="alignBottom" size={14} aria-hidden />
+          </span>
           <span>Alinhar Baixo</span>
         </button>
       )}
@@ -374,9 +389,13 @@ export default function ContextMenu({
               e.currentTarget.style.background = "transparent";
             }}
           >
-            <span aria-hidden>🎨</span>
+            <span aria-hidden>
+              <Icon name="material" size={14} aria-hidden />
+            </span>
             <span>{showDoorMaterial ? "Alterar material da porta" : "Alterar material da gaveta"}</span>
-            <span style={{ marginLeft: "auto" }}>▶</span>
+            <span style={{ marginLeft: "auto" }} aria-hidden>
+              <Icon name="chevronRight" size={12} aria-hidden />
+            </span>
           </button>
           {materialSubmenuOpen && materialSubmenuPos && (
             <div
@@ -464,9 +483,13 @@ export default function ContextMenu({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <span aria-hidden>🖱️</span>
+          <span aria-hidden>
+            <Icon name="mouse" size={14} aria-hidden />
+          </span>
           <span>Modo do Mouse</span>
-          <span style={{ marginLeft: "auto" }}>▶</span>
+          <span style={{ marginLeft: "auto" }} aria-hidden>
+            <Icon name="chevronRight" size={12} aria-hidden />
+          </span>
         </button>
         {mouseSubmenuOpen && mouseSubmenuPos && (
           <div
