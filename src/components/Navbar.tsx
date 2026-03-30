@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 
+import { Icon } from "@/components/icons";
 import { useAuth } from "../auth/useAuth";
 import Button from "./ui/Button";
 import Toolbar from "./ui/Toolbar";
@@ -16,30 +17,40 @@ export default function Navbar() {
       left={
         <div className="ui-nav-links">
           <NavLink to="/dashboard" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
-            <span className="ui-nav-link__icon" aria-hidden>◻</span>
+            <span className="ui-nav-link__icon" aria-hidden>
+              <Icon name="grid" size={16} aria-hidden />
+            </span>
             <span>Dashboard</span>
           </NavLink>
           {authenticated ? (
             <>
               <NavLink to="/me" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
-                <span className="ui-nav-link__icon" aria-hidden>◻</span>
+                <span className="ui-nav-link__icon" aria-hidden>
+              <Icon name="grid" size={16} aria-hidden />
+            </span>
                 <span>Me</span>
               </NavLink>
               <NavLink to="/projects" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
-                <span className="ui-nav-link__icon" aria-hidden>◻</span>
+                <span className="ui-nav-link__icon" aria-hidden>
+              <Icon name="grid" size={16} aria-hidden />
+            </span>
                 <span>Projects</span>
               </NavLink>
             </>
           ) : null}
           {!authenticated ? (
             <NavLink to="/register" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
-              <span className="ui-nav-link__icon" aria-hidden>◻</span>
+              <span className="ui-nav-link__icon" aria-hidden>
+              <Icon name="grid" size={16} aria-hidden />
+            </span>
               <span>Registrar</span>
             </NavLink>
           ) : null}
           {authenticated && canViewAdmin ? (
             <NavLink to="/admin/users" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
-              <span className="ui-nav-link__icon" aria-hidden>◻</span>
+              <span className="ui-nav-link__icon" aria-hidden>
+              <Icon name="grid" size={16} aria-hidden />
+            </span>
               <span>Administração</span>
             </NavLink>
           ) : null}
