@@ -3,9 +3,10 @@
  * Exibe explicação completa sobre construção do projeto, recursos completados, em andamento e planejados
  */
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useProject } from "../context/useProject";
 import { projectProgressStyles } from "./ProjectProgressStyles";
+import { Icon } from "@/components/icons";
 
 const PROJECT_SECTIONS = [
   {
@@ -192,25 +193,40 @@ const PROJECT_SECTIONS = [
 ];
 
 const STATUS_CONFIG: Record<string, {
-  label: string;
+  label: ReactNode;
   color: string;
   bgColor: string;
   borderColor: string;
 }> = {
   completed: {
-    label: "✓ Concluído",
+    label: (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Icon name="check" size={14} aria-hidden />
+        <span>Concluído</span>
+      </span>
+    ),
     color: "#22c55e",
     bgColor: "rgba(34, 197, 94, 0.1)",
     borderColor: "rgba(34, 197, 94, 0.3)",
   },
   "in-progress": {
-    label: "⚙ Em Andamento",
+    label: (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Icon name="adminSettings" size={14} aria-hidden />
+        <span>Em Andamento</span>
+      </span>
+    ),
     color: "#3b82f6",
     bgColor: "rgba(59, 130, 246, 0.1)",
     borderColor: "rgba(59, 130, 246, 0.3)",
   },
   planned: {
-    label: "→ Planejado",
+    label: (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Icon name="chevronRight" size={14} aria-hidden />
+        <span>Planejado</span>
+      </span>
+    ),
     color: "#f59e0b",
     bgColor: "rgba(245, 158, 11, 0.1)",
     borderColor: "rgba(245, 158, 11, 0.3)",
@@ -374,14 +390,24 @@ export default function ProjectProgress() {
       {/* Footer Info */}
       <section style={projectProgressStyles.footerInfo}>
         <div style={projectProgressStyles.infoBox}>
-          <h3 style={projectProgressStyles.infoTitle}>🚀 Sobre o Projeto</h3>
+          <h3 style={projectProgressStyles.infoTitle}>
+            <span aria-hidden style={{ display: "inline-flex", marginRight: 6, verticalAlign: "middle" }}>
+              <Icon name="send" size={16} aria-hidden />
+            </span>
+            Sobre o Projeto
+          </h3>
           <p style={projectProgressStyles.infoText}>
             PIMO Studio é um sistema integrado para design e planejamento de móveis tridimensionais com cálculos detalhados de custos e materiais.
             Foi construído usando as tecnologias mais modernas como React 19, Three.js e TypeScript, com foco em desempenho e facilidade de uso.
           </p>
         </div>
         <div style={projectProgressStyles.infoBox}>
-          <h3 style={projectProgressStyles.infoTitle}>📊 Estatísticas</h3>
+          <h3 style={projectProgressStyles.infoTitle}>
+            <span aria-hidden style={{ display: "inline-flex", marginRight: 6, verticalAlign: "middle" }}>
+              <Icon name="adminChart" size={16} aria-hidden />
+            </span>
+            Estatísticas
+          </h3>
           <p style={projectProgressStyles.infoText}>
             Total de recursos: {stats.total} | Funcional: {stats.completed} | Em desenvolvimento: {stats.inProgress} |
             Planejado: {stats.planned}
