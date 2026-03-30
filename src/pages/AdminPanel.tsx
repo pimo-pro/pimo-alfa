@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from "react";
 import { Icon } from "@/components/icons";
+import { IconGallery } from "@/components/icons";
 import TemplatesManager from "../components/admin/TemplatesManager";
 import MaterialsManufacturing from "../components/admin/MaterialsManufacturing";
 import RulesManager from "../components/admin/RulesManager";
@@ -32,7 +33,8 @@ type AdminTab =
   | "Painel Referência"
   | "System Settings"
   | "Etiqueta / QR N"
-  | "Projetos Salvos";
+  | "Projetos Salvos"
+  | "icons";
 
 type AdminMenuEntry =
   | { type: "group"; label: string }
@@ -60,6 +62,8 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
+  { type: "group", label: "Sistema" },
+  { type: "item", id: "icons", label: "Biblioteca de Ícones" },
 ];
 
 const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]>> = {
@@ -78,6 +82,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Projetos Salvos": "adminSave",
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
+  icons: "projects",
 };
 
 const adminVisibleTabs = new Set<AdminTab>(
@@ -273,6 +278,8 @@ export default function AdminPanel() {
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <PainelReferencia />
             </Suspense>
+          ) : active === "icons" ? (
+            <IconGallery />
           ) : (
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
               Módulo em construção.
