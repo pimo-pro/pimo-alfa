@@ -177,8 +177,11 @@ function calcParafuso(piece: PieceInput, rules: RulesConfig, out: TechnicalDrill
   const sideOffset = cfg.sideOffset ?? 9.5;
   const xLeft = sideOffset;
   const xRight = piece.largura - sideOffset;
-  const yFront = cfg.distanciaFrente ?? 40;
-  const yBack = piece.altura - (cfg.distanciaFundo ?? 40);
+  if (process.env.NODE_ENV === "development" && cfg.distanciaFrente == null) {
+    console.warn("[drilling] parafuso distanciaFrente is undefined, using fallback");
+  }
+  const yFront = cfg.distanciaFrente ?? 90;
+  const yBack = piece.altura - (cfg.distanciaFundo ?? 90);
   pushHole(out, piece, xLeft, yFront, diametro, depth, "parafuso", face);
   pushHole(out, piece, xLeft, yBack, diametro, depth, "parafuso", face);
   pushHole(out, piece, xRight, yFront, diametro, depth, "parafuso", face);
