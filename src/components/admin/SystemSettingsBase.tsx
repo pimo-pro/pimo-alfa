@@ -461,7 +461,7 @@ export default function SystemSettingsBase() {
           />
           <NumberField
             label="Cavilha cima/fundo — centro ao bordo lateral (mm)"
-            value={draft.furação?.cavilha?.sideOffset ?? 19}
+            value={draft.furação?.cavilha?.sideOffset ?? 9.5}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,

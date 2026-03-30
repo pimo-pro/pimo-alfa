@@ -269,7 +269,7 @@ export const defaultRulesConfig: RulesConfig = {
         distanciaBase: 60,
         offsetLateral: 0,
         offsetDaBorda: 9,
-        sideOffset: 19,
+        sideOffset: 9.5,
         aplicarEm: {
           cima: true,
           fundo: true,

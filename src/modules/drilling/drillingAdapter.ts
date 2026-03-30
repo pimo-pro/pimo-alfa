@@ -70,30 +70,7 @@ function sanitizeHingePositions(
     .map((y) => clampNumber(y, minY, maxY));
 }
 
-function getHingePositionsFromDoorHeight(
-  rules: RulesConfig,
-  doorHeightMm: number,
-  lateralHeightMm: number
-): number[] {
-  if (!Number.isFinite(doorHeightMm) || doorHeightMm <= 0) return [];
-  const numHinges = getNumDobradicas(doorHeightMm / 10, rules);
-  const doorPositions = getHingeYPositions(doorHeightMm, numHinges, rules);
-  if (doorPositions.length === 0) return [];
-  if (!Number.isFinite(lateralHeightMm) || lateralHeightMm <= 0) return doorPositions;
-
-  const margem = MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM;
-  const yMinLateral = margem;
-  const yMaxLateral = Math.max(yMinLateral, lateralHeightMm - margem);
-  const distEntreCalco = rules.furos?.tecnicos?.dobradica_fixacao?.distanciaEntreFurosCalco ?? 32;
-  const halfDistHoles = distEntreCalco / 2;
-  const yMinSafe = yMinLateral + halfDistHoles;
-  const yMaxSafe = Math.max(yMinSafe, yMaxLateral - halfDistHoles);
-
-  const centerOffset = (lateralHeightMm - doorHeightMm) / 2;
-  return doorPositions.map((y) => Math.max(yMinSafe, Math.min(yMaxSafe, y + centerOffset)));
-}
-
-/** Posições X (mm) para furação top/bottom: porta = master, painel cima/fundo copia. Mesma lógica que getHingePositionsFromDoorHeight mas ao longo da largura. */
+/** Posições X (mm) para furação top/bottom: porta = master, painel cima/fundo copia. Lógica paralela à de altura da porta, ao longo da largura. */
 function getHingePositionsFromDoorWidth(
   rules: RulesConfig,
   doorWidthMm: number,
@@ -163,7 +140,12 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
   const parafusoSideOffset = toFiniteNumber(fu.parafuso.sideOffset, 9.5);
   const cavilhaFront = toFiniteNumber(fu.cavilha?.frontDistance, 60);
   const cavilhaBack = toFiniteNumber(fu.cavilha?.backDistance, 60);
-  const cavilhaSideOffset = toFiniteNumber(fu.cavilha?.sideOffset, 19);
+  // @PIMO-SOON: tornar sideOffset dinâmico → espessura / 2
+  // Atualmente fixo em 9.5 mm (correto para madeira 19mm).
+  // Para suportar outras espessuras, passar `espessura` ao drilling pipeline
+  // e calcular: cavilhaSideOffset = espessura / 2
+  // Ver também: rulesConfig.ts linha ~272
+  const cavilhaSideOffset = toFiniteNumber(fu.cavilha?.sideOffset, 9.5);
 
   return {
     ...normalizedRules,
@@ -182,7 +164,6 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
           ...normalizedRules.furos.tecnicos.cavilha,
           distanciaFrente: cavilhaFront,
           distanciaFundo: cavilhaBack,
-          offsetDaBorda: fu.cavilha?.offsetDaBorda,
           sideOffset: cavilhaSideOffset,
         },
         prateleira: {
@@ -267,7 +248,7 @@ export function buildPanelDrillingResult(
   const numHinges = isDoor ? numHingesForDoor : rules.furos.tecnicos.dobradica.numeroPorPorta;
 
   let hingePositions: number[] = [];
-  if (isLateral) {
+  if (isLateral && Number.isFinite(input.doorHeightMm) && Number(input.doorHeightMm) > 0) {
     // Overlay doors: hinge positions are fixed distances from
     // the lateral top/bottom edges — independent of door height
     const rawLateralHinges = getHingeYPositions(input.alturaMm, numHinges, rules);

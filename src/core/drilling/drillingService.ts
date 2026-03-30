@@ -138,7 +138,7 @@ export function getInternalFace(pieceType: PieceType): DrillFace {
   return "frente";
 }
 
-/** Furos de cavilha (dowel). Cima/fundo: eixo a 60 mm dos bordos frente/fundo; centro a sideOffset (padrão 19 mm) dos bordos esquerdo/direito (alinhamento com lateral 19 mm). */
+/** Furos de cavilha (dowel). Cima/fundo: eixo a 60 mm dos bordos frente/fundo; centro a sideOffset (padrão 9.5 mm (espessura/2)) dos bordos esquerdo/direito (alinhamento com lateral 19 mm). */
 function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.cavilha) return;
   const cfg = rules.furos.tecnicos.cavilha;
@@ -146,7 +146,7 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 8;
   const profundidade = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : Math.min(13, piece.espessura);
   const face = getInternalFace(piece.tipo);
-  const insetLateral = Number(cfg.sideOffset) > 0 ? Number(cfg.sideOffset) : 19;
+  const insetLateral = Number(cfg.sideOffset) > 0 ? Number(cfg.sideOffset) : 9.5;
 
   if ((piece.tipo === "cima" || piece.tipo === "fundo") && (cfg.aplicarEm.cima || cfg.aplicarEm.fundo)) {
     const xLeft = insetLateral;
