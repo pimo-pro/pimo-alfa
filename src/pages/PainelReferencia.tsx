@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/icons";
 import Panel from "../components/ui/Panel";
 import { useProject } from "../context/useProject";
 import {
@@ -252,7 +253,26 @@ export default function PainelReferencia() {
             }}
             className="painel-sidebar-toggle"
           >
-            {sidebarOpen ? "◀" : "▶"}
+            {sidebarOpen ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: "rotate(180deg)",
+                }}
+                aria-hidden
+              >
+                <Icon name="chevronRight" size={14} aria-hidden />
+              </span>
+            ) : (
+              <span
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                aria-hidden
+              >
+                <Icon name="chevronRight" size={14} aria-hidden />
+              </span>
+            )}
           </button>
         </div>
         {sidebarOpen && (
@@ -353,8 +373,21 @@ export default function PainelReferencia() {
       <Panel title="Resumo do Progresso">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
-              ✓ Tarefas concluídas
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--text-main)",
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span aria-hidden style={{ display: "inline-flex" }}>
+                <Icon name="check" size={16} aria-hidden />
+              </span>
+              Tarefas concluídas
             </div>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: "var(--text-main)", lineHeight: 1.8 }}>
               {TAREFAS_CONCLUIDAS.map((t) => (
@@ -363,8 +396,21 @@ export default function PainelReferencia() {
             </ul>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
-              🔄 Em andamento
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--text-main)",
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span aria-hidden style={{ display: "inline-flex" }}>
+                <Icon name="redo" size={16} aria-hidden />
+              </span>
+              Em andamento
             </div>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: "var(--text-main)", lineHeight: 1.8 }}>
               {EM_ANDAMENTO.map((t) => (
@@ -373,8 +419,21 @@ export default function PainelReferencia() {
             </ul>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
-              🧭 Próximas etapas
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--text-main)",
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span aria-hidden style={{ display: "inline-flex" }}>
+                <Icon name="orbit" size={16} aria-hidden />
+              </span>
+              Próximas etapas
             </div>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: "var(--text-main)", lineHeight: 1.8 }}>
               {PROXIMAS_ETAPAS.map((t) => (
