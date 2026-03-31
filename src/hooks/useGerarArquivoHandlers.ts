@@ -32,10 +32,14 @@ function formatThicknessBucket(thicknessMm: number): string {
   return `${label}mm`;
 }
 
-function tcnMethodSuffix(tcnMetodo: string | undefined): "v1" | "v2" | "v3" | "v4" | "v5" | "v6" {
+function tcnMethodSuffix(tcnMetodo: string | undefined): "v1" | "v2" | "v2n" | "v3" | "v3n" | "v4" | "v5" | "v6" {
   switch (tcnMetodo) {
+    case "v2_new":
+      return "v2n";
     case "v2_ramp":
       return "v2";
+    case "v3_new":
+      return "v3n";
     case "v3_ramp_noflip":
       return "v3";
     case "v4_corner_noflip":

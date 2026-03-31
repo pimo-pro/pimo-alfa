@@ -67,7 +67,9 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         merged.cnc.tcnMetodo === "v3_ramp_noflip" ||
         merged.cnc.tcnMetodo === "v4_corner_noflip" ||
         merged.cnc.tcnMetodo === "v5_ramp_noanchor" ||
-        merged.cnc.tcnMetodo === "v6_ramp"
+        merged.cnc.tcnMetodo === "v6_ramp" ||
+        merged.cnc.tcnMetodo === "v2_new" ||
+        merged.cnc.tcnMetodo === "v3_new"
           ? merged.cnc.tcnMetodo
           : "v1_corner",
       zSafetyMm: clamp(toNumber(merged.cnc.zSafetyMm, settingsDefaults.cnc.zSafetyMm), 0, 100),

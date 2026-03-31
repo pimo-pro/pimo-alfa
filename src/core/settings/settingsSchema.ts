@@ -49,7 +49,9 @@ export interface SettingsSchema {
       | "v3_ramp_noflip"
       | "v4_corner_noflip"
       | "v5_ramp_noanchor"
-      | "v6_ramp";
+      | "v6_ramp"
+      | "v2_new"
+      | "v3_new";
     zSafetyMm: number;
     minSpacingMm: number;
     contourEntryMode: "corner" | "midside";
