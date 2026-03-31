@@ -7,14 +7,14 @@ import { describe, it, expect } from "vitest";
 import { defaultRulesConfig, getNumDobradicas, normalizeRulesConfig } from "../src/core/rules/rulesConfig";
 
 describe("rules", () => {
-  it("Regras da Porta (defaults): tabela 10–280cm aplicada", () => {
+  it("Regras da Porta (defaults): tabela em mm aplicada", () => {
     const rules = defaultRulesConfig;
-    expect(getNumDobradicas(80, rules)).toBe(2);
-    expect(getNumDobradicas(150, rules)).toBe(3);
-    expect(getNumDobradicas(180, rules)).toBe(4);
-    expect(getNumDobradicas(220, rules)).toBe(5);
-    expect(getNumDobradicas(250, rules)).toBe(6);
-    expect(getNumDobradicas(270, rules)).toBe(7);
+    expect(getNumDobradicas(800, rules)).toBe(2);
+    expect(getNumDobradicas(1500, rules)).toBe(3);
+    expect(getNumDobradicas(1800, rules)).toBe(4);
+    expect(getNumDobradicas(2200, rules)).toBe(5);
+    expect(getNumDobradicas(2500, rules)).toBe(6);
+    expect(getNumDobradicas(2700, rules)).toBe(7);
   });
 
   it("migra automaticamente tabela antiga de dobradiças para a nova", () => {
@@ -30,12 +30,12 @@ describe("rules", () => {
     };
     const normalized = normalizeRulesConfig(oldSavedRules);
     expect(normalized.portas.ranges).toEqual([
-      { min: 10, max: 90, dobradicas: 2 },
-      { min: 91, max: 160, dobradicas: 3 },
-      { min: 160, max: 200, dobradicas: 4 },
-      { min: 200, max: 240, dobradicas: 5 },
-      { min: 240, max: 260, dobradicas: 6 },
-      { min: 260, max: 280, dobradicas: 7 },
+      { min: 100, max: 900, dobradicas: 2 },
+      { min: 901, max: 1600, dobradicas: 3 },
+      { min: 1601, max: 2000, dobradicas: 4 },
+      { min: 2001, max: 2400, dobradicas: 5 },
+      { min: 2401, max: 2600, dobradicas: 6 },
+      { min: 2601, max: 2800, dobradicas: 7 },
     ]);
   });
 });
