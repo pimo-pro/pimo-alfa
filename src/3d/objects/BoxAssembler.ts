@@ -70,7 +70,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   };
 
   // Rodar apenas no eixo Y para espelhar esquerda/direita sem inverter o eixo vertical (Y).
-  panels.right.rotation.y = Math.PI;
+  panels.right.rotation.y = 0;
   panels.right.rotation.z = 0;
   (panelTypes as readonly string[]).forEach((key) => {
     const k = key as keyof typeof panels;
@@ -78,7 +78,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     const pos = specs[k].pos;
     p.position.set(pos[0], pos[1], pos[2]);
     if (k === "right") {
-      p.rotation.y = Math.PI;
+      p.rotation.y = 0;
       p.rotation.z = 0;
     }
     root.add(p);
