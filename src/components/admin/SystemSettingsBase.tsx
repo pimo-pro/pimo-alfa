@@ -121,6 +121,7 @@ export default function SystemSettingsBase() {
     feedback.success("Gerando variantes…");
     const previousSettings = getSettings();
     const variants = [
+      { metodo: "nesting_mo" as const, file: "peça_nesting_mo.tcn" },
       { metodo: "v1_corner" as const, file: "peça_v1.tcn" },
       { metodo: "v2_ramp" as const, file: "peça_v2.tcn" },
       { metodo: "v2_new" as const, file: "peça_v2_new.tcn" },
@@ -1116,8 +1117,20 @@ export default function SystemSettingsBase() {
                 <input
                   type="radio"
                   name="tcnMetodo"
+                  value="nesting_mo"
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "nesting_mo"}
+                  onChange={() =>
+                    setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "nesting_mo" } }))
+                  }
+                />
+                <span><strong>NESTING MO</strong> — Modo principal (dinâmico)</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="tcnMetodo"
                   value="v1_corner"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v1_corner"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v1_corner"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v1_corner" } }))
                   }
@@ -1129,7 +1142,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v2_ramp"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v2_ramp"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v2_ramp"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v2_ramp" } }))
                   }
@@ -1141,7 +1154,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v2_new"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v2_new"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v2_new"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v2_new" } }))
                   }
@@ -1153,7 +1166,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v3_ramp_noflip"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v3_ramp_noflip"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v3_ramp_noflip"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v3_ramp_noflip" } }))
                   }
@@ -1165,7 +1178,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v3_new"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v3_new"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v3_new"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v3_new" } }))
                   }
@@ -1177,7 +1190,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v4_corner_noflip"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v4_corner_noflip"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v4_corner_noflip"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v4_corner_noflip" } }))
                   }
@@ -1189,7 +1202,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v5_ramp_noanchor"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v5_ramp_noanchor"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v5_ramp_noanchor"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v5_ramp_noanchor" } }))
                   }
@@ -1201,7 +1214,7 @@ export default function SystemSettingsBase() {
                   type="radio"
                   name="tcnMetodo"
                   value="v6_ramp"
-                  checked={(draft.cnc.tcnMetodo ?? "v1_corner") === "v6_ramp"}
+                  checked={(draft.cnc.tcnMetodo ?? "nesting_mo") === "v6_ramp"}
                   onChange={() =>
                     setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, tcnMetodo: "v6_ramp" } }))
                   }

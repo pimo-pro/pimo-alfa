@@ -44,6 +44,7 @@ export interface SettingsSchema {
     /** Diâmetro da fresa para compensação geométrica no TCN (contorno já compensado no CAM; 0 = usar Kerf padrão ou 12 mm). */
     diametroFresaContornoMm: number;
     tcnMetodo:
+      | "nesting_mo"
       | "v1_corner"
       | "v2_ramp"
       | "v3_ramp_noflip"
@@ -211,9 +212,9 @@ export const settingsDefaults: SettingsSchema = {
     offsetFerramentaPadraoMm: 0,
     toleranciaPosicionamentoMm: 0.1,
     diametroFresaContornoMm: 0,
-    tcnMetodo: "v1_corner",
+    tcnMetodo: "nesting_mo",
     zSafetyMm: 10,
-    minSpacingMm: 15,
+    minSpacingMm: 3,
     contourEntryMode: "corner",
     contourCloseExplicit: false,
     toolFeedRate: 8,
@@ -222,7 +223,7 @@ export const settingsDefaults: SettingsSchema = {
     drillRpm: 18000,
     sheetMarginMm: 10,
     rampDistanceMm: 20,
-    compensacaoFerramenta: "fora",
+    compensacaoFerramenta: "dentro",
   },
   nesting: {
     kerfPadraoMm: 3,
