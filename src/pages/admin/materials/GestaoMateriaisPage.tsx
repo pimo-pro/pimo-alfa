@@ -98,6 +98,12 @@ export default function GestaoMateriaisPage() {
   const [showImport, setShowImport] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [texturePreviewErrored, setTexturePreviewErrored] = useState(false);
+  const texturePreviewUrl = String(form.textureUrl ?? "").trim();
+
+  useEffect(() => {
+    setTexturePreviewErrored(false);
+  }, [texturePreviewUrl]);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...materials];
@@ -205,7 +211,7 @@ export default function GestaoMateriaisPage() {
     label: String(form.label ?? "").trim(),
     categoryId: form.categoryId,
     color: form.color,
-    textureUrl: form.textureUrl,
+    textureUrl: texturePreviewUrl || undefined,
     espessura: Number(form.espessura) || 19,
     precoPorM2: Number(form.precoPorM2 ?? 0),
     sheetWidthMm: Number(form.sheetWidthMm) || 2800,
@@ -732,9 +738,50 @@ export default function GestaoMateriaisPage() {
                 type="text"
                 placeholder="URL ou caminho — upload planejado"
                 value={form.textureUrl ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, textureUrl: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setForm((prev) => ({ ...prev, textureUrl: value }));
+                  setTexturePreviewErrored(false);
+                }}
                 style={{ width: "100%" }}
               />
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6 }}>
+                URL atual: {texturePreviewUrl || "(sem textura)"}
+              </div>
+              {texturePreviewUrl && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: "var(--radius)",
+                    padding: 8,
+                    background: "rgba(255,255,255,0.03)",
+                  }}
+                >
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 6 }}>
+                    Pré-visualização da textura
+                  </div>
+                  {!texturePreviewErrored ? (
+                    <img
+                      src={texturePreviewUrl}
+                      alt="Preview da textura"
+                      onError={() => setTexturePreviewErrored(true)}
+                      style={{
+                        width: "100%",
+                        height: 110,
+                        objectFit: "cover",
+                        borderRadius: 6,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        display: "block",
+                      }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "10px 4px" }}>
+                      Não foi possível carregar a imagem desta URL.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>

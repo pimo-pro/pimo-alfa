@@ -1157,13 +1157,12 @@ export class ViewerCore {
         if (child instanceof THREE.Mesh) {
           if (this.isKitchenFeetNode(child)) return;
           if (isDoorOrDrawerFront(child)) return;
-          const boxMaterial = nextMaterial.material.clone();
-          child.material = boxMaterial;
+          child.material = nextMaterial.material;
         }
       });
     } else if (entry.mesh instanceof THREE.Mesh) {
       if (!this.isKitchenFeetNode(entry.mesh)) {
-        entry.mesh.material = nextMaterial.material.clone();
+        entry.mesh.material = nextMaterial.material;
       }
     }
 
@@ -1584,7 +1583,7 @@ export class ViewerCore {
           material.roughness = original.roughness;
           material.metalness = original.metalness;
           material.envMapIntensity = original.envMapIntensity;
-          material.map = original.map;
+          // material.map preservado (definido pelo MaterialEngine)
           material.needsUpdate = true;
           return;
         }
@@ -1592,14 +1591,14 @@ export class ViewerCore {
           material.roughness = Math.min(original.roughness, 0.18);
           material.metalness = Math.max(original.metalness, 0.1);
           material.envMapIntensity = Math.max(original.envMapIntensity, 1.1);
-          material.map = null;
+          // material.map preservado (definido pelo MaterialEngine)
           material.needsUpdate = true;
           return;
         }
         material.roughness = Math.max(0.24, original.roughness * 0.8);
         material.metalness = Math.max(0.04, original.metalness * 1.1);
         material.envMapIntensity = Math.max(original.envMapIntensity, 0.78);
-        material.map = premiumMap;
+        // material.map preservado (definido pelo MaterialEngine)
         material.needsUpdate = true;
       });
     });
@@ -1626,7 +1625,7 @@ export class ViewerCore {
         ? "showcase"
         : this.materialQuality === "lacquered"
           ? "realistic"
-          : "performance";
+          : "realistic";
     this.setMaterialMode(mode);
   }
 

@@ -171,7 +171,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     if (doorUserData?.[deps.doorSpecFingerprintKey] === newFingerprint) return;
     if (existingDoor) group.remove(existingDoor);
     const doorMaterial = deps.getMaterialForOfficialId(materialName);
-    const newDoor = deps.createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
+    const newDoor = deps.createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta);
     (newDoor.userData as Record<string, unknown>)[deps.doorSpecFingerprintKey] = newFingerprint;
     group.add(newDoor);
   });
@@ -191,7 +191,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     if (drawerUserData?.[deps.drawerSpecFingerprintKey] === newFingerprint) return;
     if (existingDrawer) group.remove(existingDrawer);
     const drawerMaterial = deps.getMaterialForOfficialId(materialName);
-    const newDrawer = deps.createDrawerObject(spec, (drawerMaterial as THREE.Material).clone());
+    const newDrawer = deps.createDrawerObject(spec, drawerMaterial as THREE.Material);
     (newDrawer.userData as Record<string, unknown>)[deps.drawerSpecFingerprintKey] = newFingerprint;
     group.add(newDrawer);
   });
@@ -200,7 +200,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   const shelfSpecs = deps.getShelfSpecs(width, height, depth, shelfCount, opts);
   group.children.filter((c) => /^shelf-\d+$/.test(c.name)).forEach((obj) => group.remove(obj));
   shelfSpecs.forEach((spec, i) => {
-    const shelfMat = (mat as THREE.Material).clone();
+    const shelfMat = mat as THREE.Material;
     const mesh = deps.panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.shelfIndex = i;
@@ -232,7 +232,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     if (layout.horizontalDividerCenterY_mm != null) {
       const dividerH = new THREE.Mesh(
         new THREE.BoxGeometry(width, deps.thicknessM, depth),
-        dividerMat.clone()
+        dividerMat
       );
       dividerH.name = "wardrobe-divider-horizontal";
       dividerH.position.set(0, layout.horizontalDividerCenterY_mm / 1000, 0);
@@ -242,7 +242,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     if (layout.verticalDividerEnabled) {
       const dividerV = new THREE.Mesh(
         new THREE.BoxGeometry(deps.thicknessM, height, depth),
-        dividerMat.clone()
+        dividerMat
       );
       dividerV.name = "wardrobe-divider-vertical";
       dividerV.position.set((layout.verticalDividerCenterX_mm ?? 0) / 1000, 0, 0);
@@ -258,7 +258,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     const createRail = (name: string, x: number, lengthM: number) => {
       const cyl = new THREE.Mesh(
         new THREE.CylinderGeometry(railRadiusM, railRadiusM, Math.max(0.001, lengthM), 12),
-        dividerMat.clone()
+        dividerMat
       );
       cyl.name = name;
       cyl.position.set(x, railY, railZ);

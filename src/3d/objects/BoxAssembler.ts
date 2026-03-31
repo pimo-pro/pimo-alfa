@@ -55,7 +55,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   root.name = "box-model";
   const specs = deps.getPanelSpecs(width, height, depth);
   const panelTypes = ["left", "top", "bottom", "right", "back"] as const;
-  const getMaterial = (_panelType: PanelType) => baseMaterial.clone();
+  const getMaterial = (_panelType: PanelType) => baseMaterial;
   const panelOptions = (panelType: PanelType) =>
     useDefaultMDF
       ? { edgeMaterial: deps.getEdgeMaterial(), faceMaterial: getMaterial(panelType) }
@@ -105,7 +105,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
 
   if (shelfCount > 0) {
     deps.getShelfSpecs(width, height, depth, shelfCount, opts).forEach((spec, i) => {
-      const shelfMat = baseMaterial.clone();
+      const shelfMat = baseMaterial;
       const mesh = deps.panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
       mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
       mesh.userData.shelfIndex = i;
@@ -130,7 +130,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
 
     // Divisor horizontal: separa “zona inferior” (gavetas/varão) e “zona superior” (prateleira).
     if (layout.horizontalDividerCenterY_mm != null) {
-      const dividerMat = baseMaterial.clone();
+      const dividerMat = baseMaterial;
       const dividerH = new THREE.Mesh(
         new THREE.BoxGeometry(width, deps.thicknessM, depth),
         dividerMat
@@ -142,7 +142,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
 
     // Divisor vertical: obrigatório quando largura >= 800mm.
     if (layout.verticalDividerEnabled) {
-      const dividerMat = baseMaterial.clone();
+      const dividerMat = baseMaterial;
       const dividerV = new THREE.Mesh(
         new THREE.BoxGeometry(deps.thicknessM, height, depth),
         dividerMat
@@ -160,7 +160,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     const railY = layout.lowerCabideCenterY_mm != null ? layout.lowerCabideCenterY_mm / 1000 : -height / 4;
 
     const createRail = (name: string, x: number, lengthM: number) => {
-      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(railRadiusM, railRadiusM, Math.max(0.001, lengthM), 12), baseMaterial.clone());
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(railRadiusM, railRadiusM, Math.max(0.001, lengthM), 12), baseMaterial);
       cyl.name = name;
       cyl.position.set(x, railY, railZ);
       // CylinderGeometry gera eixo em Y; rodar para alinhar ao eixo X (varão atravessando a largura).
@@ -193,13 +193,13 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     const item = doorLayerItems[doorIndex];
     const materialId = item?.material ?? item?.materialId ?? deps.getDefaultOfficialMaterialId();
     const doorMaterial = deps.getMaterialForOfficialId(materialId);
-    root.add(deps.createDoorObject(spec, (doorMaterial as THREE.Material).clone(), drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
+    root.add(deps.createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
   });
   drawerSpecs.forEach((spec, drawerIndex) => {
     const drawerMaterial = drawerLayerItems[drawerIndex]?.material
       ? deps.getMaterialForOfficialId(drawerLayerItems[drawerIndex].material!)
       : baseMaterial;
-    root.add(deps.createDrawerObject(spec, (drawerMaterial as THREE.Material).clone()));
+    root.add(deps.createDrawerObject(spec, drawerMaterial as THREE.Material));
   });
 
   root.position.set(0, 0, 0);

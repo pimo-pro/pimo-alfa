@@ -20,6 +20,14 @@ export type MaterialPresetRecord = Record<string, MaterialPreset>;
 
 const D = { x: 1, y: 1 };
 const M = 0;
+const TEXTURES_BASE_URL = (import.meta.env.VITE_TEXTURES_URL || "/textures").replace(/\/+$/, "");
+const TEXTURE_URLS = {
+  mdfBranco: `${TEXTURES_BASE_URL}/mdf/mdf-branco.jpg`,
+  mdfCinza: `${TEXTURES_BASE_URL}/mdf/mdf-cinza.jpg`,
+  mdfPreto: `${TEXTURES_BASE_URL}/mdf/mdf-preto.jpg`,
+  carvalho: `${TEXTURES_BASE_URL}/wood/carvalho.jpg`,
+  nogueira: `${TEXTURES_BASE_URL}/wood/nogueira.jpg`,
+} as const;
 
 /** 9 presets Wood Pack — único centro de definição de materiais visuais. */
 export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
@@ -27,6 +35,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     id: "mdf_branco",
     name: "MDF Branco",
     color: "#f2f0eb",
+    textureUrl: TEXTURE_URLS.mdfBranco,
     uvScale: D,
     uvRotation: 0,
     roughness: 0.52,
@@ -36,6 +45,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     id: "mdf_cinza",
     name: "Cinza",
     color: "#9ca3af",
+    textureUrl: TEXTURE_URLS.mdfCinza,
     uvScale: D,
     uvRotation: 0,
     roughness: 0.55,
@@ -45,6 +55,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     id: "mdf_preto",
     name: "Preto",
     color: "#1f2937",
+    textureUrl: TEXTURE_URLS.mdfPreto,
     uvScale: D,
     uvRotation: 0,
     roughness: 0.58,
@@ -58,8 +69,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     uvRotation: 0,
     roughness: 0.35,
     metallic: 0.08,
-    textureUrl: "/textures/wood/hdf_lacado-base.jpg",
-    normalMapUrl: "/textures/wood/hdf_lacado-normal.jpg",
+    textureUrl: TEXTURE_URLS.mdfBranco,
   },
   {
     id: "hdf_cru",
@@ -69,8 +79,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     uvRotation: 0,
     roughness: 0.6,
     metallic: M,
-    textureUrl: "/textures/wood/hdf_cru-base.jpg",
-    normalMapUrl: "/textures/wood/hdf_cru-normal.jpg",
+    textureUrl: TEXTURE_URLS.mdfBranco,
   },
   {
     id: "carvalho_natural",
@@ -80,8 +89,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     uvRotation: 0,
     roughness: 0.55,
     metallic: M,
-    textureUrl: "/textures/wood/carvalho_natural-base.jpg",
-    normalMapUrl: "/textures/wood/carvalho_natural-normal.jpg",
+    textureUrl: TEXTURE_URLS.carvalho,
   },
   {
     id: "madeira_carvalho",
@@ -91,8 +99,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     uvRotation: 0,
     roughness: 0.55,
     metallic: M,
-    textureUrl: "/textures/wood/madeira_carvalho-base.jpg",
-    normalMapUrl: "/textures/wood/madeira_carvalho-normal.jpg",
+    textureUrl: TEXTURE_URLS.carvalho,
   },
   {
     id: "pinho_natural",
@@ -102,8 +109,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     uvRotation: 0,
     roughness: 0.5,
     metallic: M,
-    textureUrl: "/textures/wood/pinho_natural-base.jpg",
-    normalMapUrl: "/textures/wood/pinho_natural-normal.jpg",
+    textureUrl: TEXTURE_URLS.nogueira,
   },
   {
     id: "madeira_pinho",
@@ -113,7 +119,6 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     uvRotation: 0,
     roughness: 0.52,
     metallic: M,
-    textureUrl: "/textures/wood/madeira_pinho-base.jpg",
-    normalMapUrl: "/textures/wood/madeira_pinho-normal.jpg",
+    textureUrl: TEXTURE_URLS.nogueira,
   },
 ];
