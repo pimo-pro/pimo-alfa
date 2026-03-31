@@ -233,13 +233,16 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   );
 
   /* Porta superior ou inferior: dobradiça na borda top/bottom (eixo Y fixo, posições ao longo da largura = X).
-   * Convenção: Y=0 no topo da peça, Y cresce para baixo. Borda superior = Y pequeno, borda inferior = Y grande. */
+   * Convenção nominal (igual ao nesting/TCN e layoutCoordinateSystem): origem no canto inferior-esquerdo da peça, X ao longo da largura, Y para cima ao longo da altura. */
   if (piece.hingeSide === "top" || piece.hingeSide === "bottom") {
-    const offsetsX = getHingeYPositions(piece.largura, numHingesClamped, rules);
+    const offsetsX =
+      Array.isArray(piece.hingePositionsMm) && piece.hingePositionsMm.length >= 2
+        ? piece.hingePositionsMm
+        : getHingeYPositions(piece.largura, numHingesClamped, rules);
     if (offsetsX.length === 0) return;
-    /* top = borda SUPERIOR = menor Y → y = dist. bottom = borda INFERIOR = maior Y → y = altura - dist. */
-    const yCaneco = piece.hingeSide === "top" ? distCentroCaneco : piece.altura - distCentroCaneco;
-    const yFixacao = piece.hingeSide === "top" ? distCentroFixacao : piece.altura - distCentroFixacao;
+    /* top = borda superior (Y grande). bottom = borda inferior (Y pequeno). */
+    const yCaneco = piece.hingeSide === "top" ? piece.altura - distCentroCaneco : distCentroCaneco;
+    const yFixacao = piece.hingeSide === "top" ? piece.altura - distCentroFixacao : distCentroFixacao;
     for (const ox of offsetsX) {
       pushHole(out, piece, ox, yCaneco, diametroCaneco, profundidadeCaneco, "dobradica", face, true);
       pushHole(out, piece, ox - halfFix, yFixacao, diametroFixacao, profundidadeFixacao, "dobradica_fixacao", face, true);
@@ -250,7 +253,10 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
 
   /* Laterais (left/right): comportamento existente inalterado. */
   const hingeSide = piece.hingeSide === "left" || piece.hingeSide === "right" ? piece.hingeSide : "left";
-  const offsets = getHingeYPositions(piece.altura, numHingesClamped, rules);
+  const offsets =
+    Array.isArray(piece.hingePositionsMm) && piece.hingePositionsMm.length >= 2
+      ? piece.hingePositionsMm
+      : getHingeYPositions(piece.altura, numHingesClamped, rules);
   if (offsets.length === 0) return;
   const xCaneco = hingeSide === "left" ? piece.largura - distCentroCaneco : piece.largura - distCentroCaneco;
   const xFixacao = hingeSide === "left" ? piece.largura - distCentroFixacao : piece.largura - distCentroFixacao;

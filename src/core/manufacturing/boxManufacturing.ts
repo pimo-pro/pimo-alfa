@@ -340,8 +340,9 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   };
 
   if (box.portaTipo !== "sem_porta") {
-    const dobradicas = box.portaTipo === "porta_dupla" ? 4 : 2;
-    addFerragem("dobradicas", dobradicas);
+    const portas = gerarPortas(box, rules);
+    const totalDobradicas = portas.reduce((sum, p) => sum + Math.max(0, Number(p.dobradicas) || 0), 0);
+    addFerragem("dobradicas", totalDobradicas);
   }
 
   if (box.gavetas > 0) {
@@ -394,10 +395,15 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
   const alturaPorta = clampPositive(alturaBase);
   const larguraPorta = clampPositive(larguraBase);
   const alturaPortaCm = alturaPorta / 10;
-  const dobradicas = getNumDobradicas(alturaPortaCm, rules);
+  const baseDobradicas = getNumDobradicas(alturaPortaCm, rules);
+  const extraWide = larguraPorta > 600 ? 1 : 0;
+  const dobradicas = baseDobradicas + extraWide;
 
   if (box.portaTipo === "porta_dupla") {
     const metade = clampPositive(larguraPorta / 2);
+    const baseDobradicasMetade = getNumDobradicas(alturaPortaCm, rules);
+    const extraWideMetade = metade > 600 ? 1 : 0;
+    const dobradicasMetade = baseDobradicasMetade + extraWideMetade;
     return [
       {
         id: getArrayPanelId(box, "portas", 0),
@@ -405,7 +411,7 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
         altura_mm: alturaPorta,
         espessura_mm: espessura,
         tipo: tipoPorta,
-        dobradicas,
+        dobradicas: dobradicasMetade,
         custo: calcularCustoPainel(
           { largura_mm: metade, altura_mm: alturaPorta, material: material.nome } as PainelIndustrial,
           material
@@ -417,7 +423,7 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
         altura_mm: alturaPorta,
         espessura_mm: espessura,
         tipo: tipoPorta,
-        dobradicas,
+        dobradicas: dobradicasMetade,
         custo: calcularCustoPainel(
           { largura_mm: metade, altura_mm: alturaPorta, material: material.nome } as PainelIndustrial,
           material

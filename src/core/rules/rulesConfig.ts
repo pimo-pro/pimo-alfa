@@ -230,10 +230,12 @@ export type RulesConfig = {
 export const defaultRulesConfig: RulesConfig = {
   portas: {
     ranges: [
-      { min: 10, max: 50, dobradicas: 2 },
-      { min: 51, max: 100, dobradicas: 3 },
-      { min: 101, max: 150, dobradicas: 3 },
-      { min: 151, max: 200, dobradicas: 4 },
+      { min: 10, max: 90, dobradicas: 2 },
+      { min: 91, max: 160, dobradicas: 3 },
+      { min: 160, max: 200, dobradicas: 4 },
+      { min: 200, max: 240, dobradicas: 5 },
+      { min: 240, max: 260, dobradicas: 6 },
+      { min: 260, max: 280, dobradicas: 7 },
     ],
   },
   prateleiras: {
@@ -512,8 +514,16 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
  * Usado por: Configuração de Regras → Regras da Porta (UI); drillingAdapter e boxManufacturing para furos no Viewer e cutlist.
  */
 export function getNumDobradicas(alturaCm: number, rules: RulesConfig): number {
-  const range = rules.portas.ranges.find((r) => alturaCm >= r.min && alturaCm <= r.max);
-  return range?.dobradicas ?? 2;
+  const ranges = Array.isArray(rules?.portas?.ranges) ? rules.portas.ranges : [];
+  let chosen: PortaRange | undefined;
+  for (const r of ranges) {
+    if (!r) continue;
+    if (alturaCm >= r.min && alturaCm <= r.max) {
+      // Em caso de overlap (ex.: 160 pode estar em 91–160 e 160–200), preferir o range mais específico/alto.
+      if (!chosen || r.min >= chosen.min) chosen = r;
+    }
+  }
+  return chosen?.dobradicas ?? 2;
 }
 
 /** Distância mínima (mm) da dobradiça ao fundo da porta para evitar dobradiça colada ao chão. */

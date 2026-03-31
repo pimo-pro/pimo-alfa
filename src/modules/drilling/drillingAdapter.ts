@@ -70,6 +70,23 @@ function sanitizeHingePositions(
     .map((y) => clampNumber(y, minY, maxY));
 }
 
+function applyWideDoorExtraHingeRule(
+  positions: number[],
+  doorWidthMm: number | undefined
+): number[] {
+  if (!Array.isArray(positions) || positions.length < 2) return positions ?? [];
+  if (!Number.isFinite(Number(doorWidthMm)) || Number(doorWidthMm) <= 600) return positions;
+
+  // Regra: porta larga (>600mm) → +1 dobradiça, 100mm abaixo da dobradiça superior.
+  // A dobradiça superior mantém a posição original; as restantes mantêm distribuição normal.
+  const sorted = [...positions].sort((a, b) => a - b);
+  const top = sorted[sorted.length - 1];
+  const extra = top - 100;
+  // Evitar duplicações/colisões óbvias.
+  if (sorted.some((y) => Math.abs(y - extra) < 0.5)) return sorted;
+  return [...sorted.slice(0, sorted.length - 1), extra, top].sort((a, b) => a - b);
+}
+
 /** Posições X (mm) para furação top/bottom: porta = master, painel cima/fundo copia. Lógica paralela à de altura da porta, ao longo da largura. */
 function getHingePositionsFromDoorWidth(
   rules: RulesConfig,
@@ -77,8 +94,10 @@ function getHingePositionsFromDoorWidth(
   panelWidthMm: number
 ): number[] {
   if (!Number.isFinite(doorWidthMm) || doorWidthMm <= 0) return [];
-  const numHinges = getNumDobradicas(doorWidthMm / 10, rules);
-  const doorPositions = getHingeYPositions(doorWidthMm, numHinges, rules);
+  const base = getNumDobradicas(doorWidthMm / 10, rules);
+  const numHinges = base + (doorWidthMm > 600 ? 1 : 0);
+  const doorPositionsBase = getHingeYPositions(doorWidthMm, numHinges, rules);
+  const doorPositions = applyWideDoorExtraHingeRule(doorPositionsBase, doorWidthMm);
   if (doorPositions.length === 0) return [];
   if (!Number.isFinite(panelWidthMm) || panelWidthMm <= 0) return doorPositions;
 
@@ -245,22 +264,30 @@ export function buildPanelDrillingResult(
         ? getNumDobradicas(input.larguraMm / 10, rules)
         : getNumDobradicas(input.alturaMm / 10, rules))
     : 0;
-  const numHinges = isDoor ? numHingesForDoor : rules.furos.tecnicos.dobradica.numeroPorPorta;
+  const numHinges = isDoor
+    ? (numHingesForDoor + (input.larguraMm > 600 ? 1 : 0))
+    : rules.furos.tecnicos.dobradica.numeroPorPorta;
 
   let hingePositions: number[] = [];
   if (isLateral && Number.isFinite(input.doorHeightMm) && Number(input.doorHeightMm) > 0) {
-    // Overlay doors: hinge positions are fixed distances from
-    // the lateral top/bottom edges — independent of door height
-    const rawLateralHinges = getHingeYPositions(input.alturaMm, numHinges, rules);
-    hingePositions = sanitizeHingePositions(rawLateralHinges, input.alturaMm, distEntreFixacao);
+    // Laterais: devem copiar a mesma contagem lógica das "Regras da Porta" (por altura da porta)
+    // e aplicar a regra adicional de largura (>600mm) para manter alinhamento porta ↔ caixote.
+    const doorHeightMm = Number(input.doorHeightMm);
+    const base = getNumDobradicas(doorHeightMm / 10, rules);
+    const numForThisDoor = base + ((Number(input.doorWidthMm) > 600) ? 1 : 0);
+    const rawLateralHinges = getHingeYPositions(input.alturaMm, numForThisDoor, rules);
+    const withExtra = applyWideDoorExtraHingeRule(rawLateralHinges, input.doorWidthMm);
+    hingePositions = sanitizeHingePositions(withExtra, input.alturaMm, distEntreFixacao);
   } else if (isDoor) {
     /* Porta: top/bottom = posições ao longo da largura (X); left/right = ao longo da altura (Y). */
     if (input.hingeSide === "top" || input.hingeSide === "bottom") {
       const rawDoorHinges = getHingeYPositions(input.larguraMm, numHinges, rules);
-      hingePositions = sanitizeHingePositions(rawDoorHinges, input.larguraMm, distEntreFixacao);
+      const withExtra = applyWideDoorExtraHingeRule(rawDoorHinges, input.larguraMm);
+      hingePositions = sanitizeHingePositions(withExtra, input.larguraMm, distEntreFixacao);
     } else {
       const rawDoorHinges = getHingeYPositions(input.alturaMm, numHinges, rules);
-      hingePositions = sanitizeHingePositions(rawDoorHinges, input.alturaMm, distEntreFixacao);
+      const withExtra = applyWideDoorExtraHingeRule(rawDoorHinges, input.larguraMm);
+      hingePositions = sanitizeHingePositions(withExtra, input.alturaMm, distEntreFixacao);
     }
   } else if ((isTopPanel && input.hingeSide === "top") || (isBottomPanel && input.hingeSide === "bottom")) {
     /* Painel cima/fundo: posições X copiadas da largura da porta (porta = master). Fallback: usar largura do painel. */
