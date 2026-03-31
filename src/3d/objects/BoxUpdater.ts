@@ -68,7 +68,8 @@ export function updateBoxModelWithDeps(model: BoxModel, options: BoxOptions | un
     model.panels[key].position.set(px, py, pz);
     if (key === "right") {
       model.panels[key].rotation.y = Math.PI;
-      model.panels[key].rotation.z = Math.PI;
+      // Manter Y consistente entre porta e lateral: não inverter no eixo Z.
+      model.panels[key].rotation.z = 0;
     } else {
       model.panels[key].rotation.y = 0;
       model.panels[key].rotation.z = 0;
@@ -120,7 +121,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
       child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
       if (panelName === "right") {
         child.rotation.y = Math.PI;
-        child.rotation.z = Math.PI;
+        child.rotation.z = 0;
       } else {
         child.rotation.y = 0;
         child.rotation.z = 0;
@@ -147,7 +148,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
       deps.panelFactory.updatePanelGeometry(rightPanel, rightSpec.size[0], rightSpec.size[1], rightSpec.size[2]);
       rightPanel.position.set(rightSpec.pos[0], rightSpec.pos[1], rightSpec.pos[2]);
       rightPanel.rotation.y = Math.PI;
-      rightPanel.rotation.z = Math.PI;
+      rightPanel.rotation.z = 0;
     }
   }
   if (topPanel) deps.applyDrillHolesToPanelGeometry(topPanel, "top", drillMap.cima);

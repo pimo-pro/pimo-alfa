@@ -69,8 +69,9 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     back: deps.panelFactory.createPanel(specs.back.size[0], specs.back.size[1], specs.back.size[2], "back", "back", panelOptions("back")),
   };
 
+  // Rodar apenas no eixo Y para espelhar esquerda/direita sem inverter o eixo vertical (Y).
   panels.right.rotation.y = Math.PI;
-  panels.right.rotation.z = Math.PI;
+  panels.right.rotation.z = 0;
   (panelTypes as readonly string[]).forEach((key) => {
     const k = key as keyof typeof panels;
     const p = panels[k];
@@ -78,7 +79,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     p.position.set(pos[0], pos[1], pos[2]);
     if (k === "right") {
       p.rotation.y = Math.PI;
-      p.rotation.z = Math.PI;
+      p.rotation.z = 0;
     }
     root.add(p);
   });

@@ -25,10 +25,19 @@ export function toLayoutPlacementX(xMm: number, widthMm: number, sheetWidthMm: n
  * X ao longo da largura, Y ao longo da altura) para offset no retângulo de colocação na chapa
  * (origem canto inferior-esquerdo do placement), com rotação 0 ou 90° do nesting.
  */
-export function holeLocalToSheetOffsetMm(hx: number, hy: number, rotacaoDeg: number): { sx: number; sy: number } {
+export function holeLocalToSheetOffsetMm(
+  hx: number,
+  hy: number,
+  rotacaoDeg: number,
+  pieceLarguraMm?: number,
+  pieceAlturaMm?: number
+): { sx: number; sy: number } {
   const r = ((rotacaoDeg ?? 0) % 360 + 360) % 360;
   if (r === 90) {
-    return { sx: hy, sy: hx };
+    // 90° CCW: piece X→sheet Y, piece Y→sheet X (mirrored)
+    const L = pieceLarguraMm ?? 0;
+    void pieceAlturaMm;
+    return { sx: hy, sy: L - hx };
   }
   return { sx: hx, sy: hy };
 }

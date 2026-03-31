@@ -226,17 +226,49 @@ export type RulesConfig = {
   };
 };
 
+const NEW_PORTA_RANGES_DEFAULT: PortaRange[] = [
+  { min: 10, max: 90, dobradicas: 2 },
+  { min: 91, max: 160, dobradicas: 3 },
+  { min: 160, max: 200, dobradicas: 4 },
+  { min: 200, max: 240, dobradicas: 5 },
+  { min: 240, max: 260, dobradicas: 6 },
+  { min: 260, max: 280, dobradicas: 7 },
+];
+
+const OLD_PORTA_RANGES_DEFAULT: PortaRange[] = [
+  { min: 10, max: 50, dobradicas: 2 },
+  { min: 51, max: 100, dobradicas: 3 },
+  { min: 101, max: 150, dobradicas: 3 },
+  { min: 151, max: 200, dobradicas: 4 },
+];
+
+function arePortaRangesEqual(a: PortaRange[], b: PortaRange[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ra = a[i];
+    const rb = b[i];
+    if (!ra || !rb) return false;
+    if (ra.min !== rb.min || ra.max !== rb.max || ra.dobradicas !== rb.dobradicas) return false;
+  }
+  return true;
+}
+
+function migratePortaRangesIfNeeded(ranges: PortaRange[] | undefined): PortaRange[] {
+  if (!Array.isArray(ranges) || ranges.length === 0) return [...NEW_PORTA_RANGES_DEFAULT];
+
+  // Migração segura: só substitui se estiver exatamente na tabela antiga (defaults históricos),
+  // evitando sobrescrever perfis já personalizados pelo utilizador.
+  if (arePortaRangesEqual(ranges, OLD_PORTA_RANGES_DEFAULT)) {
+    return [...NEW_PORTA_RANGES_DEFAULT];
+  }
+
+  return ranges;
+}
+
 /** Regras padrão do projeto (defaults; carregadas ao iniciar ou ao resetar). */
 export const defaultRulesConfig: RulesConfig = {
   portas: {
-    ranges: [
-      { min: 10, max: 90, dobradicas: 2 },
-      { min: 91, max: 160, dobradicas: 3 },
-      { min: 160, max: 200, dobradicas: 4 },
-      { min: 200, max: 240, dobradicas: 5 },
-      { min: 240, max: 260, dobradicas: 6 },
-      { min: 260, max: 280, dobradicas: 7 },
-    ],
+    ranges: [...NEW_PORTA_RANGES_DEFAULT],
   },
   prateleiras: {
     suportesPorPrateleira: 4,
@@ -418,6 +450,11 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
     portas: {
       ...defaults.portas,
       ...(isObject(src.portas) ? src.portas : {}),
+      ranges: migratePortaRangesIfNeeded(
+        Array.isArray((isObject(src.portas) ? (src.portas as Record<string, unknown>) : {}).ranges)
+          ? (((isObject(src.portas) ? (src.portas as Record<string, unknown>) : {}).ranges as unknown) as PortaRange[])
+          : base.portas?.ranges
+      ),
     },
     prateleiras: {
       ...defaults.prateleiras,

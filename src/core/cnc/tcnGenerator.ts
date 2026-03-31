@@ -555,7 +555,7 @@ export function generateTcnForPanel(
     for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
       if (topDrillable === false) continue;
-      const off = holeLocalToSheetOffsetMm(hole.x, hole.y, rot);
+      const off = holeLocalToSheetOffsetMm(hole.x, hole.y, rot, pl.largura_mm, pl.altura_mm);
       const tcnPt = transformPlacementToTcn({ x: pl.x_mm + off.sx, y: pl.y_mm + off.sy, z: 0 }, sheet.largura_mm, maxW, maxH);
       allDrillOps.push({
         x: tcnPt.x,
@@ -595,7 +595,7 @@ export function generateTcnForPanel(
     const innerContours = pl.innerContours;
     if (innerContours?.length) {
       for (const rect of innerContours) {
-        const offR = holeLocalToSheetOffsetMm(rect.x_mm, rect.y_mm, rot);
+        const offR = holeLocalToSheetOffsetMm(rect.x_mm, rect.y_mm, rot, pl.largura_mm, pl.altura_mm);
         const iw = rot === 90 ? rect.altura_mm : rect.largura_mm;
         const ih = rot === 90 ? rect.largura_mm : rect.altura_mm;
         const innerPointsRaw = buildInternalContourPoints(
