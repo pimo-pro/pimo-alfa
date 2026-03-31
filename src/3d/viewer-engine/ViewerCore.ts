@@ -1528,42 +1528,7 @@ export class ViewerCore {
     this.sceneManager.setMaterialQuality(this.materialQuality);
   }
 
-  private getPremiumTexture(): THREE.CanvasTexture {
-    if (this.premiumTexture) return this.premiumTexture;
-    const canvas = document.createElement("canvas");
-    canvas.width = 128;
-    canvas.height = 128;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      this.premiumTexture = new THREE.CanvasTexture(canvas);
-      return this.premiumTexture;
-    }
-    const gradient = ctx.createLinearGradient(0, 0, 128, 128);
-    gradient.addColorStop(0, "#f8fafc");
-    gradient.addColorStop(1, "#dbe4ef");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 128, 128);
-    for (let i = 0; i < 22; i += 1) {
-      const x = Math.random() * 128;
-      const y = Math.random() * 128;
-      const len = 18 + Math.random() * 30;
-      ctx.strokeStyle = `rgba(148,163,184,${0.05 + Math.random() * 0.08})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + len, y + Math.random() * 6 - 3);
-      ctx.stroke();
-    }
-    this.premiumTexture = new THREE.CanvasTexture(canvas);
-    this.premiumTexture.wrapS = THREE.RepeatWrapping;
-    this.premiumTexture.wrapT = THREE.RepeatWrapping;
-    this.premiumTexture.repeat.set(1.2, 1.2);
-    this.premiumTexture.needsUpdate = true;
-    return this.premiumTexture;
-  }
-
   private applyMaterialQualityProfile(): void {
-    const premiumMap = this.materialQuality === "premium" ? this.getPremiumTexture() : null;
     this.sceneManager.root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const materials = Array.isArray(node.material) ? node.material : [node.material];
