@@ -5,9 +5,9 @@
  */
 
 export type PortaRange = {
-  /** Altura mínima da porta (cm). */
+  /** Altura mínima da porta (mm). */
   min: number;
-  /** Altura máxima da porta (cm). */
+  /** Altura máxima da porta (mm). */
   max: number;
   /** Número de dobradiças para este range. */
   dobradicas: number;
@@ -226,49 +226,17 @@ export type RulesConfig = {
   };
 };
 
-const NEW_PORTA_RANGES_DEFAULT: PortaRange[] = [
-  { min: 10, max: 90, dobradicas: 2 },
-  { min: 91, max: 160, dobradicas: 3 },
-  { min: 160, max: 200, dobradicas: 4 },
-  { min: 200, max: 240, dobradicas: 5 },
-  { min: 240, max: 260, dobradicas: 6 },
-  { min: 260, max: 280, dobradicas: 7 },
-];
-
-const OLD_PORTA_RANGES_DEFAULT: PortaRange[] = [
-  { min: 10, max: 50, dobradicas: 2 },
-  { min: 51, max: 100, dobradicas: 3 },
-  { min: 101, max: 150, dobradicas: 3 },
-  { min: 151, max: 200, dobradicas: 4 },
-];
-
-function arePortaRangesEqual(a: PortaRange[], b: PortaRange[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const ra = a[i];
-    const rb = b[i];
-    if (!ra || !rb) return false;
-    if (ra.min !== rb.min || ra.max !== rb.max || ra.dobradicas !== rb.dobradicas) return false;
-  }
-  return true;
-}
-
-function migratePortaRangesIfNeeded(ranges: PortaRange[] | undefined): PortaRange[] {
-  if (!Array.isArray(ranges) || ranges.length === 0) return [...NEW_PORTA_RANGES_DEFAULT];
-
-  // Migração segura: só substitui se estiver exatamente na tabela antiga (defaults históricos),
-  // evitando sobrescrever perfis já personalizados pelo utilizador.
-  if (arePortaRangesEqual(ranges, OLD_PORTA_RANGES_DEFAULT)) {
-    return [...NEW_PORTA_RANGES_DEFAULT];
-  }
-
-  return ranges;
-}
-
 /** Regras padrão do projeto (defaults; carregadas ao iniciar ou ao resetar). */
 export const defaultRulesConfig: RulesConfig = {
   portas: {
-    ranges: [...NEW_PORTA_RANGES_DEFAULT],
+    ranges: [
+      { min: 100, max: 900, dobradicas: 2 },
+      { min: 901, max: 1600, dobradicas: 3 },
+      { min: 1601, max: 2000, dobradicas: 4 },
+      { min: 2001, max: 2400, dobradicas: 5 },
+      { min: 2401, max: 2600, dobradicas: 6 },
+      { min: 2601, max: 2800, dobradicas: 7 },
+    ],
   },
   prateleiras: {
     suportesPorPrateleira: 4,
@@ -427,6 +395,65 @@ export const defaultRulesConfig: RulesConfig = {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
+const LEGACY_PORTA_RANGES_CM_V1: Array<{ min: number; max: number; dobradicas: number }> = [
+  { min: 10, max: 50, dobradicas: 2 },
+  { min: 51, max: 100, dobradicas: 3 },
+  { min: 101, max: 150, dobradicas: 3 },
+  { min: 151, max: 200, dobradicas: 4 },
+];
+
+function looksLikeCmRanges(ranges: Array<{ min: number; max: number; dobradicas: number }>): boolean {
+  // Heurística: ranges em cm tipicamente têm max <= 300
+  const maxVal = Math.max(...ranges.map((r) => Number(r.max) || 0));
+  return maxVal > 0 && maxVal <= 400;
+}
+
+function isSamePortaRanges(
+  a: Array<{ min: number; max: number; dobradicas: number }>,
+  b: Array<{ min: number; max: number; dobradicas: number }>
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (!x || !y) return false;
+    if (Number(x.min) !== Number(y.min)) return false;
+    if (Number(x.max) !== Number(y.max)) return false;
+    if (Number(x.dobradicas) !== Number(y.dobradicas)) return false;
+  }
+  return true;
+}
+
+function normalizePortaRanges(srcPortas: unknown, defaults: RulesConfig["portas"]): RulesConfig["portas"]["ranges"] {
+  const portasObj = isObject(srcPortas) ? (srcPortas as Record<string, unknown>) : {};
+  const rangesRaw = portasObj.ranges;
+  if (!Array.isArray(rangesRaw)) return defaults.ranges;
+
+  const ranges = rangesRaw
+    .map((r) => (isObject(r) ? r : {}))
+    .map((r) => ({
+      min: Number((r as Record<string, unknown>).min),
+      max: Number((r as Record<string, unknown>).max),
+      dobradicas: Number((r as Record<string, unknown>).dobradicas),
+    }))
+    .filter((r) => Number.isFinite(r.min) && Number.isFinite(r.max) && Number.isFinite(r.dobradicas));
+
+  // Migração: perfis antigos podem ter a tabela legacy hard-coded em CM.
+  // Se bater exatamente, ou se parecer cm (max <= 400), converte para mm.
+  if (isSamePortaRanges(ranges, LEGACY_PORTA_RANGES_CM_V1)) {
+    return defaults.ranges;
+  }
+  if (looksLikeCmRanges(ranges)) {
+    return ranges.map((r) => ({ ...r, min: Math.round(r.min * 10), max: Math.round(r.max * 10) })) as RulesConfig["portas"]["ranges"];
+  }
+  // Se já estiver em mm, mantém.
+  // Se bater exatamente na tabela antiga já em mm (caso raro), também normaliza para defaults atuais.
+  if (isSamePortaRanges(ranges, defaults.ranges)) {
+    return defaults.ranges;
+  }
+  return ranges as RulesConfig["portas"]["ranges"];
+}
+
 /**
  * Normaliza regras vindas de versões antigas, garantindo estrutura completa.
  * Evita crashes em telas que acessam chaves profundas (ex.: furos.tecnicos.cavilha).
@@ -450,11 +477,7 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
     portas: {
       ...defaults.portas,
       ...(isObject(src.portas) ? src.portas : {}),
-      ranges: migratePortaRangesIfNeeded(
-        Array.isArray((isObject(src.portas) ? (src.portas as Record<string, unknown>) : {}).ranges)
-          ? (((isObject(src.portas) ? (src.portas as Record<string, unknown>) : {}).ranges as unknown) as PortaRange[])
-          : base.portas?.ranges
-      ),
+      ranges: normalizePortaRanges(src.portas, defaults.portas),
     },
     prateleiras: {
       ...defaults.prateleiras,
@@ -550,17 +573,21 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
  * Calcula o número de dobradiças para uma porta com base na altura (cm).
  * Usado por: Configuração de Regras → Regras da Porta (UI); drillingAdapter e boxManufacturing para furos no Viewer e cutlist.
  */
-export function getNumDobradicas(alturaCm: number, rules: RulesConfig): number {
-  const ranges = Array.isArray(rules?.portas?.ranges) ? rules.portas.ranges : [];
-  let chosen: PortaRange | undefined;
+export function getNumDobradicas(alturaMm: number, rules: RulesConfig): number {
+  const ranges = rules?.portas?.ranges ?? [];
+  if (!Number.isFinite(alturaMm) || alturaMm <= 0 || ranges.length === 0) return 2;
+
+  const match = ranges.find((r) => alturaMm >= r.min && alturaMm <= r.max);
+  if (match?.dobradicas != null) return Math.max(2, Number(match.dobradicas) || 2);
+
+  // Se está acima do último range, usar SEMPRE o último range (evita fallback para 2).
+  let last = ranges[0]!;
   for (const r of ranges) {
-    if (!r) continue;
-    if (alturaCm >= r.min && alturaCm <= r.max) {
-      // Em caso de overlap (ex.: 160 pode estar em 91–160 e 160–200), preferir o range mais específico/alto.
-      if (!chosen || r.min >= chosen.min) chosen = r;
-    }
+    if (r.max >= last.max) last = r;
   }
-  return chosen?.dobradicas ?? 2;
+  if (alturaMm > last.max) return Math.max(2, Number(last.dobradicas) || 2);
+
+  return 2;
 }
 
 /** Distância mínima (mm) da dobradiça ao fundo da porta para evitar dobradiça colada ao chão. */
@@ -579,17 +606,27 @@ export const MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM = 70;
 export function getHingeYPositions(
   alturaMm: number,
   numHinges: number,
-  rules: RulesConfig
+  rules: RulesConfig,
+  /**
+   * Posição Y (mm) da travessa/reforço horizontal, medida a partir da BASE da porta/painel.
+   * Se definida, a dobradiça mais próxima é ajustada para ficar a 50mm acima/abaixo da travessa,
+   * escolhendo a opção mais próxima da posição original.
+   */
+  travessaYMm?: number
 ): number[] {
   const cfg = rules?.furos?.tecnicos?.dobradica;
   if (!cfg || alturaMm <= 0) return [];
   const n = Math.max(2, numHinges);
-  const distTopo = cfg.distanciaDobradiçaTopo ?? cfg.offsetSuperior ?? 100;
-  const distFundo = cfg.distanciaDobradiçaFundo ?? cfg.offsetInferior ?? 100;
+  const distTopo = Number(cfg.distanciaDobradiçaTopo ?? cfg.offsetSuperior ?? 100);
+  const distBase = Number(cfg.distanciaDobradiçaFundo ?? cfg.offsetInferior ?? 100);
+
+  // Convenção industrial (e exemplos do produto):
+  // Y é medido a partir da BASE do painel/porta:
+  // - dobradiça inferior: distBase (ex.: 100mm)
+  // - dobradiça superior: altura - distTopo (ex.: 1000mm → 900mm)
   const margem = MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM;
-  const distFundoSafe = Math.max(distFundo, MIN_DIST_FUNDO_DOBRADICA_MM, margem);
-  const yFirst = Math.max(distTopo, margem);
-  const yLast = Math.max(yFirst + 60, alturaMm - distFundoSafe);
+  const yBottom = Math.max(distBase, MIN_DIST_FUNDO_DOBRADICA_MM, margem);
+  const yTop = Math.max(yBottom + 60, alturaMm - Math.max(distTopo, margem));
 
   const useManual =
     cfg.distribuicaoAutomatica === false &&
@@ -599,22 +636,37 @@ export function getHingeYPositions(
     return cfg.offsetsVerticaisMm!.slice(0, n);
   }
 
-  if (n === 2) return [yFirst, yLast];
-  if (n === 3) {
-    const yMid = (yFirst + yLast) / 2;
-    return [yFirst, yMid, yLast];
+  // Distribuição uniforme entre inferior e superior (inclui extremos).
+  const result: number[] = [];
+  const step = n > 1 ? (yTop - yBottom) / (n - 1) : 0;
+  for (let i = 0; i < n; i++) {
+    result.push(yBottom + step * i);
   }
-  if (n === 4) {
-    const step = (yLast - yFirst) / 3;
-    return [yFirst, yFirst + step, yFirst + step * 2, yLast];
+
+  // Ajuste por travessa (se existir): move apenas a dobradiça mais próxima.
+  if (Number.isFinite(travessaYMm) && (travessaYMm as number) > 0 && (travessaYMm as number) < alturaMm) {
+    const t = Number(travessaYMm);
+    const above = Math.max(yBottom, Math.min(yTop, t + 50));
+    const below = Math.max(yBottom, Math.min(yTop, t - 50));
+
+    let idx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < result.length; i++) {
+      const d = Math.abs(result[i]! - t);
+      if (d < bestDist) {
+        bestDist = d;
+        idx = i;
+      }
+    }
+    const current = result[idx]!;
+    const cand = Math.abs(current - below) <= Math.abs(current - above) ? below : above;
+    result[idx] = cand;
   }
-  const result: number[] = [yFirst];
-  for (let i = 1; i < n - 1; i++) {
-    const t = i / (n - 1);
-    result.push(yFirst + (yLast - yFirst) * t);
-  }
-  result.push(yLast);
-  return result;
+
+  // Manter ordem crescente e evitar valores fora do intervalo por arredondamentos.
+  return result
+    .map((y) => Math.max(yBottom, Math.min(yTop, y)))
+    .sort((a, b) => a - b);
 }
 
 /**

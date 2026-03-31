@@ -18,13 +18,20 @@ export function loadProfiles(): RulesProfilesConfig {
     const parsed = JSON.parse(stored) as RulesProfilesConfig;
     // Garantir que existe pelo menos um perfil e que perfilAtivoId é válido
     const perfisRaw = Array.isArray(parsed.perfis) && parsed.perfis.length > 0 ? parsed.perfis : defaultProfilesConfig.perfis;
-    const perfis = perfisRaw.map((perfil) => ({
-      ...perfil,
-      rules: normalizeRulesConfig(perfil.rules),
-    }));
+    let changed = false;
+    const perfis = perfisRaw.map((perfil) => {
+      const before = perfil.rules;
+      const after = normalizeRulesConfig(before);
+      if (JSON.stringify(before) !== JSON.stringify(after)) changed = true;
+      return { ...perfil, rules: after };
+    });
     const perfilAtivoId =
       perfis.some((p) => p.id === parsed.perfilAtivoId) ? parsed.perfilAtivoId : perfis[0].id;
-    return { perfis, perfilAtivoId };
+    const next = { perfis, perfilAtivoId };
+    if (changed) {
+      saveProfiles(next);
+    }
+    return next;
   } catch {
     return defaultProfilesConfig;
   }

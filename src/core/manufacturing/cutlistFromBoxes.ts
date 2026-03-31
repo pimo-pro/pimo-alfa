@@ -20,6 +20,23 @@ import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
 
 /**
+ * Converte furos de caneco da porta (Y em coordenadas do painel: topo=0, Y↓) para offsets industriais
+ * a partir da base da peça (mm), iguais a getHingeYPositions — mesma lista que a lateral deve usar.
+ */
+function extractDoorHingeOffsetsFromBottomMm(drillHoles: PanelDrillHole[] | undefined, doorAlturaMm: number): number[] {
+  if (!Array.isArray(drillHoles) || drillHoles.length === 0) return [];
+  if (!Number.isFinite(doorAlturaMm) || doorAlturaMm <= 0) return [];
+  const offs = drillHoles
+    .filter((h) => h.holeType === "dobradica")
+    .map((h) => doorAlturaMm - Number(h.y))
+    .filter((o) => Number.isFinite(o));
+  if (offs.length === 0) return [];
+  const unique = Array.from(new Set(offs.map((o) => Math.round(o * 1000) / 1000)));
+  unique.sort((a, b) => a - b);
+  return unique;
+}
+
+/**
  * Gera cutlist com preço para uma caixa a partir de project.boxes (Single Source of Truth).
  * Usa gerarModeloIndustrial com rules do projeto. Material = label do CRUD ou legado.
  * Preenche materialId, visualMaterial, grainDirection e opcionalmente faceMaterials (Layout Engine / MaterialLibrary v2).
@@ -75,6 +92,52 @@ export function cutlistComPrecoFromBox(
   const hasDoorTop = doorsLayer.some((d) => d.hingeSide === "top");
   const hasDoorBottom = doorsLayer.some((d) => d.hingeSide === "bottom");
   const doorWidthMm = firstDoorPanel?.largura_mm;
+  const lateralHeights = modelo.paineis
+    .filter((p) => p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")
+    .map((p) => p.altura_mm)
+    .filter((h) => Number.isFinite(h) && h > 0) as number[];
+  const openingHeightMm = lateralHeights.length > 0 ? Math.max(...lateralHeights) : (doorHeightMm ?? undefined);
+
+  // Pré-cálculo obrigatório: gerar furos das portas primeiro para extrair as posições reais
+  // e garantir que as laterais copiem 100% (mesmo número e mesmos Y).
+  const doorTipos = ["porta_simples", "porta_dupla", "porta_correr"];
+  const doorPanelsInOrder = modelo.paineis.filter((p) => doorTipos.includes(p.tipo));
+  const doorDrillHolesByIndex = new Map<number, PanelDrillHole[]>();
+  const hingePositionsBySide: Partial<Record<"left" | "right", number[]>> = {};
+  for (let i = 0; i < doorPanelsInOrder.length; i++) {
+    const p = doorPanelsInOrder[i]!;
+    if (!p || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) continue;
+    const hingeSide = doorsLayer[i]?.hingeSide;
+    const openingH = Number.isFinite(openingHeightMm) && Number(openingHeightMm) > 0 ? Number(openingHeightMm) : p.altura_mm;
+    const bottomGap = (openingH - p.altura_mm) / 2;
+    const topGap = openingH - p.altura_mm - bottomGap;
+    const drillingResult = buildPanelDrillingResult(
+      {
+        tipo: p.tipo,
+        larguraMm: p.largura_mm,
+        alturaMm: p.altura_mm,
+        espessuraMm: p.espessura_mm,
+        hasShelves,
+        hasDrawers: hasDrawersForShelfDrilling,
+        doorHeightMm,
+        doorWidthMm,
+        openingHeightMm: openingH,
+        bottomGapMm: bottomGap,
+        topGapMm: topGap,
+        hingeSide,
+      },
+      effRules
+    );
+    const drillHoles =
+      drillingResult.success && drillingResult.data?.drillHoles?.length ? drillingResult.data.drillHoles : [];
+    doorDrillHolesByIndex.set(i, drillHoles);
+    if (hingeSide === "left" || hingeSide === "right") {
+      const hingeOffsetsDoorLocal = extractDoorHingeOffsetsFromBottomMm(drillHoles, p.altura_mm);
+      // Converter offsets locais da porta para offsets globais do vão (base do vão).
+      const hingeOffsetsGlobal = hingeOffsetsDoorLocal.map((o) => o + bottomGap);
+      if (hingeOffsetsGlobal.length > 0) hingePositionsBySide[hingeSide] = hingeOffsetsGlobal;
+    }
+  }
 
   let doorPanelIndex = 0;
   modelo.paineis.forEach((p) => {
@@ -88,25 +151,35 @@ export function cutlistComPrecoFromBox(
     const isLateralRight = p.tipo === "lateral_direita";
     const isTopPanel = p.tipo === "cima";
     const isBottomPanel = p.tipo === "fundo";
+    const doorIndex = isDoor ? doorPanelIndex : -1;
     const hingeSide =
-      isDoor && doorsLayer[doorPanelIndex]
-        ? doorsLayer[doorPanelIndex].hingeSide
-        : isTopPanel && hasDoorTop
-          ? "top"
-          : isBottomPanel && hasDoorBottom
-            ? "bottom"
-            : undefined;
-    const doorOfficial = isDoor && doorsLayer[doorPanelIndex]?.material
-      ? resolveMaterial(doorsLayer[doorPanelIndex].material)
+      isDoor && doorsLayer[doorIndex]
+        ? doorsLayer[doorIndex].hingeSide
+        : isLateralLeft && hasDoorLeft
+          ? "left"
+          : isLateralRight && hasDoorRight
+            ? "right"
+            : isTopPanel && hasDoorTop
+              ? "top"
+              : isBottomPanel && hasDoorBottom
+                ? "bottom"
+                : undefined;
+    const doorOfficial = isDoor && doorsLayer[doorIndex]?.material
+      ? resolveMaterial(doorsLayer[doorIndex].material)
       : null;
     const itemMaterial = isDoor
-      ? (doorOfficial?.label ?? doorsLayer[doorPanelIndex]?.material ?? getDefaultOfficialMaterial().label)
+      ? (doorOfficial?.label ?? doorsLayer[doorIndex]?.material ?? getDefaultOfficialMaterial().label)
       : material;
     if (isDoor) doorPanelIndex += 1;
     const doorHeightForLateral =
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
     const doorWidthForTopBottom =
       (isTopPanel && hasDoorTop) || (isBottomPanel && hasDoorBottom) ? doorWidthMm : undefined;
+    const hingePositionsForLateral =
+      isLateralLeft && hasDoorLeft ? hingePositionsBySide.left : isLateralRight && hasDoorRight ? hingePositionsBySide.right : undefined;
+    const openingH = Number.isFinite(openingHeightMm) && Number(openingHeightMm) > 0 ? Number(openingHeightMm) : p.altura_mm;
+    const bottomGap = isDoor ? Math.max(0, (openingH - p.altura_mm) / 2) : 0;
+    const topGap = isDoor ? Math.max(0, openingH - p.altura_mm - bottomGap) : 0;
     let drillHoles: PanelDrillHole[] = [];
     if (isPiBox && (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")) {
       const piSettings = getSettings().modeloPI;
@@ -118,23 +191,42 @@ export function cutlistComPrecoFromBox(
         piSettings: piSettings ?? {},
       });
     } else {
-      const drillingResult = buildPanelDrillingResult(
-        {
-          tipo: p.tipo,
-          larguraMm: p.largura_mm,
-          alturaMm: p.altura_mm,
-          espessuraMm: p.espessura_mm,
-          hasShelves,
-          hasDrawers: hasDrawersForShelfDrilling,
-          doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
-          doorWidthMm: doorWidthForTopBottom,
-          hingeSide,
-        },
-        effRules
-      );
-      drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
-        ? drillingResult.data.drillHoles
-        : [];
+      if (isDoor) {
+        drillHoles = doorDrillHolesByIndex.get(doorIndex) ?? [];
+        if (import.meta.env.DEV) {
+          const ys = drillHoles
+            .filter((h) => h.holeType === "dobradica")
+            .map((h) => h.y);
+          devLogger.debug("[DRILL-DIAG] door hinge holes", {
+            doorIndex,
+            hingeSide,
+            count: ys.length,
+            ys,
+          });
+        }
+      } else {
+        const drillingResult = buildPanelDrillingResult(
+          {
+            tipo: p.tipo,
+            larguraMm: p.largura_mm,
+            alturaMm: p.altura_mm,
+            espessuraMm: p.espessura_mm,
+            hasShelves,
+            hasDrawers: hasDrawersForShelfDrilling,
+            doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
+            doorWidthMm: doorWidthForTopBottom,
+            openingHeightMm: openingH,
+            bottomGapMm: bottomGap,
+            topGapMm: topGap,
+            hingeSide,
+            hingePositionsMm: hingePositionsForLateral,
+          },
+          effRules
+        );
+        drillHoles = drillingResult.success && drillingResult.data?.drillHoles?.length
+          ? drillingResult.data.drillHoles
+          : [];
+      }
     }
     if (import.meta.env.DEV) {
       // Log de diagnóstico dos furos gerados para cada painel

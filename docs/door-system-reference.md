@@ -11,8 +11,8 @@ Não existem duas fontes de verdade: o estado usa `DoorLayerItem`; o Viewer usa 
 
 ## Regras da Porta (Configuração de Regras)
 
-- **rulesConfig.portas.ranges**: lista `{ min, max, dobradicas }` em cm (altura da porta). Define quantas dobradiças uma porta tem conforme a altura (ou largura, se abertura top/bottom).
-- **getNumDobradicas(alturaCm, rules)** (`src/core/rules/rulesConfig.ts`): retorna o número de dobradiças para uma altura (ou largura) em cm.
+- **rulesConfig.portas.ranges**: lista `{ min, max, dobradicas }` em **mm** (altura da porta). Define quantas dobradiças uma porta tem conforme a altura (ou largura, se abertura top/bottom).
+- **getNumDobradicas(alturaMm, rules)** (`src/core/rules/rulesConfig.ts`): retorna o número de dobradiças para uma altura (ou largura) em **mm**.
 - **getHingeYPositions(alturaMm, numHinges, rules)**: calcula as posições Y (mm) das dobradiças; `numHinges` deve vir de `getNumDobradicas` para respeitar as Regras da Porta.
 
 Estas funções são usadas por:
