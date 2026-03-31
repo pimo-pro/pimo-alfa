@@ -184,7 +184,7 @@ export default function RulesAdminPage() {
 
       <div style={{ maxWidth: 900, display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Regras da Porta */}
-        <Panel title="Regras da Porta" description="Altura (cm) → Número de dobradiças">
+        <Panel title="Regras da Porta" description="Altura (mm) → Número de dobradiças">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {rules.portas.ranges.map((range, index) => (
               <div key={index} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}>
@@ -192,7 +192,7 @@ export default function RulesAdminPage() {
                   type="number"
                   value={range.min}
                   onChange={(e) => updatePortaRange(index, "min", Number(e.target.value))}
-                  placeholder="Min"
+                  placeholder="De (mm)"
                   className="input input-xs"
                   style={{ width: 80 }}
                 />
@@ -201,11 +201,11 @@ export default function RulesAdminPage() {
                   type="number"
                   value={range.max}
                   onChange={(e) => updatePortaRange(index, "max", Number(e.target.value))}
-                  placeholder="Max"
+                  placeholder="Até (mm)"
                   className="input input-xs"
                   style={{ width: 80 }}
                 />
-                <span>cm →</span>
+                <span>mm →</span>
                 <input
                   type="number"
                   value={range.dobradicas}

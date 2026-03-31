@@ -393,8 +393,7 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
       : alturaInterna - folga * 2;
   const alturaPorta = clampPositive(alturaBase);
   const larguraPorta = clampPositive(larguraBase);
-  const alturaPortaCm = alturaPorta / 10;
-  const dobradicas = getNumDobradicas(alturaPortaCm, rules);
+  const dobradicas = getNumDobradicas(alturaPorta, rules);
 
   if (box.portaTipo === "porta_dupla") {
     const metade = clampPositive(larguraPorta / 2);

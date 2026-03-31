@@ -31,7 +31,24 @@ export type PanelDrillingInput = {
   doorHeightMm?: number;
   /** Largura da porta (mm). Para hingeSide top/bottom: posições ao longo da largura; usado em cima/fundo para copiar da porta. */
   doorWidthMm?: number;
+  /**
+   * Altura do vão (abertura) do caixote em mm.
+   * Este é o eixo global onde as dobradiças devem alinhar (porta e laterais).
+   */
+  openingHeightMm?: number;
+  /** Folga inferior da porta dentro do vão (mm). */
+  bottomGapMm?: number;
+  /** Folga superior da porta dentro do vão (mm). */
+  topGapMm?: number;
   hingeSide?: "left" | "right" | "top" | "bottom";
+  /**
+   * Posições das dobradiças (mm) já calculadas na porta (fonte primária).
+   * - Laterais (left/right): lista de offsets a partir da base do móvel (mm)
+   * - Cima/Fundo (top/bottom): lista de X (mm)
+   *
+   * Quando fornecido, o painel deve copiar SEM recalcular.
+   */
+  hingePositionsMm?: number[];
 };
 
 export type PanelDrillingOutput = {
@@ -53,21 +70,26 @@ function toFiniteNumber(value: unknown, fallback: number): number {
   return Number.isFinite(Number(value)) ? Number(value) : fallback;
 }
 
-function sanitizeHingePositions(
+/**
+ * Limita offsets ao longo de um eixo (altura da porta ou largura em abertura top/bottom):
+ * valores são mm a partir da borda "base" do eixo (base da porta = fundo; esquerda ao longo da largura).
+ * drillingService converte para coordenadas do painel (Y topo→baixo) com y = dimensão - offset.
+ */
+function sanitizeHingeOffsetsFromEdge(
   positions: number[] | undefined,
-  alturaRefMm: number,
+  axisLenMm: number,
   distEntreFurosCalcoMm: number
 ): number[] {
-  if (!Array.isArray(positions) || !Number.isFinite(alturaRefMm) || alturaRefMm <= 0) return [];
+  if (!Array.isArray(positions) || !Number.isFinite(axisLenMm) || axisLenMm <= 0) return [];
   const margin = MIN_MARGEM_DOBRADICA_TOP_BOTTOM_MM;
   const halfFixationDist = Math.max(0, distEntreFurosCalcoMm / 2);
-  const minY = margin + halfFixationDist;
-  const maxY = Math.max(minY, alturaRefMm - margin - halfFixationDist);
+  const minO = margin + halfFixationDist;
+  const maxO = Math.max(minO, axisLenMm - margin - halfFixationDist);
 
   return positions
-    .map((y) => Number(y))
-    .filter((y) => Number.isFinite(y))
-    .map((y) => clampNumber(y, minY, maxY));
+    .map((o) => Number(o))
+    .filter((o) => Number.isFinite(o))
+    .map((o) => clampNumber(o, minO, maxO));
 }
 
 /** Posições X (mm) para furação top/bottom: porta = master, painel cima/fundo copia. Lógica paralela à de altura da porta, ao longo da largura. */
@@ -77,7 +99,7 @@ function getHingePositionsFromDoorWidth(
   panelWidthMm: number
 ): number[] {
   if (!Number.isFinite(doorWidthMm) || doorWidthMm <= 0) return [];
-  const numHinges = getNumDobradicas(doorWidthMm / 10, rules);
+  const numHinges = getNumDobradicas(doorWidthMm, rules);
   const doorPositions = getHingeYPositions(doorWidthMm, numHinges, rules);
   if (doorPositions.length === 0) return [];
   if (!Number.isFinite(panelWidthMm) || panelWidthMm <= 0) return doorPositions;
@@ -242,32 +264,60 @@ export function buildPanelDrillingResult(
   // Regras da Porta (Configuração de Regras → Regras da Porta): número de dobradiças por altura/largura da porta.
   const numHingesForDoor = isDoor
     ? (input.hingeSide === "top" || input.hingeSide === "bottom"
-        ? getNumDobradicas(input.larguraMm / 10, rules)
-        : getNumDobradicas(input.alturaMm / 10, rules))
+        ? getNumDobradicas(input.larguraMm, rules)
+        : getNumDobradicas(input.alturaMm, rules))
     : 0;
   const numHinges = isDoor ? numHingesForDoor : rules.furos.tecnicos.dobradica.numeroPorPorta;
 
   let hingePositions: number[] = [];
-  if (isLateral && Number.isFinite(input.doorHeightMm) && Number(input.doorHeightMm) > 0) {
-    // Overlay doors: hinge positions are fixed distances from
-    // the lateral top/bottom edges — independent of door height
-    const rawLateralHinges = getHingeYPositions(input.alturaMm, numHinges, rules);
-    hingePositions = sanitizeHingePositions(rawLateralHinges, input.alturaMm, distEntreFixacao);
+  const openingHeightMm =
+    Number.isFinite(input.openingHeightMm) && Number(input.openingHeightMm) > 0
+      ? Number(input.openingHeightMm)
+      : input.alturaMm;
+  // Folgas podem ser negativas (porta overlay maior que o vão físico do painel lateral).
+  const bottomGapMm = Number(input.bottomGapMm ?? 0);
+  // topGapMm é usado apenas para reconstrução de eixo global no caller; aqui não é necessário.
+
+  // Porta é sempre a fonte primária: se posições vierem do upstream, apenas copiar.
+  if (Array.isArray(input.hingePositionsMm) && input.hingePositionsMm.length > 0) {
+    const refLenMm =
+      input.hingeSide === "top" || input.hingeSide === "bottom" ? input.larguraMm : openingHeightMm;
+    const globalOffsets = sanitizeHingeOffsetsFromEdge(input.hingePositionsMm, refLenMm, distEntreFixacao);
+    // Converter offsets globais do vão para offsets locais da peça.
+    // Porta flutua no vão → offsetLocal = offsetGlobal - bottomGap.
+    if (isDoor && (input.hingeSide === "left" || input.hingeSide === "right")) {
+      hingePositions = globalOffsets.map((o) => o - bottomGapMm);
+    } else {
+      // Laterais representam o próprio vão (openingHeightMm deve bater com a altura do painel lateral).
+      hingePositions = globalOffsets;
+    }
   } else if (isDoor) {
     /* Porta: top/bottom = posições ao longo da largura (X); left/right = ao longo da altura (Y). */
     if (input.hingeSide === "top" || input.hingeSide === "bottom") {
       const rawDoorHinges = getHingeYPositions(input.larguraMm, numHinges, rules);
-      hingePositions = sanitizeHingePositions(rawDoorHinges, input.larguraMm, distEntreFixacao);
+      hingePositions = sanitizeHingeOffsetsFromEdge(rawDoorHinges, input.larguraMm, distEntreFixacao);
     } else {
-      const rawDoorHinges = getHingeYPositions(input.alturaMm, numHinges, rules);
-      hingePositions = sanitizeHingePositions(rawDoorHinges, input.alturaMm, distEntreFixacao);
+      // Offsets SEMPRE em relação ao vão (openingHeightMm), não à altura isolada da porta.
+      const rawGlobal = getHingeYPositions(openingHeightMm, numHinges, rules);
+      const globalOffsets = sanitizeHingeOffsetsFromEdge(rawGlobal, openingHeightMm, distEntreFixacao);
+      hingePositions = globalOffsets.map((o) => o - bottomGapMm);
+    }
+  } else if (isLateral) {
+    // Regra: lateral NÃO recalcula posições de dobradiça, MAS precisa receber offsets globais do vão
+    // (hingePositionsMm) OU, se não vierem, calcular a partir do vão (openingHeightMm) para não
+    // quebrar cenários onde o upstream ainda não passa a lista.
+    if (Array.isArray(input.hingePositionsMm) && input.hingePositionsMm.length > 0) {
+      hingePositions = sanitizeHingeOffsetsFromEdge(input.hingePositionsMm, openingHeightMm, distEntreFixacao);
+    } else {
+      const raw = getHingeYPositions(openingHeightMm, Math.max(2, rules.furos.tecnicos.dobradica.numeroPorPorta), rules);
+      hingePositions = sanitizeHingeOffsetsFromEdge(raw, openingHeightMm, distEntreFixacao);
     }
   } else if ((isTopPanel && input.hingeSide === "top") || (isBottomPanel && input.hingeSide === "bottom")) {
     /* Painel cima/fundo: posições X copiadas da largura da porta (porta = master). Fallback: usar largura do painel. */
     const refWidthMm = Number.isFinite(input.doorWidthMm) ? Number(input.doorWidthMm) : input.larguraMm;
     if (Number.isFinite(refWidthMm) && refWidthMm > 0) {
       const panelPositions = getHingePositionsFromDoorWidth(rules, refWidthMm, input.larguraMm);
-      hingePositions = sanitizeHingePositions(panelPositions, input.larguraMm, distEntreFixacao);
+      hingePositions = sanitizeHingeOffsetsFromEdge(panelPositions, input.larguraMm, distEntreFixacao);
     }
   }
 
