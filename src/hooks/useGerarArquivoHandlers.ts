@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { createElement, useCallback, useMemo, useRef, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import JSZip from "jszip";
 import { useProject } from "../context/useProject";
 import { useToast } from "../context/ToastContext";
@@ -18,6 +19,40 @@ import {
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
 import { sanitizeZipPath } from "../utils/sanitization";
+import PiLoader from "../components/PiLoader/PiLoader";
+
+let cutLayoutLoaderRoot: Root | null = null;
+let cutLayoutLoaderHost: HTMLDivElement | null = null;
+
+function yieldToMainThread(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
+function showCutLayoutLoader() {
+  if (typeof document === "undefined") return;
+  if (!cutLayoutLoaderHost) {
+    cutLayoutLoaderHost = document.createElement("div");
+    cutLayoutLoaderHost.id = "pimo-cut-layout-loader-root";
+    document.body.appendChild(cutLayoutLoaderHost);
+    cutLayoutLoaderRoot = createRoot(cutLayoutLoaderHost);
+  }
+  cutLayoutLoaderRoot!.render(createElement(PiLoader, { isVisible: true }));
+}
+
+function hideCutLayoutLoader() {
+  if (!cutLayoutLoaderRoot || !cutLayoutLoaderHost) return;
+  cutLayoutLoaderRoot.render(createElement(PiLoader, { isVisible: false }));
+  const root = cutLayoutLoaderRoot;
+  const host = cutLayoutLoaderHost;
+  cutLayoutLoaderRoot = null;
+  cutLayoutLoaderHost = null;
+  queueMicrotask(() => {
+    root.unmount();
+    host.remove();
+  });
+}
 
 function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
   const arr = doc.output("arraybuffer");
@@ -300,6 +335,8 @@ export function useGerarArquivoHandlers() {
       return;
     }
     try {
+      showCutLayoutLoader();
+      await yieldToMainThread();
       const parametric = cutlistComPrecoFromBoxes(
         boxes,
         project.rules,
@@ -336,6 +373,8 @@ export function useGerarArquivoHandlers() {
       const msg = err instanceof Error ? err.message : String(err);
       devLogger.error("Layout de Corte PRO:", err);
       showToast(`Layout de Corte PRO: falha — ${msg}`, "error");
+    } finally {
+      hideCutLayoutLoader();
     }
   }, [
     hasBoxes,
@@ -565,6 +604,8 @@ export function useGerarArquivoHandlers() {
       try {
         const pieces = cutlistToPieces(allItems);
         if (pieces.length > 0) {
+          showCutLayoutLoader();
+          await yieldToMainThread();
           const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
             ...getDefaultCncLayoutOptions(),
             originTopRight: true,
@@ -583,6 +624,8 @@ export function useGerarArquivoHandlers() {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push({ step: "Layout de Corte PRO", message: msg });
         devLogger.error("Full export: Layout de Corte", err);
+      } finally {
+        hideCutLayoutLoader();
       }
 
       // --- CNC (TCN): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
