@@ -13,7 +13,7 @@ type PiPainelIndustrial = {
   altura_mm: number;
   espessura_mm: number;
   material: string;
-  orientacaoFibra: "horizontal" | "vertical";
+  orientacaoFibra: "horizontal" | "vertical" | "none";
   quantidade: number;
   custo: number;
 };
@@ -73,7 +73,7 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       altura_mm: clampPositive(profundidade),
       espessura_mm: espessura,
       material,
-      orientacaoFibra: "horizontal",
+      orientacaoFibra: "none",
       quantidade: 1,
       custo: 0,
     },
@@ -84,7 +84,7 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       altura_mm: clampPositive(profundidade),
       espessura_mm: espessura,
       material,
-      orientacaoFibra: "horizontal",
+      orientacaoFibra: "none",
       quantidade: 1,
       custo: 0,
     },
@@ -95,7 +95,7 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       altura_mm: clampPositive(altura),
       espessura_mm: espessura,
       material,
-      orientacaoFibra: "vertical",
+      orientacaoFibra: "none",
       quantidade: 1,
       custo: 0,
     },
@@ -106,7 +106,7 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       altura_mm: clampPositive(altura),
       espessura_mm: espessura,
       material,
-      orientacaoFibra: "vertical",
+      orientacaoFibra: "none",
       quantidade: 1,
       custo: 0,
     },

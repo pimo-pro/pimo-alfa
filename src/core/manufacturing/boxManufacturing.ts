@@ -14,7 +14,7 @@ type PainelIndustrial = {
   altura_mm: number;
   espessura_mm: number;
   material: string;
-  orientacaoFibra: "horizontal" | "vertical";
+  orientacaoFibra: "horizontal" | "vertical" | "none";
   quantidade: number;
   custo: number;
 };
@@ -183,7 +183,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     altura_mm: clampPositive(profundidade),
     espessura_mm: espessura,
     material,
-    orientacaoFibra: "horizontal",
+    orientacaoFibra: "none",
     quantidade: 1,
     custo: 0,
   });
@@ -195,7 +195,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     altura_mm: clampPositive(profundidade),
     espessura_mm: espessura,
     material,
-    orientacaoFibra: "horizontal",
+    orientacaoFibra: "none",
     quantidade: 1,
     custo: 0,
   });
@@ -207,7 +207,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     altura_mm: alturaLateral,
     espessura_mm: espessura,
     material,
-    orientacaoFibra: "vertical",
+    orientacaoFibra: "none",
     quantidade: 1,
     custo: 0,
   });
@@ -219,7 +219,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     altura_mm: alturaLateral,
     espessura_mm: espessura,
     material,
-    orientacaoFibra: "vertical",
+    orientacaoFibra: "none",
     quantidade: 1,
     custo: 0,
   });
@@ -249,7 +249,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
         altura_mm: profundidadePrateleira,
         espessura_mm: espessura,
         material,
-        orientacaoFibra: "horizontal",
+        orientacaoFibra: "none",
         quantidade: 1,
         custo: 0,
       });
