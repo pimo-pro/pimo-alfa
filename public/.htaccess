@@ -1,6 +1,12 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Auth API — tem de vir ANTES do fallback SPA (senão /me e /auth/login vão para index.html)
+  RewriteRule ^auth/login$ api/auth/index.php [L]
+  RewriteRule ^me$ api/auth/index.php [L]
+  RewriteRule ^users$ api/users/index.php [L]
+
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

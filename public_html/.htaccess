@@ -17,4 +17,10 @@
 
   # Mapeamento interno: /api/projects/<ficheiro> → backend no disco
   RewriteRule ^api/projects/(.*)$ /home/u100505900/public_html/api/projects/$1 [L]
+
+  # SPA React (Vite) — por último, para não capturar /me nem /auth/login
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
 </IfModule>
