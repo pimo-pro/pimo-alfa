@@ -399,7 +399,7 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
   if (!Number.isFinite(xCalco) || xCalco <= 0) xCalco = DEFAULTS_DOBRADICA_FIXACAO.distanciaDaBordaCalco;
   let xUniao = Number(cfg.distanciaDaBordaParafusoUniao);
   if (!Number.isFinite(xUniao) || xUniao <= 0) xUniao = DEFAULTS_DOBRADICA_FIXACAO.distanciaDaBordaParafusoUniao;
-  if (piece.tipo === "lateral_esquerda") {
+  if (piece.tipo === "lateral_esquerda" || piece.tipo === "lateral_direita") {
     xCalco = piece.largura - xCalco;
     xUniao = piece.largura - xUniao;
   }

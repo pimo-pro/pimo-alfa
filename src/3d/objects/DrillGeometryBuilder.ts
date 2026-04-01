@@ -130,13 +130,12 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
       }
 
       axisInward = getInwardAxisForHole(panelType, hole).normalize();
+      const lateralInterior =
+        String(hole.face) === "B" || hole.face === "direita";
       if (panelType === "left") {
-        entry.set(hole.face === "direita" ? entryOffset : -entryOffset, b, a);
+        entry.set(lateralInterior ? entryOffset : -entryOffset, b, a);
       } else if (panelType === "right") {
-        if (hole.tipo === "dobradica" || hole.tipo === "dobradica_fixacao") {
-          console.log("[RIGHT-HINGE]", { face: hole.face, a, b, entryOffset, entry_x: hole.face === "direita" ? entryOffset : -entryOffset });
-        }
-        entry.set(hole.face === "direita" ? entryOffset : -entryOffset, b, a);
+        entry.set(lateralInterior ? entryOffset : -entryOffset, b, a);
       } else {
         entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
       }

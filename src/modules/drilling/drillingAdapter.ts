@@ -415,18 +415,6 @@ export function buildViewerDrillMarkersByPanelResult(
     if (tipo === "porta") return portaMerged;
     const item = byType.get(tipo);
     if (!item?.drillHoles?.length) return [];
-    if (tipo === "lateral_esquerda") {
-      console.log(
-        "[LATERAL-ESQUERDA-HOLES]",
-        item?.drillHoles?.map((h) => ({ holeType: h.holeType, face: h.face, x: h.x, y: h.y }))
-      );
-    }
-    if (tipo === "lateral_direita") {
-      console.log(
-        "[LATERAL-DIREITA-HOLES]",
-        item?.drillHoles?.map((h) => ({ holeType: h.holeType, face: h.face, x: h.x, y: h.y }))
-      );
-    }
     if (tipo === "lateral_esquerda" || tipo === "lateral_direita") {
       const holesToUse = onlyInternalFaceHoles(item.drillHoles);
       const lateralFace: DrillFace = tipo === "lateral_esquerda" ? "direita" : "direita";
