@@ -66,9 +66,13 @@ jobs:
           port: 21
           local-dir: dist/
           server-dir: /public_html/
-          dangerous-clean-slate: true
+          # Não apagar no servidor ficheiros que não existem em dist/ (dados persistentes).
+          dangerous-clean-slate: false
           exclude: |
             **/textures/**
+            **/api/data/**
+            **/api/projects/**
+            **/api/materials/**
 
 
 
