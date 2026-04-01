@@ -65,7 +65,7 @@ export function AuthProvider({ children }: Props) {
         username: me.user.username,
         role: me.user.role,
       });
-      setPermissions(me.user.permissions);
+      setPermissions(Array.isArray(me.user.permissions) ? me.user.permissions : []);
 
       localStorage.setItem(STORAGE_TOKEN, loginResult.token);
       localStorage.setItem(
@@ -76,7 +76,10 @@ export function AuthProvider({ children }: Props) {
           role: me.user.role,
         })
       );
-      localStorage.setItem(STORAGE_PERMISSIONS, JSON.stringify(me.user.permissions));
+      localStorage.setItem(
+        STORAGE_PERMISSIONS,
+        JSON.stringify(Array.isArray(me.user.permissions) ? me.user.permissions : [])
+      );
     },
     []
   );

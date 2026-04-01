@@ -29,9 +29,9 @@ export default function DashboardPage() {
         </Section>
         <Section title="Permissões efetivas">
           <Card>
-            {permissions.length > 0 ? (
+            {(permissions ?? []).length > 0 ? (
               <div className="ui-inline-list">
-                {permissions.map((permission) => (
+                {(permissions ?? []).map((permission) => (
                   <span key={permission} className="ui-badge">
                     {permission}
                   </span>
