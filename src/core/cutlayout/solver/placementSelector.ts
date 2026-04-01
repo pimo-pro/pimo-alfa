@@ -94,19 +94,28 @@ export function pickBestPieceForSheet(
       : limit;
 
   if (bin === "firstFit") {
-    for (let i = 0; i < limit; i++) {
-      const placement = findPlacementForPiece(
-        remaining[i],
-        strategy,
-        sheet,
-        placedRects,
-        state,
-        kerf,
-        rotationCfg,
-        bin,
-        deps
-      );
-      if (placement) return { index: i, placement };
+    const scanFirstFit = (from: number, to: number) => {
+      const end = Math.min(to, remaining.length);
+      for (let i = from; i < end; i++) {
+        const placement = findPlacementForPiece(
+          remaining[i],
+          strategy,
+          sheet,
+          placedRects,
+          state,
+          kerf,
+          rotationCfg,
+          bin,
+          deps
+        );
+        if (placement) return { index: i, placement };
+      }
+      return null;
+    };
+    const head = scanFirstFit(0, limit);
+    if (head) return head;
+    if (remaining.length > limit) {
+      return scanFirstFit(limit, remaining.length);
     }
     return null;
   }
@@ -127,6 +136,24 @@ export function pickBestPieceForSheet(
     if (!placement) continue;
     const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg);
     if (!best || score > best.score) best = { index: i, placement, score };
+  }
+  if (!best && remaining.length > dynamicLimit) {
+    for (let i = dynamicLimit; i < remaining.length; i++) {
+      const placement = findPlacementForPiece(
+        remaining[i],
+        strategy,
+        sheet,
+        placedRects,
+        state,
+        kerf,
+        rotationCfg,
+        bin,
+        deps
+      );
+      if (!placement) continue;
+      const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg);
+      if (!best || score > best.score) best = { index: i, placement, score };
+    }
   }
   return best ? { index: best.index, placement: best.placement } : null;
 }

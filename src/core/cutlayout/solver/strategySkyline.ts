@@ -133,7 +133,6 @@ export function findPlacementSkyline(
         rotationDelta: 0,
         alternativeRotationAvailable: false,
       });
-      if (bin === "firstFit") break;
     }
   }
 
@@ -142,5 +141,11 @@ export function findPlacementSkyline(
   const rotated = deps.pickBestCandidateByRotation(candidates, 90);
   const picked = deps.chooseOrientationWithRotationBias(normal, rotated, cfg);
   if (bin === "firstFit" && picked) return picked;
-  return candidates.sort((a, b) => a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore)[0];
+  return candidates.sort((a, b) => {
+    const wasteA =
+      Math.max(0, sheet.largura_mm - (a.x + a.w)) * a.h + Math.max(0, sheet.altura_mm - (a.y + a.h)) * a.w;
+    const wasteB =
+      Math.max(0, sheet.largura_mm - (b.x + b.w)) * b.h + Math.max(0, sheet.altura_mm - (b.y + b.h)) * b.w;
+    return wasteA - wasteB || a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore;
+  })[0];
 }

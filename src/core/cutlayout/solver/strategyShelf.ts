@@ -40,23 +40,46 @@ export function findPlacementShelf(
 
   for (const o of orientations) {
     for (const shelf of sortedShelves) {
-      const x = shelf.nextX;
       const y = shelf.y;
-      if (x + o.w > sheet.largura_mm + EPS) continue;
       if (o.h > shelf.height + EPS) continue;
       if (y + o.h > sheet.altura_mm + EPS) continue;
-      if (deps.overlaps(x, y, o.w, o.h, placed, kerf)) continue;
-      candidates.push({
-        x,
-        y,
-        w: o.w,
-        h: o.h,
-        rotation: o.rotation,
-        orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
-        rotationDelta: 0,
-        alternativeRotationAvailable: false,
-      });
-      if (bin === "firstFit") break;
+
+      const xCandidates: number[] = [shelf.nextX];
+      const inLine = placed
+        .filter((p) => Math.abs(p.y - shelf.y) < EPS)
+        .sort((a, b) => a.x - b.x);
+      for (const p of inLine) {
+        xCandidates.push(p.x + p.w + kerf);
+      }
+
+      const seen = new Set<number>();
+      let extraCount = 0;
+      for (let i = 0; i < xCandidates.length; i++) {
+        const raw = Number(xCandidates[i]);
+        if (!Number.isFinite(raw)) continue;
+        const x = Math.max(0, raw);
+        const k = Math.round(x * 1000) / 1000;
+        if (seen.has(k)) continue;
+        seen.add(k);
+
+        if (i !== 0) {
+          extraCount += 1;
+          if (extraCount > 4) break;
+        }
+
+        if (x + o.w > sheet.largura_mm + EPS) continue;
+        if (deps.overlaps(x, y, o.w, o.h, placed, kerf)) continue;
+        candidates.push({
+          x,
+          y,
+          w: o.w,
+          h: o.h,
+          rotation: o.rotation,
+          orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
+          rotationDelta: 0,
+          alternativeRotationAvailable: false,
+        });
+      }
     }
 
     const maxY = state.shelves.length === 0 ? 0 : Math.max(...state.shelves.map((s) => s.y + s.height + kerf));

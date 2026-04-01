@@ -4,7 +4,7 @@ type PlacedRect = { x: number; y: number; w: number; h: number };
 type ScoreModel = "legacy" | "v32";
 
 const EPS = 0.001;
-const LAST_SHEET_SMALL_PART_THRESHOLD_MM2 = 120000; // ~350x350
+const LAST_SHEET_SMALL_PART_THRESHOLD_MM2 = 200000; // ~447x447 — mais peças elegíveis para mover da última chapa
 const LAST_SHEET_MICRO_ADJUST_MM = 3;
 
 export type LastSheetRefineDeps = {
@@ -129,7 +129,7 @@ export function trySwapSmallPieceToPrevious(
       const sheetRes = previous[sIdx];
       const candidates = [...sheetRes.placements]
         .sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm)
-        .slice(0, 6);
+        .slice(0, 10);
       for (const victim of candidates) {
         const kept = sheetRes.placements.filter((p) => p !== victim);
         const fitTarget = deps.findBestResidualPlacement(target, kept, sheet, kerf);

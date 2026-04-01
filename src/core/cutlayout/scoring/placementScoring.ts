@@ -108,6 +108,11 @@ export function scorePlacement(
   const areaGain = (placement.w * placement.h) / sheetArea;
   const bottomLeftBias =
     1 - (placement.y / Math.max(1, sheet.altura_mm)) - (placement.x / Math.max(1, sheet.largura_mm)) * 0.5;
+  const rightSlack = Math.max(0, sheet.largura_mm - (placement.x + placement.w));
+  const topSlack = Math.max(0, sheet.altura_mm - (placement.y + placement.h));
+  const localWaste = rightSlack * placement.h + topSlack * placement.w;
+  const compactness01 = 1 - Math.min(1, localWaste / sheetArea);
+  const compactnessScore = compactness01 * 0.15;
   const expectedUtil = currentUtilization + areaGain;
   const utilizationReward = expectedUtil >= MIN_UTILIZATION_PERCENT ? 0.4 : expectedUtil * 0.2;
   let rotationScore = 0;
@@ -118,5 +123,12 @@ export function scorePlacement(
       rotationScore -= rotationCfg.rotationPenalty * placement.rotationDelta;
     }
   }
-  return areaGain * 2.0 + bottomLeftBias * 0.3 + utilizationReward + placement.orientationScore * 0.25 + rotationScore;
+  return (
+    areaGain * 2.0 +
+    bottomLeftBias * 0.3 +
+    utilizationReward +
+    placement.orientationScore * 0.25 +
+    rotationScore +
+    compactnessScore
+  );
 }

@@ -40,7 +40,7 @@ export function getOrientations(
   isRotatablePiece: (_piece: CutPiece) => boolean
 ): Array<{ w: number; h: number; rotation: number }> {
   const list = [{ w: piece.largura_mm, h: piece.altura_mm, rotation: 0 }];
-  const canRotate = cfg.rotationPreferenceMode !== "disabled" && isRotatablePiece(piece);
+  const canRotate = isRotatablePiece(piece);
   if (canRotate) list.push({ w: piece.altura_mm, h: piece.largura_mm, rotation: 90 });
   return list;
 }
@@ -60,11 +60,12 @@ export function chooseOrientationWithRotationBias(
   let adjustedNormal = normalScore;
   let adjustedRotated = rotatedScore;
 
-  if (cfg.rotationPreferenceMode === "aggressive") {
+  if (
+    cfg.rotationPreferenceMode === "aggressive" ||
+    cfg.rotationPreferenceMode === "auto" ||
+    cfg.rotationPreferenceMode === "disabled"
+  ) {
     adjustedRotated += cfg.rotationWeight;
-  } else if (cfg.rotationPreferenceMode === "auto") {
-    adjustedRotated += Math.max(0, rotationDelta) * cfg.rotationWeight;
-    if (rotationDelta > 0) adjustedNormal -= cfg.rotationPenalty * rotationDelta;
   }
 
   if (adjustedRotated > adjustedNormal) {

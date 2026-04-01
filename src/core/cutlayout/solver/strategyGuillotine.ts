@@ -73,7 +73,6 @@ export function findPlacementGuillotine(
         rotationDelta: 0,
         alternativeRotationAvailable: false,
       });
-      if (bin === "firstFit") break;
     }
   }
   if (candidates.length === 0) return null;
