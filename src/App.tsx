@@ -13,6 +13,8 @@ import { ProjectProvider } from "./context/ProjectProvider";
 import { MaterialProvider } from "./context/materialContext";
 import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
+import { PendingWorkspaceMergeEffect } from "./context/PendingWorkspaceMergeEffect";
+import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
@@ -29,6 +31,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import MePage from "./pages/MePage";
 import ProjectsPage from "./pages/ProjectsPage";
+import ProjectsViewerPage from "./pages/ProjectsViewerPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -187,6 +190,8 @@ function LegacyApp() {
       <SettingsProvider>
         <MaterialProvider>
           <ToastProvider>
+            <PendingWorkspaceMergeEffect />
+            <PendingSingleLoadEffect />
             <PimoViewerProvider>
             <div className="app-root">
         <Header />
@@ -359,6 +364,14 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/me" element={<MePage />} />
+            <Route
+              path="/projects/viewer"
+              element={
+                <AdminRoute>
+                  <ProjectsViewerPage />
+                </AdminRoute>
+              }
+            />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
             <Route

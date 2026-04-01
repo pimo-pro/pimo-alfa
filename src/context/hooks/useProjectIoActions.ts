@@ -18,6 +18,7 @@ import {
   saveProject,
   saveSnapshot,
 } from "../../core/projects/projectsClient";
+import { mergeProjectSnapshotsIntoWorkspace } from "../../core/projects/projectMergeWorkspace";
 import { defaultState } from "../projectState";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
@@ -27,6 +28,7 @@ export type ProjectIoActions = Pick<
   | "saveProjectSnapshot"
   | "saveManualBackupSnapshot"
   | "loadProjectSnapshot"
+  | "mergeSnapshots"
   | "listSavedProjects"
   | "createNewProject"
   | "setProjectName"
@@ -101,6 +103,15 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
           }
         }
         updateProject(() => applyResultados(restored));
+      },
+      mergeSnapshots: async (ids) => {
+        const merged = await mergeProjectSnapshotsIntoWorkspace(ids);
+        viewerSync.restoreViewerSnapshot(null);
+        wallStore.getState().clearRoom();
+        undoStackRef.current = [];
+        redoStackRef.current = [];
+        updateProject(() => applyResultados(merged), false);
+        logProjectIo("merge-snapshots", { count: ids.length });
       },
       listSavedProjects: async (scope = "mine"): Promise<SavedProjectInfo[]> => {
         const currentUser = getCurrentProjectUser();

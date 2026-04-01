@@ -1,0 +1,53 @@
+import { Canvas } from "@react-three/fiber";
+import type { ReactNode } from "react";
+
+import { useShowroomStore } from "./showroomStore";
+import { ShowroomArrowKeys } from "./ShowroomArrowKeys";
+import { ShowroomMeasureFloor } from "./ShowroomMeasureFloor";
+import { ShowroomMeasureLine } from "./ShowroomMeasureLine";
+import { ShowroomOrbitControls } from "./ShowroomOrbitControls";
+import { ShowroomRotatePointer } from "./ShowroomRotatePointer";
+
+type Props = {
+  children: ReactNode;
+};
+
+/**
+ * Canvas 3D do showroom: sem ProjectProvider, sem sala. Ferramentas locais via Zustand.
+ */
+export function ShowroomCanvas({ children }: Props) {
+  return (
+    <div
+      style={{
+        height: "min(70vh, 680px)",
+        width: "100%",
+        borderRadius: 8,
+        overflow: "hidden",
+        border: "1px solid var(--border, #ccc)",
+        background: "#d8dce3",
+      }}
+    >
+      <Canvas
+        camera={{ position: [14, 11, 14], fov: 45, near: 0.1, far: 500 }}
+        gl={{ antialias: true, alpha: false }}
+        shadows={false}
+        onPointerMissed={() => {
+          const { activeTool, setSelectedId } = useShowroomStore.getState();
+          if (activeTool !== "measure") setSelectedId(null);
+        }}
+      >
+        <color attach="background" args={["#d8dce3"]} />
+        <ambientLight intensity={0.72} />
+        <directionalLight position={[12, 18, 8]} intensity={1.05} />
+        <hemisphereLight args={["#ffffff", "#9096a0", 0.35]} />
+        <ShowroomOrbitControls />
+        <ShowroomRotatePointer />
+        <ShowroomArrowKeys />
+        <gridHelper args={[80, 40, "#b0b4bc", "#c8ccd4"]} position={[0, 0, 0]} />
+        {children}
+        <ShowroomMeasureFloor />
+        <ShowroomMeasureLine />
+      </Canvas>
+    </div>
+  );
+}

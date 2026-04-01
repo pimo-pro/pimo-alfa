@@ -473,6 +473,8 @@ export interface ProjectActions {
   /** Cria backup manual dedicado (independente do autosave regular). */
   saveManualBackupSnapshot: () => void;
   loadProjectSnapshot: (_id: string) => Promise<void>;
+  /** Combina vários snapshots guardados num único estado de workspace (opcional; não altera os projetos guardados). */
+  mergeSnapshots: (_ids: string[]) => Promise<void>;
   /** Carrega projeto a partir de um template (limpa sala, caixas e substitui pelo layout do modelo). */
   loadProjectFromTemplate: (_templateId: string) => void;
   /** Adiciona um template como novas caixas no workspace (não substitui o projeto). */
