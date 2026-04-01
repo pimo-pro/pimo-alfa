@@ -49,6 +49,13 @@ export type PanelDrillingInput = {
    * Quando fornecido, o painel deve copiar SEM recalcular.
    */
   hingePositionsMm?: number[];
+  /**
+   * Contexto do módulo (ex.: cutlist): necessário para permitir furos de dobradiça em laterais.
+   * Sem ambos definidos, laterais não geram hingePositions nem dobradica_fixacao / parafuso_uniao.
+   */
+  portaTipo?: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
+  /** Tamanho de doorsLayer no módulo (número de folhas/itens). */
+  doorsLayerCount?: number;
 };
 
 export type PanelDrillingOutput = {
@@ -68,6 +75,13 @@ const clampNumber = (value: number, min: number, max: number): number => Math.mi
 
 function toFiniteNumber(value: unknown, fallback: number): number {
   return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
+/** Laterais: só dobradiça quando há porta real no módulo e hingeSide definido (cutlist passa portaTipo + doorsLayerCount). */
+function lateralModuleAllowsHingeDrilling(input: PanelDrillingInput): boolean {
+  if (input.portaTipo === undefined || input.doorsLayerCount === undefined) return false;
+  if (input.portaTipo === "sem_porta" || input.doorsLayerCount <= 0) return false;
+  return input.hingeSide !== undefined;
 }
 
 /**
@@ -303,13 +317,12 @@ export function buildPanelDrillingResult(
       hingePositions = globalOffsets.map((o) => o - bottomGapMm);
     }
   } else if (isLateral) {
-    // Regra: lateral NÃO recalcula posições de dobradiça, MAS precisa receber offsets globais do vão
-    // (hingePositionsMm) OU, se não vierem, calcular a partir do vão (openingHeightMm) para não
-    // quebrar cenários onde o upstream ainda não passa a lista.
-    if (Array.isArray(input.hingePositionsMm) && input.hingePositionsMm.length > 0) {
+    if (!lateralModuleAllowsHingeDrilling(input)) {
+      hingePositions = [];
+    } else if (Array.isArray(input.hingePositionsMm) && input.hingePositionsMm.length > 0) {
       hingePositions = sanitizeHingeOffsetsFromEdge(input.hingePositionsMm, openingHeightMm, distEntreFixacao);
     } else {
-      const raw = getHingeYPositions(openingHeightMm, Math.max(2, rules.furos.tecnicos.dobradica.numeroPorPorta), rules);
+      const raw = getHingeYPositions(openingHeightMm, Math.max(2, getNumDobradicas(openingHeightMm, rules)), rules);
       hingePositions = sanitizeHingeOffsetsFromEdge(raw, openingHeightMm, distEntreFixacao);
     }
   } else if ((isTopPanel && input.hingeSide === "top") || (isBottomPanel && input.hingeSide === "bottom")) {
@@ -319,6 +332,10 @@ export function buildPanelDrillingResult(
       const panelPositions = getHingePositionsFromDoorWidth(rules, refWidthMm, input.larguraMm);
       hingePositions = sanitizeHingeOffsetsFromEdge(panelPositions, input.larguraMm, distEntreFixacao);
     }
+  }
+
+  if (isLateral && !lateralModuleAllowsHingeDrilling(input)) {
+    hingePositions = [];
   }
 
   // Furos de prateleira: regra existente do motor (desativar quando há gavetas no mesmo módulo).

@@ -87,6 +87,7 @@ export function cutlistComPrecoFromBox(
   );
   const doorHeightMm = firstDoorPanel?.altura_mm ?? (modelo.portas.length > 0 ? modelo.portas[0].altura_mm : undefined);
   const doorsLayer = box.doorsLayer ?? [];
+  const doorsLayerCount = doorsLayer.length;
   const hasDoorLeft = doorsLayer.some((d) => d.hingeSide === "left");
   const hasDoorRight = doorsLayer.some((d) => d.hingeSide === "right");
   const hasDoorTop = doorsLayer.some((d) => d.hingeSide === "top");
@@ -125,6 +126,8 @@ export function cutlistComPrecoFromBox(
         bottomGapMm: bottomGap,
         topGapMm: topGap,
         hingeSide,
+        portaTipo: box.portaTipo,
+        doorsLayerCount,
       },
       effRules
     );
@@ -220,6 +223,8 @@ export function cutlistComPrecoFromBox(
             topGapMm: topGap,
             hingeSide,
             hingePositionsMm: hingePositionsForLateral,
+            portaTipo: box.portaTipo,
+            doorsLayerCount,
           },
           effRules
         );

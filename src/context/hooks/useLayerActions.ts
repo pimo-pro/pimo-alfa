@@ -80,7 +80,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                   gavetas: valor,
                   portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
                   prateleiras: valor > 0 ? 0 : box.prateleiras,
-                  doorsLayer: valor > 0 ? [] : box.doorsLayer,
+                  doorsLayer: valor > 0 ? box.doorsLayer : [],
                   panelIds: ensureBoxPanelIds(box.panelIds, {
                     ...box,
                     gavetas: valor,
@@ -133,6 +133,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                   portaTipo,
                   gavetas: portaTipo === "sem_porta" ? box.gavetas : 0,
                   drawersLayer: portaTipo === "sem_porta" ? box.drawersLayer : [],
+                  doorsLayer: portaTipo === "sem_porta" ? [] : box.doorsLayer,
                   panelIds: ensureBoxPanelIds(box.panelIds, {
                     ...box,
                     portaTipo,
@@ -297,11 +298,17 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);
             if (!selected) return prev;
-            const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-              box.id === selected.id
-                ? { ...box, doorsLayer: (box.doorsLayer ?? []).filter((item) => item.id !== id) }
-                : box
-            );
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id === selected.id) {
+                const newDoorsLayer = (box.doorsLayer ?? []).filter((item) => item.id !== id);
+                return {
+                  ...box,
+                  doorsLayer: newDoorsLayer,
+                  portaTipo: newDoorsLayer.length === 0 ? "sem_porta" : box.portaTipo,
+                };
+              }
+              return box;
+            });
             return {
               ...prev,
               workspaceBoxes,
