@@ -209,6 +209,10 @@ function drawSheetDiagram(
       if (bands.right) drawDottedLine(doc, px + pw - inset, py + inset, px + pw - inset, py + ph - inset);
     }
 
+    // @PIMO-SOON: quando rotacao === 90, transformar coordenadas dos furos:
+    // x_new = placement.altura_mm - hole.y
+    // y_new = hole.x
+    // Aguarda Sonnet no Cursor para implementação segura.
     const holes = pl.holes ?? [];
     if (holes.length > 0) {
       doc.setFillColor(30, 30, 30);
