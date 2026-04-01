@@ -55,6 +55,7 @@ export default function ManageRolesPage() {
   const startEdit = (role: RoleItem) => {
     setEditingId(role.id);
     setEditingName(role.name);
+    // @PIMO-KEEP — guard: role.permissions pode ser undefined
     setEditingPermissions((role.permissions ?? []).join(", "));
   };
 
@@ -115,11 +116,13 @@ export default function ManageRolesPage() {
                 </tr>
               </thead>
               <tbody>
+                {/* @PIMO-KEEP — guard: roles pode ser undefined (defensivo) */}
                 {(roles ?? []).map((role) => (
                   <tr key={role.id}>
                     <td>{role.name}</td>
                     <td>
                       <div className="ui-inline-list">
+                        {/* @PIMO-KEEP — guard: role.permissions pode ser undefined */}
                         {(role.permissions ?? []).map((permission) => (
                           <span key={permission} className="ui-badge">
                             {permission}

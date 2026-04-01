@@ -629,3 +629,245 @@
     gap: var(--ui-space-3);
   }
 }
+
+/* ============================================================
+   SETTINGS DASHBOARD — /dashboard redesign
+   Adicionado: 01.04.2026
+   ============================================================ */
+
+.ui-settings-page-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Layout shell */
+.ui-settings-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* S1 — Icon sidebar */
+.ui-settings-sidebar-icons {
+  width: 56px;
+  min-width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--ui-space-3) 0;
+  gap: var(--ui-space-2);
+  background: var(--ui-color-surface);
+  border-right: 1px solid var(--ui-color-border);
+  overflow: hidden;
+}
+
+.ui-settings-icon-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ui-color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.ui-settings-icon-btn:hover {
+  background: color-mix(in srgb, var(--ui-color-primary) 12%, transparent);
+  color: var(--ui-color-text);
+  border-color: var(--ui-color-border);
+}
+
+.ui-settings-icon-btn--active {
+  background: color-mix(in srgb, var(--ui-color-primary) 18%, transparent);
+  color: var(--ui-color-primary);
+  border-color: color-mix(in srgb, var(--ui-color-primary) 40%, transparent);
+}
+
+/* Tooltip */
+.ui-settings-icon-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ui-color-surface);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-md);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--ui-color-text);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+  box-shadow: var(--ui-shadow-card);
+}
+
+.ui-settings-icon-btn:hover::after {
+  opacity: 1;
+}
+
+/* S2 — Sub-panel */
+.ui-settings-subpanel {
+  width: 220px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.015);
+  border-right: 1px solid var(--ui-color-border);
+  overflow-y: auto;
+  transition: width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease;
+}
+
+.ui-settings-subpanel--collapsed {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.ui-settings-subpanel-header {
+  padding: var(--ui-space-4) var(--ui-space-4) var(--ui-space-3);
+  border-bottom: 1px solid var(--ui-color-border);
+}
+
+.ui-settings-subpanel-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ui-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ui-settings-subpanel-items {
+  display: flex;
+  flex-direction: column;
+  padding: var(--ui-space-3) var(--ui-space-2);
+  gap: 2px;
+}
+
+.ui-settings-subpanel-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border-radius: var(--ui-radius-md);
+  font-size: 13px;
+  color: var(--ui-color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+}
+
+.ui-settings-subpanel-item:hover {
+  background: color-mix(in srgb, var(--ui-color-primary) 10%, transparent);
+  color: var(--ui-color-text);
+}
+
+.ui-settings-subpanel-item--active {
+  background: color-mix(in srgb, var(--ui-color-primary) 16%, transparent);
+  color: var(--ui-color-primary);
+  font-weight: 500;
+}
+
+/* S3 — Main content area */
+.ui-settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ui-space-6) var(--ui-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-5);
+}
+
+/* Avatar circle */
+.ui-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-color-primary) 20%, transparent);
+  border: 2px solid color-mix(in srgb, var(--ui-color-primary) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ui-color-primary);
+  flex-shrink: 0;
+}
+
+/* Role badge (dashboard — não sobrescreve .ui-badge global) */
+.ui-dash-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--ui-radius-pill, 999px);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ui-dash-role-badge--admin {
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  color: #f59e0b;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+}
+
+.ui-dash-role-badge--user {
+  background: color-mix(in srgb, var(--ui-color-primary) 18%, transparent);
+  color: var(--ui-color-primary);
+  border: 1px solid color-mix(in srgb, var(--ui-color-primary) 35%, transparent);
+}
+
+/* Profile card row */
+.ui-profile-card-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+}
+
+/* Empty state */
+.ui-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-6);
+  color: var(--ui-color-text-muted);
+  text-align: center;
+}
+
+.ui-empty-state svg {
+  opacity: 0.35;
+}
+
+/* Coming soon placeholder */
+.ui-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-6);
+  color: var(--ui-color-text-muted);
+  opacity: 0.6;
+}
+
+/* ============================================================
+   END SETTINGS DASHBOARD
+   ============================================================ */

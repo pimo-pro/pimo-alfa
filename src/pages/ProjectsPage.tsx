@@ -17,11 +17,13 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     getProjects()
+      // @PIMO-KEEP — guard: setProjects com resultado potencialmente undefined
       .then((result) => setProjects(result.projects ?? []))
       .catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar projetos"))
       .finally(() => setLoading(false));
   }, []);
 
+  // @PIMO-KEEP — guard: projects pode ser undefined após setState
   const safeProjects = projects ?? [];
 
   if (error) {

@@ -37,6 +37,7 @@ export default function MePage() {
     );
   }
 
+  // @PIMO-KEEP — guard: permissions pode ser undefined vindo da API
   const permissions = data.user.permissions ?? [];
 
   return (

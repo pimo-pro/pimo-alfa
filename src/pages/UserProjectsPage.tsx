@@ -14,6 +14,7 @@ export default function UserProjectsPage() {
     setLoading(true);
     try {
       const result = await actions.listSavedProjects("mine");
+      // @PIMO-KEEP — guard: result pode não ser array
       setProjects(Array.isArray(result) ? result : []);
     } finally {
       setLoading(false);
@@ -25,7 +26,7 @@ export default function UserProjectsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeProjects = useMemo(() => (Array.isArray(projects) ? projects : []), [projects]);
   const latest = useMemo(() => safeProjects.slice(0, 4), [safeProjects]);
 
   return (

@@ -32,6 +32,7 @@ export async function getProjects(): Promise<ProjectsResponse> {
     const { data } = await apiClient.get<ProjectsResponse>("/projects");
     return {
       ...data,
+      // @PIMO-KEEP — guard: API pode devolver projects:undefined
       projects: data?.projects ?? [],
     };
   } catch (error) {

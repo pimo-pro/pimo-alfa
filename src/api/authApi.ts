@@ -41,7 +41,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
   }
 }
 
-/** Garante arrays e campos mínimos quando a API /me devolve payload incompleto. */
+// @PIMO-KEEP — guard: normalizeMeResponse garante permissions:[] quando API devolve undefined
 function normalizeMeResponse(data: MeResponse | undefined): MeResponse {
   const u = data?.user;
   return {
