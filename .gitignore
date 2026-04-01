@@ -27,4 +27,7 @@ dist-ssr
 deploy_key
 deploy_key.pub
 
+# Auth PHP (Hostinger) — contém passwordHash
+api/data/users.json
+
 .claude/

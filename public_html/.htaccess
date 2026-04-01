@@ -10,6 +10,11 @@
   RewriteEngine On
   RewriteBase /
 
+  # Auth JWT (frontend: https://pimo.pro/auth/login e /me)
+  RewriteRule ^auth/login$ api/auth/index.php [L]
+  RewriteRule ^me$ api/auth/index.php [L]
+  RewriteRule ^users$ api/users/index.php [L]
+
   # Mapeamento interno: /api/projects/<ficheiro> → backend no disco
   RewriteRule ^api/projects/(.*)$ /home/u100505900/public_html/api/projects/$1 [L]
 </IfModule>
