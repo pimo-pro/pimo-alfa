@@ -10,10 +10,10 @@ export type AuthState = {
   token: string | null;
   user: AuthUser | null;
   permissions: string[];
-  login: (email: string, password: string) => Promise<void>;
+  login: (_email: string, _password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: () => boolean;
-  hasPermission: (permission: string) => boolean;
+  hasPermission: (_permission: string) => boolean;
   loading: boolean;
 };
 

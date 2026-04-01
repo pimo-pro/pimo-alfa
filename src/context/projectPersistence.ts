@@ -74,6 +74,18 @@ export function reviveState(snapshot: unknown): ProjectState | null {
   ) as ProjectState;
 
   const extractedPartsByBoxId = normalizeExtractedParts(restored.extractedPartsByBoxId);
+
+  const modelPositionsByBoxId: ProjectState["modelPositionsByBoxId"] =
+    restored.modelPositionsByBoxId && typeof restored.modelPositionsByBoxId === "object"
+      ? { ...(restored.modelPositionsByBoxId as ProjectState["modelPositionsByBoxId"]) }
+      : {};
+
+  for (const [boxId, inner] of Object.entries(modelPositionsByBoxId)) {
+    if (inner && typeof inner === "object") {
+      modelPositionsByBoxId[boxId] = { ...inner };
+    }
+  }
+
   const workspaceBoxesRaw = restored.workspaceBoxes ?? [];
   const workspaceBoxes = Array.isArray(workspaceBoxesRaw)
     ? (() => {
@@ -120,6 +132,7 @@ export function reviveState(snapshot: unknown): ProjectState | null {
     materialId,
     dimensoes: { ...defaultState.dimensoes, ...restored.dimensoes },
     extractedPartsByBoxId,
+    modelPositionsByBoxId,
     selectedModelInstanceId: restored.selectedModelInstanceId ?? null,
     lastAutosaveTime:
       typeof restored.lastAutosaveTime === "string" ? restored.lastAutosaveTime : null,

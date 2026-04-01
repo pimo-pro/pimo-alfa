@@ -14,6 +14,7 @@ import {
   SHOWROOM_SPACING_MM,
 } from "../components/showroom/showroomLayout";
 import { useShowroomLoader } from "../components/showroom/useShowroomLoader";
+import { ShowroomGenerateMultiFabricationButton } from "../components/showroom/ShowroomGenerateMultiFabricationButton";
 import { PIMO_PENDING_WORKSPACE_MERGE_IDS } from "../core/projects/projectMergeWorkspace";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -124,7 +125,10 @@ export default function ProjectsViewerPage() {
   const loadedIdsKey = loadedIds.join("\u0001");
 
   useLayoutEffect(() => {
-    if (loading || loadedIds.length === 0) return;
+    if (loading) {
+      useShowroomStore.getState().initProjectIds([]);
+      return;
+    }
     useShowroomStore.getState().initProjectIds(loadedIds);
   }, [loading, loadedIdsKey, loadedIds]);
 
@@ -155,6 +159,7 @@ export default function ProjectsViewerPage() {
           >
             Enviar selecionados para Workspace (Merge)
           </Button>
+          <ShowroomGenerateMultiFabricationButton showroomLoading={loading} />
         </div>
 
         {ids.length === 0 ? (

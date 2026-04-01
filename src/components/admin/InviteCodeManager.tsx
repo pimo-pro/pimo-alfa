@@ -9,7 +9,7 @@ import "../ui/ui.css";
 import { initialInviteCodes, normalizeCode, type InviteCode } from "./inviteCodesMock";
 
 type Props = {
-  onCodesChange?: (codes: InviteCode[]) => void;
+  onCodesChange?: (_codes: InviteCode[]) => void;
 };
 
 export default function InviteCodeManager({ onCodesChange }: Props) {

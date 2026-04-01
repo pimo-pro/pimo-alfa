@@ -96,8 +96,8 @@ function getStructureFingerprint(
   });
 }
 
-/** Posição do projeto. Sempre envia posição para módulos de chão (lower) e quando manual/feet ativos, para preservar Y/Z ao trocar seleção. */
-function getBoxPositionAndRotation(workspaceBox: WorkspaceBox | undefined): Partial<BoxOptions> {
+/** Posição/rotação da caixa no viewer (metros / radianos). Reutilizado pelo showroom para alinhar a pré-visualização ao Workspace. */
+export function getBoxPositionAndRotation(workspaceBox: WorkspaceBox | undefined): Partial<BoxOptions> {
   if (!workspaceBox) return {};
   const opts: Partial<BoxOptions> = {};
   const isLower = workspaceBox.cabinetType === "lower";

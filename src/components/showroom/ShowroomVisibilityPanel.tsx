@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import Button from "../ui/Button";
-import { PIMO_PENDING_SINGLE_LOAD } from "../../workspace/PendingSingleLoadEffect";
+import { PIMO_PENDING_SINGLE_LOAD } from "../../workspace/pendingSingleLoadUtils";
 import { useShowroomStore } from "./showroomStore";
 
 export type ShowroomVisibilityRow = {

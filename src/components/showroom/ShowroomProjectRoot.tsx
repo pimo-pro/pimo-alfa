@@ -1,4 +1,3 @@
-import { Edges } from "@react-three/drei";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -7,6 +6,7 @@ import type { ProjectState } from "../../context/projectTypes";
 import type { ShowroomOffsetMm } from "./showroomLayout";
 import { intersectRayWithHorizontalPlane } from "./showroomRaycast";
 import { useShowroomStore } from "./showroomStore";
+import { ShowroomParametricBoxes } from "./ShowroomParametricBoxes";
 
 type Props = {
   projectId: string;
@@ -98,17 +98,15 @@ export function ShowroomProjectRoot({ projectId, projectState, offsetMm, display
         onPointerDown={handlePointerDown}
         userData={{ projectId, showroom: true }}
       >
-        <mesh position={[0, 0.6, 0]} castShadow receiveShadow userData={{ projectId, showroom: true }}>
-          <boxGeometry args={[1.2, 1.2, 1.2]} />
-          <meshStandardMaterial
-            color="#6b8cae"
-            metalness={0.15}
-            roughness={0.55}
-            emissive={selected ? "#ffcc66" : "#000000"}
-            emissiveIntensity={selected ? 0.35 : 0}
-          />
-          <Edges color={selected ? "#ff8800" : "#1a1a1a"} threshold={15} />
-        </mesh>
+        <group userData={{ projectId, showroom: true }}>
+          <ShowroomParametricBoxes projectState={projectState} />
+        </group>
+        {selected ? (
+          <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} userData={{ projectId, showroom: true }}>
+            <ringGeometry args={[0.35, 0.42, 48]} />
+            <meshBasicMaterial color="#ff8800" transparent opacity={0.85} depthWrite={false} />
+          </mesh>
+        ) : null}
       </group>
     </group>
   );

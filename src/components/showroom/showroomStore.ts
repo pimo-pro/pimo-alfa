@@ -20,6 +20,8 @@ const BASE_CAM_Z = 14;
 
 type ShowroomStoreState = {
   entities: Record<string, ShowroomEntity>;
+  /** IDs com snapshot carregado com sucesso (último `initProjectIds` do viewer). */
+  projectIdsCarregados: string[];
   /** Por projeto: incluir na fila de merge para o workspace (predefinição: true ao carregar lista). */
   mergeIncludeById: Record<string, boolean>;
   selectedId: string | null;
@@ -61,6 +63,7 @@ function applyCameraDistance(ctrl: OrbitControlsImpl, scale: number): void {
 
 export const useShowroomStore = create<ShowroomStoreState>((set, get) => ({
   entities: {},
+  projectIdsCarregados: [],
   mergeIncludeById: {},
   selectedId: null,
   activeTool: "move",
@@ -81,6 +84,7 @@ export const useShowroomStore = create<ShowroomStoreState>((set, get) => ({
       return {
         entities,
         mergeIncludeById,
+        projectIdsCarregados: [...ids],
         selectedId: null,
         measurePointA: null,
         measurePointB: null,

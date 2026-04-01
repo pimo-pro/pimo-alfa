@@ -152,6 +152,38 @@ export function prefixMergedProjectState(state: ProjectState, snapshotId: string
   }
   next.modelPositionsByBoxId = mp;
 
+  next.ruleViolations = (state.ruleViolations ?? []).map((v) => ({
+    ...v,
+    boxId: `${prefix}${v.boxId}`,
+    modelInstanceId: v.modelInstanceId ? `${prefix}${v.modelInstanceId}` : v.modelInstanceId,
+  }));
+
+  const lw = state.layoutWarnings ?? { collisions: [], outOfBounds: [] };
+  next.layoutWarnings = {
+    collisions: (lw.collisions ?? []).map((c) => ({
+      ...c,
+      boxId: `${prefix}${c.boxId}`,
+      modelIdA: `${prefix}${c.modelIdA}`,
+      modelIdB: `${prefix}${c.modelIdB}`,
+    })),
+    outOfBounds: (lw.outOfBounds ?? []).map((o) => ({
+      ...o,
+      boxId: `${prefix}${o.boxId}`,
+      modelInstanceId: `${prefix}${o.modelInstanceId}`,
+    })),
+  };
+
+  if (state.estrutura3D?.pecas?.length) {
+    const pecas = state.estrutura3D.pecas.map((p) => ({
+      ...p,
+      id: `${prefix}${p.id}`,
+    }));
+    next.estrutura3D = {
+      ...state.estrutura3D,
+      pecas,
+    };
+  }
+
   return next;
 }
 

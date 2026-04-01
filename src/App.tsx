@@ -316,8 +316,10 @@ function LegacyApp() {
 function ProtectedLayout() {
   return (
     <ProtectedRoute>
-      <Navbar />
-      <Outlet />
+      <ToastProvider>
+        <Navbar />
+        <Outlet />
+      </ToastProvider>
     </ProtectedRoute>
   );
 }

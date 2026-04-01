@@ -56,6 +56,42 @@ function getMaterialType(m: MaterialRecord): "industrial" | "visual" | "migrado"
   return "outro";
 }
 
+function MaterialTexturePreview({ url }: { url: string }) {
+  const [errored, setErrored] = useState(false);
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: "var(--radius)",
+        padding: 8,
+        background: "rgba(255,255,255,0.03)",
+      }}
+    >
+      <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 6 }}>Pré-visualização da textura</div>
+      {!errored ? (
+        <img
+          src={url}
+          alt="Preview da textura"
+          onError={() => setErrored(true)}
+          style={{
+            width: "100%",
+            height: 110,
+            objectFit: "cover",
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.12)",
+            display: "block",
+          }}
+        />
+      ) : (
+        <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "10px 4px" }}>
+          Não foi possível carregar a imagem desta URL.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GestaoMateriaisPage() {
   const { showToast } = useToast();
   const { materials, reload } = useMaterialsList();
@@ -98,12 +134,7 @@ export default function GestaoMateriaisPage() {
   const [showImport, setShowImport] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
-  const [texturePreviewErrored, setTexturePreviewErrored] = useState(false);
   const texturePreviewUrl = String(form.textureUrl ?? "").trim();
-
-  useEffect(() => {
-    setTexturePreviewErrored(false);
-  }, [texturePreviewUrl]);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...materials];
@@ -741,47 +772,15 @@ export default function GestaoMateriaisPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setForm((prev) => ({ ...prev, textureUrl: value }));
-                  setTexturePreviewErrored(false);
                 }}
                 style={{ width: "100%" }}
               />
               <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6 }}>
                 URL atual: {texturePreviewUrl || "(sem textura)"}
               </div>
-              {texturePreviewUrl && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: "var(--radius)",
-                    padding: 8,
-                    background: "rgba(255,255,255,0.03)",
-                  }}
-                >
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 6 }}>
-                    Pré-visualização da textura
-                  </div>
-                  {!texturePreviewErrored ? (
-                    <img
-                      src={texturePreviewUrl}
-                      alt="Preview da textura"
-                      onError={() => setTexturePreviewErrored(true)}
-                      style={{
-                        width: "100%",
-                        height: 110,
-                        objectFit: "cover",
-                        borderRadius: 6,
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        display: "block",
-                      }}
-                    />
-                  ) : (
-                    <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "10px 4px" }}>
-                      Não foi possível carregar a imagem desta URL.
-                    </div>
-                  )}
-                </div>
-              )}
+              {texturePreviewUrl ? (
+                <MaterialTexturePreview key={texturePreviewUrl} url={texturePreviewUrl} />
+              ) : null}
             </div>
 
             <div>

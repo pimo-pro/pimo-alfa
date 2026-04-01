@@ -27,7 +27,7 @@ export type RegisterFormValues = {
 
 type Props = {
   submitLabel: string;
-  onSubmit: (values: RegisterFormValues) => Promise<void> | void;
+  onSubmit: (_values: RegisterFormValues) => Promise<void> | void;
   inviteCodes: InviteCode[];
   initialValues?: Partial<RegisterFormValues>;
   compact?: boolean;

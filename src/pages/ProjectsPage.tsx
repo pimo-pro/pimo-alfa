@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth/useAuth";
+import type { AuthUser } from "../auth/AuthContext";
 import type { SavedProjectInfo } from "../context/projectTypes";
 import { listProjects } from "../core/projects/projectsClient";
 import Button from "../components/ui/Button";
@@ -24,61 +25,53 @@ function formatUpdatedAt(iso: string): string {
   }
 }
 
-export default function ProjectsPage() {
+type ProjectsPageInnerProps = {
+  scope: "all" | "mine";
+  ownerId: string | undefined;
+  user: AuthUser | null;
+  isElevated: boolean;
+};
+
+function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInnerProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [projects, setProjects] = useState<SavedProjectInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  const isElevated = user?.role === "admin" || user?.role === "ultra+";
-  const scope = isElevated ? "all" : "mine";
-  const ownerId = scope === "mine" ? user?.id : undefined;
+  const missingUserForMine = scope === "mine" && !(user?.id ?? "").trim();
 
   useEffect(() => {
-    setSelectedIds(new Set());
-  }, [scope, ownerId]);
-
-  useEffect(() => {
+    if (missingUserForMine) return;
     let cancelled = false;
 
-    if (scope === "mine" && !(user?.id ?? "").trim()) {
-      setError("Não foi possível determinar o utilizador para filtrar os projetos.");
-      setProjects([]);
-      setLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setLoading(true);
-    setError(null);
-
-    listProjects(scope, ownerId)
-      .then((list) => {
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const list = await listProjects(scope, ownerId);
         if (!cancelled) {
           // @PIMO-KEEP — guard: API/local pode devolver lista inválida
           setProjects(Array.isArray(list) ? list : []);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Falha ao carregar projetos");
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [scope, ownerId, user?.id]);
+  }, [scope, ownerId, user?.id, missingUserForMine]);
 
-  // @PIMO-KEEP — guard: projects pode ser undefined após setState
-  const safeProjects = projects ?? [];
+  const safeProjects = useMemo(() => projects ?? [], [projects]);
 
   const allSelected = useMemo(
     () => safeProjects.length > 0 && safeProjects.every((p) => selectedIds.has(p.id)),
@@ -118,6 +111,21 @@ export default function ProjectsPage() {
     }
     return "Os teus projetos guardados (snapshots).";
   }, [scope]);
+
+  if (missingUserForMine) {
+    return (
+      <PageContainer>
+        <Card className="ui-projects-shell">
+          <PageHeader title="Projects" subtitle="Sessão incompleta." />
+          <Card>
+            <p className="ui-text-danger">
+              Não foi possível determinar o utilizador para filtrar os projetos.
+            </p>
+          </Card>
+        </Card>
+      </PageContainer>
+    );
+  }
 
   if (error) {
     return (
@@ -242,5 +250,23 @@ export default function ProjectsPage() {
         </Section>
       </Card>
     </PageContainer>
+  );
+}
+
+export default function ProjectsPage() {
+  const { user } = useAuth();
+  const isElevated = user?.role === "admin" || user?.role === "ultra+";
+  const scope = isElevated ? "all" : "mine";
+  const ownerId = scope === "mine" ? user?.id : undefined;
+  const listKey = `${scope}:${ownerId ?? ""}`;
+
+  return (
+    <ProjectsPageInner
+      key={listKey}
+      scope={scope}
+      ownerId={ownerId}
+      user={user ?? null}
+      isElevated={isElevated}
+    />
   );
 }

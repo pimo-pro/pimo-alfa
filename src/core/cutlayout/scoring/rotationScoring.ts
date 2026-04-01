@@ -57,7 +57,7 @@ export function chooseOrientationWithRotationBias(
   const normalScore = normal!.orientationScore;
   const rotatedScore = rotated!.orientationScore;
   const rotationDelta = rotatedScore - normalScore;
-  let adjustedNormal = normalScore;
+  const adjustedNormal = normalScore;
   let adjustedRotated = rotatedScore;
 
   if (

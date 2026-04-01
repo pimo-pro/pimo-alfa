@@ -217,17 +217,15 @@ export class ViewerCore {
   /** Configurações de exibição expostas ao exterior (ex.: `viewerCore.display.shadowIntensity`). */
   readonly display!: {
     get shadowIntensity(): number;
-    set shadowIntensity(value: number);
+    set shadowIntensity(_value: number);
   };
 
   /** Eventos internos do Viewer Engine (extensão para automação/plugins). */
   readonly events: {
-    emit: (event: string, ...args: unknown[]) => void;
+    emit: (_event: string, ..._args: unknown[]) => void;
   } = {
-    emit: (event: string, ...args: unknown[]) => {
-      if (event === "shadowIntensityChanged") {
-        void args[0];
-      }
+    emit: () => {
+      /* extensão futura: plugins / automação */
     },
   };
 
@@ -386,6 +384,7 @@ export class ViewerCore {
       fill: this.lights.fillLight.intensity,
       rim: this.lights.rimLight.intensity,
     };
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- getters no objeto precisam fechar sobre a instância do viewer
     const engine = this;
     this.display = {
       get shadowIntensity() {
