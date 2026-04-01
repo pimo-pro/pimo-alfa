@@ -80,6 +80,43 @@ const defaultViewerSettings: ViewerSettings = {
   shadowIntensity: 1,
 };
 
+const AUTO_PROJECT_NAME_SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * Nome automático: NP + ano (2 dígitos) + dia + mês + hora (dia/mês/hora sem zero à esquerda).
+ * Ex.: 2026-04-01 10:15 -> NP261410
+ */
+export function formatAutoProjectName(date: Date): string {
+  const yy = date.getFullYear() % 100;
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const hour = date.getHours();
+  return `NP${String(yy).padStart(2, "0")}${day}${month}${hour}`;
+}
+
+/**
+ * Se `base` já existir em `existing`, acrescenta 2 caracteres até encontrar candidato livre (varredura determinística).
+ */
+export function ensureUniqueAutoProjectName(
+  base: string,
+  existing: ReadonlySet<string>
+): string {
+  if (!existing.has(base)) return base;
+  const chars = AUTO_PROJECT_NAME_SUFFIX_CHARS;
+  for (let i = 0; i < chars.length; i++) {
+    for (let j = 0; j < chars.length; j++) {
+      const candidate = `${base}${chars[i]!}${chars[j]!}`;
+      if (!existing.has(candidate)) return candidate;
+    }
+  }
+  return `${base}zz`;
+}
+
+const defaultAutoProjectName = ensureUniqueAutoProjectName(
+  formatAutoProjectName(new Date()),
+  new Set()
+);
+
 const createBox = (
   id: string,
   nome: string,
@@ -213,7 +250,7 @@ export const createWorkspaceBox = (
 const defaultWorkspaceBoxes: WorkspaceBox[] = [];
 
 export const defaultState: ProjectState = {
-  projectName: "Novo Projeto",
+  projectName: defaultAutoProjectName,
   tipoProjeto: "Estante de Parede – 3 Portas",
   material: defaultMaterial,
   materialId: "",
