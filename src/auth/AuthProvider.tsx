@@ -57,6 +57,7 @@ export function AuthProvider({ children }: Props) {
       const loginResult = await loginApi(email, password);
       setApiToken(loginResult.token);
       const me = await getMe();
+      if (!me?.user?.id) throw new Error("Resposta inválida do servidor");
 
       setToken(loginResult.token);
       setUser({

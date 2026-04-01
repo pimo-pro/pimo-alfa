@@ -18,6 +18,7 @@ function tryOwnerFromAuthStorage(): CurrentProjectUser | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as { id?: unknown; username?: unknown };
+    if (!parsed || typeof parsed !== "object") return null;
     const id = typeof parsed.id === "string" ? parsed.id.trim() : "";
     if (!id) return null;
     const username = typeof parsed.username === "string" ? parsed.username.trim() : "";
