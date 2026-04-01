@@ -37,6 +37,8 @@ export default function MePage() {
     );
   }
 
+  const permissions = data.user.permissions ?? [];
+
   return (
     <PageContainer>
       <Card maxWidth={640}>
@@ -48,7 +50,7 @@ export default function MePage() {
         </Section>
         <Section title="Permissions">
           <ul>
-            {data.user.permissions.map((permission) => (
+            {permissions.map((permission) => (
               <li key={permission}>{permission}</li>
             ))}
           </ul>

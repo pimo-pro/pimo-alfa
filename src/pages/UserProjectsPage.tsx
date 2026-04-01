@@ -14,7 +14,7 @@ export default function UserProjectsPage() {
     setLoading(true);
     try {
       const result = await actions.listSavedProjects("mine");
-      setProjects(result);
+      setProjects(Array.isArray(result) ? result : []);
     } finally {
       setLoading(false);
     }
@@ -25,7 +25,8 @@ export default function UserProjectsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const latest = useMemo(() => projects.slice(0, 4), [projects]);
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const latest = useMemo(() => safeProjects.slice(0, 4), [safeProjects]);
 
   return (
     <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -88,11 +89,11 @@ export default function UserProjectsPage() {
         <h2 style={{ marginTop: 0, fontSize: 15 }}>Todos os meus projetos</h2>
         {loading ? (
           <p style={{ fontSize: 12, color: "var(--text-muted)" }}>A carregar...</p>
-        ) : projects.length === 0 ? (
+        ) : safeProjects.length === 0 ? (
           <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Nenhum projeto guardado.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {projects.map((project) => (
+            {safeProjects.map((project) => (
               <div key={project.id} className="card" style={{ padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

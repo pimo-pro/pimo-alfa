@@ -55,7 +55,7 @@ export default function ManageRolesPage() {
   const startEdit = (role: RoleItem) => {
     setEditingId(role.id);
     setEditingName(role.name);
-    setEditingPermissions(role.permissions.join(", "));
+    setEditingPermissions((role.permissions ?? []).join(", "));
   };
 
   const saveEdit = () => {
@@ -115,12 +115,12 @@ export default function ManageRolesPage() {
                 </tr>
               </thead>
               <tbody>
-                {roles.map((role) => (
+                {(roles ?? []).map((role) => (
                   <tr key={role.id}>
                     <td>{role.name}</td>
                     <td>
                       <div className="ui-inline-list">
-                        {role.permissions.map((permission) => (
+                        {(role.permissions ?? []).map((permission) => (
                           <span key={permission} className="ui-badge">
                             {permission}
                           </span>

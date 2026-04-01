@@ -41,10 +41,24 @@ export async function login(email: string, password: string): Promise<LoginRespo
   }
 }
 
+/** Garante arrays e campos mínimos quando a API /me devolve payload incompleto. */
+function normalizeMeResponse(data: MeResponse | undefined): MeResponse {
+  const u = data?.user;
+  return {
+    status: "ok",
+    user: {
+      id: u?.id ?? "",
+      username: u?.username ?? "",
+      role: u?.role ?? "",
+      permissions: u?.permissions ?? [],
+    },
+  };
+}
+
 export async function getMe(): Promise<MeResponse> {
   try {
     const { data } = await apiClient.get<MeResponse>("/me");
-    return data;
+    return normalizeMeResponse(data);
   } catch (error) {
     throw new Error(parseApiError(error));
   }
