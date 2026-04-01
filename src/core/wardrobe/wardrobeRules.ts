@@ -1,4 +1,4 @@
-import { SYSTEM_BACK_MM, SYSTEM_THICKNESS_MM } from "../baseCabinets";
+import { SYSTEM_THICKNESS_MM } from "../baseCabinets";
 
 export type WardrobeGroup = "H" | "J" | "T";
 
@@ -89,8 +89,8 @@ export type WardrobeWardrobeLocalLayout = {
   drawerOriginYLocal_mm: number | null;
 };
 
-const SHELF_WIDTH_CLEARANCE_MM = 2; // 1mm cada lado (paridade com BoxBuilder visual)
-const SHELF_DEPTH_CLEARANCE_MM = SYSTEM_BACK_MM; // 10mm (paridade com BoxBuilder visual)
+const SHELF_WIDTH_CLEARANCE_MM = 2; // 1 mm + 1 mm (folgas laterais da prateleira)
+const SHELF_DEPTH_CLEARANCE_MM = 5; // folga frontal (paridade com BoxBuilder / industrial)
 const SHELF_VISUAL_INSET_MM = 1; // inset visual
 const RAIL_THICKNESS_MM = 6; // dimensão visual (não usado para cutlist)
 
@@ -127,7 +127,7 @@ export function computeWardrobeLocalLayout(params: {
   const leftCompartmentCenterX_mm = -widthMm / 4 + thicknessMm / 4;
   const rightCompartmentCenterX_mm = widthMm / 4 - thicknessMm / 4;
 
-  const shelfWidthFull_mm = Math.max(1, widthMm - SHELF_WIDTH_CLEARANCE_MM);
+  const shelfWidthFull_mm = Math.max(1, widthMm - 2 * thicknessMm - SHELF_WIDTH_CLEARANCE_MM);
   const compartmentInternalWidth_mm = (widthMm - 3 * thicknessMm) / 2;
   const shelfWidthPerSide_mm = Math.max(1, compartmentInternalWidth_mm - SHELF_WIDTH_CLEARANCE_MM);
 

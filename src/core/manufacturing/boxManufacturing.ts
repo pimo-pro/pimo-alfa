@@ -99,9 +99,6 @@ const getEspessura = (box: BoxModule) => (box.espessura > 0 ? box.espessura : SY
 /** Nome do material (CRUD ou legado) para painéis/custos. */
 const getNomeMaterial = (box: BoxModule) =>
   getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco").nome;
-/** Profundidade útil (sem costa): profundidade_total - 10 mm. */
-const PROFUNDIDADE_UTIL_MM = SYSTEM_BACK_MM;
-
 /** Nomes finais e fixos para exibição (UI, PDF). COSTA sem espessura ao lado do nome. Gavetas e prateleira: docs/matriz-faces-A-B-FINAL.md. */
 export const PIECE_LABELS: Record<string, string> = {
   cima: "Cima",
@@ -239,10 +236,10 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     custo: 0,
   });
 
-  // 3.4 Prateleiras: DENTRO; largura = width − espessura×2 − 1 mm (folga lateral); profundidade = depth − COSTA − 5 mm (folga porta).
+  // 3.4 Prateleiras: largura = width - espessura esq. - espessura dir. - 1 mm - 1 mm; profundidade = depth - 5 mm (folga frontal).
   if (box.prateleiras > 0) {
-    const larguraPrateleira = clampPositive(largura - espessura * 2 - 1);
-    const profundidadePrateleira = clampPositive(profundidade - PROFUNDIDADE_UTIL_MM - 5);
+    const larguraPrateleira = clampPositive(largura - espessura * 2 - 2);
+    const profundidadePrateleira = clampPositive(profundidade - 5);
     const nPrateleiras = Math.max(0, Math.floor(box.prateleiras));
     for (let i = 0; i < nPrateleiras; i++) {
       paineis.push({

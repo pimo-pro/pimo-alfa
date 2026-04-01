@@ -1,0 +1,15 @@
+---
+description: Fluxo obrigatório — diff completo e confirmação antes de gravar
+alwaysApply: true
+---
+
+# Regra obrigatória para o pimo-criativo
+Para qualquer tarefa de correção, modificação, refatoração ou ajuste em qualquer módulo do projeto pimo-criativo (incluindo BoxBuilder, industrial, PI, roupeiro, drilling, distribuição, geometria e derivados):
+1. O assistente deve sempre apresentar o diff completo de todas as alterações propostas ANTES de gravar qualquer ficheiro.
+2. O assistente deve aguardar confirmação explícita do utilizador (ex.: "aplica", "ok, podes gravar", "confirmado").
+3. Nenhuma alteração pode ser gravada automaticamente sem aprovação prévia.
+4. O assistente deve operar sempre em modo leitura até receber autorização para aplicar o diff.
+5. O assistente não pode criar novas regras, estruturas ou comportamentos sem pedido explícito — apenas corrigir ou ajustar o que já existe.
+6. O assistente deve garantir que nenhuma alteração quebra módulos existentes, incluindo PI, industrial, roupeiro ou distribuição.
+7. O assistente deve manter a integridade total do projeto e respeitar todas as regras já estabelecidas.
+Esta regra é permanente e aplica-se a todas as conversas futuras relacionadas ao repositório.

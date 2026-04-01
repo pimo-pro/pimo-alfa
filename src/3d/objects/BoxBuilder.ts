@@ -37,7 +37,7 @@ import { getWardrobeGroupFromBaseCabinetId, isWardrobeVerticalDividerEnabled } f
  * - Costa (fundo): 10 mm, sempre ATRÁS da caixa; profundidade da caixa NUNCA é reduzida pela costa.
  * - Cima/fundo: largura total × profundidade total × 19 mm.
  * - Laterais: DENTRO; altura = altura - 38 mm, profundidade = total, espessura 19 mm.
- * - Prateleiras: DENTRO; largura = largura - 2 mm, profundidade = profundidade - 10 mm, 19 mm.
+ * - Prateleiras: DENTRO; largura = largura - laterais - 1 mm - 1 mm; profundidade = profundidade - 5 mm (folga frontal), 19 mm.
  * 
  * GAVETAS:
  * - Cálculos delegados ao domínio: src/core/drawers/
@@ -114,10 +114,10 @@ export type BoxModel = {
 const THICKNESS_M = SYSTEM_THICKNESS_MM / 1000;
 /** Espessura da costa em metros (10 mm). */
 const BACK_THICKNESS_M = SYSTEM_BACK_MM / 1000;
-/** Folga lateral para prateleiras (1 mm cada lado = 2 mm total). */
+/** Folga lateral para prateleiras (1 mm + 1 mm). */
 const SHELF_WIDTH_CLEARANCE_M = 0.002;
-/** Profundidade interna antes da costa (costa 10 mm atrás). */
-const SHELF_DEPTH_CLEARANCE_M = SYSTEM_BACK_MM / 1000;
+/** Folga frontal da prateleira (5 mm). */
+const SHELF_DEPTH_CLEARANCE_M = 0.005;
 /** Offset visual (1 mm) para dentro: evita Z-fighting entre prateleiras e paredes internas; não altera medidas/cutlist/CNC. */
 const SHELF_VISUAL_INSET_M = 0.001;
 const resolveDimensions = (options: BoxOptions = {}) => {
@@ -168,11 +168,11 @@ function getPanelSpecs(width: number, height: number, depth: number) {
 export type BoxPanelLayoutSpecs = ReturnType<typeof getPanelSpecs>;
 
 /**
- * Prateleiras: DENTRO da caixa. largura = width - 2 mm, profundidade = depth - 10 mm, espessura 19 mm.
- * Posição z: centrada na profundidade útil + SHELF_VISUAL_INSET_M para evitar Z-fighting com a costa.
+ * Prateleiras: DENTRO da caixa. largura = width - 2*espessura lateral - 1 mm - 1 mm; profundidade = depth - 5 mm; espessura 19 mm.
+ * Posição z: centrada na profundidade da prateleira + SHELF_VISUAL_INSET_M (evita Z-fighting).
  */
 function getShelfSpecs(width: number, height: number, depth: number, count: number, opts?: BoxOptions) {
-  const shelfWidth = Math.max(0.001, width - SHELF_WIDTH_CLEARANCE_M);
+  const shelfWidth = Math.max(0.001, width - 2 * THICKNESS_M - SHELF_WIDTH_CLEARANCE_M);
   const shelfDepth = Math.max(0.001, depth - SHELF_DEPTH_CLEARANCE_M);
   const interiorHeight = Math.max(0.001, height - 2 * THICKNESS_M);
   const centerZ = -depth / 2 + shelfDepth / 2 + SHELF_VISUAL_INSET_M;
