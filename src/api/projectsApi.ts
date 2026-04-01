@@ -30,7 +30,10 @@ function parseApiError(error: unknown): string {
 export async function getProjects(): Promise<ProjectsResponse> {
   try {
     const { data } = await apiClient.get<ProjectsResponse>("/projects");
-    return data;
+    return {
+      ...data,
+      projects: data?.projects ?? [],
+    };
   } catch (error) {
     throw new Error(parseApiError(error));
   }

@@ -17,10 +17,12 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     getProjects()
-      .then((result) => setProjects(result.projects))
+      .then((result) => setProjects(result.projects ?? []))
       .catch((err) => setError(err instanceof Error ? err.message : "Falha ao carregar projetos"))
       .finally(() => setLoading(false));
   }, []);
+
+  const safeProjects = projects ?? [];
 
   if (error) {
     return (
@@ -42,7 +44,7 @@ export default function ProjectsPage() {
         <Section title="Tabela de projetos">
           <Card>
             {loading ? <Loader label="Carregando /projects..." /> : null}
-            {!loading && projects.length === 0 ? (
+            {!loading && safeProjects.length === 0 ? (
               <p className="ui-text-muted">Nenhum projeto visível para este utilizador.</p>
             ) : !loading ? (
               <table className="projects-table ui-table">
@@ -56,7 +58,7 @@ export default function ProjectsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {projects.map((project) => (
+                  {safeProjects.map((project) => (
                     <tr key={project.id}>
                       <td>{project.id}</td>
                       <td>{project.title}</td>
