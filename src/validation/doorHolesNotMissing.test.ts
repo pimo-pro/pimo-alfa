@@ -128,6 +128,8 @@ describe("Viewer alignment — vão 1000, porta 998, folgas 1/1", () => {
         hingeSide: "left",
         openingHeightMm,
         hingePositionsMm: globalOffsets,
+        portaTipo: "porta_simples",
+        doorsLayerCount: 1,
       },
       rules
     );

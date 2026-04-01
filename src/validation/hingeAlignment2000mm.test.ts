@@ -46,6 +46,8 @@ describe("Hinges — alinhamento porta vs lateral (altura 2000mm)", () => {
         espessuraMm,
         hingeSide: "left",
         hingePositionsMm: doorOffsetsFromBase,
+        portaTipo: "porta_simples",
+        doorsLayerCount: 1,
       },
       rules
     );
