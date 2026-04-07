@@ -357,10 +357,25 @@ export function useGerarArquivoHandlers() {
         return;
       }
 
+      // Cede controlo ao browser antes do cálculo de nesting (pode ser pesado)
+      await yieldToMainThread();
+
       const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
         ...getDefaultCncLayoutOptions(),
         originTopRight: true,
+        minUtilizationPercent: 0.92,
+        rotationPreferenceMode: "aggressive",
+        collectDiagnostics: true,
       });
+      if (result.diagnostics?.rejectedByLimit && result.diagnostics.rejectedByLimit.length > 0) {
+        showToast(
+          `Atenção: ${result.diagnostics.rejectedByLimit.length} peça(s) não couberam no layout e foram omitidas.`,
+          "warning"
+        );
+      }
+
+      // Cede controlo ao browser antes da geração do PDF
+      await yieldToMainThread();
       const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
       const doc = await buildCutLayoutPdf(result, {
         projectName: project.projectName ?? "Projeto",

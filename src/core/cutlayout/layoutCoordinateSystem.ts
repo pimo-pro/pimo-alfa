@@ -42,6 +42,29 @@ export function holeLocalToSheetOffsetMm(
   return { sx: hx, sy: hy };
 }
 
+/**
+ * Converte coordenadas de furo no espaço original da peça (pré-rotação, pré-espelho)
+ * para offset relativo ao canto superior-esquerdo do placement no sistema TRO (Top-Right Origin).
+ * Use este offset para desenhar furos no PDF: hxAbs = pl.x_mm + dx, hyPdf = py + dy*scale.
+ *
+ * Fórmulas derivadas analiticamente para rot=0 e rot=90:
+ *   rot=0:  dx = plLargura - hx_orig,  dy = plAltura - hy_orig
+ *   rot=90: dx = plLargura - hy_orig,  dy = hx_orig
+ */
+export function holeToTroPdfDisplayOffset(
+  hx: number,
+  hy: number,
+  rotacao: number,
+  plLargura: number,
+  plAltura: number
+): { dx: number; dy: number } {
+  const r = ((rotacao ?? 0) % 360 + 360) % 360;
+  if (r === 90) {
+    return { dx: Math.max(0, plLargura - hy), dy: Math.max(0, hx) };
+  }
+  return { dx: Math.max(0, plLargura - hx), dy: Math.max(0, plAltura - hy) };
+}
+
 export function getSheetSafetyMarginMm(): number {
   try {
     const s = getSettings();

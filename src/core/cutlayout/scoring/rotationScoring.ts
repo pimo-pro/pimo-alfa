@@ -62,8 +62,7 @@ export function chooseOrientationWithRotationBias(
 
   if (
     cfg.rotationPreferenceMode === "aggressive" ||
-    cfg.rotationPreferenceMode === "auto" ||
-    cfg.rotationPreferenceMode === "disabled"
+    cfg.rotationPreferenceMode === "auto"
   ) {
     adjustedRotated += cfg.rotationWeight;
   }

@@ -61,8 +61,10 @@ type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_
 
 const MAX_NESTING_ATTEMPTS = 4;
 const ATTEMPT_TIMEOUT_MS = 1500;
-const META_MAX_MULTI_START = 4;
-const META_MAX_ITERATIONS = 36;
+const META_MAX_MULTI_START = 8;
+const META_MAX_ITERATIONS = 120;
+/** Budget de tempo por grupo de material para a meta-heurística (ms). */
+const META_BUDGET_MS = 2200;
 
 function nowMs(): number {
   if (typeof performance !== "undefined" && typeof performance.now === "function") {
@@ -85,16 +87,26 @@ function sortPiecesForAttempt(pieces: CutPiece[], mode: AttemptOrderMode): CutPi
   return list;
 }
 
-function mirrorPlacementHoles(
-  largura: number,
-  altura: number,
+/**
+ * Transforma furos para o formato TCN-ready no espaço TRO.
+ * Para rot=0:  x' = plLargura - hx,  y' = plAltura  - hy  (espelho normal)
+ * Para rot=90: x' = plLargura - hx,  y' = plLargura - hy  (ambos usam plLargura)
+ * Esta fórmula garante que holeLocalToSheetOffsetMm(h.x, h.y, rot, plLargura)
+ * no TCN produz o offset TRO correto para qualquer ângulo.
+ */
+function computeTcnReadyHoles(
+  rotacao: number,
+  plLargura: number,
+  plAltura: number,
   holes: Array<{ x: number; y: number; diameter: number; depth: number; holeType?: string; topDrillable?: boolean }> | undefined
 ): Array<{ x: number; y: number; diameter: number; depth: number; holeType?: string; topDrillable?: boolean }> | undefined {
   if (!holes?.length) return holes;
+  const r = ((rotacao ?? 0) % 360 + 360) % 360;
+  const mirrorY = r === 90 ? plLargura : plAltura;
   return holes.map((h) => ({
     ...h,
-    x: Math.max(0, largura - Number(h.x ?? 0)),
-    y: Math.max(0, altura - Number(h.y ?? 0)),
+    x: Math.max(0, plLargura - Number(h.x ?? 0)),
+    y: Math.max(0, mirrorY - Number(h.y ?? 0)),
   }));
 }
 
@@ -107,8 +119,9 @@ function normalizeSheetToTopRightOrigin(sheetResult: SheetResult): SheetResult {
       ...pl,
       x_mm: W - (pl.x_mm + pl.largura_mm),
       y_mm: H - (pl.y_mm + pl.altura_mm),
-      holes: mirrorPlacementHoles(pl.largura_mm, pl.altura_mm, pl.holes),
-      drillHoles: mirrorPlacementHoles(pl.largura_mm, pl.altura_mm, pl.drillHoles),
+      holes: computeTcnReadyHoles(pl.rotacao, pl.largura_mm, pl.altura_mm, pl.holes),
+      drillHoles: computeTcnReadyHoles(pl.rotacao, pl.largura_mm, pl.altura_mm, pl.drillHoles),
+      originalDrillHoles: pl.originalDrillHoles ?? pl.drillHoles,
     })),
   };
 }
@@ -142,7 +155,8 @@ export type RunCutLayoutDeps = {
     _meta: Required<CutLayoutMetaHeuristicsOptions>,
     _seed?: number,
     _trialPool?: CutLayoutTrialConfig[],
-    _scoreModel?: CutLayoutScoreModel
+    _scoreModel?: CutLayoutScoreModel,
+    _budgetMs?: number
   ) => {
     sheets: SheetResult[];
     diagnostics: {
@@ -195,7 +209,7 @@ export function runCutLayout(
   const rawMetaCfg = getDefaultMetaOptions(options?.useMetaHeuristics, options?.metaHeuristics);
   const metaCfg: Required<CutLayoutMetaHeuristicsOptions> = {
     ...rawMetaCfg,
-    enabled: false, // LNS/SA desactivado: causa instabilidade e excede budget de 3s
+    enabled: rawMetaCfg.enabled,
     multiStartCount: Math.min(rawMetaCfg.multiStartCount, META_MAX_MULTI_START),
     iterations: Math.min(rawMetaCfg.iterations, META_MAX_ITERATIONS),
   };
@@ -424,8 +438,10 @@ export function runCutLayout(
         { strategy: "guillotine", binHeuristic: "bestFit" },
       ];
 
+      const metaGroupStartMs = nowMs();
       for (let si = 0; si < startCount; si++) {
         throwIfAbort();
+        if (nowMs() - metaGroupStartMs > META_BUDGET_MS) break;
         const metaPercent =
           60 + (((groupIndex + (si + 1) / Math.max(1, startCount)) / groupCount) * 35);
         emitProgress({
@@ -458,6 +474,7 @@ export function runCutLayout(
           scoreModel
         );
         const startSheets = seededRun.sheets.length > 0 ? seededRun.sheets : bestRun.sheets;
+        const remainingBudget = Math.max(200, META_BUDGET_MS - (nowMs() - metaGroupStartMs));
         const local = deps.optimizeWithMetaHeuristics(
           startSheets,
           placementSheet,
@@ -467,7 +484,8 @@ export function runCutLayout(
           metaCfg,
           seed,
           strategyPool,
-          scoreModel
+          scoreModel,
+          remainingBudget
         );
         const localScore = deps.computeSolutionMetrics(local.sheets, placementSheet, scoreModel).score;
         globalAcceptedMoves += local.diagnostics.acceptedMoves;

@@ -43,6 +43,15 @@ export type CutPiece = {
     holeType?: string;
     topDrillable?: boolean;
   }>;
+  /** Furos no espaço original da peça (pré-rotação, pré-espelho). Usado pelo PDF para renderização correta. */
+  originalDrillHoles?: Array<{
+    x: number;
+    y: number;
+    diameter: number;
+    depth: number;
+    holeType?: string;
+    topDrillable?: boolean;
+  }>;
   /** Comprimento ao longo da fibra (length) = horizontal; width = vertical. */
   grainDirection?: "length" | "width";
   /** Material visual para preview / aplicação no Viewer (MaterialLibrary v2). */
@@ -80,6 +89,15 @@ export type CutPlacement = {
     topDrillable?: boolean;
   }>;
   holes?: Array<{
+    x: number;
+    y: number;
+    diameter: number;
+    depth: number;
+    holeType?: string;
+    topDrillable?: boolean;
+  }>;
+  /** Furos no espaço original da peça (pré-rotação, pré-espelho). Usado pelo PDF para renderização correta. */
+  originalDrillHoles?: Array<{
     x: number;
     y: number;
     diameter: number;

@@ -189,6 +189,7 @@ export function applyLnsRepack(
     materialName: p.materialName,
     drillHoles: p.drillHoles ?? p.holes,
     holes: p.holes ?? p.drillHoles,
+    originalDrillHoles: p.originalDrillHoles ?? p.drillHoles ?? p.holes,
     pieceNumber: p.pieceNumber,
     shortCode: p.shortCode,
     metadata: p.metadata,
@@ -225,6 +226,13 @@ export function applyLnsRepack(
   return bestSheets;
 }
 
+function nowMsMeta(): number {
+  if (typeof performance !== "undefined" && typeof performance.now === "function") {
+    return performance.now();
+  }
+  return Date.now();
+}
+
 export function optimizeWithMetaHeuristics(
   initialSheets: SheetResult[],
   sheet: SheetDefinition,
@@ -235,7 +243,8 @@ export function optimizeWithMetaHeuristics(
   seed: number,
   trialPool: TrialConfig[] | undefined,
   scoreModel: ScoreModel,
-  deps: MetaheuristicsDeps
+  deps: MetaheuristicsDeps,
+  budgetMs = 2500
 ): {
   sheets: SheetResult[];
   diagnostics: {
@@ -247,6 +256,7 @@ export function optimizeWithMetaHeuristics(
     totalMoves: number;
   };
 } {
+  const t0 = nowMsMeta();
   const rng = deps.createSeededRng(seed);
   let current = deps.cloneSheets(initialSheets);
   let currentMetrics = deps.computeSolutionMetrics(current, sheet, scoreModel);
@@ -255,9 +265,12 @@ export function optimizeWithMetaHeuristics(
   const initialMetrics = { ...currentMetrics };
   let temp = meta.initialTemperature;
   let acceptedMoves = 0;
+  let completedIter = 0;
 
   const moves: MetaMove[] = ["swapBetweenSheets", "movePieceAcrossSheets", "reorderSheet", "flipRotation"];
   for (let iter = 0; iter < meta.iterations; iter++) {
+    if (nowMsMeta() - t0 > budgetMs) break;
+    completedIter++;
     const move = moves[rng.int(moves.length)];
     const basePlacements = deps.flattenPlacements(current);
     const mutated = mutatePlacements(basePlacements, move, sheet, rng, deps);
@@ -298,12 +311,12 @@ export function optimizeWithMetaHeuristics(
   return {
     sheets: bestMetrics.score <= initialMetrics.score ? best : deps.cloneSheets(initialSheets),
     diagnostics: {
-      iterations: meta.iterations,
+      iterations: completedIter,
       bestScore: bestMetrics.score,
       initialScore: initialMetrics.score,
       improvementPercent,
       acceptedMoves,
-      totalMoves: meta.iterations,
+      totalMoves: completedIter,
     },
   };
 }

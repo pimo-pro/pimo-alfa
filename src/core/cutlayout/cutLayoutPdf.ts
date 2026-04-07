@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
-import { holeLocalToSheetOffsetMm, toLayoutAbsoluteX, toLayoutPlacementX } from "./layoutCoordinateSystem";
+import { holeToTroPdfDisplayOffset, toLayoutAbsoluteX, toLayoutPlacementX } from "./layoutCoordinateSystem";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
 
 /** A4 retrato: largura × altura (mm) */
@@ -209,18 +209,15 @@ function drawSheetDiagram(
       if (bands.right) drawDottedLine(doc, px + pw - inset, py + inset, px + pw - inset, py + ph - inset);
     }
 
-    // @PIMO-SOON: quando rotacao === 90, transformar coordenadas dos furos:
-    // x_new = placement.altura_mm - hole.y
-    // y_new = hole.x
-    // Aguarda Sonnet no Cursor para implementação segura.
-    const holes = pl.holes ?? [];
-    if (holes.length > 0) {
+    const origHoles = pl.originalDrillHoles ?? [];
+    if (origHoles.length > 0) {
       doc.setFillColor(30, 30, 30);
       doc.setDrawColor(30, 30, 30);
-      for (const h of holes) {
-        const hxAbs = topRightOrigin ? (pl.x_mm + h.x) : toLayoutAbsoluteX(pl.x_mm + h.x, sheet.largura_mm);
+      for (const h of origHoles) {
+        const off = holeToTroPdfDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+        const hxAbs = topRightOrigin ? (pl.x_mm + off.dx) : toLayoutAbsoluteX(pl.x_mm + off.dx, sheet.largura_mm);
         const hx = originX + hxAbs * scale;
-        const hy = py + h.y * scale;
+        const hy = py + off.dy * scale;
         const r = Math.max(0.35, Math.min(1.1, ((h.diameter ?? 5) / 2) * scale * 0.85));
         doc.circle(hx, hy, r, "FD");
       }
@@ -361,14 +358,13 @@ function drawPieceTablePaginated(
         const ry = ty + (th - rh) / 2;
         doc.setDrawColor(...BRAND_RED);
         doc.rect(rx, ry, rw, rh, "S");
-        const holes = pl.holes ?? [];
-        if (holes.length > 0) {
+        const thumbHoles = pl.originalDrillHoles ?? [];
+        if (thumbHoles.length > 0) {
           doc.setFillColor(25, 25, 25);
-          const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
-          for (const h of holes) {
-            const off = holeLocalToSheetOffsetMm(h.x, h.y, rot);
-            const hx = rx + (off.sx / pl.largura_mm) * rw;
-            const hy = ry + (off.sy / pl.altura_mm) * rh;
+          for (const h of thumbHoles) {
+            const off = holeToTroPdfDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+            const hx = rx + (off.dx / pl.largura_mm) * rw;
+            const hy = ry + (off.dy / pl.altura_mm) * rh;
             const hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.largura_mm) * rw));
             doc.circle(hx, hy, hr, "F");
           }
