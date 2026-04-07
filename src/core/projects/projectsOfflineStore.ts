@@ -98,7 +98,7 @@ export function readOfflineProjects(): OfflineProjectRecord[] {
         lastSyncedAt: typeof obj.lastSyncedAt === "string" ? obj.lastSyncedAt : null,
       } satisfies OfflineProjectRecord;
     })
-    .filter((row): row is OfflineProjectRecord => Boolean(row));
+    .filter(Boolean) as OfflineProjectRecord[];
 }
 
 export function writeOfflineProjects(items: OfflineProjectRecord[]): void {
