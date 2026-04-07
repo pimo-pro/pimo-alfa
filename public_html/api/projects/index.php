@@ -163,17 +163,24 @@ if ($method === "POST") {
     $sid = sanitize_id($incomingId);
 
     if ($sid !== null) {
-        $id = $sid;
+        // UPSERT: usa o ID fornecido pelo cliente.
+        // Atualiza o ficheiro se existir; cria-o se não existir.
+        // Evita 404 quando o servidor perdeu os dados (ex.: redeployment, limpeza de disco).
+        $id   = $sid;
         $path = project_path($dataDir, $id);
-        if (!is_file($path)) {
-            respond_json(["status" => "error", "message" => "Projeto não encontrado para atualizar"], 404);
+        if (is_file($path)) {
+            $oldRaw    = file_get_contents($path);
+            $old       = json_decode($oldRaw !== false ? $oldRaw : "null", true);
+            $createdAt = is_array($old) && isset($old["createdAt"]) && is_string($old["createdAt"])
+                ? $old["createdAt"]
+                : $now;
+        } else {
+            // Ficheiro inexistente: criar com o ID fornecido (UPSERT — não retornar 404).
+            $createdAt = isset($input["createdAt"]) && is_string($input["createdAt"])
+                ? $input["createdAt"]
+                : $now;
         }
-        $oldRaw = file_get_contents($path);
-        $old = json_decode($oldRaw !== false ? $oldRaw : "null", true);
-        $createdAt = is_array($old) && isset($old["createdAt"]) && is_string($old["createdAt"])
-            ? $old["createdAt"]
-            : $now;
-        $input["id"] = $id;
+        $input["id"]        = $id;
         $input["createdAt"] = $createdAt;
         $input["updatedAt"] = $now;
     } else {
