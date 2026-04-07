@@ -82,7 +82,6 @@ export function holePhysicalDisplayOffset(
   hx: number,
   hy: number,
   rotacao: number,
-  plLargura: number,
   plAltura: number
 ): { dx: number; dy: number } {
   const r = ((rotacao ?? 0) % 360 + 360) % 360;

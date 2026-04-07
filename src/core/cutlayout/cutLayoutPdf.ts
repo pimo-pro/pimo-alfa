@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
-import { holePhysicalDisplayOffset, toLayoutPlacementX } from "./layoutCoordinateSystem";
+import { holePhysicalDisplayOffset } from "./layoutCoordinateSystem";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
 
 /** A4 retrato: largura × altura (mm) */
@@ -224,7 +224,7 @@ function drawSheetDiagram(
         ? (sheet.largura_mm - pl.x_mm - pl.largura_mm)
         : pl.x_mm;
       for (const h of origHoles) {
-        const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+        const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.altura_mm);
         const hx = originX + (piecePhysLeft + off.dx) * scale;
         const hy = py + off.dy * scale;
         const r = Math.max(0.35, Math.min(1.1, ((h.diameter ?? 5) / 2) * scale * 0.85));
@@ -371,7 +371,7 @@ function drawPieceTablePaginated(
         if (thumbHoles.length > 0) {
           doc.setFillColor(25, 25, 25);
           for (const h of thumbHoles) {
-            const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+            const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.altura_mm);
             // off.dx = distância física do furo ao lado A (esquerda) da peça
             // off.dy = distância física do furo ao lado C (topo) da peça
             const hx = rx + (off.dx / pl.largura_mm) * rw;
