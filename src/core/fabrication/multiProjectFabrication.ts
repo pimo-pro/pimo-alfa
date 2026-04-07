@@ -13,7 +13,8 @@ import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { gerarPdfTecnicoCompleto } from "../pdf/gerarPdfTecnico";
 import { buildCutlistPdf, type ProjectForPdf } from "../pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../pdf/pdfUnified";
-import { buildEtiquetasPdf } from "../pdf/pdfEtiquetas";
+import { buildEtiquetasPdf, type ProjectForEtiquetasPdf } from "../pdf/pdfEtiquetas";
+import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../labelDesigner/labelDesignerStorage";
 import { runCutLayout, cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import {
   buildCncFromCutlistItems,
@@ -293,7 +294,12 @@ export async function generateMultiProjectFabrication(
     }
 
     try {
-      const docEtiquetas = await buildEtiquetasPdf({ ...proj, settings: getSettings() });
+      const designerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
+      const docEtiquetas = await buildEtiquetasPdf({
+        ...proj,
+        settings: getSettings(),
+        designerConfig: designerCfg,
+      });
       safeAddPdf(zip, `${basePath}/etiquetas.pdf`, docEtiquetas);
     } catch (err) {
       devLogger.error("multiProjectFabrication: etiquetas PDF", err);
@@ -317,6 +323,25 @@ export async function generateMultiProjectFabrication(
         nestingTopRightOrigin: true,
       });
       safeAddPdf(zip, "layout/layout_corte_pro.pdf", docLayout);
+
+      // --- Etiquetas globais: todas as peças de todos os projetos, ordenadas pelas chapas ---
+      try {
+        const combinedPlacements = result.sheets.flatMap((s) => s.placements);
+        const globalDesignerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
+        const globalEtiquetasProj: ProjectForEtiquetasPdf = {
+          projectName: layoutTitle || "Multi-projeto",
+          boxes: allPrefixedBoxes,
+          rules: rulesForGlobal,
+          settings: getSettings(),
+          precomputedItems: allPrefixedItems,
+          cutLayoutPlacements: combinedPlacements.length > 0 ? combinedPlacements : undefined,
+          designerConfig: globalDesignerCfg,
+        };
+        const docEtiquetasTodas = await buildEtiquetasPdf(globalEtiquetasProj);
+        safeAddPdf(zip, "etiquetas/etiquetas_todas.pdf", docEtiquetasTodas);
+      } catch (err) {
+        devLogger.error("multiProjectFabrication: etiquetas globais combinadas", err);
+      }
     }
   } catch (err) {
     devLogger.error("multiProjectFabrication: layout corte PRO", err);

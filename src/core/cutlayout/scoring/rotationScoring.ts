@@ -64,7 +64,9 @@ export function chooseOrientationWithRotationBias(
     cfg.rotationPreferenceMode === "aggressive" ||
     cfg.rotationPreferenceMode === "auto"
   ) {
-    adjustedRotated += cfg.rotationWeight;
+    // Bónus normalizado: evita forçar 90° sempre quando rotationWeight > orientationScore máx (~1.0)
+    const biasCap = cfg.rotationPreferenceMode === "aggressive" ? 0.12 : 0.06;
+    adjustedRotated += Math.min(biasCap, cfg.rotationWeight * 0.08);
   }
 
   if (adjustedRotated > adjustedNormal) {

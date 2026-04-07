@@ -10,6 +10,8 @@ import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import { buildEtiquetasPdf } from "../core/pdf/pdfEtiquetas";
 import { runCutLayout, cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
+import type { CutLayoutResult } from "../core/cutlayout/cutLayoutTypes";
+import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../core/labelDesigner/labelDesignerStorage";
 import {
   buildCncFromCutlistItems,
   getDefaultCncLayoutOptions,
@@ -191,8 +193,9 @@ export function useGerarArquivoHandlers() {
       rules: project.rules,
       materialId: project.materialId,
       extractedPartsByBoxId: project.extractedPartsByBoxId ?? {},
+      settings: settings ?? undefined,
     }),
-    [project, boxes]
+    [project, boxes, settings]
   );
 
   const cancelIndustrialLayout = useCallback(() => {
@@ -274,7 +277,8 @@ export function useGerarArquivoHandlers() {
       return;
     }
     try {
-      const doc = await buildEtiquetasPdf(pdfProject());
+      const designerConfig = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
+      const doc = await buildEtiquetasPdf({ ...pdfProject(), designerConfig });
       doc.save(`${slug}_etiquetas.pdf`);
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de etiquetas:", err);
@@ -406,14 +410,12 @@ export function useGerarArquivoHandlers() {
     }
     showToast("Gerando layout industrial otimizado… aguarde.", "info");
     abortIndustrialLayoutRef.current = false;
-    const forceFastMode = true; // temporário para diagnóstico
+    const forceFastMode = false;
     setLayoutProgress({
       visible: true,
       percent: 1,
-      message: forceFastMode
-        ? "Modo rápido forçado ativo. Gerando layout estável…"
-        : "Gerando layout industrial otimizado… aguarde.",
-      mode: forceFastMode ? "fast" : "pro",
+      message: "Gerando layout industrial otimizado… aguarde.",
+      mode: "pro",
     });
     console.log("Projeto atual:", project);
     const allItems = buildItemsForCncExport(project, boxes) as CutlistItemForPieces[];
@@ -521,7 +523,7 @@ export function useGerarArquivoHandlers() {
         visible: true,
         percent: 100,
         message: "Layout concluído. A transferir ficheiros…",
-        mode: forceFastMode || abortIndustrialLayoutRef.current ? "fast" : "pro",
+        mode: abortIndustrialLayoutRef.current ? "fast" : "pro",
       });
       setTimeout(() => {
         setLayoutProgress({ visible: false, percent: 0, message: "", mode: "pro" });
@@ -603,9 +605,35 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: PDF Unificado", err);
       }
 
-      // --- Etiquetas ---
+      // --- Nesting (calculado uma vez; partilhado por Etiquetas + Layout de Corte PRO) ---
+      let nestingResult: CutLayoutResult | null = null;
       try {
-        const docEtiquetas = await buildEtiquetasPdf(proj);
+        const pieces = cutlistToPieces(allItems as CutlistItemForPieces[]);
+        if (pieces.length > 0) {
+          showCutLayoutLoader();
+          await yieldToMainThread();
+          nestingResult = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
+            ...getDefaultCncLayoutOptions(),
+            originTopRight: true,
+          });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push({ step: "Nesting", message: msg });
+        devLogger.error("Full export: Nesting", err);
+      } finally {
+        hideCutLayoutLoader();
+      }
+
+      // --- Etiquetas (ordenadas pela posição real no nesting) ---
+      try {
+        const nestingPlacements = nestingResult?.sheets.flatMap((s) => s.placements) ?? [];
+        const designerConfig = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
+        const docEtiquetas = await buildEtiquetasPdf({
+          ...proj,
+          cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
+          designerConfig,
+        });
         if (!safeAddPdf(zip, `${safeSlug}_etiquetas.pdf`, docEtiquetas)) {
           errors.push({ step: "PDF Etiquetas", message: "Documento ou blob inválido." });
         }
@@ -615,23 +643,15 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: PDF Etiquetas", err);
       }
 
-      // --- Layout de Corte (e Layout de Corte PRO) ---
+      // --- Layout de Corte PRO (reutiliza nesting calculado acima) ---
       try {
-        const pieces = cutlistToPieces(allItems);
-        if (pieces.length > 0) {
-          showCutLayoutLoader();
-          await yieldToMainThread();
-          const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
-            ...getDefaultCncLayoutOptions(),
-            originTopRight: true,
-          });
+        if (nestingResult && nestingResult.sheets.length > 0) {
           const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-          const docLayout = await buildCutLayoutPdf(result, {
+          const docLayout = await buildCutLayoutPdf(nestingResult, {
             projectName: project.projectName ?? "Projeto",
             nestingTopRightOrigin: true,
           });
-          const addedPro = safeAddPdf(zip, `${safeSlug}_layout_corte_pro.pdf`, docLayout);
-          if (!addedPro) {
+          if (!safeAddPdf(zip, `${safeSlug}_layout_corte_pro.pdf`, docLayout)) {
             errors.push({ step: "Layout de Corte PRO", message: "Falha ao adicionar PDF ao ZIP." });
           }
         }
@@ -639,8 +659,6 @@ export function useGerarArquivoHandlers() {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push({ step: "Layout de Corte PRO", message: msg });
         devLogger.error("Full export: Layout de Corte", err);
-      } finally {
-        hideCutLayoutLoader();
       }
 
       // --- CNC (TCN): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---

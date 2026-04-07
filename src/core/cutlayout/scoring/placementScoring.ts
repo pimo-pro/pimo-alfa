@@ -113,7 +113,10 @@ export function scorePlacement(
   const compactness01 = 1 - Math.min(1, localWaste / sheetArea);
   const compactnessScore = compactness01 * 0.22;
   const expectedUtil = currentUtilization + areaGain;
-  const utilizationReward = Math.min(0.6, expectedUtil * 0.65);
+  // Base linear + bónus não-linear para chapas quase cheias (incentiva manter a chapa atual)
+  const utilizationReward =
+    Math.min(0.5, expectedUtil * 0.55) +
+    (expectedUtil > 0.85 ? Math.min(0.2, (expectedUtil - 0.85) * 2.0) : 0);
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {
     if (placement.rotation === 90) {

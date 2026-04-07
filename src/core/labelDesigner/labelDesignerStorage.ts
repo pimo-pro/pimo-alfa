@@ -23,6 +23,14 @@ export function saveLabelDesignerConfig(config: LabelDesignerConfig): void {
   localStorage.setItem(LABEL_DESIGNER_STORAGE_KEY, JSON.stringify(config));
 }
 
+export function hasStoredLabelDesignerConfig(): boolean {
+  try {
+    return Boolean(localStorage.getItem(LABEL_DESIGNER_STORAGE_KEY));
+  } catch {
+    return false;
+  }
+}
+
 export function exportLabelDesignerConfig(config: LabelDesignerConfig): string {
   return JSON.stringify(config, null, 2);
 }
