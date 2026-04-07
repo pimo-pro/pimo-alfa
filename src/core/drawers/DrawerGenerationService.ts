@@ -5,6 +5,7 @@
  * baseado nas dimensões do box e configurações.
  */
 
+import { devLogger } from "../../utils/devLogger";
 import {
   calculateDrawerSpecs,
   validateDrawerSpecs,
@@ -104,7 +105,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
 
     // Valida specs
     if (!validateDrawerSpecs(specs)) {
-      console.warn(`DrawerGenerationService: specs inválidas para gaveta ${i}`);
+      devLogger.warn(`DrawerGenerationService: specs inválidas para gaveta ${i}`);
     }
 
     // Cria gaveta

@@ -293,8 +293,8 @@ export function cutlistComPrecoFromBox(
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
   }
 
-  console.log("[CUTLIST-FINAL] total:", items.length);
-  console.log("[CUTLIST-FINAL] tipos:", items.map((p) => p.tipo));
+  devLogger.debug("[CUTLIST-FINAL] total:", items.length);
+  devLogger.debug("[CUTLIST-FINAL] tipos:", items.map((p) => p.tipo));
   return items;
 }
 

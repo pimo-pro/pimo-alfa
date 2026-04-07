@@ -5,6 +5,7 @@ import {
   remoteSaveProject,
   type ProjectsApiDeps,
 } from "./projectsApi";
+import { devLogger } from "../../utils/devLogger";
 import {
   asObject,
   buildPimoProjectDataFromRequest,
@@ -301,8 +302,22 @@ export async function syncQueue(): Promise<void> {
           const request: SaveProjectRequest = project.remoteId
             ? { ...baseRequest, remoteProjectId: project.remoteId }
             : baseRequest;
+          if (import.meta.env.DEV) {
+            devLogger.debug("[SYNC] remoteSaveProject →", {
+              projectId: project.id,
+              remoteId: project.remoteId ?? null,
+              ownerId: project.ownerId,
+              op: entry.op,
+            });
+          }
           const saved = await remoteSaveProject(request, projectsApiDeps);
           if (!saved) {
+            if (import.meta.env.DEV) {
+              devLogger.warn("[SYNC] remoteSaveProject devolveu null (payload vazio ou erro HTTP)", {
+                projectId: project.id,
+                ownerId: project.ownerId,
+              });
+            }
             throw new Error("Falha ao guardar no servidor");
           }
           projects[projectIdx] = {
@@ -349,10 +364,10 @@ export async function syncQueue(): Promise<void> {
             try {
               const ok = await remoteDeleteProject(remoteId);
               if (!ok) {
-                console.warn("[SYNC] Falha ao apagar no servidor; seguindo com fluxo local", { remoteId });
+                devLogger.warn("[SYNC] Falha ao apagar no servidor; seguindo com fluxo local", { remoteId });
               }
             } catch (deleteErr) {
-              console.warn("[SYNC] Erro no delete remoto; seguindo com fluxo local", {
+              devLogger.warn("[SYNC] Erro no delete remoto; seguindo com fluxo local", {
                 remoteId,
                 error: deleteErr instanceof Error ? deleteErr.message : "erro desconhecido",
               });

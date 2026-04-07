@@ -9,6 +9,8 @@
  * - Traseira: 10mm mais curta (fundo passa por baixo)
  */
 
+import { devLogger } from "../../utils/devLogger";
+
 export interface DrawerDimensions {
   // Box de referência (dimensões internas)
   boxInternalWidth: number;
@@ -221,7 +223,7 @@ export function calculateDrawerSpecs(
 export function validateDrawerSpecs(specs: DrawerCalculatedSpecs): boolean {
   // Frente deve ser maior que corpo
   if (specs.front.width <= specs.body.width) {
-    console.warn("DrawerParametrics: frente deve ser maior que corpo");
+    devLogger.warn("DrawerParametrics: frente deve ser maior que corpo");
     return false;
   }
 
@@ -229,7 +231,7 @@ export function validateDrawerSpecs(specs: DrawerCalculatedSpecs): boolean {
   const widthDiff = specs.front.width - specs.body.width;
   const expectedDiff = (FRONT_GAP_MM + SIDE_GAP_MM) * 2;
   if (Math.abs(widthDiff - expectedDiff) > 0.1) {
-    console.warn(`DrawerParametrics: diferença incorreta (${widthDiff}mm, esperado ${expectedDiff}mm)`);
+    devLogger.warn(`DrawerParametrics: diferença incorreta (${widthDiff}mm, esperado ${expectedDiff}mm)`);
     return false;
   }
 

@@ -249,3 +249,13 @@ export const updateProject = renameProjectById;
 export const deleteProject = deleteProjectById;
 export const saveDesign = saveProject;
 export const loadDesign = loadProjectRecord;
+
+/**
+ * Lista todos os projetos do sistema para administradores.
+ * Combina dados locais (offline) com dados remotos (scope=all).
+ * Deduplicação por id interno garantida pelo mergeRemoteListIntoOffline.
+ * Destinada a uso em páginas/ferramentas de administração globais.
+ */
+export async function listAllProjectsForAdmin(): Promise<SavedProjectMeta[]> {
+  return listProjects("all", undefined);
+}
