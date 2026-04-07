@@ -335,6 +335,8 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
   const [showArchived, setShowArchived] = useState(false);
   const [confirmDeleteInfo, setConfirmDeleteInfo] = useState<{ ids: string[]; names: string[] } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedArchivedIds, setSelectedArchivedIds] = useState<Set<string>>(() => new Set());
+  const selectAllArchivedRef = useRef<HTMLInputElement>(null);
   const [activeOwnerFilter, setActiveOwnerFilter] = useState<string | null>(null);
 
   const { overlays, archive, unarchive, removeFromOverlay, setTag, setNote, getOverlay, archivedCount } =
@@ -404,10 +406,29 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
     [activeProjects, selectedIds]
   );
 
+  const allArchivedSelected = useMemo(
+    () => archivedProjects.length > 0 && archivedProjects.every((p) => selectedArchivedIds.has(p.id)),
+    [archivedProjects, selectedArchivedIds]
+  );
+
+  const someArchivedSelected = useMemo(
+    () => archivedProjects.some((p) => selectedArchivedIds.has(p.id)),
+    [archivedProjects, selectedArchivedIds]
+  );
+
   useEffect(() => {
     const el = selectAllRef.current;
     if (el) el.indeterminate = someSelected && !allSelected;
   }, [someSelected, allSelected]);
+
+  useEffect(() => {
+    const el = selectAllArchivedRef.current;
+    if (el) el.indeterminate = someArchivedSelected && !allArchivedSelected;
+  }, [someArchivedSelected, allArchivedSelected]);
+
+  useEffect(() => {
+    if (!showArchived) setSelectedArchivedIds(new Set());
+  }, [showArchived]);
 
   const toggleSelectAll = useCallback(() => {
     if (allSelected) {
@@ -425,6 +446,37 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
       return next;
     });
   }, []);
+
+  const toggleSelectAllArchived = useCallback(() => {
+    if (allArchivedSelected) {
+      setSelectedArchivedIds(new Set());
+    } else {
+      setSelectedArchivedIds(new Set(archivedProjects.map((p) => p.id)));
+    }
+  }, [allArchivedSelected, archivedProjects]);
+
+  const toggleArchivedRow = useCallback((id: string, checked: boolean) => {
+    setSelectedArchivedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const handleUnarchiveSelected = useCallback(() => {
+    const ids = Array.from(selectedArchivedIds);
+    unarchive(ids);
+    setSelectedArchivedIds(new Set());
+  }, [selectedArchivedIds, unarchive]);
+
+  const handleDeleteArchivedSelected = useCallback(() => {
+    const ids = Array.from(selectedArchivedIds);
+    const names = ids.map(
+      (id) => safeProjects.find((p) => p.id === id)?.name?.trim() || "Projeto sem nome"
+    );
+    setConfirmDeleteInfo({ ids, names });
+  }, [selectedArchivedIds, safeProjects]);
 
   const handleArchiveSelected = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -684,7 +736,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
                           gap: 16,
                           marginTop: 12,
                         }}
@@ -710,7 +762,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
                     gap: 16,
                   }}
                 >
@@ -741,8 +793,21 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                     marginBottom: 12,
                     paddingBottom: 8,
                     borderBottom: "1px dashed var(--border, #e4e4e7)",
+                    flexWrap: "wrap",
                   }}
                 >
+                  <label
+                    style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}
+                  >
+                    <input
+                      ref={selectAllArchivedRef}
+                      type="checkbox"
+                      checked={allArchivedSelected}
+                      onChange={toggleSelectAllArchived}
+                      aria-label="Selecionar todos os arquivados"
+                    />
+                    Selecionar todos
+                  </label>
                   <h3
                     style={{
                       margin: 0,
@@ -751,50 +816,38 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                       color: "var(--ui-color-muted, #71717a)",
                     }}
                   >
-                    Projetos Arquivados ({archivedProjects.length})
+                    Arquivados ({archivedProjects.length})
                   </h3>
+                  {selectedArchivedIds.size > 0 && (
+                    <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexWrap: "wrap" }}>
+                      <Button type="button" variant="outline" onClick={handleUnarchiveSelected}>
+                        Desarquivar ({selectedArchivedIds.size})
+                      </Button>
+                      <Button type="button" variant="danger" onClick={handleDeleteArchivedSelected}>
+                        Eliminar ({selectedArchivedIds.size})
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
                     gap: 16,
                     opacity: 0.7,
                   }}
                 >
                   {archivedProjects.map((project) => (
-                    <div key={project.id} style={{ position: "relative" }}>
-                      <ProjectCard
-                        project={project}
-                        isElevated={false}
-                        selected={false}
-                        onToggleSelect={(_id, _checked) => {}}
-                        overlay={getOverlay(project.id)}
-                        onSetTag={setTag}
-                        onSetNote={setNote}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => unarchive([project.id])}
-                        style={{
-                          position: "absolute",
-                          bottom: 52,
-                          left: 0,
-                          right: 0,
-                          margin: "0 14px",
-                          padding: "5px",
-                          background: "var(--ui-color-surface, #f4f4f5)",
-                          border: "1px solid var(--border, #e4e4e7)",
-                          borderRadius: 6,
-                          cursor: "pointer",
-                          fontSize: 12,
-                          color: "var(--ui-color-text, #18181b)",
-                          fontWeight: 500,
-                        }}
-                      >
-                        Restaurar
-                      </button>
-                    </div>
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      isElevated={true}
+                      selected={selectedArchivedIds.has(project.id)}
+                      onToggleSelect={toggleArchivedRow}
+                      overlay={getOverlay(project.id)}
+                      onSetTag={setTag}
+                      onSetNote={setNote}
+                    />
                   ))}
                 </div>
               </div>

@@ -5,6 +5,8 @@
   gap: var(--ui-space-5);
   font-family: var(--ui-font-family);
   color: var(--ui-color-text);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .ui-app-frame {
@@ -17,6 +19,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
