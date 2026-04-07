@@ -148,7 +148,8 @@ export function projectMatchesId(project: OfflineProjectRecord, id: string): boo
 let genericOwnerMigrationDone = false;
 
 /**
- * Migra registos com ownerId genérico "usuario-local" para o ID anónimo estável do dispositivo.
+ * Migra registos com ownerId genérico ("usuario-local" ou prefixo "anon-" legacy)
+ * para o ID de visitante estável do dispositivo (prefixo "guest-").
  * Corre uma única vez por sessão.
  */
 export function migrateGenericOwnerIdOnce(
@@ -162,7 +163,8 @@ export function migrateGenericOwnerIdOnce(
   const projects = readOfflineProjects();
   let changed = false;
   const updated = projects.map((p) => {
-    if (p.ownerId === "usuario-local") {
+    const isGeneric = p.ownerId === "usuario-local" || p.ownerId.startsWith("anon-");
+    if (isGeneric) {
       changed = true;
       return { ...p, ownerId: currentUser.ownerId, ownerName: currentUser.ownerName };
     }

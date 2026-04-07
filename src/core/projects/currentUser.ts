@@ -1,4 +1,5 @@
-const CURRENT_USER_ID_KEY = "pimo_current_user_id";
+import { getGuestOwnerId } from "../auth/authGuest";
+
 const CURRENT_USER_NAME_KEY = "pimo_current_user_name";
 
 /** Deve coincidir com `AuthProvider` (`src/auth/AuthProvider.tsx`). */
@@ -39,30 +40,6 @@ function tryOwnerFromAuthStorage(): CurrentProjectUser | null {
   }
 }
 
-/**
- * Gera ou lê um ID anónimo estável para este dispositivo.
- * - Cria apenas se não existir ou se o valor for o genérico "usuario-local".
- * - Nunca reescreve um ID já válido.
- * - Protegido contra QuotaExceededError.
- */
-function getOrCreateAnonymousId(): string {
-  if (typeof localStorage === "undefined") {
-    return `anon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-
-  const existing = (localStorage.getItem(CURRENT_USER_ID_KEY) || "").trim();
-  if (existing && existing !== "usuario-local") return existing;
-
-  const newId = `anon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  try {
-    localStorage.setItem(CURRENT_USER_ID_KEY, newId);
-  } catch (err) {
-    // QuotaExceededError — devolver o ID sem persistir; não crasha
-    console.warn("[pimo] localStorage cheio ao guardar userId anónimo:", err);
-  }
-  return newId;
-}
-
 // ---------------------------------------------------------------------------
 // API pública
 // ---------------------------------------------------------------------------
@@ -70,7 +47,10 @@ function getOrCreateAnonymousId(): string {
 /**
  * Retorna o utilizador do projeto atual.
  * Resultado memoizado em memória após a primeira chamada — sem releituras de
- * localStorage nem criações repetidas de ID anónimo.
+ * localStorage nem criações repetidas de ID de visitante.
+ *
+ * - Utilizadores autenticados: sempre lidos de auth storage (bypass cache).
+ * - Visitantes: ownerId estável via getGuestOwnerId() (authGuest.ts).
  *
  * O cache é invalidado por `setCurrentProjectUser()` para suportar login/logout.
  */
@@ -82,24 +62,20 @@ export function getCurrentProjectUser(): CurrentProjectUser {
     return fromAuth;
   }
 
-  // Utilizador anónimo: retornar do cache se já calculado
+  // Visitante: retornar do cache se já calculado
   if (_cachedUser) return _cachedUser;
 
   if (typeof localStorage === "undefined") {
-    _cachedUser = { ownerId: "usuario-local", ownerName: "Utilizador Local" };
+    _cachedUser = { ownerId: "guest-offline", ownerName: "Visitante" };
     return _cachedUser;
   }
 
-  const explicit = (localStorage.getItem(CURRENT_USER_ID_KEY) || "").trim();
   const ownerName =
-    (localStorage.getItem(CURRENT_USER_NAME_KEY) || "").trim() || "Utilizador Local";
+    (localStorage.getItem(CURRENT_USER_NAME_KEY) || "").trim() || "Visitante";
 
-  if (explicit && explicit !== "usuario-local") {
-    _cachedUser = { ownerId: explicit, ownerName };
-    return _cachedUser;
-  }
-
-  const ownerId = getOrCreateAnonymousId();
+  // getGuestOwnerId() é idempotente: lê do localStorage na 1ª chamada,
+  // devolve o mesmo valor em chamadas subsequentes desta sessão.
+  const ownerId = getGuestOwnerId();
   _cachedUser = { ownerId, ownerName };
   return _cachedUser;
 }
@@ -107,8 +83,8 @@ export function getCurrentProjectUser(): CurrentProjectUser {
 export function setCurrentProjectUser(user: CurrentProjectUser): void {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(CURRENT_USER_ID_KEY, user.ownerId.trim() || "usuario-local");
-    localStorage.setItem(CURRENT_USER_NAME_KEY, user.ownerName.trim() || "Utilizador Local");
+    localStorage.setItem("pimo_current_user_id", user.ownerId.trim() || "guest-offline");
+    localStorage.setItem(CURRENT_USER_NAME_KEY, user.ownerName.trim() || "Visitante");
   } catch (err) {
     console.warn("[pimo] localStorage cheio ao guardar utilizador:", err);
   }

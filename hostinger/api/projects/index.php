@@ -204,6 +204,10 @@ if ($method === "GET" && $action === "") {
         if ($pid === "") {
             continue;
         }
+            // scope=all  → sem filtro: devolve TODOS os projectos do sistema,
+        //               incluindo ownerId com prefixo "guest-" (visitantes),
+        //               "anon-" (sistema legacy) e utilizadores registados.
+        // scope=mine → filtra pelo ownerId exacto enviado pelo cliente.
         if ($scope === "mine" && $ownerId !== "") {
             if (($data["ownerId"] ?? "") !== $ownerId) {
                 continue;
