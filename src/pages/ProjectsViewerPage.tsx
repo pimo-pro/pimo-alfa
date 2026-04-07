@@ -21,7 +21,6 @@ import Card from "../components/ui/Card";
 import Loader from "../components/ui/Loader";
 import PageContainer from "../components/ui/PageContainer";
 import PageHeader from "../components/ui/PageHeader";
-import Section from "../components/ui/Section";
 import "../components/ui/ui.css";
 
 /** Alinhado ao blueprint: lista de IDs escolhida em `/projects` (fase seguinte pode gravar aqui). */
