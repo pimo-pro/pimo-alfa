@@ -21,6 +21,7 @@ import {
   migrateGenericOwnerIdOnce,
   readOfflineProjects,
   readSyncQueue,
+  startIdbInit,
   writeOfflineProjects,
   writeSyncQueue,
   type OfflineProjectRecord,
@@ -206,6 +207,7 @@ function resolveProjectIdForRemote(project: OfflineProjectRecord): string | null
 function ensureSyncLoopStarted(): void {
   if (syncLoopStarted) return;
   syncLoopStarted = true;
+  startIdbInit(); // garantir arranque antecipado do IDB (idempotente)
   migrateLegacyLocalProjectsOnce({
     enqueueSyncOperation,
     buildSaveRequestFromOffline,
