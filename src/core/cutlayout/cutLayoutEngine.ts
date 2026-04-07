@@ -544,7 +544,8 @@ function optimizeWithMetaHeuristics(
   meta: Required<MetaHeuristicsOptions>,
   seed: number = 1,
   trialPool?: TrialConfig[],
-  scoreModel: ScoreModel = "legacy"
+  scoreModel: ScoreModel = "legacy",
+  budgetMs?: number
 ): {
   sheets: SheetResult[];
   diagnostics: {
@@ -574,7 +575,8 @@ function optimizeWithMetaHeuristics(
       layoutFromPlacements,
       computeSolutionMetrics,
       simulateTrialForGroup,
-    }
+    },
+    budgetMs
   );
 }
 

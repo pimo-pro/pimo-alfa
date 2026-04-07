@@ -50,6 +50,8 @@ export type SaveProjectRequest = {
   thumbnailDataUrl?: string | null;
   /** Id no servidor (após primeiro sync); enviado no POST para atualizar o mesmo ficheiro. */
   remoteProjectId?: string;
+  /** Id local do projeto a atualizar; se fornecido, faz UPDATE em vez de INSERT. */
+  localProjectId?: string;
 };
 
 export type RenameProjectRequest = {

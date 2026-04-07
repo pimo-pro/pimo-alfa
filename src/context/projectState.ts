@@ -269,6 +269,7 @@ export const defaultState: ProjectState = {
   resultados: null,
   ultimaAtualizacao: null,
   lastAutosaveTime: null,
+  currentProjectId: null,
   design: null,
   cutList: null,
   cutListComPreco: null,

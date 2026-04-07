@@ -2,7 +2,6 @@ import type { CutPlacement, SheetDefinition } from "../cutLayoutTypes";
 import type { PlacementCandidate, RotationScoringConfig } from "./rotationScoring";
 
 const EPS = 0.001;
-const MIN_UTILIZATION_PERCENT = 0.8;
 
 export function buildCandidateCoordinates(
   placed: CutPlacement[],
@@ -112,9 +111,9 @@ export function scorePlacement(
   const topSlack = Math.max(0, sheet.altura_mm - (placement.y + placement.h));
   const localWaste = rightSlack * placement.h + topSlack * placement.w;
   const compactness01 = 1 - Math.min(1, localWaste / sheetArea);
-  const compactnessScore = compactness01 * 0.15;
+  const compactnessScore = compactness01 * 0.22;
   const expectedUtil = currentUtilization + areaGain;
-  const utilizationReward = expectedUtil >= MIN_UTILIZATION_PERCENT ? 0.4 : expectedUtil * 0.2;
+  const utilizationReward = Math.min(0.6, expectedUtil * 0.65);
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {
     if (placement.rotation === 90) {
@@ -124,7 +123,7 @@ export function scorePlacement(
     }
   }
   return (
-    areaGain * 2.0 +
+    areaGain * 2.5 +
     bottomLeftBias * 0.3 +
     utilizationReward +
     placement.orientationScore * 0.25 +

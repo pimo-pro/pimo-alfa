@@ -2,7 +2,7 @@ import type { CutLayoutTrialConfig, CutPiece, CutPlacement, SheetDefinition, She
 import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 import type { GlobalScoreMetrics } from "../scoring/solutionMetrics";
 
-const MAIN_SEARCH_WINDOW = 32;
+const MAIN_SEARCH_WINDOW = 48;
 
 type PlacedRect = { x: number; y: number; w: number; h: number };
 type ScoreModel = "legacy" | "v32";
@@ -218,45 +218,50 @@ export function simulateTrialForGroup(
       const util = deps.calculateSheetUtilization(placedRects, sheet.largura_mm, sheet.altura_mm);
       if (util < minUtilizationPercent) {
         rescueAttempts += 1;
-        const rescue = deps.pickBestPieceForSheet(
-          remaining,
-          sheet,
-          trial.strategy,
-          state,
-          placedRects,
-          kerf,
-          remaining.length,
-          rotationCfg,
-          "bestFit"
-        );
-        if (rescue) {
-          const piece = remaining[rescue.index];
-          placements.push({
-            x_mm: rescue.placement.x,
-            y_mm: rescue.placement.y,
-            largura_mm: rescue.placement.w,
-            altura_mm: rescue.placement.h,
-            rotacao: rescue.placement.rotation,
-            sheetIndex,
-            boxId: piece.boxId,
-            partName: piece.partName,
-            materialId: piece.materialId,
-            materialName: piece.materialName,
-            drillHoles: piece.drillHoles ?? piece.holes,
-            holes: piece.holes,
-            originalDrillHoles: piece.originalDrillHoles ?? piece.drillHoles ?? piece.holes,
-            pieceNumber: piece.pieceNumber,
-            shortCode: piece.shortCode,
-            metadata: piece.metadata,
-          });
-          placedRects.push({
-            x: rescue.placement.x,
-            y: rescue.placement.y,
-            w: rescue.placement.w,
-            h: rescue.placement.h,
-          });
-          state = deps.updateStrategyState(trial.strategy, state, rescue.placement, kerf);
-          remaining.splice(rescue.index, 1);
+        let moreToRescue = true;
+        while (moreToRescue && remaining.length > 0) {
+          moreToRescue = false;
+          const rescue = deps.pickBestPieceForSheet(
+            remaining,
+            sheet,
+            trial.strategy,
+            state,
+            placedRects,
+            kerf,
+            remaining.length,
+            rotationCfg,
+            "bestFit"
+          );
+          if (rescue) {
+            const piece = remaining[rescue.index];
+            placements.push({
+              x_mm: rescue.placement.x,
+              y_mm: rescue.placement.y,
+              largura_mm: rescue.placement.w,
+              altura_mm: rescue.placement.h,
+              rotacao: rescue.placement.rotation,
+              sheetIndex,
+              boxId: piece.boxId,
+              partName: piece.partName,
+              materialId: piece.materialId,
+              materialName: piece.materialName,
+              drillHoles: piece.drillHoles ?? piece.holes,
+              holes: piece.holes,
+              originalDrillHoles: piece.originalDrillHoles ?? piece.drillHoles ?? piece.holes,
+              pieceNumber: piece.pieceNumber,
+              shortCode: piece.shortCode,
+              metadata: piece.metadata,
+            });
+            placedRects.push({
+              x: rescue.placement.x,
+              y: rescue.placement.y,
+              w: rescue.placement.w,
+              h: rescue.placement.h,
+            });
+            state = deps.updateStrategyState(trial.strategy, state, rescue.placement, kerf);
+            remaining.splice(rescue.index, 1);
+            moreToRescue = true;
+          }
         }
       }
     }

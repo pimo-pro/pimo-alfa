@@ -114,7 +114,7 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
             wallStore.getState().clearRoom();
           }
         }
-        updateProject(() => applyResultados(restored));
+        updateProject(() => ({ ...applyResultados(restored), currentProjectId: id }));
       },
       mergeSnapshots: async (ids) => {
         const merged = await mergeProjectSnapshotsIntoWorkspace(ids);

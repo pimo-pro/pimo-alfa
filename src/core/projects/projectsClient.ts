@@ -58,6 +58,33 @@ export function saveProjectOffline(
 ): SavedProjectRecord {
   ensureProjectsSyncStarted();
   const timestamp = nowIso();
+  const projects = readOfflineProjects();
+
+  // UPDATE: se localProjectId é fornecido, atualizar registo existente em vez de criar novo
+  if (request.localProjectId) {
+    const idx = projects.findIndex(
+      (p) => !p.deleted && projectMatchesId(p, request.localProjectId!)
+    );
+    if (idx >= 0) {
+      const existing = projects[idx];
+      projects[idx] = {
+        ...existing,
+        name: request.name?.trim() || existing.name,
+        updatedAt: timestamp,
+        thumbnailDataUrl:
+          request.thumbnailDataUrl !== undefined
+            ? (request.thumbnailDataUrl ?? null)
+            : existing.thumbnailDataUrl,
+        snapshot: request.snapshot,
+      };
+      writeOfflineProjects(projects);
+      void source;
+      notifyLocalSaveStatus(existing.id);
+      return toSavedRecordFromOffline(projects[idx]);
+    }
+  }
+
+  // INSERT: criar novo registo
   const id = makeId("local");
   const record: OfflineProjectRecord = {
     id,
@@ -72,7 +99,6 @@ export function saveProjectOffline(
     deleted: false,
     lastSyncedAt: null,
   };
-  const projects = readOfflineProjects();
   projects.push(record);
   writeOfflineProjects(projects);
   void source;
@@ -89,6 +115,7 @@ export function loadProjectsOffline(
   ownerId?: string
 ): SavedProjectMeta[] {
   ensureProjectsSyncStarted();
+  const seen = new Set<string>();
   const projects = readOfflineProjects()
     .filter((project) => !project.deleted)
     .filter((project) => {
@@ -96,7 +123,13 @@ export function loadProjectsOffline(
       if (!ownerId) return true;
       return project.ownerId === ownerId;
     })
-    .sort(compareByUpdatedDesc);
+    .sort(compareByUpdatedDesc)
+    .filter((project) => {
+      const key = project.remoteId ?? project.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   return projects.map((project, index) => toSavedMetaFromOffline(project, index));
 }
 

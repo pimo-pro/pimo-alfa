@@ -84,6 +84,8 @@ export interface ProjectState {
   ultimaAtualizacao: Date | null;
   /** Último instante de auto-save (ISO string). */
   lastAutosaveTime: string | null;
+  /** Id do projeto atualmente aberto/guardado; usado para UPDATE em saves subsequentes. */
+  currentProjectId?: string | null;
 
   design: Design | null;
   cutList: CutListItem[] | null;

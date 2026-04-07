@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getCurrentProjectUser } from "../../core/projects/currentUser";
-import { saveProject, saveSnapshot } from "../../core/projects/projectsClient";
+import { saveProject } from "../../core/projects/projectsClient";
 import type { ProjectActions, ProjectSnapshot, ProjectState } from "../projectTypes";
 import {
   appendChangelog,
@@ -16,7 +16,7 @@ import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 export type DesignActions = Pick<ProjectActions, "gerarDesign" | "gerarESalvarDesign" | "recalculateAllBoxes">;
 
 export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignActions {
-  const { updateProject, setProject, viewerSync, applyResultados } = ctx;
+  const { updateProject, setProject, viewerSync, applyResultados, projectRef } = ctx;
 
   return useMemo(() => {
     const buildGeneratedState = (prev: ProjectState): ProjectState => {
@@ -136,6 +136,7 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
         roomSnapshot: captureRoomSnapshot(),
       };
       const currentUser = getCurrentProjectUser();
+      const currentProjectId = projectRef.current.currentProjectId ?? undefined;
       let saved: Awaited<ReturnType<typeof saveProject>> = null;
       try {
         saved = await saveProject({
@@ -144,26 +145,16 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
           ownerName: currentUser.ownerName,
           snapshot,
           thumbnailDataUrl,
+          localProjectId: currentProjectId,
         });
       } catch (err) {
         console.warn("[SYNC] gerarESalvarDesign: saveProject falhou, seguindo fluxo", err);
       }
 
-      try {
-        await saveSnapshot({
-          name: generatedState.projectName,
-          ownerId: currentUser.ownerId,
-          ownerName: currentUser.ownerName,
-          snapshot,
-          thumbnailDataUrl: null,
-        });
-      } catch (err) {
-        console.warn("[SYNC] gerarESalvarDesign: saveSnapshot falhou, seguindo fluxo", err);
-      }
-
       setProject((prev) => ({
         ...prev,
         lastAutosaveTime: saved?.updatedAt ?? new Date().toISOString(),
+        currentProjectId: saved?.id ?? prev.currentProjectId ?? null,
       }));
     };
 
@@ -172,5 +163,5 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
     };
 
     return a;
-  }, [updateProject, setProject, viewerSync, applyResultados]);
+  }, [updateProject, setProject, viewerSync, applyResultados, projectRef]);
 }

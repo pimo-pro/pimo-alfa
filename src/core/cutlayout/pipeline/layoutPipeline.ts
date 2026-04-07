@@ -61,10 +61,10 @@ type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_
 
 const MAX_NESTING_ATTEMPTS = 4;
 const ATTEMPT_TIMEOUT_MS = 1500;
-const META_MAX_MULTI_START = 8;
-const META_MAX_ITERATIONS = 120;
+const META_MAX_MULTI_START = 12;
+const META_MAX_ITERATIONS = 160;
 /** Budget de tempo por grupo de material para a meta-heurística (ms). */
-const META_BUDGET_MS = 2200;
+const META_BUDGET_MS = 3500;
 
 function nowMs(): number {
   if (typeof performance !== "undefined" && typeof performance.now === "function") {
