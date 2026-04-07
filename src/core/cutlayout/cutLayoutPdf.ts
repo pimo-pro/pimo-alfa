@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
-import { holeToTroPdfDisplayOffset, toLayoutAbsoluteX, toLayoutPlacementX } from "./layoutCoordinateSystem";
+import { holePhysicalDisplayOffset, toLayoutPlacementX } from "./layoutCoordinateSystem";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
 
 /** A4 retrato: largura × altura (mm) */
@@ -188,7 +188,12 @@ function drawSheetDiagram(
   type PlacedRect = { pl: CutPlacement; px: number; py: number; pw: number; ph: number };
   const layoutRects: PlacedRect[] = placements.map((pl) => ({
     pl,
-    px: originX + (topRightOrigin ? pl.x_mm : toLayoutPlacementX(pl.x_mm, pl.largura_mm, sheet.largura_mm)) * scale,
+    // Converte TRO x (distância da aresta direita da peça ao lado B) para x físico de A (lado esquerdo).
+    // topRightOrigin=true: pl.x_mm está em TRO → físico = W - pl.x_mm - pl.largura_mm
+    // topRightOrigin=false: pl.x_mm já está em coordenadas físicas (origem esquerda, sistema nesting)
+    px: originX + (topRightOrigin
+      ? (sheet.largura_mm - pl.x_mm - pl.largura_mm)
+      : pl.x_mm) * scale,
     py: originY + pl.y_mm * scale,
     pw: pl.largura_mm * scale,
     ph: pl.altura_mm * scale,
@@ -213,10 +218,14 @@ function drawSheetDiagram(
     if (origHoles.length > 0) {
       doc.setFillColor(30, 30, 30);
       doc.setDrawColor(30, 30, 30);
+      // piecePhysLeft = x físico da aresta esquerda (A) da peça, medido do lado A da chapa.
+      // Já calculado como a mesma expressão usada no px da peça acima.
+      const piecePhysLeft = topRightOrigin
+        ? (sheet.largura_mm - pl.x_mm - pl.largura_mm)
+        : pl.x_mm;
       for (const h of origHoles) {
-        const off = holeToTroPdfDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
-        const hxAbs = topRightOrigin ? (pl.x_mm + off.dx) : toLayoutAbsoluteX(pl.x_mm + off.dx, sheet.largura_mm);
-        const hx = originX + hxAbs * scale;
+        const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+        const hx = originX + (piecePhysLeft + off.dx) * scale;
         const hy = py + off.dy * scale;
         const r = Math.max(0.35, Math.min(1.1, ((h.diameter ?? 5) / 2) * scale * 0.85));
         doc.circle(hx, hy, r, "FD");
@@ -362,7 +371,9 @@ function drawPieceTablePaginated(
         if (thumbHoles.length > 0) {
           doc.setFillColor(25, 25, 25);
           for (const h of thumbHoles) {
-            const off = holeToTroPdfDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+            const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.largura_mm, pl.altura_mm);
+            // off.dx = distância física do furo ao lado A (esquerda) da peça
+            // off.dy = distância física do furo ao lado C (topo) da peça
             const hx = rx + (off.dx / pl.largura_mm) * rw;
             const hy = ry + (off.dy / pl.altura_mm) * rh;
             const hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.largura_mm) * rw));

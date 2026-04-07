@@ -65,6 +65,35 @@ export function holeToTroPdfDisplayOffset(
   return { dx: Math.max(0, plLargura - hx), dy: Math.max(0, plAltura - hy) };
 }
 
+/**
+ * Offset do furo para display no PDF em coordenadas FÍSICAS (origem A-C = topo-esquerdo da chapa).
+ * dx = distância do furo ao lado A (esquerda) da peça — X cresce em direção a B (direita).
+ * dy = distância do furo ao lado C (topo) da peça  — Y cresce em direção a D (base).
+ *
+ * rot=0:    dx = hx_orig,  dy = plAltura - hy_orig
+ * rot=90 CW: dx = hy_orig,  dy = hx_orig
+ *
+ * Uso no PDF (diagrama):  hx = originX + (piecePhysLeft + off.dx) * scale
+ *                         hy = py + off.dy * scale
+ * Uso no PDF (miniatura): hx = rx + (off.dx / pl.largura_mm) * rw
+ *                         hy = ry + (off.dy / pl.altura_mm) * rh
+ */
+export function holePhysicalDisplayOffset(
+  hx: number,
+  hy: number,
+  rotacao: number,
+  plLargura: number,
+  plAltura: number
+): { dx: number; dy: number } {
+  const r = ((rotacao ?? 0) % 360 + 360) % 360;
+  if (r === 90) {
+    // rot=90 CW: eixo-largura original → topo da peça colocada; eixo-altura original → lado A da peça colocada
+    return { dx: Math.max(0, hy), dy: Math.max(0, hx) };
+  }
+  // rot=0: posição física directa (hx de A, hy de D → converter para y-de-C)
+  return { dx: Math.max(0, hx), dy: Math.max(0, plAltura - hy) };
+}
+
 export function getSheetSafetyMarginMm(): number {
   try {
     const s = getSettings();
