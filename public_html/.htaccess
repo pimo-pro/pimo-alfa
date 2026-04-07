@@ -15,8 +15,13 @@
   RewriteRule ^me$ api/auth/index.php [L]
   RewriteRule ^users$ api/users/index.php [L]
 
-  # Mapeamento interno: /api/projects/<ficheiro> → backend no disco
-  RewriteRule ^api/projects/(.*)$ /home/u100505900/public_html/api/projects/$1 [L]
+  # Nota: a RewriteRule para api/projects foi removida intencionalmente.
+  # O ficheiro public_html/api/projects/index.php existe fisicamente no disco,
+  # pelo que Apache serve-o diretamente sem necessidade de rewrite.
+  # A regra anterior reescrevia o URL para um caminho de SO (/home/u.../public_html/...)
+  # que mod_rewrite trata como URL-path — inexistente no DocumentRoot —
+  # fazendo com que POST/GET para /api/projects/ fossem servidos como index.html (SPA)
+  # e causando "Erro ao sincronizar" em todos os projetos.
 
   # SPA React (Vite) — por último, para não capturar /me nem /auth/login
   RewriteRule ^index\.html$ - [L]

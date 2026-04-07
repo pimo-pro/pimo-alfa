@@ -5,6 +5,15 @@
  */
 declare(strict_types=1);
 
+// Diagnóstico de routing/WAF: confirma que o script PHP é realmente executado.
+// Visível em: Hostinger → Logs → PHP error log (ou equivalente).
+// Remover após confirmar que o routing está correto e o sync funciona.
+error_log(sprintf(
+    "[PIMO-API] projects/index.php reached — method=%s uri=%s",
+    $_SERVER["REQUEST_METHOD"] ?? "?",
+    $_SERVER["REQUEST_URI"] ?? "?"
+));
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
