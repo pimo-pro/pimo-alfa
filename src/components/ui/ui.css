@@ -8,13 +8,15 @@
 }
 
 .ui-app-frame {
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .ui-app-frame__content {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }

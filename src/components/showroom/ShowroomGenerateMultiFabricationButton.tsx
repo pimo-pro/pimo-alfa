@@ -1,9 +1,8 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
-import { generateMultiProjectFabrication } from "../../core/fabrication/multiProjectFabrication";
-import { useToast } from "../../context/ToastContext";
 import Button from "../ui/Button";
 import { useShowroomStore } from "./showroomStore";
+import { MultiProjectGenerationModal } from "../projects/MultiProjectGenerationModal";
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -24,41 +23,31 @@ type Props = {
  */
 export function ShowroomGenerateMultiFabricationButton({ showroomLoading }: Props) {
   const projectIdsCarregados = useShowroomStore((s) => s.projectIdsCarregados);
-  const { showToast, startLoading, stopLoading } = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleClick = useCallback(async () => {
-    const ids = useShowroomStore.getState().projectIdsCarregados;
-    if (ids.length === 0) return;
-
-    setIsGenerating(true);
-    const loadingId = startLoading("Gerando pacote industrial…");
-    try {
-      const { zipBlob } = await generateMultiProjectFabrication(ids);
-      downloadBlob(zipBlob, "fabricacao-multiprojeto.zip");
-      showToast("Pacote industrial gerado.", "info");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast(`Não foi possível gerar o pacote industrial: ${msg}`, "error");
-    } finally {
-      stopLoading(loadingId);
-      setIsGenerating(false);
-    }
-  }, [showToast, startLoading, stopLoading]);
+  const [showModal, setShowModal] = useState(false);
 
   if (projectIdsCarregados.length < 1) {
     return null;
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      disabled={showroomLoading || isGenerating}
-      onClick={handleClick}
-      title="Gera ZIP com PDFs por projeto e ficheiros industriais globais (layout, drill, CNC)."
-    >
-      Gerar Arquivo Completo (Todos os Projetos)
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={showroomLoading}
+        onClick={() => setShowModal(true)}
+        title="Gera ZIP com PDFs por projeto e ficheiros industriais globais (layout, drill, CNC)."
+      >
+        Gerar Arquivo Completo (Todos os Projetos)
+      </Button>
+
+      {showModal && (
+        <MultiProjectGenerationModal
+          projectIds={projectIdsCarregados}
+          onClose={() => setShowModal(false)}
+          onDownload={downloadBlob}
+        />
+      )}
+    </>
   );
 }

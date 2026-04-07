@@ -34,8 +34,18 @@ export interface GeneratedFabricationPackage {
   };
 }
 
+export type GenerationStep = {
+  step: number;
+  total: number;
+  label: string;
+  detail?: string;
+  elapsed: number;
+};
+
 export type MultiProjectFabricationOptions = {
   nesting?: "auto" | "none";
+  signal?: AbortSignal;
+  onProgress?: (_step: GenerationStep) => void;
 };
 
 function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
@@ -169,6 +179,23 @@ export async function generateMultiProjectFabrication(
   }
 
   const nestingMode = options?.nesting ?? "auto";
+  const signal = options?.signal;
+  const onProgress = options?.onProgress;
+  const totalSteps = 6;
+  const t0 = Date.now();
+
+  const emit = (step: number, label: string, detail?: string) => {
+    onProgress?.({ step, total: totalSteps, label, detail, elapsed: Date.now() - t0 });
+  };
+
+  const checkAbort = () => {
+    if (signal?.aborted) {
+      const err = new Error("AbortError");
+      err.name = "AbortError";
+      throw err;
+    }
+  };
+
   const layoutOpts =
     nestingMode === "none"
       ? { ...getFastCncLayoutOptions(), originTopRight: true }
@@ -186,8 +213,11 @@ export async function generateMultiProjectFabrication(
 
   const loaded: LoadedEntry[] = [];
 
+  emit(1, "Carregando projetos…");
   for (let i = 0; i < projectIds.length; i += 1) {
+    checkAbort();
     const recordId = projectIds[i];
+    emit(1, "Carregando projetos…", `Projeto ${i + 1} de ${projectIds.length}`);
     const record = await loadProjectRecord(recordId);
     if (!record?.snapshot?.projectState) {
       throw new Error(`multiProjectFabrication: projeto não encontrado ou sem snapshot (${recordId}).`);
@@ -203,6 +233,9 @@ export async function generateMultiProjectFabrication(
       prefix: `P${i + 1}_`,
     });
   }
+
+  checkAbort();
+  emit(2, "Gerando cutlist e PDFs por projeto…");
 
   const projectNames: string[] = [];
   const allPrefixedItems: CutListItemComPreco[] = [];
@@ -230,7 +263,9 @@ export async function generateMultiProjectFabrication(
   const folderNamesUsed = new Set<string>();
 
   for (const entry of loaded) {
+    checkAbort();
     const proj = stateToProjectForPdf(entry.state);
+    emit(2, "Gerando cutlist e PDFs por projeto…", proj.projectName || entry.recordId);
     const folder = uniqueFolderSegment(projectSlug(proj.projectName), folderNamesUsed);
     const basePath = `projetos/${folder}`;
 
@@ -265,12 +300,16 @@ export async function generateMultiProjectFabrication(
     }
   }
 
+  checkAbort();
+  emit(3, "Otimizando layout de chapas…");
+
   const allItemsForLayout = allPrefixedItems as CutlistItemForPieces[];
   const layoutTitle = projectNames.join(" + ");
 
   try {
     const pieces = cutlistToPieces(allItemsForLayout);
     if (pieces.length > 0) {
+      emit(4, "Aplicando meta-heurística de nesting…");
       const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), layoutOpts);
       const { buildCutLayoutPdf } = await import("../cutlayout/cutLayoutPdf");
       const docLayout = await buildCutLayoutPdf(result, {
@@ -283,6 +322,9 @@ export async function generateMultiProjectFabrication(
     devLogger.error("multiProjectFabrication: layout corte PRO", err);
   }
 
+  checkAbort();
+  emit(5, "Gerando ficheiros TCN/CNC…");
+
   try {
     const byMaterial = new Map<string, CutListItemComPreco[]>();
     for (const item of allPrefixedItems) {
@@ -293,6 +335,8 @@ export async function generateMultiProjectFabrication(
     const usedTcnNamesByPath = new Set<string>();
 
     for (const [materialName, itemsForMaterial] of byMaterial) {
+      checkAbort();
+      emit(5, "Gerando ficheiros TCN/CNC…", materialName);
       const cncBundle = buildCncFromCutlistItems(
         globalProjectStub,
         itemsForMaterial as CutlistItemForPieces[],
@@ -323,6 +367,9 @@ export async function generateMultiProjectFabrication(
     devLogger.error("multiProjectFabrication: CNC", err);
   }
 
+  checkAbort();
+  emit(5, "Gerando ficheiros de furação (drill)…");
+
   try {
     const drillFiles = buildDrillFilesForProject(allPrefixedItems, {
       projectName: globalProjectStub.projectName,
@@ -344,6 +391,9 @@ export async function generateMultiProjectFabrication(
   } catch (err) {
     devLogger.error("multiProjectFabrication: drill XML", err);
   }
+
+  checkAbort();
+  emit(6, "Compactando pacote industrial…");
 
   const zipBlob = await zip.generateAsync({ type: "blob" });
   if (!zipBlob || zipBlob.size === 0) {
