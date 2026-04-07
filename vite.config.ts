@@ -67,6 +67,15 @@ export default defineConfig({
       },
     },
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://pimo.pro',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   define: {
     __PIMO_VERSION__: JSON.stringify(buildVersion),
   },

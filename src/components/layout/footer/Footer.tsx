@@ -55,8 +55,8 @@ export default function Footer({
       }}
     >
       <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span>© 2026 PiMo-Criativo Configurador paramétrico — Crafted by Khaled</span>
         <span style={{ color: "var(--text-main)", fontWeight: "inherit" }}>{version}</span>
-        <span>© 2026 PIMO Studio — Crafted by Khaled</span>
       </span>
 
       <span

@@ -19,12 +19,13 @@ export function ShowroomCanvas({ children }: Props) {
   return (
     <div
       style={{
-        height: "min(70vh, 680px)",
+        height: "min(78vh, 760px)",
         width: "100%",
         borderRadius: 8,
         overflow: "hidden",
         border: "1px solid var(--border, #ccc)",
         background: "#d8dce3",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
       }}
     >
       <Canvas

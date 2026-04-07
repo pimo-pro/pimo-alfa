@@ -36,7 +36,8 @@ export type SyncQueueEntry = {
 
 let legacyMigrationDone = false;
 
-export function readCurrentUser(): { ownerId: string; ownerName: string } {
+/** Leitura directa para migração legacy — não cria ID novo, não usa cache. */
+function readCurrentUser(): { ownerId: string; ownerName: string } {
   if (typeof localStorage === "undefined") {
     return { ownerId: "usuario-local", ownerName: "Utilizador Local" };
   }
@@ -61,8 +62,9 @@ export function writeJsonToLocalStorage(key: string, value: unknown): void {
   if (typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* ignore */
+  } catch (err) {
+    // Proteção global: QuotaExceededError ou outro erro de storage — log + continua sem crash
+    console.warn(`[pimo] Falha ao escrever "${key}" no localStorage (storage cheio?):`, err);
   }
 }
 

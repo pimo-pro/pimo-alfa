@@ -7,8 +7,10 @@ export default function UserProjectsPage() {
   const { actions } = useProject();
   const [projects, setProjects] = useState<SavedProjectInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [ownerId, setOwnerId] = useState(getCurrentProjectUser().ownerId);
-  const [ownerName, setOwnerName] = useState(getCurrentProjectUser().ownerName);
+  // Chamada única — getCurrentProjectUser() é memoizada em módulo após a 1ª leitura
+  const initialUser = getCurrentProjectUser();
+  const [ownerId, setOwnerId] = useState(initialUser.ownerId);
+  const [ownerName, setOwnerName] = useState(initialUser.ownerName);
 
   const refresh = async () => {
     setLoading(true);

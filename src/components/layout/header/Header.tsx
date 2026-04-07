@@ -98,10 +98,7 @@ export default function Header() {
           }}
         />
         <div style={{ background: "transparent", border: "none", boxShadow: "none", outline: "none" }}>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>PIMO-Criativo</div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Configurador paramétrico
-          </div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>PiMo Studio</div>
         </div>
       </div>
 

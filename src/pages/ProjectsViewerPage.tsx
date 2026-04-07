@@ -137,10 +137,11 @@ export default function ProjectsViewerPage() {
       <Card className="ui-projects-shell">
         <PageHeader
           title="Showroom de projetos"
-          subtitle={`Visualização múltipla (snapshots). Espaçamento da grelha: ${SHOWROOM_SPACING_MM} mm. Máx. ${MAX_SHOWROOM_IDS} projetos.`}
+          subtitle={`Visualização múltipla (snapshots) — Espaçamento da grelha: ${SHOWROOM_SPACING_MM} mm — Máx. ${MAX_SHOWROOM_IDS} projetos`}
         />
 
-        <div style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+        {/* Barra de ações */}
+        <div style={{ marginBottom: 12, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
           <Link to="/projects">
             <Button type="button" variant="outline">
               Voltar a Projects
@@ -162,64 +163,75 @@ export default function ProjectsViewerPage() {
           <ShowroomGenerateMultiFabricationButton showroomLoading={loading} />
         </div>
 
+        {/* Estado vazio */}
         {ids.length === 0 ? (
-          <Section title="IDs">
+          <div style={{ padding: "12px 0" }}>
             <p className="ui-text-muted">
               Nenhum projeto selecionado. Utilize a query{" "}
               <code style={{ fontSize: 12 }}>?ids=id1,id2</code> ou grave uma lista JSON em{" "}
               <code style={{ fontSize: 12 }}>sessionStorage[&quot;{PIMO_SHOWROOM_PROJECT_IDS_KEY}&quot;]</code>{" "}
               (array de strings ou objeto <code style={{ fontSize: 12 }}>{`{ ids: string[] }`}</code>).
             </p>
-          </Section>
+          </div>
         ) : null}
 
-        {ids.length > 0 ? (
-          <Section title={`IDs carregados (${ids.length})`}>
-            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13 }}>
-              {ids.map((id) => (
-                <li key={id}>
-                  <code>{id}</code>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
+        {/* Erros de carregamento */}
         {errorRows.length > 0 ? (
-          <Section title="Erros por projeto">
-            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "var(--text-danger, #b00020)" }}>
+          <div
+            style={{
+              marginBottom: 8,
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid var(--text-danger, #b00020)",
+              background: "rgba(176,0,32,0.04)",
+            }}
+          >
+            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "var(--text-danger, #b00020)" }}>
+              Erros por projeto ({errorRows.length})
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--text-danger, #b00020)" }}>
               {errorRows.map((row) => (
                 <li key={row.id}>
                   <code>{row.id}</code>: {row.error}
                 </li>
               ))}
             </ul>
-          </Section>
+          </div>
         ) : null}
 
+        {/* Loader */}
         {loading && ids.length > 0 ? (
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 12 }}>
             <Card>
               <Loader label="A carregar snapshots…" />
             </Card>
           </div>
         ) : null}
 
+        {/* Canvas + painel lateral */}
         {!loading && ids.length > 0 ? (
-          <Section title="Canvas">
-            <p className="ui-text-muted" style={{ fontSize: 12, marginBottom: 8 }}>
-              Mover: arraste no plano XZ com projeto já selecionado; setas para ajuste fino. Rodar: Shift + arrastar.
-              Régua: dois cliques no chão. Clique fora para desselecionar.
+          <div style={{ marginTop: 4 }}>
+            <p
+              style={{
+                margin: "0 0 4px",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--ui-color-muted, #71717a)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              Snapshots carregados ({loadedIds.length})
             </p>
             <div
               style={{
                 display: "flex",
-                flexWrap: "wrap",
-                gap: 16,
+                gap: 8,
                 alignItems: "flex-start",
+                width: "100%",
               }}
             >
-              <div style={{ flex: "1 1 400px", minWidth: 280 }}>
+              {/* Canvas ocupa 85% da largura */}
+              <div style={{ flex: "1 1 0", minWidth: 0 }}>
                 <ShowroomToolbar />
                 <ShowroomCanvas>
                   {ids.map((id, i) => {
@@ -238,9 +250,10 @@ export default function ProjectsViewerPage() {
                   })}
                 </ShowroomCanvas>
               </div>
-              <ShowroomVisibilityPanel rows={visibilityRows} />
+              {/* Painel lateral estreito */}
+              <ShowroomVisibilityPanel rows={visibilityRows} allIds={ids} />
             </div>
-          </Section>
+          </div>
         ) : null}
       </Card>
     </PageContainer>
