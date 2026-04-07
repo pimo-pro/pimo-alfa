@@ -127,6 +127,7 @@ export function toSavedMetaFromOffline(project: OfflineProjectRecord, index: num
     ownerId: project.ownerId,
     ownerName: project.ownerName,
     thumbnailDataUrl: project.thumbnailDataUrl,
+    ...(project.corrupted ? { corrupted: true } : {}),
   };
 }
 

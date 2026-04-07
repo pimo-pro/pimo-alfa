@@ -472,6 +472,8 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
     viewerApi.setGlobalLightIntensity?.(settings.globalLightIntensity);
     viewerApi.setShadowIntensity?.(settings.shadowIntensity);
+    viewerApi.setGlossIntensity?.(settings.glossIntensity);
+    viewerApi.setMatteMode?.(settings.matteMode);
   }, [project.viewerSettings, viewerApi, photoModePanelOpen]);
 
   useEffect(() => {

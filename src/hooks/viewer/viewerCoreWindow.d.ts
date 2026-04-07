@@ -96,6 +96,10 @@ declare global {
       getGlobalLightIntensity?: () => number;
       setShadowIntensity?: (value: number) => void;
       getShadowIntensity?: () => number;
+      setGlossIntensity?: (value: number) => void;
+      getGlossIntensity?: () => number;
+      setMatteMode?: (enabled: boolean) => void;
+      getMatteMode?: () => boolean;
       display?: {
         shadowIntensity: number;
       };

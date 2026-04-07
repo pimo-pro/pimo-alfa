@@ -51,9 +51,9 @@ const files = import.meta.glob(
 const PAINEL_OBSERVER_THRESHOLDS: number[] = [0, 0.05, 0.15, 0.3, 0.5, 0.75, 1];
 
 const computeStats = (boxCount: number): DocStat[] => {
-  // Valores atualizados manualmente (contagem real de arquivos .ts, .tsx, .js, .jsx)
-  const totalFiles = 331;
-  const totalLines = 55139;
+  // Valores auditados (07/04/2026) — src/**/*.ts + src/**/*.tsx
+  const totalFiles = 477;
+  const totalLines = 73273;
   
   const filePaths = Object.keys(files);
   const totalComponents = filePaths.filter(
@@ -576,13 +576,13 @@ export default function PainelReferencia() {
           </div>
           <div>
             <strong>Arquitetura Atualizada (2026-03-11):</strong>
-            {"\n"}- Total de arquivos no projeto: 18,607
-            {"\n"}- Arquivos de código (TypeScript/JavaScript): 331
-            {"\n"}- Linhas de código: 55,139
+            {"\n"}- Arquivos de código (src/**/*.ts, src/**/*.tsx): 477
+            {"\n"}- Linhas de código (src/**/*.ts, src/**/*.tsx): 73,273
             {"\n"}- Estrutura principal: src/, docs/, scripts/, services/, api/
-            {"\n"}- Módulos principais: MultiBoxManager, Viewer, ProjectProvider, Workspace
-            {"\n"}- Fluxos de dados: ProjectContext → MultiBoxManager → Viewer
-            {"\n"}- Documentação: Painel de Referência, Roadmap, Arquitetura
+            {"\n"}- Módulos principais: ViewerCore, Viewer, BoxAssembler, DrillGeometryBuilder, MultiBoxManager, ProjectProvider, Workspace
+            {"\n"}- Fluxos de dados: Painel(UI) → ProjectActions/ProjectProvider → MultiBoxManager/useCalculadoraSync → Viewer API
+            {"\n"}- Exportação: useGerarArquivoHandlers → CutLayout/PDF/TCN/Drill XML
+            {"\n"}- Documentação: Documentacao, Painel de Referência, Ajuda, Roadmap, Arquitetura
           </div>
           <div>
             <strong>Contexts, managers e viewerApiAdapter</strong>

@@ -51,6 +51,10 @@ export type ViewerSettings = {
   globalLightIntensity: number;
   /** Intensidade das sombras projetadas pela luz principal (0 = desligado, 1 = 100%). */
   shadowIntensity: number;
+  /** Intensidade do brilho para exibição (1 = comportamento atual, 0 = fosco). Não altera presets. */
+  glossIntensity: number;
+  /** Modo fosco: remove brilho, env e clearcoat independentemente do slider. */
+  matteMode: boolean;
 };
 
 /**
@@ -126,6 +130,8 @@ export type SavedProjectInfo = {
   ownerId: string;
   ownerName: string;
   thumbnailDataUrl: string | null;
+  /** Verdadeiro quando o snapshot do projeto estava inválido/nulo no storage. */
+  corrupted?: boolean;
 };
 
 export type ViewerSnapshot = {

@@ -17,6 +17,8 @@ export type OfflineProjectRecord = {
   snapshot: SaveProjectRequest["snapshot"];
   deleted: boolean;
   lastSyncedAt: string | null;
+  /** Verdadeiro quando o snapshot original estava inválido; registo mantido para auditoria. */
+  corrupted?: boolean;
 };
 
 export type SyncQueueOperationType = "save" | "snapshot" | "rename" | "delete";
@@ -75,7 +77,9 @@ export function readOfflineProjects(): OfflineProjectRecord[] {
       const createdAt = toIsoOrNow(obj.createdAt);
       const updatedAt = toIsoOrNow(obj.updatedAt);
       const snapshotObj = asObject(obj.snapshot);
-      if (!snapshotObj) return null;
+      if (!snapshotObj) {
+        console.warn(`[pimo] Projeto com snapshot inválido mantido como corrompido (id: ${id})`);
+      }
       return {
         id,
         remoteId: typeof obj.remoteId === "string" && (obj.remoteId?.trim()?.length ?? 0) > 0 ? obj.remoteId : null,
@@ -88,7 +92,8 @@ export function readOfflineProjects(): OfflineProjectRecord[] {
           typeof obj.thumbnailDataUrl === "string" || obj.thumbnailDataUrl === null
             ? (obj.thumbnailDataUrl as string | null)
             : null,
-        snapshot: snapshotObj as SaveProjectRequest["snapshot"],
+        snapshot: (snapshotObj ?? { projectState: {}, viewerSnapshot: null }) as SaveProjectRequest["snapshot"],
+        corrupted: !snapshotObj,
         deleted: obj.deleted === true,
         lastSyncedAt: typeof obj.lastSyncedAt === "string" ? obj.lastSyncedAt : null,
       } satisfies OfflineProjectRecord;
@@ -136,6 +141,34 @@ export function compareByUpdatedDesc(a: { updatedAt: string }, b: { updatedAt: s
 
 export function projectMatchesId(project: OfflineProjectRecord, id: string): boolean {
   return project.id === id || project.remoteId === id;
+}
+
+let genericOwnerMigrationDone = false;
+
+/**
+ * Migra registos com ownerId genérico "usuario-local" para o ID anónimo estável do dispositivo.
+ * Corre uma única vez por sessão.
+ */
+export function migrateGenericOwnerIdOnce(
+  getCurrentUser: () => { ownerId: string; ownerName: string }
+): void {
+  if (genericOwnerMigrationDone) return;
+  genericOwnerMigrationDone = true;
+  if (typeof localStorage === "undefined") return;
+  const currentUser = getCurrentUser();
+  if (currentUser.ownerId === "usuario-local") return;
+  const projects = readOfflineProjects();
+  let changed = false;
+  const updated = projects.map((p) => {
+    if (p.ownerId === "usuario-local") {
+      changed = true;
+      return { ...p, ownerId: currentUser.ownerId, ownerName: currentUser.ownerName };
+    }
+    return p;
+  });
+  if (changed) {
+    writeOfflineProjects(updated);
+  }
 }
 
 export function migrateLegacyLocalProjectsOnce(deps: {

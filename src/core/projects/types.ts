@@ -33,6 +33,8 @@ export type SavedProjectMeta = {
   ownerId: string;
   ownerName: string;
   thumbnailDataUrl: string | null;
+  /** Verdadeiro quando o snapshot do projeto estava inválido/nulo no storage. */
+  corrupted?: boolean;
 };
 
 export type SavedProjectRecord = SavedProjectMeta & {

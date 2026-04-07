@@ -14,8 +14,10 @@ import {
   toMetaFromProjectData,
   toRecordFromProjectData,
 } from "./projectsMappers";
+import { getCurrentProjectUser } from "./currentUser";
 import {
   migrateLegacyLocalProjectsOnce,
+  migrateGenericOwnerIdOnce,
   readOfflineProjects,
   readSyncQueue,
   writeOfflineProjects,
@@ -207,6 +209,7 @@ function ensureSyncLoopStarted(): void {
     enqueueSyncOperation,
     buildSaveRequestFromOffline,
   });
+  migrateGenericOwnerIdOnce(getCurrentProjectUser);
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
       setSyncStatus({ online: true });

@@ -27,7 +27,7 @@ export const painelReferenciaSections: DocSection[] = [
       "Local: src/core/multibox/. Arquivos: types.ts (MultiBoxViewerApi, MultiBoxManagerApi, MultiBoxEvent), " +
       "multiBoxManager.ts (hook useMultiBoxManager), index.ts (re-exports). " +
       "Responsabilidades: sincronizar ProjectContext.workspaceBoxes com o Viewer; encaminhar operações via " +
-      "useCalculadoraSync e useCadModelsSync; API: addBox, removeBox, selectBox, listBoxes. " +
+      "useCalculadoraSync; API: addBox, removeBox, selectBox, listBoxes. " +
       "Fluxo: Workspace → MultiBoxManager → Viewer.",
     files: [
       "src/core/multibox/types.ts",

@@ -21,6 +21,7 @@ import {
 import { mergeProjectSnapshotsIntoWorkspace } from "../../core/projects/projectMergeWorkspace";
 import { defaultState } from "../projectState";
 import { devLogger } from "../../utils/devLogger";
+import { useToast } from "../../context/ToastContext";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 
 export type ProjectIoActions = Pick<
@@ -45,6 +46,7 @@ function logProjectIo(_event: string, _data?: object): void {
 export function useProjectIoActions(ctx: ProjectActionsExecutionContext): ProjectIoActions {
   const { updateProject, setProject, viewerSync, undoStackRef, redoStackRef, projectRef, applyResultados } =
     ctx;
+  const { showToast } = useToast();
 
   return useMemo(
     () => ({
@@ -85,13 +87,23 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         const entry = await loadProjectRecord(id);
         if (!entry) {
           logProjectIo("load-project-miss", { id });
+          showToast(
+            "Projeto não encontrado. Pode ter sido eliminado ou ainda não sincronizado.",
+            "error"
+          );
           return;
         }
         viewerSync.restoreViewerSnapshot(
           (entry.snapshot.viewerSnapshot ?? null) as ProjectSnapshot["viewerSnapshot"]
         );
         const restored = reviveState(entry.snapshot.projectState);
-        if (!restored) return;
+        if (!restored) {
+          showToast(
+            "Snapshot do projeto inválido ou incompatível. Não foi possível abrir.",
+            "error"
+          );
+          return;
+        }
         logProjectIo("project-loaded", { id, boxes: restored.workspaceBoxes?.length ?? 0 });
         if (entry.snapshot.roomSnapshot !== undefined) {
           if (entry.snapshot.roomSnapshot) {
@@ -154,6 +166,6 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         await deleteProjectById(id);
       },
     }),
-    [updateProject, setProject, viewerSync, undoStackRef, redoStackRef, projectRef, applyResultados]
+    [updateProject, setProject, viewerSync, undoStackRef, redoStackRef, projectRef, applyResultados, showToast]
   );
 }

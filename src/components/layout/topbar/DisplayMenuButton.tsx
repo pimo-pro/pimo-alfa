@@ -67,6 +67,8 @@ export default function DisplayMenuButton() {
       },
       globalLightIntensity: 1,
       shadowIntensity: 1,
+      glossIntensity: 1,
+      matteMode: false,
     });
     viewerApi?.setBackgroundMode?.("studio");
     viewerApi?.setMaterialQuality?.("standard");
@@ -78,6 +80,8 @@ export default function DisplayMenuButton() {
     viewerApi?.setUltraPerformanceMode?.(false);
     viewerApi?.setGlobalLightIntensity?.(1);
     viewerApi?.setShadowIntensity?.(1);
+    viewerApi?.setGlossIntensity?.(1);
+    viewerApi?.setMatteMode?.(false);
     setMenuOpen(false);
   };
 
@@ -240,6 +244,44 @@ export default function DisplayMenuButton() {
                     viewerApi?.setShadowIntensity?.(value);
                   }}
                   title="Ajusta a intensidade das sombras projetadas no ambiente 3D."
+                />
+              </label>
+            </section>
+
+            <section className="display-quality-section" aria-label="Brilho">
+              <div className="display-quality-section-title">Brilho</div>
+              <label className="display-quality-toggle-row">
+                <span title="Remove todo o brilho e reflexos dos materiais.">
+                  Modo Mate
+                </span>
+                <input
+                  type="checkbox"
+                  checked={project.viewerSettings.matteMode}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    actions.setViewerSettings({ matteMode: enabled });
+                    viewerApi?.setMatteMode?.(enabled);
+                  }}
+                />
+              </label>
+              <label
+                className="display-quality-field"
+                style={{ opacity: project.viewerSettings.matteMode ? 0.4 : 1 }}
+              >
+                Gloss ({Math.round(project.viewerSettings.glossIntensity * 100)}%)
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={project.viewerSettings.glossIntensity}
+                  disabled={project.viewerSettings.matteMode}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    actions.setViewerSettings({ glossIntensity: value });
+                    viewerApi?.setGlossIntensity?.(value);
+                  }}
+                  title="Reduz ou remove o brilho dos materiais (1 = original, 0 = totalmente fosco)."
                 />
               </label>
             </section>

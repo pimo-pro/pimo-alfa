@@ -5,6 +5,7 @@ import {
   isOnline,
   makeId,
   nowIso,
+  toSavedMetaFromOffline,
   toSavedRecordFromOffline,
 } from "./projectsMappers";
 import {
@@ -65,15 +66,28 @@ export async function mergeRemoteListIntoOffline(
   });
   writeOfflineProjects(localProjects);
   writeSyncQueue(queue);
-  const mergedById = new Map<string, SavedProjectMeta>();
-  local.forEach((item) => mergedById.set(item.id, item));
-  remote.forEach((item) => {
-    const existing = mergedById.get(item.id);
-    if (!existing || Date.parse(item.updatedAt) > Date.parse(existing.updatedAt)) {
-      mergedById.set(item.id, item);
+
+  // Re-ler após writes para garantir estado fresco; usar id interno como chave para evitar duplicados.
+  const freshProjects = readOfflineProjects().filter((p) => !p.deleted);
+  const scopedProjects =
+    scope === "mine" && ownerId
+      ? freshProjects.filter((p) => p.ownerId === ownerId)
+      : freshProjects;
+
+  const mergedByInternalId = new Map<string, SavedProjectMeta>();
+  scopedProjects.forEach((p, idx) => {
+    mergedByInternalId.set(p.id, toSavedMetaFromOffline(p, idx));
+  });
+  // Adicionar projetos só-remotos (sem correspondência local por id ou remoteId).
+  remote.forEach((remoteMeta) => {
+    const hasLocal = scopedProjects.some(
+      (p) => p.remoteId === remoteMeta.id || p.id === remoteMeta.id
+    );
+    if (!hasLocal) {
+      mergedByInternalId.set(remoteMeta.id, remoteMeta);
     }
   });
-  return Array.from(mergedById.values()).sort(compareByUpdatedDesc).map((item, index) => ({
+  return Array.from(mergedByInternalId.values()).sort(compareByUpdatedDesc).map((item, index) => ({
     ...item,
     sequence: index + 1,
   }));

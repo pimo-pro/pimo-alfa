@@ -78,6 +78,8 @@ const defaultViewerSettings: ViewerSettings = {
   },
   globalLightIntensity: 1,
   shadowIntensity: 1,
+  glossIntensity: 1,
+  matteMode: false,
 };
 
 const AUTO_PROJECT_NAME_SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";

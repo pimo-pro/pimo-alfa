@@ -28,6 +28,15 @@ function tryOwnerFromAuthStorage(): CurrentProjectUser | null {
   }
 }
 
+/** Gera ou lê um ID anónimo estável para este dispositivo (persiste em localStorage). */
+function getOrCreateAnonymousId(): string {
+  const existing = (localStorage.getItem(CURRENT_USER_ID_KEY) || "").trim();
+  if (existing && existing !== "usuario-local") return existing;
+  const newId = `anon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  localStorage.setItem(CURRENT_USER_ID_KEY, newId);
+  return newId;
+}
+
 export function getCurrentProjectUser(): CurrentProjectUser {
   if (typeof localStorage === "undefined") {
     return { ownerId: "usuario-local", ownerName: "Utilizador Local" };
@@ -36,7 +45,12 @@ export function getCurrentProjectUser(): CurrentProjectUser {
   const fromAuth = tryOwnerFromAuthStorage();
   if (fromAuth) return fromAuth;
 
-  const ownerId = (localStorage.getItem(CURRENT_USER_ID_KEY) || "").trim() || "usuario-local";
+  const explicit = (localStorage.getItem(CURRENT_USER_ID_KEY) || "").trim();
+  if (explicit && explicit !== "usuario-local") {
+    const ownerName = (localStorage.getItem(CURRENT_USER_NAME_KEY) || "").trim() || "Utilizador Local";
+    return { ownerId: explicit, ownerName };
+  }
+  const ownerId = getOrCreateAnonymousId();
   const ownerName = (localStorage.getItem(CURRENT_USER_NAME_KEY) || "").trim() || "Utilizador Local";
   return { ownerId, ownerName };
 }

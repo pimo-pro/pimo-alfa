@@ -17,6 +17,10 @@ const MATERIALS_NOOP_API = {
   setMaterialQuality: NOOP,
   getMaterialQuality: NOOP_RETURN_UNDEFINED,
   applyMaterialPreset: NOOP,
+  setGlossIntensity: NOOP,
+  getGlossIntensity: NOOP_RETURN_UNDEFINED,
+  setMatteMode: NOOP,
+  getMatteMode: NOOP_RETURN_UNDEFINED,
 } as const;
 
 export function useViewerMaterials() {
@@ -38,6 +42,10 @@ export function useViewerMaterials() {
       setMaterialQuality: bind(viewerCore.setMaterialQuality),
       getMaterialQuality: bind(viewerCore.getMaterialQuality),
       applyMaterialPreset: bind(viewerCore.applyMaterialPreset),
+      setGlossIntensity: bind(viewerCore.setGlossIntensity),
+      getGlossIntensity: bind(viewerCore.getGlossIntensity),
+      setMatteMode: bind(viewerCore.setMatteMode),
+      getMatteMode: bind(viewerCore.getMatteMode),
     };
   }, [viewerCore]);
 }

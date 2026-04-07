@@ -321,15 +321,23 @@ export class ViewerCore {
     string,
     { roughness: number; metalness: number; envMapIntensity: number; flatShading: boolean }
   >();
-  private materialQualityState = new Map<
+  /** Snapshot dos valores PBR base por material.uuid (capturado após preset/MaterialEngine).
+   * Fonte única para derivação de qualidade, gloss e matte — sem duplicação de estado. */
+  private displayMaterialBaseByUuid = new Map<
     string,
     {
       roughness: number;
       metalness: number;
       envMapIntensity: number;
       map: THREE.Texture | null;
+      clearcoat?: number;
+      clearcoatRoughness?: number;
     }
   >();
+  /** Intensidade de brilho visual (1 = preset original, 0 = fosco). Só afeta exibição. */
+  private glossIntensity = 1;
+  /** Modo fosco: sobrepõe gloss e clearcoat, envMapIntensity → 0. Reversível. */
+  private matteMode = false;
   private premiumTexture: THREE.CanvasTexture | null = null;
   private _diagnosticsLogged = false;
   /** Evita aplicar rotação duplicada no mesmo mesh. */
@@ -1527,45 +1535,104 @@ export class ViewerCore {
     this.sceneManager.setMaterialQuality(this.materialQuality);
   }
 
-  private applyMaterialQualityProfile(): void {
+  /** Orquestrador: quality → glossIntensity → matteMode.
+   * Único ponto de reconciliação de brilho. Substitui applyMaterialQualityProfile. */
+  private reapplyDisplayMaterials(): void {
     this.sceneManager.root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const materials = Array.isArray(node.material) ? node.material : [node.material];
       materials.forEach((material) => {
         if (!(material instanceof THREE.MeshStandardMaterial)) return;
-        if (!this.materialQualityState.has(material.uuid)) {
-          this.materialQualityState.set(material.uuid, {
+        const isPhysical = material instanceof THREE.MeshPhysicalMaterial;
+
+        // Captura snapshot base pós-preset (uma única vez por material.uuid).
+        if (!this.displayMaterialBaseByUuid.has(material.uuid)) {
+          const snap: {
+            roughness: number; metalness: number; envMapIntensity: number;
+            map: THREE.Texture | null; clearcoat?: number; clearcoatRoughness?: number;
+          } = {
             roughness: material.roughness,
             metalness: material.metalness,
             envMapIntensity: material.envMapIntensity,
             map: material.map,
-          });
+          };
+          if (isPhysical) {
+            snap.clearcoat = (material as THREE.MeshPhysicalMaterial).clearcoat;
+            snap.clearcoatRoughness = (material as THREE.MeshPhysicalMaterial).clearcoatRoughness;
+          }
+          this.displayMaterialBaseByUuid.set(material.uuid, snap);
         }
-        const original = this.materialQualityState.get(material.uuid);
-        if (!original) return;
-        if (this.materialQuality === "standard") {
-          material.roughness = original.roughness;
-          material.metalness = original.metalness;
-          material.envMapIntensity = original.envMapIntensity;
-          // material.map preservado (definido pelo MaterialEngine)
-          material.needsUpdate = true;
-          return;
-        }
+        const base = this.displayMaterialBaseByUuid.get(material.uuid);
+        if (!base) return;
+
+        // Passo 2: derivar quality a partir da base.
+        let roughness = base.roughness;
+        let metalness = base.metalness;
+        let envMapIntensity = base.envMapIntensity;
+        let clearcoat = base.clearcoat;
+        let clearcoatRoughness = base.clearcoatRoughness;
+
         if (this.materialQuality === "lacquered") {
-          material.roughness = Math.min(original.roughness, 0.18);
-          material.metalness = Math.max(original.metalness, 0.1);
-          material.envMapIntensity = Math.max(original.envMapIntensity, 1.1);
-          // material.map preservado (definido pelo MaterialEngine)
-          material.needsUpdate = true;
-          return;
+          roughness = Math.min(base.roughness, 0.18);
+          metalness = Math.max(base.metalness, 0.1);
+          envMapIntensity = Math.max(base.envMapIntensity, 1.1);
+        } else if (this.materialQuality === "premium") {
+          roughness = Math.max(0.24, base.roughness * 0.8);
+          metalness = Math.max(0.04, base.metalness * 1.1);
+          envMapIntensity = Math.max(base.envMapIntensity, 0.78);
         }
-        material.roughness = Math.max(0.24, original.roughness * 0.8);
-        material.metalness = Math.max(0.04, original.metalness * 1.1);
-        material.envMapIntensity = Math.max(original.envMapIntensity, 0.78);
+        // standard: valores da base preservados
+
+        // Passo 3: aplicar glossIntensity (não afeta metalness; só env, roughness, clearcoat).
+        if (!this.matteMode) {
+          const t = this.glossIntensity;
+          roughness = roughness + (1 - t) * (1 - roughness);
+          envMapIntensity = envMapIntensity * t;
+          if (clearcoat !== undefined) {
+            clearcoat = clearcoat * t;
+            if (clearcoatRoughness !== undefined) {
+              clearcoatRoughness = clearcoatRoughness + (1 - t) * (1 - clearcoatRoughness);
+            }
+          }
+        } else {
+          // Passo 4: matteMode sobrepõe gloss.
+          roughness = Math.max(roughness, 0.92);
+          envMapIntensity = 0;
+          if (clearcoat !== undefined) clearcoat = 0;
+        }
+
+        // Aplicar resultado final.
+        material.roughness = roughness;
+        material.metalness = metalness;
+        material.envMapIntensity = envMapIntensity;
+        if (isPhysical && clearcoat !== undefined) {
+          (material as THREE.MeshPhysicalMaterial).clearcoat = clearcoat;
+          if (clearcoatRoughness !== undefined) {
+            (material as THREE.MeshPhysicalMaterial).clearcoatRoughness = clearcoatRoughness;
+          }
+        }
         // material.map preservado (definido pelo MaterialEngine)
         material.needsUpdate = true;
       });
     });
+  }
+
+  setGlossIntensity(value: number): void {
+    this.glossIntensity = Math.max(0, Math.min(1, value));
+    this.reapplyDisplayMaterials();
+  }
+
+  getGlossIntensity(): number {
+    return this.glossIntensity;
+  }
+
+  setMatteMode(enabled: boolean): void {
+    this.matteMode = Boolean(enabled);
+    this.reapplyDisplayMaterials();
+  }
+
+  getMatteMode(): boolean {
+    return this.matteMode;
   }
 
   setBackgroundMode(mode: ViewerBackgroundMode): void {
@@ -1583,7 +1650,7 @@ export class ViewerCore {
       quality === "premium" || quality === "lacquered" ? quality : "standard";
     materialEngineSetLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
     this.sceneManager.setMaterialQuality(this.materialQuality);
-    this.applyMaterialQualityProfile();
+    this.reapplyDisplayMaterials();
     const mode: MaterialMode =
       this.materialQuality === "premium"
         ? "showcase"
@@ -1855,7 +1922,7 @@ export class ViewerCore {
     tagBoxGroupWithId(box, id);
     this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
     this.applyBackgroundMode();
-    this.applyMaterialQualityProfile();
+    this.reapplyDisplayMaterials();
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
       // auto-rotate disabled — centralizado no snapping
       // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
@@ -2077,7 +2144,7 @@ export class ViewerCore {
     }
     if (opts.materialName && !entry.cadOnly) {
       this.updateBoxMaterial(id, opts.materialName);
-      this.applyMaterialQualityProfile();
+      this.reapplyDisplayMaterials();
     }
     if (opts.cabinetType !== undefined) {
       entry.cabinetType =
@@ -2533,7 +2600,7 @@ export class ViewerCore {
     this.roomBoxCeiling = ceiling;
     this.setRoomCeilingVisible(this.roomCeilingVisible);
     this.applyBackgroundMode();
-    this.applyMaterialQualityProfile();
+    this.reapplyDisplayMaterials();
   }
 
   setRoomBounds(bounds: {
@@ -4012,7 +4079,7 @@ export class ViewerCore {
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();
-    this.materialQualityState.clear();
+    this.displayMaterialBaseByUuid.clear();
     if (this.premiumTexture) {
       this.premiumTexture.dispose();
       this.premiumTexture = null;

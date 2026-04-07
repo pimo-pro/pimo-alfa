@@ -1,6 +1,7 @@
+import { Icon } from "@/components/icons";
+import type { IconName } from "@/components/icons";
 
-
-const sections = [
+const helpSections = [
   {
     title: "Como mover caixas no workspace",
     text: "Arraste as caixas livremente nos eixos X e Z. O movimento é sempre em tempo real no viewer.",
@@ -92,6 +93,37 @@ const sections = [
     media: null,
   },
 ];
+
+const iconNames: IconName[] = [
+  "themeSun", "themeMoon", "user", "upload", "projects", "settings",
+  "home", "furniture", "models", "calculator", "electro", "accessories", "info",
+  "camera", "highlight", "ruler", "grid", "room", "orbit", "pan", "select", "move", "rotate",
+  "delete", "rename", "duplicate", "lock", "unlock", "alignFront", "alignBottom", "material", "mouse", "chevronRight", "check", "close",
+  "undo", "redo", "photoMode", "resetCamera", "send", "displayMenu", "displayCheck", "lock3D", "exploded",
+  "adminWood", "adminChecklist", "adminScrew", "adminPuzzle", "adminRuler", "adminSettings", "adminBook", "adminFolder", "adminArchive", "adminLab", "adminTools", "adminTag", "adminSave", "adminChart", "adminDocs",
+  "alertWarning", "alertInfo", "alertError", "whatsapp", "blueprint",
+];
+
+const iconDescription = (name: IconName): string => {
+  if (name.startsWith("admin")) return "Ícone usado em páginas e ações administrativas.";
+  if (name === "whatsapp") return "Ícone de contacto rápido por WhatsApp.";
+  if (name.startsWith("alert")) return "Ícone de estado/alerta para feedback visual.";
+  if (["camera", "highlight", "ruler", "grid", "room", "orbit", "pan", "select", "move", "rotate", "photoMode", "resetCamera", "lock3D", "exploded"].includes(name)) {
+    return "Ícone relacionado com controlo do viewer 3D.";
+  }
+  if (["undo", "redo", "send", "displayMenu", "displayCheck"].includes(name)) return "Ícone de ações de toolbar e fluxo de trabalho.";
+  if (["home", "furniture", "models", "calculator", "electro", "accessories", "info"].includes(name)) return "Ícone da navegação lateral e ferramentas do projeto.";
+  return "Ícone de interface geral do sistema.";
+};
+
+const iconSections = iconNames.map((name) => ({
+  title: `Ícone: ${name}`,
+  text: `Uso: <Icon name="${name}" size={24} /> — ${iconDescription(name)}`,
+  icon: <Icon name={name} size={40} />,
+  media: null,
+}));
+
+const sections = [...helpSections, ...iconSections];
 
 function Ajuda() {
   return (

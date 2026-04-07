@@ -116,8 +116,10 @@ export function clearAutoLinks(): void {
 /** Módulos principais e responsabilidades */
 export const MODULES: ModuleRef[] = [
   { id: "project-provider", name: "ProjectProvider", path: "src/context/ProjectProvider.tsx", responsibility: "Estado global do projeto (boxes, workspaceBoxes, material, changelog)", relatedModules: ["multibox", "viewer-sync"] },
-  { id: "multibox", name: "MultiBoxManager", path: "src/core/multibox/", responsibility: "Sincronizar workspaceBoxes com Viewer via useCalculadoraSync e useCadModelsSync", relatedModules: ["viewer", "workspace", "project-provider"] },
-  { id: "viewer", name: "Viewer 3D", path: "src/3d/core/Viewer.ts", responsibility: "Renderização 3D, múltiplos boxes, modelos GLB", relatedModules: ["multibox", "pimo-viewer-context"] },
+  { id: "multibox", name: "MultiBoxManager", path: "src/core/multibox/", responsibility: "Sincronizar workspaceBoxes com Viewer via useCalculadoraSync", relatedModules: ["viewer", "workspace", "project-provider"] },
+  { id: "viewer", name: "Viewer 3D / ViewerCore", path: "src/3d/core/Viewer.ts + src/3d/viewer-engine/ViewerCore.ts", responsibility: "Renderização 3D, múltiplos boxes, materiais, room, tools, snapshot", relatedModules: ["multibox", "pimo-viewer-context"] },
+  { id: "box-assembler", name: "BoxAssembler", path: "src/3d/objects/BoxAssembler.ts", responsibility: "Montagem paramétrica das caixas/painéis/portas/gavetas", relatedModules: ["viewer", "drilling"] },
+  { id: "drilling", name: "DrillGeometryBuilder", path: "src/3d/objects/DrillGeometryBuilder.ts", responsibility: "Aplicação geométrica dos furos no 3D", relatedModules: ["box-assembler", "manufacturing"] },
   { id: "workspace", name: "Workspace", path: "src/components/layout/workspace/Workspace.tsx", responsibility: "Inicializa Viewer, MultiBoxManager, viewerApiAdapter; monta cena principal", relatedModules: ["multibox", "viewer", "viewer-adapter"] },
   { id: "viewer-adapter", name: "viewerApiAdapter", path: "src/core/viewer/viewerApiAdapter.ts", responsibility: "Adapta PimoViewerApi para ViewerApi (snapshot, render); stubs documentados", relatedModules: ["viewer-sync", "workspace"] },
   { id: "viewer-sync", name: "useViewerSync", path: "src/hooks/useViewerSync.ts", responsibility: "Expõe notifyChange e callbacks de snapshot/render ao ProjectContext", relatedModules: ["viewer-adapter", "project-provider"] },
@@ -130,26 +132,32 @@ export const MODULES: ModuleRef[] = [
 export const DATA_FLOWS: DataFlowRef[] = [
   { id: "flow-1", name: "Workspace → MultiBoxManager → Viewer", from: "Workspace", to: "Viewer", description: "Inicialização e orquestração da sincronização" },
   { id: "flow-2", name: "workspaceBoxes → useCalculadoraSync → viewerApi", from: "ProjectContext.workspaceBoxes", to: "viewerApi.addBox/updateBox/removeBox", description: "Sincronização de boxes paramétricos" },
-  { id: "flow-3", name: "workspaceBoxes → useCadModelsSync → viewerApi", from: "ProjectContext.workspaceBoxes", to: "viewerApi.addModelToBox/removeModelFromBox", description: "Sincronização de modelos GLB" },
-  { id: "flow-4", name: "UI → actions → ProjectContext", from: "UI (addWorkspaceBox)", to: "ProjectContext.actions", description: "Ações do utilizador disparam atualização de estado" },
-  { id: "flow-5", name: "Workspace → viewerApiAdapter → viewerSync", from: "Workspace", to: "useViewerSync", description: "Registo do adapter para snapshot/render" },
+  { id: "flow-3", name: "UI (Painéis) → useProject actions → ProjectProvider", from: "LeftPanel/RightPanel/Toolbar", to: "ProjectContext.actions", description: "Entrada principal de alterações de estado" },
+  { id: "flow-4", name: "ProjectProvider → Workspace → Viewer", from: "project/workspaceBoxes", to: "viewerApi + window.viewerCore", description: "Render e sincronização visual" },
+  { id: "flow-5", name: "UI Exportar → useGerarArquivoHandlers → Engines", from: "Workspace modal", to: "CutLayout/PDF/CNC/DRILL", description: "Exportação de layout, PDFs, TCN e Drill XML" },
 ];
 
 /** Estrutura de pastas atualizada (principais) */
 export const FOLDER_STRUCTURE = `
 src/
-├── 3d/core/          — Viewer, câmera, cena, materiais
+├── 3d/               — Viewer, ViewerCore, objetos paramétricos, materiais, room
+│   ├── core/
+│   ├── objects/
+│   └── viewer-engine/
 ├── context/          — ProjectProvider, PimoViewerContext, materialContext
 ├── core/
 │   ├── multibox/     — MultiBoxManager (types, manager, index)
 │   ├── viewer/       — viewerApiAdapter
+│   ├── cutlayout/    — Engine de layout/nesting e PDF de layout
+│   ├── cnc/          — Geração TCN e pipeline CNC
+│   ├── drill/        — Export Drill XML
 │   ├── rules/        — Dynamic rules, validação
 │   ├── layout/       — viewerLayoutAdapter, smartArrange
 │   └── docs/         — projectRoadmap, progressoResumo, painelReferenciaSections, architectureIndex
-├── hooks/            — usePimoViewer, useCalculadoraSync, useCadModelsSync, useViewerSync
+├── hooks/            — usePimoViewer, useCalculadoraSync, useViewerSync, useGerarArquivoHandlers
 ├── constants/        — viewerOptions, toolbarConfig, fileManagerConfig
 ├── components/
 │   ├── layout/       — Workspace, ViewerToolbar, Tools3DToolbar, LeftPanel, RightPanel, RightToolsBar
 │   └── ui/           — Panel, UnifiedPopover, StepperPopover, etc.
-└── pages/            — PainelReferencia, ProjectRoadmap, AdminPanel, etc.
+└── pages/            — Documentacao, PainelReferencia, Ajuda, ProjectProgress, AdminPanel, etc.
 `.trim();

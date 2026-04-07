@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 import { getProjects } from "../api/projectsApi";
 import { useAuth } from "../auth/useAuth";
 import { useTheme, type ThemeId } from "../context/ThemeContext";
+import { listProjects } from "../core/projects/projectsClient";
+import { getCurrentProjectUser } from "../core/projects/currentUser";
+import type { SavedProjectMeta } from "../core/projects/types";
 import Button from "../components/ui/Button";
 import "../components/ui/ui.css";
 
@@ -118,6 +121,22 @@ function ComingSoon() {
   );
 }
 
+type ProjectStats = {
+  total: number;
+  corrupted: number;
+  withThumb: number;
+};
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso || "—";
+    return d.toLocaleString("pt-PT");
+  } catch {
+    return iso || "—";
+  }
+}
+
 function SectionContent({
   section,
   subItem,
@@ -129,6 +148,9 @@ function SectionContent({
   projectsCount,
   projectsLoading,
   projectsError,
+  recentProjects,
+  recentLoading,
+  projectStats,
 }: {
   section: SectionId;
   subItem: SubItemId;
@@ -140,6 +162,9 @@ function SectionContent({
   projectsCount: number | null;
   projectsLoading: boolean;
   projectsError: string | null;
+  recentProjects: SavedProjectMeta[];
+  recentLoading: boolean;
+  projectStats: ProjectStats;
 }) {
   const initials = (username || "?").slice(0, 2).toUpperCase();
   const roleLower = role.toLowerCase();
@@ -292,15 +317,59 @@ function SectionContent({
       <section className="ui-section">
         <header className="ui-section__header">
           <h3 className="ui-section__title">Os meus projetos</h3>
+          <p className="ui-section__subtitle">Resumo dos projetos guardados neste dispositivo.</p>
         </header>
         <section className="ui-card">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            {[
+              { label: "Total local", value: projectStats.total },
+              { label: "Corrompidos", value: projectStats.corrupted, danger: projectStats.corrupted > 0 },
+              { label: "Com thumbnail", value: projectStats.withThumb },
+            ].map(({ label, value, danger }) => (
+              <div
+                key={label}
+                style={{
+                  background: "var(--ui-color-surface, #f4f4f5)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  textAlign: "center",
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 22,
+                    fontWeight: 700,
+                    color: danger
+                      ? "var(--ui-color-danger, #ef4444)"
+                      : "var(--ui-color-text, #18181b)",
+                  }}
+                >
+                  {value}
+                </p>
+                <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--ui-color-muted, #71717a)" }}>
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
           <p className="ui-kv-item">
             <strong>Total (API):</strong>{" "}
             {projectsLoading ? "A carregar…" : projectsError ?? (projectsCount !== null ? String(projectsCount) : "—")}
           </p>
-          <div className="ui-inline-actions" style={{ marginTop: 16 }}>
+          <div className="ui-inline-actions" style={{ marginTop: 16, flexWrap: "wrap", gap: 8 }}>
+            <Link to="/workspace">
+              <Button variant="primary">Novo projeto</Button>
+            </Link>
             <Link to="/projects">
-              <Button variant="primary">Abrir lista de projetos</Button>
+              <Button variant="outline">Ver todos</Button>
             </Link>
           </div>
         </section>
@@ -313,8 +382,125 @@ function SectionContent({
       <section className="ui-section">
         <header className="ui-section__header">
           <h3 className="ui-section__title">Recentes</h3>
+          <p className="ui-section__subtitle">Os últimos 5 projetos editados.</p>
         </header>
-        <ComingSoon />
+        <section className="ui-card">
+          {recentLoading ? (
+            <p className="ui-text-muted" style={{ margin: 0 }}>A carregar projetos recentes…</p>
+          ) : recentProjects.length === 0 ? (
+            <p className="ui-text-muted" style={{ margin: 0 }}>
+              Nenhum projeto encontrado. Crie um novo projeto para começar.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {recentProjects.map((project) => (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border, #e4e4e7)",
+                      background: "var(--ui-color-bg, #fff)",
+                      cursor: "pointer",
+                      transition: "background 0.12s",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 36,
+                        borderRadius: 6,
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        background: "var(--ui-color-surface, #f4f4f5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {project.thumbnailDataUrl ? (
+                        <img
+                          src={project.thumbnailDataUrl}
+                          alt=""
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <svg
+                          width={18}
+                          height={18}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="var(--ui-color-muted, #a1a1aa)"
+                          strokeWidth={1.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M3 9h18M9 21V9" />
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, overflow: "hidden" }}>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontWeight: 600,
+                          fontSize: 13,
+                          color: "var(--ui-color-text, #18181b)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        {project.name?.trim() || "Projeto sem nome"}
+                        {project.corrupted ? (
+                          <span
+                            style={{
+                              background: "var(--ui-color-danger, #ef4444)",
+                              color: "#fff",
+                              fontSize: 9,
+                              fontWeight: 700,
+                              padding: "1px 5px",
+                              borderRadius: 3,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              flexShrink: 0,
+                            }}
+                          >
+                            Corrompido
+                          </span>
+                        ) : null}
+                      </p>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--ui-color-muted, #71717a)" }}>
+                        {formatDate(project.updatedAt ?? "")}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {!recentLoading && (
+            <div style={{ marginTop: 14 }}>
+              <Link to="/projects">
+                <Button variant="outline" style={{ width: "100%", fontSize: 13 }}>
+                  Ver todos os projetos
+                </Button>
+              </Link>
+            </div>
+          )}
+        </section>
       </section>
     );
   }
@@ -372,6 +558,10 @@ export default function DashboardPage() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
 
+  const [recentProjects, setRecentProjects] = useState<SavedProjectMeta[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
+  const [projectStats, setProjectStats] = useState<ProjectStats>({ total: 0, corrupted: 0, withThumb: 0 });
+
   useEffect(() => {
     let cancelled = false;
     getProjects()
@@ -389,6 +579,45 @@ export default function DashboardPage() {
       .finally(() => {
         if (!cancelled) setProjectsLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const currentUser = getCurrentProjectUser();
+        const all = await listProjects("all");
+        if (cancelled) return;
+
+        // @PIMO-KEEP — guard: lista pode ser inválida
+        const safe = Array.isArray(all) ? all : [];
+
+        const stats: ProjectStats = {
+          total: safe.length,
+          corrupted: safe.filter((p) => p.corrupted).length,
+          withThumb: safe.filter((p) => !!p.thumbnailDataUrl).length,
+        };
+        setProjectStats(stats);
+
+        const sorted = [...safe].sort((a, b) => {
+          const ta = new Date(a.updatedAt ?? "").getTime();
+          const tb = new Date(b.updatedAt ?? "").getTime();
+          return tb - ta;
+        });
+
+        // Priorizar projetos do utilizador atual; se nenhum, mostrar todos
+        const mine = sorted.filter((p) => p.ownerId === currentUser.ownerId);
+        const recent = (mine.length > 0 ? mine : sorted).slice(0, 5);
+        if (!cancelled) setRecentProjects(recent);
+      } catch {
+        /* Falha silenciosa — dados locais podem não estar disponíveis */
+      } finally {
+        if (!cancelled) setRecentLoading(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -454,6 +683,9 @@ export default function DashboardPage() {
             projectsCount={projectsCount}
             projectsLoading={projectsLoading}
             projectsError={projectsError}
+            recentProjects={recentProjects}
+            recentLoading={recentLoading}
+            projectStats={projectStats}
           />
         </main>
       </div>
