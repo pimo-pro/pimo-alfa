@@ -16,6 +16,7 @@ import { buildUnifiedPdf } from "../pdf/pdfUnified";
 import { buildEtiquetasPdf, type ProjectForEtiquetasPdf } from "../pdf/pdfEtiquetas";
 import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../labelDesigner/labelDesignerStorage";
 import { runCutLayout, cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
+import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 import {
   buildCncFromCutlistItems,
   getDefaultCncLayoutOptions,
@@ -317,6 +318,9 @@ export async function generateMultiProjectFabrication(
     if (pieces.length > 0) {
       emit(4, "Aplicando meta-heurística de nesting…");
       const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), layoutOpts);
+      // Pós-processamento geométrico: garante drillHoles em coords do espaço colocado
+      // (pós-rotação, para TCN) e originalDrillHoles em coords pré-rotação (para PDF).
+      applyRotationGeometryToSheets(result.sheets);
       const { buildCutLayoutPdf } = await import("../cutlayout/cutLayoutPdf");
       const docLayout = await buildCutLayoutPdf(result, {
         projectName: layoutTitle || "Multi-projeto",

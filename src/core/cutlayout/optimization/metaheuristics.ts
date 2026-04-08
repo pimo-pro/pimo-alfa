@@ -178,22 +178,32 @@ export function applyLnsRepack(
     all.splice(pos, 0, r);
   }
 
-  const allPieces: CutPiece[] = all.map((p) => ({
-    largura_mm: p.largura_mm,
-    altura_mm: p.altura_mm,
-    espessura_mm: sheet.espessura_mm,
-    quantidade: 1,
-    boxId: p.boxId,
-    partName: p.partName,
-    materialId: p.materialId,
-    materialName: p.materialName,
-    drillHoles: p.drillHoles ?? p.holes,
-    holes: p.holes ?? p.drillHoles,
-    originalDrillHoles: p.originalDrillHoles ?? p.drillHoles ?? p.holes,
-    pieceNumber: p.pieceNumber,
-    shortCode: p.shortCode,
-    metadata: p.metadata,
-  }));
+  // Restaura dimensões originais da peça antes do re-pack LNS.
+  // Bug crítico sem este fix: se rotacao=90 o motor swapou largura↔altura,
+  // e o LNS criava CutPiece com as dims swapped → furos ficavam fora dos bounds
+  // e o próximo ciclo de nesting recebia geometria inválida.
+  const allPieces: CutPiece[] = all.map((p) => {
+    const origW = p.rotacao === 90 ? p.altura_mm : p.largura_mm;
+    const origH = p.rotacao === 90 ? p.largura_mm : p.altura_mm;
+    // originalDrillHoles = coords pré-rotação = fonte de verdade para coordenadas de furo
+    const origHoles = p.originalDrillHoles ?? p.drillHoles ?? p.holes;
+    return {
+      largura_mm: origW,
+      altura_mm: origH,
+      espessura_mm: sheet.espessura_mm,
+      quantidade: 1,
+      boxId: p.boxId,
+      partName: p.partName,
+      materialId: p.materialId,
+      materialName: p.materialName,
+      drillHoles: origHoles,
+      holes: origHoles,
+      originalDrillHoles: origHoles,
+      pieceNumber: p.pieceNumber,
+      shortCode: p.shortCode,
+      metadata: p.metadata,
+    };
+  });
 
   const candidateTrials: TrialConfig[] = trialPool && trialPool.length > 0 ? trialPool : [
     { strategy: "skyline", binHeuristic: "firstFit" },

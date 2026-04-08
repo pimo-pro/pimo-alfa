@@ -1,4 +1,5 @@
 import type { CutPiece, CutPlacement, SheetDefinition, SheetResult } from "../cutLayoutTypes";
+import { canRotatePieceGeometry } from "./cutLayoutGeomRotation";
 
 const EPS = 0.001;
 
@@ -12,7 +13,16 @@ export function getPieceAspectRatio(piece: CutPiece): number {
   return a / b;
 }
 
-export const isRotatablePiece = (piece: CutPiece): boolean => !piece.grainDirection && piece.largura_mm !== piece.altura_mm;
+/**
+ * Determina se uma peça pode ser rodada 90° pelo motor de nesting.
+ * Verifica grainDirection, dimensões quadradas e operações geométricas direcionais
+ * (furos de face lateral com topDrillable=false não permitem rotação).
+ */
+export const isRotatablePiece = (piece: CutPiece): boolean => {
+  if (piece.grainDirection) return false;
+  if (piece.largura_mm === piece.altura_mm) return false;
+  return canRotatePieceGeometry(piece);
+};
 
 export function reorderPieces(pieces: CutPiece[], mode: "production" | "gapFill" = "production"): CutPiece[] {
   return [...pieces].sort((a, b) => {
