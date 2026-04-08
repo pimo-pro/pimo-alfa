@@ -580,6 +580,16 @@ export function runCutLayout(
     }
 
     if (metaCfg.enabled && bestRun.sheets.length > 0) {
+      // MOD 1: iterações dinâmicas — grupos grandes (> 30 peças) usam 420; outros 160.
+      const groupMetaCfg: Required<CutLayoutMetaHeuristicsOptions> = {
+        ...metaCfg,
+        iterations: Math.min(
+          rawMetaCfg.iterations,
+          groupPieces.length > 30 ? 420 : META_MAX_ITERATIONS
+        ),
+      };
+      // MOD 2: budget dinâmico — grupos grandes (> 30 peças) usam 8000ms; outros 3500ms.
+      const groupBudgetMs = groupPieces.length > 30 ? 8000 : META_BUDGET_MS;
       const baselineRefScore = bestRun.score;
       const startCount = metaCfg.multiStartCount;
       let globalBestSheets = deps.cloneSheets(bestRun.sheets);
@@ -601,7 +611,7 @@ export function runCutLayout(
       const metaGroupStartMs = nowMs();
       for (let si = 0; si < startCount; si++) {
         throwIfAbort();
-        if (nowMs() - metaGroupStartMs > META_BUDGET_MS) break;
+        if (nowMs() - metaGroupStartMs > groupBudgetMs) break;
         const metaPercent =
           60 + (((groupIndex + (si + 1) / Math.max(1, startCount)) / groupCount) * 35);
         emitProgress({
@@ -634,14 +644,14 @@ export function runCutLayout(
           scoreModel
         );
         const startSheets = seededRun.sheets.length > 0 ? seededRun.sheets : bestRun.sheets;
-        const remainingBudget = Math.max(200, META_BUDGET_MS - (nowMs() - metaGroupStartMs));
+        const remainingBudget = Math.max(200, groupBudgetMs - (nowMs() - metaGroupStartMs));
         const local = deps.optimizeWithMetaHeuristics(
           startSheets,
           placementSheet,
           kerf,
           minUtilizationPercent,
           seededRotationCfg,
-          metaCfg,
+          groupMetaCfg,
           seed,
           strategyPool,
           scoreModel,
@@ -733,7 +743,7 @@ export function runCutLayout(
     if (bestRun.sheets.length > 2) {
       bestRun.sheets = aplicarPocketFilling(bestRun.sheets, kerf, {
         lateIndexThreshold: 0,
-        wasteThreshold: 0.15,
+        wasteThreshold: 0.12,
       });
     }
 
