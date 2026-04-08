@@ -1,25 +1,10 @@
 import { computeTightnessScore } from "../scoring/rotationScoring";
+import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
 const EPS = 0.001;
 
 type FreeRect = { x: number; y: number; w: number; h: number };
-type PlacementCandidate = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rotation: number;
-  orientationScore: number;
-  rotationDelta: number;
-  alternativeRotationAvailable: boolean;
-  tightnessScore: number;
-};
-type RotationScoringConfig = {
-  rotationWeight: number;
-  rotationPenalty: number;
-  rotationPreferenceMode: "auto" | "aggressive" | "disabled";
-};
 
 export function splitGuillotineRect(rect: FreeRect, w: number, h: number, kerf: number): FreeRect[] {
   const rightW = rect.w - w - kerf;

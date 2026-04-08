@@ -1,24 +1,8 @@
 import { computeTightnessScore } from "../scoring/rotationScoring";
+import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
 const EPS = 0.001;
-
-type PlacementCandidate = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rotation: number;
-  orientationScore: number;
-  rotationDelta: number;
-  alternativeRotationAvailable: boolean;
-  tightnessScore: number;
-};
-type RotationScoringConfig = {
-  rotationWeight: number;
-  rotationPenalty: number;
-  rotationPreferenceMode: "auto" | "aggressive" | "disabled";
-};
 
 export function findPlacementShelf(
   piece: CutPiece,

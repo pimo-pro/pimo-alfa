@@ -1,23 +1,8 @@
 import { computeTightnessScore } from "../scoring/rotationScoring";
+import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
 type SkylineSegment = { x: number; y: number };
-type PlacementCandidate = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rotation: number;
-  orientationScore: number;
-  rotationDelta: number;
-  alternativeRotationAvailable: boolean;
-  tightnessScore: number;
-};
-type RotationScoringConfig = {
-  rotationWeight: number;
-  rotationPenalty: number;
-  rotationPreferenceMode: "auto" | "aggressive" | "disabled";
-};
 
 export function getSkylineHeight(skyline: SkylineSegment[], xStart: number, width: number): number {
   const xEnd = xStart + width;
