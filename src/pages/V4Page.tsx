@@ -34,10 +34,10 @@ export default function V4Page() {
   }
 
   return (
-    <div className="ui-settings-page-wrap">
-      <div className="ui-settings-shell">
+    <div className="ui-settings-page-wrap" style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <div className="ui-settings-shell" style={{ width: "100%", height: "100%", display: "flex", overflow: "hidden" }}>
         {/* Column 1 */}
-        <aside className="ui-settings-sidebar-icons">
+        <aside className="ui-settings-sidebar-icons" style={{ flexShrink: 0, overflowX: "hidden", overflowY: "auto" }}>
           <span style={{ fontSize: 10, color: "#888" }}>SECTION: sidebar</span>
           {SECTIONS.map((section) => (
             <button
@@ -58,6 +58,14 @@ export default function V4Page() {
         {/* Column 2 */}
         <aside
           className={`ui-settings-subpanel${subpanelOpen ? "" : " ui-settings-subpanel--collapsed"}`}
+          style={{
+            width: subpanelOpen ? 220 : 0,
+            minWidth: subpanelOpen ? 220 : 0,
+            flexShrink: 0,
+            overflowX: "hidden",
+            overflowY: "auto",
+            transition: "width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease",
+          }}
         >
           <div className="ui-settings-subpanel-header">
             <span style={{ fontSize: 10, color: "#888", display: "block", marginBottom: 4 }}>
@@ -84,7 +92,7 @@ export default function V4Page() {
         </aside>
 
         {/* Column 3 */}
-        <main className="ui-settings-content">
+        <main className="ui-settings-content" style={{ flex: 1, minWidth: 0, overflowX: "hidden", overflowY: "hidden" }}>
           <span style={{ fontSize: 10, color: "#888" }}>SECTION: main-content</span>
 
           <section

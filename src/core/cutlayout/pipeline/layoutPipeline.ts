@@ -194,8 +194,6 @@ export function runCutLayout(
   const grouped = (options?.groupByThicknessOnly ? deps.groupByThicknessOnly : deps.groupByMaterialAndThickness)(
     deps.expandPieces(pieces)
   );
-  const trials =
-    options?.strategyTrials && options.strategyTrials.length > 0 ? options.strategyTrials : getDefaultTrials();
   const rawMetaCfg = getDefaultMetaOptions(options?.useMetaHeuristics, options?.metaHeuristics);
   const metaCfg: Required<CutLayoutMetaHeuristicsOptions> = {
     ...rawMetaCfg,
