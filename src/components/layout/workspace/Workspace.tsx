@@ -5,6 +5,7 @@ import { usePimoViewer } from "../../../hooks/usePimoViewer";
 import { createViewerApiAdapter } from "../../../core/viewer/viewerApiAdapter";
 import { useMultiBoxManager } from "../../../core/multibox";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
+import UnifiedTopToolbar from "../unified-toolbar/UnifiedTopToolbar";
 import ViewerToolbar from "../viewer-toolbar/ViewerToolbar";
 import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
 import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
@@ -643,6 +644,7 @@ return (
     >
       <div className="workspace-canvas">
         <div className="workspace-toolbars" style={{ display: "flex", flexDirection: "column" }}>
+          <UnifiedTopToolbar />
           <ViewerToolbar />
           <Tools3DToolbar
             activeTool={project.activeViewerTool ?? "select"}

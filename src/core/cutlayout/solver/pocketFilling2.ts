@@ -81,7 +81,7 @@ export type PocketFillingOptions = {
 };
 
 /** Máximo de peças a tentar colocar por bolsão. */
-const MAX_PIECES_PER_POCKET = 3;
+const MAX_PIECES_PER_POCKET = 6;
 
 export type FreeRect = { x: number; y: number; w: number; h: number };
 
@@ -302,7 +302,7 @@ export function preencherPocket(
       }
     }
 
-    if (!placed) break; // Sem espaço — parar para não desperdiçar ciclos
+    if (!placed) continue; // Tentar peças seguintes — podem ser menores e caber
   }
 
   return result;
