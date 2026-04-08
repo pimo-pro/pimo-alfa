@@ -125,32 +125,37 @@ export function scorePlacement(
   const topSlack = Math.max(0, sheet.altura_mm - (placement.y + placement.h));
   const localWaste = rightSlack * placement.h + topSlack * placement.w;
   const compactness01 = 1 - Math.min(1, localWaste / sheetArea);
-  const compactnessScore = compactness01 * 0.22;
+  // Fase 3: compactness amplificado ×1.35 para forçar layouts mais densos.
+  const compactnessScore = compactness01 * 0.22 * 1.35;
   const expectedUtil = currentUtilization + areaGain;
-  // Base linear + bónus não-linear para chapas quase cheias (incentiva manter a chapa atual)
+  // Regra industrial R2: encher ao máximo a chapa atual antes de abrir nova.
+  // Bónus não-linear: começa mais cedo (80% vs 85%) e com inclinação mais forte (2.5 vs 2.0).
+  // Regra industrial R6: desperdício concentrado numa só área (lado direito/topo).
+  // O bónus de utilização elevada incentiva o motor a "fechar" a chapa corrente.
   const utilizationReward =
     Math.min(0.5, expectedUtil * 0.55) +
-    (expectedUtil > 0.85 ? Math.min(0.2, (expectedUtil - 0.85) * 2.0) : 0);
+    (expectedUtil > 0.80 ? Math.min(0.25, (expectedUtil - 0.80) * 2.5) : 0);
 
   // Fator de chapa tardia: 0.0 nas primeiras chapas, crescendo linearmente até 1.0 a partir de 40% do total.
-  // Nas chapas tardias amplifica bónus de encaixe e penaliza isolamento.
   const lateFactor =
     ctx && ctx.totalSheets > 1
       ? Math.max(0, Math.min(1, (ctx.sheetIndex / ctx.totalSheets - 0.4) / 0.6))
       : 0;
 
-  // Bónus de encaixe lateral: recompensa peças encostadas a paredes ou outras peças.
-  // Ampliado em chapas tardias para forçar maior compactação.
-  const tightnessBonus = (placement.tightnessScore ?? 0) * (0.20 + lateFactor * 0.25);
+  const tightnessVal = placement.tightnessScore ?? 0;
 
-  // Bónus extra para peças pequenas (< 5% da chapa) que preenchem gaps apertados.
-  // Também amplificado em chapas tardias.
+  // Fase 3: tightnessBonus reforçado nas chapas tardias para forçar compactação.
+  const tightnessBonus = tightnessVal * (0.25 + lateFactor * 0.35);
+
+  // Fase 3: gapFillBonus reforçado para peças pequenas em gaps apertados.
   const isSmall = placement.w * placement.h < sheetArea * 0.05;
-  const gapFillBonus = isSmall && (placement.tightnessScore ?? 0) >= 0.5 ? 0.08 + lateFactor * 0.10 : 0;
+  const gapFillBonus = isSmall && tightnessVal >= 0.5 ? 0.10 + lateFactor * 0.15 : 0;
 
-  // Penalização de isolamento: em chapas tardias, se a peça não encosta a nada
-  // (tightnessScore = 0), penalizar — evita bolsões abertos.
-  const isolationPenalty = lateFactor > 0 && (placement.tightnessScore ?? 0) === 0 ? lateFactor * 0.15 : 0;
+  // Fase 3: isolationPenalty aumentada (0.22 vs 0.15) — penaliza mais peças sem vizinhos.
+  const isolationPenalty = lateFactor > 0 && tightnessVal === 0 ? lateFactor * 0.22 : 0;
+
+  // Fase 3: islandPenalty — penaliza peças que criam "ilhas" (tightnessScore < 0.15).
+  const islandPenalty = (tightnessVal < 0.15 ? 0.12 : 0) * (1 + lateFactor);
 
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {
@@ -162,13 +167,16 @@ export function scorePlacement(
   }
   return (
     areaGain * 2.5 +
-    bottomLeftBias * 0.3 +
+    // Regra industrial R6: peso aumentado (0.50 vs 0.30) para empurrar peças para o
+    // canto inferior-esquerdo, concentrando o desperdício numa zona contígua.
+    bottomLeftBias * 0.50 +
     utilizationReward +
     placement.orientationScore * 0.25 +
     rotationScore +
     compactnessScore +
     tightnessBonus +
     gapFillBonus -
-    isolationPenalty
+    isolationPenalty -
+    islandPenalty
   );
 }

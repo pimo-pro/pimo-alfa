@@ -5,6 +5,8 @@ import {
   LATE_SHEET_COMPACT_WINDOW,
   LATE_SHEET_MIN_WASTE_RATIO,
 } from "../solver/lateSheetCompactor";
+import { aplicarPocketFilling } from "../solver/pocketFilling2";
+import { gerarCenariosLayout, escolherMelhorCenario } from "./layoutSearchLayer";
 
 import type {
   CutPiece,
@@ -61,6 +63,17 @@ export function isDevRuntime(): boolean {
   return true;
 }
 
+/**
+ * Modo de operação do motor de nesting.
+ * Detetado automaticamente pela diversidade de boxId nas peças:
+ *   - 1 boxId único  → SingleProject (SPM): 1 tentativa + pocket filling agressivo, sem compactor
+ *   - múltiplos boxId → MultiProject  (MPM): fluxo completo com meta-heurísticas e compactor
+ */
+export enum NestingMode {
+  SingleProject = "single",
+  MultiProject = "multi",
+}
+
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
 type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_desc_soft";
@@ -68,6 +81,18 @@ type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_
 const MAX_NESTING_ATTEMPTS = 4;
 const ATTEMPT_TIMEOUT_MS = 1500;
 const META_MAX_MULTI_START = 12;
+
+/**
+ * Threshold de peças expandidas acima do qual a Layer 2 é desativada
+ * (demasiado lento para grandes projetos multi-módulo).
+ */
+const LAYER2_MAX_EXPANDED_PIECES = 40;
+
+/**
+ * WeakSet usado como guarda de recursão para a Layer 2.
+ * Quando `deps` está no set, o pipeline corre diretamente sem Layer 2.
+ */
+const _layer2InProgress = new WeakSet<object>();
 const META_MAX_ITERATIONS = 160;
 /** Budget de tempo por grupo de material para a meta-heurística (ms). */
 const META_BUDGET_MS = 3500;
@@ -187,6 +212,38 @@ export function runCutLayout(
   options: CutLayoutEngineOptions | undefined,
   deps: RunCutLayoutDeps
 ): CutLayoutResult {
+  // ── Layer 2 Search ─────────────────────────────────────────────────────────
+  // Para projetos pequenos (≤ LAYER2_MAX_EXPANDED_PIECES peças expandidas),
+  // testa 5 ordenações diferentes e escolhe a melhor por métricas globais.
+  // O WeakSet _layer2InProgress evita recursão infinita.
+  if (!_layer2InProgress.has(deps)) {
+    const expandedCount = pieces.reduce((acc, p) => acc + Math.max(1, p.quantidade), 0);
+    if (expandedCount > 0 && expandedCount <= LAYER2_MAX_EXPANDED_PIECES) {
+      _layer2InProgress.add(deps);
+      try {
+        // Fase de pesquisa: sem meta-heurísticas para manter velocidade
+        const searchOpts: CutLayoutEngineOptions = { ...options, useMetaHeuristics: false };
+        const runner = (ps: CutPiece[]) => runCutLayout(ps, sheetDef, searchOpts, deps);
+        const cenarios = gerarCenariosLayout(pieces, runner);
+        if (cenarios.length > 0) {
+          const best = escolherMelhorCenario(cenarios);
+          console.log(
+            `[LAYER2] Vencedor: ${best.strategyName} | ` +
+              `sheets=${best.metrics.sheetCount} | ` +
+              `waste=${(best.metrics.totalWasteRatio * 100).toFixed(1)}%`
+          );
+          // Fase final: ordenação vencedora + opções completas (com meta-heurísticas)
+          return runCutLayout(best.pieces, sheetDef, options, deps);
+        }
+      } catch {
+        // Fallback silencioso: continua com o pipeline normal
+      } finally {
+        _layer2InProgress.delete(deps);
+      }
+    }
+  }
+  // ── Pipeline Normal ─────────────────────────────────────────────────────────
+
   const throwIfAbort = () => {
     if (options?.shouldAbort?.()) {
       const err = new Error("CutLayout aborted");
@@ -206,6 +263,10 @@ export function runCutLayout(
     rotationPenalty: options?.rotationPenalty ?? DEFAULT_ROTATION_PENALTY,
     rotationPreferenceMode: options?.rotationPreferenceMode ?? DEFAULT_ROTATION_MODE,
   };
+
+  // Deteção automática de modo: 1 boxId único = projeto simples (SPM), vários = multi (MPM).
+  const nestingMode =
+    new Set(pieces.map((p) => p.boxId)).size <= 1 ? NestingMode.SingleProject : NestingMode.MultiProject;
 
   const grouped = (options?.groupByThicknessOnly ? deps.groupByThicknessOnly : deps.groupByMaterialAndThickness)(
     deps.expandPieces(pieces)
@@ -306,6 +367,72 @@ export function runCutLayout(
     const marginMm = getSheetSafetyMarginMm();
     const placementSheet = deps.createUsableSheetArea(sheet, marginMm);
     const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
+
+    // ── SPM PATH ────────────────────────────────────────────────────────────
+    // Projeto único: 1 tentativa skyline/bestFit/aggressive + pocket filling
+    // agressivo em todas as chapas. Meta-heurísticas e compactor não correm.
+    if (nestingMode === NestingMode.SingleProject) {
+      const spmTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "bestFit" };
+      const spmRotCfg: RotationScoringConfig = { ...rotationCfg, rotationPreferenceMode: "aggressive" };
+
+      // ── SPM Door-Priority Ordering ─────────────────────────────────────────
+      // Peças identificadas como portas (partName contém porta/door/fr/porte)
+      // são colocadas NO FIM da lista de corte, garantindo que o corpo do móvel
+      // enche a chapa 1 antes de qualquer porta ser considerada.
+      // Esta separação só actua quando ambos os tipos existem no grupo.
+      const DOOR_PATTERN = /\b(porta|door|fr|porte)\b/i;
+      const spmBaseSorted = sortPiecesForAttempt(groupPieces, "area_desc");
+      const nonDoorPieces = spmBaseSorted.filter((p) => !DOOR_PATTERN.test(p.partName ?? ""));
+      const doorPieces = spmBaseSorted.filter((p) => DOOR_PATTERN.test(p.partName ?? ""));
+      const spmOrderedPieces =
+        nonDoorPieces.length > 0 && doorPieces.length > 0
+          ? [...nonDoorPieces, ...doorPieces]
+          : spmBaseSorted;
+      // ──────────────────────────────────────────────────────────────────────
+
+      const spmRun = deps.simulateTrialForGroup(
+        spmOrderedPieces,
+        placementSheet,
+        kerf,
+        minUtilizationPercent,
+        spmRotCfg,
+        spmTrial,
+        Boolean(options?.collectDiagnostics),
+        true,
+        scoreModel
+      );
+      if (spmRun.sheets.length > 0) {
+        // Pocket filling SPM — classificação industrial:
+        //   lateIndexThreshold=0  → todas as chapas são candidatas (sem restrição de posição)
+        //   wasteThreshold=0.15   → só preenche chapas Fracas (> 15% desperdício)
+        //   spmLock:
+        //     stableDestThreshold=0.10  → chapas Excelentes (≤ 10%) são INTOCÁVEIS
+        //     minTotalWasteImprovement=0.05 → confirma só com ganho real ≥ 5pp
+        const spmSheets = aplicarPocketFilling(spmRun.sheets, kerf, {
+          lateIndexThreshold: 0,
+          wasteThreshold: 0.15,
+          spmLock: {
+            stableDestThreshold: 0.10,
+            minTotalWasteImprovement: 0.05,
+          },
+        });
+        if (diagnostics) {
+          diagnostics.flow.selectedStrategy = spmTrial.strategy;
+          diagnostics.flow.selectedBinHeuristic = spmTrial.binHeuristic;
+          diagnostics.flow.gapFillAttempts += spmRun.gapFillAttempts;
+          diagnostics.flow.rescueAttempts += spmRun.rescueAttempts;
+        }
+        diagnostics?.rejectedByLimit.push(...spmRun.rejectedByLimit);
+        diagnostics?.gapFillPlacements.push(...spmRun.gapFillPlacements);
+        const spmOffset = deps.applyFixedMarginOffset(spmSheets, sheet, marginMm);
+        const spmNorm = options?.originTopRight
+          ? spmOffset.map((s) => normalizeSheetToTopRightOrigin(s))
+          : spmOffset;
+        finalSheets.push(...spmNorm);
+      }
+      continue; // Salta todo o fluxo MPM
+    }
+    // ── MPM PATH ────────────────────────────────────────────────────────────
 
     let bestRun:
       | (SimulateTrialForGroupResult & {
@@ -533,6 +660,23 @@ export function runCutLayout(
       }
     }
 
+    // ── Log de classificação industrial de chapas ──────────────────────────────
+    if (bestRun.sheets.length > 0) {
+      let excellent = 0, good = 0, weak = 0;
+      for (const s of bestRun.sheets) {
+        const area = Math.max(1, s.sheet.largura_mm * s.sheet.altura_mm);
+        const used = s.placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
+        const waste = Math.max(0, (area - used) / area);
+        if (waste <= 0.10)      excellent++;
+        else if (waste <= 0.15) good++;
+        else                    weak++;
+      }
+      console.log(
+        `[NESTING] Classificação: ${excellent} Excelente(≤10%) | ${good} Boa(10-15%) | ${weak} Fraca(>15%) | total=${bestRun.sheets.length}`
+      );
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     // Late-Sheet Compactor: tenta recompactar as chapas tardias com desperdício elevado.
     // Só ativa se o grupo tiver mais de LATE_SHEET_COMPACT_WINDOW chapas e desperdício médio
     // nas últimas chapas acima de LATE_SHEET_MIN_WASTE_RATIO. Resultado só é usado se melhorar.
@@ -543,6 +687,20 @@ export function runCutLayout(
     });
     if (compactResult?.improved) {
       bestRun.sheets = [...compactResult.earlySheets, ...compactResult.lateSheets];
+    }
+
+    // Pocket Filling 2.0: move peças de chapas tardias para bolsões em chapas anteriores.
+    // Ativa apenas se houver >2 chapas; condições por chapa (waste > 14%, index > 40%)
+    // Pocket filling MPM — classificação industrial:
+    //   lateIndexThreshold=0  → qualquer chapa Fraca é redistribuível (não só as tardias)
+    //   wasteThreshold=0.15   → activar apenas em chapas Fracas (> 15% desperdício)
+    //   Chapas Excelentes (≤ 10%) e Boas (10-15%) são protegidas implicitamente
+    //   pelo wasteThreshold — não recebem peças adicionais.
+    if (bestRun.sheets.length > 2) {
+      bestRun.sheets = aplicarPocketFilling(bestRun.sheets, kerf, {
+        lateIndexThreshold: 0,
+        wasteThreshold: 0.15,
+      });
     }
 
     if (diagnostics) {

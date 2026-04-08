@@ -20,8 +20,18 @@ const EPS = 0.001;
 /** Número de chapas tardias a considerar para recompactação (configurável). */
 export const LATE_SHEET_COMPACT_WINDOW = 6;
 
-/** Rácio mínimo de desperdício médio nas chapas tardias para ativar o compactor. */
-export const LATE_SHEET_MIN_WASTE_RATIO = 0.13;
+/**
+ * Rácio mínimo de desperdício médio nas chapas tardias para ativar o compactor.
+ * Alinhado com a classificação industrial: Fraca = desperdício > 15%.
+ * Anteriormente 0.13.
+ */
+export const LATE_SHEET_MIN_WASTE_RATIO = 0.15;
+
+/**
+ * Rácio de desperdício abaixo do qual uma chapa é "Excelente" e não pode ser
+ * recompactada mesmo que caia dentro da janela tardia.
+ */
+const COMPACTOR_EXCELLENT_THRESHOLD = 0.10;
 
 export type LateSheetSortStrategy = "area_desc" | "height_desc";
 
@@ -279,24 +289,52 @@ export function tryCompactLateSheetsOfRun(
   const lateTotal = lateSheets.length * sheetArea;
   const lateWasteRatio = lateTotal > 0 ? lateWaste / lateTotal : 0;
 
-  // Ativa apenas se o desperdício médio nas chapas tardias justificar
+  // Ativa apenas se o desperdício médio nas chapas tardias justificar (≥ Fraca)
   if (lateWasteRatio < minWaste) return null;
 
+
+  // ── Protecção de chapas Excelentes dentro da janela tardia ─────────────────
+  // Chapas Excelentes (≤ 10% desperdício) que caem dentro da janela tardios
+  // são retiradas do repack e preservadas intactas.
+  const excellentInLate: SheetResult[] = [];
+  const weakInLate: SheetResult[] = [];
+  for (const ls of lateSheets) {
+    const lsArea = Math.max(1, ls.sheet.largura_mm * ls.sheet.altura_mm);
+    const lsUsed = ls.placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
+    const lsWaste = Math.max(0, (lsArea - lsUsed) / lsArea);
+    if (lsWaste <= COMPACTOR_EXCELLENT_THRESHOLD) {
+      excellentInLate.push(ls);
+      console.log(`[COMPACTOR] Chapa Excelente protegida dentro da janela tardia (desperdício=${(lsWaste * 100).toFixed(1)}%)`);
+    } else {
+      weakInLate.push(ls);
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   // Converte placements → CutPiece (conservadoramente — sem rotação)
-  const latePieces = lateSheets.flatMap((s) => s.placements.map(placementToPiece));
+  // Apenas as chapas Fracas da janela são recompactadas.
+  const piecesToCompact = weakInLate.length > 0 ? weakInLate : lateSheets;
+  const latePieces = piecesToCompact.flatMap((s) => s.placements.map(placementToPiece));
   const baseIndex = earlySheets.length;
   const compacted = compactLateSheets(latePieces, sheet, kerf, baseIndex);
 
   if (!compacted) return null;
 
-  const improved = compacted.wasteArea < lateWaste;
+  // Comparar apenas com o desperdício das chapas Fracas (as que foram reempacotadas)
+  const weakWaste = totalWaste(piecesToCompact, sheetArea);
+  const improved = compacted.wasteArea < weakWaste;
+
   console.log(
-    `[COMPACTOR] late-sheet repack: originalWaste=${lateWaste.toFixed(0)}mm² | compactedWaste=${compacted.wasteArea.toFixed(0)}mm² | improved=${improved} | strategy=${compacted.sortStrategy}`
+    `[COMPACTOR] late-sheet repack: weakSheets=${piecesToCompact.length} | excellentProtected=${excellentInLate.length} | ` +
+      `originalWaste=${weakWaste.toFixed(0)}mm² | compactedWaste=${compacted.wasteArea.toFixed(0)}mm² | ` +
+      `improved=${improved} | strategy=${compacted.sortStrategy}`
   );
 
+  // Resultado: chapas protegidas (earlySheets + Excelentes da janela) + chapas Fracas recompactadas
+  const finalLateSheets = improved ? compacted.sheets : piecesToCompact;
   return {
-    earlySheets,
-    lateSheets: improved ? compacted.sheets : lateSheets,
+    earlySheets: [...earlySheets, ...excellentInLate],
+    lateSheets: finalLateSheets,
     improved,
   };
 }

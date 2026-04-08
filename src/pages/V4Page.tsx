@@ -1,6 +1,10 @@
 import { useState } from "react";
 import "../components/ui/ui.css";
-import V4Viewer from "../components/v4/V4Viewer";
+import { Icon } from "../components/icons/Icon";
+import V4Viewer, { type SceneItem } from "../components/v4/V4Viewer";
+import V4CatalogPanel from "../components/v4/V4CatalogPanel";
+import V4ItemPreview from "../components/v4/V4ItemPreview";
+import type { CatalogItem } from "../catalog/catalogTypes";
 
 type SectionId = "perfil" | "permissoes" | "definicoes" | "projetos" | "seguranca" | "atividade";
 
@@ -23,7 +27,28 @@ const SECTIONS: Section[] = [
 export default function V4Page() {
   const [activeSection, setActiveSection] = useState<SectionId>("perfil");
   const [subpanelOpen, setSubpanelOpen] = useState(true);
+  const [showCatalogPanel, setShowCatalogPanel] = useState(false);
+  const [sceneItems, setSceneItems] = useState<SceneItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
   const current = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0];
+
+  function handleAddCatalogItem(item: CatalogItem) {
+    const gapM = 0.02;
+    const positionX = sceneItems.reduce(
+      (acc, currentItem) => acc + currentItem.catalogItem.dimensoesDefault.largura_mm / 1000 + gapM,
+      0
+    );
+
+    const newItem: SceneItem = {
+      id: globalThis.crypto?.randomUUID?.() ?? Date.now().toString(),
+      catalogItem: item,
+      position: [positionX, 0, 0],
+    };
+
+    setSceneItems((prev) => [...prev, newItem]);
+    setSelectedId(newItem.id);
+  }
 
   function handleSectionClick(section: Section) {
     if (section.id === activeSection) {
@@ -40,6 +65,18 @@ export default function V4Page() {
         {/* Column 1 */}
         <aside className="ui-settings-sidebar-icons" style={{ flexShrink: 0, overflowX: "hidden", overflowY: "auto" }}>
           <span style={{ fontSize: 10, color: "#888" }}>SECTION: sidebar</span>
+          <button
+            type="button"
+            data-tooltip="Móveis"
+            title="Móveis"
+            className={`ui-settings-icon-btn${showCatalogPanel ? " ui-settings-icon-btn--active" : ""}`}
+            onClick={() => {
+              setShowCatalogPanel((prev) => !prev);
+              setSubpanelOpen(true);
+            }}
+          >
+            <Icon name="furniture" size={16} />
+          </button>
           {SECTIONS.map((section) => (
             <button
               key={section.id}
@@ -72,24 +109,58 @@ export default function V4Page() {
             <span style={{ fontSize: 10, color: "#888", display: "block", marginBottom: 4 }}>
               SECTION: subpanel
             </span>
-            <p className="ui-settings-subpanel-title">{current.label}</p>
+            <p className="ui-settings-subpanel-title">{showCatalogPanel ? "Móveis" : current.label}</p>
           </div>
 
-          <div className="ui-settings-subpanel-items">
-            {SECTIONS.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                className={`ui-settings-subpanel-item${
-                  activeSection === section.id ? " ui-settings-subpanel-item--active" : ""
-                }`}
-                onClick={() => setActiveSection(section.id)}
-              >
-                <span style={{ marginRight: 8 }}>{section.icon}</span>
-                {section.subLabel}
-              </button>
-            ))}
-          </div>
+          {showCatalogPanel ? (
+            <div style={{ height: "calc(100% - 56px)" }}>
+              <V4CatalogPanel
+                onAdd={handleAddCatalogItem}
+                onPreview={(item) => setPreviewItem(item)}
+                previewItemId={previewItem?.id}
+              />
+            </div>
+          ) : (
+            <div className="ui-settings-subpanel-items">
+              {SECTIONS.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  className={`ui-settings-subpanel-item${
+                    activeSection === section.id ? " ui-settings-subpanel-item--active" : ""
+                  }`}
+                  onClick={() => setActiveSection(section.id)}
+                >
+                  <span style={{ marginRight: 8 }}>{section.icon}</span>
+                  {section.subLabel}
+                </button>
+              ))}
+            </div>
+          )}
+        </aside>
+
+        <aside
+          style={{
+            width: previewItem ? 260 : 0,
+            minWidth: previewItem ? 260 : 0,
+            flexShrink: 0,
+            borderLeft: previewItem ? "1px solid var(--color-border, #333)" : "none",
+            background: "var(--color-surface, #1e1e1e)",
+            transition: "width 0.2s ease, min-width 0.2s ease",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
+          {previewItem ? (
+            <V4ItemPreview
+              item={previewItem}
+              onAdd={(item) => {
+                handleAddCatalogItem(item);
+                setPreviewItem(null);
+              }}
+              onClose={() => setPreviewItem(null)}
+            />
+          ) : null}
         </aside>
 
         {/* Column 3 */}
@@ -137,7 +208,11 @@ export default function V4Page() {
             }}
           >
             <div style={{ width: "100%", height: "100%", minHeight: 280 }}>
-              <V4Viewer style={{ width: "100%", height: "100%" }} />
+              <V4Viewer
+                style={{ width: "100%", height: "100%" }}
+                sceneItems={sceneItems}
+                selectedId={selectedId}
+              />
             </div>
           </section>
         </main>

@@ -309,6 +309,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
       return;
     }
+    console.log("PIECES SENT TO LAYOUT (onLayoutCorte):", JSON.stringify(pieces, null, 2));
     const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
       ...getDefaultCncLayoutOptions(),
       originTopRight: true,
@@ -364,6 +365,7 @@ export function useGerarArquivoHandlers() {
       // Cede controlo ao browser antes do cálculo de nesting (pode ser pesado)
       await yieldToMainThread();
 
+      console.log("PIECES SENT TO LAYOUT (onLayoutCortePro):", JSON.stringify(pieces, null, 2));
       const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
         ...getDefaultCncLayoutOptions(),
         originTopRight: true,
@@ -612,6 +614,7 @@ export function useGerarArquivoHandlers() {
         if (pieces.length > 0) {
           showCutLayoutLoader();
           await yieldToMainThread();
+          console.log("PIECES SENT TO LAYOUT (onArquivoCompleto):", JSON.stringify(pieces, null, 2));
           nestingResult = runCutLayout(pieces, getSheetDefinitionFromSettings(), {
             ...getDefaultCncLayoutOptions(),
             originTopRight: true,
