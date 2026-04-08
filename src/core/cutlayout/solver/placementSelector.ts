@@ -1,5 +1,6 @@
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
+import type { ContextoChapa } from "../scoring/placementScoring";
 
 // Área máxima para considerar uma peça "pequena" no gap-fill scan: 120×120mm²
 const GAP_FILL_SMALL_PIECE_AREA_MM2 = 14_400;
@@ -52,7 +53,8 @@ export type CutLayoutPlacementSelectorDeps = CutLayoutStrategyPlacementDeps & {
     _sheet: SheetDefinition,
     _placement: PlacementCandidate,
     _currentUtilization: number,
-    _rotationCfg: RotationScoringConfig
+    _rotationCfg: RotationScoringConfig,
+    _ctx?: ContextoChapa
   ) => number;
 };
 
@@ -86,7 +88,8 @@ export function pickBestPieceForSheet(
   searchWindow: number,
   rotationCfg: RotationScoringConfig,
   bin: BinHeuristic,
-  deps: CutLayoutPlacementSelectorDeps
+  deps: CutLayoutPlacementSelectorDeps,
+  ctx?: ContextoChapa
 ): { index: number; placement: PlacementCandidate } | null {
   if (remaining.length === 0) return null;
   const currentUtil = deps.calculateSheetUtilization(placedRects, sheet.largura_mm, sheet.altura_mm);
@@ -137,7 +140,7 @@ export function pickBestPieceForSheet(
       deps
     );
     if (!placement) continue;
-    const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg);
+    const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg, ctx);
     if (!best || score > best.score) best = { index: i, placement, score };
   }
   if (!best && remaining.length > dynamicLimit) {
@@ -154,7 +157,7 @@ export function pickBestPieceForSheet(
         deps
       );
       if (!placement) continue;
-      const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg);
+      const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg, ctx);
       if (!best || score > best.score) best = { index: i, placement, score };
     }
   }
@@ -178,7 +181,7 @@ export function pickBestPieceForSheet(
         deps
       );
       if (!placement) continue;
-      const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg);
+      const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg, ctx);
       if (!best || score > best.score) best = { index: i, placement, score };
     }
   }

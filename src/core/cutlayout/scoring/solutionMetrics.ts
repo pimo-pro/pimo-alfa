@@ -13,6 +13,9 @@ export type GlobalScoreMetrics = {
     linearGapScoreTotal: number;
     compactnessScoreTotal: number;
     usefulRectangularScrapScoreTotal: number;
+    /** Penalização acumulada por chapas com muitos bolsões grandes (v32).
+     *  Chapas tardias (idx > 40% do total) pesam o dobro. */
+    largeVoidPocketsTotal: number;
     perSheet: SheetAdvancedMetrics[];
   };
 };
@@ -44,6 +47,17 @@ export function computeSolutionMetrics(
   const compactnessScoreTotal = perSheet.reduce((acc, p) => acc + p.compactnessScore, 0);
   const usefulRectangularScrapScoreTotal = perSheet.reduce((acc, p) => acc + p.usefulRectangularScrapScore, 0);
 
+  // largeVoidPocketsTotal: penaliza chapas com muitos pockets (>2) e baixa compacidade (<0.75).
+  // Chapas tardias (idx > 40% do total de chapas) têm peso duplo.
+  const totalSheetsCount = Math.max(1, sheets.length);
+  const largeVoidPocketsTotal = perSheet.reduce((acc, p, idx) => {
+    const isLateSheet = idx / totalSheetsCount > 0.4;
+    const hasLargePockets = p.pocketsCount > 2 && p.compactnessScore < 0.75;
+    if (!hasLargePockets) return acc;
+    const weight = isLateSheet ? 2.0 : 1.0;
+    return acc + p.pocketsCount * weight;
+  }, 0);
+
   let score = sheets.length * 1_000_000 + wasteArea - usefulLeftoverArea * 0.1;
   if (scoreModel === "v32") {
     score += convexHullWasteTotal * 120_000;
@@ -52,6 +66,7 @@ export function computeSolutionMetrics(
     score += linearGapScoreTotal * 12_000;       // ↑ penaliza faixas vazias longas
     score -= compactnessScoreTotal * 38_000;     // ↑ recompensa layouts compactos
     score -= usefulRectangularScrapScoreTotal * 35_000;
+    score += largeVoidPocketsTotal * 15_000;     // ↑ penaliza bolsões grandes em chapas tardias
   }
 
   return {
@@ -66,6 +81,7 @@ export function computeSolutionMetrics(
       linearGapScoreTotal,
       compactnessScoreTotal,
       usefulRectangularScrapScoreTotal,
+      largeVoidPocketsTotal,
       perSheet,
     },
   };

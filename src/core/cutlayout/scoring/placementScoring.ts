@@ -3,6 +3,19 @@ import type { PlacementCandidate, RotationScoringConfig } from "./rotationScorin
 
 const EPS = 0.001;
 
+/**
+ * Contexto de chapa passado opcionalmente a scorePlacement.
+ * Permite ajustar pesos consoante a posição da chapa no layout global
+ * (chapas tardias recebem penalizações extra contra bolsões/isolamento).
+ * Backward-compatible: callers existentes que não passam ctx continuam a funcionar.
+ */
+export type ContextoChapa = {
+  /** Índice da chapa atual no layout (0-based). */
+  sheetIndex: number;
+  /** Estimativa do número total de chapas no layout atual. */
+  totalSheets: number;
+};
+
 export function buildCandidateCoordinates(
   placed: CutPlacement[],
   pieceW: number,
@@ -101,7 +114,8 @@ export function scorePlacement(
   sheet: SheetDefinition,
   placement: PlacementCandidate,
   currentUtilization: number,
-  rotationCfg: RotationScoringConfig
+  rotationCfg: RotationScoringConfig,
+  ctx?: ContextoChapa
 ): number {
   const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
   const areaGain = (placement.w * placement.h) / sheetArea;
@@ -118,12 +132,25 @@ export function scorePlacement(
     Math.min(0.5, expectedUtil * 0.55) +
     (expectedUtil > 0.85 ? Math.min(0.2, (expectedUtil - 0.85) * 2.0) : 0);
 
-  // Bónus de encaixe lateral: recompensa peças encostadas a paredes ou outras peças
-  const tightnessBonus = (placement.tightnessScore ?? 0) * 0.20;
+  // Fator de chapa tardia: 0.0 nas primeiras chapas, crescendo linearmente até 1.0 a partir de 40% do total.
+  // Nas chapas tardias amplifica bónus de encaixe e penaliza isolamento.
+  const lateFactor =
+    ctx && ctx.totalSheets > 1
+      ? Math.max(0, Math.min(1, (ctx.sheetIndex / ctx.totalSheets - 0.4) / 0.6))
+      : 0;
 
-  // Bónus extra para peças pequenas (< 5% da chapa) que preenchem gaps apertados
+  // Bónus de encaixe lateral: recompensa peças encostadas a paredes ou outras peças.
+  // Ampliado em chapas tardias para forçar maior compactação.
+  const tightnessBonus = (placement.tightnessScore ?? 0) * (0.20 + lateFactor * 0.25);
+
+  // Bónus extra para peças pequenas (< 5% da chapa) que preenchem gaps apertados.
+  // Também amplificado em chapas tardias.
   const isSmall = placement.w * placement.h < sheetArea * 0.05;
-  const gapFillBonus = isSmall && (placement.tightnessScore ?? 0) >= 0.5 ? 0.08 : 0;
+  const gapFillBonus = isSmall && (placement.tightnessScore ?? 0) >= 0.5 ? 0.08 + lateFactor * 0.10 : 0;
+
+  // Penalização de isolamento: em chapas tardias, se a peça não encosta a nada
+  // (tightnessScore = 0), penalizar — evita bolsões abertos.
+  const isolationPenalty = lateFactor > 0 && (placement.tightnessScore ?? 0) === 0 ? lateFactor * 0.15 : 0;
 
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {
@@ -141,6 +168,7 @@ export function scorePlacement(
     rotationScore +
     compactnessScore +
     tightnessBonus +
-    gapFillBonus
+    gapFillBonus -
+    isolationPenalty
   );
 }
