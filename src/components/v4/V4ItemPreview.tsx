@@ -52,8 +52,8 @@ export default function V4ItemPreview({ item, onAdd, onClose }: V4ItemPreviewPro
         height: "100%",
         border: "none",
         borderRadius: 0,
-        background: "transparent",
-        color: "var(--color-text-primary, #f0f0f0)",
+        background: "var(--navy)",
+        color: "var(--text-main)",
         padding: 12,
         position: "relative",
       }}
@@ -62,30 +62,30 @@ export default function V4ItemPreview({ item, onAdd, onClose }: V4ItemPreviewPro
         type="button"
         onClick={onClose}
         aria-label="Fechar preview"
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          width: 28,
-          height: 28,
-          borderRadius: 6,
-          border: "1px solid var(--color-border, #333)",
-          background: "transparent",
-          color: "var(--color-text-primary, #f0f0f0)",
-          cursor: "pointer",
-        }}
-      >
-        ×
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            border: "1px solid var(--card-border)",
+            background: "transparent",
+            color: "var(--text-main)",
+            cursor: "pointer",
+          }}
+        >
+          ×
       </button>
 
-      <p style={{ margin: "0 28px 8px 0", fontSize: 16, fontWeight: 700 }}>{item.nome}</p>
-      <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary, #aaa)" }}>
+      <p style={{ margin: "0 28px 8px 0", fontSize: 16, fontWeight: 700, color: "var(--text-main)" }}>{item.nome}</p>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
         Largura: {larguraCm} cm
       </p>
-      <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary, #aaa)" }}>
+      <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
         Altura: {alturaCm} cm
       </p>
-      <p style={{ margin: "2px 0 10px", fontSize: 12, color: "var(--color-text-secondary, #aaa)" }}>
+      <p style={{ margin: "2px 0 10px", fontSize: 12, color: "var(--text-muted)" }}>
         Profundidade: {profundidadeCm} cm
       </p>
 
@@ -95,19 +95,19 @@ export default function V4ItemPreview({ item, onAdd, onClose }: V4ItemPreviewPro
           height: 180,
           borderRadius: 8,
           overflow: "hidden",
-          border: "1px solid var(--color-border, #333)",
+          border: "1px solid var(--card-border)",
           margin: "0 auto 12px",
-          background: "#d8dce3",
+          background: "var(--card-bg)",
         }}
       >
         <Canvas gl={{ antialias: true, alpha: false }}>
-          <color attach="background" args={["#d8dce3"]} />
+          <color attach="background" args={["var(--card-bg)"]} />
           <PerspectiveCamera makeDefault position={[1.5, 1.5, 2.5]} fov={45} near={0.1} far={500} />
           <ambientLight intensity={0.72} />
           <directionalLight position={[12, 18, 8]} intensity={1.05} />
           <OrbitControls enableDamping />
           {boxGroup ? <primitive object={boxGroup} /> : null}
-          <gridHelper args={[20, 20, "#b0b4bc", "#c8ccd4"]} position={[0, 0, 0]} />
+          <gridHelper args={[20, 20, "var(--card-border)", "var(--card-border)"]} position={[0, 0, 0]} />
         </Canvas>
       </div>
 
@@ -120,9 +120,9 @@ export default function V4ItemPreview({ item, onAdd, onClose }: V4ItemPreviewPro
         style={{
           width: "100%",
           borderRadius: 8,
-          border: "1px solid var(--color-accent, #f59e0b)",
-          background: "var(--color-accent, #f59e0b)",
-          color: "#111",
+          border: "1px solid var(--blue-light)",
+          background: "var(--blue-light)",
+          color: "white",
           fontWeight: 700,
           padding: "10px 12px",
           cursor: "pointer",

@@ -42,6 +42,8 @@ export type ProjectForEtiquetasPdf = {
 type LabelItem = CutListItemComPreco & {
   boxNome?: string;
   pieceName?: string;
+  /** Nome do projeto de origem da peça (fabricação em massa). */
+  sourceProjectName?: string;
 };
 
 function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
@@ -52,6 +54,7 @@ function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
       ...p,
       boxNome: boxById.get(p.boxId ?? "")?.nome ?? p.boxId ?? "—",
       pieceName: p.nome,
+      sourceProjectName: (p as Record<string, unknown>).sourceProjectName as string | undefined,
     }));
   }
 
@@ -180,9 +183,10 @@ async function renderEtiquetaPageFromDesignerConfig(
   }
 
   const pieceNumber = Number(item.pieceNumber ?? 0);
+  const effectiveProjectName = item.sourceProjectName ?? project.projectName;
   const etiquetaCode = buildLocalQrPayload(
     item,
-    { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
+    { projectName: effectiveProjectName, boxes: project.boxes, rules: project.rules },
     pieceNumber,
   );
 
@@ -191,7 +195,7 @@ async function renderEtiquetaPageFromDesignerConfig(
   const esp  = Math.round(item.espessura ?? 0);
 
   const dataMap: Record<string, string> = {
-    projeto:     project.projectName || "PROJETO",
+    projeto:     effectiveProjectName || "PROJETO",
     caixa:       item.boxNome ?? item.boxId ?? "—",
     peca:        item.pieceName ?? item.nome ?? "—",
     madeira:     (item.material ?? "—").toUpperCase(),
@@ -269,7 +273,8 @@ async function renderEtiquetaPage(
   const logoY = margin + 0.5;
   drawLogoPiInBox(doc, logoDataUrl, logoX, logoY, logoSizeMm, BRAND_RED_ETI);
 
-  const ref = `${project.projectName || "PROJETO"}_${item.boxNome ?? item.boxId ?? "BOX"}_${item.pieceName ?? item.nome}`;
+  const effectiveProjectName = item.sourceProjectName ?? project.projectName;
+  const ref = `${effectiveProjectName || "PROJETO"}_${item.boxNome ?? item.boxId ?? "BOX"}_${item.pieceName ?? item.nome}`;
   const refX = logoX + logoSizeMm + 2;
   const refMaxW = Math.max(8, width - refX - margin);
 
@@ -289,7 +294,7 @@ async function renderEtiquetaPage(
   const qrY = y + 1.5;
   const pieceNumber = Number(item.pieceNumber ?? 0);
   const etiquetaCode = buildLocalQrPayload(item, {
-    projectName: project.projectName,
+    projectName: effectiveProjectName,
     boxes: project.boxes,
     rules: project.rules,
   }, pieceNumber);

@@ -1243,7 +1243,7 @@ export default function SystemSettingsBase() {
             />
             <NumberField
               label="Espaçamento mínimo entre peças (mm)"
-              value={draft.cnc.minSpacingMm ?? 15}
+              value={draft.cnc.minSpacingMm ?? 3}
               min={0} max={100} step={1}
               onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, minSpacingMm: value } }))}
             />
@@ -1274,7 +1274,7 @@ export default function SystemSettingsBase() {
                     ...prev,
                     cnc: {
                       ...prev.cnc,
-                      compensacaoFerramenta: (prev.cnc.compensacaoFerramenta ?? "fora") === "fora" ? "dentro" : "fora",
+                      compensacaoFerramenta: (prev.cnc.compensacaoFerramenta ?? "dentro") === "fora" ? "dentro" : "fora",
                     },
                   }))
                 }
@@ -1285,12 +1285,12 @@ export default function SystemSettingsBase() {
                   cursor: "pointer",
                   fontSize: 12,
                   fontWeight: 600,
-                  background: (draft.cnc.compensacaoFerramenta ?? "fora") === "fora" ? "#16a34a" : "#4b5563",
+                  background: (draft.cnc.compensacaoFerramenta ?? "dentro") === "fora" ? "#16a34a" : "#4b5563",
                   color: "#fff",
                   transition: "background 0.2s",
                 }}
               >
-                {(draft.cnc.compensacaoFerramenta ?? "fora") === "fora"
+                {(draft.cnc.compensacaoFerramenta ?? "dentro") === "fora"
                   ? "Compensação: FORA da peça ✓"
                   : "Compensação: DENTRO da peça"}
               </button>

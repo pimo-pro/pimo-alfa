@@ -17,19 +17,34 @@ export type ProjectForPdf = {
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
   settings?: unknown;
+  /** Itens pré-calculados com numeração global (modo fabricação em massa). */
+  precomputedItems?: CutListItemComPreco[];
 };
 
 const MARGIN = 14;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
 
 function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { boxNome: string; tipoBorda?: string }> {
+  const boxById = new Map(project.boxes.map((b) => [b.id, b]));
+
+  // Modo fabricação em massa: usar itens pré-calculados com numeração global
+  if (project.precomputedItems && project.precomputedItems.length > 0) {
+    return project.precomputedItems.map((p) => {
+      const box = boxById.get(p.boxId ?? "");
+      return {
+        ...p,
+        boxNome: box?.nome ?? p.boxId ?? "—",
+        tipoBorda: box?.tipoBorda,
+      };
+    });
+  }
+
   const parametric = cutlistComPrecoFromBoxes(
     project.boxes,
     project.rules,
     project.materialId,
     project.projectName
   );
-  const boxById = new Map(project.boxes.map((b) => [b.id, b]));
 
   const rows: Array<CutListItemComPreco & { boxNome: string; tipoBorda?: string }> = parametric.map((p) => {
     const box = boxById.get(p.boxId ?? "");

@@ -17,6 +17,7 @@ import { buildEtiquetasPdf, type ProjectForEtiquetasPdf } from "../pdf/pdfEtique
 import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../labelDesigner/labelDesignerStorage";
 import { runCutLayout, cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
+import type { CutLayoutResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
 import {
   buildCncFromCutlistItems,
   getDefaultCncLayoutOptions,
@@ -168,9 +169,117 @@ function uniqueFolderSegment(base: string, used: Set<string>): string {
   return candidate;
 }
 
+// --- Numeração global de peças (Fabricação em Massa) ---
+
+type GlobalPieceInfo = {
+  globalNumber: number;
+  sheetIndex: number;
+  rotacao: number;
+};
+
 /**
- * Carrega snapshots, recalcula com `applyResultados` e gera ZIP com PDFs por projeto e ficheiros industriais globais.
- * Peças agregadas usam prefixo `P1_`, `P2_`, … por ordem em `projectIds`.
+ * Cria índice de numeração global ordenado pelo layout de chapas.
+ * Ordem: chapa ascendente → y descendente (base da chapa primeiro) → x ascendente.
+ * Peças sem colocação no nesting ficam no fim, em ordem de aparição.
+ */
+function buildGlobalPieceIndex(
+  items: CutListItemComPreco[],
+  sheets: Array<{ placements: CutPlacement[] }>
+): Map<string, GlobalPieceInfo> {
+  const posLookup = new Map<string, { sheetIndex: number; x_mm: number; y_mm: number; rotacao: number }>();
+  for (const sheet of sheets) {
+    for (const placement of sheet.placements) {
+      const key = `${placement.boxId ?? ""}::${placement.partName ?? ""}`;
+      if (!posLookup.has(key)) {
+        posLookup.set(key, {
+          sheetIndex: placement.sheetIndex,
+          x_mm: placement.x_mm,
+          y_mm: placement.y_mm,
+          rotacao: placement.rotacao,
+        });
+      }
+    }
+  }
+
+  const sortedItems = [...items].sort((a, b) => {
+    const keyA = `${a.boxId ?? ""}::${a.nome ?? ""}`;
+    const keyB = `${b.boxId ?? ""}::${b.nome ?? ""}`;
+    const posA = posLookup.get(keyA);
+    const posB = posLookup.get(keyB);
+    if (!posA && !posB) return 0;
+    if (!posA) return 1;
+    if (!posB) return -1;
+    if (posA.sheetIndex !== posB.sheetIndex) return posA.sheetIndex - posB.sheetIndex;
+    const yDiff = posB.y_mm - posA.y_mm;
+    if (Math.abs(yDiff) > 1) return yDiff;
+    return posA.x_mm - posB.x_mm;
+  });
+
+  const result = new Map<string, GlobalPieceInfo>();
+  for (let i = 0; i < sortedItems.length; i++) {
+    const item = sortedItems[i]!;
+    const key = `${item.boxId ?? ""}::${item.nome ?? ""}`;
+    const pos = posLookup.get(key);
+    result.set(key, {
+      globalNumber: i + 1,
+      sheetIndex: pos?.sheetIndex ?? -1,
+      rotacao: pos?.rotacao ?? 0,
+    });
+  }
+  return result;
+}
+
+/**
+ * Aplica numeração global e projeto de origem a todos os itens prefixados (in-place).
+ * Após esta chamada cada item tem `pieceNumber` global único e `sourceProjectName`.
+ */
+function applyGlobalPieceNumbers(
+  items: CutListItemComPreco[],
+  globalIndex: Map<string, GlobalPieceInfo>,
+  prefixToProjectName: Map<string, string>
+): void {
+  const prefixes = [...prefixToProjectName.keys()];
+  for (const item of items) {
+    const key = `${item.boxId ?? ""}::${item.nome ?? ""}`;
+    const info = globalIndex.get(key);
+    const prefix = prefixes.find((p) => (item.boxId ?? "").startsWith(p));
+    const o = item as Record<string, unknown>;
+    if (info) {
+      o.pieceNumber = info.globalNumber;
+    }
+    if (prefix) {
+      o.sourceProjectName = prefixToProjectName.get(prefix);
+    }
+  }
+}
+
+/**
+ * Constrói itens originais (não prefixados) de um projeto com numeração global atribuída.
+ * Usados para PDFs de cutlist e etiquetas por projeto (IDs originais, números globais).
+ */
+function buildProjectDisplayItems(
+  entry: { state: ProjectState; prefix: string; recordId: string },
+  globalIndex: Map<string, GlobalPieceInfo>
+): CutListItemComPreco[] {
+  const rawItems = buildItemsForCncExportFromState(entry.state);
+  let fallback = globalIndex.size + 1;
+  return rawItems.map((item) => {
+    const prefixedKey = `${entry.prefix}${item.boxId ?? ""}::${entry.prefix}${item.nome ?? ""}`;
+    const info = globalIndex.get(prefixedKey);
+    return {
+      ...item,
+      pieceNumber: info?.globalNumber ?? fallback++,
+    };
+  });
+}
+
+/**
+ * Carrega snapshots, recalcula com `applyResultados` e gera ZIP com:
+ * - Layout global único de corte PRO
+ * - Etiquetas globais (numeração 1..N, nome do projeto de origem em cada etiqueta)
+ * - TCN/CNC global (por material) + por projeto
+ * - Drill XML global + por projeto
+ * - Por projeto: cutlist, técnico, unificado, etiquetas (com numeração global)
  */
 export async function generateMultiProjectFabrication(
   projectIds: string[],
@@ -183,7 +292,7 @@ export async function generateMultiProjectFabrication(
   const nestingMode = options?.nesting ?? "auto";
   const signal = options?.signal;
   const onProgress = options?.onProgress;
-  const totalSteps = 6;
+  const totalSteps = 7;
   const t0 = Date.now();
 
   const emit = (step: number, label: string, detail?: string) => {
@@ -204,7 +313,6 @@ export async function generateMultiProjectFabrication(
       : { ...getDefaultCncLayoutOptions(), originTopRight: true };
 
   const cncPipelineOpts = nestingMode === "none" ? getFastCncLayoutOptions() : getDefaultCncLayoutOptions();
-
   const tcnSuffix = tcnMethodSuffix(getSettings()?.cnc?.tcnMetodo);
 
   type LoadedEntry = {
@@ -215,6 +323,7 @@ export async function generateMultiProjectFabrication(
 
   const loaded: LoadedEntry[] = [];
 
+  // PASSO 1 — Carregar projetos
   emit(1, "Carregando projetos…");
   for (let i = 0; i < projectIds.length; i += 1) {
     checkAbort();
@@ -229,24 +338,22 @@ export async function generateMultiProjectFabrication(
       throw new Error(`multiProjectFabrication: falha ao reviver estado (${recordId}).`);
     }
     const state = applyResultados(revived);
-    loaded.push({
-      state,
-      recordId,
-      prefix: `P${i + 1}_`,
-    });
+    loaded.push({ state, recordId, prefix: `P${i + 1}_` });
   }
 
   checkAbort();
-  emit(2, "Gerando cutlist e PDFs por projeto…");
 
   const projectNames: string[] = [];
   const allPrefixedItems: CutListItemComPreco[] = [];
   const allPrefixedBoxes: BoxModule[] = [];
   const rulesForGlobal = loaded[0]!.state.rules;
+  const prefixToProjectName = new Map<string, string>();
 
   for (const entry of loaded) {
     const { state, prefix } = entry;
-    projectNames.push(state.projectName || entry.recordId);
+    const projName = state.projectName || entry.recordId;
+    projectNames.push(projName);
+    prefixToProjectName.set(prefix, projName);
 
     const items = buildItemsForCncExportFromState(state).map((it) => prefixCutlistItem(it, prefix));
     allPrefixedItems.push(...items);
@@ -261,23 +368,107 @@ export async function generateMultiProjectFabrication(
     rules: rulesForGlobal,
   };
 
+  // PASSO 2 — Layout global (executado ANTES do loop por projeto para atribuir numeração global)
+  checkAbort();
+  emit(2, "Otimizando layout global de chapas…");
+
+  const allItemsForLayout = allPrefixedItems as CutlistItemForPieces[];
+  const layoutTitle = projectNames.join(" + ");
+  let layoutResult: CutLayoutResult | null = null;
+  let combinedPlacements: CutPlacement[] = [];
+
+  try {
+    const pieces = cutlistToPieces(allItemsForLayout);
+    if (pieces.length > 0) {
+      emit(2, "Otimizando layout global de chapas…", "Executando nesting…");
+      layoutResult = runCutLayout(pieces, getSheetDefinitionFromSettings(), layoutOpts);
+      applyRotationGeometryToSheets(layoutResult.sheets);
+      combinedPlacements = layoutResult.sheets.flatMap((s) => s.placements);
+    }
+  } catch (err) {
+    devLogger.error("multiProjectFabrication: layout global", err);
+  }
+
+  // Atribuir numeração global única e projeto de origem a todos os itens prefixados
+  const globalIndex = buildGlobalPieceIndex(allPrefixedItems, layoutResult?.sheets ?? []);
+  applyGlobalPieceNumbers(allPrefixedItems, globalIndex, prefixToProjectName);
+
+  // PASSO 3 — PDF do layout de corte PRO + etiquetas globais
+  checkAbort();
+  emit(3, "Gerando PDF do layout de corte PRO…");
+
   const zip = new JSZip();
   const folderNamesUsed = new Set<string>();
+
+  if (layoutResult && layoutResult.sheets.length > 0) {
+    try {
+      const { buildCutLayoutPdf } = await import("../cutlayout/cutLayoutPdf");
+      const docLayout = await buildCutLayoutPdf(layoutResult, {
+        projectName: layoutTitle || "Multi-projeto",
+        nestingTopRightOrigin: true,
+      });
+      safeAddPdf(zip, "layout/layout_corte_pro.pdf", docLayout);
+    } catch (err) {
+      devLogger.error("multiProjectFabrication: layout PDF", err);
+    }
+
+    // Etiquetas globais: todas as peças ordenadas por chapa, nome do projeto de origem em cada etiqueta
+    try {
+      const globalDesignerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
+      const globalEtiquetasProj: ProjectForEtiquetasPdf = {
+        projectName: layoutTitle || "Multi-projeto",
+        boxes: allPrefixedBoxes,
+        rules: rulesForGlobal,
+        settings: getSettings(),
+        precomputedItems: allPrefixedItems, // contém pieceNumber global + sourceProjectName
+        cutLayoutPlacements: combinedPlacements.length > 0 ? combinedPlacements : undefined,
+        designerConfig: globalDesignerCfg,
+      };
+      const docEtiquetasTodas = await buildEtiquetasPdf(globalEtiquetasProj);
+      safeAddPdf(zip, "etiquetas/etiquetas_todas.pdf", docEtiquetasTodas);
+    } catch (err) {
+      devLogger.error("multiProjectFabrication: etiquetas globais", err);
+    }
+  }
+
+  // PASSO 4 — Loop por projeto (com numeração global já disponível)
+  checkAbort();
+  emit(4, "Gerando ficheiros por projeto…");
 
   for (const entry of loaded) {
     checkAbort();
     const proj = stateToProjectForPdf(entry.state);
-    emit(2, "Gerando cutlist e PDFs por projeto…", proj.projectName || entry.recordId);
+    emit(4, "Gerando ficheiros por projeto…", proj.projectName || entry.recordId);
+
     const folder = uniqueFolderSegment(projectSlug(proj.projectName), folderNamesUsed);
     const basePath = `projetos/${folder}`;
 
+    // Itens originais do projeto com numeração global (para cutlist e etiquetas)
+    const projDisplayItems = buildProjectDisplayItems(entry, globalIndex);
+
+    // Placements filtrados do projeto (IDs sem prefixo, para ordenação das etiquetas)
+    const prefixLen = entry.prefix.length;
+    const projPlacements = combinedPlacements
+      .filter((p) => (p.boxId ?? "").startsWith(entry.prefix))
+      .map((p) => ({
+        ...p,
+        boxId: (p.boxId ?? "").slice(prefixLen),
+        partName: (p.partName ?? "").slice(prefixLen),
+      }));
+
+    // Cutlist PDF com numeração global
     try {
-      const docCutlist = await buildCutlistPdf(proj);
+      const projForCutlist: ProjectForPdf = {
+        ...proj,
+        precomputedItems: projDisplayItems,
+      };
+      const docCutlist = await buildCutlistPdf(projForCutlist);
       safeAddPdf(zip, `${basePath}/cutlist.pdf`, docCutlist);
     } catch (err) {
       devLogger.error("multiProjectFabrication: cutlist PDF", err);
     }
 
+    // PDF Técnico (inalterado)
     try {
       const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
         materialId: proj.materialId,
@@ -287,6 +478,7 @@ export async function generateMultiProjectFabrication(
       devLogger.error("multiProjectFabrication: técnico PDF", err);
     }
 
+    // PDF Unificado (inalterado)
     try {
       const docUnificado = await buildUnifiedPdf(proj);
       safeAddPdf(zip, `${basePath}/unificado.pdf`, docUnificado);
@@ -294,65 +486,102 @@ export async function generateMultiProjectFabrication(
       devLogger.error("multiProjectFabrication: unificado PDF", err);
     }
 
+    // Etiquetas com numeração global e nome do projeto original
     try {
       const designerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
       const docEtiquetas = await buildEtiquetasPdf({
-        ...proj,
+        projectName: proj.projectName,
+        boxes: proj.boxes,
+        rules: proj.rules,
+        materialId: proj.materialId,
         settings: getSettings(),
+        precomputedItems: projDisplayItems,
+        cutLayoutPlacements: projPlacements.length > 0 ? projPlacements : undefined,
         designerConfig: designerCfg,
       });
       safeAddPdf(zip, `${basePath}/etiquetas.pdf`, docEtiquetas);
     } catch (err) {
       devLogger.error("multiProjectFabrication: etiquetas PDF", err);
     }
-  }
 
-  checkAbort();
-  emit(3, "Otimizando layout de chapas…");
-
-  const allItemsForLayout = allPrefixedItems as CutlistItemForPieces[];
-  const layoutTitle = projectNames.join(" + ");
-
-  try {
-    const pieces = cutlistToPieces(allItemsForLayout);
-    if (pieces.length > 0) {
-      emit(4, "Aplicando meta-heurística de nesting…");
-      const result = runCutLayout(pieces, getSheetDefinitionFromSettings(), layoutOpts);
-      // Pós-processamento geométrico: garante drillHoles em coords do espaço colocado
-      // (pós-rotação, para TCN) e originalDrillHoles em coords pré-rotação (para PDF).
-      applyRotationGeometryToSheets(result.sheets);
-      const { buildCutLayoutPdf } = await import("../cutlayout/cutLayoutPdf");
-      const docLayout = await buildCutLayoutPdf(result, {
-        projectName: layoutTitle || "Multi-projeto",
-        nestingTopRightOrigin: true,
-      });
-      safeAddPdf(zip, "layout/layout_corte_pro.pdf", docLayout);
-
-      // --- Etiquetas globais: todas as peças de todos os projetos, ordenadas pelas chapas ---
-      try {
-        const combinedPlacements = result.sheets.flatMap((s) => s.placements);
-        const globalDesignerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
-        const globalEtiquetasProj: ProjectForEtiquetasPdf = {
-          projectName: layoutTitle || "Multi-projeto",
-          boxes: allPrefixedBoxes,
-          rules: rulesForGlobal,
-          settings: getSettings(),
-          precomputedItems: allPrefixedItems,
-          cutLayoutPlacements: combinedPlacements.length > 0 ? combinedPlacements : undefined,
-          designerConfig: globalDesignerCfg,
-        };
-        const docEtiquetasTodas = await buildEtiquetasPdf(globalEtiquetasProj);
-        safeAddPdf(zip, "etiquetas/etiquetas_todas.pdf", docEtiquetasTodas);
-      } catch (err) {
-        devLogger.error("multiProjectFabrication: etiquetas globais combinadas", err);
+    // TCN/CNC por projeto (peças do projeto com numeração global preservada)
+    try {
+      const projPrefixedItems = allPrefixedItems.filter((item) =>
+        (item.boxId ?? "").startsWith(entry.prefix)
+      );
+      const projByMaterial = new Map<string, CutListItemComPreco[]>();
+      for (const item of projPrefixedItems) {
+        const key = ((item as { material?: string }).material ?? "Módulo").trim() || "Módulo";
+        if (!projByMaterial.has(key)) projByMaterial.set(key, []);
+        projByMaterial.get(key)!.push(item);
       }
+      const usedProjTcnNames = new Set<string>();
+      for (const [materialName, matItems] of projByMaterial) {
+        checkAbort();
+        const cncBundle = buildCncFromCutlistItems(
+          { projectName: proj.projectName || entry.recordId, rules: entry.state.rules },
+          matItems as CutlistItemForPieces[],
+          undefined,
+          cncPipelineOpts
+        );
+        if (!cncBundle?.cnc?.files?.length) continue;
+        const safeMat =
+          materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
+        for (const file of cncBundle.cnc.files) {
+          if (!file || file.tcn == null) continue;
+          const thicknessBucket = formatThicknessBucket(file.thicknessMm);
+          const base =
+            cncBundle.cnc.files.length === 1 ? safeMat : `${safeMat}_${file.panelIndex}`;
+          let finalBase = base;
+          let dedupeIdx = 2;
+          while (usedProjTcnNames.has(`${thicknessBucket}/${finalBase}`)) {
+            finalBase = `${base}_${dedupeIdx}`;
+            dedupeIdx += 1;
+          }
+          usedProjTcnNames.add(`${thicknessBucket}/${finalBase}`);
+          const tcnPath = sanitizeZipPath(
+            `${basePath}/cnc/${thicknessBucket}/${finalBase}_${tcnSuffix}.tcn`
+          );
+          if (tcnPath && typeof file.tcn === "string") {
+            zip.file(tcnPath, file.tcn);
+          }
+        }
+      }
+    } catch (err) {
+      devLogger.error("multiProjectFabrication: TCN por projeto", err);
     }
-  } catch (err) {
-    devLogger.error("multiProjectFabrication: layout corte PRO", err);
+
+    // Drill XML por projeto
+    try {
+      const projPrefixedItemsDrill = allPrefixedItems.filter((item) =>
+        (item.boxId ?? "").startsWith(entry.prefix)
+      );
+      const projPrefixedBoxes = allPrefixedBoxes.filter((b) => b.id.startsWith(entry.prefix));
+      const drillFiles = buildDrillFilesForProject(projPrefixedItemsDrill, {
+        projectName: proj.projectName || entry.recordId,
+        boxes: projPrefixedBoxes,
+        rules: entry.state.rules,
+      });
+      const usedDrillNames = new Set<string>();
+      for (const f of drillFiles) {
+        const base = sanitizeZipPath(f.filenameBase) || "peca";
+        let n = 2;
+        let name = base;
+        while (usedDrillNames.has(name)) {
+          name = `${base}_${n}`;
+          n += 1;
+        }
+        usedDrillNames.add(name);
+        zip.file(sanitizeZipPath(`${basePath}/drill/${name}.xml`), f.xml);
+      }
+    } catch (err) {
+      devLogger.error("multiProjectFabrication: drill XML por projeto", err);
+    }
   }
 
+  // PASSO 5 — TCN/CNC global (todas as peças, por material)
   checkAbort();
-  emit(5, "Gerando ficheiros TCN/CNC…");
+  emit(5, "Gerando ficheiros TCN/CNC globais…");
 
   try {
     const byMaterial = new Map<string, CutListItemComPreco[]>();
@@ -365,7 +594,7 @@ export async function generateMultiProjectFabrication(
 
     for (const [materialName, itemsForMaterial] of byMaterial) {
       checkAbort();
-      emit(5, "Gerando ficheiros TCN/CNC…", materialName);
+      emit(5, "Gerando ficheiros TCN/CNC globais…", materialName);
       const cncBundle = buildCncFromCutlistItems(
         globalProjectStub,
         itemsForMaterial as CutlistItemForPieces[],
@@ -373,12 +602,15 @@ export async function generateMultiProjectFabrication(
         cncPipelineOpts
       );
       if (!cncBundle?.cnc?.files?.length) continue;
-      const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
+      const safeMaterialName =
+        materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
       for (const file of cncBundle.cnc.files) {
         if (!file || file.tcn == null) continue;
         const thicknessBucket = formatThicknessBucket(file.thicknessMm);
         const base =
-          cncBundle.cnc.files.length === 1 ? safeMaterialName : `${safeMaterialName}_${file.panelIndex}`;
+          cncBundle.cnc.files.length === 1
+            ? safeMaterialName
+            : `${safeMaterialName}_${file.panelIndex}`;
         let finalBase = base;
         let dedupeIndex = 2;
         while (usedTcnNamesByPath.has(`cnc/${thicknessBucket}/${finalBase}`)) {
@@ -386,18 +618,21 @@ export async function generateMultiProjectFabrication(
           dedupeIndex += 1;
         }
         usedTcnNamesByPath.add(`cnc/${thicknessBucket}/${finalBase}`);
-        const tcnPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/${finalBase}_cnc_${tcnSuffix}.tcn`);
+        const tcnPathFinal = sanitizeZipPath(
+          `cnc/${thicknessBucket}/${finalBase}_cnc_${tcnSuffix}.tcn`
+        );
         if (tcnPathFinal && typeof file.tcn === "string") {
           zip.file(tcnPathFinal, file.tcn);
         }
       }
     }
   } catch (err) {
-    devLogger.error("multiProjectFabrication: CNC", err);
+    devLogger.error("multiProjectFabrication: CNC global", err);
   }
 
+  // PASSO 6 — Drill XML global
   checkAbort();
-  emit(5, "Gerando ficheiros de furação (drill)…");
+  emit(6, "Gerando ficheiros de furação (drill) globais…");
 
   try {
     const drillFiles = buildDrillFilesForProject(allPrefixedItems, {
@@ -418,11 +653,12 @@ export async function generateMultiProjectFabrication(
       zip.file(sanitizeZipPath(`drill/${name}.xml`), f.xml);
     }
   } catch (err) {
-    devLogger.error("multiProjectFabrication: drill XML", err);
+    devLogger.error("multiProjectFabrication: drill XML global", err);
   }
 
+  // PASSO 7 — Compactar pacote
   checkAbort();
-  emit(6, "Compactando pacote industrial…");
+  emit(7, "Compactando pacote industrial…");
 
   const zipBlob = await zip.generateAsync({ type: "blob" });
   if (!zipBlob || zipBlob.size === 0) {

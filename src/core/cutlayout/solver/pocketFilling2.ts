@@ -366,6 +366,19 @@ export function aplicarPocketFilling(
 
   const result = sheets.map((s) => ({ ...s, placements: [...s.placements] }));
 
+  // ── Guard a): chapa com menor desperdício é IMUTÁVEL como fonte ─────────────
+  // Nunca mover peças da chapa mais bem aproveitada do run,
+  // independentemente da sua posição na sequência.
+  let bestSrcIdx = -1;
+  let bestSrcWaste = Infinity;
+  for (let _i = 0; _i < totalSheets; _i++) {
+    const _a = Math.max(1, result[_i].sheet.largura_mm * result[_i].sheet.altura_mm);
+    const _u = result[_i].placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
+    const _w = Math.max(0, (_a - _u) / _a);
+    if (_w < bestSrcWaste) { bestSrcWaste = _w; bestSrcIdx = _i; }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   for (let si = 0; si < totalSheets - 1; si++) {
     const relIndex = si / Math.max(1, totalSheets - 1);
     if (relIndex < lateIndexThr) continue;
@@ -394,6 +407,8 @@ export function aplicarPocketFilling(
       for (let sj = si + 1; sj < totalSheets; sj++) {
         const srcSheet = result[sj];
         if (srcSheet.placements.length === 0) continue;
+        // Guard a): nunca mover peças da chapa com menor desperdício do run
+        if (sj === bestSrcIdx) continue;
 
         const candidates = selecionarPeçasParaPocket(pocket, srcSheet.placements);
         if (candidates.length === 0) continue;
@@ -408,10 +423,22 @@ export function aplicarPocketFilling(
         const newPlacements = preencherPocket(pocket, candidates, existingRects, si, kerf);
         if (newPlacements.length === 0) continue;
 
+        // Guard b): só confirmar se o volume movido ≥ 3% da área da chapa
+        // Evita perturbações no layout por movimentos de peças demasiado pequenas.
+        const movedArea = newPlacements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
+        if (movedArea < sheetArea * 0.03) continue;
+
         // Identificar peças movidas pela posição original (único por chapa/posição)
         const movedKeys = new Set(
           newPlacements.map((p) => `${p.boxId}::${p.partName}::${p.x_mm}::${p.y_mm}`)
         );
+
+        // Guard c): se srcSheet ficaria com apenas 1 peça isolada → cancelar
+        const remainingCount = srcSheet.placements.filter(
+          (p) => !movedKeys.has(`${p.boxId}::${p.partName}::${p.x_mm}::${p.y_mm}`)
+        ).length;
+        if (remainingCount === 1) continue;
+
         result[sj] = {
           ...srcSheet,
           placements: srcSheet.placements.filter(

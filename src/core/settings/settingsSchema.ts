@@ -63,7 +63,7 @@ export interface SettingsSchema {
     drillRpm: number;
     sheetMarginMm: number;
     rampDistanceMm: number;
-    /** Compensação de ferramenta: "fora" = offset exterior completo (toolRadiusMm); "dentro" = sem offset (0). Default "fora". */
+    /** Compensação de ferramenta: "fora" = offset exterior completo (toolRadiusMm); "dentro" = sem offset (0). Default "dentro". */
     compensacaoFerramenta: "fora" | "dentro";
   };
   nesting: {

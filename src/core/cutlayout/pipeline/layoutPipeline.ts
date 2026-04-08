@@ -218,6 +218,11 @@ export function runCutLayout(
   // Para projetos pequenos (≤ LAYER2_MAX_EXPANDED_PIECES peças expandidas),
   // testa 5 ordenações diferentes e escolhe a melhor por métricas globais.
   // O WeakSet _layer2InProgress evita recursão infinita.
+  // SPM: Layer 2 desativada — o Door-Priority Ordering do SPM PATH garante
+  // já a melhor ordenação possível. A Layer 2 desfaria essa separação.
+  if (new Set(pieces.map((p) => p.boxId)).size <= 1) {
+    _layer2InProgress.add(deps);
+  }
   if (!_layer2InProgress.has(deps)) {
     const expandedCount = pieces.reduce((acc, p) => acc + Math.max(1, p.quantidade), 0);
     if (expandedCount > 0 && expandedCount <= LAYER2_MAX_EXPANDED_PIECES) {
@@ -377,15 +382,23 @@ export function runCutLayout(
       const spmTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "bestFit" };
       const spmRotCfg: RotationScoringConfig = { ...rotationCfg, rotationPreferenceMode: "aggressive" };
 
-      // ── SPM Door-Priority Ordering ─────────────────────────────────────────
-      // Peças identificadas como portas (partName contém porta/door/fr/porte)
-      // são colocadas NO FIM da lista de corte, garantindo que o corpo do móvel
-      // enche a chapa 1 antes de qualquer porta ser considerada.
-      // Esta separação só actua quando ambos os tipos existem no grupo.
+      // ── SPM Door-Priority Ordering (nome + dimensões) ──────────────────────
+      // Uma peça é tratada como "porta/complemento" se:
+      //   a) o nome corresponde a DOOR_PATTERN, OU
+      //   b) largura_mm > 800 E altura_mm > 800 E nome NÃO corresponde a BODY_PATTERN
+      // O grupo "corpo" (não-portas) fica sempre primeiro na lista, garantindo
+      // que enche a chapa 1 antes de qualquer porta/complemento ser considerado.
       const DOOR_PATTERN = /\b(porta|door|fr|porte)\b/i;
+      const BODY_PATTERN = /\b(lateral|cima|fundo|costa|prateleira|shelf|top|bottom|back|side)\b/i;
+      const isDoorPiece = (p: (typeof groupPieces)[0]): boolean => {
+        if (DOOR_PATTERN.test(p.partName ?? "")) return true;
+        const w = Math.max(p.largura_mm, p.altura_mm);
+        const h = Math.min(p.largura_mm, p.altura_mm);
+        return w > 800 && h > 800 && !BODY_PATTERN.test(p.partName ?? "");
+      };
       const spmBaseSorted = sortPiecesForAttempt(groupPieces, "area_desc");
-      const nonDoorPieces = spmBaseSorted.filter((p) => !DOOR_PATTERN.test(p.partName ?? ""));
-      const doorPieces = spmBaseSorted.filter((p) => DOOR_PATTERN.test(p.partName ?? ""));
+      const nonDoorPieces = spmBaseSorted.filter((p) => !isDoorPiece(p));
+      const doorPieces    = spmBaseSorted.filter((p) =>  isDoorPiece(p));
       const spmOrderedPieces =
         nonDoorPieces.length > 0 && doorPieces.length > 0
           ? [...nonDoorPieces, ...doorPieces]
@@ -418,6 +431,25 @@ export function runCutLayout(
             minTotalWasteImprovement: 0.05,
           },
         });
+
+        // ── Guard anti-mistura corpo/portas ────────────────────────────────────
+        // Se o pocket filling introduziu peças de corpo numa chapa que já continha
+        // portas (ou vice-versa), e esse mixing NÃO existia antes → revert completo
+        // para o estado pré-filling, garantindo separação corpo/portas.
+        const _DOOR_PAT = /\b(porta|door|fr|porte)\b/i;
+        const _isMixed = (pls: (typeof spmRun.sheets)[0]["placements"]) =>
+          pls.some((p) => _DOOR_PAT.test(p.partName ?? "")) &&
+          pls.some((p) => !_DOOR_PAT.test(p.partName ?? ""));
+        const _preMixed  = spmRun.sheets.some((s) => _isMixed(s.placements));
+        const _postMixed = spmSheets.some((s) => _isMixed(s.placements));
+        const guardedSpmSheets = (!_preMixed && _postMixed) ? spmRun.sheets : spmSheets;
+        if (!_preMixed && _postMixed) {
+          console.log(
+            "[SPM] Guard anti-mistura: pocket filling introduziu corpo/portas na mesma chapa → revert"
+          );
+        }
+        // ──────────────────────────────────────────────────────────────────────
+
         if (diagnostics) {
           diagnostics.flow.selectedStrategy = spmTrial.strategy;
           diagnostics.flow.selectedBinHeuristic = spmTrial.binHeuristic;
@@ -426,7 +458,7 @@ export function runCutLayout(
         }
         diagnostics?.rejectedByLimit.push(...spmRun.rejectedByLimit);
         diagnostics?.gapFillPlacements.push(...spmRun.gapFillPlacements);
-        const spmOffset = deps.applyFixedMarginOffset(spmSheets, sheet, marginMm);
+        const spmOffset = deps.applyFixedMarginOffset(guardedSpmSheets, sheet, marginMm);
         const spmNorm = options?.originTopRight
           ? spmOffset.map((s) => normalizeSheetToTopRightOrigin(s))
           : spmOffset;

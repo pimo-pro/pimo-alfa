@@ -72,30 +72,20 @@ function ItemCard({
         textAlign: "left",
         borderRadius: 8,
         border: selected
-          ? "1px solid var(--color-accent, #f59e0b)"
-          : "1px solid var(--color-border, #333)",
-        background: "var(--color-surface, #1e1e1e)",
+          ? "1px solid var(--blue-light)"
+          : "1px solid var(--card-border)",
+        background: "var(--card-bg)",
         padding: 10,
         display: "flex",
-        gap: 10,
+        gap: 0,
         cursor: "pointer",
       }}
     >
-      <div
-        aria-hidden
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 6,
-          background: selected ? "#93c5fd" : "#d1d5db",
-          flexShrink: 0,
-        }}
-      />
-      <div style={{ minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--color-text-primary, #f0f0f0)" }}>
+      <div style={{ minWidth: 0, width: "100%" }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>
           {item.nome}
         </p>
-        <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--color-text-secondary, #aaa)" }}>
+        <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
           {w}mm × {h}mm × {d}mm
         </p>
       </div>
@@ -116,10 +106,10 @@ export default function V4CatalogPanel({ onPreview, previewItemId }: V4CatalogPa
   const sections = useMemo(() => splitSections(filtered), [filtered]);
 
   return (
-    <div style={{ height: "100%", overflowY: "auto", overflowX: "hidden", padding: 10 }}>
+    <div style={{ height: "100%", overflowY: "auto", overflowX: "hidden", padding: 10, background: "var(--navy)", border: "1px solid var(--border)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <Icon name="furniture" size={16} />
-        <strong style={{ fontSize: 13 }}>Móveis</strong>
+        <strong style={{ fontSize: 13, color: "var(--text-main)" }}>Móveis</strong>
       </div>
 
       <input
@@ -130,9 +120,9 @@ export default function V4CatalogPanel({ onPreview, previewItemId }: V4CatalogPa
         style={{
           width: "100%",
           borderRadius: 8,
-          border: "1px solid var(--color-border, #333)",
-          background: "var(--color-surface, #1e1e1e)",
-          color: "var(--color-text-primary, #f0f0f0)",
+          border: "1px solid var(--input-border)",
+          background: "var(--input-bg)",
+          color: "var(--text-main)",
           padding: "8px 10px",
           fontSize: 12,
           marginBottom: 10,
@@ -147,9 +137,9 @@ export default function V4CatalogPanel({ onPreview, previewItemId }: V4CatalogPa
               type="button"
               onClick={() => setOpen((prev) => ({ ...prev, [section.key]: !prev[section.key] }))}
               style={{
-                border: "1px solid var(--color-border, #333)",
-                background: "var(--color-surface, #1e1e1e)",
-                color: "var(--color-text-primary, #f0f0f0)",
+                border: "1px solid var(--card-border)",
+                background: "var(--navy)",
+                color: "var(--text-main)",
                 borderRadius: 8,
                 padding: "6px 8px",
                 textAlign: "left",
