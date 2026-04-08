@@ -54,7 +54,7 @@ function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
       ...p,
       boxNome: boxById.get(p.boxId ?? "")?.nome ?? p.boxId ?? "—",
       pieceName: p.nome,
-      sourceProjectName: (p as Record<string, unknown>).sourceProjectName as string | undefined,
+      sourceProjectName: (p as unknown as Record<string, unknown>).sourceProjectName as string | undefined,
     }));
   }
 

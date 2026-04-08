@@ -243,7 +243,7 @@ function applyGlobalPieceNumbers(
     const key = `${item.boxId ?? ""}::${item.nome ?? ""}`;
     const info = globalIndex.get(key);
     const prefix = prefixes.find((p) => (item.boxId ?? "").startsWith(p));
-    const o = item as Record<string, unknown>;
+    const o = item as unknown as Record<string, unknown>;
     if (info) {
       o.pieceNumber = info.globalNumber;
     }
