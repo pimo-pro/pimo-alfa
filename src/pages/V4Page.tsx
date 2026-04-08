@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../components/ui/ui.css";
+import V4Viewer from "../components/v4/V4Viewer";
 
 type SectionId = "perfil" | "permissoes" | "definicoes" | "projetos" | "seguranca" | "atividade";
 
@@ -133,20 +134,11 @@ export default function V4Page() {
               padding: "var(--ui-space-5)",
               background: "var(--ui-color-bg)",
               minHeight: 220,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
             }}
           >
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--ui-color-text-muted)",
-              }}
-            >
-              SECTION: viewer-placeholder
-            </span>
+            <div style={{ width: "100%", height: "100%", minHeight: 280 }}>
+              <V4Viewer style={{ width: "100%", height: "100%" }} />
+            </div>
           </section>
         </main>
       </div>

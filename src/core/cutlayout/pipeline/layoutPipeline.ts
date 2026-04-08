@@ -5,7 +5,7 @@ import {
   LATE_SHEET_COMPACT_WINDOW,
   LATE_SHEET_MIN_WASTE_RATIO,
 } from "../solver/lateSheetCompactor";
-import { runGlobalOptimizer } from "../solver/globalRunOptimizer";
+
 import type {
   CutPiece,
   CutLayoutEngineOptions,
@@ -63,7 +63,10 @@ export function isDevRuntime(): boolean {
 
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
+type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_desc_soft";
 
+const MAX_NESTING_ATTEMPTS = 4;
+const ATTEMPT_TIMEOUT_MS = 1500;
 const META_MAX_MULTI_START = 12;
 const META_MAX_ITERATIONS = 160;
 /** Budget de tempo por grupo de material para a meta-heurística (ms). */
@@ -76,6 +79,19 @@ function nowMs(): number {
   return Date.now();
 }
 
+function sortPiecesForAttempt(pieces: CutPiece[], mode: AttemptOrderMode): CutPiece[] {
+  const list = pieces.map((p) => ({ ...p }));
+  const area = (p: CutPiece) => p.largura_mm * p.altura_mm;
+  const maxSide = (p: CutPiece) => Math.max(p.largura_mm, p.altura_mm);
+  const minSide = (p: CutPiece) => Math.min(p.largura_mm, p.altura_mm);
+  list.sort((a, b) => {
+    if (mode === "area_desc") return area(b) - area(a) || maxSide(b) - maxSide(a);
+    if (mode === "max_side_desc") return maxSide(b) - maxSide(a) || area(b) - area(a);
+    if (mode === "min_side_desc") return minSide(b) - minSide(a) || area(b) - area(a);
+    return area(b) - area(a) || minSide(a) - minSide(b);
+  });
+  return list;
+}
 
 /**
  * Transforma furos para o formato TCN-ready no espaço TRO.
@@ -298,42 +314,83 @@ export function runCutLayout(
         })
       | null = null;
 
-    // Global Run Optimizer: avalia 6 combinações de ordem+estratégia com score global.
-    // Penaliza chapas com desperdício elevado (> 25%) e bolsões tardios.
-    emitProgress({
-      phase: "trial",
-      groupIndex: groupIndex + 1,
-      groupCount,
-      stepIndex: 1,
-      stepCount: 1,
-      percent: Math.min(60, Math.max(1, ((groupIndex + 0.5) / groupCount) * 60)),
-    });
-    throwIfAbort();
-    const groResult = runGlobalOptimizer(
-      groupPieces,
-      placementSheet,
-      kerf,
-      minUtilizationPercent,
-      rotationCfg,
-      scoreModel,
-      { simulateTrialForGroup: deps.simulateTrialForGroup }
-    );
-    if (groResult) {
-      const wasteArea = groResult.run.sheets.length * sheetArea - groResult.run.usedArea;
-      diagnostics?.trialRuns?.push({
-        strategy: groResult.config.trial.strategy,
-        binHeuristic: groResult.config.trial.binHeuristic,
-        sheetCount: groResult.run.sheets.length,
-        usedArea: groResult.run.usedArea,
-        wasteArea,
-        usefulLeftoverArea: groResult.run.usefulLeftoverArea,
-        score: groResult.run.score,
+    const attemptVariants: Array<{
+      orderMode: AttemptOrderMode;
+      trial: CutLayoutTrialConfig;
+      rotationMode: CutLayoutRotationPreferenceMode;
+    }> = [
+      { orderMode: "area_desc", trial: { strategy: "skyline", binHeuristic: "bestFit" }, rotationMode: "aggressive" },
+      { orderMode: "max_side_desc", trial: { strategy: "skyline", binHeuristic: "firstFit" }, rotationMode: "auto" },
+      { orderMode: "min_side_desc", trial: { strategy: "shelf", binHeuristic: "bestFit" }, rotationMode: "auto" },
+      { orderMode: "area_desc_soft", trial: { strategy: "guillotine", binHeuristic: "firstFit" }, rotationMode: "disabled" },
+    ];
+    const attempts = attemptVariants.slice(0, MAX_NESTING_ATTEMPTS);
+
+    for (let ti = 0; ti < attempts.length; ti++) {
+      throwIfAbort();
+      const attempt = attempts[ti];
+      const trial = attempt.trial;
+      const trialPercent = ((groupIndex + (ti + 1) / Math.max(1, attempts.length)) / groupCount) * 60;
+      emitProgress({
+        phase: "trial",
+        groupIndex: groupIndex + 1,
+        groupCount,
+        stepIndex: ti + 1,
+        stepCount: attempts.length,
+        percent: Math.min(60, Math.max(1, trialPercent)),
       });
-      bestRun = {
-        ...groResult.run,
-        strategy: groResult.config.trial.strategy,
-        binHeuristic: groResult.config.trial.binHeuristic,
+      const attemptStartedAt = nowMs();
+      const piecesForAttempt = sortPiecesForAttempt(groupPieces, attempt.orderMode);
+      const attemptRotationCfg: RotationScoringConfig = {
+        ...rotationCfg,
+        rotationPreferenceMode: attempt.rotationMode,
       };
+      const run = deps.simulateTrialForGroup(
+        piecesForAttempt,
+        placementSheet,
+        kerf,
+        minUtilizationPercent,
+        attemptRotationCfg,
+        trial,
+        Boolean(options?.collectDiagnostics),
+        true,
+        scoreModel
+      );
+      const elapsedMs = nowMs() - attemptStartedAt;
+      if (elapsedMs > ATTEMPT_TIMEOUT_MS) {
+        console.log(`[NESTING] Timeout na tentativa ${ti + 1} — descartada`);
+        continue;
+      }
+      const wasteArea = run.sheets.length * sheetArea - run.usedArea;
+      const totalPlacements = run.sheets.reduce((acc, s) => acc + s.placements.length, 0);
+      const isValidRun = run.sheets.length > 0 && totalPlacements > 0;
+      console.log(`[NESTING] Tentativa ${ti + 1} concluída:`, {
+        score: run.score,
+        sheets: run.sheets.length,
+        placements: totalPlacements,
+        usedArea: run.usedArea,
+        wasteArea,
+        elapsedMs: Number(elapsedMs.toFixed(2)),
+        valid: isValidRun,
+        strategy: trial.strategy,
+        binHeuristic: trial.binHeuristic,
+        orderMode: attempt.orderMode,
+      });
+      if (!isValidRun) {
+        continue;
+      }
+      diagnostics?.trialRuns?.push({
+        strategy: trial.strategy,
+        binHeuristic: trial.binHeuristic,
+        sheetCount: run.sheets.length,
+        usedArea: run.usedArea,
+        wasteArea,
+        usefulLeftoverArea: run.usefulLeftoverArea,
+        score: run.score,
+      });
+      if (!bestRun || run.score < bestRun.score) {
+        bestRun = { ...run, strategy: trial.strategy, binHeuristic: trial.binHeuristic };
+      }
     }
 
     if (!bestRun) {
