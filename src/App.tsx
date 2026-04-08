@@ -45,6 +45,7 @@ import "./components/ui/ui.css";
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
+const V4Page = lazy(() => import("./pages/V4Page"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
@@ -409,6 +410,7 @@ export default function App() {
               }
             />
           </Route>
+          <Route path="/v4" element={<V4Page />} /> {/* TEMPORARY — remove before production */}
         </Route>
         <Route path="/" element={<LegacyApp />} />
         <Route path="*" element={<Navigate to="/" replace />} />
