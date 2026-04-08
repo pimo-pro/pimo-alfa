@@ -47,10 +47,10 @@ export function computeSolutionMetrics(
   let score = sheets.length * 1_000_000 + wasteArea - usefulLeftoverArea * 0.1;
   if (scoreModel === "v32") {
     score += convexHullWasteTotal * 120_000;
-    score += fragmentationScoreTotal * 65_000;
-    score += pocketsCountTotal * 3_000;
-    score += linearGapScoreTotal * 8_000;
-    score -= compactnessScoreTotal * 22_000;
+    score += fragmentationScoreTotal * 90_000;  // ↑ penaliza dispersão de peças
+    score += pocketsCountTotal * 8_000;          // ↑ penaliza buracos/pockets internos
+    score += linearGapScoreTotal * 12_000;       // ↑ penaliza faixas vazias longas
+    score -= compactnessScoreTotal * 38_000;     // ↑ recompensa layouts compactos
     score -= usefulRectangularScrapScoreTotal * 35_000;
   }
 

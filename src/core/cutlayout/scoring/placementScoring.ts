@@ -117,6 +117,14 @@ export function scorePlacement(
   const utilizationReward =
     Math.min(0.5, expectedUtil * 0.55) +
     (expectedUtil > 0.85 ? Math.min(0.2, (expectedUtil - 0.85) * 2.0) : 0);
+
+  // Bónus de encaixe lateral: recompensa peças encostadas a paredes ou outras peças
+  const tightnessBonus = (placement.tightnessScore ?? 0) * 0.20;
+
+  // Bónus extra para peças pequenas (< 5% da chapa) que preenchem gaps apertados
+  const isSmall = placement.w * placement.h < sheetArea * 0.05;
+  const gapFillBonus = isSmall && (placement.tightnessScore ?? 0) >= 0.5 ? 0.08 : 0;
+
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {
     if (placement.rotation === 90) {
@@ -131,6 +139,8 @@ export function scorePlacement(
     utilizationReward +
     placement.orientationScore * 0.25 +
     rotationScore +
-    compactnessScore
+    compactnessScore +
+    tightnessBonus +
+    gapFillBonus
   );
 }

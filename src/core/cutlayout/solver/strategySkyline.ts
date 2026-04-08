@@ -1,3 +1,4 @@
+import { computeTightnessScore } from "../scoring/rotationScoring";
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
 type SkylineSegment = { x: number; y: number };
@@ -10,6 +11,7 @@ type PlacementCandidate = {
   orientationScore: number;
   rotationDelta: number;
   alternativeRotationAvailable: boolean;
+  tightnessScore: number;
 };
 type RotationScoringConfig = {
   rotationWeight: number;
@@ -74,11 +76,29 @@ export function updateSkyline(
   return mergeSkylineSegments(out);
 }
 
-export function getCandidateX(skyline: SkylineSegment[], sheetW: number, pieceW: number): number[] {
+/**
+ * Gera candidatos X para placement no skyline.
+ * Inclui os breakpoints do skyline E as bordas direitas das peças já colocadas,
+ * o que permite tight packing horizontal entre peças adjacentes.
+ */
+export function getCandidateX(
+  skyline: SkylineSegment[],
+  sheetW: number,
+  pieceW: number,
+  placed?: Array<{ x: number; y: number; w: number; h: number }>,
+  kerf = 0
+): number[] {
   const xs = new Set<number>();
   xs.add(0);
   for (const seg of skyline) {
     if (seg.x >= 0 && seg.x <= sheetW - pieceW) xs.add(seg.x);
+  }
+  // Bordas direitas de peças colocadas → candidatos adicionais para interlocking
+  if (placed) {
+    for (const p of placed) {
+      const rx = Math.round((p.x + p.w + kerf) * 1000) / 1000;
+      if (rx >= 0 && rx <= sheetW - pieceW) xs.add(rx);
+    }
   }
   return Array.from(xs).sort((a, b) => a - b);
 }
@@ -118,7 +138,7 @@ export function findPlacementSkyline(
 
   for (const o of orientations) {
     if (o.w > sheet.largura_mm || o.h > sheet.altura_mm) continue;
-    const xs = getCandidateX(state.skyline, sheet.largura_mm, o.w);
+    const xs = getCandidateX(state.skyline, sheet.largura_mm, o.w, placed, kerf);
     for (const x of xs) {
       const y = getSkylineHeight(state.skyline, x, o.w);
       if (y + o.h > sheet.altura_mm) continue;
@@ -130,6 +150,7 @@ export function findPlacementSkyline(
         h: o.h,
         rotation: o.rotation,
         orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
+        tightnessScore: computeTightnessScore(x, y, o.w, o.h, sheet, placed, kerf),
         rotationDelta: 0,
         alternativeRotationAvailable: false,
       });
@@ -146,6 +167,9 @@ export function findPlacementSkyline(
       Math.max(0, sheet.largura_mm - (a.x + a.w)) * a.h + Math.max(0, sheet.altura_mm - (a.y + a.h)) * a.w;
     const wasteB =
       Math.max(0, sheet.largura_mm - (b.x + b.w)) * b.h + Math.max(0, sheet.altura_mm - (b.y + b.h)) * b.w;
-    return wasteA - wasteB || a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore;
+    // Desconto de tightness: posições encostadas a outras peças têm desperdício efetivo menor
+    const adjA = wasteA - a.tightnessScore * 12000;
+    const adjB = wasteB - b.tightnessScore * 12000;
+    return adjA - adjB || a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore;
   })[0];
 }

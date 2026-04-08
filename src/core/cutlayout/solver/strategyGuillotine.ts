@@ -1,3 +1,4 @@
+import { computeTightnessScore } from "../scoring/rotationScoring";
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
 const EPS = 0.001;
@@ -12,6 +13,7 @@ type PlacementCandidate = {
   orientationScore: number;
   rotationDelta: number;
   alternativeRotationAvailable: boolean;
+  tightnessScore: number;
 };
 type RotationScoringConfig = {
   rotationWeight: number;
@@ -43,9 +45,9 @@ export function pruneContainedFreeRects(rects: FreeRect[]): FreeRect[] {
 export function findPlacementGuillotine(
   piece: CutPiece,
   sheet: SheetDefinition,
-  _placed: Array<{ x: number; y: number; w: number; h: number }>,
+  placed: Array<{ x: number; y: number; w: number; h: number }>,
   state: { freeRects: FreeRect[] },
-  _kerf: number,
+  kerf: number,
   cfg: RotationScoringConfig,
   bin: "firstFit" | "bestFit",
   deps: {
@@ -57,7 +59,8 @@ export function findPlacementGuillotine(
 ): PlacementCandidate | null {
   const candidates: PlacementCandidate[] = [];
   const orientations = deps.getOrientations(piece, cfg);
-  const orderedFreeRects = [...state.freeRects].sort((a, b) => a.y - b.y || a.x - b.x);
+  // Ordena free rects por área crescente (best-fit): prefere o rect mais apertado para a peça
+  const orderedFreeRects = [...state.freeRects].sort((a, b) => a.w * a.h - b.w * b.h || a.y - b.y || a.x - b.x);
   for (const o of orientations) {
     for (const fr of orderedFreeRects) {
       if (o.w > fr.w + EPS || o.h > fr.h + EPS) continue;
@@ -70,6 +73,7 @@ export function findPlacementGuillotine(
         h: o.h,
         rotation: o.rotation,
         orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
+        tightnessScore: computeTightnessScore(x, y, o.w, o.h, sheet, placed, kerf),
         rotationDelta: 0,
         alternativeRotationAvailable: false,
       });
@@ -84,6 +88,9 @@ export function findPlacementGuillotine(
   return candidates.sort((a, b) => {
     const wasteA = (sheet.largura_mm - (a.x + a.w)) + (sheet.altura_mm - (a.y + a.h));
     const wasteB = (sheet.largura_mm - (b.x + b.w)) + (sheet.altura_mm - (b.y + b.h));
-    return wasteA - wasteB || a.y - b.y || a.x - b.x;
+    // Desconto de tightness: posições com mais lados encostados têm desperdício efetivo menor
+    const adjA = wasteA - a.tightnessScore * 600;
+    const adjB = wasteB - b.tightnessScore * 600;
+    return adjA - adjB || a.y - b.y || a.x - b.x;
   })[0];
 }

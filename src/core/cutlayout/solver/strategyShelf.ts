@@ -1,3 +1,4 @@
+import { computeTightnessScore } from "../scoring/rotationScoring";
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 
 const EPS = 0.001;
@@ -11,6 +12,7 @@ type PlacementCandidate = {
   orientationScore: number;
   rotationDelta: number;
   alternativeRotationAvailable: boolean;
+  tightnessScore: number;
 };
 type RotationScoringConfig = {
   rotationWeight: number;
@@ -51,6 +53,13 @@ export function findPlacementShelf(
       for (const p of inLine) {
         xCandidates.push(p.x + p.w + kerf);
       }
+      // Bordas direitas de TODAS as peças colocadas para tight packing entre prateleiras
+      for (const p of placed) {
+        if (Math.abs(p.y - shelf.y) >= EPS) {
+          const rx = p.x + p.w + kerf;
+          if (rx >= 0 && rx + o.w <= sheet.largura_mm + EPS) xCandidates.push(rx);
+        }
+      }
 
       const seen = new Set<number>();
       let extraCount = 0;
@@ -64,7 +73,7 @@ export function findPlacementShelf(
 
         if (i !== 0) {
           extraCount += 1;
-          if (extraCount > 4) break;
+          if (extraCount > 8) break; // aumentado de 4 para 8 para explorar mais posições
         }
 
         if (x + o.w > sheet.largura_mm + EPS) continue;
@@ -76,6 +85,7 @@ export function findPlacementShelf(
           h: o.h,
           rotation: o.rotation,
           orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
+          tightnessScore: computeTightnessScore(x, y, o.w, o.h, sheet, placed, kerf),
           rotationDelta: 0,
           alternativeRotationAvailable: false,
         });
@@ -94,6 +104,7 @@ export function findPlacementShelf(
           h: o.h,
           rotation: o.rotation,
           orientationScore: deps.scoreOrientationFit({ x, y, w: o.w, h: o.h }, sheet),
+          tightnessScore: computeTightnessScore(x, y, o.w, o.h, sheet, placed, kerf),
           rotationDelta: 0,
           alternativeRotationAvailable: false,
         });
@@ -109,8 +120,9 @@ export function findPlacementShelf(
   }
 
   return candidates.sort((a, b) => {
-    const remainingA = sheet.largura_mm - (a.x + a.w);
-    const remainingB = sheet.largura_mm - (b.x + b.w);
+    // Desconto de tightness: posições encostadas reduzem o espaço restante efetivo
+    const remainingA = sheet.largura_mm - (a.x + a.w) - a.tightnessScore * 8000;
+    const remainingB = sheet.largura_mm - (b.x + b.w) - b.tightnessScore * 8000;
     return remainingA - remainingB || a.y - b.y || a.x - b.x;
   })[0];
 }

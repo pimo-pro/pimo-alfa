@@ -17,7 +17,39 @@ export type PlacementCandidate = {
   orientationScore: number;
   rotationDelta: number;
   alternativeRotationAvailable: boolean;
+  tightnessScore?: number; // 0–1: fração de lados encostados a paredes ou peças já colocadas
 };
+
+/**
+ * Conta quantos lados da peça (x,y,w,h) tocam a borda da chapa ou peças já colocadas.
+ * Retorna 0–1 (touchCount / 4 lados máximos).
+ * Usado para recompensar encaixe lateral real (tight packing / interlocking).
+ */
+export function computeTightnessScore(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  sheet: SheetDefinition,
+  placed: Array<{ x: number; y: number; w: number; h: number }>,
+  kerf: number
+): number {
+  const adj = Math.max(0.5, kerf + 0.3);
+  let touchCount = 0;
+  if (x <= adj) touchCount++;
+  if (y <= adj) touchCount++;
+  if (x + w >= sheet.largura_mm - adj) touchCount++;
+  if (y + h >= sheet.altura_mm - adj) touchCount++;
+  for (const p of placed) {
+    const overlapX = x < p.x + p.w + adj && x + w > p.x - adj;
+    const overlapY = y < p.y + p.h + adj && y + h > p.y - adj;
+    if (Math.abs(p.x + p.w + kerf - x) <= adj && overlapY) touchCount++;
+    if (Math.abs(x + w + kerf - p.x) <= adj && overlapY) touchCount++;
+    if (Math.abs(p.y + p.h + kerf - y) <= adj && overlapX) touchCount++;
+    if (Math.abs(y + h + kerf - p.y) <= adj && overlapX) touchCount++;
+  }
+  return Math.min(1.0, touchCount / 4.0);
+}
 
 export function scoreOrientationFit(
   candidate: { x: number; y: number; w: number; h: number },
@@ -54,22 +86,20 @@ export function chooseOrientationWithRotationBias(
   if (normal && !rotated) return normal;
   if (!normal && rotated) return rotated;
 
-  const normalScore = normal!.orientationScore;
-  const rotatedScore = rotated!.orientationScore;
-  const rotationDelta = rotatedScore - normalScore;
-  const adjustedNormal = normalScore;
-  let adjustedRotated = rotatedScore;
+  const rotationDelta = rotated!.orientationScore - normal!.orientationScore;
+  // Score combinado: orientação + tightness para escolha baseada em encaixe real
+  const normalCombined = normal!.orientationScore + (normal!.tightnessScore ?? 0) * 0.35;
+  let rotatedCombined = rotated!.orientationScore + (rotated!.tightnessScore ?? 0) * 0.35;
 
   if (
     cfg.rotationPreferenceMode === "aggressive" ||
     cfg.rotationPreferenceMode === "auto"
   ) {
-    // Bónus normalizado: evita forçar 90° sempre quando rotationWeight > orientationScore máx (~1.0)
     const biasCap = cfg.rotationPreferenceMode === "aggressive" ? 0.12 : 0.06;
-    adjustedRotated += Math.min(biasCap, cfg.rotationWeight * 0.08);
+    rotatedCombined += Math.min(biasCap, cfg.rotationWeight * 0.08);
   }
 
-  if (adjustedRotated > adjustedNormal) {
+  if (rotatedCombined > normalCombined) {
     return {
       ...rotated!,
       rotationDelta,
@@ -89,5 +119,9 @@ export function pickBestCandidateByRotation(
 ): PlacementCandidate | null {
   const pool = candidates.filter((c) => c.rotation === rotation);
   if (pool.length === 0) return null;
-  return pool.sort((a, b) => b.orientationScore - a.orientationScore || a.y - b.y || a.x - b.x)[0];
+  return pool.sort((a, b) => {
+    const sa = a.orientationScore + (a.tightnessScore ?? 0) * 0.35;
+    const sb = b.orientationScore + (b.tightnessScore ?? 0) * 0.35;
+    return sb - sa || a.y - b.y || a.x - b.x;
+  })[0];
 }

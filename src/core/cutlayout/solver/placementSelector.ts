@@ -1,6 +1,9 @@
 import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 
+// Área máxima para considerar uma peça "pequena" no gap-fill scan: 120×120mm²
+const GAP_FILL_SMALL_PIECE_AREA_MM2 = 14_400;
+
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
 type PlacedRect = { x: number; y: number; w: number; h: number };
@@ -155,5 +158,30 @@ export function pickBestPieceForSheet(
       if (!best || score > best.score) best = { index: i, placement, score };
     }
   }
+
+  // Gap-fill scan: procura SEMPRE peças pequenas no resto da lista,
+  // independentemente de já ter encontrado um best — uma peça pequena pode
+  // encaixar num gap melhor do que a peça já selecionada.
+  if (bin === "bestFit" && remaining.length > dynamicLimit) {
+    for (let i = dynamicLimit; i < remaining.length; i++) {
+      const piece = remaining[i];
+      if (piece.largura_mm * piece.altura_mm > GAP_FILL_SMALL_PIECE_AREA_MM2) continue;
+      const placement = findPlacementForPiece(
+        piece,
+        strategy,
+        sheet,
+        placedRects,
+        state,
+        kerf,
+        rotationCfg,
+        bin,
+        deps
+      );
+      if (!placement) continue;
+      const score = deps.scorePlacement(sheet, placement, currentUtil, rotationCfg);
+      if (!best || score > best.score) best = { index: i, placement, score };
+    }
+  }
+
   return best ? { index: best.index, placement: best.placement } : null;
 }
