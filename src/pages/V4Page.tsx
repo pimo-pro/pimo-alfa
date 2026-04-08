@@ -1,108 +1,31 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import "../components/ui/ui.css";
 
-type SectionId =
-  | "perfil"
-  | "permissoes"
-  | "definicoes"
-  | "projetos"
-  | "seguranca"
-  | "atividade";
+type SectionId = "perfil" | "permissoes" | "definicoes" | "projetos" | "seguranca" | "atividade";
 
-type NavSection = {
+type Section = {
   id: SectionId;
   label: string;
-  iconPath: string | string[];
-  subItemLabel: string;
+  icon: string;
+  subLabel: string;
 };
 
-const NAV_SECTIONS: NavSection[] = [
-  {
-    id: "perfil",
-    label: "Perfil",
-    iconPath:
-      "M12 12c2.7 0 4-1.8 4-4s-1.3-4-4-4-4 1.8-4 4 1.3 4 4 4zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z",
-    subItemLabel: "Informação pessoal",
-  },
-  {
-    id: "permissoes",
-    label: "Permissões",
-    iconPath: ["M12 2L4 6v6c0 5 3.5 9.7 8 11 4.5-1.3 8-6 8-11V6l-8-4z", "M9 12l2 2 4-4"],
-    subItemLabel: "Permissões efetivas",
-  },
-  {
-    id: "definicoes",
-    label: "Definições",
-    iconPath: [
-      "M4 6h16",
-      "M4 12h16",
-      "M4 18h16",
-      "M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
-      "M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
-      "M20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
-    ],
-    subItemLabel: "Geral",
-  },
-  {
-    id: "projetos",
-    label: "Projetos",
-    iconPath: "M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z",
-    subItemLabel: "Showroom",
-  },
-  {
-    id: "seguranca",
-    label: "Segurança",
-    iconPath:
-      "M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4",
-    subItemLabel: "Palavra-passe",
-  },
-  {
-    id: "atividade",
-    label: "Atividade",
-    iconPath: "M22 12h-4l-3 9L9 3l-3 9H2",
-    subItemLabel: "Histórico",
-  },
+const SECTIONS: Section[] = [
+  { id: "perfil", label: "Perfil", icon: "👤", subLabel: "Informação pessoal" },
+  { id: "permissoes", label: "Permissões", icon: "🛡️", subLabel: "Permissões efetivas" },
+  { id: "definicoes", label: "Definições", icon: "⚙️", subLabel: "Geral" },
+  { id: "projetos", label: "Projetos", icon: "📁", subLabel: "Meus projetos" },
+  { id: "seguranca", label: "Segurança", icon: "🔐", subLabel: "Palavra-passe" },
+  { id: "atividade", label: "Atividade", icon: "📈", subLabel: "Histórico" },
 ];
-
-const COLORS = {
-  bg: "var(--ui-color-bg, #ffffff)",
-  surface: "var(--ui-color-surface, #f4f4f5)",
-  border: "var(--border, #e4e4e7)",
-  text: "var(--ui-color-text, #18181b)",
-  muted: "var(--ui-color-muted, #71717a)",
-  primary: "var(--ui-color-primary, #3b82f6)",
-};
-
-function SvgIcon({ paths, size = 20 }: { paths: string | string[]; size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      {(Array.isArray(paths) ? paths : [paths]).map((d, i) => (
-        <path key={i} d={d} />
-      ))}
-    </svg>
-  );
-}
 
 export default function V4Page() {
   const [activeSection, setActiveSection] = useState<SectionId>("perfil");
   const [subpanelOpen, setSubpanelOpen] = useState(true);
+  const current = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0];
 
-  const currentSection = useMemo(
-    () => NAV_SECTIONS.find((s) => s.id === activeSection) ?? NAV_SECTIONS[0],
-    [activeSection]
-  );
-
-  function handleSectionClick(section: NavSection) {
-    if (activeSection === section.id) {
+  function handleSectionClick(section: Section) {
+    if (section.id === activeSection) {
       setSubpanelOpen((prev) => !prev);
       return;
     }
@@ -111,246 +34,112 @@ export default function V4Page() {
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        minHeight: "calc(100vh - 120px)",
-        boxSizing: "border-box",
-        background: COLORS.surface,
-        padding: 12,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          height: "100%",
-          minHeight: "calc(100vh - 144px)",
-          borderRadius: 12,
-          overflow: "hidden",
-          border: `1px solid ${COLORS.border}`,
-          background: COLORS.bg,
-        }}
-      >
-        {/* Coluna 1 — icon sidebar (Dashboard visual) */}
+    <div className="ui-settings-page-wrap">
+      <div className="ui-settings-shell">
+        {/* Column 1 */}
+        <aside className="ui-settings-sidebar-icons">
+          <span style={{ fontSize: 10, color: "#888" }}>SECTION: sidebar</span>
+          {SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              data-tooltip={section.label}
+              title={section.label}
+              className={`ui-settings-icon-btn${
+                activeSection === section.id ? " ui-settings-icon-btn--active" : ""
+              }`}
+              onClick={() => handleSectionClick(section)}
+            >
+              <span style={{ fontSize: 16, lineHeight: 1 }}>{section.icon}</span>
+            </button>
+          ))}
+        </aside>
+
+        {/* Column 2 */}
         <aside
-          style={{
-            width: 64,
-            minWidth: 64,
-            borderRight: `1px solid ${COLORS.border}`,
-            background: COLORS.bg,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 8px",
-          }}
+          className={`ui-settings-subpanel${subpanelOpen ? "" : " ui-settings-subpanel--collapsed"}`}
         >
-          {NAV_SECTIONS.map((section) => {
-            const active = activeSection === section.id;
-            return (
+          <div className="ui-settings-subpanel-header">
+            <span style={{ fontSize: 10, color: "#888", display: "block", marginBottom: 4 }}>
+              SECTION: subpanel
+            </span>
+            <p className="ui-settings-subpanel-title">{current.label}</p>
+          </div>
+
+          <div className="ui-settings-subpanel-items">
+            {SECTIONS.map((section) => (
               <button
                 key={section.id}
                 type="button"
-                title={section.label}
-                onClick={() => handleSectionClick(section)}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  border: `1px solid ${active ? COLORS.primary : COLORS.border}`,
-                  background: active ? "rgba(59,130,246,0.10)" : COLORS.bg,
-                  color: active ? COLORS.primary : COLORS.muted,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  transition: "all .15s ease",
-                }}
+                className={`ui-settings-subpanel-item${
+                  activeSection === section.id ? " ui-settings-subpanel-item--active" : ""
+                }`}
+                onClick={() => setActiveSection(section.id)}
               >
-                <SvgIcon paths={section.iconPath} size={20} />
+                <span style={{ marginRight: 8 }}>{section.icon}</span>
+                {section.subLabel}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </aside>
 
-        {/* Coluna 2 — collapsible sub-panel (Dashboard visual behavior) */}
-        <aside
-          style={{
-            width: subpanelOpen ? 260 : 0,
-            minWidth: subpanelOpen ? 260 : 0,
-            maxWidth: subpanelOpen ? 260 : 0,
-            borderRight: subpanelOpen ? `1px solid ${COLORS.border}` : "none",
-            overflow: "hidden",
-            transition: "width .2s ease",
-            background: COLORS.bg,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div
+        {/* Column 3 */}
+        <main className="ui-settings-content">
+          <span style={{ fontSize: 10, color: "#888" }}>SECTION: main-content</span>
+
+          <section
+            className="ui-card"
             style={{
-              padding: "12px 14px",
-              borderBottom: `1px solid ${COLORS.border}`,
+              borderRadius: "var(--ui-radius-lg)",
+              border: "1px solid var(--ui-color-border)",
+              padding: "var(--ui-space-5)",
+              background: "var(--ui-color-bg)",
             }}
           >
             <p
               style={{
                 margin: 0,
-                fontSize: 13,
-                fontWeight: 700,
-                color: COLORS.text,
+                fontSize: 14,
+                fontWeight: 600,
+                color: "var(--ui-color-text)",
               }}
             >
-              {currentSection.label}
+              {current.icon} {current.label}
             </p>
-          </div>
-
-          <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 10 }}>
-            {NAV_SECTIONS.map((section) => {
-              const active = section.id === activeSection;
-              return (
-                <div key={section.id}>
-                  <div style={{ color: "#888", fontSize: 11, marginBottom: 4 }}>
-                    SECTION: {section.label}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection(section.id)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: `1px solid ${active ? COLORS.primary : COLORS.border}`,
-                      background: active ? "rgba(59,130,246,0.08)" : COLORS.bg,
-                      color: active ? COLORS.primary : COLORS.text,
-                      fontSize: 13,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {section.subItemLabel}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </aside>
-
-        {/* Coluna 3 — main content inspired by ProjectsViewerPage */}
-        <main
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: 12,
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            background: COLORS.surface,
-          }}
-        >
-          <div
-            style={{
-              background: COLORS.bg,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: 10,
-              padding: "12px 14px",
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: 18, color: COLORS.text }}>V4</h2>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: COLORS.muted }}>
-              Layout base inspirado no Dashboard + Projects Viewer
+            <p
+              style={{
+                margin: "6px 0 0",
+                fontSize: 13,
+                color: "var(--ui-color-text-muted)",
+              }}
+            >
+              Shell visual V4 (sem lógica de negócio).
             </p>
-          </div>
+          </section>
 
-          {/* Toolbar (same position concept as ProjectsViewerPage) */}
-          <div
+          <section
+            className="ui-card"
             style={{
-              background: COLORS.bg,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: 10,
-              padding: 8,
+              borderRadius: "var(--ui-radius-lg)",
+              border: "1px solid var(--ui-color-border)",
+              padding: "var(--ui-space-5)",
+              background: "var(--ui-color-bg)",
+              minHeight: 220,
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              flexWrap: "wrap",
+              justifyContent: "center",
             }}
           >
-            <button
-              type="button"
+            <span
               style={{
-                borderRadius: 8,
-                border: `1px solid ${COLORS.border}`,
-                background: COLORS.bg,
-                color: COLORS.text,
-                padding: "6px 10px",
-                fontSize: 12,
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--ui-color-text-muted)",
               }}
             >
-              Ação 1
-            </button>
-            <button
-              type="button"
-              style={{
-                borderRadius: 8,
-                border: `1px solid ${COLORS.primary}`,
-                background: COLORS.primary,
-                color: "#fff",
-                padding: "6px 10px",
-                fontSize: 12,
-              }}
-            >
-              Ação 2
-            </button>
-          </div>
-
-          {/* Canvas area + side panel layout inspired by ProjectsViewerPage */}
-          <div
-            style={{
-              flex: 1,
-              minHeight: 320,
-              display: "flex",
-              gap: 8,
-              alignItems: "flex-start",
-            }}
-          >
-            <div
-              style={{
-                flex: "1 1 0",
-                minWidth: 0,
-                height: "100%",
-                minHeight: 320,
-                background: COLORS.bg,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 10,
-                display: "grid",
-                placeItems: "center",
-              }}
-            >
-              <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: COLORS.muted }}>
-                V4 Viewer
-              </p>
-            </div>
-
-            <aside
-              style={{
-                width: 240,
-                minWidth: 240,
-                background: COLORS.bg,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 10,
-                padding: 10,
-              }}
-            >
-              <div style={{ color: "#888", fontSize: 11, marginBottom: 6 }}>
-                SECTION: {currentSection.label}
-              </div>
-              <p style={{ margin: 0, fontSize: 13, color: COLORS.text }}>
-                Painel lateral placeholder.
-              </p>
-            </aside>
-          </div>
+              SECTION: viewer-placeholder
+            </span>
+          </section>
         </main>
       </div>
     </div>
