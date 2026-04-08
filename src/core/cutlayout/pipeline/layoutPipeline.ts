@@ -1,5 +1,10 @@
 import type { SeededRng } from "../utils/cutLayoutRng";
 import { getSheetSafetyMarginMm } from "../layoutCoordinateSystem";
+import {
+  tryCompactLateSheetsOfRun,
+  LATE_SHEET_COMPACT_WINDOW,
+  LATE_SHEET_MIN_WASTE_RATIO,
+} from "../solver/lateSheetCompactor";
 import type {
   CutPiece,
   CutLayoutEngineOptions,
@@ -532,6 +537,18 @@ export function runCutLayout(
           compactnessScore: advanced.compactnessScoreTotal,
         };
       }
+    }
+
+    // Late-Sheet Compactor: tenta recompactar as chapas tardias com desperdício elevado.
+    // Só ativa se o grupo tiver mais de LATE_SHEET_COMPACT_WINDOW chapas e desperdício médio
+    // nas últimas chapas acima de LATE_SHEET_MIN_WASTE_RATIO. Resultado só é usado se melhorar.
+    const compactResult = tryCompactLateSheetsOfRun(bestRun.sheets, placementSheet, kerf, {
+      kerf,
+      lateSheetWindow: LATE_SHEET_COMPACT_WINDOW,
+      minWasteRatioToTrigger: LATE_SHEET_MIN_WASTE_RATIO,
+    });
+    if (compactResult?.improved) {
+      bestRun.sheets = [...compactResult.earlySheets, ...compactResult.lateSheets];
     }
 
     if (diagnostics) {
