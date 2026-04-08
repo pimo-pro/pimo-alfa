@@ -69,10 +69,12 @@ export function isDevRuntime(): boolean {
  *   - 1 boxId único  → SingleProject (SPM): 1 tentativa + pocket filling agressivo, sem compactor
  *   - múltiplos boxId → MultiProject  (MPM): fluxo completo com meta-heurísticas e compactor
  */
-export enum NestingMode {
-  SingleProject = "single",
-  MultiProject = "multi",
-}
+export const NestingMode = {
+  SingleProject: "single",
+  MultiProject: "multi",
+} as const;
+
+export type NestingMode = (typeof NestingMode)[keyof typeof NestingMode];
 
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
