@@ -112,21 +112,9 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     return a;
   }, [exportActions, updateProject]);
 
-  return useMemo(
-    () =>
-      Object.assign(
-        {} as ProjectActions,
-        coreActions,
-        historyActions,
-        projectIoActions,
-        layerActions,
-        boxCrudActions,
-        boxTransformActions,
-        rulesActions,
-        viewerUiActions,
-        designActions
-      ),
-    [
+  return useMemo(() => {
+    const actions = Object.assign(
+      {} as ProjectActions,
       coreActions,
       historyActions,
       projectIoActions,
@@ -135,7 +123,97 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       boxTransformActions,
       rulesActions,
       viewerUiActions,
-      designActions,
-    ]
-  );
+      designActions
+    );
+
+    // @PIMO-KEEP — Runtime validation
+    if (import.meta.env.DEV) {
+      const requiredActions: (keyof ProjectActions)[] = [
+        "createNewProject",
+        "selectBox",
+        "clearSelection",
+        "setActiveTool",
+        "setTipoProjeto",
+        "setMaterial",
+        "setEspessura",
+        "setDimensoes",
+        "setReadyForProduction",
+        "setProjectName",
+        "addBox",
+        "addWorkspaceBox",
+        "addWorkspaceBoxFromCatalog",
+        "duplicateBox",
+        "duplicateWorkspaceBox",
+        "duplicateWorkspaceBoxAtOffset",
+        "removeBox",
+        "removeWorkspaceBox",
+        "removeWorkspaceBoxById",
+        "setPortaTipo",
+        "setTipoBorda",
+        "setTipoFundo",
+        "setPrateleiras",
+        "setGavetas",
+        "addDoorLayerItem",
+        "addDrawerLayerItem",
+        "removeDoorLayerItem",
+        "removeDrawerLayerItem",
+        "updateDoorLayerItem",
+        "updateDrawerLayerItem",
+        "setDoorLayerItemOpen",
+        "setDrawerLayerItemOpen",
+        "setDoorMaterial",
+        "setDrawerMaterial",
+        "updateWorkspaceBoxTransform",
+        "updateWorkspacePosition",
+        "repositionWorkspaceBoxesInsideRoom",
+        "setWorkspaceBoxMaterial",
+        "setWorkspaceBoxLocked",
+        "alignFrontWithNeighbor",
+        "alignBottomSelectedBoxes",
+        "toggleWorkspaceRotation",
+        "rotateWorkspaceBox",
+        "gerarESalvarDesign",
+        "exportarPDF",
+        "exportarPdfTecnico",
+        "exportarPdfUnificado",
+        "listSavedProjects",
+        "loadProjectSnapshot",
+        "renameProject",
+        "deleteProject",
+        "mergeSnapshots",
+        "undo",
+        "redo",
+        "goToHistory",
+        "updateRulesInProfile",
+        "setActiveRulesProfile",
+        "addRulesProfile",
+        "removeRulesProfile",
+        "setRulesProfilesConfig",
+        "setViewerSettings",
+        "toggleHighlight",
+        "toggleRuler",
+        "logChangelog",
+      ];
+
+      requiredActions.forEach((key) => {
+        if (typeof (actions as Record<string, unknown>)[key] !== "function") {
+          console.error(
+            `[PIMO] actions.${key} is not a function — runtime crash expected when called from UI`
+          );
+        }
+      });
+    }
+
+    return actions;
+  }, [
+    coreActions,
+    historyActions,
+    projectIoActions,
+    layerActions,
+    boxCrudActions,
+    boxTransformActions,
+    rulesActions,
+    viewerUiActions,
+    designActions,
+  ]);
 }
