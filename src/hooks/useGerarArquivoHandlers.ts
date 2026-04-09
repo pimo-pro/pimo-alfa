@@ -540,6 +540,51 @@ export function useGerarArquivoHandlers() {
     }
   }, [hasBoxes, showToast, project, boxes, tcnSuffix]);
 
+  /** TCN (via fluxo existente) + XML de furação; só orquestração, mesmas funções de export. */
+  const onArquivosCnc = useCallback(async () => {
+    await onExportarCnc();
+    if (!hasBoxes) return;
+    try {
+      const parametric = cutlistComPrecoFromBoxes(
+        boxes,
+        project.rules,
+        project.materialId,
+        project.projectName
+      );
+      const extracted = boxes.flatMap((b) =>
+        Object.values(project.extractedPartsByBoxId?.[b.id] ?? {}).flat()
+      );
+      const allItems = [...parametric, ...extracted].map((p) => ({
+        ...p,
+        boxId: p.boxId ?? "",
+      }));
+      const drillFiles = buildDrillFilesForProject(allItems, {
+        projectName: project.projectName ?? "Projeto",
+        boxes: boxes ?? [],
+        rules: project.rules,
+      });
+      if (drillFiles.length === 0) {
+        showToast("Nenhum ficheiro XML de furação para exportar.", "info");
+        return;
+      }
+      const urls: string[] = [];
+      for (const f of drillFiles) {
+        const blob = new Blob([f.xml], { type: "application/xml" });
+        const url = URL.createObjectURL(blob);
+        urls.push(url);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${f.filenameBase}.xml`;
+        a.click();
+      }
+      setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
+      showToast("XML de furação gerado.", "info");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Falha ao gerar XML: ${msg}`, "error");
+    }
+  }, [onExportarCnc, hasBoxes, boxes, project, showToast]);
+
   /** Gera todos os arquivos disponíveis, coloca numa pasta (ZIP) e descarrega. */
   const onArquivoCompleto = useCallback(async () => {
     console.log("[GEN] Entrou no gerarArquivoCompleto");
@@ -786,5 +831,6 @@ export function useGerarArquivoHandlers() {
     onLayoutCortePro,
     onEtiquetas,
     onExportarCnc,
+    onArquivosCnc,
   };
 }
