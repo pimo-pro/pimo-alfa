@@ -1,6 +1,6 @@
 /**
  * Barra superior unificada do Workspace (evolução incremental).
- * Após salvar/gerar design, abre modal com exportações e envio de pacote.
+ * «Salvar e Gerar Design»: executa gerarESalvarDesign (persistir + gerar) e só depois abre o painel.
  * Ferramentas 3D selecionar / mover / rodar (mesma semântica que Tools3DToolbar).
  */
 
@@ -34,7 +34,7 @@ const lockToolbarButtonStyle = {
   color: "var(--text-main)",
   fontSize: 12,
   cursor: "pointer" as const,
-  marginLeft: 4,
+  marginLeft: 3,
 };
 
 const toolbarButtonStyle = {
@@ -48,7 +48,7 @@ const toolbarButtonStyle = {
   color: "var(--text-main)",
   fontSize: 12,
   cursor: "pointer" as const,
-  marginLeft: 4,
+  marginLeft: 3,
 };
 
 const unifiedBubbleStyle = {
@@ -61,10 +61,11 @@ const unifiedBubbleStyle = {
   borderRadius: 4,
   background: "transparent",
   cursor: "pointer" as const,
-  marginLeft: 4,
+  marginLeft: 3,
   color: "var(--blue-light)",
 };
 
+const RIGHT_TOOLBAR_ICON_PX = 24;
 const projectIconBubbleStyle = {
   width: 28,
   height: 28,
@@ -204,14 +205,14 @@ export default function UnifiedTopToolbar({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 8,
-        padding: "4px 6px",
+        gap: 6,
+        padding: "2px 4px",
         flexShrink: 0,
         width: "100%",
         boxSizing: "border-box",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "wrap" }}>
         {primary3dItems.map((item) => {
           const isActive = activeTool === item.id;
           const isEnabled = enabledTools.includes(item.id);
@@ -260,7 +261,7 @@ export default function UnifiedTopToolbar({
                   e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
                 }}
               >
-                <Icon name={item.iconName} size={16} aria-hidden />
+                <Icon name={item.iconName} size={24} aria-hidden />
               </button>
               {isRotate && selectedBoxId && showRotationMenu && (() => {
                 const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
@@ -384,7 +385,7 @@ export default function UnifiedTopToolbar({
                   e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
                 }}
               >
-                <Icon name={item.iconName} size={16} aria-hidden />
+                <Icon name={item.iconName} size={24} aria-hidden />
               </button>
             </div>
           );
@@ -401,7 +402,7 @@ export default function UnifiedTopToolbar({
               background: lockEnabled ? "var(--toolbar-pressed-bg)" : "transparent",
             }}
           >
-            <Icon name="lock3D" size={16} aria-hidden />
+            <Icon name="lock3D" size={24} aria-hidden />
           </button>
         )}
         <div ref={cameraMenuRef} style={{ position: "relative", display: "inline-flex", marginLeft: 2 }}>
@@ -425,7 +426,7 @@ export default function UnifiedTopToolbar({
               if (!showCameraMenu) e.currentTarget.style.background = "transparent";
             }}
           >
-            <Icon name="camera" size={14} aria-hidden />
+            <Icon name="camera" size={24} aria-hidden />
           </button>
           {showCameraMenu && (
             <CameraViewMenu
@@ -458,7 +459,7 @@ export default function UnifiedTopToolbar({
               if (!showExplodedMenu) e.currentTarget.style.background = "transparent";
             }}
           >
-            <Icon name="exploded" size={16} aria-hidden />
+            <Icon name="exploded" size={24} aria-hidden />
           </button>
           {showExplodedMenu && (
             <div
@@ -532,7 +533,7 @@ export default function UnifiedTopToolbar({
             if (!project.viewerSettings.highlightEnabled) e.currentTarget.style.background = "transparent";
           }}
         >
-          <Icon name="highlight" size={14} aria-hidden />
+          <Icon name="highlight" size={24} aria-hidden />
         </button>
         <button
           type="button"
@@ -554,7 +555,7 @@ export default function UnifiedTopToolbar({
             if (!project.viewerSettings.rulerEnabled) e.currentTarget.style.background = "transparent";
           }}
         >
-          <Icon name="ruler" size={22} aria-hidden />
+          <Icon name="ruler" size={24} aria-hidden />
         </button>
         {cfgImagem ? (
           <button
@@ -574,7 +575,7 @@ export default function UnifiedTopToolbar({
               e.currentTarget.style.background = photoModePanelOpen ? "var(--toolbar-pressed-bg)" : "transparent";
             }}
           >
-            <Icon name={cfgImagem.iconName} size={22} aria-hidden />
+            <Icon name={cfgImagem.iconName} size={24} aria-hidden />
           </button>
         ) : null}
         {cfgResetCamera ? (
@@ -591,7 +592,7 @@ export default function UnifiedTopToolbar({
               e.currentTarget.style.background = "transparent";
             }}
           >
-            <Icon name={cfgResetCamera.iconName} size={22} aria-hidden />
+            <Icon name={cfgResetCamera.iconName} size={24} aria-hidden />
           </button>
         ) : null}
         <DisplayMenuButton triggerStyle={unifiedBubbleStyle} />
@@ -615,7 +616,7 @@ export default function UnifiedTopToolbar({
               e.currentTarget.style.background = visibilityMenuOpen ? "var(--toolbar-pressed-bg)" : "transparent";
             }}
           >
-            <Icon name="displayCheck" size={22} aria-hidden />
+            <Icon name="displayCheck" size={24} aria-hidden />
           </button>
           {visibilityMenuOpen && (
             <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Opções de visualização">
@@ -687,7 +688,7 @@ export default function UnifiedTopToolbar({
         <RoomIconButton />
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "wrap" }}>
         <button
           type="button"
           className="button viewer-action-button"
@@ -702,7 +703,7 @@ export default function UnifiedTopToolbar({
             cursor: project.estaCarregando ? "not-allowed" : "pointer",
           }}
         >
-          <Icon name={cfgNovo?.iconName ?? "adminDocs"} size={23} aria-hidden />
+          <Icon name={cfgNovo?.iconName ?? "adminDocs"} size={RIGHT_TOOLBAR_ICON_PX} aria-hidden />
         </button>
         <button
           type="button"
@@ -718,17 +719,26 @@ export default function UnifiedTopToolbar({
             cursor: project.estaCarregando ? "not-allowed" : "pointer",
           }}
         >
-          <Icon name={cfgProjeto?.iconName ?? "projects"} size={23} aria-hidden />
+          <Icon name={cfgProjeto?.iconName ?? "projects"} size={RIGHT_TOOLBAR_ICON_PX} aria-hidden />
         </button>
         <button
           type="button"
           className="button button-primary viewer-action-button"
           title="Salvar e Gerar Design"
           aria-label="Salvar e Gerar Design"
-          onClick={() => setExportPanelOpen(true)}
+          onClick={() => {
+            void (async () => {
+              await actions.gerarESalvarDesign();
+              setExportPanelOpen(true);
+            })();
+          }}
           disabled={project.estaCarregando}
           style={{
             background: "var(--blue-light)",
+            fontSize: 13,
+            padding: "7px 13px",
+            minHeight: 31,
+            lineHeight: 1.2,
             opacity: project.estaCarregando ? 0.7 : 1,
             cursor: project.estaCarregando ? "not-allowed" : "pointer",
           }}

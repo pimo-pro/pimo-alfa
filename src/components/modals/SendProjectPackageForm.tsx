@@ -17,8 +17,8 @@ type SendProjectPackageFormProps = {
 };
 
 const iconWrap: CSSProperties = {
-  width: 20,
-  height: 20,
+  width: 27,
+  height: 27,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -26,23 +26,23 @@ const iconWrap: CSSProperties = {
 };
 
 const iconSlotEmpty: CSSProperties = {
-  width: 20,
-  height: 20,
+  width: 27,
+  height: 27,
   flexShrink: 0,
 };
 
 const grid2: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
-  gap: 8,
+  gap: 7,
 };
 
 const panelBtn: CSSProperties = {
   width: "100%",
-  height: 32,
-  padding: "8px 12px",
+  height: 37,
+  padding: "6px 12px",
   borderRadius: 6,
-  fontSize: 13,
+  fontSize: 15,
   boxSizing: "border-box",
   display: "inline-flex",
   alignItems: "center",
@@ -53,10 +53,10 @@ const panelBtn: CSSProperties = {
 const labelRow: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: 7,
   cursor: "pointer",
   fontSize: 12,
-  minHeight: 32,
+  minHeight: 34,
 };
 
 /**
@@ -102,8 +102,8 @@ export default function SendProjectPackageForm({
 
     return (
       <div>
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Conteúdo do pacote</div>
+        <div style={{ marginBottom: 7 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>Conteúdo do pacote</div>
           <div style={{ fontSize: 12, opacity: 0.9 }}>Selecione o que deve ser incluído no envio</div>
         </div>
         <div style={grid2}>
@@ -122,9 +122,9 @@ export default function SendProjectPackageForm({
         </div>
 
         {sendSelections.image ? (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Imagem renderizada</div>
-            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 8 }}>
+          <div style={{ marginTop: 7 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>Imagem renderizada</div>
+            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 7 }}>
               {photoCaptureUrl
                 ? "Captura pronta para download"
                 : "Capture uma imagem no Photo Mode da toolbar"}
@@ -157,8 +157,8 @@ export default function SendProjectPackageForm({
           </div>
         ) : null}
 
-        <div style={{ marginTop: 12, marginBottom: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Método de envio</div>
+        <div style={{ marginTop: 10, marginBottom: 7 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>Método de envio</div>
           <div style={{ fontSize: 12, opacity: 0.9 }}>Escolha como deseja enviar o pacote</div>
         </div>
         <div style={grid2}>
@@ -178,7 +178,7 @@ export default function SendProjectPackageForm({
         </div>
 
         {showPrepareButton ? (
-          <button type="button" className="modal-action" style={{ ...panelBtn, marginTop: 8 }} onClick={handleSendPackage}>
+          <button type="button" className="modal-action" style={{ ...panelBtn, marginTop: 7 }} onClick={handleSendPackage}>
             <span style={iconSlotEmpty} aria-hidden />
             <span style={{ lineHeight: 1.1, textAlign: "center" }}>Preparar envio</span>
           </button>

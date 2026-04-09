@@ -176,7 +176,7 @@ export default function ViewerToolbar({ confirmNewOpen, setConfirmNewOpen }: Vie
             style={{ fontSize: 12 }}
           >
             <span className="viewer-toolbar-icon" aria-hidden>
-              <Icon name={item.iconName} size={16} aria-hidden />
+              <Icon name={item.iconName} size={24} aria-hidden />
             </span>
           </button>
         );

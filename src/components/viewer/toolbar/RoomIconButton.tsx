@@ -45,7 +45,7 @@ export default function RoomIconButton() {
     uiStore.getState().clearSelection();
   }, [actions, roomPresent, setSelectedTool, viewerApi]);
 
-  /** Mesmo encaixe que `unifiedBubbleStyle` (28×28, ícone 22) para não aumentar a altura da barra; verde via token. */
+  /** Mesmo encaixe que `unifiedBubbleStyle` na barra unificada. */
   const bubbleStyle = {
     width: 28,
     height: 28,
@@ -55,7 +55,7 @@ export default function RoomIconButton() {
     border: "none" as const,
     borderRadius: 4,
     cursor: "pointer" as const,
-    marginLeft: 4,
+    marginLeft: 3,
     color: "var(--status-done-color)",
     background: isActive ? "var(--toolbar-pressed-bg)" : "transparent",
   };
@@ -75,7 +75,7 @@ export default function RoomIconButton() {
         e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
       }}
     >
-      <Icon name="room" size={22} aria-hidden />
+      <Icon name="room" size={24} aria-hidden />
     </button>
   );
 }

@@ -123,10 +123,10 @@ export default function DisplayMenuButton({ triggerStyle }: DisplayMenuButtonPro
         }
       >
         {triggerStyle ? (
-          <Icon name="displayMenu" size={22} aria-hidden />
+          <Icon name="displayMenu" size={24} aria-hidden />
         ) : (
           <span className="viewer-toolbar-icon" aria-hidden>
-            <Icon name="displayMenu" size={16} aria-hidden />
+            <Icon name="displayMenu" size={24} aria-hidden />
           </span>
         )}
       </button>

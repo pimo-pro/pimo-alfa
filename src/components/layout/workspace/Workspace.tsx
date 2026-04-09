@@ -672,7 +672,7 @@ return (
       }}
     >
       <div className="workspace-canvas">
-        <div className="workspace-toolbars" style={{ display: "flex", flexDirection: "column" }}>
+        <div className="workspace-toolbars" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
           <UnifiedTopToolbar
             onNovo={handleTopToolbarNovo}
             onProjetos={handleTopToolbarProjetos}

@@ -89,6 +89,7 @@
   --workspace-gradient-end: #0b0f17;
   --toolbar-border: rgba(255, 255, 255, 0.08);
   --viewer-toolbar-bg: rgba(15, 23, 42, 0.85);
+  --top-toolbar-bg: var(--viewer-toolbar-bg);
   --viewer-toolbar-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
   --viewer-toolbar-inset: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   --viewer-toolbar-icon: #f1f5f9;
@@ -190,6 +191,7 @@
   --workspace-gradient-end: #f1f5f9;
   --toolbar-border: rgba(0, 0, 0, 0.08);
   --viewer-toolbar-bg: rgba(255, 255, 255, 0.9);
+  --top-toolbar-bg: var(--viewer-toolbar-bg);
   --viewer-toolbar-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
   --viewer-toolbar-inset: inset 0 -1px 0 rgba(0, 0, 0, 0.05);
   --viewer-toolbar-icon: #0f172a;
@@ -857,14 +859,26 @@ body {
   box-shadow: var(--viewer-toolbar-shadow);
 }
 
+/* Mesma faixa visual que o ViewerToolbar (sem linha entre as duas linhas). */
+.unified-top-toolbar {
+  background: var(--top-toolbar-bg);
+  border-bottom: none;
+  box-shadow: none;
+}
+
 /* ViewerToolbar: ícones com cor clara visível no fundo escuro */
 .viewer-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-toolbar-gap);
-  padding: var(--space-toolbar-padding-y) var(--space-toolbar-padding-x);
-  background: var(--viewer-toolbar-bg);
-  border-bottom: 1px solid var(--toolbar-border);
+  gap: 6px;
+  padding: 2px 4px;
+  background: var(--top-toolbar-bg);
+  border-bottom: none;
+}
+
+.workspace-toolbars .viewer-toolbar button {
+  width: 28px;
+  height: 28px;
 }
 .tools-3d-toolbar {
   background: var(--viewer-toolbar-bg);

@@ -15,20 +15,20 @@ type Props = {
   onClose: () => void;
 };
 
-/** Wrapper obrigatório 20×20 para ícones dentro de botões. */
+/** Wrapper 27×27 para ícones (~+15% face a 23px). */
 const iconWrap: CSSProperties = {
-  width: 20,
-  height: 20,
+  width: 27,
+  height: 27,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
 };
 
-/** Reserva 20×20 em botões sem ícone (alinhamento com botões com ícone). */
+/** Reserva 27×27 em botões sem ícone (alinhamento com botões com ícone). */
 const iconSlotEmpty: CSSProperties = {
-  width: 20,
-  height: 20,
+  width: 27,
+  height: 27,
   flexShrink: 0,
 };
 
@@ -36,22 +36,22 @@ const cardStyle: CSSProperties = {
   background: "rgba(255,255,255,0.06)",
   border: "1px solid rgba(255,255,255,0.12)",
   borderRadius: 8,
-  padding: 12,
-  marginBottom: 10,
+  padding: 10,
+  marginBottom: 9,
 };
 
 const cardTitleStyle: CSSProperties = {
   fontSize: 14,
   fontWeight: 600,
-  margin: "0 0 8px",
+  margin: "0 0 6px",
 };
 
 const exportGridBtnStyle: CSSProperties = {
   width: "100%",
-  height: 32,
-  padding: "8px 12px",
+  height: 37,
+  padding: "6px 12px",
   borderRadius: 6,
-  fontSize: 13,
+  fontSize: 15,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -59,18 +59,29 @@ const exportGridBtnStyle: CSSProperties = {
   boxSizing: "border-box",
 };
 
+/** Botão final do painel: ~−20% face a 42×15 / gap 7 / ícone 27. */
 const finalBtnStyle: CSSProperties = {
   width: "100%",
-  height: 40,
-  borderRadius: 8,
-  fontSize: 13,
+  height: 34,
+  borderRadius: 6,
+  fontSize: 12,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   gap: 6,
   background: "var(--blue-light)",
+  color: "#fff",
   boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
   boxSizing: "border-box",
+};
+
+const finalIconWrap: CSSProperties = {
+  width: 22,
+  height: 22,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 };
 
 export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
@@ -121,14 +132,14 @@ export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        <div className="unified-export-panel" style={{ padding: "16px" }}>
+        <div className="unified-export-panel" style={{ padding: "14px" }}>
           <div style={cardStyle}>
             <div style={cardTitleStyle}>Gerar Arquivo</div>
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(2, 1fr)",
-                gap: 8,
+                gap: 7,
               }}
             >
               <button
@@ -181,7 +192,7 @@ export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
                 disabled={!hasBoxes}
               >
                 <span style={iconWrap} aria-hidden>
-                  <Icon name="blueprint" size={20} aria-hidden />
+                  <Icon name="blueprint" size={27} aria-hidden />
                 </span>
                 <span style={{ lineHeight: 1.1, textAlign: "center" }}>Layout de Corte PRO</span>
               </button>
@@ -211,8 +222,8 @@ export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
               onClick={() => void handleSalvarEGerarEEnviar()}
               disabled={project.estaCarregando}
             >
-              <span style={iconWrap} aria-hidden>
-                <Icon name="adminSave" size={20} aria-hidden />
+              <span style={finalIconWrap} aria-hidden>
+                <Icon name="adminSave" size={22} aria-hidden />
               </span>
               <span style={{ lineHeight: 1.1 }}>Salvar e Gerar Design</span>
             </button>
