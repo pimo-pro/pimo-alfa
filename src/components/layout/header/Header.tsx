@@ -1,6 +1,7 @@
 import logoPimo from "../../../assets/logo-pi.png";
-import { useRef, type ReactNode } from "react";
+import { useContext, useRef, type ChangeEvent, type ReactNode } from "react";
 import { useTheme } from "../../../context/ThemeContext";
+import { ProjectContext } from "../../../context/projectContext";
 import { Icon } from "@/components/icons";
 import HeaderUndoRedoButtons from "./HeaderUndoRedoButtons";
 
@@ -40,6 +41,7 @@ function HeaderActionButton({ title, ariaLabel, onClick, children }: HeaderActio
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
+  const projectContext = useContext(ProjectContext);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const navigateInternal = (path: string) => {
     window.history.pushState({}, "", path);
@@ -47,12 +49,34 @@ export default function Header() {
   };
 
   const handleLanguageControl = () => {
-    // Comportamento atual: app fixo em PT (sem troca ativa de idioma).
+    // @PIMO-SOON: Troca de idioma (atualmente fixo em PT).
   };
 
   const handleProjectUpload = () => {
     fileInputRef.current?.click();
-    console.log("[Header] Upload de projeto ainda não implementado.");
+  };
+
+  const handleProjectFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    const load = projectContext?.actions.loadProjectSnapshot;
+    if (!load) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as unknown;
+      let id: string | null = null;
+      if (typeof data === "object" && data !== null) {
+        const o = data as Record<string, unknown>;
+        if (typeof o.id === "string") id = o.id;
+        else if (typeof o.projectId === "string") id = o.projectId;
+      }
+      if (id) await load(id);
+      // @PIMO-SOON: Importar snapshot completo (projectState) a partir de ficheiro.
+    } catch {
+      // @PIMO-SOON: Toast em erro (JSON inválido, rede, etc.).
+    }
   };
 
   return (
@@ -168,9 +192,11 @@ export default function Header() {
       <input
         ref={fileInputRef}
         type="file"
+        accept=".json"
         style={{ display: "none" }}
         aria-hidden
         tabIndex={-1}
+        onChange={handleProjectFileChange}
       />
     </header>
   );
