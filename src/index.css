@@ -304,8 +304,8 @@ body {
 
 /* Sidebar: estilo clean — ícone + nome por baixo; scroll interno se muitos itens */
 .left-toolbar {
-  width: 72px;
-  min-width: 72px;
+  width: 48px;
+  min-width: 48px;
   height: 100%;
   max-height: 100%;
   overflow-y: auto;
@@ -336,45 +336,50 @@ body {
   font-size: 10px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  border: 1px solid transparent;
 }
 
-.left-toolbar-item:hover {
-  background: var(--bg-item-hover);
-  border-color: var(--border-item-hover);
+.left-toolbar-item:hover:not(.left-toolbar-item--selected) {
+  background: transparent;
+  border: none;
+}
+
+.left-toolbar-item:hover:not(.left-toolbar-item--selected) .left-toolbar-label {
+  color: var(--text-main);
 }
 
 .left-toolbar-item--selected {
-  background: var(--bg-selected);
-  border-color: var(--border-selected);
+  background: var(--button-ghost-bg);
+  border-radius: var(--radius);
+  border: none;
   color: var(--primary);
 }
 
 .left-toolbar-item--selected .left-toolbar-icon {
   background: var(--bg-selected-icon);
-  border-color: var(--border-selected);
+  border: 1px solid var(--border-selected);
+  border-radius: 7px;
   color: var(--primary);
 }
 
+.left-toolbar-item:hover:not(.left-toolbar-item--selected) .left-toolbar-icon {
+  background: transparent;
+  border: none;
+}
+
 .left-toolbar-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  border: 1px solid var(--border-icon);
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  border: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   font-weight: 500;
-  background: var(--bg-icon);
+  background: transparent;
   color: var(--text-main);
   backdrop-filter: blur(4px);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.left-toolbar-item:hover .left-toolbar-icon {
-  background: var(--bg-icon-hover);
-  border-color: var(--border-icon-hover);
 }
 
 .left-toolbar-label {

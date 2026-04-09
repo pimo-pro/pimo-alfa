@@ -10,6 +10,7 @@ import { BottomInfoProvider } from "./context/BottomInfoContext";
 import WhatsAppButton from "./components/layout/WhatsAppButton";
 import { PimoViewerProvider } from "./context/PimoViewerContext";
 import { ProjectProvider } from "./context/ProjectProvider";
+import { WorkspaceUndoRedoRegistryProvider } from "./context/WorkspaceUndoRedoRegistryContext";
 import { MaterialProvider } from "./context/materialContext";
 import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -188,6 +189,7 @@ function LegacyApp() {
 
   return (
     <ProjectProvider>
+      <WorkspaceUndoRedoRegistryProvider>
       <SettingsProvider>
         <MaterialProvider>
           <ToastProvider>
@@ -310,6 +312,7 @@ function LegacyApp() {
           </ToastProvider>
         </MaterialProvider>
       </SettingsProvider>
+      </WorkspaceUndoRedoRegistryProvider>
     </ProjectProvider>
   );
 }

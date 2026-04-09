@@ -356,7 +356,10 @@ export function useGerarArquivoHandlers() {
         boxId: p.boxId ?? "",
       }));
 
-      const pieces = cutlistToPieces(allItems);
+      const pieces = cutlistToPieces(allItems, {
+        projectName: project.projectName ?? "Projeto",
+        boxes,
+      });
       if (pieces.length === 0) {
         showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
         return;
@@ -610,7 +613,10 @@ export function useGerarArquivoHandlers() {
       // --- Nesting (calculado uma vez; partilhado por Etiquetas + Layout de Corte PRO) ---
       let nestingResult: CutLayoutResult | null = null;
       try {
-        const pieces = cutlistToPieces(allItems as CutlistItemForPieces[]);
+        const pieces = cutlistToPieces(allItems as CutlistItemForPieces[], {
+          projectName: project.projectName ?? "Projeto",
+          boxes: proj.boxes ?? boxes,
+        });
         if (pieces.length > 0) {
           showCutLayoutLoader();
           await yieldToMainThread();

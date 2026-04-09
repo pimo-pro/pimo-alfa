@@ -2,60 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import { useProject } from "../../context/useProject";
 import type { SavedProjectInfo } from "../../context/projectTypes";
 import { useToast } from "../../context/ToastContext";
-import { usePimoViewerContext } from "../../hooks/usePimoViewerContext";
 import { useToolbarModal } from "../../context/ToolbarModalContext";
-import {
-  cutlistComPrecoFromBoxes,
-  ferragensFromBoxes,
-} from "../../core/manufacturing/cutlistFromBoxes";
-import {
-  calcularPrecoTotalPecas,
-  calcularPrecoTotalProjeto,
-} from "../../core/pricing/pricing";
 import Piece3DModal from "../modals/Piece3DModal";
+import { RESET_SEND_EVENT } from "../modals/SendProjectPackageForm";
 import { buildViewerDrillMarkersByPanel } from "../../modules/drilling/drillingAdapter";
 
-type SendMethod = "whatsapp" | "email" | "download";
-
-type SendSelections = {
-  image: boolean;
-  viewerSnapshot: boolean;
-  projectSnapshot: boolean;
-  cutlist: boolean;
-  ferragens: boolean;
-  precos: boolean;
-};
-
-const defaultSendSelections: SendSelections = {
-  image: true,
-  viewerSnapshot: true,
-  projectSnapshot: true,
-  cutlist: true,
-  ferragens: true,
-  precos: true,
-};
-
 /**
- * Renderiza os modais abertos pela ViewerToolbar (Projetos, Enviar, etc.).
- * Mantido após remoção do painel direito para que os botões da toolbar continuem a funcionar.
+ * Renderiza os modais abertos pela ViewerToolbar (Projetos, Integração, etc.).
+ * Envio de pacote: apenas no painel unificado (UnifiedExportPanel).
  */
 export default function ToolbarModals() {
   const { actions, project } = useProject();
   const { showToast } = useToast();
-  const { viewerApi } = usePimoViewerContext();
-  const { modal, openModal, closeModal } = useToolbarModal();
+  const { modal, closeModal, integrationMessage } = useToolbarModal();
   const [savedProjects, setSavedProjects] = useState<SavedProjectInfo[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [photoCaptureUrl, setPhotoCaptureUrl] = useState<string | null>(null);
-  const [sendMethod, setSendMethod] = useState<SendMethod>("download");
-  const [sendSelections, setSendSelections] = useState<SendSelections>(defaultSendSelections);
-  const [integrationMessage, setIntegrationMessage] = useState("");
   const [showPiece3DModal, setShowPiece3DModal] = useState(false);
   const modalTitle = useMemo(() => {
     if (modal === "projects") return "Projetos salvos";
-    if (modal === "send") return "Enviar";
     if (modal === "integration") return "Integração";
     return "";
   }, [modal]);
@@ -84,140 +50,13 @@ export default function ToolbarModals() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal]);
 
-  const resetSendState = () => {
-    setSendMethod("download");
-    setSendSelections(defaultSendSelections);
-    setIntegrationMessage("");
-  };
-
-  const toggleSendSelection = (key: keyof SendSelections) => {
-    setSendSelections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const slugifyName = (value: string) => {
-    return value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  };
-
-  const serializeProjectState = () => {
-    return JSON.parse(
-      JSON.stringify(project, (_key, value) => {
-        if (value instanceof Date) {
-          return { __date: value.toISOString() };
-        }
-        return value;
-      })
-    );
-  };
-
-  const buildSendPackage = () => {
-    const timestamp = new Date();
-    const shouldCaptureViewer = sendSelections.viewerSnapshot || sendSelections.projectSnapshot;
-    const viewerSnapshot = shouldCaptureViewer ? null : null;
-    const payload: Record<string, unknown> = {};
-
-    if (sendSelections.viewerSnapshot) {
-      payload.viewerSnapshot = viewerSnapshot;
-    }
-
-    if (sendSelections.projectSnapshot) {
-      payload.projectSnapshot = {
-        projectState: serializeProjectState(),
-        viewerSnapshot,
-      };
-    }
-
-    if (sendSelections.image) {
-      payload.imagem = photoCaptureUrl ?? null;
-    }
-
-    const boxes = project.boxes ?? [];
-    const cutlistFromBoxes = cutlistComPrecoFromBoxes(
-      boxes,
-      project.rules,
-      project.materialId,
-      project.projectName
-    );
-    const ferragensFromBoxesList = ferragensFromBoxes(boxes, project.rules);
-    const totalPecasFromBoxes =
-      cutlistFromBoxes.length > 0
-        ? calcularPrecoTotalPecas(cutlistFromBoxes)
-        : null;
-    const totalAcessoriosFromBoxes =
-      ferragensFromBoxesList.length > 0
-        ? ferragensFromBoxesList.reduce((s, a) => s + a.precoTotal, 0)
-        : null;
-    const totalProjetoFromBoxes =
-      totalPecasFromBoxes != null && totalAcessoriosFromBoxes != null
-        ? calcularPrecoTotalProjeto(totalPecasFromBoxes + totalAcessoriosFromBoxes)
-        : null;
-
-    if (sendSelections.cutlist) {
-      payload.cutlist = cutlistFromBoxes.length > 0 ? cutlistFromBoxes : null;
-    }
-
-    if (sendSelections.ferragens) {
-      payload.ferragens =
-        ferragensFromBoxesList.length > 0 ? ferragensFromBoxesList : null;
-    }
-
-    if (sendSelections.precos) {
-      payload.precos = {
-        cutListComPreco: cutlistFromBoxes.length > 0 ? cutlistFromBoxes : null,
-        acessorios: ferragensFromBoxesList.length > 0 ? ferragensFromBoxesList : null,
-        totalPecas: totalPecasFromBoxes,
-        totalAcessorios: totalAcessoriosFromBoxes,
-        totalProjeto: totalProjetoFromBoxes,
-      };
-    }
-
-    return {
-      meta: {
-        createdAt: timestamp.toISOString(),
-        projectName: project.projectName,
-        version: "fase-6-g",
-      },
-      payload,
-    };
-  };
-
-  const downloadSendPackage = () => {
-    const pacote = buildSendPackage();
-    const projectSlug = slugifyName(project.projectName || "projeto");
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = `pimo-envio-${projectSlug || "projeto"}-${timestamp}.json`;
-    const blob = new Blob([JSON.stringify(pacote, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 500);
-  };
-
-  const handleSendPackage = () => {
-    if (sendMethod === "download") {
-      downloadSendPackage();
-      return;
-    }
-    const channelLabel = sendMethod === "whatsapp" ? "WhatsApp" : "Email";
-    setIntegrationMessage(`Integração ${channelLabel} em desenvolvimento.`);
-    openModal("integration");
-  };
-
   const handleCloseModal = () => {
     if (modal === "projects") {
       setRenamingId(null);
       setRenameValue("");
     }
-    if (modal === "send" || modal === "integration") {
-      resetSendState();
+    if (modal === "integration") {
+      window.dispatchEvent(new Event(RESET_SEND_EVENT));
     }
     closeModal();
   };
@@ -346,134 +185,6 @@ export default function ToolbarModals() {
                     </div>
                   ))
                 )}
-              </div>
-            ) : modal === "send" ? (
-              <div className="modal-list">
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Conteúdo do pacote</div>
-                    <div className="modal-list-meta">Selecione o que deve ser incluído no envio</div>
-                  </div>
-                </div>
-                {(
-                  [
-                    ["image", "Imagem renderizada"],
-                    ["viewerSnapshot", "Snapshot do Viewer (JSON)"],
-                    ["projectSnapshot", "Snapshot do Projeto (JSON)"],
-                    ["cutlist", "Cutlist"],
-                    ["ferragens", "Ferragens"],
-                    ["precos", "Preços"],
-                  ] as [keyof SendSelections, string][]
-                ).map(([key, label]) => (
-                  <label
-                    key={key}
-                    className="modal-list-item"
-                    style={{ cursor: "pointer", alignItems: "center" }}
-                  >
-                    <div className="modal-list-info">
-                      <div className="modal-list-title">{label}</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={sendSelections[key]}
-                      onChange={() => toggleSendSelection(key)}
-                    />
-                  </label>
-                ))}
-                {sendSelections.image && (
-                  <div className="modal-list-item">
-                    <div className="modal-list-info">
-                      <div className="modal-list-title">Imagem renderizada</div>
-                      <div className="modal-list-meta">
-                        {photoCaptureUrl
-                          ? "Captura pronta para download"
-                          : "Capture uma imagem no Photo Mode da toolbar"}
-                      </div>
-                    </div>
-                    {photoCaptureUrl ? (
-                      <button
-                        type="button"
-                        className="modal-action"
-                        onClick={() => {
-                          const link = document.createElement("a");
-                          link.href = photoCaptureUrl;
-                          link.download = photoCaptureUrl.startsWith("data:image/jpeg")
-                            ? "pimo-photo.jpg"
-                            : "pimo-photo.png";
-                          link.click();
-                        }}
-                      >
-                        Pré-visualizar
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="modal-action"
-                        onClick={async () => {
-                          if (!viewerApi?.renderScene) {
-                            showToast("Renderizador indisponível para captura.", "warning");
-                            return;
-                          }
-                          try {
-                            const result = await viewerApi.renderScene({
-                              size: "large",
-                              preset: "current",
-                              background: "white",
-                              mode: "pbr",
-                              watermark: false,
-                              shadowIntensity: 1,
-                              format: "png",
-                              quality: 1,
-                              advancedRealism: true,
-                            });
-                            if (result?.dataUrl) {
-                              setPhotoCaptureUrl(result.dataUrl);
-                              showToast("Captura pronta para envio.", "info", 1400);
-                            } else {
-                              showToast("Não foi possível capturar a imagem do Viewer.", "warning");
-                            }
-                          } catch {
-                            showToast("Erro ao gerar imagem para envio.", "error");
-                          }
-                        }}
-                      >
-                        Capturar agora
-                      </button>
-                    )}
-                  </div>
-                )}
-                <div className="modal-list-item">
-                  <div className="modal-list-info">
-                    <div className="modal-list-title">Método de envio</div>
-                    <div className="modal-list-meta">Escolha como deseja enviar o pacote</div>
-                  </div>
-                </div>
-                {(
-                  [
-                    ["whatsapp", "WhatsApp"],
-                    ["email", "Email"],
-                    ["download", "Download local"],
-                  ] as [SendMethod, string][]
-                ).map(([key, label]) => (
-                  <label
-                    key={key}
-                    className="modal-list-item"
-                    style={{ cursor: "pointer", alignItems: "center" }}
-                  >
-                    <div className="modal-list-info">
-                      <div className="modal-list-title">{label}</div>
-                    </div>
-                    <input
-                      type="radio"
-                      name="send-method"
-                      checked={sendMethod === key}
-                      onChange={() => setSendMethod(key)}
-                    />
-                  </label>
-                ))}
-                <button type="button" className="modal-action" onClick={handleSendPackage}>
-                  Preparar envio
-                </button>
               </div>
             ) : modal === "integration" ? (
               <div className="modal-placeholder">{integrationMessage}</div>

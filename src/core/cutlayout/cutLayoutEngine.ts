@@ -104,6 +104,7 @@ import {
 } from "./pipeline/trialRunner";
 import { runCutLayout as runCutLayoutPipeline, type RunCutLayoutDeps } from "./pipeline/layoutPipeline";
 import { runCutLayoutResult as runCutLayoutResultPipeline } from "./pipeline/resultWrapper";
+import { buildBoxNomeByIdFromBoxes, cutlistItemsWithCutLayoutProNames } from "./cutLayoutProPieceNaming";
 
 export type { CutLayoutEngineOptions } from "./cutLayoutTypes";
 
@@ -631,8 +632,24 @@ const RUN_CUT_LAYOUT_DEPS: RunCutLayoutDeps = {
   computeSolutionMetrics,
 };
 
-export function cutlistToPieces(items: CutlistItemForPieces[]): CutPiece[] {
-  return items.flatMap((item) => {
+export type CutlistToPiecesLayoutProNaming = {
+  projectName: string;
+  boxes: ReadonlyArray<{ id: string; nome?: string }>;
+};
+
+export function cutlistToPieces(
+  items: CutlistItemForPieces[],
+  layoutProPieceNaming?: CutlistToPiecesLayoutProNaming
+): CutPiece[] {
+  const sourceItems =
+    layoutProPieceNaming != null
+      ? cutlistItemsWithCutLayoutProNames(
+          items,
+          layoutProPieceNaming.projectName.trim() || "Projeto",
+          buildBoxNomeByIdFromBoxes(layoutProPieceNaming.boxes)
+        )
+      : items;
+  return sourceItems.flatMap((item) => {
     const raw = [
       Number(item.dimensoes?.largura) || 0,
       Number(item.dimensoes?.altura) || 0,

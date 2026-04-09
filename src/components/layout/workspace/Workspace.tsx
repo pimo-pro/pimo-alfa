@@ -8,17 +8,19 @@ import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import UnifiedTopToolbar from "../unified-toolbar/UnifiedTopToolbar";
 import ViewerToolbar from "../viewer-toolbar/ViewerToolbar";
 import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
+import { useToolbarModal } from "../../../context/ToolbarModalContext";
+import { defaultState } from "../../../context/projectState";
 import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
 import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
 import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../../../utils/roomMeshFromWallStore";
 import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
-import { useGerarArquivoHandlers } from "../../../hooks/useGerarArquivoHandlers";
-import GerarArquivoModal from "../right-panel/GerarArquivoModal";
 import BoxInfoOverlay from "./BoxInfoOverlay";
 import ContextMenu from "./ContextMenu";
 import { devLogger } from "../../../utils/devLogger";
+import { useWorkspaceUndoRedoRegistry } from "../../../context/WorkspaceUndoRedoRegistryContext";
+import { runProjectRedo, runProjectUndo } from "./workspaceUndoRedoHandlers";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -33,6 +35,9 @@ export default function Workspace({
 }: WorkspaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { project, actions, viewerSync } = useProject();
+  const { registerWorkspaceUndoRedo } = useWorkspaceUndoRedoRegistry();
+  const { openModal } = useToolbarModal();
+  const [confirmNewOpen, setConfirmNewOpen] = useState(false);
   const actionsRef = useRef(actions);
   // eslint-disable-next-line react-hooks/refs -- intencional: espelho em ref com o `actions` mais recente para listeners/efeitos sem re-inscrever em cada mudança de identidade.
   actionsRef.current = actions;
@@ -49,6 +54,38 @@ export default function Workspace({
   const { registerViewerApi } = usePimoViewerContext();
   const isRoomOpen = useWallStore((state) => state.isOpen);
   const walls = useWallStore((state) => state.walls);
+
+  const projectHasNonDefaultState = useMemo(() => {
+    if (project.workspaceBoxes.length > 0) return true;
+    if ((project.projectName?.trim() || "") !== defaultState.projectName) return true;
+    if (walls.length >= 3) return true;
+    return false;
+  }, [project.workspaceBoxes.length, project.projectName, walls.length]);
+
+  const handleTopToolbarNovo = useCallback(() => {
+    if (projectHasNonDefaultState) setConfirmNewOpen(true);
+    else void actions.createNewProject();
+  }, [projectHasNonDefaultState, actions]);
+
+  const handleTopToolbarProjetos = useCallback(() => {
+    openModal("projects");
+  }, [openModal]);
+
+  const handleUndo = useCallback(() => {
+    runProjectUndo(actions);
+  }, [actions]);
+
+  const handleRedo = useCallback(() => {
+    runProjectRedo(actions);
+  }, [actions]);
+
+  useEffect(() => {
+    registerWorkspaceUndoRedo({ handleUndo, handleRedo });
+    return () => {
+      registerWorkspaceUndoRedo(null);
+    };
+  }, [handleUndo, handleRedo, registerWorkspaceUndoRedo]);
+
   const roomMeshSyncToken = useWallStore((state) => state.roomMeshSyncToken);
   const selectedWallId = useWallStore((state) => state.selectedWallId);
   const selectedObject = useUiStore((state) => state.selectedObject);
@@ -57,9 +94,7 @@ export default function Workspace({
   const setSelectedTool = useUiStore((state) => state.setSelectedTool);
   const photoModePanelOpen = useUiStore((state) => state.photoModePanelOpen);
 
-  const [showGerarArquivoModal, setShowGerarArquivoModal] = useState(false);
   const [contextSelectedBoxIds, setContextSelectedBoxIds] = useState<string[]>([]);
-  const gerarArquivoHandlers = useGerarArquivoHandlers();
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
   const projectRef = useRef(project);
   const ctrlOrMetaPressedRef = useRef(false);
@@ -108,12 +143,6 @@ export default function Workspace({
       setViewerMounted(false);
     };
   }, [viewerOptionsStable]);
-
-  useEffect(() => {
-    const handleOpenGerarArquivo = () => setShowGerarArquivoModal(true);
-    window.addEventListener("pimo:open-gerar-arquivo-modal", handleOpenGerarArquivo);
-    return () => window.removeEventListener("pimo:open-gerar-arquivo-modal", handleOpenGerarArquivo);
-  }, []);
 
   // Registrar no PimoViewerContext apenas quando viewerApi muda (não quando viewerSync muda, para evitar loop ao rotacionar/atualizar projeto).
   useEffect(() => {
@@ -644,13 +673,18 @@ return (
     >
       <div className="workspace-canvas">
         <div className="workspace-toolbars" style={{ display: "flex", flexDirection: "column" }}>
-          <UnifiedTopToolbar />
-          <ViewerToolbar />
+          <UnifiedTopToolbar
+            onNovo={handleTopToolbarNovo}
+            onProjetos={handleTopToolbarProjetos}
+            activeTool={project.activeViewerTool ?? "select"}
+            onToolSelect={(toolId, _eventKey) => handleToolSelect(toolId)}
+            lockEnabled={lockEnabled}
+            onToggleLock={toggleLock}
+          />
+          <ViewerToolbar confirmNewOpen={confirmNewOpen} setConfirmNewOpen={setConfirmNewOpen} />
           <Tools3DToolbar
             activeTool={project.activeViewerTool ?? "select"}
             onToolSelect={handleToolSelect}
-            lockEnabled={lockEnabled}
-            onToggleLock={toggleLock}
           />
         </div>
 <div className="workspace-viewer" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
@@ -769,68 +803,6 @@ return (
         </div>
       </div>
     </main>
-      {gerarArquivoHandlers.layoutProgress?.visible && (
-        <div
-          className="modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          style={{ zIndex: 1200 }}
-        >
-          <div className="modal-card" style={{ maxWidth: 460, width: "92vw" }}>
-            <div className="modal-header">
-              <div className="modal-title">Layout Industrial</div>
-            </div>
-            <div className="modal-list" style={{ padding: 16 }}>
-              <div style={{ fontSize: 13, marginBottom: 10 }}>
-                {gerarArquivoHandlers.layoutProgress.message || "Gerando layout industrial otimizado… aguarde."}
-              </div>
-              <div
-                style={{
-                  width: "100%",
-                  height: 10,
-                  borderRadius: 6,
-                  background: "rgba(255,255,255,0.15)",
-                  overflow: "hidden",
-                  marginBottom: 12,
-                }}
-              >
-                <div
-                  style={{
-                    width: `${Math.max(2, Math.min(100, Math.round(gerarArquivoHandlers.layoutProgress.percent)))}%`,
-                    height: "100%",
-                    background: "var(--accent, #57a6ff)",
-                    transition: "width 140ms linear",
-                  }}
-                />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {Math.round(gerarArquivoHandlers.layoutProgress.percent)}%
-                </span>
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  onClick={gerarArquivoHandlers.cancelIndustrialLayout}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showGerarArquivoModal && (
-        <GerarArquivoModal
-          onClose={() => setShowGerarArquivoModal(false)}
-          hasBoxes={gerarArquivoHandlers.hasBoxes}
-          onCutlist={gerarArquivoHandlers.onCutlist}
-          onPdfTecnico={gerarArquivoHandlers.onPdfTecnico}
-          onUnificado={gerarArquivoHandlers.onUnificado}
-          onAmbos={gerarArquivoHandlers.onAmbos}
-          onLayoutCortePro={gerarArquivoHandlers.onLayoutCortePro}
-          onArquivoCompleto={gerarArquivoHandlers.onArquivoCompleto}
-        />
-      )}
     </>
   );
 }

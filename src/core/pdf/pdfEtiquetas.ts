@@ -6,6 +6,7 @@ import type { SettingsSchema } from "../settings/settingsService";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
+import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
 import type {
   LabelDesignerConfig,
   LabelTextElement,
@@ -45,6 +46,13 @@ type LabelItem = CutListItemComPreco & {
   /** Nome do projeto de origem da peça (fabricação em massa). */
   sourceProjectName?: string;
 };
+
+/** Nome industrial alinhado ao Layout de Corte PRO (`<prefixoCaixa>_<prefixoPeca>`). */
+function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiquetasPdf): string {
+  const projectName = item.sourceProjectName ?? project.projectName;
+  const boxNome = item.boxNome;
+  return buildCutLayoutProPartName(item, boxNome, projectName);
+}
 
 function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
   const boxById = new Map(project.boxes.map((b) => [b.id, b]));
@@ -194,10 +202,12 @@ async function renderEtiquetaPageFromDesignerConfig(
   const alt  = Math.round(item.dimensoes?.altura ?? 0);
   const esp  = Math.round(item.espessura ?? 0);
 
+  const nomeIndustrial = nomeIndustrialParaEtiqueta(item, project);
+
   const dataMap: Record<string, string> = {
     projeto:     effectiveProjectName || "PROJETO",
     caixa:       item.boxNome ?? item.boxId ?? "—",
-    peca:        item.pieceName ?? item.nome ?? "—",
+    peca:        nomeIndustrial,
     madeira:     (item.material ?? "—").toUpperCase(),
     medidas:     `${larg}×${alt}×${esp} mm`,
     numero_peca: etiquetaCode,
@@ -311,6 +321,11 @@ async function renderEtiquetaPage(
   const rightX = qrX + qrSize + 4;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(bodySize);
+  const nomeIndustrial = nomeIndustrialParaEtiqueta(item, project);
+  doc.setFont("helvetica", "bold");
+  doc.text(nomeIndustrial, rightX, rightY);
+  rightY += 4.2;
+  doc.setFont("helvetica", "normal");
   if (cfg.mostrarMaterial) {
     doc.text(`MAT: ${(item.material ?? "-").toUpperCase()}`, rightX, rightY);
     rightY += 4.2;

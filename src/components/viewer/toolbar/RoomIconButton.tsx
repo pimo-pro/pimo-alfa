@@ -45,6 +45,21 @@ export default function RoomIconButton() {
     uiStore.getState().clearSelection();
   }, [actions, roomPresent, setSelectedTool, viewerApi]);
 
+  /** Mesmo encaixe que `unifiedBubbleStyle` (28×28, ícone 22) para não aumentar a altura da barra; verde via token. */
+  const bubbleStyle = {
+    width: 28,
+    height: 28,
+    display: "flex" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    border: "none" as const,
+    borderRadius: 4,
+    cursor: "pointer" as const,
+    marginLeft: 4,
+    color: "var(--status-done-color)",
+    background: isActive ? "var(--toolbar-pressed-bg)" : "transparent",
+  };
+
   return (
     <button
       type="button"
@@ -52,14 +67,15 @@ export default function RoomIconButton() {
       aria-label={roomPresent ? "Remover sala" : "Criar sala"}
       aria-pressed={isActive}
       onClick={handleClick}
-      style={{
-        fontSize: 12,
-        background: isActive ? "rgba(59, 130, 246, 0.25)" : "transparent",
+      style={bubbleStyle}
+      onMouseEnter={(e) => {
+        if (!isActive) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = isActive ? "var(--toolbar-pressed-bg)" : "transparent";
       }}
     >
-      <span className="viewer-toolbar-icon" aria-hidden>
-        <Icon name="room" size={16} aria-hidden />
-      </span>
+      <Icon name="room" size={22} aria-hidden />
     </button>
   );
 }

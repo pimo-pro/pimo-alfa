@@ -2,6 +2,7 @@ import logoPimo from "../../../assets/logo-pi.png";
 import { useRef, type ReactNode } from "react";
 import { useTheme } from "../../../context/ThemeContext";
 import { Icon } from "@/components/icons";
+import HeaderUndoRedoButtons from "./HeaderUndoRedoButtons";
 
 type HeaderActionButtonProps = {
   title: string;
@@ -22,7 +23,7 @@ function HeaderActionButton({ title, ariaLabel, onClick, children }: HeaderActio
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
-        minHeight: 36,
+        minHeight: 29,
         padding: "0 10px",
         border: "1px solid var(--border)",
         borderRadius: "var(--radius)",
@@ -58,7 +59,7 @@ export default function Header() {
     <header
       style={{
         flexShrink: 0,
-        height: "56px",
+        height: "45px",
         background: `linear-gradient(90deg, var(--black), var(--navy))`,
         borderBottom: "1px solid var(--border)",
         display: "flex",
@@ -66,40 +67,49 @@ export default function Header() {
         padding: "0 20px",
       }}
     >
-      {/* Logótipo oficial */}
+      {/* Logótipo + título + desfazer/refazer (handlers registados pelo Workspace no LegacyApp) */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "10px",
-          cursor: "pointer",
-          background: "transparent",
-          border: "none",
-          boxShadow: "none",
-          outline: "none",
-        }}
-        onClick={() => {
-          window.history.pushState({}, "", "/");
-          window.dispatchEvent(new PopStateEvent("popstate"));
+          gap: 10,
         }}
       >
-        <img
-          src={logoPimo}
-          alt="PIMO"
+        <div
           style={{
-            height: 42,
-            width: "auto",
-            display: "block",
-            objectFit: "contain",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
             background: "transparent",
             border: "none",
             boxShadow: "none",
             outline: "none",
           }}
-        />
-        <div style={{ background: "transparent", border: "none", boxShadow: "none", outline: "none" }}>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>PiMo Studio</div>
+          onClick={() => {
+            window.history.pushState({}, "", "/");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
+        >
+          <img
+            src={logoPimo}
+            alt="PIMO"
+            style={{
+              height: 42,
+              width: "auto",
+              display: "block",
+              objectFit: "contain",
+              background: "transparent",
+              border: "none",
+              boxShadow: "none",
+              outline: "none",
+            }}
+          />
+          <div style={{ background: "transparent", border: "none", boxShadow: "none", outline: "none" }}>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>PiMo Studio</div>
+          </div>
         </div>
+        <HeaderUndoRedoButtons />
       </div>
 
       {/* Área Direita */}

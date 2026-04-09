@@ -1,73 +1,35 @@
 /**
  * Toolbar superior do Viewer.
- * Ações principais do projeto + Photo Mode (abre painel esquerdo).
+ * Ações principais do projeto.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from "react";
 import { useProject } from "../../../context/useProject";
 import { defaultState } from "../../../context/projectState";
 import { useWallStore } from "../../../stores/wallStore";
 import { useToast } from "../../../context/ToastContext";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
-import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
-import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { VIEWER_TOOLBAR_ITEMS } from "../../../constants/toolbarConfig";
 import { subscribeProjectsSyncStatus } from "../../../core/projects/projectsClient";
 import type { ToolbarActionId } from "../../../constants/toolbarConfig";
-import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
-import DisplayMenuButton from "../topbar/DisplayMenuButton";
 import ConfirmNewProjectModal from "../../modals/ConfirmNewProjectModal";
 import { Icon } from "@/components/icons";
 
-export default function ViewerToolbar() {
+export type ViewerToolbarProps = {
+  confirmNewOpen: boolean;
+  setConfirmNewOpen: Dispatch<SetStateAction<boolean>>;
+};
+
+export default function ViewerToolbar({ confirmNewOpen, setConfirmNewOpen }: ViewerToolbarProps) {
   const { actions, project } = useProject();
   const { showToast } = useToast();
   const { openModal } = useToolbarModal();
-  const { viewerApi } = usePimoViewerContext();
-  const photoModePanelOpen = useUiStore((s) => s.photoModePanelOpen);
-  const setPhotoModePanelOpen = useUiStore((s) => s.setPhotoModePanelOpen);
-  const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
-  const [confirmNewOpen, setConfirmNewOpen] = useState(false);
-  const visibilityMenuRef = useRef<HTMLDivElement | null>(null);
   const autosaveRunningRef = useRef(false);
   const lastErrorToastAtRef = useRef(0);
   const lastPendingToastAtRef = useRef(0);
   const lastOfflineToastAtRef = useRef(0);
   const lastSavedLocalToastKeyRef = useRef<string>("");
   const previousSyncStateRef = useRef<string>("");
-
-  const actionsRef = useRef(actions);
-  const viewerApiRef = useRef(viewerApi);
-  useEffect(() => {
-    actionsRef.current = actions;
-    viewerApiRef.current = viewerApi;
-  }, [actions, viewerApi]);
-
-  // Sincronizar painel foto com viewer e projeto (evitar loop: só quando photoModePanelOpen mudar).
-  useEffect(() => {
-    viewerApiRef.current?.setPhotoModeEnabled?.(photoModePanelOpen);
-    actionsRef.current.setViewerSettings({ photoModeEnabled: photoModePanelOpen });
-  }, [photoModePanelOpen]);
-
-  useEffect(() => {
-    if (!visibilityMenuOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!visibilityMenuRef.current?.contains(event.target as Node)) {
-        setVisibilityMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [visibilityMenuOpen]);
-
-  // Cleanup no unmount: fechar painel foto e desativar no viewer.
-  useEffect(() => {
-    return () => {
-      viewerApiRef.current?.setPhotoModeEnabled?.(false);
-      actionsRef.current.setViewerSettings({ photoModeEnabled: false });
-      uiStore.getState().setPhotoModePanelOpen(false);
-    };
-  }, []);
 
   useEffect(() => {
     const unsub = subscribeProjectsSyncStatus((status) => {
@@ -120,6 +82,21 @@ export default function ViewerToolbar() {
 
   const wallCount = useWallStore((s) => s.walls.length);
 
+  const viewerToolbarItems = useMemo(
+    () =>
+      VIEWER_TOOLBAR_ITEMS.filter(
+        (item) =>
+          item.id !== "novo" &&
+          item.id !== "projeto" &&
+          item.id !== "desfazer" &&
+          item.id !== "refazer" &&
+          item.id !== "imagem" &&
+          item.id !== "reset-camera" &&
+          item.id !== "enviar"
+      ),
+    []
+  );
+
   const hasUnsavedChanges = useMemo(() => {
     if (!project.lastAutosaveTime) return true;
     const savedAt = Date.parse(project.lastAutosaveTime);
@@ -157,10 +134,6 @@ export default function ViewerToolbar() {
   }, [actions, project.estaCarregando, hasUnsavedChanges, confirmNewOpen]);
 
   const handleAction = (id: ToolbarActionId) => {
-    if (id === "reset-camera") {
-      viewerApi?.resetCamera?.();
-      return;
-    }
     if (id === "projeto") {
       openModal("projects");
       return;
@@ -171,18 +144,6 @@ export default function ViewerToolbar() {
       } else {
         void actions.createNewProject();
       }
-      return;
-    }
-    if (id === "desfazer") {
-      actions.undo();
-      return;
-    }
-    if (id === "refazer") {
-      actions.redo();
-      return;
-    }
-    if (id === "enviar") {
-      openModal("send");
       return;
     }
   };
@@ -202,42 +163,9 @@ export default function ViewerToolbar() {
     setConfirmNewOpen(false);
   };
 
-  const togglePhotoMenu = () => {
-    setPhotoModePanelOpen(!photoModePanelOpen);
-    setVisibilityMenuOpen(false);
-  };
-
-  const toggleVisibilityMenu = () => {
-    setVisibilityMenuOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setPhotoModePanelOpen(false);
-      }
-      return next;
-    });
-  };
-
   return (
     <div className="viewer-toolbar" role="toolbar" aria-label="Ações do Viewer">
-      {VIEWER_TOOLBAR_ITEMS.map((item) => {
-        if (item.id === "imagem") {
-          return (
-            <button
-              key={item.id}
-              type="button"
-              title={item.tooltip}
-              aria-label={item.tooltip}
-              aria-pressed={photoModePanelOpen}
-              onClick={togglePhotoMenu}
-              style={{ fontSize: 12 }}
-            >
-              <span className="viewer-toolbar-icon" aria-hidden>
-                <Icon name={item.iconName} size={16} aria-hidden />
-              </span>
-            </button>
-          );
-        }
-
+      {viewerToolbarItems.map((item) => {
         return (
           <button
             key={item.id}
@@ -253,105 +181,6 @@ export default function ViewerToolbar() {
           </button>
         );
       })}
-      <RoomIconButton />
-      <DisplayMenuButton />
-      <div ref={visibilityMenuRef} className="viewer-toolbar-popover-anchor">
-        <button
-          type="button"
-          title="Opções de visualização"
-          aria-label="Opções de visualização"
-          aria-haspopup="dialog"
-          aria-expanded={visibilityMenuOpen}
-          aria-pressed={visibilityMenuOpen}
-          onClick={toggleVisibilityMenu}
-          style={{ fontSize: 12 }}
-        >
-          <span className="viewer-toolbar-icon" aria-hidden>
-            <Icon name="displayCheck" size={16} aria-hidden />
-          </span>
-        </button>
-        {visibilityMenuOpen && (
-          <div className="viewer-toolbar-popover-panel" role="dialog" aria-label="Opções de visualização">
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 260 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={project.viewerSettings.showPanelEdges}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    actions.setViewerSettings({ showPanelEdges: checked });
-                    viewerApi?.setPanelEdgesVisible?.(checked);
-                  }}
-                />
-                Mostrar arestas dos painéis
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={project.viewerSettings.hideAllPanels}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    actions.setViewerSettings({ hideAllPanels: checked });
-                    viewerApi?.setAllPanelsHidden?.(checked);
-                  }}
-                />
-                Esconder todos os painéis
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={project.viewerSettings.showCeiling}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    actions.setViewerSettings({ showCeiling: checked });
-                    viewerApi?.setRoomCeilingVisible?.(checked);
-                  }}
-                />
-                Mostrar teto da sala
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={project.viewerSettings.wallEditMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    actions.setViewerSettings({ wallEditMode: checked });
-                    viewerApi?.setWallEditMode?.(checked);
-                  }}
-                />
-                Modo edição de paredes
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={project.viewerSettings.enableReflections}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    actions.setViewerSettings({ enableReflections: checked });
-                    viewerApi?.setReflectionsEnabled?.(checked);
-                  }}
-                />
-                Reflexos dinâmicos (probe)
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="viewer-toolbar-action-container" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <button
-          type="button"
-          className="button button-primary viewer-action-button"
-          onClick={() => void actions.gerarESalvarDesign()}
-          disabled={project.estaCarregando}
-          style={{
-            background: "var(--blue-light)",
-            opacity: project.estaCarregando ? 0.7 : 1,
-            cursor: project.estaCarregando ? "not-allowed" : "pointer",
-          }}
-        >
-          Gerar e Salvar Design
-        </button>
-      </div>
       <ConfirmNewProjectModal
         open={confirmNewOpen}
         onSave={() => void handleSaveBeforeNew()}

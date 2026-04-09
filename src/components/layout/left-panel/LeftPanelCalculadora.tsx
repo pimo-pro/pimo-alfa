@@ -147,15 +147,6 @@ export function LeftPanelCalculadora() {
               )}
             </div>
           </Panel>
-          <button
-            type="button"
-            onClick={() => void actions.gerarESalvarDesign()}
-            disabled={project.estaCarregando}
-            className="button button-primary"
-            style={{ width: "100%", marginTop: 8 }}
-          >
-            Gerar e Salvar Design
-          </button>
         </aside>
       </div>
     </div>

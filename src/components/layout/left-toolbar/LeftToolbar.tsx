@@ -60,7 +60,7 @@ export default function LeftToolbar({ selectedId, onSelect }: LeftToolbarProps) 
               aria-pressed={isSelected}
             >
               <span className="left-toolbar-icon" aria-hidden="true">
-                <Icon name={item.iconName} size={16} aria-hidden />
+                <Icon name={item.iconName} size={28} aria-hidden />
               </span>
               <span className="left-toolbar-label">{item.label}</span>
             </button>
@@ -77,7 +77,7 @@ export default function LeftToolbar({ selectedId, onSelect }: LeftToolbarProps) 
             aria-pressed={isSelected}
           >
             <span className="left-toolbar-icon" aria-hidden="true">
-              <Icon name={item.iconName} size={16} aria-hidden />
+              <Icon name={item.iconName} size={28} aria-hidden />
             </span>
             <span className="left-toolbar-label">{item.label}</span>
           </button>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type {
   UltraPerformanceInternalMode,
   ViewerBackgroundMode,
@@ -19,7 +19,11 @@ const UNIQUE_BACKGROUND_OPTIONS = Array.from(
   new Map(BACKGROUND_OPTIONS.map((option) => [option.value, option])).values()
 );
 
-export default function DisplayMenuButton() {
+export type DisplayMenuButtonProps = {
+  triggerStyle?: CSSProperties;
+};
+
+export default function DisplayMenuButton({ triggerStyle }: DisplayMenuButtonProps) {
   const { actions, project } = useProject();
   const { viewerApi } = usePimoViewerContext();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,11 +99,36 @@ export default function DisplayMenuButton() {
         aria-expanded={menuOpen}
         aria-pressed={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
-        style={{ fontSize: 12 }}
+        style={
+          triggerStyle
+            ? {
+                ...triggerStyle,
+                background: menuOpen ? "var(--toolbar-pressed-bg)" : "transparent",
+              }
+            : { fontSize: 12 }
+        }
+        onMouseEnter={
+          triggerStyle
+            ? (e) => {
+                if (!menuOpen) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+              }
+            : undefined
+        }
+        onMouseLeave={
+          triggerStyle
+            ? (e) => {
+                e.currentTarget.style.background = menuOpen ? "var(--toolbar-pressed-bg)" : "transparent";
+              }
+            : undefined
+        }
       >
-        <span className="viewer-toolbar-icon" aria-hidden>
-          <Icon name="displayMenu" size={16} aria-hidden />
-        </span>
+        {triggerStyle ? (
+          <Icon name="displayMenu" size={22} aria-hidden />
+        ) : (
+          <span className="viewer-toolbar-icon" aria-hidden>
+            <Icon name="displayMenu" size={16} aria-hidden />
+          </span>
+        )}
       </button>
 
       {menuOpen && (

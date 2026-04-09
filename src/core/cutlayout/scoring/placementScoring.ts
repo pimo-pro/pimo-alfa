@@ -145,17 +145,17 @@ export function scorePlacement(
   const tightnessVal = placement.tightnessScore ?? 0;
 
   // Fase 3: tightnessBonus reforçado nas chapas tardias para forçar compactação.
-  const tightnessBonus = tightnessVal * (0.25 + lateFactor * 0.35);
+  const tightnessBonus = tightnessVal * (0.55 + lateFactor * 0.35);
 
   // Fase 3: gapFillBonus reforçado para peças pequenas em gaps apertados.
   const isSmall = placement.w * placement.h < sheetArea * 0.05;
   const gapFillBonus = isSmall && tightnessVal >= 0.5 ? 0.10 + lateFactor * 0.15 : 0;
 
   // Fase 3: isolationPenalty aumentada (0.22 vs 0.15) — penaliza mais peças sem vizinhos.
-  const isolationPenalty = lateFactor > 0 && tightnessVal === 0 ? lateFactor * 0.22 : 0;
+  const isolationPenalty = tightnessVal === 0 ? (0.15 + lateFactor * 0.22) : 0;
 
   // Fase 3: islandPenalty — penaliza peças que criam "ilhas" (tightnessScore < 0.15).
-  const islandPenalty = (tightnessVal < 0.15 ? 0.12 : 0) * (1 + lateFactor);
+  const islandPenalty = (tightnessVal < 0.15 ? 0.28 : 0) * (1 + lateFactor);
 
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {
