@@ -3,7 +3,7 @@ import { useSelectedBoxInfo } from "../../../hooks/useSelectedBoxInfo";
 
 /**
  * Overlay no canto inferior esquerdo da área de visualização 3D (viewport).
- * Exibe apenas L, A, P e rotação da peça selecionada (quando disponíveis).
+ * Exibe L, A, P, profundidades de referência (mm) e rotação da caixa selecionada (quando disponíveis).
  * O controle de Lock está exclusivamente no menu de contexto (clique direito).
  */
 export default function BoxInfoOverlay() {
@@ -28,12 +28,13 @@ export default function BoxInfoOverlay() {
         borderRadius: 6,
         fontFamily: "var(--font-sans, system-ui, sans-serif)",
         lineHeight: 1.4,
-        whiteSpace: "nowrap",
       }}
     >
       <div>L {info.L.toFixed(2)} m</div>
       <div>A {info.A.toFixed(2)} m</div>
       <div>P {info.P.toFixed(2)} m</div>
+      <div>Profundidade externa: {info.profundidadeExternaMm} mm</div>
+      <div>Profundidade interna útil: {info.profundidadeInternaUtilMm} mm</div>
       <div>Rotação: {info.rotationDeg.toFixed(0)}°</div>
     </div>
   );

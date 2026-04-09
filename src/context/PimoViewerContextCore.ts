@@ -93,6 +93,12 @@ export type PimoViewerApi = {
   getSelectedBoxScreenPosition?: () => { x: number; y: number } | null;
   /** Projeta um ponto 3D (mundial) em pixels relativos ao container. Retorna null se atrás da câmera. */
   projectWorldToScreen?: (_worldPoint: import("three").Vector3) => { x: number; y: number } | null;
+  /** FASE 6 — Eixo de profundidade (Z local) projetável para overlay. */
+  getSelectedBoxDepthAxisWorldSegment?: (
+    _lengthM: number
+  ) => { start: import("three").Vector3; end: import("three").Vector3 } | null;
+  /** FASE 6 — Id da caixa sob o ponteiro (raycast). */
+  getBoxIdAtPointerPublic?: (_event: { clientX: number; clientY: number }) => string | null;
   /** Ativa/desativa modo de medição interna por bordas (ferramenta CAD). */
   setInternalMeasurementMode?: (_enabled: boolean) => void;
   getInternalMeasurementMode?: () => boolean;

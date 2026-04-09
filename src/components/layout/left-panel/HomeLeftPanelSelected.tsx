@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
 import UnifiedPopover, { StepperPopover } from "../../ui/UnifiedPopover";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
@@ -9,6 +10,8 @@ import { getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/mater
 import { MaterialPickerModal } from "./MaterialPickerModal";
 import type { UseMaterialsForPickerResult } from "./hooks/useMaterialsForPicker";
 import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
+import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
+import { Icon } from "@/components/icons";
 
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
@@ -24,6 +27,11 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
   const selectedGavetas = selectedBox?.gavetas ?? 0;
   const { materialModalOpen, setMaterialModalOpen, materialsList, materialsLoading } = materialsPicker;
   const { viewerApi } = usePimoViewerContext();
+
+  const profundidadeLeitura = useMemo(
+    () => (selectedBox ? computeBoxProfundidadeLeituraMm(selectedBox, project.rules) : null),
+    [selectedBox, project.rules]
+  );
 
   return (
     <div className="left-panel-content">
@@ -133,6 +141,82 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
               </div>
             </div>
           </Panel>
+
+          {selectedBox && profundidadeLeitura && (
+            <details
+              style={{
+                marginTop: 10,
+                padding: "12px 12px",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
+                fontSize: 12,
+              }}
+            >
+              <summary
+                style={{
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  color: "var(--text-main)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Icon name="ruler" size={16} aria-hidden />
+                Profundidade da caixa (referência)
+              </summary>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div
+                  style={{
+                    paddingLeft: 10,
+                    borderLeft: "3px solid #38bdf8",
+                    color: "var(--text-main)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Externa
+                  </div>
+                  <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeExternaMm} mm</div>
+                </div>
+                <div
+                  style={{
+                    paddingLeft: 10,
+                    borderLeft: "3px solid #c4b5fd",
+                    color: "var(--text-main)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Útil interna
+                  </div>
+                  <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
+                </div>
+              </div>
+            </details>
+          )}
 
           {selectedBox && (
             <button

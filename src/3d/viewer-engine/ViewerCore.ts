@@ -1001,6 +1001,33 @@ export class ViewerCore {
   }
 
   /**
+   * FASE 6 — Segmento no eixo de profundidade local (Z) da caixa selecionada, em espaço mundo.
+   * Apenas leitura para overlays 2D (projectWorldToScreen); não altera geometria.
+   */
+  getSelectedBoxDepthAxisWorldSegment(
+    lengthMeters: number
+  ): { start: THREE.Vector3; end: THREE.Vector3 } | null {
+    const id = this.viewerState.getSelectedBox();
+    if (!id) return null;
+    const entry = this.boxes.get(id);
+    if (!entry) return null;
+    const len = Number(lengthMeters);
+    if (!Number.isFinite(len) || len <= 0) return null;
+    const h = len * 0.5;
+    entry.mesh.updateMatrixWorld(true);
+    const a = new THREE.Vector3(0, 0, -h);
+    const b = new THREE.Vector3(0, 0, h);
+    a.applyMatrix4(entry.mesh.matrixWorld);
+    b.applyMatrix4(entry.mesh.matrixWorld);
+    return { start: a, end: b };
+  }
+
+  /** FASE 6 — Raycast no canvas (mesma lógica que o seletor de caixas). */
+  getBoxIdAtPointerPublic(event: { clientX: number; clientY: number }): string | null {
+    return this.getBoxIdAtPointer(event);
+  }
+
+  /**
    * Projeta um ponto 3D (mundial) em coordenadas de ecrã (pixels relativos ao container do viewer).
    * Retorna null se o ponto estiver atrás da câmera.
    */

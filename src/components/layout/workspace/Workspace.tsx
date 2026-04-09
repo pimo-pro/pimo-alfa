@@ -17,6 +17,7 @@ import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../.
 import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import BoxInfoOverlay from "./BoxInfoOverlay";
+import BoxDepthMeasureOverlay from "./BoxDepthMeasureOverlay";
 import ContextMenu from "./ContextMenu";
 import { devLogger } from "../../../utils/devLogger";
 import { useWorkspaceUndoRedoRegistry } from "../../../context/WorkspaceUndoRedoRegistryContext";
@@ -34,6 +35,7 @@ export default function Workspace({
   viewerOptions,
 }: WorkspaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const viewerSurfaceRef = useRef<HTMLDivElement | null>(null);
   const { project, actions, viewerSync } = useProject();
   const { registerWorkspaceUndoRedo } = useWorkspaceUndoRedoRegistry();
   const { openModal } = useToolbarModal();
@@ -689,6 +691,7 @@ return (
         </div>
 <div className="workspace-viewer" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
           <div
+            ref={viewerSurfaceRef}
             style={{
               position: "relative",
               flex: 1,
@@ -738,6 +741,7 @@ return (
               aria-hidden
             >
               <BoxInfoOverlay />
+              <BoxDepthMeasureOverlay surfaceRef={viewerSurfaceRef} />
             </div>
           </div>
           {!viewerApi.viewerReady && (

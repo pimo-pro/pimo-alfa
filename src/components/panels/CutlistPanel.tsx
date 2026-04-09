@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Panel from "../ui/Panel";
 import { useCutlistData } from "../../hooks/useCutlistData";
 import { formatCurrency } from "../../utils/formatting";
@@ -49,6 +50,7 @@ const aplicacaoFerragens: Record<string, string> = {
 };
 
 export default function CutlistPanel() {
+  const [showBoxDepthCols, setShowBoxDepthCols] = useState(false);
   const data = useCutlistData();
   const {
     boxes,
@@ -82,11 +84,53 @@ export default function CutlistPanel() {
     <Panel title="Cutlist Industrial">
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
-          <div style={sectionTitleStyle}>Painéis (todas as caixas)</div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <div style={{ ...sectionTitleStyle, marginBottom: 0 }}>Painéis (todas as caixas)</div>
+            <button
+              type="button"
+              onClick={() => setShowBoxDepthCols((v) => !v)}
+              style={{
+                fontSize: 11,
+                padding: "4px 10px",
+                borderRadius: "var(--radius)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.04)",
+                color: "var(--text-main)",
+                cursor: "pointer",
+              }}
+            >
+              {showBoxDepthCols ? "Ocultar" : "Mostrar"} profundidade da caixa
+            </button>
+          </div>
           <table style={tableStyle}>
             <thead>
               <tr>
                 <th style={headerCellStyle}>Caixa</th>
+                {showBoxDepthCols && (
+                  <>
+                    <th
+                      style={headerCellStyle}
+                      title="Profundidade externa total da caixa (mm). Não é a profundidade da peça listada."
+                    >
+                      P. ext. caixa (mm)
+                    </th>
+                    <th
+                      style={headerCellStyle}
+                      title="Profundidade interna útil da caixa (mm), modelo FASE 3/4. Não é a profundidade da peça."
+                    >
+                      P. útil int. (mm)
+                    </th>
+                  </>
+                )}
                 <th style={headerCellStyle}>Tipo</th>
                 <th style={headerCellStyle}>Largura (mm)</th>
                 <th style={headerCellStyle}>Altura (mm)</th>
@@ -100,6 +144,12 @@ export default function CutlistPanel() {
               {allPaineis.map((painel) => (
                 <tr key={painel.key}>
                   <td style={bodyCellStyle}>{painel.boxNome}</td>
+                  {showBoxDepthCols && (
+                    <>
+                      <td style={bodyCellStyle}>{painel.boxProfundidadeExternaMm}</td>
+                      <td style={bodyCellStyle}>{painel.boxProfundidadeInternaUtilMm}</td>
+                    </>
+                  )}
                   <td style={bodyCellStyle}>{painel.tipo}</td>
                   <td style={bodyCellStyle}>{painel.largura_mm}</td>
                   <td style={bodyCellStyle}>{painel.altura_mm}</td>

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectState, ViewerSync } from "../context/projectTypes";
+import { computeBoxProfundidadeLeituraMm } from "../utils/boxProfundidadeLeituraUi";
 
 export type SelectedBoxInfo = {
   L: number;
   A: number;
   P: number;
   rotationDeg: number;
+  profundidadeExternaMm: number;
+  profundidadeInternaUtilMm: number;
 };
 
 function computeSelectedBoxInfo(
@@ -19,6 +22,7 @@ function computeSelectedBoxInfo(
   const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
   const rotRad = box?.rotacaoY ?? 0;
   const rotationDeg = (rotRad * 180) / Math.PI;
+  const depth = box != null ? computeBoxProfundidadeLeituraMm(box, project.rules) : null;
 
   if (!dims) return null;
   return {
@@ -26,6 +30,8 @@ function computeSelectedBoxInfo(
     A: dims.height,
     P: dims.depth,
     rotationDeg,
+    profundidadeExternaMm: depth?.profundidadeExternaMm ?? 0,
+    profundidadeInternaUtilMm: depth?.profundidadeInternaUtilMm ?? 0,
   };
 }
 
@@ -58,7 +64,9 @@ export function useSelectedBoxInfo(
         prev.L === next.L &&
         prev.A === next.A &&
         prev.P === next.P &&
-        Math.abs(prev.rotationDeg - next.rotationDeg) < 0.01
+        Math.abs(prev.rotationDeg - next.rotationDeg) < 0.01 &&
+        prev.profundidadeExternaMm === next.profundidadeExternaMm &&
+        prev.profundidadeInternaUtilMm === next.profundidadeInternaUtilMm
       ) {
         return prev;
       }
@@ -75,7 +83,7 @@ export function useSelectedBoxInfo(
     return () => {
       unsubscribe?.();
     };
-  }, [viewerSync, project.selectedWorkspaceBoxId, refreshInfo]);
+  }, [viewerSync, project.selectedWorkspaceBoxId, project.rules, project.workspaceBoxes, refreshInfo]);
 
   return info;
 }

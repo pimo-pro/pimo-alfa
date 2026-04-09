@@ -46,7 +46,10 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
             if (box?.locked) return prev;
             const workspaceBoxes = prev.workspaceBoxes.map((b) => {
               if (b.id !== boxId) return b;
-              const updatedBox = { ...b, dimensoes: { ...b.dimensoes, ...dimensoes } };
+              let updatedBox = { ...b, dimensoes: { ...b.dimensoes, ...dimensoes } };
+              if (dimensoes.profundidade !== undefined) {
+                updatedBox = { ...updatedBox, profundidadeExterna: dimensoes.profundidade };
+              }
               const layers = regenerateLayersForBox(updatedBox);
               return { ...updatedBox, ...layers };
             });
@@ -65,7 +68,10 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
           if (box?.locked) return prev;
           const workspaceBoxes = prev.workspaceBoxes.map((boxItem) => {
             if (boxItem.id !== boxId) return boxItem;
-            const updatedBox = { ...boxItem, dimensoes: { ...boxItem.dimensoes, ...dimensoes } };
+            let updatedBox = { ...boxItem, dimensoes: { ...boxItem.dimensoes, ...dimensoes } };
+            if (dimensoes.profundidade !== undefined) {
+              updatedBox = { ...updatedBox, profundidadeExterna: dimensoes.profundidade };
+            }
             const layers = regenerateLayersForBox(updatedBox);
             return { ...updatedBox, ...layers };
           });

@@ -95,7 +95,12 @@ export function reviveState(snapshot: unknown): ProjectState | null {
             const models =
               box.models ?? (box.modelId != null ? [{ id: `${box.id}-model-1`, modelId: box.modelId }] : []);
             const { modelId: _modelId, ...rest } = box;
-            return { ...rest, models, locked: rest.locked === true };
+            const next: WorkspaceBox = { ...rest, models, locked: rest.locked === true };
+            if (next.costaAtiva === undefined) next.costaAtiva = true;
+            if (next.profundidadeExterna === undefined) {
+              next.profundidadeExterna = next.dimensoes?.profundidade ?? 0;
+            }
+            return next;
           })
           .filter((box: { id?: string }) => {
             if (!box?.id || typeof box.id !== "string") return false;

@@ -18,6 +18,7 @@ import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
+import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 
 /**
  * Converte furos de caneco da porta (Y em coordenadas do painel: topo=0, Y↓) para offsets industriais
@@ -61,6 +62,17 @@ export function cutlistComPrecoFromBox(
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
   const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
   const material = matInfo.label;
+  const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
+  const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
+    {
+      dimensoes: { profundidade: profundidadeExternaMm },
+      espessura: box.espessura,
+      portaTipo: box.portaTipo,
+      doorsLayer: box.doorsLayer,
+      costaAtiva: box.costaAtiva,
+    },
+    effRules.madeira.espessuraCosta
+  );
   const visualMaterial = materialId
     ? getVisualMaterialForBox(box, projectMaterialId)
     : getFallbackMaterial();
@@ -80,6 +92,8 @@ export function cutlistComPrecoFromBox(
     materialId,
     visualMaterial,
     faceMaterials: { top: visualMaterial, front: visualMaterial } as { top?: typeof visualMaterial; front?: typeof visualMaterial },
+    boxProfundidadeExternaMm: profundidadeExternaMm,
+    boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
   };
 
   const firstDoorPanel = modelo.paineis.find(

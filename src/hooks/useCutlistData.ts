@@ -9,6 +9,7 @@ import { gerarModeloIndustrial } from "../core/manufacturing/boxManufacturing";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../core/industriais/ferragensIndustriais";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
+import { computeBoxProfundidadeLeituraMm } from "../utils/boxProfundidadeLeituraUi";
 
 export type PainelRow = {
   key: string;
@@ -20,6 +21,8 @@ export type PainelRow = {
   orientacaoFibra: string;
   quantidade: number;
   custo: number;
+  boxProfundidadeExternaMm: number;
+  boxProfundidadeInternaUtilMm: number;
 };
 
 export type PortaRow = {
@@ -83,13 +86,23 @@ export function useCutlistData() {
     const allFerragens: FerragemRow[] = [];
 
     boxes.forEach((box) => {
+      const { profundidadeExternaMm, profundidadeInternaUtilMm } = computeBoxProfundidadeLeituraMm(
+        box,
+        project.rules
+      );
       const modelo = gerarModeloIndustrial(box, project.rules);
       const boxNome = box.nome || box.id;
       totalAreaMm2 += modelo.cutlist.areaTotal_mm2;
       modelo.paineis.forEach((p) => {
         totalPaineisQty += p.quantidade;
         custoTotalPaineis += p.custo;
-        allPaineis.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
+        allPaineis.push({
+          ...p,
+          key: `${box.id}-${p.id}`,
+          boxNome,
+          boxProfundidadeExternaMm: profundidadeExternaMm,
+          boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
+        });
       });
       modelo.portas.forEach((p) => {
         totalPortasQty += 1;

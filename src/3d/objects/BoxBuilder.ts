@@ -34,7 +34,8 @@ import { getWardrobeGroupFromBaseCabinetId, isWardrobeVerticalDividerEnabled } f
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
  * Aplica-se a modelos base, caixas manuais, calculadora, duplicadas, templates e personalizadas.
  * Dimensões em cena em metros (1 unidade = 1 m).
- * - Costa (fundo): 10 mm, sempre ATRÁS da caixa; profundidade da caixa NUNCA é reduzida pela costa.
+ * - Profundidade exterior: `depth` (= profundidade externa em m; p.ex. alinhada a `profundidadeExterna` mm).
+ * - Costa: espessura padrão 10 mm (SYSTEM_BACK_MM), no interior do volume; não prolonga o bbox em Z.
  * - Cima/fundo: largura total × profundidade total × 19 mm.
  * - Laterais: DENTRO; altura = altura - 38 mm, profundidade = total, espessura 19 mm.
  * - Prateleiras: DENTRO; largura = largura - laterais - 1 mm - 1 mm; profundidade = profundidade - 5 mm (folga frontal), 19 mm.
@@ -136,7 +137,7 @@ const resolveDimensions = (options: BoxOptions = {}) => {
  * Especificação dos painéis segundo regras de marcenaria.
  * - Cima/fundo: largura total × profundidade total × 19 mm.
  * - Laterais: DENTRO; altura = altura - 38 mm, profundidade = total, 19 mm. Posição x dentro das faces.
- * - Costa: ATRÁS da caixa; largura total × altura total × 10 mm; z = -depth/2 - 5 mm.
+ * - Costa: dentro do volume; largura total × altura total × 10 mm; centro em z = -depth/2 + espessuraCosta/2.
  * Tamanhos em Three.js: [x_size, y_size, z_size] = [largura, altura, profundidade] para cada painel.
  */
 function getPanelSpecs(width: number, height: number, depth: number) {
@@ -160,7 +161,7 @@ function getPanelSpecs(width: number, height: number, depth: number) {
     },
     back: {
       size: [width, height, BACK_THICKNESS_M] as const,
-      pos: [0, 0, -depth / 2 - BACK_THICKNESS_M / 2] as const,
+      pos: [0, 0, -depth / 2 + BACK_THICKNESS_M / 2] as const,
     },
   };
 }

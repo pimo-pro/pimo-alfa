@@ -238,6 +238,8 @@ export const createWorkspaceBox = (
     drawersLayer: [],
     locked: false,
     piHideDrawerHoles: overrides?.piHideDrawerHoles === true,
+    costaAtiva: true,
+    profundidadeExterna: dimensoes.profundidade,
   };
   
   // Regenerate layers based on portaTipo and gavetas
@@ -512,6 +514,8 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     catalogItemId: box.catalogItemId,
     baseCabinetId: box.baseCabinetId,
     piHideDrawerHoles: box.piHideDrawerHoles === true,
+    costaAtiva: box.costaAtiva,
+    profundidadeExterna: box.profundidadeExterna,
   };
 };
 

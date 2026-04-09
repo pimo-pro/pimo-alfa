@@ -4,15 +4,21 @@
  * material do móvel, animação de câmara e pós-processamento.
  */
 
-import React from "react";
+import React, { useRef } from "react";
 import styles from "./LandingV4.module.css";
-// import { useLanding3D } from "./useLanding3D";
-
-// TODO: Implementar lógica do canvas após aprovação do esqueleto.
+import { useLanding3D } from "./useLanding3D";
 
 export const Landing3DCanvas: React.FC = () => {
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  useLanding3D(canvasRef);
+
   return (
-    <div className={styles.canvas}>
+    <div
+      ref={canvasRef}
+      className={styles.canvas}
+      style={{ width: "100%", height: "100vh" }}
+    >
       {/* Canvas Three.js será renderizado aqui */}
     </div>
   );

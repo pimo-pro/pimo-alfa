@@ -35,6 +35,8 @@ const VIEWER_CORE_UTILITY_METHODS = [
   "getDimensionsOverlayVisible",
   "getSelectedBoxScreenPosition",
   "projectWorldToScreen",
+  "getSelectedBoxDepthAxisWorldSegment",
+  "getBoxIdAtPointerPublic",
   "setInternalMeasurementMode",
   "getInternalMeasurementMode",
   "setManualWallHidden",
@@ -80,6 +82,8 @@ const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   getShadowIntensity: () => 1,
   getBoxIdByMesh: () => null,
   projectWorldToScreen: () => null,
+  getSelectedBoxDepthAxisWorldSegment: () => null,
+  getBoxIdAtPointerPublic: () => null,
   setInternalMeasurementMode: () => {},
   getInternalMeasurementMode: () => false,
 };

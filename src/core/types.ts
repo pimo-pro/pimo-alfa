@@ -137,6 +137,10 @@ export interface CutListItem {
   qrSvg?: string;
   /** Índice sequencial da peça no ciclo 1..99. */
   pieceNumber?: number;
+  /** Profundidade exterior da caixa (mm), FASE 2/4 — não é a terceira dimensão da peça na lista. */
+  boxProfundidadeExternaMm?: number;
+  /** Profundidade útil interna da caixa (mm), FASE 3/4 — mesmo modelo que `getProfundidadeInternaUtilMm`. */
+  boxProfundidadeInternaUtilMm?: number;
 }
 
 /** Instância de um modelo CAD (GLB) associada a uma caixa. */
@@ -286,6 +290,10 @@ export interface BoxModule {
   cutListComPreco: CutListItemComPreco[];
   estrutura3D: Estrutura3D | null;
   precoTotalPecas: number;
+  /** FASE 2 — Ver `WorkspaceBox.costaAtiva`. */
+  costaAtiva?: boolean;
+  /** FASE 2 — Ver `WorkspaceBox.profundidadeExterna`. */
+  profundidadeExterna?: number;
 }
 
 export interface WorkspaceBox {
@@ -352,6 +360,16 @@ export interface WorkspaceBox {
   material?: string;
   /** Se true, a peça não pode ser movida, redimensionada nem transformada (apenas selecionável para medição). */
   locked?: boolean;
+  /**
+   * FASE 2 — Costa estrutural ativa (default lógico: true quando omitido em projetos antigos).
+   * Ver `resolveCostaAtiva` em `boxDepthModel.ts`.
+   */
+  costaAtiva?: boolean;
+  /**
+   * FASE 2 — Profundidade externa explícita (mm), alinhada a `dimensoes.profundidade`.
+   * Mantida em sincrono nas ações de dimensão; facilita FASE 3–4.
+   */
+  profundidadeExterna?: number;
 }
 
 export interface ProjetoConfig {
