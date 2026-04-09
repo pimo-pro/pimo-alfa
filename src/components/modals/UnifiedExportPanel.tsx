@@ -75,6 +75,23 @@ const finalBtnStyle: CSSProperties = {
   boxSizing: "border-box",
 };
 
+const fabricationBtnStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 37,
+  padding: "8px 12px",
+  borderRadius: 6,
+  fontSize: 13,
+  fontWeight: 600,
+  lineHeight: 1.2,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  boxSizing: "border-box",
+  background: "#22c55e",
+  color: "#fff",
+};
+
 const finalIconWrap: CSSProperties = {
   width: 22,
   height: 22,
@@ -102,6 +119,11 @@ export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
     onClose();
   };
 
+  const handlePedirFabricacao = async () => {
+    await actions.gerarESalvarDesign();
+    actions.setReadyForProduction(true);
+  };
+
   const handleSalvarEGerarEEnviar = async () => {
     await actions.gerarESalvarDesign();
     await Promise.resolve(sendPackage.buildSendPackage());
@@ -122,7 +144,14 @@ export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
     >
       <div
         className="modal-card"
-        style={{ maxWidth: 560, maxHeight: "90vh", overflow: "auto" }}
+        style={{
+          width: "min(100%, 1000px)",
+          maxWidth: 1000,
+          maxHeight: "90vh",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
@@ -132,101 +161,151 @@ export default function UnifiedExportPanel({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        <div className="unified-export-panel" style={{ padding: "14px" }}>
-          <div style={cardStyle}>
-            <div style={cardTitleStyle}>Gerar Arquivo</div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: 7,
-              }}
-            >
-              <button
-                type="button"
-                className="modal-action"
-                style={exportGridBtnStyle}
-                onClick={wrap(onPdfTecnico)}
-                disabled={!hasBoxes}
-              >
-                <span style={iconSlotEmpty} aria-hidden />
-                <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar PDF Técnico</span>
-              </button>
-              <button
-                type="button"
-                className="modal-action"
-                style={exportGridBtnStyle}
-                onClick={wrap(onCutlist)}
-                disabled={!hasBoxes}
-              >
-                <span style={iconSlotEmpty} aria-hidden />
-                <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar Cutlist</span>
-              </button>
-              <button
-                type="button"
-                className="modal-action"
-                style={exportGridBtnStyle}
-                onClick={wrap(onUnificado)}
-                disabled={!hasBoxes}
-              >
-                <span style={iconSlotEmpty} aria-hidden />
-                <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar Arquivo Unificado (NOVO)</span>
-              </button>
-              <button
-                type="button"
-                className="modal-action"
-                style={exportGridBtnStyle}
-                onClick={wrap(onAmbos)}
-                disabled={!hasBoxes}
-              >
-                <span style={iconSlotEmpty} aria-hidden />
-                <span style={{ lineHeight: 1.1, textAlign: "center" }}>
-                  Ambos (Cutlist + PDF Técnico + Arquivo Unificado)
-                </span>
-              </button>
-              <button
-                type="button"
-                className="modal-action"
-                style={exportGridBtnStyle}
-                onClick={wrap(onLayoutCortePro)}
-                disabled={!hasBoxes}
-              >
-                <span style={iconWrap} aria-hidden>
-                  <Icon name="blueprint" size={27} aria-hidden />
-                </span>
-                <span style={{ lineHeight: 1.1, textAlign: "center" }}>Layout de Corte PRO</span>
-              </button>
-              <button
-                type="button"
-                className="modal-action"
-                style={{ ...exportGridBtnStyle, fontWeight: 600 }}
-                onClick={wrap(onArquivoCompleto)}
-                disabled={!hasBoxes}
-              >
-                <span style={iconSlotEmpty} aria-hidden />
-                <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar arquivo completo</span>
-              </button>
+        <div
+          className="unified-export-panel"
+          style={{
+            padding: "14px",
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "row",
+            gap: 24,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ ...cardStyle, marginBottom: 0, flex: 1, minHeight: 0, overflow: "hidden" }}>
+              <div style={cardTitleStyle}>Enviar Projeto</div>
+              <SendProjectPackageForm hookApi={sendPackage} showPrepareButton={false} unifiedPanelLayout />
             </div>
           </div>
 
-          <div style={cardStyle}>
-            <div style={cardTitleStyle}>Enviar Projeto</div>
-            <SendProjectPackageForm hookApi={sendPackage} showPrepareButton={false} unifiedPanelLayout />
-          </div>
-
-          <div style={{ ...cardStyle, marginBottom: 0 }}>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
             <button
               type="button"
-              className="button button-primary"
-              style={finalBtnStyle}
-              onClick={() => void handleSalvarEGerarEEnviar()}
+              style={{ ...fabricationBtnStyle, marginBottom: 9, border: "none", cursor: "pointer" }}
+              onClick={() => void handlePedirFabricacao()}
               disabled={project.estaCarregando}
             >
-              <span style={finalIconWrap} aria-hidden>
-                <Icon name="adminSave" size={22} aria-hidden />
-              </span>
-              <span style={{ lineHeight: 1.1 }}>Salvar e Gerar Design</span>
+              Pedir Fabricação / Pedir Orçamento / Enviar para Fábrica
             </button>
+
+            <div
+              style={{
+                ...cardStyle,
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div style={cardTitleStyle}>Gerar Arquivo</div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gap: 7,
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  type="button"
+                  className="modal-action"
+                  style={exportGridBtnStyle}
+                  onClick={wrap(onPdfTecnico)}
+                  disabled={!hasBoxes}
+                >
+                  <span style={iconSlotEmpty} aria-hidden />
+                  <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar PDF Técnico</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-action"
+                  style={exportGridBtnStyle}
+                  onClick={wrap(onCutlist)}
+                  disabled={!hasBoxes}
+                >
+                  <span style={iconSlotEmpty} aria-hidden />
+                  <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar Cutlist</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-action"
+                  style={exportGridBtnStyle}
+                  onClick={wrap(onUnificado)}
+                  disabled={!hasBoxes}
+                >
+                  <span style={iconSlotEmpty} aria-hidden />
+                  <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar Arquivo Unificado (NOVO)</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-action"
+                  style={exportGridBtnStyle}
+                  onClick={wrap(onAmbos)}
+                  disabled={!hasBoxes}
+                >
+                  <span style={iconSlotEmpty} aria-hidden />
+                  <span style={{ lineHeight: 1.1, textAlign: "center" }}>
+                    Ambos (Cutlist + PDF Técnico + Arquivo Unificado)
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-action"
+                  style={exportGridBtnStyle}
+                  onClick={wrap(onLayoutCortePro)}
+                  disabled={!hasBoxes}
+                >
+                  <span style={iconWrap} aria-hidden>
+                    <Icon name="blueprint" size={27} aria-hidden />
+                  </span>
+                  <span style={{ lineHeight: 1.1, textAlign: "center" }}>Layout de Corte PRO</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-action"
+                  style={{ ...exportGridBtnStyle, fontWeight: 600 }}
+                  onClick={wrap(onArquivoCompleto)}
+                  disabled={!hasBoxes}
+                >
+                  <span style={iconSlotEmpty} aria-hidden />
+                  <span style={{ lineHeight: 1.1, textAlign: "center" }}>Gerar arquivo completo</span>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ ...cardStyle, marginBottom: 0, flexShrink: 0 }}>
+              <button
+                type="button"
+                className="button button-primary"
+                style={finalBtnStyle}
+                onClick={() => void handleSalvarEGerarEEnviar()}
+                disabled={project.estaCarregando}
+              >
+                <span style={finalIconWrap} aria-hidden>
+                  <Icon name="adminSave" size={22} aria-hidden />
+                </span>
+                <span style={{ lineHeight: 1.1 }}>Salvar e Gerar Design</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -71,7 +71,8 @@ export default function PainelMoveisUnificado() {
 
   const handleAddItem = useCallback((item: UnifiedModelItem) => {
     if (item.tipo === "pronto") {
-      actions.addTemplateAsNewBox(item.sourceId);
+      // @PIMO-SOON: addTemplateAsNewBox — aguarda definição de templates
+      console.warn("[PIMO] addTemplateAsNewBox: não implementado — desativado temporariamente");
       return;
     }
     if (item.tipo === "3d") {
@@ -336,6 +337,8 @@ export default function PainelMoveisUnificado() {
                           type="button"
                           className="button button-ghost"
                           style={{ fontSize: 10, padding: "4px 8px" }}
+                          disabled={item.tipo === "pronto"}
+                          title={item.tipo === "pronto" ? "Funcionalidade em desenvolvimento" : undefined}
                           onClick={() => handleAddItem(item)}
                         >
                           Adicionar

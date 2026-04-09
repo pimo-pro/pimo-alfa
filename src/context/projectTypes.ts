@@ -86,6 +86,8 @@ export interface ProjectState {
   lastAutosaveTime: string | null;
   /** Id do projeto atualmente aberto/guardado; usado para UPDATE em saves subsequentes. */
   currentProjectId?: string | null;
+  /** Metadado: projeto marcado para fabricação/orçamento (painel de exportação). */
+  readyForProduction: boolean;
 
   design: Design | null;
   cutList: CutListItem[] | null;
@@ -350,11 +352,14 @@ export interface ProjectActions {
   setProjectName: (_name: string) => void;
   setTipoProjeto: (_tipo: string) => void;
   setMaterial: (_material: Material) => void;
-  /** Define o material do projeto por id do CRUD; propaga às caixas que usam o padrão. */
+  /** @deprecated LEGADO — Sem implementação em runtime. Usar setMaterial para Material completo. */
   setProjectMaterial: (_materialId: string) => void;
   setEspessura: (_espessura: number) => void;
   setDimensoes: (_dimensoes: Partial<Dimensoes>) => void;
+  /** @deprecated LEGADO — Sem implementação em runtime. Candidato a remoção futura. */
   setQuantidade: (_quantidade: number) => void;
+  /** Atualiza apenas o flag de pronto para fabricação/orçamento. */
+  setReadyForProduction: (_ready: boolean) => void;
   addBox: () => void;
   addWorkspaceBox: () => void;
   addWorkspaceBoxFromCatalog: (_catalogItemId: string) => void;
@@ -367,16 +372,17 @@ export interface ProjectActions {
   removeWorkspaceBoxById: (_boxId: string) => void;
   selectBox: (_boxId: string) => void;
   clearSelection: () => void;
-  /** Adiciona um modelo CAD (por id do catálogo) à caixa. */
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   addModelToBox: (_caixaId: string, _cadModelId: string) => void;
-  /** Cria uma nova caixa no workspace com o modelo CAD (modelo = Box completo). */
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   addCadModelAsNewBox: (_cadModelId: string) => void;
-  /** Remove uma instância de modelo da caixa. */
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   removeModelFromBox: (_caixaId: string, _modelInstanceId: string) => void;
-  /** Atualiza nome, material ou categoria de uma instância de modelo na caixa. */
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   updateModelInBox: (_caixaId: string, _modelInstanceId: string, _updates: { nome?: string; material?: string; categoria?: string }) => void;
-  /** (Legado) Atualiza o único modelo da caixa; migra para models[]. */
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   updateCaixaModelId: (_caixaId: string, _modelId: string | null) => void;
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   selectModelInstance: (_boxId: string, _modelInstanceId: string | null) => void;
   renameBox: (_nome: string) => void;
   setPrateleiras: (_quantidade: number) => void;
@@ -385,8 +391,11 @@ export interface ProjectActions {
   setPortaTipo: (_portaTipo: BoxModule["portaTipo"]) => void;
   setTipoBorda: (_tipoBorda: TipoBorda) => void;
   setTipoFundo: (_tipoFundo: TipoFundo) => void;
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   setExtractedPartsForBox: (_boxId: string, _modelInstanceId: string, _parts: CutListItemComPreco[]) => void;
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   clearExtractedPartsForBox: (_boxId: string, _modelInstanceId?: string) => void;
+  /** @deprecated LEGADO — Sistema CAD removido. Sem implementação em runtime. Candidato a remoção futura. */
   setModelPositionInBox: (_boxId: string, _modelInstanceId: string, _position: { x: number; y: number; z: number }) => void;
   setLayoutWarnings: (_warnings: LayoutWarnings) => void;
   /** Altera o material simples da porta (Material Picker: Madeira, Branco, etc.). */
@@ -442,11 +451,70 @@ export interface ProjectActions {
   regenerateBoxLayersForSelectedBox: () => void;
   toggleWorkspaceRotation: (_boxId: string) => void;
   rotateWorkspaceBox: (_boxId: string) => void;
+  /** @internal Implementada em useDesignActions. Não chamada diretamente pela UI via actions.*. */
   gerarDesign: () => void;
   gerarESalvarDesign: () => Promise<void>;
+  /**
+   * @stable
+   * Gera o PDF simples do projeto.
+   *
+   * Características:
+   * - Não inclui PDF técnico
+   * - Não inclui cutlist
+   * - Não inclui detalhes de furação ou medidas técnicas
+   * - Mantém o layout atual do PDF simples
+   *
+   * Uso:
+   * - Botão principal de exportação na UI
+   * - Entrega rápida para cliente
+   * - Visualização geral do projeto sem detalhes de fabricação
+   *
+   * Importante:
+   * - Não alterar comportamento sem decisão explícita de produto
+   * - Não unificar automaticamente com PDF técnico
+   */
   exportarPDF: () => void;
+  /**
+   * @stable
+   * Gera o PDF técnico do projeto.
+   *
+   * Características:
+   * - Inclui medidas técnicas
+   * - Inclui detalhes de furação
+   * - Inclui informações de fabricação
+   * - Pode incluir vistas técnicas específicas
+   *
+   * Uso:
+   * - Produção e fabricação
+   * - Documentação técnica detalhada
+   * - Profissionais que precisam de medidas exatas
+   *
+   * Importante:
+   * - Não alterar comportamento sem decisão explícita de produto
+   * - Não misturar com PDF simples automaticamente
+   */
   exportarPdfTecnico: () => void;
-  /** Gera PDF unificado (Técnico + Cutlist em um único ficheiro). */
+  /**
+   * @stable
+   * Gera um PDF unificado contendo:
+   * - PDF técnico
+   * - Cutlist completa
+   * - Informações combinadas num único ficheiro
+   *
+   * Características:
+   * - Documento completo para produção
+   * - Evita múltiplos ficheiros separados
+   * - Mantém a ordem e estrutura atual
+   *
+   * Uso:
+   * - Produção final
+   * - Entrega completa para fábrica
+   * - Clientes que desejam documentação técnica + lista de corte
+   *
+   * Importante:
+   * - Não alterar comportamento sem decisão explícita de produto
+   * - Não dividir novamente em múltiplos PDFs
+   */
   exportarPdfUnificado: () => void;
   logChangelog: (_message: string) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
@@ -457,7 +525,7 @@ export interface ProjectActions {
   toggleHighlight: () => void;
   /** Alterna modo régua (medição). */
   toggleRuler: () => void;
-  /** Atualiza regras dinâmicas; guarda no LocalStorage e força recalcular caixas. */
+  /** @internal Implementada em useRulesActions. UI usa updateRulesInProfile — não actions.updateRules. */
   updateRules: (_rules: RulesConfig) => void;
   /** Define o perfil de regras ativo; recalcula todas as caixas. */
   setActiveRulesProfile: (_id: string) => void;
@@ -469,21 +537,22 @@ export interface ProjectActions {
   removeRulesProfile: (_id: string) => void;
   /** Substitui toda a configuração de perfis (ex.: após reset). */
   setRulesProfilesConfig: (_config: RulesProfilesConfig) => void;
-  /** Define o perfil de regras do projeto (futuro; não ativado na UI ainda). */
+  /** @internal Implementada em useRulesActions. Perfil por projeto; não ativado na UI ainda. */
   setProjectRulesProfile: (_id: string) => void;
-  /** Recalcula todas as caixas com as regras atuais (após updateRules). */
+  /** @internal Implementada em useDesignActions. Não chamada diretamente pela UI via actions.*. */
   recalculateAllBoxes: () => void;
   undo: () => void;
   redo: () => void;
   /** Navega para um estado específico da timeline de histórico. */
   goToHistory: (_index: number) => void;
+  /** @internal Implementada em useProjectIoActions. Chamada via mecanismo interno (não via actions.* na UI). */
   saveProjectSnapshot: () => void;
-  /** Cria backup manual dedicado (independente do autosave regular). */
+  /** @internal Implementada em useProjectIoActions. Backup manual; não exposto na UI atual. */
   saveManualBackupSnapshot: () => void;
   loadProjectSnapshot: (_id: string) => Promise<void>;
   /** Combina vários snapshots guardados num único estado de workspace (opcional; não altera os projetos guardados). */
   mergeSnapshots: (_ids: string[]) => Promise<void>;
-  /** Carrega projeto a partir de um template (limpa sala, caixas e substitui pelo layout do modelo). */
+  /** @deprecated LEGADO — Templates não implementados. Sem implementação em runtime. Candidato a remoção futura. */
   loadProjectFromTemplate: (_templateId: string) => void;
   /** Adiciona um template como novas caixas no workspace (não substitui o projeto). */
   addTemplateAsNewBox: (_templateId: string) => void;

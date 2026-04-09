@@ -71,6 +71,44 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         false
       );
     };
+    a.setReadyForProduction = (ready) => {
+      updateProject((prev) => ({ ...prev, readyForProduction: ready }), false);
+    };
+
+    // --- setTipoProjeto ---
+    a.setTipoProjeto = (tipo) => {
+      updateProject((prev) => ({ ...prev, tipoProjeto: tipo }), false);
+    };
+
+    // --- setMaterial ---
+    // Atualiza o Material completo + sincroniza materialId se o objeto tiver id
+    a.setMaterial = (material) => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          material,
+          // Se o objeto Material tiver id, sincronizar também materialId
+          ...(material && "id" in material && material.id
+            ? { materialId: material.id as string }
+            : {}),
+        }),
+        false
+      );
+    };
+
+    // --- setEspessura ---
+    // Atualiza material.espessura (fonte principal no domínio)
+    // A WorkspaceBox.espessura é por caixa — não alterar aqui
+    a.setEspessura = (espessura) => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          material: { ...prev.material, espessura },
+        }),
+        false
+      );
+    };
+
     return a;
   }, [exportActions, updateProject]);
 
