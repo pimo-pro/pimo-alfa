@@ -9,9 +9,9 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
 export function useLanding3D(canvasRef: React.RefObject<HTMLDivElement>) {
-  const rendererRef = useRef<THREE.WebGLRenderer>();
-  const sceneRef = useRef<THREE.Scene>();
-  const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
