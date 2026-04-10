@@ -194,7 +194,8 @@ function drawSheetDiagram(
     px: originX + (topRightOrigin
       ? (sheet.largura_mm - pl.x_mm - pl.largura_mm)
       : pl.x_mm) * scale,
-    py: originY + pl.y_mm * scale,
+    // Inverter eixo Y: y=0 é o fundo físico → deve aparecer no FUNDO do diagrama.
+    py: originY + (sheet.altura_mm - pl.y_mm - pl.altura_mm) * scale,
     pw: pl.largura_mm * scale,
     ph: pl.altura_mm * scale,
   }));

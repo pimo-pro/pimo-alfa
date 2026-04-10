@@ -1,9 +1,8 @@
 /**
  * Layout Search Layer — Nesting Engine 2.3 (Layer 2)
  *
- * Orquestrador de estratégias por cima do pipeline existente.
- * O motor (runCutLayout) é tratado como "caixa preta" e chamado várias vezes
- * com ordenações de peças diferentes; o melhor resultado global é selecionado.
+ * Orquestrador Layer 2 sobre o pipeline existente (Fase 7D: 1 ordenação area_desc).
+ * O motor (runCutLayout) é caixa preta; freeze do 1.º sheet e métricas preservados.
  *
  * Critérios de seleção (por prioridade):
  *   1. Menor número de chapas
@@ -39,12 +38,12 @@ export interface LayoutScenario {
 }
 
 // ---------------------------------------------------------------------------
-// Estratégias de ordenação (A–E)
+// Estratégia de ordenação Layer 2 (Fase 7D: só area_desc)
 // ---------------------------------------------------------------------------
 
 type SortFn = (pieces: CutPiece[]) => CutPiece[];
 
-/** A — área descendente: peças maiores primeiro. */
+/** Área descendente: peças maiores primeiro. */
 function stratAreaDesc(pieces: CutPiece[]): CutPiece[] {
   return [...pieces].sort(
     (a, b) =>
@@ -53,65 +52,9 @@ function stratAreaDesc(pieces: CutPiece[]): CutPiece[] {
   );
 }
 
-/** B — lado maior descendente: peça mais alta/larga primeiro. */
-function stratMaxSideDesc(pieces: CutPiece[]): CutPiece[] {
-  return [...pieces].sort(
-    (a, b) =>
-      Math.max(b.largura_mm, b.altura_mm) - Math.max(a.largura_mm, a.altura_mm) ||
-      b.largura_mm * b.altura_mm - a.largura_mm * a.altura_mm
-  );
-}
-
-/** C — razão w/h descendente: peças mais alongadas primeiro. */
-function stratAspectRatioDesc(pieces: CutPiece[]): CutPiece[] {
-  const ratio = (p: CutPiece) =>
-    Math.max(p.largura_mm, p.altura_mm) / Math.max(1, Math.min(p.largura_mm, p.altura_mm));
-  return [...pieces].sort(
-    (a, b) =>
-      ratio(b) - ratio(a) ||
-      b.largura_mm * b.altura_mm - a.largura_mm * a.altura_mm
-  );
-}
-
-/** D — agrupar por boxId, grupos ordenados por área total desc, dentro do grupo por área desc. */
-function stratGroupByBox(pieces: CutPiece[]): CutPiece[] {
-  const groups = new Map<string, CutPiece[]>();
-  for (const p of pieces) {
-    const g = groups.get(p.boxId) ?? [];
-    g.push(p);
-    groups.set(p.boxId, g);
-  }
-  const groupTotalArea = (ps: CutPiece[]) =>
-    ps.reduce((acc, p) => acc + p.largura_mm * p.altura_mm * Math.max(1, p.quantidade), 0);
-  return Array.from(groups.values())
-    .sort((a, b) => groupTotalArea(b) - groupTotalArea(a))
-    .flatMap((group) =>
-      [...group].sort((a, b) => b.largura_mm * b.altura_mm - a.largura_mm * a.altura_mm)
-    );
-}
-
-/**
- * E — "sheet-first": entre peças de área semelhante, prioriza as mais quadradas
- * (razão w/h ≈ 1). Peças quadradas empacotam de forma mais eficiente e deixam
- * menos bolsões fragmentados.
- */
-function stratSheetFirst(pieces: CutPiece[]): CutPiece[] {
-  const squareness = (p: CutPiece) =>
-    Math.min(p.largura_mm, p.altura_mm) / Math.max(1, Math.max(p.largura_mm, p.altura_mm));
-  return [...pieces].sort((a, b) => {
-    const aArea = a.largura_mm * a.altura_mm;
-    const bArea = b.largura_mm * b.altura_mm;
-    if (Math.abs(aArea - bArea) > 2000) return bArea - aArea;
-    return squareness(b) - squareness(a);
-  });
-}
-
+/** Fase 7D: uma única estratégia (area_desc) — freeze + métricas inalterados. */
 const LAYER2_STRATEGIES: Array<{ id: string; name: string; sort: SortFn }> = [
-  { id: "A", name: "area_desc",       sort: stratAreaDesc       },
-  { id: "B", name: "max_side_desc",   sort: stratMaxSideDesc    },
-  { id: "C", name: "aspect_ratio",    sort: stratAspectRatioDesc },
-  { id: "D", name: "group_by_box",    sort: stratGroupByBox     },
-  { id: "E", name: "sheet_first",     sort: stratSheetFirst     },
+  { id: "A", name: "area_desc", sort: stratAreaDesc },
 ];
 
 // ---------------------------------------------------------------------------
@@ -239,18 +182,16 @@ function calcularMetricas(sheets: SheetResult[]): LayoutScenarioMetrics {
 // ---------------------------------------------------------------------------
 
 /**
- * Gera múltiplos cenários de layout testando 5 estratégias de ordenação de peças.
+ * Gera cenários de layout (Fase 7D: 1 estratégia area_desc; freeze e métricas mantidos).
  * O `runner` é chamado com meta-heurísticas desativadas para manter velocidade.
  *
  * **SPM First-Sheet Freeze** (activado automaticamente):
- *   Antes de testar as estratégias A–E, executa um run de baseline com a ordenação
- *   original das peças.  Se o primeiro sheet do baseline tiver desperdício ≤ 20%,
- *   é marcado como "congelado".  Durante a avaliação de cada estratégia:
+ *   Antes do cenário area_desc, executa um run de baseline com a ordenação
+ *   original das peças. Se o primeiro sheet do baseline tiver desperdício ≤ 20%,
+ *   é marcado como "congelado". Durante a avaliação do cenário:
  *     1. O sheet 0 é sempre substituído pelo sheet congelado (preservando o layout ideal).
- *     2. Peças do sheet congelado que a estratégia tivesse colocado noutros sheets
- *        são removidas dessas chapas (evita duplicação).
+ *     2. Peças do sheet congelado colocadas noutros sheets são removidas dessas chapas.
  *     3. As métricas são calculadas sobre o resultado corrigido.
- *   Isto garante que nenhuma estratégia "estraga" um primeiro sheet bem aproveitado.
  *
  * @param pieces  Peças a distribuir (antes de expandPieces — quantidade pode ser > 1).
  * @param runner  Callback que executa o pipeline base para uma dada ordenação.

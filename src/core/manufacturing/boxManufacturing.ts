@@ -201,13 +201,15 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
   const larguraLateral = profundidadeInterna;
+  /** P útil em profundidade: mesma base que `larguraLateral` (externa − costa se ativa − porta, via getProfundidadeInternaUtilMm). */
+  const profundidadeUtil = profundidadeInterna;
 
-  // 3.2 Cima e Fundo: largura total × profundidade exterior × 19 mm
+  // 3.2 Cima e Fundo: largura total × profundidade útil (alinhada às laterais) × espessura do corpo
   paineis.push({
     id: getStructuralPanelId(box, "cima"),
     tipo: "cima",
     largura_mm: clampPositive(largura),
-    altura_mm: clampPositive(profundidadeExterna),
+    altura_mm: clampPositive(profundidadeUtil),
     espessura_mm: espessura,
     material,
     orientacaoFibra: "none",
@@ -219,7 +221,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     id: getStructuralPanelId(box, "fundo"),
     tipo: "fundo",
     largura_mm: clampPositive(largura),
-    altura_mm: clampPositive(profundidadeExterna),
+    altura_mm: clampPositive(profundidadeUtil),
     espessura_mm: espessura,
     material,
     orientacaoFibra: "none",

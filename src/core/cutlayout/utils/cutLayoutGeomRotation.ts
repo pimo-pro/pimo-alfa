@@ -1,8 +1,8 @@
 /**
  * Rotação geométrica real para o motor de nesting.
  *
- * Convenção: 90° CCW, confirmada por layoutCoordinateSystem.ts:
- *   holeLocalToSheetOffsetMm → sx = hy, sy = L − hx  (L = largura original da peça)
+ * Convenção: 90° CCW, alinhada a layoutCoordinateSystem.holeLocalToSheetOffsetMm:
+ *   sx = hy, sy = H − hx  (H = altura da peça no referencial do furo)
  *
  * Após rotação de uma peça de (origW × origH) para (origH × origW):
  *   ponto (hx, hy) → (hy, origW − hx)

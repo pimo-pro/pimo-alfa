@@ -83,6 +83,27 @@ export type PocketFillingOptions = {
 /** Máximo de peças a tentar colocar por bolsão. */
 const MAX_PIECES_PER_POCKET = 6;
 
+/**
+ * Fase 7D: no máximo N ordenações "inteligentes" por bolsão; depois fallback barato.
+ */
+const MAX_SMART_POCKET_REORDER = 3;
+
+function pieceSquareFriendlyMm(w: number, h: number): boolean {
+  const m = Math.max(w, h);
+  if (m < EPS) return false;
+  return Math.abs(w - h) / m < 0.05;
+}
+
+function pieceLongStripMm(w: number, h: number): boolean {
+  const a = Math.max(w, h);
+  const b = Math.min(w, h);
+  return b > EPS && a / b >= 3;
+}
+
+function logWhRatio(w: number, h: number): number {
+  return Math.log(Math.max(w, 1e-6) / Math.max(h, 1e-6));
+}
+
 export type FreeRect = { x: number; y: number; w: number; h: number };
 
 // ---------------------------------------------------------------------------
@@ -202,10 +223,9 @@ export function detectarBolsões(
  * Seleciona, de uma lista de placements candidatos, os que cabem no bolsão
  * (na sua rotação actual — sem re-rotação, por segurança de grainDirection).
  *
- * Ordenação:
- *   1. Maior área
- *   2. Maior lado
- *   3. Melhor razão w/h em relação ao bolsão
+ * Fase 7C: ordenação por compatibilidade de proporção com o bolsão, peças
+ * quadradas-friendly em bolsões quadrados, alinhamento de tiras longas (≥3:1)
+ * com bolsões alongados, e área crescente para favorecer preenchimento fino.
  */
 export function selecionarPeçasParaPocket(
   pocket: FreeRect,
@@ -215,19 +235,47 @@ export function selecionarPeçasParaPocket(
     (p) => p.largura_mm <= pocket.w + EPS && p.altura_mm <= pocket.h + EPS
   );
 
-  const pocketRatio = pocket.w / Math.max(1, pocket.h);
-  fitting.sort((a, b) => {
-    const areaA = a.largura_mm * a.altura_mm;
-    const areaB = b.largura_mm * b.altura_mm;
-    if (Math.abs(areaA - areaB) > 100) return areaB - areaA;
-    const maxA = Math.max(a.largura_mm, a.altura_mm);
-    const maxB = Math.max(b.largura_mm, b.altura_mm);
-    if (Math.abs(maxA - maxB) > 5) return maxB - maxA;
-    const ratioA = a.largura_mm / Math.max(1, a.altura_mm);
-    const ratioB = b.largura_mm / Math.max(1, b.altura_mm);
-    return Math.abs(ratioA - pocketRatio) - Math.abs(ratioB - pocketRatio);
-  });
+  const pocketLong = pieceLongStripMm(pocket.w, pocket.h);
+  const pocketSquare = pieceSquareFriendlyMm(pocket.w, pocket.h);
+  const pocketRl = logWhRatio(pocket.w, pocket.h);
 
+  const score = (p: CutPlacement): number => {
+    const w = p.largura_mm;
+    const h = p.altura_mm;
+    const sq = pieceSquareFriendlyMm(w, h);
+    const lng = pieceLongStripMm(w, h);
+    const rl = logWhRatio(w, h);
+    const ratioDist = Math.abs(rl - pocketRl);
+    const area = w * h;
+
+    let tier = 1;
+    if (pocketSquare && sq) tier = 0;
+    else if (pocketLong) {
+      const horizPocket = pocket.w >= pocket.h;
+      const horizPiece = w >= h;
+      if (horizPocket === horizPiece) tier = 0;
+      else tier = 2;
+    } else if (lng) tier = 2;
+
+    return tier * 1e12 + ratioDist * 1e6 + area;
+  };
+
+  fitting.sort((a, b) => score(a) - score(b));
+
+  return fitting;
+}
+
+/**
+ * Fallback Fase 7D: só área crescente (menor primeiro) — custo O(n log n) simples.
+ */
+function selecionarPeçasParaPocketAreaAsc(
+  pocket: FreeRect,
+  candidates: CutPlacement[]
+): CutPlacement[] {
+  const fitting = candidates.filter(
+    (p) => p.largura_mm <= pocket.w + EPS && p.altura_mm <= pocket.h + EPS
+  );
+  fitting.sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm);
   return fitting;
 }
 
@@ -261,48 +309,87 @@ export function preencherPocket(
   let curY = pocket.y;
   let shelfH = 0;
   let count = 0;
+  let remaining = [...candidates];
+  let smartReorderPass = 0;
 
-  for (const piece of candidates) {
-    if (count >= MAX_PIECES_PER_POCKET) break;
+  while (count < MAX_PIECES_PER_POCKET && remaining.length > 0) {
+    const remW = pocket.x + pocket.w - curX;
+    const remH = pocket.y + pocket.h - curY;
+    if (remW < -EPS || remH < -EPS) break;
 
-    const pw = piece.largura_mm;
-    const ph = piece.altura_mm;
-    let placed = false;
-
-    // Tentativa 1: posição actual na prateleira corrente
-    if (
-      curX + pw <= pocket.x + pocket.w + EPS &&
-      curY + ph <= pocket.y + pocket.h + EPS &&
-      !overlapsAny(curX, curY, pw, ph, localPlaced, kerf)
-    ) {
-      result.push({ ...piece, x_mm: curX, y_mm: curY, sheetIndex: destSheetIndex });
-      localPlaced.push({ x: curX, y: curY, w: pw, h: ph });
-      curX += pw + kerf;
-      shelfH = Math.max(shelfH, ph);
-      placed = true;
-      count++;
+    const headPocket: FreeRect = {
+      x: curX,
+      y: curY,
+      w: Math.max(0, remW),
+      h: Math.max(0, remH),
+    };
+    const ordered =
+      smartReorderPass < MAX_SMART_POCKET_REORDER
+        ? selecionarPeçasParaPocket(headPocket, remaining)
+        : selecionarPeçasParaPocketAreaAsc(headPocket, remaining);
+    if (smartReorderPass < MAX_SMART_POCKET_REORDER) smartReorderPass += 1;
+    if (ordered.length === 0) {
+      if (shelfH > 0) {
+        curY += shelfH + kerf;
+        curX = pocket.x;
+        shelfH = 0;
+        continue;
+      }
+      break;
     }
 
-    // Tentativa 2: início de nova prateleira
-    if (!placed && shelfH > 0) {
-      const newY = curY + shelfH + kerf;
-      const newX = pocket.x;
+    let placedThisRound = false;
+    for (const piece of ordered) {
+      const pw = piece.largura_mm;
+      const ph = piece.altura_mm;
+
+      let placed = false;
       if (
-        newX + pw <= pocket.x + pocket.w + EPS &&
-        newY + ph <= pocket.y + pocket.h + EPS &&
-        !overlapsAny(newX, newY, pw, ph, localPlaced, kerf)
+        curX + pw <= pocket.x + pocket.w + EPS &&
+        curY + ph <= pocket.y + pocket.h + EPS &&
+        !overlapsAny(curX, curY, pw, ph, localPlaced, kerf)
       ) {
-        result.push({ ...piece, x_mm: newX, y_mm: newY, sheetIndex: destSheetIndex });
-        localPlaced.push({ x: newX, y: newY, w: pw, h: ph });
-        curX = newX + pw + kerf;
-        curY = newY;
-        shelfH = ph;
-        placed = true;
+        result.push({ ...piece, x_mm: curX, y_mm: curY, sheetIndex: destSheetIndex });
+        localPlaced.push({ x: curX, y: curY, w: pw, h: ph });
+        curX += pw + kerf;
+        shelfH = Math.max(shelfH, ph);
         count++;
+        remaining = remaining.filter((p) => p !== piece);
+        placed = true;
+        placedThisRound = true;
+        break;
+      }
+
+      if (!placed && shelfH > 0) {
+        const newY = curY + shelfH + kerf;
+        const newX = pocket.x;
+        if (
+          newX + pw <= pocket.x + pocket.w + EPS &&
+          newY + ph <= pocket.y + pocket.h + EPS &&
+          !overlapsAny(newX, newY, pw, ph, localPlaced, kerf)
+        ) {
+          result.push({ ...piece, x_mm: newX, y_mm: newY, sheetIndex: destSheetIndex });
+          localPlaced.push({ x: newX, y: newY, w: pw, h: ph });
+          curX = newX + pw + kerf;
+          curY = newY;
+          shelfH = ph;
+          count++;
+          remaining = remaining.filter((p) => p !== piece);
+          placedThisRound = true;
+          break;
+        }
       }
     }
 
-    if (!placed) continue; // Tentar peças seguintes — podem ser menores e caber
+    if (!placedThisRound) {
+      if (shelfH > 0) {
+        curY += shelfH + kerf;
+        curX = pocket.x;
+        shelfH = 0;
+        continue;
+      }
+      break;
+    }
   }
 
   return result;

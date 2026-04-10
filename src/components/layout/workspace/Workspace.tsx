@@ -17,7 +17,6 @@ import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../.
 import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import BoxInfoOverlay from "./BoxInfoOverlay";
-import BoxDepthMeasureOverlay from "./BoxDepthMeasureOverlay";
 import ContextMenu from "./ContextMenu";
 import { devLogger } from "../../../utils/devLogger";
 import { useWorkspaceUndoRedoRegistry } from "../../../context/WorkspaceUndoRedoRegistryContext";
@@ -741,7 +740,6 @@ return (
               aria-hidden
             >
               <BoxInfoOverlay />
-              <BoxDepthMeasureOverlay surfaceRef={viewerSurfaceRef} />
             </div>
           </div>
           {!viewerApi.viewerReady && (

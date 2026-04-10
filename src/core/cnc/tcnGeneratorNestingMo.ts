@@ -76,6 +76,40 @@ function transformPlacementToTcn(
   return { x: flipped.x, y: flipped.y, z: p.z };
 }
 
+type TcnHoleLike = { x: number; y: number; diameter: number; depth: number; topDrillable?: boolean };
+
+/**
+ * Fase 7F — conversão explícita furo (local à peça) → coordenadas TCN.
+ * Alinhado com `tcnGenerator.ts`: passa sempre `largura_mm`/`altura_mm` a
+ * `holeLocalToSheetOffsetMm` com `pl.largura_mm`/`pl.altura_mm` (rot=90: sy usa altura — layoutCoordinateSystem).
+ */
+function converterCoordenadasFuroTCN(
+  pl: SheetResult["placements"][number],
+  hole: TcnHoleLike,
+  sheetLarguraMm: number,
+  sheetAlturaMm: number,
+  maxW: number,
+  maxH: number
+): { tcnX: number; tcnY: number; xAbs: number; yAbs: number; off: { sx: number; sy: number } } {
+  const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
+  const off = holeLocalToSheetOffsetMm(hole.x, hole.y, rot, pl.largura_mm, pl.altura_mm);
+  const xAbs = pl.x_mm + off.sx;
+  const yAbs = pl.y_mm + off.sy;
+  const tcnPt = transformPlacementToTcn({ x: xAbs, y: yAbs, z: 0 }, sheetLarguraMm, maxW, maxH);
+
+  if (import.meta.env.DEV) {
+    console.log(
+      `[TCN-NestingMO][HOLE] ${pl.partName ?? "?"} rot=${rot} | ` +
+        `piece=(${fmt(pl.x_mm)},${fmt(pl.y_mm)}) size=(${fmt(pl.largura_mm)},${fmt(pl.altura_mm)}) | ` +
+        `holeLocal=(${fmt(hole.x)},${fmt(hole.y)}) off=(${fmt(off.sx)},${fmt(off.sy)}) | ` +
+        `abs=(${fmt(xAbs)},${fmt(yAbs)}) sheet=(${fmt(sheetLarguraMm)},${fmt(sheetAlturaMm)}) | ` +
+        `tcn=(${fmt(tcnPt.x)},${fmt(tcnPt.y)})`
+    );
+  }
+
+  return { tcnX: tcnPt.x, tcnY: tcnPt.y, xAbs, yAbs, off };
+}
+
 function isPlacementInsideSheet(x: number, y: number, w: number, h: number, sheetW: number, sheetH: number): boolean {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) return false;
   if (w <= 0 || h <= 0) return false;
@@ -329,19 +363,15 @@ export function generateTcnForPanelNestingMo(
   // Loop 1 — furos: coords locais à peça + placement físico, sem toolRadius/toolOffset
   const allDrillOps: CncDrillOperation[] = [];
   for (const pl of sanitizedPlacements) {
-    const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
     for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
       if (topDrillable === false) continue;
 
-      const off = holeLocalToSheetOffsetMm(hole.x, hole.y, rot);
-      const xAbs = pl.x_mm + off.sx;
-      const yAbs = pl.y_mm + off.sy;
-      const tcnPt = transformPlacementToTcn({ x: xAbs, y: yAbs, z: 0 }, dl, maxW, maxH);
+      const conv = converterCoordenadasFuroTCN(pl, hole, dl, dh, maxW, maxH);
 
       allDrillOps.push({
-        x: tcnPt.x,
-        y: tcnPt.y,
+        x: conv.tcnX,
+        y: conv.tcnY,
         z: 0,
         diametro: hole.diameter,
         profundidade: Math.min(hole.depth, thicknessMm),
@@ -364,7 +394,7 @@ export function generateTcnForPanelNestingMo(
     const innerContours = pl.innerContours;
     if (innerContours?.length) {
       for (const rect of innerContours) {
-        const offR = holeLocalToSheetOffsetMm(rect.x_mm, rect.y_mm, rot);
+        const offR = holeLocalToSheetOffsetMm(rect.x_mm, rect.y_mm, rot, pl.largura_mm, pl.altura_mm);
         const iw = rot === 90 ? rect.altura_mm : rect.largura_mm;
         const ih = rot === 90 ? rect.largura_mm : rect.altura_mm;
         const innerPointsRaw = buildInternalContourPoints(x + offR.sx, y + offR.sy, iw, ih, zCut, TOOL_RADIUS_MM);

@@ -6,6 +6,7 @@ import {
   LATE_SHEET_MIN_WASTE_RATIO,
 } from "../solver/lateSheetCompactor";
 import { aplicarPocketFilling } from "../solver/pocketFilling2";
+import { aplicarCompactacaoTranslacional } from "../solver/layoutCompactionPass";
 import { gerarCenariosLayout, escolherMelhorCenario } from "./layoutSearchLayer";
 
 import type {
@@ -80,7 +81,8 @@ type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
 type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_desc_soft";
 
-const MAX_NESTING_ATTEMPTS = 4;
+/** Fase 7D: MPM com menos tentativas por grupo de material. */
+const MAX_NESTING_ATTEMPTS = 2;
 const ATTEMPT_TIMEOUT_MS = 1500;
 const META_MAX_MULTI_START = 12;
 
@@ -214,16 +216,12 @@ export function runCutLayout(
   options: CutLayoutEngineOptions | undefined,
   deps: RunCutLayoutDeps
 ): CutLayoutResult {
-  // ── Layer 2 Search ─────────────────────────────────────────────────────────
-  // Para projetos pequenos (≤ LAYER2_MAX_EXPANDED_PIECES peças expandidas),
-  // testa 5 ordenações diferentes e escolhe a melhor por métricas globais.
-  // O WeakSet _layer2InProgress evita recursão infinita.
-  // SPM: Layer 2 desativada — o Door-Priority Ordering do SPM PATH garante
-  // já a melhor ordenação possível. A Layer 2 desfaria essa separação.
-  if (new Set(pieces.map((p) => p.boxId)).size <= 1) {
-    _layer2InProgress.add(deps);
-  }
-  if (!_layer2InProgress.has(deps)) {
+  // ── Layer 2 Search (apenas MPM) ────────────────────────────────────────────
+  // Fase 7E: SPM (1 boxId) NUNCA corre Layer2 — evita baseline + runs extra sem ganho.
+  // Para MPM, em projetos ≤ LAYER2_MAX_EXPANDED_PIECES peças expandidas, testa ordenações
+  // e escolhe a melhor por métricas. _layer2InProgress evita recursão na 2.ª entrada.
+  const layer2IsSpm = new Set(pieces.map((p) => p.boxId)).size <= 1;
+  if (!_layer2InProgress.has(deps) && !layer2IsSpm) {
     const expandedCount = pieces.reduce((acc, p) => acc + Math.max(1, p.quantidade), 0);
     if (expandedCount > 0 && expandedCount <= LAYER2_MAX_EXPANDED_PIECES) {
       _layer2InProgress.add(deps);
@@ -376,11 +374,19 @@ export function runCutLayout(
     const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
 
     // ── SPM PATH ────────────────────────────────────────────────────────────
-    // Projeto único: 1 tentativa skyline/bestFit/aggressive + pocket filling
-    // agressivo em todas as chapas. Meta-heurísticas e compactor não correm.
+    // Projeto único: 2 variantes (Fase 7D — performance) sem meta-heurísticas.
+    // Escolhe a melhor por score, depois pocket filling + compactação translacional.
+    // Compactor não corre no SPM.
     if (nestingMode === NestingMode.SingleProject) {
-      const spmTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "bestFit" };
-      const spmRotCfg: RotationScoringConfig = { ...rotationCfg, rotationPreferenceMode: "aggressive" };
+      const spmTrialVariants: Array<{
+        trial: CutLayoutTrialConfig;
+        rotationMode: CutLayoutRotationPreferenceMode;
+      }> = [
+        { trial: { strategy: "skyline", binHeuristic: "bestFit" }, rotationMode: "aggressive" },
+        { trial: { strategy: "shelf",   binHeuristic: "bestFit" }, rotationMode: "auto" },
+      ];
+      let spmBestRun: SimulateTrialForGroupResult | null = null;
+      let spmBestTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "bestFit" };
 
       // ── SPM Door-Priority Ordering (nome + dimensões) ──────────────────────
       // Uma peça é tratada como "porta/complemento" se:
@@ -405,18 +411,28 @@ export function runCutLayout(
           : spmBaseSorted;
       // ──────────────────────────────────────────────────────────────────────
 
-      const spmRun = deps.simulateTrialForGroup(
-        spmOrderedPieces,
-        placementSheet,
-        kerf,
-        minUtilizationPercent,
-        spmRotCfg,
-        spmTrial,
-        Boolean(options?.collectDiagnostics),
-        true,
-        scoreModel
-      );
-      if (spmRun.sheets.length > 0) {
+      // Testar as 2 variantes e escolher a melhor por score
+      for (const { trial: spmTrial, rotationMode } of spmTrialVariants) {
+        const spmRotCfg: RotationScoringConfig = { ...rotationCfg, rotationPreferenceMode: rotationMode };
+        const run = deps.simulateTrialForGroup(
+          spmOrderedPieces,
+          placementSheet,
+          kerf,
+          minUtilizationPercent,
+          spmRotCfg,
+          spmTrial,
+          false,
+          true,
+          scoreModel
+        );
+        if (run.sheets.length > 0 && (!spmBestRun || run.score < spmBestRun.score)) {
+          spmBestRun = run;
+          spmBestTrial = spmTrial;
+        }
+      }
+
+      const spmRun = spmBestRun;
+      if (spmRun && spmRun.sheets.length > 0) {
         // Pocket filling SPM — classificação industrial:
         //   lateIndexThreshold=0  → todas as chapas são candidatas (sem restrição de posição)
         //   wasteThreshold=0.15   → só preenche chapas Fracas (> 15% desperdício)
@@ -451,14 +467,15 @@ export function runCutLayout(
         // ──────────────────────────────────────────────────────────────────────
 
         if (diagnostics) {
-          diagnostics.flow.selectedStrategy = spmTrial.strategy;
-          diagnostics.flow.selectedBinHeuristic = spmTrial.binHeuristic;
+          diagnostics.flow.selectedStrategy = spmBestTrial.strategy;
+          diagnostics.flow.selectedBinHeuristic = spmBestTrial.binHeuristic;
           diagnostics.flow.gapFillAttempts += spmRun.gapFillAttempts;
           diagnostics.flow.rescueAttempts += spmRun.rescueAttempts;
         }
         diagnostics?.rejectedByLimit.push(...spmRun.rejectedByLimit);
         diagnostics?.gapFillPlacements.push(...spmRun.gapFillPlacements);
-        const spmOffset = deps.applyFixedMarginOffset(guardedSpmSheets, sheet, marginMm);
+        const spmCompacted = aplicarCompactacaoTranslacional(guardedSpmSheets, kerf);
+        const spmOffset = deps.applyFixedMarginOffset(spmCompacted, sheet, marginMm);
         const spmNorm = options?.originTopRight
           ? spmOffset.map((s) => normalizeSheetToTopRightOrigin(s))
           : spmOffset;
@@ -475,15 +492,14 @@ export function runCutLayout(
         })
       | null = null;
 
+    // Fase 7D: 2 variantes (antes 4) — alinhado com SPM para custo menor.
     const attemptVariants: Array<{
       orderMode: AttemptOrderMode;
       trial: CutLayoutTrialConfig;
       rotationMode: CutLayoutRotationPreferenceMode;
     }> = [
       { orderMode: "area_desc", trial: { strategy: "skyline", binHeuristic: "bestFit" }, rotationMode: "aggressive" },
-      { orderMode: "max_side_desc", trial: { strategy: "skyline", binHeuristic: "firstFit" }, rotationMode: "auto" },
-      { orderMode: "min_side_desc", trial: { strategy: "shelf", binHeuristic: "bestFit" }, rotationMode: "auto" },
-      { orderMode: "area_desc_soft", trial: { strategy: "guillotine", binHeuristic: "firstFit" }, rotationMode: "disabled" },
+      { orderMode: "area_desc", trial: { strategy: "shelf", binHeuristic: "bestFit" }, rotationMode: "auto" },
     ];
     const attempts = attemptVariants.slice(0, MAX_NESTING_ATTEMPTS);
 
@@ -746,6 +762,8 @@ export function runCutLayout(
         wasteThreshold: 0.12,
       });
     }
+
+    bestRun.sheets = aplicarCompactacaoTranslacional(bestRun.sheets, kerf);
 
     if (diagnostics) {
       diagnostics.flow.selectedStrategy = bestRun.strategy;

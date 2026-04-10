@@ -25,13 +25,28 @@ export const isRotatablePiece = (piece: CutPiece): boolean => {
 };
 
 export function reorderPieces(pieces: CutPiece[], mode: "production" | "gapFill" = "production"): CutPiece[] {
+  const pieceSquareFriendly = (p: CutPiece): boolean => {
+    const mx = Math.max(p.largura_mm, p.altura_mm);
+    if (mx < EPS) return false;
+    return Math.abs(p.largura_mm - p.altura_mm) / mx < 0.05;
+  };
+  const pieceLongStrip = (p: CutPiece): boolean => getPieceAspectRatio(p) >= 3;
+
   return [...pieces].sort((a, b) => {
     if (mode === "production") {
       const matA = a.materialId ?? "";
       const matB = b.materialId ?? "";
       if (matA !== matB) return matA.localeCompare(matB);
       const areaDiff = getPieceArea(b) - getPieceArea(a);
-      if (areaDiff !== 0) return areaDiff;
+      if (areaDiff !== 0) {
+        const maxAb = Math.max(getPieceArea(a), getPieceArea(b));
+        if (maxAb > 1 && Math.abs(areaDiff) <= maxAb * 0.05) {
+          const ar = getPieceAspectRatio(b) - getPieceAspectRatio(a);
+          if (ar !== 0) return ar;
+        } else {
+          return areaDiff;
+        }
+      }
       const bMax = Math.max(b.largura_mm, b.altura_mm);
       const aMax = Math.max(a.largura_mm, a.altura_mm);
       if (bMax !== aMax) return bMax - aMax;
@@ -40,9 +55,15 @@ export function reorderPieces(pieces: CutPiece[], mode: "production" | "gapFill"
       if (bMin !== aMin) return bMin - aMin;
       return getPieceAspectRatio(b) - getPieceAspectRatio(a);
     }
+    const longA = pieceLongStrip(a) ? 1 : 0;
+    const longB = pieceLongStrip(b) ? 1 : 0;
+    if (longA !== longB) return longA - longB;
+    const sqA = pieceSquareFriendly(a) ? 0 : 1;
+    const sqB = pieceSquareFriendly(b) ? 0 : 1;
+    if (sqA !== sqB) return sqA - sqB;
     const areaDiff = getPieceArea(a) - getPieceArea(b);
     if (areaDiff !== 0) return areaDiff;
-    return getPieceAspectRatio(b) - getPieceAspectRatio(a);
+    return getPieceAspectRatio(a) - getPieceAspectRatio(b);
   });
 }
 
