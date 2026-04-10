@@ -12,6 +12,10 @@ export interface ViewerBoxEntry {
   mesh: THREE.Object3D;
   width: number;
   height: number;
+  /**
+   * Profundidade da carcaça paramétrica (m), alinhada a `carcassDepthM` / painéis; pode ser menor que `depth` (layout externo).
+   */
+  carcassDepth?: number;
   depth: number;
   index: number;
   cadOnly?: boolean;

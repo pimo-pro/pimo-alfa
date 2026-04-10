@@ -21,7 +21,7 @@ import type { ControlsOptions } from "./controls";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
-import { EdgeOutlineSystem, isEdgeOutlineMesh } from "../outline";
+import { EdgeOutlineSystem, type EdgeOutlineBoxEntry } from "../outline";
 import { ViewerRaycastSystem } from "./raycast/ViewerRaycastSystem";
 import type { EnvironmentOptions } from "./environment";
 import { ViewerState } from "./state";
@@ -264,7 +264,7 @@ export class ViewerCore {
   private turntableEnabled = false;
   private turntableSpeed = 0.15;
   private lights: Lights;
-  /** Grupo de `BoxHelper` — um por mesh (`isEdgeOutlineMesh`), sem helper no grupo/root nem AABB agregado. */
+  /** Grupo com um wireframe L×A×P de layout (contorno azul de seleção). */
   private selectionOutline: THREE.Group | null = null;
   private selectionOutlineTarget: THREE.Object3D | null = null;
   /** Evita reconstruir os helpers a cada frame quando a lista de peças não mudou. */
@@ -1862,6 +1862,9 @@ export class ViewerCore {
     const { width, height, depth: layoutDepth } = this.getBoxDimensionsFromOptions(opts);
     const index = opts.index ?? this.getNextBoxIndex();
     const manualPosition = opts.manualPosition === true;
+    const carcassDepthForEntry = cadOnly
+      ? layoutDepth
+      : Math.max(0.001, opts.carcassDepthM ?? opts.depth ?? layoutDepth);
 
     let box: THREE.Object3D;
     let material: LoadedWoodMaterial | null = null;
@@ -1879,12 +1882,11 @@ export class ViewerCore {
         lateral_direita: [],
         porta: [],
       };
-      const carcassDepth = Math.max(0.001, opts.carcassDepthM ?? opts.depth ?? layoutDepth);
       const boxOptions: BoxOptions = {
         ...opts,
         width: opts.width ?? 1,
         height: opts.height ?? 1,
-        depth: carcassDepth,
+        depth: carcassDepthForEntry,
         thickness: opts.thickness ?? 0.019,
         index: opts.index,
         materialName,
@@ -1945,6 +1947,7 @@ export class ViewerCore {
       mesh: box,
       width,
       height,
+      carcassDepth: carcassDepthForEntry,
       depth: layoutDepth,
       index,
       cadOnly: cadOnly || undefined,
@@ -1971,7 +1974,7 @@ export class ViewerCore {
     this.applyPanelVisibilityForObject(box);
     this.applyExplodedViewForObject(box);
     tagBoxGroupWithId(box, id);
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
     this.applyBackgroundMode();
     this.reapplyDisplayMaterials();
     if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
@@ -2094,14 +2097,14 @@ export class ViewerCore {
         entry.locked = opts.locked === true;
       }
       entry.mesh.updateMatrixWorld(true);
-      this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+      this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
       return true;
     }
 
     let width = entry.width;
     let height = entry.height;
     let layoutDepth = entry.depth;
-    let carcassDepth = layoutDepth;
+    let carcassDepth = entry.carcassDepth ?? layoutDepth;
     let heightChanged = false;
     let indexChanged = false;
     const dimensionsChanged =
@@ -2222,7 +2225,7 @@ export class ViewerCore {
           });
         }
         // [CORRIGIDO 2026-03] Forçar rebuild completo do Scene Graph após mesh rebuild (sem alterar transforms ou offsets)
-        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
         this.requestRender();
       }
     }
@@ -2293,6 +2296,7 @@ export class ViewerCore {
     entry.width = width;
     entry.height = height;
     entry.depth = layoutDepth;
+    entry.carcassDepth = carcassDepth;
     if (structureChanged) {
       this.attachLayoutBoundsMesh(entry);
     }
@@ -2342,7 +2346,7 @@ export class ViewerCore {
         }
       });
     }
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
 
     // Forçar render imediato após alteração estrutural (rebuild do mesh) para que furações e geometria nova apareçam sem segunda ação.
     if (structureChanged) {
@@ -2414,7 +2418,7 @@ export class ViewerCore {
     }
     this.clearModelsFromBox(id);
     this.disposeBoxMeshFromScene(entry.mesh);
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
     if (entry.material) {
       entry.material.textures.forEach((texture) => texture.dispose());
     }
@@ -2948,7 +2952,7 @@ export class ViewerCore {
           object.position.set(0, entry.height / 2, 0);
         }
         entry.cadModels.push({ id, object, path: modelPath });
-        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
         this.onModelLoaded?.(boxId, id, object);
       })
       .catch(() => {
@@ -3008,7 +3012,7 @@ export class ViewerCore {
     if (model.object.parent) {
       model.object.parent.remove(model.object);
     }
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
     this.disposeObject(model.object);
     return true;
   }
@@ -3023,7 +3027,7 @@ export class ViewerCore {
       this.disposeObject(model.object);
     });
     entry.cadModels = [];
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
+    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
   }
 
   listModels(boxId: string): Array<{ id: string; path: string }> | null {
@@ -3597,49 +3601,6 @@ export class ViewerCore {
     return true;
   }
 
-  /**
-   * Contorno azul com foco em porta: `target` é normalmente o grupo da caixa; inferimos a porta via
-   * grupo `door-layer-*` ou highlight (mesh selecionado com `doorLayerId`).
-   */
-  private getSelectionOutlineDoorLayerFocusId(target: THREE.Object3D): string | null {
-    if (typeof target.name === "string" && target.name.startsWith("door-layer-")) {
-      const fromUd = (target.userData as { doorLayerId?: string }).doorLayerId;
-      if (typeof fromUd === "string" && fromUd.trim().length > 0) return fromUd.trim();
-      return target.name.slice("door-layer-".length).trim() || null;
-    }
-    const hm = this.highlightManager;
-    if (!hm?.getEnabled()) return null;
-    const sel = hm.getSelectedMesh();
-    if (!sel) return null;
-    let cur: THREE.Object3D | null = sel;
-    while (cur) {
-      const ud = (cur.userData as { doorLayerId?: string }) ?? {};
-      if (typeof ud.doorLayerId === "string" && ud.doorLayerId.trim().length > 0) {
-        return ud.doorLayerId.trim();
-      }
-      if (typeof cur.name === "string" && cur.name.startsWith("door-layer-")) {
-        return cur.name.slice("door-layer-".length).trim() || null;
-      }
-      cur = cur.parent;
-    }
-    return null;
-  }
-
-  /** Com foco de porta: exclui costa e malhas de porta que não sejam o painel principal. */
-  private shouldIncludeMeshInSelectionOutline(mesh: THREE.Mesh, doorLayerFocusId: string | null): boolean {
-    if (!(mesh.geometry instanceof THREE.BufferGeometry)) return false;
-    if (!isEdgeOutlineMesh(mesh)) return false;
-    if (!this.hasVisibleAncestorsForOutline(mesh)) return false;
-    if (doorLayerFocusId == null) return true;
-    const ud = (mesh.userData ?? {}) as Record<string, unknown>;
-    if (ud.panelType === "back") return false;
-    if (ud.doorLayerId != null) {
-      if (typeof ud.doorLayerId !== "string" || ud.doorLayerId !== doorLayerFocusId) return false;
-      if (ud.doorPart !== "panel") return false;
-    }
-    return true;
-  }
-
   private clearSelectionOutlineHelpers(): void {
     const g = this.selectionOutline;
     if (!g) return;
@@ -3655,40 +3616,44 @@ export class ViewerCore {
     }
   }
 
-  /** Assinatura mesh + geometria + modo porta para reconstruir quando a lista ou o foco mudam. */
+  /** Assinatura layout (L×A×P externo) para reconstruir geometria do contorno azul quando as dimensões mudam. */
   private getSelectionOutlinePiecesSignature(target: THREE.Object3D): string {
-    const doorLayerFocusId = this.getSelectionOutlineDoorLayerFocusId(target);
-    const parts: string[] = [];
-    target.updateMatrixWorld(true);
-    target.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      if (!this.shouldIncludeMeshInSelectionOutline(node, doorLayerFocusId)) return;
-      parts.push(`${node.uuid}:${node.geometry.uuid}`);
-    });
-    parts.sort();
-    return `${target.uuid}:door=${doorLayerFocusId ?? "none"}:${parts.join(",")}`;
+    const boxId =
+      typeof target.userData?.boxId === "string" && target.userData.boxId.trim().length > 0
+        ? target.userData.boxId.trim()
+        : "";
+    if (!boxId) return `${target.uuid}:no-boxId`;
+    const entry = this.boxes.get(boxId);
+    if (!entry) return `${target.uuid}:no-entry`;
+    return `${boxId}:${entry.width}:${entry.height}:${entry.depth}:${entry.carcassDepth ?? "u"}:${entry.cadOnly ? 1 : 0}`;
   }
 
-  /** Um `BoxHelper` por mesh real (`isEdgeOutlineMesh`), nunca no grupo inteiro. */
+  /** Um único wireframe L×A×P de layout (`ViewerBoxEntry`), alinhado ao grupo da caixa em mundo. */
   private rebuildSelectionOutlinePieceHelpers(target: THREE.Object3D): void {
     if (!this.selectionOutline || !this.selectionOutlineMaterial) return;
     this.clearSelectionOutlineHelpers();
     const group = this.selectionOutline;
-    const doorLayerFocusId = this.getSelectionOutlineDoorLayerFocusId(target);
-    target.updateMatrixWorld(true);
-    target.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      if (!this.shouldIncludeMeshInSelectionOutline(node, doorLayerFocusId)) return;
-      const helper = new THREE.BoxHelper(node, 0x7dd3fc);
-      (helper.material as THREE.Material).dispose();
-      helper.material = this.selectionOutlineMaterial;
-      helper.name = `selection-outline-${node.name || node.uuid}`;
-      helper.raycast = () => null;
-      helper.frustumCulled = false;
-      helper.renderOrder = 2001;
-      group.add(helper);
-      helper.update();
-    });
+    const boxId =
+      typeof target.userData?.boxId === "string" && target.userData.boxId.trim().length > 0
+        ? target.userData.boxId.trim()
+        : "";
+    const entry = boxId ? this.boxes.get(boxId) : undefined;
+    if (!entry) return;
+
+    const w = Math.max(0.001, entry.width);
+    const h = Math.max(0.001, entry.height);
+    const d = Math.max(0.001, entry.carcassDepth ?? entry.depth);
+    const boxGeo = new THREE.BoxGeometry(w, h, d);
+    const edges = new THREE.EdgesGeometry(boxGeo);
+    boxGeo.dispose();
+
+    const wireframe = new THREE.LineSegments(edges, this.selectionOutlineMaterial);
+    wireframe.name = "selection-outline-layout";
+    wireframe.raycast = () => null;
+    wireframe.frustumCulled = false;
+    wireframe.renderOrder = 2001;
+    wireframe.matrixAutoUpdate = false;
+    group.add(wireframe);
   }
 
   private updateSelectionOutlineGeometry(target: THREE.Object3D): void {
@@ -3698,18 +3663,13 @@ export class ViewerCore {
       this.selectionOutlinePiecesSig = sig;
       this.rebuildSelectionOutlinePieceHelpers(target);
     }
-    const doorLayerFocusId = this.getSelectionOutlineDoorLayerFocusId(target);
+    target.updateMatrixWorld(true);
+    const show = this.hasVisibleAncestorsForOutline(target);
     for (const child of this.selectionOutline.children) {
-      if (child instanceof THREE.BoxHelper) {
-        const obj = (child as THREE.BoxHelper & { object: THREE.Object3D }).object;
-        obj.updateWorldMatrix(true, false);
-        const show =
-          obj instanceof THREE.Mesh &&
-          this.shouldIncludeMeshInSelectionOutline(obj, doorLayerFocusId) &&
-          this.hasVisibleAncestorsForOutline(obj);
+      if (child instanceof THREE.LineSegments && child.name === "selection-outline-layout") {
         child.visible = show;
         if (show) {
-          child.update();
+          child.matrix.copy(target.matrixWorld);
         }
       }
     }
@@ -3991,6 +3951,21 @@ export class ViewerCore {
 
   /** Filho do grupo da caixa: volume L×A×P de layout para AABB de câmara (layer dedicada; não entra em raycast/reflow/colisão). */
   private static readonly VIEWER_LAYOUT_BOUNDS_NAME = "viewer-layout-bounds";
+
+  private getEdgeOutlineBoxesMap(): ReadonlyMap<string, EdgeOutlineBoxEntry> {
+    const map = new Map<string, EdgeOutlineBoxEntry>();
+    this.boxes.forEach((entry, id) => {
+      map.set(id, {
+        mesh: entry.mesh,
+        width: entry.width,
+        height: entry.height,
+        carcassDepth: entry.carcassDepth,
+        depth: entry.depth,
+        cadOnly: entry.cadOnly,
+      });
+    });
+    return map;
+  }
 
   /**
    * Proxy L×A×P de layout: `visible: false` no render; só `visible: true` temporariamente em

@@ -1,10 +1,19 @@
 import * as THREE from "three";
 
-type OutlineEntry = {
-  sourceMesh: THREE.Mesh;
-  /** Um `BoxHelper` por mesh (ligado ao `sourceMesh` via `.object`). */
-  lines: THREE.BoxHelper;
-  geometryUuid: string;
+export type EdgeOutlineBoxEntry = {
+  mesh: THREE.Object3D;
+  width: number;
+  height: number;
+  carcassDepth?: number;
+  depth: number;
+  cadOnly?: boolean;
+};
+
+type InternalEntry = {
+  boxId: string;
+  lines: THREE.LineSegments;
+  sig: string;
+  mesh: THREE.Object3D;
 };
 
 function hasVisibleAncestors(node: THREE.Object3D): boolean {
@@ -16,7 +25,7 @@ function hasVisibleAncestors(node: THREE.Object3D): boolean {
   return true;
 }
 
-/** Mesma regra que o contorno fino global: painéis, portas, gavetas, prateleiras; exclui proxy e overlays. */
+/** Mesma regra que o contorno fino global: painéis, portas, gavetas, prateleiras; exclui proxy e overlays. Mantido exportado para compatibilidade; o sync já não percorre meshes. */
 export function isWoodPieceMesh(mesh: THREE.Mesh): boolean {
   const ud = (mesh as THREE.Mesh & { userData?: Record<string, unknown> }).userData ?? {};
   if (ud.viewerLayoutBounds === true) return false;
@@ -39,7 +48,7 @@ export function isWoodPieceMesh(mesh: THREE.Mesh): boolean {
   return false;
 }
 
-/** Peças de madeira + malhas de furo CNC (`isDrillHole`) com `boxId`. */
+/** Peças de madeira + malhas de furo CNC (`isDrillHole`) com `boxId`. Mantido exportado para compatibilidade. */
 export function isEdgeOutlineMesh(mesh: THREE.Mesh): boolean {
   if (!(mesh.geometry instanceof THREE.BufferGeometry)) return false;
   const ud = (mesh as THREE.Mesh & { userData?: Record<string, unknown> }).userData ?? {};
@@ -54,15 +63,15 @@ export function isEdgeOutlineMesh(mesh: THREE.Mesh): boolean {
   return isWoodPieceMesh(mesh);
 }
 
-function disposeBoxHelperGeometryOnly(helper: THREE.BoxHelper): void {
-  helper.geometry.dispose();
+function disposeLineSegmentsGeometry(lines: THREE.LineSegments): void {
+  lines.geometry.dispose();
 }
 
 export class EdgeOutlineSystem {
   private readonly scene: THREE.Scene;
   private readonly overlayGroup = new THREE.Group();
   private readonly material: THREE.LineBasicMaterial;
-  private readonly entries = new Map<string, OutlineEntry>();
+  private readonly entries = new Map<string, InternalEntry>();
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -80,72 +89,84 @@ export class EdgeOutlineSystem {
     });
   }
 
-  syncRoot(root: THREE.Object3D): void {
+  syncRoot(_root: THREE.Object3D, boxes: ReadonlyMap<string, EdgeOutlineBoxEntry> | null): void {
+    if (!boxes) {
+      this.clearAllEntries();
+      return;
+    }
+
     const seen = new Set<string>();
 
-    root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      if (!isEdgeOutlineMesh(node)) return;
+    boxes.forEach((entry, boxId) => {
+      if (entry.cadOnly) return;
 
-      const key = node.uuid;
-      seen.add(key);
-      const existing = this.entries.get(key);
+      seen.add(boxId);
+      const sig = `${entry.width}:${entry.height}:${entry.carcassDepth ?? entry.depth}`;
+      const existing = this.entries.get(boxId);
 
-      const geometryUuid = node.geometry.uuid;
-      if (existing && existing.geometryUuid === geometryUuid) {
+      if (existing && existing.sig === sig) {
+        existing.mesh = entry.mesh;
         return;
       }
 
       if (existing) {
         this.overlayGroup.remove(existing.lines);
-        disposeBoxHelperGeometryOnly(existing.lines);
-        this.entries.delete(key);
+        disposeLineSegmentsGeometry(existing.lines);
+        this.entries.delete(boxId);
       }
 
-      const helper = new THREE.BoxHelper(node, 0x000000);
-      (helper.material as THREE.Material).dispose();
-      helper.material = this.material;
-      helper.name = `edge-outline-${node.name || node.uuid}`;
-      helper.userData.isEdgeOutlineOverlay = true;
-      helper.raycast = () => null;
-      helper.frustumCulled = false;
-      helper.renderOrder = 2001;
+      const w = Math.max(0.001, entry.width);
+      const h = Math.max(0.001, entry.height);
+      const d = Math.max(0.001, entry.carcassDepth ?? entry.depth);
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const edges = new THREE.EdgesGeometry(geo);
+      geo.dispose();
+      const lines = new THREE.LineSegments(edges, this.material);
+      lines.name = `edge-outline-box-${boxId}`;
+      lines.userData.isEdgeOutlineOverlay = true;
+      lines.raycast = () => null;
+      lines.frustumCulled = false;
+      lines.renderOrder = 2001;
+      lines.matrixAutoUpdate = false;
+      this.overlayGroup.add(lines);
 
-      this.overlayGroup.add(helper);
-      helper.update();
-
-      this.entries.set(key, {
-        sourceMesh: node,
-        lines: helper,
-        geometryUuid,
-      });
+      this.entries.set(boxId, { boxId, lines, sig, mesh: entry.mesh });
     });
 
-    this.entries.forEach((entry, key) => {
-      if (seen.has(key) && entry.sourceMesh.parent) return;
-      this.overlayGroup.remove(entry.lines);
-      disposeBoxHelperGeometryOnly(entry.lines);
-      this.entries.delete(key);
+    const toRemove: string[] = [];
+    this.entries.forEach((_, id) => {
+      if (!seen.has(id)) toRemove.push(id);
     });
+    toRemove.forEach((id) => {
+      const internal = this.entries.get(id);
+      if (!internal) return;
+      this.overlayGroup.remove(internal.lines);
+      disposeLineSegmentsGeometry(internal.lines);
+      this.entries.delete(id);
+    });
+  }
+
+  private clearAllEntries(): void {
+    this.entries.forEach((internal) => {
+      this.overlayGroup.remove(internal.lines);
+      disposeLineSegmentsGeometry(internal.lines);
+    });
+    this.entries.clear();
   }
 
   update(): void {
     this.entries.forEach((entry) => {
-      entry.sourceMesh.updateWorldMatrix(true, false);
-      const show = hasVisibleAncestors(entry.sourceMesh);
+      entry.mesh.updateWorldMatrix(true, false);
+      const show = hasVisibleAncestors(entry.mesh) && entry.mesh.visible;
       entry.lines.visible = show;
       if (show) {
-        entry.lines.update();
+        entry.lines.matrix.copy(entry.mesh.matrixWorld);
       }
     });
   }
 
   dispose(): void {
-    this.entries.forEach((entry) => {
-      this.overlayGroup.remove(entry.lines);
-      disposeBoxHelperGeometryOnly(entry.lines);
-    });
-    this.entries.clear();
+    this.clearAllEntries();
     this.material.dispose();
     this.scene.remove(this.overlayGroup);
   }
