@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import versionDataUrl from "../../../../version.json?url";
 
 interface FooterProps {
-  onShowAbout?: () => void;
   onShowSystemDocs?: () => void;
-  onShowAdmin?: () => void;
   onShowAjuda?: () => void;
   onShowUserProjects?: () => void;
   onShowProjectProgress?: () => void;
@@ -12,14 +12,13 @@ interface FooterProps {
 }
 
 export default function Footer({
-  onShowAbout,
   onShowSystemDocs,
-  onShowAdmin,
   onShowAjuda,
   onShowUserProjects,
   onShowProjectProgress,
   onShowPainelReferencia,
 }: FooterProps) {
+  const navigate = useNavigate();
   const [version, setVersion] = useState("V4.1.0.2.6");
 
   useEffect(() => {
@@ -136,33 +135,18 @@ export default function Footer({
         >
           Painel de Referência
         </span>
-        {onShowAdmin ? (
-          <span
-            style={{ cursor: "pointer" }}
-            onClick={onShowAdmin}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                onShowAdmin();
-              }
-            }}
-          >
-            Admin
-          </span>
-        ) : null}
         <span
           style={{ cursor: "pointer" }}
-          onClick={onShowAbout}
+          onClick={() => navigate("/admin")}
           role="button"
           tabIndex={0}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
-              onShowAbout?.();
+              navigate("/admin");
             }
           }}
         >
-          Sobre Nós
+          Admin
         </span>
       </span>
     </footer>

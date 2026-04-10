@@ -29,8 +29,12 @@
   # e causando "Erro ao sincronizar" em todos os projetos.
 
   # SPA React (Vite) — por último, para não capturar /me nem /auth/login
+  RewriteRule ^admin(?:/.*)?$ /index.html [L]
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !^/auth/
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteCond %{REQUEST_URI} !^/admin/
   RewriteRule . /index.html [L]
 </IfModule>

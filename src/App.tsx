@@ -56,9 +56,6 @@ const DevPimoTest = import.meta.env.DEV
   : null;
 
 function LegacyApp() {
-  const { isAuthenticated, hasPermission } = useAuth();
-  const showLegacyAdminFooter = isAuthenticated() && canAccessAdminPanel(hasPermission);
-
   const [leftOpen, setLeftOpen] = useState(true);
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
@@ -132,17 +129,6 @@ function LegacyApp() {
     window.history.pushState({}, "", "/documentacao");
     setShowSystemDocs(true);
     setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
-  };
-
-  const navigateToAdmin = () => {
-    window.history.pushState({}, "", "/admin");
-    setShowAdmin(true);
-    setShowSystemDocs(false);
     setShowProjectProgress(false);
     setShowPainelReferencia(false);
     setShowAjuda(false);
@@ -305,7 +291,6 @@ function LegacyApp() {
 
         <Footer
           onShowSystemDocs={navigateToSystemDocs}
-          onShowAdmin={showLegacyAdminFooter ? navigateToAdmin : undefined}
           onShowAjuda={navigateToAjuda}
           onShowUserProjects={navigateToUserProjects}
           onShowProjectProgress={navigateToProjectProgress}
@@ -464,6 +449,8 @@ export default function App() {
           <Route path="/v4" element={<V4Page />} /> {/* TEMPORARY — remove before production */}
         </Route>
         <Route path="/" element={<LegacyApp />} />
+        {/* Painel legacy (AdminPanel): mesmo shell que / — syncRoute em LegacyApp lê pathname /admin */}
+        <Route path="/admin" element={<LegacyApp />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ThemeProvider>
