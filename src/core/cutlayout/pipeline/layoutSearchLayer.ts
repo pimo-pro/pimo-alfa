@@ -215,21 +215,10 @@ export function gerarCenariosLayout(
       if (waste <= FREEZE_WASTE_THRESHOLD) {
         frozenSheet0 = s0;
         frozenMultiset = buildPieceMultiset(s0.placements);
-        console.log(
-          `[LAYER2][FREEZE] Primeiro sheet congelado: ` +
-            `desperdício=${(waste * 100).toFixed(1)}% ≤ ${FREEZE_WASTE_THRESHOLD * 100}% | ` +
-            `peças=${s0.placements.length}`
-        );
-      } else {
-        console.log(
-          `[LAYER2][FREEZE] Primeiro sheet NÃO congelado: ` +
-            `desperdício=${(waste * 100).toFixed(1)}% > ${FREEZE_WASTE_THRESHOLD * 100}%`
-        );
       }
     }
   } catch {
     // Baseline falhou — sem freeze; as estratégias correm normalmente
-    console.warn("[LAYER2][FREEZE] Baseline falhou — freeze desativado.");
   }
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -249,18 +238,14 @@ export function gerarCenariosLayout(
     // Se o freeze está ativo, substitui o sheet 0 pelo estado congelado e remove
     // as suas peças dos sheets subsequentes gerados por esta estratégia.
     let scenarioSheets = result.sheets;
-    let freezeNote = "";
 
     if (frozenSheet0 && frozenMultiset) {
-      const { sheets: corrected, piecesRestored } = aplicarFreezeSheet0(
+      const { sheets: corrected } = aplicarFreezeSheet0(
         result.sheets,
         frozenSheet0,
         frozenMultiset
       );
       scenarioSheets = corrected;
-      if (piecesRestored > 0) {
-        freezeNote = ` | freeze_restored=${piecesRestored}`;
-      }
     }
     // ──────────────────────────────────────────────────────────────────────
 
@@ -272,13 +257,6 @@ export function gerarCenariosLayout(
       sheets: scenarioSheets,
       metrics,
     });
-
-    console.log(
-      `[LAYER2] Estratégia ${strategy.id} (${strategy.name}): ` +
-        `sheets=${metrics.sheetCount} | waste=${(metrics.totalWasteRatio * 100).toFixed(1)}% | ` +
-        `avgWaste=${(metrics.avgWasteRatio * 100).toFixed(1)}% | largeVoids=${metrics.largeVoidCount}` +
-        freezeNote
-    );
   }
 
   return cenarios;

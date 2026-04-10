@@ -9,25 +9,24 @@ import type { ProjectState } from "../../context/projectTypes";
 import { applyResultados } from "../../context/projectState";
 import { reviveState } from "../../context/projectPersistence";
 import { loadProjectRecord } from "../projects/projectsClient";
-import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildCutlistItemsForIndustrialExport } from "./buildCutlistItemsForIndustrialExport";
 import { gerarPdfTecnicoCompleto } from "../pdf/gerarPdfTecnico";
 import { buildCutlistPdf, type ProjectForPdf } from "../pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../pdf/pdfUnified";
 import { buildEtiquetasPdf, type ProjectForEtiquetasPdf } from "../pdf/pdfEtiquetas";
 import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../labelDesigner/labelDesignerStorage";
-import { runCutLayout, cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
+import { cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 import type { CutLayoutResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
-import {
-  buildCncFromCutlistItems,
-  getDefaultCncLayoutOptions,
-  getFastCncLayoutOptions,
-  getSheetDefinitionFromSettings,
-} from "../cnc/cncPipeline";
+import { getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
 import { buildDrillFilesForProject } from "../drill/drillExport";
 import { getSettings } from "../settings/settingsService";
+import { listMaterials } from "../materials/service";
+import { runCutLayoutInWorker, buildCncFromCutlistItemsInWorker } from "./industrialWorkerRunner";
 import { sanitizeZipPath } from "../../utils/sanitization";
 import { devLogger } from "../../utils/devLogger";
+import { beginIndustrialFileGeneration, endIndustrialFileGeneration } from "./industrialGenerationSuspend";
+import { measureTime } from "../../utils/measureTime";
 
 export interface GeneratedFabricationPackage {
   zipBlob: Blob;
@@ -97,13 +96,13 @@ function projectSlug(name: string): string {
 }
 
 function buildItemsForCncExportFromState(state: ProjectState): CutListItemComPreco[] {
-  const boxes = state.boxes ?? [];
-  const cutlist = cutlistComPrecoFromBoxes(boxes, state.rules, state.materialId, state.projectName);
-  const extracted = boxes.flatMap((b) => Object.values(state.extractedPartsByBoxId?.[b.id] ?? {}).flat());
-  return [...cutlist, ...extracted].map((p) => ({
-    ...p,
-    boxId: p.boxId ?? "",
-  })) as CutListItemComPreco[];
+  return buildCutlistItemsForIndustrialExport({
+    boxes: state.boxes ?? [],
+    rules: state.rules,
+    materialId: state.materialId,
+    projectName: state.projectName,
+    extractedPartsByBoxId: state.extractedPartsByBoxId,
+  });
 }
 
 function prefixCutlistItem(item: CutListItemComPreco, prefix: string): CutListItemComPreco {
@@ -289,6 +288,9 @@ export async function generateMultiProjectFabrication(
     throw new Error("multiProjectFabrication: indique pelo menos um projectId.");
   }
 
+  beginIndustrialFileGeneration();
+  try {
+    return await measureTime("Fabricação multi-projeto (ZIP)", async () => {
   const nestingMode = options?.nesting ?? "auto";
   const signal = options?.signal;
   const onProgress = options?.onProgress;
@@ -314,6 +316,8 @@ export async function generateMultiProjectFabrication(
 
   const cncPipelineOpts = nestingMode === "none" ? getFastCncLayoutOptions() : getDefaultCncLayoutOptions();
   const tcnSuffix = tcnMethodSuffix(getSettings()?.cnc?.tcnMetodo);
+  const settingsSnapshot = getSettings();
+  const materialsSnapshot = listMaterials();
 
   type LoadedEntry = {
     state: ProjectState;
@@ -381,7 +385,12 @@ export async function generateMultiProjectFabrication(
     const pieces = cutlistToPieces(allItemsForLayout);
     if (pieces.length > 0) {
       emit(2, "Otimizando layout global de chapas…", "Executando nesting…");
-      layoutResult = runCutLayout(pieces, getSheetDefinitionFromSettings(), layoutOpts);
+      const sheetDefGlobal = getSheetDefinitionFromSettings();
+      layoutResult = await runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
+        ...layoutOpts,
+        sheetLargura_mm: sheetDefGlobal.largura_mm,
+        sheetAltura_mm: sheetDefGlobal.altura_mm,
+      });
       applyRotationGeometryToSheets(layoutResult.sheets);
       combinedPlacements = layoutResult.sheets.flatMap((s) => s.placements);
     }
@@ -518,10 +527,11 @@ export async function generateMultiProjectFabrication(
       const usedProjTcnNames = new Set<string>();
       for (const [materialName, matItems] of projByMaterial) {
         checkAbort();
-        const cncBundle = buildCncFromCutlistItems(
+        const cncBundle = await buildCncFromCutlistItemsInWorker(
+          settingsSnapshot,
+          materialsSnapshot,
           { projectName: proj.projectName || entry.recordId, rules: entry.state.rules },
           matItems as CutlistItemForPieces[],
-          undefined,
           cncPipelineOpts
         );
         if (!cncBundle?.cnc?.files?.length) continue;
@@ -595,10 +605,11 @@ export async function generateMultiProjectFabrication(
     for (const [materialName, itemsForMaterial] of byMaterial) {
       checkAbort();
       emit(5, "Gerando ficheiros TCN/CNC globais…", materialName);
-      const cncBundle = buildCncFromCutlistItems(
+      const cncBundle = await buildCncFromCutlistItemsInWorker(
+        settingsSnapshot,
+        materialsSnapshot,
         globalProjectStub,
         itemsForMaterial as CutlistItemForPieces[],
-        undefined,
         cncPipelineOpts
       );
       if (!cncBundle?.cnc?.files?.length) continue;
@@ -672,4 +683,8 @@ export async function generateMultiProjectFabrication(
       projects: projectNames,
     },
   };
+    });
+  } finally {
+    endIndustrialFileGeneration();
+  }
 }

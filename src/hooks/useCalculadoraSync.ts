@@ -9,6 +9,7 @@ import { devLogger } from "../utils/devLogger";
 import { getViewerMaterialId } from "../core/materials/service";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
+import { isIndustrialFileGenerationActive } from "../core/fabrication/industrialGenerationSuspend";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 
 type ViewerApi = {
@@ -178,6 +179,7 @@ export const useCalculadoraSync = (
   }, [viewerApi]);
 
   const syncFromCalculator = useCallback(() => {
+    if (isIndustrialFileGenerationActive()) return;
     const api = viewerApiRef.current;
     if (!api) return;
     const currentBoxes = boxesRef.current ?? [];

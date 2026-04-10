@@ -92,7 +92,7 @@ function converterCoordenadasFuroTCN(
   pl: SheetResult["placements"][number],
   hole: TcnHoleLike,
   sheetLarguraMm: number,
-  sheetAlturaMm: number,
+  _sheetAlturaMm: number,
   maxW: number,
   maxH: number
 ): { tcnX: number; tcnY: number; xAbs: number; yAbs: number; off: { sx: number; sy: number } } {
@@ -101,16 +101,6 @@ function converterCoordenadasFuroTCN(
   const xAbs = pl.x_mm + off.sx;
   const yAbs = pl.y_mm + off.sy;
   const tcnPt = transformPlacementToTcn({ x: xAbs, y: yAbs, z: 0 }, sheetLarguraMm, maxW, maxH);
-
-  if (import.meta.env.DEV) {
-    console.log(
-      `[TCN-NestingMO][HOLE] ${pl.partName ?? "?"} rot=${rot} | ` +
-        `piece=(${fmt(pl.x_mm)},${fmt(pl.y_mm)}) size=(${fmt(pl.largura_mm)},${fmt(pl.altura_mm)}) | ` +
-        `holeLocal=(${fmt(hole.x)},${fmt(hole.y)}) off=(${fmt(off.sx)},${fmt(off.sy)}) | ` +
-        `abs=(${fmt(xAbs)},${fmt(yAbs)}) sheet=(${fmt(sheetLarguraMm)},${fmt(sheetAlturaMm)}) | ` +
-        `tcn=(${fmt(tcnPt.x)},${fmt(tcnPt.y)})`
-    );
-  }
 
   return { tcnX: tcnPt.x, tcnY: tcnPt.y, xAbs, yAbs, off };
 }

@@ -1,15 +1,15 @@
-type LogMethod = "debug" | "info" | "warn" | "error";
-
 const canLog = import.meta.env.DEV;
 
-function write(method: LogMethod, ...args: unknown[]): void {
-  if (!canLog) return;
-  console[method](...args);
-}
-
+/** Em DEV: `info` para resumos de performance; `error` para falhas. Resto em silêncio. */
 export const devLogger = {
-  debug: (...args: unknown[]) => write("debug", ...args),
-  info: (...args: unknown[]) => write("info", ...args),
-  warn: (...args: unknown[]) => write("warn", ...args),
-  error: (...args: unknown[]) => write("error", ...args),
+  debug: (..._args: unknown[]) => {},
+  info: (...args: unknown[]) => {
+    if (!canLog) return;
+    console.info(...args);
+  },
+  warn: (..._args: unknown[]) => {},
+  error: (...args: unknown[]) => {
+    if (!canLog) return;
+    console.error(...args);
+  },
 };

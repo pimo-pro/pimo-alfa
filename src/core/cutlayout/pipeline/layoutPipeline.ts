@@ -81,8 +81,8 @@ type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
 type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_desc_soft";
 
-/** Fase 7D: MPM com menos tentativas por grupo de material. */
-const MAX_NESTING_ATTEMPTS = 2;
+/** Fase 7D: uma tentativa por grupo/espessura (performance). */
+const MAX_NESTING_ATTEMPTS = 1;
 const ATTEMPT_TIMEOUT_MS = 1500;
 const META_MAX_MULTI_START = 12;
 
@@ -232,11 +232,6 @@ export function runCutLayout(
         const cenarios = gerarCenariosLayout(pieces, runner);
         if (cenarios.length > 0) {
           const best = escolherMelhorCenario(cenarios);
-          console.log(
-            `[LAYER2] Vencedor: ${best.strategyName} | ` +
-              `sheets=${best.metrics.sheetCount} | ` +
-              `waste=${(best.metrics.totalWasteRatio * 100).toFixed(1)}%`
-          );
           // Fase final: ordenação vencedora + opções completas (com meta-heurísticas)
           return runCutLayout(best.pieces, sheetDef, options, deps);
         }
@@ -374,17 +369,17 @@ export function runCutLayout(
     const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
 
     // ── SPM PATH ────────────────────────────────────────────────────────────
-    // Projeto único: 2 variantes (Fase 7D — performance) sem meta-heurísticas.
-    // Escolhe a melhor por score, depois pocket filling + compactação translacional.
-    // Compactor não corre no SPM.
+    // Projeto único: 1 variante (performance) sem meta-heurísticas.
+    // Depois pocket filling + compactação translacional. Compactor não corre no SPM.
     if (nestingMode === NestingMode.SingleProject) {
       const spmTrialVariants: Array<{
         trial: CutLayoutTrialConfig;
         rotationMode: CutLayoutRotationPreferenceMode;
       }> = [
         { trial: { strategy: "skyline", binHeuristic: "bestFit" }, rotationMode: "aggressive" },
-        { trial: { strategy: "shelf",   binHeuristic: "bestFit" }, rotationMode: "auto" },
+        { trial: { strategy: "shelf", binHeuristic: "bestFit" }, rotationMode: "auto" },
       ];
+      const spmTrialVariantsToRun = spmTrialVariants.slice(0, 1);
       let spmBestRun: SimulateTrialForGroupResult | null = null;
       let spmBestTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "bestFit" };
 
@@ -411,8 +406,7 @@ export function runCutLayout(
           : spmBaseSorted;
       // ──────────────────────────────────────────────────────────────────────
 
-      // Testar as 2 variantes e escolher a melhor por score
-      for (const { trial: spmTrial, rotationMode } of spmTrialVariants) {
+      for (const { trial: spmTrial, rotationMode } of spmTrialVariantsToRun) {
         const spmRotCfg: RotationScoringConfig = { ...rotationCfg, rotationPreferenceMode: rotationMode };
         const run = deps.simulateTrialForGroup(
           spmOrderedPieces,
@@ -459,11 +453,6 @@ export function runCutLayout(
         const _preMixed  = spmRun.sheets.some((s) => _isMixed(s.placements));
         const _postMixed = spmSheets.some((s) => _isMixed(s.placements));
         const guardedSpmSheets = (!_preMixed && _postMixed) ? spmRun.sheets : spmSheets;
-        if (!_preMixed && _postMixed) {
-          console.log(
-            "[SPM] Guard anti-mistura: pocket filling introduziu corpo/portas na mesma chapa → revert"
-          );
-        }
         // ──────────────────────────────────────────────────────────────────────
 
         if (diagnostics) {
@@ -492,7 +481,7 @@ export function runCutLayout(
         })
       | null = null;
 
-    // Fase 7D: 2 variantes (antes 4) — alinhado com SPM para custo menor.
+    // Fase 7D: variantes limitadas por MAX_NESTING_ATTEMPTS.
     const attemptVariants: Array<{
       orderMode: AttemptOrderMode;
       trial: CutLayoutTrialConfig;
@@ -535,24 +524,11 @@ export function runCutLayout(
       );
       const elapsedMs = nowMs() - attemptStartedAt;
       if (elapsedMs > ATTEMPT_TIMEOUT_MS) {
-        console.log(`[NESTING] Timeout na tentativa ${ti + 1} — descartada`);
         continue;
       }
       const wasteArea = run.sheets.length * sheetArea - run.usedArea;
       const totalPlacements = run.sheets.reduce((acc, s) => acc + s.placements.length, 0);
       const isValidRun = run.sheets.length > 0 && totalPlacements > 0;
-      console.log(`[NESTING] Tentativa ${ti + 1} concluída:`, {
-        score: run.score,
-        sheets: run.sheets.length,
-        placements: totalPlacements,
-        usedArea: run.usedArea,
-        wasteArea,
-        elapsedMs: Number(elapsedMs.toFixed(2)),
-        valid: isValidRun,
-        strategy: trial.strategy,
-        binHeuristic: trial.binHeuristic,
-        orderMode: attempt.orderMode,
-      });
       if (!isValidRun) {
         continue;
       }
@@ -719,23 +695,6 @@ export function runCutLayout(
         };
       }
     }
-
-    // ── Log de classificação industrial de chapas ──────────────────────────────
-    if (bestRun.sheets.length > 0) {
-      let excellent = 0, good = 0, weak = 0;
-      for (const s of bestRun.sheets) {
-        const area = Math.max(1, s.sheet.largura_mm * s.sheet.altura_mm);
-        const used = s.placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
-        const waste = Math.max(0, (area - used) / area);
-        if (waste <= 0.10)      excellent++;
-        else if (waste <= 0.15) good++;
-        else                    weak++;
-      }
-      console.log(
-        `[NESTING] Classificação: ${excellent} Excelente(≤10%) | ${good} Boa(10-15%) | ${weak} Fraca(>15%) | total=${bestRun.sheets.length}`
-      );
-    }
-    // ──────────────────────────────────────────────────────────────────────────
 
     // Late-Sheet Compactor: tenta recompactar as chapas tardias com desperdício elevado.
     // Só ativa se o grupo tiver mais de LATE_SHEET_COMPACT_WINDOW chapas e desperdício médio

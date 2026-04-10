@@ -21,6 +21,7 @@ import {
 import { mergeProjectSnapshotsIntoWorkspace } from "../../core/projects/projectMergeWorkspace";
 import { defaultState } from "../projectState";
 import { devLogger } from "../../utils/devLogger";
+import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 import { useToast } from "../../context/ToastContext";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 
@@ -114,6 +115,7 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
             wallStore.getState().clearRoom();
           }
         }
+        clearAllCutlistCache();
         updateProject(() => ({ ...applyResultados(restored), currentProjectId: id }));
       },
       mergeSnapshots: async (ids) => {
@@ -122,6 +124,7 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         wallStore.getState().clearRoom();
         undoStackRef.current = [];
         redoStackRef.current = [];
+        clearAllCutlistCache();
         updateProject(() => applyResultados(merged), false);
         logProjectIo("merge-snapshots", { count: ids.length });
       },
@@ -154,6 +157,7 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         wallStore.getState().clearRoom();
         undoStackRef.current = [];
         redoStackRef.current = [];
+        clearAllCutlistCache();
         updateProject(() => ({ ...freshState, lastAutosaveTime: saved.updatedAt }), false);
         return saved;
       },

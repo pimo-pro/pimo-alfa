@@ -27,6 +27,7 @@ import {
   type OfflineProjectRecord,
   type SyncQueueEntry,
 } from "./projectsOfflineStore";
+import { isIndustrialFileGenerationActive } from "../fabrication/industrialGenerationSuspend";
 
 const SYNC_INTERVAL_MS = 15000;
 
@@ -264,6 +265,10 @@ export function subscribeProjectsSyncStatus(
 
 export async function syncQueue(): Promise<void> {
   ensureSyncLoopStarted();
+  if (isIndustrialFileGenerationActive()) {
+    refreshPendingStatus();
+    return;
+  }
   if (syncInProgress) return;
   if (syncStatus.hasActiveSyncError && nextRetryAtMs > Date.now()) return;
   const queue = readSyncQueue();
@@ -304,23 +309,14 @@ export async function syncQueue(): Promise<void> {
           const request: SaveProjectRequest = project.remoteId
             ? { ...baseRequest, remoteProjectId: project.remoteId }
             : baseRequest;
-          if (import.meta.env.DEV) {
-            devLogger.debug("[SYNC] remoteSaveProject →", {
-              projectId: project.id,
-              remoteId: project.remoteId ?? null,
-              ownerId: project.ownerId,
-              op: entry.op,
-            });
-          }
           const saved = await remoteSaveProject(request, projectsApiDeps);
           if (!saved) {
-            if (import.meta.env.DEV) {
-              devLogger.warn("[SYNC] remoteSaveProject devolveu null (payload vazio ou erro HTTP)", {
-                projectId: project.id,
-                ownerId: project.ownerId,
-              });
-            }
-            throw new Error("Falha ao guardar no servidor");
+            console.warn("[SYNC] remoteSaveProject devolveu null — operação removida da fila sem retry", {
+              projectId: project.id,
+              ownerId: project.ownerId,
+            });
+            nextQueue.splice(index, 1);
+            continue;
           }
           projects[projectIdx] = {
             ...project,

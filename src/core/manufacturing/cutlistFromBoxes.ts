@@ -13,13 +13,53 @@ import { getIndustrialMaterial } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
-import { devLogger } from "../../utils/devLogger";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
+
+/** Campos derivados — não entram na chave de cache (evita recomputes por efeitos colaterais). */
+const CAMPOS_EXCLUIDOS_FP_CUTLIST = new Set([
+  "cutList",
+  "cutListComPreco",
+  "estrutura3D",
+  "precoTotalPecas",
+]);
+
+function jsonIndustrialBoxParaCutlist(box: BoxModule): string {
+  return JSON.stringify(box, (key, value) => {
+    if (key !== "" && CAMPOS_EXCLUIDOS_FP_CUTLIST.has(key)) return undefined;
+    return value;
+  });
+}
+
+type EntradaCacheCutlistBox = { chave: string; items: CutListItemComPreco[] };
+
+let cutlistCompletaCacheChave: string | null = null;
+let cutlistCompletaCache: CutListItemComPreco[] | null = null;
+const cutlistPorCaixaCache = new Map<string, EntradaCacheCutlistBox>();
+
+/** Invalidação total (import, troca macro de regras, etc.). */
+export function clearAllCutlistCache(): void {
+  cutlistCompletaCacheChave = null;
+  cutlistCompletaCache = null;
+  cutlistPorCaixaCache.clear();
+}
+
+/**
+ * Invalida cache relacionado com um projeto. `projectId` reserva-se para diagnóstico futuro.
+ * Com `boxIds`, remove entradas por caixa; a lista completa em cache é sempre invalidada.
+ */
+export function clearCutlistCacheForProject(_projectId: string, boxIds?: readonly string[]): void {
+  void _projectId;
+  cutlistCompletaCacheChave = null;
+  cutlistCompletaCache = null;
+  if (boxIds?.length) {
+    for (const bid of boxIds) cutlistPorCaixaCache.delete(bid);
+  }
+}
 
 /**
  * Converte furos de caneco da porta (Y em coordenadas do painel: topo=0, Y↓) para offsets industriais
@@ -48,18 +88,14 @@ export function cutlistComPrecoFromBox(
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
-  if (import.meta.env.DEV) {
-    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: box recebido", box);
-    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: rules recebido", rules);
+  const chaveCaixa = `${jsonIndustrialBoxParaCutlist(box)}\0${JSON.stringify(rules)}\0${projectMaterialId ?? ""}`;
+  const entradaCaixa = cutlistPorCaixaCache.get(box.id);
+  if (entradaCaixa && entradaCaixa.chave === chaveCaixa) {
+    return entradaCaixa.items;
   }
+
   const effRules = buildEffectiveDrillingRules(rules);
-  if (import.meta.env.DEV) {
-    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: effRules", effRules);
-  }
   const modelo = gerarModeloIndustrial(box, effRules);
-  if (import.meta.env.DEV) {
-    devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: modelo.paineis", modelo.paineis);
-  }
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
   const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
   const material = matInfo.label;
@@ -160,7 +196,6 @@ export function cutlistComPrecoFromBox(
   let doorPanelIndex = 0;
   modelo.paineis.forEach((p) => {
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
-      console.warn("[cutlistFromBoxes] Skipping invalid painel:", p);
       return;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
@@ -211,17 +246,6 @@ export function cutlistComPrecoFromBox(
     } else {
       if (isDoor) {
         drillHoles = doorDrillHolesByIndex.get(doorIndex) ?? [];
-        if (import.meta.env.DEV) {
-          const ys = drillHoles
-            .filter((h) => h.holeType === "dobradica")
-            .map((h) => h.y);
-          devLogger.debug("[DRILL-DIAG] door hinge holes", {
-            doorIndex,
-            hingeSide,
-            count: ys.length,
-            ys,
-          });
-        }
       } else {
         const drillingResult = buildPanelDrillingResult(
           {
@@ -248,14 +272,6 @@ export function cutlistComPrecoFromBox(
           : [];
       }
     }
-    if (import.meta.env.DEV) {
-      // Log de diagnóstico dos furos gerados para cada painel
-      devLogger.debug("[DRILL-DIAG] cutlistComPrecoFromBox: drillHoles para painel", {
-        painelId: p.id,
-        tipo: p.tipo,
-        drillHoles,
-      });
-    }
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -274,14 +290,6 @@ export function cutlistComPrecoFromBox(
       precoTotal: p.custo,
       drillHoles,
     });
-    if (import.meta.env.DEV) {
-      console.log("[CUTLIST] painel gerado:", p.tipo, {
-        largura_mm: p.largura_mm,
-        altura_mm: p.altura_mm,
-        espessura_mm: p.espessura_mm,
-        quantidade: p.quantidade,
-      });
-    }
   });
 
   // Portas já vêm em modelo.paineis (porta_simples, porta_dupla, porta_correr); não duplicar a partir de modelo.portas
@@ -308,8 +316,7 @@ export function cutlistComPrecoFromBox(
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
   }
 
-  devLogger.debug("[CUTLIST-FINAL] total:", items.length);
-  devLogger.debug("[CUTLIST-FINAL] tipos:", items.map((p) => p.tipo));
+  cutlistPorCaixaCache.set(box.id, { chave: chaveCaixa, items });
   return items;
 }
 
@@ -322,12 +329,30 @@ export function cutlistComPrecoFromBoxes(
   projectMaterialId?: string,
   projectName = "Projeto"
 ): CutListItemComPreco[] {
+  const idsPresentes = new Set(boxes.map((b) => b.id));
+  for (const id of cutlistPorCaixaCache.keys()) {
+    if (!idsPresentes.has(id)) cutlistPorCaixaCache.delete(id);
+  }
+
+  const fpCaixasOrdenado = [...boxes]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((b) => `${b.id}:${jsonIndustrialBoxParaCutlist(b)}`)
+    .join("\n");
+  const chaveCompleta = `${projectName}\0${projectMaterialId ?? ""}\0${JSON.stringify(rules)}\0${fpCaixasOrdenado}`;
+
+  if (cutlistCompletaCacheChave === chaveCompleta && cutlistCompletaCache) {
+    return cutlistCompletaCache;
+  }
+
   const raw = boxes.flatMap((box) => cutlistComPrecoFromBox(box, rules, projectMaterialId));
-  return attachQrCodesToCutlist(raw, {
+  const comQr = attachQrCodesToCutlist(raw, {
     projectName,
     boxes,
     rules,
   });
+  cutlistCompletaCacheChave = chaveCompleta;
+  cutlistCompletaCache = comQr;
+  return comQr;
 }
 
 /**

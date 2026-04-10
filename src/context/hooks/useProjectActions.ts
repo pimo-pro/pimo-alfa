@@ -15,6 +15,7 @@ import { useRulesActions } from "./useRulesActions";
 import { useViewerUiActions } from "./useViewerUiActions";
 import { useDesignActions } from "./useDesignActions";
 import { getIndustrialMaterial } from "../../core/materials/service";
+import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
 export type UseProjectActionsParams = {
   updateProject: (_fn: (_prev: ProjectState) => ProjectState, _pushUndo?: boolean) => void;
@@ -84,6 +85,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     // --- setMaterial ---
     // Atualiza o Material completo + sincroniza materialId se o objeto tiver id
     a.setMaterial = (material) => {
+      clearAllCutlistCache();
       updateProject(
         (prev) => {
           if (!material) {

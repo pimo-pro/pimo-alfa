@@ -34,7 +34,6 @@ export function exportCncFiles(
 
   const files: CncExportFile[] = [];
   layoutResult.sheets.forEach((sheetResult, index) => {
-    console.log("[EXPORT] panels no sheet:", sheetResult.placements.length);
     const sheet = sheetResult.sheet;
     const thicknessMm = sheet.espessura_mm;
     const panelIndex = index + 1;

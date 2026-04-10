@@ -174,12 +174,8 @@ export function buildCncFromCutlistItems(
   _sheet?: SheetDefinition,
   layoutOptions: CutLayoutEngineOptions = getDefaultCncLayoutOptions()
 ) {
-  console.log("[CNC-ENTRY] Entrou no buildCncFromCutlistItems");
-  console.log("[CNC-ENTRY] items recebidos:", items?.length);
   try {
-    console.log("[CNC] buildCncFromCutlistItems - items:", items.length);
     if (items.length === 0) {
-      console.log("[CNC] retorno antecipado: sem peças.");
       return null;
     }
     const industrialItems = applyCutlistMetadata(applyDrillHoles(applyIndustrialRules(items)));
@@ -189,7 +185,6 @@ export function buildCncFromCutlistItems(
       kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
     };
 
-    console.log("[CNC-STAGE] agrupando por espessura...");
     const groupedItems = new Map<number, CutlistItemForPieces[]>();
     for (const item of industrialItems) {
       const t = inferItemThicknessMm(item);
@@ -198,31 +193,19 @@ export function buildCncFromCutlistItems(
       if (!groupedItems.has(key)) groupedItems.set(key, []);
       groupedItems.get(key)!.push(item);
     }
-    console.log("[CNC-STAGE] grupos encontrados:", Array.from(groupedItems.keys()));
     if (groupedItems.size === 0) {
       throw new Error("Nenhuma peça com espessura válida para CNC.");
     }
 
     const allPieces = cutlistToPieces(industrialItems);
-    console.log("[CNC] cutlistToPieces - pieces:", allPieces.length);
     if (allPieces.length === 0) {
-      console.log("[CNC] retorno antecipado: sem peças após normalização.");
       return null;
     }
 
     const finalSheets: CutLayoutResult["sheets"] = [];
     for (const [thickness, group] of groupedItems) {
-      console.log("[CNC-STAGE] resolvendo chapa para espessura:", thickness);
       const selectedSheet = resolveSheetForThickness(thickness, group);
-      console.log("[CNC-STAGE] chapa encontrada:", selectedSheet);
-      const material = {
-        ...selectedSheet,
-        DL: selectedSheet.largura_mm,
-        DH: selectedSheet.altura_mm,
-        DS: selectedSheet.espessura_mm,
-      };
 
-      console.log("[CNC-STAGE] preparando peças para layout...");
       const piecesGroup = cutlistToPieces(group).map((p) => ({
         ...p,
         sheetWidthMm: selectedSheet.largura_mm,
@@ -249,17 +232,11 @@ export function buildCncFromCutlistItems(
           }
         );
       }
-      console.log("[CNC-STAGE] quantidade de peças:", piecesGroup.length);
-      console.log("[DEBUG] material selecionado:", material);
-      console.log("[DEBUG] peças:", piecesGroup.length);
-      console.log("[DEBUG] bin size usado:", material.DL, material.DH, material.DS);
-
       const optionsForGroup: CutLayoutEngineOptions = {
         ...enforcedLayoutOptions,
         sheetLargura_mm: selectedSheet.largura_mm,
         sheetAltura_mm: selectedSheet.altura_mm,
       };
-      console.log("[CNC-STAGE] chamando runCutLayout...");
       const groupLayout = runCutLayout(piecesGroup, selectedSheet, optionsForGroup);
       for (const s of groupLayout.sheets) {
         const enrichedPlacements = s.placements.map((pl) => {
@@ -288,17 +265,7 @@ export function buildCncFromCutlistItems(
       }
     }
     const layoutResult: CutLayoutResult = { sheets: finalSheets };
-    console.log("[CNC] runCutLayout - sheets:", layoutResult.sheets.length);
-    layoutResult.sheets.forEach((s, idx) => {
-      console.log(`[DEBUG] sheet ${idx + 1} placements:`, s.placements.length);
-      console.log(`[DEBUG] sheet ${idx + 1} size:`, {
-        largura_mm: s.sheet.largura_mm,
-        altura_mm: s.sheet.altura_mm,
-        espessura_mm: s.sheet.espessura_mm,
-      });
-    });
     const cnc = exportCncFiles(project, layoutResult, []);
-    console.log("[CNC] exportCncFiles - arquivos:", cnc.files.length);
     return { pieces: allPieces, layoutResult, cnc };
   } catch (err) {
     console.error("[CNC-ERROR] Erro no pipeline:", err);

@@ -6,6 +6,14 @@ import { SETTINGS_SCHEMA_VERSION, SETTINGS_STORAGE_KEY, settingsDefaults, type S
 import { deepMergeSettings, isObject } from "./settingsMerge";
 import { validateSettings } from "./settingsValidation";
 
+/** Snapshot injetado no Worker industrial (localStorage não está disponível de forma fiável no Worker). */
+let settingsReadOverride: SettingsSchema | null = null;
+
+/** @internal Apenas `industrialGeneration.worker` / runner; não usar na UI. */
+export function setIndustrialSettingsReadOverride(s: SettingsSchema | null): void {
+  settingsReadOverride = s;
+}
+
 export function migrateSettings(raw: unknown): SettingsSchema {
   if (!isObject(raw)) return settingsDefaults;
   const rawObj = raw as Record<string, unknown>;
@@ -27,6 +35,7 @@ export function migrateSettings(raw: unknown): SettingsSchema {
 }
 
 export function getSettings(): SettingsSchema {
+  if (settingsReadOverride) return settingsReadOverride;
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return settingsDefaults;

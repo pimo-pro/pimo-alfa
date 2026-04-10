@@ -31,6 +31,14 @@ import {
 } from "./materials.api";
 
 const STORAGE_KEY = "pimo_materials_crud_v1";
+
+/** Lista vinda do main para o Worker industrial (evita localStorage no Worker). */
+let materialsListReadOverride: MaterialRecord[] | null = null;
+
+/** @internal Apenas pipeline industrial no Worker. */
+export function setIndustrialMaterialsReadOverride(list: MaterialRecord[] | null): void {
+  materialsListReadOverride = list;
+}
 /** Incrementar quando for necessário voltar a sincronizar o CRUD com o catálogo oficial (FASE 7M = 7). */
 const MATERIALS_CRUD_DATA_VERSION = 7;
 const MATERIALS_CRUD_DATA_VERSION_KEY = "pimo_materials_crud_data_version";
@@ -359,6 +367,9 @@ export function validateMaterialData(
  * Lista todos os materiais guardados (localStorage).
  */
 export function listMaterials(): MaterialRecord[] {
+  if (materialsListReadOverride) {
+    return materialsListReadOverride.map((m) => applyInferredIndustrialFields(m));
+  }
   maybeApplyMaterialsCrudDataMigrations();
   ensureRequiredMaterialsCatalog();
   const list = loadFromStorage();

@@ -5,6 +5,7 @@ import { defaultRulesConfig, normalizeRulesConfig, type RulesConfig } from "../.
 import type { RulesProfile, RulesProfilesConfig } from "../../core/rules/rulesProfiles";
 import type { ProjectActions } from "../projectTypes";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
+import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
 export type RulesActions = Pick<
   ProjectActions,
@@ -33,6 +34,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         nextPerfis[idx] = { ...nextPerfis[idx], rules: normalizedRules };
         const nextConfig = { ...profiles, perfis: nextPerfis };
         saveProfiles(nextConfig);
+        clearAllCutlistCache();
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: normalizedRules });
       }, true);
     };
@@ -45,6 +47,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const perfil = nextConfig.perfis.find((p) => p.id === id);
         const rules = normalizeRulesConfig(perfil?.rules ?? prev.rules);
         saveProfiles(nextConfig);
+        clearAllCutlistCache();
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
       }, true);
     };
@@ -61,6 +64,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const isActive = profiles.perfilAtivoId === profileId;
         const nextRules = isActive ? normalizedRules : prev.rules;
         saveProfiles(nextConfig);
+        if (isActive) clearAllCutlistCache();
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules: nextRules });
       }, true);
     };
@@ -92,6 +96,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         };
         const normalizedActive = normalizedConfig.perfis.find((p) => p.id === normalizedConfig.perfilAtivoId);
         const rules = normalizeRulesConfig(normalizedActive?.rules ?? perfil?.rules ?? prev.rules);
+        clearAllCutlistCache();
         return applyResultados({ ...prev, rulesProfiles: normalizedConfig, rules });
       }, true);
     };
@@ -100,6 +105,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
       updateProject((prev) => {
         const perfil = prev.rulesProfiles.perfis.find((p) => p.id === id);
         if (!perfil) return prev;
+        clearAllCutlistCache();
         return applyResultados({
           ...prev,
           rulesProfileId: id,
@@ -122,6 +128,7 @@ export function useRulesActions(ctx: ProjectActionsExecutionContext): RulesActio
         const perfil = nextPerfis.find((p) => p.id === newActiveId);
         const rules = normalizeRulesConfig(perfil?.rules ?? prev.rules);
         saveProfiles(nextConfig);
+        clearAllCutlistCache();
         return applyResultados({ ...prev, rulesProfiles: nextConfig, rules });
       }, true);
     };
