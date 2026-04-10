@@ -103,7 +103,7 @@ Conclusão: o sistema visual das caixas no Viewer é **MaterialLibrary (3d) + Wo
 
 | Sistema | Ficheiro(s) | Consumidores | Conteúdo |
 |--------|-------------|--------------|----------|
-| **Presets visuais (CRUD/Fase 4)** | `presets.ts`, `presetService.ts` | materialLibraryV2, getVisualMaterialForBox, getDefaultPreset | INITIAL_MATERIAL_PRESETS: mdf_branco, mdf_cinza, mdf_preto, carvalho_natural, nogueira (id, name, color, uvScale, roughness, metallic; textureUrl opcional) |
+| **Presets visuais (CRUD/Fase 4)** | `presets.ts`, `presetService.ts` | materialLibraryV2, getVisualMaterialForBox, getDefaultPreset | INITIAL_MATERIAL_PRESETS: mdf_branco, laminado_linho_cancun, mdf_preto, carvalho_natural, nogueira (id, name, color, uvScale, roughness, metallic; textureUrl opcional) |
 | **MaterialLibrary (Viewer)** | `MaterialLibrary.ts` + `materials.api.ts` | ViewerCore, BoxBuilder, Piece3DModal | defaultMaterialSet derivado de listOfficialMaterials(); MATERIAIS_PBR_IDS; getMaterialPreset(materialSet, idOrName) → WoodMaterialOptions |
 | **MaterialPanel (UI)** | `materialPresets.ts` | MaterialPanel.tsx | wood_oak, wood_walnut, wood_pine; maps: base.svg, normal.svg, etc. por categoria; getPresetById / getPresetsByCategory |
 

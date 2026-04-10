@@ -27,6 +27,8 @@ if (!fs.existsSync(dist)) {
 
 const srcAuth = path.join(root, "api", "auth", "index.php");
 const srcUsers = path.join(root, "api", "users", "index.php");
+const srcUserSettings = path.join(root, "api", "user-settings", "index.php");
+const srcGlobalConfig = path.join(root, "api", "global-config", "index.php");
 
 if (!fs.existsSync(srcAuth) || !fs.existsSync(srcUsers)) {
   console.warn("[copyDeployApiToDist] api/auth ou api/users em falta — nada a copiar.");
@@ -35,6 +37,12 @@ if (!fs.existsSync(srcAuth) || !fs.existsSync(srcUsers)) {
 
 copyFile(srcAuth, path.join(dist, "api", "_impl", "auth", "index.php"));
 copyFile(srcUsers, path.join(dist, "api", "_impl", "users", "index.php"));
+if (fs.existsSync(srcUserSettings)) {
+  copyFile(srcUserSettings, path.join(dist, "api", "_impl", "user-settings", "index.php"));
+}
+if (fs.existsSync(srcGlobalConfig)) {
+  copyFile(srcGlobalConfig, path.join(dist, "api", "_impl", "global-config", "index.php"));
+}
 
 const gitkeep = path.join(root, "api", "data", ".gitkeep");
 if (fs.existsSync(gitkeep)) {
@@ -51,9 +59,34 @@ define('PIMO_USERS_ROUTER', true);
 require_once __DIR__ . '/../_impl/users/index.php';
 `;
 
+const userSettingsStub = `<?php
+define('PIMO_USER_SETTINGS_ROUTER', true);
+require_once __DIR__ . '/../_impl/user-settings/index.php';
+`;
+
+const globalConfigStub = `<?php
+define('PIMO_GLOBAL_CONFIG_ROUTER', true);
+require_once __DIR__ . '/../_impl/global-config/index.php';
+`;
+
 ensureDir(path.join(dist, "api", "auth"));
 ensureDir(path.join(dist, "api", "users"));
 fs.writeFileSync(path.join(dist, "api", "auth", "index.php"), authStub, "utf8");
 fs.writeFileSync(path.join(dist, "api", "users", "index.php"), usersStub, "utf8");
+if (fs.existsSync(srcUserSettings)) {
+  ensureDir(path.join(dist, "api", "user-settings"));
+  fs.writeFileSync(path.join(dist, "api", "user-settings", "index.php"), userSettingsStub, "utf8");
+}
+if (fs.existsSync(srcGlobalConfig)) {
+  ensureDir(path.join(dist, "api", "global-config"));
+  fs.writeFileSync(path.join(dist, "api", "global-config", "index.php"), globalConfigStub, "utf8");
+}
 
-console.log("[copyDeployApiToDist] Copiado auth/users para dist/api/ (_impl + stubs).");
+const extras = [];
+if (fs.existsSync(srcUserSettings)) extras.push("user-settings");
+if (fs.existsSync(srcGlobalConfig)) extras.push("global-config");
+console.log(
+  "[copyDeployApiToDist] Copiado auth/users" +
+    (extras.length ? "/" + extras.join("/") : "") +
+    " para dist/api/ (_impl + stubs)."
+);

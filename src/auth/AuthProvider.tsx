@@ -8,6 +8,14 @@ const STORAGE_TOKEN = "pimo_auth_token";
 const STORAGE_USER = "pimo_auth_user";
 const STORAGE_PERMISSIONS = "pimo_auth_permissions";
 
+/**
+ * Sessão / RBAC — extensões futuras (não implementadas aqui):
+ * - Settings online por utilizador: após login, `user.id` (igual ao `sub` do JWT no backend) é o
+ *   identificador estável para GET/PATCH de preferências no servidor.
+ * - Merge global → utilizador → local: ver `src/core/settings/settingsStorage.ts` (leitura única
+ *   hoje em localStorage); a composição por camadas entrará nesse módulo + SettingsContext.
+ */
+
 type Props = {
   children: ReactNode;
 };
@@ -92,6 +100,7 @@ export function AuthProvider({ children }: Props) {
     return Boolean(token);
   }, [token]);
 
+  /** RBAC: lista espelha `pimo_auth_permissions` e o array normalizado de `/me` (após fix do contrato). */
   const hasPermission = useCallback(
     (permission: string) => {
       return permissions.includes("admin.full_access") || permissions.includes(permission);

@@ -12,8 +12,13 @@
 
   # Auth JWT (frontend: https://pimo.pro/auth/login e /me)
   RewriteRule ^auth/login$ api/auth/index.php [L]
+  RewriteRule ^auth/register$ api/auth/index.php [L]
   RewriteRule ^me$ api/auth/index.php [L]
   RewriteRule ^users$ api/users/index.php [L]
+  # User settings online (JWT) — GET/PATCH
+  RewriteRule ^user/settings$ api/user-settings/index.php [L]
+  # Global settings público (sem JWT)
+  RewriteRule ^config/global$ api/global-config/index.php [L]
 
   # Nota: a RewriteRule para api/projects foi removida intencionalmente.
   # O ficheiro public_html/api/projects/index.php existe fisicamente no disco,

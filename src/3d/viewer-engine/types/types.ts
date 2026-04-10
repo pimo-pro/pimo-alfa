@@ -35,4 +35,9 @@ export interface ViewerBoxEntry {
   materialName?: string;
   /** Id do modelo base (ex.: pi-base-*); furação lateral PI sempre aplicada no mesh. */
   baseCabinetId?: string;
+  /**
+   * Proxy de volume L×A×P de layout: layer 31; `visible: false` no render; só visível em janelas síncronas
+   * (`runWithLayoutBoundsProxiesVisible`) para bbox de câmara. Excluído de raycast/reflow/colisão/régua.
+   */
+  layoutBoundsMesh?: THREE.Mesh;
 }

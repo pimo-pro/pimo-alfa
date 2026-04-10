@@ -1,5 +1,10 @@
 /**
  * Persistência local (localStorage), migração e leitura de configurações.
+ *
+ * Camada global (GET /config/global) é aplicada em `resolveAllSettingsLayers` / SettingsProvider
+ * antes do merge com o blob `SETTINGS_STORAGE_KEY`; este ficheiro continua a ser só leitura/escrita
+ * local + migração. `getSettings()` devolve defaults+migrate(local) sem servidor — no arranque,
+ * o provider regrava após compor defaults → global → user → local.
  */
 
 import { SETTINGS_SCHEMA_VERSION, SETTINGS_STORAGE_KEY, settingsDefaults, type SettingsSchema } from "./settingsSchema";

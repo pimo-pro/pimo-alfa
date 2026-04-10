@@ -12,6 +12,7 @@ import type {
   ViewerRenderResult,
 } from "../../../context/projectTypes";
 import type { ViewerBoxEntry } from "../types";
+import { runWithAllLayoutBoundsProxiesVisible } from "../box/boxAabbUtils";
 
 type LightState = {
   keyLight: THREE.DirectionalLight;
@@ -33,7 +34,7 @@ type ViewerRenderExporterDeps = {
   setGridVisible: (_visible: boolean) => void;
   getRoomGroup: () => THREE.Group;
   getRoomWalls: () => Array<{ mesh: THREE.Mesh }>;
-  getSelectionOutline: () => THREE.BoxHelper | null;
+  getSelectionOutline: () => THREE.Object3D | null;
   getWallSelectionOutline: () => THREE.BoxHelper | null;
   getDimensionsOverlayGroup: () => THREE.Group | null;
   getWallGizmoGroup: () => THREE.Group | null;
@@ -155,9 +156,12 @@ export class ViewerRenderExporter {
       const boundingBox = new THREE.Box3();
       const centerVec = new THREE.Vector3();
       const sizeVec = new THREE.Vector3();
-      boundingBox.makeEmpty();
-      boxes.forEach((entry) => {
-        boundingBox.expandByObject(entry.mesh);
+      const roots = Array.from(boxes.values()).map((e) => e.mesh);
+      runWithAllLayoutBoundsProxiesVisible(roots, () => {
+        boundingBox.makeEmpty();
+        boxes.forEach((entry) => {
+          boundingBox.expandByObject(entry.mesh);
+        });
       });
       if (boundingBox.isEmpty()) return;
       boundingBox.getCenter(centerVec);

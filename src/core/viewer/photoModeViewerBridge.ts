@@ -38,7 +38,7 @@ type ViewerInternals = {
     rimLight: THREE.Light;
   };
   rendererManager: { renderer: THREE.WebGLRenderer };
-  selectionOutline: THREE.BoxHelper | null;
+  selectionOutline: THREE.Object3D | null;
   wallSelectionOutline: THREE.BoxHelper | null;
   dimensionsOverlayGroup: THREE.Group | null;
   roomBuilder: { getGroup: () => THREE.Group };

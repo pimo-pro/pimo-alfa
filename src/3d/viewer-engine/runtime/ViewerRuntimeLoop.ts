@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { runWithAllLayoutBoundsProxiesVisible } from "../box/boxAabbUtils";
 import type { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import type { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 
@@ -77,9 +78,13 @@ export class ViewerRuntimeLoop {
     const composer = this.deps.getShowcaseComposer();
     const bokeh = this.deps.getBokehPass();
     if (mode === "showcase" && composer && bokeh) {
-      this.boundingBox.makeEmpty();
-      this.deps.getBoxes().forEach((entry) => {
-        this.boundingBox.expandByObject(entry.mesh);
+      const boxEntries = this.deps.getBoxes();
+      const roots = Array.from(boxEntries.values()).map((e) => e.mesh);
+      runWithAllLayoutBoundsProxiesVisible(roots, () => {
+        this.boundingBox.makeEmpty();
+        boxEntries.forEach((entry) => {
+          this.boundingBox.expandByObject(entry.mesh);
+        });
       });
       this.boundingBox.getCenter(this.center);
       const cam = this.deps.getCamera();

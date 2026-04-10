@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { RoomBounds } from "../room/RoomManager";
+import { setBox3FromObjectExcludingLayoutProxy } from "../viewer-engine/box/boxAabbUtils";
 
 /**
  * Impede interseção modelo x paredes empurrando o modelo pelo menor eixo de sobreposição.
@@ -16,7 +17,7 @@ export function preventModelWallIntersection(
 
   for (let i = 0; i < maxIterations; i += 1) {
     model.updateMatrixWorld(true);
-    modelBox.setFromObject(model);
+    setBox3FromObjectExcludingLayoutProxy(modelBox, model);
     let hadIntersection = false;
 
     for (const wall of walls) {
@@ -76,7 +77,8 @@ export function keepModelInsideRoom(
   roomBounds: RoomBounds,
   margin = 0.02
 ): void {
-  const box = new THREE.Box3().setFromObject(model);
+  const box = new THREE.Box3();
+  setBox3FromObjectExcludingLayoutProxy(box, model);
   let dx = 0;
   let dz = 0;
 

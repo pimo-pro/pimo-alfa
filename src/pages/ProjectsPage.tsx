@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { canMutateEveryListedProject, canViewAllProjects } from "../auth/rbac";
 import { useAuth } from "../auth/useAuth";
 import type { AuthUser } from "../auth/AuthContext";
 import type { SavedProjectInfo } from "../context/projectTypes";
@@ -65,7 +66,7 @@ function ThumbnailFallback() {
 
 type ProjectCardProps = {
   project: SavedProjectInfo;
-  isElevated: boolean;
+  showBulkSelect: boolean;
   selected: boolean;
   onToggleSelect: (_id: string, _checked: boolean) => void;
   overlay: ProjectUIOverlay;
@@ -75,7 +76,7 @@ type ProjectCardProps = {
 
 function ProjectCard({
   project,
-  isElevated,
+  showBulkSelect,
   selected,
   onToggleSelect,
   overlay,
@@ -145,7 +146,7 @@ function ProjectCard({
         )}
 
         {/* Tag badge (topo esquerdo, tag picker) */}
-        <span style={{ position: "absolute", top: 8, left: isElevated ? 32 : 8 }}>
+        <span style={{ position: "absolute", top: 8, left: showBulkSelect ? 32 : 8 }}>
           <ProjectTagBadge
             tag={overlay.tag ?? null}
             onClick={handleTagBadgeClick}
@@ -172,7 +173,7 @@ function ProjectCard({
           </span>
         ) : null}
 
-        {isElevated ? (
+        {showBulkSelect ? (
           <span style={{ position: "absolute", top: 8, left: 8 }}>
             <input
               type="checkbox"
@@ -322,10 +323,20 @@ type ProjectsPageInnerProps = {
   scope: "all" | "mine";
   ownerId: string | undefined;
   user: AuthUser | null;
-  isElevated: boolean;
+  /** Listagem global (project.view.all / factory / admin). */
+  scopeWide: boolean;
+  hasPermission: (permission: string) => boolean;
+  currentUserId: string | undefined;
 };
 
-function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInnerProps) {
+function ProjectsPageInner({
+  scope,
+  ownerId,
+  user,
+  scopeWide,
+  hasPermission,
+  currentUserId,
+}: ProjectsPageInnerProps) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<SavedProjectInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -338,6 +349,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
   const [selectedArchivedIds, setSelectedArchivedIds] = useState<Set<string>>(() => new Set());
   const selectAllArchivedRef = useRef<HTMLInputElement>(null);
   const [activeOwnerFilter, setActiveOwnerFilter] = useState<string | null>(null);
+  const [rbacMessage, setRbacMessage] = useState<string | null>(null);
 
   const { overlays, archive, unarchive, removeFromOverlay, setTag, setNote, getOverlay, archivedCount } =
     useProjectsUIOverlay();
@@ -466,34 +478,74 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
 
   const handleUnarchiveSelected = useCallback(() => {
     const ids = Array.from(selectedArchivedIds);
+    const rows = ids
+      .map((id) => safeProjects.find((p) => p.id === id))
+      .filter((p): p is SavedProjectInfo => Boolean(p));
+    if (!canMutateEveryListedProject(hasPermission, currentUserId, rows)) {
+      setRbacMessage("Não tem permissão para desarquivar projetos de outros utilizadores.");
+      return;
+    }
+    setRbacMessage(null);
     unarchive(ids);
     setSelectedArchivedIds(new Set());
-  }, [selectedArchivedIds, unarchive]);
+  }, [selectedArchivedIds, unarchive, safeProjects, hasPermission, currentUserId]);
 
   const handleDeleteArchivedSelected = useCallback(() => {
     const ids = Array.from(selectedArchivedIds);
+    const rows = ids
+      .map((id) => safeProjects.find((p) => p.id === id))
+      .filter((p): p is SavedProjectInfo => Boolean(p));
+    if (!canMutateEveryListedProject(hasPermission, currentUserId, rows)) {
+      setRbacMessage("Não tem permissão para eliminar projetos de outros utilizadores.");
+      return;
+    }
+    setRbacMessage(null);
     const names = ids.map(
       (id) => safeProjects.find((p) => p.id === id)?.name?.trim() || "Projeto sem nome"
     );
     setConfirmDeleteInfo({ ids, names });
-  }, [selectedArchivedIds, safeProjects]);
+  }, [selectedArchivedIds, safeProjects, hasPermission, currentUserId]);
 
   const handleArchiveSelected = useCallback(() => {
     const ids = Array.from(selectedIds);
+    const rows = ids
+      .map((id) => safeProjects.find((p) => p.id === id))
+      .filter((p): p is SavedProjectInfo => Boolean(p));
+    if (!canMutateEveryListedProject(hasPermission, currentUserId, rows)) {
+      setRbacMessage("Não tem permissão para arquivar projetos de outros utilizadores.");
+      return;
+    }
+    setRbacMessage(null);
     archive(ids);
     setSelectedIds(new Set());
-  }, [selectedIds, archive]);
+  }, [selectedIds, safeProjects, archive, hasPermission, currentUserId]);
 
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(selectedIds);
+    const rows = ids
+      .map((id) => safeProjects.find((p) => p.id === id))
+      .filter((p): p is SavedProjectInfo => Boolean(p));
+    if (!canMutateEveryListedProject(hasPermission, currentUserId, rows)) {
+      setRbacMessage("Não tem permissão para eliminar projetos de outros utilizadores.");
+      return;
+    }
+    setRbacMessage(null);
     const names = ids.map(
       (id) => safeProjects.find((p) => p.id === id)?.name?.trim() || "Projeto sem nome"
     );
     setConfirmDeleteInfo({ ids, names });
-  }, [selectedIds, safeProjects]);
+  }, [selectedIds, safeProjects, hasPermission, currentUserId]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!confirmDeleteInfo) return;
+    const rows = confirmDeleteInfo.ids
+      .map((id) => safeProjects.find((p) => p.id === id))
+      .filter((p): p is SavedProjectInfo => Boolean(p));
+    if (!canMutateEveryListedProject(hasPermission, currentUserId, rows)) {
+      setRbacMessage("Operação cancelada: sem permissão para eliminar um ou mais projetos.");
+      setConfirmDeleteInfo(null);
+      return;
+    }
     setIsDeleting(true);
     try {
       for (const id of confirmDeleteInfo.ids) {
@@ -506,11 +558,11 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
     } finally {
       setIsDeleting(false);
     }
-  }, [confirmDeleteInfo, removeFromOverlay, reload]);
+  }, [confirmDeleteInfo, removeFromOverlay, reload, safeProjects, hasPermission, currentUserId]);
 
   // Agrupamento por utilizador (Fase 2) — só quando scope=all e sem filtro ativo
   const groupedByOwner = useMemo(() => {
-    if (!isElevated || activeOwnerFilter) return null;
+    if (!scopeWide || activeOwnerFilter) return null;
     const map = new Map<string, { ownerName: string; projects: SavedProjectInfo[] }>();
     for (const p of activeProjects) {
       const key = p.ownerId || "desconhecido";
@@ -524,7 +576,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
       ownerName: v.ownerName,
       projects: v.projects,
     }));
-  }, [isElevated, activeOwnerFilter, activeProjects]);
+  }, [scopeWide, activeOwnerFilter, activeProjects]);
 
   const userEntries = useMemo(
     () => buildUserEntries(safeProjects, overlays),
@@ -535,6 +587,23 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
     if (scope === "all") return "Lista global de projetos guardados.";
     return "Os teus projetos guardados.";
   }, [scope]);
+
+  const selectedCount = selectedIds.size;
+  const selectedActiveRows = useMemo(
+    () => activeProjects.filter((p) => selectedIds.has(p.id)),
+    [activeProjects, selectedIds]
+  );
+  const canBulkMutateSelection =
+    selectedCount > 0 &&
+    canMutateEveryListedProject(hasPermission, currentUserId, selectedActiveRows);
+
+  const selectedArchivedRows = useMemo(
+    () => archivedProjects.filter((p) => selectedArchivedIds.has(p.id)),
+    [archivedProjects, selectedArchivedIds]
+  );
+  const canArchivedMutateSelection =
+    selectedArchivedIds.size > 0 &&
+    canMutateEveryListedProject(hasPermission, currentUserId, selectedArchivedRows);
 
   if (missingUserForMine) {
     return (
@@ -564,12 +633,10 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
     );
   }
 
-  const selectedCount = selectedIds.size;
-
   return (
     <>
-      {/* Sidebar de utilizadores (Fase 2) — só para elevated */}
-      {isElevated && userEntries.length > 1 && (
+      {/* Sidebar de utilizadores — listagem global (project.view.all / factory / admin) */}
+      {scopeWide && userEntries.length > 1 && (
         <UsersSidebar
           users={userEntries}
           activeOwnerId={activeOwnerFilter}
@@ -580,6 +647,22 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
       <PageContainer>
         <Card className="ui-projects-shell">
           <PageHeader title="Projects" subtitle={pageSubtitle} />
+
+          {rbacMessage ? (
+            <div
+              style={{
+                marginBottom: 14,
+                padding: "10px 14px",
+                borderRadius: 8,
+                border: "1px solid var(--ui-color-danger, #ef4444)",
+                background: "var(--ui-color-surface, #f4f4f5)",
+              }}
+            >
+              <p className="ui-text-danger" style={{ margin: 0, fontSize: 13 }}>
+                {rbacMessage}
+              </p>
+            </div>
+          ) : null}
 
           {/* Estatísticas rápidas */}
           {!loading ? (
@@ -627,8 +710,8 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
           ) : null}
 
           <Section title="Projetos">
-            {/* Barra de ações (admin/elevated) */}
-            {isElevated ? (
+            {/* Barra de ações (listagem global — ver rbacHelpers) */}
+            {scopeWide ? (
               <div
                 style={{
                   display: "flex",
@@ -670,6 +753,12 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                     <Button
                       type="button"
                       variant="outline"
+                      disabled={!canBulkMutateSelection}
+                      title={
+                        canBulkMutateSelection
+                          ? undefined
+                          : "Apenas pode arquivar os seus próprios projetos (ou todos, como administrador)."
+                      }
                       onClick={handleArchiveSelected}
                     >
                       Arquivar ({selectedCount})
@@ -677,6 +766,12 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                     <Button
                       type="button"
                       variant="danger"
+                      disabled={!canBulkMutateSelection}
+                      title={
+                        canBulkMutateSelection
+                          ? undefined
+                          : "Apenas pode eliminar os seus próprios projetos (ou todos, como administrador)."
+                      }
                       onClick={handleDeleteSelected}
                     >
                       Eliminar ({selectedCount})
@@ -724,7 +819,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
             ) : null}
 
             {!loading && activeProjects.length > 0 ? (
-              isElevated && groupedByOwner && groupedByOwner.length > 1 ? (
+              scopeWide && groupedByOwner && groupedByOwner.length > 1 ? (
                 // Vista agrupada por utilizador
                 <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
                   {groupedByOwner.map((group) => (
@@ -745,7 +840,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                           <ProjectCard
                             key={project.id}
                             project={project}
-                            isElevated={isElevated}
+                            showBulkSelect={scopeWide}
                             selected={selectedIds.has(project.id)}
                             onToggleSelect={toggleRow}
                             overlay={getOverlay(project.id)}
@@ -770,7 +865,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      isElevated={isElevated}
+                      showBulkSelect={scopeWide}
                       selected={selectedIds.has(project.id)}
                       onToggleSelect={toggleRow}
                       overlay={getOverlay(project.id)}
@@ -820,10 +915,30 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                   </h3>
                   {selectedArchivedIds.size > 0 && (
                     <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexWrap: "wrap" }}>
-                      <Button type="button" variant="outline" onClick={handleUnarchiveSelected}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!canArchivedMutateSelection}
+                        title={
+                          canArchivedMutateSelection
+                            ? undefined
+                            : "Apenas pode desarquivar os seus próprios projetos (ou todos, como administrador)."
+                        }
+                        onClick={handleUnarchiveSelected}
+                      >
                         Desarquivar ({selectedArchivedIds.size})
                       </Button>
-                      <Button type="button" variant="danger" onClick={handleDeleteArchivedSelected}>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        disabled={!canArchivedMutateSelection}
+                        title={
+                          canArchivedMutateSelection
+                            ? undefined
+                            : "Apenas pode eliminar os seus próprios projetos (ou todos, como administrador)."
+                        }
+                        onClick={handleDeleteArchivedSelected}
+                      >
                         Eliminar ({selectedArchivedIds.size})
                       </Button>
                     </div>
@@ -841,7 +956,7 @@ function ProjectsPageInner({ scope, ownerId, user, isElevated }: ProjectsPageInn
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      isElevated={true}
+                      showBulkSelect={scopeWide}
                       selected={selectedArchivedIds.has(project.id)}
                       onToggleSelect={toggleArchivedRow}
                       overlay={getOverlay(project.id)}
@@ -935,9 +1050,9 @@ function StatPill({
 }
 
 export default function ProjectsPage() {
-  const { user } = useAuth();
-  const isElevated = user?.role === "admin" || user?.role === "ultra+";
-  const scope = isElevated ? "all" : "mine";
+  const { user, hasPermission } = useAuth();
+  const scopeWide = canViewAllProjects(hasPermission);
+  const scope = scopeWide ? "all" : "mine";
   const ownerId = scope === "mine" ? user?.id : undefined;
   const listKey = `${scope}:${ownerId ?? ""}`;
 
@@ -947,7 +1062,9 @@ export default function ProjectsPage() {
       scope={scope}
       ownerId={ownerId}
       user={user ?? null}
-      isElevated={isElevated}
+      scopeWide={scopeWide}
+      hasPermission={hasPermission}
+      currentUserId={user?.id}
     />
   );
 }

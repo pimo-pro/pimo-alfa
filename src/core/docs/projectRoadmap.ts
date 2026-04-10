@@ -115,7 +115,7 @@ const basePhases: Phase[] = [
       {
         id: "phase3_task_pbr_system",
         title: "Sistema de Materiais PBR (100% realista)",
-        description: "Biblioteca com 6 materiais PBR: Carvalho Natural, Carvalho Escuro, Nogueira, MDF Branco, MDF Cinza, MDF Preto. Cada material com colorMap, normalMap, roughnessMap, aoMap e metalnessMap. Remoção total de cores sólidas. Mapeamento automático de materiais antigos para PBR. Material padrão: MDF Branco.",
+        description: "Biblioteca com 6 materiais PBR: Carvalho Natural, Carvalho Escuro, Nogueira, MDF Branco, Laminado Linho Cancun, MDF Preto. Cada material com colorMap, normalMap, roughnessMap, aoMap e metalnessMap. Remoção total de cores sólidas. Mapeamento automático de materiais antigos para PBR. Material padrão: MDF Branco.",
         status: "in_progress",
       },
       {

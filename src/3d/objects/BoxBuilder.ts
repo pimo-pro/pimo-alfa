@@ -52,6 +52,16 @@ export type BoxOptions = {
   width?: number;
   height?: number;
   depth?: number;
+  /**
+   * Profundidade da carcaça paramétrica no Viewer (m), alinhada a `getProfundidadeInternaUtilMm`.
+   * Se definido, a geometria (laterais, tampo, fundo, prateleiras, costa relativa) usa este valor em vez de `depth`.
+   */
+  carcassDepthM?: number;
+  /**
+   * Profundidade externa do módulo (m) para reflow / bbox / pés no ViewerCore.
+   * Não altera `resolveDimensions` quando `carcassDepthM` está definido.
+   */
+  layoutDepthM?: number;
   index?: number;
   position?: { x: number; y: number; z: number };
   materialName?: string;
@@ -125,7 +135,7 @@ const resolveDimensions = (options: BoxOptions = {}) => {
   const size = options.size ?? 1;
   const width = options.width ?? size;
   const height = options.height ?? size;
-  const depth = options.depth ?? size;
+  const depth = options.carcassDepthM ?? options.depth ?? size;
   return {
     width: Math.max(0.001, width),
     height: Math.max(0.001, height),

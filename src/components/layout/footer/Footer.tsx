@@ -136,19 +136,21 @@ export default function Footer({
         >
           Painel de Referência
         </span>
-        <span
-          style={{ cursor: "pointer" }}
-          onClick={onShowAdmin}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              onShowAdmin?.();
-            }
-          }}
-        >
-          Admin
-        </span>
+        {onShowAdmin ? (
+          <span
+            style={{ cursor: "pointer" }}
+            onClick={onShowAdmin}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                onShowAdmin();
+              }
+            }}
+          >
+            Admin
+          </span>
+        ) : null}
         <span
           style={{ cursor: "pointer" }}
           onClick={onShowAbout}

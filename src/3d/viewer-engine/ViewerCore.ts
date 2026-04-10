@@ -21,7 +21,7 @@ import type { ControlsOptions } from "./controls";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
-import { EdgeOutlineSystem } from "../outline";
+import { EdgeOutlineSystem, isEdgeOutlineMesh } from "../outline";
 import { ViewerRaycastSystem } from "./raycast/ViewerRaycastSystem";
 import type { EnvironmentOptions } from "./environment";
 import { ViewerState } from "./state";
@@ -48,12 +48,22 @@ import type { ViewerBoxEntry } from "./types";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
+import {
+  expandBox3ByObjectExcludingLayoutProxy,
+  isViewerLayoutProxyObject,
+  runWithAllLayoutBoundsProxiesVisible,
+  runWithLayoutBoundsProxiesVisible,
+  setBox3FromObjectExcludingLayoutProxy,
+  VIEWER_LAYOUT_PROXY_LAYER,
+} from "./box/boxAabbUtils";
 
 /**
  * Propaga userData.boxId e layer 0 para todos os filhos do grupo da caixa.
+ * O proxy de layout (`viewerLayoutBounds`) fica na layer dedicada (raycaster/picking = layer 0).
  */
 function tagBoxGroupWithId(group: THREE.Object3D, boxId: string) {
   group.traverse((child) => {
+    if (isViewerLayoutProxyObject(child)) return;
     child.userData = child.userData || {};
     child.userData.boxId = boxId;
     if (child.layers && typeof child.layers.set === "function") {
@@ -254,8 +264,11 @@ export class ViewerCore {
   private turntableEnabled = false;
   private turntableSpeed = 0.15;
   private lights: Lights;
-  private selectionOutline: THREE.BoxHelper | null = null;
+  /** Grupo de `BoxHelper` — um por mesh (`isEdgeOutlineMesh`), sem helper no grupo/root nem AABB agregado. */
+  private selectionOutline: THREE.Group | null = null;
   private selectionOutlineTarget: THREE.Object3D | null = null;
+  /** Evita reconstruir os helpers a cada frame quando a lista de peças não mudou. */
+  private selectionOutlinePiecesSig: string | null = null;
   private selectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
   /** Outline da parede selecionada (Room Box). */
   private wallSelectionOutline: THREE.BoxHelper | null = null;
@@ -410,12 +423,11 @@ export class ViewerCore {
       opacity: 0.6,
       transparent: true,
       depthTest: true,
+      depthWrite: false,
+      toneMapped: false,
     });
-    this.selectionOutline = new THREE.BoxHelper(new THREE.Object3D(), 0x00aeef);
-    if (this.selectionOutlineMaterial) {
-      (this.selectionOutline.material as THREE.Material).dispose();
-      this.selectionOutline.material = this.selectionOutlineMaterial;
-    }
+    this.selectionOutline = new THREE.Group();
+    this.selectionOutline.name = "selectionOutlinePieces";
     this.selectionOutline.visible = false;
     this.sceneManager.scene.add(this.selectionOutline);
 
@@ -918,8 +930,11 @@ export class ViewerCore {
 
   getCombinedBoundingBox(): { min: THREE.Vector3; max: THREE.Vector3; size: THREE.Vector3; width: number; height: number; depth: number } | null {
     if (this.boxes.size === 0) return null;
-    this._boundingBox.makeEmpty();
-    this.boxes.forEach((entry) => this._boundingBox.expandByObject(entry.mesh));
+    const roots = Array.from(this.boxes.values()).map((e) => e.mesh);
+    runWithAllLayoutBoundsProxiesVisible(roots, () => {
+      this._boundingBox.makeEmpty();
+      this.boxes.forEach((entry) => this._boundingBox.expandByObject(entry.mesh));
+    });
     const min = this._boundingBox.min.clone();
     const max = this._boundingBox.max.clone();
     this._boundingBox.getSize(this._size);
@@ -943,7 +958,7 @@ export class ViewerCore {
     let maxX = -Infinity;
     this.boxes.forEach((entry) => {
       entry.mesh.updateMatrixWorld(true);
-      this._boundingBox.setFromObject(entry.mesh);
+      setBox3FromObjectExcludingLayoutProxy(this._boundingBox, entry.mesh);
       this._boundingBox.getSize(this._size);
       const rightEdge =
         this._size.x < 0.001 || !Number.isFinite(this._boundingBox.max.x)
@@ -989,7 +1004,7 @@ export class ViewerCore {
     const entry = this.boxes.get(this.viewerState.getSelectedBox());
     if (!entry) return null;
     entry.mesh.updateMatrixWorld(true);
-    this._boundingBox.setFromObject(entry.mesh);
+    setBox3FromObjectExcludingLayoutProxy(this._boundingBox, entry.mesh);
     const min = this._boundingBox.min;
     const max = this._boundingBox.max;
     const topCenter = new THREE.Vector3(
@@ -1067,7 +1082,7 @@ export class ViewerCore {
       return;
     }
     entry.mesh.updateMatrixWorld(true);
-    this._boundingBox.setFromObject(entry.mesh);
+    setBox3FromObjectExcludingLayoutProxy(this._boundingBox, entry.mesh);
     const min = this._boundingBox.min.clone();
     const max = this._boundingBox.max.clone();
     this.dimensionsOverlayLines.visible = true;
@@ -1700,9 +1715,12 @@ export class ViewerCore {
       };
     }
     if (this.boxes.size > 0) {
-      this._boundingBox.makeEmpty();
-      this.boxes.forEach((entry) => {
-        this._boundingBox.expandByObject(entry.mesh);
+      const roots = Array.from(this.boxes.values()).map((e) => e.mesh);
+      runWithAllLayoutBoundsProxiesVisible(roots, () => {
+        this._boundingBox.makeEmpty();
+        this.boxes.forEach((entry) => {
+          this._boundingBox.expandByObject(entry.mesh);
+        });
       });
       this._boundingBox.getCenter(this._center);
       return { x: this._center.x, y: Math.max(0.8, this._center.y), z: this._center.z };
@@ -1841,7 +1859,7 @@ export class ViewerCore {
     if (this.boxes.has(id)) return false;
     const opts = options ?? {};
     const cadOnly = opts.cadOnly === true;
-    const { width, height, depth } = this.getBoxDimensionsFromOptions(opts);
+    const { width, height, depth: layoutDepth } = this.getBoxDimensionsFromOptions(opts);
     const index = opts.index ?? this.getNextBoxIndex();
     const manualPosition = opts.manualPosition === true;
 
@@ -1861,11 +1879,12 @@ export class ViewerCore {
         lateral_direita: [],
         porta: [],
       };
+      const carcassDepth = Math.max(0.001, opts.carcassDepthM ?? opts.depth ?? layoutDepth);
       const boxOptions: BoxOptions = {
         ...opts,
         width: opts.width ?? 1,
         height: opts.height ?? 1,
-        depth: opts.depth ?? 1,
+        depth: carcassDepth,
         thickness: opts.thickness ?? 0.019,
         index: opts.index,
         materialName,
@@ -1885,6 +1904,10 @@ export class ViewerCore {
     box.userData.boxId = id;
     // Garantir que todos os descendentes estejam na layer 0 para o raycaster detectar clique.
     box.traverse((child) => {
+      if (isViewerLayoutProxyObject(child)) {
+        child.layers.set(VIEWER_LAYOUT_PROXY_LAYER);
+        return;
+      }
       child.layers.set(0);
     });
     this.applyViewerDrillHoleSceneRules(box);
@@ -1922,7 +1945,7 @@ export class ViewerCore {
       mesh: box,
       width,
       height,
-      depth,
+      depth: layoutDepth,
       index,
       cadOnly: cadOnly || undefined,
       manualPosition,
@@ -1940,6 +1963,7 @@ export class ViewerCore {
     });
     const createdEntry = this.boxes.get(id);
     if (createdEntry) {
+      this.attachLayoutBoundsMesh(createdEntry);
       this.syncFeetVisualForBox(createdEntry);
     }
     this.sceneManager.add(box);
@@ -1969,16 +1993,34 @@ export class ViewerCore {
   updateBox(id: string, options: Partial<BoxOptions> = {}): boolean {
     const entry = this.boxes.get(id);
     const opts = options ?? {};
-    const hasDimOpts = opts.width !== undefined || opts.height !== undefined || opts.depth !== undefined || opts.size !== undefined;
+    const hasDimOpts =
+      opts.width !== undefined ||
+      opts.height !== undefined ||
+      opts.depth !== undefined ||
+      opts.size !== undefined ||
+      opts.layoutDepthM !== undefined ||
+      opts.carcassDepthM !== undefined;
     if (import.meta.env.DEV && hasDimOpts) {
-      devLogger.debug("[ViewerCore.updateBox] chamado com dimensões", { id, entry: !!entry, width: opts.width, height: opts.height, depth: opts.depth });
+      devLogger.debug("[ViewerCore.updateBox] chamado com dimensões", {
+        id,
+        entry: !!entry,
+        width: opts.width,
+        height: opts.height,
+        depth: opts.depth,
+        layoutDepthM: opts.layoutDepthM,
+        carcassDepthM: opts.carcassDepthM,
+      });
     }
     if (!entry) return false;
     if (
       (opts.size !== undefined && (!Number.isFinite(opts.size) || opts.size <= 0)) ||
       (opts.width !== undefined && (!Number.isFinite(opts.width) || opts.width <= 0)) ||
       (opts.height !== undefined && (!Number.isFinite(opts.height) || opts.height <= 0)) ||
-      (opts.depth !== undefined && (!Number.isFinite(opts.depth) || opts.depth <= 0))
+      (opts.depth !== undefined && (!Number.isFinite(opts.depth) || opts.depth <= 0)) ||
+      (opts.layoutDepthM !== undefined &&
+        (!Number.isFinite(opts.layoutDepthM) || opts.layoutDepthM <= 0)) ||
+      (opts.carcassDepthM !== undefined &&
+        (!Number.isFinite(opts.carcassDepthM) || opts.carcassDepthM <= 0))
     ) {
       return false;
     }
@@ -2006,6 +2048,8 @@ export class ViewerCore {
       opts.width !== undefined ||
       opts.height !== undefined ||
       opts.depth !== undefined ||
+      opts.layoutDepthM !== undefined ||
+      opts.carcassDepthM !== undefined ||
       opts.size !== undefined ||
       opts.shelves !== undefined ||
       opts.doorLayerItems !== undefined ||
@@ -2056,13 +2100,16 @@ export class ViewerCore {
 
     let width = entry.width;
     let height = entry.height;
-    let depth = entry.depth;
+    let layoutDepth = entry.depth;
+    let carcassDepth = layoutDepth;
     let heightChanged = false;
     let indexChanged = false;
     const dimensionsChanged =
       opts.width !== undefined ||
       opts.height !== undefined ||
       opts.depth !== undefined ||
+      opts.layoutDepthM !== undefined ||
+      opts.carcassDepthM !== undefined ||
       opts.size !== undefined ||
       opts.thickness !== undefined;
     const structureChanged =
@@ -2074,7 +2121,8 @@ export class ViewerCore {
     if (structureChanged) {
       width = Math.max(0.001, opts.width ?? opts.size ?? width);
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
-      depth = Math.max(0.001, opts.depth ?? opts.size ?? depth);
+      layoutDepth = Math.max(0.001, opts.layoutDepthM ?? opts.depth ?? opts.size ?? layoutDepth);
+      carcassDepth = Math.max(0.001, opts.carcassDepthM ?? opts.depth ?? opts.size ?? layoutDepth);
       heightChanged = height !== entry.height;
       const hasLayerUpdate =
         opts.doorLayerItems !== undefined ||
@@ -2121,9 +2169,10 @@ export class ViewerCore {
           const materialName = opts.materialName ?? entry.materialName ?? this.defaultMaterialName;
           const loadedMat = entry.material ?? this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
           const boxOptions: BoxOptions = {
+            ...opts,
             width,
             height,
-            depth,
+            depth: carcassDepth,
             thickness: opts.thickness ?? 0.019,
             shelves: opts.shelves,
             doorLayerItems: opts.doorLayerItems,
@@ -2141,7 +2190,13 @@ export class ViewerCore {
         newBox.matrixAutoUpdate = true;
         newBox.visible = true;
         newBox.layers.set(0);
-        newBox.traverse((child) => child.layers.set(0));
+        newBox.traverse((child) => {
+          if (isViewerLayoutProxyObject(child)) {
+            child.layers.set(VIEWER_LAYOUT_PROXY_LAYER);
+            return;
+          }
+          child.layers.set(0);
+        });
         this.applyViewerDrillHoleSceneRules(newBox);
         newBox.userData.boxId = id;
         newBox.userData.costaRotationY =
@@ -2158,7 +2213,13 @@ export class ViewerCore {
         cadModels.forEach((m) => newBox.add(m.object));
 
         if (import.meta.env.DEV && dimensionsChanged) {
-          devLogger.debug("[ViewerCore.updateBox] mesh reconstruído (estrutura alterada)", { boxId: id, width, height, depth });
+          devLogger.debug("[ViewerCore.updateBox] mesh reconstruído (estrutura alterada)", {
+            boxId: id,
+            width,
+            height,
+            layoutDepth,
+            carcassDepth,
+          });
         }
         // [CORRIGIDO 2026-03] Forçar rebuild completo do Scene Graph após mesh rebuild (sem alterar transforms ou offsets)
         this.edgeOutlineSystem?.syncRoot(this.sceneManager.root);
@@ -2231,7 +2292,10 @@ export class ViewerCore {
     entry.mesh.matrixAutoUpdate = true;
     entry.width = width;
     entry.height = height;
-    entry.depth = depth;
+    entry.depth = layoutDepth;
+    if (structureChanged) {
+      this.attachLayoutBoundsMesh(entry);
+    }
     this.syncFeetVisualForBox(entry);
     tagBoxGroupWithId(entry.mesh, id);
     if (opts.drillMarkersByPanel !== undefined) {
@@ -3040,7 +3104,7 @@ export class ViewerCore {
   private applyFloorConstraint(mesh: THREE.Object3D): void {
     if (!this.lockEnabled) return;
     mesh.updateMatrixWorld(true);
-    this._boundingBox.setFromObject(mesh);
+    setBox3FromObjectExcludingLayoutProxy(this._boundingBox, mesh);
     if (this._boundingBox.min.y < 0) {
       mesh.position.y += -this._boundingBox.min.y;
       mesh.updateMatrixWorld(true);
@@ -3056,7 +3120,9 @@ export class ViewerCore {
     if (this.boxes.size === 0) return;
     this.boxes.forEach((entry) => entry.mesh.updateMatrixWorld(true));
     this._boundingBox.makeEmpty();
-    this.boxes.forEach((entry) => this._boundingBox.expandByObject(entry.mesh));
+    this.boxes.forEach((entry) =>
+      expandBox3ByObjectExcludingLayoutProxy(this._boundingBox, entry.mesh)
+    );
     const minY = this._boundingBox.min.y;
     if (minY >= 0) return;
     const shiftUp = -minY;
@@ -3088,9 +3154,12 @@ export class ViewerCore {
       }
       return;
     }
-    this._boundingBox.makeEmpty();
-    this.boxes.forEach((entry) => {
-      this._boundingBox.expandByObject(entry.mesh);
+    const camBboxRoots = Array.from(this.boxes.values()).map((e) => e.mesh);
+    runWithAllLayoutBoundsProxiesVisible(camBboxRoots, () => {
+      this._boundingBox.makeEmpty();
+      this.boxes.forEach((entry) => {
+        this._boundingBox.expandByObject(entry.mesh);
+      });
     });
     this._boundingBox.getCenter(this._center);
 
@@ -3118,7 +3187,9 @@ export class ViewerCore {
     const entry = this.boxes.get(boxId);
     if (!entry) return null;
     entry.mesh.updateMatrixWorld(true);
-    this._boxSingle.setFromObject(entry.mesh);
+    runWithLayoutBoundsProxiesVisible(entry.mesh, () => {
+      this._boxSingle.setFromObject(entry.mesh);
+    });
     this._boxSingle.getCenter(this._center);
     return this._center.clone();
   }
@@ -3136,7 +3207,9 @@ export class ViewerCore {
       this.cameraManager.camera.matrixWorldInverse
     );
     this._frustum.setFromProjectionMatrix(this._projScreenMatrix);
-    this._boxSingle.setFromObject(entry.mesh);
+    runWithLayoutBoundsProxiesVisible(entry.mesh, () => {
+      this._boxSingle.setFromObject(entry.mesh);
+    });
     return this._frustum.intersectsBox(this._boxSingle);
   }
 
@@ -3148,7 +3221,9 @@ export class ViewerCore {
     const entry = this.boxes.get(boxId);
     if (!entry) return;
     entry.mesh.updateMatrixWorld(true);
-    this._boxSingle.setFromObject(entry.mesh);
+    runWithLayoutBoundsProxiesVisible(entry.mesh, () => {
+      this._boxSingle.setFromObject(entry.mesh);
+    });
     this._boxSingle.getCenter(this._center);
     this._boxSingle.getSize(this._size);
     const cam = this.cameraManager.camera;
@@ -3199,7 +3274,10 @@ export class ViewerCore {
   private getBoxDimensionsFromOptions(options?: BoxOptions) {
     const width = Math.max(0.001, options?.width ?? options?.size ?? 1);
     const height = Math.max(0.001, options?.height ?? options?.size ?? 1);
-    const depth = Math.max(0.001, options?.depth ?? options?.size ?? 1);
+    const depth = Math.max(
+      0.001,
+      options?.layoutDepthM ?? options?.depth ?? options?.size ?? 1
+    );
     return { width, height, depth };
   }
 
@@ -3510,18 +3588,147 @@ export class ViewerCore {
     };
   }
 
+  private hasVisibleAncestorsForOutline(node: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = node;
+    while (current) {
+      if (!current.visible) return false;
+      current = current.parent;
+    }
+    return true;
+  }
+
+  /**
+   * Contorno azul com foco em porta: `target` é normalmente o grupo da caixa; inferimos a porta via
+   * grupo `door-layer-*` ou highlight (mesh selecionado com `doorLayerId`).
+   */
+  private getSelectionOutlineDoorLayerFocusId(target: THREE.Object3D): string | null {
+    if (typeof target.name === "string" && target.name.startsWith("door-layer-")) {
+      const fromUd = (target.userData as { doorLayerId?: string }).doorLayerId;
+      if (typeof fromUd === "string" && fromUd.trim().length > 0) return fromUd.trim();
+      return target.name.slice("door-layer-".length).trim() || null;
+    }
+    const hm = this.highlightManager;
+    if (!hm?.getEnabled()) return null;
+    const sel = hm.getSelectedMesh();
+    if (!sel) return null;
+    let cur: THREE.Object3D | null = sel;
+    while (cur) {
+      const ud = (cur.userData as { doorLayerId?: string }) ?? {};
+      if (typeof ud.doorLayerId === "string" && ud.doorLayerId.trim().length > 0) {
+        return ud.doorLayerId.trim();
+      }
+      if (typeof cur.name === "string" && cur.name.startsWith("door-layer-")) {
+        return cur.name.slice("door-layer-".length).trim() || null;
+      }
+      cur = cur.parent;
+    }
+    return null;
+  }
+
+  /** Com foco de porta: exclui costa e malhas de porta que não sejam o painel principal. */
+  private shouldIncludeMeshInSelectionOutline(mesh: THREE.Mesh, doorLayerFocusId: string | null): boolean {
+    if (!(mesh.geometry instanceof THREE.BufferGeometry)) return false;
+    if (!isEdgeOutlineMesh(mesh)) return false;
+    if (!this.hasVisibleAncestorsForOutline(mesh)) return false;
+    if (doorLayerFocusId == null) return true;
+    const ud = (mesh.userData ?? {}) as Record<string, unknown>;
+    if (ud.panelType === "back") return false;
+    if (ud.doorLayerId != null) {
+      if (typeof ud.doorLayerId !== "string" || ud.doorLayerId !== doorLayerFocusId) return false;
+      if (ud.doorPart !== "panel") return false;
+    }
+    return true;
+  }
+
+  private clearSelectionOutlineHelpers(): void {
+    const g = this.selectionOutline;
+    if (!g) return;
+    while (g.children.length > 0) {
+      const ch = g.children[0];
+      g.remove(ch);
+      if (ch instanceof THREE.LineSegments) {
+        ch.geometry.dispose();
+        if (ch.material && ch.material !== this.selectionOutlineMaterial) {
+          (ch.material as THREE.Material).dispose();
+        }
+      }
+    }
+  }
+
+  /** Assinatura mesh + geometria + modo porta para reconstruir quando a lista ou o foco mudam. */
+  private getSelectionOutlinePiecesSignature(target: THREE.Object3D): string {
+    const doorLayerFocusId = this.getSelectionOutlineDoorLayerFocusId(target);
+    const parts: string[] = [];
+    target.updateMatrixWorld(true);
+    target.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      if (!this.shouldIncludeMeshInSelectionOutline(node, doorLayerFocusId)) return;
+      parts.push(`${node.uuid}:${node.geometry.uuid}`);
+    });
+    parts.sort();
+    return `${target.uuid}:door=${doorLayerFocusId ?? "none"}:${parts.join(",")}`;
+  }
+
+  /** Um `BoxHelper` por mesh real (`isEdgeOutlineMesh`), nunca no grupo inteiro. */
+  private rebuildSelectionOutlinePieceHelpers(target: THREE.Object3D): void {
+    if (!this.selectionOutline || !this.selectionOutlineMaterial) return;
+    this.clearSelectionOutlineHelpers();
+    const group = this.selectionOutline;
+    const doorLayerFocusId = this.getSelectionOutlineDoorLayerFocusId(target);
+    target.updateMatrixWorld(true);
+    target.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      if (!this.shouldIncludeMeshInSelectionOutline(node, doorLayerFocusId)) return;
+      const helper = new THREE.BoxHelper(node, 0x7dd3fc);
+      (helper.material as THREE.Material).dispose();
+      helper.material = this.selectionOutlineMaterial;
+      helper.name = `selection-outline-${node.name || node.uuid}`;
+      helper.raycast = () => null;
+      helper.frustumCulled = false;
+      helper.renderOrder = 2001;
+      group.add(helper);
+      helper.update();
+    });
+  }
+
+  private updateSelectionOutlineGeometry(target: THREE.Object3D): void {
+    if (!this.selectionOutline) return;
+    const sig = this.getSelectionOutlinePiecesSignature(target);
+    if (this.selectionOutlinePiecesSig !== sig) {
+      this.selectionOutlinePiecesSig = sig;
+      this.rebuildSelectionOutlinePieceHelpers(target);
+    }
+    const doorLayerFocusId = this.getSelectionOutlineDoorLayerFocusId(target);
+    for (const child of this.selectionOutline.children) {
+      if (child instanceof THREE.BoxHelper) {
+        const obj = (child as THREE.BoxHelper & { object: THREE.Object3D }).object;
+        obj.updateWorldMatrix(true, false);
+        const show =
+          obj instanceof THREE.Mesh &&
+          this.shouldIncludeMeshInSelectionOutline(obj, doorLayerFocusId) &&
+          this.hasVisibleAncestorsForOutline(obj);
+        child.visible = show;
+        if (show) {
+          child.update();
+        }
+      }
+    }
+  }
+
   private setOutlineTarget(mesh: THREE.Object3D | null, opacity: number, colorHex: number): void {
     this.selectionOutlineTarget = mesh;
     this.outlineTargetOpacity = opacity;
     if (!this.selectionOutline || !this.selectionOutlineMaterial) return;
     if (!mesh) {
+      this.clearSelectionOutlineHelpers();
+      this.selectionOutlinePiecesSig = null;
       this.selectionOutline.visible = false;
       return;
     }
     this.selectionOutlineMaterial.color.setHex(colorHex);
     this.selectionOutlineMaterial.needsUpdate = true;
     this.selectionOutline.visible = true;
-    this.selectionOutline.update(mesh);
+    this.updateSelectionOutlineGeometry(mesh);
   }
 
   /** Obtém boxId a partir de um mesh (grupo ou filho/GLB); sobe na hierarquia até encontrar userData.boxId ou o grupo da caixa. */
@@ -3615,14 +3822,17 @@ export class ViewerCore {
     if (!selectedEntry) return null;
 
     selectedEntry.mesh.updateMatrixWorld(true);
-    const selectedThree = new THREE.Box3().setFromObject(selectedEntry.mesh);
+    const selectedThree = new THREE.Box3();
+    setBox3FromObjectExcludingLayoutProxy(selectedThree, selectedEntry.mesh);
     const selectedAabb = aabb3FromThreeBox3(selectedThree);
 
     let best: ParametricRulerHit | null = null;
     this.boxes.forEach((entry, id) => {
       if (id === selectedBoxId) return;
       entry.mesh.updateMatrixWorld(true);
-      const otherAabb = aabb3FromThreeBox3(new THREE.Box3().setFromObject(entry.mesh));
+      const otherBox = new THREE.Box3();
+      setBox3FromObjectExcludingLayoutProxy(otherBox, entry.mesh);
+      const otherAabb = aabb3FromThreeBox3(otherBox);
       const hit = nearestBoxGapBetweenPair(selectedAabb, otherAabb);
       if (hit && (!best || hit.distanceM < best.distanceM)) best = hit;
     });
@@ -3636,7 +3846,9 @@ export class ViewerCore {
     if (!selectedEntry || !this.roomBounds) return null;
 
     selectedEntry.mesh.updateMatrixWorld(true);
-    const boxAabb = aabb3FromThreeBox3(new THREE.Box3().setFromObject(selectedEntry.mesh));
+    const wallSelBox = new THREE.Box3();
+    setBox3FromObjectExcludingLayoutProxy(wallSelBox, selectedEntry.mesh);
+    const boxAabb = aabb3FromThreeBox3(wallSelBox);
     const hit = nearestWallMeasurement(boxAabb, {
       minX: this.roomBounds.minX,
       maxX: this.roomBounds.maxX,
@@ -3653,7 +3865,9 @@ export class ViewerCore {
     if (!selectedEntry) return null;
 
     selectedEntry.mesh.updateMatrixWorld(true);
-    const boxAabb = aabb3FromThreeBox3(new THREE.Box3().setFromObject(selectedEntry.mesh));
+    const floorSelBox = new THREE.Box3();
+    setBox3FromObjectExcludingLayoutProxy(floorSelBox, selectedEntry.mesh);
+    const boxAabb = aabb3FromThreeBox3(floorSelBox);
     const floorY = this.roomBounds?.minY ?? 0;
     const hit = floorClearanceMeasurement(boxAabb, floorY);
     return hit ? parametricRulerHitToThree(hit) : null;
@@ -3672,7 +3886,8 @@ export class ViewerCore {
     });
     this.boxes.forEach((entry, boxId) => {
       entry.mesh.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(entry.mesh);
+      const box = new THREE.Box3();
+      setBox3FromObjectExcludingLayoutProxy(box, entry.mesh);
       if (box.intersectsBox(wallBox)) this.boxesIntersectingWalls.add(boxId);
     });
   }
@@ -3729,7 +3944,8 @@ export class ViewerCore {
   private applyRoomConstraint(movingMesh: THREE.Object3D, options: { ignoreY?: boolean } = {}): void {
     if (!this.roomBounds) return;
     movingMesh.updateMatrixWorld(true);
-    const movingBox = new THREE.Box3().setFromObject(movingMesh);
+    const movingBox = new THREE.Box3();
+    setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);
     const inset = this.lockEnabled ? ViewerCore.WALL_INNER_INSET_M : 0;
     const off = this.lockEnabled ? ViewerCore.SNAP_WALL_OFFSET_M : 0;
     const minX = this.roomBounds.minX + inset + off;
@@ -3773,6 +3989,50 @@ export class ViewerCore {
   /** Recuo lateral dos pés (m). */
   private static readonly FEET_SIDE_INSET_M = 0.06;
 
+  /** Filho do grupo da caixa: volume L×A×P de layout para AABB de câmara (layer dedicada; não entra em raycast/reflow/colisão). */
+  private static readonly VIEWER_LAYOUT_BOUNDS_NAME = "viewer-layout-bounds";
+
+  /**
+   * Proxy L×A×P de layout: `visible: false` no render; só `visible: true` temporariamente em
+   * `runWithLayoutBoundsProxiesVisible` para bbox de câmara. Material não escreve cor/depth.
+   */
+  private attachLayoutBoundsMesh(entry: ViewerBoxEntry): void {
+    const name = ViewerCore.VIEWER_LAYOUT_BOUNDS_NAME;
+    const existing = entry.mesh.getObjectByName(name);
+    if (existing) {
+      entry.mesh.remove(existing);
+      if (existing instanceof THREE.Mesh) {
+        existing.geometry.dispose();
+        const mat = existing.material;
+        if (!Array.isArray(mat) && mat instanceof THREE.Material) mat.dispose();
+      }
+    }
+    entry.layoutBoundsMesh = undefined;
+    if (entry.cadOnly) return;
+
+    const w = Math.max(0.001, entry.width);
+    const h = Math.max(0.001, entry.height);
+    const d = Math.max(0.001, entry.depth);
+    const geom = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      depthTest: false,
+      colorWrite: false,
+    });
+    const m = new THREE.Mesh(geom, mat);
+    m.name = name;
+    m.renderOrder = -999999;
+    m.frustumCulled = false;
+    m.raycast = () => null;
+    m.userData.viewerLayoutBounds = true;
+    m.layers.set(VIEWER_LAYOUT_PROXY_LAYER);
+    entry.mesh.add(m);
+    m.visible = false;
+    entry.layoutBoundsMesh = m;
+  }
+
   /**
    * Caixa segue lógica da sala apenas quando está dentro ou encostada ao perímetro em X/Z.
    * Caixas totalmente fora da sala ficam livres (sem auto-rotate/snap da sala).
@@ -3780,7 +4040,8 @@ export class ViewerCore {
   private isMeshInsideOrTouchingRoom(movingMesh: THREE.Object3D, tolerance = 0.02): boolean {
     if (!this.roomBounds) return false;
     movingMesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(movingMesh);
+    const box = new THREE.Box3();
+    setBox3FromObjectExcludingLayoutProxy(box, movingMesh);
     const { minX, maxX, minZ, maxZ } = this.roomBounds;
     return !(
       box.max.x < minX - tolerance ||
@@ -3982,7 +4243,7 @@ export class ViewerCore {
       const shouldShow = this.outlineCurrentOpacity > 0.02 && this.selectionOutlineTarget;
       if (shouldShow && this.selectionOutlineTarget) {
         this.selectionOutline.visible = true;
-        this.selectionOutline.update(this.selectionOutlineTarget);
+        this.updateSelectionOutlineGeometry(this.selectionOutlineTarget);
       } else if (!shouldShow) {
         this.selectionOutline.visible = false;
       }
@@ -4067,14 +4328,15 @@ export class ViewerCore {
     this.snapshotRenderer = null;
     this.selectedBoxChangeListeners.clear();
     if (this.selectionOutline) {
+      this.clearSelectionOutlineHelpers();
       this.sceneManager.scene.remove(this.selectionOutline);
-      this.selectionOutline.geometry.dispose();
       if (this.selectionOutlineMaterial) {
         this.selectionOutlineMaterial.dispose();
       }
       this.selectionOutline = null;
       this.selectionOutlineMaterial = null;
       this.selectionOutlineTarget = null;
+      this.selectionOutlinePiecesSig = null;
     }
     if (this.wallSelectionOutline) {
       this.sceneManager.scene.remove(this.wallSelectionOutline);

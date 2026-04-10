@@ -32,7 +32,7 @@ function pimo_cors(): void
         header('Access-Control-Allow-Origin: ' . $origin);
         header('Vary: Origin');
     }
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization');
     header('Access-Control-Max-Age: 86400');
 }
@@ -183,6 +183,116 @@ function pimo_find_user_by_email(array $users, string $email): ?array
     return null;
 }
 
+/** Username comparado em minúsculas (único para registo público). */
+function pimo_find_user_by_username_ci(array $users, string $username): ?array
+{
+    $want = strtolower(trim($username));
+    if ($want === '') {
+        return null;
+    }
+    foreach ($users as $u) {
+        if (strtolower(trim((string) ($u['username'] ?? ''))) === $want) {
+            return $u;
+        }
+    }
+    return null;
+}
+
+const PIMO_REGISTER_MIN_PASSWORD_LEN = 6;
+const PIMO_USER_SETTINGS_DIR_FOR_REGISTER = __DIR__ . '/../data/user-settings';
+
+/** Registo público: só `visitor` ou `pro`; qualquer outro valor (ex.: admin) → visitor. */
+function pimo_register_normalize_public_role(mixed $roleInput): string
+{
+    $r = strtolower(trim((string) ($roleInput ?? '')));
+    return $r === 'pro' ? 'pro' : 'visitor';
+}
+
+/** Ficheiro inicial para GET/PATCH /user/settings (vazio). */
+function pimo_auth_write_empty_user_settings(string $userId): void
+{
+    if (!is_dir(PIMO_USER_SETTINGS_DIR_FOR_REGISTER)) {
+        mkdir(PIMO_USER_SETTINGS_DIR_FOR_REGISTER, 0755, true);
+    }
+    $path = PIMO_USER_SETTINGS_DIR_FOR_REGISTER . '/user-settings-' . $userId . '.json';
+    $payload = [
+        'updatedAt' => null,
+        'settings' => new stdClass(),
+    ];
+    $encoded = json_encode(
+        $payload,
+        JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT
+    );
+    file_put_contents($path, $encoded);
+}
+
+function pimo_auth_handle_register(): void
+{
+    pimo_ensure_default_admin();
+    $raw = file_get_contents('php://input') ?: '';
+    $body = json_decode($raw, true);
+    if (!is_array($body)) {
+        pimo_json_response(['status' => 'error', 'message' => 'JSON inválido'], 400);
+        return;
+    }
+    $username = trim((string) ($body['username'] ?? ''));
+    $email = strtolower(trim((string) ($body['email'] ?? '')));
+    $password = (string) ($body['password'] ?? '');
+    if ($username === '' || $email === '') {
+        pimo_json_response(['status' => 'error', 'message' => 'username e email obrigatórios'], 400);
+        return;
+    }
+    if (strlen($password) < PIMO_REGISTER_MIN_PASSWORD_LEN) {
+        pimo_json_response([
+            'status' => 'error',
+            'message' => 'Password demasiado curta (mínimo ' . (string) PIMO_REGISTER_MIN_PASSWORD_LEN . ' caracteres)',
+        ], 400);
+        return;
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        pimo_json_response(['status' => 'error', 'message' => 'Email inválido'], 400);
+        return;
+    }
+    $users = pimo_load_users();
+    if (pimo_find_user_by_email($users, $email) !== null) {
+        pimo_json_response(['status' => 'error', 'message' => 'Email já registado'], 409);
+        return;
+    }
+    if (pimo_find_user_by_username_ci($users, $username) !== null) {
+        pimo_json_response(['status' => 'error', 'message' => 'Username já em uso'], 409);
+        return;
+    }
+    $role = pimo_register_normalize_public_role($body['role'] ?? null);
+    $id = bin2hex(random_bytes(16));
+    $newUser = [
+        'id' => $id,
+        'email' => $email,
+        'username' => $username,
+        'passwordHash' => password_hash($password, PASSWORD_DEFAULT),
+        'role' => $role,
+        'createdAt' => gmdate('c'),
+    ];
+    $users[] = $newUser;
+    pimo_save_users($users);
+    try {
+        pimo_auth_write_empty_user_settings($id);
+    } catch (Throwable $e) {
+        $users = array_values(array_filter($users, static fn($u) => ($u['id'] ?? '') !== $id));
+        pimo_save_users($users);
+        pimo_json_response(['status' => 'error', 'message' => 'Falha ao criar ficheiro de preferências'], 500);
+        return;
+    }
+    pimo_json_response([
+        'status' => 'ok',
+        'user' => [
+            'id' => $id,
+            'username' => $username,
+            'email' => $email,
+            'role' => $role,
+        ],
+    ], 201);
+}
+
 function pimo_bearer_token(): ?string
 {
     $h = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['Authorization'] ?? '';
@@ -278,11 +388,16 @@ function pimo_auth_router(): void
 
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $path = pimo_request_path();
+    $endsRegister = str_ends_with($path, '/auth/register');
     $endsLogin = str_ends_with($path, '/auth/login');
     $isMe = $path === '/me' || str_ends_with($path, '/me');
     $postToAuthScript = $method === 'POST' && str_contains($path, 'api/auth');
 
     try {
+        if ($method === 'POST' && $endsRegister) {
+            pimo_auth_handle_register();
+            return;
+        }
         if ($method === 'POST' && ($endsLogin || $postToAuthScript)) {
             pimo_auth_handle_login();
             return;

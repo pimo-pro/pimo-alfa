@@ -19,7 +19,7 @@ export interface IViewerToolsEngine {
   setTransformHelperVisible(_visible: boolean): void;
   applyTransformControlsMouseGuard(): void;
   logTransformDiagnostic(_name: string, _data?: Record<string, unknown>): void;
-  getSelectionOutline(): THREE.BoxHelper | null;
+  getSelectionOutline(): THREE.Object3D | null;
   getSelectionOutlineMaterial(): THREE.LineBasicMaterial | null;
   getHoveredBoxId(): string | null;
   getBoxesIntersectingWalls(): Set<string>;

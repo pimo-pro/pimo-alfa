@@ -1,1 +1,1 @@
-export { EdgeOutlineSystem } from "./EdgeOutlineSystem";
+export { EdgeOutlineSystem, isEdgeOutlineMesh, isWoodPieceMesh } from "./EdgeOutlineSystem";

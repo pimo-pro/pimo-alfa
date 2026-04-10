@@ -1,7 +1,17 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+
+import { useAuth } from "../auth/useAuth";
+import {
+  fetchGlobalSettings,
+  fetchUserSettings,
+  flushUserSettingsRemoteQueue,
+  resolveUserSettingsPipeline,
+  scheduleUserSettingsRemotePatch,
+} from "../core/userSettings/userSettingsService";
+import { devLogger } from "../utils/devLogger";
 import {
   getSettings,
   saveSettings,
@@ -35,8 +45,83 @@ type SettingsContextValue = {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
+/**
+ * Arranque: GET /config/global (público) → depois, se autenticado, GET /user/settings.
+ * Merge: defaults → global → user online → local (`pimo_system_settings_v1`) → validateSettings.
+ * Visitante: mesmo pipeline sem camada user; falha de rede no global cai no fallback (comportamento anterior).
+ * Extensão futura: UI admin para editar `global-settings.json` no servidor (ver globalSettingsService).
+ */
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { token, loading } = useAuth();
   const [settings, setSettings] = useState<SettingsSchema>(() => getSettings());
+
+  useEffect(() => {
+    if (loading) return;
+
+    let cancelled = false;
+    void (async () => {
+      const globalPartial = await fetchGlobalSettings();
+      if (cancelled) return;
+
+      if (!token) {
+        try {
+          const resolved = resolveUserSettingsPipeline(null, globalPartial);
+          const result = saveSettings(resolved);
+          if (!cancelled) setSettings(result.settings);
+          if (import.meta.env.DEV) {
+            devLogger.info(
+              "[PIMO][settings] visitante: pipeline com global",
+              globalPartial ? "GET /config/global ok" : "fallback (sem global)"
+            );
+          }
+        } catch {
+          if (!cancelled) setSettings(getSettings());
+        }
+        return;
+      }
+
+      let online: Record<string, unknown> | null = null;
+      try {
+        online = await fetchUserSettings();
+      } catch {
+        if (import.meta.env.DEV) {
+          devLogger.warn("[PIMO][settings] GET /user/settings falhou; merge com global + local");
+        }
+      }
+      if (cancelled) return;
+
+      try {
+        const resolved = resolveUserSettingsPipeline(online, globalPartial);
+        const result = saveSettings(resolved);
+        if (!cancelled) setSettings(result.settings);
+        if (import.meta.env.DEV) {
+          devLogger.info(
+            "[PIMO][settings] autenticado: pipeline com global + user",
+            globalPartial ? "global ok" : "global fallback"
+          );
+        }
+      } catch {
+        if (!cancelled) setSettings(getSettings());
+      } finally {
+        if (!cancelled) void flushUserSettingsRemoteQueue();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const intervalId = window.setInterval(() => void flushUserSettingsRemoteQueue(), 45000);
+    const onOnline = () => void flushUserSettingsRemoteQueue();
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [token]);
 
   const refreshSettings = useCallback(() => {
     setSettings(getSettings());
@@ -72,8 +157,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     };
     const result = saveSettings(merged as SettingsSchema);
     setSettings(result.settings);
+    if (token) {
+      scheduleUserSettingsRemotePatch(patch);
+      void flushUserSettingsRemoteQueue();
+    }
     return result;
-  }, [settings]);
+  }, [settings, token]);
 
   const validate = useCallback((patch: DeepPartial<SettingsSchema>) => {
     const merged = {

@@ -1,7 +1,8 @@
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
+import { createAccountRemote } from "../api/authApi";
 import { useAuth } from "../auth/useAuth";
-import RegisterUserForm from "../components/admin/RegisterUserForm";
+import RegisterUserForm, { type RegisterFormValues } from "../components/admin/RegisterUserForm";
 import { initialInviteCodes } from "../components/admin/inviteCodesMock";
 import Card from "../components/ui/Card";
 import PageHeader from "../components/ui/PageHeader";
@@ -9,14 +10,22 @@ import PageContainer from "../components/ui/PageContainer";
 import "../components/ui/ui.css";
 
 export default function RegisterPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, login } = useAuth();
+  const navigate = useNavigate();
 
   if (isAuthenticated()) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleSubmit = async () => {
-    await Promise.resolve();
+  const handleSubmit = async (values: RegisterFormValues) => {
+    await createAccountRemote({
+      username: values.username.trim(),
+      email: values.email.trim(),
+      password: values.senha,
+      role: values.tipoConta,
+    });
+    await login(values.email.trim(), values.senha);
+    navigate("/dashboard", { replace: true });
   };
 
   return (

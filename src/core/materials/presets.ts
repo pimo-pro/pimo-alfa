@@ -46,7 +46,7 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
     metallic: M,
   },
   {
-    id: "mdf_cinza",
+    id: "laminado_linho_cancun",
     name: "Cinza",
     color: "#9ca3af",
     textureUrl: TEXTURE_URLS?.mdfCinza,

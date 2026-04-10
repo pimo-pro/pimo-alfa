@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { getMe, type MeResponse } from "../api/authApi";
+import { canAccessAdminPanel, hasFullAccess } from "../auth/rbac";
+import { useAuth } from "../auth/useAuth";
 import Card from "../components/ui/Card";
 import Loader from "../components/ui/Loader";
 import PageContainer from "../components/ui/PageContainer";
@@ -9,6 +12,9 @@ import Section from "../components/ui/Section";
 import "../components/ui/ui.css";
 
 export default function MePage() {
+  const { hasPermission } = useAuth();
+  const full = hasFullAccess(hasPermission);
+  const adminPanel = canAccessAdminPanel(hasPermission);
   const [data, setData] = useState<MeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +43,6 @@ export default function MePage() {
     );
   }
 
-  // @PIMO-KEEP — guard: permissions pode ser undefined vindo da API
   const permissions = data.user.permissions ?? [];
 
   return (
@@ -56,6 +61,20 @@ export default function MePage() {
             ))}
           </ul>
         </Section>
+        {full || adminPanel ? (
+          <Section title="Área administrativa">
+            {full ? (
+              <p style={{ marginTop: 0, fontSize: 13 }}>
+                <Link to="/admin/users">Gestão de utilizadores (API online)</Link>
+              </p>
+            ) : null}
+            {adminPanel ? (
+              <p style={{ marginTop: 0, fontSize: 13 }}>
+                <Link to="/admin/roles">Painel administração (roles, permissões, ícones)</Link>
+              </p>
+            ) : null}
+          </Section>
+        ) : null}
       </Card>
     </PageContainer>
   );

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
 import { convertWorkspaceToBox } from "../context/projectState";
+import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
+import { COSTA_INDUSTRIAL_CANONICAL_ID } from "../core/materials/materials.api";
+import { getIndustrialMaterial } from "../core/materials/service";
+import type { DoorLayerItem } from "../models/BoxLayers";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
@@ -95,6 +99,24 @@ function getStructureFingerprint(
     feetHeight: wsBox.feetHeight,
     feetOffsetFront: wsBox.feetOffsetFront,
   });
+}
+
+/**
+ * Portas enviadas ao Viewer: compensar Z quando a carcaça usa P útil (centrada) e o estado guarda posZ para P externa.
+ * Não altera `workspaceBoxes` / estado do projeto.
+ */
+function doorLayerItemsForViewer(
+  items: DoorLayerItem[],
+  profundidadeExternaMm: number,
+  profundidadeInternaUtilMm: number
+): DoorLayerItem[] {
+  if (items.length === 0) return items;
+  const dzMm = (profundidadeInternaUtilMm - profundidadeExternaMm) / 2;
+  if (dzMm === 0) return items;
+  return items.map((d) => ({
+    ...d,
+    posZ: (d.posZ ?? 0) + dzMm,
+  }));
 }
 
 /** Posição/rotação da caixa no viewer (metros / radianos). Reutilizado pelo showroom para alinhar a pré-visualização ao Workspace. */
@@ -211,6 +233,28 @@ export const useCalculadoraSync = (
       const width = widthMm !== undefined ? mmToM(widthMm) : undefined;
       const height = heightMm !== undefined ? mmToM(heightMm) : undefined;
       const depth = depthMm !== undefined ? mmToM(depthMm) : undefined;
+
+      let layoutDepthM: number | undefined;
+      let carcassDepthM: number | undefined;
+      let doorLayerItems: DoorLayerItem[] = wsBox?.doorsLayer ?? [];
+      if (depthMm !== undefined && Number.isFinite(depthMm)) {
+        const profundidadeExternaMm = Number(wsBox.profundidadeExterna ?? depthMm) || 0;
+        const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
+        const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
+          {
+            dimensoes: { profundidade: profundidadeExternaMm },
+            espessura: wsBox.espessura,
+            portaTipo: wsBox.portaTipo,
+            doorsLayer: wsBox.doorsLayer,
+            costaAtiva: wsBox.costaAtiva,
+          },
+          espessuraCostaMm
+        );
+        layoutDepthM = mmToM(profundidadeExternaMm);
+        carcassDepthM = mmToM(profundidadeInternaUtilMm);
+        doorLayerItems = doorLayerItemsForViewer(wsBox?.doorsLayer ?? [], profundidadeExternaMm, profundidadeInternaUtilMm);
+      }
+
       const thicknessMm = Number.isFinite(wsBox.espessura) ? wsBox.espessura : undefined;
       const thickness = thicknessMm !== undefined ? mmToM(thicknessMm) : undefined;
       const effectiveMaterial =
@@ -233,7 +277,6 @@ export const useCalculadoraSync = (
       const pe_cm = feetHeight / 10;
       const feetEnabled = wsBox?.feetEnabled ?? (cabinetType === "lower");
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
-      const doorLayerItems = wsBox?.doorsLayer ?? [];
       const drawerLayerItems = wsBox?.drawersLayer ?? [];
       if (import.meta.env.DEV && doorLayerItems.length > 0) {
         devLogger.debug("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
@@ -260,7 +303,9 @@ export const useCalculadoraSync = (
         api.addBox(wsBox.id, {
           width,
           height,
-          depth,
+          depth: layoutDepthM ?? depth,
+          layoutDepthM,
+          carcassDepthM,
           thickness,
           panelIds: wsBox.panelIds,
           shelves,
@@ -308,7 +353,9 @@ export const useCalculadoraSync = (
           api.updateBox(wsBox.id, {
             width,
             height,
-            depth,
+            depth: layoutDepthM ?? depth,
+            layoutDepthM,
+            carcassDepthM,
             thickness,
             panelIds: wsBox.panelIds,
             shelves,

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { setBox3FromObjectExcludingLayoutProxy } from "../viewer-engine/box/boxAabbUtils";
 
 type SnapUserData = {
   currentWallId: number | null;
@@ -92,7 +93,8 @@ function applySnapPosition(
 ): void {
   model.updateMatrixWorld(true);
   const size = new THREE.Vector3();
-  const modelBox = new THREE.Box3().setFromObject(model);
+  const modelBox = new THREE.Box3();
+  setBox3FromObjectExcludingLayoutProxy(modelBox, model);
   modelBox.getSize(size);
   const halfDepth = Math.max(size.x, size.z) * 0.5;
   const wallThickness = Number(wall.userData?.wallThicknessM) || 0.12;

@@ -1,4 +1,7 @@
 import { useEffect, useRef } from "react";
+
+import { canAccessAdminPanel } from "../auth/rbac";
+import { useAuth } from "../auth/useAuth";
 import AdminPanel from "./AdminPanel";
 
 function disableInteractiveControls(root: HTMLElement) {
@@ -15,6 +18,8 @@ function disableInteractiveControls(root: HTMLElement) {
 }
 
 export default function SettingsPage() {
+  const { hasPermission } = useAuth();
+  const showAdminBack = canAccessAdminPanel(hasPermission);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -35,18 +40,20 @@ export default function SettingsPage() {
         <AdminPanel />
       </div>
       <div className="settings-overlay-blocker" />
-      <button
-        type="button"
-        onClick={() => {
-          window.history.pushState({}, "", "/admin");
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }}
-        title="Voltar para Admin"
-        aria-label="Voltar para Admin"
-        className="settings-back-to-admin-btn"
-      >
-        Voltar para Admin
-      </button>
+      {showAdminBack ? (
+        <button
+          type="button"
+          onClick={() => {
+            window.history.pushState({}, "", "/admin");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
+          title="Voltar para Admin"
+          aria-label="Voltar para Admin"
+          className="settings-back-to-admin-btn"
+        >
+          Voltar para Admin
+        </button>
+      ) : null}
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { Icon } from "@/components/icons";
+import { canAccessAdminPanel, hasFullAccess } from "../auth/rbac";
 import { useAuth } from "../auth/useAuth";
 import Button from "./ui/Button";
 import Toolbar from "./ui/Toolbar";
@@ -8,9 +9,10 @@ import "./ui/ui.css";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, hasPermission } = useAuth();
   const authenticated = isAuthenticated();
-  const canViewAdmin = user?.role === "admin" || user?.role === "ultra+";
+  const canViewAdmin = canAccessAdminPanel(hasPermission);
+  const canManageUsersRemote = hasFullAccess(hasPermission);
 
   return (
     <Toolbar
@@ -46,12 +48,28 @@ export default function Navbar() {
               <span>Registrar</span>
             </NavLink>
           ) : null}
-          {authenticated && canViewAdmin ? (
+          {authenticated && canManageUsersRemote ? (
             <NavLink to="/admin/users" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
               <span className="ui-nav-link__icon" aria-hidden>
-              <Icon name="grid" size={16} aria-hidden />
-            </span>
+                <Icon name="grid" size={16} aria-hidden />
+              </span>
+              <span>Utilizadores</span>
+            </NavLink>
+          ) : null}
+          {authenticated && canViewAdmin && !canManageUsersRemote ? (
+            <NavLink to="/admin/roles" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
+              <span className="ui-nav-link__icon" aria-hidden>
+                <Icon name="grid" size={16} aria-hidden />
+              </span>
               <span>Administração</span>
+            </NavLink>
+          ) : null}
+          {authenticated && canViewAdmin && canManageUsersRemote ? (
+            <NavLink to="/admin/roles" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
+              <span className="ui-nav-link__icon" aria-hidden>
+                <Icon name="grid" size={16} aria-hidden />
+              </span>
+              <span>Roles</span>
             </NavLink>
           ) : null}
         </div>

@@ -7,6 +7,9 @@ import Section from "../ui/Section";
 import "../ui/ui.css";
 import { resolveInviteCode, type InviteCode } from "./inviteCodesMock";
 
+/** Conta pública: só estes valores são enviados em POST /auth/register (validados no servidor). */
+export type RegisterPublicAccountType = "visitor" | "pro";
+
 export type RegisterFormValues = {
   nome: string;
   sobrenome: string;
@@ -18,6 +21,7 @@ export type RegisterFormValues = {
   cidade: string;
   endereco: string;
   tipoCliente: string;
+  tipoConta: RegisterPublicAccountType;
   username: string;
   senha: string;
   confirmarSenha: string;
@@ -146,6 +150,7 @@ const DEFAULT_VALUES: RegisterFormValues = {
   cidade: "",
   endereco: "",
   tipoCliente: "Visitante",
+  tipoConta: "visitor",
   username: "",
   senha: "",
   confirmarSenha: "",
@@ -292,6 +297,10 @@ export default function RegisterUserForm({
       nextErrors.email = "Email inválido";
     }
 
+    if (values.tipoConta !== "visitor" && values.tipoConta !== "pro") {
+      nextErrors.tipoConta = "Tipo de conta inválido";
+    }
+
     if (values.senha && values.senha.length < 6) {
       nextErrors.senha = "A senha deve ter pelo menos 6 caracteres";
     }
@@ -317,7 +326,6 @@ export default function RegisterUserForm({
     setSubmitting(true);
     try {
       await onSubmit(values);
-      setStatusMessage("Formulário enviado com sucesso (mock).");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Falha no envio");
     } finally {
@@ -351,6 +359,24 @@ export default function RegisterUserForm({
           error={errors.email}
           required
         />
+        <FormGroup>
+          <span className="ui-input__label">Tipo de conta: Visitor ou Designer (Pro)</span>
+          <select
+            className="ui-input"
+            value={values.tipoConta}
+            onChange={(event) =>
+              updateValue("tipoConta", event.target.value as RegisterPublicAccountType)
+            }
+            required
+          >
+            <option value="visitor">Visitor — acesso básico</option>
+            <option value="pro">Designer (Pro) — acesso de designer (sem permissões administrativas)</option>
+          </select>
+          <span className="ui-input__hint" style={{ display: "block", marginTop: 6 }}>
+            Ultra, Ultra+ e Admin só podem ser atribuídos por um administrador no painel de utilizadores.
+          </span>
+          {errors.tipoConta ? <span className="ui-input__error">{errors.tipoConta}</span> : null}
+        </FormGroup>
         <FormGroup>
           <span className="ui-input__label">Tipo de Cliente</span>
           <select

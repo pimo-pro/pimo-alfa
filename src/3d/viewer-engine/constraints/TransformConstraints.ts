@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import type { ViewerBoxEntry } from "../types";
+import { setBox3FromObjectExcludingLayoutProxy } from "../box/boxAabbUtils";
 import { keepModelInsideRoom, preventModelWallIntersection } from "../../collision/ModelCollision";
 import { snapModelToNearestWall, type SnapDebugData } from "../../snapping/ModelWallSnap";
 
@@ -110,12 +111,14 @@ export class TransformConstraints {
     const maxIterations = 8;
     for (let iter = 0; iter < maxIterations; iter++) {
       movingMesh.updateMatrixWorld(true);
-      const movingBox = new THREE.Box3().setFromObject(movingMesh);
+      const movingBox = new THREE.Box3();
+      setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);
       let anyOverlap = false;
       boxes.forEach((entry, boxId) => {
         if (boxId === selectedBoxId) return;
         entry.mesh.updateMatrixWorld(true);
-        const otherBox = new THREE.Box3().setFromObject(entry.mesh);
+        const otherBox = new THREE.Box3();
+        setBox3FromObjectExcludingLayoutProxy(otherBox, entry.mesh);
         if (!movingBox.intersectsBox(otherBox)) return;
         anyOverlap = true;
 

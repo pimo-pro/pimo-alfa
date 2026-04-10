@@ -19,7 +19,8 @@ function pimo_users_public(array $u): array
     ];
 }
 
-function pimo_require_admin_user(): ?array
+/** JWT válido + permissão efectiva `admin.full_access` (alinhado com RBAC no cliente). */
+function pimo_users_require_full_access(): ?array
 {
     $token = pimo_bearer_token();
     if ($token === null || $token === '') {
@@ -34,7 +35,12 @@ function pimo_require_admin_user(): ?array
     if ($user === null) {
         return null;
     }
-    if (($user['role'] ?? '') !== 'admin') {
+    $role = (string) ($user['role'] ?? 'visitor');
+    $perms = pimo_effective_permissions($role);
+    if ($role === 'admin') {
+        $perms = array_values(array_unique([...$perms, 'admin.full_access']));
+    }
+    if (!in_array('admin.full_access', $perms, true)) {
         return null;
     }
     return $user;
@@ -48,9 +54,9 @@ function pimo_users_router(): void
         return;
     }
 
-    $admin = pimo_require_admin_user();
+    $admin = pimo_users_require_full_access();
     if ($admin === null) {
-        pimo_json_response(['status' => 'error', 'message' => 'Proibido'], 403);
+        pimo_json_response(['status' => 'error', 'message' => 'Proibido (requer admin.full_access)'], 403);
         return;
     }
 

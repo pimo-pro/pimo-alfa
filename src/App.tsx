@@ -19,7 +19,7 @@ import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
@@ -36,10 +36,14 @@ import ProjectsViewerPage from "./pages/ProjectsViewerPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ManageUsersPage from "./pages/admin/ManageUsersPage";
+import UsersAdminPage from "./pages/admin/UsersAdminPage";
 import ManageRolesPage from "./pages/admin/ManageRolesPage";
 import ManagePermissionsPage from "./pages/admin/ManagePermissionsPage";
+import GlobalSettingsAdminPage from "./pages/admin/GlobalSettingsAdminPage";
+import { canAccessAdminPanel, canOpenProjectsShowroom, hasFullAccess } from "./auth/rbac";
 import { useAuth } from "./auth/useAuth";
+import Card from "./components/ui/Card";
+import PageContainer from "./components/ui/PageContainer";
 import { IconGallery } from "@/components/icons";
 import "./components/ui/ui.css";
 
@@ -52,6 +56,9 @@ const DevPimoTest = import.meta.env.DEV
   : null;
 
 function LegacyApp() {
+  const { isAuthenticated, hasPermission } = useAuth();
+  const showLegacyAdminFooter = isAuthenticated() && canAccessAdminPanel(hasPermission);
+
   const [leftOpen, setLeftOpen] = useState(true);
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
@@ -298,7 +305,7 @@ function LegacyApp() {
 
         <Footer
           onShowSystemDocs={navigateToSystemDocs}
-          onShowAdmin={navigateToAdmin}
+          onShowAdmin={showLegacyAdminFooter ? navigateToAdmin : undefined}
           onShowAjuda={navigateToAjuda}
           onShowUserProjects={navigateToUserProjects}
           onShowProjectProgress={navigateToProjectProgress}
@@ -321,8 +328,10 @@ function ProtectedLayout() {
   return (
     <ProtectedRoute>
       <ToastProvider>
-        <Navbar />
-        <Outlet />
+        <SettingsProvider>
+          <Navbar />
+          <Outlet />
+        </SettingsProvider>
       </ToastProvider>
     </ProtectedRoute>
   );
@@ -340,11 +349,42 @@ function AppChromeLayout() {
   );
 }
 
-function AdminRoute({ children }: { children: ReactElement }) {
-  const { user } = useAuth();
-  const canAccess = user?.role === "admin" || user?.role === "ultra+";
-  if (!canAccess) {
-    return <Navigate to="/dashboard" replace />;
+function PermissionRoute({
+  children,
+  check,
+}: {
+  children: ReactElement;
+  check: (_hasPermission: (permission: string) => boolean) => boolean;
+}) {
+  const { hasPermission, loading } = useAuth();
+  if (loading) {
+    return (
+      <PageContainer centered>
+        <Card maxWidth={420}>
+          <p style={{ margin: 0 }}>A carregar sessão…</p>
+        </Card>
+      </PageContainer>
+    );
+  }
+  if (!check(hasPermission)) {
+    return (
+      <PageContainer centered>
+        <Card maxWidth={480}>
+          <p className="ui-text-danger" style={{ marginTop: 0 }}>
+            Não tem permissão para aceder a esta área.
+          </p>
+          <p style={{ fontSize: 13, color: "var(--text-muted, #71717a)" }}>
+            Se precisar de acesso, contacte um administrador.
+          </p>
+          <Link
+            to="/dashboard"
+            style={{ marginTop: 14, display: "inline-block", fontWeight: 600 }}
+          >
+            Voltar ao Dashboard
+          </Link>
+        </Card>
+      </PageContainer>
+    );
   }
   return children;
 }
@@ -373,9 +413,9 @@ export default function App() {
             <Route
               path="/projects/viewer"
               element={
-                <AdminRoute>
+                <PermissionRoute check={canOpenProjectsShowroom}>
                   <ProjectsViewerPage />
-                </AdminRoute>
+                </PermissionRoute>
               }
             />
             <Route path="/projects" element={<ProjectsPage />} />
@@ -383,33 +423,41 @@ export default function App() {
             <Route
               path="/admin/users"
               element={
-                <AdminRoute>
-                  <ManageUsersPage />
-                </AdminRoute>
+                <PermissionRoute check={hasFullAccess}>
+                  <UsersAdminPage />
+                </PermissionRoute>
               }
             />
             <Route
               path="/admin/roles"
               element={
-                <AdminRoute>
+                <PermissionRoute check={canAccessAdminPanel}>
                   <ManageRolesPage />
-                </AdminRoute>
+                </PermissionRoute>
               }
             />
             <Route
               path="/admin/permissions"
               element={
-                <AdminRoute>
+                <PermissionRoute check={canAccessAdminPanel}>
                   <ManagePermissionsPage />
-                </AdminRoute>
+                </PermissionRoute>
               }
             />
             <Route
               path="/admin/icons"
               element={
-                <AdminRoute>
+                <PermissionRoute check={canAccessAdminPanel}>
                   <IconGallery />
-                </AdminRoute>
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/admin/global-settings"
+              element={
+                <PermissionRoute check={hasFullAccess}>
+                  <GlobalSettingsAdminPage />
+                </PermissionRoute>
               }
             />
           </Route>

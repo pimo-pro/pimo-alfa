@@ -5,6 +5,7 @@
 
 import * as THREE from "three";
 import type { ViewerBoxEntry } from "../types";
+import { setBox3FromObjectExcludingLayoutProxy } from "./boxAabbUtils";
 
 export class ViewerBoxManager {
   private readonly boxes = new Map<string, ViewerBoxEntry>();
@@ -38,7 +39,7 @@ export class ViewerBoxManager {
       let w: number;
       if (!entry.cadOnly && entry.mesh) {
         entry.mesh.updateMatrixWorld(true);
-        this._boundingBox.setFromObject(entry.mesh);
+        setBox3FromObjectExcludingLayoutProxy(this._boundingBox, entry.mesh);
         this._boundingBox.getSize(this._size);
         w = Math.max(this._size.x, 0.001);
       } else {
