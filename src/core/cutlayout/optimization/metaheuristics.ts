@@ -187,10 +187,11 @@ export function applyLnsRepack(
     const origH = p.rotacao === 90 ? p.largura_mm : p.altura_mm;
     // originalDrillHoles = coords pré-rotação = fonte de verdade para coordenadas de furo
     const origHoles = p.originalDrillHoles ?? p.drillHoles ?? p.holes;
+    const thick = Number(p.espessura_mm);
     return {
       largura_mm: origW,
       altura_mm: origH,
-      espessura_mm: sheet.espessura_mm,
+      espessura_mm: Number.isFinite(thick) && thick > 0 ? thick : sheet.espessura_mm,
       quantidade: 1,
       boxId: p.boxId,
       partName: p.partName,

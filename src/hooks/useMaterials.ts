@@ -5,6 +5,7 @@ import { useStorageList } from "./useStorageList";
 const STORAGE_KEY = "pimo_admin_materials";
 
 const MATERIALS_DEFAULT: MaterialIndustrial[] = listIndustrialWoodMaterials().map((m) => ({
+  id: m.canonicalId,
   nome: m.label,
   espessuraPadrao: m.industrialDefaults?.espessuraPadrao ?? 19,
   custo_m2: m.industrialDefaults?.custo_m2 ?? 0,

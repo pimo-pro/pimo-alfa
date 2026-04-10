@@ -32,8 +32,6 @@ export const CATEGORIAS_MATERIAIS: { id: MaterialCategoryId; label: string }[] =
   { id: "mdf", label: "MDF" },
   { id: "carvalho", label: "Carvalho" },
   { id: "lacado", label: "Lacado" },
-  { id: "melamina", label: "Melamina" },
-  { id: "contraplacado", label: "Contraplacado" },
   { id: "glass", label: "Vidro" },
   { id: "metal", label: "Metal" },
   { id: "industrial", label: "Industrial" },

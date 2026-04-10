@@ -24,6 +24,8 @@ export const MATERIAIS_PBR_OPCOES: { id: MaterialPbrId; label: string }[] = [
 ];
 
 export type MaterialIndustrial = {
+  /** ID canónico (ex.: mdf_branco-19). */
+  id: string;
   nome: string;
   espessuraPadrao: number;
   custo_m2: number;
@@ -44,9 +46,13 @@ export const CHAPA_PADRAO_ALTURA = PANEL_DEFAULTS.altura_mm;
 // Densidade padrão MDF: ~750 kg/m³
 export const DENSIDADE_PADRAO = 750;
 
+const espessuraIndustrialFallbackMm = (): number =>
+  getDefaultOfficialMaterial().industrialDefaults!.espessuraPadrao;
+
 export const MATERIAIS_INDUSTRIAIS: MaterialIndustrial[] = listIndustrialWoodMaterials().map((m) => ({
+  id: m.canonicalId,
   nome: m.label,
-  espessuraPadrao: m.industrialDefaults?.espessuraPadrao ?? PANEL_DEFAULTS.espessura_mm,
+  espessuraPadrao: m.industrialDefaults?.espessuraPadrao ?? espessuraIndustrialFallbackMm(),
   custo_m2: m.industrialDefaults?.custo_m2 ?? 0,
   materialPbrId: (m.viewerMaterialId as MaterialPbrId | undefined) ?? undefined,
   larguraChapa: m.industrialDefaults?.larguraChapa ?? PANEL_DEFAULTS.largura_mm,
@@ -78,8 +84,9 @@ export const getMaterial = (nome?: string): MaterialIndustrial => {
     const resolved = resolveMaterial(nome);
     if (resolved?.industrial) {
       return {
+        id: resolved.canonicalId,
         nome: resolved.label,
-        espessuraPadrao: resolved.industrialDefaults?.espessuraPadrao ?? PANEL_DEFAULTS.espessura_mm,
+        espessuraPadrao: resolved.industrialDefaults?.espessuraPadrao ?? espessuraIndustrialFallbackMm(),
         custo_m2: resolved.industrialDefaults?.custo_m2 ?? 0,
         materialPbrId: (resolved.viewerMaterialId as MaterialPbrId | undefined) ?? undefined,
         larguraChapa: resolved.industrialDefaults?.larguraChapa ?? PANEL_DEFAULTS.largura_mm,
@@ -87,13 +94,14 @@ export const getMaterial = (nome?: string): MaterialIndustrial => {
         densidade: resolved.industrialDefaults?.densidade ?? DENSIDADE_PADRAO,
       };
     }
-    const found = MATERIAIS_INDUSTRIAIS.find((material) => material.nome === nome);
+    const found = MATERIAIS_INDUSTRIAIS.find((material) => material.nome === nome || material.id === nome);
     if (found) return found;
   }
   const fallback = getDefaultOfficialMaterial();
   return {
+    id: fallback.canonicalId,
     nome: fallback.label,
-    espessuraPadrao: fallback.industrialDefaults?.espessuraPadrao ?? PANEL_DEFAULTS.espessura_mm,
+    espessuraPadrao: fallback.industrialDefaults?.espessuraPadrao ?? espessuraIndustrialFallbackMm(),
     custo_m2: fallback.industrialDefaults?.custo_m2 ?? 0,
     materialPbrId: (fallback.viewerMaterialId as MaterialPbrId | undefined) ?? "mdf_branco",
     larguraChapa: fallback.industrialDefaults?.larguraChapa ?? PANEL_DEFAULTS.largura_mm,

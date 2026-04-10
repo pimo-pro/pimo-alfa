@@ -45,8 +45,9 @@ export function fallbackMaterialsFromLocalStorage(): MaterialOption[] {
         const row = item as Record<string, unknown>;
         const nome = row.nome;
         if (typeof nome !== "string") return null;
+        const id = typeof row.id === "string" ? row.id : nome;
         return {
-          id: nome,
+          id,
           label: nome,
           color: typeof row.cor === "string" ? row.cor : undefined,
           espessura: Number.isFinite(Number(row.espessuraPadrao)) ? Number(row.espessuraPadrao) : undefined,
@@ -61,7 +62,7 @@ export function fallbackMaterialsFromLocalStorage(): MaterialOption[] {
 
 export function defaultIndustrialMaterials(): MaterialOption[] {
   return MATERIAIS_INDUSTRIAIS.map((m) => ({
-    id: m.nome,
+    id: m.id,
     label: m.nome,
     color: m.cor,
     espessura: m.espessuraPadrao,

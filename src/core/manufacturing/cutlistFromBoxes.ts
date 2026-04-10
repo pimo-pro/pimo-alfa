@@ -8,7 +8,8 @@ import type {
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
-import { resolveMaterial, getDefaultOfficialMaterial } from "../materials/materials.api";
+import { COSTA_INDUSTRIAL_CANONICAL_ID, resolveMaterial, getDefaultOfficialMaterial } from "../materials/materials.api";
+import { getIndustrialMaterial } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
@@ -71,7 +72,7 @@ export function cutlistComPrecoFromBox(
       doorsLayer: box.doorsLayer,
       costaAtiva: box.costaAtiva,
     },
-    effRules.madeira.espessuraCosta
+    getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao
   );
   const visualMaterial = materialId
     ? getVisualMaterialForBox(box, projectMaterialId)

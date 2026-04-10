@@ -102,7 +102,8 @@ function loadMaterialsFromStorage(): MaterialIndustrial[] {
 }
 
 function formatMaterial(materialNome: string, espessura: number, materials: MaterialIndustrial[]): string {
-  const mat = materials.find((m) => m.nome === materialNome) ?? getMaterial(materialNome);
+  const mat =
+    materials.find((m) => m.nome === materialNome || m.id === materialNome) ?? getMaterial(materialNome);
   const cor = mat.cor ?? "";
   const parts = [materialNome];
   if (cor) parts.push(cor);
@@ -267,7 +268,7 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
   for (const box of boxes) {
     const mat = box.material ?? "mdf_branco";
     const esp = box.espessura > 0 ? box.espessura : 18;
-    const matInfo = materials.find((m) => m.nome === mat) ?? getMaterial(mat);
+    const matInfo = materials.find((m) => m.nome === mat || m.id === mat) ?? getMaterial(mat);
     const cor = matInfo.cor ?? "";
     const s = `${mat}${cor ? " " + cor : ""} ${esp}mm`;
     if (!seen.has(s)) {

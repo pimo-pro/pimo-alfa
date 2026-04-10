@@ -4,7 +4,8 @@
  */
 
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
-import { buildEffectiveDrillingRules } from "../modules/drilling/drillingAdapter";
+import { COSTA_INDUSTRIAL_CANONICAL_ID } from "../core/materials/materials.api";
+import { getIndustrialMaterial } from "../core/materials/service";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { BoxModule } from "../core/types";
 
@@ -21,9 +22,8 @@ export type BoxProfundidadeLeituraMm = {
 
 export function computeBoxProfundidadeLeituraMm(
   box: BoxLikeProfundidadeLeitura,
-  rules: RulesConfig
+  _rules: RulesConfig
 ): BoxProfundidadeLeituraMm {
-  const effRules = buildEffectiveDrillingRules(rules);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
   const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
     {
@@ -33,7 +33,7 @@ export function computeBoxProfundidadeLeituraMm(
       doorsLayer: box.doorsLayer,
       costaAtiva: box.costaAtiva,
     },
-    effRules.madeira.espessuraCosta
+    getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao
   );
   return { profundidadeExternaMm, profundidadeInternaUtilMm };
 }

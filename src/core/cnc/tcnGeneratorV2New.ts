@@ -13,6 +13,11 @@ import type { SheetResult } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
 import { holeLocalToSheetOffsetMm, toLayoutAbsoluteX } from "../cutlayout/layoutCoordinateSystem";
 import { getSettings } from "../settings/settingsService";
+import {
+  logTcnThicknessDebug,
+  resolveTcnPanelThicknessMm,
+  resolveTcnUnmDsMm,
+} from "./tcnPanelThickness";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -273,20 +278,9 @@ export function generateTcnForPanelV2New(
   const lines: string[] = [];
   lines.push(HEADER);
 
-  const thicknessMm = sheetResult.sheet.espessura_mm;
-  const zCut = -thicknessMm;
-
   const sheet = sheetResult.sheet;
   const dl = sheet.largura_mm;
   const dh = sheet.altura_mm;
-  const ds = thicknessMm;
-
-  lines.push(`$=Acam Name=${acamName}`);
-  lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
-  lines.push("VAR{");
-  lines.push("}VAR");
-  lines.push("OPTI{");
-  lines.push("}OPTI");
 
   const runtimeSettings = getSettings();
   const toolDiameterMm = getContourToolDiameterMm(runtimeSettings);
@@ -317,6 +311,14 @@ export function generateTcnForPanelV2New(
   );
   const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet, minSpacingMm, toolRadiusMm, sheetMarginMm);
 
+  const ds = resolveTcnUnmDsMm(sanitizedPlacements, sheet);
+  lines.push(`$=Acam Name=${acamName}`);
+  lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
+  lines.push("VAR{");
+  lines.push("}VAR");
+  lines.push("OPTI{");
+  lines.push("}OPTI");
+
   const sideInnerLines: string[] = [];
 
   const pushContourFromPath = (
@@ -333,6 +335,8 @@ export function generateTcnForPanelV2New(
   // Loop 1 — furos (v2_new): coords locais à peça + placement físico, sem toolRadius
   const allDrillOps: CncDrillOperation[] = [];
   for (const pl of sanitizedPlacements) {
+    logTcnThicknessDebug(pl, sheet);
+    const panelMm = resolveTcnPanelThicknessMm(pl, sheet);
     const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
     for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
@@ -348,7 +352,7 @@ export function generateTcnForPanelV2New(
         y: tcnPt.y,
         z: 0,
         diametro: hole.diameter,
-        profundidade: Math.min(hole.depth, thicknessMm),
+        profundidade: Math.min(hole.depth, panelMm),
         tipo: "vertical",
       });
     }
@@ -357,13 +361,15 @@ export function generateTcnForPanelV2New(
 
   // Loop 2 — contornos exteriores + rasgos interiores
   for (const pl of sanitizedPlacements) {
+    const panelMm = resolveTcnPanelThicknessMm(pl, sheet);
+    const zCut = -panelMm;
     const w = pl.largura_mm;
     const h = pl.altura_mm;
     const x = pl.x_mm;
     const y = pl.y_mm;
     const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
 
-    pushContourFromPath(buildContourPathV1Style(x, y, w, h, toolRadiusMm, thicknessMm, zSafe, rampDistMm));
+    pushContourFromPath(buildContourPathV1Style(x, y, w, h, toolRadiusMm, panelMm, zSafe, rampDistMm));
 
     const innerContours = pl.innerContours;
     if (innerContours?.length) {

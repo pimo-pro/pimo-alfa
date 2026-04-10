@@ -169,10 +169,22 @@ function analyzeRamps(content: string, ds: number): {
   };
 }
 
-function validateDrilling(items: Array<{ tipo?: string; dimensoes?: { largura: number; altura: number }; drillHoles?: Array<{ x: number; y: number; holeType?: string }> }>, rules: RulesConfig) {
+function pieceThicknessMmForDrillCheck(it: { dimensoes?: { profundidade?: number } }): number {
+  const p = Number(it.dimensoes?.profundidade);
+  return Number.isFinite(p) && p > 0 ? p : 19;
+}
+
+function validateDrilling(
+  items: Array<{
+    tipo?: string;
+    dimensoes?: { largura: number; altura: number; profundidade?: number };
+    drillHoles?: Array<{ x: number; y: number; holeType?: string }>;
+  }>,
+  rules: RulesConfig
+) {
   const expectedFront = Number(rules.furos.tecnicos.cavilha.distanciaFrente) > 0 ? Number(rules.furos.tecnicos.cavilha.distanciaFrente) : 60;
   const expectedBack = Number(rules.furos.tecnicos.cavilha.distanciaFundo) > 0 ? Number(rules.furos.tecnicos.cavilha.distanciaFundo) : 60;
-  const expectedSide = Number(rules.furos.tecnicos.cavilha.sideOffset) > 0 ? Number(rules.furos.tecnicos.cavilha.sideOffset) : 19;
+  const cfgCavilhaSide = Number(rules.furos.tecnicos.cavilha.sideOffset);
   const expectedHinge = Number(rules.furos.tecnicos.dobradica.distanciaCentroDaBorda) > 0
     ? Number(rules.furos.tecnicos.dobradica.distanciaCentroDaBorda)
     : 22.5;
@@ -187,6 +199,8 @@ function validateDrilling(items: Array<{ tipo?: string; dimensoes?: { largura: n
     const h = Number(it.dimensoes?.altura ?? 0);
 
     if (tipo === "cima" || tipo === "fundo") {
+      const expectedSide =
+        Number.isFinite(cfgCavilhaSide) && cfgCavilhaSide > 0 ? cfgCavilhaSide : pieceThicknessMmForDrillCheck(it) / 2;
       for (const h0 of holes.filter((hh) => hh.holeType === "cavilha")) {
         const okX = Math.abs(h0.x - expectedSide) < 0.2 || Math.abs(h0.x - (w - expectedSide)) < 0.2;
         const okY = Math.abs(h0.y - expectedFront) < 0.2 || Math.abs(h0.y - (h - expectedBack)) < 0.2;
@@ -205,7 +219,13 @@ function validateDrilling(items: Array<{ tipo?: string; dimensoes?: { largura: n
   }
 
   return {
-    expected: { cavilhaFrente: expectedFront, cavilhaFundo: expectedBack, cavilhaSideOffset: expectedSide, dobradicaCentro: expectedHinge },
+    expected: {
+      cavilhaFrente: expectedFront,
+      cavilhaFundo: expectedBack,
+      cavilhaSideOffset:
+        Number.isFinite(cfgCavilhaSide) && cfgCavilhaSide > 0 ? cfgCavilhaSide : null,
+      dobradicaCentro: expectedHinge,
+    },
     cavilhaOk: cavilhaMismatches.length === 0,
     dobradicaOk: hingeMismatches.length === 0,
     cavilhaMismatches,

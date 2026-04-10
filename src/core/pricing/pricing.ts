@@ -8,18 +8,13 @@ interface PrecoMaterial {
   precoPorM2: number; // euros por m²
 }
 
-// Preços derivados da API oficial (somente madeira).
+// Preços: uma linha por chapa industrial oficial (espessura real da variante).
 const PRECOS_MATERIAIS: PrecoMaterial[] = listOfficialMaterials()
   .filter((m) => m.industrial && m.industrialDefaults)
-  .flatMap((m) => {
-    const baseEsp = Number(m.industrialDefaults?.espessuraPadrao) || 19;
-    const basePreco = Number(m.industrialDefaults?.custo_m2) || 0;
-    const espessuras = [12, 16, 18, 19, 25];
-    return espessuras.map((esp) => ({
-      material: m.label,
-      espessura: esp,
-      precoPorM2: Number((basePreco * (esp / baseEsp)).toFixed(2)),
-    }));
+  .map((m) => {
+    const esp = Number(m.industrialDefaults?.espessuraPadrao) || 0;
+    const precoPorM2 = Number(m.industrialDefaults?.custo_m2) || 0;
+    return { material: m.label, espessura: esp, precoPorM2 };
   });
 
 /**

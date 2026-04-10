@@ -60,7 +60,7 @@ export function placementToPiece(p: CutPlacement): CutPiece {
   return {
     largura_mm: isRotated ? p.altura_mm : p.largura_mm,
     altura_mm: isRotated ? p.largura_mm : p.altura_mm,
-    espessura_mm: 0,
+    espessura_mm: Number(p.espessura_mm) > 0 ? Number(p.espessura_mm) : 0,
     quantidade: 1,
     boxId: p.boxId,
     partName: p.partName,
@@ -106,6 +106,7 @@ function makePlacement(
     y_mm: y,
     largura_mm: orient.w,
     altura_mm: orient.h,
+    espessura_mm: piece.espessura_mm,
     rotacao: orient.rotation,
     sheetIndex,
     boxId: piece.boxId,

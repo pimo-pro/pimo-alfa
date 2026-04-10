@@ -462,19 +462,33 @@ export default function SystemSettingsBase() {
               }))
             }
           />
-          <NumberField
-            label="Cavilha cima/fundo — centro ao bordo lateral (mm)"
-            value={draft.furação?.cavilha?.sideOffset ?? 9.5}
-            onChange={(v) =>
-              setDraft((p) => ({
-                ...p,
-                furação: {
-                  ...p.furação,
-                  cavilha: { ...p.furação?.cavilha, sideOffset: v },
-                },
-              }))
-            }
-          />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Cavilha cima/fundo — centro ao bordo lateral (mm), vazio = automático (metade da espessura)
+            </span>
+            <input
+              className="input"
+              type="number"
+              min={3}
+              max={50}
+              step={0.5}
+              placeholder="Automático"
+              value={draft.furação?.cavilha?.sideOffset ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setDraft((p) => ({
+                  ...p,
+                  furação: {
+                    ...p.furação,
+                    cavilha: {
+                      ...p.furação?.cavilha,
+                      sideOffset: v === "" ? undefined : Number(v),
+                    },
+                  },
+                }));
+              }}
+            />
+          </label>
           <NumberField
             label="Offset da borda (mm)"
             value={draft.furação?.parafuso?.offsetDaBorda ?? 9}
@@ -488,6 +502,33 @@ export default function SystemSettingsBase() {
               }))
             }
           />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Parafuso cima/fundo — centro ao bordo lateral (mm), vazio = automático (metade da espessura)
+            </span>
+            <input
+              className="input"
+              type="number"
+              min={3}
+              max={50}
+              step={0.5}
+              placeholder="Automático"
+              value={draft.furação?.parafuso?.sideOffset ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setDraft((p) => ({
+                  ...p,
+                  furação: {
+                    ...p.furação,
+                    parafuso: {
+                      ...p.furação?.parafuso,
+                      sideOffset: v === "" ? undefined : Number(v),
+                    },
+                  },
+                }));
+              }}
+            />
+          </label>
           <span style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Furos de prateleira (sistema 32mm)</span>
           <NumberField
             label="Margem topo (mm)"

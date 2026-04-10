@@ -1,9 +1,9 @@
 import type { BoxModule } from "../types";
 import { getMaterial } from "./materials";
 import type { RulesConfig } from "../rules/rulesConfig";
+import { COSTA_INDUSTRIAL_CANONICAL_ID, getDefaultOfficialMaterial } from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
-import { SYSTEM_THICKNESS_MM } from "../baseCabinets";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
@@ -96,8 +96,15 @@ function getArrayPanelId(box: BoxModule, kind: "prateleiras" | "portas" | "gavet
   return buildId(prefix, index);
 }
 
-/** Espessura estrutural padrão 19 mm (spec). */
-const getEspessura = (box: BoxModule) => (box.espessura > 0 ? box.espessura : SYSTEM_THICKNESS_MM);
+/** Espessura do corpo: caixa → material industrial → último recurso sistema. */
+const getEspessura = (box: BoxModule) => {
+  const fromBox = Number(box.espessura);
+  if (fromBox > 0) return fromBox;
+  const mid = getMaterialForBox(box, undefined);
+  const eMat = Number(getIndustrialMaterial(mid || "mdf_branco").espessuraPadrao);
+  if (Number.isFinite(eMat) && eMat > 0) return eMat;
+  return getDefaultOfficialMaterial().industrialDefaults!.espessuraPadrao;
+};
 /** Nome do material (CRUD ou legado) para painéis/custos. */
 const getNomeMaterial = (box: BoxModule) =>
   getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco").nome;
@@ -120,10 +127,11 @@ export function getPieceLabel(tipo: string): string {
 }
 
 /** L/A internas inalteradas; P útil = modelo FASE 1 com `profundidadeExterna` (FASE 2). */
-const getDimensoesInternas = (box: BoxModule, espessura: number, rules: RulesConfig) => {
+const getDimensoesInternas = (box: BoxModule, espessura: number, _rules: RulesConfig) => {
   const larguraInterna = clampPositive(Number(box.dimensoes.largura) - espessura * 2);
   const alturaInterna = clampPositive(Number(box.dimensoes.altura) - espessura * 2);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
+  const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
   const profundidadeInterna = clampPositive(
     computeBoxProfundidadeAlvoFromBoxLike(
       {
@@ -133,7 +141,7 @@ const getDimensoesInternas = (box: BoxModule, espessura: number, rules: RulesCon
         doorsLayer: box.doorsLayer,
         costaAtiva: box.costaAtiva,
       },
-      rules.madeira.espessuraCosta
+      espessuraCostaMm
     ).profundidadeInternaUtilMm
   );
   return { larguraInterna, alturaInterna, profundidadeInterna };
@@ -177,6 +185,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = Number(box.dimensoes.altura) || 0;
   const profundidadeExterna = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
+  const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
   const profundidadeInterna = clampPositive(
     getProfundidadeInternaUtilMm(
       {
@@ -186,7 +195,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
         doorsLayer: box.doorsLayer,
         costaAtiva: box.costaAtiva,
       },
-      rules.madeira.espessuraCosta
+      espessuraCostaMm
     )
   );
   const espessura = getEspessura(box);
@@ -195,8 +204,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 
   const paineis: PainelIndustrial[] = [];
   const material = getNomeMaterial(box);
-
-  const espessuraCosta = rules.madeira.espessuraCosta;
+  const matCosta = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID);
   const alturaLateral = rules.madeira.calcularAlturaLaterais
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
@@ -258,8 +266,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     tipo: "COSTA",
     largura_mm: clampPositive(largura),
     altura_mm: clampPositive(altura),
-    espessura_mm: espessuraCosta,
-    material,
+    espessura_mm: matCosta.espessuraPadrao,
+    material: matCosta.nome,
     orientacaoFibra: "vertical",
     quantidade: 1,
     custo: 0,

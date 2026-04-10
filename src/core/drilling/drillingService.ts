@@ -51,6 +51,15 @@ type PieceInput = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+/** Centro do furo em relação à borda esquerda/direita em cima/fundo: override em regras, senão metade da espessura do painel. */
+function lateralInsetTopBottomMm(cfgSide: number | undefined, espessuraMm: number): number {
+  const fromCfg = Number(cfgSide);
+  if (Number.isFinite(fromCfg) && fromCfg > 0) return fromCfg;
+  const e = Number(espessuraMm);
+  const half = (Number.isFinite(e) && e > 0 ? e : 18) / 2;
+  return Math.max(0.25, half);
+}
+
 /**
  * Modelo 2D dobradiça Sensys 8645i (lado da porta):
  * - Copo: Ø35 mm, profundidade 13 mm, distância da borda 3 mm (inset) → centro do copo ≈ 22.5 mm.
@@ -142,7 +151,7 @@ export function getInternalFace(pieceType: PieceType): DrillFace {
   return "frente";
 }
 
-/** Furos de cavilha (dowel). Cima/fundo: eixo a 60 mm dos bordos frente/fundo; centro a sideOffset (padrão 9.5 mm (espessura/2)) dos bordos esquerdo/direito (alinhamento com lateral 19 mm). */
+/** Furos de cavilha (dowel). Cima/fundo: eixo a 60 mm dos bordos frente/fundo; centro a sideOffset (opcional nas regras) ou espessura/2. */
 function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.cavilha) return;
   const cfg = rules.furos.tecnicos.cavilha;
@@ -150,7 +159,7 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 8;
   const profundidade = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : Math.min(13, piece.espessura);
   const face = getInternalFace(piece.tipo);
-  const insetLateral = Number(cfg.sideOffset) > 0 ? Number(cfg.sideOffset) : 9.5;
+  const insetLateral = lateralInsetTopBottomMm(cfg.sideOffset, piece.espessura);
 
   if ((piece.tipo === "cima" || piece.tipo === "fundo") && (cfg.aplicarEm.cima || cfg.aplicarEm.fundo)) {
     const xLeft = insetLateral;
@@ -167,7 +176,7 @@ function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillH
   /* Laterais: apenas furos de prateleira e fixação de dobradiça (calcPrateleira32mm e calcDobradicaFixacao). Sem cavilha nas laterais. */
 }
 
-/** Furos de parafuso (confirmat). União topo/base: mesma linha que cavilha (9mm), parafuso a 40mm da frente/fundo. */
+/** Furos de parafuso (confirmat). União topo/base: mesma linha lateral que cavilha (offset = regra ou espessura/2), eixo conforme distâncias frente/fundo. */
 function calcParafuso(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.parafuso) return;
   const cfg = rules.furos.tecnicos.parafuso;
@@ -178,7 +187,7 @@ function calcParafuso(piece: PieceInput, rules: RulesConfig, out: TechnicalDrill
   const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 4;
   const cfgDepth = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : piece.espessura;
   const depth = cfg.profundidadeIgualEspessura ? piece.espessura : Math.min(piece.espessura, cfgDepth);
-  const sideOffset = cfg.sideOffset ?? 9.5;
+  const sideOffset = lateralInsetTopBottomMm(cfg.sideOffset, piece.espessura);
   const xLeft = sideOffset;
   const xRight = piece.largura - sideOffset;
   if (process.env.NODE_ENV === "development" && cfg.distanciaFrente == null) {

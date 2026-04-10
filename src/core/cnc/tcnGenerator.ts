@@ -15,6 +15,11 @@ import type { SheetResult } from "../cutlayout/cutLayoutTypes";
 import type { CncDrillOperation } from "./cncTypes";
 import { holeLocalToSheetOffsetMm, toLayoutAbsoluteX } from "../cutlayout/layoutCoordinateSystem";
 import { getSettings } from "../settings/settingsService";
+import {
+  logTcnThicknessDebug,
+  resolveTcnPanelThicknessMm,
+  resolveTcnUnmDsMm,
+} from "./tcnPanelThickness";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -486,20 +491,9 @@ export function generateTcnForPanel(
   const lines: string[] = [];
   lines.push(HEADER);
 
-  const thicknessMm = sheetResult.sheet.espessura_mm;
-  const zCut = -thicknessMm;
-
   const sheet = sheetResult.sheet;
   const dl = sheet.largura_mm;
   const dh = sheet.altura_mm;
-  const ds = thicknessMm;
-
-  lines.push(`$=Acam Name=${acamName}`);
-  lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
-  lines.push("VAR{");
-  lines.push("}VAR");
-  lines.push("OPTI{");
-  lines.push("}OPTI");
 
   const runtimeSettings = getSettings();
   const toolDiameterMm = getContourToolDiameterMm(runtimeSettings);
@@ -534,6 +528,14 @@ export function generateTcnForPanel(
     isPlacementInsideSheet(pl.x_mm, pl.y_mm, pl.largura_mm, pl.altura_mm, sheet.largura_mm, sheet.altura_mm)
   );
   const sanitizedPlacements = sanitizePlacementsForTcn(placements, sheet, minSpacingMm, toolRadiusMm, sheetMarginMm);
+  const ds = resolveTcnUnmDsMm(sanitizedPlacements, sheet);
+  lines.push(`$=Acam Name=${acamName}`);
+  lines.push(`::UNm DL=${intVal(dl)} DH=${intVal(dh)} DS=${intVal(ds)} OX=0 OY=0 OZ=0`);
+  lines.push("VAR{");
+  lines.push("}VAR");
+  lines.push("OPTI{");
+  lines.push("}OPTI");
+
   const sideInnerLines: string[] = [];
 
   const pushContourFromPath = (
@@ -551,6 +553,8 @@ export function generateTcnForPanel(
   // Loop 1 — todos os W#81 (furos) de todas as peças
   const allDrillOps: CncDrillOperation[] = [];
   for (const pl of sanitizedPlacements) {
+    logTcnThicknessDebug(pl, sheet);
+    const panelMm = resolveTcnPanelThicknessMm(pl, sheet);
     const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
     for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
@@ -562,7 +566,7 @@ export function generateTcnForPanel(
         y: tcnPt.y,
         z: 0,
         diametro: hole.diameter,
-        profundidade: Math.min(hole.depth, thicknessMm),
+        profundidade: Math.min(hole.depth, panelMm),
         tipo: "vertical",
       });
     }
@@ -571,6 +575,8 @@ export function generateTcnForPanel(
 
   // Loop 2 — todos os W#89+W#2201 (contornos exteriores + rasgos interiores) de todas as peças
   for (const pl of sanitizedPlacements) {
+    const panelMm = resolveTcnPanelThicknessMm(pl, sheet);
+    const zCut = -panelMm;
     const w = pl.largura_mm;
     const h = pl.altura_mm;
     const x = pl.x_mm;
@@ -578,18 +584,18 @@ export function generateTcnForPanel(
     const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
 
     if (tcnMetodo === "v2_ramp") {
-      pushContourFromPath(buildContourPathV2(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+      pushContourFromPath(buildContourPathV2(x, y, w, h, toolOffsetMm, panelMm, zSafe, rampDistMm));
     } else if (tcnMetodo === "v3_ramp_noflip") {
-      pushContourFromPath(buildContourPathV3(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+      pushContourFromPath(buildContourPathV3(x, y, w, h, toolOffsetMm, panelMm, zSafe, rampDistMm));
     } else if (tcnMetodo === "v4_corner_noflip") {
-      pushContourFromPath(buildContourPathV4(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+      pushContourFromPath(buildContourPathV4(x, y, w, h, toolOffsetMm, panelMm, zSafe, rampDistMm));
     } else if (tcnMetodo === "v5_ramp_noanchor") {
-      pushContourFromPath(buildContourPathV5(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+      pushContourFromPath(buildContourPathV5(x, y, w, h, toolOffsetMm, panelMm, zSafe, rampDistMm));
     } else if (tcnMetodo === "v6_ramp") {
-      pushContourFromPath(buildContourPathV6(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+      pushContourFromPath(buildContourPathV6(x, y, w, h, toolOffsetMm, panelMm, zSafe, rampDistMm));
     } else {
       // v1_corner + fallback
-      pushContourFromPath(buildContourPathV1(x, y, w, h, toolOffsetMm, thicknessMm, zSafe, rampDistMm));
+      pushContourFromPath(buildContourPathV1(x, y, w, h, toolOffsetMm, panelMm, zSafe, rampDistMm));
     }
 
     const innerContours = pl.innerContours;

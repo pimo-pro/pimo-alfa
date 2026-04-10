@@ -18,7 +18,8 @@ import type {
   CutLayoutTrialConfig as TrialConfig,
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial, OperationResult } from "../types";
-import { getMaterialByIdOrLabel } from "../materials/service";
+import { getDefaultOfficialMaterial } from "../materials/materials.api";
+import { getIndustrialMaterial, getMaterialByIdOrLabel } from "../materials/service";
 import { SYSTEM_BACK_MM } from "../baseCabinets";
 import {
   applyFixedMarginOffset as applyFixedMarginOffsetUtil,
@@ -662,10 +663,17 @@ export function cutlistToPieces(
     const nomeToken = String(item.nome ?? "").trim().toLowerCase();
     const isCosta = tipoToken === "costa" || nomeToken === "costa";
     const rawEsp = Number(item.espessura ?? item.dimensoes?.profundidade);
+    const materialKey = item.materialId ?? item.material;
+    const espIndustrialFallback =
+      materialKey && String(materialKey).trim()
+        ? getIndustrialMaterial(String(materialKey).trim()).espessuraPadrao
+        : getDefaultOfficialMaterial().industrialDefaults!.espessuraPadrao;
     // Regra industrial fixa: COSTA sempre 10mm (SYSTEM_BACK_MM).
     const esp = isCosta
       ? SYSTEM_BACK_MM
-      : (Number.isFinite(rawEsp) && rawEsp > 0 ? rawEsp : 19);
+      : Number.isFinite(rawEsp) && rawEsp > 0
+        ? rawEsp
+        : espIndustrialFallback;
     const materialRef = item.materialId ?? item.material;
     const materialRecord = materialRef ? getMaterialByIdOrLabel(String(materialRef)) : null;
     const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);

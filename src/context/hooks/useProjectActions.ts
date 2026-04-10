@@ -14,6 +14,7 @@ import { useBoxTransformActions } from "./useBoxTransformActions";
 import { useRulesActions } from "./useRulesActions";
 import { useViewerUiActions } from "./useViewerUiActions";
 import { useDesignActions } from "./useDesignActions";
+import { getIndustrialMaterial } from "../../core/materials/service";
 
 export type UseProjectActionsParams = {
   updateProject: (_fn: (_prev: ProjectState) => ProjectState, _pushUndo?: boolean) => void;
@@ -84,14 +85,21 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     // Atualiza o Material completo + sincroniza materialId se o objeto tiver id
     a.setMaterial = (material) => {
       updateProject(
-        (prev) => ({
-          ...prev,
-          material,
-          // Se o objeto Material tiver id, sincronizar também materialId
-          ...(material && "id" in material && material.id
-            ? { materialId: material.id as string }
-            : {}),
-        }),
+        (prev) => {
+          if (!material) {
+            return { ...prev, material };
+          }
+          const tipo = material.tipo?.trim();
+          const espFromIndustrial =
+            tipo && tipo.length > 0 ? getIndustrialMaterial(tipo).espessuraPadrao : material.espessura;
+          const materialNext =
+            tipo && tipo.length > 0 ? { ...material, espessura: espFromIndustrial } : material;
+          return {
+            ...prev,
+            material: materialNext,
+            ...("id" in material && material.id ? { materialId: material.id as string } : {}),
+          };
+        },
         false
       );
     };

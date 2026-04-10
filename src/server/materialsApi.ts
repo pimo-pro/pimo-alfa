@@ -26,7 +26,7 @@ export function buildMaterialsApiPayload(): MaterialsApiPayload {
   const materials: ApiMaterial[] = listOfficialMaterials().map((m) => ({
     id: m.canonicalId,
     label: m.label,
-    espessura: Number(m.industrialDefaults?.espessuraPadrao) || 18,
+    espessura: Number(m.industrialDefaults?.espessuraPadrao) || 0,
     precoPorM2: Number(m.industrialDefaults?.custo_m2) || 0,
     sheetWidthMm: m.industrialDefaults?.larguraChapa,
     sheetHeightMm: m.industrialDefaults?.alturaChapa,

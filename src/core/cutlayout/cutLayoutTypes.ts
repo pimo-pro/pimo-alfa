@@ -73,6 +73,8 @@ export type CutPlacement = {
   y_mm: number;
   largura_mm: number;
   altura_mm: number;
+  /** Espessura real do painel (mm). Obrigatória para TCN/furos quando difere do stock da chapa. */
+  espessura_mm?: number;
   rotacao: number;
   sheetIndex: number;
   boxId: string;

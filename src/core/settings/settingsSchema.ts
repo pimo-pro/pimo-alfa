@@ -126,8 +126,8 @@ export interface SettingsSchema {
       backDistance: number;
       /** Offset da borda (linha de furação), mm. */
       offsetDaBorda: number;
-      /** Distância do centro do furo à borda lateral da peça (mm). Padrão industrial 9.5. */
-      sideOffset: number;
+      /** Distância do centro do furo à borda lateral em cima/fundo (mm). Se omitido, usa metade da espessura do painel. */
+      sideOffset?: number;
     };
     /** Distâncias de furação cavilha (mm). Aplicadas globalmente a todos os projetos. */
     cavilha: {
@@ -135,8 +135,8 @@ export interface SettingsSchema {
       frontDistance: number;
       /** Distância do fundo ao eixo da cavilha (mm). Padrão industrial 60. */
       backDistance: number;
-      /** Distância do centro do furo aos bordos esquerdo/direito em cima/fundo (mm). Padrão 19 (alinhamento com lateral 19 mm). */
-      sideOffset: number;
+      /** Distância do centro do furo aos bordos esquerdo/direito em cima/fundo (mm). Se omitido, usa metade da espessura do painel. */
+      sideOffset?: number;
     };
     prateleira: {
       margemTop: number;
@@ -201,11 +201,11 @@ export const settingsDefaults: SettingsSchema = {
   materiais: {
     categoriaPadraoId: "mdf",
     presetVisualPadraoId: "mdf_branco",
-    materialIndustrialPadraoId: "mdf_branco",
+    materialIndustrialPadraoId: "mdf_branco-19",
     sheetWidthMm: PANEL_DEFAULTS.largura_mm,
     sheetHeightMm: PANEL_DEFAULTS.altura_mm,
-    sheetThicknessMm: PANEL_DEFAULTS.espessura_mm,
-    sheetName: "MDF Branco 19mm",
+    sheetThicknessMm: 19,
+    sheetName: "MDF Branco 19",
   },
   cnc: {
     profundidadeCortePadraoMm: 18,
@@ -274,12 +274,10 @@ export const settingsDefaults: SettingsSchema = {
       frontDistance: 90,
       backDistance: 90,
       offsetDaBorda: 9,
-      sideOffset: 9.5,
     },
     cavilha: {
       frontDistance: 60,
       backDistance: 60,
-      sideOffset: 9.5,
     },
     prateleira: {
       margemTop: 200,

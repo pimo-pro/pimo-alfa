@@ -1,5 +1,3 @@
-import { PANEL_DEFAULTS } from "../panel/panelConstants";
-
 export type MigrationAliasAction = "manter" | "mesclar" | "renomear" | "remover";
 
 export type MaterialAlias = {
@@ -17,7 +15,6 @@ export type OfficialWoodMaterial = {
   aliases: MaterialAlias[];
   action: MigrationAliasAction;
   observacoes?: string;
-  // Campos tecnicos opcionais para manter o comportamento atual sem fontes paralelas.
   industrialDefaults?: {
     espessuraPadrao: number;
     custo_m2: number;
@@ -28,222 +25,215 @@ export type OfficialWoodMaterial = {
   viewerMaterialId?: string;
 };
 
-const SHEET_W = PANEL_DEFAULTS.largura_mm;
-const SHEET_H = PANEL_DEFAULTS.altura_mm;
+/** Chapa padrão industrial FASE 7J — todas as variantes 2800 × 2070 mm. */
+export const INDUSTRIAL_SHEET_LF_MM = 2800;
+export const INDUSTRIAL_SHEET_HF_MM = 2070;
+
+/** Costa estrutural: sempre esta chapa (10 mm, MDF Branco). */
+export const COSTA_INDUSTRIAL_CANONICAL_ID = "mdf_branco-10";
+
+type IndustrialSheetSeed = {
+  canonicalId: string;
+  label: string;
+  espessuraPadrao: number;
+  viewerMaterialId: string;
+  custo_m2: number;
+  densidade: number;
+  /** Aliases extra para migração (ids/nomes antigos). */
+  legacyAliases?: string[];
+};
 
 /**
- * Fonte oficial unificada de materiais (madeira apenas).
- * action e aliases sao metadados de migracao; o runtime usa apenas registros ativos.
+ * Lista única de chapas industriais (FASE 7K) — sem entradas só-visuais nem legacy fora desta lista.
  */
-export const OFFICIAL_WOOD_MATERIALS_SEED: OfficialWoodMaterial[] = [
+const INDUSTRIAL_SHEETS_SEED: IndustrialSheetSeed[] = [
+  // MDF Branco
   {
-    canonicalId: "mdf_branco",
-    label: "MDF Branco",
-    type: "wood",
-    industrial: true,
-    visual: true,
-    action: "manter",
+    canonicalId: "mdf_branco-19",
+    label: "MDF Branco 19",
+    espessuraPadrao: 19,
     viewerMaterialId: "mdf_branco",
-    industrialDefaults: {
-      espessuraPadrao: PANEL_DEFAULTS.espessura_mm,
-      custo_m2: 35,
-      larguraChapa: SHEET_W,
-      alturaChapa: SHEET_H,
-      densidade: 750,
-    },
-    aliases: [
-      { name: "MDF Branco", origin: ["industrial", "legacy", "ui"], action: "manter" },
-      { name: "MDF", origin: ["pricing", "defaults"], action: "mesclar" },
-      { name: "Branco", origin: ["catalogo:mdfLibrary"], action: "mesclar" },
-      { name: "Branco Liso", origin: ["presets"], action: "mesclar" },
-      { name: "MDF Branco (legacy)", origin: ["legacy-cutlist"], action: "mesclar" }
+    custo_m2: 35,
+    densidade: 750,
+    legacyAliases: [
+      "mdf_branco",
+      "MDF Branco",
+      "MDF",
+      "Branco",
+      "Branco Liso",
+      "MDF Branco (legacy)",
     ],
-    observacoes: "Entrada principal MDF."
   },
   {
-    canonicalId: "mdf_cinza",
-    label: "MDF Cinza",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "manter",
+    canonicalId: "mdf_branco-16",
+    label: "MDF Branco 16",
+    espessuraPadrao: 16,
+    viewerMaterialId: "mdf_branco",
+    custo_m2: 35,
+    densidade: 750,
+  },
+  {
+    canonicalId: "mdf_branco-10",
+    label: "MDF Branco 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "mdf_branco",
+    custo_m2: 35,
+    densidade: 750,
+  },
+  // MDF Cinza
+  {
+    canonicalId: "mdf_cinza-19",
+    label: "MDF Cinza 19",
+    espessuraPadrao: 19,
     viewerMaterialId: "mdf_cinza",
-    aliases: [
-      { name: "MDF Cinza", origin: ["visual", "ui"], action: "manter" },
-      { name: "Cinza Industrial", origin: ["presets"], action: "mesclar" }
-    ]
+    custo_m2: 38,
+    densidade: 750,
+    legacyAliases: ["mdf_cinza", "MDF Cinza", "Cinza Industrial"],
   },
   {
-    canonicalId: "mdf_preto",
-    label: "MDF Preto",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "manter",
+    canonicalId: "mdf_cinza-16",
+    label: "MDF Cinza 16",
+    espessuraPadrao: 16,
+    viewerMaterialId: "mdf_cinza",
+    custo_m2: 38,
+    densidade: 750,
+  },
+  {
+    canonicalId: "mdf_cinza-10",
+    label: "MDF Cinza 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "mdf_cinza",
+    custo_m2: 38,
+    densidade: 750,
+  },
+  // MDF Preto
+  {
+    canonicalId: "mdf_preto-19",
+    label: "MDF Preto 19",
+    espessuraPadrao: 19,
     viewerMaterialId: "mdf_preto",
-    aliases: [
-      { name: "MDF Preto", origin: ["visual", "ui", "catalogo:mdfLibrary"], action: "manter" },
-      { name: "Preto Fosco", origin: ["presets"], action: "mesclar" }
-    ]
+    custo_m2: 40,
+    densidade: 750,
+    legacyAliases: ["mdf_preto", "MDF Preto", "Preto Fosco"],
   },
   {
-    canonicalId: "carvalho",
-    label: "Carvalho",
-    type: "wood",
-    industrial: true,
-    visual: true,
-    action: "manter",
+    canonicalId: "mdf_preto-10",
+    label: "MDF Preto 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "mdf_preto",
+    custo_m2: 40,
+    densidade: 750,
+  },
+  // Carvalho
+  {
+    canonicalId: "carvalho-20",
+    label: "Carvalho 20",
+    espessuraPadrao: 20,
     viewerMaterialId: "carvalho_natural",
-    industrialDefaults: {
-      espessuraPadrao: 20,
-      custo_m2: 45,
-      larguraChapa: SHEET_W,
-      alturaChapa: SHEET_H,
-      densidade: 720,
-    },
-    aliases: [
-      { name: "Carvalho", origin: ["industrial", "pricing", "ui"], action: "manter" },
-      { name: "Carvalho Natural", origin: ["visual", "ui"], action: "mesclar" },
-      { name: "Carvalho Escuro", origin: ["visual", "ui"], action: "mesclar" },
-      { name: "Madeira - Carvalho", origin: ["presets"], action: "mesclar" },
-      { name: "carvalho_natural", origin: ["viewer"], action: "mesclar" },
-      { name: "carvalho_escuro", origin: ["viewer"], action: "mesclar" }
+    custo_m2: 48,
+    densidade: 720,
+    legacyAliases: [
+      "carvalho",
+      "Carvalho",
+      "Carvalho Natural",
+      "Carvalho Escuro",
+      "Madeira - Carvalho",
+      "carvalho_natural",
+      "carvalho_escuro",
     ],
-    observacoes: "Visual possui variantes natural/escuro; industrial permanece unico."
   },
   {
-    canonicalId: "nogueira",
-    label: "Nogueira",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "manter",
-    viewerMaterialId: "nogueira",
-    aliases: [
-      { name: "Nogueira", origin: ["visual", "ui"], action: "manter" },
-      { name: "Madeira - Nogueira", origin: ["materialPresets"], action: "mesclar" },
-      { name: "nogueira", origin: ["viewer"], action: "mesclar" }
-    ]
-  },
-  {
-    canonicalId: "pinho",
-    label: "Pinho",
-    type: "wood",
-    industrial: true,
-    visual: true,
-    action: "manter",
+    canonicalId: "carvalho-17",
+    label: "Carvalho 17",
+    espessuraPadrao: 17,
     viewerMaterialId: "carvalho_natural",
-    industrialDefaults: {
-      espessuraPadrao: 18,
-      custo_m2: 35,
-      larguraChapa: SHEET_W,
-      alturaChapa: SHEET_H,
-      densidade: 650,
-    },
-    aliases: [
-      { name: "Pinho", origin: ["pricing", "ui"], action: "manter" },
-      { name: "Madeira - Pinho", origin: ["presets"], action: "mesclar" }
-    ]
+    custo_m2: 52,
+    densidade: 720,
   },
   {
-    canonicalId: "faia",
-    label: "Faia",
-    type: "wood",
-    industrial: false,
-    visual: false,
-    action: "manter",
-    aliases: [{ name: "Faia", origin: ["ui modelos"], action: "manter" }]
+    canonicalId: "carvalho-10",
+    label: "Carvalho 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "carvalho_natural",
+    custo_m2: 55,
+    densidade: 720,
   },
+  // Nogueira
   {
-    canonicalId: "contraplacado",
-    label: "Contraplacado",
-    type: "wood",
-    industrial: true,
-    visual: false,
-    action: "manter",
-    industrialDefaults: {
-      espessuraPadrao: 19,
-      custo_m2: 68,
-      larguraChapa: SHEET_W,
-      alturaChapa: SHEET_H,
-      densidade: 600,
-    },
-    aliases: [
-      { name: "Contraplacado", origin: ["industrial", "ui"], action: "manter" },
-      { name: "Plywood", origin: ["pricing"], action: "renomear" }
-    ]
-  },
-  {
-    canonicalId: "melamina",
-    label: "Melamina",
-    type: "wood",
-    industrial: true,
-    visual: false,
-    action: "manter",
-    industrialDefaults: {
-      espessuraPadrao: 19,
-      custo_m2: 22,
-      larguraChapa: SHEET_W,
-      alturaChapa: SHEET_H,
-      densidade: 700,
-    },
-    aliases: [{ name: "Melamina", origin: ["industrial"], action: "manter" }]
-  },
-  {
-    canonicalId: "lacado",
-    label: "Lacado",
-    type: "wood",
-    industrial: true,
-    visual: false,
-    action: "manter",
-    industrialDefaults: {
-      espessuraPadrao: 20,
-      custo_m2: 90,
-      larguraChapa: SHEET_W,
-      alturaChapa: SHEET_H,
-      densidade: 750,
-    },
-    aliases: [{ name: "Lacado", origin: ["industrial", "ui"], action: "manter" }]
-  },
-  {
-    canonicalId: "mdf_clarus",
-    label: "MDF Clarus",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "manter",
-    viewerMaterialId: "mdf_branco",
-    aliases: [{ name: "MDF Clarus", origin: ["catalogo:mdfLibrary"], action: "manter" }]
-  },
-  {
-    canonicalId: "mdf_noce",
-    label: "MDF Noce",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "manter",
+    canonicalId: "nogueira-20",
+    label: "Nogueira 20",
+    espessuraPadrao: 20,
     viewerMaterialId: "nogueira",
-    aliases: [{ name: "MDF Noce", origin: ["catalogo:mdfLibrary"], action: "manter" }]
+    custo_m2: 58,
+    densidade: 700,
+    legacyAliases: ["nogueira", "Nogueira", "Madeira - Nogueira"],
   },
   {
-    canonicalId: "madeira_generica_clara",
-    label: "Madeira Clara",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "remover",
-    aliases: [{ name: "Madeira Clara", origin: ["presets"], action: "remover" }]
+    canonicalId: "nogueira-10",
+    label: "Nogueira 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "nogueira",
+    custo_m2: 62,
+    densidade: 700,
+  },
+  // Lacado
+  {
+    canonicalId: "lacado-20",
+    label: "Lacado 20",
+    espessuraPadrao: 20,
+    viewerMaterialId: "mdf_branco",
+    custo_m2: 90,
+    densidade: 750,
+    legacyAliases: ["lacado", "Lacado"],
   },
   {
-    canonicalId: "madeira_generica_escura",
-    label: "Madeira Escura",
-    type: "wood",
-    industrial: false,
-    visual: true,
-    action: "remover",
-    aliases: [{ name: "Madeira Escura", origin: ["presets"], action: "remover" }]
-  }
+    canonicalId: "lacado-17",
+    label: "Lacado 17",
+    espessuraPadrao: 17,
+    viewerMaterialId: "mdf_branco",
+    custo_m2: 92,
+    densidade: 750,
+  },
+  {
+    canonicalId: "lacado-10",
+    label: "Lacado 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "mdf_branco",
+    custo_m2: 95,
+    densidade: 750,
+  },
 ];
+
+function industrialSheetToOfficial(row: IndustrialSheetSeed): OfficialWoodMaterial {
+  const aliases: MaterialAlias[] = [
+    { name: row.label, origin: ["industrial", "ui"], action: "manter" },
+    { name: row.canonicalId, origin: ["id"], action: "manter" },
+    ...(row.legacyAliases ?? []).map((name) => ({ name, origin: ["legacy", "migration"], action: "mesclar" as const })),
+  ];
+  return {
+    canonicalId: row.canonicalId,
+    label: row.label,
+    type: "wood",
+    industrial: true,
+    visual: true,
+    action: "manter",
+    viewerMaterialId: row.viewerMaterialId,
+    industrialDefaults: {
+      espessuraPadrao: row.espessuraPadrao,
+      custo_m2: row.custo_m2,
+      larguraChapa: INDUSTRIAL_SHEET_LF_MM,
+      alturaChapa: INDUSTRIAL_SHEET_HF_MM,
+      densidade: row.densidade,
+    },
+    aliases,
+  };
+}
+
+/** Chapas industriais ativas (única fonte para listIndustrialWoodMaterials). */
+export const INDUSTRIAL_WOOD_MATERIALS: OfficialWoodMaterial[] = INDUSTRIAL_SHEETS_SEED.map(industrialSheetToOfficial);
+
+/** Catálogo oficial = apenas chapas industriais (FASE 7K). */
+export const OFFICIAL_WOOD_MATERIALS_SEED: OfficialWoodMaterial[] = [...INDUSTRIAL_WOOD_MATERIALS];
 
 const normalize = (value: string): string => value.trim().toLowerCase();
 
@@ -256,9 +246,7 @@ for (const material of OFFICIAL_WOOD_MATERIALS_SEED) {
   }
 }
 
-export const OFFICIAL_WOOD_MATERIALS = OFFICIAL_WOOD_MATERIALS_SEED.filter(
-  (m) => m.action !== "remover"
-);
+export const OFFICIAL_WOOD_MATERIALS = OFFICIAL_WOOD_MATERIALS_SEED.filter((m) => m.action !== "remover");
 
 export function resolveMaterial(idOrAlias: string): OfficialWoodMaterial | null {
   if (!idOrAlias || typeof idOrAlias !== "string") return null;
@@ -270,9 +258,9 @@ export function listOfficialMaterials(): OfficialWoodMaterial[] {
 }
 
 export function listIndustrialWoodMaterials(): OfficialWoodMaterial[] {
-  return OFFICIAL_WOOD_MATERIALS.filter((m) => m.industrial);
+  return [...INDUSTRIAL_WOOD_MATERIALS];
 }
 
 export function getDefaultOfficialMaterial(): OfficialWoodMaterial {
-  return resolveMaterial("mdf_branco") ?? OFFICIAL_WOOD_MATERIALS[0];
+  return resolveMaterial("mdf_branco-19") ?? INDUSTRIAL_WOOD_MATERIALS[0]!;
 }

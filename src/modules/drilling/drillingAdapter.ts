@@ -170,18 +170,26 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
     120
   );
 
-  // Distâncias e sideOffset de parafuso e cavilha vêm SEMPRE das configurações globais (sem overrides por projeto)
+  // Distâncias de parafuso/cavilha vêm das configurações globais. sideOffset só se definido manualmente; caso contrário o motor usa espessura/2.
   const parafusoFront = toFiniteNumber(fu.parafuso.frontDistance, 90);
   const parafusoBack = toFiniteNumber(fu.parafuso.backDistance, 90);
-  const parafusoSideOffset = toFiniteNumber(fu.parafuso.sideOffset, 9.5);
+  const parafusoSideExplicit =
+    fu.parafuso.sideOffset != null &&
+    Number.isFinite(Number(fu.parafuso.sideOffset)) &&
+    Number(fu.parafuso.sideOffset) > 0
+      ? Number(fu.parafuso.sideOffset)
+      : undefined;
   const cavilhaFront = toFiniteNumber(fu.cavilha?.frontDistance, 60);
   const cavilhaBack = toFiniteNumber(fu.cavilha?.backDistance, 60);
-  // @PIMO-SOON: tornar sideOffset dinâmico → espessura / 2
-  // Atualmente fixo em 9.5 mm (correto para madeira 19mm).
-  // Para suportar outras espessuras, passar `espessura` ao drilling pipeline
-  // e calcular: cavilhaSideOffset = espessura / 2
-  // Ver também: rulesConfig.ts linha ~272
-  const cavilhaSideOffset = toFiniteNumber(fu.cavilha?.sideOffset, 9.5);
+  const cavilhaSideExplicit =
+    fu.cavilha?.sideOffset != null &&
+    Number.isFinite(Number(fu.cavilha.sideOffset)) &&
+    Number(fu.cavilha.sideOffset) > 0
+      ? Number(fu.cavilha.sideOffset)
+      : undefined;
+
+  const { sideOffset: _dropParafusoSo, ...parafusoNorm } = normalizedRules.furos.tecnicos.parafuso;
+  const { sideOffset: _dropCavilhaSo, ...cavilhaNorm } = normalizedRules.furos.tecnicos.cavilha;
 
   return {
     ...normalizedRules,
@@ -190,17 +198,17 @@ export function buildEffectiveDrillingRules(rules: RulesConfig): RulesConfig {
       tecnicos: {
         ...normalizedRules.furos.tecnicos,
         parafuso: {
-          ...normalizedRules.furos.tecnicos.parafuso,
+          ...parafusoNorm,
           distanciaFrente: parafusoFront,
           distanciaFundo: parafusoBack,
           offsetDaBorda: fu.parafuso.offsetDaBorda,
-          sideOffset: parafusoSideOffset,
+          ...(parafusoSideExplicit != null ? { sideOffset: parafusoSideExplicit } : {}),
         },
         cavilha: {
-          ...normalizedRules.furos.tecnicos.cavilha,
+          ...cavilhaNorm,
           distanciaFrente: cavilhaFront,
           distanciaFundo: cavilhaBack,
-          sideOffset: cavilhaSideOffset,
+          ...(cavilhaSideExplicit != null ? { sideOffset: cavilhaSideExplicit } : {}),
         },
         prateleira: {
           ...normalizedRules.furos.tecnicos.prateleira,

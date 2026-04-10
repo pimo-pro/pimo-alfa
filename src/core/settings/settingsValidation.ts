@@ -6,6 +6,14 @@ import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas } from "../../data/move
 import { SETTINGS_SCHEMA_VERSION, settingsDefaults, type SettingsSchema } from "./settingsSchema";
 import { clamp, deepMergeSettings, normalizeDepths, toNumber, type ValidationResult } from "./settingsMerge";
 
+/** sideOffset > 0 = override manual; ausente ou ≤0 = automático (espessura/2 no motor). */
+function optionalFuraçãoSideOffset(raw: unknown): { sideOffset?: number } {
+  if (raw === undefined || raw === null) return {};
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return {};
+  return { sideOffset: clamp(n, 3, 50) };
+}
+
 export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema): ValidationResult {
   const merged = deepMergeSettings(settingsDefaults, input);
   const errors: string[] = [];
@@ -231,11 +239,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
           3,
           50
         ),
-        sideOffset: clamp(
-          toNumber(merged.furação?.parafuso?.sideOffset, settingsDefaults.furação.parafuso.sideOffset),
-          3,
-          50
-        ),
+        ...optionalFuraçãoSideOffset(merged.furação?.parafuso?.sideOffset),
       },
       cavilha: {
         frontDistance: clamp(
@@ -256,11 +260,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
           5,
           500
         ),
-        sideOffset: clamp(
-          toNumber(merged.furação?.cavilha?.sideOffset, settingsDefaults.furação.cavilha.sideOffset),
-          3,
-          50
-        ),
+        ...optionalFuraçãoSideOffset(merged.furação?.cavilha?.sideOffset),
       },
       prateleira: {
         margemTop: clamp(toNumber(merged.furação?.prateleira?.margemTop, settingsDefaults.furação.prateleira.margemTop), 0, 500),

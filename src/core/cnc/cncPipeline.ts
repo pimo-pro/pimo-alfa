@@ -121,6 +121,7 @@ type IndustrialMeta = {
   metadata?: Record<string, unknown>;
   pieceNumber?: number;
   shortCode?: string;
+  espessura_mm?: number;
 };
 
 function applyIndustrialRules(items: CutlistItemForPieces[]): CutlistItemForPieces[] {
@@ -244,6 +245,7 @@ export function buildCncFromCutlistItems(
             metadata: p.metadata,
             pieceNumber: p.pieceNumber,
             shortCode: p.shortCode,
+            espessura_mm: p.espessura_mm,
           }
         );
       }
@@ -274,6 +276,7 @@ export function buildCncFromCutlistItems(
           if (!meta) return pl;
           return {
             ...pl,
+            espessura_mm: pl.espessura_mm ?? meta.espessura_mm,
             holes: pl.holes ?? meta.drillHoles,
             drillHoles: pl.drillHoles ?? meta.drillHoles,
             metadata: pl.metadata ?? meta.metadata,

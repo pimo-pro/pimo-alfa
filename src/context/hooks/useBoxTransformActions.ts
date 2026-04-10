@@ -11,6 +11,7 @@ import {
   hasPersistedRoomWalls,
   repositionOutsiderBoxesStackedFromCornerMm,
 } from "../../utils/roomWorkspaceBounds";
+import { getIndustrialMaterial } from "../../core/materials/service";
 
 export type BoxTransformActions = Pick<
   ProjectActions,
@@ -186,8 +187,9 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
     a.setWorkspaceBoxMaterial = (boxId, materialId) => {
       updateProject(
         (prev) => {
+          const espessuraMm = getIndustrialMaterial(materialId).espessuraPadrao;
           const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-            box.id === boxId ? { ...box, material: materialId } : box
+            box.id === boxId ? { ...box, material: materialId, espessura: espessuraMm } : box
           );
           return { ...prev, workspaceBoxes };
         },
