@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { Vector3 } from "three";
 import { useProject } from "../../../context/useProject";
+import type { PimoViewerApi } from "../../../context/PimoViewerContextCore";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
 
@@ -70,13 +71,16 @@ type BoxDepthMeasureOverlayProps = {
   surfaceRef: RefObject<HTMLDivElement | null>;
 };
 
+type BoxDepthMeasureOverlayInnerProps = BoxDepthMeasureOverlayProps & {
+  /** Instância do viewer (API) já validada pelo wrapper — nunca null aqui. */
+  viewer: PimoViewerApi;
+};
+
 /**
- * FASE 6 — Overlay SVG opcional: medições de profundidade externa vs útil (só leitura).
- * Não altera geometria 3D; usa computeBoxProfundidadeLeituraMm + eixo Z local no viewer.
+ * Conteúdo do overlay: hooks só correm quando o viewer existe e está pronto (evita crash no 1.º render).
  */
-export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOverlayProps) {
+function BoxDepthMeasureOverlayInner({ surfaceRef, viewer }: BoxDepthMeasureOverlayInnerProps) {
   const { project } = useProject();
-  const { viewerApi } = usePimoViewerContext();
 
   const [overlayEnabled, setOverlayEnabled] = useState(() => {
     try {
@@ -92,10 +96,10 @@ export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOv
   const drawStateRef = useRef<DrawState>(null);
   const snapRef = useRef({
     project,
-    viewerApi,
+    viewer,
     overlayEnabled,
   });
-  snapRef.current = { project, viewerApi, overlayEnabled };
+  snapRef.current = { project, viewer, overlayEnabled };
 
   const persistOverlayEnabled = useCallback((next: boolean) => {
     setOverlayEnabled(next);
@@ -112,9 +116,9 @@ export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOv
     const tick = () => {
       if (cancelled) return;
       rafId = requestAnimationFrame(tick);
-      const { project: p, viewerApi: api, overlayEnabled: enabled } = snapRef.current;
+      const { project: p, viewer: api, overlayEnabled: enabled } = snapRef.current;
 
-      if (!api.viewerReady || !enabled || !p.selectedWorkspaceBoxId) {
+      if (!api || !api.viewerReady || !enabled || !p.selectedWorkspaceBoxId) {
         const empty: DrawState = null;
         if (!drawStateEqual(drawStateRef.current, empty)) {
           drawStateRef.current = empty;
@@ -187,7 +191,11 @@ export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOv
     if (!el) return;
 
     const onMove = (e: PointerEvent) => {
-      const { project: p, viewerApi: api } = snapRef.current;
+      const { project: p, viewer: api } = snapRef.current;
+      if (!api) {
+        setTooltip(null);
+        return;
+      }
       const sid = p.selectedWorkspaceBoxId;
       if (!sid || !api.getBoxIdAtPointerPublic) {
         setTooltip(null);
@@ -220,7 +228,7 @@ export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOv
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
     };
-  }, [surfaceRef, project.selectedWorkspaceBoxId, viewerApi.viewerReady]);
+  }, [surfaceRef, project.selectedWorkspaceBoxId, viewer]);
 
   const labelExt = drawState
     ? { x: (drawState.ext.x1 + drawState.ext.x2) * 0.5, y: (drawState.ext.y1 + drawState.ext.y2) * 0.5 - 8 }
@@ -366,4 +374,16 @@ export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOv
       )}
     </>
   );
+}
+
+/**
+ * FASE 6 — Overlay SVG opcional: medições de profundidade externa vs útil (só leitura).
+ * Não altera geometria 3D; usa computeBoxProfundidadeLeituraMm + eixo Z local no viewer.
+ */
+export default function BoxDepthMeasureOverlay({ surfaceRef }: BoxDepthMeasureOverlayProps) {
+  const { viewerApi: viewer } = usePimoViewerContext();
+  if (!viewer || !viewer.viewerReady) {
+    return null;
+  }
+  return <BoxDepthMeasureOverlayInner surfaceRef={surfaceRef} viewer={viewer} />;
 }
