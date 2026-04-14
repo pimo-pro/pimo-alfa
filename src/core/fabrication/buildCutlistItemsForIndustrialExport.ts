@@ -1,6 +1,6 @@
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 
 /**
  * Snapshot mínimo para gerar a mesma lista de itens que o fluxo CNC/PDF (cutlist + peças CAD extraídas).
@@ -24,9 +24,14 @@ export function buildCutlistItemsForIndustrialExport(
     projectName = "Projeto",
     extractedPartsByBoxId = {},
   } = snap;
-  const cutlist = cutlistComPrecoFromBoxes(boxes, rules, materialId, projectName);
-  const extracted = boxes.flatMap((b) => Object.values(extractedPartsByBoxId[b.id] ?? {}).flat()) as CutListItemComPreco[];
-  return [...cutlist, ...extracted].map((p) => ({
+  const merged = buildGlobalQrCutlistMerged(
+    boxes,
+    rules,
+    materialId,
+    projectName,
+    extractedPartsByBoxId as Record<string, Record<string, CutListItemComPreco[]>> | undefined
+  );
+  return merged.map((p) => ({
     ...p,
     boxId: p.boxId ?? "",
   }));

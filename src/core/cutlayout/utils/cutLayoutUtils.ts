@@ -37,22 +37,36 @@ export function reorderPieces(pieces: CutPiece[], mode: "production" | "gapFill"
       const matA = a.materialId ?? "";
       const matB = b.materialId ?? "";
       if (matA !== matB) return matA.localeCompare(matB);
-      const areaDiff = getPieceArea(b) - getPieceArea(a);
-      if (areaDiff !== 0) {
-        const maxAb = Math.max(getPieceArea(a), getPieceArea(b));
-        if (maxAb > 1 && Math.abs(areaDiff) <= maxAb * 0.05) {
-          const ar = getPieceAspectRatio(b) - getPieceAspectRatio(a);
-          if (ar !== 0) return ar;
-        } else {
-          return areaDiff;
-        }
-      }
-      const bMax = Math.max(b.largura_mm, b.altura_mm);
-      const aMax = Math.max(a.largura_mm, a.altura_mm);
-      if (bMax !== aMax) return bMax - aMax;
-      const bMin = Math.min(b.largura_mm, b.altura_mm);
-      const aMin = Math.min(a.largura_mm, a.altura_mm);
-      if (bMin !== aMin) return bMin - aMin;
+
+      const areaA = getPieceArea(a);
+      const areaB = getPieceArea(b);
+      const aMaxDim = Math.max(a.largura_mm, a.altura_mm);
+      const bMaxDim = Math.max(b.largura_mm, b.altura_mm);
+      const aMinDim = Math.min(a.largura_mm, a.altura_mm);
+      const bMinDim = Math.min(b.largura_mm, b.altura_mm);
+
+      // 1. Peças muito grandes primeiro (>60% da chapa padrão 2800×2070)
+      const LARGE_AREA = 2800 * 2070 * 0.6;
+      const aLarge = areaA >= LARGE_AREA ? 1 : 0;
+      const bLarge = areaB >= LARGE_AREA ? 1 : 0;
+      if (aLarge !== bLarge) return bLarge - aLarge;
+
+      // 2. Dentro das grandes: maior dimensão máxima primeiro
+      if (aLarge && bLarge && aMaxDim !== bMaxDim) return bMaxDim - aMaxDim;
+
+      // 3. Peças médias: agrupa por "faixa de altura" (blocos de 100mm)
+      // Peças com altura similar ficam juntas → preenchem prateleiras
+      const aHeightBand = Math.floor(aMinDim / 100);
+      const bHeightBand = Math.floor(bMinDim / 100);
+      if (aHeightBand !== bHeightBand) return bHeightBand - aHeightBand;
+
+      // 4. Dentro da mesma faixa: maior área primeiro
+      const areaDiff = areaB - areaA;
+      if (Math.abs(areaDiff) > Math.max(areaA, areaB) * 0.05) return areaDiff;
+
+      // 5. Desempate: dimensão máxima
+      if (aMaxDim !== bMaxDim) return bMaxDim - aMaxDim;
+      if (aMinDim !== bMinDim) return bMinDim - aMinDim;
       return getPieceAspectRatio(b) - getPieceAspectRatio(a);
     }
     const longA = pieceLongStrip(a) ? 1 : 0;
@@ -136,13 +150,19 @@ export function groupByThicknessOnly(pieces: CutPiece[]): Map<string, CutPiece[]
   return map;
 }
 
-export function estimateUsefulLeftover(sheet: SheetDefinition, placed: Array<{ x: number; y: number; w: number; h: number }>): number {
+export function estimateUsefulLeftover(
+  sheet: SheetDefinition,
+  placed: Array<{ x: number; y: number; w: number; h: number }>
+): number {
   if (placed.length === 0) return sheet.largura_mm * sheet.altura_mm;
   const maxX = Math.max(...placed.map((r) => r.x + r.w));
   const maxY = Math.max(...placed.map((r) => r.y + r.h));
+  // Faixa direita: largura livre × altura total
   const rightStrip = Math.max(0, sheet.largura_mm - maxX) * sheet.altura_mm;
-  const topStrip = Math.max(0, sheet.altura_mm - maxY) * sheet.largura_mm;
-  return Math.max(rightStrip, topStrip);
+  // Faixa inferior: largura total × altura livre
+  const bottomStrip = Math.max(0, sheet.altura_mm - maxY) * sheet.largura_mm;
+  // Retorna o maior retalho contíguo (direita OU baixo)
+  return Math.max(rightStrip, bottomStrip);
 }
 
 export function cloneSheets(sheets: SheetResult[]): SheetResult[] {

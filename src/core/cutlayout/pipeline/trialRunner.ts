@@ -112,7 +112,48 @@ export function simulateTrialForGroup(
         rotationCfg,
         trial.binHeuristic
       );
-      if (!best) break;
+      if (!best) {
+        // Segunda tentativa: janela completa para não deixar peças que cabem
+        const rescue2 = deps.pickBestPieceForSheet(
+          remaining,
+          sheet,
+          trial.strategy,
+          state,
+          placedRects,
+          kerf,
+          remaining.length, // janela total
+          rotationCfg,
+          "bestFit"
+        );
+        if (!rescue2) break;
+        // continua com rescue2 como best
+        const piece2 = remaining[rescue2.index];
+        if (!deps.isInsideSheet(rescue2.placement.x, rescue2.placement.y, rescue2.placement.w, rescue2.placement.h, sheet))
+          break;
+        placements.push({
+          x_mm: rescue2.placement.x,
+          y_mm: rescue2.placement.y,
+          largura_mm: rescue2.placement.w,
+          altura_mm: rescue2.placement.h,
+          espessura_mm: piece2.espessura_mm,
+          rotacao: rescue2.placement.rotation,
+          sheetIndex,
+          boxId: piece2.boxId,
+          partName: piece2.partName,
+          materialId: piece2.materialId,
+          materialName: piece2.materialName,
+          drillHoles: piece2.drillHoles ?? piece2.holes,
+          holes: piece2.holes,
+          originalDrillHoles: piece2.originalDrillHoles ?? piece2.drillHoles ?? piece2.holes,
+          pieceNumber: piece2.pieceNumber,
+          shortCode: piece2.shortCode,
+          metadata: piece2.metadata,
+        });
+        placedRects.push({ x: rescue2.placement.x, y: rescue2.placement.y, w: rescue2.placement.w, h: rescue2.placement.h });
+        state = deps.updateStrategyState(trial.strategy, state, rescue2.placement, kerf);
+        remaining.splice(rescue2.index, 1);
+        continue;
+      }
 
       const piece = remaining[best.index];
       if (!deps.isInsideSheet(best.placement.x, best.placement.y, best.placement.w, best.placement.h, sheet)) {
@@ -214,6 +255,49 @@ export function simulateTrialForGroup(
         });
         remaining.splice(originalIndex, 1);
       }
+
+      // Segunda passagem gap fill: tenta peças restantes por ordem de área decrescente
+      const gapOrdered2 = [...remaining].sort(
+        (a, b) => b.largura_mm * b.altura_mm - a.largura_mm * a.altura_mm
+      );
+      for (let i = 0; i < gapOrdered2.length; i++) {
+        const target = gapOrdered2[i];
+        const originalIndex = remaining.findIndex((r) => r === target);
+        if (originalIndex < 0) continue;
+        const fit = deps.findPlacementForPiece(
+          target,
+          trial.strategy,
+          sheet,
+          placedRects,
+          state,
+          kerf,
+          rotationCfg,
+          "bestFit"
+        );
+        if (!fit) continue;
+        placements.push({
+          x_mm: fit.x,
+          y_mm: fit.y,
+          largura_mm: fit.w,
+          altura_mm: fit.h,
+          espessura_mm: target.espessura_mm,
+          rotacao: fit.rotation,
+          sheetIndex,
+          boxId: target.boxId,
+          partName: target.partName,
+          materialId: target.materialId,
+          materialName: target.materialName,
+          drillHoles: target.drillHoles ?? target.holes,
+          holes: target.holes,
+          originalDrillHoles: target.originalDrillHoles ?? target.drillHoles ?? target.holes,
+          pieceNumber: target.pieceNumber,
+          shortCode: target.shortCode,
+          metadata: target.metadata,
+        });
+        placedRects.push({ x: fit.x, y: fit.y, w: fit.w, h: fit.h });
+        state = deps.updateStrategyState(trial.strategy, state, fit, kerf);
+        remaining.splice(originalIndex, 1);
+      }
     }
 
     if (remaining.length > 0) {
@@ -269,10 +353,14 @@ export function simulateTrialForGroup(
       }
     }
 
+    // Proteção: chapas com waste < 10% não são candidatas a repack
+    const sheetUtil = deps.calculateSheetUtilization(placedRects, sheet.largura_mm, sheet.altura_mm);
+    const isExcellent = sheetUtil >= 0.9; // waste < 10%
     sheets.push({
       sheet: { ...sheet },
       placements,
-    });
+      ...(isExcellent ? { protected: true } : {}),
+    } as SheetResult);
   }
 
   const optimizedSheets = deps.optimizeLastSheetLocally(sheets, sheet, kerf, scoreModel);

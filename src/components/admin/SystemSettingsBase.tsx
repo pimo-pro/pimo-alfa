@@ -18,6 +18,7 @@ import { buildItemsForCncExport } from "../../hooks/useGerarArquivoHandlers";
 
 function NumberField({
   label,
+  hint,
   value,
   onChange,
   min,
@@ -25,6 +26,7 @@ function NumberField({
   step = 1,
 }: {
   label: string;
+  hint?: string;
   value: number;
   onChange: (_value: number) => void;
   min?: number;
@@ -34,6 +36,9 @@ function NumberField({
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{label}</span>
+      {hint ? (
+        <span style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.35 }}>{hint}</span>
+      ) : null}
       <input
         className="input"
         type="number"
@@ -783,6 +788,39 @@ export default function SystemSettingsBase() {
             step={0.1}
             onChange={(value) => setDraft((prev) => ({ ...prev, nesting: { ...prev.nesting, kerfPadraoMm: value } }))}
           />
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
+              Motor de nesting
+            </label>
+            <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "2px 0 6px" }}>
+              "Clássico" usa o motor original. "Strip Packing" usa o novo motor experimental com menor desperdício.
+            </p>
+            <select
+              value={draft.nesting?.nestingEngine ?? "classic"}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  nesting: { ...prev.nesting, nestingEngine: e.target.value as "classic" | "strip" },
+                }))
+              }
+              style={{
+                padding: "4px 8px",
+                borderRadius: 6,
+                border: "1px solid var(--color-border-secondary)",
+                background: "var(--color-background-secondary)",
+                color: "var(--color-text-primary)",
+                fontSize: 13,
+              }}
+            >
+              <option value="classic">Clássico (padrão)</option>
+              <option value="strip">Strip Packing v1 (experimental)</option>
+            </select>
+            {draft.nesting?.nestingEngine === "strip" && (
+              <p style={{ fontSize: 11, color: "#ea580c", marginTop: 4 }}>
+                Motor experimental — testar antes de usar em produção.
+              </p>
+            )}
+          </div>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Prioridade</span>
             <select
@@ -1300,6 +1338,38 @@ export default function SystemSettingsBase() {
               min={0} max={100} step={1}
               onChange={(value) => setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, sheetMarginMm: value } }))}
             />
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <NumberField
+                label="Espaço mínimo entre peças (floor) (mm)"
+                hint="Mínimo absoluto usado apenas quando necessário para evitar abrir nova chapa"
+                value={draft.cnc.minSpacingFloorMm ?? 13.5}
+                min={0}
+                max={15}
+                step={0.5}
+                onChange={(value) =>
+                  setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, minSpacingFloorMm: value } }))
+                }
+              />
+              {(draft.cnc.minSpacingFloorMm ?? 13.5) > (draft.cnc.minSpacingMm ?? 3) ? (
+                <span style={{ fontSize: 11, color: "#ea580c" }}>O floor não pode ser maior que o valor normal.</span>
+              ) : null}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <NumberField
+                label="Margem mínima da chapa (floor) (mm)"
+                hint="Mínimo absoluto de margem usado apenas quando a peça não cabe com a margem normal"
+                value={draft.cnc.sheetMarginFloorMm ?? 4}
+                min={0}
+                max={10}
+                step={0.5}
+                onChange={(value) =>
+                  setDraft((prev) => ({ ...prev, cnc: { ...prev.cnc, sheetMarginFloorMm: value } }))
+                }
+              />
+              {(draft.cnc.sheetMarginFloorMm ?? 4) > (draft.cnc.sheetMarginMm ?? 10) ? (
+                <span style={{ fontSize: 11, color: "#ea580c" }}>O floor não pode ser maior que o valor normal.</span>
+              ) : null}
+            </div>
             <NumberField
               label="Distância de rampa entrada/saída (mm)"
               value={draft.cnc.rampDistanceMm ?? 20}

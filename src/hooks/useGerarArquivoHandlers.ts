@@ -305,8 +305,9 @@ export function useGerarArquivoHandlers() {
     const sheetDef = getSheetDefinitionFromSettings();
     const settingsSnapshot = getSettings();
     const materialsSnapshot = listMaterials();
+    const nestingEngine = (getSettings()?.nesting?.nestingEngine ?? "classic") as "classic" | "strip";
     const result = await runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
-      ...getDefaultCncLayoutOptions(),
+      ...getDefaultCncLayoutOptions(nestingEngine),
       originTopRight: true,
       sheetLargura_mm: sheetDef.largura_mm,
       sheetAltura_mm: sheetDef.altura_mm,
@@ -367,9 +368,10 @@ export function useGerarArquivoHandlers() {
       const sheetDef = getSheetDefinitionFromSettings();
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
+      const nestingEngine = (getSettings()?.nesting?.nestingEngine ?? "classic") as "classic" | "strip";
       const result = await measureTime("Layout de corte PRO (nesting)", async () =>
         runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
-          ...getDefaultCncLayoutOptions(),
+          ...getDefaultCncLayoutOptions(nestingEngine),
           originTopRight: true,
           minUtilizationPercent: 0.92,
           rotationPreferenceMode: "aggressive",
@@ -470,7 +472,11 @@ export function useGerarArquivoHandlers() {
             }
             const [materialName, itemsForMaterial] = materialEntries[mi]!;
             const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
-            const layoutOptionsBase = mode === "pro" ? getDefaultCncLayoutOptions() : getFastCncLayoutOptions();
+            const nestingEngine = (getSettings()?.nesting?.nestingEngine ?? "classic") as "classic" | "strip";
+            const layoutOptionsBase =
+              mode === "pro"
+                ? getDefaultCncLayoutOptions(nestingEngine)
+                : getFastCncLayoutOptions(nestingEngine);
             const basePct = (mi / Math.max(1, materialEntries.length)) * 100;
             setLayoutProgress((prev) => ({
               ...prev,
@@ -686,8 +692,9 @@ export function useGerarArquivoHandlers() {
           showCutLayoutLoader();
           await yieldToMainThread();
           const sheetDefNest = getSheetDefinitionFromSettings();
+          const nestingEngine = (getSettings()?.nesting?.nestingEngine ?? "classic") as "classic" | "strip";
           nestingResult = await runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
-            ...getDefaultCncLayoutOptions(),
+            ...getDefaultCncLayoutOptions(nestingEngine),
             originTopRight: true,
             sheetLargura_mm: sheetDefNest.largura_mm,
             sheetAltura_mm: sheetDefNest.altura_mm,
@@ -739,7 +746,8 @@ export function useGerarArquivoHandlers() {
 
       // --- CNC (TCN): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
       try {
-        const cncOptions = getDefaultCncLayoutOptions();
+        const nestingEngine = (getSettings()?.nesting?.nestingEngine ?? "classic") as "classic" | "strip";
+        const cncOptions = getDefaultCncLayoutOptions(nestingEngine);
         const byMaterial = new Map<string, typeof allItems>();
         for (const item of allItems) {
           const key = (item.material ?? "Módulo").trim() || "Módulo";

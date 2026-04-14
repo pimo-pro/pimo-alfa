@@ -7,8 +7,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload } from "../qrcode/qrcodeService";
+import { formatNqrCell, resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -39,14 +40,15 @@ function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { b
     });
   }
 
-  const parametric = cutlistComPrecoFromBoxes(
+  const merged = buildGlobalQrCutlistMerged(
     project.boxes,
     project.rules,
     project.materialId,
-    project.projectName
+    project.projectName,
+    project.extractedPartsByBoxId
   );
 
-  const rows: Array<CutListItemComPreco & { boxNome: string; tipoBorda?: string }> = parametric.map((p) => {
+  return merged.map((p) => {
     const box = boxById.get(p.boxId ?? "");
     return {
       ...p,
@@ -54,22 +56,6 @@ function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { b
       tipoBorda: box?.tipoBorda,
     };
   });
-
-  const extractedByBox = project.extractedPartsByBoxId ?? {};
-  for (const box of project.boxes) {
-    const byModel = extractedByBox[box.id];
-    if (!byModel) continue;
-    const extracted = Object.values(byModel).flat();
-    for (const p of extracted) {
-      rows.push({
-        ...p,
-        boxNome: box.nome ?? box.id,
-        tipoBorda: box.tipoBorda,
-      });
-    }
-  }
-
-  return rows;
 }
 
 /** Detecta se o contexto (projeto/caixa/peça) é de cozinha para regra da coluna Borda. */
@@ -107,7 +93,7 @@ export function renderCutlistTable(
     "OBSERVAÇÕES",
     "N.º QR",
   ];
-  const body = parts.map((p, idx) => {
+  const body = parts.map((p) => {
     let bordaFita: string;
     if (p.espessura === 10) {
       bordaFita = "—";
@@ -119,12 +105,15 @@ export function renderCutlistTable(
         bordaFita = raw;
       }
     }
-    const pieceNumber = Number(p.pieceNumber ?? 0) || idx + 1;
-    const nQr = buildLocalQrPayload(
-      p,
-      { projectName: project.projectName, boxes: project.boxes, rules: project.rules },
-      pieceNumber
-    );
+    const ctx = { projectName: project.projectName, boxes: project.boxes, rules: project.rules };
+    const auth = resolveAuthoritativeLabelNumber(p);
+    const nQr =
+      auth != null
+        ? formatNqrCell(p.shortCode, buildLocalQrPayload(p, ctx, auth))
+        : formatNqrCell(
+            p.shortCode,
+            p.shortCode && p.shortCode !== "ERR" ? p.shortCode : "—"
+          );
     return [
       p.boxNome ?? "—",
       p.nome,
@@ -147,8 +136,19 @@ export function renderCutlistTable(
     head: [head],
     body,
     startY,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: HEADER_COLOR, fontSize: 7 },
+    theme: "grid",
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.5,
+      lineColor: [160, 160, 160],
+      lineWidth: 0.12,
+    },
+    headStyles: {
+      fillColor: HEADER_COLOR,
+      fontSize: 7,
+      lineColor: [160, 160, 160],
+      lineWidth: 0.12,
+    },
     margin: { left: MARGIN, right: MARGIN },
     columnStyles: {
       0: { cellWidth: 22 },
@@ -193,7 +193,7 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
     MARGIN,
     y
   );
-  y += 12;
+  y += 9;
 
   const parts = getFullCutlist(project);
   y = renderCutlistTable(doc, parts, project, y);

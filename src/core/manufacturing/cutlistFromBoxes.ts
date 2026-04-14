@@ -12,6 +12,10 @@ import { COSTA_INDUSTRIAL_CANONICAL_ID, resolveMaterial, getDefaultOfficialMater
 import { getIndustrialMaterial } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
+import {
+  hasExplicitMetadataLabelNumber,
+  readLabelNumberFromMetadata,
+} from "../qrcode/panelLabelNumber";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
@@ -276,6 +280,7 @@ export function cutlistComPrecoFromBox(
       ...baseItem,
       id: `${box.id}-${p.id}`,
       nome: getPieceLabel(p.tipo),
+      metadata: { panelId: p.id },
       quantidade: p.quantidade,
       dimensoes: {
         largura: p.largura_mm,
@@ -316,6 +321,24 @@ export function cutlistComPrecoFromBox(
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
   }
 
+  const prevById = new Map((box.cutListComPreco ?? []).map((x) => [x.id, x]));
+  for (const item of items) {
+    const prev = prevById.get(item.id);
+    if (!prev) continue;
+    if (prev.metadata && Object.keys(prev.metadata).length > 0) {
+      item.metadata = { ...(item.metadata ?? {}), ...prev.metadata };
+    }
+    if (hasExplicitMetadataLabelNumber(prev.metadata)) {
+      const n = readLabelNumberFromMetadata(prev.metadata);
+      if (n != null) {
+        item.pieceNumber = n;
+        if (prev.shortCode && prev.shortCode !== "ERR") {
+          item.shortCode = prev.shortCode;
+        }
+      }
+    }
+  }
+
   cutlistPorCaixaCache.set(box.id, { chave: chaveCaixa, items });
   return items;
 }
@@ -353,6 +376,31 @@ export function cutlistComPrecoFromBoxes(
   cutlistCompletaCacheChave = chaveCompleta;
   cutlistCompletaCache = comQr;
   return comQr;
+}
+
+/**
+ * Cutlist paramétrica + peças CAD extraídas, com um único attachQr global
+ * (alinhado ao PDF unificado / exportação industrial).
+ */
+export function buildGlobalQrCutlistMerged(
+  boxes: BoxModule[],
+  rules: RulesConfig,
+  materialId: string | undefined,
+  projectName: string,
+  extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>
+): CutListItemComPreco[] {
+  const rawParam = boxes.flatMap((box) => cutlistComPrecoFromBox(box, rules, materialId));
+  const extracted = boxes.flatMap((box) => {
+    const byModel = extractedPartsByBoxId?.[box.id];
+    if (!byModel) return [] as CutListItemComPreco[];
+    return Object.values(byModel).flat() as CutListItemComPreco[];
+  });
+  const merged = [...rawParam, ...extracted];
+  return attachQrCodesToCutlist(merged, {
+    projectName,
+    boxes,
+    rules,
+  });
 }
 
 /**

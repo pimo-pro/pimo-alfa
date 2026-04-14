@@ -1,6 +1,7 @@
 import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
+import { resolveAuthoritativeLabelNumber } from "./panelLabelNumber";
 
 type ProjectQrContext = {
   projectName: string;
@@ -207,6 +208,26 @@ export function attachQrCodesToCutlist(
     }
     
     try {
+      const authoritative = resolveAuthoritativeLabelNumber(item);
+      if (authoritative != null) {
+        const boxNome = project.boxes.find((b) => b.id === item.boxId)?.nome ?? item.boxId ?? "xx";
+        const shortCode =
+          item.shortCode && String(item.shortCode).trim() !== "" && item.shortCode !== "ERR"
+            ? String(item.shortCode)
+            : generateEtiquetaCode(
+                project.projectName ?? "PROJETO",
+                boxNome,
+                item.nome ?? "peca",
+                authoritative
+              );
+        const qrPayload = buildLocalQrPayload(item, project, authoritative);
+        return {
+          ...item,
+          pieceNumber: authoritative,
+          shortCode,
+          qrSvg: shortCode !== "ERR" ? generateQrCodeSvg(qrPayload) : "",
+        };
+      }
       const generated = generateShortCodeForPiece(item, project, idx);
       const qrPayload = buildLocalQrPayload(item, project, generated.pieceNumber);
       return {

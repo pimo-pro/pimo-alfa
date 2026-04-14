@@ -30,5 +30,8 @@ export function cloneSerializableCutLayoutEngineOptions(o: CutLayoutEngineOption
       : undefined,
     scoreModel: o.scoreModel,
     originTopRight: o.originTopRight,
+    nestingEngine: o.nestingEngine,
+    kerf_mm_floor: o.kerf_mm_floor,
+    margin_mm_floor: o.margin_mm_floor,
   };
 }

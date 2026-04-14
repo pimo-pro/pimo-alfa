@@ -108,6 +108,77 @@ function nowMs(): number {
   return Date.now();
 }
 
+function resolveKerfAndMargin(
+  pieceW: number,
+  pieceH: number,
+  sheetW: number,
+  sheetH: number,
+  kerf: number,
+  kerfFloor: number,
+  margin: number,
+  marginFloor: number
+): { effectiveKerf: number; effectiveMargin: number } {
+  // Tenta com valores normais primeiro
+  const usableW = sheetW - 2 * margin;
+  const usableH = sheetH - 2 * margin;
+  if (pieceW + kerf <= usableW && pieceH + kerf <= usableH) {
+    return { effectiveKerf: kerf, effectiveMargin: margin };
+  }
+  // Tenta com kerfFloor mas margin normal
+  if (pieceW + kerfFloor <= usableW && pieceH + kerfFloor <= usableH) {
+    return { effectiveKerf: kerfFloor, effectiveMargin: margin };
+  }
+  // Tenta com kerfFloor e marginFloor
+  const usableWFloor = sheetW - 2 * marginFloor;
+  const usableHFloor = sheetH - 2 * marginFloor;
+  if (pieceW + kerfFloor <= usableWFloor && pieceH + kerfFloor <= usableHFloor) {
+    return { effectiveKerf: kerfFloor, effectiveMargin: marginFloor };
+  }
+  // Retorna floor de qualquer forma (a peça é muito grande — será rejeitada depois)
+  return { effectiveKerf: kerfFloor, effectiveMargin: marginFloor };
+}
+
+function pickEffectiveKerfMarginForGroup(
+  pieces: CutPiece[],
+  sheetW: number,
+  sheetH: number,
+  kerf: number,
+  kerfFloor: number,
+  marginMm: number,
+  marginFloor: number
+): { effectiveKerf: number; effectiveMargin: number } {
+  if (pieces.length === 0) return { effectiveKerf: kerf, effectiveMargin: marginMm };
+  let effKerf = kerf;
+  let effMargin = marginMm;
+  for (const p of pieces) {
+    const orientations: Array<{ w: number; h: number }> = [{ w: p.largura_mm, h: p.altura_mm }];
+    if (!p.grainDirection && Math.abs(p.largura_mm - p.altura_mm) > 0.001) {
+      orientations.push({ w: p.altura_mm, h: p.largura_mm });
+    }
+    let bestForPiece = resolveKerfAndMargin(
+      orientations[0].w,
+      orientations[0].h,
+      sheetW,
+      sheetH,
+      kerf,
+      kerfFloor,
+      marginMm,
+      marginFloor
+    );
+    for (let i = 1; i < orientations.length; i++) {
+      const { w, h } = orientations[i];
+      const r = resolveKerfAndMargin(w, h, sheetW, sheetH, kerf, kerfFloor, marginMm, marginFloor);
+      const preferR =
+        r.effectiveKerf > bestForPiece.effectiveKerf ||
+        (r.effectiveKerf === bestForPiece.effectiveKerf && r.effectiveMargin > bestForPiece.effectiveMargin);
+      if (preferR) bestForPiece = r;
+    }
+    effKerf = Math.min(effKerf, bestForPiece.effectiveKerf);
+    effMargin = Math.min(effMargin, bestForPiece.effectiveMargin);
+  }
+  return { effectiveKerf: effKerf, effectiveMargin: effMargin };
+}
+
 function sortPiecesForAttempt(pieces: CutPiece[], mode: AttemptOrderMode): CutPiece[] {
   const list = pieces.map((p) => ({ ...p }));
   const area = (p: CutPiece) => p.largura_mm * p.altura_mm;
@@ -221,7 +292,7 @@ export function runCutLayout(
   // Para MPM, em projetos ≤ LAYER2_MAX_EXPANDED_PIECES peças expandidas, testa ordenações
   // e escolhe a melhor por métricas. _layer2InProgress evita recursão na 2.ª entrada.
   const layer2IsSpm = new Set(pieces.map((p) => p.boxId)).size <= 1;
-  if (!_layer2InProgress.has(deps) && !layer2IsSpm) {
+  if (!_layer2InProgress.has(deps) && !layer2IsSpm && (options?.nestingEngine ?? "classic") === "classic") {
     const expandedCount = pieces.reduce((acc, p) => acc + Math.max(1, p.quantidade), 0);
     if (expandedCount > 0 && expandedCount <= LAYER2_MAX_EXPANDED_PIECES) {
       _layer2InProgress.add(deps);
@@ -257,6 +328,11 @@ export function runCutLayout(
 
   throwIfAbort();
   const kerf = options?.kerf_mm ?? DEFAULT_KERF_MM;
+  const kerfFloor = options?.kerf_mm_floor ?? kerf;
+
+  const marginMm = getSheetSafetyMarginMm();
+  const marginFloor = options?.margin_mm_floor ?? Math.min(4, marginMm);
+
   const minUtilizationPercent = options?.minUtilizationPercent ?? MIN_UTILIZATION_PERCENT;
   const rotationCfg: RotationScoringConfig = {
     rotationWeight: options?.rotationWeight ?? DEFAULT_ROTATION_WEIGHT,
@@ -364,8 +440,16 @@ export function runCutLayout(
       materialId: materialId !== "material" ? materialId : sheetDef.materialId,
       materialName: groupPieces[0]?.materialName ?? sheetDef.materialName,
     };
-    const marginMm = getSheetSafetyMarginMm();
-    const placementSheet = deps.createUsableSheetArea(sheet, marginMm);
+    const { effectiveKerf, effectiveMargin } = pickEffectiveKerfMarginForGroup(
+      groupPieces,
+      sheet.largura_mm,
+      sheet.altura_mm,
+      kerf,
+      kerfFloor,
+      marginMm,
+      marginFloor
+    );
+    const placementSheet = deps.createUsableSheetArea(sheet, effectiveMargin);
     const sheetArea = Math.max(1, sheet.largura_mm * sheet.altura_mm);
 
     // ── SPM PATH ────────────────────────────────────────────────────────────
@@ -411,7 +495,7 @@ export function runCutLayout(
         const run = deps.simulateTrialForGroup(
           spmOrderedPieces,
           placementSheet,
-          kerf,
+          effectiveKerf,
           minUtilizationPercent,
           spmRotCfg,
           spmTrial,
@@ -433,7 +517,7 @@ export function runCutLayout(
         //   spmLock:
         //     stableDestThreshold=0.10  → chapas Excelentes (≤ 10%) são INTOCÁVEIS
         //     minTotalWasteImprovement=0.05 → confirma só com ganho real ≥ 5pp
-        const spmSheets = aplicarPocketFilling(spmRun.sheets, kerf, {
+        const spmSheets = aplicarPocketFilling(spmRun.sheets, effectiveKerf, {
           lateIndexThreshold: 0,
           wasteThreshold: 0.15,
           spmLock: {
@@ -463,8 +547,8 @@ export function runCutLayout(
         }
         diagnostics?.rejectedByLimit.push(...spmRun.rejectedByLimit);
         diagnostics?.gapFillPlacements.push(...spmRun.gapFillPlacements);
-        const spmCompacted = aplicarCompactacaoTranslacional(guardedSpmSheets, kerf);
-        const spmOffset = deps.applyFixedMarginOffset(spmCompacted, sheet, marginMm);
+        const spmCompacted = aplicarCompactacaoTranslacional(guardedSpmSheets, effectiveKerf);
+        const spmOffset = deps.applyFixedMarginOffset(spmCompacted, sheet, effectiveMargin);
         const spmNorm = options?.originTopRight
           ? spmOffset.map((s) => normalizeSheetToTopRightOrigin(s))
           : spmOffset;
@@ -514,7 +598,7 @@ export function runCutLayout(
       const run = deps.simulateTrialForGroup(
         piecesForAttempt,
         placementSheet,
-        kerf,
+        effectiveKerf,
         minUtilizationPercent,
         attemptRotationCfg,
         trial,
@@ -551,7 +635,7 @@ export function runCutLayout(
       const fallbackRun = deps.simulateTrialForGroup(
         groupPieces,
         placementSheet,
-        kerf,
+        effectiveKerf,
         minUtilizationPercent,
         rotationCfg,
         fallbackTrial,
@@ -627,7 +711,7 @@ export function runCutLayout(
         const seededRun = deps.simulateTrialForGroup(
           shuffledPieces,
           placementSheet,
-          kerf,
+          effectiveKerf,
           minUtilizationPercent,
           seededRotationCfg,
           initialTrial,
@@ -640,7 +724,7 @@ export function runCutLayout(
         const local = deps.optimizeWithMetaHeuristics(
           startSheets,
           placementSheet,
-          kerf,
+          effectiveKerf,
           minUtilizationPercent,
           seededRotationCfg,
           groupMetaCfg,
@@ -699,8 +783,8 @@ export function runCutLayout(
     // Late-Sheet Compactor: tenta recompactar as chapas tardias com desperdício elevado.
     // Só ativa se o grupo tiver mais de LATE_SHEET_COMPACT_WINDOW chapas e desperdício médio
     // nas últimas chapas acima de LATE_SHEET_MIN_WASTE_RATIO. Resultado só é usado se melhorar.
-    const compactResult = tryCompactLateSheetsOfRun(bestRun.sheets, placementSheet, kerf, {
-      kerf,
+    const compactResult = tryCompactLateSheetsOfRun(bestRun.sheets, placementSheet, effectiveKerf, {
+      kerf: effectiveKerf,
       lateSheetWindow: LATE_SHEET_COMPACT_WINDOW,
       minWasteRatioToTrigger: LATE_SHEET_MIN_WASTE_RATIO,
     });
@@ -716,13 +800,13 @@ export function runCutLayout(
     //   Chapas Excelentes (≤ 10%) e Boas (10-15%) são protegidas implicitamente
     //   pelo wasteThreshold — não recebem peças adicionais.
     if (bestRun.sheets.length > 2) {
-      bestRun.sheets = aplicarPocketFilling(bestRun.sheets, kerf, {
+      bestRun.sheets = aplicarPocketFilling(bestRun.sheets, effectiveKerf, {
         lateIndexThreshold: 0,
         wasteThreshold: 0.12,
       });
     }
 
-    bestRun.sheets = aplicarCompactacaoTranslacional(bestRun.sheets, kerf);
+    bestRun.sheets = aplicarCompactacaoTranslacional(bestRun.sheets, effectiveKerf);
 
     if (diagnostics) {
       diagnostics.flow.selectedStrategy = bestRun.strategy;
@@ -732,7 +816,7 @@ export function runCutLayout(
     }
     diagnostics?.rejectedByLimit.push(...bestRun.rejectedByLimit);
     diagnostics?.gapFillPlacements.push(...bestRun.gapFillPlacements);
-    const offsetSheets = deps.applyFixedMarginOffset(bestRun.sheets, sheet, marginMm);
+    const offsetSheets = deps.applyFixedMarginOffset(bestRun.sheets, sheet, effectiveMargin);
     const normalizedSheets = options?.originTopRight
       ? offsetSheets.map((s) => normalizeSheetToTopRightOrigin(s))
       : offsetSheets;

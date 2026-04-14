@@ -5,18 +5,37 @@ import { getLayoutKerfMmForCncNesting } from "./tcnGenerator";
 import { getSettings } from "../settings/settingsService";
 import { listMaterials } from "../materials/service";
 
+const TOOL_113_NOMINAL_DIAMETER_MM = 12;
+const MIN_TOOL_DIAMETER_MM = 1;
+
+function contourToolRadiusMmFromSettings(settings: ReturnType<typeof getSettings>): number {
+  const fromCnc = Number(settings?.cnc?.diametroFresaContornoMm);
+  const d =
+    Number.isFinite(fromCnc) && fromCnc > 0
+      ? Math.max(MIN_TOOL_DIAMETER_MM, fromCnc)
+      : TOOL_113_NOMINAL_DIAMETER_MM;
+  return d / 2;
+}
+
 /** Opções de nesting alinhadas ao TCN: kerf = minSpacing (entre contornos) + 2×raio da fresa. */
-export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
+export function getDefaultCncLayoutOptions(
+  engine: "classic" | "strip" = "classic"
+): CutLayoutEngineOptions {
+  const settings = getSettings();
+  const kerf_mm = getLayoutKerfMmForCncNesting(settings);
+  const toolRadiusMm = contourToolRadiusMmFromSettings(settings);
+  const kerfFloor = (settings?.cnc?.minSpacingFloorMm ?? 13.5) + 2 * Math.max(0, toolRadiusMm);
   return {
-    kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
-    sheetLargura_mm: sheet?.largura_mm,
-    sheetAltura_mm: sheet?.altura_mm,
+    kerf_mm,
+    kerf_mm_floor: kerfFloor,
+    margin_mm_floor: getSettings()?.cnc?.sheetMarginFloorMm ?? 4,
     groupByThicknessOnly: false,
     minUtilizationPercent: 0.9,
     rotationPreferenceMode: "aggressive",
     rotationWeight: 1.2,
     rotationPenalty: 0.15,
     scoreModel: "v32",
+    nestingEngine: engine,
     // Nesting industrial multi-solução:
     // - múltiplos starts independentes (ordens de peças distintas)
     // - combinações de heurísticas skyline/shelf/guillotine + first/best fit
@@ -35,17 +54,24 @@ export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEn
   };
 }
 
-export function getFastCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
+export function getFastCncLayoutOptions(
+  engine: "classic" | "strip" = "classic"
+): CutLayoutEngineOptions {
+  const settings = getSettings();
+  const kerf_mm = getLayoutKerfMmForCncNesting(settings);
+  const toolRadiusMm = contourToolRadiusMmFromSettings(settings);
+  const kerfFloor = (settings?.cnc?.minSpacingFloorMm ?? 13.5) + 2 * Math.max(0, toolRadiusMm);
   return {
-    kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
-    sheetLargura_mm: sheet?.largura_mm,
-    sheetAltura_mm: sheet?.altura_mm,
+    kerf_mm,
+    kerf_mm_floor: kerfFloor,
+    margin_mm_floor: getSettings()?.cnc?.sheetMarginFloorMm ?? 4,
     groupByThicknessOnly: false,
     minUtilizationPercent: 0.75,
     rotationPreferenceMode: "aggressive",
     rotationWeight: 0.8,
     rotationPenalty: 0.35,
     scoreModel: "legacy",
+    nestingEngine: engine,
     strategyTrials: [{ strategy: "skyline", binHeuristic: "firstFit" }],
     useMetaHeuristics: false,
     collectDiagnostics: false,
@@ -180,9 +206,14 @@ export function buildCncFromCutlistItems(
     }
     const industrialItems = applyCutlistMetadata(applyDrillHoles(applyIndustrialRules(items)));
 
+    const settings = getSettings();
+    const kerf_mm = getLayoutKerfMmForCncNesting(settings);
+    const toolRadiusMm = contourToolRadiusMmFromSettings(settings);
+    const kerfFloor = (settings?.cnc?.minSpacingFloorMm ?? 13.5) + 2 * Math.max(0, toolRadiusMm);
     const enforcedLayoutOptions: CutLayoutEngineOptions = {
       ...layoutOptions,
-      kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
+      kerf_mm,
+      kerf_mm_floor: kerfFloor,
     };
 
     const groupedItems = new Map<number, CutlistItemForPieces[]>();

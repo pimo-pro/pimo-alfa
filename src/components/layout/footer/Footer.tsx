@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import versionDataUrl from "../../../../version.json?url";
 
@@ -18,7 +18,6 @@ export default function Footer({
   onShowProjectProgress,
   onShowPainelReferencia,
 }: FooterProps) {
-  const navigate = useNavigate();
   const [version, setVersion] = useState("V4.1.0.2.6");
 
   useEffect(() => {
@@ -135,19 +134,12 @@ export default function Footer({
         >
           Painel de Referência
         </span>
-        <span
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate("/admin")}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              navigate("/admin");
-            }
-          }}
+        <Link
+          to="/admin"
+          style={{ cursor: "pointer", color: "inherit", textDecoration: "none" }}
         >
           Admin
-        </span>
+        </Link>
       </span>
     </footer>
   );

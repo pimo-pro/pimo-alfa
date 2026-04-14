@@ -90,6 +90,8 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       drillFeedRate: clamp(toNumber(merged.cnc.drillFeedRate, settingsDefaults.cnc.drillFeedRate), 1, 20000),
       drillRpm: clamp(toNumber(merged.cnc.drillRpm, settingsDefaults.cnc.drillRpm), 1000, 50000),
       sheetMarginMm: clamp(toNumber(merged.cnc.sheetMarginMm, settingsDefaults.cnc.sheetMarginMm), 0, 100),
+      minSpacingFloorMm: clamp(toNumber(merged.cnc.minSpacingFloorMm, 13.5), 0, 15),
+      sheetMarginFloorMm: clamp(toNumber(merged.cnc.sheetMarginFloorMm, 4), 0, 10),
       rampDistanceMm: clamp(toNumber(merged.cnc.rampDistanceMm, settingsDefaults.cnc.rampDistanceMm), 5, 100),
       compensacaoFerramenta: merged.cnc.compensacaoFerramenta === "dentro" ? "dentro" : "fora",
     },
@@ -100,6 +102,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         merged.nesting.prioridadeAproveitamento === "area" || merged.nesting.prioridadeAproveitamento === "chapas"
           ? merged.nesting.prioridadeAproveitamento
           : "balanceado",
+      nestingEngine: merged.nesting?.nestingEngine === "strip" ? "strip" : "classic",
     },
     portas: {
       portaGapVerticalMm: clamp(toNumber(merged.portas.portaGapVerticalMm, settingsDefaults.portas.portaGapVerticalMm), 0, 20),

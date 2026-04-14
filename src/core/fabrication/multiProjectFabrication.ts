@@ -309,12 +309,16 @@ export async function generateMultiProjectFabrication(
     }
   };
 
+  const nestingEngine = (getSettings()?.nesting?.nestingEngine ?? "classic") as "classic" | "strip";
   const layoutOpts =
     nestingMode === "none"
-      ? { ...getFastCncLayoutOptions(), originTopRight: true }
-      : { ...getDefaultCncLayoutOptions(), originTopRight: true };
+      ? { ...getFastCncLayoutOptions(nestingEngine), originTopRight: true }
+      : { ...getDefaultCncLayoutOptions(nestingEngine), originTopRight: true };
 
-  const cncPipelineOpts = nestingMode === "none" ? getFastCncLayoutOptions() : getDefaultCncLayoutOptions();
+  const cncPipelineOpts =
+    nestingMode === "none"
+      ? getFastCncLayoutOptions(nestingEngine)
+      : getDefaultCncLayoutOptions(nestingEngine);
   const tcnSuffix = tcnMethodSuffix(getSettings()?.cnc?.tcnMetodo);
   const settingsSnapshot = getSettings();
   const materialsSnapshot = listMaterials();

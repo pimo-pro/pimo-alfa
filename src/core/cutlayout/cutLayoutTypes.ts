@@ -216,6 +216,8 @@ export type CutLayoutEngineOptions = {
   sheetLargura_mm?: number;
   sheetAltura_mm?: number;
   kerf_mm?: number;
+  kerf_mm_floor?: number; // mínimo absoluto de kerf (usado quando peça não cabe com kerf normal)
+  margin_mm_floor?: number; // mínimo absoluto de margem (usado quando peça não cabe com margem normal)
   minUtilizationPercent?: number;
   rotationWeight?: number;
   rotationPenalty?: number;
@@ -226,6 +228,8 @@ export type CutLayoutEngineOptions = {
   useMetaHeuristics?: boolean;
   metaHeuristics?: CutLayoutMetaHeuristicsOptions;
   scoreModel?: CutLayoutScoreModel;
+  /** Motor de nesting a usar. "classic" = motor original. "strip" = Strip Packing v1. */
+  nestingEngine?: "classic" | "strip";
   /** Quando true, normaliza placements para origem top-right após o packing. */
   originTopRight?: boolean;
   onProgress?: (_event: CutLayoutProgressEvent) => void;

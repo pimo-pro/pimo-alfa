@@ -19,7 +19,7 @@ import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
@@ -56,6 +56,8 @@ const DevPimoTest = import.meta.env.DEV
   : null;
 
 function LegacyApp() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [leftOpen, setLeftOpen] = useState(true);
   const leftPanelTab = useUiStore((state) => state.selectedTool);
   const setLeftPanelTab = useUiStore((state) => state.setSelectedTool);
@@ -90,94 +92,41 @@ function LegacyApp() {
   const handleResizeEnd = () => {
     resizeState.current.active = false;
   };
-  const [showPainelReferencia, setShowPainelReferencia] = useState(false);
-  const [showSystemDocs, setShowSystemDocs] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showProjectProgress, setShowProjectProgress] = useState(false);
-  const [showDevTest, setShowDevTest] = useState(false);
-  const [showAjuda, setShowAjuda] = useState(false);
-  const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
 
+  const pathname = location.pathname;
+  const showSystemDocs = pathname === "/documentacao";
+  const showAdmin = pathname === "/admin";
+  const showProjectProgress = pathname === "/project-progress";
+  const showDevTest = import.meta.env.DEV && pathname === "/dev-test";
+  const showPainelReferencia = pathname === "/painel-referencia";
+  const showAjuda = pathname === "/ajuda";
+  const showUserProjects = pathname === "/meus-projetos";
+
   useEffect(() => {
-    const syncRoute = () => {
-      const pathname = window.location.pathname;
-      const isSystemDocs = pathname === "/documentacao";
-      const isAdmin = pathname === "/admin";
-      const isProjectProgress = pathname === "/project-progress";
-      if (!import.meta.env.DEV && pathname === "/dev-test") {
-        window.history.replaceState({}, "", "/");
-      }
-      const isDevTest = import.meta.env.DEV && pathname === "/dev-test";
-      const isPainelReferencia = pathname === "/painel-referencia";
-      const isAjuda = pathname === "/ajuda";
-      const isUserProjects = pathname === "/meus-projetos";
-      setShowSystemDocs(isSystemDocs);
-      setShowAdmin(isAdmin);
-      setShowProjectProgress(isProjectProgress);
-      setShowDevTest(isDevTest);
-      setShowPainelReferencia(isPainelReferencia);
-      setShowAjuda(isAjuda);
-      setShowUserProjects(isUserProjects);
-    };
-    syncRoute();
-    window.addEventListener("popstate", syncRoute);
-    return () => window.removeEventListener("popstate", syncRoute);
-  }, []);
+    if (!import.meta.env.DEV && pathname === "/dev-test") {
+      navigate("/", { replace: true });
+    }
+  }, [pathname, navigate]);
 
   const navigateToSystemDocs = () => {
-    window.history.pushState({}, "", "/documentacao");
-    setShowSystemDocs(true);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
+    navigate("/documentacao");
   };
 
   const navigateToProjectProgress = () => {
-    window.history.pushState({}, "", "/project-progress");
-    setShowProjectProgress(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
+    navigate("/project-progress");
   };
 
   const navigateToAjuda = () => {
-    window.history.pushState({}, "", "/ajuda");
-    setShowAjuda(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowDevTest(false);
-    setShowPainelReferencia(false);
-    setShowUserProjects(false);
+    navigate("/ajuda");
   };
 
   const navigateToPainelReferencia = () => {
-    window.history.pushState({}, "", "/painel-referencia");
-    setShowPainelReferencia(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
+    navigate("/painel-referencia");
   };
 
   const navigateToUserProjects = () => {
-    window.history.pushState({}, "", "/meus-projetos");
-    setShowUserProjects(true);
-    setShowAjuda(false);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowDevTest(false);
-    setShowPainelReferencia(false);
+    navigate("/meus-projetos");
   };
 
   return (
@@ -339,7 +288,7 @@ function PermissionRoute({
   check,
 }: {
   children: ReactElement;
-  check: (_hasPermission: (permission: string) => boolean) => boolean;
+  check: (_hasPermission: (_permission: string) => boolean) => boolean;
 }) {
   const { hasPermission, loading } = useAuth();
   if (loading) {

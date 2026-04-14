@@ -1,5 +1,6 @@
 import logoPimo from "../../../assets/logo-pi.png";
 import { useContext, useRef, type ChangeEvent, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../../../context/ThemeContext";
 import { ProjectContext } from "../../../context/projectContext";
 import { Icon } from "@/components/icons";
@@ -43,9 +44,9 @@ export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const projectContext = useContext(ProjectContext);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const navigate = useNavigate();
   const navigateInternal = (path: string) => {
-    window.history.pushState({}, "", path);
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    navigate(path);
   };
 
   const handleLanguageControl = () => {
@@ -99,7 +100,8 @@ export default function Header() {
           gap: 10,
         }}
       >
-        <div
+        <Link
+          to="/"
           style={{
             display: "flex",
             alignItems: "center",
@@ -109,10 +111,8 @@ export default function Header() {
             border: "none",
             boxShadow: "none",
             outline: "none",
-          }}
-          onClick={() => {
-            window.history.pushState({}, "", "/");
-            window.dispatchEvent(new PopStateEvent("popstate"));
+            textDecoration: "none",
+            color: "inherit",
           }}
         >
           <img
@@ -132,7 +132,7 @@ export default function Header() {
           <div style={{ background: "transparent", border: "none", boxShadow: "none", outline: "none" }}>
             <div style={{ fontSize: 16, fontWeight: 600 }}>PiMo Studio</div>
           </div>
-        </div>
+        </Link>
         <HeaderUndoRedoButtons />
       </div>
 

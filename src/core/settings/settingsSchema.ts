@@ -62,6 +62,8 @@ export interface SettingsSchema {
     drillFeedRate: number;
     drillRpm: number;
     sheetMarginMm: number;
+    minSpacingFloorMm: number; // mínimo absoluto entre peças (padrão: 13.5)
+    sheetMarginFloorMm: number; // mínimo absoluto de margem da chapa (padrão: 4)
     rampDistanceMm: number;
     /** Compensação de ferramenta: "fora" = offset exterior completo (toolRadiusMm); "dentro" = sem offset (0). Default "dentro". */
     compensacaoFerramenta: "fora" | "dentro";
@@ -70,6 +72,7 @@ export interface SettingsSchema {
     kerfPadraoMm: number;
     permitirRotacaoGlobal: boolean;
     prioridadeAproveitamento: "area" | "chapas" | "balanceado";
+    nestingEngine: "classic" | "strip";
   };
   portas: {
     portaGapVerticalMm: number;
@@ -222,6 +225,8 @@ export const settingsDefaults: SettingsSchema = {
     drillFeedRate: 1000,
     drillRpm: 18000,
     sheetMarginMm: 10,
+    minSpacingFloorMm: 13.5,
+    sheetMarginFloorMm: 4,
     rampDistanceMm: 20,
     compensacaoFerramenta: "dentro",
   },
@@ -229,6 +234,7 @@ export const settingsDefaults: SettingsSchema = {
     kerfPadraoMm: 3,
     permitirRotacaoGlobal: true,
     prioridadeAproveitamento: "balanceado",
+    nestingEngine: "classic",
   },
   portas: {
     portaGapVerticalMm: 1,
