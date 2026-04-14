@@ -2,6 +2,7 @@ import type { CutListItemComPreco } from "../types";
 import type { BoxModule } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { buildLocalQrPayload } from "../qrcode/qrcodeService";
+import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 import { isLateralPanel } from "./lateralDowels";
 import { getDrillBackDistance, getDrillFrontDistance } from "./drillConfig";
 
@@ -109,8 +110,11 @@ export function buildDrillFilesForProject(
 
     if (panelLength <= 0 || panelWidth <= 0) continue;
 
-    const pieceNumber = Number(item.pieceNumber ?? 0) || idx + 1;
-    const code = item.shortCode ?? buildLocalQrPayload(item, project, pieceNumber);
+    const auth = resolveAuthoritativeLabelNumber(item);
+    const code =
+      auth != null
+        ? item.shortCode ?? buildLocalQrPayload(item, project, auth)
+        : item.shortCode ?? `lateral-${item.id ?? String(idx)}`;
     const filenameBase = sanitizeFilename(code);
 
     out.push({

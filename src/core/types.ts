@@ -131,6 +131,8 @@ export interface CutListItem {
   faceMaterials?: PieceFaceMaterials;
   /** Furos reais do painel: geometria de fabricação (fonte única para Layout de Corte PRO, TCN e Viewer). */
   drillHoles?: PanelDrillHole[];
+  /** Metadados por painel (ex.: labelNumber, QRNumber) — fonte preferencial para N/QR em PDFs e exportações. */
+  metadata?: Record<string, unknown>;
   /** Código curto legível para fábrica. */
   shortCode?: string;
   /** QR em SVG contendo o shortCode/carga técnica. */

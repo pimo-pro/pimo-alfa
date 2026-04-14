@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
 import { holePhysicalDisplayOffset } from "./layoutCoordinateSystem";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
+import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 
 /** A4 retrato: largura × altura (mm) */
 const PAGE_W = 210;
@@ -236,7 +237,8 @@ function drawSheetDiagram(
 
   for (let i = 0; i < layoutRects.length; i++) {
     const { pl, px, py, pw, ph } = layoutRects[i];
-    const numStr = String(pl.pieceNumber ?? i + 1);
+    const auth = resolveAuthoritativeLabelNumber(pl);
+    const numStr = String(auth ?? pl.shortCode ?? pl.pieceNumber ?? "—");
     let fs = Math.min(ph * 0.66, pw * 0.55, 42);
     fs = Math.max(5, fs);
     doc.setFont("helvetica", "bold");
@@ -298,10 +300,10 @@ function drawPieceTablePaginated(
   const { placements, sheet } = sheetResult;
   const head = [["Nome da peça", "Dimensões", "Nº Peça", "Qtd na placa", "Imagem da peça"]];
 
-  const bodyRows = placements.map((pl, idx) => [
+  const bodyRows = placements.map((pl) => [
     String(pl.partName ?? "—").slice(0, 42),
     `${Math.round(pl.largura_mm)}\u00d7${Math.round(pl.altura_mm)} mm`,
-    String(pl.pieceNumber ?? idx + 1),
+    String(resolveAuthoritativeLabelNumber(pl) ?? pl.shortCode ?? pl.pieceNumber ?? "—"),
     "1",
     "",
   ]);
@@ -381,7 +383,8 @@ function drawPieceTablePaginated(
             doc.circle(hx, hy, hr, "F");
           }
         }
-        const numStr = String(pl.pieceNumber ?? rowOffset + data.row.index + 1);
+        const authThumb = resolveAuthoritativeLabelNumber(pl);
+        const numStr = String(authThumb ?? pl.shortCode ?? pl.pieceNumber ?? "—");
         let nfs = Math.min(rh * 0.52, rw * 0.42, 9);
         nfs = Math.max(3.5, nfs);
         doc.setFontSize(nfs);

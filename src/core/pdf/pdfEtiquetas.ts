@@ -3,8 +3,9 @@ import qrcode from "qrcode-generator";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import type { SettingsSchema } from "../settings/settingsService";
-import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
+import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
 import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
 import type {
@@ -66,32 +67,18 @@ function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
     }));
   }
 
-  const parametric = cutlistComPrecoFromBoxes(
+  const parametric = buildGlobalQrCutlistMerged(
     project.boxes,
     project.rules,
     project.materialId,
-    project.projectName
+    project.projectName,
+    project.extractedPartsByBoxId
   );
-  const merged: LabelItem[] = parametric.map((p) => ({
+  return parametric.map((p) => ({
     ...p,
     boxNome: boxById.get(p.boxId ?? "")?.nome ?? p.boxId ?? "—",
     pieceName: p.nome,
   }));
-
-  const extractedByBox = project.extractedPartsByBoxId ?? {};
-  for (const box of project.boxes) {
-    const byModel = extractedByBox[box.id];
-    if (!byModel) continue;
-    const extracted = Object.values(byModel).flat();
-    for (const p of extracted) {
-      merged.push({
-        ...p,
-        boxNome: box.nome ?? box.id,
-        pieceName: p.nome,
-      });
-    }
-  }
-  return merged;
 }
 
 /**
@@ -190,12 +177,14 @@ async function renderEtiquetaPageFromDesignerConfig(
     }
   }
 
-  const pieceNumber = Number(item.pieceNumber ?? 0);
   const effectiveProjectName = item.sourceProjectName ?? project.projectName;
+  const pieceNumberForQr =
+    resolveAuthoritativeLabelNumber(item) ??
+    (Number(item.pieceNumber ?? 0) > 0 ? Math.floor(Number(item.pieceNumber)) : 1);
   const etiquetaCode = buildLocalQrPayload(
     item,
     { projectName: effectiveProjectName, boxes: project.boxes, rules: project.rules },
-    pieceNumber,
+    pieceNumberForQr,
   );
 
   const larg = Math.round(item.dimensoes?.largura ?? 0);
@@ -302,12 +291,14 @@ async function renderEtiquetaPage(
   const y = headerBottom + 2;
   const qrX = margin;
   const qrY = y + 1.5;
-  const pieceNumber = Number(item.pieceNumber ?? 0);
+  const pieceNumberForQr =
+    resolveAuthoritativeLabelNumber(item) ??
+    (Number(item.pieceNumber ?? 0) > 0 ? Math.floor(Number(item.pieceNumber)) : 1);
   const etiquetaCode = buildLocalQrPayload(item, {
     projectName: effectiveProjectName,
     boxes: project.boxes,
     rules: project.rules,
-  }, pieceNumber);
+  }, pieceNumberForQr);
 
   await drawQrWithLogoOrFallback(doc, etiquetaCode, qrX, qrY, qrSize, project.settings);
 
