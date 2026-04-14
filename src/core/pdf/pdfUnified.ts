@@ -6,8 +6,7 @@
 import type jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { gerarPdfTecnicoCompleto } from "./gerarPdfTecnico";
-import { buildCutlistPdf } from "./pdfCutlist";
-import type { ProjectForPdf } from "./pdfTechnical";
+import { buildCutlistPdf, type ProjectForPdf } from "./pdfCutlist";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import {
@@ -16,10 +15,8 @@ import {
 } from "../pricing/pricing";
 import { formatCurrency } from "../../utils/formatting";
 
-/** ProjectForPdf compatível com pdfCutlist (extractedPartsByBoxId opcional). */
-export type ProjectForPdfWithExtracted = ProjectForPdf & {
-  extractedPartsByBoxId?: Record<string, Record<string, import("../types").CutListItemComPreco[]>>;
-};
+/** Alias ao `ProjectForPdf` da cutlist (inclui extractedPartsByBoxId e precomputedItems). */
+export type ProjectForPdfWithExtracted = ProjectForPdf;
 
 const MARGIN = 14;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
@@ -202,6 +199,8 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
 export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Promise<jsPDF> {
   const doc = gerarPdfTecnicoCompleto(project.boxes, project.rules, project.projectName, {
     materialId: project.materialId,
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    precomputedItems: project.precomputedItems,
   });
   await buildCutlistPdf(project, doc);
   addPainéisSection(doc, project);

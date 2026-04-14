@@ -481,6 +481,8 @@ export async function generateMultiProjectFabrication(
     try {
       const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
         materialId: proj.materialId,
+        extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
+        precomputedItems: projDisplayItems,
       });
       safeAddPdf(zip, `${basePath}/tecnico.pdf`, docTecnico);
     } catch (err) {
@@ -489,7 +491,10 @@ export async function generateMultiProjectFabrication(
 
     // PDF Unificado (inalterado)
     try {
-      const docUnificado = await buildUnifiedPdf(proj);
+      const docUnificado = await buildUnifiedPdf({
+        ...proj,
+        precomputedItems: projDisplayItems,
+      });
       safeAddPdf(zip, `${basePath}/unificado.pdf`, docUnificado);
     } catch (err) {
       devLogger.error("multiProjectFabrication: unificado PDF", err);

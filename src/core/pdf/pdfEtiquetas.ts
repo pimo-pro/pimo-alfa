@@ -55,6 +55,22 @@ function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiqueta
   return buildCutLayoutProPartName(item, boxNome, projectName);
 }
 
+/** Código gravado no QR / texto da etiqueta — alinhado a `resolveAuthoritativeLabelNumber` + shortCode literal. */
+function resolveEtiquetaCodeParaEtiqueta(
+  item: LabelItem,
+  ctx: { projectName: string; boxes: BoxModule[]; rules: RulesConfig }
+): string {
+  const authoritative = resolveAuthoritativeLabelNumber(item);
+  if (authoritative != null) {
+    return buildLocalQrPayload(item, ctx, authoritative);
+  }
+  const rawSc = String(item.shortCode ?? "").trim();
+  if (rawSc && rawSc !== "ERR") {
+    return rawSc;
+  }
+  return buildLocalQrPayload(item, ctx, 1);
+}
+
 function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
   const boxById = new Map(project.boxes.map((b) => [b.id, b]));
 
@@ -178,14 +194,11 @@ async function renderEtiquetaPageFromDesignerConfig(
   }
 
   const effectiveProjectName = item.sourceProjectName ?? project.projectName;
-  const pieceNumberForQr =
-    resolveAuthoritativeLabelNumber(item) ??
-    (Number(item.pieceNumber ?? 0) > 0 ? Math.floor(Number(item.pieceNumber)) : 1);
-  const etiquetaCode = buildLocalQrPayload(
-    item,
-    { projectName: effectiveProjectName, boxes: project.boxes, rules: project.rules },
-    pieceNumberForQr,
-  );
+  const etiquetaCode = resolveEtiquetaCodeParaEtiqueta(item, {
+    projectName: effectiveProjectName,
+    boxes: project.boxes,
+    rules: project.rules,
+  });
 
   const larg = Math.round(item.dimensoes?.largura ?? 0);
   const alt  = Math.round(item.dimensoes?.altura ?? 0);
@@ -291,14 +304,11 @@ async function renderEtiquetaPage(
   const y = headerBottom + 2;
   const qrX = margin;
   const qrY = y + 1.5;
-  const pieceNumberForQr =
-    resolveAuthoritativeLabelNumber(item) ??
-    (Number(item.pieceNumber ?? 0) > 0 ? Math.floor(Number(item.pieceNumber)) : 1);
-  const etiquetaCode = buildLocalQrPayload(item, {
+  const etiquetaCode = resolveEtiquetaCodeParaEtiqueta(item, {
     projectName: effectiveProjectName,
     boxes: project.boxes,
     rules: project.rules,
-  }, pieceNumberForQr);
+  });
 
   await drawQrWithLogoOrFallback(doc, etiquetaCode, qrX, qrY, qrSize, project.settings);
 

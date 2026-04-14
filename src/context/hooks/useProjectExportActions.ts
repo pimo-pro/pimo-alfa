@@ -48,6 +48,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
       const { gerarPdfTecnicoCompleto } = await import("../../core/pdf/gerarPdfTecnico");
       const doc = gerarPdfTecnicoCompleto(boxesToExport, currentProject.rules, projectName, {
         materialId: currentProject.materialId,
+        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
       });
       doc.save(`${safeProjectName(projectName)}_tecnico.pdf`);
     }, [projectRef]),

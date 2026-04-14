@@ -1,5 +1,5 @@
 /**
- * Número de etiqueta / QR — prioridade: metadados do painel, depois pieceNumber já atribuído.
+ * Número de etiqueta / QR — prioridade: metadados (inteiro), pieceNumber, sufixo numérico do shortCode.
  * Não gera números sequenciais artificiais (isso fica para o chamador, ex.: attachQrCodesToCutlist).
  */
 
@@ -34,9 +34,21 @@ export function readLabelNumberFromMetadata(metadata?: Record<string, unknown>):
   return null;
 }
 
+/** Extrai o sufixo numérico final do código curto (ex.: "np261cacim01" → 1). */
+export function extractPieceNumberFromShortCode(shortCode: string): number | null {
+  const s = String(shortCode ?? "").trim();
+  if (!s || s === "ERR") return null;
+  const m = s.match(/(\d{2,3})$/);
+  if (!m?.[1]) return null;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
 type ItemLike = {
   pieceNumber?: number;
   metadata?: Record<string, unknown>;
+  shortCode?: string;
 };
 
 /**
@@ -47,6 +59,8 @@ export function resolveAuthoritativeLabelNumber(item: ItemLike): number | null {
   if (fromMeta != null) return fromMeta;
   const pn = Number(item.pieceNumber ?? 0);
   if (Number.isFinite(pn) && pn > 0) return Math.floor(pn);
+  const fromShortCode = extractPieceNumberFromShortCode(String(item.shortCode ?? ""));
+  if (fromShortCode != null) return fromShortCode;
   return null;
 }
 

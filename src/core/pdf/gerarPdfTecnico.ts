@@ -6,9 +6,10 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { ComponentType } from "../components/componentTypes";
-import type { BoxModule } from "../types";
+import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { gerarModeloIndustrial } from "../manufacturing/boxManufacturing";
+import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 import { safeGetItem } from "../../utils/storage";
 import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
 import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
@@ -71,7 +72,7 @@ interface LinhaPeca {
   f4: string;
   f5: string;
   observacoes: string;
-  nQr: number;
+  nQr: string;
   boxNome: string;
   espessura_mm: number;
   tipo: string;
@@ -126,14 +127,62 @@ function temFurosLaterais(ladosFuro: Set<string>): boolean {
   return ladosFuro.has("fundo") || ladosFuro.has("esquerda") || ladosFuro.has("direita");
 }
 
+export type GerarPdfTecnicoOpcoes = {
+  incluirPaginaPrecos?: boolean;
+  materialId?: string;
+  extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
+  /** Itens já com shortCode (ex.: fabricação multi‑projeto). */
+  precomputedItems?: CutListItemComPreco[];
+};
+
+function panelIdFromCutlistMetadata(metadata?: Record<string, unknown>): string | null {
+  if (!metadata || typeof metadata.panelId !== "string") return null;
+  const s = metadata.panelId.trim();
+  return s || null;
+}
+
+function buildShortCodeByBoxPanel(
+  boxes: BoxModule[],
+  rules: RulesConfig,
+  projectName: string,
+  materialId: string | undefined,
+  extractedPartsByBoxId: Record<string, Record<string, CutListItemComPreco[]>> | undefined,
+  precomputedItems: CutListItemComPreco[] | undefined
+): Map<string, string> {
+  const items =
+    precomputedItems && precomputedItems.length > 0
+      ? precomputedItems
+      : buildGlobalQrCutlistMerged(boxes, rules, materialId, projectName, extractedPartsByBoxId);
+  const map = new Map<string, string>();
+  for (const it of items) {
+    const pid = panelIdFromCutlistMetadata(it.metadata);
+    const bid = it.boxId?.trim();
+    if (!bid || !pid) continue;
+    const key = `${bid}::${pid}`;
+    if (map.has(key)) continue;
+    const sc = String(it.shortCode ?? "").trim();
+    if (sc && sc !== "ERR") map.set(key, sc);
+  }
+  return map;
+}
+
 function construirLinhas(
   boxes: BoxModule[],
   rules: RulesConfig,
   componentTypes: ComponentType[],
-  materials: MaterialIndustrial[]
+  materials: MaterialIndustrial[],
+  projectName: string,
+  pdfOpts?: Pick<GerarPdfTecnicoOpcoes, "materialId" | "extractedPartsByBoxId" | "precomputedItems">
 ): LinhaPeca[] {
   const ctById = Object.fromEntries(componentTypes.map((c) => [c.id, c]));
-  let nQr = 1;
+  const shortByPanel = buildShortCodeByBoxPanel(
+    boxes,
+    rules,
+    projectName,
+    pdfOpts?.materialId,
+    pdfOpts?.extractedPartsByBoxId,
+    pdfOpts?.precomputedItems
+  );
 
   const pecasCompletas: Array<{
     box: BoxModule;
@@ -145,6 +194,7 @@ function construirLinhas(
     esp: number;
     material: string;
     qtd: number;
+    panelId: string;
   }> = [];
 
   for (let boxIdx = 0; boxIdx < boxes.length; boxIdx++) {
@@ -174,6 +224,7 @@ function construirLinhas(
         esp: p.espessura_mm,
         material,
         qtd: p.quantidade,
+        panelId: p.id,
       });
     }
   }
@@ -196,6 +247,8 @@ function construirLinhas(
     const materialStr = formatMaterial(p.material, p.esp, materials);
     const temFurosLateraisPiece = temFurosLaterais(ladosFuro);
     const key = `${p.refPeca}|${p.larg}|${p.comp}|${p.esp}|${materialStr}|${p.box.id}`;
+    const panelKey = `${p.box.id}::${p.panelId}`;
+    const nQrLabel = shortByPanel.get(panelKey)?.trim() || "—";
     const esp10 = p.esp === 10;
     const o2o5 = esp10 ? "" : "X";
 
@@ -221,7 +274,7 @@ function construirLinhas(
         f4: ladosFuro.has("esquerda") ? "X" : "",
         f5: ladosFuro.has("direita") ? "X" : "",
         observacoes: "",
-        nQr: nQr++,
+        nQr: nQrLabel,
         boxNome: p.box.nome || p.box.id,
         boxIndex: p.boxIndex,
         espessura_mm: p.esp,
@@ -237,10 +290,6 @@ function construirLinhas(
     const espCmp = a.espessura_mm - b.espessura_mm;
     if (espCmp !== 0) return espCmp;
     return a.refPeca.localeCompare(b.refPeca);
-  });
-
-  resultado.forEach((r, i) => {
-    r.nQr = i + 1;
   });
 
   return resultado;
@@ -288,7 +337,7 @@ export function gerarPdfTecnicoCompleto(
   boxes: BoxModule[],
   rules: RulesConfig,
   projectName: string,
-  opcoes?: { incluirPaginaPrecos?: boolean; materialId?: string }
+  opcoes?: GerarPdfTecnicoOpcoes
 ): jsPDF {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const componentTypes = loadComponentTypesFromStorage();
@@ -310,7 +359,11 @@ export function gerarPdfTecnicoCompleto(
   doc.text(`Acabamento: ${acabamentos.length > 0 ? acabamentos.join(" | ") : "—"}`, MARGIN, y);
   y += 12;
 
-  const linhas = construirLinhas(boxes, rules, componentTypes, materials);
+  const linhas = construirLinhas(boxes, rules, componentTypes, materials, projectName, {
+    materialId: opcoes?.materialId,
+    extractedPartsByBoxId: opcoes?.extractedPartsByBoxId,
+    precomputedItems: opcoes?.precomputedItems,
+  });
 
   const head = [
     "REF PEÇA",

@@ -228,6 +228,21 @@ export function attachQrCodesToCutlist(
           qrSvg: shortCode !== "ERR" ? generateQrCodeSvg(qrPayload) : "",
         };
       }
+      const rawSc = String(item.shortCode ?? "").trim();
+      if (rawSc && rawSc !== "ERR") {
+        const pn =
+          Number(item.pieceNumber ?? 0) > 0 && Number.isFinite(Number(item.pieceNumber))
+            ? Math.floor(Number(item.pieceNumber))
+            : null;
+        const qrPayload =
+          pn != null ? buildLocalQrPayload(item, project, pn) : rawSc;
+        return {
+          ...item,
+          shortCode: rawSc,
+          pieceNumber: pn ?? item.pieceNumber,
+          qrSvg: generateQrCodeSvg(qrPayload),
+        };
+      }
       const generated = generateShortCodeForPiece(item, project, idx);
       const qrPayload = buildLocalQrPayload(item, project, generated.pieceNumber);
       return {
