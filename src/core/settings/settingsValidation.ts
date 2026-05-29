@@ -6,6 +6,30 @@ import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas } from "../../data/move
 import { SETTINGS_SCHEMA_VERSION, settingsDefaults, type SettingsSchema } from "./settingsSchema";
 import { clamp, deepMergeSettings, normalizeDepths, toNumber, type ValidationResult } from "./settingsMerge";
 
+const DRAWER_SLIDE_TYPES = [
+  "Blum Tandem",
+  "Blum Movento",
+  "Hettich InnoTech",
+  "Hettich ArciTech",
+  "Hafele Matrix",
+  "Genérica",
+] as const;
+const DRAWER_METAL_BOX_TYPES = ["Nenhuma", "Blum Legrabox", "Blum Antaro", "Hettich AvanTech", "Hafele Alto", "Genérica"] as const;
+const DRAWER_HANDLE_TYPES = ["Nenhum", "Puxador", "Cava", "Perfil Alumínio"] as const;
+const DRAWER_HANDLE_POSITIONS = ["Centro", "Topo", "Inferior"] as const;
+const DRAWER_LOAD_CAPACITIES = [30, 40, 50, 70] as const;
+
+function pickOption<T extends readonly string[]>(value: unknown, options: T, fallback: T[number]): T[number] {
+  return options.includes(value as T[number]) ? (value as T[number]) : fallback;
+}
+
+function pickDrawerCapacity(value: unknown): 30 | 40 | 50 | 70 {
+  const numeric = Number(value);
+  return DRAWER_LOAD_CAPACITIES.includes(numeric as 30 | 40 | 50 | 70)
+    ? (numeric as 30 | 40 | 50 | 70)
+    : settingsDefaults.gavetas.gavetaCapacidadeCargaKg;
+}
+
 /** sideOffset > 0 = override manual; ausente ou ≤0 = automático (espessura/2 no motor). */
 function optionalFuraçãoSideOffset(raw: unknown): { sideOffset?: number } {
   if (raw === undefined || raw === null) return {};
@@ -108,25 +132,100 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       portaPosZOffsetMm: clamp(toNumber(merged.portas.portaPosZOffsetMm, settingsDefaults.portas.portaPosZOffsetMm), 0, 50),
     },
     gavetas: {
-      gavetaNormalBaseEspessuraMm: clamp(
-        toNumber(merged.gavetas.gavetaNormalBaseEspessuraMm, settingsDefaults.gavetas.gavetaNormalBaseEspessuraMm),
+      gavetaFolgaFrenteMm: clamp(
+        toNumber(merged.gavetas.gavetaFolgaFrenteMm, settingsDefaults.gavetas.gavetaFolgaFrenteMm),
         0,
-        50
-      ),
-      gavetaProBaseEspessuraMm: clamp(
-        toNumber(merged.gavetas.gavetaProBaseEspessuraMm, settingsDefaults.gavetas.gavetaProBaseEspessuraMm),
-        0,
-        50
+        20
       ),
       gavetaFolgaLateralMm: clamp(
         toNumber(merged.gavetas.gavetaFolgaLateralMm, settingsDefaults.gavetas.gavetaFolgaLateralMm),
         0,
         30
       ),
+      gavetaEspessuraFrenteMm: clamp(
+        toNumber(merged.gavetas.gavetaEspessuraFrenteMm, settingsDefaults.gavetas.gavetaEspessuraFrenteMm),
+        5,
+        50
+      ),
+      gavetaEspessuraLateralMm: clamp(
+        toNumber(merged.gavetas.gavetaEspessuraLateralMm, settingsDefaults.gavetas.gavetaEspessuraLateralMm),
+        5,
+        50
+      ),
+      gavetaEspessuraTraseiraMm: clamp(
+        toNumber(merged.gavetas.gavetaEspessuraTraseiraMm, settingsDefaults.gavetas.gavetaEspessuraTraseiraMm),
+        5,
+        50
+      ),
+      gavetaEspessuraFundoMm: clamp(
+        toNumber(merged.gavetas.gavetaEspessuraFundoMm, settingsDefaults.gavetas.gavetaEspessuraFundoMm),
+        3,
+        30
+      ),
+      gavetaRecuoCorpoMm: clamp(
+        toNumber(merged.gavetas.gavetaRecuoCorpoMm, settingsDefaults.gavetas.gavetaRecuoCorpoMm),
+        0,
+        200
+      ),
       gavetaProfundidadesDisponiveisMm: normalizeDepths(
         merged.gavetas.gavetaProfundidadesDisponiveisMm,
         settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm
       ),
+      gavetaAlturaMinimaMm: clamp(
+        toNumber(merged.gavetas.gavetaAlturaMinimaMm, settingsDefaults.gavetas.gavetaAlturaMinimaMm),
+        40,
+        500
+      ),
+      gavetaAlturaMaximaMm: clamp(
+        toNumber(merged.gavetas.gavetaAlturaMaximaMm, settingsDefaults.gavetas.gavetaAlturaMaximaMm),
+        80,
+        1000
+      ),
+      gavetaTipoCorredica: pickOption(
+        merged.gavetas.gavetaTipoCorredica,
+        DRAWER_SLIDE_TYPES,
+        settingsDefaults.gavetas.gavetaTipoCorredica
+      ),
+      gavetaSoftClose: Boolean(merged.gavetas.gavetaSoftClose),
+      gavetaCursoTotalMm: clamp(
+        toNumber(merged.gavetas.gavetaCursoTotalMm, settingsDefaults.gavetas.gavetaCursoTotalMm),
+        0,
+        1000
+      ),
+      gavetaCapacidadeCargaKg: pickDrawerCapacity(merged.gavetas.gavetaCapacidadeCargaKg),
+      gavetaTipoCaixaMetalica: pickOption(
+        merged.gavetas.gavetaTipoCaixaMetalica,
+        DRAWER_METAL_BOX_TYPES,
+        settingsDefaults.gavetas.gavetaTipoCaixaMetalica
+      ),
+      gavetaAlturaCaixaMetalicaMm: clamp(
+        toNumber(merged.gavetas.gavetaAlturaCaixaMetalicaMm, settingsDefaults.gavetas.gavetaAlturaCaixaMetalicaMm),
+        0,
+        400
+      ),
+      gavetaProfundidadesCompativeisMm: normalizeDepths(
+        merged.gavetas.gavetaProfundidadesCompativeisMm,
+        settingsDefaults.gavetas.gavetaProfundidadesCompativeisMm
+      ),
+      gavetaTipoHandle: pickOption(
+        merged.gavetas.gavetaTipoHandle,
+        DRAWER_HANDLE_TYPES,
+        settingsDefaults.gavetas.gavetaTipoHandle
+      ),
+      gavetaPosicaoHandle: pickOption(
+        merged.gavetas.gavetaPosicaoHandle,
+        DRAWER_HANDLE_POSITIONS,
+        settingsDefaults.gavetas.gavetaPosicaoHandle
+      ),
+      gavetaOffsetHandleMm: clamp(
+        toNumber(merged.gavetas.gavetaOffsetHandleMm, settingsDefaults.gavetas.gavetaOffsetHandleMm),
+        -500,
+        500
+      ),
+      gavetaValidarAlturasCustom: Boolean(merged.gavetas.gavetaValidarAlturasCustom),
+      gavetaValidarProfundidadeCompativel: Boolean(merged.gavetas.gavetaValidarProfundidadeCompativel),
+      gavetaValidarCargaMaxima: Boolean(merged.gavetas.gavetaValidarCargaMaxima),
+      gavetaValidarSoftCloseCompativel: Boolean(merged.gavetas.gavetaValidarSoftCloseCompativel),
       gavetaAlturaModoPadrao:
         merged.gavetas.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || merged.gavetas.gavetaAlturaModoPadrao === "custom"
           ? merged.gavetas.gavetaAlturaModoPadrao

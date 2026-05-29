@@ -23,6 +23,8 @@ import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
+import { calcularPrecoCutList } from "../pricing/pricing";
+import { extractDrawerCutlistFromLayerItems } from "../../services/drawerCutlistAdapter";
 
 /** Campos derivados — não entram na chave de cache (evita recomputes por efeitos colaterais). */
 const CAMPOS_EXCLUIDOS_FP_CUTLIST = new Set([
@@ -202,6 +204,9 @@ export function cutlistComPrecoFromBox(
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       return;
     }
+    if (drawersLayer.length > 0 && (p.tipo === "gaveta_frente" || p.tipo === "gaveta")) {
+      return;
+    }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
     const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
     const isLateralLeft = p.tipo === "lateral_esquerda";
@@ -296,6 +301,48 @@ export function cutlistComPrecoFromBox(
       drillHoles,
     });
   });
+
+  if (drawersLayer.length > 0) {
+    const drawerCutlist = extractDrawerCutlistFromLayerItems(drawersLayer, material);
+    const drawerItems = calcularPrecoCutList(drawerCutlist).map((item) => {
+      const drawerRules = item.metadata?.drawerRules as
+        | {
+            slideType?: string;
+            metalBoxType?: string;
+            handleType?: string;
+            handlePosition?: "Centro" | "Topo" | "Inferior";
+            handleOffsetMm?: number;
+          }
+        | undefined;
+      const drillingResult = buildPanelDrillingResult(
+        {
+          tipo: item.tipo,
+          larguraMm: item.dimensoes.largura,
+          alturaMm: item.dimensoes.altura,
+          espessuraMm: item.espessura,
+          hasShelves,
+          hasDrawers,
+          slideType: drawerRules?.slideType,
+          metalBoxType: drawerRules?.metalBoxType,
+          handleType: drawerRules?.handleType,
+          handlePosition: drawerRules?.handlePosition,
+          handleOffsetMm: drawerRules?.handleOffsetMm,
+        },
+        effRules
+      );
+      const drillHoles =
+        drillingResult.success && drillingResult.data?.drillHoles?.length ? drillingResult.data.drillHoles : [];
+      return {
+        ...baseItem,
+        ...item,
+        materialId: item.materialId ?? materialId,
+        visualMaterial,
+        faceMaterials: baseItem.faceMaterials,
+        drillHoles,
+      };
+    });
+    items.push(...drawerItems);
+  }
 
   // Portas já vêm em modelo.paineis (porta_simples, porta_dupla, porta_correr); não duplicar a partir de modelo.portas
   // (modelo.portas é usado apenas para custos/ferragens; a cutlist de peças usa apenas paineis)

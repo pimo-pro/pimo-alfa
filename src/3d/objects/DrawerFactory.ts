@@ -15,6 +15,10 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
 }
 
+function easeSoftClose(t: number): number {
+  return 1 - (1 - t) ** 4;
+}
+
 export type DrawerSpec = {
   id: string;
   type: "drawer";
@@ -59,6 +63,12 @@ export type DrawerSpec = {
   rotY: number;
   isOpen: boolean;
   pullDistanceM: number;
+  handleType?: DrawerLayerItem["handleType"];
+  handlePosition?: DrawerLayerItem["handlePosition"];
+  handleOffsetM?: number;
+  slideType?: DrawerLayerItem["slideType"];
+  metalBoxType?: DrawerLayerItem["metalBoxType"];
+  softClose?: boolean;
 };
 
 export function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
@@ -106,6 +116,12 @@ export function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
     rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
     isOpen: Boolean(item.isOpen),
     pullDistanceM: Math.max(0, (item.pullDistanceMm ?? 0) / 1000),
+    handleType: item.handleType ?? "Nenhum",
+    handlePosition: item.handlePosition ?? "Centro",
+    handleOffsetM: (item.handleOffsetMm ?? 0) / 1000,
+    slideType: item.slideType ?? "Genérica",
+    metalBoxType: item.metalBoxType ?? "Nenhuma",
+    softClose: Boolean(item.softClose),
   }));
 }
 
@@ -116,12 +132,48 @@ export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string
     heightM: spec.heightM,
     depthM: spec.depthM,
     frontThicknessM: spec.frontThicknessM,
+    bodyWidthM: spec.bodyWidthM,
+    bodyHeightM: spec.bodyHeightM,
+    bodyDepthM: spec.bodyDepthM,
+    leftSideWidthM: spec.leftSideWidthM,
+    leftSideHeightM: spec.leftSideHeightM,
+    leftSideDepthM: spec.leftSideDepthM,
+    rightSideWidthM: spec.rightSideWidthM,
+    rightSideHeightM: spec.rightSideHeightM,
+    rightSideDepthM: spec.rightSideDepthM,
+    backWidthM: spec.backWidthM,
+    backHeightM: spec.backHeightM,
+    backThicknessM: spec.backThicknessM,
+    bottomWidthM: spec.bottomWidthM,
+    bottomDepthM: spec.bottomDepthM,
+    bottomThicknessM: spec.bottomThicknessM,
+    frontPosX: spec.frontPosX,
+    frontPosY: spec.frontPosY,
+    frontPosZ: spec.frontPosZ,
+    leftSidePosX: spec.leftSidePosX,
+    leftSidePosY: spec.leftSidePosY,
+    leftSidePosZ: spec.leftSidePosZ,
+    rightSidePosX: spec.rightSidePosX,
+    rightSidePosY: spec.rightSidePosY,
+    rightSidePosZ: spec.rightSidePosZ,
+    bottomPosX: spec.bottomPosX,
+    bottomPosY: spec.bottomPosY,
+    bottomPosZ: spec.bottomPosZ,
+    backPosX: spec.backPosX,
+    backPosY: spec.backPosY,
+    backPosZ: spec.backPosZ,
     x: spec.x,
     y: spec.y,
     z: spec.z,
     rotY: spec.rotY,
     isOpen: spec.isOpen,
     pullDistanceM: spec.pullDistanceM,
+    handleType: spec.handleType,
+    handlePosition: spec.handlePosition,
+    handleOffsetM: spec.handleOffsetM,
+    slideType: spec.slideType,
+    metalBoxType: spec.metalBoxType,
+    softClose: spec.softClose,
     material: materialName ?? getDefaultOfficialMaterial().canonicalId,
   });
 }
@@ -148,8 +200,9 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
     const start = performance.now();
     const animate = (now: number) => {
       const t = Math.min(1, (now - start) / DRAWER_ANIMATION_DURATION_MS);
-      const eased = easeInOutCubic(t);
+      const eased = spec.softClose ? easeSoftClose(t) : easeInOutCubic(t);
       drawerGroup.position.z = startPosition + (targetPullOffset - startPosition) * eased;
+      drawerPositionState.set(spec.id, drawerGroup.position.z);
       if (t < 1) drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
       else drawerAnimationRaf.delete(spec.id);
     };
@@ -172,15 +225,68 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
   if (Number.isFinite(spec.frontPosX) && Number.isFinite(spec.frontPosY) && Number.isFinite(spec.frontPosZ)) {
     front.position.set(spec.frontPosX as number, spec.frontPosY as number, spec.frontPosZ as number);
   } else {
-    front.position.set(0, 0, spec.frontThicknessM / 2);
+    front.position.set(0, 0, 0);
   }
   front.userData.drawerLayerId = spec.id;
   front.userData.drawerPart = "front";
   drawerGroup.add(front);
 
+  if (spec.handleType && spec.handleType !== "Nenhum") {
+    const handleMaterial = new THREE.MeshStandardMaterial({
+      color: spec.handleType === "Cava" ? 0x111827 : 0xb6bcc6,
+      roughness: 0.45,
+      metalness: spec.handleType === "Perfil Alumínio" || spec.handleType === "Puxador" ? 0.6 : 0.1,
+    });
+    const handleWidth = Math.max(0.08, Math.min(spec.widthM * 0.55, 0.28));
+    const handleHeight = spec.handleType === "Cava" ? 0.012 : 0.024;
+    const handleDepth = spec.handleType === "Cava" ? 0.006 : 0.026;
+    const handle = panelFactory.createPanel(
+      handleWidth,
+      handleHeight,
+      handleDepth,
+      `drawer-handle-${spec.id}`,
+      "front",
+      { singleMaterial: handleMaterial }
+    );
+    const yBase =
+      spec.handlePosition === "Topo"
+        ? spec.heightM / 2 - handleHeight * 1.5
+        : spec.handlePosition === "Inferior"
+          ? -spec.heightM / 2 + handleHeight * 1.5
+          : 0;
+    handle.position.set(0, yBase + (spec.handleOffsetM ?? 0), spec.frontThicknessM / 2 + handleDepth / 2);
+    handle.userData.drawerLayerId = spec.id;
+    handle.userData.drawerPart = "handle";
+    drawerGroup.add(handle);
+  }
+
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
-    const bodyOffsetZ = -(spec.bodyDepthM / 2 + spec.frontThicknessM);
-    if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
+    const bodyOffsetZ = -(spec.frontThicknessM / 2 + spec.bodyDepthM / 2);
+    if (spec.metalBoxType && spec.metalBoxType !== "Nenhuma") {
+      const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.75 });
+      const metalThicknessM = 0.012;
+      const sideHeightM = Math.max(0.04, spec.bodyHeightM);
+      const leftMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-left-${spec.id}`, "left", { singleMaterial: metalMaterial });
+      leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, 0, bodyOffsetZ);
+      leftMetal.userData.drawerPart = "metal-box";
+      leftMetal.userData.drawerLayerId = spec.id;
+      drawerGroup.add(leftMetal);
+      const rightMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-right-${spec.id}`, "right", { singleMaterial: metalMaterial });
+      rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, 0, bodyOffsetZ);
+      rightMetal.userData.drawerPart = "metal-box";
+      rightMetal.userData.drawerLayerId = spec.id;
+      drawerGroup.add(rightMetal);
+      const backMetal = panelFactory.createPanel(spec.bodyWidthM, sideHeightM, metalThicknessM, `drawer-metal-back-${spec.id}`, "back", { singleMaterial: metalMaterial });
+      backMetal.position.set(0, 0, -spec.frontThicknessM / 2 - spec.bodyDepthM + metalThicknessM / 2);
+      backMetal.userData.drawerPart = "metal-box";
+      backMetal.userData.drawerLayerId = spec.id;
+      drawerGroup.add(backMetal);
+      const bottomMetal = panelFactory.createPanel(spec.bodyWidthM, metalThicknessM, spec.bodyDepthM, `drawer-metal-bottom-${spec.id}`, "bottom", { singleMaterial: metalMaterial });
+      bottomMetal.position.set(0, -sideHeightM / 2 + metalThicknessM / 2, bodyOffsetZ);
+      bottomMetal.userData.drawerPart = "metal-box";
+      bottomMetal.userData.drawerLayerId = spec.id;
+      drawerGroup.add(bottomMetal);
+    } else if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
       const leftSide = panelFactory.createPanel(spec.leftSideWidthM, spec.leftSideHeightM, spec.leftSideDepthM, `drawer-left-${spec.id}`, "left", { singleMaterial: material });
       leftSide.position.set(
         Number.isFinite(spec.leftSidePosX) ? (spec.leftSidePosX as number) : -spec.bodyWidthM / 2 + spec.leftSideWidthM / 2,

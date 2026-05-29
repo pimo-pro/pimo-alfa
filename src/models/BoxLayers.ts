@@ -1,4 +1,5 @@
 export type LayerOpenDirection = "left" | "right" | "up" | "down" | "pull";
+import type { DrawerHandlePosition, DrawerHandleType, DrawerMetalBoxType, DrawerSlideType } from "../core/settings/settingsSchema";
 
 /**
  * Modelo unificado de porta (fonte de verdade para estado e UI).
@@ -31,6 +32,14 @@ export interface DrawerLayerItem {
   type?: "normal" | "pro";
   drawerType?: "normal" | "pro";
   sideMaterial?: "wood" | "aluminum";
+  handleType?: DrawerHandleType;
+  handlePosition?: DrawerHandlePosition;
+  handleOffsetMm?: number;
+  slideType?: DrawerSlideType;
+  metalBoxType?: DrawerMetalBoxType;
+  softClose?: boolean;
+  capacityKg?: 30 | 40 | 50 | 70;
+  drawerWarnings?: string[];
   bottomThickness?: number;
   sideThickness?: number;
   backThickness?: number;

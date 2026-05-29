@@ -11,7 +11,7 @@
  */
 
 // Core types
-export type { DrawerDimensions, DrawerPieceSpec, DrawerCalculatedSpecs } from "./DrawerParametrics";
+export type { DrawerDimensions, DrawerPieceSpec, DrawerCalculatedSpecs, DrawerParametricSettings } from "./DrawerParametrics";
 export type { DrawerPiece, Drawer } from "./Drawer";
 export type { DrawerGroup } from "./DrawerGroup";
 export type { DrawerGenerationConfig } from "./DrawerGenerationService";

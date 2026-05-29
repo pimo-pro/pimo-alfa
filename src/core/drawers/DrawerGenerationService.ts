@@ -10,6 +10,7 @@ import {
   calculateDrawerSpecs,
   validateDrawerSpecs,
   type DrawerDimensions,
+  type DrawerParametricSettings,
 } from "./DrawerParametrics";
 import { createDrawer, type Drawer } from "./Drawer";
 import {
@@ -34,6 +35,7 @@ export interface DrawerGenerationConfig {
   
   // Available depths (from settings)
   availableDepths: number[];
+  drawerSettings?: Partial<DrawerParametricSettings>;
   
   // Material
   materialId?: string;
@@ -62,6 +64,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     heightMode,
     customHeights,
     availableDepths,
+    drawerSettings,
     materialId,
     originX,
     originY,
@@ -101,7 +104,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       type: drawerType,
     };
 
-    const specs = calculateDrawerSpecs(dims, availableDepths);
+    const specs = calculateDrawerSpecs(dims, availableDepths, drawerSettings);
 
     // Valida specs
     if (!validateDrawerSpecs(specs)) {
@@ -109,7 +112,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     }
 
     // Cria gaveta
-    // Posição Z: frente flush no plano frontal do box
+    // Posicao Z: centro da frente overlay fora da face frontal da caixa.
     const drawer = createDrawer(
       `drawer-${boxId}-${i}`,
       boxId,
@@ -117,7 +120,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       {
         x: originX ?? 0,
         y: (originY ?? 0) + posY,
-        z: boxDepth / 2 - specs.front.thickness,
+        z: boxDepth / 2 + specs.front.thickness / 2,
       },
       drawerType
     );
@@ -163,6 +166,7 @@ export function regenerateDrawerGroup(
     heightMode: config.heightMode ?? existingGroup.heightMode,
     customHeights: config.customHeights ?? existingGroup.customHeights,
     availableDepths: config.availableDepths ?? [250, 300, 350, 400, 450, 500, 550, 600],
+    drawerSettings: config.drawerSettings,
     materialId: config.materialId ?? existingGroup.drawers[0]?.materialId,
   };
 

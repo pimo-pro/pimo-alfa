@@ -853,30 +853,195 @@ export default function SystemSettingsBase() {
         </div>
       </Panel>
 
-      <Panel title="Gavetas" description="Parâmetros de construção e distribuição de alturas.">
+      <Panel title="Regras das Gavetas (Drawer Rules)" description="Parâmetros profissionais de construção, ferragens, handles e validações.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <NumberField
-            label="Base gaveta normal (mm)"
-            value={draft.gavetas.gavetaNormalBaseEspessuraMm}
+            label="Folga da frente (mm)"
+            value={draft.gavetas.gavetaFolgaFrenteMm}
             step={0.1}
             onChange={(value) =>
-              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaNormalBaseEspessuraMm: value } }))
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaFolgaFrenteMm: value } }))
             }
           />
           <NumberField
-            label="Base gaveta PRO (mm)"
-            value={draft.gavetas.gavetaProBaseEspessuraMm}
-            step={0.1}
-            onChange={(value) =>
-              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaProBaseEspessuraMm: value } }))
-            }
-          />
-          <NumberField
-            label="Folga lateral (mm)"
+            label="Folga lateral corredica (mm)"
             value={draft.gavetas.gavetaFolgaLateralMm}
             step={0.1}
             onChange={(value) =>
               setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaFolgaLateralMm: value } }))
+            }
+          />
+          <NumberField
+            label="Espessura frente (mm)"
+            value={draft.gavetas.gavetaEspessuraFrenteMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaEspessuraFrenteMm: value } }))
+            }
+          />
+          <NumberField
+            label="Espessura laterais (mm)"
+            value={draft.gavetas.gavetaEspessuraLateralMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaEspessuraLateralMm: value } }))
+            }
+          />
+          <NumberField
+            label="Espessura traseira (mm)"
+            value={draft.gavetas.gavetaEspessuraTraseiraMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaEspessuraTraseiraMm: value } }))
+            }
+          />
+          <NumberField
+            label="Espessura fundo (mm)"
+            value={draft.gavetas.gavetaEspessuraFundoMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaEspessuraFundoMm: value } }))
+            }
+          />
+          <NumberField
+            label="Recuo altura corpo (mm)"
+            value={draft.gavetas.gavetaRecuoCorpoMm}
+            step={0.1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaRecuoCorpoMm: value } }))
+            }
+          />
+          <NumberField
+            label="Altura mínima (mm)"
+            value={draft.gavetas.gavetaAlturaMinimaMm}
+            step={1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaAlturaMinimaMm: value } }))
+            }
+          />
+          <NumberField
+            label="Altura máxima (mm)"
+            value={draft.gavetas.gavetaAlturaMaximaMm}
+            step={1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaAlturaMaximaMm: value } }))
+            }
+          />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tipo de corrediça</span>
+            <select
+              className="input"
+              value={draft.gavetas.gavetaTipoCorredica}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaTipoCorredica: e.target.value as SettingsSchema["gavetas"]["gavetaTipoCorredica"] },
+                }))
+              }
+            >
+              {["Blum Tandem", "Blum Movento", "Hettich InnoTech", "Hettich ArciTech", "Hafele Matrix", "Genérica"].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={draft.gavetas.gavetaSoftClose}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaSoftClose: e.target.checked } }))
+              }
+            />
+            Soft-close
+          </label>
+          <NumberField
+            label="Curso total override (mm)"
+            value={draft.gavetas.gavetaCursoTotalMm}
+            step={1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaCursoTotalMm: value } }))
+            }
+          />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Capacidade carga (kg)</span>
+            <select
+              className="input"
+              value={draft.gavetas.gavetaCapacidadeCargaKg}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaCapacidadeCargaKg: Number(e.target.value) as 30 | 40 | 50 | 70 },
+                }))
+              }
+            >
+              {[30, 40, 50, 70].map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tipo caixa metálica</span>
+            <select
+              className="input"
+              value={draft.gavetas.gavetaTipoCaixaMetalica}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaTipoCaixaMetalica: e.target.value as SettingsSchema["gavetas"]["gavetaTipoCaixaMetalica"] },
+                }))
+              }
+            >
+              {["Nenhuma", "Blum Legrabox", "Blum Antaro", "Hettich AvanTech", "Hafele Alto", "Genérica"].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <NumberField
+            label="Altura caixa metálica (mm)"
+            value={draft.gavetas.gavetaAlturaCaixaMetalicaMm}
+            step={1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaAlturaCaixaMetalicaMm: value } }))
+            }
+          />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tipo handle</span>
+            <select
+              className="input"
+              value={draft.gavetas.gavetaTipoHandle}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaTipoHandle: e.target.value as SettingsSchema["gavetas"]["gavetaTipoHandle"] },
+                }))
+              }
+            >
+              {["Nenhum", "Puxador", "Cava", "Perfil Alumínio"].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Posição handle</span>
+            <select
+              className="input"
+              value={draft.gavetas.gavetaPosicaoHandle}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaPosicaoHandle: e.target.value as SettingsSchema["gavetas"]["gavetaPosicaoHandle"] },
+                }))
+              }
+            >
+              {["Centro", "Topo", "Inferior"].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <NumberField
+            label="Offset handle (mm)"
+            value={draft.gavetas.gavetaOffsetHandleMm}
+            step={1}
+            onChange={(value) =>
+              setDraft((prev) => ({ ...prev, gavetas: { ...prev.gavetas, gavetaOffsetHandleMm: value } }))
             }
           />
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -897,6 +1062,44 @@ export default function SystemSettingsBase() {
               placeholder="250, 300, 350, 400"
             />
           </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Profundidades compatíveis (mm)</span>
+            <input
+              className="input"
+              value={draft.gavetas.gavetaProfundidadesCompativeisMm.join(", ")}
+              onChange={(e) => {
+                const values = e.target.value
+                  .split(",")
+                  .map((item) => Number(item.trim()))
+                  .filter((item) => Number.isFinite(item) && item > 0);
+                setDraft((prev) => ({
+                  ...prev,
+                  gavetas: { ...prev.gavetas, gavetaProfundidadesCompativeisMm: values },
+                }));
+              }}
+              placeholder="300, 350, 400, 450"
+            />
+          </label>
+          {[
+            ["Validar alturas custom", "gavetaValidarAlturasCustom"],
+            ["Validar profundidade compatível", "gavetaValidarProfundidadeCompativel"],
+            ["Validar carga máxima", "gavetaValidarCargaMaxima"],
+            ["Validar soft-close compatível", "gavetaValidarSoftCloseCompativel"],
+          ].map(([label, key]) => (
+            <label key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+              <input
+                type="checkbox"
+                checked={Boolean(draft.gavetas[key as keyof SettingsSchema["gavetas"]])}
+                onChange={(e) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    gavetas: { ...prev.gavetas, [key]: e.target.checked },
+                  }))
+                }
+              />
+              {label}
+            </label>
+          ))}
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Modo de altura</span>
             <select

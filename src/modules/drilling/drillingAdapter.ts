@@ -56,6 +56,11 @@ export type PanelDrillingInput = {
   portaTipo?: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
   /** Tamanho de doorsLayer no módulo (número de folhas/itens). */
   doorsLayerCount?: number;
+  handleType?: string;
+  handlePosition?: "Centro" | "Topo" | "Inferior";
+  handleOffsetMm?: number;
+  slideType?: string;
+  metalBoxType?: string;
 };
 
 export type PanelDrillingOutput = {
@@ -359,6 +364,11 @@ export function buildPanelDrillingResult(
         largura: input.larguraMm,
         altura: input.alturaMm,
         espessura: input.espessuraMm,
+        handleType: input.handleType,
+        handlePosition: input.handlePosition,
+        handleOffsetMm: input.handleOffsetMm,
+        slideType: input.slideType,
+        metalBoxType: input.metalBoxType,
         shelfHolesEnabled,
         hingeSide: input.hingeSide,
         hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,

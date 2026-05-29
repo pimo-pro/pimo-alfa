@@ -59,6 +59,7 @@ export const applyDrawerTypeRules = (
     heightMode: "equal",
     customHeights: [drawer.height],
     availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+    drawerSettings,
     materialId: drawer.materialId,
   };
 
@@ -235,6 +236,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
           heightMode: mode,
           customHeights,
           availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+          drawerSettings,
           materialId: defaultDrawerMaterial,
         };
       }
@@ -257,6 +259,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
         drawerType,
         heightMode: "equal", // regra obrigatória: 3 gavetas, distribuídas uniformemente
         availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+        drawerSettings,
         materialId: defaultDrawerMaterial,
         originX: layout.drawerOriginXLocal_mm ?? 0,
         originY: layout.drawerOriginYLocal_mm ?? 0,
@@ -339,6 +342,7 @@ export function createManualDrawer(box: WorkspaceBox): DrawerLayerItem {
     drawerType,
     heightMode: mode,
     availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
+    drawerSettings,
     materialId: defaultDrawerMaterial,
   };
 

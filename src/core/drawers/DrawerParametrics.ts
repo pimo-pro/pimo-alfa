@@ -1,14 +1,21 @@
 /**
- * DrawerParametrics - REESCRITO PARA MARCENARIA REAL
- * 
- * Calcula dimensões reais de gavetas fabricáveis:
- * - Frente: cobre abertura (larguraInterna - 2mm)
- * - Corpo: espaço para corrediças (larguraInterna - 14mm)
- * - Laterais: encostadas no corpo
- * - Fundo: entra 5mm em todas as peças
- * - Traseira: 10mm mais curta (fundo passa por baixo)
+ * DrawerParametrics
+ *
+ * Calcula dimensoes reais para o sistema europeu de gavetas:
+ * - Frente overlay externa, fora da caixa.
+ * - Corpo atras da frente, com folgas para corredicas.
+ * - Laterais/traseira 70 mm mais baixas que a frente.
+ * - Profundidade nominal escolhida a partir de settings.gavetas.
  */
 
+import {
+  settingsDefaults,
+  type DrawerHandlePosition,
+  type DrawerHandleType,
+  type DrawerMetalBoxType,
+  type DrawerSlideType,
+  type SettingsSchema,
+} from "../settings/settingsSchema";
 import { devLogger } from "../../utils/devLogger";
 
 export interface DrawerDimensions {
@@ -61,6 +68,30 @@ export interface DrawerCalculatedSpecs {
     bodyOffsetZ: number;       // Centro do corpo
     pullDistance: number;      // Distância máxima de abertura
   };
+
+  slide: {
+    type: DrawerSlideType;
+    softClose: boolean;
+    capacityKg: 30 | 40 | 50 | 70;
+    cursoTotalMm: number;
+  };
+
+  metalBox: {
+    type: DrawerMetalBoxType;
+    enabled: boolean;
+    height: number;
+    compatibleDepths: number[];
+  };
+
+  handle: {
+    type: DrawerHandleType;
+    position: DrawerHandlePosition;
+    offsetMm: number;
+  };
+
+  validation: {
+    warnings: string[];
+  };
   
   // Gaps/folgas
   gaps: {
@@ -74,30 +105,77 @@ export interface DrawerCalculatedSpecs {
   };
 }
 
-/**
- * CONSTANTES DE MARCENARIA REAL
- * Baseadas em padrões globais de fabricação de gavetas
- */
+export type DrawerParametricSettings = SettingsSchema["gavetas"];
 
-// Folgas externas (entre gaveta e box)
-const FRONT_GAP_MM = 1;                    // Folga da frente (1mm cada lado)
-const SIDE_GAP_MM = 7;                     // Folga lateral para corrediças (7mm cada lado)
+const DRAWER_RUNNER_CLEARANCE_MM = 20;
+const MIN_MM = 1;
+const SOFT_CLOSE_COMPATIBLE_SLIDES = new Set<DrawerSlideType>([
+  "Blum Tandem",
+  "Blum Movento",
+  "Hettich InnoTech",
+  "Hettich ArciTech",
+  "Hafele Matrix",
+]);
 
-// Espessuras de peças
-const FRONT_THICKNESS_MM = 19;             // Espessura da frente
-const SIDE_THICKNESS_MM = 15;              // Espessura das laterais (madeira)
-const BOTTOM_THICKNESS_MM = 10;            // Espessura do fundo
-const BACK_THICKNESS_MM = 15;              // Espessura da traseira
+function clampMm(value: number, min = MIN_MM): number {
+  return Math.max(min, Number.isFinite(value) ? value : min);
+}
 
-// Reduções do corpo em relação à gaveta total
-const BODY_HEIGHT_REDUCTION_MM = 6;        // Corpo menor que altura disponível
-const BODY_DEPTH_REDUCTION_MM = 30;        // Corpo menor que profundidade (espaço corrediças)
-const BACK_HEIGHT_REDUCTION_MM = 10;       // Traseira mais curta (fundo passa por baixo)
+function normalizePositiveNumber(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
-// Encaixes do fundo (marcenaria real)
-const BOTTOM_SLOT_INTO_FRONT_MM = 5;       // Fundo entra 5mm na frente
-const BOTTOM_SLOT_INTO_SIDES_MM = 5;       // Fundo entra 5mm em cada lateral
-const BOTTOM_SLOT_INTO_BACK_MM = 5;        // Fundo entra 5mm sob a traseira
+function normalizeDepths(depths: unknown, fallback: number[]): number[] {
+  const parsed = Array.isArray(depths)
+    ? depths
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+        .sort((a, b) => a - b)
+    : [];
+  return parsed.length > 0 ? parsed : fallback;
+}
+
+function resolveDrawerSettings(
+  settings?: Partial<DrawerParametricSettings>,
+  availableDepths?: number[]
+): DrawerParametricSettings {
+  const defaults = settingsDefaults.gavetas;
+  return {
+    ...defaults,
+    ...settings,
+    gavetaFolgaFrenteMm: normalizePositiveNumber(settings?.gavetaFolgaFrenteMm, defaults.gavetaFolgaFrenteMm),
+    gavetaFolgaLateralMm: normalizePositiveNumber(settings?.gavetaFolgaLateralMm, defaults.gavetaFolgaLateralMm),
+    gavetaEspessuraFrenteMm: normalizePositiveNumber(settings?.gavetaEspessuraFrenteMm, defaults.gavetaEspessuraFrenteMm),
+    gavetaEspessuraLateralMm: normalizePositiveNumber(settings?.gavetaEspessuraLateralMm, defaults.gavetaEspessuraLateralMm),
+    gavetaEspessuraTraseiraMm: normalizePositiveNumber(settings?.gavetaEspessuraTraseiraMm, defaults.gavetaEspessuraTraseiraMm),
+    gavetaEspessuraFundoMm: normalizePositiveNumber(settings?.gavetaEspessuraFundoMm, defaults.gavetaEspessuraFundoMm),
+    gavetaRecuoCorpoMm: normalizePositiveNumber(settings?.gavetaRecuoCorpoMm, defaults.gavetaRecuoCorpoMm),
+    gavetaProfundidadesDisponiveisMm: normalizeDepths(
+      settings?.gavetaProfundidadesDisponiveisMm ?? availableDepths,
+      defaults.gavetaProfundidadesDisponiveisMm
+    ),
+    gavetaAlturaModoPadrao:
+      settings?.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || settings?.gavetaAlturaModoPadrao === "custom"
+        ? settings.gavetaAlturaModoPadrao
+        : "equal",
+  };
+}
+
+function chooseNominalDepth(boxInternalDepth: number, availableDepths: number[]): number {
+  const sorted = normalizeDepths(availableDepths, settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm);
+  const fitting = sorted.filter((depth) => depth <= boxInternalDepth);
+  return fitting.length > 0 ? fitting[fitting.length - 1] : sorted[0];
+}
+
+function resolveSlideCourse(settings: DrawerParametricSettings, bodyDepth: number): number {
+  const override = Number(settings.gavetaCursoTotalMm);
+  if (Number.isFinite(override) && override > 0) return Math.min(override, bodyDepth);
+  if (settings.gavetaTipoCorredica === "Blum Tandem" || settings.gavetaTipoCorredica === "Blum Movento") {
+    return bodyDepth;
+  }
+  return bodyDepth;
+}
 
 /**
  * Calcula todas as dimensões de uma gaveta
@@ -105,66 +183,83 @@ const BOTTOM_SLOT_INTO_BACK_MM = 5;        // Fundo entra 5mm sob a traseira
  */
 export function calculateDrawerSpecs(
   dimensions: DrawerDimensions,
-  _availableDepths: number[]
+  availableDepths: number[],
+  drawerSettings?: Partial<DrawerParametricSettings>
 ): DrawerCalculatedSpecs {
   const {
     boxInternalWidth,
     boxInternalDepth,
     drawerHeight,
-    type: _type,
+    type,
   } = dimensions;
+  const settings = resolveDrawerSettings(drawerSettings, availableDepths);
+  const frontGap = settings.gavetaFolgaFrenteMm;
+  const sideGap = settings.gavetaFolgaLateralMm;
+  const frontThickness = settings.gavetaEspessuraFrenteMm;
+  const sideThickness = settings.gavetaEspessuraLateralMm;
+  const bottomThickness = settings.gavetaEspessuraFundoMm;
+  const backThickness = settings.gavetaEspessuraTraseiraMm;
+  const bodyRecess = settings.gavetaRecuoCorpoMm;
+  const availableDepthRules = settings.gavetaValidarProfundidadeCompativel
+    ? settings.gavetaProfundidadesCompativeisMm
+    : settings.gavetaProfundidadesDisponiveisMm;
+  const nominalDepth = chooseNominalDepth(boxInternalDepth, availableDepthRules);
+  const metalBoxEnabled = settings.gavetaTipoCaixaMetalica !== "Nenhuma" || type === "pro";
+  const metalBoxType = metalBoxEnabled
+    ? settings.gavetaTipoCaixaMetalica !== "Nenhuma"
+      ? settings.gavetaTipoCaixaMetalica
+      : "Genérica"
+    : "Nenhuma";
+  const warnings: string[] = [];
 
   // ===== FRENTE =====
-  // Frente cobre a abertura com folga mínima (1mm cada lado)
-  // Fica FLUSH com o box, colada ao corpo
-  const frontWidth = Math.max(1, boxInternalWidth - (2 * FRONT_GAP_MM));
-  const frontHeight = Math.max(1, drawerHeight - (2 * FRONT_GAP_MM));
-  const frontThickness = FRONT_THICKNESS_MM;
+  // Frente overlay externa, com folga perimetral configuravel.
+  const frontWidth = clampMm(boxInternalWidth - (2 * frontGap));
+  const frontHeight = clampMm(drawerHeight - (2 * frontGap));
 
   // ===== CORPO =====
-  // Corpo menor que a frente:
-  // - largura: -14mm (7mm cada lado para corrediças)
-  // - altura: -4mm (respiro/folga vertical)
-  // - profundidade: -30mm (espaço para corrediças traseiras)
-  const bodyWidth = Math.max(1, boxInternalWidth - (2 * SIDE_GAP_MM));
-  const bodyHeight = Math.max(1, drawerHeight - BODY_HEIGHT_REDUCTION_MM);
-  const bodyDepth = Math.max(1, boxInternalDepth - BODY_DEPTH_REDUCTION_MM);
+  // Padrao europeu: corpo com folga lateral, profundidade nominal e altura 70 mm abaixo da frente.
+  const bodyWidth = clampMm(boxInternalWidth - (2 * sideGap));
+  const bodyHeight = clampMm(frontHeight - bodyRecess);
+  const bodyDepth = clampMm(nominalDepth - DRAWER_RUNNER_CLEARANCE_MM);
+  const woodBodyHeight = metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0
+    ? settings.gavetaAlturaCaixaMetalicaMm
+    : bodyHeight;
 
   // ===== LATERAIS =====
-  // A frente cobre a abertura com folga de 1mm de cada lado
-  // Laterais têm a altura do corpo e profundidade do corpo
-  // Espessura fixa de 15mm (madeira)
-  const sideThickness = SIDE_THICKNESS_MM;
-  const leftSideWidth = sideThickness;
-  const leftSideHeight = bodyHeight;
-  const leftSideDepth = bodyDepth;
+  const leftSideWidth = metalBoxEnabled ? 0 : sideThickness;
+  const leftSideHeight = metalBoxEnabled ? 0 : bodyHeight;
+  const leftSideDepth = metalBoxEnabled ? 0 : bodyDepth;
 
-  const rightSideWidth = sideThickness;
-  const rightSideHeight = bodyHeight;
-  const rightSideDepth = bodyDepth;
+  const rightSideWidth = metalBoxEnabled ? 0 : sideThickness;
+  const rightSideHeight = metalBoxEnabled ? 0 : bodyHeight;
+  const rightSideDepth = metalBoxEnabled ? 0 : bodyDepth;
 
   // ===== TRASEIRA =====
-  // Traseira tem largura do corpo, mas é 10mm mais curta
-  // (o fundo passa por baixo e é parafusado)
-  const backWidth = bodyWidth;
-  const backHeight = Math.max(1, bodyHeight - BACK_HEIGHT_REDUCTION_MM);
-  const backThickness = BACK_THICKNESS_MM;
+  const backWidth = metalBoxEnabled ? 0 : clampMm(bodyWidth - (2 * sideThickness));
+  const backHeight = metalBoxEnabled ? 0 : bodyHeight;
 
   // ===== FUNDO =====
-  // Fundo entra 5mm em todas as outras peças (encaixe real de marcenaria)
-  const bottomThickness = BOTTOM_THICKNESS_MM;
-  // Largura: entre as laterais (corpo - 10mm, 5mm cada lado)
-  const bottomWidth = Math.max(1, bodyWidth - (2 * BOTTOM_SLOT_INTO_SIDES_MM));
-  // Profundidade: da frente até a traseira (corpo - 10mm)
-  const bottomDepth = Math.max(
-    1,
-    bodyDepth - BOTTOM_SLOT_INTO_FRONT_MM - BOTTOM_SLOT_INTO_BACK_MM
-  );
+  const bottomWidth = metalBoxEnabled ? 0 : backWidth;
+  const bottomDepth = metalBoxEnabled ? 0 : bodyDepth;
 
   // ===== POSICIONAMENTO =====
-  const frontOffsetZ = frontThickness / 2;
-  const bodyOffsetZ = 0;
-  const pullDistance = bodyDepth;
+  const frontOffsetZ = 0;
+  const bodyOffsetZ = -(frontThickness / 2 + bodyDepth / 2);
+  const pullDistance = resolveSlideCourse(settings, bodyDepth);
+
+  if (frontHeight < settings.gavetaAlturaMinimaMm) {
+    warnings.push(`Altura da frente abaixo do minimo (${settings.gavetaAlturaMinimaMm}mm).`);
+  }
+  if (frontHeight > settings.gavetaAlturaMaximaMm) {
+    warnings.push(`Altura da frente acima do maximo (${settings.gavetaAlturaMaximaMm}mm).`);
+  }
+  if (settings.gavetaValidarSoftCloseCompativel && settings.gavetaSoftClose && !SOFT_CLOSE_COMPATIBLE_SLIDES.has(settings.gavetaTipoCorredica)) {
+    warnings.push(`Soft-close nao validado para ${settings.gavetaTipoCorredica}.`);
+  }
+  if (metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0 && frontHeight < settings.gavetaAlturaCaixaMetalicaMm) {
+    warnings.push(`Frente abaixo da altura da caixa metalica (${settings.gavetaAlturaCaixaMetalicaMm}mm).`);
+  }
 
   return {
     front: {
@@ -175,7 +270,7 @@ export function calculateDrawerSpecs(
     },
     body: {
       width: bodyWidth,
-      height: bodyHeight,
+      height: woodBodyHeight,
       depth: bodyDepth,
     },
     leftSide: {
@@ -205,13 +300,33 @@ export function calculateDrawerSpecs(
       bodyOffsetZ,
       pullDistance,
     },
+    slide: {
+      type: settings.gavetaTipoCorredica,
+      softClose: settings.gavetaSoftClose,
+      capacityKg: settings.gavetaCapacidadeCargaKg,
+      cursoTotalMm: pullDistance,
+    },
+    metalBox: {
+      type: metalBoxType,
+      enabled: metalBoxEnabled,
+      height: settings.gavetaAlturaCaixaMetalicaMm,
+      compatibleDepths: settings.gavetaProfundidadesCompativeisMm,
+    },
+    handle: {
+      type: settings.gavetaTipoHandle,
+      position: settings.gavetaPosicaoHandle,
+      offsetMm: settings.gavetaOffsetHandleMm,
+    },
+    validation: {
+      warnings,
+    },
     gaps: {
-      frontGap: FRONT_GAP_MM,
-      sideGap: SIDE_GAP_MM,
+      frontGap,
+      sideGap,
       bottomSlots: {
-        front: BOTTOM_SLOT_INTO_FRONT_MM,
-        sides: BOTTOM_SLOT_INTO_SIDES_MM,
-        back: BOTTOM_SLOT_INTO_BACK_MM,
+        front: 0,
+        sides: 0,
+        back: 0,
       },
     },
   };
@@ -227,11 +342,13 @@ export function validateDrawerSpecs(specs: DrawerCalculatedSpecs): boolean {
     return false;
   }
 
-  // Diferença deve ser exatamente 12mm (6mm cada lado)
-  const widthDiff = specs.front.width - specs.body.width;
-  const expectedDiff = (FRONT_GAP_MM + SIDE_GAP_MM) * 2;
-  if (Math.abs(widthDiff - expectedDiff) > 0.1) {
-    devLogger.warn(`DrawerParametrics: diferença incorreta (${widthDiff}mm, esperado ${expectedDiff}mm)`);
+  if (specs.body.depth <= 0 || specs.positioning.pullDistance > specs.body.depth) {
+    devLogger.warn("DrawerParametrics: curso de abertura invalido");
+    return false;
+  }
+
+  if (!specs.metalBox.enabled && (specs.leftSide.width <= 0 || specs.back.thickness <= 0 || specs.bottom.thickness <= 0)) {
+    devLogger.warn("DrawerParametrics: espessuras invalidas");
     return false;
   }
 

@@ -37,6 +37,11 @@ type PieceInput = {
   largura: number;
   altura: number;
   espessura: number;
+  handleType?: string;
+  handlePosition?: "Centro" | "Topo" | "Inferior";
+  handleOffsetMm?: number;
+  slideType?: string;
+  metalBoxType?: string;
   /** Se false, desativa explicitamente os furos de prateleira para a peça. */
   shelfHolesEnabled?: boolean;
   hingeSide?: "left" | "right" | "top" | "bottom";
@@ -279,23 +284,53 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   }
 }
 
-/** Furos de corrediça de gaveta: apenas nas laterais de gaveta, não nas laterais do módulo. */
+/** Furos de corredica de gaveta: laterais, frente e traseira da gaveta europeia. */
 function calcCorredica(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.corredica) return;
   const cfg = rules.furos.tecnicos.corredica;
   if (!cfg.enabled) return;
   const isDrawerSide =
     piece.tipo === "gaveta_lat_esq" || piece.tipo === "gaveta_lat_dir" || piece.tipo === "gaveta";
-  if (!isDrawerSide) return;
-  const face =
-    piece.tipo === "gaveta_lat_esq" ? "direita" : piece.tipo === "gaveta_lat_dir" ? "esquerda" : "frente";
-  const y = (cfg.alturaRelativaFundo ?? 37) + (cfg.offsetVerticalAdicional ?? 0);
-  const xFront = cfg.offsetFrente ?? 37;
-  const xBack = piece.largura - (cfg.offsetFundo ?? 37);
+  const isDrawerFrontOrBack = piece.tipo === "gaveta_frente" || piece.tipo === "gaveta_traseira";
+  if (!isDrawerSide && !isDrawerFrontOrBack) return;
+  const face: DrillFace =
+    piece.tipo === "gaveta_lat_esq"
+      ? "direita"
+      : piece.tipo === "gaveta_lat_dir"
+        ? "esquerda"
+        : piece.tipo === "gaveta_frente"
+          ? "tras"
+          : piece.tipo === "gaveta_traseira"
+            ? "frente"
+            : "frente";
+  const alturaCorredica = (cfg.alturaRelativaFundo ?? 37) + (cfg.offsetVerticalAdicional ?? 0);
+  const y = piece.altura - alturaCorredica;
+  const slideFrontOffset =
+    piece.slideType === "Blum Tandem" || piece.slideType === "Blum Movento" ? 37 : cfg.offsetFrente ?? 37;
+  const slideBackOffset =
+    piece.slideType === "Blum Tandem" || piece.slideType === "Blum Movento" ? 37 : cfg.offsetFundo ?? 37;
+  const xFront = slideFrontOffset;
+  const xBack = piece.largura - slideBackOffset;
   const diametro = cfg.diametro ?? 5;
   const profundidade = cfg.profundidade ?? 10;
   pushHole(out, piece, xFront, y, diametro, profundidade, "corredica", face);
   pushHole(out, piece, xBack, y, diametro, profundidade, "corredica", face);
+}
+
+function calcHandle(piece: PieceInput, out: TechnicalDrillHole[]) {
+  if (piece.tipo !== "gaveta_frente") return;
+  if (piece.handleType !== "Puxador") return;
+  const yBase =
+    piece.handlePosition === "Topo"
+      ? 40
+      : piece.handlePosition === "Inferior"
+        ? piece.altura - 40
+        : piece.altura / 2;
+  const y = clamp(yBase + (piece.handleOffsetMm ?? 0), 20, Math.max(20, piece.altura - 20));
+  const center = piece.largura / 2;
+  const halfDistance = 80 / 2;
+  pushHole(out, piece, center - halfDistance, y, 5, Math.min(12, piece.espessura), "parafuso", "tras");
+  pushHole(out, piece, center + halfDistance, y, 5, Math.min(12, piece.espessura), "parafuso", "tras");
 }
 
 /**
@@ -438,6 +473,7 @@ export function calculateTechnicalDrillingsForPiece(
     calcParafuso(piece, rules, out);
     calcDobradica(piece, rules, out);
     calcCorredica(piece, rules, out);
+    calcHandle(piece, out);
     calcPrateleira32mm(piece, rules, out);
     calcDobradicaFixacao(piece, rules, out);
   } catch (err) {

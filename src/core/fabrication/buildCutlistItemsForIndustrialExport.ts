@@ -24,6 +24,8 @@ export function buildCutlistItemsForIndustrialExport(
     projectName = "Projeto",
     extractedPartsByBoxId = {},
   } = snap;
+  // buildGlobalQrCutlistMerged usa cutlistComPrecoFromBox, que integra drawersLayer
+  // via drawerCutlistAdapter; gavetas nao dependem do modelo industrial legado.
   const merged = buildGlobalQrCutlistMerged(
     boxes,
     rules,

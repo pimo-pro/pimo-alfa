@@ -21,6 +21,32 @@ export function drawerLayerItemToCutList(
   const pieces: CutListItem[] = [];
   
   const baseId = `${item.parentBoxId}-drawer-${drawerIndex}`;
+  const hasMetalBox = item.metalBoxType != null && item.metalBoxType !== "Nenhuma";
+  const drawerHardware = [
+    {
+      tipo: "corredica",
+      nome: item.slideType ?? "Genérica",
+      quantidade: 1,
+      softClose: Boolean(item.softClose),
+      capacidadeCargaKg: item.capacityKg ?? 40,
+    },
+    ...(hasMetalBox
+      ? [{
+          tipo: "caixa_metalica",
+          nome: item.metalBoxType,
+          quantidade: 1,
+        }]
+      : []),
+    ...(item.handleType && item.handleType !== "Nenhum"
+      ? [{
+          tipo: "handle",
+          nome: item.handleType,
+          posicao: item.handlePosition ?? "Centro",
+          offsetMm: item.handleOffsetMm ?? 0,
+          quantidade: 1,
+        }]
+      : []),
+  ];
   
   // FRENTE
   pieces.push({
@@ -39,18 +65,31 @@ export function drawerLayerItemToCutList(
     boxId: item.parentBoxId,
     materialId: item.materialId,
     grainDirection: "horizontal",
+    metadata: {
+      drawerHardware,
+      drawerRules: {
+        slideType: item.slideType ?? "Genérica",
+        softClose: Boolean(item.softClose),
+        metalBoxType: item.metalBoxType ?? "Nenhuma",
+        handleType: item.handleType ?? "Nenhum",
+        handlePosition: item.handlePosition ?? "Centro",
+        handleOffsetMm: item.handleOffsetMm ?? 0,
+      },
+    },
   });
+
+  if (hasMetalBox) return pieces;
   
-  // LATERAL ESQUERDA (apenas se tipo "normal")
-  if (item.drawerType === "normal" && item.leftSideWidth && item.leftSideWidth > 0) {
+  // LATERAL ESQUERDA
+  if (item.leftSideWidth && item.leftSideWidth > 0) {
     pieces.push({
       id: `${baseId}-left`,
       nome: `Gaveta ${drawerIndex + 1} - Lateral Esquerda`,
       quantidade: 1,
       dimensoes: {
-        largura: item.leftSideWidth,
+        largura: item.leftSideDepth ?? 0,
         altura: item.leftSideHeight ?? 0,
-        profundidade: item.leftSideDepth ?? 0,
+        profundidade: item.leftSideWidth,
       },
       espessura: item.leftSideWidth,
       material: materialType,
@@ -62,16 +101,16 @@ export function drawerLayerItemToCutList(
     });
   }
   
-  // LATERAL DIREITA (apenas se tipo "normal")
-  if (item.drawerType === "normal" && item.rightSideWidth && item.rightSideWidth > 0) {
+  // LATERAL DIREITA
+  if (item.rightSideWidth && item.rightSideWidth > 0) {
     pieces.push({
       id: `${baseId}-right`,
       nome: `Gaveta ${drawerIndex + 1} - Lateral Direita`,
       quantidade: 1,
       dimensoes: {
-        largura: item.rightSideWidth,
+        largura: item.rightSideDepth ?? 0,
         altura: item.rightSideHeight ?? 0,
-        profundidade: item.rightSideDepth ?? 0,
+        profundidade: item.rightSideWidth,
       },
       espessura: item.rightSideWidth,
       material: materialType,
@@ -83,16 +122,16 @@ export function drawerLayerItemToCutList(
     });
   }
   
-  // FUNDO (apenas se tipo "normal")
-  if (item.drawerType === "normal" && item.bottomThickness && item.bottomThickness > 0) {
+  // FUNDO
+  if (item.bottomThickness && item.bottomThickness > 0) {
     pieces.push({
       id: `${baseId}-bottom`,
       nome: `Gaveta ${drawerIndex + 1} - Fundo`,
       quantidade: 1,
       dimensoes: {
         largura: item.bottomWidth ?? 0,
-        altura: item.bottomThickness,
-        profundidade: item.bottomDepth ?? 0,
+        altura: item.bottomDepth ?? 0,
+        profundidade: item.bottomThickness,
       },
       espessura: item.bottomThickness,
       material: materialType,
@@ -105,23 +144,25 @@ export function drawerLayerItemToCutList(
   }
   
   // TRASEIRA
-  pieces.push({
-    id: `${baseId}-back`,
-    nome: `Gaveta ${drawerIndex + 1} - Traseira`,
-    quantidade: 1,
-    dimensoes: {
-      largura: item.backWidth ?? 0,
-      altura: item.backHeight ?? 0,
-      profundidade: item.backThickness ?? 0,
-    },
-    espessura: item.backThickness ?? 0,
-    material: materialType,
-    tipo: "gaveta_traseira",
-    sourceType: "parametric",
-    boxId: item.parentBoxId,
-    materialId: item.materialId,
-    grainDirection: "horizontal",
-  });
+  if (item.backThickness && item.backThickness > 0) {
+    pieces.push({
+      id: `${baseId}-back`,
+      nome: `Gaveta ${drawerIndex + 1} - Traseira`,
+      quantidade: 1,
+      dimensoes: {
+        largura: item.backWidth ?? 0,
+        altura: item.backHeight ?? 0,
+        profundidade: item.backThickness ?? 0,
+      },
+      espessura: item.backThickness ?? 0,
+      material: materialType,
+      tipo: "gaveta_traseira",
+      sourceType: "parametric",
+      boxId: item.parentBoxId,
+      materialId: item.materialId,
+      grainDirection: "horizontal",
+    });
+  }
   
   return pieces;
 }

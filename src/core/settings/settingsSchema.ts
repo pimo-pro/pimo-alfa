@@ -12,6 +12,25 @@ import {
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 export const SETTINGS_SCHEMA_VERSION = 2;
 
+export type DrawerSlideType =
+  | "Blum Tandem"
+  | "Blum Movento"
+  | "Hettich InnoTech"
+  | "Hettich ArciTech"
+  | "Hafele Matrix"
+  | "Genérica";
+
+export type DrawerMetalBoxType =
+  | "Nenhuma"
+  | "Blum Legrabox"
+  | "Blum Antaro"
+  | "Hettich AvanTech"
+  | "Hafele Alto"
+  | "Genérica";
+
+export type DrawerHandleType = "Nenhum" | "Puxador" | "Cava" | "Perfil Alumínio";
+export type DrawerHandlePosition = "Centro" | "Topo" | "Inferior";
+
 export interface SettingsSchema {
   schemaVersion: number;
   geral: {
@@ -78,10 +97,30 @@ export interface SettingsSchema {
     portaPosZOffsetMm: number;
   };
   gavetas: {
-    gavetaNormalBaseEspessuraMm: number;
-    gavetaProBaseEspessuraMm: number;
+    gavetaFolgaFrenteMm: number;
     gavetaFolgaLateralMm: number;
+    gavetaEspessuraFrenteMm: number;
+    gavetaEspessuraLateralMm: number;
+    gavetaEspessuraTraseiraMm: number;
+    gavetaEspessuraFundoMm: number;
+    gavetaRecuoCorpoMm: number;
     gavetaProfundidadesDisponiveisMm: number[];
+    gavetaAlturaMinimaMm: number;
+    gavetaAlturaMaximaMm: number;
+    gavetaTipoCorredica: DrawerSlideType;
+    gavetaSoftClose: boolean;
+    gavetaCursoTotalMm: number;
+    gavetaCapacidadeCargaKg: 30 | 40 | 50 | 70;
+    gavetaTipoCaixaMetalica: DrawerMetalBoxType;
+    gavetaAlturaCaixaMetalicaMm: number;
+    gavetaProfundidadesCompativeisMm: number[];
+    gavetaTipoHandle: DrawerHandleType;
+    gavetaPosicaoHandle: DrawerHandlePosition;
+    gavetaOffsetHandleMm: number;
+    gavetaValidarAlturasCustom: boolean;
+    gavetaValidarProfundidadeCompativel: boolean;
+    gavetaValidarCargaMaxima: boolean;
+    gavetaValidarSoftCloseCompativel: boolean;
     gavetaAlturaModoPadrao: "equal" | "top_small_mid_medium_bottom_large" | "custom";
   };
   modeloPI: {
@@ -237,10 +276,30 @@ export const settingsDefaults: SettingsSchema = {
     portaPosZOffsetMm: 9,
   },
   gavetas: {
-    gavetaNormalBaseEspessuraMm: 10,
-    gavetaProBaseEspessuraMm: 0,
+    gavetaFolgaFrenteMm: 1,
     gavetaFolgaLateralMm: 7,
+    gavetaEspessuraFrenteMm: 19,
+    gavetaEspessuraLateralMm: 16,
+    gavetaEspessuraTraseiraMm: 16,
+    gavetaEspessuraFundoMm: 10,
+    gavetaRecuoCorpoMm: 70,
     gavetaProfundidadesDisponiveisMm: [250, 300, 350, 400, 450, 500, 550, 600],
+    gavetaAlturaMinimaMm: 80,
+    gavetaAlturaMaximaMm: 350,
+    gavetaTipoCorredica: "Genérica",
+    gavetaSoftClose: true,
+    gavetaCursoTotalMm: 0,
+    gavetaCapacidadeCargaKg: 40,
+    gavetaTipoCaixaMetalica: "Nenhuma",
+    gavetaAlturaCaixaMetalicaMm: 0,
+    gavetaProfundidadesCompativeisMm: [300, 350, 400, 450, 500, 550],
+    gavetaTipoHandle: "Nenhum",
+    gavetaPosicaoHandle: "Centro",
+    gavetaOffsetHandleMm: 0,
+    gavetaValidarAlturasCustom: true,
+    gavetaValidarProfundidadeCompativel: true,
+    gavetaValidarCargaMaxima: true,
+    gavetaValidarSoftCloseCompativel: true,
     gavetaAlturaModoPadrao: "equal",
   },
   modeloPI: {

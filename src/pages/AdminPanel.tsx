@@ -11,6 +11,7 @@ import DeployAdminPage from "../components/admin/DeployAdminPage";
 import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage";
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
+import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
 import EtiquetaDesignerPage from "../components/admin/EtiquetaDesignerPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
@@ -32,6 +33,7 @@ type AdminTab =
   | "Project Progress"
   | "Painel Referência"
   | "System Settings"
+  | "Regras das Gavetas"
   | "Etiqueta / QR N"
   | "Projetos Salvos"
   | "icons";
@@ -58,6 +60,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Gestor de Ficheiros", label: "Gestor de Ficheiros" },
   { type: "item", id: "Deploy", label: "Deploy", badge: "Experimental" },
   { type: "item", id: "System Settings", label: "System Settings" },
+  { type: "item", id: "Regras das Gavetas", label: "Regras das Gavetas" },
   { type: "item", id: "Etiqueta / QR N", label: "Etiqueta / QR N" },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
@@ -78,6 +81,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Gestor de Ficheiros": "adminArchive",
   "Deploy": "adminLab",
   "System Settings": "adminTools",
+  "Regras das Gavetas": "adminRuler",
   "Etiqueta / QR N": "adminTag",
   "Projetos Salvos": "adminSave",
   "Project Progress": "adminChart",
@@ -266,6 +270,8 @@ export default function AdminPanel() {
             <DeployAdminPage />
           ) : active === "System Settings" ? (
             <SystemSettingsBase />
+          ) : active === "Regras das Gavetas" ? (
+            <DrawerRulesAdminPage />
           ) : active === "Project Progress" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <ProjectProgress />

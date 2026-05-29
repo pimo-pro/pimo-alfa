@@ -1,9 +1,7 @@
 import { calcularProjeto } from "../core/calculator/woodCalculator";
 import { buildFerragens } from "../core/ferragens/ferragens";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
-import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../modules/drilling/drillingAdapter";
 import {
-  calcularPrecoCutList,
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
 } from "../core/pricing/pricing";
@@ -32,7 +30,6 @@ import { loadProfiles } from "../core/rules/rulesProfilesStorage";
 import { defaultRulesConfig, normalizeRulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { regenerateLayersForBox } from "../services/boxLayersService";
-import { extractDrawerCutlistFromLayerItems } from "../services/drawerCutlistAdapter";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
@@ -414,37 +411,10 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
     };
   }
 
-  // Pipeline moderno: cutlistFromBoxes é a única fonte de peças paramétricas (modelo FINAL).
-  const parametricFromBox = cutlistComPrecoFromBox(box, prev.rules, prev.materialId);
-  const hasDrawers = (box.drawersLayer?.length ?? 0) > 0;
-  const parametricFiltered = hasDrawers
-    ? parametricFromBox.filter((item) => item.tipo !== "gaveta_frente" && item.tipo !== "gaveta")
-    : parametricFromBox;
-
-  const drawerCutlist = hasDrawers
-    ? extractDrawerCutlistFromLayerItems(box.drawersLayer!, prev.material.tipo)
-    : [];
-  const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
-  const effRules = buildEffectiveDrillingRules(prev.rules);
-  const drawerWithHoles = drawerCutlist.map((item) => {
-    const result = buildPanelDrillingResult(
-      {
-        tipo: item.tipo,
-        larguraMm: item.dimensoes.largura,
-        alturaMm: item.dimensoes.altura,
-        espessuraMm: item.espessura,
-        hasShelves,
-        hasDrawers,
-      },
-      effRules
-    );
-    const drillHoles =
-      result.success && result.data?.drillHoles?.length ? result.data.drillHoles : [];
-    return { ...item, drillHoles };
-  });
-
-  const combinedCutList = [...parametricFiltered, ...drawerWithHoles];
-  const cutListComPreco = calcularPrecoCutList(combinedCutList);
+  // Pipeline moderno: cutlistFromBoxes e a unica fonte de pecas parametricas,
+  // incluindo gavetas geradas a partir de drawersLayer.
+  const cutListComPreco = cutlistComPrecoFromBox(box, prev.rules, prev.materialId);
+  const combinedCutList = cutListComPreco;
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
   const ferragensBase = buildFerragens(box.prateleiras, box.portaTipo, box.gavetas);
   const ferragens =
