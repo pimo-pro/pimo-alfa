@@ -1659,7 +1659,7 @@ export class ViewerCore {
         textura: materialName,
       });
     }
-    this.applyPanelIdsToBox(boxGroup, boxId);
+    this.applyPanelIdsToBox(boxGroup, boxId, undefined, entry.materialName ?? this.defaultMaterialName);
     this.applyPanelVisibilityForObject(boxGroup);
     if (import.meta.env.DEV) {
       let newMeshUuid: string | null = null;
@@ -2122,8 +2122,13 @@ export class ViewerCore {
     return this.panelVisibility.getExplodedViewIntensity();
   }
 
-  private applyPanelIdsToBox(root: THREE.Object3D, boxId: string, panelIds?: Partial<BoxPanelIds> | null): void {
-    this.panelVisibility.applyPanelIdsToBox(root, boxId, panelIds);
+  private applyPanelIdsToBox(
+    root: THREE.Object3D,
+    boxId: string,
+    panelIds?: Partial<BoxPanelIds> | null,
+    materialPresetId?: string
+  ): void {
+    this.panelVisibility.applyPanelIdsToBox(root, boxId, panelIds, materialPresetId);
   }
 
   private applyPanelVisibilityForObject(root: THREE.Object3D): void {
@@ -2156,6 +2161,14 @@ export class ViewerCore {
 
   setAllPanelsHidden(hidden: boolean): void {
     this.panelVisibility.setAllPanelsHidden(hidden);
+  }
+
+  setPanelRenderingEnabled(enabled: boolean): void {
+    this.panelVisibility.setPanelRenderingEnabled(enabled);
+  }
+
+  getPanelRenderingEnabled(): boolean {
+    return this.panelVisibility.getPanelRenderingEnabled();
   }
 
   setRoomCeilingVisible(visible: boolean): void {
@@ -2305,7 +2318,7 @@ export class ViewerCore {
       this.syncFeetVisualForBox(createdEntry);
     }
     this.sceneManager.add(box);
-    this.applyPanelIdsToBox(box, id, opts.panelIds);
+    this.applyPanelIdsToBox(box, id, opts.panelIds, materialName);
     this.applyPanelVisibilityForObject(box);
     this.applyExplodedViewForObject(box);
     this.syncOrlaForBox(id);
@@ -2619,7 +2632,12 @@ export class ViewerCore {
       y: opts.rotationY,
       z: opts.rotationZ,
     });
-    this.applyPanelIdsToBox(entry.mesh, id, opts.panelIds);
+    this.applyPanelIdsToBox(
+      entry.mesh,
+      id,
+      opts.panelIds,
+      opts.materialName ?? entry.materialName ?? this.defaultMaterialName
+    );
     this.applyExplodedViewForObject(entry.mesh);
     if (opts.costaRotationY !== undefined) {
       (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =

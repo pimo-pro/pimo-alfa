@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { OrlaPreset, OrlaSideId, PieceOrlaConfig } from "../../../core/orla/orlaTypes";
 import { findOrlaPreset } from "../../../core/orla/orlaPresets";
+import { loadTextureAsync } from "../materials/textureCache";
 
 export type OrlaVisualPieceConfig = {
   pieceId: string;
@@ -21,6 +22,8 @@ export type OrlaVisualBridge = {
 const ORLA_SURFACE_OFFSET_M = 0.0001;
 const ORLA_MIN_DIMENSION_M = 0.0001;
 const ORLA_DEFAULT_OPACITY = 0.98;
+const ORLA_PROFILE_HEIGHT_M = 0.023;
+const ORLA_PROFILE_DEPTH_M = 0.008;
 
 type OrlaSurfaceDef = {
   side: OrlaSideId;
@@ -35,7 +38,7 @@ type OrlaSurfaceDef = {
 /**
  * Visualização de Orla V1 por Surface Overlay.
  *
- * Cada orla é um mesh independente aplicado sobre a face da aresta,
+ * Cada orla é um mesh independente aplicado apenas sobre a aresta,
  * sem alterar medidas reais da peça/box. O mesh acompanha a peça porque
  * é filho direto do painel correspondente.
  */
@@ -130,45 +133,46 @@ export class OrlaVisualizer {
     bb.getSize(size);
     const cx = (bb.min.x + bb.max.x) / 2;
     const cy = (bb.min.y + bb.max.y) / 2;
-    const cz = (bb.min.z + bb.max.z) / 2;
     const t = ORLA_SURFACE_OFFSET_M;
+    const profileHeight = Math.min(ORLA_PROFILE_HEIGHT_M, Math.max(ORLA_MIN_DIMENSION_M, size.y));
+    const profileDepth = Math.min(ORLA_PROFILE_DEPTH_M, Math.max(ORLA_MIN_DIMENSION_M, size.z));
 
     return [
       {
         side: "front",
         width: size.x,
-        height: size.y,
+        height: profileHeight,
         depth: t,
         x: cx,
-        y: cy,
+        y: bb.max.y - profileHeight / 2,
         z: bb.max.z + t / 2,
       },
       {
         side: "back",
         width: size.x,
-        height: size.y,
+        height: profileHeight,
         depth: t,
         x: cx,
-        y: cy,
+        y: bb.max.y - profileHeight / 2,
         z: bb.min.z - t / 2,
       },
       {
         side: "left",
         width: t,
         height: size.y,
-        depth: size.z,
+        depth: profileDepth,
         x: bb.min.x - t / 2,
         y: cy,
-        z: cz,
+        z: bb.max.z - profileDepth / 2,
       },
       {
         side: "right",
         width: t,
         height: size.y,
-        depth: size.z,
+        depth: profileDepth,
         x: bb.max.x + t / 2,
         y: cy,
-        z: cz,
+        z: bb.max.z - profileDepth / 2,
       },
     ];
   }
@@ -221,7 +225,7 @@ export class OrlaVisualizer {
   }
 
   private createMaterial(preset: OrlaPreset): THREE.MeshBasicMaterial {
-    return new THREE.MeshBasicMaterial({
+    const material = new THREE.MeshBasicMaterial({
       color: new THREE.Color(preset.cor),
       transparent: true,
       opacity: ORLA_DEFAULT_OPACITY,
@@ -231,6 +235,19 @@ export class OrlaVisualizer {
       polygonOffsetFactor: -4,
       polygonOffsetUnits: -4,
     });
+
+    if (preset.texturaUrl && preset.texturaUrl.trim().length > 0) {
+      void loadTextureAsync(preset.texturaUrl.trim()).then((texture) => {
+        if (!texture) return;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(1, 1);
+        material.map = texture;
+        material.needsUpdate = true;
+      });
+    }
+
+    return material;
   }
 
   private applySurfaceMetadata(

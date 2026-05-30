@@ -16,6 +16,7 @@ import { Icon } from "@/components/icons";
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  onOpenNestingV3?: () => void;
 };
 
 const iconSlot: CSSProperties = {
@@ -95,7 +96,7 @@ function ExportRow({
   );
 }
 
-export default function UnifiedExportBubble({ isOpen, onClose }: Props) {
+export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }: Props) {
   const { project, actions } = useProject();
   const sendPackage = useSendProjectPackage();
   const {
@@ -284,6 +285,12 @@ export default function UnifiedExportBubble({ isOpen, onClose }: Props) {
                   onClick={wrap(onLayoutCortePro)}
                   disabled={!hasBoxes}
                   icon={<Icon name="blueprint" size={18} aria-hidden />}
+                />
+                <ExportRow
+                  label="Layout de Corte MANUAL (Nesting V3)"
+                  onClick={() => { onClose(); onOpenNestingV3?.(); }}
+                  disabled={!hasBoxes || !onOpenNestingV3}
+                  icon={<Icon name="grid" size={18} aria-hidden />}
                 />
                 <ExportRow label="arquivos cnc" onClick={wrap(onArquivosCnc)} disabled={!hasBoxes} />
               </div>

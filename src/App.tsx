@@ -52,6 +52,7 @@ const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
 const V4Page = lazy(() => import("./pages/V4Page"));
+const NestingV3Page = lazy(() => import("./nesting-v3/NestingV3Page"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
@@ -98,6 +99,7 @@ function LegacyApp() {
   const [showDevTest, setShowDevTest] = useState(false);
   const [showAjuda, setShowAjuda] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
+  const [showNestingV3, setShowNestingV3] = useState(false);
   const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
 
@@ -197,6 +199,25 @@ function LegacyApp() {
     setShowPainelReferencia(false);
   };
 
+  const navigateToNestingV3 = () => {
+    setShowNestingV3(true);
+    setShowAjuda(false);
+    setShowLanding(false);
+    setShowSystemDocs(false);
+    setShowAdmin(false);
+    setShowProjectProgress(false);
+    setShowPainelReferencia(false);
+    setShowUserProjects(false);
+  };
+
+  // Listen for Nesting V3 open event (dispatched from UnifiedTopToolbar)
+  useEffect(() => {
+    const handler = () => navigateToNestingV3();
+    window.addEventListener("pimo:open-nesting-v3", handler);
+    return () => window.removeEventListener("pimo:open-nesting-v3", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <ProjectProvider>
       <WorkspaceUndoRedoRegistryProvider>
@@ -211,7 +232,7 @@ function LegacyApp() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showLanding || showUserProjects ? (
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showLanding || showNestingV3 || showUserProjects ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
@@ -227,6 +248,8 @@ function LegacyApp() {
                 <Ajuda />
               ) : showLanding ? (
                 <LandingPage />
+              ) : showNestingV3 ? (
+                <NestingV3Page onClose={() => setShowNestingV3(false)} />
               ) : showUserProjects ? (
                 <UserProjectsPage />
               ) : (

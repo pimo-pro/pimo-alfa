@@ -164,6 +164,8 @@ declare global {
       getGlossIntensity?: () => number;
       setMatteMode?: (enabled: boolean) => void;
       getMatteMode?: () => boolean;
+      setPanelRenderingEnabled?: (enabled: boolean) => void;
+      getPanelRenderingEnabled?: () => boolean;
       display?: {
         shadowIntensity: number;
       };

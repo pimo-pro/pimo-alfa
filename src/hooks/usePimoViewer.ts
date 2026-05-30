@@ -9,6 +9,7 @@ import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 /** Nomes de métodos do viewerCore que devem ser expostos na API (override dos stubs). */
 const VIEWER_CORE_SETTING_METHODS = [
   "setPanelEdgesVisible", "setAllPanelsHidden", "setHiddenPanels", "setPanelHidden",
+  "setPanelRenderingEnabled", "getPanelRenderingEnabled",
   "setRoomCeilingVisible", "setWallEditMode", "setMousePreset", "setBackgroundMode",
   "getBackgroundMode",
   "setMaterialQuality", "setReflectionsEnabled",
@@ -67,6 +68,8 @@ const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   setAllPanelsHidden: () => {},
   setHiddenPanels: () => {},
   setPanelHidden: () => {},
+  setPanelRenderingEnabled: () => {},
+  getPanelRenderingEnabled: () => false,
   setRoomCeilingVisible: () => {},
   setWallEditMode: () => {},
   setMousePreset: () => {},

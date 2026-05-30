@@ -69,6 +69,8 @@ export type ViewerSettings = {
   glossIntensity: number;
   /** Modo fosco: remove brilho, env e clearcoat independentemente do slider. */
   matteMode: boolean;
+  /** Panel Rendering 2.0: evidencia peças individuais já renderizadas como meshes separados. */
+  panelRenderingEnabled: boolean;
 };
 
 /**

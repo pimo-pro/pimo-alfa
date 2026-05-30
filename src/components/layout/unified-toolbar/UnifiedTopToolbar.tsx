@@ -128,6 +128,7 @@ export default function UnifiedTopToolbar({
   const selectedBox = selectedBoxId ? project.workspaceBoxes.find((b) => b.id === selectedBoxId) : undefined;
   const isPieceLocked = selectedBox?.locked === true;
   const enabledTools: Tool3DId[] = isPieceLocked ? ["select"] : ["select", "move", "rotate"];
+  const panelRenderingEnabled = project.viewerSettings.panelRenderingEnabled === true;
 
   const [rotationMenuOpen, setRotationMenuOpen] = useState(false);
   const showRotationMenu = activeTool === "rotate" && rotationMenuOpen;
@@ -346,6 +347,37 @@ export default function UnifiedTopToolbar({
             </div>
           );
         })}
+        <button
+          type="button"
+          title={panelRenderingEnabled ? "Ocultar peças individuais" : "Ver Peças"}
+          aria-label={panelRenderingEnabled ? "Ocultar peças individuais" : "Ver Peças"}
+          aria-pressed={panelRenderingEnabled}
+          onClick={() => actions.setViewerSettings({ panelRenderingEnabled: !panelRenderingEnabled })}
+          style={{
+            width: 44,
+            height: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "none",
+            borderRadius: 4,
+            background: panelRenderingEnabled ? "var(--toolbar-pressed-bg)" : "transparent",
+            color: "var(--text-main)",
+            fontSize: 11,
+            cursor: "pointer",
+            marginLeft: 3,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = panelRenderingEnabled
+              ? "var(--toolbar-pressed-bg)"
+              : "var(--viewer-toolbar-hover-bg)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = panelRenderingEnabled ? "var(--toolbar-pressed-bg)" : "transparent";
+          }}
+        >
+          Peças
+        </button>
         {TOOLS_3D_ITEMS.filter(
           (item) => item.id === "scale" || item.id === "orbit" || item.id === "pan"
         ).map((item) => {
@@ -783,7 +815,14 @@ export default function UnifiedTopToolbar({
         >
           Salvar e Gerar Design
         </button>
-        <UnifiedExportPanel isOpen={exportPanelOpen} onClose={() => setExportPanelOpen(false)} />
+        <UnifiedExportPanel
+          isOpen={exportPanelOpen}
+          onClose={() => setExportPanelOpen(false)}
+          onOpenNestingV3={() => {
+            setExportPanelOpen(false);
+            window.dispatchEvent(new CustomEvent("pimo:open-nesting-v3"));
+          }}
+        />
       </div>
     </div>
   );

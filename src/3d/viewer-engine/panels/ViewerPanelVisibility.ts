@@ -33,6 +33,7 @@ export class ViewerPanelVisibility {
   private hideAllPanels = false;
   private explodedViewEnabled = false;
   private explodedViewIntensity = 0.35;
+  private panelRenderingEnabled = false;
 
   private static readonly PANEL_THICKNESS_M = 0.019;
   private static readonly PANEL_BACK_THICKNESS_M = 0.01;
@@ -69,6 +70,15 @@ export class ViewerPanelVisibility {
     this.applyPanelVisibilityForAllBoxes();
   }
 
+  setPanelRenderingEnabled(enabled: boolean): void {
+    this.panelRenderingEnabled = Boolean(enabled);
+    this.applyPanelVisibilityForAllBoxes();
+  }
+
+  getPanelRenderingEnabled(): boolean {
+    return this.panelRenderingEnabled;
+  }
+
   setExplodedViewEnabled(enabled: boolean): void {
     this.explodedViewEnabled = Boolean(enabled);
     this.applyExplodedViewForAllBoxes();
@@ -93,7 +103,12 @@ export class ViewerPanelVisibility {
    * - root deve ser a raiz do box com meshes de painel/porta/gaveta/prateleira.
    * - boxId deve ser estável para manter chaves de visibilidade consistentes.
    */
-  applyPanelIdsToBox(root: THREE.Object3D, boxId: string, panelIds?: Partial<BoxPanelIds> | null): void {
+  applyPanelIdsToBox(
+    root: THREE.Object3D,
+    boxId: string,
+    panelIds?: Partial<BoxPanelIds> | null,
+    materialPresetId?: string
+  ): void {
     const panelIdByType: Partial<Record<PanelType, string | undefined>> = {
       left: panelIds?.lateral_esquerda,
       right: panelIds?.lateral_direita,
@@ -111,20 +126,35 @@ export class ViewerPanelVisibility {
       const panelType = node.userData?.panelType as PanelType | undefined;
       if (panelType) {
         const specificId = panelIdByType[panelType];
-        node.userData.panelId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
+        const pieceId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
+        node.userData.panelId = pieceId;
+        node.userData.pieceId = pieceId;
+        node.userData.isPanelMesh = true;
+        node.userData.materialPresetId = materialPresetId;
+        this.applyPanelDimensionMetadata(node, panelType);
         return;
       }
 
       const doorLayerId = node.userData?.doorLayerId as string | undefined;
       if (doorLayerId && doorLayerId.trim().length > 0) {
-        node.userData.panelId = `door:${doorLayerId}`;
+        const pieceId = `door:${doorLayerId}`;
+        node.userData.panelId = pieceId;
+        node.userData.pieceId = pieceId;
+        node.userData.isPanelMesh = true;
+        node.userData.materialPresetId = materialPresetId;
+        this.applyPanelDimensionMetadata(node, "front");
         return;
       }
 
       const drawerLayerId = node.userData?.drawerLayerId as string | undefined;
       const drawerPart = node.userData?.drawerPart as string | undefined;
       if (drawerLayerId && drawerLayerId.trim().length > 0) {
-        node.userData.panelId = `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
+        const pieceId = `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
+        node.userData.panelId = pieceId;
+        node.userData.pieceId = pieceId;
+        node.userData.isPanelMesh = true;
+        node.userData.materialPresetId = materialPresetId;
+        this.applyPanelDimensionMetadata(node, "front");
         return;
       }
 
@@ -136,9 +166,14 @@ export class ViewerPanelVisibility {
           : Number.NaN;
       if (Number.isFinite(shelfIndex)) {
         const indexedId = panelIds?.prateleiras?.[shelfIndex as number];
-        node.userData.panelId = indexedId && indexedId.trim().length > 0
+        const pieceId = indexedId && indexedId.trim().length > 0
           ? indexedId
           : `shelf:${boxId}:${shelfIndex}`;
+        node.userData.panelId = pieceId;
+        node.userData.pieceId = pieceId;
+        node.userData.isPanelMesh = true;
+        node.userData.materialPresetId = materialPresetId;
+        this.applyPanelDimensionMetadata(node, "top");
       }
     });
   }
@@ -168,8 +203,25 @@ export class ViewerPanelVisibility {
         (panelType != null && this.hiddenPanels.has(panelType)) ||
         (panelKey.length > 0 && this.hiddenPanels.has(panelKey));
       node.visible = !hidden;
-      this.ensurePanelEdges(node, this.panelEdgesVisible && !hidden);
+      this.ensurePanelEdges(node, (this.panelEdgesVisible || this.panelRenderingEnabled) && !hidden);
     });
+  }
+
+  private applyPanelDimensionMetadata(mesh: THREE.Mesh, panelType: PanelType | "front"): void {
+    mesh.geometry.computeBoundingBox();
+    const bb = mesh.geometry.boundingBox;
+    if (!bb) return;
+    const size = new THREE.Vector3();
+    bb.getSize(size);
+    const dims =
+      panelType === "left" || panelType === "right"
+        ? { width: size.z, height: size.y, thickness: size.x }
+        : panelType === "top" || panelType === "bottom"
+          ? { width: size.x, height: size.z, thickness: size.y }
+          : { width: size.x, height: size.y, thickness: size.z };
+    mesh.userData.width = dims.width;
+    mesh.userData.height = dims.height;
+    mesh.userData.thickness = dims.thickness;
   }
 
   applyPanelVisibilityForAllBoxes(): void {
