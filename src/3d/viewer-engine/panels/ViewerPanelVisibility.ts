@@ -201,9 +201,12 @@ export class ViewerPanelVisibility {
         node.userData?.doorLayerId != null ||
         node.userData?.drawerPart != null;
       if (!panelType && !isDoorOrDrawerOrShelf && !isRemate) return;
-      const panelKey = panelType
-        ? this.getPanelVisibilityKey(node, panelType)
-        : this.getAnyVisibilityKey(node) ?? "";
+      const remateId = node.userData?.remateId as string | undefined;
+      const panelKey = isRemate
+        ? (remateId?.trim() || (node.userData?.pieceId as string | undefined)?.trim() || "")
+        : panelType
+          ? this.getPanelVisibilityKey(node, panelType)
+          : this.getAnyVisibilityKey(node) ?? "";
       const hidden =
         this.hideAllPanels ||
         (panelType != null && this.hiddenPanels.has(panelType)) ||
@@ -211,6 +214,11 @@ export class ViewerPanelVisibility {
       node.visible = !hidden;
       this.applyPieceRenderOrder(node);
       this.ensurePanelEdges(node, (this.panelEdgesVisible || this.panelRenderingEnabled) && !hidden);
+      node.children.forEach((child) => {
+        if (child.userData?.isPanelEdgeOverlay === true) {
+          child.visible = (this.panelEdgesVisible || this.panelRenderingEnabled) && !hidden;
+        }
+      });
     });
   }
 
@@ -470,7 +478,7 @@ export class ViewerPanelVisibility {
 
     let order = 1;
     if (isStructural) order = 0;
-    else if (mesh.userData?.isRematePiece === true) order = 6;
+    else if (mesh.userData?.isRematePiece === true) order = 12;
     else if (minDim <= ViewerPanelVisibility.THIN_PIECE_THRESHOLD_M) order = 5;
     else if (mesh.userData?.doorLayerId != null || mesh.name?.startsWith("door-leaf-")) order = 4;
     else if (mesh.userData?.drawerPart != null || mesh.name?.startsWith("drawer-")) order = 3;
@@ -493,7 +501,11 @@ export class ViewerPanelVisibility {
     overlay.userData.parentPieceUuid = mesh.uuid;
     overlay.raycast = () => null;
     overlay.frustumCulled = false;
-    overlay.renderOrder = (mesh.renderOrder ?? 0) + ViewerPanelVisibility.EDGE_OVERLAY_RENDER_OFFSET;
+    const remateOutlineOrder = mesh.userData?.remateOutlineRenderOrder as number | undefined;
+    overlay.renderOrder =
+      remateOutlineOrder != null && Number.isFinite(remateOutlineOrder)
+        ? remateOutlineOrder
+        : (mesh.renderOrder ?? 0) + ViewerPanelVisibility.EDGE_OVERLAY_RENDER_OFFSET;
     mesh.add(overlay);
     overlay.visible = visible && !this.deps.getHighlightEnabled();
   }
@@ -592,6 +604,9 @@ export class ViewerPanelVisibility {
   private getAnyVisibilityKey(node: THREE.Object3D): string | null {
     const panelId = node.userData?.panelId as string | undefined;
     if (panelId && panelId.trim().length > 0) return panelId;
+
+    const remateId = node.userData?.remateId as string | undefined;
+    if (remateId && remateId.trim().length > 0) return remateId;
 
     const doorLayerId = node.userData?.doorLayerId as string | undefined;
     if (doorLayerId && doorLayerId.trim().length > 0) return `door:${doorLayerId}`;

@@ -227,7 +227,7 @@ export class ViewerCore {
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
   private onRemateTransform: ((
     _remateId: string,
-    _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+    _patch: import("../../core/remate/remateTypes").UpdateRemateInput
   ) => void) | null = null;
   private onHematiTransform: ((
     _hematiId: string,
@@ -3426,7 +3426,7 @@ export class ViewerCore {
     this.onBoxTransform = callback;
   }
 
-  setTransformMode(mode: "translate" | "rotate" | null): void {
+  setTransformMode(mode: "translate" | "rotate" | "scale" | null): void {
     this.viewerState.setCurrentTool(mode);
     this.refreshTransformControlsAttachment();
     this.applyTransformControlsMouseGuard();
@@ -4349,6 +4349,23 @@ export class ViewerCore {
     if (!boxId) return;
     const entry = this.boxes.get(boxId);
     if (!entry) return;
+
+    const tool = this.viewerState.getCurrentTool();
+    if (tool === "scale") {
+      mesh.geometry.computeBoundingBox();
+      const size = new THREE.Vector3();
+      mesh.geometry.boundingBox?.getSize(size);
+      const widthMm = Math.max(1, size.x * mesh.scale.x * 1000);
+      const heightMm = Math.max(1, size.y * mesh.scale.y * 1000);
+      const depthMm = Math.max(1, size.z * mesh.scale.z * 1000);
+      mesh.scale.set(1, 1, 1);
+      this.onRemateTransform?.(remateId, {
+        dimensions: { widthMm, heightMm, depthMm },
+        placementFree: true,
+      });
+      return;
+    }
+
     entry.mesh.updateMatrixWorld(true);
     const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
     const local = mesh.position.clone().applyMatrix4(inv);

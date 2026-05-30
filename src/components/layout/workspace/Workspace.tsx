@@ -522,7 +522,7 @@ export default function Workspace({
   const [mouseMenuPosition, setMouseMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [contextMenuLayerTarget, setContextMenuLayerTarget] = useState<MouseMenuTarget | null>(null);
   const handleToolSelect = useCallback((toolId: string) => {
-    if (toolId === "select" || toolId === "move" || toolId === "rotate") {
+    if (toolId === "select" || toolId === "move" || toolId === "rotate" || toolId === "scale") {
       actions.setActiveTool(toolId);
     }
   }, [actions]);
@@ -643,8 +643,20 @@ const hasShownViewerReadyToastRef = useRef(false);
     const buildRemateBoxConfig = (boxId: string) => {
       const dims = buildFinishBoxDims(boxId);
       if (!dims) return null;
+      const wsBox = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
       const remates = (projectRef.current.remates ?? []).filter((r) => r.parentBoxId === boxId);
-      return { ...dims, remates };
+      return {
+        ...dims,
+        remates,
+        box: wsBox
+          ? {
+              cabinetType: wsBox.cabinetType,
+              feetEnabled: wsBox.feetEnabled,
+              feetHeight: wsBox.feetHeight,
+              pe_cm: wsBox.pe_cm,
+            }
+          : undefined,
+      };
     };
 
     const buildHematiBoxConfig = (boxId: string) => {

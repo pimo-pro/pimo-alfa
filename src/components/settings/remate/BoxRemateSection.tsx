@@ -110,40 +110,49 @@ export default function BoxRemateSection({ boxId }: Props) {
                   </option>
                 ))}
               </select>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                <input
-                  className="input input-sm"
-                  type="number"
-                  title="Largura (mm)"
-                  value={remate.dimensions.widthMm}
-                  onChange={(e) =>
-                    actions.updateRemate(remate.id, {
-                      dimensions: { ...remate.dimensions, widthMm: Number(e.target.value) || 1 },
-                    })
-                  }
-                />
-                <input
-                  className="input input-sm"
-                  type="number"
-                  title="Altura (mm)"
-                  value={remate.dimensions.heightMm}
-                  onChange={(e) =>
-                    actions.updateRemate(remate.id, {
-                      dimensions: { ...remate.dimensions, heightMm: Number(e.target.value) || 1 },
-                    })
-                  }
-                />
-                <input
-                  className="input input-sm"
-                  type="number"
-                  title="Profundidade (mm)"
-                  value={remate.dimensions.depthMm}
-                  onChange={(e) =>
-                    actions.updateRemate(remate.id, {
-                      dimensions: { ...remate.dimensions, depthMm: Number(e.target.value) || 1 },
-                    })
-                  }
-                />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {(
+                  [
+                    { key: "widthMm" as const, label: "Largura (mm)", min: 1, max: 3000 },
+                    { key: "heightMm" as const, label: "Altura (mm)", min: 1, max: 3000 },
+                    { key: "depthMm" as const, label: "Profundidade (mm)", min: 1, max: 1200 },
+                  ] as const
+                ).map((field) => (
+                  <label key={field.key} style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 11 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{field.label}</span>
+                    <input
+                      className="input input-sm"
+                      type="number"
+                      min={field.min}
+                      max={field.max}
+                      value={remate.dimensions[field.key]}
+                      onChange={(e) =>
+                        actions.updateRemate(remate.id, {
+                          dimensions: {
+                            ...remate.dimensions,
+                            [field.key]: Math.max(field.min, Number(e.target.value) || field.min),
+                          },
+                        })
+                      }
+                    />
+                    <input
+                      type="range"
+                      min={field.min}
+                      max={field.max}
+                      step={1}
+                      value={Math.min(field.max, Math.max(field.min, remate.dimensions[field.key]))}
+                      onChange={(e) =>
+                        actions.updateRemate(remate.id, {
+                          dimensions: {
+                            ...remate.dimensions,
+                            [field.key]: Number(e.target.value),
+                          },
+                        })
+                      }
+                      style={{ width: "100%", accentColor: "var(--primary)" }}
+                    />
+                  </label>
+                ))}
               </div>
               <button type="button" className="btn btn-danger" onClick={() => actions.removeRemate(remate.id)}>
                 Remover peça

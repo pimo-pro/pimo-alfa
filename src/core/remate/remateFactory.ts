@@ -1,8 +1,8 @@
 import type { WorkspaceBox } from "../types";
+import { computeRemateDimensionsFromBox } from "./remateDimensions";
 import type { CreateRemateInput, ProjectRemate } from "./remateTypes";
 import { positionToFaceKind, RODAPE_MAX_LENGTH_MM } from "./remateTypes";
 
-const AVISTA_DEFAULT_MM = 100;
 const RODAPE_HEIGHT_MM = 150;
 
 const POSITION_SUFFIX: Record<string, string> = {
@@ -18,27 +18,16 @@ function normalizeBoxCode(box: WorkspaceBox): string {
 }
 
 function getDefaultDimensions(box: WorkspaceBox, input: CreateRemateInput, thicknessMm: number) {
-  const largura = Math.max(1, box.dimensoes?.largura ?? 1);
-  const altura = Math.max(1, box.dimensoes?.altura ?? 1);
-  const profundidade = Math.max(1, box.dimensoes?.profundidade ?? 1);
-
+  const dims = computeRemateDimensionsFromBox(box, input, thicknessMm);
   if (input.position === "rodape" || input.type === "rodape") {
+    const largura = Math.max(1, box.dimensoes?.largura ?? 1);
     return {
       widthMm: Math.min(RODAPE_MAX_LENGTH_MM, largura),
       heightMm: RODAPE_HEIGHT_MM,
       depthMm: thicknessMm,
     };
   }
-
-  if (input.position === "dir" || input.position === "esq") {
-    return input.type === "completo"
-      ? { widthMm: thicknessMm, heightMm: altura, depthMm: profundidade }
-      : { widthMm: thicknessMm, heightMm: altura, depthMm: AVISTA_DEFAULT_MM };
-  }
-
-  return input.type === "completo"
-    ? { widthMm: largura, heightMm: thicknessMm, depthMm: profundidade }
-    : { widthMm: largura, heightMm: thicknessMm, depthMm: AVISTA_DEFAULT_MM };
+  return dims;
 }
 
 export function createRematesForBox(params: {
@@ -55,8 +44,7 @@ export function createRematesForBox(params: {
 
   if (input.type === "L") {
     const largura = Math.max(1, box.dimensoes?.largura ?? 1);
-    const altura = Math.max(1, box.dimensoes?.altura ?? 1);
-    const legDepth = AVISTA_DEFAULT_MM;
+    const span = computeRemateDimensionsFromBox(box, input, thicknessMm);
     return ([1, 2] as const).map((part) => ({
       id: `${box.id}-remate-L${part}-${existingCount + part}`,
       parentBoxId: box.id,
@@ -68,8 +56,8 @@ export function createRematesForBox(params: {
       thicknessMm,
       dimensions:
         part === 1
-          ? { widthMm: thicknessMm, heightMm: altura, depthMm: legDepth }
-          : { widthMm: largura, heightMm: thicknessMm, depthMm: legDepth },
+          ? { widthMm: thicknessMm, heightMm: span.heightMm, depthMm: span.depthMm }
+          : { widthMm: largura, heightMm: thicknessMm, depthMm: span.depthMm },
       name: `${code}_REM_L${part}`,
       parentGroupId: groupId,
       partIndex: part,

@@ -1,3 +1,6 @@
+import { getRemateEnvelopeMm, type RemateBoxMeta } from "./remateDimensions";
+
+export type { RemateBoxMeta } from "./remateDimensions";
 import type { ProjectRemate, RematePosition, RemateType } from "./remateTypes";
 
 const AVISTA_DEPTH_MM = 100;
@@ -25,6 +28,29 @@ export function getStructuralBoundsM(widthM: number, heightM: number, depthM: nu
     maxY: halfH,
     minZ: -halfD,
     maxZ: halfD,
+    centerX: 0,
+    centerY: 0,
+    centerZ: 0,
+  };
+}
+
+/** Bounds estruturais expandidos com envelope de remate (alinhamento ao módulo real). */
+export function getRemateEnvelopeBoundsM(
+  widthM: number,
+  heightM: number,
+  depthM: number,
+  box: RemateBoxMeta | null
+): StructuralBoundsM {
+  const base = getStructuralBoundsM(widthM, heightM, depthM);
+  if (!box) return base;
+  const env = getRemateEnvelopeMm(box);
+  return {
+    minX: base.minX,
+    maxX: base.maxX,
+    minY: base.minY - env.belowMm / 1000,
+    maxY: base.maxY + env.aboveMm / 1000,
+    minZ: base.minZ - env.backMm / 1000,
+    maxZ: base.maxZ + env.frontMm / 1000,
     centerX: 0,
     centerY: 0,
     centerZ: 0,

@@ -77,7 +77,7 @@ const projectIconBubbleStyle = {
   boxSizing: "border-box" as const,
 };
 
-const PRIMARY_3D_IDS: Tool3DId[] = ["select", "move", "rotate"];
+const PRIMARY_3D_IDS: Tool3DId[] = ["select", "move", "rotate", "scale"];
 
 type UnifiedTopToolbarProps = {
   onNovo: () => void;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ModalPortal } from "../ui/ModalPortal";
 import { useProject } from "../../context/useProject";
 import type { SavedProjectInfo } from "../../context/projectTypes";
 import { useToast } from "../../context/ToastContext";
@@ -64,6 +65,7 @@ export default function ToolbarModals() {
   return (
     <>
       {modal && (
+        <ModalPortal>
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-card">
             <div className="modal-header">
@@ -191,6 +193,7 @@ export default function ToolbarModals() {
             ) : null}
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {showPiece3DModal && (

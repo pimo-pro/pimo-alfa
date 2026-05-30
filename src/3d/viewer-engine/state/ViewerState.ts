@@ -5,7 +5,7 @@
 
 import type { InternalSelectionState } from "../selection/internalSelectionTypes";
 
-export type TransformMode = "translate" | "rotate" | null;
+export type TransformMode = "translate" | "rotate" | "scale" | null;
 export type PlacementMode = "door" | "window" | null;
 export type ViewerRenderMode = "performance" | "showcase";
 

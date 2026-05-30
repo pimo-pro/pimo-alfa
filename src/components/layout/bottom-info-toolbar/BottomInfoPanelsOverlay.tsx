@@ -19,7 +19,7 @@ const overlayStyle: React.CSSProperties = {
   right: 0,
   top: 0,
   bottom: 0,
-  zIndex: 20,
+  zIndex: 50,
   display: "flex",
   flexDirection: "column",
   background: "rgba(5, 8, 22, 0.92)",

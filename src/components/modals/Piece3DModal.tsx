@@ -12,6 +12,7 @@ import { getMaterialPreset, defaultMaterialSet, mergeMaterialSet } from "../../3
 import { mmToM } from "../../utils/units";
 import type { ViewerDrillMarkersByPanel, WorkspaceBox } from "../../core/types";
 import { getViewerMaterialId } from "../../core/materials/service";
+import { ModalPortal } from "../ui/ModalPortal";
 
 type Piece3DModalProps = {
   box: WorkspaceBox | null;
@@ -134,6 +135,7 @@ export default function Piece3DModal({
   if (!box || !open) return null;
 
   return (
+    <ModalPortal>
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-card" style={{ maxWidth: 420 }}>
         <div className="modal-header">
@@ -157,5 +159,6 @@ export default function Piece3DModal({
         </p>
       </div>
     </div>
+    </ModalPortal>
   );
 }

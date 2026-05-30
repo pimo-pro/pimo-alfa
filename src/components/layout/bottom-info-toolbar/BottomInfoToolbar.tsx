@@ -137,7 +137,7 @@ const componentsSidePanelStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  zIndex: 45,
+  zIndex: 50,
 };
 
 const historyPanelStyle: React.CSSProperties = {
@@ -150,7 +150,7 @@ const historyPanelStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  zIndex: 46,
+  zIndex: 50,
 };
 
 const historyPanelHeaderStyle: React.CSSProperties = {
@@ -712,6 +712,7 @@ export default function BottomInfoToolbar() {
 
   const componentsSidePanel = (
     <aside
+      className="components-side-panel"
       aria-label="Painel lateral de peças e painéis"
       style={{
         ...componentsSidePanelStyle,
@@ -757,6 +758,7 @@ export default function BottomInfoToolbar() {
 
   const historyPanel = historyPanelPosition ? (
     <aside
+      className="history-side-panel"
       aria-label="Painel de histórico"
       style={{
         ...historyPanelStyle,

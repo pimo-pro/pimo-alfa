@@ -1,5 +1,7 @@
 // Modal de confirmação para criar novo projeto
 
+import { ModalPortal } from "../ui/ModalPortal";
+
 export type ConfirmNewProjectModalProps = {
   open: boolean;
   onSave: () => void;
@@ -10,6 +12,7 @@ export type ConfirmNewProjectModalProps = {
 export default function ConfirmNewProjectModal({ open, onSave, onDiscard, onCancel }: ConfirmNewProjectModalProps) {
   if (!open) return null;
   return (
+    <ModalPortal>
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-card" style={{ maxWidth: 420 }}>
         <div className="modal-header">
@@ -26,5 +29,6 @@ export default function ConfirmNewProjectModal({ open, onSave, onDiscard, onCanc
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

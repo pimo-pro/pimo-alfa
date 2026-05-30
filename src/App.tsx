@@ -279,7 +279,7 @@ function LegacyApp() {
                     }}
                   >
                     <div className="app-panels" style={{ flex: 1, minHeight: 0 }}>
-                      <div style={{ position: "relative", zIndex: 1 }}>
+                      <div style={{ position: "relative", zIndex: 20 }}>
                         <LeftToolbar
                           selectedId={leftPanelTab}
                           onSelect={(id) => {
@@ -301,7 +301,6 @@ function LegacyApp() {
                           overflow: "hidden",
                           transition: "width 0.2s ease",
                           position: "relative",
-                          zIndex: 1,
                         }}
                       >
                         <LeftPanel activeTab={leftPanelTab} />

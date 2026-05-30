@@ -10,9 +10,10 @@ import type {
 import type { PimoViewerApi } from "../../context/PimoViewerContextCore";
 
 /** Mapeia ViewerToolMode para setTransformMode do Viewer (select = sem gizmo). */
-function toolModeToTransformMode(mode: ViewerToolMode): "translate" | "rotate" | null {
+function toolModeToTransformMode(mode: ViewerToolMode): "translate" | "rotate" | "scale" | null {
   if (mode === "select") return null;
   if (mode === "move") return "translate";
+  if (mode === "scale") return "scale";
   return "rotate";
 }
 

@@ -1,4 +1,5 @@
 import type { MaterialOption } from "./materialOptions";
+import { ModalPortal } from "../../ui/ModalPortal";
 
 export type MaterialPickerModalProps = {
   materialsLoading: boolean;
@@ -14,6 +15,7 @@ export function MaterialPickerModal({
   onSelectMaterial,
 }: MaterialPickerModalProps) {
   return (
+    <ModalPortal>
     <div
       className="modal-overlay"
       role="dialog"
@@ -92,5 +94,6 @@ export function MaterialPickerModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

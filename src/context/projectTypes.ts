@@ -134,7 +134,7 @@ export interface ProjectState {
   precoTotalProjeto: number | null;
 
   /** Ferramenta 3D ativa no Viewer: select, move, rotate. Opcional para compatibilidade com snapshots antigos. */
-  activeViewerTool?: "select" | "move" | "rotate";
+  activeViewerTool?: "select" | "move" | "rotate" | "scale";
 
   /** Configurações visuais/controle do viewer (fase 3). */
   viewerSettings: ViewerSettings;
@@ -259,7 +259,7 @@ export type ViewerRenderResult = {
   height: number;
 };
 
-export type ViewerToolMode = "select" | "move" | "rotate";
+export type ViewerToolMode = "select" | "move" | "rotate" | "scale";
 
 export type RoomConfig = {
   numWalls: 3 | 4;
@@ -635,8 +635,8 @@ export interface ProjectActions {
   }) => void;
   /** Layout Generator 3.0 — I / L / U / Ilha (Auto-Room-Fill integrado). */
   runKitchenLayout30: () => void;
-  /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
-  setActiveTool: (_mode: "select" | "move" | "rotate") => void;
+  /** Define a ferramenta 3D ativa (select, move, rotate, scale) e aplica ao viewerApiAdapter. */
+  setActiveTool: (_mode: ViewerToolMode) => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */
   setViewerSettings: (_partial: Partial<ViewerSettings>) => void;
   /** Alterna highlight 3D (hover/click em elementos). */

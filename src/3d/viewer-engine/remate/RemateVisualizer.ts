@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import type { ProjectRemate } from "../../../core/remate/remateTypes";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
+import type { RemateBoxMeta } from "../../../core/remate/rematePlacement";
 import {
   computeRematePlacementLocal,
-  getStructuralBoundsM,
+  getRemateEnvelopeBoundsM,
 } from "../../../core/remate/rematePlacement";
 import {
   computeRemateVisualMergeGroups,
@@ -16,6 +17,8 @@ export type RemateVisualBoxConfig = {
   heightM: number;
   depthM: number;
   remates: ProjectRemate[];
+  /** Metadados do módulo para envelope e dimensões realistas. */
+  box?: RemateBoxMeta;
 };
 
 export type RemateVisualBridge = {
@@ -26,6 +29,7 @@ export type RemateVisualBridge = {
 };
 
 const REMATE_RENDER_ORDER = 12;
+const REMATE_OUTLINE_RENDER_ORDER = 13;
 
 export class RemateVisualizer {
   private bridge: RemateVisualBridge | null = null;
@@ -35,6 +39,7 @@ export class RemateVisualizer {
 
   constructor() {
     this.root.name = "remate-visual-root";
+    this.root.userData.isRemateVisualRoot = true;
   }
 
   getRoot(): THREE.Group {
@@ -201,6 +206,7 @@ export class RemateVisualizer {
     mesh.userData.remateFaceKind = remate.faceKind;
     mesh.userData.pieceId = remate.id;
     mesh.userData.panelType = "remate";
+    mesh.userData.remateOutlineRenderOrder = REMATE_OUTLINE_RENDER_ORDER;
     mesh.renderOrder = REMATE_RENDER_ORDER;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -223,7 +229,7 @@ export class RemateVisualizer {
   }
 
   private applyInitialPlacement(mesh: THREE.Mesh, remate: ProjectRemate, cfg: RemateVisualBoxConfig): void {
-    const bounds = getStructuralBoundsM(cfg.widthM, cfg.heightM, cfg.depthM);
+    const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
     const local = computeRematePlacementLocal(remate, bounds);
     const worldMatrix = this.bridge?.getBoxWorldMatrix(cfg.boxId);
     if (!worldMatrix) {

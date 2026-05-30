@@ -33,7 +33,7 @@ declare global {
       ) => void;
       setOnModelLoaded?: (callback: ((boxId: string, modelId: string, object: unknown) => void) | null) => void;
       selectBox?: (id: string | null) => void;
-      setTransformMode?: (mode: "translate" | "rotate" | null) => void;
+      setTransformMode?: (mode: "translate" | "rotate" | "scale" | null) => void;
       getContextMenuLayerHit?: (
         event: { clientX: number; clientY: number }
       ) => import("../../ui/context-menu/ContextMenuEngine").MouseMenuTarget | null;
@@ -78,17 +78,7 @@ declare global {
         callback:
           | ((
               remateId: string,
-              patch: {
-                transform: {
-                  xMm: number;
-                  yMm: number;
-                  zMm: number;
-                  rotacaoXRad: number;
-                  rotacaoYRad: number;
-                  rotacaoZRad: number;
-                };
-                placementFree: boolean;
-              }
+              patch: import("../../core/remate/remateTypes").UpdateRemateInput
             ) => void)
           | null
       ) => void;
