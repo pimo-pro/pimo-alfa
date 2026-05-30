@@ -6,6 +6,7 @@
 import type * as THREE from "three";
 import type { DoorWindowConfig } from "../../room/types";
 import type { MouseButtonAction } from "../controls/MouseInputMapper";
+import type { InternalSelectionState } from "../selection/internalSelectionTypes";
 
 export type RoomElementHit = {
   elementId: string;
@@ -75,4 +76,7 @@ export interface IViewerEventEngine {
   shouldBlockPointerDownForSelection(_button: number): boolean;
   /** Desativa/ativa OrbitControls. Deve ser false enquanto o utilizador arrasta um gizmo (TransformControls ou WallGizmo). */
   setCameraControlsEnabled(_enabled: boolean): void;
+  getInternalSelectionEnabled(): boolean;
+  getInternalSelectionHit(_event: { clientX: number; clientY: number }): InternalSelectionState | null;
+  setInternalSelection(_selection: InternalSelectionState | null): void;
 }

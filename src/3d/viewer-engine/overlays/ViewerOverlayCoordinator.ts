@@ -7,12 +7,14 @@ export const VIEWER_OVERLAY_Z_INDEX = {
   movementRuler: 14,
   smartSnapping: 16,
   internalRuler: 17,
+  internalRulerOverlay: 18,
 } as const;
 
 export type ViewerOverlayRefreshHooks = {
   syncRulerWithExternalSelectionMovement: () => void;
   clearRulerOverlayIfMovementIdle: (_nowMs: number) => void;
   refreshInternalRuler: () => void;
+  refreshInternalRulerOverlay: () => void;
   refreshSnapping: () => void;
   clearMovementRuler?: () => void;
 };
@@ -31,6 +33,7 @@ export class ViewerOverlayCoordinator {
     h.syncRulerWithExternalSelectionMovement();
     h.clearRulerOverlayIfMovementIdle(nowMs);
     h.refreshInternalRuler();
+    h.refreshInternalRulerOverlay();
     h.refreshSnapping();
   }
 

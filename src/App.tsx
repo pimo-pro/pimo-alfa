@@ -24,6 +24,7 @@ import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOpt
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
 import Ajuda from "./pages/Ajuda";
+import LandingPage from "./pages/LandingPage";
 import UserProjectsPage from "./pages/UserProjectsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -96,6 +97,7 @@ function LegacyApp() {
   const [showProjectProgress, setShowProjectProgress] = useState(false);
   const [showDevTest, setShowDevTest] = useState(false);
   const [showAjuda, setShowAjuda] = useState(false);
+  const [showLanding, setShowLanding] = useState(false);
   const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
 
@@ -111,6 +113,7 @@ function LegacyApp() {
       const isDevTest = import.meta.env.DEV && pathname === "/dev-test";
       const isPainelReferencia = pathname === "/painel-referencia";
       const isAjuda = pathname === "/ajuda";
+      const isLanding = pathname === "/landing" || pathname === "/apresentacao";
       const isUserProjects = pathname === "/meus-projetos";
       setShowSystemDocs(isSystemDocs);
       setShowAdmin(isAdmin);
@@ -118,6 +121,7 @@ function LegacyApp() {
       setShowDevTest(isDevTest);
       setShowPainelReferencia(isPainelReferencia);
       setShowAjuda(isAjuda);
+      setShowLanding(isLanding);
       setShowUserProjects(isUserProjects);
     };
     syncRoute();
@@ -165,6 +169,19 @@ function LegacyApp() {
     setShowAdmin(false);
     setShowProjectProgress(false);
     setShowAjuda(false);
+    setShowLanding(false);
+    setShowDevTest(false);
+    setShowUserProjects(false);
+  };
+
+  const navigateToLanding = () => {
+    window.history.pushState({}, "", "/apresentacao");
+    setShowLanding(true);
+    setShowAjuda(false);
+    setShowSystemDocs(false);
+    setShowAdmin(false);
+    setShowProjectProgress(false);
+    setShowPainelReferencia(false);
     setShowDevTest(false);
     setShowUserProjects(false);
   };
@@ -194,7 +211,7 @@ function LegacyApp() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showUserProjects ? (
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showLanding || showUserProjects ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
@@ -208,6 +225,8 @@ function LegacyApp() {
                 <DevPimoTest />
               ) : showAjuda ? (
                 <Ajuda />
+              ) : showLanding ? (
+                <LandingPage />
               ) : showUserProjects ? (
                 <UserProjectsPage />
               ) : (
@@ -295,6 +314,7 @@ function LegacyApp() {
           onShowUserProjects={navigateToUserProjects}
           onShowProjectProgress={navigateToProjectProgress}
           onShowPainelReferencia={navigateToPainelReferencia}
+          onShowLanding={navigateToLanding}
         />
 
         <WhatsAppButton />

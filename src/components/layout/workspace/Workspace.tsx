@@ -524,6 +524,8 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
     viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
     viewerApi.setInternalMeasurementMode?.(settings.rulerEnabled);
+    if (settings.internalRulerEnabled) viewerApi.enableInternalRuler?.();
+    else viewerApi.disableInternalRuler?.();
     viewerApi.setUltraPerformanceModeOptions?.(settings.ultraPerformanceModeOptions);
     viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
     viewerApi.setGlobalLightIntensity?.(settings.globalLightIntensity);

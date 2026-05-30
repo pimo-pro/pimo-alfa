@@ -9,6 +9,11 @@ import { getPointerNdc } from "../utils";
 import { devLogger } from "../../../utils/devLogger";
 import { clampOpeningToWall } from "../../../utils/openingConstraints";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
+import type { InternalSelectionHit } from "../selection/internalSelectionTypes";
+import { resolveInternalSelectionHit } from "../selection/InternalSelectionResolver";
+
+/** Layer lógica interna (raycast continua em layer 0; classificação separa interno vs externo). */
+export const VIEWER_INTERNAL_PICK_LAYER = 30;
 
 /** Limites da sala (m) usados por getWallIdInFrontOfCamera — espelha o campo em ViewerCore. */
 export type ViewerRaycastRoomBounds = {
@@ -39,6 +44,8 @@ export type ViewerRaycastSystemDeps = {
   getRoomBounds: () => ViewerRaycastRoomBounds | null;
   getTransformControlsHelper: () => THREE.Object3D | null;
   getDebugMode: () => boolean;
+  getBoxEntry?: (boxId: string) => ViewerBoxEntry | undefined;
+  projectWorldToScreen?: (world: THREE.Vector3) => { x: number; y: number } | null;
 };
 
 /**
@@ -327,6 +334,46 @@ export class ViewerRaycastSystem {
     const wallId = this.getWallIdAtPointer(event);
     if (wallId != null) return { type: "room", wallId };
     return null;
+  }
+
+  /**
+   * Picking interno (faces, arestas, pontos dentro da cavidade).
+   * Pipeline separado — não altera getBoxIdAtPointer nem seleção externa.
+   */
+  getInternalSelectionHit(event: { clientX: number; clientY: number }): InternalSelectionHit | null {
+    const getBoxEntry = this.deps.getBoxEntry;
+    const projectWorldToScreen = this.deps.projectWorldToScreen;
+    if (!getBoxEntry || !projectWorldToScreen) return null;
+
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    this.deps.raycaster.layers.set(0);
+
+    const roots: THREE.Object3D[] = [];
+    this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
+    if (!roots.length) return null;
+
+    const hits = this.deps.raycaster.intersectObjects(roots, true);
+    if (import.meta.env.DEV && this.deps.getDebugMode()) {
+      devLogger.debug("[SELECTION][Raycast] getInternalSelectionHit hits", {
+        totalHits: hits.length,
+      });
+    }
+
+    const getBoxMesh = (boxId: string): THREE.Object3D | null => {
+      return this.deps.getBoxes().get(boxId)?.mesh ?? null;
+    };
+
+    return resolveInternalSelectionHit(hits, event, rect, getBoxMesh, {
+      getBoxEntry,
+      projectWorldToScreen,
+    });
   }
 
   getWallPlacementHit(

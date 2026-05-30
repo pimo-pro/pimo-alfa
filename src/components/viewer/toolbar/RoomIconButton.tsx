@@ -28,7 +28,8 @@ export default function RoomIconButton() {
   const handleClick = useCallback(() => {
     if (!roomPresent) {
       wallStore.getState().setRoomLayoutFromMeters(DEFAULT_ROOM_WIDTH_M, DEFAULT_ROOM_DEPTH_M, DEFAULT_ROOM_HEIGHT_M, 4);
-      setSelectedTool(LEFT_TOOLBAR_IDS.SALA);
+      // Navigate to HOME so room settings appear in the Início section
+      setSelectedTool(LEFT_TOOLBAR_IDS.HOME);
       const scheduleReposition = () => {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -39,10 +40,13 @@ export default function RoomIconButton() {
       scheduleReposition();
       return;
     }
-    wallStore.getState().clearRoom();
-    viewerApi?.removeRoom?.();
-    setSelectedTool(LEFT_TOOLBAR_IDS.HOME);
-    uiStore.getState().clearSelection();
+    // Room already exists: toggle to SALA tab to show/manage settings
+    const currentTool = uiStore.getState().selectedTool;
+    if (currentTool === LEFT_TOOLBAR_IDS.SALA) {
+      setSelectedTool(LEFT_TOOLBAR_IDS.HOME);
+    } else {
+      setSelectedTool(LEFT_TOOLBAR_IDS.SALA);
+    }
   }, [actions, roomPresent, setSelectedTool, viewerApi]);
 
   /** Mesmo encaixe que `unifiedBubbleStyle` na barra unificada. */

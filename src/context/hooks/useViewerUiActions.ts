@@ -4,7 +4,7 @@ import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 
 export type ViewerUiActions = Pick<
   ProjectActions,
-  "setActiveTool" | "setViewerSettings" | "toggleHighlight" | "toggleRuler" | "setLayoutWarnings"
+  "setActiveTool" | "setViewerSettings" | "toggleHighlight" | "toggleRuler" | "toggleInternalRuler" | "setLayoutWarnings"
 >;
 
 export function useViewerUiActions(ctx: ProjectActionsExecutionContext): ViewerUiActions {
@@ -51,6 +51,19 @@ export function useViewerUiActions(ctx: ProjectActionsExecutionContext): ViewerU
           viewerSettings: {
             ...prev.viewerSettings,
             rulerEnabled: !prev.viewerSettings.rulerEnabled,
+          },
+        }),
+        true
+      );
+    };
+
+    a.toggleInternalRuler = () => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          viewerSettings: {
+            ...prev.viewerSettings,
+            internalRulerEnabled: !prev.viewerSettings.internalRulerEnabled,
           },
         }),
         true

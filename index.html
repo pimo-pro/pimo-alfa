@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt">
+<html lang="pt-PT">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo-pi.png" />
@@ -11,17 +11,96 @@
         document.documentElement.classList.add(t === "light" ? "theme-light" : "theme-dark");
       })();
     </script>
-    <!-- Google tag (gtag.js) -->
+
+    <!-- ═══ SEO PRIMARY ═══════════════════════════════════════════════════════ -->
+    <title>PIMO Criativo — Configurador Paramétrico de Mobiliário | CNC, Lista de Corte e Ficheiros Industriais</title>
+    <meta name="description" content="PIMO Criativo é a plataforma web para criação de caixas e mobiliário modular com visualização 3D em tempo real. Gera automaticamente lista de corte, ficheiros CNC/TCN, planos de furação e relatórios de preço. Para carpintarias, designers e fábricas — sem instalação." />
+    <meta name="keywords" content="configurador mobiliário paramétrico, lista de corte CNC, software carpintaria, caixas modulares, PIMO criativo, exportação TCN, furação 32mm, mobiliário industrial, planeamento de corte, nesting madeira" />
+    <meta name="author" content="PIMO Criativo" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://pim0.com" />
+
+    <!-- ═══ OPEN GRAPH ════════════════════════════════════════════════════════ -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:locale"      content="pt_PT" />
+    <meta property="og:site_name"   content="PIMO Criativo" />
+    <meta property="og:url"         content="https://pim0.com" />
+    <meta property="og:title"       content="PIMO Criativo — Configurador Paramétrico de Mobiliário Industrial" />
+    <meta property="og:description" content="Crie caixas parametricamente, visualize em 3D e exporte ficheiros industriais prontos para produção: lista de corte, CNC/TCN, furação e etiquetas de rastreio. Funciona diretamente no navegador." />
+    <meta property="og:image"       content="https://pim0.com/logo-pi.png" />
+
+    <!-- ═══ TWITTER CARD ═════════════════════════════════════════════════════ -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="PIMO Criativo — Configurador de Mobiliário Paramétrico" />
+    <meta name="twitter:description" content="Plataforma web para design de caixas e mobiliário modular. Exportação automática para CNC, lista de corte, furação e PDF técnico." />
+    <meta name="twitter:image"       content="https://pim0.com/logo-pi.png" />
+
+    <!-- ═══ SCHEMA JSON-LD ═══════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://pim0.com/#organization",
+          "name": "PIMO Criativo",
+          "url": "https://pim0.com",
+          "logo": "https://pim0.com/logo-pi.png",
+          "description": "Plataforma web para configuração paramétrica de mobiliário e geração automática de ficheiros industriais.",
+          "foundingLocation": { "@type": "Place", "addressCountry": "PT" },
+          "knowsAbout": ["mobiliário modular", "CNC", "carpintaria", "configurador paramétrico", "lista de corte"]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://pim0.com/#website",
+          "url": "https://pim0.com",
+          "name": "PIMO Criativo",
+          "publisher": { "@id": "https://pim0.com/#organization" },
+          "inLanguage": "pt-PT"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://pim0.com/#app",
+          "name": "PIMO Criativo",
+          "url": "https://pim0.com",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "Web Browser",
+          "browserRequirements": "Requires JavaScript",
+          "description": "Configurador paramétrico 3D para mobiliário modular. Gera automaticamente lista de corte, ficheiros CNC/TCN, planos de furação 32mm, PDFs técnicos e etiquetas de rastreio de produção.",
+          "featureList": [
+            "Configuração paramétrica de caixas com portas, gavetas e prateleiras",
+            "Visualização 3D em tempo real com materiais PBR",
+            "Geração automática de lista de corte industrial",
+            "Exportação CNC/TCN para máquinas de furação",
+            "Layout de corte otimizado (nesting PRO/Fast)",
+            "Exportação PDF técnico, unificado e de etiquetas",
+            "Sistema de rastreio por QR code (PIMO-TRAK)",
+            "Gestão de materiais com custo por m²",
+            "Multi-box: vários módulos num único projeto",
+            "Regras dinâmicas de construção e validação automática"
+          ],
+          "softwareVersion": "4.1",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "EUR",
+            "description": "Plano gratuito disponível"
+          },
+          "publisher": { "@id": "https://pim0.com/#organization" },
+          "inLanguage": "pt-PT"
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══ GOOGLE ANALYTICS ══════════════════════════════════════════════════ -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-800KERMEV7"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
+      function gtag() { dataLayer.push(arguments); }
       gtag('js', new Date());
       gtag('config', 'G-800KERMEV7');
     </script>
-    <title>PIMO Criativo — Configurador paramétrico</title>
   </head>
   <body>
     <div id="root"></div>

@@ -221,6 +221,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "setViewerSettings",
         "toggleHighlight",
         "toggleRuler",
+        "toggleInternalRuler",
         "logChangelog",
         "createBoxRemate",
         "updateRemate",

@@ -3,6 +3,8 @@
  * Extraído do ViewerCore para desacoplar estado da orquestração.
  */
 
+import type { InternalSelectionState } from "../selection/internalSelectionTypes";
+
 export type TransformMode = "translate" | "rotate" | null;
 export type PlacementMode = "door" | "window" | null;
 export type ViewerRenderMode = "performance" | "showcase";
@@ -20,6 +22,8 @@ export class ViewerState {
   private wallGizmoDragging = false;
   private currentMode: ViewerRenderMode = "performance";
   private wallEditMode = false;
+  private internalSelection: InternalSelectionState | null = null;
+  private internalSelectionEnabled = false;
 
   getSelectedBox(): string | null {
     return this.selectedBoxId;
@@ -105,6 +109,22 @@ export class ViewerState {
     this.wallEditMode = v;
   }
 
+  getInternalSelection(): InternalSelectionState | null {
+    return this.internalSelection;
+  }
+
+  setInternalSelection(v: InternalSelectionState | null): void {
+    this.internalSelection = v;
+  }
+
+  getInternalSelectionEnabled(): boolean {
+    return this.internalSelectionEnabled;
+  }
+
+  setInternalSelectionEnabled(v: boolean): void {
+    this.internalSelectionEnabled = v;
+  }
+
   limparHover(): void {
     this.hoveredBoxId = null;
   }
@@ -113,5 +133,6 @@ export class ViewerState {
     this.selectedBoxId = null;
     this.selectedWallIndex = null;
     this.selectedRoomElementId = null;
+    this.internalSelection = null;
   }
 }

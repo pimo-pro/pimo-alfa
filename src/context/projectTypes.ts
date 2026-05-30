@@ -58,6 +58,8 @@ export type ViewerSettings = {
   highlightEnabled: boolean;
   /** Régua: modo de medição (UI apenas; medição a implementar). */
   rulerEnabled: boolean;
+  /** Régua interna (cavidade): seleção interna + overlay de dimensões L×A×P. */
+  internalRulerEnabled: boolean;
   ultraPerformanceModeOptions: UltraPerformanceModeOptions;
   /** Multiplicador global da iluminação (0.6 - 1.4). */
   globalLightIntensity: number;
@@ -593,6 +595,7 @@ export interface ProjectActions {
   toggleHighlight: () => void;
   /** Alterna modo régua (medição). */
   toggleRuler: () => void;
+  toggleInternalRuler: () => void;
   /** @internal Implementada em useRulesActions. UI usa updateRulesInProfile — não actions.updateRules. */
   updateRules: (_rules: RulesConfig) => void;
   /** Define o perfil de regras ativo; recalcula todas as caixas. */

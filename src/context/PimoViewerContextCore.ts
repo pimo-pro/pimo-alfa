@@ -103,6 +103,19 @@ export type PimoViewerApi = {
   /** Ativa/desativa modo de medição interna por bordas (ferramenta CAD). */
   setInternalMeasurementMode?: (_enabled: boolean) => void;
   getInternalMeasurementMode?: () => boolean;
+  /** Fase 5 Parte A — seleção interna (faces, arestas, pontos). */
+  getInternalSelectionHit?: (_event: { clientX: number; clientY: number }) => import("../3d/viewer-engine/selection/internalSelectionTypes").InternalSelectionHit | null;
+  getInternalSelection?: () => import("../3d/viewer-engine/selection/internalSelectionTypes").InternalSelectionState | null;
+  setInternalSelection?: (_selection: import("../3d/viewer-engine/selection/internalSelectionTypes").InternalSelectionState | null) => void;
+  setInternalSelectionEnabled?: (_enabled: boolean) => void;
+  getInternalSelectionEnabled?: () => boolean;
+  setOnInternalSurfaceSelected?: (_callback: ((_hit: import("../3d/viewer-engine/selection/internalSelectionTypes").InternalSelectionState) => void) | null) => void;
+  setOnInternalEdgeSelected?: (_callback: ((_hit: import("../3d/viewer-engine/selection/internalSelectionTypes").InternalSelectionState) => void) | null) => void;
+  setOnInternalPointSelected?: (_callback: ((_hit: import("../3d/viewer-engine/selection/internalSelectionTypes").InternalSelectionState) => void) | null) => void;
+  enableInternalRuler?: () => void;
+  disableInternalRuler?: () => void;
+  getInternalMeasurements?: (_boxId?: string) => import("../3d/viewer-engine/measurement/internalRulerOverlayTypes").InternalCavityMeasurements | null;
+  isInternalRulerOverlayActive?: () => boolean;
   internalRuler?: {
     enableForBox: (_boxId: string) => void;
     disable: () => void;

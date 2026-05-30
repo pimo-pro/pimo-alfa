@@ -557,6 +557,44 @@ export default function UnifiedTopToolbar({
         >
           <Icon name="ruler" size={24} aria-hidden />
         </button>
+        <button
+          type="button"
+          className="viewer-action-icon"
+          title={
+            project.viewerSettings.internalRulerEnabled
+              ? "Régua interna ON (clique para desativar)"
+              : "Régua interna OFF (clique para ativar)"
+          }
+          aria-label={
+            project.viewerSettings.internalRulerEnabled ? "Desativar régua interna" : "Ativar régua interna"
+          }
+          aria-pressed={project.viewerSettings.internalRulerEnabled}
+          onClick={() => {
+            const next = !project.viewerSettings.internalRulerEnabled;
+            actions.toggleInternalRuler();
+            if (next) viewerApi?.enableInternalRuler?.();
+            else viewerApi?.disableInternalRuler?.();
+          }}
+          style={{
+            ...toolbarButtonStyle,
+            background: project.viewerSettings.internalRulerEnabled ? "rgba(56, 189, 248, 0.28)" : "transparent",
+            boxShadow: project.viewerSettings.internalRulerEnabled
+              ? "inset 0 0 0 1px rgba(56, 189, 248, 0.45)"
+              : undefined,
+          }}
+          onMouseEnter={(e) => {
+            if (!project.viewerSettings.internalRulerEnabled) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!project.viewerSettings.internalRulerEnabled) {
+              e.currentTarget.style.background = "transparent";
+            }
+          }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", color: "#7dd3fc" }}>Ri</span>
+        </button>
         {cfgImagem ? (
           <button
             type="button"

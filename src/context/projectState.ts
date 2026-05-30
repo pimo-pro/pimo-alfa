@@ -73,6 +73,7 @@ const defaultViewerSettings: ViewerSettings = {
   photoModeEnabled: false,
   highlightEnabled: false,
   rulerEnabled: false,
+  internalRulerEnabled: false,
   ultraPerformanceModeOptions: {
     enabled: false,
     mode: "balanced",

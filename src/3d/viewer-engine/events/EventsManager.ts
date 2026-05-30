@@ -79,6 +79,18 @@ export class EventsManager {
       e.setSuppressNextCanvasClick(false);
       return;
     }
+    if (e.getInternalSelectionEnabled()) {
+      const internalHit = e.getInternalSelectionHit(event);
+      if (internalHit) {
+        e.setInternalSelection(internalHit);
+        if (e.getSelectedBoxId() !== internalHit.boxId) {
+          e.setSelectedBox(internalHit.boxId);
+        }
+        e.getOnRoomElementSelected()?.(null);
+        e.getOnWallSelected()?.(null);
+        return;
+      }
+    }
     if (e.getHighlightEnabled() && e.getHighlightManager()) {
       const hits = e.getHighlightIntersects(event);
       const mesh = e.getHighlightManager()!.getSelectableMeshFromIntersects(hits);

@@ -110,7 +110,19 @@ import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
 import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
 import { InternalRuler, type InternalRulerMeasurement } from "./measurement/InternalRuler";
+import { InternalRulerOverlay } from "./measurement/InternalRulerOverlay";
+import type { InternalCavityMeasurements } from "./measurement/internalRulerOverlayTypes";
 import type { InternalMeasurementEntry } from "./measurement/internalRulerTypes";
+import {
+  computeBoxCavityBoundsLocal,
+  computeInternalCavityMeasurements,
+} from "./selection/boxCavityBounds";
+import {
+  InternalSelectionOutline,
+  type InternalSelectionHit,
+  type InternalSelectionState,
+  cloneInternalSelectionState,
+} from "./selection";
 import { SmartSnapping } from "./snapping/SmartSnapping";
 import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
@@ -202,6 +214,11 @@ export class ViewerCore {
   private readonly raycastSystem: ViewerRaycastSystem;
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
+  private onInternalSurfaceSelected: ((_hit: InternalSelectionState) => void) | null = null;
+  private onInternalEdgeSelected: ((_hit: InternalSelectionState) => void) | null = null;
+  private onInternalPointSelected: ((_hit: InternalSelectionState) => void) | null = null;
+  private internalSelectionOutline: InternalSelectionOutline | null = null;
+  private internalRulerOverlay: InternalRulerOverlay | null = null;
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
@@ -517,6 +534,7 @@ export class ViewerCore {
 
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
     this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
+    this.internalSelectionOutline = new InternalSelectionOutline(this.sceneManager.scene);
 
     this.roomBuilder = new RoomBuilder(() => this.roomBoxWalls.map((w) => w.mesh));
     this.sceneManager.add(this.roomBuilder.getGroup());
@@ -533,6 +551,8 @@ export class ViewerCore {
       getRoomBounds: () => this.roomBounds,
       getTransformControlsHelper: () => this.transformControlsHelper,
       getDebugMode: () => this.debugMode,
+      getBoxEntry: (boxId) => this.boxes.get(boxId),
+      projectWorldToScreen: (world) => this.projectWorldToScreen(world),
     });
 
     this.panelVisibility = new ViewerPanelVisibility({
@@ -582,6 +602,12 @@ export class ViewerCore {
       syncFromProject: (entries) => this.internalRulerEngine.syncFromProject(entries),
     };
 
+    this.internalRulerOverlay = new InternalRulerOverlay({
+      getContainer: () => this.container,
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+      getBoxMesh: (boxId) => this.boxes.get(boxId)?.mesh ?? null,
+    });
+
     this.smartSnappingEngine = new SmartSnapping({
       getCamera: () => this.cameraManager.camera,
       getCanvas: () => this.rendererManager.renderer.domElement,
@@ -617,6 +643,7 @@ export class ViewerCore {
       clearRulerOverlayIfMovementIdle: (nowMs) =>
         this.measurementOverlay.clearRulerOverlayIfMovementIdle(nowMs),
       refreshInternalRuler: () => this.internalRulerEngine.refreshOverlay(),
+      refreshInternalRulerOverlay: () => this.refreshInternalRulerOverlay(),
       refreshSnapping: () => this.smartSnappingEngine.refreshOverlay(),
       clearMovementRuler: () => this.measurementOverlay.clearRulerOverlay(),
     });
@@ -1201,6 +1228,113 @@ export class ViewerCore {
 
   getInternalMeasurementMode(): boolean {
     return this.measurementOverlay.getInternalMeasurementMode();
+  }
+
+  /** Fase 5 Parte A — picking interno (face / aresta / ponto). */
+  getInternalSelectionHit(event: { clientX: number; clientY: number }): InternalSelectionHit | null {
+    return this.raycastSystem.getInternalSelectionHit(event);
+  }
+
+  getInternalSelection(): InternalSelectionState | null {
+    return cloneInternalSelectionState(this.viewerState.getInternalSelection());
+  }
+
+  setInternalSelection(selection: InternalSelectionState | null): void {
+    const prev = this.viewerState.getInternalSelection();
+    const next = selection ? cloneInternalSelectionState(selection) : null;
+    const same =
+      prev?.type === next?.type &&
+      prev?.boxId === next?.boxId &&
+      prev?.faceId === next?.faceId &&
+      prev?.edgeId === next?.edgeId &&
+      prev?.pointId === next?.pointId;
+    if (same) return;
+
+    this.viewerState.setInternalSelection(next);
+    this.internalSelectionOutline?.sync(next, (boxId) => this.boxes.get(boxId)?.mesh ?? null);
+    this.syncInternalRulerOverlay();
+
+    if (!next) return;
+    if (next.type === "internal-face") this.onInternalSurfaceSelected?.(next);
+    else if (next.type === "internal-edge") this.onInternalEdgeSelected?.(next);
+    else if (next.type === "internal-point") this.onInternalPointSelected?.(next);
+  }
+
+  setInternalSelectionEnabled(enabled: boolean): void {
+    this.viewerState.setInternalSelectionEnabled(enabled);
+    if (!enabled) {
+      this.setInternalSelection(null);
+      this.internalRulerOverlay?.sync(null, null, null);
+      return;
+    }
+    this.syncInternalRulerOverlay();
+  }
+
+  enableInternalRuler(): void {
+    this.internalRulerEngine.disable();
+    this.setInternalSelectionEnabled(true);
+  }
+
+  disableInternalRuler(): void {
+    this.setInternalSelectionEnabled(false);
+  }
+
+  getInternalMeasurements(boxId?: string): InternalCavityMeasurements | null {
+    const resolvedId =
+      boxId ??
+      this.viewerState.getInternalSelection()?.boxId ??
+      this.viewerState.getSelectedBox() ??
+      null;
+    if (!resolvedId) return null;
+    const entry = this.boxes.get(resolvedId);
+    if (!entry) return null;
+    return computeInternalCavityMeasurements(resolvedId, entry);
+  }
+
+  isInternalRulerOverlayActive(): boolean {
+    return this.internalRulerOverlay?.isActive() === true;
+  }
+
+  private syncInternalRulerOverlay(): void {
+    if (!this.internalRulerOverlay) return;
+    if (!this.viewerState.getInternalSelectionEnabled()) {
+      this.internalRulerOverlay.sync(null, null, null);
+      return;
+    }
+    const selection = this.viewerState.getInternalSelection();
+    if (!selection) {
+      this.internalRulerOverlay.sync(null, null, null);
+      return;
+    }
+    const entry = this.boxes.get(selection.boxId);
+    if (!entry) {
+      this.internalRulerOverlay.sync(null, null, null);
+      return;
+    }
+    const bounds = computeBoxCavityBoundsLocal(entry);
+    const measurements = computeInternalCavityMeasurements(selection.boxId, entry);
+    this.internalRulerOverlay.sync(selection, measurements, bounds);
+  }
+
+  private refreshInternalRulerOverlay(): void {
+    if (!this.viewerState.getInternalSelectionEnabled()) return;
+    this.internalRulerOverlay?.refresh();
+  }
+
+  getInternalSelectionEnabled(): boolean {
+    return this.viewerState.getInternalSelectionEnabled();
+  }
+
+  setOnInternalSurfaceSelected(callback: ((_hit: InternalSelectionState) => void) | null): void {
+    this.onInternalSurfaceSelected = callback;
+  }
+
+  setOnInternalEdgeSelected(callback: ((_hit: InternalSelectionState) => void) | null): void {
+    this.onInternalEdgeSelected = callback;
+  }
+
+  setOnInternalPointSelected(callback: ((_hit: InternalSelectionState) => void) | null): void {
+    this.onInternalPointSelected = callback;
   }
 
   /**
@@ -3801,6 +3935,9 @@ export class ViewerCore {
       setCameraControlsEnabled: (enabled) => {
         if (this.controls?.controls) this.controls.controls.enabled = enabled;
       },
+      getInternalSelectionEnabled: () => this.viewerState.getInternalSelectionEnabled(),
+      getInternalSelectionHit: (e) => this.getInternalSelectionHit(e),
+      setInternalSelection: (selection) => this.setInternalSelection(selection),
     };
   }
 
@@ -3986,6 +4123,7 @@ export class ViewerCore {
     if (id == null) {
       this.measurementOverlay.onSelectionChanged(null);
       this.internalRulerEngine.onSelectionChanged(null);
+      this.setInternalSelection(null);
       return;
     }
     this.measurementOverlay.onSelectionChanged(id);
@@ -4470,6 +4608,7 @@ export class ViewerCore {
     this.runtimeLoop.onResize();
     this.measurementOverlay.resize();
     this.internalRulerEngine.resize();
+    this.internalRulerOverlay?.resize();
     this.smartSnappingEngine.resize();
   };
 
@@ -4587,6 +4726,9 @@ export class ViewerCore {
     this.overlayCoordinator.dispose();
     this.onBoxTransform = null;
     this.onBoxSelected = null;
+    this.onInternalSurfaceSelected = null;
+    this.onInternalEdgeSelected = null;
+    this.onInternalPointSelected = null;
     this.onDoorLayerDoubleClick = null;
     this.onModelLoaded = null;
     this.eventsManager?.unregister();
@@ -4633,6 +4775,14 @@ export class ViewerCore {
     if (this.edgeOutlineSystem) {
       this.edgeOutlineSystem.dispose();
       this.edgeOutlineSystem = null;
+    }
+    if (this.internalSelectionOutline) {
+      this.internalSelectionOutline.dispose();
+      this.internalSelectionOutline = null;
+    }
+    if (this.internalRulerOverlay) {
+      this.internalRulerOverlay.dispose();
+      this.internalRulerOverlay = null;
     }
     if (this.dimensionsOverlayLines) {
       this.dimensionsOverlayLines.geometry.dispose();

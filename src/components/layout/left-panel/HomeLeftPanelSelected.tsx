@@ -6,12 +6,12 @@ import Panel from "../../ui/Panel";
 import { NumericInput } from "../../ui/NumericInput";
 import BoxLayersPanel from "./BoxLayersPanel";
 import { useToast } from "../../../context/ToastContext";
-import { getViewerMaterialId, getMaterialByIdOrLabel } from "../../../core/materials";
-import { MaterialPickerModal } from "./MaterialPickerModal";
+import { getMaterialByIdOrLabel } from "../../../core/materials";
 import type { UseMaterialsForPickerResult } from "./hooks/useMaterialsForPicker";
 import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
 import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
 import { Icon } from "@/components/icons";
+import SelecionarMaterialSection from "../../settings/material/SelecionarMaterialSection";
 
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
@@ -25,7 +25,7 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
   );
   const selectedPrateleiras = selectedBox?.prateleiras ?? 0;
   const selectedGavetas = selectedBox?.gavetas ?? 0;
-  const { materialModalOpen, setMaterialModalOpen, materialsList, materialsLoading } = materialsPicker;
+  void materialsPicker;
   const { viewerApi } = usePimoViewerContext();
 
   const profundidadeLeitura = useMemo(
@@ -219,28 +219,11 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
           )}
 
           {selectedBox && (
-            <button
-              type="button"
-              className="button button-ghost"
-              style={{ width: "100%", marginBottom: 8 }}
-              onClick={() => setMaterialModalOpen(true)}
-            >
-              Selecionar Material
-            </button>
-          )}
-
-          {materialModalOpen && selectedBox && (
-            <MaterialPickerModal
-              materialsLoading={materialsLoading}
-              materialsList={materialsList}
-              onClose={() => setMaterialModalOpen(false)}
-              onSelectMaterial={(m) => {
-                actions.setWorkspaceBoxMaterial(selectedBox.id, m.id);
-                viewerApi?.updateBox(selectedBox.id, {
-                  materialName: getViewerMaterialId(m.id),
-                });
+            <SelecionarMaterialSection
+              boxId={selectedBox.id}
+              onViewerMaterialChange={(boxId, materialName) => {
+                viewerApi?.updateBox(boxId, { materialName });
                 showToast("Material aplicado à caixa.", "info");
-                setMaterialModalOpen(false);
               }}
             />
           )}

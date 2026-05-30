@@ -15,8 +15,6 @@ import LayoutWarningsAlert from "../../ui/LayoutWarningsAlert";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import { Icon } from "@/components/icons";
-import BoxOrlaSection from "../../settings/orla/BoxOrlaSection";
-import BoxRemateSection from "../../settings/remate/BoxRemateSection";
 
 const OFFICIAL_WOOD_OPTIONS = listOfficialMaterials();
 const VISUAL_WOOD_OPTIONS = OFFICIAL_WOOD_OPTIONS.filter((m) => m.visual);
@@ -165,10 +163,6 @@ export default function PainelModelosDaCaixa() {
           </div>
         )}
       </Panel>
-
-      <BoxOrlaSection boxId={selectedBox.id} boxNome={selectedBox.nome} />
-
-      <BoxRemateSection boxId={selectedBox.id} />
 
       <RuleViolationsAlert
         violations={project.ruleViolations ?? []}

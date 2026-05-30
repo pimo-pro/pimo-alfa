@@ -27,5 +27,6 @@ export { EventsManager } from "./events";
 export type { IViewerEventEngine } from "./events";
 export { ViewerState } from "./state";
 export type { TransformMode, PlacementMode, ViewerRenderMode } from "./state";
+export type { InternalSelectionHit, InternalSelectionState } from "./selection";
 export { ViewerTools } from "./tools";
 export type { IViewerToolsEngine } from "./tools";

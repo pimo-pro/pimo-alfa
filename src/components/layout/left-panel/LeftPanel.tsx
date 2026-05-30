@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
+import { useWallStore } from "../../../stores/wallStore";
+import { hasPersistedRoomWalls } from "../../../utils/roomWorkspaceBounds";
+import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import PainelMoveisUnificado from "./PainelMoveisUnificado";
 import PainelModelosDaCaixa from "./PainelModelosDaCaixa";
 import { useUiStore } from "../../../stores/uiStore";
@@ -9,6 +12,7 @@ import { InfoPanelContent } from "./InfoPanelContent";
 import OrlaSettingsPanel from "../../settings/orla/OrlaSettingsPanel";
 import { PlaceholderLeftPanel } from "./PlaceholderLeftPanel";
 import RoomSettingsPanel from "../room/RoomSettingsPanel";
+import { PainelSala } from "./PainelSala";
 import { LeftPanelCalculadora } from "./LeftPanelCalculadora";
 import { HomeLeftPanelEmpty } from "./HomeLeftPanelEmpty";
 import { HomeLeftPanelSelected } from "./HomeLeftPanelSelected";
@@ -26,6 +30,9 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const selectedBox = project.workspaceBoxes.find(
     (box) => box.id === project.selectedWorkspaceBoxId
   );
+  const { viewerApi } = usePimoViewerContext();
+  const walls = useWallStore((state) => state.walls);
+  const roomPresent = hasPersistedRoomWalls(walls) || (viewerApi?.getRoomExists?.() ?? false);
 
   const materialsPicker = useMaterialsForPicker();
   const [savedRecentProjects, setSavedRecentProjects] = useState<SavedProjectInfo[]>([]);
@@ -88,12 +95,12 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     return <LeftPanelCalculadora />;
   }
 
-  // Sala — Room 2.0: dimensões, paredes, aberturas
+  // Sala — usa PainelSala (wallStore) como painel principal de controlo
   if (resolvedTab === LEFT_TOOLBAR_IDS.SALA) {
     return (
       <div className="left-panel-content">
         <div className="left-panel-scroll">
-          <RoomSettingsPanel />
+          <PainelSala />
         </div>
       </div>
     );
@@ -127,7 +134,17 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     );
   }
 
+  // HOME sem caixa selecionada — se sala presente, mostra definições da sala
   if (resolvedTab === LEFT_TOOLBAR_IDS.HOME && !selectedBox) {
+    if (roomPresent) {
+      return (
+        <div className="left-panel-content">
+          <div className="left-panel-scroll">
+            <PainelSala />
+          </div>
+        </div>
+      );
+    }
     return (
       <HomeLeftPanelEmpty
         loadingSavedRecent={loadingSavedRecent}

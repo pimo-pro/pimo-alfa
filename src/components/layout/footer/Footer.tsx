@@ -9,6 +9,7 @@ interface FooterProps {
   onShowUserProjects?: () => void;
   onShowProjectProgress?: () => void;
   onShowPainelReferencia?: () => void;
+  onShowLanding?: () => void;
 }
 
 export default function Footer({
@@ -17,6 +18,7 @@ export default function Footer({
   onShowUserProjects,
   onShowProjectProgress,
   onShowPainelReferencia,
+  onShowLanding,
 }: FooterProps) {
   const navigate = useNavigate();
   const [version, setVersion] = useState("V4.1.0.2.6");
@@ -68,6 +70,17 @@ export default function Footer({
           columnGap: 8,
         }}
       >
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={onShowLanding}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") onShowLanding?.();
+          }}
+        >
+          Apresentação
+        </span>
         <span
           style={{ cursor: "pointer" }}
           onClick={onShowUserProjects}
