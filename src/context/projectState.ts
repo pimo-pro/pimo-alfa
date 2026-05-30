@@ -19,6 +19,7 @@ import type {
   WorkspaceBox,
 } from "../core/types";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
+import { isCornerFixedFrontModel } from "../core/cornerCabinet";
 import type { ProjectState, ViewerSettings } from "./projectTypes";
 import { validateBoxModels } from "../core/rules/validation";
 import {
@@ -176,6 +177,7 @@ export type CreateWorkspaceBoxOverrides = {
   feetOffsetFront?: number;
   feetEnabled?: boolean;
   piHideDrawerHoles?: boolean;
+  cornerFixedFront?: boolean;
 };
 
 export const createWorkspaceBox = (
@@ -195,7 +197,12 @@ export const createWorkspaceBox = (
   const gavetas = overrides?.gavetas ?? 0;
   const drawerHeightMode = overrides?.drawerHeightMode ?? "equal";
   const drawerType = overrides?.drawerType ?? "normal";
-  const panelIds = ensureBoxPanelIds(overrides?.panelIds, { prateleiras, portaTipo, gavetas });
+  const panelIds = ensureBoxPanelIds(overrides?.panelIds, {
+    prateleiras,
+    portaTipo,
+    gavetas,
+    cornerFixedFront: overrides?.cornerFixedFront,
+  });
   const cabinetType = overrides?.cabinetType;
   const feetHeight = Math.max(40, overrides?.feetHeight ?? ((overrides?.pe_cm ?? 10) * 10));
   const pe_cm = feetHeight / 10;
@@ -479,6 +486,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     prateleiras: box.prateleiras,
     portaTipo: box.portaTipo,
     gavetas: box.gavetas,
+    cornerFixedFront: isCornerFixedFrontModel(box.baseCabinetId),
   });
   return {
     ...createBox(

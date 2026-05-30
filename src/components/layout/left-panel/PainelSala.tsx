@@ -5,11 +5,19 @@ import { useProject } from "../../../context/useProject";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import Panel from "../../ui/Panel";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
+import { uiStore, useUiStore } from "../../../stores/uiStore";
+import type {
+  ProjectRoomConfig,
+  ProjectRoomOpening,
+  ProjectRoomWall,
+  RoomOpeningKind,
+} from "../../../3d/viewer-engine/room/roomEngineTypes";
+import { ROOM_20_DEFAULTS, WALL_LABEL_TITLES } from "../../../3d/viewer-engine/room/RoomEngine";
 
 /** Dimensões padrão da sala em centímetros */
 const DEFAULT_ROOM_WIDTH_CM  = 400;  // 4 m
-const DEFAULT_ROOM_DEPTH_CM  = 500;  // 5 m
-const DEFAULT_ROOM_HEIGHT_CM = 270;  // 2.7 m
+const DEFAULT_ROOM_DEPTH_CM  = 400;  // 4 m
+const DEFAULT_ROOM_HEIGHT_CM = 260;  // 2.6 m
 
 /** Limites em cm */
 const MIN_WD_CM = 50;    // 0.5 m
@@ -19,39 +27,101 @@ const MAX_H_CM  = 1000;  // 10 m
 
 type RoomType = "closed" | "open";
 
+const DEFAULT_OPENING_BY_TYPE = {
+  door: { widthMm: 900, heightMm: 2100, thicknessMm: 40, floorOffsetMm: 0 },
+  window: { widthMm: 1200, heightMm: 1200, thicknessMm: 40, floorOffsetMm: 900 },
+} as const;
+
+function numInput(
+  label: string,
+  value: number,
+  onChange: (value: number) => void,
+  min = 0,
+  max = 20000,
+  step = 10,
+  unit = "mm"
+) {
+  return (
+    <div className="panel-field-row">
+      <label className="panel-label" style={{ minWidth: 110 }}>{label}</label>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={Math.round(value)}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          if (Number.isFinite(next)) onChange(next);
+        }}
+        className="input input-sm"
+        style={{ width: 92 }}
+      />
+      <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4 }}>{unit}</span>
+    </div>
+  );
+}
+
+function makeOpening(type: "door" | "window", kind: RoomOpeningKind, wall: ProjectRoomWall): ProjectRoomOpening {
+  const defaults = DEFAULT_OPENING_BY_TYPE[type];
+  const xPosMm = Math.max(0, ((wall.widthMm ?? wall.lengthMm) - defaults.widthMm) / 2);
+  return {
+    id: `room-opening-${type}-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type,
+    kind,
+    wallId: wall.id,
+    xPosMm,
+    horizontalOffsetMm: xPosMm,
+    widthMm: defaults.widthMm,
+    heightMm: defaults.heightMm,
+    thicknessMm: defaults.thicknessMm,
+    floorOffsetMm: defaults.floorOffsetMm,
+    verticalOffsetMm: defaults.floorOffsetMm,
+  };
+}
+
 export function PainelSala() {
   const { viewerApi } = usePimoViewerContext();
-  const { actions } = useProject();
+  const { project, actions } = useProject();
   const mainWallIndex = useWallStore((state) => state.mainWallIndex);
   const setMainWallIndex = useWallStore((state) => state.setMainWallIndex);
+  const selectedWallId = useWallStore((state) => state.selectedWallId);
+  const selectedObject = useUiStore((state) => state.selectedObject);
+  const room = project.room;
 
   // Estado em centímetros — conversão para metros só nas chamadas ao viewer
   const [widthCm,  setWidthCm]  = useState(DEFAULT_ROOM_WIDTH_CM);
   const [depthCm,  setDepthCm]  = useState(DEFAULT_ROOM_DEPTH_CM);
   const [heightCm, setHeightCm] = useState(DEFAULT_ROOM_HEIGHT_CM);
   const [roomType, setRoomType] = useState<RoomType>("closed");
-  const [roomExistsState, setRoomExistsState] = useState(false);
   const [roomVisibleState, setRoomVisibleState] = useState(true);
 
-  const roomExists  = viewerApi?.getRoomExists?.()  ?? roomExistsState;
   const roomVisible = viewerApi?.getRoomVisible?.()  ?? roomVisibleState;
   const locked      = viewerApi?.getRoomLocked?.()   ?? false;
+  const selectedRoomWall =
+    selectedObject.type === "wall"
+      ? room?.walls.find((wall) => wall.id === selectedObject.id)
+      : selectedWallId
+        ? room?.walls.find((wall) => wall.id === selectedWallId)
+        : null;
+  const selectedOpening =
+    selectedObject.type === "roomElement"
+      ? room?.openings.find((opening) => opening.id === selectedObject.id)
+      : null;
+  const selectedOpeningWall = selectedOpening
+    ? room?.walls.find((wall) => wall.id === selectedOpening.wallId) ?? null
+    : null;
 
   useEffect(() => {
-    setRoomExistsState(viewerApi?.getRoomExists?.() ?? false);
     setRoomVisibleState(viewerApi?.getRoomVisible?.() ?? true);
   }, [viewerApi]);
 
-  // Ao detectar sala existente, lê dimensões do viewer (metros) e converte para cm
   useEffect(() => {
-    if (!roomExists) return;
-    const dims = viewerApi?.getRoomDimensions?.();
-    if (dims) {
-      setWidthCm(Math.round(dims.width  * 100));
-      setDepthCm(Math.round(dims.depth  * 100));
-      setHeightCm(Math.round(dims.height * 100));
-    }
-  }, [roomExists, viewerApi]);
+    if (!room) return;
+    setWidthCm(Math.round(room.widthMm / 10));
+    setDepthCm(Math.round(room.depthMm / 10));
+    setHeightCm(Math.round(room.heightMm / 10));
+  }, [room]);
 
   // Clamp e conversão cm → metros
   const toMeters = (widthCm: number, depthCm: number, heightCm: number) => ({
@@ -62,28 +132,100 @@ export function PainelSala() {
 
   const handleCreate = () => {
     const { w, d, h } = toMeters(widthCm, depthCm, heightCm);
-    const numWalls = roomType === "open" ? 3 : 4;
-    wallStore.getState().setRoomLayoutFromMeters(w, d, h, numWalls);
-    setRoomExistsState(true);
-    setRoomVisibleState(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        actions.repositionWorkspaceBoxesInsideRoom();
-      });
+    actions.updateProjectRoom({
+      widthMm: Math.round(w * 1000),
+      depthMm: Math.round(d * 1000),
+      heightMm: Math.round(h * 1000),
+      visible: true,
+      locked: false,
     });
+    setRoomVisibleState(true);
   };
 
   const handleRemove = () => {
-    wallStore.getState().clearRoom();
+    actions.removeProjectRoom();
     viewerApi?.removeRoom?.();
-    setRoomExistsState(false);
     setRoomVisibleState(false);
   };
 
   const handleDimensionsChange = () => {
     const { w, d, h } = toMeters(widthCm, depthCm, heightCm);
-    wallStore.getState().updateRoomDimensionsMeters(w, d, h);
-    viewerApi?.setRoomDimensions?.(w, d, h);
+    actions.updateProjectRoom({
+      widthMm: Math.round(w * 1000),
+      depthMm: Math.round(d * 1000),
+      heightMm: Math.round(h * 1000),
+    });
+  };
+
+  const patchRoom = (patch: Partial<ProjectRoomConfig>) => {
+    actions.updateProjectRoom(patch);
+  };
+
+  const patchWall = (wallId: string, patch: Partial<ProjectRoomWall>) => {
+    if (!room) return;
+    patchRoom({
+      walls: room.walls.map((wall) =>
+        wall.id === wallId
+          ? {
+              ...wall,
+              ...patch,
+              widthMm: patch.widthMm ?? patch.lengthMm ?? wall.widthMm,
+              lengthMm: patch.widthMm ?? patch.lengthMm ?? wall.lengthMm,
+            }
+          : wall
+      ),
+    });
+  };
+
+  const patchOpening = (openingId: string, patch: Partial<ProjectRoomOpening>) => {
+    if (!room) return;
+    patchRoom({
+      openings: room.openings.map((opening) => {
+        if (opening.id !== openingId) return opening;
+        const floorOffsetMm = patch.floorOffsetMm ?? patch.verticalOffsetMm ?? opening.floorOffsetMm;
+        const xPosMm = patch.xPosMm ?? patch.horizontalOffsetMm ?? opening.xPosMm;
+        return {
+          ...opening,
+          ...patch,
+          xPosMm,
+          horizontalOffsetMm: xPosMm,
+          floorOffsetMm,
+          verticalOffsetMm: floorOffsetMm,
+        };
+      }),
+    });
+  };
+
+  const addWall = () => {
+    const base = room;
+    if (!base) return;
+    const id = `room-wall-extra-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const wall: ProjectRoomWall = {
+      id,
+      label: "extra",
+      widthMm: ROOM_20_DEFAULTS.widthMm,
+      lengthMm: ROOM_20_DEFAULTS.widthMm,
+      heightMm: base.heightMm,
+      thicknessMm: base.wallThicknessMm,
+      position: { x: base.widthMm / 2, y: base.heightMm / 2, z: base.depthMm / 2 },
+      rotationDeg: 0,
+    };
+    patchRoom({ walls: [...base.walls, wall] });
+    wallStore.getState().selectWall(id);
+    uiStore.getState().setSelectedObject({ type: "wall", id });
+  };
+
+  const addOpening = (type: "door" | "window", kind: RoomOpeningKind) => {
+    if (!room) return;
+    const wall =
+      selectedRoomWall ??
+      (selectedOpeningWall ? selectedOpeningWall : null) ??
+      room.walls.find((item) => item.id === selectedWallId) ??
+      room.walls[0];
+    if (!wall) return;
+    const opening = makeOpening(type, kind, wall);
+    patchRoom({ openings: [...room.openings, opening] });
+    uiStore.getState().setSelectedObject({ type: "roomElement", id: opening.id });
   };
 
   return (
@@ -92,10 +234,10 @@ export function PainelSala() {
         <div className="section-title">Sala</div>
       </div>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }} className="design-panel-subtitle">
-        Dimensões em centímetros. Crie a sala para ter 4 paredes principais e piso.
+        Room 2.0 visual. Paredes, portas e janelas não entram em cutlist, CNC ou fabricação.
       </p>
 
-      <Panel title="Dimensões (cm)">
+      <Panel title="Dimensões da sala (cm)">
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div className="panel-field-row">
             <label className="panel-label" style={{ minWidth: 80 }}>Largura</label>
@@ -106,7 +248,7 @@ export function PainelSala() {
               step={10}
               value={widthCm}
               onChange={(e) => setWidthCm(Number(e.target.value) || 0)}
-              onBlur={roomExists ? handleDimensionsChange : undefined}
+              onBlur={room ? handleDimensionsChange : undefined}
               className="input input-sm"
               style={{ width: 90 }}
             />
@@ -121,7 +263,7 @@ export function PainelSala() {
               step={10}
               value={depthCm}
               onChange={(e) => setDepthCm(Number(e.target.value) || 0)}
-              onBlur={roomExists ? handleDimensionsChange : undefined}
+              onBlur={room ? handleDimensionsChange : undefined}
               className="input input-sm"
               style={{ width: 90 }}
             />
@@ -136,7 +278,7 @@ export function PainelSala() {
               step={5}
               value={heightCm}
               onChange={(e) => setHeightCm(Number(e.target.value) || 0)}
-              onBlur={roomExists ? handleDimensionsChange : undefined}
+              onBlur={room ? handleDimensionsChange : undefined}
               className="input input-sm"
               style={{ width: 90 }}
             />
@@ -146,7 +288,7 @@ export function PainelSala() {
       </Panel>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-        {!roomExists ? (
+        {!room ? (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
               <label style={{ fontSize: 12, color: "var(--text-main)" }}>Tipo de sala</label>
@@ -180,12 +322,26 @@ export function PainelSala() {
             </button>
             <button
               type="button"
-              onClick={() => viewerApi?.addExtraWall?.()}
+              onClick={addWall}
               className="button button-ghost"
               style={{ width: "100%" }}
             >
               Adicionar Parede
             </button>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button type="button" onClick={() => addOpening("door", "normal")} className="button button-ghost">
+                Porta normal
+              </button>
+              <button type="button" onClick={() => addOpening("door", "correr")} className="button button-ghost">
+                Porta correr
+              </button>
+              <button type="button" onClick={() => addOpening("window", "normal")} className="button button-ghost">
+                Janela normal
+              </button>
+              <button type="button" onClick={() => addOpening("window", "correr")} className="button button-ghost">
+                Janela correr
+              </button>
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
               <label style={{ fontSize: 12, color: "var(--text-main)" }}>Parede principal</label>
               <select
@@ -223,13 +379,85 @@ export function PainelSala() {
               <input
                 type="checkbox"
                 checked={locked}
-                onChange={(e) => viewerApi?.setRoomLocked?.(e.target.checked)}
+                onChange={(e) => {
+                  patchRoom({ locked: e.target.checked });
+                  viewerApi?.setRoomLocked?.(e.target.checked);
+                }}
               />
               Lock Walls (paredes principais conectadas)
             </label>
           </>
         )}
       </div>
+
+      {room && selectedRoomWall && (
+        <Panel title={`Parede: ${WALL_LABEL_TITLES[selectedRoomWall.label] ?? selectedRoomWall.id}`}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              wallId: {selectedRoomWall.id}
+            </div>
+            {numInput("Largura", selectedRoomWall.widthMm, (value) =>
+              patchWall(selectedRoomWall.id, { widthMm: value, lengthMm: value }), 100)}
+            {numInput("Altura", selectedRoomWall.heightMm, (value) =>
+              patchWall(selectedRoomWall.id, { heightMm: value }), 100)}
+            {numInput("Espessura", selectedRoomWall.thicknessMm, (value) =>
+              patchWall(selectedRoomWall.id, { thicknessMm: value }), 50, 500)}
+            {numInput("Posição X", selectedRoomWall.position.x, (value) =>
+              patchWall(selectedRoomWall.id, { position: { ...selectedRoomWall.position, x: value } }), -20000)}
+            {numInput("Posição Y", selectedRoomWall.position.y, (value) =>
+              patchWall(selectedRoomWall.id, { position: { ...selectedRoomWall.position, y: value } }), 0)}
+            {numInput("Posição Z", selectedRoomWall.position.z, (value) =>
+              patchWall(selectedRoomWall.id, { position: { ...selectedRoomWall.position, z: value } }), -20000)}
+            {numInput("Rotação", selectedRoomWall.rotationDeg, (value) =>
+              patchWall(selectedRoomWall.id, { rotationDeg: value }), -360, 360, 1, "°")}
+          </div>
+        </Panel>
+      )}
+
+      {room && selectedOpening && (
+        <Panel title={`${selectedOpening.type === "door" ? "Porta" : "Janela"} ${selectedOpening.kind}`}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {selectedOpening.type === "door" ? "doorId" : "windowId"}: {selectedOpening.id}
+            </div>
+            <div className="panel-field-row">
+              <label className="panel-label" style={{ minWidth: 110 }}>Parede</label>
+              <select
+                className="input input-sm"
+                value={selectedOpening.wallId}
+                onChange={(e) => patchOpening(selectedOpening.id, { wallId: e.target.value })}
+              >
+                {room.walls.map((wall) => (
+                  <option key={wall.id} value={wall.id}>
+                    {WALL_LABEL_TITLES[wall.label] ?? wall.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="panel-field-row">
+              <label className="panel-label" style={{ minWidth: 110 }}>Tipo</label>
+              <select
+                className="input input-sm"
+                value={selectedOpening.kind}
+                onChange={(e) => patchOpening(selectedOpening.id, { kind: e.target.value as RoomOpeningKind })}
+              >
+                <option value="normal">Normal</option>
+                <option value="correr">Correr</option>
+              </select>
+            </div>
+            {numInput("Largura", selectedOpening.widthMm, (value) =>
+              patchOpening(selectedOpening.id, { widthMm: value }), 100)}
+            {numInput("Altura", selectedOpening.heightMm, (value) =>
+              patchOpening(selectedOpening.id, { heightMm: value }), 100)}
+            {numInput("Espessura", selectedOpening.thicknessMm, (value) =>
+              patchOpening(selectedOpening.id, { thicknessMm: value }), 10, 500)}
+            {numInput("Posição horiz.", selectedOpening.xPosMm, (value) =>
+              patchOpening(selectedOpening.id, { xPosMm: value, horizontalOffsetMm: value }), 0)}
+            {numInput("Dist. chão", selectedOpening.floorOffsetMm, (value) =>
+              patchOpening(selectedOpening.id, { floorOffsetMm: value, verticalOffsetMm: value }), 0)}
+          </div>
+        </Panel>
+      )}
     </aside>
   );
 }

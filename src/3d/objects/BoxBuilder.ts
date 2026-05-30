@@ -29,6 +29,7 @@ import {
   updateBoxModelWithDeps,
 } from "./BoxUpdater";
 import { getWardrobeGroupFromBaseCabinetId, isWardrobeVerticalDividerEnabled } from "../../core/wardrobe/wardrobeRules";
+import { getCornerCabinetConfig } from "../../core/cornerCabinet";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -191,6 +192,24 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
   if (count < 1) return specs;
 
   // Roupeiro: as prateleiras só existem na secção superior; as posições dependem do divisor horizontal e (quando aplicável) do divisor vertical.
+  const cornerCfg = getCornerCabinetConfig(opts?.baseCabinetId);
+  if (cornerCfg && count >= 1) {
+    const extraRecessM = cornerCfg.shelfDepthExtraRecessMm / 1000;
+    const shelfDepthCorner = Math.max(0.001, depth - SHELF_DEPTH_CLEARANCE_M - extraRecessM);
+    const centerZCorner = -depth / 2 + shelfDepthCorner / 2 + SHELF_VISUAL_INSET_M;
+    const interiorHeight = Math.max(0.001, height - 2 * THICKNESS_M);
+    const spacing = interiorHeight / (count + 1);
+    const yMin = -height / 2 + THICKNESS_M + spacing;
+    for (let i = 0; i < count; i++) {
+      const y = yMin + i * spacing;
+      specs.push({
+        size: [shelfWidth, THICKNESS_M, shelfDepthCorner],
+        pos: [0, y, centerZCorner],
+      });
+    }
+    return specs;
+  }
+
   const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(opts?.baseCabinetId);
   if (wardrobeGroup) {
     const feetHeightMm = Math.max(40, opts?.feetHeight ?? 100);

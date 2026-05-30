@@ -20,6 +20,23 @@ export class ViewerTools {
     const controls = e.getTransformControls();
     if (!controls) return;
     const mode = e.getCurrentTool();
+    const selectedRemateId = e.getSelectedRemateId();
+    if (selectedRemateId && mode) {
+      const remateMesh = e.getRemateMesh(selectedRemateId);
+      if (remateMesh) {
+        remateMesh.matrixAutoUpdate = true;
+        remateMesh.updateMatrixWorld(true);
+        controls.detach();
+        controls.attach(remateMesh);
+        controls.setMode(mode);
+        controls.setSize(0.35);
+        e.applyTransformControlsMouseGuard();
+        e.logTransformDiagnostic("attach-remate", { remateId: selectedRemateId, attachedUuid: remateMesh.uuid });
+        e.setTransformHelperVisible(true);
+        return;
+      }
+    }
+
     const selectedBoxId = e.getSelectedBoxId();
     if (selectedBoxId && mode) {
       const entry = e.getBoxEntry(selectedBoxId);
@@ -81,6 +98,15 @@ export class ViewerTools {
     const outline = e.getSelectionOutline();
     const material = e.getSelectionOutlineMaterial();
     if (!outline || !material) return;
+    const selectedRemateId = e.getSelectedRemateId();
+    if (selectedRemateId) {
+      const remateMesh = e.getRemateMesh(selectedRemateId);
+      if (remateMesh) {
+        e.setOutlineTarget(remateMesh, 0.9, 0x38bdf8);
+        return;
+      }
+    }
+
     const targetId = e.getSelectedBoxId() ?? e.getHoveredBoxId();
     if (!targetId) {
       e.setOutlineTarget(null, 0, 0);

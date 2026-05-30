@@ -174,10 +174,13 @@ export function positionMainWalls(room: Room, walls: THREE.Mesh[]): void {
  * Cria uma parede extra (livre). Dimensões padrão; posição (0,0,0) para o caller posicionar.
  * Usa config.wallExtra da cena (MaterialEngine).
  */
-export function createExtraWall(id: number): THREE.Mesh {
-  const length = 2;
-  const height = 2.7;
-  const t = getWallThicknessM();
+export function createExtraWall(
+  id: number,
+  options: { lengthM?: number; heightM?: number; thicknessM?: number; isMainWall?: boolean } = {}
+): THREE.Mesh {
+  const length = options.lengthM ?? 2;
+  const height = options.heightM ?? 2.7;
+  const t = options.thicknessM ?? getWallThicknessM();
   const config = getSceneMaterialConfig();
   const mat = createWallMaterialFromConfig(config.wallExtra, { opacity: 0.6 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(length, height, t), mat);
@@ -185,7 +188,7 @@ export function createExtraWall(id: number): THREE.Mesh {
   mesh.userData.wallId = id;
   mesh.userData.wallNormal = new THREE.Vector3(0, 0, 1);
   mesh.userData.isRoomWall = true;
-  mesh.userData.isMainWall = false;
+  mesh.userData.isMainWall = options.isMainWall === true;
   mesh.userData.wallLengthMm = length * 1000;
   mesh.userData.wallHeightMm = height * 1000;
   mesh.userData.wallThicknessM = t;

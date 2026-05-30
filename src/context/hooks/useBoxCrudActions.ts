@@ -20,6 +20,7 @@ import {
 import { createWorkspaceBox, recomputeState } from "../projectState";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import { isCornerFixedFrontModel } from "../../core/cornerCabinet";
 import { wallStore } from "../../stores/wallStore";
 import {
   getFloorBoundsMmFromWalls,
@@ -247,6 +248,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
               feetHeight: 100,
               feetOffsetFront: 100,
                   drawerHeightMode: isPiModel ? "custom" : "equal",
+              cornerFixedFront: isCornerFixedFrontModel(baseModel.id),
             }
           );
           newBox.manualPosition = true;

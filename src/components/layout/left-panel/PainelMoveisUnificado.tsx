@@ -45,6 +45,7 @@ function buildGroups(items: UnifiedModelItem[]): CatalogGroup[] {
   for (const item of items) {
     const gc = item.grupoCatalogo;
     const key =
+      item.subcategoriaCatalogo === "caixas-de-canto" ? "caixas-de-canto" :
       gc === "pt" ? "cozinha-pt" :
       gc === "pi" ? "pi" :
       gc === "br" ? "cozinha-br" :
@@ -54,6 +55,7 @@ function buildGroups(items: UnifiedModelItem[]): CatalogGroup[] {
     map.get(key)!.push(item);
   }
   const LABELS: Record<string, string> = {
+    "caixas-de-canto": "Caixas de Canto",
     "cozinha-br": "Cozinha — Branco",
     "cozinha-pt": "Cozinha — Carve",
     "pi":         "PI Models",
@@ -334,7 +336,7 @@ export default function PainelMoveisUnificado() {
   const { actions } = useProject();
   const panelRef   = useRef<HTMLDivElement>(null);
   const [search, setSearch]         = useState("");
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ "cozinha-br": true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ "cozinha-br": true, "caixas-de-canto": true });
   const [activeItem, setActiveItem] = useState<UnifiedModelItem | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [config, setConfig]         = useState<BoxConfig>(DEFAULT_CONFIG);

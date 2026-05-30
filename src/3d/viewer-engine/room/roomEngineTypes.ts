@@ -1,22 +1,43 @@
-/** Tipos Room 2.0 — fase básica pimo.pro */
+/** Tipos Room 2.0 — fase visual. Não alimenta cutlist, CNC ou produção. */
 
-export type RoomWallLabel = "norte" | "sul" | "este" | "oeste";
+export type RoomWallLabel = "norte" | "sul" | "este" | "oeste" | "extra";
+export type RoomOpeningKind = "normal" | "correr";
+
+export type ProjectRoomWallPosition = {
+  x: number;
+  y: number;
+  z: number;
+};
 
 export type ProjectRoomWall = {
   id: string;
   label: RoomWallLabel;
+  /** Largura/comprimento visual da parede em mm. */
+  widthMm: number;
+  /** Compatibilidade com snapshots antigos; espelha widthMm. */
   lengthMm: number;
   heightMm: number;
+  thicknessMm: number;
+  position: ProjectRoomWallPosition;
+  rotationDeg: number;
 };
 
 export type ProjectRoomOpening = {
   id: string;
   type: "door" | "window";
+  /** Subtipo visual: porta/janela normal ou de correr. */
+  kind: RoomOpeningKind;
   wallId: string;
+  /** Posição horizontal em mm a partir da borda da parede. */
   xPosMm: number;
+  /** Alias semântico para Room 2.0; espelha xPosMm. */
+  horizontalOffsetMm: number;
   widthMm: number;
   heightMm: number;
+  thicknessMm: number;
   floorOffsetMm: number;
+  /** Alias semântico para Room 2.0; espelha floorOffsetMm. */
+  verticalOffsetMm: number;
 };
 
 export type ProjectRoomConfig = {
@@ -32,7 +53,7 @@ export type ProjectRoomConfig = {
 
 export const ROOM_20_DEFAULTS = {
   widthMm: 4000,
-  depthMm: 2500,
+  depthMm: 4000,
   heightMm: 2600,
   wallThicknessMm: 200,
 } as const;
@@ -44,6 +65,7 @@ export const WALL_LABEL_TITLES: Record<RoomWallLabel, string> = {
   este: "Este (direita)",
   norte: "Norte (fundo)",
   oeste: "Oeste (esquerda)",
+  extra: "Parede extra",
 };
 
 /** Índice da parede no layout conectado (wallStore / viewer). */
@@ -52,6 +74,7 @@ export const WALL_LABEL_TO_INDEX: Record<RoomWallLabel, number> = {
   este: 1,
   norte: 2,
   oeste: 3,
+  extra: 999,
 };
 
 export const WALL_INDEX_TO_LABEL: Record<number, RoomWallLabel> = {

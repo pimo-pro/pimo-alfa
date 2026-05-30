@@ -14,6 +14,8 @@ export interface CatalogItem {
   categoria: "cozinha" | "roupeiro" | "banheiro" | "quarto-infantil" | "base" | "upper";
   /** Grupo organizacional interno do catalogo de moveis (UI). */
   grupoCatalogo?: "br" | "pt" | "pi";
+  /** Subcategoria para agrupamento no painel Móveis (ex.: caixas-de-canto). */
+  subcategoriaCatalogo?: string;
   dimensoesDefault: CatalogItemDimensoes;
   descricao?: string;
   /** URL opcional para thumbnail (futuro) */

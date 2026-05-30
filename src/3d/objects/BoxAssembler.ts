@@ -12,6 +12,12 @@ import {
   getWardrobeGroupFromBaseCabinetId,
   hasWardrobeLowerDrawers,
 } from "../../core/wardrobe/wardrobeRules";
+import {
+  getCornerCabinetConfig,
+  inferCornerSideFromBox,
+  computeCornerVisualLayout,
+} from "../../core/cornerCabinet";
+import { getSettings } from "../../core/settings/settingsService";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -190,12 +196,71 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
   const doorSpecs = deps.buildDoorSpecs(doorLayerItems);
   const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems);
+  const cornerCfg = getCornerCabinetConfig(opts.baseCabinetId);
+  const cornerSide = cornerCfg
+    ? inferCornerSideFromBox({ baseCabinetId: opts.baseCabinetId, rotacaoY: opts.rotationY })
+    : null;
+  const portasSettings = getSettings().portas;
+
   doorSpecs.forEach((spec, doorIndex) => {
     const item = doorLayerItems[doorIndex];
     const materialId = item?.material ?? item?.materialId ?? deps.getDefaultOfficialMaterialId();
     const doorMaterial = deps.getMaterialForOfficialId(materialId);
-    root.add(deps.createDoorObject(spec, doorMaterial as THREE.Material, drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta));
+    const doorObj = deps.createDoorObject(
+      spec,
+      doorMaterial as THREE.Material,
+      drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta
+    );
+    if (cornerCfg && cornerCfg.doorFrameVisualMm > 0) {
+      const frameInset = cornerCfg.doorFrameVisualMm / 1000;
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          spec.widthM + frameInset * 2,
+          spec.heightM + frameInset * 2,
+          Math.max(0.002, spec.thicknessM * 0.35)
+        ),
+        doorMaterial as THREE.Material
+      );
+      frame.name = `door-frame-${spec.id}`;
+      frame.position.z = -spec.thicknessM * 0.2;
+      doorObj.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh && child.name.startsWith("door-leaf")) {
+          child.add(frame);
+        }
+      });
+    }
+    root.add(doorObj);
   });
+
+  if (cornerCfg && cornerSide) {
+    const visual = computeCornerVisualLayout({
+      widthM: width,
+      heightM: height,
+      depthM: depth,
+      thicknessM: deps.thicknessM,
+      side: cornerSide,
+      config: cornerCfg,
+      gapVerticalMm: portasSettings.portaGapVerticalMm,
+      gapHorizontalMm: portasSettings.portaGapHorizontalMm,
+      doorPosZOffsetMm: portasSettings.portaPosZOffsetMm,
+    });
+    const ffMat = baseMaterial;
+    const ff = deps.panelFactory.createPanel(
+      visual.fixedFront.size[0],
+      visual.fixedFront.size[1],
+      visual.fixedFront.size[2],
+      "frente-fixa",
+      "front",
+      { singleMaterial: ffMat }
+    );
+    ff.name = "frente-fixa";
+    ff.position.set(...visual.fixedFront.pos);
+    const ffHoles = drillMap.frente_fixa ?? [];
+    if (ffHoles.length > 0) {
+      deps.applyDrillHolesToPanelGeometry(ff, "front", ffHoles);
+    }
+    root.add(ff);
+  }
   drawerSpecs.forEach((spec, drawerIndex) => {
     const drawerMaterial = drawerLayerItems[drawerIndex]?.material
       ? deps.getMaterialForOfficialId(drawerLayerItems[drawerIndex].material!)

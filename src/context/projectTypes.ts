@@ -248,8 +248,9 @@ export type RoomConfig = {
   numWalls: 3 | 4;
   walls: Array<{
     id: string;
-    position: { x: number; z: number };
+    position: { x: number; y?: number; z: number };
     rotation: number;
+    widthMm?: number;
     lengthMm: number;
     heightMm: number;
     thicknessMm: number;
@@ -257,8 +258,10 @@ export type RoomConfig = {
     openings: Array<{
       id: string;
       type: "door" | "window";
+      kind?: "normal" | "correr";
       widthMm: number;
       heightMm: number;
+      thicknessMm?: number;
       floorOffsetMm: number;
       horizontalOffsetMm: number;
       modelId?: string;
@@ -325,13 +328,15 @@ export type RoomSnapshot = {
     heightCm: number;
     thicknessCm: number;
     color: string;
-    position?: { x: number; z: number };
+    position?: { x: number; y?: number; z: number };
     rotation?: number;
     openings: Array<{
       id: string;
       type: "door" | "window";
+      kind?: "normal" | "correr";
       widthMm: number;
       heightMm: number;
+      thicknessMm?: number;
       floorOffsetMm: number;
       horizontalOffsetMm: number;
       modelId?: string;

@@ -1,75 +1,88 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
-import type { RematePosition, RemateType } from "../../../core/remate/remateTypes";
+import type { CreateRemateInput, RemateFaceKind } from "../../../core/remate/remateTypes";
+import { faceKindLabel } from "../../../core/remate/remateTypes";
 
 type Props = {
   boxId: string;
 };
 
-const TYPES: Array<{ id: RemateType; label: string }> = [
-  { id: "completo", label: "Completo" },
-  { id: "avista", label: "Avista" },
-  { id: "L", label: "Remate L" },
-  { id: "rodape", label: "Rodapé" },
-];
-
-const POSITIONS: Array<{ id: RematePosition; label: string }> = [
-  { id: "dir", label: "Direita" },
-  { id: "esq", label: "Esquerda" },
-  { id: "cima", label: "Cima" },
-  { id: "baixo", label: "Baixo" },
-  { id: "rodape", label: "Rodapé" },
+const FACE_TOGGLES: Array<{
+  faceKind: RemateFaceKind | "RODAPE";
+  label: string;
+  create: CreateRemateInput;
+}> = [
+  { faceKind: "DIR", label: "Remate DIR", create: { type: "avista", position: "dir" } },
+  { faceKind: "ESQ", label: "Remate ESQ", create: { type: "avista", position: "esq" } },
+  { faceKind: "CIMA", label: "Remate CIMA", create: { type: "avista", position: "cima" } },
+  { faceKind: "BAIXO", label: "Remate BAIXO", create: { type: "avista", position: "baixo" } },
+  { faceKind: "L", label: "Remate L (2 peças)", create: { type: "L", position: "dir" } },
+  { faceKind: "RODAPE", label: "Roda pé", create: { type: "rodape", position: "rodape" } },
 ];
 
 export default function BoxRemateSection({ boxId }: Props) {
   const { project, actions } = useProject();
-  const [type, setType] = useState<RemateType>("avista");
-  const [position, setPosition] = useState<RematePosition>("dir");
   const selectedBox = project.workspaceBoxes.find((box) => box.id === boxId);
   const materials = useMemo(() => listOfficialMaterials().filter((material) => material.industrial), []);
   const defaultMaterialId = selectedBox?.material || project.materialId || project.material.tipo;
-  const [materialId, setMaterialId] = useState(defaultMaterialId);
   const remates = (project.remates ?? []).filter((remate) => remate.parentBoxId === boxId);
 
+  const rematesByFace = (face: RemateFaceKind | "RODAPE") =>
+    remates.filter((r) => r.faceKind === face);
+
+  const toggleFace = (face: RemateFaceKind | "RODAPE", create: CreateRemateInput) => {
+    const existing = rematesByFace(face);
+    if (existing.length > 0) {
+      existing.forEach((r) => actions.removeRemate(r.id));
+      return;
+    }
+    actions.createBoxRemate({
+      ...create,
+      parentBoxId: boxId,
+      materialId: defaultMaterialId,
+      materialMode: "custom",
+    });
+  };
+
   return (
-    <Panel title="Remate do Box" description="Peças independentes de acabamento final.">
+    <Panel title="Remate do Box" description="Peças independentes — adicione várias faces no mesmo módulo.">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <select className="select" value={type} onChange={(e) => setType(e.target.value as RemateType)}>
-          {TYPES.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-        <select className="select" value={position} onChange={(e) => setPosition(e.target.value as RematePosition)}>
-          {POSITIONS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-        <select className="select" value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
-          {materials.map((material) => (
-            <option key={material.canonicalId} value={material.canonicalId}>
-              {material.label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => actions.createBoxRemate({ type, position, materialId, materialMode: "custom" })}
-        >
-          Criar remate
-        </button>
+        {FACE_TOGGLES.map((item) => {
+          const active = rematesByFace(item.faceKind);
+          const isOn = active.length > 0;
+          return (
+            <div
+              key={item.faceKind}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                padding: "6px 8px",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: 6,
+              }}
+            >
+              <span style={{ fontSize: 12 }}>{item.label}</span>
+              <button
+                type="button"
+                className={isOn ? "btn btn-danger" : "btn"}
+                style={{ fontSize: 11, padding: "4px 10px" }}
+                onClick={() => toggleFace(item.faceKind, item.create)}
+              >
+                {isOn ? "Remover" : "Adicionar"}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {remates.length === 0 ? (
-        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Sem remates neste box.</div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8 }}>Sem remates neste box.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
           {remates.map((remate) => (
             <div
               key={remate.id}
@@ -82,7 +95,10 @@ export default function BoxRemateSection({ boxId }: Props) {
                 gap: 6,
               }}
             >
-              <strong style={{ fontSize: 12 }}>{remate.name}</strong>
+              <strong style={{ fontSize: 12 }}>
+                {faceKindLabel(remate.faceKind)}
+                {remate.partIndex ? ` · peça ${remate.partIndex}` : ""}
+              </strong>
               <select
                 className="select input-sm"
                 value={remate.materialId}
@@ -98,6 +114,7 @@ export default function BoxRemateSection({ boxId }: Props) {
                 <input
                   className="input input-sm"
                   type="number"
+                  title="Largura (mm)"
                   value={remate.dimensions.widthMm}
                   onChange={(e) =>
                     actions.updateRemate(remate.id, {
@@ -108,6 +125,7 @@ export default function BoxRemateSection({ boxId }: Props) {
                 <input
                   className="input input-sm"
                   type="number"
+                  title="Altura (mm)"
                   value={remate.dimensions.heightMm}
                   onChange={(e) =>
                     actions.updateRemate(remate.id, {
@@ -118,6 +136,7 @@ export default function BoxRemateSection({ boxId }: Props) {
                 <input
                   className="input input-sm"
                   type="number"
+                  title="Profundidade (mm)"
                   value={remate.dimensions.depthMm}
                   onChange={(e) =>
                     actions.updateRemate(remate.id, {
@@ -127,7 +146,7 @@ export default function BoxRemateSection({ boxId }: Props) {
                 />
               </div>
               <button type="button" className="btn btn-danger" onClick={() => actions.removeRemate(remate.id)}>
-                Remover
+                Remover peça
               </button>
             </div>
           ))}

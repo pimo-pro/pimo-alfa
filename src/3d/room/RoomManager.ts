@@ -126,6 +126,64 @@ export class RoomManager {
     return wall;
   }
 
+  updateWallFromConfig(config: {
+    id: number;
+    lengthM: number;
+    heightM: number;
+    thicknessM: number;
+    position: { x: number; y?: number; z: number };
+    rotationDeg: number;
+  }): boolean {
+    const entry = this.getWallsForViewer().find((wall) => wall.id === config.id);
+    const wall = entry?.mesh;
+    if (!wall) return false;
+    wall.geometry.dispose();
+    wall.geometry = new THREE.BoxGeometry(config.lengthM, config.heightM, config.thicknessM);
+    wall.position.set(
+      config.position.x,
+      config.position.y ?? config.heightM / 2,
+      config.position.z
+    );
+    wall.rotation.y = (config.rotationDeg * Math.PI) / 180;
+    wall.userData.wallLengthMm = config.lengthM * 1000;
+    wall.userData.wallHeightMm = config.heightM * 1000;
+    wall.userData.wallThicknessM = config.thicknessM;
+    return true;
+  }
+
+  addWallFromConfig(config: {
+    id: number;
+    lengthM: number;
+    heightM: number;
+    thicknessM: number;
+    position: { x: number; y?: number; z: number };
+    rotationDeg: number;
+    isMainWall?: boolean;
+  }): THREE.Mesh {
+    const wall = createExtraWall(config.id, {
+      lengthM: config.lengthM,
+      heightM: config.heightM,
+      thicknessM: config.thicknessM,
+      isMainWall: config.isMainWall,
+    });
+    wall.position.set(
+      config.position.x,
+      config.position.y ?? config.heightM / 2,
+      config.position.z
+    );
+    wall.rotation.y = (config.rotationDeg * Math.PI) / 180;
+    wall.userData.wallId = config.id;
+    wall.userData.wallLengthMm = config.lengthM * 1000;
+    wall.userData.wallHeightMm = config.heightM * 1000;
+    wall.userData.wallThicknessM = config.thicknessM;
+    this.wallsExtra.push(wall);
+    this.group.add(wall);
+    this.nextExtraWallId = Math.max(this.nextExtraWallId, config.id + 1);
+    const bounds = this.getBounds();
+    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    return wall;
+  }
+
   setLocked(flag: boolean): void {
     this.locked = flag;
   }

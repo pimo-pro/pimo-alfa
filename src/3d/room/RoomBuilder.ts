@@ -98,6 +98,7 @@ export class RoomBuilder {
     const id =
       elementId?.trim() ||
       `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    if (elementId) this.removeElement(elementId);
     const cfg: DoorWindowConfig = { ...config };
     const group =
       kind === "door" ? DoorElement.create(cfg, id) : WindowElement.create(cfg, id);

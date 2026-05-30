@@ -11,12 +11,16 @@ export const CATALOG_ITEMS: CatalogItem[] = BASE_CABINET_MODELS.map((m) => ({
   nome: m.nome,
   categoria: m.categoria,
   grupoCatalogo: m.grupoCatalogo ?? (/^[AB]\d+\b/i.test(m.nome) ? "br" : undefined),
+  subcategoriaCatalogo: m.subcategoriaCatalogo,
   dimensoesDefault: {
     largura_mm: m.widthMm,
     altura_mm: m.heightMm,
     profundidade_mm: m.depthMm,
   },
-  descricao: m.nome,
+  descricao:
+    m.subcategoriaCatalogo === "caixas-de-canto"
+      ? "Canto com frente fixa e porta única — esquerda/direita ou rotação 180°"
+      : m.nome,
 }));
 
 const CATALOG_BY_ID = new Map(CATALOG_ITEMS.map((item) => [item.id, item]));

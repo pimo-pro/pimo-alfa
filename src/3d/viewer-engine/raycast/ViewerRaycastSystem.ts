@@ -46,6 +46,7 @@ export type ViewerRaycastSystemDeps = {
   getDebugMode: () => boolean;
   getBoxEntry?: (boxId: string) => ViewerBoxEntry | undefined;
   projectWorldToScreen?: (world: THREE.Vector3) => { x: number; y: number } | null;
+  getRemateRoot?: () => THREE.Object3D | null;
 };
 
 /**
@@ -126,6 +127,26 @@ export class ViewerRaycastSystem {
         return drawerLayerId;
       }
       current = current.parent;
+    }
+    return null;
+  }
+
+  getRemateIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    const root = this.deps.getRemateRoot?.();
+    if (!root) return null;
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    this.deps.raycaster.layers.set(0);
+    const hits = this.deps.raycaster.intersectObjects([root], true);
+    for (const hit of hits) {
+      if (hit.object.userData?.isRemateMergeVisual === true) continue;
+      const remateId = hit.object.userData?.remateId;
+      if (typeof remateId === "string" && remateId.length > 0) return remateId;
     }
     return null;
   }

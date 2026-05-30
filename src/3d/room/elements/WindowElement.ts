@@ -9,7 +9,85 @@ import { DEFAULT_ELEMENT_COLOR } from "../types";
 
 const MM_TO_M = 1 / 1000;
 const FRAME_WIDTH_MM = 60;
-const DEPTH_M = 0.04;
+const DEFAULT_DEPTH_MM = 40;
+
+function disposeChildren(group: THREE.Group): void {
+  group.children.forEach((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry.dispose();
+      const mat = child.material;
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+      else mat.dispose();
+    }
+  });
+  group.clear();
+}
+
+function tagRoomElement(mesh: THREE.Mesh): THREE.Mesh {
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.isRoomElement = true;
+  return mesh;
+}
+
+function buildWindowGeometry(group: THREE.Group, config: DoorWindowConfig): void {
+  disposeChildren(group);
+  const widthM = Math.max(0.01, config.widthMm * MM_TO_M);
+  const heightM = Math.max(0.01, config.heightMm * MM_TO_M);
+  const frameM = FRAME_WIDTH_MM * MM_TO_M;
+  const depthM = Math.max(0.01, (config.thicknessMm ?? DEFAULT_DEPTH_MM) * MM_TO_M);
+
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: DEFAULT_ELEMENT_COLOR,
+    roughness: 0.7,
+    metalness: 0.05,
+  });
+  const glassMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc8e0f0,
+    roughness: 0.2,
+    metalness: 0.02,
+    transparent: true,
+    opacity: 0.85,
+  });
+
+  const leafCount = config.kind === "correr" ? 2 : 1;
+  const glassWidth = widthM / leafCount;
+  for (let i = 0; i < leafCount; i += 1) {
+    const panel = tagRoomElement(new THREE.Mesh(
+      new THREE.BoxGeometry(Math.max(0.01, glassWidth), Math.max(0.01, heightM), depthM * 0.6),
+      glassMaterial.clone()
+    ));
+    const x = leafCount === 1 ? 0 : -glassWidth / 2 + i * glassWidth;
+    panel.position.set(x, 0, config.kind === "correr" && i === 1 ? depthM * 0.45 : 0);
+    group.add(panel);
+  }
+
+  const frames: THREE.Mesh[] = [];
+  const top = tagRoomElement(new THREE.Mesh(new THREE.BoxGeometry(widthM + frameM * 2, frameM, depthM), frameMaterial.clone()));
+  top.position.y = heightM / 2 + frameM / 2;
+  frames.push(top);
+
+  const bottom = tagRoomElement(new THREE.Mesh(new THREE.BoxGeometry(widthM + frameM * 2, frameM, depthM), frameMaterial.clone()));
+  bottom.position.y = -heightM / 2 - frameM / 2;
+  frames.push(bottom);
+
+  const left = tagRoomElement(new THREE.Mesh(new THREE.BoxGeometry(frameM, heightM, depthM), frameMaterial.clone()));
+  left.position.x = -widthM / 2 - frameM / 2;
+  frames.push(left);
+
+  const right = tagRoomElement(new THREE.Mesh(new THREE.BoxGeometry(frameM, heightM, depthM), frameMaterial.clone()));
+  right.position.x = widthM / 2 + frameM / 2;
+  frames.push(right);
+
+  if (config.kind === "correr") {
+    const centerRail = tagRoomElement(new THREE.Mesh(new THREE.BoxGeometry(frameM * 0.5, heightM, depthM * 1.2), frameMaterial.clone()));
+    frames.push(centerRail);
+  }
+
+  frames.forEach((f) => group.add(f));
+  group.userData.config = { ...config };
+  group.userData.frames = frames;
+}
 
 export class WindowElement {
   static create(config: DoorWindowConfig, elementId: string): THREE.Group {
@@ -18,102 +96,11 @@ export class WindowElement {
     group.userData.isRoomElement = true;
     group.userData.elementId = elementId;
     group.userData.elementType = "window";
-
-    const widthM = Math.max(0.01, config.widthMm * MM_TO_M);
-    const heightM = Math.max(0.01, config.heightMm * MM_TO_M);
-    const frameM = FRAME_WIDTH_MM * MM_TO_M;
-
-    const frameMaterial = new THREE.MeshStandardMaterial({
-      color: DEFAULT_ELEMENT_COLOR,
-      roughness: 0.7,
-      metalness: 0.05,
-    });
-    const glassMaterial = new THREE.MeshStandardMaterial({
-      color: 0xc8e0f0,
-      roughness: 0.2,
-      metalness: 0.02,
-      transparent: true,
-      opacity: 0.85,
-    });
-
-    const panelGeo = new THREE.BoxGeometry(
-      Math.max(0.01, widthM),
-      Math.max(0.01, heightM),
-      DEPTH_M * 0.6
-    );
-    const panel = new THREE.Mesh(panelGeo, glassMaterial);
-    panel.castShadow = true;
-    panel.receiveShadow = true;
-    panel.userData.isRoomElement = true;
-    group.add(panel);
-
-    const frames: THREE.Mesh[] = [];
-    const topGeo = new THREE.BoxGeometry(widthM + frameM * 2, frameM, DEPTH_M);
-    const top = new THREE.Mesh(topGeo, frameMaterial);
-    top.position.y = heightM / 2 + frameM / 2;
-    top.castShadow = true;
-    top.receiveShadow = true;
-    top.userData.isRoomElement = true;
-    frames.push(top);
-
-    const bottomGeo = new THREE.BoxGeometry(widthM + frameM * 2, frameM, DEPTH_M);
-    const bottom = new THREE.Mesh(bottomGeo, frameMaterial);
-    bottom.position.y = -heightM / 2 - frameM / 2;
-    bottom.castShadow = true;
-    bottom.receiveShadow = true;
-    bottom.userData.isRoomElement = true;
-    frames.push(bottom);
-
-    const leftGeo = new THREE.BoxGeometry(frameM, heightM, DEPTH_M);
-    const left = new THREE.Mesh(leftGeo, frameMaterial);
-    left.position.x = -widthM / 2 - frameM / 2;
-    left.castShadow = true;
-    left.receiveShadow = true;
-    left.userData.isRoomElement = true;
-    frames.push(left);
-
-    const rightGeo = new THREE.BoxGeometry(frameM, heightM, DEPTH_M);
-    const right = new THREE.Mesh(rightGeo, frameMaterial);
-    right.position.x = widthM / 2 + frameM / 2;
-    right.castShadow = true;
-    right.receiveShadow = true;
-    right.userData.isRoomElement = true;
-    frames.push(right);
-
-    frames.forEach((f) => group.add(f));
-    group.userData.config = { ...config };
-    group.userData.frames = frames;
+    buildWindowGeometry(group, config);
     return group;
   }
 
   static updateConfig(group: THREE.Group, config: DoorWindowConfig): void {
-    const frames = group.userData.frames as THREE.Mesh[] | undefined;
-    if (!Array.isArray(frames) || frames.length < 4) return;
-
-    const widthM = Math.max(0.01, config.widthMm * MM_TO_M);
-    const heightM = Math.max(0.01, config.heightMm * MM_TO_M);
-    const frameM = FRAME_WIDTH_MM * MM_TO_M;
-
-    const panel = group.children[0];
-    if (panel instanceof THREE.Mesh) {
-      panel.geometry.dispose();
-      panel.geometry = new THREE.BoxGeometry(widthM, heightM, DEPTH_M * 0.6);
-    }
-
-    const [top, bottom, left, right] = frames;
-    top.geometry.dispose();
-    top.geometry = new THREE.BoxGeometry(widthM + frameM * 2, frameM, DEPTH_M);
-    top.position.y = heightM / 2 + frameM / 2;
-    bottom.geometry.dispose();
-    bottom.geometry = new THREE.BoxGeometry(widthM + frameM * 2, frameM, DEPTH_M);
-    bottom.position.y = -heightM / 2 - frameM / 2;
-    left.geometry.dispose();
-    left.geometry = new THREE.BoxGeometry(frameM, heightM, DEPTH_M);
-    left.position.x = -widthM / 2 - frameM / 2;
-    right.geometry.dispose();
-    right.geometry = new THREE.BoxGeometry(frameM, heightM, DEPTH_M);
-    right.position.x = widthM / 2 + frameM / 2;
-
-    group.userData.config = { ...config };
+    buildWindowGeometry(group, config);
   }
 }

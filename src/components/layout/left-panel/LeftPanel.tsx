@@ -25,6 +25,7 @@ export type LeftPanelProps = {
 export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
   const photoModePanelOpen = useUiStore((state) => state.photoModePanelOpen);
   const selectedTool = useUiStore((state) => state.selectedTool);
+  const selectedObject = useUiStore((state) => state.selectedObject);
   const { project, actions } = useProject();
   const selectedBox = project.workspaceBoxes.find(
     (box) => box.id === project.selectedWorkspaceBoxId
@@ -68,6 +69,16 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <div className="left-panel-content">
         <div className="left-panel-scroll">
           <PhotoModeSettingsContent />
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedObject.type === "wall" || selectedObject.type === "roomElement") {
+    return (
+      <div className="left-panel-content">
+        <div className="left-panel-scroll">
+          <PainelSala />
         </div>
       </div>
     );

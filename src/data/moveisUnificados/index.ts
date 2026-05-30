@@ -12,6 +12,7 @@ export type UnifiedModelItem = {
   categoria: string;
   categoriaId: string;
   grupoCatalogo?: "br" | "pt" | "pi";
+  subcategoriaCatalogo?: string;
   descricao?: string;
   thumbnailUrl?: string | null;
   dimensoes?: { largura_mm: number; altura_mm: number; profundidade_mm: number };
@@ -115,6 +116,7 @@ export const buildUnifiedMoveis = (): UnifiedModelItem[] => {
     categoria: item.categoria,
     categoriaId: resolveCategoriaId(item.categoria),
     grupoCatalogo: item.grupoCatalogo,
+    subcategoriaCatalogo: item.subcategoriaCatalogo,
     descricao: item.descricao,
     thumbnailUrl: item.thumbnailUrl ?? null,
     dimensoes: {

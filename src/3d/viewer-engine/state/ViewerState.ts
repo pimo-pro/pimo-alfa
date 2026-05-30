@@ -14,6 +14,7 @@ export class ViewerState {
   private hoveredBoxId: string | null = null;
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
+  private selectedRemateId: string | null = null;
   private transformMode: TransformMode = null;
   private placementMode: PlacementMode = null;
   private highlightEnabled = false;
@@ -51,6 +52,13 @@ export class ViewerState {
   }
   setSelectedRoomElementId(v: string | null): void {
     this.selectedRoomElementId = v;
+  }
+
+  getSelectedRemate(): string | null {
+    return this.selectedRemateId;
+  }
+  setSelectedRemate(id: string | null): void {
+    this.selectedRemateId = id;
   }
 
   getCurrentTool(): TransformMode {
@@ -133,6 +141,7 @@ export class ViewerState {
     this.selectedBoxId = null;
     this.selectedWallIndex = null;
     this.selectedRoomElementId = null;
+    this.selectedRemateId = null;
     this.internalSelection = null;
   }
 }

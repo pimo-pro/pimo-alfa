@@ -71,9 +71,30 @@ declare global {
       bindRemateBridge?: (
         bridge: Pick<
           import("../3d/viewer-engine/remate/RemateVisualizer").RemateVisualBridge,
-          "getBoxRemateConfig"
+          "getBoxRemateConfig" | "listBoxRemateConfigs" | "getBoxWorldMatrix"
         > | null
       ) => void;
+      setOnRemateTransform?: (
+        callback:
+          | ((
+              remateId: string,
+              patch: {
+                transform: {
+                  xMm: number;
+                  yMm: number;
+                  zMm: number;
+                  rotacaoXRad: number;
+                  rotacaoYRad: number;
+                  rotacaoZRad: number;
+                };
+                placementFree: boolean;
+              }
+            ) => void)
+          | null
+      ) => void;
+      selectRemate?: (remateId: string | null) => void;
+      getBoxDimensions?: (boxId: string) => { width: number; height: number; depth: number } | null;
+      getBoxWorldMatrix?: (boxId: string) => unknown;
       syncRemateVisuals?: () => void;
       remateVisual?: {
         syncAll: () => void;

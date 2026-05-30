@@ -12,8 +12,10 @@ import { computeWallEndpoints, distance, type Point } from "../utils/wallSnappin
 export interface WallOpening {
   id: string;
   type: "door" | "window";
+  kind?: "normal" | "correr";
   widthMm: number;
   heightMm: number;
+  thicknessMm?: number;
   floorOffsetMm: number;
   horizontalOffsetMm: number;
   modelId?: string;
@@ -25,7 +27,7 @@ export interface Wall {
   heightCm: number;
   thicknessCm: number;
   color: string;
-  position?: { x: number; z: number };
+  position?: { x: number; y?: number; z: number };
   rotation?: number;
   openings: WallOpening[];
 }
@@ -134,8 +136,8 @@ function applyLayoutIfMissing(walls: Wall[]): Wall[] {
     const fallback = layout[index] ?? { x: 0, z: 0, rotation: 0 };
     return {
       ...wall,
-      position: { x: fallback.x, z: fallback.z },
-      rotation: fallback.rotation,
+    position: wall.position ?? { x: fallback.x, z: fallback.z },
+    rotation: wall.rotation ?? fallback.rotation,
     };
   });
 }
@@ -160,9 +162,15 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
 
   createWall: () => {
     const { walls, selectedWallId } = get();
-    if (walls.length >= 4) return;
     const id = `wall-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const wall: Wall = { id, ...DEFAULT_WALL };
+    const offset = walls.length * 25;
+    const wall: Wall = {
+      id,
+      ...DEFAULT_WALL,
+      position: { x: offset, z: offset },
+      rotation: 0,
+      openings: [],
+    };
     const newWalls = applyLayoutIfMissing([...walls, wall]);
     set({
       walls: newWalls,
@@ -174,7 +182,7 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
   removeWall: (id: string) => {
     const { walls, selectedWallId, mainWallIndex } = get();
     if (!walls.some((w) => w.id === id)) return;
-    const nextWalls = applyLayoutIfMissing(walls.filter((wall) => wall.id !== id));
+    const nextWalls = walls.filter((wall) => wall.id !== id);
     const nextMainWallIndex = clampMainWallIndex(mainWallIndex, nextWalls.length);
     const nextSelected =
       selectedWallId === id

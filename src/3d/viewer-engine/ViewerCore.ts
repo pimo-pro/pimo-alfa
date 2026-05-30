@@ -223,6 +223,10 @@ export class ViewerCore {
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
+  private onRemateTransform: ((
+    _remateId: string,
+    _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+  ) => void) | null = null;
   private transformControls: TransformControls | null = null;
   /** Helper (Object3D) retornado por getHelper(); é o que é adicionado à cena e tem .visible. */
   private transformControlsHelper: THREE.Object3D | null = null;
@@ -553,6 +557,7 @@ export class ViewerCore {
       getDebugMode: () => this.debugMode,
       getBoxEntry: (boxId) => this.boxes.get(boxId),
       projectWorldToScreen: (world) => this.projectWorldToScreen(world),
+      getRemateRoot: () => this.remateVisualizer.getRoot(),
     });
 
     this.panelVisibility = new ViewerPanelVisibility({
@@ -711,6 +716,7 @@ export class ViewerCore {
       this.measurementOverlay.onRulerMovementTick("transform");
       // Keep external listeners in sync during drag.
       this.notifyBoxTransform();
+      this.notifyRemateTransform();
       this.logTransformDiagnostic("drag(objectChange)");
     });
     this.transformControlsHelper = this.transformControls.getHelper();
@@ -724,6 +730,7 @@ export class ViewerCore {
     this.wallGizmo = new WallGizmo(this.cameraManager.camera);
     this.wallGizmo.setOnTransform(() => this.notifyWallTransform());
     this.sceneManager.scene.add(this.wallGizmo.group);
+    this.sceneManager.scene.add(this.remateVisualizer.getRoot());
     this.setWallEditMode(false);
 
     this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
@@ -869,24 +876,51 @@ export class ViewerCore {
     this.orlaVisualizer.syncBoxRoot(boxId, entry.mesh);
   }
 
-  bindRemateBridge(bridge: Pick<RemateVisualBridge, "getBoxRemateConfig"> | null): void {
+  bindRemateBridge(bridge: RemateVisualBridge | null): void {
     this.remateVisualizer.bindBridge(bridge);
     this.syncRemateVisuals();
   }
 
   syncRemateVisuals(): void {
-    for (const [boxId, entry] of this.boxes.entries()) {
+    this.remateVisualizer.syncAll();
+    for (const [, entry] of this.boxes.entries()) {
       if (!entry?.mesh) continue;
-      this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
+      this.clearBoxChildrenRemateLegacy(entry.mesh);
       this.applyPanelVisibilityForObject(entry.mesh);
     }
+    this.applyPanelVisibilityForObject(this.remateVisualizer.getRoot());
   }
 
-  private syncRemateForBox(boxId: string): void {
-    const entry = this.boxes.get(boxId);
-    if (!entry?.mesh) return;
-    this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
-    this.applyPanelVisibilityForObject(entry.mesh);
+  private clearBoxChildrenRemateLegacy(boxRoot: THREE.Object3D): void {
+    this.remateVisualizer.clearBoxChildren(boxRoot);
+  }
+
+  private syncRemateForBox(_boxId: string): void {
+    this.syncRemateVisuals();
+  }
+
+  getRemateMesh(remateId: string): THREE.Object3D | null {
+    return this.remateVisualizer.getMeshByRemateId(remateId) ?? null;
+  }
+
+  selectRemate(remateId: string | null): void {
+    this.viewerState.setSelectedRemate(remateId);
+    if (remateId) {
+      this.viewerState.setSelectedBox(null);
+      this.viewerState.setSelectedWallIndex(null);
+      this.viewerState.setSelectedRoomElementId(null);
+    }
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
+  }
+
+  setOnRemateTransform(
+    callback: ((
+      remateId: string,
+      patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+    ) => void) | null
+  ): void {
+    this.onRemateTransform = callback;
   }
 
   private getRoomBoundsMmForAutoLayout(): AutoLayoutRoomBoundsMm | null {
@@ -3436,6 +3470,17 @@ export class ViewerCore {
     return { width: entry.width, height: entry.height, depth: entry.depth };
   }
 
+  getBoxWorldMatrix(boxId: string): THREE.Matrix4 | null {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return null;
+    entry.mesh.updateMatrixWorld(true);
+    return entry.mesh.matrixWorld.clone();
+  }
+
+  getRemateIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    return this.raycastSystem.getRemateIdAtPointer(event);
+  }
+
   /** Posição do modelo em espaço local da caixa (metros; origem no centro da caixa). */
   getModelPosition(boxId: string, modelId: string): { x: number; y: number; z: number } | null {
     const entry = this.boxes.get(boxId);
@@ -3927,6 +3972,8 @@ export class ViewerCore {
       getRoomBuilder: () => this.roomBuilder,
       setPlacementMode: (mode) => this.viewerState.setPlacementMode(mode),
       getBoxIdAtPointer: (e) => this.getBoxIdAtPointer(e),
+      getRemateIdAtPointer: (e) => this.getRemateIdAtPointer(e),
+      selectRemate: (id) => this.selectRemate(id),
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
       getRoomElementAtPointer: (e) => this.getRoomElementAtPointer(e),
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
@@ -3969,6 +4016,8 @@ export class ViewerCore {
       getTransformControlsHelper: () => this.transformControlsHelper,
       getCurrentTool: () => this.viewerState.getCurrentTool(),
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      getSelectedRemateId: () => this.viewerState.getSelectedRemate(),
+      getRemateMesh: (remateId) => this.getRemateMesh(remateId),
       getBoxEntry: (id) => this.boxes.get(id),
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
       getRoomBoxWalls: () => this.roomBoxWalls,
@@ -4120,6 +4169,7 @@ export class ViewerCore {
       return;
     }
     this.viewerState.setSelectedBox(id);
+    this.viewerState.setSelectedRemate(null);
     this.viewerState.setSelectedWallIndex(null);
     this.viewerState.setSelectedRoomElementId(null);
     this.refreshTransformControlsAttachment();
@@ -4163,12 +4213,40 @@ export class ViewerCore {
     this.viewerState.setSuppressNextCanvasClick(true);
     this.viewerTools.applyCurrentTool();
     this.notifyBoxTransform();
+    this.notifyRemateTransform();
     this.notifyWallTransform();
     this.notifyRoomElementTransform();
   }
 
+  private notifyRemateTransform(): void {
+    const remateId = this.viewerState.getSelectedRemate();
+    if (!remateId) return;
+    const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
+    if (!mesh) return;
+    const boxId = mesh.userData.boxId as string | undefined;
+    if (!boxId) return;
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    entry.mesh.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
+    const local = mesh.position.clone().applyMatrix4(inv);
+    this.onRemateTransform?.(remateId, {
+      transform: {
+        xMm: local.x * 1000,
+        yMm: local.y * 1000,
+        zMm: local.z * 1000,
+        rotacaoXRad: mesh.rotation.x,
+        rotacaoYRad: mesh.rotation.y,
+        rotacaoZRad: mesh.rotation.z,
+      },
+      placementFree: true,
+    });
+  }
+
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
+    if (this.viewerState.getSelectedRemate()) return;
+
     const selectedBoxId = this.viewerState.getSelectedBox();
     const currentTool = this.viewerState.getCurrentTool();
     const isDragging = this.viewerState.getTransformControlsDragging();

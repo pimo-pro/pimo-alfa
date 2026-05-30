@@ -8,7 +8,7 @@ interface V4CatalogPanelProps {
   previewItemId?: string;
 }
 
-type SectionKey = "cozinhaBase" | "cozinhaSuperior" | "piModels" | "outros";
+type SectionKey = "cozinhaBase" | "cozinhaSuperior" | "caixasDeCanto" | "piModels" | "outros";
 
 type CatalogSection = {
   key: SectionKey;
@@ -19,25 +19,33 @@ type CatalogSection = {
 const DEFAULT_OPEN: Record<SectionKey, boolean> = {
   cozinhaBase: true,
   cozinhaSuperior: true,
+  caixasDeCanto: true,
   piModels: true,
   outros: false,
 };
 
 function splitSections(items: CatalogItem[]): CatalogSection[] {
-  const cozinhaBase     = items.filter((i) => i.categoria === "base"  && i.grupoCatalogo === "br");
-  const cozinhaSuperior = items.filter((i) => i.categoria === "upper" && i.grupoCatalogo === "br");
+  const caixasDeCanto   = items.filter((i) => i.subcategoriaCatalogo === "caixas-de-canto");
+  const cozinhaBase     = items.filter(
+    (i) => i.categoria === "base" && i.grupoCatalogo === "br" && i.subcategoriaCatalogo !== "caixas-de-canto"
+  );
+  const cozinhaSuperior = items.filter(
+    (i) => i.categoria === "upper" && i.grupoCatalogo === "br" && i.subcategoriaCatalogo !== "caixas-de-canto"
+  );
   const piModels        = items.filter((i) => i.grupoCatalogo === "pi");
   const outros          = items.filter(
     (i) =>
+      i.subcategoriaCatalogo !== "caixas-de-canto" &&
       !(i.categoria === "base"  && i.grupoCatalogo === "br") &&
       !(i.categoria === "upper" && i.grupoCatalogo === "br") &&
       i.grupoCatalogo !== "pi"
   );
   return ([
-    { key: "cozinhaBase",     title: "Cozinha Base",    items: cozinhaBase     },
-    { key: "cozinhaSuperior", title: "Cozinha Superior", items: cozinhaSuperior },
-    { key: "piModels",        title: "PI Models",        items: piModels        },
-    { key: "outros",          title: "Outros",           items: outros          },
+    { key: "caixasDeCanto",   title: "Caixas de Canto",   items: caixasDeCanto   },
+    { key: "cozinhaBase",     title: "Cozinha Base",      items: cozinhaBase     },
+    { key: "cozinhaSuperior", title: "Cozinha Superior",  items: cozinhaSuperior },
+    { key: "piModels",        title: "PI Models",         items: piModels        },
+    { key: "outros",          title: "Outros",            items: outros          },
   ] as CatalogSection[]).filter((s) => s.items.length > 0);
 }
 

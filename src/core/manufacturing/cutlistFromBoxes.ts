@@ -18,6 +18,7 @@ import {
 } from "../qrcode/panelLabelNumber";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide } from "../cornerCabinet";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
@@ -209,23 +210,28 @@ export function cutlistComPrecoFromBox(
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
     const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
+    const isFixedFront = p.tipo === "frente_fixa";
+    const isCornerBox = isCornerFixedFrontModel(box.baseCabinetId);
     const isLateralLeft = p.tipo === "lateral_esquerda";
     const isLateralRight = p.tipo === "lateral_direita";
     const isTopPanel = p.tipo === "cima";
     const isBottomPanel = p.tipo === "fundo";
     const doorIndex = isDoor ? doorPanelIndex : -1;
+    const doorHingeSide = doorsLayer[0]?.hingeSide;
     const hingeSide =
       isDoor && doorsLayer[doorIndex]
         ? doorsLayer[doorIndex].hingeSide
-        : isLateralLeft && hasDoorLeft
-          ? "left"
-          : isLateralRight && hasDoorRight
-            ? "right"
-            : isTopPanel && hasDoorTop
-              ? "top"
-              : isBottomPanel && hasDoorBottom
-                ? "bottom"
-                : undefined;
+        : isFixedFront && isCornerBox
+          ? getCornerFixedFrontHingeSide(box)
+          : isLateralLeft && hasDoorLeft
+            ? "left"
+            : isLateralRight && hasDoorRight
+              ? "right"
+              : isTopPanel && hasDoorTop
+                ? "top"
+                : isBottomPanel && hasDoorBottom
+                  ? "bottom"
+                  : undefined;
     const doorOfficial = isDoor && doorsLayer[doorIndex]?.material
       ? resolveMaterial(doorsLayer[doorIndex].material)
       : null;
@@ -238,7 +244,13 @@ export function cutlistComPrecoFromBox(
     const doorWidthForTopBottom =
       (isTopPanel && hasDoorTop) || (isBottomPanel && hasDoorBottom) ? doorWidthMm : undefined;
     const hingePositionsForLateral =
-      isLateralLeft && hasDoorLeft ? hingePositionsBySide.left : isLateralRight && hasDoorRight ? hingePositionsBySide.right : undefined;
+      isFixedFront && isCornerBox && (doorHingeSide === "left" || doorHingeSide === "right")
+        ? hingePositionsBySide[doorHingeSide]
+        : isLateralLeft && hasDoorLeft
+          ? hingePositionsBySide.left
+          : isLateralRight && hasDoorRight
+            ? hingePositionsBySide.right
+            : undefined;
     const openingH = Number.isFinite(openingHeightMm) && Number(openingHeightMm) > 0 ? Number(openingHeightMm) : p.altura_mm;
     const bottomGap = isDoor ? Math.max(0, (openingH - p.altura_mm) / 2) : 0;
     const topGap = isDoor ? Math.max(0, openingH - p.altura_mm - bottomGap) : 0;

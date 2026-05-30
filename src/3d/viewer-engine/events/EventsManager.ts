@@ -121,8 +121,19 @@ export class EventsManager {
       }
       return;
     }
+    const remateId = e.getRemateIdAtPointer(event);
+    if (remateId) {
+      e.selectRemate(remateId);
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.getOnBoxSelected()?.(null);
+      return;
+    }
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
+      e.selectRemate(null);
       e.setHoveredBox(boxId);
       e.setSelectedBox(boxId);
       e.getOnRoomElementSelected()?.(null);

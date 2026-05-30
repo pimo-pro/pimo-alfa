@@ -1,6 +1,7 @@
 import type {
   CutListItem,
   DrillFace,
+  DrillPanelKey,
   DrillType,
   OperationResult,
   PanelDrillHole,
@@ -284,6 +285,7 @@ export function buildPanelDrillingResult(
   }
 
   const isLateral = input.tipo === "lateral_esquerda" || input.tipo === "lateral_direita";
+  const isFixedFront = input.tipo === "frente_fixa";
   const isDoor = input.tipo === "porta_simples" || input.tipo === "porta_dupla" || input.tipo === "porta_correr";
   const isTopPanel = input.tipo === "cima";
   const isBottomPanel = input.tipo === "fundo";
@@ -329,11 +331,13 @@ export function buildPanelDrillingResult(
       const globalOffsets = sanitizeHingeOffsetsFromEdge(rawGlobal, openingHeightMm, distEntreFixacao);
       hingePositions = globalOffsets.map((o) => o - bottomGapMm);
     }
-  } else if (isLateral) {
-    if (!lateralModuleAllowsHingeDrilling(input)) {
+  } else if (isLateral || isFixedFront) {
+    if (isLateral && !lateralModuleAllowsHingeDrilling(input)) {
       hingePositions = [];
     } else if (Array.isArray(input.hingePositionsMm) && input.hingePositionsMm.length > 0) {
       hingePositions = sanitizeHingeOffsetsFromEdge(input.hingePositionsMm, openingHeightMm, distEntreFixacao);
+    } else if (isFixedFront) {
+      hingePositions = [];
     } else {
       const raw = getHingeYPositions(openingHeightMm, Math.max(2, getNumDobradicas(openingHeightMm, rules)), rules);
       hingePositions = sanitizeHingeOffsetsFromEdge(raw, openingHeightMm, distEntreFixacao);
@@ -349,6 +353,9 @@ export function buildPanelDrillingResult(
 
   if (isLateral && !lateralModuleAllowsHingeDrilling(input)) {
     hingePositions = [];
+  }
+  if (isFixedFront && hingePositions.length === 0 && Array.isArray(input.hingePositionsMm) && input.hingePositionsMm.length > 0) {
+    hingePositions = sanitizeHingeOffsetsFromEdge(input.hingePositionsMm, openingHeightMm, distEntreFixacao);
   }
 
   // Furos de prateleira: regra existente do motor (desativar quando há gavetas no mesmo módulo).
@@ -446,7 +453,7 @@ export function buildViewerDrillMarkersByPanelResult(
       ? panelDrillHolesToTechnical(onlyInternalFaceHoles(canonicalDoorItem.drillHoles), "tras")
       : portaPerDoor[0] ?? [];
 
-  const getHolesFor = (tipo: keyof Omit<ViewerDrillMarkersByPanel, "portaPerDoor">): TechnicalDrillHole[] => {
+  const getHolesFor = (tipo: DrillPanelKey): TechnicalDrillHole[] => {
     if (tipo === "porta") return portaMerged;
     const item = byType.get(tipo);
     if (!item?.drillHoles?.length) return [];
@@ -481,6 +488,12 @@ export function buildViewerDrillMarkersByPanelResult(
     return panelDrillHolesToTechnical(holesToUse, face);
   };
 
+  const frenteFixaItem = byType.get("frente_fixa");
+  const frente_fixa =
+    frenteFixaItem?.drillHoles?.length
+      ? panelDrillHolesToTechnical(onlyInternalFaceHoles(frenteFixaItem.drillHoles), "direita")
+      : [];
+
   const result = {
     cima: getHolesFor("cima"),
     fundo: getHolesFor("fundo"),
@@ -488,6 +501,7 @@ export function buildViewerDrillMarkersByPanelResult(
     lateral_direita: getHolesFor("lateral_direita"),
     porta: portaMerged,
     portaPerDoor: portaPerDoor.length > 0 ? portaPerDoor : undefined,
+    frente_fixa,
   };
   if (import.meta.env.DEV) {
     // Log resultado do mapeamento

@@ -355,9 +355,26 @@ export default function BottomInfoToolbar() {
         });
       }
 
+      const boxRemates = (project.remates ?? []).filter((remate) => remate.parentBoxId === box.id);
+      for (const remate of boxRemates) {
+        const kindLabel =
+          remate.faceKind === "RODAPE"
+            ? "Roda pé"
+            : remate.faceKind === "L"
+              ? `Remate L${remate.partIndex ?? ""}`
+              : `Remate ${remate.faceKind}`;
+        entries.push({
+          id: remate.id,
+          boxId: box.id,
+          boxName: box.nome,
+          label: kindLabel,
+          searchText: `${box.nome} ${kindLabel} ${remate.id} remate`.toLowerCase(),
+        });
+      }
+
       return entries;
     });
-  }, [workspaceBoxes]);
+  }, [workspaceBoxes, project.remates]);
 
   const filteredPanelVisibilityEntries = useMemo(() => {
     const query = pieceSearch.trim().toLowerCase();

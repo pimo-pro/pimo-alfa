@@ -15,6 +15,7 @@ export function ensureBoxPanelIds(
     prateleiras: number;
     portaTipo: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
     gavetas: number;
+    cornerFixedFront?: boolean;
   }
 ): BoxPanelIds {
   const numPortas = options.portaTipo === "sem_porta" ? 0 : options.portaTipo === "porta_dupla" ? 2 : 1;
@@ -30,12 +31,15 @@ export function ensureBoxPanelIds(
   const gavetas = [...(current?.gavetas ?? [])];
   while (gavetas.length < nGavetas) gavetas.push(createStableId());
 
+  const needsFixedFront = options.cornerFixedFront === true && options.portaTipo === "porta_simples";
+
   return {
     cima: current?.cima ?? createStableId(),
     fundo: current?.fundo ?? createStableId(),
     lateral_esquerda: current?.lateral_esquerda ?? createStableId(),
     lateral_direita: current?.lateral_direita ?? createStableId(),
     costa: current?.costa ?? createStableId(),
+    frente_fixa: needsFixedFront ? (current?.frente_fixa ?? createStableId()) : undefined,
     prateleiras: prateleiras.slice(0, nPrateleiras),
     portas: portas.slice(0, numPortas),
     gavetas: gavetas.slice(0, nGavetas),

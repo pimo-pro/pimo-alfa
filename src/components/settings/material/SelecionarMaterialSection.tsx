@@ -1,28 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
-import type { RematePosition, RemateType } from "../../../core/remate/remateTypes";
-
 type SelecionarMaterialSectionProps = {
   boxId: string;
   onViewerMaterialChange?: (_boxId: string, _materialId: string) => void;
-};
-
-const REMATE_TYPES: Array<{ id: RemateType; label: string }> = [
-  { id: "completo", label: "Completo" },
-  { id: "avista", label: "Avista" },
-  { id: "L", label: "Remate L" },
-  { id: "rodape", label: "Rodapé" },
-];
-
-const DEFAULT_REMATE_POSITION: Record<RemateType, RematePosition> = {
-  completo: "dir",
-  avista: "dir",
-  L: "dir",
-  rodape: "rodape",
 };
 
 export default function SelecionarMaterialSection({
@@ -36,9 +20,7 @@ export default function SelecionarMaterialSection({
     []
   );
   const orlaPresets = normalizeOrlaPresets(project.orlaPresets);
-  const remates = (project.remates ?? []).filter((remate) => remate.parentBoxId === boxId);
-  const activeRemateType = remates[0]?.type ?? "";
-  const [selectedRemateType, setSelectedRemateType] = useState<RemateType | "">(activeRemateType);
+  const remateCount = (project.remates ?? []).filter((remate) => remate.parentBoxId === boxId).length;
 
   if (!box) return null;
 
@@ -94,33 +76,12 @@ export default function SelecionarMaterialSection({
 
         <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-            Remate
+            Remate / Roda pé
           </div>
-          <select
-            className="select"
-            value={selectedRemateType}
-            onChange={(e) => {
-              const value = e.target.value as RemateType | "";
-              remates.forEach((remate) => actions.removeRemate(remate.id));
-              setSelectedRemateType(value);
-              if (!value) return;
-              actions.createBoxRemate({
-                type: value,
-                position: DEFAULT_REMATE_POSITION[value],
-                materialId: currentMaterialId,
-                materialMode: "box",
-              });
-            }}
-          >
-            <option value="">Sem remate</option>
-            {REMATE_TYPES.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
           <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            O tipo selecionado cria remates independentes associados ao box.
+            {remateCount > 0
+              ? `${remateCount} peça(s) neste módulo. Use o painel «componentes» ou «Remate do Box» para adicionar DIR, ESQ, CIMA, BAIXO, L ou roda pé.`
+              : "Nenhum remate. Adicione faces no painel «Remate do Box» ou no menu «componentes»."}
           </div>
         </section>
       </div>

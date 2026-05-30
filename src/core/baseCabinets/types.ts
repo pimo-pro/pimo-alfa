@@ -25,6 +25,14 @@ export interface BaseCabinetModel {
   cornerRight?: boolean;
   /** Canto esquerdo (L). */
   cornerLeft?: boolean;
+  /** Canto com frente fixa + porta única (motor dedicado). */
+  cornerFixedFront?: boolean;
+  /** Estilo visual/paramétrico do canto. */
+  cornerStyle?: "cozinha" | "roupeiro";
+  /** Lado padrão da frente fixa (invertível com rotação 180°). */
+  cornerDefaultSide?: "left" | "right";
+  /** Subcategoria no catálogo Móveis (UI). */
+  subcategoriaCatalogo?: string;
   /** Grupo organizacional do catalogo (somente UI). */
   grupoCatalogo?: "br" | "pt" | "pi";
   /** Categoria para filtro na UI. */

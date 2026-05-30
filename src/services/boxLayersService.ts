@@ -16,6 +16,7 @@ import {
   hasWardrobeLowerDrawers,
   isWardrobeModel,
 } from "../core/wardrobe/wardrobeRules";
+import { getCornerCabinetConfig, computeCornerLayoutForBox } from "../core/cornerCabinet";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -92,6 +93,36 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
     const gapVertical = clamp(settings.portas.portaGapVerticalMm, 0);
     const gapHorizontal = clamp(settings.portas.portaGapHorizontalMm, 0);
     const doorGap = clamp(settings.portas.portaGapDuplaMm, 0);
+
+    const cornerCfg = getCornerCabinetConfig(box.baseCabinetId);
+    if (cornerCfg && box.portaTipo === "porta_simples") {
+      const layout = computeCornerLayoutForBox(box, {
+        gapVerticalMm: gapVertical,
+        gapHorizontalMm: gapHorizontal,
+        doorPosZOffsetMm: settings.portas.portaPosZOffsetMm,
+      });
+      if (layout) {
+        const doorPosZ = boxDepth / 2 + clamp(settings.portas.portaPosZOffsetMm, 0);
+        doorsLayer.push({
+          id: createId("door"),
+          parentBoxId: box.id,
+          groupType: "simples",
+          width: layout.doorWidthMm,
+          height: layout.doorHeightMm,
+          thickness,
+          materialId: defaultDoorMaterial,
+          material: defaultDoorMaterial,
+          openDirection: layout.door.openDirection,
+          isOpen: false,
+          hingeSide: layout.door.hingeSide,
+          pivot: layout.door.pivot,
+          posX: layout.door.pivotX,
+          posY: layout.door.posY,
+          posZ: doorPosZ,
+          rotY: 0,
+        });
+      }
+    } else {
     const doorHeight = clamp(boxHeight - 2 * gapVertical, MM_EPS);
     const doorWidth = clamp(boxWidth - 2 * gapHorizontal, MM_EPS);
     // Center the door vertically: Y=0 is box center
@@ -203,6 +234,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
         posZ: doorPosZ,
         rotY: 0,
       });
+    }
     }
   }
 

@@ -49,6 +49,8 @@ export interface IViewerEventEngine {
   };
   setPlacementMode(_mode: "door" | "window" | null): void;
   getBoxIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
+  getRemateIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
+  selectRemate(_remateId: string | null): void;
   getSelectedBoxId(): string | null;
   getRoomElementAtPointer(_event: { clientX: number; clientY: number }): RoomElementHit | null;
   getSelectedWallIndex(): number | null;

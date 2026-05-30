@@ -7,6 +7,30 @@ import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 import { getRoomDimensionsCm, wallStore } from "../stores/wallStore";
 import { ROOM_20_DEFAULTS } from "../3d/viewer-engine/room/RoomEngine";
 
+type RoomManagerWithConfigWalls = {
+  roomManager?: {
+    wallsMain?: unknown[];
+    updateWallFromConfig?: (_config: {
+      id: number;
+      lengthM: number;
+      heightM: number;
+      thicknessM: number;
+      position: { x: number; y?: number; z: number };
+      rotationDeg: number;
+    }) => boolean;
+    addWallFromConfig?: (_config: {
+      id: number;
+      lengthM: number;
+      heightM: number;
+      thicknessM: number;
+      position: { x: number; y?: number; z: number };
+      rotationDeg: number;
+      isMainWall?: boolean;
+    }) => unknown;
+    updateCamera?: () => void;
+  };
+};
+
 export function applyRoomMeshFromWallStore(
   viewerApi: Pick<PimoViewerApi, "createRoomWithDimensions" | "removeRoom"> | null | undefined
 ): void {
@@ -28,6 +52,32 @@ export function applyRoomMeshFromWallStore(
   const thicknessM = Math.max(0.05, thicknessCm / 100);
   const numWalls: 3 | 4 = walls.length >= 4 ? 4 : 3;
   viewerApi.createRoomWithDimensions(widthM, depthM, heightM, numWalls, thicknessM);
+  const core = typeof window !== "undefined" ? (window.viewerCore as RoomManagerWithConfigWalls | undefined) : undefined;
+  const manager = core?.roomManager;
+  if (!manager?.addWallFromConfig) return;
+  walls.forEach((wall, index) => {
+    const config = {
+      id: index,
+      lengthM: Math.max(0.1, wall.lengthCm / 100),
+      heightM: Math.max(0.1, wall.heightCm / 100),
+      thicknessM: Math.max(0.05, wall.thicknessCm / 100),
+      position: {
+        x: (wall.position?.x ?? 0) / 100,
+        y: wall.position?.y != null ? wall.position.y / 100 : Math.max(0.1, wall.heightCm / 100) / 2,
+        z: (wall.position?.z ?? 0) / 100,
+      },
+      rotationDeg: wall.rotation ?? 0,
+    };
+    if (index < numWalls) {
+      manager.updateWallFromConfig?.(config);
+      return;
+    }
+    manager.addWallFromConfig?.({
+      ...config,
+      isMainWall: false,
+    });
+  });
+  manager.updateCamera?.();
 }
 
 export function getRoomMeshFingerprintFromWallStore(): string {
@@ -39,11 +89,15 @@ export function getRoomMeshFingerprintFromWallStore(): string {
       lengthCm: wall.lengthCm,
       heightCm: wall.heightCm,
       thicknessCm: wall.thicknessCm,
+      position: wall.position,
+      rotation: wall.rotation,
       openings: (wall.openings ?? []).map((o) => ({
         id: o.id,
         type: o.type,
+        kind: o.kind,
         widthMm: o.widthMm,
         heightMm: o.heightMm,
+        thicknessMm: o.thicknessMm,
         floorOffsetMm: o.floorOffsetMm,
         horizontalOffsetMm: o.horizontalOffsetMm,
       })),
@@ -63,6 +117,8 @@ export function applyRoomOpeningsFromWallStore(
       const config = {
         widthMm: o.widthMm,
         heightMm: o.heightMm,
+        thicknessMm: o.thicknessMm,
+        kind: o.kind,
         floorOffsetMm: o.floorOffsetMm,
         horizontalOffsetMm: o.horizontalOffsetMm,
       };

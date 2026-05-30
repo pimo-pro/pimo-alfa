@@ -70,6 +70,8 @@ export interface TechnicalDrillHole {
 export interface ViewerDrillMarkersByPanel extends Record<DrillPanelKey, TechnicalDrillHole[]> {
   /** Furos por porta (índice = ordem da porta). Quando definido, cada porta usa apenas os seus furos. */
   portaPerDoor?: TechnicalDrillHole[][];
+  /** Frente fixa (caixas de canto — calço alinhado à porta). */
+  frente_fixa?: TechnicalDrillHole[];
 }
 
 export interface DrillHole {
@@ -242,6 +244,8 @@ export interface BoxPanelIds {
   lateral_esquerda: string;
   lateral_direita: string;
   costa: string;
+  /** Frente fixa (caixas de canto). */
+  frente_fixa?: string;
   prateleiras: string[];
   portas: string[];
   gavetas: string[];

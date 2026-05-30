@@ -12,6 +12,7 @@ import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/
 import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import type { ProjectRemate } from "../core/remate/remateTypes";
+import { positionToFaceKind } from "../core/remate/remateTypes";
 
 export const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 export const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
@@ -124,13 +125,24 @@ export function reviveState(snapshot: unknown): ProjectState | null {
           : "");
 
   const remates: ProjectRemate[] = Array.isArray(restored.remates)
-    ? restored.remates.filter(
-        (remate): remate is ProjectRemate =>
-          remate != null &&
-          typeof remate === "object" &&
-          typeof (remate as ProjectRemate).id === "string" &&
-          typeof (remate as ProjectRemate).parentBoxId === "string"
-      )
+    ? restored.remates
+        .filter(
+          (remate): remate is ProjectRemate =>
+            remate != null &&
+            typeof remate === "object" &&
+            typeof (remate as ProjectRemate).id === "string" &&
+            typeof (remate as ProjectRemate).parentBoxId === "string"
+        )
+        .map((remate) => ({
+          ...remate,
+          faceKind:
+            remate.faceKind ??
+            positionToFaceKind(
+              remate.position ?? "dir",
+              remate.type ?? "avista"
+            ),
+          placementFree: remate.placementFree ?? false,
+        }))
     : [];
 
   return {

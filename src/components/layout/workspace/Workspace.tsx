@@ -364,8 +364,29 @@ export default function Workspace({
       const wall = walls[wallIndex];
       if (!wall) return;
       wallStore.getState().updateWall(wall.id, {
-        position: { x: position.x * 100, z: position.z * 100 },
+        position: {
+          x: position.x * 100,
+          y: wall.position?.y,
+          z: position.z * 100,
+        },
         rotation,
+      }, { skipSnap: true });
+      const room = projectRef.current.room;
+      if (!room) return;
+      actionsRef.current.updateProjectRoom({
+        walls: room.walls.map((roomWall) =>
+          roomWall.id === wall.id
+            ? {
+                ...roomWall,
+                position: {
+                  ...roomWall.position,
+                  x: position.x * 1000,
+                  z: position.z * 1000,
+                },
+                rotationDeg: rotation,
+              }
+            : roomWall
+        ),
       });
     });
   }, [viewerApi, walls]);
@@ -418,6 +439,7 @@ export default function Workspace({
         horizontalOffsetMm,
         floorOffsetMm,
       };
+      const currentOpening = wall.openings?.find((o) => o.id === elementId);
       wallStore.getState().updateWall(wall.id, {
         openings: (wall.openings ?? []).map((o) =>
           o.id === elementId
@@ -431,6 +453,26 @@ export default function Workspace({
             : o
         ),
       });
+      const room = projectRef.current.room;
+      if (room) {
+        actionsRef.current.updateProjectRoom({
+          openings: room.openings.map((opening) =>
+            opening.id === elementId
+              ? {
+                  ...opening,
+                  widthMm: finalConfig.widthMm,
+                  heightMm: finalConfig.heightMm,
+                  thicknessMm: currentOpening?.thicknessMm ?? opening.thicknessMm,
+                  kind: currentOpening?.kind ?? opening.kind,
+                  floorOffsetMm: finalConfig.floorOffsetMm,
+                  verticalOffsetMm: finalConfig.floorOffsetMm,
+                  xPosMm: finalConfig.horizontalOffsetMm,
+                  horizontalOffsetMm: finalConfig.horizontalOffsetMm,
+                }
+              : opening
+          ),
+        });
+      }
       viewerApi.updateRoomElementConfig?.(elementId, finalConfig);
     });
   }, [viewerApi, walls]);
@@ -577,11 +619,37 @@ const hasShownViewerReadyToastRef = useRef(false);
         return { boxId, pieces, presets };
       },
     });
+    const buildRemateBoxConfig = (boxId: string) => {
+      const state = projectRef.current;
+      const wsBox = state.workspaceBoxes.find((b) => b.id === boxId);
+      if (!wsBox) return null;
+      const dimsRaw = core?.getBoxDimensions?.(boxId);
+      const dims =
+        dimsRaw &&
+        typeof dimsRaw === "object" &&
+        "width" in dimsRaw &&
+        "height" in dimsRaw &&
+        "depth" in dimsRaw
+          ? (dimsRaw as { width: number; height: number; depth: number })
+          : null;
+      const widthM = dims?.width ?? Math.max(0.001, (wsBox.dimensoes?.largura ?? 600) / 1000);
+      const heightM = dims?.height ?? Math.max(0.001, (wsBox.dimensoes?.altura ?? 720) / 1000);
+      const depthM = dims?.depth ?? Math.max(0.001, (wsBox.dimensoes?.profundidade ?? 600) / 1000);
+      const remates = (state.remates ?? []).filter((remate) => remate.parentBoxId === boxId);
+      return { boxId, widthM, heightM, depthM, remates };
+    };
+
     core?.bindRemateBridge?.({
-      getBoxRemateConfig: (boxId) => ({
-        boxId,
-        remates: (projectRef.current.remates ?? []).filter((remate) => remate.parentBoxId === boxId),
-      }),
+      getBoxRemateConfig: (boxId) => buildRemateBoxConfig(boxId),
+      listBoxRemateConfigs: () =>
+        projectRef.current.workspaceBoxes
+          .map((box) => buildRemateBoxConfig(box.id))
+          .filter((cfg): cfg is NonNullable<typeof cfg> => cfg != null && cfg.remates.length > 0),
+      getBoxWorldMatrix: (boxId) => core?.getBoxWorldMatrix?.(boxId) ?? null,
+    });
+
+    core?.setOnRemateTransform?.((remateId, patch) => {
+      actionsRef.current.updateRemate(remateId, patch);
     });
   }, [viewerApi.viewerReady]);
 

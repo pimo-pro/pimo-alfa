@@ -18,12 +18,16 @@ export type DoorWindowModelCatalog = {
   windows: Array<{ id: DoorWindowModelId; name: string }>;
 };
 
+export type DoorWindowKind = "normal" | "correr";
+
 /** Configuração de uma abertura (porta ou janela) na parede. */
 export type OpeningConfig = {
   id: string;
   type: "door" | "window";
+  kind?: DoorWindowKind;
   widthMm: number;
   heightMm: number;
+  thicknessMm?: number;
   /** Altura do piso (offset Y em mm, do chão até a base). */
   floorOffsetMm: number;
   /** Posição horizontal na parede (offset em mm ao longo do eixo da parede). */
@@ -36,7 +40,7 @@ export type OpeningConfig = {
 export type WallConfig = {
   id: string;
   /** Posição do centro da parede no mundo (metros). */
-  position: { x: number; z: number };
+  position: { x: number; y?: number; z: number };
   /** Rotação em graus (eixo Y). */
   rotation: number;
   lengthMm: number;
@@ -60,6 +64,8 @@ export const DEFAULT_WALL_THICKNESS_MM = 200;
 export type DoorWindowConfig = {
   widthMm: number;
   heightMm: number;
+  thicknessMm?: number;
+  kind?: DoorWindowKind;
   floorOffsetMm: number;
   horizontalOffsetMm: number;
 };

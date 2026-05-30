@@ -8,6 +8,7 @@ import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
+import { isCornerFixedFrontModel, gerarPaineisCorner } from "../cornerCabinet";
 
 type PainelIndustrial = {
   id: string;
@@ -121,6 +122,7 @@ export const PIECE_LABELS: Record<string, string> = {
   gaveta_lat_dir: "Gaveta lateral direita",
   gaveta_fundo: "Gaveta fundo",
   gaveta_traseira: "Gaveta traseira",
+  frente_fixa: "Frente fixa",
 };
 export function getPieceLabel(tipo: string): string {
   return PIECE_LABELS[tipo] ?? tipo;
@@ -174,6 +176,9 @@ export function gerarModeloIndustrial(box: BoxModule, rules: RulesConfig): Model
 }
 
 export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustrial[] {
+  if (isCornerFixedFrontModel(box.baseCabinetId)) {
+    return gerarPaineisCorner(box, rules);
+  }
   if (isPiBaseCabinetId(box.baseCabinetId)) {
     const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
     return gerarPaineisPi(box).map((painel) => ({
