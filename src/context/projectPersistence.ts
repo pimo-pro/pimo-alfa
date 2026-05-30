@@ -224,6 +224,29 @@ export function reviveState(snapshot: unknown): ProjectState | null {
             typeof (r as ProjectRodape).parentBoxId === "string"
         ).map((r) => ({ ...r, visible: r.visible !== false, placementFree: r.placementFree ?? false }))
       : [],
+    autoFill:
+      restored.autoFill && typeof restored.autoFill === "object"
+        ? {
+            lastRunAt: String((restored.autoFill as { lastRunAt?: unknown }).lastRunAt ?? ""),
+            summary: String((restored.autoFill as { summary?: unknown }).summary ?? ""),
+            createdBoxIds: Array.isArray((restored.autoFill as { createdBoxIds?: unknown }).createdBoxIds)
+              ? (restored.autoFill as { createdBoxIds: string[] }).createdBoxIds
+              : [],
+            createdRemateIds: Array.isArray((restored.autoFill as { createdRemateIds?: unknown }).createdRemateIds)
+              ? (restored.autoFill as { createdRemateIds: string[] }).createdRemateIds
+              : [],
+            createdHematiIds: Array.isArray((restored.autoFill as { createdHematiIds?: unknown }).createdHematiIds)
+              ? (restored.autoFill as { createdHematiIds: string[] }).createdHematiIds
+              : [],
+            createdRodapeIds: Array.isArray((restored.autoFill as { createdRodapeIds?: unknown }).createdRodapeIds)
+              ? (restored.autoFill as { createdRodapeIds: string[] }).createdRodapeIds
+              : [],
+            wallSummaries: Array.isArray((restored.autoFill as { wallSummaries?: unknown }).wallSummaries)
+              ? (restored.autoFill as { wallSummaries: import("../core/autoRoomFill/autoRoomFillTypes").AutoFillWallSummary[] })
+                  .wallSummaries
+              : [],
+          }
+        : null,
     lastAutosaveTime:
       typeof restored.lastAutosaveTime === "string" ? restored.lastAutosaveTime : null,
   };

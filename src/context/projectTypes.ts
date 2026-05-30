@@ -161,6 +161,9 @@ export interface ProjectState {
   /** Roda pé inteligente — acabamento inferior (cozinhas; apenas visual). */
   rodapes: ProjectRodape[];
 
+  /** Auto-Room-Fill — última execução e IDs criados (apenas visual). */
+  autoFill?: import("../core/autoRoomFill/autoRoomFillTypes").ProjectAutoFillState | null;
+
   /** Perfis de regras: lista de perfis + perfil ativo. */
   rulesProfiles: RulesProfilesConfig;
   /** Regras dinâmicas ativas (= perfil ativo); usadas em todo o projeto. */
@@ -618,6 +621,8 @@ export interface ProjectActions {
   updateRodape: (_rodapeId: string, _patch: UpdateRodapeInput) => void;
   removeRodape: (_rodapeId: string) => void;
   setRodapeVisible: (_rodapeId: string, _visible: boolean) => void;
+  /** Auto-Room-Fill — preenche cozinha na sala atual (apenas visual). */
+  runAutoRoomFill: () => void;
   /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: "select" | "move" | "rotate") => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */

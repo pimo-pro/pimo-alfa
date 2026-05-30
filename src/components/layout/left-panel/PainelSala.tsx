@@ -89,12 +89,19 @@ export function PainelSala() {
   const selectedObject = useUiStore((state) => state.selectedObject);
   const room = project.room;
 
+  useEffect(() => {
+    if (project.autoFill?.summary) {
+      setAutoFillMessage(project.autoFill.summary);
+    }
+  }, [project.autoFill?.lastRunAt, project.autoFill?.summary]);
+
   // Estado em centímetros — conversão para metros só nas chamadas ao viewer
   const [widthCm,  setWidthCm]  = useState(DEFAULT_ROOM_WIDTH_CM);
   const [depthCm,  setDepthCm]  = useState(DEFAULT_ROOM_DEPTH_CM);
   const [heightCm, setHeightCm] = useState(DEFAULT_ROOM_HEIGHT_CM);
   const [roomType, setRoomType] = useState<RoomType>("closed");
   const [roomVisibleState, setRoomVisibleState] = useState(true);
+  const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
 
   const roomVisible = viewerApi?.getRoomVisible?.()  ?? roomVisibleState;
   const locked      = viewerApi?.getRoomLocked?.()   ?? false;
@@ -386,6 +393,47 @@ export function PainelSala() {
               />
               Lock Walls (paredes principais conectadas)
             </label>
+            <button
+              type="button"
+              className="button button-primary"
+              style={{ width: "100%", marginTop: 4 }}
+              onClick={() => {
+                if (!room) {
+                  setAutoFillMessage("Crie uma sala antes de preencher a cozinha.");
+                  return;
+                }
+                setAutoFillMessage("A gerar cozinha…");
+                actions.runAutoRoomFill();
+              }}
+            >
+              Preencher Cozinha Automaticamente
+            </button>
+            {(autoFillMessage || project.autoFill?.summary) && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.45,
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  background: "var(--surface-elevated, rgba(255,255,255,0.04))",
+                }}
+              >
+                {autoFillMessage ?? project.autoFill?.summary}
+                {project.autoFill?.lastRunAt && (
+                  <>
+                    {"\n\n"}
+                    Última execução: {new Date(project.autoFill.lastRunAt).toLocaleString("pt-PT")}
+                    {"\n"}
+                    Módulos: {project.autoFill.createdBoxIds?.length ?? 0} · Remates:{" "}
+                    {project.autoFill.createdRemateIds?.length ?? 0} · Hemati:{" "}
+                    {project.autoFill.createdHematiIds?.length ?? 0} · Roda pé:{" "}
+                    {project.autoFill.createdRodapeIds?.length ?? 0}
+                  </>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

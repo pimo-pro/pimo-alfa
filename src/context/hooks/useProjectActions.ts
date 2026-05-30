@@ -20,6 +20,7 @@ import { useOrlaActions } from "./useOrlaActions";
 import { useRemateActions } from "./useRemateActions";
 import { useHematiActions } from "./useHematiActions";
 import { useRodapeActions } from "./useRodapeActions";
+import { useAutoRoomFillActions } from "./useAutoRoomFillActions";
 import { getIndustrialMaterial } from "../../core/materials/service";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
@@ -66,6 +67,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const remateActions = useRemateActions(executionContext);
   const hematiActions = useHematiActions(executionContext);
   const rodapeActions = useRodapeActions(executionContext);
+  const autoRoomFillActions = useAutoRoomFillActions(executionContext);
 
   const coreActions = useMemo(() => {
     const a = {} as ProjectActions;
@@ -151,7 +153,8 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       orlaActions,
       remateActions,
       hematiActions,
-      rodapeActions
+      rodapeActions,
+      autoRoomFillActions
     );
 
     // @PIMO-KEEP — Runtime validation
@@ -266,5 +269,6 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     remateActions,
     hematiActions,
     rodapeActions,
+    autoRoomFillActions,
   ]);
 }

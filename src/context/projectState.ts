@@ -307,6 +307,7 @@ export const defaultState: ProjectState = {
   remates: [],
   hematis: [],
   rodapes: [],
+  autoFill: null,
   ...((): { rulesProfiles: RulesProfilesConfig; rules: ReturnType<typeof normalizeRulesConfig> } => {
     const profiles = loadProfiles();
     return { rulesProfiles: profiles, rules: getRulesFromProfiles(profiles) };
