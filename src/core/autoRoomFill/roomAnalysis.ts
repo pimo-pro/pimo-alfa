@@ -5,6 +5,9 @@ import type { AnalyzedWallRun, WallRunAxis } from "./autoRoomFillTypes";
 
 const END_RECESS_MM = 80;
 const OPENING_CLEARANCE_MM = 40;
+const CORNER_VERTEX_TOLERANCE_MM = 5;
+const CORNER_ANGLE_MIN = 85;
+const CORNER_ANGLE_MAX = 95;
 
 type WallGeom = {
   label: RoomWallLabel;
@@ -65,6 +68,18 @@ const WALL_GEOM: Partial<Record<RoomWallLabel, WallGeom>> = {
   },
 };
 
+/** Tangentes no vértice (sentido ao longo da parede, para dentro da sala). */
+const CORNER_TANGENTS: Record<string, { a: [number, number]; b: [number, number] }> = {
+  "sul|oeste": { a: [1, 0], b: [0, 1] },
+  "sul|este": { a: [1, 0], b: [0, 1] },
+  "norte|este": { a: [-1, 0], b: [0, -1] },
+  "norte|oeste": { a: [-1, 0], b: [0, -1] },
+  "este|sul": { a: [0, 1], b: [1, 0] },
+  "este|norte": { a: [0, -1], b: [-1, 0] },
+  "oeste|sul": { a: [0, 1], b: [1, 0] },
+  "oeste|norte": { a: [0, -1], b: [-1, 0] },
+};
+
 function resolveRunEnd(geom: WallGeom, widthMm: number, depthMm: number): WallGeom {
   const g = { ...geom };
   if (g.label === "sul" || g.label === "norte") {
@@ -75,6 +90,54 @@ function resolveRunEnd(geom: WallGeom, widthMm: number, depthMm: number): WallGe
     g.runEndMm = depthMm;
   }
   return g;
+}
+
+function expectedWallPosition(
+  label: RoomWallLabel,
+  widthMm: number,
+  depthMm: number
+): { x: number; z: number } {
+  switch (label) {
+    case "sul":
+      return { x: widthMm / 2, z: 0 };
+    case "este":
+      return { x: widthMm, z: depthMm / 2 };
+    case "norte":
+      return { x: widthMm / 2, z: depthMm };
+    case "oeste":
+      return { x: 0, z: depthMm / 2 };
+    default:
+      return { x: widthMm / 2, z: depthMm / 2 };
+  }
+}
+
+function isWallAtCanonicalPosition(
+  room: ProjectRoomConfig,
+  label: RoomWallLabel
+): boolean {
+  const wall = room.walls.find((w) => w.label === label);
+  if (!wall?.position) return false;
+  const expected = expectedWallPosition(label, room.widthMm, room.depthMm);
+  return (
+    Math.abs(wall.position.x - expected.x) <= CORNER_VERTEX_TOLERANCE_MM &&
+    Math.abs(wall.position.z - expected.z) <= CORNER_VERTEX_TOLERANCE_MM
+  );
+}
+
+function cornerAngleValid(labelA: RoomWallLabel, labelB: RoomWallLabel): boolean {
+  const key = `${labelA}|${labelB}`;
+  const alt = `${labelB}|${labelA}`;
+  const tangents = CORNER_TANGENTS[key] ?? CORNER_TANGENTS[alt];
+  if (!tangents) return false;
+  const [ax, az] = tangents.a;
+  const [bx, bz] = tangents.b;
+  const dot = ax * bx + az * bz;
+  const magA = Math.hypot(ax, az);
+  const magB = Math.hypot(bx, bz);
+  if (magA < 1e-6 || magB < 1e-6) return false;
+  const cos = Math.max(-1, Math.min(1, dot / (magA * magB)));
+  const deg = (Math.acos(cos) * 180) / Math.PI;
+  return deg >= CORNER_ANGLE_MIN && deg <= CORNER_ANGLE_MAX;
 }
 
 function forbiddenRangesForWall(
@@ -117,7 +180,7 @@ function subtractRanges(
 
 export function detectRoomCorners(
   room: ProjectRoomConfig
-): Array<{ wallIds: [string, string]; x_mm: number; z_mm: number }> {
+): Array<{ wallIds: [string, string]; x_mm: number; z_mm: number; valid: boolean }> {
   const w = room.widthMm;
   const d = room.depthMm;
   const byLabel = new Map(room.walls.map((wall) => [wall.label, wall.id]));
@@ -132,16 +195,37 @@ export function detectRoomCorners(
       const idA = byLabel.get(a);
       const idB = byLabel.get(b);
       if (!idA || !idB) return null;
-      return { wallIds: [idA, idB] as [string, string], x_mm: x, z_mm: z };
+      const angleOk = cornerAngleValid(a, b);
+      const posOk =
+        isWallAtCanonicalPosition(room, a) && isWallAtCanonicalPosition(room, b);
+      return {
+        wallIds: [idA, idB] as [string, string],
+        x_mm: x,
+        z_mm: z,
+        valid: angleOk && posOk,
+      };
     })
     .filter((c): c is NonNullable<typeof c> => c != null);
+}
+
+function wallHasValidCorner(
+  corners: Array<{ wallIds: [string, string]; valid: boolean }>,
+  wallId: string,
+  partnerLabel: RoomWallLabel | null,
+  room: ProjectRoomConfig
+): boolean {
+  if (!partnerLabel) return false;
+  const partner = room.walls.find((w) => w.label === partnerLabel);
+  if (!partner) return false;
+  return corners.some(
+    (c) => c.valid && c.wallIds.includes(wallId) && c.wallIds.includes(partner.id)
+  );
 }
 
 export function analyzeRoomWalls(room: ProjectRoomConfig): AnalyzedWallRun[] {
   const widthMm = room.widthMm;
   const depthMm = room.depthMm;
   const corners = detectRoomCorners(room);
-  const cornerWallIds = new Set(corners.flatMap((c) => c.wallIds));
 
   return room.walls
     .filter((wall) => WALL_GEOM[wall.label] != null)
@@ -170,8 +254,12 @@ export function analyzeRoomWalls(room: ProjectRoomConfig): AnalyzedWallRun[] {
         runEndMm: runEnd,
         rotacaoY_rad: geom.rotacaoY_rad,
         inwardNormal: geom.inwardNormal,
-        cornerAtStart: hasStartCorner && cornerWallIds.has(wall.id),
-        cornerAtEnd: hasEndCorner && cornerWallIds.has(wall.id),
+        cornerAtStart:
+          hasStartCorner &&
+          wallHasValidCorner(corners, wall.id, geom.startCornerLabel, room),
+        cornerAtEnd:
+          hasEndCorner &&
+          wallHasValidCorner(corners, wall.id, geom.endCornerLabel, room),
         segments,
       } satisfies AnalyzedWallRun;
     })

@@ -15,6 +15,11 @@ import type { ProjectRemate } from "../core/remate/remateTypes";
 import { positionToFaceKind } from "../core/remate/remateTypes";
 import type { ProjectHemati } from "../core/hemati/hematiTypes";
 import type { ProjectRodape } from "../core/rodape/rodapeTypes";
+import {
+  EMPTY_ALLOW_UPPER,
+  EMPTY_WALL_SELECTION,
+  type ProjectAutoFillState,
+} from "../core/autoRoomFill/autoRoomFillTypes";
 
 export const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 export const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
@@ -226,26 +231,25 @@ export function reviveState(snapshot: unknown): ProjectState | null {
       : [],
     autoFill:
       restored.autoFill && typeof restored.autoFill === "object"
-        ? {
-            lastRunAt: String((restored.autoFill as { lastRunAt?: unknown }).lastRunAt ?? ""),
-            summary: String((restored.autoFill as { summary?: unknown }).summary ?? ""),
-            createdBoxIds: Array.isArray((restored.autoFill as { createdBoxIds?: unknown }).createdBoxIds)
-              ? (restored.autoFill as { createdBoxIds: string[] }).createdBoxIds
-              : [],
-            createdRemateIds: Array.isArray((restored.autoFill as { createdRemateIds?: unknown }).createdRemateIds)
-              ? (restored.autoFill as { createdRemateIds: string[] }).createdRemateIds
-              : [],
-            createdHematiIds: Array.isArray((restored.autoFill as { createdHematiIds?: unknown }).createdHematiIds)
-              ? (restored.autoFill as { createdHematiIds: string[] }).createdHematiIds
-              : [],
-            createdRodapeIds: Array.isArray((restored.autoFill as { createdRodapeIds?: unknown }).createdRodapeIds)
-              ? (restored.autoFill as { createdRodapeIds: string[] }).createdRodapeIds
-              : [],
-            wallSummaries: Array.isArray((restored.autoFill as { wallSummaries?: unknown }).wallSummaries)
-              ? (restored.autoFill as { wallSummaries: import("../core/autoRoomFill/autoRoomFillTypes").AutoFillWallSummary[] })
-                  .wallSummaries
-              : [],
-          }
+        ? ((): ProjectAutoFillState => {
+            const raw = restored.autoFill as Partial<ProjectAutoFillState>;
+            return {
+              lastRunAt: String(raw.lastRunAt ?? ""),
+              summary: String(raw.summary ?? ""),
+              detailedSummary:
+                typeof raw.detailedSummary === "string" ? raw.detailedSummary : undefined,
+              wallSelection: { ...EMPTY_WALL_SELECTION, ...(raw.wallSelection ?? {}) },
+              allowUpperModules: { ...EMPTY_ALLOW_UPPER, ...(raw.allowUpperModules ?? {}) },
+              createdBoxIds: Array.isArray(raw.createdBoxIds) ? raw.createdBoxIds : [],
+              createdRemateIds: Array.isArray(raw.createdRemateIds) ? raw.createdRemateIds : [],
+              createdHematiIds: Array.isArray(raw.createdHematiIds) ? raw.createdHematiIds : [],
+              createdRodapeIds: Array.isArray(raw.createdRodapeIds) ? raw.createdRodapeIds : [],
+              wallSummaries: Array.isArray(raw.wallSummaries) ? raw.wallSummaries : [],
+              specialsPlaced: Array.isArray(raw.specialsPlaced) ? raw.specialsPlaced : [],
+              trimAppliedMm:
+                typeof raw.trimAppliedMm === "number" ? raw.trimAppliedMm : undefined,
+            };
+          })()
         : null,
     lastAutosaveTime:
       typeof restored.lastAutosaveTime === "string" ? restored.lastAutosaveTime : null,

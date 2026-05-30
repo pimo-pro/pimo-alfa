@@ -11,19 +11,59 @@ import { getMaterialByIdOrLabel } from "../materials/service";
 import { HEMATI_DEFAULT_THICKNESS_MM } from "../kitchenFinish/finishTypes";
 import type { AutoFillApplyResult } from "./autoRoomFillTypes";
 import type { AutoFillPlan } from "./autoRoomFillTypes";
+import { buildGenerateOptions } from "./autoFillSettings";
+import { analyzeRoomWalls } from "./roomAnalysis";
 import { generateAutoRoomFillPlan } from "./generateAutoRoomFillPlan";
+import {
+  EMPTY_ALLOW_UPPER,
+  EMPTY_WALL_SELECTION,
+  type ProjectAutoFillState,
+} from "./autoRoomFillTypes";
 
 function buildBoxFromCatalog(
   prev: ProjectState,
   placed: import("./autoRoomFillTypes").AutoFillPlacedModule,
   boxId: string
 ) {
+  const baseEspessura = prev.material.espessura;
+
+  if (placed.role === "filler") {
+    const largura = Math.max(10, placed.fillerWidthMm ?? 20);
+    const box = createWorkspaceBox(
+      boxId,
+      "Enchimento visual",
+      { largura, altura: 720, profundidade: 600 },
+      baseEspessura,
+      placed.posicaoX_mm,
+      [],
+      "reta",
+      "recuado",
+      placed.catalogId,
+      {
+        prateleiras: 0,
+        portaTipo: "sem_porta",
+        gavetas: 0,
+        cabinetType: "lower",
+        feetEnabled: false,
+        feetHeight: 0,
+      }
+    );
+    box.manualPosition = true;
+    box.posicaoX_mm = placed.posicaoX_mm;
+    box.posicaoY_mm = placed.posicaoY_mm;
+    box.posicaoZ_mm = placed.posicaoZ_mm;
+    box.rotacaoY = placed.rotacaoY_rad;
+    box.autoRotateEnabled = false;
+    return box;
+  }
+
   const baseModel = getBaseCabinetById(placed.catalogId);
   if (!baseModel) return null;
 
-  const isUpperModel = baseModel.categoria === "upper";
+  const isUpperModel =
+    baseModel.categoria === "upper" ||
+    (placed.role === "special" && placed.specialKind === "hood");
   const isPiModel = isPiBaseCabinetId(baseModel.id) || baseModel.grupoCatalogo === "pi";
-  const baseEspessura = prev.material.espessura;
   let largura = baseModel.widthMm;
   if (placed.trimWidthMm && placed.trimWidthMm > 0) {
     largura = Math.max(280, largura - placed.trimWidthMm);
@@ -204,14 +244,21 @@ export function applyAutoRoomFillPlan(prev: ProjectState, plan: AutoFillPlan): A
   }
 
   const summary = plan.summaryLines.join("\n");
-  const lastRun = {
+  const detailedSummary = plan.summaryLines.slice(3).join("\n") || summary;
+  const trimAppliedMm = Math.max(0, ...plan.wallSummaries.map((w) => w.trimAppliedMm));
+  const lastRun: ProjectAutoFillState = {
     lastRunAt: new Date().toISOString(),
     summary,
+    detailedSummary,
+    wallSelection: prev.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION,
+    allowUpperModules: prev.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER,
     createdBoxIds,
     createdRemateIds,
     createdHematiIds,
     createdRodapeIds,
     wallSummaries: plan.wallSummaries,
+    specialsPlaced: plan.specialsPlaced,
+    trimAppliedMm,
   };
 
   const next = applyResultados({
@@ -236,11 +283,19 @@ export function applyAutoRoomFillPlan(prev: ProjectState, plan: AutoFillPlan): A
     createdHematiIds,
     createdRodapeIds,
     summary,
+    detailedSummary,
   };
 }
 
 export function runAutoRoomFillOnState(prev: ProjectState): AutoFillApplyResult | null {
-  const plan = generateAutoRoomFillPlan(prev.room);
+  if (!prev.room) return null;
+  const runs = analyzeRoomWalls(prev.room);
+  const opts = buildGenerateOptions(
+    prev.autoFill?.wallSelection,
+    prev.autoFill?.allowUpperModules,
+    runs
+  );
+  const plan = generateAutoRoomFillPlan(prev.room, opts);
   if (!plan || plan.modules.length === 0) return null;
   return applyAutoRoomFillPlan(prev, plan);
 }

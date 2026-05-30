@@ -13,6 +13,12 @@ import type {
   RoomOpeningKind,
 } from "../../../3d/viewer-engine/room/roomEngineTypes";
 import { ROOM_20_DEFAULTS, WALL_LABEL_TITLES } from "../../../3d/viewer-engine/room/RoomEngine";
+import {
+  AUTO_FILL_WALL_LABELS,
+  EMPTY_ALLOW_UPPER,
+  EMPTY_WALL_SELECTION,
+} from "../../../core/autoRoomFill";
+import type { RoomWallLabel } from "../../../3d/viewer-engine/room/roomEngineTypes";
 
 /** Dimensões padrão da sala em centímetros */
 const DEFAULT_ROOM_WIDTH_CM  = 400;  // 4 m
@@ -89,11 +95,13 @@ export function PainelSala() {
   const selectedObject = useUiStore((state) => state.selectedObject);
   const room = project.room;
 
+  const wallSelection = project.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION;
+  const allowUpperModules = project.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER;
+
   useEffect(() => {
-    if (project.autoFill?.summary) {
-      setAutoFillMessage(project.autoFill.summary);
-    }
-  }, [project.autoFill?.lastRunAt, project.autoFill?.summary]);
+    const text = project.autoFill?.detailedSummary ?? project.autoFill?.summary;
+    if (text) setAutoFillMessage(text);
+  }, [project.autoFill?.lastRunAt, project.autoFill?.summary, project.autoFill?.detailedSummary]);
 
   // Estado em centímetros — conversão para metros só nas chamadas ao viewer
   const [widthCm,  setWidthCm]  = useState(DEFAULT_ROOM_WIDTH_CM);
@@ -393,6 +401,64 @@ export function PainelSala() {
               />
               Lock Walls (paredes principais conectadas)
             </label>
+            <Panel title="Auto-Room-Fill — paredes">
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 8px" }}>
+                Sem seleção, preenche só a parede mais longa.
+              </p>
+              {AUTO_FILL_WALL_LABELS.map((label) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 12,
+                      color: "var(--text-main)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={wallSelection[label]}
+                      onChange={(e) => {
+                        actions.setAutoFillWallSettings({
+                          wallSelection: { [label]: e.target.checked } as Partial<
+                            Record<RoomWallLabel, boolean>
+                          >,
+                        });
+                      }}
+                    />
+                    {WALL_LABEL_TITLES[label] ?? label}
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 11,
+                      color: "var(--text-muted)",
+                      cursor: wallSelection[label] ? "pointer" : "not-allowed",
+                      marginLeft: 22,
+                      opacity: wallSelection[label] ? 1 : 0.55,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={!wallSelection[label]}
+                      checked={allowUpperModules[label]}
+                      onChange={(e) => {
+                        actions.setAutoFillWallSettings({
+                          allowUpperModules: { [label]: e.target.checked } as Partial<
+                            Record<RoomWallLabel, boolean>
+                          >,
+                        });
+                      }}
+                    />
+                    Colocar módulos superiores nesta parede
+                  </label>
+                </div>
+              ))}
+            </Panel>
             <button
               type="button"
               className="button button-primary"
@@ -408,7 +474,7 @@ export function PainelSala() {
             >
               Preencher Cozinha Automaticamente
             </button>
-            {(autoFillMessage || project.autoFill?.summary) && (
+            {(autoFillMessage || project.autoFill?.detailedSummary || project.autoFill?.summary) && (
               <div
                 style={{
                   fontSize: 11,
@@ -420,7 +486,9 @@ export function PainelSala() {
                   background: "var(--surface-elevated, rgba(255,255,255,0.04))",
                 }}
               >
-                {autoFillMessage ?? project.autoFill?.summary}
+                {autoFillMessage ??
+                  project.autoFill?.detailedSummary ??
+                  project.autoFill?.summary}
                 {project.autoFill?.lastRunAt && (
                   <>
                     {"\n\n"}
@@ -430,6 +498,8 @@ export function PainelSala() {
                     {project.autoFill.createdRemateIds?.length ?? 0} · Hemati:{" "}
                     {project.autoFill.createdHematiIds?.length ?? 0} · Roda pé:{" "}
                     {project.autoFill.createdRodapeIds?.length ?? 0}
+                    {(project.autoFill.trimAppliedMm ?? 0) > 0 &&
+                      ` · Trim máx.: ${project.autoFill.trimAppliedMm} mm`}
                   </>
                 )}
               </div>

@@ -623,6 +623,15 @@ export interface ProjectActions {
   setRodapeVisible: (_rodapeId: string, _visible: boolean) => void;
   /** Auto-Room-Fill — preenche cozinha na sala atual (apenas visual). */
   runAutoRoomFill: () => void;
+  /** Auto-Room-Fill — preferências de paredes / superiores. */
+  setAutoFillWallSettings: (_patch: {
+    wallSelection?: Partial<
+      import("../core/autoRoomFill/autoRoomFillTypes").AutoFillWallSelection
+    >;
+    allowUpperModules?: Partial<
+      import("../core/autoRoomFill/autoRoomFillTypes").AutoFillAllowUpperByWall
+    >;
+  }) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: "select" | "move" | "rotate") => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */
