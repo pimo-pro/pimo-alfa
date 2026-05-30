@@ -49,7 +49,11 @@ export interface IViewerEventEngine {
   };
   setPlacementMode(_mode: "door" | "window" | null): void;
   getBoxIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
+  getHematiIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
+  getRodapeIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
   getRemateIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
+  selectHemati(_hematiId: string | null): void;
+  selectRodape(_rodapeId: string | null): void;
   selectRemate(_remateId: string | null): void;
   getSelectedBoxId(): string | null;
   getRoomElementAtPointer(_event: { clientX: number; clientY: number }): RoomElementHit | null;

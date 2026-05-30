@@ -39,6 +39,8 @@ export function isInternalSelectableMesh(mesh: THREE.Mesh): boolean {
   if (ud.viewerLayoutBounds === true) return false;
   if (ud.isOrlaBand === true) return false;
   if (ud.isRematePiece === true || ud.remateId != null) return false;
+  if (ud.isHematiPiece === true || ud.hematiId != null) return false;
+  if (ud.isRodapePiece === true || ud.rodapeId != null) return false;
   if (ud.isDrillMarker === true) return false;
   if (ud.isPanelEdgeOverlay === true) return false;
   if (ud.isEdgeOutlineOverlay === true) return false;

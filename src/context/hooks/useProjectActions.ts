@@ -18,6 +18,8 @@ import { useDesignActions } from "./useDesignActions";
 import { useRoomActions } from "./useRoomActions";
 import { useOrlaActions } from "./useOrlaActions";
 import { useRemateActions } from "./useRemateActions";
+import { useHematiActions } from "./useHematiActions";
+import { useRodapeActions } from "./useRodapeActions";
 import { getIndustrialMaterial } from "../../core/materials/service";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
@@ -62,6 +64,8 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const roomActions = useRoomActions(executionContext);
   const orlaActions = useOrlaActions(executionContext);
   const remateActions = useRemateActions(executionContext);
+  const hematiActions = useHematiActions(executionContext);
+  const rodapeActions = useRodapeActions(executionContext);
 
   const coreActions = useMemo(() => {
     const a = {} as ProjectActions;
@@ -145,7 +149,9 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       designActions,
       roomActions,
       orlaActions,
-      remateActions
+      remateActions,
+      hematiActions,
+      rodapeActions
     );
 
     // @PIMO-KEEP — Runtime validation
@@ -226,6 +232,12 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "createBoxRemate",
         "updateRemate",
         "removeRemate",
+        "createBoxHemati",
+        "updateHemati",
+        "removeHemati",
+        "createBoxRodape",
+        "updateRodape",
+        "removeRodape",
       ];
 
       requiredActions.forEach((key) => {
@@ -252,5 +264,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     roomActions,
     orlaActions,
     remateActions,
+    hematiActions,
+    rodapeActions,
   ]);
 }

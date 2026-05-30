@@ -541,6 +541,8 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
                 internal: (prev.measurements?.internal ?? []).filter((m) => m.boxId !== removedId),
               },
               remates: (prev.remates ?? []).filter((remate) => remate.parentBoxId !== removedId),
+              hematis: (prev.hematis ?? []).filter((h) => h.parentBoxId !== removedId),
+              rodapes: (prev.rodapes ?? []).filter((r) => r.parentBoxId !== removedId),
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",
@@ -588,6 +590,8 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
                 internal: (prev.measurements?.internal ?? []).filter((m) => m.boxId !== boxId),
               },
               remates: (prev.remates ?? []).filter((remate) => remate.parentBoxId !== boxId),
+              hematis: (prev.hematis ?? []).filter((h) => h.parentBoxId !== boxId),
+              rodapes: (prev.rodapes ?? []).filter((r) => r.parentBoxId !== boxId),
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",

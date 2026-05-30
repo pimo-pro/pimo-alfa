@@ -305,6 +305,8 @@ export const defaultState: ProjectState = {
   orlaJuntoPairs: [],
   ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },
   remates: [],
+  hematis: [],
+  rodapes: [],
   ...((): { rulesProfiles: RulesProfilesConfig; rules: ReturnType<typeof normalizeRulesConfig> } => {
     const profiles = loadProfiles();
     return { rulesProfiles: profiles, rules: getRulesFromProfiles(profiles) };

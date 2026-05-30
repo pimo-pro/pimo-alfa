@@ -47,6 +47,8 @@ export type ViewerRaycastSystemDeps = {
   getBoxEntry?: (boxId: string) => ViewerBoxEntry | undefined;
   projectWorldToScreen?: (world: THREE.Vector3) => { x: number; y: number } | null;
   getRemateRoot?: () => THREE.Object3D | null;
+  getHematiRoot?: () => THREE.Object3D | null;
+  getRodapeRoot?: () => THREE.Object3D | null;
 };
 
 /**
@@ -131,8 +133,12 @@ export class ViewerRaycastSystem {
     return null;
   }
 
-  getRemateIdAtPointer(event: { clientX: number; clientY: number }): string | null {
-    const root = this.deps.getRemateRoot?.();
+  private pickIdFromFinishRoot(
+    event: { clientX: number; clientY: number },
+    root: THREE.Object3D | null | undefined,
+    idKey: "hematiId" | "rodapeId" | "remateId",
+    skipMergeKey: "isHematiMergeVisual" | "isRodapeMergeVisual" | "isRemateMergeVisual"
+  ): string | null {
     if (!root) return null;
     const canvas = this.deps.getCanvas();
     const rect = canvas.getBoundingClientRect();
@@ -144,11 +150,23 @@ export class ViewerRaycastSystem {
     this.deps.raycaster.layers.set(0);
     const hits = this.deps.raycaster.intersectObjects([root], true);
     for (const hit of hits) {
-      if (hit.object.userData?.isRemateMergeVisual === true) continue;
-      const remateId = hit.object.userData?.remateId;
-      if (typeof remateId === "string" && remateId.length > 0) return remateId;
+      if (hit.object.userData?.[skipMergeKey] === true) continue;
+      const id = hit.object.userData?.[idKey];
+      if (typeof id === "string" && id.length > 0) return id;
     }
     return null;
+  }
+
+  getHematiIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    return this.pickIdFromFinishRoot(event, this.deps.getHematiRoot?.(), "hematiId", "isHematiMergeVisual");
+  }
+
+  getRodapeIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    return this.pickIdFromFinishRoot(event, this.deps.getRodapeRoot?.(), "rodapeId", "isRodapeMergeVisual");
+  }
+
+  getRemateIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    return this.pickIdFromFinishRoot(event, this.deps.getRemateRoot?.(), "remateId", "isRemateMergeVisual");
   }
 
   getBoxIdAtPointer(event: { clientX: number; clientY: number }) {

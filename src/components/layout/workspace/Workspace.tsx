@@ -619,7 +619,7 @@ const hasShownViewerReadyToastRef = useRef(false);
         return { boxId, pieces, presets };
       },
     });
-    const buildRemateBoxConfig = (boxId: string) => {
+    const buildFinishBoxDims = (boxId: string) => {
       const state = projectRef.current;
       const wsBox = state.workspaceBoxes.find((b) => b.id === boxId);
       if (!wsBox) return null;
@@ -632,12 +632,36 @@ const hasShownViewerReadyToastRef = useRef(false);
         "depth" in dimsRaw
           ? (dimsRaw as { width: number; height: number; depth: number })
           : null;
-      const widthM = dims?.width ?? Math.max(0.001, (wsBox.dimensoes?.largura ?? 600) / 1000);
-      const heightM = dims?.height ?? Math.max(0.001, (wsBox.dimensoes?.altura ?? 720) / 1000);
-      const depthM = dims?.depth ?? Math.max(0.001, (wsBox.dimensoes?.profundidade ?? 600) / 1000);
-      const remates = (state.remates ?? []).filter((remate) => remate.parentBoxId === boxId);
-      return { boxId, widthM, heightM, depthM, remates };
+      return {
+        boxId,
+        widthM: dims?.width ?? Math.max(0.001, (wsBox.dimensoes?.largura ?? 600) / 1000),
+        heightM: dims?.height ?? Math.max(0.001, (wsBox.dimensoes?.altura ?? 720) / 1000),
+        depthM: dims?.depth ?? Math.max(0.001, (wsBox.dimensoes?.profundidade ?? 600) / 1000),
+      };
     };
+
+    const buildRemateBoxConfig = (boxId: string) => {
+      const dims = buildFinishBoxDims(boxId);
+      if (!dims) return null;
+      const remates = (projectRef.current.remates ?? []).filter((r) => r.parentBoxId === boxId);
+      return { ...dims, remates };
+    };
+
+    const buildHematiBoxConfig = (boxId: string) => {
+      const dims = buildFinishBoxDims(boxId);
+      if (!dims) return null;
+      const hematis = (projectRef.current.hematis ?? []).filter((h) => h.parentBoxId === boxId);
+      return { ...dims, hematis };
+    };
+
+    const buildRodapeBoxConfig = (boxId: string) => {
+      const dims = buildFinishBoxDims(boxId);
+      if (!dims) return null;
+      const rodapes = (projectRef.current.rodapes ?? []).filter((r) => r.parentBoxId === boxId);
+      return { ...dims, rodapes };
+    };
+
+    const getBoxWorldMatrix = (boxId: string) => core?.getBoxWorldMatrix?.(boxId) ?? null;
 
     core?.bindRemateBridge?.({
       getBoxRemateConfig: (boxId) => buildRemateBoxConfig(boxId),
@@ -645,11 +669,35 @@ const hasShownViewerReadyToastRef = useRef(false);
         projectRef.current.workspaceBoxes
           .map((box) => buildRemateBoxConfig(box.id))
           .filter((cfg): cfg is NonNullable<typeof cfg> => cfg != null && cfg.remates.length > 0),
-      getBoxWorldMatrix: (boxId) => core?.getBoxWorldMatrix?.(boxId) ?? null,
+      getBoxWorldMatrix,
+    });
+
+    core?.bindHematiBridge?.({
+      getBoxHematiConfig: (boxId) => buildHematiBoxConfig(boxId),
+      listBoxHematiConfigs: () =>
+        projectRef.current.workspaceBoxes
+          .map((box) => buildHematiBoxConfig(box.id))
+          .filter((cfg): cfg is NonNullable<typeof cfg> => cfg != null && cfg.hematis.length > 0),
+      getBoxWorldMatrix,
+    });
+
+    core?.bindRodapeBridge?.({
+      getBoxRodapeConfig: (boxId) => buildRodapeBoxConfig(boxId),
+      listBoxRodapeConfigs: () =>
+        projectRef.current.workspaceBoxes
+          .map((box) => buildRodapeBoxConfig(box.id))
+          .filter((cfg): cfg is NonNullable<typeof cfg> => cfg != null && cfg.rodapes.length > 0),
+      getBoxWorldMatrix,
     });
 
     core?.setOnRemateTransform?.((remateId, patch) => {
       actionsRef.current.updateRemate(remateId, patch);
+    });
+    core?.setOnHematiTransform?.((hematiId, patch) => {
+      actionsRef.current.updateHemati(hematiId, patch);
+    });
+    core?.setOnRodapeTransform?.((rodapeId, patch) => {
+      actionsRef.current.updateRodape(rodapeId, patch);
     });
   }, [viewerApi.viewerReady]);
 
@@ -657,10 +705,15 @@ const hasShownViewerReadyToastRef = useRef(false);
     if (!viewerApi.viewerReady) return;
     window.viewerCore?.syncOrlaVisuals?.();
     window.viewerCore?.syncRemateVisuals?.();
+    window.viewerCore?.syncHematiVisuals?.();
+    window.viewerCore?.syncRodapeVisuals?.();
   }, [
     project.orlaPieces,
     project.orlaPresets,
     project.remates,
+    project.hematis,
+    project.rodapes,
+    project.room,
     project.workspaceBoxes,
     project.boxes,
     viewerApi.viewerReady,

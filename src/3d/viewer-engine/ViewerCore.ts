@@ -128,6 +128,8 @@ import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
 import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
 import { RemateVisualizer, type RemateVisualBridge } from "./remate/RemateVisualizer";
+import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
+import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
 import { mToMm } from "../../utils/units";
 import {
   floorClearanceMeasurement,
@@ -225,6 +227,14 @@ export class ViewerCore {
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
   private onRemateTransform: ((
     _remateId: string,
+    _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+  ) => void) | null = null;
+  private onHematiTransform: ((
+    _hematiId: string,
+    _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+  ) => void) | null = null;
+  private onRodapeTransform: ((
+    _rodapeId: string,
     _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
   ) => void) | null = null;
   private transformControls: TransformControls | null = null;
@@ -415,6 +425,8 @@ export class ViewerCore {
   private autoLayoutEngine!: AutoLayoutEngine;
   private orlaVisualizer = new OrlaVisualizer();
   private remateVisualizer = new RemateVisualizer();
+  private hematiVisualizer = new HematiVisualizer();
+  private rodapeVisualizer = new RodapeVisualizer();
   private readonly overlayCoordinator = new ViewerOverlayCoordinator();
   private readonly boundsCache = new ViewerBoundsCache();
   /** Evita processar fim de drag duas vezes (mouseUp + dragging-changed). */
@@ -456,6 +468,12 @@ export class ViewerCore {
     syncAll: () => void;
   };
   readonly remateVisual: {
+    syncAll: () => void;
+  };
+  readonly hematiVisual: {
+    syncAll: () => void;
+  };
+  readonly rodapeVisual: {
     syncAll: () => void;
   };
   private panelVisibility!: ViewerPanelVisibility;
@@ -558,6 +576,8 @@ export class ViewerCore {
       getBoxEntry: (boxId) => this.boxes.get(boxId),
       projectWorldToScreen: (world) => this.projectWorldToScreen(world),
       getRemateRoot: () => this.remateVisualizer.getRoot(),
+      getHematiRoot: () => this.hematiVisualizer.getRoot(),
+      getRodapeRoot: () => this.rodapeVisualizer.getRoot(),
     });
 
     this.panelVisibility = new ViewerPanelVisibility({
@@ -668,6 +688,12 @@ export class ViewerCore {
     this.remateVisual = {
       syncAll: () => this.syncRemateVisuals(),
     };
+    this.hematiVisual = {
+      syncAll: () => this.syncHematiVisuals(),
+    };
+    this.rodapeVisual = {
+      syncAll: () => this.syncRodapeVisuals(),
+    };
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -717,6 +743,8 @@ export class ViewerCore {
       // Keep external listeners in sync during drag.
       this.notifyBoxTransform();
       this.notifyRemateTransform();
+      this.notifyHematiTransform();
+      this.notifyRodapeTransform();
       this.logTransformDiagnostic("drag(objectChange)");
     });
     this.transformControlsHelper = this.transformControls.getHelper();
@@ -731,6 +759,8 @@ export class ViewerCore {
     this.wallGizmo.setOnTransform(() => this.notifyWallTransform());
     this.sceneManager.scene.add(this.wallGizmo.group);
     this.sceneManager.scene.add(this.remateVisualizer.getRoot());
+    this.sceneManager.scene.add(this.hematiVisualizer.getRoot());
+    this.sceneManager.scene.add(this.rodapeVisualizer.getRoot());
     this.setWallEditMode(false);
 
     this.roomManager = new RoomManager(this as unknown as IRoomManagerViewer);
@@ -906,6 +936,8 @@ export class ViewerCore {
   selectRemate(remateId: string | null): void {
     this.viewerState.setSelectedRemate(remateId);
     if (remateId) {
+      this.viewerState.setSelectedHemati(null);
+      this.viewerState.setSelectedRodape(null);
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
@@ -921,6 +953,86 @@ export class ViewerCore {
     ) => void) | null
   ): void {
     this.onRemateTransform = callback;
+  }
+
+  bindHematiBridge(bridge: HematiVisualBridge | null): void {
+    this.hematiVisualizer.bindBridge(bridge);
+    this.syncHematiVisuals();
+  }
+
+  syncHematiVisuals(): void {
+    this.hematiVisualizer.syncAll();
+    this.applyPanelVisibilityForObject(this.hematiVisualizer.getRoot());
+  }
+
+  bindRodapeBridge(bridge: RodapeVisualBridge | null): void {
+    this.rodapeVisualizer.bindBridge(bridge);
+    this.syncRodapeVisuals();
+  }
+
+  syncRodapeVisuals(): void {
+    this.rodapeVisualizer.syncAll();
+    this.applyPanelVisibilityForObject(this.rodapeVisualizer.getRoot());
+  }
+
+  getHematiMesh(hematiId: string): THREE.Object3D | null {
+    return this.hematiVisualizer.getMeshByHematiId(hematiId) ?? null;
+  }
+
+  getRodapeMesh(rodapeId: string): THREE.Object3D | null {
+    return this.rodapeVisualizer.getMeshByRodapeId(rodapeId) ?? null;
+  }
+
+  getHematiIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    return this.raycastSystem.getHematiIdAtPointer(event);
+  }
+
+  getRodapeIdAtPointer(event: { clientX: number; clientY: number }): string | null {
+    return this.raycastSystem.getRodapeIdAtPointer(event);
+  }
+
+  selectHemati(hematiId: string | null): void {
+    this.viewerState.setSelectedHemati(hematiId);
+    if (hematiId) {
+      this.viewerState.setSelectedRodape(null);
+      this.viewerState.setSelectedRemate(null);
+      this.viewerState.setSelectedBox(null);
+      this.viewerState.setSelectedWallIndex(null);
+      this.viewerState.setSelectedRoomElementId(null);
+    }
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
+  }
+
+  selectRodape(rodapeId: string | null): void {
+    this.viewerState.setSelectedRodape(rodapeId);
+    if (rodapeId) {
+      this.viewerState.setSelectedHemati(null);
+      this.viewerState.setSelectedRemate(null);
+      this.viewerState.setSelectedBox(null);
+      this.viewerState.setSelectedWallIndex(null);
+      this.viewerState.setSelectedRoomElementId(null);
+    }
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
+  }
+
+  setOnHematiTransform(
+    callback: ((
+      hematiId: string,
+      patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+    ) => void) | null
+  ): void {
+    this.onHematiTransform = callback;
+  }
+
+  setOnRodapeTransform(
+    callback: ((
+      rodapeId: string,
+      patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+    ) => void) | null
+  ): void {
+    this.onRodapeTransform = callback;
   }
 
   private getRoomBoundsMmForAutoLayout(): AutoLayoutRoomBoundsMm | null {
@@ -3972,7 +4084,11 @@ export class ViewerCore {
       getRoomBuilder: () => this.roomBuilder,
       setPlacementMode: (mode) => this.viewerState.setPlacementMode(mode),
       getBoxIdAtPointer: (e) => this.getBoxIdAtPointer(e),
+      getHematiIdAtPointer: (e) => this.getHematiIdAtPointer(e),
+      getRodapeIdAtPointer: (e) => this.getRodapeIdAtPointer(e),
       getRemateIdAtPointer: (e) => this.getRemateIdAtPointer(e),
+      selectHemati: (id) => this.selectHemati(id),
+      selectRodape: (id) => this.selectRodape(id),
       selectRemate: (id) => this.selectRemate(id),
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
       getRoomElementAtPointer: (e) => this.getRoomElementAtPointer(e),
@@ -4016,7 +4132,11 @@ export class ViewerCore {
       getTransformControlsHelper: () => this.transformControlsHelper,
       getCurrentTool: () => this.viewerState.getCurrentTool(),
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      getSelectedHematiId: () => this.viewerState.getSelectedHemati(),
+      getSelectedRodapeId: () => this.viewerState.getSelectedRodape(),
       getSelectedRemateId: () => this.viewerState.getSelectedRemate(),
+      getHematiMesh: (hematiId) => this.getHematiMesh(hematiId),
+      getRodapeMesh: (rodapeId) => this.getRodapeMesh(rodapeId),
       getRemateMesh: (remateId) => this.getRemateMesh(remateId),
       getBoxEntry: (id) => this.boxes.get(id),
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
@@ -4214,6 +4334,8 @@ export class ViewerCore {
     this.viewerTools.applyCurrentTool();
     this.notifyBoxTransform();
     this.notifyRemateTransform();
+    this.notifyHematiTransform();
+    this.notifyRodapeTransform();
     this.notifyWallTransform();
     this.notifyRoomElementTransform();
   }
@@ -4243,9 +4365,65 @@ export class ViewerCore {
     });
   }
 
+  private notifyHematiTransform(): void {
+    const hematiId = this.viewerState.getSelectedHemati();
+    if (!hematiId) return;
+    const mesh = this.hematiVisualizer.getMeshByHematiId(hematiId);
+    if (!mesh) return;
+    const boxId = mesh.userData.boxId as string | undefined;
+    if (!boxId) return;
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    entry.mesh.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
+    const local = mesh.position.clone().applyMatrix4(inv);
+    this.onHematiTransform?.(hematiId, {
+      transform: {
+        xMm: local.x * 1000,
+        yMm: local.y * 1000,
+        zMm: local.z * 1000,
+        rotacaoXRad: mesh.rotation.x,
+        rotacaoYRad: mesh.rotation.y,
+        rotacaoZRad: mesh.rotation.z,
+      },
+      placementFree: true,
+    });
+  }
+
+  private notifyRodapeTransform(): void {
+    const rodapeId = this.viewerState.getSelectedRodape();
+    if (!rodapeId) return;
+    const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodapeId);
+    if (!mesh) return;
+    const boxId = mesh.userData.boxId as string | undefined;
+    if (!boxId) return;
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    entry.mesh.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
+    const local = mesh.position.clone().applyMatrix4(inv);
+    this.onRodapeTransform?.(rodapeId, {
+      transform: {
+        xMm: local.x * 1000,
+        yMm: local.y * 1000,
+        zMm: local.z * 1000,
+        rotacaoXRad: mesh.rotation.x,
+        rotacaoYRad: mesh.rotation.y,
+        rotacaoZRad: mesh.rotation.z,
+      },
+      placementFree: true,
+    });
+  }
+
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
-    if (this.viewerState.getSelectedRemate()) return;
+    if (
+      this.viewerState.getSelectedRemate() ||
+      this.viewerState.getSelectedHemati() ||
+      this.viewerState.getSelectedRodape()
+    ) {
+      return;
+    }
 
     const selectedBoxId = this.viewerState.getSelectedBox();
     const currentTool = this.viewerState.getCurrentTool();
@@ -4822,6 +5000,10 @@ export class ViewerCore {
     this.orlaVisualizer.dispose();
     this.remateVisualizer.bindBridge(null);
     this.remateVisualizer.dispose();
+    this.hematiVisualizer.bindBridge(null);
+    this.hematiVisualizer.dispose();
+    this.rodapeVisualizer.bindBridge(null);
+    this.rodapeVisualizer.dispose();
     this.overlayCoordinator.dispose();
     this.onBoxTransform = null;
     this.onBoxSelected = null;

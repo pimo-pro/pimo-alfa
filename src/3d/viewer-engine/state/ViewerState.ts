@@ -15,6 +15,8 @@ export class ViewerState {
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
   private selectedRemateId: string | null = null;
+  private selectedHematiId: string | null = null;
+  private selectedRodapeId: string | null = null;
   private transformMode: TransformMode = null;
   private placementMode: PlacementMode = null;
   private highlightEnabled = false;
@@ -59,6 +61,20 @@ export class ViewerState {
   }
   setSelectedRemate(id: string | null): void {
     this.selectedRemateId = id;
+  }
+
+  getSelectedHemati(): string | null {
+    return this.selectedHematiId;
+  }
+  setSelectedHemati(id: string | null): void {
+    this.selectedHematiId = id;
+  }
+
+  getSelectedRodape(): string | null {
+    return this.selectedRodapeId;
+  }
+  setSelectedRodape(id: string | null): void {
+    this.selectedRodapeId = id;
   }
 
   getCurrentTool(): TransformMode {
@@ -142,6 +158,8 @@ export class ViewerState {
     this.selectedWallIndex = null;
     this.selectedRoomElementId = null;
     this.selectedRemateId = null;
+    this.selectedHematiId = null;
+    this.selectedRodapeId = null;
     this.internalSelection = null;
   }
 }

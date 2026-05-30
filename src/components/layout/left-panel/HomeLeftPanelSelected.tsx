@@ -12,6 +12,8 @@ import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
 import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
 import { Icon } from "@/components/icons";
 import SelecionarMaterialSection from "../../settings/material/SelecionarMaterialSection";
+import BoxHematiSection from "../../settings/hemati/BoxHematiSection";
+import BoxRodapeSection from "../../settings/rodape/BoxRodapeSection";
 
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
@@ -227,6 +229,9 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
               }}
             />
           )}
+
+          {selectedBox && <BoxHematiSection boxId={selectedBox.id} />}
+          {selectedBox && <BoxRodapeSection boxId={selectedBox.id} />}
 
           {selectedBox && (
             <Panel title="Pés">

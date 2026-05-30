@@ -18,6 +18,16 @@ import type {
   ProjectRemate,
   UpdateRemateInput,
 } from "../core/remate/remateTypes";
+import type {
+  CreateHematiInput,
+  ProjectHemati,
+  UpdateHematiInput,
+} from "../core/hemati/hematiTypes";
+import type {
+  CreateRodapeInput,
+  ProjectRodape,
+  UpdateRodapeInput,
+} from "../core/rodape/rodapeTypes";
 import type { RuleViolation } from "../core/rules/types";
 import type { LayoutWarnings } from "../core/layout/layoutWarnings";
 import type { RulesConfig } from "../core/rules/rulesConfig";
@@ -146,6 +156,10 @@ export interface ProjectState {
 
   /** Remate V1 — peças independentes de acabamento final. */
   remates: ProjectRemate[];
+  /** Hemati — acabamento superior/lateral (cozinhas; apenas visual). */
+  hematis: ProjectHemati[];
+  /** Roda pé inteligente — acabamento inferior (cozinhas; apenas visual). */
+  rodapes: ProjectRodape[];
 
   /** Perfis de regras: lista de perfis + perfil ativo. */
   rulesProfiles: RulesProfilesConfig;
@@ -594,6 +608,16 @@ export interface ProjectActions {
   updateRemate: (_remateId: string, _patch: UpdateRemateInput) => void;
   /** Remate V1 — remove remate do projeto. */
   removeRemate: (_remateId: string) => void;
+  /** Hemati — cria peça(s) no módulo. */
+  createBoxHemati: (_input: CreateHematiInput) => void;
+  updateHemati: (_hematiId: string, _patch: UpdateHematiInput) => void;
+  removeHemati: (_hematiId: string) => void;
+  setHematiVisible: (_hematiId: string, _visible: boolean) => void;
+  /** Roda pé — cria peça(s) no módulo. */
+  createBoxRodape: (_input: CreateRodapeInput) => void;
+  updateRodape: (_rodapeId: string, _patch: UpdateRodapeInput) => void;
+  removeRodape: (_rodapeId: string) => void;
+  setRodapeVisible: (_rodapeId: string, _visible: boolean) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: "select" | "move" | "rotate") => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */

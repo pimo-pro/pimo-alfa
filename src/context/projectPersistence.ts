@@ -13,6 +13,8 @@ import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import type { ProjectRemate } from "../core/remate/remateTypes";
 import { positionToFaceKind } from "../core/remate/remateTypes";
+import type { ProjectHemati } from "../core/hemati/hematiTypes";
+import type { ProjectRodape } from "../core/rodape/rodapeTypes";
 
 export const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 export const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
@@ -204,6 +206,24 @@ export function reviveState(snapshot: unknown): ProjectState | null {
           }
         : defaultState.ferragemOrla,
     remates,
+    hematis: Array.isArray(restored.hematis)
+      ? restored.hematis.filter(
+          (h): h is ProjectHemati =>
+            h != null &&
+            typeof h === "object" &&
+            typeof (h as ProjectHemati).id === "string" &&
+            typeof (h as ProjectHemati).parentBoxId === "string"
+        ).map((h) => ({ ...h, visible: h.visible !== false, placementFree: h.placementFree ?? false }))
+      : [],
+    rodapes: Array.isArray(restored.rodapes)
+      ? restored.rodapes.filter(
+          (r): r is ProjectRodape =>
+            r != null &&
+            typeof r === "object" &&
+            typeof (r as ProjectRodape).id === "string" &&
+            typeof (r as ProjectRodape).parentBoxId === "string"
+        ).map((r) => ({ ...r, visible: r.visible !== false, placementFree: r.placementFree ?? false }))
+      : [],
     lastAutosaveTime:
       typeof restored.lastAutosaveTime === "string" ? restored.lastAutosaveTime : null,
   };

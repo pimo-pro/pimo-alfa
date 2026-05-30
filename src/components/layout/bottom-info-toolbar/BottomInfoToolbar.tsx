@@ -372,9 +372,33 @@ export default function BottomInfoToolbar() {
         });
       }
 
+      for (const hemati of (project.hematis ?? []).filter((h) => h.parentBoxId === box.id)) {
+        entries.push({
+          id: hemati.id,
+          boxId: box.id,
+          boxName: box.nome,
+          label: hemati.kind === "L" || hemati.kind === "U" ? `Hemati ${hemati.kind}${hemati.partIndex ?? ""}` : `Hemati ${hemati.kind}`,
+          searchText: `${box.nome} hemati ${hemati.id}`.toLowerCase(),
+        });
+      }
+      for (const rodape of (project.rodapes ?? []).filter((r) => r.parentBoxId === box.id)) {
+        entries.push({
+          id: rodape.id,
+          boxId: box.id,
+          boxName: box.nome,
+          label:
+            rodape.kind === "L" || rodape.kind === "U"
+              ? `Roda pé ${rodape.kind}${rodape.partIndex ?? ""}`
+              : rodape.kind === "FULL"
+                ? "Roda pé Full Wall"
+                : "Roda pé",
+          searchText: `${box.nome} roda pé ${rodape.id}`.toLowerCase(),
+        });
+      }
+
       return entries;
     });
-  }, [workspaceBoxes, project.remates]);
+  }, [workspaceBoxes, project.remates, project.hematis, project.rodapes]);
 
   const filteredPanelVisibilityEntries = useMemo(() => {
     const query = pieceSearch.trim().toLowerCase();

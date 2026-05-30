@@ -121,6 +121,26 @@ export class EventsManager {
       }
       return;
     }
+    const hematiId = e.getHematiIdAtPointer(event);
+    if (hematiId) {
+      e.selectHemati(hematiId);
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.getOnBoxSelected()?.(null);
+      return;
+    }
+    const rodapeId = e.getRodapeIdAtPointer(event);
+    if (rodapeId) {
+      e.selectRodape(rodapeId);
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.getOnBoxSelected()?.(null);
+      return;
+    }
     const remateId = e.getRemateIdAtPointer(event);
     if (remateId) {
       e.selectRemate(remateId);
@@ -133,6 +153,8 @@ export class EventsManager {
     }
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
+      e.selectHemati(null);
+      e.selectRodape(null);
       e.selectRemate(null);
       e.setHoveredBox(boxId);
       e.setSelectedBox(boxId);

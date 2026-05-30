@@ -99,6 +99,60 @@ declare global {
       remateVisual?: {
         syncAll: () => void;
       };
+      bindHematiBridge?: (
+        bridge: Pick<
+          import("../3d/viewer-engine/hemati/HematiVisualizer").HematiVisualBridge,
+          "getBoxHematiConfig" | "listBoxHematiConfigs" | "getBoxWorldMatrix"
+        > | null
+      ) => void;
+      syncHematiVisuals?: () => void;
+      hematiVisual?: { syncAll: () => void };
+      setOnHematiTransform?: (
+        callback:
+          | ((
+              hematiId: string,
+              patch: {
+                transform: {
+                  xMm: number;
+                  yMm: number;
+                  zMm: number;
+                  rotacaoXRad: number;
+                  rotacaoYRad: number;
+                  rotacaoZRad: number;
+                };
+                placementFree: boolean;
+              }
+            ) => void)
+          | null
+      ) => void;
+      selectHemati?: (hematiId: string | null) => void;
+      bindRodapeBridge?: (
+        bridge: Pick<
+          import("../3d/viewer-engine/rodape/RodapeVisualizer").RodapeVisualBridge,
+          "getBoxRodapeConfig" | "listBoxRodapeConfigs" | "getBoxWorldMatrix"
+        > | null
+      ) => void;
+      syncRodapeVisuals?: () => void;
+      rodapeVisual?: { syncAll: () => void };
+      setOnRodapeTransform?: (
+        callback:
+          | ((
+              rodapeId: string,
+              patch: {
+                transform: {
+                  xMm: number;
+                  yMm: number;
+                  zMm: number;
+                  rotacaoXRad: number;
+                  rotacaoYRad: number;
+                  rotacaoZRad: number;
+                };
+                placementFree: boolean;
+              }
+            ) => void)
+          | null
+      ) => void;
+      selectRodape?: (rodapeId: string | null) => void;
       snapping?: {
         enable: () => void;
         disable: () => void;

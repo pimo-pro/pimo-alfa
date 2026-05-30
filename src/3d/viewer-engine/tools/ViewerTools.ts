@@ -20,6 +20,40 @@ export class ViewerTools {
     const controls = e.getTransformControls();
     if (!controls) return;
     const mode = e.getCurrentTool();
+    const selectedHematiId = e.getSelectedHematiId();
+    if (selectedHematiId && mode) {
+      const hematiMesh = e.getHematiMesh(selectedHematiId);
+      if (hematiMesh) {
+        hematiMesh.matrixAutoUpdate = true;
+        hematiMesh.updateMatrixWorld(true);
+        controls.detach();
+        controls.attach(hematiMesh);
+        controls.setMode(mode);
+        controls.setSize(0.35);
+        e.applyTransformControlsMouseGuard();
+        e.logTransformDiagnostic("attach-hemati", { hematiId: selectedHematiId, attachedUuid: hematiMesh.uuid });
+        e.setTransformHelperVisible(true);
+        return;
+      }
+    }
+
+    const selectedRodapeId = e.getSelectedRodapeId();
+    if (selectedRodapeId && mode) {
+      const rodapeMesh = e.getRodapeMesh(selectedRodapeId);
+      if (rodapeMesh) {
+        rodapeMesh.matrixAutoUpdate = true;
+        rodapeMesh.updateMatrixWorld(true);
+        controls.detach();
+        controls.attach(rodapeMesh);
+        controls.setMode(mode);
+        controls.setSize(0.35);
+        e.applyTransformControlsMouseGuard();
+        e.logTransformDiagnostic("attach-rodape", { rodapeId: selectedRodapeId, attachedUuid: rodapeMesh.uuid });
+        e.setTransformHelperVisible(true);
+        return;
+      }
+    }
+
     const selectedRemateId = e.getSelectedRemateId();
     if (selectedRemateId && mode) {
       const remateMesh = e.getRemateMesh(selectedRemateId);
@@ -98,6 +132,22 @@ export class ViewerTools {
     const outline = e.getSelectionOutline();
     const material = e.getSelectionOutlineMaterial();
     if (!outline || !material) return;
+    const selectedHematiId = e.getSelectedHematiId();
+    if (selectedHematiId) {
+      const hematiMesh = e.getHematiMesh(selectedHematiId);
+      if (hematiMesh) {
+        e.setOutlineTarget(hematiMesh, 0.9, 0xf59e0b);
+        return;
+      }
+    }
+    const selectedRodapeId = e.getSelectedRodapeId();
+    if (selectedRodapeId) {
+      const rodapeMesh = e.getRodapeMesh(selectedRodapeId);
+      if (rodapeMesh) {
+        e.setOutlineTarget(rodapeMesh, 0.9, 0xa78bfa);
+        return;
+      }
+    }
     const selectedRemateId = e.getSelectedRemateId();
     if (selectedRemateId) {
       const remateMesh = e.getRemateMesh(selectedRemateId);
