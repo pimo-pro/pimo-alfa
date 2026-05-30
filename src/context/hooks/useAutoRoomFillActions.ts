@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import type { ProjectActions } from "../projectTypes";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
-import { runAutoRoomFillOnState } from "../../core/autoRoomFill";
+import { runAutoRoomFillOnState, runKitchenLayout30OnState } from "../../core/autoRoomFill";
+import { detectKitchenLayout } from "../../core/autoRoomFill/layoutDetection";
 import {
   EMPTY_ALLOW_UPPER,
   EMPTY_WALL_SELECTION,
@@ -9,8 +10,30 @@ import {
 
 export type AutoRoomFillActions = Pick<
   ProjectActions,
-  "runAutoRoomFill" | "setAutoFillWallSettings"
+  "runAutoRoomFill" | "runKitchenLayout30" | "setAutoFillWallSettings"
 >;
+
+function baseAutoFillState(prev: import("../projectTypes").ProjectState) {
+  return {
+    lastRunAt: prev.autoFill?.lastRunAt ?? "",
+    summary: prev.autoFill?.summary ?? "",
+    createdBoxIds: prev.autoFill?.createdBoxIds ?? [],
+    createdRemateIds: prev.autoFill?.createdRemateIds ?? [],
+    createdHematiIds: prev.autoFill?.createdHematiIds ?? [],
+    createdRodapeIds: prev.autoFill?.createdRodapeIds ?? [],
+    wallSummaries: prev.autoFill?.wallSummaries ?? [],
+    specialsPlaced: prev.autoFill?.specialsPlaced ?? [],
+    wallSelection: prev.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION,
+    allowUpperModules: prev.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER,
+    layoutType: prev.autoFill?.layoutType,
+    layoutTypeOverride: prev.autoFill?.layoutTypeOverride ?? "auto",
+    layoutSummary: prev.autoFill?.layoutSummary,
+    islandConfig: prev.autoFill?.islandConfig ?? null,
+    wallAssignments: prev.autoFill?.wallAssignments,
+    trimAppliedMm: prev.autoFill?.trimAppliedMm,
+    detailedSummary: prev.autoFill?.detailedSummary,
+  };
+}
 
 export function useAutoRoomFillActions(ctx: ProjectActionsExecutionContext): AutoRoomFillActions {
   const { updateProject } = ctx;
@@ -19,27 +42,35 @@ export function useAutoRoomFillActions(ctx: ProjectActionsExecutionContext): Aut
     () => ({
       setAutoFillWallSettings: (patch) => {
         updateProject(
-          (prev) => ({
-            ...prev,
-            autoFill: {
-              lastRunAt: prev.autoFill?.lastRunAt ?? "",
-              summary: prev.autoFill?.summary ?? "",
-              createdBoxIds: prev.autoFill?.createdBoxIds ?? [],
-              createdRemateIds: prev.autoFill?.createdRemateIds ?? [],
-              createdHematiIds: prev.autoFill?.createdHematiIds ?? [],
-              createdRodapeIds: prev.autoFill?.createdRodapeIds ?? [],
-              wallSummaries: prev.autoFill?.wallSummaries ?? [],
-              specialsPlaced: prev.autoFill?.specialsPlaced ?? [],
-              wallSelection: {
-                ...(prev.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION),
-                ...(patch.wallSelection ?? {}),
+          (prev) => {
+            const detected =
+              prev.room && patch.layoutTypeOverride === undefined
+                ? detectKitchenLayout(prev.room)?.detectedType
+                : prev.autoFill?.layoutType;
+
+            return {
+              ...prev,
+              autoFill: {
+                ...baseAutoFillState(prev),
+                wallSelection: {
+                  ...(prev.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION),
+                  ...(patch.wallSelection ?? {}),
+                },
+                allowUpperModules: {
+                  ...(prev.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER),
+                  ...(patch.allowUpperModules ?? {}),
+                },
+                layoutTypeOverride:
+                  patch.layoutTypeOverride ??
+                  prev.autoFill?.layoutTypeOverride ??
+                  "auto",
+                layoutType:
+                  patch.layoutTypeOverride && patch.layoutTypeOverride !== "auto"
+                    ? patch.layoutTypeOverride
+                    : detected ?? prev.autoFill?.layoutType,
               },
-              allowUpperModules: {
-                ...(prev.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER),
-                ...(patch.allowUpperModules ?? {}),
-              },
-            },
-          }),
+            };
+          },
           false
         );
       },
@@ -49,6 +80,17 @@ export function useAutoRoomFillActions(ctx: ProjectActionsExecutionContext): Aut
           (prev) => {
             if (!prev.room) return prev;
             const result = runAutoRoomFillOnState(prev);
+            return result?.state ?? prev;
+          },
+          true
+        );
+      },
+
+      runKitchenLayout30: () => {
+        updateProject(
+          (prev) => {
+            if (!prev.room) return prev;
+            const result = runKitchenLayout30OnState(prev);
             return result?.state ?? prev;
           },
           true

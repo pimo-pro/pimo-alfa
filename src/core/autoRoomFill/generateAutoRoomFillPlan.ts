@@ -1,4 +1,4 @@
-import type { ProjectRoomConfig } from "../../3d/viewer-engine/room/roomEngineTypes";
+import type { ProjectRoomConfig, RoomWallLabel } from "../../3d/viewer-engine/room/roomEngineTypes";
 import { getBaseCabinetById } from "../baseCabinets";
 import {
   buildGenerateOptions,
@@ -359,7 +359,8 @@ function formatDetailedSummary(summaries: AutoFillWallSummary[]): string {
 
 export function generateAutoRoomFillPlan(
   room: ProjectRoomConfig | null,
-  options?: Partial<AutoFillGenerateOptions>
+  options?: Partial<AutoFillGenerateOptions>,
+  specialsByWallLabel?: Partial<Record<RoomWallLabel, SpecialPlacement[]>>
 ): AutoFillPlan | null {
   if (!room?.walls?.length) return null;
 
@@ -386,7 +387,9 @@ export function generateAutoRoomFillPlan(
 
   for (const run of wallRuns) {
     const isPrimary = run.wallId === primary.wallId;
-    const specials = buildSpecialsForWall(run, room, isPrimary);
+    const specials =
+      specialsByWallLabel?.[run.label] ??
+      buildSpecialsForWall(run, room, isPrimary);
     const allowUpper = canPlaceUpperOnWall(run, room, genOpts);
     let wallStats: SegmentFillStats = {
       wastedMm: 0,
@@ -441,7 +444,8 @@ export function generateAutoRoomFillPlan(
       }
     }
 
-    if (isPrimary && genOpts.allowUpperModules[run.label]) {
+    const hasCooktop = specials.some((s) => s.kind === "cooktop");
+    if (hasCooktop && genOpts.allowUpperModules[run.label]) {
       const cooktop = specials.find((s) => s.kind === "cooktop");
       if (cooktop) {
         const hood = hoodPlacementForCooktop(run, cooktop);

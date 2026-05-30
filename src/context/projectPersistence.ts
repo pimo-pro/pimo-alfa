@@ -248,6 +248,28 @@ export function reviveState(snapshot: unknown): ProjectState | null {
               specialsPlaced: Array.isArray(raw.specialsPlaced) ? raw.specialsPlaced : [],
               trimAppliedMm:
                 typeof raw.trimAppliedMm === "number" ? raw.trimAppliedMm : undefined,
+              layoutType:
+                raw.layoutType === "I" ||
+                raw.layoutType === "L" ||
+                raw.layoutType === "U" ||
+                raw.layoutType === "island"
+                  ? raw.layoutType
+                  : undefined,
+              layoutTypeOverride:
+                raw.layoutTypeOverride === "auto" ||
+                raw.layoutTypeOverride === "I" ||
+                raw.layoutTypeOverride === "L" ||
+                raw.layoutTypeOverride === "U" ||
+                raw.layoutTypeOverride === "island"
+                  ? raw.layoutTypeOverride
+                  : "auto",
+              layoutSummary:
+                typeof raw.layoutSummary === "string" ? raw.layoutSummary : undefined,
+              islandConfig:
+                raw.islandConfig && typeof raw.islandConfig === "object"
+                  ? raw.islandConfig
+                  : null,
+              wallAssignments: Array.isArray(raw.wallAssignments) ? raw.wallAssignments : [],
             };
           })()
         : null,

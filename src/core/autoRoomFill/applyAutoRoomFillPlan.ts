@@ -9,11 +9,17 @@ import { createRodapesForBox } from "../rodape/rodapeFactory";
 import { createRematesForBox } from "../remate/remateFactory";
 import { getMaterialByIdOrLabel } from "../materials/service";
 import { HEMATI_DEFAULT_THICKNESS_MM } from "../kitchenFinish/finishTypes";
-import type { AutoFillApplyResult } from "./autoRoomFillTypes";
-import type { AutoFillPlan } from "./autoRoomFillTypes";
+import type {
+  AutoFillApplyResult,
+  AutoFillIslandConfig,
+  AutoFillPlan,
+  AutoFillWallAssignment,
+  KitchenLayoutType,
+} from "./autoRoomFillTypes";
 import { buildGenerateOptions } from "./autoFillSettings";
 import { analyzeRoomWalls } from "./roomAnalysis";
 import { generateAutoRoomFillPlan } from "./generateAutoRoomFillPlan";
+import { generateKitchenLayoutPlan } from "./generateKitchenLayoutPlan";
 import {
   EMPTY_ALLOW_UPPER,
   EMPTY_WALL_SELECTION,
@@ -112,7 +118,18 @@ function buildBoxFromCatalog(
   return box;
 }
 
-export function applyAutoRoomFillPlan(prev: ProjectState, plan: AutoFillPlan): AutoFillApplyResult {
+export type AutoFillApplyExtras = {
+  layoutType?: KitchenLayoutType;
+  layoutSummary?: string;
+  islandConfig?: AutoFillIslandConfig | null;
+  wallAssignments?: AutoFillWallAssignment[];
+};
+
+export function applyAutoRoomFillPlan(
+  prev: ProjectState,
+  plan: AutoFillPlan,
+  extras?: AutoFillApplyExtras
+): AutoFillApplyResult {
   const materialId = prev.materialId || prev.material.tipo;
   const material = getMaterialByIdOrLabel(materialId);
   const thicknessMm =
@@ -243,8 +260,9 @@ export function applyAutoRoomFillPlan(prev: ProjectState, plan: AutoFillPlan): A
     }
   }
 
-  const summary = plan.summaryLines.join("\n");
-  const detailedSummary = plan.summaryLines.slice(3).join("\n") || summary;
+  const summary = extras?.layoutSummary ?? plan.summaryLines.join("\n");
+  const detailedSummary =
+    extras?.layoutSummary ?? (plan.summaryLines.slice(3).join("\n") || summary);
   const trimAppliedMm = Math.max(0, ...plan.wallSummaries.map((w) => w.trimAppliedMm));
   const lastRun: ProjectAutoFillState = {
     lastRunAt: new Date().toISOString(),
@@ -252,6 +270,11 @@ export function applyAutoRoomFillPlan(prev: ProjectState, plan: AutoFillPlan): A
     detailedSummary,
     wallSelection: prev.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION,
     allowUpperModules: prev.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER,
+    layoutType: extras?.layoutType,
+    layoutTypeOverride: prev.autoFill?.layoutTypeOverride ?? "auto",
+    layoutSummary: extras?.layoutSummary,
+    islandConfig: extras?.islandConfig ?? null,
+    wallAssignments: extras?.wallAssignments,
     createdBoxIds,
     createdRemateIds,
     createdHematiIds,
@@ -298,4 +321,19 @@ export function runAutoRoomFillOnState(prev: ProjectState): AutoFillApplyResult 
   const plan = generateAutoRoomFillPlan(prev.room, opts);
   if (!plan || plan.modules.length === 0) return null;
   return applyAutoRoomFillPlan(prev, plan);
+}
+
+export function runKitchenLayout30OnState(prev: ProjectState): AutoFillApplyResult | null {
+  if (!prev.room) return null;
+  const layoutResult = generateKitchenLayoutPlan(
+    prev.room,
+    prev.autoFill?.layoutTypeOverride ?? "auto"
+  );
+  if (!layoutResult || layoutResult.plan.modules.length === 0) return null;
+  return applyAutoRoomFillPlan(prev, layoutResult.plan, {
+    layoutType: layoutResult.layoutType,
+    layoutSummary: layoutResult.layoutSummary,
+    islandConfig: layoutResult.islandConfig,
+    wallAssignments: layoutResult.wallAssignments,
+  });
 }

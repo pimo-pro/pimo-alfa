@@ -85,6 +85,11 @@ export type ProjectAutoFillState = {
   detailedSummary?: string;
   wallSelection: AutoFillWallSelection;
   allowUpperModules: AutoFillAllowUpperByWall;
+  layoutType?: KitchenLayoutType;
+  layoutTypeOverride?: KitchenLayoutTypeOverride;
+  layoutSummary?: string;
+  islandConfig?: AutoFillIslandConfig | null;
+  wallAssignments?: AutoFillWallAssignment[];
   createdBoxIds: string[];
   createdRemateIds: string[];
   createdHematiIds: string[];
@@ -94,9 +99,45 @@ export type ProjectAutoFillState = {
   trimAppliedMm?: number;
 };
 
+export const ISLAND_LAYOUT_WALL_ID = "layout-island";
+
 export type AutoFillGenerateOptions = {
   wallSelection: AutoFillWallSelection;
   allowUpperModules: AutoFillAllowUpperByWall;
+};
+
+/** Layout de cozinha 3.0 — I, L, U ou ilha. */
+export type KitchenLayoutType = "I" | "L" | "U" | "island";
+
+export type KitchenLayoutTypeOverride = KitchenLayoutType | "auto";
+
+export type AutoFillWallAssignment = {
+  label: RoomWallLabel;
+  wallId: string;
+  role: "primary" | "secondary" | "tertiary" | "leg";
+  usefulLengthMm: number;
+};
+
+export type AutoFillIslandConfig = {
+  widthMm: number;
+  depthMm: number;
+  centerX_mm: number;
+  centerZ_mm: number;
+  moduleCatalogIds: string[];
+  hasSink: boolean;
+  hasCooktop: boolean;
+};
+
+export type LayoutDetectionResult = {
+  detectedType: KitchenLayoutType;
+  usableWallLabels: RoomWallLabel[];
+  validCornerCount: number;
+  centerFreeWidthMm: number;
+  centerFreeDepthMm: number;
+  islandEligible: boolean;
+  lPair: [RoomWallLabel, RoomWallLabel] | null;
+  uChain: RoomWallLabel[] | null;
+  primaryLabel: RoomWallLabel;
 };
 
 export type AutoFillApplyResult = {

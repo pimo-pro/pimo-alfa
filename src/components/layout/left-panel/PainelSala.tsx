@@ -18,7 +18,20 @@ import {
   EMPTY_ALLOW_UPPER,
   EMPTY_WALL_SELECTION,
 } from "../../../core/autoRoomFill";
+import { detectKitchenLayout } from "../../../core/autoRoomFill/layoutDetection";
+import type {
+  KitchenLayoutType,
+  KitchenLayoutTypeOverride,
+} from "../../../core/autoRoomFill/autoRoomFillTypes";
 import type { RoomWallLabel } from "../../../3d/viewer-engine/room/roomEngineTypes";
+
+const LAYOUT_OPTIONS: Array<{ id: KitchenLayoutTypeOverride; label: string }> = [
+  { id: "auto", label: "Automático" },
+  { id: "I", label: "I (uma parede)" },
+  { id: "L", label: "L (duas paredes)" },
+  { id: "U", label: "U (três paredes)" },
+  { id: "island", label: "Ilha" },
+];
 
 /** Dimensões padrão da sala em centímetros */
 const DEFAULT_ROOM_WIDTH_CM  = 400;  // 4 m
@@ -97,6 +110,10 @@ export function PainelSala() {
 
   const wallSelection = project.autoFill?.wallSelection ?? EMPTY_WALL_SELECTION;
   const allowUpperModules = project.autoFill?.allowUpperModules ?? EMPTY_ALLOW_UPPER;
+  const layoutOverride = project.autoFill?.layoutTypeOverride ?? "auto";
+  const detectedLayout = room ? detectKitchenLayout(room) : null;
+  const displayLayoutType: KitchenLayoutType | "auto" =
+    layoutOverride !== "auto" ? layoutOverride : detectedLayout?.detectedType ?? "I";
 
   useEffect(() => {
     const text = project.autoFill?.detailedSummary ?? project.autoFill?.summary;
@@ -401,6 +418,58 @@ export function PainelSala() {
               />
               Lock Walls (paredes principais conectadas)
             </label>
+            <Panel title="Layout Cozinha 3.0">
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+                Detetado: <strong>{detectedLayout?.detectedType ?? "—"}</strong>
+                {detectedLayout && (
+                  <>
+                    {" "}
+                    · Centro livre: {detectedLayout.centerFreeWidthMm}×
+                    {detectedLayout.centerFreeDepthMm} mm
+                    {detectedLayout.islandEligible ? " · Ilha OK" : ""}
+                  </>
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+                {LAYOUT_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 12,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="kitchen-layout-override"
+                      checked={layoutOverride === opt.id}
+                      onChange={() => {
+                        actions.setAutoFillWallSettings({ layoutTypeOverride: opt.id });
+                      }}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ width: "100%" }}
+                onClick={() => {
+                  if (!room) {
+                    setAutoFillMessage("Crie uma sala antes de gerar o layout.");
+                    return;
+                  }
+                  setAutoFillMessage(`A gerar layout ${displayLayoutType}…`);
+                  actions.runKitchenLayout30();
+                }}
+              >
+                Gerar Layout da Cozinha (3.0)
+              </button>
+            </Panel>
             <Panel title="Auto-Room-Fill — paredes">
               <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 8px" }}>
                 Sem seleção, preenche só a parede mais longa.

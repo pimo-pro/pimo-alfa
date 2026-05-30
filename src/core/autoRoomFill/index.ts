@@ -14,4 +14,20 @@ export {
 } from "./autoRoomFillTypes";
 export { buildGenerateOptions, pickPrimaryWallRun } from "./autoFillSettings";
 export { generateAutoRoomFillPlan } from "./generateAutoRoomFillPlan";
-export { applyAutoRoomFillPlan, runAutoRoomFillOnState } from "./applyAutoRoomFillPlan";
+export {
+  generateKitchenLayoutPlan,
+  type KitchenLayoutPlanResult,
+} from "./generateKitchenLayoutPlan";
+export { detectKitchenLayout, resolveLayoutType } from "./layoutDetection";
+export {
+  applyAutoRoomFillPlan,
+  runAutoRoomFillOnState,
+  runKitchenLayout30OnState,
+} from "./applyAutoRoomFillPlan";
+export type {
+  KitchenLayoutType,
+  KitchenLayoutTypeOverride,
+  LayoutDetectionResult,
+  AutoFillIslandConfig,
+  AutoFillWallAssignment,
+} from "./autoRoomFillTypes";

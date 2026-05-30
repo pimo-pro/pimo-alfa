@@ -5,7 +5,7 @@ import type {
   AutoFillGenerateOptions,
   AutoFillWallSelection,
 } from "./autoRoomFillTypes";
-import { AUTO_FILL_WALL_LABELS } from "./autoRoomFillTypes";
+import { AUTO_FILL_WALL_LABELS, EMPTY_WALL_SELECTION } from "./autoRoomFillTypes";
 
 export { EMPTY_WALL_SELECTION, EMPTY_ALLOW_UPPER } from "./autoRoomFillTypes";
 
@@ -82,6 +82,12 @@ export function buildGenerateOptions(
     wallSelection: normalizeWallSelection(wallSelection),
     allowUpperModules: normalizeAllowUpper(allowUpperModules, primary.label),
   };
+}
+
+export function wallSelectionFromLabels(labels: RoomWallLabel[]): AutoFillWallSelection {
+  const sel = { ...EMPTY_WALL_SELECTION };
+  for (const label of labels) sel[label] = true;
+  return sel;
 }
 
 export function roomDepthAlongWall(

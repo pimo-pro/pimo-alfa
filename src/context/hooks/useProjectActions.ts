@@ -241,6 +241,9 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "createBoxRodape",
         "updateRodape",
         "removeRodape",
+        "runAutoRoomFill",
+        "runKitchenLayout30",
+        "setAutoFillWallSettings",
       ];
 
       requiredActions.forEach((key) => {
