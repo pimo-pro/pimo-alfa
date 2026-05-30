@@ -1,6 +1,6 @@
 /**
+ * @deprecated Substituído por ViewerState. Mantido apenas para compatibilidade de import legado.
  * Estado de seleção da caixa ativa no viewer (selectedBoxId).
- * O Viewer delega setSelectedBox/getSelectedBoxId aqui; hit test e outline permanecem no Viewer.
  */
 
 export class ViewerSelectionManager {

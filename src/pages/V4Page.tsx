@@ -1,222 +1,164 @@
 import { useState } from "react";
-import "../components/ui/ui.css";
-import { Icon } from "../components/icons/Icon";
+import "../components/v4/v4.css";
+import { V4Icon } from "../v4/icons/Icon";
+import type { V4IconName } from "../v4/icons/types";
 import V4Viewer, { type SceneItem } from "../components/v4/V4Viewer";
 import V4CatalogPanel from "../components/v4/V4CatalogPanel";
 import V4ItemPreview from "../components/v4/V4ItemPreview";
 import type { CatalogItem } from "../catalog/catalogTypes";
 
-type SectionId = "perfil" | "permissoes" | "definicoes" | "projetos" | "seguranca" | "atividade";
+type SectionId = "moveis" | "projeto" | "materiais" | "fabricacao" | "rastreio" | "definicoes";
 
 type Section = {
   id: SectionId;
   label: string;
-  icon: string;
-  subLabel: string;
+  icon: V4IconName;
 };
 
 const SECTIONS: Section[] = [
-  { id: "perfil", label: "Perfil", icon: "👤", subLabel: "Informação pessoal" },
-  { id: "permissoes", label: "Permissões", icon: "🛡️", subLabel: "Permissões efetivas" },
-  { id: "definicoes", label: "Definições", icon: "⚙️", subLabel: "Geral" },
-  { id: "projetos", label: "Projetos", icon: "📁", subLabel: "Meus projetos" },
-  { id: "seguranca", label: "Segurança", icon: "🔐", subLabel: "Palavra-passe" },
-  { id: "atividade", label: "Atividade", icon: "📈", subLabel: "Histórico" },
+  { id: "moveis",     label: "Móveis",     icon: "furniture"   },
+  { id: "projeto",    label: "Projeto",    icon: "project"     },
+  { id: "materiais",  label: "Materiais",  icon: "materials"   },
+  { id: "fabricacao", label: "Fabricação", icon: "fabrication" },
+  { id: "rastreio",   label: "Rastreio",   icon: "tracking"    },
+  { id: "definicoes", label: "Definições", icon: "settings"    },
 ];
 
 export default function V4Page() {
-  const [activeSection, setActiveSection] = useState<SectionId>("perfil");
+  const [activeSection, setActiveSection] = useState<SectionId>("moveis");
   const [subpanelOpen, setSubpanelOpen] = useState(true);
-  const [showCatalogPanel, setShowCatalogPanel] = useState(false);
   const [sceneItems, setSceneItems] = useState<SceneItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
-  const current = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0];
 
   function handleAddCatalogItem(item: CatalogItem) {
     const gapM = 0.02;
     const positionX = sceneItems.reduce(
-      (acc, currentItem) => acc + currentItem.catalogItem.dimensoesDefault.largura_mm / 1000 + gapM,
+      (acc, cur) => acc + cur.catalogItem.dimensoesDefault.largura_mm / 1000 + gapM,
       0
     );
-
     const newItem: SceneItem = {
       id: globalThis.crypto?.randomUUID?.() ?? Date.now().toString(),
       catalogItem: item,
       position: [positionX, 0, 0],
     };
-
     setSceneItems((prev) => [...prev, newItem]);
     setSelectedId(newItem.id);
   }
 
-  function handleSectionClick(section: Section) {
-    if (section.id === activeSection) {
-      setSubpanelOpen((prev) => !prev);
-      return;
+  function handleSectionClick(id: SectionId) {
+    if (id === activeSection) {
+      setSubpanelOpen((p) => !p);
+    } else {
+      setActiveSection(id);
+      setSubpanelOpen(true);
     }
-    setActiveSection(section.id);
-    setSubpanelOpen(true);
   }
 
+  const active = SECTIONS.find((s) => s.id === activeSection)!;
+
   return (
-    <div className="ui-settings-page-wrap" style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <div className="ui-settings-shell" style={{ width: "100%", height: "100%", display: "flex", overflow: "hidden" }}>
-        {/* Column 1 */}
-        <aside className="ui-settings-sidebar-icons" style={{ flexShrink: 0, overflowX: "hidden", overflowY: "auto" }}>
-          <span style={{ fontSize: 10, color: "#888" }}>SECTION: sidebar</span>
+    <div className="v4-root v4-shell">
+
+      {/* ── Column 1: Icon sidebar ── */}
+      <aside className="v4-sidebar">
+        <div className="v4-sidebar__logo" title="Pimo v4">
+          <V4Icon name="logo" size={18} color="#fff" aria-hidden={false} title="Pimo" />
+        </div>
+        <div className="v4-sidebar__divider" />
+
+        {SECTIONS.map((s) => (
           <button
+            key={s.id}
             type="button"
-            data-tooltip="Móveis"
-            title="Móveis"
-            className={`ui-settings-icon-btn${showCatalogPanel ? " ui-settings-icon-btn--active" : ""}`}
-            onClick={() => {
-              setShowCatalogPanel((prev) => !prev);
-              setSubpanelOpen(true);
-            }}
+            className={`v4-icon-btn${activeSection === s.id && subpanelOpen ? " v4-icon-btn--active" : ""}`}
+            data-tip={s.label}
+            title={s.label}
+            onClick={() => handleSectionClick(s.id)}
           >
-            <Icon name="furniture" size={16} />
+            <V4Icon name={s.icon} size={16} />
           </button>
-          {SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              data-tooltip={section.label}
-              title={section.label}
-              className={`ui-settings-icon-btn${
-                activeSection === section.id ? " ui-settings-icon-btn--active" : ""
-              }`}
-              onClick={() => handleSectionClick(section)}
-            >
-              <span style={{ fontSize: 16, lineHeight: 1 }}>{section.icon}</span>
-            </button>
-          ))}
-        </aside>
+        ))}
 
-        {/* Column 2 */}
-        <aside
-          className={`ui-settings-subpanel${subpanelOpen ? "" : " ui-settings-subpanel--collapsed"}`}
-          style={{
-            width: subpanelOpen ? 220 : 0,
-            minWidth: subpanelOpen ? 220 : 0,
-            flexShrink: 0,
-            overflowX: "hidden",
-            overflowY: "auto",
-            transition: "width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease",
-          }}
-        >
-          <div className="ui-settings-subpanel-header">
-            <span style={{ fontSize: 10, color: "#888", display: "block", marginBottom: 4 }}>
-              SECTION: subpanel
-            </span>
-            <p className="ui-settings-subpanel-title">{showCatalogPanel ? "Móveis" : current.label}</p>
-          </div>
+        <div className="v4-sidebar__spacer" />
+      </aside>
 
-          {showCatalogPanel ? (
-            <div style={{ height: "calc(100% - 56px)" }}>
-              <V4CatalogPanel
-                onAdd={handleAddCatalogItem}
-                onPreview={(item) => setPreviewItem(item)}
-                previewItemId={previewItem?.id}
-              />
-            </div>
+      {/* ── Column 2: Sub-panel ── */}
+      <aside className={`v4-subpanel${subpanelOpen ? "" : " v4-subpanel--hidden"}`}>
+        <div className="v4-subpanel__header">
+          <p className="v4-subpanel__label">{active.label}</p>
+        </div>
+
+        <div className="v4-subpanel__body">
+          {activeSection === "moveis" ? (
+            <V4CatalogPanel
+              onAdd={handleAddCatalogItem}
+              onPreview={(item) => setPreviewItem(item)}
+              previewItemId={previewItem?.id}
+            />
           ) : (
-            <div className="ui-settings-subpanel-items">
-              {SECTIONS.map((section) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  className={`ui-settings-subpanel-item${
-                    activeSection === section.id ? " ui-settings-subpanel-item--active" : ""
-                  }`}
-                  onClick={() => setActiveSection(section.id)}
-                >
-                  <span style={{ marginRight: 8 }}>{section.icon}</span>
-                  {section.subLabel}
-                </button>
-              ))}
+            <div style={{ padding: "12px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <V4Icon name={active.icon} size={28} color="var(--v4-text-subtle)" />
+              <p style={{ margin: 0, fontSize: 12, color: "var(--v4-text-muted)" }}>
+                {active.label} — em construção
+              </p>
             </div>
           )}
-        </aside>
+        </div>
+      </aside>
 
-        <aside
-          style={{
-            width: previewItem ? 260 : 0,
-            minWidth: previewItem ? 260 : 0,
-            flexShrink: 0,
-            borderLeft: previewItem ? "1px solid var(--color-border, #333)" : "none",
-            background: "var(--color-surface, #1e1e1e)",
-            transition: "width 0.2s ease, min-width 0.2s ease",
-            overflowY: "auto",
-            overflowX: "hidden",
-          }}
-        >
-          {previewItem ? (
-            <V4ItemPreview
-              item={previewItem}
-              onAdd={(item) => {
-                handleAddCatalogItem(item);
-                setPreviewItem(null);
-              }}
-              onClose={() => setPreviewItem(null)}
-            />
-          ) : null}
-        </aside>
-
-        {/* Column 3 */}
-        <main className="ui-settings-content" style={{ flex: 1, minWidth: 0, overflowX: "hidden", overflowY: "hidden" }}>
-          <span style={{ fontSize: 10, color: "#888" }}>SECTION: main-content</span>
-
-          <section
-            className="ui-card"
-            style={{
-              borderRadius: "var(--ui-radius-lg)",
-              border: "1px solid var(--ui-color-border)",
-              padding: "var(--ui-space-5)",
-              background: "var(--ui-color-bg)",
+      {/* ── Column 3: Item preview panel ── */}
+      <aside className={`v4-preview-panel${previewItem ? "" : " v4-preview-panel--hidden"}`}>
+        {previewItem && (
+          <V4ItemPreview
+            item={previewItem}
+            onAdd={(item) => {
+              handleAddCatalogItem(item);
+              setPreviewItem(null);
             }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 600,
-                color: "var(--ui-color-text)",
-              }}
-            >
-              {current.icon} {current.label}
-            </p>
-            <p
-              style={{
-                margin: "6px 0 0",
-                fontSize: 13,
-                color: "var(--ui-color-text-muted)",
-              }}
-            >
-              Shell visual V4 (sem lógica de negócio).
-            </p>
-          </section>
+            onClose={() => setPreviewItem(null)}
+          />
+        )}
+      </aside>
 
-          <section
-            className="ui-card"
-            style={{
-              borderRadius: "var(--ui-radius-lg)",
-              border: "1px solid var(--ui-color-border)",
-              padding: "var(--ui-space-5)",
-              background: "var(--ui-color-bg)",
-              minHeight: 220,
-            }}
-          >
-            <div style={{ width: "100%", height: "100%", minHeight: 280 }}>
-              <V4Viewer
-                style={{ width: "100%", height: "100%" }}
-                sceneItems={sceneItems}
-                selectedId={selectedId}
-              />
-            </div>
-          </section>
-        </main>
-      </div>
+      {/* ── Column 4: Main canvas ── */}
+      <main className="v4-main">
+        <div className="v4-toolbar">
+          <p className="v4-toolbar__title">Pimo</p>
+          <div className="v4-toolbar__sep" />
+          <span className="v4-badge v4-badge--accent" style={{ fontSize: 10 }}>v4</span>
+          <div className="v4-toolbar__sep" />
+          <span style={{ fontSize: 12, color: "var(--v4-text-muted)" }}>
+            {sceneItems.length} {sceneItems.length === 1 ? "módulo" : "módulos"}
+          </span>
+          <div className="v4-toolbar__spacer" />
+
+          <button type="button" className="v4-icon-btn" data-tip="Selecionar" title="Selecionar">
+            <V4Icon name="select" size={15} />
+          </button>
+          <button type="button" className="v4-icon-btn" data-tip="Mover" title="Mover">
+            <V4Icon name="move" size={15} />
+          </button>
+          <button type="button" className="v4-icon-btn" data-tip="Rodar" title="Rodar">
+            <V4Icon name="rotate" size={15} />
+          </button>
+          <div className="v4-toolbar__sep" />
+          <button type="button" className="v4-icon-btn" data-tip="Câmera" title="Câmera">
+            <V4Icon name="camera" size={15} />
+          </button>
+          <button type="button" className="v4-icon-btn" data-tip="Medições" title="Medições">
+            <V4Icon name="ruler" size={15} />
+          </button>
+        </div>
+
+        <div className="v4-canvas-area">
+          <V4Viewer
+            style={{ width: "100%", height: "100%" }}
+            sceneItems={sceneItems}
+            selectedId={selectedId}
+          />
+        </div>
+      </main>
     </div>
   );
 }

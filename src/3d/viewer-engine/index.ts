@@ -20,7 +20,6 @@ export { SnapshotRenderer } from "./snapshot";
 export type { SnapshotRendererHost } from "./snapshot";
 export { addModelToBox, type GlbLoaderAddOptions } from "./loader";
 export type { ViewerBoxEntry } from "./types";
-export { ViewerSelectionManager } from "./selection";
 export { createGround, createGrid } from "./environment";
 export type { EnvironmentOptions } from "./environment";
 export { getPointerNdc } from "./utils";

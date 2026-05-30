@@ -34,14 +34,78 @@ declare global {
       setOnModelLoaded?: (callback: ((boxId: string, modelId: string, object: unknown) => void) | null) => void;
       selectBox?: (id: string | null) => void;
       setTransformMode?: (mode: "translate" | "rotate" | null) => void;
-      getContextMenuLayerHit?: (event: { clientX: number; clientY: number }) => {
-        boxId: string;
-        type: "door" | "drawer";
-        doorLayerId?: string;
-        drawerLayerId?: string;
-      } | null;
+      getContextMenuLayerHit?: (
+        event: { clientX: number; clientY: number }
+      ) => import("../../ui/context-menu/ContextMenuEngine").MouseMenuTarget | null;
       setCameraView?: (preset: "top" | "bottom" | "front" | "back" | "right" | "left" | "isometric") => void;
       resetCamera?: () => void;
+      frameSelection?: (boxId: string) => boolean;
+      internalRuler?: {
+        enableForBox: (boxId: string) => void;
+        disable: () => void;
+        isActive: () => boolean;
+        getLastMeasurement: () => { valueMm: number } | null;
+        getActiveBoxId: () => string | null;
+        syncFromProject: (entries: import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry[]) => void;
+      };
+      bindInternalMeasurementBridge?: (
+        getMeasurements: () => import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry[],
+        onSaved: (entry: import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry) => void
+      ) => void;
+      bindAutoLayoutBridge?: (
+        bridge: Pick<
+          import("../3d/viewer-engine/autoLayout/autoLayoutTypes").AutoLayoutBridge,
+          "getWorkspaceBoxes" | "applyPlan"
+        >
+      ) => void;
+      bindOrlaBridge?: (
+        bridge: Pick<
+          import("../3d/viewer-engine/orla/OrlaVisualizer").OrlaVisualBridge,
+          "getBoxOrlaConfig"
+        > | null
+      ) => void;
+      syncOrlaVisuals?: () => void;
+      orlaVisual?: {
+        syncAll: () => void;
+      };
+      bindRemateBridge?: (
+        bridge: Pick<
+          import("../3d/viewer-engine/remate/RemateVisualizer").RemateVisualBridge,
+          "getBoxRemateConfig"
+        > | null
+      ) => void;
+      syncRemateVisuals?: () => void;
+      remateVisual?: {
+        syncAll: () => void;
+      };
+      snapping?: {
+        enable: () => void;
+        disable: () => void;
+        isEnabled: () => boolean;
+        setGridSize: (mm: number) => void;
+        setCaptureRadius: (mm: number) => void;
+        setMagnetStrength: (value: number) => void;
+        setMode: (mode: "basic" | "advanced") => void;
+        getMode: () => "basic" | "advanced";
+        setRoomSnappingEnabled: (enabled: boolean) => void;
+        isRoomSnappingEnabled: () => boolean;
+        setAutoAlignmentEnabled: (enabled: boolean) => void;
+        isAutoAlignmentEnabled: () => boolean;
+        setAutoSpacingEnabled: (enabled: boolean) => void;
+        isAutoSpacingEnabled: () => boolean;
+        setWallOffset: (mm: number) => void;
+        getWallOffset: () => number;
+        getActiveAlignmentType: () => "flush" | "center" | "corner" | "stack" | "depth" | "height" | "spacing" | null;
+      };
+      autoLayout?: {
+        fillWallWithModule: (wallId: string | number, moduleBoxId: string) => boolean;
+        extendAlongWallFromBox: (boxId: string) => boolean;
+        distributeBoxesEvenly: (boxIds: string[]) => boolean;
+        autoStackShelvesInBox: (
+          boxId: string,
+          options: { count: number; topMarginMm: number; bottomMarginMm: number }
+        ) => boolean;
+      };
       getCameraPosition?: () => unknown;
       setCameraPosition?: (...args: unknown[]) => void;
       setCameraZoom?: (...args: unknown[]) => void;

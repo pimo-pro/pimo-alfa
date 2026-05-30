@@ -11,6 +11,7 @@ const NOOP_RETURN_UNDEFINED = () => undefined;
 const CAMERA_NOOP_API = {
   setCameraView: NOOP,
   resetCamera: NOOP,
+  frameSelection: () => false,
   getCameraPosition: NOOP_RETURN_UNDEFINED,
   setCameraPosition: NOOP,
   setCameraZoom: NOOP,
@@ -30,6 +31,7 @@ export function useViewerCamera() {
     return {
       setCameraView: bind(viewerCore.setCameraView),
       resetCamera: bind(viewerCore.resetCamera),
+      frameSelection: bind(viewerCore.frameSelection),
       getCameraPosition: bind(viewerCore.getCameraPosition),
       setCameraPosition: bind(viewerCore.setCameraPosition),
       setCameraZoom: bind(viewerCore.setCameraZoom),

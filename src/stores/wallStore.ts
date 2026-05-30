@@ -78,7 +78,7 @@ export interface WallStoreState {
 const DEFAULT_WALL: Omit<Wall, "id"> = {
   lengthCm: 300,
   heightCm: 280,
-  thicknessCm: 12,
+  thicknessCm: 20,
   color: "#d1d5db",
   openings: [],
 };

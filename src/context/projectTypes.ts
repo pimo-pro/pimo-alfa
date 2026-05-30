@@ -13,13 +13,25 @@ import type {
   TipoFundo,
   WorkspaceBox,
 } from "../core/types";
+import type {
+  CreateRemateInput,
+  ProjectRemate,
+  UpdateRemateInput,
+} from "../core/remate/remateTypes";
 import type { RuleViolation } from "../core/rules/types";
 import type { LayoutWarnings } from "../core/layout/layoutWarnings";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import type { DoorLayerItem, DrawerLayerItem, LayerOpenDirection } from "../models/BoxLayers";
+import type {
+  InternalMeasurementEntry,
+  InternalMeasurementPoint,
+  ProjectMeasurementsState,
+} from "../3d/viewer-engine/measurement/internalRulerTypes";
 
-export type ViewerMousePreset = "cad" | "classic" | "orbital";
+export type { InternalMeasurementEntry, InternalMeasurementPoint, ProjectMeasurementsState };
+
+export type ViewerMousePreset = "cad" | "classic" | "orbitFriendly" | "mouseCentric";
 export type ViewerBackgroundMode = "studio" | "white" | "dark" | "woodFloor";
 export type ViewerMaterialQuality = "standard" | "premium" | "lacquered";
 export type UltraPerformanceInternalMode = "balanced" | "flat2" | "aggressive";
@@ -112,6 +124,24 @@ export interface ProjectState {
 
   /** Configurações visuais/controle do viewer (fase 3). */
   viewerSettings: ViewerSettings;
+
+  /** Medições do viewer (régua interna, etc.). */
+  measurements: ProjectMeasurementsState;
+
+  /** Sala Room 2.0 — geometria visual (sem impacto industrial). */
+  room: import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomConfig | null;
+
+  /** Orla V1 — catálogo de presets de orla do projeto. */
+  orlaPresets: import("../core/orla/orlaTypes").OrlaPreset[];
+  /** Orla V1 — configuração por peça (chave = panelId estável). */
+  orlaPieces: Record<string, import("../core/orla/orlaTypes").PieceOrlaConfig>;
+  /** Orla V1 — pares de bordas partilhadas (Orla Junto). */
+  orlaJuntoPairs: import("../core/orla/orlaTypes").OrlaJuntoPair[];
+  /** Orla V1 — ferragem calculada (metros, custo). */
+  ferragemOrla: import("../core/orla/orlaTypes").ProjectFerragemOrla;
+
+  /** Remate V1 — peças independentes de acabamento final. */
+  remates: ProjectRemate[];
 
   /** Perfis de regras: lista de perfis + perfil ativo. */
   rulesProfiles: RulesProfilesConfig;
@@ -367,6 +397,10 @@ export interface ProjectActions {
   duplicateWorkspaceBox: () => void;
   /** Duplica a peça selecionada e coloca com offset em X (mm). Usado pelo menu de contexto. */
   duplicateWorkspaceBoxAtOffset: (_offsetXMm?: number) => void;
+  /** Aplica plano batch do Auto-Layout (clones, movimentos, prateleiras). */
+  applyAutoLayoutPlan: (
+    _plan: import("../3d/viewer-engine/autoLayout/autoLayoutTypes").AutoLayoutPlan
+  ) => void;
   removeBox: () => void;
   removeWorkspaceBox: () => void;
   removeWorkspaceBoxById: (_boxId: string) => void;
@@ -437,6 +471,12 @@ export interface ProjectActions {
   alignFrontWithNeighbor: (_boxId: string) => void;
   /** Alinha a base da caixa selecionada à base da vizinha mais próxima no plano XZ (só Y); sem outras caixas, chão em Y=0. */
   alignBottomSelectedBoxes: (_boxIds: string[]) => void;
+  addInternalMeasurement: (_entry: InternalMeasurementEntry) => void;
+  removeInternalMeasurement: (_id: string) => void;
+  toggleInternalMeasurementVisibility: (_id: string) => void;
+  showAllInternalMeasurements: (_boxId?: string) => void;
+  hideAllInternalMeasurements: (_boxId?: string) => void;
+  clearInternalMeasurements: (_boxId?: string) => void;
   addDoorLayerItem: () => void;
   addDrawerLayerItem: () => void;
   removeDoorLayerItem: (_id: string) => void;
@@ -517,6 +557,34 @@ export interface ProjectActions {
    */
   exportarPdfUnificado: () => void;
   logChangelog: (_message: string) => void;
+  /** Substitui a configuração Room 2.0 (null = sem sala). */
+  setProjectRoom: (_room: import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomConfig | null) => void;
+  /** Atualiza parcialmente project.room e sincroniza wallStore/viewer. */
+  updateProjectRoom: (_patch: Partial<import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomConfig>) => void;
+  /** Cria sala padrão Room 2.0 (4000×2500×2600 mm). */
+  createDefaultProjectRoom: () => void;
+  /** Remove sala do projeto. */
+  removeProjectRoom: () => void;
+  /** Orla V1 — aplica preset de orla a todas as peças do caixote. */
+  setBoxOrlaPreset: (_boxId: string, _presetId: string | null) => void;
+  /** Orla V1 — configura um lado da orla numa peça. */
+  setPieceOrlaSide: (
+    _pieceId: string,
+    _side: import("../core/orla/orlaTypes").OrlaSideId,
+    _patch: Partial<{ presetId: string | null; enabled: boolean }>
+  ) => void;
+  /** Orla V1 — define peças adjacentes com Orla Junto. */
+  setPieceOrlaJunto: (_pieceId: string, _partnerIds: string[]) => void;
+  /** Orla V1 — cria ou atualiza preset de orla. */
+  upsertOrlaPreset: (_preset: import("../core/orla/orlaTypes").OrlaPreset) => void;
+  /** Orla V1 — remove preset de orla (se não estiver em uso). */
+  removeOrlaPreset: (_presetId: string) => void;
+  /** Remate V1 — cria remate(s) no box selecionado. */
+  createBoxRemate: (_input: CreateRemateInput) => void;
+  /** Remate V1 — atualiza dimensões/material/transform de um remate. */
+  updateRemate: (_remateId: string, _patch: UpdateRemateInput) => void;
+  /** Remate V1 — remove remate do projeto. */
+  removeRemate: (_remateId: string) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: "select" | "move" | "rotate") => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */

@@ -1595,3 +1595,346 @@ body {
   outline: 2px solid var(--blue-light, #3b82f6);
   outline-offset: 2px;
 }
+/* ---------------------------------------------------------------
+   PAINEL MÓVEIS — Redesign v4 style
+   --------------------------------------------------------------- */
+
+.moveis-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--ui-font-family, system-ui, sans-serif);
+}
+
+/* Search bar */
+.moveis-panel__search {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border, #21262d);
+  flex-shrink: 0;
+}
+
+.moveis-panel__search-input {
+  width: 100%;
+  background: var(--input-bg, #0d1117);
+  border: 1px solid var(--input-border, #30363d);
+  border-radius: 7px;
+  color: var(--text-main, #e6edf3);
+  font-size: 12px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.12s;
+  font-family: inherit;
+}
+
+.moveis-panel__search-input:focus {
+  border-color: var(--blue-light, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
+}
+
+/* Scrollable list */
+.moveis-panel__list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0 12px;
+}
+
+.moveis-panel__list::-webkit-scrollbar { width: 4px; }
+.moveis-panel__list::-webkit-scrollbar-thumb { background: var(--border, #30363d); border-radius: 4px; }
+
+.moveis-panel__empty {
+  padding: 16px;
+  font-size: 12px;
+  color: var(--text-muted, #7d8590);
+  margin: 0;
+}
+
+/* Group */
+.moveis-group {
+  margin-bottom: 2px;
+}
+
+.moveis-group__header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #7d8590);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.1s;
+}
+
+.moveis-group__header:hover {
+  color: var(--text-main, #e6edf3);
+}
+
+.moveis-group__chevron {
+  font-size: 13px;
+  display: inline-block;
+  transition: transform 0.15s;
+  font-style: normal;
+  flex-shrink: 0;
+}
+
+.moveis-group__chevron--open {
+  transform: rotate(90deg);
+}
+
+.moveis-group__label {
+  flex: 1;
+}
+
+.moveis-group__count {
+  font-size: 9px;
+  background: var(--card-bg, #1c2128);
+  border-radius: 8px;
+  padding: 1px 5px;
+  color: var(--text-muted, #7d8590);
+  border: 1px solid var(--border, #21262d);
+}
+
+.moveis-group__items {
+  padding: 0 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Item card */
+.moveis-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.moveis-item:hover {
+  background: var(--card-bg, #1c2128);
+  border-color: var(--border, #21262d);
+}
+
+.moveis-item--active {
+  background: rgba(59,130,246,0.10);
+  border-color: rgba(59,130,246,0.28);
+}
+
+.moveis-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.moveis-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.moveis-item__name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-main, #e6edf3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.moveis-item__dims {
+  font-size: 10px;
+  color: var(--text-muted, #7d8590);
+  font-variant-numeric: tabular-nums;
+}
+
+.moveis-item__arrow {
+  font-size: 13px;
+  color: var(--text-muted, #7d8590);
+  flex-shrink: 0;
+}
+
+/* -- Config bubble --------------------------------------------- */
+
+.moveis-bubble {
+  margin: 2px 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #30363d);
+  background: var(--card-bg, #161b22);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.moveis-bubble__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+}
+
+.moveis-bubble__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main, #e6edf3);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.moveis-bubble__close {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--border, #30363d);
+  background: transparent;
+  color: var(--text-muted, #7d8590);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.moveis-bubble__close:hover {
+  background: var(--card-bg, #1c2128);
+  color: var(--text-main, #e6edf3);
+}
+
+.moveis-bubble__dims {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px 8px;
+  font-size: 11px;
+  color: var(--text-muted, #7d8590);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Preview canvas wrapper — no padding, full width */
+.moveis-bubble > div:nth-child(3) {
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Options block */
+.moveis-bubble__opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px 10px 8px;
+  align-items: center;
+}
+
+/* Option chip (toggle/radio style) */
+.moveis-opt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #30363d);
+  background: transparent;
+  color: var(--text-muted, #7d8590);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+
+.moveis-opt-chip:hover {
+  background: var(--card-bg, #1c2128);
+  color: var(--text-main, #e6edf3);
+}
+
+.moveis-opt-chip--on {
+  background: rgba(59,130,246,0.14);
+  color: var(--blue-light, #3b82f6);
+  border-color: rgba(59,130,246,0.35);
+  font-weight: 500;
+}
+
+.moveis-opt-chip__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue-light, #3b82f6);
+  flex-shrink: 0;
+}
+
+/* Counter row (inside opts block) */
+.moveis-opt-counter {
+  width: 100%;
+  padding: 3px 2px;
+}
+
+/* Counter +/- buttons */
+.moveis-counter-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--border, #30363d);
+  background: var(--card-bg, #1c2128);
+  color: var(--text-main, #e6edf3);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.moveis-counter-btn:hover:not(:disabled) {
+  background: var(--blue-dark, #1e293b);
+}
+
+.moveis-counter-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Add button */
+.moveis-bubble__add {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid var(--border, #21262d);
+  background: var(--blue-light, #3b82f6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: center;
+}
+
+.moveis-bubble__add:hover {
+  background: #2563eb;
+}

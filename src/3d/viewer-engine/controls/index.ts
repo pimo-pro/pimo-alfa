@@ -4,3 +4,15 @@
  */
 export { Controls } from "./Controls";
 export type { ControlsOptions } from "./Controls";
+export {
+  getMouseInputMapping,
+  normalizeMouseInputPreset,
+  applyMouseInputMappingToOrbitControls,
+  getPointerActionForButton,
+  shouldBlockPointerDownForSelection,
+} from "./MouseInputMapper";
+export type {
+  MouseButtonAction,
+  MouseInputMapping,
+  MouseInputPreset,
+} from "./MouseInputMapper";

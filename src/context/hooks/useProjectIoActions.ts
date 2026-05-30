@@ -9,6 +9,7 @@ import {
 } from "../projectPersistence";
 import { safeGetItem, safeParseJson, safeSetItem } from "../../utils/storage";
 import { wallStore } from "../../stores/wallStore";
+import { applyProjectRoomToWallStore } from "../../3d/viewer-engine/room/RoomEngine";
 import { getCurrentProjectUser } from "../../core/projects/currentUser";
 import {
   deleteProjectById,
@@ -106,7 +107,9 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
           return;
         }
         logProjectIo("project-loaded", { id, boxes: restored.workspaceBoxes?.length ?? 0 });
-        if (entry.snapshot.roomSnapshot !== undefined) {
+        if (restored.room) {
+          applyProjectRoomToWallStore(restored.room);
+        } else if (entry.snapshot.roomSnapshot !== undefined) {
           if (entry.snapshot.roomSnapshot) {
             wallStore
               .getState()

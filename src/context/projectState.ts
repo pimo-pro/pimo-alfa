@@ -31,6 +31,10 @@ import { defaultRulesConfig, normalizeRulesConfig } from "../core/rules/rulesCon
 import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { regenerateLayersForBox } from "../services/boxLayersService";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
+import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
+import { computeOrlaFerragem } from "../core/orla/orlaCalculator";
+import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
+import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
 function getRulesFromProfiles(config: RulesProfilesConfig) {
@@ -237,6 +241,7 @@ export const createWorkspaceBox = (
     piHideDrawerHoles: overrides?.piHideDrawerHoles === true,
     costaAtiva: true,
     profundidadeExterna: dimensoes.profundidade,
+    remateIds: [],
   };
   
   // Regenerate layers based on portaTipo and gavetas
@@ -284,6 +289,13 @@ export const defaultState: ProjectState = {
   precoTotalProjeto: null,
   activeViewerTool: "select",
   viewerSettings: defaultViewerSettings,
+  measurements: createEmptyProjectMeasurements(),
+  room: null,
+  orlaPresets: normalizeOrlaPresets(undefined),
+  orlaPieces: {},
+  orlaJuntoPairs: [],
+  ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },
+  remates: [],
   ...((): { rulesProfiles: RulesProfilesConfig; rules: ReturnType<typeof normalizeRulesConfig> } => {
     const profiles = loadProfiles();
     return { rulesProfiles: profiles, rules: getRulesFromProfiles(profiles) };
@@ -345,13 +357,21 @@ export const applyResultados = (state: ProjectState): ProjectState => {
     // Sincroniza boxes com workspaceBoxes (single source of truth para o viewer e cálculo).
     const boxes = buildBoxesFromWorkspace(state);
     const stateWithBoxes = { ...state, boxes };
+    const boxesWithCutList = boxes.map((box) => buildBoxDesign(stateWithBoxes, box));
     const resultados =
       boxes.length > 0
         ? calcularResultadosBoxes(stateWithBoxes)
         : calcularProjeto(buildConfig(stateWithBoxes));
+    const ferragemOrla = computeOrlaFerragem({
+      boxes: boxesWithCutList,
+      orlaPresets: normalizeOrlaPresets(state.orlaPresets),
+      orlaPieces: state.orlaPieces ?? {},
+      orlaJuntoPairs: state.orlaJuntoPairs ?? [],
+    });
     return {
       ...stateWithBoxes,
       resultados,
+      ferragemOrla,
       ultimaAtualizacao: new Date(),
       estaCarregando: false,
       erro: null,
@@ -486,11 +506,19 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     piHideDrawerHoles: box.piHideDrawerHoles === true,
     costaAtiva: box.costaAtiva,
     profundidadeExterna: box.profundidadeExterna,
+    orlaPresetId: box.orlaPresetId,
+    remateIds: box.remateIds ?? [],
   };
 };
 
 export const buildBoxesFromWorkspace = (state: ProjectState): BoxModule[] => {
   return state.workspaceBoxes.map((box) => convertWorkspaceToBox(box));
+};
+
+/** Caixas com cutlist paramétrica calculada (para orla, exports, etc.). */
+export const buildBoxesWithCutList = (state: ProjectState): BoxModule[] => {
+  const boxes = buildBoxesFromWorkspace(state);
+  return boxes.map((box) => buildBoxDesign(state, box));
 };
 
 /** Deriva dimensões aproximadas do modelo a partir das peças extraídas (bbox máximo). */
@@ -615,7 +643,8 @@ export const buildDesignState = (prev: ProjectState): Partial<ProjectState> => {
   const allExtracted = (prev.boxes ?? []).flatMap((box) =>
     Object.values(prev.extractedPartsByBoxId?.[box.id] ?? {}).flat()
   );
-  const cutListComPreco = [...allParametric, ...allExtracted];
+  const allRemates = buildRemateCutlistItems(prev.remates ?? [], boxes);
+  const cutListComPreco = [...allParametric, ...allExtracted, ...allRemates];
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
   const precoProjetoBase = precoTotalPecas + precoTotalAcessorios;
   const precoTotalProjeto = calcularPrecoTotalProjeto(precoProjetoBase);

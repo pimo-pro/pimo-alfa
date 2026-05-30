@@ -196,23 +196,25 @@ export class EventsManager {
     }
 
     if (event.button === 0 && e.getHighlightEnabled() && e.getHighlightManager()) {
-      const hits = e.getHighlightIntersects(event);
-      const mesh = e.getHighlightManager()!.getSelectableMeshFromIntersects(hits);
-      if (mesh) {
-        const boxId = e.getBoxIdByMesh(mesh);
-        if (boxId != null) {
-          event.preventDefault();
-          event.stopPropagation();
-          e.getHighlightManager()!.setSelected(mesh);
-          e.setSelectedBox(boxId);
-          e.getOnRoomElementSelected()?.(null);
-          e.getOnWallSelected()?.(null);
-          e.setSuppressNextCanvasClick(true);
-          return;
+      if (e.shouldBlockPointerDownForSelection(event.button)) {
+        const hits = e.getHighlightIntersects(event);
+        const mesh = e.getHighlightManager()!.getSelectableMeshFromIntersects(hits);
+        if (mesh) {
+          const boxId = e.getBoxIdByMesh(mesh);
+          if (boxId != null) {
+            event.preventDefault();
+            event.stopPropagation();
+            e.getHighlightManager()!.setSelected(mesh);
+            e.setSelectedBox(boxId);
+            e.getOnRoomElementSelected()?.(null);
+            e.getOnWallSelected()?.(null);
+            e.setSuppressNextCanvasClick(true);
+            return;
+          }
         }
       }
     }
-    if (event.button === 0) {
+    if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
       const boxId = e.getBoxIdAtPointer(event);
       if (import.meta.env.DEV) {
         devLogger.debug("[SELECTION][EventsManager] pointerdown:boxId do raycast", {

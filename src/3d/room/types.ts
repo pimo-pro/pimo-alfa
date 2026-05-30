@@ -54,7 +54,7 @@ export type RoomConfig = {
   selectedWallId?: string | null;
 };
 
-export const DEFAULT_WALL_THICKNESS_MM = 120;
+export const DEFAULT_WALL_THICKNESS_MM = 200;
 
 /** Configuração de porta ou janela (formato interno para DoorElement/WindowElement). */
 export type DoorWindowConfig = {

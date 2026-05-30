@@ -33,10 +33,10 @@ export function getFloorBoundsMmFromWalls(walls: Wall[]): FloorBoundsMm | null {
   const depthMm = dims.depthCm * 10;
   const heightMm = dims.heightCm * 10;
   return {
-    minX_mm: 0,
-    maxX_mm: widthMm,
-    minZ_mm: 0,
-    maxZ_mm: depthMm,
+    minX_mm: -widthMm / 2,
+    maxX_mm: widthMm / 2,
+    minZ_mm: -depthMm / 2,
+    maxZ_mm: depthMm / 2,
     minY_mm: 0,
     maxY_mm: heightMm,
   };

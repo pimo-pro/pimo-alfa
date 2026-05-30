@@ -13,7 +13,11 @@ import { useBoxCrudActions } from "./useBoxCrudActions";
 import { useBoxTransformActions } from "./useBoxTransformActions";
 import { useRulesActions } from "./useRulesActions";
 import { useViewerUiActions } from "./useViewerUiActions";
+import { useInternalMeasurementActions } from "./useInternalMeasurementActions";
 import { useDesignActions } from "./useDesignActions";
+import { useRoomActions } from "./useRoomActions";
+import { useOrlaActions } from "./useOrlaActions";
+import { useRemateActions } from "./useRemateActions";
 import { getIndustrialMaterial } from "../../core/materials/service";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
@@ -53,7 +57,11 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const boxTransformActions = useBoxTransformActions(executionContext);
   const rulesActions = useRulesActions(executionContext);
   const viewerUiActions = useViewerUiActions(executionContext);
+  const internalMeasurementActions = useInternalMeasurementActions(executionContext);
   const designActions = useDesignActions(executionContext);
+  const roomActions = useRoomActions(executionContext);
+  const orlaActions = useOrlaActions(executionContext);
+  const remateActions = useRemateActions(executionContext);
 
   const coreActions = useMemo(() => {
     const a = {} as ProjectActions;
@@ -133,7 +141,11 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       boxTransformActions,
       rulesActions,
       viewerUiActions,
-      designActions
+      internalMeasurementActions,
+      designActions,
+      roomActions,
+      orlaActions,
+      remateActions
     );
 
     // @PIMO-KEEP — Runtime validation
@@ -155,6 +167,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "duplicateBox",
         "duplicateWorkspaceBox",
         "duplicateWorkspaceBoxAtOffset",
+        "applyAutoLayoutPlan",
         "removeBox",
         "removeWorkspaceBox",
         "removeWorkspaceBoxById",
@@ -180,6 +193,12 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "setWorkspaceBoxLocked",
         "alignFrontWithNeighbor",
         "alignBottomSelectedBoxes",
+        "addInternalMeasurement",
+        "removeInternalMeasurement",
+        "toggleInternalMeasurementVisibility",
+        "showAllInternalMeasurements",
+        "hideAllInternalMeasurements",
+        "clearInternalMeasurements",
         "toggleWorkspaceRotation",
         "rotateWorkspaceBox",
         "gerarESalvarDesign",
@@ -203,6 +222,9 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "toggleHighlight",
         "toggleRuler",
         "logChangelog",
+        "createBoxRemate",
+        "updateRemate",
+        "removeRemate",
       ];
 
       requiredActions.forEach((key) => {
@@ -224,6 +246,10 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     boxTransformActions,
     rulesActions,
     viewerUiActions,
+    internalMeasurementActions,
     designActions,
+    roomActions,
+    orlaActions,
+    remateActions,
   ]);
 }

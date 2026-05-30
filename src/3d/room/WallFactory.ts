@@ -2,7 +2,15 @@ import * as THREE from "three";
 import type { Room } from "./Room";
 import { getSceneMaterialConfig } from "../viewer-engine/materials";
 
-const WALL_THICKNESS_M = 0.12;
+let currentWallThicknessM = 0.2;
+
+export function getWallThicknessM(): number {
+  return currentWallThicknessM;
+}
+
+export function setWallThicknessM(value: number): void {
+  currentWallThicknessM = Math.max(0.05, value);
+}
 
 export interface WallMaterialOptions {
   doubleSide?: boolean;
@@ -59,8 +67,8 @@ export type RoomNumWalls = 3 | 4;
  * numWalls === 4: front, right, back, left (sala fechada).
  * numWalls === 3: front, right, left (sala de estar / aberta, sem parede traseira).
  */
-export function createMainWalls(room: Room, numWalls: RoomNumWalls = 4): THREE.Mesh[] {
-  const t = WALL_THICKNESS_M;
+export function createMainWalls(room: Room, numWalls: RoomNumWalls = 4, wallThicknessM?: number): THREE.Mesh[] {
+  const t = wallThicknessM ?? getWallThicknessM();
   const { width, depth, height, minX, maxX, minZ, maxZ, centerX, centerZ, minY } = room;
   const yCenter = minY + height / 2;
   const config = getSceneMaterialConfig();
@@ -123,7 +131,7 @@ export function createMainWalls(room: Room, numWalls: RoomNumWalls = 4): THREE.M
  */
 export function positionMainWalls(room: Room, walls: THREE.Mesh[]): void {
   if (walls.length < 3) return;
-  const t = WALL_THICKNESS_M;
+  const t = getWallThicknessM();
   const { width, depth, minX, maxX, minZ, maxZ, centerX, centerZ, minY, height } = room;
   const yCenter = minY + height / 2;
   const front = walls[0];
@@ -169,7 +177,7 @@ export function positionMainWalls(room: Room, walls: THREE.Mesh[]): void {
 export function createExtraWall(id: number): THREE.Mesh {
   const length = 2;
   const height = 2.7;
-  const t = WALL_THICKNESS_M;
+  const t = getWallThicknessM();
   const config = getSceneMaterialConfig();
   const mat = createWallMaterialFromConfig(config.wallExtra, { opacity: 0.6 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(length, height, t), mat);
@@ -183,5 +191,3 @@ export function createExtraWall(id: number): THREE.Mesh {
   mesh.userData.wallThicknessM = t;
   return mesh;
 }
-
-export { WALL_THICKNESS_M };

@@ -8,6 +8,10 @@ import type { ProjectState, ProjectSnapshot, RoomSnapshot } from "./projectTypes
 import { defaultState } from "./projectState";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
 import { wallStore } from "../stores/wallStore";
+import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
+import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
+import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
+import type { ProjectRemate } from "../core/remate/remateTypes";
 
 export const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 export const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
@@ -100,6 +104,7 @@ export function reviveState(snapshot: unknown): ProjectState | null {
             if (next.profundidadeExterna === undefined) {
               next.profundidadeExterna = next.dimensoes?.profundidade ?? 0;
             }
+            next.remateIds = Array.isArray(next.remateIds) ? next.remateIds.filter(Boolean) : [];
             return next;
           })
           .filter((box: { id?: string }) => {
@@ -117,6 +122,16 @@ export function reviveState(snapshot: unknown): ProjectState | null {
       : (restored.material?.tipo
           ? getMaterialByIdOrLabel(restored.material.tipo)?.id ?? ""
           : "");
+
+  const remates: ProjectRemate[] = Array.isArray(restored.remates)
+    ? restored.remates.filter(
+        (remate): remate is ProjectRemate =>
+          remate != null &&
+          typeof remate === "object" &&
+          typeof (remate as ProjectRemate).id === "string" &&
+          typeof (remate as ProjectRemate).parentBoxId === "string"
+      )
+    : [];
 
   return {
     ...defaultState,
@@ -139,6 +154,44 @@ export function reviveState(snapshot: unknown): ProjectState | null {
     extractedPartsByBoxId,
     modelPositionsByBoxId,
     selectedModelInstanceId: restored.selectedModelInstanceId ?? null,
+    measurements: {
+      ...createEmptyProjectMeasurements(),
+      ...(restored.measurements && typeof restored.measurements === "object" ? restored.measurements : {}),
+      internal: Array.isArray(restored.measurements?.internal)
+        ? restored.measurements.internal.filter(
+            (e): e is import("./projectTypes").InternalMeasurementEntry =>
+              e != null &&
+              typeof e === "object" &&
+              typeof (e as { id?: unknown }).id === "string" &&
+              typeof (e as { boxId?: unknown }).boxId === "string"
+          )
+        : [],
+    },
+    room:
+      restored.room && typeof restored.room === "object"
+        ? normalizeProjectRoom(restored.room as import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomConfig)
+        : null,
+    orlaPresets: normalizeOrlaPresets(restored.orlaPresets),
+    orlaPieces:
+      restored.orlaPieces && typeof restored.orlaPieces === "object"
+        ? { ...(restored.orlaPieces as ProjectState["orlaPieces"]) }
+        : defaultState.orlaPieces,
+    orlaJuntoPairs: Array.isArray(restored.orlaJuntoPairs)
+      ? restored.orlaJuntoPairs
+      : defaultState.orlaJuntoPairs,
+    ferragemOrla:
+      restored.ferragemOrla && typeof restored.ferragemOrla === "object"
+        ? {
+            linhas: Array.isArray(restored.ferragemOrla.linhas) ? restored.ferragemOrla.linhas : [],
+            metrosTotal: Number(restored.ferragemOrla.metrosTotal) || 0,
+            custoTotal: Number(restored.ferragemOrla.custoTotal) || 0,
+            porBox:
+              restored.ferragemOrla.porBox && typeof restored.ferragemOrla.porBox === "object"
+                ? restored.ferragemOrla.porBox
+                : {},
+          }
+        : defaultState.ferragemOrla,
+    remates,
     lastAutosaveTime:
       typeof restored.lastAutosaveTime === "string" ? restored.lastAutosaveTime : null,
   };

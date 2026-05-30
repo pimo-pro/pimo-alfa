@@ -296,6 +296,10 @@ export interface BoxModule {
   costaAtiva?: boolean;
   /** FASE 2 — Ver `WorkspaceBox.profundidadeExterna`. */
   profundidadeExterna?: number;
+  /** Orla V1 — preset aplicado a todas as peças do caixote. */
+  orlaPresetId?: string;
+  /** Remate V1 — IDs dos remates associados a esta caixa. */
+  remateIds?: string[];
 }
 
 export interface WorkspaceBox {
@@ -372,6 +376,10 @@ export interface WorkspaceBox {
    * Mantida em sincrono nas ações de dimensão; facilita FASE 3–4.
    */
   profundidadeExterna?: number;
+  /** Orla V1 — preset aplicado a todas as peças do caixote. */
+  orlaPresetId?: string;
+  /** Remate V1 — IDs dos remates associados a esta caixa. */
+  remateIds?: string[];
 }
 
 export interface ProjetoConfig {

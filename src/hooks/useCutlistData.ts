@@ -55,6 +55,28 @@ export type FerragemRow = {
   custo: number;
 };
 
+export type OrlaFerragemRow = {
+  key: string;
+  boxNome: string;
+  presetNome: string;
+  metros: number;
+  custo: number;
+  tipo: "normal" | "orla_junto";
+  pieceNome?: string;
+};
+
+export type RemateRow = {
+  key: string;
+  boxNome: string;
+  nome: string;
+  material: string;
+  largura_mm: number;
+  altura_mm: number;
+  profundidade_mm: number;
+  quantidade: number;
+  custo: number;
+};
+
 export function useCutlistData() {
   const { project } = useProject();
   const { componentTypes } = useComponentTypes();
@@ -84,6 +106,8 @@ export function useCutlistData() {
     const allPortas: PortaRow[] = [];
     const allGavetas: GavetaRow[] = [];
     const allFerragens: FerragemRow[] = [];
+    const allOrlaFerragens: OrlaFerragemRow[] = [];
+    const allRemates: RemateRow[] = [];
 
     boxes.forEach((box) => {
       const { profundidadeExternaMm, profundidadeInternaUtilMm } = computeBoxProfundidadeLeituraMm(
@@ -121,9 +145,39 @@ export function useCutlistData() {
       });
     });
 
+    (project.ferragemOrla?.linhas ?? []).forEach((linha) => {
+      allOrlaFerragens.push({
+        key: linha.id,
+        boxNome: linha.boxNome ?? "—",
+        presetNome: linha.presetNome,
+        metros: linha.metros,
+        custo: linha.custo,
+        tipo: linha.tipo,
+        pieceNome: linha.pieceNome,
+      });
+    });
+
+    (project.remates ?? []).forEach((remate) => {
+      const box = boxes.find((b) => b.id === remate.parentBoxId);
+      allRemates.push({
+        key: remate.id,
+        boxNome: box?.nome ?? remate.parentBoxId,
+        nome: remate.name,
+        material: remate.materialId,
+        largura_mm: remate.dimensions.widthMm,
+        altura_mm: remate.dimensions.heightMm,
+        profundidade_mm: remate.dimensions.depthMm,
+        quantidade: 1,
+        custo: project.cutListComPreco?.find((item) => item.id === remate.id)?.precoTotal ?? 0,
+      });
+    });
+
     const totalPecas = totalPaineisQty + totalPortasQty + totalGavetasQty;
+    const custoTotalOrla = allOrlaFerragens.reduce((s, l) => s + l.custo, 0);
+    const custoTotalRemates = allRemates.reduce((s, l) => s + l.custo, 0);
     const totalAreaM2 = totalAreaMm2 / 1_000_000;
-    const custoTotal = custoTotalPaineis + custoTotalPortas + custoTotalGavetas + custoTotalFerragens;
+    const custoTotal =
+      custoTotalPaineis + custoTotalPortas + custoTotalGavetas + custoTotalFerragens + custoTotalOrla + custoTotalRemates;
 
     return {
       boxes,
@@ -131,6 +185,8 @@ export function useCutlistData() {
       allPortas,
       allGavetas,
       allFerragens,
+      allOrlaFerragens,
+      allRemates,
       ferragensIndustriaisDetalhado,
       ferragensPorComponente,
       totalAreaMm2,
@@ -144,9 +200,11 @@ export function useCutlistData() {
       custoTotalPortas,
       custoTotalGavetas,
       custoTotalFerragens,
+      custoTotalOrla,
+      custoTotalRemates,
       custoTotal,
     };
-  }, [boxes, project.rules, ferragensIndustriaisDetalhado, ferragensPorComponente]);
+  }, [boxes, project.rules, project.ferragemOrla, project.remates, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente]);
 
   return aggregated;
 }

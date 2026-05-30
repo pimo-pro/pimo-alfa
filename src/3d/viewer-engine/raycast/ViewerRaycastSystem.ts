@@ -8,6 +8,7 @@ import type { ViewerBoxEntry } from "../types";
 import { getPointerNdc } from "../utils";
 import { devLogger } from "../../../utils/devLogger";
 import { clampOpeningToWall } from "../../../utils/openingConstraints";
+import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 
 /** Limites da sala (m) usados por getWallIdInFrontOfCamera — espelha o campo em ViewerCore. */
 export type ViewerRaycastRoomBounds = {
@@ -250,12 +251,7 @@ export class ViewerRaycastSystem {
    * Raycast nos boxes; para o primeiro hit que tenha getDoorLayerIdByMesh ou getDrawerLayerIdByMesh, devolve boxId + type + doorLayerId/drawerLayerId.
    * Depende de userData.doorLayerId propagado em createDoorObject e de userData.boxId em applyPanelIdsToBox.
    */
-  getContextMenuLayerHit(event: { clientX: number; clientY: number }): {
-    boxId: string;
-    type: "door" | "drawer";
-    doorLayerId?: string;
-    drawerLayerId?: string;
-  } | null {
+  getContextMenuLayerHit(event: { clientX: number; clientY: number }): MouseMenuTarget | null {
     const canvas = this.deps.getCanvas();
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
@@ -273,6 +269,10 @@ export class ViewerRaycastSystem {
     for (const hit of hits) {
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
+      const remateId = hit.object.userData?.remateId;
+      if (typeof remateId === "string" && remateId.length > 0) {
+        return { type: "remate", boxId, remateId };
+      }
       const doorLayerId = this.getDoorLayerIdByMesh(hit.object);
       if (doorLayerId) {
         const entry = boxes.get(boxId);
@@ -304,8 +304,28 @@ export class ViewerRaycastSystem {
       }
       const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
       if (drawerLayerId) return { boxId, type: "drawer", drawerLayerId };
-      return null;
+      const panelId = hit.object.userData?.panelId;
+      const panelType = hit.object.userData?.panelType;
+      if (typeof panelId === "string" && panelId.length > 0) {
+        return {
+          type: "piece",
+          boxId,
+          panelId,
+          panelType: typeof panelType === "string" ? panelType : undefined,
+        };
+      }
+      return { type: "box", boxId };
     }
+    const roomElement = this.getRoomElementAtPointer(event);
+    if (roomElement) {
+      return {
+        type: "room",
+        wallId: roomElement.wallId,
+        roomElementId: roomElement.elementId,
+      };
+    }
+    const wallId = this.getWallIdAtPointer(event);
+    if (wallId != null) return { type: "room", wallId };
     return null;
   }
 

@@ -6,8 +6,9 @@ import PainelModelosDaCaixa from "./PainelModelosDaCaixa";
 import { useUiStore } from "../../../stores/uiStore";
 import type { SavedProjectInfo } from "../../../context/projectTypes";
 import { InfoPanelContent } from "./InfoPanelContent";
+import OrlaSettingsPanel from "../../settings/orla/OrlaSettingsPanel";
 import { PlaceholderLeftPanel } from "./PlaceholderLeftPanel";
-import { PainelSala } from "./PainelSala";
+import RoomSettingsPanel from "../room/RoomSettingsPanel";
 import { LeftPanelCalculadora } from "./LeftPanelCalculadora";
 import { HomeLeftPanelEmpty } from "./HomeLeftPanelEmpty";
 import { HomeLeftPanelSelected } from "./HomeLeftPanelSelected";
@@ -87,12 +88,12 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     return <LeftPanelCalculadora />;
   }
 
-  // Sala — RoomManager: dimensões, criar/remover sala, paredes extras, lock
+  // Sala — Room 2.0: dimensões, paredes, aberturas
   if (resolvedTab === LEFT_TOOLBAR_IDS.SALA) {
     return (
       <div className="left-panel-content">
         <div className="left-panel-scroll">
-          <PainelSala />
+          <RoomSettingsPanel />
         </div>
       </div>
     );
@@ -108,10 +109,14 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     );
   }
 
-  // Acessórios — placeholder
+  // Acessórios — catálogo de orlas V1
   if (resolvedTab === LEFT_TOOLBAR_IDS.ACESSORIOS) {
     return (
-      <PlaceholderLeftPanel title="Acessórios" description="Acessórios em preparação." />
+      <div className="left-panel-content">
+        <div className="left-panel-scroll">
+          <OrlaSettingsPanel />
+        </div>
+      </div>
     );
   }
 

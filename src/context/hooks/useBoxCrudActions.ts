@@ -26,6 +26,7 @@ import {
   getRoomGridSpawnMm,
   hasPersistedRoomWalls,
 } from "../../utils/roomWorkspaceBounds";
+import type { AutoLayoutPlan } from "../../3d/viewer-engine/autoLayout/autoLayoutTypes";
 
 export type BoxCrudActions = Pick<
   ProjectActions,
@@ -35,6 +36,7 @@ export type BoxCrudActions = Pick<
   | "duplicateBox"
   | "duplicateWorkspaceBox"
   | "duplicateWorkspaceBoxAtOffset"
+  | "applyAutoLayoutPlan"
   | "removeBox"
   | "removeWorkspaceBox"
   | "removeWorkspaceBoxById"
@@ -425,12 +427,99 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
       );
     };
 
+    a.applyAutoLayoutPlan = (plan: AutoLayoutPlan) => {
+      updateProject(
+        (prev) => {
+          let workspaceBoxes = [...prev.workspaceBoxes];
+          let lastSelectedId = prev.selectedWorkspaceBoxId;
+
+          for (const move of plan.moveBoxes) {
+            workspaceBoxes = workspaceBoxes.map((box) => {
+              if (box.id !== move.boxId || box.locked) return box;
+              return {
+                ...box,
+                posicaoX_mm: move.placement.x_mm,
+                posicaoY_mm: move.placement.y_mm,
+                posicaoZ_mm: move.placement.z_mm,
+                manualPosition: true,
+              };
+            });
+          }
+
+          for (const clone of plan.cloneBoxes) {
+            const source = workspaceBoxes.find((b) => b.id === clone.sourceId);
+            if (!source || source.locked) continue;
+            const { id: newBoxId } = getNextWorkspaceBoxId(workspaceBoxes);
+            const newBox: WorkspaceBox = {
+              ...source,
+              id: newBoxId,
+              nome: `${source.nome} (layout)`,
+              posicaoX_mm: clone.placement.x_mm,
+              posicaoY_mm: clone.placement.y_mm,
+              posicaoZ_mm: clone.placement.z_mm,
+              manualPosition: true,
+              locked: false,
+              models: (source.models ?? []).map((m, i) => ({
+                ...m,
+                id: `${newBoxId}-model-${Date.now()}-${i}`,
+              })),
+              panelIds: ensureBoxPanelIds(undefined, {
+                prateleiras: source.prateleiras,
+                portaTipo: source.portaTipo,
+                gavetas: source.gavetas,
+              }),
+            };
+            workspaceBoxes = [...workspaceBoxes, newBox];
+            lastSelectedId = newBoxId;
+          }
+
+          for (const shelf of plan.shelfUpdates) {
+            const valor = Math.max(0, Math.floor(shelf.count));
+            workspaceBoxes = workspaceBoxes.map((box) => {
+              if (box.id !== shelf.boxId || box.locked) return box;
+              return {
+                ...box,
+                prateleiras: valor,
+                gavetas: valor > 0 ? 0 : box.gavetas,
+                drawersLayer: valor > 0 ? [] : box.drawersLayer,
+                panelIds: ensureBoxPanelIds(box.panelIds, {
+                  ...box,
+                  prateleiras: valor,
+                  gavetas: valor > 0 ? 0 : box.gavetas,
+                }),
+              };
+            });
+          }
+
+          const nextPrev = { ...prev, workspaceBoxes };
+          const boxes = buildBoxesFromWorkspace(nextPrev);
+          return recomputeState(
+            prev,
+            {
+              workspaceBoxes,
+              boxes,
+              selectedWorkspaceBoxId: lastSelectedId,
+              selectedCaixaId: lastSelectedId,
+              changelog: appendChangelog(prev.changelog, {
+                timestamp: new Date(),
+                type: "box",
+                message: "Auto-Layout aplicado",
+              }),
+            },
+            true
+          );
+        },
+        true
+      );
+    };
+
     a.removeBox = () => {
       updateProject(
         (prev) => {
           const removed = getSelectedWorkspaceBox(prev);
           if (!removed) return prev;
-          const filtered = prev.workspaceBoxes.filter((box) => box.id !== prev.selectedWorkspaceBoxId);
+          const removedId = removed.id;
+          const filtered = prev.workspaceBoxes.filter((box) => box.id !== removedId);
           const nextSelected = filtered[0];
           const nextPrev = { ...prev, workspaceBoxes: filtered };
           const boxes = buildBoxesFromWorkspace(nextPrev);
@@ -445,6 +534,11 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
               selectedCaixaModelUrl: null,
               selectedModelInstanceId: null,
               dimensoes: nextSelected?.dimensoes ?? prev.dimensoes,
+              measurements: {
+                ...prev.measurements,
+                internal: (prev.measurements?.internal ?? []).filter((m) => m.boxId !== removedId),
+              },
+              remates: (prev.remates ?? []).filter((remate) => remate.parentBoxId !== removedId),
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",
@@ -487,6 +581,11 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
               selectedCaixaModelUrl: null,
               selectedModelInstanceId: null,
               dimensoes: nextSelected?.dimensoes ?? prev.dimensoes,
+              measurements: {
+                ...prev.measurements,
+                internal: (prev.measurements?.internal ?? []).filter((m) => m.boxId !== boxId),
+              },
+              remates: (prev.remates ?? []).filter((remate) => remate.parentBoxId !== boxId),
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",

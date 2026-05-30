@@ -86,6 +86,39 @@ const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   getBoxIdAtPointerPublic: () => null,
   setInternalMeasurementMode: () => {},
   getInternalMeasurementMode: () => false,
+  internalRuler: {
+    enableForBox: () => {},
+    disable: () => {},
+    isActive: () => false,
+    getLastMeasurement: () => null,
+    getActiveBoxId: () => null,
+    syncFromProject: () => {},
+  },
+  snapping: {
+    enable: () => {},
+    disable: () => {},
+    isEnabled: () => false,
+    setGridSize: () => {},
+    setCaptureRadius: () => {},
+    setMagnetStrength: () => {},
+    setMode: () => {},
+    getMode: () => "basic" as const,
+    setRoomSnappingEnabled: () => {},
+    isRoomSnappingEnabled: () => false,
+    setAutoAlignmentEnabled: () => {},
+    isAutoAlignmentEnabled: () => true,
+    setAutoSpacingEnabled: () => {},
+    isAutoSpacingEnabled: () => false,
+    setWallOffset: () => {},
+    getWallOffset: () => 0,
+    getActiveAlignmentType: () => null,
+  },
+  autoLayout: {
+    fillWallWithModule: () => false,
+    extendAlongWallFromBox: () => false,
+    distributeBoxesEvenly: () => false,
+    autoStackShelvesInBox: () => false,
+  },
 };
 
 /**
@@ -125,6 +158,18 @@ export function usePimoViewer() {
           viewerCore && typeof (viewerCore as { getBoxIdByMeshPublic?: unknown }).getBoxIdByMeshPublic === "function"
             ? (viewerCore as { getBoxIdByMeshPublic: (..._args: unknown[]) => unknown }).getBoxIdByMeshPublic.bind(viewerCore)
             : PIMO_VIEWER_STUBS.getBoxIdByMesh,
+        internalRuler:
+          viewerCore && (viewerCore as { internalRuler?: PimoViewerApi["internalRuler"] }).internalRuler
+            ? (viewerCore as { internalRuler: NonNullable<PimoViewerApi["internalRuler"]> }).internalRuler
+            : PIMO_VIEWER_STUBS.internalRuler,
+        snapping:
+          viewerCore && (viewerCore as { snapping?: PimoViewerApi["snapping"] }).snapping
+            ? (viewerCore as { snapping: NonNullable<PimoViewerApi["snapping"]> }).snapping
+            : PIMO_VIEWER_STUBS.snapping,
+        autoLayout:
+          viewerCore && (viewerCore as { autoLayout?: PimoViewerApi["autoLayout"] }).autoLayout
+            ? (viewerCore as { autoLayout: NonNullable<PimoViewerApi["autoLayout"]> }).autoLayout
+            : PIMO_VIEWER_STUBS.autoLayout,
       }) as PimoViewerApi,
     [boxes, room, camera, materials, viewerCore]
   );

@@ -13,14 +13,19 @@ import { defaultState } from "../../../context/projectState";
 import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
 import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
-import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../../../utils/roomMeshFromWallStore";
+import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore, getRoomMeshFingerprintFromWallStore } from "../../../utils/roomMeshFromWallStore";
 import { uiStore, useUiStore } from "../../../stores/uiStore";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import BoxInfoOverlay from "./BoxInfoOverlay";
+import InternalMeasurementsPanel from "./InternalMeasurementsPanel";
 import ContextMenu from "./ContextMenu";
 import { devLogger } from "../../../utils/devLogger";
 import { useWorkspaceUndoRedoRegistry } from "../../../context/WorkspaceUndoRedoRegistryContext";
 import { runProjectRedo, runProjectUndo } from "./workspaceUndoRedoHandlers";
+import { buildBoxesWithCutList } from "../../../context/projectState";
+import { resolvePieceOrlaConfig } from "../../../core/orla/orlaCalculator";
+import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
+import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -97,6 +102,7 @@ export default function Workspace({
 
   const [contextSelectedBoxIds, setContextSelectedBoxIds] = useState<string[]>([]);
   const viewerCoreInstanceRef = useRef<{ dispose: () => void } | null>(null);
+  const lastRoomMeshFingerprintRef = useRef("");
   const projectRef = useRef(project);
   const ctrlOrMetaPressedRef = useRef(false);
   const pointerToggleSelectionRef = useRef(false);
@@ -165,10 +171,30 @@ export default function Workspace({
   // Fluxo da sala é controlado exclusivamente pelo PainelSala (RoomManager).
   // Evita remoção/criação implícita da sala em mudanças de seleção do wallStore.
 
-  /** Após restaurar projeto/autosave (loadRoomConfig / clearRoom), recria ou remove a mesh da sala e as aberturas. */
+  /** Após alterações Room 2.0: rebuild só se geometria/aberturas mudaram; locked/visible sem rebuild. */
   useEffect(() => {
+    const fingerprint = getRoomMeshFingerprintFromWallStore();
+    const room = projectRef.current.room;
+    if (
+      fingerprint &&
+      fingerprint === lastRoomMeshFingerprintRef.current &&
+      viewerApi.getRoomExists?.()
+    ) {
+      if (room) {
+        viewerApi.setRoomLocked?.(room.locked);
+        if (room.visible !== false) viewerApi.showRoom?.();
+        else viewerApi.hideRoom?.();
+      }
+      return;
+    }
+    lastRoomMeshFingerprintRef.current = fingerprint;
     applyRoomMeshFromWallStore(viewerApi);
     applyRoomOpeningsFromWallStore(viewerApi);
+    if (room) {
+      viewerApi.setRoomLocked?.(room.locked);
+      if (room.visible !== false) viewerApi.showRoom?.();
+      else viewerApi.hideRoom?.();
+    }
   }, [viewerApi, roomMeshSyncToken]);
 
   // MultiBoxManager: sincroniza workspaceBoxes ↔ viewer; addBox/removeBox delegam a actions
@@ -223,7 +249,11 @@ export default function Workspace({
             boxId,
           });
         }
-        setSelectedTool("home");
+        // Rule: if user is in "moveis" tab, stay there — don't auto-navigate to home.
+        // This allows adding multiple boxes without losing the catalog.
+        if (uiStore.getState().selectedTool !== "moveis") {
+          setSelectedTool("home");
+        }
         if (import.meta.env.DEV) {
           const afterUi = uiStore.getState();
           devLogger.debug("[SELECTION][Workspace] modo painel -> box/home", {
@@ -448,12 +478,7 @@ export default function Workspace({
 
   const [lockEnabled, setLockEnabledState] = useState(true);
   const [mouseMenuPosition, setMouseMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const [contextMenuLayerTarget, setContextMenuLayerTarget] = useState<{
-    boxId: string;
-    type: "door" | "drawer";
-    doorLayerId?: string;
-    drawerLayerId?: string;
-  } | null>(null);
+  const [contextMenuLayerTarget, setContextMenuLayerTarget] = useState<MouseMenuTarget | null>(null);
   const handleToolSelect = useCallback((toolId: string) => {
     if (toolId === "select" || toolId === "move" || toolId === "rotate") {
       actions.setActiveTool(toolId);
@@ -488,7 +513,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     }
     viewerApi.setRoomCeilingVisible?.(settings.showCeiling);
     viewerApi.setWallEditMode?.(settings.wallEditMode);
-    viewerApi.setMousePreset?.(settings.mousePreset === "orbital" ? "classic" : settings.mousePreset);
+    viewerApi.setMousePreset?.(settings.mousePreset);
     if (!photoModePanelOpen) {
       viewerApi.setBackgroundMode?.(settings.backgroundMode);
     }
@@ -510,6 +535,70 @@ const hasShownViewerReadyToastRef = useRef(false);
   useEffect(() => {
     projectRef.current = project;
   }, [project]);
+
+  useEffect(() => {
+    if (!viewerApi.viewerReady) return;
+    const core = window.viewerCore;
+    core?.bindInternalMeasurementBridge?.(
+      () => projectRef.current.measurements?.internal ?? [],
+      (entry) => actionsRef.current.addInternalMeasurement(entry)
+    );
+    core?.bindAutoLayoutBridge?.({
+      getWorkspaceBoxes: () => projectRef.current.workspaceBoxes,
+      applyPlan: (plan) => actionsRef.current.applyAutoLayoutPlan(plan),
+    });
+    core?.bindOrlaBridge?.({
+      getBoxOrlaConfig: (boxId) => {
+        const state = projectRef.current;
+        const wsBox = state.workspaceBoxes.find((b) => b.id === boxId);
+        const boxesWithCut = buildBoxesWithCutList(state);
+        const box = boxesWithCut.find((b) => b.id === boxId);
+        if (!box) return null;
+        const presets = normalizeOrlaPresets(state.orlaPresets);
+        const pieces = (box.cutList ?? []).map((item) => {
+          const panelId =
+            typeof item.metadata?.panelId === "string" && item.metadata.panelId.trim().length > 0
+              ? item.metadata.panelId
+              : item.id;
+          return {
+            pieceId: panelId,
+            panelType: item.tipo,
+            config: resolvePieceOrlaConfig(
+              panelId,
+              state.orlaPieces,
+              wsBox?.orlaPresetId,
+              presets
+            ),
+          };
+        });
+        return { boxId, pieces, presets };
+      },
+    });
+    core?.bindRemateBridge?.({
+      getBoxRemateConfig: (boxId) => ({
+        boxId,
+        remates: (projectRef.current.remates ?? []).filter((remate) => remate.parentBoxId === boxId),
+      }),
+    });
+  }, [viewerApi.viewerReady]);
+
+  useEffect(() => {
+    if (!viewerApi.viewerReady) return;
+    window.viewerCore?.syncOrlaVisuals?.();
+    window.viewerCore?.syncRemateVisuals?.();
+  }, [
+    project.orlaPieces,
+    project.orlaPresets,
+    project.remates,
+    project.workspaceBoxes,
+    project.boxes,
+    viewerApi.viewerReady,
+  ]);
+
+  useEffect(() => {
+    if (!viewerApi.viewerReady) return;
+    viewerApi.internalRuler?.syncFromProject?.(project.measurements?.internal ?? []);
+  }, [project.measurements?.internal, viewerApi.viewerReady, viewerApi.internalRuler]);
 
   useEffect(() => {
     const clearKeyboardMoveTimers = () => {
@@ -712,7 +801,7 @@ return (
               onContextMenu={(event) => {
                 event.preventDefault();
                 const hit = viewerApi.getContextMenuLayerHit?.(event) ?? null;
-                if (import.meta.env.DEV && hit?.type === "door" && hit?.doorLayerId) {
+                if (import.meta.env.DEV && hit?.type === "door" && hit.doorLayerId) {
                   devLogger.debug("[DOOR-MAT] Workspace onContextMenu — hit recebido (será usado no menu)", {
                     boxId: hit.boxId,
                     doorLayerId: hit.doorLayerId,
@@ -740,6 +829,7 @@ return (
               aria-hidden
             >
               <BoxInfoOverlay />
+              <InternalMeasurementsPanel />
             </div>
           </div>
           {!viewerApi.viewerReady && (

@@ -12,6 +12,7 @@ import type {
   ViewerSnapshot,
 } from "./projectTypes";
 import type { Viewer } from "../3d/core/Viewer";
+import type { MouseMenuTarget } from "../ui/context-menu/ContextMenuEngine";
 
 export type PimoViewerApi = {
   viewerRef: React.MutableRefObject<Viewer | null>;
@@ -102,23 +103,62 @@ export type PimoViewerApi = {
   /** Ativa/desativa modo de medição interna por bordas (ferramenta CAD). */
   setInternalMeasurementMode?: (_enabled: boolean) => void;
   getInternalMeasurementMode?: () => boolean;
-  /** Retorna o alvo do ponteiro para o menu de contexto: porta, gaveta ou null (módulo/canvas). */
-  getContextMenuLayerHit?: (_event: { clientX: number; clientY: number }) => {
-    boxId: string;
-    type: "door" | "drawer";
-    doorLayerId?: string;
-    drawerLayerId?: string;
-  } | null;
+  internalRuler?: {
+    enableForBox: (_boxId: string) => void;
+    disable: () => void;
+    isActive: () => boolean;
+    getLastMeasurement: () => { valueMm: number } | null;
+    getActiveBoxId?: () => string | null;
+    syncFromProject?: (_entries: import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry[]) => void;
+  };
+  snapping?: {
+    enable: () => void;
+    disable: () => void;
+    isEnabled: () => boolean;
+    setGridSize: (_mm: number) => void;
+    setCaptureRadius: (_mm: number) => void;
+    setMagnetStrength: (_value: number) => void;
+    setMode: (_mode: "basic" | "advanced") => void;
+    getMode: () => "basic" | "advanced";
+    setRoomSnappingEnabled: (_enabled: boolean) => void;
+    isRoomSnappingEnabled: () => boolean;
+    setAutoAlignmentEnabled: (_enabled: boolean) => void;
+    isAutoAlignmentEnabled: () => boolean;
+    setAutoSpacingEnabled: (_enabled: boolean) => void;
+    isAutoSpacingEnabled: () => boolean;
+    setWallOffset: (_mm: number) => void;
+    getWallOffset: () => number;
+    getActiveAlignmentType: () => "flush" | "center" | "corner" | "stack" | "depth" | "height" | "spacing" | null;
+  };
+  autoLayout?: {
+    fillWallWithModule: (_wallId: string | number, _moduleBoxId: string) => boolean;
+    extendAlongWallFromBox: (_boxId: string) => boolean;
+    distributeBoxesEvenly: (_boxIds: string[]) => boolean;
+    autoStackShelvesInBox: (
+      _boxId: string,
+      _options: { count: number; topMarginMm: number; bottomMarginMm: number }
+    ) => boolean;
+  };
+  /** Retorna o alvo do ponteiro para o menu de contexto inteligente. */
+  getContextMenuLayerHit?: (_event: { clientX: number; clientY: number }) => MouseMenuTarget | null;
   getRightmostX?: () => number;
   /** Reposiciona a câmera numa vista pré-definida (top, bottom, front, back, right, left, isometric). */
   setCameraView?: (_preset: "top" | "bottom" | "front" | "back" | "right" | "left" | "isometric") => void;
   /** Reposiciona a câmera para o enquadramento padrão. */
   resetCamera?: () => void;
+  /** Enquadra a câmara numa caixa específica. */
+  frameSelection?: (_boxId: string) => boolean;
   /** Esconde/mostra manualmente uma parede (auto-hide continua ativo). */
   setManualWallHidden?: (_active: boolean) => void;
   getManualWallHidden?: () => boolean;
   /** Sala (RoomManager): criar com dimensões, remover, adicionar parede, lock. */
-  createRoomWithDimensions?: (_width: number, _depth: number, _height: number, _numWalls?: 3 | 4) => void;
+  createRoomWithDimensions?: (
+    _width: number,
+    _depth: number,
+    _height: number,
+    _numWalls?: 3 | 4,
+    _wallThicknessM?: number
+  ) => void;
   setRoomDimensions?: (_width: number, _depth: number, _height: number) => void;
   addExtraWall?: () => void;
   setRoomLocked?: (_locked: boolean) => void;

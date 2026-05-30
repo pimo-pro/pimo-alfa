@@ -18,6 +18,14 @@ import { Lights } from "./lighting";
 import type { LightsOptions } from "./lighting";
 import { Controls } from "./controls";
 import type { ControlsOptions } from "./controls";
+import {
+  applyMouseInputMappingToOrbitControls,
+  getMouseInputMapping,
+  getPointerActionForButton,
+  normalizeMouseInputPreset,
+  shouldBlockPointerDownForSelection,
+  type MouseInputPreset,
+} from "./controls/MouseInputMapper";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
@@ -101,6 +109,14 @@ import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
 import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
+import { InternalRuler, type InternalRulerMeasurement } from "./measurement/InternalRuler";
+import type { InternalMeasurementEntry } from "./measurement/internalRulerTypes";
+import { SmartSnapping } from "./snapping/SmartSnapping";
+import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
+import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
+import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
+import { RemateVisualizer, type RemateVisualBridge } from "./remate/RemateVisualizer";
+import { mToMm } from "../../utils/units";
 import {
   floorClearanceMeasurement,
   nearestBoxGapBetweenPair,
@@ -110,6 +126,9 @@ import {
 } from "./measurement/parametricDimensions";
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
 import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
+import { ViewerOverlayCoordinator } from "./overlays/ViewerOverlayCoordinator";
+import { ViewerBoundsCache } from "./cache/ViewerBoundsCache";
+import type { MouseMenuTarget } from "../../ui/context-menu/ContextMenuEngine";
 
 function aabb3FromThreeBox3(b: THREE.Box3): Aabb3 {
   return {
@@ -205,7 +224,7 @@ export class ViewerCore {
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
   private onRoomElementTransform: ((_elementId: string, _config: DoorWindowConfig) => void) | null = null;
   private roomCeilingVisible = true;
-  private mousePreset: ViewerMousePreset = "cad";
+  private mouseInputPreset: MouseInputPreset = "cad";
   private backgroundMode: ViewerBackgroundMode = "studio";
   private materialQuality: ViewerMaterialQuality = "standard";
   private reflectionsEnabled = false;
@@ -368,6 +387,56 @@ export class ViewerCore {
    * O ViewerCore permanece como orquestrador e ponto único de composição.
    */
   private measurementOverlay!: ViewerMeasurementOverlay;
+  private internalRulerEngine!: InternalRuler;
+  private getProjectMeasurementsFn: () => InternalMeasurementEntry[] = () => [];
+  private onInternalMeasurementSavedFn: (_entry: InternalMeasurementEntry) => void = () => {};
+  private smartSnappingEngine!: SmartSnapping;
+  private autoLayoutEngine!: AutoLayoutEngine;
+  private orlaVisualizer = new OrlaVisualizer();
+  private remateVisualizer = new RemateVisualizer();
+  private readonly overlayCoordinator = new ViewerOverlayCoordinator();
+  private readonly boundsCache = new ViewerBoundsCache();
+  /** Evita processar fim de drag duas vezes (mouseUp + dragging-changed). */
+  private transformDragEndStamp = -1;
+  readonly internalRuler: {
+    enableForBox: (_boxId: string) => void;
+    disable: () => void;
+    isActive: () => boolean;
+    getLastMeasurement: () => InternalRulerMeasurement | null;
+    getActiveBoxId: () => string | null;
+    syncFromProject: (_entries: InternalMeasurementEntry[]) => void;
+  };
+  readonly snapping: {
+    enable: () => void;
+    disable: () => void;
+    isEnabled: () => boolean;
+    setGridSize: (_mm: number) => void;
+    setCaptureRadius: (_mm: number) => void;
+    setMagnetStrength: (_value: number) => void;
+    setMode: (_mode: import("./snapping/SmartSnapping").SmartSnapMode) => void;
+    getMode: () => import("./snapping/SmartSnapping").SmartSnapMode;
+    setRoomSnappingEnabled: (_enabled: boolean) => void;
+    isRoomSnappingEnabled: () => boolean;
+    setAutoAlignmentEnabled: (_enabled: boolean) => void;
+    isAutoAlignmentEnabled: () => boolean;
+    setAutoSpacingEnabled: (_enabled: boolean) => void;
+    isAutoSpacingEnabled: () => boolean;
+    setWallOffset: (_mm: number) => void;
+    getWallOffset: () => number;
+    getActiveAlignmentType: () => import("./snapping/SmartSnapping").ActiveAlignmentType;
+  };
+  readonly autoLayout: {
+    fillWallWithModule: (_wallId: string | number, _moduleBoxId: string) => boolean;
+    extendAlongWallFromBox: (_boxId: string) => boolean;
+    distributeBoxesEvenly: (_boxIds: string[]) => boolean;
+    autoStackShelvesInBox: (_boxId: string, _options: AutoStackShelvesOptions) => boolean;
+  };
+  readonly orlaVisual: {
+    syncAll: () => void;
+  };
+  readonly remateVisual: {
+    syncAll: () => void;
+  };
   private panelVisibility!: ViewerPanelVisibility;
   private runtimeLoop!: ViewerRuntimeLoop;
 
@@ -494,6 +563,80 @@ export class ViewerCore {
       getFloorDistance: () => this.computeDistanceToFloor(),
     });
 
+    this.internalRulerEngine = new InternalRuler({
+      getCamera: () => this.cameraManager.camera,
+      getCanvas: () => this.rendererManager.renderer.domElement,
+      getContainer: () => this.container,
+      getBoxMesh: (boxId) => this.boxes.get(boxId)?.mesh ?? null,
+      isTransformDragging: () => this.viewerState.getTransformControlsDragging(),
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+      getProjectMeasurements: () => this.getProjectMeasurementsFn(),
+      onMeasurementSaved: (entry) => this.onInternalMeasurementSavedFn(entry),
+    });
+    this.internalRuler = {
+      enableForBox: (boxId) => this.internalRulerEngine.enableForBox(boxId),
+      disable: () => this.internalRulerEngine.disable(),
+      isActive: () => this.internalRulerEngine.isActive(),
+      getLastMeasurement: () => this.internalRulerEngine.getLastMeasurement(),
+      getActiveBoxId: () => this.internalRulerEngine.getActiveBoxId(),
+      syncFromProject: (entries) => this.internalRulerEngine.syncFromProject(entries),
+    };
+
+    this.smartSnappingEngine = new SmartSnapping({
+      getCamera: () => this.cameraManager.camera,
+      getCanvas: () => this.rendererManager.renderer.domElement,
+      getContainer: () => this.container,
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+      isInternalRulerActive: () => this.internalRulerEngine.isActive(),
+      getRoomBounds: () => this.roomBounds,
+      getRoomOpenings: () => this.getRoomOpeningsForSnapping(),
+    });
+    this.snapping = {
+      enable: () => this.smartSnappingEngine.enable(),
+      disable: () => this.smartSnappingEngine.disable(),
+      isEnabled: () => this.smartSnappingEngine.isEnabled(),
+      setGridSize: (mm) => this.smartSnappingEngine.setGridSize(mm),
+      setCaptureRadius: (mm) => this.smartSnappingEngine.setCaptureRadius(mm),
+      setMagnetStrength: (value) => this.smartSnappingEngine.setMagnetStrength(value),
+      setMode: (mode) => this.smartSnappingEngine.setMode(mode),
+      getMode: () => this.smartSnappingEngine.getMode(),
+      setRoomSnappingEnabled: (enabled) => this.smartSnappingEngine.setRoomSnappingEnabled(enabled),
+      isRoomSnappingEnabled: () => this.smartSnappingEngine.isRoomSnappingEnabled(),
+      setAutoAlignmentEnabled: (enabled) => this.smartSnappingEngine.setAutoAlignmentEnabled(enabled),
+      isAutoAlignmentEnabled: () => this.smartSnappingEngine.isAutoAlignmentEnabled(),
+      setAutoSpacingEnabled: (enabled) => this.smartSnappingEngine.setAutoSpacingEnabled(enabled),
+      isAutoSpacingEnabled: () => this.smartSnappingEngine.isAutoSpacingEnabled(),
+      setWallOffset: (mm) => this.smartSnappingEngine.setWallOffset(mm),
+      getWallOffset: () => this.smartSnappingEngine.getWallOffset(),
+      getActiveAlignmentType: () => this.smartSnappingEngine.getActiveAlignmentType(),
+    };
+
+    this.overlayCoordinator.bind({
+      syncRulerWithExternalSelectionMovement: () =>
+        this.measurementOverlay.syncRulerWithExternalSelectionMovement(),
+      clearRulerOverlayIfMovementIdle: (nowMs) =>
+        this.measurementOverlay.clearRulerOverlayIfMovementIdle(nowMs),
+      refreshInternalRuler: () => this.internalRulerEngine.refreshOverlay(),
+      refreshSnapping: () => this.smartSnappingEngine.refreshOverlay(),
+      clearMovementRuler: () => this.measurementOverlay.clearRulerOverlay(),
+    });
+
+    this.autoLayoutEngine = new AutoLayoutEngine();
+    this.autoLayout = {
+      fillWallWithModule: (wallId, moduleBoxId) =>
+        this.autoLayoutEngine.fillWallWithModule(wallId, moduleBoxId),
+      extendAlongWallFromBox: (boxId) => this.autoLayoutEngine.extendAlongWallFromBox(boxId),
+      distributeBoxesEvenly: (boxIds) => this.autoLayoutEngine.distributeBoxesEvenly(boxIds),
+      autoStackShelvesInBox: (boxId, options) =>
+        this.autoLayoutEngine.autoStackShelvesInBox(boxId, options),
+    };
+    this.orlaVisual = {
+      syncAll: () => this.syncOrlaVisuals(),
+    };
+    this.remateVisual = {
+      syncAll: () => this.syncRemateVisuals(),
+    };
+
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
       this.rendererManager.renderer.domElement
@@ -506,34 +649,25 @@ export class ViewerCore {
     this.transformControls.addEventListener("mouseDown", () => {
       if (this.viewerState.getSelectedBox()) {
         const obj = this.transformControls!.object;
-        if (obj && "position" in obj) this.dragStartZForShiftLock = (obj as THREE.Object3D).position.z;
+        if (obj && "position" in obj) {
+          this.dragStartZForShiftLock = (obj as THREE.Object3D).position.z;
+          this.smartSnappingEngine.onDragStart(obj as THREE.Object3D);
+        }
       }
       this.viewerState.setTransformControlsDragging(true);
       this.logTransformDiagnostic("dragStart(mouseDown)");
     });
     this.transformControls.addEventListener("mouseUp", () => {
-      this.dragStartZForShiftLock = undefined;
-      this.viewerState.setTransformControlsDragging(false);
-      this.viewerState.setSuppressNextCanvasClick(true);
-      this.viewerTools.applyCurrentTool();
-      this.notifyBoxTransform();
-      this.notifyWallTransform();
-      this.notifyRoomElementTransform();
+      this.finishTransformDrag("mouseUp");
       this.logTransformDiagnostic("dragEnd(mouseUp)");
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
-      if (!event.value) this.dragStartZForShiftLock = undefined;
       this.viewerState.setTransformControlsDragging(Boolean(event.value));
       this.logTransformDiagnostic("dragging-changed", {
         value: Boolean(event.value),
       });
       if (!event.value) {
-        this.measurementOverlay.clearRulerOverlay();
-        this.viewerState.setSuppressNextCanvasClick(true);
-        this.viewerTools.applyCurrentTool();
-        this.notifyBoxTransform();
-        this.notifyWallTransform();
-        this.notifyRoomElementTransform();
+        this.finishTransformDrag("dragging-changed");
       }
     });
     this.transformControls.addEventListener("objectChange", () => {
@@ -551,9 +685,6 @@ export class ViewerCore {
       // Keep external listeners in sync during drag.
       this.notifyBoxTransform();
       this.logTransformDiagnostic("drag(objectChange)");
-    });
-    this.transformControls.addEventListener("change", () => {
-      // no-op para régua antiga removida
     });
     this.transformControlsHelper = this.transformControls.getHelper();
     this.transformControlsHelper.visible = false;
@@ -671,6 +802,83 @@ export class ViewerCore {
 
   getCurrentMode(): "performance" | "showcase" {
     return this.viewerState.getCurrentMode();
+  }
+
+  bindInternalMeasurementBridge(
+    getMeasurements: () => InternalMeasurementEntry[],
+    onSaved: (_entry: InternalMeasurementEntry) => void
+  ): void {
+    this.getProjectMeasurementsFn = getMeasurements;
+    this.onInternalMeasurementSavedFn = onSaved;
+    this.internalRulerEngine.syncFromProject(getMeasurements());
+  }
+
+  bindAutoLayoutBridge(
+    bridge: Pick<AutoLayoutBridge, "getWorkspaceBoxes" | "applyPlan">
+  ): void {
+    this.autoLayoutEngine.bindBridge({
+      getWorkspaceBoxes: bridge.getWorkspaceBoxes,
+      applyPlan: bridge.applyPlan,
+      getRoomBoundsMm: () => this.getRoomBoundsMmForAutoLayout(),
+      getOpeningsMm: () => this.getRoomOpeningsMmForAutoLayout(),
+      getWallOffsetMm: () => this.smartSnappingEngine.getWallOffset(),
+    });
+  }
+
+  bindOrlaBridge(bridge: Pick<OrlaVisualBridge, "getBoxOrlaConfig"> | null): void {
+    this.orlaVisualizer.bindBridge(bridge);
+    this.syncOrlaVisuals();
+  }
+
+  syncOrlaVisuals(): void {
+    for (const [boxId, entry] of this.boxes.entries()) {
+      if (entry?.mesh) this.orlaVisualizer.syncBoxRoot(boxId, entry.mesh);
+    }
+  }
+
+  private syncOrlaForBox(boxId: string): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry?.mesh) return;
+    this.orlaVisualizer.syncBoxRoot(boxId, entry.mesh);
+  }
+
+  bindRemateBridge(bridge: Pick<RemateVisualBridge, "getBoxRemateConfig"> | null): void {
+    this.remateVisualizer.bindBridge(bridge);
+    this.syncRemateVisuals();
+  }
+
+  syncRemateVisuals(): void {
+    for (const [boxId, entry] of this.boxes.entries()) {
+      if (entry?.mesh) this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
+    }
+  }
+
+  private syncRemateForBox(boxId: string): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry?.mesh) return;
+    this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
+  }
+
+  private getRoomBoundsMmForAutoLayout(): AutoLayoutRoomBoundsMm | null {
+    if (!this.roomBounds) return null;
+    const b = this.roomBounds;
+    return {
+      minX_mm: mToMm(b.minX),
+      maxX_mm: mToMm(b.maxX),
+      minZ_mm: mToMm(b.minZ),
+      maxZ_mm: mToMm(b.maxZ),
+      minY_mm: mToMm(b.minY),
+      maxY_mm: mToMm(b.maxY),
+    };
+  }
+
+  private getRoomOpeningsMmForAutoLayout(): AutoLayoutOpeningMm[] {
+    return this.getRoomOpeningsForSnapping().map((opening) => ({
+      minX_mm: mToMm(opening.min.x),
+      maxX_mm: mToMm(opening.max.x),
+      minZ_mm: mToMm(opening.min.z),
+      maxZ_mm: mToMm(opening.max.z),
+    }));
   }
 
   setMode(mode: "performance" | "showcase", turntable = false): void {
@@ -1455,15 +1663,8 @@ export class ViewerCore {
   private applyMousePresetToControls(): void {
     const controls = this.controls?.controls;
     if (!controls) return;
-    if (this.mousePreset === "classic") {
-      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-      controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
-      controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
-      return;
-    }
-    controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
-    controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
-    controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+    const mapping = getMouseInputMapping(this.mouseInputPreset);
+    applyMouseInputMappingToOrbitControls(controls, mapping);
   }
 
   /** Aplica o preset de botões do rato ao OrbitControls. Não bloqueia a órbita em nenhum modo (Selecionar, Mover, Rodar). */
@@ -1502,12 +1703,12 @@ export class ViewerCore {
   }
 
   setMousePreset(preset: ViewerMousePreset): void {
-    this.mousePreset = preset === "classic" ? "classic" : "cad";
+    this.mouseInputPreset = normalizeMouseInputPreset(preset);
     this.applyTransformControlsMouseGuard();
   }
 
   getMousePreset(): ViewerMousePreset {
-    return this.mousePreset;
+    return this.mouseInputPreset;
   }
 
   private applyBackgroundMode(): void {
@@ -1973,6 +2174,8 @@ export class ViewerCore {
     this.applyPanelIdsToBox(box, id, opts.panelIds);
     this.applyPanelVisibilityForObject(box);
     this.applyExplodedViewForObject(box);
+    this.syncOrlaForBox(id);
+    this.syncRemateForBox(id);
     tagBoxGroupWithId(box, id);
     this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
     this.applyBackgroundMode();
@@ -2312,6 +2515,8 @@ export class ViewerCore {
     if (structureChanged) {
       this.applyPanelVisibilityForObject(entry.mesh);
     }
+    this.syncOrlaForBox(id);
+    this.syncRemateForBox(id);
     if (this.lockEnabled) this.applyFloorConstraint(entry.mesh);
     if (dimensionsChanged && entry.cadOnly) {
       entry.cadModels.forEach((model) => {
@@ -2474,9 +2679,10 @@ export class ViewerCore {
     width: number,
     depth: number,
     height: number,
-    numWalls?: 3 | 4
+    numWalls?: 3 | 4,
+    wallThicknessM?: number
   ): void {
-    this.roomManager?.createRoom(width, depth, height, numWalls ?? 4);
+    this.roomManager?.createRoom(width, depth, height, numWalls ?? 4, wallThicknessM);
   }
 
   removeRoom(): void {
@@ -2573,6 +2779,7 @@ export class ViewerCore {
     this.roomBoxFloor = null;
     this.roomBoxCeiling = null;
     this.roomBounds = bounds;
+    this.boundsCache.invalidateRoom();
     this.sceneManager.root.add(group);
     this.sceneManager.setGroundSize(
       Math.max(bounds.maxX - bounds.minX, 0.01),
@@ -2593,6 +2800,7 @@ export class ViewerCore {
     this.roomBoxFloor = null;
     this.roomBoxCeiling = null;
     this.roomBounds = null;
+    this.boundsCache.invalidateRoom();
     this.viewerState.setSelectedWallIndex(null);
     if (this.wallGizmo) this.wallGizmo.detach();
     this.refreshTransformControlsAttachment();
@@ -2787,8 +2995,7 @@ export class ViewerCore {
     }
 
     if (this.controls) {
-      this.controls.controls.target.set(cx, cy, cz);
-      this.controls.update();
+      this.syncCameraTarget(new THREE.Vector3(cx, cy, cz), { updateLookAt: false });
     }
 
     this.cameraViewPreset = preset;
@@ -2798,6 +3005,33 @@ export class ViewerCore {
   resetCamera(): void {
     this.cameraViewPreset = null;
     this.setCameraView("front");
+  }
+
+  /**
+   * Enquadra a câmara numa caixa específica (centro no target, distância pelo FOV).
+   */
+  frameSelection(boxId: string): boolean {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return false;
+    entry.mesh.updateMatrixWorld(true);
+    runWithLayoutBoundsProxiesVisible(entry.mesh, () => {
+      this._boxSingle.setFromObject(entry.mesh);
+    });
+    this._boxSingle.getCenter(this._center);
+    this._boxSingle.getSize(this._size);
+    const maxDim = Math.max(this._size.x, this._size.y, this._size.z, 0.1);
+    const cam = this.cameraManager.camera;
+    const fovRad = (cam.fov * Math.PI) / 180;
+    const distance = Math.max(0.3, (maxDim / (2 * Math.tan(fovRad * 0.5))) * 1.2);
+    const orbitTarget = this.controls?.controls.target ?? this.cameraManager.getTarget();
+    const dir = new THREE.Vector3().subVectors(cam.position, orbitTarget);
+    if (dir.lengthSq() < 1e-8) dir.set(0, 0.2, 1);
+    dir.normalize();
+    cam.position.copy(this._center).addScaledVector(dir, distance);
+    this.syncCameraTarget(this._center, { updateLookAt: false });
+    cam.lookAt(this._center);
+    this.controls?.update();
+    return true;
   }
 
   setPlacementMode(mode: "door" | "window" | null): void {
@@ -2833,11 +3067,15 @@ export class ViewerCore {
   }
 
   addDoorToRoom(wallId: number, config: DoorWindowConfig, elementId?: string): string {
-    return this.roomBuilder.addDoorByIndex(wallId, config, elementId);
+    const id = this.roomBuilder.addDoorByIndex(wallId, config, elementId);
+    this.boundsCache.invalidateRoom();
+    return id;
   }
 
   addWindowToRoom(wallId: number, config: DoorWindowConfig, elementId?: string): string {
-    return this.roomBuilder.addWindowByIndex(wallId, config, elementId);
+    const id = this.roomBuilder.addWindowByIndex(wallId, config, elementId);
+    this.boundsCache.invalidateRoom();
+    return id;
   }
 
   getRoomWalls(): THREE.Mesh[] {
@@ -3146,15 +3384,27 @@ export class ViewerCore {
     this.boxManager.reflowBoxes(this.boxGap);
   }
 
+  /** Mantém CameraManager.target e OrbitControls.target sincronizados. */
+  private syncCameraTarget(
+    center: THREE.Vector3,
+    options?: { updateLookAt?: boolean }
+  ): void {
+    const updateLookAt = options?.updateLookAt !== false;
+    if (updateLookAt) {
+      this.cameraManager.setTarget(center.x, center.y, center.z);
+    } else {
+      this.cameraManager.getTarget().copy(center);
+    }
+    if (this.controls) {
+      this.controls.controls.target.copy(center);
+      this.controls.update();
+    }
+  }
+
   private updateCameraTarget() {
     if (this.boxes.size === 0) {
       if (this.cameraViewPreset == null) {
-        this.cameraManager.setTarget(0, 0, 0);
-        if (this.controls) {
-          this.controls.controls.target.set(0, 0, 0);
-          this.cameraManager.camera.lookAt(0, 0, 0);
-          this.controls.update();
-        }
+        this.syncCameraTarget(new THREE.Vector3(0, 0, 0));
       }
       return;
     }
@@ -3168,20 +3418,11 @@ export class ViewerCore {
     this._boundingBox.getCenter(this._center);
 
     if (this.cameraViewPreset != null) {
-      this.cameraManager.getTarget().copy(this._center);
-      if (this.controls) {
-        this.controls.controls.target.copy(this._center);
-        this.controls.update();
-      }
+      this.syncCameraTarget(this._center, { updateLookAt: false });
       return;
     }
 
-    this.cameraManager.setTarget(this._center.x, this._center.y, this._center.z);
-    if (this.controls) {
-      this.controls.controls.target.copy(this._center);
-      this.cameraManager.camera.lookAt(this._center);
-      this.controls.update();
-    }
+    this.syncCameraTarget(this._center);
   }
 
   /**
@@ -3236,11 +3477,9 @@ export class ViewerCore {
     const fovRad = (cam.fov * Math.PI) / 180;
     const distance = Math.max(0.3, maxDim / (2 * Math.tan(fovRad * 0.5)) * 1.1);
     cam.position.copy(this._center).addScaledVector(dir, distance);
-    this.cameraManager.setTarget(this._center.x, this._center.y, this._center.z);
-    if (this.controls) {
-      this.controls.controls.target.copy(this._center);
-      this.controls.update();
-    }
+    this.syncCameraTarget(this._center, { updateLookAt: false });
+    cam.lookAt(this._center);
+    this.controls?.update();
   }
 
   /**
@@ -3256,19 +3495,11 @@ export class ViewerCore {
     if (!center) return;
 
     if (this.cameraViewPreset != null) {
-      this.cameraManager.getTarget().copy(center);
-      if (this.controls) {
-        this.controls.controls.target.copy(center);
-        this.controls.update();
-      }
+      this.syncCameraTarget(center, { updateLookAt: false });
       return;
     }
 
-    this.cameraManager.setTarget(center.x, center.y, center.z);
-    if (this.controls) {
-      this.controls.controls.target.copy(center);
-      this.controls.controls.update();
-    }
+    this.syncCameraTarget(center);
     const onlyIfOut = options?.onlyMovePositionIfOutOfFrame === true;
     if (onlyIfOut && !this.isBoxInCameraFrame(boxId)) {
       this.adjustCameraPositionToIncludeBox(boxId);
@@ -3559,6 +3790,14 @@ export class ViewerCore {
       setWallGizmoDragging: (v) => { this.viewerState.setWallGizmoDragging(v); },
       getDoorHitAtPointer: (e) => this.getDoorHitAtPointer(e),
       getOnDoorLayerDoubleClick: () => this.onDoorLayerDoubleClick,
+      getPointerActionForButton: (button) => {
+        const mapping = getMouseInputMapping(this.mouseInputPreset);
+        return getPointerActionForButton(mapping, button);
+      },
+      shouldBlockPointerDownForSelection: (button) => {
+        const mapping = getMouseInputMapping(this.mouseInputPreset);
+        return shouldBlockPointerDownForSelection(mapping, button);
+      },
       setCameraControlsEnabled: (enabled) => {
         if (this.controls?.controls) this.controls.controls.enabled = enabled;
       },
@@ -3746,13 +3985,49 @@ export class ViewerCore {
     });
     if (id == null) {
       this.measurementOverlay.onSelectionChanged(null);
+      this.internalRulerEngine.onSelectionChanged(null);
       return;
     }
     this.measurementOverlay.onSelectionChanged(id);
+    this.internalRulerEngine.onSelectionChanged(id);
+  }
+
+  /** Fim de drag unificado — evita duplicação mouseUp + dragging-changed. */
+  private finishTransformDrag(_source: "mouseUp" | "dragging-changed"): void {
+    const stamp = performance.now();
+    if (stamp - this.transformDragEndStamp < 8) return;
+    this.transformDragEndStamp = stamp;
+    this.dragStartZForShiftLock = undefined;
+    this.viewerState.setTransformControlsDragging(false);
+    this.overlayCoordinator.clearTransientOverlays();
+    this.smartSnappingEngine.onDragEnd();
+    this.viewerState.setSuppressNextCanvasClick(true);
+    this.viewerTools.applyCurrentTool();
+    this.notifyBoxTransform();
+    this.notifyWallTransform();
+    this.notifyRoomElementTransform();
   }
 
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
+    const selectedBoxId = this.viewerState.getSelectedBox();
+    const currentTool = this.viewerState.getCurrentTool();
+    const isDragging = this.viewerState.getTransformControlsDragging();
+    if (selectedBoxId && isDragging && currentTool === "translate") {
+      const entry = this.boxes.get(selectedBoxId);
+      const obj = this.transformControls?.object;
+      if (entry && obj === entry.mesh) {
+        this.smartSnappingEngine.applyDuringTranslate({
+          mesh: entry.mesh,
+          selectedBoxId,
+          boxes: this.boxes,
+          isDragging,
+          currentTool,
+          roomBounds: this.roomBounds,
+        });
+      }
+    }
+
     this.constraints.clampTransform({
       transformControls: this.transformControls,
       selectedBoxId: this.viewerState.getSelectedBox(),
@@ -4026,6 +4301,28 @@ export class ViewerCore {
     );
   }
 
+  private getRoomOpeningsForSnapping(): import("./snapping/smartSnappingTypes").RoomOpeningLike[] {
+    const gen = this.boundsCache.getRoomGeneration();
+    return this.boundsCache.getRoomOpenings(gen, () => {
+      const out: import("./snapping/smartSnappingTypes").RoomOpeningLike[] = [];
+      const box = this._boundingBox;
+      for (const el of this.roomBuilder.getElements()) {
+        const group = this.roomBuilder.getElementById(el.elementId);
+        if (!group) continue;
+        group.updateMatrixWorld(true);
+        box.setFromObject(group);
+        if (box.isEmpty()) continue;
+        out.push({
+          elementId: el.elementId,
+          type: el.type,
+          min: box.min.clone(),
+          max: box.max.clone(),
+        });
+      }
+      return out;
+    });
+  }
+
   private notifyBoxTransform() {
     if (!this.viewerState.getSelectedBox()) return;
     const entry = this.boxes.get(this.viewerState.getSelectedBox());
@@ -4142,12 +4439,7 @@ export class ViewerCore {
    * Raycast nos boxes; para o primeiro hit que tenha getDoorLayerIdByMesh ou getDrawerLayerIdByMesh, devolve boxId + type + doorLayerId/drawerLayerId.
    * Depende de userData.doorLayerId propagado em createDoorObject e de userData.boxId em applyPanelIdsToBox.
    */
-  getContextMenuLayerHit(event: { clientX: number; clientY: number }): {
-    boxId: string;
-    type: "door" | "drawer";
-    doorLayerId?: string;
-    drawerLayerId?: string;
-  } | null {
+  getContextMenuLayerHit(event: { clientX: number; clientY: number }): MouseMenuTarget | null {
     return this.raycastSystem.getContextMenuLayerHit(event);
   }
 
@@ -4177,6 +4469,8 @@ export class ViewerCore {
   private updateCanvasSize = () => {
     this.runtimeLoop.onResize();
     this.measurementOverlay.resize();
+    this.internalRulerEngine.resize();
+    this.smartSnappingEngine.resize();
   };
 
   private start() {
@@ -4228,8 +4522,7 @@ export class ViewerCore {
 
     this.highlightManager?.update();
     this.edgeOutlineSystem?.update();
-    this.measurementOverlay.syncRulerWithExternalSelectionMovement();
-    this.measurementOverlay.clearRulerOverlayIfMovementIdle(performance.now());
+    this.overlayCoordinator.refreshFrame(performance.now());
 
     if (this.reflectionsEnabled) {
       this.reflectionFrameCounter += 1;
@@ -4284,7 +4577,18 @@ export class ViewerCore {
         this.transformControlsHelper = null;
       }
       this.transformControls.dispose();
+      this.transformControls = null;
     }
+    this.autoLayoutEngine?.bindBridge(null);
+    this.orlaVisualizer.bindBridge(null);
+    this.orlaVisualizer.dispose();
+    this.remateVisualizer.bindBridge(null);
+    this.remateVisualizer.dispose();
+    this.overlayCoordinator.dispose();
+    this.onBoxTransform = null;
+    this.onBoxSelected = null;
+    this.onDoorLayerDoubleClick = null;
+    this.onModelLoaded = null;
     this.eventsManager?.unregister();
     this.eventsManager = null;
     if (this.wallGizmo) {
@@ -4340,6 +4644,8 @@ export class ViewerCore {
       this.dimensionsOverlayLines = null;
     }
     this.measurementOverlay.dispose();
+    this.internalRulerEngine.dispose();
+    this.smartSnappingEngine.dispose();
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();

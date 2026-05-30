@@ -54,7 +54,7 @@ export class Room {
   }
 }
 
-/** Dimensões padrão da sala: 4m × 5m × 2.7m */
+/** Dimensões padrão Room 2.0: 4m × 2.5m × 2.6m */
 export const DEFAULT_ROOM_WIDTH = 4;
-export const DEFAULT_ROOM_DEPTH = 5;
-export const DEFAULT_ROOM_HEIGHT = 2.7;
+export const DEFAULT_ROOM_DEPTH = 2.5;
+export const DEFAULT_ROOM_HEIGHT = 2.6;

@@ -5,6 +5,7 @@
 
 import type * as THREE from "three";
 import type { DoorWindowConfig } from "../../room/types";
+import type { MouseButtonAction } from "../controls/MouseInputMapper";
 
 export type RoomElementHit = {
   elementId: string;
@@ -70,6 +71,8 @@ export interface IViewerEventEngine {
   setWallGizmoDragging(_v: boolean): void;
   getDoorHitAtPointer(_event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null;
   getOnDoorLayerDoubleClick(): ((_boxId: string, _doorLayerId: string) => void) | null;
+  getPointerActionForButton(_button: number): MouseButtonAction | null;
+  shouldBlockPointerDownForSelection(_button: number): boolean;
   /** Desativa/ativa OrbitControls. Deve ser false enquanto o utilizador arrasta um gizmo (TransformControls ou WallGizmo). */
   setCameraControlsEnabled(_enabled: boolean): void;
 }

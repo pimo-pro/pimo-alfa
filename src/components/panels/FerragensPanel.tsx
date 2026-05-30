@@ -43,7 +43,7 @@ const sectionTitleStyle: React.CSSProperties = {
 };
 
 export default function FerragensPanel() {
-  const { allFerragens, boxes } = useCutlistData();
+  const { allFerragens, allOrlaFerragens, allRemates, boxes } = useCutlistData();
 
   if (boxes.length === 0) {
     return (
@@ -79,6 +79,72 @@ export default function FerragensPanel() {
                 <td style={{ ...bodyCellStyle, textAlign: "center" }}>{ferragem.quantidade}</td>
                 <td style={bodyCellStyle}>{aplicacaoFerragens[ferragem.tipo] ?? "Geral"}</td>
                 <td style={costCellStyle}>{formatCurrency(ferragem.custo)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div style={{ ...sectionTitleStyle, marginTop: 20 }}>Orla (V1)</div>
+      {allOrlaFerragens.length === 0 ? (
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Sem orla configurada.</div>
+      ) : (
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={headerCellStyle}>Caixa</th>
+              <th style={headerCellStyle}>Orla</th>
+              <th style={headerCellStyle}>Peça</th>
+              <th style={{ ...headerCellStyle, textAlign: "center" }}>Metros</th>
+              <th style={headerCellStyle}>Tipo</th>
+              <th style={{ ...headerCellStyle, textAlign: "right" }}>Custo (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allOrlaFerragens.map((linha) => (
+              <tr key={linha.key}>
+                <td style={bodyCellStyle}>{linha.boxNome}</td>
+                <td style={bodyCellStyle}>{linha.presetNome}</td>
+                <td style={bodyCellStyle}>{linha.pieceNome ?? "—"}</td>
+                <td style={{ ...bodyCellStyle, textAlign: "center" }}>
+                  {linha.metros.toFixed(2)}
+                </td>
+                <td style={bodyCellStyle}>
+                  {linha.tipo === "orla_junto" ? "Orla Junto" : "Normal"}
+                </td>
+                <td style={costCellStyle}>{formatCurrency(linha.custo)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div style={{ ...sectionTitleStyle, marginTop: 20 }}>Remates</div>
+      {allRemates.length === 0 ? (
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Sem remates configurados.</div>
+      ) : (
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={headerCellStyle}>Caixa</th>
+              <th style={headerCellStyle}>Remate</th>
+              <th style={headerCellStyle}>Material</th>
+              <th style={headerCellStyle}>Dimensões</th>
+              <th style={{ ...headerCellStyle, textAlign: "center" }}>Qtd.</th>
+              <th style={{ ...headerCellStyle, textAlign: "right" }}>Custo (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allRemates.map((linha) => (
+              <tr key={linha.key}>
+                <td style={bodyCellStyle}>{linha.boxNome}</td>
+                <td style={bodyCellStyle}>{linha.nome}</td>
+                <td style={bodyCellStyle}>{linha.material}</td>
+                <td style={bodyCellStyle}>
+                  {linha.largura_mm} × {linha.altura_mm} × {linha.profundidade_mm} mm
+                </td>
+                <td style={{ ...bodyCellStyle, textAlign: "center" }}>{linha.quantidade}</td>
+                <td style={costCellStyle}>{formatCurrency(linha.custo)}</td>
               </tr>
             ))}
           </tbody>

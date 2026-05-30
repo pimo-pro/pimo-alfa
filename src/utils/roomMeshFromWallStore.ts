@@ -5,6 +5,7 @@
 
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 import { getRoomDimensionsCm, wallStore } from "../stores/wallStore";
+import { ROOM_20_DEFAULTS } from "../3d/viewer-engine/room/RoomEngine";
 
 export function applyRoomMeshFromWallStore(
   viewerApi: Pick<PimoViewerApi, "createRoomWithDimensions" | "removeRoom"> | null | undefined
@@ -23,8 +24,31 @@ export function applyRoomMeshFromWallStore(
   const widthM = Math.max(0.5, dims.widthCm / 100);
   const depthM = Math.max(0.5, dims.depthCm / 100);
   const heightM = Math.max(0.5, dims.heightCm / 100);
+  const thicknessCm = walls[0]?.thicknessCm ?? ROOM_20_DEFAULTS.wallThicknessMm / 10;
+  const thicknessM = Math.max(0.05, thicknessCm / 100);
   const numWalls: 3 | 4 = walls.length >= 4 ? 4 : 3;
-  viewerApi.createRoomWithDimensions(widthM, depthM, heightM, numWalls);
+  viewerApi.createRoomWithDimensions(widthM, depthM, heightM, numWalls, thicknessM);
+}
+
+export function getRoomMeshFingerprintFromWallStore(): string {
+  const { walls } = wallStore.getState();
+  if (!walls || walls.length < 3) return "";
+  return JSON.stringify(
+    walls.map((wall) => ({
+      id: wall.id,
+      lengthCm: wall.lengthCm,
+      heightCm: wall.heightCm,
+      thicknessCm: wall.thicknessCm,
+      openings: (wall.openings ?? []).map((o) => ({
+        id: o.id,
+        type: o.type,
+        widthMm: o.widthMm,
+        heightMm: o.heightMm,
+        floorOffsetMm: o.floorOffsetMm,
+        horizontalOffsetMm: o.horizontalOffsetMm,
+      })),
+    }))
+  );
 }
 
 /** Chamado após applyRoomMeshFromWallStore quando existe sala; preserva ids das openings para UI/sync. */

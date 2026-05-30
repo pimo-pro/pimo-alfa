@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { safeGetItem, safeSetItem } from "../../utils/storage";
 import { wallStore } from "../../stores/wallStore";
+import { applyProjectRoomToWallStore } from "../../3d/viewer-engine/room/RoomEngine";
 import type { ProjectState, ProjectSnapshot, RoomSnapshot } from "../projectTypes";
 import { defaultState } from "../projectState";
 
@@ -103,8 +104,11 @@ export function useProjectPersistence(
         ? api.applyResultados({ ...restored, lastAutosaveTime: parsed.savedAt ?? restored.lastAutosaveTime ?? null })
         : { ...restored, lastAutosaveTime: parsed.savedAt ?? restored.lastAutosaveTime ?? null };
       setProject(next);
+      if (next.room) {
+        applyProjectRoomToWallStore(next.room);
+      }
     }
-    if (roomSnapshot !== undefined) {
+    if (roomSnapshot !== undefined && !restored?.room) {
       if (roomSnapshot) {
         wallStore.getState().loadRoomConfig(roomSnapshot);
       } else {

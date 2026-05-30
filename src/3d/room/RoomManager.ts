@@ -5,7 +5,8 @@ import {
   createMainWalls,
   createExtraWall,
   positionMainWalls,
-  WALL_THICKNESS_M,
+  getWallThicknessM,
+  setWallThicknessM,
 } from "./WallFactory";
 
 export type RoomBounds = {
@@ -63,11 +64,13 @@ export class RoomManager {
     width = DEFAULT_ROOM_WIDTH,
     depth = DEFAULT_ROOM_DEPTH,
     height = DEFAULT_ROOM_HEIGHT,
-    numWalls: RoomNumWalls = 4
+    numWalls: RoomNumWalls = 4,
+    wallThicknessM?: number
   ): void {
     this.removeRoom();
-    this.room = new Room(width, depth, height);
-    this.wallsMain = createMainWalls(this.room, numWalls);
+    if (wallThicknessM != null) setWallThicknessM(wallThicknessM);
+    this.room = new Room(width, depth, height, -width / 2, -depth / 2);
+    this.wallsMain = createMainWalls(this.room, numWalls, wallThicknessM ?? getWallThicknessM());
     this.wallsExtra = [];
     this.nextExtraWallId = numWalls >= 4 ? 4 : 3;
     this.group.clear();
@@ -194,7 +197,7 @@ export class RoomManager {
   ): void {
     if (!this.room || !this.locked || wallIndex < 0 || wallIndex >= this.wallsMain.length) return;
 
-    const t = WALL_THICKNESS_M;
+    const t = getWallThicknessM();
     const { minX, maxX, minZ, maxZ } = this.room;
 
     switch (wallIndex) {

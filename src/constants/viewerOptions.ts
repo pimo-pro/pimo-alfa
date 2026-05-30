@@ -30,7 +30,7 @@ export const DEFAULT_VIEWER_OPTIONS = {
     enableDamping: true,
     dampingFactor: 0.08,
     minDistance: 0.01,
-    maxDistance: 40,
+    maxDistance: 120,
     minPolarAngle: Math.PI * 0.02,
     maxPolarAngle: Math.PI * 0.98,
   },
