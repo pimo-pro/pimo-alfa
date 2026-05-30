@@ -21,6 +21,8 @@ export interface IViewerToolsEngine {
   getRoomBoxWalls(): { id: number; mesh: THREE.Mesh }[];
   getSelectedRoomElementId(): string | null;
   getRoomElementById(_id: string): THREE.Object3D | null;
+  getSelectedRoomUtilityId(): string | null;
+  getRoomUtilityById(_id: string): THREE.Object3D | null;
   getTransformGizmoSizeForBox(_entry: { width: number; height: number; depth: number }): number;
   setTransformHelperVisible(_visible: boolean): void;
   applyTransformControlsMouseGuard(): void;

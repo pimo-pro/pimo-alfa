@@ -14,6 +14,7 @@ export class ViewerState {
   private hoveredBoxId: string | null = null;
   private selectedWallIndex: number | null = null;
   private selectedRoomElementId: string | null = null;
+  private selectedRoomUtilityId: string | null = null;
   private selectedRemateId: string | null = null;
   private selectedHematiId: string | null = null;
   private selectedRodapeId: string | null = null;
@@ -54,6 +55,13 @@ export class ViewerState {
   }
   setSelectedRoomElementId(v: string | null): void {
     this.selectedRoomElementId = v;
+  }
+
+  getSelectedRoomUtilityId(): string | null {
+    return this.selectedRoomUtilityId;
+  }
+  setSelectedRoomUtilityId(v: string | null): void {
+    this.selectedRoomUtilityId = v;
   }
 
   getSelectedRemate(): string | null {
@@ -157,6 +165,7 @@ export class ViewerState {
     this.selectedBoxId = null;
     this.selectedWallIndex = null;
     this.selectedRoomElementId = null;
+    this.selectedRoomUtilityId = null;
     this.selectedRemateId = null;
     this.selectedHematiId = null;
     this.selectedRodapeId = null;

@@ -101,6 +101,7 @@ import {
   type VisualMaterial,
 } from "../../core/materials/materialLibraryV2";
 import { snapHorizontalOffset } from "../../utils/openingConstraints";
+import type { ProjectRoomUtility, RoomFloorMode } from "./room/roomEngineTypes";
 import { devLogger } from "../../utils/devLogger";
 import { WallGizmo } from "../gizmos/WallGizmo";
 import { updateWallCulling } from "../visibility/WallRaycastCulling";
@@ -201,6 +202,8 @@ export class ViewerCore {
   private roomBoxWalls: Array<{ id: number; normal: THREE.Vector3; mesh: THREE.Mesh }> = [];
   private roomBoxFloor: THREE.Mesh | null = null;
   private roomBoxCeiling: THREE.Mesh | null = null;
+  private roomFloorRoot: THREE.Group | null = null;
+  private roomUtilitiesRoot: THREE.Group | null = null;
   private roomBounds: {
     minX: number;
     maxX: number;
@@ -254,7 +257,11 @@ export class ViewerCore {
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
   private onWallTransform: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null = null;
   private onRoomElementTransform: ((_elementId: string, _config: DoorWindowConfig) => void) | null = null;
+  private onRoomUtilitySelected: ((_data: { utilityId: string; wallId: number; config: ProjectRoomUtility } | null) => void) | null = null;
+  private onRoomUtilityTransform: ((_utilityId: string, _patch: Pick<ProjectRoomUtility, "positionAlongWall" | "heightMm">) => void) | null = null;
   private roomCeilingVisible = true;
+  private roomFloorMode: RoomFloorMode = "room";
+  private hiddenRoomWallIds = new Set<number>();
   private mouseInputPreset: MouseInputPreset = "cad";
   private backgroundMode: ViewerBackgroundMode = "studio";
   private materialQuality: ViewerMaterialQuality = "standard";
@@ -948,8 +955,8 @@ export class ViewerCore {
 
   setOnRemateTransform(
     callback: ((
-      remateId: string,
-      patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+      _remateId: string,
+      _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
     ) => void) | null
   ): void {
     this.onRemateTransform = callback;
@@ -1019,8 +1026,8 @@ export class ViewerCore {
 
   setOnHematiTransform(
     callback: ((
-      hematiId: string,
-      patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+      _hematiId: string,
+      _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
     ) => void) | null
   ): void {
     this.onHematiTransform = callback;
@@ -1028,8 +1035,8 @@ export class ViewerCore {
 
   setOnRodapeTransform(
     callback: ((
-      rodapeId: string,
-      patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+      _rodapeId: string,
+      _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
     ) => void) | null
   ): void {
     this.onRodapeTransform = callback;
@@ -2335,6 +2342,25 @@ export class ViewerCore {
     }
   }
 
+  setRoomFloorMode(mode: RoomFloorMode): void {
+    this.roomFloorMode = mode === "full" || mode === "hybrid" || mode === "room" ? mode : "room";
+    this.rebuildRoomFloorAndCeiling();
+  }
+
+  setRoomHiddenWalls(wallIds: string[]): void {
+    const byStringId = new Map(this.roomBoxWalls.map((entry) => [String(entry.mesh.userData.wallProjectId ?? entry.mesh.userData.wallId ?? entry.id), entry.id]));
+    this.hiddenRoomWallIds = new Set(
+      (Array.isArray(wallIds) ? wallIds : [])
+        .map((id) => byStringId.get(id))
+        .filter((id): id is number => typeof id === "number")
+    );
+    this.applyRoomWallVisibility();
+  }
+
+  setRoomUtilities(utilities: ProjectRoomUtility[]): void {
+    this.rebuildRoomUtilities(Array.isArray(utilities) ? utilities : []);
+  }
+
   setWallEditMode(enabled: boolean): void {
     this.viewerState.setWallEditMode(Boolean(enabled));
     if (this.wallGizmo) {
@@ -3060,10 +3086,20 @@ export class ViewerCore {
         this.roomBoxCeiling.material.dispose();
       }
     }
+    if (this.roomFloorRoot) {
+      this.disposeObject(this.roomFloorRoot);
+      this.roomFloorRoot.removeFromParent();
+    }
+    if (this.roomUtilitiesRoot) {
+      this.disposeObject(this.roomUtilitiesRoot);
+      this.roomUtilitiesRoot.removeFromParent();
+    }
     this.roomBoxGroup = null;
     this.roomBoxWalls = [];
     this.roomBoxFloor = null;
     this.roomBoxCeiling = null;
+    this.roomFloorRoot = null;
+    this.roomUtilitiesRoot = null;
   }
 
   /** Chamado pelo RoomManager quando a sala é criada/atualizada. Adiciona o grupo à cena e regista paredes/bounds. */
@@ -3087,6 +3123,8 @@ export class ViewerCore {
       Math.max(bounds.maxZ - bounds.minZ, 0.01)
     );
     this.sceneManager.setGroundPosition(bounds.centerX, bounds.centerZ);
+    this.rebuildRoomFloorAndCeiling();
+    this.applyRoomWallVisibility();
     this.setRoomCeilingVisible(this.roomCeilingVisible);
   }
 
@@ -3100,6 +3138,8 @@ export class ViewerCore {
     this.roomBoxGroup = null;
     this.roomBoxFloor = null;
     this.roomBoxCeiling = null;
+    this.roomFloorRoot = null;
+    this.roomUtilitiesRoot = null;
     this.roomBounds = null;
     this.boundsCache.invalidateRoom();
     this.viewerState.setSelectedWallIndex(null);
@@ -3205,6 +3245,136 @@ export class ViewerCore {
     this.setRoomCeilingVisible(this.roomCeilingVisible);
     this.applyBackgroundMode();
     this.reapplyDisplayMaterials();
+  }
+
+  private getRoomFloorShape(expandM = 0): THREE.Shape | null {
+    if (!this.roomBounds) return null;
+    const { minX, maxX, minZ, maxZ } = this.roomBounds;
+    const shape = new THREE.Shape();
+    shape.moveTo(minX - expandM, minZ - expandM);
+    shape.lineTo(maxX + expandM, minZ - expandM);
+    shape.lineTo(maxX + expandM, maxZ + expandM);
+    shape.lineTo(minX - expandM, maxZ + expandM);
+    shape.lineTo(minX - expandM, minZ - expandM);
+    return shape;
+  }
+
+  private clearRoomFloorRoot(): void {
+    if (!this.roomFloorRoot) return;
+    this.disposeObject(this.roomFloorRoot);
+    this.roomFloorRoot.removeFromParent();
+    this.roomFloorRoot = null;
+    this.roomBoxFloor = null;
+    this.roomBoxCeiling = null;
+  }
+
+  private rebuildRoomFloorAndCeiling(): void {
+    if (!this.roomBoxGroup || !this.roomBounds) return;
+    this.clearRoomFloorRoot();
+    const sceneConfig = getSceneMaterialConfig();
+    const group = new THREE.Group();
+    group.name = "room-floor-root";
+    const expandM = this.roomFloorMode === "hybrid" ? 0.35 : this.roomFloorMode === "full" ? 4 : 0;
+    const shape = this.getRoomFloorShape(expandM);
+    if (!shape) return;
+    const floorGeom = new THREE.ShapeGeometry(shape);
+    floorGeom.rotateX(-Math.PI / 2);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: sceneConfig.roomBox.color,
+      roughness: sceneConfig.roomBox.roughness,
+      metalness: sceneConfig.roomBox.metalness,
+      transparent: sceneConfig.roomBox.transparent,
+      opacity: sceneConfig.roomBox.opacity,
+      side: THREE.DoubleSide,
+    });
+    const floor = new THREE.Mesh(floorGeom, floorMat);
+    floor.position.y = this.roomBounds.minY + 0.002;
+    floor.name = "room-floor-root";
+    floor.userData.isRoomFloor = true;
+    group.add(floor);
+
+    const ceilingGeom = new THREE.ShapeGeometry(shape);
+    ceilingGeom.rotateX(Math.PI / 2);
+    const ceilingMat = floorMat.clone();
+    ceilingMat.opacity = Math.min(0.45, ceilingMat.opacity);
+    ceilingMat.transparent = true;
+    const ceiling = new THREE.Mesh(ceilingGeom, ceilingMat);
+    ceiling.position.y = this.roomBounds.maxY;
+    ceiling.name = "room-ceiling";
+    ceiling.userData.isRoomCeiling = true;
+    ceiling.visible = this.roomCeilingVisible;
+    group.add(ceiling);
+
+    this.roomBoxGroup.add(group);
+    this.roomFloorRoot = group;
+    this.roomBoxFloor = floor;
+    this.roomBoxCeiling = ceiling;
+    this.applyBackgroundMode();
+  }
+
+  private clearRoomUtilitiesRoot(): void {
+    this.roomBoxWalls.forEach((entry) => {
+      const toRemove = entry.mesh.children.filter((child) => child.userData?.roomUtilityId);
+      toRemove.forEach((child) => {
+        entry.mesh.remove(child);
+        this.disposeObject(child);
+      });
+    });
+    if (!this.roomUtilitiesRoot) return;
+    this.roomUtilitiesRoot.removeFromParent();
+    this.roomUtilitiesRoot = null;
+  }
+
+  private utilityColor(type: ProjectRoomUtility["type"]): number {
+    if (type === "WaterPoint") return 0x38bdf8;
+    if (type === "DrainPoint") return 0x64748b;
+    return 0xfacc15;
+  }
+
+  private rebuildRoomUtilities(utilities: ProjectRoomUtility[]): void {
+    this.clearRoomUtilitiesRoot();
+    if (!this.roomBoxGroup || !utilities.length) return;
+    const root = new THREE.Group();
+    root.name = "room-utilities-root";
+    const wallsByProjectId = new Map<string, THREE.Mesh>();
+    this.roomBoxWalls.forEach((entry) => {
+      const key = String(entry.mesh.userData.wallProjectId ?? entry.mesh.userData.wallId ?? entry.id);
+      wallsByProjectId.set(key, entry.mesh);
+    });
+    utilities.forEach((utility) => {
+      const wall = wallsByProjectId.get(utility.wallId);
+      if (!wall) return;
+      const wallLenMm = (wall.userData.wallLengthMm as number | undefined) ?? 1000;
+      const wallHeightMm = (wall.userData.wallHeightMm as number | undefined) ?? 2600;
+      const wallLenM = wallLenMm / 1000;
+      const wallHeightM = wallHeightMm / 1000;
+      const t = (wall.userData.wallThicknessM as number | undefined) ?? 0.12;
+      const marker = new THREE.Group();
+      marker.name = `room-utility-${utility.type}`;
+      marker.userData.roomUtilityId = utility.id;
+      marker.userData.roomUtility = { ...utility };
+      const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.16, 0.018),
+        new THREE.MeshStandardMaterial({ color: this.utilityColor(utility.type), roughness: 0.55, metalness: 0.05 })
+      );
+      plate.userData.roomUtilityId = utility.id;
+      marker.add(plate);
+      const x = -wallLenM / 2 + Math.max(0, Math.min(wallLenMm, utility.positionAlongWall)) / 1000;
+      const y = -wallHeightM / 2 + Math.max(0, Math.min(wallHeightMm, utility.heightMm)) / 1000;
+      marker.position.set(x, y, t / 2 + 0.04);
+      wall.add(marker);
+    });
+    this.roomBoxGroup.add(root);
+    this.roomUtilitiesRoot = root;
+    this.applyRoomWallVisibility();
+  }
+
+  private getRoomUtilityById(utilityId: string): THREE.Object3D | null {
+    for (const wall of this.roomBoxWalls) {
+      const found = wall.mesh.children.find((child) => child.userData?.roomUtilityId === utilityId);
+      if (found) return found;
+    }
+    return null;
   }
 
   setRoomBounds(bounds: {
@@ -3363,6 +3533,18 @@ export class ViewerCore {
     this.onRoomElementTransform = callback;
   }
 
+  setOnRoomUtilitySelected(
+    callback: ((_data: { utilityId: string; wallId: number; config: ProjectRoomUtility } | null) => void) | null
+  ): void {
+    this.onRoomUtilitySelected = callback;
+  }
+
+  setOnRoomUtilityTransform(
+    callback: ((_utilityId: string, _patch: Pick<ProjectRoomUtility, "positionAlongWall" | "heightMm">) => void) | null
+  ): void {
+    this.onRoomUtilityTransform = callback;
+  }
+
   updateRoomElementConfig(elementId: string, config: DoorWindowConfig): boolean {
     return this.roomBuilder.updateElementConfig(elementId, config);
   }
@@ -3401,6 +3583,14 @@ export class ViewerCore {
 
   selectRoomElementById(elementId: string | null): void {
     this.viewerState.setSelectedRoomElementId(elementId);
+    if (elementId) this.viewerState.setSelectedRoomUtilityId(null);
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
+  }
+
+  selectRoomUtilityById(utilityId: string | null): void {
+    this.viewerState.setSelectedRoomUtilityId(utilityId);
+    if (utilityId) this.viewerState.setSelectedRoomElementId(null);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
   }
@@ -4076,6 +4266,7 @@ export class ViewerCore {
       setSelectedBox: (id) => this.setSelectedBox(id),
       setHoveredBox: (id) => this.setHoveredBox(id),
       getOnRoomElementSelected: () => this.onRoomElementSelected,
+      getOnRoomUtilitySelected: () => this.onRoomUtilitySelected,
       getOnWallSelected: () => this.onWallSelected,
       getOnBoxSelected: () => this.onBoxSelected,
       getPlacementMode: () => this.viewerState.getPlacementMode(),
@@ -4096,6 +4287,9 @@ export class ViewerCore {
       setSelectedWallIndex: (v) => { this.viewerState.setSelectedWallIndex(v); },
       getSelectedRoomElementId: () => this.viewerState.getSelectedRoomElementId(),
       setSelectedRoomElementId: (v) => { this.viewerState.setSelectedRoomElementId(v); },
+      getSelectedRoomUtilityId: () => this.viewerState.getSelectedRoomUtilityId(),
+      setSelectedRoomUtilityId: (v) => { this.viewerState.setSelectedRoomUtilityId(v); },
+      getRoomUtilityAtPointer: (e) => this.getRoomUtilityAtPointer(e),
       refreshTransformControlsAttachment: () => this.refreshTransformControlsAttachment(),
       refreshOutlineTarget: () => this.refreshOutlineTarget(),
       getRoomBoxWalls: () => this.roomBoxWalls,
@@ -4143,6 +4337,8 @@ export class ViewerCore {
       getRoomBoxWalls: () => this.roomBoxWalls,
       getSelectedRoomElementId: () => this.viewerState.getSelectedRoomElementId(),
       getRoomElementById: (id) => this.roomBuilder.getElementById(id),
+      getSelectedRoomUtilityId: () => this.viewerState.getSelectedRoomUtilityId(),
+      getRoomUtilityById: (id) => this.getRoomUtilityById(id),
       getTransformGizmoSizeForBox: (entry) => this.getTransformGizmoSizeForBox(entry),
       setTransformHelperVisible: (visible) => {
         if (this.transformControlsHelper) this.transformControlsHelper.visible = visible;
@@ -4338,6 +4534,7 @@ export class ViewerCore {
     this.notifyRodapeTransform();
     this.notifyWallTransform();
     this.notifyRoomElementTransform();
+    this.notifyRoomUtilityTransform();
   }
 
   private notifyRemateTransform(): void {
@@ -4434,6 +4631,10 @@ export class ViewerCore {
 
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
+    if (this.viewerState.getSelectedRoomElementId() || this.viewerState.getSelectedRoomUtilityId()) {
+      this.clampSelectedWallChildTransform();
+      return;
+    }
     if (
       this.viewerState.getSelectedRemate() ||
       this.viewerState.getSelectedHemati() ||
@@ -4480,6 +4681,36 @@ export class ViewerCore {
         this.lastSnapDebugData = data;
       },
     });
+  }
+
+  private clampSelectedWallChildTransform(): void {
+    const selectedId = this.viewerState.getSelectedRoomElementId() ?? this.viewerState.getSelectedRoomUtilityId();
+    if (!selectedId) return;
+    const object =
+      this.viewerState.getSelectedRoomElementId()
+        ? this.roomBuilder.getElementById(selectedId)
+        : this.getRoomUtilityById(selectedId);
+    if (!object || !(object.parent instanceof THREE.Mesh)) return;
+    const wall = object.parent as THREE.Mesh;
+    const wallLenMm = (wall.userData.wallLengthMm as number | undefined) ?? 1000;
+    const wallHeightMm = (wall.userData.wallHeightMm as number | undefined) ?? 2600;
+    const wallLenM = wallLenMm / 1000;
+    const wallHeightM = wallHeightMm / 1000;
+    object.position.z = ((wall.userData.wallThicknessM as number | undefined) ?? 0.12) / 2 + 0.04;
+    const widthMm =
+      this.viewerState.getSelectedRoomElementId()
+        ? ((object.userData.config as DoorWindowConfig | undefined)?.widthMm ?? 0)
+        : 0;
+    const heightMm =
+      this.viewerState.getSelectedRoomElementId()
+        ? ((object.userData.config as DoorWindowConfig | undefined)?.heightMm ?? 0)
+        : 0;
+    const minX = -wallLenM / 2 + widthMm / 2000;
+    const maxX = wallLenM / 2 - widthMm / 2000;
+    const minY = -wallHeightM / 2 + heightMm / 2000;
+    const maxY = wallHeightM / 2 - heightMm / 2000;
+    object.position.x = THREE.MathUtils.clamp(object.position.x, minX, maxX);
+    object.position.y = THREE.MathUtils.clamp(object.position.y, minY, maxY);
   }
 
   private computeDistanceToNearestBox(): RulerMeasurementHit | null {
@@ -4568,6 +4799,17 @@ export class ViewerCore {
       .filter((m) => m.userData?.isMainWall === true);
 
     updateWallCulling(cam, this.roomBounds, wallsMain);
+    this.applyRoomWallVisibility();
+  }
+
+  private applyRoomWallVisibility(): void {
+    this.roomBoxWalls.forEach((entry) => {
+      if (!this.hiddenRoomWallIds.has(entry.id)) return;
+      entry.mesh.visible = false;
+      entry.mesh.children.forEach((child) => {
+        if (child.userData?.elementId || child.userData?.roomUtilityId) child.visible = false;
+      });
+    });
 
     // Override manual continua com prioridade.
     if (this.manualHiddenWallId !== null) {
@@ -4829,6 +5071,22 @@ export class ViewerCore {
     this.onRoomElementTransform(this.viewerState.getSelectedRoomElementId(), config);
   }
 
+  private notifyRoomUtilityTransform() {
+    const utilityId = this.viewerState.getSelectedRoomUtilityId();
+    if (!utilityId || !this.onRoomUtilityTransform) return;
+    const utility = this.getRoomUtilityById(utilityId);
+    if (!utility || !(utility.parent instanceof THREE.Mesh)) return;
+    const wall = utility.parent as THREE.Mesh;
+    const wallLenMm = (wall.userData.wallLengthMm as number | undefined) ?? 1000;
+    const wallHeightMm = (wall.userData.wallHeightMm as number | undefined) ?? 2600;
+    const wallLenM = wallLenMm / 1000;
+    let positionAlongWall = (utility.position.x + wallLenM / 2) * 1000;
+    let heightMm = (utility.position.y + wallHeightMm / 2000) * 1000;
+    positionAlongWall = Math.max(0, Math.min(wallLenMm, positionAlongWall));
+    heightMm = Math.max(0, Math.min(wallHeightMm, heightMm));
+    this.onRoomUtilityTransform(utilityId, { positionAlongWall, heightMm });
+  }
+
   private loadMaterial(materialName: string): LoadedWoodMaterial | null {
     const result = materialEngineLoadMaterial(materialName, getMaterialMode(), {
       useLacqueredClearcoat: this.materialQuality === "lacquered",
@@ -4896,6 +5154,33 @@ export class ViewerCore {
     config: DoorWindowConfig;
   } | null {
     return this.raycastSystem.getRoomElementAtPointer(event);
+  }
+
+  private getRoomUtilityAtPointer(event: { clientX: number; clientY: number }): {
+    utilityId: string;
+    wallId: number;
+    config: ProjectRoomUtility;
+  } | null {
+    const rect = this.rendererManager.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
+    const roots: THREE.Object3D[] = [];
+    this.roomBoxWalls.forEach((entry) => {
+      entry.mesh.children.forEach((child) => {
+        if (child.userData?.roomUtilityId) roots.push(child);
+      });
+    });
+    const hit = this.raycaster.intersectObjects(roots, true)[0];
+    if (!hit) return null;
+    let node: THREE.Object3D | null = hit.object;
+    while (node && !node.userData?.roomUtilityId) node = node.parent;
+    if (!node) return null;
+    const wall = node.parent instanceof THREE.Mesh ? node.parent : null;
+    const wallEntry = wall ? this.roomBoxWalls.find((entry) => entry.mesh === wall) : null;
+    const config = node.userData.roomUtility as ProjectRoomUtility | undefined;
+    if (!wallEntry || !config) return null;
+    return { utilityId: config.id, wallId: wallEntry.id, config };
   }
 
   private updateCanvasSize = () => {

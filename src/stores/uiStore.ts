@@ -5,7 +5,8 @@ export type SelectedObject =
   | { type: "none" }
   | { type: "box"; id: string }
   | { type: "wall"; id: string }
-  | { type: "roomElement"; id: string };
+  | { type: "roomElement"; id: string }
+  | { type: "roomUtility"; id: string };
 
 export interface UiStoreState {
   selectedTool: string;

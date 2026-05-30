@@ -182,6 +182,10 @@ export default function Workspace({
     ) {
       if (room) {
         viewerApi.setRoomLocked?.(room.locked);
+        viewerApi.setRoomFloorMode?.(room.floorMode);
+        viewerApi.setRoomCeilingVisible?.(room.ceilingVisible && projectRef.current.viewerSettings.showCeiling);
+        viewerApi.setRoomHiddenWalls?.(room.hiddenWalls ?? []);
+        viewerApi.setRoomUtilities?.(room.utilities ?? []);
         if (room.visible !== false) viewerApi.showRoom?.();
         else viewerApi.hideRoom?.();
       }
@@ -192,10 +196,14 @@ export default function Workspace({
     applyRoomOpeningsFromWallStore(viewerApi);
     if (room) {
       viewerApi.setRoomLocked?.(room.locked);
+      viewerApi.setRoomFloorMode?.(room.floorMode);
+      viewerApi.setRoomCeilingVisible?.(room.ceilingVisible && projectRef.current.viewerSettings.showCeiling);
+      viewerApi.setRoomHiddenWalls?.(room.hiddenWalls ?? []);
+      viewerApi.setRoomUtilities?.(room.utilities ?? []);
       if (room.visible !== false) viewerApi.showRoom?.();
       else viewerApi.hideRoom?.();
     }
-  }, [viewerApi, roomMeshSyncToken]);
+  }, [viewerApi, roomMeshSyncToken, project.room]);
 
   // MultiBoxManager: sincroniza workspaceBoxes ↔ viewer; addBox/removeBox delegam a actions
   useMultiBoxManager({
@@ -356,6 +364,8 @@ export default function Workspace({
   useEffect(() => {
     if (selectedObject?.type === "roomElement" && selectedObject?.id) {
       viewerApi.selectRoomElementById?.(selectedObject.id);
+    } else if (selectedObject?.type === "roomUtility" && selectedObject?.id) {
+      viewerApi.selectRoomUtilityById?.(selectedObject.id);
     }
   }, [viewerApi, selectedObject]);
 
@@ -422,6 +432,24 @@ export default function Workspace({
   }, [actions, viewerApi, walls, clearUiSelection, setSelectedObject, setSelectedTool]);
 
   useEffect(() => {
+    viewerApi.setOnRoomUtilitySelected?.((roomUtility) => {
+      if (roomUtility == null) {
+        const currentSelectedObject = uiStore.getState().selectedObject;
+        if (currentSelectedObject.type === "roomUtility") clearUiSelection();
+        return;
+      }
+      actions.clearSelection();
+      const wall = walls[roomUtility.wallId];
+      if (wall) {
+        wallStore.getState().setOpen(true);
+        wallStore.getState().selectWall(wall.id);
+      }
+      setSelectedTool("layout");
+      setSelectedObject({ type: "roomUtility", id: roomUtility.utilityId });
+    });
+  }, [actions, viewerApi, walls, clearUiSelection, setSelectedObject, setSelectedTool]);
+
+  useEffect(() => {
     viewerApi.setOnRoomElementTransform?.((elementId, config) => {
       const wall = walls.find((w) => (w.openings ?? []).some((o) => o.id === elementId));
       if (!wall) return;
@@ -476,6 +504,24 @@ export default function Workspace({
       viewerApi.updateRoomElementConfig?.(elementId, finalConfig);
     });
   }, [viewerApi, walls]);
+
+  useEffect(() => {
+    viewerApi.setOnRoomUtilityTransform?.((utilityId, patch) => {
+      const room = projectRef.current.room;
+      if (!room) return;
+      actionsRef.current.updateProjectRoom({
+        utilities: (room.utilities ?? []).map((utility) =>
+          utility.id === utilityId
+            ? {
+                ...utility,
+                positionAlongWall: patch.positionAlongWall,
+                heightMm: patch.heightMm,
+              }
+            : utility
+        ),
+      });
+    });
+  }, [viewerApi]);
 
   useEffect(() => {
     if (project.selectedWorkspaceBoxId) {

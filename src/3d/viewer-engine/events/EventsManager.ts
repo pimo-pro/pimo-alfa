@@ -168,10 +168,27 @@ export class EventsManager {
       e.setSelectedBox(null);
       e.setSelectedWallIndex(null);
       e.setSelectedRoomElementId(roomHit.elementId);
+      e.setSelectedRoomUtilityId(null);
       e.refreshTransformControlsAttachment();
       e.refreshOutlineTarget();
       e.getOnBoxSelected()?.(null);
       e.getOnRoomElementSelected()?.(roomHit);
+      e.getOnRoomUtilitySelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      return;
+    }
+    const utilityHit = e.getRoomUtilityAtPointer(event);
+    if (utilityHit) {
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
+      e.setSelectedWallIndex(null);
+      e.setSelectedRoomElementId(null);
+      e.setSelectedRoomUtilityId(utilityHit.utilityId);
+      e.refreshTransformControlsAttachment();
+      e.refreshOutlineTarget();
+      e.getOnBoxSelected()?.(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnRoomUtilitySelected()?.(utilityHit);
       e.getOnWallSelected()?.(null);
       return;
     }
@@ -181,6 +198,7 @@ export class EventsManager {
       e.setSelectedBox(null);
       e.setSelectedWallIndex(wallId);
       e.setSelectedRoomElementId(null);
+      e.setSelectedRoomUtilityId(null);
       const wall = e.getRoomBoxWalls().find((w) => w.id === wallId)?.mesh;
       const wallGizmo = e.getWallGizmo();
       if (wallGizmo && wall && e.getWallEditMode()) wallGizmo.attach(wall);
@@ -188,6 +206,7 @@ export class EventsManager {
       e.refreshOutlineTarget();
       e.getOnBoxSelected()?.(null);
       e.getOnRoomElementSelected()?.(null);
+      e.getOnRoomUtilitySelected()?.(null);
       e.getOnWallSelected()?.(wallId);
       return;
     }
@@ -195,12 +214,14 @@ export class EventsManager {
     e.setSelectedBox(null);
     e.setSelectedWallIndex(null);
     e.setSelectedRoomElementId(null);
+    e.setSelectedRoomUtilityId(null);
     const wallGizmo = e.getWallGizmo();
     if (wallGizmo) wallGizmo.detach();
     e.refreshTransformControlsAttachment();
     e.refreshOutlineTarget();
     e.getOnBoxSelected()?.(null);
     e.getOnRoomElementSelected()?.(null);
+    e.getOnRoomUtilitySelected()?.(null);
     e.getOnWallSelected()?.(null);
   }
 

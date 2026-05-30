@@ -5,6 +5,7 @@
 
 import type * as THREE from "three";
 import type { DoorWindowConfig } from "../../room/types";
+import type { ProjectRoomUtility } from "../room/roomEngineTypes";
 import type { MouseButtonAction } from "../controls/MouseInputMapper";
 import type { InternalSelectionState } from "../selection/internalSelectionTypes";
 
@@ -37,6 +38,7 @@ export interface IViewerEventEngine {
   setSelectedBox(_id: string | null): void;
   setHoveredBox(_id: string | null): void;
   getOnRoomElementSelected(): ((_data: RoomElementHit | null) => void) | null;
+  getOnRoomUtilitySelected(): ((_data: { utilityId: string; wallId: number; config: ProjectRoomUtility } | null) => void) | null;
   getOnWallSelected(): ((_wallId: number | null) => void) | null;
   getOnBoxSelected(): ((_id: string | null) => void) | null;
   getPlacementMode(): "door" | "window" | null;
@@ -61,6 +63,9 @@ export interface IViewerEventEngine {
   setSelectedWallIndex(_v: number | null): void;
   getSelectedRoomElementId(): string | null;
   setSelectedRoomElementId(_v: string | null): void;
+  getSelectedRoomUtilityId(): string | null;
+  setSelectedRoomUtilityId(_v: string | null): void;
+  getRoomUtilityAtPointer(_event: { clientX: number; clientY: number }): { utilityId: string; wallId: number; config: ProjectRoomUtility } | null;
   refreshTransformControlsAttachment(): void;
   refreshOutlineTarget(): void;
   getRoomBoxWalls(): { id: number; mesh: THREE.Mesh }[];

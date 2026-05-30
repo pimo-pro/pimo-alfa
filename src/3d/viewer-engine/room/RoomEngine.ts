@@ -9,8 +9,11 @@ import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../.
 import {
   type ProjectRoomConfig,
   type ProjectRoomOpening,
+  type ProjectRoomUtility,
+  type ProjectRoomUtilityType,
   type ProjectRoomWall,
   type ProjectRoomWallPosition,
+  type RoomFloorMode,
   type RoomOpeningKind,
   ROOM_20_DEFAULTS,
   WALL_INDEX_TO_LABEL,
@@ -31,6 +34,11 @@ export const PROJECT_ROOM_WALL_THICKNESS_MM = ROOM_20_DEFAULTS.wallThicknessMm;
 
 const DEFAULT_DOOR = { widthMm: 900, heightMm: 2100, thicknessMm: 40, floorOffsetMm: 0 };
 const DEFAULT_WINDOW = { widthMm: 1200, heightMm: 1200, thicknessMm: 40, floorOffsetMm: 900 };
+const DEFAULT_UTILITY_HEIGHT_MM: Record<ProjectRoomUtilityType, number> = {
+  ElectricalOutlet: 300,
+  WaterPoint: 550,
+  DrainPoint: 250,
+};
 
 function mkWallId(label: string): string {
   return `room-wall-${label}`;
@@ -64,14 +72,30 @@ function normalizeOpeningKind(value: unknown): RoomOpeningKind {
   return value === "correr" ? "correr" : "normal";
 }
 
+function normalizeFloorMode(value: unknown): RoomFloorMode {
+  return value === "full" || value === "hybrid" || value === "room"
+    ? value
+    : ROOM_20_DEFAULTS.floorMode;
+}
+
+function wallLengthById(walls: ProjectRoomWall[], wallId: string): number {
+  const wall = walls.find((w) => w.id === wallId);
+  return Math.max(100, wall?.lengthMm ?? wall?.widthMm ?? 100);
+}
+
 function normalizeOpening(raw: Partial<ProjectRoomOpening>, walls: ProjectRoomWall[]): ProjectRoomOpening {
   const type = raw.type === "window" ? "window" : "door";
   const defaults = type === "window" ? DEFAULT_WINDOW : DEFAULT_DOOR;
   const wallId = raw.wallId && walls.some((w) => w.id === raw.wallId)
     ? raw.wallId
     : walls[3]?.id ?? walls[0]?.id ?? mkWallId("sul");
-  const xPosMm = Math.max(0, raw.xPosMm ?? raw.horizontalOffsetMm ?? 0);
+  const widthMm = Math.max(100, raw.widthMm ?? defaults.widthMm);
+  const heightMm = Math.max(100, raw.heightMm ?? defaults.heightMm);
+  const wallLengthMm = wallLengthById(walls, wallId);
+  const wallHeightMm = Math.max(100, walls.find((w) => w.id === wallId)?.heightMm ?? 100);
+  const xPosMm = Math.max(0, Math.min(wallLengthMm - widthMm, raw.xPosMm ?? raw.horizontalOffsetMm ?? 0));
   const floorOffsetMm = Math.max(0, raw.floorOffsetMm ?? raw.verticalOffsetMm ?? defaults.floorOffsetMm);
+  const clampedFloorOffsetMm = Math.max(0, Math.min(wallHeightMm - heightMm, floorOffsetMm));
   return {
     id: raw.id ?? mkOpeningId(type),
     type,
@@ -79,11 +103,31 @@ function normalizeOpening(raw: Partial<ProjectRoomOpening>, walls: ProjectRoomWa
     wallId,
     xPosMm,
     horizontalOffsetMm: xPosMm,
-    widthMm: Math.max(100, raw.widthMm ?? defaults.widthMm),
-    heightMm: Math.max(100, raw.heightMm ?? defaults.heightMm),
+    widthMm,
+    heightMm,
     thicknessMm: Math.max(10, raw.thicknessMm ?? defaults.thicknessMm),
-    floorOffsetMm,
-    verticalOffsetMm: floorOffsetMm,
+    floorOffsetMm: clampedFloorOffsetMm,
+    verticalOffsetMm: clampedFloorOffsetMm,
+  };
+}
+
+function normalizeUtility(raw: Partial<ProjectRoomUtility>, walls: ProjectRoomWall[]): ProjectRoomUtility | null {
+  const type: ProjectRoomUtilityType =
+    raw.type === "WaterPoint" || raw.type === "DrainPoint" || raw.type === "ElectricalOutlet"
+      ? raw.type
+      : "ElectricalOutlet";
+  const wallId = raw.wallId && walls.some((w) => w.id === raw.wallId)
+    ? raw.wallId
+    : walls[0]?.id;
+  if (!wallId) return null;
+  const wallLengthMm = wallLengthById(walls, wallId);
+  const wallHeightMm = Math.max(100, walls.find((w) => w.id === wallId)?.heightMm ?? ROOM_20_DEFAULTS.heightMm);
+  return {
+    id: raw.id?.trim() || `room-utility-${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type,
+    wallId,
+    positionAlongWall: Math.max(0, Math.min(wallLengthMm, raw.positionAlongWall ?? wallLengthMm / 2)),
+    heightMm: Math.max(0, Math.min(wallHeightMm, raw.heightMm ?? DEFAULT_UTILITY_HEIGHT_MM[type])),
   };
 }
 
@@ -109,6 +153,9 @@ export function createDefaultProjectRoom(): ProjectRoomConfig {
     wallThicknessMm,
     locked: false,
     visible: true,
+    floorMode: ROOM_20_DEFAULTS.floorMode,
+    ceilingVisible: ROOM_20_DEFAULTS.ceilingVisible,
+    hiddenWalls: [],
     walls,
     openings: [
       {
@@ -138,6 +185,7 @@ export function createDefaultProjectRoom(): ProjectRoomConfig {
         verticalOffsetMm: DEFAULT_WINDOW.floorOffsetMm,
       },
     ],
+    utilities: [],
   };
 }
 
@@ -182,6 +230,13 @@ export function normalizeProjectRoom(raw: Partial<ProjectRoomConfig> | null | un
   const openings: ProjectRoomOpening[] = Array.isArray(raw.openings)
     ? raw.openings.map((o) => normalizeOpening(o, walls))
     : base.openings;
+  const wallIds = new Set(walls.map((w) => w.id));
+  const hiddenWalls = Array.isArray(raw.hiddenWalls)
+    ? raw.hiddenWalls.filter((id): id is string => typeof id === "string" && wallIds.has(id))
+    : [];
+  const utilities = Array.isArray(raw.utilities)
+    ? raw.utilities.map((u) => normalizeUtility(u, walls)).filter((u): u is ProjectRoomUtility => Boolean(u))
+    : [];
   return {
     widthMm,
     depthMm,
@@ -189,8 +244,12 @@ export function normalizeProjectRoom(raw: Partial<ProjectRoomConfig> | null | un
     wallThicknessMm,
     locked: raw.locked === true,
     visible: raw.visible !== false,
+    floorMode: normalizeFloorMode(raw.floorMode),
+    ceilingVisible: raw.ceilingVisible !== false,
+    hiddenWalls,
     walls,
     openings,
+    utilities,
   };
 }
 
@@ -230,7 +289,7 @@ export function projectRoomToWallStoreWalls(room: ProjectRoomConfig): Wall[] {
 
 export function wallStoreToProjectRoom(
   walls: Wall[],
-  extras?: Partial<Pick<ProjectRoomConfig, "locked" | "visible">>
+  extras?: Partial<Pick<ProjectRoomConfig, "locked" | "visible" | "floorMode" | "ceilingVisible" | "hiddenWalls" | "utilities">>
 ): ProjectRoomConfig | null {
   if (!walls || walls.length < 4) return null;
   const sorted = [...walls];
@@ -280,8 +339,16 @@ export function wallStoreToProjectRoom(
     wallThicknessMm,
     locked: extras?.locked ?? false,
     visible: extras?.visible !== false,
+    floorMode: normalizeFloorMode(extras?.floorMode),
+    ceilingVisible: extras?.ceilingVisible !== false,
+    hiddenWalls: Array.isArray(extras?.hiddenWalls)
+      ? extras.hiddenWalls.filter((id) => projectWalls.some((wall) => wall.id === id))
+      : [],
     walls: projectWalls,
     openings,
+    utilities: Array.isArray(extras?.utilities)
+      ? extras.utilities.map((u) => normalizeUtility(u, projectWalls)).filter((u): u is ProjectRoomUtility => Boolean(u))
+      : [],
   };
 }
 
@@ -297,7 +364,7 @@ export function applyProjectRoomDimensions(room: ProjectRoomConfig): ProjectRoom
       w.rotationDeg = wallRotationForLabel(w.label);
     }
   });
-  return next;
+  return normalizeProjectRoom(next) ?? next;
 }
 
 export function applyProjectRoomToWallStore(room: ProjectRoomConfig): void {
@@ -320,8 +387,12 @@ export function syncProjectRoomToViewer(
     | "addWindowToRoom"
     | "getRoomExists"
     | "setRoomLocked"
+    | "setRoomFloorMode"
+    | "setRoomHiddenWalls"
+    | "setRoomUtilities"
     | "hideRoom"
     | "showRoom"
+    | "setRoomCeilingVisible"
   > | null | undefined,
   room: ProjectRoomConfig | null
 ): void {
@@ -334,6 +405,10 @@ export function syncProjectRoomToViewer(
   applyRoomMeshFromWallStore(viewerApi);
   applyRoomOpeningsFromWallStore(viewerApi);
   viewerApi.setRoomLocked?.(room.locked);
+  viewerApi.setRoomFloorMode?.(room.floorMode);
+  viewerApi.setRoomCeilingVisible?.(room.ceilingVisible);
+  viewerApi.setRoomHiddenWalls?.(room.hiddenWalls);
+  viewerApi.setRoomUtilities?.(room.utilities);
   if (room.visible) viewerApi.showRoom?.();
   else viewerApi.hideRoom?.();
 }

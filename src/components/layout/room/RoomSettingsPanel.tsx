@@ -89,6 +89,34 @@ export default function RoomSettingsPanel() {
             </div>
           </Panel>
 
+          <Panel title="Visualização">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="panel-field-row">
+                <label className="panel-label" style={{ minWidth: 120 }}>Chão</label>
+                <select
+                  className="input input-sm"
+                  value={room.floorMode}
+                  onChange={(e) => patchRoom({ floorMode: e.target.value as ProjectRoomConfig["floorMode"] })}
+                >
+                  <option value="full">Full Floor</option>
+                  <option value="room">Room Floor</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={room.ceilingVisible !== false}
+                  onChange={(e) => {
+                    patchRoom({ ceilingVisible: e.target.checked });
+                    viewerApi?.setRoomCeilingVisible?.(e.target.checked);
+                  }}
+                />
+                Mostrar teto
+              </label>
+            </div>
+          </Panel>
+
           <Panel title="Paredes">
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {room.walls.map((wall) => (
@@ -103,6 +131,19 @@ export default function RoomSettingsPanel() {
                   <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
                     {WALL_LABEL_TITLES[wall.label]}
                   </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={!(room.hiddenWalls ?? []).includes(wall.id)}
+                      onChange={(e) => {
+                        const current = new Set(room.hiddenWalls ?? []);
+                        if (e.target.checked) current.delete(wall.id);
+                        else current.add(wall.id);
+                        patchRoom({ hiddenWalls: [...current] });
+                      }}
+                    />
+                    Mostrar parede
+                  </label>
                   {numInput("Comprimento", wall.lengthMm, (v) => {
                     const walls = room.walls.map((w) =>
                       w.id === wall.id ? { ...w, lengthMm: v } : w

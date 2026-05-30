@@ -195,15 +195,21 @@ declare global {
       };
       selectWallByIndex?: (index: number | null) => void;
       selectRoomElementById?: (elementId: string | null) => void;
+      selectRoomUtilityById?: (utilityId: string | null) => void;
       setPlacementMode?: (mode: "door" | "window" | null) => void;
       setOnRoomElementPlaced?: (callback: unknown) => void;
       setOnRoomElementSelected?: (callback: unknown) => void;
+      setOnRoomUtilitySelected?: (callback: unknown) => void;
       setOnWallSelected?: (callback: ((wallId: number | null) => void) | null) => void;
       setOnWallTransform?: (
         callback: ((wallIndex: number, position: { x: number; z: number }, rotation: number) => void) | null
       ) => void;
       setOnRoomElementTransform?: (callback: ((elementId: string, config: unknown) => void) | null) => void;
+      setOnRoomUtilityTransform?: (callback: ((utilityId: string, patch: unknown) => void) | null) => void;
       updateRoomElementConfig?: (...args: unknown[]) => unknown;
+      setRoomFloorMode?: (mode: "full" | "room" | "hybrid") => void;
+      setRoomHiddenWalls?: (wallIds: string[]) => void;
+      setRoomUtilities?: (utilities: unknown[]) => void;
       setRoomBounds?: (bounds: unknown) => void;
       clearRoomBounds?: () => void;
       getRoomExists?: () => boolean;

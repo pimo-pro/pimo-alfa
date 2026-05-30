@@ -9,6 +9,8 @@ import { uiStore, useUiStore } from "../../../stores/uiStore";
 import type {
   ProjectRoomConfig,
   ProjectRoomOpening,
+  ProjectRoomUtility,
+  ProjectRoomUtilityType,
   ProjectRoomWall,
   RoomOpeningKind,
 } from "../../../3d/viewer-engine/room/roomEngineTypes";
@@ -140,6 +142,10 @@ export function PainelSala() {
     selectedObject.type === "roomElement"
       ? room?.openings.find((opening) => opening.id === selectedObject.id)
       : null;
+  const selectedUtility =
+    selectedObject.type === "roomUtility"
+      ? room?.utilities.find((utility) => utility.id === selectedObject.id)
+      : null;
   const selectedOpeningWall = selectedOpening
     ? room?.walls.find((wall) => wall.id === selectedOpening.wallId) ?? null
     : null;
@@ -260,6 +266,38 @@ export function PainelSala() {
     uiStore.getState().setSelectedObject({ type: "roomElement", id: opening.id });
   };
 
+  const addUtility = (type: ProjectRoomUtilityType) => {
+    if (!room) return;
+    const wall =
+      selectedRoomWall ??
+      room.walls.find((item) => item.id === selectedWallId) ??
+      room.walls[0];
+    if (!wall) return;
+    const defaults: Record<ProjectRoomUtilityType, number> = {
+      ElectricalOutlet: 300,
+      WaterPoint: 550,
+      DrainPoint: 250,
+    };
+    const utility: ProjectRoomUtility = {
+      id: `room-utility-${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type,
+      wallId: wall.id,
+      positionAlongWall: Math.max(0, (wall.lengthMm ?? wall.widthMm) / 2),
+      heightMm: defaults[type],
+    };
+    patchRoom({ utilities: [...(room.utilities ?? []), utility] });
+    uiStore.getState().setSelectedObject({ type: "roomUtility", id: utility.id });
+  };
+
+  const patchUtility = (utilityId: string, patch: Partial<ProjectRoomUtility>) => {
+    if (!room) return;
+    patchRoom({
+      utilities: (room.utilities ?? []).map((utility) =>
+        utility.id === utilityId ? { ...utility, ...patch } : utility
+      ),
+    });
+  };
+
   return (
     <aside className="panel-content panel-content--side">
       <div className="design-panel-header">
@@ -374,6 +412,61 @@ export function PainelSala() {
                 Janela correr
               </button>
             </div>
+            <Panel title="Chão, teto e paredes">
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="panel-field-row">
+                  <label className="panel-label" style={{ minWidth: 110 }}>Chão</label>
+                  <select
+                    className="input input-sm"
+                    value={room.floorMode}
+                    onChange={(e) => patchRoom({ floorMode: e.target.value as ProjectRoomConfig["floorMode"] })}
+                  >
+                    <option value="full">Full Floor</option>
+                    <option value="room">Room Floor</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-main)" }}>
+                  <input
+                    type="checkbox"
+                    checked={room.ceilingVisible !== false}
+                    onChange={(e) => {
+                      patchRoom({ ceilingVisible: e.target.checked });
+                      viewerApi?.setRoomCeilingVisible?.(e.target.checked);
+                    }}
+                  />
+                  Mostrar teto
+                </label>
+                {room.walls.map((wall) => (
+                  <label key={wall.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={!(room.hiddenWalls ?? []).includes(wall.id)}
+                      onChange={(e) => {
+                        const current = new Set(room.hiddenWalls ?? []);
+                        if (e.target.checked) current.delete(wall.id);
+                        else current.add(wall.id);
+                        patchRoom({ hiddenWalls: [...current] });
+                      }}
+                    />
+                    Mostrar {WALL_LABEL_TITLES[wall.label] ?? wall.id}
+                  </label>
+                ))}
+              </div>
+            </Panel>
+            <Panel title="Pontos técnicos">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+                <button type="button" className="button button-ghost" onClick={() => addUtility("ElectricalOutlet")}>
+                  Adicionar Tomada
+                </button>
+                <button type="button" className="button button-ghost" onClick={() => addUtility("WaterPoint")}>
+                  Adicionar Água
+                </button>
+                <button type="button" className="button button-ghost" onClick={() => addUtility("DrainPoint")}>
+                  Adicionar Dreno
+                </button>
+              </div>
+            </Panel>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
               <label style={{ fontSize: 12, color: "var(--text-main)" }}>Parede principal</label>
               <select
@@ -642,6 +735,40 @@ export function PainelSala() {
               patchOpening(selectedOpening.id, { xPosMm: value, horizontalOffsetMm: value }), 0)}
             {numInput("Dist. chão", selectedOpening.floorOffsetMm, (value) =>
               patchOpening(selectedOpening.id, { floorOffsetMm: value, verticalOffsetMm: value }), 0)}
+          </div>
+        </Panel>
+      )}
+
+      {room && selectedUtility && (
+        <Panel title={
+          selectedUtility.type === "ElectricalOutlet"
+            ? "Tomada"
+            : selectedUtility.type === "WaterPoint"
+              ? "Ponto de água"
+              : "Dreno"
+        }>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              utilityId: {selectedUtility.id}
+            </div>
+            <div className="panel-field-row">
+              <label className="panel-label" style={{ minWidth: 110 }}>Parede</label>
+              <select
+                className="input input-sm"
+                value={selectedUtility.wallId}
+                onChange={(e) => patchUtility(selectedUtility.id, { wallId: e.target.value })}
+              >
+                {room.walls.map((wall) => (
+                  <option key={wall.id} value={wall.id}>
+                    {WALL_LABEL_TITLES[wall.label] ?? wall.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {numInput("Posição", selectedUtility.positionAlongWall, (value) =>
+              patchUtility(selectedUtility.id, { positionAlongWall: value }), 0)}
+            {numInput("Altura", selectedUtility.heightMm, (value) =>
+              patchUtility(selectedUtility.id, { heightMm: value }), 0)}
           </div>
         </Panel>
       )}

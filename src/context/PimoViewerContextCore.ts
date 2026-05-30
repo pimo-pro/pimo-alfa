@@ -69,6 +69,7 @@ export type PimoViewerApi = {
   selectWallByIndex?: (_index: number | null) => void;
   /** Seleciona abertura (porta/janela) por id para mover/rodar com botões do topo. */
   selectRoomElementById?: (_elementId: string | null) => void;
+  selectRoomUtilityById?: (_utilityId: string | null) => void;
   setPlacementMode?: (_mode: "door" | "window" | null) => void;
   addDoorToRoom?: (_wallId: number, _config: DoorWindowConfig, _elementId?: string) => string;
   addWindowToRoom?: (_wallId: number, _config: DoorWindowConfig, _elementId?: string) => string;
@@ -78,10 +79,19 @@ export type PimoViewerApi = {
   setOnRoomElementSelected?: (
     _cb: ((_data: { elementId: string; wallId: number; type: "door" | "window"; config: DoorWindowConfig } | null) => void) | null
   ) => void;
+  setOnRoomUtilitySelected?: (
+    _cb: ((_data: { utilityId: string; wallId: number; config: import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomUtility } | null) => void) | null
+  ) => void;
   setOnWallSelected?: (_cb: ((_wallId: number | null) => void) | null) => void;
   setOnWallTransform?: (_cb: ((_wallIndex: number, _position: { x: number; z: number }, _rotation: number) => void) | null) => void;
   setOnRoomElementTransform?: (_cb: ((_elementId: string, _config: DoorWindowConfig) => void) | null) => void;
+  setOnRoomUtilityTransform?: (
+    _cb: ((_utilityId: string, _patch: Pick<import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomUtility, "positionAlongWall" | "heightMm">) => void) | null
+  ) => void;
   updateRoomElementConfig?: (_elementId: string, _config: DoorWindowConfig) => boolean;
+  setRoomFloorMode?: (_mode: import("../3d/viewer-engine/room/roomEngineTypes").RoomFloorMode) => void;
+  setRoomHiddenWalls?: (_wallIds: string[]) => void;
+  setRoomUtilities?: (_utilities: import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomUtility[]) => void;
   setLockEnabled?: (_enabled: boolean) => void;
   getLockEnabled?: () => boolean;
   getCombinedBoundingBox?: () => { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; width: number; height: number; depth: number } | null;

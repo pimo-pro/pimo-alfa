@@ -1,4 +1,5 @@
 import type { ProjectState } from "../../context/projectTypes";
+import type { ProjectRoomUtility } from "../../3d/viewer-engine/room/roomEngineTypes";
 import { appendChangelog, applyResultados, createWorkspaceBox } from "../../context/projectState";
 import { getNextWorkspaceBoxId, isLowerCabinet, isUpperCabinet } from "../../context/projectHelpers";
 import { getBaseCabinetById, modelToPortaTipo } from "../baseCabinets";
@@ -139,6 +140,7 @@ export function applyAutoRoomFillPlan(
   let remates = [...(prev.remates ?? [])];
   let hematis = [...(prev.hematis ?? [])];
   let rodapes = [...(prev.rodapes ?? [])];
+  let room = prev.room;
 
   const createdBoxIds: string[] = [];
   const createdRemateIds: string[] = [];
@@ -154,6 +156,53 @@ export function applyAutoRoomFillPlan(
     workspaceBoxes = [...workspaceBoxes, box];
     boxesByIndex.push(box);
     createdBoxIds.push(box.id);
+  }
+
+  if (room) {
+    const generatedUtilities: ProjectRoomUtility[] = [];
+    for (const placed of plan.modules) {
+      if (placed.role !== "special" || !placed.specialKind) continue;
+      const positionAlongWall =
+        placed.wallLabel === "este" || placed.wallLabel === "oeste"
+          ? Math.max(0, placed.posicaoZ_mm)
+          : Math.max(0, placed.posicaoX_mm);
+      const base = {
+        wallId: placed.wallId,
+        positionAlongWall,
+      };
+      if (placed.specialKind === "sink") {
+        generatedUtilities.push(
+          {
+            id: `auto-water-${placed.wallId}-${Math.round(positionAlongWall)}`,
+            type: "WaterPoint",
+            heightMm: 550,
+            ...base,
+          },
+          {
+            id: `auto-drain-${placed.wallId}-${Math.round(positionAlongWall)}`,
+            type: "DrainPoint",
+            heightMm: 250,
+            ...base,
+          }
+        );
+      }
+      if (placed.specialKind === "oven" || placed.specialKind === "fridge") {
+        generatedUtilities.push({
+          id: `auto-electric-${placed.specialKind}-${placed.wallId}-${Math.round(positionAlongWall)}`,
+          type: "ElectricalOutlet",
+          heightMm: placed.specialKind === "fridge" ? 1200 : 300,
+          ...base,
+        });
+      }
+    }
+    const existingIds = new Set((room.utilities ?? []).map((utility) => utility.id));
+    room = {
+      ...room,
+      utilities: [
+        ...(room.utilities ?? []),
+        ...generatedUtilities.filter((utility) => !existingIds.has(utility.id)),
+      ],
+    };
   }
 
   for (const finish of plan.finishes) {
@@ -287,6 +336,7 @@ export function applyAutoRoomFillPlan(
   const next = applyResultados({
     ...prev,
     workspaceBoxes,
+    room,
     remates,
     hematis,
     rodapes,

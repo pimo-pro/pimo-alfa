@@ -7,6 +7,8 @@
  */
 
 import type { V3Piece, V3Sheet, V3Placement, V3AutoLayoutResult } from "./nestingV3Types";
+import { runHybridNesting } from "../core/nesting3/hybridNesting";
+import type { Nesting3Piece, Nesting3Sheet } from "../core/nesting3/nesting3Types";
 
 // ── Dimensões efectivas de uma peça com rotação ───────────────────────────────
 
@@ -18,13 +20,6 @@ function effectiveDims(piece: V3Piece): { w: number; h: number } {
 }
 
 // ── Shelf row ─────────────────────────────────────────────────────────────────
-
-interface Shelf {
-  x: number;
-  y: number;
-  height: number;
-  usedWidth: number;
-}
 
 // ── Auto-layout principal ─────────────────────────────────────────────────────
 
@@ -41,95 +36,38 @@ export function runNestingV3AutoLayout(
   kerfMm: number
 ): V3AutoLayoutResult {
   if (pieces.length === 0) return { placements: [], unplacedPieceIds: [], sheetsUsed: 0 };
-
-  // Ordenar por área descendente
-  const sorted = [...pieces].sort((a, b) => {
-    const aA = effectiveDims(a);
-    const bA = effectiveDims(b);
-    return bA.w * bA.h - aA.w * aA.h;
-  });
-
-  const placements: V3Placement[] = [];
-  const unplaced: string[] = [];
-  const sheetCount = sheets.length > 0 ? sheets.length : 1;
-  const templateSheet = sheets[0] ?? { widthMm: 2800, heightMm: 2070, thicknessMm: 19 };
-
-  // Ensure at least enough sheets (will add more if needed)
-  const activeSheets = [...sheets];
-  while (activeSheets.length < sheetCount) {
-    activeSheets.push({ ...templateSheet, index: activeSheets.length });
-  }
-
-  // Per-sheet shelf state
-  const shelves: Shelf[][] = activeSheets.map(() => []);
-  let currentSheetIdx = 0;
-
-  for (const piece of sorted) {
-    const { w: pw, h: ph } = effectiveDims(piece);
-    let placed = false;
-
-    // Try to place in current and subsequent sheets
-    for (let si = currentSheetIdx; si < activeSheets.length + 10; si++) {
-      // Extend sheets if needed
-      if (si >= activeSheets.length) {
-        activeSheets.push({ ...templateSheet, index: activeSheets.length });
-        shelves.push([]);
-      }
-
-      const sheet = activeSheets[si];
-      const sheetW = sheet.widthMm;
-      const sheetH = sheet.heightMm;
-      const sf = shelves[si];
-
-      // Try existing shelves
-      let bestShelf: Shelf | null = null;
-      for (const shelf of sf) {
-        const remainWidth = sheetW - shelf.usedWidth - (shelf.usedWidth > 0 ? kerfMm : 0);
-        if (
-          pw + kerfMm <= remainWidth + kerfMm &&
-          ph <= shelf.height &&
-          pw <= sheetW &&
-          shelf.y + ph <= sheetH
-        ) {
-          if (!bestShelf || shelf.height < bestShelf.height) {
-            bestShelf = shelf;
-          }
-        }
-      }
-
-      if (bestShelf) {
-        const xOff = bestShelf.usedWidth > 0 ? kerfMm : 0;
-        placements.push({
-          pieceId: piece.id,
-          sheetIndex: si,
-          xMm: bestShelf.x + bestShelf.usedWidth + xOff,
-          yMm: bestShelf.y,
-        });
-        bestShelf.usedWidth += pw + xOff;
-        placed = true;
-        break;
-      }
-
-      // Start new shelf on this sheet
-      const lastShelf = sf.length > 0 ? sf[sf.length - 1] : null;
-      const newY = lastShelf ? lastShelf.y + lastShelf.height + kerfMm : 0;
-
-      if (pw <= sheetW && newY + ph <= sheetH) {
-        const newShelf: Shelf = { x: 0, y: newY, height: ph, usedWidth: pw };
-        sf.push(newShelf);
-        placements.push({ pieceId: piece.id, sheetIndex: si, xMm: 0, yMm: newY });
-        placed = true;
-        break;
-      }
-    }
-
-    if (!placed) {
-      unplaced.push(piece.id);
-    }
-  }
-
-  const sheetsUsed = placements.reduce((max, p) => Math.max(max, p.sheetIndex + 1), 0);
-  return { placements, unplacedPieceIds: unplaced, sheetsUsed };
+  const nestingPieces: Nesting3Piece[] = pieces.map((piece, index) => ({
+    id: piece.id,
+    widthMm: piece.widthMm,
+    heightMm: piece.heightMm,
+    materialId: piece.materialId,
+    materialName: piece.materialName,
+    thicknessMm: piece.thicknessMm,
+    allowRotation: true,
+    grainDirection: "none",
+    originalIndex: index,
+  }));
+  const fallbackSheet: V3Sheet = { index: 0, widthMm: 2800, heightMm: 2070, thicknessMm: 19 };
+  const nestingSheets: Nesting3Sheet[] = (sheets.length ? sheets : [fallbackSheet]).map((sheet) => ({
+    index: sheet.index,
+    widthMm: sheet.widthMm,
+    heightMm: sheet.heightMm,
+    materialId: sheet.materialId,
+    materialName: sheet.materialName,
+    thicknessMm: sheet.thicknessMm,
+  }));
+  const result = runHybridNesting(nestingPieces, nestingSheets, { kerfMm });
+  const placements: V3Placement[] = result.placements.map((placement) => ({
+    pieceId: placement.pieceId,
+    sheetIndex: placement.sheetIndex,
+    xMm: placement.xMm,
+    yMm: placement.yMm,
+  }));
+  return {
+    placements,
+    unplacedPieceIds: result.unplacedPieceIds,
+    sheetsUsed: result.sheetsUsed,
+  };
 }
 
 // ── Verificar sobreposição ────────────────────────────────────────────────────

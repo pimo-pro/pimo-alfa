@@ -2,6 +2,8 @@
 
 export type RoomWallLabel = "norte" | "sul" | "este" | "oeste" | "extra";
 export type RoomOpeningKind = "normal" | "correr";
+export type RoomFloorMode = "full" | "room" | "hybrid";
+export type ProjectRoomUtilityType = "ElectricalOutlet" | "WaterPoint" | "DrainPoint";
 
 export type ProjectRoomWallPosition = {
   x: number;
@@ -40,6 +42,15 @@ export type ProjectRoomOpening = {
   verticalOffsetMm: number;
 };
 
+export type ProjectRoomUtility = {
+  id: string;
+  type: ProjectRoomUtilityType;
+  wallId: string;
+  /** Posição em mm ao longo da parede, a partir da borda inicial. */
+  positionAlongWall: number;
+  heightMm: number;
+};
+
 export type ProjectRoomConfig = {
   widthMm: number;
   depthMm: number;
@@ -47,8 +58,12 @@ export type ProjectRoomConfig = {
   wallThicknessMm: number;
   locked: boolean;
   visible: boolean;
+  floorMode: RoomFloorMode;
+  ceilingVisible: boolean;
+  hiddenWalls: string[];
   walls: ProjectRoomWall[];
   openings: ProjectRoomOpening[];
+  utilities: ProjectRoomUtility[];
 };
 
 export const ROOM_20_DEFAULTS = {
@@ -56,6 +71,8 @@ export const ROOM_20_DEFAULTS = {
   depthMm: 4000,
   heightMm: 2600,
   wallThicknessMm: 200,
+  floorMode: "room" as RoomFloorMode,
+  ceilingVisible: true,
 } as const;
 
 export const WALL_LABELS: RoomWallLabel[] = ["sul", "este", "norte", "oeste"];

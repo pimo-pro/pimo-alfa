@@ -120,6 +120,22 @@ export class ViewerTools {
         return;
       }
     }
+    const selectedRoomUtilityId = e.getSelectedRoomUtilityId();
+    if (selectedRoomUtilityId && mode) {
+      const utility = e.getRoomUtilityById(selectedRoomUtilityId);
+      if (utility) {
+        utility.matrixAutoUpdate = true;
+        utility.updateMatrixWorld(true);
+        controls.detach();
+        controls.attach(utility);
+        controls.setMode("translate");
+        controls.setSize(0.35);
+        e.applyTransformControlsMouseGuard();
+        e.logTransformDiagnostic("attach-room-utility", { utilityId: selectedRoomUtilityId, attachedUuid: utility.uuid });
+        e.setTransformHelperVisible(true);
+        return;
+      }
+    }
     controls.detach();
     e.applyTransformControlsMouseGuard();
     e.logTransformDiagnostic("detach-none", { reason: "no-selected-target-or-transform-mode" });
