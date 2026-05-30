@@ -14,6 +14,7 @@ type PanelType = "left" | "right" | "top" | "bottom" | "back";
 
 /**
  * Contrato de integração do módulo de visibilidade de painéis.
+ * Panel Visualization 2.1: contornos consistentes, z-order e suporte a peças finas.
  * Invariantes esperados em userData:
  * - boxId identifica o box dono do mesh.
  * - panelType mapeia para left/right/top/bottom/back quando aplicável.
@@ -38,8 +39,12 @@ export class ViewerPanelVisibility {
   private static readonly PANEL_THICKNESS_M = 0.019;
   private static readonly PANEL_BACK_THICKNESS_M = 0.01;
   private static readonly HOLE_CIRCLE_SEGMENTS = 16;
-  private static readonly OVERLAY_INSET_M = 0.0001;
-  private static readonly FALLBACK_EDGES_ANGLE_DEG = 25;
+  private static readonly OVERLAY_INSET_M = 0.00015;
+  private static readonly FALLBACK_EDGES_ANGLE_DEG = 5;
+  /** Peças com espessura ≤ 12 mm (GAV FUNDO 10 mm, prateleiras finas, etc.) */
+  private static readonly THIN_PIECE_THRESHOLD_M = 0.012;
+  /** Contornos renderizam acima da peça mas abaixo da Orla (renderOrder 10). */
+  private static readonly EDGE_OVERLAY_RENDER_OFFSET = 8;
 
   constructor(deps: ViewerPanelVisibilityDeps) {
     this.deps = deps;
@@ -187,6 +192,7 @@ export class ViewerPanelVisibility {
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       const panelType = node.userData?.panelType as PanelType | undefined;
+      const isRemate = node.userData?.isRematePiece === true;
       const isDoorOrDrawerOrShelf =
         (node.name &&
           (node.name.startsWith("door-leaf-") ||
@@ -194,7 +200,7 @@ export class ViewerPanelVisibility {
             node.name.startsWith("drawer-"))) ||
         node.userData?.doorLayerId != null ||
         node.userData?.drawerPart != null;
-      if (!panelType && !isDoorOrDrawerOrShelf) return;
+      if (!panelType && !isDoorOrDrawerOrShelf && !isRemate) return;
       const panelKey = panelType
         ? this.getPanelVisibilityKey(node, panelType)
         : this.getAnyVisibilityKey(node) ?? "";
@@ -203,6 +209,7 @@ export class ViewerPanelVisibility {
         (panelType != null && this.hiddenPanels.has(panelType)) ||
         (panelKey.length > 0 && this.hiddenPanels.has(panelKey));
       node.visible = !hidden;
+      this.applyPieceRenderOrder(node);
       this.ensurePanelEdges(node, (this.panelEdgesVisible || this.panelRenderingEnabled) && !hidden);
     });
   }
@@ -399,6 +406,98 @@ export class ViewerPanelVisibility {
     return geo;
   }
 
+  /**
+   * Contorno completo de caixa alinhado ao BoxGeometry local (12 arestas).
+   * Usado para gavetas, prateleiras finas e remates — dimensões reais do mesh,
+   * sem constantes industriais de espessura de caixaria.
+   */
+  private static createBoxWireframeContourGeometry(
+    width: number,
+    height: number,
+    depth: number
+  ): THREE.BufferGeometry {
+    const inset = ViewerPanelVisibility.OVERLAY_INSET_M;
+    const w2 = Math.max(0.0005, width / 2);
+    const h2 = Math.max(0.0005, height / 2);
+    const d2 = Math.max(0.0005, depth / 2);
+    const segs: number[] = [];
+    const push = (x1: number, y1: number, z1: number, x2: number, y2: number, z2: number) => {
+      segs.push(x1, y1, z1, x2, y2, z2);
+    };
+
+    const ring = (y: number, xs: number[], zs: number[]) => {
+      for (let i = 0; i < 4; i += 1) {
+        const j = (i + 1) % 4;
+        push(xs[i], y, zs[i], xs[j], y, zs[j]);
+      }
+    };
+
+    ring(-h2 - inset, [-w2, w2, w2, -w2], [-d2, -d2, d2, d2]);
+    ring(h2 + inset, [-w2, w2, w2, -w2], [-d2, -d2, d2, d2]);
+
+    const corners: Array<[number, number]> = [[-w2, -d2], [w2, -d2], [w2, d2], [-w2, d2]];
+    for (const [x, z] of corners) {
+      push(x, -h2 - inset, z, x, h2 + inset, z);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(segs), 3));
+    geo.computeBoundingSphere();
+    return geo;
+  }
+
+  private getMeshBoundingSize(mesh: THREE.Mesh): THREE.Vector3 {
+    mesh.geometry.computeBoundingBox();
+    const bb = mesh.geometry.boundingBox;
+    const size = new THREE.Vector3();
+    if (bb) bb.getSize(size);
+    return new THREE.Vector3(
+      Math.max(0.001, size.x),
+      Math.max(0.001, size.y),
+      Math.max(0.001, size.z)
+    );
+  }
+
+  /** Z-order apenas visual — não altera geometria industrial. */
+  private applyPieceRenderOrder(mesh: THREE.Mesh): void {
+    const size = this.getMeshBoundingSize(mesh);
+    const minDim = Math.min(size.x, size.y, size.z);
+    const structuralNames = new Set(["left", "right", "top", "bottom", "back"]);
+    const isStructural =
+      mesh.userData?.panelType != null &&
+      typeof mesh.name === "string" &&
+      structuralNames.has(mesh.name);
+
+    let order = 1;
+    if (isStructural) order = 0;
+    else if (mesh.userData?.isRematePiece === true) order = 6;
+    else if (minDim <= ViewerPanelVisibility.THIN_PIECE_THRESHOLD_M) order = 5;
+    else if (mesh.userData?.doorLayerId != null || mesh.name?.startsWith("door-leaf-")) order = 4;
+    else if (mesh.userData?.drawerPart != null || mesh.name?.startsWith("drawer-")) order = 3;
+    else if (
+      mesh.userData?.shelfIndex != null ||
+      (typeof mesh.name === "string" && mesh.name.startsWith("shelf-"))
+    ) order = 2;
+
+    mesh.renderOrder = order;
+  }
+
+  private finalizePanelEdgeOverlay(
+    overlay: THREE.LineSegments,
+    mesh: THREE.Mesh,
+    visible: boolean
+  ): void {
+    overlay.userData.isPanelEdgeOverlay = true;
+    overlay.userData.pieceId =
+      mesh.userData.pieceId ?? mesh.userData.panelId ?? mesh.userData.remateId;
+    overlay.userData.parentPieceUuid = mesh.uuid;
+    overlay.raycast = () => null;
+    overlay.frustumCulled = false;
+    overlay.renderOrder = (mesh.renderOrder ?? 0) + ViewerPanelVisibility.EDGE_OVERLAY_RENDER_OFFSET;
+    mesh.add(overlay);
+    overlay.visible = visible && !this.deps.getHighlightEnabled();
+  }
+
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
     const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
     if (existing) {
@@ -409,11 +508,16 @@ export class ViewerPanelVisibility {
         existing.material.dispose();
       }
     }
+
+    const material = this.deps.getSharedPanelEdgeMaterial();
     const panelType = mesh.userData?.panelType as PanelType | undefined;
     const boxId = mesh.userData?.boxId as string | undefined;
     const entry = boxId ? this.deps.getBoxes().get(boxId) : undefined;
     const structuralPanelNames = new Set(["left", "right", "top", "bottom", "back"]);
     const isStructuralPanel = mesh.name && structuralPanelNames.has(mesh.name);
+
+    let geometry: THREE.BufferGeometry | null = null;
+
     if (
       panelType &&
       isStructuralPanel &&
@@ -434,64 +538,47 @@ export class ViewerPanelVisibility {
                 ? (drillMap?.lateral_direita ?? [])
                 : [];
       const holes = filterTechnicalDrillHolesForViewerMesh(holesRaw);
-      const geometry = ViewerPanelVisibility.createContourEdgesGeometry(
+      geometry = ViewerPanelVisibility.createContourEdgesGeometry(
         panelType,
         entry.width,
         entry.height,
         entry.depth,
         holes
       );
-      const material = this.deps.getSharedPanelEdgeMaterial();
-      const overlay = new THREE.LineSegments(geometry, material);
-      overlay.userData.isPanelEdgeOverlay = true;
-      overlay.raycast = () => null;
-      mesh.add(overlay);
-      overlay.visible = visible && !this.deps.getHighlightEnabled();
-    } else {
-      const isDoor =
-        (mesh.name && mesh.name.startsWith("door-leaf-")) ||
-        mesh.userData?.doorLayerId != null;
-      const isDoorOrDrawerOrShelf =
-        (mesh.name && (
-          mesh.name.startsWith("door-leaf-") ||
-          mesh.name.startsWith("shelf-") ||
-          mesh.name.startsWith("drawer-")
-        )) ||
-        mesh.userData?.doorLayerId != null ||
-        mesh.userData?.drawerPart != null;
-      if (isDoor && mesh.geometry) {
-        mesh.geometry.computeBoundingBox();
-        const bb = mesh.geometry.boundingBox;
-        const size = new THREE.Vector3();
-        bb?.getSize(size);
-        const holeData = mesh.userData?.doorHolesEffective;
-        const holesRaw = Array.isArray(holeData)
-          ? (holeData.filter((h) => h && Number.isFinite(h.x) && Number.isFinite(h.y)) as TechnicalDrillHole[])
-          : [];
-        const holes = filterTechnicalDrillHolesForViewerMesh(holesRaw);
-        const geometry = ViewerPanelVisibility.createContourEdgesGeometry(
-          "front",
-          Math.max(0.001, size.x),
-          Math.max(0.001, size.y),
-          Math.max(0.001, size.z),
-          holes
-        );
-        const material = this.deps.getSharedPanelEdgeMaterial();
-        const overlay = new THREE.LineSegments(geometry, material);
-        overlay.userData.isPanelEdgeOverlay = true;
-        overlay.raycast = () => null;
-        mesh.add(overlay);
-        overlay.visible = visible && !this.deps.getHighlightEnabled();
-      } else if (isDoorOrDrawerOrShelf && mesh.geometry) {
-        const geometry = new THREE.EdgesGeometry(mesh.geometry, ViewerPanelVisibility.FALLBACK_EDGES_ANGLE_DEG);
-        const material = this.deps.getSharedPanelEdgeMaterial();
-        const overlay = new THREE.LineSegments(geometry, material);
-        overlay.userData.isPanelEdgeOverlay = true;
-        overlay.raycast = () => null;
-        mesh.add(overlay);
-        overlay.visible = visible && !this.deps.getHighlightEnabled();
-      }
+    } else if (
+      (mesh.name && mesh.name.startsWith("door-leaf-")) ||
+      mesh.userData?.doorLayerId != null ||
+      mesh.userData?.drawerPart === "front"
+    ) {
+      const size = this.getMeshBoundingSize(mesh);
+      const holeData = mesh.userData?.doorHolesEffective;
+      const holesRaw = Array.isArray(holeData)
+        ? (holeData.filter((h) => h && Number.isFinite(h.x) && Number.isFinite(h.y)) as TechnicalDrillHole[])
+        : [];
+      const holes = filterTechnicalDrillHolesForViewerMesh(holesRaw);
+      geometry = ViewerPanelVisibility.createContourEdgesGeometry(
+        "front",
+        size.x,
+        size.y,
+        size.z,
+        holes
+      );
+    } else if (
+      mesh.userData?.drawerPart != null ||
+      mesh.userData?.shelfIndex != null ||
+      (mesh.name && (mesh.name.startsWith("shelf-") || mesh.name.startsWith("drawer-"))) ||
+      mesh.userData?.isRematePiece === true
+    ) {
+      const size = this.getMeshBoundingSize(mesh);
+      geometry = ViewerPanelVisibility.createBoxWireframeContourGeometry(size.x, size.y, size.z);
+    } else if (mesh.geometry) {
+      geometry = new THREE.EdgesGeometry(mesh.geometry, ViewerPanelVisibility.FALLBACK_EDGES_ANGLE_DEG);
     }
+
+    if (!geometry) return;
+
+    const overlay = new THREE.LineSegments(geometry, material);
+    this.finalizePanelEdgeOverlay(overlay, mesh, visible);
   }
 
   private getPanelVisibilityKey(node: THREE.Object3D, panelType: PanelType): string {

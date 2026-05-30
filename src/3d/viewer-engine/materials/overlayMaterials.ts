@@ -1,5 +1,6 @@
 /**
  * MaterialEngine — Materiais partilhados para overlays (evitar uma instância por chamada).
+ * Panel Visualization 2.1: contornos estáveis, legíveis e preparados para Edge Selection futuro.
  */
 
 import * as THREE from "three";
@@ -13,14 +14,16 @@ let sharedPanelEdgeMaterial: THREE.LineBasicMaterial | null = null;
 export function getSharedPanelEdgeMaterial(): THREE.LineBasicMaterial {
   if (!sharedPanelEdgeMaterial) {
     sharedPanelEdgeMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color("#000000"),
+      color: new THREE.Color("#1e2535"),
       transparent: true,
-      opacity: 0.9,
-      linewidth: 2,
+      opacity: 0.88,
+      linewidth: 1,
       depthTest: true,
+      depthWrite: false,
+      toneMapped: false,
       polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
     });
   }
   return sharedPanelEdgeMaterial;

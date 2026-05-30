@@ -876,7 +876,9 @@ export class ViewerCore {
 
   syncRemateVisuals(): void {
     for (const [boxId, entry] of this.boxes.entries()) {
-      if (entry?.mesh) this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
+      if (!entry?.mesh) continue;
+      this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
+      this.applyPanelVisibilityForObject(entry.mesh);
     }
   }
 
@@ -884,6 +886,7 @@ export class ViewerCore {
     const entry = this.boxes.get(boxId);
     if (!entry?.mesh) return;
     this.remateVisualizer.syncBoxRoot(boxId, entry.mesh);
+    this.applyPanelVisibilityForObject(entry.mesh);
   }
 
   private getRoomBoundsMmForAutoLayout(): AutoLayoutRoomBoundsMm | null {
