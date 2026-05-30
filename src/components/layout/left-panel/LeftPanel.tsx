@@ -11,7 +11,6 @@ import type { SavedProjectInfo } from "../../../context/projectTypes";
 import { InfoPanelContent } from "./InfoPanelContent";
 import OrlaSettingsPanel from "../../settings/orla/OrlaSettingsPanel";
 import { PlaceholderLeftPanel } from "./PlaceholderLeftPanel";
-import RoomSettingsPanel from "../room/RoomSettingsPanel";
 import { PainelSala } from "./PainelSala";
 import { LeftPanelCalculadora } from "./LeftPanelCalculadora";
 import { HomeLeftPanelEmpty } from "./HomeLeftPanelEmpty";
