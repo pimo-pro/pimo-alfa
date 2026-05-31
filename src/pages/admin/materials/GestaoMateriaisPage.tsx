@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Panel from "../../../components/ui/Panel";
+import MaterialPanel from "../../../components/layout/right-panel/MaterialPanel";
 import { useToast } from "../../../context/ToastContext";
 import {
   useMaterialsList,
@@ -366,6 +367,13 @@ export default function GestaoMateriaisPage() {
             {showImport ? "Fechar importação" : "Colar JSON"}
           </button>
         </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          Centro único de gestão de materiais: catálogo, fabricação, presets visuais e painéis de materiais.
+        </div>
+        <MaterialPanel />
       </div>
 
       {pendingDelete && (

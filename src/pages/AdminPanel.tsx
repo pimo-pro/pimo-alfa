@@ -2,7 +2,6 @@ import { Suspense, lazy, useState } from "react";
 import { Icon } from "@/components/icons";
 import { IconGallery } from "@/components/icons";
 import TemplatesManager from "../components/admin/TemplatesManager";
-import MaterialsManufacturing from "../components/admin/MaterialsManufacturing";
 import RulesManager from "../components/admin/RulesManager";
 import FileManager from "../components/admin/FileManager";
 import RulesAdminPage from "../components/admin/RulesAdminPage";
@@ -20,11 +19,9 @@ import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
 
 type AdminTab =
-  | "Materiais & Fabricação"
   | "Gestão de Materiais"
   | "Ferragens"
   | "Templates"
-  | "Regras"
   | "Configuração de Regras"
   | "Perfis de Regras"
   | "Component Types"
@@ -43,15 +40,13 @@ type AdminMenuEntry =
   | { type: "item"; id: AdminTab; label: string; badge?: string; disabled?: boolean };
 
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = "pimo_admin_active_tab";
-const DEFAULT_ADMIN_TAB: AdminTab = "Materiais & Fabricação";
+const DEFAULT_ADMIN_TAB: AdminTab = "Gestão de Materiais";
 
 const adminMenu: AdminMenuEntry[] = [
   { type: "group", label: "Configuração" },
-  { type: "item", id: "Materiais & Fabricação", label: "Materiais & Fabricação" },
   { type: "item", id: "Gestão de Materiais", label: "Gestão de Materiais" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
   { type: "item", id: "Component Types", label: "Component Types" },
-  { type: "item", id: "Regras", label: "Regras" },
   { type: "item", id: "Configuração de Regras", label: "Configuração de Regras" },
   { type: "item", id: "Perfis de Regras", label: "Perfis de Regras" },
   { type: "group", label: "Catálogo / Modelos" },
@@ -70,11 +65,9 @@ const adminMenu: AdminMenuEntry[] = [
 ];
 
 const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]>> = {
-  "Materiais & Fabricação": "adminWood",
   "Gestão de Materiais": "adminChecklist",
   "Ferragens": "adminScrew",
   "Component Types": "adminPuzzle",
-  "Regras": "adminRuler",
   "Configuração de Regras": "adminSettings",
   "Perfis de Regras": "adminBook",
   "Templates": "adminFolder",
@@ -108,10 +101,6 @@ export default function AdminPanel() {
     setActive(next);
     localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, next);
   };
-  const openSettingsPage = () => {
-    window.history.pushState({}, "", "/definicoes");
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
 
   return (
     <main
@@ -140,25 +129,6 @@ export default function AdminPanel() {
         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
           Admin Panel
         </div>
-        <button
-          type="button"
-          onClick={openSettingsPage}
-          title="Abrir Definições"
-          aria-label="Abrir Definições"
-          style={{
-            textAlign: "left",
-            padding: "9px 10px",
-            borderRadius: "var(--radius)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.06)",
-            color: "var(--text-main)",
-            fontSize: 12,
-            cursor: "pointer",
-            marginBottom: 6,
-          }}
-        >
-          Ir para Definições
-        </button>
         {adminMenu.map((entry, index) => {
           if (entry.type === "group") {
             return (
@@ -248,18 +218,17 @@ export default function AdminPanel() {
             {active}
           </div>
 
-          {active === "Materiais & Fabricação" ? (
-            <MaterialsManufacturing />
-          ) : active === "Gestão de Materiais" ? (
+          {active === "Gestão de Materiais" ? (
             <GestaoMateriaisPage />
           ) : active === "Ferragens" ? (
             <FerragensAdminPage />
           ) : active === "Templates" ? (
             <TemplatesManager />
-          ) : active === "Regras" ? (
-            <RulesManager />
           ) : active === "Configuração de Regras" ? (
-            <RulesAdminPage />
+            <div className="stack" style={{ gap: 20 }}>
+              <RulesAdminPage />
+              <RulesManager />
+            </div>
           ) : active === "Perfis de Regras" ? (
             <RulesProfilesPage />
           ) : active === "Component Types" ? (

@@ -11,6 +11,8 @@ function validateFerragens(value: unknown): value is Ferragem[] {
       item !== null &&
       typeof (item as Ferragem).id === "string" &&
       typeof (item as Ferragem).nome === "string" &&
+      ((item as Ferragem).precoUnitario === undefined ||
+        typeof (item as Ferragem).precoUnitario === "number") &&
       ["parafuso", "cavilha", "dobradica", "corredica", "suporte", "prego", "acessorio"].includes(
         (item as Ferragem).categoria
       )

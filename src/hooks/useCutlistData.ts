@@ -9,6 +9,7 @@ import { gerarModeloIndustrial } from "../core/manufacturing/boxManufacturing";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../core/industriais/ferragensIndustriais";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
+import type { Ferragem } from "../core/ferragens/ferragens";
 import { computeBoxProfundidadeLeituraMm } from "../utils/boxProfundidadeLeituraUi";
 
 export type PainelRow = {
@@ -52,6 +53,7 @@ export type FerragemRow = {
   boxNome: string;
   tipo: string;
   quantidade: number;
+  precoUnitario: number;
   custo: number;
 };
 
@@ -82,6 +84,32 @@ export function useCutlistData() {
   const { componentTypes } = useComponentTypes();
   const { ferragens } = useFerragens();
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
+
+  const resolveFerragemPrecoUnitario = useMemo(() => {
+    const byId = new Map(ferragens.map((f) => [f.id, f]));
+    const idAliases: Record<string, string[]> = {
+      dobradicas: ["dobradica_35mm"],
+      corredicas: ["corredica_esq", "corredica_dir"],
+      suportes_prateleira: ["suporte_prateleira"],
+    };
+    const categoryAliases: Record<string, Ferragem["categoria"]> = {
+      dobradicas: "dobradica",
+      corredicas: "corredica",
+      suportes_prateleira: "suporte",
+    };
+
+    return (tipo: string): number | null => {
+      for (const id of idAliases[tipo] ?? []) {
+        const preco = byId.get(id)?.precoUnitario;
+        if (typeof preco === "number") return preco;
+      }
+
+      const categoria = categoryAliases[tipo];
+      if (!categoria) return null;
+      const ferragem = ferragens.find((item) => item.categoria === categoria);
+      return typeof ferragem?.precoUnitario === "number" ? ferragem.precoUnitario : null;
+    };
+  }, [ferragens]);
 
   const ferragensIndustriaisDetalhado = useMemo(
     () => gerarFerragensIndustriais(componentTypes, ferragens),
@@ -139,9 +167,17 @@ export function useCutlistData() {
         allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
       });
       modelo.ferragens.forEach((f) => {
+        const precoUnitario = resolveFerragemPrecoUnitario(f.tipo);
+        const custo = precoUnitario != null ? precoUnitario * f.quantidade : f.custo;
         totalFerragensQty += f.quantidade;
-        custoTotalFerragens += f.custo;
-        allFerragens.push({ ...f, key: `${box.id}-${f.id}`, boxNome });
+        custoTotalFerragens += custo;
+        allFerragens.push({
+          ...f,
+          key: `${box.id}-${f.id}`,
+          boxNome,
+          precoUnitario: precoUnitario ?? (f.quantidade > 0 ? f.custo / f.quantidade : 0),
+          custo,
+        });
       });
     });
 
@@ -173,6 +209,7 @@ export function useCutlistData() {
     });
 
     const totalPecas = totalPaineisQty + totalPortasQty + totalGavetasQty;
+    const totalOrlaMetros = allOrlaFerragens.reduce((s, l) => s + l.metros, 0);
     const custoTotalOrla = allOrlaFerragens.reduce((s, l) => s + l.custo, 0);
     const custoTotalRemates = allRemates.reduce((s, l) => s + l.custo, 0);
     const totalAreaM2 = totalAreaMm2 / 1_000_000;
@@ -200,11 +237,12 @@ export function useCutlistData() {
       custoTotalPortas,
       custoTotalGavetas,
       custoTotalFerragens,
+      totalOrlaMetros,
       custoTotalOrla,
       custoTotalRemates,
       custoTotal,
     };
-  }, [boxes, project.rules, project.ferragemOrla, project.remates, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente]);
+  }, [boxes, project.rules, project.ferragemOrla, project.remates, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente, resolveFerragemPrecoUnitario]);
 
   return aggregated;
 }

@@ -18,8 +18,8 @@ import { PendingWorkspaceMergeEffect } from "./context/PendingWorkspaceMergeEffe
 import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
@@ -102,34 +102,40 @@ function LegacyApp() {
   const [showNestingV3, setShowNestingV3] = useState(false);
   const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
+  const location = useLocation();
+
+  const syncRoute = useCallback(() => {
+    const pathname = window.location.pathname;
+    const isSystemDocs = pathname === "/documentacao";
+    const isAdmin = pathname === "/admin";
+    const isProjectProgress = pathname === "/project-progress";
+    if (!import.meta.env.DEV && pathname === "/dev-test") {
+      window.history.replaceState({}, "", "/");
+    }
+    const isDevTest = import.meta.env.DEV && pathname === "/dev-test";
+    const isPainelReferencia = pathname === "/painel-referencia";
+    const isAjuda = pathname === "/ajuda";
+    const isLanding = pathname === "/landing" || pathname === "/apresentacao";
+    const isUserProjects = pathname === "/meus-projetos";
+    setShowSystemDocs(isSystemDocs);
+    setShowAdmin(isAdmin);
+    setShowProjectProgress(isProjectProgress);
+    setShowDevTest(isDevTest);
+    setShowPainelReferencia(isPainelReferencia);
+    setShowAjuda(isAjuda);
+    setShowLanding(isLanding);
+    setShowUserProjects(isUserProjects);
+  }, []);
 
   useEffect(() => {
-    const syncRoute = () => {
-      const pathname = window.location.pathname;
-      const isSystemDocs = pathname === "/documentacao";
-      const isAdmin = pathname === "/admin";
-      const isProjectProgress = pathname === "/project-progress";
-      if (!import.meta.env.DEV && pathname === "/dev-test") {
-        window.history.replaceState({}, "", "/");
-      }
-      const isDevTest = import.meta.env.DEV && pathname === "/dev-test";
-      const isPainelReferencia = pathname === "/painel-referencia";
-      const isAjuda = pathname === "/ajuda";
-      const isLanding = pathname === "/landing" || pathname === "/apresentacao";
-      const isUserProjects = pathname === "/meus-projetos";
-      setShowSystemDocs(isSystemDocs);
-      setShowAdmin(isAdmin);
-      setShowProjectProgress(isProjectProgress);
-      setShowDevTest(isDevTest);
-      setShowPainelReferencia(isPainelReferencia);
-      setShowAjuda(isAjuda);
-      setShowLanding(isLanding);
-      setShowUserProjects(isUserProjects);
-    };
     syncRoute();
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
-  }, []);
+  }, [syncRoute]);
+
+  useEffect(() => {
+    syncRoute();
+  }, [location.pathname, syncRoute]);
 
   const navigateToSystemDocs = () => {
     window.history.pushState({}, "", "/documentacao");

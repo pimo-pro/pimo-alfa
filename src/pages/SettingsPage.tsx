@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { canAccessAdminPanel } from "../auth/rbac";
+import { AdminShellProviders } from "../context/AdminShellProviders";
 import { useAuth } from "../auth/useAuth";
 import AdminPanel from "./AdminPanel";
 
@@ -37,7 +38,9 @@ export default function SettingsPage() {
   return (
     <main className="settings-page-root" aria-label="Definições (modo visitante)">
       <div ref={contentRef} className="settings-page-content" aria-hidden>
-        <AdminPanel />
+        <AdminShellProviders>
+          <AdminPanel />
+        </AdminShellProviders>
       </div>
       <div className="settings-overlay-blocker" />
       {showAdminBack ? (

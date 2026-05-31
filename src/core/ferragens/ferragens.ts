@@ -11,6 +11,7 @@ export interface Ferragem {
   categoria: "parafuso" | "cavilha" | "dobradica" | "corredica" | "suporte" | "prego" | "acessorio";
   medidas?: string;
   descricao?: string;
+  precoUnitario?: number;
 }
 
 export const FERRAGENS_DEFAULT: Ferragem[] = [
@@ -20,6 +21,7 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     categoria: "parafuso",
     medidas: "4mm × 50mm",
     descricao: "Parafuso para fixação estrutural",
+    precoUnitario: 0.15,
   },
   {
     id: "cavilha_8mm",
@@ -27,6 +29,7 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     categoria: "cavilha",
     medidas: "Ø8mm",
     descricao: "Cavilha para montagem de painéis",
+    precoUnitario: 0.05,
   },
   {
     id: "dobradica_35mm",
@@ -34,24 +37,28 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     categoria: "dobradica",
     medidas: "35mm",
     descricao: "Dobradiça para portas",
+    precoUnitario: 2.5,
   },
   {
     id: "suporte_prateleira",
     nome: "Suporte de Prateleira",
     categoria: "suporte",
     descricao: "Suporte regulável para prateleira",
+    precoUnitario: 0.9,
   },
   {
     id: "corredica_esq",
     nome: "Corrediça Lateral Esquerda",
     categoria: "corredica",
     descricao: "Corrediça para gaveta (lado esquerdo)",
+    precoUnitario: 9.5,
   },
   {
     id: "corredica_dir",
     nome: "Corrediça Lateral Direita",
     categoria: "corredica",
     descricao: "Corrediça para gaveta (lado direito)",
+    precoUnitario: 9.5,
   },
   {
     id: "prego_costa",
@@ -59,6 +66,7 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     categoria: "prego",
     medidas: "2mm × 20mm",
     descricao: "Prego fino para fixar costa",
+    precoUnitario: 0.02,
   },
   {
     id: "parafuso_puxador",
@@ -66,6 +74,7 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     categoria: "parafuso",
     medidas: "M4 × 25mm",
     descricao: "Parafuso para fixar puxadores",
+    precoUnitario: 0.12,
   },
 ];
 

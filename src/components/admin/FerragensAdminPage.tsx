@@ -8,6 +8,8 @@ import Panel from "../ui/Panel";
 import type { Ferragem } from "../../core/ferragens/ferragens";
 import { useFerragens } from "../../hooks/useFerragens";
 import { useToast } from "../../context/ToastContext";
+import OrlaSettingsPanel from "../settings/orla/OrlaSettingsPanel";
+import { formatCurrency } from "../../utils/formatting";
 
 const CATEGORIAS: Ferragem["categoria"][] = [
   "parafuso",
@@ -31,6 +33,7 @@ export default function FerragensAdminPage() {
     categoria: "parafuso",
     medidas: "",
     descricao: "",
+    precoUnitario: 0,
   });
 
   const handleEdit = (ferragem: Ferragem) => {
@@ -41,7 +44,11 @@ export default function FerragensAdminPage() {
   const handleSaveEdit = () => {
     if (!editingId || !form.nome.trim()) return;
     setFerragens((prev) =>
-      prev.map((f) => (f.id === editingId ? { ...form, nome: form.nome.trim() } : f))
+      prev.map((f) =>
+        f.id === editingId
+          ? { ...form, nome: form.nome.trim(), precoUnitario: Number(form.precoUnitario ?? 0) }
+          : f
+      )
     );
     setEditingId(null);
   };
@@ -65,10 +72,11 @@ export default function FerragensAdminPage() {
       categoria: form.categoria,
       medidas: form.medidas?.trim() || undefined,
       descricao: form.descricao?.trim() || undefined,
+      precoUnitario: Number(form.precoUnitario ?? 0),
     };
     setFerragens((prev) => [...prev, newFerragem]);
     setAddingNew(false);
-    setForm({ id: "", nome: "", categoria: "parafuso", medidas: "", descricao: "" });
+    setForm({ id: "", nome: "", categoria: "parafuso", medidas: "", descricao: "", precoUnitario: 0 });
     showToast("Ferragem adicionada com sucesso.", "info");
   };
 
@@ -161,6 +169,18 @@ export default function FerragensAdminPage() {
                   placeholder="ex: 4mm × 50mm"
                 />
               </div>
+              <div>
+                <div style={labelStyle}>Preço unitário (€)</div>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.precoUnitario ?? 0}
+                  onChange={(e) => setForm((p) => ({ ...p, precoUnitario: Number(e.target.value) }))}
+                  placeholder="0.00"
+                />
+              </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <div style={labelStyle}>Descrição (opcional)</div>
                 <input
@@ -180,7 +200,7 @@ export default function FerragensAdminPage() {
                 className="button button-ghost"
                 onClick={() => {
                   setAddingNew(false);
-                  setForm({ id: "", nome: "", categoria: "parafuso", medidas: "", descricao: "" });
+                  setForm({ id: "", nome: "", categoria: "parafuso", medidas: "", descricao: "", precoUnitario: 0 });
                 }}
               >
                 Cancelar
@@ -245,6 +265,17 @@ export default function FerragensAdminPage() {
                             onChange={(e) => setForm((p) => ({ ...p, medidas: e.target.value }))}
                           />
                         </div>
+                        <div>
+                          <div style={labelStyle}>Preço unitário (€)</div>
+                          <input
+                            className="input"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={form.precoUnitario ?? 0}
+                            onChange={(e) => setForm((p) => ({ ...p, precoUnitario: Number(e.target.value) }))}
+                          />
+                        </div>
                         <div style={{ gridColumn: "1 / -1" }}>
                           <div style={labelStyle}>Descrição</div>
                           <input
@@ -271,6 +302,7 @@ export default function FerragensAdminPage() {
                           <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                             ID: {ferragem.id} · Categoria: {ferragem.categoria}
                             {ferragem.medidas && ` · Medidas: ${ferragem.medidas}`}
+                            {` · Preço unitário: ${formatCurrency(ferragem.precoUnitario ?? 0)}`}
                           </div>
                           {ferragem.descricao && (
                             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
@@ -304,6 +336,10 @@ export default function FerragensAdminPage() {
             })
           )}
         </div>
+      </Panel>
+
+      <Panel title="Orla">
+        <OrlaSettingsPanel />
       </Panel>
     </div>
   );

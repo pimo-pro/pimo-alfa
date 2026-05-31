@@ -29,6 +29,9 @@ export default function TotaisProjetoPanel() {
     custoTotalPortas,
     custoTotalGavetas,
     custoTotalFerragens,
+    totalOrlaMetros,
+    custoTotalOrla,
+    custoTotalRemates,
     custoTotal,
   } = useCutlistData();
 
@@ -57,6 +60,7 @@ export default function TotaisProjetoPanel() {
         <div>Área total de painéis: {totalAreaM2.toFixed(3)} m²</div>
         <div>Quantidade total de peças: {totalPecas}</div>
         <div>Quantidade total de ferragens: {totalFerragensQty}</div>
+        <div>Total de orla usada: {totalOrlaMetros.toFixed(2)} m</div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Custo total de painéis:</span>
           <span style={totalValueStyle}>{formatCurrency(custoTotalPaineis)}</span>
@@ -72,6 +76,14 @@ export default function TotaisProjetoPanel() {
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Custo total de ferragens:</span>
           <span style={totalValueStyle}>{formatCurrency(custoTotalFerragens)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Custo total de orla:</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotalOrla)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Custo total de remates:</span>
+          <span style={totalValueStyle}>{formatCurrency(custoTotalRemates)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
           <span>Custo total do projeto:</span>
