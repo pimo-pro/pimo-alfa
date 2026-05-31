@@ -11,8 +11,7 @@ import { wallStore } from "../stores/wallStore";
 import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
 import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
-import type { ProjectRemate } from "../core/remate/remateTypes";
-import { positionToFaceKind } from "../core/remate/remateTypes";
+import { normalizeRematesFromPersistence } from "../core/remate/rematePieceMigration";
 import type { ProjectHemati } from "../core/hemati/hematiTypes";
 import type { ProjectRodape } from "../core/rodape/rodapeTypes";
 import {
@@ -131,25 +130,8 @@ export function reviveState(snapshot: unknown): ProjectState | null {
           ? getMaterialByIdOrLabel(restored.material.tipo)?.id ?? ""
           : "");
 
-  const remates: ProjectRemate[] = Array.isArray(restored.remates)
-    ? restored.remates
-        .filter(
-          (remate): remate is ProjectRemate =>
-            remate != null &&
-            typeof remate === "object" &&
-            typeof (remate as ProjectRemate).id === "string" &&
-            typeof (remate as ProjectRemate).parentBoxId === "string"
-        )
-        .map((remate) => ({
-          ...remate,
-          faceKind:
-            remate.faceKind ??
-            positionToFaceKind(
-              remate.position ?? "dir",
-              remate.type ?? "avista"
-            ),
-          placementFree: remate.placementFree ?? false,
-        }))
+  const remates = Array.isArray(restored.remates)
+    ? normalizeRematesFromPersistence(restored.remates)
     : [];
 
   return {

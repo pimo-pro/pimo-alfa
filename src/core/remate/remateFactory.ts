@@ -1,85 +1,46 @@
 import type { WorkspaceBox } from "../types";
-import { computeRemateDimensionsFromBox } from "./remateDimensions";
-import type { CreateRemateInput, ProjectRemate } from "./remateTypes";
-import { positionToFaceKind, RODAPE_MAX_LENGTH_MM } from "./remateTypes";
+import type { CreateRemateInput, RematePieceTipo } from "./remateTypes";
+import { createRematePieces } from "./rematePieceFactory";
+import type { RematePiece } from "./rematePieceTypes";
 
-const RODAPE_HEIGHT_MM = 150;
-
-const POSITION_SUFFIX: Record<string, string> = {
-  dir: "DIR",
-  esq: "ESQ",
-  cima: "CIMA",
-  baixo: "BAIXO",
-  rodape: "RODAPE",
-};
-
-function normalizeBoxCode(box: WorkspaceBox): string {
-  return (box.nome || box.id).trim().replace(/\s+/g, "_").toUpperCase();
+function mapLegacyInputToTipo(input: CreateRemateInput): RematePieceTipo {
+  if (input.type === "L") return "L";
+  if (input.type === "rodape" || input.position === "rodape") return "RODAPE";
+  if (input.position === "dir") return "DIR";
+  if (input.position === "esq") return "ESQ";
+  if (input.position === "cima") return "CIMA";
+  return "BAIXO";
 }
 
-function getDefaultDimensions(box: WorkspaceBox, input: CreateRemateInput, thicknessMm: number) {
-  const dims = computeRemateDimensionsFromBox(box, input, thicknessMm);
-  if (input.position === "rodape" || input.type === "rodape") {
-    const largura = Math.max(1, box.dimensoes?.largura ?? 1);
-    return {
-      widthMm: Math.min(RODAPE_MAX_LENGTH_MM, largura),
-      heightMm: RODAPE_HEIGHT_MM,
-      depthMm: thicknessMm,
-    };
-  }
-  return dims;
+function boxDimsM(box: WorkspaceBox) {
+  return {
+    widthM: Math.max(0.001, (box.dimensoes?.largura ?? 600) / 1000),
+    heightM: Math.max(0.001, (box.dimensoes?.altura ?? 720) / 1000),
+    depthM: Math.max(0.001, (box.dimensoes?.profundidade ?? 600) / 1000),
+  };
 }
 
+/** Compatibilidade auto-room-fill e legado V1. */
 export function createRematesForBox(params: {
   box: WorkspaceBox;
   input: CreateRemateInput;
   materialId: string;
   thicknessMm: number;
   existingCount: number;
-}): ProjectRemate[] {
-  const { box, input, materialId, thicknessMm, existingCount } = params;
-  const code = normalizeBoxCode(box);
-  const faceKind = positionToFaceKind(input.position, input.type);
-  const groupId = input.type === "L" ? `${box.id}-remate-L-group-${existingCount + 1}` : undefined;
-
-  if (input.type === "L") {
-    const largura = Math.max(1, box.dimensoes?.largura ?? 1);
-    const span = computeRemateDimensionsFromBox(box, input, thicknessMm);
-    return ([1, 2] as const).map((part) => ({
-      id: `${box.id}-remate-L${part}-${existingCount + part}`,
-      parentBoxId: box.id,
-      type: "L" as const,
-      position: input.position,
-      faceKind: "L" as const,
-      materialId,
-      materialMode: input.materialMode,
-      thicknessMm,
-      dimensions:
-        part === 1
-          ? { widthMm: thicknessMm, heightMm: span.heightMm, depthMm: span.depthMm }
-          : { widthMm: largura, heightMm: thicknessMm, depthMm: span.depthMm },
-      name: `${code}_REM_L${part}`,
-      parentGroupId: groupId,
-      partIndex: part,
-      placementFree: false,
-    }));
-  }
-
-  const dimensions = getDefaultDimensions(box, input, thicknessMm);
-  const suffix = input.position === "rodape" ? "RODAPE" : `REM_${POSITION_SUFFIX[input.position]}`;
-  return [
+}): RematePiece[] {
+  const { box, input, materialId, thicknessMm } = params;
+  return createRematePieces(
     {
-      id: `${box.id}-remate-${input.position}-${existingCount + 1}`,
+      tipo: mapLegacyInputToTipo(input),
       parentBoxId: box.id,
-      type: input.type,
-      position: input.position,
-      faceKind,
-      materialId,
-      materialMode: input.materialMode,
-      thicknessMm,
-      dimensions,
-      name: `${code}_${suffix}`,
-      placementFree: false,
+      materialPresetId: materialId,
+      followBox: true,
     },
-  ];
+    {
+      box,
+      materialPresetId: materialId,
+      thicknessMm,
+      boxDimsM: boxDimsM(box),
+    }
+  );
 }

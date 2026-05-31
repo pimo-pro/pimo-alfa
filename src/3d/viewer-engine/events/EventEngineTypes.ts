@@ -41,6 +41,7 @@ export interface IViewerEventEngine {
   getOnRoomUtilitySelected(): ((_data: { utilityId: string; wallId: number; config: ProjectRoomUtility } | null) => void) | null;
   getOnWallSelected(): ((_wallId: number | null) => void) | null;
   getOnBoxSelected(): ((_id: string | null) => void) | null;
+  getOnRemateSelected(): ((_remateId: string | null) => void) | null;
   getPlacementMode(): "door" | "window" | null;
   getOnRoomElementPlaced(): ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null;
   getWallHitAtPointer(_event: { clientX: number; clientY: number }): WallHit | null;

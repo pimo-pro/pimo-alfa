@@ -222,9 +222,6 @@ export function applyAutoRoomFillPlan(
       });
       remates = [...remates, ...created];
       createdRemateIds.push(...created.map((r) => r.id));
-      workspaceBoxes = workspaceBoxes.map((b) =>
-        b.id === box.id ? { ...b, remateIds: [...(b.remateIds ?? []), ...created.map((r) => r.id)] } : b
-      );
     }
     if (finish.remateDir) {
       const created = createRematesForBox({

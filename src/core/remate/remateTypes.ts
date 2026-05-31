@@ -1,3 +1,14 @@
+export type {
+  RematePiece,
+  RematePieceTipo,
+  RematePiecePosition,
+  RematePieceRotation,
+  CreateRematePieceInput,
+  UpdateRematePieceInput,
+} from "./rematePieceTypes";
+export { REMATE_PIECE_TIPO_LABELS, isMultiPartRemateTipo } from "./rematePieceTypes";
+
+/** @deprecated Remate V1 — migrado automaticamente para RematePiece. */
 export type RemateType = "completo" | "avista" | "L" | "rodape";
 
 export type RematePosition = "dir" | "esq" | "cima" | "baixo" | "rodape";

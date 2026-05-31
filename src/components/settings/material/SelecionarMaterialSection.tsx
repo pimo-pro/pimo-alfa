@@ -20,14 +20,13 @@ export default function SelecionarMaterialSection({
     []
   );
   const orlaPresets = normalizeOrlaPresets(project.orlaPresets);
-  const remateCount = (project.remates ?? []).filter((remate) => remate.parentBoxId === boxId).length;
 
   if (!box) return null;
 
   const currentMaterialId = box.material || project.materialId || project.material.tipo;
 
   return (
-    <Panel title="Selecionar Material" description="Material da caixa, orla e remate do box selecionado.">
+    <Panel title="Selecionar Material" description="Material da caixa e orla do box selecionado.">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
@@ -71,17 +70,6 @@ export default function SelecionarMaterialSection({
           </select>
           <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
             Materiais, espessura e tipo seguem os presets permitidos de Orla V1.
-          </div>
-        </section>
-
-        <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-            Remate / Roda pé
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {remateCount > 0
-              ? `${remateCount} peça(s) neste módulo. Use o painel «componentes» ou «Remate do Box» para adicionar DIR, ESQ, CIMA, BAIXO, L ou roda pé.`
-              : "Nenhum remate. Adicione faces no painel «Remate do Box» ou no menu «componentes»."}
           </div>
         </section>
       </div>

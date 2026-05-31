@@ -144,6 +144,7 @@ export class EventsManager {
     const remateId = e.getRemateIdAtPointer(event);
     if (remateId) {
       e.selectRemate(remateId);
+      e.getOnRemateSelected?.()?.(remateId);
       e.setHoveredBox(null);
       e.setSelectedBox(null);
       e.getOnRoomElementSelected()?.(null);

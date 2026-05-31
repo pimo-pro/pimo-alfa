@@ -128,7 +128,7 @@ import { SmartSnapping } from "./snapping/SmartSnapping";
 import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
 import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
-import { RemateVisualizer, type RemateVisualBridge } from "./remate/RemateVisualizer";
+import { RematePieceVisualizer, type RematePieceVisualBridge } from "./remate/RematePieceVisualizer";
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
 import { mToMm } from "../../utils/units";
@@ -219,6 +219,7 @@ export class ViewerCore {
   private readonly raycastSystem: ViewerRaycastSystem;
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
+  private onRemateSelected: ((_remateId: string | null) => void) | null = null;
   private onInternalSurfaceSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private onInternalEdgeSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private onInternalPointSelected: ((_hit: InternalSelectionState) => void) | null = null;
@@ -230,7 +231,7 @@ export class ViewerCore {
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
   private onRemateTransform: ((
     _remateId: string,
-    _patch: import("../../core/remate/remateTypes").UpdateRemateInput
+    _patch: import("../../core/remate/rematePieceTypes").UpdateRematePieceInput
   ) => void) | null = null;
   private onHematiTransform: ((
     _hematiId: string,
@@ -431,7 +432,7 @@ export class ViewerCore {
   private smartSnappingEngine!: SmartSnapping;
   private autoLayoutEngine!: AutoLayoutEngine;
   private orlaVisualizer = new OrlaVisualizer();
-  private remateVisualizer = new RemateVisualizer();
+  private remateVisualizer = new RematePieceVisualizer();
   private hematiVisualizer = new HematiVisualizer();
   private rodapeVisualizer = new RodapeVisualizer();
   private readonly overlayCoordinator = new ViewerOverlayCoordinator();
@@ -913,7 +914,7 @@ export class ViewerCore {
     this.orlaVisualizer.syncBoxRoot(boxId, entry.mesh);
   }
 
-  bindRemateBridge(bridge: RemateVisualBridge | null): void {
+  bindRemateBridge(bridge: RematePieceVisualBridge | null): void {
     this.remateVisualizer.bindBridge(bridge);
     this.syncRemateVisuals();
   }
@@ -942,6 +943,7 @@ export class ViewerCore {
 
   selectRemate(remateId: string | null): void {
     this.viewerState.setSelectedRemate(remateId);
+    this.onRemateSelected?.(remateId);
     if (remateId) {
       this.viewerState.setSelectedHemati(null);
       this.viewerState.setSelectedRodape(null);
@@ -956,10 +958,14 @@ export class ViewerCore {
   setOnRemateTransform(
     callback: ((
       _remateId: string,
-      _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+      _patch: import("../../core/remate/rematePieceTypes").UpdateRematePieceInput
     ) => void) | null
   ): void {
     this.onRemateTransform = callback;
+  }
+
+  setOnRemateSelected(callback: ((_remateId: string | null) => void) | null): void {
+    this.onRemateSelected = callback;
   }
 
   bindHematiBridge(bridge: HematiVisualBridge | null): void {
@@ -4269,6 +4275,7 @@ export class ViewerCore {
       getOnRoomUtilitySelected: () => this.onRoomUtilitySelected,
       getOnWallSelected: () => this.onWallSelected,
       getOnBoxSelected: () => this.onBoxSelected,
+      getOnRemateSelected: () => this.onRemateSelected,
       getPlacementMode: () => this.viewerState.getPlacementMode(),
       getOnRoomElementPlaced: () => this.onRoomElementPlaced,
       getWallHitAtPointer: (e) => this.getWallHitAtPointer(e),
@@ -4543,9 +4550,7 @@ export class ViewerCore {
     const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
     if (!mesh) return;
     const boxId = mesh.userData.boxId as string | undefined;
-    if (!boxId) return;
-    const entry = this.boxes.get(boxId);
-    if (!entry) return;
+    const entry = boxId ? this.boxes.get(boxId) : undefined;
 
     const tool = this.viewerState.getCurrentTool();
     if (tool === "scale") {
@@ -4557,25 +4562,47 @@ export class ViewerCore {
       const depthMm = Math.max(1, size.z * mesh.scale.z * 1000);
       mesh.scale.set(1, 1, 1);
       this.onRemateTransform?.(remateId, {
-        dimensions: { widthMm, heightMm, depthMm },
-        placementFree: true,
+        width: widthMm,
+        height: heightMm,
+        depth: depthMm,
+        followBox: false,
       });
       return;
     }
 
-    entry.mesh.updateMatrixWorld(true);
-    const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
-    const local = mesh.position.clone().applyMatrix4(inv);
+    if (entry?.mesh) {
+      entry.mesh.updateMatrixWorld(true);
+      const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
+      const local = mesh.position.clone().applyMatrix4(inv);
+      const localQuat = new THREE.Quaternion().copy(mesh.quaternion);
+      const boxQuat = new THREE.Quaternion().setFromRotationMatrix(entry.mesh.matrixWorld);
+      const invBoxQuat = boxQuat.clone().invert();
+      localQuat.premultiply(invBoxQuat);
+      const euler = new THREE.Euler().setFromQuaternion(localQuat);
+      this.onRemateTransform?.(remateId, {
+        position: {
+          xMm: local.x * 1000,
+          yMm: local.y * 1000,
+          zMm: local.z * 1000,
+        },
+        rotation: { xRad: euler.x, yRad: euler.y, zRad: euler.z },
+        followBox: false,
+      });
+      return;
+    }
+
     this.onRemateTransform?.(remateId, {
-      transform: {
-        xMm: local.x * 1000,
-        yMm: local.y * 1000,
-        zMm: local.z * 1000,
-        rotacaoXRad: mesh.rotation.x,
-        rotacaoYRad: mesh.rotation.y,
-        rotacaoZRad: mesh.rotation.z,
+      position: {
+        xMm: mesh.position.x * 1000,
+        yMm: mesh.position.y * 1000,
+        zMm: mesh.position.z * 1000,
       },
-      placementFree: true,
+      rotation: {
+        xRad: mesh.rotation.x,
+        yRad: mesh.rotation.y,
+        zRad: mesh.rotation.z,
+      },
+      followBox: false,
     });
   }
 

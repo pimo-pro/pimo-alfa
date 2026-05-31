@@ -13,6 +13,8 @@ import {
 } from "../../../data/moveisUnificados";
 import { buildBoxLegacy, type BoxOptions } from "../../../3d/objects/BoxBuilder";
 import type { BoxModule } from "../../../core/types";
+import { REMATE_CATALOG_ITEMS } from "../../../data/moveisUnificados/remateCatalog";
+import type { RematePieceTipo } from "../../../core/remate/rematePieceTypes";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -332,11 +334,13 @@ function Flyout({ item, anchorRect, panelWidth, config, onConfigChange, onAdd, o
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
+const REMATE_GROUP_KEY = "remates";
+
 export default function PainelMoveisUnificado() {
   const { actions } = useProject();
   const panelRef   = useRef<HTMLDivElement>(null);
   const [search, setSearch]         = useState("");
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ "cozinha-br": true, "caixas-de-canto": true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ "cozinha-br": true, "caixas-de-canto": true, [REMATE_GROUP_KEY]: true });
   const [activeItem, setActiveItem] = useState<UnifiedModelItem | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [config, setConfig]         = useState<BoxConfig>(DEFAULT_CONFIG);
@@ -365,6 +369,10 @@ export default function PainelMoveisUnificado() {
     setAnchorRect(buttonEl.getBoundingClientRect());
     setConfig(DEFAULT_CONFIG);
   }, [activeItem]);
+
+  const handleAddRemateCatalog = useCallback((tipo: RematePieceTipo) => {
+    actions.createStandaloneRematePiece(tipo);
+  }, [actions]);
 
   const handleAdd = useCallback(() => {
     if (!activeItem || activeItem.tipo !== "3d") return;
@@ -400,6 +408,55 @@ export default function PainelMoveisUnificado() {
 
         {/* Groups list */}
         <div className="left-panel-scroll" style={{ flex: 1, padding: "4px 0 16px" }}>
+          <div key={REMATE_GROUP_KEY}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(REMATE_GROUP_KEY)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                width: "100%", padding: "7px 12px",
+                border: "none", background: "transparent",
+                color: "var(--text-muted, #94a3b8)",
+                fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
+                cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+              }}
+            >
+              <span style={{
+                display: "inline-block",
+                transition: "transform 0.15s",
+                transform: (openGroups[REMATE_GROUP_KEY] ?? false) ? "rotate(90deg)" : "none",
+                fontSize: 12,
+              }}>›</span>
+              <span style={{ flex: 1 }}>REMATES</span>
+              <span style={{
+                fontSize: 9, background: "var(--card-bg, rgba(255,255,255,0.03))",
+                border: "1px solid var(--card-border, rgba(255,255,255,0.06))",
+                borderRadius: 8, padding: "1px 5px",
+              }}>{REMATE_CATALOG_ITEMS.length}</span>
+            </button>
+            {(openGroups[REMATE_GROUP_KEY] ?? false) && (
+              <div style={{ padding: "0 6px 4px", display: "flex", flexDirection: "column", gap: 1 }}>
+                {REMATE_CATALOG_ITEMS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleAddRemateCatalog(item.tipo)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      width: "100%", padding: "7px 10px",
+                      borderRadius: 7, border: "1px solid transparent",
+                      background: "transparent", cursor: "pointer",
+                      textAlign: "left", fontFamily: "inherit",
+                    }}
+                  >
+                    <span style={{ flex: 1, fontSize: 12, color: "var(--text-main, #e2e8f0)" }}>{item.nome}</span>
+                    <span style={{ fontSize: 13, color: "var(--text-muted, #94a3b8)" }}>+</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {groups.length === 0 && (
             <p style={{ padding: "12px 14px", fontSize: 12, color: "var(--text-muted, #94a3b8)", margin: 0 }}>
               Sem resultados para "{search}"

@@ -358,11 +358,11 @@ export default function BottomInfoToolbar() {
       const boxRemates = (project.remates ?? []).filter((remate) => remate.parentBoxId === box.id);
       for (const remate of boxRemates) {
         const kindLabel =
-          remate.faceKind === "RODAPE"
+          remate.tipo === "RODAPE"
             ? "Roda pé"
-            : remate.faceKind === "L"
-              ? `Remate L${remate.partIndex ?? ""}`
-              : `Remate ${remate.faceKind}`;
+            : remate.tipo === "L" || remate.tipo === "RODAPE_L"
+              ? `${remate.tipo}${remate.partIndex ?? ""}`
+              : `Remate ${remate.tipo}`;
         entries.push({
           id: remate.id,
           boxId: box.id,

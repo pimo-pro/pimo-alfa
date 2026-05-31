@@ -688,24 +688,35 @@ const hasShownViewerReadyToastRef = useRef(false);
       };
     };
 
-    const buildRemateBoxConfig = (boxId: string) => {
-      const dims = buildFinishBoxDims(boxId);
-      if (!dims) return null;
-      const wsBox = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
-      const remates = (projectRef.current.remates ?? []).filter((r) => r.parentBoxId === boxId);
-      return {
-        ...dims,
-        remates,
-        box: wsBox
-          ? {
-              cabinetType: wsBox.cabinetType,
-              feetEnabled: wsBox.feetEnabled,
-              feetHeight: wsBox.feetHeight,
-              pe_cm: wsBox.pe_cm,
-            }
-          : undefined,
-      };
-    };
+    const getBoxWorldMatrix = (boxId: string) => core?.getBoxWorldMatrix?.(boxId) ?? null;
+
+    core?.bindRemateBridge?.({
+      listRematePieces: () => projectRef.current.remates ?? [],
+      getBoxConfig: (boxId) => {
+        const dims = buildFinishBoxDims(boxId);
+        if (!dims) return null;
+        const wsBox = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
+        return {
+          ...dims,
+          box: wsBox
+            ? {
+                cabinetType: wsBox.cabinetType,
+                feetEnabled: wsBox.feetEnabled,
+                feetHeight: wsBox.feetHeight,
+                pe_cm: wsBox.pe_cm,
+              }
+            : undefined,
+        };
+      },
+      getBoxWorldMatrix,
+    });
+
+    core?.setOnRemateSelected?.((remateId) => {
+      if (remateId) {
+        setSelectedObject({ type: "remate", id: remateId });
+        setSelectedTool("home");
+      }
+    });
 
     const buildHematiBoxConfig = (boxId: string) => {
       const dims = buildFinishBoxDims(boxId);
@@ -720,17 +731,6 @@ const hasShownViewerReadyToastRef = useRef(false);
       const rodapes = (projectRef.current.rodapes ?? []).filter((r) => r.parentBoxId === boxId);
       return { ...dims, rodapes };
     };
-
-    const getBoxWorldMatrix = (boxId: string) => core?.getBoxWorldMatrix?.(boxId) ?? null;
-
-    core?.bindRemateBridge?.({
-      getBoxRemateConfig: (boxId) => buildRemateBoxConfig(boxId),
-      listBoxRemateConfigs: () =>
-        projectRef.current.workspaceBoxes
-          .map((box) => buildRemateBoxConfig(box.id))
-          .filter((cfg): cfg is NonNullable<typeof cfg> => cfg != null && cfg.remates.length > 0),
-      getBoxWorldMatrix,
-    });
 
     core?.bindHematiBridge?.({
       getBoxHematiConfig: (boxId) => buildHematiBoxConfig(boxId),
@@ -759,7 +759,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     core?.setOnRodapeTransform?.((rodapeId, patch) => {
       actionsRef.current.updateRodape(rodapeId, patch);
     });
-  }, [viewerApi.viewerReady]);
+  }, [viewerApi.viewerReady, setSelectedObject, setSelectedTool]);
 
   useEffect(() => {
     if (!viewerApi.viewerReady) return;

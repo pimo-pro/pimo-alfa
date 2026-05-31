@@ -4,6 +4,7 @@ import { useStore } from "zustand";
 export type SelectedObject =
   | { type: "none" }
   | { type: "box"; id: string }
+  | { type: "remate"; id: string }
   | { type: "wall"; id: string }
   | { type: "roomElement"; id: string }
   | { type: "roomUtility"; id: string };

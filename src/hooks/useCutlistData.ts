@@ -197,12 +197,12 @@ export function useCutlistData() {
       const box = boxes.find((b) => b.id === remate.parentBoxId);
       allRemates.push({
         key: remate.id,
-        boxNome: box?.nome ?? remate.parentBoxId,
+        boxNome: box?.nome ?? remate.parentBoxId ?? "Standalone",
         nome: remate.name,
-        material: remate.materialId,
-        largura_mm: remate.dimensions.widthMm,
-        altura_mm: remate.dimensions.heightMm,
-        profundidade_mm: remate.dimensions.depthMm,
+        material: remate.materialPresetId,
+        largura_mm: remate.width,
+        altura_mm: remate.height,
+        profundidade_mm: remate.depth,
         quantidade: 1,
         custo: project.cutListComPreco?.find((item) => item.id === remate.id)?.precoTotal ?? 0,
       });

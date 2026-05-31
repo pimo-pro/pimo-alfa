@@ -15,8 +15,9 @@ import type {
 } from "../core/types";
 import type {
   CreateRemateInput,
-  ProjectRemate,
-  UpdateRemateInput,
+  CreateRematePieceInput,
+  RematePiece,
+  UpdateRematePieceInput,
 } from "../core/remate/remateTypes";
 import type {
   CreateHematiInput,
@@ -154,8 +155,8 @@ export interface ProjectState {
   /** Orla V1 — ferragem calculada (metros, custo). */
   ferragemOrla: import("../core/orla/orlaTypes").ProjectFerragemOrla;
 
-  /** Remate V1 — peças independentes de acabamento final. */
-  remates: ProjectRemate[];
+  /** Remate 2.0 — peças independentes manipuláveis. */
+  remates: RematePiece[];
   /** Hemati — acabamento superior/lateral (cozinhas; apenas visual). */
   hematis: ProjectHemati[];
   /** Roda pé inteligente — acabamento inferior (cozinhas; apenas visual). */
@@ -605,12 +606,18 @@ export interface ProjectActions {
   upsertOrlaPreset: (_preset: import("../core/orla/orlaTypes").OrlaPreset) => void;
   /** Orla V1 — remove preset de orla (se não estiver em uso). */
   removeOrlaPreset: (_presetId: string) => void;
-  /** Remate V1 — cria remate(s) no box selecionado. */
+  /** Remate 2.0 — cria peça independente (box ou standalone). */
+  createRematePiece: (_input: CreateRematePieceInput) => void;
+  /** Remate 2.0 — cria peça standalone a partir do catálogo MÓVEIS. */
+  createStandaloneRematePiece: (_tipo: RematePiece["tipo"]) => void;
+  /** @deprecated alias — auto-room-fill e legado */
   createBoxRemate: (_input: CreateRemateInput) => void;
-  /** Remate V1 — atualiza dimensões/material/transform de um remate. */
-  updateRemate: (_remateId: string, _patch: UpdateRemateInput) => void;
-  /** Remate V1 — remove remate do projeto. */
+  /** Remate 2.0 — atualiza dimensões/material/posição de um remate. */
+  updateRemate: (_remateId: string, _patch: UpdateRematePieceInput) => void;
+  /** Remate 2.0 — remove remate do projeto. */
   removeRemate: (_remateId: string) => void;
+  /** Remate 2.0 — seleção UI (noop no estado persistido). */
+  selectRematePiece: (_remateId: string | null) => void;
   /** Hemati — cria peça(s) no módulo. */
   createBoxHemati: (_input: CreateHematiInput) => void;
   updateHemati: (_hematiId: string, _patch: UpdateHematiInput) => void;

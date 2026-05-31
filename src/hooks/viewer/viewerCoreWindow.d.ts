@@ -70,18 +70,19 @@ declare global {
       };
       bindRemateBridge?: (
         bridge: Pick<
-          import("../3d/viewer-engine/remate/RemateVisualizer").RemateVisualBridge,
-          "getBoxRemateConfig" | "listBoxRemateConfigs" | "getBoxWorldMatrix"
+          import("../3d/viewer-engine/remate/RematePieceVisualizer").RematePieceVisualBridge,
+          "listRematePieces" | "getBoxConfig" | "getBoxWorldMatrix"
         > | null
       ) => void;
       setOnRemateTransform?: (
         callback:
           | ((
               remateId: string,
-              patch: import("../../core/remate/remateTypes").UpdateRemateInput
+              patch: import("../../core/remate/rematePieceTypes").UpdateRematePieceInput
             ) => void)
           | null
       ) => void;
+      setOnRemateSelected?: (callback: ((_remateId: string | null) => void) | null) => void;
       selectRemate?: (remateId: string | null) => void;
       getBoxDimensions?: (boxId: string) => { width: number; height: number; depth: number } | null;
       getBoxWorldMatrix?: (boxId: string) => unknown;
