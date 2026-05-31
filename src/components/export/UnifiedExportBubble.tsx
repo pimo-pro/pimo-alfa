@@ -11,6 +11,7 @@ import {
   type SendSelections,
 } from "../../hooks/useSendProjectPackage";
 import Button from "../ui/Button";
+import { ModalPortal } from "../ui/ModalPortal";
 import { Icon } from "@/components/icons";
 
 type Props = {
@@ -147,6 +148,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div
       className="modal-overlay"
       role="dialog"
@@ -398,5 +400,6 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
