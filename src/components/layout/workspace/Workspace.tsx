@@ -25,6 +25,7 @@ import { runProjectRedo, runProjectUndo } from "./workspaceUndoRedoHandlers";
 import { buildBoxesWithCutList } from "../../../context/projectState";
 import { resolvePieceOrlaConfig } from "../../../core/orla/orlaCalculator";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
+import { useSettings } from "../../../context/SettingsContext";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 
 type WorkspaceProps = {
@@ -41,6 +42,7 @@ export default function Workspace({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerSurfaceRef = useRef<HTMLDivElement | null>(null);
   const { project, actions, viewerSync } = useProject();
+  const { settings } = useSettings();
   const { registerWorkspaceUndoRedo } = useWorkspaceUndoRedoRegistry();
   const { openModal } = useToolbarModal();
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
@@ -774,6 +776,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     project.room,
     project.workspaceBoxes,
     project.boxes,
+    settings.orlaRules,
     viewerApi.viewerReady,
   ]);
 

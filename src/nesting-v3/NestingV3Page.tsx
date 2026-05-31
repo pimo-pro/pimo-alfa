@@ -18,6 +18,7 @@ import {
   useCallback, useRef, useState, useMemo,
   useEffect, type PointerEvent, type WheelEvent
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useNestingV3 } from "./useNestingV3";
 import { calcSheetUtilization, rotateHoles } from "./nestingV3Engine";
 import { downloadNestingV3Tcn, getV3ExportStats } from "./nestingV3Export";
@@ -31,7 +32,9 @@ import { Icon } from "../components/icons/Icon";
 
 interface NestingV3PageProps {
   initialCutPieces?: CutPiece[];
+  initialPieces?: V3Piece[];
   projectName?: string;
+  projectId?: string;
   onClose?: () => void;
 }
 
@@ -432,9 +435,31 @@ function SheetCanvas({ sheet, sheetIndex, pieces, placements, kerfMm: _kerfMm, s
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function NestingV3Page({ initialCutPieces = [], projectName = "Projeto", onClose }: NestingV3PageProps) {
+type NestingV3LocationState = {
+  pieces?: V3Piece[];
+  projectId?: string;
+  projectName?: string;
+};
+
+export default function NestingV3Page({
+  initialCutPieces = [],
+  initialPieces,
+  projectName = "Projeto",
+  projectId,
+  onClose,
+}: NestingV3PageProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const locationState = (location.state ?? null) as NestingV3LocationState | null;
+  const resolvedPieces = useMemo(
+    () => initialPieces ?? locationState?.pieces ?? [],
+    [initialPieces, locationState?.pieces]
+  );
+  const resolvedProjectId = projectId ?? locationState?.projectId;
+  const resolvedProjectName = locationState?.projectName ?? projectName;
   const {
     state, dragState, setDragState,
+    loadPieces,
     runAutoLayout, movePiece, returnToSidebar, rotatePiece,
     movePieceToSheet, addManualPiece, removePiece,
     addSheet, removeSheet, setActiveSheet, setKerfMm, clearAll,
@@ -448,6 +473,13 @@ export default function NestingV3Page({ initialCutPieces = [], projectName = "Pr
   const panStartRef   = useRef({ x: 0, y: 0, px: 0, py: 0 });
   const [ghostPos, setGhostPos]         = useState<{ x: number; y: number } | null>(null);
   const [generating, setGenerating]     = useState(false);
+  const hasAutoLaidOutRef = useRef(false);
+
+  useEffect(() => {
+    if (resolvedPieces.length === 0) return;
+    hasAutoLaidOutRef.current = false;
+    loadPieces(resolvedPieces);
+  }, [resolvedPieces, loadPieces]);
 
   const activeSheet = state.sheets[state.activeSheetIndex] ?? state.sheets[0];
   const stats       = getV3ExportStats(state);
@@ -458,6 +490,14 @@ export default function NestingV3Page({ initialCutPieces = [], projectName = "Pr
     calcSheetUtilization(state.activeSheetIndex, activeSheet, state.placements, state.pieces),
     [state, activeSheet]
   );
+
+  useEffect(() => {
+    if (hasAutoLaidOutRef.current) return;
+    if (state.pieces.length === 0) return;
+    hasAutoLaidOutRef.current = true;
+    runAutoLayout();
+    setSelectedId(state.pieces[0]?.id ?? null);
+  }, [runAutoLayout, state.pieces]);
 
   // Zoom with wheel
   const handleWheel = useCallback((e: WheelEvent<HTMLDivElement>) => {
@@ -569,15 +609,15 @@ export default function NestingV3Page({ initialCutPieces = [], projectName = "Pr
     setGenerating(true);
     try {
       await new Promise((r) => setTimeout(r, 20)); // yield to UI
-      downloadNestingV3Pdf(state, projectName);
+      downloadNestingV3Pdf(state, resolvedProjectName);
       await new Promise((r) => setTimeout(r, 100));
-      downloadNestingV3Tcn(state, projectName);
+      downloadNestingV3Tcn(state, resolvedProjectName);
       await new Promise((r) => setTimeout(r, 100));
-      downloadNestingV3Labels(state, projectName);
+      downloadNestingV3Labels(state, resolvedProjectName);
     } finally {
       setGenerating(false);
     }
-  }, [state, projectName]);
+  }, [state, resolvedProjectName]);
 
   const ghostPiece = dragState ? state.pieces.find((p) => p.id === dragState.pieceId) : null;
 
@@ -590,15 +630,20 @@ export default function NestingV3Page({ initialCutPieces = [], projectName = "Pr
 
       {/* ── Toolbar ─────────────────────────────────────────────────────── */}
       <div style={{ height:TOOLBAR_H, display:"flex", alignItems:"center", gap:6, padding:"0 12px", background:C.surface, borderBottom:`1px solid ${C.border}`, flexShrink:0, zIndex:10 }}>
-        {onClose && (
-          <button type="button" onClick={onClose}
+        {(onClose || resolvedProjectId) && (
+          <button
+            type="button"
+            onClick={() => {
+              if (resolvedProjectId) navigate(`/projects/viewer?ids=${encodeURIComponent(resolvedProjectId)}`);
+              else onClose?.();
+            }}
             style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 9px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", fontSize:11, fontFamily:font }}>
-            <Icon name="chevronRight" size={12} color={C.muted}/>Voltar
+            <Icon name="chevronRight" size={12} color={C.muted}/>Voltar ao Projeto
           </button>
         )}
         <div style={{ width:1, height:18, background:C.border }}/>
         <span style={{ fontSize:13, fontWeight:700, color:C.text }}>Nesting V3</span>
-        <span style={{ fontSize:10, padding:"2px 8px", borderRadius:999, background:"rgba(59,130,246,0.14)", color:C.accent, border:"1px solid rgba(59,130,246,0.3)" }}>{projectName}</span>
+        <span style={{ fontSize:10, padding:"2px 8px", borderRadius:999, background:"rgba(59,130,246,0.14)", color:C.accent, border:"1px solid rgba(59,130,246,0.3)" }}>{resolvedProjectName}</span>
         <div style={{ flex:1 }}/>
 
         {/* Kerf */}
@@ -632,11 +677,11 @@ export default function NestingV3Page({ initialCutPieces = [], projectName = "Pr
         <div style={{ width:1, height:18, background:C.border }}/>
 
         {/* Export individual */}
-        <button type="button" onClick={() => downloadNestingV3Pdf(state, projectName)}
+        <button type="button" onClick={() => downloadNestingV3Pdf(state, resolvedProjectName)}
           style={toolBtn(C.muted)} title="Exportar PDF técnico">PDF</button>
-        <button type="button" onClick={() => downloadNestingV3Tcn(state, projectName)}
+        <button type="button" onClick={() => downloadNestingV3Tcn(state, resolvedProjectName)}
           style={toolBtn(C.muted)} title="Exportar TCN">TCN</button>
-        <button type="button" onClick={() => downloadNestingV3Labels(state, projectName)}
+        <button type="button" onClick={() => downloadNestingV3Labels(state, resolvedProjectName)}
           style={toolBtn(C.muted)} title="Exportar etiquetas">Etiquetas</button>
 
         {/* Generate all */}

@@ -62,6 +62,7 @@ export function runNestingV3AutoLayout(
     sheetIndex: placement.sheetIndex,
     xMm: placement.xMm,
     yMm: placement.yMm,
+    rotated: placement.rotated === true,
   }));
   return {
     placements,

@@ -37,6 +37,7 @@ export interface V3Piece {
   color: string;
   /** ID da origem (boxId do projeto). Opcional para peças adicionadas manualmente. */
   sourceBoxId?: string;
+  sourceProjectId?: string;
 }
 
 // ── Placement de uma peça num sheet ──────────────────────────────────────────
@@ -48,6 +49,7 @@ export interface V3Placement {
   xMm: number;
   /** Y do canto sup-esq no sheet (mm). */
   yMm: number;
+  rotated?: boolean;
 }
 
 // ── Sheet (folha de madeira) ───────────────────────────────────────────────────
@@ -75,6 +77,8 @@ export interface NestingV3State {
   /** Sheet atualmente visível na área central. */
   activeSheetIndex: number;
 }
+
+export type V3PiecesByProject = Record<string, V3Piece[]>;
 
 // ── Resultado de auto-layout ──────────────────────────────────────────────────
 

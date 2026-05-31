@@ -1,7 +1,15 @@
 import * as THREE from "three";
-import type { OrlaPreset, OrlaSideId, PieceOrlaConfig } from "../../../core/orla/orlaTypes";
+import type { OrlaPreset, PieceOrlaConfig } from "../../../core/orla/orlaTypes";
 import { findOrlaPreset } from "../../../core/orla/orlaPresets";
 import { loadTextureAsync } from "../materials/textureCache";
+import {
+  getActiveOrlaVisualRules,
+  getOrlaEdgesForVisualRule,
+  resolveDomainSideForVisualEdge,
+  resolveGeometryPanelType,
+  resolveOrlaVisualRuleKey,
+  type OrlaVisualEdgeId,
+} from "./orlaVisualRules";
 
 export type OrlaVisualPieceConfig = {
   pieceId: string;
@@ -19,14 +27,13 @@ export type OrlaVisualBridge = {
   getBoxOrlaConfig: (_boxId: string) => OrlaVisualBoxConfig | null;
 };
 
-const ORLA_SURFACE_OFFSET_M = 0.0001;
 const ORLA_MIN_DIMENSION_M = 0.0001;
 const ORLA_DEFAULT_OPACITY = 0.98;
-const ORLA_PROFILE_HEIGHT_M = 0.023;
-const ORLA_PROFILE_DEPTH_M = 0.008;
+const ORLA_DEFAULT_BAND_WIDTH_M = 0.023;
+const ORLA_DEFAULT_THICKNESS_M = 0.0008;
 
-type OrlaSurfaceDef = {
-  side: OrlaSideId;
+type OrlaEdgeDef = {
+  edgeId: OrlaVisualEdgeId;
   width: number;
   height: number;
   depth: number;
@@ -36,11 +43,7 @@ type OrlaSurfaceDef = {
 };
 
 /**
- * Visualização de Orla V1 por Surface Overlay.
- *
- * Cada orla é um mesh independente aplicado apenas sobre a aresta,
- * sem alterar medidas reais da peça/box. O mesh acompanha a peça porque
- * é filho direto do painel correspondente.
+ * Visualização de Orla — fitas por aresta, filtradas por tipo de peça e regras em SystemSettings.
  */
 export class OrlaVisualizer {
   private bridge: OrlaVisualBridge | null = null;
@@ -62,16 +65,28 @@ export class OrlaVisualizer {
       return;
     }
 
+    const rules = getActiveOrlaVisualRules();
     const expectedKeys = new Set<string>();
 
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
-      const panelType = node.userData?.panelType as string | undefined;
       const pieceId = node.userData?.panelId as string | undefined;
-      if (!panelType || !pieceId) return;
+      if (!pieceId) return;
+      const ruleKey = resolveOrlaVisualRuleKey(node);
+      if (!ruleKey) return;
       const pieceCfg = cfg.pieces.find((p) => p.pieceId === pieceId);
       if (!pieceCfg) return;
-      this.syncSurfacesForPanel(node, pieceId, pieceCfg.config, cfg.presets, expectedKeys);
+      const geometryPanelType = resolveGeometryPanelType(node);
+      this.syncEdgesForPanel(
+        node,
+        pieceId,
+        geometryPanelType,
+        ruleKey,
+        pieceCfg.config,
+        cfg.presets,
+        rules,
+        expectedKeys
+      );
     });
 
     this.clearStaleOrlaBands(root, expectedKeys);
@@ -94,26 +109,35 @@ export class OrlaVisualizer {
     this.bridge = null;
   }
 
-  private syncSurfacesForPanel(
+  private syncEdgesForPanel(
     mesh: THREE.Mesh,
     pieceId: string,
+    geometryPanelType: string,
+    ruleKey: string,
     pieceConfig: PieceOrlaConfig,
     presets: OrlaPreset[],
+    rules: ReturnType<typeof getActiveOrlaVisualRules>,
     expectedKeys: Set<string>
   ): void {
     mesh.geometry.computeBoundingBox();
     const bb = mesh.geometry.boundingBox;
     if (!bb) return;
 
-    const surfaceDefs = this.getSurfaceDefs(bb);
+    const edgesToApply = getOrlaEdgesForVisualRule(ruleKey, rules);
+    if (edgesToApply.length === 0) return;
 
-    for (const def of surfaceDefs) {
-      const sideConfig = pieceConfig.sides[def.side];
+    for (const visualEdge of edgesToApply) {
+      const domainSide = resolveDomainSideForVisualEdge(geometryPanelType, visualEdge);
+      const sideConfig = pieceConfig.sides[domainSide];
       if (!sideConfig?.enabled || !sideConfig.presetId) continue;
       const preset = findOrlaPreset(presets, sideConfig.presetId);
       if (!preset) continue;
 
-      const key = `${pieceId}:${def.side}`;
+      const presetEdgeDefMap = this.buildEdgeDefMap(bb, geometryPanelType, preset);
+      const presetDef = presetEdgeDefMap[visualEdge];
+      if (!presetDef) continue;
+
+      const key = `${pieceId}:${visualEdge}`;
       expectedKeys.add(key);
 
       const existing = mesh.children.find(
@@ -121,79 +145,117 @@ export class OrlaVisualizer {
       );
 
       if (existing instanceof THREE.Mesh) {
-        this.updateSurfaceMesh(existing, def, preset, pieceId, key);
+        this.updateEdgeMesh(existing, presetDef, preset, pieceId, key, visualEdge);
       } else {
-        mesh.add(this.createSurfaceMesh(def, preset, pieceId, key));
+        mesh.add(this.createEdgeMesh(presetDef, preset, pieceId, key, visualEdge));
       }
     }
   }
 
-  private getSurfaceDefs(bb: THREE.Box3): OrlaSurfaceDef[] {
-    const size = new THREE.Vector3();
-    bb.getSize(size);
-    const cx = (bb.min.x + bb.max.x) / 2;
-    const cy = (bb.min.y + bb.max.y) / 2;
-    const t = ORLA_SURFACE_OFFSET_M;
-    const profileHeight = Math.min(ORLA_PROFILE_HEIGHT_M, Math.max(ORLA_MIN_DIMENSION_M, size.y));
-    const profileDepth = Math.min(ORLA_PROFILE_DEPTH_M, Math.max(ORLA_MIN_DIMENSION_M, size.z));
-
-    return [
-      {
-        side: "front",
-        width: size.x,
-        height: profileHeight,
-        depth: t,
-        x: cx,
-        y: bb.max.y - profileHeight / 2,
-        z: bb.max.z + t / 2,
-      },
-      {
-        side: "back",
-        width: size.x,
-        height: profileHeight,
-        depth: t,
-        x: cx,
-        y: bb.max.y - profileHeight / 2,
-        z: bb.min.z - t / 2,
-      },
-      {
-        side: "left",
-        width: t,
-        height: size.y,
-        depth: profileDepth,
-        x: bb.min.x - t / 2,
-        y: cy,
-        z: bb.max.z - profileDepth / 2,
-      },
-      {
-        side: "right",
-        width: t,
-        height: size.y,
-        depth: profileDepth,
-        x: bb.max.x + t / 2,
-        y: cy,
-        z: bb.max.z - profileDepth / 2,
-      },
-    ];
+  private getBandWidthM(preset: OrlaPreset | null): number {
+    const fromPreset =
+      preset && preset.larguraMm > 0 ? preset.larguraMm / 1000 : ORLA_DEFAULT_BAND_WIDTH_M;
+    return Math.max(ORLA_MIN_DIMENSION_M, fromPreset);
   }
 
-  private createSurfaceMesh(
-    def: OrlaSurfaceDef,
+  private getThicknessM(preset: OrlaPreset | null): number {
+    const fromPreset =
+      preset && preset.espessuraMm > 0 ? preset.espessuraMm / 1000 : ORLA_DEFAULT_THICKNESS_M;
+    return Math.max(ORLA_MIN_DIMENSION_M, fromPreset);
+  }
+
+  private buildEdgeDefMap(
+    bb: THREE.Box3,
+    panelType: string,
+    preset: OrlaPreset | null
+  ): Partial<Record<OrlaVisualEdgeId, OrlaEdgeDef>> {
+    const bw = this.getBandWidthM(preset);
+    const t = this.getThicknessM(preset);
+    const cx = (bb.min.x + bb.max.x) / 2;
+    const cy = (bb.min.y + bb.max.y) / 2;
+    const cz = (bb.min.z + bb.max.z) / 2;
+    const sx = Math.max(ORLA_MIN_DIMENSION_M, bb.max.x - bb.min.x);
+    const sy = Math.max(ORLA_MIN_DIMENSION_M, bb.max.y - bb.min.y);
+    const sz = Math.max(ORLA_MIN_DIMENSION_M, bb.max.z - bb.min.z);
+
+    switch (panelType) {
+      case "bottom":
+        return {
+          front: { edgeId: "front", width: sx, height: bw, depth: t, x: cx, y: bb.min.y + bw / 2, z: bb.max.z + t / 2 },
+          back: { edgeId: "back", width: sx, height: bw, depth: t, x: cx, y: bb.min.y + bw / 2, z: bb.min.z - t / 2 },
+          left: { edgeId: "left", width: t, height: bw, depth: sz, x: bb.min.x - t / 2, y: bb.min.y + bw / 2, z: cz },
+          right: { edgeId: "right", width: t, height: bw, depth: sz, x: bb.max.x + t / 2, y: bb.min.y + bw / 2, z: cz },
+          top: { edgeId: "top", width: sx, height: bw, depth: t, x: cx, y: bb.min.y + bw / 2, z: bb.max.z + t / 2 },
+          bottom: { edgeId: "bottom", width: sx, height: bw, depth: t, x: cx, y: bb.min.y + bw / 2, z: bb.min.z - t / 2 },
+        };
+      case "left":
+        return {
+          front: { edgeId: "front", width: t, height: sy, depth: bw, x: bb.min.x - t / 2, y: cy, z: bb.max.z + bw / 2 },
+          back: { edgeId: "back", width: t, height: sy, depth: bw, x: bb.min.x - t / 2, y: cy, z: bb.min.z - bw / 2 },
+          top: { edgeId: "top", width: t, height: bw, depth: sz, x: bb.min.x - t / 2, y: bb.max.y + bw / 2, z: cz },
+          bottom: { edgeId: "bottom", width: t, height: bw, depth: sz, x: bb.min.x - t / 2, y: bb.min.y - bw / 2, z: cz },
+          left: { edgeId: "left", width: t, height: bw, depth: sz, x: bb.min.x - t / 2, y: bb.min.y - bw / 2, z: cz },
+          right: { edgeId: "right", width: t, height: bw, depth: sz, x: bb.min.x - t / 2, y: bb.max.y + bw / 2, z: cz },
+        };
+      case "right":
+        return {
+          front: { edgeId: "front", width: t, height: sy, depth: bw, x: bb.max.x + t / 2, y: cy, z: bb.max.z + bw / 2 },
+          back: { edgeId: "back", width: t, height: sy, depth: bw, x: bb.max.x + t / 2, y: cy, z: bb.min.z - bw / 2 },
+          top: { edgeId: "top", width: t, height: bw, depth: sz, x: bb.max.x + t / 2, y: bb.max.y + bw / 2, z: cz },
+          bottom: { edgeId: "bottom", width: t, height: bw, depth: sz, x: bb.max.x + t / 2, y: bb.min.y - bw / 2, z: cz },
+          left: { edgeId: "left", width: t, height: bw, depth: sz, x: bb.max.x + t / 2, y: bb.min.y - bw / 2, z: cz },
+          right: { edgeId: "right", width: t, height: bw, depth: sz, x: bb.max.x + t / 2, y: bb.max.y + bw / 2, z: cz },
+        };
+      case "back":
+        return {
+          top: { edgeId: "top", width: sx, height: bw, depth: t, x: cx, y: bb.max.y + bw / 2, z: bb.min.z - t / 2 },
+          bottom: { edgeId: "bottom", width: sx, height: bw, depth: t, x: cx, y: bb.min.y - bw / 2, z: bb.min.z - t / 2 },
+          left: { edgeId: "left", width: bw, height: sy, depth: t, x: bb.min.x - bw / 2, y: cy, z: bb.min.z - t / 2 },
+          right: { edgeId: "right", width: bw, height: sy, depth: t, x: bb.max.x + bw / 2, y: cy, z: bb.min.z - t / 2 },
+          front: { edgeId: "front", width: sx, height: bw, depth: t, x: cx, y: bb.max.y + bw / 2, z: bb.min.z - t / 2 },
+          back: { edgeId: "back", width: sx, height: bw, depth: t, x: cx, y: bb.min.y - bw / 2, z: bb.min.z - t / 2 },
+        };
+      case "front":
+        return {
+          top: { edgeId: "top", width: sx, height: bw, depth: t, x: cx, y: bb.max.y + bw / 2, z: bb.max.z + t / 2 },
+          bottom: { edgeId: "bottom", width: sx, height: bw, depth: t, x: cx, y: bb.min.y - bw / 2, z: bb.max.z + t / 2 },
+          left: { edgeId: "left", width: bw, height: sy, depth: t, x: bb.min.x - bw / 2, y: cy, z: bb.max.z + t / 2 },
+          right: { edgeId: "right", width: bw, height: sy, depth: t, x: bb.max.x + bw / 2, y: cy, z: bb.max.z + t / 2 },
+          front: { edgeId: "front", width: sx, height: bw, depth: t, x: cx, y: bb.max.y + bw / 2, z: bb.max.z + t / 2 },
+          back: { edgeId: "back", width: sx, height: bw, depth: t, x: cx, y: bb.min.y - bw / 2, z: bb.max.z + t / 2 },
+        };
+      case "top":
+      default:
+        return {
+          top: { edgeId: "top", width: sx, height: bw, depth: t, x: cx, y: bb.max.y - bw / 2, z: bb.max.z + t / 2 },
+          bottom: { edgeId: "bottom", width: sx, height: bw, depth: t, x: cx, y: bb.max.y - bw / 2, z: bb.min.z - t / 2 },
+          left: { edgeId: "left", width: t, height: bw, depth: sz, x: bb.min.x - t / 2, y: bb.max.y - bw / 2, z: cz },
+          right: { edgeId: "right", width: t, height: bw, depth: sz, x: bb.max.x + t / 2, y: bb.max.y - bw / 2, z: cz },
+          front: { edgeId: "front", width: sx, height: bw, depth: t, x: cx, y: bb.max.y - bw / 2, z: bb.max.z + t / 2 },
+          back: { edgeId: "back", width: sx, height: bw, depth: t, x: cx, y: bb.max.y - bw / 2, z: bb.min.z - t / 2 },
+        };
+    }
+  }
+
+  private createEdgeMesh(
+    def: OrlaEdgeDef,
     preset: OrlaPreset,
     pieceId: string,
-    key: string
+    key: string,
+    visualEdge: OrlaVisualEdgeId
   ): THREE.Mesh {
     const mesh = new THREE.Mesh(this.createGeometry(def), this.createMaterial(preset));
-    this.applySurfaceMetadata(mesh, def, preset, pieceId, key);
+    this.applyEdgeMetadata(mesh, def, preset, pieceId, key, visualEdge);
     return mesh;
   }
 
-  private updateSurfaceMesh(
+  private updateEdgeMesh(
     mesh: THREE.Mesh,
-    def: OrlaSurfaceDef,
+    def: OrlaEdgeDef,
     preset: OrlaPreset,
     pieceId: string,
-    key: string
+    key: string,
+    visualEdge: OrlaVisualEdgeId
   ): void {
     const currentPresetId = mesh.userData?.presetId;
     const currentSizeKey = mesh.userData?.sizeKey;
@@ -213,10 +275,10 @@ export class OrlaVisualizer {
       mesh.material.needsUpdate = true;
     }
 
-    this.applySurfaceMetadata(mesh, def, preset, pieceId, key);
+    this.applyEdgeMetadata(mesh, def, preset, pieceId, key, visualEdge);
   }
 
-  private createGeometry(def: OrlaSurfaceDef): THREE.BoxGeometry {
+  private createGeometry(def: OrlaEdgeDef): THREE.BoxGeometry {
     return new THREE.BoxGeometry(
       Math.max(ORLA_MIN_DIMENSION_M, def.width),
       Math.max(ORLA_MIN_DIMENSION_M, def.height),
@@ -250,27 +312,28 @@ export class OrlaVisualizer {
     return material;
   }
 
-  private applySurfaceMetadata(
+  private applyEdgeMetadata(
     mesh: THREE.Mesh,
-    def: OrlaSurfaceDef,
+    def: OrlaEdgeDef,
     preset: OrlaPreset,
     pieceId: string,
-    key: string
+    key: string,
+    visualEdge: OrlaVisualEdgeId
   ): void {
     mesh.position.set(def.x, def.y, def.z);
     mesh.renderOrder = 10;
     mesh.userData.isOrlaBand = true;
-    mesh.userData.isOrlaSurfaceOverlay = true;
+    mesh.userData.isOrlaEdgeOverlay = true;
     mesh.userData.orlaKey = key;
-    mesh.userData.orlaSide = def.side;
+    mesh.userData.orlaVisualEdge = visualEdge;
     mesh.userData.pieceId = pieceId;
     mesh.userData.presetId = preset.id;
     mesh.userData.sizeKey = this.getSizeKey(def);
   }
 
-  private getSizeKey(def: OrlaSurfaceDef): string {
+  private getSizeKey(def: OrlaEdgeDef): string {
     return [
-      def.side,
+      def.edgeId,
       def.width.toFixed(6),
       def.height.toFixed(6),
       def.depth.toFixed(6),

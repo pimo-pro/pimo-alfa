@@ -219,6 +219,8 @@ export interface SettingsSchema {
     /** Tamanho do logo em percentual (10-30%) */
     logoTamanhoPorcento: number;
   };
+  /** Regras visuais de ORLA por tipo de peça (viewer only). */
+  orlaRules: Partial<Record<string, ("top" | "bottom" | "left" | "right" | "front" | "back")[]>>;
 }
 
 export const settingsDefaults: SettingsSchema = {
@@ -369,4 +371,5 @@ export const settingsDefaults: SettingsSchema = {
     logoDataUrl: undefined,
     logoTamanhoPorcento: 20,
   },
+  orlaRules: {},
 };

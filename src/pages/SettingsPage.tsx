@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { canAccessAdminPanel } from "../auth/rbac";
 import { AdminShellProviders } from "../context/AdminShellProviders";
 import { useAuth } from "../auth/useAuth";
+import OrlaRulesSettingsPanel from "../components/settings/orla/OrlaRulesSettingsPanel";
 import AdminPanel from "./AdminPanel";
 
 function disableInteractiveControls(root: HTMLElement) {
@@ -36,7 +37,20 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <main className="settings-page-root" aria-label="Definições (modo visitante)">
+    <main className="settings-page-root" aria-label="Definições">
+      <section
+        className="settings-orla-rules-section"
+        style={{
+          position: "relative",
+          zIndex: 1001,
+          padding: "16px 20px 0",
+          maxWidth: 960,
+          margin: "0 auto",
+        }}
+      >
+        <OrlaRulesSettingsPanel />
+      </section>
+
       <div ref={contentRef} className="settings-page-content" aria-hidden>
         <AdminShellProviders>
           <AdminPanel />

@@ -3,6 +3,7 @@
  */
 
 import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas } from "../../data/moveisUnificados/pi/settings";
+import { sanitizeOrlaRulesInput } from "../../3d/viewer-engine/orla/orlaVisualRules";
 import { SETTINGS_SCHEMA_VERSION, settingsDefaults, type SettingsSchema } from "./settingsSchema";
 import { clamp, deepMergeSettings, normalizeDepths, toNumber, type ValidationResult } from "./settingsMerge";
 
@@ -443,6 +444,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         30
       ),
     },
+    orlaRules: sanitizeOrlaRulesInput(merged.orlaRules),
   };
 
   if (normalized.materiais.sheetThicknessMm > normalized.materiais.sheetWidthMm) {

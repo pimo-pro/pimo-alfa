@@ -3,12 +3,13 @@
  * Toda a lógica de estado está aqui. A UI só chama as acções.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   NestingV3State,
   V3Piece,
   V3Sheet,
   V3DragState,
+  V3PiecesByProject,
 } from "./nestingV3Types";
 import { runNestingV3AutoLayout, getPieceColor } from "./nestingV3Engine";
 import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
@@ -31,6 +32,15 @@ function makeDefaultState(): NestingV3State {
     unplacedPieceIds: [],
     kerfMm: 4,
     activeSheetIndex: 0,
+  };
+}
+
+function stateFromV3Pieces(pieces: V3Piece[]): NestingV3State {
+  const base = makeDefaultState();
+  return {
+    ...base,
+    pieces,
+    unplacedPieceIds: pieces.map((piece) => piece.id),
   };
 }
 
@@ -78,6 +88,34 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
 
   const [dragState, setDragState] = useState<V3DragState | null>(null);
 
+  const loadPieces = useCallback((pieces: V3Piece[]) => {
+    setState(stateFromV3Pieces(pieces));
+    setDragState(null);
+  }, []);
+
+  const loadMultipleProjects = useCallback((_piecesByProject: V3PiecesByProject) => {
+    /* preparado para fase multi-projeto */
+  }, []);
+
+  const assignProjectColor = useCallback((_projectId: string) => {
+    return undefined as string | undefined;
+  }, []);
+
+  const generateOutputsGroupedByProject = useCallback(() => {
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (initialCutPieces.length === 0) return;
+    const pieces: V3Piece[] = [];
+    let idx = 0;
+    for (const cp of initialCutPieces) {
+      const qty = cp.quantidade ?? 1;
+      for (let q = 0; q < qty; q++) pieces.push(cutPieceToV3(cp, idx++));
+    }
+    loadPieces(pieces);
+  }, [initialCutPieces, loadPieces]);
+
   // ── Auto-layout ─────────────────────────────────────────────────────────────
 
   const runAutoLayout = useCallback(() => {
@@ -88,9 +126,15 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
       while (newSheets.length < result.sheetsUsed) {
         newSheets.push({ ...DEFAULT_SHEET, index: newSheets.length });
       }
+      const rotatedById = new Map(result.placements.map((placement) => [placement.pieceId, placement.rotated === true]));
       return {
         ...prev,
         sheets: newSheets,
+        pieces: prev.pieces.map((piece) => {
+          const rotated = rotatedById.get(piece.id);
+          if (rotated == null) return piece;
+          return { ...piece, rotation: rotated ? 90 : 0 };
+        }),
         placements: result.placements,
         unplacedPieceIds: result.unplacedPieceIds,
       };
@@ -242,6 +286,10 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
     state,
     dragState,
     setDragState,
+    loadPieces,
+    loadMultipleProjects,
+    assignProjectColor,
+    generateOutputsGroupedByProject,
     runAutoLayout,
     movePiece,
     returnToSidebar,

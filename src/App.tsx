@@ -47,6 +47,7 @@ import Card from "./components/ui/Card";
 import PageContainer from "./components/ui/PageContainer";
 import { IconGallery } from "@/components/icons";
 import "./components/ui/ui.css";
+import type { V3Piece } from "./nesting-v3/nestingV3Types";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -100,6 +101,11 @@ function LegacyApp() {
   const [showAjuda, setShowAjuda] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
   const [showNestingV3, setShowNestingV3] = useState(false);
+  const [nestingV3Payload, setNestingV3Payload] = useState<{
+    pieces?: V3Piece[];
+    projectId?: string;
+    projectName?: string;
+  } | null>(null);
   const [showUserProjects, setShowUserProjects] = useState(false);
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
   const location = useLocation();
@@ -205,7 +211,8 @@ function LegacyApp() {
     setShowPainelReferencia(false);
   };
 
-  const navigateToNestingV3 = () => {
+  const navigateToNestingV3 = (payload?: { pieces?: V3Piece[]; projectId?: string; projectName?: string }) => {
+    setNestingV3Payload(payload ?? null);
     setShowNestingV3(true);
     setShowAjuda(false);
     setShowLanding(false);
@@ -218,7 +225,10 @@ function LegacyApp() {
 
   // Listen for Nesting V3 open event (dispatched from UnifiedTopToolbar)
   useEffect(() => {
-    const handler = () => navigateToNestingV3();
+    const handler = (event: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail : undefined;
+      navigateToNestingV3(detail);
+    };
     window.addEventListener("pimo:open-nesting-v3", handler);
     return () => window.removeEventListener("pimo:open-nesting-v3", handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,7 +265,15 @@ function LegacyApp() {
               ) : showLanding ? (
                 <LandingPage />
               ) : showNestingV3 ? (
-                <NestingV3Page onClose={() => setShowNestingV3(false)} />
+                <NestingV3Page
+                  initialPieces={nestingV3Payload?.pieces}
+                  projectId={nestingV3Payload?.projectId}
+                  projectName={nestingV3Payload?.projectName}
+                  onClose={() => {
+                    setShowNestingV3(false);
+                    setNestingV3Payload(null);
+                  }}
+                />
               ) : showUserProjects ? (
                 <UserProjectsPage />
               ) : (

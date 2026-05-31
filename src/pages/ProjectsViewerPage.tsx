@@ -22,6 +22,7 @@ import Loader from "../components/ui/Loader";
 import PageContainer from "../components/ui/PageContainer";
 import PageHeader from "../components/ui/PageHeader";
 import "../components/ui/ui.css";
+import { convertProjectToV3Pieces } from "../nesting-v3/utils/convertProjectToV3Pieces";
 
 /** Alinhado ao blueprint: lista de IDs escolhida em `/projects` (fase seguinte pode gravar aqui). */
 export const PIMO_SHOWROOM_PROJECT_IDS_KEY = "pimo_showroom_project_ids";
@@ -111,6 +112,26 @@ export default function ProjectsViewerPage() {
     navigate("/");
   }, [mergeSelectedIds, navigate]);
 
+  const openSelectedInNestingV3 = useCallback(() => {
+    const selectedId = mergeSelectedIds[0] ?? loadedIds[0];
+    if (!selectedId) return;
+    const index = ids.indexOf(selectedId);
+    const entry = entries[index];
+    if (!entry?.projectState) return;
+    const pieces = convertProjectToV3Pieces(entry.projectState).map((piece) => ({
+      ...piece,
+      sourceProjectId: selectedId,
+    }));
+    window.dispatchEvent(new CustomEvent("pimo:open-nesting-v3", {
+      detail: {
+        pieces,
+        projectId: selectedId,
+        projectName: entry.recordName ?? entry.projectState.projectName,
+      },
+    }));
+    navigate("/");
+  }, [entries, ids, loadedIds, mergeSelectedIds, navigate]);
+
   const visibilityRows = useMemo((): ShowroomVisibilityRow[] => {
     return ids.flatMap((id, i) => {
       const e = entries[i];
@@ -160,6 +181,14 @@ export default function ProjectsViewerPage() {
             Enviar selecionados para Workspace (Merge)
           </Button>
           <ShowroomGenerateMultiFabricationButton showroomLoading={loading} />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading || loadedIds.length === 0}
+            onClick={openSelectedInNestingV3}
+          >
+            Abrir no Nesting V3
+          </Button>
         </div>
 
         {/* Estado vazio */}
