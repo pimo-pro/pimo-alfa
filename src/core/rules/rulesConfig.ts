@@ -4,6 +4,62 @@
  * Editável via Admin; afeta todo o projeto automaticamente.
  */
 
+import {
+  DEFAULT_LABEL_CONFIG,
+  type PaletteGroup,
+  type ProductionStep,
+} from "../labelConfig/labelConfig";
+
+export type LabelV5ProductionStepConfig = {
+  id: ProductionStep["id"];
+  label: string;
+  defaultOrder: number;
+};
+
+export type LabelV5RulesConfig = {
+  bottomStrip_mm: number;
+  materialHeight_mm: number;
+  medidasHeight_mm: number;
+  productionHeight_mm: number;
+  observationHeight_mm: number;
+  paletteGroups: PaletteGroup[];
+  productionSteps: LabelV5ProductionStepConfig[];
+  manualPieceNames: string[];
+  noOrlarThickness_mm: number;
+};
+
+const LABEL_V5_STEP_LABELS: Record<ProductionStep["id"], string> = {
+  nisting: "Nisting",
+  manual: "Manual",
+  orlar: "Orlar",
+  drill: "Furação",
+  limpezas: "Limpezas",
+  montagem: "Montagem",
+  embalagem: "Embalagem",
+};
+
+const LABEL_V5_STEP_IDS = Object.keys(LABEL_V5_STEP_LABELS) as ProductionStep["id"][];
+const PALETTE_GROUP_CODES: PaletteGroup["code"][] = ["D", "O", "OD", "C", "L", "E"];
+
+export function buildDefaultLabelV5RulesConfig(): LabelV5RulesConfig {
+  const base = DEFAULT_LABEL_CONFIG;
+  return {
+    bottomStrip_mm: base.dimensions.bottomStrip_mm,
+    materialHeight_mm: base.dimensions.materialHeight_mm,
+    medidasHeight_mm: base.dimensions.medidasHeight_mm,
+    productionHeight_mm: base.dimensions.productionHeight_mm,
+    observationHeight_mm: base.dimensions.observationHeight_mm,
+    paletteGroups: base.paletteGroups.map((group) => ({ ...group })),
+    productionSteps: base.productionSteps.map((step, index) => ({
+      id: step.id,
+      label: LABEL_V5_STEP_LABELS[step.id],
+      defaultOrder: index + 1,
+    })),
+    manualPieceNames: [...base.manualPieceNames],
+    noOrlarThickness_mm: base.noOrlarThickness_mm,
+  };
+}
+
 export type PortaRange = {
   /** Altura mínima da porta (mm). */
   min: number;
@@ -223,7 +279,11 @@ export type RulesConfig = {
     mostrarMaterial: boolean;
     mostrarDimensoes: boolean;
     mostrarReferencia: boolean;
+    /** Activa o renderer de etiquetas v5 (faixa inferior + grelha produção). */
+    enableV5Layout: boolean;
   };
+  /** Override v5 de etiquetas por perfil de regras (UI Fase 4). */
+  labelV5: LabelV5RulesConfig;
 };
 
 /** Regras padrão do projeto (defaults; carregadas ao iniciar ou ao resetar). */
@@ -387,7 +447,9 @@ export const defaultRulesConfig: RulesConfig = {
     mostrarMaterial: true,
     mostrarDimensoes: true,
     mostrarReferencia: true,
+    enableV5Layout: false,
   },
+  labelV5: buildDefaultLabelV5RulesConfig(),
 };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -450,6 +512,57 @@ function normalizePortaRanges(srcPortas: unknown, defaults: RulesConfig["portas"
     return defaults.ranges;
   }
   return ranges as RulesConfig["portas"]["ranges"];
+}
+
+function normalizeLabelV5RulesConfig(input: unknown): LabelV5RulesConfig {
+  const defaults = buildDefaultLabelV5RulesConfig();
+  if (!isObject(input)) return defaults;
+
+  const num = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const paletteGroups = Array.isArray(input.paletteGroups)
+    ? input.paletteGroups
+        .map((item) => (isObject(item) ? item.code : null))
+        .filter(
+          (code): code is PaletteGroup["code"] =>
+            typeof code === "string" && PALETTE_GROUP_CODES.includes(code as PaletteGroup["code"])
+        )
+        .map((code) => ({ code }))
+    : defaults.paletteGroups;
+
+  const productionSteps = Array.isArray(input.productionSteps)
+    ? input.productionSteps
+        .map((item, index) => {
+          if (!isObject(item)) return null;
+          const id = item.id as ProductionStep["id"];
+          if (!LABEL_V5_STEP_IDS.includes(id)) return null;
+          return {
+            id,
+            label: String(item.label ?? LABEL_V5_STEP_LABELS[id]),
+            defaultOrder: num(item.defaultOrder, index + 1),
+          };
+        })
+        .filter((step): step is LabelV5ProductionStepConfig => step != null)
+    : defaults.productionSteps;
+
+  const manualPieceNames = Array.isArray(input.manualPieceNames)
+    ? input.manualPieceNames.map((name) => String(name).trim()).filter(Boolean)
+    : defaults.manualPieceNames;
+
+  return {
+    bottomStrip_mm: num(input.bottomStrip_mm, defaults.bottomStrip_mm),
+    materialHeight_mm: num(input.materialHeight_mm, defaults.materialHeight_mm),
+    medidasHeight_mm: num(input.medidasHeight_mm, defaults.medidasHeight_mm),
+    productionHeight_mm: num(input.productionHeight_mm, defaults.productionHeight_mm),
+    observationHeight_mm: num(input.observationHeight_mm, defaults.observationHeight_mm),
+    paletteGroups: paletteGroups.length > 0 ? paletteGroups : defaults.paletteGroups,
+    productionSteps: productionSteps.length > 0 ? productionSteps : defaults.productionSteps,
+    manualPieceNames: manualPieceNames.length > 0 ? manualPieceNames : defaults.manualPieceNames,
+    noOrlarThickness_mm: num(input.noOrlarThickness_mm, defaults.noOrlarThickness_mm),
+  };
 }
 
 /**
@@ -563,7 +676,12 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
     etiqueta: {
       ...defaults.etiqueta,
       ...(isObject(src.etiqueta) ? src.etiqueta : {}),
+      enableV5Layout:
+        (isObject(src.etiqueta) ? src.etiqueta : {}).enableV5Layout == null
+          ? defaults.etiqueta.enableV5Layout
+          : Boolean((isObject(src.etiqueta) ? src.etiqueta : {}).enableV5Layout),
     },
+    labelV5: normalizeLabelV5RulesConfig(src.labelV5),
   };
 }
 

@@ -12,9 +12,12 @@ import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
 import EtiquetaDesignerPage from "../components/admin/EtiquetaDesignerPage";
+import LabelConfigPage from "../components/admin/LabelConfigPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
+import { useAuth } from "../auth/useAuth";
+import { hasFullAccess } from "../auth/rbac";
 
 const ProjectProgress = lazy(() => import("./ProjectProgress"));
 
@@ -32,12 +35,13 @@ type AdminTab =
   | "System Settings"
   | "Regras das Gavetas"
   | "Etiqueta / QR N"
+  | "Configuração de Etiquetas (v5)"
   | "Projetos Salvos"
   | "icons";
 
 type AdminMenuEntry =
   | { type: "group"; label: string }
-  | { type: "item"; id: AdminTab; label: string; badge?: string; disabled?: boolean };
+  | { type: "item"; id: AdminTab; label: string; badge?: string; disabled?: boolean; adminOnly?: boolean };
 
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = "pimo_admin_active_tab";
 const DEFAULT_ADMIN_TAB: AdminTab = "Gestão de Materiais";
@@ -57,6 +61,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "System Settings", label: "System Settings" },
   { type: "item", id: "Regras das Gavetas", label: "Regras das Gavetas" },
   { type: "item", id: "Etiqueta / QR N", label: "Etiqueta / QR N" },
+  { type: "item", id: "Configuração de Etiquetas (v5)", label: "Configuração de Etiquetas (v5)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
@@ -76,15 +81,23 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "System Settings": "adminTools",
   "Regras das Gavetas": "adminRuler",
   "Etiqueta / QR N": "adminTag",
+  "Configuração de Etiquetas (v5)": "adminTag",
   "Projetos Salvos": "adminSave",
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
   icons: "projects",
 };
 
-const adminVisibleTabs = new Set<AdminTab>(
-  adminMenu.filter((entry): entry is Extract<AdminMenuEntry, { type: "item" }> => entry.type === "item").map((entry) => entry.id)
-);
+function getAdminVisibleTabs(canSeeAdminOnlyMenus: boolean): Set<AdminTab> {
+  return new Set(
+    adminMenu
+      .filter(
+        (entry): entry is Extract<AdminMenuEntry, { type: "item" }> =>
+          entry.type === "item" && (!entry.adminOnly || canSeeAdminOnlyMenus)
+      )
+      .map((entry) => entry.id)
+  );
+}
 
 // Módulos planeados (futuro): manter fora do menu até fluxo real.
 // Dashboard, Pricing e Users permanecem ocultos por enquanto.
@@ -92,6 +105,10 @@ const ADMIN_PLANNED_HIDDEN_MODULES = ["Dashboard", "Pricing", "Users"] as const;
 void ADMIN_PLANNED_HIDDEN_MODULES;
 
 export default function AdminPanel() {
+  const { hasPermission } = useAuth();
+  const canSeeAdminOnlyMenus = hasFullAccess(hasPermission);
+  const adminVisibleTabs = getAdminVisibleTabs(canSeeAdminOnlyMenus);
+
   const [active, setActive] = useState<AdminTab>(() => {
     const saved = localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY) as AdminTab | null;
     return saved && adminVisibleTabs.has(saved) ? saved : DEFAULT_ADMIN_TAB;
@@ -129,7 +146,9 @@ export default function AdminPanel() {
         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
           Admin Panel
         </div>
-        {adminMenu.map((entry, index) => {
+        {adminMenu
+          .filter((entry) => entry.type === "group" || !entry.adminOnly || canSeeAdminOnlyMenus)
+          .map((entry, index) => {
           if (entry.type === "group") {
             return (
               <div
@@ -247,6 +266,14 @@ export default function AdminPanel() {
             </Suspense>
           ) : active === "Etiqueta / QR N" ? (
             <EtiquetaDesignerPage />
+          ) : active === "Configuração de Etiquetas (v5)" ? (
+            canSeeAdminOnlyMenus ? (
+              <LabelConfigPage />
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Acesso restrito a administradores.
+              </div>
+            )
           ) : active === "Projetos Salvos" ? (
             <SavedProjectsAdminPage />
           ) : active === "Painel Referência" ? (
