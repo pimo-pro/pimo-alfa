@@ -20,10 +20,9 @@ import { useSettings } from "../context/SettingsContext";
 import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
-import { buildEtiquetasPdf } from "../core/pdf/pdfEtiquetas";
+import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutLayoutResult } from "../core/cutlayout/cutLayoutTypes";
-import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../core/labelDesigner/labelDesignerStorage";
 import { getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
@@ -278,14 +277,52 @@ export function useGerarArquivoHandlers() {
       return;
     }
     try {
-      const designerConfig = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
-      const doc = await buildEtiquetasPdf({ ...pdfProject(), designerConfig });
+      const proj = pdfProject();
+      const allItems = buildCutlistItemsForIndustrialExport({
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+      });
+      let nestingPlacements: CutLayoutResult["sheets"][0]["placements"] | undefined;
+      try {
+        const pieces = cutlistToPieces(allItems as CutlistItemForPieces[], {
+          projectName: project.projectName ?? "Projeto",
+          boxes: proj.boxes ?? boxes,
+        });
+        if (pieces.length > 0) {
+          const settingsSnapshot = getSettings();
+          const materialsSnapshot = listMaterials();
+          const sheetDefNest = getSheetDefinitionFromSettings();
+          const nestingResult = await runCutLayoutInWorker(
+            settingsSnapshot,
+            materialsSnapshot,
+            pieces,
+            {
+              ...getDefaultCncLayoutOptions(),
+              originTopRight: true,
+              sheetLargura_mm: sheetDefNest.largura_mm,
+              sheetAltura_mm: sheetDefNest.altura_mm,
+            }
+          );
+          nestingPlacements = nestingResult?.sheets.flatMap((s) => s.placements);
+        }
+      } catch (err) {
+        devLogger.warn("Etiquetas UEE: nesting opcional falhou, continua sem placements", err);
+      }
+      const doc = await UnifiedEtiquetaEngine.build({
+        ...proj,
+        cutLayoutPlacements:
+          nestingPlacements && nestingPlacements.length > 0 ? nestingPlacements : undefined,
+      });
       doc.save(`${slug}_etiquetas.pdf`);
+      showToast("PDF de etiquetas (UEE v5) gerado.", "info");
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de etiquetas:", err);
       showToast("Erro ao gerar PDF.", "error");
     }
-  }, [hasBoxes, showToast, pdfProject, slug]);
+  }, [hasBoxes, showToast, pdfProject, slug, boxes, project]);
 
   const onLayoutCorte = useCallback(async () => {
     if (!hasBoxes) {
@@ -704,14 +741,12 @@ export function useGerarArquivoHandlers() {
         hideCutLayoutLoader();
       }
 
-      // --- Etiquetas (ordenadas pela posição real no nesting) ---
+      // --- Etiquetas UEE (ordenadas pela posição real no nesting) ---
       try {
         const nestingPlacements = nestingResult?.sheets.flatMap((s) => s.placements) ?? [];
-        const designerConfig = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
-        const docEtiquetas = await buildEtiquetasPdf({
+        const docEtiquetas = await UnifiedEtiquetaEngine.build({
           ...proj,
           cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
-          designerConfig,
         });
         if (!safeAddPdf(zip, `${safeSlug}_etiquetas.pdf`, docEtiquetas)) {
           errors.push({ step: "PDF Etiquetas", message: "Documento ou blob inválido." });

@@ -10,7 +10,10 @@ import {
   buildEtiquetaCodeV5,
   buildPiecesPerSheetMap,
   labelItemSheetKey,
-} from "../qrcode/etiquetaCodeV5";
+} from "../etiquetas/qr/etiquetaCodeV5";
+import type { LabelConfig } from "../labelConfig/labelConfig";
+import { resolveUnifiedLabelConfig } from "../etiquetas/config/unifiedLabelConfig";
+import { normalizeCutLayoutPlacements } from "../etiquetas/engine/nestingAdapter";
 import { formatDimensionV5 } from "./labelMeasuresV5";
 import {
   collectObservationsForItem,
@@ -20,7 +23,6 @@ import {
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
 import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
 import { DEFAULT_LABEL_CONFIG } from "../labelConfig/labelConfig";
-import type { LabelConfig } from "../labelConfig/labelConfig";
 import {
   computePieceSequence,
   type PieceData,
@@ -752,7 +754,44 @@ async function renderEtiquetaPageV5(
   drawV5_BottomStrip(doc, bottomY, w, dims.bottomStrip_mm, etiquetaCode, aaa, fullName);
 }
 
-export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
+/**
+ * PDF de etiquetas de produção — UnifiedEtiquetaEngine (motor v5, config unificada).
+ */
+export async function buildProductionEtiquetasV5Pdf(
+  project: ProjectForEtiquetasPdf,
+  labelConfig: LabelConfig = DEFAULT_LABEL_CONFIG
+): Promise<jsPDF> {
+  const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project), project.cutLayoutPlacements);
+  const piecesPerSheet = buildPiecesPerSheetMap(ordered, project.cutLayoutPlacements);
+  for (const item of ordered) {
+    const key = labelItemSheetKey(item.boxId, item.nome);
+    item.numCaixa = piecesPerSheet.get(key) ?? 0;
+    item.observations = collectObservationsForItem(item, project.rules as LabelObservationRulesLike);
+  }
+
+  const dims = labelConfig.dimensions;
+  const pageW = dims.totalWidth_mm;
+  const pageH = dims.totalHeight_mm;
+  const doc = new jsPDF({
+    orientation: pageW >= pageH ? "landscape" : "portrait",
+    unit: "mm",
+    format: [pageW, pageH],
+  });
+
+  for (let idx = 0; idx < ordered.length; idx++) {
+    if (idx > 0) doc.addPage([pageW, pageH], pageW >= pageH ? "landscape" : "portrait");
+    const pieceData = labelItemToPieceData(ordered[idx], project);
+    const seq = computePieceSequence(pieceData, labelConfig);
+    await renderEtiquetaPageV5(doc, ordered[idx], project, labelConfig, seq, piecesPerSheet, idx);
+  }
+  return doc;
+}
+
+/**
+ * Sistemas legados isolados (S1 legado, S3 designer, flag enableV5Layout).
+ * Mantido para regressão — não usar em exportação de produção.
+ */
+export async function buildEtiquetasPdfLegacy(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
   const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project), project.cutLayoutPlacements);
   const piecesPerSheet = buildPiecesPerSheetMap(ordered, project.cutLayoutPlacements);
   for (const item of ordered) {
@@ -762,7 +801,6 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
   }
   const designerConfig = project.designerConfig;
 
-  // Sistema principal: Etiqueta Designer (se configurado pelo utilizador)
   if (designerConfig && designerConfig.elements.length > 0) {
     const w = designerConfig.widthMm;
     const h = designerConfig.heightMm;
@@ -774,7 +812,6 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
     return doc;
   }
 
-  // Fallback: rules.etiqueta — v5 (opt-in) ou layout legado
   const cfg = project.rules.etiqueta;
   const useV5 = Boolean(cfg.enableV5Layout);
   const v5Cfg = DEFAULT_LABEL_CONFIG;
@@ -799,4 +836,14 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
     }
   }
   return doc;
+}
+
+/** Hub público — UnifiedEtiquetaEngine (UEE): produção v5, sem designer S3. */
+export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
+  const labelConfig = resolveUnifiedLabelConfig(project.rules);
+  const placements = normalizeCutLayoutPlacements(project.cutLayoutPlacements);
+  return buildProductionEtiquetasV5Pdf(
+    { ...project, cutLayoutPlacements: placements, designerConfig: undefined },
+    labelConfig
+  );
 }

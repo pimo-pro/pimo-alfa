@@ -118,6 +118,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
     onAmbos,
     onLayoutCortePro,
     onArquivoCompleto,
+    onEtiquetas,
     onArquivosCnc,
   } = useGerarArquivoHandlers();
 
@@ -276,6 +277,11 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
               >
                 <ExportRow label="Gerar PDF Técnico" onClick={wrap(onPdfTecnico)} disabled={!hasBoxes} />
                 <ExportRow label="Gerar Cutlist" onClick={wrap(onCutlist)} disabled={!hasBoxes} />
+                <ExportRow
+                  label="Gerar Etiquetas (UEE v5)"
+                  onClick={wrap(onEtiquetas)}
+                  disabled={!hasBoxes}
+                />
                 <ExportRow label="Gerar Arquivo Unificado (NOVO)" onClick={wrap(onUnificado)} disabled={!hasBoxes} />
                 <ExportRow
                   label="Ambos (Cutlist + PDF + Unificado)"

@@ -13,8 +13,8 @@ import { buildCutlistItemsForIndustrialExport } from "./buildCutlistItemsForIndu
 import { gerarPdfTecnicoCompleto } from "../pdf/gerarPdfTecnico";
 import { buildCutlistPdf, type ProjectForPdf } from "../pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../pdf/pdfUnified";
-import { buildEtiquetasPdf, type ProjectForEtiquetasPdf } from "../pdf/pdfEtiquetas";
-import { loadLabelDesignerConfig, hasStoredLabelDesignerConfig } from "../labelDesigner/labelDesignerStorage";
+import type { ProjectForEtiquetasPdf } from "../pdf/pdfEtiquetas";
+import { UnifiedEtiquetaEngine } from "../etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 import type { CutLayoutResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
@@ -423,7 +423,6 @@ export async function generateMultiProjectFabrication(
 
     // Etiquetas globais: todas as peças ordenadas por chapa, nome do projeto de origem em cada etiqueta
     try {
-      const globalDesignerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
       const globalEtiquetasProj: ProjectForEtiquetasPdf = {
         projectName: layoutTitle || "Multi-projeto",
         boxes: allPrefixedBoxes,
@@ -431,9 +430,8 @@ export async function generateMultiProjectFabrication(
         settings: getSettings(),
         precomputedItems: allPrefixedItems, // contém pieceNumber global + sourceProjectName
         cutLayoutPlacements: combinedPlacements.length > 0 ? combinedPlacements : undefined,
-        designerConfig: globalDesignerCfg,
       };
-      const docEtiquetasTodas = await buildEtiquetasPdf(globalEtiquetasProj);
+      const docEtiquetasTodas = await UnifiedEtiquetaEngine.build(globalEtiquetasProj);
       safeAddPdf(zip, "etiquetas/etiquetas_todas.pdf", docEtiquetasTodas);
     } catch (err) {
       devLogger.error("multiProjectFabrication: etiquetas globais", err);
@@ -502,8 +500,7 @@ export async function generateMultiProjectFabrication(
 
     // Etiquetas com numeração global e nome do projeto original
     try {
-      const designerCfg = hasStoredLabelDesignerConfig() ? loadLabelDesignerConfig() : undefined;
-      const docEtiquetas = await buildEtiquetasPdf({
+      const docEtiquetas = await UnifiedEtiquetaEngine.build({
         projectName: proj.projectName,
         boxes: proj.boxes,
         rules: proj.rules,
@@ -511,7 +508,6 @@ export async function generateMultiProjectFabrication(
         settings: getSettings(),
         precomputedItems: projDisplayItems,
         cutLayoutPlacements: projPlacements.length > 0 ? projPlacements : undefined,
-        designerConfig: designerCfg,
       });
       safeAddPdf(zip, `${basePath}/etiquetas.pdf`, docEtiquetas);
     } catch (err) {
