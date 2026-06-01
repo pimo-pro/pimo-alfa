@@ -6,6 +6,17 @@ import type { SettingsSchema } from "../settings/settingsService";
 import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
+import {
+  buildEtiquetaCodeV5,
+  buildPiecesPerSheetMap,
+  labelItemSheetKey,
+} from "../qrcode/etiquetaCodeV5";
+import { formatDimensionV5 } from "./labelMeasuresV5";
+import {
+  collectObservationsForItem,
+  observationsToV5Slots,
+  type LabelObservationRulesLike,
+} from "./labelObservationsV5";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
 import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
 import { DEFAULT_LABEL_CONFIG } from "../labelConfig/labelConfig";
@@ -57,6 +68,10 @@ type LabelItem = CutListItemComPreco & {
   pieceName?: string;
   /** Nome do projeto de origem da peça (fabricação em massa). */
   sourceProjectName?: string;
+  /** Total de peças na folha/caixa (NUM_CAIXA) — uso interno v5 / futuro tracking. */
+  numCaixa?: number;
+  /** Observações ligadas à peça/etiqueta (máx. 3 para v5). */
+  observations?: string[];
 };
 
 /** Nome industrial alinhado ao Layout de Corte PRO (`<prefixoCaixa>_<prefixoPeca>`). */
@@ -80,6 +95,23 @@ function resolveEtiquetaCodeParaEtiqueta(
     return rawSc;
   }
   return buildLocalQrPayload(item, ctx, 1);
+}
+
+/** Código v5 — apenas quando enableV5Layout; QR e faixa inferior usam a mesma string. */
+function resolveEtiquetaCodeV5ParaEtiqueta(
+  item: LabelItem,
+  ctx: { projectName: string },
+  piecesPerSheet: Map<string, number>,
+  index0: number
+): string {
+  const key = labelItemSheetKey(item.boxId, item.nome);
+  const totalPiecesInSheet = piecesPerSheet.get(key) ?? 0;
+  const pieceSeq = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
+  return buildEtiquetaCodeV5({
+    projectName: ctx.projectName,
+    pieceSeq,
+    totalPiecesInSheet,
+  });
 }
 
 function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
@@ -360,18 +392,26 @@ async function renderEtiquetaPage(
 // Renderer v5 — layout FINAL (98×60 mm, faixa inferior, grelha produção)
 // ============================================================================
 
-const V5_PAD_MM = 1;
-const V5_TEXT: [number, number, number] = [0, 0, 0];
-const V5_MUTED: [number, number, number] = [80, 80, 80];
-
-function formatDimension(widthMm: number, heightMm: number, thicknessMm?: number): string {
-  const w = Math.round(widthMm);
-  const h = Math.round(heightMm);
-  if (thicknessMm != null && thicknessMm > 0) {
-    return `${w}×${h}×${Math.round(thicknessMm)}`;
-  }
-  return `${w}×${h}`;
+/** px CSS @96dpi → mm (maqueta PIMO_LABEL_DESIGN_PREVIEW). */
+function v5Px(px: number): number {
+  return (px / 96) * 25.4;
 }
+
+/** px CSS → pontos jsPDF (≈ font-size em px). */
+function v5Pt(px: number): number {
+  return px * 0.75;
+}
+
+const V5_PAD_MM = v5Px(8);
+const V5_BORDER_MM = v5Px(2);
+const V5_TEXT: [number, number, number] = [17, 17, 17];
+const V5_MUTED: [number, number, number] = [102, 102, 102];
+const V5_LINE_LIGHT: [number, number, number] = [221, 221, 221];
+const V5_LINE_CUT: [number, number, number] = [68, 68, 68];
+const V5_INFO_GAP_MM = v5Px(12);
+const V5_LABEL_COL_MM = v5Px(26);
+const V5_SEQ_BOX_MM = v5Px(21);
+const V5_OBS_LABEL_W_MM = v5Px(14);
 
 function mapPaletteGroupToAAA(group: string): string {
   const g = String(group ?? "").trim().toUpperCase();
@@ -381,14 +421,18 @@ function mapPaletteGroupToAAA(group: string): string {
   return "---";
 }
 
-function formatOrlarSidesGrid(sides: PieceProductionSequence["orlarSides"]): string {
-  const c = (v: boolean) => (v ? "S" : "N");
-  return `${c(sides.front)} ${c(sides.back)} ${c(sides.right)} ${c(sides.left)}`;
+function formatDrillDistancesGridV5(seq: PieceProductionSequence): string {
+  if (!seq.drillDistances) return "————";
+  const labels = ["F2", "F3", "F4", "F5"];
+  return seq.drillDistances
+    .map((d, i) => `${labels[i] ?? "?"}${d > 0 ? d : "—"}`)
+    .join("");
 }
 
-function formatDrillDistancesGrid(seq: PieceProductionSequence): string {
-  if (!seq.drillDistances) return "— — — —";
-  return seq.drillDistances.map((d) => (d > 0 ? String(d) : "—")).join(" ");
+function formatOrlarSidesGridV5(sides: PieceProductionSequence["orlarSides"]): string {
+  const flags = [sides.front, sides.back, sides.right, sides.left];
+  const labels = ["O2", "O3", "O4", "O5"];
+  return labels.map((label, i) => `${label}${flags[i] ? "S" : "N"}`).join("");
 }
 
 function fmtStepNum(n: number | null): string {
@@ -456,20 +500,72 @@ function drawV5_Info(
   medidas: string,
   dims: LabelConfig["dimensions"]
 ): number {
-  doc.setTextColor(...V5_TEXT);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.text("MATERIAL", x, yMaterial + 3);
+  const labelPt = v5Pt(8.5);
+  const valuePt = v5Pt(10.5);
+  const valX = x + V5_LABEL_COL_MM;
+  const valueMaxW = width - V5_LABEL_COL_MM - 0.5;
+
   doc.setFont("helvetica", "normal");
-  doc.text(material, x + 18, yMaterial + 3, { maxWidth: width - 18 });
+  doc.setFontSize(labelPt);
+  doc.setTextColor(...V5_MUTED);
+  doc.text("MATRIAL", x, yMaterial + labelPt * 0.35);
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(valuePt);
+  doc.setTextColor(...V5_TEXT);
+  const matLines = doc.splitTextToSize(material, valueMaxW);
+  doc.text(matLines.slice(0, 2), valX, yMaterial + valuePt * 0.35);
 
   const yMed = yMaterial + dims.materialHeight_mm;
-  doc.setFont("helvetica", "bold");
-  doc.text("MEDIDAS", x, yMed + 3.5);
   doc.setFont("helvetica", "normal");
-  doc.text(medidas, x + 18, yMed + 3.5, { maxWidth: width - 18 });
+  doc.setFontSize(labelPt);
+  doc.setTextColor(...V5_MUTED);
+  doc.text("MEDIDAS", x, yMed + labelPt * 0.35);
+
+  doc.setFont("courier", "bold");
+  doc.setFontSize(valuePt);
+  doc.setTextColor(...V5_TEXT);
+  doc.text(medidas, valX, yMed + valuePt * 0.35, { maxWidth: valueMaxW });
 
   return yMed + dims.medidasHeight_mm;
+}
+
+function drawV5_SeqBox(
+  doc: jsPDF,
+  cellX: number,
+  cellY: number,
+  colW: number,
+  pkLabel: string,
+  stepNum: number | null
+): void {
+  const num = fmtStepNum(stepNum);
+  const hasNum = num !== "—";
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(v5Pt(9.5));
+  doc.setTextColor(...V5_TEXT);
+  doc.text(pkLabel, cellX + 0.5, cellY + v5Pt(9.5) * 0.38);
+
+  const boxSize = Math.min(V5_SEQ_BOX_MM, colW - 1.2);
+  const boxX = cellX + (colW - boxSize) / 2;
+  const boxY = cellY + v5Px(11);
+
+  doc.setDrawColor(hasNum ? 51 : 204, hasNum ? 51 : 204, hasNum ? 51 : 204);
+  doc.setLineWidth(hasNum ? v5Px(2) : v5Px(1));
+  doc.rect(boxX, boxY, boxSize, boxSize);
+
+  if (hasNum) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(v5Pt(9.5));
+    doc.text(num, boxX + boxSize / 2, boxY + boxSize / 2 + v5Pt(9.5) * 0.12, { align: "center" });
+  }
+}
+
+function drawV5_GridDataLine(doc: jsPDF, cellX: number, cellY: number, colW: number, rowH: number, line: string): void {
+  doc.setFont("courier", "bold");
+  doc.setFontSize(v5Pt(9.5));
+  doc.setTextColor(...V5_TEXT);
+  doc.text(line, cellX + 0.5, cellY + rowH / 2 + v5Pt(9.5) * 0.1, { maxWidth: colW - 1 });
 }
 
 function drawV5_ProductionGrid(
@@ -482,54 +578,29 @@ function drawV5_ProductionGrid(
 ): void {
   const colW = width / 3;
   const rowH = height / 3;
-  const drillStr = formatDrillDistancesGrid(seq);
-  const orlarStr = formatOrlarSidesGrid(seq.orlarSides);
 
-  const cells: { label: string; value: string }[][] = [
-    [
-      { label: "NISTING", value: fmtStepNum(seq.nisting) },
-      { label: "MANUAL", value: fmtStepNum(seq.manual) },
-      { label: "LIMPEZAS", value: fmtStepNum(seq.limpezas) },
-    ],
-    [
-      { label: "DRILL", value: fmtStepNum(seq.drill) },
-      { label: "", value: drillStr },
-      { label: "MONTAGEM", value: fmtStepNum(seq.montagem) },
-    ],
-    [
-      { label: "ORLAR", value: fmtStepNum(seq.orlar) },
-      { label: "", value: orlarStr },
-      { label: "EMBALAGEM", value: fmtStepNum(seq.embalagem) },
-    ],
-  ];
-
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.12);
-  for (let r = 0; r <= 3; r++) {
+  doc.setDrawColor(...V5_LINE_LIGHT);
+  doc.setLineWidth(0.08);
+  for (let r = 1; r < 3; r++) {
     doc.line(x, y + r * rowH, x + width, y + r * rowH);
   }
-  for (let c = 0; c <= 3; c++) {
+  for (let c = 1; c < 3; c++) {
     doc.line(x + c * colW, y, x + c * colW, y + height);
   }
 
-  doc.setTextColor(...V5_TEXT);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      const cell = cells[r]![c]!;
-      const cx = x + c * colW + 0.8;
-      const cy = y + r * rowH + 2.2;
-      if (cell.label) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(4.5);
-        doc.text(cell.label, cx, cy);
-      }
-      doc.setFont("helvetica", cell.label ? "normal" : "bold");
-      doc.setFontSize(cell.label ? 5.5 : 5);
-      doc.text(cell.value, cx, cy + (cell.label ? 2.8 : 3.2), {
-        maxWidth: colW - 1.2,
-      });
-    }
-  }
+  drawV5_SeqBox(doc, x, y, colW, "NISTING", seq.nisting);
+  drawV5_SeqBox(doc, x + colW, y, colW, "MANUAL", seq.manual);
+  drawV5_SeqBox(doc, x + 2 * colW, y, colW, "LIMPEZAS", seq.limpezas);
+
+  const y1 = y + rowH;
+  drawV5_SeqBox(doc, x, y1, colW, "DRILL", seq.drill);
+  drawV5_GridDataLine(doc, x + colW, y1, colW, rowH, formatDrillDistancesGridV5(seq));
+  drawV5_SeqBox(doc, x + 2 * colW, y1, colW, "MONTAGEM", seq.montagem);
+
+  const y2 = y + 2 * rowH;
+  drawV5_SeqBox(doc, x, y2, colW, "ORLAR", seq.orlar);
+  drawV5_GridDataLine(doc, x + colW, y2, colW, rowH, formatOrlarSidesGridV5(seq.orlarSides));
+  drawV5_SeqBox(doc, x + 2 * colW, y2, colW, "EMBALAGEM", seq.embalagem);
 }
 
 function drawV5_ObservationBar(
@@ -540,29 +611,41 @@ function drawV5_ObservationBar(
   height: number,
   observations: [string, string, string]
 ): void {
-  const fieldW = width / 3;
-  doc.setDrawColor(160, 160, 160);
+  const fieldsX = x + V5_OBS_LABEL_W_MM;
+  const fieldsW = width - V5_OBS_LABEL_W_MM;
+  const fieldW = fieldsW / 3;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(v5Pt(7));
+  doc.setTextColor(136, 136, 136);
+  doc.text("obs", x + 0.5, y + height * 0.62);
+
+  doc.setDrawColor(187, 187, 187);
   doc.setLineWidth(0.1);
   for (let i = 0; i < 3; i++) {
-    const fx = x + i * fieldW;
-    doc.rect(fx + 0.3, y + 0.3, fieldW - 0.6, height - 0.6);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(4.5);
-    doc.setTextColor(...V5_MUTED);
-    doc.text(observations[i] ?? "", fx + 1, y + height - 1, { maxWidth: fieldW - 2 });
+    const fx = fieldsX + i * fieldW;
+    const text = (observations[i] ?? "").trim();
+    const lineY = y + height - v5Px(2);
+    doc.line(fx + v5Px(3), lineY, fx + fieldW - v5Px(3), lineY);
+    if (text) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(v5Pt(8));
+      doc.setTextColor(...V5_TEXT);
+      doc.text(text, fx + v5Px(4), lineY - v5Px(5), { maxWidth: fieldW - v5Px(8) });
+    }
   }
   doc.setTextColor(...V5_TEXT);
 }
 
 function drawV5_CutLine(doc: jsPDF, y: number, width: number): void {
-  doc.setDrawColor(120, 120, 120);
-  doc.setLineWidth(0.2);
-  const dash = 0.66;
+  doc.setDrawColor(...V5_LINE_CUT);
+  doc.setLineWidth(v5Px(2.5));
+  const dash = v5Px(4);
   const docDash = doc as jsPDF & { setLineDashPattern?: (a: number[], b: number) => void };
   if (typeof docDash.setLineDashPattern === "function") {
-    docDash.setLineDashPattern([dash, dash], 0);
+    docDash.setLineDashPattern([dash, dash * 0.6], 0);
   }
-  doc.line(V5_PAD_MM, y, width - V5_PAD_MM, y);
+  doc.line(0, y, width, y);
   if (typeof docDash.setLineDashPattern === "function") {
     docDash.setLineDashPattern([], 0);
   }
@@ -580,24 +663,31 @@ function drawV5_BottomStrip(
   doc.setFillColor(245, 245, 245);
   doc.rect(0, y, width, height, "F");
   doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.15);
+  doc.setLineWidth(0.12);
   doc.line(0, y, width, y);
 
-  const leftW = width * 0.38;
-  const sepX = leftW;
-  const midX = sepX + 1.5;
+  const sepX = width * 0.36;
+  const midX = sepX + v5Px(8);
+  const centerY = y + height / 2 + v5Pt(13) * 0.1;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
+  doc.setFontSize(v5Pt(15));
   doc.setTextColor(...V5_TEXT);
-  doc.text(`${etiquetaCode}  ${aaa}`, V5_PAD_MM + 1, y + height / 2 + 1);
+  doc.text(etiquetaCode, V5_PAD_MM, centerY);
 
-  doc.setLineWidth(0.25);
-  doc.line(sepX, y + 1, sepX, y + height - 1);
+  const codeW = doc.getTextWidth(etiquetaCode);
+  doc.setFontSize(v5Pt(12));
+  doc.text(aaa, V5_PAD_MM + codeW + v5Px(5), centerY);
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
-  doc.text(fullName, midX, y + height / 2 + 1, { maxWidth: width - midX - V5_PAD_MM });
+  const barH = Math.min(v5Px(38), height - v5Px(4));
+  const barY = y + (height - barH) / 2;
+  doc.setDrawColor(51, 51, 51);
+  doc.setLineWidth(v5Px(2));
+  doc.line(sepX, barY, sepX, barY + barH);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(v5Pt(13));
+  doc.text(fullName, midX, centerY, { maxWidth: width - midX - V5_PAD_MM });
 }
 
 async function renderEtiquetaPageV5(
@@ -605,7 +695,9 @@ async function renderEtiquetaPageV5(
   item: LabelItem,
   project: ProjectForEtiquetasPdf,
   config: LabelConfig,
-  seq: PieceProductionSequence
+  seq: PieceProductionSequence,
+  piecesPerSheet: Map<string, number>,
+  index0: number
 ): Promise<void> {
   const dims = config.dimensions;
   const w = dims.totalWidth_mm;
@@ -613,38 +705,39 @@ async function renderEtiquetaPageV5(
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, w, h, "F");
-  doc.setDrawColor(100, 100, 100);
-  doc.setLineWidth(0.2);
-  doc.rect(0.3, 0.3, w - 0.6, h - 0.6);
+  doc.setDrawColor(...V5_TEXT);
+  doc.setLineWidth(V5_BORDER_MM);
+  doc.rect(V5_BORDER_MM / 2, V5_BORDER_MM / 2, w - V5_BORDER_MM, h - V5_BORDER_MM);
 
   const effectiveProjectName = item.sourceProjectName ?? project.projectName;
-  const etiquetaCode = resolveEtiquetaCodeParaEtiqueta(item, {
-    projectName: effectiveProjectName,
-    boxes: project.boxes,
-    rules: project.rules,
-  });
+  const etiquetaCode = resolveEtiquetaCodeV5ParaEtiqueta(
+    item,
+    { projectName: effectiveProjectName },
+    piecesPerSheet,
+    index0
+  );
   const nomeIndustrial = nomeIndustrialParaEtiqueta(item, project);
   const fullName = `${effectiveProjectName || "PROJETO"} · ${nomeIndustrial}`;
   const material = (item.material ?? "—").toUpperCase();
-  const medidas = formatDimension(
+  const medidas = formatDimensionV5(
     item.dimensoes?.largura ?? 0,
     item.dimensoes?.altura ?? 0,
     item.espessura
   );
   const aaa = mapPaletteGroupToAAA(seq.paletteGroup);
-  const observations: [string, string, string] = ["", "", ""];
+  const observations = observationsToV5Slots(item.observations ?? []);
 
   const qrX = V5_PAD_MM;
   const qrY = V5_PAD_MM;
   await drawV5_QR(doc, etiquetaCode, qrX, qrY, dims.qrSize_mm, project.settings);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(4.5);
-  doc.setTextColor(...V5_MUTED);
-  doc.text("obs", qrX, qrY + dims.qrSize_mm + 2.5);
+  doc.setFontSize(v5Pt(7));
+  doc.setTextColor(136, 136, 136);
+  doc.text("obs", qrX, qrY + dims.qrSize_mm + v5Px(4));
   doc.setTextColor(...V5_TEXT);
 
-  const infoX = V5_PAD_MM + dims.qrColumnWidth_mm + 0.5;
+  const infoX = V5_PAD_MM + dims.qrSize_mm + V5_INFO_GAP_MM;
   const infoW = w - infoX - V5_PAD_MM;
   const yMaterial = V5_PAD_MM;
   const yGrid = drawV5_Info(doc, infoX, yMaterial, infoW, material, medidas, dims);
@@ -654,13 +747,19 @@ async function renderEtiquetaPageV5(
   drawV5_ObservationBar(doc, V5_PAD_MM, yObs, w - 2 * V5_PAD_MM, dims.observationHeight_mm, observations);
 
   const bottomY = h - dims.bottomStrip_mm;
-  const cutY = bottomY - 0.5;
+  const cutY = bottomY - v5Px(3);
   drawV5_CutLine(doc, cutY, w);
   drawV5_BottomStrip(doc, bottomY, w, dims.bottomStrip_mm, etiquetaCode, aaa, fullName);
 }
 
 export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
   const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project), project.cutLayoutPlacements);
+  const piecesPerSheet = buildPiecesPerSheetMap(ordered, project.cutLayoutPlacements);
+  for (const item of ordered) {
+    const key = labelItemSheetKey(item.boxId, item.nome);
+    item.numCaixa = piecesPerSheet.get(key) ?? 0;
+    item.observations = collectObservationsForItem(item, project.rules as LabelObservationRulesLike);
+  }
   const designerConfig = project.designerConfig;
 
   // Sistema principal: Etiqueta Designer (se configurado pelo utilizador)
@@ -694,7 +793,7 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
     if (useV5) {
       const pieceData = labelItemToPieceData(ordered[idx], project);
       const seq = computePieceSequence(pieceData, v5Cfg);
-      await renderEtiquetaPageV5(doc, ordered[idx], project, v5Cfg, seq);
+      await renderEtiquetaPageV5(doc, ordered[idx], project, v5Cfg, seq, piecesPerSheet, idx);
     } else {
       await renderEtiquetaPage(doc, ordered[idx], project, logoDataUrl);
     }

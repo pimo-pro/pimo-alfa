@@ -1,0 +1,102 @@
+import { describe, it, expect } from "vitest";
+import {
+  buildEtiquetaCodeV5,
+  buildPiecesPerSheetMap,
+  extractProjectSigla,
+  formatNumCaixa,
+  labelItemSheetKey,
+} from "./etiquetaCodeV5";
+
+describe("etiquetaCodeV5", () => {
+  it("exemplo 1: NPKCVLD08-1", () => {
+    expect(extractProjectSigla("NOVO_PROJETO_KHALED_C2_V3_LAT_DIR")).toBe("NPKCVLD");
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "NOVO_PROJETO_KHALED_C2_V3_LAT_DIR",
+        totalPiecesInSheet: 8,
+        pieceSeq: 1,
+      })
+    ).toBe("NPKCVLD08-1");
+  });
+
+  it("exemplo 2: CAP12-5", () => {
+    expect(extractProjectSigla("COZINHA AZUL PREMIUM")).toBe("CAP");
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "COZINHA AZUL PREMIUM",
+        totalPiecesInSheet: 12,
+        pieceSeq: 5,
+      })
+    ).toBe("CAP12-5");
+  });
+
+  it("NUM_CAIXA inválido → 00", () => {
+    expect(formatNumCaixa(0)).toBe("00");
+    expect(formatNumCaixa(-3)).toBe("00");
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "TESTE",
+        totalPiecesInSheet: 0,
+        pieceSeq: 1,
+      })
+    ).toBe("T00-1");
+  });
+});
+
+describe("buildPiecesPerSheetMap", () => {
+  it("4.1 — com placements: totais por sheetIndex", () => {
+    const items = [
+      { boxId: "b1", nome: "p1" },
+      { boxId: "b1", nome: "p2" },
+      { boxId: "b2", nome: "p3" },
+    ];
+    const placements = [
+      { boxId: "b1", partName: "p1", sheetIndex: 0 },
+      { boxId: "b1", partName: "p2", sheetIndex: 0 },
+      { boxId: "b2", partName: "p3", sheetIndex: 1 },
+    ];
+    const map = buildPiecesPerSheetMap(items, placements);
+    expect(map.get(labelItemSheetKey("b1", "p1"))).toBe(2);
+    expect(map.get(labelItemSheetKey("b1", "p2"))).toBe(2);
+    expect(map.get(labelItemSheetKey("b2", "p3"))).toBe(1);
+  });
+
+  it("4.1b — sem match em placements: fallback por boxId", () => {
+    const items = [
+      { boxId: "b1", nome: "p1" },
+      { boxId: "b1", nome: "p_extra" },
+    ];
+    const placements = [{ boxId: "b1", partName: "p1", sheetIndex: 0 }];
+    const map = buildPiecesPerSheetMap(items, placements);
+    expect(map.get(labelItemSheetKey("b1", "p1"))).toBe(1);
+    expect(map.get(labelItemSheetKey("b1", "p_extra"))).toBe(2);
+  });
+
+  it("4.2 — sem placements: agrupa por boxId", () => {
+    const items = [
+      { boxId: "A", nome: "x" },
+      { boxId: "A", nome: "y" },
+      { boxId: "B", nome: "z" },
+    ];
+    const map = buildPiecesPerSheetMap(items);
+    expect(map.get(labelItemSheetKey("A", "x"))).toBe(2);
+    expect(map.get(labelItemSheetKey("B", "z"))).toBe(1);
+  });
+
+  it("4.3 — sem placements e sem boxId: agrupa por nome", () => {
+    const items = [{ nome: "lat_esq" }, { nome: "lat_esq" }, { nome: "cima" }];
+    const map = buildPiecesPerSheetMap(items);
+    expect(map.get(labelItemSheetKey(undefined, "lat_esq"))).toBe(2);
+    expect(map.get(labelItemSheetKey(undefined, "cima"))).toBe(1);
+  });
+
+  it("4.4 — totalPiecesInSheet = 0 → código com 00", () => {
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "TESTE",
+        totalPiecesInSheet: 0,
+        pieceSeq: 3,
+      })
+    ).toBe("T00-3");
+  });
+});
