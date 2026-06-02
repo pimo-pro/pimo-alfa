@@ -514,7 +514,32 @@ export default function RulesAdminPage() {
           </div>
         </Panel>
 
-        <Panel title="QR N" description="Configuração simples do QR local e destaque do número da peça.">
+        {/*
+         * @deprecated QR N — este painel edita `rules.qrcode` (legado S1/industrial).
+         * A configuração canónica de etiquetas/QR é feita em:
+         *   Admin → "Configuração de Etiquetas (v5)" → aba Geral → Política de QR
+         * Este painel mantém-se para compatibilidade com fluxos industriais existentes
+         * que ainda lêem `rules.qrcode`. Será removido quando esses fluxos migrarem.
+         */}
+        <Panel
+          title="QR N (legado)"
+          description="⚠ Deprecated — use 'Configuração de Etiquetas (v5)' para a configuração canónica. Este painel afecta apenas fluxos industriais S1 que ainda lêem rules.qrcode."
+        >
+          <div
+            style={{
+              padding: "8px 12px",
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid rgba(245,158,11,0.25)",
+              borderRadius: "var(--radius)",
+              fontSize: 12,
+              color: "rgba(245,158,11,0.9)",
+              marginBottom: 8,
+            }}
+          >
+            A política de QR, dimensões e logo estão agora em{" "}
+            <strong>Configuração de Etiquetas (v5) → Geral</strong>.
+            Os campos abaixo são mantidos para compatibilidade com S1/industrial.
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(160px, 1fr))", gap: 8 }}>
               <label style={{ fontSize: 12 }}>Tamanho do QR (mm)
@@ -537,76 +562,17 @@ export default function RulesAdminPage() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
               <label><input type="checkbox" checked={rules.qrcode.destacarNumeroPeca} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, destacarNumeroPeca: e.target.checked } }))} /> Mostrar número da peça em destaque</label>
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Pré-visualização do número de peça: <strong>{previewLabel}</strong>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  onClick={() =>
-                    setRules((prev) => ({
-                      ...prev,
-                      qrcode: { ...defaultRulesConfig.qrcode },
-                    }))
-                  }
-                >
-                  Reverter seção
-                </button>
-                <button
-                  type="button"
-                  className="button"
-                  onClick={() => handleSave()}
-                >
-                  Salvar seção
-                </button>
-              </div>
-            </div>
-            <div
-              style={{
-                border: "1px dashed rgba(255,255,255,0.2)",
-                borderRadius: 8,
-                padding: 10,
-                display: "flex",
-                gap: 12,
-                alignItems: "flex-start",
-              }}
-            >
-              <div style={{ fontSize: 12, color: "var(--text-muted)", minWidth: 70 }}>Preview</div>
-              <div
-                style={{
-                  width: Math.max(140, rules.etiqueta.larguraMm * 1.8),
-                  minHeight: Math.max(80, rules.etiqueta.alturaMm * 1.6),
-                  border: `${Math.max(1, rules.etiqueta.bordaPx)}px solid rgba(255,255,255,0.28)`,
-                  borderRadius: 6,
-                  padding: 8,
-                  display: "grid",
-                  gridTemplateColumns: rules.etiqueta.posicaoLogo === "acima" ? "1fr" : "auto 1fr",
-                  gap: 8,
-                  background: "rgba(10,10,10,0.35)",
-                }}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                type="button"
+                className="button button-ghost"
+                onClick={() => setRules((prev) => ({ ...prev, qrcode: { ...defaultRulesConfig.qrcode } }))}
               >
-                {rules.etiqueta.mostrarLogoEmpresa ? (
-                  <div style={{ alignSelf: "start", justifySelf: "start" }}>
-                    {rules.etiqueta.logoDataUrl ? (
-                      <img src={rules.etiqueta.logoDataUrl} alt="logo etiqueta" style={{ height: 26, maxWidth: 80, objectFit: "contain" }} />
-                    ) : (
-                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>LOGO</div>
-                    )}
-                  </div>
-                ) : null}
-                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 8, alignItems: "start" }}>
-                  <div
-                    style={{ width: 62, height: 62, background: "#fff", padding: 2 }}
-                    dangerouslySetInnerHTML={{ __html: previewQrSvg }}
-                  />
-                  <div style={{ fontSize: Math.max(11, rules.qrcode.tamanhoTexto + 2) }}>
-                    {rules.qrcode.destacarNumeroPeca ? <div style={{ fontWeight: 700, marginBottom: 4 }}>{previewLabel}</div> : null}
-                    {rules.qrcode.mostrarTextoAbaixoQr ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Projeto/Caixa/Peça/Madeira/Medidas</div> : null}
-                  </div>
-                </div>
-              </div>
+                Reverter
+              </button>
+              <button type="button" className="button" onClick={() => handleSave()}>
+                Salvar
+              </button>
             </div>
           </div>
         </Panel>

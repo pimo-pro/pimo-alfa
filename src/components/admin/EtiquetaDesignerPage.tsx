@@ -82,16 +82,32 @@ function snapToGrid(v: number, gridMm: number, enabled: boolean): number {
   return Math.round(v / gridMm) * gridMm;
 }
 
-export default function EtiquetaDesignerPage() {
+export interface EtiquetaDesignerPageProps {
+  /**
+   * Quando fornecido, o designer opera em modo controlado: usa este valor como
+   * configuração inicial em vez do localStorage. Passa a ser o SSOT do perfil.
+   */
+  externalConfig?: LabelDesignerConfig;
+  /**
+   * Quando fornecido, "Salvar" chama este callback em vez de escrever em localStorage.
+   * O caller é responsável por persistir a configuração no perfil.
+   */
+  onExternalSave?: (config: LabelDesignerConfig) => void;
+  /** Quando true, omite o AdminPageHeader e a AdminStickyActionBar (para embed em tab). */
+  embedded?: boolean;
+}
+
+export default function EtiquetaDesignerPage({ externalConfig, onExternalSave, embedded }: EtiquetaDesignerPageProps = {}) {
   const { showToast } = useToast();
-  const [config, setConfig] = useState<LabelDesignerConfig>(() => loadLabelDesignerConfig());
+  const initialConfig = externalConfig ?? loadLabelDesignerConfig();
+  const [config, setConfig] = useState<LabelDesignerConfig>(() => JSON.parse(JSON.stringify(initialConfig)));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ elX: 0, elY: 0, mouseX: 0, mouseY: 0 });
   const [resizeStart, setResizeStart] = useState({ elW: 0, elH: 0, mouseX: 0, mouseY: 0 });
   const [zoomPercent, setZoomPercent] = useState(100);
-  const [history, setHistory] = useState<LabelDesignerConfig[]>([JSON.parse(JSON.stringify(loadLabelDesignerConfig()))]);
+  const [history, setHistory] = useState<LabelDesignerConfig[]>([JSON.parse(JSON.stringify(initialConfig))]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
   const configRef = useRef(config);
@@ -233,8 +249,14 @@ export default function EtiquetaDesignerPage() {
   ]);
 
   const handleSave = () => {
-    saveLabelDesignerConfig(config);
-    showToast("Configuração da etiqueta guardada.", "info");
+    if (onExternalSave) {
+      // Modo controlado (embed em LabelConfigPage) — delega ao caller.
+      onExternalSave(config);
+      showToast("Layout actualizado. Use 'Guardar perfil' para persistir.", "info");
+    } else {
+      saveLabelDesignerConfig(config);
+      showToast("Configuração da etiqueta guardada.", "info");
+    }
   };
 
   const handleExport = () => {
@@ -394,10 +416,12 @@ export default function EtiquetaDesignerPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: "100%" }}>
-      <AdminPageHeader
-        title="Etiqueta / QR N"
-        subtitle="Personalize o layout da etiqueta. Arraste os elementos, redimensione o QR e o logo, configure cores e fontes."
-      />
+      {!embedded && (
+        <AdminPageHeader
+          title="Etiqueta / QR N"
+          subtitle="Personalize o layout da etiqueta. Arraste os elementos, redimensione o QR e o logo, configure cores e fontes."
+        />
+      )}
 
       <AdminStickyActionBar>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>

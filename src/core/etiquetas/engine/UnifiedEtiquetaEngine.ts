@@ -1,5 +1,5 @@
 import type jsPDF from "jspdf";
-import { resolveUnifiedLabelConfig } from "../config/unifiedLabelConfig";
+import { resolveLabelSystemConfig } from "../../labelSystem/resolveLabelSystemConfig";
 import { normalizeCutLayoutPlacements } from "./nestingAdapter";
 import { shouldUseDesignerInProductionExport } from "../ui/designerPreview";
 import type { UnifiedEtiquetaProjectInput } from "../types";
@@ -11,6 +11,7 @@ import {
 
 /**
  * UnifiedEtiquetaEngine (UEE) — hub único de etiquetas de produção (motor v5).
+ * Usa `resolveLabelSystemConfig` como única fonte de configuração (LabelSystemV5).
  */
 export const UnifiedEtiquetaEngine = {
   /**
@@ -24,12 +25,18 @@ export const UnifiedEtiquetaEngine = {
       return buildEtiquetasPdfLegacy(pdfProject);
     }
 
-    const labelConfig = resolveUnifiedLabelConfig(project.rules);
+    // F5: usar resolveLabelSystemConfig como única fonte de configuração.
+    // Fallback automático para regras legadas quando labelSystemV5 está ausente.
+    const runtime = resolveLabelSystemConfig(
+      project.rules,
+      project.settings ?? null,
+      project.labelSystemV5 ?? project.rules.labelSystemV5 ?? null
+    );
     const placements = normalizeCutLayoutPlacements(project.cutLayoutPlacements);
 
     return buildProductionEtiquetasV5Pdf(
       { ...pdfProject, cutLayoutPlacements: placements },
-      labelConfig
+      runtime.labelConfig
     );
   },
 

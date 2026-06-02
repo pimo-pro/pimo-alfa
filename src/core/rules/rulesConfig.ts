@@ -9,6 +9,8 @@ import {
   type PaletteGroup,
   type ProductionStep,
 } from "../labelConfig/labelConfig";
+// type-only — erased at runtime; no circular runtime dep
+import type { LabelSystemV5 } from "../labelSystem/LabelSystemV5";
 
 export type LabelV5ProductionStepConfig = {
   id: ProductionStep["id"];
@@ -257,6 +259,10 @@ export type RulesConfig = {
     /** Se true, profundidade das peças não muda com dimensões (futuro uso). */
     profundidadeFixa: boolean;
   };
+  /**
+   * @deprecated Para configuração de etiquetas, usar `labelSystemV5`.
+   * Mantido para compatibilidade com S1/S3 e fluxos industriais existentes.
+   */
   qrcode: {
     tamanhoQr: number;
     tamanhoTexto: number;
@@ -265,6 +271,11 @@ export type RulesConfig = {
     numeroDigitosPeca: 2 | 3;
     reiniciarContagemEm99: boolean;
   };
+  /**
+   * @deprecated Para configuração de etiquetas, usar `labelSystemV5`.
+   * Mantido para compatibilidade com o designer legado e fluxos industriais existentes.
+   * O campo `enableV5Layout` é ignorado na produção — UEE usa sempre v5.
+   */
   etiqueta: {
     larguraMm: number;
     alturaMm: number;
@@ -279,11 +290,23 @@ export type RulesConfig = {
     mostrarMaterial: boolean;
     mostrarDimensoes: boolean;
     mostrarReferencia: boolean;
-    /** Activa o renderer de etiquetas v5 (faixa inferior + grelha produção). */
+    /**
+     * @deprecated Ignorado em produção — UEE usa sempre o renderer v5.
+     * Mantido para não quebrar perfis gravados.
+     */
     enableV5Layout: boolean;
   };
-  /** Override v5 de etiquetas por perfil de regras (UI Fase 4). */
+  /**
+   * @deprecated Para configuração de etiquetas, usar `labelSystemV5`.
+   * Mantido para retrocompatibilidade com perfis existentes.
+   */
   labelV5: LabelV5RulesConfig;
+  /**
+   * Sistema unificado de etiquetas v5 (LabelSystemV5).
+   * SSOT para toda a configuração de etiquetas, QR, designer e policy.
+   * Substituirá `etiqueta`, `qrcode` e `labelV5` no futuro.
+   */
+  labelSystemV5?: LabelSystemV5;
 };
 
 /** Regras padrão do projeto (defaults; carregadas ao iniciar ou ao resetar). */
@@ -682,6 +705,8 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
           : Boolean((isObject(src.etiqueta) ? src.etiqueta : {}).enableV5Layout),
     },
     labelV5: normalizeLabelV5RulesConfig(src.labelV5),
+    // Pass-through; runtime migration via resolveLabelSystemConfig (LabelSystemV5.ts).
+    labelSystemV5: isObject(src.labelSystemV5) ? (src.labelSystemV5 as LabelSystemV5) : undefined,
   };
 }
 

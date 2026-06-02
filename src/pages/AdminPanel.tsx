@@ -60,7 +60,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Deploy", label: "Deploy", badge: "Experimental" },
   { type: "item", id: "System Settings", label: "System Settings" },
   { type: "item", id: "Regras das Gavetas", label: "Regras das Gavetas" },
-  { type: "item", id: "Etiqueta / QR N", label: "Etiqueta / QR N" },
+  { type: "item", id: "Etiqueta / QR N", label: "Designer de Etiqueta (legado)" },
   { type: "item", id: "Configuração de Etiquetas (v5)", label: "Configuração de Etiquetas (v5)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
@@ -265,7 +265,12 @@ export default function AdminPanel() {
               <ProjectProgress />
             </Suspense>
           ) : active === "Etiqueta / QR N" ? (
-            <EtiquetaDesignerPage />
+            <>
+              <div style={{ fontSize: 11, color: "rgba(245,158,11,0.85)", marginBottom: 8, padding: "6px 10px", background: "rgba(245,158,11,0.07)", borderRadius: 6, border: "1px solid rgba(245,158,11,0.2)" }}>
+                ⚠ Designer legado — a configuração canónica está em <strong>Configuração de Etiquetas (v5) → Layout</strong>.
+              </div>
+              <EtiquetaDesignerPage />
+            </>
           ) : active === "Configuração de Etiquetas (v5)" ? (
             canSeeAdminOnlyMenus ? (
               <LabelConfigPage />
