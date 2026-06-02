@@ -377,8 +377,11 @@ export default function BottomInfoToolbar() {
           id: hemati.id,
           boxId: box.id,
           boxName: box.nome,
-          label: hemati.kind === "L" || hemati.kind === "U" ? `Hemati ${hemati.kind}${hemati.partIndex ?? ""}` : `Hemati ${hemati.kind}`,
-          searchText: `${box.nome} hemati ${hemati.id}`.toLowerCase(),
+          label:
+            hemati.kind === "L" || hemati.kind === "U"
+              ? `Remate ${hemati.kind}${hemati.partIndex ?? ""}`
+              : `Remate ${hemati.kind}`,
+          searchText: `${box.nome} remate ${hemati.id}`.toLowerCase(),
         });
       }
       for (const rodape of (project.rodapes ?? []).filter((r) => r.parentBoxId === box.id)) {

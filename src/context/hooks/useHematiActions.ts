@@ -53,7 +53,7 @@ export function useHematiActions(ctx: ProjectActionsExecutionContext): HematiAct
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",
-                message: `Hemati: ${created.map((h) => h.name).join(", ")}`,
+                message: `Remate: ${created.map((h) => h.name).join(", ")}`,
               }),
             });
           },
@@ -83,7 +83,7 @@ export function useHematiActions(ctx: ProjectActionsExecutionContext): HematiAct
                 ? appendChangelog(prev.changelog, {
                     timestamp: new Date(),
                     type: "box",
-                    message: `Hemati removido: ${removed.name}`,
+                    message: `Remate removido: ${removed.name}`,
                   })
                 : prev.changelog,
             });

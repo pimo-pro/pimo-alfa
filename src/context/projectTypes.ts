@@ -157,7 +157,7 @@ export interface ProjectState {
 
   /** Remate 2.0 — peças independentes manipuláveis. */
   remates: RematePiece[];
-  /** Hemati — acabamento superior/lateral (cozinhas; apenas visual). */
+  /** Remate visual (legado hematis[]) — acabamento superior/lateral; apenas visual. */
   hematis: ProjectHemati[];
   /** Roda pé inteligente — acabamento inferior (cozinhas; apenas visual). */
   rodapes: ProjectRodape[];
@@ -618,7 +618,7 @@ export interface ProjectActions {
   removeRemate: (_remateId: string) => void;
   /** Remate 2.0 — seleção UI (noop no estado persistido). */
   selectRematePiece: (_remateId: string | null) => void;
-  /** Hemati — cria peça(s) no módulo. */
+  /** Remate visual (legado) — cria peça(s) no módulo. */
   createBoxHemati: (_input: CreateHematiInput) => void;
   updateHemati: (_hematiId: string, _patch: UpdateHematiInput) => void;
   removeHemati: (_hematiId: string) => void;

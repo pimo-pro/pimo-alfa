@@ -657,7 +657,7 @@ export function PainelSala() {
                     Última execução: {new Date(project.autoFill.lastRunAt).toLocaleString("pt-PT")}
                     {"\n"}
                     Módulos: {project.autoFill.createdBoxIds?.length ?? 0} · Remates:{" "}
-                    {project.autoFill.createdRemateIds?.length ?? 0} · Hemati:{" "}
+                    {project.autoFill.createdRemateIds?.length ?? 0} · Remate módulo:{" "}
                     {project.autoFill.createdHematiIds?.length ?? 0} · Roda pé:{" "}
                     {project.autoFill.createdRodapeIds?.length ?? 0}
                     {(project.autoFill.trimAppliedMm ?? 0) > 0 &&

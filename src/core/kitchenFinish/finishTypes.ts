@@ -1,4 +1,4 @@
-/** Tipos partilhados Hemati / Roda Pé (apenas visual — sem industrial). */
+/** Tipos partilhados Remate (acabamento visual) / Roda Pé (apenas visual — sem industrial). */
 
 export type FinishDimensions = {
   widthMm: number;

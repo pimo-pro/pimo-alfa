@@ -11,13 +11,13 @@ type Props = {
 };
 
 const TOGGLES: Array<{ kind: HematiKind; label: string }> = [
-  { kind: "DIR", label: "Hemati DIR" },
-  { kind: "ESQ", label: "Hemati ESQ" },
-  { kind: "CIMA", label: "Hemati CIMA" },
-  { kind: "BAIXO", label: "Hemati BAIXO" },
-  { kind: "L", label: "Hemati L (2 peças)" },
-  { kind: "U", label: "Hemati U (3 peças)" },
-  { kind: "FULL", label: "Hemati Full Wall" },
+  { kind: "DIR", label: "Remate DIR" },
+  { kind: "ESQ", label: "Remate ESQ" },
+  { kind: "CIMA", label: "Remate CIMA" },
+  { kind: "BAIXO", label: "Remate BAIXO" },
+  { kind: "L", label: "Remate L (2 peças)" },
+  { kind: "U", label: "Remate U (3 peças)" },
+  { kind: "FULL", label: "Remate Full Wall" },
 ];
 
 export default function BoxHematiSection({ boxId }: Props) {
@@ -43,7 +43,7 @@ export default function BoxHematiSection({ boxId }: Props) {
   };
 
   return (
-    <Panel title="Hemati do Módulo" description="Acabamento superior e lateral — peças móveis e independentes.">
+    <Panel title="Remate do Módulo" description="Acabamento superior e lateral — peças móveis e independentes.">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {TOGGLES.map((item) => {
           const active = byKind(item.kind);

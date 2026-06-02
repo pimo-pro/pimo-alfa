@@ -346,7 +346,7 @@ function formatDetailedSummary(summaries: AutoFillWallSummary[]): string {
         `▸ ${w.wallLabel.toUpperCase()} (${w.usefulLengthMm} mm úteis)`,
         `  Inferiores: ${w.lowerCount} · Superiores: ${w.upperCount} · Especiais: ${w.specialCount}`,
         `  Cantos: ${w.cornerCount} · Enchimento: ${w.fillerCount}`,
-        `  Remates: ${w.remateCount} · Hemati: ${w.hematiCount} · Roda pé: ${w.rodapeCount}`,
+        `  Remates: ${w.remateCount} · Remate módulo: ${w.hematiCount} · Roda pé: ${w.rodapeCount}`,
         `  Perda: ${w.wastedMm} mm · Trim: ${w.trimAppliedMm} mm`,
       ];
       if (w.specialsPlaced.length) {

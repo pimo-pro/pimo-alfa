@@ -43,8 +43,9 @@ export type UpdateHematiInput = Partial<
   >
 >;
 
+/** Rótulo UI — nomenclatura «Remate» (domínio interno mantém tipo Hemati). */
 export function hematiKindLabel(kind: HematiKind, partIndex?: number): string {
-  if (kind === "L" || kind === "U") return `Hemati ${kind}${partIndex ?? ""}`;
-  if (kind === "FULL") return "Hemati Full Wall";
-  return `Hemati ${kind}`;
+  if (kind === "L" || kind === "U") return `Remate ${kind}${partIndex ?? ""}`;
+  if (kind === "FULL") return "Remate Full Wall";
+  return `Remate ${kind}`;
 }

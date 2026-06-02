@@ -12,8 +12,7 @@ import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
 import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
 import { Icon } from "@/components/icons";
 import SelecionarMaterialSection from "../../settings/material/SelecionarMaterialSection";
-import AdicionarRemateModal from "../../settings/remate/AdicionarRemateModal";
-import BoxHematiSection from "../../settings/hemati/BoxHematiSection";
+import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
 import BoxRodapeSection from "../../settings/rodape/BoxRodapeSection";
 
 export type HomeLeftPanelSelectedProps = {
@@ -30,7 +29,7 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
   const selectedGavetas = selectedBox?.gavetas ?? 0;
   void materialsPicker;
   const { viewerApi } = usePimoViewerContext();
-  const [remateModalOpen, setRemateModalOpen] = useState(false);
+  const [remateDrawerOpen, setRemateDrawerOpen] = useState(false);
 
   const profundidadeLeitura = useMemo(
     () => (selectedBox ? computeBoxProfundidadeLeituraMm(selectedBox, project.rules) : null),
@@ -224,28 +223,22 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
 
           {selectedBox && (
             <>
-              <Panel title="Remates do Box">
+              <Panel title="Acabamento do módulo" description="Remate — configuração lateral">
                 <button
                   type="button"
                   className="button button-primary"
                   style={{ width: "100%" }}
-                  onClick={() => setRemateModalOpen(true)}
+                  onClick={() => setRemateDrawerOpen(true)}
                 >
-                  Adicionar Remate
+                  Remate
                 </button>
               </Panel>
-              <AdicionarRemateModal
+              <BoxRemateDrawer
                 boxId={selectedBox.id}
-                open={remateModalOpen}
-                onClose={() => setRemateModalOpen(false)}
-                onConfirm={(tipo) =>
-                  actions.createRematePiece({
-                    tipo,
-                    parentBoxId: selectedBox.id,
-                    followBox: true,
-                    materialPresetId:
-                      selectedBox.material || project.materialId || project.material.tipo,
-                  })
+                open={remateDrawerOpen}
+                onClose={() => setRemateDrawerOpen(false)}
+                defaultMaterialId={
+                  selectedBox.material || project.materialId || project.material.tipo
                 }
               />
             </>
@@ -261,7 +254,6 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
             />
           )}
 
-          {selectedBox && <BoxHematiSection boxId={selectedBox.id} />}
           {selectedBox && <BoxRodapeSection boxId={selectedBox.id} />}
 
           {selectedBox && (
