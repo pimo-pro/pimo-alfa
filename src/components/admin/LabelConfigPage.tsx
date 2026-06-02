@@ -20,10 +20,7 @@ import {
   type LabelSystemV5,
   type QrPolicy,
 } from "../../core/labelSystem/LabelSystemV5";
-import {
-  buildLabelSystemV5FromLegacyRules,
-  normalizeLabelSystemV5,
-} from "../../core/labelSystem/resolveLabelSystemConfig";
+import { normalizeLabelSystemV5 } from "../../core/labelSystem/resolveLabelSystemConfig";
 import { hasStoredLabelDesignerConfig, loadLabelDesignerConfig } from "../../core/labelDesigner/labelDesignerStorage";
 import EtiquetaDesignerPage from "./EtiquetaDesignerPage";
 import AdminLabelPreview from "./AdminLabelPreview";

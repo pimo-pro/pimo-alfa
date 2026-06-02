@@ -11,6 +11,7 @@ import {
 } from "../labelConfig/labelConfig";
 // type-only — erased at runtime; no circular runtime dep
 import type { LabelSystemV5 } from "../labelSystem/LabelSystemV5";
+import { normalizeLabelSystemV5 } from "../labelSystem/resolveLabelSystemConfig";
 
 export type LabelV5ProductionStepConfig = {
   id: ProductionStep["id"];
@@ -706,7 +707,9 @@ export function normalizeRulesConfig(input: unknown): RulesConfig {
     },
     labelV5: normalizeLabelV5RulesConfig(src.labelV5),
     // Pass-through; runtime migration via resolveLabelSystemConfig (LabelSystemV5.ts).
-    labelSystemV5: isObject(src.labelSystemV5) ? (src.labelSystemV5 as LabelSystemV5) : undefined,
+    labelSystemV5: isObject(src.labelSystemV5)
+      ? normalizeLabelSystemV5(src.labelSystemV5 as unknown as LabelSystemV5)
+      : undefined,
   };
 }
 

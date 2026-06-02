@@ -243,7 +243,7 @@ export default function AdminLabelPreview({ rules, settings, labelSystemV5 }: Ad
                   cell(step.id)
                 )}
                 {labelConfig.productionSteps.length < 9 &&
-                  Array.from({ length: 9 - Math.min(labelConfig.productionSteps.length, 9) }).map((_, i) =>
+                  Array.from({ length: 9 - Math.min(labelConfig.productionSteps.length, 9) }).map((_) =>
                     cell("", "transparent")
                   )}
               </div>

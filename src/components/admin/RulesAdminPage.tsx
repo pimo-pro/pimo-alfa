@@ -562,6 +562,32 @@ export default function RulesAdminPage() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
               <label><input type="checkbox" checked={rules.qrcode.destacarNumeroPeca} onChange={(e) => setRules((prev) => ({ ...prev, qrcode: { ...prev.qrcode, destacarNumeroPeca: e.target.checked } }))} /> Mostrar número da peça em destaque</label>
             </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                alignItems: "flex-start",
+                padding: 12,
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                background: "var(--surface-2)",
+              }}
+            >
+              {previewQrSvg ? (
+                <div
+                  style={{ width: 72, height: 72, flexShrink: 0 }}
+                  dangerouslySetInnerHTML={{ __html: previewQrSvg }}
+                />
+              ) : null}
+              <div style={{ fontSize: Math.max(11, rules.qrcode.tamanhoTexto + 2) }}>
+                {rules.qrcode.destacarNumeroPeca ? (
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{previewLabel}</div>
+                ) : null}
+                {rules.qrcode.mostrarTextoAbaixoQr ? (
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{previewQrPayload}</div>
+                ) : null}
+              </div>
+            </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <button
                 type="button"

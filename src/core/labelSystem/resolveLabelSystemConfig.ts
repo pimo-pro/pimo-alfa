@@ -65,7 +65,10 @@ export function resolveLabelSystemConfig(
   settings?: Pick<SettingsSchema, "etiquetasQr"> | null,
   labelSystemV5?: LabelSystemV5 | null
 ): ResolvedLabelRuntime {
-  const schema = migrateLabelSystemV5(labelSystemV5 ?? null);
+  const explicit = labelSystemV5 ?? rules.labelSystemV5 ?? null;
+  const schema = explicit
+    ? migrateLabelSystemV5(explicit)
+    : normalizeLabelSystemV5(null, rules, settings);
 
   const labelConfig = toLabelConfig(schema);
 
