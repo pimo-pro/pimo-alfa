@@ -11,7 +11,6 @@ import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
-import EtiquetaDesignerPage from "../components/admin/EtiquetaDesignerPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
@@ -34,7 +33,6 @@ type AdminTab =
   | "Painel Referência"
   | "System Settings"
   | "Regras das Gavetas"
-  | "Etiqueta / QR N"
   | "Configuração de Etiquetas (v5)"
   | "Projetos Salvos"
   | "icons";
@@ -60,7 +58,6 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Deploy", label: "Deploy", badge: "Experimental" },
   { type: "item", id: "System Settings", label: "System Settings" },
   { type: "item", id: "Regras das Gavetas", label: "Regras das Gavetas" },
-  { type: "item", id: "Etiqueta / QR N", label: "Designer de Etiqueta (legado)" },
   { type: "item", id: "Configuração de Etiquetas (v5)", label: "Configuração de Etiquetas (v5)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
@@ -80,7 +77,6 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Deploy": "adminLab",
   "System Settings": "adminTools",
   "Regras das Gavetas": "adminRuler",
-  "Etiqueta / QR N": "adminTag",
   "Configuração de Etiquetas (v5)": "adminTag",
   "Projetos Salvos": "adminSave",
   "Project Progress": "adminChart",
@@ -110,8 +106,12 @@ export default function AdminPanel() {
   const adminVisibleTabs = getAdminVisibleTabs(canSeeAdminOnlyMenus);
 
   const [active, setActive] = useState<AdminTab>(() => {
-    const saved = localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY) as AdminTab | null;
-    return saved && adminVisibleTabs.has(saved) ? saved : DEFAULT_ADMIN_TAB;
+    const saved = localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY) as AdminTab | string | null;
+    if (saved === "Etiqueta / QR N") {
+      const migrated: AdminTab = "Configuração de Etiquetas (v5)";
+      return adminVisibleTabs.has(migrated) ? migrated : DEFAULT_ADMIN_TAB;
+    }
+    return saved && adminVisibleTabs.has(saved as AdminTab) ? (saved as AdminTab) : DEFAULT_ADMIN_TAB;
   });
 
   const setActiveTab = (next: AdminTab) => {
@@ -264,13 +264,6 @@ export default function AdminPanel() {
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <ProjectProgress />
             </Suspense>
-          ) : active === "Etiqueta / QR N" ? (
-            <>
-              <div style={{ fontSize: 11, color: "rgba(245,158,11,0.85)", marginBottom: 8, padding: "6px 10px", background: "rgba(245,158,11,0.07)", borderRadius: 6, border: "1px solid rgba(245,158,11,0.2)" }}>
-                ⚠ Designer legado — a configuração canónica está em <strong>Configuração de Etiquetas (v5) → Layout</strong>.
-              </div>
-              <EtiquetaDesignerPage />
-            </>
           ) : active === "Configuração de Etiquetas (v5)" ? (
             canSeeAdminOnlyMenus ? (
               <LabelConfigPage />
