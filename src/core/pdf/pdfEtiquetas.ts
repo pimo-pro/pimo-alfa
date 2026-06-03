@@ -26,7 +26,6 @@ import {
 } from "./labelObservationsV5";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
 import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
-import { DEFAULT_LABEL_CONFIG } from "../labelConfig/labelConfig";
 import {
   computePieceSequence,
   type PieceData,
@@ -61,7 +60,7 @@ export type ProjectForEtiquetasPdf = {
   settings?: SettingsSchema;
   /** Posições das peças no nesting final; se fornecidas, ordena etiquetas por chapa. */
   cutLayoutPlacements?: SheetPlacement[];
-  /** Config do designer de etiquetas; se presente, substitui o renderer de rules.etiqueta. */
+  /** Config do designer de etiquetas (legado S3 — ignorado pelo motor v5 de produção). */
   designerConfig?: LabelDesignerConfig;
   /** Itens pré-calculados (útil para exportação multi-projeto; skip getCutlistWithMetadata). */
   precomputedItems?: CutListItemComPreco[];
@@ -87,7 +86,7 @@ function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiqueta
   return buildCutLayoutProPartName(item, boxNome, projectName);
 }
 
-/** Código gravado no QR / texto da etiqueta — alinhado a `resolveAuthoritativeLabelNumber` + shortCode literal. */
+/** Código S1 — apenas referência legada (`labelPdfLegacyRenderRefs`); produção usa `etiquetaQr`. */
 function resolveEtiquetaCodeParaEtiqueta(
   item: LabelItem,
   ctx: { projectName: string; boxes: BoxModule[]; rules: RulesConfig }
@@ -201,7 +200,7 @@ async function drawQrWithLogoOrFallback(
   }
 }
 
-/** Renderer usando a configuração visual do Etiqueta Designer com dados reais da peça. */
+/** Renderer S3 legado — não usado em produção (ver `labelPdfLegacyRenderRefs`). */
 async function renderEtiquetaPageFromDesignerConfig(
   doc: jsPDF,
   item: LabelItem,
@@ -294,6 +293,7 @@ async function renderEtiquetaPageFromDesignerConfig(
   }
 }
 
+/** Renderer S1 legado — não usado em produção (ver `labelPdfLegacyRenderRefs`). */
 async function renderEtiquetaPage(
   doc: jsPDF,
   item: LabelItem,
@@ -935,7 +935,7 @@ async function renderEtiquetaPageV5(
 }
 
 /**
- * PDF de etiquetas de produção — UnifiedEtiquetaEngine (motor v5, config unificada).
+ * PDF de etiquetas de produção — motor v5 unificado (único renderer activo).
  */
 export async function buildProductionEtiquetasV5Pdf(
   project: ProjectForEtiquetasPdf,
@@ -969,63 +969,7 @@ export async function buildProductionEtiquetasV5Pdf(
   return doc;
 }
 
-/**
- * Sistemas legados isolados (S1 legado, S3 designer, flag enableV5Layout).
- * Mantido para regressão — não usar em exportação de produção.
- */
-export async function buildEtiquetasPdfLegacy(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
-  const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project), project.cutLayoutPlacements);
-  const piecesPerSheet = buildPiecesPerSheetMap(ordered, project.cutLayoutPlacements);
-  for (const item of ordered) {
-    const key = labelItemSheetKey(item.boxId, item.nome);
-    item.numCaixa = piecesPerSheet.get(key) ?? 0;
-    item.observations = collectObservationsForItem(item, project.rules as LabelObservationRulesLike);
-  }
-  const designerConfig = project.designerConfig;
-
-  if (designerConfig && designerConfig.elements.length > 0) {
-    const w = designerConfig.widthMm;
-    const h = designerConfig.heightMm;
-    const doc = new jsPDF({ unit: "mm", format: [w, h] });
-    for (let idx = 0; idx < ordered.length; idx++) {
-      if (idx > 0) doc.addPage([w, h]);
-      await renderEtiquetaPageFromDesignerConfig(doc, ordered[idx], project, designerConfig);
-    }
-    return doc;
-  }
-
-  const cfg = project.rules.etiqueta;
-  const useV5 = Boolean(cfg.enableV5Layout);
-  const v5Cfg = DEFAULT_LABEL_CONFIG;
-  const pageW = useV5 ? v5Cfg.dimensions.totalWidth_mm : cfg.larguraMm;
-  const pageH = useV5 ? v5Cfg.dimensions.totalHeight_mm : cfg.alturaMm;
-
-  const doc = new jsPDF({
-    orientation: pageW >= pageH ? "landscape" : "portrait",
-    unit: "mm",
-    format: [pageW, pageH],
-  });
-  const logoDataUrl = useV5 ? null : await loadLogoPiDataUrl();
-
-  for (let idx = 0; idx < ordered.length; idx++) {
-    if (idx > 0) doc.addPage([pageW, pageH], pageW >= pageH ? "landscape" : "portrait");
-    if (useV5) {
-      const runtime = resolveLabelSystemConfig(
-        project.rules,
-        project.settings ?? null,
-        project.rules.labelSystemV5 ?? null
-      );
-      const pieceData = labelItemToPieceData(ordered[idx], project);
-      const seq = computePieceSequence(pieceData, runtime.labelConfig);
-      await renderEtiquetaPageV5(doc, ordered[idx], project, runtime, seq, piecesPerSheet, idx);
-    } else {
-      await renderEtiquetaPage(doc, ordered[idx], project, logoDataUrl);
-    }
-  }
-  return doc;
-}
-
-/** Hub público — delega ao motor v5 com ResolvedLabelRuntime. */
+/** Hub público — delega sempre ao motor v5 (`buildProductionEtiquetasV5Pdf`). */
 export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
   const runtime = resolveLabelSystemConfig(
     project.rules,
@@ -1038,3 +982,23 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
     runtime
   );
 }
+
+/**
+ * @deprecated API legada — redireccionada para o motor v5. Mantida para compatibilidade de imports (UEE).
+ */
+export async function buildEtiquetasPdfLegacy(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
+  return buildEtiquetasPdf(project);
+}
+
+// ─── Referências S1/S3 (não usadas em produção) ───────────────────────────────
+
+/** Funções legadas exportadas apenas para compatibilidade TS / regressão isolada. */
+export const labelPdfLegacyRenderRefs = {
+  renderEtiquetaPage,
+  renderEtiquetaPageFromDesignerConfig,
+  drawQrWithLogoOrFallback,
+  resolveEtiquetaCodeParaEtiqueta,
+  loadLogoPiDataUrl,
+  drawLogoPiInBox,
+  buildEtiquetasPdfLegacy,
+};
