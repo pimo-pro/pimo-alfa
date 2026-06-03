@@ -56,9 +56,9 @@ export interface ResolvedLabelRuntime {
 
 /**
  * Resolve a configuração completa de etiquetas a partir de:
- *   1. LabelSystemV5 no perfil de regras (se presente e válido)
- *   2. Fallback para rules.labelV5 + rules.etiqueta (legado)
- *   3. Merge com settings globais (logo QR)
+ *   1. `rules.labelSystemV5` (ou override explícito no 3.º argumento)
+ *   2. Defaults de `buildDefaultLabelSystemV5()` quando ausente
+ *   3. `settings.etiquetasQr` — apenas fallback de logo QR (`qrLogoDataUrl`)
  */
 export function resolveLabelSystemConfig(
   rules: RulesConfig,
@@ -68,7 +68,7 @@ export function resolveLabelSystemConfig(
   const explicit = labelSystemV5 ?? rules.labelSystemV5 ?? null;
   const schema = explicit
     ? migrateLabelSystemV5(explicit)
-    : normalizeLabelSystemV5(null, rules, settings);
+    : buildDefaultLabelSystemV5();
 
   const labelConfig = toLabelConfig(schema);
 
@@ -90,8 +90,8 @@ export function resolveLabelSystemConfig(
 // ─── Compatibilidade legada ───────────────────────────────────────────────────
 
 /**
- * Constrói um LabelSystemV5 a partir das regras legadas (rules.labelV5 + rules.etiqueta + rules.qrcode).
- * Usado quando o perfil ainda não tem um LabelSystemV5 explícito.
+ * Constrói LabelSystemV5 a partir de regras legadas — **apenas** para
+ * `normalizeLabelSystemV5` (Admin / migração de perfil). Não usar no runtime de produção.
  */
 export function buildLabelSystemV5FromLegacyRules(rules: RulesConfig): LabelSystemV5 {
   const defaults = buildDefaultLabelSystemV5();
