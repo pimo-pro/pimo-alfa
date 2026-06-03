@@ -662,15 +662,18 @@ function drawV5_ObservationBar(
   y: number,
   width: number,
   height: number,
-  observations: [string, string, string]
+  observations: [string, string, string],
+  options?: { drawTopRule?: boolean }
 ): void {
   const textPt = v5Pt(7);
   const textY = y + height * 0.50 + textPt * 0.13;
   const labelW = V5_OBS_LABEL_W_MM;
 
-  doc.setDrawColor(...V5_LINE_LIGHT);
-  doc.setLineWidth(0.1);
-  doc.line(x, y, x + width, y);
+  if (options?.drawTopRule !== false) {
+    doc.setDrawColor(...V5_LINE_LIGHT);
+    doc.setLineWidth(0.1);
+    doc.line(x, y, x + width, y);
+  }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(textPt);
@@ -803,22 +806,31 @@ async function renderEtiquetaPageV5(
   const infoW = w - infoX - PAD;
 
   // ── QR único (v5) — short code apenas como texto auxiliar, nunca segundo QR ──
-  const qrSize1 = Math.min(dims.qrSize_mm, contentH);
-  const qrY1 = PAD;
-
-  await drawV5_QR(doc, etiquetaCodeV5, qrX, qrY1, qrSize1, project.settings);
-
   const showLegacyAux =
     legacyCode.trim() !== etiquetaCodeV5.trim() &&
     legacyCode.trim() !== "" &&
     legacyCode !== "ERR";
+  const auxTextReserveMm = showLegacyAux ? 3.5 : 0;
+  const obsBelowQrReserveMm = dims.observationHeight_mm + auxTextReserveMm + 2;
+  const qrSize1 = Math.min(dims.qrSize_mm, Math.max(12, contentH - obsBelowQrReserveMm));
+  const qrY1 = PAD;
+
+  await drawV5_QR(doc, etiquetaCodeV5, qrX, qrY1, qrSize1, project.settings);
+
+  let belowQrY = qrY1 + qrSize1 + 1.2;
   if (showLegacyAux) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(v5Pt(6));
     doc.setTextColor(...V5_MUTED);
-    doc.text(legacyCode, qrX, qrY1 + qrSize1 + 1.2, { maxWidth: qrColW });
+    doc.text(legacyCode, qrX, belowQrY, { maxWidth: qrColW });
     doc.setTextColor(...V5_TEXT);
+    belowQrY += 3.2;
   }
+
+  const obsBlockH = Math.min(dims.observationHeight_mm, Math.max(3.5, obsY - belowQrY));
+  drawV5_ObservationBar(doc, qrX, belowQrY, w - qrX - PAD, obsBlockH, observations, {
+    drawTopRule: false,
+  });
 
   // ── Secção de informação ──────────────────────────────────────────────────
   const yMaterial = PAD;
@@ -864,8 +876,10 @@ async function renderEtiquetaPageV5(
   // Grelha de produção (gridH dinâmico)
   drawV5_ProductionGrid(doc, infoX, yGrid, infoW, gridH, seq);
 
-  // ── Barra de observações (largura total) ─────────────────────────────────
-  drawV5_ObservationBar(doc, PAD, obsY, w - 2 * PAD, dims.observationHeight_mm, observations);
+  // Delimitador da faixa de observações (secção mantida; rótulo já desenhado abaixo do QR)
+  doc.setDrawColor(...V5_LINE_LIGHT);
+  doc.setLineWidth(0.1);
+  doc.line(PAD, obsY, w - PAD, obsY);
 
   // ── Linha de corte ────────────────────────────────────────────────────────
   drawV5_CutLine(doc, cutY, w);
