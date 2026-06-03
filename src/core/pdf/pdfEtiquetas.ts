@@ -6,13 +6,17 @@ import type { SettingsSchema } from "../settings/settingsService";
 import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
+import { buildPiecesPerSheetMap, labelItemSheetKey } from "../etiquetas/qr/etiquetaCodeV5";
 import {
-  buildEtiquetaCodeV5,
-  buildPiecesPerSheetMap,
-  labelItemSheetKey,
-} from "../etiquetas/qr/etiquetaCodeV5";
+  resolveLegacyShortQrCode,
+  resolveUnifiedEtiquetaQrCode,
+} from "../etiquetas/qr/etiquetaQr";
 import type { LabelConfig } from "../labelConfig/labelConfig";
-import { resolveUnifiedLabelConfig } from "../etiquetas/config/unifiedLabelConfig";
+import {
+  resolveLabelSystemConfig,
+  type ResolvedLabelRuntime,
+} from "../labelSystem/resolveLabelSystemConfig";
+import type { QrPolicy } from "../labelSystem/LabelSystemV5";
 import { normalizeCutLayoutPlacements } from "../etiquetas/engine/nestingAdapter";
 import { formatDimensionV5, formatNumberV5 } from "./labelMeasuresV5";
 import {
@@ -97,23 +101,6 @@ function resolveEtiquetaCodeParaEtiqueta(
     return rawSc;
   }
   return buildLocalQrPayload(item, ctx, 1);
-}
-
-/** Código v5 — apenas quando enableV5Layout; QR e faixa inferior usam a mesma string. */
-function resolveEtiquetaCodeV5ParaEtiqueta(
-  item: LabelItem,
-  ctx: { projectName: string },
-  piecesPerSheet: Map<string, number>,
-  index0: number
-): string {
-  const key = labelItemSheetKey(item.boxId, item.nome);
-  const totalPiecesInSheet = piecesPerSheet.get(key) ?? 0;
-  const pieceSeq = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
-  return buildEtiquetaCodeV5({
-    projectName: ctx.projectName,
-    pieceSeq,
-    totalPiecesInSheet,
-  });
 }
 
 function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
@@ -491,9 +478,35 @@ async function drawV5_QR(
   x: number,
   y: number,
   sizeMm: number,
+  qrLogoDataUrl: string,
+  qrLogoSizePercent: number,
   settings?: SettingsSchema
 ): Promise<void> {
-  await drawQrWithLogoOrFallback(doc, code, x, y, sizeMm, settings);
+  const logoUrl =
+    qrLogoDataUrl.trim() ||
+    (settings?.etiquetasQr?.logoAtivado && settings.etiquetasQr.logoDataUrl
+      ? settings.etiquetasQr.logoDataUrl
+      : "");
+  const logoPercent =
+    qrLogoDataUrl.trim() && qrLogoSizePercent > 0
+      ? qrLogoSizePercent
+      : (settings?.etiquetasQr?.logoTamanhoPorcento ?? 20);
+
+  if (!logoUrl) {
+    drawQrFromCode(doc, code, x, y, sizeMm);
+    return;
+  }
+
+  try {
+    const canvas = await generateQrCanvasWithLogo(code, sizeMm * 10, {
+      logoDataUrl: logoUrl,
+      logoSizePercent: logoPercent,
+    });
+    const imgData = canvas.toDataURL("image/png");
+    doc.addImage(imgData, "PNG", x, y, sizeMm, sizeMm);
+  } catch {
+    drawQrFromCode(doc, code, x, y, sizeMm);
+  }
 }
 
 function drawV5_Info(
@@ -747,20 +760,20 @@ function drawV5_BottomStrip(
 }
 
 /**
- * Renderer principal v5 — layout de referência:
- * um QR v5; short code só como texto auxiliar; faixa inferior branca 10 mm;
- * OBSERVAÇÃO única à esquerda; medidas largura × altura (sem espessura).
+ * Renderer principal v5 — QR único ou dual (qrPolicy); logo via ResolvedLabelRuntime.
  */
 async function renderEtiquetaPageV5(
   doc: jsPDF,
   item: LabelItem,
   project: ProjectForEtiquetasPdf,
-  config: LabelConfig,
+  runtime: ResolvedLabelRuntime,
   seq: PieceProductionSequence,
   piecesPerSheet: Map<string, number>,
   index0: number
 ): Promise<void> {
+  const config = runtime.labelConfig;
   const dims = config.dimensions;
+  const qrPolicy: QrPolicy = runtime.qrPolicy ?? "v5";
   const w = dims.totalWidth_mm;
   const h = dims.totalHeight_mm;
 
@@ -773,12 +786,34 @@ async function renderEtiquetaPageV5(
 
   // ── Dados da peça ────────────────────────────────────────────────────────
   const effectiveProjectName = item.sourceProjectName ?? project.projectName;
-  const etiquetaCodeV5 = resolveEtiquetaCodeV5ParaEtiqueta(
-    item, { projectName: effectiveProjectName }, piecesPerSheet, index0
-  );
-  const legacyCode = resolveEtiquetaCodeParaEtiqueta(item, {
-    projectName: effectiveProjectName, boxes: project.boxes, rules: project.rules,
-  });
+  const qrCtx = {
+    projectName: effectiveProjectName,
+    boxes: project.boxes,
+    rules: project.rules,
+  };
+  const codeV5 = resolveUnifiedEtiquetaQrCode(item, qrCtx, piecesPerSheet, index0);
+  const codeShort = resolveLegacyShortQrCode(item, qrCtx);
+
+  let primaryQrCode: string;
+  let secondaryQrCode: string | null = null;
+  let bottomStripCode = codeV5;
+
+  switch (qrPolicy) {
+    case "short":
+      primaryQrCode = codeShort;
+      bottomStripCode = codeShort;
+      break;
+    case "dual":
+      primaryQrCode = codeV5;
+      secondaryQrCode = codeShort;
+      bottomStripCode = codeV5;
+      break;
+    case "v5":
+    default:
+      primaryQrCode = codeV5;
+      break;
+  }
+
   const nomeIndustrial = nomeIndustrialParaEtiqueta(item, project);
   const material = (item.material ?? "—").toUpperCase();
   const medidas = formatMedidasLabelV5(
@@ -805,26 +840,32 @@ async function renderEtiquetaPageV5(
   const infoX = PAD + qrColW + QR_INFO_GAP;
   const infoW = w - infoX - PAD;
 
-  // ── QR único (v5) — short code apenas como texto auxiliar, nunca segundo QR ──
-  const showLegacyAux =
-    legacyCode.trim() !== etiquetaCodeV5.trim() &&
-    legacyCode.trim() !== "" &&
-    legacyCode !== "ERR";
-  const auxTextReserveMm = showLegacyAux ? 3.5 : 0;
-  const obsBelowQrReserveMm = dims.observationHeight_mm + auxTextReserveMm + 2;
+  // ── QR(s) conforme qrPolicy — sem texto short abaixo do QR ──
+  const obsBelowQrReserveMm = dims.observationHeight_mm + 2;
   const qrSize1 = Math.min(dims.qrSize_mm, Math.max(12, contentH - obsBelowQrReserveMm));
   const qrY1 = PAD;
+  const logoUrl = runtime.qrLogoDataUrl;
+  const logoPct = runtime.qrLogoSizePercent;
 
-  await drawV5_QR(doc, etiquetaCodeV5, qrX, qrY1, qrSize1, project.settings);
-
-  let belowQrY = qrY1 + qrSize1 + 1.2;
-  if (showLegacyAux) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(v5Pt(6));
-    doc.setTextColor(...V5_MUTED);
-    doc.text(legacyCode, qrX, belowQrY, { maxWidth: qrColW });
-    doc.setTextColor(...V5_TEXT);
-    belowQrY += 3.2;
+  let belowQrY: number;
+  if (qrPolicy === "dual" && secondaryQrCode) {
+    const gapMm = 1;
+    const dualSize = Math.min((qrColW - gapMm) / 2, qrSize1);
+    await drawV5_QR(doc, primaryQrCode, qrX, qrY1, dualSize, logoUrl, logoPct, project.settings);
+    await drawV5_QR(
+      doc,
+      secondaryQrCode,
+      qrX + dualSize + gapMm,
+      qrY1,
+      dualSize,
+      logoUrl,
+      logoPct,
+      project.settings
+    );
+    belowQrY = qrY1 + dualSize + 1.2;
+  } else {
+    await drawV5_QR(doc, primaryQrCode, qrX, qrY1, qrSize1, logoUrl, logoPct, project.settings);
+    belowQrY = qrY1 + qrSize1 + 1.2;
   }
 
   const obsBlockH = Math.min(dims.observationHeight_mm, Math.max(3.5, obsY - belowQrY));
@@ -887,7 +928,7 @@ async function renderEtiquetaPageV5(
   // ── Faixa inferior ────────────────────────────────────────────────────────
   drawV5_BottomStrip(
     doc, bottomY, w, bottomStripMm,
-    etiquetaCodeV5, aaa,
+    bottomStripCode, aaa,
     effectiveProjectName || "PROJETO",
     nomeIndustrial
   );
@@ -898,14 +939,16 @@ async function renderEtiquetaPageV5(
  */
 export async function buildProductionEtiquetasV5Pdf(
   project: ProjectForEtiquetasPdf,
-  labelConfig: LabelConfig = DEFAULT_LABEL_CONFIG
+  runtime: ResolvedLabelRuntime
 ): Promise<jsPDF> {
+  const labelConfig = runtime.labelConfig;
   const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project), project.cutLayoutPlacements);
   const piecesPerSheet = buildPiecesPerSheetMap(ordered, project.cutLayoutPlacements);
   for (const item of ordered) {
     const key = labelItemSheetKey(item.boxId, item.nome);
     item.numCaixa = piecesPerSheet.get(key) ?? 0;
-    item.observations = collectObservationsForItem(item, project.rules as LabelObservationRulesLike);
+    const collected = collectObservationsForItem(item, project.rules as LabelObservationRulesLike);
+    item.observations = [...runtime.observations, ...collected].slice(0, 3);
   }
 
   const dims = labelConfig.dimensions;
@@ -921,7 +964,7 @@ export async function buildProductionEtiquetasV5Pdf(
     if (idx > 0) doc.addPage([pageW, pageH], pageW >= pageH ? "landscape" : "portrait");
     const pieceData = labelItemToPieceData(ordered[idx], project);
     const seq = computePieceSequence(pieceData, labelConfig);
-    await renderEtiquetaPageV5(doc, ordered[idx], project, labelConfig, seq, piecesPerSheet, idx);
+    await renderEtiquetaPageV5(doc, ordered[idx], project, runtime, seq, piecesPerSheet, idx);
   }
   return doc;
 }
@@ -967,9 +1010,14 @@ export async function buildEtiquetasPdfLegacy(project: ProjectForEtiquetasPdf): 
   for (let idx = 0; idx < ordered.length; idx++) {
     if (idx > 0) doc.addPage([pageW, pageH], pageW >= pageH ? "landscape" : "portrait");
     if (useV5) {
+      const runtime = resolveLabelSystemConfig(
+        project.rules,
+        project.settings ?? null,
+        project.rules.labelSystemV5 ?? null
+      );
       const pieceData = labelItemToPieceData(ordered[idx], project);
-      const seq = computePieceSequence(pieceData, v5Cfg);
-      await renderEtiquetaPageV5(doc, ordered[idx], project, v5Cfg, seq, piecesPerSheet, idx);
+      const seq = computePieceSequence(pieceData, runtime.labelConfig);
+      await renderEtiquetaPageV5(doc, ordered[idx], project, runtime, seq, piecesPerSheet, idx);
     } else {
       await renderEtiquetaPage(doc, ordered[idx], project, logoDataUrl);
     }
@@ -977,12 +1025,16 @@ export async function buildEtiquetasPdfLegacy(project: ProjectForEtiquetasPdf): 
   return doc;
 }
 
-/** Hub público — UnifiedEtiquetaEngine (UEE): produção v5, sem designer S3. */
+/** Hub público — delega ao motor v5 com ResolvedLabelRuntime. */
 export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
-  const labelConfig = resolveUnifiedLabelConfig(project.rules);
+  const runtime = resolveLabelSystemConfig(
+    project.rules,
+    project.settings ?? null,
+    project.rules.labelSystemV5 ?? null
+  );
   const placements = normalizeCutLayoutPlacements(project.cutLayoutPlacements);
   return buildProductionEtiquetasV5Pdf(
     { ...project, cutLayoutPlacements: placements, designerConfig: undefined },
-    labelConfig
+    runtime
   );
 }

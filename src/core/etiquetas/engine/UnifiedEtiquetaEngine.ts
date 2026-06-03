@@ -36,7 +36,7 @@ export const UnifiedEtiquetaEngine = {
 
     return buildProductionEtiquetasV5Pdf(
       { ...pdfProject, cutLayoutPlacements: placements },
-      runtime.labelConfig
+      runtime
     );
   },
 
