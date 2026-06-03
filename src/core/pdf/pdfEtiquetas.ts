@@ -14,7 +14,7 @@ import {
 import type { LabelConfig } from "../labelConfig/labelConfig";
 import { resolveUnifiedLabelConfig } from "../etiquetas/config/unifiedLabelConfig";
 import { normalizeCutLayoutPlacements } from "../etiquetas/engine/nestingAdapter";
-import { formatDimensionV5 } from "./labelMeasuresV5";
+import { formatDimensionV5, formatNumberV5 } from "./labelMeasuresV5";
 import {
   collectObservationsForItem,
   observationsToV5Slots,
@@ -433,6 +433,13 @@ function formatOrlarSidesGridV5(sides: PieceProductionSequence["orlarSides"]): s
   return flags.map((f) => (f ? "S" : "N")).join("  ");
 }
 
+/** Medidas v5 na etiqueta: largura × altura (sem espessura; ~5 espaços visuais). */
+function formatMedidasLabelV5(widthMm: number, heightMm: number): string {
+  const w = formatNumberV5(widthMm);
+  const h = formatNumberV5(heightMm);
+  return `${w}     ×     ${h} MM`;
+}
+
 function fmtStepNum(n: number | null): string {
   return n != null ? String(n) : "—";
 }
@@ -536,6 +543,8 @@ export const v5EtiquetaLayoutLegacyRefs = {
   V5_SEQ_BOX_MM,
   V5_OBS_LABEL_W_MM,
   drawV5_Info,
+  formatDimensionV5,
+  formatMedidasLabelV5,
 };
 
 /**
@@ -576,10 +585,9 @@ function drawV5_SeqBox(
     doc.text(pkLabel.toUpperCase(), cellX + 1.5, labelY, { maxWidth: labelMaxW });
   }
 
-  // Borda da caixa
-  const borderThick = hasNum ? 0.45 : 0.2;
-  doc.setDrawColor(hasNum ? 30 : 190, hasNum ? 30 : 190, hasNum ? 30 : 190);
-  doc.setLineWidth(borderThick);
+  // Borda da caixa — contorno fino uniforme (sem preenchimento)
+  doc.setDrawColor(51, 51, 51);
+  doc.setLineWidth(0.15);
   doc.rect(boxX, boxY, boxSize, boxSize);
 
   // Número centrado na caixa
@@ -645,8 +653,8 @@ function drawV5_ProductionGrid(
 }
 
 /**
- * Barra de observações — 4 slots de largura igual, cada um com sublinhado e
- * placeholder "OBSERVAÇÃO" (cinzento) quando vazio, ou texto real (preto) quando preenchido.
+ * Barra de observações — rótulo único "OBSERVAÇÃO" à esquerda (abaixo do QR);
+ * textos reais na mesma linha, sem repetir o rótulo nem caixas múltiplas.
  */
 function drawV5_ObservationBar(
   doc: jsPDF,
@@ -656,37 +664,25 @@ function drawV5_ObservationBar(
   height: number,
   observations: [string, string, string]
 ): void {
-  const NUM_SLOTS = 4;
-  const slotW = width / NUM_SLOTS;
-  const PLACEHOLDER = "OBSERVAÇÃO";
   const textPt = v5Pt(7);
-  const lineY = y + height - 1.2;
   const textY = y + height * 0.50 + textPt * 0.13;
+  const labelW = V5_OBS_LABEL_W_MM;
 
-  for (let i = 0; i < NUM_SLOTS; i++) {
-    const sx = x + i * slotW;
-    // Use observations[i] for slots 0-2; slot 3 is always empty (future use)
-    const raw = (i < observations.length ? (observations[i] ?? "") : "").trim();
-    const hasText = raw.length > 0;
+  doc.setDrawColor(...V5_LINE_LIGHT);
+  doc.setLineWidth(0.1);
+  doc.line(x, y, x + width, y);
 
-    // Sublinhado do slot
-    doc.setDrawColor(190, 190, 190);
-    doc.setLineWidth(0.18);
-    doc.line(sx + 2, lineY, sx + slotW - 2, lineY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(textPt);
+  doc.setTextColor(...V5_MUTED);
+  doc.text("OBSERVAÇÃO", x + 0.5, textY);
 
-    if (hasText) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(textPt);
-      doc.setTextColor(...V5_TEXT);
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(v5Pt(6.5));
-      doc.setTextColor(190, 190, 190);
-    }
-    doc.text(hasText ? raw : PLACEHOLDER, sx + slotW / 2, textY, {
-      align: "center",
-      maxWidth: slotW - 3,
-    });
+  const parts = observations.map((o) => String(o ?? "").trim()).filter(Boolean);
+  if (parts.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(textPt);
+    doc.setTextColor(...V5_TEXT);
+    doc.text(parts.join("  "), x + labelW + 1, textY, { maxWidth: width - labelW - 2 });
   }
   doc.setTextColor(...V5_TEXT);
 }
@@ -706,9 +702,8 @@ function drawV5_CutLine(doc: jsPDF, y: number, width: number): void {
 }
 
 /**
- * Faixa inferior — fundo escuro, texto branco, duas linhas por coluna:
- *   Esquerda: etiquetaCode (linha 1) + AAA (linha 2)
- *   Direita:  projectName (linha 1) + pieceName (linha 2)
+ * Faixa inferior — fundo branco (igual ao resto), 10 mm, delimitada por linha fina no topo.
+ * Esquerda: CODIGO / AAA · Direita: PROJETO / PEÇA (texto preto).
  */
 function drawV5_BottomStrip(
   doc: jsPDF,
@@ -720,76 +715,38 @@ function drawV5_BottomStrip(
   projectName: string,
   pieceName: string
 ): void {
-  // Fundo escuro
-  doc.setFillColor(18, 18, 18);
+  doc.setFillColor(255, 255, 255);
   doc.rect(0, y, width, height, "F");
 
+  doc.setDrawColor(...V5_LINE_LIGHT);
+  doc.setLineWidth(0.12);
+  doc.line(0, y, width, y);
+
   const PAD = 3;
-  // Duas linhas de texto
-  const y1 = y + height * 0.38;   // baseline linha 1
-  const y2 = y + height * 0.80;   // baseline linha 2
+  const centerY = y + height / 2 + v5Pt(11) * 0.12;
+  const leftText = `${etiquetaCode} / ${aaa}`;
+  const rightText = `${projectName} / ${pieceName}`;
 
-  // --- Lado esquerdo ---
-  // Linha 1: código da etiqueta (bold, grande)
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(v5Pt(12));
-  doc.setTextColor(255, 255, 255);
-  doc.text(etiquetaCode, PAD, y1);
+  doc.setFontSize(v5Pt(11));
+  doc.setTextColor(...V5_TEXT);
+  doc.text(leftText, PAD, centerY);
 
-  // Linha 2: grupo paleta AAA
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(v5Pt(9));
-  doc.setTextColor(210, 210, 210);
-  doc.text(aaa, PAD, y2);
+  const leftW = doc.getTextWidth(leftText);
+  const sepX = PAD + leftW + 4;
+  doc.setDrawColor(...V5_LINE_LIGHT);
+  doc.setLineWidth(0.12);
+  doc.line(sepX, y + 1.2, sepX, y + height - 1.2);
 
-  // Separador vertical
-  const codeW = doc.getTextWidth(etiquetaCode);
-  const aaaW = doc.getTextWidth(aaa);
-  const leftUsed = Math.max(codeW, aaaW);
-  const sepX = PAD + leftUsed + 4;
-  doc.setDrawColor(80, 80, 80);
-  doc.setLineWidth(0.35);
-  doc.line(sepX, y + 1.5, sepX, y + height - 1.5);
-
-  // --- Lado direito ---
   const rightX = sepX + PAD;
   const rightMaxW = width - rightX - PAD;
-
-  // Linha 1: nome do projecto
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(v5Pt(11));
-  doc.setTextColor(255, 255, 255);
-  doc.text(projectName, rightX, y1, { maxWidth: rightMaxW });
-
-  // Linha 2: nome da peça
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(v5Pt(11));
-  doc.setTextColor(230, 230, 230);
-  doc.text(pieceName, rightX, y2, { maxWidth: rightMaxW });
+  doc.text(rightText, rightX, centerY, { maxWidth: rightMaxW });
 }
 
 /**
- * Renderer principal v5 — layout reconstruído para corresponder ao design de referência:
- *
- *  ┌──────────────┬──────────────────────────────────────────────────────┐
- *  │  [QR v5]     │  MATRIAL   <material bold>                           │
- *  │              │  MEDIDAS   <dimensões bold>                          │
- *  │  [QR short]  ├──────────────────────────────────────────────────────┤
- *  │              │ NISTING [N] │ MANUAL  [ ] │ LIMPEZAS [N]            │
- *  │              │ DRILL   [N] │  d  d  d  d │ MONTAGEM [N]            │
- *  │              │ ORLAR   [N] │  S  N  S  N │ EMBALAGEM[N]           │
- *  ├──────────────┴─────┬───────────────┬──────────────┬────────────────┤
- *  │  OBSERVAÇÃO        │  OBSERVAÇÃO   │  OBSERVAÇÃO  │  OBSERVAÇÃO   │
- *  ╞══════════════════════════════════════════════════════════════════════╡
- *  │  <etiquetaCode>  │  <projectName>                                  │
- *  │  <AAA>           │  <pieceName>                                    │
- *  └──────────────────────────────────────────────────────────────────────┘
- *
- * Características:
- * - gridH computado dinamicamente para preencher todo o espaço disponível
- * - Dois QRs (v5 + shortCode) quando os códigos diferem
- * - Obs bar cobre toda a largura, 4 slots iguais
- * - Footer escuro, duas linhas por coluna
+ * Renderer principal v5 — layout de referência:
+ * um QR v5; short code só como texto auxiliar; faixa inferior branca 10 mm;
+ * OBSERVAÇÃO única à esquerda; medidas largura × altura (sem espessura).
  */
 async function renderEtiquetaPageV5(
   doc: jsPDF,
@@ -821,10 +778,9 @@ async function renderEtiquetaPageV5(
   });
   const nomeIndustrial = nomeIndustrialParaEtiqueta(item, project);
   const material = (item.material ?? "—").toUpperCase();
-  const medidas = formatDimensionV5(
+  const medidas = formatMedidasLabelV5(
     item.dimensoes?.largura ?? 0,
-    item.dimensoes?.altura ?? 0,
-    item.espessura
+    item.dimensoes?.altura ?? 0
   );
   const aaa = mapPaletteGroupToAAA(seq.paletteGroup);
   const observations = observationsToV5Slots(item.observations ?? []);
@@ -832,7 +788,8 @@ async function renderEtiquetaPageV5(
   // ── Coordenadas — calcula de baixo para cima ──────────────────────────────
   const PAD = 2.5;
   const QR_INFO_GAP = 3;
-  const bottomY  = h - dims.bottomStrip_mm;         // início da faixa inferior
+  const bottomStripMm = 10;
+  const bottomY  = h - bottomStripMm;              // faixa inferior fixa 10 mm
   const cutY     = bottomY - 0.5;                    // linha de corte
   const obsY     = cutY - dims.observationHeight_mm; // barra de observações
   const contentH = obsY - PAD;                       // altura disponível para QR + info
@@ -845,27 +802,22 @@ async function renderEtiquetaPageV5(
   const infoX = PAD + qrColW + QR_INFO_GAP;
   const infoW = w - infoX - PAD;
 
-  // ── QR(s) — dual se os códigos forem distintos ────────────────────────────
-  const hasDualQr = legacyCode.trim() !== etiquetaCodeV5.trim() && legacyCode.trim() !== "" && legacyCode !== "ERR";
-  let qrSize1: number;
-  let qrY1: number;
-  let qrY2: number | null = null;
-  let qrSize2: number | null = null;
-
-  if (hasDualQr) {
-    const gap = 2;
-    qrSize1 = Math.min(dims.qrSize_mm, Math.floor((contentH - gap) / 2));
-    qrSize2 = qrSize1;
-    qrY1 = PAD;
-    qrY2 = qrY1 + qrSize1 + gap;
-  } else {
-    qrSize1 = Math.min(dims.qrSize_mm, contentH);
-    qrY1 = PAD;
-  }
+  // ── QR único (v5) — short code apenas como texto auxiliar, nunca segundo QR ──
+  const qrSize1 = Math.min(dims.qrSize_mm, contentH);
+  const qrY1 = PAD;
 
   await drawV5_QR(doc, etiquetaCodeV5, qrX, qrY1, qrSize1, project.settings);
-  if (hasDualQr && qrY2 !== null && qrSize2 !== null) {
-    await drawV5_QR(doc, legacyCode, qrX, qrY2, qrSize2, project.settings);
+
+  const showLegacyAux =
+    legacyCode.trim() !== etiquetaCodeV5.trim() &&
+    legacyCode.trim() !== "" &&
+    legacyCode !== "ERR";
+  if (showLegacyAux) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(v5Pt(6));
+    doc.setTextColor(...V5_MUTED);
+    doc.text(legacyCode, qrX, qrY1 + qrSize1 + 1.2, { maxWidth: qrColW });
+    doc.setTextColor(...V5_TEXT);
   }
 
   // ── Secção de informação ──────────────────────────────────────────────────
@@ -920,7 +872,7 @@ async function renderEtiquetaPageV5(
 
   // ── Faixa inferior ────────────────────────────────────────────────────────
   drawV5_BottomStrip(
-    doc, bottomY, w, dims.bottomStrip_mm,
+    doc, bottomY, w, bottomStripMm,
     etiquetaCodeV5, aaa,
     effectiveProjectName || "PROJETO",
     nomeIndustrial
