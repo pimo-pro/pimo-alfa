@@ -372,11 +372,18 @@ export class EventsManager {
 
   private handleCanvasDoubleClick(event: MouseEvent): void {
     if (event.button !== 0) return;
-    const hit = this.engine.getDoorHitAtPointer(event);
-    if (!hit) return;
+    const doorHit = this.engine.getDoorHitAtPointer(event);
+    if (doorHit) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.engine.getOnDoorLayerDoubleClick()?.(doorHit.boxId, doorHit.doorLayerId);
+      return;
+    }
+    const boxId = this.engine.getBoxIdAtPointer(event);
+    if (!boxId) return;
     event.preventDefault();
     event.stopPropagation();
-    this.engine.getOnDoorLayerDoubleClick()?.(hit.boxId, hit.doorLayerId);
+    this.engine.getOnBoxDoubleClick()?.(boxId);
   }
 
   private handleCanvasPointerUp(event: PointerEvent): void {

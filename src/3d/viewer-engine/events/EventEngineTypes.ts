@@ -84,6 +84,7 @@ export interface IViewerEventEngine {
   setWallGizmoDragging(_v: boolean): void;
   getDoorHitAtPointer(_event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null;
   getOnDoorLayerDoubleClick(): ((_boxId: string, _doorLayerId: string) => void) | null;
+  getOnBoxDoubleClick(): ((_boxId: string) => void) | null;
   getPointerActionForButton(_button: number): MouseButtonAction | null;
   shouldBlockPointerDownForSelection(_button: number): boolean;
   /** Desativa/ativa OrbitControls. Deve ser false enquanto o utilizador arrasta um gizmo (TransformControls ou WallGizmo). */

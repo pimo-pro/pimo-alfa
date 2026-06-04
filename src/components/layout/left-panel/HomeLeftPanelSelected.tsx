@@ -13,7 +13,10 @@ import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeL
 import { Icon } from "@/components/icons";
 import SelecionarMaterialSection from "../../settings/material/SelecionarMaterialSection";
 import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
-import BoxRodapeSection from "../../settings/rodape/BoxRodapeSection";
+import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
+
+const HOME_SELECTED_SECTION_HELP_TEXT =
+  "Controles principais da caixa selecionada e definição inicial do projeto.";
 
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
@@ -36,17 +39,34 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
     [selectedBox, project.rules]
   );
 
+  const portaTipoLabel =
+    selectedBox?.portaTipo === "sem_porta"
+      ? "Sem"
+      : selectedBox?.portaTipo === "porta_simples"
+        ? "Simples"
+        : selectedBox?.portaTipo === "porta_correr"
+          ? "Correr"
+          : "Dupla";
+
   return (
     <div className="left-panel-content">
       <div className="left-panel-scroll">
         <aside className="panel-content panel-content--side">
           <div className="design-panel-header">
-            <div className="section-title">Início</div>
-            <p className="design-panel-subtitle">Controles principais da caixa selecionada e definição inicial do projeto.</p>
+            <SectionTitleWithHelp title="Início" helpText={HOME_SELECTED_SECTION_HELP_TEXT} />
           </div>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
-            Crie novas caixas a partir daqui para começar o seu projeto.
-          </p>
+
+          {selectedBox && (
+            <Panel title="NOME DA CAIXA">
+              <input
+                type="text"
+                value={selectedBox.nome}
+                onChange={(e) => actions.setWorkspaceBoxNome(selectedBox.id, e.target.value)}
+                placeholder="Nome da caixa"
+                className="input input-sm"
+              />
+            </Panel>
+          )}
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
             <button
@@ -70,15 +90,311 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
           </div>
 
           {selectedBox && (
-            <Panel title="NOME DA CAIXA">
-              <input
-                type="text"
-                value={selectedBox.nome}
-                onChange={(e) => actions.setWorkspaceBoxNome(selectedBox.id, e.target.value)}
-                placeholder="Nome da caixa"
-                className="input input-sm"
+            <>
+              <UnifiedPopover
+                id="dimensoes-popover"
+                fullWidth
+                triggerVariant="ghost"
+                triggerTitle="Definir largura, altura e profundidade do módulo."
+                trigger={<span>Dimensões</span>}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div className="panel-field-row">
+                    <span className="panel-label">Largura:</span>
+                    <NumericInput
+                      value={selectedBox.dimensoes.largura}
+                      onChange={(value) => {
+                        actions.setDimensoes({ largura: value });
+                      }}
+                      className="input input-xs"
+                      unit="mm"
+                    />
+                  </div>
+                  <div className="panel-field-row">
+                    <span className="panel-label">Altura:</span>
+                    <NumericInput
+                      value={selectedBox.dimensoes.altura}
+                      onChange={(value) => {
+                        actions.setDimensoes({ altura: value });
+                      }}
+                      className="input input-xs"
+                      unit="mm"
+                    />
+                  </div>
+                  <div className="panel-field-row">
+                    <span className="panel-label">Profundidade:</span>
+                    <NumericInput
+                      value={selectedBox.dimensoes.profundidade}
+                      onChange={(value) => {
+                        actions.setDimensoes({ profundidade: value });
+                      }}
+                      className="input input-xs"
+                      unit="mm"
+                    />
+                  </div>
+                </div>
+              </UnifiedPopover>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+              <StepperPopover
+                id="prateleiras-popover"
+                label="Prateleiras"
+                value={selectedPrateleiras}
+                onChange={(v) => actions.setPrateleiras(v)}
+                fullWidth
+                triggerVariant="ghost"
+                triggerTitle="Número de prateleiras internas do módulo."
               />
-            </Panel>
+              <StepperPopover
+                id="gavetas-popover"
+                label="Gavetas"
+                value={selectedGavetas}
+                onChange={(v) => actions.setGavetas(v)}
+                fullWidth
+                triggerVariant="ghost"
+                triggerTitle="Quantidade de gavetas aplicadas ao módulo."
+              />
+              <UnifiedPopover
+                fullWidth
+                triggerVariant="ghost"
+                triggerTitle="Selecione o tipo de porta para este módulo."
+                trigger={
+                  <span>
+                    Tipo de porta — <strong>{portaTipoLabel}</strong>
+                  </span>
+                }
+              >
+                <select
+                  value={selectedBox.portaTipo ?? "sem_porta"}
+                  onChange={(e) =>
+                    actions.setPortaTipo(
+                      e.target.value as "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr"
+                    )
+                  }
+                  className="select"
+                  style={{ width: "100%" }}
+                >
+                  <option value="sem_porta">Sem porta</option>
+                  <option value="porta_simples">Porta simples</option>
+                  <option value="porta_dupla">Porta dupla</option>
+                  <option value="porta_correr">Porta de correr</option>
+                </select>
+              </UnifiedPopover>
+              <button
+                type="button"
+                className="button button-ghost"
+                style={{ width: "100%" }}
+                title="Adicionar e configurar remates e roda pé do módulo."
+                aria-label="Adicionar e configurar remates e roda pé do módulo."
+                onClick={() => setRemateDrawerOpen(true)}
+              >
+                Remate
+              </button>
+              <UnifiedPopover
+                fullWidth
+                triggerVariant="ghost"
+                triggerTitle="Ativar e configurar pés do módulo."
+                trigger={<span>Pés</span>}
+              >
+                {(() => {
+                  const feetHeightMm = Math.max(40, selectedBox.feetHeight ?? ((selectedBox.pe_cm ?? 10) * 10));
+                  const feetOffsetFrontMm = Math.max(0, selectedBox.feetOffsetFront ?? 100);
+                  const shouldLockY = selectedBox.cabinetType === "lower";
+                  const feetEnabled = selectedBox.feetEnabled !== false;
+                  return (
+                    <>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 12,
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={feetEnabled}
+                          onChange={(e) => {
+                            const nextEnabled = e.target.checked;
+                            const partial: {
+                              feetEnabled: boolean;
+                              y_mm?: number;
+                              manualPosition?: boolean;
+                            } = { feetEnabled: nextEnabled };
+                            if (nextEnabled && shouldLockY) {
+                              partial.y_mm = feetHeightMm + selectedBox.dimensoes.altura / 2;
+                              partial.manualPosition = true;
+                            } else if (!nextEnabled && shouldLockY) {
+                              partial.manualPosition = true;
+                            }
+                            actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
+                          }}
+                        />
+                        Ativar pés
+                      </label>
+
+                      {feetEnabled && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                          <div className="panel-field-row">
+                            <label className="panel-label" style={{ minWidth: 110 }}>
+                              Altura (mm)
+                            </label>
+                            <NumericInput
+                              value={feetHeightMm}
+                              min={40}
+                              onChange={(clamped) => {
+                                const partial: {
+                                  feetHeight: number;
+                                  y_mm?: number;
+                                  manualPosition?: boolean;
+                                } = { feetHeight: clamped };
+                                if (selectedBox.feetEnabled !== false && shouldLockY) {
+                                  partial.y_mm = clamped + selectedBox.dimensoes.altura / 2;
+                                  partial.manualPosition = true;
+                                }
+                                actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
+                              }}
+                              className="input input-sm"
+                              style={{ width: 110 }}
+                            />
+                          </div>
+
+                          <div className="panel-field-row">
+                            <label className="panel-label" style={{ minWidth: 110 }}>
+                              Recuo frontal (mm)
+                            </label>
+                            <NumericInput
+                              value={feetOffsetFrontMm}
+                              min={0}
+                              onChange={(value) => {
+                                actions.updateWorkspaceBoxTransform(selectedBox.id, {
+                                  feetOffsetFront: Math.max(0, Math.round(value)),
+                                });
+                              }}
+                              className="input input-sm"
+                              style={{ width: 110 }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </UnifiedPopover>
+              <UnifiedPopover
+                id="selecionar-material-popover"
+                fullWidth
+                triggerVariant="ghost"
+                triggerTitle="Selecionar materiais do módulo, porta e gavetas."
+                trigger={<span>Selecionar Material</span>}
+              >
+                <SelecionarMaterialSection
+                  embedded
+                  boxId={selectedBox.id}
+                  onViewerMaterialChange={(boxId, materialName) => {
+                    viewerApi?.updateBox(boxId, { materialName });
+                    showToast("Material aplicado à caixa.", "info");
+                  }}
+                  onDoorMaterialChange={(boxId, doorLayerId, materialName) => {
+                    viewerApi?.updateDoorMaterial?.(boxId, doorLayerId, materialName);
+                    showToast("Material aplicado à porta.", "info");
+                  }}
+                  onDrawerMaterialChange={(boxId, drawerLayerId, materialName) => {
+                    viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName);
+                    showToast("Material aplicado à gaveta.", "info");
+                  }}
+                />
+              </UnifiedPopover>
+
+              {profundidadeLeitura && (
+                <details
+                  style={{
+                    marginTop: 8,
+                    padding: "12px 12px",
+                    borderRadius: "var(--radius)",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    fontSize: 12,
+                  }}
+                >
+                  <summary
+                    style={{
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      color: "var(--text-main)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Icon name="ruler" size={16} aria-hidden />
+                    Profundidade da caixa (referência)
+                  </summary>
+                  <div
+                    style={{
+                      marginTop: 12,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    <div
+                      style={{
+                        paddingLeft: 10,
+                        borderLeft: "3px solid #38bdf8",
+                        color: "var(--text-main)",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        Externa
+                      </div>
+                      <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeExternaMm} mm</div>
+                    </div>
+                    <div
+                      style={{
+                        paddingLeft: 10,
+                        borderLeft: "3px solid #c4b5fd",
+                        color: "var(--text-main)",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        Útil interna
+                      </div>
+                      <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
+                    </div>
+                  </div>
+                </details>
+              )}
+              </div>
+            </>
+          )}
+
+          {selectedBox && (
+            <BoxRemateDrawer
+              boxId={selectedBox.id}
+              open={remateDrawerOpen}
+              onClose={() => setRemateDrawerOpen(false)}
+              defaultMaterialId={
+                selectedBox.material || project.materialId || project.material.tipo
+              }
+            />
           )}
 
           {!selectedBox && (
@@ -107,277 +423,8 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
             </Panel>
           )}
 
-          <Panel title="Dimensões" description="Valores em milímetros">
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div className="panel-field-row">
-                <span className="panel-label">Largura:</span>
-                <NumericInput
-                  value={selectedBox?.dimensoes.largura ?? project.dimensoes.largura}
-                  onChange={(value) => {
-                    actions.setDimensoes({ largura: value });
-                  }}
-                  className="input input-xs"
-                  unit="mm"
-                />
-              </div>
-              <div className="panel-field-row">
-                <span className="panel-label">Altura:</span>
-                <NumericInput
-                  value={selectedBox?.dimensoes.altura ?? project.dimensoes.altura}
-                  onChange={(value) => {
-                    actions.setDimensoes({ altura: value });
-                  }}
-                  className="input input-xs"
-                  unit="mm"
-                />
-              </div>
-              <div className="panel-field-row">
-                <span className="panel-label">Profundidade:</span>
-                <NumericInput
-                  value={selectedBox?.dimensoes.profundidade ?? project.dimensoes.profundidade}
-                  onChange={(value) => {
-                    actions.setDimensoes({ profundidade: value });
-                  }}
-                  className="input input-xs"
-                  unit="mm"
-                />
-              </div>
-            </div>
-          </Panel>
-
-          {selectedBox && profundidadeLeitura && (
-            <details
-              style={{
-                marginTop: 10,
-                padding: "12px 12px",
-                borderRadius: "var(--radius)",
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                fontSize: 12,
-              }}
-            >
-              <summary
-                style={{
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  color: "var(--text-main)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <Icon name="ruler" size={16} aria-hidden />
-                Profundidade da caixa (referência)
-              </summary>
-              <div
-                style={{
-                  marginTop: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                <div
-                  style={{
-                    paddingLeft: 10,
-                    borderLeft: "3px solid #38bdf8",
-                    color: "var(--text-main)",
-                    lineHeight: 1.45,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    Externa
-                  </div>
-                  <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeExternaMm} mm</div>
-                </div>
-                <div
-                  style={{
-                    paddingLeft: 10,
-                    borderLeft: "3px solid #c4b5fd",
-                    color: "var(--text-main)",
-                    lineHeight: 1.45,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    Útil interna
-                  </div>
-                  <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
-                </div>
-              </div>
-            </details>
-          )}
-
           {selectedBox && (
-            <>
-              <Panel title="Acabamento do módulo" description="Remate — configuração lateral">
-                <button
-                  type="button"
-                  className="button button-primary"
-                  style={{ width: "100%" }}
-                  onClick={() => setRemateDrawerOpen(true)}
-                >
-                  Remate
-                </button>
-              </Panel>
-              <BoxRemateDrawer
-                boxId={selectedBox.id}
-                open={remateDrawerOpen}
-                onClose={() => setRemateDrawerOpen(false)}
-                defaultMaterialId={
-                  selectedBox.material || project.materialId || project.material.tipo
-                }
-              />
-            </>
-          )}
-
-          {selectedBox && (
-            <SelecionarMaterialSection
-              boxId={selectedBox.id}
-              onViewerMaterialChange={(boxId, materialName) => {
-                viewerApi?.updateBox(boxId, { materialName });
-                showToast("Material aplicado à caixa.", "info");
-              }}
-            />
-          )}
-
-          {selectedBox && <BoxRodapeSection boxId={selectedBox.id} />}
-
-          {selectedBox && (
-            <Panel title="Pés">
-              {(() => {
-                const feetHeightMm = Math.max(40, selectedBox.feetHeight ?? ((selectedBox.pe_cm ?? 10) * 10));
-                const feetOffsetFrontMm = Math.max(0, selectedBox.feetOffsetFront ?? 100);
-                const shouldLockY = selectedBox.cabinetType === "lower";
-                const feetEnabled = selectedBox.feetEnabled !== false;
-                return (
-                  <>
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        fontSize: 12,
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={feetEnabled}
-                        onChange={(e) => {
-                          const nextEnabled = e.target.checked;
-                          const partial: {
-                            feetEnabled: boolean;
-                            y_mm?: number;
-                            manualPosition?: boolean;
-                          } = { feetEnabled: nextEnabled };
-                          if (nextEnabled && shouldLockY) {
-                            partial.y_mm = feetHeightMm + selectedBox.dimensoes.altura / 2;
-                            partial.manualPosition = true;
-                          } else if (!nextEnabled && shouldLockY) {
-                            partial.manualPosition = true;
-                          }
-                          actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
-                        }}
-                      />
-                      Ativar pés
-                    </label>
-
-                    {feetEnabled && (
-                      <>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                          <div className="panel-field-row">
-                            <label className="panel-label" style={{ minWidth: 110 }}>Altura (mm)</label>
-                            <NumericInput
-                              value={feetHeightMm}
-                              min={40}
-                              onChange={(clamped) => {
-                                const partial: {
-                                  feetHeight: number;
-                                  y_mm?: number;
-                                  manualPosition?: boolean;
-                                } = { feetHeight: clamped };
-                                if (selectedBox.feetEnabled !== false && shouldLockY) {
-                                  partial.y_mm = clamped + selectedBox.dimensoes.altura / 2;
-                                  partial.manualPosition = true;
-                                }
-                                actions.updateWorkspaceBoxTransform(selectedBox.id, partial);
-                              }}
-                              className="input input-sm"
-                              style={{ width: 110 }}
-                            />
-                          </div>
-
-                          <div className="panel-field-row">
-                            <label className="panel-label" style={{ minWidth: 110 }}>Recuo frontal (mm)</label>
-                            <NumericInput
-                              value={feetOffsetFrontMm}
-                              min={0}
-                              onChange={(value) => {
-                                actions.updateWorkspaceBoxTransform(selectedBox.id, {
-                                  feetOffsetFront: Math.max(0, Math.round(value)),
-                                });
-                              }}
-                              className="input input-sm"
-                              style={{ width: 110 }}
-                            />
-                          </div>
-                        </div>
-
-                        <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-                          Pés fixos em 4 unidades por caixa (controle de quantidade reservado para futura versão).
-                        </p>
-                      </>
-                    )}
-                  </>
-                );
-              })()}
-            </Panel>
-          )}
-
-          {selectedBox && (
-            <Panel title="Opções do box" description="Prateleiras, portas e gavetas no mesmo local.">
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <StepperPopover
-                  id="prateleiras-popover"
-                  label="Prateleiras"
-                  value={selectedPrateleiras}
-                  onChange={(v) => actions.setPrateleiras(v)}
-                />
-                <StepperPopover
-                  id="gavetas-popover"
-                  label="Gavetas"
-                  value={selectedGavetas}
-                  onChange={(v) => actions.setGavetas(v)}
-                />
-                <UnifiedPopover trigger={<span>Tipo de porta: <strong>{selectedBox?.portaTipo === "sem_porta" ? "Sem" : selectedBox?.portaTipo === "porta_simples" ? "Simples" : selectedBox?.portaTipo === "porta_correr" ? "Correr" : "Dupla"}</strong></span>}>
-                  <select
-                    value={selectedBox?.portaTipo ?? "sem_porta"}
-                    onChange={(e) => actions.setPortaTipo(e.target.value as "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr")}
-                    className="select"
-                    style={{ width: "100%" }}
-                  >
-                    <option value="sem_porta">Sem porta</option>
-                    <option value="porta_simples">Porta simples</option>
-                    <option value="porta_dupla">Porta dupla</option>
-                    <option value="porta_correr">Porta de correr</option>
-                  </select>
-                </UnifiedPopover>
-              </div>
-
+            <Panel title="Opções do box">
               <BoxLayersPanel embedded />
             </Panel>
           )}

@@ -2,6 +2,7 @@ import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import type { SavedProjectInfo } from "../../../context/projectTypes";
 import { NotesField } from "./NotesField";
+import { HOME_SECTION_HELP_TEXT, SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
 
 export type HomeLeftPanelEmptyProps = {
   loadingSavedRecent: boolean;
@@ -19,21 +20,29 @@ export function HomeLeftPanelEmpty({
       <div className="left-panel-scroll">
         <aside className="panel-content panel-content--side">
           <div className="design-panel-header">
-            <div className="section-title">Início</div>
-            <p className="design-panel-subtitle">Comece criando uma caixa e definindo os dados básicos do projeto.</p>
+            <SectionTitleWithHelp title="Início" helpText={HOME_SECTION_HELP_TEXT} />
           </div>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
-            Nenhuma caixa selecionada. Defina o nome do projeto abaixo.
-          </p>
 
-          <button
-            type="button"
-            onClick={() => actions.addWorkspaceBox()}
-            className="button button-primary"
-            style={{ width: "100%", marginBottom: 12 }}
-          >
-            Criar Caixa
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() => actions.addWorkspaceBox()}
+              className="button button-primary"
+              style={{ width: "100%" }}
+            >
+              Criar Caixa
+            </button>
+            <button
+              type="button"
+              className="button button-primary"
+              style={{
+                width: "100%",
+                background: "var(--ui-color-success, #22c55e)",
+              }}
+            >
+              Pedir Orçamento
+            </button>
+          </div>
 
           <Panel title="NOME DE PROJETO">
             <input

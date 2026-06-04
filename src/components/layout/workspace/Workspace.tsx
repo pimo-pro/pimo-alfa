@@ -27,6 +27,7 @@ import { resolvePieceOrlaConfig } from "../../../core/orla/orlaCalculator";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import { useSettings } from "../../../context/SettingsContext";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
+import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -259,18 +260,6 @@ export default function Workspace({
             boxId,
           });
         }
-        // Rule: if user is in "moveis" tab, stay there — don't auto-navigate to home.
-        // This allows adding multiple boxes without losing the catalog.
-        if (uiStore.getState().selectedTool !== "moveis") {
-          setSelectedTool("home");
-        }
-        if (import.meta.env.DEV) {
-          const afterUi = uiStore.getState();
-          devLogger.debug("[SELECTION][Workspace] modo painel -> box/home", {
-            selectedObjectAfter: afterUi.selectedObject,
-            selectedToolAfter: afterUi.selectedTool,
-          });
-        }
         pointerToggleSelectionRef.current = false;
         return;
       }
@@ -293,7 +282,18 @@ export default function Workspace({
       }
       pointerToggleSelectionRef.current = false;
     });
-  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, setSelectedObject, setSelectedTool]);
+  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, setSelectedObject]);
+
+  useEffect(() => {
+    viewerApi.setOnBoxDoubleClick?.((boxId) => {
+      actions.selectBox(boxId);
+      setSelectedObject({ type: "box", id: boxId });
+      setSelectedTool(LEFT_TOOLBAR_IDS.HOME);
+    });
+    return () => {
+      viewerApi.setOnBoxDoubleClick?.(null);
+    };
+  }, [actions, viewerApi, setSelectedObject, setSelectedTool]);
 
   /** GLB/CAD: ViewerCore chama após `addModelToBox` concluir o load (ver ViewerCore.addModelToBox). */
   useEffect(() => {

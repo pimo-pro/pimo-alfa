@@ -1,78 +1,148 @@
-import { useMemo } from "react";
-import { useProject } from "../../../context/useProject";
-import Panel from "../../ui/Panel";
-import { listOfficialMaterials } from "../../../core/materials/materials.api";
-import { getViewerMaterialId } from "../../../core/materials/service";
-import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
-type SelecionarMaterialSectionProps = {
-  boxId: string;
-  onViewerMaterialChange?: (_boxId: string, _materialId: string) => void;
-};
-
-export default function SelecionarMaterialSection({
-  boxId,
-  onViewerMaterialChange,
-}: SelecionarMaterialSectionProps) {
-  const { project, actions } = useProject();
-  const box = project.workspaceBoxes.find((item) => item.id === boxId);
-  const woodMaterials = useMemo(
-    () => listOfficialMaterials().filter((material) => material.industrial && material.visual),
-    []
-  );
-  const orlaPresets = normalizeOrlaPresets(project.orlaPresets);
-
-  if (!box) return null;
-
-  const currentMaterialId = box.material || project.materialId || project.material.tipo;
-
-  return (
-    <Panel title="Selecionar Material" description="Material da caixa e orla do box selecionado.">
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-            Material da Caixa
-          </div>
-          <select
-            className="select"
-            value={currentMaterialId}
-            onChange={(e) => {
-              const materialId = e.target.value;
-              actions.setWorkspaceBoxMaterial(boxId, materialId);
-              onViewerMaterialChange?.(boxId, getViewerMaterialId(materialId));
-            }}
-          >
-            {woodMaterials.map((material) => (
-              <option key={material.canonicalId} value={material.canonicalId}>
-                {material.label}
-              </option>
-            ))}
-          </select>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            A espessura é aplicada automaticamente pelas regras do material.
-          </div>
-        </section>
-
-        <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-            Orla
-          </div>
-          <select
-            className="select"
-            value={box.orlaPresetId ?? ""}
-            onChange={(e) => actions.setBoxOrlaPreset(boxId, e.target.value || null)}
-          >
-            <option value="">Sem orla</option>
-            {orlaPresets.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.nome}
-              </option>
-            ))}
-          </select>
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Materiais, espessura e tipo seguem os presets permitidos de Orla V1.
-          </div>
-        </section>
-      </div>
-    </Panel>
-  );
-}
+import { useMemo } from "react";
+import { useProject } from "../../../context/useProject";
+import Panel from "../../ui/Panel";
+import { listOfficialMaterials } from "../../../core/materials/materials.api";
+import { getViewerMaterialId } from "../../../core/materials/service";
+import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
+
+type SelecionarMaterialSectionProps = {
+  boxId: string;
+  /** Conteúdo sem Panel (ex.: dentro de UnifiedPopover). */
+  embedded?: boolean;
+  onViewerMaterialChange?: (_boxId: string, _materialId: string) => void;
+  onDoorMaterialChange?: (_boxId: string, _doorLayerId: string, _materialId: string) => void;
+  onDrawerMaterialChange?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
+};
+
+export default function SelecionarMaterialSection({
+  boxId,
+  embedded = false,
+  onViewerMaterialChange,
+  onDoorMaterialChange,
+  onDrawerMaterialChange,
+}: SelecionarMaterialSectionProps) {
+  const { project, actions } = useProject();
+  const box = project.workspaceBoxes.find((item) => item.id === boxId);
+  const woodMaterials = useMemo(
+    () => listOfficialMaterials().filter((material) => material.industrial && material.visual),
+    []
+  );
+  const orlaPresets = normalizeOrlaPresets(project.orlaPresets);
+
+  if (!box) return null;
+
+  const fallbackMaterialId = box.material || project.materialId || project.material.tipo;
+  const currentMaterialId = fallbackMaterialId;
+  const hasDoor = box.portaTipo !== "sem_porta" && (box.doorsLayer?.length ?? 0) > 0;
+  const hasDrawers = (box.gavetas ?? 0) > 0 && (box.drawersLayer?.length ?? 0) > 0;
+
+  const content = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+          Material da Caixa
+        </div>
+        <select
+          className="select"
+          value={currentMaterialId}
+          onChange={(e) => {
+            const materialId = e.target.value;
+            actions.setWorkspaceBoxMaterial(boxId, materialId);
+            onViewerMaterialChange?.(boxId, getViewerMaterialId(materialId));
+          }}
+        >
+          {woodMaterials.map((material) => (
+            <option key={material.canonicalId} value={material.canonicalId}>
+              {material.label}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+          Orla
+        </div>
+        <select
+          className="select"
+          value={box.orlaPresetId ?? ""}
+          onChange={(e) => actions.setBoxOrlaPreset(boxId, e.target.value || null)}
+        >
+          <option value="">Sem orla</option>
+          {orlaPresets.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.nome}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {hasDoor &&
+        (box.doorsLayer ?? []).map((door, index) => {
+          const doorMaterialId = door.material ?? door.materialId ?? fallbackMaterialId;
+          const label = (box.doorsLayer?.length ?? 0) > 1 ? `Porta ${index + 1}` : "Porta";
+          return (
+            <section key={door.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                {label}
+              </div>
+              <select
+                className="select"
+                value={doorMaterialId}
+                onChange={(e) => {
+                  const materialId = e.target.value;
+                  actions.setDoorMaterial(boxId, door.id, materialId);
+                  onDoorMaterialChange?.(boxId, door.id, getViewerMaterialId(materialId));
+                }}
+              >
+                {woodMaterials.map((material) => (
+                  <option key={material.canonicalId} value={material.canonicalId}>
+                    {material.label}
+                  </option>
+                ))}
+              </select>
+            </section>
+          );
+        })}
+
+      {hasDrawers &&
+        (box.drawersLayer ?? []).map((drawer, index) => {
+          const drawerMaterialId = drawer.material ?? fallbackMaterialId;
+          const label =
+            (box.drawersLayer?.length ?? 0) > 1
+              ? `Gaveta ${index + 1} — frente`
+              : "Gaveta — frente";
+          return (
+            <section key={drawer.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                {label}
+              </div>
+              <select
+                className="select"
+                value={drawerMaterialId}
+                onChange={(e) => {
+                  const materialId = e.target.value;
+                  actions.setDrawerMaterial(boxId, drawer.id, materialId);
+                  onDrawerMaterialChange?.(boxId, drawer.id, getViewerMaterialId(materialId));
+                }}
+              >
+                {woodMaterials.map((material) => (
+                  <option key={material.canonicalId} value={material.canonicalId}>
+                    {material.label}
+                  </option>
+                ))}
+              </select>
+            </section>
+          );
+        })}
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Panel title="Selecionar Material" titleHelpText="Material da caixa e orla do box selecionado.">
+      {content}
+    </Panel>
+  );
+}

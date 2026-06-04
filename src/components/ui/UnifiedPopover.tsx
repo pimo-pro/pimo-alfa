@@ -16,6 +16,12 @@ export type UnifiedPopoverProps = {
   id?: string;
   /** Classe CSS do container do trigger */
   className?: string;
+  /** Botão trigger em largura total (ex.: painel lateral). */
+  fullWidth?: boolean;
+  /** Estilo do botão trigger: inline (padrão), primary ou ghost (painel lateral). */
+  triggerVariant?: "inline" | "primary" | "ghost";
+  /** Tooltip nativo ao hover no botão trigger. */
+  triggerTitle?: string;
 };
 
 export default function UnifiedPopover({
@@ -24,6 +30,9 @@ export default function UnifiedPopover({
   align = "start",
   id,
   className,
+  fullWidth = false,
+  triggerVariant = "inline",
+  triggerTitle,
 }: UnifiedPopoverProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,23 +50,48 @@ export default function UnifiedPopover({
     }
   }, [open, handleClickOutside]);
 
+  const isPrimaryTrigger = triggerVariant === "primary";
+  const isGhostTrigger = triggerVariant === "ghost";
+  const isPanelTrigger = isPrimaryTrigger || isGhostTrigger;
+
   return (
-    <div ref={containerRef} style={{ position: "relative", display: "inline-block" }} className={className}>
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        display: fullWidth ? "block" : "inline-block",
+        width: fullWidth ? "100%" : undefined,
+      }}
+      className={className}
+    >
       <button
         type="button"
         id={id}
         aria-haspopup="true"
         aria-expanded={open}
+        title={triggerTitle}
+        aria-label={triggerTitle}
         onClick={() => setOpen((o) => !o)}
-        style={{
-          background: "transparent",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius)",
-          color: "var(--text-main)",
-          padding: "6px 10px",
-          fontSize: 12,
-          cursor: "pointer",
-        }}
+        className={
+          isPrimaryTrigger
+            ? "button button-primary"
+            : isGhostTrigger
+              ? "button button-ghost"
+              : undefined
+        }
+        style={
+          isPanelTrigger
+            ? { width: fullWidth ? "100%" : undefined }
+            : {
+                background: "transparent",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                color: "var(--text-main)",
+                padding: "6px 10px",
+                fontSize: 12,
+                cursor: "pointer",
+              }
+        }
       >
         {trigger}
       </button>
@@ -79,6 +113,8 @@ export default function UnifiedPopover({
             boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
             zIndex: 1000,
             minWidth: 160,
+            width: fullWidth ? "100%" : undefined,
+            boxSizing: "border-box",
           }}
         >
           {children}
@@ -96,6 +132,9 @@ export function StepperPopover({
   max = 99,
   onChange,
   id,
+  fullWidth,
+  triggerVariant,
+  triggerTitle,
 }: {
   label: string;
   value: number;
@@ -103,14 +142,21 @@ export function StepperPopover({
   max?: number;
   onChange: (_v: number) => void;
   id?: string;
+  fullWidth?: boolean;
+  triggerVariant?: "inline" | "primary" | "ghost";
+  triggerTitle?: string;
 }) {
   const v = Math.max(min, Math.min(max, Math.floor(value)));
+  const separator = triggerVariant && triggerVariant !== "inline" ? " — " : ": ";
   return (
     <UnifiedPopover
       id={id}
+      fullWidth={fullWidth}
+      triggerVariant={triggerVariant}
+      triggerTitle={triggerTitle}
       trigger={
         <span>
-          {label}: <strong>{v}</strong>
+          {label}{separator}<strong>{v}</strong>
         </span>
       }
     >

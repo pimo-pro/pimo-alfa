@@ -4,6 +4,7 @@ import { useProject } from "../../../context/useProject";
 import { useUiStore } from "../../../stores/uiStore";
 import { REMATE_PIECE_TIPO_LABELS } from "../../../core/remate/rematePieceTypes";
 import type { RematePieceTipo } from "../../../core/remate/rematePieceTypes";
+import BoxRodapeSection from "../rodape/BoxRodapeSection";
 
 const OPTIONS: RematePieceTipo[] = ["DIR", "ESQ", "CIMA", "BAIXO", "L", "RODAPE", "RODAPE_L"];
 
@@ -138,6 +139,8 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
               Criar remate
             </button>
           </div>
+
+          <BoxRodapeSection boxId={boxId} embedded />
 
           {remates.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

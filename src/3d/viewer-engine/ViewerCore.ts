@@ -227,6 +227,7 @@ export class ViewerCore {
   private internalRulerOverlay: InternalRulerOverlay | null = null;
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
+  private onBoxDoubleClick: ((_boxId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
   private onRemateTransform: ((
@@ -3614,6 +3615,10 @@ export class ViewerCore {
     this.onDoorLayerDoubleClick = callback;
   }
 
+  setOnBoxDoubleClick(callback: ((_boxId: string) => void) | null): void {
+    this.onBoxDoubleClick = callback;
+  }
+
   setOnModelLoaded(callback: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null): void {
     this.onModelLoaded = callback;
   }
@@ -4309,6 +4314,7 @@ export class ViewerCore {
       setWallGizmoDragging: (v) => { this.viewerState.setWallGizmoDragging(v); },
       getDoorHitAtPointer: (e) => this.getDoorHitAtPointer(e),
       getOnDoorLayerDoubleClick: () => this.onDoorLayerDoubleClick,
+      getOnBoxDoubleClick: () => this.onBoxDoubleClick,
       getPointerActionForButton: (button) => {
         const mapping = getMouseInputMapping(this.mouseInputPreset);
         return getPointerActionForButton(mapping, button);
@@ -5340,6 +5346,7 @@ export class ViewerCore {
     this.onInternalEdgeSelected = null;
     this.onInternalPointSelected = null;
     this.onDoorLayerDoubleClick = null;
+    this.onBoxDoubleClick = null;
     this.onModelLoaded = null;
     this.eventsManager?.unregister();
     this.eventsManager = null;

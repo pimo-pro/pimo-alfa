@@ -1,10 +1,13 @@
 // src/components/ui/Panel.tsx
 
 import { memo, type ReactNode } from "react";
+import { MiniHelpTooltip } from "./MiniHelpTooltip";
 
 export interface PanelProps {
   title?: string;
   description?: string;
+  /** Texto do Mini‑Tooltip de Ajuda ao lado do título (substitui description equivalente). */
+  titleHelpText?: string;
   children?: ReactNode;
   /** Classe CSS opcional para estilização externa. */
   className?: string;
@@ -33,10 +36,21 @@ const descriptionStyle: React.CSSProperties = {
   color: "var(--text-muted)",
 };
 
-function PanelComponent({ title, description, children, className }: PanelProps) {
+function PanelComponent({ title, description, titleHelpText, children, className }: PanelProps) {
   return (
     <div style={panelRootStyle} className={className}>
-      {title != null && title !== "" && <div style={titleStyle}>{title}</div>}
+      {title != null && title !== "" && (
+        <div style={titleStyle}>
+          {titleHelpText ? (
+            <span className="section-title-with-help">
+              {title}
+              <MiniHelpTooltip text={titleHelpText} />
+            </span>
+          ) : (
+            title
+          )}
+        </div>
+      )}
       {description != null && description !== "" && <div style={descriptionStyle}>{description}</div>}
       {children}
     </div>

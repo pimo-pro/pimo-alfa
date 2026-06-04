@@ -8,6 +8,8 @@ import { RODAPE_DEFAULT_HEIGHT_MM } from "../../../core/kitchenFinish/finishType
 
 type Props = {
   boxId: string;
+  /** Conteúdo embutido no drawer de Remate (sem Panel lateral). */
+  embedded?: boolean;
 };
 
 const TOGGLES: Array<{ kind: RodapeKind; label: string }> = [
@@ -17,7 +19,7 @@ const TOGGLES: Array<{ kind: RodapeKind; label: string }> = [
   { kind: "FULL", label: "Roda pé Full Wall" },
 ];
 
-export default function BoxRodapeSection({ boxId }: Props) {
+export default function BoxRodapeSection({ boxId, embedded = false }: Props) {
   const { project, actions } = useProject();
   const box = project.workspaceBoxes.find((b) => b.id === boxId);
   const materials = useMemo(() => listOfficialMaterials().filter((m) => m.industrial), []);
@@ -39,8 +41,8 @@ export default function BoxRodapeSection({ boxId }: Props) {
     actions.createBoxRodape(input);
   };
 
-  return (
-    <Panel title="Roda Pé" description="Rodapé inferior inteligente — alinhado à base do módulo.">
+  const rodapeContent = (
+    <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {TOGGLES.map((item) => {
           const active = byKind(item.kind);
@@ -124,6 +126,33 @@ export default function BoxRodapeSection({ boxId }: Props) {
           ))}
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-main)" }}>Roda Pé</div>
+        <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
+          Rodapé inferior inteligente — alinhado à base do módulo.
+        </p>
+        {rodapeContent}
+      </div>
+    );
+  }
+
+  return (
+    <Panel title="Roda Pé" description="Rodapé inferior inteligente — alinhado à base do módulo.">
+      {rodapeContent}
     </Panel>
   );
 }
