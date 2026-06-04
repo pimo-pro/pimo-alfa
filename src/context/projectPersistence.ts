@@ -11,7 +11,10 @@ import { wallStore } from "../stores/wallStore";
 import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
 import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
-import { normalizeRematesFromPersistence } from "../core/remate/rematePieceMigration";
+import {
+  normalizeRematesFromPersistence,
+  upgradeRematesAfterLoad,
+} from "../core/remate/rematePieceMigration";
 import type { ProjectHemati } from "../core/hemati/hematiTypes";
 import type { ProjectRodape } from "../core/rodape/rodapeTypes";
 import {
@@ -131,7 +134,10 @@ export function reviveState(snapshot: unknown): ProjectState | null {
           : "");
 
   const remates = Array.isArray(restored.remates)
-    ? normalizeRematesFromPersistence(restored.remates)
+    ? upgradeRematesAfterLoad(
+        normalizeRematesFromPersistence(restored.remates),
+        workspaceBoxes
+      )
     : [];
 
   return {

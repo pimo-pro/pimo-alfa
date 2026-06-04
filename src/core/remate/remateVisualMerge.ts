@@ -12,6 +12,8 @@ const TOUCH_TOLERANCE_MM = 8;
 const ALIGN_TOLERANCE_MM = 12;
 
 function sameTipo(a: RematePiece, b: RematePiece): boolean {
+  if (a.partRole && a.partRole !== "MAIN") return false;
+  if (b.partRole && b.partRole !== "MAIN") return false;
   return a.tipo === b.tipo && a.tipo !== "L" && a.tipo !== "RODAPE_L";
 }
 

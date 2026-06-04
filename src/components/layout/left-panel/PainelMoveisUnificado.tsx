@@ -13,8 +13,7 @@ import {
 } from "../../../data/moveisUnificados";
 import { buildBoxLegacy, type BoxOptions } from "../../../3d/objects/BoxBuilder";
 import type { BoxModule } from "../../../core/types";
-import { REMATE_CATALOG_ITEMS } from "../../../data/moveisUnificados/remateCatalog";
-import type { RematePieceTipo } from "../../../core/remate/rematePieceTypes";
+import { REMATE_CATALOG_ITEMS, type RemateCatalogItem } from "../../../data/moveisUnificados/remateCatalog";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -370,8 +369,11 @@ export default function PainelMoveisUnificado() {
     setConfig(DEFAULT_CONFIG);
   }, [activeItem]);
 
-  const handleAddRemateCatalog = useCallback((tipo: RematePieceTipo) => {
-    actions.createStandaloneRematePiece(tipo);
+  const handleAddRemateCatalog = useCallback((item: RemateCatalogItem) => {
+    actions.createStandaloneRematePiece({
+      productType: item.productType,
+      mountSlot: item.defaultMountSlot,
+    });
   }, [actions]);
 
   const handleAdd = useCallback(() => {
@@ -440,7 +442,7 @@ export default function PainelMoveisUnificado() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => handleAddRemateCatalog(item.tipo)}
+                    onClick={() => handleAddRemateCatalog(item)}
                     style={{
                       display: "flex", alignItems: "center", gap: 8,
                       width: "100%", padding: "7px 10px",

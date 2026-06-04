@@ -2,7 +2,8 @@ import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
-import { computeRematePieceSnapForBox } from "../../../core/remate/rematePieceSnap";
+import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
+import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
 import {
   computeRemateVisualMergeGroups,
   remateIdsInMergeGroup,
@@ -195,40 +196,22 @@ export class RematePieceVisualizer {
   }
 
   private applyWorldTransform(mesh: THREE.Mesh, piece: RematePiece): void {
-    if (piece.parentBoxId && piece.followBox) {
+    if (piece.parentBoxId) {
       const cfg = this.bridge?.getBoxConfig(piece.parentBoxId);
       const worldMatrix = this.bridge?.getBoxWorldMatrix(piece.parentBoxId);
       if (cfg && worldMatrix) {
-        const snap = computeRematePieceSnapForBox(piece, cfg);
+        const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
+        const pose = resolveRematePoseLocal(piece, bounds);
         const local = new THREE.Vector3(
-          snap.position.xMm / 1000,
-          snap.position.yMm / 1000,
-          snap.position.zMm / 1000
+          pose.position.xMm / 1000,
+          pose.position.yMm / 1000,
+          pose.position.zMm / 1000
         );
         local.applyMatrix4(worldMatrix);
         mesh.position.copy(local);
         const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
         const partQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(snap.rotation.xRad, snap.rotation.yRad, snap.rotation.zRad)
-        );
-        mesh.quaternion.copy(boxQuat).multiply(partQuat);
-        return;
-      }
-    }
-
-    if (piece.parentBoxId) {
-      const worldMatrix = this.bridge?.getBoxWorldMatrix(piece.parentBoxId);
-      if (worldMatrix) {
-        const local = new THREE.Vector3(
-          piece.position.xMm / 1000,
-          piece.position.yMm / 1000,
-          piece.position.zMm / 1000
-        );
-        local.applyMatrix4(worldMatrix);
-        mesh.position.copy(local);
-        const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
-        const partQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(piece.rotation.xRad, piece.rotation.yRad, piece.rotation.zRad)
+          new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
         );
         mesh.quaternion.copy(boxQuat).multiply(partQuat);
         return;

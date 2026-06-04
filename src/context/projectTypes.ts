@@ -609,13 +609,15 @@ export interface ProjectActions {
   /** Remate 2.0 — cria peça independente (box ou standalone). */
   createRematePiece: (_input: CreateRematePieceInput) => void;
   /** Remate 2.0 — cria peça standalone a partir do catálogo MÓVEIS. */
-  createStandaloneRematePiece: (_tipo: RematePiece["tipo"]) => void;
+  createStandaloneRematePiece: (_input: CreateRematePieceInput) => void;
   /** @deprecated alias — auto-room-fill e legado */
   createBoxRemate: (_input: CreateRemateInput) => void;
   /** Remate 2.0 — atualiza dimensões/material/posição de um remate. */
   updateRemate: (_remateId: string, _patch: UpdateRematePieceInput) => void;
   /** Remate 2.0 — remove remate do projeto. */
   removeRemate: (_remateId: string) => void;
+  /** Remate 2.0 — reencosta remate (ou grupo) à face do módulo. */
+  resnapRemateToFace: (_remateId: string) => void;
   /** Remate 2.0 — seleção UI (noop no estado persistido). */
   selectRematePiece: (_remateId: string | null) => void;
   /** Remate visual (legado) — cria peça(s) no módulo. */

@@ -3,10 +3,20 @@ export type {
   RematePieceTipo,
   RematePiecePosition,
   RematePieceRotation,
+  RemateProductType,
+  RemateProductOptions,
+  RematePartRole,
+  RemateMountSlot,
   CreateRematePieceInput,
   UpdateRematePieceInput,
 } from "./rematePieceTypes";
-export { REMATE_PIECE_TIPO_LABELS, isMultiPartRemateTipo } from "./rematePieceTypes";
+export {
+  REMATE_PIECE_TIPO_LABELS,
+  REMATE_PRODUCT_TYPE_LABELS,
+  REMATE_MOUNT_SLOT_LABELS,
+  isMultiPartRemateTipo,
+  isMultiPartRemateProduct,
+} from "./rematePieceTypes";
 
 /** @deprecated Remate V1 — migrado automaticamente para RematePiece. */
 export type RemateType = "completo" | "avista" | "L" | "rodape";

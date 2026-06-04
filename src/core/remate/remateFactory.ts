@@ -1,15 +1,33 @@
 import type { WorkspaceBox } from "../types";
-import type { CreateRemateInput, RematePieceTipo } from "./remateTypes";
+import type { CreateRemateInput } from "./remateTypes";
 import { createRematePieces } from "./rematePieceFactory";
-import type { RematePiece } from "./rematePieceTypes";
+import type { CreateRematePieceInput, RemateMountSlot, RematePiece, RemateProductType } from "./rematePieceTypes";
 
-function mapLegacyInputToTipo(input: CreateRemateInput): RematePieceTipo {
-  if (input.type === "L") return "L";
-  if (input.type === "rodape" || input.position === "rodape") return "RODAPE";
+function mapPositionToMountSlot(input: CreateRemateInput): RemateMountSlot {
+  if (input.type === "rodape" || input.position === "rodape") return "FUNDO";
   if (input.position === "dir") return "DIR";
   if (input.position === "esq") return "ESQ";
   if (input.position === "cima") return "CIMA";
-  return "BAIXO";
+  if (input.position === "baixo") return "FUNDO";
+  return "FRENTE";
+}
+
+function mapLegacyInputToCreate(input: CreateRemateInput): CreateRematePieceInput {
+  const productType: RemateProductType =
+    input.type === "completo"
+      ? "COMPLETO"
+      : input.type === "L"
+        ? "L"
+        : input.type === "rodape"
+          ? "RODAPE"
+          : "AVISTA";
+  return {
+    productType,
+    mountSlot: mapPositionToMountSlot(input),
+    parentBoxId: input.parentBoxId,
+    materialPresetId: input.materialId,
+    followBox: true,
+  };
 }
 
 function boxDimsM(box: WorkspaceBox) {
@@ -30,12 +48,7 @@ export function createRematesForBox(params: {
 }): RematePiece[] {
   const { box, input, materialId, thicknessMm } = params;
   return createRematePieces(
-    {
-      tipo: mapLegacyInputToTipo(input),
-      parentBoxId: box.id,
-      materialPresetId: materialId,
-      followBox: true,
-    },
+    { ...mapLegacyInputToCreate(input), parentBoxId: box.id },
     {
       box,
       materialPresetId: materialId,

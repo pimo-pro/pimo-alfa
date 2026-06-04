@@ -1,7 +1,18 @@
 import type { WorkspaceBox } from "../types";
-import type { CreateRematePieceInput, RematePiece } from "./rematePieceTypes";
-import { isMultiPartRemateTipo } from "./rematePieceTypes";
-import { computeRematePieceSnapForBox, defaultDimensionsForTipo } from "./rematePieceSnap";
+import type {
+  CreateRematePieceInput,
+  RemateMountSlot,
+  RematePartRole,
+  RematePiece,
+  RemateProductType,
+} from "./rematePieceTypes";
+import {
+  buildProductPieceSpecs,
+  computeDimensionsForProduct,
+  normalizeProductOptions,
+} from "./remateProductRules";
+import { getRemateEnvelopeBoundsM } from "./rematePlacement";
+import { snapToMountRule } from "./remateMountFrame";
 
 let remateSeq = 0;
 
@@ -10,9 +21,17 @@ function nextRemateId(prefix = "remate"): string {
   return `${prefix}-${Date.now()}-${remateSeq}`;
 }
 
-function buildName(box: WorkspaceBox | null, tipo: RematePiece["tipo"], partIndex?: 1 | 2): string {
+function buildName(
+  box: WorkspaceBox | null,
+  productType: RemateProductType,
+  mountSlot: RemateMountSlot,
+  partRole?: RematePartRole,
+  partIndex?: 1 | 2
+): string {
   const code = (box?.nome || box?.id || "STANDALONE").trim().replace(/\s+/g, "_").toUpperCase();
-  const suffix = partIndex ? `${tipo}${partIndex}` : tipo;
+  const suffix = partIndex
+    ? `${productType}${partIndex}`
+    : `${productType}_${mountSlot}${partRole && partRole !== "MAIN" ? `_${partRole}` : ""}`;
   return `${code}_${suffix}`;
 }
 
@@ -28,19 +47,33 @@ function defaultStandalonePosition(
   };
 }
 
-function applySnapIfNeeded(
+function applyMountSnapIfNeeded(
   piece: RematePiece,
   box: WorkspaceBox,
   boxDimsM: { widthM: number; heightM: number; depthM: number }
 ): RematePiece {
-  if (!piece.followBox) return piece;
-  const snap = computeRematePieceSnapForBox(piece, {
-    widthM: boxDimsM.widthM,
-    heightM: boxDimsM.heightM,
-    depthM: boxDimsM.depthM,
-    box,
-  });
-  return { ...piece, position: snap.position, rotation: snap.rotation };
+  if (!piece.followBox && piece.placementMode === "FREE") return piece;
+  const bounds = getRemateEnvelopeBoundsM(
+    boxDimsM.widthM,
+    boxDimsM.heightM,
+    boxDimsM.depthM,
+    box
+  );
+  return snapToMountRule(piece, bounds);
+}
+
+export function refreshRemateMountSnap(
+  piece: RematePiece,
+  box: WorkspaceBox,
+  boxDimsM: { widthM: number; heightM: number; depthM: number }
+): RematePiece {
+  const bounds = getRemateEnvelopeBoundsM(
+    boxDimsM.widthM,
+    boxDimsM.heightM,
+    boxDimsM.depthM,
+    box
+  );
+  return snapToMountRule({ ...piece, placementMode: "SNAPPED" }, bounds);
 }
 
 export function createRematePieces(
@@ -53,58 +86,50 @@ export function createRematePieces(
     boxDimsM?: { widthM: number; heightM: number; depthM: number };
   }
 ): RematePiece[] {
-  const { box, materialPresetId, thicknessMm, boxDimsM } = ctx;
+  const specs = buildProductPieceSpecs(input);
+  const groupId = specs.length > 1 ? nextRemateId("remate-group") : undefined;
 
-  if (isMultiPartRemateTipo(input.tipo)) {
-    const groupId = nextRemateId("remate-group");
-    return ([1, 2] as const).map((partIndex) => {
-      const dims = defaultDimensionsForTipo(box ?? null, input.tipo, thicknessMm, partIndex);
-      let piece: RematePiece = {
-        id: nextRemateId(),
-        parentBoxId: input.parentBoxId,
-        tipo: input.tipo,
-        width: input.width ?? dims.width,
-        height: input.height ?? dims.height,
-        depth: input.depth ?? dims.depth,
-        materialPresetId: input.materialPresetId ?? materialPresetId,
-        position: input.workspacePosition ?? { xMm: 0, yMm: 0, zMm: 0 },
-        rotation: { xRad: 0, yRad: 0, zRad: 0 },
-        followBox: input.followBox ?? Boolean(input.parentBoxId),
-        name: buildName(box ?? null, input.tipo, partIndex),
-        parentGroupId: groupId,
-        partIndex,
-      };
-      if (input.parentBoxId && box && boxDimsM) {
-        piece = applySnapIfNeeded(piece, box, boxDimsM);
-      } else if (!input.parentBoxId) {
-        piece.position = input.workspacePosition ?? defaultStandalonePosition(ctx.allBoxes ?? [], piece);
-        piece.followBox = false;
-      }
-      return piece;
+  return specs.map((spec) => {
+    const productType = spec.productType;
+    const mountSlot = spec.mountSlot;
+    const opts = normalizeProductOptions(productType, spec.productOptions);
+    const dims = computeDimensionsForProduct({
+      box: ctx.box ?? null,
+      productType,
+      mountSlot,
+      thicknessMm: ctx.thicknessMm,
+      productOptions: opts,
+      partRole: spec.partRole,
+      partIndex: spec.partIndex,
     });
-  }
 
-  const dims = defaultDimensionsForTipo(box ?? null, input.tipo, thicknessMm);
-  let piece: RematePiece = {
-    id: nextRemateId(),
-    parentBoxId: input.parentBoxId,
-    tipo: input.tipo,
-    width: input.width ?? dims.width,
-    height: input.height ?? dims.height,
-    depth: input.depth ?? dims.depth,
-    materialPresetId: input.materialPresetId ?? materialPresetId,
-    position: input.workspacePosition ?? { xMm: 0, yMm: 0, zMm: 0 },
-    rotation: { xRad: 0, yRad: 0, zRad: 0 },
-    followBox: input.followBox ?? Boolean(input.parentBoxId),
-    name: buildName(box ?? null, input.tipo),
-  };
+    let piece: RematePiece = {
+      id: nextRemateId(),
+      parentBoxId: input.parentBoxId,
+      productType,
+      mountSlot,
+      productOptions: opts,
+      partRole: spec.partRole,
+      tipo: spec.tipo,
+      width: input.width ?? dims.width,
+      height: input.height ?? dims.height,
+      depth: input.depth ?? dims.depth,
+      materialPresetId: input.materialPresetId ?? ctx.materialPresetId,
+      position: input.workspacePosition ?? { xMm: 0, yMm: 0, zMm: 0 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: input.followBox ?? Boolean(input.parentBoxId),
+      name: buildName(ctx.box ?? null, productType, mountSlot, spec.partRole, spec.partIndex),
+      parentGroupId: groupId,
+      partIndex: spec.partIndex,
+    };
 
-  if (input.parentBoxId && box && boxDimsM) {
-    piece = applySnapIfNeeded(piece, box, boxDimsM);
-  } else if (!input.parentBoxId) {
-    piece.position = input.workspacePosition ?? defaultStandalonePosition(ctx.allBoxes ?? [], piece);
-    piece.followBox = false;
-  }
-
-  return [piece];
+    if (input.parentBoxId && ctx.box && ctx.boxDimsM) {
+      piece = applyMountSnapIfNeeded(piece, ctx.box, ctx.boxDimsM);
+    } else if (!input.parentBoxId) {
+      piece.position = input.workspacePosition ?? defaultStandalonePosition(ctx.allBoxes ?? [], piece);
+      piece.followBox = false;
+      piece.placementMode = "FREE";
+    }
+    return piece;
+  });
 }

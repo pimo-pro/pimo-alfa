@@ -6,7 +6,13 @@ import type * as THREE from "three";
 import type { TransformMode } from "../state";
 
 export interface IViewerToolsEngine {
-  getTransformControls(): { attach(_mesh: THREE.Object3D): void; detach(): void; setMode(_mode: string): void; setSize(_size: number): void } | null;
+  getTransformControls(): {
+    attach(_mesh: THREE.Object3D): void;
+    detach(): void;
+    setMode(_mode: string): void;
+    setSize(_size: number): void;
+    setSpace(_space: "local" | "world"): void;
+  } | null;
   getTransformControlsHelper(): THREE.Object3D | null;
   getCurrentTool(): TransformMode;
   getSelectedBoxId(): string | null;

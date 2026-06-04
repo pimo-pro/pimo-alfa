@@ -1,4 +1,20 @@
+export type RemateProductType = "AVISTA" | "COMPLETO" | "L" | "RODAPE" | "RODAPE_L";
+
+export type RematePartRole = "MAIN" | "TOP" | "BOTTOM";
+
+export type RemateProductOptions = {
+  avistaWidthMm?: number;
+  avistaFlushDepthMm?: number;
+  avistaFlushToDoor?: boolean;
+  coverageExtraMm?: number;
+  includeTopBottomRemates?: boolean;
+  asPuxador?: boolean;
+  lGapMaxMm?: number;
+  lSide?: "DIR" | "ESQ";
+};
+
 export type RematePieceTipo =
+  | "FRENTE"
   | "DIR"
   | "ESQ"
   | "CIMA"
@@ -6,6 +22,17 @@ export type RematePieceTipo =
   | "L"
   | "RODAPE"
   | "RODAPE_L";
+
+export type RemateMountSlot = "FRENTE" | "TRAS" | "DIR" | "ESQ" | "CIMA" | "FUNDO";
+
+export type RematePlacementMode = "SNAPPED" | "FREE";
+
+export type RemateFaceOffsets = {
+  offsetAlongNormalMm: number;
+  offsetTangentUMm: number;
+  offsetTangentVMm: number;
+  rotationSnapIndex?: 0 | 1 | 2 | 3;
+};
 
 export type RematePiecePosition = {
   xMm: number;
@@ -23,22 +50,36 @@ export type RematePieceRotation = {
 export type RematePiece = {
   id: string;
   parentBoxId?: string;
+  productType?: RemateProductType;
+  productOptions?: RemateProductOptions;
+  partRole?: RematePartRole;
   tipo: RematePieceTipo;
+  /** Slot de montagem; derivado de `tipo` se omitido. */
+  mountSlot?: RemateMountSlot;
+  /** SNAPPED = regra de montagem; FREE = editado pelo gizmo. */
+  placementMode?: RematePlacementMode;
+  /** Offsets relativos à face (normal + tangentes). */
+  faceOffsets?: RemateFaceOffsets;
   width: number;
   height: number;
   depth: number;
   materialPresetId: string;
   position: RematePiecePosition;
   rotation: RematePieceRotation;
+  /** Acompanha transform do módulo preservando offsets à face. */
   followBox: boolean;
   name: string;
-  /** Agrupa peças L / RODAPE_L. */
+  /** Agrupa peças L / RODAPE_L / Completo multi-peça. */
   parentGroupId?: string;
   partIndex?: 1 | 2;
 };
 
 export type CreateRematePieceInput = {
-  tipo: RematePieceTipo;
+  productType: RemateProductType;
+  mountSlot?: RemateMountSlot;
+  productOptions?: RemateProductOptions;
+  /** @deprecated — inferido de productType + mountSlot */
+  tipo?: RematePieceTipo;
   parentBoxId?: string;
   materialPresetId?: string;
   width?: number;
@@ -52,8 +93,14 @@ export type CreateRematePieceInput = {
 export type UpdateRematePieceInput = Partial<
   Pick<
     RematePiece,
+    | "productType"
+    | "productOptions"
+    | "partRole"
     | "tipo"
     | "parentBoxId"
+    | "mountSlot"
+    | "placementMode"
+    | "faceOffsets"
     | "width"
     | "height"
     | "depth"
@@ -65,7 +112,25 @@ export type UpdateRematePieceInput = Partial<
   >
 >;
 
+export const REMATE_PRODUCT_TYPE_LABELS: Record<RemateProductType, string> = {
+  AVISTA: "Remate Avista (10 cm)",
+  COMPLETO: "Remate Completo (coplito)",
+  L: "Remate L",
+  RODAPE: "Rodapé",
+  RODAPE_L: "Rodapé L",
+};
+
+export const REMATE_MOUNT_SLOT_LABELS: Record<RemateMountSlot, string> = {
+  FRENTE: "Face frontal",
+  TRAS: "Face traseira",
+  DIR: "Lateral direita",
+  ESQ: "Lateral esquerda",
+  CIMA: "Topo",
+  FUNDO: "Fundo",
+};
+
 export const REMATE_PIECE_TIPO_LABELS: Record<RematePieceTipo, string> = {
+  FRENTE: "Remate Frontal",
   DIR: "Remate Direito",
   ESQ: "Remate Esquerdo",
   CIMA: "Remate Cima",
@@ -75,6 +140,11 @@ export const REMATE_PIECE_TIPO_LABELS: Record<RematePieceTipo, string> = {
   RODAPE_L: "Rodapé L",
 };
 
+export function isMultiPartRemateProduct(productType: RemateProductType): boolean {
+  return productType === "L" || productType === "RODAPE_L";
+}
+
+/** @deprecated Preferir isMultiPartRemateProduct */
 export function isMultiPartRemateTipo(tipo: RematePieceTipo): boolean {
   return tipo === "L" || tipo === "RODAPE_L";
 }

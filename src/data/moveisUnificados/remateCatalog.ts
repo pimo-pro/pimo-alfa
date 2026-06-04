@@ -1,18 +1,43 @@
-import type { RematePieceTipo } from "../../core/remate/rematePieceTypes";
+import type { RemateMountSlot, RemateProductType } from "../../core/remate/rematePieceTypes";
+import { REMATE_PRODUCT_TYPE_LABELS } from "../../core/remate/rematePieceTypes";
 
 export type RemateCatalogItem = {
   id: string;
-  tipo: RematePieceTipo;
+  productType: RemateProductType;
+  defaultMountSlot: RemateMountSlot;
   nome: string;
   descricao?: string;
 };
 
 export const REMATE_CATALOG_ITEMS: RemateCatalogItem[] = [
-  { id: "remate-dir", tipo: "DIR", nome: "Remate Direito" },
-  { id: "remate-esq", tipo: "ESQ", nome: "Remate Esquerdo" },
-  { id: "remate-cima", tipo: "CIMA", nome: "Remate Cima" },
-  { id: "remate-baixo", tipo: "BAIXO", nome: "Remate Baixo" },
-  { id: "remate-l", tipo: "L", nome: "Remate L" },
-  { id: "remate-rodape", tipo: "RODAPE", nome: "Rodapé" },
-  { id: "remate-rodape-l", tipo: "RODAPE_L", nome: "Rodapé L" },
+  {
+    id: "remate-avista",
+    productType: "AVISTA",
+    defaultMountSlot: "FRENTE",
+    nome: REMATE_PRODUCT_TYPE_LABELS.AVISTA,
+  },
+  {
+    id: "remate-completo",
+    productType: "COMPLETO",
+    defaultMountSlot: "FRENTE",
+    nome: REMATE_PRODUCT_TYPE_LABELS.COMPLETO,
+  },
+  {
+    id: "remate-l",
+    productType: "L",
+    defaultMountSlot: "DIR",
+    nome: REMATE_PRODUCT_TYPE_LABELS.L,
+  },
+  {
+    id: "remate-rodape",
+    productType: "RODAPE",
+    defaultMountSlot: "FUNDO",
+    nome: REMATE_PRODUCT_TYPE_LABELS.RODAPE,
+  },
+  {
+    id: "remate-rodape-l",
+    productType: "RODAPE_L",
+    defaultMountSlot: "FUNDO",
+    nome: REMATE_PRODUCT_TYPE_LABELS.RODAPE_L,
+  },
 ];

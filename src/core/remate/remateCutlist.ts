@@ -3,6 +3,7 @@ import { getMaterialByIdOrLabel } from "../materials/service";
 import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
 import type { RematePiece } from "./rematePieceTypes";
+import { inferProductTypeFromLegacy } from "./remateProductRules";
 
 function toCutDimensions(remate: RematePiece): CutListItem["dimensoes"] {
   return {
@@ -38,6 +39,10 @@ export function buildRemateCutlistItems(
       metadata: {
         panelId: remate.id,
         remateId: remate.id,
+        productType: remate.productType ?? inferProductTypeFromLegacy(remate),
+        mountSlot: remate.mountSlot,
+        partRole: remate.partRole,
+        parentGroupId: remate.parentGroupId,
         remateType: remate.tipo,
         rematePosition: remate.tipo,
       },

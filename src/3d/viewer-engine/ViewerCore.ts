@@ -125,10 +125,21 @@ import {
   cloneInternalSelectionState,
 } from "./selection";
 import { SmartSnapping } from "./snapping/SmartSnapping";
+import { RemateSmartSnapping } from "./snapping/RemateSmartSnapping";
 import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
 import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
 import { RematePieceVisualizer, type RematePieceVisualBridge } from "./remate/RematePieceVisualizer";
+import {
+  computeMountFrameM,
+  faceOffsetsFromPositionM,
+  resolveMountSlot,
+} from "../../core/remate/remateMountFrame";
+import { getRemateEnvelopeBoundsM } from "../../core/remate/rematePlacement";
+import {
+  applyRemateRotationSnapToMesh,
+  rotationSnapIndexFromLocalY,
+} from "../../core/remate/remateRotationSnap";
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
 import { mToMm } from "../../utils/units";
@@ -431,9 +442,11 @@ export class ViewerCore {
   private getProjectMeasurementsFn: () => InternalMeasurementEntry[] = () => [];
   private onInternalMeasurementSavedFn: (_entry: InternalMeasurementEntry) => void = () => {};
   private smartSnappingEngine!: SmartSnapping;
+  private remateSmartSnapping!: RemateSmartSnapping;
   private autoLayoutEngine!: AutoLayoutEngine;
   private orlaVisualizer = new OrlaVisualizer();
   private remateVisualizer = new RematePieceVisualizer();
+  private remateVisualBridge: RematePieceVisualBridge | null = null;
   private hematiVisualizer = new HematiVisualizer();
   private rodapeVisualizer = new RodapeVisualizer();
   private readonly overlayCoordinator = new ViewerOverlayCoordinator();
@@ -651,6 +664,11 @@ export class ViewerCore {
       getRoomBounds: () => this.roomBounds,
       getRoomOpenings: () => this.getRoomOpeningsForSnapping(),
     });
+    this.remateSmartSnapping = new RemateSmartSnapping({
+      getContainer: () => this.container,
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+    });
+    this.remateSmartSnapping.enable();
     this.snapping = {
       enable: () => this.smartSnappingEngine.enable(),
       disable: () => this.smartSnappingEngine.disable(),
@@ -714,7 +732,10 @@ export class ViewerCore {
     this.transformControls.showY = true;
     this.transformControls.showZ = true;
     this.transformControls.addEventListener("mouseDown", () => {
-      if (this.viewerState.getSelectedBox()) {
+      if (this.viewerState.getSelectedRemate()) {
+        const obj = this.transformControls!.object;
+        if (obj) this.remateSmartSnapping.onDragStart(obj as THREE.Object3D);
+      } else if (this.viewerState.getSelectedBox()) {
         const obj = this.transformControls!.object;
         if (obj && "position" in obj) {
           this.dragStartZForShiftLock = (obj as THREE.Object3D).position.z;
@@ -916,6 +937,7 @@ export class ViewerCore {
   }
 
   bindRemateBridge(bridge: RematePieceVisualBridge | null): void {
+    this.remateVisualBridge = bridge;
     this.remateVisualizer.bindBridge(bridge);
     this.syncRemateVisuals();
   }
@@ -4539,6 +4561,7 @@ export class ViewerCore {
     this.viewerState.setTransformControlsDragging(false);
     this.overlayCoordinator.clearTransientOverlays();
     this.smartSnappingEngine.onDragEnd();
+    this.remateSmartSnapping.onDragEnd();
     this.viewerState.setSuppressNextCanvasClick(true);
     this.viewerTools.applyCurrentTool();
     this.notifyBoxTransform();
@@ -4571,12 +4594,12 @@ export class ViewerCore {
         width: widthMm,
         height: heightMm,
         depth: depthMm,
-        followBox: false,
+        placementMode: "FREE",
       });
       return;
     }
 
-    if (entry?.mesh) {
+    if (entry?.mesh && boxId) {
       entry.mesh.updateMatrixWorld(true);
       const inv = new THREE.Matrix4().copy(entry.mesh.matrixWorld).invert();
       const local = mesh.position.clone().applyMatrix4(inv);
@@ -4585,14 +4608,35 @@ export class ViewerCore {
       const invBoxQuat = boxQuat.clone().invert();
       localQuat.premultiply(invBoxQuat);
       const euler = new THREE.Euler().setFromQuaternion(localQuat);
+
+      const position = {
+        xMm: local.x * 1000,
+        yMm: local.y * 1000,
+        zMm: local.z * 1000,
+      };
+      const rotation = { xRad: euler.x, yRad: euler.y, zRad: euler.z };
+
+      const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === remateId);
+      let faceOffsets = piece?.faceOffsets;
+      if (piece?.parentBoxId) {
+        const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
+        if (cfg) {
+          const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
+          const slot = piece.mountSlot ?? resolveMountSlot(piece);
+          const frame = computeMountFrameM(bounds, slot);
+          const snapIdx =
+            tool === "rotate"
+              ? rotationSnapIndexFromLocalY(rotation.yRad)
+              : piece?.faceOffsets?.rotationSnapIndex;
+          faceOffsets = faceOffsetsFromPositionM(frame, position, snapIdx);
+        }
+      }
+
       this.onRemateTransform?.(remateId, {
-        position: {
-          xMm: local.x * 1000,
-          yMm: local.y * 1000,
-          zMm: local.z * 1000,
-        },
-        rotation: { xRad: euler.x, yRad: euler.y, zRad: euler.z },
-        followBox: false,
+        position,
+        rotation,
+        placementMode: "FREE",
+        ...(faceOffsets ? { faceOffsets } : {}),
       });
       return;
     }
@@ -4608,7 +4652,7 @@ export class ViewerCore {
         yRad: mesh.rotation.y,
         zRad: mesh.rotation.z,
       },
-      followBox: false,
+      placementMode: "FREE",
     });
   }
 
@@ -4668,17 +4712,42 @@ export class ViewerCore {
       this.clampSelectedWallChildTransform();
       return;
     }
-    if (
-      this.viewerState.getSelectedRemate() ||
-      this.viewerState.getSelectedHemati() ||
-      this.viewerState.getSelectedRodape()
-    ) {
+
+    const selectedRemateId = this.viewerState.getSelectedRemate();
+    const isDragging = this.viewerState.getTransformControlsDragging();
+    const currentTool = this.viewerState.getCurrentTool();
+
+    if (selectedRemateId) {
+      const mesh = this.remateVisualizer.getMeshByRemateId(selectedRemateId);
+      const obj = this.transformControls?.object;
+      if (isDragging && mesh && obj === mesh) {
+        const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === selectedRemateId);
+        const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
+        const entry = boxId ? this.boxes.get(boxId) : undefined;
+
+        if (currentTool === "translate" && entry && piece && boxId) {
+          const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
+          if (cfg) {
+            this.remateSmartSnapping.applyDuringTranslate({
+              mesh,
+              boxEntry: entry,
+              boxConfig: cfg,
+            });
+          }
+        } else if (currentTool === "translate" && piece && !boxId) {
+          this.remateSmartSnapping.applyStandaloneGridSnap(mesh);
+        } else if (currentTool === "rotate") {
+          applyRemateRotationSnapToMesh(mesh, entry?.mesh ?? null);
+        }
+      }
+      return;
+    }
+
+    if (this.viewerState.getSelectedHemati() || this.viewerState.getSelectedRodape()) {
       return;
     }
 
     const selectedBoxId = this.viewerState.getSelectedBox();
-    const currentTool = this.viewerState.getCurrentTool();
-    const isDragging = this.viewerState.getTransformControlsDragging();
     if (selectedBoxId && isDragging && currentTool === "translate") {
       const entry = this.boxes.get(selectedBoxId);
       const obj = this.transformControls?.object;
@@ -5333,6 +5402,7 @@ export class ViewerCore {
     this.autoLayoutEngine?.bindBridge(null);
     this.orlaVisualizer.bindBridge(null);
     this.orlaVisualizer.dispose();
+    this.remateVisualBridge = null;
     this.remateVisualizer.bindBridge(null);
     this.remateVisualizer.dispose();
     this.hematiVisualizer.bindBridge(null);
@@ -5413,6 +5483,7 @@ export class ViewerCore {
     this.measurementOverlay.dispose();
     this.internalRulerEngine.dispose();
     this.smartSnappingEngine.dispose();
+    this.remateSmartSnapping.dispose();
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();

@@ -63,6 +63,8 @@ export class ViewerTools {
         controls.detach();
         controls.attach(remateMesh);
         controls.setMode(mode);
+        const hasParentBox = Boolean(remateMesh.userData.boxId);
+        controls.setSpace(hasParentBox ? "local" : "world");
         controls.setSize(0.35);
         e.applyTransformControlsMouseGuard();
         e.logTransformDiagnostic("attach-remate", { remateId: selectedRemateId, attachedUuid: remateMesh.uuid });
