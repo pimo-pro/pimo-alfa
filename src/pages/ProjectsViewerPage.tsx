@@ -122,14 +122,14 @@ export default function ProjectsViewerPage() {
       ...piece,
       sourceProjectId: selectedId,
     }));
-    window.dispatchEvent(new CustomEvent("pimo:open-nesting-v3", {
-      detail: {
+    navigate("/nesting_v3", {
+      state: {
+        openNestingV3: true,
         pieces,
         projectId: selectedId,
         projectName: entry.recordName ?? entry.projectState.projectName,
       },
-    }));
-    navigate("/");
+    });
   }, [entries, ids, loadedIds, mergeSelectedIds, navigate]);
 
   const visibilityRows = useMemo((): ShowroomVisibilityRow[] => {

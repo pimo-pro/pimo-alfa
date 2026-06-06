@@ -4,6 +4,8 @@
  * Lê tipos existentes (read-only), nunca os modifica.
  */
 
+import type { NestingV3Settings } from "./nestingV3Settings";
+
 // ── Furo associado a uma peça ─────────────────────────────────────────────────
 
 export interface V3Hole {
@@ -72,7 +74,9 @@ export interface NestingV3State {
   placements: V3Placement[];
   /** Peças na lista lateral (não colocadas em nenhum sheet). */
   unplacedPieceIds: string[];
-  /** Folga entre peças (kerf) em mm. */
+  /** Configurações de nesting da sessão (folha, margens, kerf, rotação). */
+  settings: NestingV3Settings;
+  /** @deprecated usar settings.kerfMm */
   kerfMm: number;
   /** Sheet atualmente visível na área central. */
   activeSheetIndex: number;

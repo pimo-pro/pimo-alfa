@@ -13,34 +13,34 @@ import type {
 } from "./nestingV3Types";
 import { runNestingV3AutoLayout, getPieceColor } from "./nestingV3Engine";
 import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
-
-// ── Sheet padrão ──────────────────────────────────────────────────────────────
-
-const DEFAULT_SHEET: V3Sheet = {
-  index: 0,
-  widthMm: 2800,
-  heightMm: 2070,
-  thicknessMm: 19,
-  materialName: "Folha padrão",
-};
+import { loadNestingV3SettingsFromGlobal, type NestingV3Settings } from "./nestingV3Settings";
+import { buildInitialSheetsForPieces, cloneDefaultSheet, defaultSheetFromSettings } from "./nestingSheetsFactory";
+import { findValidPlacement } from "./nestingV3Placement";
 
 function makeDefaultState(): NestingV3State {
+  const settings = loadNestingV3SettingsFromGlobal();
   return {
-    sheets: [{ ...DEFAULT_SHEET }],
+    sheets: [defaultSheetFromSettings(settings)],
     pieces: [],
     placements: [],
     unplacedPieceIds: [],
-    kerfMm: 4,
+    settings,
+    kerfMm: settings.kerfMm,
     activeSheetIndex: 0,
   };
 }
 
 function stateFromV3Pieces(pieces: V3Piece[]): NestingV3State {
-  const base = makeDefaultState();
+  const settings = loadNestingV3SettingsFromGlobal();
+  const sheets = buildInitialSheetsForPieces(pieces, settings);
   return {
-    ...base,
+    sheets,
     pieces,
+    placements: [],
     unplacedPieceIds: pieces.map((piece) => piece.id),
+    settings,
+    kerfMm: settings.kerfMm,
+    activeSheetIndex: 0,
   };
 }
 
@@ -74,7 +74,6 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
   const [state, setState] = useState<NestingV3State>(() => {
     const base = makeDefaultState();
     if (initialCutPieces.length === 0) return base;
-    // Expand quantities
     const pieces: V3Piece[] = [];
     let idx = 0;
     for (const cp of initialCutPieces) {
@@ -83,7 +82,7 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
         pieces.push(cutPieceToV3(cp, idx++));
       }
     }
-    return { ...base, pieces, unplacedPieceIds: pieces.map((p) => p.id) };
+    return { ...stateFromV3Pieces(pieces) };
   });
 
   const [dragState, setDragState] = useState<V3DragState | null>(null);
@@ -120,11 +119,11 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
 
   const runAutoLayout = useCallback(() => {
     setState((prev) => {
-      const result = runNestingV3AutoLayout(prev.pieces, prev.sheets, prev.kerfMm);
-      // Add sheets if engine needed more
+      const result = runNestingV3AutoLayout(prev.pieces, prev.sheets, prev.settings);
+      const template = prev.sheets[0] ?? defaultSheetFromSettings(prev.settings);
       const newSheets = [...prev.sheets];
       while (newSheets.length < result.sheetsUsed) {
-        newSheets.push({ ...DEFAULT_SHEET, index: newSheets.length });
+        newSheets.push(cloneDefaultSheet(newSheets.length, template));
       }
       const rotatedById = new Map(result.placements.map((placement) => [placement.pieceId, placement.rotated === true]));
       return {
@@ -141,20 +140,33 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
     });
   }, []);
 
-  // ── Move piece on sheet ─────────────────────────────────────────────────────
+  // ── Move piece on sheet (com validação de overlap) ───────────────────────────
 
   const movePiece = useCallback((
     pieceId: string,
     sheetIndex: number,
     xMm: number,
     yMm: number
-  ) => {
+  ): boolean => {
+    let accepted = false;
     setState((prev) => {
+      const piece = prev.pieces.find((p) => p.id === pieceId);
+      const sheet = prev.sheets[sheetIndex];
+      if (!piece || !sheet) return prev;
+
+      const valid = findValidPlacement(
+        pieceId, sheetIndex, xMm, yMm,
+        piece, sheet, prev.placements, prev.pieces, prev.settings
+      );
+      if (!valid) return prev;
+
+      accepted = true;
       const placements = prev.placements.filter((p) => p.pieceId !== pieceId);
-      placements.push({ pieceId, sheetIndex, xMm: Math.max(0, xMm), yMm: Math.max(0, yMm) });
+      placements.push({ pieceId, sheetIndex, xMm: valid.xMm, yMm: valid.yMm });
       const unplaced = prev.unplacedPieceIds.filter((id) => id !== pieceId);
       return { ...prev, placements, unplacedPieceIds: unplaced };
     });
+    return accepted;
   }, []);
 
   // ── Remove from sheet → back to sidebar ────────────────────────────────────
@@ -172,26 +184,65 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
   // ── Rotate piece ────────────────────────────────────────────────────────────
 
   const rotatePiece = useCallback((pieceId: string) => {
-    setState((prev) => ({
-      ...prev,
-      pieces: prev.pieces.map((p) => {
-        if (p.id !== pieceId) return p;
-        const next = ((p.rotation + 90) % 360) as 0 | 90 | 180 | 270;
-        return { ...p, rotation: next };
-      }),
-    }));
+    setState((prev) => {
+      const placement = prev.placements.find((p) => p.pieceId === pieceId);
+      const piece = prev.pieces.find((p) => p.id === pieceId);
+      if (!piece) return prev;
+
+      const nextRotation = ((piece.rotation + 90) % 360) as 0 | 90 | 180 | 270;
+      const rotatedPiece = { ...piece, rotation: nextRotation };
+
+      if (!placement) {
+        return {
+          ...prev,
+          pieces: prev.pieces.map((p) => (p.id === pieceId ? rotatedPiece : p)),
+        };
+      }
+
+      const sheet = prev.sheets[placement.sheetIndex];
+      if (!sheet) return prev;
+
+      const valid = findValidPlacement(
+        pieceId, placement.sheetIndex, placement.xMm, placement.yMm,
+        rotatedPiece, sheet, prev.placements, prev.pieces, prev.settings
+      );
+
+      const placements = prev.placements.map((p) =>
+        p.pieceId === pieceId && valid
+          ? { ...p, xMm: valid.xMm, yMm: valid.yMm }
+          : p
+      );
+
+      return {
+        ...prev,
+        pieces: prev.pieces.map((p) => (p.id === pieceId ? rotatedPiece : p)),
+        placements: valid ? placements : prev.placements.filter((p) => p.pieceId !== pieceId),
+        unplacedPieceIds: valid
+          ? prev.unplacedPieceIds.filter((id) => id !== pieceId)
+          : [...new Set([...prev.unplacedPieceIds, pieceId])],
+      };
+    });
   }, []);
 
   // ── Move piece to different sheet ──────────────────────────────────────────
 
   const movePieceToSheet = useCallback((pieceId: string, targetSheetIndex: number) => {
     setState((prev) => {
-      const existing = prev.placements.find((p) => p.pieceId === pieceId);
-      if (!existing) return prev;
-      const placements = prev.placements.map((p) =>
-        p.pieceId === pieceId ? { ...p, sheetIndex: targetSheetIndex, xMm: 0, yMm: 0 } : p
+      const piece = prev.pieces.find((p) => p.id === pieceId);
+      const sheet = prev.sheets[targetSheetIndex];
+      if (!piece || !sheet) return prev;
+
+      const valid = findValidPlacement(
+        pieceId, targetSheetIndex, prev.settings.marginMm, prev.settings.marginMm,
+        piece, sheet, prev.placements, prev.pieces, prev.settings
       );
-      return { ...prev, placements };
+      if (!valid) return prev;
+
+      const placements = prev.placements
+        .filter((p) => p.pieceId !== pieceId)
+        .concat({ pieceId, sheetIndex: targetSheetIndex, xMm: valid.xMm, yMm: valid.yMm });
+      const unplaced = prev.unplacedPieceIds.filter((id) => id !== pieceId);
+      return { ...prev, placements, unplacedPieceIds: unplaced, activeSheetIndex: targetSheetIndex };
     });
   }, []);
 
@@ -236,10 +287,13 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
   // ── Add / remove sheets ─────────────────────────────────────────────────────
 
   const addSheet = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      sheets: [...prev.sheets, { ...DEFAULT_SHEET, index: prev.sheets.length }],
-    }));
+    setState((prev) => {
+      const template = prev.sheets[prev.activeSheetIndex] ?? defaultSheetFromSettings(prev.settings);
+      return {
+        ...prev,
+        sheets: [...prev.sheets, cloneDefaultSheet(prev.sheets.length, template)],
+      };
+    });
   }, []);
 
   const removeSheet = useCallback((sheetIndex: number) => {
@@ -264,7 +318,22 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
   }, []);
 
   const setKerfMm = useCallback((v: number) => {
-    setState((prev) => ({ ...prev, kerfMm: v }));
+    setState((prev) => ({
+      ...prev,
+      kerfMm: v,
+      settings: { ...prev.settings, kerfMm: v },
+    }));
+  }, []);
+
+  const updateSettings = useCallback((patch: Partial<NestingV3Settings>) => {
+    setState((prev) => {
+      const settings = { ...prev.settings, ...patch };
+      return {
+        ...prev,
+        settings,
+        kerfMm: settings.kerfMm,
+      };
+    });
   }, []);
 
   const updateSheet = useCallback((idx: number, patch: Partial<V3Sheet>) => {
@@ -280,6 +349,14 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
       placements: [],
       unplacedPieceIds: prev.pieces.map((p) => p.id),
     }));
+  }, []);
+
+  const focusPiece = useCallback((pieceId: string) => {
+    setState((prev) => {
+      const placement = prev.placements.find((p) => p.pieceId === pieceId);
+      if (!placement) return prev;
+      return { ...prev, activeSheetIndex: placement.sheetIndex };
+    });
   }, []);
 
   return {
@@ -301,7 +378,9 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
     removeSheet,
     setActiveSheet,
     setKerfMm,
+    updateSettings,
     updateSheet,
     clearAll,
+    focusPiece,
   };
 }

@@ -7,6 +7,8 @@
  */
 
 import type { V3Piece, V3Sheet, V3Placement, V3AutoLayoutResult } from "./nestingV3Types";
+import type { NestingV3Settings } from "./nestingV3Settings";
+import { allowRotationForPiece } from "./nestingV3Settings";
 import { runHybridNesting } from "../core/nesting3/hybridNesting";
 import type { Nesting3Piece, Nesting3Sheet } from "../core/nesting3/nesting3Types";
 
@@ -33,9 +35,11 @@ function effectiveDims(piece: V3Piece): { w: number; h: number } {
 export function runNestingV3AutoLayout(
   pieces: V3Piece[],
   sheets: V3Sheet[],
-  kerfMm: number
+  settings: NestingV3Settings
 ): V3AutoLayoutResult {
   if (pieces.length === 0) return { placements: [], unplacedPieceIds: [], sheetsUsed: 0 };
+  const margin = settings.marginMm;
+  const kerfMm = settings.kerfMm;
   const nestingPieces: Nesting3Piece[] = pieces.map((piece, index) => ({
     id: piece.id,
     widthMm: piece.widthMm,
@@ -43,15 +47,20 @@ export function runNestingV3AutoLayout(
     materialId: piece.materialId,
     materialName: piece.materialName,
     thicknessMm: piece.thicknessMm,
-    allowRotation: true,
+    allowRotation: allowRotationForPiece(piece, settings),
     grainDirection: "none",
     originalIndex: index,
   }));
-  const fallbackSheet: V3Sheet = { index: 0, widthMm: 2800, heightMm: 2070, thicknessMm: 19 };
+  const fallbackSheet: V3Sheet = {
+    index: 0,
+    widthMm: settings.sheetWidthMm,
+    heightMm: settings.sheetHeightMm,
+    thicknessMm: settings.sheetThicknessMm,
+  };
   const nestingSheets: Nesting3Sheet[] = (sheets.length ? sheets : [fallbackSheet]).map((sheet) => ({
     index: sheet.index,
-    widthMm: sheet.widthMm,
-    heightMm: sheet.heightMm,
+    widthMm: Math.max(1, sheet.widthMm - margin * 2),
+    heightMm: Math.max(1, sheet.heightMm - margin * 2),
     materialId: sheet.materialId,
     materialName: sheet.materialName,
     thicknessMm: sheet.thicknessMm,
@@ -60,8 +69,8 @@ export function runNestingV3AutoLayout(
   const placements: V3Placement[] = result.placements.map((placement) => ({
     pieceId: placement.pieceId,
     sheetIndex: placement.sheetIndex,
-    xMm: placement.xMm,
-    yMm: placement.yMm,
+    xMm: placement.xMm + margin,
+    yMm: placement.yMm + margin,
     rotated: placement.rotated === true,
   }));
   return {

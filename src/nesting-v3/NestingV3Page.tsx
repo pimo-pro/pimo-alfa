@@ -27,6 +27,12 @@ import { downloadNestingV3Labels } from "./nestingV3Labels";
 import type { V3Piece, V3Placement } from "./nestingV3Types";
 import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
 import { Icon } from "../components/icons/Icon";
+import { useProject } from "../context/useProject";
+import { convertProjectToV3Pieces } from "./utils/convertProjectToV3Pieces";
+import { IndustrialThreeColumnLayout } from "@/industrial/ui/layouts/IndustrialThreeColumnLayout";
+import NestingV3StationSidebar from "./components/NestingV3StationSidebar";
+import NestingV3SettingsPanel from "./components/NestingV3SettingsPanel";
+import type { V3Sheet } from "./nestingV3Types";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +42,8 @@ interface NestingV3PageProps {
   projectName?: string;
   projectId?: string;
   onClose?: () => void;
+  /** "station" = rota dedicada com shell industrial PIMO */
+  layout?: "standalone" | "station";
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
@@ -48,6 +56,8 @@ const STATUS_H     = 26;
 const HOLE_RADIUS_MIN = 2.5;
 const ZOOM_MIN = 0.05;
 const ZOOM_MAX = 4;
+/** 1 unidade SVG = 1 mm (evita SVG gigante e drag incoerente). */
+const CANVAS_SCALE = 1;
 
 // ── Theme colours (CSS vars with fallback) ────────────────────────────────────
 
@@ -192,22 +202,24 @@ function btnStyle(col: string): React.CSSProperties {
 
 // ── Sidebar: piece list ───────────────────────────────────────────────────────
 
-function PieceSidebar({ unplacedIds, pieces, selectedId, onSelect, onDragStart, onRemove, onRotate }:{
-  unplacedIds: string[]; pieces: V3Piece[]; selectedId: string | null;
+function PieceSidebar({ unplacedIds, pieces, sheets, placements, selectedId, onSelect, onDragStart, onRemove, onRotate, onFocus, onSelectSheet }:{
+  unplacedIds: string[]; pieces: V3Piece[]; sheets: V3Sheet[];
+  placements: V3Placement[]; selectedId: string | null;
   onSelect: (id: string) => void;
   onDragStart: (e: PointerEvent<HTMLDivElement>, id: string) => void;
   onRemove: (id: string) => void;
   onRotate: (id: string) => void;
+  onFocus: (id: string) => void;
+  onSelectSheet: (index: number) => void;
 }) {
   const unplaced = pieces.filter((p) => unplacedIds.includes(p.id));
-  const placed   = pieces.filter((p) => !unplacedIds.includes(p.id));
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
       <div style={{ padding: "10px 10px 6px", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: C.muted, flexShrink: 0, fontFamily: font }}>
         Por colocar ({unplaced.length})
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 6px 6px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 6px 6px", minHeight: 0 }}>
         {unplaced.length === 0 && (
           <p style={{ fontSize: 11, color: C.muted, padding: "8px 4px", fontFamily: font }}>Todas colocadas ✓</p>
         )}
@@ -218,22 +230,36 @@ function PieceSidebar({ unplacedIds, pieces, selectedId, onSelect, onDragStart, 
             onRotate={() => onRotate(piece.id)}
             onRemove={() => onRemove(piece.id)} />
         ))}
-        {placed.length > 0 && (
-          <>
-            <div style={{ padding: "8px 4px 4px", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: C.muted, fontFamily: font }}>
-              Colocadas ({placed.length})
+
+        {sheets.map((_sheet, si) => {
+          const onSheet = placements
+            .filter((p) => p.sheetIndex === si)
+            .map((p) => pieces.find((pc) => pc.id === p.pieceId))
+            .filter((p): p is V3Piece => p != null);
+          if (onSheet.length === 0) return null;
+          return (
+            <div key={si} style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => onSelectSheet(si)}
+                style={{ width: "100%", textAlign: "left", padding: "6px 4px 4px", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: C.muted, fontFamily: font, background: "transparent", border: "none", cursor: "pointer" }}
+              >
+                Folha {si + 1} ({onSheet.length})
+              </button>
+              {onSheet.map((piece) => (
+                <div key={piece.id}
+                  onClick={() => { onSelect(piece.id); onFocus(piece.id); }}
+                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 7px", marginBottom: 2, borderRadius: 6, cursor: "pointer", background: selectedId === piece.id ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedId === piece.id ? "rgba(59,130,246,0.3)" : "transparent"}` }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: piece.color, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 11, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: font }}>{piece.name}</p>
+                    <p style={{ margin: 0, fontSize: 9, color: C.muted, fontFamily: font }}>{piece.widthMm}×{piece.heightMm} mm</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            {placed.map((piece) => (
-              <div key={piece.id}
-                onClick={() => onSelect(piece.id)}
-                style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 7px", marginBottom: 2, borderRadius: 6, opacity: 0.6, cursor: "pointer", background: selectedId === piece.id ? "rgba(59,130,246,0.1)" : "transparent" }}>
-                <div style={{ width: 12, height: 12, borderRadius: 3, background: piece.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: C.muted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: font }}>{piece.name}</span>
-                <span style={{ fontSize: 9, color: C.green }}>✓</span>
-              </div>
-            ))}
-          </>
-        )}
+          );
+        })}
       </div>
     </div>
   );
@@ -327,6 +353,7 @@ interface SheetCanvasProps {
   pieces: V3Piece[];
   placements: V3Placement[];
   kerfMm: number;
+  marginMm?: number;
   scale: number;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
@@ -337,16 +364,21 @@ interface SheetCanvasProps {
   sheetCount: number;
 }
 
-function SheetCanvas({ sheet, sheetIndex, pieces, placements, kerfMm: _kerfMm, scale, selectedId, onSelect, onPiecePointerDown, onRotate, onReturn, onMoveToSheet, sheetCount }: SheetCanvasProps) {
+function SheetCanvas({ sheet, sheetIndex, pieces, placements, kerfMm: _kerfMm, marginMm = 0, scale, selectedId, onSelect, onPiecePointerDown, onRotate, onReturn, onMoveToSheet, sheetCount }: SheetCanvasProps) {
   const W = sheet.widthMm * scale;
   const H = sheet.heightMm * scale;
   const myPlacements = placements.filter((p) => p.sheetIndex === sheetIndex);
+  const m = marginMm * scale;
 
   return (
     <svg width={W} height={H} style={{ display: "block", userSelect: "none" }}
       onClick={(e) => { if (e.target === e.currentTarget) onSelect(null); }}>
       {/* Sheet */}
       <rect width={W} height={H} fill={C.sheetBg} stroke={C.sheetBd} strokeWidth={1} />
+      {marginMm > 0 && (
+        <rect x={m} y={m} width={W - m * 2} height={H - m * 2}
+          fill="none" stroke="rgba(59,130,246,0.25)" strokeWidth={0.8} strokeDasharray="4 3" />
+      )}
       {/* Grid dots */}
       {scale > 0.06 && Array.from({ length: Math.floor(sheet.widthMm / 100) + 1 }).map((_, i) =>
         Array.from({ length: Math.floor(sheet.heightMm / 100) + 1 }).map((_, j) => (
@@ -436,10 +468,13 @@ function SheetCanvas({ sheet, sheetIndex, pieces, placements, kerfMm: _kerfMm, s
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 type NestingV3LocationState = {
+  openNestingV3?: boolean;
   pieces?: V3Piece[];
   projectId?: string;
   projectName?: string;
 };
+
+type CanvasViewMode = "single" | "overview";
 
 export default function NestingV3Page({
   initialCutPieces = [],
@@ -447,14 +482,18 @@ export default function NestingV3Page({
   projectName = "Projeto",
   projectId,
   onClose,
+  layout = "standalone",
 }: NestingV3PageProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { project } = useProject();
   const locationState = (location.state ?? null) as NestingV3LocationState | null;
-  const resolvedPieces = useMemo(
-    () => initialPieces ?? locationState?.pieces ?? [],
-    [initialPieces, locationState?.pieces]
-  );
+  const resolvedPieces = useMemo(() => {
+    const fromPayload = initialPieces ?? locationState?.pieces ?? [];
+    if (fromPayload.length > 0) return fromPayload;
+    if (project.boxes?.length) return convertProjectToV3Pieces(project);
+    return [];
+  }, [initialPieces, locationState?.pieces, project]);
   const resolvedProjectId = projectId ?? locationState?.projectId;
   const resolvedProjectName = locationState?.projectName ?? projectName;
   const {
@@ -462,11 +501,13 @@ export default function NestingV3Page({
     loadPieces,
     runAutoLayout, movePiece, returnToSidebar, rotatePiece,
     movePieceToSheet, addManualPiece, removePiece,
-    addSheet, removeSheet, setActiveSheet, setKerfMm, clearAll,
+    addSheet, removeSheet, setActiveSheet, setKerfMm, updateSettings, updateSheet,
+    clearAll, focusPiece,
   } = useNestingV3(initialCutPieces);
 
   const canvasRef     = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId]     = useState<string | null>(null);
+  const [canvasView, setCanvasView]     = useState<CanvasViewMode>("single");
   const [zoom, setZoom]                 = useState(0.14);
   const [pan, setPan]                   = useState({ x: 20, y: 20 });
   const [isPanning, setIsPanning]       = useState(false);
@@ -536,10 +577,12 @@ export default function NestingV3Page({
     if (!rect) return;
     const canvasX = (e.clientX - rect.left - pan.x) / zoom;
     const canvasY = (e.clientY - rect.top  - pan.y) / zoom;
+    const xMm = canvasX / CANVAS_SCALE;
+    const yMm = canvasY / CANVAS_SCALE;
     setDragState({
       pieceId: id,
-      offsetX: (canvasX - pl.xMm) * zoom,
-      offsetY: (canvasY - pl.yMm) * zoom,
+      offsetX: (xMm - pl.xMm) * zoom * CANVAS_SCALE,
+      offsetY: (yMm - pl.yMm) * zoom * CANVAS_SCALE,
       cursorX: e.clientX, cursorY: e.clientY,
       source: "sheet", sourcePlacement: pl,
     });
@@ -581,18 +624,18 @@ export default function NestingV3Page({
     const rawX = (e.clientX - rect.left - pan.x) / zoom;
     const rawY = (e.clientY - rect.top  - pan.y) / zoom;
 
-    const piece = state.pieces.find((p) => p.id === dragState.pieceId);
-    const { w, h } = piece ? effectiveDims(piece) : { w: 0, h: 0 };
-    const offXmm = dragState.source === "sidebar" ? 0 : dragState.offsetX / zoom;
-    const offYmm = dragState.source === "sidebar" ? 0 : dragState.offsetY / zoom;
-    const xMm = rawX - offXmm;
-    const yMm = rawY - offYmm;
+    const offXmm = dragState.source === "sidebar" ? 0 : dragState.offsetX / zoom / CANVAS_SCALE;
+    const offYmm = dragState.source === "sidebar" ? 0 : dragState.offsetY / zoom / CANVAS_SCALE;
+    const xMm = rawX / CANVAS_SCALE - offXmm;
+    const yMm = rawY / CANVAS_SCALE - offYmm;
 
-    if (activeSheet && xMm + w > 0 && yMm + h > 0 && xMm < activeSheet.widthMm && yMm < activeSheet.heightMm) {
-      movePiece(dragState.pieceId, state.activeSheetIndex,
-        Math.max(0, Math.min(activeSheet.widthMm - w, xMm)),
-        Math.max(0, Math.min(activeSheet.heightMm - h, yMm))
-      );
+    const targetSheetIndex = dragState.source === "sheet"
+      ? (dragState.sourcePlacement?.sheetIndex ?? state.activeSheetIndex)
+      : state.activeSheetIndex;
+
+    const placed = movePiece(dragState.pieceId, targetSheetIndex, xMm, yMm);
+    if (placed) {
+      setActiveSheet(targetSheetIndex);
       setSelectedId(dragState.pieceId);
     } else if (dragState.source === "sheet") {
       returnToSidebar(dragState.pieceId);
@@ -601,7 +644,7 @@ export default function NestingV3Page({
 
     setDragState(null);
     setGhostPos(null);
-  }, [isPanning, dragState, pan, zoom, state, activeSheet, movePiece, returnToSidebar, setDragState]);
+  }, [isPanning, dragState, pan, zoom, state, movePiece, returnToSidebar, setDragState, setActiveSheet]);
 
   // ── Generate all ─────────────────────────────────────────────────────────
 
@@ -621,20 +664,43 @@ export default function NestingV3Page({
 
   const ghostPiece = dragState ? state.pieces.find((p) => p.id === dragState.pieceId) : null;
 
-  return (
+  const leftPanel = (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", background: C.surface }}>
+      <NestingV3SettingsPanel
+        settings={state.settings}
+        activeSheet={activeSheet}
+        onUpdateSettings={updateSettings}
+        onUpdateActiveSheet={(patch) => updateSheet(state.activeSheetIndex, patch)}
+      />
+      <PieceSidebar
+        unplacedIds={state.unplacedPieceIds} pieces={state.pieces}
+        sheets={state.sheets} placements={state.placements}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onDragStart={handleSidebarDragStart}
+        onRemove={removePiece} onRotate={rotatePiece}
+        onFocus={(id) => { focusPiece(id); setSelectedId(id); }}
+        onSelectSheet={setActiveSheet}
+      />
+      <AddPieceForm onAdd={addManualPiece}/>
+    </div>
+  );
+
+  const workspace = (
     <div
-      style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", background:C.bg, color:C.text, fontFamily:font, overflow:"hidden" }}
+      style={{ width:"100%", height: layout === "station" ? "calc(100vh - 280px)" : "100%", display:"flex", flexDirection:"column", background:C.bg, color:C.text, fontFamily:font, overflow:"hidden", borderRadius: layout === "station" ? 8 : 0, border: layout === "station" ? `1px solid ${C.border}` : "none" }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
 
       {/* ── Toolbar ─────────────────────────────────────────────────────── */}
       <div style={{ height:TOOLBAR_H, display:"flex", alignItems:"center", gap:6, padding:"0 12px", background:C.surface, borderBottom:`1px solid ${C.border}`, flexShrink:0, zIndex:10 }}>
-        {(onClose || resolvedProjectId) && (
+        {(layout === "station" || onClose || resolvedProjectId) && (
           <button
             type="button"
             onClick={() => {
               if (resolvedProjectId) navigate(`/projects/viewer?ids=${encodeURIComponent(resolvedProjectId)}`);
+              else if (layout === "station") navigate("/");
               else onClose?.();
             }}
             style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 9px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", fontSize:11, fontFamily:font }}>
@@ -668,6 +734,11 @@ export default function NestingV3Page({
 
         <div style={{ width:1, height:18, background:C.border }}/>
 
+        <button type="button" onClick={() => setCanvasView((v) => v === "single" ? "overview" : "single")}
+          style={toolBtn(canvasView === "overview" ? C.accent : C.muted)}>
+          {canvasView === "overview" ? "Vista folha" : "Vista chão"}
+        </button>
+
         <button type="button" onClick={runAutoLayout}
           style={{ ...toolBtn(C.accent), fontSize:11, display:"flex", alignItems:"center", gap:5 }}>
           <Icon name="grid" size={13}/> Auto Layout
@@ -694,16 +765,27 @@ export default function NestingV3Page({
       {/* ── Body ──────────────────────────────────────────────────────────── */}
       <div style={{ flex:1, display:"flex", minHeight:0 }}>
 
-        {/* Sidebar */}
-        <aside style={{ width:SIDEBAR_W, flexShrink:0, display:"flex", flexDirection:"column", background:C.surface, borderRight:`1px solid ${C.border}`, overflow:"hidden" }}>
-          <PieceSidebar
-            unplacedIds={state.unplacedPieceIds} pieces={state.pieces} selectedId={selectedId}
-            onSelect={setSelectedId}
-            onDragStart={handleSidebarDragStart}
-            onRemove={removePiece} onRotate={rotatePiece}
-          />
-          <AddPieceForm onAdd={addManualPiece}/>
-        </aside>
+        {layout === "standalone" && (
+          <aside style={{ width:SIDEBAR_W, flexShrink:0, display:"flex", flexDirection:"column", background:C.surface, borderRight:`1px solid ${C.border}`, overflow:"hidden" }}>
+            <NestingV3SettingsPanel
+              settings={state.settings}
+              activeSheet={activeSheet}
+              onUpdateSettings={updateSettings}
+              onUpdateActiveSheet={(patch) => updateSheet(state.activeSheetIndex, patch)}
+            />
+            <PieceSidebar
+              unplacedIds={state.unplacedPieceIds} pieces={state.pieces}
+              sheets={state.sheets} placements={state.placements}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onDragStart={handleSidebarDragStart}
+              onRemove={removePiece} onRotate={rotatePiece}
+              onFocus={(id) => { focusPiece(id); setSelectedId(id); }}
+              onSelectSheet={setActiveSheet}
+            />
+            <AddPieceForm onAdd={addManualPiece}/>
+          </aside>
+        )}
 
         {/* Canvas area */}
         <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
@@ -735,17 +817,38 @@ export default function NestingV3Page({
             onPointerDown={handleCanvasPointerDown}
           >
             <div style={{ position:"absolute", transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin:"0 0" }}>
-              {activeSheet && (
+              {canvasView === "overview" ? (
+                <div style={{ display:"flex", flexWrap:"wrap", gap: 24, padding: 16 }}>
+                  {state.sheets.map((sheet, si) => (
+                    <div key={si} style={{ cursor: "pointer" }} onClick={() => { setActiveSheet(si); setCanvasView("single"); }}>
+                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 4, fontFamily: font }}>
+                        Folha {si + 1} — {sheet.widthMm}×{sheet.heightMm} mm
+                      </div>
+                      <SheetCanvas
+                        sheet={sheet} sheetIndex={si}
+                        pieces={state.pieces} placements={state.placements}
+                        kerfMm={state.kerfMm} marginMm={state.settings.marginMm}
+                        scale={CANVAS_SCALE * 0.35}
+                        selectedId={selectedId} onSelect={setSelectedId}
+                        onPiecePointerDown={handlePiecePointerDown}
+                        onRotate={rotatePiece} onReturn={returnToSidebar}
+                        onMoveToSheet={movePieceToSheet} sheetCount={state.sheets.length}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : activeSheet ? (
                 <SheetCanvas
                   sheet={activeSheet} sheetIndex={state.activeSheetIndex}
                   pieces={state.pieces} placements={state.placements}
-                  kerfMm={state.kerfMm} scale={1000}
+                  kerfMm={state.kerfMm} marginMm={state.settings.marginMm}
+                  scale={CANVAS_SCALE}
                   selectedId={selectedId} onSelect={setSelectedId}
                   onPiecePointerDown={handlePiecePointerDown}
                   onRotate={rotatePiece} onReturn={returnToSidebar}
                   onMoveToSheet={movePieceToSheet} sheetCount={state.sheets.length}
                 />
-              )}
+              ) : null}
             </div>
 
             {/* Zoom/pan hint */}
@@ -794,7 +897,7 @@ export default function NestingV3Page({
         return (
           <div style={{
             position:"fixed", left:ghostPos.x - dragState.offsetX, top:ghostPos.y - dragState.offsetY,
-            width: w * zoom, height: h * zoom,
+            width: w * zoom * CANVAS_SCALE, height: h * zoom * CANVAS_SCALE,
             background: ghostPiece.color, border:`2px solid ${C.accent}`,
             borderRadius:4, opacity:0.65, pointerEvents:"none", zIndex:9999,
             display:"flex", alignItems:"center", justifyContent:"center",
@@ -806,6 +909,21 @@ export default function NestingV3Page({
       })()}
     </div>
   );
+
+  if (layout === "station") {
+    return (
+      <IndustrialThreeColumnLayout
+        title="Layout de Corte MANUAL"
+        description={`Nesting V3 — ${resolvedProjectName}`}
+        sidebarOpen={false}
+        leftLeft={<NestingV3StationSidebar />}
+        left={leftPanel}
+        right={workspace}
+      />
+    );
+  }
+
+  return workspace;
 }
 
 function toolBtn(c: string): React.CSSProperties {

@@ -409,6 +409,7 @@ export async function generateMultiProjectFabrication(
 
   const zip = new JSZip();
   const folderNamesUsed = new Set<string>();
+  let tcnFilesAdded = 0;
 
   if (layoutResult && layoutResult.sheets.length > 0) {
     try {
@@ -556,6 +557,7 @@ export async function generateMultiProjectFabrication(
           );
           if (tcnPath && typeof file.tcn === "string") {
             zip.file(tcnPath, file.tcn);
+            tcnFilesAdded += 1;
           }
         }
       }
@@ -636,11 +638,16 @@ export async function generateMultiProjectFabrication(
         );
         if (tcnPathFinal && typeof file.tcn === "string") {
           zip.file(tcnPathFinal, file.tcn);
+          tcnFilesAdded += 1;
         }
       }
     }
   } catch (err) {
     devLogger.error("multiProjectFabrication: CNC global", err);
+  }
+
+  if (allPrefixedItems.length > 0 && tcnFilesAdded === 0) {
+    throw new Error("multiProjectFabrication: nenhum ficheiro TCN foi gerado.");
   }
 
   // PASSO 6 — Drill XML global

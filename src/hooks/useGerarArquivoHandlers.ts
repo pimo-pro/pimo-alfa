@@ -792,6 +792,7 @@ export function useGerarArquivoHandlers() {
           byMaterial.get(key)!.push(item);
         }
         const usedTcnNamesByPath = new Set<string>();
+        let tcnFilesAdded = 0;
         for (const [materialName, itemsForMaterial] of byMaterial) {
           const cncBundle = await buildCncFromCutlistItemsInWorker(
             settingsSnapshot,
@@ -823,8 +824,12 @@ export function useGerarArquivoHandlers() {
             const tcnPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}_cnc_${tcnSuffix}.tcn`);
             if (tcnPathFinal && typeof file.tcn === "string") {
               zip.file(tcnPathFinal, file.tcn);
+              tcnFilesAdded += 1;
             }
           }
+        }
+        if (allItems.length > 0 && tcnFilesAdded === 0) {
+          errors.push({ step: "CNC (TCN)", message: "Nenhum ficheiro TCN foi gerado." });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

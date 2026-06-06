@@ -19,7 +19,7 @@ import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Link, Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
@@ -79,7 +79,7 @@ const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
 const V4Page = lazy(() => import("./pages/V4Page"));
-const NestingV3Page = lazy(() => import("./nesting-v3/NestingV3Page"));
+const NestingV3RoutePage = lazy(() => import("./app/nesting-v3/NestingV3RoutePage"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
@@ -126,13 +126,8 @@ function LegacyApp() {
   const [showDevTest, setShowDevTest] = useState(false);
   const [showAjuda, setShowAjuda] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
-  const [showNestingV3, setShowNestingV3] = useState(false);
-  const [nestingV3Payload, setNestingV3Payload] = useState<{
-    pieces?: V3Piece[];
-    projectId?: string;
-    projectName?: string;
-  } | null>(null);
   const [showUserProjects, setShowUserProjects] = useState(false);
+  const navigate = useNavigate();
   const viewerOptions = useMemo(() => DEFAULT_VIEWER_OPTIONS, []);
   const location = useLocation();
 
@@ -238,15 +233,14 @@ function LegacyApp() {
   };
 
   const navigateToNestingV3 = (payload?: { pieces?: V3Piece[]; projectId?: string; projectName?: string }) => {
-    setNestingV3Payload(payload ?? null);
-    setShowNestingV3(true);
-    setShowAjuda(false);
-    setShowLanding(false);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowPainelReferencia(false);
-    setShowUserProjects(false);
+    navigate("/nesting_v3", {
+      state: {
+        openNestingV3: true,
+        pieces: payload?.pieces,
+        projectId: payload?.projectId,
+        projectName: payload?.projectName,
+      },
+    });
   };
 
   // Listen for Nesting V3 open event (dispatched from UnifiedTopToolbar)
@@ -274,7 +268,7 @@ function LegacyApp() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showLanding || showNestingV3 || showUserProjects ? (
+          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showLanding || showUserProjects ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
               {showPainelReferencia ? (
                 <PainelReferencia />
@@ -290,16 +284,6 @@ function LegacyApp() {
                 <Ajuda />
               ) : showLanding ? (
                 <LandingPage />
-              ) : showNestingV3 ? (
-                <NestingV3Page
-                  initialPieces={nestingV3Payload?.pieces}
-                  projectId={nestingV3Payload?.projectId}
-                  projectName={nestingV3Payload?.projectName}
-                  onClose={() => {
-                    setShowNestingV3(false);
-                    setNestingV3Payload(null);
-                  }}
-                />
               ) : showUserProjects ? (
                 <UserProjectsPage />
               ) : (
@@ -545,6 +529,7 @@ export default function App() {
                 </PermissionRoute>
               }
             />
+            <Route path="/nesting_v3" element={<NestingV3RoutePage />} />
             <Route path="/industrial" element={<IndustrialHomePage />} />
             <Route path="/industrial/supervisor" element={<IndustrialSupervisorDashboardPage />} />
             <Route path="/industrial/work-orders" element={<IndustrialWorkOrdersPage />} />

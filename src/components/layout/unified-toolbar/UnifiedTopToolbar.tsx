@@ -5,7 +5,9 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useProject } from "../../../context/useProject";
+import { convertProjectToV3Pieces } from "../../../nesting-v3/utils/convertProjectToV3Pieces";
 import { VIEWER_TOOLBAR_ITEMS, TOOLS_3D_ITEMS } from "../../../constants/toolbarConfig";
 import type { Tool3DId } from "../../../constants/toolbarConfig";
 import UnifiedExportPanel from "../../modals/UnifiedExportPanel";
@@ -97,6 +99,7 @@ export default function UnifiedTopToolbar({
   onToggleLock,
 }: UnifiedTopToolbarProps) {
   const { project, actions } = useProject();
+  const navigate = useNavigate();
   const { viewerApi } = usePimoViewerContext() ?? {};
   const [exportPanelOpen, setExportPanelOpen] = useState(false);
   const photoModePanelOpen = useUiStore((s) => s.photoModePanelOpen);
@@ -908,7 +911,14 @@ export default function UnifiedTopToolbar({
           onClose={() => setExportPanelOpen(false)}
           onOpenNestingV3={() => {
             setExportPanelOpen(false);
-            window.dispatchEvent(new CustomEvent("pimo:open-nesting-v3"));
+            const pieces = convertProjectToV3Pieces(project);
+            navigate("/nesting_v3", {
+              state: {
+                openNestingV3: true,
+                pieces,
+                projectName: project.projectName,
+              },
+            });
           }}
         />
       </div>
