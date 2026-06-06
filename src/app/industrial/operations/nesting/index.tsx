@@ -1,13 +1,8 @@
-import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
+import { Navigate } from 'react-router-dom';
 
-import WorkOrderStationPanel from '@/app/industrial/work-orders/components/WorkOrderStationPanel';
+import { useIndustrialPageState } from '@/industrial/ui/components';
 
 export default function IndustrialNestingOperationRoute() {
   useIndustrialPageState();
-
-  return (
-    <IndustrialLayout title="Operação Nesting" description="Fila de nesting, QR e registo de execução.">
-      <WorkOrderStationPanel station="nesting" />
-    </IndustrialLayout>
-  );
+  return <Navigate to="/industrial/work-orders/nesting" replace />;
 }

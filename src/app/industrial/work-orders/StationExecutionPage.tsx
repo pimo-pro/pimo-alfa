@@ -6,7 +6,6 @@ function isStation(value: string | undefined): value is IndustrialStation {
   return !!value && (INDUSTRIAL_STATIONS as readonly string[]).includes(value);
 }
 
-/** Alias legado → páginas canónicas em `/industrial/work-orders/{station}`. */
 export default function StationExecutionPage() {
   const { station } = useParams<{ station: string }>();
   if (!isStation(station)) {

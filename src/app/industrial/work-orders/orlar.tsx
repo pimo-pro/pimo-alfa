@@ -1,5 +1,5 @@
-import StationWorkOrderPage from './components/StationWorkOrderPage';
+import StationPageShell from './components/StationPageShell';
 
 export default function OrlarWorkOrderPage() {
-  return <StationWorkOrderPage station="orlar" />;
+  return <StationPageShell station="orlar" />;
 }

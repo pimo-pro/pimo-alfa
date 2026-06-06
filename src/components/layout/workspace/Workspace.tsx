@@ -821,19 +821,27 @@ const hasShownViewerReadyToastRef = useRef(false);
       const remate = projectRef.current.remates?.find((r) => r.id === remateId);
       if (!remate) return;
 
-      const delta =
-        key === "ArrowUp"
-          ? new Vector3(0, stepMm / 1000, 0)
-          : key === "ArrowDown"
-            ? new Vector3(0, -stepMm / 1000, 0)
-            : key === "ArrowLeft"
-              ? new Vector3(-stepMm / 1000, 0, 0)
-              : new Vector3(stepMm / 1000, 0, 0);
+      const stepM = stepMm / 1000;
+      let localU = 0;
+      let localV = 0;
+      if (key === "ArrowUp") localV = stepM;
+      else if (key === "ArrowDown") localV = -stepM;
+      else if (key === "ArrowLeft") localU = -stepM;
+      else localU = stepM;
+
+      const yaw = remate.rotation?.yRad ?? 0;
+      const cos = Math.cos(yaw);
+      const sin = Math.sin(yaw);
+      const delta = new Vector3(
+        localU * cos - localV * sin,
+        localV,
+        localU * sin + localV * cos
+      );
 
       let nextPosition = { ...remate.position };
 
       if (remate.parentBoxId) {
-        const worldMatrix = window.viewerCore?.getBoxWorldMatrix?.(remate.parentBoxId);
+        const worldMatrix = window.viewerCore?.getBoxWorldMatrix?.(remate.parentBoxId) as Matrix4 | undefined;
         if (worldMatrix) {
           const inv = new Matrix4().copy(worldMatrix).invert();
           const deltaLocal = delta.clone().applyMatrix4(inv);
@@ -847,7 +855,7 @@ const hasShownViewerReadyToastRef = useRef(false);
         nextPosition = {
           xMm: remate.position.xMm + delta.x * 1000,
           yMm: remate.position.yMm + delta.y * 1000,
-          zMm: remate.position.zMm,
+          zMm: remate.position.zMm + delta.z * 1000,
         };
       }
 
@@ -935,7 +943,7 @@ const hasShownViewerReadyToastRef = useRef(false);
       state.activeKey = key;
 
       const uiSelection = uiStore.getState().selectedObject;
-      const remateStep = event.shiftKey ? 1 : event.ctrlKey || event.metaKey ? 50 : 10;
+      const remateStep = 1;
       if (uiSelection.type === "remate") {
         performRemateMoveStep(uiSelection.id, key, remateStep);
         state.accelTimeoutId = window.setTimeout(() => {

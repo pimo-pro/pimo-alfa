@@ -131,6 +131,7 @@ export function buildItemsForCncExport(
     rules: unknown;
     materialId?: string;
     projectName?: string;
+    remates?: import("../core/remate/rematePieceTypes").RematePiece[];
     extractedPartsByBoxId?: Record<string, Record<string, unknown[]>>;
   },
   boxes: Array<{ id: string }>
@@ -140,6 +141,7 @@ export function buildItemsForCncExport(
     rules: project.rules as never,
     materialId: project.materialId,
     projectName: project.projectName,
+    remates: project.remates ?? [],
     extractedPartsByBoxId: project.extractedPartsByBoxId,
   });
   return items as unknown as Array<Record<string, unknown>>;
@@ -283,6 +285,7 @@ export function useGerarArquivoHandlers() {
         rules: project.rules,
         materialId: project.materialId,
         projectName: project.projectName,
+        remates: project.remates ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
       let nestingPlacements: CutLayoutResult["sheets"][0]["placements"] | undefined;
@@ -334,6 +337,7 @@ export function useGerarArquivoHandlers() {
       rules: project.rules,
       materialId: project.materialId,
       projectName: project.projectName,
+      remates: project.remates ?? [],
       extractedPartsByBoxId: project.extractedPartsByBoxId,
     });
     const pieces = cutlistToPieces(allItems);
@@ -389,6 +393,7 @@ export function useGerarArquivoHandlers() {
         rules: project.rules,
         materialId: project.materialId,
         projectName: project.projectName,
+        remates: project.remates ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
 
@@ -612,6 +617,7 @@ export function useGerarArquivoHandlers() {
         rules: project.rules,
         materialId: project.materialId,
         projectName: project.projectName,
+        remates: project.remates ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
       const drillFiles = buildDrillFilesForProject(allItems, {
@@ -667,6 +673,7 @@ export function useGerarArquivoHandlers() {
         rules: project.rules,
         materialId: project.materialId,
         projectName: project.projectName,
+        remates: project.remates ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
 

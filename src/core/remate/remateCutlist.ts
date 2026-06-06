@@ -4,12 +4,14 @@ import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
 import type { RematePiece } from "./rematePieceTypes";
 import { inferProductTypeFromLegacy } from "./remateProductRules";
+import { resolveRemateSheetCutDimensions } from "./remateSheetDimensions";
 
 function toCutDimensions(remate: RematePiece): CutListItem["dimensoes"] {
+  const sheet = resolveRemateSheetCutDimensions(remate);
   return {
-    largura: Math.max(1, remate.width),
-    altura: Math.max(1, remate.height),
-    profundidade: Math.max(1, remate.depth),
+    largura: sheet.comprimentoMm,
+    altura: sheet.larguraMm,
+    profundidade: sheet.espessuraMm,
   };
 }
 
@@ -27,7 +29,7 @@ export function buildRemateCutlistItems(
       nome: remate.name,
       quantidade: 1,
       dimensoes: toCutDimensions(remate),
-      espessura: Math.min(remate.width, remate.height, remate.depth),
+      espessura: resolveRemateSheetCutDimensions(remate).espessuraMm,
       material: materialLabel,
       tipo: "remate",
       sourceType: "parametric",

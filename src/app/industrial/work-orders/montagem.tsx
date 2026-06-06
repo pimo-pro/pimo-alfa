@@ -1,5 +1,5 @@
-import StationWorkOrderPage from './components/StationWorkOrderPage';
+import StationPageShell from './components/StationPageShell';
 
 export default function MontagemWorkOrderPage() {
-  return <StationWorkOrderPage station="montagem" />;
+  return <StationPageShell station="montagem" />;
 }

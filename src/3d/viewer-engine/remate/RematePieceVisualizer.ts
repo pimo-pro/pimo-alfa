@@ -56,6 +56,9 @@ export class RematePieceVisualizer {
     for (const piece of remateList) {
       this.upsertMesh(piece, false);
     }
+
+    // Merge visual reservado — método mantido para reativação futura sem perder lógica.
+    void this.upsertMergeMesh;
   }
 
   clearBoxChildren(boxRoot: THREE.Object3D): void {

@@ -17,7 +17,7 @@ describe("remateProductRules", () => {
     expect(specs.map((s) => s.partRole)).toEqual(["MAIN", "TOP", "BOTTOM"]);
   });
 
-  it("Avista frente usa profundidade 100 mm por default", () => {
+  it("Avista frente usa espessura do material como profundidade 3D", () => {
     const dims = computeDimensionsForProduct({
       box: null,
       productType: "AVISTA",
@@ -25,7 +25,7 @@ describe("remateProductRules", () => {
       thicknessMm: 19,
       productOptions: { avistaWidthMm: 100 },
     });
-    expect(dims.depth).toBe(100);
+    expect(dims.depth).toBe(19);
   });
 
   it("inferProductTypeFromLegacy mapeia DIR para AVISTA", () => {

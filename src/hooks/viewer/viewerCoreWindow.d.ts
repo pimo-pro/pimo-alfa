@@ -85,6 +85,7 @@ declare global {
       ) => void;
       setOnRemateSelected?: (callback: ((_remateId: string | null) => void) | null) => void;
       selectRemate?: (remateId: string | null) => void;
+      getRemateMesh?: (remateId: string) => unknown;
       getBoxDimensions?: (boxId: string) => { width: number; height: number; depth: number } | null;
       getBoxWorldMatrix?: (boxId: string) => unknown;
       syncRemateVisuals?: () => void;

@@ -131,22 +131,20 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
               ...prev,
               remates: (prev.remates ?? []).map((remate) => {
                 if (remate.id !== remateId) return remate;
-                let next = applyProductPatch(remate, patch);
-                // Recalculate depth (and width/height if driven by rules) when
-                // material, productOptions, or productType change — depth is not
-                // user-editable and must always reflect the rules + material.
+                const { depth: _depthPatchIgnored, ...patchWithoutDepth } = patch;
+                void _depthPatchIgnored;
+                let next = applyProductPatch(remate, patchWithoutDepth);
+                const box = next.parentBoxId
+                  ? prev.workspaceBoxes.find((b) => b.id === next.parentBoxId)
+                  : null;
+                const mat = getMaterialByIdOrLabel(next.materialPresetId);
+                const thicknessMm =
+                  Number(mat?.espessura ?? box?.espessura ?? prev.material.espessura) || 19;
                 const shouldRecalcDims =
-                  patch.materialPresetId != null ||
                   patch.productOptions != null ||
                   patch.productType != null ||
                   patch.mountSlot != null;
-                if (shouldRecalcDims && !patch.depth) {
-                  const box = next.parentBoxId
-                    ? prev.workspaceBoxes.find((b) => b.id === next.parentBoxId)
-                    : null;
-                  const mat = getMaterialByIdOrLabel(next.materialPresetId);
-                  const thicknessMm =
-                    Number(mat?.espessura ?? box?.espessura ?? prev.material.espessura) || 19;
+                if (shouldRecalcDims) {
                   const productType = next.productType ?? inferProductTypeFromLegacy(next);
                   const opts = normalizeProductOptions(productType, next.productOptions);
                   const dims = computeDimensionsForProduct({
@@ -158,7 +156,15 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                     partRole: next.partRole,
                     partIndex: next.partIndex,
                   });
-                  next = { ...next, depth: dims.depth };
+                  next = { ...next, ...dims, depth: thicknessMm };
+                } else if (
+                  patch.width != null ||
+                  patch.height != null ||
+                  patch.materialPresetId != null
+                ) {
+                  next = { ...next, depth: thicknessMm };
+                } else {
+                  next = { ...next, depth: thicknessMm };
                 }
                 const shouldResnap =
                   (patch.tipo != null ||

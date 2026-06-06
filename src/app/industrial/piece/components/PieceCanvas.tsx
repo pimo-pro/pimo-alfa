@@ -58,14 +58,14 @@ function buildEntities(
     depthM: Math.max(0.001, remate.depth / 1000),
     color: remate.tipo === 'RODAPE' ? '#b08968' : '#6c8f7c',
     basePosition: [
-      (remate.position?.x ?? 0) / 1000,
-      (remate.position?.y ?? 0) / 1000 + 0.02,
-      (remate.position?.z ?? 0) / 1000 - 0.25 - index * 0.05,
+      (remate.position?.xMm ?? 0) / 1000,
+      (remate.position?.yMm ?? 0) / 1000 + 0.02,
+      (remate.position?.zMm ?? 0) / 1000 - 0.25 - index * 0.05,
     ] as [number, number, number],
     baseRotation: [
-      remate.rotation?.x ?? 0,
-      remate.rotation?.y ?? 0,
-      remate.rotation?.z ?? 0,
+      remate.rotation?.xRad ?? 0,
+      remate.rotation?.yRad ?? 0,
+      remate.rotation?.zRad ?? 0,
     ] as [number, number, number],
   }));
 

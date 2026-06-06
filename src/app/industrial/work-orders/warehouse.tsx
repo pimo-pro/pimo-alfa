@@ -1,5 +1,5 @@
-import StationWorkOrderPage from './components/StationWorkOrderPage';
+import StationPageShell from './components/StationPageShell';
 
 export default function WarehouseWorkOrderPage() {
-  return <StationWorkOrderPage station="warehouse" />;
+  return <StationPageShell station="warehouse" />;
 }

@@ -52,7 +52,10 @@ export type PieceUiEventType =
   | 'quality_checked'
   | 'rework_requested'
   | 'time_started'
-  | 'time_stopped';
+  | 'time_stopped'
+  | 'work_order_task_start'
+  | 'work_order_task_complete'
+  | 'work_order_task_reject';
 
 export interface PieceEventPayload {
   type: PieceUiEventType;

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
+import { useUiStore } from "../../../stores/uiStore";
 import Panel from "../../ui/Panel";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import type {
@@ -19,6 +20,7 @@ import {
   inferProductTypeFromLegacy,
 } from "../../../core/remate/remateProductRules";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
+import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/remateGapMeasure";
 import RemateRulesSection from "./RemateRulesSection";
 
 type Props = { remateId: string };
@@ -28,8 +30,47 @@ const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "ROD
 
 export default function RematePropertiesPanel({ remateId }: Props) {
   const { project, actions } = useProject();
+  const selectedObject = useUiStore((s) => s.selectedObject);
   const remate = (project.remates ?? []).find((r) => r.id === remateId);
   const materials = useMemo(() => listOfficialMaterials().filter((m) => m.industrial), []);
+
+  const parentBox = remate?.parentBoxId
+    ? project.workspaceBoxes.find((b) => b.id === remate.parentBoxId)
+    : null;
+
+  const targetRemate =
+    remate && selectedObject.type === "remate" && selectedObject.id !== remateId
+      ? (project.remates ?? []).find((r) => r.id === selectedObject.id)
+      : null;
+
+  const selectedWorkspaceBox =
+    remate && project.selectedWorkspaceBoxId && project.selectedWorkspaceBoxId !== remate.parentBoxId
+      ? project.workspaceBoxes.find((b) => b.id === project.selectedWorkspaceBoxId)
+      : null;
+
+  const gapMeasure = useMemo(() => {
+    if (!remate) return null;
+    if (targetRemate) {
+      return measureRemateGap(remate, { targetRemate });
+    }
+    if (parentBox) {
+      return measureRemateGap(remate, { parentBox });
+    }
+    if (selectedWorkspaceBox) {
+      return measureRemateGapToBox(remate, selectedWorkspaceBox);
+    }
+    return null;
+  }, [
+    remate,
+    remate?.position.xMm,
+    remate?.position.yMm,
+    remate?.position.zMm,
+    remate?.width,
+    remate?.height,
+    parentBox,
+    targetRemate,
+    selectedWorkspaceBox,
+  ]);
 
   if (!remate) return null;
 
@@ -39,14 +80,9 @@ export default function RematePropertiesPanel({ remateId }: Props) {
   const isMain = !remate.partRole || remate.partRole === "MAIN";
   const isCompleto = productType === "COMPLETO";
 
-  // Thickness from material (read-only display)
   const material = getMaterialByIdOrLabel(remate.materialPresetId);
   const thicknessMm = Number(material?.espessura) || 19;
 
-  // Parent box feet height for rules display
-  const parentBox = remate.parentBoxId
-    ? project.workspaceBoxes.find((b) => b.id === remate.parentBoxId)
-    : null;
   const feetHeightMm = parentBox?.feetEnabled !== false
     ? Number(parentBox?.feetHeight ?? (parentBox?.pe_cm ?? 10) * 10) || 0
     : 0;
@@ -192,7 +228,7 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>Posição livre</p>
         ) : null}
 
-        {/* Dimensões — largura e altura editáveis; profundidade calculada pelas regras */}
+        {/* Dimensões de chapa — comprimento/largura editáveis; espessura do material */}
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Comprimento (mm)
           <input
@@ -217,35 +253,38 @@ export default function RematePropertiesPanel({ remateId }: Props) {
             }
           />
         </label>
-        {/* Profundidade */}
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-          Profundidade (mm)
+          Espessura (mm)
           <input
             className="input input-sm"
             type="number"
-            min={1}
-            value={remate.depth}
-            onChange={(e) =>
-              actions.updateRemate(remate.id, { depth: Math.max(1, Number(e.target.value) || 1) })
-            }
+            readOnly
+            value={thicknessMm}
+            title="Definida pelo material selecionado"
           />
         </label>
-        {/* Espessura da chapa — determinada pela chapa/material */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12 }}>
-          <span style={{ color: "var(--text-muted)" }}>Espessura da chapa</span>
+
+        {gapMeasure ? (
           <div
             style={{
-              padding: "4px 8px",
-              background: "var(--bg-input-disabled, #252836)",
-              borderRadius: 4,
-              fontSize: 12,
-              color: "var(--text-muted)",
+              padding: "8px 10px",
+              borderRadius: 6,
               border: "1px solid var(--border-muted, #333)",
+              fontSize: 12,
+              lineHeight: 1.5,
             }}
           >
-            {thicknessMm} mm — definida pelo material
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Distância ({gapMeasure.targetLabel})</div>
+            {gapMeasure.overlapping ? (
+              <span style={{ color: "var(--text-muted)" }}>Peças sobrepostas (0 mm nos eixos)</span>
+            ) : (
+              <>
+                <div>Distância X: {gapMeasure.gapXMm} mm</div>
+                <div>Distância Y: {gapMeasure.gapYMm} mm</div>
+              </>
+            )}
           </div>
-        </div>
+        ) : null}
 
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Material

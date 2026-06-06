@@ -1,4 +1,3 @@
-import type { PieceOperationStatus } from '@/industrial/core/piece-operations/types';
 import type { QualityDecision } from '@/industrial/core/quality/types';
 import type { RematePiece } from '@/core/remate/remateTypes';
 import type { ProjectRodape } from '@/core/rodape/rodapeTypes';

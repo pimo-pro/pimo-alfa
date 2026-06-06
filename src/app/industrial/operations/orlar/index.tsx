@@ -1,13 +1,8 @@
-import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
+import { Navigate } from 'react-router-dom';
 
-import WorkOrderStationPanel from '@/app/industrial/work-orders/components/WorkOrderStationPanel';
+import { useIndustrialPageState } from '@/industrial/ui/components';
 
 export default function IndustrialOrlarOperationRoute() {
   useIndustrialPageState();
-
-  return (
-    <IndustrialLayout title="Operação Orlar" description="Orlagem, QR e registo de execução.">
-      <WorkOrderStationPanel station="orlar" />
-    </IndustrialLayout>
-  );
+  return <Navigate to="/industrial/work-orders/orlar" replace />;
 }

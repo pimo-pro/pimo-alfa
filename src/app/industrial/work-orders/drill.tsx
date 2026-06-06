@@ -1,5 +1,5 @@
-import StationWorkOrderPage from './components/StationWorkOrderPage';
+import StationPageShell from './components/StationPageShell';
 
 export default function DrillWorkOrderPage() {
-  return <StationWorkOrderPage station="drill" />;
+  return <StationPageShell station="drill" />;
 }

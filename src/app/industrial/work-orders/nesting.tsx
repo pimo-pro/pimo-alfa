@@ -1,5 +1,5 @@
-import StationWorkOrderPage from './components/StationWorkOrderPage';
+import StationPageShell from './components/StationPageShell';
 
 export default function NestingWorkOrderPage() {
-  return <StationWorkOrderPage station="nesting" />;
+  return <StationPageShell station="nesting" />;
 }

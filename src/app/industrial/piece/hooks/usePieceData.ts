@@ -71,18 +71,25 @@ function parseQualityFromEvents(events: IndustrialSystemEvent[], pieceId: string
 
 function parseReworkFromEvents(events: IndustrialSystemEvent[], pieceId: string): ReworkRequest[] {
   return events
-    .filter((e) => eventMatchesPiece(e, pieceId) && (e.type === 'rework_requested' || e.metadata?.rework))
+    .filter(
+      (e) =>
+        eventMatchesPiece(e, pieceId) &&
+        (String(e.type) === 'rework_requested' || Boolean(e.metadata?.rework)),
+    )
     .map((event) => {
       const raw = event.metadata?.rework_request ?? event.metadata?.rework;
       const data = (raw && typeof raw === 'object' ? raw : event.metadata) as Record<string, unknown>;
-      return createReworkRequest({
+      const request = createReworkRequest({
         id: String(data.id ?? `${pieceId}:rework:${event.created_at}`),
         pieceId,
         reason: String(data.reason ?? 'Retrabalho'),
         origin: (data.origin as ReworkRequest['origin']) ?? 'quality',
-        status: (data.status as ReworkRequest['status']) ?? 'open',
         createdAt: String(data.createdAt ?? event.created_at),
       });
+      return {
+        ...request,
+        status: (data.status as ReworkRequest['status']) ?? request.status ?? 'open',
+      };
     });
 }
 

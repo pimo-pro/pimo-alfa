@@ -157,12 +157,12 @@ export function computeDimensionsForProduct(
     return { width: largura, height: RODAPE_HEIGHT_MM, depth: t };
   }
   if (ctx.productType === "RODAPE_L") {
-    if (ctx.partIndex === 2) return { width: largura, height: t, depth: avistaD };
+    if (ctx.partIndex === 2) return { width: largura, height: avistaD, depth: t };
     return { width: largura, height: RODAPE_HEIGHT_MM, depth: t };
   }
   if (ctx.productType === "L") {
-    if (ctx.partIndex === 2) return { width: largura, height: t, depth: avistaD };
-    return { width: t, height: spanHeight, depth: avistaD };
+    if (ctx.partIndex === 2) return { width: largura, height: avistaD, depth: t };
+    return { width: avistaD, height: spanHeight, depth: t };
   }
 
   if (ctx.productType === "COMPLETO") {
@@ -172,9 +172,7 @@ export function computeDimensionsForProduct(
     const bottomAdd = rules.floorProxEnabled
       ? Math.max(rules.bottomExtraMm, rules.floorProxMm + feetMm)
       : rules.bottomExtraMm;
-    const backExtra = rules.backExtraMm;
-    // Depth: profundidade + frontExtraMm(20) + backExtraMm
-    const completoDepth = Math.max(1, profundidade + 20 + backExtra);
+    void profundidade;
     // Clamp width/height to not exceed box by more than maxOverBoxMm
     const maxOver = rules.maxOverBoxMm;
 
@@ -183,33 +181,33 @@ export function computeDimensionsForProduct(
       return { width: w, height: PUXADOR_HEIGHT_MM, depth: t };
     }
     if (ctx.partRole === "TOP" || ctx.partRole === "BOTTOM") {
-      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: completoDepth };
+      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: t };
     }
     const slot = ctx.mountSlot;
     if (slot === "DIR" || slot === "ESQ") {
       const h = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
-      return { width: t, height: h, depth: completoDepth };
+      return { width: t, height: h, depth: t };
     }
     if (slot === "CIMA" || slot === "FUNDO" || slot === "TRAS") {
-      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: completoDepth };
+      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: t };
     }
     // FRENTE (default / main face)
     const w = Math.min(largura + extra + doorAdd, largura + maxOver);
     const h = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
-    return { width: w, height: h, depth: completoDepth };
+    return { width: w, height: h, depth: t };
   }
 
   if (ctx.partRole === "TOP" || ctx.partRole === "BOTTOM") {
-    return { width: largura, height: t, depth: avistaD };
+    return { width: largura, height: t, depth: t };
   }
   const slot = ctx.mountSlot;
   if (slot === "DIR" || slot === "ESQ") {
-    return { width: t, height: spanHeight, depth: avistaD };
+    return { width: t, height: spanHeight, depth: t };
   }
   if (slot === "CIMA" || slot === "FUNDO" || slot === "TRAS") {
-    return { width: largura, height: t, depth: avistaD };
+    return { width: largura, height: t, depth: t };
   }
-  return { width: largura, height: spanHeight, depth: avistaD };
+  return { width: largura, height: spanHeight, depth: t };
 }
 
 export type ProductPieceSpec = {

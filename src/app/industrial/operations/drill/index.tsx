@@ -1,13 +1,8 @@
-import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
+import { Navigate } from 'react-router-dom';
 
-import WorkOrderStationPanel from '@/app/industrial/work-orders/components/WorkOrderStationPanel';
+import { useIndustrialPageState } from '@/industrial/ui/components';
 
 export default function IndustrialDrillOperationRoute() {
   useIndustrialPageState();
-
-  return (
-    <IndustrialLayout title="Operação Drill" description="Furação, QR e registo de execução.">
-      <WorkOrderStationPanel station="drill" />
-    </IndustrialLayout>
-  );
+  return <Navigate to="/industrial/work-orders/drill" replace />;
 }
