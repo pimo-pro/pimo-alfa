@@ -3,6 +3,7 @@ import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import type {
+  RemateCompletoRules,
   RemateMountSlot,
   RemateProductOptions,
   RemateProductType,
@@ -13,9 +14,12 @@ import {
 } from "../../../core/remate/rematePieceTypes";
 import {
   DEFAULT_AVISTA_WIDTH_MM,
+  defaultCompletoRules,
   defaultMountSlotForProduct,
   inferProductTypeFromLegacy,
 } from "../../../core/remate/remateProductRules";
+import { getMaterialByIdOrLabel } from "../../../core/materials/service";
+import RemateRulesSection from "./RemateRulesSection";
 
 type Props = { remateId: string };
 
@@ -33,12 +37,32 @@ export default function RematePropertiesPanel({ remateId }: Props) {
   const productOptions = remate.productOptions ?? {};
   const faceEditable = productType === "AVISTA" || productType === "COMPLETO";
   const isMain = !remate.partRole || remate.partRole === "MAIN";
+  const isCompleto = productType === "COMPLETO";
+
+  // Thickness from material (read-only display)
+  const material = getMaterialByIdOrLabel(remate.materialPresetId);
+  const thicknessMm = Number(material?.espessura) || 19;
+
+  // Parent box feet height for rules display
+  const parentBox = remate.parentBoxId
+    ? project.workspaceBoxes.find((b) => b.id === remate.parentBoxId)
+    : null;
+  const feetHeightMm = parentBox?.feetEnabled !== false
+    ? Number(parentBox?.feetHeight ?? (parentBox?.pe_cm ?? 10) * 10) || 0
+    : 0;
 
   const patchOptions = (patch: RemateProductOptions) =>
     actions.updateRemate(remate.id, {
       productOptions: { ...productOptions, ...patch },
       followBox: Boolean(remate.parentBoxId),
     });
+
+  const patchCompletoRules = (rulePatch: Partial<RemateCompletoRules>) => {
+    const currentRules = productOptions.completoRules ?? defaultCompletoRules();
+    patchOptions({ completoRules: { ...currentRules, ...rulePatch } });
+  };
+
+  const completoRules = productOptions.completoRules ?? defaultCompletoRules();
 
   return (
     <Panel title="Propriedades do Remate" description={remate.name}>
@@ -168,22 +192,60 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>Posição livre</p>
         ) : null}
 
-        {(["width", "height", "depth"] as const).map((field) => (
-          <label key={field} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-            {field === "width" ? "Largura" : field === "height" ? "Altura" : "Profundidade"} (mm)
-            <input
-              className="input input-sm"
-              type="number"
-              min={1}
-              value={remate[field]}
-              onChange={(e) =>
-                actions.updateRemate(remate.id, {
-                  [field]: Math.max(1, Number(e.target.value) || 1),
-                })
-              }
-            />
-          </label>
-        ))}
+        {/* Dimensões — largura e altura editáveis; profundidade calculada pelas regras */}
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Comprimento (mm)
+          <input
+            className="input input-sm"
+            type="number"
+            min={1}
+            value={remate.width}
+            onChange={(e) =>
+              actions.updateRemate(remate.id, { width: Math.max(1, Number(e.target.value) || 1) })
+            }
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Largura (mm)
+          <input
+            className="input input-sm"
+            type="number"
+            min={1}
+            value={remate.height}
+            onChange={(e) =>
+              actions.updateRemate(remate.id, { height: Math.max(1, Number(e.target.value) || 1) })
+            }
+          />
+        </label>
+        {/* Profundidade */}
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Profundidade (mm)
+          <input
+            className="input input-sm"
+            type="number"
+            min={1}
+            value={remate.depth}
+            onChange={(e) =>
+              actions.updateRemate(remate.id, { depth: Math.max(1, Number(e.target.value) || 1) })
+            }
+          />
+        </label>
+        {/* Espessura da chapa — determinada pela chapa/material */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12 }}>
+          <span style={{ color: "var(--text-muted)" }}>Espessura da chapa</span>
+          <div
+            style={{
+              padding: "4px 8px",
+              background: "var(--bg-input-disabled, #252836)",
+              borderRadius: 4,
+              fontSize: 12,
+              color: "var(--text-muted)",
+              border: "1px solid var(--border-muted, #333)",
+            }}
+          >
+            {thicknessMm} mm — definida pelo material
+          </div>
+        </div>
 
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Material
@@ -199,6 +261,15 @@ export default function RematePropertiesPanel({ remateId }: Props) {
             ))}
           </select>
         </label>
+
+        {/* Regras de dimensionamento — só para tipo COMPLETO */}
+        {isCompleto && isMain ? (
+          <RemateRulesSection
+            rules={completoRules}
+            feetHeightMm={feetHeightMm}
+            onChange={patchCompletoRules}
+          />
+        ) : null}
 
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
           <input

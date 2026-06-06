@@ -63,8 +63,7 @@ export class ViewerTools {
         controls.detach();
         controls.attach(remateMesh);
         controls.setMode(mode);
-        const hasParentBox = Boolean(remateMesh.userData.boxId);
-        controls.setSpace(hasParentBox ? "local" : "world");
+        controls.setSpace("world");
         controls.setSize(0.35);
         e.applyTransformControlsMouseGuard();
         e.logTransformDiagnostic("attach-remate", { remateId: selectedRemateId, attachedUuid: remateMesh.uuid });
@@ -171,6 +170,15 @@ export class ViewerTools {
       const remateMesh = e.getRemateMesh(selectedRemateId);
       if (remateMesh) {
         e.setOutlineTarget(remateMesh, 0.9, 0x38bdf8);
+        return;
+      }
+    }
+
+    const hoveredRemateId = e.getHoveredRemateId();
+    if (hoveredRemateId && hoveredRemateId !== selectedRemateId) {
+      const remateMesh = e.getRemateMesh(hoveredRemateId);
+      if (remateMesh) {
+        e.setOutlineTarget(remateMesh, 0.55, 0x7dd3fc);
         return;
       }
     }

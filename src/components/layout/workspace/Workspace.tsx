@@ -28,6 +28,7 @@ import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import { useSettings } from "../../../context/SettingsContext";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
+import { Matrix4, Vector3 } from "three";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -713,8 +714,15 @@ const hasShownViewerReadyToastRef = useRef(false);
 
     core?.setOnRemateSelected?.((remateId) => {
       if (remateId) {
+        if (projectRef.current.selectedWorkspaceBoxId) {
+          actionsRef.current.clearSelection();
+        }
         setSelectedObject({ type: "remate", id: remateId });
         setSelectedTool("home");
+        return;
+      }
+      if (uiStore.getState().selectedObject.type === "remate") {
+        clearUiSelection();
       }
     });
 
@@ -759,7 +767,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     core?.setOnRodapeTransform?.((rodapeId, patch) => {
       actionsRef.current.updateRodape(rodapeId, patch);
     });
-  }, [viewerApi.viewerReady, setSelectedObject, setSelectedTool]);
+  }, [viewerApi.viewerReady, setSelectedObject, setSelectedTool, clearUiSelection]);
 
   useEffect(() => {
     if (!viewerApi.viewerReady) return;
@@ -803,6 +811,50 @@ const hasShownViewerReadyToastRef = useRef(false);
       if (!(target instanceof HTMLElement)) return false;
       const tag = target.tagName.toLowerCase();
       return tag === "input" || tag === "textarea" || target.isContentEditable;
+    };
+
+    const performRemateMoveStep = (
+      remateId: string,
+      key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+      stepMm: number
+    ) => {
+      const remate = projectRef.current.remates?.find((r) => r.id === remateId);
+      if (!remate) return;
+
+      const delta =
+        key === "ArrowUp"
+          ? new Vector3(0, stepMm / 1000, 0)
+          : key === "ArrowDown"
+            ? new Vector3(0, -stepMm / 1000, 0)
+            : key === "ArrowLeft"
+              ? new Vector3(-stepMm / 1000, 0, 0)
+              : new Vector3(stepMm / 1000, 0, 0);
+
+      let nextPosition = { ...remate.position };
+
+      if (remate.parentBoxId) {
+        const worldMatrix = window.viewerCore?.getBoxWorldMatrix?.(remate.parentBoxId);
+        if (worldMatrix) {
+          const inv = new Matrix4().copy(worldMatrix).invert();
+          const deltaLocal = delta.clone().applyMatrix4(inv);
+          nextPosition = {
+            xMm: remate.position.xMm + deltaLocal.x * 1000,
+            yMm: remate.position.yMm + deltaLocal.y * 1000,
+            zMm: remate.position.zMm + deltaLocal.z * 1000,
+          };
+        }
+      } else {
+        nextPosition = {
+          xMm: remate.position.xMm + delta.x * 1000,
+          yMm: remate.position.yMm + delta.y * 1000,
+          zMm: remate.position.zMm,
+        };
+      }
+
+      actionsRef.current.updateRemate(remateId, {
+        position: nextPosition,
+        placementMode: "FREE",
+      });
     };
 
     const performMoveStep = (key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight", stepMm: number) => {
@@ -852,6 +904,12 @@ const hasShownViewerReadyToastRef = useRef(false);
       }
       if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
+        const uiSelection = uiStore.getState().selectedObject;
+        if (uiSelection.type === "remate") {
+          actionsRef.current.removeRemate(uiSelection.id);
+          clearUiSelection();
+          return;
+        }
         const currentProject = projectRef.current;
         const validIds = new Set(currentProject.workspaceBoxes.map((box) => box.id));
         const multiSelectionIds = multiSelectedBoxIdsRef.current.filter((id) => validIds.has(id));
@@ -875,6 +933,20 @@ const hasShownViewerReadyToastRef = useRef(false);
       if (state.activeKey === key) return;
       clearKeyboardMoveTimers();
       state.activeKey = key;
+
+      const uiSelection = uiStore.getState().selectedObject;
+      const remateStep = event.shiftKey ? 1 : event.ctrlKey || event.metaKey ? 50 : 10;
+      if (uiSelection.type === "remate") {
+        performRemateMoveStep(uiSelection.id, key, remateStep);
+        state.accelTimeoutId = window.setTimeout(() => {
+          state.repeatIntervalId = window.setInterval(() => {
+            if (keyboardMoveRef.current.activeKey !== key) return;
+            performRemateMoveStep(uiSelection.id, key, remateStep);
+          }, 40);
+        }, 200);
+        return;
+      }
+
       performMoveStep(key, 1);
       state.accelTimeoutId = window.setTimeout(() => {
         state.repeatIntervalId = window.setInterval(() => {

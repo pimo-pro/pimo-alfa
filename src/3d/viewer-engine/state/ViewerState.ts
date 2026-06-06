@@ -16,6 +16,7 @@ export class ViewerState {
   private selectedRoomElementId: string | null = null;
   private selectedRoomUtilityId: string | null = null;
   private selectedRemateId: string | null = null;
+  private hoveredRemateId: string | null = null;
   private selectedHematiId: string | null = null;
   private selectedRodapeId: string | null = null;
   private transformMode: TransformMode = null;
@@ -69,6 +70,13 @@ export class ViewerState {
   }
   setSelectedRemate(id: string | null): void {
     this.selectedRemateId = id;
+  }
+
+  getHoveredRemate(): string | null {
+    return this.hoveredRemateId;
+  }
+  setHoveredRemate(id: string | null): void {
+    this.hoveredRemateId = id;
   }
 
   getSelectedHemati(): string | null {
@@ -159,6 +167,7 @@ export class ViewerState {
 
   limparHover(): void {
     this.hoveredBoxId = null;
+    this.hoveredRemateId = null;
   }
 
   limparSelecao(): void {

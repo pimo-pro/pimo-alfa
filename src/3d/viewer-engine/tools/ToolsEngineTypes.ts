@@ -36,6 +36,7 @@ export interface IViewerToolsEngine {
   getSelectionOutline(): THREE.Object3D | null;
   getSelectionOutlineMaterial(): THREE.LineBasicMaterial | null;
   getHoveredBoxId(): string | null;
+  getHoveredRemateId(): string | null;
   getBoxesIntersectingWalls(): Set<string>;
   setOutlineTarget(_mesh: THREE.Object3D | null, _opacity: number, _colorHex: number): void;
   /** Chamado pelo ViewerTools após arraste (translate/rotate). Mantido no Core por dependências (collision, snap, room). */

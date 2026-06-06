@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIMO-TRAK — Documentação</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+    aside {
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      padding: 24px 16px;
+    }
+    .brand {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 4px;
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 24px;
+    }
+    nav { display: grid; gap: 6px; }
+    nav a {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      border: 1px solid transparent;
+    }
+    nav a:hover { background: var(--accent-soft); border-color: var(--border); }
+    nav a.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    main { padding: 32px 40px; overflow: auto; }
+    .doc-header { margin-bottom: 24px; }
+    .doc-header h1 { margin: 0 0 8px; font-size: 28px; }
+    .doc-header p { margin: 0; color: var(--muted); font-size: 14px; }
+    .doc-content {
+      max-width: 900px;
+      line-height: 1.75;
+      font-size: 15px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .doc-content h1, .doc-content h2, .doc-content h3 {
+      white-space: normal;
+      margin-top: 1.6em;
+      margin-bottom: 0.5em;
+    }
+    .loading, .error { color: var(--muted); font-style: italic; }
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { border-right: none; border-bottom: 1px solid var(--border); }
+      main { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <p class="brand">PIMO-TRAK Industrial</p>
+      <h1 class="brand-title">Documentação</h1>
+      <nav id="nav">
+        <a href="?view=index" data-view="index">Índice</a>
+        <a href="?view=release-notes" data-view="release-notes">Release Notes (PIMO-TRAK)</a>
+        <a href="?view=overview" data-view="overview">Visão Geral Industrial</a>
+      </nav>
+    </aside>
+    <main>
+      <div class="doc-header">
+        <h1 id="title">A carregar…</h1>
+        <p id="subtitle"></p>
+      </div>
+      <article id="content" class="doc-content loading">A carregar documentação…</article>
+    </main>
+  </div>
+  <script>
+    const DOCS = {
+      index: {
+        file: 'index.md',
+        title: 'Índice de Documentação',
+        subtitle: 'PIMO-TRAK · Release 1.0.0'
+      },
+      'release-notes': {
+        file: 'pimo-trak-release-notes.md',
+        title: 'Release Notes (PIMO-TRAK)',
+        subtitle: 'Versão 1.0.0 · Release Final'
+      },
+      overview: {
+        file: 'industrial-feature-overview.md',
+        title: 'Visão Geral da Funcionalidade Industrial',
+        subtitle: 'Documentação oficial completa'
+      }
+    };
+
+    function getView() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('view') || 'index';
+    }
+
+    function setActiveNav(view) {
+      document.querySelectorAll('#nav a').forEach(function (link) {
+        link.classList.toggle('active', link.dataset.view === view);
+      });
+    }
+
+    function loadDoc(view) {
+      const doc = DOCS[view] || DOCS.index;
+      const titleEl = document.getElementById('title');
+      const subtitleEl = document.getElementById('subtitle');
+      const contentEl = document.getElementById('content');
+
+      titleEl.textContent = doc.title;
+      subtitleEl.textContent = doc.subtitle;
+      contentEl.textContent = 'A carregar documentação…';
+      contentEl.className = 'doc-content loading';
+      setActiveNav(view in DOCS ? view : 'index');
+
+      fetch('./' + doc.file)
+        .then(function (res) {
+          if (!res.ok) throw new Error('Documento não encontrado');
+          return res.text();
+        })
+        .then(function (text) {
+          contentEl.textContent = text;
+          contentEl.className = 'doc-content';
+          document.title = doc.title + ' — PIMO-TRAK';
+        })
+        .catch(function () {
+          contentEl.textContent = 'Não foi possível carregar o documento. Verifique se o ficheiro está publicado em /industrial/docs/.';
+          contentEl.className = 'doc-content error';
+        });
+    }
+
+    loadDoc(getView());
+    window.addEventListener('popstate', function () { loadDoc(getView()); });
+    document.getElementById('nav').addEventListener('click', function (event) {
+      const link = event.target.closest('a[data-view]');
+      if (!link) return;
+      event.preventDefault();
+      const view = link.dataset.view;
+      history.pushState({}, '', '?view=' + view);
+      loadDoc(view);
+    });
+  </script>
+</body>
+</html>

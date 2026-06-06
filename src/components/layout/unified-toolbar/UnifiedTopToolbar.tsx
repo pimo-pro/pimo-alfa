@@ -126,8 +126,14 @@ export default function UnifiedTopToolbar({
 
   const selectedBoxId = project.selectedWorkspaceBoxId;
   const selectedBox = selectedBoxId ? project.workspaceBoxes.find((b) => b.id === selectedBoxId) : undefined;
+  const selectedObject = useUiStore((s) => s.selectedObject);
+  const selectedRemateId = selectedObject.type === "remate" ? selectedObject.id : null;
+  const selectedRemate = selectedRemateId
+    ? (project.remates ?? []).find((r) => r.id === selectedRemateId)
+    : undefined;
   const isPieceLocked = selectedBox?.locked === true;
-  const enabledTools: Tool3DId[] = isPieceLocked ? ["select"] : ["select", "move", "rotate"];
+  const enabledTools: Tool3DId[] =
+    isPieceLocked && !selectedRemateId ? ["select"] : ["select", "move", "rotate"];
   const panelRenderingEnabled = project.viewerSettings.panelRenderingEnabled === true;
 
   const [rotationMenuOpen, setRotationMenuOpen] = useState(false);
@@ -189,7 +195,7 @@ export default function UnifiedTopToolbar({
       return;
     }
     emitToolSelect("rotate", "tool:rotate");
-    if (selectedBoxId) setRotationMenuOpen(true);
+    if (selectedBoxId || selectedRemateId) setRotationMenuOpen(true);
   };
 
   const primary3dItems = PRIMARY_3D_IDS.map((id) => TOOLS_3D_ITEMS.find((i) => i.id === id)).filter(
@@ -264,7 +270,89 @@ export default function UnifiedTopToolbar({
               >
                 <Icon name={item.iconName} size={24} aria-hidden />
               </button>
-              {isRotate && selectedBoxId && showRotationMenu && (() => {
+              {isRotate && (selectedBoxId || selectedRemateId) && showRotationMenu && (() => {
+                if (selectedRemateId && selectedRemate) {
+                  const radToDeg = (r: number) => Math.round((r * 180) / Math.PI);
+                  const degToRad = (d: number) => (d * Math.PI) / 180;
+                  const rotX = selectedRemate.rotation.xRad;
+                  const rotY = selectedRemate.rotation.yRad;
+                  const rotZ = selectedRemate.rotation.zRad;
+                  const updateRotation = (partial: { xRad?: number; yRad?: number; zRad?: number }) => {
+                    actions.updateRemate(selectedRemateId, {
+                      rotation: {
+                        xRad: partial.xRad ?? rotX,
+                        yRad: partial.yRad ?? rotY,
+                        zRad: partial.zRad ?? rotZ,
+                      },
+                      placementMode: "FREE",
+                    });
+                  };
+                  return (
+                    <div
+                      role="dialog"
+                      aria-label="Rotação do remate"
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        marginTop: 4,
+                        padding: 12,
+                        background: "var(--popover-bg)",
+                        border: "1px solid var(--popover-border)",
+                        borderRadius: 8,
+                        boxShadow: "var(--popover-shadow)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        minWidth: 200,
+                        zIndex: 1000,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="button button-ghost button-sm"
+                        style={{ width: "100%" }}
+                        onClick={() => updateRotation({ yRad: rotY + Math.PI / 2 })}
+                      >
+                        90° direita
+                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#ef4444", minWidth: 20 }}>X</span>
+                        <NumericInput
+                          value={radToDeg(rotX)}
+                          min={-360}
+                          max={360}
+                          onChange={(v) => updateRotation({ xRad: degToRad(v) })}
+                          className="input input-xs"
+                          style={{ flex: 1 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#22c55e", minWidth: 20 }}>Y</span>
+                        <NumericInput
+                          value={radToDeg(rotY)}
+                          min={-360}
+                          max={360}
+                          onChange={(v) => updateRotation({ yRad: degToRad(v) })}
+                          className="input input-xs"
+                          style={{ flex: 1 }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#3b82f6", minWidth: 20 }}>Z</span>
+                        <NumericInput
+                          value={radToDeg(rotZ)}
+                          min={-360}
+                          max={360}
+                          onChange={(v) => updateRotation({ zRad: degToRad(v) })}
+                          className="input input-xs"
+                          style={{ flex: 1 }}
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+
                 const box = project.workspaceBoxes.find((b) => b.id === selectedBoxId);
                 const radToDeg = (r: number) => Math.round((r * 180) / Math.PI);
                 const degToRad = (d: number) => (d * Math.PI) / 180;

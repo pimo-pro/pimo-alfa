@@ -37,6 +37,7 @@ export interface IViewerEventEngine {
   getBoxIdByMesh(_mesh: THREE.Object3D): string | null;
   setSelectedBox(_id: string | null): void;
   setHoveredBox(_id: string | null): void;
+  setHoveredRemate(_id: string | null): void;
   getOnRoomElementSelected(): ((_data: RoomElementHit | null) => void) | null;
   getOnRoomUtilitySelected(): ((_data: { utilityId: string; wallId: number; config: ProjectRoomUtility } | null) => void) | null;
   getOnWallSelected(): ((_wallId: number | null) => void) | null;
@@ -59,6 +60,7 @@ export interface IViewerEventEngine {
   selectRodape(_rodapeId: string | null): void;
   selectRemate(_remateId: string | null): void;
   getSelectedBoxId(): string | null;
+  getSelectedRemateId(): string | null;
   getRoomElementAtPointer(_event: { clientX: number; clientY: number }): RoomElementHit | null;
   getSelectedWallIndex(): number | null;
   setSelectedWallIndex(_v: number | null): void;

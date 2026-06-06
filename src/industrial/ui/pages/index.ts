@@ -1,0 +1,9 @@
+export { default as IndustrialCncPage } from './cnc';
+export { default as IndustrialEmbalagemPage } from './embalagem';
+export { default as IndustrialEventsPage } from './events';
+export { default as IndustrialMontagemPage } from './montagem';
+export { default as IndustrialNestingPage } from './nesting';
+export { default as IndustrialOperationsPage } from './operations';
+export { default as IndustrialQualityPage } from './quality';
+export { default as IndustrialTrackingPage } from './tracking';
+export { default as IndustrialWorkOrdersPage } from './work-orders';

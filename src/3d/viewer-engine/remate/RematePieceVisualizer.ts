@@ -4,10 +4,6 @@ import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
 import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
-import {
-  computeRemateVisualMergeGroups,
-  remateIdsInMergeGroup,
-} from "../../../core/remate/remateVisualMerge";
 
 export type RematePieceVisualBoxConfig = {
   boxId: string;
@@ -54,17 +50,11 @@ export class RematePieceVisualizer {
     if (!this.bridge) return;
 
     const remateList = this.bridge.listRematePieces();
-    const mergeGroups = computeRemateVisualMergeGroups(remateList);
-    const mergedIds = remateIdsInMergeGroup(mergeGroups);
 
+    // Cada peça permanece visível e clicável — merge visual desativado para
+    // permitir seleção, gizmo e outline em cada remate/roda pé independentemente.
     for (const piece of remateList) {
-      const hideForMerge = mergedIds.has(piece.id);
-      this.upsertMesh(piece, hideForMerge);
-    }
-
-    for (const group of mergeGroups) {
-      if (group.remateIds.length < 2) continue;
-      this.upsertMergeMesh(group, remateList);
+      this.upsertMesh(piece, false);
     }
   }
 

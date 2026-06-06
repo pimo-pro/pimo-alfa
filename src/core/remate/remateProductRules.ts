@@ -2,6 +2,7 @@ import type { WorkspaceBox } from "../types";
 import type {
   CreateRematePieceInput,
   RemateMountSlot,
+  RemateCompletoRules,
   RematePartRole,
   RematePiece,
   RematePieceTipo,
@@ -11,11 +12,25 @@ import type {
 } from "./rematePieceTypes";
 import {
   depthMmFromModule,
+  getFeetHeightMm,
   getRemateEnvelopeMm,
   type RemateBoxMeta,
 } from "./remateDimensions";
 
 export const DEFAULT_AVISTA_WIDTH_MM = 100;
+
+export function defaultCompletoRules(): RemateCompletoRules {
+  return {
+    doorFlushEnabled: false,
+    doorFlushMm: 20,
+    backExtraMm: 50,
+    topExtraMm: 20,
+    bottomExtraMm: 20,
+    floorProxEnabled: false,
+    floorProxMm: 100,
+    maxOverBoxMm: 200,
+  };
+}
 export const DEFAULT_AVISTA_FLUSH_DEPTH_MM = 20;
 export const DEFAULT_L_GAP_MAX_MM = 200;
 export const RODAPE_HEIGHT_MM = 150;
@@ -69,7 +84,7 @@ export function normalizeProductOptions(
   productType: RemateProductType,
   options?: RemateProductOptions
 ): RemateProductOptions {
-  const base = options ?? {};
+  const base: RemateProductOptions = options ?? {};
   if (productType === "AVISTA") {
     return {
       avistaWidthMm: base.avistaWidthMm ?? DEFAULT_AVISTA_WIDTH_MM,
@@ -78,10 +93,23 @@ export function normalizeProductOptions(
     };
   }
   if (productType === "COMPLETO") {
+    // Permite opções parciais vindas da UI sem perder os defaults completos.
+    const baseRules: Partial<RemateCompletoRules> = base.completoRules ?? {};
+    const def = defaultCompletoRules();
     return {
       coverageExtraMm: base.coverageExtraMm ?? 0,
       includeTopBottomRemates: base.includeTopBottomRemates ?? false,
       asPuxador: base.asPuxador ?? false,
+      completoRules: {
+        doorFlushEnabled: baseRules.doorFlushEnabled ?? def.doorFlushEnabled,
+        doorFlushMm: baseRules.doorFlushMm ?? def.doorFlushMm,
+        backExtraMm: baseRules.backExtraMm ?? def.backExtraMm,
+        topExtraMm: baseRules.topExtraMm ?? def.topExtraMm,
+        bottomExtraMm: baseRules.bottomExtraMm ?? def.bottomExtraMm,
+        floorProxEnabled: baseRules.floorProxEnabled ?? def.floorProxEnabled,
+        floorProxMm: baseRules.floorProxMm ?? def.floorProxMm,
+        maxOverBoxMm: baseRules.maxOverBoxMm ?? def.maxOverBoxMm,
+      },
     };
   }
   if (productType === "L") {
@@ -109,14 +137,15 @@ function spanMetrics(box: WorkspaceBox | null) {
     : { aboveMm: 20, belowMm: 20, frontMm: 20, backMm: 70 };
   const spanHeight = altura + env.aboveMm + env.belowMm;
   const spanDepth = depthMmFromModule(profundidade);
-  return { largura, altura, profundidade, spanHeight, spanDepth };
+  const feetMm = box ? getFeetHeightMm(box as RemateBoxMeta) : 0;
+  return { largura, altura, profundidade, spanHeight, spanDepth, feetMm };
 }
 
 export function computeDimensionsForProduct(
   ctx: ProductDimContext
 ): Pick<RematePiece, "width" | "height" | "depth"> {
   const opts = normalizeProductOptions(ctx.productType, ctx.productOptions);
-  const { largura, spanHeight, spanDepth } = spanMetrics(ctx.box);
+  const { largura, altura, profundidade, spanHeight, feetMm } = spanMetrics(ctx.box);
   const t = ctx.thicknessMm;
   const avistaW = opts.avistaWidthMm ?? DEFAULT_AVISTA_WIDTH_MM;
   const avistaD = opts.avistaFlushToDoor
@@ -137,20 +166,37 @@ export function computeDimensionsForProduct(
   }
 
   if (ctx.productType === "COMPLETO") {
+    const rules = opts.completoRules ?? defaultCompletoRules();
+    const doorAdd = rules.doorFlushEnabled ? rules.doorFlushMm : 0;
+    const topAdd = rules.topExtraMm;
+    const bottomAdd = rules.floorProxEnabled
+      ? Math.max(rules.bottomExtraMm, rules.floorProxMm + feetMm)
+      : rules.bottomExtraMm;
+    const backExtra = rules.backExtraMm;
+    // Depth: profundidade + frontExtraMm(20) + backExtraMm
+    const completoDepth = Math.max(1, profundidade + 20 + backExtra);
+    // Clamp width/height to not exceed box by more than maxOverBoxMm
+    const maxOver = rules.maxOverBoxMm;
+
     if (opts.asPuxador) {
-      return { width: largura + extra, height: PUXADOR_HEIGHT_MM, depth: t };
+      const w = Math.min(largura + extra + doorAdd, largura + maxOver);
+      return { width: w, height: PUXADOR_HEIGHT_MM, depth: t };
     }
     if (ctx.partRole === "TOP" || ctx.partRole === "BOTTOM") {
-      return { width: largura + extra, height: t, depth: spanDepth };
+      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: completoDepth };
     }
     const slot = ctx.mountSlot;
     if (slot === "DIR" || slot === "ESQ") {
-      return { width: t, height: spanHeight + extra, depth: spanDepth };
+      const h = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
+      return { width: t, height: h, depth: completoDepth };
     }
     if (slot === "CIMA" || slot === "FUNDO" || slot === "TRAS") {
-      return { width: largura + extra, height: t, depth: spanDepth };
+      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: completoDepth };
     }
-    return { width: largura + extra, height: spanHeight, depth: spanDepth };
+    // FRENTE (default / main face)
+    const w = Math.min(largura + extra + doorAdd, largura + maxOver);
+    const h = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
+    return { width: w, height: h, depth: completoDepth };
   }
 
   if (ctx.partRole === "TOP" || ctx.partRole === "BOTTOM") {

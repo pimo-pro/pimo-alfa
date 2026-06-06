@@ -146,6 +146,7 @@ export class EventsManager {
       e.selectRemate(remateId);
       e.getOnRemateSelected?.()?.(remateId);
       e.setHoveredBox(null);
+      e.setHoveredRemate(null);
       e.setSelectedBox(null);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
@@ -212,10 +213,14 @@ export class EventsManager {
       return;
     }
     e.setHoveredBox(null);
+    e.setHoveredRemate(null);
     e.setSelectedBox(null);
     e.setSelectedWallIndex(null);
     e.setSelectedRoomElementId(null);
     e.setSelectedRoomUtilityId(null);
+    e.selectRemate(null);
+    e.selectHemati(null);
+    e.selectRodape(null);
     const wallGizmo = e.getWallGizmo();
     if (wallGizmo) wallGizmo.detach();
     e.refreshTransformControlsAttachment();
@@ -224,6 +229,7 @@ export class EventsManager {
     e.getOnRoomElementSelected()?.(null);
     e.getOnRoomUtilitySelected()?.(null);
     e.getOnWallSelected()?.(null);
+    e.getOnRemateSelected?.()?.(null);
   }
 
   private handleCanvasPointerDown(event: PointerEvent): void {
@@ -282,6 +288,16 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
+      const remateId = e.getRemateIdAtPointer(event);
+      if (remateId != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.setHoveredRemate(remateId);
+        e.selectRemate(remateId);
+        e.getOnRemateSelected?.()?.(remateId);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
       const boxId = e.getBoxIdAtPointer(event);
       if (import.meta.env.DEV) {
         devLogger.debug("[SELECTION][EventsManager] pointerdown:boxId do raycast", {
@@ -422,8 +438,17 @@ export class EventsManager {
       e.getHighlightManager()!.setHovered(mesh);
       const boxId = mesh ? e.getBoxIdByMesh(mesh) : null;
       e.setHoveredBox(boxId);
+      if (boxId == null) {
+        e.setHoveredRemate(null);
+      }
       return;
     }
+    const remateId = e.getRemateIdAtPointer(event);
+    if (remateId) {
+      e.setHoveredRemate(remateId);
+      return;
+    }
+    e.setHoveredRemate(null);
     const id = e.getBoxIdAtPointer(event);
     e.setHoveredBox(id);
   }
@@ -437,6 +462,7 @@ export class EventsManager {
       e.getHighlightManager()!.setHovered(null);
     }
     e.setHoveredBox(null);
+    e.setHoveredRemate(null);
   }
 
   private handleWindowBlur(): void {

@@ -4,6 +4,7 @@ import { useTheme } from "../../../context/ThemeContext";
 import { ProjectContext } from "../../../context/projectContext";
 import { Icon } from "@/components/icons";
 import HeaderUndoRedoButtons from "./HeaderUndoRedoButtons";
+import HeaderIndustrialMenu from "./HeaderIndustrialMenu";
 
 type HeaderActionButtonProps = {
   title: string;
@@ -146,6 +147,7 @@ export default function Header() {
           fontSize: 13,
         }}
       >
+        <HeaderIndustrialMenu />
         <HeaderActionButton
           onClick={() => navigateInternal("/login")}
           title="Abrir página de login"

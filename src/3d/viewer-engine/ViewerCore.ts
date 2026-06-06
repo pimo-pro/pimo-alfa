@@ -770,11 +770,11 @@ export class ViewerCore {
       }
       this.viewerTools.applyCurrentTool();
       this.measurementOverlay.onRulerMovementTick("transform");
-      // Keep external listeners in sync during drag.
+      // Notify box during drag (doesn't trigger full syncAll).
       this.notifyBoxTransform();
-      this.notifyRemateTransform();
-      this.notifyHematiTransform();
-      this.notifyRodapeTransform();
+      // Remate/Hemati/Rodape are NOT notified during drag: their callbacks trigger
+      // syncAll() which resets the mesh position and fights the transform controls.
+      // Position is saved once in finishTransformDrag via notifyRemateTransform etc.
       this.logTransformDiagnostic("drag(objectChange)");
     });
     this.transformControlsHelper = this.transformControls.getHelper();
@@ -4298,6 +4298,7 @@ export class ViewerCore {
       getBoxIdByMesh: (mesh) => this.getBoxIdByMesh(mesh),
       setSelectedBox: (id) => this.setSelectedBox(id),
       setHoveredBox: (id) => this.setHoveredBox(id),
+      setHoveredRemate: (id) => this.setHoveredRemate(id),
       getOnRoomElementSelected: () => this.onRoomElementSelected,
       getOnRoomUtilitySelected: () => this.onRoomUtilitySelected,
       getOnWallSelected: () => this.onWallSelected,
@@ -4316,6 +4317,7 @@ export class ViewerCore {
       selectRodape: (id) => this.selectRodape(id),
       selectRemate: (id) => this.selectRemate(id),
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      getSelectedRemateId: () => this.viewerState.getSelectedRemate(),
       getRoomElementAtPointer: (e) => this.getRoomElementAtPointer(e),
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
       setSelectedWallIndex: (v) => { this.viewerState.setSelectedWallIndex(v); },
@@ -4383,6 +4385,7 @@ export class ViewerCore {
       getSelectionOutline: () => this.selectionOutline,
       getSelectionOutlineMaterial: () => this.selectionOutlineMaterial,
       getHoveredBoxId: () => this.viewerState.getHoveredBox(),
+      getHoveredRemateId: () => this.viewerState.getHoveredRemate(),
       getBoxesIntersectingWalls: () => this.boxesIntersectingWalls,
       setOutlineTarget: (mesh, opacity, colorHex) => this.setOutlineTarget(mesh, opacity, colorHex),
       clampTransform: () => this.clampTransform(),
@@ -4414,7 +4417,33 @@ export class ViewerCore {
   }
 
   /** Assinatura layout (L×A×P externo) para reconstruir geometria do contorno azul quando as dimensões mudam. */
+  private isRemateOutlineTarget(target: THREE.Object3D): boolean {
+    return (
+      target.userData?.isRematePiece === true ||
+      (typeof target.userData?.remateId === "string" && target.userData.remateId.length > 0)
+    );
+  }
+
+  private getRemateOutlineDimensions(target: THREE.Object3D): { w: number; h: number; d: number } | null {
+    if (!(target instanceof THREE.Mesh)) return null;
+    const geo = target.geometry;
+    if (!(geo instanceof THREE.BufferGeometry)) return null;
+    geo.computeBoundingBox();
+    const size = new THREE.Vector3();
+    geo.boundingBox?.getSize(size);
+    return {
+      w: Math.max(0.001, size.x * target.scale.x),
+      h: Math.max(0.001, size.y * target.scale.y),
+      d: Math.max(0.001, size.z * target.scale.z),
+    };
+  }
+
   private getSelectionOutlinePiecesSignature(target: THREE.Object3D): string {
+    if (this.isRemateOutlineTarget(target)) {
+      const remateId = String(target.userData?.remateId ?? target.uuid);
+      const dims = this.getRemateOutlineDimensions(target);
+      return `remate:${remateId}:${dims?.w ?? 0}:${dims?.h ?? 0}:${dims?.d ?? 0}`;
+    }
     const boxId =
       typeof target.userData?.boxId === "string" && target.userData.boxId.trim().length > 0
         ? target.userData.boxId.trim()
@@ -4430,6 +4459,26 @@ export class ViewerCore {
     if (!this.selectionOutline || !this.selectionOutlineMaterial) return;
     this.clearSelectionOutlineHelpers();
     const group = this.selectionOutline;
+
+    if (this.isRemateOutlineTarget(target)) {
+      const dims = this.getRemateOutlineDimensions(target);
+      if (!dims) return;
+      const boxGeo = new THREE.BoxGeometry(dims.w, dims.h, dims.d);
+      const edges = new THREE.EdgesGeometry(boxGeo);
+      boxGeo.dispose();
+      const wireframe = new THREE.LineSegments(edges, this.selectionOutlineMaterial);
+      wireframe.name = "selection-outline-layout";
+      wireframe.raycast = () => null;
+      wireframe.frustumCulled = false;
+      wireframe.renderOrder =
+        typeof target.userData?.remateOutlineRenderOrder === "number"
+          ? target.userData.remateOutlineRenderOrder
+          : 2001;
+      wireframe.matrixAutoUpdate = false;
+      group.add(wireframe);
+      return;
+    }
+
     const boxId =
       typeof target.userData?.boxId === "string" && target.userData.boxId.trim().length > 0
         ? target.userData.boxId.trim()
@@ -5204,6 +5253,14 @@ export class ViewerCore {
   private setHoveredBox(id: string | null) {
     if (this.viewerState.getHoveredBox() === id) return;
     this.viewerState.setHoveredBox(id);
+    if (id != null) this.viewerState.setHoveredRemate(null);
+    this.refreshOutlineTarget();
+  }
+
+  private setHoveredRemate(id: string | null) {
+    if (this.viewerState.getHoveredRemate() === id) return;
+    this.viewerState.setHoveredRemate(id);
+    if (id != null) this.viewerState.setHoveredBox(null);
     this.refreshOutlineTarget();
   }
 

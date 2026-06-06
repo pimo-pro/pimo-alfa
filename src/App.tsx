@@ -19,7 +19,7 @@ import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
@@ -48,6 +48,30 @@ import PageContainer from "./components/ui/PageContainer";
 import { IconGallery } from "@/components/icons";
 import "./components/ui/ui.css";
 import type { V3Piece } from "./nesting-v3/nestingV3Types";
+import IndustrialHomePage from "./app/industrial/index";
+import IndustrialWorkOrdersPage from "./app/industrial/work-orders/index";
+import WorkOrderExecutionPage from "./app/industrial/work-orders/WorkOrderExecutionPage";
+import StationExecutionPage from "./app/industrial/work-orders/StationExecutionPage";
+import WarehouseWorkOrderPage from "./app/industrial/work-orders/warehouse";
+import NestingWorkOrderPage from "./app/industrial/work-orders/nesting";
+import DrillWorkOrderPage from "./app/industrial/work-orders/drill";
+import OrlarWorkOrderPage from "./app/industrial/work-orders/orlar";
+import MontagemWorkOrderPage from "./app/industrial/work-orders/montagem";
+import EmbalagemWorkOrderPage from "./app/industrial/work-orders/embalagem";
+import IndustrialTrackingPage from "./app/industrial/tracking/index";
+import IndustrialEventsPage from "./app/industrial/events/index";
+import IndustrialQualityPage from "./app/industrial/quality/index";
+import IndustrialReworkPage from "./app/industrial/rework/index";
+import IndustrialTimeTrackingPage from "./app/industrial/time-tracking/index";
+import IndustrialOperationsPage from "./app/industrial/operations/index";
+import IndustrialCncPage from "./app/industrial/operations/cnc/index";
+import IndustrialNestingPage from "./app/industrial/operations/nesting/index";
+import IndustrialDrillPage from "./app/industrial/operations/drill/index";
+import IndustrialOrlarPage from "./app/industrial/operations/orlar/index";
+import IndustrialMontagemPage from "./app/industrial/operations/montagem/index";
+import IndustrialEmbalagemPage from "./app/industrial/operations/embalagem/index";
+import IndustrialAdminSettingsPage from "./app/admin/settings/industrial/index";
+import PieceMainView from "./app/industrial/piece/PieceMainView";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -400,6 +424,12 @@ function AppChromeLayout() {
   );
 }
 
+function PieceAliasRedirect() {
+  const { id } = useParams();
+  if (!id) return <Navigate to="/industrial" replace />;
+  return <Navigate to={`/industrial/piece/${id}`} replace />;
+}
+
 function PermissionRoute({
   children,
   check,
@@ -458,6 +488,8 @@ export default function App() {
           />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/pieces/:id" element={<PieceAliasRedirect />} />
+          <Route path="/studio/piece/:id" element={<PieceAliasRedirect />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/me" element={<MePage />} />
@@ -511,6 +543,30 @@ export default function App() {
                 </PermissionRoute>
               }
             />
+            <Route path="/industrial" element={<IndustrialHomePage />} />
+            <Route path="/industrial/work-orders" element={<IndustrialWorkOrdersPage />} />
+            <Route path="/industrial/work-orders/warehouse" element={<WarehouseWorkOrderPage />} />
+            <Route path="/industrial/work-orders/nesting" element={<NestingWorkOrderPage />} />
+            <Route path="/industrial/work-orders/drill" element={<DrillWorkOrderPage />} />
+            <Route path="/industrial/work-orders/orlar" element={<OrlarWorkOrderPage />} />
+            <Route path="/industrial/work-orders/montagem" element={<MontagemWorkOrderPage />} />
+            <Route path="/industrial/work-orders/embalagem" element={<EmbalagemWorkOrderPage />} />
+            <Route path="/industrial/work-orders/order/:workOrderId" element={<WorkOrderExecutionPage />} />
+            <Route path="/industrial/stations/:station" element={<StationExecutionPage />} />
+            <Route path="/industrial/tracking" element={<IndustrialTrackingPage />} />
+            <Route path="/industrial/events" element={<IndustrialEventsPage />} />
+            <Route path="/industrial/quality" element={<IndustrialQualityPage />} />
+            <Route path="/industrial/rework" element={<IndustrialReworkPage />} />
+            <Route path="/industrial/time-tracking" element={<IndustrialTimeTrackingPage />} />
+            <Route path="/industrial/piece/:pieceId" element={<PieceMainView />} />
+            <Route path="/industrial/operations" element={<IndustrialOperationsPage />} />
+            <Route path="/industrial/operations/cnc" element={<IndustrialCncPage />} />
+            <Route path="/industrial/operations/nesting" element={<IndustrialNestingPage />} />
+            <Route path="/industrial/operations/drill" element={<IndustrialDrillPage />} />
+            <Route path="/industrial/operations/orlar" element={<IndustrialOrlarPage />} />
+            <Route path="/industrial/operations/montagem" element={<IndustrialMontagemPage />} />
+            <Route path="/industrial/operations/embalagem" element={<IndustrialEmbalagemPage />} />
+            <Route path="/admin/settings/industrial" element={<IndustrialAdminSettingsPage />} />
           </Route>
           <Route path="/v4" element={<V4Page />} /> {/* TEMPORARY — remove before production */}
         </Route>

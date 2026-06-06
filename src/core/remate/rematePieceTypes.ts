@@ -2,6 +2,24 @@ export type RemateProductType = "AVISTA" | "COMPLETO" | "L" | "RODAPE" | "RODAPE
 
 export type RematePartRole = "MAIN" | "TOP" | "BOTTOM";
 
+/** Regras de cálculo automático de dimensões para Remate Completo. */
+export type RemateCompletoRules = {
+  /** +Xmm de largura se há porta (encostar à porta). */
+  doorFlushEnabled: boolean;
+  doorFlushMm: number;
+  /** Extensão extra para a traseira do módulo (mm). */
+  backExtraMm: number;
+  /** Extensão extra para o topo (alinhamento com remate cima) (mm). */
+  topExtraMm: number;
+  /** Extensão extra para o fundo (paralelo com porta/gaveta/remate lat) (mm). */
+  bottomExtraMm: number;
+  /** Adiciona altura extra quando o módulo está próximo do chão (+pés) (mm). */
+  floorProxEnabled: boolean;
+  floorProxMm: number;
+  /** Limite máximo de excesso em relação ao módulo (mm). */
+  maxOverBoxMm: number;
+};
+
 export type RemateProductOptions = {
   avistaWidthMm?: number;
   avistaFlushDepthMm?: number;
@@ -11,6 +29,8 @@ export type RemateProductOptions = {
   asPuxador?: boolean;
   lGapMaxMm?: number;
   lSide?: "DIR" | "ESQ";
+  /** Regras de dimensão automática para tipo COMPLETO. */
+  completoRules?: RemateCompletoRules;
 };
 
 export type RematePieceTipo =
