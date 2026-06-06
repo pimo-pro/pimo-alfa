@@ -145,13 +145,14 @@ export function computeDimensionsForProduct(
   ctx: ProductDimContext
 ): Pick<RematePiece, "width" | "height" | "depth"> {
   const opts = normalizeProductOptions(ctx.productType, ctx.productOptions);
-  const { largura, altura, profundidade, spanHeight, feetMm } = spanMetrics(ctx.box);
+  const { largura, altura, spanHeight, spanDepth, feetMm } = spanMetrics(ctx.box);
   const t = ctx.thicknessMm;
   const avistaW = opts.avistaWidthMm ?? DEFAULT_AVISTA_WIDTH_MM;
   const avistaD = opts.avistaFlushToDoor
     ? Math.max(1, opts.avistaFlushDepthMm ?? DEFAULT_AVISTA_FLUSH_DEPTH_MM)
     : Math.min(DEFAULT_AVISTA_WIDTH_MM, avistaW);
   const extra = opts.coverageExtraMm ?? 0;
+  const avistaDepthMm = Math.max(10, avistaW);
 
   if (ctx.productType === "RODAPE") {
     return { width: largura, height: RODAPE_HEIGHT_MM, depth: t };
@@ -162,7 +163,7 @@ export function computeDimensionsForProduct(
   }
   if (ctx.productType === "L") {
     if (ctx.partIndex === 2) return { width: largura, height: avistaD, depth: t };
-    return { width: avistaD, height: spanHeight, depth: t };
+    return { width: spanHeight, height: avistaD, depth: t };
   }
 
   if (ctx.productType === "COMPLETO") {
@@ -172,8 +173,7 @@ export function computeDimensionsForProduct(
     const bottomAdd = rules.floorProxEnabled
       ? Math.max(rules.bottomExtraMm, rules.floorProxMm + feetMm)
       : rules.bottomExtraMm;
-    void profundidade;
-    // Clamp width/height to not exceed box by more than maxOverBoxMm
+    const completoLarguraMm = Math.max(1, spanDepth + rules.backExtraMm);
     const maxOver = rules.maxOverBoxMm;
 
     if (opts.asPuxador) {
@@ -181,31 +181,38 @@ export function computeDimensionsForProduct(
       return { width: w, height: PUXADOR_HEIGHT_MM, depth: t };
     }
     if (ctx.partRole === "TOP" || ctx.partRole === "BOTTOM") {
-      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: t };
+      return {
+        width: Math.min(largura + extra + doorAdd, largura + maxOver),
+        height: t,
+        depth: avistaDepthMm,
+      };
     }
     const slot = ctx.mountSlot;
     if (slot === "DIR" || slot === "ESQ") {
-      const h = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
-      return { width: t, height: h, depth: t };
+      const comprimento = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
+      return { width: comprimento, height: completoLarguraMm, depth: t };
     }
     if (slot === "CIMA" || slot === "FUNDO" || slot === "TRAS") {
-      return { width: Math.min(largura + extra + doorAdd, largura + maxOver), height: t, depth: t };
+      return {
+        width: Math.min(largura + extra + doorAdd, largura + maxOver),
+        height: t,
+        depth: avistaDepthMm,
+      };
     }
-    // FRENTE (default / main face)
     const w = Math.min(largura + extra + doorAdd, largura + maxOver);
     const h = Math.min(altura + topAdd + bottomAdd + extra, altura + maxOver);
     return { width: w, height: h, depth: t };
   }
 
   if (ctx.partRole === "TOP" || ctx.partRole === "BOTTOM") {
-    return { width: largura, height: t, depth: t };
+    return { width: largura, height: t, depth: avistaDepthMm };
   }
   const slot = ctx.mountSlot;
   if (slot === "DIR" || slot === "ESQ") {
-    return { width: t, height: spanHeight, depth: t };
+    return { width: spanHeight, height: avistaW, depth: t };
   }
   if (slot === "CIMA" || slot === "FUNDO" || slot === "TRAS") {
-    return { width: largura, height: t, depth: t };
+    return { width: largura, height: t, depth: avistaDepthMm };
   }
   return { width: largura, height: spanHeight, depth: t };
 }

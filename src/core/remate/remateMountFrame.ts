@@ -172,23 +172,23 @@ export function defaultFaceOffsetsForPiece(piece: RematePiece, bounds: Structura
     case "DIR":
     case "ESQ":
       return {
-        offsetAlongNormalMm: (w / 2) * 1000,
-        offsetTangentUMm: (d / 2) * 1000,
+        offsetAlongNormalMm: (piece.depth / 2) * 1000,
+        offsetTangentUMm: (piece.height / 2) * 1000,
         offsetTangentVMm: 0,
         rotationSnapIndex: 0,
       };
     case "CIMA":
     case "FUNDO":
       return {
-        offsetAlongNormalMm: (h / 2) * 1000,
+        offsetAlongNormalMm: (piece.height / 2) * 1000,
         offsetTangentUMm: 0,
-        offsetTangentVMm: (d / 2) * 1000,
+        offsetTangentVMm: (piece.depth / 2) * 1000,
         rotationSnapIndex: 0,
       };
     case "FRENTE":
     case "TRAS":
       return {
-        offsetAlongNormalMm: (d / 2) * 1000,
+        offsetAlongNormalMm: (piece.depth / 2) * 1000,
         offsetTangentUMm: 0,
         offsetTangentVMm: 0,
         rotationSnapIndex: 0,

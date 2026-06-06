@@ -91,10 +91,10 @@ export default function RemateRulesSection({ rules, feetHeightMm, onChange }: Pr
         <p style={INFO_STYLE}>Profundidade = módulo + 20 (frente) + {r.backExtraMm} (traseira).</p>
       </div>
 
-      {/* Topo — +topExtraMm na altura */}
+      {/* Cima — +topExtraMm na altura */}
       <div style={FIELD_STYLE}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ flex: 1 }}>Margem de topo</span>
+          <span style={{ flex: 1 }}>Margem de cima</span>
           {numInput(r.topExtraMm, "topExtraMm", 0, 100)}
           <span style={{ fontSize: 10 }}>mm</span>
         </div>

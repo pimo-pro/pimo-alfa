@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useProject } from "../../../context/useProject";
 import { useUiStore } from "../../../stores/uiStore";
 import Panel from "../../ui/Panel";
@@ -24,6 +24,35 @@ import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/re
 import RemateRulesSection from "./RemateRulesSection";
 
 type Props = { remateId: string };
+
+function useNumericField(
+  value: number,
+  onCommit: (next: number) => void,
+  min = 1
+): {
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+} {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+  return {
+    value: draft,
+    onChange: (e) => setDraft(e.target.value),
+    onBlur: () => {
+      const parsed = Number(draft);
+      if (draft.trim() === "" || Number.isNaN(parsed)) {
+        setDraft(String(value));
+        return;
+      }
+      const clamped = Math.max(min, parsed);
+      onCommit(clamped);
+      setDraft(String(clamped));
+    },
+  };
+}
 
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
@@ -71,6 +100,15 @@ export default function RematePropertiesPanel({ remateId }: Props) {
     targetRemate,
     selectedWorkspaceBox,
   ]);
+
+  const widthField = useNumericField(remate?.width ?? 1, (width) => {
+    if (!remate) return;
+    actions.updateRemate(remate.id, { width });
+  });
+  const heightField = useNumericField(remate?.height ?? 1, (height) => {
+    if (!remate) return;
+    actions.updateRemate(remate.id, { height });
+  });
 
   if (!remate) return null;
 
@@ -231,38 +269,15 @@ export default function RematePropertiesPanel({ remateId }: Props) {
         {/* Dimensões de chapa — comprimento/largura editáveis; espessura do material */}
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Comprimento (mm)
-          <input
-            className="input input-sm"
-            type="number"
-            min={1}
-            value={remate.width}
-            onChange={(e) =>
-              actions.updateRemate(remate.id, { width: Math.max(1, Number(e.target.value) || 1) })
-            }
-          />
+          <input className="input input-sm" type="number" min={1} {...widthField} />
         </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Largura (mm)
-          <input
-            className="input input-sm"
-            type="number"
-            min={1}
-            value={remate.height}
-            onChange={(e) =>
-              actions.updateRemate(remate.id, { height: Math.max(1, Number(e.target.value) || 1) })
-            }
-          />
+          <input className="input input-sm" type="number" min={1} {...heightField} />
         </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-          Espessura (mm)
-          <input
-            className="input input-sm"
-            type="number"
-            readOnly
-            value={thicknessMm}
-            title="Definida pelo material selecionado"
-          />
-        </label>
+        <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+          Espessura: {thicknessMm} mm (material)
+        </p>
 
         {gapMeasure ? (
           <div

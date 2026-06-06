@@ -64,6 +64,7 @@ import {
   setBox3FromObjectExcludingLayoutProxy,
   VIEWER_LAYOUT_PROXY_LAYER,
 } from "./box/boxAabbUtils";
+import { resolveFinishMeshOverlaps } from "./constraints/finishCollision";
 
 /**
  * Propaga userData.boxId e layer 0 para todos os filhos do grupo da caixa.
@@ -231,6 +232,7 @@ export class ViewerCore {
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
   private onRemateSelected: ((_remateId: string | null) => void) | null = null;
+  private onRodapeSelected: ((_rodapeId: string | null) => void) | null = null;
   private onInternalSurfaceSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private onInternalEdgeSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private onInternalPointSelected: ((_hit: InternalSelectionState) => void) | null = null;
@@ -447,6 +449,7 @@ export class ViewerCore {
   private orlaVisualizer = new OrlaVisualizer();
   private remateVisualizer = new RematePieceVisualizer();
   private remateVisualBridge: RematePieceVisualBridge | null = null;
+  private rodapeVisualBridge: RodapeVisualBridge | null = null;
   private hematiVisualizer = new HematiVisualizer();
   private rodapeVisualizer = new RodapeVisualizer();
   private readonly overlayCoordinator = new ViewerOverlayCoordinator();
@@ -991,6 +994,10 @@ export class ViewerCore {
     this.onRemateSelected = callback;
   }
 
+  setOnRodapeSelected(callback: ((_rodapeId: string | null) => void) | null): void {
+    this.onRodapeSelected = callback;
+  }
+
   bindHematiBridge(bridge: HematiVisualBridge | null): void {
     this.hematiVisualizer.bindBridge(bridge);
     this.syncHematiVisuals();
@@ -1002,6 +1009,7 @@ export class ViewerCore {
   }
 
   bindRodapeBridge(bridge: RodapeVisualBridge | null): void {
+    this.rodapeVisualBridge = bridge;
     this.rodapeVisualizer.bindBridge(bridge);
     this.syncRodapeVisuals();
   }
@@ -1042,6 +1050,7 @@ export class ViewerCore {
 
   selectRodape(rodapeId: string | null): void {
     this.viewerState.setSelectedRodape(rodapeId);
+    this.onRodapeSelected?.(rodapeId);
     if (rodapeId) {
       this.viewerState.setSelectedHemati(null);
       this.viewerState.setSelectedRemate(null);
@@ -4755,6 +4764,36 @@ export class ViewerCore {
     });
   }
 
+  private applyFinishCollisionConstraint(
+    movingMesh: THREE.Object3D,
+    excludeBoxId: string | undefined,
+    excludeRemateId?: string,
+    excludeRodapeId?: string
+  ): void {
+    if (!this.lockEnabled) return;
+
+    const otherMeshes: THREE.Object3D[] = [];
+    for (const piece of this.remateVisualBridge?.listRematePieces() ?? []) {
+      if (piece.id === excludeRemateId) continue;
+      const mesh = this.remateVisualizer.getMeshByRemateId(piece.id);
+      if (mesh) otherMeshes.push(mesh);
+    }
+    for (const cfg of this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []) {
+      for (const rodape of cfg.rodapes) {
+        if (rodape.id === excludeRodapeId) continue;
+        const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodape.id);
+        if (mesh) otherMeshes.push(mesh);
+      }
+    }
+
+    resolveFinishMeshOverlaps({
+      movingMesh,
+      boxes: this.boxes,
+      excludeBoxIds: excludeBoxId ? new Set([excludeBoxId]) : undefined,
+      otherMeshes,
+    });
+  }
+
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
     if (this.viewerState.getSelectedRoomElementId() || this.viewerState.getSelectedRoomUtilityId()) {
@@ -4788,11 +4827,27 @@ export class ViewerCore {
         } else if (currentTool === "rotate") {
           applyRemateRotationSnapToMesh(mesh, entry?.mesh ?? null);
         }
+
+        if (currentTool === "translate" && mesh && obj === mesh) {
+          const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
+          this.applyFinishCollisionConstraint(mesh, boxId, selectedRemateId);
+        }
       }
       return;
     }
 
-    if (this.viewerState.getSelectedHemati() || this.viewerState.getSelectedRodape()) {
+    if (this.viewerState.getSelectedHemati()) {
+      return;
+    }
+
+    const selectedRodapeId = this.viewerState.getSelectedRodape();
+    if (selectedRodapeId) {
+      const mesh = this.rodapeVisualizer.getMeshByRodapeId(selectedRodapeId);
+      const obj = this.transformControls?.object;
+      if (isDragging && mesh && obj === mesh && currentTool === "translate") {
+        const boxId = mesh.userData.boxId as string | undefined;
+        this.applyFinishCollisionConstraint(mesh, boxId, undefined, selectedRodapeId);
+      }
       return;
     }
 
@@ -5464,6 +5519,7 @@ export class ViewerCore {
     this.remateVisualizer.dispose();
     this.hematiVisualizer.bindBridge(null);
     this.hematiVisualizer.dispose();
+    this.rodapeVisualBridge = null;
     this.rodapeVisualizer.bindBridge(null);
     this.rodapeVisualizer.dispose();
     this.overlayCoordinator.dispose();

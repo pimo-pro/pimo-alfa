@@ -16,6 +16,7 @@ import { LeftPanelCalculadora } from "./LeftPanelCalculadora";
 import { HomeLeftPanelEmpty } from "./HomeLeftPanelEmpty";
 import { HomeLeftPanelSelected } from "./HomeLeftPanelSelected";
 import RematePropertiesPanel from "../../settings/remate/RematePropertiesPanel";
+import RodapePropertiesPanel from "../../settings/rodape/RodapePropertiesPanel";
 import { useMaterialsForPicker } from "./hooks/useMaterialsForPicker";
 import PhotoModeSettingsContent from "./PhotoModeSettingsContent";
 
@@ -80,6 +81,16 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
       <div className="left-panel-content">
         <div className="left-panel-scroll">
           <RematePropertiesPanel remateId={selectedObject.id} />
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedObject.type === "rodape") {
+    return (
+      <div className="left-panel-content">
+        <div className="left-panel-scroll">
+          <RodapePropertiesPanel rodapeId={selectedObject.id} />
         </div>
       </div>
     );

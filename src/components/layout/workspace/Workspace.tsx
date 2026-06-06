@@ -726,6 +726,20 @@ const hasShownViewerReadyToastRef = useRef(false);
       }
     });
 
+    core?.setOnRodapeSelected?.((rodapeId) => {
+      if (rodapeId) {
+        if (projectRef.current.selectedWorkspaceBoxId) {
+          actionsRef.current.clearSelection();
+        }
+        setSelectedObject({ type: "rodape", id: rodapeId });
+        setSelectedTool("home");
+        return;
+      }
+      if (uiStore.getState().selectedObject.type === "rodape") {
+        clearUiSelection();
+      }
+    });
+
     const buildHematiBoxConfig = (boxId: string) => {
       const dims = buildFinishBoxDims(boxId);
       if (!dims) return null;

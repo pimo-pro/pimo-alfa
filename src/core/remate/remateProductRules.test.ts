@@ -28,6 +28,37 @@ describe("remateProductRules", () => {
     expect(dims.depth).toBe(19);
   });
 
+  it("Completo lateral usa comprimento vertical e largura de profundidade", () => {
+    const dims = computeDimensionsForProduct({
+      box: {
+        id: "b1",
+        dimensoes: { largura: 600, altura: 720, profundidade: 500 },
+      } as never,
+      productType: "COMPLETO",
+      mountSlot: "DIR",
+      thicknessMm: 19,
+      productOptions: { completoRules: { backExtraMm: 50 } as never },
+    });
+    expect(dims.width).toBeGreaterThan(700);
+    expect(dims.height).toBeGreaterThan(500);
+    expect(dims.depth).toBe(19);
+  });
+
+  it("Remate cima usa profundidade avista de 100 mm", () => {
+    const dims = computeDimensionsForProduct({
+      box: {
+        id: "b1",
+        dimensoes: { largura: 600, altura: 720, profundidade: 500 },
+      } as never,
+      productType: "AVISTA",
+      mountSlot: "CIMA",
+      thicknessMm: 19,
+    });
+    expect(dims.width).toBe(600);
+    expect(dims.height).toBe(19);
+    expect(dims.depth).toBe(100);
+  });
+
   it("inferProductTypeFromLegacy mapeia DIR para AVISTA", () => {
     expect(inferProductTypeFromLegacy({ tipo: "DIR" })).toBe("AVISTA");
   });

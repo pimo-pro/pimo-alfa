@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
+import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
 import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
 
@@ -90,9 +91,7 @@ export class RematePieceVisualizer {
   }
 
   private upsertMesh(piece: RematePiece, hidden: boolean): void {
-    const w = Math.max(0.001, piece.width / 1000);
-    const h = Math.max(0.001, piece.height / 1000);
-    const d = Math.max(0.001, piece.depth / 1000);
+    const { w, h, d } = remateGeometryExtentsM(piece);
 
     let mesh = this.meshById.get(piece.id);
     if (!mesh) {

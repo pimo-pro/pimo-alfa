@@ -1,10 +1,8 @@
-import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
+import { useUiStore } from "../../../stores/uiStore";
 import Panel from "../../ui/Panel";
-import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import type { CreateRodapeInput, RodapeKind } from "../../../core/rodape/rodapeTypes";
 import { rodapeKindLabel } from "../../../core/rodape/rodapeTypes";
-import { RODAPE_DEFAULT_HEIGHT_MM } from "../../../core/kitchenFinish/finishTypes";
 
 type Props = {
   boxId: string;
@@ -21,8 +19,9 @@ const TOGGLES: Array<{ kind: RodapeKind; label: string }> = [
 
 export default function BoxRodapeSection({ boxId, embedded = false }: Props) {
   const { project, actions } = useProject();
+  const setSelectedObject = useUiStore((s) => s.setSelectedObject);
+  const setSelectedTool = useUiStore((s) => s.setSelectedTool);
   const box = project.workspaceBoxes.find((b) => b.id === boxId);
-  const materials = useMemo(() => listOfficialMaterials().filter((m) => m.industrial), []);
   const defaultMaterialId = box?.material || project.materialId || project.material.tipo;
   const rodapes = (project.rodapes ?? []).filter((r) => r.parentBoxId === boxId);
 
@@ -76,53 +75,33 @@ export default function BoxRodapeSection({ boxId, embedded = false }: Props) {
       {rodapes.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
           {rodapes.map((rodape) => (
-            <div
+            <button
               key={rodape.id}
+              type="button"
+              className="btn"
               style={{
                 border: "1px solid var(--border-subtle)",
                 borderRadius: 6,
-                padding: 8,
+                padding: "10px 12px",
                 display: "flex",
                 flexDirection: "column",
                 gap: 6,
                 opacity: rodape.visible === false ? 0.55 : 1,
+                textAlign: "left",
+              }}
+              onClick={() => {
+                setSelectedObject({ type: "rodape", id: rodape.id });
+                setSelectedTool("home");
+                window.viewerCore?.selectRodape?.(rodape.id);
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <strong style={{ fontSize: 12 }}>{rodapeKindLabel(rodape.kind, rodape.partIndex)}</strong>
-                <label style={{ fontSize: 11, display: "flex", gap: 4, alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={rodape.visible !== false}
-                    onChange={(e) => actions.setRodapeVisible(rodape.id, e.target.checked)}
-                  />
-                  Visível
-                </label>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {rodape.dimensions.widthMm} × {rodape.heightMm} mm
+                </span>
               </div>
-              <select
-                className="select input-sm"
-                value={rodape.materialId}
-                onChange={(e) => actions.updateRodape(rodape.id, { materialId: e.target.value })}
-              >
-                {materials.map((m) => (
-                  <option key={m.canonicalId} value={m.canonicalId}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="input input-sm"
-                type="number"
-                title="Altura roda pé (mm)"
-                value={rodape.heightMm}
-                onChange={(e) =>
-                  actions.updateRodape(rodape.id, { heightMm: Number(e.target.value) || RODAPE_DEFAULT_HEIGHT_MM })
-                }
-              />
-              <button type="button" className="btn btn-danger" onClick={() => actions.removeRodape(rodape.id)}>
-                Remover peça
-              </button>
-            </div>
+            </button>
           ))}
         </div>
       )}

@@ -145,7 +145,7 @@ export const REMATE_MOUNT_SLOT_LABELS: Record<RemateMountSlot, string> = {
   TRAS: "Face traseira",
   DIR: "Lateral direita",
   ESQ: "Lateral esquerda",
-  CIMA: "Topo",
+  CIMA: "Cima",
   FUNDO: "Fundo",
 };
 

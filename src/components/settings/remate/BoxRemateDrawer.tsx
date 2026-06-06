@@ -299,6 +299,7 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
                     }}
                     onClick={() => {
                       setSelectedObject({ type: "remate", id: remate.id });
+                      window.viewerCore?.selectRemate?.(remate.id);
                       onClose();
                     }}
                   >
