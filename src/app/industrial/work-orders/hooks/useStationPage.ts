@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import { useAuth } from '@/auth/useAuth';
 import { parseBarcode } from '@/industrial/core/barcode/actions';
+import { useIndustrialRealtime } from '@/industrial/realtime';
 import {
   assignOperator,
   fetchStationTasks,
@@ -135,6 +136,21 @@ export function useStationPage(station: IndustrialStation) {
     config.enableSupervisorChat ? 'supervisor' : 'station',
   );
   const [eventLog, setEventLog] = useState<Array<{ id: string; type: string; at: string }>>([]);
+  const reloadRef = useRef<() => Promise<void>>(async () => undefined);
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleReload = useCallback(() => {
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(() => {
+      void reloadRef.current();
+    }, 800);
+  }, []);
+
+  const realtime = useIndustrialRealtime({
+    mode: 'station',
+    station,
+    onDataRefresh: scheduleReload,
+  });
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -157,6 +173,8 @@ export function useStationPage(station: IndustrialStation) {
     }
   }, [station]);
 
+  reloadRef.current = reload;
+
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -173,13 +191,25 @@ export function useStationPage(station: IndustrialStation) {
 
   const canvasPieces = useMemo(
     () => buildCanvasPieces(tasks, orders, selectedPieceId),
-    [tasks, orders, selectedPieceId],
+    [tasks, orders, selectedPieceId, realtime.canvasRevision],
   );
 
   const notifications = useMemo(() => {
-    const all = buildNotifications(station, tasks, config.enableSupervisorChat ?? false);
-    return all.filter((n) => !dismissedNotifications.includes(n.id));
-  }, [station, tasks, config.enableSupervisorChat, dismissedNotifications]);
+    const base = buildNotifications(station, tasks, config.enableSupervisorChat ?? false);
+    const merged = [...realtime.realtimeNotifications, ...base];
+    const seen = new Set<string>();
+    const unique = merged.filter((n) => {
+      if (seen.has(n.id)) return false;
+      seen.add(n.id);
+      return true;
+    });
+    return unique.filter((n) => !dismissedNotifications.includes(n.id));
+  }, [station, tasks, config.enableSupervisorChat, realtime.realtimeNotifications, dismissedNotifications]);
+
+  const liveConversations = useMemo(
+    () => realtime.mergeChatConversations(conversations),
+    [conversations, realtime],
+  );
 
   const resolveTaskFromCode = useCallback(
     (raw: string): IndustrialWorkOrderTask | null => {
@@ -264,6 +294,22 @@ export function useStationPage(station: IndustrialStation) {
   const handleSendChatMessage = useCallback(
     (body: string, eventAttachment?: string) => {
       const convId = activeConversationId;
+      const author = user?.id ?? 'Operador';
+      const scopeId =
+        convId === 'supervisor'
+          ? 'supervisor'
+          : selectedTask?.pieceId ?? station;
+      const scope = convId === 'supervisor' ? 'supervisor' : selectedTask ? 'piece' : 'station';
+
+      realtime.sendRealtimeChat({
+        conversationId: convId,
+        author,
+        body,
+        scope,
+        scopeId,
+        eventAttachment,
+      });
+
       setConversations((prev) =>
         prev.map((conv) =>
           conv.id === convId
@@ -273,7 +319,7 @@ export function useStationPage(station: IndustrialStation) {
                   ...conv.messages,
                   {
                     id: `${Date.now()}`,
-                    author: user?.id ?? 'Operador',
+                    author,
                     body,
                     createdAt: new Date().toISOString(),
                     eventAttachment,
@@ -287,7 +333,7 @@ export function useStationPage(station: IndustrialStation) {
         void logTaskEvent(selectedTask.id, 'chat_event', { event: eventAttachment }, user?.id);
       }
     },
-    [activeConversationId, selectedTask, user?.id],
+    [activeConversationId, selectedTask, user?.id, station, realtime],
   );
 
   return {
@@ -295,7 +341,7 @@ export function useStationPage(station: IndustrialStation) {
     title: getStationPageTitle(station),
     description: loading
       ? 'A carregar fila de trabalho…'
-      : `${activeTasks.length} tarefa(s) activa(s) · ${orders.length} ordem(ns)`,
+      : `${activeTasks.length} tarefa(s) activa(s) · ${orders.length} ordem(ns) · ${realtime.stationOnline ? 'online' : 'offline'}`,
     loading,
     busy,
     error,
@@ -317,7 +363,7 @@ export function useStationPage(station: IndustrialStation) {
     notifications,
     dismissedNotifications,
     setDismissedNotifications,
-    conversations,
+    conversations: liveConversations,
     activeConversationId,
     setActiveConversationId,
     sections,
@@ -331,5 +377,9 @@ export function useStationPage(station: IndustrialStation) {
     handleSendChatMessage,
     reload,
     selectTask,
+    stationOnline: realtime.stationOnline,
+    realtimeConnected: realtime.connected,
+    canvasRevision: realtime.canvasRevision,
+    typingUsers: realtime.typingUsers,
   };
 }

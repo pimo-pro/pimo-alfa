@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import StationCanvas from '@/industrial/ui/components/StationCanvas';
 import StationPanel from '@/industrial/ui/components/StationPanel';
 import StationSidebar from '@/industrial/ui/components/StationSidebar';
@@ -66,6 +68,14 @@ export default function StationPageShell({ station }: StationPageShellProps) {
           onReload={() => void page.reload()}
           onToggleSidebar={() => page.setSidebarOpen(!page.sidebarOpen)}
           sidebarOpen={page.sidebarOpen}
+          extra={
+            <Link
+              to={`/industrial/supervisor?station=${station}`}
+              style={{ fontSize: 12, color: '#60a5fa' }}
+            >
+              Ver no Supervisor
+            </Link>
+          }
         />
       }
       right={

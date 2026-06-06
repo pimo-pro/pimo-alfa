@@ -71,7 +71,9 @@ import IndustrialOrlarPage from "./app/industrial/operations/orlar/index";
 import IndustrialMontagemPage from "./app/industrial/operations/montagem/index";
 import IndustrialEmbalagemPage from "./app/industrial/operations/embalagem/index";
 import IndustrialAdminSettingsPage from "./app/admin/settings/industrial/index";
+import RealtimeAlertsAdminPage from "./app/admin/system-settings/industrial/realtime-alerts";
 import PieceMainView from "./app/industrial/piece/PieceMainView";
+import IndustrialSupervisorDashboardPage from "./app/industrial/supervisor/index";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -544,6 +546,7 @@ export default function App() {
               }
             />
             <Route path="/industrial" element={<IndustrialHomePage />} />
+            <Route path="/industrial/supervisor" element={<IndustrialSupervisorDashboardPage />} />
             <Route path="/industrial/work-orders" element={<IndustrialWorkOrdersPage />} />
             <Route path="/industrial/work-orders/warehouse" element={<WarehouseWorkOrderPage />} />
             <Route path="/industrial/work-orders/nesting" element={<NestingWorkOrderPage />} />
@@ -567,6 +570,7 @@ export default function App() {
             <Route path="/industrial/operations/montagem" element={<IndustrialMontagemPage />} />
             <Route path="/industrial/operations/embalagem" element={<IndustrialEmbalagemPage />} />
             <Route path="/admin/settings/industrial" element={<IndustrialAdminSettingsPage />} />
+            <Route path="/admin/system-settings/industrial/realtime-alerts" element={<RealtimeAlertsAdminPage />} />
           </Route>
           <Route path="/v4" element={<V4Page />} /> {/* TEMPORARY — remove before production */}
         </Route>

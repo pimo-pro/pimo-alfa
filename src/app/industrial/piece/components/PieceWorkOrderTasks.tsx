@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 
@@ -16,6 +16,8 @@ const STATUS_LABEL: Record<IndustrialWorkOrderTask['status'], string> = {
 };
 
 export default function PieceWorkOrderTasks({ tasks, loading, error }: PieceWorkOrderTasksProps) {
+  const { pieceId } = useParams<{ pieceId: string }>();
+
   if (loading) return <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>A carregar work orders…</p>;
   if (error) return <p style={{ fontSize: 12, color: '#f87171', margin: 0 }}>{error}</p>;
   if (tasks.length === 0) {
@@ -23,6 +25,15 @@ export default function PieceWorkOrderTasks({ tasks, loading, error }: PieceWork
   }
 
   return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {pieceId ? (
+        <Link
+          to={`/industrial/supervisor?piece=${encodeURIComponent(pieceId)}`}
+          style={{ fontSize: 11, color: '#60a5fa' }}
+        >
+          Ver estado industrial
+        </Link>
+      ) : null}
     <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
       {tasks.map((task) => (
         <li
@@ -45,5 +56,6 @@ export default function PieceWorkOrderTasks({ tasks, loading, error }: PieceWork
         </li>
       ))}
     </ul>
+    </div>
   );
 }

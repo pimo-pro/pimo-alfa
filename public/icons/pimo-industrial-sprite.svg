@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="industrial-supervisor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="8" r="3.5"/>
+    <path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/>
+    <path d="M17 5.5l1.5 1.5M19 8h2"/>
+  </symbol>
+  <symbol id="industrial-overview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1"/>
+    <rect x="14" y="3" width="7" height="7" rx="1"/>
+    <rect x="3" y="14" width="7" height="7" rx="1"/>
+    <rect x="14" y="14" width="7" height="7" rx="1"/>
+  </symbol>
+  <symbol id="industrial-stations" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 19V5l8 4 8-4v14"/>
+    <path d="M12 9v10"/>
+  </symbol>
+  <symbol id="industrial-projects" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7h5l2 2h11v10H3z"/>
+    <path d="M3 7V5h5l2 2"/>
+  </symbol>
+  <symbol id="industrial-quality" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 11l2 2 4-4"/>
+    <rect x="4" y="4" width="16" height="16" rx="2"/>
+  </symbol>
+  <symbol id="industrial-time" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/>
+    <path d="M12 8v4l3 2"/>
+  </symbol>
+  <symbol id="industrial-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 5h16v10H8l-4 4z"/>
+  </symbol>
+  <symbol id="industrial-alerts" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 4a5 5 0 0 1 5 5v3l1.5 3H5.5L7 12V9a5 5 0 0 1 5-5z"/>
+    <path d="M10 18a2 2 0 0 0 4 0"/>
+  </symbol>
+  <symbol id="industrial-canvas-3d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/>
+    <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>
+  </symbol>
+  <symbol id="industrial-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/>
+    <path d="M12 10v6"/>
+    <path d="M12 7h.01"/>
+  </symbol>
+  <symbol id="industrial-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/>
+    <path d="M8 12l2.5 2.5L16 9"/>
+  </symbol>
+</svg>

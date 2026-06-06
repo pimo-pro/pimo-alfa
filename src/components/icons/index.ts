@@ -1,4 +1,6 @@
 export { Icon } from "./Icon";
+export { default as IndustrialSpriteIcon } from "./IndustrialSpriteIcon";
+export type { IndustrialSpriteIconName } from "./IndustrialSpriteIcon";
 export { IconGallery } from "./IconGallery";
 export type { IconName, IconProps, IconComponentProps } from "./types";
 export * from "./groups/header";

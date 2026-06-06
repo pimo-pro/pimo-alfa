@@ -8,6 +8,7 @@ type MenuItem =
 const MENU_ITEMS: MenuItem[] = [
   { type: 'link', label: 'Tracking', path: '/industrial/tracking' },
   { type: 'link', label: 'Work Orders', path: '/industrial/work-orders' },
+  { type: 'link', label: 'Supervisor', path: '/industrial/supervisor' },
   { type: 'link', label: 'Quality', path: '/industrial/quality' },
   { type: 'link', label: 'Rework', path: '/industrial/rework' },
   { type: 'link', label: 'Time Tracking', path: '/industrial/time-tracking' },
