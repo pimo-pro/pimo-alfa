@@ -64,7 +64,7 @@ import {
   setBox3FromObjectExcludingLayoutProxy,
   VIEWER_LAYOUT_PROXY_LAYER,
 } from "./box/boxAabbUtils";
-import { resolveFinishMeshOverlaps } from "./constraints/finishCollision";
+import { applyFinishMovementConstraints } from "./constraints/finishCollision";
 
 /**
  * Propaga userData.boxId e layer 0 para todos os filhos do grupo da caixa.
@@ -1781,6 +1781,8 @@ export class ViewerCore {
       const name = entry.materialName ?? this.defaultMaterialName;
       this.updateBoxMaterial(id, name);
     });
+    this.syncRemateVisuals();
+    this.syncRodapeVisuals();
   }
 
   /**
@@ -4764,6 +4766,35 @@ export class ViewerCore {
     });
   }
 
+  /**
+   * Após sync visual (painel/teclado), reaplica colisão e propaga posição corrigida ao estado.
+   */
+  resolveFinishCollisionAfterSync(params: { remateId?: string; rodapeId?: string }): void {
+    const { remateId, rodapeId } = params;
+    if (remateId) {
+      const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
+      if (!mesh) return;
+      const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === remateId);
+      const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
+      this.applyFinishCollisionConstraint(mesh, boxId, remateId);
+      const prev = this.viewerState.getSelectedRemate();
+      if (prev !== remateId) this.viewerState.setSelectedRemate(remateId);
+      this.notifyRemateTransform();
+      if (prev !== remateId) this.viewerState.setSelectedRemate(prev);
+      return;
+    }
+    if (rodapeId) {
+      const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodapeId);
+      if (!mesh) return;
+      const boxId = mesh.userData.boxId as string | undefined;
+      this.applyFinishCollisionConstraint(mesh, boxId, undefined, rodapeId);
+      const prev = this.viewerState.getSelectedRodape();
+      if (prev !== rodapeId) this.viewerState.setSelectedRodape(rodapeId);
+      this.notifyRodapeTransform();
+      if (prev !== rodapeId) this.viewerState.setSelectedRodape(prev);
+    }
+  }
+
   private applyFinishCollisionConstraint(
     movingMesh: THREE.Object3D,
     excludeBoxId: string | undefined,
@@ -4786,11 +4817,15 @@ export class ViewerCore {
       }
     }
 
-    resolveFinishMeshOverlaps({
+    applyFinishMovementConstraints({
       movingMesh,
       boxes: this.boxes,
       excludeBoxIds: excludeBoxId ? new Set([excludeBoxId]) : undefined,
       otherMeshes,
+      applyFloorConstraint: (mesh) => this.applyFloorConstraint(mesh),
+      roomBounds: this.roomBounds,
+      roomWallMeshes: this.roomBoxWalls.map((w) => w.mesh),
+      isInsideRoom: (mesh) => this.isMeshInsideOrTouchingRoom(mesh),
     });
   }
 

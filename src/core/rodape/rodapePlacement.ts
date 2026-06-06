@@ -14,7 +14,7 @@ export function computeRodapePlacementLocal(
   bounds: StructuralBoundsM
 ): RodapePlacementLocal {
   const w = rodape.dimensions.widthMm / 1000;
-  const h = rodape.dimensions.heightMm / 1000;
+  const h = (rodape.dimensions.heightMm ?? rodape.heightMm) / 1000;
   const d = rodape.dimensions.depthMm / 1000;
   const cx = bounds.centerX;
 

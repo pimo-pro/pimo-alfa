@@ -90,6 +90,8 @@ declare global {
       getBoxDimensions?: (boxId: string) => { width: number; height: number; depth: number } | null;
       getBoxWorldMatrix?: (boxId: string) => unknown;
       syncRemateVisuals?: () => void;
+      resolveFinishCollisionAfterSync?: (params: { remateId?: string; rodapeId?: string }) => void;
+      refreshTransformControlsAttachment?: () => void;
       remateVisual?: {
         syncAll: () => void;
       };

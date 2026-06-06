@@ -95,7 +95,7 @@ function resolveBoxOverlaps(
   }
 }
 
-function clampInsideRoom(movingMesh: THREE.Object3D, roomBounds: RoomBoundsLike, wallOffsetMm: number): void {
+export function clampInsideRoom(movingMesh: THREE.Object3D, roomBounds: RoomBoundsLike, wallOffsetMm: number): void {
   movingMesh.updateMatrixWorld(true);
   const movingBox = new THREE.Box3();
   setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);

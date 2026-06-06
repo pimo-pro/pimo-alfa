@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
-import { getMaterialByIdOrLabel } from "../../../core/materials/service";
+import { getMaterialForOfficialId } from "../../objects/BoxMaterialApplier";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
@@ -173,12 +173,8 @@ export class RematePieceVisualizer {
   }
 
   private buildMaterial(piece: RematePiece): THREE.MeshStandardMaterial {
-    const matRecord = getMaterialByIdOrLabel(piece.materialPresetId);
-    return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(matRecord?.color ?? "#d9d9d9"),
-      roughness: 0.65,
-      metalness: (piece.materialPresetId ?? "").toLowerCase().includes("alumin") ? 0.6 : 0,
-    });
+    const base = getMaterialForOfficialId(piece.materialPresetId);
+    return base.clone();
   }
 
   private applyMaterial(mesh: THREE.Mesh, piece: RematePiece): void {

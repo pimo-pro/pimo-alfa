@@ -8,7 +8,7 @@ import { RODAPE_DEFAULT_HEIGHT_MM, HEMATI_DEFAULT_THICKNESS_MM } from "../../cor
 
 export type RodapeActions = Pick<
   ProjectActions,
-  "createBoxRodape" | "updateRodape" | "removeRodape" | "setRodapeVisible"
+  "createBoxRodape" | "updateRodape" | "updateRodapeDimensions" | "removeRodape" | "setRodapeVisible"
 >;
 
 export function useRodapeActions(ctx: ProjectActionsExecutionContext): RodapeActions {
@@ -68,7 +68,44 @@ export function useRodapeActions(ctx: ProjectActionsExecutionContext): RodapeAct
           (prev) =>
             applyResultados({
               ...prev,
-              rodapes: (prev.rodapes ?? []).map((r) => (r.id === rodapeId ? { ...r, ...patch } : r)),
+              rodapes: (prev.rodapes ?? []).map((r) => {
+                if (r.id !== rodapeId) return r;
+                const next = { ...r, ...patch };
+                if (patch.heightMm != null) {
+                  next.dimensions = { ...next.dimensions, heightMm: patch.heightMm };
+                }
+                if (patch.dimensions?.heightMm != null) {
+                  next.heightMm = patch.dimensions.heightMm;
+                }
+                if (patch.dimensions?.widthMm != null) {
+                  next.dimensions = { ...next.dimensions, widthMm: patch.dimensions.widthMm };
+                }
+                return next;
+              }),
+            }),
+          true
+        );
+      },
+
+      updateRodapeDimensions: (rodapeId, dims) => {
+        updateProject(
+          (prev) =>
+            applyResultados({
+              ...prev,
+              rodapes: (prev.rodapes ?? []).map((r) => {
+                if (r.id !== rodapeId) return r;
+                const widthMm = dims.widthMm ?? r.dimensions.widthMm;
+                const heightMm = dims.heightMm ?? r.heightMm ?? r.dimensions.heightMm;
+                return {
+                  ...r,
+                  heightMm,
+                  dimensions: {
+                    ...r.dimensions,
+                    widthMm,
+                    heightMm,
+                  },
+                };
+              }),
             }),
           true
         );

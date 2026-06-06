@@ -16,9 +16,13 @@ import { snapToMountRule } from "./remateMountFrame";
 
 let remateSeq = 0;
 
-function nextRemateId(prefix = "remate"): string {
+export function createRemateId(prefix = "remate"): string {
   remateSeq += 1;
   return `${prefix}-${Date.now()}-${remateSeq}`;
+}
+
+function nextRemateId(prefix = "remate"): string {
+  return createRemateId(prefix);
 }
 
 function buildName(

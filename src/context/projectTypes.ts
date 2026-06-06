@@ -618,6 +618,10 @@ export interface ProjectActions {
   removeRemate: (_remateId: string) => void;
   /** Remate 2.0 — reencosta remate (ou grupo) à face do módulo. */
   resnapRemateToFace: (_remateId: string) => void;
+  /** Remate 2.0 — duplica peça com offset lateral (mm). Devolve id da nova peça. */
+  duplicateRemate: (_remateId: string) => string | null;
+  /** Remate 2.0 — cria peça no slot oposto (ESQ↔DIR, CIMA↔FUNDO, FRENTE↔TRAS). */
+  createOppositeRemate: (_remateId: string) => string | null;
   /** Remate 2.0 — seleção UI (noop no estado persistido). */
   selectRematePiece: (_remateId: string | null) => void;
   /** Remate visual (legado) — cria peça(s) no módulo. */
@@ -628,6 +632,11 @@ export interface ProjectActions {
   /** Roda pé — cria peça(s) no módulo. */
   createBoxRodape: (_input: CreateRodapeInput) => void;
   updateRodape: (_rodapeId: string, _patch: UpdateRodapeInput) => void;
+  /** Roda pé — actualiza comprimento/altura sincronizando heightMm e dimensions. */
+  updateRodapeDimensions: (
+    _rodapeId: string,
+    _dims: { widthMm?: number; heightMm?: number }
+  ) => void;
   removeRodape: (_rodapeId: string) => void;
   setRodapeVisible: (_rodapeId: string, _visible: boolean) => void;
   /** Auto-Room-Fill — preenche cozinha na sala atual (apenas visual). */

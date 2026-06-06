@@ -22,6 +22,7 @@ import {
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/remateGapMeasure";
 import RemateRulesSection from "./RemateRulesSection";
+import { OPPOSITE_MOUNT_SLOT } from "../../../core/remate/remateCloneUtils";
 
 type Props = { remateId: string };
 
@@ -59,6 +60,7 @@ const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "ROD
 
 export default function RematePropertiesPanel({ remateId }: Props) {
   const { project, actions } = useProject();
+  const setSelectedObject = useUiStore((s) => s.setSelectedObject);
   const selectedObject = useUiStore((s) => s.selectedObject);
   const remate = (project.remates ?? []).find((r) => r.id === remateId);
   const materials = useMemo(() => listOfficialMaterials().filter((m) => m.industrial), []);
@@ -342,6 +344,36 @@ export default function RematePropertiesPanel({ remateId }: Props) {
             onClick={() => actions.resnapRemateToFace(remate.id)}
           >
             Reencostar à face
+          </button>
+        ) : null}
+
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            const newId = actions.duplicateRemate(remate.id);
+            if (newId) {
+              setSelectedObject({ type: "remate", id: newId });
+              window.viewerCore?.selectRemate?.(newId);
+            }
+          }}
+        >
+          Duplicar Remate
+        </button>
+
+        {OPPOSITE_MOUNT_SLOT[remate.mountSlot ?? "FRENTE"] ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const newId = actions.createOppositeRemate(remate.id);
+              if (newId) {
+                setSelectedObject({ type: "remate", id: newId });
+                window.viewerCore?.selectRemate?.(newId);
+              }
+            }}
+          >
+            Criar Remate Oposto
           </button>
         ) : null}
 

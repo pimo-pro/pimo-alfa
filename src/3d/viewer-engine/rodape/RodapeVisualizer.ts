@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { ProjectRodape } from "../../../core/rodape/rodapeTypes";
-import { getMaterialByIdOrLabel } from "../../../core/materials/service";
+import { getMaterialForOfficialId } from "../../objects/BoxMaterialApplier";
 import { computeRodapePlacementLocal, getStructuralBoundsM } from "../../../core/rodape/rodapePlacement";
 import { computeRodapeVisualMergeGroups, rodapeIdsInMergeGroup } from "../../../core/rodape/rodapeMerge";
 
@@ -92,7 +92,7 @@ export class RodapeVisualizer {
 
   private upsertMesh(rodape: ProjectRodape, cfg: RodapeVisualBoxConfig, hidden: boolean): void {
     const w = Math.max(0.001, rodape.dimensions.widthMm / 1000);
-    const h = Math.max(0.001, rodape.dimensions.heightMm / 1000);
+    const h = Math.max(0.001, (rodape.dimensions.heightMm ?? rodape.heightMm) / 1000);
     const d = Math.max(0.001, rodape.dimensions.depthMm / 1000);
 
     let mesh = this.meshById.get(rodape.id);
@@ -124,7 +124,7 @@ export class RodapeVisualizer {
     const cfg = boxConfigs.get(ref.parentBoxId);
     if (!cfg) return;
 
-    const h = ref.dimensions.heightMm / 1000;
+    const h = (ref.dimensions.heightMm ?? ref.heightMm) / 1000;
     const d = Math.max(0.001, ref.thicknessMm / 1000);
     const mergeW = group.spanMm / 1000;
 
@@ -158,12 +158,8 @@ export class RodapeVisualizer {
   }
 
   private buildMaterial(rodape: ProjectRodape): THREE.MeshStandardMaterial {
-    const matRecord = getMaterialByIdOrLabel(rodape.materialId);
-    return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(matRecord?.color ?? "#c8c0b8"),
-      roughness: 0.7,
-      metalness: 0,
-    });
+    const base = getMaterialForOfficialId(rodape.materialId);
+    return base.clone();
   }
 
   private applyMaterial(mesh: THREE.Mesh, rodape: ProjectRodape): void {

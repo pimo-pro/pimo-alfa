@@ -7,6 +7,7 @@ import { createRematesForBox } from "../../core/remate/remateFactory";
 import { getMaterialByIdOrLabel } from "../../core/materials/service";
 import type { CreateRematePieceInput } from "../../core/remate/rematePieceTypes";
 import { applyProductPatch, computeDimensionsForProduct, inferProductTypeFromLegacy, normalizeProductOptions } from "../../core/remate/remateProductRules";
+import { createOppositeRematePiece, duplicateRematePiece } from "../../core/remate/remateCloneUtils";
 
 export type RemateActions = Pick<
   ProjectActions,
@@ -17,6 +18,8 @@ export type RemateActions = Pick<
   | "removeRemate"
   | "selectRematePiece"
   | "resnapRemateToFace"
+  | "duplicateRemate"
+  | "createOppositeRemate"
 >;
 
 function boxDimsFromWorkspace(box: import("../../core/types").WorkspaceBox) {
@@ -235,6 +238,61 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
 
       selectRematePiece: () => {
         // Seleção UI via viewer; noop no estado persistido.
+      },
+
+      duplicateRemate: (remateId) => {
+        let newId: string | null = null;
+        updateProject(
+          (prev) => {
+            const source = prev.remates?.find((r) => r.id === remateId);
+            if (!source) return prev;
+            const copy = duplicateRematePiece(source);
+            newId = copy.id;
+            return applyResultados({
+              ...prev,
+              remates: [...(prev.remates ?? []), copy],
+              changelog: appendChangelog(prev.changelog, {
+                timestamp: new Date(),
+                type: "box",
+                message: `Remate duplicado: ${copy.name}`,
+              }),
+            });
+          },
+          true
+        );
+        return newId;
+      },
+
+      createOppositeRemate: (remateId) => {
+        let newId: string | null = null;
+        updateProject(
+          (prev) => {
+            const source = prev.remates?.find((r) => r.id === remateId);
+            if (!source) return prev;
+            let opposite = createOppositeRematePiece(source);
+            if (!opposite) return prev;
+
+            if (opposite.followBox && opposite.placementMode !== "FREE" && opposite.parentBoxId) {
+              const box = prev.workspaceBoxes.find((b) => b.id === opposite!.parentBoxId);
+              if (box) {
+                opposite = refreshRemateMountSnap(opposite, box, boxDimsFromWorkspace(box));
+              }
+            }
+
+            newId = opposite.id;
+            return applyResultados({
+              ...prev,
+              remates: [...(prev.remates ?? []), opposite],
+              changelog: appendChangelog(prev.changelog, {
+                timestamp: new Date(),
+                type: "box",
+                message: `Remate oposto: ${opposite.name}`,
+              }),
+            });
+          },
+          true
+        );
+        return newId;
       },
     }),
     [updateProject]

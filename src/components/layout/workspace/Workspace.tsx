@@ -789,6 +789,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     window.viewerCore?.syncRemateVisuals?.();
     window.viewerCore?.syncHematiVisuals?.();
     window.viewerCore?.syncRodapeVisuals?.();
+    window.viewerCore?.refreshTransformControlsAttachment?.();
   }, [
     project.orlaPieces,
     project.orlaPresets,
@@ -873,10 +874,17 @@ const hasShownViewerReadyToastRef = useRef(false);
         };
       }
 
-      actionsRef.current.updateRemate(remateId, {
-        position: nextPosition,
-        placementMode: "FREE",
-      });
+      const current = projectRef.current;
+      projectRef.current = {
+        ...current,
+        remates: (current.remates ?? []).map((r) =>
+          r.id === remateId
+            ? { ...r, position: nextPosition, placementMode: "FREE" as const }
+            : r
+        ),
+      };
+      window.viewerCore?.syncRemateVisuals?.();
+      window.viewerCore?.resolveFinishCollisionAfterSync?.({ remateId });
     };
 
     const performMoveStep = (key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight", stepMm: number) => {

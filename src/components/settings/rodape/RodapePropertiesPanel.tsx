@@ -44,12 +44,15 @@ export default function RodapePropertiesPanel({ rodapeId }: Props) {
 
   const widthField = useNumericField(rodape?.dimensions.widthMm ?? 1, (widthMm) => {
     if (!rodape) return;
-    actions.updateRodape(rodape.id, { dimensions: { ...rodape.dimensions, widthMm } });
+    actions.updateRodapeDimensions(rodape.id, { widthMm });
   });
-  const heightField = useNumericField(rodape?.heightMm ?? RODAPE_DEFAULT_HEIGHT_MM, (heightMm) => {
-    if (!rodape) return;
-    actions.updateRodape(rodape.id, { heightMm });
-  });
+  const heightField = useNumericField(
+    rodape?.dimensions.heightMm ?? rodape?.heightMm ?? RODAPE_DEFAULT_HEIGHT_MM,
+    (heightMm) => {
+      if (!rodape) return;
+      actions.updateRodapeDimensions(rodape.id, { heightMm });
+    }
+  );
 
   if (!rodape) return null;
 

@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import type { ViewerBoxEntry } from "../types";
 import { setBox3FromObjectExcludingLayoutProxy } from "../box/boxAabbUtils";
+import { keepModelInsideRoom, preventModelWallIntersection } from "../../collision/ModelCollision";
+import { clampInsideRoom } from "../snapping/smartSnappingConstraints";
+import type { RoomBoundsLike } from "../snapping/smartSnappingTypes";
 
 /**
  * Impede remates/rodapés de penetrarem outras peças quando o bloqueio está activo.
@@ -76,4 +79,41 @@ export function resolveFinishMeshOverlaps(params: {
 
     if (!anyOverlap) break;
   }
+}
+
+/**
+ * Aplica chão + sala + paredes + overlap — alinhado com o pipeline das caixas.
+ */
+export function applyFinishMovementConstraints(params: {
+  movingMesh: THREE.Object3D;
+  boxes: Map<string, ViewerBoxEntry>;
+  excludeBoxIds?: Set<string>;
+  otherMeshes: THREE.Object3D[];
+  applyFloorConstraint: (_mesh: THREE.Object3D) => void;
+  roomBounds: RoomBoundsLike | null;
+  roomWallMeshes: THREE.Mesh[];
+  isInsideRoom: (_mesh: THREE.Object3D) => boolean;
+}): void {
+  const {
+    movingMesh,
+    boxes,
+    excludeBoxIds,
+    otherMeshes,
+    applyFloorConstraint,
+    roomBounds,
+    roomWallMeshes,
+    isInsideRoom,
+  } = params;
+
+  resolveFinishMeshOverlaps({ movingMesh, boxes, excludeBoxIds, otherMeshes });
+  applyFloorConstraint(movingMesh);
+
+  if (roomBounds && isInsideRoom(movingMesh)) {
+    preventModelWallIntersection(movingMesh, roomWallMeshes);
+    keepModelInsideRoom(movingMesh, roomBounds);
+    clampInsideRoom(movingMesh, roomBounds, 0);
+  }
+
+  resolveFinishMeshOverlaps({ movingMesh, boxes, excludeBoxIds, otherMeshes });
+  applyFloorConstraint(movingMesh);
 }
