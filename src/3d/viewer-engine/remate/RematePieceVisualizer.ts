@@ -177,7 +177,7 @@ export class RematePieceVisualizer {
     return new THREE.MeshStandardMaterial({
       color: new THREE.Color(matRecord?.color ?? "#d9d9d9"),
       roughness: 0.65,
-      metalness: piece.materialPresetId.toLowerCase().includes("alumin") ? 0.6 : 0,
+      metalness: (piece.materialPresetId ?? "").toLowerCase().includes("alumin") ? 0.6 : 0,
     });
   }
 
@@ -191,21 +191,26 @@ export class RematePieceVisualizer {
     if (piece.parentBoxId) {
       const cfg = this.bridge?.getBoxConfig(piece.parentBoxId);
       const worldMatrix = this.bridge?.getBoxWorldMatrix(piece.parentBoxId);
-      if (cfg && worldMatrix) {
+      if (cfg) {
         const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
         const pose = resolveRematePoseLocal(piece, bounds);
-        const local = new THREE.Vector3(
-          pose.position.xMm / 1000,
-          pose.position.yMm / 1000,
-          pose.position.zMm / 1000
-        );
-        local.applyMatrix4(worldMatrix);
-        mesh.position.copy(local);
-        const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
-        const partQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
-        );
-        mesh.quaternion.copy(boxQuat).multiply(partQuat);
+        if (worldMatrix) {
+          const local = new THREE.Vector3(
+            pose.position.xMm / 1000,
+            pose.position.yMm / 1000,
+            pose.position.zMm / 1000
+          );
+          local.applyMatrix4(worldMatrix);
+          mesh.position.copy(local);
+          const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
+          const partQuat = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
+          );
+          mesh.quaternion.copy(boxQuat).multiply(partQuat);
+          return;
+        }
+        mesh.position.set(pose.position.xMm / 1000, pose.position.yMm / 1000, pose.position.zMm / 1000);
+        mesh.rotation.set(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad);
         return;
       }
     }

@@ -22,16 +22,37 @@ function basePiece(overrides: Partial<RematePiece>): RematePiece {
 }
 
 describe("remateMountFrame", () => {
-  it("DIR nasce alinhado à frente (zMm ≠ 0)", () => {
-    const snapped = snapToMountRule(basePiece({ tipo: "DIR" }), bounds);
-    expect(Math.abs(snapped.position.zMm)).toBeGreaterThan(200);
-    expect(Math.abs(snapped.position.zMm - (bounds.maxZ * 1000 - 50))).toBeLessThan(5);
+  it("DIR lateral mantém peça junto à caixa (offsets em mm, não km)", () => {
+    const snapped = snapToMountRule(
+      basePiece({ tipo: "DIR", width: 760, height: 550, depth: 19 }),
+      bounds
+    );
+    expect(Math.abs(snapped.position.xMm)).toBeLessThan(500);
+    expect(Math.abs(snapped.position.yMm)).toBeLessThan(500);
+    expect(Math.abs(snapped.position.zMm)).toBeLessThan(500);
   });
 
-  it("ESQ/CIMA/BAIXO não usam zMm≈0", () => {
+  it("FRENTE Completo fica à frente do módulo (z positivo, < 2 m)", () => {
+    const snapped = snapToMountRule(
+      basePiece({
+        tipo: "FRENTE",
+        productType: "COMPLETO",
+        mountSlot: "FRENTE",
+        width: 620,
+        height: 780,
+        depth: 19,
+      }),
+      bounds
+    );
+    expect(snapped.position.zMm).toBeGreaterThan(200);
+    expect(snapped.position.zMm).toBeLessThan(2000);
+  });
+
+  it("ESQ/CIMA/BAIXO não colapsam para zMm≈0 (centro antigo)", () => {
     for (const tipo of ["ESQ", "CIMA", "BAIXO"] as const) {
       const p = snapToMountRule(basePiece({ tipo }), bounds);
-      expect(Math.abs(p.position.zMm)).toBeGreaterThan(200);
+      expect(Math.abs(p.position.zMm)).toBeGreaterThan(50);
+      expect(Math.abs(p.position.zMm)).toBeLessThan(2000);
     }
   });
 

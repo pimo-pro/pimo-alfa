@@ -172,23 +172,23 @@ export function defaultFaceOffsetsForPiece(piece: RematePiece, bounds: Structura
     case "DIR":
     case "ESQ":
       return {
-        offsetAlongNormalMm: (piece.depth / 2) * 1000,
-        offsetTangentUMm: (piece.height / 2) * 1000,
+        offsetAlongNormalMm: (d / 2) * 1000,
+        offsetTangentUMm: (h / 2) * 1000,
         offsetTangentVMm: 0,
         rotationSnapIndex: 0,
       };
     case "CIMA":
     case "FUNDO":
       return {
-        offsetAlongNormalMm: (piece.height / 2) * 1000,
+        offsetAlongNormalMm: (h / 2) * 1000,
         offsetTangentUMm: 0,
-        offsetTangentVMm: (piece.depth / 2) * 1000,
+        offsetTangentVMm: (d / 2) * 1000,
         rotationSnapIndex: 0,
       };
     case "FRENTE":
     case "TRAS":
       return {
-        offsetAlongNormalMm: (piece.depth / 2) * 1000,
+        offsetAlongNormalMm: (d / 2) * 1000,
         offsetTangentUMm: 0,
         offsetTangentVMm: 0,
         rotationSnapIndex: 0,
@@ -229,6 +229,18 @@ export function resolveRematePoseLocal(
   }
 
   return poseFromFaceOffsetsM(frame, defaultFaceOffsetsForPiece(piece, bounds), piece.rotation);
+}
+
+/** Offsets corrompidos pelo bug mm×1000 (peça a km de distância). */
+export function isCorruptedMountOffsetSnap(piece: RematePiece): boolean {
+  if (!piece.faceOffsets) return false;
+  const { offsetAlongNormalMm, offsetTangentUMm, offsetTangentVMm } = piece.faceOffsets;
+  const maxAbs = Math.max(
+    Math.abs(offsetAlongNormalMm),
+    Math.abs(offsetTangentUMm),
+    Math.abs(offsetTangentVMm),
+  );
+  return maxAbs > 2000;
 }
 
 /** Detecta remates V2 contaminados com Z≈0 (snap antigo com centerZ). */

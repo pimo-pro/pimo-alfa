@@ -3,6 +3,7 @@ import type { ProjectRemate } from "./remateTypes";
 import type { WorkspaceBox } from "../types";
 import { getRemateEnvelopeBoundsM } from "./rematePlacement";
 import {
+  isCorruptedMountOffsetSnap,
   isLegacyCenterZSnap,
   resolveMountSlot,
   snapToMountRule,
@@ -95,7 +96,7 @@ function upgradeRematePiece(piece: RematePiece, box: WorkspaceBox | null): Remat
   if (!box) return next;
   const dims = boxDimsFromWorkspace(box);
   const bounds = getRemateEnvelopeBoundsM(dims.widthM, dims.heightM, dims.depthM, box);
-  if (!next.faceOffsets || isLegacyCenterZSnap(next)) {
+  if (!next.faceOffsets || isLegacyCenterZSnap(next) || isCorruptedMountOffsetSnap(next)) {
     next = snapToMountRule(next, bounds);
   }
   return next;

@@ -21,7 +21,8 @@ export function remateGeometryExtentsM(piece: Pick<RematePiece, "width" | "heigh
       return { w: espessura, h: comprimento, d: largura };
     case "CIMA":
     case "FUNDO":
-      return { w: comprimento, h: espessura, d: largura };
+      // height=largura (extensão na face), depth=espessura (espessura material / avista)
+      return { w: comprimento, h: largura, d: espessura };
     case "FRENTE":
     case "TRAS":
     default:
