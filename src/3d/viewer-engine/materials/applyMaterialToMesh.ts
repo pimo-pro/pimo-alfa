@@ -1,6 +1,6 @@
 /**
  * MaterialEngine — Aplica preset a MeshStandardMaterial / MeshPhysicalMaterial (cor, PBR, opcionalmente mapas).
- * performance: só cor + PBR. showcase/realistic: cor + PBR + map/normalMap/roughnessMap quando existirem no preset.
+ * Cor + PBR sempre; map/normalMap/roughnessMap quando existirem no preset (textureUrl).
  */
 
 import * as THREE from "three";

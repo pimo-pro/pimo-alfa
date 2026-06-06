@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
-import { getMaterialForOfficialId } from "../../objects/BoxMaterialApplier";
+import { applyMaterialToMesh } from "../materials/MaterialEngine";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
@@ -156,7 +156,11 @@ export class RematePieceVisualizer {
   }
 
   private createMesh(piece: RematePiece, w: number, h: number, d: number): THREE.Mesh {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), this.buildMaterial(piece));
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      new THREE.MeshStandardMaterial({ color: "#f2f0eb" })
+    );
+    this.applyMaterialPreset(mesh, piece);
     mesh.name = `remate-piece-${piece.id}`;
     mesh.userData.isRematePiece = true;
     mesh.userData.remateId = piece.id;
@@ -172,15 +176,14 @@ export class RematePieceVisualizer {
     return mesh;
   }
 
-  private buildMaterial(piece: RematePiece): THREE.MeshStandardMaterial {
-    const base = getMaterialForOfficialId(piece.materialPresetId);
-    return base.clone();
+  private applyMaterialPreset(mesh: THREE.Mesh, piece: RematePiece): void {
+    applyMaterialToMesh(mesh, piece.materialPresetId);
   }
 
   private applyMaterial(mesh: THREE.Mesh, piece: RematePiece): void {
     const prev = mesh.material;
     if (prev instanceof THREE.Material) prev.dispose();
-    mesh.material = this.buildMaterial(piece);
+    this.applyMaterialPreset(mesh, piece);
   }
 
   private applyWorldTransform(mesh: THREE.Mesh, piece: RematePiece): void {

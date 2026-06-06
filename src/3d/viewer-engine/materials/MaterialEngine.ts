@@ -18,6 +18,8 @@ import {
   applyMapsToMaterialAsync,
   assignMaterialToMesh,
 } from "./applyMaterialToMesh";
+import { loadTextureAsync } from "./textureCache";
+import { getDefaultOfficialMaterial } from "../../../core/materials/materials.api";
 
 /** Modo global (default: performance para manter comportamento atual). */
 let currentMode: MaterialMode = "performance";
@@ -42,6 +44,71 @@ export function getMaterialMode(): MaterialMode {
 
 export function setMaterialMode(mode: MaterialMode): void {
   currentMode = mode;
+  invalidateOfficialMaterialCache();
+}
+
+/** Carrega textura por URL (cache global); usado pelo pipeline unificado. */
+export function loadTextureIfNeeded(url: string): Promise<THREE.Texture | null> {
+  return loadTextureAsync(url);
+}
+
+const sharedOfficialMaterialCache = new Map<
+  string,
+  THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial
+>();
+
+export function invalidateOfficialMaterialCache(): void {
+  sharedOfficialMaterialCache.clear();
+}
+
+/**
+ * Material partilhável por id oficial (portas/gavetas na construção da caixa).
+ * Texturas carregadas de forma assíncrona via textureUrl do preset.
+ */
+export function getMaterialForOfficialId(
+  materialId: string
+): THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial {
+  const key = (materialId ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
+  const cached = sharedOfficialMaterialCache.get(key);
+  if (cached) return cached;
+
+  const result = loadMaterial(key, currentMode, {
+    useLacqueredClearcoat: lacqueredClearcoatPipeline,
+  });
+  if (result?.material) {
+    sharedOfficialMaterialCache.set(key, result.material);
+    return result.material;
+  }
+
+  const fallback = loadMaterial(getDefaultOfficialMaterial().canonicalId, currentMode, {
+    useLacqueredClearcoat: lacqueredClearcoatPipeline,
+  });
+  if (fallback?.material) {
+    sharedOfficialMaterialCache.set(key, fallback.material);
+    return fallback.material;
+  }
+
+  const { material } = createWoodMaterial({}, { color: "#f2f0eb", roughness: 0.55, metalness: 0 });
+  sharedOfficialMaterialCache.set(key, material);
+  return material;
+}
+
+/**
+ * Material exclusivo por mesh (remate/rodapé — dispose seguro, sem partilhar instância).
+ */
+export function createMaterialForOfficialId(
+  materialId: string
+): THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial {
+  const key = (materialId ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
+  const result = loadMaterial(key, currentMode, {
+    useLacqueredClearcoat: lacqueredClearcoatPipeline,
+  });
+  if (result?.material) return result.material;
+  const fallback = loadMaterial(getDefaultOfficialMaterial().canonicalId, currentMode, {
+    useLacqueredClearcoat: lacqueredClearcoatPipeline,
+  });
+  if (fallback?.material) return fallback.material;
+  return createWoodMaterial({}, { color: "#f2f0eb", roughness: 0.55, metalness: 0 }).material;
 }
 
 /**
@@ -53,12 +120,12 @@ export function loadPreset(materialId: string): MaterialPresetDefinition | null 
 
 /**
  * Constrói MeshStandardMaterial ou MeshPhysicalMaterial (lacado + clearcoat) a partir do preset e modo.
- * performance: só cor + PBR (delega em createWoodMaterial, salvo lacado explícito).
- * showcase/realistic: cor + PBR + map/normalMap/roughnessMap quando existirem no preset.
+ * Cor + PBR sempre; map/normalMap/roughnessMap quando existirem no preset (textureUrl).
+ * Modo performance mantém PBR leve; texturas reais da chapa são sempre aplicadas se definidas.
  */
 export function buildThreeMaterial(
   preset: MaterialPresetDefinition,
-  mode: MaterialMode,
+  _mode: MaterialMode,
   buildOptions?: BuildMaterialOptions
 ): LoadedMaterialResult {
   const useLacquered = Boolean(buildOptions?.useLacqueredClearcoat);
@@ -89,9 +156,9 @@ export function buildThreeMaterial(
     textures = created.textures;
   }
 
-  const hasDetailMaps =
-    mode !== "performance" &&
-    (preset.textureUrl || preset.normalMapUrl || preset.roughnessMapUrl);
+  const hasDetailMaps = Boolean(
+    preset.textureUrl || preset.normalMapUrl || preset.roughnessMapUrl
+  );
 
   if (hasDetailMaps) {
     applyMapsToMaterialAsync(material, preset);
@@ -132,8 +199,10 @@ export function applyMaterialToMesh(
   materialId: string,
   mode: MaterialMode = currentMode
 ): void {
-  const preset = getPreset(materialId) ?? getDefaultPreset();
-  const result = buildThreeMaterial(preset, mode);
+  const result = loadMaterial(materialId, mode, {
+    useLacqueredClearcoat: lacqueredClearcoatPipeline,
+  });
+  if (!result) return;
   assignMaterialToMesh(mesh, result.material);
 }
 

@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { createWoodMaterial } from "../materials/WoodMaterial";
 import { defaultMaterialSet, getMaterialPreset } from "../materials/MaterialLibrary";
-import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
-import { loadMaterial, getMaterialMode } from "../viewer-engine/materials/MaterialEngine";
+import {
+  loadMaterial,
+  getMaterialMode,
+  getMaterialForOfficialId as engineGetMaterialForOfficialId,
+} from "../viewer-engine/materials/MaterialEngine";
 
 export type PanelMaterialOptions =
   | { singleMaterial: THREE.Material }
@@ -32,23 +35,9 @@ export function getFallbackPBRMaterial(): THREE.MeshStandardMaterial {
 
 let cachedEdgeMaterial: THREE.MeshStandardMaterial | null = null;
 
-const officialMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
-
-/** Material PBR para porta/gaveta: MaterialEngine + id oficial; fallback MaterialLibrary + WoodMaterial. */
+/** Material PBR para porta/gaveta — delega ao MaterialEngine (textureUrl + mapas PBR). */
 export function getMaterialForOfficialId(idOrLabel: string): THREE.MeshStandardMaterial {
-  const key = (idOrLabel ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
-  const mat = officialMaterialCache.get(key);
-  if (mat) return mat;
-  const loaded = loadMaterial(key, getMaterialMode());
-  if (loaded?.material) {
-    officialMaterialCache.set(key, loaded.material as THREE.MeshStandardMaterial);
-    return loaded.material as THREE.MeshStandardMaterial;
-  }
-  const preset = getMaterialPreset(defaultMaterialSet, key);
-  const options = preset?.options ?? { color: "#f2f0eb", roughness: 0.55, metalness: 0 };
-  const { material } = createWoodMaterial({}, { ...options });
-  officialMaterialCache.set(key, material);
-  return material;
+  return engineGetMaterialForOfficialId(idOrLabel) as THREE.MeshStandardMaterial;
 }
 
 /** Material para arestas (corte) — modo performance, sem clearcoat lacado; cor de aresta escurecida. */

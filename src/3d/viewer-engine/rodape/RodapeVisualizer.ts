@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { ProjectRodape } from "../../../core/rodape/rodapeTypes";
-import { getMaterialForOfficialId } from "../../objects/BoxMaterialApplier";
+import { applyMaterialToMesh } from "../materials/MaterialEngine";
 import { computeRodapePlacementLocal, getStructuralBoundsM } from "../../../core/rodape/rodapePlacement";
 import { computeRodapeVisualMergeGroups, rodapeIdsInMergeGroup } from "../../../core/rodape/rodapeMerge";
 
@@ -144,7 +144,11 @@ export class RodapeVisualizer {
   }
 
   private createMesh(rodape: ProjectRodape, w: number, h: number, d: number): THREE.Mesh {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), this.buildMaterial(rodape));
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      new THREE.MeshStandardMaterial({ color: "#f2f0eb" })
+    );
+    this.applyMaterialPreset(mesh, rodape);
     mesh.name = `rodape-${rodape.id}`;
     mesh.userData.isRodapePiece = true;
     mesh.userData.rodapeId = rodape.id;
@@ -157,15 +161,14 @@ export class RodapeVisualizer {
     return mesh;
   }
 
-  private buildMaterial(rodape: ProjectRodape): THREE.MeshStandardMaterial {
-    const base = getMaterialForOfficialId(rodape.materialId);
-    return base.clone();
+  private applyMaterialPreset(mesh: THREE.Mesh, rodape: ProjectRodape): void {
+    applyMaterialToMesh(mesh, rodape.materialId);
   }
 
   private applyMaterial(mesh: THREE.Mesh, rodape: ProjectRodape): void {
     const prev = mesh.material;
     if (prev instanceof THREE.Material) prev.dispose();
-    mesh.material = this.buildMaterial(rodape);
+    this.applyMaterialPreset(mesh, rodape);
   }
 
   private applyInitialPlacement(mesh: THREE.Mesh, rodape: ProjectRodape, cfg: RodapeVisualBoxConfig): void {
