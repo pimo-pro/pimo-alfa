@@ -24,6 +24,11 @@ import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutLayoutResult } from "../core/cutlayout/cutLayoutTypes";
 import { getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
+import {
+  formatIndustrialThicknessIssue,
+  resolveIndustrialThicknesses,
+} from "../core/cnc/industrialThicknessResolution";
+import { buildIndustrialManifest } from "../core/fabrication/industrialManifest";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
 import { sanitizeZipPath } from "../utils/sanitization";
@@ -166,6 +171,20 @@ function safeAddPdf(
   }
 }
 
+function confirmIndustrialThicknessAdjustments(messageDetail: string): boolean {
+  if (typeof window === "undefined" || typeof window.confirm !== "function") {
+    return true;
+  }
+  return window.confirm(
+    [
+      "A matéria-prima selecionada não possui chapa configurada para esta espessura.",
+      "Deseja substituir por uma espessura próxima?",
+      "",
+      messageDetail,
+    ].join("\n")
+  );
+}
+
 export function useGerarArquivoHandlers() {
   const { project, viewerSync } = useProject();
   const { settings } = useSettings();
@@ -195,6 +214,27 @@ export function useGerarArquivoHandlers() {
       settings: settings ?? undefined,
     }),
     [project, boxes, settings]
+  );
+
+  const prepareItemsForCnc = useCallback(
+    <T extends CutlistItemForPieces>(items: T[], materialsSnapshot: ReturnType<typeof listMaterials>): T[] | null => {
+      const resolution = resolveIndustrialThicknesses(items, materialsSnapshot);
+      if (resolution.unresolved.length > 0) {
+        const detail = resolution.unresolved.map(formatIndustrialThicknessIssue).join("\n");
+        showToast(`Matéria-prima sem chapa válida: ${detail}`, "error");
+        return null;
+      }
+      if (resolution.adjustments.length > 0) {
+        const detail = resolution.adjustments.map(formatIndustrialThicknessIssue).join("\n");
+        const accepted = confirmIndustrialThicknessAdjustments(detail);
+        if (!accepted) {
+          showToast(`Exportação CNC cancelada: ${detail}`, "warning");
+          return null;
+        }
+      }
+      return resolution.items;
+    },
+    [showToast]
   );
 
   const cancelIndustrialLayout = useCallback(() => {
@@ -486,15 +526,21 @@ export function useGerarArquivoHandlers() {
     try {
       await measureTime("Exportação CNC (projeto único)", async () => {
         const allItems = buildItemsForCncExport(project, boxes) as CutlistItemForPieces[];
-        const byMaterial = new Map<string, typeof allItems>();
-        for (const item of allItems) {
+        const settingsSnapshot = getSettings();
+        const materialsSnapshot = listMaterials();
+        const cncItems = prepareItemsForCnc(allItems, materialsSnapshot);
+        if (!cncItems) {
+          setLayoutProgress({ visible: false, percent: 0, message: "", mode: "pro" });
+          return;
+        }
+
+        const byMaterial = new Map<string, typeof cncItems>();
+        for (const item of cncItems) {
           const key = (item.material ?? "Módulo").trim() || "Módulo";
           if (!byMaterial.has(key)) byMaterial.set(key, []);
           byMaterial.get(key)!.push(item);
         }
 
-        const settingsSnapshot = getSettings();
-        const materialsSnapshot = listMaterials();
         const cncProjectStub = { projectName: project.projectName ?? "Projeto" };
 
         const collectFiles = async (mode: "pro" | "fast"): Promise<Array<{ name: string; tcn: string; base: string }>> => {
@@ -605,7 +651,7 @@ export function useGerarArquivoHandlers() {
       }
       endIndustrialFileGeneration();
     }
-  }, [hasBoxes, showToast, project, boxes, tcnSuffix, viewerSync]);
+  }, [hasBoxes, showToast, project, boxes, tcnSuffix, viewerSync, prepareItemsForCnc]);
 
   /** TCN (via fluxo existente) + XML de furação; só orquestração, mesmas funções de export. */
   const onArquivosCnc = useCallback(async () => {
@@ -667,6 +713,8 @@ export function useGerarArquivoHandlers() {
       const errors: StepError[] = [];
       const zip = new JSZip();
       const proj = pdfProject();
+      const tcnManifestFiles: Array<{ path: string; content: string }> = [];
+      let abortFullExport = false;
 
       const allItems = buildCutlistItemsForIndustrialExport({
         boxes,
@@ -785,8 +833,13 @@ export function useGerarArquivoHandlers() {
       // --- CNC (TCN): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
       try {
         const cncOptions = getDefaultCncLayoutOptions();
-        const byMaterial = new Map<string, typeof allItems>();
-        for (const item of allItems) {
+        const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
+        if (!cncItems) {
+          abortFullExport = true;
+          throw new Error("Exportação cancelada por matéria-prima sem chapa válida.");
+        }
+        const byMaterial = new Map<string, typeof cncItems>();
+        for (const item of cncItems) {
           const key = (item.material ?? "Módulo").trim() || "Módulo";
           if (!byMaterial.has(key)) byMaterial.set(key, []);
           byMaterial.get(key)!.push(item);
@@ -824,6 +877,7 @@ export function useGerarArquivoHandlers() {
             const tcnPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}_cnc_${tcnSuffix}.tcn`);
             if (tcnPathFinal && typeof file.tcn === "string") {
               zip.file(tcnPathFinal, file.tcn);
+              tcnManifestFiles.push({ path: tcnPathFinal, content: file.tcn });
               tcnFilesAdded += 1;
             }
           }
@@ -837,38 +891,54 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: CNC", err);
       }
 
-      // --- DRILL (XML): um ficheiro por lateral ---
+      // --- Manifesto de proteção dos TCNs (não altera conteúdo dos .tcn) ---
       try {
-        const drillFiles = buildDrillFilesForProject(allItems, {
-          projectName: project.projectName ?? "Projeto",
-          boxes: boxes ?? [],
-          rules: project.rules,
-        });
-        for (const f of drillFiles) {
-          const path = `drill/XML/${f.filenameBase}.xml`;
-          zip.file(path, f.xml);
-        }
-      } catch (err) {
-        errors.push({ step: "DRILL (XML)", error: String(err) });
-      }
-
-      // --- Gerar e descarregar ZIP ---
-      try {
-        const blob = await zip.generateAsync({ type: "blob" });
-        if (!blob || blob.size === 0) {
-          errors.push({ step: "ZIP", message: "ZIP gerado está vazio ou inválido." });
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${safeSlug}_completo.zip`;
-          a.click();
-          URL.revokeObjectURL(url);
+        if (tcnManifestFiles.length > 0) {
+          const manifest = await buildIndustrialManifest(tcnManifestFiles);
+          zip.file("manifest-industrial.json", JSON.stringify(manifest, null, 2));
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "ZIP (generateAsync)", message: msg });
-        devLogger.error("Full export: zip.generateAsync", err);
+        errors.push({ step: "Manifesto Industrial", message: msg });
+        devLogger.error("Full export: manifest-industrial", err);
+      }
+
+      // --- DRILL (XML): um ficheiro por lateral ---
+      if (!abortFullExport) {
+        try {
+          const drillFiles = buildDrillFilesForProject(allItems, {
+            projectName: project.projectName ?? "Projeto",
+            boxes: boxes ?? [],
+            rules: project.rules,
+          });
+          for (const f of drillFiles) {
+            const path = `drill/XML/${f.filenameBase}.xml`;
+            zip.file(path, f.xml);
+          }
+        } catch (err) {
+          errors.push({ step: "DRILL (XML)", error: String(err) });
+        }
+      }
+
+      // --- Gerar e descarregar ZIP ---
+      if (!abortFullExport) {
+        try {
+          const blob = await zip.generateAsync({ type: "blob" });
+          if (!blob || blob.size === 0) {
+            errors.push({ step: "ZIP", message: "ZIP gerado está vazio ou inválido." });
+          } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${safeSlug}_completo.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push({ step: "ZIP (generateAsync)", message: msg });
+          devLogger.error("Full export: zip.generateAsync", err);
+        }
       }
 
       if (errors.length > 0) {
@@ -900,6 +970,7 @@ export function useGerarArquivoHandlers() {
     project,
     tcnSuffix,
     viewerSync,
+    prepareItemsForCnc,
   ]);
 
   return {

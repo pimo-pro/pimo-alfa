@@ -19,10 +19,15 @@ import { cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayo
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 import type { CutLayoutResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
 import { getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
+import {
+  formatIndustrialThicknessIssue,
+  resolveIndustrialThicknesses,
+} from "../cnc/industrialThicknessResolution";
 import { buildDrillFilesForProject } from "../drill/drillExport";
 import { getSettings } from "../settings/settingsService";
 import { listMaterials } from "../materials/service";
 import { runCutLayoutInWorker, buildCncFromCutlistItemsInWorker } from "./industrialWorkerRunner";
+import { buildIndustrialManifest } from "./industrialManifest";
 import { sanitizeZipPath } from "../../utils/sanitization";
 import { devLogger } from "../../utils/devLogger";
 import { beginIndustrialFileGeneration, endIndustrialFileGeneration } from "./industrialGenerationSuspend";
@@ -167,6 +172,20 @@ function uniqueFolderSegment(base: string, used: Set<string>): string {
   }
   used.add(candidate);
   return candidate;
+}
+
+function confirmIndustrialThicknessAdjustments(messageDetail: string): boolean {
+  if (typeof window === "undefined" || typeof window.confirm !== "function") {
+    return true;
+  }
+  return window.confirm(
+    [
+      "A matéria-prima selecionada não possui chapa configurada para esta espessura.",
+      "Deseja substituir por uma espessura próxima?",
+      "",
+      messageDetail,
+    ].join("\n")
+  );
 }
 
 // --- Numeração global de peças (Fabricação em Massa) ---
@@ -402,6 +421,24 @@ export async function generateMultiProjectFabrication(
   // Atribuir numeração global única e projeto de origem a todos os itens prefixados
   const globalIndex = buildGlobalPieceIndex(allPrefixedItems, layoutResult?.sheets ?? []);
   applyGlobalPieceNumbers(allPrefixedItems, globalIndex, prefixToProjectName);
+  const cncThicknessResolution = resolveIndustrialThicknesses(
+    allPrefixedItems as CutlistItemForPieces[],
+    materialsSnapshot
+  );
+  if (cncThicknessResolution.unresolved.length > 0) {
+    throw new Error(
+      `multiProjectFabrication: matéria-prima sem chapa válida (${cncThicknessResolution.unresolved
+        .map(formatIndustrialThicknessIssue)
+        .join("; ")}).`
+    );
+  }
+  if (cncThicknessResolution.adjustments.length > 0) {
+    const detail = cncThicknessResolution.adjustments.map(formatIndustrialThicknessIssue).join("\n");
+    if (!confirmIndustrialThicknessAdjustments(detail)) {
+      throw new Error(`multiProjectFabrication: exportação cancelada por matéria-prima sem chapa válida (${detail}).`);
+    }
+  }
+  const allPrefixedCncItems = cncThicknessResolution.items as CutListItemComPreco[];
 
   // PASSO 3 — PDF do layout de corte PRO + etiquetas globais
   checkAbort();
@@ -410,6 +447,7 @@ export async function generateMultiProjectFabrication(
   const zip = new JSZip();
   const folderNamesUsed = new Set<string>();
   let tcnFilesAdded = 0;
+  const tcnManifestFiles: Array<{ path: string; content: string }> = [];
 
   if (layoutResult && layoutResult.sheets.length > 0) {
     try {
@@ -518,7 +556,7 @@ export async function generateMultiProjectFabrication(
 
     // TCN/CNC por projeto (peças do projeto com numeração global preservada)
     try {
-      const projPrefixedItems = allPrefixedItems.filter((item) =>
+      const projPrefixedItems = allPrefixedCncItems.filter((item) =>
         (item.boxId ?? "").startsWith(entry.prefix)
       );
       const projByMaterial = new Map<string, CutListItemComPreco[]>();
@@ -557,6 +595,7 @@ export async function generateMultiProjectFabrication(
           );
           if (tcnPath && typeof file.tcn === "string") {
             zip.file(tcnPath, file.tcn);
+            tcnManifestFiles.push({ path: tcnPath, content: file.tcn });
             tcnFilesAdded += 1;
           }
         }
@@ -599,7 +638,7 @@ export async function generateMultiProjectFabrication(
 
   try {
     const byMaterial = new Map<string, CutListItemComPreco[]>();
-    for (const item of allPrefixedItems) {
+    for (const item of allPrefixedCncItems) {
       const key = ((item as { material?: string }).material ?? "Módulo").trim() || "Módulo";
       if (!byMaterial.has(key)) byMaterial.set(key, []);
       byMaterial.get(key)!.push(item);
@@ -638,6 +677,7 @@ export async function generateMultiProjectFabrication(
         );
         if (tcnPathFinal && typeof file.tcn === "string") {
           zip.file(tcnPathFinal, file.tcn);
+          tcnManifestFiles.push({ path: tcnPathFinal, content: file.tcn });
           tcnFilesAdded += 1;
         }
       }
@@ -679,6 +719,11 @@ export async function generateMultiProjectFabrication(
   // PASSO 7 — Compactar pacote
   checkAbort();
   emit(7, "Compactando pacote industrial…");
+
+  if (tcnManifestFiles.length > 0) {
+    const manifest = await buildIndustrialManifest(tcnManifestFiles);
+    zip.file("manifest-industrial.json", JSON.stringify(manifest, null, 2));
+  }
 
   const zipBlob = await zip.generateAsync({ type: "blob" });
   if (!zipBlob || zipBlob.size === 0) {

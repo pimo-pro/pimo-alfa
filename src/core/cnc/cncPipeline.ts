@@ -4,6 +4,10 @@ import { exportCncFiles } from "./cncExport";
 import { getLayoutKerfMmForCncNesting } from "./tcnGenerator";
 import { getSettings } from "../settings/settingsService";
 import { listMaterials } from "../materials/service";
+import {
+  formatIndustrialThicknessIssue,
+  resolveIndustrialThicknesses,
+} from "./industrialThicknessResolution";
 
 /** Opções de nesting alinhadas ao TCN: kerf = minSpacing (entre contornos) + 2×raio da fresa. */
 export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
@@ -179,6 +183,15 @@ export function buildCncFromCutlistItems(
       return null;
     }
     const industrialItems = applyCutlistMetadata(applyDrillHoles(applyIndustrialRules(items)));
+    const thicknessResolution = resolveIndustrialThicknesses(industrialItems, listMaterials());
+    if (thicknessResolution.unresolved.length > 0) {
+      throw new Error(
+        `Matéria-prima sem chapa válida: ${thicknessResolution.unresolved
+          .map(formatIndustrialThicknessIssue)
+          .join("; ")}`
+      );
+    }
+    const cncItems = thicknessResolution.items;
 
     const enforcedLayoutOptions: CutLayoutEngineOptions = {
       ...layoutOptions,
@@ -186,7 +199,7 @@ export function buildCncFromCutlistItems(
     };
 
     const groupedItems = new Map<number, CutlistItemForPieces[]>();
-    for (const item of industrialItems) {
+    for (const item of cncItems) {
       const t = inferItemThicknessMm(item);
       if (!(t > 0)) continue;
       const key = Math.round(Math.abs(t) * 100) / 100;
@@ -197,7 +210,7 @@ export function buildCncFromCutlistItems(
       throw new Error("Nenhuma peça com espessura válida para CNC.");
     }
 
-    const allPieces = cutlistToPieces(industrialItems);
+    const allPieces = cutlistToPieces(cncItems);
     if (allPieces.length === 0) {
       return null;
     }
