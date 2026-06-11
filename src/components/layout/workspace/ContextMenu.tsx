@@ -182,11 +182,14 @@ export default function ContextMenu({
   const showDoorMaterial = isDoorTarget;
   const showDrawerMaterial = isDrawerTarget;
   const roomExists = viewerApi?.getRoomExists?.() === true || project.room != null;
+  const hasSmartAlignTarget =
+    Boolean(selectedBoxId) || contextMenuLayerTarget?.type === "remate";
   const categoryMenu = buildMouseMenu({
     target: contextMenuLayerTarget,
     hasSelectedBox: Boolean(selectedBoxId),
     hasRoom: roomExists,
     hasRemates: (project.remates ?? []).length > 0,
+    hasSmartAlignTarget,
     multiSelectionCount: activeSelectedIds.length,
   });
 
@@ -287,6 +290,7 @@ export default function ContextMenu({
   const roomSnappingEnabled = viewerApi?.snapping?.isRoomSnappingEnabled?.() === true;
   const autoAlignmentEnabled = viewerApi?.snapping?.isAutoAlignmentEnabled?.() !== false;
   const autoSpacingEnabled = viewerApi?.snapping?.isAutoSpacingEnabled?.() === true;
+  const smartAlignSnapEnabled = window.viewerCore?.settings?.enableSmartAlignSnap === true;
 
   const getActionLabel = (action: MouseMenuAction): string => {
     if (action.id === "box.lockToggle") return locked ? "Desbloquear peça" : "Bloquear peça";
@@ -297,6 +301,9 @@ export default function ContextMenu({
     if (action.id === "ferramentas.autoAlignmentToggle") return `Auto-Alignment: ${autoAlignmentEnabled ? "ON" : "OFF"}`;
     if (action.id === "ferramentas.autoSpacingToggle") return `Auto-Spacing: ${autoSpacingEnabled ? "ON" : "OFF"}`;
     if (action.id === "ferramentas.wallOffset") return `Wall Offset: ${viewerApi?.snapping?.getWallOffset?.() ?? 0} mm`;
+    if (action.id === "smartAlignSnap.toggle") {
+      return smartAlignSnapEnabled ? "Smart Align & Snap: ON" : "Smart Align & Snap: OFF";
+    }
     return action.label;
   };
 
@@ -370,6 +377,121 @@ export default function ContextMenu({
           bottomMarginMm: Number.isFinite(bottomMarginMm) ? bottomMarginMm : 50,
         });
       }
+    }
+    if (actionId === "smartAlignSnap.toggle" && window.viewerCore?.settings) {
+      window.viewerCore.settings.enableSmartAlignSnap = !window.viewerCore.settings.enableSmartAlignSnap;
+    }
+    if (actionId === "smartAlignSnap.repeatLast") {
+      window.viewerCore?.smartAlignEngine?.applyRepeatLastAlignment?.();
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "smartAlignSnap.inverse") {
+      window.viewerCore?.smartAlignEngine?.applyInverseAlignment?.();
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (
+      actionId.startsWith("smartAlignSnap.") &&
+      actionId !== "smartAlignSnap.toggle" &&
+      actionId !== "smartAlignSnap.repeatLast" &&
+      actionId !== "smartAlignSnap.inverse"
+    ) {
+      const mode = actionId.replace("smartAlignSnap.", "") as
+        | "front"
+        | "back"
+        | "top"
+        | "bottom"
+        | "right"
+        | "left"
+        | "auto"
+        | "flushFront"
+        | "flushBack"
+        | "flushLeft"
+        | "flushRight"
+        | "continueLine"
+        | "alignDoor"
+        | "alignDrawer";
+      window.viewerCore?.smartAlignEngine?.applyExplicitAlignment?.(mode);
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "smartLayout.autoWallFill" && selectedBoxId) {
+      const raw = window.prompt("ID da parede (0=frente, 1=direita, 2=fundo, 3=esquerda):", "0");
+      const wallId = raw == null ? NaN : Number.parseInt(raw, 10);
+      if (Number.isFinite(wallId) && wallId >= 0 && wallId <= 3) {
+        if (window.viewerCore?.settings?.enableSmartAlignSnap) {
+          window.viewerCore.smartLayout?.previewAutoWallFill?.(wallId, selectedBoxId);
+        } else {
+          window.viewerCore?.smartLayout?.autoWallFill?.(wallId, selectedBoxId);
+        }
+      }
+    }
+    if (actionId === "smartLayout.autoRoomFill") {
+      window.viewerCore?.smartLayout?.autoRoomFill?.(selectedBoxId ?? undefined);
+    }
+    if (actionId === "smartLayout.autoDistribute" && activeSelectedIds.length >= 2) {
+      window.viewerCore?.smartLayout?.autoDistribute?.(activeSelectedIds);
+    }
+    if (actionId === "smartLayout.autoStackShelves" && selectedBoxId) {
+      const countRaw = window.prompt("Número de prateleiras (0=auto):", "0");
+      const count = countRaw == null ? NaN : Number.parseInt(countRaw, 10);
+      const topMarginMm = Number.parseFloat(window.prompt("Margem superior (mm):", "50") ?? "50");
+      const bottomMarginMm = Number.parseFloat(window.prompt("Margem inferior (mm):", "50") ?? "50");
+      if (Number.isFinite(count) && count >= 0) {
+        window.viewerCore?.smartLayout?.autoStackShelves?.(selectedBoxId, {
+          count,
+          topMarginMm: Number.isFinite(topMarginMm) ? topMarginMm : 50,
+          bottomMarginMm: Number.isFinite(bottomMarginMm) ? bottomMarginMm : 50,
+        });
+      }
+    }
+    if (actionId === "smartLayout.applyPredictive") {
+      window.viewerCore?.smartLayout?.applyPredictiveLayout?.();
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "smartLayout.rejectPredictive") {
+      window.viewerCore?.smartLayout?.rejectPredictiveLayout?.();
+    }
+    if (actionId === "intelligentDesigner.generateABC" && selectedBoxId) {
+      window.viewerCore?.intelligentDesigner?.generateDesigns?.(selectedBoxId);
+    }
+    if (actionId === "intelligentDesigner.generateVariations") {
+      window.viewerCore?.intelligentDesigner?.generateVariations?.();
+    }
+    if (actionId === "intelligentDesigner.applyA") {
+      window.viewerCore?.intelligentDesigner?.previewDesign?.("A");
+      window.viewerCore?.intelligentDesigner?.applyDesign?.("A");
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "intelligentDesigner.applyB") {
+      window.viewerCore?.intelligentDesigner?.previewDesign?.("B");
+      window.viewerCore?.intelligentDesigner?.applyDesign?.("B");
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "intelligentDesigner.applyC") {
+      window.viewerCore?.intelligentDesigner?.previewDesign?.("C");
+      window.viewerCore?.intelligentDesigner?.applyDesign?.("C");
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "intelligentDesigner.refine") {
+      window.viewerCore?.intelligentDesigner?.refineLayout?.();
+      window.viewerCore?.refreshTransformControlsAttachment?.();
+    }
+    if (actionId === "intelligentDesigner.learnPreferences") {
+      const summary = window.viewerCore?.intelligentDesigner?.learnPreferences?.();
+      if (summary) window.alert(`Preferências aprendidas:\n\n${summary}`);
+    }
+    const styleActionMap: Record<string, import("../../../3d/viewer-engine/snapping/intelligentDesignerTypes").EnvironmentStyleId> = {
+      "designerStyles.modern": "modern",
+      "designerStyles.nordic": "nordic",
+      "designerStyles.industrial": "industrial",
+      "designerStyles.minimalist": "minimalist",
+      "designerStyles.classic": "classic",
+      "designerStyles.scandinavian": "scandinavian",
+      "designerStyles.japandi": "japandi",
+      "designerStyles.luxury": "luxury",
+    };
+    const styleId = styleActionMap[actionId];
+    if (styleId && selectedBoxId) {
+      window.viewerCore?.intelligentDesigner?.previewStyle?.(styleId, selectedBoxId);
     }
     onClose();
   };

@@ -640,6 +640,14 @@ const hasShownViewerReadyToastRef = useRef(false);
     core?.bindAutoLayoutBridge?.({
       getWorkspaceBoxes: () => projectRef.current.workspaceBoxes,
       applyPlan: (plan) => actionsRef.current.applyAutoLayoutPlan(plan),
+      runProjectRoomFill: () => {
+        actionsRef.current.runKitchenLayout30();
+        return true;
+      },
+      getRoomLabelHint: () =>
+        projectRef.current.autoFill?.layoutSummary ??
+        projectRef.current.projectName ??
+        undefined,
     });
     core?.bindOrlaBridge?.({
       getBoxOrlaConfig: (boxId) => {

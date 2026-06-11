@@ -163,6 +163,11 @@ export type PimoViewerApi = {
       _options: { count: number; topMarginMm: number; bottomMarginMm: number }
     ) => boolean;
   };
+  smartLayout?: NonNullable<Window["viewerCore"]>["smartLayout"];
+  intelligentDesigner?: NonNullable<Window["viewerCore"]>["intelligentDesigner"];
+  conversationalDesigner?: NonNullable<Window["viewerCore"]>["conversationalDesigner"];
+  manufacturing?: NonNullable<Window["viewerCore"]>["manufacturing"];
+  costEstimator?: NonNullable<Window["viewerCore"]>["costEstimator"];
   /** Retorna o alvo do ponteiro para o menu de contexto inteligente. */
   getContextMenuLayerHit?: (_event: { clientX: number; clientY: number }) => MouseMenuTarget | null;
   getRightmostX?: () => number;

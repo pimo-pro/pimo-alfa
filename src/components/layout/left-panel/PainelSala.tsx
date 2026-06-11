@@ -26,6 +26,9 @@ import type {
   KitchenLayoutTypeOverride,
 } from "../../../core/autoRoomFill/autoRoomFillTypes";
 import type { RoomWallLabel } from "../../../3d/viewer-engine/room/roomEngineTypes";
+import { ConversationalDesignerPanel } from "./ConversationalDesignerPanel";
+import { ManufacturingPanel } from "./ManufacturingPanel";
+import { CostEstimatorPanel } from "./CostEstimatorPanel";
 
 const LAYOUT_OPTIONS: Array<{ id: KitchenLayoutTypeOverride; label: string }> = [
   { id: "auto", label: "Automático" },
@@ -738,6 +741,10 @@ export function PainelSala() {
           </div>
         </Panel>
       )}
+
+      {room && <ConversationalDesignerPanel />}
+      {room && <ManufacturingPanel />}
+      {room && <CostEstimatorPanel />}
 
       {room && selectedUtility && (
         <Panel title={

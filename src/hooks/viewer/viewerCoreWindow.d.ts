@@ -57,7 +57,10 @@ declare global {
         bridge: Pick<
           import("../3d/viewer-engine/autoLayout/autoLayoutTypes").AutoLayoutBridge,
           "getWorkspaceBoxes" | "applyPlan"
-        >
+        > & {
+          runProjectRoomFill?: () => boolean;
+          getRoomLabelHint?: () => string | undefined;
+        }
       ) => void;
       bindOrlaBridge?: (
         bridge: Pick<
@@ -149,6 +152,33 @@ declare global {
           | null
       ) => void;
       selectRodape?: (rodapeId: string | null) => void;
+      settings?: {
+        enableSmartAlignSnap: boolean;
+        autoBalanceEnabled: boolean;
+        predictiveSnapEnabled: boolean;
+      };
+      smartAlignEngine?: {
+        applyExplicitAlignment: (
+          mode:
+            | "front"
+            | "back"
+            | "top"
+            | "bottom"
+            | "left"
+            | "right"
+            | "auto"
+            | "flushFront"
+            | "flushBack"
+            | "flushLeft"
+            | "flushRight"
+            | "depthAlign"
+            | "continueLine"
+            | "alignDoor"
+            | "alignDrawer"
+        ) => boolean;
+        applyRepeatLastAlignment?: () => boolean;
+        applyInverseAlignment?: () => boolean;
+      };
       snapping?: {
         enable: () => void;
         disable: () => void;
@@ -176,6 +206,128 @@ declare global {
           boxId: string,
           options: { count: number; topMarginMm: number; bottomMarginMm: number }
         ) => boolean;
+      };
+      smartLayout?: {
+        autoWallFill: (wallId: string | number, moduleBoxId: string) => boolean;
+        previewAutoWallFill: (wallId: string | number, moduleBoxId: string) => boolean;
+        autoRoomFill: (seedBoxId?: string) => boolean;
+        autoDistribute: (boxIds: string[]) => boolean;
+        autoStackShelves: (
+          boxId: string,
+          options: { count: number; topMarginMm: number; bottomMarginMm: number }
+        ) => boolean;
+        applyPredictiveLayout: () => boolean;
+        rejectPredictiveLayout: () => void;
+        hasPredictiveLayout: () => boolean;
+      };
+      intelligentDesigner?: {
+        generateDesigns: (seedBoxId: string) => boolean;
+        generateVariations: () => boolean;
+        previewDesign: (id: "A" | "B" | "C") => boolean;
+        applyDesign: (id: "A" | "B" | "C") => boolean;
+        refineLayout: () => boolean;
+        learnPreferences: () => string;
+        explainDecision: (id?: "A" | "B" | "C") => string;
+        previewStyle: (
+          styleId:
+            | "modern"
+            | "nordic"
+            | "industrial"
+            | "minimalist"
+            | "classic"
+            | "scandinavian"
+            | "japandi"
+            | "luxury",
+          seedBoxId: string
+        ) => boolean;
+        applyStyle: (
+          styleId:
+            | "modern"
+            | "nordic"
+            | "industrial"
+            | "minimalist"
+            | "classic"
+            | "scandinavian"
+            | "japandi"
+            | "luxury",
+          seedBoxId: string
+        ) => boolean;
+        explainStyle: (
+          styleId?:
+            | "modern"
+            | "nordic"
+            | "industrial"
+            | "minimalist"
+            | "classic"
+            | "scandinavian"
+            | "japandi"
+            | "luxury"
+        ) => string;
+        listStyles: () => Array<{
+          id:
+            | "modern"
+            | "nordic"
+            | "industrial"
+            | "minimalist"
+            | "classic"
+            | "scandinavian"
+            | "japandi"
+            | "luxury";
+          label: string;
+        }>;
+      };
+      costEstimator?: {
+        generateCostReport: (
+          seedBoxId?: string
+        ) => import("../../3d/viewer-engine/snapping/costTypes").CostFullReport;
+        summarizeForUI: (
+          seedBoxId?: string
+        ) => import("../../3d/viewer-engine/snapping/costTypes").CostUiSummary;
+        score: () => number;
+        compareDesigns: (seedBoxId: string) => unknown;
+        compareStyles: () => unknown;
+        estimateChangeImpact: (change: {
+          depthDeltaMm?: number;
+          heightDeltaMm?: number;
+          moduleCountDelta?: number;
+          remateCountDelta?: number;
+          rodapeCountDelta?: number;
+        }) => { summary: string; deltaPercent: number; projectedCost: number };
+        suggestCheaper: (seedBoxId: string) => boolean;
+        suggestPremium: (seedBoxId: string) => boolean;
+        suggestBalanced: (seedBoxId: string) => boolean;
+      };
+      manufacturing?: {
+        generateReport: () => import("../../3d/viewer-engine/snapping/manufacturingTypes").ManufacturingFullReport;
+        getReport: () => import("../../3d/viewer-engine/snapping/manufacturingTypes").ManufacturingUiReport;
+        autoFix: () => { ok: boolean; message: string; score: number };
+        score: () => number;
+        previewFixes: () => boolean;
+        applySuggestedFixes: () => boolean;
+      };
+      conversationalDesigner?: {
+        sendMessage: (
+          text: string,
+          seedBoxId: string
+        ) => {
+          assistantText: string;
+          applied: boolean;
+          suggestion?: string;
+        };
+        quickAction: (
+          action: "moreSpace" | "moreSymmetry" | "minimal" | "optimizeWall" | "variations",
+          seedBoxId: string
+        ) => {
+          assistantText: string;
+          applied: boolean;
+          suggestion?: string;
+        };
+        getHistory: () => Array<{
+          role: "user" | "assistant";
+          text: string;
+          timestamp: number;
+        }>;
+        explain: () => string;
       };
       getCameraPosition?: () => unknown;
       setCameraPosition?: (...args: unknown[]) => void;

@@ -16,7 +16,9 @@ export type ViewerOverlayRefreshHooks = {
   refreshInternalRuler: () => void;
   refreshInternalRulerOverlay: () => void;
   refreshSnapping: () => void;
+  refreshSmartAlignSnap?: () => void;
   clearMovementRuler?: () => void;
+  clearSmartAlignSnap?: () => void;
 };
 
 export class ViewerOverlayCoordinator {
@@ -35,11 +37,13 @@ export class ViewerOverlayCoordinator {
     h.refreshInternalRuler();
     h.refreshInternalRulerOverlay();
     h.refreshSnapping();
+    h.refreshSmartAlignSnap?.();
   }
 
   /** Limpa overlays voláteis (fim de drag, mudança de seleção). */
   clearTransientOverlays(): void {
     this.hooks?.clearMovementRuler?.();
+    this.hooks?.clearSmartAlignSnap?.();
   }
 
   dispose(): void {

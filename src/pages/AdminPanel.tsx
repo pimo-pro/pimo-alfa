@@ -11,6 +11,7 @@ import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
+import AdminRulesPage from "../components/admin/AdminRulesPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
@@ -25,6 +26,7 @@ type AdminTab =
   | "Ferragens"
   | "Templates"
   | "Configuração de Regras"
+  | "Sistema de Regras"
   | "Perfis de Regras"
   | "Component Types"
   | "Gestor de Ficheiros"
@@ -50,6 +52,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Ferragens", label: "Ferragens" },
   { type: "item", id: "Component Types", label: "Component Types" },
   { type: "item", id: "Configuração de Regras", label: "Configuração de Regras" },
+  { type: "item", id: "Sistema de Regras", label: "Sistema de Regras (Rules System)" },
   { type: "item", id: "Perfis de Regras", label: "Perfis de Regras" },
   { type: "group", label: "Catálogo / Modelos" },
   { type: "item", id: "Templates", label: "Templates" },
@@ -71,6 +74,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Ferragens": "adminScrew",
   "Component Types": "adminPuzzle",
   "Configuração de Regras": "adminSettings",
+  "Sistema de Regras": "adminTools",
   "Perfis de Regras": "adminBook",
   "Templates": "adminFolder",
   "Gestor de Ficheiros": "adminArchive",
@@ -248,6 +252,8 @@ export default function AdminPanel() {
               <RulesAdminPage />
               <RulesManager />
             </div>
+          ) : active === "Sistema de Regras" ? (
+            <AdminRulesPage />
           ) : active === "Perfis de Regras" ? (
             <RulesProfilesPage />
           ) : active === "Component Types" ? (

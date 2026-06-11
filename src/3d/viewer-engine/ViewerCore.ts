@@ -127,8 +127,46 @@ import {
 } from "./selection";
 import { SmartSnapping } from "./snapping/SmartSnapping";
 import { RemateSmartSnapping } from "./snapping/RemateSmartSnapping";
+import { SmartSnapEngine, meshToAabb } from "./snapping/smartSnapEngine";
+import { SmartAlignEngine } from "./snapping/smartAlignEngine";
+import { SmartAlignSnapCache } from "./snapping/smartAlignSnapCache";
+import { SmartAlignSnapHistory } from "./snapping/smartAlignSnapHistory";
+import {
+  SmartAlignSnapOverlay,
+  buildOverlayStateFromCandidate,
+} from "./snapping/smartAlignSnapOverlay";
+import { overlayModeForKind } from "./snapping/smartAlignSnapPriority";
+import type {
+  SmartAlignSnapContext,
+  SmartSnapEntity,
+  UnifiedSnapCandidate,
+  UnifiedSnapResult,
+} from "./snapping/smartAlignSnapTypes";
+import {
+  DEFAULT_UNIFIED_CAPTURE_MM,
+  DEFAULT_UNIFIED_MAGNET,
+} from "./snapping/smartAlignSnapTypes";
 import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
+import { AutoWallFillEngine } from "./snapping/autoWallFillEngine";
+import { AutoRoomFillEngine } from "./snapping/autoRoomFillEngine";
+import { AutoDistributionEngine } from "./snapping/autoDistributionEngine";
+import { AutoStackShelvesEngine } from "./snapping/autoStackShelvesEngine";
+import { PredictiveLayoutEngine, buildPredictiveLayoutResult } from "./snapping/predictiveLayoutEngine";
+import { IntelligentDesignerEngine } from "./snapping/intelligentDesignerEngine";
+import { ConversationalDesignerEngine } from "./snapping/conversationalDesignerEngine";
+import { DesignConversationState } from "./snapping/designConversationState";
+import type { ConversationTurnResult } from "./snapping/conversationalDesignerEngine";
+import type { ConversationEntry } from "./snapping/designConversationState";
+import type { DesignVariantId, EnvironmentStyleId } from "./snapping/intelligentDesignerTypes";
+import { isEnvironmentStyleId, listStyleProfiles } from "./snapping/styleProfileEngine";
+import { ManufacturingReportEngine } from "./snapping/manufacturingReportEngine";
+import type { ManufacturingFullReport, ManufacturingUiReport } from "./snapping/manufacturingTypes";
+import { CostReportEngine } from "./snapping/costReportEngine";
+import type { CostChangeInput, CostFullReport, CostUiSummary, CostSuggestion } from "./snapping/costTypes";
+import { getRoomRules, getSnapRules } from "./snapping/rulesRuntime";
+import { rulesStore } from "../../admin/rules/rulesStore";
+import type { SmartLayoutBridge } from "./snapping/smartLayoutTypes";
 import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
 import { RematePieceVisualizer, type RematePieceVisualBridge } from "./remate/RematePieceVisualizer";
 import {
@@ -143,7 +181,7 @@ import {
 } from "../../core/remate/remateRotationSnap";
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
-import { mToMm } from "../../utils/units";
+import { mToMm, mmToM } from "../../utils/units";
 import {
   floorClearanceMeasurement,
   nearestBoxGapBetweenPair,
@@ -445,7 +483,28 @@ export class ViewerCore {
   private onInternalMeasurementSavedFn: (_entry: InternalMeasurementEntry) => void = () => {};
   private smartSnappingEngine!: SmartSnapping;
   private remateSmartSnapping!: RemateSmartSnapping;
+  private smartSnapEngine!: SmartSnapEngine;
+  readonly smartAlignEngine!: SmartAlignEngine;
+  private readonly smartAlignSnapCache = new SmartAlignSnapCache();
+  private readonly smartAlignSnapHistory = new SmartAlignSnapHistory();
+  private smartAlignSnapOverlay!: SmartAlignSnapOverlay;
+  readonly settings = {
+    enableSmartAlignSnap: false,
+    autoBalanceEnabled: true,
+    predictiveSnapEnabled: true,
+  };
   private autoLayoutEngine!: AutoLayoutEngine;
+  private smartLayoutBridge: SmartLayoutBridge | null = null;
+  private autoWallFillEngine!: AutoWallFillEngine;
+  private autoRoomFillEngine!: AutoRoomFillEngine;
+  private autoDistributionEngine!: AutoDistributionEngine;
+  private autoStackShelvesEngine!: AutoStackShelvesEngine;
+  private predictiveLayoutEngine!: PredictiveLayoutEngine;
+  private intelligentDesignerEngine!: IntelligentDesignerEngine;
+  private readonly designConversationState = new DesignConversationState();
+  private conversationalDesignerEngine!: ConversationalDesignerEngine;
+  private manufacturingReportEngine!: ManufacturingReportEngine;
+  private costReportEngine!: CostReportEngine;
   private orlaVisualizer = new OrlaVisualizer();
   private remateVisualizer = new RematePieceVisualizer();
   private remateVisualBridge: RematePieceVisualBridge | null = null;
@@ -488,6 +547,57 @@ export class ViewerCore {
     extendAlongWallFromBox: (_boxId: string) => boolean;
     distributeBoxesEvenly: (_boxIds: string[]) => boolean;
     autoStackShelvesInBox: (_boxId: string, _options: AutoStackShelvesOptions) => boolean;
+  };
+  readonly smartLayout: {
+    autoWallFill: (_wallId: string | number, _moduleBoxId: string) => boolean;
+    previewAutoWallFill: (_wallId: string | number, _moduleBoxId: string) => boolean;
+    autoRoomFill: (_seedBoxId?: string) => boolean;
+    autoDistribute: (_boxIds: string[]) => boolean;
+    autoStackShelves: (_boxId: string, _options: AutoStackShelvesOptions) => boolean;
+    applyPredictiveLayout: () => boolean;
+    rejectPredictiveLayout: () => void;
+    hasPredictiveLayout: () => boolean;
+  };
+  readonly intelligentDesigner: {
+    generateDesigns: (_seedBoxId: string) => boolean;
+    generateVariations: () => boolean;
+    previewDesign: (_id: DesignVariantId) => boolean;
+    applyDesign: (_id: DesignVariantId) => boolean;
+    refineLayout: () => boolean;
+    learnPreferences: () => string;
+    explainDecision: (_id?: DesignVariantId) => string;
+    previewStyle: (_styleId: EnvironmentStyleId, _seedBoxId: string) => boolean;
+    applyStyle: (_styleId: EnvironmentStyleId, _seedBoxId: string) => boolean;
+    explainStyle: (_styleId?: EnvironmentStyleId) => string;
+    listStyles: () => Array<{ id: EnvironmentStyleId; label: string }>;
+  };
+  readonly conversationalDesigner: {
+    sendMessage: (_text: string, _seedBoxId: string) => ConversationTurnResult;
+    quickAction: (
+      _action: "moreSpace" | "moreSymmetry" | "minimal" | "optimizeWall" | "variations",
+      _seedBoxId: string
+    ) => ConversationTurnResult;
+    getHistory: () => ConversationEntry[];
+    explain: () => string;
+  };
+  readonly manufacturing: {
+    generateReport: () => ManufacturingFullReport;
+    getReport: () => ManufacturingUiReport;
+    autoFix: () => { ok: boolean; message: string; score: number };
+    score: () => number;
+    previewFixes: () => boolean;
+    applySuggestedFixes: () => boolean;
+  };
+  readonly costEstimator: {
+    generateCostReport: (seedBoxId?: string) => CostFullReport;
+    summarizeForUI: (seedBoxId?: string) => CostUiSummary;
+    score: () => number;
+    compareDesigns: (seedBoxId: string) => import("./snapping/costTypes").CostDesignComparison;
+    compareStyles: () => import("./snapping/costTypes").CostStyleComparison;
+    estimateChangeImpact: (change: CostChangeInput) => import("./snapping/costTypes").CostImpactEstimate;
+    suggestCheaper: (seedBoxId: string) => boolean;
+    suggestPremium: (seedBoxId: string) => boolean;
+    suggestBalanced: (seedBoxId: string) => boolean;
   };
   readonly orlaVisual: {
     syncAll: () => void;
@@ -672,6 +782,25 @@ export class ViewerCore {
       projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
     });
     this.remateSmartSnapping.enable();
+
+    this.smartAlignSnapOverlay = new SmartAlignSnapOverlay({
+      getContainer: () => this.container,
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+    });
+
+    this.smartSnapEngine = new SmartSnapEngine({
+      listEntities: () => this.listSmartSnapEntities(),
+      buildContext: () => this.buildSmartAlignSnapContext(),
+    });
+    this.smartAlignEngine = new SmartAlignEngine({
+      getSelectedEntity: () => this.resolveSmartSnapSelectedEntity(),
+      listEntities: () => this.listSmartSnapEntities(),
+      buildContext: () => this.buildSmartAlignSnapContext(),
+      onAlignmentApplied: (entity) => this.notifyEntityAfterSmartAlign(entity),
+      isEnabled: () => this.settings.enableSmartAlignSnap,
+      isAutoBalanceEnabled: () => this.settings.autoBalanceEnabled,
+      history: this.smartAlignSnapHistory,
+    });
     this.snapping = {
       enable: () => this.smartSnappingEngine.enable(),
       disable: () => this.smartSnappingEngine.disable(),
@@ -700,10 +829,112 @@ export class ViewerCore {
       refreshInternalRuler: () => this.internalRulerEngine.refreshOverlay(),
       refreshInternalRulerOverlay: () => this.refreshInternalRulerOverlay(),
       refreshSnapping: () => this.smartSnappingEngine.refreshOverlay(),
+      refreshSmartAlignSnap: () => this.refreshSmartAlignSnapOverlay(),
       clearMovementRuler: () => this.measurementOverlay.clearRulerOverlay(),
+      clearSmartAlignSnap: () => this.clearSmartAlignSnapOverlay(),
     });
 
     this.autoLayoutEngine = new AutoLayoutEngine();
+    const smartLayoutDeps = {
+      getBridge: () => this.smartLayoutBridge,
+      refineBoxWithSmartSnap: (boxId: string) => this.refineBoxWithUnifiedSnap(boxId),
+      isSmartSnapEnabled: () => this.settings.enableSmartAlignSnap,
+      buildSnapContext: () => this.buildSmartAlignSnapContext(),
+      getBoxWorldPosition: (boxId: string) => {
+        const entry = this.boxes.get(boxId);
+        return entry ? entry.mesh.position.clone() : null;
+      },
+      setBoxWorldPosition: (boxId: string, pos: THREE.Vector3) => {
+        const entry = this.boxes.get(boxId);
+        if (entry) entry.mesh.position.copy(pos);
+      },
+    };
+    this.autoWallFillEngine = new AutoWallFillEngine(smartLayoutDeps);
+    this.autoRoomFillEngine = new AutoRoomFillEngine(smartLayoutDeps);
+    this.autoDistributionEngine = new AutoDistributionEngine(smartLayoutDeps);
+    this.autoStackShelvesEngine = new AutoStackShelvesEngine(smartLayoutDeps);
+    this.predictiveLayoutEngine = new PredictiveLayoutEngine(smartLayoutDeps);
+    this.intelligentDesignerEngine = new IntelligentDesignerEngine({
+      getBridge: () => this.smartLayoutBridge,
+      getRoomLabelHint: () => this.smartLayoutBridge?.getRoomLabelHint?.(),
+      refinePlan: (plan) => this.refineLayoutPlan(plan),
+    });
+    this.manufacturingReportEngine = new ManufacturingReportEngine({
+      getContext: () => this.buildManufacturingScanContext(),
+      applyPlan: (plan) => {
+        this.smartLayoutBridge?.applyPlan(plan);
+      },
+      refinePlan: (plan) => this.refineLayoutPlan(plan),
+      distribute: (boxIds) => this.autoDistributionEngine.distribute({
+        boxIds,
+        alignTop: true,
+        alignFront: true,
+        alignDepth: true,
+        useHistorySpacing: true,
+      }),
+      isSmartSnapEnabled: () => this.settings.enableSmartAlignSnap,
+    });
+    this.costReportEngine = new CostReportEngine({
+      getContext: () => this.buildCostScanContext(),
+      getDesigner: () => this.intelligentDesignerEngine,
+      getSeedBoxId: () => this.resolveCostSeedBoxId(),
+    });
+    this.conversationalDesignerEngine = new ConversationalDesignerEngine({
+      designer: this.intelligentDesignerEngine,
+      conversation: this.designConversationState,
+      previewPlan: (plan, label, previewId) => {
+        const { overlay } = buildPredictiveLayoutResult(this.predictiveLayoutEngine, plan, label);
+        this.predictiveLayoutEngine.previewDesigns([{ id: previewId, plan, label }]);
+        this.smartAlignSnapOverlay.setState(overlay);
+      },
+      applyPlan: (plan, meta) => {
+        const ok = this.intelligentDesignerEngine.applyPlanDirect(plan, {
+          designId: meta.designId,
+          variationKind: meta.variationKind,
+        });
+        if (ok) {
+          this.designConversationState.recordApplied({
+            plan,
+            label: meta.label,
+            designId: meta.designId,
+            variationKind: meta.variationKind,
+          });
+          this.clearSmartAlignSnapOverlay();
+        }
+        return ok;
+      },
+      acceptPending: () => this.acceptConversationalPending(),
+      rejectPending: () => {
+        this.predictiveLayoutEngine.rejectPending();
+        this.designConversationState.clearPending();
+        this.clearSmartAlignSnapOverlay();
+      },
+      optimizeWallPreview: (wallId, seedBoxId) => this.previewSmartWallFill(wallId, seedBoxId),
+      getManufacturingReport: () => this.manufacturingReportEngine.generateReport(),
+      previewManufacturingFixes: () => this.previewManufacturingFixes(),
+      applyManufacturingFixes: () => {
+        const result = this.manufacturingReportEngine.autoFix();
+        return { ok: result.ok, message: result.message };
+      },
+      getCostReport: (seedBoxId) => {
+        this.designConversationState.setSeedBoxId(seedBoxId);
+        return this.costReportEngine.generateCostReport();
+      },
+      previewCostSuggestion: (suggestion) => this.previewCostSuggestion(suggestion),
+      buildCostSuggestion: (tier, seedBoxId, reducePercent) => {
+        this.designConversationState.setSeedBoxId(seedBoxId);
+        this.costReportEngine.scanProject();
+        if (tier === "cheaper") {
+          return reducePercent != null
+            ? this.costReportEngine.suggestReduceCostPercent(reducePercent)
+            : this.costReportEngine.suggestCheaperAlternative();
+        }
+        if (tier === "premium") return this.costReportEngine.suggestPremiumAlternative();
+        return this.costReportEngine.suggestBalancedAlternative();
+      },
+    });
+    this.autoDistributionEngine.bindHistory(this.smartAlignSnapHistory);
+
     this.autoLayout = {
       fillWallWithModule: (wallId, moduleBoxId) =>
         this.autoLayoutEngine.fillWallWithModule(wallId, moduleBoxId),
@@ -711,6 +942,81 @@ export class ViewerCore {
       distributeBoxesEvenly: (boxIds) => this.autoLayoutEngine.distributeBoxesEvenly(boxIds),
       autoStackShelvesInBox: (boxId, options) =>
         this.autoLayoutEngine.autoStackShelvesInBox(boxId, options),
+    };
+    this.smartLayout = {
+      autoWallFill: (wallId, moduleBoxId) =>
+        this.autoWallFillEngine.fillWall({ wallId, moduleBoxId, alignTop: true, alignFront: true }),
+      previewAutoWallFill: (wallId, moduleBoxId) => this.previewSmartWallFill(wallId, moduleBoxId),
+      autoRoomFill: (seedBoxId) => this.autoRoomFillEngine.fillRoom(seedBoxId),
+      autoDistribute: (boxIds) =>
+        this.autoDistributionEngine.distribute({
+          boxIds,
+          alignTop: true,
+          alignFront: true,
+          alignDepth: true,
+          useHistorySpacing: true,
+        }),
+      autoStackShelves: (boxId, options) => this.autoStackShelvesEngine.stackShelves(boxId, options),
+      applyPredictiveLayout: () => this.acceptPredictiveLayoutPending(),
+      rejectPredictiveLayout: () => {
+        this.predictiveLayoutEngine.rejectPending();
+        this.clearSmartAlignSnapOverlay();
+      },
+      hasPredictiveLayout: () => this.predictiveLayoutEngine.getPending() !== null,
+    };
+    this.intelligentDesigner = {
+      generateDesigns: (seedBoxId) => this.generateIntelligentDesigns(seedBoxId),
+      generateVariations: () => this.generateIntelligentVariations(),
+      previewDesign: (id) => this.previewIntelligentDesign(id),
+      applyDesign: (id) => this.applyIntelligentDesign(id),
+      refineLayout: () => this.intelligentDesignerEngine.refineLastLayout(),
+      learnPreferences: () => this.intelligentDesignerEngine.learnPreferencesSummary(),
+      explainDecision: (id) => this.intelligentDesignerEngine.explainDecision(id),
+      previewStyle: (styleId, seedBoxId) => this.previewIntelligentStyle(styleId, seedBoxId),
+      applyStyle: (styleId, seedBoxId) => this.applyIntelligentStyle(styleId, seedBoxId),
+      explainStyle: (styleId) => this.intelligentDesignerEngine.explainStyle(styleId),
+      listStyles: () => listStyleProfiles().map((p) => ({ id: p.id, label: p.label })),
+    };
+    this.conversationalDesigner = {
+      sendMessage: (text, seedBoxId) => this.conversationalDesignerEngine.processInput(text, seedBoxId),
+      quickAction: (action, seedBoxId) =>
+        this.conversationalDesignerEngine.processQuickAction(action, seedBoxId),
+      getHistory: () => this.designConversationState.getHistory(),
+      explain: () =>
+        this.intelligentDesignerEngine.explainDecision(
+          this.intelligentDesignerEngine.getLastAppliedDesignId() ?? undefined
+        ),
+    };
+    this.manufacturing = {
+      generateReport: () => this.manufacturingReportEngine.generateReport(),
+      getReport: () => this.manufacturingReportEngine.getUiReport(),
+      score: () => this.manufacturingReportEngine.score(),
+      autoFix: () => {
+        const result = this.manufacturingReportEngine.autoFix();
+        return { ok: result.ok, message: result.message, score: result.scan.score };
+      },
+      previewFixes: () => this.previewManufacturingFixes(),
+      applySuggestedFixes: () => this.applyManufacturingSuggestedFixes(),
+    };
+    this.costEstimator = {
+      generateCostReport: (seedBoxId) => {
+        if (seedBoxId) this.designConversationState.setSeedBoxId(seedBoxId);
+        return this.costReportEngine.generateCostReport();
+      },
+      summarizeForUI: (seedBoxId) => {
+        if (seedBoxId) this.designConversationState.setSeedBoxId(seedBoxId);
+        return this.costReportEngine.summarizeCostForUI();
+      },
+      score: () => this.costReportEngine.score(),
+      compareDesigns: (seedBoxId) => {
+        this.designConversationState.setSeedBoxId(seedBoxId);
+        return this.costReportEngine.compareDesignsCost(seedBoxId);
+      },
+      compareStyles: () => this.costReportEngine.compareStylesCost(),
+      estimateChangeImpact: (change) => this.costReportEngine.estimateChangeImpact(change),
+      suggestCheaper: (seedBoxId) => this.previewCostSuggestionByTier(seedBoxId, "cheaper"),
+      suggestPremium: (seedBoxId) => this.previewCostSuggestionByTier(seedBoxId, "premium"),
+      suggestBalanced: (seedBoxId) => this.previewCostSuggestionByTier(seedBoxId, "balanced"),
     };
     this.orlaVisual = {
       syncAll: () => this.syncOrlaVisuals(),
@@ -724,6 +1030,10 @@ export class ViewerCore {
     this.rodapeVisual = {
       syncAll: () => this.syncRodapeVisuals(),
     };
+
+    this.applyAdminRulesSettings();
+    rulesStore.snapRules.subscribe(() => this.applyAdminRulesSettings());
+    rulesStore.roomRules.subscribe(() => this.applyAdminRulesSettings());
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -911,15 +1221,21 @@ export class ViewerCore {
   }
 
   bindAutoLayoutBridge(
-    bridge: Pick<AutoLayoutBridge, "getWorkspaceBoxes" | "applyPlan">
+    bridge: Pick<AutoLayoutBridge, "getWorkspaceBoxes" | "applyPlan"> & {
+      runProjectRoomFill?: () => boolean;
+      getRoomLabelHint?: () => string | undefined;
+    }
   ): void {
-    this.autoLayoutEngine.bindBridge({
+    this.smartLayoutBridge = {
       getWorkspaceBoxes: bridge.getWorkspaceBoxes,
       applyPlan: bridge.applyPlan,
       getRoomBoundsMm: () => this.getRoomBoundsMmForAutoLayout(),
       getOpeningsMm: () => this.getRoomOpeningsMmForAutoLayout(),
       getWallOffsetMm: () => this.smartSnappingEngine.getWallOffset(),
-    });
+      runProjectRoomFill: bridge.runProjectRoomFill,
+      getRoomLabelHint: bridge.getRoomLabelHint,
+    };
+    this.autoLayoutEngine.bindBridge(this.smartLayoutBridge);
   }
 
   bindOrlaBridge(bridge: Pick<OrlaVisualBridge, "getBoxOrlaConfig"> | null): void {
@@ -4829,6 +5145,421 @@ export class ViewerCore {
     });
   }
 
+  private buildSmartAlignSnapContext(): SmartAlignSnapContext {
+    const allEntities = this.listSmartSnapEntities();
+    const roomBounds = this.roomBounds
+      ? {
+          minX: this.roomBounds.minX,
+          maxX: this.roomBounds.maxX,
+          minZ: this.roomBounds.minZ,
+          maxZ: this.roomBounds.maxZ,
+        }
+      : null;
+    return {
+      boxes: this.boxes,
+      captureRadiusM: mmToM(DEFAULT_UNIFIED_CAPTURE_MM),
+      magnetStrength: DEFAULT_UNIFIED_MAGNET,
+      rematePieces: this.remateVisualBridge?.listRematePieces() ?? [],
+      rodapes: (this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []).flatMap((c) => c.rodapes),
+      getBoxConfig: (boxId) => this.remateVisualBridge?.getBoxConfig(boxId) ?? null,
+      getWorldAabb: (mesh) =>
+        this.smartAlignSnapCache.getWorldAabb(mesh, () => meshToAabb(mesh)),
+      roomBounds,
+      roomBoundsFull: this.roomBounds,
+      roomOpenings: this.getRoomOpeningsForSnapping(),
+      wallOffsetMm: this.smartSnappingEngine.getWallOffset(),
+      explicitModeActive: false,
+      allEntities,
+    };
+  }
+
+  private refineLayoutPlan(plan: import("./autoLayout/autoLayoutTypes").AutoLayoutPlan): void {
+    const ids = new Set<string>();
+    for (const m of plan.moveBoxes) ids.add(m.boxId);
+    for (const c of plan.cloneBoxes) ids.add(c.sourceId);
+    for (const id of ids) this.refineBoxWithUnifiedSnap(id);
+  }
+
+  private generateIntelligentDesigns(seedBoxId: string): boolean {
+    const designs = this.intelligentDesignerEngine.buildDesigns(seedBoxId);
+    if (!designs.length) return false;
+    const overlays = this.predictiveLayoutEngine.previewDesigns(
+      designs.map((d) => ({ id: d.id, plan: d.plan, label: d.label }))
+    );
+    if (overlays[0]) {
+      this.smartAlignSnapOverlay.setState(
+        this.predictiveLayoutEngine.showDesignPreview(0) ?? { visible: false, mode: "predictive", guides: [] }
+      );
+    }
+    return true;
+  }
+
+  private previewIntelligentDesign(id: DesignVariantId): boolean {
+    const state = this.predictiveLayoutEngine.showDesignById(id);
+    if (!state) return false;
+    this.smartAlignSnapOverlay.setState(state);
+    return true;
+  }
+
+  private applyIntelligentDesign(id: DesignVariantId): boolean {
+    const ok = this.intelligentDesignerEngine.applyDesign(id);
+    if (ok) this.clearSmartAlignSnapOverlay();
+    return ok;
+  }
+
+  private acceptPredictiveLayoutPending(): boolean {
+    const pending = this.predictiveLayoutEngine.getPending();
+    if (!pending) return false;
+    const previews = this.predictiveLayoutEngine.getDesignPreviews();
+    const activeEntry = previews[this.predictiveLayoutEngine.getActiveDesignIndex()];
+    const ok = this.predictiveLayoutEngine.applyPending();
+    if (ok) {
+      if (activeEntry && isEnvironmentStyleId(activeEntry.id)) {
+        this.intelligentDesignerEngine.getBehaviorStore().learnStylePreference(activeEntry.id);
+      }
+      this.refineLayoutPlan(pending.plan);
+      this.clearSmartAlignSnapOverlay();
+    }
+    return ok;
+  }
+
+  private acceptConversationalPending(): boolean {
+    const pending = this.predictiveLayoutEngine.getPending();
+    if (!pending) return false;
+    const ok = this.acceptPredictiveLayoutPending();
+    if (ok) {
+      this.designConversationState.recordApplied({
+        plan: pending.plan,
+        label: pending.label,
+      });
+    }
+    return ok;
+  }
+
+  private previewIntelligentStyle(styleId: EnvironmentStyleId, seedBoxId: string): boolean {
+    const result = this.intelligentDesignerEngine.buildStyleDesign(styleId, seedBoxId);
+    if (!result) return false;
+    const { overlay } = buildPredictiveLayoutResult(this.predictiveLayoutEngine, result.plan, result.label);
+    this.predictiveLayoutEngine.previewDesigns([{ id: styleId, plan: result.plan, label: result.label }]);
+    this.smartAlignSnapOverlay.setState(overlay);
+    return true;
+  }
+
+  private applyIntelligentStyle(styleId: EnvironmentStyleId, seedBoxId: string): boolean {
+    const ok = this.intelligentDesignerEngine.applyStyle(styleId, seedBoxId);
+    if (ok) this.clearSmartAlignSnapOverlay();
+    return ok;
+  }
+
+  private applyAdminRulesSettings(): void {
+    const snap = getSnapRules();
+    const room = getRoomRules();
+    this.smartSnappingEngine.setCaptureRadius(snap.captureRadiusMm);
+    this.smartSnappingEngine.setMagnetStrength(snap.magnetStrength);
+    this.smartSnappingEngine.setGridSize(snap.gridSizeMm);
+    this.smartSnappingEngine.setWallOffset(room.wallOffsetMm);
+    this.settings.autoBalanceEnabled = snap.autoBalanceEnabled;
+    this.settings.predictiveSnapEnabled = snap.predictiveSnapEnabled;
+  }
+
+  private resolveCostSeedBoxId(): string {
+    return (
+      this.designConversationState.getSeedBoxId() ??
+      this.smartLayoutBridge?.getWorkspaceBoxes().find((b) => !b.locked)?.id ??
+      ""
+    );
+  }
+
+  private buildCostScanContext(): import("./snapping/costTypes").CostScanContext {
+    const ctx = this.buildManufacturingScanContext();
+    return {
+      boxes: ctx.boxes,
+      remates: ctx.remates,
+      rodapes: ctx.rodapes,
+      bounds: ctx.bounds,
+      openings: ctx.openings,
+      wallOffsetMm: ctx.wallOffsetMm,
+    };
+  }
+
+  private previewCostSuggestion(suggestion: CostSuggestion): void {
+    const { overlay } = buildPredictiveLayoutResult(
+      this.predictiveLayoutEngine,
+      suggestion.plan,
+      suggestion.label
+    );
+    this.predictiveLayoutEngine.previewDesigns([
+      { id: `cost-${suggestion.kind}`, plan: suggestion.plan, label: suggestion.label },
+    ]);
+    this.smartAlignSnapOverlay.setState(overlay);
+  }
+
+  private previewCostSuggestionByTier(
+    seedBoxId: string,
+    tier: "cheaper" | "premium" | "balanced"
+  ): boolean {
+    this.designConversationState.setSeedBoxId(seedBoxId);
+    this.costReportEngine.scanProject();
+    const suggestion =
+      tier === "cheaper"
+        ? this.costReportEngine.suggestCheaperAlternative()
+        : tier === "premium"
+          ? this.costReportEngine.suggestPremiumAlternative()
+          : this.costReportEngine.suggestBalancedAlternative();
+    if (!suggestion) return false;
+    this.previewCostSuggestion(suggestion);
+    return true;
+  }
+
+  private buildManufacturingScanContext(): import("./snapping/manufacturingTypes").ManufacturingScanContext {
+    const bridge = this.smartLayoutBridge;
+    const rodapeConfigs = this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? [];
+    const rodapes = rodapeConfigs.flatMap((cfg) => cfg.rodapes);
+    return {
+      boxes: bridge?.getWorkspaceBoxes() ?? [],
+      remates: this.remateVisualBridge?.listRematePieces() ?? [],
+      rodapes,
+      bounds: bridge?.getRoomBoundsMm() ?? null,
+      openings: bridge?.getOpeningsMm() ?? [],
+      wallOffsetMm: bridge?.getWallOffsetMm() ?? this.smartSnappingEngine.getWallOffset(),
+    };
+  }
+
+  private previewManufacturingFixes(): boolean {
+    const fixPlan = this.manufacturingReportEngine.buildFixPreview();
+    if (!fixPlan || !fixPlan.plan.moveBoxes.length) return false;
+    const { overlay } = buildPredictiveLayoutResult(
+      this.predictiveLayoutEngine,
+      fixPlan.plan,
+      fixPlan.label
+    );
+    this.predictiveLayoutEngine.previewDesigns([
+      { id: "manufacturing-fix", plan: fixPlan.plan, label: fixPlan.label },
+    ]);
+    this.smartAlignSnapOverlay.setState(overlay);
+    return true;
+  }
+
+  private applyManufacturingSuggestedFixes(): boolean {
+    const pending = this.predictiveLayoutEngine.getPending();
+    if (pending?.label.includes("Auto-Manufacturing")) {
+      return this.acceptPredictiveLayoutPending();
+    }
+    const result = this.manufacturingReportEngine.autoFix();
+    return result.ok;
+  }
+
+  private generateIntelligentVariations(): boolean {
+    const variations = this.intelligentDesignerEngine.generateVariations();
+    if (!variations.length) return false;
+    const overlays = this.predictiveLayoutEngine.previewDesigns(
+      variations.map((v, i) => ({
+        id: `V${i + 1}`,
+        plan: v.plan,
+        label: v.label,
+      }))
+    );
+    if (overlays[0]) {
+      this.smartAlignSnapOverlay.setState(
+        this.predictiveLayoutEngine.showDesignPreview(0) ?? { visible: false, mode: "predictive", guides: [] }
+      );
+    }
+    return true;
+  }
+
+  private refineBoxWithUnifiedSnap(boxId: string, iterations = 3): void {
+    if (!this.settings.enableSmartAlignSnap) return;
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    const entity: SmartSnapEntity = { kind: "box", id: boxId, mesh: entry.mesh as THREE.Mesh };
+    for (let i = 0; i < iterations; i += 1) {
+      const ctx = this.buildSmartAlignSnapContext();
+      this.smartAlignSnapCache.touchMesh(entity.mesh);
+      const result = this.smartSnapEngine.applyUnifiedSnap(entity, ctx);
+      if (!result.applied) break;
+    }
+  }
+
+  private previewSmartWallFill(wallId: string | number, moduleBoxId: string): boolean {
+    const plan = this.autoWallFillEngine.buildPlan({
+      wallId,
+      moduleBoxId,
+      alignTop: true,
+      alignFront: true,
+    });
+    if (!plan) return false;
+    const { overlay } = buildPredictiveLayoutResult(
+      this.predictiveLayoutEngine,
+      plan,
+      "Auto-Wall-Fill sugerido"
+    );
+    this.smartAlignSnapOverlay.setState(overlay);
+    return true;
+  }
+
+  private listSmartSnapEntities(): SmartSnapEntity[] {
+    const out: SmartSnapEntity[] = [];
+    this.boxes.forEach((entry, id) => {
+      out.push({ kind: "box", id, mesh: entry.mesh as THREE.Mesh });
+    });
+    for (const piece of this.remateVisualBridge?.listRematePieces() ?? []) {
+      const mesh = this.remateVisualizer.getMeshByRemateId(piece.id);
+      if (mesh) out.push({ kind: "remate", id: piece.id, mesh, parentBoxId: piece.parentBoxId });
+    }
+    for (const cfg of this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []) {
+      for (const rodape of cfg.rodapes) {
+        const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodape.id);
+        if (mesh) out.push({ kind: "rodape", id: rodape.id, mesh, parentBoxId: rodape.parentBoxId });
+      }
+    }
+    return out;
+  }
+
+  private resolveSmartSnapSelectedEntity(): SmartSnapEntity | null {
+    const remateId = this.viewerState.getSelectedRemate();
+    if (remateId) {
+      const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
+      const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === remateId);
+      if (mesh) return { kind: "remate", id: remateId, mesh, parentBoxId: piece?.parentBoxId };
+    }
+    const rodapeId = this.viewerState.getSelectedRodape();
+    if (rodapeId) {
+      const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodapeId);
+      if (mesh) {
+        return {
+          kind: "rodape",
+          id: rodapeId,
+          mesh,
+          parentBoxId: mesh.userData.boxId as string | undefined,
+        };
+      }
+    }
+    const boxId = this.viewerState.getSelectedBox();
+    if (boxId) {
+      const entry = this.boxes.get(boxId);
+      if (entry) return { kind: "box", id: boxId, mesh: entry.mesh as THREE.Mesh };
+    }
+    return null;
+  }
+
+  private applyUnifiedSmartAlignSnap(
+    entity: SmartSnapEntity,
+    isDragging: boolean,
+    currentTool: string
+  ): boolean {
+    if (!this.settings.enableSmartAlignSnap) return false;
+    if (!isDragging || currentTool !== "translate") return false;
+
+    this.smartAlignSnapCache.touchMesh(entity.mesh);
+    const ctx = this.buildSmartAlignSnapContext();
+
+    if (this.settings.predictiveSnapEnabled) {
+      const prediction = this.smartSnapEngine.predictSnap(entity, ctx);
+      if (prediction.candidate) {
+        this.showSmartAlignSnapOverlay(entity, prediction.candidate, "predictive");
+      }
+    }
+
+    const snapResult = this.smartSnapEngine.applyUnifiedSnap(entity, ctx);
+    if (snapResult.applied) {
+      this.onUnifiedSnapApplied(snapResult, entity);
+    }
+
+    const balanceResult = this.smartAlignEngine.applyAutoBalanceIfEnabled(entity, ctx);
+    if (balanceResult.applied && balanceResult.delta && balanceResult.candidateKind) {
+      this.smartAlignSnapHistory.record({
+        mode: "magnetic",
+        kind: balanceResult.candidateKind,
+        targetId: balanceResult.targetId,
+      });
+      const preSnapPosition = entity.mesh.position.clone().sub(balanceResult.delta);
+      this.renderSmartAlignSnapOverlay({
+        meshPosition: preSnapPosition,
+        delta: balanceResult.delta,
+        kind: balanceResult.candidateKind,
+        targetId: balanceResult.targetId,
+        targetKind: balanceResult.targetKind,
+        mode: overlayModeForKind(balanceResult.candidateKind),
+      });
+    }
+
+    return snapResult.applied || balanceResult.applied;
+  }
+
+  private onUnifiedSnapApplied(result: UnifiedSnapResult, entity: SmartSnapEntity): void {
+    if (!result.candidateKind || !result.delta) return;
+    this.smartAlignSnapHistory.record({
+      mode: "magnetic",
+      kind: result.candidateKind,
+      targetId: result.targetId,
+    });
+    const preSnapPosition = entity.mesh.position.clone().sub(result.delta);
+    this.renderSmartAlignSnapOverlay({
+      meshPosition: preSnapPosition,
+      delta: result.delta,
+      kind: result.candidateKind,
+      targetId: result.targetId,
+      targetKind: result.targetKind,
+      mode: overlayModeForKind(result.candidateKind),
+    });
+  }
+
+  private showSmartAlignSnapOverlay(
+    entity: SmartSnapEntity,
+    candidate: UnifiedSnapCandidate,
+    modeOverride?: "predictive" | "magnetic" | "explicit" | "continuity" | "flush"
+  ): void {
+    this.renderSmartAlignSnapOverlay({
+      meshPosition: entity.mesh.position.clone(),
+      delta: candidate.delta,
+      kind: candidate.kind,
+      targetId: candidate.targetId,
+      targetKind: candidate.targetKind,
+      mode: modeOverride ?? overlayModeForKind(candidate.kind),
+    });
+  }
+
+  private renderSmartAlignSnapOverlay(params: {
+    meshPosition: THREE.Vector3;
+    delta: THREE.Vector3;
+    kind: string;
+    targetId?: string;
+    targetKind?: SmartSnapEntity["kind"];
+    mode: "predictive" | "magnetic" | "explicit" | "continuity" | "flush";
+  }): void {
+    if (!this.settings.enableSmartAlignSnap) return;
+    const ctx = this.buildSmartAlignSnapContext();
+    const target =
+      params.targetId && params.targetKind
+        ? ctx.allEntities?.find((e) => e.id === params.targetId && e.kind === params.targetKind)
+        : undefined;
+    const targetCenter = target ? ctx.getWorldAabb(target.mesh).center : undefined;
+    this.smartAlignSnapOverlay.setState(
+      buildOverlayStateFromCandidate({
+        mode: params.mode,
+        meshPosition: params.meshPosition,
+        delta: params.delta,
+        kind: params.kind,
+        targetCenter,
+      })
+    );
+  }
+
+  private refreshSmartAlignSnapOverlay(): void {
+    if (!this.settings.enableSmartAlignSnap) return;
+    this.smartAlignSnapOverlay.refresh();
+  }
+
+  private clearSmartAlignSnapOverlay(): void {
+    this.smartAlignSnapOverlay.clear();
+  }
+
+  private notifyEntityAfterSmartAlign(entity: SmartSnapEntity): void {
+    if (entity.kind === "box") this.notifyBoxTransform();
+    else if (entity.kind === "remate") this.notifyRemateTransform();
+    else if (entity.kind === "rodape") this.notifyRodapeTransform();
+  }
+
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
     if (this.viewerState.getSelectedRoomElementId() || this.viewerState.getSelectedRoomUtilityId()) {
@@ -4849,13 +5580,20 @@ export class ViewerCore {
         const entry = boxId ? this.boxes.get(boxId) : undefined;
 
         if (currentTool === "translate" && entry && piece && boxId) {
-          const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
-          if (cfg) {
-            this.remateSmartSnapping.applyDuringTranslate({
-              mesh,
-              boxEntry: entry,
-              boxConfig: cfg,
-            });
+          const unifiedHandled = this.applyUnifiedSmartAlignSnap(
+            { kind: "remate", id: selectedRemateId, mesh, parentBoxId: boxId },
+            isDragging,
+            currentTool
+          );
+          if (!unifiedHandled) {
+            const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
+            if (cfg) {
+              this.remateSmartSnapping.applyDuringTranslate({
+                mesh,
+                boxEntry: entry,
+                boxConfig: cfg,
+              });
+            }
           }
         } else if (currentTool === "translate" && piece && !boxId) {
           this.remateSmartSnapping.applyStandaloneGridSnap(mesh);
@@ -4881,6 +5619,11 @@ export class ViewerCore {
       const obj = this.transformControls?.object;
       if (isDragging && mesh && obj === mesh && currentTool === "translate") {
         const boxId = mesh.userData.boxId as string | undefined;
+        this.applyUnifiedSmartAlignSnap(
+          { kind: "rodape", id: selectedRodapeId, mesh, parentBoxId: boxId },
+          isDragging,
+          currentTool
+        );
         this.applyFinishCollisionConstraint(mesh, boxId, undefined, selectedRodapeId);
       }
       return;
@@ -4891,14 +5634,21 @@ export class ViewerCore {
       const entry = this.boxes.get(selectedBoxId);
       const obj = this.transformControls?.object;
       if (entry && obj === entry.mesh) {
-        this.smartSnappingEngine.applyDuringTranslate({
-          mesh: entry.mesh,
-          selectedBoxId,
-          boxes: this.boxes,
+        const unifiedHandled = this.applyUnifiedSmartAlignSnap(
+          { kind: "box", id: selectedBoxId, mesh: entry.mesh as THREE.Mesh },
           isDragging,
-          currentTool,
-          roomBounds: this.roomBounds,
-        });
+          currentTool
+        );
+        if (!unifiedHandled) {
+          this.smartSnappingEngine.applyDuringTranslate({
+            mesh: entry.mesh,
+            selectedBoxId,
+            boxes: this.boxes,
+            isDragging,
+            currentTool,
+            roomBounds: this.roomBounds,
+          });
+        }
       }
     }
 

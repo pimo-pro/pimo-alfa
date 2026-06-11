@@ -201,6 +201,11 @@ export function usePimoViewer() {
           viewerCore && (viewerCore as { autoLayout?: PimoViewerApi["autoLayout"] }).autoLayout
             ? (viewerCore as { autoLayout: NonNullable<PimoViewerApi["autoLayout"]> }).autoLayout
             : PIMO_VIEWER_STUBS.autoLayout,
+        smartLayout: viewerCore?.smartLayout,
+        intelligentDesigner: viewerCore?.intelligentDesigner,
+        conversationalDesigner: viewerCore?.conversationalDesigner,
+        manufacturing: viewerCore?.manufacturing,
+        costEstimator: viewerCore?.costEstimator,
       }) as PimoViewerApi,
     [boxes, room, camera, materials, viewerCore]
   );
