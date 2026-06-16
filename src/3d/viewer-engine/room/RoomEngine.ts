@@ -7,12 +7,15 @@ import { wallStore } from "../../../stores/wallStore";
 import type { PimoViewerApi } from "../../../context/PimoViewerContextCore";
 import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore } from "../../../utils/roomMeshFromWallStore";
 import {
+  centeredWallPositionForLabel,
+  migrateProjectRoomToCenteredCoords,
+} from "../../../utils/roomCoordinates";
+import {
   type ProjectRoomConfig,
   type ProjectRoomOpening,
   type ProjectRoomUtility,
   type ProjectRoomUtilityType,
   type ProjectRoomWall,
-  type ProjectRoomWallPosition,
   type RoomFloorMode,
   type RoomOpeningKind,
   ROOM_20_DEFAULTS,
@@ -46,22 +49,6 @@ function mkWallId(label: string): string {
 
 function mkOpeningId(type: string): string {
   return `room-opening-${type}-${Date.now()}`;
-}
-
-function wallPositionForLabel(label: ProjectRoomWall["label"], widthMm: number, depthMm: number, heightMm: number): ProjectRoomWallPosition {
-  const y = heightMm / 2;
-  switch (label) {
-    case "sul":
-      return { x: widthMm / 2, y, z: 0 };
-    case "este":
-      return { x: widthMm, y, z: depthMm / 2 };
-    case "norte":
-      return { x: widthMm / 2, y, z: depthMm };
-    case "oeste":
-      return { x: 0, y, z: depthMm / 2 };
-    default:
-      return { x: widthMm / 2, y, z: depthMm / 2 };
-  }
 }
 
 function wallRotationForLabel(label: ProjectRoomWall["label"]): number {
@@ -141,7 +128,7 @@ export function createDefaultProjectRoom(): ProjectRoomConfig {
     lengthMm: label === "sul" || label === "norte" ? widthMm : depthMm,
     heightMm,
     thicknessMm: wallThicknessMm,
-    position: wallPositionForLabel(label, widthMm, depthMm, heightMm),
+    position: centeredWallPositionForLabel(label, widthMm, depthMm, heightMm, wallThicknessMm),
     rotationDeg: wallRotationForLabel(label),
   }));
   const oeste = walls.find((w) => w.label === "oeste")!;
@@ -202,7 +189,8 @@ export function normalizeProjectRoom(raw: Partial<ProjectRoomConfig> | null | un
           const label = (w.label as ProjectRoomWall["label"]) ?? WALL_LABELS[i] ?? "extra";
           const fallbackWidth = label === "sul" || label === "norte" ? widthMm : depthMm;
           const width = Math.max(100, w.widthMm ?? w.lengthMm ?? fallbackWidth);
-          const position = w.position ?? wallPositionForLabel(label, widthMm, depthMm, heightMm);
+          const position =
+            w.position ?? centeredWallPositionForLabel(label, widthMm, depthMm, heightMm, wallThicknessMm);
           return {
             id: w.id ?? mkWallId(label),
             label,
@@ -224,7 +212,7 @@ export function normalizeProjectRoom(raw: Partial<ProjectRoomConfig> | null | un
           lengthMm: w.label === "sul" || w.label === "norte" ? widthMm : depthMm,
           heightMm,
           thicknessMm: wallThicknessMm,
-          position: wallPositionForLabel(w.label, widthMm, depthMm, heightMm),
+          position: centeredWallPositionForLabel(w.label, widthMm, depthMm, heightMm, wallThicknessMm),
           rotationDeg: wallRotationForLabel(w.label),
         }));
   const openings: ProjectRoomOpening[] = Array.isArray(raw.openings)
@@ -237,7 +225,7 @@ export function normalizeProjectRoom(raw: Partial<ProjectRoomConfig> | null | un
   const utilities = Array.isArray(raw.utilities)
     ? raw.utilities.map((u) => normalizeUtility(u, walls)).filter((u): u is ProjectRoomUtility => Boolean(u))
     : [];
-  return {
+  return migrateProjectRoomToCenteredCoords({
     widthMm,
     depthMm,
     heightMm,
@@ -250,7 +238,7 @@ export function normalizeProjectRoom(raw: Partial<ProjectRoomConfig> | null | un
     walls,
     openings,
     utilities,
-  };
+  });
 }
 
 export function projectRoomToWallStoreWalls(room: ProjectRoomConfig): Wall[] {
@@ -360,7 +348,13 @@ export function applyProjectRoomDimensions(room: ProjectRoomConfig): ProjectRoom
     w.lengthMm = w.widthMm;
     w.heightMm = next.heightMm;
     if (w.label !== "extra") {
-      w.position = wallPositionForLabel(w.label, next.widthMm, next.depthMm, next.heightMm);
+      w.position = centeredWallPositionForLabel(
+        w.label,
+        next.widthMm,
+        next.depthMm,
+        next.heightMm,
+        next.wallThicknessMm
+      );
       w.rotationDeg = wallRotationForLabel(w.label);
     }
   });

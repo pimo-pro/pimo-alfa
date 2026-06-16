@@ -1,6 +1,10 @@
 import { createStore } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { computeWallEndpoints, distance, type Point } from "../utils/wallSnapping";
+import {
+  computeCenteredConnectedLayoutCm,
+  isLegacyCornerWallStoreLayout,
+} from "../utils/roomCoordinates";
 
 /**
  * Estado da sala (wallStore) e layout (computeConnectedLayout) estão desenhados para expansão:
@@ -97,25 +101,10 @@ const clampMainWallIndex = (index: number, wallsLength: number): 0 | 1 | 2 | 3 =
 };
 
 /**
- * Layout alinhado à origem da sala (0,0). Piso = [0→W]×[0→D] em cm.
- * Posições são centros de cada parede; em metros ficam [0→width]×[0→depth].
- * Frontal: (0,0)→(W,0); Traseira: (0,D)→(W,D); Esquerda: (0,0)→(0,D); Direita: (W,0)→(W,D).
+ * Layout conectado em sistema centrado (cm). Footprint interior ≈ [-W/2,W/2]×[-D/2,D/2] em metros no viewer.
  */
 function computeConnectedLayout(walls: Wall[]): Array<{ x: number; z: number; rotation: number }> {
-  if (walls.length === 0) return [];
-  const n = Math.min(4, walls.length);
-  const lengths = walls.map((wall) => wall.lengthCm ?? DEFAULT_WALL.lengthCm);
-  const L0 = lengths[0];
-  const L1 = lengths[1] ?? L0;
-  const W = L0;
-  const D = L1;
-
-  const layout: Array<{ x: number; z: number; rotation: number }> = [];
-  if (n >= 1) layout.push({ x: W / 2, z: 0, rotation: 0 });
-  if (n >= 2) layout.push({ x: W, z: D / 2, rotation: 90 });
-  if (n >= 3) layout.push({ x: W / 2, z: D, rotation: 0 });
-  if (n >= 4) layout.push({ x: 0, z: D / 2, rotation: 90 });
-  return layout;
+  return computeCenteredConnectedLayoutCm(walls);
 }
 
 export function getRoomDimensionsCm(walls: Wall[]): { widthCm: number; depthCm: number; heightCm: number } | null {
@@ -345,15 +334,27 @@ export const wallStore = createStore<WallStoreState>((set, get) => ({
       return;
     }
     const walls = applyLayoutIfMissing(snapshot.walls);
+    const dims = getRoomDimensionsCm(walls);
+    const migratedWalls =
+      dims && isLegacyCornerWallStoreLayout(walls, dims.widthCm)
+        ? walls.map((wall) => ({
+            ...wall,
+            position: {
+              x: (wall.position?.x ?? 0) - dims.widthCm / 2,
+              y: wall.position?.y,
+              z: (wall.position?.z ?? 0) - dims.depthCm / 2,
+            },
+          }))
+        : walls;
     const mainWallIndex = clampMainWallIndex(
       (snapshot as { mainWallIndex?: number }).mainWallIndex ?? 0,
-      walls.length
+      migratedWalls.length
     );
     set({
-      walls,
-      selectedWallId: snapshot.selectedWallId && walls.some((w) => w.id === snapshot.selectedWallId)
+      walls: migratedWalls,
+      selectedWallId: snapshot.selectedWallId && migratedWalls.some((w) => w.id === snapshot.selectedWallId)
         ? snapshot.selectedWallId
-        : walls[mainWallIndex]?.id ?? walls[0]?.id ?? null,
+        : migratedWalls[mainWallIndex]?.id ?? migratedWalls[0]?.id ?? null,
       mainWallIndex,
       roomMeshSyncToken: get().roomMeshSyncToken + 1,
     });

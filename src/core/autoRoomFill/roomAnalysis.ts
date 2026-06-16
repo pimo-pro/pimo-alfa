@@ -1,5 +1,6 @@
-import type { ProjectRoomConfig, ProjectRoomOpening } from "../../3d/viewer-engine/room/roomEngineTypes";
+import type { ProjectRoomConfig, ProjectRoomOpening, ProjectRoomWall } from "../../3d/viewer-engine/room/roomEngineTypes";
 import type { RoomWallLabel } from "../../3d/viewer-engine/room/roomEngineTypes";
+import { centeredWallPositionForLabel } from "../../utils/roomCoordinates";
 import { wallLengthMm } from "../kitchenFinish/roomContext";
 import type { AnalyzedWallRun, WallRunAxis } from "./autoRoomFillTypes";
 
@@ -83,10 +84,10 @@ const CORNER_TANGENTS: Record<string, { a: [number, number]; b: [number, number]
 function resolveRunEnd(geom: WallGeom, widthMm: number, depthMm: number): WallGeom {
   const g = { ...geom };
   if (g.label === "sul" || g.label === "norte") {
-    g.fixedCoordMm = g.label === "sul" ? 0 : depthMm;
+    g.fixedCoordMm = g.label === "sul" ? -depthMm / 2 : depthMm / 2;
     g.runEndMm = widthMm;
   } else {
-    g.fixedCoordMm = g.label === "oeste" ? 0 : widthMm;
+    g.fixedCoordMm = g.label === "oeste" ? -widthMm / 2 : widthMm / 2;
     g.runEndMm = depthMm;
   }
   return g;
@@ -94,21 +95,16 @@ function resolveRunEnd(geom: WallGeom, widthMm: number, depthMm: number): WallGe
 
 function expectedWallPosition(
   label: RoomWallLabel,
-  widthMm: number,
-  depthMm: number
+  room: ProjectRoomConfig
 ): { x: number; z: number } {
-  switch (label) {
-    case "sul":
-      return { x: widthMm / 2, z: 0 };
-    case "este":
-      return { x: widthMm, z: depthMm / 2 };
-    case "norte":
-      return { x: widthMm / 2, z: depthMm };
-    case "oeste":
-      return { x: 0, z: depthMm / 2 };
-    default:
-      return { x: widthMm / 2, z: depthMm / 2 };
-  }
+  const pos = centeredWallPositionForLabel(
+    label,
+    room.widthMm,
+    room.depthMm,
+    room.heightMm,
+    room.wallThicknessMm
+  );
+  return { x: pos.x, z: pos.z };
 }
 
 function isWallAtCanonicalPosition(
@@ -117,7 +113,7 @@ function isWallAtCanonicalPosition(
 ): boolean {
   const wall = room.walls.find((w) => w.label === label);
   if (!wall?.position) return false;
-  const expected = expectedWallPosition(label, room.widthMm, room.depthMm);
+  const expected = expectedWallPosition(label, room);
   return (
     Math.abs(wall.position.x - expected.x) <= CORNER_VERTEX_TOLERANCE_MM &&
     Math.abs(wall.position.z - expected.z) <= CORNER_VERTEX_TOLERANCE_MM
@@ -185,10 +181,10 @@ export function detectRoomCorners(
   const d = room.depthMm;
   const byLabel = new Map(room.walls.map((wall) => [wall.label, wall.id]));
   const pairs: Array<[RoomWallLabel, RoomWallLabel, number, number]> = [
-    ["sul", "oeste", 0, 0],
-    ["sul", "este", w, 0],
-    ["norte", "este", w, d],
-    ["norte", "oeste", 0, d],
+    ["sul", "oeste", -w / 2, -d / 2],
+    ["sul", "este", w / 2, -d / 2],
+    ["norte", "este", w / 2, d / 2],
+    ["norte", "oeste", -w / 2, d / 2],
   ];
   return pairs
     .map(([a, b, x, z]) => {
@@ -222,12 +218,49 @@ function wallHasValidCorner(
   );
 }
 
+function analyzeExtraWallRun(wall: ProjectRoomWall, room: ProjectRoomConfig): AnalyzedWallRun | null {
+  const lengthMm = wallLengthMm(wall);
+  const runStart = END_RECESS_MM;
+  const runEnd = Math.max(runStart, lengthMm - END_RECESS_MM);
+  if (runEnd - runStart < 600) return null;
+
+  const rotRad = ((wall.rotationDeg ?? 0) * Math.PI) / 180;
+  const axis: WallRunAxis =
+    Math.abs(Math.cos(rotRad)) >= Math.abs(Math.sin(rotRad)) ? "x" : "z";
+  const posX = wall.position?.x ?? 0;
+  const posZ = wall.position?.z ?? 0;
+  const fixedCoordMm = axis === "x" ? posZ : posX;
+  const dist = Math.hypot(posX, posZ);
+  const inwardNormal =
+    dist > 1e-3 ? { x: -posX / dist, z: -posZ / dist } : { x: 0, z: 1 };
+
+  const forbidden = forbiddenRangesForWall(wall.id, room.openings ?? [], runStart, runEnd);
+  const segments = subtractRanges(runStart, runEnd, forbidden);
+  if (!segments.some((s) => s.lengthMm >= 600)) return null;
+
+  return {
+    wall,
+    wallId: wall.id,
+    label: "extra",
+    lengthMm,
+    axis,
+    fixedCoordMm,
+    runStartMm: runStart,
+    runEndMm: runEnd,
+    rotacaoY_rad: rotRad,
+    inwardNormal,
+    cornerAtStart: false,
+    cornerAtEnd: false,
+    segments,
+  };
+}
+
 export function analyzeRoomWalls(room: ProjectRoomConfig): AnalyzedWallRun[] {
   const widthMm = room.widthMm;
   const depthMm = room.depthMm;
   const corners = detectRoomCorners(room);
 
-  return room.walls
+  const mainRuns = room.walls
     .filter((wall) => WALL_GEOM[wall.label] != null)
     .map((wall) => {
       const geom = resolveRunEnd(WALL_GEOM[wall.label]!, widthMm, depthMm);
@@ -264,26 +297,56 @@ export function analyzeRoomWalls(room: ProjectRoomConfig): AnalyzedWallRun[] {
       } satisfies AnalyzedWallRun;
     })
     .filter((run) => run.segments.some((s) => s.lengthMm >= 600));
+
+  const extraRuns = room.walls
+    .filter((wall) => wall.label === "extra")
+    .map((wall) => analyzeExtraWallRun(wall, room))
+    .filter((run): run is AnalyzedWallRun => run != null);
+
+  return [...mainRuns, ...extraRuns];
 }
 
 export function runAlongToWorld(
   run: AnalyzedWallRun,
   alongMm: number,
+  widthMm: number,
   depthMm: number,
   heightMm: number
 ): { x: number; z: number; y: number } {
+  if (run.label === "extra") {
+    const lengthMm = run.lengthMm;
+    const wall = run.wall;
+    const posX = wall.position?.x ?? 0;
+    const posZ = wall.position?.z ?? 0;
+    const rot = run.rotacaoY_rad;
+    const localAlong = alongMm - lengthMm / 2;
+    const lx = run.axis === "x" ? localAlong : 0;
+    const lz = run.axis === "z" ? localAlong : 0;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const x = posX + lx * cos - lz * sin;
+    const z = posZ + lx * sin + lz * cos;
+    const inset = 25;
+    const n = run.inwardNormal;
+    return {
+      x: x + n.x * inset,
+      z: z + n.z * inset,
+      y: heightMm / 2,
+    };
+  }
+
   const offset = depthMm / 2 + 25;
   const n = run.inwardNormal;
   if (run.axis === "x") {
     return {
-      x: alongMm,
+      x: -widthMm / 2 + alongMm,
       z: run.fixedCoordMm + n.z * offset,
       y: heightMm / 2,
     };
   }
   return {
     x: run.fixedCoordMm + n.x * offset,
-    z: alongMm,
+    z: -depthMm / 2 + alongMm,
     y: heightMm / 2,
   };
 }

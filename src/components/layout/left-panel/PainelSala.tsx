@@ -29,6 +29,7 @@ import type { RoomWallLabel } from "../../../3d/viewer-engine/room/roomEngineTyp
 import { ConversationalDesignerPanel } from "./ConversationalDesignerPanel";
 import { ManufacturingPanel } from "./ManufacturingPanel";
 import { CostEstimatorPanel } from "./CostEstimatorPanel";
+import { RoomFloorModeSelect } from "../room/RoomFloorModeSelect";
 
 const LAYOUT_OPTIONS: Array<{ id: KitchenLayoutTypeOverride; label: string }> = [
   { id: "auto", label: "Automático" },
@@ -248,7 +249,7 @@ export function PainelSala() {
       lengthMm: ROOM_20_DEFAULTS.widthMm,
       heightMm: base.heightMm,
       thicknessMm: base.wallThicknessMm,
-      position: { x: base.widthMm / 2, y: base.heightMm / 2, z: base.depthMm / 2 },
+      position: { x: 0, y: base.heightMm / 2, z: 0 },
       rotationDeg: 0,
     };
     patchRoom({ walls: [...base.walls, wall] });
@@ -417,18 +418,13 @@ export function PainelSala() {
             </div>
             <Panel title="Chão, teto e paredes">
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div className="panel-field-row">
-                  <label className="panel-label" style={{ minWidth: 110 }}>Chão</label>
-                  <select
-                    className="input input-sm"
-                    value={room.floorMode}
-                    onChange={(e) => patchRoom({ floorMode: e.target.value as ProjectRoomConfig["floorMode"] })}
-                  >
-                    <option value="full">Full Floor</option>
-                    <option value="room">Room Floor</option>
-                    <option value="hybrid">Hybrid</option>
-                  </select>
-                </div>
+                <RoomFloorModeSelect
+                  value={room.floorMode}
+                  onChange={(mode) => {
+                    patchRoom({ floorMode: mode });
+                    viewerApi?.setRoomFloorMode?.(mode);
+                  }}
+                />
                 <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-main)" }}>
                   <input
                     type="checkbox"

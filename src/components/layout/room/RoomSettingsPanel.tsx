@@ -4,6 +4,7 @@ import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import Panel from "../../ui/Panel";
 import type { ProjectRoomConfig, ProjectRoomOpening } from "../../../3d/viewer-engine/room/roomEngineTypes";
 import { WALL_LABEL_TITLES } from "../../../3d/viewer-engine/room/RoomEngine";
+import { RoomFloorModeSelect } from "./RoomFloorModeSelect";
 
 function numInput(
   label: string,
@@ -91,18 +92,14 @@ export default function RoomSettingsPanel() {
 
           <Panel title="Visualização">
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div className="panel-field-row">
-                <label className="panel-label" style={{ minWidth: 120 }}>Chão</label>
-                <select
-                  className="input input-sm"
-                  value={room.floorMode}
-                  onChange={(e) => patchRoom({ floorMode: e.target.value as ProjectRoomConfig["floorMode"] })}
-                >
-                  <option value="full">Full Floor</option>
-                  <option value="room">Room Floor</option>
-                  <option value="hybrid">Hybrid</option>
-                </select>
-              </div>
+              <RoomFloorModeSelect
+                value={room.floorMode}
+                labelMinWidth={120}
+                onChange={(mode) => {
+                  patchRoom({ floorMode: mode });
+                  viewerApi?.setRoomFloorMode?.(mode);
+                }}
+              />
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                 <input
                   type="checkbox"

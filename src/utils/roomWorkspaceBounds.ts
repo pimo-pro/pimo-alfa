@@ -1,11 +1,11 @@
 /**
- * Limites da sala no plano do projeto (mm), alinhados ao RoomManager (origem 0,0 no canto;
- * eixo X = largura, Z = profundidade). O clamp em XZ usa só meia-dimensão da caixa (AABB rotacionada);
- * sem recuo extra face às paredes — o utilizador pode encostar ao muro.
+ * Limites da sala no plano do projeto (mm), sistema centrado (RoomManager / ViewerCore).
+ * Interior da sala: X ∈ [-W/2, W/2], Z ∈ [-D/2, D/2]. O clamp em XZ usa meia-dimensão da caixa.
  */
 import type { WorkspaceBox } from "../core/types";
 import type { Wall } from "../stores/wallStore";
 import { getRoomDimensionsCm } from "../stores/wallStore";
+import { wallStoreWallFootprintXZMm } from "../3d/room/roomDynamicBounds";
 
 /** Recuo adicional nas paredes para colisão no estado do projeto (0 = encostar ao limite interior da sala). */
 export const ROOM_COLLISION_INSET_MM = 0;
@@ -32,11 +32,22 @@ export function getFloorBoundsMmFromWalls(walls: Wall[]): FloorBoundsMm | null {
   const widthMm = dims.widthCm * 10;
   const depthMm = dims.depthCm * 10;
   const heightMm = dims.heightCm * 10;
+  let minX_mm = -widthMm / 2;
+  let maxX_mm = widthMm / 2;
+  let minZ_mm = -depthMm / 2;
+  let maxZ_mm = depthMm / 2;
+  for (const wall of walls) {
+    const fp = wallStoreWallFootprintXZMm(wall);
+    minX_mm = Math.min(minX_mm, fp.minX);
+    maxX_mm = Math.max(maxX_mm, fp.maxX);
+    minZ_mm = Math.min(minZ_mm, fp.minZ);
+    maxZ_mm = Math.max(maxZ_mm, fp.maxZ);
+  }
   return {
-    minX_mm: -widthMm / 2,
-    maxX_mm: widthMm / 2,
-    minZ_mm: -depthMm / 2,
-    maxZ_mm: depthMm / 2,
+    minX_mm,
+    maxX_mm,
+    minZ_mm,
+    maxZ_mm,
     minY_mm: 0,
     maxY_mm: heightMm,
   };

@@ -6,6 +6,7 @@
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 import { getRoomDimensionsCm, wallStore } from "../stores/wallStore";
 import { ROOM_20_DEFAULTS } from "../3d/viewer-engine/room/RoomEngine";
+import { wallStorePositionToViewerMeters } from "./roomCoordinates";
 
 type RoomManagerWithConfigWalls = {
   roomManager?: {
@@ -56,16 +57,13 @@ export function applyRoomMeshFromWallStore(
   const manager = core?.roomManager;
   if (!manager?.addWallFromConfig) return;
   walls.forEach((wall, index) => {
+    const position = wallStorePositionToViewerMeters(wall, walls, dims.widthCm, dims.depthCm);
     const config = {
       id: index,
       lengthM: Math.max(0.1, wall.lengthCm / 100),
       heightM: Math.max(0.1, wall.heightCm / 100),
       thicknessM: Math.max(0.05, wall.thicknessCm / 100),
-      position: {
-        x: (wall.position?.x ?? 0) / 100,
-        y: wall.position?.y != null ? wall.position.y / 100 : Math.max(0.1, wall.heightCm / 100) / 2,
-        z: (wall.position?.z ?? 0) / 100,
-      },
+      position,
       rotationDeg: wall.rotation ?? 0,
     };
     if (index < numWalls) {

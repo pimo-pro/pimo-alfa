@@ -50,6 +50,12 @@ import {
   getSharedPanelEdgeMaterial,
   disposeSharedPanelEdgeMaterial,
 } from "./materials";
+import {
+  createRoomFloorOutline,
+  createRoomFloorOverlayMaterial,
+  getRoomFloorExpandM,
+  getRoomFloorOverlayAppearance,
+} from "./materials/roomFloorOverlay";
 import type { MaterialMode } from "./materials";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { ViewerBoxEntry } from "./types";
@@ -251,6 +257,7 @@ export class ViewerCore {
   private roomBoxGroup: THREE.Group | null = null;
   private roomBoxWalls: Array<{ id: number; normal: THREE.Vector3; mesh: THREE.Mesh }> = [];
   private roomBoxFloor: THREE.Mesh | null = null;
+  private roomBoxFloorOutline: THREE.LineLoop | null = null;
   private roomBoxCeiling: THREE.Mesh | null = null;
   private roomFloorRoot: THREE.Group | null = null;
   private roomUtilitiesRoot: THREE.Group | null = null;
@@ -1083,8 +1090,11 @@ export class ViewerCore {
       }
       this.viewerTools.applyCurrentTool();
       this.measurementOverlay.onRulerMovementTick("transform");
-      // Notify box during drag (doesn't trigger full syncAll).
-      this.notifyBoxTransform();
+      // NÃO notificar caixas durante drag: o callback updateWorkspaceBoxTransform dispara
+      // workspaceBoxes → syncFromCalculator → updateBox → mesh.position.set(), brigando com
+      // o TransformControls e causando movimento de ~1mm por tentativa.
+      // Mesmo padrão que Remate/Hemati/Rodape (ver comentário abaixo).
+      // A posição correcta é gravada em finishTransformDrag via notifyBoxTransform().
       // Remate/Hemati/Rodape are NOT notified during drag: their callbacks trigger
       // syncAll() which resets the mesh position and fights the transform controls.
       // Position is saved once in finishTransformDrag via notifyRemateTransform etc.
@@ -2396,29 +2406,37 @@ export class ViewerCore {
       });
     }
 
-    const roomFloorColor = mode === "woodFloor"
-      ? "#b08968"
-      : mode === "dark"
-        ? "#374151"
-        : mode === "white"
-          ? "#f3f4f6"
-          : "#d1d5db";
-    const roomFloorRoughness = mode === "woodFloor" ? 0.82 : 0.75;
+    const roomFloorAppearance = getRoomFloorOverlayAppearance(mode);
+    const applyRoomFloorOverlayMaterial = (material: THREE.MeshStandardMaterial) => {
+      material.color.set(roomFloorAppearance.color);
+      material.roughness = roomFloorAppearance.roughness;
+      material.metalness = roomFloorAppearance.metalness;
+      material.opacity = roomFloorAppearance.opacity;
+      material.transparent = roomFloorAppearance.opacity < 1;
+      material.needsUpdate = true;
+    };
 
     if (this.roomBoxFloor?.material instanceof THREE.MeshStandardMaterial) {
-      this.roomBoxFloor.material.color.set(roomFloorColor);
-      this.roomBoxFloor.material.roughness = roomFloorRoughness;
-      this.roomBoxFloor.material.metalness = 0.05;
-      this.roomBoxFloor.material.needsUpdate = true;
+      applyRoomFloorOverlayMaterial(this.roomBoxFloor.material);
     }
 
     this.sceneManager.root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       if (node.userData?.isRoomFloor !== true) return;
       if (!(node.material instanceof THREE.MeshStandardMaterial)) return;
-      node.material.color.set(roomFloorColor);
-      node.material.roughness = roomFloorRoughness;
-      node.material.metalness = 0.05;
+      applyRoomFloorOverlayMaterial(node.material);
+    });
+
+    if (this.roomBoxFloorOutline?.material instanceof THREE.LineBasicMaterial) {
+      this.roomBoxFloorOutline.material.color.set(roomFloorAppearance.outlineColor);
+      this.roomBoxFloorOutline.material.needsUpdate = true;
+    }
+
+    this.sceneManager.root.traverse((node) => {
+      if (!(node instanceof THREE.LineLoop)) return;
+      if (node.userData?.isRoomFloorOutline !== true) return;
+      if (!(node.material instanceof THREE.LineBasicMaterial)) return;
+      node.material.color.set(roomFloorAppearance.outlineColor);
       node.material.needsUpdate = true;
     });
     this.sceneManager.setMaterialQuality(this.materialQuality);
@@ -2944,29 +2962,38 @@ export class ViewerCore {
       if (import.meta.env.DEV) {
         devLogger.debug("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
       }
-      if (entry.manualPosition && !opts.position) {
-        // nada a alterar
-      } else if (opts.position && !this.shouldUseFeetLock(entry)) {
-        entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
-      } else if (this.shouldUseFeetLock(entry)) {
-        const fixedY = this.getFixedYForCabinet({
-          height: entry.height,
-          cabinetType: entry.cabinetType,
-          pe_cm: entry.pe_cm,
-        });
-        if (opts.position) {
-          entry.mesh.position.set(opts.position.x, fixedY, opts.position.z);
-        } else {
-          entry.mesh.position.y = fixedY;
+      // Defesa: ignorar updates externos de posição/rotação enquanto o drag estiver activo
+      // para esta caixa. O Fix principal está em objectChange (notifyBoxTransform removido
+      // durante drag), mas este guard protege contra qualquer outro caminho que chame updateBox.
+      const isActiveDragForThisBox =
+        this.viewerState.getTransformControlsDragging() &&
+        this.viewerState.getSelectedBox() === id;
+
+      if (!isActiveDragForThisBox) {
+        if (entry.manualPosition && !opts.position) {
+          // nada a alterar
+        } else if (opts.position && !this.shouldUseFeetLock(entry)) {
+          entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
+        } else if (this.shouldUseFeetLock(entry)) {
+          const fixedY = this.getFixedYForCabinet({
+            height: entry.height,
+            cabinetType: entry.cabinetType,
+            pe_cm: entry.pe_cm,
+          });
+          if (opts.position) {
+            entry.mesh.position.set(opts.position.x, fixedY, opts.position.z);
+          } else {
+            entry.mesh.position.y = fixedY;
+          }
+        } else if (opts.position) {
+          entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
         }
-      } else if (opts.position) {
-        entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
+        this.applyRotationIfNeeded(entry.mesh, {
+          x: opts.rotationX,
+          y: opts.rotationY,
+          z: opts.rotationZ,
+        });
       }
-      this.applyRotationIfNeeded(entry.mesh, {
-        x: opts.rotationX,
-        y: opts.rotationY,
-        z: opts.rotationZ,
-      });
       if (opts.costaRotationY !== undefined) {
         (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
           Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
@@ -3453,9 +3480,16 @@ export class ViewerCore {
     this.roomBoxGroup = null;
     this.roomBoxWalls = [];
     this.roomBoxFloor = null;
+    this.roomBoxFloorOutline = null;
     this.roomBoxCeiling = null;
     this.roomFloorRoot = null;
     this.roomUtilitiesRoot = null;
+  }
+
+  /** Room 2.1: chão global fixo (25 m), independente da sala. Não redimensionar com bounds. */
+  private ensureStaticSceneGround(): void {
+    this.sceneManager.setGroundSize(this.defaultGroundSize, this.defaultGroundSize);
+    this.sceneManager.setGroundPosition(0, 0);
   }
 
   /** Chamado pelo RoomManager quando a sala é criada/atualizada. Adiciona o grupo à cena e regista paredes/bounds. */
@@ -3470,15 +3504,12 @@ export class ViewerCore {
     this.roomBoxGroup = group;
     this.roomBoxWalls = walls;
     this.roomBoxFloor = null;
+    this.roomBoxFloorOutline = null;
     this.roomBoxCeiling = null;
     this.roomBounds = bounds;
     this.boundsCache.invalidateRoom();
     this.sceneManager.root.add(group);
-    this.sceneManager.setGroundSize(
-      Math.max(bounds.maxX - bounds.minX, 0.01),
-      Math.max(bounds.maxZ - bounds.minZ, 0.01)
-    );
-    this.sceneManager.setGroundPosition(bounds.centerX, bounds.centerZ);
+    this.ensureStaticSceneGround();
     this.rebuildRoomFloorAndCeiling();
     this.applyRoomWallVisibility();
     this.setRoomCeilingVisible(this.roomCeilingVisible);
@@ -3493,6 +3524,7 @@ export class ViewerCore {
     this.roomBoxWalls = [];
     this.roomBoxGroup = null;
     this.roomBoxFloor = null;
+    this.roomBoxFloorOutline = null;
     this.roomBoxCeiling = null;
     this.roomFloorRoot = null;
     this.roomUtilitiesRoot = null;
@@ -3502,8 +3534,7 @@ export class ViewerCore {
     if (this.wallGizmo) this.wallGizmo.detach();
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
-    this.sceneManager.setGroundSize(this.defaultGroundSize, this.defaultGroundSize);
-    this.sceneManager.setGroundPosition(0, 0);
+    this.ensureStaticSceneGround();
   }
 
   createRoomBox(bounds: {
@@ -3621,6 +3652,7 @@ export class ViewerCore {
     this.roomFloorRoot.removeFromParent();
     this.roomFloorRoot = null;
     this.roomBoxFloor = null;
+    this.roomBoxFloorOutline = null;
     this.roomBoxCeiling = null;
   }
 
@@ -3630,30 +3662,41 @@ export class ViewerCore {
     const sceneConfig = getSceneMaterialConfig();
     const group = new THREE.Group();
     group.name = "room-floor-root";
-    const expandM = this.roomFloorMode === "hybrid" ? 0.35 : this.roomFloorMode === "full" ? 4 : 0;
+    const expandM = getRoomFloorExpandM(this.roomFloorMode);
     const shape = this.getRoomFloorShape(expandM);
     if (!shape) return;
+    const floorAppearance = getRoomFloorOverlayAppearance(this.backgroundMode);
     const floorGeom = new THREE.ShapeGeometry(shape);
     floorGeom.rotateX(-Math.PI / 2);
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: sceneConfig.roomBox.color,
-      roughness: sceneConfig.roomBox.roughness,
-      metalness: sceneConfig.roomBox.metalness,
-      transparent: sceneConfig.roomBox.transparent,
-      opacity: sceneConfig.roomBox.opacity,
-      side: THREE.DoubleSide,
-    });
+    const floorMat = createRoomFloorOverlayMaterial(floorAppearance);
     const floor = new THREE.Mesh(floorGeom, floorMat);
     floor.position.y = this.roomBounds.minY + 0.002;
     floor.name = "room-floor-root";
     floor.userData.isRoomFloor = true;
+    floor.renderOrder = 1;
     group.add(floor);
+
+    const outline = createRoomFloorOutline(
+      this.roomBounds.minX,
+      this.roomBounds.maxX,
+      this.roomBounds.minZ,
+      this.roomBounds.maxZ,
+      expandM,
+      this.roomBounds.minY + 0.004,
+      floorAppearance.outlineColor
+    );
+    group.add(outline);
 
     const ceilingGeom = new THREE.ShapeGeometry(shape);
     ceilingGeom.rotateX(Math.PI / 2);
-    const ceilingMat = floorMat.clone();
-    ceilingMat.opacity = Math.min(0.45, ceilingMat.opacity);
-    ceilingMat.transparent = true;
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      color: sceneConfig.roomBox.color,
+      roughness: sceneConfig.roomBox.roughness,
+      metalness: sceneConfig.roomBox.metalness,
+      transparent: true,
+      opacity: Math.min(0.45, sceneConfig.roomBox.opacity),
+      side: THREE.DoubleSide,
+    });
     const ceiling = new THREE.Mesh(ceilingGeom, ceilingMat);
     ceiling.position.y = this.roomBounds.maxY;
     ceiling.name = "room-ceiling";
@@ -3664,6 +3707,7 @@ export class ViewerCore {
     this.roomBoxGroup.add(group);
     this.roomFloorRoot = group;
     this.roomBoxFloor = floor;
+    this.roomBoxFloorOutline = outline;
     this.roomBoxCeiling = ceiling;
     this.applyBackgroundMode();
   }
@@ -3751,8 +3795,7 @@ export class ViewerCore {
       return;
     }
     this.roomBounds = null;
-    this.sceneManager.setGroundSize(this.defaultGroundSize, this.defaultGroundSize);
-    this.sceneManager.setGroundPosition(0, 0);
+    this.ensureStaticSceneGround();
     this.clearRoomBox();
     this.roomBuilder.clearRoom(true);
   }
@@ -6033,6 +6076,7 @@ export class ViewerCore {
       const rotDeg = (wallAfter.rotation.y * 180) / Math.PI;
       this.onWallTransform(this.viewerState.getSelectedWallIndex(), { x, z }, rotDeg);
     }
+    this.roomManager?.refreshDynamicBounds();
   }
 
   private notifyRoomElementTransform() {

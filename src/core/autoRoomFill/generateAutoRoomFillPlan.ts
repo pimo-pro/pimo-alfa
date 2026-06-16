@@ -22,6 +22,7 @@ import {
   SPECIAL_CATALOG,
 } from "./moduleCatalog";
 import { analyzeRoomWalls, detectRoomCorners, runAlongToWorld } from "./roomAnalysis";
+import { getEffectiveRoomSpanMm } from "../../3d/room/roomDynamicBounds";
 import type { AnalyzedWallRun } from "./autoRoomFillTypes";
 import { packWallSpan } from "./wallPacking";
 import {
@@ -61,12 +62,13 @@ function upperCenterY(lowerHeightMm: number, upperHeightMm: number): number {
 function placeAlongRun(
   run: AnalyzedWallRun,
   alongStartMm: number,
-  widthMm: number,
-  depthMm: number,
+  moduleWidthMm: number,
+  roomWidthMm: number,
+  roomDepthMm: number,
   centerY_mm: number
 ): Pick<AutoFillPlacedModule, "posicaoX_mm" | "posicaoZ_mm" | "posicaoY_mm"> {
-  const centerAlong = alongStartMm + widthMm / 2;
-  const world = runAlongToWorld(run, centerAlong, depthMm, centerY_mm * 2);
+  const centerAlong = alongStartMm + moduleWidthMm / 2;
+  const world = runAlongToWorld(run, centerAlong, roomWidthMm, roomDepthMm, centerY_mm * 2);
   return {
     posicaoX_mm: world.x,
     posicaoY_mm: centerY_mm,
@@ -143,7 +145,9 @@ function emitPackedWidths(
   stats: SegmentFillStats,
   modules: AutoFillPlacedModule[],
   finishes: AutoFillFinishSpec[],
-  cornerAtStart: boolean
+  cornerAtStart: boolean,
+  roomWidthMm: number,
+  roomDepthMm: number
 ): number {
   for (let i = 0; i < packed.widthsMm.length; i++) {
     const width = packed.widthsMm[i];
@@ -153,12 +157,12 @@ function emitPackedWidths(
     const catalogId = tier === "upper" ? catalogIdForUpperWidth(width) : catalogIdForLowerWidth(width);
     const model = getBaseCabinetById(catalogId);
     const h = model?.heightMm ?? 720;
-    const d = model?.depthMm ?? 600;
     const pos = placeAlongRun(
       run,
       cursor,
       width,
-      d,
+      roomWidthMm,
+      roomDepthMm,
       tier === "upper" ? upperCenterY(LOWER_REF_HEIGHT_MM, h) : lowerCenterY(h)
     );
     pushModule(
@@ -190,7 +194,8 @@ function emitPackedWidths(
       run,
       cursor,
       fillerW,
-      600,
+      roomWidthMm,
+      roomDepthMm,
       lowerCenterY(LOWER_REF_HEIGHT_MM)
     );
     pushModule(
@@ -219,7 +224,9 @@ function fillSegmentOnWall(
   segmentLength: number,
   tier: "lower" | "upper",
   cornerAtStart: boolean,
-  specials: SpecialPlacement[]
+  specials: SpecialPlacement[],
+  roomWidthMm: number,
+  roomDepthMm: number
 ): {
   modules: AutoFillPlacedModule[];
   finishes: AutoFillFinishSpec[];
@@ -248,12 +255,12 @@ function fillSegmentOnWall(
     const model = getBaseCabinetById(cornerId);
     const w = model?.widthMm ?? CORNER_RESERVE_MM;
     const h = model?.heightMm ?? 720;
-    const d = model?.depthMm ?? 600;
     const pos = placeAlongRun(
       run,
       cursor,
       w,
-      d,
+      roomWidthMm,
+      roomDepthMm,
       isUpper ? upperCenterY(LOWER_REF_HEIGHT_MM, h) : lowerCenterY(h)
     );
     pushModule(
@@ -281,7 +288,18 @@ function fillSegmentOnWall(
     if (special.alongMm > cursor + 50) {
       const gap = special.alongMm - cursor;
       const packed = packWallSpan(gap, tier);
-      cursor = emitPackedWidths(run, cursor, packed, tier, stats, modules, finishes, cornerAtStart);
+      cursor = emitPackedWidths(
+        run,
+        cursor,
+        packed,
+        tier,
+        stats,
+        modules,
+        finishes,
+        cornerAtStart,
+        roomWidthMm,
+        roomDepthMm
+      );
       stats.wastedMm += Math.max(0, gap - packed.widthsMm.reduce((a, w) => a + w, 0));
     }
     const spec = SPECIAL_CATALOG[special.kind];
@@ -289,12 +307,12 @@ function fillSegmentOnWall(
     const model = getBaseCabinetById(catalogId);
     const w = model?.widthMm ?? special.widthMm;
     const h = model?.heightMm ?? 720;
-    const d = model?.depthMm ?? 600;
     const pos = placeAlongRun(
       run,
       special.alongMm,
       w,
-      d,
+      roomWidthMm,
+      roomDepthMm,
       isUpper ? upperCenterY(LOWER_REF_HEIGHT_MM, h) : lowerCenterY(h)
     );
     pushModule(
@@ -322,7 +340,18 @@ function fillSegmentOnWall(
   const remaining = segmentStart + segmentLength - cursor;
   const packed = packWallSpan(remaining, tier);
   const before = cursor;
-  cursor = emitPackedWidths(run, cursor, packed, tier, stats, modules, finishes, cornerAtStart);
+  cursor = emitPackedWidths(
+    run,
+    cursor,
+    packed,
+    tier,
+    stats,
+    modules,
+    finishes,
+    cornerAtStart,
+    roomWidthMm,
+    roomDepthMm
+  );
   const used = cursor - before;
   stats.wastedMm += Math.max(0, remaining - used - (packed.trimLastMm ?? 0));
 
@@ -364,6 +393,7 @@ export function generateAutoRoomFillPlan(
 ): AutoFillPlan | null {
   if (!room?.walls?.length) return null;
 
+  const roomSpan = getEffectiveRoomSpanMm(room);
   const allRuns = analyzeRoomWalls(room);
   if (!allRuns.length) return null;
 
@@ -417,7 +447,9 @@ export function generateAutoRoomFillPlan(
         segment.lengthMm,
         "lower",
         run.cornerAtStart,
-        specials
+        specials,
+        roomSpan.widthMm,
+        roomSpan.depthMm
       );
       lower.finishes.forEach((f) =>
         allFinishes.push({ ...f, boxIndex: f.boxIndex + finishOffset })
@@ -433,7 +465,9 @@ export function generateAutoRoomFillPlan(
           segment.lengthMm,
           "upper",
           run.cornerAtStart,
-          []
+          [],
+          roomSpan.widthMm,
+          roomSpan.depthMm
         );
         upper.finishes.forEach((f) =>
           allFinishes.push({ ...f, boxIndex: f.boxIndex + finishOffset })
@@ -452,9 +486,15 @@ export function generateAutoRoomFillPlan(
         const hoodModel = getBaseCabinetById(SPECIAL_CATALOG.hood.upperId!);
         const w = hoodModel?.widthMm ?? hood.widthMm;
         const h = hoodModel?.heightMm ?? 720;
-        const d = hoodModel?.depthMm ?? 350;
         const lowerTop = LOWER_REF_HEIGHT_MM + 100;
-        const pos = placeAlongRun(run, hood.alongMm, w, d, lowerTop + UPPER_GAP_MM + h / 2);
+        const pos = placeAlongRun(
+          run,
+          hood.alongMm,
+          w,
+          roomSpan.widthMm,
+          roomSpan.depthMm,
+          lowerTop + UPPER_GAP_MM + h / 2
+        );
         const mod: AutoFillPlacedModule = {
           catalogId: SPECIAL_CATALOG.hood.upperId!,
           role: "special",

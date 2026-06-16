@@ -8,6 +8,7 @@ import {
   getWallThicknessM,
   setWallThicknessM,
 } from "./WallFactory";
+import { computeDynamicRoomBounds } from "./roomDynamicBounds";
 
 export type RoomBounds = {
   minX: number;
@@ -40,14 +41,14 @@ export interface IRoomManagerViewer {
 }
 
 /**
- * Gestor da sala única: dimensões, 4 paredes principais, paredes extras, piso, lock e visibilidade.
+ * Gestor da sala única: dimensões, paredes principais/extra, lock e visibilidade.
+ * Piso visual: ViewerCore.rebuildRoomFloorAndCeiling (Room 2.0) — não criar mesh de piso aqui.
  */
 export class RoomManager {
   room: Room | null = null;
   wallsMain: THREE.Mesh[] = [];
   wallsExtra: THREE.Mesh[] = [];
-  floor: THREE.Mesh | null = null;
-  /** Grupo que contém todas as paredes e o piso; adicionado à cena pelo Viewer. */
+  /** Grupo que contém as paredes; adicionado à cena pelo Viewer. */
   group: THREE.Group;
   locked = false;
   private _visible = true;
@@ -76,11 +77,7 @@ export class RoomManager {
     this.group.clear();
 
     this.wallsMain.forEach((mesh) => this.group.add(mesh));
-    this.updateFloor();
-    if (this.floor) this.group.add(this.floor);
-
-    const bounds = this.getBounds();
-    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    this.syncBoundsToViewer();
   }
 
   removeRoom(): void {
@@ -93,14 +90,6 @@ export class RoomManager {
     this.wallsMain = [];
     this.wallsExtra = [];
 
-    if (this.floor) {
-      this.floor.geometry.dispose();
-      if (!Array.isArray(this.floor.material)) {
-        (this.floor.material as THREE.Material).dispose();
-      }
-      this.floor = null;
-    }
-
     this.group.clear();
     this.room = null;
   }
@@ -110,10 +99,8 @@ export class RoomManager {
     this.room.width = Math.max(0.1, width);
     this.room.depth = Math.max(0.1, depth);
     this.room.height = Math.max(0.1, height);
-    this.updateFloor();
     positionMainWalls(this.room, this.wallsMain);
-    const bounds = this.getBounds();
-    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    this.syncBoundsToViewer();
   }
 
   addExtraWall(): THREE.Mesh {
@@ -121,8 +108,7 @@ export class RoomManager {
     const wall = createExtraWall(id);
     this.wallsExtra.push(wall);
     this.group.add(wall);
-    const bounds = this.getBounds();
-    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    this.syncBoundsToViewer();
     return wall;
   }
 
@@ -148,6 +134,7 @@ export class RoomManager {
     wall.userData.wallLengthMm = config.lengthM * 1000;
     wall.userData.wallHeightMm = config.heightM * 1000;
     wall.userData.wallThicknessM = config.thicknessM;
+    this.syncBoundsToViewer();
     return true;
   }
 
@@ -179,8 +166,7 @@ export class RoomManager {
     this.wallsExtra.push(wall);
     this.group.add(wall);
     this.nextExtraWallId = Math.max(this.nextExtraWallId, config.id + 1);
-    const bounds = this.getBounds();
-    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    this.syncBoundsToViewer();
     return wall;
   }
 
@@ -188,46 +174,21 @@ export class RoomManager {
     this.locked = flag;
   }
 
-  updateFloor(): void {
-    if (!this.room) return;
-    if (this.floor) {
-      this.floor.geometry.dispose();
-      if (!Array.isArray(this.floor.material)) {
-        (this.floor.material as THREE.Material).dispose();
-      }
-      this.group.remove(this.floor);
-    }
-    const floorGeom = new THREE.PlaneGeometry(this.room.width, this.room.depth);
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0xe5e7eb,
-      roughness: 0.9,
-      metalness: 0,
-      side: THREE.DoubleSide,
-    });
-    floorMat.depthWrite = true;
-    floorMat.depthTest = true;
-    floorMat.polygonOffset = true;
-    floorMat.polygonOffsetFactor = 1;
-    floorMat.polygonOffsetUnits = 1;
-    this.floor = new THREE.Mesh(floorGeom, floorMat);
-    this.floor.rotation.x = -Math.PI / 2;
-    this.floor.position.set(this.room.centerX, 0, this.room.centerZ);
-    this.floor.userData.isRoomFloor = true;
-    this.group.add(this.floor);
-  }
-
   getBounds(): RoomBounds | null {
     if (!this.room) return null;
-    return {
-      minX: this.room.minX,
-      maxX: this.room.maxX,
-      minZ: this.room.minZ,
-      maxZ: this.room.maxZ,
-      minY: this.room.minY,
-      maxY: this.room.maxY,
-      centerX: this.room.centerX,
-      centerZ: this.room.centerZ,
-    };
+    return computeDynamicRoomBounds(this.room, [...this.wallsMain, ...this.wallsExtra]);
+  }
+
+  /** Propaga bounds dinâmicos ao ViewerCore (piso, snapping, constraints). */
+  private syncBoundsToViewer(): void {
+    const bounds = this.getBounds();
+    if (!bounds) return;
+    this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+  }
+
+  /** Recalcula bounds dinâmicos (paredes extras) e atualiza piso/snapping no viewer. */
+  refreshDynamicBounds(): void {
+    this.syncBoundsToViewer();
   }
 
   getWallsForViewer(): WallEntryForViewer[] {
@@ -289,21 +250,17 @@ export class RoomManager {
     }
 
     positionMainWalls(this.room, this.wallsMain);
-    this.updateFloor();
-    const bounds = this.getBounds();
-    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    this.syncBoundsToViewer();
   }
 
   hideRoom(): void {
     this._visible = false;
     this.group.visible = false;
-    if (this.floor) this.floor.visible = false;
   }
 
   showRoom(): void {
     this._visible = true;
     this.group.visible = true;
-    if (this.floor) this.floor.visible = true;
   }
 
   get visible(): boolean {
@@ -311,7 +268,6 @@ export class RoomManager {
   }
 
   updateCamera(): void {
-    const bounds = this.getBounds();
-    if (bounds) this.viewer.setRoomFromManager(this.getWallsForViewer(), bounds, this.group);
+    this.syncBoundsToViewer();
   }
 }

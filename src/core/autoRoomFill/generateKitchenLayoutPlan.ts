@@ -24,6 +24,7 @@ import { hoodPlacementForCooktop } from "./specialPlacement";
 import { getBaseCabinetById } from "../baseCabinets";
 import { SPECIAL_CATALOG } from "./moduleCatalog";
 import { runAlongToWorld } from "./roomAnalysis";
+import { getEffectiveRoomSpanMm } from "../../3d/room/roomDynamicBounds";
 import type { AnalyzedWallRun } from "./autoRoomFillTypes";
 
 const UPPER_GAP_MM = 680;
@@ -74,7 +75,7 @@ function buildWallAssignments(
 
 function appendHoodForCooktop(
   plan: AutoFillPlan,
-  _room: ProjectRoomConfig,
+  room: ProjectRoomConfig,
   runs: AnalyzedWallRun[],
   specialsByWall: Partial<Record<RoomWallLabel, SpecialPlacement[]>>
 ): AutoFillPlan {
@@ -89,9 +90,15 @@ function appendHoodForCooktop(
     const hoodModel = getBaseCabinetById(SPECIAL_CATALOG.hood.upperId!);
     const w = hoodModel?.widthMm ?? hood.widthMm;
     const h = hoodModel?.heightMm ?? 720;
-    const d = hoodModel?.depthMm ?? 350;
     const lowerTop = LOWER_REF_HEIGHT_MM + 100;
-    const pos = runAlongToWorld(run, hood.alongMm + w / 2, d, (lowerTop + UPPER_GAP_MM + h / 2) * 2);
+    const span = getEffectiveRoomSpanMm(room);
+    const pos = runAlongToWorld(
+      run,
+      hood.alongMm + w / 2,
+      span.widthMm,
+      span.depthMm,
+      (lowerTop + UPPER_GAP_MM + h / 2) * 2
+    );
 
     const modules = [...plan.modules];
     const finishes = [...plan.finishes];
