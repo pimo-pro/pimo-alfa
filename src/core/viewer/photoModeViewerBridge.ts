@@ -40,7 +40,7 @@ type ViewerInternals = {
   rendererManager: { renderer: THREE.WebGLRenderer };
   selectionOutline: THREE.Object3D | null;
   wallSelectionOutline: THREE.BoxHelper | null;
-  dimensionsOverlayGroup: THREE.Group | null;
+  dimensionsOverlayHandle: { group: THREE.Group } | null;
   roomBuilder: { getGroup: () => THREE.Group };
   sceneManager: {
     getGroundVisible: () => boolean;
@@ -69,7 +69,7 @@ function getInternals(viewer: Viewer): ViewerInternals | null {
     rendererManager: v.rendererManager,
     selectionOutline: v.selectionOutline,
     wallSelectionOutline: v.wallSelectionOutline ?? null,
-    dimensionsOverlayGroup: v.dimensionsOverlayGroup ?? null,
+    dimensionsOverlayHandle: v.dimensionsOverlayHandle ?? null,
     roomBuilder: v.roomBuilder,
     sceneManager: v.sceneManager,
     wallGizmo: v.wallGizmo ?? null,
@@ -167,7 +167,7 @@ export function captureChromeBaseline(viewer: Viewer): PhotoModeChromeBaseline |
     roomWallVisibilities,
     selectionOutlineVisible: core.selectionOutline?.visible ?? false,
     wallSelectionOutlineVisible: core.wallSelectionOutline?.visible ?? false,
-    dimensionsOverlayVisible: core.dimensionsOverlayGroup?.visible ?? false,
+    dimensionsOverlayVisible: core.dimensionsOverlayHandle?.group?.visible ?? false,
     wallGizmoVisible: wallGizmo?.group.visible ?? false,
   };
 }
@@ -184,7 +184,7 @@ export function applyProjectTransparentChrome(viewer: Viewer, chrome: PhotoModeC
   });
   if (core.selectionOutline) core.selectionOutline.visible = false;
   if (core.wallSelectionOutline) core.wallSelectionOutline.visible = false;
-  if (core.dimensionsOverlayGroup) core.dimensionsOverlayGroup.visible = false;
+  if (core.dimensionsOverlayHandle?.group) core.dimensionsOverlayHandle.group.visible = false;
   if (core.wallGizmo) core.wallGizmo.group.visible = false;
   core.rendererManager.renderer.shadowMap.enabled = false;
 }
@@ -201,7 +201,9 @@ export function restoreChromeBaseline(viewer: Viewer, chrome: PhotoModeChromeBas
   });
   if (core.selectionOutline) core.selectionOutline.visible = chrome.selectionOutlineVisible;
   if (core.wallSelectionOutline) core.wallSelectionOutline.visible = chrome.wallSelectionOutlineVisible;
-  if (core.dimensionsOverlayGroup) core.dimensionsOverlayGroup.visible = chrome.dimensionsOverlayVisible;
+  if (core.dimensionsOverlayHandle?.group) {
+    core.dimensionsOverlayHandle.group.visible = chrome.dimensionsOverlayVisible;
+  }
   if (core.wallGizmo) core.wallGizmo.group.visible = chrome.wallGizmoVisible;
 }
 

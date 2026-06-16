@@ -35,6 +35,7 @@ const VIEWER_CORE_UTILITY_METHODS = [
   "subscribeSelectedBoxChange",
   "setDimensionsOverlayVisible",
   "getDimensionsOverlayVisible",
+  "toggleDimensionsOverlay",
   "getSelectedBoxScreenPosition",
   "projectWorldToScreen",
   "getSelectedBoxDepthAxisWorldSegment",

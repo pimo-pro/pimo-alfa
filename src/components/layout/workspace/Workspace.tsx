@@ -587,10 +587,6 @@ export default function Workspace({
 const hasShownViewerReadyToastRef = useRef(false);
 
   useEffect(() => {
-    viewerSync.setDimensionsOverlayVisible(false);
-  }, [viewerSync]);
-
-  useEffect(() => {
     const settings = project.viewerSettings;
     viewerApi.setPanelEdgesVisible?.(settings.showPanelEdges);
     viewerApi.setAllPanelsHidden?.(settings.hideAllPanels);

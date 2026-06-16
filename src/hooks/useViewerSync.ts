@@ -124,6 +124,11 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
     []
   );
 
+  const toggleDimensionsOverlay = useCallback(
+    () => viewerApiRef.current?.toggleDimensionsOverlay?.() ?? false,
+    []
+  );
+
   const getSelectedBoxScreenPosition = useCallback(
     () => viewerApiRef.current?.getSelectedBoxScreenPosition?.() ?? null,
     []
@@ -168,6 +173,7 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
       subscribeSelectedBoxChange,
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
+      toggleDimensionsOverlay,
       getSelectedBoxScreenPosition,
       getRightmostX,
     }),
@@ -195,6 +201,7 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
       subscribeSelectedBoxChange,
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
+      toggleDimensionsOverlay,
       getSelectedBoxScreenPosition,
       getRightmostX,
     ]

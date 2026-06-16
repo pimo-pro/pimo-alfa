@@ -198,6 +198,14 @@ import {
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
 import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
 import { ViewerOverlayCoordinator } from "./overlays/ViewerOverlayCoordinator";
+import {
+  computeUnifiedBoxDimensions,
+  createDimensionsOverlay,
+  updateDimensionsOverlay,
+  disposeDimensionsOverlay,
+  type BoxBoundsInput,
+  type DimensionsOverlayHandle,
+} from "./overlays/boxDimensionsOverlay";
 import { ViewerBoundsCache } from "./cache/ViewerBoundsCache";
 import type { MouseMenuTarget } from "../../ui/context-menu/ContextMenuEngine";
 
@@ -373,10 +381,9 @@ export class ViewerCore {
   /** Parede escondida manualmente (se existir). */
   private manualHiddenWallId: number | null = null;
 
-  /** Overlay de dimensões da caixa selecionada (modo Selecionar). */
+  /** Overlay unificado de medidas do conjunto de caixas (visualização apenas). */
   private dimensionsOverlayVisible = false;
-  private dimensionsOverlayGroup: THREE.Group | null = null;
-  private dimensionsOverlayLines: THREE.LineSegments | null = null;
+  private dimensionsOverlayHandle: DimensionsOverlayHandle | null = null;
 
   private turntableEnabled = false;
   private turntableSpeed = 0.15;
@@ -1161,7 +1168,7 @@ export class ViewerCore {
       getRoomWalls: () => this.roomBoxWalls,
       getSelectionOutline: () => this.selectionOutline,
       getWallSelectionOutline: () => this.wallSelectionOutline,
-      getDimensionsOverlayGroup: () => this.dimensionsOverlayGroup,
+      getDimensionsOverlayGroup: () => this.dimensionsOverlayHandle?.group ?? null,
       getWallGizmoGroup: () => this.wallGizmo?.group ?? null,
       ensureShowcaseComposer: () => {
         if (!this.composer) this.initShowcaseComposer();
@@ -1734,12 +1741,42 @@ export class ViewerCore {
 
   setDimensionsOverlayVisible(visible: boolean): void {
     this.dimensionsOverlayVisible = visible;
-    if (visible && !this.dimensionsOverlayGroup) this.createDimensionsOverlay();
-    if (this.dimensionsOverlayGroup) this.dimensionsOverlayGroup.visible = visible;
+    if (visible && !this.dimensionsOverlayHandle) {
+      this.dimensionsOverlayHandle = createDimensionsOverlay(this.sceneManager.scene);
+    }
+    if (this.dimensionsOverlayHandle) {
+      this.dimensionsOverlayHandle.group.visible = visible;
+    }
+    if (!visible) {
+      this.updateDimensionsOverlay();
+    }
   }
 
   getDimensionsOverlayVisible(): boolean {
     return this.dimensionsOverlayVisible;
+  }
+
+  toggleDimensionsOverlay(): boolean {
+    const next = !this.dimensionsOverlayVisible;
+    this.setDimensionsOverlayVisible(next);
+    return next;
+  }
+
+  private collectBoxBoundsForDimensions(): BoxBoundsInput[] {
+    const inputs: BoxBoundsInput[] = [];
+    this.boxes.forEach((entry, id) => {
+      if (!entry.mesh.visible) return;
+      entry.mesh.updateMatrixWorld(true);
+      setBox3FromObjectExcludingLayoutProxy(this._boundingBox, entry.mesh);
+      if (!Number.isFinite(this._boundingBox.min.x)) return;
+      inputs.push({
+        id,
+        min: this._boundingBox.min.clone(),
+        max: this._boundingBox.max.clone(),
+        cabinetType: entry.cabinetType,
+      });
+    });
+    return inputs;
   }
 
   setInternalMeasurementMode(enabled: boolean): void {
@@ -1920,50 +1957,14 @@ export class ViewerCore {
     return { x, y };
   }
 
-  private createDimensionsOverlay(): void {
-    if (this.dimensionsOverlayGroup) return;
-    this.dimensionsOverlayGroup = new THREE.Group();
-    this.dimensionsOverlayGroup.name = "dimensionsOverlay";
-    this.sceneManager.scene.add(this.dimensionsOverlayGroup);
-    const mat = new THREE.LineBasicMaterial({ color: 0x64748b, linewidth: 1 });
-    const geo = new THREE.BufferGeometry();
-    this.dimensionsOverlayLines = new THREE.LineSegments(geo, mat);
-    this.dimensionsOverlayGroup.add(this.dimensionsOverlayLines);
-    this.dimensionsOverlayGroup.visible = this.dimensionsOverlayVisible;
-  }
-
   private updateDimensionsOverlay(): void {
-    if (!this.dimensionsOverlayVisible || !this.dimensionsOverlayLines) return;
-    if (!this.viewerState.getSelectedBox()) {
-      this.dimensionsOverlayLines.visible = false;
-      return;
-    }
-    const entry = this.boxes.get(this.viewerState.getSelectedBox());
-    if (!entry) {
-      this.dimensionsOverlayLines.visible = false;
-      return;
-    }
-    entry.mesh.updateMatrixWorld(true);
-    setBox3FromObjectExcludingLayoutProxy(this._boundingBox, entry.mesh);
-    const min = this._boundingBox.min.clone();
-    const max = this._boundingBox.max.clone();
-    this.dimensionsOverlayLines.visible = true;
-    const vertices = new Float32Array([
-      min.x, min.y, min.z, max.x, min.y, min.z,
-      min.x, max.y, min.z, max.x, max.y, min.z,
-      min.x, min.y, max.z, max.x, min.y, max.z,
-      min.x, max.y, max.z, max.x, max.y, max.z,
-      min.x, min.y, min.z, min.x, max.y, min.z,
-      max.x, min.y, min.z, max.x, max.y, min.z,
-      min.x, min.y, max.z, min.x, max.y, max.z,
-      max.x, min.y, max.z, max.x, max.y, max.z,
-      min.x, min.y, min.z, min.x, min.y, max.z,
-      max.x, min.y, min.z, max.x, min.y, max.z,
-      min.x, max.y, min.z, min.x, max.y, max.z,
-      max.x, max.y, min.z, max.x, max.y, max.z,
-    ]);
-    this.dimensionsOverlayLines.geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-    this.dimensionsOverlayLines.geometry.attributes.position.needsUpdate = true;
+    if (!this.dimensionsOverlayVisible || !this.dimensionsOverlayHandle) return;
+    const dimensions = computeUnifiedBoxDimensions(this.collectBoxBoundsForDimensions());
+    updateDimensionsOverlay(
+      this.dimensionsOverlayHandle,
+      dimensions,
+      this.cameraManager.camera
+    );
   }
 
   private initShowcaseComposer(): void {
@@ -6413,14 +6414,9 @@ export class ViewerCore {
       this.internalRulerOverlay.dispose();
       this.internalRulerOverlay = null;
     }
-    if (this.dimensionsOverlayLines) {
-      this.dimensionsOverlayLines.geometry.dispose();
-      (this.dimensionsOverlayLines.material as THREE.Material).dispose();
-    }
-    if (this.dimensionsOverlayGroup) {
-      this.sceneManager.scene.remove(this.dimensionsOverlayGroup);
-      this.dimensionsOverlayGroup = null;
-      this.dimensionsOverlayLines = null;
+    if (this.dimensionsOverlayHandle) {
+      disposeDimensionsOverlay(this.dimensionsOverlayHandle, this.sceneManager.scene);
+      this.dimensionsOverlayHandle = null;
     }
     this.measurementOverlay.dispose();
     this.internalRulerEngine.dispose();

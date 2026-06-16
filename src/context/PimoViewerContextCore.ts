@@ -101,6 +101,7 @@ export type PimoViewerApi = {
   subscribeSelectedBoxChange?: (_callback: (_id: string | null) => void) => () => void;
   setDimensionsOverlayVisible?: (_visible: boolean) => void;
   getDimensionsOverlayVisible?: () => boolean;
+  toggleDimensionsOverlay?: () => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */
   getSelectedBoxScreenPosition?: () => { x: number; y: number } | null;
   /** Projeta um ponto 3D (mundial) em pixels relativos ao container. Retorna null se atrás da câmera. */

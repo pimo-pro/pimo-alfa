@@ -326,6 +326,7 @@ export type ViewerApi = {
   subscribeSelectedBoxChange?: (_callback: (_id: string | null) => void) => () => void;
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
+  toggleDimensionsOverlay: () => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */
   getSelectedBoxScreenPosition: () => { x: number; y: number } | null;
   /** Maior X (borda direita) das caixas no viewer, em metros. Usado para posicionar nova caixa ao lado. */
@@ -401,6 +402,7 @@ export type ViewerSync = {
   subscribeSelectedBoxChange?: (_callback: (_id: string | null) => void) => () => void;
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
+  toggleDimensionsOverlay: () => boolean;
   getSelectedBoxScreenPosition: () => { x: number; y: number } | null;
   getRightmostX: () => number;
 };

@@ -144,6 +144,7 @@ export default function UnifiedTopToolbar({
   const rotationMenuRef = useRef<HTMLDivElement>(null);
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showExplodedMenu, setShowExplodedMenu] = useState(false);
+  const [dimensionsOverlayOn, setDimensionsOverlayOn] = useState(false);
   const cameraMenuRef = useRef<HTMLDivElement>(null);
   const explodedMenuRef = useRef<HTMLDivElement>(null);
 
@@ -717,6 +718,40 @@ export default function UnifiedTopToolbar({
           }}
         >
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", color: "#7dd3fc" }}>Ri</span>
+        </button>
+        <button
+          type="button"
+          className="viewer-action-icon"
+          title={
+            dimensionsOverlayOn
+              ? "Medidas do Conjunto ON (clique para desativar)"
+              : "Medidas do Conjunto OFF (clique para ativar)"
+          }
+          aria-label={
+            dimensionsOverlayOn ? "Desativar medidas do conjunto" : "Ativar medidas do conjunto"
+          }
+          aria-pressed={dimensionsOverlayOn}
+          onClick={() => {
+            const next = viewerApi?.toggleDimensionsOverlay?.() ?? false;
+            setDimensionsOverlayOn(next);
+          }}
+          style={{
+            ...toolbarButtonStyle,
+            background: dimensionsOverlayOn ? "rgba(148, 163, 184, 0.28)" : "transparent",
+            boxShadow: dimensionsOverlayOn
+              ? "inset 0 0 0 1px rgba(148, 163, 184, 0.45)"
+              : undefined,
+            minWidth: 28,
+            padding: "0 4px",
+          }}
+          onMouseEnter={(e) => {
+            if (!dimensionsOverlayOn) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+          }}
+          onMouseLeave={(e) => {
+            if (!dimensionsOverlayOn) e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.01em", color: "#cbd5e1" }}>MC</span>
         </button>
         {cfgImagem ? (
           <button
