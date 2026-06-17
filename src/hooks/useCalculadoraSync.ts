@@ -29,7 +29,8 @@ type BoxState = { index: number };
 /** Fingerprint da estrutura da caixa (dimensões, portas, gavetas, etc.) para evitar updateBox completo quando só posição/rotação mudou (ex.: após drag). */
 function getStructureFingerprint(
   wsBox: WorkspaceBox,
-  piLateralDrillCountSig?: string | null
+  piLateralDrillCountSig?: string | null,
+  viewerDebug?: { showDrawerDrilling?: boolean }
 ): string {
   const d = wsBox.dimensoes;
   const doors = wsBox.doorsLayer ?? [];
@@ -98,6 +99,7 @@ function getStructureFingerprint(
     pe_cm: wsBox.pe_cm,
     feetHeight: wsBox.feetHeight,
     feetOffsetFront: wsBox.feetOffsetFront,
+    viewerDebug: viewerDebug ?? null,
   });
 }
 
@@ -172,12 +174,15 @@ export const useCalculadoraSync = (
   /** Id do material do projeto (CRUD); usado quando a caixa não tem material próprio. */
   projectMaterialId?: string,
   /** Regras do projeto; usadas para gerar cutlist com drillHoles quando box.cutList não está populado. */
-  rules?: RulesConfig
+  rules?: RulesConfig,
+  /** Debug viewer — marcadores de furação nas gavetas. */
+  showDrawerDrilling?: boolean
 ) => {
   const boxesRef = useRef<BoxModule[]>(boxes);
   const workspaceBoxesRef = useRef<WorkspaceBox[]>(workspaceBoxes);
   const viewerApiRef = useRef(viewerApi);
   const projectMaterialIdRef = useRef<string | undefined>(projectMaterialId);
+  const showDrawerDrillingRef = useRef<boolean>(showDrawerDrilling === true);
   const stateRef = useRef<Map<string, BoxState>>(new Map());
   const prevViewerReadyRef = useRef<boolean | undefined>(false);
   /** Última estrutura conhecida por box id; quando igual, só enviamos position/rotation para evitar rebuild no Viewer. */
@@ -190,11 +195,16 @@ export const useCalculadoraSync = (
   workspaceBoxesRef.current = workspaceBoxes;
   viewerApiRef.current = viewerApi;
   projectMaterialIdRef.current = projectMaterialId;
+  showDrawerDrillingRef.current = showDrawerDrilling === true;
   /* eslint-enable react-hooks/refs */
 
   useEffect(() => {
     projectMaterialIdRef.current = projectMaterialId;
   }, [projectMaterialId]);
+
+  useEffect(() => {
+    showDrawerDrillingRef.current = showDrawerDrilling === true;
+  }, [showDrawerDrilling]);
 
   useEffect(() => {
     viewerApiRef.current = viewerApi;
@@ -206,6 +216,7 @@ export const useCalculadoraSync = (
     if (!api) return;
     const currentBoxes = boxesRef.current ?? [];
     const wsBoxes = workspaceBoxesRef.current ?? [];
+    const viewerDebug = { showDrawerDrilling: showDrawerDrillingRef.current };
     if (import.meta.env.DEV && wsBoxes.length > 0) {
       devLogger.debug("[DOOR-MAT] syncFromCalculator INÍCIO — wsBoxes (ref) door materials", {
         wsBoxesCount: wsBoxes.length,
@@ -319,14 +330,15 @@ export const useCalculadoraSync = (
           doorLayerItems,
           drawerLayerItems,
           drillMarkersByPanel,
+          showDrawerDrilling: viewerDebug.showDrawerDrilling,
           ...posRot,
         });
         lastStructureFingerprintRef.current.set(
           wsBox.id,
-          getStructureFingerprint(wsBox, piLateralDrillCountSig)
+          getStructureFingerprint(wsBox, piLateralDrillCountSig, viewerDebug)
         );
       } else {
-        const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig);
+        const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig, viewerDebug);
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
           if (import.meta.env.DEV && (wsBox?.doorsLayer?.length ?? 0) > 0) {
@@ -368,6 +380,7 @@ export const useCalculadoraSync = (
             doorLayerItems,
             drawerLayerItems,
             drillMarkersByPanel,
+            showDrawerDrilling: viewerDebug.showDrawerDrilling,
             ...posRot,
           });
           lastStructureFingerprintRef.current.set(wsBox.id, structureFingerprint);
@@ -383,7 +396,7 @@ export const useCalculadoraSync = (
     });
 
     stateRef.current = nextState;
-  }, [materialName, rules]);
+  }, [materialName, rules, showDrawerDrilling]);
 
   useEffect(() => {
     // Só sincronizar quando o viewer estiver explicitamente pronto
@@ -394,7 +407,7 @@ export const useCalculadoraSync = (
       prevViewerReadyRef.current = true;
     }
     syncFromCalculator();
-  }, [boxes, workspaceBoxes, syncFromCalculator, viewerReady]);
+  }, [boxes, workspaceBoxes, syncFromCalculator, viewerReady, showDrawerDrilling]);
 
   useEffect(() => {
     const api = viewerApiRef.current;

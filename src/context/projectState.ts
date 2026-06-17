@@ -84,6 +84,7 @@ const defaultViewerSettings: ViewerSettings = {
   glossIntensity: 1,
   matteMode: false,
   panelRenderingEnabled: false,
+  showDrawerDrilling: false,
 };
 
 const AUTO_PROJECT_NAME_SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";

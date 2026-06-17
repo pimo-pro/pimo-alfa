@@ -1,5 +1,12 @@
 import type { DrillType, PanelDrillHole } from "../../../core/types";
 import {
+  computePiModuleLateralCorredicaHoles,
+  getDrawerSlideDrillingRules,
+  resolvePiDrawerCountForDrilling,
+  resolvePiRunnerLinesYMm,
+} from "../../../core/drawers/drilling/DrawerDrillingRules";
+import { getSettings } from "../../../core/settings/settingsService";
+import {
   PI_CORREDICA_DRILL_LINE_COUNT,
   PI_MODEL_DEFAULT_SETTINGS,
   clampPiNumeroGavetas,
@@ -23,6 +30,11 @@ export type PiLateralDrillingInput = {
   piHideDrawerHoles: boolean;
   /** Preferências PI (merge com defaults dentro de buildPiUniversalLateralDrilling). */
   piSettings: Partial<PiModelSettings> | PiModelSettings;
+  /** FASE 3: contagem oficial quando pipeline moderno ativo. */
+  drawersLayerCount?: number;
+  slideType?: string;
+  metalBoxType?: string;
+  softClose?: boolean;
 };
 
 const GRID_STEP_MM = 32;
@@ -85,7 +97,7 @@ function addHole(
 
 function getDrawerLayout(alturaMm: number, numeroGavetas: number): PiDrawerLayout {
   const qty = clamp(Math.round(numeroGavetas), 1, 4);
-  const usefulHeight = Math.max(1, alturaMm - 8); // topo 2 + base 2 + 2 gaps entre frentes
+  const usefulHeight = Math.max(1, alturaMm - 8);
   const base = DRAWER_FRONT_BASE_HEIGHTS_MM.slice(0, qty);
   const baseSum = base.reduce((sum, h) => sum + h, 0);
   const ratio = usefulHeight / Math.max(1, baseSum);
@@ -143,7 +155,8 @@ function addHingeGridHoles(holes: PanelDrillHole[], alturaMm: number, profundida
   }
 }
 
-function addDrawerSlideHoles(
+/** Legado PI — offsets fixos 37/69/293 mm (comportamento pré-FASE 3). */
+function addDrawerSlideHolesLegacy(
   holes: PanelDrillHole[],
   runnerLinesYMm: number[],
   profundidadeMm: number,
@@ -159,6 +172,41 @@ function addDrawerSlideHoles(
   }
 }
 
+function addDrawerSlideHolesUnified(
+  holes: PanelDrillHole[],
+  runnerLinesYMm: number[],
+  profundidadeMm: number,
+  side: PiLateralSide,
+  slideType?: string,
+  metalBoxType?: string,
+  softClose?: boolean
+) {
+  const gavetas = getSettings().gavetas;
+  const rules = getDrawerSlideDrillingRules(slideType ?? gavetas.gavetaTipoCorredica, metalBoxType, {
+    softClose: softClose === true,
+    mode: "pi_module_lateral",
+    gavetasSettings: gavetas,
+  });
+
+  const specs = computePiModuleLateralCorredicaHoles({
+    runnerLinesYMm,
+    panelDepthMm: profundidadeMm,
+    side,
+    rules,
+    useLegacyPiOffsets: false,
+  });
+
+  for (const spec of specs) {
+    addHole(
+      holes,
+      spec.x,
+      spec.y,
+      spec.isMarkOnly ? MARK_HOLE_DEPTH_MM : FULL_HOLE_DEPTH_MM,
+      "corredica"
+    );
+  }
+}
+
 export function buildPiDrawerLayoutForFronts(alturaMm: number, numeroGavetas: number): PiDrawerLayout {
   return getDrawerLayout(alturaMm, numeroGavetas);
 }
@@ -166,24 +214,45 @@ export function buildPiDrawerLayoutForFronts(alturaMm: number, numeroGavetas: nu
 export function buildPiUniversalLateralDrilling(input: PiLateralDrillingInput): PanelDrillHole[] {
   const holes: PanelDrillHole[] = [];
   const s = mergePiSettings(input.piSettings);
-  const nCorredica = clampPiNumeroGavetas(PI_CORREDICA_DRILL_LINE_COUNT);
-  const layout = getDrawerLayout(input.alturaMm, nCorredica);
+  const useUnifiedPipeline = (input.drawersLayerCount ?? 0) > 0;
 
-  // Malha base 32 mm (tipo prateleira): parte fixa do módulo PI; independente de prateleiras/portas na UI.
+  const drawerCountForLayout = useUnifiedPipeline
+    ? resolvePiDrawerCountForDrilling({
+        drawersLayerCount: input.drawersLayerCount,
+        numeroGavetasSettings: s.numeroGavetas,
+      })
+    : clampPiNumeroGavetas(PI_CORREDICA_DRILL_LINE_COUNT);
+
+  const layout = useUnifiedPipeline
+    ? {
+        frontHeightsMm: [] as number[],
+        runnerLinesYMm: resolvePiRunnerLinesYMm(input.alturaMm, drawerCountForLayout),
+      }
+    : getDrawerLayout(input.alturaMm, drawerCountForLayout);
+
   if (s.ativarFuracaoPrateleiras) {
     addUniversalGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
   }
 
-  // Furos de dobradiça nas posições PI: base do módulo; independente de portaTipo / doorsLayer.
   if (s.ativarFuracaoDobradicas) {
     addHingeGridHoles(holes, input.alturaMm, input.profundidadeMm, input.side);
   }
 
-  // Corrediça: sempre 3 linhas (PI_CORREDICA_DRILL_LINE_COUNT) quando ativo e não oculto; independente de gavetas na UI.
   if (s.ativarFuracaoGavetas && !input.piHideDrawerHoles) {
-    addDrawerSlideHoles(holes, layout.runnerLinesYMm, input.profundidadeMm, input.side);
+    if (useUnifiedPipeline) {
+      addDrawerSlideHolesUnified(
+        holes,
+        layout.runnerLinesYMm,
+        input.profundidadeMm,
+        input.side,
+        input.slideType,
+        input.metalBoxType,
+        input.softClose
+      );
+    } else {
+      addDrawerSlideHolesLegacy(holes, layout.runnerLinesYMm, input.profundidadeMm, input.side);
+    }
   }
 
   return holes;
 }
-

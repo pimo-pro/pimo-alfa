@@ -3,7 +3,15 @@ import type { ProjectActions } from "../projectTypes";
 import { appendChangelog, buildBoxesFromWorkspace, buildDesignState, getSelectedWorkspaceBox } from "../projectState";
 import { ensureBoxPanelIds } from "../../core/box/panelIds";
 import { getSelectedOrFirstWorkspaceBox } from "../projectHelpers";
-import { regenerateLayersForBox, createManualDoor, createManualDrawer, applyDrawerTypeRules } from "../../services/boxLayersService";
+import { regenerateLayersForBox, createManualDoor, createManualDrawer } from "../../services/boxLayersService";
+import { canBoxHaveDrawers } from "../../core/drawers";
+import { canOpenDrawer } from "../../core/drawers/DrawerCollisionService";
+import {
+  resolveDrawerVerticalPosition,
+  getDrawerUsableInternalHeightMm,
+} from "../../core/drawers/drawerVerticalPosition";
+import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValidation";
+import { getSettings } from "../../core/settings/settingsService";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 
@@ -74,24 +82,47 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         updateProject(
           (prev) => {
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
-              if (box.id === prev.selectedWorkspaceBoxId) {
-                const updatedBox = {
+              if (box.id !== prev.selectedWorkspaceBoxId) return box;
+
+              if (valor > 0) {
+                const check = canBoxHaveDrawers(
+                  box.dimensoes.largura,
+                  box.dimensoes.altura,
+                  box.dimensoes.profundidade,
+                  valor
+                );
+                if (!check.valid) {
+                  return {
+                    ...box,
+                    drawerConfigError: check.reason ?? "Não é possível adicionar gavetas neste módulo.",
+                    drawerConfigWarnings: [],
+                  };
+                }
+              }
+
+              const updatedBox = {
+                ...box,
+                gavetas: valor,
+                portaTipo: valor > 0 ? ("sem_porta" as const) : box.portaTipo,
+                prateleiras: valor > 0 ? 0 : box.prateleiras,
+                doorsLayer: valor > 0 ? box.doorsLayer : [],
+                drawerConfigError: undefined,
+                panelIds: ensureBoxPanelIds(box.panelIds, {
                   ...box,
                   gavetas: valor,
                   portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
                   prateleiras: valor > 0 ? 0 : box.prateleiras,
-                  doorsLayer: valor > 0 ? box.doorsLayer : [],
-                  panelIds: ensureBoxPanelIds(box.panelIds, {
-                    ...box,
-                    gavetas: valor,
-                    portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
-                    prateleiras: valor > 0 ? 0 : box.prateleiras,
-                  }),
-                };
-                const layers = regenerateLayersForBox(updatedBox);
-                return { ...updatedBox, ...layers };
-              }
-              return box;
+                }),
+              };
+              const layers = regenerateLayersForBox(updatedBox);
+              const merged = { ...updatedBox, ...layers };
+              const drawerConfigWarnings = validateBoxDrawerConfiguration(
+                merged,
+                getSettings().gavetas
+              )
+                .filter((alert) => alert.level === "warning")
+                .map((alert) => alert.message);
+              return { ...merged, drawerConfigWarnings };
             });
             return recomputeState(
               prev,
@@ -114,9 +145,16 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
               if (box.id !== prev.selectedWorkspaceBoxId) return box;
-              const updatedBox = { ...box, drawerHeightMode: mode };
+              const updatedBox = { ...box, drawerHeightMode: mode, drawerConfigError: undefined };
               const layers = regenerateLayersForBox(updatedBox);
-              return { ...updatedBox, ...layers };
+              const merged = { ...updatedBox, ...layers };
+              const drawerConfigWarnings = validateBoxDrawerConfiguration(
+                merged,
+                getSettings().gavetas
+              )
+                .filter((alert) => alert.level === "warning")
+                .map((alert) => alert.message);
+              return { ...merged, drawerConfigWarnings };
             });
             return recomputeState(prev, { workspaceBoxes }, true);
           },
@@ -392,37 +430,41 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);
             if (!selected) return prev;
-            const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-              box.id === selected.id
-                ? {
-                    ...box,
-                    drawersLayer: (() => {
-                      const updated = (box.drawersLayer ?? []).map((item) =>
-                        item.id === id ? { ...item, ...partial } : item
-                      );
-                      const heightChanged = "height" in partial;
-                      const mode = box.drawerHeightMode ?? "equal";
-                      let next = updated.map((item) =>
-                        item.id === id ? applyDrawerTypeRules(box, item) : item
-                      );
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== selected.id) return box;
+
+              const updated = (box.drawersLayer ?? []).map((item) =>
+                item.id === id ? { ...item, ...partial } : item
+              );
+              const heightChanged = "height" in partial;
+              const mode = box.drawerHeightMode ?? "equal";
+              let nextDrawers = updated;
                       if (heightChanged && mode === "custom") {
-                        let offsetY = 0;
-                        const availableHeight = Math.max(1, box.dimensoes.altura - 10);
-                        next = next.map((item) => {
-                          const height =
-                            Number.isFinite(item.height) && item.height > 0
-                              ? item.height
-                              : availableHeight / Math.max(1, next.length);
-                          const posY = -box.dimensoes.altura / 2 + 10 + offsetY + height / 2;
-                          offsetY += height;
+                        const availableHeight = getDrawerUsableInternalHeightMm(box.dimensoes.altura);
+                        const heights = nextDrawers.map((item) =>
+                          Number.isFinite(item.height) && item.height > 0
+                            ? item.height
+                            : availableHeight / Math.max(1, nextDrawers.length)
+                        );
+                        nextDrawers = nextDrawers.map((item, index) => {
+                          const height = heights[index];
+                          const posY = resolveDrawerVerticalPosition(
+                            index,
+                            heights,
+                            box.dimensoes.altura
+                          );
                           return { ...item, height, posY };
                         });
                       }
-                      return next;
-                    })(),
-                  }
-                : box
-            );
+
+              const mergedBox = { ...box, drawersLayer: nextDrawers };
+              return {
+                ...mergedBox,
+                drawerConfigWarnings: validateBoxDrawerConfiguration(mergedBox, getSettings().gavetas)
+                  .filter((alert) => alert.level === "warning")
+                  .map((alert) => alert.message),
+              };
+            });
             return recomputeState(
               prev,
               {
@@ -469,12 +511,41 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);
             if (!selected) return prev;
+
+            const drawer = (selected.drawersLayer ?? []).find((item) => item.id === id);
+            if (!drawer) return prev;
+
+            if (isOpen) {
+              const drawerIndex = (selected.drawersLayer ?? []).findIndex((item) => item.id === id);
+              const collision = canOpenDrawer(drawer, selected, { drawerIndex });
+              if (!collision.canOpen) {
+                return {
+                  ...prev,
+                  workspaceBoxes: prev.workspaceBoxes.map((box) =>
+                    box.id === selected.id
+                      ? { ...box, drawerConfigError: collision.reason }
+                      : box
+                  ),
+                };
+              }
+            }
+
             const workspaceBoxes = prev.workspaceBoxes.map((box) =>
               box.id === selected.id
                 ? {
                     ...box,
+                    drawerConfigError: undefined,
                     drawersLayer: (box.drawersLayer ?? []).map((item) =>
-                      item.id === id ? applyDrawerTypeRules(box, { ...item, isOpen }) : item
+                      item.id === id
+                        ? {
+                            ...item,
+                            isOpen,
+                            pullDistanceMm:
+                              item.pullDistanceMm ??
+                              item.bodyDepth ??
+                              Math.max(0, item.depth - item.frontThickness),
+                          }
+                        : item
                     ),
                   }
                 : box

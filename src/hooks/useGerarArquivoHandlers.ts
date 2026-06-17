@@ -32,6 +32,9 @@ import { buildIndustrialManifest } from "../core/fabrication/industrialManifest"
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
 import { sanitizeZipPath } from "../utils/sanitization";
+import { captureMcDimensionsFromViewer } from "../core/industrial/mcDimensions/mcDimensionsCapture";
+import { exportMCDimensionsForZip } from "../core/industrial/mcDimensions/mcDimensionsGenerator";
+import { loadMcDimensionsConfig } from "../config/mcDimensionsConfig";
 import PiLoader from "../components/PiLoader/PiLoader";
 
 let cutLayoutLoaderRoot: Root | null = null;
@@ -901,6 +904,26 @@ export function useGerarArquivoHandlers() {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push({ step: "Manifesto Industrial", message: msg });
         devLogger.error("Full export: manifest-industrial", err);
+      }
+
+      // --- MC Dimensions (overlay técnico — pipeline independente) ---
+      if (!abortFullExport && loadMcDimensionsConfig().enabled) {
+        try {
+          const dimensionsData = await captureMcDimensionsFromViewer({
+            getPrintReadyDimensions: () => viewerSync.getPrintReadyDimensions?.() ?? { entries: [], generatedAt: Date.now() },
+            setDimensionsOverlayVisible: viewerSync.setDimensionsOverlayVisible,
+            getDimensionsOverlayVisible: viewerSync.getDimensionsOverlayVisible,
+            renderScene: (opts) => viewerSync.renderScene(opts as Parameters<typeof viewerSync.renderScene>[0]),
+          });
+          const mcFiles = await exportMCDimensionsForZip(dimensionsData);
+          for (const f of mcFiles) {
+            zip.file(f.path, f.blob);
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push({ step: "MC Dimensions", message: msg });
+          devLogger.error("Full export: MC Dimensions", err);
+        }
       }
 
       // --- DRILL (XML): um ficheiro por lateral ---

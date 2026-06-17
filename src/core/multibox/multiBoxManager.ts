@@ -65,7 +65,8 @@ export function useMultiBoxManager({
     project.material.tipo,
     viewerReady,
     project.materialId,
-    project.rules
+    project.rules,
+    project.viewerSettings.showDrawerDrilling
   );
 
   const addBox = useCallback(() => {

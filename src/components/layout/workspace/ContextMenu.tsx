@@ -184,6 +184,8 @@ export default function ContextMenu({
   const roomExists = viewerApi?.getRoomExists?.() === true || project.room != null;
   const hasSmartAlignTarget =
     Boolean(selectedBoxId) || contextMenuLayerTarget?.type === "remate";
+  const alignableCount = viewerApi?.getSelectedObjects?.(activeSelectedIds)?.length ?? 0;
+  const canAlign = alignableCount >= 2;
   const categoryMenu = buildMouseMenu({
     target: contextMenuLayerTarget,
     hasSelectedBox: Boolean(selectedBoxId),
@@ -191,6 +193,7 @@ export default function ContextMenu({
     hasRemates: (project.remates ?? []).length > 0,
     hasSmartAlignTarget,
     multiSelectionCount: activeSelectedIds.length,
+    canAlign,
   });
 
   const clearSubmenuCloseTimer = () => {
@@ -338,6 +341,23 @@ export default function ContextMenu({
     if (actionId === "box.delete") actions.removeWorkspaceBox();
     if (actionId === "box.alignFront" && selectedBoxId) actions.alignFrontWithNeighbor(selectedBoxId);
     if (actionId === "box.alignBottom") actions.alignBottomSelectedBoxes(activeSelectedIds);
+    if (
+      actionId === "alignment.right" ||
+      actionId === "alignment.left" ||
+      actionId === "alignment.front" ||
+      actionId === "alignment.back" ||
+      actionId === "alignment.top" ||
+      actionId === "alignment.bottom"
+    ) {
+      const type = actionId.replace("alignment.", "") as
+        | "right"
+        | "left"
+        | "front"
+        | "back"
+        | "top"
+        | "bottom";
+      viewerApi?.align?.(type, activeSelectedIds);
+    }
     if (actionId === "remate.remove" && contextMenuLayerTarget?.type === "remate" && contextMenuLayerTarget.remateId) {
       actions.removeRemate(contextMenuLayerTarget.remateId);
     }

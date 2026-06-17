@@ -205,7 +205,6 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   );
   const espessura = getEspessura(box);
   const folgaPorta = 3;
-  const recuoGaveta = 13;
 
   const paineis: PainelIndustrial[] = [];
   const material = getNomeMaterial(box);
@@ -331,24 +330,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     }
   }
 
-  if (box.gavetas > 0) {
-    const larguraGaveta = clampPositive(largura - recuoGaveta * 2);
-    const alturaGaveta = clampPositive(box.alturaGaveta);
-    const nGavetas = Math.max(0, Math.floor(box.gavetas));
-    for (let i = 0; i < nGavetas; i++) {
-      paineis.push({
-        id: getArrayPanelId(box, "gavetas", i),
-        tipo: "gaveta_frente",
-        largura_mm: larguraGaveta,
-        altura_mm: alturaGaveta,
-        espessura_mm: espessura,
-        material,
-        orientacaoFibra: "horizontal",
-        quantidade: 1,
-        custo: 0,
-      });
-    }
-  }
+  // FASE 6: frentes de gaveta via drawersLayer + drawerCutlistAdapter (não gerar gaveta_frente legado).
 
   const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
   return paineis.map((painel) => ({
@@ -383,7 +365,7 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
     addFerragem("dobradicas", dobradicas);
   }
 
-  if (box.gavetas > 0) {
+  if (box.gavetas > 0 && (box.drawersLayer?.length ?? 0) === 0) {
     addFerragem("corredicas", Math.max(0, Math.floor(box.gavetas)) * 2);
   }
 
@@ -480,6 +462,10 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
   ];
 }
 
+/**
+ * @deprecated FASE 6 — usar `drawersLayer` + `drawerCutlistAdapter`. Mantido apenas para módulos PI.
+ * Caixas com pipeline moderno não devem depender deste resumo.
+ */
 export function gerarGavetas(box: BoxModule, _rules: RulesConfig): GavetaIndustrial[] {
   if (isPiBaseCabinetId(box.baseCabinetId)) {
     const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
@@ -496,37 +482,12 @@ export function gerarGavetas(box: BoxModule, _rules: RulesConfig): GavetaIndustr
     }));
   }
 
-  if (box.gavetas <= 0) return [];
-  const espessura = getEspessura(box);
-  const recuoLateral = 13;
-  const folga = 2;
-  const tipoPorta: "overlay" | "inset" = "overlay";
-  const { larguraInterna, alturaInterna, profundidadeInterna } = getDimensoesInternas(box, espessura, _rules);
-  const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
-  const larguraGaveta = clampPositive(larguraInterna - recuoLateral * 2);
-  const alturaGaveta = clampPositive(alturaInterna - 40);
-  const profundidadeGaveta = clampPositive(profundidadeInterna);
-  const alturaFrente =
-    tipoPorta === "overlay"
-      ? alturaInterna + folga * 2
-      : alturaInterna - folga * 2;
+  return [];
+}
 
-  return Array.from({ length: Math.max(0, Math.floor(box.gavetas)) }).map((_, index) => ({
-    id: getArrayPanelId(box, "gavetas", index),
-    largura_mm: clampPositive(larguraGaveta),
-    altura_mm: clampPositive(alturaGaveta || alturaFrente),
-    profundidade_mm: clampPositive(profundidadeGaveta),
-    espessura_mm: espessura,
-    corrediças: 1,
-    custo: calcularCustoPainel(
-      {
-        largura_mm: clampPositive(larguraGaveta),
-        altura_mm: clampPositive(alturaGaveta || alturaFrente),
-        material: material.nome,
-      } as PainelIndustrial,
-      material
-    ),
-  }));
+/** @deprecated FASE 6 — shim vazio; ver `gerarGavetas`. */
+export function gerarGavetasLegado(_box: BoxModule, _rules: RulesConfig): GavetaIndustrial[] {
+  return [];
 }
 
 export function gerarCutlist(box: BoxModule, rules: RulesConfig) {

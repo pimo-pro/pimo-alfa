@@ -9,7 +9,8 @@ import type { ComponentType } from "../components/componentTypes";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { gerarModeloIndustrial } from "../manufacturing/boxManufacturing";
-import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
+import { buildGlobalQrCutlistMerged, cutlistComPrecoFromBox } from "../manufacturing/cutlistFromBoxes";
+import { boxUsesModernDrawerPipeline } from "../../services/drawerCutlistAdapter";
 import { safeGetItem } from "../../utils/storage";
 import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
 import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
@@ -199,9 +200,43 @@ function construirLinhas(
 
   for (let boxIdx = 0; boxIdx < boxes.length; boxIdx++) {
     const box = boxes[boxIdx];
-    const modelo = gerarModeloIndustrial(box, rules);
     const material = box.material ?? "mdf_branco";
     const boxNum = boxIdx + 1;
+
+    if (boxUsesModernDrawerPipeline(box)) {
+      const modernCutlist = cutlistComPrecoFromBox(box, rules, pdfOpts?.materialId);
+      let prateleiraCount = 0;
+      let gavetaFrenteCount = 0;
+
+      for (const item of modernCutlist) {
+        let nomePeca = TIPO_TO_REF_NAME[item.tipo] ?? item.tipo.toUpperCase().replace(/\s/g, "_");
+        if (item.tipo === "prateleira") {
+          prateleiraCount++;
+          nomePeca = `PRATELEIRA_${String(prateleiraCount).padStart(2, "0")}`;
+        } else if (item.tipo === "gaveta_frente") {
+          gavetaFrenteCount++;
+          nomePeca = `GAVETA_FRENTE_${String(gavetaFrenteCount).padStart(2, "0")}`;
+        } else if (item.nome?.trim()) {
+          nomePeca = item.nome.toUpperCase().replace(/\s+/g, "_");
+        }
+
+        pecasCompletas.push({
+          box,
+          boxIndex: boxNum,
+          tipo: item.tipo,
+          refPeca: `Caixa ${boxNum} – ${nomePeca}`,
+          larg: item.dimensoes.largura,
+          comp: item.dimensoes.altura,
+          esp: item.espessura,
+          material: item.material || material,
+          qtd: item.quantidade,
+          panelId: item.id,
+        });
+      }
+      continue;
+    }
+
+    const modelo = gerarModeloIndustrial(box, rules);
     let prateleiraCount = 0;
     let gavetaCount = 0;
 

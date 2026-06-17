@@ -103,6 +103,8 @@ export type BoxOptions = {
   locked?: boolean;
   /** Modelo base (ex.: pi-base-600); usado pelo viewer para furação lateral PI sem depender de prateleiras/gavetas. */
   baseCabinetId?: string;
+  /** Debug FASE 5: marcadores visuais de furação nas gavetas. */
+  showDrawerDrilling?: boolean;
 };
 
 export type BoxModel = {
@@ -378,8 +380,8 @@ function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): stri
  * NOTA: Não faz cálculos! Apenas converte mm -> metros.
  * Todos os cálculos de dimensões estão em src/core/drawers/
  */
-function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
-  return buildDrawerSpecsFromFactory(items);
+function buildDrawerSpecs(items: DrawerLayerItem[], options?: { showDrillingMarkers?: boolean }): DrawerSpec[] {
+  return buildDrawerSpecsFromFactory(items, options);
 }
 
 /**

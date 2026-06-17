@@ -343,6 +343,25 @@ export default function Workspace({
   }, [actions, project.workspaceBoxes, project.selectedWorkspaceBoxId, viewerApi]);
 
   useEffect(() => {
+    viewerApi.setOnDrawerLayerDoubleClick?.((boxId, drawerLayerId) => {
+      const box = project.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
+      const drawer = box?.drawersLayer?.find((item) => item.id === drawerLayerId);
+      if (!box || !drawer) return;
+
+      const nextIsOpen = !drawer.isOpen;
+      if (project.selectedWorkspaceBoxId === boxId) {
+        actions.setDrawerLayerItemOpen(drawerLayerId, nextIsOpen);
+        return;
+      }
+
+      actions.selectBox(boxId);
+      requestAnimationFrame(() => {
+        actionsRef.current.setDrawerLayerItemOpen(drawerLayerId, nextIsOpen);
+      });
+    });
+  }, [actions, project.workspaceBoxes, project.selectedWorkspaceBoxId, viewerApi]);
+
+  useEffect(() => {
     viewerApi.setOnWallSelected?.((wallIndex) => {
       if (wallIndex == null) {
         wallStore.getState().selectWall(null);

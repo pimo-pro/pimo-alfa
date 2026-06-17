@@ -10,8 +10,13 @@
  * face externa = A = face que olha para cima. getInternalFace("prateleira") = "fundo".
  */
 
+import {
+  computeDrawerPieceCorredicaHoles,
+  getDrawerSlideDrillingRules,
+} from "../drawers/drilling/DrawerDrillingRules";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getNumDobradicas, getHingeYPositions } from "../rules/rulesConfig";
+import { getSettings } from "../settings/settingsService";
 import type { DrillFace, DrillType, PanelFace, TechnicalDrillHole } from "../types";
 
 export type PieceType =
@@ -42,6 +47,7 @@ type PieceInput = {
   handleOffsetMm?: number;
   slideType?: string;
   metalBoxType?: string;
+  softClose?: boolean;
   /** Se false, desativa explicitamente os furos de prateleira para a peça. */
   shelfHolesEnabled?: boolean;
   hingeSide?: "left" | "right" | "top" | "bottom";
@@ -287,34 +293,35 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
 /** Furos de corredica de gaveta: laterais, frente e traseira da gaveta europeia. */
 function calcCorredica(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.corredica) return;
-  const cfg = rules.furos.tecnicos.corredica;
-  if (!cfg.enabled) return;
-  const isDrawerSide =
-    piece.tipo === "gaveta_lat_esq" || piece.tipo === "gaveta_lat_dir" || piece.tipo === "gaveta";
-  const isDrawerFrontOrBack = piece.tipo === "gaveta_frente" || piece.tipo === "gaveta_traseira";
-  if (!isDrawerSide && !isDrawerFrontOrBack) return;
-  const face: DrillFace =
-    piece.tipo === "gaveta_lat_esq"
-      ? "direita"
-      : piece.tipo === "gaveta_lat_dir"
-        ? "esquerda"
-        : piece.tipo === "gaveta_frente"
-          ? "tras"
-          : piece.tipo === "gaveta_traseira"
-            ? "frente"
-            : "frente";
-  const alturaCorredica = (cfg.alturaRelativaFundo ?? 37) + (cfg.offsetVerticalAdicional ?? 0);
-  const y = piece.altura - alturaCorredica;
-  const slideFrontOffset =
-    piece.slideType === "Blum Tandem" || piece.slideType === "Blum Movento" ? 37 : cfg.offsetFrente ?? 37;
-  const slideBackOffset =
-    piece.slideType === "Blum Tandem" || piece.slideType === "Blum Movento" ? 37 : cfg.offsetFundo ?? 37;
-  const xFront = slideFrontOffset;
-  const xBack = piece.largura - slideBackOffset;
-  const diametro = cfg.diametro ?? 5;
-  const profundidade = cfg.profundidade ?? 10;
-  pushHole(out, piece, xFront, y, diametro, profundidade, "corredica", face);
-  pushHole(out, piece, xBack, y, diametro, profundidade, "corredica", face);
+
+  const gavetas = getSettings().gavetas;
+  const slideRules = getDrawerSlideDrillingRules(piece.slideType, piece.metalBoxType, {
+    softClose: piece.softClose === true,
+    mode: "drawer_piece",
+    corredicaConfig: rules.furos.tecnicos.corredica,
+    gavetasSettings: gavetas,
+  });
+  if (!slideRules.enabled) return;
+
+  const specs = computeDrawerPieceCorredicaHoles({
+    pieceType: piece.tipo,
+    largura: piece.largura,
+    altura: piece.altura,
+    rules: slideRules,
+  });
+
+  for (const spec of specs) {
+    pushHole(
+      out,
+      piece,
+      spec.x,
+      spec.y,
+      spec.diametro,
+      spec.profundidade,
+      "corredica",
+      spec.face
+    );
+  }
 }
 
 function calcHandle(piece: PieceInput, out: TechnicalDrillHole[]) {

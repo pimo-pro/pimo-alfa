@@ -92,6 +92,10 @@ export interface DrawerCalculatedSpecs {
   validation: {
     warnings: string[];
   };
+
+  /** Profundidade nominal (corrediça) e recuo aplicado (FASE 6). */
+  nominalDepthMm: number;
+  runnerClearanceMm: number;
   
   // Gaps/folgas
   gaps: {
@@ -107,7 +111,16 @@ export interface DrawerCalculatedSpecs {
 
 export type DrawerParametricSettings = SettingsSchema["gavetas"];
 
-const DRAWER_RUNNER_CLEARANCE_MM = 20;
+/** Overrides por gaveta vindos da UI (drawersLayer.metadata + campos espelhados). */
+export type DrawerParametricOverrides = {
+  nominalDepthMm?: number;
+  slideType?: DrawerSlideType;
+  metalBoxType?: DrawerMetalBoxType;
+  softClose?: boolean;
+  drawerType?: "normal" | "pro";
+};
+
+const MIN_BODY_DEPTH_MM = 50;
 const MIN_MM = 1;
 const SOFT_CLOSE_COMPATIBLE_SLIDES = new Set<DrawerSlideType>([
   "Blum Tandem",
@@ -151,6 +164,10 @@ function resolveDrawerSettings(
     gavetaEspessuraTraseiraMm: normalizePositiveNumber(settings?.gavetaEspessuraTraseiraMm, defaults.gavetaEspessuraTraseiraMm),
     gavetaEspessuraFundoMm: normalizePositiveNumber(settings?.gavetaEspessuraFundoMm, defaults.gavetaEspessuraFundoMm),
     gavetaRecuoCorpoMm: normalizePositiveNumber(settings?.gavetaRecuoCorpoMm, defaults.gavetaRecuoCorpoMm),
+    gavetaRecuoProfundidadeCorredicaMm: normalizePositiveNumber(
+      settings?.gavetaRecuoProfundidadeCorredicaMm,
+      defaults.gavetaRecuoProfundidadeCorredicaMm
+    ),
     gavetaProfundidadesDisponiveisMm: normalizeDepths(
       settings?.gavetaProfundidadesDisponiveisMm ?? availableDepths,
       defaults.gavetaProfundidadesDisponiveisMm
@@ -166,6 +183,30 @@ function chooseNominalDepth(boxInternalDepth: number, availableDepths: number[])
   const sorted = normalizeDepths(availableDepths, settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm);
   const fitting = sorted.filter((depth) => depth <= boxInternalDepth);
   return fitting.length > 0 ? fitting[fitting.length - 1] : sorted[0];
+}
+
+function resolveNominalDepth(
+  boxInternalDepth: number,
+  availableDepths: number[],
+  overrideMm?: number
+): number {
+  if (overrideMm != null && Number.isFinite(overrideMm) && overrideMm > 0) {
+    return Math.min(overrideMm, boxInternalDepth);
+  }
+  return chooseNominalDepth(boxInternalDepth, availableDepths);
+}
+
+function applyDrawerParametricOverrides(
+  settings: DrawerParametricSettings,
+  overrides?: DrawerParametricOverrides
+): DrawerParametricSettings {
+  if (!overrides) return settings;
+
+  const next = { ...settings };
+  if (overrides.slideType) next.gavetaTipoCorredica = overrides.slideType;
+  if (overrides.metalBoxType) next.gavetaTipoCaixaMetalica = overrides.metalBoxType;
+  if (typeof overrides.softClose === "boolean") next.gavetaSoftClose = overrides.softClose;
+  return next;
 }
 
 function resolveSlideCourse(settings: DrawerParametricSettings, bodyDepth: number): number {
@@ -184,7 +225,8 @@ function resolveSlideCourse(settings: DrawerParametricSettings, bodyDepth: numbe
 export function calculateDrawerSpecs(
   dimensions: DrawerDimensions,
   availableDepths: number[],
-  drawerSettings?: Partial<DrawerParametricSettings>
+  drawerSettings?: Partial<DrawerParametricSettings>,
+  overrides?: DrawerParametricOverrides
 ): DrawerCalculatedSpecs {
   const {
     boxInternalWidth,
@@ -192,7 +234,9 @@ export function calculateDrawerSpecs(
     drawerHeight,
     type,
   } = dimensions;
-  const settings = resolveDrawerSettings(drawerSettings, availableDepths);
+  const baseSettings = resolveDrawerSettings(drawerSettings, availableDepths);
+  const settings = applyDrawerParametricOverrides(baseSettings, overrides);
+  const drawerType = overrides?.drawerType ?? type;
   const frontGap = settings.gavetaFolgaFrenteMm;
   const sideGap = settings.gavetaFolgaLateralMm;
   const frontThickness = settings.gavetaEspessuraFrenteMm;
@@ -200,11 +244,16 @@ export function calculateDrawerSpecs(
   const bottomThickness = settings.gavetaEspessuraFundoMm;
   const backThickness = settings.gavetaEspessuraTraseiraMm;
   const bodyRecess = settings.gavetaRecuoCorpoMm;
+  const runnerClearanceMm = settings.gavetaRecuoProfundidadeCorredicaMm;
   const availableDepthRules = settings.gavetaValidarProfundidadeCompativel
     ? settings.gavetaProfundidadesCompativeisMm
     : settings.gavetaProfundidadesDisponiveisMm;
-  const nominalDepth = chooseNominalDepth(boxInternalDepth, availableDepthRules);
-  const metalBoxEnabled = settings.gavetaTipoCaixaMetalica !== "Nenhuma" || type === "pro";
+  const nominalDepth = resolveNominalDepth(
+    boxInternalDepth,
+    availableDepthRules,
+    overrides?.nominalDepthMm
+  );
+  const metalBoxEnabled = settings.gavetaTipoCaixaMetalica !== "Nenhuma" || drawerType === "pro";
   const metalBoxType = metalBoxEnabled
     ? settings.gavetaTipoCaixaMetalica !== "Nenhuma"
       ? settings.gavetaTipoCaixaMetalica
@@ -221,7 +270,7 @@ export function calculateDrawerSpecs(
   // Padrao europeu: corpo com folga lateral, profundidade nominal e altura 70 mm abaixo da frente.
   const bodyWidth = clampMm(boxInternalWidth - (2 * sideGap));
   const bodyHeight = clampMm(frontHeight - bodyRecess);
-  const bodyDepth = clampMm(nominalDepth - DRAWER_RUNNER_CLEARANCE_MM);
+  const bodyDepth = clampMm(nominalDepth - runnerClearanceMm);
   const woodBodyHeight = metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0
     ? settings.gavetaAlturaCaixaMetalicaMm
     : bodyHeight;
@@ -259,6 +308,25 @@ export function calculateDrawerSpecs(
   }
   if (metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0 && frontHeight < settings.gavetaAlturaCaixaMetalicaMm) {
     warnings.push(`Frente abaixo da altura da caixa metalica (${settings.gavetaAlturaCaixaMetalicaMm}mm).`);
+  }
+  if (
+    overrides?.nominalDepthMm != null &&
+    overrides.nominalDepthMm > boxInternalDepth
+  ) {
+    warnings.push(
+      `Profundidade nominal ${overrides.nominalDepthMm}mm excede profundidade interna (${boxInternalDepth}mm).`
+    );
+  }
+  if (bodyDepth < MIN_BODY_DEPTH_MM) {
+    warnings.push(
+      `Profundidade do corpo (${bodyDepth}mm) abaixo do minimo industrial (${MIN_BODY_DEPTH_MM}mm).`
+    );
+  }
+  if (
+    settings.gavetaValidarProfundidadeCompativel &&
+    !availableDepthRules.includes(nominalDepth)
+  ) {
+    warnings.push(`Profundidade nominal ${nominalDepth}mm incompativel com caixa metalica/corredica.`);
   }
 
   return {
@@ -320,6 +388,8 @@ export function calculateDrawerSpecs(
     validation: {
       warnings,
     },
+    nominalDepthMm: nominalDepth,
+    runnerClearanceMm: runnerClearanceMm,
     gaps: {
       frontGap,
       sideGap,

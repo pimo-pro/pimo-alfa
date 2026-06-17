@@ -114,6 +114,14 @@ export function drawerToLayerItem(drawer: Drawer): DrawerLayerItem {
     posY: position.y,
     posZ: position.z,
     rotY: 0,
+
+    metadata: {
+      nominalDepth: specs.nominalDepthMm,
+      slideType: specs.slide.type,
+      metalBoxType: specs.metalBox.type,
+      softClose: specs.slide.softClose,
+      drawerType: type,
+    },
   };
 }
 

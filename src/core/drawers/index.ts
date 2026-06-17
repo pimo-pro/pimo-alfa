@@ -11,7 +11,7 @@
  */
 
 // Core types
-export type { DrawerDimensions, DrawerPieceSpec, DrawerCalculatedSpecs, DrawerParametricSettings } from "./DrawerParametrics";
+export type { DrawerDimensions, DrawerPieceSpec, DrawerCalculatedSpecs, DrawerParametricSettings, DrawerParametricOverrides } from "./DrawerParametrics";
 export type { DrawerPiece, Drawer } from "./Drawer";
 export type { DrawerGroup } from "./DrawerGroup";
 export type { DrawerGenerationConfig } from "./DrawerGenerationService";
@@ -22,6 +22,11 @@ export type {
   DrawerPieceForBom,
   DrawerHardwareForBom,
 } from "./DrawerBomService";
+
+export {
+  buildDrawerParametricOverridesList,
+  drawerParametricOverridesFromLayerItem,
+} from "./drawerParametricOverrides";
 
 // Parametrics
 export {
@@ -47,6 +52,12 @@ export {
   removeDrawerFromGroup,
   updateHeightMode,
 } from "./DrawerGroup";
+export {
+  DRAWER_VERTICAL_BASE_OFFSET_MM,
+  getDrawerUsableInternalHeightMm,
+  resolveDrawerVerticalPosition,
+  resolveDrawerVerticalPositions,
+} from "./drawerVerticalPosition";
 
 // Generation Service
 export {
@@ -72,11 +83,24 @@ export {
   updateDrawerProgress,
   calculateDrawerOffset,
   createDrawerAnimation,
+  animateDrawer,
   easeInOutCubic,
   closeAllDrawers,
   openAllDrawers,
   canOpenDrawer,
 } from "./DrawerMotionService";
+export {
+  tandemCurve,
+  moventoCurve,
+  genericSlideCurve,
+  resolveDrawerMotionCurve,
+  resolveDrawerAnimationDurationMs,
+} from "./DrawerMotionCurves";
+export {
+  canOpenDrawer as canOpenDrawerLayer,
+  canToggleDrawer,
+  type DrawerCollisionSceneContext,
+} from "./DrawerCollisionService";
 
 // Adapters
 export {

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import Button from "../ui/Button";
 import { useShowroomStore } from "./showroomStore";
+import { useProject } from "../../context/useProject";
 import { MultiProjectGenerationModal } from "../projects/MultiProjectGenerationModal";
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -23,7 +24,20 @@ type Props = {
  */
 export function ShowroomGenerateMultiFabricationButton({ showroomLoading }: Props) {
   const projectIdsCarregados = useShowroomStore((s) => s.projectIdsCarregados);
+  const { viewerSync } = useProject();
   const [showModal, setShowModal] = useState(false);
+
+  const mcDimensionsViewer = useMemo(
+    () => ({
+      getPrintReadyDimensions: () =>
+        viewerSync.getPrintReadyDimensions?.() ?? { entries: [], generatedAt: Date.now() },
+      setDimensionsOverlayVisible: viewerSync.setDimensionsOverlayVisible,
+      getDimensionsOverlayVisible: viewerSync.getDimensionsOverlayVisible,
+      renderScene: (opts: { quality?: string }) =>
+        viewerSync.renderScene(opts as Parameters<typeof viewerSync.renderScene>[0]),
+    }),
+    [viewerSync]
+  );
 
   if (projectIdsCarregados.length < 1) {
     return null;
@@ -46,6 +60,7 @@ export function ShowroomGenerateMultiFabricationButton({ showroomLoading }: Prop
           projectIds={projectIdsCarregados}
           onClose={() => setShowModal(false)}
           onDownload={downloadBlob}
+          mcDimensionsViewer={mcDimensionsViewer}
         />
       )}
     </>

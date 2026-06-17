@@ -1,32 +1,34 @@
 /**
  * DrawerMotionService
- * 
+ *
  * Gerencia o movimento e animação das gavetas.
  * A frente e o corpo se movem juntos como uma unidade rígida.
  */
 
 import { updateDrawerMotion, type Drawer } from "./Drawer";
 import type { DrawerGroup } from "./DrawerGroup";
+import type { DrawerLayerItem } from "../../models/BoxLayers";
+import type { WorkspaceBox } from "../types";
+import { canOpenDrawer as canOpenDrawerLayer, type DrawerCollisionSceneContext } from "./DrawerCollisionService";
+import {
+  resolveDrawerMotionCurve,
+  resolveDrawerAnimationDurationMs,
+  easeInOutCubic,
+} from "./DrawerMotionCurves";
 
 export interface DrawerMotionState {
   drawerId: string;
   isOpen: boolean;
-  progress: number;        // 0 = fechada, 1 = totalmente aberta
-  targetProgress: number;  // Progress desejado
+  progress: number;
+  targetProgress: number;
   isAnimating: boolean;
 }
 
-/**
- * Define o estado de abertura de uma gaveta (sem animação)
- */
 export function setDrawerOpen(drawer: Drawer, isOpen: boolean): Drawer {
   const progress = isOpen ? 1 : 0;
   return updateDrawerMotion(drawer, isOpen, progress);
 }
 
-/**
- * Define o estado de abertura de uma gaveta no grupo
- */
 export function setDrawerOpenInGroup(
   group: DrawerGroup,
   drawerId: string,
@@ -42,61 +44,69 @@ export function setDrawerOpenInGroup(
   };
 }
 
-/**
- * Atualiza o progresso de abertura de uma gaveta (usado para animação)
- */
-export function updateDrawerProgress(
-  drawer: Drawer,
-  progress: number
-): Drawer {
+export function updateDrawerProgress(drawer: Drawer, progress: number): Drawer {
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const isOpen = clampedProgress > 0.5;
   return updateDrawerMotion(drawer, isOpen, clampedProgress);
 }
 
-/**
- * Calcula o deslocamento em mm baseado no progresso
- */
 export function calculateDrawerOffset(drawer: Drawer, progress: number): number {
   return drawer.specs.positioning.pullDistance * progress;
 }
 
-/**
- * Anima suavemente uma gaveta de um estado para outro
- * Esta função retorna os parâmetros para usar com requestAnimationFrame
- */
 export function createDrawerAnimation(
   drawer: Drawer,
   targetIsOpen: boolean,
-  durationMs: number = 1500,
-  easingFn: (_t: number) => number = easeInOutCubic
+  durationMs?: number,
+  easingFn?: (_t: number) => number
 ): {
   startProgress: number;
   targetProgress: number;
   duration: number;
   easing: (_t: number) => number;
 } {
-  const startProgress = drawer.motion.openProgress;
-  const targetProgress = targetIsOpen ? 1 : 0;
-
+  const slideType = drawer.slideType;
+  const softClose = drawer.softClose;
   return {
-    startProgress,
-    targetProgress,
-    duration: durationMs,
-    easing: easingFn,
+    startProgress: drawer.motion.openProgress,
+    targetProgress: targetIsOpen ? 1 : 0,
+    duration: durationMs ?? resolveDrawerAnimationDurationMs(slideType, softClose),
+    easing: easingFn ?? resolveDrawerMotionCurve(slideType, softClose),
   };
 }
 
-/**
- * Função de easing cúbica (mesma das portas)
- */
-export function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+export function animateDrawer(params: {
+  drawer: Drawer;
+  targetIsOpen: boolean;
+  onProgress: (progress: number, offsetMm: number) => void;
+  onComplete?: () => void;
+}): () => void {
+  const animation = createDrawerAnimation(params.drawer, params.targetIsOpen);
+  const pullDistance = params.drawer.specs.positioning.pullDistance;
+  const start = performance.now();
+  let raf = 0;
+
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - start) / animation.duration);
+    const eased = animation.easing(t);
+    const progress =
+      animation.startProgress + (animation.targetProgress - animation.startProgress) * eased;
+    params.onProgress(progress, pullDistance * progress);
+    if (t < 1) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      params.onComplete?.();
+    }
+  };
+
+  raf = requestAnimationFrame(tick);
+  return () => {
+    if (raf) cancelAnimationFrame(raf);
+  };
 }
 
-/**
- * Fecha todas as gavetas do grupo
- */
+export { easeInOutCubic };
+
 export function closeAllDrawers(group: DrawerGroup): DrawerGroup {
   const updatedDrawers = group.drawers.map((drawer) => setDrawerOpen(drawer, false));
   return {
@@ -105,9 +115,6 @@ export function closeAllDrawers(group: DrawerGroup): DrawerGroup {
   };
 }
 
-/**
- * Abre todas as gavetas do grupo
- */
 export function openAllDrawers(group: DrawerGroup): DrawerGroup {
   const updatedDrawers = group.drawers.map((drawer) => setDrawerOpen(drawer, true));
   return {
@@ -116,19 +123,29 @@ export function openAllDrawers(group: DrawerGroup): DrawerGroup {
   };
 }
 
-/**
- * Valida se uma gaveta pode ser aberta sem colidir com outras
- */
 export function canOpenDrawer(
   group: DrawerGroup,
-  drawerId: string
+  drawerId: string,
+  box?: WorkspaceBox,
+  layerItems?: DrawerLayerItem[]
 ): { canOpen: boolean; reason?: string } {
   const drawer = group.drawers.find((d) => d.id === drawerId);
   if (!drawer) {
     return { canOpen: false, reason: "Gaveta não encontrada" };
   }
 
-  // Por enquanto, sempre pode abrir
-  // Futuramente pode adicionar lógica de colisão
+  if (drawer.motion.isOpen) {
+    return { canOpen: true };
+  }
+
+  if (box && layerItems) {
+    const layer = layerItems.find((item) => item.id === drawerId);
+    if (layer) {
+      const drawerIndex = layerItems.findIndex((item) => item.id === drawerId);
+      const ctx: DrawerCollisionSceneContext = { drawerIndex };
+      return canOpenDrawerLayer(layer, box, ctx);
+    }
+  }
+
   return { canOpen: true };
 }

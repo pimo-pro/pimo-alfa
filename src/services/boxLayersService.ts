@@ -7,6 +7,7 @@ import {
   drawerToLayerItem,
   type DrawerGenerationConfig,
 } from "../core/drawers";
+import { buildDrawerParametricOverridesList } from "../core/drawers/drawerParametricOverrides";
 import { devLogger } from "../utils/devLogger";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 import {
@@ -254,6 +255,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
       isWardrobe && wardrobeGroup !== "T" && hasWardrobeLowerDrawers(box.baseCabinetId) && boxWidth >= 1200;
 
     const feetHeightMm = Math.max(40, box.feetHeight ?? (box.pe_cm ?? 10) * 10);
+    const drawerOverrides = buildDrawerParametricOverridesList(box.drawersLayer, drawerCount);
 
     const config: DrawerGenerationConfig = (() => {
       if (!shouldWardrobeLowerRightDrawers) {
@@ -270,6 +272,7 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
           availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
           drawerSettings,
           materialId: defaultDrawerMaterial,
+          drawerOverrides,
         };
       }
 
@@ -296,19 +299,32 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
         originX: layout.drawerOriginXLocal_mm ?? 0,
         originY: layout.drawerOriginYLocal_mm ?? 0,
         customHeights: undefined,
+        drawerOverrides,
       };
     })();
 
     const drawerGroup = generateDrawerGroup(config);
     const generatedDrawers = drawerGroupToLayerItems(drawerGroup);
 
-    // Preserva estado de abertura das gavetas existentes
+    // Preserva estado e configuração UI das gavetas existentes
     for (let i = 0; i < generatedDrawers.length; i++) {
       const existing = (box.drawersLayer ?? [])[i];
       if (existing) {
-        generatedDrawers[i].isOpen = existing.isOpen ?? false;
-        generatedDrawers[i].materialId = existing.materialId ?? defaultDrawerMaterial;
-        generatedDrawers[i].material = existing.material ?? defaultDrawerMaterial;
+        generatedDrawers[i] = {
+          ...generatedDrawers[i],
+          isOpen: existing.isOpen ?? false,
+          materialId: existing.materialId ?? defaultDrawerMaterial,
+          material: existing.material ?? defaultDrawerMaterial,
+          type: existing.type ?? existing.drawerType ?? generatedDrawers[i].type,
+          drawerType: existing.drawerType ?? existing.type ?? generatedDrawers[i].drawerType,
+          slideType: existing.slideType ?? generatedDrawers[i].slideType,
+          metalBoxType: existing.metalBoxType ?? generatedDrawers[i].metalBoxType,
+          softClose: existing.softClose ?? generatedDrawers[i].softClose,
+          handleType: existing.handleType ?? generatedDrawers[i].handleType,
+          handlePosition: existing.handlePosition ?? generatedDrawers[i].handlePosition,
+          handleOffsetMm: existing.handleOffsetMm ?? generatedDrawers[i].handleOffsetMm,
+          metadata: existing.metadata ?? generatedDrawers[i].metadata,
+        };
       } else {
         generatedDrawers[i].material = defaultDrawerMaterial;
       }

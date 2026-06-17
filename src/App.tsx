@@ -23,7 +23,7 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, usePar
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
 import PainelReferencia from "./pages/PainelReferencia";
-import Ajuda from "./pages/Ajuda";
+import HelpPage from "./pages/HelpPage";
 import LandingPage from "./pages/LandingPage";
 import UserProjectsPage from "./pages/UserProjectsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -281,7 +281,7 @@ function LegacyApp() {
               ) : showDevTest && DevPimoTest ? (
                 <DevPimoTest />
               ) : showAjuda ? (
-                <Ajuda />
+                <HelpPage />
               ) : showLanding ? (
                 <LandingPage />
               ) : showUserProjects ? (

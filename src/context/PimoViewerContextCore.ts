@@ -36,6 +36,7 @@ export type PimoViewerApi = {
   setOnModelLoaded: (_callback: ((_boxId: string, _modelId: string, _object: unknown) => void) | null) => void;
   setOnBoxTransform: (_callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null) => void;
   setOnDoorLayerDoubleClick?: (_callback: ((_boxId: string, _doorLayerId: string) => void) | null) => void;
+  setOnDrawerLayerDoubleClick?: (_callback: ((_boxId: string, _drawerLayerId: string) => void) | null) => void;
   setOnBoxDoubleClick?: (_callback: ((_boxId: string) => void) | null) => void;
   setTransformMode: (_mode: "translate" | "rotate" | "scale" | null) => void;
   selectBox?: (_id: string | null) => void;
@@ -102,6 +103,20 @@ export type PimoViewerApi = {
   setDimensionsOverlayVisible?: (_visible: boolean) => void;
   getDimensionsOverlayVisible?: () => boolean;
   toggleDimensionsOverlay?: () => boolean;
+  getDimensionsOverlayData?: () => Array<{
+    text: string;
+    position: { x: number; y: number; z: number };
+    valueMm: number;
+    axis: "x" | "y" | "z";
+  }>;
+  getPrintReadyDimensions?: () => import("../3d/viewer-engine/overlays/boxDimensionsLayout").PrintReadyDimensions;
+  getSelectedObjects?: (
+    _multiBoxIds?: string[]
+  ) => Array<{ kind: "box" | "remate" | "rodape"; id: string }>;
+  align?: (
+    _type: "right" | "left" | "front" | "back" | "top" | "bottom",
+    _multiBoxIds?: string[]
+  ) => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */
   getSelectedBoxScreenPosition?: () => { x: number; y: number } | null;
   /** Projeta um ponto 3D (mundial) em pixels relativos ao container. Retorna null se atrás da câmera. */

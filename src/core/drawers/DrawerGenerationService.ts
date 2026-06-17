@@ -10,6 +10,7 @@ import {
   calculateDrawerSpecs,
   validateDrawerSpecs,
   type DrawerDimensions,
+  type DrawerParametricOverrides,
   type DrawerParametricSettings,
 } from "./DrawerParametrics";
 import { createDrawer, type Drawer } from "./Drawer";
@@ -18,6 +19,7 @@ import {
   calculateDrawerPositions,
   type DrawerGroup,
 } from "./DrawerGroup";
+import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
 
 export interface DrawerGenerationConfig {
   // Box dimensions
@@ -39,6 +41,9 @@ export interface DrawerGenerationConfig {
   
   // Material
   materialId?: string;
+
+  /** Overrides UI por gaveta (metadata drawersLayer → geometria). */
+  drawerOverrides?: Array<DrawerParametricOverrides | undefined>;
 
   /**
    * Deslocamento do “origin” do conjunto de gavetas no sistema local do box (mm).
@@ -68,6 +73,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     materialId,
     originX,
     originY,
+    drawerOverrides,
   } = config;
 
   // Dimensões internas do box
@@ -85,13 +91,15 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
   );
 
   // Calcula posições Y (empilhamento vertical)
-  const positions = calculateDrawerPositions(heights, boxHeight, 0);
+  const positions = calculateDrawerPositions(heights, boxHeight, DRAWER_VERTICAL_BASE_OFFSET_MM);
 
   // Gera cada gaveta
   const drawers: Drawer[] = [];
   for (let i = 0; i < drawerCount; i++) {
     const drawerHeight = heights[i];
     const posY = positions[i];
+    const perDrawerOverrides = drawerOverrides?.[i];
+    const effectiveDrawerType = perDrawerOverrides?.drawerType ?? drawerType;
 
     // Calcula specs da gaveta (com número total para cálculos proporcionais)
     const dims: DrawerDimensions = {
@@ -101,10 +109,10 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       boxThickness,
       drawerHeight,
       totalDrawers: drawerCount,
-      type: drawerType,
+      type: effectiveDrawerType,
     };
 
-    const specs = calculateDrawerSpecs(dims, availableDepths, drawerSettings);
+    const specs = calculateDrawerSpecs(dims, availableDepths, drawerSettings, perDrawerOverrides);
 
     // Valida specs
     if (!validateDrawerSpecs(specs)) {
@@ -122,7 +130,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
         y: (originY ?? 0) + posY,
         z: boxDepth / 2 + specs.front.thickness / 2,
       },
-      drawerType
+      effectiveDrawerType
     );
 
     if (materialId) {
@@ -168,6 +176,7 @@ export function regenerateDrawerGroup(
     availableDepths: config.availableDepths ?? [250, 300, 350, 400, 450, 500, 550, 600],
     drawerSettings: config.drawerSettings,
     materialId: config.materialId ?? existingGroup.drawers[0]?.materialId,
+    drawerOverrides: config.drawerOverrides,
   };
 
   return generateDrawerGroup(fullConfig);

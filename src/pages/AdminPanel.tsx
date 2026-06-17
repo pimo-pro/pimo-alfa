@@ -11,8 +11,10 @@ import ComponentTypesAdminPage from "../components/admin/ComponentTypesAdminPage
 import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
+import DrawerSystemUnifiedAdminPage from "../components/admin/DrawerSystemUnifiedAdminPage";
 import AdminRulesPage from "../components/admin/AdminRulesPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
+import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
@@ -35,7 +37,9 @@ type AdminTab =
   | "Painel Referência"
   | "System Settings"
   | "Regras das Gavetas"
+  | "Configurações das Gavetas (Sistema Unificado)"
   | "Configuração de Etiquetas (v5)"
+  | "Dimensões Técnicas (MC Overlay)"
   | "Projetos Salvos"
   | "icons";
 
@@ -47,6 +51,12 @@ const ADMIN_ACTIVE_TAB_STORAGE_KEY = "pimo_admin_active_tab";
 const DEFAULT_ADMIN_TAB: AdminTab = "Gestão de Materiais";
 
 const adminMenu: AdminMenuEntry[] = [
+  { type: "group", label: "Produtos" },
+  {
+    type: "item",
+    id: "Configurações das Gavetas (Sistema Unificado)",
+    label: "Configurações das Gavetas (Sistema Unificado)",
+  },
   { type: "group", label: "Configuração" },
   { type: "item", id: "Gestão de Materiais", label: "Gestão de Materiais" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
@@ -62,6 +72,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "System Settings", label: "System Settings" },
   { type: "item", id: "Regras das Gavetas", label: "Regras das Gavetas" },
   { type: "item", id: "Configuração de Etiquetas (v5)", label: "Configuração de Etiquetas (v5)", adminOnly: true },
+  { type: "item", id: "Dimensões Técnicas (MC Overlay)", label: "Dimensões Técnicas (MC Overlay)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
@@ -81,7 +92,9 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Deploy": "adminLab",
   "System Settings": "adminTools",
   "Regras das Gavetas": "adminRuler",
+  "Configurações das Gavetas (Sistema Unificado)": "adminRuler",
   "Configuração de Etiquetas (v5)": "adminTag",
+  "Dimensões Técnicas (MC Overlay)": "adminRuler",
   "Projetos Salvos": "adminSave",
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
@@ -266,6 +279,8 @@ export default function AdminPanel() {
             <SystemSettingsBase />
           ) : active === "Regras das Gavetas" ? (
             <DrawerRulesAdminPage />
+          ) : active === "Configurações das Gavetas (Sistema Unificado)" ? (
+            <DrawerSystemUnifiedAdminPage />
           ) : active === "Project Progress" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <ProjectProgress />
@@ -273,6 +288,14 @@ export default function AdminPanel() {
           ) : active === "Configuração de Etiquetas (v5)" ? (
             canSeeAdminOnlyMenus ? (
               <LabelConfigPage />
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Acesso restrito a administradores.
+              </div>
+            )
+          ) : active === "Dimensões Técnicas (MC Overlay)" ? (
+            canSeeAdminOnlyMenus ? (
+              <McDimensionsAdminPage />
             ) : (
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                 Acesso restrito a administradores.

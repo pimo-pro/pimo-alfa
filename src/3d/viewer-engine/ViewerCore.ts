@@ -199,12 +199,21 @@ import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
 import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
 import { ViewerOverlayCoordinator } from "./overlays/ViewerOverlayCoordinator";
 import {
+  applyAlignment,
+  type AlignmentType,
+  type AlignableObject,
+} from "./commands/alignmentCommands";
+import {
   computeUnifiedBoxDimensions,
   createDimensionsOverlay,
   updateDimensionsOverlay,
   disposeDimensionsOverlay,
+  getDimensionsOverlayData,
+  getPrintReadyDimensions,
   type BoxBoundsInput,
   type DimensionsOverlayHandle,
+  type DimensionOverlayDataEntry,
+  type PrintReadyDimensions,
 } from "./overlays/boxDimensionsOverlay";
 import { ViewerBoundsCache } from "./cache/ViewerBoundsCache";
 import type { MouseMenuTarget } from "../../ui/context-menu/ContextMenuEngine";
@@ -293,6 +302,7 @@ export class ViewerCore {
   private internalRulerOverlay: InternalRulerOverlay | null = null;
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
+  private onDrawerLayerDoubleClick: ((_boxId: string, _drawerLayerId: string) => void) | null = null;
   private onBoxDoubleClick: ((_boxId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
@@ -1762,6 +1772,91 @@ export class ViewerCore {
     return next;
   }
 
+  /**
+   * Objetos atualmente selecionáveis para alinhamento (primeiro = referência).
+   * `multiBoxIds` — ordem da multi-seleção de caixas (Workspace).
+   */
+  getSelectedObjects(multiBoxIds?: string[]): AlignableObject[] {
+    const result: AlignableObject[] = [];
+    const seen = new Set<string>();
+
+    const push = (obj: AlignableObject) => {
+      const key = `${obj.kind}:${obj.id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push(obj);
+    };
+
+    const remateId = this.viewerState.getSelectedRemate();
+    if (remateId) {
+      const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
+      if (mesh) push({ kind: "remate", id: remateId, mesh });
+    }
+
+    const rodapeId = this.viewerState.getSelectedRodape();
+    if (rodapeId) {
+      const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodapeId);
+      if (mesh) push({ kind: "rodape", id: rodapeId, mesh });
+    }
+
+    const boxIds =
+      multiBoxIds && multiBoxIds.length > 0
+        ? multiBoxIds
+        : this.viewerState.getSelectedBox()
+          ? [this.viewerState.getSelectedBox()!]
+          : [];
+
+    for (const id of boxIds) {
+      const entry = this.boxes.get(id);
+      if (!entry) continue;
+      push({
+        kind: "box",
+        id,
+        mesh: entry.mesh,
+        locked: entry.locked === true,
+      });
+    }
+
+    return result;
+  }
+
+  /** Alinha objetos selecionados (referência = primeiro). */
+  align(type: AlignmentType, multiBoxIds?: string[]): boolean {
+    const selected = this.getSelectedObjects(multiBoxIds);
+    const applied = applyAlignment(type, selected);
+    if (!applied) return false;
+
+    for (let i = 1; i < selected.length; i += 1) {
+      this.notifyAlignableTransform(selected[i]!);
+    }
+    this.refreshTransformControlsAttachment?.();
+    return true;
+  }
+
+  private notifyAlignableTransform(obj: AlignableObject): void {
+    if (obj.kind === "box") {
+      const entry = this.boxes.get(obj.id);
+      if (!entry) return;
+      const { x, y, z } = entry.mesh.position;
+      const r = entry.mesh.rotation;
+      this.onBoxTransform?.(obj.id, { x, y, z }, { x: r.x, y: r.y, z: r.z });
+      return;
+    }
+    if (obj.kind === "remate") {
+      const prev = this.viewerState.getSelectedRemate();
+      if (prev !== obj.id) this.viewerState.setSelectedRemate(obj.id);
+      this.notifyRemateTransform();
+      if (prev !== obj.id) this.viewerState.setSelectedRemate(prev);
+      return;
+    }
+    if (obj.kind === "rodape") {
+      const prev = this.viewerState.getSelectedRodape();
+      if (prev !== obj.id) this.viewerState.setSelectedRodape(obj.id);
+      this.notifyRodapeTransform();
+      if (prev !== obj.id) this.viewerState.setSelectedRodape(prev);
+    }
+  }
+
   private collectBoxBoundsForDimensions(): BoxBoundsInput[] {
     const inputs: BoxBoundsInput[] = [];
     this.boxes.forEach((entry, id) => {
@@ -1960,11 +2055,28 @@ export class ViewerCore {
   private updateDimensionsOverlay(): void {
     if (!this.dimensionsOverlayVisible || !this.dimensionsOverlayHandle) return;
     const dimensions = computeUnifiedBoxDimensions(this.collectBoxBoundsForDimensions());
+    const viewportH = this.container?.clientHeight ?? 720;
+    const viewportW = this.container?.clientWidth ?? 1280;
     updateDimensionsOverlay(
       this.dimensionsOverlayHandle,
       dimensions,
-      this.cameraManager.camera
+      this.cameraManager.camera,
+      viewportH,
+      viewportW,
+      (world) => this.projectWorldToScreen(world)
     );
+  }
+
+  getDimensionsOverlayData(): DimensionOverlayDataEntry[] {
+    if (!this.dimensionsOverlayHandle) return [];
+    return getDimensionsOverlayData(this.dimensionsOverlayHandle);
+  }
+
+  getPrintReadyDimensions(): PrintReadyDimensions {
+    if (!this.dimensionsOverlayHandle) {
+      return { entries: [], generatedAt: Date.now() };
+    }
+    return getPrintReadyDimensions(this.dimensionsOverlayHandle);
   }
 
   private initShowcaseComposer(): void {
@@ -4008,6 +4120,10 @@ export class ViewerCore {
     this.onDoorLayerDoubleClick = callback;
   }
 
+  setOnDrawerLayerDoubleClick(callback: ((_boxId: string, _drawerLayerId: string) => void) | null): void {
+    this.onDrawerLayerDoubleClick = callback;
+  }
+
   setOnBoxDoubleClick(callback: ((_boxId: string) => void) | null): void {
     this.onBoxDoubleClick = callback;
   }
@@ -4708,7 +4824,9 @@ export class ViewerCore {
       getWallGizmoDragging: () => this.viewerState.getWallGizmoDragging(),
       setWallGizmoDragging: (v) => { this.viewerState.setWallGizmoDragging(v); },
       getDoorHitAtPointer: (e) => this.getDoorHitAtPointer(e),
+      getDrawerHitAtPointer: (e) => this.getDrawerHitAtPointer(e),
       getOnDoorLayerDoubleClick: () => this.onDoorLayerDoubleClick,
+      getOnDrawerLayerDoubleClick: () => this.onDrawerLayerDoubleClick,
       getOnBoxDoubleClick: () => this.onBoxDoubleClick,
       getPointerActionForButton: (button) => {
         const mapping = getMouseInputMapping(this.mouseInputPreset);
@@ -6168,6 +6286,10 @@ export class ViewerCore {
     return this.raycastSystem.getDoorHitAtPointer(event);
   }
 
+  private getDrawerHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; drawerLayerId: string } | null {
+    return this.raycastSystem.getDrawerHitAtPointer(event);
+  }
+
   /**
    * Retorna o alvo do ponteiro para o menu de contexto: porta, gaveta ou null (módulo/canvas).
    * Raycast nos boxes; para o primeiro hit que tenha getDoorLayerIdByMesh ou getDrawerLayerIdByMesh, devolve boxId + type + doorLayerId/drawerLayerId.
@@ -6359,6 +6481,7 @@ export class ViewerCore {
     this.onInternalEdgeSelected = null;
     this.onInternalPointSelected = null;
     this.onDoorLayerDoubleClick = null;
+    this.onDrawerLayerDoubleClick = null;
     this.onBoxDoubleClick = null;
     this.onModelLoaded = null;
     this.eventsManager?.unregister();

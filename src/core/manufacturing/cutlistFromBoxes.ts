@@ -257,12 +257,18 @@ export function cutlistComPrecoFromBox(
     let drillHoles: PanelDrillHole[] = [];
     if (isPiBox && (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")) {
       const piSettings = getSettings().modeloPI;
+      const gavetasSettings = getSettings().gavetas;
+      const firstDrawer = drawersLayer[0];
       drillHoles = buildPiUniversalLateralDrilling({
         alturaMm: p.altura_mm,
         profundidadeMm: p.largura_mm,
         side: p.tipo === "lateral_esquerda" ? "left" : "right",
         piHideDrawerHoles: box.piHideDrawerHoles === true,
         piSettings: piSettings ?? {},
+        drawersLayerCount: drawersLayer.length,
+        slideType: firstDrawer?.slideType ?? gavetasSettings.gavetaTipoCorredica,
+        metalBoxType: firstDrawer?.metalBoxType ?? gavetasSettings.gavetaTipoCaixaMetalica,
+        softClose: firstDrawer?.softClose ?? gavetasSettings.gavetaSoftClose,
       });
     } else {
       if (isDoor) {
@@ -321,6 +327,7 @@ export function cutlistComPrecoFromBox(
         | {
             slideType?: string;
             metalBoxType?: string;
+            softClose?: boolean;
             handleType?: string;
             handlePosition?: "Centro" | "Topo" | "Inferior";
             handleOffsetMm?: number;
@@ -336,6 +343,7 @@ export function cutlistComPrecoFromBox(
           hasDrawers,
           slideType: drawerRules?.slideType,
           metalBoxType: drawerRules?.metalBoxType,
+          softClose: drawerRules?.softClose,
           handleType: drawerRules?.handleType,
           handlePosition: drawerRules?.handlePosition,
           handleOffsetMm: drawerRules?.handleOffsetMm,

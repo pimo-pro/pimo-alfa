@@ -267,6 +267,10 @@ export interface BoxModule {
   alturaGaveta: number;
   drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
   drawerType?: "normal" | "pro";
+  /** Erro bloqueante da última tentativa de configurar gavetas (FASE 4 UI). */
+  drawerConfigError?: string;
+  /** Avisos de validação de gavetas (FASE 4 UI). */
+  drawerConfigWarnings?: string[];
   /** Tipo de armário para recursos visuais e acessórios (inferior/superior). */
   cabinetType?: "lower" | "upper";
   /** Altura do pé (PE) em cm para armários inferiores. */
@@ -323,6 +327,10 @@ export interface WorkspaceBox {
   alturaGaveta: number;
   drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
   drawerType?: "normal" | "pro";
+  /** Erro bloqueante da última tentativa de configurar gavetas (FASE 4 UI). */
+  drawerConfigError?: string;
+  /** Avisos de validação de gavetas (FASE 4 UI). */
+  drawerConfigWarnings?: string[];
   posicaoX_mm: number;
   posicaoY_mm: number;
   /** Posição Z em mm (para manipulação 3D no viewer). */

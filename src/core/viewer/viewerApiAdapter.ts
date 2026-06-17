@@ -120,6 +120,15 @@ export function createViewerApiAdapter(
     toggleDimensionsOverlay: (): boolean => {
       return pimoApi.toggleDimensionsOverlay?.() ?? false;
     },
+    getDimensionsOverlayData: () => pimoApi.getDimensionsOverlayData?.() ?? [],
+    getPrintReadyDimensions: () =>
+      pimoApi.getPrintReadyDimensions?.() ?? { entries: [], generatedAt: Date.now() },
+    getSelectedObjects: (multiBoxIds?: string[]) => {
+      return pimoApi.getSelectedObjects?.(multiBoxIds) ?? [];
+    },
+    align: (type, multiBoxIds) => {
+      return pimoApi.align?.(type, multiBoxIds) ?? false;
+    },
     getSelectedBoxScreenPosition: (): { x: number; y: number } | null => {
       return pimoApi.getSelectedBoxScreenPosition?.() ?? null;
     },

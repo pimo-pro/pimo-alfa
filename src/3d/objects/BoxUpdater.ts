@@ -37,7 +37,10 @@ type BoxUpdaterDeps = {
   getFallbackPBRMaterial: () => THREE.Material;
   applyDrillHolesToPanelGeometry: (_panel: THREE.Mesh, _panelType: PanelType, _holes: TechnicalDrillHole[] | undefined) => void;
   buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
-  buildDrawerSpecs: (_items: DrawerLayerItem[]) => DrawerSpec[];
+  buildDrawerSpecs: (
+    _items: DrawerLayerItem[],
+    _options?: { showDrillingMarkers?: boolean }
+  ) => DrawerSpec[];
   getDoorSpecFingerprint: (_spec: DoorSpec, _materialName?: string) => string;
   getDrawerSpecFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
@@ -178,7 +181,9 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   });
 
   const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
-  const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems);
+  const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
+    showDrillingMarkers: opts.showDrawerDrilling === true,
+  });
   const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
   for (const c of group.children.filter((c) => c.name.startsWith("drawer-layer-"))) {
     const id = c.name.replace("drawer-layer-", "");

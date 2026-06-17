@@ -395,6 +395,13 @@ export class EventsManager {
       this.engine.getOnDoorLayerDoubleClick()?.(doorHit.boxId, doorHit.doorLayerId);
       return;
     }
+    const drawerHit = this.engine.getDrawerHitAtPointer(event);
+    if (drawerHit) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.engine.getOnDrawerLayerDoubleClick()?.(drawerHit.boxId, drawerHit.doorLayerId);
+      return;
+    }
     const boxId = this.engine.getBoxIdAtPointer(event);
     if (!boxId) return;
     event.preventDefault();

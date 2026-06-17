@@ -129,6 +129,26 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
     []
   );
 
+  const getPrintReadyDimensions = useCallback(
+    () =>
+      viewerApiRef.current?.getPrintReadyDimensions?.() ?? {
+        entries: [],
+        generatedAt: Date.now(),
+      },
+    []
+  );
+
+  const getSelectedObjects = useCallback(
+    (multiBoxIds?: string[]) => viewerApiRef.current?.getSelectedObjects?.(multiBoxIds) ?? [],
+    []
+  );
+
+  const align = useCallback(
+    (type: "right" | "left" | "front" | "back" | "top" | "bottom", multiBoxIds?: string[]) =>
+      viewerApiRef.current?.align?.(type, multiBoxIds) ?? false,
+    []
+  );
+
   const getSelectedBoxScreenPosition = useCallback(
     () => viewerApiRef.current?.getSelectedBoxScreenPosition?.() ?? null,
     []
@@ -174,6 +194,9 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
       toggleDimensionsOverlay,
+      getPrintReadyDimensions,
+      getSelectedObjects,
+      align,
       getSelectedBoxScreenPosition,
       getRightmostX,
     }),
@@ -202,6 +225,9 @@ export const useViewerSync = (_project: ProjectState): ViewerSync => {
       setDimensionsOverlayVisible,
       getDimensionsOverlayVisible,
       toggleDimensionsOverlay,
+      getPrintReadyDimensions,
+      getSelectedObjects,
+      align,
       getSelectedBoxScreenPosition,
       getRightmostX,
     ]

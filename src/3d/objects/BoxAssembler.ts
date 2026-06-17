@@ -43,7 +43,10 @@ type BoxAssemblerDeps = {
   getEdgeMaterial: () => THREE.Material;
   applyDrillHolesToPanelGeometry: (_panel: THREE.Mesh, _panelType: PanelType, _holes: TechnicalDrillHole[] | undefined) => void;
   buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
-  buildDrawerSpecs: (_items: DrawerLayerItem[]) => DrawerSpec[];
+  buildDrawerSpecs: (
+    _items: DrawerLayerItem[],
+    _options?: { showDrillingMarkers?: boolean }
+  ) => DrawerSpec[];
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
   createDrawerObject: (_spec: DrawerSpec, _material: THREE.Material) => THREE.Object3D;
   getMaterialForOfficialId: (_idOrLabel: string) => THREE.Material;
@@ -195,7 +198,9 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
   const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
   const doorSpecs = deps.buildDoorSpecs(doorLayerItems);
-  const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems);
+  const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
+    showDrillingMarkers: opts.showDrawerDrilling === true,
+  });
   const cornerCfg = getCornerCabinetConfig(opts.baseCabinetId);
   const cornerSide = cornerCfg
     ? inferCornerSideFromBox({ baseCabinetId: opts.baseCabinetId, rotacaoY: opts.rotationY })

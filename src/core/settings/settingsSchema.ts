@@ -104,6 +104,8 @@ export interface SettingsSchema {
     gavetaEspessuraTraseiraMm: number;
     gavetaEspessuraFundoMm: number;
     gavetaRecuoCorpoMm: number;
+    /** Recuo de profundidade para corrediça traseira (mm). Usado pelo domínio paramétrico quando ligado (FASE 2+). */
+    gavetaRecuoProfundidadeCorredicaMm: number;
     gavetaProfundidadesDisponiveisMm: number[];
     gavetaAlturaMinimaMm: number;
     gavetaAlturaMaximaMm: number;
@@ -285,6 +287,7 @@ export const settingsDefaults: SettingsSchema = {
     gavetaEspessuraTraseiraMm: 16,
     gavetaEspessuraFundoMm: 10,
     gavetaRecuoCorpoMm: 70,
+    gavetaRecuoProfundidadeCorredicaMm: 20,
     gavetaProfundidadesDisponiveisMm: [250, 300, 350, 400, 450, 500, 550, 600],
     gavetaAlturaMinimaMm: 80,
     gavetaAlturaMaximaMm: 350,

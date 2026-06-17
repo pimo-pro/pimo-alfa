@@ -24,6 +24,7 @@ declare global {
       updateBoxSpacing?: (spacing: number) => void;
       setOnBoxSelected?: (callback: (id: string | null) => void) => void;
       setOnDoorLayerDoubleClick?: (callback: ((boxId: string, doorLayerId: string) => void) | null) => void;
+      setOnDrawerLayerDoubleClick?: (callback: ((boxId: string, drawerLayerId: string) => void) | null) => void;
       setOnBoxDoubleClick?: (callback: ((boxId: string) => void) | null) => void;
       setOnBoxTransform?: (
         callback: ((

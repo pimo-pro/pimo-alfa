@@ -6,6 +6,7 @@
  */
 
 import type { Drawer } from "./Drawer";
+import { resolveDrawerVerticalPositions, DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
 
 export interface DrawerGroup {
   id: string;
@@ -80,19 +81,9 @@ export function calculateDrawerHeights(
 export function calculateDrawerPositions(
   heights: number[],
   boxHeight: number,
-  baseOffset: number = 10
+  baseOffset: number = DRAWER_VERTICAL_BASE_OFFSET_MM
 ): number[] {
-  const positions: number[] = [];
-  let offsetY = 0;
-
-  for (let i = 0; i < heights.length; i++) {
-    const height = heights[i];
-    const posY = -boxHeight / 2 + baseOffset + offsetY + height / 2;
-    positions.push(posY);
-    offsetY += height;
-  }
-
-  return positions;
+  return resolveDrawerVerticalPositions(heights, boxHeight, baseOffset);
 }
 
 /**
@@ -109,7 +100,7 @@ export function recalculateDrawerGroupLayout(group: DrawerGroup): DrawerGroup {
   const positions = calculateDrawerPositions(
     heights,
     group.boxDimensions.height,
-    0 // Sem base offset
+    DRAWER_VERTICAL_BASE_OFFSET_MM
   );
 
   const updatedDrawers = group.drawers.map((drawer, index) => ({

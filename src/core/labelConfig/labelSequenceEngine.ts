@@ -25,6 +25,7 @@ export type PieceProductionKind =
   | "CIMA"
   | "PRATELEIRA"
   | "FRENTE_GAVETA"
+  | "FUNDO_GAVETA"
   | "REMATE"
   | "RODAPE"
   | "LATERAL"
@@ -85,6 +86,7 @@ const ORLAR_FIRST_KINDS: ReadonlySet<PieceProductionKind> = new Set([
   "CIMA",
   "PRATELEIRA",
   "FRENTE_GAVETA",
+  "FUNDO_GAVETA",
   "REMATE",
   "RODAPE",
 ]);

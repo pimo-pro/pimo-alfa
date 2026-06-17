@@ -154,6 +154,20 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                 triggerVariant="ghost"
                 triggerTitle="Quantidade de gavetas aplicadas ao módulo."
               />
+              {selectedBox.drawerConfigError && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    padding: "6px 8px",
+                    borderRadius: 6,
+                    background: "rgba(239,68,68,0.12)",
+                    color: "#fca5a5",
+                    border: "1px solid rgba(239,68,68,0.35)",
+                  }}
+                >
+                  {selectedBox.drawerConfigError}
+                </div>
+              )}
               <UnifiedPopover
                 fullWidth
                 triggerVariant="ghost"

@@ -1,3 +1,23 @@
+import type { DrawerLayerItem } from "../../models/BoxLayers";
+import {
+  extractDrawerIndustrialBomFromLayerItems,
+  type DrawerHardwareSummary,
+  type DrawerIndustrialBom,
+} from "../../services/drawerCutlistAdapter";
+
+export type { DrawerHardwareSummary, DrawerIndustrialBom };
+
+/**
+ * Ponte FASE 2: BOM industrial a partir de drawersLayer (pipeline moderno).
+ * Preferir esta função em exports industriais; funções Drawer/DrawerGroup mantêm-se para domínio 3D.
+ */
+export function extractDrawerBomFromLayerItems(
+  layerItems: DrawerLayerItem[],
+  materialType: string = "MDF"
+): DrawerIndustrialBom {
+  return extractDrawerIndustrialBomFromLayerItems(layerItems, materialType);
+}
+
 /**
  * DrawerBomService
  * 

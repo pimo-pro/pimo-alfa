@@ -26,6 +26,18 @@ export interface DoorLayerItem {
   rotY: number;
 }
 
+export type DrawerLayerMetadata = {
+  nominalDepth?: number;
+  frontMaterial?: string;
+  slideType?: DrawerSlideType;
+  metalBoxType?: DrawerMetalBoxType;
+  softClose?: boolean;
+  handleType?: DrawerHandleType;
+  handlePosition?: DrawerHandlePosition;
+  handleOffsetMm?: number;
+  drawerType?: "normal" | "pro";
+};
+
 export interface DrawerLayerItem {
   id: string;
   parentBoxId: string;
@@ -89,4 +101,6 @@ export interface DrawerLayerItem {
   posY: number;
   posZ: number;
   rotY: number;
+  /** Configuração UI por gaveta (FASE 4) — espelha campos editáveis sem alterar geometria. */
+  metadata?: DrawerLayerMetadata;
 }

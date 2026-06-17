@@ -109,7 +109,7 @@ export function buildFerragens(
       return { ...item, quantidade: qtd };
     }
     if (item.tipo === "corrediça") {
-      return { ...item, quantidade: gavetas };
+      return { ...item, quantidade: gavetas * 2 };
     }
     if (item.tipo === "trilho") {
       const qtd = portaTipo === "porta_correr" ? 1 : 0;

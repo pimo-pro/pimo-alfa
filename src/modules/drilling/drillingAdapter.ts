@@ -62,6 +62,7 @@ export type PanelDrillingInput = {
   handleOffsetMm?: number;
   slideType?: string;
   metalBoxType?: string;
+  softClose?: boolean;
 };
 
 export type PanelDrillingOutput = {
@@ -376,6 +377,7 @@ export function buildPanelDrillingResult(
         handleOffsetMm: input.handleOffsetMm,
         slideType: input.slideType,
         metalBoxType: input.metalBoxType,
+        softClose: input.softClose,
         shelfHolesEnabled,
         hingeSide: input.hingeSide,
         hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,

@@ -4,19 +4,42 @@ import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { devLogger } from "../../utils/devLogger";
 import { PanelFactory } from "./PanelFactory";
 import { resolvePanelMaterialOptions } from "./BoxMaterialApplier";
+import {
+  computeDrawerPieceCorredicaHoles,
+  getDrawerSlideDrillingRules,
+} from "../../core/drawers/drilling/DrawerDrillingRules";
+import {
+  resolveDrawerAnimationDurationMs,
+  resolveDrawerMotionCurve,
+} from "../../core/drawers/DrawerMotionCurves";
 
-const DRAWER_ANIMATION_DURATION_MS = 1500;
 const drawerOpenState = new Map<string, boolean>();
 const drawerPositionState = new Map<string, number>();
 const drawerAnimationRaf = new Map<string, number>();
 const panelFactory = new PanelFactory({ resolvePanelMaterialOptions });
 
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
+export type BuildDrawerSpecsOptions = {
+  showDrillingMarkers?: boolean;
+};
+
+function metalBoxColor(metalBoxType?: string): number {
+  switch (metalBoxType) {
+    case "Blum Legrabox":
+      return 0xb8c2cc;
+    case "Blum Antaro":
+      return 0x9aa8b8;
+    case "Hettich AvanTech":
+      return 0xa3adb8;
+    case "Hafele Alto":
+      return 0x8f9baa;
+    default:
+      return 0x9ca3af;
+  }
 }
 
-function easeSoftClose(t: number): number {
-  return 1 - (1 - t) ** 4;
+function shouldShowGenericSlideRails(slideType?: string): boolean {
+  const hidden = new Set(["Blum Tandem", "Blum Movento", "Hettich InnoTech", "Hettich ArciTech"]);
+  return !hidden.has(slideType ?? "Genérica");
 }
 
 export type DrawerSpec = {
@@ -69,9 +92,13 @@ export type DrawerSpec = {
   slideType?: DrawerLayerItem["slideType"];
   metalBoxType?: DrawerLayerItem["metalBoxType"];
   softClose?: boolean;
+  showDrillingMarkers?: boolean;
 };
 
-export function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
+export function buildDrawerSpecs(
+  items: DrawerLayerItem[],
+  options: BuildDrawerSpecsOptions = {}
+): DrawerSpec[] {
   return items.map((item) => ({
     id: item.id,
     type: "drawer",
@@ -122,6 +149,7 @@ export function buildDrawerSpecs(items: DrawerLayerItem[]): DrawerSpec[] {
     slideType: item.slideType ?? "Genérica",
     metalBoxType: item.metalBoxType ?? "Nenhuma",
     softClose: Boolean(item.softClose),
+    showDrillingMarkers: options.showDrillingMarkers === true,
   }));
 }
 
@@ -174,6 +202,7 @@ export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string
     slideType: spec.slideType,
     metalBoxType: spec.metalBoxType,
     softClose: spec.softClose,
+    showDrillingMarkers: spec.showDrillingMarkers,
     material: materialName ?? getDefaultOfficialMaterial().canonicalId,
   });
 }
@@ -198,9 +227,11 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
     const existingRaf = drawerAnimationRaf.get(spec.id);
     if (existingRaf != null) cancelAnimationFrame(existingRaf);
     const start = performance.now();
+    const durationMs = resolveDrawerAnimationDurationMs(spec.slideType, spec.softClose);
+    const easing = resolveDrawerMotionCurve(spec.slideType, spec.softClose);
     const animate = (now: number) => {
-      const t = Math.min(1, (now - start) / DRAWER_ANIMATION_DURATION_MS);
-      const eased = spec.softClose ? easeSoftClose(t) : easeInOutCubic(t);
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = easing(t);
       drawerGroup.position.z = startPosition + (targetPullOffset - startPosition) * eased;
       drawerPositionState.set(spec.id, drawerGroup.position.z);
       if (t < 1) drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
@@ -263,7 +294,11 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
     const bodyOffsetZ = -(spec.frontThicknessM / 2 + spec.bodyDepthM / 2);
     if (spec.metalBoxType && spec.metalBoxType !== "Nenhuma") {
-      const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.75 });
+      const metalMaterial = new THREE.MeshStandardMaterial({
+        color: metalBoxColor(spec.metalBoxType),
+        roughness: 0.28,
+        metalness: 0.82,
+      });
       const metalThicknessM = 0.012;
       const sideHeightM = Math.max(0.04, spec.bodyHeightM);
       const leftMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-left-${spec.id}`, "left", { singleMaterial: metalMaterial });
@@ -329,6 +364,66 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       back.userData.drawerPart = "back";
       back.userData.drawerLayerId = spec.id;
       drawerGroup.add(back);
+    }
+
+    if (shouldShowGenericSlideRails(spec.slideType) && spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
+      const railMaterial = new THREE.MeshStandardMaterial({
+        color: 0x6b7280,
+        roughness: 0.5,
+        metalness: 0.45,
+      });
+      const railW = 0.012;
+      const railH = Math.max(0.03, spec.bodyHeightM * 0.85);
+      const railD = spec.bodyDepthM;
+      const bodyOffsetZ = -(spec.frontThicknessM / 2 + spec.bodyDepthM / 2);
+      const leftRail = panelFactory.createPanel(railW, railH, railD, `drawer-rail-left-${spec.id}`, "left", {
+        singleMaterial: railMaterial,
+      });
+      leftRail.position.set(-spec.bodyWidthM / 2 - railW / 2, 0, bodyOffsetZ);
+      leftRail.userData.drawerPart = "slide-rail";
+      drawerGroup.add(leftRail);
+      const rightRail = panelFactory.createPanel(railW, railH, railD, `drawer-rail-right-${spec.id}`, "right", {
+        singleMaterial: railMaterial,
+      });
+      rightRail.position.set(spec.bodyWidthM / 2 + railW / 2, 0, bodyOffsetZ);
+      rightRail.userData.drawerPart = "slide-rail";
+      drawerGroup.add(rightRail);
+    }
+  }
+
+  if (spec.showDrillingMarkers && spec.bodyDepthM && spec.bodyHeightM) {
+    const rules = getDrawerSlideDrillingRules(spec.slideType, spec.metalBoxType, {
+      softClose: spec.softClose === true,
+      mode: "drawer_piece",
+    });
+    const markerMaterial = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      emissive: 0x7f1d1d,
+      roughness: 0.4,
+      metalness: 0.1,
+    });
+    const pieceTypes = ["gaveta_lat_esq", "gaveta_frente", "gaveta_traseira"] as const;
+    for (const pieceType of pieceTypes) {
+      const larguraMm = pieceType === "gaveta_frente" ? spec.widthM * 1000 : (spec.bodyDepthM ?? spec.depthM) * 1000;
+      const alturaMm = pieceType === "gaveta_frente" ? spec.heightM * 1000 : (spec.bodyHeightM ?? spec.heightM) * 1000;
+      const holes = computeDrawerPieceCorredicaHoles({
+        pieceType,
+        largura: larguraMm,
+        altura: alturaMm,
+        rules,
+      });
+      for (const hole of holes) {
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.004, 8, 8), markerMaterial);
+        const x = (hole.x / 1000) - larguraMm / 2000;
+        const y = alturaMm / 2000 - hole.y / 1000;
+        const z =
+          pieceType === "gaveta_frente"
+            ? spec.frontThicknessM / 2
+            : -(spec.frontThicknessM / 2 + (spec.bodyDepthM ?? spec.depthM) / 2) + hole.x / 1000;
+        sphere.position.set(x, y, z);
+        sphere.userData.drawerPart = "drill-marker";
+        drawerGroup.add(sphere);
+      }
     }
   }
 

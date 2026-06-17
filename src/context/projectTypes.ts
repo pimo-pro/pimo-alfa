@@ -82,6 +82,8 @@ export type ViewerSettings = {
   matteMode: boolean;
   /** Panel Rendering 2.0: evidencia peças individuais já renderizadas como meshes separados. */
   panelRenderingEnabled: boolean;
+  /** Debug FASE 5: marcadores de furação nas gavetas no Viewer 3D. */
+  showDrawerDrilling: boolean;
 };
 
 /**
@@ -327,6 +329,14 @@ export type ViewerApi = {
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
   toggleDimensionsOverlay: () => boolean;
+  getPrintReadyDimensions?: () => import("../3d/viewer-engine/overlays/boxDimensionsLayout").PrintReadyDimensions;
+  getSelectedObjects: (
+    _multiBoxIds?: string[]
+  ) => Array<{ kind: "box" | "remate" | "rodape"; id: string }>;
+  align: (
+    _type: "right" | "left" | "front" | "back" | "top" | "bottom",
+    _multiBoxIds?: string[]
+  ) => boolean;
   /** Posição em pixels (relativa ao container) do topo da caixa selecionada, para overlay de texto. */
   getSelectedBoxScreenPosition: () => { x: number; y: number } | null;
   /** Maior X (borda direita) das caixas no viewer, em metros. Usado para posicionar nova caixa ao lado. */
@@ -403,6 +413,14 @@ export type ViewerSync = {
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
   toggleDimensionsOverlay: () => boolean;
+  getPrintReadyDimensions?: () => import("../3d/viewer-engine/overlays/boxDimensionsLayout").PrintReadyDimensions;
+  getSelectedObjects: (
+    _multiBoxIds?: string[]
+  ) => Array<{ kind: "box" | "remate" | "rodape"; id: string }>;
+  align: (
+    _type: "right" | "left" | "front" | "back" | "top" | "bottom",
+    _multiBoxIds?: string[]
+  ) => boolean;
   getSelectedBoxScreenPosition: () => { x: number; y: number } | null;
   getRightmostX: () => number;
 };

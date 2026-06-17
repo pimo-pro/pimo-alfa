@@ -9,6 +9,76 @@
 import type { CutListItem } from "../core/types";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 
+/** Convenção industrial unificada (FASE 2): uma corrediça por lado. */
+export const DRAWER_SLIDES_PER_DRAWER = 2;
+
+export const DRAWER_PIECE_TIPOS = [
+  "gaveta_frente",
+  "gaveta_lat_esq",
+  "gaveta_lat_dir",
+  "gaveta_fundo",
+  "gaveta_traseira",
+] as const;
+
+export type DrawerPieceTipo = (typeof DRAWER_PIECE_TIPOS)[number];
+
+export function isDrawerPieceTipo(tipo: string): tipo is DrawerPieceTipo {
+  return (DRAWER_PIECE_TIPOS as readonly string[]).includes(tipo);
+}
+
+export function boxUsesModernDrawerPipeline(box: { drawersLayer?: DrawerLayerItem[] | null }): boolean {
+  return (box.drawersLayer?.length ?? 0) > 0;
+}
+
+export type DrawerHardwareSummary = {
+  drawerId: string;
+  drawerIndex: number;
+  boxId: string;
+  slideType: string;
+  slideQuantity: number;
+  slideLengthMm?: number;
+  softClose: boolean;
+  metalBoxType?: string;
+  handleType?: string;
+};
+
+/**
+ * Ferragens por gaveta a partir de drawersLayer (BOM unificado com cutlist).
+ */
+export function extractDrawerHardwareSummaryFromLayerItems(
+  layerItems: DrawerLayerItem[]
+): DrawerHardwareSummary[] {
+  return layerItems.map((item, index) => ({
+    drawerId: item.id,
+    drawerIndex: index + 1,
+    boxId: item.parentBoxId,
+    slideType: item.slideType ?? "Genérica",
+    slideQuantity: DRAWER_SLIDES_PER_DRAWER,
+    slideLengthMm: item.bodyDepth ?? item.depth,
+    softClose: Boolean(item.softClose),
+    metalBoxType: item.metalBoxType,
+    handleType: item.handleType,
+  }));
+}
+
+export type DrawerIndustrialBom = {
+  pieces: CutListItem[];
+  hardware: DrawerHardwareSummary[];
+};
+
+/**
+ * BOM industrial unificado: peças (cutlist) + ferragens por gaveta.
+ */
+export function extractDrawerIndustrialBomFromLayerItems(
+  layerItems: DrawerLayerItem[],
+  materialType: string = "MDF"
+): DrawerIndustrialBom {
+  return {
+    pieces: extractDrawerCutlistFromLayerItems(layerItems, materialType),
+    hardware: extractDrawerHardwareSummaryFromLayerItems(layerItems),
+  };
+}
+
 /**
  * Converte uma DrawerLayerItem em múltiplas CutListItems
  * (uma para cada peça: frente, lateral esq, lateral dir, fundo, traseira)
@@ -26,7 +96,7 @@ export function drawerLayerItemToCutList(
     {
       tipo: "corredica",
       nome: item.slideType ?? "Genérica",
-      quantidade: 1,
+      quantidade: DRAWER_SLIDES_PER_DRAWER,
       softClose: Boolean(item.softClose),
       capacidadeCargaKg: item.capacityKg ?? 40,
     },

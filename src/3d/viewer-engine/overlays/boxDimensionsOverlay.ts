@@ -1,19 +1,33 @@
 /**
  * Unified Box Dimensions Overlay — medidas essenciais do conjunto de caixas.
- * Somente leitura visual (THREE.Line + sprites billboard); não altera o projeto.
+ * Linhas (THREE.LineSegments) + labels billboard (boxDimensionsText).
  */
 
 import * as THREE from "three";
 import { worldMetersToLabelMm } from "../measurement/parametricDimensions";
+import {
+  computePrintFriendlyLayout,
+  type DimensionLayoutInput,
+  type LabelLayoutItem,
+  type PrintReadyDimensions,
+  type ProjectWorldFn,
+} from "./boxDimensionsLayout";
+import {
+  createDimensionLabel,
+  disposeDimensionLabel,
+  faceCamera,
+  updateDimensionLabel,
+  type DimensionLabel,
+} from "./boxDimensionsText";
 
 const LINE_COLOR = 0x94a3b8;
+const LINE_RENDER_ORDER = 999;
 const GAP_MIN_M = 0.02;
 const FLOOR_TOLERANCE_M = 0.05;
 const UPPER_MIN_Y_M = 1.0;
 const TALL_HEIGHT_M = 1.5;
 const DEPTH_TOLERANCE_M = 0.001;
 const DIM_OFFSET_M = 0.1;
-const TICK_M = 0.025;
 
 export type BoxBoundsInput = {
   id: string;
@@ -50,20 +64,34 @@ export type UnifiedBoxDimensions = {
   gaps: DimensionGap[];
 };
 
+export type { PrintReadyDimensions, PrintReadyDimensionEntry } from "./boxDimensionsLayout";
+
+export type DimensionOverlayDataEntry = {
+  text: string;
+  position: { x: number; y: number; z: number };
+  valueMm: number;
+  axis: "x" | "y" | "z";
+};
+
 export type DimensionsOverlayHandle = {
   group: THREE.Group;
+  linesGroup: THREE.Group;
+  labelsGroup: THREE.Group;
   lineSegments: THREE.LineSegments;
-  sprites: THREE.Sprite[];
-  textures: THREE.CanvasTexture[];
+  labels: DimensionLabel[];
+  overlayData: DimensionOverlayDataEntry[];
+  printReady: PrintReadyDimensions | null;
+  layoutItems: LabelLayoutItem[];
+  lastSyncKey: string;
+  lastStructureKey: string;
 };
 
 type BoxClass = "lower" | "upper" | "vertical";
 
-type DimAnnotation = {
-  a: THREE.Vector3;
-  b: THREE.Vector3;
-  label: string;
-};
+const OFF_Y = new THREE.Vector3(0, 1, 0);
+const OFF_Y_NEG = new THREE.Vector3(0, -1, 0);
+const OFF_X_NEG = new THREE.Vector3(-1, 0, 0);
+const OFF_X_POS = new THREE.Vector3(1, 0, 0);
 
 function boundsFromBoxes(boxes: BoxBoundsInput[]): GroupBounds | null {
   if (!boxes.length) return null;
@@ -120,7 +148,277 @@ function formatMm(m: number): string {
   return `${worldMetersToLabelMm(m)} mm`;
 }
 
-/** Agrupa caixas e calcula medidas principais do conjunto. */
+function pushLayoutDim(
+  out: DimensionLayoutInput[],
+  spec: Omit<DimensionLayoutInput, "featureStart" | "featureEnd"> & {
+    fx1: number;
+    fy1: number;
+    fz1: number;
+    fx2: number;
+    fy2: number;
+    fz2: number;
+  }
+): void {
+  out.push({
+    id: spec.id,
+    featureStart: new THREE.Vector3(spec.fx1, spec.fy1, spec.fz1),
+    featureEnd: new THREE.Vector3(spec.fx2, spec.fy2, spec.fz2),
+    axis: spec.axis,
+    text: spec.text,
+    valueMm: spec.valueMm,
+    dimLineOffsetM: spec.dimLineOffsetM,
+    offsetDirection: spec.offsetDirection.clone(),
+  });
+}
+
+function buildDimensionLayoutInputs(dims: UnifiedBoxDimensions, floorY: number): DimensionLayoutInput[] {
+  const out: DimensionLayoutInput[] = [];
+  const { total, lower, upper, vertical, dominantDepthM, gaps } = dims;
+  const zFace = total.maxZ;
+  const off = DIM_OFFSET_M;
+
+  pushLayoutDim(out, {
+    id: "total-width",
+    fx1: total.minX,
+    fy1: total.maxY,
+    fz1: zFace,
+    fx2: total.maxX,
+    fy2: total.maxY,
+    fz2: zFace,
+    axis: "x",
+    text: `L total ${formatMm(total.width)}`,
+    valueMm: worldMetersToLabelMm(total.width),
+    dimLineOffsetM: off,
+    offsetDirection: OFF_Y,
+  });
+
+  pushLayoutDim(out, {
+    id: "total-height",
+    fx1: total.minX,
+    fy1: total.minY,
+    fz1: zFace,
+    fx2: total.minX,
+    fy2: total.maxY,
+    fz2: zFace,
+    axis: "y",
+    text: `A total ${formatMm(total.height)}`,
+    valueMm: worldMetersToLabelMm(total.height),
+    dimLineOffsetM: off,
+    offsetDirection: OFF_X_NEG,
+  });
+
+  if (dominantDepthM != null) {
+    const yMid = total.minY + total.height * 0.5;
+    pushLayoutDim(out, {
+      id: "total-depth",
+      fx1: total.minX,
+      fy1: yMid,
+      fz1: total.minZ,
+      fx2: total.minX,
+      fy2: yMid,
+      fz2: total.maxZ,
+      axis: "z",
+      text: `P ${formatMm(dominantDepthM)}`,
+      valueMm: worldMetersToLabelMm(dominantDepthM),
+      dimLineOffsetM: off * 1.4,
+      offsetDirection: OFF_X_NEG,
+    });
+  }
+
+  if (lower) {
+    pushLayoutDim(out, {
+      id: "lower-height",
+      fx1: lower.minX,
+      fy1: lower.minY,
+      fz1: zFace,
+      fx2: lower.minX,
+      fy2: lower.maxY,
+      fz2: zFace,
+      axis: "y",
+      text: `A inf. ${formatMm(lower.height)}`,
+      valueMm: worldMetersToLabelMm(lower.height),
+      dimLineOffsetM: off * 0.75,
+      offsetDirection: OFF_X_NEG,
+    });
+    pushLayoutDim(out, {
+      id: "lower-width",
+      fx1: lower.minX,
+      fy1: lower.minY,
+      fz1: zFace,
+      fx2: lower.maxX,
+      fy2: lower.minY,
+      fz2: zFace,
+      axis: "x",
+      text: `L inf. ${formatMm(lower.width)}`,
+      valueMm: worldMetersToLabelMm(lower.width),
+      dimLineOffsetM: off * 0.65,
+      offsetDirection: OFF_Y_NEG,
+    });
+  }
+
+  if (upper) {
+    pushLayoutDim(out, {
+      id: "upper-height",
+      fx1: upper.minX,
+      fy1: upper.minY,
+      fz1: zFace,
+      fx2: upper.minX,
+      fy2: upper.maxY,
+      fz2: zFace,
+      axis: "y",
+      text: `A sup. ${formatMm(upper.height)}`,
+      valueMm: worldMetersToLabelMm(upper.height),
+      dimLineOffsetM: off * 0.85,
+      offsetDirection: OFF_X_NEG,
+    });
+    pushLayoutDim(out, {
+      id: "upper-width",
+      fx1: upper.minX,
+      fy1: upper.maxY,
+      fz1: zFace,
+      fx2: upper.maxX,
+      fy2: upper.maxY,
+      fz2: zFace,
+      axis: "x",
+      text: `L sup. ${formatMm(upper.width)}`,
+      valueMm: worldMetersToLabelMm(upper.width),
+      dimLineOffsetM: off * 0.65,
+      offsetDirection: OFF_Y,
+    });
+    if (upper.minY > floorY + GAP_MIN_M) {
+      pushLayoutDim(out, {
+        id: "upper-floor",
+        fx1: upper.maxX,
+        fy1: floorY,
+        fz1: zFace,
+        fx2: upper.maxX,
+        fy2: upper.minY,
+        fz2: zFace,
+        axis: "y",
+        text: `Sup. ao chão ${formatMm(upper.minY - floorY)}`,
+        valueMm: worldMetersToLabelMm(upper.minY - floorY),
+        dimLineOffsetM: off * 0.65,
+        offsetDirection: OFF_X_POS,
+      });
+    }
+  }
+
+  if (vertical) {
+    pushLayoutDim(out, {
+      id: "vertical-height",
+      fx1: vertical.maxX,
+      fy1: vertical.minY,
+      fz1: zFace,
+      fx2: vertical.maxX,
+      fy2: vertical.maxY,
+      fz2: zFace,
+      axis: "y",
+      text: `A vertical ${formatMm(vertical.height)}`,
+      valueMm: worldMetersToLabelMm(vertical.height),
+      dimLineOffsetM: off * 0.85,
+      offsetDirection: OFF_X_POS,
+    });
+  }
+
+  let gapIdx = 0;
+  for (const gap of gaps) {
+    if (gap.start.y !== gap.end.y) {
+      pushLayoutDim(out, {
+        id: `gap-v-${gapIdx}`,
+        fx1: gap.start.x,
+        fy1: gap.start.y,
+        fz1: zFace,
+        fx2: gap.end.x,
+        fy2: gap.end.y,
+        fz2: zFace,
+        axis: "y",
+        text: gap.label,
+        valueMm: worldMetersToLabelMm(gap.distanceM),
+        dimLineOffsetM: off * 0.5,
+        offsetDirection: OFF_X_POS,
+      });
+    } else if (gap.start.x !== gap.end.x) {
+      const y = gap.start.y;
+      pushLayoutDim(out, {
+        id: `gap-h-${gapIdx}`,
+        fx1: gap.start.x,
+        fy1: y,
+        fz1: zFace,
+        fx2: gap.end.x,
+        fy2: y,
+        fz2: zFace,
+        axis: "x",
+        text: gap.label,
+        valueMm: worldMetersToLabelMm(gap.distanceM),
+        dimLineOffsetM: off * 0.45,
+        offsetDirection: y < total.minY + total.height * 0.5 ? OFF_Y_NEG : OFF_Y,
+      });
+    }
+    gapIdx += 1;
+  }
+
+  return out;
+}
+
+function layoutSyncKey(inputs: DimensionLayoutInput[]): string {
+  return inputs.map((i) => `${i.id}|${i.valueMm}|${i.featureStart.x.toFixed(3)}`).join(";");
+}
+
+function syncLabelsFromLayout(
+  handle: DimensionsOverlayHandle,
+  items: LabelLayoutItem[],
+  structureKey: string,
+  camera: THREE.Camera,
+  viewportHeightPx: number
+): void {
+  const structureChanged = structureKey !== handle.lastStructureKey;
+
+  if (structureChanged) {
+    while (handle.labels.length > items.length) {
+      const removed = handle.labels.pop();
+      if (removed) disposeDimensionLabel(removed);
+    }
+
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i]!;
+      const existing = handle.labels[i];
+      if (existing) {
+        updateDimensionLabel(
+          existing,
+          item.text,
+          item.anchorWorld,
+          camera,
+          viewportHeightPx,
+          item.screenOffsetPx
+        );
+      } else {
+        const label = createDimensionLabel(item.text, item.anchorWorld, item.screenOffsetPx);
+        handle.labelsGroup.add(label.sprite);
+        handle.labels.push(label);
+        faceCamera(label, camera, viewportHeightPx);
+      }
+    }
+    handle.lastStructureKey = structureKey;
+  }
+
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i]!;
+    const label = handle.labels[i];
+    if (!label) continue;
+    label.basePosition.copy(item.anchorWorld);
+    label.screenOffsetPx.copy(item.screenOffsetPx);
+    faceCamera(label, camera, viewportHeightPx);
+  }
+
+  handle.layoutItems = items;
+  handle.overlayData = items.map((item) => ({
+    text: item.text,
+    position: { x: item.anchorWorld.x, y: item.anchorWorld.y, z: item.anchorWorld.z },
+    valueMm: item.valueMm,
+    axis: item.axis,
+  }));
+}
+
 export function computeUnifiedBoxDimensions(boxes: readonly BoxBoundsInput[]): UnifiedBoxDimensions | null {
   if (!boxes.length) return null;
 
@@ -148,7 +446,7 @@ export function computeUnifiedBoxDimensions(boxes: readonly BoxBoundsInput[]): U
   const dominantDepthM = allSameDepth ? firstDepth : null;
 
   const gaps: DimensionGap[] = [];
-  const frontZ = total.maxZ + 0.02;
+  const frontZ = total.maxZ;
 
   if (lower && upper && upper.minY > lower.maxY) {
     const gapM = upper.minY - lower.maxY;
@@ -164,276 +462,134 @@ export function computeUnifiedBoxDimensions(boxes: readonly BoxBoundsInput[]): U
   }
 
   if (lower) {
-    gaps.push(...horizontalGaps(lowerBoxes, "Intervalo inferior", lower.minY - 0.04, frontZ));
+    gaps.push(...horizontalGaps(lowerBoxes, "Intervalo inferior", lower.minY, frontZ));
   }
   if (upper) {
-    gaps.push(...horizontalGaps(upperBoxes, "Intervalo superior", upper.maxY + 0.04, frontZ));
+    gaps.push(...horizontalGaps(upperBoxes, "Intervalo superior", upper.maxY, frontZ));
   }
 
-  return {
-    total,
-    lower,
-    upper,
-    vertical,
-    dominantDepthM,
-    gaps,
-  };
+  return { total, lower, upper, vertical, dominantDepthM, gaps };
 }
 
-function pushHorizontalDim(
-  out: DimAnnotation[],
-  x1: number,
-  x2: number,
-  y: number,
-  z: number,
-  label: string
-): void {
-  out.push({
-    a: new THREE.Vector3(x1, y, z),
-    b: new THREE.Vector3(x2, y, z),
-    label,
-  });
-}
-
-function pushVerticalDim(
-  out: DimAnnotation[],
-  x: number,
-  y1: number,
-  y2: number,
-  z: number,
-  label: string
-): void {
-  out.push({
-    a: new THREE.Vector3(x, y1, z),
-    b: new THREE.Vector3(x, y2, z),
-    label,
-  });
-}
-
-function buildAnnotations(dims: UnifiedBoxDimensions, floorY: number): DimAnnotation[] {
-  const out: DimAnnotation[] = [];
-  const { total, lower, upper, vertical, dominantDepthM, gaps } = dims;
-  const z = total.maxZ + 0.02;
-  const leftX = total.minX - DIM_OFFSET_M;
-
-  pushHorizontalDim(out, total.minX, total.maxX, total.maxY + DIM_OFFSET_M, z, `L total ${formatMm(total.width)}`);
-  pushVerticalDim(out, leftX, total.minY, total.maxY, z, `A total ${formatMm(total.height)}`);
-
-  if (dominantDepthM != null) {
-    pushHorizontalDim(
-      out,
-      total.minZ,
-      total.maxZ,
-      total.minY + total.height * 0.5,
-      total.minX - DIM_OFFSET_M * 1.6,
-      `P ${formatMm(dominantDepthM)}`
-    );
+function clearLabels(handle: DimensionsOverlayHandle): void {
+  for (const label of handle.labels) {
+    disposeDimensionLabel(label);
   }
+  handle.labels.length = 0;
+  handle.overlayData = [];
+  handle.layoutItems = [];
+  handle.printReady = null;
+  handle.lastSyncKey = "";
+  handle.lastStructureKey = "";
+}
 
-  if (lower) {
-    pushVerticalDim(out, lower.minX - DIM_OFFSET_M * 0.65, lower.minY, lower.maxY, z, `A inf. ${formatMm(lower.height)}`);
-    pushHorizontalDim(out, lower.minX, lower.maxX, lower.minY - DIM_OFFSET_M * 0.55, z, `L inf. ${formatMm(lower.width)}`);
-  }
+export function getDimensionsOverlayData(handle: DimensionsOverlayHandle): DimensionOverlayDataEntry[] {
+  return handle.overlayData.map((entry) => ({
+    text: entry.text,
+    position: { ...entry.position },
+    valueMm: entry.valueMm,
+    axis: entry.axis,
+  }));
+}
 
-  if (upper) {
-    pushVerticalDim(out, upper.minX - DIM_OFFSET_M * 0.85, upper.minY, upper.maxY, z, `A sup. ${formatMm(upper.height)}`);
-    pushHorizontalDim(out, upper.minX, upper.maxX, upper.maxY + DIM_OFFSET_M * 0.55, z, `L sup. ${formatMm(upper.width)}`);
-    if (upper.minY > floorY + GAP_MIN_M) {
-      pushVerticalDim(
-        out,
-        upper.maxX + DIM_OFFSET_M * 0.55,
-        floorY,
-        upper.minY,
-        z,
-        `Sup. ao chão ${formatMm(upper.minY - floorY)}`
-      );
+export function getPrintReadyDimensions(handle: DimensionsOverlayHandle): PrintReadyDimensions {
+  return (
+    handle.printReady ?? {
+      entries: [],
+      generatedAt: Date.now(),
     }
-  }
-
-  if (vertical) {
-    pushVerticalDim(
-      out,
-      vertical.maxX + DIM_OFFSET_M * 0.75,
-      vertical.minY,
-      vertical.maxY,
-      z,
-      `A vertical ${formatMm(vertical.height)}`
-    );
-  }
-
-  for (const gap of gaps) {
-    if (gap.start.y !== gap.end.y) {
-      pushVerticalDim(out, gap.start.x, gap.start.y, gap.end.y, z, gap.label);
-    } else if (gap.start.x !== gap.end.x) {
-      pushHorizontalDim(out, gap.start.x, gap.end.x, gap.start.y, z, gap.label);
-    }
-  }
-
-  return out;
+  );
 }
 
-function lineVerticesForAnnotation(ann: DimAnnotation): number[] {
-  const { a, b } = ann;
-  const verts: number[] = [];
-  const dx = Math.abs(b.x - a.x);
-  const dy = Math.abs(b.y - a.y);
-  const dz = Math.abs(b.z - a.z);
-  const horizontal = dx >= dy && dx >= dz;
-  const vertical = dy > dx && dy >= dz;
-
-  verts.push(a.x, a.y, a.z, b.x, b.y, b.z);
-
-  if (horizontal) {
-    const y = a.y;
-    verts.push(a.x, y - TICK_M, a.z, a.x, y + TICK_M, a.z);
-    verts.push(b.x, y - TICK_M, b.z, b.x, y + TICK_M, b.z);
-  } else if (vertical) {
-    const x = a.x;
-    verts.push(x - TICK_M, a.y, a.z, x + TICK_M, a.y, a.z);
-    verts.push(x - TICK_M, b.y, b.z, x + TICK_M, b.y, b.z);
-  } else {
-    const z = a.z;
-    verts.push(a.x, a.y, z - TICK_M, a.x, a.y, z + TICK_M);
-    verts.push(b.x, b.y, z - TICK_M, b.x, b.y, z + TICK_M);
-  }
-  return verts;
-}
-
-function createTextSprite(text: string): { sprite: THREE.Sprite; texture: THREE.CanvasTexture } {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    const texture = new THREE.CanvasTexture(canvas);
-    return { sprite: new THREE.Sprite(new THREE.SpriteMaterial({ map: texture })), texture };
-  }
-  const fontSize = 26;
-  const font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
-  ctx.font = font;
-  const padX = 10;
-  const padY = 6;
-  const textW = ctx.measureText(text).width;
-  canvas.width = Math.ceil(textW + padX * 2);
-  canvas.height = fontSize + padY * 2;
-  ctx.font = font;
-  ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
-  const r = 4;
-  ctx.beginPath();
-  if (typeof ctx.roundRect === "function") {
-    ctx.roundRect(0, 0, canvas.width, canvas.height, r);
-  } else {
-    ctx.rect(0, 0, canvas.width, canvas.height);
-  }
-  ctx.fill();
-  ctx.fillStyle = "#e2e8f0";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, padX, canvas.height * 0.5);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-  });
-  const sprite = new THREE.Sprite(material);
-  sprite.renderOrder = 1000;
-  sprite.userData.textWidth = canvas.width;
-  sprite.userData.textHeight = canvas.height;
-  return { sprite, texture };
-}
-
-function clearSprites(handle: DimensionsOverlayHandle): void {
-  for (const sprite of handle.sprites) {
-    handle.group.remove(sprite);
-    (sprite.material as THREE.SpriteMaterial).map?.dispose();
-    (sprite.material as THREE.Material).dispose();
-  }
-  for (const tex of handle.textures) tex.dispose();
-  handle.sprites.length = 0;
-  handle.textures.length = 0;
-}
-
-function labelPosition(ann: DimAnnotation): THREE.Vector3 {
-  const mid = new THREE.Vector3().addVectors(ann.a, ann.b).multiplyScalar(0.5);
-  const dx = Math.abs(ann.b.x - ann.a.x);
-  const dy = Math.abs(ann.b.y - ann.a.y);
-  if (dx >= dy) mid.y += 0.035;
-  else mid.x -= 0.035;
-  return mid;
-}
-
-/** Cria o grupo 3D do overlay na cena. */
 export function createDimensionsOverlay(scene: THREE.Scene): DimensionsOverlayHandle {
   const group = new THREE.Group();
   group.name = "unifiedDimensionsOverlay";
+  group.frustumCulled = false;
+
+  const linesGroup = new THREE.Group();
+  linesGroup.name = "unifiedDimensionsLines";
+  const labelsGroup = new THREE.Group();
+  labelsGroup.name = "unifiedDimensionsLabels";
+
   const mat = new THREE.LineBasicMaterial({
     color: LINE_COLOR,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.92,
     depthTest: false,
     depthWrite: false,
   });
   const geo = new THREE.BufferGeometry();
   const lineSegments = new THREE.LineSegments(geo, mat);
-  lineSegments.renderOrder = 999;
-  group.add(lineSegments);
+  lineSegments.renderOrder = LINE_RENDER_ORDER;
+  lineSegments.frustumCulled = false;
+  linesGroup.add(lineSegments);
+
+  group.add(linesGroup);
+  group.add(labelsGroup);
   scene.add(group);
-  return { group, lineSegments, sprites: [], textures: [] };
+
+  return {
+    group,
+    linesGroup,
+    labelsGroup,
+    lineSegments,
+    labels: [],
+    overlayData: [],
+    printReady: null,
+    layoutItems: [],
+    lastSyncKey: "",
+    lastStructureKey: "",
+  };
 }
 
-/** Atualiza linhas e rótulos com base nas medidas calculadas. */
 export function updateDimensionsOverlay(
   handle: DimensionsOverlayHandle,
   dimensions: UnifiedBoxDimensions | null,
-  camera: THREE.Camera
+  camera: THREE.Camera,
+  viewportHeightPx = 720,
+  viewportWidthPx = 1280,
+  project?: ProjectWorldFn
 ): void {
   if (!dimensions) {
     handle.group.visible = false;
     handle.lineSegments.visible = false;
-    clearSprites(handle);
+    clearLabels(handle);
     return;
   }
 
   handle.group.visible = true;
   handle.lineSegments.visible = true;
 
-  const floorY = dimensions.total.minY;
-  const annotations = buildAnnotations(dimensions, floorY);
-  const allVerts: number[] = [];
-  for (const ann of annotations) {
-    allVerts.push(...lineVerticesForAnnotation(ann));
-  }
+  const layoutInputs = buildDimensionLayoutInputs(dimensions, dimensions.total.minY);
+  const projectFn: ProjectWorldFn =
+    project ??
+    ((world) => {
+      const p = world.clone().project(camera);
+      if (p.z > 1) return null;
+      const x = (p.x + 1) * 0.5 * viewportWidthPx;
+      const y = (1 - p.y) * 0.5 * viewportHeightPx;
+      return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+    });
 
-  const posAttr = new THREE.BufferAttribute(new Float32Array(allVerts), 3);
+  const layout = computePrintFriendlyLayout(
+    layoutInputs,
+    camera,
+    viewportWidthPx,
+    viewportHeightPx,
+    projectFn
+  );
+
+  const posAttr = new THREE.BufferAttribute(new Float32Array(layout.lineVertices), 3);
   handle.lineSegments.geometry.dispose();
   handle.lineSegments.geometry = new THREE.BufferGeometry();
   handle.lineSegments.geometry.setAttribute("position", posAttr);
 
-  clearSprites(handle);
-  for (const ann of annotations) {
-    const { sprite, texture } = createTextSprite(ann.label);
-    const pos = labelPosition(ann);
-    sprite.position.copy(pos);
-    handle.group.add(sprite);
-    handle.sprites.push(sprite);
-    handle.textures.push(texture);
-  }
-
-  const camPos = new THREE.Vector3();
-  camera.getWorldPosition(camPos);
-  for (const sprite of handle.sprites) {
-    const dist = camPos.distanceTo(sprite.position);
-    const aspect = (sprite.userData.textWidth as number) / (sprite.userData.textHeight as number);
-    const h = dist * 0.00011;
-    sprite.scale.set(h * aspect, h, 1);
-    sprite.quaternion.copy(camera.quaternion);
-  }
+  handle.printReady = layout.printReady;
+  syncLabelsFromLayout(handle, layout.items, layoutSyncKey(layoutInputs), camera, viewportHeightPx);
 }
 
-/** Remove o overlay da cena e liberta recursos GPU. */
 export function disposeDimensionsOverlay(handle: DimensionsOverlayHandle, scene: THREE.Scene): void {
-  clearSprites(handle);
+  clearLabels(handle);
   handle.lineSegments.geometry.dispose();
   (handle.lineSegments.material as THREE.Material).dispose();
   scene.remove(handle.group);

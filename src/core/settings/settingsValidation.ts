@@ -168,6 +168,14 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         0,
         200
       ),
+      gavetaRecuoProfundidadeCorredicaMm: clamp(
+        toNumber(
+          merged.gavetas.gavetaRecuoProfundidadeCorredicaMm,
+          settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm
+        ),
+        0,
+        80
+      ),
       gavetaProfundidadesDisponiveisMm: normalizeDepths(
         merged.gavetas.gavetaProfundidadesDisponiveisMm,
         settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../ui/Button";
 import type { GenerationStep } from "../../core/fabrication/multiProjectFabrication";
+import type { McDimensionsViewerSource } from "../../core/industrial/mcDimensions/mcDimensionsCapture";
 
 type LogEntry = {
   ts: string;
@@ -13,6 +14,7 @@ type Props = {
   projectIds: string[];
   onClose: () => void;
   onDownload: (_blob: Blob, _filename: string) => void;
+  mcDimensionsViewer?: McDimensionsViewerSource;
 };
 
 function formatElapsed(ms: number): string {
@@ -22,7 +24,7 @@ function formatElapsed(ms: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function MultiProjectGenerationModal({ projectIds, onClose, onDownload }: Props) {
+export function MultiProjectGenerationModal({ projectIds, onClose, onDownload, mcDimensionsViewer }: Props) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [progress, setProgress] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -100,6 +102,7 @@ export function MultiProjectGenerationModal({ projectIds, onClose, onDownload }:
           {
             nesting: boost ? "none" : "auto",
             signal,
+            mcDimensionsViewer,
             onProgress: (step: GenerationStep) => {
               setProgress(Math.round((step.step / step.total) * 100));
               setLogs((prev) => [
@@ -135,7 +138,7 @@ export function MultiProjectGenerationModal({ projectIds, onClose, onDownload }:
         setIsRunning(false);
       }
     },
-    [projectIds, appendLog, onDownload]
+    [projectIds, appendLog, onDownload, mcDimensionsViewer]
   );
 
   const handleCancel = useCallback(() => {

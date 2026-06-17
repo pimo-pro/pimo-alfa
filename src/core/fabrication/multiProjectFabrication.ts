@@ -30,6 +30,11 @@ import { runCutLayoutInWorker, buildCncFromCutlistItemsInWorker } from "./indust
 import { buildIndustrialManifest } from "./industrialManifest";
 import { sanitizeZipPath } from "../../utils/sanitization";
 import { devLogger } from "../../utils/devLogger";
+import type { PrintReadyDimensions } from "../../3d/viewer-engine/overlays/boxDimensionsLayout";
+import type { McDimensionsViewerSource } from "../industrial/mcDimensions/mcDimensionsCapture";
+import { captureMcDimensionsFromViewer } from "../industrial/mcDimensions/mcDimensionsCapture";
+import { exportMCDimensionsForZip } from "../industrial/mcDimensions/mcDimensionsGenerator";
+import { loadMcDimensionsConfig } from "../../config/mcDimensionsConfig";
 import { beginIndustrialFileGeneration, endIndustrialFileGeneration } from "./industrialGenerationSuspend";
 import { measureTime } from "../../utils/measureTime";
 
@@ -53,6 +58,8 @@ export type MultiProjectFabricationOptions = {
   nesting?: "auto" | "none";
   signal?: AbortSignal;
   onProgress?: (_step: GenerationStep) => void;
+  /** Fonte opcional de medidas MC (viewer). Se omitido, MC não é gerado. */
+  mcDimensionsViewer?: McDimensionsViewerSource;
 };
 
 function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
@@ -723,6 +730,21 @@ export async function generateMultiProjectFabrication(
   if (tcnManifestFiles.length > 0) {
     const manifest = await buildIndustrialManifest(tcnManifestFiles);
     zip.file("manifest-industrial.json", JSON.stringify(manifest, null, 2));
+  }
+
+  // MC Dimensions — pipeline independente (após industrial, antes do ZIP final)
+  if (loadMcDimensionsConfig().enabled && options?.mcDimensionsViewer) {
+    try {
+      const dimensionsData: PrintReadyDimensions = await captureMcDimensionsFromViewer(
+        options.mcDimensionsViewer
+      );
+      const mcFiles = await exportMCDimensionsForZip(dimensionsData);
+      for (const f of mcFiles) {
+        zip.file(f.path, f.blob);
+      }
+    } catch (err) {
+      devLogger.error("multiProjectFabrication: MC Dimensions", err);
+    }
   }
 
   const zipBlob = await zip.generateAsync({ type: "blob" });

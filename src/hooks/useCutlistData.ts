@@ -1,16 +1,26 @@
 /**
  * Dados agregados da cutlist e ferragens (project.boxes).
  * Usado por CutlistPanel e pelos painéis focados (Portas, Ferragens, Totais, etc.).
+ *
+ * FASE 2: quando `drawersLayer` existe, painéis de gaveta vêm de `cutlistComPrecoFromBox`
+ * (pipeline moderno, alinhado com CNC). Caso contrário, fallback legado (`gerarModeloIndustrial`).
  */
 
 import { useMemo } from "react";
 import { useProject } from "../context/useProject";
 import { gerarModeloIndustrial } from "../core/manufacturing/boxManufacturing";
+import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../core/industriais/ferragensIndustriais";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
 import type { Ferragem } from "../core/ferragens/ferragens";
+import type { BoxModule, CutListItemComPreco } from "../core/types";
 import { computeBoxProfundidadeLeituraMm } from "../utils/boxProfundidadeLeituraUi";
+import {
+  DRAWER_SLIDES_PER_DRAWER,
+  boxUsesModernDrawerPipeline,
+  isDrawerPieceTipo,
+} from "../services/drawerCutlistAdapter";
 
 export type PainelRow = {
   key: string;
@@ -79,6 +89,67 @@ export type RemateRow = {
   custo: number;
 };
 
+function cutlistItemToPainelRow(
+  item: CutListItemComPreco,
+  boxNome: string,
+  boxProfundidadeExternaMm: number,
+  boxProfundidadeInternaUtilMm: number
+): PainelRow {
+  return {
+    key: `${item.boxId ?? "box"}-${item.id}`,
+    boxNome,
+    tipo: item.tipo,
+    largura_mm: item.dimensoes.largura,
+    altura_mm: item.dimensoes.altura,
+    espessura_mm: item.espessura,
+    orientacaoFibra: item.grainDirection ?? "none",
+    quantidade: item.quantidade,
+    custo: item.precoTotal,
+    boxProfundidadeExternaMm,
+    boxProfundidadeInternaUtilMm,
+  };
+}
+
+function buildGavetaRowsFromModernCutlist(
+  box: BoxModule,
+  boxNome: string,
+  modernCutlist: CutListItemComPreco[]
+): GavetaRow[] {
+  const drawerPieceIds = modernCutlist.filter((item) => isDrawerPieceTipo(item.tipo));
+  const drawerIndices = new Set<number>();
+  for (const item of drawerPieceIds) {
+    const match = item.id.match(/-drawer-(\d+)-/);
+    if (match) drawerIndices.add(Number(match[1]));
+  }
+
+  const rows: GavetaRow[] = [];
+  for (const drawerIndex of [...drawerIndices].sort((a, b) => a - b)) {
+    const prefix = `${box.id}-drawer-${drawerIndex}`;
+    const drawerPieces = drawerPieceIds.filter((item) => item.id.startsWith(prefix));
+    const front = drawerPieces.find((item) => item.tipo === "gaveta_frente");
+    if (!front) continue;
+
+    rows.push({
+      key: `${box.id}-gaveta-${drawerIndex}`,
+      boxNome,
+      largura_mm: front.dimensoes.largura,
+      altura_mm: front.dimensoes.altura,
+      profundidade_mm: front.dimensoes.profundidade,
+      espessura_mm: front.espessura,
+      corrediças: DRAWER_SLIDES_PER_DRAWER,
+      custo: drawerPieces.reduce((sum, piece) => sum + piece.precoTotal, 0),
+    });
+  }
+  return rows;
+}
+
+function sumCutlistAreaMm2(items: CutListItemComPreco[]): number {
+  return items.reduce(
+    (total, item) => total + item.dimensoes.largura * item.dimensoes.altura * item.quantidade,
+    0
+  );
+}
+
 export function useCutlistData() {
   const { project } = useProject();
   const { componentTypes } = useComponentTypes();
@@ -144,28 +215,52 @@ export function useCutlistData() {
       );
       const modelo = gerarModeloIndustrial(box, project.rules);
       const boxNome = box.nome || box.id;
-      totalAreaMm2 += modelo.cutlist.areaTotal_mm2;
-      modelo.paineis.forEach((p) => {
-        totalPaineisQty += p.quantidade;
-        custoTotalPaineis += p.custo;
-        allPaineis.push({
-          ...p,
-          key: `${box.id}-${p.id}`,
-          boxNome,
-          boxProfundidadeExternaMm: profundidadeExternaMm,
-          boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
+      const useModernDrawers = boxUsesModernDrawerPipeline(box);
+
+      if (useModernDrawers) {
+        const modernCutlist = cutlistComPrecoFromBox(box, project.rules, project.materialId);
+        totalAreaMm2 += sumCutlistAreaMm2(modernCutlist);
+
+        for (const item of modernCutlist) {
+          totalPaineisQty += item.quantidade;
+          custoTotalPaineis += item.precoTotal;
+          allPaineis.push(
+            cutlistItemToPainelRow(item, boxNome, profundidadeExternaMm, profundidadeInternaUtilMm)
+          );
+        }
+
+        const gavetaRows = buildGavetaRowsFromModernCutlist(box, boxNome, modernCutlist);
+        for (const gaveta of gavetaRows) {
+          totalGavetasQty += 1;
+          custoTotalGavetas += gaveta.custo;
+          allGavetas.push(gaveta);
+        }
+      } else {
+        totalAreaMm2 += modelo.cutlist.areaTotal_mm2;
+        modelo.paineis.forEach((p) => {
+          totalPaineisQty += p.quantidade;
+          custoTotalPaineis += p.custo;
+          allPaineis.push({
+            ...p,
+            key: `${box.id}-${p.id}`,
+            boxNome,
+            boxProfundidadeExternaMm: profundidadeExternaMm,
+            boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
+          });
         });
-      });
+        modelo.gavetas.forEach((p) => {
+          totalGavetasQty += 1;
+          custoTotalGavetas += p.custo;
+          allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
+        });
+      }
+
       modelo.portas.forEach((p) => {
         totalPortasQty += 1;
         custoTotalPortas += p.custo;
         allPortas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
       });
-      modelo.gavetas.forEach((p) => {
-        totalGavetasQty += 1;
-        custoTotalGavetas += p.custo;
-        allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
-      });
+
       modelo.ferragens.forEach((f) => {
         const precoUnitario = resolveFerragemPrecoUnitario(f.tipo);
         const custo = precoUnitario != null ? precoUnitario * f.quantidade : f.custo;
@@ -208,7 +303,7 @@ export function useCutlistData() {
       });
     });
 
-    const totalPecas = totalPaineisQty + totalPortasQty + totalGavetasQty;
+    const totalPecas = totalPaineisQty + totalPortasQty;
     const totalOrlaMetros = allOrlaFerragens.reduce((s, l) => s + l.metros, 0);
     const custoTotalOrla = allOrlaFerragens.reduce((s, l) => s + l.custo, 0);
     const custoTotalRemates = allRemates.reduce((s, l) => s + l.custo, 0);
@@ -242,7 +337,7 @@ export function useCutlistData() {
       custoTotalRemates,
       custoTotal,
     };
-  }, [boxes, project.rules, project.ferragemOrla, project.remates, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente, resolveFerragemPrecoUnitario]);
+  }, [boxes, project.rules, project.materialId, project.ferragemOrla, project.remates, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente, resolveFerragemPrecoUnitario]);
 
   return aggregated;
 }

@@ -29,6 +29,7 @@ export type MouseMenuCategoryId =
   | "cutlist"
   | "ferramentas"
   | "smartAlignSnap"
+  | "alignment"
   | "intelligentDesigner"
   | "designerStyles";
 
@@ -80,6 +81,12 @@ export type MouseMenuActionId =
   | "smartLayout.autoStackShelves"
   | "smartLayout.applyPredictive"
   | "smartLayout.rejectPredictive"
+  | "alignment.right"
+  | "alignment.left"
+  | "alignment.front"
+  | "alignment.back"
+  | "alignment.top"
+  | "alignment.bottom"
   | "intelligentDesigner.generateABC"
   | "intelligentDesigner.generateVariations"
   | "intelligentDesigner.applyA"
@@ -115,6 +122,7 @@ export type MouseMenuEngineInput = {
   hasRemates: boolean;
   hasSmartAlignTarget: boolean;
   multiSelectionCount: number;
+  canAlign: boolean;
 };
 
 function isGeneralTarget(target: MouseMenuTarget | null): boolean {
@@ -188,6 +196,21 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
       id: "materiais",
       label: "Materiais",
       actions: [{ id: "materiais.mousePreset", label: "Modo do mouse" }],
+    });
+  }
+
+  if (input.canAlign) {
+    categories.push({
+      id: "alignment",
+      label: "Alinhamento",
+      actions: [
+        { id: "alignment.right", label: "Alinhar à Direita" },
+        { id: "alignment.left", label: "Alinhar à Esquerda" },
+        { id: "alignment.front", label: "Alinhar à Frente" },
+        { id: "alignment.back", label: "Alinhar Atrás" },
+        { id: "alignment.top", label: "Alinhar Acima" },
+        { id: "alignment.bottom", label: "Alinhar Abaixo" },
+      ],
     });
   }
 
