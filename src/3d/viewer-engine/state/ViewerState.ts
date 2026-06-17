@@ -29,6 +29,7 @@ export class ViewerState {
   private wallEditMode = false;
   private internalSelection: InternalSelectionState | null = null;
   private internalSelectionEnabled = false;
+  private transformGizmoAnchor: { x: number; y: number; z: number } | null = null;
 
   getSelectedBox(): string | null {
     return this.selectedBoxId;
@@ -165,6 +166,14 @@ export class ViewerState {
     this.internalSelectionEnabled = v;
   }
 
+  getTransformGizmoAnchor(): { x: number; y: number; z: number } | null {
+    return this.transformGizmoAnchor;
+  }
+
+  setTransformGizmoAnchor(point: { x: number; y: number; z: number } | null): void {
+    this.transformGizmoAnchor = point;
+  }
+
   limparHover(): void {
     this.hoveredBoxId = null;
     this.hoveredRemateId = null;
@@ -179,5 +188,6 @@ export class ViewerState {
     this.selectedHematiId = null;
     this.selectedRodapeId = null;
     this.internalSelection = null;
+    this.transformGizmoAnchor = null;
   }
 }

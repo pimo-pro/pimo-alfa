@@ -24,7 +24,7 @@ describe("Sistema europeu de gavetas", () => {
       drawerSettings
     );
 
-    expect(specs.front.width).toBe(560);
+    expect(specs.front.width).toBe(598);
     expect(specs.front.height).toBe(198);
     expect(specs.front.thickness).toBe(19);
     expect(specs.body.width).toBe(548);
@@ -115,7 +115,7 @@ describe("Sistema europeu de gavetas", () => {
     const result = buildPanelDrillingResult(
       {
         tipo: "gaveta_frente",
-        larguraMm: 560,
+        larguraMm: 598,
         alturaMm: 198,
         espessuraMm: 19,
       },
@@ -125,7 +125,7 @@ describe("Sistema europeu de gavetas", () => {
     expect(result.success).toBe(true);
     const holes = result.data?.drillHoles.filter((hole) => hole.holeType === "corredica") ?? [];
     expect(holes).toHaveLength(2);
-    expect(holes.map((hole) => hole.x)).toEqual([37, 523]);
+    expect(holes.map((hole) => hole.x)).toEqual([37, 561]);
     expect(holes.every((hole) => hole.y === 161)).toBe(true);
     expect(holes.every((hole) => hole.face === "B")).toBe(true);
   });

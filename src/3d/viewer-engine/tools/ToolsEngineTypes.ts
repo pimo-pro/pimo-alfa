@@ -4,6 +4,7 @@
 
 import type * as THREE from "three";
 import type { TransformMode } from "../state";
+import type { TransformGizmoPivot } from "./TransformGizmoPivot";
 
 export interface IViewerToolsEngine {
   getTransformControls(): {
@@ -41,4 +42,6 @@ export interface IViewerToolsEngine {
   setOutlineTarget(_mesh: THREE.Object3D | null, _opacity: number, _colorHex: number): void;
   /** Chamado pelo ViewerTools após arraste (translate/rotate). Mantido no Core por dependências (collision, snap, room). */
   clampTransform(): void;
+  getTransformGizmoAnchor(): { x: number; y: number; z: number } | null;
+  getTransformGizmoPivot(): TransformGizmoPivot;
 }

@@ -506,23 +506,25 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           true
         );
       },
-      setDrawerLayerItemOpen: (id, isOpen) => {
+      setDrawerLayerItemOpen: (id, isOpen, options) => {
         updateProject(
           (prev) => {
-            const selected = getSelectedOrFirstWorkspaceBox(prev);
-            if (!selected) return prev;
+            const ownerBox = prev.workspaceBoxes.find((box) =>
+              (box.drawersLayer ?? []).some((item) => item.id === id)
+            );
+            if (!ownerBox) return prev;
 
-            const drawer = (selected.drawersLayer ?? []).find((item) => item.id === id);
+            const drawer = (ownerBox.drawersLayer ?? []).find((item) => item.id === id);
             if (!drawer) return prev;
 
-            if (isOpen) {
-              const drawerIndex = (selected.drawersLayer ?? []).findIndex((item) => item.id === id);
-              const collision = canOpenDrawer(drawer, selected, { drawerIndex });
+            if (isOpen && !options?.ignoreCollision) {
+              const drawerIndex = (ownerBox.drawersLayer ?? []).findIndex((item) => item.id === id);
+              const collision = canOpenDrawer(drawer, ownerBox, { drawerIndex });
               if (!collision.canOpen) {
                 return {
                   ...prev,
                   workspaceBoxes: prev.workspaceBoxes.map((box) =>
-                    box.id === selected.id
+                    box.id === ownerBox.id
                       ? { ...box, drawerConfigError: collision.reason }
                       : box
                   ),
@@ -531,7 +533,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
             }
 
             const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-              box.id === selected.id
+              box.id === ownerBox.id
                 ? {
                     ...box,
                     drawerConfigError: undefined,
@@ -553,6 +555,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
             return {
               ...prev,
               workspaceBoxes,
+              selectedWorkspaceBoxId: ownerBox.id,
             };
           },
           true

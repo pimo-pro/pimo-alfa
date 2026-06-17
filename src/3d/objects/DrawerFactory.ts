@@ -210,6 +210,7 @@ export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string
 export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
+  group.userData.drawerLayerId = spec.id;
   group.position.set(spec.x, spec.y, spec.z);
   if (spec.rotY !== 0) group.rotation.y = spec.rotY;
 

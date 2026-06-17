@@ -104,6 +104,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     // Calcula specs da gaveta (com número total para cálculos proporcionais)
     const dims: DrawerDimensions = {
       boxInternalWidth,
+      boxExternalWidth: boxWidth,
       boxInternalHeight,
       boxInternalDepth,
       boxThickness,

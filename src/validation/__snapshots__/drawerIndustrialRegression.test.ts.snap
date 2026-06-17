@@ -9,7 +9,7 @@ exports[`Certificação — regressão industrial (snapshots) > furação europe
   },
   {
     "face": "B",
-    "x": 523,
+    "x": 561,
     "y": 561,
   },
 ]
@@ -30,7 +30,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -49,7 +49,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -68,7 +68,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -87,7 +87,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -106,7 +106,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -125,7 +125,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -144,7 +144,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -163,7 +163,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -182,7 +182,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;
 
@@ -201,6 +201,6 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "pullDistanceMm": 530,
   "slideType": "Genérica",
   "softClose": true,
-  "width": 560,
+  "width": 598,
 }
 `;

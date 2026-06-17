@@ -21,6 +21,8 @@ import { devLogger } from "../../utils/devLogger";
 export interface DrawerDimensions {
   // Box de referência (dimensões internas)
   boxInternalWidth: number;
+  /** Largura externa do módulo (overlay da frente, alinhada à porta). */
+  boxExternalWidth: number;
   boxInternalHeight: number;
   boxInternalDepth: number;
   boxThickness: number;
@@ -230,6 +232,7 @@ export function calculateDrawerSpecs(
 ): DrawerCalculatedSpecs {
   const {
     boxInternalWidth,
+    boxExternalWidth,
     boxInternalDepth,
     drawerHeight,
     type,
@@ -262,9 +265,13 @@ export function calculateDrawerSpecs(
   const warnings: string[] = [];
 
   // ===== FRENTE =====
-  // Frente overlay externa, com folga perimetral configuravel.
-  const frontWidth = clampMm(boxInternalWidth - (2 * frontGap));
-  const frontHeight = clampMm(drawerHeight - (2 * frontGap));
+  // Frente overlay externa: largura do módulo com folga industrial (como porta), 1 mm por lado.
+  const externalWidth =
+    Number.isFinite(boxExternalWidth) && boxExternalWidth > 0
+      ? boxExternalWidth
+      : boxInternalWidth + 2 * dimensions.boxThickness;
+  const frontWidth = clampMm(externalWidth - 2 * frontGap);
+  const frontHeight = clampMm(drawerHeight - 2);
 
   // ===== CORPO =====
   // Padrao europeu: corpo com folga lateral, profundidade nominal e altura 70 mm abaixo da frente.

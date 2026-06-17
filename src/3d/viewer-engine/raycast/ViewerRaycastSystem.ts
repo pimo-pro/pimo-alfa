@@ -169,6 +169,52 @@ export class ViewerRaycastSystem {
     return this.pickIdFromFinishRoot(event, this.deps.getRemateRoot?.(), "remateId", "isRemateMergeVisual");
   }
 
+  /** Ponto 3D do primeiro hit em superfícies seleccionáveis (prioridade: hemati → rodapé → remate → módulo). */
+  getPointerWorldHit(event: { clientX: number; clientY: number }): THREE.Vector3 | null {
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    this.deps.raycaster.layers.set(0);
+
+    const finishRoots = [
+      this.deps.getHematiRoot?.(),
+      this.deps.getRodapeRoot?.(),
+      this.deps.getRemateRoot?.(),
+    ].filter((root): root is THREE.Object3D => root != null);
+
+    if (finishRoots.length > 0) {
+      const finishHits = this.deps.raycaster.intersectObjects(finishRoots, true);
+      for (const hit of finishHits) {
+        if (hit.object.userData?.isHematiMergeVisual === true) continue;
+        if (hit.object.userData?.isRodapeMergeVisual === true) continue;
+        if (hit.object.userData?.isRemateMergeVisual === true) continue;
+        const id =
+          hit.object.userData?.hematiId ??
+          hit.object.userData?.rodapeId ??
+          hit.object.userData?.remateId;
+        if (typeof id === "string" && id.length > 0) {
+          return hit.point.clone();
+        }
+      }
+    }
+
+    const boxRoots: THREE.Object3D[] = [];
+    this.deps.getBoxes().forEach((entry) => boxRoots.push(entry.mesh));
+    if (!boxRoots.length) return null;
+
+    const boxHits = this.deps.raycaster.intersectObjects(boxRoots, true);
+    for (const hit of boxHits) {
+      const boxId = this.getBoxIdByMesh(hit.object);
+      if (!boxId) continue;
+      return hit.point.clone();
+    }
+    return null;
+  }
+
   getBoxIdAtPointer(event: { clientX: number; clientY: number }) {
     const canvas = this.deps.getCanvas();
     const rect = canvas.getBoundingClientRect();

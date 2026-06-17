@@ -96,4 +96,6 @@ export interface IViewerEventEngine {
   getInternalSelectionEnabled(): boolean;
   getInternalSelectionHit(_event: { clientX: number; clientY: number }): InternalSelectionState | null;
   setInternalSelection(_selection: InternalSelectionState | null): void;
+  getPointerWorldHit(_event: { clientX: number; clientY: number }): { x: number; y: number; z: number } | null;
+  setTransformGizmoAnchor(_point: { x: number; y: number; z: number } | null): void;
 }

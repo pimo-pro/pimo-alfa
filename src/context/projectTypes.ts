@@ -532,7 +532,11 @@ export interface ProjectActions {
   updateDoorLayerItem: (_id: string, _partial: Partial<DoorLayerItem>) => void;
   updateDrawerLayerItem: (_id: string, _partial: Partial<DrawerLayerItem>) => void;
   setDoorLayerItemOpen: (_id: string, _isOpen: boolean) => void;
-  setDrawerLayerItemOpen: (_id: string, _isOpen: boolean) => void;
+  setDrawerLayerItemOpen: (
+    _id: string,
+    _isOpen: boolean,
+    _options?: { ignoreCollision?: boolean }
+  ) => void;
   setDoorLayerItemMaterial: (_id: string, _materialId: string) => void;
   setDrawerLayerItemMaterial: (_id: string, _materialId: string) => void;
   setDoorLayerItemDirection: (_id: string, _direction: Exclude<LayerOpenDirection, "pull">) => void;

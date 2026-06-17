@@ -287,14 +287,24 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnBoxDoubleClick?.((boxId) => {
+      const box = project.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
+      if (!box) return;
+
+      const drawers = box.drawersLayer ?? [];
       actions.selectBox(boxId);
       setSelectedObject({ type: "box", id: boxId });
       setSelectedTool(LEFT_TOOLBAR_IDS.HOME);
+
+      if (drawers.length > 0) {
+        drawers.forEach((drawer) => {
+          actions.setDrawerLayerItemOpen(drawer.id, true, { ignoreCollision: true });
+        });
+      }
     });
     return () => {
       viewerApi.setOnBoxDoubleClick?.(null);
     };
-  }, [actions, viewerApi, setSelectedObject, setSelectedTool]);
+  }, [actions, project.workspaceBoxes, viewerApi, setSelectedObject, setSelectedTool]);
 
   /** GLB/CAD: ViewerCore chama após `addModelToBox` concluir o load (ver ViewerCore.addModelToBox). */
   useEffect(() => {
@@ -898,16 +908,85 @@ const hasShownViewerReadyToastRef = useRef(false);
       }
 
       const current = projectRef.current;
+      const nextPatch = { position: nextPosition, placementMode: "FREE" as const };
       projectRef.current = {
         ...current,
         remates: (current.remates ?? []).map((r) =>
-          r.id === remateId
-            ? { ...r, position: nextPosition, placementMode: "FREE" as const }
-            : r
+          r.id === remateId ? { ...r, ...nextPatch } : r
         ),
       };
+      actionsRef.current.updateRemate(remateId, nextPatch);
       window.viewerCore?.syncRemateVisuals?.();
       window.viewerCore?.resolveFinishCollisionAfterSync?.({ remateId });
+    };
+
+    const performRodapeMoveStep = (
+      rodapeId: string,
+      key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+      stepMm: number
+    ) => {
+      const rodape = projectRef.current.rodapes?.find((r) => r.id === rodapeId);
+      if (!rodape) return;
+
+      const stepM = stepMm / 1000;
+      let localU = 0;
+      let localV = 0;
+      if (key === "ArrowUp") localV = stepM;
+      else if (key === "ArrowDown") localV = -stepM;
+      else if (key === "ArrowLeft") localU = -stepM;
+      else localU = stepM;
+
+      const transform = rodape.transform ?? {
+        xMm: 0,
+        yMm: 0,
+        zMm: 0,
+        rotacaoXRad: 0,
+        rotacaoYRad: 0,
+        rotacaoZRad: 0,
+      };
+      const yaw = transform.rotacaoYRad ?? 0;
+      const cos = Math.cos(yaw);
+      const sin = Math.sin(yaw);
+      const delta = new Vector3(
+        localU * cos - localV * sin,
+        localV,
+        localU * sin + localV * cos
+      );
+
+      let nextTransform = { ...transform };
+
+      if (rodape.parentBoxId) {
+        const worldMatrix = window.viewerCore?.getBoxWorldMatrix?.(rodape.parentBoxId) as Matrix4 | undefined;
+        if (worldMatrix) {
+          const inv = new Matrix4().copy(worldMatrix).invert();
+          const deltaLocal = delta.clone().applyMatrix4(inv);
+          nextTransform = {
+            ...transform,
+            xMm: transform.xMm + deltaLocal.x * 1000,
+            yMm: transform.yMm + deltaLocal.y * 1000,
+            zMm: transform.zMm + deltaLocal.z * 1000,
+          };
+        }
+      } else {
+        nextTransform = {
+          ...transform,
+          xMm: transform.xMm + delta.x * 1000,
+          yMm: transform.yMm + delta.y * 1000,
+          zMm: transform.zMm + delta.z * 1000,
+        };
+      }
+
+      const current = projectRef.current;
+      const nextPatch = { transform: nextTransform, placementFree: true as const };
+      projectRef.current = {
+        ...current,
+        rodapes: (current.rodapes ?? []).map((r) =>
+          r.id === rodapeId ? { ...r, ...nextPatch } : r
+        ),
+      };
+      actionsRef.current.updateRodape(rodapeId, nextPatch);
+      window.viewerCore?.syncRodapeVisuals?.();
+      window.viewerCore?.resolveFinishCollisionAfterSync?.({ rodapeId });
     };
 
     const performMoveStep = (key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight", stepMm: number) => {
@@ -988,13 +1067,23 @@ const hasShownViewerReadyToastRef = useRef(false);
       state.activeKey = key;
 
       const uiSelection = uiStore.getState().selectedObject;
-      const remateStep = 1;
+      const finishStepMm = 1;
       if (uiSelection.type === "remate") {
-        performRemateMoveStep(uiSelection.id, key, remateStep);
+        performRemateMoveStep(uiSelection.id, key, finishStepMm);
         state.accelTimeoutId = window.setTimeout(() => {
           state.repeatIntervalId = window.setInterval(() => {
             if (keyboardMoveRef.current.activeKey !== key) return;
-            performRemateMoveStep(uiSelection.id, key, remateStep);
+            performRemateMoveStep(uiSelection.id, key, finishStepMm);
+          }, 40);
+        }, 200);
+        return;
+      }
+      if (uiSelection.type === "rodape") {
+        performRodapeMoveStep(uiSelection.id, key, finishStepMm);
+        state.accelTimeoutId = window.setTimeout(() => {
+          state.repeatIntervalId = window.setInterval(() => {
+            if (keyboardMoveRef.current.activeKey !== key) return;
+            performRodapeMoveStep(uiSelection.id, key, finishStepMm);
           }, 40);
         }, 200);
         return;

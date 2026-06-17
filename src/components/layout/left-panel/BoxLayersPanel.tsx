@@ -191,8 +191,12 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                 type="button"
                 className="button button-ghost"
                 style={{ flex: 1, minWidth: 120 }}
-                onClick={() => setShowHeightEditor((v) => !v)}
-                disabled={heightMode !== "custom"}
+                onClick={() => {
+                  if (heightMode !== "custom") {
+                    actions.setDrawerHeightMode("custom");
+                  }
+                  setShowHeightEditor(true);
+                }}
               >
                 {showHeightEditor ? "Ocultar Alturas" : "Editar Alturas"}
               </button>
@@ -206,7 +210,7 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
               </button>
             </div>
 
-            {showHeightEditor && heightMode === "custom" && (
+            {showHeightEditor && (
               <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 10 }}>
                 <DrawerCustomHeightsTable
                   box={selectedBox}

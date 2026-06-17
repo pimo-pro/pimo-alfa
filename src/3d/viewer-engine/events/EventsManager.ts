@@ -72,6 +72,16 @@ export class EventsManager {
     this.canvas = null;
   }
 
+  private applyGizmoAnchorFromPointer(
+    e: IViewerEventEngine,
+    event: { clientX: number; clientY: number },
+    fallback?: { x: number; y: number; z: number } | null
+  ): void {
+    const hit = e.getPointerWorldHit(event) ?? fallback ?? null;
+    e.setTransformGizmoAnchor(hit);
+    e.refreshTransformControlsAttachment();
+  }
+
   private handleCanvasClick(event: MouseEvent): void {
     const e = this.engine;
     if (e.getTransformControlsDragging()) return;
@@ -79,13 +89,16 @@ export class EventsManager {
       e.setSuppressNextCanvasClick(false);
       return;
     }
+    const clickAnchor = e.getPointerWorldHit(event);
     if (e.getInternalSelectionEnabled()) {
       const internalHit = e.getInternalSelectionHit(event);
       if (internalHit) {
         e.setInternalSelection(internalHit);
+        e.setTransformGizmoAnchor(clickAnchor ?? internalHit.worldPoint);
         if (e.getSelectedBoxId() !== internalHit.boxId) {
           e.setSelectedBox(internalHit.boxId);
         }
+        e.refreshTransformControlsAttachment();
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         return;
@@ -101,7 +114,9 @@ export class EventsManager {
           // Permite fallback para raycast normal de box/sala/parede.
         } else {
           e.getHighlightManager()!.setSelected(mesh);
+          e.setTransformGizmoAnchor(clickAnchor);
           e.setSelectedBox(boxId);
+          e.refreshTransformControlsAttachment();
           e.getOnRoomElementSelected()?.(null);
           e.getOnWallSelected()?.(null);
           return;
@@ -123,26 +138,31 @@ export class EventsManager {
     }
     const hematiId = e.getHematiIdAtPointer(event);
     if (hematiId) {
+      e.setTransformGizmoAnchor(clickAnchor);
       e.selectHemati(hematiId);
       e.setHoveredBox(null);
       e.setSelectedBox(null);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
       e.getOnBoxSelected()?.(null);
+      e.refreshTransformControlsAttachment();
       return;
     }
     const rodapeId = e.getRodapeIdAtPointer(event);
     if (rodapeId) {
+      e.setTransformGizmoAnchor(clickAnchor);
       e.selectRodape(rodapeId);
       e.setHoveredBox(null);
       e.setSelectedBox(null);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
       e.getOnBoxSelected()?.(null);
+      e.refreshTransformControlsAttachment();
       return;
     }
     const remateId = e.getRemateIdAtPointer(event);
     if (remateId) {
+      e.setTransformGizmoAnchor(clickAnchor);
       e.selectRemate(remateId);
       e.getOnRemateSelected?.()?.(remateId);
       e.setHoveredBox(null);
@@ -151,10 +171,12 @@ export class EventsManager {
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
       e.getOnBoxSelected()?.(null);
+      e.refreshTransformControlsAttachment();
       return;
     }
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
+      e.setTransformGizmoAnchor(clickAnchor);
       e.selectHemati(null);
       e.selectRodape(null);
       e.selectRemate(null);
@@ -162,6 +184,7 @@ export class EventsManager {
       e.setSelectedBox(boxId);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
+      e.refreshTransformControlsAttachment();
       return;
     }
     const roomHit = e.getRoomElementAtPointer(event);
@@ -221,6 +244,7 @@ export class EventsManager {
     e.selectRemate(null);
     e.selectHemati(null);
     e.selectRodape(null);
+    e.setTransformGizmoAnchor(null);
     const wallGizmo = e.getWallGizmo();
     if (wallGizmo) wallGizmo.detach();
     e.refreshTransformControlsAttachment();
@@ -278,7 +302,9 @@ export class EventsManager {
             event.preventDefault();
             event.stopPropagation();
             e.getHighlightManager()!.setSelected(mesh);
+            e.setTransformGizmoAnchor(e.getPointerWorldHit(event));
             e.setSelectedBox(boxId);
+            e.refreshTransformControlsAttachment();
             e.getOnRoomElementSelected()?.(null);
             e.getOnWallSelected()?.(null);
             e.setSuppressNextCanvasClick(true);
@@ -288,6 +314,24 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
+      const hematiId = e.getHematiIdAtPointer(event);
+      if (hematiId != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.selectHemati(hematiId);
+        this.applyGizmoAnchorFromPointer(e, event);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
+      const rodapeId = e.getRodapeIdAtPointer(event);
+      if (rodapeId != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.selectRodape(rodapeId);
+        this.applyGizmoAnchorFromPointer(e, event);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
       const remateId = e.getRemateIdAtPointer(event);
       if (remateId != null) {
         event.preventDefault();
@@ -295,6 +339,7 @@ export class EventsManager {
         e.setHoveredRemate(remateId);
         e.selectRemate(remateId);
         e.getOnRemateSelected?.()?.(remateId);
+        this.applyGizmoAnchorFromPointer(e, event);
         e.setSuppressNextCanvasClick(true);
         return;
       }
@@ -323,6 +368,7 @@ export class EventsManager {
             selectedBoxAfterSet: e.getSelectedBoxId(),
           });
         }
+        this.applyGizmoAnchorFromPointer(e, event);
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.setSuppressNextCanvasClick(true);
@@ -355,15 +401,10 @@ export class EventsManager {
             selectedBoxAfterSet: e.getSelectedBoxId(),
           });
         }
+        this.applyGizmoAnchorFromPointer(e, event);
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.setSuppressNextCanvasClick(true);
-        if (import.meta.env.DEV) {
-          devLogger.debug("[SELECTION][EventsManager] suppressNextCanvasClick=true", {
-            reason: "selected-box-on-pointerdown",
-            boxId,
-          });
-        }
         e.logTransformDiagnostic("box-selected-pointerDown", { boxId });
         return;
       }
