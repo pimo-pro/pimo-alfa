@@ -913,7 +913,8 @@ export function useGerarArquivoHandlers() {
             getPrintReadyDimensions: () => viewerSync.getPrintReadyDimensions?.() ?? { entries: [], generatedAt: Date.now() },
             setDimensionsOverlayVisible: viewerSync.setDimensionsOverlayVisible,
             getDimensionsOverlayVisible: viewerSync.getDimensionsOverlayVisible,
-            renderScene: (opts) => viewerSync.renderScene(opts as Parameters<typeof viewerSync.renderScene>[0]),
+            renderScene: (opts) =>
+              viewerSync.renderScene(opts as unknown as Parameters<typeof viewerSync.renderScene>[0]),
           });
           const mcFiles = await exportMCDimensionsForZip(dimensionsData);
           for (const f of mcFiles) {

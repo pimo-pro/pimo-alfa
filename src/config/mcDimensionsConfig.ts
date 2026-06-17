@@ -56,7 +56,7 @@ export function normalizeMcDimensionsConfig(
   partial?: Partial<McDimensionsConfig> | null
 ): McDimensionsConfig {
   const def = defaultMcDimensionsConfig;
-  const formats = partial?.formats ?? {};
+  const formats: Partial<Record<McDimensionsFormat, boolean>> = partial?.formats ?? {};
   return {
     enabled: partial?.enabled !== false,
     formats: {

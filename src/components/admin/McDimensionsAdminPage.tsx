@@ -121,7 +121,8 @@ export default function McDimensionsAdminPage() {
           viewerSync.getPrintReadyDimensions?.() ?? { entries: [], generatedAt: Date.now() },
         setDimensionsOverlayVisible: viewerSync.setDimensionsOverlayVisible,
         getDimensionsOverlayVisible: viewerSync.getDimensionsOverlayVisible,
-        renderScene: (opts) => viewerSync.renderScene(opts as Parameters<typeof viewerSync.renderScene>[0]),
+        renderScene: (opts) =>
+          viewerSync.renderScene(opts as unknown as Parameters<typeof viewerSync.renderScene>[0]),
       });
       const svg = previewMcSvg(data, config);
       setPreviewSvg(svg);

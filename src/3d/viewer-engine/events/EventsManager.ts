@@ -399,7 +399,7 @@ export class EventsManager {
     if (drawerHit) {
       event.preventDefault();
       event.stopPropagation();
-      this.engine.getOnDrawerLayerDoubleClick()?.(drawerHit.boxId, drawerHit.doorLayerId);
+      this.engine.getOnDrawerLayerDoubleClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
       return;
     }
     const boxId = this.engine.getBoxIdAtPointer(event);

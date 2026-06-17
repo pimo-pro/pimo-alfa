@@ -219,8 +219,8 @@ function cameraOrientation(camera: THREE.Camera): { yaw: number; pitch: number }
 export function computePrintFriendlyLayout(
   dimensionsData: readonly DimensionLayoutInput[],
   camera: THREE.Camera,
-  viewportWidthPx: number,
-  viewportHeightPx: number,
+  _viewportWidthPx: number,
+  _viewportHeightPx: number,
   project: ProjectWorldFn
 ): PrintFriendlyLayoutResult {
   const items: LabelLayoutItem[] = dimensionsData.map((input) => {

@@ -329,6 +329,7 @@ export type ViewerApi = {
   setDimensionsOverlayVisible: (_visible: boolean) => void;
   getDimensionsOverlayVisible: () => boolean;
   toggleDimensionsOverlay: () => boolean;
+  getDimensionsOverlayData?: () => import("../3d/viewer-engine/overlays/boxDimensionsOverlay").DimensionOverlayDataEntry[];
   getPrintReadyDimensions?: () => import("../3d/viewer-engine/overlays/boxDimensionsLayout").PrintReadyDimensions;
   getSelectedObjects: (
     _multiBoxIds?: string[]

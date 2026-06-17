@@ -7,7 +7,7 @@ import Panel from "../../ui/Panel";
 import DrawerConfigPanel, {
   DrawerCustomHeightsTable,
   getDrawerStatusBadges,
-} from "../panels/DrawerConfigPanel";
+} from "../../panels/DrawerConfigPanel";
 
 type BoxLayersPanelProps = {
   embedded?: boolean;

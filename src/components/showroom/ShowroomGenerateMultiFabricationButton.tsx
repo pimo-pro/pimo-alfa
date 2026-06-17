@@ -34,7 +34,7 @@ export function ShowroomGenerateMultiFabricationButton({ showroomLoading }: Prop
       setDimensionsOverlayVisible: viewerSync.setDimensionsOverlayVisible,
       getDimensionsOverlayVisible: viewerSync.getDimensionsOverlayVisible,
       renderScene: (opts: { quality?: string }) =>
-        viewerSync.renderScene(opts as Parameters<typeof viewerSync.renderScene>[0]),
+        viewerSync.renderScene(opts as unknown as Parameters<typeof viewerSync.renderScene>[0]),
     }),
     [viewerSync]
   );
