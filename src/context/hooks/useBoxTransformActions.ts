@@ -51,7 +51,7 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
               if (dimensoes.profundidade !== undefined) {
                 updatedBox = { ...updatedBox, profundidadeExterna: dimensoes.profundidade };
               }
-              const layers = regenerateLayersForBox(updatedBox);
+              const layers = regenerateLayersForBox(updatedBox, { preserveMaterials: true });
               return { ...updatedBox, ...layers };
             });
             return recomputeState(prev, { workspaceBoxes }, true);
@@ -73,7 +73,7 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
             if (dimensoes.profundidade !== undefined) {
               updatedBox = { ...updatedBox, profundidadeExterna: dimensoes.profundidade };
             }
-            const layers = regenerateLayersForBox(updatedBox);
+            const layers = regenerateLayersForBox(updatedBox, { preserveMaterials: true });
             return { ...updatedBox, ...layers };
           });
           return recomputeState(prev, { workspaceBoxes }, true);

@@ -21,6 +21,7 @@ import { useRemateActions } from "./useRemateActions";
 import { useHematiActions } from "./useHematiActions";
 import { useRodapeActions } from "./useRodapeActions";
 import { useAutoRoomFillActions } from "./useAutoRoomFillActions";
+import { useSelectionTransformActions } from "./useSelectionTransformActions";
 import { getIndustrialMaterial } from "../../core/materials/service";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
@@ -68,6 +69,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const hematiActions = useHematiActions(executionContext);
   const rodapeActions = useRodapeActions(executionContext);
   const autoRoomFillActions = useAutoRoomFillActions(executionContext);
+  const selectionTransformActions = useSelectionTransformActions(executionContext);
 
   const coreActions = useMemo(() => {
     const a = {} as ProjectActions;
@@ -154,7 +156,8 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       remateActions,
       hematiActions,
       rodapeActions,
-      autoRoomFillActions
+      autoRoomFillActions,
+      selectionTransformActions
     );
 
     // @PIMO-KEEP — Runtime validation
@@ -244,6 +247,11 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "runAutoRoomFill",
         "runKitchenLayout30",
         "setAutoFillWallSettings",
+        "scaleSelectedObjects",
+        "duplicateSelectedObjects",
+        "deleteSelectedObjects",
+        "rotateSelectedObjects",
+        "setSelectedObjectsMaterial",
       ];
 
       requiredActions.forEach((key) => {
@@ -273,5 +281,6 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     hematiActions,
     rodapeActions,
     autoRoomFillActions,
+    selectionTransformActions,
   ]);
 }

@@ -622,4 +622,14 @@ export class ViewerRaycastSystem {
     }
     return null;
   }
+
+  /** True se o ponteiro acerta caixa, porta, gaveta, remate, rodapé ou peça selecionável. */
+  isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
+    const layerHit = this.getContextMenuLayerHit(event);
+    if (layerHit && layerHit.type !== "empty" && layerHit.type !== "room") return true;
+    if (this.getRemateIdAtPointer(event)) return true;
+    if (this.getRodapeIdAtPointer(event)) return true;
+    if (this.getHematiIdAtPointer(event)) return true;
+    return false;
+  }
 }

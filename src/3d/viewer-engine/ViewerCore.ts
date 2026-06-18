@@ -26,6 +26,7 @@ import {
   shouldBlockPointerDownForSelection,
   type MouseInputPreset,
 } from "./controls/MouseInputMapper";
+import { isObjectInScreenRect } from "./utils/screenSelection";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
@@ -132,6 +133,10 @@ import {
   type InternalSelectionState,
   cloneInternalSelectionState,
 } from "./selection";
+import { MultiSelectionOutline, type MultiOutlineTarget } from "./selection/MultiSelectionOutline";
+import { decodeSelectionId } from "../../core/viewer/selectionIds";
+import { encodeSelectionIdFromLayerHit } from "../../core/viewer/selectionHitEncoding";
+import { remateSelectionId, rodapeSelectionId } from "../../core/viewer/selectionIds";
 import { SmartSnapping } from "./snapping/SmartSnapping";
 import { RemateSmartSnapping } from "./snapping/RemateSmartSnapping";
 import { SmartSnapEngine, meshToAabb } from "./snapping/smartSnapEngine";
@@ -294,12 +299,14 @@ export class ViewerCore {
   private readonly raycastSystem: ViewerRaycastSystem;
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
+  private onMultiSelectToggle: ((_encodedId: string) => void) | null = null;
   private onRemateSelected: ((_remateId: string | null) => void) | null = null;
   private onRodapeSelected: ((_rodapeId: string | null) => void) | null = null;
   private onInternalSurfaceSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private onInternalEdgeSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private onInternalPointSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private internalSelectionOutline: InternalSelectionOutline | null = null;
+  private multiSelectionOutline: MultiSelectionOutline | null = null;
   private internalRulerOverlay: InternalRulerOverlay | null = null;
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
@@ -718,6 +725,7 @@ export class ViewerCore {
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
     this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
     this.internalSelectionOutline = new InternalSelectionOutline(this.sceneManager.scene);
+    this.multiSelectionOutline = new MultiSelectionOutline(this.sceneManager.scene);
 
     this.roomBuilder = new RoomBuilder(() => this.roomBoxWalls.map((w) => w.mesh));
     this.sceneManager.add(this.roomBuilder.getGroup());
@@ -1720,6 +1728,122 @@ export class ViewerCore {
       height: this._size.y,
       depth: this._size.z,
     };
+  }
+
+  /**
+   * Retorna IDs codificados (box:, remate:, rodape:) dos objetos cujo bbox projetado intersecta o retângulo em px.
+   */
+  getSelectionIdsInScreenRect(
+    rect: { left: number; top: number; right: number; bottom: number },
+    canvas: HTMLCanvasElement
+  ): string[] {
+    const canvasRect = canvas.getBoundingClientRect();
+    const selectionRect = {
+      left: Math.min(rect.left, rect.right),
+      top: Math.min(rect.top, rect.bottom),
+      right: Math.max(rect.left, rect.right),
+      bottom: Math.max(rect.top, rect.bottom),
+    };
+    const camera = this.cameraManager.camera;
+    const ids: string[] = [];
+
+    this.boxes.forEach((entry, boxId) => {
+      entry.mesh.updateMatrixWorld(true);
+      if (isObjectInScreenRect(entry.mesh, selectionRect, camera, canvasRect)) {
+        ids.push(`box:${boxId}`);
+      }
+    });
+
+    const rematePieces = this.remateVisualBridge?.listRematePieces() ?? [];
+    for (const piece of rematePieces) {
+      const mesh = this.remateVisualizer.getMeshByRemateId(piece.id);
+      if (!mesh) continue;
+      mesh.updateMatrixWorld(true);
+      if (isObjectInScreenRect(mesh, selectionRect, camera, canvasRect)) {
+        ids.push(`remate:${piece.id}`);
+      }
+    }
+
+    const rodapes = (this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []).flatMap((c) => c.rodapes);
+    for (const rodape of rodapes) {
+      const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodape.id);
+      if (!mesh) continue;
+      mesh.updateMatrixWorld(true);
+      if (isObjectInScreenRect(mesh, selectionRect, camera, canvasRect)) {
+        ids.push(`rodape:${rodape.id}`);
+      }
+    }
+
+    return ids;
+  }
+
+  setMultiSelectionOutlines(encodedIds: string[]): void {
+    this.multiSelectionOutline?.sync(encodedIds, (encoded) => this.resolveMultiOutlineTarget(encoded));
+  }
+
+  isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
+    return this.raycastSystem.isPointerOnSelectableObject(event);
+  }
+
+  setOnMultiSelectToggle(callback: ((_encodedId: string) => void) | null): void {
+    this.onMultiSelectToggle = callback;
+  }
+
+  getPointerSelectionEncodedId(event: { clientX: number; clientY: number }): string | null {
+    const hit = this.getContextMenuLayerHit(event);
+    const fromHit = encodeSelectionIdFromLayerHit(hit);
+    if (fromHit && !fromHit.startsWith("box:")) return fromHit;
+    const remateId = this.getRemateIdAtPointer(event);
+    if (remateId) return remateSelectionId(remateId);
+    const rodapeId = this.getRodapeIdAtPointer(event);
+    if (rodapeId) return rodapeSelectionId(rodapeId);
+    return null;
+  }
+
+  private resolveMultiOutlineTarget(encoded: string): MultiOutlineTarget | null {
+    const decoded = decodeSelectionId(encoded);
+    if (!decoded) return null;
+
+    if (decoded.kind === "box") {
+      const entry = this.boxes.get(decoded.id);
+      if (!entry) return null;
+      return {
+        mesh: entry.mesh,
+        layoutDims: {
+          w: Math.max(0.001, entry.width),
+          h: Math.max(0.001, entry.height),
+          d: Math.max(0.001, entry.carcassDepth ?? entry.depth),
+        },
+      };
+    }
+
+    if (decoded.kind === "remate") {
+      const mesh = this.remateVisualizer.getMeshByRemateId(decoded.id);
+      return mesh ? { mesh } : null;
+    }
+
+    if (decoded.kind === "rodape") {
+      const mesh = this.rodapeVisualizer.getMeshByRodapeId(decoded.id);
+      return mesh ? { mesh } : null;
+    }
+
+    if (decoded.kind === "door") {
+      for (const entry of this.boxes.values()) {
+        const doorGroup = entry.mesh.children.find((c) => c.name === `door-layer-${decoded.id}`);
+        if (doorGroup) return { mesh: doorGroup };
+      }
+      return null;
+    }
+
+    if (decoded.kind === "drawer") {
+      for (const entry of this.boxes.values()) {
+        const drawerGroup = entry.mesh.children.find((c) => c.name === `drawer-layer-${decoded.id}`);
+        if (drawerGroup) return { mesh: drawerGroup };
+      }
+      return null;
+    }
+
+    return null;
   }
 
   /**
@@ -4792,6 +4916,7 @@ export class ViewerCore {
       getOnRoomUtilitySelected: () => this.onRoomUtilitySelected,
       getOnWallSelected: () => this.onWallSelected,
       getOnBoxSelected: () => this.onBoxSelected,
+      getOnMultiSelectToggle: () => this.onMultiSelectToggle,
       getOnRemateSelected: () => this.onRemateSelected,
       getPlacementMode: () => this.viewerState.getPlacementMode(),
       getOnRoomElementPlaced: () => this.onRoomElementPlaced,
@@ -4827,6 +4952,9 @@ export class ViewerCore {
       setWallGizmoDragging: (v) => { this.viewerState.setWallGizmoDragging(v); },
       getDoorHitAtPointer: (e) => this.getDoorHitAtPointer(e),
       getDrawerHitAtPointer: (e) => this.getDrawerHitAtPointer(e),
+      getLayerSelectionHitAtPointer: (e) => this.getContextMenuLayerHit(e),
+      encodeLayerHitToSelectionId: (hit) => encodeSelectionIdFromLayerHit(hit),
+      getPointerSelectionEncodedId: (e) => this.getPointerSelectionEncodedId(e),
       getOnDoorLayerDoubleClick: () => this.onDoorLayerDoubleClick,
       getOnDrawerLayerDoubleClick: () => this.onDrawerLayerDoubleClick,
       getOnBoxDoubleClick: () => this.onBoxDoubleClick,
@@ -6436,6 +6564,7 @@ export class ViewerCore {
       this.selectionOutlineMaterial.opacity = Math.max(0, Math.min(1, this.outlineCurrentOpacity));
       this.selectionOutlineMaterial.needsUpdate = true;
     }
+    this.multiSelectionOutline?.updateMatrices();
 
     this.highlightManager?.update();
     this.edgeOutlineSystem?.update();
@@ -6510,6 +6639,7 @@ export class ViewerCore {
     this.overlayCoordinator.dispose();
     this.onBoxTransform = null;
     this.onBoxSelected = null;
+    this.onMultiSelectToggle = null;
     this.onInternalSurfaceSelected = null;
     this.onInternalEdgeSelected = null;
     this.onInternalPointSelected = null;
@@ -6545,6 +6675,8 @@ export class ViewerCore {
       this.selectionOutlineTarget = null;
       this.selectionOutlinePiecesSig = null;
     }
+    this.multiSelectionOutline?.dispose(this.sceneManager.scene);
+    this.multiSelectionOutline = null;
     if (this.wallSelectionOutline) {
       this.sceneManager.scene.remove(this.wallSelectionOutline);
       this.wallSelectionOutline.geometry.dispose();

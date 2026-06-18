@@ -12,6 +12,12 @@ import {
   type MouseMenuCategory,
   type MouseMenuTarget,
 } from "../../../ui/context-menu/ContextMenuEngine";
+import { uiStore } from "../../../stores/uiStore";
+import { promptScalingNewLength } from "../../../context/hooks/useSelectionTransformActions";
+import { decodeSelectionId } from "../../../core/viewer/selectionIds";
+import { buildScalingPreviewData, type ScalingPreviewData } from "../../../core/viewer/scalingPreview";
+import type { ScalingMode } from "../../../context/projectTypes";
+import ScalingPreviewDialog from "./ScalingPreviewDialog";
 
 export type ContextMenuPosition = { x: number; y: number } | null;
 
@@ -30,6 +36,8 @@ export type ContextMenuProps = {
   onDrawerMaterialChange?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
   /** IDs de seleção atual (Ctrl+Click) para ações em lote. */
   selectedBoxIds?: string[];
+  /** IDs codificados da multi-seleção global (selectedObjects). */
+  selectedObjectIds?: string[];
 };
 
 /** Materiais oficiais do projeto (mesma lista do módulo); apenas labels para o picker. */
@@ -144,6 +152,7 @@ export default function ContextMenu({
   onDoorMaterialChange,
   onDrawerMaterialChange,
   selectedBoxIds = [],
+  selectedObjectIds = [],
 }: ContextMenuProps) {
   const { project, actions } = useProject();
   const { viewerApi } = usePimoViewerContext();
@@ -156,6 +165,10 @@ export default function ContextMenu({
   const [mouseSubmenuPos, setMouseSubmenuPos] = useState<{ left: number; top: number; height: number } | null>(null);
   const [materialAnchorRect, setMaterialAnchorRect] = useState<DOMRect | null>(null);
   const [mouseAnchorRect, setMouseAnchorRect] = useState<DOMRect | null>(null);
+  const [dimensionsSubmenuOpen, setDimensionsSubmenuOpen] = useState(false);
+  const [dimensionsSubmenuPos, setDimensionsSubmenuPos] = useState<{ left: number; top: number; height: number } | null>(null);
+  const [dimensionsAnchorRect, setDimensionsAnchorRect] = useState<DOMRect | null>(null);
+  const [scalingPreview, setScalingPreview] = useState<ScalingPreviewData | null>(null);
 
   const selectedBoxId = project.selectedWorkspaceBoxId ?? "";
   const selectedBox = selectedBoxId
@@ -171,11 +184,25 @@ export default function ContextMenu({
       ? rawMousePreset
       : "cad";
   const activeSelectedIds = useMemo(() => {
+    const fromObjects = Array.isArray(selectedObjectIds) ? selectedObjectIds.filter(Boolean) : [];
+    if (fromObjects.length > 0) {
+      const boxIds = fromObjects
+        .map((encoded) => decodeSelectionId(encoded))
+        .filter((d) => d?.kind === "box")
+        .map((d) => d!.id);
+      if (boxIds.length > 0) return Array.from(new Set(boxIds));
+    }
     const fromContext = Array.isArray(selectedBoxIds) ? selectedBoxIds.filter(Boolean) : [];
     if (fromContext.length > 0) return Array.from(new Set(fromContext));
     if (!selectedBoxId) return [];
     return [selectedBoxId];
-  }, [selectedBoxId, selectedBoxIds]);
+  }, [selectedBoxId, selectedBoxIds, selectedObjectIds]);
+
+  const activeSelectedObjectIds = useMemo(() => {
+    const fromObjects = Array.isArray(selectedObjectIds) ? selectedObjectIds.filter(Boolean) : [];
+    if (fromObjects.length > 0) return Array.from(new Set(fromObjects));
+    return activeSelectedIds.map((id) => `box:${id}`);
+  }, [activeSelectedIds, selectedObjectIds]);
 
   const isDoorTarget = contextMenuLayerTarget?.type === "door" && contextMenuLayerTarget.doorLayerId != null;
   const isDrawerTarget = contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId != null;
@@ -192,7 +219,7 @@ export default function ContextMenu({
     hasRoom: roomExists,
     hasRemates: (project.remates ?? []).length > 0,
     hasSmartAlignTarget,
-    multiSelectionCount: activeSelectedIds.length,
+    multiSelectionCount: Math.max(activeSelectedObjectIds.length, activeSelectedIds.length),
     canAlign,
   });
 
@@ -205,6 +232,7 @@ export default function ContextMenu({
   const closeSubmenus = () => {
     setMaterialSubmenuOpen(null);
     setMouseSubmenuOpen(false);
+    setDimensionsSubmenuOpen(false);
     setActiveCategoryId(null);
   };
 
@@ -311,12 +339,49 @@ export default function ContextMenu({
   };
 
   const applyLayerMaterial = (materialId: string) => {
+    if (activeSelectedObjectIds.length >= 2) {
+      actions.setSelectedObjectsMaterial(activeSelectedObjectIds, materialId);
+      for (const encoded of activeSelectedObjectIds) {
+        const decoded = decodeSelectionId(encoded);
+        if (!decoded) continue;
+        if (decoded.kind === "box") {
+          window.viewerCore?.updateBoxMaterial?.(decoded.id, materialId);
+          continue;
+        }
+        if (decoded.kind === "door") {
+          const box = project.workspaceBoxes.find((b) =>
+            (b.doorsLayer ?? []).some((d) => d.id === decoded.id)
+          );
+          if (box) viewerApi?.updateDoorMaterial?.(box.id, decoded.id, materialId);
+          continue;
+        }
+        if (decoded.kind === "drawer") {
+          const box = project.workspaceBoxes.find((b) =>
+            (b.drawersLayer ?? []).some((d) => d.id === decoded.id)
+          );
+          if (box) viewerApi?.updateDrawerMaterial?.(box.id, decoded.id, materialId);
+        }
+      }
+      window.viewerCore?.syncRemateVisuals?.();
+      window.viewerCore?.syncRodapeVisuals?.();
+      onClose();
+      return;
+    }
     if (contextMenuLayerTarget?.type === "door" && contextMenuLayerTarget.doorLayerId) {
       onDoorMaterialChange?.(contextMenuLayerTarget.boxId ?? "", contextMenuLayerTarget.doorLayerId, materialId);
     } else if (contextMenuLayerTarget?.type === "drawer" && contextMenuLayerTarget.drawerLayerId) {
       onDrawerMaterialChange?.(contextMenuLayerTarget.boxId ?? "", contextMenuLayerTarget.drawerLayerId, materialId);
     }
     onClose();
+  };
+
+  const runScaling = (mode: ScalingMode): boolean => {
+    const newLength = promptScalingNewLength(project, activeSelectedObjectIds);
+    if (newLength == null) return false;
+    const preview = buildScalingPreviewData(project, activeSelectedObjectIds, newLength, mode);
+    if (!preview) return false;
+    setScalingPreview(preview);
+    return true;
   };
 
   const runAction = (actionId: MouseMenuActionId, anchorRect?: DOMRect) => {
@@ -513,7 +578,56 @@ export default function ContextMenu({
     if (styleId && selectedBoxId) {
       window.viewerCore?.intelligentDesigner?.previewStyle?.(styleId, selectedBoxId);
     }
+
+    if (actionId === "multi.copy") {
+      actions.duplicateSelectedObjects(activeSelectedObjectIds);
+    }
+    if (actionId === "multi.delete") {
+      actions.deleteSelectedObjects(activeSelectedObjectIds);
+      uiStore.getState().clearMultiSelection();
+    }
+    if (actionId === "multi.rotate") {
+      actions.rotateSelectedObjects(activeSelectedObjectIds);
+    }
+    if (actionId === "multi.move") {
+      actions.setActiveTool("move");
+    }
+    if (actionId === "multi.showMcDimensions") {
+      viewerApi?.setDimensionsOverlayVisible?.(true);
+      viewerApi?.toggleDimensionsOverlay?.();
+    }
+    if (actionId === "multi.changeMaterial" && anchorRect) {
+      openMaterialPicker("door", anchorRect);
+      return;
+    }
+    if (actionId === "multi.changeDimensionsAdditive") {
+      if (runScaling("additive")) return;
+    } else if (actionId === "multi.changeDimensionsRatio") {
+      if (runScaling("ratio")) return;
+    }
+
     onClose();
+  };
+
+  const runDimensionsDefault = () => {
+    runScaling(project.viewerSettings.defaultScalingMode ?? "additive");
+  };
+
+  const confirmScalingPreview = () => {
+    if (!scalingPreview) return;
+    actions.scaleSelectedObjects(activeSelectedObjectIds, scalingPreview.newMax, scalingPreview.mode);
+    setScalingPreview(null);
+    onClose();
+  };
+
+  const openDimensionsPicker = (anchorRect: DOMRect) => {
+    clearSubmenuCloseTimer();
+    setDimensionsAnchorRect(anchorRect);
+    setDimensionsSubmenuOpen(true);
+    const submenuHeight = 2 * ITEM_HEIGHT + 12;
+    const submenuWidth = SUBMENU_MIN_WIDTH;
+    const pos = placeMenu(anchorRect.right, anchorRect.top, submenuWidth, submenuHeight);
+    setDimensionsSubmenuPos({ left: pos.left, top: pos.top, height: submenuHeight });
   };
 
   const renderMousePresetItem = (preset: ViewerMousePreset, label: string) => (
@@ -540,7 +654,42 @@ export default function ContextMenu({
     </button>
   );
 
-  const renderActionItem = (action: MouseMenuAction) => (
+  const renderActionItem = (action: MouseMenuAction) => {
+    if (action.id === "multi.changeDimensions") {
+      return (
+        <div
+          key={action.id}
+          style={{ display: "flex", alignItems: "stretch", width: "100%" }}
+          onPointerEnter={(e) => openDimensionsPicker(e.currentTarget.getBoundingClientRect())}
+          onPointerLeave={scheduleCloseSubmenus}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            style={{ ...itemStyle, flex: 1 }}
+            onClick={() => runDimensionsDefault()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <span>{action.label}</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Submenu alterar medidas"
+            style={{ ...itemStyle, width: 28, padding: "8px 6px", justifyContent: "center" }}
+            onClick={(e) => openDimensionsPicker(e.currentTarget.getBoundingClientRect())}
+          >
+            <Icon name="chevronRight" size={12} aria-hidden />
+          </button>
+        </div>
+      );
+    }
+
+    return (
     <button
       key={action.id}
       type="button"
@@ -566,6 +715,7 @@ export default function ContextMenu({
       )}
     </button>
   );
+  };
 
   const renderCategoryItem = (category: MouseMenuCategory) => (
     <div
@@ -594,6 +744,14 @@ export default function ContextMenu({
   );
 
   return (
+    <>
+    {scalingPreview && (
+      <ScalingPreviewDialog
+        preview={scalingPreview}
+        onConfirm={confirmScalingPreview}
+        onCancel={() => setScalingPreview(null)}
+      />
+    )}
     <ContextMenuPortal>
       <div ref={menuRef}>
         <div
@@ -679,6 +837,48 @@ export default function ContextMenu({
             </div>
           </>
         )}
+
+        {dimensionsSubmenuOpen && dimensionsSubmenuPos && dimensionsAnchorRect && (
+          <>
+            <SubmenuHoverBridge
+              anchorRect={dimensionsAnchorRect}
+              submenuLeft={dimensionsSubmenuPos.left}
+              submenuTop={dimensionsSubmenuPos.top}
+              submenuHeight={dimensionsSubmenuPos.height}
+              onPointerEnter={clearSubmenuCloseTimer}
+            />
+            <div
+              role="menu"
+              aria-label="Alterar medidas"
+              style={{
+                ...menuStyle,
+                left: dimensionsSubmenuPos.left,
+                top: dimensionsSubmenuPos.top,
+                minWidth: SUBMENU_MIN_WIDTH,
+              }}
+              onPointerEnter={clearSubmenuCloseTimer}
+              onPointerLeave={scheduleCloseSubmenus}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                style={itemStyle}
+                onClick={() => runAction("multi.changeDimensionsAdditive")}
+              >
+                Adicionar Diferença
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                style={itemStyle}
+                onClick={() => runAction("multi.changeDimensionsRatio")}
+              >
+                Escala Percentual
+              </button>
+            </div>
+          </>
+        )}
         {activeCategoryId && mouseSubmenuPos && mouseAnchorRect && (
           <>
             <SubmenuHoverBridge
@@ -707,5 +907,6 @@ export default function ContextMenu({
         )}
       </div>
     </ContextMenuPortal>
+    </>
   );
 }

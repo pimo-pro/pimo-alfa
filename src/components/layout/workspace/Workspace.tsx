@@ -19,7 +19,12 @@ import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import BoxInfoOverlay from "./BoxInfoOverlay";
 import InternalMeasurementsPanel from "./InternalMeasurementsPanel";
 import ContextMenu from "./ContextMenu";
+import SelectionMarquee from "./SelectionMarquee";
 import { devLogger } from "../../../utils/devLogger";
+import {
+  boxSelectionId,
+  decodeSelectionId,
+} from "../../../core/viewer/selectionIds";
 import { useWorkspaceUndoRedoRegistry } from "../../../context/WorkspaceUndoRedoRegistryContext";
 import { runProjectRedo, runProjectUndo } from "./workspaceUndoRedoHandlers";
 import { buildBoxesWithCutList } from "../../../context/projectState";
@@ -100,6 +105,9 @@ export default function Workspace({
   const selectedWallId = useWallStore((state) => state.selectedWallId);
   const selectedObject = useUiStore((state) => state.selectedObject);
   const setSelectedObject = useUiStore((state) => state.setSelectedObject);
+  const setSelectedObjects = useUiStore((state) => state.setSelectedObjects);
+  const toggleSelectedObject = useUiStore((state) => state.toggleSelectedObject);
+  const selectedObjects = useUiStore((state) => state.selectedObjects);
   const clearUiSelection = useUiStore((state) => state.clearSelection);
   const setSelectedTool = useUiStore((state) => state.setSelectedTool);
   const photoModePanelOpen = useUiStore((state) => state.photoModePanelOpen);
@@ -229,6 +237,7 @@ export default function Workspace({
       }
       if (boxId) {
         const toggleSelection = pointerToggleSelectionRef.current || ctrlOrMetaPressedRef.current;
+        const encodedId = boxSelectionId(boxId);
         if (toggleSelection) {
           const currentSelection = multiSelectedBoxIdsRef.current;
           const alreadySelected = currentSelection.includes(boxId);
@@ -236,6 +245,7 @@ export default function Workspace({
             ? currentSelection.filter((id) => id !== boxId)
             : [...currentSelection, boxId];
           multiSelectedBoxIdsRef.current = nextSelection;
+          toggleSelectedObject(encodedId);
           if (alreadySelected) {
             const fallbackBoxId = nextSelection[nextSelection.length - 1];
             if (fallbackBoxId) {
@@ -248,6 +258,7 @@ export default function Workspace({
           }
         } else {
           multiSelectedBoxIdsRef.current = [boxId];
+          setSelectedObjects([encodedId]);
         }
         if (import.meta.env.DEV) {
           devLogger.debug("[SELECTION][Workspace] onBoxSelected:actions.selectBox", {
@@ -266,6 +277,7 @@ export default function Workspace({
       }
       if (project.selectedWorkspaceBoxId != null && project.selectedWorkspaceBoxId !== "") {
         multiSelectedBoxIdsRef.current = [];
+        setSelectedObjects([]);
         if (import.meta.env.DEV) {
           devLogger.debug("[SELECTION][Workspace] onBoxSelected:null -> clearSelection", {
             projectSelectedWorkspaceBoxIdBeforeClear: project.selectedWorkspaceBoxId,
@@ -283,7 +295,7 @@ export default function Workspace({
       }
       pointerToggleSelectionRef.current = false;
     });
-  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, setSelectedObject]);
+  }, [actions, viewerApi, clearUiSelection, project.selectedWorkspaceBoxId, setSelectedObject, setSelectedObjects, toggleSelectedObject]);
 
   useEffect(() => {
     viewerApi.setOnBoxDoubleClick?.((boxId) => {
@@ -332,6 +344,11 @@ export default function Workspace({
     }
     multiSelectedBoxIdsRef.current = filteredSelection;
   }, [project.selectedWorkspaceBoxId, project.workspaceBoxes]);
+
+  useEffect(() => {
+    const core = window.viewerCore as { setMultiSelectionOutlines?: (ids: string[]) => void } | undefined;
+    core?.setMultiSelectionOutlines?.(selectedObjects);
+  }, [selectedObjects, viewerApi.viewerReady]);
 
   useEffect(() => {
     viewerApi.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
@@ -745,6 +762,51 @@ const hasShownViewerReadyToastRef = useRef(false);
       getBoxWorldMatrix,
     });
 
+    core?.setOnMultiSelectToggle?.((encodedId) => {
+      const decoded = decodeSelectionId(encodedId);
+      if (!decoded) return;
+      toggleSelectedObject(encodedId);
+      if (decoded.kind === "box") {
+        const boxId = decoded.id;
+        const already = multiSelectedBoxIdsRef.current.includes(boxId);
+        multiSelectedBoxIdsRef.current = already
+          ? multiSelectedBoxIdsRef.current.filter((id) => id !== boxId)
+          : [...multiSelectedBoxIdsRef.current, boxId];
+        if (!already) {
+          actionsRef.current.selectBox(boxId);
+          setSelectedObject({ type: "box", id: boxId });
+        }
+        return;
+      }
+      if (decoded.kind === "remate") {
+        if (projectRef.current.selectedWorkspaceBoxId) {
+          actionsRef.current.clearSelection();
+        }
+        setSelectedObject({ type: "remate", id: decoded.id });
+        return;
+      }
+      if (decoded.kind === "rodape") {
+        if (projectRef.current.selectedWorkspaceBoxId) {
+          actionsRef.current.clearSelection();
+        }
+        setSelectedObject({ type: "rodape", id: decoded.id });
+        return;
+      }
+      if (decoded.kind === "door" || decoded.kind === "drawer") {
+        const layerId = decoded.id;
+        const box = projectRef.current.workspaceBoxes.find((b) => {
+          if (decoded.kind === "door") {
+            return (b.doorsLayer ?? []).some((d) => d.id === layerId);
+          }
+          return (b.drawersLayer ?? []).some((d) => d.id === layerId);
+        });
+        if (box) {
+          actionsRef.current.selectBox(box.id);
+          setSelectedObject({ type: "box", id: box.id });
+        }
+      }
+    });
+
     core?.setOnRemateSelected?.((remateId) => {
       if (remateId) {
         if (projectRef.current.selectedWorkspaceBoxId) {
@@ -1044,18 +1106,35 @@ const hasShownViewerReadyToastRef = useRef(false);
         }
         const currentProject = projectRef.current;
         const validIds = new Set(currentProject.workspaceBoxes.map((box) => box.id));
-        const multiSelectionIds = multiSelectedBoxIdsRef.current.filter((id) => validIds.has(id));
+        const multiSelectionIds = selectedObjects.length > 0
+          ? selectedObjects
+          : multiSelectedBoxIdsRef.current
+              .filter((id) => validIds.has(id))
+              .map((id) => boxSelectionId(id));
+        const boxIdsToDelete = multiSelectionIds
+          .map((encoded) => encoded.replace(/^box:/, ""))
+          .filter((id) => validIds.has(id));
         const selectedId = currentProject.selectedWorkspaceBoxId;
-        const idsToDelete = multiSelectionIds.length > 0
-          ? Array.from(new Set(multiSelectionIds))
+        const idsToDelete = boxIdsToDelete.length > 0
+          ? Array.from(new Set(boxIdsToDelete))
           : selectedId
             ? [selectedId]
             : [];
-        if (idsToDelete.length === 0) return;
+        if (idsToDelete.length === 0) {
+          if (multiSelectionIds.some((id) => id.startsWith("remate:"))) {
+            for (const encoded of multiSelectionIds.filter((id) => id.startsWith("remate:"))) {
+              actionsRef.current.removeRemate(encoded.replace(/^remate:/, ""));
+            }
+            clearUiSelection();
+            setSelectedObjects([]);
+          }
+          return;
+        }
         for (const boxId of idsToDelete) {
           actionsRef.current.removeWorkspaceBoxById(boxId);
         }
         multiSelectedBoxIdsRef.current = [];
+        setSelectedObjects([]);
         return;
       }
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown" && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -1219,6 +1298,38 @@ return (
                 overflow: "hidden",
               }}
             />
+            <SelectionMarquee
+              containerRef={containerRef}
+              enabled={(project.activeViewerTool ?? "select") === "select" && viewerApi.viewerReady}
+              canStartAtPointer={(event) => {
+                const core = window.viewerCore as
+                  | { isPointerOnSelectableObject?: (e: { clientX: number; clientY: number }) => boolean }
+                  | undefined;
+                return core?.isPointerOnSelectableObject?.({
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                }) !== true;
+              }}
+              getIdsInRect={(rect) => {
+                const canvas = containerRef.current?.querySelector("canvas");
+                const core = window.viewerCore as
+                  | { getSelectionIdsInScreenRect?: (r: typeof rect, c: HTMLCanvasElement) => string[] }
+                  | undefined;
+                if (!canvas || !core?.getSelectionIdsInScreenRect) return [];
+                return core.getSelectionIdsInScreenRect(rect, canvas);
+              }}
+              onSelectionComplete={(ids) => {
+                setSelectedObjects(ids);
+                multiSelectedBoxIdsRef.current = ids
+                  .map((encoded) => encoded.replace(/^box:/, ""))
+                  .filter((id) => projectRef.current.workspaceBoxes.some((b) => b.id === id));
+                const lastBox = multiSelectedBoxIdsRef.current[multiSelectedBoxIdsRef.current.length - 1];
+                if (lastBox) {
+                  actions.selectBox(lastBox);
+                  setSelectedObject({ type: "box", id: lastBox });
+                }
+              }}
+            />
             <div
               style={{
                 position: "absolute",
@@ -1261,6 +1372,7 @@ return (
                 viewerApi.updateDrawerMaterial?.(boxId, drawerLayerId, materialId);
               }}
               selectedBoxIds={contextSelectedBoxIds}
+              selectedObjectIds={selectedObjects}
             />
           )}
           {showKeyboardShortcutsHelp && (

@@ -8,6 +8,7 @@ import type { DoorWindowConfig } from "../../room/types";
 import type { ProjectRoomUtility } from "../room/roomEngineTypes";
 import type { MouseButtonAction } from "../controls/MouseInputMapper";
 import type { InternalSelectionState } from "../selection/internalSelectionTypes";
+import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 
 export type RoomElementHit = {
   elementId: string;
@@ -42,6 +43,7 @@ export interface IViewerEventEngine {
   getOnRoomUtilitySelected(): ((_data: { utilityId: string; wallId: number; config: ProjectRoomUtility } | null) => void) | null;
   getOnWallSelected(): ((_wallId: number | null) => void) | null;
   getOnBoxSelected(): ((_id: string | null) => void) | null;
+  getOnMultiSelectToggle(): ((_encodedId: string) => void) | null;
   getOnRemateSelected(): ((_remateId: string | null) => void) | null;
   getPlacementMode(): "door" | "window" | null;
   getOnRoomElementPlaced(): ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null;
@@ -98,4 +100,7 @@ export interface IViewerEventEngine {
   setInternalSelection(_selection: InternalSelectionState | null): void;
   getPointerWorldHit(_event: { clientX: number; clientY: number }): { x: number; y: number; z: number } | null;
   setTransformGizmoAnchor(_point: { x: number; y: number; z: number } | null): void;
+  getLayerSelectionHitAtPointer(_event: { clientX: number; clientY: number }): MouseMenuTarget | null;
+  encodeLayerHitToSelectionId(_hit: MouseMenuTarget | null): string | null;
+  getPointerSelectionEncodedId(_event: { clientX: number; clientY: number }): string | null;
 }

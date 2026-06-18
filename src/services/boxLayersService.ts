@@ -18,11 +18,20 @@ import {
   isWardrobeModel,
 } from "../core/wardrobe/wardrobeRules";
 import { getCornerCabinetConfig, computeCornerLayoutForBox } from "../core/cornerCabinet";
+import {
+  backupLayerMaterials,
+  restoreLayerMaterials,
+} from "../core/viewer/materialPreservation";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
   drawersLayer: DrawerLayerItem[];
 }
+
+export type RegenerateLayersOptions = {
+  /** Quando true (padrão em resize), preserva materialId/material das layers existentes. */
+  preserveMaterials?: boolean;
+};
 
 const MM_EPS = 1;
 
@@ -76,7 +85,12 @@ export const applyDrawerTypeRules = (
   };
 };
 
-export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
+export function regenerateLayersForBox(
+  box: WorkspaceBox,
+  options?: RegenerateLayersOptions
+): BoxLayersState {
+  const preserveMaterials = options?.preserveMaterials !== false;
+  const materialBackup = preserveMaterials ? backupLayerMaterials(box) : null;
   const settings = getSettings();
   const boxWidth = clamp(box.dimensoes.largura, 100);
   const boxHeight = clamp(box.dimensoes.altura, 100);
@@ -342,7 +356,11 @@ export function regenerateLayersForBox(box: WorkspaceBox): BoxLayersState {
     }
   }
 
-  return { doorsLayer, drawersLayer };
+  const generated = { doorsLayer, drawersLayer };
+  if (materialBackup) {
+    return restoreLayerMaterials(generated, materialBackup);
+  }
+  return generated;
 }
 
 export function createManualDoor(box: WorkspaceBox): DoorLayerItem {

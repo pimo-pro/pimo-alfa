@@ -13,12 +13,19 @@ export type SelectedObject =
 export interface UiStoreState {
   selectedTool: string;
   selectedObject: SelectedObject;
+  /** IDs codificados (box:, door:, remate:, etc.) para multi-seleção. */
+  selectedObjects: string[];
   /** Painel esquerdo: definições de captura (Photo Mode); o viewport principal é a pré-visualização. */
   photoModePanelOpen: boolean;
   setPhotoModePanelOpen: (_open: boolean) => void;
   setSelectedTool: (_toolId: string) => void;
   setSelectedObject: (_selected: SelectedObject) => void;
+  setSelectedObjects: (_ids: string[]) => void;
+  toggleSelectedObject: (_id: string) => void;
+  addSelectedObject: (_id: string) => void;
+  removeSelectedObject: (_id: string) => void;
   clearSelection: () => void;
+  clearMultiSelection: () => void;
 }
 
 const logUiStore = (event: string, payload?: Record<string, unknown>) => {
@@ -35,6 +42,7 @@ function isValidSelectedObject(value: SelectedObject): boolean {
 export const uiStore = createStore<UiStoreState>((set) => ({
   selectedTool: "home",
   selectedObject: { type: "none" },
+  selectedObjects: [],
   photoModePanelOpen: false,
   setPhotoModePanelOpen: (open) => {
     set((state) => {
@@ -66,10 +74,51 @@ export const uiStore = createStore<UiStoreState>((set) => ({
       return { ...state, selectedObject: selected };
     });
   },
+  setSelectedObjects: (ids) => {
+    const unique = Array.from(new Set(ids.filter((id) => typeof id === "string" && id.trim().length > 0)));
+    set((state) => {
+      if (
+        state.selectedObjects.length === unique.length &&
+        state.selectedObjects.every((id, i) => id === unique[i])
+      ) {
+        return state;
+      }
+      return { ...state, selectedObjects: unique };
+    });
+  },
+  toggleSelectedObject: (id) => {
+    if (!id?.trim()) return;
+    set((state) => {
+      const exists = state.selectedObjects.includes(id);
+      const selectedObjects = exists
+        ? state.selectedObjects.filter((item) => item !== id)
+        : [...state.selectedObjects, id];
+      return { ...state, selectedObjects };
+    });
+  },
+  addSelectedObject: (id) => {
+    if (!id?.trim()) return;
+    set((state) => {
+      if (state.selectedObjects.includes(id)) return state;
+      return { ...state, selectedObjects: [...state.selectedObjects, id] };
+    });
+  },
+  removeSelectedObject: (id) => {
+    set((state) => {
+      if (!state.selectedObjects.includes(id)) return state;
+      return { ...state, selectedObjects: state.selectedObjects.filter((item) => item !== id) };
+    });
+  },
   clearSelection: () => {
     set((state) => {
-      if (state.selectedObject.type === "none") return state;
-      return { ...state, selectedObject: { type: "none" } };
+      if (state.selectedObject.type === "none" && state.selectedObjects.length === 0) return state;
+      return { ...state, selectedObject: { type: "none" }, selectedObjects: [] };
+    });
+  },
+  clearMultiSelection: () => {
+    set((state) => {
+      if (state.selectedObjects.length === 0) return state;
+      return { ...state, selectedObjects: [] };
     });
   },
 }));

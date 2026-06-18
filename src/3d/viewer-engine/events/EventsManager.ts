@@ -82,6 +82,19 @@ export class EventsManager {
     e.refreshTransformControlsAttachment();
   }
 
+  /** Ctrl/Cmd + clique: toggle em multi-seleção sem substituir seleção única. */
+  private tryMultiSelectToggle(event: { ctrlKey?: boolean; metaKey?: boolean; clientX: number; clientY: number }): boolean {
+    if (!event.ctrlKey && !event.metaKey) return false;
+    const e = this.engine;
+    const toggle = e.getOnMultiSelectToggle?.();
+    if (!toggle) return false;
+    const encoded = e.getPointerSelectionEncodedId?.(event) ?? null;
+    if (!encoded) return false;
+    toggle(encoded);
+    e.setSuppressNextCanvasClick(true);
+    return true;
+  }
+
   private handleCanvasClick(event: MouseEvent): void {
     const e = this.engine;
     if (e.getTransformControlsDragging()) return;
@@ -89,6 +102,7 @@ export class EventsManager {
       e.setSuppressNextCanvasClick(false);
       return;
     }
+    if (this.tryMultiSelectToggle(event)) return;
     const clickAnchor = e.getPointerWorldHit(event);
     if (e.getInternalSelectionEnabled()) {
       const internalHit = e.getInternalSelectionHit(event);
@@ -138,6 +152,7 @@ export class EventsManager {
     }
     const hematiId = e.getHematiIdAtPointer(event);
     if (hematiId) {
+      if (this.tryMultiSelectToggle(event)) return;
       e.setTransformGizmoAnchor(clickAnchor);
       e.selectHemati(hematiId);
       e.setHoveredBox(null);
@@ -150,6 +165,7 @@ export class EventsManager {
     }
     const rodapeId = e.getRodapeIdAtPointer(event);
     if (rodapeId) {
+      if (this.tryMultiSelectToggle(event)) return;
       e.setTransformGizmoAnchor(clickAnchor);
       e.selectRodape(rodapeId);
       e.setHoveredBox(null);
@@ -162,6 +178,7 @@ export class EventsManager {
     }
     const remateId = e.getRemateIdAtPointer(event);
     if (remateId) {
+      if (this.tryMultiSelectToggle(event)) return;
       e.setTransformGizmoAnchor(clickAnchor);
       e.selectRemate(remateId);
       e.getOnRemateSelected?.()?.(remateId);
@@ -176,6 +193,7 @@ export class EventsManager {
     }
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
+      if (this.tryMultiSelectToggle(event)) return;
       e.setTransformGizmoAnchor(clickAnchor);
       e.selectHemati(null);
       e.selectRodape(null);
@@ -334,6 +352,11 @@ export class EventsManager {
       }
       const remateId = e.getRemateIdAtPointer(event);
       if (remateId != null) {
+        if (this.tryMultiSelectToggle(event)) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         e.setHoveredRemate(remateId);

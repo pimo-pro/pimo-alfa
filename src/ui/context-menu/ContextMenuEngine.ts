@@ -20,6 +20,7 @@ export type MouseMenuTarget = {
 };
 
 export type MouseMenuCategoryId =
+  | "multiSelection"
   | "box"
   | "porta"
   | "peca"
@@ -101,7 +102,16 @@ export type MouseMenuActionId =
   | "designerStyles.classic"
   | "designerStyles.scandinavian"
   | "designerStyles.japandi"
-  | "designerStyles.luxury";
+  | "designerStyles.luxury"
+  | "multi.copy"
+  | "multi.delete"
+  | "multi.rotate"
+  | "multi.move"
+  | "multi.showMcDimensions"
+  | "multi.changeMaterial"
+  | "multi.changeDimensions"
+  | "multi.changeDimensionsAdditive"
+  | "multi.changeDimensionsRatio";
 
 export type MouseMenuAction = {
   id: MouseMenuActionId;
@@ -132,6 +142,22 @@ function isGeneralTarget(target: MouseMenuTarget | null): boolean {
 export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[] {
   const target = input.target ?? { type: "empty" as const };
   const categories: MouseMenuCategory[] = [];
+
+  if (input.multiSelectionCount >= 2) {
+    categories.push({
+      id: "multiSelection",
+      label: `Seleção (${input.multiSelectionCount})`,
+      actions: [
+        { id: "multi.copy", label: "Copiar" },
+        { id: "multi.delete", label: "Apagar", danger: true },
+        { id: "multi.rotate", label: "Rodar" },
+        { id: "multi.move", label: "Mover" },
+        { id: "multi.showMcDimensions", label: "Mostrar Medidas MC" },
+        { id: "multi.changeMaterial", label: "Alterar Material" },
+        { id: "multi.changeDimensions", label: "Alterar Medidas" },
+      ],
+    });
+  }
 
   if (target.type === "box") {
     categories.push({

@@ -315,6 +315,24 @@ export default function DisplayMenuButton({ triggerStyle }: DisplayMenuButtonPro
               </label>
             </section>
 
+            <section className="display-quality-section" aria-label="Transformações">
+              <div className="display-quality-section-title">Transformações</div>
+              <label className="display-quality-field">
+                Modo de escala padrão
+                <select
+                  className="input"
+                  value={project.viewerSettings.defaultScalingMode ?? "additive"}
+                  onChange={(e) => {
+                    const value = e.target.value === "ratio" ? "ratio" : "additive";
+                    actions.setViewerSettings({ defaultScalingMode: value });
+                  }}
+                >
+                  <option value="additive">Additive</option>
+                  <option value="ratio">Ratio</option>
+                </select>
+              </label>
+            </section>
+
             <button
               type="button"
               className="button button-ghost viewer-display-reset-button"

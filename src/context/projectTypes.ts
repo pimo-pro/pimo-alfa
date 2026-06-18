@@ -46,6 +46,7 @@ export type ViewerMousePreset = "cad" | "classic" | "orbitFriendly" | "mouseCent
 export type ViewerBackgroundMode = "studio" | "white" | "dark" | "woodFloor";
 export type ViewerMaterialQuality = "standard" | "premium" | "lacquered";
 export type UltraPerformanceInternalMode = "balanced" | "flat2" | "aggressive";
+export type ScalingMode = "additive" | "ratio";
 
 export type UltraPerformanceModeOptions = {
   enabled: boolean;
@@ -84,6 +85,8 @@ export type ViewerSettings = {
   panelRenderingEnabled: boolean;
   /** Debug FASE 5: marcadores de furação nas gavetas no Viewer 3D. */
   showDrawerDrilling: boolean;
+  /** Modo padrão ao alterar medidas via menu de contexto (sem submenu). */
+  defaultScalingMode: ScalingMode;
 };
 
 /**
@@ -678,6 +681,20 @@ export interface ProjectActions {
   }) => void;
   /** Layout Generator 3.0 — I / L / U / Ilha (Auto-Room-Fill integrado). */
   runKitchenLayout30: () => void;
+  /** Escala objetos selecionados (IDs codificados) segundo modo additive/ratio. */
+  scaleSelectedObjects: (
+    _selectedObjectIds: string[],
+    _newMaxLength: number,
+    _mode: ScalingMode
+  ) => void;
+  /** Duplica objetos selecionados preservando materiais. */
+  duplicateSelectedObjects: (_selectedObjectIds: string[]) => void;
+  /** Remove objetos selecionados. */
+  deleteSelectedObjects: (_selectedObjectIds: string[]) => void;
+  /** Roda caixas selecionadas 90°. */
+  rotateSelectedObjects: (_selectedObjectIds: string[]) => void;
+  /** Aplica material a todos os objetos selecionados (preserva geometria). */
+  setSelectedObjectsMaterial: (_selectedObjectIds: string[], _materialId: string) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate, scale) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: ViewerToolMode) => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */

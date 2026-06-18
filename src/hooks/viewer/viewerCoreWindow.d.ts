@@ -23,6 +23,13 @@ declare global {
       setBoxSpacing?: (spacing: number) => void;
       updateBoxSpacing?: (spacing: number) => void;
       setOnBoxSelected?: (callback: (id: string | null) => void) => void;
+      setOnMultiSelectToggle?: (callback: ((encodedId: string) => void) | null) => void;
+      setMultiSelectionOutlines?: (ids: string[]) => void;
+      isPointerOnSelectableObject?: (event: { clientX: number; clientY: number }) => boolean;
+      getSelectionIdsInScreenRect?: (
+        rect: { left: number; top: number; right: number; bottom: number },
+        canvas: HTMLCanvasElement
+      ) => string[];
       setOnDoorLayerDoubleClick?: (callback: ((boxId: string, doorLayerId: string) => void) | null) => void;
       setOnDrawerLayerDoubleClick?: (callback: ((boxId: string, drawerLayerId: string) => void) | null) => void;
       setOnBoxDoubleClick?: (callback: ((boxId: string) => void) | null) => void;

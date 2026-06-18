@@ -83,6 +83,25 @@ export function getNextWorkspaceBoxId(
   return { id, index: nextIndex };
 }
 
+const NEW_BOX_GAP_MM = 0;
+
+export function getAdjacentPlacementMm(
+  referenceBox: WorkspaceBox,
+  targetDimensions: { largura: number },
+  gapMm = NEW_BOX_GAP_MM
+): { x_mm: number; z_mm: number } {
+  const referenceWidthMm = Math.max(0, referenceBox.dimensoes?.largura ?? 0);
+  const targetWidthMm = Math.max(0, targetDimensions.largura ?? 0);
+  const distanceMm = referenceWidthMm / 2 + targetWidthMm / 2 + Math.max(0, gapMm);
+  const rotationY = Number.isFinite(referenceBox.rotacaoY) ? (referenceBox.rotacaoY ?? 0) : 0;
+  const dirX = Math.cos(rotationY);
+  const dirZ = Math.sin(rotationY);
+  return {
+    x_mm: (referenceBox.posicaoX_mm ?? 0) + dirX * distanceMm,
+    z_mm: (referenceBox.posicaoZ_mm ?? 0) + dirZ * distanceMm,
+  };
+}
+
 export function getSelectedOrFirstWorkspaceBox(prev: ProjectState): WorkspaceBox | null {
   const list = prev.workspaceBoxes ?? [];
   const selected = list.find((b) => b.id === prev.selectedWorkspaceBoxId);
