@@ -5,6 +5,7 @@ import { applyScalingToProject, resolveScalableTargets } from "../../core/viewer
 import { maxLengthAcross } from "../../core/viewer/scalingModes";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { applyMaterialToSelectedObjects } from "../../core/viewer/batchMaterialService";
+import { historyManager } from "../../core/viewer/historyManager";
 import { decodeSelectionId } from "../../core/viewer/selectionIds";
 import { getAdjacentPlacementMm, getNextWorkspaceBoxId } from "../projectHelpers";
 import type { WorkspaceBox } from "../../core/types";
@@ -28,6 +29,7 @@ export function useSelectionTransformActions(ctx: ProjectActionsExecutionContext
 
     a.scaleSelectedObjects = (selectedObjectIds, newMaxLength, mode) => {
       if (!selectedObjectIds.length || !Number.isFinite(newMaxLength) || newMaxLength <= 0) return;
+      historyManager.recordEvent("scaling", `Scaling ${mode}`);
       updateProject(
         (prev) => {
           const patch = applyScalingToProject(prev, selectedObjectIds, newMaxLength, mode);
@@ -174,6 +176,7 @@ export function useSelectionTransformActions(ctx: ProjectActionsExecutionContext
 
     a.setSelectedObjectsMaterial = (selectedObjectIds, materialId) => {
       if (!selectedObjectIds.length || !materialId?.trim()) return;
+      historyManager.recordEvent("material.batch", "Material em lote");
       updateProject(
         (prev) => {
           const patch = applyMaterialToSelectedObjects(prev, selectedObjectIds, materialId);

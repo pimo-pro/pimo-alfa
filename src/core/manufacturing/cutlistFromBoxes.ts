@@ -8,7 +8,7 @@ import type {
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
-import { COSTA_INDUSTRIAL_CANONICAL_ID, resolveMaterial, getDefaultOfficialMaterial } from "../materials/materials.api";
+import { COSTA_INDUSTRIAL_CANONICAL_ID, resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterial } from "../materials/materials.api";
 import { getIndustrialMaterial } from "../materials/service";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
@@ -104,8 +104,10 @@ export function cutlistComPrecoFromBox(
   const effRules = buildEffectiveDrillingRules(rules);
   const modelo = gerarModeloIndustrial(box, effRules);
   const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
-  const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
+  const bodyMaterialKey = materialId || "mdf_branco";
+  const matInfo = getMaterialDisplayInfo(bodyMaterialKey);
   const material = matInfo.label;
+  const costaMaterial = resolveCostaMaterial(bodyMaterialKey);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
   const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
     {
@@ -232,12 +234,16 @@ export function cutlistComPrecoFromBox(
                 : isBottomPanel && hasDoorBottom
                   ? "bottom"
                   : undefined;
+    const isCostaPanel = p.tipo === "COSTA";
     const doorOfficial = isDoor && doorsLayer[doorIndex]?.material
       ? resolveMaterial(doorsLayer[doorIndex].material)
       : null;
     const itemMaterial = isDoor
       ? (doorOfficial?.label ?? doorsLayer[doorIndex]?.material ?? getDefaultOfficialMaterial().label)
-      : material;
+      : isCostaPanel
+        ? costaMaterial.label
+        : material;
+    const itemMaterialId = isCostaPanel ? costaMaterial.materialId : materialId;
     if (isDoor) doorPanelIndex += 1;
     const doorHeightForLateral =
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
@@ -311,6 +317,7 @@ export function cutlistComPrecoFromBox(
         profundidade: p.espessura_mm,
       },
       espessura: p.espessura_mm,
+      materialId: itemMaterialId,
       material: itemMaterial,
       tipo: p.tipo,
       grainDirection,

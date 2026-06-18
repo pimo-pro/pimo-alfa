@@ -162,6 +162,8 @@ export interface ProjectState {
 
   /** Remate 2.0 — peças independentes manipuláveis. */
   remates: RematePiece[];
+  /** Grupos de objetos do viewer (multi-seleção persistente). */
+  objectGroups: import("../core/viewer/groupTypes").ObjectGroupsState;
   /** Remate visual (legado hematis[]) — acabamento superior/lateral; apenas visual. */
   hematis: ProjectHemati[];
   /** Roda pé inteligente — acabamento inferior (cozinhas; apenas visual). */
@@ -695,6 +697,14 @@ export interface ProjectActions {
   rotateSelectedObjects: (_selectedObjectIds: string[]) => void;
   /** Aplica material a todos os objetos selecionados (preserva geometria). */
   setSelectedObjectsMaterial: (_selectedObjectIds: string[], _materialId: string) => void;
+  /** Cria grupo a partir de IDs codificados selecionados. */
+  createObjectGroup: (_memberIds: string[], _name?: string) => string | null;
+  /** Remove grupo (mantém membros). */
+  ungroupObject: (_groupId: string) => void;
+  /** Adiciona âncora de medição no espaço 3D (metros). */
+  addMeasurementAnchor: (_position: { x: number; y: number; z: number }, _label?: string) => void;
+  /** Remove âncora de medição. */
+  removeMeasurementAnchor: (_anchorId: string) => void;
   /** Define a ferramenta 3D ativa (select, move, rotate, scale) e aplica ao viewerApiAdapter. */
   setActiveTool: (_mode: ViewerToolMode) => void;
   /** Atualiza parcialmente as configurações do viewer (teto, arestas, painéis, mouse, edição de parede). */

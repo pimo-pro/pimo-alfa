@@ -38,6 +38,7 @@ import { EventsManager } from "./events";
 import type { IViewerEventEngine } from "./events/EventEngineTypes";
 import { ViewerTools } from "./tools";
 import { TransformGizmoPivot } from "./tools/TransformGizmoPivot";
+import { GroupGizmo } from "./tools/GroupGizmo";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
 
 import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
@@ -134,9 +135,12 @@ import {
   cloneInternalSelectionState,
 } from "./selection";
 import { MultiSelectionOutline, type MultiOutlineTarget } from "./selection/MultiSelectionOutline";
-import { decodeSelectionId } from "../../core/viewer/selectionIds";
+import { MeasurementAnchorsVisualizer } from "./measurement/MeasurementAnchorsVisualizer";
+import { applySmartSnap, type SmartSnapMeshTarget } from "./snapping/groupSnapApply";
+import { historyManager } from "../../core/viewer/historyManager";
+import type { MeasurementAnchorEntry } from "../../core/viewer/measurementAnchors";
+import { decodeSelectionId, remateSelectionId, rodapeSelectionId } from "../../core/viewer/selectionIds";
 import { encodeSelectionIdFromLayerHit } from "../../core/viewer/selectionHitEncoding";
-import { remateSelectionId, rodapeSelectionId } from "../../core/viewer/selectionIds";
 import { SmartSnapping } from "./snapping/SmartSnapping";
 import { RemateSmartSnapping } from "./snapping/RemateSmartSnapping";
 import { SmartSnapEngine, meshToAabb } from "./snapping/smartSnapEngine";
@@ -330,6 +334,10 @@ export class ViewerCore {
   /** Helper (Object3D) retornado por getHelper(); é o que é adicionado à cena e tem .visible. */
   private transformControlsHelper: THREE.Object3D | null = null;
   private transformGizmoPivot: TransformGizmoPivot | null = null;
+  private groupGizmo: GroupGizmo | null = null;
+  private measurementAnchorsVisualizer: MeasurementAnchorsVisualizer | null = null;
+  private onTransformDragStart: (() => void) | null = null;
+  private onTransformDragEnd: (() => void) | null = null;
   private readonly _boundingBox = new THREE.Box3();
   private readonly _center = new THREE.Vector3();
   private readonly _size = new THREE.Vector3();
@@ -1079,6 +1087,8 @@ export class ViewerCore {
     this.transformControls.showY = true;
     this.transformControls.showZ = true;
     this.transformControls.addEventListener("mouseDown", () => {
+      historyManager.beginDragSession("transform.drag", "Transformação");
+      this.onTransformDragStart?.();
       const dragTarget = this.getTransformControlsTargetMesh();
       if (this.viewerState.getSelectedRemate()) {
         if (dragTarget) this.remateSmartSnapping.onDragStart(dragTarget);
@@ -1105,6 +1115,9 @@ export class ViewerCore {
       }
     });
     this.transformControls.addEventListener("objectChange", () => {
+      if (this.groupGizmo?.isActive()) {
+        this.groupGizmo.applyPivotTransform();
+      }
       if (
         this.viewerState.getTransformControlsDragging() &&
         this.viewerState.getSelectedBox() &&
@@ -1130,6 +1143,8 @@ export class ViewerCore {
     this.transformControlsHelper.visible = false;
     this.sceneManager.scene.add(this.transformControlsHelper);
     this.transformGizmoPivot = new TransformGizmoPivot(this.sceneManager.scene);
+    this.groupGizmo = new GroupGizmo(this.sceneManager.scene);
+    this.measurementAnchorsVisualizer = new MeasurementAnchorsVisualizer(this.sceneManager.scene);
     this.logTransformDiagnostic("transform-listeners-ready", {
       domTag: this.rendererManager.renderer.domElement.tagName,
       helperVisible: this.transformControlsHelper.visible,
@@ -1779,6 +1794,113 @@ export class ViewerCore {
 
   setMultiSelectionOutlines(encodedIds: string[]): void {
     this.multiSelectionOutline?.sync(encodedIds, (encoded) => this.resolveMultiOutlineTarget(encoded));
+  }
+
+  setGroupTransformMembers(encodedIds: string[]): void {
+    this.viewerState.setGroupTransformMemberIds(encodedIds);
+    this.viewerTools.updateTransformControlsAttachment();
+  }
+
+  getGroupTransformMembers(): string[] {
+    return this.viewerState.getGroupTransformMemberIds();
+  }
+
+  clearGroupTransformMembers(): void {
+    this.viewerState.clearGroupTransformMemberIds();
+    this.viewerTools.updateTransformControlsAttachment();
+  }
+
+  setOnTransformDragStart(callback: (() => void) | null): void {
+    this.onTransformDragStart = callback;
+  }
+
+  setOnTransformDragEnd(callback: (() => void) | null): void {
+    this.onTransformDragEnd = callback;
+  }
+
+  syncMeasurementAnchors(
+    anchors: MeasurementAnchorEntry[],
+    selectedMesh?: THREE.Object3D | null
+  ): void {
+    const pos = selectedMesh ? new THREE.Vector3() : null;
+    selectedMesh?.getWorldPosition(pos!);
+    this.measurementAnchorsVisualizer?.sync(anchors, pos);
+  }
+
+  addMeasurementAnchorAtPointer(event: { clientX: number; clientY: number }): MeasurementAnchorEntry | null {
+    const hit = this.raycastSystem.getPointerWorldHit(event);
+    if (!hit) return null;
+    return {
+      id: `anchor-${Date.now()}`,
+      position: { x: hit.x, y: hit.y, z: hit.z },
+      createdAt: Date.now(),
+    };
+  }
+
+  applySmartSnapForGroup(pointerPosition?: { x: number; y: number; z: number }): boolean {
+    void pointerPosition;
+    const memberIds = this.viewerState.getGroupTransformMemberIds();
+    if (memberIds.length < 2) return false;
+    const targets: SmartSnapMeshTarget[] = [];
+    for (const id of memberIds) {
+      const mesh = this.resolveMemberMesh(id);
+      const decoded = decodeSelectionId(id);
+      if (!mesh || !decoded) continue;
+      if (decoded.kind === "box") targets.push({ encodedId: id, mesh, entity: { kind: "box", id: decoded.id, mesh: mesh as THREE.Mesh } });
+      else if (decoded.kind === "remate")
+        targets.push({
+          encodedId: id,
+          mesh,
+          entity: { kind: "remate", id: decoded.id, mesh: mesh as THREE.Mesh, parentBoxId: mesh.userData.boxId as string },
+        });
+      else if (decoded.kind === "rodape")
+        targets.push({
+          encodedId: id,
+          mesh,
+          entity: { kind: "rodape", id: decoded.id, mesh: mesh as THREE.Mesh, parentBoxId: mesh.userData.boxId as string },
+        });
+    }
+    if (!targets.length) return false;
+    const exclude = new Set(targets.map((t) => `${t.entity.kind}:${t.entity.id}`));
+    const others = this.listSmartSnapEntities().filter((e) => !exclude.has(`${e.kind}:${e.id}`));
+    const result = applySmartSnap(targets, others, this.buildSmartAlignSnapContext());
+    if (result.applied) historyManager.recordEvent("snap", "Smart snap grupo");
+    return result.applied;
+  }
+
+  resolveMemberMesh(encoded: string): THREE.Object3D | null {
+    return this.resolveMultiOutlineTarget(encoded)?.mesh ?? null;
+  }
+
+  applyGroupPivotTransform(): void {
+    this.groupGizmo?.applyPivotTransform();
+  }
+
+  notifyGroupTransform(): void {
+    if (!this.groupGizmo?.isActive()) return;
+    for (const member of this.groupGizmo.getMembers()) {
+      const decoded = decodeSelectionId(member.encodedId);
+      if (!decoded) continue;
+      if (decoded.kind === "box") {
+        const { x, y, z } = member.mesh.position;
+        const r = member.mesh.rotation;
+        this.onBoxTransform?.(decoded.id, { x, y, z }, { x: r.x, y: r.y, z: r.z });
+      } else if (decoded.kind === "remate") {
+        this.viewerState.setSelectedRemate(decoded.id);
+        this.notifyRemateTransform();
+      } else if (decoded.kind === "rodape") {
+        this.viewerState.setSelectedRodape(decoded.id);
+        this.notifyRodapeTransform();
+      }
+    }
+    historyManager.recordEvent("group.transform", "Transformar grupo");
+  }
+
+  clampGroupTransform(): void {
+    if (!this.groupGizmo?.isActive()) return;
+    if (this.viewerState.getCurrentTool() !== "translate") return;
+    if (!this.viewerState.getTransformControlsDragging()) return;
+    this.applySmartSnapForGroup();
   }
 
   isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
@@ -5041,6 +5163,15 @@ export class ViewerCore {
         }
         return this.transformGizmoPivot;
       },
+      getGroupGizmo: () => {
+        if (!this.groupGizmo) throw new Error("GroupGizmo not initialized");
+        return this.groupGizmo;
+      },
+      getGroupTransformMemberIds: () => this.viewerState.getGroupTransformMemberIds(),
+      resolveMemberMesh: (encoded) => this.resolveMemberMesh(encoded),
+      applyGroupPivotTransform: () => this.applyGroupPivotTransform(),
+      notifyGroupTransform: () => this.notifyGroupTransform(),
+      clampGroupTransform: () => this.clampGroupTransform(),
     };
   }
 
@@ -5264,6 +5395,9 @@ export class ViewerCore {
     this.smartSnappingEngine.onDragEnd();
     this.remateSmartSnapping.onDragEnd();
     this.viewerState.setSuppressNextCanvasClick(true);
+    if (this.groupGizmo?.isActive()) {
+      this.notifyGroupTransform();
+    }
     this.viewerTools.restoreTransformGizmoPivot();
     this.viewerTools.applyCurrentTool();
     this.notifyBoxTransform();
@@ -5273,6 +5407,8 @@ export class ViewerCore {
     this.notifyWallTransform();
     this.notifyRoomElementTransform();
     this.notifyRoomUtilityTransform();
+    historyManager.endDragSession();
+    this.onTransformDragEnd?.();
   }
 
   private notifyRemateTransform(): void {
@@ -5888,6 +6024,10 @@ export class ViewerCore {
 
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
+    if (this.groupGizmo?.isActive()) {
+      this.clampGroupTransform();
+      return;
+    }
     if (this.viewerState.getSelectedRoomElementId() || this.viewerState.getSelectedRoomUtilityId()) {
       this.clampSelectedWallChildTransform();
       return;

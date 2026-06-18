@@ -2,6 +2,7 @@ import type { BoxModule } from "../../../core/types";
 import type { RulesConfig } from "../../../core/rules/rulesConfig";
 import { getSettings } from "../../../core/settings/settingsService";
 import { getMaterialForBox, getIndustrialMaterial } from "../../../core/materials/service";
+import { resolveCostaMaterial } from "../../../core/materials/materials.api";
 import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas, type PiModelSettings } from "./settings";
 import { PI_BASE_BOX_HEIGHT_MM, PI_BASE_DEPTH_MM } from "./models";
 import { buildPiDrawerLayoutForFronts } from "./drilling";
@@ -59,7 +60,9 @@ export function getPiEspessuraMm(defaultEspessura: number): number {
 }
 
 export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
-  const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco").nome;
+  const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
+  const material = getIndustrialMaterial(bodyMaterialId).nome;
+  const costaMaterial = resolveCostaMaterial(bodyMaterialId);
   const espessura = getPiEspessuraMm(box.espessura);
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = PI_BASE_BOX_HEIGHT_MM;
@@ -115,8 +118,8 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       tipo: "COSTA",
       largura_mm: clampPositive(largura),
       altura_mm: clampPositive(altura),
-      espessura_mm: Number.isFinite(box.espessura) ? Math.max(10, Math.min(19, box.espessura)) : 10,
-      material,
+      espessura_mm: 10,
+      material: costaMaterial.label,
       orientacaoFibra: "vertical",
       quantidade: 1,
       custo: 0,

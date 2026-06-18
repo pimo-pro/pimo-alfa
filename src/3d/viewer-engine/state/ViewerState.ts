@@ -30,6 +30,17 @@ export class ViewerState {
   private internalSelection: InternalSelectionState | null = null;
   private internalSelectionEnabled = false;
   private transformGizmoAnchor: { x: number; y: number; z: number } | null = null;
+  private groupTransformMemberIds: string[] = [];
+
+  getGroupTransformMemberIds(): string[] {
+    return [...this.groupTransformMemberIds];
+  }
+  setGroupTransformMemberIds(ids: string[]): void {
+    this.groupTransformMemberIds = Array.from(new Set(ids.filter((id) => id?.trim())));
+  }
+  clearGroupTransformMemberIds(): void {
+    this.groupTransformMemberIds = [];
+  }
 
   getSelectedBox(): string | null {
     return this.selectedBoxId;

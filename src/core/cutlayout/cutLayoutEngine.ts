@@ -18,7 +18,7 @@ import type {
   CutLayoutTrialConfig as TrialConfig,
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial, OperationResult } from "../types";
-import { getDefaultOfficialMaterial } from "../materials/materials.api";
+import { getDefaultOfficialMaterial, resolveCostaMaterial } from "../materials/materials.api";
 import { getIndustrialMaterial, getMaterialByIdOrLabel } from "../materials/service";
 import { SYSTEM_BACK_MM } from "../baseCabinets";
 import {
@@ -674,7 +674,12 @@ export function cutlistToPieces(
       : Number.isFinite(rawEsp) && rawEsp > 0
         ? rawEsp
         : espIndustrialFallback;
-    const materialRef = item.materialId ?? item.material;
+    const costaMaterial = isCosta
+      ? resolveCostaMaterial(String(item.materialId ?? item.material ?? "mdf_branco").trim() || "mdf_branco")
+      : null;
+    const pieceMaterialId = isCosta ? costaMaterial!.materialId : (item.materialId ?? item.material);
+    const pieceMaterialName = isCosta ? costaMaterial!.label : item.material;
+    const materialRef = isCosta ? costaMaterial!.materialId : (item.materialId ?? item.material);
     const materialRecord = materialRef ? getMaterialByIdOrLabel(String(materialRef)) : null;
     const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);
     const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);
@@ -728,8 +733,8 @@ export function cutlistToPieces(
         quantidade: 1,
         boxId: item.boxId ?? "",
         partName: item.nome,
-        materialId: item.materialId ?? item.material,
-        materialName: item.material,
+        materialId: pieceMaterialId,
+        materialName: pieceMaterialName,
         drillHoles: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         holes: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         grainDirection,

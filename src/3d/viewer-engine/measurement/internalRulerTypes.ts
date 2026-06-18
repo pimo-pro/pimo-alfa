@@ -17,10 +17,12 @@ export type InternalMeasurementEntry = {
 
 export type ProjectMeasurementsState = {
   internal: InternalMeasurementEntry[];
+  /** Âncoras de medição persistentes no espaço 3D (metros). */
+  anchors: import("../../../core/viewer/measurementAnchors").MeasurementAnchorEntry[];
 };
 
 export function createEmptyProjectMeasurements(): ProjectMeasurementsState {
-  return { internal: [] };
+  return { internal: [], anchors: [] };
 }
 
 export function createInternalMeasurementId(): string {

@@ -1,7 +1,12 @@
 import type { BoxModule } from "../types";
 import { getMaterial } from "./materials";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { COSTA_INDUSTRIAL_CANONICAL_ID, getDefaultOfficialMaterial } from "../materials/materials.api";
+import {
+  COSTA_FIXED_THICKNESS_MM,
+  COSTA_INDUSTRIAL_CANONICAL_ID,
+  getDefaultOfficialMaterial,
+  resolveCostaMaterial,
+} from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
@@ -208,7 +213,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 
   const paineis: PainelIndustrial[] = [];
   const material = getNomeMaterial(box);
-  const matCosta = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID);
+  const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
+  const costaMaterial = resolveCostaMaterial(bodyMaterialId);
   const alturaLateral = rules.madeira.calcularAlturaLaterais
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
@@ -270,8 +276,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     tipo: "COSTA",
     largura_mm: clampPositive(largura),
     altura_mm: clampPositive(altura),
-    espessura_mm: matCosta.espessuraPadrao,
-    material: matCosta.nome,
+    espessura_mm: COSTA_FIXED_THICKNESS_MM,
+    material: costaMaterial.label,
     orientacaoFibra: "vertical",
     quantidade: 1,
     custo: 0,
@@ -332,10 +338,15 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 
   // FASE 6: frentes de gaveta via drawersLayer + drawerCutlistAdapter (não gerar gaveta_frente legado).
 
-  const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+  const materialInfo = getIndustrialMaterial(bodyMaterialId);
+  const costaMaterialInfo = getIndustrialMaterial(costaMaterial.materialId);
   return paineis.map((painel) => ({
     ...painel,
-    custo: calcularCustoPainel(painel, materialInfo) * painel.quantidade,
+    custo:
+      calcularCustoPainel(
+        painel,
+        painel.tipo === "COSTA" ? costaMaterialInfo : materialInfo
+      ) * painel.quantidade,
   }));
 }
 

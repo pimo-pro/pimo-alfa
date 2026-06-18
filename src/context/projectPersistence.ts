@@ -173,7 +173,20 @@ export function reviveState(snapshot: unknown): ProjectState | null {
               typeof (e as { boxId?: unknown }).boxId === "string"
           )
         : [],
+      anchors: Array.isArray(restored.measurements?.anchors)
+        ? restored.measurements.anchors.filter(
+            (e): e is import("../core/viewer/measurementAnchors").MeasurementAnchorEntry =>
+              e != null &&
+              typeof e === "object" &&
+              typeof (e as { id?: unknown }).id === "string" &&
+              typeof (e as { position?: unknown }).position === "object"
+          )
+        : [],
     },
+    objectGroups:
+      restored.objectGroups && typeof restored.objectGroups === "object"
+        ? { ...(restored.objectGroups as ProjectState["objectGroups"]) }
+        : defaultState.objectGroups,
     room:
       restored.room && typeof restored.room === "object"
         ? normalizeProjectRoom(restored.room as import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomConfig)

@@ -111,7 +111,10 @@ export type MouseMenuActionId =
   | "multi.changeMaterial"
   | "multi.changeDimensions"
   | "multi.changeDimensionsAdditive"
-  | "multi.changeDimensionsRatio";
+  | "multi.changeDimensionsRatio"
+  | "multi.createGroup"
+  | "multi.ungroup"
+  | "multi.addAnchor";
 
 export type MouseMenuAction = {
   id: MouseMenuActionId;
@@ -132,6 +135,7 @@ export type MouseMenuEngineInput = {
   hasRemates: boolean;
   hasSmartAlignTarget: boolean;
   multiSelectionCount: number;
+  activeGroupId?: string | null;
   canAlign: boolean;
 };
 
@@ -148,6 +152,8 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
       id: "multiSelection",
       label: `Seleção (${input.multiSelectionCount})`,
       actions: [
+        { id: "multi.createGroup", label: "Criar Grupo" },
+        ...(input.activeGroupId ? [{ id: "multi.ungroup" as const, label: "Desagrupar" }] : []),
         { id: "multi.copy", label: "Copiar" },
         { id: "multi.delete", label: "Apagar", danger: true },
         { id: "multi.rotate", label: "Rodar" },
@@ -155,6 +161,7 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
         { id: "multi.showMcDimensions", label: "Mostrar Medidas MC" },
         { id: "multi.changeMaterial", label: "Alterar Material" },
         { id: "multi.changeDimensions", label: "Alterar Medidas" },
+        { id: "multi.addAnchor", label: "Adicionar Âncora" },
       ],
     });
   }

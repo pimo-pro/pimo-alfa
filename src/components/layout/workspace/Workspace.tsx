@@ -15,6 +15,8 @@ import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
 import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore, getRoomMeshFingerprintFromWallStore } from "../../../utils/roomMeshFromWallStore";
 import { uiStore, useUiStore } from "../../../stores/uiStore";
+import { groupStore, resolveActiveGroupMembers } from "../../../stores/groupStore";
+import { serializeState, reviveState } from "../../../context/projectPersistence";
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import BoxInfoOverlay from "./BoxInfoOverlay";
 import InternalMeasurementsPanel from "./InternalMeasurementsPanel";
@@ -119,6 +121,7 @@ export default function Workspace({
   const ctrlOrMetaPressedRef = useRef(false);
   const pointerToggleSelectionRef = useRef(false);
   const multiSelectedBoxIdsRef = useRef<string[]>([]);
+  const dragPreStateRef = useRef<typeof project | null>(null);
   const keyboardMoveRef = useRef<{
     activeKey: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | null;
     accelTimeoutId: number | null;
@@ -349,6 +352,58 @@ export default function Workspace({
     const core = window.viewerCore as { setMultiSelectionOutlines?: (ids: string[]) => void } | undefined;
     core?.setMultiSelectionOutlines?.(selectedObjects);
   }, [selectedObjects, viewerApi.viewerReady]);
+
+  useEffect(() => {
+    if (!viewerApi.viewerReady) return;
+    const { activeGroupId, ephemeralMemberIds } = groupStore.getState();
+    const members = resolveActiveGroupMembers(project.objectGroups, activeGroupId, ephemeralMemberIds);
+    const fallback = selectedObjects.length >= 2 ? selectedObjects : members;
+    const core = window.viewerCore as {
+      setGroupTransformMembers?: (ids: string[]) => void;
+      clearGroupTransformMembers?: () => void;
+    } | undefined;
+    if (fallback.length >= 2) {
+      core?.setGroupTransformMembers?.(fallback);
+      groupStore.getState().setEphemeralMemberIds(fallback);
+    } else {
+      core?.clearGroupTransformMembers?.();
+    }
+  }, [selectedObjects, project.objectGroups, viewerApi.viewerReady]);
+
+  useEffect(() => {
+    if (!viewerApi.viewerReady) return;
+    const core = window.viewerCore as {
+      syncMeasurementAnchors?: (
+        anchors: typeof project.measurements.anchors,
+        selectedMesh?: unknown
+      ) => void;
+    } | undefined;
+    core?.syncMeasurementAnchors?.(project.measurements.anchors ?? [], null);
+  }, [project.measurements.anchors, viewerApi.viewerReady, project.selectedWorkspaceBoxId]);
+
+  useEffect(() => {
+    if (!viewerApi.viewerReady) return;
+    const core = window.viewerCore as {
+      setOnTransformDragStart?: (cb: (() => void) | null) => void;
+      setOnTransformDragEnd?: (cb: (() => void) | null) => void;
+    } | undefined;
+    core?.setOnTransformDragStart?.(() => {
+      dragPreStateRef.current =
+        reviveState(serializeState(projectRef.current) as import("../../../context/projectTypes").ProjectState) ??
+        projectRef.current;
+    });
+    core?.setOnTransformDragEnd?.(() => {
+      const pre = dragPreStateRef.current;
+      if (pre && "recordDragUndo" in actionsRef.current) {
+        (actionsRef.current as { recordDragUndo: (s: typeof project) => void }).recordDragUndo(pre);
+        dragPreStateRef.current = null;
+      }
+    });
+    return () => {
+      core?.setOnTransformDragStart?.(null);
+      core?.setOnTransformDragEnd?.(null);
+    };
+  }, [viewerApi.viewerReady]);
 
   useEffect(() => {
     viewerApi.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {

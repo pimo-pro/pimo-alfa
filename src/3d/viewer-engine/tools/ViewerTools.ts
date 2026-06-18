@@ -20,6 +20,9 @@ export class ViewerTools {
     const e = this.getEngine();
     const controls = e.getTransformControls();
     if (!controls) return;
+    if (e.getGroupGizmo().isActive()) {
+      e.getGroupGizmo().end(controls);
+    }
     e.getTransformGizmoPivot().detach(controls);
   }
 
@@ -36,7 +39,26 @@ export class ViewerTools {
     const controls = e.getTransformControls();
     if (!controls) return;
     this.restoreTransformGizmoPivot();
+
+    const groupMemberIds = e.getGroupTransformMemberIds();
     const mode = e.getCurrentTool();
+    if (groupMemberIds.length >= 2 && mode) {
+      const members = groupMemberIds
+        .map((id) => {
+          const mesh = e.resolveMemberMesh(id);
+          return mesh ? { encodedId: id, mesh } : null;
+        })
+        .filter((m): m is { encodedId: string; mesh: THREE.Object3D } => m != null);
+      if (members.length >= 2 && e.getGroupGizmo().begin(controls, members)) {
+        controls.setMode(mode);
+        controls.setSize(0.4);
+        e.applyTransformControlsMouseGuard();
+        e.logTransformDiagnostic("attach-group", { count: members.length });
+        e.setTransformHelperVisible(true);
+        return;
+      }
+    }
+
     const selectedHematiId = e.getSelectedHematiId();
     if (selectedHematiId && mode) {
       const hematiMesh = e.getHematiMesh(selectedHematiId);

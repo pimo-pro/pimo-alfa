@@ -3,8 +3,11 @@ import type { ProjectActions } from "../projectTypes";
 import { serializeState, reviveState } from "../projectPersistence";
 import { HISTORY_MAX_ENTRIES } from "../historyConfig";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
+import type { ProjectState } from "../projectTypes";
 
-export type HistoryActions = Pick<ProjectActions, "undo" | "redo" | "goToHistory">;
+export type HistoryActions = Pick<ProjectActions, "undo" | "redo" | "goToHistory"> & {
+  recordDragUndo: (_preDrag: import("../projectTypes").ProjectState) => void;
+};
 
 export function useHistoryActions(ctx: ProjectActionsExecutionContext): HistoryActions {
   const { updateProject, viewerSync, undoStackRef, redoStackRef, applyResultados } = ctx;
@@ -65,6 +68,11 @@ export function useHistoryActions(ctx: ProjectActionsExecutionContext): HistoryA
           },
           false
         );
+      },
+      recordDragUndo: (preDrag: ProjectState) => {
+        const snapshot = reviveState(serializeState(preDrag)) ?? preDrag;
+        undoStackRef.current = [snapshot, ...undoStackRef.current].slice(0, HISTORY_MAX_ENTRIES);
+        redoStackRef.current = [];
       },
     }),
     [updateProject, viewerSync, undoStackRef, redoStackRef, applyResultados]

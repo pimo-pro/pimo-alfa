@@ -8,6 +8,7 @@ import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
 } from "./industrialThicknessResolution";
+import { resolveCostaMaterial } from "../materials/materials.api";
 
 /** Opções de nesting alinhadas ao TCN: kerf = minSpacing (entre contornos) + 2×raio da fresa. */
 export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
@@ -80,6 +81,12 @@ function almostEqual(a: number, b: number, eps = 0.2): boolean {
   return Math.abs(a - b) <= eps;
 }
 
+function isCostaCutlistItem(item: CutlistItemForPieces): boolean {
+  const tipo = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
+  const nome = String(item.nome ?? "").trim().toLowerCase();
+  return tipo === "costa" || nome === "costa";
+}
+
 function resolveSheetForThickness(
   thicknessMm: number,
   groupItems: CutlistItemForPieces[]
@@ -91,6 +98,36 @@ function resolveSheetForThickness(
       Number(m.sheetThicknessMm) > 0
   );
   const wanted = Math.abs(thicknessMm);
+  const costaItems = groupItems.filter(isCostaCutlistItem);
+
+  if (costaItems.length > 0 && almostEqual(wanted, 10)) {
+    const bodyRef =
+      String(
+        (costaItems[0] as { materialId?: string }).materialId ??
+          (costaItems[0] as { material?: string }).material ??
+          "mdf_branco"
+      ).trim() || "mdf_branco";
+    const costaMat = resolveCostaMaterial(bodyRef);
+    const costaSheet = mats.find(
+      (m) =>
+        almostEqual(Number(m.sheetThicknessMm), 10) &&
+        (String(m.id).toLowerCase() === costaMat.materialId.toLowerCase() ||
+          String(m.label).toLowerCase() === costaMat.label.toLowerCase())
+    );
+    if (costaSheet) {
+      return {
+        largura_mm: Number(costaSheet.sheetWidthMm),
+        altura_mm: Number(costaSheet.sheetHeightMm),
+        espessura_mm: Number(costaSheet.sheetThicknessMm),
+        materialId: costaSheet.id,
+        materialName: costaSheet.label,
+      };
+    }
+    throw new Error(
+      `Nenhuma chapa 10 mm da família da COSTA (${costaMat.label}) configurada no CRUD.`
+    );
+  }
+
   const refs = new Set(
     groupItems
       .flatMap((it) => {
@@ -106,7 +143,10 @@ function resolveSheetForThickness(
       almostEqual(Number(m.sheetThicknessMm), wanted) &&
       (refs.has(String(m.id).toLowerCase()) || refs.has(String(m.label).toLowerCase()))
   );
-  const byThickness = mats.find((m) => almostEqual(Number(m.sheetThicknessMm), wanted));
+  const byThickness =
+    costaItems.length > 0 && almostEqual(wanted, 10)
+      ? undefined
+      : mats.find((m) => almostEqual(Number(m.sheetThicknessMm), wanted));
   const chosen = preferred ?? byThickness;
   if (!chosen) {
     throw new Error(`Nenhuma chapa configurada para espessura ${wanted} mm.`);

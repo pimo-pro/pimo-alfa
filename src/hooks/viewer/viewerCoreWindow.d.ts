@@ -25,6 +25,21 @@ declare global {
       setOnBoxSelected?: (callback: (id: string | null) => void) => void;
       setOnMultiSelectToggle?: (callback: ((encodedId: string) => void) | null) => void;
       setMultiSelectionOutlines?: (ids: string[]) => void;
+      setGroupTransformMembers?: (ids: string[]) => void;
+      clearGroupTransformMembers?: () => void;
+      setOnTransformDragStart?: (callback: (() => void) | null) => void;
+      setOnTransformDragEnd?: (callback: (() => void) | null) => void;
+      syncMeasurementAnchors?: (
+        anchors: import("../../core/viewer/measurementAnchors").MeasurementAnchorEntry[],
+        selectedMesh?: unknown
+      ) => void;
+      addMeasurementAnchorAtPointer?: (event: { clientX: number; clientY: number }) => {
+        id: string;
+        position: { x: number; y: number; z: number };
+        label?: string;
+        createdAt: number;
+      } | null;
+      applySmartSnapForGroup?: (pointerPosition?: { x: number; y: number; z: number }) => boolean;
       isPointerOnSelectableObject?: (event: { clientX: number; clientY: number }) => boolean;
       getSelectionIdsInScreenRect?: (
         rect: { left: number; top: number; right: number; bottom: number },

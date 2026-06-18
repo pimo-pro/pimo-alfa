@@ -13,6 +13,7 @@ import {
   type MouseMenuTarget,
 } from "../../../ui/context-menu/ContextMenuEngine";
 import { uiStore } from "../../../stores/uiStore";
+import { groupStore } from "../../../stores/groupStore";
 import { promptScalingNewLength } from "../../../context/hooks/useSelectionTransformActions";
 import { decodeSelectionId } from "../../../core/viewer/selectionIds";
 import { buildScalingPreviewData, type ScalingPreviewData } from "../../../core/viewer/scalingPreview";
@@ -213,6 +214,7 @@ export default function ContextMenu({
     Boolean(selectedBoxId) || contextMenuLayerTarget?.type === "remate";
   const alignableCount = viewerApi?.getSelectedObjects?.(activeSelectedIds)?.length ?? 0;
   const canAlign = alignableCount >= 2;
+  const activeGroupId = groupStore.getState().activeGroupId;
   const categoryMenu = buildMouseMenu({
     target: contextMenuLayerTarget,
     hasSelectedBox: Boolean(selectedBoxId),
@@ -220,6 +222,7 @@ export default function ContextMenu({
     hasRemates: (project.remates ?? []).length > 0,
     hasSmartAlignTarget,
     multiSelectionCount: Math.max(activeSelectedObjectIds.length, activeSelectedIds.length),
+    activeGroupId,
     canAlign,
   });
 
@@ -579,6 +582,25 @@ export default function ContextMenu({
       window.viewerCore?.intelligentDesigner?.previewStyle?.(styleId, selectedBoxId);
     }
 
+    if (actionId === "multi.createGroup") {
+      const groupId = actions.createObjectGroup(activeSelectedObjectIds);
+      if (groupId) {
+        groupStore.getState().setActiveGroupId(groupId);
+        window.viewerCore?.setGroupTransformMembers?.(activeSelectedObjectIds);
+      }
+    }
+    if (actionId === "multi.ungroup" && activeGroupId) {
+      actions.ungroupObject(activeGroupId);
+      groupStore.getState().clearGroupSelection();
+      window.viewerCore?.clearGroupTransformMembers?.();
+    }
+    if (actionId === "multi.addAnchor") {
+      const hit = window.viewerCore?.addMeasurementAnchorAtPointer?.({
+        clientX: position?.x ?? 0,
+        clientY: position?.y ?? 0,
+      });
+      if (hit) actions.addMeasurementAnchor(hit.position, hit.label);
+    }
     if (actionId === "multi.copy") {
       actions.duplicateSelectedObjects(activeSelectedObjectIds);
     }

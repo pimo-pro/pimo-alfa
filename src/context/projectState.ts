@@ -33,6 +33,7 @@ import type { RulesProfilesConfig } from "../core/rules/rulesProfiles";
 import { regenerateLayersForBox } from "../services/boxLayersService";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
+import { createEmptyObjectGroups } from "../core/viewer/groupTypes";
 import { computeOrlaFerragem } from "../core/orla/orlaCalculator";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
@@ -301,6 +302,7 @@ export const defaultState: ProjectState = {
   activeViewerTool: "select",
   viewerSettings: defaultViewerSettings,
   measurements: createEmptyProjectMeasurements(),
+  objectGroups: createEmptyObjectGroups(),
   room: null,
   orlaPresets: normalizeOrlaPresets(undefined),
   orlaPieces: {},

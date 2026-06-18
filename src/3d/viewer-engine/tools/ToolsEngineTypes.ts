@@ -5,6 +5,7 @@
 import type * as THREE from "three";
 import type { TransformMode } from "../state";
 import type { TransformGizmoPivot } from "./TransformGizmoPivot";
+import type { GroupGizmo } from "./GroupGizmo";
 
 export interface IViewerToolsEngine {
   getTransformControls(): {
@@ -44,4 +45,10 @@ export interface IViewerToolsEngine {
   clampTransform(): void;
   getTransformGizmoAnchor(): { x: number; y: number; z: number } | null;
   getTransformGizmoPivot(): TransformGizmoPivot;
+  getGroupGizmo(): GroupGizmo;
+  getGroupTransformMemberIds(): string[];
+  resolveMemberMesh(_encodedId: string): THREE.Object3D | null;
+  applyGroupPivotTransform(): void;
+  notifyGroupTransform(): void;
+  clampGroupTransform(): void;
 }

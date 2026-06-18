@@ -22,6 +22,8 @@ import { useHematiActions } from "./useHematiActions";
 import { useRodapeActions } from "./useRodapeActions";
 import { useAutoRoomFillActions } from "./useAutoRoomFillActions";
 import { useSelectionTransformActions } from "./useSelectionTransformActions";
+import { useGroupActions } from "./useGroupActions";
+import { useMeasurementAnchorActions } from "./useMeasurementAnchorActions";
 import { getIndustrialMaterial } from "../../core/materials/service";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 
@@ -70,6 +72,8 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const rodapeActions = useRodapeActions(executionContext);
   const autoRoomFillActions = useAutoRoomFillActions(executionContext);
   const selectionTransformActions = useSelectionTransformActions(executionContext);
+  const groupActions = useGroupActions(executionContext);
+  const measurementAnchorActions = useMeasurementAnchorActions(executionContext);
 
   const coreActions = useMemo(() => {
     const a = {} as ProjectActions;
@@ -157,7 +161,9 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       hematiActions,
       rodapeActions,
       autoRoomFillActions,
-      selectionTransformActions
+      selectionTransformActions,
+      groupActions,
+      measurementAnchorActions
     );
 
     // @PIMO-KEEP — Runtime validation
@@ -252,6 +258,10 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "deleteSelectedObjects",
         "rotateSelectedObjects",
         "setSelectedObjectsMaterial",
+        "createObjectGroup",
+        "ungroupObject",
+        "addMeasurementAnchor",
+        "removeMeasurementAnchor",
       ];
 
       requiredActions.forEach((key) => {
@@ -282,5 +292,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     rodapeActions,
     autoRoomFillActions,
     selectionTransformActions,
+    groupActions,
+    measurementAnchorActions,
   ]);
 }

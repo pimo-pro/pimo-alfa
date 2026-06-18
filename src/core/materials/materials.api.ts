@@ -29,8 +29,16 @@ export type OfficialWoodMaterial = {
 export const INDUSTRIAL_SHEET_LF_MM = 2800;
 export const INDUSTRIAL_SHEET_HF_MM = 2070;
 
-/** Costa estrutural: sempre esta chapa (10 mm, MDF Branco). */
+/** Fallback da costa (10 mm, MDF Branco) quando a família do corpo não tem variante 10 mm. */
 export const COSTA_INDUSTRIAL_CANONICAL_ID = "mdf_branco-10";
+
+/** Espessura fixa da peça COSTA (mm). */
+export const COSTA_FIXED_THICKNESS_MM = 10;
+
+export type CostaMaterialResolution = {
+  materialId: string;
+  label: string;
+};
 
 type IndustrialSheetSeed = {
   canonicalId: string;
@@ -263,4 +271,37 @@ export function listIndustrialWoodMaterials(): OfficialWoodMaterial[] {
 
 export function getDefaultOfficialMaterial(): OfficialWoodMaterial {
   return resolveMaterial("mdf_branco-19") ?? INDUSTRIAL_WOOD_MATERIALS[0]!;
+}
+
+function materialFamilyKey(material: OfficialWoodMaterial): string {
+  const fromViewer = material.viewerMaterialId?.trim().toLowerCase();
+  if (fromViewer) return fromViewer;
+  const id = material.canonicalId.trim().toLowerCase();
+  const dash = id.lastIndexOf("-");
+  return dash > 0 ? id.slice(0, dash) : id;
+}
+
+/**
+ * Resolve material industrial da COSTA: mesma família do corpo, espessura fixa 10 mm.
+ * Nunca devolve variantes 19/20 mm.
+ */
+export function resolveCostaMaterial(bodyMaterialId: string): CostaMaterialResolution {
+  const fallback = resolveMaterial(COSTA_INDUSTRIAL_CANONICAL_ID) ?? INDUSTRIAL_WOOD_MATERIALS[0]!;
+  const body = resolveMaterial(bodyMaterialId);
+  if (!body) {
+    return { materialId: fallback.canonicalId, label: fallback.label };
+  }
+  if ((body.industrialDefaults?.espessuraPadrao ?? 0) === COSTA_FIXED_THICKNESS_MM) {
+    return { materialId: body.canonicalId, label: body.label };
+  }
+  const family = materialFamilyKey(body);
+  const variant10 = listIndustrialWoodMaterials().find(
+    (m) =>
+      materialFamilyKey(m) === family &&
+      (m.industrialDefaults?.espessuraPadrao ?? 0) === COSTA_FIXED_THICKNESS_MM
+  );
+  if (variant10) {
+    return { materialId: variant10.canonicalId, label: variant10.label };
+  }
+  return { materialId: fallback.canonicalId, label: fallback.label };
 }
