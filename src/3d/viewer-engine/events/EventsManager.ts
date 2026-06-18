@@ -191,6 +191,13 @@ export class EventsManager {
       e.refreshTransformControlsAttachment();
       return;
     }
+    const drawerHit = e.getDrawerHitAtPointer(event);
+    if (drawerHit) {
+      event.preventDefault();
+      event.stopPropagation();
+      e.getOnDrawerLayerClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
+      return;
+    }
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
       if (this.tryMultiSelectToggle(event)) return;
@@ -463,7 +470,7 @@ export class EventsManager {
     if (drawerHit) {
       event.preventDefault();
       event.stopPropagation();
-      this.engine.getOnDrawerLayerDoubleClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
+      this.engine.getOnBoxDoubleClick()?.(drawerHit.boxId);
       return;
     }
     const boxId = this.engine.getBoxIdAtPointer(event);

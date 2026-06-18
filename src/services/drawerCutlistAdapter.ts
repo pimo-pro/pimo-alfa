@@ -8,6 +8,12 @@
 
 import type { CutListItem } from "../core/types";
 import type { DrawerLayerItem } from "../models/BoxLayers";
+import {
+  DRAWER_SIDE_THICKNESS_MM,
+  resolveDrawerBottomMaterial,
+  resolveDrawerSideMaterial,
+  resolveMaterial,
+} from "../core/materials/materials.api";
 
 /** Convenção industrial unificada (FASE 2): uma corrediça por lado. */
 export const DRAWER_SLIDES_PER_DRAWER = 2;
@@ -24,6 +30,10 @@ export type DrawerPieceTipo = (typeof DRAWER_PIECE_TIPOS)[number];
 
 export function isDrawerPieceTipo(tipo: string): tipo is DrawerPieceTipo {
   return (DRAWER_PIECE_TIPOS as readonly string[]).includes(tipo);
+}
+
+export function isDrawerSideOrBackPieceTipo(tipo: string): boolean {
+  return tipo === "gaveta_lat_esq" || tipo === "gaveta_lat_dir" || tipo === "gaveta_traseira";
 }
 
 export function boxUsesModernDrawerPipeline(box: { drawersLayer?: DrawerLayerItem[] | null }): boolean {
@@ -66,15 +76,28 @@ export type DrawerIndustrialBom = {
   hardware: DrawerHardwareSummary[];
 };
 
+export type DrawerCutlistMaterialContext = {
+  bodyMaterialId: string;
+};
+
+function normalizeDrawerMaterialContext(
+  bodyMaterialIdOrLegacyLabel?: string
+): DrawerCutlistMaterialContext {
+  const raw = bodyMaterialIdOrLegacyLabel?.trim();
+  if (!raw) return { bodyMaterialId: "mdf_branco-19" };
+  if (resolveMaterial(raw)) return { bodyMaterialId: raw };
+  return { bodyMaterialId: "mdf_branco-19" };
+}
+
 /**
  * BOM industrial unificado: peças (cutlist) + ferragens por gaveta.
  */
 export function extractDrawerIndustrialBomFromLayerItems(
   layerItems: DrawerLayerItem[],
-  materialType: string = "MDF"
+  bodyMaterialIdOrLegacyLabel?: string
 ): DrawerIndustrialBom {
   return {
-    pieces: extractDrawerCutlistFromLayerItems(layerItems, materialType),
+    pieces: extractDrawerCutlistFromLayerItems(layerItems, bodyMaterialIdOrLegacyLabel),
     hardware: extractDrawerHardwareSummaryFromLayerItems(layerItems),
   };
 }
@@ -86,10 +109,25 @@ export function extractDrawerIndustrialBomFromLayerItems(
 export function drawerLayerItemToCutList(
   item: DrawerLayerItem,
   drawerIndex: number,
-  materialType: string = "MDF"
+  bodyMaterialIdOrLegacyLabel?: string
 ): CutListItem[] {
+  const materialContext = normalizeDrawerMaterialContext(bodyMaterialIdOrLegacyLabel);
+  const sideMaterial = resolveDrawerSideMaterial(materialContext.bodyMaterialId);
+  const sideThickness = DRAWER_SIDE_THICKNESS_MM;
+  const bottomThickness =
+    Number.isFinite(item.bottomThickness) && (item.bottomThickness ?? 0) > 0
+      ? Number(item.bottomThickness)
+      : undefined;
+  const bottomMaterial = resolveDrawerBottomMaterial(
+    materialContext.bodyMaterialId,
+    bottomThickness
+  );
+  const frontMaterialId = item.materialId ?? materialContext.bodyMaterialId;
+  const frontOfficial = resolveMaterial(frontMaterialId);
+  const frontMaterialLabel = frontOfficial?.label ?? frontMaterialId;
+
   const pieces: CutListItem[] = [];
-  
+
   const baseId = `${item.parentBoxId}-drawer-${drawerIndex}`;
   const hasMetalBox = item.metalBoxType != null && item.metalBoxType !== "Nenhuma";
   const drawerHardware = [
@@ -117,8 +155,8 @@ export function drawerLayerItemToCutList(
         }]
       : []),
   ];
-  
-  // FRENTE
+
+  // FRENTE — material da frente (não alterado)
   pieces.push({
     id: `${baseId}-front`,
     nome: `Gaveta ${drawerIndex + 1} - Frente`,
@@ -129,11 +167,11 @@ export function drawerLayerItemToCutList(
       profundidade: item.frontThickness,
     },
     espessura: item.frontThickness,
-    material: materialType,
+    material: frontMaterialLabel,
     tipo: "gaveta_frente",
     sourceType: "parametric",
     boxId: item.parentBoxId,
-    materialId: item.materialId,
+    materialId: frontOfficial?.canonicalId ?? frontMaterialId,
     grainDirection: "horizontal",
     metadata: {
       drawerHardware,
@@ -149,9 +187,18 @@ export function drawerLayerItemToCutList(
   });
 
   if (hasMetalBox) return pieces;
-  
-  // LATERAL ESQUERDA
-  if (item.leftSideWidth && item.leftSideWidth > 0) {
+
+  const hasLeftSide =
+    (item.leftSideWidth ?? 0) > 0 ||
+    (item.leftSideHeight ?? 0) > 0 ||
+    (item.leftSideDepth ?? 0) > 0;
+  const hasRightSide =
+    (item.rightSideWidth ?? 0) > 0 ||
+    (item.rightSideHeight ?? 0) > 0 ||
+    (item.rightSideDepth ?? 0) > 0;
+
+  // LATERAL ESQUERDA (1×)
+  if (hasLeftSide) {
     pieces.push({
       id: `${baseId}-left`,
       nome: `Gaveta ${drawerIndex + 1} - Lateral Esquerda`,
@@ -159,20 +206,20 @@ export function drawerLayerItemToCutList(
       dimensoes: {
         largura: item.leftSideDepth ?? 0,
         altura: item.leftSideHeight ?? 0,
-        profundidade: item.leftSideWidth,
+        profundidade: sideThickness,
       },
-      espessura: item.leftSideWidth,
-      material: materialType,
+      espessura: sideThickness,
+      material: sideMaterial.label,
       tipo: "gaveta_lat_esq",
       sourceType: "parametric",
       boxId: item.parentBoxId,
-      materialId: item.materialId,
+      materialId: sideMaterial.materialId,
       grainDirection: "vertical",
     });
   }
-  
-  // LATERAL DIREITA
-  if (item.rightSideWidth && item.rightSideWidth > 0) {
+
+  // LATERAL DIREITA (1×)
+  if (hasRightSide) {
     pieces.push({
       id: `${baseId}-right`,
       nome: `Gaveta ${drawerIndex + 1} - Lateral Direita`,
@@ -180,20 +227,20 @@ export function drawerLayerItemToCutList(
       dimensoes: {
         largura: item.rightSideDepth ?? 0,
         altura: item.rightSideHeight ?? 0,
-        profundidade: item.rightSideWidth,
+        profundidade: sideThickness,
       },
-      espessura: item.rightSideWidth,
-      material: materialType,
+      espessura: sideThickness,
+      material: sideMaterial.label,
       tipo: "gaveta_lat_dir",
       sourceType: "parametric",
       boxId: item.parentBoxId,
-      materialId: item.materialId,
+      materialId: sideMaterial.materialId,
       grainDirection: "vertical",
     });
   }
-  
-  // FUNDO
-  if (item.bottomThickness && item.bottomThickness > 0) {
+
+  // FUNDO (espessura do sistema, normalmente 10 mm)
+  if (bottomMaterial.thicknessMm > 0 && (item.bottomWidth ?? 0) > 0 && (item.bottomDepth ?? 0) > 0) {
     pieces.push({
       id: `${baseId}-bottom`,
       nome: `Gaveta ${drawerIndex + 1} - Fundo`,
@@ -201,20 +248,20 @@ export function drawerLayerItemToCutList(
       dimensoes: {
         largura: item.bottomWidth ?? 0,
         altura: item.bottomDepth ?? 0,
-        profundidade: item.bottomThickness,
+        profundidade: bottomMaterial.thicknessMm,
       },
-      espessura: item.bottomThickness,
-      material: materialType,
+      espessura: bottomMaterial.thicknessMm,
+      material: bottomMaterial.label,
       tipo: "gaveta_fundo",
       sourceType: "parametric",
       boxId: item.parentBoxId,
-      materialId: item.materialId,
+      materialId: bottomMaterial.materialId,
       grainDirection: "none",
     });
   }
-  
-  // TRASEIRA
-  if (item.backThickness && item.backThickness > 0) {
+
+  // TRASEIRA (1×, 16 mm)
+  if ((item.backWidth ?? 0) > 0 && (item.backHeight ?? 0) > 0) {
     pieces.push({
       id: `${baseId}-back`,
       nome: `Gaveta ${drawerIndex + 1} - Traseira`,
@@ -222,18 +269,18 @@ export function drawerLayerItemToCutList(
       dimensoes: {
         largura: item.backWidth ?? 0,
         altura: item.backHeight ?? 0,
-        profundidade: item.backThickness ?? 0,
+        profundidade: sideThickness,
       },
-      espessura: item.backThickness ?? 0,
-      material: materialType,
+      espessura: sideThickness,
+      material: sideMaterial.label,
       tipo: "gaveta_traseira",
       sourceType: "parametric",
       boxId: item.parentBoxId,
-      materialId: item.materialId,
+      materialId: sideMaterial.materialId,
       grainDirection: "horizontal",
     });
   }
-  
+
   return pieces;
 }
 
@@ -242,15 +289,15 @@ export function drawerLayerItemToCutList(
  */
 export function extractDrawerCutlistFromLayerItems(
   layerItems: DrawerLayerItem[],
-  materialType: string = "MDF"
+  bodyMaterialIdOrLegacyLabel?: string
 ): CutListItem[] {
   const allPieces: CutListItem[] = [];
-  
+
   for (let i = 0; i < layerItems.length; i++) {
     const item = layerItems[i];
-    const pieces = drawerLayerItemToCutList(item, i, materialType);
+    const pieces = drawerLayerItemToCutList(item, i, bodyMaterialIdOrLegacyLabel);
     allPieces.push(...pieces);
   }
-  
+
   return allPieces;
 }

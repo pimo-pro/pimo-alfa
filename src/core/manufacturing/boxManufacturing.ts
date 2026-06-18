@@ -2,10 +2,9 @@ import type { BoxModule } from "../types";
 import { getMaterial } from "./materials";
 import type { RulesConfig } from "../rules/rulesConfig";
 import {
-  COSTA_FIXED_THICKNESS_MM,
-  COSTA_INDUSTRIAL_CANONICAL_ID,
   getDefaultOfficialMaterial,
-  resolveCostaMaterial,
+  resolveCostaMaterialForBox,
+  resolveCostaThicknessMm,
 } from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
@@ -138,7 +137,7 @@ const getDimensoesInternas = (box: BoxModule, espessura: number, _rules: RulesCo
   const larguraInterna = clampPositive(Number(box.dimensoes.largura) - espessura * 2);
   const alturaInterna = clampPositive(Number(box.dimensoes.altura) - espessura * 2);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
-  const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
+  const espessuraCostaMm = resolveCostaThicknessMm(box);
   const profundidadeInterna = clampPositive(
     computeBoxProfundidadeAlvoFromBoxLike(
       {
@@ -195,7 +194,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = Number(box.dimensoes.altura) || 0;
   const profundidadeExterna = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
-  const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
+  const espessuraCostaMm = resolveCostaThicknessMm(box);
   const profundidadeInterna = clampPositive(
     getProfundidadeInternaUtilMm(
       {
@@ -214,7 +213,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   const paineis: PainelIndustrial[] = [];
   const material = getNomeMaterial(box);
   const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
-  const costaMaterial = resolveCostaMaterial(bodyMaterialId);
+  const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialId);
   const alturaLateral = rules.madeira.calcularAlturaLaterais
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
@@ -276,7 +275,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     tipo: "COSTA",
     largura_mm: clampPositive(largura),
     altura_mm: clampPositive(altura),
-    espessura_mm: COSTA_FIXED_THICKNESS_MM,
+    espessura_mm: costaMaterial.thicknessMm,
     material: costaMaterial.label,
     orientacaoFibra: "vertical",
     quantidade: 1,

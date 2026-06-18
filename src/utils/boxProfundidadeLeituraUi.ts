@@ -4,15 +4,20 @@
  */
 
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
-import { COSTA_INDUSTRIAL_CANONICAL_ID } from "../core/materials/materials.api";
-import { getIndustrialMaterial } from "../core/materials/service";
+import { resolveCostaThicknessMm } from "../core/materials/materials.api";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 import type { BoxModule } from "../core/types";
 
 /** Subconjunto comum a `WorkspaceBox` e `BoxModule` para o cálculo de leitura. */
 export type BoxLikeProfundidadeLeitura = Pick<
   BoxModule,
-  "dimensoes" | "espessura" | "portaTipo" | "doorsLayer" | "costaAtiva" | "profundidadeExterna"
+  | "dimensoes"
+  | "espessura"
+  | "portaTipo"
+  | "doorsLayer"
+  | "costaAtiva"
+  | "costaThicknessMm"
+  | "profundidadeExterna"
 >;
 
 export type BoxProfundidadeLeituraMm = {
@@ -33,7 +38,7 @@ export function computeBoxProfundidadeLeituraMm(
       doorsLayer: box.doorsLayer,
       costaAtiva: box.costaAtiva,
     },
-    getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao
+    resolveCostaThicknessMm(box)
   );
   return { profundidadeExternaMm, profundidadeInternaUtilMm };
 }

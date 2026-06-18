@@ -482,9 +482,11 @@ export default function App() {
             <Route
               path="/projects/viewer"
               element={
-                <PermissionRoute check={canOpenProjectsShowroom}>
-                  <ProjectsViewerPage />
-                </PermissionRoute>
+                <ProjectProvider>
+                  <PermissionRoute check={canOpenProjectsShowroom}>
+                    <ProjectsViewerPage />
+                  </PermissionRoute>
+                </ProjectProvider>
               }
             />
             <Route path="/projects" element={<ProjectsPage />} />

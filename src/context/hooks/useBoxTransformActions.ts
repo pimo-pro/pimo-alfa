@@ -24,6 +24,7 @@ export type BoxTransformActions = Pick<
   | "setWorkspaceBoxMaterial"
   | "setWorkspaceBoxLocked"
   | "setWorkspaceBoxPiHideDrawerHoles"
+  | "setWorkspaceBoxCostaMaterial"
   | "setTipoBorda"
   | "setTipoFundo"
   | "alignFrontWithNeighbor"
@@ -215,6 +216,30 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
           const workspaceBoxes = prev.workspaceBoxes.map((box) =>
             box.id === boxId ? { ...box, piHideDrawerHoles: hide } : box
           );
+          return recomputeState(prev, { workspaceBoxes }, true);
+        },
+        true
+      );
+    };
+
+    a.setWorkspaceBoxCostaMaterial = (boxId, costaMaterialId, costaThicknessMm) => {
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+            if (box.id !== boxId) return box;
+            const next = { ...box } as typeof box;
+            if (costaMaterialId === undefined) {
+              delete next.costaMaterialId;
+            } else {
+              next.costaMaterialId = costaMaterialId;
+            }
+            if (costaThicknessMm === undefined) {
+              delete next.costaThicknessMm;
+            } else {
+              next.costaThicknessMm = costaThicknessMm;
+            }
+            return next;
+          });
           return recomputeState(prev, { workspaceBoxes }, true);
         },
         true

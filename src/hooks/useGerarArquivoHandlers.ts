@@ -23,7 +23,7 @@ import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutLayoutResult } from "../core/cutlayout/cutLayoutTypes";
-import { getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
+import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
 import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
@@ -537,58 +537,45 @@ export function useGerarArquivoHandlers() {
           return;
         }
 
-        const byMaterial = new Map<string, typeof cncItems>();
-        for (const item of cncItems) {
-          const key = (item.material ?? "Módulo").trim() || "Módulo";
-          if (!byMaterial.has(key)) byMaterial.set(key, []);
-          byMaterial.get(key)!.push(item);
-        }
-
         const cncProjectStub = { projectName: project.projectName ?? "Projeto" };
 
         const collectFiles = async (mode: "pro" | "fast"): Promise<Array<{ name: string; tcn: string; base: string }>> => {
+          if (
+            abortIndustrialLayoutRef.current ||
+            isMemoryPressureHigh()
+          ) {
+            const err = new Error("CutLayout aborted");
+            err.name = "CutLayoutAbortedError";
+            throw err;
+          }
+          const layoutOptionsBase = mode === "pro" ? getDefaultCncLayoutOptions() : getFastCncLayoutOptions();
+          setLayoutProgress((prev) => ({
+            ...prev,
+            visible: true,
+            mode,
+            percent: Math.max(prev.percent, 50),
+            message: "Gerando layout industrial otimizado… aguarde.",
+          }));
+          const cncBundle = await buildCncFromCutlistItemsInWorker(
+            settingsSnapshot,
+            materialsSnapshot,
+            cncProjectStub,
+            cncItems,
+            layoutOptionsBase
+          );
+          if (!cncBundle?.cnc?.files?.length) return [];
           const rows: Array<{ name: string; tcn: string; base: string }> = [];
-          const materialEntries = Array.from(byMaterial.entries());
-          const startedAt = Date.now();
-          const timeoutMs = 6000;
-          for (let mi = 0; mi < materialEntries.length; mi++) {
-            if (
-              abortIndustrialLayoutRef.current ||
-              Date.now() - startedAt > timeoutMs ||
-              isMemoryPressureHigh()
-            ) {
-              const err = new Error("CutLayout aborted");
-              err.name = "CutLayoutAbortedError";
-              throw err;
-            }
-            const [materialName, itemsForMaterial] = materialEntries[mi]!;
-            const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
-            const layoutOptionsBase = mode === "pro" ? getDefaultCncLayoutOptions() : getFastCncLayoutOptions();
-            const basePct = (mi / Math.max(1, materialEntries.length)) * 100;
-            setLayoutProgress((prev) => ({
-              ...prev,
-              visible: true,
-              mode,
-              percent: Math.max(prev.percent, Math.min(99, basePct + 50 / Math.max(1, materialEntries.length))),
-              message: "Gerando layout industrial otimizado… aguarde.",
-            }));
-            const cncBundle = await buildCncFromCutlistItemsInWorker(
-              settingsSnapshot,
-              materialsSnapshot,
-              cncProjectStub,
-              itemsForMaterial,
-              layoutOptionsBase
+          for (const file of cncBundle.cnc.files) {
+            const base = buildTcnExportBaseName(
+              cncBundle.layoutResult,
+              file.panelIndex,
+              cncBundle.cnc.files.length
             );
-            if (!cncBundle) continue;
-            const cnc = cncBundle.cnc;
-            for (const file of cnc.files) {
-              const base = cnc.files.length === 1 ? safeMaterialName : `${safeMaterialName}_${file.panelIndex}`;
-              rows.push({
-                name: `${base}_cnc_${tcnSuffix}.tcn`,
-                tcn: file.tcn,
-                base: file.filenameBase,
-              });
-            }
+            rows.push({
+              name: `${base}_cnc_${tcnSuffix}.tcn`,
+              tcn: file.tcn,
+              base: file.filenameBase,
+            });
           }
           return rows;
         };
@@ -833,7 +820,7 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: Layout de Corte", err);
       }
 
-      // --- CNC (TCN): um ficheiro por material (ex.: Madeira.tcn, Branco.tcn) ---
+      // --- CNC (TCN): nesting global (corpo + portas + prateleiras + gavetas) ---
       try {
         const cncOptions = getDefaultCncLayoutOptions();
         const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
@@ -841,24 +828,16 @@ export function useGerarArquivoHandlers() {
           abortFullExport = true;
           throw new Error("Exportação cancelada por matéria-prima sem chapa válida.");
         }
-        const byMaterial = new Map<string, typeof cncItems>();
-        for (const item of cncItems) {
-          const key = (item.material ?? "Módulo").trim() || "Módulo";
-          if (!byMaterial.has(key)) byMaterial.set(key, []);
-          byMaterial.get(key)!.push(item);
-        }
         const usedTcnNamesByPath = new Set<string>();
         let tcnFilesAdded = 0;
-        for (const [materialName, itemsForMaterial] of byMaterial) {
-          const cncBundle = await buildCncFromCutlistItemsInWorker(
-            settingsSnapshot,
-            materialsSnapshot,
-            cncProjectStub,
-            itemsForMaterial as CutlistItemForPieces[],
-            cncOptions
-          );
-          if (!cncBundle?.cnc?.files?.length) continue;
-          const safeMaterialName = materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
+        const cncBundle = await buildCncFromCutlistItemsInWorker(
+          settingsSnapshot,
+          materialsSnapshot,
+          cncProjectStub,
+          cncItems as CutlistItemForPieces[],
+          cncOptions
+        );
+        if (cncBundle?.cnc?.files?.length) {
           for (const file of cncBundle.cnc.files) {
             if (!file || file.tcn == null) {
               errors.push({
@@ -868,7 +847,11 @@ export function useGerarArquivoHandlers() {
               continue;
             }
             const thicknessBucket = formatThicknessBucket(file.thicknessMm);
-            const base = cncBundle.cnc.files.length === 1 ? safeMaterialName : `${safeMaterialName}_${file.panelIndex}`;
+            const base = buildTcnExportBaseName(
+              cncBundle.layoutResult,
+              file.panelIndex,
+              cncBundle.cnc.files.length
+            );
             let finalBase = base;
             let dedupeIndex = 2;
             while (usedTcnNamesByPath.has(`cnc/${thicknessBucket}/tcn/${finalBase}`)) {

@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
 import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
-import { COSTA_INDUSTRIAL_CANONICAL_ID } from "../core/materials/materials.api";
-import { getIndustrialMaterial } from "../core/materials/service";
+import { resolveCostaThicknessMm } from "../core/materials/materials.api";
 import type { DoorLayerItem } from "../models/BoxLayers";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
@@ -250,7 +249,7 @@ export const useCalculadoraSync = (
       let doorLayerItems: DoorLayerItem[] = wsBox?.doorsLayer ?? [];
       if (depthMm !== undefined && Number.isFinite(depthMm)) {
         const profundidadeExternaMm = Number(wsBox.profundidadeExterna ?? depthMm) || 0;
-        const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
+        const espessuraCostaMm = resolveCostaThicknessMm(wsBox);
         const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
           {
             dimensoes: { profundidade: profundidadeExternaMm },

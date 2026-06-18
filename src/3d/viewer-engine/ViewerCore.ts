@@ -315,6 +315,7 @@ export class ViewerCore {
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onDrawerLayerDoubleClick: ((_boxId: string, _drawerLayerId: string) => void) | null = null;
+  private onDrawerLayerClick: ((_boxId: string, _drawerLayerId: string) => void) | null = null;
   private onBoxDoubleClick: ((_boxId: string) => void) | null = null;
   private onModelLoaded: ((_boxId: string, _modelId: string, _object: THREE.Object3D) => void) | null = null;
   private onBoxTransform: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null = null;
@@ -4372,6 +4373,10 @@ export class ViewerCore {
     this.onDrawerLayerDoubleClick = callback;
   }
 
+  setOnDrawerLayerClick(callback: ((_boxId: string, _drawerLayerId: string) => void) | null): void {
+    this.onDrawerLayerClick = callback;
+  }
+
   setOnBoxDoubleClick(callback: ((_boxId: string) => void) | null): void {
     this.onBoxDoubleClick = callback;
   }
@@ -5079,6 +5084,7 @@ export class ViewerCore {
       getPointerSelectionEncodedId: (e) => this.getPointerSelectionEncodedId(e),
       getOnDoorLayerDoubleClick: () => this.onDoorLayerDoubleClick,
       getOnDrawerLayerDoubleClick: () => this.onDrawerLayerDoubleClick,
+      getOnDrawerLayerClick: () => this.onDrawerLayerClick,
       getOnBoxDoubleClick: () => this.onBoxDoubleClick,
       getPointerActionForButton: (button) => {
         const mapping = getMouseInputMapping(this.mouseInputPreset);
@@ -6785,6 +6791,7 @@ export class ViewerCore {
     this.onInternalPointSelected = null;
     this.onDoorLayerDoubleClick = null;
     this.onDrawerLayerDoubleClick = null;
+    this.onDrawerLayerClick = null;
     this.onBoxDoubleClick = null;
     this.onModelLoaded = null;
     this.eventsManager?.unregister();

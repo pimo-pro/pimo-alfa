@@ -1,6 +1,10 @@
 import type { BoxModule } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { COSTA_INDUSTRIAL_CANONICAL_ID, getDefaultOfficialMaterial } from "../materials/materials.api";
+import {
+  getDefaultOfficialMaterial,
+  resolveCostaMaterialForBox,
+  resolveCostaThicknessMm,
+} from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { getCornerCabinetConfig, computeCornerLayoutForBox, inferCornerSideFromBox } from "./cornerCabinetRules";
@@ -13,6 +17,7 @@ type PainelCorner = {
   altura_mm: number;
   espessura_mm: number;
   material: string;
+  materialId?: string;
   orientacaoFibra: "horizontal" | "vertical" | "none";
   quantidade: number;
   custo: number;
@@ -79,7 +84,7 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = Number(box.dimensoes.altura) || 0;
   const profundidadeExterna = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
-  const espessuraCostaMm = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao;
+  const espessuraCostaMm = resolveCostaThicknessMm(box);
   const profundidadeInterna = clampPositive(
     computeBoxProfundidadeAlvoFromBoxLike(
       {
@@ -94,7 +99,8 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
   );
   const espessura = getEspessura(box);
   const material = getNomeMaterial(box);
-  const matCosta = getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID);
+  const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
+  const costaMat = resolveCostaMaterialForBox(box, bodyMaterialId);
   const alturaLateral = rules.madeira.calcularAlturaLaterais
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
@@ -153,8 +159,9 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
       tipo: "COSTA",
       largura_mm: clampPositive(largura),
       altura_mm: clampPositive(altura),
-      espessura_mm: matCosta.espessuraPadrao,
-      material: matCosta.nome,
+      espessura_mm: costaMat.thicknessMm,
+      material: costaMat.label,
+      materialId: costaMat.materialId,
       orientacaoFibra: "vertical",
       quantidade: 1,
       custo: 0,
@@ -205,10 +212,15 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
     });
   }
 
-  const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+  const materialInfo = getIndustrialMaterial(bodyMaterialId);
+  const costaMaterialInfo = getIndustrialMaterial(costaMat.materialId);
   return paineis.map((painel) => ({
     ...painel,
-    custo: calcularCustoPainel(painel, materialInfo) * painel.quantidade,
+    custo:
+      calcularCustoPainel(
+        painel,
+        painel.tipo === "COSTA" ? costaMaterialInfo : materialInfo
+      ) * painel.quantidade,
   }));
 }
 

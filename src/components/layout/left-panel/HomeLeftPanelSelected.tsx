@@ -12,6 +12,7 @@ import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
 import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
 import { Icon } from "@/components/icons";
 import SelecionarMaterialSection from "../../settings/material/SelecionarMaterialSection";
+import CostaMaterialControl from "./CostaMaterialControl";
 import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
 import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
 
@@ -393,6 +394,22 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                       </div>
                       <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
                     </div>
+                    <CostaMaterialControl
+                      box={selectedBox}
+                      projectMaterialId={project.materialId}
+                      onApply={(costaMaterialId, costaThicknessMm) => {
+                        actions.setWorkspaceBoxCostaMaterial(
+                          selectedBox.id,
+                          costaMaterialId,
+                          costaThicknessMm
+                        );
+                        showToast("Material da costa actualizado.", "info");
+                      }}
+                      onReset={() => {
+                        actions.setWorkspaceBoxCostaMaterial(selectedBox.id);
+                        showToast("Costa reposta para o padrão (família + 10 mm).", "info");
+                      }}
+                    />
                   </div>
                 </details>
               )}

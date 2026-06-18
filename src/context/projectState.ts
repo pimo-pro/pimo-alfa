@@ -522,6 +522,8 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     baseCabinetId: box.baseCabinetId,
     piHideDrawerHoles: box.piHideDrawerHoles === true,
     costaAtiva: box.costaAtiva,
+    costaMaterialId: box.costaMaterialId,
+    costaThicknessMm: box.costaThicknessMm,
     profundidadeExterna: box.profundidadeExterna,
     orlaPresetId: box.orlaPresetId,
     remateIds: box.remateIds ?? [],

@@ -9,9 +9,9 @@ import {
   getDrawerSlideDrillingRules,
 } from "../../core/drawers/drilling/DrawerDrillingRules";
 import {
-  resolveDrawerAnimationDurationMs,
-  resolveDrawerMotionCurve,
-} from "../../core/drawers/DrawerMotionCurves";
+  easeInOutCubic,
+  VIEWER_DRAWER_ANIMATION_DURATION_MS,
+} from "../../core/drawers/DrawerMotionService";
 
 const drawerOpenState = new Map<string, boolean>();
 const drawerPositionState = new Map<string, number>();
@@ -228,8 +228,8 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
     const existingRaf = drawerAnimationRaf.get(spec.id);
     if (existingRaf != null) cancelAnimationFrame(existingRaf);
     const start = performance.now();
-    const durationMs = resolveDrawerAnimationDurationMs(spec.slideType, spec.softClose);
-    const easing = resolveDrawerMotionCurve(spec.slideType, spec.softClose);
+    const durationMs = VIEWER_DRAWER_ANIMATION_DURATION_MS;
+    const easing = easeInOutCubic;
     const animate = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
       const eased = easing(t);

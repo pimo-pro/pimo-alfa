@@ -8,8 +8,7 @@ import type {
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
-import { COSTA_INDUSTRIAL_CANONICAL_ID, resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterial } from "../materials/materials.api";
-import { getIndustrialMaterial } from "../materials/service";
+import { resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterialForBox, resolveCostaThicknessMm } from "../materials/materials.api";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import {
@@ -25,7 +24,7 @@ import { calcLateralDowelHoles } from "../drill/lateralDowels";
 import { getSettings } from "../settings/settingsService";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { calcularPrecoCutList } from "../pricing/pricing";
-import { extractDrawerCutlistFromLayerItems } from "../../services/drawerCutlistAdapter";
+import { extractDrawerCutlistFromLayerItems, isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 
 /** Campos derivados — não entram na chave de cache (evita recomputes por efeitos colaterais). */
 const CAMPOS_EXCLUIDOS_FP_CUTLIST = new Set([
@@ -107,7 +106,7 @@ export function cutlistComPrecoFromBox(
   const bodyMaterialKey = materialId || "mdf_branco";
   const matInfo = getMaterialDisplayInfo(bodyMaterialKey);
   const material = matInfo.label;
-  const costaMaterial = resolveCostaMaterial(bodyMaterialKey);
+  const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialKey);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
   const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
     {
@@ -117,7 +116,7 @@ export function cutlistComPrecoFromBox(
       doorsLayer: box.doorsLayer,
       costaAtiva: box.costaAtiva,
     },
-    getIndustrialMaterial(COSTA_INDUSTRIAL_CANONICAL_ID).espessuraPadrao
+    resolveCostaThicknessMm(box)
   );
   const visualMaterial = materialId
     ? getVisualMaterialForBox(box, projectMaterialId)
@@ -207,7 +206,7 @@ export function cutlistComPrecoFromBox(
     if (!p || !p.id || !p.tipo || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) {
       return;
     }
-    if (drawersLayer.length > 0 && (p.tipo === "gaveta_frente" || p.tipo === "gaveta")) {
+    if (drawersLayer.length > 0 && (p.tipo === "gaveta_frente" || p.tipo === "gaveta" || isDrawerPieceTipo(p.tipo))) {
       return;
     }
     const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
@@ -316,7 +315,7 @@ export function cutlistComPrecoFromBox(
         altura: p.altura_mm,
         profundidade: p.espessura_mm,
       },
-      espessura: p.espessura_mm,
+      espessura: isCostaPanel ? costaMaterial.thicknessMm : p.espessura_mm,
       materialId: itemMaterialId,
       material: itemMaterial,
       tipo: p.tipo,
@@ -328,7 +327,7 @@ export function cutlistComPrecoFromBox(
   });
 
   if (drawersLayer.length > 0) {
-    const drawerCutlist = extractDrawerCutlistFromLayerItems(drawersLayer, material);
+    const drawerCutlist = extractDrawerCutlistFromLayerItems(drawersLayer, bodyMaterialKey);
     const drawerItems = calcularPrecoCutList(drawerCutlist).map((item) => {
       const drawerRules = item.metadata?.drawerRules as
         | {
@@ -363,6 +362,7 @@ export function cutlistComPrecoFromBox(
         ...baseItem,
         ...item,
         materialId: item.materialId ?? materialId,
+        material: item.material ?? material,
         visualMaterial,
         faceMaterials: baseItem.faceMaterials,
         drillHoles,

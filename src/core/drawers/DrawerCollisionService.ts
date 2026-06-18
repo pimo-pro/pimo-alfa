@@ -11,6 +11,8 @@ export type DrawerCollisionSceneContext = {
   drawerIndex: number;
   /** Gaveta já aberta bloqueia abertura de outra na mesma coluna. */
   singleOpenDrawer?: boolean;
+  /** Abertura sequencial global — permite várias gavetas abertas em simultâneo. */
+  allowMultipleOpen?: boolean;
 };
 
 export type DrawerCollisionResult = {
@@ -60,7 +62,7 @@ export function canOpenDrawer(
     sceneContext?.drawerIndex ?? drawers.findIndex((d) => d.id === drawer.id);
 
   const otherOpen = hasOtherOpenDrawer(drawers, drawer.id);
-  if (otherOpen) {
+  if (otherOpen && !sceneContext?.allowMultipleOpen) {
     return {
       canOpen: false,
       reason: "Feche a outra gaveta aberta antes de abrir esta.",

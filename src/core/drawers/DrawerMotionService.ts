@@ -16,6 +16,12 @@ import {
   easeInOutCubic,
 } from "./DrawerMotionCurves";
 
+/** Delay entre passos da abertura/fecho sequencial no Viewer (ms). */
+export const DRAWER_SEQUENTIAL_STEP_DELAY_MS = 150;
+
+/** Duração da animação no Viewer — alinhada com portas (DoorFactory). */
+export const VIEWER_DRAWER_ANIMATION_DURATION_MS = 2000;
+
 export interface DrawerMotionState {
   drawerId: string;
   isOpen: boolean;
@@ -106,6 +112,40 @@ export function animateDrawer(params: {
 }
 
 export { easeInOutCubic };
+
+/** Curso máximo da corrediça (mm) a partir das dimensões do layer. */
+export function resolveDrawerMaxPullMm(
+  layer: Pick<DrawerLayerItem, "pullDistanceMm" | "bodyDepth" | "depth" | "frontThickness">
+): number {
+  const fromBody = Number(layer.bodyDepth);
+  if (Number.isFinite(fromBody) && fromBody > 0) return fromBody;
+  const depth = Number(layer.depth) || 0;
+  const front = Number(layer.frontThickness) || 0;
+  const fromDepth = Math.max(0, depth - front);
+  if (fromDepth > 0) return fromDepth;
+  const stored = Number(layer.pullDistanceMm);
+  if (Number.isFinite(stored) && stored > 0) return stored;
+  return 0;
+}
+
+/** Estado aberto: isOpen + pullDistanceMm = curso máximo. */
+export function openDrawer(layer: DrawerLayerItem): DrawerLayerItem {
+  const maxPull = resolveDrawerMaxPullMm(layer);
+  return {
+    ...layer,
+    isOpen: true,
+    pullDistanceMm: maxPull,
+  };
+}
+
+/** Estado fechado: isOpen + pullDistanceMm = 0. */
+export function closeDrawer(layer: DrawerLayerItem): DrawerLayerItem {
+  return {
+    ...layer,
+    isOpen: false,
+    pullDistanceMm: 0,
+  };
+}
 
 export function closeAllDrawers(group: DrawerGroup): DrawerGroup {
   const updatedDrawers = group.drawers.map((drawer) => setDrawerOpen(drawer, false));

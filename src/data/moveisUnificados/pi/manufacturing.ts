@@ -2,7 +2,7 @@ import type { BoxModule } from "../../../core/types";
 import type { RulesConfig } from "../../../core/rules/rulesConfig";
 import { getSettings } from "../../../core/settings/settingsService";
 import { getMaterialForBox, getIndustrialMaterial } from "../../../core/materials/service";
-import { resolveCostaMaterial } from "../../../core/materials/materials.api";
+import { resolveCostaMaterialForBox } from "../../../core/materials/materials.api";
 import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas, type PiModelSettings } from "./settings";
 import { PI_BASE_BOX_HEIGHT_MM, PI_BASE_DEPTH_MM } from "./models";
 import { buildPiDrawerLayoutForFronts } from "./drilling";
@@ -62,7 +62,7 @@ export function getPiEspessuraMm(defaultEspessura: number): number {
 export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
   const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
   const material = getIndustrialMaterial(bodyMaterialId).nome;
-  const costaMaterial = resolveCostaMaterial(bodyMaterialId);
+  const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialId);
   const espessura = getPiEspessuraMm(box.espessura);
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = PI_BASE_BOX_HEIGHT_MM;
@@ -118,44 +118,13 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       tipo: "COSTA",
       largura_mm: clampPositive(largura),
       altura_mm: clampPositive(altura),
-      espessura_mm: 10,
+      espessura_mm: costaMaterial.thicknessMm,
       material: costaMaterial.label,
       orientacaoFibra: "vertical",
       quantidade: 1,
       custo: 0,
     },
   ];
-
-  const drawerLayers = box.drawersLayer ?? [];
-  if (drawerLayers.length === 0) {
-    return panels;
-  }
-
-  const n = clampPiNumeroGavetas(drawerLayers.length);
-  const layout = buildPiDrawerLayoutForFronts(altura, n);
-  const gavetasIds = box.panelIds?.gavetas ?? [];
-
-  drawerLayers.forEach((item, index) => {
-    const frontHeight =
-      Number.isFinite(item.height) && item.height > 0
-        ? Math.round(item.height)
-        : layout.frontHeightsMm[index] ?? layout.frontHeightsMm[layout.frontHeightsMm.length - 1];
-    const frontWidth =
-      Number.isFinite(item.width) && item.width > 0
-        ? Math.round(item.width)
-        : clampPositive(largura - FRONT_GAP_MM * 2);
-    panels.push({
-      id: gavetasIds[index] ?? item.id ?? `pi-gaveta-frente-${index + 1}`,
-      tipo: "gaveta_frente",
-      largura_mm: clampPositive(frontWidth),
-      altura_mm: clampPositive(frontHeight),
-      espessura_mm: espessura,
-      material,
-      orientacaoFibra: "vertical",
-      quantidade: 1,
-      custo: 0,
-    });
-  });
 
   return panels;
 }

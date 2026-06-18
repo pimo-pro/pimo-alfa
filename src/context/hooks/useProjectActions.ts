@@ -209,6 +209,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "repositionWorkspaceBoxesInsideRoom",
         "setWorkspaceBoxMaterial",
         "setWorkspaceBoxLocked",
+        "setWorkspaceBoxCostaMaterial",
         "alignFrontWithNeighbor",
         "alignBottomSelectedBoxes",
         "addInternalMeasurement",

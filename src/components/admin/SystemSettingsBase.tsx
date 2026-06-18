@@ -12,7 +12,7 @@ import {
 import { useAdminFeedback } from "../../hooks/useAdminFeedback";
 import { useProject } from "../../context/useProject";
 import JSZip from "jszip";
-import { buildCncFromCutlistItems } from "../../core/cnc/cncPipeline";
+import { buildCncFromCutlistItems, buildTcnExportBaseName } from "../../core/cnc/cncPipeline";
 import type { CutlistItemForPieces } from "../../core/cutlayout/cutLayoutEngine";
 import { buildItemsForCncExport } from "../../hooks/useGerarArquivoHandlers";
 
@@ -155,19 +155,15 @@ export default function SystemSettingsBase() {
           },
         });
 
-        const byMaterial = new Map<string, typeof allItems>();
-        for (const item of allItems) {
-          const key = (item.material ?? "Módulo").trim() || "Módulo";
-          if (!byMaterial.has(key)) byMaterial.set(key, []);
-          byMaterial.get(key)!.push(item);
-        }
-
         let filesAddedForVariant = 0;
-        for (const [materialKey, itemsForMaterial] of byMaterial) {
-          const cncBundle = buildCncFromCutlistItems(project, itemsForMaterial);
-          if (!cncBundle?.cnc?.files?.length) continue;
+        const cncBundle = buildCncFromCutlistItems(project, allItems);
+        if (cncBundle?.cnc?.files?.length) {
           for (const file of cncBundle.cnc.files) {
-            const matSlug = materialKey
+            const matSlug = buildTcnExportBaseName(
+              cncBundle.layoutResult,
+              file.panelIndex,
+              cncBundle.cnc.files.length
+            )
               .replace(/[^\p{L}\p{N}_-]+/gu, "_")
               .replace(/_+/g, "_")
               .replace(/^_+|_+$/g, "")

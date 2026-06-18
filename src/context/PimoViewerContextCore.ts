@@ -37,6 +37,7 @@ export type PimoViewerApi = {
   setOnBoxTransform: (_callback: ((_boxId: string, _position: { x: number; y: number; z: number }, _rotation: { x: number; y: number; z: number }) => void) | null) => void;
   setOnDoorLayerDoubleClick?: (_callback: ((_boxId: string, _doorLayerId: string) => void) | null) => void;
   setOnDrawerLayerDoubleClick?: (_callback: ((_boxId: string, _drawerLayerId: string) => void) | null) => void;
+  setOnDrawerLayerClick?: (_callback: ((_boxId: string, _drawerLayerId: string) => void) | null) => void;
   setOnBoxDoubleClick?: (_callback: ((_boxId: string) => void) | null) => void;
   setTransformMode: (_mode: "translate" | "rotate" | "scale" | null) => void;
   selectBox?: (_id: string | null) => void;

@@ -88,8 +88,10 @@ describe("Sistema europeu de gavetas", () => {
       "gaveta_traseira",
     ]);
     expect(cutlist.find((item) => item.tipo === "gaveta_lat_esq")?.espessura).toBe(16);
+    expect(cutlist.find((item) => item.tipo === "gaveta_lat_esq")?.materialId).toBe("mdf_branco-16");
     expect(cutlist.find((item) => item.tipo === "gaveta_fundo")?.espessura).toBe(10);
     expect(cutlist.find((item) => item.tipo === "gaveta_traseira")?.espessura).toBe(16);
+    expect(cutlist.find((item) => item.tipo === "gaveta_traseira")?.materialId).toBe("mdf_branco-16");
   });
 
   it("aplica furacao europeia de corredicas a 37 mm do fundo", () => {

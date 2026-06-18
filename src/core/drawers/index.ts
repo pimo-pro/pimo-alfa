@@ -88,6 +88,11 @@ export {
   closeAllDrawers,
   openAllDrawers,
   canOpenDrawer,
+  openDrawer,
+  closeDrawer,
+  resolveDrawerMaxPullMm,
+  DRAWER_SEQUENTIAL_STEP_DELAY_MS,
+  VIEWER_DRAWER_ANIMATION_DURATION_MS,
 } from "./DrawerMotionService";
 export {
   tandemCurve,
@@ -101,6 +106,13 @@ export {
   canToggleDrawer,
   type DrawerCollisionSceneContext,
 } from "./DrawerCollisionService";
+
+export {
+  toggleDrawer,
+  toggleAllDrawersSequential,
+  type DrawerControllerCallbacks,
+  type DrawerOpenOptions,
+} from "./DrawerController";
 
 // Adapters
 export {

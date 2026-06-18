@@ -36,6 +36,10 @@ import { useSettings } from "../../../context/SettingsContext";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
 import { Matrix4, Vector3 } from "three";
+import {
+  toggleAllDrawersSequential,
+  toggleDrawer,
+} from "../../../core/drawers/DrawerController";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -303,23 +307,42 @@ export default function Workspace({
   useEffect(() => {
     viewerApi.setOnBoxDoubleClick?.((boxId) => {
       const box = project.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
-      if (!box) return;
+      if (!box || (box.drawersLayer?.length ?? 0) === 0) return;
 
-      const drawers = box.drawersLayer ?? [];
       actions.selectBox(boxId);
       setSelectedObject({ type: "box", id: boxId });
       setSelectedTool(LEFT_TOOLBAR_IDS.HOME);
 
-      if (drawers.length > 0) {
-        drawers.forEach((drawer) => {
-          actions.setDrawerLayerItemOpen(drawer.id, true, { ignoreCollision: true });
-        });
-      }
+      toggleAllDrawersSequential(box, {
+        getBox: () => projectRef.current.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId),
+        setDrawerOpen: (drawerId, isOpen, options) =>
+          actionsRef.current.setDrawerLayerItemOpen(drawerId, isOpen, options),
+      });
     });
     return () => {
       viewerApi.setOnBoxDoubleClick?.(null);
     };
   }, [actions, project.workspaceBoxes, viewerApi, setSelectedObject, setSelectedTool]);
+
+  useEffect(() => {
+    viewerApi.setOnDrawerLayerClick?.((boxId, drawerLayerId) => {
+      const box = projectRef.current.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
+      if (!box) return;
+
+      if (project.selectedWorkspaceBoxId !== boxId) {
+        actions.selectBox(boxId);
+      }
+
+      toggleDrawer(box, drawerLayerId, {
+        getBox: () => projectRef.current.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId),
+        setDrawerOpen: (drawerId, isOpen, options) =>
+          actionsRef.current.setDrawerLayerItemOpen(drawerId, isOpen, options),
+      });
+    });
+    return () => {
+      viewerApi.setOnDrawerLayerClick?.(null);
+    };
+  }, [actions, project.selectedWorkspaceBoxId, viewerApi]);
 
   /** GLB/CAD: ViewerCore chama após `addModelToBox` concluir o load (ver ViewerCore.addModelToBox). */
   useEffect(() => {
@@ -420,25 +443,6 @@ export default function Workspace({
       actions.selectBox(boxId);
       requestAnimationFrame(() => {
         actionsRef.current.setDoorLayerItemOpen(doorLayerId, nextIsOpen);
-      });
-    });
-  }, [actions, project.workspaceBoxes, project.selectedWorkspaceBoxId, viewerApi]);
-
-  useEffect(() => {
-    viewerApi.setOnDrawerLayerDoubleClick?.((boxId, drawerLayerId) => {
-      const box = project.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
-      const drawer = box?.drawersLayer?.find((item) => item.id === drawerLayerId);
-      if (!box || !drawer) return;
-
-      const nextIsOpen = !drawer.isOpen;
-      if (project.selectedWorkspaceBoxId === boxId) {
-        actions.setDrawerLayerItemOpen(drawerLayerId, nextIsOpen);
-        return;
-      }
-
-      actions.selectBox(boxId);
-      requestAnimationFrame(() => {
-        actionsRef.current.setDrawerLayerItemOpen(drawerLayerId, nextIsOpen);
       });
     });
   }, [actions, project.workspaceBoxes, project.selectedWorkspaceBoxId, viewerApi]);

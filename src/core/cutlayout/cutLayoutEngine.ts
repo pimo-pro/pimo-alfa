@@ -18,9 +18,8 @@ import type {
   CutLayoutTrialConfig as TrialConfig,
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial, OperationResult } from "../types";
-import { getDefaultOfficialMaterial, resolveCostaMaterial } from "../materials/materials.api";
+import { getDefaultOfficialMaterial, resolveMaterial, resolveIndustrialMaterialAtThickness, COSTA_FIXED_THICKNESS_MM, DRAWER_SIDE_THICKNESS_MM } from "../materials/materials.api";
 import { getIndustrialMaterial, getMaterialByIdOrLabel } from "../materials/service";
-import { SYSTEM_BACK_MM } from "../baseCabinets";
 import {
   applyFixedMarginOffset as applyFixedMarginOffsetUtil,
   cloneSheets as cloneSheetsUtil,
@@ -662,24 +661,69 @@ export function cutlistToPieces(
     const tipoToken = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
     const nomeToken = String(item.nome ?? "").trim().toLowerCase();
     const isCosta = tipoToken === "costa" || nomeToken === "costa";
+    const isDrawerSideOrBack =
+      tipoToken === "gaveta_lat_esq" ||
+      tipoToken === "gaveta_lat_dir" ||
+      tipoToken === "gaveta_traseira";
     const rawEsp = Number(item.espessura ?? item.dimensoes?.profundidade);
     const materialKey = item.materialId ?? item.material;
     const espIndustrialFallback =
       materialKey && String(materialKey).trim()
         ? getIndustrialMaterial(String(materialKey).trim()).espessuraPadrao
         : getDefaultOfficialMaterial().industrialDefaults!.espessuraPadrao;
-    // Regra industrial fixa: COSTA sempre 10mm (SYSTEM_BACK_MM).
+    const costaMatRef = isCosta
+      ? String(item.materialId ?? item.material ?? "").trim()
+      : "";
+    const costaOfficial = isCosta && costaMatRef ? resolveMaterial(costaMatRef) : null;
+    const drawerSideMatRef = isDrawerSideOrBack
+      ? String(item.materialId ?? item.material ?? "").trim()
+      : "";
+    const drawerSideOfficial =
+      isDrawerSideOrBack && drawerSideMatRef ? resolveMaterial(drawerSideMatRef) : null;
     const esp = isCosta
-      ? SYSTEM_BACK_MM
-      : Number.isFinite(rawEsp) && rawEsp > 0
+      ? Number.isFinite(rawEsp) && rawEsp > 0
         ? rawEsp
-        : espIndustrialFallback;
-    const costaMaterial = isCosta
-      ? resolveCostaMaterial(String(item.materialId ?? item.material ?? "mdf_branco").trim() || "mdf_branco")
-      : null;
-    const pieceMaterialId = isCosta ? costaMaterial!.materialId : (item.materialId ?? item.material);
-    const pieceMaterialName = isCosta ? costaMaterial!.label : item.material;
-    const materialRef = isCosta ? costaMaterial!.materialId : (item.materialId ?? item.material);
+        : COSTA_FIXED_THICKNESS_MM
+      : isDrawerSideOrBack
+        ? Number.isFinite(rawEsp) && rawEsp > 0
+          ? rawEsp
+          : DRAWER_SIDE_THICKNESS_MM
+        : Number.isFinite(rawEsp) && rawEsp > 0
+          ? rawEsp
+          : espIndustrialFallback;
+    const pieceMaterialId = isCosta
+      ? (costaOfficial?.canonicalId ?? (costaMatRef || undefined))
+      : isDrawerSideOrBack
+        ? (drawerSideOfficial?.canonicalId ?? (drawerSideMatRef || undefined))
+        : (() => {
+            const bodyMatRef = String(item.materialId ?? item.material ?? "").trim();
+            if (!bodyMatRef) return item.materialId ?? item.material;
+            const atThickness = resolveIndustrialMaterialAtThickness(
+              bodyMatRef,
+              esp,
+              getDefaultOfficialMaterial().canonicalId
+            );
+            return atThickness.materialId;
+          })();
+    const pieceMaterialName = isCosta
+      ? (costaOfficial?.label ?? item.material ?? costaMatRef)
+      : isDrawerSideOrBack
+        ? (drawerSideOfficial?.label ?? item.material ?? drawerSideMatRef)
+        : (() => {
+            const bodyMatRef = String(item.materialId ?? item.material ?? "").trim();
+            if (!bodyMatRef) return item.material;
+            const atThickness = resolveIndustrialMaterialAtThickness(
+              bodyMatRef,
+              esp,
+              getDefaultOfficialMaterial().canonicalId
+            );
+            return atThickness.label;
+          })();
+    const materialRef = isCosta
+      ? pieceMaterialId
+      : isDrawerSideOrBack
+        ? pieceMaterialId
+        : (item.materialId ?? item.material);
     const materialRecord = materialRef ? getMaterialByIdOrLabel(String(materialRef)) : null;
     const sheetWidthMm = Number(item.sheetWidthMm ?? materialRecord?.sheetWidthMm);
     const sheetHeightMm = Number(item.sheetHeightMm ?? materialRecord?.sheetHeightMm);

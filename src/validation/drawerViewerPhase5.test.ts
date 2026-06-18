@@ -71,4 +71,20 @@ describe("DrawerCollisionService (FASE 5)", () => {
     );
     expect(result.canOpen).toBe(true);
   });
+
+  it("permite várias abertas em modo sequencial", () => {
+    const result = canOpenDrawer(
+      baseDrawer({ id: "d2" }),
+      {
+        dimensoes: { largura: 600, altura: 720, profundidade: 560 },
+        drawersLayer: [baseDrawer({ id: "d1", isOpen: true }), baseDrawer({ id: "d2" })],
+        doorsLayer: [],
+        portaTipo: "sem_porta",
+        prateleiras: 0,
+        gavetas: 2,
+      },
+      { drawerIndex: 1, allowMultipleOpen: true }
+    );
+    expect(result.canOpen).toBe(true);
+  });
 });

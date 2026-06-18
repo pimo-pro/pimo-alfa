@@ -3,12 +3,12 @@ import type { CutLayoutResult, SheetDefinition } from "../cutlayout/cutLayoutTyp
 import { exportCncFiles } from "./cncExport";
 import { getLayoutKerfMmForCncNesting } from "./tcnGenerator";
 import { getSettings } from "../settings/settingsService";
-import { listMaterials } from "../materials/service";
+import { listMaterials, getMaterialByIdOrLabel } from "../materials/service";
 import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
 } from "./industrialThicknessResolution";
-import { resolveCostaMaterial } from "../materials/materials.api";
+import { sanitizeIndustrialFileToken } from "./industrialNestingGroup";
 
 /** Opções de nesting alinhadas ao TCN: kerf = minSpacing (entre contornos) + 2×raio da fresa. */
 export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
@@ -67,97 +67,30 @@ export function getSheetDefinitionFromSettings(): SheetDefinition {
   };
 }
 
-function inferItemThicknessMm(item: CutlistItemForPieces): number {
-  const fromEspessura = Number((item as unknown as { espessura?: number }).espessura);
-  if (Number.isFinite(fromEspessura) && fromEspessura > 0) return fromEspessura;
-  const fromEspessuraMm = Number((item as unknown as { espessura_mm?: number }).espessura_mm);
-  if (Number.isFinite(fromEspessuraMm) && fromEspessuraMm > 0) return fromEspessuraMm;
-  const fromDepth = Number(item.dimensoes?.profundidade);
-  if (Number.isFinite(fromDepth) && fromDepth > 0) return fromDepth;
-  return 0;
-}
-
-function almostEqual(a: number, b: number, eps = 0.2): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-function isCostaCutlistItem(item: CutlistItemForPieces): boolean {
-  const tipo = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
-  const nome = String(item.nome ?? "").trim().toLowerCase();
-  return tipo === "costa" || nome === "costa";
-}
-
-function resolveSheetForThickness(
-  thicknessMm: number,
-  groupItems: CutlistItemForPieces[]
-): SheetDefinition {
-  const mats = listMaterials().filter(
-    (m) =>
-      Number(m.sheetWidthMm) > 0 &&
-      Number(m.sheetHeightMm) > 0 &&
-      Number(m.sheetThicknessMm) > 0
-  );
-  const wanted = Math.abs(thicknessMm);
-  const costaItems = groupItems.filter(isCostaCutlistItem);
-
-  if (costaItems.length > 0 && almostEqual(wanted, 10)) {
-    const bodyRef =
-      String(
-        (costaItems[0] as { materialId?: string }).materialId ??
-          (costaItems[0] as { material?: string }).material ??
-          "mdf_branco"
-      ).trim() || "mdf_branco";
-    const costaMat = resolveCostaMaterial(bodyRef);
-    const costaSheet = mats.find(
-      (m) =>
-        almostEqual(Number(m.sheetThicknessMm), 10) &&
-        (String(m.id).toLowerCase() === costaMat.materialId.toLowerCase() ||
-          String(m.label).toLowerCase() === costaMat.label.toLowerCase())
-    );
-    if (costaSheet) {
-      return {
-        largura_mm: Number(costaSheet.sheetWidthMm),
-        altura_mm: Number(costaSheet.sheetHeightMm),
-        espessura_mm: Number(costaSheet.sheetThicknessMm),
-        materialId: costaSheet.id,
-        materialName: costaSheet.label,
-      };
-    }
-    throw new Error(
-      `Nenhuma chapa 10 mm da família da COSTA (${costaMat.label}) configurada no CRUD.`
-    );
-  }
-
-  const refs = new Set(
-    groupItems
-      .flatMap((it) => {
-        const m1 = (it as unknown as { materialId?: string }).materialId;
-        const m2 = (it as unknown as { material?: string }).material;
-        return [m1, m2].filter((v): v is string => typeof v === "string" && v.trim() !== "");
-      })
-      .map((s) => s.trim().toLowerCase())
-  );
-
-  const preferred = mats.find(
-    (m) =>
-      almostEqual(Number(m.sheetThicknessMm), wanted) &&
-      (refs.has(String(m.id).toLowerCase()) || refs.has(String(m.label).toLowerCase()))
-  );
-  const byThickness =
-    costaItems.length > 0 && almostEqual(wanted, 10)
-      ? undefined
-      : mats.find((m) => almostEqual(Number(m.sheetThicknessMm), wanted));
-  const chosen = preferred ?? byThickness;
-  if (!chosen) {
-    throw new Error(`Nenhuma chapa configurada para espessura ${wanted} mm.`);
-  }
-  return {
-    largura_mm: Number(chosen.sheetWidthMm),
-    altura_mm: Number(chosen.sheetHeightMm),
-    espessura_mm: Number(chosen.sheetThicknessMm),
-    materialId: chosen.id,
-    materialName: chosen.label,
-  };
+function enrichPiecesWithMaterialSheetDimensions(pieces: import("../cutlayout/cutLayoutTypes").CutPiece[]) {
+  return pieces.map((piece) => {
+    const materialRecord = piece.materialId ? getMaterialByIdOrLabel(String(piece.materialId)) : null;
+    if (!materialRecord) return piece;
+    return {
+      ...piece,
+      sheetWidthMm:
+        piece.sheetWidthMm && piece.sheetWidthMm > 0
+          ? piece.sheetWidthMm
+          : Number(materialRecord.sheetWidthMm) > 0
+            ? Number(materialRecord.sheetWidthMm)
+            : piece.sheetWidthMm,
+      sheetHeightMm:
+        piece.sheetHeightMm && piece.sheetHeightMm > 0
+          ? piece.sheetHeightMm
+          : Number(materialRecord.sheetHeightMm) > 0
+            ? Number(materialRecord.sheetHeightMm)
+            : piece.sheetHeightMm,
+      sheetThicknessMm:
+        piece.sheetThicknessMm && piece.sheetThicknessMm > 0
+          ? piece.sheetThicknessMm
+          : piece.espessura_mm,
+    };
+  });
 }
 
 type IndustrialMeta = {
@@ -212,6 +145,18 @@ function pieceKey(value: {
   return `geom:${value.boxId ?? ""}:${value.partName ?? ""}:${Math.round(Number(value.largura_mm ?? 0))}:${Math.round(Number(value.altura_mm ?? 0))}`;
 }
 
+export function buildTcnExportBaseName(
+  layoutResult: CutLayoutResult,
+  panelIndex: number,
+  totalFiles: number
+): string {
+  const sheetResult = layoutResult.sheets[panelIndex - 1];
+  const materialLabel =
+    sheetResult?.sheet.materialName ?? sheetResult?.sheet.materialId ?? "Sheet";
+  const safeMaterialName = sanitizeIndustrialFileToken(String(materialLabel));
+  return totalFiles === 1 ? safeMaterialName : `${safeMaterialName}_${panelIndex}`;
+}
+
 export function buildCncFromCutlistItems(
   project: unknown,
   items: CutlistItemForPieces[],
@@ -233,93 +178,74 @@ export function buildCncFromCutlistItems(
     }
     const cncItems = thicknessResolution.items;
 
+    const baseSheet = _sheet ?? getSheetDefinitionFromSettings();
     const enforcedLayoutOptions: CutLayoutEngineOptions = {
       ...layoutOptions,
       kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
+      groupByThicknessOnly: false,
+      sheetLargura_mm: layoutOptions.sheetLargura_mm ?? baseSheet.largura_mm,
+      sheetAltura_mm: layoutOptions.sheetAltura_mm ?? baseSheet.altura_mm,
     };
 
-    const groupedItems = new Map<number, CutlistItemForPieces[]>();
-    for (const item of cncItems) {
-      const t = inferItemThicknessMm(item);
-      if (!(t > 0)) continue;
-      const key = Math.round(Math.abs(t) * 100) / 100;
-      if (!groupedItems.has(key)) groupedItems.set(key, []);
-      groupedItems.get(key)!.push(item);
-    }
-    if (groupedItems.size === 0) {
-      throw new Error("Nenhuma peça com espessura válida para CNC.");
-    }
-
-    const allPieces = cutlistToPieces(cncItems);
-    if (allPieces.length === 0) {
+    const rawPieces = cutlistToPieces(cncItems);
+    if (rawPieces.length === 0) {
       return null;
     }
+    const pieces = enrichPiecesWithMaterialSheetDimensions(rawPieces);
 
-    const finalSheets: CutLayoutResult["sheets"] = [];
-    for (const [thickness, group] of groupedItems) {
-      const selectedSheet = resolveSheetForThickness(thickness, group);
-
-      const piecesGroup = cutlistToPieces(group).map((p) => ({
-        ...p,
-        sheetWidthMm: selectedSheet.largura_mm,
-        sheetHeightMm: selectedSheet.altura_mm,
-        sheetThicknessMm: selectedSheet.espessura_mm,
-      }));
-      const metaByPieceKey = new Map<string, IndustrialMeta>();
-      for (const p of piecesGroup) {
-        metaByPieceKey.set(
-          pieceKey({
-            boxId: p.boxId,
-            partName: p.partName,
-            largura_mm: p.largura_mm,
-            altura_mm: p.altura_mm,
-            pieceNumber: p.pieceNumber,
-            shortCode: p.shortCode,
-          }),
-          {
-            drillHoles: p.drillHoles ?? p.holes,
-            metadata: p.metadata,
-            pieceNumber: p.pieceNumber,
-            shortCode: p.shortCode,
-            espessura_mm: p.espessura_mm,
-          }
-        );
-      }
-      const optionsForGroup: CutLayoutEngineOptions = {
-        ...enforcedLayoutOptions,
-        sheetLargura_mm: selectedSheet.largura_mm,
-        sheetAltura_mm: selectedSheet.altura_mm,
-      };
-      const groupLayout = runCutLayout(piecesGroup, selectedSheet, optionsForGroup);
-      for (const s of groupLayout.sheets) {
-        const enrichedPlacements = s.placements.map((pl) => {
-          const meta = metaByPieceKey.get(
-            pieceKey({
-              boxId: pl.boxId,
-              partName: pl.partName,
-              largura_mm: pl.largura_mm,
-              altura_mm: pl.altura_mm,
-              pieceNumber: pl.pieceNumber,
-              shortCode: pl.shortCode,
-            })
-          );
-          if (!meta) return pl;
-          return {
-            ...pl,
-            espessura_mm: pl.espessura_mm ?? meta.espessura_mm,
-            holes: pl.holes ?? meta.drillHoles,
-            drillHoles: pl.drillHoles ?? meta.drillHoles,
-            metadata: pl.metadata ?? meta.metadata,
-            pieceNumber: pl.pieceNumber ?? meta.pieceNumber,
-            shortCode: pl.shortCode ?? meta.shortCode,
-          };
-        });
-        finalSheets.push({ ...s, placements: enrichedPlacements });
-      }
+    const metaByPieceKey = new Map<string, IndustrialMeta>();
+    for (const p of pieces) {
+      metaByPieceKey.set(
+        pieceKey({
+          boxId: p.boxId,
+          partName: p.partName,
+          largura_mm: p.largura_mm,
+          altura_mm: p.altura_mm,
+          pieceNumber: p.pieceNumber,
+          shortCode: p.shortCode,
+        }),
+        {
+          drillHoles: p.drillHoles ?? p.holes,
+          metadata: p.metadata,
+          pieceNumber: p.pieceNumber,
+          shortCode: p.shortCode,
+          espessura_mm: p.espessura_mm,
+        }
+      );
     }
-    const layoutResult: CutLayoutResult = { sheets: finalSheets };
-    const cnc = exportCncFiles(project, layoutResult, []);
-    return { pieces: allPieces, layoutResult, cnc };
+
+    const layoutResult = runCutLayout(pieces, baseSheet, enforcedLayoutOptions);
+    const enrichedSheets = layoutResult.sheets.map((s) => ({
+      ...s,
+      placements: s.placements.map((pl) => {
+        const meta = metaByPieceKey.get(
+          pieceKey({
+            boxId: pl.boxId,
+            partName: pl.partName,
+            largura_mm: pl.largura_mm,
+            altura_mm: pl.altura_mm,
+            pieceNumber: pl.pieceNumber,
+            shortCode: pl.shortCode,
+          })
+        );
+        if (!meta) return pl;
+        return {
+          ...pl,
+          espessura_mm: pl.espessura_mm ?? meta.espessura_mm,
+          holes: pl.holes ?? meta.drillHoles,
+          drillHoles: pl.drillHoles ?? meta.drillHoles,
+          metadata: pl.metadata ?? meta.metadata,
+          pieceNumber: pl.pieceNumber ?? meta.pieceNumber,
+          shortCode: pl.shortCode ?? meta.shortCode,
+        };
+      }),
+    }));
+    const finalLayoutResult: CutLayoutResult = {
+      ...layoutResult,
+      sheets: enrichedSheets,
+    };
+    const cnc = exportCncFiles(project, finalLayoutResult, []);
+    return { pieces, layoutResult: finalLayoutResult, cnc };
   } catch (err) {
     console.error("[CNC-ERROR] Erro no pipeline:", err);
     throw err;

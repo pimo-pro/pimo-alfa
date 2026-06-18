@@ -520,6 +520,12 @@ export interface ProjectActions {
   setWorkspaceBoxLocked: (_boxId: string, _locked: boolean) => void;
   /** PI: ocultar só furos de corrediça nas laterais (cutlist + viewer). */
   setWorkspaceBoxPiHideDrawerHoles: (_boxId: string, _hide: boolean) => void;
+  /** Material e espessura explícitos da COSTA; omitir valores restaura o padrão (família + 10 mm). */
+  setWorkspaceBoxCostaMaterial: (
+    _boxId: string,
+    _costaMaterialId?: string,
+    _costaThicknessMm?: number
+  ) => void;
   /** Alinha a frente do box (eixo Z) com a frente do box vizinho mais próximo no eixo X. */
   alignFrontWithNeighbor: (_boxId: string) => void;
   /** Alinha a base da caixa selecionada à base da vizinha mais próxima no plano XZ (só Y); sem outras caixas, chão em Y=0. */
@@ -540,7 +546,7 @@ export interface ProjectActions {
   setDrawerLayerItemOpen: (
     _id: string,
     _isOpen: boolean,
-    _options?: { ignoreCollision?: boolean }
+    _options?: { allowMultipleOpen?: boolean }
   ) => void;
   setDoorLayerItemMaterial: (_id: string, _materialId: string) => void;
   setDrawerLayerItemMaterial: (_id: string, _materialId: string) => void;

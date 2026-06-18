@@ -18,7 +18,7 @@ import { UnifiedEtiquetaEngine } from "../etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 import type { CutLayoutResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
-import { getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
+import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
 import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
@@ -561,49 +561,45 @@ export async function generateMultiProjectFabrication(
       devLogger.error("multiProjectFabrication: etiquetas PDF", err);
     }
 
-    // TCN/CNC por projeto (peças do projeto com numeração global preservada)
+    // TCN/CNC por projeto (nesting global das peças do projeto)
     try {
       const projPrefixedItems = allPrefixedCncItems.filter((item) =>
         (item.boxId ?? "").startsWith(entry.prefix)
       );
-      const projByMaterial = new Map<string, CutListItemComPreco[]>();
-      for (const item of projPrefixedItems) {
-        const key = ((item as { material?: string }).material ?? "Módulo").trim() || "Módulo";
-        if (!projByMaterial.has(key)) projByMaterial.set(key, []);
-        projByMaterial.get(key)!.push(item);
-      }
-      const usedProjTcnNames = new Set<string>();
-      for (const [materialName, matItems] of projByMaterial) {
+      if (projPrefixedItems.length > 0) {
         checkAbort();
         const cncBundle = await buildCncFromCutlistItemsInWorker(
           settingsSnapshot,
           materialsSnapshot,
           { projectName: proj.projectName || entry.recordId, rules: entry.state.rules },
-          matItems as CutlistItemForPieces[],
+          projPrefixedItems as CutlistItemForPieces[],
           cncPipelineOpts
         );
-        if (!cncBundle?.cnc?.files?.length) continue;
-        const safeMat =
-          materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
-        for (const file of cncBundle.cnc.files) {
-          if (!file || file.tcn == null) continue;
-          const thicknessBucket = formatThicknessBucket(file.thicknessMm);
-          const base =
-            cncBundle.cnc.files.length === 1 ? safeMat : `${safeMat}_${file.panelIndex}`;
-          let finalBase = base;
-          let dedupeIdx = 2;
-          while (usedProjTcnNames.has(`${thicknessBucket}/${finalBase}`)) {
-            finalBase = `${base}_${dedupeIdx}`;
-            dedupeIdx += 1;
-          }
-          usedProjTcnNames.add(`${thicknessBucket}/${finalBase}`);
-          const tcnPath = sanitizeZipPath(
-            `${basePath}/cnc/${thicknessBucket}/${finalBase}_${tcnSuffix}.tcn`
-          );
-          if (tcnPath && typeof file.tcn === "string") {
-            zip.file(tcnPath, file.tcn);
-            tcnManifestFiles.push({ path: tcnPath, content: file.tcn });
-            tcnFilesAdded += 1;
+        const usedProjTcnNames = new Set<string>();
+        if (cncBundle?.cnc?.files?.length) {
+          for (const file of cncBundle.cnc.files) {
+            if (!file || file.tcn == null) continue;
+            const thicknessBucket = formatThicknessBucket(file.thicknessMm);
+            const base = buildTcnExportBaseName(
+              cncBundle.layoutResult,
+              file.panelIndex,
+              cncBundle.cnc.files.length
+            );
+            let finalBase = base;
+            let dedupeIdx = 2;
+            while (usedProjTcnNames.has(`${thicknessBucket}/${finalBase}`)) {
+              finalBase = `${base}_${dedupeIdx}`;
+              dedupeIdx += 1;
+            }
+            usedProjTcnNames.add(`${thicknessBucket}/${finalBase}`);
+            const tcnPath = sanitizeZipPath(
+              `${basePath}/cnc/${thicknessBucket}/${finalBase}_${tcnSuffix}.tcn`
+            );
+            if (tcnPath && typeof file.tcn === "string") {
+              zip.file(tcnPath, file.tcn);
+              tcnManifestFiles.push({ path: tcnPath, content: file.tcn });
+              tcnFilesAdded += 1;
+            }
           }
         }
       }
@@ -639,39 +635,30 @@ export async function generateMultiProjectFabrication(
     }
   }
 
-  // PASSO 5 — TCN/CNC global (todas as peças, por material)
+  // PASSO 5 — TCN/CNC global (nesting único: corpo + portas + prateleiras + gavetas)
   checkAbort();
   emit(5, "Gerando ficheiros TCN/CNC globais…");
 
   try {
-    const byMaterial = new Map<string, CutListItemComPreco[]>();
-    for (const item of allPrefixedCncItems) {
-      const key = ((item as { material?: string }).material ?? "Módulo").trim() || "Módulo";
-      if (!byMaterial.has(key)) byMaterial.set(key, []);
-      byMaterial.get(key)!.push(item);
-    }
+    checkAbort();
+    emit(5, "Gerando ficheiros TCN/CNC globais…", "nesting global");
     const usedTcnNamesByPath = new Set<string>();
-
-    for (const [materialName, itemsForMaterial] of byMaterial) {
-      checkAbort();
-      emit(5, "Gerando ficheiros TCN/CNC globais…", materialName);
-      const cncBundle = await buildCncFromCutlistItemsInWorker(
-        settingsSnapshot,
-        materialsSnapshot,
-        globalProjectStub,
-        itemsForMaterial as CutlistItemForPieces[],
-        cncPipelineOpts
-      );
-      if (!cncBundle?.cnc?.files?.length) continue;
-      const safeMaterialName =
-        materialName.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]+/gu, "_") || "Sheet";
+    const cncBundle = await buildCncFromCutlistItemsInWorker(
+      settingsSnapshot,
+      materialsSnapshot,
+      globalProjectStub,
+      allPrefixedCncItems as CutlistItemForPieces[],
+      cncPipelineOpts
+    );
+    if (cncBundle?.cnc?.files?.length) {
       for (const file of cncBundle.cnc.files) {
         if (!file || file.tcn == null) continue;
         const thicknessBucket = formatThicknessBucket(file.thicknessMm);
-        const base =
-          cncBundle.cnc.files.length === 1
-            ? safeMaterialName
-            : `${safeMaterialName}_${file.panelIndex}`;
+        const base = buildTcnExportBaseName(
+          cncBundle.layoutResult,
+          file.panelIndex,
+          cncBundle.cnc.files.length
+        );
         let finalBase = base;
         let dedupeIndex = 2;
         while (usedTcnNamesByPath.has(`cnc/${thicknessBucket}/${finalBase}`)) {

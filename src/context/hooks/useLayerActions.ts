@@ -517,9 +517,12 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
             const drawer = (ownerBox.drawersLayer ?? []).find((item) => item.id === id);
             if (!drawer) return prev;
 
-            if (isOpen && !options?.ignoreCollision) {
-              const drawerIndex = (ownerBox.drawersLayer ?? []).findIndex((item) => item.id === id);
-              const collision = canOpenDrawer(drawer, ownerBox, { drawerIndex });
+            const drawerIndex = (ownerBox.drawersLayer ?? []).findIndex((item) => item.id === id);
+            if (isOpen) {
+              const collision = canOpenDrawer(drawer, ownerBox, {
+                drawerIndex,
+                allowMultipleOpen: options?.allowMultipleOpen,
+              });
               if (!collision.canOpen) {
                 return {
                   ...prev,
@@ -532,23 +535,32 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               }
             }
 
+            const maxPull =
+              Number(drawer.bodyDepth) > 0
+                ? Number(drawer.bodyDepth)
+                : Math.max(
+                    0,
+                    (Number(drawer.depth) || 0) - (Number(drawer.frontThickness) || 0)
+                  );
+
             const workspaceBoxes = prev.workspaceBoxes.map((box) =>
               box.id === ownerBox.id
                 ? {
                     ...box,
                     drawerConfigError: undefined,
-                    drawersLayer: (box.drawersLayer ?? []).map((item) =>
-                      item.id === id
-                        ? {
-                            ...item,
-                            isOpen,
-                            pullDistanceMm:
-                              item.pullDistanceMm ??
-                              item.bodyDepth ??
-                              Math.max(0, item.depth - item.frontThickness),
-                          }
-                        : item
-                    ),
+                    drawersLayer: (box.drawersLayer ?? []).map((item) => {
+                      if (item.id === id) {
+                        return {
+                          ...item,
+                          isOpen,
+                          pullDistanceMm: isOpen ? maxPull : 0,
+                        };
+                      }
+                      if (isOpen && !options?.allowMultipleOpen && item.isOpen) {
+                        return { ...item, isOpen: false, pullDistanceMm: 0 };
+                      }
+                      return item;
+                    }),
                   }
                 : box
             );

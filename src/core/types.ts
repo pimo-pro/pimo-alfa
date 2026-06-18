@@ -302,6 +302,10 @@ export interface BoxModule {
   precoTotalPecas: number;
   /** FASE 2 — Ver `WorkspaceBox.costaAtiva`. */
   costaAtiva?: boolean;
+  /** Material industrial explícito da COSTA (canonicalId, ex.: carvalho-10). Omitido = família do corpo. */
+  costaMaterialId?: string;
+  /** Espessura explícita da COSTA (mm). Omitido = 10 mm (ou espessura da variante escolhida). */
+  costaThicknessMm?: number;
   /** FASE 2 — Ver `WorkspaceBox.profundidadeExterna`. */
   profundidadeExterna?: number;
   /** Orla V1 — preset aplicado a todas as peças do caixote. */
@@ -383,6 +387,10 @@ export interface WorkspaceBox {
    * Ver `resolveCostaAtiva` em `boxDepthModel.ts`.
    */
   costaAtiva?: boolean;
+  /** Material industrial explícito da COSTA (canonicalId). */
+  costaMaterialId?: string;
+  /** Espessura explícita da COSTA (mm). */
+  costaThicknessMm?: number;
   /**
    * FASE 2 — Profundidade externa explícita (mm), alinhada a `dimensoes.profundidade`.
    * Mantida em sincrono nas ações de dimensão; facilita FASE 3–4.

@@ -89,6 +89,17 @@ function itemThickness(item: CutlistItemForPieces): number | null {
   );
 }
 
+function isCostaCutlistItem(item: CutlistItemForPieces): boolean {
+  const tipo = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
+  const nome = String(item.nome ?? "").trim().toLowerCase();
+  return tipo === "costa" || nome === "costa";
+}
+
+function isDrawerSideCutlistItem(item: CutlistItemForPieces): boolean {
+  const tipo = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
+  return tipo === "gaveta_lat_esq" || tipo === "gaveta_lat_dir" || tipo === "gaveta_traseira";
+}
+
 function itemMaterialKey(item: CutlistItemForPieces): string {
   return String(item.materialId ?? item.material ?? "").trim() || "material";
 }
@@ -120,6 +131,8 @@ export function resolveIndustrialThicknesses<T extends CutlistItemForPieces>(
   const resolvedThicknessByKey = new Map<string, number>();
 
   for (const item of items) {
+    if (isCostaCutlistItem(item) || isDrawerSideCutlistItem(item)) continue;
+
     const requested = itemThickness(item);
     if (!requested) continue;
 
@@ -173,6 +186,8 @@ export function resolveIndustrialThicknesses<T extends CutlistItemForPieces>(
   }
 
   const normalizedItems = items.map((item) => {
+    if (isCostaCutlistItem(item) || isDrawerSideCutlistItem(item)) return item;
+
     const requested = itemThickness(item);
     if (!requested) return item;
     const key = adjustmentKey(itemMaterialKey(item), requested);
