@@ -120,8 +120,8 @@ export const SNAP_VISUAL: Record<
   roomCeiling: { color: "#57534e", dash: "#78716c", label: "Teto", radius: 6 },
   roomOpeningEdge: { color: "#e11d48", dash: "#fb7185", label: "Abertura", radius: 6 },
   grid: { color: "#fde047", dash: "#fef08a", label: "Grade", radius: 5 },
-  axis: { color: "#cbd5e1", dash: "#e2e8f0", label: "Eixo global", radius: 5 },
-  center: { color: "#94a3b8", dash: "#cbd5e1", label: "Centro cena", radius: 6 },
+  axis: { color: "#cbd5e1", dash: "#e2e8f0", label: "Eixo da sala", radius: 5 },
+  center: { color: "#94a3b8", dash: "#cbd5e1", label: "Centro da sala", radius: 6 },
 };
 
 export function pushCandidate(

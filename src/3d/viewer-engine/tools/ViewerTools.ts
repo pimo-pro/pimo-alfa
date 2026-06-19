@@ -7,6 +7,10 @@ import * as THREE from "three";
 import type { IViewerToolsEngine } from "./ToolsEngineTypes";
 import type { TransformControlsLike } from "./TransformGizmoPivot";
 
+type TransformControlsWithDragState = TransformControlsLike & {
+  dragging?: boolean;
+};
+
 export class ViewerTools {
   private readonly engineOrGetter: IViewerToolsEngine | (() => IViewerToolsEngine);
   private getEngine(): IViewerToolsEngine {
@@ -38,6 +42,7 @@ export class ViewerTools {
     const e = this.getEngine();
     const controls = e.getTransformControls();
     if (!controls) return;
+    if ((controls as TransformControlsWithDragState).dragging) return;
     this.restoreTransformGizmoPivot();
 
     const groupMemberIds = e.getGroupTransformMemberIds();

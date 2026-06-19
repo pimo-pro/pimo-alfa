@@ -25,9 +25,16 @@ import type {
   UnifiedSnapCandidate,
   UnifiedSnapResult,
 } from "./smartAlignSnapTypes";
-import { DEFAULT_UNIFIED_CAPTURE_MM } from "./smartAlignSnapTypes";
+import {
+  getWorldPosition,
+  setWorldPosition,
+  type DragTransformTarget,
+} from "../utils/transformDragSpace";
 
 const _box3 = new THREE.Box3();
+const _worldPos = new THREE.Vector3();
+const _worldTarget = new THREE.Vector3();
+const _deltaWorld = new THREE.Vector3();
 const _localBox = new THREE.Box3();
 const _corner = new THREE.Vector3();
 const _invBox = new THREE.Matrix4();
@@ -340,12 +347,25 @@ export function applySnapTransform(
   candidate: UnifiedSnapCandidate,
   mode: SmartSnapTransformMode,
   magnetStrength: number,
-  captureRadiusM?: number
+  captureRadiusM?: number,
+  dragTransform?: DragTransformTarget
 ): void {
+  const drivenObject = dragTransform?.drivenObject ?? entity.mesh;
   const captureM = captureRadiusM ?? mmToM(DEFAULT_UNIFIED_CAPTURE_MM);
   const strength =
     mode === "immediate" ? 1 : smoothMagnetStrength(candidate.distanceM, captureM, magnetStrength);
-  entity.mesh.position.add(candidate.delta.clone().multiplyScalar(strength));
+  const world = getWorldPosition(drivenObject, _worldPos);
+  _deltaWorld.copy(candidate.delta).multiplyScalar(strength);
+  world.add(_deltaWorld);
+  setWorldPosition(drivenObject, world);
+}
+
+function resolveDragTransformForEntity(
+  entity: SmartSnapEntity,
+  resolver?: (logicalMesh: THREE.Object3D) => DragTransformTarget
+): DragTransformTarget {
+  if (resolver) return resolver(entity.mesh);
+  return { drivenObject: entity.mesh, logicalMesh: entity.mesh };
 }
 
 function smoothMagnetStrength(distanceM: number, captureM: number, magnet: number): number {
@@ -371,6 +391,7 @@ export type SmartSnapEngineDeps = {
   listEntities: () => SmartSnapEntity[];
   buildContext: () => SmartAlignSnapContext;
   onSnapApplied?: (result: UnifiedSnapResult) => void;
+  resolveDragTransformTarget?: (logicalMesh: THREE.Object3D) => DragTransformTarget;
 };
 
 export class SmartSnapEngine {
@@ -385,7 +406,8 @@ export class SmartSnapEngine {
     const others = this.deps.listEntities().filter((e) => !(e.kind === selected.kind && e.id === selected.id));
     const best = findBestSnapForEntity(selected, context, others);
     if (!best) return { candidate: null, predictivePosition: null };
-    const predictivePosition = selected.mesh.position.clone().add(best.delta);
+    const dragTransform = resolveDragTransformForEntity(selected, this.deps.resolveDragTransformTarget);
+    const predictivePosition = getWorldPosition(dragTransform.drivenObject, _worldTarget).clone().add(best.delta);
     return { candidate: best, predictivePosition };
   }
 
@@ -409,9 +431,10 @@ export class SmartSnapEngine {
       ignoreAutomatic: context.explicitModeActive,
     });
     if (!best) return { candidate: null, predictivePosition: null };
+    const dragTransform = resolveDragTransformForEntity(selected, this.deps.resolveDragTransformTarget);
     return {
       candidate: best,
-      predictivePosition: selected.mesh.position.clone().add(best.delta),
+      predictivePosition: getWorldPosition(dragTransform.drivenObject, _worldTarget).clone().add(best.delta),
     };
   }
 
@@ -422,7 +445,15 @@ export class SmartSnapEngine {
 
     if (!best) return { applied: false };
     maybeCorrectRemateRotationForStructuralSnap(selected, best, context);
-    applySnapTransform(selected, best, "magnetic", context.magnetStrength, context.captureRadiusM);
+    const dragTransform = resolveDragTransformForEntity(selected, this.deps.resolveDragTransformTarget);
+    applySnapTransform(
+      selected,
+      best,
+      "magnetic",
+      context.magnetStrength,
+      context.captureRadiusM,
+      dragTransform
+    );
     const result: UnifiedSnapResult = {
       applied: true,
       candidateKind: best.kind,

@@ -27,6 +27,7 @@ import {
   type MouseInputPreset,
 } from "./controls/MouseInputMapper";
 import { isObjectInScreenRect } from "./utils/screenSelection";
+import { resolveDragTransformTarget, getWorldPosition, setWorldPosition, type DragTransformTarget } from "./utils/transformDragSpace";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
@@ -398,6 +399,8 @@ export class ViewerCore {
   private shiftKeyHeld = false;
   /** Z do box ao iniciar o drag (para Shift-Lock); em metros. */
   private dragStartZForShiftLock: number | undefined = undefined;
+  /** Posição world do drivenObject ao iniciar o drag (fail-safe NaN em clampTransform). */
+  private readonly _dragOriginalWorldPos = new THREE.Vector3();
   private boundShiftKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Shift") this.shiftKeyHeld = true;
   };
@@ -819,6 +822,7 @@ export class ViewerCore {
       isInternalRulerActive: () => this.internalRulerEngine.isActive(),
       getRoomBounds: () => this.roomBounds,
       getRoomOpenings: () => this.getRoomOpeningsForSnapping(),
+      resolveDragTransformTarget: (logicalMesh) => this.resolveDragTransformTarget(logicalMesh),
     });
     this.remateSmartSnapping = new RemateSmartSnapping({
       getContainer: () => this.container,
@@ -834,6 +838,7 @@ export class ViewerCore {
     this.smartSnapEngine = new SmartSnapEngine({
       listEntities: () => this.listSmartSnapEntities(),
       buildContext: () => this.buildSmartAlignSnapContext(),
+      resolveDragTransformTarget: (logicalMesh) => this.resolveDragTransformTarget(logicalMesh),
     });
     this.smartAlignEngine = new SmartAlignEngine({
       getSelectedEntity: () => this.resolveSmartSnapSelectedEntity(),
@@ -1100,6 +1105,10 @@ export class ViewerCore {
         }
       }
       this.viewerState.setTransformControlsDragging(true);
+      const drivenObject = this.transformControls?.object;
+      if (drivenObject) {
+        getWorldPosition(drivenObject, this._dragOriginalWorldPos);
+      }
       this.logTransformDiagnostic("dragStart(mouseDown)");
     });
     this.transformControls.addEventListener("mouseUp", () => {
@@ -5118,6 +5127,13 @@ export class ViewerCore {
     return controlled;
   }
 
+  /** Par driven/logical para translate com ou sem TransformGizmoPivot. */
+  private resolveDragTransformTarget(logicalMesh: THREE.Object3D): DragTransformTarget {
+    const controlled = this.transformControls?.object ?? null;
+    const pivotActive = Boolean(this.transformGizmoPivot?.isActive());
+    return resolveDragTransformTarget(logicalMesh, controlled, pivotActive);
+  }
+
   private isTransformControlsDriving(mesh: THREE.Object3D | null | undefined): boolean {
     const controlled = this.transformControls?.object ?? null;
     if (!controlled || !mesh) return false;
@@ -5422,6 +5438,11 @@ export class ViewerCore {
     if (!remateId) return;
     const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
     if (!mesh) return;
+    const p = mesh.position;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+      console.warn("[sanity] posição inválida em notifyRemateTransform — ignorado");
+      return;
+    }
     const boxId = mesh.userData.boxId as string | undefined;
     const entry = boxId ? this.boxes.get(boxId) : undefined;
 
@@ -5940,7 +5961,9 @@ export class ViewerCore {
         kind: balanceResult.candidateKind,
         targetId: balanceResult.targetId,
       });
-      const preSnapPosition = entity.mesh.position.clone().sub(balanceResult.delta);
+      const preSnapPosition = getWorldPosition(this.resolveDragTransformTarget(entity.mesh).drivenObject)
+        .clone()
+        .sub(balanceResult.delta);
       this.renderSmartAlignSnapOverlay({
         meshPosition: preSnapPosition,
         delta: balanceResult.delta,
@@ -5961,7 +5984,9 @@ export class ViewerCore {
       kind: result.candidateKind,
       targetId: result.targetId,
     });
-    const preSnapPosition = entity.mesh.position.clone().sub(result.delta);
+    const preSnapPosition = getWorldPosition(this.resolveDragTransformTarget(entity.mesh).drivenObject)
+      .clone()
+      .sub(result.delta);
     this.renderSmartAlignSnapOverlay({
       meshPosition: preSnapPosition,
       delta: result.delta,
@@ -5978,7 +6003,7 @@ export class ViewerCore {
     modeOverride?: "predictive" | "magnetic" | "explicit" | "continuity" | "flush"
   ): void {
     this.renderSmartAlignSnapOverlay({
-      meshPosition: entity.mesh.position.clone(),
+      meshPosition: getWorldPosition(this.resolveDragTransformTarget(entity.mesh).drivenObject).clone(),
       delta: candidate.delta,
       kind: candidate.kind,
       targetId: candidate.targetId,
@@ -6043,6 +6068,7 @@ export class ViewerCore {
     const isDragging = this.viewerState.getTransformControlsDragging();
     const currentTool = this.viewerState.getCurrentTool();
 
+    try {
     if (selectedRemateId) {
       const mesh = this.remateVisualizer.getMeshByRemateId(selectedRemateId);
       if (isDragging && mesh && this.isTransformControlsDriving(mesh)) {
@@ -6061,13 +6087,16 @@ export class ViewerCore {
             if (cfg) {
               this.remateSmartSnapping.applyDuringTranslate({
                 mesh,
+                dragTransform: this.resolveDragTransformTarget(mesh),
                 boxEntry: entry,
                 boxConfig: cfg,
               });
             }
           }
         } else if (currentTool === "translate" && piece && !boxId) {
-          this.remateSmartSnapping.applyStandaloneGridSnap(mesh);
+          this.remateSmartSnapping.applyStandaloneGridSnap({
+            dragTransform: this.resolveDragTransformTarget(mesh),
+          });
         } else if (currentTool === "rotate") {
           applyRemateRotationSnapToMesh(mesh, entry?.mesh ?? null);
         }
@@ -6111,6 +6140,7 @@ export class ViewerCore {
         if (!unifiedHandled) {
           this.smartSnappingEngine.applyDuringTranslate({
             mesh: entry.mesh,
+            dragTransform: this.resolveDragTransformTarget(entry.mesh),
             selectedBoxId,
             boxes: this.boxes,
             isDragging,
@@ -6130,6 +6160,8 @@ export class ViewerCore {
       lockEnabled: this.lockEnabled,
       roomBounds: this.roomBounds,
       roomBoxWalls: this.roomBoxWalls,
+      isTransformControlsDriving: (mesh) => this.isTransformControlsDriving(mesh),
+      resolveDragTransformTarget: (logicalMesh) => this.resolveDragTransformTarget(logicalMesh),
       applyFloorConstraint: (obj) => this.applyFloorConstraint(obj),
       applyRoomConstraint: (obj, options) => this.applyRoomConstraint(obj, options),
       isMeshInsideOrTouchingRoom: (obj) => this.isMeshInsideOrTouchingRoom(obj),
@@ -6141,6 +6173,18 @@ export class ViewerCore {
         this.lastSnapDebugData = data;
       },
     });
+    } finally {
+      if (isDragging) {
+        const drivenObject = this.transformControls?.object;
+        if (drivenObject) {
+          const world = getWorldPosition(drivenObject, this._center);
+          if (!Number.isFinite(world.x + world.y + world.z)) {
+            console.warn("[sanity] posição inválida após clampTransform — revertendo");
+            setWorldPosition(drivenObject, this._dragOriginalWorldPos);
+          }
+        }
+      }
+    }
   }
 
   private clampSelectedWallChildTransform(): void {
@@ -6461,7 +6505,12 @@ export class ViewerCore {
     if (!this.viewerState.getSelectedBox()) return;
     const entry = this.boxes.get(this.viewerState.getSelectedBox());
     if (!entry) return;
-    const { x, y, z } = entry.mesh.position;
+    const p = entry.mesh.position;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+      console.warn("[sanity] posição inválida em notifyBoxTransform — ignorado");
+      return;
+    }
+    const { x, y, z } = p;
     const r = entry.mesh.rotation;
     this.onBoxTransform?.(this.viewerState.getSelectedBox(), { x, y, z }, { x: r.x, y: r.y, z: r.z });
   }

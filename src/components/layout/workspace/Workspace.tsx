@@ -943,6 +943,10 @@ const hasShownViewerReadyToastRef = useRef(false);
     window.viewerCore?.syncRemateVisuals?.();
     window.viewerCore?.syncHematiVisuals?.();
     window.viewerCore?.syncRodapeVisuals?.();
+    const core = window.viewerCore as typeof window.viewerCore & {
+      viewerState?: { getTransformControlsDragging(): boolean };
+    };
+    if (core?.viewerState?.getTransformControlsDragging()) return;
     window.viewerCore?.refreshTransformControlsAttachment?.();
   }, [
     project.orlaPieces,
