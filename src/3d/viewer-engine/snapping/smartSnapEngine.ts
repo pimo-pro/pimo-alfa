@@ -16,14 +16,15 @@ import {
 } from "./smartAlignSnapRules";
 import { pickBestSnapCandidate } from "./smartAlignSnapPriority";
 import { collectUnifiedRoomSnapCandidates } from "./smartRoomSnapIntegration";
-import type {
-  PredictSnapResult,
-  SmartAlignSnapContext,
-  SmartSnapEntity,
-  SmartSnapEntityKind,
-  SmartSnapTransformMode,
-  UnifiedSnapCandidate,
-  UnifiedSnapResult,
+import {
+  DEFAULT_UNIFIED_CAPTURE_MM,
+  type PredictSnapResult,
+  type SmartAlignSnapContext,
+  type SmartSnapEntity,
+  type SmartSnapEntityKind,
+  type SmartSnapTransformMode,
+  type UnifiedSnapCandidate,
+  type UnifiedSnapResult,
 } from "./smartAlignSnapTypes";
 import {
   getWorldPosition,
