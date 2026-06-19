@@ -23,6 +23,10 @@ export type RematePieceVisualBridge = {
 const REMATE_RENDER_ORDER = 12;
 const REMATE_OUTLINE_RENDER_ORDER = 13;
 
+function isRodapeLikeRematePiece(piece: RematePiece): boolean {
+  return piece.tipo === "RODAPE" || piece.tipo === "RODAPE_L";
+}
+
 export class RematePieceVisualizer {
   private bridge: RematePieceVisualBridge | null = null;
   private readonly root = new THREE.Group();
@@ -47,16 +51,20 @@ export class RematePieceVisualizer {
   }
 
   syncAll(): void {
-    this.clearAll();
-    if (!this.bridge) return;
+    if (!this.bridge) {
+      this.clearAll();
+      return;
+    }
 
-    const remateList = this.bridge.listRematePieces();
+    const remateList = this.bridge.listRematePieces().filter((piece) => !isRodapeLikeRematePiece(piece));
+    const expectedIds = new Set(remateList.map((piece) => piece.id));
 
-    // Cada peça permanece visível e clicável — merge visual desativado para
-    // permitir seleção, gizmo e outline em cada remate/roda pé independentemente.
+    // Cada remate permanece visível e clicável; rodapés pertencem ao RodapeVisualizer.
     for (const piece of remateList) {
       this.upsertMesh(piece, false);
     }
+    this.removeStaleMeshes(this.meshById, expectedIds);
+    this.removeStaleMeshes(this.mergeGroupById, new Set());
 
     // Merge visual reservado — método mantido para reativação futura sem perder lógica.
     void this.upsertMergeMesh;
@@ -68,20 +76,10 @@ export class RematePieceVisualizer {
   }
 
   clearAll(): void {
-    this.mergeGroupById.forEach((mesh) => {
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
-      else mesh.material.dispose();
-    });
+    this.disposeMeshes(this.mergeGroupById);
     this.mergeGroupById.clear();
 
-    this.meshById.forEach((mesh) => {
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
-      else mesh.material.dispose();
-    });
+    this.disposeMeshes(this.meshById);
     this.meshById.clear();
   }
 
@@ -106,6 +104,25 @@ export class RematePieceVisualizer {
 
     mesh.visible = !hidden;
     this.applyWorldTransform(mesh, piece);
+  }
+
+  private removeStaleMeshes(map: Map<string, THREE.Mesh>, expectedIds: Set<string>): void {
+    for (const [id, mesh] of map.entries()) {
+      if (expectedIds.has(id)) continue;
+      this.disposeMesh(mesh);
+      map.delete(id);
+    }
+  }
+
+  private disposeMeshes(map: Map<string, THREE.Mesh>): void {
+    map.forEach((mesh) => this.disposeMesh(mesh));
+  }
+
+  private disposeMesh(mesh: THREE.Mesh): void {
+    mesh.removeFromParent();
+    mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
+    else mesh.material.dispose();
   }
 
   private upsertMergeMesh(

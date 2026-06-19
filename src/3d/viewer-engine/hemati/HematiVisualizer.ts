@@ -43,8 +43,10 @@ export class HematiVisualizer {
   }
 
   syncAll(): void {
-    this.clearAll();
-    if (!this.bridge) return;
+    if (!this.bridge) {
+      this.clearAll();
+      return;
+    }
 
     const configs = this.bridge.listBoxHematiConfigs();
     const boxConfigs = new Map<string, HematiVisualBoxConfig>();
@@ -56,6 +58,8 @@ export class HematiVisualizer {
 
     const mergeGroups = computeHematiVisualMergeGroups(list);
     const mergedIds = hematiIdsInMergeGroup(mergeGroups);
+    const expectedIds = new Set(list.map((hemati) => hemati.id));
+    const expectedMergeIds = new Set(mergeGroups.filter((group) => group.hematiIds.length >= 2).map((group) => group.id));
 
     for (const hemati of list) {
       const cfg = boxConfigs.get(hemati.parentBoxId);
@@ -67,6 +71,8 @@ export class HematiVisualizer {
       if (group.hematiIds.length < 2) continue;
       this.upsertMergeMesh(group, list, boxConfigs);
     }
+    this.removeStaleMeshes(this.meshById, expectedIds);
+    this.removeStaleMeshes(this.mergeGroupById, expectedMergeIds);
   }
 
   clearAll(): void {
@@ -83,11 +89,23 @@ export class HematiVisualizer {
 
   private disposeMeshes(map: Map<string, THREE.Mesh>): void {
     map.forEach((mesh) => {
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
-      else mesh.material.dispose();
+      this.disposeMesh(mesh);
     });
+  }
+
+  private removeStaleMeshes(map: Map<string, THREE.Mesh>, expectedIds: Set<string>): void {
+    for (const [id, mesh] of map.entries()) {
+      if (expectedIds.has(id)) continue;
+      this.disposeMesh(mesh);
+      map.delete(id);
+    }
+  }
+
+  private disposeMesh(mesh: THREE.Mesh): void {
+    mesh.removeFromParent();
+    mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
+    else mesh.material.dispose();
   }
 
   private upsertMesh(hemati: ProjectHemati, cfg: HematiVisualBoxConfig, hidden: boolean): void {

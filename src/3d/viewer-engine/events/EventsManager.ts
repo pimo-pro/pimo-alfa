@@ -150,6 +150,35 @@ export class EventsManager {
       }
       return;
     }
+    const boxId = e.getBoxIdAtPointer(event);
+    if (boxId) {
+      if (this.tryMultiSelectToggle(event)) return;
+      e.setTransformGizmoAnchor(clickAnchor);
+      e.selectHemati(null);
+      e.selectRodape(null);
+      e.selectRemate(null);
+      e.setHoveredBox(boxId);
+      e.setSelectedBox(boxId);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.refreshTransformControlsAttachment();
+      return;
+    }
+    const remateId = e.getRemateIdAtPointer(event);
+    if (remateId) {
+      if (this.tryMultiSelectToggle(event)) return;
+      e.setTransformGizmoAnchor(clickAnchor);
+      e.selectRemate(remateId);
+      e.getOnRemateSelected?.()?.(remateId);
+      e.setHoveredBox(null);
+      e.setHoveredRemate(null);
+      e.setSelectedBox(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.getOnBoxSelected()?.(null);
+      e.refreshTransformControlsAttachment();
+      return;
+    }
     const hematiId = e.getHematiIdAtPointer(event);
     if (hematiId) {
       if (this.tryMultiSelectToggle(event)) return;
@@ -176,40 +205,11 @@ export class EventsManager {
       e.refreshTransformControlsAttachment();
       return;
     }
-    const remateId = e.getRemateIdAtPointer(event);
-    if (remateId) {
-      if (this.tryMultiSelectToggle(event)) return;
-      e.setTransformGizmoAnchor(clickAnchor);
-      e.selectRemate(remateId);
-      e.getOnRemateSelected?.()?.(remateId);
-      e.setHoveredBox(null);
-      e.setHoveredRemate(null);
-      e.setSelectedBox(null);
-      e.getOnRoomElementSelected()?.(null);
-      e.getOnWallSelected()?.(null);
-      e.getOnBoxSelected()?.(null);
-      e.refreshTransformControlsAttachment();
-      return;
-    }
     const drawerHit = e.getDrawerHitAtPointer(event);
     if (drawerHit) {
       event.preventDefault();
       event.stopPropagation();
       e.getOnDrawerLayerClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
-      return;
-    }
-    const boxId = e.getBoxIdAtPointer(event);
-    if (boxId) {
-      if (this.tryMultiSelectToggle(event)) return;
-      e.setTransformGizmoAnchor(clickAnchor);
-      e.selectHemati(null);
-      e.selectRodape(null);
-      e.selectRemate(null);
-      e.setHoveredBox(boxId);
-      e.setSelectedBox(boxId);
-      e.getOnRoomElementSelected()?.(null);
-      e.getOnWallSelected()?.(null);
-      e.refreshTransformControlsAttachment();
       return;
     }
     const roomHit = e.getRoomElementAtPointer(event);
@@ -339,40 +339,6 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
-      const hematiId = e.getHematiIdAtPointer(event);
-      if (hematiId != null) {
-        event.preventDefault();
-        event.stopPropagation();
-        e.selectHemati(hematiId);
-        this.applyGizmoAnchorFromPointer(e, event);
-        e.setSuppressNextCanvasClick(true);
-        return;
-      }
-      const rodapeId = e.getRodapeIdAtPointer(event);
-      if (rodapeId != null) {
-        event.preventDefault();
-        event.stopPropagation();
-        e.selectRodape(rodapeId);
-        this.applyGizmoAnchorFromPointer(e, event);
-        e.setSuppressNextCanvasClick(true);
-        return;
-      }
-      const remateId = e.getRemateIdAtPointer(event);
-      if (remateId != null) {
-        if (this.tryMultiSelectToggle(event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        e.setHoveredRemate(remateId);
-        e.selectRemate(remateId);
-        e.getOnRemateSelected?.()?.(remateId);
-        this.applyGizmoAnchorFromPointer(e, event);
-        e.setSuppressNextCanvasClick(true);
-        return;
-      }
       const boxId = e.getBoxIdAtPointer(event);
       if (import.meta.env.DEV) {
         devLogger.debug("[SELECTION][EventsManager] pointerdown:boxId do raycast", {
@@ -436,6 +402,40 @@ export class EventsManager {
         e.getOnWallSelected()?.(null);
         e.setSuppressNextCanvasClick(true);
         e.logTransformDiagnostic("box-selected-pointerDown", { boxId });
+        return;
+      }
+      const remateId = e.getRemateIdAtPointer(event);
+      if (remateId != null) {
+        if (this.tryMultiSelectToggle(event)) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        e.setHoveredRemate(remateId);
+        e.selectRemate(remateId);
+        e.getOnRemateSelected?.()?.(remateId);
+        this.applyGizmoAnchorFromPointer(e, event);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
+      const hematiId = e.getHematiIdAtPointer(event);
+      if (hematiId != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.selectHemati(hematiId);
+        this.applyGizmoAnchorFromPointer(e, event);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
+      const rodapeId = e.getRodapeIdAtPointer(event);
+      if (rodapeId != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.selectRodape(rodapeId);
+        this.applyGizmoAnchorFromPointer(e, event);
+        e.setSuppressNextCanvasClick(true);
         return;
       }
     }

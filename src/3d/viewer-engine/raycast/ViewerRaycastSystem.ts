@@ -44,8 +44,8 @@ export type ViewerRaycastSystemDeps = {
   getRoomBounds: () => ViewerRaycastRoomBounds | null;
   getTransformControlsHelper: () => THREE.Object3D | null;
   getDebugMode: () => boolean;
-  getBoxEntry?: (boxId: string) => ViewerBoxEntry | undefined;
-  projectWorldToScreen?: (world: THREE.Vector3) => { x: number; y: number } | null;
+  getBoxEntry?: (_boxId: string) => ViewerBoxEntry | undefined;
+  projectWorldToScreen?: (_world: THREE.Vector3) => { x: number; y: number } | null;
   getRemateRoot?: () => THREE.Object3D | null;
   getHematiRoot?: () => THREE.Object3D | null;
   getRodapeRoot?: () => THREE.Object3D | null;
@@ -60,6 +60,15 @@ export class ViewerRaycastSystem {
 
   constructor(deps: ViewerRaycastSystemDeps) {
     this.deps = deps;
+  }
+
+  private isVisibleInHierarchy(object: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = object;
+    while (current) {
+      if (!current.visible) return false;
+      current = current.parent;
+    }
+    return true;
   }
 
   getTransformGizmoIntersections(event: { clientX: number; clientY: number }): number {
@@ -90,6 +99,7 @@ export class ViewerRaycastSystem {
     this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
     this.deps.raycaster.layers.set(0);
     const roots = this.getHighlightRaycastRoots();
+    roots.forEach((root) => root.updateMatrixWorld(true));
     return this.deps.raycaster.intersectObjects(roots, true);
   }
 
@@ -148,8 +158,10 @@ export class ViewerRaycastSystem {
     this.deps.pointer.set(x, y);
     this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
     this.deps.raycaster.layers.set(0);
+    root.updateMatrixWorld(true);
     const hits = this.deps.raycaster.intersectObjects([root], true);
     for (const hit of hits) {
+      if (!this.isVisibleInHierarchy(hit.object)) continue;
       if (hit.object.userData?.[skipMergeKey] === true) continue;
       const id = hit.object.userData?.[idKey];
       if (typeof id === "string" && id.length > 0) return id;
@@ -187,8 +199,10 @@ export class ViewerRaycastSystem {
     ].filter((root): root is THREE.Object3D => root != null);
 
     if (finishRoots.length > 0) {
+      finishRoots.forEach((root) => root.updateMatrixWorld(true));
       const finishHits = this.deps.raycaster.intersectObjects(finishRoots, true);
       for (const hit of finishHits) {
+        if (!this.isVisibleInHierarchy(hit.object)) continue;
         if (hit.object.userData?.isHematiMergeVisual === true) continue;
         if (hit.object.userData?.isRodapeMergeVisual === true) continue;
         if (hit.object.userData?.isRemateMergeVisual === true) continue;
@@ -206,8 +220,10 @@ export class ViewerRaycastSystem {
     this.deps.getBoxes().forEach((entry) => boxRoots.push(entry.mesh));
     if (!boxRoots.length) return null;
 
+    boxRoots.forEach((root) => root.updateMatrixWorld(true));
     const boxHits = this.deps.raycaster.intersectObjects(boxRoots, true);
     for (const hit of boxHits) {
+      if (!this.isVisibleInHierarchy(hit.object)) continue;
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
       return hit.point.clone();
@@ -229,6 +245,7 @@ export class ViewerRaycastSystem {
     boxes.forEach((entry) => {
       roots.push(entry.mesh);
     });
+    roots.forEach((root) => root.updateMatrixWorld(true));
     const hits = this.deps.raycaster.intersectObjects(roots, true);
     if (import.meta.env.DEV) {
       const hitsDebug = hits.map((hit, index) => ({
@@ -246,6 +263,7 @@ export class ViewerRaycastSystem {
     }
     if (!hits.length) return null;
     for (const hit of hits) {
+      if (!this.isVisibleInHierarchy(hit.object)) continue;
       const candidate = hit.object;
       const boxIdCandidate = this.getBoxIdByMesh(candidate);
       if (!boxIdCandidate) continue;

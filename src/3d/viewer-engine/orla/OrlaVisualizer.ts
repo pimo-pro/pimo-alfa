@@ -99,7 +99,7 @@ export class OrlaVisualizer {
         if (child.userData?.isOrlaBand === true) toRemove.push(child);
       });
       for (const child of toRemove) {
-        node.remove(child);
+        child.removeFromParent();
         this.disposeOrlaObject(child);
       }
     });

@@ -43,8 +43,10 @@ export class RodapeVisualizer {
   }
 
   syncAll(): void {
-    this.clearAll();
-    if (!this.bridge) return;
+    if (!this.bridge) {
+      this.clearAll();
+      return;
+    }
 
     const configs = this.bridge.listBoxRodapeConfigs();
     const boxConfigs = new Map<string, RodapeVisualBoxConfig>();
@@ -56,6 +58,8 @@ export class RodapeVisualizer {
 
     const mergeGroups = computeRodapeVisualMergeGroups(list);
     const mergedIds = rodapeIdsInMergeGroup(mergeGroups);
+    const expectedIds = new Set(list.map((rodape) => rodape.id));
+    const expectedMergeIds = new Set(mergeGroups.filter((group) => group.rodapeIds.length >= 2).map((group) => group.id));
 
     for (const rodape of list) {
       const cfg = boxConfigs.get(rodape.parentBoxId);
@@ -67,6 +71,8 @@ export class RodapeVisualizer {
       if (group.rodapeIds.length < 2) continue;
       this.upsertMergeMesh(group, list, boxConfigs);
     }
+    this.removeStaleMeshes(this.meshById, expectedIds);
+    this.removeStaleMeshes(this.mergeGroupById, expectedMergeIds);
   }
 
   clearAll(): void {
@@ -83,11 +89,23 @@ export class RodapeVisualizer {
 
   private disposeMeshes(map: Map<string, THREE.Mesh>): void {
     map.forEach((mesh) => {
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
-      else mesh.material.dispose();
+      this.disposeMesh(mesh);
     });
+  }
+
+  private removeStaleMeshes(map: Map<string, THREE.Mesh>, expectedIds: Set<string>): void {
+    for (const [id, mesh] of map.entries()) {
+      if (expectedIds.has(id)) continue;
+      this.disposeMesh(mesh);
+      map.delete(id);
+    }
+  }
+
+  private disposeMesh(mesh: THREE.Mesh): void {
+    mesh.removeFromParent();
+    mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
+    else mesh.material.dispose();
   }
 
   private upsertMesh(rodape: ProjectRodape, cfg: RodapeVisualBoxConfig, hidden: boolean): void {

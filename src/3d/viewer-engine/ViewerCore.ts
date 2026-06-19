@@ -401,6 +401,10 @@ export class ViewerCore {
   private dragStartZForShiftLock: number | undefined = undefined;
   /** Posição world do drivenObject ao iniciar o drag (fail-safe NaN em clampTransform). */
   private readonly _dragOriginalWorldPos = new THREE.Vector3();
+  private transformObjectChangeRaf: number | null = null;
+  private transformObjectChangePending = false;
+  private transformDragStartStamp: number | null = null;
+  private lastRuntimeStabilityProbeStamp = 0;
   private boundShiftKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Shift") this.shiftKeyHeld = true;
   };
@@ -425,6 +429,13 @@ export class ViewerCore {
   /** Evita reconstruir os helpers a cada frame quando a lista de peças não mudou. */
   private selectionOutlinePiecesSig: string | null = null;
   private selectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
+  private readonly pendingViewerVisualSync = {
+    orla: false,
+    remate: false,
+    hemati: false,
+    rodape: false,
+  };
+  private readonly pendingBoxStructureUpdates = new Map<string, Partial<BoxOptions>>();
   /** Outline da parede selecionada (Room Box). */
   private wallSelectionOutline: THREE.BoxHelper | null = null;
   private wallSelectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
@@ -634,15 +645,15 @@ export class ViewerCore {
     applySuggestedFixes: () => boolean;
   };
   readonly costEstimator: {
-    generateCostReport: (seedBoxId?: string) => CostFullReport;
-    summarizeForUI: (seedBoxId?: string) => CostUiSummary;
+    generateCostReport: (_seedBoxId?: string) => CostFullReport;
+    summarizeForUI: (_seedBoxId?: string) => CostUiSummary;
     score: () => number;
-    compareDesigns: (seedBoxId: string) => import("./snapping/costTypes").CostDesignComparison;
+    compareDesigns: (_seedBoxId: string) => import("./snapping/costTypes").CostDesignComparison;
     compareStyles: () => import("./snapping/costTypes").CostStyleComparison;
-    estimateChangeImpact: (change: CostChangeInput) => import("./snapping/costTypes").CostImpactEstimate;
-    suggestCheaper: (seedBoxId: string) => boolean;
-    suggestPremium: (seedBoxId: string) => boolean;
-    suggestBalanced: (seedBoxId: string) => boolean;
+    estimateChangeImpact: (_change: CostChangeInput) => import("./snapping/costTypes").CostImpactEstimate;
+    suggestCheaper: (_seedBoxId: string) => boolean;
+    suggestPremium: (_seedBoxId: string) => boolean;
+    suggestBalanced: (_seedBoxId: string) => boolean;
   };
   readonly orlaVisual: {
     syncAll: () => void;
@@ -1104,6 +1115,8 @@ export class ViewerCore {
           this.smartSnappingEngine.onDragStart(dragTarget as THREE.Object3D);
         }
       }
+      this.transformDragStartStamp = performance.now();
+      this.lastRuntimeStabilityProbeStamp = this.transformDragStartStamp;
       this.viewerState.setTransformControlsDragging(true);
       const drivenObject = this.transformControls?.object;
       if (drivenObject) {
@@ -1125,29 +1138,7 @@ export class ViewerCore {
       }
     });
     this.transformControls.addEventListener("objectChange", () => {
-      if (this.groupGizmo?.isActive()) {
-        this.groupGizmo.applyPivotTransform();
-      }
-      if (
-        this.viewerState.getTransformControlsDragging() &&
-        this.viewerState.getSelectedBox() &&
-        this.shiftKeyHeld &&
-        this.dragStartZForShiftLock !== undefined
-      ) {
-        const dragTarget = this.getTransformControlsTargetMesh();
-        if (dragTarget && "position" in dragTarget) (dragTarget as THREE.Object3D).position.z = this.dragStartZForShiftLock;
-      }
-      this.viewerTools.applyCurrentTool();
-      this.measurementOverlay.onRulerMovementTick("transform");
-      // NÃO notificar caixas durante drag: o callback updateWorkspaceBoxTransform dispara
-      // workspaceBoxes → syncFromCalculator → updateBox → mesh.position.set(), brigando com
-      // o TransformControls e causando movimento de ~1mm por tentativa.
-      // Mesmo padrão que Remate/Hemati/Rodape (ver comentário abaixo).
-      // A posição correcta é gravada em finishTransformDrag via notifyBoxTransform().
-      // Remate/Hemati/Rodape are NOT notified during drag: their callbacks trigger
-      // syncAll() which resets the mesh position and fights the transform controls.
-      // Position is saved once in finishTransformDrag via notifyRemateTransform etc.
-      this.logTransformDiagnostic("drag(objectChange)");
+      this.scheduleTransformObjectChange();
     });
     this.transformControlsHelper = this.transformControls.getHelper();
     this.transformControlsHelper.visible = false;
@@ -1306,15 +1297,25 @@ export class ViewerCore {
   }
 
   syncOrlaVisuals(): void {
+    if (this.viewerState.getTransformControlsDragging()) {
+      this.pendingViewerVisualSync.orla = true;
+      return;
+    }
     for (const [boxId, entry] of this.boxes.entries()) {
       if (entry?.mesh) this.orlaVisualizer.syncBoxRoot(boxId, entry.mesh);
     }
+    this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
   private syncOrlaForBox(boxId: string): void {
+    if (this.viewerState.getTransformControlsDragging()) {
+      this.pendingViewerVisualSync.orla = true;
+      return;
+    }
     const entry = this.boxes.get(boxId);
     if (!entry?.mesh) return;
     this.orlaVisualizer.syncBoxRoot(boxId, entry.mesh);
+    this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
   bindRemateBridge(bridge: RematePieceVisualBridge | null): void {
@@ -1324,6 +1325,10 @@ export class ViewerCore {
   }
 
   syncRemateVisuals(): void {
+    if (this.viewerState.getTransformControlsDragging()) {
+      this.pendingViewerVisualSync.remate = true;
+      return;
+    }
     this.remateVisualizer.syncAll();
     for (const [, entry] of this.boxes.entries()) {
       if (!entry?.mesh) continue;
@@ -1331,6 +1336,7 @@ export class ViewerCore {
       this.applyPanelVisibilityForObject(entry.mesh);
     }
     this.applyPanelVisibilityForObject(this.remateVisualizer.getRoot());
+    this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
   private clearBoxChildrenRemateLegacy(boxRoot: THREE.Object3D): void {
@@ -1342,7 +1348,8 @@ export class ViewerCore {
   }
 
   getRemateMesh(remateId: string): THREE.Object3D | null {
-    return this.remateVisualizer.getMeshByRemateId(remateId) ?? null;
+    const mesh = this.remateVisualizer.getMeshByRemateId(remateId) ?? null;
+    return this.isObjectAttachedToScene(mesh) ? mesh : null;
   }
 
   selectRemate(remateId: string | null): void {
@@ -1382,8 +1389,13 @@ export class ViewerCore {
   }
 
   syncHematiVisuals(): void {
+    if (this.viewerState.getTransformControlsDragging()) {
+      this.pendingViewerVisualSync.hemati = true;
+      return;
+    }
     this.hematiVisualizer.syncAll();
     this.applyPanelVisibilityForObject(this.hematiVisualizer.getRoot());
+    this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
   bindRodapeBridge(bridge: RodapeVisualBridge | null): void {
@@ -1393,16 +1405,23 @@ export class ViewerCore {
   }
 
   syncRodapeVisuals(): void {
+    if (this.viewerState.getTransformControlsDragging()) {
+      this.pendingViewerVisualSync.rodape = true;
+      return;
+    }
     this.rodapeVisualizer.syncAll();
     this.applyPanelVisibilityForObject(this.rodapeVisualizer.getRoot());
+    this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
   getHematiMesh(hematiId: string): THREE.Object3D | null {
-    return this.hematiVisualizer.getMeshByHematiId(hematiId) ?? null;
+    const mesh = this.hematiVisualizer.getMeshByHematiId(hematiId) ?? null;
+    return this.isObjectAttachedToScene(mesh) ? mesh : null;
   }
 
   getRodapeMesh(rodapeId: string): THREE.Object3D | null {
-    return this.rodapeVisualizer.getMeshByRodapeId(rodapeId) ?? null;
+    const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodapeId) ?? null;
+    return this.isObjectAttachedToScene(mesh) ? mesh : null;
   }
 
   getHematiIdAtPointer(event: { clientX: number; clientY: number }): string | null {
@@ -3400,6 +3419,13 @@ export class ViewerCore {
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
       opts.drillMarkersByPanel !== undefined;
+    if (structureChanged && this.viewerState.getTransformControlsDragging()) {
+      this.pendingBoxStructureUpdates.set(id, {
+        ...(this.pendingBoxStructureUpdates.get(id) ?? {}),
+        ...opts,
+      });
+      return true;
+    }
     if (structureChanged) {
       width = Math.max(0.001, opts.width ?? opts.size ?? width);
       height = Math.max(0.001, opts.height ?? opts.size ?? height);
@@ -3614,6 +3640,7 @@ export class ViewerCore {
     }
     if (structureChanged) {
       this.updateCameraTargetToBox(id, { onlyMovePositionIfOutOfFrame: true });
+      this.refreshViewerAttachmentsAfterMeshMutation();
     }
     if (heightChanged && !entry.cadOnly) {
       this.updateModelsVerticalPosition(entry);
@@ -4409,6 +4436,135 @@ export class ViewerCore {
     this.viewerTools.updateTransformControlsAttachment();
   }
 
+  private refreshViewerAttachmentsAfterMeshMutation(): void {
+    if (this.viewerState.getTransformControlsDragging()) return;
+    this.sanitizeStaleViewerReferences();
+    this.refreshTransformControlsAttachment();
+    this.sanitizeStaleViewerReferences();
+    this.refreshOutlineTarget();
+    this.validateViewerMeshLifecycle("mesh-mutation");
+  }
+
+  private hasPendingViewerVisualSyncs(): boolean {
+    return (
+      this.pendingViewerVisualSync.orla ||
+      this.pendingViewerVisualSync.remate ||
+      this.pendingViewerVisualSync.hemati ||
+      this.pendingViewerVisualSync.rodape
+    );
+  }
+
+  private flushDeferredBoxStructureUpdates(): void {
+    if (this.viewerState.getTransformControlsDragging()) return;
+    if (this.pendingBoxStructureUpdates.size === 0) return;
+    const pending = Array.from(this.pendingBoxStructureUpdates.entries());
+    this.pendingBoxStructureUpdates.clear();
+    pending.forEach(([boxId, options]) => {
+      this.updateBox(boxId, options);
+    });
+  }
+
+  private flushDeferredViewerVisualSyncs(): void {
+    if (this.viewerState.getTransformControlsDragging()) return;
+    if (!this.hasPendingViewerVisualSyncs()) return;
+    const pending = { ...this.pendingViewerVisualSync };
+    this.pendingViewerVisualSync.orla = false;
+    this.pendingViewerVisualSync.remate = false;
+    this.pendingViewerVisualSync.hemati = false;
+    this.pendingViewerVisualSync.rodape = false;
+
+    if (pending.orla) this.syncOrlaVisuals();
+    if (pending.remate) this.syncRemateVisuals();
+    if (pending.hemati) this.syncHematiVisuals();
+    if (pending.rodape) this.syncRodapeVisuals();
+  }
+
+  private isObjectAttachedToScene(object: THREE.Object3D | null | undefined): boolean {
+    let current: THREE.Object3D | null | undefined = object;
+    while (current) {
+      if (current === this.sceneManager.scene) return true;
+      current = current.parent;
+    }
+    return false;
+  }
+
+  private sanitizeStaleViewerReferences(): void {
+    if (this.viewerState.getTransformControlsDragging()) return;
+    const attached = this.transformControls?.object ?? null;
+    if (attached && !this.isObjectAttachedToScene(attached)) {
+      this.transformControls?.detach();
+      if (this.transformControlsHelper) this.transformControlsHelper.visible = false;
+    }
+    if (this.selectionOutlineTarget && !this.isObjectAttachedToScene(this.selectionOutlineTarget)) {
+      this.selectionOutlineTarget = null;
+      this.selectionOutlinePiecesSig = null;
+    }
+  }
+
+  private incrementLifecycleCount(map: Map<string, number>, id: unknown): void {
+    if (typeof id !== "string" || id.length === 0) return;
+    map.set(id, (map.get(id) ?? 0) + 1);
+  }
+
+  private collectDuplicateLifecycleIds(map: Map<string, number>): string[] {
+    return Array.from(map.entries())
+      .filter(([, count]) => count > 1)
+      .map(([id]) => id);
+  }
+
+  private validateViewerMeshLifecycle(reason: string): void {
+    if (!import.meta.env.DEV) return;
+    const boxRoots = new Map<string, number>();
+    const remates = new Map<string, number>();
+    const hematis = new Map<string, number>();
+    const rodapes = new Map<string, number>();
+    const staleBoxRoots: string[] = [];
+    const staleFinishMeshes: string[] = [];
+    const remateRodapeOverlap: string[] = [];
+
+    this.sceneManager.scene.traverse((node) => {
+      if (!node.visible) return;
+      const boxId = node.userData?.boxId;
+      if (typeof boxId === "string" && boxId.length > 0 && !this.boxes.has(boxId)) {
+        staleFinishMeshes.push(`box:${boxId}`);
+      }
+      if (typeof boxId === "string" && this.boxes.get(boxId)?.mesh === node) {
+        this.incrementLifecycleCount(boxRoots, boxId);
+      } else if (typeof boxId === "string" && node.name === boxId && this.boxes.get(boxId)?.mesh !== node) {
+        staleBoxRoots.push(boxId);
+      }
+      if (node.userData?.isRematePiece === true) {
+        const remateId = node.userData?.remateId;
+        this.incrementLifecycleCount(remates, remateId);
+        if (node.userData?.remateTipo === "RODAPE" || node.userData?.remateTipo === "RODAPE_L") {
+          remateRodapeOverlap.push(String(remateId ?? "unknown"));
+        }
+      }
+      if (node.userData?.isHematiPiece === true && node.userData?.isHematiMergeVisual !== true) {
+        this.incrementLifecycleCount(hematis, node.userData?.hematiId);
+      }
+      if (node.userData?.isRodapePiece === true && node.userData?.isRodapeMergeVisual !== true) {
+        this.incrementLifecycleCount(rodapes, node.userData?.rodapeId);
+      }
+    });
+
+    const issues = {
+      duplicateBoxes: this.collectDuplicateLifecycleIds(boxRoots),
+      duplicateRemates: this.collectDuplicateLifecycleIds(remates),
+      duplicateHematis: this.collectDuplicateLifecycleIds(hematis),
+      duplicateRodapes: this.collectDuplicateLifecycleIds(rodapes),
+      staleBoxRoots,
+      staleFinishMeshes: Array.from(new Set(staleFinishMeshes)),
+      remateRodapeOverlap,
+      staleTransformTarget: Boolean(this.transformControls?.object && !this.isObjectAttachedToScene(this.transformControls.object)),
+      staleOutlineTarget: Boolean(this.selectionOutlineTarget && !this.isObjectAttachedToScene(this.selectionOutlineTarget)),
+    };
+    const hasIssues = Object.values(issues).some((value) => Array.isArray(value) ? value.length > 0 : value);
+    if (hasIssues) {
+      devLogger.info("[ViewerCore][LifecycleValidation]", { reason, ...issues });
+    }
+  }
+
   selectBox(id: string | null): void {
     this.setSelectedBox(id);
   }
@@ -5158,7 +5314,10 @@ export class ViewerCore {
       getHematiMesh: (hematiId) => this.getHematiMesh(hematiId),
       getRodapeMesh: (rodapeId) => this.getRodapeMesh(rodapeId),
       getRemateMesh: (remateId) => this.getRemateMesh(remateId),
-      getBoxEntry: (id) => this.boxes.get(id),
+      getBoxEntry: (id) => {
+        const entry = this.boxes.get(id);
+        return entry && this.isObjectAttachedToScene(entry.mesh) ? entry : undefined;
+      },
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
       getRoomBoxWalls: () => this.roomBoxWalls,
       getSelectedRoomElementId: () => this.viewerState.getSelectedRoomElementId(),
@@ -5407,12 +5566,24 @@ export class ViewerCore {
   }
 
   /** Fim de drag unificado — evita duplicação mouseUp + dragging-changed. */
-  private finishTransformDrag(_source: "mouseUp" | "dragging-changed"): void {
+  private finishTransformDrag(source: "mouseUp" | "dragging-changed"): void {
     const stamp = performance.now();
-    if (stamp - this.transformDragEndStamp < 8) return;
+    if (stamp - this.transformDragEndStamp < 8) {
+      if (source === "mouseUp") {
+        this.flushPendingTransformObjectChange();
+        this.viewerState.setTransformControlsDragging(false);
+        this.transformDragStartStamp = null;
+        this.flushDeferredBoxStructureUpdates();
+        this.flushDeferredViewerVisualSyncs();
+        this.refreshViewerAttachmentsAfterMeshMutation();
+      }
+      return;
+    }
     this.transformDragEndStamp = stamp;
+    this.flushPendingTransformObjectChange();
     this.dragStartZForShiftLock = undefined;
     this.viewerState.setTransformControlsDragging(false);
+    this.transformDragStartStamp = null;
     this.overlayCoordinator.clearTransientOverlays();
     this.smartSnappingEngine.onDragEnd();
     this.remateSmartSnapping.onDragEnd();
@@ -5431,6 +5602,11 @@ export class ViewerCore {
     this.notifyRoomUtilityTransform();
     historyManager.endDragSession();
     this.onTransformDragEnd?.();
+    if (source === "mouseUp") {
+      this.flushDeferredBoxStructureUpdates();
+      this.flushDeferredViewerVisualSyncs();
+    }
+    this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
   private notifyRemateTransform(): void {
@@ -5954,7 +6130,9 @@ export class ViewerCore {
       this.onUnifiedSnapApplied(snapResult, entity);
     }
 
-    const balanceResult = this.smartAlignEngine.applyAutoBalanceIfEnabled(entity, ctx);
+    const balanceResult = snapResult.applied
+      ? { applied: false as const, delta: null, candidateKind: null, targetId: undefined, targetKind: undefined }
+      : this.smartAlignEngine.applyAutoBalanceIfEnabled(entity, ctx);
     if (balanceResult.applied && balanceResult.delta && balanceResult.candidateKind) {
       this.smartAlignSnapHistory.record({
         mode: "magnetic",
@@ -6047,6 +6225,69 @@ export class ViewerCore {
     this.smartAlignSnapOverlay.clear();
   }
 
+  private scheduleTransformObjectChange(): void {
+    this.transformObjectChangePending = true;
+    if (this.transformObjectChangeRaf != null) return;
+    this.transformObjectChangeRaf = window.requestAnimationFrame(() => {
+      this.transformObjectChangeRaf = null;
+      if (!this.transformObjectChangePending) return;
+      this.transformObjectChangePending = false;
+      this.processTransformObjectChange();
+    });
+  }
+
+  private flushPendingTransformObjectChange(): void {
+    if (this.transformObjectChangeRaf != null) {
+      window.cancelAnimationFrame(this.transformObjectChangeRaf);
+      this.transformObjectChangeRaf = null;
+    }
+    if (!this.transformObjectChangePending) return;
+    this.transformObjectChangePending = false;
+    this.processTransformObjectChange();
+  }
+
+  private processTransformObjectChange(): void {
+    if (this.groupGizmo?.isActive()) {
+      this.groupGizmo.applyPivotTransform();
+    }
+    if (
+      this.viewerState.getTransformControlsDragging() &&
+      this.viewerState.getSelectedBox() &&
+      this.shiftKeyHeld &&
+      this.dragStartZForShiftLock !== undefined
+    ) {
+      const dragTarget = this.getTransformControlsTargetMesh();
+      if (dragTarget && "position" in dragTarget) (dragTarget as THREE.Object3D).position.z = this.dragStartZForShiftLock;
+    }
+    this.viewerTools.applyCurrentTool();
+    this.measurementOverlay.onRulerMovementTick("transform");
+    this.validateRuntimeStabilityDuringDrag();
+    this.logTransformDiagnostic("drag(objectChange)");
+  }
+
+  private validateRuntimeStabilityDuringDrag(): void {
+    if (!import.meta.env.DEV) return;
+    if (!this.viewerState.getTransformControlsDragging()) return;
+    const now = performance.now();
+    if (now - this.lastRuntimeStabilityProbeStamp < 1000) return;
+    this.lastRuntimeStabilityProbeStamp = now;
+    this.validateViewerMeshLifecycle("drag-runtime");
+    if (this.transformDragStartStamp != null && now - this.transformDragStartStamp >= 180000) {
+      const attached = this.transformControls?.object ?? null;
+      devLogger.info("[ViewerCore][RuntimeStabilityProbe]", {
+        durationMs: Math.round(now - this.transformDragStartStamp),
+        selectedBox: this.viewerState.getSelectedBox(),
+        selectedRemate: this.viewerState.getSelectedRemate(),
+        selectedHemati: this.viewerState.getSelectedHemati(),
+        selectedRodape: this.viewerState.getSelectedRodape(),
+        attachedUuid: attached?.uuid ?? null,
+        attachedInScene: this.isObjectAttachedToScene(attached),
+        pendingVisualSync: { ...this.pendingViewerVisualSync },
+        pendingBoxUpdates: this.pendingBoxStructureUpdates.size,
+      });
+    }
+  }
+
   private notifyEntityAfterSmartAlign(entity: SmartSnapEntity): void {
     if (entity.kind === "box") this.notifyBoxTransform();
     else if (entity.kind === "remate") this.notifyRemateTransform();
@@ -6075,6 +6316,7 @@ export class ViewerCore {
         const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === selectedRemateId);
         const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
         const entry = boxId ? this.boxes.get(boxId) : undefined;
+        let deltaAppliedThisFrame = false;
 
         if (currentTool === "translate" && entry && piece && boxId) {
           const unifiedHandled = this.applyUnifiedSmartAlignSnap(
@@ -6082,6 +6324,7 @@ export class ViewerCore {
             isDragging,
             currentTool
           );
+          deltaAppliedThisFrame = unifiedHandled;
           if (!unifiedHandled) {
             const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
             if (cfg) {
@@ -6091,17 +6334,19 @@ export class ViewerCore {
                 boxEntry: entry,
                 boxConfig: cfg,
               });
+              deltaAppliedThisFrame = true;
             }
           }
         } else if (currentTool === "translate" && piece && !boxId) {
           this.remateSmartSnapping.applyStandaloneGridSnap({
             dragTransform: this.resolveDragTransformTarget(mesh),
           });
+          deltaAppliedThisFrame = true;
         } else if (currentTool === "rotate") {
           applyRemateRotationSnapToMesh(mesh, entry?.mesh ?? null);
         }
 
-        if (currentTool === "translate" && mesh && this.isTransformControlsDriving(mesh)) {
+        if (currentTool === "translate" && mesh && this.isTransformControlsDriving(mesh) && !deltaAppliedThisFrame) {
           const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
           this.applyFinishCollisionConstraint(mesh, boxId, selectedRemateId);
         }
@@ -6118,12 +6363,12 @@ export class ViewerCore {
       const mesh = this.rodapeVisualizer.getMeshByRodapeId(selectedRodapeId);
       if (isDragging && mesh && this.isTransformControlsDriving(mesh) && currentTool === "translate") {
         const boxId = mesh.userData.boxId as string | undefined;
-        this.applyUnifiedSmartAlignSnap(
+        const unifiedHandled = this.applyUnifiedSmartAlignSnap(
           { kind: "rodape", id: selectedRodapeId, mesh, parentBoxId: boxId },
           isDragging,
           currentTool
         );
-        this.applyFinishCollisionConstraint(mesh, boxId, undefined, selectedRodapeId);
+        if (!unifiedHandled) this.applyFinishCollisionConstraint(mesh, boxId, undefined, selectedRodapeId);
       }
       return;
     }
@@ -6148,6 +6393,8 @@ export class ViewerCore {
             roomBounds: this.roomBounds,
           });
         }
+        this.updateBoxesIntersectingWalls();
+        return;
       }
     }
 
@@ -6805,6 +7052,11 @@ export class ViewerCore {
 
   dispose() {
     this.runtimeLoop.stop();
+    if (this.transformObjectChangeRaf != null) {
+      window.cancelAnimationFrame(this.transformObjectChangeRaf);
+      this.transformObjectChangeRaf = null;
+    }
+    this.transformObjectChangePending = false;
     window.removeEventListener("resize", this.updateCanvasSize);
     window.removeEventListener("keydown", this.boundShiftKeyDown);
     window.removeEventListener("keyup", this.boundShiftKeyUp);
