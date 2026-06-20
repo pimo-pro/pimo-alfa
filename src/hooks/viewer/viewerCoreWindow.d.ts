@@ -178,30 +178,6 @@ declare global {
       selectRodape?: (rodapeId: string | null) => void;
       settings?: {
         enableSmartAlignSnap: boolean;
-        autoBalanceEnabled: boolean;
-        predictiveSnapEnabled: boolean;
-      };
-      smartAlignEngine?: {
-        applyExplicitAlignment: (
-          mode:
-            | "front"
-            | "back"
-            | "top"
-            | "bottom"
-            | "left"
-            | "right"
-            | "auto"
-            | "flushFront"
-            | "flushBack"
-            | "flushLeft"
-            | "flushRight"
-            | "depthAlign"
-            | "continueLine"
-            | "alignDoor"
-            | "alignDrawer"
-        ) => boolean;
-        applyRepeatLastAlignment?: () => boolean;
-        applyInverseAlignment?: () => boolean;
       };
       snapping?: {
         enable: () => void;

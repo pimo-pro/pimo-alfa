@@ -210,8 +210,7 @@ export default function ContextMenu({
   const showDoorMaterial = isDoorTarget;
   const showDrawerMaterial = isDrawerTarget;
   const roomExists = viewerApi?.getRoomExists?.() === true || project.room != null;
-  const hasSmartAlignTarget =
-    Boolean(selectedBoxId) || contextMenuLayerTarget?.type === "remate";
+  const hasSmartAlignTarget = false;
   const alignableCount = viewerApi?.getSelectedObjects?.(activeSelectedIds)?.length ?? 0;
   const canAlign = alignableCount >= 2;
   const activeGroupId = groupStore.getState().activeGroupId;

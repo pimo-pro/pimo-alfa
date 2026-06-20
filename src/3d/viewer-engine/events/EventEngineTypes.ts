@@ -72,6 +72,7 @@ export interface IViewerEventEngine {
   setSelectedRoomUtilityId(_v: string | null): void;
   getRoomUtilityAtPointer(_event: { clientX: number; clientY: number }): { utilityId: string; wallId: number; config: ProjectRoomUtility } | null;
   refreshTransformControlsAttachment(): void;
+  setTransformAttachmentRefreshSuspended(_v: boolean): void;
   refreshOutlineTarget(): void;
   getRoomBoxWalls(): { id: number; mesh: THREE.Mesh }[];
   getWallGizmo(): {
