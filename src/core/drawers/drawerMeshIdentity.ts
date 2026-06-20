@@ -29,7 +29,7 @@ export function applyDrawerClickTargetIdentity(
   mesh.userData.drawerClickTarget = true;
 }
 
-export function applyDrawerBodyPartIdentity(mesh: THREE.Object3D, drawerId: string, part: string): void {
+export function applyDrawerBodyPartIdentity(mesh: THREE.Object3D, part: string): void {
   mesh.userData.drawerPart = part;
   mesh.userData.drawerBodyPart = true;
 }

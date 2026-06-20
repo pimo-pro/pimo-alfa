@@ -135,10 +135,6 @@ export class ViewerRaycastSystem {
     return false;
   }
 
-  private getDrawerLayerIdByMesh(mesh: THREE.Object3D): string | null {
-    return resolveDrawerIdFromMesh(mesh);
-  }
-
   private pickIdFromFinishRoot(
     event: { clientX: number; clientY: number },
     root: THREE.Object3D | null | undefined,

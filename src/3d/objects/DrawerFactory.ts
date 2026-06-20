@@ -348,19 +348,19 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       const sideHeightM = Math.max(0.04, spec.bodyHeightM);
       const leftMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-left-${spec.id}`, "left", { singleMaterial: metalMaterial });
       leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, 0, bodyOffsetZ);
-      applyDrawerBodyPartIdentity(leftMetal, spec.id, "metal-box");
+      applyDrawerBodyPartIdentity(leftMetal, "metal-box");
       drawerGroup.add(leftMetal);
       const rightMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-right-${spec.id}`, "right", { singleMaterial: metalMaterial });
       rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, 0, bodyOffsetZ);
-      applyDrawerBodyPartIdentity(rightMetal, spec.id, "metal-box");
+      applyDrawerBodyPartIdentity(rightMetal, "metal-box");
       drawerGroup.add(rightMetal);
       const backMetal = panelFactory.createPanel(spec.bodyWidthM, sideHeightM, metalThicknessM, `drawer-metal-back-${spec.id}`, "back", { singleMaterial: metalMaterial });
       backMetal.position.set(0, 0, -spec.frontThicknessM / 2 - spec.bodyDepthM + metalThicknessM / 2);
-      applyDrawerBodyPartIdentity(backMetal, spec.id, "metal-box");
+      applyDrawerBodyPartIdentity(backMetal, "metal-box");
       drawerGroup.add(backMetal);
       const bottomMetal = panelFactory.createPanel(spec.bodyWidthM, metalThicknessM, spec.bodyDepthM, `drawer-metal-bottom-${spec.id}`, "bottom", { singleMaterial: metalMaterial });
       bottomMetal.position.set(0, -sideHeightM / 2 + metalThicknessM / 2, bodyOffsetZ);
-      applyDrawerBodyPartIdentity(bottomMetal, spec.id, "metal-box");
+      applyDrawerBodyPartIdentity(bottomMetal, "metal-box");
       drawerGroup.add(bottomMetal);
     } else if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
       const leftSide = panelFactory.createPanel(spec.leftSideWidthM, spec.leftSideHeightM, spec.leftSideDepthM, `drawer-left-${spec.id}`, "left", { singleMaterial: material });
@@ -369,7 +369,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.leftSidePosY) ? (spec.leftSidePosY as number) : 0,
         Number.isFinite(spec.leftSidePosZ) ? (spec.leftSidePosZ as number) : bodyOffsetZ
       );
-      applyDrawerBodyPartIdentity(leftSide, spec.id, "left-side");
+      applyDrawerBodyPartIdentity(leftSide, "left-side");
       drawerGroup.add(leftSide);
     }
     if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
@@ -379,7 +379,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.rightSidePosY) ? (spec.rightSidePosY as number) : 0,
         Number.isFinite(spec.rightSidePosZ) ? (spec.rightSidePosZ as number) : bodyOffsetZ
       );
-      applyDrawerBodyPartIdentity(rightSide, spec.id, "right-side");
+      applyDrawerBodyPartIdentity(rightSide, "right-side");
       drawerGroup.add(rightSide);
     }
     if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
@@ -389,7 +389,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.bottomPosY) ? (spec.bottomPosY as number) : -spec.bodyHeightM / 2 + spec.bottomThicknessM / 2,
         Number.isFinite(spec.bottomPosZ) ? (spec.bottomPosZ as number) : bodyOffsetZ
       );
-      applyDrawerBodyPartIdentity(bottom, spec.id, "bottom");
+      applyDrawerBodyPartIdentity(bottom, "bottom");
       drawerGroup.add(bottom);
     }
     if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
@@ -399,7 +399,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.backPosY) ? (spec.backPosY as number) : 0,
         Number.isFinite(spec.backPosZ) ? (spec.backPosZ as number) : bodyOffsetZ - spec.bodyDepthM / 2 + spec.backThicknessM / 2
       );
-      applyDrawerBodyPartIdentity(back, spec.id, "back");
+      applyDrawerBodyPartIdentity(back, "back");
       drawerGroup.add(back);
     }
 
