@@ -378,8 +378,6 @@ export class ViewerCore {
   private shiftKeyHeld = false;
   /** Z do box ao iniciar o drag (para Shift-Lock); em metros. */
   private dragStartZForShiftLock: number | undefined = undefined;
-  private transformDragStartStamp: number | null = null;
-  private lastRuntimeStabilityProbeStamp = 0;
   private transformAttachmentRefreshSuspended = false;
   private boundShiftKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Shift") this.shiftKeyHeld = true;
@@ -5478,7 +5476,6 @@ export class ViewerCore {
     this.transformDragEndStamp = stamp;
     this.dragStartZForShiftLock = undefined;
     this.viewerState.setTransformControlsDragging(false);
-    this.transformDragStartStamp = null;
     this.overlayCoordinator.clearTransientOverlays();
     this.smartSnappingEngine.onDragEnd();
     this.remateSmartSnapping.onDragEnd();
@@ -5497,6 +5494,8 @@ export class ViewerCore {
     this.notifyRoomUtilityTransform();
     historyManager.endDragSession();
     this.onTransformDragEnd?.();
+    this.flushDeferredBoxStructureUpdates();
+    this.flushDeferredViewerVisualSyncs();
     this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
