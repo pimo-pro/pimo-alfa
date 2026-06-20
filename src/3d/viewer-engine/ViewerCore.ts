@@ -378,7 +378,6 @@ export class ViewerCore {
   private shiftKeyHeld = false;
   /** Z do box ao iniciar o drag (para Shift-Lock); em metros. */
   private dragStartZForShiftLock: number | undefined = undefined;
-  private transformAttachmentRefreshSuspended = false;
   private boundShiftKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Shift") this.shiftKeyHeld = true;
   };
@@ -1309,8 +1308,7 @@ export class ViewerCore {
   }
 
   getRemateMesh(remateId: string): THREE.Object3D | null {
-    const mesh = this.remateVisualizer.getMeshByRemateId(remateId) ?? null;
-    return this.isObjectAttachedToScene(mesh) ? mesh : null;
+    return this.remateVisualizer.getMeshByRemateId(remateId) ?? null;
   }
 
   selectRemate(remateId: string | null): void {
@@ -1322,6 +1320,7 @@ export class ViewerCore {
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
+      this.viewerState.clearGroupTransformMemberIds();
     }
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
@@ -1376,13 +1375,11 @@ export class ViewerCore {
   }
 
   getHematiMesh(hematiId: string): THREE.Object3D | null {
-    const mesh = this.hematiVisualizer.getMeshByHematiId(hematiId) ?? null;
-    return this.isObjectAttachedToScene(mesh) ? mesh : null;
+    return this.hematiVisualizer.getMeshByHematiId(hematiId) ?? null;
   }
 
   getRodapeMesh(rodapeId: string): THREE.Object3D | null {
-    const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodapeId) ?? null;
-    return this.isObjectAttachedToScene(mesh) ? mesh : null;
+    return this.rodapeVisualizer.getMeshByRodapeId(rodapeId) ?? null;
   }
 
   getHematiIdAtPointer(event: { clientX: number; clientY: number }): string | null {
@@ -1401,6 +1398,7 @@ export class ViewerCore {
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
+      this.viewerState.clearGroupTransformMemberIds();
     }
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
@@ -1415,6 +1413,7 @@ export class ViewerCore {
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
+      this.viewerState.clearGroupTransformMemberIds();
     }
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
@@ -4366,12 +4365,11 @@ export class ViewerCore {
 
   /** Delega ao ViewerTools. */
   private refreshTransformControlsAttachment(): void {
-    if (this.transformAttachmentRefreshSuspended) return;
     this.viewerTools.updateTransformControlsAttachment();
   }
 
-  private setTransformAttachmentRefreshSuspended(v: boolean): void {
-    this.transformAttachmentRefreshSuspended = v;
+  private setTransformAttachmentRefreshSuspended(_v: boolean): void {
+    void _v;
   }
 
   private refreshViewerAttachmentsAfterMeshMutation(): void {
@@ -5225,10 +5223,7 @@ export class ViewerCore {
       getHematiMesh: (hematiId) => this.getHematiMesh(hematiId),
       getRodapeMesh: (rodapeId) => this.getRodapeMesh(rodapeId),
       getRemateMesh: (remateId) => this.getRemateMesh(remateId),
-      getBoxEntry: (id) => {
-        const entry = this.boxes.get(id);
-        return entry && this.isObjectAttachedToScene(entry.mesh) ? entry : undefined;
-      },
+      getBoxEntry: (id) => this.boxes.get(id),
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
       getRoomBoxWalls: () => this.roomBoxWalls,
       getSelectedRoomElementId: () => this.viewerState.getSelectedRoomElementId(),
@@ -5440,6 +5435,7 @@ export class ViewerCore {
     this.viewerState.setSelectedRemate(null);
     this.viewerState.setSelectedWallIndex(null);
     this.viewerState.setSelectedRoomElementId(null);
+    this.viewerState.clearGroupTransformMemberIds();
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
     if (import.meta.env.DEV) {

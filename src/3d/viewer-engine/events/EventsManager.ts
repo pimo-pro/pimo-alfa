@@ -14,8 +14,6 @@ export class EventsManager {
   private isDraggingGizmo = false;
   /** True quando o pointerdown foi fora do gizmo (arrastar = orbit/pan câmera). */
   private isDraggingCamera = false;
-  /** Evita anexar TransformControls durante o mesmo pointerdown que apenas seleciona um objeto. */
-  private pendingSelectionAttachment = false;
   private boundHandlers: {
     click: (_event: MouseEvent) => void;
     dblclick: (_event: MouseEvent) => void;
@@ -71,52 +69,7 @@ export class EventsManager {
     window.removeEventListener("pointercancel", h.pointercancel);
     window.removeEventListener("blur", h.blur);
     this.canvas.removeEventListener("pointerleave", h.pointerleave);
-    this.pendingSelectionAttachment = false;
-    this.engine.setTransformAttachmentRefreshSuspended(false);
     this.canvas = null;
-  }
-
-  private applyGizmoAnchorFromPointer(
-    e: IViewerEventEngine,
-    event: { clientX: number; clientY: number },
-    fallback?: { x: number; y: number; z: number } | null,
-    deferAttachment = false
-  ): void {
-    const hit = e.getPointerWorldHit(event) ?? fallback ?? null;
-    e.setTransformGizmoAnchor(hit);
-    if (deferAttachment) {
-      e.setTransformAttachmentRefreshSuspended(true);
-      this.pendingSelectionAttachment = true;
-      return;
-    }
-    e.refreshTransformControlsAttachment();
-  }
-
-  private flushPendingSelectionAttachment(): void {
-    if (!this.pendingSelectionAttachment) return;
-    this.pendingSelectionAttachment = false;
-    this.engine.setTransformAttachmentRefreshSuspended(false);
-    if (this.engine.getTransformControlsDragging()) return;
-    this.engine.refreshTransformControlsAttachment();
-    this.engine.refreshOutlineTarget();
-  }
-
-  private beginDeferredSelectionAttachment(): void {
-    this.engine.setTransformAttachmentRefreshSuspended(true);
-    this.pendingSelectionAttachment = true;
-  }
-
-  /** Ctrl/Cmd + clique: toggle em multi-seleção sem substituir seleção única. */
-  private tryMultiSelectToggle(event: { ctrlKey?: boolean; metaKey?: boolean; clientX: number; clientY: number }): boolean {
-    if (!event.ctrlKey && !event.metaKey) return false;
-    const e = this.engine;
-    const toggle = e.getOnMultiSelectToggle?.();
-    if (!toggle) return false;
-    const encoded = e.getPointerSelectionEncodedId?.(event) ?? null;
-    if (!encoded) return false;
-    toggle(encoded);
-    e.setSuppressNextCanvasClick(true);
-    return true;
   }
 
   private handleCanvasClick(event: MouseEvent): void {
@@ -126,17 +79,13 @@ export class EventsManager {
       e.setSuppressNextCanvasClick(false);
       return;
     }
-    if (this.tryMultiSelectToggle(event)) return;
-    const clickAnchor = e.getPointerWorldHit(event);
     if (e.getInternalSelectionEnabled()) {
       const internalHit = e.getInternalSelectionHit(event);
       if (internalHit) {
         e.setInternalSelection(internalHit);
-        e.setTransformGizmoAnchor(clickAnchor ?? internalHit.worldPoint);
         if (e.getSelectedBoxId() !== internalHit.boxId) {
           e.setSelectedBox(internalHit.boxId);
         }
-        e.refreshTransformControlsAttachment();
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         return;
@@ -152,9 +101,7 @@ export class EventsManager {
           // Permite fallback para raycast normal de box/sala/parede.
         } else {
           e.getHighlightManager()!.setSelected(mesh);
-          e.setTransformGizmoAnchor(clickAnchor);
           e.setSelectedBox(boxId);
-          e.refreshTransformControlsAttachment();
           e.getOnRoomElementSelected()?.(null);
           e.getOnWallSelected()?.(null);
           return;
@@ -174,24 +121,28 @@ export class EventsManager {
       }
       return;
     }
-    const boxId = e.getBoxIdAtPointer(event);
-    if (boxId) {
-      if (this.tryMultiSelectToggle(event)) return;
-      e.setTransformGizmoAnchor(clickAnchor);
-      e.selectHemati(null);
-      e.selectRodape(null);
-      e.selectRemate(null);
-      e.setHoveredBox(boxId);
-      e.setSelectedBox(boxId);
+    const hematiId = e.getHematiIdAtPointer(event);
+    if (hematiId) {
+      e.selectHemati(hematiId);
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
-      e.refreshTransformControlsAttachment();
+      e.getOnBoxSelected()?.(null);
+      return;
+    }
+    const rodapeId = e.getRodapeIdAtPointer(event);
+    if (rodapeId) {
+      e.selectRodape(rodapeId);
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.getOnBoxSelected()?.(null);
       return;
     }
     const remateId = e.getRemateIdAtPointer(event);
     if (remateId) {
-      if (this.tryMultiSelectToggle(event)) return;
-      e.setTransformGizmoAnchor(clickAnchor);
       e.selectRemate(remateId);
       e.getOnRemateSelected?.()?.(remateId);
       e.setHoveredBox(null);
@@ -200,40 +151,17 @@ export class EventsManager {
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
       e.getOnBoxSelected()?.(null);
-      e.refreshTransformControlsAttachment();
       return;
     }
-    const hematiId = e.getHematiIdAtPointer(event);
-    if (hematiId) {
-      if (this.tryMultiSelectToggle(event)) return;
-      e.setTransformGizmoAnchor(clickAnchor);
-      e.selectHemati(hematiId);
-      e.setHoveredBox(null);
-      e.setSelectedBox(null);
+    const boxId = e.getBoxIdAtPointer(event);
+    if (boxId) {
+      e.selectHemati(null);
+      e.selectRodape(null);
+      e.selectRemate(null);
+      e.setHoveredBox(boxId);
+      e.setSelectedBox(boxId);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
-      e.getOnBoxSelected()?.(null);
-      e.refreshTransformControlsAttachment();
-      return;
-    }
-    const rodapeId = e.getRodapeIdAtPointer(event);
-    if (rodapeId) {
-      if (this.tryMultiSelectToggle(event)) return;
-      e.setTransformGizmoAnchor(clickAnchor);
-      e.selectRodape(rodapeId);
-      e.setHoveredBox(null);
-      e.setSelectedBox(null);
-      e.getOnRoomElementSelected()?.(null);
-      e.getOnWallSelected()?.(null);
-      e.getOnBoxSelected()?.(null);
-      e.refreshTransformControlsAttachment();
-      return;
-    }
-    const drawerHit = e.getDrawerHitAtPointer(event);
-    if (drawerHit) {
-      event.preventDefault();
-      event.stopPropagation();
-      e.getOnDrawerLayerClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
       return;
     }
     const roomHit = e.getRoomElementAtPointer(event);
@@ -293,7 +221,6 @@ export class EventsManager {
     e.selectRemate(null);
     e.selectHemati(null);
     e.selectRodape(null);
-    e.setTransformGizmoAnchor(null);
     const wallGizmo = e.getWallGizmo();
     if (wallGizmo) wallGizmo.detach();
     e.refreshTransformControlsAttachment();
@@ -351,10 +278,7 @@ export class EventsManager {
             event.preventDefault();
             event.stopPropagation();
             e.getHighlightManager()!.setSelected(mesh);
-            e.setTransformGizmoAnchor(e.getPointerWorldHit(event));
-            this.beginDeferredSelectionAttachment();
             e.setSelectedBox(boxId);
-            this.pendingSelectionAttachment = true;
             e.getOnRoomElementSelected()?.(null);
             e.getOnWallSelected()?.(null);
             e.setSuppressNextCanvasClick(true);
@@ -364,6 +288,16 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
+      const remateId = e.getRemateIdAtPointer(event);
+      if (remateId != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.setHoveredRemate(remateId);
+        e.selectRemate(remateId);
+        e.getOnRemateSelected?.()?.(remateId);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
       const boxId = e.getBoxIdAtPointer(event);
       if (import.meta.env.DEV) {
         devLogger.debug("[SELECTION][EventsManager] pointerdown:boxId do raycast", {
@@ -382,7 +316,6 @@ export class EventsManager {
             previousSelected,
           });
         }
-        this.beginDeferredSelectionAttachment();
         e.setSelectedBox(boxId);
         if (import.meta.env.DEV) {
           devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox AFTER", {
@@ -390,7 +323,6 @@ export class EventsManager {
             selectedBoxAfterSet: e.getSelectedBoxId(),
           });
         }
-        this.applyGizmoAnchorFromPointer(e, event, null, true);
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.setSuppressNextCanvasClick(true);
@@ -416,7 +348,6 @@ export class EventsManager {
             previousSelected: e.getSelectedBoxId(),
           });
         }
-        this.beginDeferredSelectionAttachment();
         e.setSelectedBox(boxId);
         if (import.meta.env.DEV) {
           devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox AFTER", {
@@ -424,48 +355,16 @@ export class EventsManager {
             selectedBoxAfterSet: e.getSelectedBoxId(),
           });
         }
-        this.applyGizmoAnchorFromPointer(e, event, null, true);
         e.getOnRoomElementSelected()?.(null);
         e.getOnWallSelected()?.(null);
         e.setSuppressNextCanvasClick(true);
-        e.logTransformDiagnostic("box-selected-pointerDown", { boxId });
-        return;
-      }
-      const remateId = e.getRemateIdAtPointer(event);
-      if (remateId != null) {
-        if (this.tryMultiSelectToggle(event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          return;
+        if (import.meta.env.DEV) {
+          devLogger.debug("[SELECTION][EventsManager] suppressNextCanvasClick=true", {
+            reason: "selected-box-on-pointerdown",
+            boxId,
+          });
         }
-        event.preventDefault();
-        event.stopPropagation();
-        e.setHoveredRemate(remateId);
-        this.beginDeferredSelectionAttachment();
-        e.selectRemate(remateId);
-        e.getOnRemateSelected?.()?.(remateId);
-        this.applyGizmoAnchorFromPointer(e, event, null, true);
-        e.setSuppressNextCanvasClick(true);
-        return;
-      }
-      const hematiId = e.getHematiIdAtPointer(event);
-      if (hematiId != null) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.beginDeferredSelectionAttachment();
-        e.selectHemati(hematiId);
-        this.applyGizmoAnchorFromPointer(e, event, null, true);
-        e.setSuppressNextCanvasClick(true);
-        return;
-      }
-      const rodapeId = e.getRodapeIdAtPointer(event);
-      if (rodapeId != null) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.beginDeferredSelectionAttachment();
-        e.selectRodape(rodapeId);
-        this.applyGizmoAnchorFromPointer(e, event, null, true);
-        e.setSuppressNextCanvasClick(true);
+        e.logTransformDiagnostic("box-selected-pointerDown", { boxId });
         return;
       }
     }
@@ -496,13 +395,6 @@ export class EventsManager {
       this.engine.getOnDoorLayerDoubleClick()?.(doorHit.boxId, doorHit.doorLayerId);
       return;
     }
-    const drawerHit = this.engine.getDrawerHitAtPointer(event);
-    if (drawerHit) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.engine.getOnBoxDoubleClick()?.(drawerHit.boxId);
-      return;
-    }
     const boxId = this.engine.getBoxIdAtPointer(event);
     if (!boxId) return;
     event.preventDefault();
@@ -526,7 +418,6 @@ export class EventsManager {
     this.isDraggingGizmo = false;
     this.isDraggingCamera = false;
     e.setCameraControlsEnabled(true);
-    this.flushPendingSelectionAttachment();
   }
 
   private handleCanvasPointerMove(event: PointerEvent): void {
@@ -566,8 +457,6 @@ export class EventsManager {
     const e = this.engine;
     this.isDraggingGizmo = false;
     this.isDraggingCamera = false;
-    this.pendingSelectionAttachment = false;
-    e.setTransformAttachmentRefreshSuspended(false);
     e.setCameraControlsEnabled(true);
     if (e.getHighlightEnabled() && e.getHighlightManager()) {
       e.getHighlightManager()!.setHovered(null);
@@ -580,9 +469,7 @@ export class EventsManager {
     const e = this.engine;
     this.isDraggingGizmo = false;
     this.isDraggingCamera = false;
-    this.pendingSelectionAttachment = false;
     e.setWallGizmoDragging(false);
-    e.setTransformAttachmentRefreshSuspended(false);
     e.setCameraControlsEnabled(true);
   }
 }
