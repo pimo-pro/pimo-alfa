@@ -180,7 +180,7 @@ import {
 } from "../../core/remate/remateRotationSnap";
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
-import { mToMm, mmToM } from "../../utils/units";
+import { mToMm } from "../../utils/units";
 import {
   floorClearanceMeasurement,
   nearestBoxGapBetweenPair,

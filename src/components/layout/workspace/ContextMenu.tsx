@@ -465,41 +465,6 @@ export default function ContextMenu({
         });
       }
     }
-    if (actionId === "smartAlignSnap.toggle" && window.viewerCore?.settings) {
-      window.viewerCore.settings.enableSmartAlignSnap = !window.viewerCore.settings.enableSmartAlignSnap;
-    }
-    if (actionId === "smartAlignSnap.repeatLast") {
-      window.viewerCore?.smartAlignEngine?.applyRepeatLastAlignment?.();
-      window.viewerCore?.refreshTransformControlsAttachment?.();
-    }
-    if (actionId === "smartAlignSnap.inverse") {
-      window.viewerCore?.smartAlignEngine?.applyInverseAlignment?.();
-      window.viewerCore?.refreshTransformControlsAttachment?.();
-    }
-    if (
-      actionId.startsWith("smartAlignSnap.") &&
-      actionId !== "smartAlignSnap.toggle" &&
-      actionId !== "smartAlignSnap.repeatLast" &&
-      actionId !== "smartAlignSnap.inverse"
-    ) {
-      const mode = actionId.replace("smartAlignSnap.", "") as
-        | "front"
-        | "back"
-        | "top"
-        | "bottom"
-        | "right"
-        | "left"
-        | "auto"
-        | "flushFront"
-        | "flushBack"
-        | "flushLeft"
-        | "flushRight"
-        | "continueLine"
-        | "alignDoor"
-        | "alignDrawer";
-      window.viewerCore?.smartAlignEngine?.applyExplicitAlignment?.(mode);
-      window.viewerCore?.refreshTransformControlsAttachment?.();
-    }
     if (actionId === "smartLayout.autoWallFill" && selectedBoxId) {
       const raw = window.prompt("ID da parede (0=frente, 1=direita, 2=fundo, 3=esquerda):", "0");
       const wallId = raw == null ? NaN : Number.parseInt(raw, 10);
