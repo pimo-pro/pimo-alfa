@@ -27,7 +27,6 @@ import {
   type MouseInputPreset,
 } from "./controls/MouseInputMapper";
 import { isObjectInScreenRect } from "./utils/screenSelection";
-import { resolveDragTransformTarget, getWorldPosition, setWorldPosition, type DragTransformTarget } from "./utils/transformDragSpace";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
@@ -38,7 +37,6 @@ import { ViewerState } from "./state";
 import { EventsManager } from "./events";
 import type { IViewerEventEngine } from "./events/EventEngineTypes";
 import { ViewerTools } from "./tools";
-import { TransformGizmoPivot } from "./tools/TransformGizmoPivot";
 import { GroupGizmo } from "./tools/GroupGizmo";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
 
@@ -317,7 +315,6 @@ export class ViewerCore {
   private transformControls: TransformControls | null = null;
   /** Helper (Object3D) retornado por getHelper(); é o que é adicionado à cena e tem .visible. */
   private transformControlsHelper: THREE.Object3D | null = null;
-  private transformGizmoPivot: TransformGizmoPivot | null = null;
   private groupGizmo: GroupGizmo | null = null;
   private measurementAnchorsVisualizer: MeasurementAnchorsVisualizer | null = null;
   private onTransformDragStart: (() => void) | null = null;
@@ -381,10 +378,6 @@ export class ViewerCore {
   private shiftKeyHeld = false;
   /** Z do box ao iniciar o drag (para Shift-Lock); em metros. */
   private dragStartZForShiftLock: number | undefined = undefined;
-  /** Posição world do drivenObject ao iniciar o drag (fail-safe NaN em clampTransform). */
-  private readonly _dragOriginalWorldPos = new THREE.Vector3();
-  private transformObjectChangeRaf: number | null = null;
-  private transformObjectChangePending = false;
   private transformDragStartStamp: number | null = null;
   private lastRuntimeStabilityProbeStamp = 0;
   private transformAttachmentRefreshSuspended = false;
@@ -810,7 +803,6 @@ export class ViewerCore {
       isInternalRulerActive: () => this.internalRulerEngine.isActive(),
       getRoomBounds: () => this.roomBounds,
       getRoomOpenings: () => this.getRoomOpeningsForSnapping(),
-      resolveDragTransformTarget: (logicalMesh) => this.resolveDragTransformTarget(logicalMesh),
     });
     this.remateSmartSnapping = new RemateSmartSnapping({
       getContainer: () => this.container,
@@ -1068,22 +1060,17 @@ export class ViewerCore {
     this.transformControls.addEventListener("mouseDown", () => {
       historyManager.beginDragSession("transform.drag", "Transformação");
       this.onTransformDragStart?.();
-      const dragTarget = this.getTransformControlsTargetMesh();
       if (this.viewerState.getSelectedRemate()) {
-        if (dragTarget) this.remateSmartSnapping.onDragStart(dragTarget);
+        const obj = this.transformControls!.object;
+        if (obj) this.remateSmartSnapping.onDragStart(obj as THREE.Object3D);
       } else if (this.viewerState.getSelectedBox()) {
-        if (dragTarget && "position" in dragTarget) {
-          this.dragStartZForShiftLock = (dragTarget as THREE.Object3D).position.z;
-          this.smartSnappingEngine.onDragStart(dragTarget as THREE.Object3D);
+        const obj = this.transformControls!.object;
+        if (obj && "position" in obj) {
+          this.dragStartZForShiftLock = (obj as THREE.Object3D).position.z;
+          this.smartSnappingEngine.onDragStart(obj as THREE.Object3D);
         }
       }
-      this.transformDragStartStamp = performance.now();
-      this.lastRuntimeStabilityProbeStamp = this.transformDragStartStamp;
       this.viewerState.setTransformControlsDragging(true);
-      const drivenObject = this.transformControls?.object;
-      if (drivenObject) {
-        getWorldPosition(drivenObject, this._dragOriginalWorldPos);
-      }
       this.logTransformDiagnostic("dragStart(mouseDown)");
     });
     this.transformControls.addEventListener("mouseUp", () => {
@@ -1100,12 +1087,26 @@ export class ViewerCore {
       }
     });
     this.transformControls.addEventListener("objectChange", () => {
-      this.scheduleTransformObjectChange();
+      if (this.groupGizmo?.isActive()) {
+        this.groupGizmo.applyPivotTransform();
+      }
+      if (
+        this.viewerState.getTransformControlsDragging() &&
+        this.viewerState.getSelectedBox() &&
+        this.shiftKeyHeld &&
+        this.dragStartZForShiftLock !== undefined
+      ) {
+        const obj = this.transformControls!.object;
+        if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
+      }
+      this.viewerTools.applyCurrentTool();
+      this.measurementOverlay.onRulerMovementTick("transform");
+      this.notifyBoxTransform();
+      this.logTransformDiagnostic("drag(objectChange)");
     });
     this.transformControlsHelper = this.transformControls.getHelper();
     this.transformControlsHelper.visible = false;
     this.sceneManager.scene.add(this.transformControlsHelper);
-    this.transformGizmoPivot = new TransformGizmoPivot(this.sceneManager.scene);
     this.groupGizmo = new GroupGizmo(this.sceneManager.scene);
     this.measurementAnchorsVisualizer = new MeasurementAnchorsVisualizer(this.sceneManager.scene);
     this.logTransformDiagnostic("transform-listeners-ready", {
@@ -5214,34 +5215,6 @@ export class ViewerCore {
   }
 
   /** API mínima para o ViewerTools (attachment, outline, clamp). */
-  private getTransformControlsTargetMesh(): THREE.Object3D | null {
-    const controlled = this.transformControls?.object ?? null;
-    if (!controlled) return null;
-    if (this.transformGizmoPivot?.isActive() && controlled.children.length > 0) {
-      return controlled.children[0] ?? controlled;
-    }
-    return controlled;
-  }
-
-  /** Par driven/logical para translate com ou sem TransformGizmoPivot. */
-  private resolveDragTransformTarget(logicalMesh: THREE.Object3D): DragTransformTarget {
-    const controlled = this.transformControls?.object ?? null;
-    const pivotActive = Boolean(this.transformGizmoPivot?.isActive());
-    return resolveDragTransformTarget(logicalMesh, controlled, pivotActive);
-  }
-
-  private isTransformControlsDriving(mesh: THREE.Object3D | null | undefined): boolean {
-    const controlled = this.transformControls?.object ?? null;
-    if (!controlled || !mesh) return false;
-    if (controlled === mesh) return true;
-    let current: THREE.Object3D | null = mesh;
-    while (current) {
-      if (current === controlled) return true;
-      current = current.parent;
-    }
-    return false;
-  }
-
   private getToolsEngineApi(): IViewerToolsEngine {
     return {
       getTransformControls: () => this.transformControls,
@@ -5277,13 +5250,6 @@ export class ViewerCore {
       getBoxesIntersectingWalls: () => this.boxesIntersectingWalls,
       setOutlineTarget: (mesh, opacity, colorHex) => this.setOutlineTarget(mesh, opacity, colorHex),
       clampTransform: () => this.clampTransform(),
-      getTransformGizmoAnchor: () => this.viewerState.getTransformGizmoAnchor(),
-      getTransformGizmoPivot: () => {
-        if (!this.transformGizmoPivot) {
-          throw new Error("TransformGizmoPivot not initialized");
-        }
-        return this.transformGizmoPivot;
-      },
       getGroupGizmo: () => {
         if (!this.groupGizmo) throw new Error("GroupGizmo not initialized");
         return this.groupGizmo;
@@ -5506,21 +5472,10 @@ export class ViewerCore {
   }
 
   /** Fim de drag unificado — evita duplicação mouseUp + dragging-changed. */
-  private finishTransformDrag(source: "mouseUp" | "dragging-changed"): void {
+  private finishTransformDrag(_source: "mouseUp" | "dragging-changed"): void {
     const stamp = performance.now();
-    if (stamp - this.transformDragEndStamp < 8) {
-      if (source === "mouseUp") {
-        this.flushPendingTransformObjectChange();
-        this.viewerState.setTransformControlsDragging(false);
-        this.transformDragStartStamp = null;
-        this.flushDeferredBoxStructureUpdates();
-        this.flushDeferredViewerVisualSyncs();
-        this.refreshViewerAttachmentsAfterMeshMutation();
-      }
-      return;
-    }
+    if (stamp - this.transformDragEndStamp < 8) return;
     this.transformDragEndStamp = stamp;
-    this.flushPendingTransformObjectChange();
     this.dragStartZForShiftLock = undefined;
     this.viewerState.setTransformControlsDragging(false);
     this.transformDragStartStamp = null;
@@ -5542,10 +5497,6 @@ export class ViewerCore {
     this.notifyRoomUtilityTransform();
     historyManager.endDragSession();
     this.onTransformDragEnd?.();
-    if (source === "mouseUp") {
-      this.flushDeferredBoxStructureUpdates();
-      this.flushDeferredViewerVisualSyncs();
-    }
     this.refreshViewerAttachmentsAfterMeshMutation();
   }
 
@@ -5980,69 +5931,6 @@ export class ViewerCore {
     return true;
   }
 
-  private scheduleTransformObjectChange(): void {
-    this.transformObjectChangePending = true;
-    if (this.transformObjectChangeRaf != null) return;
-    this.transformObjectChangeRaf = window.requestAnimationFrame(() => {
-      this.transformObjectChangeRaf = null;
-      if (!this.transformObjectChangePending) return;
-      this.transformObjectChangePending = false;
-      this.processTransformObjectChange();
-    });
-  }
-
-  private flushPendingTransformObjectChange(): void {
-    if (this.transformObjectChangeRaf != null) {
-      window.cancelAnimationFrame(this.transformObjectChangeRaf);
-      this.transformObjectChangeRaf = null;
-    }
-    if (!this.transformObjectChangePending) return;
-    this.transformObjectChangePending = false;
-    this.processTransformObjectChange();
-  }
-
-  private processTransformObjectChange(): void {
-    if (this.groupGizmo?.isActive()) {
-      this.groupGizmo.applyPivotTransform();
-    }
-    if (
-      this.viewerState.getTransformControlsDragging() &&
-      this.viewerState.getSelectedBox() &&
-      this.shiftKeyHeld &&
-      this.dragStartZForShiftLock !== undefined
-    ) {
-      const dragTarget = this.getTransformControlsTargetMesh();
-      if (dragTarget && "position" in dragTarget) (dragTarget as THREE.Object3D).position.z = this.dragStartZForShiftLock;
-    }
-    this.viewerTools.applyCurrentTool();
-    this.measurementOverlay.onRulerMovementTick("transform");
-    this.validateRuntimeStabilityDuringDrag();
-    this.logTransformDiagnostic("drag(objectChange)");
-  }
-
-  private validateRuntimeStabilityDuringDrag(): void {
-    if (!import.meta.env.DEV) return;
-    if (!this.viewerState.getTransformControlsDragging()) return;
-    const now = performance.now();
-    if (now - this.lastRuntimeStabilityProbeStamp < 1000) return;
-    this.lastRuntimeStabilityProbeStamp = now;
-    this.validateViewerMeshLifecycle("drag-runtime");
-    if (this.transformDragStartStamp != null && now - this.transformDragStartStamp >= 180000) {
-      const attached = this.transformControls?.object ?? null;
-      devLogger.info("[ViewerCore][RuntimeStabilityProbe]", {
-        durationMs: Math.round(now - this.transformDragStartStamp),
-        selectedBox: this.viewerState.getSelectedBox(),
-        selectedRemate: this.viewerState.getSelectedRemate(),
-        selectedHemati: this.viewerState.getSelectedHemati(),
-        selectedRodape: this.viewerState.getSelectedRodape(),
-        attachedUuid: attached?.uuid ?? null,
-        attachedInScene: this.isObjectAttachedToScene(attached),
-        pendingVisualSync: { ...this.pendingViewerVisualSync },
-        pendingBoxUpdates: this.pendingBoxStructureUpdates.size,
-      });
-    }
-  }
-
   /** Só chamado em objectChange (arraste do utilizador). Nunca na criação da caixa. */
   private clampTransform() {
     if (this.groupGizmo?.isActive()) {
@@ -6058,32 +5946,30 @@ export class ViewerCore {
     const isDragging = this.viewerState.getTransformControlsDragging();
     const currentTool = this.viewerState.getCurrentTool();
 
-    try {
     if (selectedRemateId) {
       const mesh = this.remateVisualizer.getMeshByRemateId(selectedRemateId);
-      if (isDragging && mesh && this.isTransformControlsDriving(mesh)) {
+      const obj = this.transformControls?.object;
+      if (isDragging && mesh && obj === mesh) {
         const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === selectedRemateId);
         const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
         const entry = boxId ? this.boxes.get(boxId) : undefined;
+
         if (currentTool === "translate" && entry && piece && boxId) {
           const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
           if (cfg) {
             this.remateSmartSnapping.applyDuringTranslate({
               mesh,
-              dragTransform: this.resolveDragTransformTarget(mesh),
               boxEntry: entry,
               boxConfig: cfg,
             });
           }
         } else if (currentTool === "translate" && piece && !boxId) {
-          this.remateSmartSnapping.applyStandaloneGridSnap({
-            dragTransform: this.resolveDragTransformTarget(mesh),
-          });
+          this.remateSmartSnapping.applyStandaloneGridSnap(mesh);
         } else if (currentTool === "rotate") {
           applyRemateRotationSnapToMesh(mesh, entry?.mesh ?? null);
         }
 
-        if (currentTool === "translate" && mesh && this.isTransformControlsDriving(mesh)) {
+        if (currentTool === "translate" && mesh && obj === mesh) {
           const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
           this.applyFinishCollisionConstraint(mesh, boxId, selectedRemateId);
         }
@@ -6098,7 +5984,8 @@ export class ViewerCore {
     const selectedRodapeId = this.viewerState.getSelectedRodape();
     if (selectedRodapeId) {
       const mesh = this.rodapeVisualizer.getMeshByRodapeId(selectedRodapeId);
-      if (isDragging && mesh && this.isTransformControlsDriving(mesh) && currentTool === "translate") {
+      const obj = this.transformControls?.object;
+      if (isDragging && mesh && obj === mesh && currentTool === "translate") {
         const boxId = mesh.userData.boxId as string | undefined;
         this.applyFinishCollisionConstraint(mesh, boxId, undefined, selectedRodapeId);
       }
@@ -6108,10 +5995,10 @@ export class ViewerCore {
     const selectedBoxId = this.viewerState.getSelectedBox();
     if (selectedBoxId && isDragging && currentTool === "translate") {
       const entry = this.boxes.get(selectedBoxId);
-      if (entry && this.isTransformControlsDriving(entry.mesh)) {
+      const obj = this.transformControls?.object;
+      if (entry && obj === entry.mesh) {
         this.smartSnappingEngine.applyDuringTranslate({
           mesh: entry.mesh,
-          dragTransform: this.resolveDragTransformTarget(entry.mesh),
           selectedBoxId,
           boxes: this.boxes,
           isDragging,
@@ -6130,8 +6017,6 @@ export class ViewerCore {
       lockEnabled: this.lockEnabled,
       roomBounds: this.roomBounds,
       roomBoxWalls: this.roomBoxWalls,
-      isTransformControlsDriving: (mesh) => this.isTransformControlsDriving(mesh),
-      resolveDragTransformTarget: (logicalMesh) => this.resolveDragTransformTarget(logicalMesh),
       applyFloorConstraint: (obj) => this.applyFloorConstraint(obj),
       applyRoomConstraint: (obj, options) => this.applyRoomConstraint(obj, options),
       isMeshInsideOrTouchingRoom: (obj) => this.isMeshInsideOrTouchingRoom(obj),
@@ -6143,18 +6028,6 @@ export class ViewerCore {
         this.lastSnapDebugData = data;
       },
     });
-    } finally {
-      if (isDragging) {
-        const drivenObject = this.transformControls?.object;
-        if (drivenObject) {
-          const world = getWorldPosition(drivenObject, this._center);
-          if (!Number.isFinite(world.x + world.y + world.z)) {
-            console.warn("[sanity] posição inválida após clampTransform — revertendo");
-            setWorldPosition(drivenObject, this._dragOriginalWorldPos);
-          }
-        }
-      }
-    }
   }
 
   private clampSelectedWallChildTransform(): void {
@@ -6775,11 +6648,6 @@ export class ViewerCore {
 
   dispose() {
     this.runtimeLoop.stop();
-    if (this.transformObjectChangeRaf != null) {
-      window.cancelAnimationFrame(this.transformObjectChangeRaf);
-      this.transformObjectChangeRaf = null;
-    }
-    this.transformObjectChangePending = false;
     window.removeEventListener("resize", this.updateCanvasSize);
     window.removeEventListener("keydown", this.boundShiftKeyDown);
     window.removeEventListener("keyup", this.boundShiftKeyUp);

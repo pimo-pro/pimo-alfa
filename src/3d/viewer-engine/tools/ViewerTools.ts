@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import type { IViewerToolsEngine } from "./ToolsEngineTypes";
-import type { TransformControlsLike } from "./TransformGizmoPivot";
+import type { TransformControlsLike } from "./TransformControlsTypes";
 
 type TransformControlsWithDragState = TransformControlsLike & {
   dragging?: boolean;
@@ -27,14 +27,7 @@ export class ViewerTools {
     if (e.getGroupGizmo().isActive()) {
       e.getGroupGizmo().end(controls);
     }
-    e.getTransformGizmoPivot().detach(controls);
-  }
-
-  private attachTransformTarget(controls: TransformControlsLike, mesh: THREE.Object3D): void {
-    const e = this.getEngine();
-    const anchor = e.getTransformGizmoAnchor();
-    const anchorVector = anchor != null ? new THREE.Vector3(anchor.x, anchor.y, anchor.z) : null;
-    e.getTransformGizmoPivot().attach(controls, mesh, anchorVector);
+    controls.detach();
   }
 
   /** Anexa ou desanexa TransformControls conforme seleção (caixa, parede ou abertura). */
@@ -71,7 +64,7 @@ export class ViewerTools {
         hematiMesh.matrixAutoUpdate = true;
         hematiMesh.updateMatrixWorld(true);
         controls.detach();
-        this.attachTransformTarget(controls, hematiMesh);
+        controls.attach(hematiMesh);
         controls.setMode(mode);
         controls.setSize(0.35);
         e.applyTransformControlsMouseGuard();
@@ -88,7 +81,7 @@ export class ViewerTools {
         rodapeMesh.matrixAutoUpdate = true;
         rodapeMesh.updateMatrixWorld(true);
         controls.detach();
-        this.attachTransformTarget(controls, rodapeMesh);
+        controls.attach(rodapeMesh);
         controls.setMode(mode);
         controls.setSize(0.35);
         e.applyTransformControlsMouseGuard();
@@ -105,7 +98,7 @@ export class ViewerTools {
         remateMesh.matrixAutoUpdate = true;
         remateMesh.updateMatrixWorld(true);
         controls.detach();
-        this.attachTransformTarget(controls, remateMesh);
+        controls.attach(remateMesh);
         controls.setMode(mode);
         controls.setSpace("world");
         controls.setSize(0.35);
@@ -130,7 +123,7 @@ export class ViewerTools {
         entry.mesh.matrixAutoUpdate = true;
         entry.mesh.updateMatrixWorld(true);
         controls.detach();
-        this.attachTransformTarget(controls, entry.mesh);
+        controls.attach(entry.mesh);
         controls.setMode(mode);
         controls.setSize(e.getTransformGizmoSizeForBox(entry));
         e.applyTransformControlsMouseGuard();
@@ -156,7 +149,7 @@ export class ViewerTools {
         element.matrixAutoUpdate = true;
         element.updateMatrixWorld(true);
         controls.detach();
-        this.attachTransformTarget(controls, element);
+        controls.attach(element);
         controls.setMode(mode);
         controls.setSize(0.65);
         e.applyTransformControlsMouseGuard();
@@ -172,7 +165,7 @@ export class ViewerTools {
         utility.matrixAutoUpdate = true;
         utility.updateMatrixWorld(true);
         controls.detach();
-        this.attachTransformTarget(controls, utility);
+        controls.attach(utility);
         controls.setMode("translate");
         controls.setSize(0.35);
         e.applyTransformControlsMouseGuard();

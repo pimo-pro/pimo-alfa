@@ -3,25 +3,9 @@ import type { ViewerBoxEntry } from "../types";
 import { setBox3FromObjectExcludingLayoutProxy } from "../box/boxAabbUtils";
 import { mmToM } from "../../../utils/units";
 import type { RoomBoundsLike, RoomOpeningLike } from "./smartSnappingTypes";
-import {
-  getWorldPosition,
-  setWorldPosition,
-  type DragTransformTarget,
-} from "../utils/transformDragSpace";
 
 const ROOM_INSET_M = 0;
 const MM = (mm: number) => mmToM(mm);
-
-const _worldPos = new THREE.Vector3();
-
-function applyWorldDelta(drivenObject: THREE.Object3D, dx: number, dy: number, dz: number): void {
-  if (dx === 0 && dy === 0 && dz === 0) return;
-  const world = getWorldPosition(drivenObject, _worldPos);
-  world.x += dx;
-  world.y += dy;
-  world.z += dz;
-  setWorldPosition(drivenObject, world);
-}
 
 export type SmartSnapConstraintOptions = {
   wallOffsetMm?: number;
@@ -30,29 +14,26 @@ export type SmartSnapConstraintOptions = {
 
 /**
  * Constraints pós-snap: sobreposição, limites da sala e aberturas.
- * AABB calculado a partir do logicalMesh; deltas aplicados ao drivenObject em world space.
  */
 export function applySmartSnapConstraints(params: {
-  dragTransform: DragTransformTarget;
+  mesh: THREE.Object3D;
   selectedBoxId: string;
   boxes: Map<string, ViewerBoxEntry>;
   roomBounds: RoomBoundsLike | null;
   options?: SmartSnapConstraintOptions;
 }): void {
-  const { dragTransform, selectedBoxId, boxes, roomBounds, options } = params;
-  const { drivenObject, logicalMesh } = dragTransform;
-  resolveBoxOverlaps(logicalMesh, drivenObject, boxes, selectedBoxId);
+  const { mesh, selectedBoxId, boxes, roomBounds, options } = params;
+  resolveBoxOverlaps(mesh, boxes, selectedBoxId);
   if (roomBounds) {
-    clampInsideRoom(logicalMesh, roomBounds, options?.wallOffsetMm ?? 0, drivenObject);
+    clampInsideRoom(mesh, roomBounds, options?.wallOffsetMm ?? 0);
   }
   if (options?.openings?.length) {
-    resolveOpeningOverlaps(logicalMesh, drivenObject, options.openings);
+    resolveOpeningOverlaps(mesh, options.openings);
   }
 }
 
 function resolveBoxOverlaps(
-  logicalMesh: THREE.Object3D,
-  drivenObject: THREE.Object3D,
+  movingMesh: THREE.Object3D,
   boxes: Map<string, ViewerBoxEntry>,
   selectedBoxId: string
 ): void {
@@ -61,8 +42,8 @@ function resolveBoxOverlaps(
   const otherBox = new THREE.Box3();
 
   for (let iter = 0; iter < maxIterations; iter += 1) {
-    logicalMesh.updateMatrixWorld(true);
-    setBox3FromObjectExcludingLayoutProxy(movingBox, logicalMesh);
+    movingMesh.updateMatrixWorld(true);
+    setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);
     let anyOverlap = false;
 
     boxes.forEach((entry, boxId) => {
@@ -93,32 +74,20 @@ function resolveBoxOverlaps(
       otherBox.getCenter(otherCenter);
 
       if (minOverlap === overlapX) {
-        applyWorldDelta(
-          drivenObject,
+        movingMesh.position.x +=
           movingCenter.x < otherCenter.x
             ? otherBox.min.x - movingBox.max.x
-            : otherBox.max.x - movingBox.min.x,
-          0,
-          0
-        );
+            : otherBox.max.x - movingBox.min.x;
       } else if (minOverlap === overlapZ) {
-        applyWorldDelta(
-          drivenObject,
-          0,
-          0,
+        movingMesh.position.z +=
           movingCenter.z < otherCenter.z
             ? otherBox.min.z - movingBox.max.z
-            : otherBox.max.z - movingBox.min.z
-        );
+            : otherBox.max.z - movingBox.min.z;
       } else {
-        applyWorldDelta(
-          drivenObject,
-          0,
+        movingMesh.position.y +=
           movingCenter.y < otherCenter.y
             ? otherBox.min.y - movingBox.max.y
-            : otherBox.max.y - movingBox.min.y,
-          0
-        );
+            : otherBox.max.y - movingBox.min.y;
       }
     });
 
@@ -126,15 +95,10 @@ function resolveBoxOverlaps(
   }
 }
 
-export function clampInsideRoom(
-  logicalMesh: THREE.Object3D,
-  roomBounds: RoomBoundsLike,
-  wallOffsetMm: number,
-  drivenObject: THREE.Object3D = logicalMesh
-): void {
-  logicalMesh.updateMatrixWorld(true);
+export function clampInsideRoom(movingMesh: THREE.Object3D, roomBounds: RoomBoundsLike, wallOffsetMm: number): void {
+  movingMesh.updateMatrixWorld(true);
   const movingBox = new THREE.Box3();
-  setBox3FromObjectExcludingLayoutProxy(movingBox, logicalMesh);
+  setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);
 
   const wallOffsetM = MM(Math.max(0, wallOffsetMm));
   const minX = roomBounds.minX + ROOM_INSET_M + wallOffsetM;
@@ -154,20 +118,19 @@ export function clampInsideRoom(
   if (movingBox.min.y < minY) dy += minY - movingBox.min.y;
   if (movingBox.max.y > maxY) dy -= movingBox.max.y - maxY;
 
-  applyWorldDelta(drivenObject, dx, dy, dz);
+  if (dx !== 0 || dy !== 0 || dz !== 0) {
+    movingMesh.position.x += dx;
+    movingMesh.position.y += dy;
+    movingMesh.position.z += dz;
+  }
 }
 
-function resolveOpeningOverlaps(
-  logicalMesh: THREE.Object3D,
-  drivenObject: THREE.Object3D,
-  openings: RoomOpeningLike[]
-): void {
+function resolveOpeningOverlaps(movingMesh: THREE.Object3D, openings: RoomOpeningLike[]): void {
+  movingMesh.updateMatrixWorld(true);
   const movingBox = new THREE.Box3();
+  setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);
 
   for (const opening of openings) {
-    logicalMesh.updateMatrixWorld(true);
-    setBox3FromObjectExcludingLayoutProxy(movingBox, logicalMesh);
-
     const openingBox = new THREE.Box3(opening.min.clone(), opening.max.clone());
     if (!movingBox.intersectsBox(openingBox)) continue;
 
@@ -192,32 +155,23 @@ function resolveOpeningOverlaps(
     openingBox.getCenter(openingCenter);
 
     if (minOverlap === overlapX) {
-      applyWorldDelta(
-        drivenObject,
+      movingMesh.position.x +=
         movingCenter.x < openingCenter.x
           ? openingBox.min.x - movingBox.max.x
-          : openingBox.max.x - movingBox.min.x,
-        0,
-        0
-      );
+          : openingBox.max.x - movingBox.min.x;
     } else if (minOverlap === overlapZ) {
-      applyWorldDelta(
-        drivenObject,
-        0,
-        0,
+      movingMesh.position.z +=
         movingCenter.z < openingCenter.z
           ? openingBox.min.z - movingBox.max.z
-          : openingBox.max.z - movingBox.min.z
-      );
+          : openingBox.max.z - movingBox.min.z;
     } else {
-      applyWorldDelta(
-        drivenObject,
-        0,
+      movingMesh.position.y +=
         movingCenter.y < openingCenter.y
           ? openingBox.min.y - movingBox.max.y
-          : openingBox.max.y - movingBox.min.y,
-        0
-      );
+          : openingBox.max.y - movingBox.min.y;
     }
+
+    movingMesh.updateMatrixWorld(true);
+    setBox3FromObjectExcludingLayoutProxy(movingBox, movingMesh);
   }
 }

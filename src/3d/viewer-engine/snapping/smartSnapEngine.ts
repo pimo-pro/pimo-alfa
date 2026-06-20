@@ -26,11 +26,26 @@ import {
   type UnifiedSnapCandidate,
   type UnifiedSnapResult,
 } from "./smartAlignSnapTypes";
-import {
-  getWorldPosition,
-  setWorldPosition,
-  type DragTransformTarget,
-} from "../utils/transformDragSpace";
+
+export type DragTransformTarget = {
+  drivenObject: THREE.Object3D;
+  logicalMesh: THREE.Object3D;
+};
+
+function getWorldPosition(obj: THREE.Object3D, target = new THREE.Vector3()): THREE.Vector3 {
+  return obj.getWorldPosition(target);
+}
+
+function setWorldPosition(obj: THREE.Object3D, worldPos: THREE.Vector3): void {
+  if (obj.parent) {
+    const local = worldPos.clone();
+    obj.parent.worldToLocal(local);
+    obj.position.copy(local);
+  } else {
+    obj.position.copy(worldPos);
+  }
+  obj.updateMatrixWorld(true);
+}
 
 const _box3 = new THREE.Box3();
 const _worldPos = new THREE.Vector3();

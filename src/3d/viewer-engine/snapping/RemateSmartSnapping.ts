@@ -8,11 +8,6 @@ import {
   signedDistanceRemateFaceToPlane,
   type RemateSnapPlane,
 } from "./remateSnapTargets";
-import {
-  getWorldPosition,
-  setWorldPosition,
-  type DragTransformTarget,
-} from "../utils/transformDragSpace";
 
 type Deps = {
   getContainer: () => HTMLElement;
@@ -40,7 +35,6 @@ export class RemateSmartSnapping {
   private readonly _worldBox = new THREE.Box3();
   private readonly _localBox = new THREE.Box3();
   private readonly _localPos = new THREE.Vector3();
-  private readonly _worldPos = new THREE.Vector3();
   private readonly _invBox = new THREE.Matrix4();
   private readonly _boxMatrix = new THREE.Matrix4();
   private readonly _corner = new THREE.Vector3();
@@ -81,7 +75,6 @@ export class RemateSmartSnapping {
 
   applyDuringTranslate(params: {
     mesh: THREE.Mesh;
-    dragTransform: DragTransformTarget;
     boxEntry: ViewerBoxEntry;
     boxConfig: RemateSmartSnapBoxConfig;
     captureRadiusMm?: number;
@@ -89,23 +82,16 @@ export class RemateSmartSnapping {
   }): void {
     if (!this.enabled || !this.dragging) return;
 
-    const { dragTransform, boxEntry, boxConfig } = params;
-    const { drivenObject, logicalMesh } = dragTransform;
+    const { mesh, boxEntry, boxConfig } = params;
     const captureM = mmToM(params.captureRadiusMm ?? this.captureRadiusMm);
     const magnet = params.magnetStrength ?? this.magnetStrength;
 
     boxEntry.mesh.updateMatrixWorld(true);
-    logicalMesh.updateMatrixWorld(true);
     this._boxMatrix.copy(boxEntry.mesh.matrixWorld);
     this._invBox.copy(this._boxMatrix).invert();
-    if (!Number.isFinite(this._invBox.elements[0])) {
-      console.warn("[sanity] invBox inválida — abort snap remate");
-      return;
-    }
 
-    getWorldPosition(logicalMesh, this._worldPos);
-    this._localPos.copy(this._worldPos).applyMatrix4(this._invBox);
-    setBox3FromObjectExcludingLayoutProxy(this._worldBox, logicalMesh);
+    this._localPos.copy(mesh.position).applyMatrix4(this._invBox);
+    setBox3FromObjectExcludingLayoutProxy(this._worldBox, mesh);
     this.expandAabbToBoxLocal(this._worldBox, boxEntry.mesh, this._localBox);
 
     const targets = collectRemateSnapTargets({
@@ -135,8 +121,8 @@ export class RemateSmartSnapping {
       const deltaLocal = best.plane.normalM.clone().multiplyScalar(-best.distanceM * strength);
       this._localPos.add(deltaLocal);
       this._localPos.applyMatrix4(this._boxMatrix);
-      setWorldPosition(drivenObject, this._localPos);
-      this.activeSnapPoint = getWorldPosition(logicalMesh, new THREE.Vector3());
+      mesh.position.copy(this._localPos);
+      this.activeSnapPoint = mesh.position.clone();
       this.drawOverlay();
       return;
     }
@@ -145,14 +131,11 @@ export class RemateSmartSnapping {
     this.clearOverlay();
   }
 
-  applyStandaloneGridSnap(params: { dragTransform: DragTransformTarget }): void {
+  applyStandaloneGridSnap(mesh: THREE.Mesh): void {
     if (!this.enabled || !this.dragging) return;
-    const { drivenObject } = params.dragTransform;
     const g = mmToM(this.gridSizeMm);
-    const world = getWorldPosition(drivenObject, this._worldPos);
-    world.x = Math.round(world.x / g) * g;
-    world.z = Math.round(world.z / g) * g;
-    setWorldPosition(drivenObject, world);
+    mesh.position.x = Math.round(mesh.position.x / g) * g;
+    mesh.position.z = Math.round(mesh.position.z / g) * g;
   }
 
   private computeStrength(distanceM: number, captureM: number, magnet: number): number {

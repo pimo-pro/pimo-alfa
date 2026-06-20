@@ -19,11 +19,6 @@ import {
   type SmartSnapMode,
   type SnapCandidate,
 } from "./smartSnappingTypes";
-import {
-  getWorldPosition,
-  setWorldPosition,
-  type DragTransformTarget,
-} from "../utils/transformDragSpace";
 
 type SmartSnappingDeps = {
   getCamera: () => THREE.Camera;
@@ -33,12 +28,9 @@ type SmartSnappingDeps = {
   isInternalRulerActive: () => boolean;
   getRoomBounds: () => RoomBoundsLike | null;
   getRoomOpenings: () => RoomOpeningLike[];
-  resolveDragTransformTarget: (_logicalMesh: THREE.Object3D) => DragTransformTarget;
 };
 
 const MM = (mm: number) => mmToM(mm);
-/** Raio de captura fixo para snap center/axis (independente do admin captureRadiusMm). */
-const AXIS_CENTER_CAPTURE_MM = 12;
 
 export class SmartSnapping {
   private readonly deps: SmartSnappingDeps;
@@ -66,8 +58,6 @@ export class SmartSnapping {
 
   private readonly _boxAabb = new THREE.Box3();
   private readonly _tempA = new THREE.Vector3();
-  private readonly _tempB = new THREE.Vector3();
-  private readonly _tempC = new THREE.Vector3();
 
   constructor(deps: SmartSnappingDeps) {
     this.deps = deps;
@@ -149,8 +139,7 @@ export class SmartSnapping {
 
   onDragStart(mesh: THREE.Object3D): void {
     this.dragging = true;
-    const { drivenObject } = this.deps.resolveDragTransformTarget(mesh);
-    this.dragOriginalPosition = getWorldPosition(drivenObject, new THREE.Vector3());
+    this.dragOriginalPosition = mesh.position.clone();
     this.clearActiveSnap();
   }
 
@@ -163,14 +152,13 @@ export class SmartSnapping {
 
   applyDuringTranslate(params: {
     mesh: THREE.Object3D;
-    dragTransform: DragTransformTarget;
     selectedBoxId: string;
     boxes: Map<string, ViewerBoxEntry>;
     isDragging: boolean;
     currentTool: string;
     roomBounds?: RoomBoundsLike | null;
   }): void {
-    const { dragTransform, selectedBoxId, boxes, isDragging, currentTool, roomBounds } = params;
+    const { mesh, selectedBoxId, boxes, isDragging, currentTool, roomBounds } = params;
     if (!this.enabled || !isDragging || currentTool !== "translate") {
       this.clearOverlay();
       return;
@@ -180,33 +168,17 @@ export class SmartSnapping {
       return;
     }
 
-    const { drivenObject, logicalMesh } = dragTransform;
     const bounds = roomBounds ?? this.deps.getRoomBounds();
     const openings = this.deps.getRoomOpenings();
     const captureM = MM(this.captureRadiusMm);
-    const drivenWorldPos = getWorldPosition(drivenObject, this._tempA);
-    const best = this.findBestCandidate(
-      logicalMesh,
-      drivenWorldPos,
-      selectedBoxId,
-      boxes,
-      captureM,
-      bounds,
-      openings
-    );
+    const candidatePos = mesh.position.clone();
+    const best = this.findBestCandidate(mesh, selectedBoxId, boxes, captureM, bounds, openings);
 
     if (best) {
-      if (!Number.isFinite(best.delta.x + best.delta.y + best.delta.z)) {
-        console.warn("[sanity] delta inválido — ignorado");
-        return;
-      }
-      const currentWorld = getWorldPosition(drivenObject, this._tempB);
-      const targetWorld = this._tempC.copy(currentWorld).add(best.delta);
+      const targetPos = candidatePos.clone().add(best.delta);
       const strength = this.computeSmoothStrength(best.distanceM, captureM);
-      currentWorld.lerp(targetWorld, strength);
-      setWorldPosition(drivenObject, currentWorld);
-      this.activeSnapFrom =
-        this.dragOriginalPosition?.clone() ?? getWorldPosition(drivenObject, new THREE.Vector3());
+      mesh.position.lerp(targetPos, strength);
+      this.activeSnapFrom = this.dragOriginalPosition?.clone() ?? candidatePos.clone();
       this.activeSnapPoint = best.snapPoint.clone();
       this.activeSnapKind = best.kind;
       this.activeAlignmentType = best.alignmentType ?? kindToAlignment(best.kind);
@@ -219,7 +191,7 @@ export class SmartSnapping {
     }
 
     applySmartSnapConstraints({
-      dragTransform,
+      mesh,
       selectedBoxId,
       boxes,
       roomBounds: bounds,
@@ -273,23 +245,21 @@ export class SmartSnapping {
   }
 
   private findBestCandidate(
-    logicalMesh: THREE.Object3D,
-    drivenWorldPos: THREE.Vector3,
+    mesh: THREE.Object3D,
     selectedBoxId: string,
     boxes: Map<string, ViewerBoxEntry>,
     captureM: number,
     roomBounds: RoomBoundsLike | null,
     openings: RoomOpeningLike[]
   ): SnapCandidate | null {
-    const moving = this.getWorldAabb(logicalMesh);
+    const moving = this.getWorldAabb(mesh);
     const getAabb = (m: THREE.Object3D) => this.getWorldAabb(m);
     const candidates: SnapCandidate[] = [];
 
     if (this.mode === "basic") {
-      const axisCenterCaptureM = MM(AXIS_CENTER_CAPTURE_MM);
-      this.collectGridCandidates(drivenWorldPos, captureM, candidates);
-      this.collectAxisCandidates(drivenWorldPos, axisCenterCaptureM, roomBounds, candidates);
-      this.collectCenterCandidates(moving, axisCenterCaptureM, roomBounds, candidates);
+      this.collectGridCandidates(mesh.position, captureM, candidates);
+      this.collectAxisCandidates(mesh.position, captureM, candidates);
+      this.collectCenterCandidates(moving, captureM, candidates);
       boxes.forEach((entry, boxId) => {
         if (boxId === selectedBoxId) return;
         collectBasicBoxCandidates(moving, getAabb(entry.mesh), captureM, candidates);
@@ -315,7 +285,7 @@ export class SmartSnapping {
         collectAutoSpacingCandidates(moving, selectedBoxId, boxes, captureM, getAabb, candidates);
       }
 
-      this.collectGridCandidates(drivenWorldPos, captureM, candidates);
+      this.collectGridCandidates(mesh.position, captureM, candidates);
     }
 
     if (!candidates.length) return null;
@@ -345,47 +315,29 @@ export class SmartSnapping {
     }
   }
 
-  private collectAxisCandidates(
-    position: THREE.Vector3,
-    captureM: number,
-    roomBounds: RoomBoundsLike | null,
-    out: SnapCandidate[]
-  ): void {
+  private collectAxisCandidates(position: THREE.Vector3, captureM: number, out: SnapCandidate[]): void {
     if (this.mode !== "basic") return;
-    if (!roomBounds) return;
-
-    const axes: Array<"x" | "z"> = ["x", "z"];
+    const axes: Array<"x" | "y" | "z"> = ["x", "y", "z"];
     for (const axis of axes) {
-      const target = axis === "x" ? roomBounds.centerX : roomBounds.centerZ;
-      const current = position[axis];
-      const distanceM = Math.abs(current - target);
+      const distanceM = Math.abs(position[axis]);
       if (distanceM > captureM) continue;
       const deltaVec = new THREE.Vector3();
-      deltaVec[axis] = target - current;
+      deltaVec[axis] = -position[axis];
       const snapPoint = position.clone();
-      snapPoint.x = roomBounds.centerX;
-      snapPoint.z = roomBounds.centerZ;
+      snapPoint[axis] = 0;
       pushCandidate(out, { kind: "axis", delta: deltaVec, snapPoint, distanceM });
     }
   }
 
-  private collectCenterCandidates(
-    moving: BoxAabb,
-    captureM: number,
-    roomBounds: RoomBoundsLike | null,
-    out: SnapCandidate[]
-  ): void {
+  private collectCenterCandidates(moving: BoxAabb, captureM: number, out: SnapCandidate[]): void {
     if (this.mode !== "basic") return;
-    if (!roomBounds) return;
-
-    const snapPoint = new THREE.Vector3(roomBounds.centerX, moving.center.y, roomBounds.centerZ);
-    const delta = snapPoint.clone().sub(moving.center);
+    const delta = this._tempA.set(-moving.center.x, -moving.center.y, -moving.center.z);
     const distanceM = delta.length();
     if (distanceM > captureM) return;
     pushCandidate(out, {
       kind: "center",
-      delta,
-      snapPoint,
+      delta: delta.clone(),
+      snapPoint: new THREE.Vector3(0, 0, 0),
       distanceM,
     });
   }

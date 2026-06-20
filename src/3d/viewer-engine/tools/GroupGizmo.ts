@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { setBox3FromObjectExcludingLayoutProxy } from "../box/boxAabbUtils";
-import type { TransformControlsLike } from "./TransformGizmoPivot";
+import type { TransformControlsLike } from "./TransformControlsTypes";
 
 export type GroupGizmoMember = {
   encodedId: string;
