@@ -11,8 +11,6 @@ import {
   openDrawer,
   resolveDrawerMaxPullMm,
 } from "./DrawerMotionService";
-import { canOpenDrawer } from "./DrawerCollisionService";
-
 export type DrawerOpenOptions = {
   /** Durante abertura sequencial global — permite várias gavetas abertas. */
   allowMultipleOpen?: boolean;
@@ -105,12 +103,6 @@ export function openAllSequential(
       const liveBox = callbacks.getBox();
       const liveDrawer = (liveBox?.drawersLayer ?? []).find((item) => item.id === drawer.id);
       if (!liveDrawer || liveDrawer.isOpen) return;
-      const drawerIndex = (liveBox?.drawersLayer ?? []).findIndex((item) => item.id === drawer.id);
-      const collision = canOpenDrawer(liveDrawer, liveBox ?? box, {
-        drawerIndex,
-        allowMultipleOpen: true,
-      });
-      if (!collision.canOpen) return;
       callbacks.setDrawerOpen(drawer.id, true, { allowMultipleOpen: true });
     });
   });

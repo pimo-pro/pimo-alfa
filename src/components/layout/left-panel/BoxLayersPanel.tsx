@@ -136,9 +136,71 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
               </button>
 
               {expandedDoorIds[item.id] && (
-                <div className="form-grid" style={{ marginTop: 8 }}>
-                  <input className="input input-xs" type="number" value={item.width} readOnly placeholder="Largura" />
-                  <input className="input input-xs" type="number" value={item.height} readOnly placeholder="Altura" />
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Largura da porta (mm)</span>
+                    <input
+                      className="input input-xs"
+                      type="number"
+                      min={40}
+                      value={Math.round(item.width)}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (!Number.isFinite(value)) return;
+                        actions.updateDoorLayerItem(item.id, { width: value });
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Altura da porta (mm)</span>
+                    <input
+                      className="input input-xs"
+                      type="number"
+                      min={80}
+                      value={Math.round(item.height)}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (!Number.isFinite(value)) return;
+                        actions.updateDoorLayerItem(item.id, { height: value });
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Ajuste vertical (mm)</span>
+                    <input
+                      className="input input-xs"
+                      type="number"
+                      placeholder="Ex.: -20 ou +40"
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        const value = Number((e.target as HTMLInputElement).value);
+                        if (!Number.isFinite(value) || value === 0) return;
+                        actions.updateDoorLayerItem(item.id, { applyVerticalAdjustMm: value });
+                        (e.target as HTMLInputElement).value = "";
+                      }}
+                      onBlur={(e) => {
+                        const value = Number(e.target.value);
+                        if (!Number.isFinite(value) || value === 0) return;
+                        actions.updateDoorLayerItem(item.id, { applyVerticalAdjustMm: value });
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Origem do ajuste vertical</span>
+                    <select
+                      className="select select-xs"
+                      value={item.verticalAdjustOrigin ?? "top"}
+                      onChange={(e) =>
+                        actions.updateDoorLayerItem(item.id, {
+                          verticalAdjustOrigin: e.target.value as "top" | "bottom",
+                        })
+                      }
+                    >
+                      <option value="top">Aplicar ajuste a partir de cima</option>
+                      <option value="bottom">Aplicar ajuste a partir de baixo</option>
+                    </select>
+                  </label>
                 </div>
               )}
             </div>

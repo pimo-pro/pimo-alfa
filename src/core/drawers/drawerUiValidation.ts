@@ -14,6 +14,72 @@ export type DrawerUiAlert = {
 
 const CUSTOM_HEIGHT_GAP_MM = 10;
 
+/** Altura útil interna do vão de gavetas (mm): altura caixa − pés − folga base. */
+export function resolveDrawerUsableInternalHeightMm(
+  box: Pick<WorkspaceBox, "dimensoes" | "feetEnabled" | "feetHeight" | "pe_cm">,
+  gapMm: number = CUSTOM_HEIGHT_GAP_MM
+): number {
+  const feetHeightMm =
+    box.feetEnabled !== false ? Number(box.feetHeight ?? (box.pe_cm ?? 10) * 10) : 0;
+  return Math.max(1, box.dimensoes.altura - feetHeightMm - gapMm);
+}
+
+/** Profundidade útil para curso da corrediça (mm): profundidade − recuo traseiro − folga corrediça. */
+export function resolveDrawerUsableInternalDepthMm(
+  box: Pick<WorkspaceBox, "dimensoes">,
+  settings: SettingsSchema["gavetas"]
+): number {
+  const depth = Number(box.dimensoes.profundidade) || 0;
+  const bodyRecess = Number(settings.gavetaRecuoCorpoMm) || 0;
+  const runnerClearance = Number(settings.gavetaRecuoProfundidadeCorredicaMm) || 0;
+  return Math.max(0, depth - bodyRecess - runnerClearance);
+}
+
+export function validateDrawerFeetWarning(
+  drawer: DrawerLayerItem,
+  box: Pick<WorkspaceBox, "dimensoes" | "feetEnabled" | "feetHeight" | "pe_cm" | "drawersLayer">,
+  drawerIndex: number
+): DrawerUiAlert[] {
+  if (drawerIndex !== 0) return [];
+  const feetHeightMm =
+    box.feetEnabled !== false ? Number(box.feetHeight ?? (box.pe_cm ?? 10) * 10) : 0;
+  if (feetHeightMm <= 0) return [];
+
+  const usableHeight = resolveDrawerUsableInternalHeightMm(box);
+  if (feetHeightMm > usableHeight * 0.35 || feetHeightMm > drawer.height * 0.35) {
+    return [
+      {
+        level: "warning",
+        message: "Rodapé/pés demasiado altos para a gaveta inferior.",
+        drawerId: drawer.id,
+      },
+    ];
+  }
+  return [];
+}
+
+export function validateDrawerSlideCourseWarning(
+  drawer: DrawerLayerItem,
+  box: Pick<WorkspaceBox, "dimensoes">,
+  settings: SettingsSchema["gavetas"]
+): DrawerUiAlert[] {
+  const usefulDepth = resolveDrawerUsableInternalDepthMm(box, settings);
+  const pullMm =
+    Number(drawer.bodyDepth) > 0
+      ? Number(drawer.bodyDepth)
+      : Math.max(0, (Number(drawer.depth) || 0) - (Number(drawer.frontThickness) || 0));
+  if (usefulDepth > 0 && pullMm > usefulDepth) {
+    return [
+      {
+        level: "warning",
+        message: "Curso da corrediça excede a profundidade interna do módulo.",
+        drawerId: drawer.id,
+      },
+    ];
+  }
+  return [];
+}
+
 export function getDrawerInternalHeightMm(boxHeightMm: number): number {
   return Math.max(1, boxHeightMm - CUSTOM_HEIGHT_GAP_MM);
 }
@@ -169,6 +235,19 @@ export function validateDrawerLayerItem(
   return alerts;
 }
 
+export function validateDrawerLayerItemWithIndex(
+  drawer: DrawerLayerItem,
+  box: WorkspaceBox,
+  settings: SettingsSchema["gavetas"],
+  drawerIndex: number
+): DrawerUiAlert[] {
+  return [
+    ...validateDrawerLayerItem(drawer, box, settings),
+    ...validateDrawerFeetWarning(drawer, box, drawerIndex),
+    ...validateDrawerSlideCourseWarning(drawer, box, settings),
+  ];
+}
+
 export function validateBoxDrawerConfiguration(
   box: WorkspaceBox,
   settings: SettingsSchema["gavetas"]
@@ -185,8 +264,9 @@ export function validateBoxDrawerConfiguration(
     alerts.push(...validateCustomDrawerHeights(heights, box.dimensoes.altura, settings));
   }
 
-  for (const drawer of box.drawersLayer ?? []) {
-    alerts.push(...validateDrawerLayerItem(drawer, box, settings));
+  for (let index = 0; index < (box.drawersLayer ?? []).length; index++) {
+    const drawer = box.drawersLayer![index]!;
+    alerts.push(...validateDrawerLayerItemWithIndex(drawer, box, settings, index));
   }
 
   return alerts;

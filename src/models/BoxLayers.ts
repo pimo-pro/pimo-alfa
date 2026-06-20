@@ -24,6 +24,10 @@ export interface DoorLayerItem {
   posY: number;
   posZ: number;
   rotY: number;
+  /** Dimensões editadas manualmente na UI — preservadas na regeneração de camadas. */
+  manualDimensions?: boolean;
+  /** Origem do ajuste vertical (+/− mm na altura): topo ou base fixos. */
+  verticalAdjustOrigin?: "top" | "bottom";
 }
 
 export type DrawerLayerMetadata = {

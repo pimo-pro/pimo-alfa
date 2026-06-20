@@ -14,6 +14,8 @@ export class EventsManager {
   private isDraggingGizmo = false;
   /** True quando o pointerdown foi fora do gizmo (arrastar = orbit/pan câmera). */
   private isDraggingCamera = false;
+  /** Evita double-toggle quando pointerdown já activou a gaveta. */
+  private drawerToggledOnPointerDown = false;
   private boundHandlers: {
     click: (_event: MouseEvent) => void;
     dblclick: (_event: MouseEvent) => void;
@@ -72,16 +74,31 @@ export class EventsManager {
     this.canvas = null;
   }
 
+  private activateDrawerToggle(
+    event: MouseEvent | PointerEvent,
+    drawerHit: { boxId: string; drawerLayerId: string }
+  ): void {
+    const e = this.engine;
+    this.drawerToggledOnPointerDown = true;
+    this.isDraggingCamera = false;
+    e.setSuppressNextCanvasClick(false);
+    event.preventDefault();
+    event.stopPropagation();
+    e.getOnDrawerLayerClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
+  }
+
   private handleCanvasClick(event: MouseEvent): void {
     const e = this.engine;
     if (e.getTransformControlsDragging()) return;
 
+    if (this.drawerToggledOnPointerDown) {
+      this.drawerToggledOnPointerDown = false;
+      return;
+    }
+
     const drawerHit = e.getDrawerHitAtPointer(event);
     if (drawerHit) {
-      e.setSuppressNextCanvasClick(false);
-      event.preventDefault();
-      event.stopPropagation();
-      e.getOnDrawerLayerClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
+      this.activateDrawerToggle(event, drawerHit);
       return;
     }
 
@@ -274,6 +291,13 @@ export class EventsManager {
         e.setCameraControlsEnabled(false);
         return;
       }
+
+      const drawerHit = e.getDrawerHitAtPointer(event);
+      if (drawerHit != null) {
+        this.activateDrawerToggle(event, drawerHit);
+        return;
+      }
+
       this.isDraggingCamera = true;
       this.isDraggingGizmo = false;
     }
@@ -298,10 +322,6 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
-      const drawerHit = e.getDrawerHitAtPointer(event);
-      if (drawerHit != null) {
-        return;
-      }
       const remateId = e.getRemateIdAtPointer(event);
       if (remateId != null) {
         event.preventDefault();

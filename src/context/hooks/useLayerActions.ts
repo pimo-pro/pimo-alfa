@@ -5,11 +5,14 @@ import { ensureBoxPanelIds } from "../../core/box/panelIds";
 import { getSelectedOrFirstWorkspaceBox } from "../projectHelpers";
 import { regenerateLayersForBox, createManualDoor, createManualDrawer } from "../../services/boxLayersService";
 import { canBoxHaveDrawers } from "../../core/drawers";
-import { canOpenDrawer } from "../../core/drawers/DrawerCollisionService";
 import {
   resolveDrawerVerticalPosition,
   getDrawerUsableInternalHeightMm,
 } from "../../core/drawers/drawerVerticalPosition";
+import {
+  mergeDoorDimensionUpdate,
+  resolveDoorOpeningHeightMm,
+} from "../../core/doors/doorLayerGeometry";
 import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValidation";
 import { getSettings } from "../../core/settings/settingsService";
 import { devLogger } from "../../utils/devLogger";
@@ -402,25 +405,40 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);
             if (!selected) return prev;
+            const calcularAlturaLaterais = prev.rules?.madeira?.calcularAlturaLaterais ?? true;
+            const openingHeightMm = resolveDoorOpeningHeightMm(
+              selected.dimensoes.altura,
+              selected.espessura,
+              calcularAlturaLaterais
+            );
             const workspaceBoxes = prev.workspaceBoxes.map((box) =>
               box.id === selected.id
                 ? {
                     ...box,
                     doorsLayer: (box.doorsLayer ?? []).map((item) =>
-                      item.id === id ? { ...item, ...partial } : item
+                      item.id === id
+                        ? mergeDoorDimensionUpdate(
+                            item,
+                            partial as Partial<typeof item> & { applyVerticalAdjustMm?: number },
+                            openingHeightMm
+                          )
+                        : item
                     ),
                   }
                 : box
             );
-            return {
-              ...prev,
-              workspaceBoxes,
-              changelog: appendChangelog(prev.changelog, {
-                timestamp: new Date(),
-                type: "box",
-                message: "Porta atualizada",
-              }),
-            };
+            return recomputeState(
+              prev,
+              {
+                workspaceBoxes,
+                changelog: appendChangelog(prev.changelog, {
+                  timestamp: new Date(),
+                  type: "box",
+                  message: "Porta atualizada",
+                }),
+              },
+              true
+            );
           },
           true
         );
@@ -517,24 +535,6 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
             const drawer = (ownerBox.drawersLayer ?? []).find((item) => item.id === id);
             if (!drawer) return prev;
 
-            const drawerIndex = (ownerBox.drawersLayer ?? []).findIndex((item) => item.id === id);
-            if (isOpen) {
-              const collision = canOpenDrawer(drawer, ownerBox, {
-                drawerIndex,
-                allowMultipleOpen: options?.allowMultipleOpen,
-              });
-              if (!collision.canOpen) {
-                return {
-                  ...prev,
-                  workspaceBoxes: prev.workspaceBoxes.map((box) =>
-                    box.id === ownerBox.id
-                      ? { ...box, drawerConfigError: collision.reason }
-                      : box
-                  ),
-                };
-              }
-            }
-
             const maxPull =
               Number(drawer.bodyDepth) > 0
                 ? Number(drawer.bodyDepth)
@@ -543,27 +543,32 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                     (Number(drawer.depth) || 0) - (Number(drawer.frontThickness) || 0)
                   );
 
-            const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-              box.id === ownerBox.id
-                ? {
-                    ...box,
-                    drawerConfigError: undefined,
-                    drawersLayer: (box.drawersLayer ?? []).map((item) => {
-                      if (item.id === id) {
-                        return {
-                          ...item,
-                          isOpen,
-                          pullDistanceMm: isOpen ? maxPull : 0,
-                        };
-                      }
-                      if (isOpen && !options?.allowMultipleOpen && item.isOpen) {
-                        return { ...item, isOpen: false, pullDistanceMm: 0 };
-                      }
-                      return item;
-                    }),
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== ownerBox.id) return box;
+              const mergedBox = {
+                ...box,
+                drawerConfigError: undefined,
+                drawersLayer: (box.drawersLayer ?? []).map((item) => {
+                  if (item.id === id) {
+                    return {
+                      ...item,
+                      isOpen,
+                      pullDistanceMm: isOpen ? maxPull : 0,
+                    };
                   }
-                : box
-            );
+                  if (isOpen && !options?.allowMultipleOpen && item.isOpen) {
+                    return { ...item, isOpen: false, pullDistanceMm: 0 };
+                  }
+                  return item;
+                }),
+              };
+              return {
+                ...mergedBox,
+                drawerConfigWarnings: validateBoxDrawerConfiguration(mergedBox, getSettings().gavetas)
+                  .filter((alert) => alert.level === "warning")
+                  .map((alert) => alert.message),
+              };
+            });
             return {
               ...prev,
               workspaceBoxes,

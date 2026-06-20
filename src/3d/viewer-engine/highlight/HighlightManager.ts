@@ -4,14 +4,16 @@
  */
 
 import * as THREE from "three";
+import { isDrawerClickTarget } from "../../../core/drawers/drawerMeshIdentity";
 
 function isSelectable(node: THREE.Object3D): boolean {
   const ud = (node as THREE.Object3D & { userData?: Record<string, unknown> }).userData;
   if (!ud) return false;
+  if (isDrawerClickTarget(node)) return false;
+  if (ud.drawerId != null || ud.drawerLayerId != null || ud.drawerPart != null) return false;
   if (ud.selectable === true) return true;
   if (ud.panelType != null) return true;
   if (ud.doorLayerId != null) return true;
-  if (ud.drawerPart != null) return true;
   if (ud.isDrillMarker === true) return false;
   if (ud.isDrillHole === true) return false;
   if (ud.doorHolesEffective != null) return true;
@@ -19,7 +21,7 @@ function isSelectable(node: THREE.Object3D): boolean {
   const name = (node as { name?: string }).name;
   if (
     typeof name === "string" &&
-    (name.startsWith("shelf-") || name.startsWith("door-leaf-") || name.startsWith("drawer-"))
+    (name.startsWith("shelf-") || name.startsWith("door-leaf-"))
   ) {
     return true;
   }

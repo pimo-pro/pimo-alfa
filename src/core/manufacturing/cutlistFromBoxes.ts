@@ -16,6 +16,7 @@ import {
   readLabelNumberFromMetadata,
 } from "../qrcode/panelLabelNumber";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
+import { computeDoorVerticalGaps } from "../doors/doorLayerGeometry";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide } from "../cornerCabinet";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
@@ -169,8 +170,13 @@ export function cutlistComPrecoFromBox(
     if (!p || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) continue;
     const hingeSide = doorsLayer[i]?.hingeSide;
     const openingH = Number.isFinite(openingHeightMm) && Number(openingHeightMm) > 0 ? Number(openingHeightMm) : p.altura_mm;
-    const bottomGap = (openingH - p.altura_mm) / 2;
-    const topGap = openingH - p.altura_mm - bottomGap;
+    const doorLayer = doorsLayer[i];
+    const { bottomGap, topGap } = doorLayer
+      ? (() => {
+          const gaps = computeDoorVerticalGaps(openingH, p.altura_mm, doorLayer.posY ?? 0);
+          return { bottomGap: gaps.bottomGapMm, topGap: gaps.topGapMm };
+        })()
+      : { bottomGap: (openingH - p.altura_mm) / 2, topGap: openingH - p.altura_mm - (openingH - p.altura_mm) / 2 };
     const drillingResult = buildPanelDrillingResult(
       {
         tipo: p.tipo,
@@ -257,8 +263,15 @@ export function cutlistComPrecoFromBox(
             ? hingePositionsBySide.right
             : undefined;
     const openingH = Number.isFinite(openingHeightMm) && Number(openingHeightMm) > 0 ? Number(openingHeightMm) : p.altura_mm;
-    const bottomGap = isDoor ? Math.max(0, (openingH - p.altura_mm) / 2) : 0;
-    const topGap = isDoor ? Math.max(0, openingH - p.altura_mm - bottomGap) : 0;
+    const doorLayerForGap = isDoor && doorsLayer[doorIndex] ? doorsLayer[doorIndex] : undefined;
+    const { bottomGap, topGap } = doorLayerForGap
+      ? (() => {
+          const gaps = computeDoorVerticalGaps(openingH, p.altura_mm, doorLayerForGap.posY ?? 0);
+          return { bottomGap: gaps.bottomGapMm, topGap: gaps.topGapMm };
+        })()
+      : isDoor
+        ? { bottomGap: Math.max(0, (openingH - p.altura_mm) / 2), topGap: Math.max(0, openingH - p.altura_mm - (openingH - p.altura_mm) / 2) }
+        : { bottomGap: 0, topGap: 0 };
     let drillHoles: PanelDrillHole[] = [];
     if (isPiBox && (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita")) {
       const piSettings = getSettings().modeloPI;

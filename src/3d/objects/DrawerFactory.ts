@@ -12,6 +12,10 @@ import {
   easeInOutCubic,
   VIEWER_DRAWER_ANIMATION_DURATION_MS,
 } from "../../core/drawers/DrawerMotionService";
+import {
+  applyDrawerBodyPartIdentity,
+  applyDrawerClickTargetIdentity,
+} from "../../core/drawers/drawerMeshIdentity";
 
 const drawerOpenState = new Map<string, boolean>();
 const drawerPositionState = new Map<string, number>();
@@ -153,7 +157,7 @@ export function buildDrawerSpecs(
   }));
 }
 
-export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): string {
+export function getDrawerStructureFingerprint(spec: DrawerSpec, materialName?: string): string {
   return JSON.stringify({
     id: spec.id,
     widthM: spec.widthM,
@@ -194,8 +198,6 @@ export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string
     y: spec.y,
     z: spec.z,
     rotY: spec.rotY,
-    isOpen: spec.isOpen,
-    pullDistanceM: spec.pullDistanceM,
     handleType: spec.handleType,
     handlePosition: spec.handlePosition,
     handleOffsetM: spec.handleOffsetM,
@@ -207,10 +209,61 @@ export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string
   });
 }
 
+/** @deprecated Use getDrawerStructureFingerprint + getDrawerMotionKey */
+export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): string {
+  return `${getDrawerStructureFingerprint(spec, materialName)}|${getDrawerMotionKey(spec)}`;
+}
+
+export function getDrawerMotionKey(spec: Pick<DrawerSpec, "isOpen" | "pullDistanceM">): string {
+  return JSON.stringify({ isOpen: spec.isOpen, pullDistanceM: spec.pullDistanceM });
+}
+
+function findDrawerBodyGroup(drawerLayerGroup: THREE.Object3D, drawerId: string): THREE.Object3D | null {
+  const byName = drawerLayerGroup.children.find((child) => child.name === `drawer-body-${drawerId}`);
+  if (byName) return byName;
+  return drawerLayerGroup.children.find((child) => child.name.startsWith("drawer-body-")) ?? null;
+}
+
+function animateDrawerBodyZ(drawerId: string, drawerGroup: THREE.Object3D, targetPullOffset: number): void {
+  const prevIsOpen = drawerOpenState.get(drawerId);
+  const prevPosition = drawerPositionState.get(drawerId);
+  const startPosition = Number.isFinite(prevPosition) ? (prevPosition as number) : drawerGroup.position.z;
+  const shouldAnimate = prevIsOpen === undefined ? targetPullOffset !== 0 : prevIsOpen !== (targetPullOffset > 0);
+
+  if (shouldAnimate) {
+    const existingRaf = drawerAnimationRaf.get(drawerId);
+    if (existingRaf != null) cancelAnimationFrame(existingRaf);
+    const start = performance.now();
+    const durationMs = VIEWER_DRAWER_ANIMATION_DURATION_MS;
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = easeInOutCubic(t);
+      drawerGroup.position.z = startPosition + (targetPullOffset - startPosition) * eased;
+      drawerPositionState.set(drawerId, drawerGroup.position.z);
+      if (t < 1) drawerAnimationRaf.set(drawerId, requestAnimationFrame(animate));
+      else drawerAnimationRaf.delete(drawerId);
+    };
+    drawerAnimationRaf.set(drawerId, requestAnimationFrame(animate));
+  } else {
+    drawerGroup.position.z = targetPullOffset;
+    drawerPositionState.set(drawerId, targetPullOffset);
+  }
+
+  drawerOpenState.set(drawerId, targetPullOffset > 0);
+}
+
+/** Actualiza só o movimento Z da gaveta (sem rebuild de meshes). */
+export function syncDrawerLayerMotion(drawerLayerGroup: THREE.Object3D, spec: DrawerSpec): boolean {
+  const drawerGroup = findDrawerBodyGroup(drawerLayerGroup, spec.id);
+  if (!drawerGroup) return false;
+  const targetPullOffset = spec.isOpen ? spec.pullDistanceM : 0;
+  animateDrawerBodyZ(spec.id, drawerGroup, targetPullOffset);
+  return true;
+}
+
 export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
-  group.userData.drawerLayerId = spec.id;
   group.position.set(spec.x, spec.y, spec.z);
   if (spec.rotY !== 0) group.rotation.y = spec.rotY;
 
@@ -218,33 +271,9 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
   drawerGroup.name = `drawer-body-${spec.id}`;
 
   const targetPullOffset = spec.isOpen ? spec.pullDistanceM : 0;
-  const prevIsOpen = drawerOpenState.get(spec.id);
   const prevPosition = drawerPositionState.get(spec.id);
-  const startPosition = Number.isFinite(prevPosition) ? (prevPosition as number) : 0;
-  const shouldAnimate = prevIsOpen === undefined ? spec.isOpen : prevIsOpen !== spec.isOpen;
-
-  drawerGroup.position.set(0, 0, Number.isFinite(prevPosition) ? startPosition : targetPullOffset);
-  if (shouldAnimate) {
-    const existingRaf = drawerAnimationRaf.get(spec.id);
-    if (existingRaf != null) cancelAnimationFrame(existingRaf);
-    const start = performance.now();
-    const durationMs = VIEWER_DRAWER_ANIMATION_DURATION_MS;
-    const easing = easeInOutCubic;
-    const animate = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = easing(t);
-      drawerGroup.position.z = startPosition + (targetPullOffset - startPosition) * eased;
-      drawerPositionState.set(spec.id, drawerGroup.position.z);
-      if (t < 1) drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
-      else drawerAnimationRaf.delete(spec.id);
-    };
-    drawerAnimationRaf.set(spec.id, requestAnimationFrame(animate));
-  }
-
-  drawerOpenState.set(spec.id, spec.isOpen);
-  drawerPositionState.set(spec.id, drawerGroup.position.z);
-  drawerGroup.userData.drawerLayerId = spec.id;
-  drawerGroup.userData.drawerPart = "body";
+  drawerGroup.position.set(0, 0, Number.isFinite(prevPosition) ? (prevPosition as number) : targetPullOffset);
+  animateDrawerBodyZ(spec.id, drawerGroup, targetPullOffset);
 
   const front = panelFactory.createPanel(
     spec.widthM,
@@ -259,9 +288,25 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
   } else {
     front.position.set(0, 0, 0);
   }
-  front.userData.drawerLayerId = spec.id;
-  front.userData.drawerPart = "front";
+  applyDrawerClickTargetIdentity(front, spec.id, "front");
   drawerGroup.add(front);
+
+  const clickTarget = new THREE.Mesh(
+    new THREE.BoxGeometry(spec.widthM, spec.heightM, 0.002),
+    new THREE.MeshBasicMaterial({ visible: false, depthWrite: false })
+  );
+  clickTarget.name = `drawer-click-${spec.id}`;
+  if (Number.isFinite(spec.frontPosX) && Number.isFinite(spec.frontPosY) && Number.isFinite(spec.frontPosZ)) {
+    clickTarget.position.set(
+      spec.frontPosX as number,
+      spec.frontPosY as number,
+      (spec.frontPosZ as number) + spec.frontThicknessM / 2 + 0.001
+    );
+  } else {
+    clickTarget.position.set(0, 0, spec.frontThicknessM / 2 + 0.001);
+  }
+  applyDrawerClickTargetIdentity(clickTarget, spec.id, "click-target");
+  drawerGroup.add(clickTarget);
 
   if (spec.handleType && spec.handleType !== "Nenhum") {
     const handleMaterial = new THREE.MeshStandardMaterial({
@@ -287,8 +332,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
           ? -spec.heightM / 2 + handleHeight * 1.5
           : 0;
     handle.position.set(0, yBase + (spec.handleOffsetM ?? 0), spec.frontThicknessM / 2 + handleDepth / 2);
-    handle.userData.drawerLayerId = spec.id;
-    handle.userData.drawerPart = "handle";
+    applyDrawerClickTargetIdentity(handle, spec.id, "handle");
     drawerGroup.add(handle);
   }
 
@@ -304,23 +348,19 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       const sideHeightM = Math.max(0.04, spec.bodyHeightM);
       const leftMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-left-${spec.id}`, "left", { singleMaterial: metalMaterial });
       leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, 0, bodyOffsetZ);
-      leftMetal.userData.drawerPart = "metal-box";
-      leftMetal.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(leftMetal, spec.id, "metal-box");
       drawerGroup.add(leftMetal);
       const rightMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-right-${spec.id}`, "right", { singleMaterial: metalMaterial });
       rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, 0, bodyOffsetZ);
-      rightMetal.userData.drawerPart = "metal-box";
-      rightMetal.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(rightMetal, spec.id, "metal-box");
       drawerGroup.add(rightMetal);
       const backMetal = panelFactory.createPanel(spec.bodyWidthM, sideHeightM, metalThicknessM, `drawer-metal-back-${spec.id}`, "back", { singleMaterial: metalMaterial });
       backMetal.position.set(0, 0, -spec.frontThicknessM / 2 - spec.bodyDepthM + metalThicknessM / 2);
-      backMetal.userData.drawerPart = "metal-box";
-      backMetal.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(backMetal, spec.id, "metal-box");
       drawerGroup.add(backMetal);
       const bottomMetal = panelFactory.createPanel(spec.bodyWidthM, metalThicknessM, spec.bodyDepthM, `drawer-metal-bottom-${spec.id}`, "bottom", { singleMaterial: metalMaterial });
       bottomMetal.position.set(0, -sideHeightM / 2 + metalThicknessM / 2, bodyOffsetZ);
-      bottomMetal.userData.drawerPart = "metal-box";
-      bottomMetal.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(bottomMetal, spec.id, "metal-box");
       drawerGroup.add(bottomMetal);
     } else if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
       const leftSide = panelFactory.createPanel(spec.leftSideWidthM, spec.leftSideHeightM, spec.leftSideDepthM, `drawer-left-${spec.id}`, "left", { singleMaterial: material });
@@ -329,8 +369,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.leftSidePosY) ? (spec.leftSidePosY as number) : 0,
         Number.isFinite(spec.leftSidePosZ) ? (spec.leftSidePosZ as number) : bodyOffsetZ
       );
-      leftSide.userData.drawerPart = "left-side";
-      leftSide.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(leftSide, spec.id, "left-side");
       drawerGroup.add(leftSide);
     }
     if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
@@ -340,8 +379,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.rightSidePosY) ? (spec.rightSidePosY as number) : 0,
         Number.isFinite(spec.rightSidePosZ) ? (spec.rightSidePosZ as number) : bodyOffsetZ
       );
-      rightSide.userData.drawerPart = "right-side";
-      rightSide.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(rightSide, spec.id, "right-side");
       drawerGroup.add(rightSide);
     }
     if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
@@ -351,8 +389,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.bottomPosY) ? (spec.bottomPosY as number) : -spec.bodyHeightM / 2 + spec.bottomThicknessM / 2,
         Number.isFinite(spec.bottomPosZ) ? (spec.bottomPosZ as number) : bodyOffsetZ
       );
-      bottom.userData.drawerPart = "bottom";
-      bottom.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(bottom, spec.id, "bottom");
       drawerGroup.add(bottom);
     }
     if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
@@ -362,8 +399,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
         Number.isFinite(spec.backPosY) ? (spec.backPosY as number) : 0,
         Number.isFinite(spec.backPosZ) ? (spec.backPosZ as number) : bodyOffsetZ - spec.bodyDepthM / 2 + spec.backThicknessM / 2
       );
-      back.userData.drawerPart = "back";
-      back.userData.drawerLayerId = spec.id;
+      applyDrawerBodyPartIdentity(back, spec.id, "back");
       drawerGroup.add(back);
     }
 

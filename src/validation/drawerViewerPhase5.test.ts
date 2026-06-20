@@ -40,7 +40,7 @@ describe("DrawerCollisionService (FASE 5)", () => {
     ...overrides,
   });
 
-  it("bloqueia quando outra gaveta está aberta", () => {
+  it("não bloqueia abertura no Viewer (outra gaveta aberta)", () => {
     const result = canOpenDrawer(
       baseDrawer({ id: "d2" }),
       {
@@ -53,7 +53,7 @@ describe("DrawerCollisionService (FASE 5)", () => {
       },
       { drawerIndex: 1 }
     );
-    expect(result.canOpen).toBe(false);
+    expect(result.canOpen).toBe(true);
   });
 
   it("permite fechar gaveta aberta", () => {

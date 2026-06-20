@@ -62,7 +62,7 @@ import type { MaterialMode } from "./materials";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { ViewerBoxEntry } from "./types";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
-import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
+import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup, updateBoxGroup } from "../objects/BoxBuilder";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 import {
   expandBox3ByObjectExcludingLayoutProxy,
@@ -3374,11 +3374,6 @@ export class ViewerCore {
           entry.mesh.position.y = height / 2;
         }
       } else {
-        // Reconstrução completa do mesh: remover o antigo, dispor, criar novo do zero.
-        // drillMarkersByPanel deve vir em opts (sync); fallback para entry para não perder furações.
-        // [CORRIGIDO 2026-03] Sempre usar drillMarkersByPanel explícito do options, ou vazio.
-        // Nunca usar entry.drillMarkersByPanel como fallback: isso evita furos congelados ou desatualizados.
-        // O mesh é sempre reconstruído com o estado mais recente vindo do sync.
         const emptyDrillMarkers: ViewerDrillMarkersByPanel = {
           cima: [],
           fundo: [],
@@ -3388,6 +3383,35 @@ export class ViewerCore {
         };
         const drillMarkers: ViewerDrillMarkersByPanel =
           opts.drillMarkersByPanel ?? emptyDrillMarkers;
+        const materialName = opts.materialName ?? entry.materialName ?? this.defaultMaterialName;
+        const loadedMat = entry.material ?? this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
+        const boxOptions: BoxOptions = {
+          ...opts,
+          width,
+          height,
+          depth: carcassDepth,
+          thickness: opts.thickness ?? 0.019,
+          shelves: opts.shelves,
+          doorLayerItems: opts.doorLayerItems,
+          drawerLayerItems: opts.drawerLayerItems,
+          drillMarkersByPanel: filterViewerDrillMarkersForMesh(drillMarkers),
+          materialName,
+        };
+        if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
+
+        const canIncrementalUpdate = !dimensionsChanged && !entry.cadOnly;
+        if (canIncrementalUpdate) {
+          updateBoxGroup(entry.mesh as THREE.Group, boxOptions);
+          tagBoxGroupWithId(entry.mesh, id);
+          this.applyViewerDrillHoleSceneRules(entry.mesh);
+          entry.width = width;
+          entry.height = height;
+          entry.depth = layoutDepth;
+          entry.carcassDepth = carcassDepth;
+          if (!entry.material && loadedMat) entry.material = loadedMat;
+          this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
+          this.requestRender();
+        } else {
         const savedPosition = new THREE.Vector3().setFromMatrixPosition(entry.mesh.matrixWorld);
         const savedQuaternion = new THREE.Quaternion().copy(entry.mesh.quaternion);
         const savedCostaRotationY = (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData?.costaRotationY;
@@ -3406,21 +3430,6 @@ export class ViewerCore {
           newBox = new THREE.Group();
           newBox.name = id;
         } else {
-          const materialName = opts.materialName ?? entry.materialName ?? this.defaultMaterialName;
-          const loadedMat = entry.material ?? this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
-          const boxOptions: BoxOptions = {
-            ...opts,
-            width,
-            height,
-            depth: carcassDepth,
-            thickness: opts.thickness ?? 0.019,
-            shelves: opts.shelves,
-            doorLayerItems: opts.doorLayerItems,
-            drawerLayerItems: opts.drawerLayerItems,
-            drillMarkersByPanel: filterViewerDrillMarkersForMesh(drillMarkers),
-            materialName,
-          };
-          if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
           newBox = buildBoxLegacy(boxOptions);
           tagBoxGroupWithId(newBox, id);
           if (!entry.material && loadedMat) entry.material = loadedMat;
@@ -3464,6 +3473,7 @@ export class ViewerCore {
         // [CORRIGIDO 2026-03] Forçar rebuild completo do Scene Graph após mesh rebuild (sem alterar transforms ou offsets)
         this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
         this.requestRender();
+        }
       }
     }
     if (opts.index !== undefined && opts.index !== entry.index) {

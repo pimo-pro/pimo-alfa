@@ -1,9 +1,13 @@
 import * as THREE from "three";
-import type { DoorWindowConfig } from "../../room/types";
+import {
+  isDrawerClickTarget,
+  resolveDrawerIdFromMesh,
+} from "../../../core/drawers/drawerMeshIdentity";
 import {
   DEFAULT_DOOR_CONFIG,
   DEFAULT_WINDOW_CONFIG,
 } from "../../room/types";
+import type { DoorWindowConfig } from "../../room/types";
 import type { ViewerBoxEntry } from "../types";
 import { getPointerNdc } from "../utils";
 import { devLogger } from "../../../utils/devLogger";
@@ -121,16 +125,18 @@ export class ViewerRaycastSystem {
     return null;
   }
 
-  private getDrawerLayerIdByMesh(mesh: THREE.Object3D): string | null {
-    let current: THREE.Object3D | null = mesh;
+  private isDrawerHierarchyObject(object: THREE.Object3D): boolean {
+    if (isDrawerClickTarget(object)) return true;
+    let current: THREE.Object3D | null = object;
     while (current) {
-      const drawerLayerId = current.userData?.drawerLayerId;
-      if (typeof drawerLayerId === "string" && drawerLayerId.length > 0) {
-        return drawerLayerId;
-      }
+      if (typeof current.name === "string" && current.name.startsWith("drawer-layer-")) return true;
       current = current.parent;
     }
-    return null;
+    return false;
+  }
+
+  private getDrawerLayerIdByMesh(mesh: THREE.Object3D): string | null {
+    return resolveDrawerIdFromMesh(mesh);
   }
 
   private pickIdFromFinishRoot(
@@ -355,7 +361,7 @@ export class ViewerRaycastSystem {
     this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
     const hits = this.deps.raycaster.intersectObjects(roots, true);
     for (const hit of hits) {
-      if (this.getDrawerLayerIdByMesh(hit.object)) continue;
+      if (this.isDrawerHierarchyObject(hit.object)) continue;
       if (this.getDoorLayerIdByMesh(hit.object)) continue;
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
@@ -377,7 +383,8 @@ export class ViewerRaycastSystem {
     this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
     const hits = this.deps.raycaster.intersectObjects(roots, true);
     for (const hit of hits) {
-      const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
+      if (!isDrawerClickTarget(hit.object)) continue;
+      const drawerLayerId = resolveDrawerIdFromMesh(hit.object);
       if (!drawerLayerId) continue;
       const boxId = this.getBoxIdByMesh(hit.object);
       if (!boxId) continue;
@@ -442,7 +449,7 @@ export class ViewerRaycastSystem {
         }
         return { boxId, type: "door", doorLayerId };
       }
-      const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
+      const drawerLayerId = isDrawerClickTarget(hit.object) ? resolveDrawerIdFromMesh(hit.object) : null;
       if (drawerLayerId) return { boxId, type: "drawer", drawerLayerId };
       const panelId = hit.object.userData?.panelId;
       const panelType = hit.object.userData?.panelType;

@@ -21,6 +21,9 @@ import {
   buildDrawerSpecs as buildDrawerSpecsFromFactory,
   createDrawerObject as createDrawerObjectFromFactory,
   getDrawerSpecFingerprint as getDrawerSpecFingerprintFromFactory,
+  getDrawerStructureFingerprint as getDrawerStructureFingerprintFromFactory,
+  getDrawerMotionKey as getDrawerMotionKeyFromFactory,
+  syncDrawerLayerMotion as syncDrawerLayerMotionFromFactory,
 } from "./DrawerFactory";
 import { buildBoxGroupWithDeps, buildBoxWithDeps } from "./BoxAssembler";
 import {
@@ -374,6 +377,14 @@ function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): stri
   return getDrawerSpecFingerprintFromFactory(spec, materialName);
 }
 
+function getDrawerStructureFingerprint(spec: DrawerSpec, materialName?: string): string {
+  return getDrawerStructureFingerprintFromFactory(spec, materialName);
+}
+
+function getDrawerMotionKey(spec: Pick<DrawerSpec, "isOpen" | "pullDistanceM">): string {
+  return getDrawerMotionKeyFromFactory(spec);
+}
+
 /**
  * Converte DrawerLayerItem[] para DrawerSpec[] (formato Three.js)
  * 
@@ -469,6 +480,9 @@ function getUpdaterDeps() {
     buildDrawerSpecs,
     getDoorSpecFingerprint,
     getDrawerSpecFingerprint,
+    getDrawerStructureFingerprint,
+    getDrawerMotionKey,
+    syncDrawerLayerMotion: syncDrawerLayerMotionFromFactory,
     createDoorObject,
     createDrawerObject,
     getMaterialForOfficialId,

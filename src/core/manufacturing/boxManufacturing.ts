@@ -303,6 +303,31 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   }
 
   if (box.portaTipo !== "sem_porta") {
+    const doorsLayer = box.doorsLayer ?? [];
+    const hasCompleteDoorLayers =
+      doorsLayer.length > 0 &&
+      doorsLayer.every((door) => Number(door.width) > 0 && Number(door.height) > 0);
+    if (hasCompleteDoorLayers) {
+      doorsLayer.forEach((door, index) => {
+        const tipoPainel =
+          box.portaTipo === "porta_dupla"
+            ? "porta_dupla"
+            : box.portaTipo === "porta_correr"
+              ? "porta_correr"
+              : "porta_simples";
+        paineis.push({
+          id: getArrayPanelId(box, "portas", index),
+          tipo: tipoPainel,
+          largura_mm: clampPositive(Number(door.width) || 0),
+          altura_mm: clampPositive(Number(door.height) || 0),
+          espessura_mm: clampPositive(Number(door.thickness) || espessura),
+          material,
+          orientacaoFibra: "vertical",
+          quantidade: 1,
+          custo: 0,
+        });
+      });
+    } else {
     const alturaPorta = clampPositive(altura - folgaPorta);
     if (box.portaTipo === "porta_dupla") {
       const larguraPorta = clampPositive((largura - folgaPorta) / 2);
@@ -332,6 +357,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
         quantidade: 1,
         custo: 0,
       });
+    }
     }
   }
 

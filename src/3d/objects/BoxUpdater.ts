@@ -43,6 +43,9 @@ type BoxUpdaterDeps = {
   ) => DrawerSpec[];
   getDoorSpecFingerprint: (_spec: DoorSpec, _materialName?: string) => string;
   getDrawerSpecFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
+  getDrawerStructureFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
+  getDrawerMotionKey: (_spec: Pick<DrawerSpec, "isOpen" | "pullDistanceM">) => string;
+  syncDrawerLayerMotion: (_drawerLayerGroup: THREE.Object3D, _spec: DrawerSpec) => boolean;
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
   createDrawerObject: (_spec: DrawerSpec, _material: THREE.Material) => THREE.Object3D;
   getMaterialForOfficialId: (_idOrLabel: string) => THREE.Material;
@@ -191,14 +194,23 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   }
   drawerSpecs.forEach((spec, drawerIndex) => {
     const materialName = drawerLayerItems[drawerIndex]?.material ?? deps.getDefaultOfficialMaterialId();
-    const newFingerprint = deps.getDrawerSpecFingerprint(spec, materialName);
+    const structureFingerprint = deps.getDrawerStructureFingerprint(spec, materialName);
+    const motionKey = deps.getDrawerMotionKey(spec);
     const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
     const drawerUserData = existingDrawer?.userData as Record<string, unknown> | undefined;
-    if (drawerUserData?.[deps.drawerSpecFingerprintKey] === newFingerprint) return;
+    if (existingDrawer && drawerUserData?.[deps.drawerSpecFingerprintKey] === structureFingerprint) {
+      if (drawerUserData?.drawerMotionKey !== motionKey) {
+        deps.syncDrawerLayerMotion(existingDrawer, spec);
+        drawerUserData.drawerMotionKey = motionKey;
+      }
+      return;
+    }
     if (existingDrawer) group.remove(existingDrawer);
     const drawerMaterial = deps.getMaterialForOfficialId(materialName);
     const newDrawer = deps.createDrawerObject(spec, drawerMaterial as THREE.Material);
-    (newDrawer.userData as Record<string, unknown>)[deps.drawerSpecFingerprintKey] = newFingerprint;
+    const newUserData = newDrawer.userData as Record<string, unknown>;
+    newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;
+    newUserData.drawerMotionKey = motionKey;
     group.add(newDrawer);
   });
 

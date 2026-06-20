@@ -540,7 +540,10 @@ export interface ProjectActions {
   addDrawerLayerItem: () => void;
   removeDoorLayerItem: (_id: string) => void;
   removeDrawerLayerItem: (_id: string) => void;
-  updateDoorLayerItem: (_id: string, _partial: Partial<DoorLayerItem>) => void;
+  updateDoorLayerItem: (
+    _id: string,
+    _partial: Partial<DoorLayerItem> & { applyVerticalAdjustMm?: number }
+  ) => void;
   updateDrawerLayerItem: (_id: string, _partial: Partial<DrawerLayerItem>) => void;
   setDoorLayerItemOpen: (_id: string, _isOpen: boolean) => void;
   setDrawerLayerItemOpen: (

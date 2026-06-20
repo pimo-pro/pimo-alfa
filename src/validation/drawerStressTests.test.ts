@@ -73,7 +73,7 @@ describe("Certificação — stress tests (robustez)", () => {
     }
   });
 
-  it("bloqueia abertura com porta fechada", () => {
+  it("Viewer não bloqueia abertura com porta fechada", () => {
     const result = canOpenDrawer(
       baseDrawer({ id: "d1" }),
       {
@@ -86,11 +86,10 @@ describe("Certificação — stress tests (robustez)", () => {
       },
       { drawerIndex: 0 }
     );
-    expect(result.canOpen).toBe(false);
-    expect(result.reason).toBeTruthy();
+    expect(result.canOpen).toBe(true);
   });
 
-  it("bloqueia abertura com outra gaveta aberta", () => {
+  it("Viewer não bloqueia abertura com outra gaveta aberta", () => {
     const result = canOpenDrawer(
       baseDrawer({ id: "d2" }),
       {
@@ -106,7 +105,7 @@ describe("Certificação — stress tests (robustez)", () => {
       },
       { drawerIndex: 1, singleOpenDrawer: true }
     );
-    expect(result.canOpen).toBe(false);
+    expect(result.canOpen).toBe(true);
   });
 
   it("100 regenerações com overrides diferentes — sem perda estrutural", () => {
