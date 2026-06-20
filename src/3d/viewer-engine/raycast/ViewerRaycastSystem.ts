@@ -338,6 +338,28 @@ export class ViewerRaycastSystem {
     return null;
   }
 
+  getDrawerHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; drawerLayerId: string } | null {
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    this.deps.raycaster.layers.set(0);
+    const roots: THREE.Object3D[] = [];
+    this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
+    const hits = this.deps.raycaster.intersectObjects(roots, true);
+    for (const hit of hits) {
+      const drawerLayerId = this.getDrawerLayerIdByMesh(hit.object);
+      if (!drawerLayerId) continue;
+      const boxId = this.getBoxIdByMesh(hit.object);
+      if (!boxId) continue;
+      return { boxId, drawerLayerId };
+    }
+    return null;
+  }
+
   /**
    * Retorna o alvo do ponteiro para o menu de contexto: porta, gaveta ou null (módulo/canvas).
    * Raycast nos boxes; para o primeiro hit que tenha getDoorLayerIdByMesh ou getDrawerLayerIdByMesh, devolve boxId + type + doorLayerId/drawerLayerId.
@@ -599,5 +621,15 @@ export class ViewerRaycastSystem {
       current = current.parent;
     }
     return null;
+  }
+
+  /** UI helper — não altera seleção do viewer. */
+  isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
+    const layerHit = this.getContextMenuLayerHit(event);
+    if (layerHit && layerHit.type !== "empty" && layerHit.type !== "room") return true;
+    if (this.getRemateIdAtPointer(event)) return true;
+    if (this.getRodapeIdAtPointer(event)) return true;
+    if (this.getHematiIdAtPointer(event)) return true;
+    return false;
   }
 }
