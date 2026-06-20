@@ -17,7 +17,7 @@ import {
 } from "./DrawerMotionCurves";
 
 /** Delay entre passos da abertura/fecho sequencial no Viewer (ms). */
-export const DRAWER_SEQUENTIAL_STEP_DELAY_MS = 150;
+export const DRAWER_SEQUENTIAL_STEP_DELAY_MS = 100;
 
 /** Duração da animação no Viewer — alinhada com portas (DoorFactory). */
 export const VIEWER_DRAWER_ANIMATION_DURATION_MS = 2000;

@@ -5181,6 +5181,7 @@ export class ViewerCore {
       setWallGizmoDragging: (v) => { this.viewerState.setWallGizmoDragging(v); },
       getDoorHitAtPointer: (e) => this.getDoorHitAtPointer(e),
       getDrawerHitAtPointer: (e) => this.getDrawerHitAtPointer(e),
+      getBoxBodyHitAtPointer: (e) => this.getBoxBodyHitAtPointer(e),
       getLayerSelectionHitAtPointer: (e) => this.getContextMenuLayerHit(e),
       encodeLayerHitToSelectionId: (hit) => encodeSelectionIdFromLayerHit(hit),
       getPointerSelectionEncodedId: (e) => this.getPointerSelectionEncodedId(e),
@@ -6482,6 +6483,10 @@ export class ViewerCore {
 
   private getDrawerHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; drawerLayerId: string } | null {
     return this.raycastSystem.getDrawerHitAtPointer(event);
+  }
+
+  private getBoxBodyHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string } | null {
+    return this.raycastSystem.getBoxBodyHitAtPointer(event);
   }
 
   /**

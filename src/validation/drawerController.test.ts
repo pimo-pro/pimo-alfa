@@ -96,9 +96,9 @@ describe("DrawerController", () => {
 
     vi.advanceTimersByTime(0);
     expect(calls).toEqual(["d1"]);
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(100);
     expect(calls).toEqual(["d1", "d2"]);
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(100);
     expect(calls).toEqual(["d1", "d2", "d3"]);
     vi.useRealTimers();
   });
@@ -122,9 +122,9 @@ describe("DrawerController", () => {
 
     vi.advanceTimersByTime(0);
     expect(calls).toEqual(["d3"]);
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(100);
     expect(calls).toEqual(["d3", "d2"]);
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(100);
     expect(calls).toEqual(["d3", "d2", "d1"]);
     vi.useRealTimers();
   });

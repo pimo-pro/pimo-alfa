@@ -75,6 +75,16 @@ export class EventsManager {
   private handleCanvasClick(event: MouseEvent): void {
     const e = this.engine;
     if (e.getTransformControlsDragging()) return;
+
+    const drawerHit = e.getDrawerHitAtPointer(event);
+    if (drawerHit) {
+      e.setSuppressNextCanvasClick(false);
+      event.preventDefault();
+      event.stopPropagation();
+      e.getOnDrawerLayerClick()?.(drawerHit.boxId, drawerHit.drawerLayerId);
+      return;
+    }
+
     if (e.getSuppressNextCanvasClick()) {
       e.setSuppressNextCanvasClick(false);
       return;
@@ -288,6 +298,10 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
+      const drawerHit = e.getDrawerHitAtPointer(event);
+      if (drawerHit != null) {
+        return;
+      }
       const remateId = e.getRemateIdAtPointer(event);
       if (remateId != null) {
         event.preventDefault();
@@ -395,11 +409,12 @@ export class EventsManager {
       this.engine.getOnDoorLayerDoubleClick()?.(doorHit.boxId, doorHit.doorLayerId);
       return;
     }
-    const boxId = this.engine.getBoxIdAtPointer(event);
-    if (!boxId) return;
+    if (this.engine.getDrawerHitAtPointer(event)) return;
+    const boxBodyHit = this.engine.getBoxBodyHitAtPointer(event);
+    if (!boxBodyHit) return;
     event.preventDefault();
     event.stopPropagation();
-    this.engine.getOnBoxDoubleClick()?.(boxId);
+    this.engine.getOnBoxDoubleClick()?.(boxBodyHit.boxId);
   }
 
   private handleCanvasPointerUp(event: PointerEvent): void {

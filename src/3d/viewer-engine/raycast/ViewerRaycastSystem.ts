@@ -338,6 +338,32 @@ export class ViewerRaycastSystem {
     return null;
   }
 
+  /**
+   * Primeiro hit no corpo da caixa (painéis estruturais), excluindo portas e gavetas.
+   * Usado pelo duplo clique global no módulo.
+   */
+  getBoxBodyHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string } | null {
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    this.deps.raycaster.layers.set(0);
+    const roots: THREE.Object3D[] = [];
+    this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
+    const hits = this.deps.raycaster.intersectObjects(roots, true);
+    for (const hit of hits) {
+      if (this.getDrawerLayerIdByMesh(hit.object)) continue;
+      if (this.getDoorLayerIdByMesh(hit.object)) continue;
+      const boxId = this.getBoxIdByMesh(hit.object);
+      if (!boxId) continue;
+      return { boxId };
+    }
+    return null;
+  }
+
   getDrawerHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; drawerLayerId: string } | null {
     const canvas = this.deps.getCanvas();
     const rect = canvas.getBoundingClientRect();

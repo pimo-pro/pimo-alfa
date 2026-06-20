@@ -109,6 +109,8 @@ export {
 
 export {
   toggleDrawer,
+  openAllSequential,
+  closeAllSequential,
   toggleAllDrawersSequential,
   type DrawerControllerCallbacks,
   type DrawerOpenOptions,

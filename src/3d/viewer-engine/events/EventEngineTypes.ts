@@ -89,6 +89,7 @@ export interface IViewerEventEngine {
   setWallGizmoDragging(_v: boolean): void;
   getDoorHitAtPointer(_event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null;
   getDrawerHitAtPointer(_event: { clientX: number; clientY: number }): { boxId: string; drawerLayerId: string } | null;
+  getBoxBodyHitAtPointer(_event: { clientX: number; clientY: number }): { boxId: string } | null;
   getOnDoorLayerDoubleClick(): ((_boxId: string, _doorLayerId: string) => void) | null;
   getOnDrawerLayerDoubleClick(): ((_boxId: string, _drawerLayerId: string) => void) | null;
   getOnDrawerLayerClick(): ((_boxId: string, _drawerLayerId: string) => void) | null;
