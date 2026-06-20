@@ -98,6 +98,8 @@ function upgradeRematePiece(piece: RematePiece, box: WorkspaceBox | null): Remat
   const bounds = getRemateEnvelopeBoundsM(dims.widthM, dims.heightM, dims.depthM, box);
   if (!next.faceOffsets || isLegacyCenterZSnap(next) || isCorruptedMountOffsetSnap(next)) {
     next = snapToMountRule(next, bounds);
+  } else if (productType === "L" && next.placementMode === "SNAPPED") {
+    next = snapToMountRule(next, bounds);
   }
   return next;
 }

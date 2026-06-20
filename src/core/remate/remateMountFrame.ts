@@ -1,4 +1,5 @@
 import type { StructuralBoundsM } from "./rematePlacement";
+import { computeLRemateCenterM } from "./remateLGeometry";
 import type {
   RemateFaceOffsets,
   RemateMountSlot,
@@ -132,18 +133,15 @@ export function defaultFaceOffsetsForPiece(piece: RematePiece, bounds: Structura
     });
   }
 
-  if (piece.tipo === "L") {
-    const frame = computeMountFrameM(bounds, piece.partIndex === 2 ? "FRENTE" : "DIR");
-    if (piece.partIndex === 2) {
-      const pos = vec(bounds.maxX - w / 2, bounds.minY + h / 2, bounds.maxZ + d / 2);
-      return faceOffsetsFromPositionM(frame, { xMm: pos.x * 1000, yMm: pos.y * 1000, zMm: pos.z * 1000 });
-    }
-    return {
-      offsetAlongNormalMm: (w / 2) * 1000,
-      offsetTangentUMm: (d / 2) * 1000,
-      offsetTangentVMm: 0,
-      rotationSnapIndex: 0,
-    };
+  if (piece.tipo === "L" || piece.productType === "L") {
+    const slot = resolveMountSlot(piece);
+    const frame = computeMountFrameM(bounds, slot);
+    const center = computeLRemateCenterM(piece, bounds);
+    return faceOffsetsFromPositionM(frame, {
+      xMm: center.x * 1000,
+      yMm: center.y * 1000,
+      zMm: center.z * 1000,
+    });
   }
 
   if (piece.tipo === "RODAPE_L") {

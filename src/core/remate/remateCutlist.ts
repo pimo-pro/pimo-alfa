@@ -44,9 +44,16 @@ export function buildRemateCutlistItems(
         productType: remate.productType ?? inferProductTypeFromLegacy(remate),
         mountSlot: remate.mountSlot,
         partRole: remate.partRole,
+        partIndex: remate.partIndex,
         parentGroupId: remate.parentGroupId,
         remateType: remate.tipo,
         rematePosition: remate.tipo,
+        remateIndustrialLabel:
+          remate.productType === "L" || remate.tipo === "L"
+            ? remate.partIndex === 2
+              ? "REMATE_L_B"
+              : "REMATE_L_A"
+            : undefined,
       },
     };
   });

@@ -11,6 +11,11 @@ import type {
   UpdateRematePieceInput,
 } from "./rematePieceTypes";
 import {
+  computeLRemateSheetDimensions,
+  lSecondaryMountSlot,
+  resolveLPrimarySlot,
+} from "./remateLGeometry";
+import {
   depthMmFromModule,
   getFeetHeightMm,
   getRemateEnvelopeMm,
@@ -162,8 +167,19 @@ export function computeDimensionsForProduct(
     return { width: largura, height: RODAPE_HEIGHT_MM, depth: t };
   }
   if (ctx.productType === "L") {
-    if (ctx.partIndex === 2) return { width: largura, height: avistaD, depth: t };
-    return { width: spanHeight, height: avistaD, depth: t };
+    const partIndex = (ctx.partIndex ?? 1) as 1 | 2;
+    const primarySlot = resolveLPrimarySlot({
+      mountSlot: ctx.mountSlot ?? "DIR",
+      partIndex,
+    });
+    const { largura, altura } = spanMetrics(ctx.box);
+    return computeLRemateSheetDimensions({
+      primarySlot,
+      partIndex,
+      boxAlturaMm: altura,
+      boxLarguraMm: largura,
+      thicknessMm: t,
+    });
   }
 
   if (ctx.productType === "COMPLETO") {
@@ -234,11 +250,27 @@ export function buildProductPieceSpecs(input: CreateRematePieceInput): ProductPi
   const mountSlot = input.mountSlot ?? defaultMountSlotForProduct(productType);
 
   if (productType === "L" || productType === "RODAPE_L") {
-    const sideSlot = productType === "L" ? (opts.lSide === "ESQ" ? "ESQ" : "DIR") : mountSlot;
+    if (productType === "L") {
+      const primarySlot: RemateMountSlot =
+        input.mountSlot === "ESQ" || input.mountSlot === "CIMA" || input.mountSlot === "FUNDO"
+          ? input.mountSlot
+          : opts.lSide === "ESQ"
+            ? "ESQ"
+            : "DIR";
+      return ([1, 2] as const).map((partIndex) => ({
+        productType,
+        mountSlot: partIndex === 1 ? primarySlot : lSecondaryMountSlot(primarySlot),
+        tipo: "L" as const,
+        partIndex,
+        partRole: partIndex === 1 ? ("MAIN" as const) : undefined,
+        productOptions: opts,
+      }));
+    }
+    const sideSlot = mountSlot;
     return ([1, 2] as const).map((partIndex) => ({
       productType,
       mountSlot: partIndex === 1 ? sideSlot : "FRENTE",
-      tipo: productType === "L" ? "L" : "RODAPE_L",
+      tipo: "RODAPE_L" as const,
       partIndex,
       productOptions: opts,
     }));

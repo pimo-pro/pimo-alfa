@@ -14,6 +14,8 @@ import {
 import { getRemateEnvelopeBoundsM } from "./rematePlacement";
 import { snapToMountRule } from "./remateMountFrame";
 
+import { remateLIndustrialName } from "./remateLGeometry";
+
 let remateSeq = 0;
 
 export function createRemateId(prefix = "remate"): string {
@@ -25,7 +27,21 @@ function nextRemateId(prefix = "remate"): string {
   return createRemateId(prefix);
 }
 
-function buildName(
+function buildRematePieceName(
+  box: WorkspaceBox | null,
+  productType: RemateProductType,
+  mountSlot: RemateMountSlot,
+  partRole?: RematePartRole,
+  partIndex?: 1 | 2
+): string {
+  if (productType === "L" && partIndex) {
+    const code = (box?.nome || box?.id || "").trim().replace(/\s+/g, "_").toUpperCase();
+    return remateLIndustrialName(partIndex, code || undefined);
+  }
+  return buildLegacyRemateName(box, productType, mountSlot, partRole, partIndex);
+}
+
+function buildLegacyRemateName(
   box: WorkspaceBox | null,
   productType: RemateProductType,
   mountSlot: RemateMountSlot,
@@ -122,7 +138,7 @@ export function createRematePieces(
       position: input.workspacePosition ?? { xMm: 0, yMm: 0, zMm: 0 },
       rotation: { xRad: 0, yRad: 0, zRad: 0 },
       followBox: input.followBox ?? Boolean(input.parentBoxId),
-      name: buildName(ctx.box ?? null, productType, mountSlot, spec.partRole, spec.partIndex),
+      name: buildRematePieceName(ctx.box ?? null, productType, mountSlot, spec.partRole, spec.partIndex),
       parentGroupId: groupId,
       partIndex: spec.partIndex,
     };

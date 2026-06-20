@@ -56,6 +56,7 @@ function useNumericField(
 }
 
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
+const L_MOUNT_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
 
 export default function RematePropertiesPanel({ remateId }: Props) {
@@ -117,6 +118,7 @@ export default function RematePropertiesPanel({ remateId }: Props) {
   const productType = remate.productType ?? inferProductTypeFromLegacy(remate);
   const productOptions = remate.productOptions ?? {};
   const faceEditable = productType === "AVISTA" || productType === "COMPLETO";
+  const lPrimaryEditable = productType === "L" && remate.partIndex !== 2;
   const isMain = !remate.partRole || remate.partRole === "MAIN";
   const isCompleto = productType === "COMPLETO";
 
@@ -248,20 +250,32 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           </>
         ) : null}
 
-        {productType === "L" ? (
+        {lPrimaryEditable ? (
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-            Lado do L
+            Posição do L (peça A)
             <select
               className="select input-sm"
-              value={productOptions.lSide ?? "DIR"}
+              value={remate.mountSlot ?? "DIR"}
               onChange={(e) =>
-                patchOptions({ lSide: e.target.value as "DIR" | "ESQ" })
+                actions.updateRemate(remate.id, {
+                  mountSlot: e.target.value as RemateMountSlot,
+                  followBox: Boolean(remate.parentBoxId),
+                })
               }
             >
-              <option value="DIR">Lateral direita</option>
-              <option value="ESQ">Lateral esquerda</option>
+              {L_MOUNT_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>
+                  {REMATE_MOUNT_SLOT_LABELS[slot]}
+                </option>
+              ))}
             </select>
           </label>
+        ) : null}
+
+        {productType === "L" && remate.partIndex === 2 ? (
+          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+            Peça B — perpendicular à peça A (REMATE_L_B)
+          </p>
         ) : null}
 
         {remate.placementMode === "FREE" ? (

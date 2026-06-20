@@ -21,6 +21,7 @@ import BoxRodapeSection from "../rodape/BoxRodapeSection";
 
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
+const L_MOUNT_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
 
 const drawerShellStyle: React.CSSProperties = {
   position: "fixed",
@@ -90,7 +91,9 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
     [project.remates, boxId]
   );
 
-  const faceSelectable = productType === "AVISTA" || productType === "COMPLETO";
+  const mountSlotSelectable =
+    productType === "AVISTA" || productType === "COMPLETO" || productType === "L";
+  const activeMountSlots = productType === "L" ? L_MOUNT_SLOTS : MOUNT_SLOTS;
 
   if (!open || typeof document === "undefined") return null;
 
@@ -100,7 +103,7 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
   const handleCreate = () => {
     const input: CreateRematePieceInput = {
       productType,
-      mountSlot: faceSelectable ? mountSlot : defaultMountSlotForProduct(productType),
+      mountSlot: mountSlotSelectable ? mountSlot : defaultMountSlotForProduct(productType),
       productOptions,
       parentBoxId: boxId,
       followBox: true,
@@ -165,15 +168,15 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
               </select>
             </label>
 
-            {faceSelectable ? (
+            {mountSlotSelectable ? (
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-                Face de montagem
+                {productType === "L" ? "Posição do L" : "Face de montagem"}
                 <select
                   className="select input-sm"
                   value={mountSlot}
                   onChange={(e) => setMountSlot(e.target.value as RemateMountSlot)}
                 >
-                  {MOUNT_SLOTS.map((slot) => (
+                  {activeMountSlots.map((slot) => (
                     <option key={slot} value={slot}>
                       {REMATE_MOUNT_SLOT_LABELS[slot]}
                     </option>
@@ -250,22 +253,6 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
                   Modo puxador
                 </label>
               </>
-            ) : null}
-
-            {productType === "L" ? (
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-                Lado do L
-                <select
-                  className="select input-sm"
-                  value={productOptions.lSide ?? "DIR"}
-                  onChange={(e) =>
-                    setProductOptions((o) => ({ ...o, lSide: e.target.value as "DIR" | "ESQ" }))
-                  }
-                >
-                  <option value="DIR">Lateral direita</option>
-                  <option value="ESQ">Lateral esquerda</option>
-                </select>
-              </label>
             ) : null}
 
             <button type="button" className="button button-primary" onClick={handleCreate}>
