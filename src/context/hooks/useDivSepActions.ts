@@ -179,10 +179,12 @@ export function useDivSepActions(ctx: ProjectActionsExecutionContext): DivSepAct
       updateSeparador: (id, partial) => {
         updateProject(
           (prev) => {
-            const selected = getSelectedOrFirstWorkspaceBox(prev);
-            if (!selected) return prev;
+            const owner = prev.workspaceBoxes.find((box) =>
+              (box.separadores ?? []).some((item) => item.id === id)
+            );
+            if (!owner) return prev;
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
-              if (box.id !== selected.id) return box;
+              if (box.id !== owner.id) return box;
               const separadores = (box.separadores ?? []).map((item) => {
                 if (item.id !== id) return item;
                 const merged = { ...item, ...partial };
@@ -202,10 +204,12 @@ export function useDivSepActions(ctx: ProjectActionsExecutionContext): DivSepAct
       updateDivisor: (id, partial) => {
         updateProject(
           (prev) => {
-            const selected = getSelectedOrFirstWorkspaceBox(prev);
-            if (!selected) return prev;
+            const owner = prev.workspaceBoxes.find((box) =>
+              (box.divisores ?? []).some((item) => item.id === id)
+            );
+            if (!owner) return prev;
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
-              if (box.id !== selected.id) return box;
+              if (box.id !== owner.id) return box;
               const divisores = (box.divisores ?? []).map((item) => {
                 if (item.id !== id) return item;
                 const merged = { ...item, ...partial };

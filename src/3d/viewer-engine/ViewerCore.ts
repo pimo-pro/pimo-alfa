@@ -208,6 +208,15 @@ import {
 } from "./overlays/boxDimensionsOverlay";
 import { ViewerBoundsCache } from "./cache/ViewerBoundsCache";
 import type { MouseMenuTarget } from "../../ui/context-menu/ContextMenuEngine";
+import type { DivSepVisualBridge } from "./divSep/DivSepVisualBridge";
+import {
+  clampDivisorLocalX,
+  clampSeparadorLocalY,
+  divisorLocalXToPositionMm,
+  separadorLocalYToPositionMm,
+} from "../../core/divSep/dragCoords";
+import type { DivisorItem, SeparadorItem } from "../../core/divSep/types";
+import type { SelectedDivSep } from "./state/ViewerState";
 
 function aabb3FromThreeBox3(b: THREE.Box3): Aabb3 {
   return {
@@ -311,6 +320,9 @@ export class ViewerCore {
   private onRodapeTransform: ((
     _rodapeId: string,
     _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+  ) => void) | null = null;
+  private onDivSepTransform: ((
+    _params: { boxId: string; kind: "div" | "sep"; itemId: string; positionMm: number }
   ) => void) | null = null;
   private transformControls: TransformControls | null = null;
   /** Helper (Object3D) retornado por getHelper(); é o que é adicionado à cena e tem .visible. */
@@ -531,6 +543,7 @@ export class ViewerCore {
   private orlaVisualizer = new OrlaVisualizer();
   private remateVisualizer = new RematePieceVisualizer();
   private remateVisualBridge: RematePieceVisualBridge | null = null;
+  private divSepVisualBridge: DivSepVisualBridge | null = null;
   private rodapeVisualBridge: RodapeVisualBridge | null = null;
   private hematiVisualizer = new HematiVisualizer();
   private rodapeVisualizer = new RodapeVisualizer();
@@ -1060,6 +1073,16 @@ export class ViewerCore {
       if (this.viewerState.getSelectedRemate()) {
         const obj = this.transformControls!.object;
         if (obj) this.remateSmartSnapping.onDragStart(obj as THREE.Object3D);
+      } else if (this.viewerState.getSelectedDivSep()) {
+        const sel = this.viewerState.getSelectedDivSep()!;
+        const mesh = this.getDivSepMesh(sel);
+        if (mesh) {
+          mesh.userData.divSepDragStart = {
+            x: mesh.position.x,
+            y: mesh.position.y,
+            z: mesh.position.z,
+          };
+        }
       } else if (this.viewerState.getSelectedBox()) {
         const obj = this.transformControls!.object;
         if (obj && "position" in obj) {
@@ -1317,6 +1340,7 @@ export class ViewerCore {
     if (remateId) {
       this.viewerState.setSelectedHemati(null);
       this.viewerState.setSelectedRodape(null);
+      this.viewerState.setSelectedDivSep(null);
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
@@ -1333,6 +1357,49 @@ export class ViewerCore {
     ) => void) | null
   ): void {
     this.onRemateTransform = callback;
+  }
+
+  bindDivSepBridge(bridge: DivSepVisualBridge | null): void {
+    this.divSepVisualBridge = bridge;
+  }
+
+  setOnDivSepTransform(
+    callback: ((
+      _params: { boxId: string; kind: "div" | "sep"; itemId: string; positionMm: number }
+    ) => void) | null
+  ): void {
+    this.onDivSepTransform = callback;
+  }
+
+  getDivSepMesh(selection: SelectedDivSep): THREE.Object3D | null {
+    const entry = this.boxes.get(selection.boxId);
+    if (!entry) return null;
+    const meshName =
+      selection.kind === "div" ? `divsep-div-${selection.itemId}` : `divsep-sep-${selection.itemId}`;
+    const found = entry.mesh.getObjectByName(meshName);
+    return found ?? null;
+  }
+
+  getDivSepHitAtPointer(event: { clientX: number; clientY: number }): SelectedDivSep | null {
+    return this.raycastSystem.getDivSepHitAtPointer(event);
+  }
+
+  selectDivSep(selection: SelectedDivSep | null): void {
+    this.viewerState.setSelectedDivSep(selection);
+    if (selection) {
+      this.viewerState.setSelectedRemate(null);
+      this.viewerState.setSelectedHemati(null);
+      this.viewerState.setSelectedRodape(null);
+      this.viewerState.setSelectedBox(null);
+      this.viewerState.setSelectedWallIndex(null);
+      this.viewerState.setSelectedRoomElementId(null);
+      this.viewerState.clearGroupTransformMemberIds();
+      if (this.viewerState.getCurrentTool() !== "translate") {
+        this.viewerState.setCurrentTool("translate");
+      }
+    }
+    this.refreshTransformControlsAttachment();
+    this.refreshOutlineTarget();
   }
 
   setOnRemateSelected(callback: ((_remateId: string | null) => void) | null): void {
@@ -1395,6 +1462,7 @@ export class ViewerCore {
     if (hematiId) {
       this.viewerState.setSelectedRodape(null);
       this.viewerState.setSelectedRemate(null);
+      this.viewerState.setSelectedDivSep(null);
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
@@ -1410,6 +1478,7 @@ export class ViewerCore {
     if (rodapeId) {
       this.viewerState.setSelectedHemati(null);
       this.viewerState.setSelectedRemate(null);
+      this.viewerState.setSelectedDivSep(null);
       this.viewerState.setSelectedBox(null);
       this.viewerState.setSelectedWallIndex(null);
       this.viewerState.setSelectedRoomElementId(null);
@@ -5165,11 +5234,14 @@ export class ViewerCore {
       getHematiIdAtPointer: (e) => this.getHematiIdAtPointer(e),
       getRodapeIdAtPointer: (e) => this.getRodapeIdAtPointer(e),
       getRemateIdAtPointer: (e) => this.getRemateIdAtPointer(e),
+      getDivSepHitAtPointer: (e) => this.getDivSepHitAtPointer(e),
       selectHemati: (id) => this.selectHemati(id),
       selectRodape: (id) => this.selectRodape(id),
       selectRemate: (id) => this.selectRemate(id),
+      selectDivSep: (hit) => this.selectDivSep(hit),
       getSelectedBoxId: () => this.viewerState.getSelectedBox(),
       getSelectedRemateId: () => this.viewerState.getSelectedRemate(),
+      getSelectedDivSep: () => this.viewerState.getSelectedDivSep(),
       getRoomElementAtPointer: (e) => this.getRoomElementAtPointer(e),
       getSelectedWallIndex: () => this.viewerState.getSelectedWallIndex(),
       setSelectedWallIndex: (v) => { this.viewerState.setSelectedWallIndex(v); },
@@ -5231,6 +5303,8 @@ export class ViewerCore {
       getSelectedHematiId: () => this.viewerState.getSelectedHemati(),
       getSelectedRodapeId: () => this.viewerState.getSelectedRodape(),
       getSelectedRemateId: () => this.viewerState.getSelectedRemate(),
+      getSelectedDivSep: () => this.viewerState.getSelectedDivSep(),
+      getDivSepMesh: (selection) => this.getDivSepMesh(selection),
       getHematiMesh: (hematiId) => this.getHematiMesh(hematiId),
       getRodapeMesh: (rodapeId) => this.getRodapeMesh(rodapeId),
       getRemateMesh: (remateId) => this.getRemateMesh(remateId),
@@ -5444,6 +5518,7 @@ export class ViewerCore {
     }
     this.viewerState.setSelectedBox(id);
     this.viewerState.setSelectedRemate(null);
+    this.viewerState.setSelectedDivSep(null);
     this.viewerState.setSelectedWallIndex(null);
     this.viewerState.setSelectedRoomElementId(null);
     this.viewerState.clearGroupTransformMemberIds();
@@ -5496,6 +5571,7 @@ export class ViewerCore {
     this.notifyRemateTransform();
     this.notifyHematiTransform();
     this.notifyRodapeTransform();
+    this.notifyDivSepTransform();
     this.notifyWallTransform();
     this.notifyRoomElementTransform();
     this.notifyRoomUtilityTransform();
@@ -5641,6 +5717,41 @@ export class ViewerCore {
         rotacaoZRad: mesh.rotation.z,
       },
       placementFree: true,
+    });
+  }
+
+  private notifyDivSepTransform(): void {
+    const selection = this.viewerState.getSelectedDivSep();
+    if (!selection) return;
+    const mesh = this.getDivSepMesh(selection);
+    const entry = this.boxes.get(selection.boxId);
+    const ctx = this.divSepVisualBridge?.getDivSepDragContext(
+      selection.boxId,
+      selection.kind,
+      selection.itemId
+    );
+    if (!mesh || !entry || !ctx) return;
+
+    const positionMm =
+      selection.kind === "sep"
+        ? separadorLocalYToPositionMm(
+            mesh.position.y,
+            entry.height,
+            ctx.box,
+            ctx.item as SeparadorItem
+          )
+        : divisorLocalXToPositionMm(
+            mesh.position.x,
+            entry.width,
+            ctx.box,
+            ctx.item as DivisorItem
+          );
+
+    this.onDivSepTransform?.({
+      boxId: selection.boxId,
+      kind: selection.kind,
+      itemId: selection.itemId,
+      positionMm,
     });
   }
 
@@ -5951,6 +6062,45 @@ export class ViewerCore {
     const selectedRemateId = this.viewerState.getSelectedRemate();
     const isDragging = this.viewerState.getTransformControlsDragging();
     const currentTool = this.viewerState.getCurrentTool();
+
+    const selectedDivSep = this.viewerState.getSelectedDivSep();
+    if (selectedDivSep) {
+      const mesh = this.getDivSepMesh(selectedDivSep);
+      const obj = this.transformControls?.object;
+      if (isDragging && mesh && obj === mesh && currentTool === "translate") {
+        const entry = this.boxes.get(selectedDivSep.boxId);
+        const ctx = this.divSepVisualBridge?.getDivSepDragContext(
+          selectedDivSep.boxId,
+          selectedDivSep.kind,
+          selectedDivSep.itemId
+        );
+        if (entry && ctx) {
+          const dragStart = mesh.userData.divSepDragStart as
+            | { x: number; y: number; z: number }
+            | undefined;
+          if (selectedDivSep.kind === "sep") {
+            mesh.position.x = dragStart?.x ?? mesh.position.x;
+            mesh.position.z = dragStart?.z ?? mesh.position.z;
+            mesh.position.y = clampSeparadorLocalY(
+              mesh.position.y,
+              entry.height,
+              ctx.box,
+              ctx.item as SeparadorItem
+            );
+          } else {
+            mesh.position.y = dragStart?.y ?? mesh.position.y;
+            mesh.position.z = dragStart?.z ?? mesh.position.z;
+            mesh.position.x = clampDivisorLocalX(
+              mesh.position.x,
+              entry.width,
+              ctx.box,
+              ctx.item as DivisorItem
+            );
+          }
+        }
+      }
+      return;
+    }
 
     if (selectedRemateId) {
       const mesh = this.remateVisualizer.getMeshByRemateId(selectedRemateId);

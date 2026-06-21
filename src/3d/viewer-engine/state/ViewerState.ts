@@ -4,6 +4,13 @@
  */
 
 import type { InternalSelectionState } from "../selection/internalSelectionTypes";
+import type { DivSepDragKind } from "../../../core/divSep/dragCoords";
+
+export type SelectedDivSep = {
+  boxId: string;
+  kind: DivSepDragKind;
+  itemId: string;
+};
 
 export type TransformMode = "translate" | "rotate" | "scale" | null;
 export type PlacementMode = "door" | "window" | null;
@@ -19,6 +26,7 @@ export class ViewerState {
   private hoveredRemateId: string | null = null;
   private selectedHematiId: string | null = null;
   private selectedRodapeId: string | null = null;
+  private selectedDivSep: SelectedDivSep | null = null;
   private transformMode: TransformMode = null;
   private placementMode: PlacementMode = null;
   private highlightEnabled = false;
@@ -103,6 +111,13 @@ export class ViewerState {
   }
   setSelectedRodape(id: string | null): void {
     this.selectedRodapeId = id;
+  }
+
+  getSelectedDivSep(): SelectedDivSep | null {
+    return this.selectedDivSep;
+  }
+  setSelectedDivSep(selection: SelectedDivSep | null): void {
+    this.selectedDivSep = selection;
   }
 
   getCurrentTool(): TransformMode {
@@ -198,6 +213,7 @@ export class ViewerState {
     this.selectedRemateId = null;
     this.selectedHematiId = null;
     this.selectedRodapeId = null;
+    this.selectedDivSep = null;
     this.internalSelection = null;
     this.transformGizmoAnchor = null;
   }

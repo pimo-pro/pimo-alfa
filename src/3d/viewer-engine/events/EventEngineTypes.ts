@@ -58,11 +58,18 @@ export interface IViewerEventEngine {
   getHematiIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
   getRodapeIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
   getRemateIdAtPointer(_event: { clientX: number; clientY: number }): string | null;
+  getDivSepHitAtPointer(_event: { clientX: number; clientY: number }): {
+    boxId: string;
+    kind: "div" | "sep";
+    itemId: string;
+  } | null;
   selectHemati(_hematiId: string | null): void;
   selectRodape(_rodapeId: string | null): void;
   selectRemate(_remateId: string | null): void;
+  selectDivSep(_selection: { boxId: string; kind: "div" | "sep"; itemId: string } | null): void;
   getSelectedBoxId(): string | null;
   getSelectedRemateId(): string | null;
+  getSelectedDivSep(): { boxId: string; kind: "div" | "sep"; itemId: string } | null;
   getRoomElementAtPointer(_event: { clientX: number; clientY: number }): RoomElementHit | null;
   getSelectedWallIndex(): number | null;
   setSelectedWallIndex(_v: number | null): void;

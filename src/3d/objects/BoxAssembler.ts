@@ -146,6 +146,13 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     );
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.divSepId = spec.name;
+    if (spec.name.startsWith("divsep-sep-")) {
+      mesh.userData.divSepKind = "sep";
+      mesh.userData.divSepItemId = spec.name.slice("divsep-sep-".length);
+    } else if (spec.name.startsWith("divsep-div-")) {
+      mesh.userData.divSepKind = "div";
+      mesh.userData.divSepItemId = spec.name.slice("divsep-div-".length);
+    }
     root.add(mesh);
   });
 

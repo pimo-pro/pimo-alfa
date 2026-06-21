@@ -109,6 +109,32 @@ export class ViewerTools {
       }
     }
 
+    const selectedDivSep = e.getSelectedDivSep();
+    if (selectedDivSep) {
+      const divSepMesh = e.getDivSepMesh(selectedDivSep);
+      if (divSepMesh) {
+        divSepMesh.matrixAutoUpdate = true;
+        divSepMesh.updateMatrixWorld(true);
+        controls.detach();
+        controls.attach(divSepMesh);
+        controls.setMode("translate");
+        controls.setSpace("local");
+        controls.showX = selectedDivSep.kind === "div";
+        controls.showY = selectedDivSep.kind === "sep";
+        controls.showZ = false;
+        controls.setSize(0.35);
+        e.applyTransformControlsMouseGuard();
+        e.logTransformDiagnostic("attach-divsep", {
+          boxId: selectedDivSep.boxId,
+          kind: selectedDivSep.kind,
+          itemId: selectedDivSep.itemId,
+          attachedUuid: divSepMesh.uuid,
+        });
+        e.setTransformHelperVisible(true);
+        return;
+      }
+    }
+
     const selectedBoxId = e.getSelectedBoxId();
     if (selectedBoxId && mode) {
       const entry = e.getBoxEntry(selectedBoxId);
@@ -125,6 +151,10 @@ export class ViewerTools {
         controls.detach();
         controls.attach(entry.mesh);
         controls.setMode(mode);
+        controls.showX = true;
+        controls.showY = true;
+        controls.showZ = true;
+        controls.setSpace("world");
         controls.setSize(e.getTransformGizmoSizeForBox(entry));
         e.applyTransformControlsMouseGuard();
         e.logTransformDiagnostic("attach-box", { boxId: selectedBoxId, attachedUuid: entry.mesh.uuid });
@@ -207,6 +237,15 @@ export class ViewerTools {
       const remateMesh = e.getRemateMesh(selectedRemateId);
       if (remateMesh) {
         e.setOutlineTarget(remateMesh, 0.9, 0x38bdf8);
+        return;
+      }
+    }
+
+    const selectedDivSep = e.getSelectedDivSep();
+    if (selectedDivSep) {
+      const divSepMesh = e.getDivSepMesh(selectedDivSep);
+      if (divSepMesh) {
+        e.setOutlineTarget(divSepMesh, 0.9, 0x34d399);
         return;
       }
     }

@@ -113,6 +113,24 @@ declare global {
       setOnRemateSelected?: (callback: ((_remateId: string | null) => void) | null) => void;
       setOnRodapeSelected?: (callback: ((_rodapeId: string | null) => void) | null) => void;
       selectRemate?: (remateId: string | null) => void;
+      selectDivSep?: (
+        selection: { boxId: string; kind: "div" | "sep"; itemId: string } | null
+      ) => void;
+      bindDivSepBridge?: (
+        bridge: import("../3d/viewer-engine/divSep/DivSepVisualBridge").DivSepVisualBridge | null
+      ) => void;
+      setOnDivSepTransform?: (
+        callback:
+          | ((
+              params: {
+                boxId: string;
+                kind: "div" | "sep";
+                itemId: string;
+                positionMm: number;
+              }
+            ) => void)
+          | null
+      ) => void;
       getRemateMesh?: (remateId: string) => unknown;
       getBoxDimensions?: (boxId: string) => { width: number; height: number; depth: number } | null;
       getBoxWorldMatrix?: (boxId: string) => unknown;

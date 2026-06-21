@@ -5,6 +5,7 @@ export type MouseMenuTargetType =
   | "drawer"
   | "piece"
   | "remate"
+  | "divSep"
   | "room";
 
 export type MouseMenuTarget = {
@@ -15,6 +16,8 @@ export type MouseMenuTarget = {
   doorLayerId?: string;
   drawerLayerId?: string;
   remateId?: string;
+  divSepKind?: "div" | "sep";
+  divSepItemId?: string;
   wallId?: number;
   roomElementId?: string;
 };
