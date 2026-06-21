@@ -123,19 +123,26 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
     setState((prev) => {
       const result = runNestingV3AutoLayout(prev.pieces, prev.sheets, prev.settings);
       const template = prev.sheets[0] ?? defaultSheetFromSettings(prev.settings);
-      const newSheets = [...prev.sheets];
-      while (newSheets.length < result.sheetsUsed) {
-        newSheets.push(cloneDefaultSheet(newSheets.length, template));
+      let newSheets = result.sheets ?? [...prev.sheets];
+      if (!result.sheets) {
+        while (newSheets.length < result.sheetsUsed) {
+          newSheets.push(cloneDefaultSheet(newSheets.length, template));
+        }
       }
-      const rotatedById = new Map(result.placements.map((placement) => [placement.pieceId, placement.rotated === true]));
+      const nextPieces =
+        result.pieces ??
+        prev.pieces.map((piece) => {
+          const rotated = result.placements.some(
+            (pl) => pl.pieceId === piece.id && pl.rotated === true
+          );
+          const placed = result.placements.some((pl) => pl.pieceId === piece.id);
+          if (!placed) return piece;
+          return { ...piece, rotation: rotated ? 90 : 0 };
+        });
       return {
         ...prev,
         sheets: newSheets,
-        pieces: prev.pieces.map((piece) => {
-          const rotated = rotatedById.get(piece.id);
-          if (rotated == null) return piece;
-          return { ...piece, rotation: rotated ? 90 : 0 };
-        }),
+        pieces: nextPieces,
         placements: result.placements,
         unplacedPieceIds: result.unplacedPieceIds,
       };

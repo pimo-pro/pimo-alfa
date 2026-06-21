@@ -1,15 +1,51 @@
 /**
- * Etapa 2 — V3Piece / NestingV3State → CutPiece[] para runCutLayout.
+ * V3Piece → CutPiece[] para runCutLayout (Etapa 2).
  *
- * Responsabilidades planeadas:
- * - Reutilizar cutlistToPieces quando origem for cutlist
- * - Mapear V3Piece (estado UI) para CutPiece industrial
- * - Preservar drillHoles, grain, pieceNumber, material
+ * Preserva dimensões, furos e IDs originais; rotação V3 fica em metadata (não altera largura/altura).
  */
 
 import type { CutPiece } from "../cutLayoutTypes";
+import type { V3Piece } from "../../../nesting-v3/nestingV3Types";
+import type { NestingV3Settings } from "../../../nesting-v3/nestingV3Settings";
+import { sheetDimsForMaterial } from "../../../nesting-v3/nestingV3Settings";
 
-/** @planned Etapa 2 */
-export function v3PiecesToCutPieces(_pieces: unknown[]): CutPiece[] {
-  throw new Error("v3ToCutPieces.v3PiecesToCutPieces: not implemented (Etapa 2)");
+function mapGrainDirection(piece: V3Piece): CutPiece["grainDirection"] {
+  if (piece.industrialGrainCode === "YY") return "length";
+  if (piece.industrialGrainCode === "XX") return "width";
+  return undefined;
+}
+
+export function v3PiecesToCutPieces(pieces: V3Piece[], settings: NestingV3Settings): CutPiece[] {
+  return pieces.map((piece) => {
+    const sheetDims = sheetDimsForMaterial(piece.materialId, settings);
+    return {
+      largura_mm: piece.widthMm,
+      altura_mm: piece.heightMm,
+      espessura_mm: piece.thicknessMm,
+      quantidade: 1,
+      boxId: piece.sourceBoxId ?? piece.id,
+      partName: piece.name,
+      materialId: piece.materialId,
+      materialName: piece.materialName,
+      drillHoles: piece.originalHoles.map((h) => ({
+        x: h.x,
+        y: h.y,
+        diameter: h.diameter,
+        depth: h.depth,
+        holeType: h.holeType,
+      })),
+      industrialGrainCode: piece.industrialGrainCode,
+      pieceTipo: piece.pieceTipo,
+      grainDirection: mapGrainDirection(piece),
+      sheetWidthMm: sheetDims.sheetWidthMm,
+      sheetHeightMm: sheetDims.sheetHeightMm,
+      sheetThicknessMm: sheetDims.sheetThicknessMm,
+      metadata: {
+        v3PieceId: piece.id,
+        v3Rotation: piece.rotation,
+        v3SourceBoxId: piece.sourceBoxId,
+        v3SourceProjectId: piece.sourceProjectId,
+      },
+    };
+  });
 }

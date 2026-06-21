@@ -125,6 +125,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
         merged.nesting.prioridadeAproveitamento === "area" || merged.nesting.prioridadeAproveitamento === "chapas"
           ? merged.nesting.prioridadeAproveitamento
           : "balanceado",
+      enableV3IndustrialAutoLayout: merged.nesting.enableV3IndustrialAutoLayout !== false,
     },
     portas: {
       portaGapVerticalMm: clamp(toNumber(merged.portas.portaGapVerticalMm, settingsDefaults.portas.portaGapVerticalMm), 0, 20),

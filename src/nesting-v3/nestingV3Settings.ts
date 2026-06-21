@@ -20,6 +20,8 @@ export interface NestingV3Settings {
   kerfMm: number;
   rotationMode: NestingV3RotationMode;
   priorityMode: NestingV3PriorityMode;
+  /** Auto-layout V3 via runCutLayout industrial (Etapa 2). */
+  enableV3IndustrialAutoLayout: boolean;
 }
 
 export const DEFAULT_NESTING_V3_SETTINGS: NestingV3Settings = {
@@ -30,6 +32,7 @@ export const DEFAULT_NESTING_V3_SETTINGS: NestingV3Settings = {
   kerfMm: 4,
   rotationMode: "90",
   priorityMode: "balanced",
+  enableV3IndustrialAutoLayout: true,
 };
 
 export function loadNestingV3SettingsFromGlobal(): NestingV3Settings {
@@ -47,6 +50,7 @@ export function loadNestingV3SettingsFromGlobal(): NestingV3Settings {
     kerfMm: s.nesting.kerfPadraoMm ?? s.cnc.minSpacingMm ?? DEFAULT_NESTING_V3_SETTINGS.kerfMm,
     rotationMode: s.nesting.permitirRotacaoGlobal ? "90" : "none",
     priorityMode,
+    enableV3IndustrialAutoLayout: s.nesting.enableV3IndustrialAutoLayout !== false,
   };
 }
 

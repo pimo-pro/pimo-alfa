@@ -94,6 +94,13 @@ export interface V3AutoLayoutResult {
   placements: V3Placement[];
   unplacedPieceIds: string[];
   sheetsUsed: number;
+  /** Folhas resultantes (motor industrial). */
+  sheets?: V3Sheet[];
+  /** Peças com rotações actualizadas. */
+  pieces?: V3Piece[];
+  /** Estratégia vencedora (motor industrial). */
+  selectedStrategy?: string;
+  selectedBinHeuristic?: string;
 }
 
 // ── Dados de drag activo ──────────────────────────────────────────────────────

@@ -89,6 +89,8 @@ export interface SettingsSchema {
     kerfPadraoMm: number;
     permitirRotacaoGlobal: boolean;
     prioridadeAproveitamento: "area" | "chapas" | "balanceado";
+    /** Etapa 2: Auto-layout V3 via runCutLayout (desactivar = motor nesting3 legacy). */
+    enableV3IndustrialAutoLayout: boolean;
   };
   portas: {
     portaGapVerticalMm: number;
@@ -272,6 +274,7 @@ export const settingsDefaults: SettingsSchema = {
     kerfPadraoMm: 3,
     permitirRotacaoGlobal: true,
     prioridadeAproveitamento: "balanceado",
+    enableV3IndustrialAutoLayout: true,
   },
   portas: {
     portaGapVerticalMm: 1,
