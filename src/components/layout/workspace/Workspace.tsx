@@ -926,6 +926,29 @@ const hasShownViewerReadyToastRef = useRef(false);
       getBoxWorldMatrix,
     });
 
+    core?.bindDivSepBridge?.({
+      getDivSepDragContext: (boxId, kind, itemId) => {
+        const ws = projectRef.current.workspaceBoxes.find((b) => b.id === boxId);
+        if (!ws) return null;
+        const box = {
+          dimensoes: ws.dimensoes,
+          espessura: ws.espessura,
+          profundidadeExterna: ws.profundidadeExterna ?? ws.dimensoes.profundidade,
+          portaTipo: ws.portaTipo,
+          doorsLayer: ws.doorsLayer,
+          costaAtiva: ws.costaAtiva,
+          divisores: ws.divisores,
+          separadores: ws.separadores,
+        };
+        if (kind === "div") {
+          const item = (ws.divisores ?? []).find((d) => d.id === itemId);
+          return item ? { box, item } : null;
+        }
+        const item = (ws.separadores ?? []).find((s) => s.id === itemId);
+        return item ? { box, item } : null;
+      },
+    });
+
     core?.setOnRemateTransform?.((remateId, patch) => {
       actionsRef.current.updateRemate(remateId, patch);
     });
@@ -934,6 +957,14 @@ const hasShownViewerReadyToastRef = useRef(false);
     });
     core?.setOnRodapeTransform?.((rodapeId, patch) => {
       actionsRef.current.updateRodape(rodapeId, patch);
+    });
+    core?.setOnDivSepTransform?.(({ boxId, kind, itemId, positionMm }) => {
+      actionsRef.current.selectBox(boxId);
+      if (kind === "div") {
+        actionsRef.current.updateDivisor(itemId, { positionMm });
+      } else {
+        actionsRef.current.updateSeparador(itemId, { positionMm });
+      }
     });
   }, [viewerApi.viewerReady, setSelectedObject, setSelectedTool, clearUiSelection]);
 

@@ -1,5 +1,5 @@
 /** Prefixos estáveis para selectedObjects (estado global). */
-export type SelectionKind = "box" | "door" | "drawer" | "remate" | "rodape" | "piece";
+export type SelectionKind = "box" | "door" | "drawer" | "remate" | "rodape" | "piece" | "divisor" | "separador";
 
 export function encodeSelectionId(kind: SelectionKind, id: string, secondaryId?: string): string {
   if (secondaryId) return `${kind}:${id}:${secondaryId}`;
@@ -16,7 +16,9 @@ export function decodeSelectionId(encoded: string): { kind: SelectionKind; id: s
     kind !== "drawer" &&
     kind !== "remate" &&
     kind !== "rodape" &&
-    kind !== "piece"
+    kind !== "piece" &&
+    kind !== "divisor" &&
+    kind !== "separador"
   ) {
     return null;
   }
@@ -48,4 +50,12 @@ export function rodapeSelectionId(rodapeId: string): string {
 
 export function pieceSelectionId(boxId: string, panelId: string): string {
   return encodeSelectionId("piece", boxId, panelId);
+}
+
+export function divisorSelectionId(divisorId: string): string {
+  return encodeSelectionId("divisor", divisorId);
+}
+
+export function separadorSelectionId(separadorId: string): string {
+  return encodeSelectionId("separador", separadorId);
 }

@@ -16,3 +16,11 @@ export {
 export { buildDivSepDrilling, mergeDrillHoles } from "./drilling";
 export { buildDivSepIndustrialLabel } from "./labels";
 export { getDivSepMeshSpecs } from "./visualSpecs";
+export {
+  parseDivSepMeshName,
+  separadorLocalYToPositionMm,
+  divisorLocalXToPositionMm,
+  clampSeparadorLocalY,
+  clampDivisorLocalX,
+} from "./dragCoords";
+export type { DivSepDragKind } from "./dragCoords";

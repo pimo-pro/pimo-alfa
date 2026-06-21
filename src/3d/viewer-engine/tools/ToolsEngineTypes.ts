@@ -20,6 +20,8 @@ export interface IViewerToolsEngine {
   getSelectedHematiId(): string | null;
   getSelectedRodapeId(): string | null;
   getSelectedRemateId(): string | null;
+  getSelectedDivSep(): { boxId: string; kind: "div" | "sep"; itemId: string } | null;
+  getDivSepMesh(_selection: { boxId: string; kind: "div" | "sep"; itemId: string }): THREE.Object3D | null;
   getHematiMesh(_hematiId: string): THREE.Object3D | null;
   getRodapeMesh(_rodapeId: string): THREE.Object3D | null;
   getRemateMesh(_remateId: string): THREE.Object3D | null;

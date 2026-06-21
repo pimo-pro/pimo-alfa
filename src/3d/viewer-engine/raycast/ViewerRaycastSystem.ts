@@ -447,6 +447,8 @@ export class ViewerRaycastSystem {
       }
       const drawerLayerId = isDrawerClickTarget(hit.object) ? resolveDrawerIdFromMesh(hit.object) : null;
       if (drawerLayerId) return { boxId, type: "drawer", drawerLayerId };
+      const divSepHit = this.resolveDivSepFromMesh(hit.object, boxId);
+      if (divSepHit) return divSepHit;
       const panelId = hit.object.userData?.panelId;
       const panelType = hit.object.userData?.panelType;
       if (typeof panelId === "string" && panelId.length > 0) {
@@ -652,10 +654,69 @@ export class ViewerRaycastSystem {
     return null;
   }
 
+  /** Primeiro hit DIV/SEP dentro de caixas (prioridade sobre seleção de caixa). */
+  getDivSepHitAtPointer(event: { clientX: number; clientY: number }): {
+    boxId: string;
+    kind: "div" | "sep";
+    itemId: string;
+  } | null {
+    const canvas = this.deps.getCanvas();
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.deps.pointer.set(x, y);
+    this.deps.raycaster.setFromCamera(this.deps.pointer, this.deps.camera);
+    this.deps.raycaster.layers.set(0);
+    const roots: THREE.Object3D[] = [];
+    this.deps.getBoxes().forEach((entry) => roots.push(entry.mesh));
+    if (!roots.length) return null;
+    const hits = this.deps.raycaster.intersectObjects(roots, true);
+    for (const hit of hits) {
+      const boxId = this.getBoxIdByMesh(hit.object);
+      if (!boxId) continue;
+      const divSep = this.resolveDivSepFromObject(hit.object, boxId);
+      if (divSep) return divSep;
+    }
+    return null;
+  }
+
+  private resolveDivSepFromMesh(
+    hitObject: THREE.Object3D,
+    boxId: string
+  ): { type: "divSep"; boxId: string; divSepKind: "div" | "sep"; divSepItemId: string } | null {
+    const resolved = this.resolveDivSepFromObject(hitObject, boxId);
+    if (!resolved) return null;
+    return {
+      type: "divSep",
+      boxId: resolved.boxId,
+      divSepKind: resolved.kind,
+      divSepItemId: resolved.itemId,
+    };
+  }
+
+  private resolveDivSepFromObject(
+    hitObject: THREE.Object3D,
+    boxId: string
+  ): { boxId: string; kind: "div" | "sep"; itemId: string } | null {
+    let current: THREE.Object3D | null = hitObject;
+    while (current) {
+      const kind = current.userData?.divSepKind;
+      const itemId = current.userData?.divSepItemId;
+      if ((kind === "div" || kind === "sep") && typeof itemId === "string" && itemId.length > 0) {
+        return { boxId, kind, itemId };
+      }
+      if (current === current.parent) break;
+      current = current.parent;
+    }
+    return null;
+  }
+
   /** UI helper — não altera seleção do viewer. */
   isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
     const layerHit = this.getContextMenuLayerHit(event);
     if (layerHit && layerHit.type !== "empty" && layerHit.type !== "room") return true;
+    if (this.getDivSepHitAtPointer(event)) return true;
     if (this.getRemateIdAtPointer(event)) return true;
     if (this.getRodapeIdAtPointer(event)) return true;
     if (this.getHematiIdAtPointer(event)) return true;

@@ -161,11 +161,26 @@ export class EventsManager {
     const rodapeId = e.getRodapeIdAtPointer(event);
     if (rodapeId) {
       e.selectRodape(rodapeId);
+      e.selectDivSep(null);
       e.setHoveredBox(null);
       e.setSelectedBox(null);
       e.getOnRoomElementSelected()?.(null);
       e.getOnWallSelected()?.(null);
       e.getOnBoxSelected()?.(null);
+      return;
+    }
+    const divSepHit = e.getDivSepHitAtPointer(event);
+    if (divSepHit) {
+      e.selectDivSep(divSepHit);
+      e.selectRemate(null);
+      e.selectHemati(null);
+      e.selectRodape(null);
+      e.setHoveredBox(null);
+      e.setSelectedBox(null);
+      e.getOnRoomElementSelected()?.(null);
+      e.getOnWallSelected()?.(null);
+      e.getOnBoxSelected()?.(null);
+      e.getOnRemateSelected?.()?.(null);
       return;
     }
     const remateId = e.getRemateIdAtPointer(event);
@@ -322,6 +337,15 @@ export class EventsManager {
       }
     }
     if (event.button === 0 && e.shouldBlockPointerDownForSelection(event.button)) {
+      const divSepHit = e.getDivSepHitAtPointer(event);
+      if (divSepHit != null) {
+        event.preventDefault();
+        event.stopPropagation();
+        e.selectDivSep(divSepHit);
+        e.selectRemate(null);
+        e.setSuppressNextCanvasClick(true);
+        return;
+      }
       const remateId = e.getRemateIdAtPointer(event);
       if (remateId != null) {
         event.preventDefault();
