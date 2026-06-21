@@ -19,6 +19,8 @@ import {
 } from "../../core/cornerCabinet";
 import { getSettings } from "../../core/settings/settingsService";
 import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
+import { isCaixaFornoBox } from "../../core/moveis/generators/caixaFornoGenerator";
+import { renderCaixaForno } from "../../core/moveis/viewer/renderCaixaForno";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -57,6 +59,19 @@ type BoxAssemblerDeps = {
 
 export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssemblerDeps): BoxModel {
   const opts = options ?? {};
+  if (isCaixaFornoBox({ baseCabinetId: opts.baseCabinetId, catalogItemId: opts.baseCabinetId })) {
+    const baseMaterial: THREE.Material = opts.material ?? deps.getFallbackPBRMaterial();
+    return renderCaixaForno(opts, {
+      panelFactory: deps.panelFactory,
+      buildDoorSpecs: deps.buildDoorSpecs,
+      createDoorObject: deps.createDoorObject,
+      getMaterialForOfficialId: deps.getMaterialForOfficialId,
+      getDefaultOfficialMaterialId: deps.getDefaultOfficialMaterialId,
+      baseMaterial,
+      resolveDimensions: deps.resolveDimensions,
+    });
+  }
+
   const { width, height, depth } = deps.resolveDimensions(opts);
   const useDefaultMDF = opts.material == null;
   const baseMaterial: THREE.Material = opts.material ?? deps.getFallbackPBRMaterial();

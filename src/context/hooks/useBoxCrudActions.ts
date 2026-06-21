@@ -18,6 +18,8 @@ import {
   UPPER_COUNTERTOP_MM,
 } from "../projectHelpers";
 import { createWorkspaceBox, recomputeState } from "../projectState";
+import { createCaixaForno, CAIXA_FORNO_ID } from "../../core/moveis/generators/caixaFornoGenerator";
+import { getMoveisCatalogItem } from "../../core/moveis";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { isCornerFixedFrontModel } from "../../core/cornerCabinet";
@@ -34,6 +36,7 @@ export type BoxCrudActions = Pick<
   | "addBox"
   | "addWorkspaceBox"
   | "addWorkspaceBoxFromCatalog"
+  | "addWorkspaceBoxFromMoveis"
   | "duplicateBox"
   | "duplicateWorkspaceBox"
   | "duplicateWorkspaceBoxAtOffset"
@@ -318,6 +321,107 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             },
             true
           );
+        },
+        true
+      );
+    };
+
+    a.addWorkspaceBoxFromMoveis = (moveisId) => {
+      const catalogItem = getMoveisCatalogItem(moveisId);
+      if (!catalogItem) return;
+      const rightmostX_m = viewerSync.getRightmostX();
+      updateProject(
+        (prev) => {
+          const { id: newBoxId } = getNextWorkspaceBoxId(prev.workspaceBoxes);
+          const baseEspessuraDefault =
+            prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId)?.espessura ??
+            prev.material.espessura;
+
+          if (moveisId === CAIXA_FORNO_ID) {
+            const fornoConfig = createCaixaForno({
+              id: newBoxId,
+              nome: catalogItem.nome,
+              espessura: baseEspessuraDefault,
+            });
+            const dimensoes = fornoConfig.dimensoes;
+            const selectedReference = prev.workspaceBoxes.find((box) => box.id === prev.selectedWorkspaceBoxId);
+            const adjacentPlacement = selectedReference
+              ? getAdjacentPlacementMm(selectedReference, dimensoes)
+              : null;
+            const spawn = getSpawnFromSelectedWall(dimensoes);
+            const wallsCatalog = wallStore.getState().walls;
+            const roomBoundsCatalog = hasPersistedRoomWalls(wallsCatalog) ? getFloorBoundsMmFromWalls(wallsCatalog) : null;
+            const roomSpawnCatalog =
+              !adjacentPlacement && roomBoundsCatalog
+                ? getRoomGridSpawnMm(
+                    prev.workspaceBoxes.length,
+                    dimensoes.largura,
+                    dimensoes.profundidade,
+                    roomBoundsCatalog,
+                    0
+                  )
+                : null;
+            const posicaoX_mm =
+              adjacentPlacement?.x_mm ??
+              roomSpawnCatalog?.x_mm ??
+              spawn?.posicaoX_mm ??
+              rightmostX_m * 1000 + dimensoes.largura / 2;
+            const posicaoZ_mm = adjacentPlacement?.z_mm ?? roomSpawnCatalog?.z_mm ?? spawn?.posicaoZ_mm ?? 0;
+
+            const newBox = createWorkspaceBox(
+              newBoxId,
+              fornoConfig.nome,
+              dimensoes,
+              fornoConfig.espessura,
+              posicaoX_mm,
+              [],
+              "reta",
+              fornoConfig.tipoFundo,
+              moveisId,
+              {
+                prateleiras: 0,
+                portaTipo: fornoConfig.portaTipo,
+                gavetas: 0,
+                cabinetType: fornoConfig.cabinetType,
+                feetEnabled: false,
+                feetHeight: 0,
+                feetOffsetFront: 0,
+                panelIds: fornoConfig.panelIds,
+                separadores: fornoConfig.separadores,
+              }
+            );
+            newBox.baseCabinetId = fornoConfig.baseCabinetId;
+            newBox.catalogItemId = fornoConfig.catalogItemId;
+            newBox.doorsLayer = fornoConfig.doorsLayer;
+            newBox.costaAtiva = true;
+            newBox.profundidadeExterna = dimensoes.profundidade;
+            newBox.manualPosition = true;
+            newBox.posicaoZ_mm = posicaoZ_mm;
+            newBox.posicaoY_mm = dimensoes.altura / 2;
+
+            const nextWorkspaceBoxes = [...prev.workspaceBoxes, newBox];
+            const nextPrev = { ...prev, workspaceBoxes: nextWorkspaceBoxes };
+            const boxes = buildBoxesFromWorkspace(nextPrev);
+            return recomputeState(
+              prev,
+              {
+                workspaceBoxes: nextWorkspaceBoxes,
+                boxes,
+                selectedWorkspaceBoxId: newBox.id,
+                selectedCaixaId: newBox.id,
+                selectedCaixaModelUrl: null,
+                changelog: appendChangelog(prev.changelog, {
+                  timestamp: new Date(),
+                  type: "box",
+                  message: `Módulo adicionado: ${catalogItem.nome}`,
+                }),
+                selectedModelInstanceId: null,
+              },
+              true
+            );
+          }
+
+          return prev;
         },
         true
       );

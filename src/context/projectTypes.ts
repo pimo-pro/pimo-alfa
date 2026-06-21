@@ -446,6 +446,7 @@ export interface ProjectActions {
   addBox: () => void;
   addWorkspaceBox: () => void;
   addWorkspaceBoxFromCatalog: (_catalogItemId: string) => void;
+  addWorkspaceBoxFromMoveis: (_moveisId: string) => void;
   duplicateBox: () => void;
   duplicateWorkspaceBox: () => void;
   /** Duplica a peça selecionada e coloca com offset em X (mm). Usado pelo menu de contexto. */

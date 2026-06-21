@@ -1,8 +1,9 @@
 import type { DesignTemplate } from "../../templates/types";
 import { TEMPLATES } from "../../templates/templatesIndex";
 import { CATALOG_ITEMS } from "../../catalog/catalogIndex";
+import { MOVEIS_CATALOG } from "../../core/moveis";
 
-export type ModeloTipo = "pronto" | "3d";
+export type ModeloTipo = "pronto" | "3d" | "moveis";
 
 export type UnifiedModelItem = {
   id: string;
@@ -126,5 +127,18 @@ export const buildUnifiedMoveis = (): UnifiedModelItem[] => {
     },
   }));
 
-  return [...templates, ...catalogo3d];
+  const moveisCatalogo = MOVEIS_CATALOG.map((item) => ({
+    id: `moveis:${item.id}`,
+    sourceId: item.id,
+    tipo: "moveis" as const,
+    nome: item.nome,
+    categoria: "cozinha",
+    categoriaId: "cozinha",
+    subcategoriaCatalogo: item.grupo,
+    descricao: `Módulo paramétrico (${item.generator})`,
+    thumbnailUrl: null,
+    dimensoes: item.dimensoesDefault,
+  }));
+
+  return [...templates, ...catalogo3d, ...moveisCatalogo];
 };

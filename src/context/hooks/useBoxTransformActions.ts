@@ -12,6 +12,7 @@ import {
   repositionOutsiderBoxesStackedFromCornerMm,
 } from "../../utils/roomWorkspaceBounds";
 import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
+import { syncCaixaFornoOnDimensoesChange, isCaixaFornoBox } from "../../core/moveis/generators/caixaFornoGenerator";
 
 export type BoxTransformActions = Pick<
   ProjectActions,
@@ -52,6 +53,9 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
               if (dimensoes.profundidade !== undefined) {
                 updatedBox = { ...updatedBox, profundidadeExterna: dimensoes.profundidade };
               }
+              if (isCaixaFornoBox(updatedBox)) {
+                updatedBox = syncCaixaFornoOnDimensoesChange(updatedBox);
+              }
               const layers = regenerateLayersForBox(updatedBox, { preserveMaterials: true });
               return { ...updatedBox, ...layers };
             });
@@ -73,6 +77,9 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
             let updatedBox = { ...boxItem, dimensoes: { ...boxItem.dimensoes, ...dimensoes } };
             if (dimensoes.profundidade !== undefined) {
               updatedBox = { ...updatedBox, profundidadeExterna: dimensoes.profundidade };
+            }
+            if (isCaixaFornoBox(updatedBox)) {
+              updatedBox = syncCaixaFornoOnDimensoesChange(updatedBox);
             }
             const layers = regenerateLayersForBox(updatedBox, { preserveMaterials: true });
             return { ...updatedBox, ...layers };

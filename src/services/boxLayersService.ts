@@ -19,6 +19,11 @@ import {
 } from "../core/wardrobe/wardrobeRules";
 import { getCornerCabinetConfig, computeCornerLayoutForBox } from "../core/cornerCabinet";
 import {
+  buildCaixaFornoDoorsLayer,
+  isCaixaFornoBox,
+  syncCaixaFornoOnDimensoesChange,
+} from "../core/moveis/generators/caixaFornoGenerator";
+import {
   backupLayerMaterials,
   restoreLayerMaterials,
 } from "../core/viewer/materialPreservation";
@@ -99,6 +104,16 @@ export function regenerateLayersForBox(
 
   const drawerCount = Math.max(0, Math.floor(box.gavetas || 0));
   const hasDrawers = drawerCount > 0;
+
+  if (isCaixaFornoBox(box)) {
+    const synced = syncCaixaFornoOnDimensoesChange(box);
+    const doorsLayer = buildCaixaFornoDoorsLayer(synced, synced.doorsLayer);
+    const generated = { doorsLayer, drawersLayer: [] as DrawerLayerItem[] };
+    if (materialBackup) {
+      return restoreLayerMaterials(generated, materialBackup);
+    }
+    return generated;
+  }
 
   const doorsLayer: DoorLayerItem[] = [];
   const drawersLayer: DrawerLayerItem[] = [];

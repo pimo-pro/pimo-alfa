@@ -14,6 +14,7 @@ import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/dimensions";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 import { isCornerFixedFrontModel, gerarPaineisCorner } from "../cornerCabinet";
+import { gerarPaineisCaixaForno, isCaixaFornoBox } from "../moveis/generators/caixaFornoGenerator";
 
 type PainelIndustrial = {
   id: string;
@@ -137,6 +138,9 @@ export const PIECE_LABELS: Record<string, string> = {
   prateleira: "Prateleira",
   divisorio: "Divisório",
   separador: "Separador",
+  porta_inferior: "Porta inferior",
+  porta_superior: "Porta superior",
+  costa_superior: "Costa superior",
   gaveta_frente: "Gaveta frente",
   gaveta_lat_esq: "Gaveta lateral esquerda",
   gaveta_lat_dir: "Gaveta lateral direita",
@@ -196,6 +200,13 @@ export function gerarModeloIndustrial(box: BoxModule, rules: RulesConfig): Model
 }
 
 export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustrial[] {
+  if (isCaixaFornoBox(box)) {
+    const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+    return gerarPaineisCaixaForno(box).map((painel) => ({
+      ...painel,
+      custo: calcularCustoPainel(painel, materialInfo) * painel.quantidade,
+    }));
+  }
   if (isCornerFixedFrontModel(box.baseCabinetId)) {
     return gerarPaineisCorner(box, rules);
   }

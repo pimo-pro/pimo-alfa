@@ -183,6 +183,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "addBox",
         "addWorkspaceBox",
         "addWorkspaceBoxFromCatalog",
+        "addWorkspaceBoxFromMoveis",
         "duplicateBox",
         "duplicateWorkspaceBox",
         "duplicateWorkspaceBoxAtOffset",

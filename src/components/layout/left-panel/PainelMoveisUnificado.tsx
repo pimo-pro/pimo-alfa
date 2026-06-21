@@ -12,6 +12,7 @@ import {
   type UnifiedModelItem,
 } from "../../../data/moveisUnificados";
 import { buildBoxLegacy, type BoxOptions } from "../../../3d/objects/BoxBuilder";
+import { buildCaixaFornoSeparadores, CAIXA_FORNO_ID } from "../../../core/moveis/generators/caixaFornoGenerator";
 import type { BoxModule } from "../../../core/types";
 import { REMATE_CATALOG_ITEMS, type RemateCatalogItem } from "../../../data/moveisUnificados/remateCatalog";
 
@@ -33,7 +34,9 @@ const DEFAULT_CONFIG: BoxConfig = {
 const MAX_PRATELEIRAS = 5;
 const MAX_GAVETAS     = 4;
 
-// ── Group helpers ─────────────────────────────────────────────────────────────
+function isSelectableMoveisItem(item: UnifiedModelItem): boolean {
+  return item.tipo === "3d" || item.tipo === "moveis";
+}
 
 interface CatalogGroup {
   key: string;
@@ -47,6 +50,7 @@ function buildGroups(items: UnifiedModelItem[]): CatalogGroup[] {
     const gc = item.grupoCatalogo;
     const key =
       item.subcategoriaCatalogo === "caixas-de-canto" ? "caixas-de-canto" :
+      item.subcategoriaCatalogo === "moveis" ? "moveis" :
       gc === "pt" ? "cozinha-pt" :
       gc === "pi" ? "pi" :
       gc === "br" ? "cozinha-br" :
@@ -57,6 +61,7 @@ function buildGroups(items: UnifiedModelItem[]): CatalogGroup[] {
   }
   const LABELS: Record<string, string> = {
     "caixas-de-canto": "Caixas de Canto",
+    "moveis": "Móveis",
     "cozinha-br": "Cozinha — Branco",
     "cozinha-pt": "Cozinha — Carve",
     "pi":         "PI Models",
@@ -78,7 +83,11 @@ function PreviewCanvas({ item, config }: { item: UnifiedModelItem; config: BoxCo
       height: item.dimensoes.altura_mm    / 1000,
       depth:  item.dimensoes.profundidade_mm / 1000,
       shelves:     config.prateleiras,
-      feetEnabled: config.pes,
+      feetEnabled: item.tipo === "moveis" ? false : config.pes,
+      baseCabinetId: item.tipo === "moveis" ? item.sourceId : undefined,
+      separadores: item.tipo === "moveis" && item.sourceId === CAIXA_FORNO_ID
+        ? buildCaixaFornoSeparadores(19)
+        : undefined,
       castShadow: true, receiveShadow: true,
     };
     const g = buildBoxLegacy(opts);
@@ -377,7 +386,13 @@ export default function PainelMoveisUnificado() {
   }, [actions]);
 
   const handleAdd = useCallback(() => {
-    if (!activeItem || activeItem.tipo !== "3d") return;
+    if (!activeItem) return;
+    if (activeItem.tipo === "moveis") {
+      actions.addWorkspaceBoxFromMoveis(activeItem.sourceId);
+      setActiveItem(null);
+      return;
+    }
+    if (activeItem.tipo !== "3d") return;
     actions.addWorkspaceBoxFromCatalog(activeItem.sourceId);
     setTimeout(() => {
       if (config.prateleiras > 0) actions.setPrateleiras(config.prateleiras);
@@ -509,7 +524,7 @@ export default function PainelMoveisUnificado() {
                         <button
                           key={item.id}
                           type="button"
-                          disabled={item.tipo !== "3d"}
+                          disabled={!isSelectableMoveisItem(item)}
                           onClick={(e) => handleSelectItem(item, e.currentTarget)}
                           style={{
                             display: "flex", alignItems: "center", gap: 8,
@@ -517,13 +532,13 @@ export default function PainelMoveisUnificado() {
                             borderRadius: 7,
                             border: `1px solid ${isActive ? "var(--border-selected, rgba(56,189,248,0.35))" : "transparent"}`,
                             background: isActive ? "var(--bg-selected, rgba(56,189,248,0.08))" : "transparent",
-                            cursor: item.tipo === "3d" ? "pointer" : "not-allowed",
+                            cursor: isSelectableMoveisItem(item) ? "pointer" : "not-allowed",
                             textAlign: "left", fontFamily: "inherit",
-                            opacity: item.tipo !== "3d" ? 0.4 : 1,
+                            opacity: isSelectableMoveisItem(item) ? 1 : 0.4,
                             transition: "background 0.1s, border-color 0.1s",
                           }}
                           onMouseEnter={(e) => {
-                            if (!isActive && item.tipo === "3d")
+                            if (!isActive && isSelectableMoveisItem(item))
                               e.currentTarget.style.background = "var(--bg-item-hover, rgba(255,255,255,0.07))";
                           }}
                           onMouseLeave={(e) => {
