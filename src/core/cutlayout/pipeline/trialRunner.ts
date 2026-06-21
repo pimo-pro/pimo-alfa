@@ -2,7 +2,8 @@ import type { CutLayoutTrialConfig, CutPiece, CutPlacement, SheetDefinition, She
 import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 import type { GlobalScoreMetrics } from "../scoring/solutionMetrics";
 
-const MAIN_SEARCH_WINDOW = 48;
+/** Janela de peças avaliadas por colocação (bestFit). Maior = melhor encaixe, custo O(n) por passo. */
+const MAIN_SEARCH_WINDOW = 64;
 
 type PlacedRect = { x: number; y: number; w: number; h: number };
 type ScoreModel = "legacy" | "v32";

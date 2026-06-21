@@ -78,11 +78,13 @@ export function getCandidateX(
   for (const seg of skyline) {
     if (seg.x >= 0 && seg.x <= sheetW - pieceW) xs.add(seg.x);
   }
-  // Bordas direitas de peças colocadas → candidatos adicionais para interlocking
+  // Bordas direitas e esquerda de peças colocadas → interlocking horizontal em níveis Y distintos
   if (placed) {
     for (const p of placed) {
       const rx = Math.round((p.x + p.w + kerf) * 1000) / 1000;
       if (rx >= 0 && rx <= sheetW - pieceW) xs.add(rx);
+      const lx = Math.round(p.x * 1000) / 1000;
+      if (lx >= 0 && lx <= sheetW - pieceW) xs.add(lx);
     }
   }
   return Array.from(xs).sort((a, b) => a - b);
@@ -153,8 +155,8 @@ export function findPlacementSkyline(
     const wasteB =
       Math.max(0, sheet.largura_mm - (b.x + b.w)) * b.h + Math.max(0, sheet.altura_mm - (b.y + b.h)) * b.w;
     // Desconto de tightness: posições encostadas a outras peças têm desperdício efetivo menor
-    const adjA = wasteA - a.tightnessScore * 12000;
-    const adjB = wasteB - b.tightnessScore * 12000;
+    const adjA = wasteA - a.tightnessScore * 15000;
+    const adjB = wasteB - b.tightnessScore * 15000;
     return adjA - adjB || a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore;
   })[0];
 }

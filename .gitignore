@@ -26,6 +26,7 @@ dist-ssr
 # Security keys
 deploy_key
 deploy_key.pub
+.git_disabled/
 
 # Auth PHP (Hostinger) — contém passwordHash
 api/data/users.json

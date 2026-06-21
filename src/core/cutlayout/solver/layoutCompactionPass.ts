@@ -10,8 +10,11 @@ import { overlaps } from "../utils/cutLayoutUtils";
 const EPS = 0.001;
 /** Fase 7D: passo maior = menos iterações, custo ~80% menor vs 1 mm. */
 const STEP_MM = 5;
-/** Fase 7D: menos passadas globais — suficiente para estabilizar na maioria dos layouts. */
-const MAX_PASSES = 2;
+/** Passo fino opcional após compactação grossa (só em chapas com poucas peças). */
+const STEP_FINE_MM = 1;
+const FINE_PASS_MAX_PIECES = 35;
+/** Mais uma passada grossa + passagem fina condicional reduz faixas residuais sem alterar rotação. */
+const MAX_PASSES = 3;
 
 function validPosition(
   x: number,
@@ -66,6 +69,29 @@ function compactPlacementsOnSheet(
       current[idx] = { ...pl, x_mm: x, y_mm: y };
     }
     if (!moved) break;
+  }
+
+  if (current.length <= FINE_PASS_MAX_PIECES) {
+    for (const idx of order) {
+      const pl = current[idx];
+      const w = pl.largura_mm;
+      const h = pl.altura_mm;
+      const others = current
+        .filter((_, j) => j !== idx)
+        .map((q) => ({ x: q.x_mm, y: q.y_mm, w: q.largura_mm, h: q.altura_mm }));
+
+      let x = pl.x_mm;
+      let y = pl.y_mm;
+
+      while (x >= STEP_FINE_MM - EPS && validPosition(x - STEP_FINE_MM, y, w, h, sheet, others, kerf)) {
+        x -= STEP_FINE_MM;
+      }
+      while (y >= STEP_FINE_MM - EPS && validPosition(x, y - STEP_FINE_MM, w, h, sheet, others, kerf)) {
+        y -= STEP_FINE_MM;
+      }
+
+      current[idx] = { ...pl, x_mm: x, y_mm: y };
+    }
   }
 
   return current;

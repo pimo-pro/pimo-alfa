@@ -125,8 +125,8 @@ export function scorePlacement(
   const topSlack = Math.max(0, sheet.altura_mm - (placement.y + placement.h));
   const localWaste = rightSlack * placement.h + topSlack * placement.w;
   const compactness01 = 1 - Math.min(1, localWaste / sheetArea);
-  // Fase 3: compactness amplificado ×1.35 para forçar layouts mais densos.
-  const compactnessScore = compactness01 * 0.22 * 1.35;
+  // Fase 3: compactness amplificado para forçar layouts mais densos (só scoring, sem alterar rotação).
+  const compactnessScore = compactness01 * 0.22 * 1.45;
   const expectedUtil = currentUtilization + areaGain;
   // Regra industrial R2: encher ao máximo a chapa atual antes de abrir nova.
   // Bónus não-linear: começa mais cedo (80% vs 85%) e com inclinação mais forte (2.5 vs 2.0).
@@ -145,7 +145,7 @@ export function scorePlacement(
   const tightnessVal = placement.tightnessScore ?? 0;
 
   // Fase 3: tightnessBonus reforçado nas chapas tardias para forçar compactação.
-  const tightnessBonus = tightnessVal * (0.55 + lateFactor * 0.35);
+  const tightnessBonus = tightnessVal * (0.60 + lateFactor * 0.38);
 
   // Fase 3: gapFillBonus reforçado para peças pequenas em gaps apertados.
   const isSmall = placement.w * placement.h < sheetArea * 0.05;

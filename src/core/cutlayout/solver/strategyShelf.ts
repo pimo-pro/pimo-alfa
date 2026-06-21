@@ -57,7 +57,7 @@ export function findPlacementShelf(
 
         if (i !== 0) {
           extraCount += 1;
-          if (extraCount > 8) break; // aumentado de 4 para 8 para explorar mais posições
+          if (extraCount > 12) break;
         }
 
         if (x + o.w > sheet.largura_mm + EPS) continue;
@@ -105,8 +105,8 @@ export function findPlacementShelf(
 
   return candidates.sort((a, b) => {
     // Desconto de tightness: posições encostadas reduzem o espaço restante efetivo
-    const remainingA = sheet.largura_mm - (a.x + a.w) - a.tightnessScore * 8000;
-    const remainingB = sheet.largura_mm - (b.x + b.w) - b.tightnessScore * 8000;
+    const remainingA = sheet.largura_mm - (a.x + a.w) - a.tightnessScore * 10000;
+    const remainingB = sheet.largura_mm - (b.x + b.w) - b.tightnessScore * 10000;
     return remainingA - remainingB || a.y - b.y || a.x - b.x;
   })[0];
 }

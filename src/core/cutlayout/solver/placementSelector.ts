@@ -2,8 +2,8 @@ import type { CutPiece, SheetDefinition } from "../cutLayoutTypes";
 import type { PlacementCandidate, RotationScoringConfig } from "../scoring/rotationScoring";
 import type { ContextoChapa } from "../scoring/placementScoring";
 
-// Área máxima para considerar uma peça "pequena" no gap-fill scan: 120×120mm²
-const GAP_FILL_SMALL_PIECE_AREA_MM2 = 14_400;
+// Área máxima para considerar uma peça "pequena" no gap-fill scan (~141×141 mm²)
+const GAP_FILL_SMALL_PIECE_AREA_MM2 = 20_000;
 
 type PlacementStrategy = "skyline" | "shelf" | "guillotine";
 type BinHeuristic = "firstFit" | "bestFit";
@@ -96,7 +96,7 @@ export function pickBestPieceForSheet(
   const limit = Math.max(1, Math.min(searchWindow, remaining.length));
   const dynamicLimit =
     bin === "bestFit"
-      ? Math.min(remaining.length, Math.max(limit, Math.floor(limit * 2.4)))
+      ? Math.min(remaining.length, Math.max(limit, Math.floor(limit * 3.0)))
       : limit;
 
   if (bin === "firstFit") {

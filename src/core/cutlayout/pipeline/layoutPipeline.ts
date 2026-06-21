@@ -5,8 +5,7 @@ import {
   LATE_SHEET_COMPACT_WINDOW,
   LATE_SHEET_MIN_WASTE_RATIO,
 } from "../solver/lateSheetCompactor";
-import { aplicarPocketFilling } from "../solver/pocketFilling2";
-import { aplicarCompactacaoTranslacional } from "../solver/layoutCompactionPass";
+import { finalizeIndustrialLayout } from "../integration/industrialLayoutContract";
 import { gerarCenariosLayout, escolherMelhorCenario } from "./layoutSearchLayer";
 
 import type {
@@ -82,7 +81,9 @@ type BinHeuristic = "firstFit" | "bestFit";
 type AttemptOrderMode = "area_desc" | "max_side_desc" | "min_side_desc" | "area_desc_soft";
 
 /** Fase 7D: uma tentativa por grupo/espessura (performance). */
-const MAX_NESTING_ATTEMPTS = 1;
+const MAX_NESTING_ATTEMPTS = 2;
+/** SPM: correr skyline + shelf quando o grupo é pequeno (custo baixo, melhor aproveitamento). */
+const SPM_DUAL_TRIAL_MAX_PIECES = 25;
 const ATTEMPT_TIMEOUT_MS = 1500;
 const META_MAX_MULTI_START = 12;
 
@@ -379,7 +380,8 @@ export function runCutLayout(
         { trial: { strategy: "skyline", binHeuristic: "bestFit" }, rotationMode: "aggressive" },
         { trial: { strategy: "shelf", binHeuristic: "bestFit" }, rotationMode: "auto" },
       ];
-      const spmTrialVariantsToRun = spmTrialVariants.slice(0, 1);
+      const spmTrialVariantsToRun =
+        groupPieces.length <= SPM_DUAL_TRIAL_MAX_PIECES ? spmTrialVariants : spmTrialVariants.slice(0, 1);
       let spmBestRun: SimulateTrialForGroupResult | null = null;
       let spmBestTrial: CutLayoutTrialConfig = { strategy: "skyline", binHeuristic: "bestFit" };
 
@@ -427,34 +429,6 @@ export function runCutLayout(
 
       const spmRun = spmBestRun;
       if (spmRun && spmRun.sheets.length > 0) {
-        // Pocket filling SPM — classificação industrial:
-        //   lateIndexThreshold=0  → todas as chapas são candidatas (sem restrição de posição)
-        //   wasteThreshold=0.15   → só preenche chapas Fracas (> 15% desperdício)
-        //   spmLock:
-        //     stableDestThreshold=0.10  → chapas Excelentes (≤ 10%) são INTOCÁVEIS
-        //     minTotalWasteImprovement=0.05 → confirma só com ganho real ≥ 5pp
-        const spmSheets = aplicarPocketFilling(spmRun.sheets, kerf, {
-          lateIndexThreshold: 0,
-          wasteThreshold: 0.15,
-          spmLock: {
-            stableDestThreshold: 0.10,
-            minTotalWasteImprovement: 0.05,
-          },
-        });
-
-        // ── Guard anti-mistura corpo/portas ────────────────────────────────────
-        // Se o pocket filling introduziu peças de corpo numa chapa que já continha
-        // portas (ou vice-versa), e esse mixing NÃO existia antes → revert completo
-        // para o estado pré-filling, garantindo separação corpo/portas.
-        const _DOOR_PAT = /\b(porta|door|fr|porte)\b/i;
-        const _isMixed = (pls: (typeof spmRun.sheets)[0]["placements"]) =>
-          pls.some((p) => _DOOR_PAT.test(p.partName ?? "")) &&
-          pls.some((p) => !_DOOR_PAT.test(p.partName ?? ""));
-        const _preMixed  = spmRun.sheets.some((s) => _isMixed(s.placements));
-        const _postMixed = spmSheets.some((s) => _isMixed(s.placements));
-        const guardedSpmSheets = (!_preMixed && _postMixed) ? spmRun.sheets : spmSheets;
-        // ──────────────────────────────────────────────────────────────────────
-
         if (diagnostics) {
           diagnostics.flow.selectedStrategy = spmBestTrial.strategy;
           diagnostics.flow.selectedBinHeuristic = spmBestTrial.binHeuristic;
@@ -463,12 +437,23 @@ export function runCutLayout(
         }
         diagnostics?.rejectedByLimit.push(...spmRun.rejectedByLimit);
         diagnostics?.gapFillPlacements.push(...spmRun.gapFillPlacements);
-        const spmCompacted = aplicarCompactacaoTranslacional(guardedSpmSheets, kerf);
-        const spmOffset = deps.applyFixedMarginOffset(spmCompacted, sheet, marginMm);
-        const spmNorm = options?.originTopRight
-          ? spmOffset.map((s) => normalizeSheetToTopRightOrigin(s))
-          : spmOffset;
-        finalSheets.push(...spmNorm);
+        const spmFinalized = finalizeIndustrialLayout(
+          { sheets: spmRun.sheets },
+          {
+            mode: "full",
+            kerfMm: kerf,
+            marginMm,
+            physicalSheet: sheet,
+            usableSheet: placementSheet,
+            originTopRight: options?.originTopRight,
+            pocketFilling: "spm",
+            spmDoorBodyGuard: true,
+          },
+          {
+            normalizeTopRightOrigin: options?.originTopRight ? normalizeSheetToTopRightOrigin : undefined,
+          }
+        );
+        finalSheets.push(...spmFinalized.sheets);
       }
       continue; // Salta todo o fluxo MPM
     }
@@ -708,21 +693,22 @@ export function runCutLayout(
       bestRun.sheets = [...compactResult.earlySheets, ...compactResult.lateSheets];
     }
 
-    // Pocket Filling 2.0: move peças de chapas tardias para bolsões em chapas anteriores.
-    // Ativa apenas se houver >2 chapas; condições por chapa (waste > 14%, index > 40%)
-    // Pocket filling MPM — classificação industrial:
-    //   lateIndexThreshold=0  → qualquer chapa Fraca é redistribuível (não só as tardias)
-    //   wasteThreshold=0.15   → activar apenas em chapas Fracas (> 15% desperdício)
-    //   Chapas Excelentes (≤ 10%) e Boas (10-15%) são protegidas implicitamente
-    //   pelo wasteThreshold — não recebem peças adicionais.
-    if (bestRun.sheets.length > 2) {
-      bestRun.sheets = aplicarPocketFilling(bestRun.sheets, kerf, {
-        lateIndexThreshold: 0,
-        wasteThreshold: 0.12,
-      });
-    }
-
-    bestRun.sheets = aplicarCompactacaoTranslacional(bestRun.sheets, kerf);
+    // Pocket filling MPM + compactação + margem → industrialLayoutContract
+    const mpmFinalized = finalizeIndustrialLayout(
+      { sheets: bestRun.sheets },
+      {
+        mode: "full",
+        kerfMm: kerf,
+        marginMm,
+        physicalSheet: sheet,
+        usableSheet: placementSheet,
+        originTopRight: options?.originTopRight,
+        pocketFilling: bestRun.sheets.length > 2 ? "mpm" : "none",
+      },
+      {
+        normalizeTopRightOrigin: options?.originTopRight ? normalizeSheetToTopRightOrigin : undefined,
+      }
+    );
 
     if (diagnostics) {
       diagnostics.flow.selectedStrategy = bestRun.strategy;
@@ -732,11 +718,7 @@ export function runCutLayout(
     }
     diagnostics?.rejectedByLimit.push(...bestRun.rejectedByLimit);
     diagnostics?.gapFillPlacements.push(...bestRun.gapFillPlacements);
-    const offsetSheets = deps.applyFixedMarginOffset(bestRun.sheets, sheet, marginMm);
-    const normalizedSheets = options?.originTopRight
-      ? offsetSheets.map((s) => normalizeSheetToTopRightOrigin(s))
-      : offsetSheets;
-    finalSheets.push(...normalizedSheets);
+    finalSheets.push(...mpmFinalized.sheets);
   }
 
   emitProgress({ phase: "finalize", groupIndex: groupCount, groupCount, stepIndex: 1, stepCount: 1, percent: 100 });
