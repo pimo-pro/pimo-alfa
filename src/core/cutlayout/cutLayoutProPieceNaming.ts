@@ -18,6 +18,8 @@ const TIPO_TO_PREFIX: Record<string, string> = {
   porta_simples: "por_sim",
   porta_dupla: "por_dup",
   porta_correr: "por_cor",
+  remate: "rem",
+  rodape: "rod_pe",
 };
 
 const NOME_PT_TO_PREFIX: Record<string, string> = {
@@ -124,6 +126,11 @@ export function cutlistItemsWithCutLayoutProNames<T extends { nome?: string; tip
     return boxNomeLookup[boxId];
   };
   return items.map((item) => {
+    const meta = item as T & { metadata?: { industrialLabel?: string } };
+    const industrialLabel = meta.metadata?.industrialLabel?.trim();
+    if (industrialLabel) {
+      return { ...item, nome: industrialLabel };
+    }
     const boxId = String(item.boxId ?? "").trim();
     const boxNome = boxId ? getNome(boxId) : undefined;
     return { ...item, nome: buildCutLayoutProPartName(item, boxNome, projectName) };

@@ -48,7 +48,7 @@ export function runNestingV3AutoLayout(
     materialName: piece.materialName,
     thicknessMm: piece.thicknessMm,
     allowRotation: allowRotationForPiece(piece, settings),
-    grainDirection: "none",
+    grainDirection: piece.industrialGrainCode === "YY" ? "width" : "none",
     originalIndex: index,
   }));
   const fallbackSheet: V3Sheet = {

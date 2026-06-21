@@ -19,7 +19,8 @@ export function getPieceAspectRatio(piece: CutPiece): number {
  * (furos de face lateral com topDrillable=false não permitem rotação).
  */
 export const isRotatablePiece = (piece: CutPiece): boolean => {
-  if (piece.grainDirection) return false;
+  if (piece.pieceTipo === "rodape") return canRotatePieceGeometry(piece);
+  if (piece.industrialGrainCode === "YY") return false;
   if (piece.largura_mm === piece.altura_mm) return false;
   return canRotatePieceGeometry(piece);
 };

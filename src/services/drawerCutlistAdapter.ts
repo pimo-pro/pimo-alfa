@@ -7,6 +7,7 @@
  */
 
 import type { CutListItem } from "../core/types";
+import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
   DRAWER_SIDE_THICKNESS_MM,
@@ -172,7 +173,7 @@ export function drawerLayerItemToCutList(
     sourceType: "parametric",
     boxId: item.parentBoxId,
     materialId: frontOfficial?.canonicalId ?? frontMaterialId,
-    grainDirection: "horizontal",
+    grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente" }),
     metadata: {
       drawerHardware,
       drawerRules: {
@@ -214,7 +215,7 @@ export function drawerLayerItemToCutList(
       sourceType: "parametric",
       boxId: item.parentBoxId,
       materialId: sideMaterial.materialId,
-      grainDirection: "vertical",
+      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_esq" }),
     });
   }
 
@@ -235,7 +236,7 @@ export function drawerLayerItemToCutList(
       sourceType: "parametric",
       boxId: item.parentBoxId,
       materialId: sideMaterial.materialId,
-      grainDirection: "vertical",
+      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_dir" }),
     });
   }
 
@@ -256,7 +257,7 @@ export function drawerLayerItemToCutList(
       sourceType: "parametric",
       boxId: item.parentBoxId,
       materialId: bottomMaterial.materialId,
-      grainDirection: "none",
+      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_fundo" }),
     });
   }
 
@@ -277,7 +278,7 @@ export function drawerLayerItemToCutList(
       sourceType: "parametric",
       boxId: item.parentBoxId,
       materialId: sideMaterial.materialId,
-      grainDirection: "horizontal",
+      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_traseira" }),
     });
   }
 

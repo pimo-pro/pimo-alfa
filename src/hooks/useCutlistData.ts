@@ -102,7 +102,7 @@ function cutlistItemToPainelRow(
     largura_mm: item.dimensoes.largura,
     altura_mm: item.dimensoes.altura,
     espessura_mm: item.espessura,
-    orientacaoFibra: item.grainDirection ?? "none",
+    orientacaoFibra: item.grainDirection ?? "XX",
     quantidade: item.quantidade,
     custo: item.precoTotal,
     boxProfundidadeExternaMm,

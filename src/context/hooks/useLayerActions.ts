@@ -17,6 +17,7 @@ import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValid
 import { getSettings } from "../../core/settings/settingsService";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
+import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
 
 export type LayerActions = Pick<
   ProjectActions,
@@ -194,35 +195,14 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         }
         updateProject(
           (prev) => {
-            const box = prev.workspaceBoxes.find((b) => b.id === boxId);
-            if (import.meta.env.DEV && box) {
-              const doorIds = (box.doorsLayer ?? []).map((d) => d.id);
-              devLogger.debug("[ProjectProvider.setDoorMaterial] doorLayerId (comparar com viewer)", {
-                boxId,
-                doorLayerId,
-                material,
-                doorIdsNoBox: doorIds,
-                match: doorIds.includes(doorLayerId),
-              });
-            }
-            if (!box) return prev;
-            const doorBefore = (box.doorsLayer ?? []).find((d) => d.id === doorLayerId);
-            if (import.meta.env.DEV) {
-              devLogger.debug("[DOOR-MAT] 4 ProjectProvider.setDoorMaterial door ANTES", {
-                boxId,
-                doorLayerId,
-                materialAntes: doorBefore?.material ?? doorBefore?.materialId,
-                materialNovo: material,
-              });
-            }
-            const doorsLayer = (box.doorsLayer ?? []).map((door) =>
-              door.id === doorLayerId ? { ...door, material, materialId: material } : door
-            );
-            const workspaceBoxes = prev.workspaceBoxes.map((b) =>
-              b.id === boxId ? { ...b, doorsLayer } : b
+            const { next, sync } = commitMaterialSync(
+              prev,
+              { kind: "door", boxId, doorLayerId, materialId: material },
+              true
             );
             if (import.meta.env.DEV) {
-              const doorAfter = doorsLayer.find((d) => d.id === doorLayerId);
+              const box = next.workspaceBoxes.find((b) => b.id === boxId);
+              const doorAfter = (box?.doorsLayer ?? []).find((d) => d.id === doorLayerId);
               devLogger.debug(
                 "[DOOR-MAT] 5 ProjectProvider.setDoorMaterial door DEPOIS (estado que será commitado)",
                 {
@@ -232,7 +212,8 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 }
               );
             }
-            return { ...prev, workspaceBoxes };
+            refreshViewerAfterMaterialSync(sync);
+            return next;
           },
           true
         );
@@ -243,15 +224,13 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
       setDrawerMaterial: (boxId, drawerLayerId, material) => {
         updateProject(
           (prev) => {
-            const box = prev.workspaceBoxes.find((b) => b.id === boxId);
-            if (!box) return prev;
-            const drawersLayer = (box.drawersLayer ?? []).map((drawer) =>
-              drawer.id === drawerLayerId ? { ...drawer, material } : drawer
+            const { next, sync } = commitMaterialSync(
+              prev,
+              { kind: "drawer", boxId, drawerLayerId, materialId: material },
+              true
             );
-            const workspaceBoxes = prev.workspaceBoxes.map((b) =>
-              b.id === boxId ? { ...b, drawersLayer } : b
-            );
-            return { ...prev, workspaceBoxes };
+            refreshViewerAfterMaterialSync(sync);
+            return next;
           },
           true
         );
@@ -577,19 +556,15 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);
             if (!selected) return prev;
-            const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-              box.id === selected.id
-                ? {
-                    ...box,
-                    doorsLayer: (box.doorsLayer ?? []).map((item) =>
-                      item.id === id ? { ...item, materialId } : item
-                    ),
-                  }
-                : box
+            const { next, sync } = commitMaterialSync(
+              prev,
+              { kind: "doorLayerItem", boxId: selected.id, itemId: id, materialId },
+              true
             );
+            refreshViewerAfterMaterialSync(sync);
             return {
-              ...prev,
-              workspaceBoxes,
+              ...next,
+              selectedWorkspaceBoxId: selected.id,
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",
@@ -605,19 +580,15 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);
             if (!selected) return prev;
-            const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-              box.id === selected.id
-                ? {
-                    ...box,
-                    drawersLayer: (box.drawersLayer ?? []).map((item) =>
-                      item.id === id ? { ...item, materialId } : item
-                    ),
-                  }
-                : box
+            const { next, sync } = commitMaterialSync(
+              prev,
+              { kind: "drawerLayerItem", boxId: selected.id, itemId: id, materialId },
+              true
             );
+            refreshViewerAfterMaterialSync(sync);
             return {
-              ...prev,
-              workspaceBoxes,
+              ...next,
+              selectedWorkspaceBoxId: selected.id,
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "box",

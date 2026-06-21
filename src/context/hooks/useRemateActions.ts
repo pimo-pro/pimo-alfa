@@ -8,6 +8,10 @@ import { getMaterialByIdOrLabel } from "../../core/materials/service";
 import type { CreateRematePieceInput } from "../../core/remate/rematePieceTypes";
 import { applyProductPatch, computeDimensionsForProduct, inferProductTypeFromLegacy, normalizeProductOptions } from "../../core/remate/remateProductRules";
 import { createOppositeRematePiece, duplicateRematePiece } from "../../core/remate/remateCloneUtils";
+import {
+  invalidateMaterialCutlistCache,
+  refreshViewerAfterMaterialSync,
+} from "../../core/materials/materialSync";
 
 export type RemateActions = Pick<
   ProjectActions,
@@ -129,18 +133,27 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
 
       updateRemate: (remateId, patch) => {
         updateProject(
-          (prev) =>
-            applyResultados({
+          (prev) => {
+            if (patch.materialPresetId != null) {
+              invalidateMaterialCutlistCache(prev, {
+                affectedBoxIds: (() => {
+                  const remate = prev.remates?.find((r) => r.id === remateId);
+                  return remate?.parentBoxId ? [remate.parentBoxId] : [];
+                })(),
+                invalidateGlobalCache: false,
+              });
+            }
+            const next = applyResultados({
               ...prev,
               remates: (prev.remates ?? []).map((remate) => {
                 if (remate.id !== remateId) return remate;
                 const { depth: _depthPatchIgnored, ...patchWithoutDepth } = patch;
                 void _depthPatchIgnored;
-                let next = applyProductPatch(remate, patchWithoutDepth);
-                const box = next.parentBoxId
-                  ? prev.workspaceBoxes.find((b) => b.id === next.parentBoxId)
+                let nextRemate = applyProductPatch(remate, patchWithoutDepth);
+                const box = nextRemate.parentBoxId
+                  ? prev.workspaceBoxes.find((b) => b.id === nextRemate.parentBoxId)
                   : null;
-                const mat = getMaterialByIdOrLabel(next.materialPresetId);
+                const mat = getMaterialByIdOrLabel(nextRemate.materialPresetId);
                 const thicknessMm =
                   Number(mat?.espessura ?? box?.espessura ?? prev.material.espessura) || 19;
                 const shouldRecalcDims =
@@ -148,43 +161,53 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                   patch.productType != null ||
                   patch.mountSlot != null;
                 if (shouldRecalcDims) {
-                  const productType = next.productType ?? inferProductTypeFromLegacy(next);
-                  const opts = normalizeProductOptions(productType, next.productOptions);
+                  const productType = nextRemate.productType ?? inferProductTypeFromLegacy(nextRemate);
+                  const opts = normalizeProductOptions(productType, nextRemate.productOptions);
                   const dims = computeDimensionsForProduct({
                     box: box ?? null,
                     productType,
-                    mountSlot: next.mountSlot ?? "FRENTE",
+                    mountSlot: nextRemate.mountSlot ?? "FRENTE",
                     thicknessMm,
                     productOptions: opts,
-                    partRole: next.partRole,
-                    partIndex: next.partIndex,
+                    partRole: nextRemate.partRole,
+                    partIndex: nextRemate.partIndex,
                   });
-                  next = { ...next, ...dims, depth: thicknessMm };
+                  nextRemate = { ...nextRemate, ...dims, depth: thicknessMm };
                 } else if (
                   patch.width != null ||
                   patch.height != null ||
                   patch.materialPresetId != null
                 ) {
-                  next = { ...next, depth: thicknessMm };
+                  nextRemate = { ...nextRemate, depth: thicknessMm };
                 } else {
-                  next = { ...next, depth: thicknessMm };
+                  nextRemate = { ...nextRemate, depth: thicknessMm };
                 }
                 const shouldResnap =
                   (patch.tipo != null ||
                     patch.mountSlot != null ||
                     patch.productType != null ||
                     patch.productOptions != null) &&
-                  next.followBox &&
-                  next.placementMode !== "FREE";
-                if (shouldResnap && next.parentBoxId) {
-                  const box = prev.workspaceBoxes.find((b) => b.id === next.parentBoxId);
-                  if (box) {
-                    next = refreshRemateMountSnap(next, box, boxDimsFromWorkspace(box));
+                  nextRemate.followBox &&
+                  nextRemate.placementMode !== "FREE";
+                if (shouldResnap && nextRemate.parentBoxId) {
+                  const parentBox = prev.workspaceBoxes.find((b) => b.id === nextRemate.parentBoxId);
+                  if (parentBox) {
+                    nextRemate = refreshRemateMountSnap(nextRemate, parentBox, boxDimsFromWorkspace(parentBox));
                   }
                 }
-                return next;
+                return nextRemate;
               }),
-            }),
+            });
+            if (patch.materialPresetId != null) {
+              const remate = next.remates?.find((r) => r.id === remateId);
+              refreshViewerAfterMaterialSync({
+                affectedRemateIds: [remateId],
+                affectedRodapeIds: [],
+              });
+              void remate;
+            }
+            return next;
+          },
           true
         );
       },
