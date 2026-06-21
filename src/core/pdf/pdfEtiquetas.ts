@@ -445,7 +445,7 @@ function inferPieceKind(item: LabelItem): PieceProductionKind {
   const tipo = String(item.tipo ?? "").toLowerCase();
   const nome = String(item.pieceName ?? item.nome ?? "").toUpperCase();
   if (tipo === "remate" || nome.includes("_REMATE_")) return "REMATE";
-  if (tipo === "rodape") return "RODAPE";
+  if (tipo === "rodape" || nome.includes("_RODA_PE_")) return "RODAPE";
   if (nome.includes("LED") && nome.includes("LATERAL")) return "LATERAIS_COM_LED";
   if (nome.includes("SENSOR") && nome.includes("FUNDO")) return "FUNDO_COM_SENSOR";
   if (tipo === "cima" || nome.includes("CIMA") || nome.includes("TOPO")) return "CIMA";

@@ -114,6 +114,7 @@ function buildItemsForCncExportFromState(state: ProjectState): CutListItemComPre
     materialId: state.materialId,
     projectName: state.projectName,
     remates: state.remates ?? [],
+    rodapes: state.rodapes ?? [],
     extractedPartsByBoxId: state.extractedPartsByBoxId,
   });
 }

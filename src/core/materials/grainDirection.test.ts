@@ -64,7 +64,7 @@ describe("resolveIndustrialGrainCode", () => {
     ).toBe("XX");
   });
 
-  it("remate RODAPE e roda pé → XX", () => {
+  it("remate produto RODAPE (família remate) → XX", () => {
     expect(
       resolveIndustrialGrainCode({
         tipo: "remate",
@@ -72,7 +72,6 @@ describe("resolveIndustrialGrainCode", () => {
         remateTipo: "RODAPE",
       })
     ).toBe("XX");
-    expect(resolveIndustrialGrainCode({ tipo: "rodape" })).toBe("XX");
   });
 
   it("laterais, prateleiras e demais → XX", () => {

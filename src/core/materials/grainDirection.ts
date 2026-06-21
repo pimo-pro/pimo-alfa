@@ -38,7 +38,7 @@ export function resolveIndustrialGrainCode(input: IndustrialGrainInput): Industr
   if (PORTA_TIPOS.has(input.tipo)) return "YY";
   if (input.tipo === "gaveta_frente") return "YY";
   if (isRemateCompletoLateral(input)) return "YY";
-  if (input.tipo === "remate" || input.tipo === "rodape") return "XX";
+  if (input.tipo === "remate") return "XX";
   return "XX";
 }
 

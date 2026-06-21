@@ -13,6 +13,7 @@ export function convertProjectToV3Pieces(project: ProjectState): V3Piece[] {
     materialId: project.materialId,
     projectName: project.projectName ?? "Projeto",
     remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
     extractedPartsByBoxId: project.extractedPartsByBoxId,
   });
 

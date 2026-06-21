@@ -338,6 +338,7 @@ export function buildIndustrialCutlistAfterMaterialSync(
     projectName: project.tipoProjeto,
     boxes: project.boxes,
     remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
     extractedPartsByBoxId: project.extractedPartsByBoxId,
   });
 }

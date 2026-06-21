@@ -140,6 +140,7 @@ export function buildItemsForCncExport(
     materialId?: string;
     projectName?: string;
     remates?: import("../core/remate/rematePieceTypes").RematePiece[];
+    rodapes?: import("../core/rodape/rodapeTypes").ProjectRodape[];
     extractedPartsByBoxId?: Record<string, Record<string, unknown[]>>;
   },
   boxes: Array<{ id: string }>
@@ -150,6 +151,7 @@ export function buildItemsForCncExport(
     materialId: project.materialId,
     projectName: project.projectName,
     remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
     extractedPartsByBoxId: project.extractedPartsByBoxId,
   });
   return items as unknown as Array<Record<string, unknown>>;
@@ -329,6 +331,7 @@ export function useGerarArquivoHandlers() {
         materialId: project.materialId,
         projectName: project.projectName,
         remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
       let nestingPlacements: CutLayoutResult["sheets"][0]["placements"] | undefined;
@@ -382,6 +385,7 @@ export function useGerarArquivoHandlers() {
       materialId: project.materialId,
       projectName: project.projectName,
       remates: project.remates ?? [],
+      rodapes: project.rodapes ?? [],
       extractedPartsByBoxId: project.extractedPartsByBoxId,
     });
     const pieces = cutlistToPieces(allItems);
@@ -438,6 +442,7 @@ export function useGerarArquivoHandlers() {
         materialId: project.materialId,
         projectName: project.projectName,
         remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
 
@@ -655,6 +660,7 @@ export function useGerarArquivoHandlers() {
         materialId: project.materialId,
         projectName: project.projectName,
         remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
       const drillFiles = buildDrillFilesForProject(allItems, {
@@ -713,6 +719,7 @@ export function useGerarArquivoHandlers() {
         materialId: project.materialId,
         projectName: project.projectName,
         remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
 

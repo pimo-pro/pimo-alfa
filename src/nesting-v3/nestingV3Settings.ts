@@ -80,6 +80,9 @@ export function allowRotationForPiece(
   piece: V3Piece,
   settings: NestingV3Settings
 ): boolean {
+  if (piece.pieceTipo === "rodape") {
+    return settings.rotationMode !== "none";
+  }
   if (isGrainRotationLocked(piece.industrialGrainCode)) return false;
   if (settings.rotationMode === "none") return false;
   return true;

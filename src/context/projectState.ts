@@ -37,6 +37,7 @@ import { createEmptyObjectGroups } from "../core/viewer/groupTypes";
 import { computeOrlaFerragem } from "../core/orla/orlaCalculator";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
+import { buildRodapeCutlistItems } from "../core/rodape/rodapeCutlist";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
 function getRulesFromProfiles(config: RulesProfilesConfig) {
@@ -675,7 +676,8 @@ export const buildDesignState = (prev: ProjectState): Partial<ProjectState> => {
     Object.values(prev.extractedPartsByBoxId?.[box.id] ?? {}).flat()
   );
   const allRemates = buildRemateCutlistItems(prev.remates ?? [], boxes);
-  const cutListComPreco = [...allParametric, ...allExtracted, ...allRemates];
+  const allRodapes = buildRodapeCutlistItems(prev.rodapes ?? [], boxes);
+  const cutListComPreco = [...allParametric, ...allExtracted, ...allRemates, ...allRodapes];
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
   const precoProjetoBase = precoTotalPecas + precoTotalAcessorios;
   const precoTotalProjeto = calcularPrecoTotalProjeto(precoProjetoBase);

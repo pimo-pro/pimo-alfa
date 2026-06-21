@@ -19,6 +19,7 @@ const TIPO_TO_PREFIX: Record<string, string> = {
   porta_dupla: "por_dup",
   porta_correr: "por_cor",
   remate: "rem",
+  rodape: "rod_pe",
 };
 
 const NOME_PT_TO_PREFIX: Record<string, string> = {

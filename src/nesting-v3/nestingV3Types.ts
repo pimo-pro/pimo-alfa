@@ -35,8 +35,10 @@ export interface V3Piece {
   originalHoles: V3Hole[];
   /** Rotação atual: 0, 90, 180, 270. */
   rotation: 0 | 90 | 180 | 270;
-  /** YY = veio fixo (sem rotação); XX = livre. */
+  /** YY = veio fixo (sem rotação); XX = livre; omitido = peça livre (ex.: rodapé). */
   industrialGrainCode?: "YY" | "XX";
+  /** Tipo industrial da peça (ex.: rodape, remate, lateral_esquerda). */
+  pieceTipo?: string;
   /** Cor de fundo para display 2D. Calculada a partir do material. */
   color: string;
   /** ID da origem (boxId do projeto). Opcional para peças adicionadas manualmente. */
