@@ -67,6 +67,20 @@ function getStructureFingerprint(
     pullDistanceMm: drawer.pullDistanceMm,
     material: drawer.material,
   }));
+  const divSig = (wsBox.divisores ?? []).map((d) => ({
+    id: d.id,
+    positionMm: d.positionMm,
+    referenceEdge: d.referenceEdge,
+    alturaMm: d.alturaMm,
+    profundidadeMm: d.profundidadeMm,
+  }));
+  const sepSig = (wsBox.separadores ?? []).map((s) => ({
+    id: s.id,
+    positionMm: s.positionMm,
+    referenceEdge: s.referenceEdge,
+    larguraMm: s.larguraMm,
+    profundidadeMm: s.profundidadeMm,
+  }));
   const m = getSettings().modeloPI;
   const piDrillSig =
     isPiBaseCabinetId(wsBox.baseCabinetId) && m
@@ -91,6 +105,8 @@ function getStructureFingerprint(
     piLateralDrillCountSig: piLateralDrillCountSig ?? null,
     doors: doorSig,
     drawers: drawerSig,
+    divisores: divSig,
+    separadores: sepSig,
     material: wsBox.material,
     espessura: wsBox.espessura,
     cabinetType: wsBox.cabinetType,
@@ -328,6 +344,8 @@ export const useCalculadoraSync = (
           locked,
           doorLayerItems,
           drawerLayerItems,
+          divisores: wsBox.divisores ?? [],
+          separadores: wsBox.separadores ?? [],
           drillMarkersByPanel,
           showDrawerDrilling: viewerDebug.showDrawerDrilling,
           ...posRot,
@@ -378,6 +396,8 @@ export const useCalculadoraSync = (
             locked,
             doorLayerItems,
             drawerLayerItems,
+            divisores: wsBox.divisores ?? [],
+            separadores: wsBox.separadores ?? [],
             drillMarkersByPanel,
             showDrawerDrilling: viewerDebug.showDrawerDrilling,
             ...posRot,

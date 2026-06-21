@@ -555,6 +555,13 @@ export interface ProjectActions {
   setDrawerLayerItemMaterial: (_id: string, _materialId: string) => void;
   setDoorLayerItemDirection: (_id: string, _direction: Exclude<LayerOpenDirection, "pull">) => void;
   regenerateBoxLayersForSelectedBox: () => void;
+  /** Divisórios verticais (DIV) e separadores horizontais (SEP). */
+  addSeparador: () => void;
+  addDivisor: () => void;
+  removeSeparador: (_id: string) => void;
+  removeDivisor: (_id: string) => void;
+  updateSeparador: (_id: string, _partial: Partial<import("../core/divSep/types").SeparadorItem>) => void;
+  updateDivisor: (_id: string, _partial: Partial<import("../core/divSep/types").DivisorItem>) => void;
   toggleWorkspaceRotation: (_boxId: string) => void;
   rotateWorkspaceBox: (_boxId: string) => void;
   /** @internal Implementada em useDesignActions. Não chamada diretamente pela UI via actions.*. */

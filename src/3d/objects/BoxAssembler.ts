@@ -18,6 +18,7 @@ import {
   computeCornerVisualLayout,
 } from "../../core/cornerCabinet";
 import { getSettings } from "../../core/settings/settingsService";
+import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -122,6 +123,31 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       root.add(mesh);
     });
   }
+
+  const divSepBoxLike = {
+    dimensoes: {
+      largura: width * 1000,
+      altura: height * 1000,
+      profundidade: (opts?.layoutDepthM ?? depth) * 1000,
+    },
+    espessura: deps.thicknessM * 1000,
+    profundidadeExterna: (opts?.layoutDepthM ?? depth) * 1000,
+    divisores: opts?.divisores ?? [],
+    separadores: opts?.separadores ?? [],
+  };
+  getDivSepMeshSpecs(divSepBoxLike, width, height, depth, deps.thicknessM).forEach((spec) => {
+    const mesh = deps.panelFactory.createPanel(
+      spec.size[0],
+      spec.size[1],
+      spec.size[2],
+      spec.name,
+      "top",
+      { singleMaterial: baseMaterial }
+    );
+    mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+    mesh.userData.divSepId = spec.name;
+    root.add(mesh);
+  });
 
   // Roupeiro (H/J): divisores internos e varões de cabides (geometry visual).
   const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(opts.baseCabinetId);

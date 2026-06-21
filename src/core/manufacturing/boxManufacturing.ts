@@ -11,6 +11,7 @@ import { getNumDobradicas } from "../rules/rulesConfig";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
+import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/dimensions";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 import { isCornerFixedFrontModel, gerarPaineisCorner } from "../cornerCabinet";
 
@@ -93,11 +94,24 @@ function getStructuralPanelId(box: BoxModule, kind: "cima" | "fundo" | "lateral_
   return buildId(prefix, 0);
 }
 
-/** ID estável para prateleira/porta/gaveta por índice. */
-function getArrayPanelId(box: BoxModule, kind: "prateleiras" | "portas" | "gavetas", index: number): string {
+/** ID estável para prateleira/porta/gaveta/divisor/separador por índice. */
+function getArrayPanelId(
+  box: BoxModule,
+  kind: "prateleiras" | "portas" | "gavetas" | "divisores" | "separadores",
+  index: number
+): string {
   const arr = box.panelIds?.[kind];
   if (Array.isArray(arr) && arr[index] != null) return arr[index];
-  const prefix = kind === "prateleiras" ? "prateleira" : kind === "portas" ? "porta" : "gaveta";
+  const prefix =
+    kind === "prateleiras"
+      ? "prateleira"
+      : kind === "portas"
+        ? "porta"
+        : kind === "gavetas"
+          ? "gaveta"
+          : kind === "divisores"
+            ? "divisorio"
+            : "separador";
   return buildId(prefix, index);
 }
 
@@ -121,6 +135,8 @@ export const PIECE_LABELS: Record<string, string> = {
   lateral_direita: "Lateral direita",
   COSTA: "COSTA",
   prateleira: "Prateleira",
+  divisorio: "Divisório",
+  separador: "Separador",
   gaveta_frente: "Gaveta frente",
   gaveta_lat_esq: "Gaveta lateral esquerda",
   gaveta_lat_dir: "Gaveta lateral direita",
@@ -300,6 +316,42 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
         custo: 0,
       });
     }
+  }
+
+  // Divisórios verticais (DIV)
+  const divisores = box.divisores ?? [];
+  for (let i = 0; i < divisores.length; i++) {
+    const item = divisores[i]!;
+    const dims = resolveDivisorDimensions(box, item);
+    paineis.push({
+      id: getArrayPanelId(box, "divisores", i),
+      tipo: "divisorio",
+      largura_mm: clampPositive(dims.profundidadeMm),
+      altura_mm: clampPositive(dims.alturaMm),
+      espessura_mm: clampPositive(dims.larguraMm),
+      material,
+      orientacaoFibra: "vertical",
+      quantidade: 1,
+      custo: 0,
+    });
+  }
+
+  // Separadores horizontais (SEP)
+  const separadores = box.separadores ?? [];
+  for (let i = 0; i < separadores.length; i++) {
+    const item = separadores[i]!;
+    const dims = resolveSeparadorDimensions(box, item);
+    paineis.push({
+      id: getArrayPanelId(box, "separadores", i),
+      tipo: "separador",
+      largura_mm: clampPositive(dims.larguraMm),
+      altura_mm: clampPositive(dims.profundidadeMm),
+      espessura_mm: clampPositive(dims.alturaMm),
+      material,
+      orientacaoFibra: "none",
+      quantidade: 1,
+      custo: 0,
+    });
   }
 
   if (box.portaTipo !== "sem_porta") {

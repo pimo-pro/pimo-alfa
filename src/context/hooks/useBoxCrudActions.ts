@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { WorkspaceBox } from "../../core/types";
 import { getBaseCabinetById, modelToPortaTipo } from "../../core/baseCabinets";
-import { ensureBoxPanelIds } from "../../core/box/panelIds";
+import { ensureBoxPanelIds, panelIdOptionsFromBox } from "../../core/box/panelIds";
 import { getSettings } from "../../core/settings/settingsService";
 import type { ProjectActions } from "../projectTypes";
 import { appendChangelog, buildBoxesFromWorkspace, getSelectedWorkspaceBox } from "../projectState";
@@ -484,11 +484,10 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
                 prateleiras: valor,
                 gavetas: valor > 0 ? 0 : box.gavetas,
                 drawersLayer: valor > 0 ? [] : box.drawersLayer,
-                panelIds: ensureBoxPanelIds(box.panelIds, {
-                  ...box,
+                panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                   prateleiras: valor,
                   gavetas: valor > 0 ? 0 : box.gavetas,
-                }),
+                })),
               };
             });
           }

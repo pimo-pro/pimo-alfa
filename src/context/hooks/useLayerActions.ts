@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { ProjectActions } from "../projectTypes";
 import { appendChangelog, buildBoxesFromWorkspace, buildDesignState, getSelectedWorkspaceBox } from "../projectState";
-import { ensureBoxPanelIds } from "../../core/box/panelIds";
+import { ensureBoxPanelIds, panelIdOptionsFromBox } from "../../core/box/panelIds";
 import { getSelectedOrFirstWorkspaceBox } from "../projectHelpers";
 import { regenerateLayersForBox, createManualDoor, createManualDrawer } from "../../services/boxLayersService";
 import { canBoxHaveDrawers } from "../../core/drawers";
@@ -56,11 +56,10 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                     prateleiras: valor,
                     gavetas: valor > 0 ? 0 : box.gavetas,
                     drawersLayer: valor > 0 ? [] : box.drawersLayer,
-                    panelIds: ensureBoxPanelIds(box.panelIds, {
-                      ...box,
+                    panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                       prateleiras: valor,
                       gavetas: valor > 0 ? 0 : box.gavetas,
-                    }),
+                    })),
                   }
                 : box
             );
@@ -110,12 +109,11 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 prateleiras: valor > 0 ? 0 : box.prateleiras,
                 doorsLayer: valor > 0 ? box.doorsLayer : [],
                 drawerConfigError: undefined,
-                panelIds: ensureBoxPanelIds(box.panelIds, {
-                  ...box,
+                panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                   gavetas: valor,
                   portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
                   prateleiras: valor > 0 ? 0 : box.prateleiras,
-                }),
+                })),
               };
               const layers = regenerateLayersForBox(updatedBox);
               const merged = { ...updatedBox, ...layers };
@@ -175,11 +173,10 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                   gavetas: portaTipo === "sem_porta" ? box.gavetas : 0,
                   drawersLayer: portaTipo === "sem_porta" ? box.drawersLayer : [],
                   doorsLayer: portaTipo === "sem_porta" ? [] : box.doorsLayer,
-                  panelIds: ensureBoxPanelIds(box.panelIds, {
-                    ...box,
+                  panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                     portaTipo,
                     gavetas: portaTipo === "sem_porta" ? box.gavetas : 0,
-                  }),
+                  })),
                 };
                 const layers = regenerateLayersForBox(updatedBox);
                 return { ...updatedBox, ...layers };
@@ -273,11 +270,10 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                     portaTipo: box.portaTipo === "sem_porta" ? "porta_simples" : box.portaTipo,
                     drawersLayer: [],
                     doorsLayer: [...(box.doorsLayer ?? []), newDoor],
-                    panelIds: ensureBoxPanelIds(box.panelIds, {
-                      ...box,
+                    panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                       gavetas: 0,
                       portaTipo: box.portaTipo === "sem_porta" ? "porta_simples" : box.portaTipo,
-                    }),
+                    })),
                   }
                 : box
             );
@@ -309,12 +305,11 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                     doorsLayer: [],
                     gavetas: (box.drawersLayer?.length ?? 0) + 1,
                     drawersLayer: [...(box.drawersLayer ?? []), newDrawer],
-                    panelIds: ensureBoxPanelIds(box.panelIds, {
-                      ...box,
+                    panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                       portaTipo: "sem_porta" as const,
                       prateleiras: 0,
                       gavetas: (box.drawersLayer?.length ?? 0) + 1,
-                    }),
+                    })),
                   }
                 : box
             );
@@ -376,10 +371,9 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                       ...box,
                       drawersLayer: nextDrawers,
                       gavetas: nextDrawers.length,
-                      panelIds: ensureBoxPanelIds(box.panelIds, {
-                        ...box,
+                      panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
                         gavetas: nextDrawers.length,
-                      }),
+                      })),
                     };
                   })()
                 : box
