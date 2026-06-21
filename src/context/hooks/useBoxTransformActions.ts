@@ -11,7 +11,7 @@ import {
   hasPersistedRoomWalls,
   repositionOutsiderBoxesStackedFromCornerMm,
 } from "../../utils/roomWorkspaceBounds";
-import { getIndustrialMaterial } from "../../core/materials/service";
+import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
 
 export type BoxTransformActions = Pick<
   ProjectActions,
@@ -188,11 +188,13 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
     a.setWorkspaceBoxMaterial = (boxId, materialId) => {
       updateProject(
         (prev) => {
-          const espessuraMm = getIndustrialMaterial(materialId).espessuraPadrao;
-          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
-            box.id === boxId ? { ...box, material: materialId, espessura: espessuraMm } : box
+          const { next, sync } = commitMaterialSync(
+            prev,
+            { kind: "box", boxId, materialId },
+            true
           );
-          return { ...prev, workspaceBoxes };
+          refreshViewerAfterMaterialSync(sync);
+          return next;
         },
         true
       );

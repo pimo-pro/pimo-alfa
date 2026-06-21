@@ -2,6 +2,10 @@ import { useMemo } from "react";
 import type { ProjectActions } from "../projectTypes";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { applyResultados, appendChangelog } from "../projectState";
+import {
+  invalidateMaterialCutlistCache,
+  refreshViewerAfterMaterialSync,
+} from "../../core/materials/materialSync";
 import { createRodapesForBox } from "../../core/rodape/rodapeFactory";
 import { getMaterialByIdOrLabel } from "../../core/materials/service";
 import { RODAPE_DEFAULT_HEIGHT_MM, HEMATI_DEFAULT_THICKNESS_MM } from "../../core/kitchenFinish/finishTypes";
@@ -65,24 +69,41 @@ export function useRodapeActions(ctx: ProjectActionsExecutionContext): RodapeAct
 
       updateRodape: (rodapeId, patch) => {
         updateProject(
-          (prev) =>
-            applyResultados({
+          (prev) => {
+            if (patch.materialId != null) {
+              invalidateMaterialCutlistCache(prev, {
+                affectedBoxIds: (() => {
+                  const rodape = prev.rodapes?.find((r) => r.id === rodapeId);
+                  return rodape?.parentBoxId ? [rodape.parentBoxId] : [];
+                })(),
+                invalidateGlobalCache: false,
+              });
+            }
+            const next = applyResultados({
               ...prev,
               rodapes: (prev.rodapes ?? []).map((r) => {
                 if (r.id !== rodapeId) return r;
-                const next = { ...r, ...patch };
+                const nextRodape = { ...r, ...patch };
                 if (patch.heightMm != null) {
-                  next.dimensions = { ...next.dimensions, heightMm: patch.heightMm };
+                  nextRodape.dimensions = { ...nextRodape.dimensions, heightMm: patch.heightMm };
                 }
                 if (patch.dimensions?.heightMm != null) {
-                  next.heightMm = patch.dimensions.heightMm;
+                  nextRodape.heightMm = patch.dimensions.heightMm;
                 }
                 if (patch.dimensions?.widthMm != null) {
-                  next.dimensions = { ...next.dimensions, widthMm: patch.dimensions.widthMm };
+                  nextRodape.dimensions = { ...nextRodape.dimensions, widthMm: patch.dimensions.widthMm };
                 }
-                return next;
+                return nextRodape;
               }),
-            }),
+            });
+            if (patch.materialId != null) {
+              refreshViewerAfterMaterialSync({
+                affectedRemateIds: [],
+                affectedRodapeIds: [rodapeId],
+              });
+            }
+            return next;
+          },
           true
         );
       },

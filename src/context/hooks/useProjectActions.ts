@@ -25,8 +25,7 @@ import { useAutoRoomFillActions } from "./useAutoRoomFillActions";
 import { useSelectionTransformActions } from "./useSelectionTransformActions";
 import { useGroupActions } from "./useGroupActions";
 import { useMeasurementAnchorActions } from "./useMeasurementAnchorActions";
-import { getIndustrialMaterial } from "../../core/materials/service";
-import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
+import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
 
 export type UseProjectActionsParams = {
   updateProject: (_fn: (_prev: ProjectState) => ProjectState, _pushUndo?: boolean) => void;
@@ -107,24 +106,23 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     // --- setMaterial ---
     // Atualiza o Material completo + sincroniza materialId se o objeto tiver id
     a.setMaterial = (material) => {
-      clearAllCutlistCache();
       updateProject(
         (prev) => {
-          if (!material) {
-            return { ...prev, material };
-          }
-          const tipo = material.tipo?.trim();
-          const espFromIndustrial =
-            tipo && tipo.length > 0 ? getIndustrialMaterial(tipo).espessuraPadrao : material.espessura;
-          const materialNext =
-            tipo && tipo.length > 0 ? { ...material, espessura: espFromIndustrial } : material;
-          return {
-            ...prev,
-            material: materialNext,
-            ...("id" in material && material.id ? { materialId: material.id as string } : {}),
-          };
+          const { next, sync } = commitMaterialSync(
+            prev,
+            {
+              kind: "project",
+              material,
+              ...(material && "id" in material && material.id
+                ? { materialId: material.id as string }
+                : {}),
+            },
+            true
+          );
+          refreshViewerAfterMaterialSync(sync);
+          return next;
         },
-        false
+        true
       );
     };
 

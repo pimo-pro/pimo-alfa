@@ -4,7 +4,7 @@ import { recomputeState } from "../projectState";
 import { applyScalingToProject, resolveScalableTargets } from "../../core/viewer/selectionTransformService";
 import { maxLengthAcross } from "../../core/viewer/scalingModes";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
-import { applyMaterialToSelectedObjects } from "../../core/viewer/batchMaterialService";
+import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
 import { historyManager } from "../../core/viewer/historyManager";
 import { decodeSelectionId } from "../../core/viewer/selectionIds";
 import { getAdjacentPlacementMm, getNextWorkspaceBoxId } from "../projectHelpers";
@@ -179,8 +179,13 @@ export function useSelectionTransformActions(ctx: ProjectActionsExecutionContext
       historyManager.recordEvent("material.batch", "Material em lote");
       updateProject(
         (prev) => {
-          const patch = applyMaterialToSelectedObjects(prev, selectedObjectIds, materialId);
-          return recomputeState(prev, patch, true);
+          const { next, sync } = commitMaterialSync(
+            prev,
+            { kind: "selection", encodedIds: selectedObjectIds, materialId },
+            true
+          );
+          refreshViewerAfterMaterialSync(sync);
+          return next;
         },
         true
       );

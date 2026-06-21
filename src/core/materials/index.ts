@@ -28,3 +28,13 @@ export {
   industrialGrainToLayoutAxis,
 } from "./grainDirection";
 export type { IndustrialGrainCode, IndustrialGrainInput } from "./grainDirection";
+export {
+  applyMaterialSync,
+  buildIndustrialCutlistAfterMaterialSync,
+  commitMaterialSync,
+  invalidateMaterialCutlistCache,
+  materialSyncPatch,
+  propagateMaterialSyncEffects,
+  refreshViewerAfterMaterialSync,
+} from "./materialSync";
+export type { MaterialSyncResult, MaterialSyncTarget } from "./materialSync";
