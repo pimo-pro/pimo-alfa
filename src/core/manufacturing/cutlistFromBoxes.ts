@@ -26,6 +26,8 @@ import { getSettings } from "../settings/settingsService";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { calcularPrecoCutList } from "../pricing/pricing";
 import { extractDrawerCutlistFromLayerItems, isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
+import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
+import { buildDivSepIndustrialLabel } from "../divSep/labels";
 
 /** Campos derivados — não entram na chave de cache (evita recomputes por efeitos colaterais). */
 const CAMPOS_EXCLUIDOS_FP_CUTLIST = new Set([
@@ -165,6 +167,9 @@ export function cutlistComPrecoFromBox(
   const doorPanelsInOrder = modelo.paineis.filter((p) => doorTipos.includes(p.tipo));
   const doorDrillHolesByIndex = new Map<number, PanelDrillHole[]>();
   const hingePositionsBySide: Partial<Record<"left" | "right", number[]>> = {};
+  const divSepDrilling = buildDivSepDrilling(box, box.panelIds);
+  let divIndex = 0;
+  let sepIndex = 0;
   for (let i = 0; i < doorPanelsInOrder.length; i++) {
     const p = doorPanelsInOrder[i]!;
     if (!p || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) continue;
@@ -240,6 +245,8 @@ export function cutlistComPrecoFromBox(
                   ? "bottom"
                   : undefined;
     const isCostaPanel = p.tipo === "COSTA";
+    const isDivisor = p.tipo === "divisorio";
+    const isSeparador = p.tipo === "separador";
     const doorOfficial = isDoor && doorsLayer[doorIndex]?.material
       ? resolveMaterial(doorsLayer[doorIndex].material)
       : null;
@@ -317,11 +324,30 @@ export function cutlistComPrecoFromBox(
           : [];
       }
     }
+
+    const panelIdForDivSep = p.id;
+    drillHoles = mergeDrillHoles(drillHoles, divSepDrilling.getExtraHoles(p.tipo, panelIdForDivSep));
+
+    let industrialLabel: string | undefined;
+    let displayNome = getPieceLabel(p.tipo);
+    if (isDivisor) {
+      divIndex += 1;
+      industrialLabel = buildDivSepIndustrialLabel(box.nome, "DIV", divIndex);
+      displayNome = industrialLabel;
+    } else if (isSeparador) {
+      sepIndex += 1;
+      industrialLabel = buildDivSepIndustrialLabel(box.nome, "SEP", sepIndex);
+      displayNome = industrialLabel;
+    }
+
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
-      nome: getPieceLabel(p.tipo),
-      metadata: { panelId: p.id },
+      nome: displayNome,
+      metadata: {
+        panelId: p.id,
+        ...(industrialLabel ? { industrialLabel, divSepKind: isDivisor ? "DIV" : "SEP" } : {}),
+      },
       quantidade: p.quantidade,
       dimensoes: {
         largura: p.largura_mm,

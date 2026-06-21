@@ -1,5 +1,6 @@
 import type { Group } from "three";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
+export type { DivisorItem, SeparadorItem, DivisorReferenceEdge, SeparadorReferenceEdge } from "./divSep/types";
 
 export type OperationResult<T> = {
   success: boolean;
@@ -249,6 +250,10 @@ export interface BoxPanelIds {
   prateleiras: string[];
   portas: string[];
   gavetas: string[];
+  /** Divisórios verticais (DIV). */
+  divisores: string[];
+  /** Separadores horizontais (SEP). */
+  separadores: string[];
 }
 
 export interface BoxModule {
@@ -287,6 +292,10 @@ export interface BoxModule {
   doorsLayer: DoorLayerItem[];
   /** Camada de gavetas da caixa. */
   drawersLayer: DrawerLayerItem[];
+  /** Divisórios verticais (DIV) internos. */
+  divisores: import("./divSep/types").DivisorItem[];
+  /** Separadores horizontais (SEP) internos. */
+  separadores: import("./divSep/types").SeparadorItem[];
   /** ID do item de catálogo que originou a caixa. */
   catalogItemId?: string;
   /** ID do modelo base que originou a caixa. */
@@ -378,6 +387,10 @@ export interface WorkspaceBox {
   doorsLayer: DoorLayerItem[];
   /** Camada de gavetas da caixa. */
   drawersLayer: DrawerLayerItem[];
+  /** Divisórios verticais (DIV) internos. */
+  divisores: import("./divSep/types").DivisorItem[];
+  /** Separadores horizontais (SEP) internos. */
+  separadores: import("./divSep/types").SeparadorItem[];
   /** Id do material (CRUD) ou label legado. Usado para resolver material no Viewer e em exports. */
   material?: string;
   /** Se true, a peça não pode ser movida, redimensionada nem transformada (apenas selecionável para medição). */

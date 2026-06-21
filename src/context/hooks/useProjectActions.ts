@@ -9,6 +9,7 @@ import { applyResultados, appendChangelog, recomputeState } from "../projectStat
 import { useHistoryActions } from "./useHistoryActions";
 import { useProjectIoActions } from "./useProjectIoActions";
 import { useLayerActions } from "./useLayerActions";
+import { useDivSepActions } from "./useDivSepActions";
 import { useBoxCrudActions } from "./useBoxCrudActions";
 import { useBoxTransformActions } from "./useBoxTransformActions";
 import { useRulesActions } from "./useRulesActions";
@@ -59,6 +60,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const historyActions = useHistoryActions(executionContext);
   const projectIoActions = useProjectIoActions(executionContext);
   const layerActions = useLayerActions(executionContext);
+  const divSepActions = useDivSepActions(executionContext);
   const boxCrudActions = useBoxCrudActions(executionContext);
   const boxTransformActions = useBoxTransformActions(executionContext);
   const rulesActions = useRulesActions(executionContext);
@@ -149,6 +151,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       historyActions,
       projectIoActions,
       layerActions,
+      divSepActions,
       boxCrudActions,
       boxTransformActions,
       rulesActions,

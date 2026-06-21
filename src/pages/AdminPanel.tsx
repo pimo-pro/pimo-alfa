@@ -12,6 +12,7 @@ import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
 import DrawerSystemUnifiedAdminPage from "../components/admin/DrawerSystemUnifiedAdminPage";
+import { DivSepRulesAdminPage } from "../admin/rules/divSepRules/DivSepRulesAdminPage";
 import AdminRulesPage from "../components/admin/AdminRulesPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
 import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
@@ -38,6 +39,7 @@ type AdminTab =
   | "System Settings"
   | "Regras das Gavetas"
   | "Configurações das Gavetas (Sistema Unificado)"
+  | "DIV/SEP Rules"
   | "Configuração de Etiquetas (v5)"
   | "Dimensões Técnicas (MC Overlay)"
   | "Projetos Salvos"
@@ -57,6 +59,7 @@ const adminMenu: AdminMenuEntry[] = [
     id: "Configurações das Gavetas (Sistema Unificado)",
     label: "Configurações das Gavetas (Sistema Unificado)",
   },
+  { type: "item", id: "DIV/SEP Rules", label: "DIV/SEP Rules" },
   { type: "group", label: "Configuração" },
   { type: "item", id: "Gestão de Materiais", label: "Gestão de Materiais" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
@@ -93,6 +96,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "System Settings": "adminTools",
   "Regras das Gavetas": "adminRuler",
   "Configurações das Gavetas (Sistema Unificado)": "adminRuler",
+  "DIV/SEP Rules": "adminRuler",
   "Configuração de Etiquetas (v5)": "adminTag",
   "Dimensões Técnicas (MC Overlay)": "adminRuler",
   "Projetos Salvos": "adminSave",
@@ -281,6 +285,8 @@ export default function AdminPanel() {
             <DrawerRulesAdminPage />
           ) : active === "Configurações das Gavetas (Sistema Unificado)" ? (
             <DrawerSystemUnifiedAdminPage />
+          ) : active === "DIV/SEP Rules" ? (
+            <DivSepRulesAdminPage />
           ) : active === "Project Progress" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <ProjectProgress />

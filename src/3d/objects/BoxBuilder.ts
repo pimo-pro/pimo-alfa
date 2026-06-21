@@ -108,6 +108,9 @@ export type BoxOptions = {
   baseCabinetId?: string;
   /** Debug FASE 5: marcadores visuais de furação nas gavetas. */
   showDrawerDrilling?: boolean;
+  /** Divisórios e separadores dinâmicos (estado da caixa). */
+  divisores?: import("../../core/divSep/types").DivisorItem[];
+  separadores?: import("../../core/divSep/types").SeparadorItem[];
 };
 
 export type BoxModel = {

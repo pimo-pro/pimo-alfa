@@ -11,6 +11,7 @@ import {
   getWardrobeGroupFromBaseCabinetId,
   hasWardrobeLowerDrawers,
 } from "../../core/wardrobe/wardrobeRules";
+import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
 import type { PanelType } from "./PanelFactory";
 
 type BoxUpdaterDeps = {
@@ -222,6 +223,32 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     const mesh = deps.panelFactory.createPanel(spec.size[0], spec.size[1], spec.size[2], `shelf-${i}`, "top", { singleMaterial: shelfMat });
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.shelfIndex = i;
+    group.add(mesh);
+  });
+
+  group.children.filter((c) => c.name.startsWith("divsep-")).forEach((obj) => group.remove(obj));
+  const divSepBoxLike = {
+    dimensoes: {
+      largura: width * 1000,
+      altura: height * 1000,
+      profundidade: (opts.layoutDepthM ?? depth) * 1000,
+    },
+    espessura: deps.thicknessM * 1000,
+    profundidadeExterna: (opts.layoutDepthM ?? depth) * 1000,
+    divisores: opts.divisores ?? [],
+    separadores: opts.separadores ?? [],
+  };
+  getDivSepMeshSpecs(divSepBoxLike, width, height, depth, deps.thicknessM).forEach((spec) => {
+    const mesh = deps.panelFactory.createPanel(
+      spec.size[0],
+      spec.size[1],
+      spec.size[2],
+      spec.name,
+      "top",
+      { singleMaterial: mat as THREE.Material }
+    );
+    mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+    mesh.userData.divSepId = spec.name;
     group.add(mesh);
   });
 

@@ -151,6 +151,8 @@ const createBox = (
   cutListComPreco: [],
   doorsLayer: [],
   drawersLayer: [],
+  divisores: [],
+  separadores: [],
   estrutura3D: {
     pecas: [],
     dimensoesTotais: {
@@ -181,6 +183,8 @@ export type CreateWorkspaceBoxOverrides = {
   feetEnabled?: boolean;
   piHideDrawerHoles?: boolean;
   cornerFixedFront?: boolean;
+  divisores?: WorkspaceBox["divisores"];
+  separadores?: WorkspaceBox["separadores"];
 };
 
 export const createWorkspaceBox = (
@@ -205,6 +209,8 @@ export const createWorkspaceBox = (
     portaTipo,
     gavetas,
     cornerFixedFront: overrides?.cornerFixedFront,
+    divisoresCount: overrides?.divisores?.length ?? 0,
+    separadoresCount: overrides?.separadores?.length ?? 0,
   });
   const cabinetType = overrides?.cabinetType;
   const feetHeight = Math.max(40, overrides?.feetHeight ?? ((overrides?.pe_cm ?? 10) * 10));
@@ -249,6 +255,8 @@ export const createWorkspaceBox = (
     panelIds,
     doorsLayer: [],
     drawersLayer: [],
+    divisores: overrides?.divisores ?? [],
+    separadores: overrides?.separadores ?? [],
     locked: false,
     piHideDrawerHoles: overrides?.piHideDrawerHoles === true,
     costaAtiva: true,
@@ -494,6 +502,8 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     portaTipo: box.portaTipo,
     gavetas: box.gavetas,
     cornerFixedFront: isCornerFixedFrontModel(box.baseCabinetId),
+    divisoresCount: box.divisores?.length ?? 0,
+    separadoresCount: box.separadores?.length ?? 0,
   });
   return {
     ...createBox(
@@ -518,6 +528,8 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     material: box.material,
     doorsLayer: box.doorsLayer ?? [],
     drawersLayer: box.drawersLayer ?? [],
+    divisores: box.divisores ?? [],
+    separadores: box.separadores ?? [],
     catalogItemId: box.catalogItemId,
     baseCabinetId: box.baseCabinetId,
     piHideDrawerHoles: box.piHideDrawerHoles === true,

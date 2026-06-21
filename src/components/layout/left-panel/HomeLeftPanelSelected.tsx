@@ -5,6 +5,7 @@ import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import Panel from "../../ui/Panel";
 import { NumericInput } from "../../ui/NumericInput";
 import BoxLayersPanel from "./BoxLayersPanel";
+import DivSepPanel from "./DivSepPanel";
 import { useToast } from "../../../context/ToastContext";
 import { getMaterialByIdOrLabel } from "../../../core/materials";
 import type { UseMaterialsForPickerResult } from "./hooks/useMaterialsForPicker";
@@ -457,6 +458,9 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
           {selectedBox && (
             <Panel title="Opções do box">
               <BoxLayersPanel embedded />
+              <div style={{ marginTop: 12 }}>
+                <DivSepPanel box={selectedBox} actions={actions} />
+              </div>
             </Panel>
           )}
 
