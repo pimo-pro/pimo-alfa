@@ -13,6 +13,9 @@ export interface IViewerToolsEngine {
     setMode(_mode: string): void;
     setSize(_size: number): void;
     setSpace(_space: "local" | "world"): void;
+    showX: boolean;
+    showY: boolean;
+    showZ: boolean;
   } | null;
   getTransformControlsHelper(): THREE.Object3D | null;
   getCurrentTool(): TransformMode;
