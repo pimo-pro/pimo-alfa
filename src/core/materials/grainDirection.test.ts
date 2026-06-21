@@ -35,6 +35,25 @@ describe("resolveIndustrialGrainCode", () => {
     ).toBe("YY");
   });
 
+  it("remate L — peça A lateral DIR/ESQ → YY; peça B → XX", () => {
+    expect(
+      resolveIndustrialGrainCode({
+        tipo: "remate",
+        remateProductType: "L",
+        remateTipo: "L",
+        remateMountSlot: "DIR",
+      })
+    ).toBe("YY");
+    expect(
+      resolveIndustrialGrainCode({
+        tipo: "remate",
+        remateProductType: "L",
+        remateTipo: "L",
+        remateMountSlot: "FRENTE",
+      })
+    ).toBe("XX");
+  });
+
   it("remate à vista → XX", () => {
     expect(
       resolveIndustrialGrainCode({

@@ -1,4 +1,4 @@
-import type { RemateProductType, RematePieceTipo } from "../remate/rematePieceTypes";
+import type { RemateProductType, RematePieceTipo, RemateMountSlot } from "../remate/rematePieceTypes";
 import type { IndustrialGrainCode } from "../types";
 
 export type { IndustrialGrainCode };
@@ -7,6 +7,7 @@ export type IndustrialGrainInput = {
   tipo: string;
   remateProductType?: RemateProductType;
   remateTipo?: RematePieceTipo;
+  remateMountSlot?: RemateMountSlot;
 };
 
 const PORTA_TIPOS = new Set([
@@ -20,7 +21,12 @@ function isRemateCompletoLateral(input: IndustrialGrainInput): boolean {
   if (input.tipo !== "remate") return false;
   if (input.remateProductType === "AVISTA") return false;
   if (input.remateProductType === "RODAPE" || input.remateProductType === "RODAPE_L") return false;
-  const lateral = input.remateTipo === "DIR" || input.remateTipo === "ESQ";
+  const lateral =
+    input.remateTipo === "DIR" ||
+    input.remateTipo === "ESQ" ||
+    (input.remateTipo === "L" &&
+      input.remateProductType === "L" &&
+      (input.remateMountSlot === "DIR" || input.remateMountSlot === "ESQ"));
   if (!lateral) return false;
   if (input.remateProductType === "COMPLETO" || input.remateProductType === "L") return true;
   if (input.remateProductType == null) return true;

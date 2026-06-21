@@ -359,6 +359,7 @@ export function useGerarArquivoHandlers() {
       }
       const doc = await UnifiedEtiquetaEngine.build({
         ...proj,
+        precomputedItems: allItems,
         cutLayoutPlacements:
           nestingPlacements && nestingPlacements.length > 0 ? nestingPlacements : undefined,
       });
@@ -791,6 +792,7 @@ export function useGerarArquivoHandlers() {
         const nestingPlacements = nestingResult?.sheets.flatMap((s) => s.placements) ?? [];
         const docEtiquetas = await UnifiedEtiquetaEngine.build({
           ...proj,
+          precomputedItems: allItems,
           cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
         });
         if (!safeAddPdf(zip, `${safeSlug}_etiquetas.pdf`, docEtiquetas)) {

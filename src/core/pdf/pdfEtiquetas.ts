@@ -81,6 +81,10 @@ type LabelItem = CutListItemComPreco & {
 
 /** Nome industrial alinhado ao Layout de Corte PRO (`<prefixoCaixa>_<prefixoPeca>`). */
 function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiquetasPdf): string {
+  const fromMeta = item.metadata?.industrialLabel;
+  if (typeof fromMeta === "string" && fromMeta.trim()) {
+    return fromMeta.trim();
+  }
   const projectName = item.sourceProjectName ?? project.projectName;
   const boxNome = item.boxNome;
   return buildCutLayoutProPartName(item, boxNome, projectName);
@@ -440,6 +444,8 @@ function panelIdFromItemMetadata(metadata?: Record<string, unknown>): string | n
 function inferPieceKind(item: LabelItem): PieceProductionKind {
   const tipo = String(item.tipo ?? "").toLowerCase();
   const nome = String(item.pieceName ?? item.nome ?? "").toUpperCase();
+  if (tipo === "remate" || nome.includes("_REMATE_")) return "REMATE";
+  if (tipo === "rodape") return "RODAPE";
   if (nome.includes("LED") && nome.includes("LATERAL")) return "LATERAIS_COM_LED";
   if (nome.includes("SENSOR") && nome.includes("FUNDO")) return "FUNDO_COM_SENSOR";
   if (tipo === "cima" || nome.includes("CIMA") || nome.includes("TOPO")) return "CIMA";
