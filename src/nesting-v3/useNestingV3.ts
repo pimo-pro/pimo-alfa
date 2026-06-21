@@ -65,6 +65,7 @@ export function cutPieceToV3(cp: CutPiece, index: number): V3Piece {
     rotation: 0,
     color: getPieceColor(cp.materialId, index),
     sourceBoxId: cp.boxId,
+    industrialGrainCode: cp.industrialGrainCode,
   };
 }
 

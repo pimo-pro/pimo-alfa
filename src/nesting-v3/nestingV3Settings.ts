@@ -4,6 +4,7 @@
 
 import { getSettings } from "../core/settings/settingsService";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
+import { isGrainRotationLocked } from "../core/materials/grainDirection";
 import type { V3Piece } from "./nestingV3Types";
 
 export type NestingV3RotationMode = "none" | "90" | "free";
@@ -76,9 +77,10 @@ export function sheetDimsForMaterial(
 }
 
 export function allowRotationForPiece(
-  _piece: V3Piece,
+  piece: V3Piece,
   settings: NestingV3Settings
 ): boolean {
+  if (isGrainRotationLocked(piece.industrialGrainCode)) return false;
   if (settings.rotationMode === "none") return false;
   return true;
 }

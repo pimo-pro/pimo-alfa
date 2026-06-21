@@ -2,6 +2,7 @@ import type { BoxModule, CutListItem, CutListItemComPreco } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
 import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
+import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import type { RematePiece } from "./rematePieceTypes";
 import { inferProductTypeFromLegacy } from "./remateProductRules";
 import { resolveRemateSheetCutDimensions } from "./remateSheetDimensions";
@@ -36,7 +37,11 @@ export function buildRemateCutlistItems(
       boxId,
       materialId: material?.id ?? remate.materialPresetId,
       visualMaterial: getFallbackMaterial(),
-      grainDirection: remate.tipo === "DIR" || remate.tipo === "ESQ" ? "vertical" : "horizontal",
+      grainDirection: resolveIndustrialGrainCode({
+        tipo: "remate",
+        remateProductType: remate.productType ?? inferProductTypeFromLegacy(remate),
+        remateTipo: remate.tipo,
+      }),
       drillHoles: [],
       metadata: {
         panelId: remate.id,

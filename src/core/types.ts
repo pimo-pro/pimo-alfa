@@ -29,8 +29,11 @@ export type TipoFundo = "integrado" | "recuado" | "sem_fundo";
 /** Origem da peça na lista de corte (paramétrica da caixa ou importada de GLB). */
 export type CutListSourceType = "parametric" | "glb_importado";
 
-/** Direção do veio (grain) para UV e textura. */
+/** Direção do veio (grain) legacy — orientação interna de painéis paramétricos (UV). */
 export type GrainDirection = "horizontal" | "vertical" | "none";
+
+/** Código industrial de veio na cutlist / nesting / TCN. YY = fixo; XX = livre. */
+export type IndustrialGrainCode = "YY" | "XX";
 
 /**
  * Estrutura de material visual por face (Layout Engine / MaterialLibrary v2).
@@ -124,8 +127,8 @@ export interface CutListItem {
   materialId?: string;
   /** Material visual completo para a peça (cor, UV, roughness, metallic). */
   visualMaterial?: LayoutVisualMaterial;
-  /** Direção do veio: horizontal (tampos), vertical (laterais), none. */
-  grainDirection?: GrainDirection;
+  /** Direção do veio industrial: YY (fixo) ou XX (livre). */
+  grainDirection?: IndustrialGrainCode;
   /** Override de escala UV por peça (opcional). */
   uvScaleOverride?: { x: number; y: number };
   /** Override de rotação UV por peça em graus (opcional). */

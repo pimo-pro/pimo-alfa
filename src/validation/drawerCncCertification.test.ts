@@ -50,13 +50,13 @@ describe("Certificação CNC — peças de gaveta", () => {
 
     const front = drawerPieces.find((p) => p.tipo === "gaveta_frente");
     expect(front?.espessura).toBe(19);
-    expect(front?.grainDirection).toBe("horizontal");
+    expect(front?.grainDirection).toBe("YY");
     expect(front?.dimensoes.largura).toBe(598);
     expect(front?.dimensoes.altura).toBeGreaterThan(0);
 
     const lat = drawerPieces.find((p) => p.tipo === "gaveta_lat_esq");
     expect(lat?.espessura).toBe(16);
-    expect(lat?.grainDirection).toBe("vertical");
+    expect(lat?.grainDirection).toBe("XX");
 
     const fundo = drawerPieces.find((p) => p.tipo === "gaveta_fundo");
     expect(fundo?.espessura).toBe(10);

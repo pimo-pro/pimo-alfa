@@ -17,7 +17,8 @@ import type {
   CutLayoutScoreModel as ScoreModel,
   CutLayoutTrialConfig as TrialConfig,
 } from "./cutLayoutTypes";
-import type { LayoutVisualMaterial, OperationResult } from "../types";
+import type { LayoutVisualMaterial, OperationResult, IndustrialGrainCode } from "../types";
+import { industrialGrainToLayoutAxis } from "../materials/grainDirection";
 import { getDefaultOfficialMaterial, resolveMaterial, resolveIndustrialMaterialAtThickness, COSTA_FIXED_THICKNESS_MM, DRAWER_SIDE_THICKNESS_MM } from "../materials/materials.api";
 import { getIndustrialMaterial, getMaterialByIdOrLabel } from "../materials/service";
 import {
@@ -135,6 +136,7 @@ export type CutlistItemForPieces = {
   quantidade: number;
   boxId?: string;
   nome: string;
+  tipo: string;
   material?: string;
   materialId?: string;
   /** Furos reais do painel (fonte única para Layout PRO e TCN). */
@@ -143,7 +145,7 @@ export type CutlistItemForPieces = {
   sheetWidthMm?: number;
   sheetHeightMm?: number;
   sheetThicknessMm?: number;
-  grainDirection?: "length" | "width" | "horizontal" | "vertical" | "none";
+  grainDirection?: IndustrialGrainCode;
   visualMaterial?: LayoutVisualMaterial;
   uvScaleOverride?: { x: number; y: number };
   uvRotationOverride?: number;
@@ -760,9 +762,9 @@ export function cutlistToPieces(
         add(x, y, diameter, depth, (h as { holeType?: string })?.holeType, (h as { topDrillable?: boolean })?.topDrillable);
       }
     }
-    const g = item.grainDirection;
-    const grainDirection: "length" | "width" | undefined =
-      g === "length" || g === "width" ? g : g === "horizontal" ? "length" : g === "vertical" ? "width" : undefined;
+    const industrialCode = item.grainDirection;
+    const grainDirection =
+      industrialCode === "YY" ? industrialGrainToLayoutAxis("YY", item.tipo) : undefined;
     const pieces: CutPiece[] = [];
     const itemWithMeta = item as typeof item & { pieceNumber?: number; shortCode?: string };
     const qty = Math.max(1, Number(item.quantidade) || 1);
@@ -782,6 +784,8 @@ export function cutlistToPieces(
         drillHoles: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         holes: normalizedHoles.length > 0 ? normalizedHoles : undefined,
         grainDirection,
+        industrialGrainCode: industrialCode,
+        pieceTipo: item.tipo,
         visualMaterial: item.visualMaterial,
         uvScaleOverride: item.uvScaleOverride,
         uvRotationOverride: item.uvRotationOverride,

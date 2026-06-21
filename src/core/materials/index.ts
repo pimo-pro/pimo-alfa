@@ -22,3 +22,9 @@ export {
 } from "./presetService";
 export * from "./materialLibraryV2";
 export * from "./materials.api";
+export {
+  resolveIndustrialGrainCode,
+  isGrainRotationLocked,
+  industrialGrainToLayoutAxis,
+} from "./grainDirection";
+export type { IndustrialGrainCode, IndustrialGrainInput } from "./grainDirection";

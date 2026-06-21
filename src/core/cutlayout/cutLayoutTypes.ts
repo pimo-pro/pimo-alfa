@@ -3,7 +3,7 @@
  * FASE 4 Etapa 8 Parte 3: extensão para material visual, UV e grain.
  */
 
-import type { LayoutVisualMaterial } from "../types";
+import type { LayoutVisualMaterial, IndustrialGrainCode } from "../types";
 
 export type SheetDefinition = {
   largura_mm: number;
@@ -52,8 +52,12 @@ export type CutPiece = {
     holeType?: string;
     topDrillable?: boolean;
   }>;
-  /** Comprimento ao longo da fibra (length) = horizontal; width = vertical. */
+  /** Comprimento ao longo da fibra (length) = horizontal; width = vertical. Só quando YY. */
   grainDirection?: "length" | "width";
+  /** Código industrial YY/XX propagado da cutlist. */
+  industrialGrainCode?: IndustrialGrainCode;
+  /** Tipo da peça (para eixo de veio fixo). */
+  pieceTipo?: string;
   /** Material visual para preview / aplicação no Viewer (MaterialLibrary v2). */
   visualMaterial?: LayoutVisualMaterial;
   /** Override de escala UV por peça. */

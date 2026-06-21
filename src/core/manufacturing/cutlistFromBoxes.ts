@@ -2,9 +2,9 @@ import type {
   AcessorioComPreco,
   BoxModule,
   CutListItemComPreco,
-  GrainDirection,
   PanelDrillHole,
 } from "../types";
+import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
@@ -220,7 +220,7 @@ export function cutlistComPrecoFromBox(
     if (drawersLayer.length > 0 && (p.tipo === "gaveta_frente" || p.tipo === "gaveta" || isDrawerPieceTipo(p.tipo))) {
       return;
     }
-    const grainDirection: GrainDirection = p.orientacaoFibra ?? "none";
+    const grainDirection = resolveIndustrialGrainCode({ tipo: p.tipo });
     const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
     const isFixedFront = p.tipo === "frente_fixa";
     const isCornerBox = isCornerFixedFrontModel(box.baseCabinetId);
