@@ -12,6 +12,9 @@
 
 import {
   computeDrawerPieceCorredicaHoles,
+  computeDrawerCostaStructuralHoles,
+  computeDrawerFrenteIntStructuralHoles,
+  computeDrawerLateralStructuralHoles,
   getDrawerSlideDrillingRules,
 } from "../drawers/drilling/DrawerDrillingRules";
 import type { RulesConfig } from "../rules/rulesConfig";
@@ -468,6 +471,33 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
   }
 }
 
+/** Furação estrutural de montagem das peças de gaveta (cavilha, fixação lateral, rasgos de fundo). */
+function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
+  if (piece.tipo === "gaveta_lat_esq" || piece.tipo === "gaveta_lat_dir") {
+    const holes = computeDrawerLateralStructuralHoles({
+      largura: piece.largura,
+      altura: piece.altura,
+      espessura: piece.espessura,
+      side: piece.tipo === "gaveta_lat_esq" ? "esq" : "dir",
+    });
+    out.push(...holes);
+  } else if (piece.tipo === "gaveta_traseira") {
+    const holes = computeDrawerCostaStructuralHoles({
+      largura: piece.largura,
+      altura: piece.altura,
+      espessura: piece.espessura,
+    });
+    out.push(...holes);
+  } else if (piece.tipo === "gaveta_frente") {
+    const holes = computeDrawerFrenteIntStructuralHoles({
+      largura: piece.largura,
+      altura: piece.altura,
+      espessura: piece.espessura,
+    });
+    out.push(...holes);
+  }
+}
+
 export function calculateTechnicalDrillingsForPiece(
   piece: PieceInput,
   rules: RulesConfig
@@ -483,6 +513,7 @@ export function calculateTechnicalDrillingsForPiece(
     calcHandle(piece, out);
     calcPrateleira32mm(piece, rules, out);
     calcDobradicaFixacao(piece, rules, out);
+    calcDrawerStructural(piece, out);
   } catch (err) {
     console.warn(`[drillingService] Error calculating drills for ${piece.tipo}:`, err);
   }

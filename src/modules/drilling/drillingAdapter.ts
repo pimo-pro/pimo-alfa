@@ -149,7 +149,7 @@ function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[], pieceType: Pi
       holeType === "dobradica_fixacao" ||
       holeType === "dobradica_parafuso_uniao" ||
       holeType === "prateleira";
-    return {
+    const base: PanelDrillHole = {
       x: h.x,
       y: h.y,
       diameter: h.diametro,
@@ -158,6 +158,12 @@ function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[], pieceType: Pi
       face: drillFaceToPanelFace(h.face, pieceType),
       topDrillable,
     };
+    if (h.holeSubtype === "groove") {
+      base.holeSubtype = "groove";
+      if (h.grooveWidth != null) base.grooveWidth = h.grooveWidth;
+      if (h.grooveLength != null) base.grooveLength = h.grooveLength;
+    }
+    return base;
   });
 }
 

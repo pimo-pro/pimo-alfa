@@ -89,6 +89,23 @@ function buildXmlFromDrillHoles(
   lines.push(" </PANEL>");
 
   for (const hole of holes) {
+    // TypeNo=3 — Vertical Line (rasgo de encaixe)
+    if (hole.holeSubtype === "groove") {
+      const endX = hole.x + (hole.grooveLength ?? panelLength);
+      lines.push(" <CAD>");
+      lines.push("  <TypeNo>3</TypeNo>");
+      lines.push("  <TypeName>Vertical Line</TypeName>");
+      lines.push(`  <X1>${fmt(hole.x)}</X1>`);
+      lines.push(`  <Y1>${fmt(hole.y)}</Y1>`);
+      lines.push(`  <X2>${fmt(endX)}</X2>`);
+      lines.push(`  <Y2>${fmt(hole.y)}</Y2>`);
+      lines.push(`  <Width>${fmt(hole.grooveWidth ?? 0)}</Width>`);
+      lines.push(`  <Depth>${fmt(hole.depth)}</Depth>`);
+      lines.push("  <Enable>1</Enable>");
+      lines.push(" </CAD>");
+      continue;
+    }
+
     const isVertical = hole.topDrillable === true || hole.holeType === "corredica" || hole.holeType === "parafuso";
     if (isVertical) {
       lines.push(" <CAD>");

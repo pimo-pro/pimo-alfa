@@ -162,7 +162,10 @@ describe("Certificação CNC — peças de gaveta", () => {
     expect(withHoles.length).toBeGreaterThanOrEqual(4);
     withHoles.forEach((item) => {
       item.drillHoles!.forEach((h) => {
-        expect(h.diameter).toBeGreaterThan(0);
+        // Rasgos (groove) não têm diâmetro circular — excluir da verificação de diameter.
+        if (h.holeSubtype !== "groove") {
+          expect(h.diameter).toBeGreaterThan(0);
+        }
         expect(h.depth).toBeGreaterThan(0);
         expect(["A", "B", undefined]).toContain(h.face);
       });

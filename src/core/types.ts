@@ -59,7 +59,7 @@ export interface PieceFaceMaterials {
   back?: LayoutVisualMaterial;
 }
 
-export type DrillType = "cavilha" | "parafuso" | "minifix" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira";
+export type DrillType = "cavilha" | "parafuso" | "minifix" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira" | "fixacao_estrutural";
 export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
 export type DrillPanelKey = "cima" | "fundo" | "lateral_esquerda" | "lateral_direita" | "porta";
 export interface TechnicalDrillHole {
@@ -69,6 +69,12 @@ export interface TechnicalDrillHole {
   profundidade: number;
   tipo: DrillType;
   face: DrillFace;
+  /** "groove" para rasgos de encaixe (fundo da gaveta); omitido = furo circular. */
+  holeSubtype?: "groove";
+  /** Largura do rasgo em mm (apenas quando holeSubtype="groove"). */
+  grooveWidth?: number;
+  /** Comprimento do rasgo em mm (apenas quando holeSubtype="groove"). */
+  grooveLength?: number;
 }
 
 export interface ViewerDrillMarkersByPanel extends Record<DrillPanelKey, TechnicalDrillHole[]> {
@@ -103,6 +109,12 @@ export interface PanelDrillHole {
   face?: PanelFace;
   /** Se true, furo perfurável pelo topo (emissão TCN). */
   topDrillable?: boolean;
+  /** "groove" para rasgos de encaixe; omitido = furo circular. */
+  holeSubtype?: "groove";
+  /** Largura do rasgo em mm (apenas quando holeSubtype="groove"). */
+  grooveWidth?: number;
+  /** Comprimento do rasgo em mm (apenas quando holeSubtype="groove"). */
+  grooveLength?: number;
 }
 
 export interface CutListItem {
