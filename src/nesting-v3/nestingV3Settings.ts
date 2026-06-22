@@ -4,7 +4,7 @@
 
 import { getSettings } from "../core/settings/settingsService";
 import { getMaterialByIdOrLabel } from "../core/materials/service";
-import { isGrainRotationLocked } from "../core/materials/grainDirection";
+import { isNestingRotationLocked } from "../core/materials/nestingGrainLock";
 import type { V3Piece } from "./nestingV3Types";
 
 export type NestingV3RotationMode = "none" | "90" | "free";
@@ -84,10 +84,17 @@ export function allowRotationForPiece(
   piece: V3Piece,
   settings: NestingV3Settings
 ): boolean {
-  if (piece.pieceTipo === "rodape") {
-    return settings.rotationMode !== "none";
-  }
-  if (isGrainRotationLocked(piece.industrialGrainCode)) return false;
   if (settings.rotationMode === "none") return false;
+  if (
+    isNestingRotationLocked({
+      materialId: piece.materialId,
+      industrialGrainCode: piece.industrialGrainCode,
+      pieceTipo: piece.pieceTipo,
+      allowPieceRotation: piece.allowPieceRotation,
+    })
+  ) {
+    return false;
+  }
+  if (piece.pieceTipo === "rodape") return true;
   return true;
 }

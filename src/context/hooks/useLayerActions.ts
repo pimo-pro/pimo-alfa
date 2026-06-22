@@ -27,7 +27,9 @@ export type LayerActions = Pick<
   | "setDrawerHeightMode"
   | "setPortaTipo"
   | "setDoorMaterial"
+  | "setDoorAllowPieceRotation"
   | "setDrawerMaterial"
+  | "setDrawerAllowPieceRotation"
   | "addDoorLayerItem"
   | "addDrawerLayerItem"
   | "removeDoorLayerItem"
@@ -232,6 +234,36 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
             );
             refreshViewerAfterMaterialSync(sync);
             return next;
+          },
+          true
+        );
+      },
+      setDoorAllowPieceRotation: (boxId, doorLayerId, allow) => {
+        updateProject(
+          (prev) => {
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== boxId) return box;
+              const doorsLayer = (box.doorsLayer ?? []).map((door) =>
+                door.id === doorLayerId ? { ...door, allowPieceRotation: allow } : door
+              );
+              return { ...box, doorsLayer };
+            });
+            return { ...prev, workspaceBoxes };
+          },
+          true
+        );
+      },
+      setDrawerAllowPieceRotation: (boxId, drawerLayerId, allow) => {
+        updateProject(
+          (prev) => {
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== boxId) return box;
+              const drawersLayer = (box.drawersLayer ?? []).map((drawer) =>
+                drawer.id === drawerLayerId ? { ...drawer, allowPieceRotation: allow } : drawer
+              );
+              return { ...box, drawersLayer };
+            });
+            return { ...prev, workspaceBoxes };
           },
           true
         );

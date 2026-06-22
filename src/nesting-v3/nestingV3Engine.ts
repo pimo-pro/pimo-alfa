@@ -8,6 +8,7 @@
 import type { V3Piece, V3Sheet, V3Placement, V3AutoLayoutResult, NestingV3State } from "./nestingV3Types";
 import type { NestingV3Settings } from "./nestingV3Settings";
 import { allowRotationForPiece } from "./nestingV3Settings";
+import { resolveNestingLayoutGrainDirection } from "../core/materials/nestingGrainLock";
 import { runCutLayout } from "../core/cutlayout/cutLayoutEngine";
 import type { CutLayoutEngineOptions, SheetDefinition } from "../core/cutlayout/cutLayoutTypes";
 import { getDefaultCncLayoutOptions } from "../core/cnc/cncPipeline";
@@ -84,17 +85,25 @@ export function runNestingV3AutoLayoutLegacy(
 
   const margin = settings.marginMm;
   const kerfMm = settings.kerfMm;
-  const nestingPieces: Nesting3Piece[] = pieces.map((piece, index) => ({
-    id: piece.id,
-    widthMm: piece.widthMm,
-    heightMm: piece.heightMm,
-    materialId: piece.materialId,
-    materialName: piece.materialName,
-    thicknessMm: piece.thicknessMm,
-    allowRotation: allowRotationForPiece(piece, settings),
-    grainDirection: piece.industrialGrainCode === "YY" ? "width" : "none",
-    originalIndex: index,
-  }));
+  const nestingPieces: Nesting3Piece[] = pieces.map((piece, index) => {
+    const layoutGrain = resolveNestingLayoutGrainDirection({
+      materialId: piece.materialId,
+      industrialGrainCode: piece.industrialGrainCode,
+      pieceTipo: piece.pieceTipo,
+      allowPieceRotation: piece.allowPieceRotation,
+    });
+    return {
+      id: piece.id,
+      widthMm: piece.widthMm,
+      heightMm: piece.heightMm,
+      materialId: piece.materialId,
+      materialName: piece.materialName,
+      thicknessMm: piece.thicknessMm,
+      allowRotation: allowRotationForPiece(piece, settings),
+      grainDirection: layoutGrain ?? "none",
+      originalIndex: index,
+    };
+  });
   const fallbackSheet: V3Sheet = {
     index: 0,
     widthMm: settings.sheetWidthMm,

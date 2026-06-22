@@ -13,7 +13,7 @@ import type {
 } from "./nestingV3Types";
 import { runNestingV3AutoLayout, getPieceColor } from "./nestingV3Engine";
 import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
-import { loadNestingV3SettingsFromGlobal, type NestingV3Settings } from "./nestingV3Settings";
+import { loadNestingV3SettingsFromGlobal, type NestingV3Settings, allowRotationForPiece } from "./nestingV3Settings";
 import { buildInitialSheetsForPieces, cloneDefaultSheet, defaultSheetFromSettings } from "./nestingSheetsFactory";
 import { findValidPlacement } from "./nestingV3Placement";
 
@@ -49,10 +49,18 @@ function nextPieceId() { return `v3p-${_pieceIdCounter++}`; }
 
 // ── Converter CutPiece → V3Piece ──────────────────────────────────────────────
 
-export function cutPieceToV3(cp: CutPiece, index: number): V3Piece {
+export function cutPieceToV3(
+  cp: CutPiece,
+  index: number,
+  options?: { allowPieceRotation?: boolean }
+): V3Piece {
   const holes = (cp.drillHoles ?? cp.holes ?? []).map((h) => ({
     x: h.x, y: h.y, diameter: h.diameter, depth: h.depth, holeType: h.holeType,
   }));
+  const metaAllow = cp.metadata?.allowPieceRotation;
+  const allowPieceRotation =
+    options?.allowPieceRotation ??
+    (metaAllow === true ? true : metaAllow === false ? false : undefined);
   return {
     id: nextPieceId(),
     name: cp.partName,
@@ -67,6 +75,7 @@ export function cutPieceToV3(cp: CutPiece, index: number): V3Piece {
     sourceBoxId: cp.boxId,
     industrialGrainCode: cp.industrialGrainCode,
     pieceTipo: cp.pieceTipo,
+    allowPieceRotation,
   };
 }
 
@@ -197,6 +206,7 @@ export function useNestingV3(initialCutPieces: CutPiece[] = []) {
       const placement = prev.placements.find((p) => p.pieceId === pieceId);
       const piece = prev.pieces.find((p) => p.id === pieceId);
       if (!piece) return prev;
+      if (!allowRotationForPiece(piece, prev.settings)) return prev;
 
       const nextRotation = ((piece.rotation + 90) % 360) as 0 | 90 | 180 | 270;
       const rotatedPiece = { ...piece, rotation: nextRotation };

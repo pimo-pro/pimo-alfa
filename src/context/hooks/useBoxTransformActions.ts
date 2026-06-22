@@ -23,6 +23,7 @@ export type BoxTransformActions = Pick<
   | "repositionWorkspaceBoxesInsideRoom"
   | "setWorkspaceBoxNome"
   | "setWorkspaceBoxMaterial"
+  | "setWorkspaceBoxAllowPieceRotation"
   | "setWorkspaceBoxLocked"
   | "setWorkspaceBoxPiHideDrawerHoles"
   | "setWorkspaceBoxCostaMaterial"
@@ -202,6 +203,18 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
           );
           refreshViewerAfterMaterialSync(sync);
           return next;
+        },
+        true
+      );
+    };
+
+    a.setWorkspaceBoxAllowPieceRotation = (boxId, allow) => {
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? { ...box, allowPieceRotation: allow } : box
+          );
+          return { ...prev, workspaceBoxes };
         },
         true
       );

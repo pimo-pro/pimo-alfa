@@ -396,6 +396,8 @@ export interface WorkspaceBox {
   separadores: import("./divSep/types").SeparadorItem[];
   /** Id do material (CRUD) ou label legado. Usado para resolver material no Viewer e em exports. */
   material?: string;
+  /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
+  allowPieceRotation?: boolean;
   /** Se true, a peça não pode ser movida, redimensionada nem transformada (apenas selecionável para medição). */
   locked?: boolean;
   /**

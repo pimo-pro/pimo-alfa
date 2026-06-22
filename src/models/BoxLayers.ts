@@ -28,6 +28,8 @@ export interface DoorLayerItem {
   manualDimensions?: boolean;
   /** Origem do ajuste vertical (+/− mm na altura): topo ou base fixos. */
   verticalAdjustOrigin?: "top" | "bottom";
+  /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
+  allowPieceRotation?: boolean;
 }
 
 export type DrawerLayerMetadata = {
@@ -107,4 +109,6 @@ export interface DrawerLayerItem {
   rotY: number;
   /** Configuração UI por gaveta (FASE 4) — espelha campos editáveis sem alterar geometria. */
   metadata?: DrawerLayerMetadata;
+  /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
+  allowPieceRotation?: boolean;
 }

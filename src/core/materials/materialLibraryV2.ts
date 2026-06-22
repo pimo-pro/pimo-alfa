@@ -15,6 +15,7 @@ import { getMaterialForBox, getMaterialByIdOrLabel } from "./service";
 import { getPresetById, getDefaultPreset } from "./presetService";
 import type { BoxModule } from "../types";
 import { loadTextureAsync } from "../../3d/viewer-engine/materials/textureCache";
+import { isMaterialMadeira, isViewerGrainFlipped, resolveViewerGrainUvScale } from "./nestingGrainLock";
 
 /** Objeto visual final para renderização (cor, textura, UV, PBR). */
 export interface VisualMaterial {
@@ -101,6 +102,9 @@ export interface PieceWithMaterialFields {
   grainDirection?: "horizontal" | "vertical" | "none";
   uvScaleOverride?: { x: number; y: number };
   uvRotationOverride?: number;
+  materialId?: string;
+  /** Índice de rotação 0–3 (remates virados no viewer). */
+  rotationSnapIndex?: number;
 }
 
 /**
@@ -109,13 +113,16 @@ export interface PieceWithMaterialFields {
  */
 export function getEffectiveUvScaleForPiece(piece: PieceWithMaterialFields): { x: number; y: number } {
   if (piece.uvScaleOverride && Number.isFinite(piece.uvScaleOverride.x) && Number.isFinite(piece.uvScaleOverride.y)) {
-    return { x: piece.uvScaleOverride.x, y: piece.uvScaleOverride.y };
+    return piece.uvScaleOverride;
   }
   const base = piece.visualMaterial?.uvScale ?? DEFAULT_UV_SCALE;
-  const g = piece.grainDirection;
-  if (g === "horizontal") return { x: 2, y: 1 };
-  if (g === "vertical") return { x: 1, y: 2 };
-  return { x: base.x, y: base.y };
+  const madeira = isMaterialMadeira(piece.materialId);
+  const grainFlipped = isViewerGrainFlipped(piece.rotationSnapIndex);
+  return resolveViewerGrainUvScale(base, {
+    materialMadeira: madeira,
+    grainFlipped,
+    grainDirection: piece.grainDirection,
+  });
 }
 
 /**

@@ -8,8 +8,16 @@ import type { CutPiece } from "../cutLayoutTypes";
 import type { V3Piece } from "../../../nesting-v3/nestingV3Types";
 import type { NestingV3Settings } from "../../../nesting-v3/nestingV3Settings";
 import { sheetDimsForMaterial } from "../../../nesting-v3/nestingV3Settings";
+import { resolveNestingLayoutGrainDirection } from "../../materials/nestingGrainLock";
 
 function mapGrainDirection(piece: V3Piece): CutPiece["grainDirection"] {
+  const nestingLock = resolveNestingLayoutGrainDirection({
+    materialId: piece.materialId,
+    industrialGrainCode: piece.industrialGrainCode,
+    pieceTipo: piece.pieceTipo,
+    allowPieceRotation: piece.allowPieceRotation,
+  });
+  if (nestingLock) return nestingLock;
   if (piece.industrialGrainCode === "YY") return "length";
   if (piece.industrialGrainCode === "XX") return "width";
   return undefined;

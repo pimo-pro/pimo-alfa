@@ -29,6 +29,7 @@ import {
   listIndustrialWoodMaterials,
   resolveMaterial,
 } from "./materials.api";
+import { inferMaterialMadeiraFromRecord } from "./nestingGrainLock";
 
 const STORAGE_KEY = "pimo_materials_crud_v1";
 
@@ -148,16 +149,20 @@ function ensureRequiredMaterialsCatalog(): { created: number; updated: number } 
  * Garante ligação ao sistema industrial (cutlayout, TCN, espessura de painel).
  */
 function applyInferredIndustrialFields(record: MaterialRecord): MaterialRecord {
-  if (record.industrialMaterialId?.trim()) return record;
-  const off = resolveMaterial(record.label);
+  const withMadeira: MaterialRecord = {
+    ...record,
+    materialMadeira: inferMaterialMadeiraFromRecord(record),
+  };
+  if (withMadeira.industrialMaterialId?.trim()) return withMadeira;
+  const off = resolveMaterial(withMadeira.label);
   if (off?.industrial && off.canonicalId) {
     return {
-      ...record,
+      ...withMadeira,
       industrialMaterialId: off.canonicalId,
-      visualPresetId: record.visualPresetId?.trim() || off.viewerMaterialId,
+      visualPresetId: withMadeira.visualPresetId?.trim() || off.viewerMaterialId,
     };
   }
-  return record;
+  return withMadeira;
 }
 
 function recordIndustrialFieldsChanged(before: MaterialRecord, after: MaterialRecord): boolean {

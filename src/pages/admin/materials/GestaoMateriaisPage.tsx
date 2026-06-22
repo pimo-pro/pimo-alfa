@@ -118,6 +118,7 @@ export default function GestaoMateriaisPage() {
     sheetDensity: undefined,
     industrialMaterialId: "",
     visualPresetId: "",
+    materialMadeira: false,
   });
 
   const [search, setSearch] = useState("");
@@ -227,6 +228,7 @@ export default function GestaoMateriaisPage() {
         sheetDensity: m.sheetDensity,
         industrialMaterialId: m.industrialMaterialId,
         visualPresetId: m.visualPresetId,
+        materialMadeira: m.materialMadeira ?? false,
       });
     }
     setPanelOpen(true);
@@ -255,6 +257,7 @@ export default function GestaoMateriaisPage() {
       : Number(form.sheetDensity),
     industrialMaterialId: form.industrialMaterialId || undefined,
     visualPresetId: form.visualPresetId || undefined,
+    materialMadeira: form.materialMadeira === true,
   });
 
   const handleSave = () => {
@@ -970,6 +973,17 @@ export default function GestaoMateriaisPage() {
                 );
               })()}
             </div>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginTop: 4 }}>
+              <input
+                type="checkbox"
+                checked={form.materialMadeira === true}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, materialMadeira: e.target.checked }))
+                }
+              />
+              Material de madeira (veio) — nesting não roda peças deste material
+            </label>
 
             <button
               type="button"

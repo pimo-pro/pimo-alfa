@@ -66,6 +66,11 @@ export interface MaterialRecord {
   industrialMaterialId?: string;
   /** Id do preset visual (ligação). */
   visualPresetId?: string;
+  /**
+   * Material com veio de madeira — nesting não pode rodar peças deste material
+   * (salvo override allowPieceRotation na peça).
+   */
+  materialMadeira?: boolean;
 }
 
 /** Dados para criar material (id gerado pelo serviço). */

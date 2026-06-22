@@ -29,6 +29,15 @@ export {
 } from "./grainDirection";
 export type { IndustrialGrainCode, IndustrialGrainInput } from "./grainDirection";
 export {
+  isMaterialMadeira,
+  isNestingRotationLocked,
+  resolveNestingLayoutGrainDirection,
+  inferMaterialMadeiraFromRecord,
+  isViewerGrainFlipped,
+  resolveViewerGrainUvScale,
+} from "./nestingGrainLock";
+export type { NestingGrainLockInput } from "./nestingGrainLock";
+export {
   applyMaterialSync,
   buildIndustrialCutlistAfterMaterialSync,
   commitMaterialSync,

@@ -92,6 +92,8 @@ export type RematePiece = {
   /** Agrupa peças L / RODAPE_L / Completo multi-peça. */
   parentGroupId?: string;
   partIndex?: 1 | 2;
+  /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
+  allowPieceRotation?: boolean;
 };
 
 export type CreateRematePieceInput = {
@@ -129,6 +131,7 @@ export type UpdateRematePieceInput = Partial<
     | "rotation"
     | "followBox"
     | "name"
+    | "allowPieceRotation"
   >
 >;
 
