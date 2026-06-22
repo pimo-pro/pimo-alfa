@@ -115,6 +115,21 @@ export function buildCutLayoutProPartName(
   return `${boxPrefix}_${piecePrefix}`;
 }
 
+/**
+ * REF PEÇA / nome industrial — mesma regra das etiquetas (metadata.industrialLabel ou PRO name).
+ */
+export function resolveIndustrialPieceRef(
+  item: { nome?: string; tipo?: string; metadata?: Record<string, unknown> },
+  boxNome: string | undefined,
+  projectName: string
+): string {
+  const fromMeta = item.metadata?.industrialLabel;
+  if (typeof fromMeta === "string" && fromMeta.trim()) {
+    return fromMeta.trim().toUpperCase();
+  }
+  return buildCutLayoutProPartName(item, boxNome, projectName).toUpperCase();
+}
+
 export type BoxNomeLookup = ReadonlyMap<string, string> | Record<string, string>;
 
 export function cutlistItemsWithCutLayoutProNames<T extends { nome?: string; tipo?: string; boxId?: string }>(

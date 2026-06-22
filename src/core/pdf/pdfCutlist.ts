@@ -8,8 +8,15 @@ import autoTable from "jspdf-autotable";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
-import { buildLocalQrPayload } from "../qrcode/qrcodeService";
-import { formatNqrCell, resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
+import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
+import {
+  buildIndustrialListPiecesPerSheet,
+  resolveIndustrialListNqr,
+} from "./industrialListQr";
+
+/** Grelha preta fina — impressão e conferência manual. */
+const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
+const TABLE_GRID_WIDTH = 0.15;
 
 export type ProjectForPdf = {
   projectName: string;
@@ -73,7 +80,7 @@ function isCozinhaContext(
  * Renderiza tabela de lista de corte.
  * Ordem: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N.º QR.
  * Borda: 10 mm → "—"; cozinha + reta → "TODAS"; demais → tipoBorda ou "todos os lados".
- * N.º QR: código da etiqueta (mesmo padrão das etiquetas), com quebra de linha.
+ * N.º QR: código v5 unificado (mesmo das etiquetas industriais).
  */
 export function renderCutlistTable(
   doc: jsPDF,
@@ -93,7 +100,14 @@ export function renderCutlistTable(
     "OBSERVAÇÕES",
     "N.º QR",
   ];
-  const body = parts.map((p) => {
+  const qrCtx = {
+    projectName: project.projectName,
+    boxes: project.boxes,
+    rules: project.rules,
+  };
+  const piecesPerSheet = buildIndustrialListPiecesPerSheet(parts);
+
+  const body = parts.map((p, index0) => {
     let bordaFita: string;
     if (p.espessura === 10) {
       bordaFita = "—";
@@ -105,18 +119,11 @@ export function renderCutlistTable(
         bordaFita = raw;
       }
     }
-    const ctx = { projectName: project.projectName, boxes: project.boxes, rules: project.rules };
-    const auth = resolveAuthoritativeLabelNumber(p);
-    const nQr =
-      auth != null
-        ? formatNqrCell(p.shortCode, buildLocalQrPayload(p, ctx, auth))
-        : formatNqrCell(
-            p.shortCode,
-            p.shortCode && p.shortCode !== "ERR" ? p.shortCode : "—"
-          );
+    const refPeca = resolveIndustrialPieceRef(p, p.boxNome, project.projectName);
+    const nQr = resolveIndustrialListNqr(p, qrCtx, piecesPerSheet, index0);
     return [
       p.boxNome ?? "—",
-      p.nome,
+      refPeca,
       String(p.quantidade),
       `${p.dimensoes.largura}×${p.dimensoes.altura}×${p.dimensoes.profundidade}`,
       bordaFita,
@@ -140,14 +147,14 @@ export function renderCutlistTable(
     styles: {
       fontSize: 7,
       cellPadding: 1.5,
-      lineColor: [160, 160, 160],
-      lineWidth: 0.12,
+      lineColor: TABLE_GRID_LINE,
+      lineWidth: TABLE_GRID_WIDTH,
     },
     headStyles: {
       fillColor: HEADER_COLOR,
       fontSize: 7,
-      lineColor: [160, 160, 160],
-      lineWidth: 0.12,
+      lineColor: TABLE_GRID_LINE,
+      lineWidth: TABLE_GRID_WIDTH,
     },
     margin: { left: MARGIN, right: MARGIN },
     columnStyles: {

@@ -8,33 +8,22 @@ import autoTable from "jspdf-autotable";
 import type { ComponentType } from "../components/componentTypes";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { gerarModeloIndustrial } from "../manufacturing/boxManufacturing";
-import { buildGlobalQrCutlistMerged, cutlistComPrecoFromBox } from "../manufacturing/cutlistFromBoxes";
-import { boxUsesModernDrawerPipeline } from "../../services/drawerCutlistAdapter";
+import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
+import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
+import {
+  buildIndustrialListPiecesPerSheet,
+  resolveIndustrialListNqr,
+} from "./industrialListQr";
 import { safeGetItem } from "../../utils/storage";
+
 import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
 import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
 
-const MARGIN = 12;
+/** Grelha preta fina — impressão e conferência manual. */
+const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
+const TABLE_GRID_WIDTH = 0.15;
+const MARGIN = 14;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
-
-/** Formato REF PEÇA: tipo → nome em maiúsculas para tabela */
-const TIPO_TO_REF_NAME: Record<string, string> = {
-  cima: "CIMA",
-  fundo: "FUNDO",
-  lateral_esquerda: "LATERAL_ESQ",
-  lateral_direita: "LATERAL_DIR",
-  COSTA: "COSTA",
-  prateleira: "PRATELEIRA",
-  porta_dupla: "PORTA_DUPLA",
-  porta_simples: "PORTA_SIMPLES",
-  porta_correr: "PORTA_CORRER",
-  gaveta_frente: "GAVETA_FRENTE",
-  gaveta_lat_esq: "GAVETA_LAT_ESQ",
-  gaveta_lat_dir: "GAVETA_LAT_DIR",
-  gaveta_fundo: "GAVETA_FUNDO",
-  gaveta_traseira: "GAVETA_TRASEIRA",
-};
 
 /** Mapeamento tipo peça (boxManufacturing) → id componentType */
 const TIPO_TO_COMPONENT_ID: Record<string, string> = {
@@ -136,35 +125,22 @@ export type GerarPdfTecnicoOpcoes = {
   precomputedItems?: CutListItemComPreco[];
 };
 
-function panelIdFromCutlistMetadata(metadata?: Record<string, unknown>): string | null {
-  if (!metadata || typeof metadata.panelId !== "string") return null;
-  const s = metadata.panelId.trim();
-  return s || null;
-}
-
-function buildShortCodeByBoxPanel(
+function loadCutlistForIndustrialList(
   boxes: BoxModule[],
   rules: RulesConfig,
   projectName: string,
-  materialId: string | undefined,
-  extractedPartsByBoxId: Record<string, Record<string, CutListItemComPreco[]>> | undefined,
-  precomputedItems: CutListItemComPreco[] | undefined
-): Map<string, string> {
-  const items =
-    precomputedItems && precomputedItems.length > 0
-      ? precomputedItems
-      : buildGlobalQrCutlistMerged(boxes, rules, materialId, projectName, extractedPartsByBoxId);
-  const map = new Map<string, string>();
-  for (const it of items) {
-    const pid = panelIdFromCutlistMetadata(it.metadata);
-    const bid = it.boxId?.trim();
-    if (!bid || !pid) continue;
-    const key = `${bid}::${pid}`;
-    if (map.has(key)) continue;
-    const sc = String(it.shortCode ?? "").trim();
-    if (sc && sc !== "ERR") map.set(key, sc);
+  pdfOpts?: Pick<GerarPdfTecnicoOpcoes, "materialId" | "extractedPartsByBoxId" | "precomputedItems">
+): CutListItemComPreco[] {
+  if (pdfOpts?.precomputedItems && pdfOpts.precomputedItems.length > 0) {
+    return pdfOpts.precomputedItems;
   }
-  return map;
+  return buildGlobalQrCutlistMerged(
+    boxes,
+    rules,
+    pdfOpts?.materialId,
+    projectName,
+    pdfOpts?.extractedPartsByBoxId
+  );
 }
 
 function construirLinhas(
@@ -176,17 +152,15 @@ function construirLinhas(
   pdfOpts?: Pick<GerarPdfTecnicoOpcoes, "materialId" | "extractedPartsByBoxId" | "precomputedItems">
 ): LinhaPeca[] {
   const ctById = Object.fromEntries(componentTypes.map((c) => [c.id, c]));
-  const shortByPanel = buildShortCodeByBoxPanel(
-    boxes,
-    rules,
-    projectName,
-    pdfOpts?.materialId,
-    pdfOpts?.extractedPartsByBoxId,
-    pdfOpts?.precomputedItems
-  );
+  const boxById = new Map(boxes.map((b) => [b.id, b]));
+  const boxIndexById = new Map(boxes.map((b, i) => [b.id, i + 1]));
+
+  const cutlist = loadCutlistForIndustrialList(boxes, rules, projectName, pdfOpts);
+  const piecesPerSheet = buildIndustrialListPiecesPerSheet(cutlist);
+  const qrCtx = { projectName, boxes, rules };
 
   const pecasCompletas: Array<{
-    box: BoxModule;
+    box: BoxModule | undefined;
     boxIndex: number;
     tipo: string;
     refPeca: string;
@@ -195,77 +169,32 @@ function construirLinhas(
     esp: number;
     material: string;
     qtd: number;
-    panelId: string;
+    nQr: string;
   }> = [];
 
-  for (let boxIdx = 0; boxIdx < boxes.length; boxIdx++) {
-    const box = boxes[boxIdx];
-    const material = box.material ?? "mdf_branco";
-    const boxNum = boxIdx + 1;
+  cutlist.forEach((item, index0) => {
+    const box = item.boxId ? boxById.get(item.boxId) : undefined;
+    const boxIndex = item.boxId ? (boxIndexById.get(item.boxId) ?? 0) : 0;
+    const boxNome = box?.nome ?? item.boxId ?? "";
+    const refPeca = resolveIndustrialPieceRef(item, boxNome, projectName);
+    const materialNome = item.material ?? box?.material ?? "mdf_branco";
 
-    if (boxUsesModernDrawerPipeline(box)) {
-      const modernCutlist = cutlistComPrecoFromBox(box, rules, pdfOpts?.materialId);
-      let prateleiraCount = 0;
-      let gavetaFrenteCount = 0;
-
-      for (const item of modernCutlist) {
-        let nomePeca = TIPO_TO_REF_NAME[item.tipo] ?? item.tipo.toUpperCase().replace(/\s/g, "_");
-        if (item.tipo === "prateleira") {
-          prateleiraCount++;
-          nomePeca = `PRATELEIRA_${String(prateleiraCount).padStart(2, "0")}`;
-        } else if (item.tipo === "gaveta_frente") {
-          gavetaFrenteCount++;
-          nomePeca = `GAVETA_FRENTE_${String(gavetaFrenteCount).padStart(2, "0")}`;
-        } else if (item.nome?.trim()) {
-          nomePeca = item.nome.toUpperCase().replace(/\s+/g, "_");
-        }
-
-        pecasCompletas.push({
-          box,
-          boxIndex: boxNum,
-          tipo: item.tipo,
-          refPeca: `Caixa ${boxNum} – ${nomePeca}`,
-          larg: item.dimensoes.largura,
-          comp: item.dimensoes.altura,
-          esp: item.espessura,
-          material: item.material || material,
-          qtd: item.quantidade,
-          panelId: item.id,
-        });
-      }
-      continue;
-    }
-
-    const modelo = gerarModeloIndustrial(box, rules);
-    let prateleiraCount = 0;
-    let gavetaCount = 0;
-
-    for (const p of modelo.paineis) {
-      let nomePeca = TIPO_TO_REF_NAME[p.tipo] ?? p.tipo.toUpperCase().replace(/\s/g, "_");
-      if (p.tipo === "prateleira") {
-        prateleiraCount++;
-        nomePeca = `PRATELEIRA_${String(prateleiraCount).padStart(2, "0")}`;
-      } else if (p.tipo === "gaveta_frente") {
-        gavetaCount++;
-        nomePeca = `GAVETA_FRENTE_${String(gavetaCount).padStart(2, "0")}`;
-      }
-      pecasCompletas.push({
-        box,
-        boxIndex: boxNum,
-        tipo: p.tipo,
-        refPeca: `Caixa ${boxNum} – ${nomePeca}`,
-        larg: p.largura_mm,
-        comp: p.altura_mm,
-        esp: p.espessura_mm,
-        material,
-        qtd: p.quantidade,
-        panelId: p.id,
-      });
-    }
-  }
+    pecasCompletas.push({
+      box,
+      boxIndex,
+      tipo: item.tipo,
+      refPeca,
+      larg: item.dimensoes.largura,
+      comp: item.dimensoes.altura,
+      esp: item.espessura,
+      material: materialNome,
+      qtd: item.quantidade,
+      nQr: resolveIndustrialListNqr(item, qrCtx, piecesPerSheet, index0),
+    });
+  });
 
   pecasCompletas.sort((a, b) => {
-    const boxCmp = (a.box.nome || a.box.id).localeCompare(b.box.nome || b.box.id);
+    const boxCmp = a.boxIndex - b.boxIndex;
     if (boxCmp !== 0) return boxCmp;
     const espCmp = a.esp - b.esp;
     if (espCmp !== 0) return espCmp;
@@ -281,9 +210,7 @@ function construirLinhas(
 
     const materialStr = formatMaterial(p.material, p.esp, materials);
     const temFurosLateraisPiece = temFurosLaterais(ladosFuro);
-    const key = `${p.refPeca}|${p.larg}|${p.comp}|${p.esp}|${materialStr}|${p.box.id}`;
-    const panelKey = `${p.box.id}::${p.panelId}`;
-    const nQrLabel = shortByPanel.get(panelKey)?.trim() || "—";
+    const key = `${p.refPeca}|${p.larg}|${p.comp}|${p.esp}|${materialStr}|${p.box?.id ?? ""}`;
     const esp10 = p.esp === 10;
     const o2o5 = esp10 ? "" : "X";
 
@@ -309,8 +236,8 @@ function construirLinhas(
         f4: ladosFuro.has("esquerda") ? "X" : "",
         f5: ladosFuro.has("direita") ? "X" : "",
         observacoes: "",
-        nQr: nQrLabel,
-        boxNome: p.box.nome || p.box.id,
+        nQr: p.nQr,
+        boxNome: p.box?.nome || p.box?.id || "—",
         boxIndex: p.boxIndex,
         espessura_mm: p.esp,
         tipo: p.tipo,
@@ -462,6 +389,7 @@ export function gerarPdfTecnicoCompleto(
   autoTable(doc, {
     head: [head],
     body: bodyRows,
+    theme: "grid",
     didParseCell: (data) => {
       if (data.section === "body" && isSeparatorRow(data.row.index)) {
         data.cell.styles.fillColor = [235, 238, 242];
@@ -469,8 +397,16 @@ export function gerarPdfTecnicoCompleto(
       }
     },
     startY: y,
-    styles: { fontSize: 7 },
-    headStyles: { fillColor: HEADER_COLOR },
+    styles: {
+      fontSize: 7,
+      lineColor: TABLE_GRID_LINE,
+      lineWidth: TABLE_GRID_WIDTH,
+    },
+    headStyles: {
+      fillColor: HEADER_COLOR,
+      lineColor: TABLE_GRID_LINE,
+      lineWidth: TABLE_GRID_WIDTH,
+    },
     margin: { left: MARGIN, right: MARGIN },
     columnStyles: {
       0: { cellWidth: 28 },
