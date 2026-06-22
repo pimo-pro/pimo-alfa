@@ -3,6 +3,7 @@ import type { PanelMaterialOptions } from "./BoxMaterialApplier";
 import type { BoxModel, BoxOptions, BoxPanelLayoutSpecs } from "./BoxBuilder";
 import type { DoorSpec } from "./DoorFactory";
 import type { DrawerSpec } from "./DrawerFactory";
+import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 import type { DoorLayerItem, DrawerLayerItem } from "../../models/BoxLayers";
 import type { TechnicalDrillHole } from "../../core/types";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
@@ -44,11 +45,17 @@ type BoxUpdaterDeps = {
   ) => DrawerSpec[];
   getDoorSpecFingerprint: (_spec: DoorSpec, _materialName?: string) => string;
   getDrawerSpecFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
-  getDrawerStructureFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
+  getDrawerStructureFingerprint: (
+    _spec: DrawerSpec,
+    _materials?: import("./DrawerFactory").DrawerStructureMaterials | string
+  ) => string;
   getDrawerMotionKey: (_spec: Pick<DrawerSpec, "isOpen" | "pullDistanceM">) => string;
   syncDrawerLayerMotion: (_drawerLayerGroup: THREE.Object3D, _spec: DrawerSpec) => boolean;
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
-  createDrawerObject: (_spec: DrawerSpec, _material: THREE.Material) => THREE.Object3D;
+  createDrawerObject: (
+    _spec: DrawerSpec,
+    _materials: import("./DrawerFactory").DrawerObjectMaterials | THREE.Material
+  ) => THREE.Object3D;
   getMaterialForOfficialId: (_idOrLabel: string) => THREE.Material;
   getDefaultOfficialMaterialId: () => string;
   thicknessM: number;
@@ -194,8 +201,17 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     if (!requiredDrawerIds.has(id)) group.remove(c);
   }
   drawerSpecs.forEach((spec, drawerIndex) => {
-    const materialName = drawerLayerItems[drawerIndex]?.material ?? deps.getDefaultOfficialMaterialId();
-    const structureFingerprint = deps.getDrawerStructureFingerprint(spec, materialName);
+    const drawerItem = drawerLayerItems[drawerIndex];
+    const defaultMaterialId = deps.getDefaultOfficialMaterialId();
+    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, defaultMaterialId);
+    const bodyMaterialId =
+      typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+        ? opts.materialName.trim()
+        : defaultMaterialId;
+    const structureFingerprint = deps.getDrawerStructureFingerprint(spec, {
+      frontMaterial: frontMaterialId,
+      bodyMaterial: bodyMaterialId,
+    });
     const motionKey = deps.getDrawerMotionKey(spec);
     const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
     const drawerUserData = existingDrawer?.userData as Record<string, unknown> | undefined;
@@ -207,8 +223,12 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
       return;
     }
     if (existingDrawer) group.remove(existingDrawer);
-    const drawerMaterial = deps.getMaterialForOfficialId(materialName);
-    const newDrawer = deps.createDrawerObject(spec, drawerMaterial as THREE.Material);
+    const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
+    const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
+    const newDrawer = deps.createDrawerObject(spec, {
+      front: frontMaterial as THREE.Material,
+      body: bodyMaterial as THREE.Material,
+    });
     const newUserData = newDrawer.userData as Record<string, unknown>;
     newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;
     newUserData.drawerMotionKey = motionKey;

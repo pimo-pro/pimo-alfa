@@ -7,9 +7,33 @@ import {
   gerarPaineisCaixaForno,
   syncCaixaFornoOnDimensoesChange,
 } from "./caixaFornoGenerator";
-import { defaultRulesConfig } from "../../rules/rulesConfig";
+import { defaultRulesConfig, getNumDobradicas } from "../../rules/rulesConfig";
 import { convertWorkspaceToBox } from "../../../context/projectState";
-import type { WorkspaceBox } from "../../types";
+import type { PanelDrillHole, WorkspaceBox } from "../../types";
+import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
+import { computeDoorVerticalGaps } from "../../doors/doorLayerGeometry";
+
+function hingeOffsetsFromDoorBottom(holes: PanelDrillHole[] | undefined, doorHeightMm: number): number[] {
+  if (!holes?.length || doorHeightMm <= 0) return [];
+  return holes
+    .filter((h) => h.holeType === "dobradica")
+    .map((h) => doorHeightMm - Number(h.y))
+    .filter((o) => Number.isFinite(o))
+    .sort((a, b) => a - b);
+}
+
+function parafusoUniaoOffsetsFromLateralBottom(
+  holes: PanelDrillHole[] | undefined,
+  lateralHeightMm: number
+): number[] {
+  if (!holes?.length || lateralHeightMm <= 0) return [];
+  return holes
+    .filter((h) => h.holeType === "dobradica_parafuso_uniao")
+    .map((h) => lateralHeightMm - Number(h.y))
+    .filter((o) => Number.isFinite(o))
+    .map((o) => Math.round(o * 1000) / 1000)
+    .sort((a, b) => a - b);
+}
 
 describe("caixaFornoGenerator", () => {
   it("mantém seps fixos e ajusta só o compartimento superior", () => {
@@ -112,5 +136,53 @@ describe("caixaFornoGenerator", () => {
 
     expect(synced.separadores[0]?.positionMm).toBe(cfg.separadores[0]?.positionMm);
     expect(synced.doorsLayer[1]?.height).toBe(762);
+  });
+
+  it("buildCutlistForCaixaForno — portas independentes com furos e laterais alinhados", () => {
+    const cfg = createCaixaForno({ id: "forno-hinges" });
+    const box = convertWorkspaceToBox({
+      ...cfg,
+      models: [],
+      posicaoX_mm: 0,
+      posicaoY_mm: 1275,
+      rotacaoY_90: false,
+      tipoBorda: "reta",
+      locked: false,
+      drawersLayer: [],
+    } as WorkspaceBox);
+
+    const items = buildCutlistForCaixaForno(box, defaultRulesConfig, "mdf_branco");
+    const portaInf = items.find((i) => i.tipo === "porta_inferior");
+    const portaSup = items.find((i) => i.tipo === "porta_superior");
+    const latEsq = items.find((i) => i.tipo === "lateral_esquerda");
+
+    expect(portaInf?.drillHoles?.some((h) => h.holeType === "dobradica")).toBe(true);
+    expect(portaSup?.drillHoles?.some((h) => h.holeType === "dobradica")).toBe(true);
+    expect(latEsq?.drillHoles?.some((h) => h.holeType === "dobradica_parafuso_uniao")).toBe(true);
+
+    const layout = computeCaixaFornoLayout(box);
+    const openingH = layout.alturaTotalMm;
+    const lowerDoor = box.doorsLayer[0]!;
+    const upperDoor = box.doorsLayer[1]!;
+    const lowerBottomGap = computeDoorVerticalGaps(openingH, lowerDoor.height, lowerDoor.posY).bottomGapMm;
+    const upperBottomGap = computeDoorVerticalGaps(openingH, upperDoor.height, upperDoor.posY).bottomGapMm;
+
+    const lowerGlobal = hingeOffsetsFromDoorBottom(portaInf?.drillHoles, lowerDoor.height).map(
+      (o) => Math.round((o + lowerBottomGap) * 1000) / 1000
+    );
+    const upperGlobal = hingeOffsetsFromDoorBottom(portaSup?.drillHoles, upperDoor.height).map(
+      (o) => Math.round((o + upperBottomGap) * 1000) / 1000
+    );
+    const lateralGlobal = parafusoUniaoOffsetsFromLateralBottom(latEsq?.drillHoles, layout.alturaTotalMm);
+
+    expect(lowerGlobal.length).toBe(getNumDobradicas(lowerDoor.height, defaultRulesConfig));
+    expect(upperGlobal.length).toBe(getNumDobradicas(upperDoor.height, defaultRulesConfig));
+    expect(lateralGlobal).toEqual([...lowerGlobal, ...upperGlobal].sort((a, b) => a - b));
+
+    const drillMarkers = buildViewerDrillMarkersByPanel(items);
+    expect(drillMarkers.portaPerDoor).toHaveLength(2);
+    expect(drillMarkers.portaPerDoor?.[0]?.length ?? 0).toBeGreaterThan(0);
+    expect(drillMarkers.portaPerDoor?.[1]?.length ?? 0).toBeGreaterThan(0);
+    expect(drillMarkers.portaPerDoor?.[0]).not.toEqual(drillMarkers.portaPerDoor?.[1]);
   });
 });

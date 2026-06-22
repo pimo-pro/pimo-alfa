@@ -3,7 +3,7 @@ import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { devLogger } from "../../utils/devLogger";
 import { PanelFactory } from "./PanelFactory";
-import { resolvePanelMaterialOptions } from "./BoxMaterialApplier";
+import { getEdgeMaterial, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
 import {
   computeDrawerPieceCorredicaHoles,
   getDrawerSlideDrillingRules,
@@ -157,7 +157,57 @@ export function buildDrawerSpecs(
   }));
 }
 
-export function getDrawerStructureFingerprint(spec: DrawerSpec, materialName?: string): string {
+export type DrawerObjectMaterials = {
+  front: THREE.Material;
+  body: THREE.Material;
+};
+
+export type DrawerStructureMaterials = {
+  frontMaterial: string;
+  bodyMaterial: string;
+};
+
+function normalizeDrawerObjectMaterials(
+  materials: DrawerObjectMaterials | THREE.Material
+): DrawerObjectMaterials {
+  if (
+    typeof materials === "object" &&
+    materials !== null &&
+    "front" in materials &&
+    "body" in materials
+  ) {
+    return materials;
+  }
+  const shared = materials as THREE.Material;
+  return { front: shared, body: shared };
+}
+
+/** Aplica material à face visível da frente (índice 1 quando há orlas/edge groups). */
+export function applyDrawerFrontMaterialToMesh(mesh: THREE.Mesh, frontMaterial: THREE.Material): void {
+  const mat = frontMaterial.clone();
+  mat.needsUpdate = true;
+  if (Array.isArray(mesh.material) && mesh.material.length >= 2) {
+    const next = mesh.material.slice() as THREE.Material[];
+    next[1] = mat;
+    mesh.material = next;
+    return;
+  }
+  mesh.material = mat;
+}
+
+export function getDrawerStructureFingerprint(
+  spec: DrawerSpec,
+  materials?: DrawerStructureMaterials | string
+): string {
+  const legacyName = typeof materials === "string" ? materials : undefined;
+  const frontMaterial =
+    typeof materials === "object" && materials?.frontMaterial
+      ? materials.frontMaterial
+      : legacyName ?? getDefaultOfficialMaterial().canonicalId;
+  const bodyMaterial =
+    typeof materials === "object" && materials?.bodyMaterial
+      ? materials.bodyMaterial
+      : legacyName ?? frontMaterial;
   return JSON.stringify({
     id: spec.id,
     widthM: spec.widthM,
@@ -205,13 +255,17 @@ export function getDrawerStructureFingerprint(spec: DrawerSpec, materialName?: s
     metalBoxType: spec.metalBoxType,
     softClose: spec.softClose,
     showDrillingMarkers: spec.showDrillingMarkers,
-    material: materialName ?? getDefaultOfficialMaterial().canonicalId,
+    frontMaterial,
+    bodyMaterial,
   });
 }
 
 /** @deprecated Use getDrawerStructureFingerprint + getDrawerMotionKey */
-export function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): string {
-  return `${getDrawerStructureFingerprint(spec, materialName)}|${getDrawerMotionKey(spec)}`;
+export function getDrawerSpecFingerprint(
+  spec: DrawerSpec,
+  materials?: DrawerStructureMaterials | string
+): string {
+  return `${getDrawerStructureFingerprint(spec, materials)}|${getDrawerMotionKey(spec)}`;
 }
 
 export function getDrawerMotionKey(spec: Pick<DrawerSpec, "isOpen" | "pullDistanceM">): string {
@@ -261,7 +315,16 @@ export function syncDrawerLayerMotion(drawerLayerGroup: THREE.Object3D, spec: Dr
   return true;
 }
 
-export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
+export function createDrawerObject(
+  spec: DrawerSpec,
+  materials: DrawerObjectMaterials | THREE.Material
+): THREE.Object3D {
+  const { front: frontMaterial, body: bodyMaterial } = normalizeDrawerObjectMaterials(materials);
+  const frontFaceMaterial = frontMaterial.clone();
+  frontFaceMaterial.needsUpdate = true;
+  const bodyPanelMaterial = bodyMaterial.clone();
+  bodyPanelMaterial.needsUpdate = true;
+
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
   group.position.set(spec.x, spec.y, spec.z);
@@ -281,7 +344,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
     spec.frontThicknessM,
     `drawer-front-${spec.id}`,
     "front",
-    { singleMaterial: material }
+    { edgeMaterial: getEdgeMaterial(), faceMaterial: frontFaceMaterial }
   );
   if (Number.isFinite(spec.frontPosX) && Number.isFinite(spec.frontPosY) && Number.isFinite(spec.frontPosZ)) {
     front.position.set(spec.frontPosX as number, spec.frontPosY as number, spec.frontPosZ as number);
@@ -363,7 +426,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       applyDrawerBodyPartIdentity(bottomMetal, "metal-box");
       drawerGroup.add(bottomMetal);
     } else if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
-      const leftSide = panelFactory.createPanel(spec.leftSideWidthM, spec.leftSideHeightM, spec.leftSideDepthM, `drawer-left-${spec.id}`, "left", { singleMaterial: material });
+      const leftSide = panelFactory.createPanel(spec.leftSideWidthM, spec.leftSideHeightM, spec.leftSideDepthM, `drawer-left-${spec.id}`, "left", { singleMaterial: bodyPanelMaterial });
       leftSide.position.set(
         Number.isFinite(spec.leftSidePosX) ? (spec.leftSidePosX as number) : -spec.bodyWidthM / 2 + spec.leftSideWidthM / 2,
         Number.isFinite(spec.leftSidePosY) ? (spec.leftSidePosY as number) : 0,
@@ -373,7 +436,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       drawerGroup.add(leftSide);
     }
     if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
-      const rightSide = panelFactory.createPanel(spec.rightSideWidthM, spec.rightSideHeightM, spec.rightSideDepthM, `drawer-right-${spec.id}`, "right", { singleMaterial: material });
+      const rightSide = panelFactory.createPanel(spec.rightSideWidthM, spec.rightSideHeightM, spec.rightSideDepthM, `drawer-right-${spec.id}`, "right", { singleMaterial: bodyPanelMaterial });
       rightSide.position.set(
         Number.isFinite(spec.rightSidePosX) ? (spec.rightSidePosX as number) : spec.bodyWidthM / 2 - spec.rightSideWidthM / 2,
         Number.isFinite(spec.rightSidePosY) ? (spec.rightSidePosY as number) : 0,
@@ -383,7 +446,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       drawerGroup.add(rightSide);
     }
     if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
-      const bottom = panelFactory.createPanel(spec.bottomWidthM, spec.bottomThicknessM, spec.bottomDepthM, `drawer-bottom-${spec.id}`, "bottom", { singleMaterial: material });
+      const bottom = panelFactory.createPanel(spec.bottomWidthM, spec.bottomThicknessM, spec.bottomDepthM, `drawer-bottom-${spec.id}`, "bottom", { singleMaterial: bodyPanelMaterial });
       bottom.position.set(
         Number.isFinite(spec.bottomPosX) ? (spec.bottomPosX as number) : 0,
         Number.isFinite(spec.bottomPosY) ? (spec.bottomPosY as number) : -spec.bodyHeightM / 2 + spec.bottomThicknessM / 2,
@@ -393,7 +456,7 @@ export function createDrawerObject(spec: DrawerSpec, material: THREE.Material): 
       drawerGroup.add(bottom);
     }
     if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
-      const back = panelFactory.createPanel(spec.backWidthM, spec.backHeightM, spec.backThicknessM, `drawer-back-${spec.id}`, "back", { singleMaterial: material });
+      const back = panelFactory.createPanel(spec.backWidthM, spec.backHeightM, spec.backThicknessM, `drawer-back-${spec.id}`, "back", { singleMaterial: bodyPanelMaterial });
       back.position.set(
         Number.isFinite(spec.backPosX) ? (spec.backPosX as number) : 0,
         Number.isFinite(spec.backPosY) ? (spec.backPosY as number) : 0,

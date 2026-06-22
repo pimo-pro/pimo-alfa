@@ -14,7 +14,7 @@ import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/dimensions";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 import { isCornerFixedFrontModel, gerarPaineisCorner } from "../cornerCabinet";
-import { gerarPaineisCaixaForno, isCaixaFornoBox } from "../moveis/generators/caixaFornoGenerator";
+import { gerarPaineisCaixaForno, isCaixaFornoBox, computeCaixaFornoLayout } from "../moveis/generators/caixaFornoGenerator";
 
 type PainelIndustrial = {
   id: string;
@@ -459,6 +459,16 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
     });
   };
 
+  if (isCaixaFornoBox(box)) {
+    const doorsLayer = box.doorsLayer ?? [];
+    const totalDobradicas = doorsLayer.reduce(
+      (sum, door) => sum + getNumDobradicas(Math.max(0, Number(door.height) || 0), rules),
+      0
+    );
+    addFerragem("dobradicas", totalDobradicas);
+    return ferragens;
+  }
+
   if (box.portaTipo !== "sem_porta") {
     const dobradicas = box.portaTipo === "porta_dupla" ? 4 : 2;
     addFerragem("dobradicas", dobradicas);
@@ -498,6 +508,29 @@ export function calcularCustoFerragens(ferragens: FerragemIndustrial[]) {
 
 export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial[] {
   if (box.portaTipo === "sem_porta") return [];
+
+  if (isCaixaFornoBox(box)) {
+    const layout = computeCaixaFornoLayout(box);
+    const espessura = getEspessura(box);
+    const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+    const portasSpec = [
+      { index: 0, altura_mm: layout.portaInferiorAlturaMm, largura_mm: layout.larguraUtilPortaMm },
+      { index: 1, altura_mm: layout.portaSuperiorAlturaMm, largura_mm: layout.larguraUtilPortaMm },
+    ];
+    return portasSpec.map(({ index, altura_mm, largura_mm }) => ({
+      id: getArrayPanelId(box, "portas", index),
+      largura_mm,
+      altura_mm,
+      espessura_mm: espessura,
+      tipo: "overlay" as const,
+      dobradicas: getNumDobradicas(altura_mm, rules),
+      custo: calcularCustoPainel(
+        { largura_mm, altura_mm, material: material.nome } as PainelIndustrial,
+        material
+      ),
+    }));
+  }
+
   const espessura = getEspessura(box);
   const folga = 2;
   const tipoPorta: PortaIndustrial["tipo"] = "overlay";

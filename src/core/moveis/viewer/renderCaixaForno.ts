@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import type { BoxOptions } from "../../../3d/objects/BoxBuilder";
 import type { BoxModel } from "../../../3d/objects/BoxBuilder";
+import type { PanelType } from "../../../3d/objects/PanelFactory";
+import type { ViewerDrillMarkersByPanel } from "../../types";
 import { SYSTEM_BACK_MM, SYSTEM_THICKNESS_MM } from "../../baseCabinets";
 import {
   buildCaixaFornoDoorsLayer,
@@ -33,6 +35,11 @@ export type RenderCaixaFornoDeps = {
   getDefaultOfficialMaterialId: () => string;
   baseMaterial: THREE.Material;
   resolveDimensions: (options?: BoxOptions) => { width: number; height: number; depth: number };
+  applyDrillHolesToPanelGeometry?: (
+    panel: THREE.Mesh,
+    panelType: PanelType,
+    holes: import("../../types").TechnicalDrillHole[] | undefined
+  ) => void;
 };
 
 export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCaixaFornoDeps): BoxModel {
@@ -81,6 +88,18 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
   );
   left.position.set(-width / 2 + thicknessM / 2, 0, 0);
 
+  const drillMap: ViewerDrillMarkersByPanel =
+    opts.drillMarkersByPanel ?? {
+      cima: [],
+      fundo: [],
+      lateral_esquerda: [],
+      lateral_direita: [],
+      porta: [],
+    };
+  if (deps.applyDrillHolesToPanelGeometry) {
+    deps.applyDrillHolesToPanelGeometry(left, "left", drillMap.lateral_esquerda);
+  }
+
   const right = deps.panelFactory.createPanel(
     thicknessM,
     sideHeight,
@@ -90,6 +109,9 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     panelOpts
   );
   right.position.set(width / 2 - thicknessM / 2, 0, 0);
+  if (deps.applyDrillHolesToPanelGeometry) {
+    deps.applyDrillHolesToPanelGeometry(right, "right", drillMap.lateral_direita);
+  }
 
   const top = deps.panelFactory.createPanel(width, thicknessM, depth, "top", "top", panelOpts);
   top.position.set(0, height / 2 - thicknessM / 2, 0);
@@ -142,7 +164,11 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     const item = doorsLayer[doorIndex];
     const materialId = item?.material ?? item?.materialId ?? deps.getDefaultOfficialMaterialId();
     const doorMaterial = deps.getMaterialForOfficialId(materialId);
-    const doorObj = deps.createDoorObject(spec, doorMaterial as THREE.Material);
+    const doorObj = deps.createDoorObject(
+      spec,
+      doorMaterial as THREE.Material,
+      drillMap.portaPerDoor?.[doorIndex] ?? drillMap.porta
+    );
     root.add(doorObj);
   });
 

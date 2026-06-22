@@ -28,8 +28,23 @@ import { calcularPrecoCutList } from "../pricing/pricing";
 import { extractDrawerCutlistFromLayerItems, isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
 import { buildDivSepIndustrialLabel } from "../divSep/labels";
+import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 
-/** Campos derivados — não entram na chave de cache (evita recomputes por efeitos colaterais). */
+/** Portas empilhadas verticalmente (ex.: caixa forno): dobradiças usam a altura da folha, não a lateral inteira. */
+function hasVerticallyStackedDoors(doorsLayer: { posY?: number }[]): boolean {
+  if (doorsLayer.length <= 1) return false;
+  const centers = doorsLayer.map((d) => Math.round(Number(d.posY) || 0));
+  return new Set(centers).size > 1;
+}
+
+function resolveDoorOpeningHeightForHinges(
+  doorPanelHeightMm: number,
+  fullOpeningHeightMm: number,
+  doorsLayer: { posY?: number }[]
+): number {
+  if (!hasVerticallyStackedDoors(doorsLayer)) return fullOpeningHeightMm;
+  return doorPanelHeightMm;
+}
 const CAMPOS_EXCLUIDOS_FP_CUTLIST = new Set([
   "cutList",
   "cutListComPreco",
@@ -83,6 +98,15 @@ function extractDoorHingeOffsetsFromBottomMm(drillHoles: PanelDrillHole[] | unde
     .filter((o) => Number.isFinite(o));
   if (offs.length === 0) return [];
   const unique = Array.from(new Set(offs.map((o) => Math.round(o * 1000) / 1000)));
+  unique.sort((a, b) => a - b);
+  return unique;
+}
+
+/** Acumula offsets de dobradiça (mm desde a base) quando várias portas partilham o mesmo lado. */
+function mergeHingeOffsetsFromBottom(existing: number[] | undefined, additional: number[]): number[] {
+  if (additional.length === 0) return existing ?? [];
+  const merged = [...(existing ?? []), ...additional];
+  const unique = Array.from(new Set(merged.map((o) => Math.round(o * 1000) / 1000)));
   unique.sort((a, b) => a - b);
   return unique;
 }
@@ -144,9 +168,7 @@ export function cutlistComPrecoFromBox(
     boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
   };
 
-  const firstDoorPanel = modelo.paineis.find(
-    (panel) => panel.tipo === "porta_dupla" || panel.tipo === "porta_simples" || panel.tipo === "porta_correr"
-  );
+  const firstDoorPanel = modelo.paineis.find((panel) => isIndustrialDoorPanelTipo(panel.tipo));
   const doorHeightMm = firstDoorPanel?.altura_mm ?? (modelo.portas.length > 0 ? modelo.portas[0].altura_mm : undefined);
   const doorsLayer = box.doorsLayer ?? [];
   const doorsLayerCount = doorsLayer.length;
@@ -163,8 +185,7 @@ export function cutlistComPrecoFromBox(
 
   // Pré-cálculo obrigatório: gerar furos das portas primeiro para extrair as posições reais
   // e garantir que as laterais copiem 100% (mesmo número e mesmos Y).
-  const doorTipos = ["porta_simples", "porta_dupla", "porta_correr"];
-  const doorPanelsInOrder = modelo.paineis.filter((p) => doorTipos.includes(p.tipo));
+  const doorPanelsInOrder = modelo.paineis.filter((p) => isIndustrialDoorPanelTipo(p.tipo));
   const doorDrillHolesByIndex = new Map<number, PanelDrillHole[]>();
   const hingePositionsBySide: Partial<Record<"left" | "right", number[]>> = {};
   const divSepDrilling = buildDivSepDrilling(box, box.panelIds);
@@ -182,6 +203,8 @@ export function cutlistComPrecoFromBox(
           return { bottomGap: gaps.bottomGapMm, topGap: gaps.topGapMm };
         })()
       : { bottomGap: (openingH - p.altura_mm) / 2, topGap: openingH - p.altura_mm - (openingH - p.altura_mm) / 2 };
+    const doorOpeningForHinges = resolveDoorOpeningHeightForHinges(p.altura_mm, openingH, doorsLayer);
+    const drillingBottomGap = doorOpeningForHinges < openingH ? 0 : bottomGap;
     const drillingResult = buildPanelDrillingResult(
       {
         tipo: p.tipo,
@@ -192,8 +215,8 @@ export function cutlistComPrecoFromBox(
         hasDrawers: hasDrawersForShelfDrilling,
         doorHeightMm,
         doorWidthMm,
-        openingHeightMm: openingH,
-        bottomGapMm: bottomGap,
+        openingHeightMm: doorOpeningForHinges,
+        bottomGapMm: drillingBottomGap,
         topGapMm: topGap,
         hingeSide,
         portaTipo: box.portaTipo,
@@ -208,7 +231,12 @@ export function cutlistComPrecoFromBox(
       const hingeOffsetsDoorLocal = extractDoorHingeOffsetsFromBottomMm(drillHoles, p.altura_mm);
       // Converter offsets locais da porta para offsets globais do vão (base do vão).
       const hingeOffsetsGlobal = hingeOffsetsDoorLocal.map((o) => o + bottomGap);
-      if (hingeOffsetsGlobal.length > 0) hingePositionsBySide[hingeSide] = hingeOffsetsGlobal;
+      if (hingeOffsetsGlobal.length > 0) {
+        hingePositionsBySide[hingeSide] = mergeHingeOffsetsFromBottom(
+          hingePositionsBySide[hingeSide],
+          hingeOffsetsGlobal
+        );
+      }
     }
   }
 
@@ -221,7 +249,7 @@ export function cutlistComPrecoFromBox(
       return;
     }
     const grainDirection = resolveIndustrialGrainCode({ tipo: p.tipo });
-    const isDoor = p.tipo === "porta_simples" || p.tipo === "porta_dupla" || p.tipo === "porta_correr";
+    const isDoor = isIndustrialDoorPanelTipo(p.tipo);
     const isFixedFront = p.tipo === "frente_fixa";
     const isCornerBox = isCornerFixedFrontModel(box.baseCabinetId);
     const isLateralLeft = p.tipo === "lateral_esquerda";

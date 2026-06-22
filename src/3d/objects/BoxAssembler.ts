@@ -21,6 +21,7 @@ import { getSettings } from "../../core/settings/settingsService";
 import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
 import { isCaixaFornoBox } from "../../core/moveis/generators/caixaFornoGenerator";
 import { renderCaixaForno } from "../../core/moveis/viewer/renderCaixaForno";
+import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -51,7 +52,10 @@ type BoxAssemblerDeps = {
     _options?: { showDrillingMarkers?: boolean }
   ) => DrawerSpec[];
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
-  createDrawerObject: (_spec: DrawerSpec, _material: THREE.Material) => THREE.Object3D;
+  createDrawerObject: (
+    _spec: DrawerSpec,
+    _materials: import("./DrawerFactory").DrawerObjectMaterials | THREE.Material
+  ) => THREE.Object3D;
   getMaterialForOfficialId: (_idOrLabel: string) => THREE.Material;
   getDefaultOfficialMaterialId: () => string;
   thicknessM: number;
@@ -69,6 +73,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       getDefaultOfficialMaterialId: deps.getDefaultOfficialMaterialId,
       baseMaterial,
       resolveDimensions: deps.resolveDimensions,
+      applyDrillHolesToPanelGeometry: deps.applyDrillHolesToPanelGeometry,
     });
   }
 
@@ -315,10 +320,21 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     root.add(ff);
   }
   drawerSpecs.forEach((spec, drawerIndex) => {
-    const drawerMaterial = drawerLayerItems[drawerIndex]?.material
-      ? deps.getMaterialForOfficialId(drawerLayerItems[drawerIndex].material!)
-      : baseMaterial;
-    root.add(deps.createDrawerObject(spec, drawerMaterial as THREE.Material));
+    const drawerItem = drawerLayerItems[drawerIndex];
+    const defaultMaterialId = deps.getDefaultOfficialMaterialId();
+    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, defaultMaterialId);
+    const bodyMaterialId =
+      typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+        ? opts.materialName.trim()
+        : defaultMaterialId;
+    const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
+    const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
+    root.add(
+      deps.createDrawerObject(spec, {
+        front: frontMaterial as THREE.Material,
+        body: bodyMaterial as THREE.Material,
+      })
+    );
   });
 
   root.position.set(0, 0, 0);

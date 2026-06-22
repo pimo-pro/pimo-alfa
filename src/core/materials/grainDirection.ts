@@ -14,6 +14,8 @@ const PORTA_TIPOS = new Set([
   "porta_simples",
   "porta_dupla",
   "porta_correr",
+  "porta_inferior",
+  "porta_superior",
   "frente_fixa",
 ]);
 

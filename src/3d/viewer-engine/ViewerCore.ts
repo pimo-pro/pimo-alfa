@@ -63,6 +63,7 @@ import type { BoxOptions } from "../objects/BoxBuilder";
 import type { ViewerBoxEntry } from "./types";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup, updateBoxGroup } from "../objects/BoxBuilder";
+import { applyDrawerFrontMaterialToMesh } from "../objects/DrawerFactory";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 import {
   expandBox3ByObjectExcludingLayoutProxy,
@@ -2600,11 +2601,14 @@ export class ViewerCore {
     const nextMaterial = this.loadMaterial(materialName);
     if (!nextMaterial) return;
     const drawerMat = (nextMaterial.material as THREE.Material).clone();
+    drawerMat.needsUpdate = true;
     entry.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        const ud = (child as THREE.Mesh & { userData: { drawerLayerId?: string; drawerPart?: string } }).userData;
-        if (ud?.drawerLayerId === drawerLayerId && ud?.drawerPart === "front")
-          (child as THREE.Mesh).material = drawerMat;
+        const ud = (child as THREE.Mesh & { userData: { drawerLayerId?: string; drawerPart?: string; drawerFrontMaterialId?: string } }).userData;
+        if (ud?.drawerLayerId === drawerLayerId && ud?.drawerPart === "front") {
+          applyDrawerFrontMaterialToMesh(child, drawerMat);
+          ud.drawerFrontMaterialId = materialName;
+        }
       }
     });
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();

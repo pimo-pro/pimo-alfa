@@ -66,6 +66,8 @@ function getStructureFingerprint(
     isOpen: drawer.isOpen,
     pullDistanceMm: drawer.pullDistanceMm,
     material: drawer.material,
+    materialId: drawer.materialId,
+    frontMaterial: drawer.metadata?.frontMaterial,
   }));
   const divSig = (wsBox.divisores ?? []).map((d) => ({
     id: d.id,

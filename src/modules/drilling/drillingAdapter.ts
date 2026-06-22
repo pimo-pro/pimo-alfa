@@ -19,6 +19,7 @@ import { getSettings } from "../../core/settings/settingsService";
 import type { PieceType } from "../../core/drilling/drillingService";
 import { calculateTechnicalDrillingsForPiece, drillFaceToPanelFace, isTopDrillable } from "../../core/drilling/drillingService";
 import { devLogger } from "../../utils/devLogger";
+import { isIndustrialDoorPanelTipo } from "../../core/doors/industrialDoorPanels";
 
 export type PanelDrillingInput = {
   tipo: string;
@@ -287,7 +288,7 @@ export function buildPanelDrillingResult(
 
   const isLateral = input.tipo === "lateral_esquerda" || input.tipo === "lateral_direita";
   const isFixedFront = input.tipo === "frente_fixa";
-  const isDoor = input.tipo === "porta_simples" || input.tipo === "porta_dupla" || input.tipo === "porta_correr";
+  const isDoor = isIndustrialDoorPanelTipo(input.tipo);
   const isTopPanel = input.tipo === "cima";
   const isBottomPanel = input.tipo === "fundo";
   const distEntreFixacao = rules.furos.tecnicos.dobradica_fixacao.distanciaEntreFurosCalco;
@@ -435,8 +436,7 @@ export function buildViewerDrillMarkersByPanelResult(
   }
 
   const byType = new Map(cutList.map((item) => [item.tipo, item]));
-  const doorTipos = ["porta_simples", "porta_dupla", "porta_correr"];
-  const doorItemsInOrder = cutList.filter((item) => doorTipos.includes(item.tipo));
+  const doorItemsInOrder = cutList.filter((item) => isIndustrialDoorPanelTipo(item.tipo));
   const firstDoorItem = doorItemsInOrder[0];
   const canonicalDoorItem =
     cutList.find((item) => item.tipo === "porta_dupla" && /-(2|02)$/.test(String(item.id ?? ""))) ?? firstDoorItem;

@@ -57,11 +57,16 @@ function withDoorMaterial<T extends { material?: string; materialId?: string }>(
   return { ...item, material: materialId, materialId };
 }
 
-function withDrawerMaterial<T extends { material?: string; materialId?: string }>(
+function withDrawerMaterial<T extends { material?: string; materialId?: string; metadata?: { frontMaterial?: string } }>(
   item: T,
   materialId: string
 ): T {
-  return { ...item, material: materialId, materialId };
+  return {
+    ...item,
+    material: materialId,
+    materialId,
+    metadata: { ...item.metadata, frontMaterial: materialId },
+  };
 }
 
 function applySelectionMaterialSync(

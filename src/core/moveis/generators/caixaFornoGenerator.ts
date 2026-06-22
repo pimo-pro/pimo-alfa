@@ -3,13 +3,9 @@ import type { RulesConfig } from "../../rules/rulesConfig";
 import type { SeparadorItem } from "../../divSep/types";
 import type { DoorLayerItem } from "../../../models/BoxLayers";
 import { getSettings } from "../../settings/settingsService";
-import { getMaterialForBox, getMaterialDisplayInfo } from "../../materials/materialsService";
+import { getMaterialForBox, getIndustrialMaterial } from "../../materials/service";
 import { resolveCostaMaterialForBox, resolveCostaThicknessMm, getDefaultOfficialMaterial } from "../../materials/materials.api";
-import { getVisualMaterialForBox, getFallbackMaterial } from "../../materials/materialLibraryV2";
-import { resolveIndustrialGrainCode } from "../../materials/grainDirection";
 import { getProfundidadeInternaUtilMm } from "../../box/boxDepthHelpers";
-import { getIndustrialMaterial } from "../../materials/service";
-import { calcularPrecoCutList } from "../../pricing/pricing";
 import { cutlistComPrecoFromBox } from "../../manufacturing/cutlistFromBoxes";
 
 export const CAIXA_FORNO_ID = "caixa_forno";
@@ -441,55 +437,7 @@ export function buildCutlistForCaixaForno(
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
-  if (!isCaixaFornoBox(box)) {
-    return cutlistComPrecoFromBox(box, rules, projectMaterialId);
-  }
-
-  const paineis = gerarPaineisCaixaForno(box);
-  const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
-  const matInfo = getMaterialDisplayInfo(materialId || "mdf_branco");
-  const material = matInfo.label;
-  const costaMaterial = resolveCostaMaterialForBox(box, materialId || "mdf_branco");
-  const visualMaterial = materialId
-    ? getVisualMaterialForBox(box, projectMaterialId)
-    : getFallbackMaterial();
-  const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
-  const profundidadeInternaUtilMm = computeCaixaFornoLayout(box).profundidadeInternaMm;
-
-  const items = paineis.map((p) => {
-    const isCosta = p.tipo === "costa_superior";
-    const isDoor = p.tipo === "porta_inferior" || p.tipo === "porta_superior";
-    const grainDirection = resolveIndustrialGrainCode({ tipo: isDoor ? "porta_simples" : p.tipo });
-    const label = getCaixaFornoPieceLabel(p.tipo);
-    return {
-      id: p.id,
-      nome: `${box.nome} — ${label}`,
-      quantidade: 1,
-      dimensoes: {
-        largura: p.largura_mm,
-        altura: p.altura_mm,
-        profundidade: p.espessura_mm,
-      },
-      espessura: p.espessura_mm,
-      material: isCosta ? costaMaterial.label : material,
-      tipo: p.tipo,
-      sourceType: "parametric" as const,
-      boxId: box.id,
-      materialId: isCosta ? costaMaterial.materialId : materialId,
-      visualMaterial,
-      grainDirection,
-      drillHoles: [],
-      metadata: {
-        panelId: p.id,
-        caixaFornoPiece: p.tipo,
-        industrialLabel: label,
-      },
-      boxProfundidadeExternaMm: profundidadeExternaMm,
-      boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
-    };
-  });
-
-  return calcularPrecoCutList(items);
+  return cutlistComPrecoFromBox(box, rules, projectMaterialId);
 }
 
 export function getCaixaFornoPieceLabel(tipo: string): string {

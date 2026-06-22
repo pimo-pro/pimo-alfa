@@ -380,8 +380,11 @@ function getDrawerSpecFingerprint(spec: DrawerSpec, materialName?: string): stri
   return getDrawerSpecFingerprintFromFactory(spec, materialName);
 }
 
-function getDrawerStructureFingerprint(spec: DrawerSpec, materialName?: string): string {
-  return getDrawerStructureFingerprintFromFactory(spec, materialName);
+function getDrawerStructureFingerprint(
+  spec: DrawerSpec,
+  materials?: import("./DrawerFactory").DrawerStructureMaterials | string
+): string {
+  return getDrawerStructureFingerprintFromFactory(spec, materials);
 }
 
 function getDrawerMotionKey(spec: Pick<DrawerSpec, "isOpen" | "pullDistanceM">): string {
@@ -428,8 +431,11 @@ export function getDoorSpecFromGroup(group: THREE.Group): DoorSpec | null {
  * 2. Posiciona peças
  * 3. Anima com requestAnimationFrame
  */
-function createDrawerObject(spec: DrawerSpec, material: THREE.Material): THREE.Object3D {
-  return createDrawerObjectFromFactory(spec, material);
+function createDrawerObject(
+  spec: DrawerSpec,
+  materials: import("./DrawerFactory").DrawerObjectMaterials | THREE.Material
+): THREE.Object3D {
+  return createDrawerObjectFromFactory(spec, materials);
 }
 
 function getAssemblerDeps() {

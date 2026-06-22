@@ -1,7 +1,6 @@
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { cutlistComPrecoFromBox } from "../manufacturing/cutlistFromBoxes";
-import { buildCutlistForCaixaForno, isCaixaFornoBox } from "../moveis/generators/caixaFornoGenerator";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import { buildRemateCutlistItems } from "../remate/remateCutlist";
 import { buildRodapeCutlistItems } from "../rodape/rodapeCutlist";
@@ -35,11 +34,7 @@ export function buildCutlistItemsForIndustrialExport(
     extractedPartsByBoxId = {},
   } = snap;
 
-  const rawParam = boxes.flatMap((box) =>
-    isCaixaFornoBox(box)
-      ? buildCutlistForCaixaForno(box, rules, materialId)
-      : cutlistComPrecoFromBox(box, rules, materialId)
-  );
+  const rawParam = boxes.flatMap((box) => cutlistComPrecoFromBox(box, rules, materialId));
   const extracted = boxes.flatMap((box) => {
     const byModel = extractedPartsByBoxId?.[box.id];
     if (!byModel) return [] as CutListItemComPreco[];
