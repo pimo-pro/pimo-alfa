@@ -329,13 +329,10 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
     const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
     const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
-    group.add(
-      deps.createDrawerObject(spec, {
-        front: frontMaterial as THREE.Material,
-        body: bodyMaterial as THREE.Material,
-      })
-    );
-    const drawerGroup = root.children[root.children.length - 1];
+    const drawerGroup = deps.createDrawerObject(spec, {
+      front: frontMaterial as THREE.Material,
+      body: bodyMaterial as THREE.Material,
+    });
     drawerGroup.traverse((child) => {
       if (
         child instanceof THREE.Mesh &&
@@ -344,6 +341,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
         child.userData.drawerFrontMaterialId = frontMaterialId;
       }
     });
+    root.add(drawerGroup);
   });
 
   root.position.set(0, 0, 0);
