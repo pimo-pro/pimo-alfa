@@ -479,7 +479,7 @@ export async function generateMultiProjectFabrication(
           boxes: allPrefixedBoxes,
           rules: rulesForGlobal,
           settings: getSettings(),
-          precomputedItems: bundle.items,
+          precomputedItems: bundle.items as CutListItemComPreco[],
           cutLayoutPlacements: bundle.layoutResult.sheets.flatMap((s) => s.placements),
         };
         const docEtiquetasTodas = await UnifiedEtiquetaEngine.build(globalEtiquetasProj);

@@ -26,7 +26,7 @@ if (!fs.existsSync(versionFilePath)) {
   throw new Error(`Ficheiro nao encontrado: ${versionFilePath}`);
 }
 
-const currentRaw = fs.readFileSync(versionFilePath, "utf8");
+const currentRaw = fs.readFileSync(versionFilePath, "utf8").replace(/^\uFEFF/, "");
 const currentData = JSON.parse(currentRaw);
 const now = new Date();
 const nextVersion = getShortVersion();

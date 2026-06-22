@@ -21,6 +21,7 @@ import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
+import type { CutListItemComPreco } from "../core/types";
 import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
 import {
   formatIndustrialThicknessIssue,
@@ -364,7 +365,7 @@ export function useGerarArquivoHandlers() {
         const nestingPlacements = bundle.layoutResult.sheets.flatMap((s) => s.placements);
         const doc = await UnifiedEtiquetaEngine.build({
           ...proj,
-          precomputedItems: bundle.items,
+          precomputedItems: bundle.items as CutListItemComPreco[],
           cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
         });
         doc.save(`${slug}_${industrialThicknessEtiquetasPdfFileName(bundle.thicknessMm)}`);
@@ -841,7 +842,7 @@ export function useGerarArquivoHandlers() {
           const nestingPlacements = bundle.layoutResult.sheets.flatMap((s) => s.placements);
           const docEtiquetas = await UnifiedEtiquetaEngine.build({
             ...proj,
-            precomputedItems: bundle.items,
+            precomputedItems: bundle.items as CutListItemComPreco[],
             cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
           });
           const etiquetasPath = industrialThicknessEtiquetasPdfPath(bundle.thicknessMm);
