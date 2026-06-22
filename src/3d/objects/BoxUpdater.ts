@@ -203,11 +203,11 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   drawerSpecs.forEach((spec, drawerIndex) => {
     const drawerItem = drawerLayerItems[drawerIndex];
     const defaultMaterialId = deps.getDefaultOfficialMaterialId();
-    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, defaultMaterialId);
     const bodyMaterialId =
       typeof opts.materialName === "string" && opts.materialName.trim().length > 0
         ? opts.materialName.trim()
         : defaultMaterialId;
+    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
     const structureFingerprint = deps.getDrawerStructureFingerprint(spec, {
       frontMaterial: frontMaterialId,
       bodyMaterial: bodyMaterialId,
@@ -233,6 +233,14 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;
     newUserData.drawerMotionKey = motionKey;
     group.add(newDrawer);
+    newDrawer.traverse((child) => {
+      if (
+        child instanceof THREE.Mesh &&
+        (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
+      ) {
+        child.userData.drawerFrontMaterialId = frontMaterialId;
+      }
+    });
   });
 
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));

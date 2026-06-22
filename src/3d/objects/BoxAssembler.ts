@@ -322,19 +322,28 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   drawerSpecs.forEach((spec, drawerIndex) => {
     const drawerItem = drawerLayerItems[drawerIndex];
     const defaultMaterialId = deps.getDefaultOfficialMaterialId();
-    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, defaultMaterialId);
     const bodyMaterialId =
       typeof opts.materialName === "string" && opts.materialName.trim().length > 0
         ? opts.materialName.trim()
         : defaultMaterialId;
+    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
     const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
     const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
-    root.add(
+    group.add(
       deps.createDrawerObject(spec, {
         front: frontMaterial as THREE.Material,
         body: bodyMaterial as THREE.Material,
       })
     );
+    const drawerGroup = root.children[root.children.length - 1];
+    drawerGroup.traverse((child) => {
+      if (
+        child instanceof THREE.Mesh &&
+        (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
+      ) {
+        child.userData.drawerFrontMaterialId = frontMaterialId;
+      }
+    });
   });
 
   root.position.set(0, 0, 0);

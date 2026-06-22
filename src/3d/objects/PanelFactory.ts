@@ -23,18 +23,28 @@ export class PanelFactory {
     return 2;
   }
 
+  /** Faces com material de orla/corte (índice 0). Para front/back, as faces largas visíveis usam faceMaterial (índice 1). */
+  getEdgeFaceIndices(panelType: PanelType, thinAxis: 0 | 1 | 2): number[] {
+    const thinFaces = thinAxis === 0 ? [0, 1] : thinAxis === 1 ? [2, 3] : [4, 5];
+    if (panelType === "front" || panelType === "back") {
+      return [0, 1, 2, 3, 4, 5].filter((face) => !thinFaces.includes(face));
+    }
+    return thinFaces;
+  }
+
   createBoxGeometryWithEdgeGroups(
     width: number,
     height: number,
     depth: number,
-    thinAxis: 0 | 1 | 2
+    thinAxis: 0 | 1 | 2,
+    panelType?: PanelType
   ): THREE.BufferGeometry {
     const geometry = new THREE.BoxGeometry(width, height, depth);
     if (!geometry.attributes.uv2 && geometry.attributes.uv) {
       geometry.setAttribute("uv2", geometry.attributes.uv.clone());
     }
     geometry.clearGroups();
-    const edgeFaces = thinAxis === 0 ? [0, 1] : thinAxis === 1 ? [2, 3] : [4, 5];
+    const edgeFaces = this.getEdgeFaceIndices(panelType ?? "left", thinAxis);
     for (let i = 0; i < 6; i++) {
       const materialIndex = edgeFaces.includes(i) ? 0 : 1;
       geometry.addGroup(i * 6, 6, materialIndex);
@@ -71,7 +81,13 @@ export class PanelFactory {
     const resolved = this.deps.resolvePanelMaterialOptions(options, panelType);
     const isEdgeFace = "edgeMaterial" in resolved;
     const geometry = isEdgeFace
-      ? this.createBoxGeometryWithEdgeGroups(width, height, depth, this.getThinAxisForPanel(panelType))
+      ? this.createBoxGeometryWithEdgeGroups(
+          width,
+          height,
+          depth,
+          this.getThinAxisForPanel(panelType),
+          panelType
+        )
       : (() => {
           const g = new THREE.BoxGeometry(width, height, depth);
           if (!g.attributes.uv2 && g.attributes.uv) {
@@ -106,9 +122,10 @@ export class PanelFactory {
   updatePanelGeometry(panel: THREE.Mesh, width: number, height: number, depth: number): void {
     panel.geometry.dispose();
     const thinAxis = panel.userData.thinAxis as 0 | 1 | 2 | undefined;
+    const panelType = panel.userData.panelType as PanelType | undefined;
     const useEdgeGroups = Array.isArray(panel.material) && panel.material.length === 2 && thinAxis !== undefined;
     const geometry = useEdgeGroups
-      ? this.createBoxGeometryWithEdgeGroups(width, height, depth, thinAxis)
+      ? this.createBoxGeometryWithEdgeGroups(width, height, depth, thinAxis, panelType ?? "left")
       : (() => {
           const g = new THREE.BoxGeometry(width, height, depth);
           if (!g.attributes.uv2 && g.attributes.uv) {

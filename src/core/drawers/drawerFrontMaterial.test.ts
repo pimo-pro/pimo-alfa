@@ -6,7 +6,7 @@ import { PanelFactory } from "../../3d/objects/PanelFactory";
 import { resolvePanelMaterialOptions } from "../../3d/objects/BoxMaterialApplier";
 
 describe("drawerFrontMaterial", () => {
-  it("resolveDrawerFrontMaterialId — material, materialId ou metadata.frontMaterial", () => {
+  it("resolveDrawerFrontMaterialId — materialId, metadata.frontMaterial ou material", () => {
     expect(resolveDrawerFrontMaterialId(undefined, "mdf_branco")).toBe("mdf_branco");
     expect(resolveDrawerFrontMaterialId({ material: "carvalho" }, "mdf_branco")).toBe("carvalho");
     expect(resolveDrawerFrontMaterialId({ materialId: "nogueira" }, "mdf_branco")).toBe("nogueira");
@@ -18,7 +18,7 @@ describe("drawerFrontMaterial", () => {
         { material: "carvalho", materialId: "nogueira", metadata: { frontMaterial: "wenge" } },
         "mdf_branco"
       )
-    ).toBe("carvalho");
+    ).toBe("nogueira");
   });
 
   it("applyDrawerFrontMaterialToMesh — atualiza faceMaterial (índice 1) sem tocar na orla", () => {
@@ -30,6 +30,10 @@ describe("drawerFrontMaterial", () => {
       faceMaterial: oldFace,
     });
     expect(Array.isArray(mesh.material)).toBe(true);
+
+    const groups = (mesh.geometry as THREE.BufferGeometry).groups;
+    const largeFaceGroup = groups.find((g) => g.materialIndex === 1);
+    expect(largeFaceGroup).toBeDefined();
 
     const newFace = new THREE.MeshStandardMaterial({ color: 0x224466 });
     applyDrawerFrontMaterialToMesh(mesh, newFace);

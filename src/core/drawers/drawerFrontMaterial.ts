@@ -6,9 +6,9 @@ export function resolveDrawerFrontMaterialId(
   fallbackId: string
 ): string {
   const candidate =
-    drawer?.material?.trim() ||
     drawer?.materialId?.trim() ||
     drawer?.metadata?.frontMaterial?.trim() ||
+    drawer?.material?.trim() ||
     fallbackId;
   return candidate.length > 0 ? candidate : fallbackId;
 }

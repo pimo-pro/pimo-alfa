@@ -64,6 +64,8 @@ import type { ViewerBoxEntry } from "./types";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
 import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup, updateBoxGroup } from "../objects/BoxBuilder";
 import { applyDrawerFrontMaterialToMesh } from "../objects/DrawerFactory";
+import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
+import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 import {
   expandBox3ByObjectExcludingLayoutProxy,
@@ -2614,6 +2616,33 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
 
+  /** Garante material independente nas frentes após rebuild incremental da caixa. */
+  private syncDrawerFrontMaterialsForBox(
+    boxId: string,
+    drawerLayerItems: DrawerLayerItem[] | undefined,
+    boxMaterialId: string
+  ): void {
+    if (!drawerLayerItems?.length) return;
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    for (const drawerItem of drawerLayerItems) {
+      const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, boxMaterialId);
+      const loaded = this.loadMaterial(frontMaterialId);
+      if (!loaded) continue;
+      const drawerMat = (loaded.material as THREE.Material).clone();
+      drawerMat.needsUpdate = true;
+      entry.mesh.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        const ud = (child as THREE.Mesh & {
+          userData: { drawerLayerId?: string; drawerPart?: string; drawerFrontMaterialId?: string };
+        }).userData;
+        if (ud?.drawerLayerId !== drawerItem.id || ud?.drawerPart !== "front") return;
+        applyDrawerFrontMaterialToMesh(child, drawerMat);
+        ud.drawerFrontMaterialId = frontMaterialId;
+      });
+    }
+  }
+
   /**
    * Define o modo de materiais (performance/showcase/realistic) e reaplica a todas as caixas.
    */
@@ -3555,6 +3584,11 @@ export class ViewerCore {
     }
     if (opts.materialName && !entry.cadOnly) {
       this.updateBoxMaterial(id, opts.materialName);
+      this.syncDrawerFrontMaterialsForBox(
+        id,
+        opts.drawerLayerItems,
+        opts.materialName ?? entry.materialName ?? this.defaultMaterialName
+      );
       this.reapplyDisplayMaterials();
     }
     if (opts.cabinetType !== undefined) {
@@ -3636,6 +3670,13 @@ export class ViewerCore {
     // pois updateBox não chama applyPanelVisibilityForObject (diferente de addBox).
     if (structureChanged) {
       this.applyPanelVisibilityForObject(entry.mesh);
+    }
+    if (opts.drawerLayerItems !== undefined) {
+      this.syncDrawerFrontMaterialsForBox(
+        id,
+        opts.drawerLayerItems,
+        opts.materialName ?? entry.materialName ?? this.defaultMaterialName
+      );
     }
     this.syncOrlaForBox(id);
     this.syncRemateForBox(id);

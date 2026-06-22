@@ -158,7 +158,11 @@ export class ViewerPanelVisibility {
         node.userData.panelId = pieceId;
         node.userData.pieceId = pieceId;
         node.userData.isPanelMesh = true;
-        node.userData.materialPresetId = materialPresetId;
+        const drawerFrontMaterialId = node.userData?.drawerFrontMaterialId as string | undefined;
+        node.userData.materialPresetId =
+          drawerPart === "front" && drawerFrontMaterialId?.trim()
+            ? drawerFrontMaterialId.trim()
+            : materialPresetId;
         this.applyPanelDimensionMetadata(node, "front");
         return;
       }
