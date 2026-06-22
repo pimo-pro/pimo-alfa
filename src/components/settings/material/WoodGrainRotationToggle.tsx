@@ -1,5 +1,5 @@
-import { getMaterialByIdOrLabel } from "../../core/materials/service";
-import { isMaterialMadeira } from "../../core/materials/nestingGrainLock";
+import { getMaterialByIdOrLabel } from "../../../core/materials/service";
+import { isMaterialMadeira } from "../../../core/materials/nestingGrainLock";
 
 type Props = {
   materialId: string;

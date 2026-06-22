@@ -1,6 +1,6 @@
 import type { ProjectState } from "../../context/projectTypes";
-import type { CutPiece } from "../cutlayout/cutLayoutTypes";
-import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
+import type { CutPiece } from "../../core/cutlayout/cutLayoutTypes";
+import { isIndustrialDoorPanelTipo } from "../../core/doors/industrialDoorPanels";
 
 /**
  * Resolve override de rotação por peça a partir do projeto (sem alterar cutlist industrial).
