@@ -6,8 +6,10 @@ import V4Viewer, { type SceneItem } from "../components/v4/V4Viewer";
 import V4CatalogPanel from "../components/v4/V4CatalogPanel";
 import V4ItemPreview from "../components/v4/V4ItemPreview";
 import type { CatalogItem } from "../catalog/catalogTypes";
+import useV4Room from "../v4/state/useV4Room";
+import V4RoomSettings from "../v4/room/V4RoomSettings";
 
-type SectionId = "moveis" | "projeto" | "materiais" | "fabricacao" | "rastreio" | "definicoes";
+type SectionId = "moveis" | "projeto" | "materiais" | "fabricacao" | "rastreio" | "sala" | "definicoes";
 
 type Section = {
   id: SectionId;
@@ -21,10 +23,12 @@ const SECTIONS: Section[] = [
   { id: "materiais",  label: "Materiais",  icon: "materials"   },
   { id: "fabricacao", label: "Fabricação", icon: "fabrication" },
   { id: "rastreio",   label: "Rastreio",   icon: "tracking"    },
+  { id: "sala",       label: "Sala",       icon: "sala"        },
   { id: "definicoes", label: "Definições", icon: "settings"    },
 ];
 
 export default function V4Page() {
+  const { roomConfig, updateRoomConfig } = useV4Room();
   const [activeSection, setActiveSection] = useState<SectionId>("moveis");
   const [subpanelOpen, setSubpanelOpen] = useState(true);
   const [sceneItems, setSceneItems] = useState<SceneItem[]>([]);
@@ -96,6 +100,8 @@ export default function V4Page() {
               onPreview={(item) => setPreviewItem(item)}
               previewItemId={previewItem?.id}
             />
+          ) : activeSection === "sala" ? (
+            <V4RoomSettings config={roomConfig} onUpdate={updateRoomConfig} />
           ) : (
             <div style={{ padding: "12px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
               <V4Icon name={active.icon} size={28} color="var(--v4-text-subtle)" />
@@ -156,6 +162,7 @@ export default function V4Page() {
             style={{ width: "100%", height: "100%" }}
             sceneItems={sceneItems}
             selectedId={selectedId}
+            roomConfig={roomConfig}
           />
         </div>
       </main>

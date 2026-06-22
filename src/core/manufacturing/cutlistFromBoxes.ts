@@ -366,7 +366,7 @@ export function cutlistComPrecoFromBox(
   });
 
   if (drawersLayer.length > 0) {
-    const drawerCutlist = extractDrawerCutlistFromLayerItems(drawersLayer, bodyMaterialKey);
+    const drawerCutlist = extractDrawerCutlistFromLayerItems(drawersLayer, bodyMaterialKey, box.nome);
     const drawerItems = calcularPrecoCutList(drawerCutlist).map((item) => {
       const drawerRules = item.metadata?.drawerRules as
         | {

@@ -27,7 +27,7 @@ describe("FASE 6 — geometria industrial + overrides UI", () => {
 
     expect(specs.nominalDepthMm).toBe(550);
     expect(specs.runnerClearanceMm).toBe(25);
-    expect(specs.body.depth).toBe(525);
+    expect(specs.body.depth).toBe(516);
   });
 
   it("aplica metadata.nominalDepth como override de profundidade", () => {

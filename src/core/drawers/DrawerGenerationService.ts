@@ -120,8 +120,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       devLogger.warn(`DrawerGenerationService: specs inválidas para gaveta ${i}`);
     }
 
-    // Cria gaveta
-    // Posicao Z: centro da frente overlay fora da face frontal da caixa.
+    // Posicao Z: frente flush com a face frontal do módulo (origem local no centro da caixa).
     const drawer = createDrawer(
       `drawer-${boxId}-${i}`,
       boxId,
@@ -129,7 +128,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       {
         x: originX ?? 0,
         y: (originY ?? 0) + posY,
-        z: boxDepth / 2 + specs.front.thickness / 2,
+        z: boxDepth / 2 - specs.front.thickness / 2,
       },
       effectiveDrawerType
     );

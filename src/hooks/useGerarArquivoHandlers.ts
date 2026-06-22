@@ -6,7 +6,6 @@ import { getSettings } from "../core/settings/settingsService";
 import { listMaterials } from "../core/materials/service";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
 import {
-  buildCncFromCutlistItemsInWorker,
   runCutLayoutInWorker,
   terminateIndustrialWorker,
 } from "../core/fabrication/industrialWorkerRunner";
@@ -22,12 +21,22 @@ import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import { cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
-import type { CutLayoutResult } from "../core/cutlayout/cutLayoutTypes";
 import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
 import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
 } from "../core/cnc/industrialThicknessResolution";
+import {
+  industrialThicknessEtiquetasPdfFileName,
+  industrialThicknessLayoutPdfFileName,
+  industrialThicknessEtiquetasPdfPath,
+  industrialThicknessLayoutPdfPath,
+  industrialThicknessTcnDirPath,
+} from "../core/cnc/industrialThicknessGroups";
+import {
+  buildCncBundlesPerThickness,
+  runCutLayoutPerThickness,
+} from "../core/fabrication/industrialPerThicknessPipeline";
 import { buildIndustrialManifest } from "../core/fabrication/industrialManifest";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { devLogger } from "../utils/devLogger";
@@ -74,13 +83,6 @@ function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array })
   const arr = doc.output("arraybuffer");
   const buffer = arr instanceof ArrayBuffer ? arr : new Uint8Array(arr).buffer;
   return new Blob([buffer], { type: "application/pdf" });
-}
-
-function formatThicknessBucket(thicknessMm: number): string {
-  if (!Number.isFinite(thicknessMm) || thicknessMm <= 0) return "0mm";
-  const rounded = Math.round(thicknessMm * 100) / 100;
-  const label = Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(".", "_");
-  return `${label}mm`;
 }
 
 function tcnMethodSuffix(tcnMetodo: string | undefined): "mo" | "v1" | "v2" | "v2n" | "v3" | "v3n" | "v4" | "v5" | "v6" {
@@ -334,45 +336,50 @@ export function useGerarArquivoHandlers() {
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
-      let nestingPlacements: CutLayoutResult["sheets"][0]["placements"] | undefined;
-      try {
-        const pieces = cutlistToPieces(allItems as CutlistItemForPieces[], {
+      const settingsSnapshot = getSettings();
+      const materialsSnapshot = listMaterials();
+      const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
+      if (!cncItems) return;
+
+      const thicknessBundles = await runCutLayoutPerThickness(
+        settingsSnapshot,
+        materialsSnapshot,
+        cncItems,
+        {
+          ...getDefaultCncLayoutOptions(),
+          originTopRight: true,
+        },
+        {
           projectName: project.projectName ?? "Projeto",
           boxes: proj.boxes ?? boxes,
-        });
-        if (pieces.length > 0) {
-          const settingsSnapshot = getSettings();
-          const materialsSnapshot = listMaterials();
-          const sheetDefNest = getSheetDefinitionFromSettings();
-          const nestingResult = await runCutLayoutInWorker(
-            settingsSnapshot,
-            materialsSnapshot,
-            pieces,
-            {
-              ...getDefaultCncLayoutOptions(),
-              originTopRight: true,
-              sheetLargura_mm: sheetDefNest.largura_mm,
-              sheetAltura_mm: sheetDefNest.altura_mm,
-            }
-          );
-          nestingPlacements = nestingResult?.sheets.flatMap((s) => s.placements);
         }
-      } catch (err) {
-        devLogger.warn("Etiquetas UEE: nesting opcional falhou, continua sem placements", err);
+      );
+
+      if (thicknessBundles.length === 0) {
+        showToast("Nenhuma peça com espessura válida para etiquetas.", "warning");
+        return;
       }
-      const doc = await UnifiedEtiquetaEngine.build({
-        ...proj,
-        precomputedItems: allItems,
-        cutLayoutPlacements:
-          nestingPlacements && nestingPlacements.length > 0 ? nestingPlacements : undefined,
-      });
-      doc.save(`${slug}_etiquetas.pdf`);
-      showToast("PDF de etiquetas (UEE v5) gerado.", "info");
+
+      for (const bundle of thicknessBundles) {
+        const nestingPlacements = bundle.layoutResult.sheets.flatMap((s) => s.placements);
+        const doc = await UnifiedEtiquetaEngine.build({
+          ...proj,
+          precomputedItems: bundle.items,
+          cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
+        });
+        doc.save(`${slug}_${industrialThicknessEtiquetasPdfFileName(bundle.thicknessMm)}`);
+      }
+      showToast(
+        thicknessBundles.length === 1
+          ? "PDF de etiquetas (UEE v5) gerado."
+          : `${thicknessBundles.length} PDFs de etiquetas gerados (um por espessura).`,
+        "info"
+      );
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de etiquetas:", err);
       showToast("Erro ao gerar PDF.", "error");
     }
-  }, [hasBoxes, showToast, pdfProject, slug, boxes, project]);
+  }, [hasBoxes, showToast, pdfProject, slug, boxes, project, prepareItemsForCnc]);
 
   const onLayoutCorte = useCallback(async () => {
     if (!hasBoxes) {
@@ -446,48 +453,63 @@ export function useGerarArquivoHandlers() {
         extractedPartsByBoxId: project.extractedPartsByBoxId,
       });
 
-      const pieces = cutlistToPieces(allItems, {
-        projectName: project.projectName ?? "Projeto",
-        boxes,
-      });
-      if (pieces.length === 0) {
-        showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
-        return;
-      }
+      const settingsSnapshot = getSettings();
+      const materialsSnapshot = listMaterials();
+      const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
+      if (!cncItems) return;
 
       await yieldToMainThread();
 
-      const sheetDef = getSheetDefinitionFromSettings();
-      const settingsSnapshot = getSettings();
-      const materialsSnapshot = listMaterials();
-      const result = await measureTime("Layout de corte PRO (nesting)", async () =>
-        runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
-          ...getDefaultCncLayoutOptions(),
-          originTopRight: true,
-          minUtilizationPercent: 0.92,
-          rotationPreferenceMode: "aggressive",
-          collectDiagnostics: true,
-          sheetLargura_mm: sheetDef.largura_mm,
-          sheetAltura_mm: sheetDef.altura_mm,
-        })
+      const thicknessBundles = await measureTime("Layout de corte PRO (nesting por espessura)", async () =>
+        runCutLayoutPerThickness(
+          settingsSnapshot,
+          materialsSnapshot,
+          cncItems,
+          {
+            ...getDefaultCncLayoutOptions(),
+            originTopRight: true,
+            minUtilizationPercent: 0.92,
+            rotationPreferenceMode: "aggressive",
+            collectDiagnostics: true,
+          },
+          {
+            projectName: project.projectName ?? "Projeto",
+            boxes,
+          }
+        )
       );
-      if (result.diagnostics?.rejectedByLimit && result.diagnostics.rejectedByLimit.length > 0) {
+
+      if (thicknessBundles.length === 0) {
+        showToast("Nenhuma peça com espessura válida para o layout de corte.", "warning");
+        return;
+      }
+
+      const rejectedTotal = thicknessBundles.reduce((sum, bundle) => {
+        const rejected = bundle.layoutResult.diagnostics?.rejectedByLimit?.length ?? 0;
+        return sum + rejected;
+      }, 0);
+      if (rejectedTotal > 0) {
         showToast(
-          `Atenção: ${result.diagnostics.rejectedByLimit.length} peça(s) não couberam no layout e foram omitidas.`,
+          `Atenção: ${rejectedTotal} peça(s) não couberam no layout e foram omitidas.`,
           "warning"
         );
       }
 
-      // Cede controlo ao browser antes da geração do PDF
       await yieldToMainThread();
       const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-      const doc = await buildCutLayoutPdf(result, {
-        projectName: project.projectName ?? "Projeto",
-        nestingTopRightOrigin: true,
-      });
-      const fileName = `${slug}_layout_corte_pro.pdf`;
-      doc.save(fileName);
-      showToast("Layout de Corte PRO gerado.", "info");
+      for (const bundle of thicknessBundles) {
+        const doc = await buildCutLayoutPdf(bundle.layoutResult, {
+          projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
+          nestingTopRightOrigin: true,
+        });
+        doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.thicknessMm)}`);
+      }
+      showToast(
+        thicknessBundles.length === 1
+          ? "Layout de Corte PRO gerado."
+          : `${thicknessBundles.length} layouts de corte PRO gerados (um por espessura).`,
+        "info"
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       devLogger.error("Layout de Corte PRO:", err);
@@ -508,6 +530,7 @@ export function useGerarArquivoHandlers() {
     project,
     slug,
     viewerSync,
+    prepareItemsForCnc,
   ]);
 
   const onExportarCnc = useCallback(async () => {
@@ -562,26 +585,38 @@ export function useGerarArquivoHandlers() {
             percent: Math.max(prev.percent, 50),
             message: "Gerando layout industrial otimizado… aguarde.",
           }));
-          const cncBundle = await buildCncFromCutlistItemsInWorker(
+          const thicknessBundles = await buildCncBundlesPerThickness(
             settingsSnapshot,
             materialsSnapshot,
             cncProjectStub,
             cncItems,
             layoutOptionsBase
           );
-          if (!cncBundle?.cnc?.files?.length) return [];
           const rows: Array<{ name: string; tcn: string; base: string }> = [];
-          for (const file of cncBundle.cnc.files) {
-            const base = buildTcnExportBaseName(
-              cncBundle.layoutResult,
-              file.panelIndex,
-              cncBundle.cnc.files.length
-            );
-            rows.push({
-              name: `${base}_cnc_${tcnSuffix}.tcn`,
-              tcn: file.tcn,
-              base: file.filenameBase,
-            });
+          for (const bundle of thicknessBundles) {
+            const files = bundle.cncBundle.cnc?.files ?? [];
+            if (!files.length) continue;
+            const tcnDir = industrialThicknessTcnDirPath(bundle.thicknessMm);
+            const usedNames = new Set<string>();
+            for (const file of files) {
+              const base = buildTcnExportBaseName(
+                bundle.cncBundle.layoutResult,
+                file.panelIndex,
+                files.length
+              );
+              let finalBase = base;
+              let dedupeIndex = 2;
+              while (usedNames.has(finalBase)) {
+                finalBase = `${base}_${dedupeIndex}`;
+                dedupeIndex += 1;
+              }
+              usedNames.add(finalBase);
+              rows.push({
+                name: `${tcnDir}/${finalBase}_cnc_${tcnSuffix}.tcn`,
+                tcn: file.tcn,
+                base: file.filenameBase,
+              });
+            }
           }
           return rows;
         };
@@ -768,68 +803,74 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: PDF Unificado", err);
       }
 
-      // --- Nesting (calculado uma vez; partilhado por Etiquetas + Layout de Corte PRO) ---
-      let nestingResult: CutLayoutResult | null = null;
+      // --- Nesting por espessura (Layout PRO + Etiquetas em cnc/<espessura>/) ---
+      let thicknessLayoutBundles: Awaited<ReturnType<typeof runCutLayoutPerThickness>> = [];
       try {
-        const pieces = cutlistToPieces(allItems as CutlistItemForPieces[], {
-          projectName: project.projectName ?? "Projeto",
-          boxes: proj.boxes ?? boxes,
-        });
-        if (pieces.length > 0) {
-          showCutLayoutLoader();
-          await yieldToMainThread();
-          const sheetDefNest = getSheetDefinitionFromSettings();
-          nestingResult = await runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
+        const cncItemsForLayout = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
+        if (!cncItemsForLayout) {
+          abortFullExport = true;
+          throw new Error("Exportação cancelada por matéria-prima sem chapa válida.");
+        }
+        showCutLayoutLoader();
+        await yieldToMainThread();
+        thicknessLayoutBundles = await runCutLayoutPerThickness(
+          settingsSnapshot,
+          materialsSnapshot,
+          cncItemsForLayout,
+          {
             ...getDefaultCncLayoutOptions(),
             originTopRight: true,
-            sheetLargura_mm: sheetDefNest.largura_mm,
-            sheetAltura_mm: sheetDefNest.altura_mm,
-          });
-        }
+          },
+          {
+            projectName: project.projectName ?? "Projeto",
+            boxes: proj.boxes ?? boxes,
+          }
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "Nesting", message: msg });
-        devLogger.error("Full export: Nesting", err);
+        errors.push({ step: "Nesting por espessura", message: msg });
+        devLogger.error("Full export: Nesting por espessura", err);
       } finally {
         hideCutLayoutLoader();
       }
 
-      // --- Etiquetas UEE (ordenadas pela posição real no nesting) ---
+      // --- Etiquetas UEE (um PDF por espessura em cnc/<espessura>/) ---
       try {
-        const nestingPlacements = nestingResult?.sheets.flatMap((s) => s.placements) ?? [];
-        const docEtiquetas = await UnifiedEtiquetaEngine.build({
-          ...proj,
-          precomputedItems: allItems,
-          cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
-        });
-        if (!safeAddPdf(zip, `${safeSlug}_etiquetas.pdf`, docEtiquetas)) {
-          errors.push({ step: "PDF Etiquetas", message: "Documento ou blob inválido." });
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "PDF Etiquetas", message: msg });
-        devLogger.error("Full export: PDF Etiquetas", err);
-      }
+        const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+        for (const bundle of thicknessLayoutBundles) {
+          const nestingPlacements = bundle.layoutResult.sheets.flatMap((s) => s.placements);
+          const docEtiquetas = await UnifiedEtiquetaEngine.build({
+            ...proj,
+            precomputedItems: bundle.items,
+            cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
+          });
+          const etiquetasPath = industrialThicknessEtiquetasPdfPath(bundle.thicknessMm);
+          if (!safeAddPdf(zip, etiquetasPath, docEtiquetas)) {
+            errors.push({
+              step: `PDF Etiquetas (${bundle.bucket})`,
+              message: "Documento ou blob inválido.",
+            });
+          }
 
-      // --- Layout de Corte PRO (reutiliza nesting calculado acima) ---
-      try {
-        if (nestingResult && nestingResult.sheets.length > 0) {
-          const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-          const docLayout = await buildCutLayoutPdf(nestingResult, {
-            projectName: project.projectName ?? "Projeto",
+          const docLayout = await buildCutLayoutPdf(bundle.layoutResult, {
+            projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
             nestingTopRightOrigin: true,
           });
-          if (!safeAddPdf(zip, `${safeSlug}_layout_corte_pro.pdf`, docLayout)) {
-            errors.push({ step: "Layout de Corte PRO", message: "Falha ao adicionar PDF ao ZIP." });
+          const layoutPath = industrialThicknessLayoutPdfPath(bundle.thicknessMm);
+          if (!safeAddPdf(zip, layoutPath, docLayout)) {
+            errors.push({
+              step: `Layout de Corte PRO (${bundle.bucket})`,
+              message: "Falha ao adicionar PDF ao ZIP.",
+            });
           }
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "Layout de Corte PRO", message: msg });
-        devLogger.error("Full export: Layout de Corte", err);
+        errors.push({ step: "PDF Etiquetas / Layout PRO", message: msg });
+        devLogger.error("Full export: Etiquetas / Layout PRO por espessura", err);
       }
 
-      // --- CNC (TCN): nesting global (corpo + portas + prateleiras + gavetas) ---
+      // --- CNC (TCN): um nesting por espessura ---
       try {
         const cncOptions = getDefaultCncLayoutOptions();
         const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
@@ -839,37 +880,40 @@ export function useGerarArquivoHandlers() {
         }
         const usedTcnNamesByPath = new Set<string>();
         let tcnFilesAdded = 0;
-        const cncBundle = await buildCncFromCutlistItemsInWorker(
+        const thicknessCncBundles = await buildCncBundlesPerThickness(
           settingsSnapshot,
           materialsSnapshot,
           cncProjectStub,
           cncItems as CutlistItemForPieces[],
           cncOptions
         );
-        if (cncBundle?.cnc?.files?.length) {
-          for (const file of cncBundle.cnc.files) {
+        for (const bundle of thicknessCncBundles) {
+          const files = bundle.cncBundle.cnc?.files ?? [];
+          for (const file of files) {
             if (!file || file.tcn == null) {
               errors.push({
                 step: "CNC",
-                message: `Painel ${file?.panelIndex ?? "?"} sem TCN.`,
+                message: `Painel ${file?.panelIndex ?? "?"} sem TCN (${bundle.bucket}).`,
               });
               continue;
             }
-            const thicknessBucket = formatThicknessBucket(file.thicknessMm);
+            const tcnDir = industrialThicknessTcnDirPath(bundle.thicknessMm);
             const base = buildTcnExportBaseName(
-              cncBundle.layoutResult,
+              bundle.cncBundle.layoutResult,
               file.panelIndex,
-              cncBundle.cnc.files.length
+              files.length
             );
             let finalBase = base;
             let dedupeIndex = 2;
-            while (usedTcnNamesByPath.has(`cnc/${thicknessBucket}/tcn/${finalBase}`)) {
+            while (usedTcnNamesByPath.has(`${tcnDir}/${finalBase}`)) {
               finalBase = `${base}_${dedupeIndex}`;
               dedupeIndex += 1;
             }
-            usedTcnNamesByPath.add(`cnc/${thicknessBucket}/tcn/${finalBase}`);
+            usedTcnNamesByPath.add(`${tcnDir}/${finalBase}`);
 
-            const tcnPathFinal = sanitizeZipPath(`cnc/${thicknessBucket}/tcn/${finalBase}_cnc_${tcnSuffix}.tcn`);
+            const tcnPathFinal = sanitizeZipPath(
+              `${tcnDir}/${finalBase}_cnc_${tcnSuffix}.tcn`
+            );
             if (tcnPathFinal && typeof file.tcn === "string") {
               zip.file(tcnPathFinal, file.tcn);
               tcnManifestFiles.push({ path: tcnPathFinal, content: file.tcn });

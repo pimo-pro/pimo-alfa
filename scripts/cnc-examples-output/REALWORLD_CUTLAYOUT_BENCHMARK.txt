@@ -1,0 +1,34 @@
+REALWORLD CUTLAYOUT BENCHMARK — ANTES vs DEPOIS
+Baseline: aecf802
+Projecto: Roupeiro_RealBench (28 peças, materiais: carvalho, mdf_branco, mdf_branco-10, mdf_branco-16, mdf_branco-19)
+
+RESUMO
+Chapas: 6 → 6 (Δ 0)
+Desperdício médio/chapa: 46.77% → 46.77% (Δ 0 pp)
+Micro-gaps <5mm: 0 → 0
+Ilhas internas: 0 → 0
+Scatter (↑=concentrado): 0.671 → 0.555
+Densidade H/V: 0.812/0.741 → 0.869/0.779
+Utilização: 53.23% → 53.23%
+Tempo: 50.9ms → 84.2ms
+Estratégia: skyline+bestFit → skyline+bestFit
+
+POR CHAPA (desperdício % | gaps | ilhas | scatter | dens.H | dens.V)
+  Chapa 1: 13.89%→22.58% | gaps 0→0 | ilhas 0→0 | scatter 0.704→0.441 | H 0.936→0.934 | V 0.964→0.964
+  Chapa 2: 21.00%→28.36% | gaps 0→0 | ilhas 0→0 | scatter 0.619→0.314 | H 0.933→0.977 | V 0.932→0.932
+  Chapa 3: 85.72%→69.67% | gaps 0→0 | ilhas 0→0 | scatter 0.99→0.781 | H 0.324→0.623 | V 0.468→0.732
+  Chapa 4: 45.01%→45.01% | gaps 0→0 | ilhas 0→0 | scatter 0.535→0.535 | H 0.948→0.948 | V 0.8→0.8
+  Chapa 5: 39.02%→39.02% | gaps 0→0 | ilhas 0→0 | scatter 0.182→0.267 | H 0.965→0.964 | V 0.963→0.929
+  Chapa 6: 76.00%→76.00% | gaps 0→0 | ilhas 0→0 | scatter 0.994→0.994 | H 0.768→0.768 | V 0.319→0.319
+
+OBSERVAÇÕES:
+- Densidade bbox ↑ H 0.812→0.869, V 0.741→0.779.
+- Chapa 3: desperdício 85.72% → 69.67%.
+
+REGRESSÃO: validateIndustrialLayout OK=true, TCN estrutural estável=true
+
+FICHEIROS:
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\REALWORLD_BENCH_INPUT.json
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\REALWORLD_CUTLAYOUT_BEFORE.json
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\REALWORLD_CUTLAYOUT_AFTER.json
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\REALWORLD_CUTLAYOUT_BENCHMARK.json

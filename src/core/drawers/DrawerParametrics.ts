@@ -1,13 +1,11 @@
 /**
  * DrawerParametrics
  *
- * Calcula dimensoes reais para o sistema europeu de gavetas:
- * - Frente overlay externa, fora da caixa.
- * - Corpo atras da frente, com folgas para corredicas.
- * - Laterais/traseira 70 mm mais baixas que a frente.
- * - Profundidade nominal escolhida a partir de settings.gavetas.
+ * Geometria de gavetas internas no módulo:
+ * - Frente alinhada (flush) com o corpo do módulo, folga lateral 1 mm por lado.
+ * - Corpo com mesma altura da frente (sem ultrapassar o caixote nesta fase).
+ * - Folgas verticais entre frentes geridas em DrawerGroup / drawerVerticalPosition.
  */
-
 import {
   settingsDefaults,
   type DrawerHandlePosition,
@@ -242,11 +240,14 @@ export function calculateDrawerSpecs(
   const drawerType = overrides?.drawerType ?? type;
   const frontGap = settings.gavetaFolgaFrenteMm;
   const sideGap = settings.gavetaFolgaLateralMm;
-  const frontThickness = settings.gavetaEspessuraFrenteMm;
+  const bodyThickness =
+    Number.isFinite(dimensions.boxThickness) && dimensions.boxThickness > 0
+      ? dimensions.boxThickness
+      : settings.gavetaEspessuraFrenteMm;
+  const frontThickness = bodyThickness;
   const sideThickness = settings.gavetaEspessuraLateralMm;
   const bottomThickness = settings.gavetaEspessuraFundoMm;
   const backThickness = settings.gavetaEspessuraTraseiraMm;
-  const bodyRecess = settings.gavetaRecuoCorpoMm;
   const runnerClearanceMm = settings.gavetaRecuoProfundidadeCorredicaMm;
   const availableDepthRules = settings.gavetaValidarProfundidadeCompativel
     ? settings.gavetaProfundidadesCompativeisMm
@@ -271,13 +272,15 @@ export function calculateDrawerSpecs(
       ? boxExternalWidth
       : boxInternalWidth + 2 * dimensions.boxThickness;
   const frontWidth = clampMm(externalWidth - 2 * frontGap);
-  const frontHeight = clampMm(drawerHeight - 2);
+  const frontHeight = clampMm(drawerHeight);
 
   // ===== CORPO =====
-  // Padrao europeu: corpo com folga lateral, profundidade nominal e altura 70 mm abaixo da frente.
-  const bodyWidth = clampMm(boxInternalWidth - (2 * sideGap));
-  const bodyHeight = clampMm(frontHeight - bodyRecess);
-  const bodyDepth = clampMm(nominalDepth - runnerClearanceMm);
+  // Corpo centrado entre laterais internas; mesma altura da frente (caixote alinhado).
+  const bodyWidth = clampMm(boxInternalWidth - 2 * sideGap);
+  const bodyHeight = clampMm(drawerHeight);
+  const rearClearanceMm = runnerClearanceMm;
+  const maxBodyDepth = clampMm(boxInternalDepth - frontThickness - rearClearanceMm, MIN_BODY_DEPTH_MM);
+  const bodyDepth = clampMm(Math.min(nominalDepth - runnerClearanceMm, maxBodyDepth));
   const woodBodyHeight = metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0
     ? settings.gavetaAlturaCaixaMetalicaMm
     : bodyHeight;
@@ -300,6 +303,7 @@ export function calculateDrawerSpecs(
   const bottomDepth = metalBoxEnabled ? 0 : bodyDepth;
 
   // ===== POSICIONAMENTO =====
+  // Frente flush na face frontal do módulo; corpo recuado para trás da frente.
   const frontOffsetZ = 0;
   const bodyOffsetZ = -(frontThickness / 2 + bodyDepth / 2);
   const pullDistance = resolveSlideCourse(settings, bodyDepth);
@@ -413,9 +417,13 @@ export function calculateDrawerSpecs(
  * Valida se as dimensões calculadas são válidas
  */
 export function validateDrawerSpecs(specs: DrawerCalculatedSpecs): boolean {
-  // Frente deve ser maior que corpo
   if (specs.front.width <= specs.body.width) {
-    devLogger.warn("DrawerParametrics: frente deve ser maior que corpo");
+    devLogger.warn("DrawerParametrics: frente deve ser mais larga que o corpo (overlay lateral)");
+    return false;
+  }
+
+  if (Math.abs(specs.front.height - specs.body.height) > 0.51) {
+    devLogger.warn("DrawerParametrics: frente e corpo devem ter a mesma altura");
     return false;
   }
 

@@ -1,5 +1,6 @@
 import type { SeededRng } from "../utils/cutLayoutRng";
 import { getSheetSafetyMarginMm } from "../layoutCoordinateSystem";
+import { comparePiecesForNesting } from "../utils/cutLayoutUtils";
 import {
   tryCompactLateSheetsOfRun,
   LATE_SHEET_COMPACT_WINDOW,
@@ -111,11 +112,14 @@ function nowMs(): number {
 
 function sortPiecesForAttempt(pieces: CutPiece[], mode: AttemptOrderMode): CutPiece[] {
   const list = pieces.map((p) => ({ ...p }));
+  if (mode === "area_desc" || mode === "area_desc_soft") {
+    list.sort(comparePiecesForNesting);
+    return list;
+  }
   const area = (p: CutPiece) => p.largura_mm * p.altura_mm;
   const maxSide = (p: CutPiece) => Math.max(p.largura_mm, p.altura_mm);
   const minSide = (p: CutPiece) => Math.min(p.largura_mm, p.altura_mm);
   list.sort((a, b) => {
-    if (mode === "area_desc") return area(b) - area(a) || maxSide(b) - maxSide(a);
     if (mode === "max_side_desc") return maxSide(b) - maxSide(a) || area(b) - area(a);
     if (mode === "min_side_desc") return minSide(b) - minSide(a) || area(b) - area(a);
     return area(b) - area(a) || minSide(a) - minSide(b);

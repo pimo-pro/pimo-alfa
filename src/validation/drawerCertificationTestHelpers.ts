@@ -31,6 +31,7 @@ export type DrawerScenarioConfig = {
   softClose?: boolean;
   runnerClearanceMm?: number;
   drawerOverrides?: Array<DrawerParametricOverrides | undefined>;
+  drawerSettingsOverrides?: Partial<typeof DRAWER_SETTINGS>;
   originX?: number;
   originY?: number;
 };
@@ -38,6 +39,7 @@ export type DrawerScenarioConfig = {
 export function buildDrawerScenario(config: DrawerScenarioConfig) {
   const drawerSettings = {
     ...DRAWER_SETTINGS,
+    ...(config.drawerSettingsOverrides ?? {}),
     ...(config.slideType ? { gavetaTipoCorredica: config.slideType } : {}),
     ...(config.metalBoxType ? { gavetaTipoCaixaMetalica: config.metalBoxType as typeof DRAWER_SETTINGS.gavetaTipoCaixaMetalica } : {}),
     ...(typeof config.softClose === "boolean" ? { gavetaSoftClose: config.softClose } : {}),
@@ -124,9 +126,9 @@ export function minimalBoxWithDrawers(
 export function classifyDrawerPieceForEtiqueta(tipo: string, nome: string): string {
   const t = tipo.toLowerCase();
   const n = nome.toUpperCase();
-  if (t === "gaveta_frente" || n.includes("GAVETA_FRENTE") || n.includes("GAV_FREN")) return "FRENTE_GAVETA";
+  if (t === "gaveta_frente" || n.includes("GAVETA_FRENTE") || n.includes("GAV_FRENT")) return "FRENTE_GAVETA";
   if (t === "gaveta_lat_esq" || t === "gaveta_lat_dir" || n.includes("GAV_LAT")) return "GAV_LATERAIS";
-  if (t === "gaveta_traseira" || n.includes("GAV_TRA")) return "GAV_TRAS";
+  if (t === "gaveta_traseira" || n.includes("GAV_COST") || n.includes("GAV_TRA")) return "GAV_TRAS";
   if (t === "gaveta_fundo" || n.includes("GAV_FUN") || n.includes("GAVETA_FUNDO")) return "FUNDO_GAVETA";
   return "GENERIC";
 }

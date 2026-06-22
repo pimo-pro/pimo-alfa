@@ -90,6 +90,26 @@ export function getCandidateX(
   return Array.from(xs).sort((a, b) => a - b);
 }
 
+/** Penaliza bbox inflada e ilhas de desperdício no meio da chapa (skyline bestFit). */
+function scoreSkylinePlacement(
+  candidate: PlacementCandidate,
+  sheet: SheetDefinition,
+  placed: Array<{ x: number; y: number; w: number; h: number }>
+): number {
+  const maxX = Math.max(0, ...placed.map((p) => p.x + p.w), candidate.x + candidate.w);
+  const maxY = Math.max(0, ...placed.map((p) => p.y + p.h), candidate.y + candidate.h);
+  const stripWaste =
+    Math.max(0, sheet.largura_mm - (candidate.x + candidate.w)) * candidate.h +
+    Math.max(0, sheet.altura_mm - (candidate.y + candidate.h)) * candidate.w;
+  const tightness = candidate.tightnessScore ?? 0;
+  const islandPenalty =
+    tightness < 0.2 && candidate.x > sheet.largura_mm * 0.05 && candidate.y > sheet.altura_mm * 0.05
+      ? maxX * maxY * 0.0004
+      : 0;
+  const bboxPenalty = maxX * maxY * 0.00015;
+  return stripWaste + bboxPenalty + islandPenalty - tightness * 16000;
+}
+
 export function findPlacementSkyline(
   piece: CutPiece,
   sheet: SheetDefinition,
@@ -150,13 +170,8 @@ export function findPlacementSkyline(
   const picked = deps.chooseOrientationWithRotationBias(normal, rotated, cfg);
   if (bin === "firstFit" && picked) return picked;
   return candidates.sort((a, b) => {
-    const wasteA =
-      Math.max(0, sheet.largura_mm - (a.x + a.w)) * a.h + Math.max(0, sheet.altura_mm - (a.y + a.h)) * a.w;
-    const wasteB =
-      Math.max(0, sheet.largura_mm - (b.x + b.w)) * b.h + Math.max(0, sheet.altura_mm - (b.y + b.h)) * b.w;
-    // Desconto de tightness: posições encostadas a outras peças têm desperdício efetivo menor
-    const adjA = wasteA - a.tightnessScore * 15000;
-    const adjB = wasteB - b.tightnessScore * 15000;
-    return adjA - adjB || a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore;
+    const scoreA = scoreSkylinePlacement(a, sheet, placed);
+    const scoreB = scoreSkylinePlacement(b, sheet, placed);
+    return scoreA - scoreB || a.y - b.y || a.x - b.x || b.orientationScore - a.orientationScore;
   })[0];
 }

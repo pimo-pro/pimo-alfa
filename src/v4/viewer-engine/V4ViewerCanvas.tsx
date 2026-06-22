@@ -1,15 +1,17 @@
-import { useRef, useCallback, useEffect, type CSSProperties } from "react";
+import { useRef, useEffect, type CSSProperties } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, TransformControls } from "@react-three/drei";
+import { TransformControls } from "@react-three/drei";
 import * as THREE from "three";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { V4Lights } from "./V4Lights";
-import { V4Ground, V4_BG_COLOR } from "./V4Ground";
+import { V4_BG_COLOR } from "./V4Ground";
 import { V4BoxObject } from "./V4BoxObject";
 import { V4DimensionLabel } from "./V4DimensionLabel";
 import { V4ViewerToolbar } from "./V4ViewerToolbar";
 import { useV4ViewerState } from "./useV4ViewerState";
+import { V4Room } from "../room/V4Room";
+import V4RoomCamera from "../camera/V4RoomCamera";
+import type { V4RoomConfig } from "../room/V4RoomConfig";
 import type { SceneItem } from "../../components/v4/V4Viewer";
 
 interface V4ViewerCanvasProps {
@@ -17,6 +19,7 @@ interface V4ViewerCanvasProps {
   sceneItems: SceneItem[];
   selectedId: string | null;
   onSelectId?: (id: string | null) => void;
+  roomConfig: V4RoomConfig;
 }
 
 /**
@@ -35,20 +38,11 @@ export function V4ViewerCanvas({
   sceneItems,
   selectedId: externalSelectedId,
   onSelectId,
+  roomConfig,
 }: V4ViewerCanvasProps) {
   const { state, actions } = useV4ViewerState(externalSelectedId);
-  const orbitRef = useRef<OrbitControlsImpl>(null);
 
   const selectedItem = sceneItems.find((i) => i.id === state.selectedId) ?? null;
-
-  // Reset camera to default position
-  const handleResetCamera = useCallback(() => {
-    const orbit = orbitRef.current;
-    if (!orbit) return;
-    orbit.target.set(0, 0.5, 0);
-    orbit.object.position.set(2.2, 1.8, 3.2);
-    orbit.update();
-  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -59,12 +53,11 @@ export function V4ViewerCanvas({
       if (e.key === "r" || e.key === "R") actions.setTool("rotate");
       if (e.key === "d" || e.key === "D") { actions.setTool("ruler"); actions.toggleDimensions(); }
       if (e.key === "g" || e.key === "G") actions.toggleGrid();
-      if (e.key === "Home")               handleResetCamera();
       if (e.key === "Escape")             { actions.setTool("select"); actions.setSelectedId(null); onSelectId?.(null); }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [actions, handleResetCamera, onSelectId]);
+  }, [actions, onSelectId]);
 
   return (
     <div className="v4-viewer-wrap" style={style}>
@@ -78,7 +71,7 @@ export function V4ViewerCanvas({
         onTool={actions.setTool}
         onToggleGrid={actions.toggleGrid}
         onToggleDimensions={actions.toggleDimensions}
-        onResetCamera={handleResetCamera}
+        onResetCamera={() => {}}
       />
 
       {/* ── 3D Canvas ── */}
@@ -102,37 +95,13 @@ export function V4ViewerCanvas({
         >
           <color attach="background" args={[V4_BG_COLOR]} />
 
-          <PerspectiveCamera
-            makeDefault
-            position={[2.2, 1.8, 3.2]}
-            fov={42}
-            near={0.05}
-            far={300}
-          />
-
-          <OrbitControls
-            ref={orbitRef}
-            enableDamping
-            dampingFactor={0.06}
-            minDistance={0.3}
-            maxDistance={30}
-            maxPolarAngle={Math.PI / 2 - 0.01}
-            target={[0, 0.5, 0]}
-            // Disable orbit while using transform tools
-            enabled={state.activeTool === "select" || state.activeTool === "ruler"}
-          />
+          <V4RoomCamera config={roomConfig} />
 
           {/* Lighting */}
           <V4Lights />
 
-          {/* Ground + grid */}
-          {state.showGrid && <V4Ground />}
-
-          {/* Shadow catcher */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]} receiveShadow>
-            <planeGeometry args={[40, 40]} />
-            <shadowMaterial opacity={0.28} />
-          </mesh>
+          {/* Sala (paredes + chão) */}
+          <V4Room config={roomConfig} />
 
           {/* Scene boxes */}
           {sceneItems.map((item) => (

@@ -8,6 +8,7 @@ import { canBoxHaveDrawers } from "../../core/drawers";
 import {
   resolveDrawerVerticalPosition,
   getDrawerUsableInternalHeightMm,
+  DRAWER_VERTICAL_GAP_MM,
 } from "../../core/drawers/drawerVerticalPosition";
 import {
   mergeDoorDimensionUpdate,
@@ -432,10 +433,12 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               let nextDrawers = updated;
                       if (heightChanged && mode === "custom") {
                         const availableHeight = getDrawerUsableInternalHeightMm(box.dimensoes.altura);
+                        const gapTotal = Math.max(0, nextDrawers.length - 1) * DRAWER_VERTICAL_GAP_MM;
+                        const distributable = Math.max(1, availableHeight - gapTotal);
                         const heights = nextDrawers.map((item) =>
                           Number.isFinite(item.height) && item.height > 0
                             ? item.height
-                            : availableHeight / Math.max(1, nextDrawers.length)
+                            : distributable / Math.max(1, nextDrawers.length)
                         );
                         nextDrawers = nextDrawers.map((item, index) => {
                           const height = heights[index];

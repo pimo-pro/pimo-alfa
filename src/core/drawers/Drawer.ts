@@ -1,10 +1,10 @@
 /**
  * Drawer
- * 
+ *
  * Representa uma gaveta completa com todas as suas peças:
- * - Frente overlay externa, movel
- * - Corpo interno, movel junto com a frente
- * - Laterais, fundo e traseira atras da frente
+ * - Frente flush com a face frontal do módulo (movível)
+ * - Corpo interno recuado atrás da frente (movível junto com a frente)
+ * - Laterais, fundo e traseira dentro do volume do corpo
  */
 
 import type { DrawerCalculatedSpecs } from "./DrawerParametrics";
@@ -101,7 +101,7 @@ export function createDrawer(
     specs,
     pieces: {
       // ===== FRENTE =====
-      // Frente externa: a origem da gaveta fica no centro da frente overlay.
+      // Frente flush: origem da gaveta no centro da frente (face alinhada ao módulo).
       front: {
         width: specs.front.width,
         height: specs.front.height,

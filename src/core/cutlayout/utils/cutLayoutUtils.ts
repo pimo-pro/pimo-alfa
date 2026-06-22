@@ -13,6 +13,52 @@ export function getPieceAspectRatio(piece: CutPiece): number {
   return a / b;
 }
 
+/** Agrupa dimensões semelhantes (útil para shelf e skyline). */
+function nestingHeightBucket(piece: CutPiece): number {
+  return Math.round(Math.max(piece.largura_mm, piece.altura_mm) / 25) * 25;
+}
+
+function nestingWidthBucket(piece: CutPiece): number {
+  return Math.round(Math.min(piece.largura_mm, piece.altura_mm) / 10) * 10;
+}
+
+/**
+ * Ordenação industrial partilhada: material → altura semelhante → área → lados.
+ * Melhora encaixe em shelf e reduz micro-gaps horizontais.
+ */
+export function comparePiecesForNesting(a: CutPiece, b: CutPiece): number {
+  const matA = a.materialId ?? "";
+  const matB = b.materialId ?? "";
+  if (matA !== matB) return matA.localeCompare(matB);
+
+  const hbA = nestingHeightBucket(a);
+  const hbB = nestingHeightBucket(b);
+  if (hbA !== hbB) return hbB - hbA;
+
+  const wbA = nestingWidthBucket(a);
+  const wbB = nestingWidthBucket(b);
+  if (wbA !== wbB) return wbB - wbA;
+
+  const areaDiff = getPieceArea(b) - getPieceArea(a);
+  if (areaDiff !== 0) {
+    const maxAb = Math.max(getPieceArea(a), getPieceArea(b));
+    if (maxAb > 1 && Math.abs(areaDiff) <= maxAb * 0.05) {
+      const ar = getPieceAspectRatio(b) - getPieceAspectRatio(a);
+      if (ar !== 0) return ar;
+    } else {
+      return areaDiff;
+    }
+  }
+
+  const bMax = Math.max(b.largura_mm, b.altura_mm);
+  const aMax = Math.max(a.largura_mm, a.altura_mm);
+  if (bMax !== aMax) return bMax - aMax;
+  const bMin = Math.min(b.largura_mm, b.altura_mm);
+  const aMin = Math.min(a.largura_mm, a.altura_mm);
+  if (bMin !== aMin) return bMin - aMin;
+  return getPieceAspectRatio(b) - getPieceAspectRatio(a);
+}
+
 /**
  * Determina se uma peça pode ser rodada 90° pelo motor de nesting.
  * Verifica grainDirection, dimensões quadradas e operações geométricas direcionais
@@ -35,26 +81,7 @@ export function reorderPieces(pieces: CutPiece[], mode: "production" | "gapFill"
 
   return [...pieces].sort((a, b) => {
     if (mode === "production") {
-      const matA = a.materialId ?? "";
-      const matB = b.materialId ?? "";
-      if (matA !== matB) return matA.localeCompare(matB);
-      const areaDiff = getPieceArea(b) - getPieceArea(a);
-      if (areaDiff !== 0) {
-        const maxAb = Math.max(getPieceArea(a), getPieceArea(b));
-        if (maxAb > 1 && Math.abs(areaDiff) <= maxAb * 0.05) {
-          const ar = getPieceAspectRatio(b) - getPieceAspectRatio(a);
-          if (ar !== 0) return ar;
-        } else {
-          return areaDiff;
-        }
-      }
-      const bMax = Math.max(b.largura_mm, b.altura_mm);
-      const aMax = Math.max(a.largura_mm, a.altura_mm);
-      if (bMax !== aMax) return bMax - aMax;
-      const bMin = Math.min(b.largura_mm, b.altura_mm);
-      const aMin = Math.min(a.largura_mm, a.altura_mm);
-      if (bMin !== aMin) return bMin - aMin;
-      return getPieceAspectRatio(b) - getPieceAspectRatio(a);
+      return comparePiecesForNesting(a, b);
     }
     const longA = pieceLongStrip(a) ? 1 : 0;
     const longB = pieceLongStrip(b) ? 1 : 0;

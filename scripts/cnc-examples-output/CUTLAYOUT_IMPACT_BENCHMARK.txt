@@ -1,0 +1,41 @@
+CUTLAYOUT IMPACT BENCHMARK — ANTES vs DEPOIS
+Baseline (antes): commit aecf802
+
+## TEST_1_IMPORT (IMPORT)
+Chapas: 1 → 1 (Δ 0)
+Desperdício médio: 92.25% → 92.25% (Δ 0 pp)
+Micro-gaps: 0 → 0 (Δ 0)
+Ilhas: 0 → 0 (Δ 0)
+Scatter: 0.989 → 0.989 (↓ = concentrado)
+Utilização: 7.75% → 7.75%
+Tempo: 16.4ms → 25.3ms
+
+## SPM_FULL_INDUSTRIAL (SPM)
+Chapas: 3 → 3 (Δ 0)
+Desperdício médio: 72.76% → 72.76% (Δ 0 pp)
+Micro-gaps: 0 → 0 (Δ 0)
+Ilhas: 0 → 0 (Δ 0)
+Scatter: 0.905 → 0.882 (↓ = concentrado)
+Utilização: 27.24% → 27.24%
+Tempo: 23.4ms → 44.3ms
+
+## MPM_DUAL_BOX (MPM)
+Chapas: 4 → 4 (Δ 0)
+Desperdício médio: 65.31% → 65.31% (Δ 0 pp)
+Micro-gaps: 0 → 0 (Δ 0)
+Ilhas: 0 → 0 (Δ 0)
+Scatter: 0.802 → 0.875 (↓ = concentrado)
+Utilização: 34.69% → 34.69%
+Tempo: 31666.7ms → 31694.2ms
+
+OBSERVAÇÕES:
+- SPM_FULL_INDUSTRIAL: desperdício mais concentrado (scatter 0.905 → 0.882).
+
+REGRESSÃO:
+- validateIndustrialLayout: OK
+- TCN estrutural estável: sim
+
+CASOS LIMITE:
+- TEST_1_IMPORT: tempo +8.9ms ou ganho marginal
+- SPM_FULL_INDUSTRIAL: tempo +20.9ms ou ganho marginal
+- MPM_DUAL_BOX: tempo +27.5ms ou ganho marginal

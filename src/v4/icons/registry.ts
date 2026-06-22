@@ -8,6 +8,7 @@ import {
   IconNavFabrication,
   IconNavTracking,
   IconNavSettings,
+  IconNavSala,
 } from "./groups/navigation";
 
 import {
@@ -58,6 +59,7 @@ export const v4IconRegistry: Record<V4IconName, FC<V4IconProps>> = {
   materials:    IconNavMaterials,
   fabrication:  IconNavFabrication,
   tracking:     IconNavTracking,
+  sala:         IconNavSala,
   settings:     IconNavSettings,
   // Viewer tools
   select:       IconActionSelect,

@@ -8,17 +8,18 @@ import {
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
 import { isDrawerPieceTipo } from "../services/drawerCutlistAdapter";
+import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import {
   buildDrawerScenario,
   minimalBoxWithDrawers,
 } from "./drawerCertificationTestHelpers";
 
 const EXPECTED_DRAWER_PREFIXES: Record<string, string> = {
-  gaveta_frente: "gav_fre",
-  gaveta_lat_esq: "gav_lat",
-  gaveta_lat_dir: "gav_lat",
+  gaveta_frente: "gav_frent",
+  gaveta_lat_esq: "gav_lat_esq",
+  gaveta_lat_dir: "gav_lat_dir",
   gaveta_fundo: "gav_fun",
-  gaveta_traseira: "gav_tra",
+  gaveta_traseira: "gav_cost",
 };
 
 describe("Certificação CNC — peças de gaveta", () => {
@@ -34,7 +35,7 @@ describe("Certificação CNC — peças de gaveta", () => {
       "Módulo 1",
       "Projeto Teste"
     );
-    expect(name).toMatch(/_gav_fre$/);
+    expect(name).toMatch(/_gav_frent$/);
   });
 
   it("espessura, orientação e dimensões corretas na cutlist industrial", () => {
@@ -48,18 +49,28 @@ describe("Certificação CNC — peças de gaveta", () => {
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
 
+    expect(drawerPieces).toHaveLength(5);
+    expect(new Set(drawerPieces.map((p) => p.tipo)).size).toBe(5);
+
     const front = drawerPieces.find((p) => p.tipo === "gaveta_frente");
     expect(front?.espessura).toBe(19);
+    expect(front?.nome).toMatch(/_gav_frent_01$/);
     expect(front?.grainDirection).toBe("YY");
     expect(front?.dimensoes.largura).toBe(598);
     expect(front?.dimensoes.altura).toBeGreaterThan(0);
 
     const lat = drawerPieces.find((p) => p.tipo === "gaveta_lat_esq");
     expect(lat?.espessura).toBe(16);
+    expect(lat?.nome).toMatch(/_gav_lat_esq_01$/);
     expect(lat?.grainDirection).toBe("XX");
 
     const fundo = drawerPieces.find((p) => p.tipo === "gaveta_fundo");
     expect(fundo?.espessura).toBe(10);
+    expect(fundo?.nome).toMatch(/_gav_fun_01$/);
+
+    const costas = drawerPieces.find((p) => p.tipo === "gaveta_traseira");
+    expect(costas?.espessura).toBe(16);
+    expect(costas?.nome).toMatch(/_gav_cost_01$/);
   });
 
   it("furos corrediça — diâmetro, profundidade, offsets e face B", () => {
@@ -131,7 +142,7 @@ describe("Certificação CNC — peças de gaveta", () => {
 
     expect(pieces.length).toBeGreaterThan(0);
     pieces.forEach((p) => {
-      expect(p.partName).toMatch(/_gav_(fre|lat|fun|tra)$/);
+      expect(p.partName).toMatch(/_gav_(frent|lat_esq|lat_dir|fun|cost)_\d{2}$/);
       expect(p.largura_mm).toBeGreaterThan(0);
       expect(p.altura_mm).toBeGreaterThan(0);
     });
@@ -155,6 +166,42 @@ describe("Certificação CNC — peças de gaveta", () => {
         expect(h.depth).toBeGreaterThan(0);
         expect(["A", "B", undefined]).toContain(h.face);
       });
+    });
+  });
+
+  it("frente usa espessura do corpo do móvel", () => {
+    const { layers } = buildDrawerScenario({
+      boxWidth: 600,
+      boxHeight: 600,
+      boxDepth: 560,
+      boxThickness: 18,
+      drawerCount: 1,
+    });
+    const box = minimalBoxWithDrawers(layers, { espessura: 18 });
+    const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const front = cutlist.find((p) => p.tipo === "gaveta_frente");
+    expect(front?.espessura).toBe(18);
+  });
+
+  it("exporta XML de furação para peças de gaveta com drillHoles", () => {
+    const { layers } = buildDrawerScenario({
+      boxWidth: 600,
+      boxHeight: 600,
+      boxDepth: 560,
+      drawerCount: 1,
+    });
+    const box = minimalBoxWithDrawers(layers, { nome: "Modulo_A" });
+    const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const xmlFiles = buildDrillFilesForProject(cutlist, {
+      projectName: "Teste",
+      boxes: [box],
+      rules: defaultRulesConfig,
+    });
+    const drawerXml = xmlFiles.filter((f) => f.partName.includes("gav_"));
+    expect(drawerXml.length).toBeGreaterThanOrEqual(2);
+    drawerXml.forEach((f) => {
+      expect(f.xml).toContain("KDTPanelFormat");
+      expect(f.xml).toContain("<CAD>");
     });
   });
 });

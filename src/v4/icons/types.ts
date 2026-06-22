@@ -14,6 +14,7 @@ export type V4IconName =
   | "materials"     // materials / materiais
   | "fabrication"   // manufacturing / fabricação
   | "tracking"      // tracking / rastreio
+  | "sala"          // sala / room planner
   | "settings"      // settings / definições
   // ── Viewer tools ──────────────────────────────────────────
   | "select"        // selection tool

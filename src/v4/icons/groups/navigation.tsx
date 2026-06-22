@@ -79,3 +79,24 @@ export const IconNavTracking: FC<V4IconProps> = ({
     <rect x="5" y="16" width="3" height="3" fill={color} stroke="none" />
   </svg>
 );
+
+/** Sala — planta de sala aberta (U shape: chão + 2 paredes laterais + parede traseira) */
+export const IconNavSala: FC<V4IconProps> = ({
+  size = 20, color = "currentColor", className, "aria-hidden": ariaHidden = true, title,
+}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+    className={className} aria-hidden={ariaHidden}>
+    {title && <title>{title}</title>}
+    {/* Parede esquerda */}
+    <path d="M4 19V5" />
+    {/* Parede traseira */}
+    <path d="M4 5h16" />
+    {/* Parede direita */}
+    <path d="M20 5v14" />
+    {/* Chão */}
+    <path d="M4 19h16" />
+    {/* Divisória interior — indica interior da sala */}
+    <path d="M4 19h6v-6" />
+  </svg>
+);

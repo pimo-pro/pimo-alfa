@@ -7,6 +7,7 @@
  */
 
 import type { CutListItem } from "../core/types";
+import { buildDrawerIndustrialLabel } from "../core/drawers/drawerIndustrialLabels";
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
@@ -77,6 +78,34 @@ export type DrawerIndustrialBom = {
   hardware: DrawerHardwareSummary[];
 };
 
+export const DRAWER_FRONT_USES_BODY_THICKNESS = true;
+export const DRAWER_BACK_THICKNESS_MM = 16;
+export const DRAWER_BOTTOM_THICKNESS_MM = 10;
+
+function resolveDrawerFrontThicknessMm(item: DrawerLayerItem): number {
+  const fromLayer = Number(item.frontThickness);
+  if (Number.isFinite(fromLayer) && fromLayer > 0) return fromLayer;
+  return 19;
+}
+
+function withDrawerIndustrialMeta(
+  piece: CutListItem,
+  boxName: string,
+  drawerIndex1Based: number
+): CutListItem {
+  const tipo = piece.tipo as DrawerPieceTipo;
+  const industrialLabel = buildDrawerIndustrialLabel(boxName, tipo, drawerIndex1Based);
+  return {
+    ...piece,
+    nome: industrialLabel,
+    metadata: {
+      ...(piece.metadata ?? {}),
+      industrialLabel,
+      drawerIndex: drawerIndex1Based,
+    },
+  };
+}
+
 export type DrawerCutlistMaterialContext = {
   bodyMaterialId: string;
 };
@@ -110,19 +139,24 @@ export function extractDrawerIndustrialBomFromLayerItems(
 export function drawerLayerItemToCutList(
   item: DrawerLayerItem,
   drawerIndex: number,
-  bodyMaterialIdOrLegacyLabel?: string
+  bodyMaterialIdOrLegacyLabel?: string,
+  boxName?: string
 ): CutListItem[] {
   const materialContext = normalizeDrawerMaterialContext(bodyMaterialIdOrLegacyLabel);
+  const drawerIndex1Based = drawerIndex + 1;
+  const safeBoxName = boxName?.trim() || "BOX";
   const sideMaterial = resolveDrawerSideMaterial(materialContext.bodyMaterialId);
   const sideThickness = DRAWER_SIDE_THICKNESS_MM;
+  const backThickness = DRAWER_BACK_THICKNESS_MM;
   const bottomThickness =
     Number.isFinite(item.bottomThickness) && (item.bottomThickness ?? 0) > 0
       ? Number(item.bottomThickness)
-      : undefined;
+      : DRAWER_BOTTOM_THICKNESS_MM;
   const bottomMaterial = resolveDrawerBottomMaterial(
     materialContext.bodyMaterialId,
     bottomThickness
   );
+  const frontThicknessMm = resolveDrawerFrontThicknessMm(item);
   const frontMaterialId = item.materialId ?? materialContext.bodyMaterialId;
   const frontOfficial = resolveMaterial(frontMaterialId);
   const frontMaterialLabel = frontOfficial?.label ?? frontMaterialId;
@@ -157,35 +191,41 @@ export function drawerLayerItemToCutList(
       : []),
   ];
 
-  // FRENTE — material da frente (não alterado)
-  pieces.push({
-    id: `${baseId}-front`,
-    nome: `Gaveta ${drawerIndex + 1} - Frente`,
-    quantidade: 1,
-    dimensoes: {
-      largura: item.width,
-      altura: item.height,
-      profundidade: item.frontThickness,
-    },
-    espessura: item.frontThickness,
-    material: frontMaterialLabel,
-    tipo: "gaveta_frente",
-    sourceType: "parametric",
-    boxId: item.parentBoxId,
-    materialId: frontOfficial?.canonicalId ?? frontMaterialId,
-    grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente" }),
-    metadata: {
-      drawerHardware,
-      drawerRules: {
-        slideType: item.slideType ?? "Genérica",
-        softClose: Boolean(item.softClose),
-        metalBoxType: item.metalBoxType ?? "Nenhuma",
-        handleType: item.handleType ?? "Nenhum",
-        handlePosition: item.handlePosition ?? "Centro",
-        handleOffsetMm: item.handleOffsetMm ?? 0,
+  // FRENTE — espessura do corpo do móvel
+  pieces.push(
+    withDrawerIndustrialMeta(
+      {
+        id: `${baseId}-front`,
+        nome: `Gaveta ${drawerIndex1Based} - Frente`,
+        quantidade: 1,
+        dimensoes: {
+          largura: item.width,
+          altura: item.height,
+          profundidade: frontThicknessMm,
+        },
+        espessura: frontThicknessMm,
+        material: frontMaterialLabel,
+        tipo: "gaveta_frente",
+        sourceType: "parametric",
+        boxId: item.parentBoxId,
+        materialId: frontOfficial?.canonicalId ?? frontMaterialId,
+        grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente" }),
+        metadata: {
+          drawerHardware,
+          drawerRules: {
+            slideType: item.slideType ?? "Genérica",
+            softClose: Boolean(item.softClose),
+            metalBoxType: item.metalBoxType ?? "Nenhuma",
+            handleType: item.handleType ?? "Nenhum",
+            handlePosition: item.handlePosition ?? "Centro",
+            handleOffsetMm: item.handleOffsetMm ?? 0,
+          },
+        },
       },
-    },
-  });
+      safeBoxName,
+      drawerIndex1Based
+    )
+  );
 
   if (hasMetalBox) return pieces;
 
@@ -200,86 +240,110 @@ export function drawerLayerItemToCutList(
 
   // LATERAL ESQUERDA (1×)
   if (hasLeftSide) {
-    pieces.push({
-      id: `${baseId}-left`,
-      nome: `Gaveta ${drawerIndex + 1} - Lateral Esquerda`,
-      quantidade: 1,
-      dimensoes: {
-        largura: item.leftSideDepth ?? 0,
-        altura: item.leftSideHeight ?? 0,
-        profundidade: sideThickness,
-      },
-      espessura: sideThickness,
-      material: sideMaterial.label,
-      tipo: "gaveta_lat_esq",
-      sourceType: "parametric",
-      boxId: item.parentBoxId,
-      materialId: sideMaterial.materialId,
-      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_esq" }),
-    });
+    pieces.push(
+      withDrawerIndustrialMeta(
+        {
+          id: `${baseId}-left`,
+          nome: `Gaveta ${drawerIndex1Based} - Lateral Esquerda`,
+          quantidade: 1,
+          dimensoes: {
+            largura: item.leftSideDepth ?? 0,
+            altura: item.leftSideHeight ?? 0,
+            profundidade: sideThickness,
+          },
+          espessura: sideThickness,
+          material: sideMaterial.label,
+          tipo: "gaveta_lat_esq",
+          sourceType: "parametric",
+          boxId: item.parentBoxId,
+          materialId: sideMaterial.materialId,
+          grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_esq" }),
+        },
+        safeBoxName,
+        drawerIndex1Based
+      )
+    );
   }
 
   // LATERAL DIREITA (1×)
   if (hasRightSide) {
-    pieces.push({
-      id: `${baseId}-right`,
-      nome: `Gaveta ${drawerIndex + 1} - Lateral Direita`,
-      quantidade: 1,
-      dimensoes: {
-        largura: item.rightSideDepth ?? 0,
-        altura: item.rightSideHeight ?? 0,
-        profundidade: sideThickness,
-      },
-      espessura: sideThickness,
-      material: sideMaterial.label,
-      tipo: "gaveta_lat_dir",
-      sourceType: "parametric",
-      boxId: item.parentBoxId,
-      materialId: sideMaterial.materialId,
-      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_dir" }),
-    });
+    pieces.push(
+      withDrawerIndustrialMeta(
+        {
+          id: `${baseId}-right`,
+          nome: `Gaveta ${drawerIndex1Based} - Lateral Direita`,
+          quantidade: 1,
+          dimensoes: {
+            largura: item.rightSideDepth ?? 0,
+            altura: item.rightSideHeight ?? 0,
+            profundidade: sideThickness,
+          },
+          espessura: sideThickness,
+          material: sideMaterial.label,
+          tipo: "gaveta_lat_dir",
+          sourceType: "parametric",
+          boxId: item.parentBoxId,
+          materialId: sideMaterial.materialId,
+          grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_dir" }),
+        },
+        safeBoxName,
+        drawerIndex1Based
+      )
+    );
   }
 
-  // FUNDO (espessura do sistema, normalmente 10 mm)
+  // FUNDO (10 mm)
   if (bottomMaterial.thicknessMm > 0 && (item.bottomWidth ?? 0) > 0 && (item.bottomDepth ?? 0) > 0) {
-    pieces.push({
-      id: `${baseId}-bottom`,
-      nome: `Gaveta ${drawerIndex + 1} - Fundo`,
-      quantidade: 1,
-      dimensoes: {
-        largura: item.bottomWidth ?? 0,
-        altura: item.bottomDepth ?? 0,
-        profundidade: bottomMaterial.thicknessMm,
-      },
-      espessura: bottomMaterial.thicknessMm,
-      material: bottomMaterial.label,
-      tipo: "gaveta_fundo",
-      sourceType: "parametric",
-      boxId: item.parentBoxId,
-      materialId: bottomMaterial.materialId,
-      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_fundo" }),
-    });
+    pieces.push(
+      withDrawerIndustrialMeta(
+        {
+          id: `${baseId}-bottom`,
+          nome: `Gaveta ${drawerIndex1Based} - Fundo`,
+          quantidade: 1,
+          dimensoes: {
+            largura: item.bottomWidth ?? 0,
+            altura: item.bottomDepth ?? 0,
+            profundidade: bottomMaterial.thicknessMm,
+          },
+          espessura: bottomMaterial.thicknessMm,
+          material: bottomMaterial.label,
+          tipo: "gaveta_fundo",
+          sourceType: "parametric",
+          boxId: item.parentBoxId,
+          materialId: bottomMaterial.materialId,
+          grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_fundo" }),
+        },
+        safeBoxName,
+        drawerIndex1Based
+      )
+    );
   }
 
-  // TRASEIRA (1×, 16 mm)
+  // COSTAS / TRASEIRA (16 mm)
   if ((item.backWidth ?? 0) > 0 && (item.backHeight ?? 0) > 0) {
-    pieces.push({
-      id: `${baseId}-back`,
-      nome: `Gaveta ${drawerIndex + 1} - Traseira`,
-      quantidade: 1,
-      dimensoes: {
-        largura: item.backWidth ?? 0,
-        altura: item.backHeight ?? 0,
-        profundidade: sideThickness,
-      },
-      espessura: sideThickness,
-      material: sideMaterial.label,
-      tipo: "gaveta_traseira",
-      sourceType: "parametric",
-      boxId: item.parentBoxId,
-      materialId: sideMaterial.materialId,
-      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_traseira" }),
-    });
+    pieces.push(
+      withDrawerIndustrialMeta(
+        {
+          id: `${baseId}-back`,
+          nome: `Gaveta ${drawerIndex1Based} - Costas`,
+          quantidade: 1,
+          dimensoes: {
+            largura: item.backWidth ?? 0,
+            altura: item.backHeight ?? 0,
+            profundidade: backThickness,
+          },
+          espessura: backThickness,
+          material: sideMaterial.label,
+          tipo: "gaveta_traseira",
+          sourceType: "parametric",
+          boxId: item.parentBoxId,
+          materialId: sideMaterial.materialId,
+          grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_traseira" }),
+        },
+        safeBoxName,
+        drawerIndex1Based
+      )
+    );
   }
 
   return pieces;
@@ -290,13 +354,14 @@ export function drawerLayerItemToCutList(
  */
 export function extractDrawerCutlistFromLayerItems(
   layerItems: DrawerLayerItem[],
-  bodyMaterialIdOrLegacyLabel?: string
+  bodyMaterialIdOrLegacyLabel?: string,
+  boxName?: string
 ): CutListItem[] {
   const allPieces: CutListItem[] = [];
 
   for (let i = 0; i < layerItems.length; i++) {
     const item = layerItems[i];
-    const pieces = drawerLayerItemToCutList(item, i, bodyMaterialIdOrLegacyLabel);
+    const pieces = drawerLayerItemToCutList(item, i, bodyMaterialIdOrLegacyLabel, boxName);
     allPieces.push(...pieces);
   }
 

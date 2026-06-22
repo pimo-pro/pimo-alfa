@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { CatalogItem } from "../../catalog/catalogTypes";
 import { V4ViewerCanvas } from "../../v4/viewer-engine/V4ViewerCanvas";
+import type { V4RoomConfig } from "../../v4/room/V4RoomConfig";
 
 export interface SceneItem {
   id: string;
@@ -12,6 +13,7 @@ export interface V4ViewerProps {
   style?: CSSProperties;
   sceneItems: SceneItem[];
   selectedId: string | null;
+  roomConfig: V4RoomConfig;
 }
 
 /**
@@ -19,12 +21,13 @@ export interface V4ViewerProps {
  * Delegates to V4ViewerCanvas (src/v4/viewer-engine/) which provides
  * high-quality rendering: ACESFilmic, PCFSoft shadows, 3-point lighting.
  */
-export default function V4Viewer({ style, sceneItems, selectedId }: V4ViewerProps) {
+export default function V4Viewer({ style, sceneItems, selectedId, roomConfig }: V4ViewerProps) {
   return (
     <V4ViewerCanvas
       style={style}
       sceneItems={sceneItems}
       selectedId={selectedId}
+      roomConfig={roomConfig}
     />
   );
 }

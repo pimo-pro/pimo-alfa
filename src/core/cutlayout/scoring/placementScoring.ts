@@ -154,8 +154,12 @@ export function scorePlacement(
   // Fase 3: isolationPenalty aumentada (0.22 vs 0.15) — penaliza mais peças sem vizinhos.
   const isolationPenalty = tightnessVal === 0 ? (0.15 + lateFactor * 0.22) : 0;
 
-  // Fase 3: islandPenalty — penaliza peças que criam "ilhas" (tightnessScore < 0.15).
-  const islandPenalty = (tightnessVal < 0.15 ? 0.28 : 0) * (1 + lateFactor);
+  const islandPenalty =
+    tightnessVal < 0.2 && placement.x > sheet.largura_mm * 0.04 && placement.y > sheet.altura_mm * 0.04
+      ? 0.32 * (1 + lateFactor)
+      : tightnessVal < 0.15
+        ? 0.28 * (1 + lateFactor)
+        : 0;
 
   let rotationScore = 0;
   if (rotationCfg.rotationPreferenceMode !== "disabled") {

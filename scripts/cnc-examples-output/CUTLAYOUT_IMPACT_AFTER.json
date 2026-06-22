@@ -1,0 +1,192 @@
+{
+  "phase": "after",
+  "baselineCommit": "aecf802",
+  "generatedAt": "2026-06-21T14:18:37.999Z",
+  "layoutOptions": "getDefaultCncLayoutOptions()",
+  "scenarios": [
+    {
+      "scenarioId": "TEST_1_IMPORT",
+      "description": "Projeto real importado (TEST 1.txt) — mix heterogéneo",
+      "pieceCount": 2,
+      "mode": "IMPORT",
+      "executionMs": 25.3,
+      "totalSheets": 1,
+      "avgWastePercent": 92.25,
+      "totalMicroGapsLt5mm": 0,
+      "totalInternalIslands": 0,
+      "avgWasteScatterIndex": 0.989,
+      "utilizationPercent": 7.75,
+      "selectedStrategy": "skyline",
+      "selectedBinHeuristic": "bestFit",
+      "perSheet": [
+        {
+          "sheetIndex": 1,
+          "usedAreaMm2": 390000,
+          "wastePercent": 92.25,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.989,
+          "bboxUsedMaxX": 610,
+          "bboxUsedMaxY": 725
+        }
+      ],
+      "tcnRegression": {
+        "ok": true,
+        "fileCount": 0,
+        "totalPiecesInTcn": 0,
+        "structuralHash": "layout-only-import",
+        "fullHash": "layout-only-import",
+        "validationErrors": []
+      },
+      "labelsContract": {
+        "pieceKindsSample": {},
+        "industrialLayoutValid": true,
+        "layoutValidationErrors": []
+      }
+    },
+    {
+      "scenarioId": "SPM_FULL_INDUSTRIAL",
+      "description": "Pipeline industrial SPM — caixa completa",
+      "pieceCount": 14,
+      "mode": "SPM",
+      "executionMs": 44.3,
+      "totalSheets": 3,
+      "avgWastePercent": 72.76,
+      "totalMicroGapsLt5mm": 0,
+      "totalInternalIslands": 0,
+      "avgWasteScatterIndex": 0.882,
+      "utilizationPercent": 27.24,
+      "selectedStrategy": "shelf",
+      "selectedBinHeuristic": "bestFit",
+      "perSheet": [
+        {
+          "sheetIndex": 1,
+          "usedAreaMm2": 3010454,
+          "wastePercent": 48.06,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.753,
+          "bboxUsedMaxX": 2068,
+          "bboxUsedMaxY": 1788
+        },
+        {
+          "sheetIndex": 2,
+          "usedAreaMm2": 705480,
+          "wastePercent": 87.83,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.975,
+          "bboxUsedMaxX": 730,
+          "bboxUsedMaxY": 1141
+        },
+        {
+          "sheetIndex": 3,
+          "usedAreaMm2": 1021248,
+          "wastePercent": 82.38,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.918,
+          "bboxUsedMaxX": 1321,
+          "bboxUsedMaxY": 1071
+        }
+      ],
+      "tcnRegression": {
+        "ok": true,
+        "fileCount": 0,
+        "totalPiecesInTcn": 0,
+        "structuralHash": "material-unresolved",
+        "fullHash": "",
+        "validationErrors": [
+          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 6 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 3 peça(s) (Gaveta 1 - Frente, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 1 peça(s) (Gaveta 1 - Fundo)."
+        ]
+      },
+      "labelsContract": {
+        "pieceKindsSample": {
+          "Armario_Full_DIV_01": "DIV",
+          "Gaveta 1 - Frente": "FRENTE_GAVETA",
+          "Armario_Full_REMATE_DIR_01": "REMATE",
+          "Armario_Full_RODA_PE_01": "RODAPE"
+        },
+        "industrialLayoutValid": true,
+        "layoutValidationErrors": []
+      }
+    },
+    {
+      "scenarioId": "MPM_DUAL_BOX",
+      "description": "Pipeline industrial MPM — duas caixas",
+      "pieceCount": 24,
+      "mode": "MPM",
+      "executionMs": 31694.2,
+      "totalSheets": 4,
+      "avgWastePercent": 65.31,
+      "totalMicroGapsLt5mm": 0,
+      "totalInternalIslands": 0,
+      "avgWasteScatterIndex": 0.875,
+      "utilizationPercent": 34.69,
+      "selectedStrategy": "shelf",
+      "selectedBinHeuristic": "bestFit",
+      "perSheet": [
+        {
+          "sheetIndex": 1,
+          "usedAreaMm2": 2919158,
+          "wastePercent": 49.63,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.754,
+          "bboxUsedMaxX": 2086,
+          "bboxUsedMaxY": 1738
+        },
+        {
+          "sheetIndex": 2,
+          "usedAreaMm2": 1859100,
+          "wastePercent": 67.92,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.874,
+          "bboxUsedMaxX": 1922,
+          "bboxUsedMaxY": 1225
+        },
+        {
+          "sheetIndex": 3,
+          "usedAreaMm2": 1410960,
+          "wastePercent": 75.66,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.941,
+          "bboxUsedMaxX": 1465,
+          "bboxUsedMaxY": 1141
+        },
+        {
+          "sheetIndex": 4,
+          "usedAreaMm2": 1853376,
+          "wastePercent": 68.02,
+          "microGapsLt5mm": 0,
+          "internalIslands": 0,
+          "wasteScatterIndex": 0.929,
+          "bboxUsedMaxX": 1321,
+          "bboxUsedMaxY": 1614
+        }
+      ],
+      "tcnRegression": {
+        "ok": true,
+        "fileCount": 0,
+        "totalPiecesInTcn": 0,
+        "structuralHash": "material-unresolved",
+        "fullHash": "",
+        "validationErrors": [
+          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Gaveta 1 - Frente, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 2 peça(s) (Gaveta 1 - Fundo)."
+        ]
+      },
+      "labelsContract": {
+        "pieceKindsSample": {
+          "Armario_Full_DIV_01": "DIV",
+          "Gaveta 1 - Frente": "FRENTE_GAVETA",
+          "Armario_Full_REMATE_DIR_01": "REMATE",
+          "Armario_Full_RODA_PE_01": "RODAPE"
+        },
+        "industrialLayoutValid": true,
+        "layoutValidationErrors": []
+      }
+    }
+  ]
+}

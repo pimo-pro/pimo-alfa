@@ -8,13 +8,11 @@ import type { CutPlacement, SheetDefinition, SheetResult } from "../cutLayoutTyp
 import { overlaps } from "../utils/cutLayoutUtils";
 
 const EPS = 0.001;
-/** Fase 7D: passo maior = menos iterações, custo ~80% menor vs 1 mm. */
-const STEP_MM = 5;
-/** Passo fino opcional após compactação grossa (só em chapas com poucas peças). */
+/** Passo grosso — equilíbrio entre precisão e custo. */
+const STEP_MM = 3;
 const STEP_FINE_MM = 1;
-const FINE_PASS_MAX_PIECES = 35;
-/** Mais uma passada grossa + passagem fina condicional reduz faixas residuais sem alterar rotação. */
-const MAX_PASSES = 3;
+const FINE_PASS_MAX_PIECES = 50;
+const MAX_PASSES = 4;
 
 function validPosition(
   x: number,
@@ -38,8 +36,8 @@ function compactPlacementsOnSheet(
   if (placements.length <= 1) return placements.map((p) => ({ ...p }));
 
   const order = placements
-    .map((p, i) => ({ i, a: p.largura_mm * p.altura_mm }))
-    .sort((x, y) => x.a - y.a || x.i - y.i)
+    .map((p, i) => ({ i, y: p.y_mm, x: p.x_mm, a: p.largura_mm * p.altura_mm }))
+    .sort((a, b) => a.y - b.y || a.x - b.x || a.a - b.a || a.i - b.i)
     .map((x) => x.i);
 
   let current = placements.map((p) => ({ ...p }));

@@ -16,7 +16,7 @@ export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEn
     kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
     sheetLargura_mm: sheet?.largura_mm,
     sheetAltura_mm: sheet?.altura_mm,
-    groupByThicknessOnly: false,
+    groupByThicknessOnly: true,
     minUtilizationPercent: 0.9,
     rotationPreferenceMode: "aggressive",
     rotationWeight: 1.2,
@@ -45,7 +45,7 @@ export function getFastCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngin
     kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
     sheetLargura_mm: sheet?.largura_mm,
     sheetAltura_mm: sheet?.altura_mm,
-    groupByThicknessOnly: false,
+    groupByThicknessOnly: true,
     minUtilizationPercent: 0.75,
     rotationPreferenceMode: "aggressive",
     rotationWeight: 0.8,
@@ -182,7 +182,7 @@ export function buildCncFromCutlistItems(
     const enforcedLayoutOptions: CutLayoutEngineOptions = {
       ...layoutOptions,
       kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
-      groupByThicknessOnly: false,
+      groupByThicknessOnly: true,
       sheetLargura_mm: layoutOptions.sheetLargura_mm ?? baseSheet.largura_mm,
       sheetAltura_mm: layoutOptions.sheetAltura_mm ?? baseSheet.altura_mm,
     };

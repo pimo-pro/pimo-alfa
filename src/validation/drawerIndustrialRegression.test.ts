@@ -39,8 +39,8 @@ describe("Certificação — regressão industrial (snapshots)", () => {
         expect(layer.posY).toBe(group.drawers[i].position.y);
         expect(layer.posY).toBeCloseTo(positions[i], 0);
         expect(layer.width).toBe(598);
-        expect(layer.bodyDepth).toBe(530);
-        expect(layer.pullDistanceMm).toBe(530);
+        expect(layer.bodyDepth).toBe(521);
+        expect(layer.pullDistanceMm).toBe(521);
         expect(snapshotDrawerLayer(layer, i)).toMatchSnapshot();
       });
 
@@ -132,7 +132,7 @@ describe("Certificação — regressão industrial (snapshots)", () => {
   });
 
   describe.each(CLEARANCE_VALUES)("recuo corrediça %i mm", (runnerClearanceMm) => {
-    it("ajusta bodyDepth conforme settings", () => {
+    it("ajusta bodyDepth conforme settings e limite interno do módulo", () => {
       const { layers } = buildDrawerScenario({
         boxWidth: 600,
         boxHeight: 400,
@@ -140,7 +140,9 @@ describe("Certificação — regressão industrial (snapshots)", () => {
         drawerCount: 1,
         runnerClearanceMm,
       });
-      expect(layers[0].bodyDepth).toBe(550 - runnerClearanceMm);
+      const nominalBody = 550 - runnerClearanceMm;
+      const maxBody = 560 - 19 - runnerClearanceMm;
+      expect(layers[0].bodyDepth).toBe(Math.min(nominalBody, maxBody));
     });
   });
 

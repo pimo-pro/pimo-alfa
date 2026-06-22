@@ -25,16 +25,16 @@ describe("Sistema europeu de gavetas", () => {
     );
 
     expect(specs.front.width).toBe(598);
-    expect(specs.front.height).toBe(198);
+    expect(specs.front.height).toBe(200);
     expect(specs.front.thickness).toBe(19);
     expect(specs.body.width).toBe(548);
-    expect(specs.body.depth).toBe(530);
-    expect(specs.body.height).toBe(128);
+    expect(specs.body.depth).toBe(521);
+    expect(specs.body.height).toBe(200);
     expect(specs.leftSide.width).toBe(16);
     expect(specs.rightSide.width).toBe(16);
     expect(specs.back.thickness).toBe(16);
     expect(specs.bottom.thickness).toBe(10);
-    expect(specs.positioning.pullDistance).toBe(530);
+    expect(specs.positioning.pullDistance).toBe(521);
   });
 
   it("gera frente externa overlay e abertura limitada", () => {
@@ -52,12 +52,12 @@ describe("Sistema europeu de gavetas", () => {
     });
     const [layer] = drawerGroupToLayerItems(group);
 
-    expect(layer.posZ).toBe(560 / 2 + 19 / 2);
+    expect(layer.posZ).toBe(560 / 2 - 19 / 2);
     expect(layer.frontPosZ).toBe(0);
     expect(layer.pullDistanceMm).toBe(layer.bodyDepth);
 
     const [spec] = buildDrawerSpecs([layer]);
-    expect(spec.z).toBeCloseTo((560 / 2 + 19 / 2) / 1000);
+    expect(spec.z).toBeCloseTo((560 / 2 - 19 / 2) / 1000);
     expect(spec.pullDistanceM).toBeCloseTo((layer.bodyDepth ?? 0) / 1000);
 
     expect(spec.frontPosZ).toBe(0);
@@ -99,7 +99,7 @@ describe("Sistema europeu de gavetas", () => {
       {
         tipo: "gaveta_lat_esq",
         larguraMm: 530,
-        alturaMm: 128,
+        alturaMm: 200,
         espessuraMm: 16,
       },
       defaultRulesConfig
@@ -109,7 +109,7 @@ describe("Sistema europeu de gavetas", () => {
     const holes = result.data?.drillHoles.filter((hole) => hole.holeType === "corredica") ?? [];
     expect(holes).toHaveLength(2);
     expect(holes.map((hole) => hole.x)).toEqual([37, 493]);
-    expect(holes.every((hole) => hole.y === 91)).toBe(true);
+    expect(holes.every((hole) => hole.y === 163)).toBe(true);
     expect(holes.every((hole) => hole.face === "B")).toBe(true);
   });
 
@@ -118,7 +118,7 @@ describe("Sistema europeu de gavetas", () => {
       {
         tipo: "gaveta_frente",
         larguraMm: 598,
-        alturaMm: 198,
+        alturaMm: 200,
         espessuraMm: 19,
       },
       defaultRulesConfig
@@ -128,7 +128,7 @@ describe("Sistema europeu de gavetas", () => {
     const holes = result.data?.drillHoles.filter((hole) => hole.holeType === "corredica") ?? [];
     expect(holes).toHaveLength(2);
     expect(holes.map((hole) => hole.x)).toEqual([37, 561]);
-    expect(holes.every((hole) => hole.y === 161)).toBe(true);
+    expect(holes.every((hole) => hole.y === 163)).toBe(true);
     expect(holes.every((hole) => hole.face === "B")).toBe(true);
   });
 });

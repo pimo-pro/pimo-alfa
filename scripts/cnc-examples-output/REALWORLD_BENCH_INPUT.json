@@ -1,0 +1,240 @@
+{
+  "project": "NP260621RB",
+  "box": "Roupeiro_RealBench",
+  "pieceCount": 28,
+  "materialIds": [
+    "carvalho",
+    "mdf_branco",
+    "mdf_branco-10",
+    "mdf_branco-16",
+    "mdf_branco-19"
+  ],
+  "pieces": [
+    {
+      "nome": "Cima",
+      "tipo": "cima",
+      "largura_mm": 900,
+      "altura_mm": 531,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Fundo",
+      "tipo": "fundo",
+      "largura_mm": 900,
+      "altura_mm": 531,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Lateral esquerda",
+      "tipo": "lateral_esquerda",
+      "largura_mm": 531,
+      "altura_mm": 2062,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Lateral direita",
+      "tipo": "lateral_direita",
+      "largura_mm": 531,
+      "altura_mm": 2062,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "COSTA",
+      "tipo": "COSTA",
+      "largura_mm": 900,
+      "altura_mm": 2100,
+      "espessura_mm": 10,
+      "materialId": "mdf_branco-10"
+    },
+    {
+      "nome": "Roupeiro_RealBench_DIV_01",
+      "tipo": "divisorio",
+      "largura_mm": 526,
+      "altura_mm": 2062,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Roupeiro_RealBench_DIV_02",
+      "tipo": "divisorio",
+      "largura_mm": 526,
+      "altura_mm": 2062,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Roupeiro_RealBench_SEP_01",
+      "tipo": "separador",
+      "largura_mm": 860,
+      "altura_mm": 526,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Roupeiro_RealBench_SEP_02",
+      "tipo": "separador",
+      "largura_mm": 860,
+      "altura_mm": 526,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "Roupeiro_RealBench_SEP_03",
+      "tipo": "separador",
+      "largura_mm": 860,
+      "altura_mm": 526,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco"
+    },
+    {
+      "nome": "porta_simples",
+      "tipo": "porta_simples",
+      "largura_mm": 894,
+      "altura_mm": 2064,
+      "espessura_mm": 19,
+      "materialId": "carvalho"
+    },
+    {
+      "nome": "Gaveta 1 - Frente",
+      "tipo": "gaveta_frente",
+      "largura_mm": 898,
+      "altura_mm": 418,
+      "espessura_mm": 19,
+      "materialId": "carvalho"
+    },
+    {
+      "nome": "Gaveta 1 - Lateral Esquerda",
+      "tipo": "gaveta_lat_esq",
+      "largura_mm": 530,
+      "altura_mm": 348,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 1 - Lateral Direita",
+      "tipo": "gaveta_lat_dir",
+      "largura_mm": 530,
+      "altura_mm": 348,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 1 - Fundo",
+      "tipo": "gaveta_fundo",
+      "largura_mm": 816,
+      "altura_mm": 530,
+      "espessura_mm": 10,
+      "materialId": "mdf_branco-10"
+    },
+    {
+      "nome": "Gaveta 1 - Traseira",
+      "tipo": "gaveta_traseira",
+      "largura_mm": 816,
+      "altura_mm": 348,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 2 - Frente",
+      "tipo": "gaveta_frente",
+      "largura_mm": 898,
+      "altura_mm": 838,
+      "espessura_mm": 19,
+      "materialId": "carvalho"
+    },
+    {
+      "nome": "Gaveta 2 - Lateral Esquerda",
+      "tipo": "gaveta_lat_esq",
+      "largura_mm": 530,
+      "altura_mm": 768,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 2 - Lateral Direita",
+      "tipo": "gaveta_lat_dir",
+      "largura_mm": 530,
+      "altura_mm": 768,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 2 - Fundo",
+      "tipo": "gaveta_fundo",
+      "largura_mm": 816,
+      "altura_mm": 530,
+      "espessura_mm": 10,
+      "materialId": "mdf_branco-10"
+    },
+    {
+      "nome": "Gaveta 2 - Traseira",
+      "tipo": "gaveta_traseira",
+      "largura_mm": 816,
+      "altura_mm": 768,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 3 - Frente",
+      "tipo": "gaveta_frente",
+      "largura_mm": 898,
+      "altura_mm": 838,
+      "espessura_mm": 19,
+      "materialId": "carvalho"
+    },
+    {
+      "nome": "Gaveta 3 - Lateral Esquerda",
+      "tipo": "gaveta_lat_esq",
+      "largura_mm": 530,
+      "altura_mm": 768,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 3 - Lateral Direita",
+      "tipo": "gaveta_lat_dir",
+      "largura_mm": 530,
+      "altura_mm": 768,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Gaveta 3 - Fundo",
+      "tipo": "gaveta_fundo",
+      "largura_mm": 816,
+      "altura_mm": 530,
+      "espessura_mm": 10,
+      "materialId": "mdf_branco-10"
+    },
+    {
+      "nome": "Gaveta 3 - Traseira",
+      "tipo": "gaveta_traseira",
+      "largura_mm": 816,
+      "altura_mm": 768,
+      "espessura_mm": 16,
+      "materialId": "mdf_branco-16"
+    },
+    {
+      "nome": "Roupeiro_RealBench_REMATE_DIR_01",
+      "tipo": "remate",
+      "largura_mm": 2140,
+      "altura_mm": 650,
+      "espessura_mm": 20,
+      "materialId": "carvalho"
+    },
+    {
+      "nome": "Roupeiro_RealBench_RODA_PE_01",
+      "tipo": "rodape",
+      "largura_mm": 2850,
+      "altura_mm": 100,
+      "espessura_mm": 19,
+      "materialId": "mdf_branco-19"
+    }
+  ],
+  "fixture": "buildRealWorldBenchmarkScenario()",
+  "generatedAt": "2026-06-21T14:30:16.220Z"
+}

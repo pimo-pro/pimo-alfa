@@ -6,7 +6,12 @@
  */
 
 import type { Drawer } from "./Drawer";
-import { resolveDrawerVerticalPositions, DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
+import {
+  resolveDrawerVerticalPositions,
+  DRAWER_VERTICAL_BASE_OFFSET_MM,
+  DRAWER_VERTICAL_GAP_MM,
+  getDrawerUsableInternalHeightMm,
+} from "./drawerVerticalPosition";
 
 export interface DrawerGroup {
   id: string;
@@ -37,24 +42,33 @@ export function calculateDrawerHeights(
 ): number[] {
   if (count <= 0) return [];
 
+  const usable = getDrawerUsableInternalHeightMm(totalHeight);
+  const gapTotal = Math.max(0, count - 1) * DRAWER_VERTICAL_GAP_MM;
+  const distributable = Math.max(1, usable - gapTotal);
+
   // Modo custom
   if (mode === "custom" && customHeights && customHeights.length > 0) {
-    return Array.from({ length: count }, (_, index) => {
+    const raw = Array.from({ length: count }, (_, index) => {
       const value = customHeights[index];
-      return Number.isFinite(value) && value > 0 ? value : totalHeight / count;
+      return Number.isFinite(value) && value! > 0 ? value! : distributable / count;
     });
+    const sum = raw.reduce((acc, v) => acc + v, 0);
+    const target = distributable;
+    if (sum <= 0) return Array.from({ length: count }, () => target / count);
+    const scale = target / sum;
+    return raw.map((v) => v * scale);
   }
 
   // Modo equal
   if (mode === "equal" || count === 1) {
-    const each = totalHeight / count;
+    const each = distributable / count;
     return Array.from({ length: count }, () => each);
   }
 
   // Modo progressivo (2 gavetas)
   if (count === 2) {
-    const top = totalHeight * 0.4;
-    const bottom = totalHeight - top;
+    const top = distributable * 0.4;
+    const bottom = distributable - top;
     return [top, bottom];
   }
 
@@ -65,13 +79,12 @@ export function calculateDrawerHeights(
   const middleCount = count - 2;
   const middleEach = middleWeight / middleCount;
   const weights = [topWeight, ...Array.from({ length: middleCount }, () => middleEach), bottomWeight];
-  const heights = weights.map((w) => w * totalHeight);
-  
-  // Ajuste de arredondamento
+  const heights = weights.map((w) => w * distributable);
+
   const sum = heights.reduce((acc, value) => acc + value, 0);
-  const diff = totalHeight - sum;
+  const diff = distributable - sum;
   heights[heights.length - 1] += diff;
-  
+
   return heights;
 }
 

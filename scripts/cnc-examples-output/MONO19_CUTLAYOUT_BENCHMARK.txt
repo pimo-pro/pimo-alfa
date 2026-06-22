@@ -1,0 +1,35 @@
+MONO19 CUTLAYOUT BENCHMARK — ANTES vs DEPOIS
+Baseline: aecf802
+Projecto: Cozinha_Mono19 (20 peças, mono 19 mm, material: mdf_branco)
+
+RESUMO
+Chapas: 4 → 3 (Δ -1)
+Desperdício médio/chapa: 54.09% → 38.79% (Δ -15.3 pp)
+Micro-gaps <5mm: 0 → 0
+Ilhas internas: 0 → 0
+Scatter (↑=concentrado): 0.801 → 0.64
+Densidade H/V: 0.685/0.683 → 0.803/0.93
+Utilização: 45.91% → 61.21%
+Tempo: 61.9ms → 80.4ms
+Estratégia: skyline+bestFit → shelf+bestFit
+
+POR CHAPA (desperdício % | gaps | ilhas | scatter | dens.H | dens.V)
+  Chapa 1: 28.44%→17.77% | gaps 0→0 | ilhas 0→0 | scatter 0.861→0.403 | H 0.866→0.938 | V 0.872→0.99
+  Chapa 2: 38.30%→29.75% | gaps 0→0 | ilhas 0→0 | scatter 0.487→0.885 | H 0.843→0.892 | V 0.965→0.826
+  Chapa 3: 54.55%→68.84% | gaps 0→0 | ilhas 0→0 | scatter 0.858→0.632 | H 0.743→0.579 | V 0.716→0.975
+
+OBSERVAÇÕES:
+- 1 chapa(s) eliminada(s).
+- Desperdício médio ↓ 15.30 pp.
+- Densidade bbox ↑ H 0.685→0.803, V 0.683→0.93.
+- Estratégia: skyline → shelf.
+- Chapa 1: desperdício 28.44% → 17.77%.
+- Chapa 2: desperdício 38.30% → 29.75%.
+
+REGRESSÃO: validateIndustrialLayout OK=true, TCN estrutural estável=true
+
+FICHEIROS:
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\MONO19_BENCH_INPUT.json
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\MONO19_CUTLAYOUT_BEFORE.json
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\MONO19_CUTLAYOUT_AFTER.json
+- C:\Users\Mofreita\pimo-v3\pimo-criativo\scripts\cnc-examples-output\MONO19_CUTLAYOUT_BENCHMARK.json

@@ -60,10 +60,10 @@ export function scoreOrientationFit(
   const sheetArea = Math.max(1, sheetW * sheetH);
   const rightSlack = Math.max(0, sheetW - (candidate.x + candidate.w));
   const topSlack = Math.max(0, sheetH - (candidate.y + candidate.h));
-  const bottomLeft = 1 - (candidate.y / sheetH) * 0.7 - (candidate.x / sheetW) * 0.3;
+  const bottomLeft = 1 - (candidate.y / sheetH) * 0.75 - (candidate.x / sheetW) * 0.35;
   const stripWaste = (rightSlack * candidate.h + topSlack * candidate.w) / sheetArea;
   const fillQuality = 1 - stripWaste;
-  return bottomLeft * 0.55 + fillQuality * 0.45;
+  return bottomLeft * 0.60 + fillQuality * 0.40;
 }
 
 export function getOrientations(

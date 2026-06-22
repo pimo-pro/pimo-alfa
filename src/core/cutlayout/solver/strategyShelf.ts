@@ -22,14 +22,21 @@ export function findPlacementShelf(
 ): PlacementCandidate | null {
   const candidates: PlacementCandidate[] = [];
   const orientations = deps.getOrientations(piece, cfg);
-  const sortedShelves = [...state.shelves].sort((a, b) => a.y - b.y);
+  const sortedShelves = [...state.shelves]
+    .filter((s) => orientations.some((o) => o.h <= s.height + EPS))
+    .sort((a, b) => a.y - b.y);
 
   for (const o of orientations) {
-    for (const shelf of sortedShelves) {
-      const y = shelf.y;
-      if (o.h > shelf.height + EPS) continue;
-      if (y + o.h > sheet.altura_mm + EPS) continue;
+    const shelvesForPiece = [...sortedShelves]
+      .filter((shelf) => o.h <= shelf.height + EPS && shelf.y + o.h <= sheet.altura_mm + EPS)
+      .sort(
+        (a, b) =>
+          Math.abs(a.height - o.h) - Math.abs(b.height - o.h) ||
+          a.y - b.y
+      );
 
+    for (const shelf of shelvesForPiece) {
+      const y = shelf.y;
       const xCandidates: number[] = [shelf.nextX];
       const inLine = placed
         .filter((p) => Math.abs(p.y - shelf.y) < EPS)
@@ -45,12 +52,14 @@ export function findPlacementShelf(
         }
       }
 
+      const uniqueX = Array.from(
+        new Set(xCandidates.map((v) => Math.round(Math.max(0, v) * 1000) / 1000))
+      ).sort((a, b) => a - b);
+
       const seen = new Set<number>();
       let extraCount = 0;
-      for (let i = 0; i < xCandidates.length; i++) {
-        const raw = Number(xCandidates[i]);
-        if (!Number.isFinite(raw)) continue;
-        const x = Math.max(0, raw);
+      for (let i = 0; i < uniqueX.length; i++) {
+        const x = uniqueX[i]!;
         const k = Math.round(x * 1000) / 1000;
         if (seen.has(k)) continue;
         seen.add(k);
@@ -104,9 +113,15 @@ export function findPlacementShelf(
   }
 
   return candidates.sort((a, b) => {
-    // Desconto de tightness: posições encostadas reduzem o espaço restante efetivo
-    const remainingA = sheet.largura_mm - (a.x + a.w) - a.tightnessScore * 10000;
-    const remainingB = sheet.largura_mm - (b.x + b.w) - b.tightnessScore * 10000;
-    return remainingA - remainingB || a.y - b.y || a.x - b.x;
+    const heightSlackA = Math.abs(a.h - (state.shelves.find((s) => s.y === a.y)?.height ?? a.h));
+    const heightSlackB = Math.abs(b.h - (state.shelves.find((s) => s.y === b.y)?.height ?? b.h));
+    const remainingA = sheet.largura_mm - (a.x + a.w) - a.tightnessScore * 11000;
+    const remainingB = sheet.largura_mm - (b.x + b.w) - b.tightnessScore * 11000;
+    return (
+      heightSlackA - heightSlackB ||
+      remainingA - remainingB ||
+      a.y - b.y ||
+      a.x - b.x
+    );
   })[0];
 }

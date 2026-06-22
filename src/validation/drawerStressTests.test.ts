@@ -141,7 +141,12 @@ describe("Certificação — stress tests (robustez)", () => {
 
       const layers = drawerGroupToLayerItems(group);
       expect(layers).toHaveLength(2);
-      expect(layers[0].bodyDepth).toBe(nominalDepthMm - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm);
+      expect(layers[0].bodyDepth).toBe(
+        Math.min(
+          nominalDepthMm - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm,
+          560 - 19 - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm
+        )
+      );
       expect(layers[0].slideType).toBe(slideType);
 
       const overrides = drawerParametricOverridesFromLayerItem(layers[0]);
