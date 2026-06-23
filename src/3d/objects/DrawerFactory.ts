@@ -25,6 +25,12 @@ import {
   applyDrawerBodyPartIdentity,
   applyDrawerClickTargetIdentity,
 } from "../../core/drawers/drawerMeshIdentity";
+import {
+  resolveDrawerBackCenterZMm,
+  resolveDrawerBodyCenterOffsetYMm,
+  resolveDrawerBodyCenterZMm,
+  resolveDrawerBottomCenterYMm,
+} from "../../core/drawers/drawerViewerLayout";
 
 const drawerOpenState = new Map<string, boolean>();
 const drawerPositionState = new Map<string, number>();
@@ -96,6 +102,9 @@ export type DrawerSpec = {
   backPosX?: number;
   backPosY?: number;
   backPosZ?: number;
+  woodBodyHeightM?: number;
+  bodyCenterOffsetYM?: number;
+  frontIntPosZ?: number;
   x: number;
   y: number;
   z: number;
@@ -167,6 +176,15 @@ export function buildDrawerSpecs(
     backPosX: Number.isFinite(item.backPosX) ? (item.backPosX as number) / 1000 : undefined,
     backPosY: Number.isFinite(item.backPosY) ? (item.backPosY as number) / 1000 : undefined,
     backPosZ: Number.isFinite(item.backPosZ) ? (item.backPosZ as number) / 1000 : undefined,
+    woodBodyHeightM: item.backHeight
+      ? Math.max(0.001, item.backHeight / 1000)
+      : item.leftSideHeight
+        ? Math.max(0.001, item.leftSideHeight / 1000)
+        : undefined,
+    bodyCenterOffsetYM: Number.isFinite(item.bodyCenterOffsetY)
+      ? (item.bodyCenterOffsetY as number) / 1000
+      : resolveDrawerBodyCenterOffsetYMm() / 1000,
+    frontIntPosZ: undefined,
     sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
     x: (item.posX ?? 0) / 1000,
     y: (item.posY ?? 0) / 1000,
@@ -229,6 +247,45 @@ export function applyDrawerFrontMaterialToMesh(mesh: THREE.Mesh, frontMaterial: 
     return;
   }
   mesh.material = mat;
+}
+
+function resolveSpecBodyCenterZM(spec: DrawerSpec): number {
+  if (Number.isFinite(spec.leftSidePosZ)) return spec.leftSidePosZ as number;
+  const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
+    ? (spec.frontIntThicknessM ?? 0) * 1000
+    : 0;
+  const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
+  const slideMm = (spec.bodyDepthM ?? spec.depthM) * 1000;
+  return resolveDrawerBodyCenterZMm(combinedFrontMm, slideMm) / 1000;
+}
+
+function resolveSpecBackCenterZM(spec: DrawerSpec): number {
+  if (Number.isFinite(spec.backPosZ)) return spec.backPosZ as number;
+  const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
+    ? (spec.frontIntThicknessM ?? 0) * 1000
+    : 0;
+  const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
+  const slideMm = (spec.bodyDepthM ?? spec.depthM) * 1000;
+  const backMm = (spec.backThicknessM ?? 0.016) * 1000;
+  return resolveDrawerBackCenterZMm(combinedFrontMm, slideMm, backMm) / 1000;
+}
+
+function resolveSpecBottomCenterYM(spec: DrawerSpec): number {
+  if (Number.isFinite(spec.bottomPosY)) return spec.bottomPosY as number;
+  const woodHm = spec.woodBodyHeightM ?? spec.leftSideHeightM ?? spec.bodyHeightM ?? 0.1;
+  const offsetYm = spec.bodyCenterOffsetYM ?? resolveDrawerBodyCenterOffsetYMm() / 1000;
+  return (
+    resolveDrawerBottomCenterYMm(
+      woodHm * 1000,
+      (spec.bottomThicknessM ?? 0.01) * 1000,
+      offsetYm * 1000
+    ) / 1000
+  );
+}
+
+function resolveSpecSideCenterYM(spec: DrawerSpec): number {
+  if (Number.isFinite(spec.leftSidePosY)) return spec.leftSidePosY as number;
+  return spec.bodyCenterOffsetYM ?? resolveDrawerBodyCenterOffsetYMm() / 1000;
 }
 
 export function getDrawerStructureFingerprint(
@@ -412,7 +469,13 @@ export function createDrawerObject(
       "front",
       { singleMaterial: frontIntMaterial }
     );
-    frontInt.position.set(0, 0, -spec.frontThicknessM);
+    frontInt.position.set(
+      0,
+      0,
+      Number.isFinite(spec.frontIntPosZ)
+        ? (spec.frontIntPosZ as number)
+        : -spec.frontThicknessM / 2 - (spec.frontIntThicknessM ?? 0) / 2
+    );
     applyDrawerBodyPartIdentity(frontInt, "front-int");
     drawerGroup.add(frontInt);
   }
@@ -509,49 +572,45 @@ export function createDrawerObject(
   }
 
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
-    const structuralFrontM = isMetalBoxCatalogType(spec.metalBoxType)
-      ? (spec.frontIntThicknessM ?? 0)
-      : 0;
-    const bodyOffsetZ = -(spec.frontThicknessM + structuralFrontM + spec.bodyDepthM / 2);
+    const bodyCenterZm = resolveSpecBodyCenterZM(spec);
+    const sideCenterYm = resolveSpecSideCenterYM(spec);
+    const woodSideHeightM = spec.woodBodyHeightM ?? spec.leftSideHeightM ?? spec.bodyHeightM;
     if (spec.metalBoxType && spec.metalBoxType !== "Nenhuma") {
-      const metalProfile = resolveMetalBoxProfile(
-        spec.metalBoxType,
-        spec.metalBoxProfileId,
-        spec.metalBoxHeightMm
-      );
       const metalMaterial = new THREE.MeshStandardMaterial({
         color: metalBoxColor(spec.metalBoxType),
         roughness: 0.28,
         metalness: 0.82,
       });
       const metalThicknessM = 0.012;
-      const metalHeightM =
-        (spec.metalBoxHeightMm ?? (spec.bodyHeightM ?? 0) * 1000) / 1000;
-      const sideHeightM = Math.max(0.04, metalHeightM > 0 ? metalHeightM : spec.bodyHeightM ?? 0.04);
-      const recessM = (metalProfile?.bodyRecessMm ?? 70) / 1000;
-      const metalBodyOffsetZ = bodyOffsetZ - recessM * 0.15;
-      const leftMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-left-${spec.id}`, "left", { singleMaterial: metalMaterial });
-      leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, 0, metalBodyOffsetZ);
+      const sideHeightM = Math.max(0.04, woodSideHeightM ?? 0.04);
+      const leftMetal = panelFactory.createPanel(
+        metalThicknessM,
+        sideHeightM,
+        spec.bodyDepthM,
+        `drawer-metal-left-${spec.id}`,
+        "left",
+        { singleMaterial: metalMaterial }
+      );
+      leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, sideCenterYm, bodyCenterZm);
       applyDrawerBodyPartIdentity(leftMetal, "metal-box");
       drawerGroup.add(leftMetal);
-      const rightMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-right-${spec.id}`, "right", { singleMaterial: metalMaterial });
-      rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, 0, metalBodyOffsetZ);
+      const rightMetal = panelFactory.createPanel(
+        metalThicknessM,
+        sideHeightM,
+        spec.bodyDepthM,
+        `drawer-metal-right-${spec.id}`,
+        "right",
+        { singleMaterial: metalMaterial }
+      );
+      rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, sideCenterYm, bodyCenterZm);
       applyDrawerBodyPartIdentity(rightMetal, "metal-box");
       drawerGroup.add(rightMetal);
-      const backMetal = panelFactory.createPanel(spec.bodyWidthM, sideHeightM, metalThicknessM, `drawer-metal-back-${spec.id}`, "back", { singleMaterial: metalMaterial });
-      backMetal.position.set(0, 0, -spec.frontThicknessM / 2 - spec.bodyDepthM + metalThicknessM / 2);
-      applyDrawerBodyPartIdentity(backMetal, "metal-box");
-      drawerGroup.add(backMetal);
-      const bottomMetal = panelFactory.createPanel(spec.bodyWidthM, metalThicknessM, spec.bodyDepthM, `drawer-metal-bottom-${spec.id}`, "bottom", { singleMaterial: metalMaterial });
-      bottomMetal.position.set(0, -sideHeightM / 2 + metalThicknessM / 2, metalBodyOffsetZ);
-      applyDrawerBodyPartIdentity(bottomMetal, "metal-box");
-      drawerGroup.add(bottomMetal);
     } else if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
       const leftSide = panelFactory.createPanel(spec.leftSideWidthM, spec.leftSideHeightM, spec.leftSideDepthM, `drawer-left-${spec.id}`, "left", { singleMaterial: bodyPanelMaterial });
       leftSide.position.set(
         Number.isFinite(spec.leftSidePosX) ? (spec.leftSidePosX as number) : -spec.bodyWidthM / 2 + spec.leftSideWidthM / 2,
-        Number.isFinite(spec.leftSidePosY) ? (spec.leftSidePosY as number) : 0,
-        Number.isFinite(spec.leftSidePosZ) ? (spec.leftSidePosZ as number) : bodyOffsetZ
+        sideCenterYm,
+        bodyCenterZm
       );
       applyDrawerBodyPartIdentity(leftSide, "left-side");
       drawerGroup.add(leftSide);
@@ -560,8 +619,8 @@ export function createDrawerObject(
       const rightSide = panelFactory.createPanel(spec.rightSideWidthM, spec.rightSideHeightM, spec.rightSideDepthM, `drawer-right-${spec.id}`, "right", { singleMaterial: bodyPanelMaterial });
       rightSide.position.set(
         Number.isFinite(spec.rightSidePosX) ? (spec.rightSidePosX as number) : spec.bodyWidthM / 2 - spec.rightSideWidthM / 2,
-        Number.isFinite(spec.rightSidePosY) ? (spec.rightSidePosY as number) : 0,
-        Number.isFinite(spec.rightSidePosZ) ? (spec.rightSidePosZ as number) : bodyOffsetZ
+        sideCenterYm,
+        bodyCenterZm
       );
       applyDrawerBodyPartIdentity(rightSide, "right-side");
       drawerGroup.add(rightSide);
@@ -570,8 +629,8 @@ export function createDrawerObject(
       const bottom = panelFactory.createPanel(spec.bottomWidthM, spec.bottomThicknessM, spec.bottomDepthM, `drawer-bottom-${spec.id}`, "bottom", { singleMaterial: bodyPanelMaterial });
       bottom.position.set(
         Number.isFinite(spec.bottomPosX) ? (spec.bottomPosX as number) : 0,
-        Number.isFinite(spec.bottomPosY) ? (spec.bottomPosY as number) : -spec.bodyHeightM / 2 + spec.bottomThicknessM / 2,
-        Number.isFinite(spec.bottomPosZ) ? (spec.bottomPosZ as number) : bodyOffsetZ
+        resolveSpecBottomCenterYM(spec),
+        bodyCenterZm
       );
       applyDrawerBodyPartIdentity(bottom, "bottom");
       drawerGroup.add(bottom);
@@ -580,8 +639,8 @@ export function createDrawerObject(
       const back = panelFactory.createPanel(spec.backWidthM, spec.backHeightM, spec.backThicknessM, `drawer-back-${spec.id}`, "back", { singleMaterial: bodyPanelMaterial });
       back.position.set(
         Number.isFinite(spec.backPosX) ? (spec.backPosX as number) : 0,
-        Number.isFinite(spec.backPosY) ? (spec.backPosY as number) : 0,
-        Number.isFinite(spec.backPosZ) ? (spec.backPosZ as number) : bodyOffsetZ - spec.bodyDepthM / 2 + spec.backThicknessM / 2
+        sideCenterYm,
+        resolveSpecBackCenterZM(spec)
       );
       applyDrawerBodyPartIdentity(back, "back");
       drawerGroup.add(back);
@@ -600,17 +659,17 @@ export function createDrawerObject(
       const railW = 0.012;
       const railH = Math.max(0.03, spec.bodyHeightM * 0.85);
       const railD = spec.bodyDepthM;
-      const bodyOffsetZ = -(spec.frontThicknessM / 2 + spec.bodyDepthM / 2);
+      const bodyCenterZm = resolveSpecBodyCenterZM(spec);
       const leftRail = panelFactory.createPanel(railW, railH, railD, `drawer-rail-left-${spec.id}`, "left", {
         singleMaterial: railMaterial,
       });
-      leftRail.position.set(-spec.bodyWidthM / 2 - railW / 2 - slideOffsetM * 0.1, 0, bodyOffsetZ);
+      leftRail.position.set(-spec.bodyWidthM / 2 - railW / 2 - slideOffsetM * 0.1, resolveSpecSideCenterYM(spec), bodyCenterZm);
       leftRail.userData.drawerPart = "slide-rail";
       drawerGroup.add(leftRail);
       const rightRail = panelFactory.createPanel(railW, railH, railD, `drawer-rail-right-${spec.id}`, "right", {
         singleMaterial: railMaterial,
       });
-      rightRail.position.set(spec.bodyWidthM / 2 + railW / 2 + slideOffsetM * 0.1, 0, bodyOffsetZ);
+      rightRail.position.set(spec.bodyWidthM / 2 + railW / 2 + slideOffsetM * 0.1, resolveSpecSideCenterYM(spec), bodyCenterZm);
       rightRail.userData.drawerPart = "slide-rail";
       drawerGroup.add(rightRail);
     }

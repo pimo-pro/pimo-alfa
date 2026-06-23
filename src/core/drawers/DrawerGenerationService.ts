@@ -24,6 +24,7 @@ import {
 import type { DrawerHeightMode } from "./drawerHeightModeTypes";
 import type { ErgonomicHeightRules, KitchenZoneProfile } from "./drawerErgonomicsHeights";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
+import { resolveDrawerGroupPosZMm } from "./drawerViewerLayout";
 
 export interface DrawerGenerationConfig {
   // Box dimensions
@@ -154,7 +155,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       {
         x: originX ?? 0,
         y: (originY ?? 0) + posY,
-        z: boxDepth / 2 - specs.frontExt.thickness / 2,
+        z: resolveDrawerGroupPosZMm(boxDepth, specs.frontExt.thickness),
       },
       effectiveDrawerType
     );

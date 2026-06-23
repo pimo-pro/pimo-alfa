@@ -23,6 +23,11 @@ import {
 } from "./drawerMetalBoxCatalog";
 import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "./drawerGeometryConstants";
 import {
+  resolveDrawerBodyCenterOffsetYMm,
+  resolveDrawerBodyCenterZMm,
+  resolveDrawerWoodBodyHeightMm,
+} from "./drawerViewerLayout";
+import {
   DRAWER_SLIDE_LENGTHS_MM,
   isDrawerSlideLengthMm,
   resolveDrawerSlideLength,
@@ -342,11 +347,10 @@ export function calculateDrawerSpecs(
   // Laterais + costa mais baixas que a frente externa (rasgo do fundo + folga).
   const bodyHeightDelta = DRAWER_BODY_HEIGHT_BELOW_FRONT_MM;
   const bodyWidth = clampMm(boxInternalWidth - 2 * sideGap);
-  const woodBodyHeight = clampMm(frontHeight - bodyHeightDelta);
+  const woodBodyHeight = resolveDrawerWoodBodyHeightMm(frontHeight, bodyHeightDelta);
   const bodyHeight =
     metalBoxEnabled && resolvedMetalHeight > 0 ? resolvedMetalHeight : woodBodyHeight;
-  /** Alinha o fundo das laterais/costa com o fundo da frente externa. */
-  const bodyCenterOffsetY = -bodyHeightDelta / 2;
+  const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(bodyHeightDelta);
   const bodyDepth = clampMm(nominalDepth);
 
   const needsStructuralFrontInt = metalBoxEnabled;
@@ -380,7 +384,7 @@ export function calculateDrawerSpecs(
   // ===== POSICIONAMENTO =====
   // Frente flush na face frontal do módulo; corpo recuado para trás da frente.
   const frontOffsetZ = 0;
-  const bodyOffsetZ = -(combinedFrontThickness / 2 + bodyDepth / 2);
+  const bodyOffsetZ = resolveDrawerBodyCenterZMm(combinedFrontThickness, bodyDepth);
   const pullDistance = resolveSlideCourse(settings, bodyDepth);
 
   if (frontHeight < settings.gavetaAlturaMinimaMm) {

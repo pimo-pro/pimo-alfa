@@ -3,7 +3,7 @@ import type { BoxModule, WorkspaceBox } from "../core/types";
 import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../core/materials/materials.api";
-import type { DoorLayerItem } from "../models/BoxLayers";
+import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
@@ -129,6 +129,21 @@ function doorLayerItemsForViewer(
   profundidadeExternaMm: number,
   profundidadeInternaUtilMm: number
 ): DoorLayerItem[] {
+  if (items.length === 0) return items;
+  const dzMm = (profundidadeInternaUtilMm - profundidadeExternaMm) / 2;
+  if (dzMm === 0) return items;
+  return items.map((d) => ({
+    ...d,
+    posZ: (d.posZ ?? 0) + dzMm,
+  }));
+}
+
+/** Gavetas: mesma compensação Z que portas (flush com face frontal da carcaça). */
+function drawerLayerItemsForViewer(
+  items: DrawerLayerItem[],
+  profundidadeExternaMm: number,
+  profundidadeInternaUtilMm: number
+): DrawerLayerItem[] {
   if (items.length === 0) return items;
   const dzMm = (profundidadeInternaUtilMm - profundidadeExternaMm) / 2;
   if (dzMm === 0) return items;
@@ -265,6 +280,8 @@ export const useCalculadoraSync = (
       let layoutDepthM: number | undefined;
       let carcassDepthM: number | undefined;
       let doorLayerItems: DoorLayerItem[] = wsBox?.doorsLayer ?? [];
+      let profundidadeExternaForViewerMm: number | undefined;
+      let profundidadeInternaForViewerMm: number | undefined;
       if (depthMm !== undefined && Number.isFinite(depthMm)) {
         const profundidadeExternaMm = Number(wsBox.profundidadeExterna ?? depthMm) || 0;
         const espessuraCostaMm = resolveCostaThicknessMm(wsBox);
@@ -278,6 +295,8 @@ export const useCalculadoraSync = (
           },
           espessuraCostaMm
         );
+        profundidadeExternaForViewerMm = profundidadeExternaMm;
+        profundidadeInternaForViewerMm = profundidadeInternaUtilMm;
         layoutDepthM = mmToM(profundidadeExternaMm);
         carcassDepthM = mmToM(profundidadeInternaUtilMm);
         doorLayerItems = doorLayerItemsForViewer(wsBox?.doorsLayer ?? [], profundidadeExternaMm, profundidadeInternaUtilMm);
@@ -305,7 +324,14 @@ export const useCalculadoraSync = (
       const pe_cm = feetHeight / 10;
       const feetEnabled = wsBox?.feetEnabled ?? (cabinetType === "lower");
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
-      const drawerLayerItems = wsBox?.drawersLayer ?? [];
+      const drawerLayerItems =
+        profundidadeExternaForViewerMm != null && profundidadeInternaForViewerMm != null
+          ? drawerLayerItemsForViewer(
+              wsBox?.drawersLayer ?? [],
+              profundidadeExternaForViewerMm,
+              profundidadeInternaForViewerMm
+            )
+          : (wsBox?.drawersLayer ?? []);
       if (import.meta.env.DEV && doorLayerItems.length > 0) {
         devLogger.debug("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
           boxId: wsBox.id,

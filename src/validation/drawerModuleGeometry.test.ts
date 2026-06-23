@@ -113,8 +113,8 @@ describe("Geometria da gaveta no módulo", () => {
     });
   });
 
-  it("profundidade do corpo respeita cavidade útil (P − costa − frente)", () => {
-    const usableDepth = 560 - 10 - 19; // 531
+  it("profundidade do corpo = comprimento da corrediça", () => {
+    const usableDepth = 521;
     const specs = calculateDrawerSpecs(
       {
         boxInternalWidth: boxW - 2 * boxT,
@@ -129,7 +129,7 @@ describe("Geometria da gaveta no módulo", () => {
       drawerSettings.gavetaProfundidadesDisponiveisMm,
       drawerSettings
     );
-    expect(specs.body.depth).toBeLessThanOrEqual(usableDepth - specs.runnerClearanceMm);
-    expect(specs.frontExt.height - specs.body.height).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
+    expect(specs.body.depth).toBe(500);
+    expect(specs.frontExt.height - specs.back.height).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
   });
 });

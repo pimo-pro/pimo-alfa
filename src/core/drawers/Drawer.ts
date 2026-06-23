@@ -8,6 +8,10 @@
  */
 
 import type { DrawerCalculatedSpecs } from "./DrawerParametrics";
+import {
+  resolveDrawerBackCenterZMm,
+  resolveDrawerBottomCenterYMm,
+} from "./drawerViewerLayout";
 import type { DrawerHandlePosition, DrawerHandleType, DrawerMetalBoxType, DrawerSlideType } from "../settings/settingsSchema";
 
 export interface DrawerPiece {
@@ -119,7 +123,8 @@ export function createDrawer(
         depth: intThickness,
         positionX: 0,
         positionY: 0,
-        positionZ: specs.positioning.frontOffsetZ - extThickness,
+        positionZ:
+          specs.positioning.frontOffsetZ - extThickness / 2 - intThickness / 2,
       },
       body: {
         width: bodyWidth,
@@ -156,7 +161,7 @@ export function createDrawer(
         height: bottomThickness,
         depth: specs.bottom.height,
         positionX: 0,
-        positionY: -woodBackHeight / 2 + bottomThickness / 2 + bodyCenterOffsetY,
+        positionY: resolveDrawerBottomCenterYMm(woodBackHeight, bottomThickness, bodyCenterOffsetY),
         positionZ: specs.positioning.bodyOffsetZ,
       },
       
@@ -168,7 +173,11 @@ export function createDrawer(
         depth: backThickness,
         positionX: 0,
         positionY: bodyCenterOffsetY,
-        positionZ: -combinedFrontThickness / 2 - bodyDepth + backThickness / 2,
+        positionZ: resolveDrawerBackCenterZMm(
+          combinedFrontThickness,
+          bodyDepth,
+          backThickness
+        ),
       },
     },
     motion: {
