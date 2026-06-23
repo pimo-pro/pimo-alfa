@@ -28,6 +28,16 @@ export {
   drawerParametricOverridesFromLayerItem,
 } from "./drawerParametricOverrides";
 
+export {
+  resolveDrawerBodyHeightMm,
+  resolveDrawerDisplayName,
+  resolveDrawerFrontHeightMm,
+  resolveDrawerFrontPieceLabel,
+  resolveDrawerGroupPrefix,
+  resolveDrawerPieceIndustrialLabel,
+  sanitizeDrawerIndustrialName,
+} from "./drawerLayerCustomization";
+
 // Parametrics
 export {
   calculateDrawerSpecs,

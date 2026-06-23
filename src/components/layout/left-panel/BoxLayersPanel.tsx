@@ -3,6 +3,10 @@ import { useProject } from "../../../context/useProject";
 import { getSettings } from "../../../core/settings/settingsService";
 import { DRAWER_HEIGHT_MODES } from "../../../core/drawers/drawerUiConstants";
 import { validateBoxDrawerConfiguration } from "../../../core/drawers/drawerUiValidation";
+import {
+  resolveDrawerBodyHeightMm,
+  resolveDrawerDisplayName,
+} from "../../../core/drawers/drawerLayerCustomization";
 import Panel from "../../ui/Panel";
 import DrawerConfigPanel, {
   DrawerCustomHeightsTable,
@@ -276,9 +280,15 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
               <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 10 }}>
                 <DrawerCustomHeightsTable
                   box={selectedBox}
-                  onHeightChange={(drawerId, height) =>
-                    actions.updateDrawerLayerItem(drawerId, { height })
-                  }
+                  onHeightChange={(drawerId, height) => {
+                    const drawer = drawers.find((d) => d.id === drawerId);
+                    const frontOverride = drawer?.metadata?.frontHeightMm;
+                    actions.updateDrawerLayerItem(drawerId, {
+                      bodyHeight: height,
+                      height:
+                        frontOverride != null && frontOverride > 0 ? frontOverride : height,
+                    });
+                  }}
                 />
               </div>
             )}
@@ -318,9 +328,17 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                     gap: 6,
                   }}
                 >
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>Gaveta {index + 1}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>
+                    {resolveDrawerDisplayName(item, index)}
+                  </span>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                     {Math.round(item.width)}×{Math.round(item.height)} mm
+                    {item.metadata?.frontHeightMm != null &&
+                    item.metadata.frontHeightMm > 0 &&
+                    Math.round(item.metadata.frontHeightMm) !==
+                      Math.round(resolveDrawerBodyHeightMm(item))
+                      ? ` (corpo ${Math.round(resolveDrawerBodyHeightMm(item))} mm)`
+                      : ""}
                   </span>
                   <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {badges.map((badge) => (

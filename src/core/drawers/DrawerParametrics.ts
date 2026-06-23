@@ -118,6 +118,8 @@ export type DrawerParametricOverrides = {
   metalBoxType?: DrawerMetalBoxType;
   softClose?: boolean;
   drawerType?: "normal" | "pro";
+  /** Altura só da frente (mm); corpo mantém drawerHeight. */
+  frontHeightMm?: number;
 };
 
 const MIN_BODY_DEPTH_MM = 50;
@@ -272,10 +274,16 @@ export function calculateDrawerSpecs(
       ? boxExternalWidth
       : boxInternalWidth + 2 * dimensions.boxThickness;
   const frontWidth = clampMm(externalWidth - 2 * frontGap);
-  const frontHeight = clampMm(drawerHeight);
+  const frontHeightOverride =
+    overrides?.frontHeightMm != null &&
+    Number.isFinite(overrides.frontHeightMm) &&
+    overrides.frontHeightMm > 0
+      ? overrides.frontHeightMm
+      : undefined;
+  const frontHeight = clampMm(frontHeightOverride ?? drawerHeight);
 
   // ===== CORPO =====
-  // Corpo centrado entre laterais internas; mesma altura da frente (caixote alinhado).
+  // Corpo centrado entre laterais internas; altura do vão (independente da frente se override).
   const bodyWidth = clampMm(boxInternalWidth - 2 * sideGap);
   const bodyHeight = clampMm(drawerHeight);
   const rearClearanceMm = runnerClearanceMm;

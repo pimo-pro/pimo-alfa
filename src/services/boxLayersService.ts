@@ -275,7 +275,10 @@ export function regenerateLayersForBox(
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";
     const mode = box.drawerHeightMode ?? drawerSettings.gavetaAlturaModoPadrao;
-    const customHeights = mode === "custom" ? (box.drawersLayer ?? []).map((item) => item.height) : undefined;
+    const customHeights =
+      mode === "custom"
+        ? (box.drawersLayer ?? []).map((item) => item.bodyHeight ?? item.height)
+        : undefined;
 
     // Usar o domínio de drawers para gerar gavetas
     const isWardrobe = isWardrobeModel(box.baseCabinetId);
@@ -352,8 +355,15 @@ export function regenerateLayersForBox(
           handleType: existing.handleType ?? generatedDrawers[i].handleType,
           handlePosition: existing.handlePosition ?? generatedDrawers[i].handlePosition,
           handleOffsetMm: existing.handleOffsetMm ?? generatedDrawers[i].handleOffsetMm,
-          metadata: existing.metadata ?? generatedDrawers[i].metadata,
+          metadata: {
+            ...generatedDrawers[i].metadata,
+            ...existing.metadata,
+          },
         };
+        const frontOverride = existing.metadata?.frontHeightMm;
+        if (frontOverride != null && Number.isFinite(frontOverride) && frontOverride > 0) {
+          generatedDrawers[i].height = frontOverride;
+        }
       } else {
         generatedDrawers[i].material = defaultDrawerMaterial;
       }

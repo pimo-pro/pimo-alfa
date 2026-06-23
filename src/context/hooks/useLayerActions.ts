@@ -460,26 +460,30 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               const updated = (box.drawersLayer ?? []).map((item) =>
                 item.id === id ? { ...item, ...partial } : item
               );
-              const heightChanged = "height" in partial;
+              const heightChanged = "height" in partial || "bodyHeight" in partial;
               const mode = box.drawerHeightMode ?? "equal";
               let nextDrawers = updated;
                       if (heightChanged && mode === "custom") {
                         const availableHeight = getDrawerUsableInternalHeightMm(box.dimensoes.altura);
                         const gapTotal = Math.max(0, nextDrawers.length - 1) * DRAWER_VERTICAL_GAP_MM;
                         const distributable = Math.max(1, availableHeight - gapTotal);
-                        const heights = nextDrawers.map((item) =>
-                          Number.isFinite(item.height) && item.height > 0
-                            ? item.height
-                            : distributable / Math.max(1, nextDrawers.length)
-                        );
+                        const heights = nextDrawers.map((item) => {
+                          const bodyH = item.bodyHeight ?? item.height;
+                          return Number.isFinite(bodyH) && bodyH > 0
+                            ? bodyH
+                            : distributable / Math.max(1, nextDrawers.length);
+                        });
                         nextDrawers = nextDrawers.map((item, index) => {
-                          const height = heights[index];
+                          const bodyHeight = heights[index];
+                          const frontOverride = item.metadata?.frontHeightMm;
+                          const height =
+                            frontOverride != null && frontOverride > 0 ? frontOverride : bodyHeight;
                           const posY = resolveDrawerVerticalPosition(
                             index,
                             heights,
                             box.dimensoes.altura
                           );
-                          return { ...item, height, posY };
+                          return { ...item, bodyHeight, height, posY };
                         });
                       }
 

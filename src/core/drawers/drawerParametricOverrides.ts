@@ -39,6 +39,11 @@ export function drawerParametricOverridesFromLayerItem(
     overrides.drawerType = drawerType;
   }
 
+  const frontHeightMm = meta?.frontHeightMm;
+  if (frontHeightMm != null && Number.isFinite(frontHeightMm) && frontHeightMm > 0) {
+    overrides.frontHeightMm = frontHeightMm;
+  }
+
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 

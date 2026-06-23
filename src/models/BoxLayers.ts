@@ -42,6 +42,12 @@ export type DrawerLayerMetadata = {
   handlePosition?: DrawerHandlePosition;
   handleOffsetMm?: number;
   drawerType?: "normal" | "pro";
+  /** Altura só da frente (mm). Vazio = altura do corpo (drawerHeight). */
+  frontHeightMm?: number;
+  /** Nome industrial / cutlist da peça frente (substitui label automático). */
+  frontPieceName?: string;
+  /** Nome do grupo da gaveta (prefixo industrial + viewer). */
+  drawerGroupName?: string;
 };
 
 export interface DrawerLayerItem {

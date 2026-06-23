@@ -7,7 +7,10 @@
  */
 
 import type { CutListItem } from "../core/types";
-import { buildDrawerIndustrialLabel } from "../core/drawers/drawerIndustrialLabels";
+import {
+  resolveDrawerFrontHeightMm,
+  resolveDrawerPieceIndustrialLabel,
+} from "../core/drawers/drawerLayerCustomization";
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
@@ -90,11 +93,12 @@ function resolveDrawerFrontThicknessMm(item: DrawerLayerItem): number {
 
 function withDrawerIndustrialMeta(
   piece: CutListItem,
+  item: DrawerLayerItem,
   boxName: string,
   drawerIndex1Based: number
 ): CutListItem {
   const tipo = piece.tipo as DrawerPieceTipo;
-  const industrialLabel = buildDrawerIndustrialLabel(boxName, tipo, drawerIndex1Based);
+  const industrialLabel = resolveDrawerPieceIndustrialLabel(item, boxName, tipo, drawerIndex1Based);
   return {
     ...piece,
     nome: industrialLabel,
@@ -102,6 +106,8 @@ function withDrawerIndustrialMeta(
       ...(piece.metadata ?? {}),
       industrialLabel,
       drawerIndex: drawerIndex1Based,
+      drawerGroupName: item.metadata?.drawerGroupName,
+      frontPieceName: item.metadata?.frontPieceName,
     },
   };
 }
@@ -191,6 +197,8 @@ export function drawerLayerItemToCutList(
       : []),
   ];
 
+  const frontHeightMm = resolveDrawerFrontHeightMm(item);
+
   // FRENTE — espessura do corpo do móvel
   pieces.push(
     withDrawerIndustrialMeta(
@@ -200,7 +208,7 @@ export function drawerLayerItemToCutList(
         quantidade: 1,
         dimensoes: {
           largura: item.width,
-          altura: item.height,
+          altura: frontHeightMm,
           profundidade: frontThicknessMm,
         },
         espessura: frontThicknessMm,
@@ -222,6 +230,7 @@ export function drawerLayerItemToCutList(
           },
         },
       },
+      item,
       safeBoxName,
       drawerIndex1Based
     )
@@ -259,6 +268,7 @@ export function drawerLayerItemToCutList(
           materialId: sideMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_esq" }),
         },
+        item,
         safeBoxName,
         drawerIndex1Based
       )
@@ -286,6 +296,7 @@ export function drawerLayerItemToCutList(
           materialId: sideMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_dir" }),
         },
+        item,
         safeBoxName,
         drawerIndex1Based
       )
@@ -313,6 +324,7 @@ export function drawerLayerItemToCutList(
           materialId: bottomMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_fundo" }),
         },
+        item,
         safeBoxName,
         drawerIndex1Based
       )
@@ -340,6 +352,7 @@ export function drawerLayerItemToCutList(
           materialId: sideMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_traseira" }),
         },
+        item,
         safeBoxName,
         drawerIndex1Based
       )

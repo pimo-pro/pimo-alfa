@@ -10,6 +10,7 @@ import {
   DRAWER_SLIDE_TYPES,
 } from "../../core/drawers/drawerUiConstants";
 import { validateDrawerLayerItem } from "../../core/drawers/drawerUiValidation";
+import { resolveDrawerBodyHeightMm } from "../../core/drawers/drawerLayerCustomization";
 import type {
   DrawerHandlePosition,
   DrawerHandleType,
@@ -51,13 +52,25 @@ function buildDrawerConfigPatch(
       | undefined,
     nominalDepth: patch.metadata?.nominalDepth ?? drawer.metadata?.nominalDepth,
     frontMaterial: patch.material ?? patch.metadata?.frontMaterial ?? drawer.material,
+    frontHeightMm: patch.metadata?.frontHeightMm ?? drawer.metadata?.frontHeightMm,
+    frontPieceName: patch.metadata?.frontPieceName ?? drawer.metadata?.frontPieceName,
+    drawerGroupName: patch.metadata?.drawerGroupName ?? drawer.metadata?.drawerGroupName,
   });
+
+  const bodyHeight = resolveDrawerBodyHeightMm(drawer);
+  const nextFrontHeightMm = patch.metadata?.frontHeightMm ?? drawer.metadata?.frontHeightMm;
+  const resolvedFrontHeight =
+    nextFrontHeightMm != null && Number.isFinite(nextFrontHeightMm) && nextFrontHeightMm > 0
+      ? nextFrontHeightMm
+      : bodyHeight;
 
   return {
     ...patch,
     metadata,
     material: patch.material ?? drawer.material,
     materialId: patch.materialId ?? patch.material ?? drawer.materialId,
+    height: resolvedFrontHeight,
+    bodyHeight: patch.bodyHeight ?? drawer.bodyHeight ?? bodyHeight,
   };
 }
 
@@ -101,9 +114,20 @@ export default function DrawerConfigPanel({
   const handlePosition = drawer.handlePosition ?? settings.gavetaPosicaoHandle;
   const nominalDepth = drawer.metadata?.nominalDepth ?? drawer.depth;
   const material = drawer.material ?? drawer.materialId ?? "";
+  const bodyHeight = Math.round(resolveDrawerBodyHeightMm(drawer));
+  const frontHeightOverride = drawer.metadata?.frontHeightMm;
+  const frontPieceName = drawer.metadata?.frontPieceName ?? "";
+  const drawerGroupName = drawer.metadata?.drawerGroupName ?? "";
 
   const update = (patch: Partial<DrawerLayerItem> & { metadata?: DrawerLayerMetadata }) => {
     onUpdate(buildDrawerConfigPatch(drawer, patch));
+  };
+
+  const parseOptionalPositiveMm = (raw: string): number | undefined => {
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+    const n = Number(trimmed);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
   };
 
   return (
@@ -247,6 +271,61 @@ export default function DrawerConfigPanel({
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome da Gaveta</span>
+        <input
+          className="input input-xs"
+          type="text"
+          placeholder={`Gaveta ${index + 1}`}
+          value={drawerGroupName}
+          onChange={(e) =>
+            update({
+              metadata: {
+                drawerGroupName: e.target.value.trim() || undefined,
+              },
+            })
+          }
+        />
+      </label>
+
+      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome da Frente da Gaveta</span>
+        <input
+          className="input input-xs"
+          type="text"
+          placeholder="Automático (industrial)"
+          value={frontPieceName}
+          onChange={(e) =>
+            update({
+              metadata: {
+                frontPieceName: e.target.value.trim() || undefined,
+              },
+            })
+          }
+        />
+      </label>
+
+      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          Altura da Frente (mm)
+        </span>
+        <input
+          className="input input-xs"
+          type="number"
+          min={settings.gavetaAlturaMinimaMm}
+          max={settings.gavetaAlturaMaximaMm}
+          placeholder={`Padrão: ${bodyHeight}`}
+          value={frontHeightOverride != null && frontHeightOverride > 0 ? frontHeightOverride : ""}
+          onChange={(e) =>
+            update({
+              metadata: {
+                frontHeightMm: parseOptionalPositiveMm(e.target.value),
+              },
+            })
+          }
+        />
+      </label>
+
+      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Material da frente</span>
         <select
           className="select select-xs"
@@ -268,7 +347,8 @@ export default function DrawerConfigPanel({
       </label>
 
       <div className="muted-text" style={{ fontSize: 10 }}>
-        Altura atual: {Math.round(drawer.height)} mm · Profundidade calculada: {Math.round(drawer.depth)} mm
+        Corpo: {bodyHeight} mm · Frente: {Math.round(drawer.height)} mm · Profundidade:{" "}
+        {Math.round(drawer.depth)} mm
       </div>
     </div>
   );
@@ -308,7 +388,7 @@ export function DrawerCustomHeightsTable({
                   type="number"
                   min={settings.gavetaAlturaMinimaMm}
                   max={settings.gavetaAlturaMaximaMm}
-                  value={Math.round(drawer.height)}
+                  value={Math.round(drawer.bodyHeight ?? drawer.height)}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     onHeightChange(drawer.id, Number(e.target.value) || settings.gavetaAlturaMinimaMm)
                   }

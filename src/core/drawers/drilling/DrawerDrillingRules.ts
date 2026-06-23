@@ -334,12 +334,8 @@ export function resolvePiDrawerCountForDrilling(input: {
  *   x = ao longo de largura (= profundidade do corpo da gaveta, L no KDT)
  *   y = ao longo de altura  (= altura da gaveta, W no KDT)
  *
- * Face "cima" (topo da lateral):
- *   2 furos de cavilha Ø10 prof.13mm — montagem com frente_int e costa.
- * Face "tras" (borda traseira, x=largura):
- *   2 furos horizontais Ø10 prof.30mm — fixação da costa.
- * Face "cima" (rasgo):
- *   1 rasgo ao longo de todo x — encaixe do fundo da gaveta.
+ * LAT_ESQ (KDT): cavilha X=T/2, costa X=L face tras, Quadrant 1.
+ * LAT_DIR (KDT): cavilha X=L-T/2, costa X=0 face frente, Quadrant 2.
  */
 export function computeDrawerLateralStructuralHoles(params: {
   largura: number;
@@ -347,21 +343,22 @@ export function computeDrawerLateralStructuralHoles(params: {
   espessura: number;
   side: "esq" | "dir";
 }): TechnicalDrillHole[] {
-  const { largura, altura, espessura } = params;
+  const { largura, altura, espessura, side } = params;
   const holes: TechnicalDrillHole[] = [];
 
+  const cavilhaX = side === "dir" ? largura - espessura / 2 : espessura / 2;
+  const costaX = side === "dir" ? 0 : largura;
+  const costaFace: DrillFace = side === "dir" ? "frente" : "tras";
+
   // Furos verticais — face "cima" (cavilha de montagem)
-  // XML: X=T/2, Y=15 e Y=W-38, Ø10, prof.13
-  holes.push({ x: espessura / 2, y: 15,           diametro: 10, profundidade: 13, tipo: "cavilha",             face: "cima" });
-  holes.push({ x: espessura / 2, y: altura - 38,  diametro: 10, profundidade: 13, tipo: "cavilha",             face: "cima" });
+  holes.push({ x: cavilhaX, y: 15,          diametro: 10, profundidade: 13, tipo: "cavilha",             face: "cima" });
+  holes.push({ x: cavilhaX, y: altura - 38, diametro: 10, profundidade: 13, tipo: "cavilha",             face: "cima" });
 
-  // Furos horizontais — face "tras" (fixação da costa)
-  // XML: X=L, Y=15 e Y=W-35, Z=T/2, Ø10, prof.30, Quadrante 1
-  holes.push({ x: largura, y: 15,           diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "tras" });
-  holes.push({ x: largura, y: altura - 35,  diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "tras" });
+  // Furos horizontais — fixação da costa (tras em esq, frente em dir)
+  holes.push({ x: costaX, y: 15,          diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: costaFace });
+  holes.push({ x: costaX, y: altura - 35, diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: costaFace });
 
-  // Rasgo — face "cima" (encaixe do fundo)
-  // XML: BeginY=W-13, largura=13mm, prof=3mm, ao longo de todo L
+  // Rasgo — face "cima" (encaixe do fundo; igual em esq/dir no KDT)
   holes.push({
     x: 0,
     y: altura - 13,
@@ -411,7 +408,7 @@ export function computeDrawerCostaStructuralHoles(params: {
  * Furação estrutural real da frente interna da gaveta (gaveta_frente).
  *
  * Face "esquerda" (X=0) e "direita" (X=largura): fixação às laterais.
- * Face "cima" (rasgo): encaixe do fundo.
+ * KDT industrial (FRENTE_INT.xml): apenas 4 furos horizontais TypeNo=2 — sem rasgo.
  */
 export function computeDrawerFrenteIntStructuralHoles(params: {
   largura: number;
@@ -428,20 +425,6 @@ export function computeDrawerFrenteIntStructuralHoles(params: {
   // Furos horizontais — face direita (X=L, Quadrante 1)
   holes.push({ x: largura, y: 30,           diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "direita" });
   holes.push({ x: largura, y: altura - 30,  diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "direita" });
-
-  // Rasgo — face "cima" (encaixe do fundo)
-  // XML: Y=W-36.5, largura=11mm, prof=10mm
-  holes.push({
-    x: 0,
-    y: altura - 36.5,
-    diametro: 0,
-    profundidade: 10,
-    tipo: "fixacao_estrutural",
-    face: "cima",
-    holeSubtype: "groove",
-    grooveWidth: 11,
-    grooveLength: largura,
-  });
 
   return holes;
 }

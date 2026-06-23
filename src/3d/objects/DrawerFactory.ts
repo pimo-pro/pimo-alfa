@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
+import { resolveDrawerFrontHeightMm, resolveDrawerDisplayName } from "../../core/drawers/drawerLayerCustomization";
 import { devLogger } from "../../utils/devLogger";
 import { PanelFactory } from "./PanelFactory";
 import { getEdgeMaterial, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
@@ -97,17 +98,19 @@ export type DrawerSpec = {
   metalBoxType?: DrawerLayerItem["metalBoxType"];
   softClose?: boolean;
   showDrillingMarkers?: boolean;
+  drawerDisplayName?: string;
+  frontDisplayName?: string;
 };
 
 export function buildDrawerSpecs(
   items: DrawerLayerItem[],
   options: BuildDrawerSpecsOptions = {}
 ): DrawerSpec[] {
-  return items.map((item) => ({
+  return items.map((item, index) => ({
     id: item.id,
     type: "drawer",
     widthM: Math.max(0.001, item.width / 1000),
-    heightM: Math.max(0.001, item.height / 1000),
+    heightM: Math.max(0.001, resolveDrawerFrontHeightMm(item) / 1000),
     depthM: Math.max(0.001, item.depth / 1000),
     frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
     bodyWidthM: item.bodyWidth ? Math.max(0.001, item.bodyWidth / 1000) : undefined,
@@ -154,6 +157,8 @@ export function buildDrawerSpecs(
     metalBoxType: item.metalBoxType ?? "Nenhuma",
     softClose: Boolean(item.softClose),
     showDrillingMarkers: options.showDrillingMarkers === true,
+    drawerDisplayName: resolveDrawerDisplayName(item, index),
+    frontDisplayName: item.metadata?.frontPieceName?.trim() || undefined,
   }));
 }
 
@@ -327,6 +332,8 @@ export function createDrawerObject(
 
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
+  group.userData.drawerDisplayName = spec.drawerDisplayName;
+  group.userData.pieceDisplayName = spec.frontDisplayName ?? spec.drawerDisplayName;
   group.position.set(spec.x, spec.y, spec.z);
   if (spec.rotY !== 0) group.rotation.y = spec.rotY;
 
@@ -352,6 +359,9 @@ export function createDrawerObject(
     front.position.set(0, 0, 0);
   }
   applyDrawerClickTargetIdentity(front, spec.id, "front");
+  if (spec.frontDisplayName) {
+    front.userData.pieceDisplayName = spec.frontDisplayName;
+  }
   drawerGroup.add(front);
 
   const clickTarget = new THREE.Mesh(
