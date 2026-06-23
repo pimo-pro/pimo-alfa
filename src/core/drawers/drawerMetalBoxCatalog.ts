@@ -45,7 +45,6 @@ function profile(
     frontHoles?: MetalBoxFrontHoleTemplate[];
   }
 ): DrawerMetalBoxProfile {
-  const defaultHeight = partial.allowedHeightsMm[Math.floor(partial.allowedHeightsMm.length / 2)] ?? 128;
   const holes = partial.frontHoles ?? standardFrontHoles();
   return {
     ...partial,

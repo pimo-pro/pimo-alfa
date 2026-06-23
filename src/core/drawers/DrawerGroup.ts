@@ -76,7 +76,7 @@ export function calculateDrawerHeights(
   }
 
   // Modo custom
-  const custom = customHeights ?? options?.customHeights;
+  const custom = customHeights;
   if (mode === "custom" && custom && custom.length > 0) {
     const raw = Array.from({ length: count }, (_, index) => {
       const value = custom[index];

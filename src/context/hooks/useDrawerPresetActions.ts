@@ -85,7 +85,7 @@ export function useDrawerPresetActions(ctx: ProjectActionsExecutionContext): Dra
               if (box.id !== boxId) return box;
 
               const result = applyDrawerPresetToBox(box, preset);
-              if (!result.ok) {
+              if (result.ok === false) {
                 return {
                   ...box,
                   drawerConfigError: result.reason,
