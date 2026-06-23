@@ -17,6 +17,9 @@ import {
   computeDrawerLateralStructuralHoles,
   getDrawerSlideDrillingRules,
 } from "../drawers/drilling/DrawerDrillingRules";
+import { computeDrawerHandleHoles } from "../drawers/drilling/DrawerHandleDrillingRules";
+import { computeDrawerMetalBoxFrontHoles } from "../drawers/drilling/DrawerMetalBoxFrontDrilling";
+import { isMetalBoxCatalogType } from "../drawers/drawerMetalBoxCatalog";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getNumDobradicas, getHingeYPositions } from "../rules/rulesConfig";
 import { getSettings } from "../settings/settingsService";
@@ -46,10 +49,17 @@ type PieceInput = {
   altura: number;
   espessura: number;
   handleType?: string;
-  handlePosition?: "Centro" | "Topo" | "Inferior";
+  handleProfileId?: string;
+  handleCenterDistanceMm?: number;
+  handlePosition?: "Centro" | "Topo" | "Inferior" | "Percentual";
+  handlePositionPercent?: number;
+  handleOffsetXMm?: number;
+  handleOffsetYMm?: number;
   handleOffsetMm?: number;
   slideType?: string;
   metalBoxType?: string;
+  metalBoxProfileId?: string;
+  metalBoxHeightMm?: number;
   softClose?: boolean;
   /** Se false, desativa explicitamente os furos de prateleira para a peça. */
   shelfHolesEnabled?: boolean;
@@ -328,19 +338,8 @@ function calcCorredica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
 }
 
 function calcHandle(piece: PieceInput, out: TechnicalDrillHole[]) {
-  if (piece.tipo !== "gaveta_frente") return;
-  if (piece.handleType !== "Puxador") return;
-  const yBase =
-    piece.handlePosition === "Topo"
-      ? 40
-      : piece.handlePosition === "Inferior"
-        ? piece.altura - 40
-        : piece.altura / 2;
-  const y = clamp(yBase + (piece.handleOffsetMm ?? 0), 20, Math.max(20, piece.altura - 20));
-  const center = piece.largura / 2;
-  const halfDistance = 80 / 2;
-  pushHole(out, piece, center - halfDistance, y, 5, Math.min(12, piece.espessura), "parafuso", "tras");
-  pushHole(out, piece, center + halfDistance, y, 5, Math.min(12, piece.espessura), "parafuso", "tras");
+  const handleHoles = computeDrawerHandleHoles(piece);
+  out.push(...handleHoles);
 }
 
 /**
@@ -489,12 +488,25 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
     });
     out.push(...holes);
   } else if (piece.tipo === "gaveta_frente") {
-    const holes = computeDrawerFrenteIntStructuralHoles({
-      largura: piece.largura,
-      altura: piece.altura,
-      espessura: piece.espessura,
-    });
-    out.push(...holes);
+    if (isMetalBoxCatalogType(piece.metalBoxType)) {
+      const holes = computeDrawerMetalBoxFrontHoles({
+        tipo: piece.tipo,
+        largura: piece.largura,
+        altura: piece.altura,
+        espessura: piece.espessura,
+        metalBoxType: piece.metalBoxType,
+        metalBoxProfileId: piece.metalBoxProfileId,
+        metalBoxHeightMm: piece.metalBoxHeightMm,
+      });
+      out.push(...holes);
+    } else {
+      const holes = computeDrawerFrenteIntStructuralHoles({
+        largura: piece.largura,
+        altura: piece.altura,
+        espessura: piece.espessura,
+      });
+      out.push(...holes);
+    }
   }
 }
 

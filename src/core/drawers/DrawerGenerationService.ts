@@ -19,6 +19,8 @@ import {
   calculateDrawerPositions,
   type DrawerGroup,
 } from "./DrawerGroup";
+import type { DrawerHeightMode } from "./drawerHeightModeTypes";
+import type { ErgonomicHeightRules, KitchenZoneProfile } from "./drawerErgonomicsHeights";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
 
 export interface DrawerGenerationConfig {
@@ -32,8 +34,12 @@ export interface DrawerGenerationConfig {
   // Drawer config
   drawerCount: number;
   drawerType: "normal" | "pro";
-  heightMode: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  heightMode: DrawerHeightMode;
   customHeights?: number[];
+  ergonomicsRules?: ErgonomicHeightRules;
+  kitchenZoneProfile?: KitchenZoneProfile;
+  minDrawerHeightMm?: number;
+  maxDrawerHeightMm?: number;
   
   // Available depths (from settings)
   availableDepths: number[];
@@ -74,6 +80,10 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     originX,
     originY,
     drawerOverrides,
+    ergonomicsRules,
+    kitchenZoneProfile,
+    minDrawerHeightMm,
+    maxDrawerHeightMm,
   } = config;
 
   // Dimensões internas do box
@@ -85,9 +95,15 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
   // Regra: altura corpo = (boxHeight / N) - 6mm
   const heights = calculateDrawerHeights(
     drawerCount,
-    boxHeight, // Sem base offset
+    boxHeight,
     heightMode,
-    customHeights
+    customHeights,
+    {
+      ergonomicsRules,
+      kitchenZoneProfile,
+      minHeightMm: minDrawerHeightMm ?? drawerSettings?.gavetaAlturaMinimaMm,
+      maxHeightMm: maxDrawerHeightMm ?? drawerSettings?.gavetaAlturaMaximaMm,
+    }
   );
 
   // Calcula posições Y (empilhamento vertical)
@@ -177,6 +193,10 @@ export function regenerateDrawerGroup(
     drawerSettings: config.drawerSettings,
     materialId: config.materialId ?? existingGroup.drawers[0]?.materialId,
     drawerOverrides: config.drawerOverrides,
+    ergonomicsRules: config.ergonomicsRules,
+    kitchenZoneProfile: config.kitchenZoneProfile,
+    minDrawerHeightMm: config.minDrawerHeightMm,
+    maxDrawerHeightMm: config.maxDrawerHeightMm,
   };
 
   return generateDrawerGroup(fullConfig);

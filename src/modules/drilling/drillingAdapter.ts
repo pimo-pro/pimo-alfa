@@ -59,10 +59,17 @@ export type PanelDrillingInput = {
   /** Tamanho de doorsLayer no módulo (número de folhas/itens). */
   doorsLayerCount?: number;
   handleType?: string;
-  handlePosition?: "Centro" | "Topo" | "Inferior";
+  handleProfileId?: string;
+  handleCenterDistanceMm?: number;
+  handlePosition?: "Centro" | "Topo" | "Inferior" | "Percentual";
+  handlePositionPercent?: number;
+  handleOffsetXMm?: number;
+  handleOffsetYMm?: number;
   handleOffsetMm?: number;
   slideType?: string;
   metalBoxType?: string;
+  metalBoxProfileId?: string;
+  metalBoxHeightMm?: number;
   softClose?: boolean;
 };
 
@@ -148,7 +155,9 @@ function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[], pieceType: Pi
       holeType === "dobradica" ||
       holeType === "dobradica_fixacao" ||
       holeType === "dobradica_parafuso_uniao" ||
-      holeType === "prateleira";
+      holeType === "prateleira" ||
+      holeType === "puxador" ||
+      holeType === "fixacao_metalica";
     const base: PanelDrillHole = {
       x: h.x,
       y: h.y,
@@ -380,10 +389,17 @@ export function buildPanelDrillingResult(
         altura: input.alturaMm,
         espessura: input.espessuraMm,
         handleType: input.handleType,
+        handleProfileId: input.handleProfileId,
+        handleCenterDistanceMm: input.handleCenterDistanceMm,
         handlePosition: input.handlePosition,
+        handlePositionPercent: input.handlePositionPercent,
+        handleOffsetXMm: input.handleOffsetXMm,
+        handleOffsetYMm: input.handleOffsetYMm,
         handleOffsetMm: input.handleOffsetMm,
         slideType: input.slideType,
         metalBoxType: input.metalBoxType,
+        metalBoxProfileId: input.metalBoxProfileId,
+        metalBoxHeightMm: input.metalBoxHeightMm,
         softClose: input.softClose,
         shelfHolesEnabled,
         hingeSide: input.hingeSide,

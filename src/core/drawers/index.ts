@@ -53,6 +53,19 @@ export {
   getBodyAbsolutePosition,
 } from "./Drawer";
 
+export type { DrawerHeightMode } from "./drawerHeightModeTypes";
+export {
+  calculateErgonomicDrawerHeights,
+  estimateDrawerCenterHeightsFromFloorMm,
+  DEFAULT_KITCHEN_ZONE_PROFILE,
+  ERGONOMIC_MIN_DRAWER_HEIGHT_MM,
+  ERGONOMIC_MAX_DRAWER_HEIGHT_MM,
+  type KitchenZoneProfile,
+  type ErgonomicDrawerHeightsInput,
+} from "./drawerErgonomicsHeights";
+export { resolveDrawerErgonomicsRules } from "./drawerErgonomicsContext";
+export { isErgonomicDrawerHeightMode, ERGONOMIC_DRAWER_HEIGHT_MODES } from "./drawerHeightModeTypes";
+
 // DrawerGroup
 export {
   calculateDrawerHeights,
@@ -125,6 +138,22 @@ export {
   type DrawerControllerCallbacks,
   type DrawerOpenOptions,
 } from "./DrawerController";
+
+export {
+  DRAWER_METAL_BOX_PROFILES,
+  findMetalBoxProfileById,
+  isMetalBoxCatalogType,
+  listMetalBoxProfilesForType,
+  normalizeDrawerMetalBoxType,
+  pickCompatibleMetalDepth,
+  resolveMetalBoxFrontHoleYOnPanel,
+  resolveMetalBoxHeightMm,
+  resolveMetalBoxProfile,
+  type DrawerMetalBoxProfile,
+  type MetalBoxFrontHoleTemplate,
+} from "./drawerMetalBoxCatalog";
+
+export { computeDrawerMetalBoxFrontHoles } from "./drilling/DrawerMetalBoxFrontDrilling";
 
 // Adapters
 export {

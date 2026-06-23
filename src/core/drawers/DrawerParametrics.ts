@@ -15,6 +15,12 @@ import {
   type SettingsSchema,
 } from "../settings/settingsSchema";
 import { devLogger } from "../../utils/devLogger";
+import {
+  isMetalBoxCatalogType,
+  pickCompatibleMetalDepth,
+  resolveMetalBoxHeightMm,
+  resolveMetalBoxProfile,
+} from "./drawerMetalBoxCatalog";
 
 export interface DrawerDimensions {
   // Box de referência (dimensões internas)
@@ -81,6 +87,7 @@ export interface DrawerCalculatedSpecs {
     enabled: boolean;
     height: number;
     compatibleDepths: number[];
+    profileId?: string;
   };
 
   handle: {
@@ -120,6 +127,8 @@ export type DrawerParametricOverrides = {
   drawerType?: "normal" | "pro";
   /** Altura só da frente (mm); corpo mantém drawerHeight. */
   frontHeightMm?: number;
+  metalBoxProfileId?: string;
+  metalBoxHeightMm?: number;
 };
 
 const MIN_BODY_DEPTH_MM = 50;
@@ -174,10 +183,7 @@ function resolveDrawerSettings(
       settings?.gavetaProfundidadesDisponiveisMm ?? availableDepths,
       defaults.gavetaProfundidadesDisponiveisMm
     ),
-    gavetaAlturaModoPadrao:
-      settings?.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || settings?.gavetaAlturaModoPadrao === "custom"
-        ? settings.gavetaAlturaModoPadrao
-        : "equal",
+    gavetaAlturaModoPadrao: settings?.gavetaAlturaModoPadrao ?? defaults.gavetaAlturaModoPadrao,
   };
 }
 
@@ -208,6 +214,16 @@ function applyDrawerParametricOverrides(
   if (overrides.slideType) next.gavetaTipoCorredica = overrides.slideType;
   if (overrides.metalBoxType) next.gavetaTipoCaixaMetalica = overrides.metalBoxType;
   if (typeof overrides.softClose === "boolean") next.gavetaSoftClose = overrides.softClose;
+  if (overrides.metalBoxHeightMm != null && Number.isFinite(overrides.metalBoxHeightMm)) {
+    next.gavetaAlturaCaixaMetalicaMm = overrides.metalBoxHeightMm;
+  }
+  if (overrides.metalBoxProfileId && overrides.metalBoxType && isMetalBoxCatalogType(overrides.metalBoxType)) {
+    const profile = resolveMetalBoxProfile(overrides.metalBoxType, overrides.metalBoxProfileId);
+    if (profile) {
+      next.gavetaTipoCorredica = profile.defaultSlideType;
+      next.gavetaProfundidadesCompativeisMm = profile.compatibleDepthsMm;
+    }
+  }
   return next;
 }
 
@@ -251,20 +267,38 @@ export function calculateDrawerSpecs(
   const bottomThickness = settings.gavetaEspessuraFundoMm;
   const backThickness = settings.gavetaEspessuraTraseiraMm;
   const runnerClearanceMm = settings.gavetaRecuoProfundidadeCorredicaMm;
-  const availableDepthRules = settings.gavetaValidarProfundidadeCompativel
-    ? settings.gavetaProfundidadesCompativeisMm
-    : settings.gavetaProfundidadesDisponiveisMm;
-  const nominalDepth = resolveNominalDepth(
-    boxInternalDepth,
-    availableDepthRules,
-    overrides?.nominalDepthMm
-  );
   const metalBoxEnabled = settings.gavetaTipoCaixaMetalica !== "Nenhuma" || drawerType === "pro";
   const metalBoxType = metalBoxEnabled
     ? settings.gavetaTipoCaixaMetalica !== "Nenhuma"
       ? settings.gavetaTipoCaixaMetalica
       : "Genérica"
     : "Nenhuma";
+  const metalProfile = metalBoxEnabled
+    ? resolveMetalBoxProfile(
+        metalBoxType,
+        overrides?.metalBoxProfileId,
+        overrides?.metalBoxHeightMm ?? settings.gavetaAlturaCaixaMetalicaMm
+      )
+    : null;
+  const resolvedMetalHeight =
+    metalProfile != null
+      ? resolveMetalBoxHeightMm(
+          metalProfile,
+          overrides?.metalBoxHeightMm ?? settings.gavetaAlturaCaixaMetalicaMm
+        )
+      : 0;
+  const depthRules =
+    metalProfile != null
+      ? metalProfile.compatibleDepthsMm
+      : settings.gavetaValidarProfundidadeCompativel
+        ? settings.gavetaProfundidadesCompativeisMm
+        : settings.gavetaProfundidadesDisponiveisMm;
+  const nominalDepth = metalProfile
+    ? pickCompatibleMetalDepth(
+        metalProfile,
+        resolveNominalDepth(boxInternalDepth, depthRules, overrides?.nominalDepthMm)
+      )
+    : resolveNominalDepth(boxInternalDepth, depthRules, overrides?.nominalDepthMm);
   const warnings: string[] = [];
 
   // ===== FRENTE =====
@@ -289,9 +323,8 @@ export function calculateDrawerSpecs(
   const rearClearanceMm = runnerClearanceMm;
   const maxBodyDepth = clampMm(boxInternalDepth - frontThickness - rearClearanceMm, MIN_BODY_DEPTH_MM);
   const bodyDepth = clampMm(Math.min(nominalDepth - runnerClearanceMm, maxBodyDepth));
-  const woodBodyHeight = metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0
-    ? settings.gavetaAlturaCaixaMetalicaMm
-    : bodyHeight;
+  const woodBodyHeight =
+    metalBoxEnabled && resolvedMetalHeight > 0 ? resolvedMetalHeight : bodyHeight;
 
   // ===== LATERAIS =====
   const leftSideWidth = metalBoxEnabled ? 0 : sideThickness;
@@ -325,8 +358,8 @@ export function calculateDrawerSpecs(
   if (settings.gavetaValidarSoftCloseCompativel && settings.gavetaSoftClose && !SOFT_CLOSE_COMPATIBLE_SLIDES.has(settings.gavetaTipoCorredica)) {
     warnings.push(`Soft-close nao validado para ${settings.gavetaTipoCorredica}.`);
   }
-  if (metalBoxEnabled && settings.gavetaAlturaCaixaMetalicaMm > 0 && frontHeight < settings.gavetaAlturaCaixaMetalicaMm) {
-    warnings.push(`Frente abaixo da altura da caixa metalica (${settings.gavetaAlturaCaixaMetalicaMm}mm).`);
+  if (metalBoxEnabled && resolvedMetalHeight > 0 && frontHeight < resolvedMetalHeight) {
+    warnings.push(`Frente abaixo da altura da caixa metalica (${resolvedMetalHeight}mm).`);
   }
   if (
     overrides?.nominalDepthMm != null &&
@@ -343,7 +376,7 @@ export function calculateDrawerSpecs(
   }
   if (
     settings.gavetaValidarProfundidadeCompativel &&
-    !availableDepthRules.includes(nominalDepth)
+    !depthRules.includes(nominalDepth)
   ) {
     warnings.push(`Profundidade nominal ${nominalDepth}mm incompativel com caixa metalica/corredica.`);
   }
@@ -396,8 +429,9 @@ export function calculateDrawerSpecs(
     metalBox: {
       type: metalBoxType,
       enabled: metalBoxEnabled,
-      height: settings.gavetaAlturaCaixaMetalicaMm,
-      compatibleDepths: settings.gavetaProfundidadesCompativeisMm,
+      height: resolvedMetalHeight,
+      compatibleDepths: metalProfile?.compatibleDepthsMm ?? settings.gavetaProfundidadesCompativeisMm,
+      profileId: metalProfile?.id,
     },
     handle: {
       type: settings.gavetaTipoHandle,

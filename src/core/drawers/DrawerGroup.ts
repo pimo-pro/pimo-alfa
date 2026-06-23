@@ -5,6 +5,13 @@
  * automática de alturas e posicionamento vertical.
  */
 
+import type { DrawerHeightMode } from "./drawerHeightModeTypes";
+import { isErgonomicDrawerHeightMode } from "./drawerHeightModeTypes";
+import {
+  calculateErgonomicDrawerHeights,
+  type ErgonomicHeightRules,
+  type KitchenZoneProfile,
+} from "./drawerErgonomicsHeights";
 import type { Drawer } from "./Drawer";
 import {
   resolveDrawerVerticalPositions,
@@ -19,7 +26,7 @@ export interface DrawerGroup {
   drawers: Drawer[];
   
   // Configuração de distribuição
-  heightMode: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  heightMode: DrawerHeightMode;
   customHeights?: number[];
   
   // Dimensões do box de referência
@@ -31,14 +38,23 @@ export interface DrawerGroup {
   };
 }
 
+export type CalculateDrawerHeightsOptions = {
+  customHeights?: number[];
+  ergonomicsRules?: ErgonomicHeightRules;
+  kitchenZoneProfile?: KitchenZoneProfile;
+  minHeightMm?: number;
+  maxHeightMm?: number;
+};
+
 /**
  * Calcula a distribuição de alturas para as gavetas
  */
 export function calculateDrawerHeights(
   count: number,
   totalHeight: number,
-  mode: "equal" | "top_small_mid_medium_bottom_large" | "custom",
-  customHeights?: number[]
+  mode: DrawerHeightMode,
+  customHeights?: number[],
+  options?: Omit<CalculateDrawerHeightsOptions, "customHeights">
 ): number[] {
   if (count <= 0) return [];
 
@@ -46,10 +62,24 @@ export function calculateDrawerHeights(
   const gapTotal = Math.max(0, count - 1) * DRAWER_VERTICAL_GAP_MM;
   const distributable = Math.max(1, usable - gapTotal);
 
+  if (isErgonomicDrawerHeightMode(mode)) {
+    return calculateErgonomicDrawerHeights({
+      drawerCount: count,
+      usableHeightMm: usable,
+      mode,
+      minHeightMm: options?.minHeightMm,
+      maxHeightMm: options?.maxHeightMm,
+      gapMm: DRAWER_VERTICAL_GAP_MM,
+      ergonomicsRules: options?.ergonomicsRules,
+      kitchenZoneProfile: options?.kitchenZoneProfile,
+    });
+  }
+
   // Modo custom
-  if (mode === "custom" && customHeights && customHeights.length > 0) {
+  const custom = customHeights ?? options?.customHeights;
+  if (mode === "custom" && custom && custom.length > 0) {
     const raw = Array.from({ length: count }, (_, index) => {
-      const value = customHeights[index];
+      const value = custom[index];
       return Number.isFinite(value) && value! > 0 ? value! : distributable / count;
     });
     const sum = raw.reduce((acc, v) => acc + v, 0);
@@ -155,7 +185,7 @@ export function removeDrawerFromGroup(group: DrawerGroup, drawerId: string): Dra
  */
 export function updateHeightMode(
   group: DrawerGroup,
-  mode: "equal" | "top_small_mid_medium_bottom_large" | "custom",
+  mode: DrawerHeightMode,
   customHeights?: number[]
 ): DrawerGroup {
   return recalculateDrawerGroupLayout({

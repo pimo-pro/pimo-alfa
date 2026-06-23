@@ -6,6 +6,9 @@
  * gaveta_lat_dir, gaveta_fundo, gaveta_traseira.
  */
 
+import {
+  resolveMetalBoxProfile,
+} from "../core/drawers/drawerMetalBoxCatalog";
 import type { CutListItem } from "../core/types";
 import {
   resolveDrawerFrontHeightMm,
@@ -54,6 +57,8 @@ export type DrawerHardwareSummary = {
   slideLengthMm?: number;
   softClose: boolean;
   metalBoxType?: string;
+  metalBoxProfileId?: string;
+  metalBoxHeightMm?: number;
   handleType?: string;
 };
 
@@ -72,6 +77,8 @@ export function extractDrawerHardwareSummaryFromLayerItems(
     slideLengthMm: item.bodyDepth ?? item.depth,
     softClose: Boolean(item.softClose),
     metalBoxType: item.metalBoxType,
+    metalBoxProfileId: item.metadata?.metalBoxProfileId,
+    metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
     handleType: item.handleType,
   }));
 }
@@ -171,6 +178,13 @@ export function drawerLayerItemToCutList(
 
   const baseId = `${item.parentBoxId}-drawer-${drawerIndex}`;
   const hasMetalBox = item.metalBoxType != null && item.metalBoxType !== "Nenhuma";
+  const metalProfile = hasMetalBox
+    ? resolveMetalBoxProfile(
+        item.metalBoxType,
+        item.metadata?.metalBoxProfileId,
+        item.metadata?.metalBoxHeightMm
+      )
+    : null;
   const drawerHardware = [
     {
       tipo: "corredica",
@@ -184,6 +198,9 @@ export function drawerLayerItemToCutList(
           tipo: "caixa_metalica",
           nome: item.metalBoxType,
           quantidade: 1,
+          profileId: metalProfile?.id ?? item.metadata?.metalBoxProfileId,
+          heightMm: item.metadata?.metalBoxHeightMm ?? metalProfile?.allowedHeightsMm[0],
+          fixationCount: metalProfile?.fixationCount ?? 2,
         }]
       : []),
     ...(item.handleType && item.handleType !== "Nenhum"
@@ -192,6 +209,10 @@ export function drawerLayerItemToCutList(
           nome: item.handleType,
           posicao: item.handlePosition ?? "Centro",
           offsetMm: item.handleOffsetMm ?? 0,
+          offsetXMm: item.metadata?.handleOffsetXMm ?? 0,
+          offsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm ?? 0,
+          centerDistanceMm: item.metadata?.handleCenterDistanceMm,
+          profileId: item.metadata?.handleProfileId,
           quantidade: 1,
         }]
       : []),
@@ -224,8 +245,15 @@ export function drawerLayerItemToCutList(
             slideType: item.slideType ?? "Genérica",
             softClose: Boolean(item.softClose),
             metalBoxType: item.metalBoxType ?? "Nenhuma",
+            metalBoxProfileId: item.metadata?.metalBoxProfileId,
+            metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
             handleType: item.handleType ?? "Nenhum",
+            handleProfileId: item.metadata?.handleProfileId,
+            handleCenterDistanceMm: item.metadata?.handleCenterDistanceMm,
             handlePosition: item.handlePosition ?? "Centro",
+            handlePositionPercent: item.metadata?.handlePositionPercent,
+            handleOffsetXMm: item.metadata?.handleOffsetXMm,
+            handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
             handleOffsetMm: item.handleOffsetMm ?? 0,
           },
         },

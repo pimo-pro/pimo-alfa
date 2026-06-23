@@ -6,6 +6,10 @@ import {
 } from "../core/drawers/DrawerMotionService";
 import { canOpenDrawer } from "../core/drawers/DrawerCollisionService";
 import { drawerParametricOverridesFromLayerItem } from "../core/drawers/drawerParametricOverrides";
+import {
+  pickCompatibleMetalDepth,
+  resolveMetalBoxProfile,
+} from "../core/drawers/drawerMetalBoxCatalog";
 import { generateDrawerGroup, drawerGroupToLayerItems } from "../core/drawers";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
@@ -134,23 +138,32 @@ describe("Certificação — stress tests (robustez)", () => {
           gavetaSoftClose: i % 2 === 0,
         },
         drawerOverrides: [
-          { nominalDepthMm, slideType, softClose: i % 2 === 0 },
-          { nominalDepthMm: depths[(i + 1) % depths.length], slideType },
+          { nominalDepthMm, slideType, softClose: i % 2 === 0, metalBoxType: metalBox },
+          {
+            nominalDepthMm: depths[(i + 1) % depths.length],
+            slideType,
+            metalBoxType: metalBox,
+          },
         ],
       });
 
       const layers = drawerGroupToLayerItems(group);
       expect(layers).toHaveLength(2);
+      const metalProfile =
+        metalBox !== "Nenhuma" ? resolveMetalBoxProfile(metalBox) : null;
+      const effectiveNominal = metalProfile
+        ? pickCompatibleMetalDepth(metalProfile, Math.min(nominalDepthMm, 560))
+        : nominalDepthMm;
       expect(layers[0].bodyDepth).toBe(
         Math.min(
-          nominalDepthMm - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm,
+          effectiveNominal - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm,
           560 - 19 - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm
         )
       );
       expect(layers[0].slideType).toBe(slideType);
 
       const overrides = drawerParametricOverridesFromLayerItem(layers[0]);
-      expect(overrides?.nominalDepthMm).toBe(nominalDepthMm);
+      expect(overrides?.nominalDepthMm).toBe(effectiveNominal);
       expect(overrides?.slideType).toBe(slideType);
     }
   });

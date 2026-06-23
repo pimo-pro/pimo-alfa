@@ -119,6 +119,8 @@ export function drawerToLayerItem(drawer: Drawer): DrawerLayerItem {
       nominalDepth: specs.nominalDepthMm,
       slideType: specs.slide.type,
       metalBoxType: specs.metalBox.type,
+      metalBoxProfileId: specs.metalBox.profileId,
+      metalBoxHeightMm: specs.metalBox.height,
       softClose: specs.slide.softClose,
       drawerType: type,
     },

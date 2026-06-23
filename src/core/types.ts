@@ -1,5 +1,6 @@
 import type { Group } from "three";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
+import type { DrawerHeightMode } from "./drawers/drawerHeightModeTypes";
 export type { DivisorItem, SeparadorItem, DivisorReferenceEdge, SeparadorReferenceEdge } from "./divSep/types";
 
 export type OperationResult<T> = {
@@ -59,7 +60,7 @@ export interface PieceFaceMaterials {
   back?: LayoutVisualMaterial;
 }
 
-export type DrillType = "cavilha" | "parafuso" | "minifix" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira" | "fixacao_estrutural";
+export type DrillType = "cavilha" | "parafuso" | "minifix" | "dobradica" | "dobradica_fixacao" | "dobradica_parafuso_uniao" | "corredica" | "prateleira" | "fixacao_estrutural" | "puxador" | "fixacao_metalica";
 export type DrillFace = "cima" | "fundo" | "esquerda" | "direita" | "frente" | "tras";
 export type DrillPanelKey = "cima" | "fundo" | "lateral_esquerda" | "lateral_direita" | "porta";
 export interface TechnicalDrillHole {
@@ -285,7 +286,7 @@ export interface BoxModule {
   portaTipo: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
   gavetas: number;
   alturaGaveta: number;
-  drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  drawerHeightMode?: DrawerHeightMode;
   drawerType?: "normal" | "pro";
   /** Erro bloqueante da última tentativa de configurar gavetas (FASE 4 UI). */
   drawerConfigError?: string;
@@ -353,7 +354,7 @@ export interface WorkspaceBox {
   portaTipo: "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr";
   gavetas: number;
   alturaGaveta: number;
-  drawerHeightMode?: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+  drawerHeightMode?: DrawerHeightMode;
   drawerType?: "normal" | "pro";
   /** Erro bloqueante da última tentativa de configurar gavetas (FASE 4 UI). */
   drawerConfigError?: string;

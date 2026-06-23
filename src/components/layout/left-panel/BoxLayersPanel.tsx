@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { getSettings } from "../../../core/settings/settingsService";
 import { DRAWER_HEIGHT_MODES } from "../../../core/drawers/drawerUiConstants";
+import type { DrawerHeightMode } from "../../../core/drawers/drawerHeightModeTypes";
 import { validateBoxDrawerConfiguration } from "../../../core/drawers/drawerUiValidation";
 import {
   resolveDrawerBodyHeightMm,
   resolveDrawerDisplayName,
 } from "../../../core/drawers/drawerLayerCustomization";
+import { normalizeDrawerPresets } from "../../../core/drawers/drawerPresets";
 import Panel from "../../ui/Panel";
 import DrawerConfigPanel, {
   DrawerCustomHeightsTable,
@@ -41,6 +43,8 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
   const [expandedDrawerIds, setExpandedDrawerIds] = useState<Record<string, boolean>>({});
   const [showHeightEditor, setShowHeightEditor] = useState(false);
   const [showAllHardware, setShowAllHardware] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState("");
 
   const selectedBox =
     project.workspaceBoxes.find((box) => box.id === project.selectedWorkspaceBoxId) ??
@@ -67,6 +71,7 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
   const drawers = selectedBox.drawersLayer ?? [];
   const settings = getSettings().gavetas;
   const heightMode = selectedBox.drawerHeightMode ?? settings.gavetaAlturaModoPadrao;
+  const drawerPresets = normalizeDrawerPresets(project.drawerPresets);
   const boxAlerts = validateBoxDrawerConfiguration(selectedBox, settings);
   const errorAlerts = [
     ...(selectedBox.drawerConfigError ? [{ level: "error" as const, message: selectedBox.drawerConfigError }] : []),
@@ -239,9 +244,7 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                 className="select select-xs"
                 value={heightMode}
                 onChange={(e) =>
-                  actions.setDrawerHeightMode(
-                    e.target.value as "equal" | "top_small_mid_medium_bottom_large" | "custom"
-                  )
+                  actions.setDrawerHeightMode(e.target.value as DrawerHeightMode)
                 }
               >
                 {DRAWER_HEIGHT_MODES.map((mode) => (
@@ -251,6 +254,68 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                 ))}
               </select>
             </label>
+
+            <div
+              style={{
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8,
+                padding: 10,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <strong style={{ fontSize: 11, color: "var(--text-muted)" }}>Presets de gavetas</strong>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome do preset</span>
+                <input
+                  className="input input-xs"
+                  type="text"
+                  value={presetName}
+                  placeholder="Ex.: Cozinha 3 gavetas"
+                  onChange={(e) => setPresetName(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="button button-ghost"
+                disabled={!presetName.trim()}
+                onClick={() => {
+                  const name = presetName.trim();
+                  if (!name) return;
+                  actions.saveDrawerPresetFromBox(selectedBox.id, name);
+                  setPresetName("");
+                }}
+              >
+                Guardar como preset
+              </button>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Aplicar preset</span>
+                <select
+                  className="select select-xs"
+                  value={selectedPresetId}
+                  onChange={(e) => setSelectedPresetId(e.target.value)}
+                >
+                  <option value="">— Selecionar preset —</option>
+                  {drawerPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.nome} ({preset.drawerCount} gav., {preset.drawerHeightMode})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={!selectedPresetId}
+                onClick={() => {
+                  if (!selectedPresetId) return;
+                  actions.applyDrawerPresetToBox(selectedBox.id, selectedPresetId);
+                }}
+              >
+                Aplicar preset
+              </button>
+            </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button

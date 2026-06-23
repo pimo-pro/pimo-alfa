@@ -9,6 +9,14 @@ import {
   computeDrawerPieceCorredicaHoles,
   getDrawerSlideDrillingRules,
 } from "../../core/drawers/drilling/DrawerDrillingRules";
+import { computeDrawerHandleHoles } from "../../core/drawers/drilling/DrawerHandleDrillingRules";
+import { computeDrawerMetalBoxFrontHoles } from "../../core/drawers/drilling/DrawerMetalBoxFrontDrilling";
+import { resolveDrawerHandleProfile } from "../../core/drawers/drawerHandleCatalog";
+import {
+  isMetalBoxCatalogType,
+  resolveMetalBoxProfile,
+} from "../../core/drawers/drawerMetalBoxCatalog";
+import { resolveHandlePlacementX, resolveHandlePlacementY } from "../../core/drawers/handlePlacement";
 import {
   easeInOutCubic,
   VIEWER_DRAWER_ANIMATION_DURATION_MS,
@@ -94,8 +102,15 @@ export type DrawerSpec = {
   handleType?: DrawerLayerItem["handleType"];
   handlePosition?: DrawerLayerItem["handlePosition"];
   handleOffsetM?: number;
+  handleProfileId?: string;
+  handleCenterDistanceMm?: number;
+  handleOffsetXMm?: number;
+  handleOffsetYMm?: number;
+  handlePositionPercent?: number;
   slideType?: DrawerLayerItem["slideType"];
   metalBoxType?: DrawerLayerItem["metalBoxType"];
+  metalBoxProfileId?: string;
+  metalBoxHeightMm?: number;
   softClose?: boolean;
   showDrillingMarkers?: boolean;
   drawerDisplayName?: string;
@@ -153,8 +168,15 @@ export function buildDrawerSpecs(
     handleType: item.handleType ?? "Nenhum",
     handlePosition: item.handlePosition ?? "Centro",
     handleOffsetM: (item.handleOffsetMm ?? 0) / 1000,
+    handleProfileId: item.metadata?.handleProfileId,
+    handleCenterDistanceMm: item.metadata?.handleCenterDistanceMm,
+    handleOffsetXMm: item.metadata?.handleOffsetXMm,
+    handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
+    handlePositionPercent: item.metadata?.handlePositionPercent,
     slideType: item.slideType ?? "Genérica",
     metalBoxType: item.metalBoxType ?? "Nenhuma",
+    metalBoxProfileId: item.metadata?.metalBoxProfileId,
+    metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
     softClose: Boolean(item.softClose),
     showDrillingMarkers: options.showDrillingMarkers === true,
     drawerDisplayName: resolveDrawerDisplayName(item, index),
@@ -382,49 +404,104 @@ export function createDrawerObject(
   drawerGroup.add(clickTarget);
 
   if (spec.handleType && spec.handleType !== "Nenhum") {
+    const frontHeightMm = spec.heightM * 1000;
+    const frontWidthMm = spec.widthM * 1000;
+    const placementInput = {
+      larguraMm: frontWidthMm,
+      alturaMm: frontHeightMm,
+      handlePosition: spec.handlePosition,
+      handlePositionPercent: spec.handlePositionPercent,
+      handleOffsetXMm: spec.handleOffsetXMm,
+      handleOffsetYMm: spec.handleOffsetYMm,
+      handleOffsetMm: (spec.handleOffsetM ?? 0) * 1000,
+    };
+    const anchorYMm = resolveHandlePlacementY(placementInput);
+    const centerXMm = resolveHandlePlacementX(placementInput);
+    const anchorYLocal = frontHeightMm / 2000 - anchorYMm / 1000;
+    const centerXLocal = centerXMm / 1000 - frontWidthMm / 2000;
+
+    const profile = resolveDrawerHandleProfile(
+      spec.handleType,
+      spec.handleProfileId,
+      spec.handleCenterDistanceMm
+    );
+    const ccM = (spec.handleCenterDistanceMm ?? profile?.defaultCenterDistanceMm ?? 80) / 1000;
+
     const handleMaterial = new THREE.MeshStandardMaterial({
       color: spec.handleType === "Cava" ? 0x111827 : 0xb6bcc6,
       roughness: 0.45,
       metalness: spec.handleType === "Perfil Alumínio" || spec.handleType === "Puxador" ? 0.6 : 0.1,
     });
-    const handleWidth = Math.max(0.08, Math.min(spec.widthM * 0.55, 0.28));
-    const handleHeight = spec.handleType === "Cava" ? 0.012 : 0.024;
-    const handleDepth = spec.handleType === "Cava" ? 0.006 : 0.026;
-    const handle = panelFactory.createPanel(
-      handleWidth,
-      handleHeight,
-      handleDepth,
-      `drawer-handle-${spec.id}`,
-      "front",
-      { singleMaterial: handleMaterial }
-    );
-    const yBase =
-      spec.handlePosition === "Topo"
-        ? spec.heightM / 2 - handleHeight * 1.5
-        : spec.handlePosition === "Inferior"
-          ? -spec.heightM / 2 + handleHeight * 1.5
-          : 0;
-    handle.position.set(0, yBase + (spec.handleOffsetM ?? 0), spec.frontThicknessM / 2 + handleDepth / 2);
-    applyDrawerClickTargetIdentity(handle, spec.id, "handle");
-    drawerGroup.add(handle);
+
+    if (spec.handleType === "Cava" || spec.handleType === "Perfil Alumínio") {
+      const grooveLengthM = Math.min(
+        (profile?.groove?.maxLengthMm ?? frontWidthMm * 0.5) / 1000,
+        spec.widthM * (profile?.groove?.lengthRatio ?? 0.5)
+      );
+      const grooveHeightM = (profile?.groove?.grooveWidth ?? 30) / 1000;
+      const grooveDepthM = 0.008;
+      const groove = panelFactory.createPanel(
+        grooveLengthM,
+        grooveHeightM,
+        grooveDepthM,
+        `drawer-handle-${spec.id}`,
+        "front",
+        { singleMaterial: handleMaterial }
+      );
+      groove.position.set(
+        centerXLocal,
+        anchorYLocal,
+        spec.frontThicknessM / 2 + grooveDepthM / 2
+      );
+      applyDrawerClickTargetIdentity(groove, spec.id, "handle");
+      drawerGroup.add(groove);
+    } else {
+      const handleWidth = Math.max(0.06, Math.min(ccM, spec.widthM * 0.7));
+      const handleHeight = 0.024;
+      const handleDepth = 0.026;
+      const handle = panelFactory.createPanel(
+        handleWidth,
+        handleHeight,
+        handleDepth,
+        `drawer-handle-${spec.id}`,
+        "front",
+        { singleMaterial: handleMaterial }
+      );
+      handle.position.set(
+        centerXLocal,
+        anchorYLocal,
+        spec.frontThicknessM / 2 + handleDepth / 2
+      );
+      applyDrawerClickTargetIdentity(handle, spec.id, "handle");
+      drawerGroup.add(handle);
+    }
   }
 
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
     const bodyOffsetZ = -(spec.frontThicknessM / 2 + spec.bodyDepthM / 2);
     if (spec.metalBoxType && spec.metalBoxType !== "Nenhuma") {
+      const metalProfile = resolveMetalBoxProfile(
+        spec.metalBoxType,
+        spec.metalBoxProfileId,
+        spec.metalBoxHeightMm
+      );
       const metalMaterial = new THREE.MeshStandardMaterial({
         color: metalBoxColor(spec.metalBoxType),
         roughness: 0.28,
         metalness: 0.82,
       });
       const metalThicknessM = 0.012;
-      const sideHeightM = Math.max(0.04, spec.bodyHeightM);
+      const metalHeightM =
+        (spec.metalBoxHeightMm ?? (spec.bodyHeightM ?? 0) * 1000) / 1000;
+      const sideHeightM = Math.max(0.04, metalHeightM > 0 ? metalHeightM : spec.bodyHeightM ?? 0.04);
+      const recessM = (metalProfile?.bodyRecessMm ?? 70) / 1000;
+      const metalBodyOffsetZ = bodyOffsetZ - recessM * 0.15;
       const leftMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-left-${spec.id}`, "left", { singleMaterial: metalMaterial });
-      leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, 0, bodyOffsetZ);
+      leftMetal.position.set(-spec.bodyWidthM / 2 + metalThicknessM / 2, 0, metalBodyOffsetZ);
       applyDrawerBodyPartIdentity(leftMetal, "metal-box");
       drawerGroup.add(leftMetal);
       const rightMetal = panelFactory.createPanel(metalThicknessM, sideHeightM, spec.bodyDepthM, `drawer-metal-right-${spec.id}`, "right", { singleMaterial: metalMaterial });
-      rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, 0, bodyOffsetZ);
+      rightMetal.position.set(spec.bodyWidthM / 2 - metalThicknessM / 2, 0, metalBodyOffsetZ);
       applyDrawerBodyPartIdentity(rightMetal, "metal-box");
       drawerGroup.add(rightMetal);
       const backMetal = panelFactory.createPanel(spec.bodyWidthM, sideHeightM, metalThicknessM, `drawer-metal-back-${spec.id}`, "back", { singleMaterial: metalMaterial });
@@ -432,7 +509,7 @@ export function createDrawerObject(
       applyDrawerBodyPartIdentity(backMetal, "metal-box");
       drawerGroup.add(backMetal);
       const bottomMetal = panelFactory.createPanel(spec.bodyWidthM, metalThicknessM, spec.bodyDepthM, `drawer-metal-bottom-${spec.id}`, "bottom", { singleMaterial: metalMaterial });
-      bottomMetal.position.set(0, -sideHeightM / 2 + metalThicknessM / 2, bodyOffsetZ);
+      bottomMetal.position.set(0, -sideHeightM / 2 + metalThicknessM / 2, metalBodyOffsetZ);
       applyDrawerBodyPartIdentity(bottomMetal, "metal-box");
       drawerGroup.add(bottomMetal);
     } else if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
@@ -477,6 +554,10 @@ export function createDrawerObject(
     }
 
     if (shouldShowGenericSlideRails(spec.slideType) && spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
+      const metalProfile = isMetalBoxCatalogType(spec.metalBoxType)
+        ? resolveMetalBoxProfile(spec.metalBoxType, spec.metalBoxProfileId, spec.metalBoxHeightMm)
+        : null;
+      const slideOffsetM = (metalProfile?.slideOffsetFrontMm ?? 37) / 1000;
       const railMaterial = new THREE.MeshStandardMaterial({
         color: 0x6b7280,
         roughness: 0.5,
@@ -489,13 +570,13 @@ export function createDrawerObject(
       const leftRail = panelFactory.createPanel(railW, railH, railD, `drawer-rail-left-${spec.id}`, "left", {
         singleMaterial: railMaterial,
       });
-      leftRail.position.set(-spec.bodyWidthM / 2 - railW / 2, 0, bodyOffsetZ);
+      leftRail.position.set(-spec.bodyWidthM / 2 - railW / 2 - slideOffsetM * 0.1, 0, bodyOffsetZ);
       leftRail.userData.drawerPart = "slide-rail";
       drawerGroup.add(leftRail);
       const rightRail = panelFactory.createPanel(railW, railH, railD, `drawer-rail-right-${spec.id}`, "right", {
         singleMaterial: railMaterial,
       });
-      rightRail.position.set(spec.bodyWidthM / 2 + railW / 2, 0, bodyOffsetZ);
+      rightRail.position.set(spec.bodyWidthM / 2 + railW / 2 + slideOffsetM * 0.1, 0, bodyOffsetZ);
       rightRail.userData.drawerPart = "slide-rail";
       drawerGroup.add(rightRail);
     }
@@ -509,6 +590,12 @@ export function createDrawerObject(
     const markerMaterial = new THREE.MeshStandardMaterial({
       color: 0xef4444,
       emissive: 0x7f1d1d,
+      roughness: 0.4,
+      metalness: 0.1,
+    });
+    const handleMarkerMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3b82f6,
+      emissive: 0x1e3a8a,
       roughness: 0.4,
       metalness: 0.1,
     });
@@ -532,6 +619,62 @@ export function createDrawerObject(
             : -(spec.frontThicknessM / 2 + (spec.bodyDepthM ?? spec.depthM) / 2) + hole.x / 1000;
         sphere.position.set(x, y, z);
         sphere.userData.drawerPart = "drill-marker";
+        drawerGroup.add(sphere);
+      }
+    }
+
+    if (spec.handleType && spec.handleType !== "Nenhum") {
+      const frontWidthMm = spec.widthM * 1000;
+      const frontHeightMm = spec.heightM * 1000;
+      const handleHoles = computeDrawerHandleHoles({
+        tipo: "gaveta_frente",
+        largura: frontWidthMm,
+        altura: frontHeightMm,
+        espessura: spec.frontThicknessM * 1000,
+        handleType: spec.handleType,
+        handleProfileId: spec.handleProfileId,
+        handleCenterDistanceMm: spec.handleCenterDistanceMm,
+        handlePosition: spec.handlePosition,
+        handlePositionPercent: spec.handlePositionPercent,
+        handleOffsetXMm: spec.handleOffsetXMm,
+        handleOffsetYMm: spec.handleOffsetYMm,
+        handleOffsetMm: (spec.handleOffsetM ?? 0) * 1000,
+      });
+      for (const hole of handleHoles) {
+        if (hole.holeSubtype === "groove") continue;
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 8), handleMarkerMaterial);
+        const x = hole.x / 1000 - frontWidthMm / 2000;
+        const y = frontHeightMm / 2000 - hole.y / 1000;
+        sphere.position.set(x, y, spec.frontThicknessM / 2 + 0.002);
+        sphere.userData.drawerPart = "handle-drill-marker";
+        drawerGroup.add(sphere);
+      }
+    }
+
+    if (isMetalBoxCatalogType(spec.metalBoxType)) {
+      const metalMarkerMaterial = new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        emissive: 0x14532d,
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+      const frontWidthMm = spec.widthM * 1000;
+      const frontHeightMm = spec.heightM * 1000;
+      const metalHoles = computeDrawerMetalBoxFrontHoles({
+        tipo: "gaveta_frente",
+        largura: frontWidthMm,
+        altura: frontHeightMm,
+        espessura: spec.frontThicknessM * 1000,
+        metalBoxType: spec.metalBoxType,
+        metalBoxProfileId: spec.metalBoxProfileId,
+        metalBoxHeightMm: spec.metalBoxHeightMm,
+      });
+      for (const hole of metalHoles) {
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 8), metalMarkerMaterial);
+        const x = hole.x / 1000 - frontWidthMm / 2000;
+        const y = frontHeightMm / 2000 - hole.y / 1000;
+        sphere.position.set(x, y, -spec.frontThicknessM / 2 - 0.002);
+        sphere.userData.drawerPart = "metal-fixation-drill-marker";
         drawerGroup.add(sphere);
       }
     }

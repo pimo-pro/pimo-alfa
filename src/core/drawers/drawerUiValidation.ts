@@ -3,6 +3,21 @@ import type { SettingsSchema } from "../settings/settingsSchema";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { canBoxHaveDrawers } from "./DrawerGenerationService";
 import { SOFT_CLOSE_COMPATIBLE_SLIDES } from "./drawerUiConstants";
+import {
+  isMetalBoxCatalogType,
+  resolveMetalBoxHeightMm,
+  resolveMetalBoxProfile,
+} from "./drawerMetalBoxCatalog";
+import { isErgonomicDrawerHeightMode } from "./drawerHeightModeTypes";
+import { calculateDrawerHeights } from "./DrawerGroup";
+import {
+  COMFORT_REACH_MAX_MM,
+  COMFORT_REACH_MIN_MM,
+  ERGONOMIC_MAX_DRAWER_HEIGHT_MM,
+  ERGONOMIC_MIN_DRAWER_HEIGHT_MM,
+  estimateDrawerCenterHeightsFromFloorMm,
+} from "./drawerErgonomicsHeights";
+import { resolveDrawerErgonomicsRules } from "./drawerErgonomicsContext";
 
 export type DrawerUiAlertLevel = "warning" | "error";
 
@@ -181,7 +196,36 @@ export function validateDrawerLayerItem(
     });
   }
 
-  if (metalBoxType !== "Nenhuma") {
+  if (isMetalBoxCatalogType(metalBoxType)) {
+    const profile = resolveMetalBoxProfile(
+      metalBoxType,
+      drawer.metadata?.metalBoxProfileId,
+      drawer.metadata?.metalBoxHeightMm
+    );
+    const metalHeight = profile
+      ? resolveMetalBoxHeightMm(profile, drawer.metadata?.metalBoxHeightMm)
+      : settings.gavetaAlturaCaixaMetalicaMm;
+    if (metalHeight > 0 && height < metalHeight) {
+      alerts.push({
+        level: "warning",
+        message: `Altura insuficiente para caixa metálica (${metalHeight} mm).`,
+        drawerId,
+      });
+    }
+    const compatibleDepths = profile?.compatibleDepthsMm ?? settings.gavetaProfundidadesCompativeisMm;
+    if (
+      settings.gavetaValidarProfundidadeCompativel &&
+      nominalDepth > 0 &&
+      compatibleDepths.length > 0 &&
+      !compatibleDepths.includes(nominalDepth)
+    ) {
+      alerts.push({
+        level: "warning",
+        message: `Profundidade ${nominalDepth} mm pode ser incompatível com ${metalBoxType}.`,
+        drawerId,
+      });
+    }
+  } else if (metalBoxType !== "Nenhuma") {
     if (
       settings.gavetaAlturaCaixaMetalicaMm > 0 &&
       height < settings.gavetaAlturaCaixaMetalicaMm
@@ -248,6 +292,68 @@ export function validateDrawerLayerItemWithIndex(
   ];
 }
 
+export function validateErgonomicDrawerHeights(
+  box: Pick<WorkspaceBox, "dimensoes" | "feetEnabled" | "feetHeight" | "pe_cm" | "drawerHeightMode" | "gavetas">,
+  settings: SettingsSchema["gavetas"]
+): DrawerUiAlert[] {
+  const count = box.gavetas ?? 0;
+  if (count <= 0) return [];
+
+  const mode = box.drawerHeightMode ?? settings.gavetaAlturaModoPadrao;
+  if (!isErgonomicDrawerHeightMode(mode)) return [];
+
+  const heights = calculateDrawerHeights(count, box.dimensoes.altura, mode, undefined, {
+    ergonomicsRules: resolveDrawerErgonomicsRules(),
+    minHeightMm: settings.gavetaAlturaMinimaMm,
+    maxHeightMm: settings.gavetaAlturaMaximaMm,
+  });
+  const alerts: DrawerUiAlert[] = [];
+
+  const minH = settings.gavetaAlturaMinimaMm ?? ERGONOMIC_MIN_DRAWER_HEIGHT_MM;
+  const maxH = settings.gavetaAlturaMaximaMm ?? ERGONOMIC_MAX_DRAWER_HEIGHT_MM;
+
+  heights.forEach((h, index) => {
+    if (h < minH - 0.5) {
+      alerts.push({
+        level: "warning",
+        message: `Gaveta ${index + 1}: altura ${Math.round(h)} mm abaixo do mínimo ergonómico (${minH} mm).`,
+      });
+    }
+    if (h > maxH + 0.5) {
+      alerts.push({
+        level: "warning",
+        message: `Gaveta ${index + 1}: altura ${Math.round(h)} mm acima do máximo (${maxH} mm).`,
+      });
+    }
+  });
+
+  const feetMm = box.feetEnabled !== false ? Number(box.feetHeight ?? (box.pe_cm ?? 10) * 10) : 0;
+  const rules = resolveDrawerErgonomicsRules();
+  const centers = estimateDrawerCenterHeightsFromFloorMm(
+    heights,
+    rules.baseCabinetHeightMm ?? box.dimensoes.altura,
+    feetMm
+  );
+  const comfortDrawer = centers.findIndex(
+    (c) => c >= COMFORT_REACH_MIN_MM && c <= COMFORT_REACH_MAX_MM
+  );
+  if (comfortDrawer < 0 && count >= 2) {
+    alerts.push({
+      level: "warning",
+      message: `Nenhuma gaveta centra na zona de alcance confortável (${COMFORT_REACH_MIN_MM}–${COMFORT_REACH_MAX_MM} mm).`,
+    });
+  }
+
+  if (heights.length > 0 && heights[heights.length - 1]! < minH * 1.1) {
+    alerts.push({
+      level: "warning",
+      message: "Gaveta inferior demasiado baixa — evitar zona de pegada desconfortável.",
+    });
+  }
+
+  return alerts;
+}
+
 export function validateBoxDrawerConfiguration(
   box: WorkspaceBox,
   settings: SettingsSchema["gavetas"]
@@ -262,6 +368,8 @@ export function validateBoxDrawerConfiguration(
   if (mode === "custom") {
     const heights = (box.drawersLayer ?? []).map((d) => d.height);
     alerts.push(...validateCustomDrawerHeights(heights, box.dimensoes.altura, settings));
+  } else if (isErgonomicDrawerHeightMode(mode)) {
+    alerts.push(...validateErgonomicDrawerHeights(box, settings));
   }
 
   for (let index = 0; index < (box.drawersLayer ?? []).length; index++) {

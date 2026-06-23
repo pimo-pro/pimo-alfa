@@ -8,6 +8,8 @@ import {
   type DrawerGenerationConfig,
 } from "../core/drawers";
 import { buildDrawerParametricOverridesList } from "../core/drawers/drawerParametricOverrides";
+import { resolveDrawerErgonomicsRules } from "../core/drawers/drawerErgonomicsContext";
+import { isErgonomicDrawerHeightMode } from "../core/drawers/drawerHeightModeTypes";
 import { devLogger } from "../utils/devLogger";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 import {
@@ -288,6 +290,9 @@ export function regenerateLayersForBox(
 
     const feetHeightMm = Math.max(40, box.feetHeight ?? (box.pe_cm ?? 10) * 10);
     const drawerOverrides = buildDrawerParametricOverridesList(box.drawersLayer, drawerCount);
+    const ergonomicsRules = isErgonomicDrawerHeightMode(mode)
+      ? resolveDrawerErgonomicsRules()
+      : undefined;
 
     const config: DrawerGenerationConfig = (() => {
       if (!shouldWardrobeLowerRightDrawers) {
@@ -305,6 +310,9 @@ export function regenerateLayersForBox(
           drawerSettings,
           materialId: defaultDrawerMaterial,
           drawerOverrides,
+          ergonomicsRules,
+          minDrawerHeightMm: drawerSettings.gavetaAlturaMinimaMm,
+          maxDrawerHeightMm: drawerSettings.gavetaAlturaMaximaMm,
         };
       }
 

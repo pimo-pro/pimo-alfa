@@ -75,6 +75,21 @@ describe("Geometria da gaveta no módulo", () => {
     });
   });
 
+  it("modos ergonómicos distribuem alturas sem sobreposição", () => {
+    for (const mode of ["ergonomic", "kitchen_zones", "auto"] as const) {
+      const heights = calculateDrawerHeights(3, boxH, mode);
+      const usable = getDrawerStackUsableHeightMm(boxH);
+      expect(sumDrawerFrontHeightsAndGaps(heights)).toBeLessThanOrEqual(usable + 0.5);
+      const slots = buildDrawerVerticalSlots(
+        heights,
+        boxH,
+        DRAWER_VERTICAL_BASE_OFFSET_MM,
+        resolveDrawerVerticalPosition
+      );
+      expect(drawerVerticalSlotsOverlap(slots)).toBe(false);
+    }
+  });
+
   it("posições Y batem com DrawerGroup e layers", () => {
     const group = generateDrawerGroup({
       boxWidth: boxW,

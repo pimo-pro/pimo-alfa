@@ -8,6 +8,7 @@ import {
   type PiSistemaGaveta,
   type PiTipoFrente,
 } from "../../data/moveisUnificados/pi/settings";
+import type { DrawerHeightMode } from "../drawers/drawerHeightModeTypes";
 
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -24,12 +25,17 @@ export type DrawerMetalBoxType =
   | "Nenhuma"
   | "Blum Legrabox"
   | "Blum Antaro"
+  | "Blum Metabox"
+  | "Hettich InnoTech"
+  | "Hettich ArciTech"
   | "Hettich AvanTech"
+  | "Grass Nova Pro"
+  | "Grass Vionaro"
   | "Hafele Alto"
   | "Genérica";
 
 export type DrawerHandleType = "Nenhum" | "Puxador" | "Cava" | "Perfil Alumínio";
-export type DrawerHandlePosition = "Centro" | "Topo" | "Inferior";
+export type DrawerHandlePosition = "Centro" | "Topo" | "Inferior" | "Percentual";
 
 export interface SettingsSchema {
   schemaVersion: number;
@@ -125,7 +131,7 @@ export interface SettingsSchema {
     gavetaValidarProfundidadeCompativel: boolean;
     gavetaValidarCargaMaxima: boolean;
     gavetaValidarSoftCloseCompativel: boolean;
-    gavetaAlturaModoPadrao: "equal" | "top_small_mid_medium_bottom_large" | "custom";
+    gavetaAlturaModoPadrao: DrawerHeightMode;
   };
   modeloPI: {
     espessuraMadeiraMm: number;

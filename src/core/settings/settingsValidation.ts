@@ -15,9 +15,29 @@ const DRAWER_SLIDE_TYPES = [
   "Hafele Matrix",
   "Genérica",
 ] as const;
-const DRAWER_METAL_BOX_TYPES = ["Nenhuma", "Blum Legrabox", "Blum Antaro", "Hettich AvanTech", "Hafele Alto", "Genérica"] as const;
+const DRAWER_METAL_BOX_TYPES = [
+  "Nenhuma",
+  "Blum Legrabox",
+  "Blum Antaro",
+  "Blum Metabox",
+  "Hettich InnoTech",
+  "Hettich ArciTech",
+  "Hettich AvanTech",
+  "Grass Nova Pro",
+  "Grass Vionaro",
+  "Hafele Alto",
+  "Genérica",
+] as const;
 const DRAWER_HANDLE_TYPES = ["Nenhum", "Puxador", "Cava", "Perfil Alumínio"] as const;
-const DRAWER_HANDLE_POSITIONS = ["Centro", "Topo", "Inferior"] as const;
+const DRAWER_HANDLE_POSITIONS = ["Centro", "Topo", "Inferior", "Percentual"] as const;
+const DRAWER_HEIGHT_MODE_VALUES = [
+  "equal",
+  "top_small_mid_medium_bottom_large",
+  "custom",
+  "ergonomic",
+  "kitchen_zones",
+  "auto",
+] as const;
 const DRAWER_LOAD_CAPACITIES = [30, 40, 50, 70] as const;
 
 function pickOption<T extends readonly string[]>(value: unknown, options: T, fallback: T[number]): T[number] {
@@ -236,10 +256,11 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       gavetaValidarProfundidadeCompativel: Boolean(merged.gavetas.gavetaValidarProfundidadeCompativel),
       gavetaValidarCargaMaxima: Boolean(merged.gavetas.gavetaValidarCargaMaxima),
       gavetaValidarSoftCloseCompativel: Boolean(merged.gavetas.gavetaValidarSoftCloseCompativel),
-      gavetaAlturaModoPadrao:
-        merged.gavetas.gavetaAlturaModoPadrao === "top_small_mid_medium_bottom_large" || merged.gavetas.gavetaAlturaModoPadrao === "custom"
-          ? merged.gavetas.gavetaAlturaModoPadrao
-          : "equal",
+      gavetaAlturaModoPadrao: pickOption(
+        merged.gavetas.gavetaAlturaModoPadrao,
+        DRAWER_HEIGHT_MODE_VALUES,
+        settingsDefaults.gavetas.gavetaAlturaModoPadrao
+      ),
     },
     modeloPI: {
       espessuraMadeiraMm: clamp(

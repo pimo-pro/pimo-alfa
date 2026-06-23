@@ -121,7 +121,9 @@ function buildXmlFromDrillHoles(
     const isVertical =
       hole.topDrillable === true ||
       hole.holeType === "corredica" ||
-      hole.holeType === "parafuso";
+      hole.holeType === "parafuso" ||
+      hole.holeType === "puxador" ||
+      hole.holeType === "fixacao_metalica";
     if (isVertical) {
       lines.push(" <CAD>");
       lines.push("  <TypeNo>1</TypeNo>");

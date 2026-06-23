@@ -15,6 +15,11 @@ import {
 } from "../../settings/settingsSchema";
 import { getSettings } from "../../settings/settingsService";
 import type { DrillFace } from "../../types";
+import {
+  isMetalBoxCatalogType,
+  normalizeDrawerMetalBoxType,
+  resolveMetalBoxProfile,
+} from "../drawerMetalBoxCatalog";
 
 export type DrawerDrillingMode = "drawer_piece" | "pi_module_lateral";
 
@@ -69,20 +74,11 @@ function clampMm(value: number, min: number, max?: number): number {
 }
 
 function normalizeMetalBoxType(value?: string): DrawerMetalBoxType {
-  const v = value ?? "Nenhuma";
-  const allowed: DrawerMetalBoxType[] = [
-    "Nenhuma",
-    "Blum Legrabox",
-    "Blum Antaro",
-    "Hettich AvanTech",
-    "Hafele Alto",
-    "Genérica",
-  ];
-  return (allowed as string[]).includes(v) ? (v as DrawerMetalBoxType) : "Nenhuma";
+  return normalizeDrawerMetalBoxType(value);
 }
 
 function isMetalBoxEnabled(metalBoxType?: string): boolean {
-  return normalizeMetalBoxType(metalBoxType) !== "Nenhuma";
+  return isMetalBoxCatalogType(metalBoxType);
 }
 
 function resolveSlideType(
@@ -106,11 +102,14 @@ export function getDrawerSlideDrillingRules(
   const resolvedMetal = normalizeMetalBoxType(metalBoxType ?? gavetas.gavetaTipoCaixaMetalica);
   const softClose = ctx.softClose === true;
   const metalEnabled = isMetalBoxEnabled(resolvedMetal);
+  const metalProfile = metalEnabled ? resolveMetalBoxProfile(resolvedMetal) : null;
 
   const offsetFrente =
-    BLUM_SLIDES.has(resolvedSlide) ? 37 : clampMm(cfg?.offsetFrente ?? 37, 5);
+    metalProfile?.slideOffsetFrontMm ??
+    (BLUM_SLIDES.has(resolvedSlide) ? 37 : clampMm(cfg?.offsetFrente ?? 37, 5));
   const offsetFundo =
-    BLUM_SLIDES.has(resolvedSlide) ? 37 : clampMm(cfg?.offsetFundo ?? 37, 5);
+    metalProfile?.slideOffsetRearMm ??
+    (BLUM_SLIDES.has(resolvedSlide) ? 37 : clampMm(cfg?.offsetFundo ?? 37, 5));
   const alturaRelativaFundo = clampMm(cfg?.alturaRelativaFundo ?? 37, 5);
   const offsetVerticalAdicional = clampMm(cfg?.offsetVerticalAdicional ?? 0, 0);
   const softCloseVerticalOffsetMm = softClose ? 2 : 0;
@@ -428,3 +427,15 @@ export function computeDrawerFrenteIntStructuralHoles(params: {
 
   return holes;
 }
+
+/** Furação de puxadores — módulo independente (ver DrawerHandleDrillingRules). */
+export {
+  computeDrawerHandleHoles,
+  type DrawerHandleDrillingInput,
+} from "./DrawerHandleDrillingRules";
+
+/** Furação da frente para caixas metálicas. */
+export {
+  computeDrawerMetalBoxFrontHoles,
+  type DrawerMetalBoxFrontDrillingInput,
+} from "./DrawerMetalBoxFrontDrilling";

@@ -48,6 +48,20 @@ export type DrawerLayerMetadata = {
   frontPieceName?: string;
   /** Nome do grupo da gaveta (prefixo industrial + viewer). */
   drawerGroupName?: string;
+  /** Perfil de puxador do catálogo (override do tipo). */
+  handleProfileId?: string;
+  /** Centro-centro dos furos do puxador (mm). */
+  handleCenterDistanceMm?: number;
+  /** Offset horizontal do puxador (mm, + = direita). */
+  handleOffsetXMm?: number;
+  /** Offset vertical do puxador (mm, + = para baixo). */
+  handleOffsetYMm?: number;
+  /** Posição percentual da altura (0–100, só com handlePosition Percentual). */
+  handlePositionPercent?: number;
+  /** Perfil de caixa metálica (catálogo). */
+  metalBoxProfileId?: string;
+  /** Altura nominal da caixa metálica (mm, lista do catálogo). */
+  metalBoxHeightMm?: number;
 };
 
 export interface DrawerLayerItem {

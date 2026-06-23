@@ -44,6 +44,14 @@ export function drawerParametricOverridesFromLayerItem(
     overrides.frontHeightMm = frontHeightMm;
   }
 
+  const metalBoxProfileId = meta?.metalBoxProfileId;
+  if (metalBoxProfileId) overrides.metalBoxProfileId = metalBoxProfileId;
+
+  const metalBoxHeightMm = meta?.metalBoxHeightMm;
+  if (metalBoxHeightMm != null && Number.isFinite(metalBoxHeightMm) && metalBoxHeightMm > 0) {
+    overrides.metalBoxHeightMm = metalBoxHeightMm;
+  }
+
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 

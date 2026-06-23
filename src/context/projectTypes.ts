@@ -153,6 +153,8 @@ export interface ProjectState {
 
   /** Orla V1 — catálogo de presets de orla do projeto. */
   orlaPresets: import("../core/orla/orlaTypes").OrlaPreset[];
+  /** Gavetas — catálogo de presets de configuração de gavetas do projeto. */
+  drawerPresets: import("../core/drawers/drawerPresetTypes").DrawerPreset[];
   /** Orla V1 — configuração por peça (chave = panelId estável). */
   orlaPieces: Record<string, import("../core/orla/orlaTypes").PieceOrlaConfig>;
   /** Orla V1 — pares de bordas partilhadas (Orla Junto). */
@@ -475,7 +477,7 @@ export interface ProjectActions {
   renameBox: (_nome: string) => void;
   setPrateleiras: (_quantidade: number) => void;
   setGavetas: (_quantidade: number) => void;
-  setDrawerHeightMode: (_mode: "equal" | "top_small_mid_medium_bottom_large" | "custom") => void;
+  setDrawerHeightMode: (_mode: import("../core/drawers/drawerHeightModeTypes").DrawerHeightMode) => void;
   setPortaTipo: (_portaTipo: BoxModule["portaTipo"]) => void;
   setTipoBorda: (_tipoBorda: TipoBorda) => void;
   setTipoFundo: (_tipoFundo: TipoFundo) => void;
@@ -657,6 +659,14 @@ export interface ProjectActions {
   upsertOrlaPreset: (_preset: import("../core/orla/orlaTypes").OrlaPreset) => void;
   /** Orla V1 — remove preset de orla (se não estiver em uso). */
   removeOrlaPreset: (_presetId: string) => void;
+  /** Gavetas — cria ou atualiza preset de gavetas no projecto. */
+  upsertDrawerPreset: (_preset: import("../core/drawers/drawerPresetTypes").DrawerPreset) => void;
+  /** Gavetas — remove preset de gavetas do catálogo. */
+  removeDrawerPreset: (_presetId: string) => void;
+  /** Gavetas — guarda configuração actual do caixote como preset. */
+  saveDrawerPresetFromBox: (_boxId: string, _nome: string) => void;
+  /** Gavetas — aplica preset ao caixote (regenera camadas por índice). */
+  applyDrawerPresetToBox: (_boxId: string, _presetId: string) => void;
   /** Remate 2.0 — cria peça independente (box ou standalone). */
   createRematePiece: (_input: CreateRematePieceInput) => void;
   /** Remate 2.0 — cria peça standalone a partir do catálogo MÓVEIS. */

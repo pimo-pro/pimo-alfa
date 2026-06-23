@@ -400,9 +400,16 @@ export function cutlistComPrecoFromBox(
         | {
             slideType?: string;
             metalBoxType?: string;
+            metalBoxProfileId?: string;
+            metalBoxHeightMm?: number;
             softClose?: boolean;
             handleType?: string;
-            handlePosition?: "Centro" | "Topo" | "Inferior";
+            handleProfileId?: string;
+            handleCenterDistanceMm?: number;
+            handlePosition?: "Centro" | "Topo" | "Inferior" | "Percentual";
+            handlePositionPercent?: number;
+            handleOffsetXMm?: number;
+            handleOffsetYMm?: number;
             handleOffsetMm?: number;
           }
         | undefined;
@@ -416,9 +423,16 @@ export function cutlistComPrecoFromBox(
           hasDrawers,
           slideType: drawerRules?.slideType,
           metalBoxType: drawerRules?.metalBoxType,
+          metalBoxProfileId: drawerRules?.metalBoxProfileId,
+          metalBoxHeightMm: drawerRules?.metalBoxHeightMm,
           softClose: drawerRules?.softClose,
           handleType: drawerRules?.handleType,
+          handleProfileId: drawerRules?.handleProfileId,
+          handleCenterDistanceMm: drawerRules?.handleCenterDistanceMm,
           handlePosition: drawerRules?.handlePosition,
+          handlePositionPercent: drawerRules?.handlePositionPercent,
+          handleOffsetXMm: drawerRules?.handleOffsetXMm,
+          handleOffsetYMm: drawerRules?.handleOffsetYMm,
           handleOffsetMm: drawerRules?.handleOffsetMm,
         },
         effRules

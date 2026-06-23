@@ -11,6 +11,7 @@ import { wallStore } from "../stores/wallStore";
 import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
 import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
+import { normalizeDrawerPresets } from "../core/drawers/drawerPresets";
 import {
   normalizeRematesFromPersistence,
   upgradeRematesAfterLoad,
@@ -192,6 +193,7 @@ export function reviveState(snapshot: unknown): ProjectState | null {
         ? normalizeProjectRoom(restored.room as import("../3d/viewer-engine/room/roomEngineTypes").ProjectRoomConfig)
         : null,
     orlaPresets: normalizeOrlaPresets(restored.orlaPresets),
+    drawerPresets: normalizeDrawerPresets(restored.drawerPresets),
     orlaPieces:
       restored.orlaPieces && typeof restored.orlaPieces === "object"
         ? { ...(restored.orlaPieces as ProjectState["orlaPieces"]) }

@@ -36,6 +36,7 @@ import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/
 import { createEmptyObjectGroups } from "../core/viewer/groupTypes";
 import { computeOrlaFerragem } from "../core/orla/orlaCalculator";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
+import { normalizeDrawerPresets } from "../core/drawers/drawerPresets";
 import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
 import { buildRodapeCutlistItems } from "../core/rodape/rodapeCutlist";
 
@@ -314,6 +315,7 @@ export const defaultState: ProjectState = {
   objectGroups: createEmptyObjectGroups(),
   room: null,
   orlaPresets: normalizeOrlaPresets(undefined),
+  drawerPresets: normalizeDrawerPresets(undefined),
   orlaPieces: {},
   orlaJuntoPairs: [],
   ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },

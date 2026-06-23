@@ -9,6 +9,18 @@ import {
   DRAWER_METAL_BOX_TYPES,
   DRAWER_SLIDE_TYPES,
 } from "../../core/drawers/drawerUiConstants";
+import {
+  getDefaultProfileForHandleType,
+  listProfilesForHandleType,
+  STANDARD_HANDLE_CENTER_DISTANCES_MM,
+} from "../../core/drawers/drawerHandleCatalog";
+import {
+  isMetalBoxCatalogType,
+  listMetalBoxProfilesForType,
+  pickCompatibleMetalDepth,
+  resolveMetalBoxHeightMm,
+  resolveMetalBoxProfile,
+} from "../../core/drawers/drawerMetalBoxCatalog";
 import { validateDrawerLayerItem } from "../../core/drawers/drawerUiValidation";
 import { resolveDrawerBodyHeightMm } from "../../core/drawers/drawerLayerCustomization";
 import type {
@@ -46,11 +58,18 @@ function buildDrawerConfigPatch(
     handleType: (patch.handleType ?? drawer.handleType) as DrawerHandleType | undefined,
     handlePosition: (patch.handlePosition ?? drawer.handlePosition) as DrawerHandlePosition | undefined,
     handleOffsetMm: patch.handleOffsetMm ?? drawer.handleOffsetMm,
+    handleProfileId: patch.metadata?.handleProfileId ?? drawer.metadata?.handleProfileId,
+    handleCenterDistanceMm: patch.metadata?.handleCenterDistanceMm ?? drawer.metadata?.handleCenterDistanceMm,
+    handleOffsetXMm: patch.metadata?.handleOffsetXMm ?? drawer.metadata?.handleOffsetXMm,
+    handleOffsetYMm: patch.metadata?.handleOffsetYMm ?? drawer.metadata?.handleOffsetYMm,
+    handlePositionPercent: patch.metadata?.handlePositionPercent ?? drawer.metadata?.handlePositionPercent,
     drawerType: (patch.type ?? patch.drawerType ?? drawer.type ?? drawer.drawerType) as
       | "normal"
       | "pro"
       | undefined,
     nominalDepth: patch.metadata?.nominalDepth ?? drawer.metadata?.nominalDepth,
+    metalBoxProfileId: patch.metadata?.metalBoxProfileId ?? drawer.metadata?.metalBoxProfileId,
+    metalBoxHeightMm: patch.metadata?.metalBoxHeightMm ?? drawer.metadata?.metalBoxHeightMm,
     frontMaterial: patch.material ?? patch.metadata?.frontMaterial ?? drawer.material,
     frontHeightMm: patch.metadata?.frontHeightMm ?? drawer.metadata?.frontHeightMm,
     frontPieceName: patch.metadata?.frontPieceName ?? drawer.metadata?.frontPieceName,
@@ -110,8 +129,32 @@ export default function DrawerConfigPanel({
   const drawerType = drawer.type ?? drawer.drawerType ?? "normal";
   const slideType = drawer.slideType ?? settings.gavetaTipoCorredica;
   const metalBoxType = drawer.metalBoxType ?? settings.gavetaTipoCaixaMetalica;
+  const metalProfile = isMetalBoxCatalogType(metalBoxType)
+    ? resolveMetalBoxProfile(
+        metalBoxType,
+        drawer.metadata?.metalBoxProfileId,
+        drawer.metadata?.metalBoxHeightMm
+      )
+    : null;
+  const metalHeightOptions = metalProfile?.allowedHeightsMm ?? [];
+  const metalHeightMm =
+    drawer.metadata?.metalBoxHeightMm ??
+    (metalProfile ? resolveMetalBoxHeightMm(metalProfile) : settings.gavetaAlturaCaixaMetalicaMm);
+  const depthOptions = metalProfile
+    ? metalProfile.compatibleDepthsMm
+    : settings.gavetaProfundidadesDisponiveisMm;
   const handleType = drawer.handleType ?? settings.gavetaTipoHandle;
   const handlePosition = drawer.handlePosition ?? settings.gavetaPosicaoHandle;
+  const handleProfileId =
+    drawer.metadata?.handleProfileId ?? getDefaultProfileForHandleType(handleType)?.id ?? "";
+  const handleCenterDistanceMm =
+    drawer.metadata?.handleCenterDistanceMm ??
+    getDefaultProfileForHandleType(handleType)?.defaultCenterDistanceMm ??
+    80;
+  const handleOffsetX = drawer.metadata?.handleOffsetXMm ?? 0;
+  const handleOffsetY = drawer.metadata?.handleOffsetYMm ?? drawer.handleOffsetMm ?? settings.gavetaOffsetHandleMm;
+  const handlePositionPercent = drawer.metadata?.handlePositionPercent ?? 50;
+  const profileOptions = listProfilesForHandleType(handleType);
   const nominalDepth = drawer.metadata?.nominalDepth ?? drawer.depth;
   const material = drawer.material ?? drawer.materialId ?? "";
   const bodyHeight = Math.round(resolveDrawerBodyHeightMm(drawer));
@@ -177,7 +220,29 @@ export default function DrawerConfigPanel({
             <select
               className="select select-xs"
               value={metalBoxType}
-              onChange={(e) => update({ metalBoxType: e.target.value as DrawerMetalBoxType })}
+              onChange={(e) => {
+                const nextType = e.target.value as DrawerMetalBoxType;
+                if (nextType === "Nenhuma") {
+                  update({ metalBoxType: nextType, metadata: { metalBoxProfileId: undefined, metalBoxHeightMm: undefined } });
+                  return;
+                }
+                const profiles = listMetalBoxProfilesForType(nextType);
+                const profile = profiles[0] ?? null;
+                const height = profile ? resolveMetalBoxHeightMm(profile) : settings.gavetaAlturaCaixaMetalicaMm;
+                const depth = profile
+                  ? pickCompatibleMetalDepth(profile, drawer.metadata?.nominalDepth ?? drawer.depth)
+                  : drawer.metadata?.nominalDepth ?? drawer.depth;
+                update({
+                  metalBoxType: nextType,
+                  slideType: profile?.defaultSlideType ?? drawer.slideType,
+                  bodyHeight: height,
+                  metadata: {
+                    metalBoxProfileId: profile?.id,
+                    metalBoxHeightMm: height,
+                    nominalDepth: depth,
+                  },
+                });
+              }}
             >
               {DRAWER_METAL_BOX_TYPES.map((option) => (
                 <option key={option} value={option}>
@@ -187,7 +252,69 @@ export default function DrawerConfigPanel({
             </select>
           </label>
 
-          {metalBoxType !== "Nenhuma" && (
+          {metalBoxType !== "Nenhuma" && metalProfile && (
+            <>
+              {listMetalBoxProfilesForType(metalBoxType).length > 1 && (
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Perfil / série</span>
+                  <select
+                    className="select select-xs"
+                    value={metalProfile.id}
+                    onChange={(e) => {
+                      const profile = listMetalBoxProfilesForType(metalBoxType).find((p) => p.id === e.target.value);
+                      if (!profile) return;
+                      const height = resolveMetalBoxHeightMm(profile, metalHeightMm);
+                      update({
+                        slideType: profile.defaultSlideType,
+                        bodyHeight: height,
+                        metadata: {
+                          metalBoxProfileId: profile.id,
+                          metalBoxHeightMm: height,
+                          nominalDepth: pickCompatibleMetalDepth(
+                            profile,
+                            drawer.metadata?.nominalDepth ?? drawer.depth
+                          ),
+                        },
+                      });
+                    }}
+                  >
+                    {listMetalBoxProfilesForType(metalBoxType).map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Altura da caixa (mm)</span>
+                <select
+                  className="select select-xs"
+                  value={metalHeightMm}
+                  onChange={(e) => {
+                    const height = Number(e.target.value) || metalHeightOptions[0];
+                    update({
+                      bodyHeight: height,
+                      metadata: { metalBoxHeightMm: height },
+                    });
+                  }}
+                >
+                  {metalHeightOptions.map((h) => (
+                    <option key={h} value={h}>
+                      {h} mm
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={alertStyle("warning")}>
+                Peças internas de madeira omitidas — apenas frente + caixa metálica ({metalProfile.brand}).
+              </div>
+            </>
+          )}
+
+          {metalBoxType !== "Nenhuma" && !metalProfile && (
             <div style={alertStyle("warning")}>
               Peças internas da gaveta serão omitidas (caixa metálica).
             </div>
@@ -207,7 +334,17 @@ export default function DrawerConfigPanel({
             <select
               className="select select-xs"
               value={handleType}
-              onChange={(e) => update({ handleType: e.target.value as DrawerHandleType })}
+              onChange={(e) => {
+                const nextType = e.target.value as DrawerHandleType;
+                const defaultProfile = getDefaultProfileForHandleType(nextType);
+                update({
+                  handleType: nextType,
+                  metadata: {
+                    handleProfileId: defaultProfile?.id,
+                    handleCenterDistanceMm: defaultProfile?.defaultCenterDistanceMm,
+                  },
+                });
+              }}
             >
               {DRAWER_HANDLE_TYPES.map((option) => (
                 <option key={option} value={option}>
@@ -219,8 +356,54 @@ export default function DrawerConfigPanel({
 
           {handleType !== "Nenhum" && (
             <>
+              {profileOptions.length > 1 && (
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Perfil de puxador</span>
+                  <select
+                    className="select select-xs"
+                    value={handleProfileId}
+                    onChange={(e) => {
+                      const profile = profileOptions.find((p) => p.id === e.target.value);
+                      update({
+                        metadata: {
+                          handleProfileId: e.target.value || undefined,
+                          handleCenterDistanceMm: profile?.defaultCenterDistanceMm,
+                        },
+                      });
+                    }}
+                  >
+                    {profileOptions.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {handleType === "Puxador" && (
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>CC (mm)</span>
+                  <select
+                    className="select select-xs"
+                    value={handleCenterDistanceMm}
+                    onChange={(e) =>
+                      update({
+                        metadata: { handleCenterDistanceMm: Number(e.target.value) || 80 },
+                      })
+                    }
+                  >
+                    {STANDARD_HANDLE_CENTER_DISTANCES_MM.map((cc) => (
+                      <option key={cc} value={cc}>
+                        {cc} mm
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
               <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Posição do puxador</span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Posição automática</span>
                 <select
                   className="select select-xs"
                   value={handlePosition}
@@ -230,20 +413,59 @@ export default function DrawerConfigPanel({
                 >
                   {DRAWER_HANDLE_POSITIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {option === "Percentual" ? "% da altura" : option}
                     </option>
                   ))}
                 </select>
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Offset puxador (mm)</span>
-                <input
-                  className="input input-xs"
-                  type="number"
-                  value={drawer.handleOffsetMm ?? settings.gavetaOffsetHandleMm}
-                  onChange={(e) => update({ handleOffsetMm: Number(e.target.value) || 0 })}
-                />
-              </label>
+
+              {handlePosition === "Percentual" && (
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>% da altura (topo→base)</span>
+                  <input
+                    className="input input-xs"
+                    type="number"
+                    min={5}
+                    max={95}
+                    value={handlePositionPercent}
+                    onChange={(e) =>
+                      update({
+                        metadata: { handlePositionPercent: Number(e.target.value) || 50 },
+                      })
+                    }
+                  />
+                </label>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Offset X (mm)</span>
+                  <input
+                    className="input input-xs"
+                    type="number"
+                    value={handleOffsetX}
+                    onChange={(e) =>
+                      update({
+                        metadata: { handleOffsetXMm: Number(e.target.value) || 0 },
+                      })
+                    }
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Offset Y (mm)</span>
+                  <input
+                    className="input input-xs"
+                    type="number"
+                    value={handleOffsetY}
+                    onChange={(e) =>
+                      update({
+                        handleOffsetMm: Number(e.target.value) || 0,
+                        metadata: { handleOffsetYMm: Number(e.target.value) || 0 },
+                      })
+                    }
+                  />
+                </label>
+              </div>
             </>
           )}
         </>
@@ -262,7 +484,7 @@ export default function DrawerConfigPanel({
             })
           }
         >
-          {settings.gavetaProfundidadesDisponiveisMm.map((depth) => (
+          {depthOptions.map((depth) => (
             <option key={depth} value={depth}>
               {depth} mm
             </option>
@@ -347,8 +569,17 @@ export default function DrawerConfigPanel({
       </label>
 
       <div className="muted-text" style={{ fontSize: 10 }}>
-        Corpo: {bodyHeight} mm · Frente: {Math.round(drawer.height)} mm · Profundidade:{" "}
-        {Math.round(drawer.depth)} mm
+        {metalProfile ? (
+          <>
+            Caixa metálica: {metalHeightMm} mm · Frente: {Math.round(drawer.height)} mm · Profundidade:{" "}
+            {Math.round(nominalDepth)} mm · Corrediça: {metalProfile.defaultSlideType}
+          </>
+        ) : (
+          <>
+            Corpo: {bodyHeight} mm · Frente: {Math.round(drawer.height)} mm · Profundidade:{" "}
+            {Math.round(drawer.depth)} mm
+          </>
+        )}
       </div>
     </div>
   );
