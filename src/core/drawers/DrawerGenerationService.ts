@@ -6,9 +6,11 @@
  */
 
 import { devLogger } from "../../utils/devLogger";
+import { settingsDefaults } from "../settings/settingsSchema";
 import {
   calculateDrawerSpecs,
   validateDrawerSpecs,
+  resolveDrawerBoxUsableDepthMm,
   type DrawerDimensions,
   type DrawerParametricOverrides,
   type DrawerParametricSettings,
@@ -47,6 +49,10 @@ export interface DrawerGenerationConfig {
   
   // Material
   materialId?: string;
+
+  /** Espessura da costa (regras) para cálculo da profundidade útil. */
+  espessuraCostaMm?: number;
+  costaAtiva?: boolean;
 
   /** Overrides UI por gaveta (metadata drawersLayer → geometria). */
   drawerOverrides?: Array<DrawerParametricOverrides | undefined>;
@@ -89,7 +95,11 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
   // Dimensões internas do box
   const boxInternalWidth = boxWidth - 2 * boxThickness;
   const boxInternalHeight = boxHeight;
-  const boxInternalDepth = boxDepth;
+  const boxInternalDepth = resolveDrawerBoxUsableDepthMm(boxDepth, boxThickness, {
+    clearanceMm:
+      drawerSettings?.gavetaRecuoProfundidadeCorredicaMm ??
+      settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm,
+  });
 
   // Calcula alturas das gavetas (distribuição proporcional)
   // Regra: altura corpo = (boxHeight / N) - 6mm
@@ -144,7 +154,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       {
         x: originX ?? 0,
         y: (originY ?? 0) + posY,
-        z: boxDepth / 2 - specs.front.thickness / 2,
+        z: boxDepth / 2 - specs.frontExt.thickness / 2,
       },
       effectiveDrawerType
     );
@@ -189,7 +199,7 @@ export function regenerateDrawerGroup(
     drawerType: config.drawerType ?? existingGroup.drawers[0]?.type ?? "normal",
     heightMode: config.heightMode ?? existingGroup.heightMode,
     customHeights: config.customHeights ?? existingGroup.customHeights,
-    availableDepths: config.availableDepths ?? [250, 300, 350, 400, 450, 500, 550, 600],
+    availableDepths: config.availableDepths ?? [350, 400, 450, 500, 550, 600],
     drawerSettings: config.drawerSettings,
     materialId: config.materialId ?? existingGroup.drawers[0]?.materialId,
     drawerOverrides: config.drawerOverrides,

@@ -398,7 +398,12 @@ export function createDrawerObject(
   }
   drawerGroup.add(frontExt);
 
-  if (spec.frontIntWidthM && spec.frontIntHeightM && spec.frontIntThicknessM) {
+  if (
+    isMetalBoxCatalogType(spec.metalBoxType) &&
+    spec.frontIntWidthM &&
+    spec.frontIntHeightM &&
+    (spec.frontIntThicknessM ?? 0) > 0.001
+  ) {
     const frontInt = panelFactory.createPanel(
       spec.frontIntWidthM,
       spec.frontIntHeightM,
@@ -504,8 +509,10 @@ export function createDrawerObject(
   }
 
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
-    const intThicknessM = spec.frontIntThicknessM ?? 0;
-    const bodyOffsetZ = -(spec.frontThicknessM + intThicknessM / 2 + spec.bodyDepthM / 2);
+    const structuralFrontM = isMetalBoxCatalogType(spec.metalBoxType)
+      ? (spec.frontIntThicknessM ?? 0)
+      : 0;
+    const bodyOffsetZ = -(spec.frontThicknessM + structuralFrontM + spec.bodyDepthM / 2);
     if (spec.metalBoxType && spec.metalBoxType !== "Nenhuma") {
       const metalProfile = resolveMetalBoxProfile(
         spec.metalBoxType,

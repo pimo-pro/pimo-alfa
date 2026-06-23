@@ -81,7 +81,7 @@ export function createDrawer(
 ): Drawer {
   // Dimensões das peças
   const extThickness = specs.frontExt.thickness;
-  const intThickness = specs.frontInt.thickness;
+  const intThickness = specs.metalBox.enabled ? specs.frontInt.thickness : 0;
   const combinedFrontThickness = extThickness + intThickness;
   const sideThickness = specs.leftSide.width;
   const bottomThickness = specs.bottom.thickness;
@@ -89,6 +89,8 @@ export function createDrawer(
   const bodyWidth = specs.body.width;
   const bodyHeight = specs.body.height;
   const bodyDepth = specs.body.depth;
+  const woodBackHeight = specs.back.height;
+  const bodyCenterOffsetY = specs.bodyCenterOffsetY;
 
   return {
     id,
@@ -132,7 +134,7 @@ export function createDrawer(
         height: specs.leftSide.height,
         depth: specs.leftSide.depth,
         positionX: -bodyWidth / 2 + sideThickness / 2,
-        positionY: 0,
+        positionY: bodyCenterOffsetY,
         positionZ: specs.positioning.bodyOffsetZ,
       },
       
@@ -143,7 +145,7 @@ export function createDrawer(
         height: specs.rightSide.height,
         depth: specs.rightSide.depth,
         positionX: bodyWidth / 2 - sideThickness / 2,
-        positionY: 0,
+        positionY: bodyCenterOffsetY,
         positionZ: specs.positioning.bodyOffsetZ,
       },
       
@@ -154,7 +156,7 @@ export function createDrawer(
         height: bottomThickness,
         depth: specs.bottom.height,
         positionX: 0,
-        positionY: -bodyHeight / 2 + bottomThickness / 2,
+        positionY: -woodBackHeight / 2 + bottomThickness / 2 + bodyCenterOffsetY,
         positionZ: specs.positioning.bodyOffsetZ,
       },
       
@@ -165,7 +167,7 @@ export function createDrawer(
         height: specs.back.height,
         depth: backThickness,
         positionX: 0,
-        positionY: 0,
+        positionY: bodyCenterOffsetY,
         positionZ: -combinedFrontThickness / 2 - bodyDepth + backThickness / 2,
       },
     },

@@ -6,7 +6,7 @@ import {
   drawerGroupToLayerItems,
   calculateDrawerSpecs,
 } from "../core/drawers";
-import { DRAWER_VERTICAL_GAP_MM } from "../core/drawers/drawerGeometryConstants";
+import { DRAWER_VERTICAL_GAP_MM, DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "../core/drawers/drawerGeometryConstants";
 import {
   buildDrawerVerticalSlots,
   drawerVerticalSlotsOverlap,
@@ -62,9 +62,10 @@ describe("Geometria da gaveta no módulo", () => {
 
       layers.forEach((layer, i) => {
         const drawer = group.drawers[i]!;
-        expect(layer.height).toBeCloseTo(drawer.specs.front.height, 1);
+        expect(layer.height).toBeCloseTo(drawer.specs.frontExt.height, 1);
         expect(layer.bodyHeight).toBeCloseTo(drawer.specs.body.height, 1);
-        expect(layer.height).toBeCloseTo(layer.bodyHeight!, 1);
+        expect(layer.height).toBeGreaterThan(layer.bodyHeight!);
+        expect(layer.height! - layer.bodyHeight!).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
         expect(layer.posZ).toBeCloseTo(boxD / 2 - layer.frontThickness / 2, 1);
         expect(layer.posX ?? 0).toBeCloseTo(0, 1);
         expect(layer.width).toBe(boxW - 2 * drawerSettings.gavetaFolgaFrenteMm);
@@ -112,13 +113,14 @@ describe("Geometria da gaveta no módulo", () => {
     });
   });
 
-  it("profundidade do corpo respeita limite interno do módulo", () => {
+  it("profundidade do corpo respeita cavidade útil (P − costa − frente)", () => {
+    const usableDepth = 560 - 10 - 19; // 531
     const specs = calculateDrawerSpecs(
       {
         boxInternalWidth: boxW - 2 * boxT,
         boxExternalWidth: boxW,
         boxInternalHeight: boxH,
-        boxInternalDepth: boxD,
+        boxInternalDepth: usableDepth,
         boxThickness: boxT,
         drawerHeight: 200,
         totalDrawers: 1,
@@ -127,14 +129,7 @@ describe("Geometria da gaveta no módulo", () => {
       drawerSettings.gavetaProfundidadesDisponiveisMm,
       drawerSettings
     );
-    const bodyBackZ =
-      boxD / 2 -
-      specs.front.thickness / 2 -
-      specs.front.thickness / 2 -
-      specs.body.depth;
-    expect(bodyBackZ).toBeGreaterThanOrEqual(-boxD / 2);
-    expect(specs.body.depth).toBeLessThanOrEqual(
-      boxD - specs.front.thickness - specs.runnerClearanceMm
-    );
+    expect(specs.body.depth).toBeLessThanOrEqual(usableDepth - specs.runnerClearanceMm);
+    expect(specs.frontExt.height - specs.body.height).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
   });
 });

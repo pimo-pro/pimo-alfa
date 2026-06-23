@@ -1,33 +1,33 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Certificação — regressão industrial (snapshots) > furação europeia na frente overlay — snapshot offsets 1`] = `
+exports[`Certificação — regressão industrial (snapshots) > furação europeia na lateral — snapshot offsets do rasgo 1`] = `
 [
   {
     "face": "B",
     "x": 37,
-    "y": 553,
+    "y": 541,
   },
   {
     "face": "B",
-    "x": 511,
-    "y": 553,
+    "x": 463,
+    "y": 541,
   },
 ]
 `;
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=1 > gera peças, dimensões e offsets consistentes 1`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 710,
+  "bodyDepth": 500,
+  "bodyHeight": 698,
   "bodyWidth": 548,
   "height": 710,
   "index": 0,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": 5,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -36,17 +36,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=2 > gera peças, dimensões e offsets consistentes 1`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 353,
+  "bodyDepth": 500,
+  "bodyHeight": 341,
   "bodyWidth": 548,
   "height": 353,
   "index": 0,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": -173.5,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -55,17 +55,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=2 > gera peças, dimensões e offsets consistentes 2`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 353,
+  "bodyDepth": 500,
+  "bodyHeight": 341,
   "bodyWidth": 548,
   "height": 353,
   "index": 1,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": 183.5,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -74,17 +74,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=3 > gera peças, dimensões e offsets consistentes 1`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 234,
+  "bodyDepth": 500,
+  "bodyHeight": 222,
   "bodyWidth": 548,
   "height": 234,
   "index": 0,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": -233,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -93,17 +93,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=3 > gera peças, dimensões e offsets consistentes 2`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 234,
+  "bodyDepth": 500,
+  "bodyHeight": 222,
   "bodyWidth": 548,
   "height": 234,
   "index": 1,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": 5,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -112,17 +112,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=3 > gera peças, dimensões e offsets consistentes 3`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 234,
+  "bodyDepth": 500,
+  "bodyHeight": 222,
   "bodyWidth": 548,
   "height": 234,
   "index": 2,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": 243,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -131,17 +131,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=4 > gera peças, dimensões e offsets consistentes 1`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 174.5,
+  "bodyDepth": 500,
+  "bodyHeight": 162.5,
   "bodyWidth": 548,
   "height": 174.5,
   "index": 0,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": -262.75,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -150,17 +150,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=4 > gera peças, dimensões e offsets consistentes 2`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 174.5,
+  "bodyDepth": 500,
+  "bodyHeight": 162.5,
   "bodyWidth": 548,
   "height": 174.5,
   "index": 1,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": -84.25,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -169,17 +169,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=4 > gera peças, dimensões e offsets consistentes 3`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 174.5,
+  "bodyDepth": 500,
+  "bodyHeight": 162.5,
   "bodyWidth": 548,
   "height": 174.5,
   "index": 2,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": 94.25,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,
@@ -188,17 +188,17 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
 
 exports[`Certificação — regressão industrial (snapshots) > gavetas normais — count=4 > gera peças, dimensões e offsets consistentes 4`] = `
 {
-  "bodyDepth": 521,
-  "bodyHeight": 174.5,
+  "bodyDepth": 500,
+  "bodyHeight": 162.5,
   "bodyWidth": 548,
   "height": 174.5,
   "index": 3,
   "metalBoxType": "Nenhuma",
-  "nominalDepth": 550,
+  "nominalDepth": 500,
   "posX": 0,
   "posY": 272.75,
   "posZ": 270.5,
-  "pullDistanceMm": 521,
+  "pullDistanceMm": 500,
   "slideType": "Genérica",
   "softClose": true,
   "width": 598,

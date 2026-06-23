@@ -11,7 +11,7 @@ import { buildDrawerParametricOverridesList } from "../core/drawers/drawerParame
 import { resolveDrawerErgonomicsRules } from "../core/drawers/drawerErgonomicsContext";
 import { isErgonomicDrawerHeightMode } from "../core/drawers/drawerHeightModeTypes";
 import { devLogger } from "../utils/devLogger";
-import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
+import { getDefaultOfficialMaterial, resolveCostaThicknessMm } from "../core/materials/materials.api";
 import {
   computeWardrobeLocalLayout,
   getWardrobeDoorCountForWidth,
@@ -79,6 +79,8 @@ export const applyDrawerTypeRules = (
     availableDepths: drawerSettings.gavetaProfundidadesDisponiveisMm,
     drawerSettings,
     materialId: drawer.materialId,
+    espessuraCostaMm: resolveCostaThicknessMm(box),
+    costaAtiva: box.costaAtiva,
   };
 
   const group = generateDrawerGroup(config);
@@ -277,6 +279,8 @@ export function regenerateLayersForBox(
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";
     const mode = box.drawerHeightMode ?? drawerSettings.gavetaAlturaModoPadrao;
+    const espessuraCostaMm = resolveCostaThicknessMm(box);
+    const costaAtiva = box.costaAtiva;
     const customHeights =
       mode === "custom"
         ? (box.drawersLayer ?? []).map((item) => item.bodyHeight ?? item.height)
@@ -313,6 +317,8 @@ export function regenerateLayersForBox(
           ergonomicsRules,
           minDrawerHeightMm: drawerSettings.gavetaAlturaMinimaMm,
           maxDrawerHeightMm: drawerSettings.gavetaAlturaMaximaMm,
+          espessuraCostaMm,
+          costaAtiva,
         };
       }
 
@@ -340,6 +346,8 @@ export function regenerateLayersForBox(
         originY: layout.drawerOriginYLocal_mm ?? 0,
         customHeights: undefined,
         drawerOverrides,
+        espessuraCostaMm,
+        costaAtiva,
       };
     })();
 

@@ -28,11 +28,13 @@ export function resolveDrawerInternalFrontHeightMm(item: DrawerLayerItem): numbe
 }
 
 /**
- * Altura da frente externa decorativa: override UI (frontHeightMm) ou altura do corpo.
+ * Altura da frente externa decorativa: override UI (frontHeightMm) ou layer.height (overlay).
  */
 export function resolveDrawerExternalFrontHeightMm(item: DrawerLayerItem): number {
   const override = item.metadata?.frontHeightMm;
   if (override != null && Number.isFinite(override) && override > 0) return override;
+  const front = Number(item.height);
+  if (Number.isFinite(front) && front > 0) return front;
   return resolveDrawerBodyHeightMm(item);
 }
 

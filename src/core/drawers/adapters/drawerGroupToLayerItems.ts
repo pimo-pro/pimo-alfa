@@ -65,6 +65,7 @@ export function drawerToLayerItem(drawer: Drawer): DrawerLayerItem {
     bodyWidth: specs.body.width,
     bodyHeight: specs.body.height,
     bodyDepth: specs.body.depth,
+    bodyCenterOffsetY: specs.bodyCenterOffsetY,
     
     // Laterais
     leftSideWidth: specs.leftSide.width,

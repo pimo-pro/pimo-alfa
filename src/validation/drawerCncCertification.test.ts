@@ -51,8 +51,8 @@ describe("Certificação CNC — peças de gaveta", () => {
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
 
-    expect(drawerPieces).toHaveLength(6);
-    expect(new Set(drawerPieces.map((p) => p.tipo)).size).toBe(6);
+    expect(drawerPieces).toHaveLength(5);
+    expect(new Set(drawerPieces.map((p) => p.tipo)).size).toBe(5);
 
     const frontExt = drawerPieces.find((p) => p.tipo === "gaveta_frente_ext");
     expect(frontExt?.espessura).toBe(19);
@@ -61,14 +61,11 @@ describe("Certificação CNC — peças de gaveta", () => {
     expect(frontExt?.dimensoes.largura).toBe(598);
     expect(frontExt?.dimensoes.altura).toBeGreaterThan(0);
 
-    const frontInt = drawerPieces.find((p) => p.tipo === "gaveta_frente_int");
-    expect(frontInt?.espessura).toBe(16);
-    expect(frontInt?.nome).toMatch(/_gav_frent_int_01$/);
-
     const lat = drawerPieces.find((p) => p.tipo === "gaveta_lat_esq");
     expect(lat?.espessura).toBe(16);
     expect(lat?.nome).toMatch(/_gav_lat_esq_01$/);
     expect(lat?.grainDirection).toBe("XX");
+    expect(lat?.dimensoes.altura).toBeLessThan(frontExt!.dimensoes.altura);
 
     const fundo = drawerPieces.find((p) => p.tipo === "gaveta_fundo");
     expect(fundo?.espessura).toBe(10);
@@ -148,7 +145,7 @@ describe("Certificação CNC — peças de gaveta", () => {
 
     expect(pieces.length).toBeGreaterThan(0);
     pieces.forEach((p) => {
-      expect(p.partName).toMatch(/_gav_(frent_int|frent_ext|lat_esq|lat_dir|fun|cost)_\d{2}$/);
+      expect(p.partName).toMatch(/_gav_(frent_ext|lat_esq|lat_dir|fun|cost)_\d{2}$/);
       expect(p.largura_mm).toBeGreaterThan(0);
       expect(p.altura_mm).toBeGreaterThan(0);
     });

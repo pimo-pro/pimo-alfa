@@ -97,6 +97,8 @@ export interface DrawerLayerItem {
   bodyWidth?: number;
   bodyHeight?: number;
   bodyDepth?: number;
+  /** Centro vertical do corpo (laterais/costa) relativamente à frente. */
+  bodyCenterOffsetY?: number;
   // Dimensões das peças individuais (calculadas automaticamente)
   leftSideWidth?: number;
   leftSideHeight?: number;

@@ -3,11 +3,12 @@ import { buildPanelDrillingResult } from "../modules/drilling/drillingAdapter";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { drawerGroupToLayerItems, generateDrawerGroup } from "../core/drawers";
+import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "../core/drawers/drawerGeometryConstants";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 import { drawerLayerItemToCutList } from "../services/drawerCutlistAdapter";
 
-describe("Fase 5 — frente interna + externa", () => {
-  it("cutlist madeira emite gaveta_frente_int e gaveta_frente_ext", () => {
+describe("Fase 5 — frente externa + interna (metálica)", () => {
+  it("cutlist madeira — 5 peças sem frente interna", () => {
     const group = generateDrawerGroup({
       boxWidth: 600,
       boxHeight: 400,
@@ -19,34 +20,34 @@ describe("Fase 5 — frente interna + externa", () => {
       heightMode: "equal",
       availableDepths: settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm,
       drawerSettings: settingsDefaults.gavetas,
+      espessuraCostaMm: 10,
+      costaAtiva: true,
     });
     const [layer] = drawerGroupToLayerItems(group);
     const cutlist = drawerLayerItemToCutList(layer, 0, "mdf_branco", "Modulo_A");
     const tipos = cutlist.map((p) => p.tipo);
 
-    expect(tipos).toContain("gaveta_frente_int");
+    expect(cutlist).toHaveLength(5);
     expect(tipos).toContain("gaveta_frente_ext");
+    expect(tipos).not.toContain("gaveta_frente_int");
     expect(tipos).not.toContain("gaveta_frente");
 
-    const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int")!;
     const frontExt = cutlist.find((p) => p.tipo === "gaveta_frente_ext")!;
-    expect(frontInt.dimensoes.altura).toBeLessThanOrEqual(frontExt.dimensoes.altura);
+    const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq")!;
+    expect(frontExt.dimensoes.altura - lat.dimensoes.altura).toBeCloseTo(
+      DRAWER_BODY_HEIGHT_BELOW_FRONT_MM,
+      0
+    );
     expect(frontExt.metadata?.drawerRules).toMatchObject({ handleType: "Nenhum" });
-    expect(frontInt.metadata?.drawerRules).toMatchObject({
-      slideType: layer.slideType,
-      metalBoxType: "Nenhuma",
-    });
   });
 
-  it("furação: estrutural na int, puxador na ext", () => {
-    const intResult = buildPanelDrillingResult(
+  it("furação madeira — estrutural nas laterais, puxador na ext", () => {
+    const latResult = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente_int",
+        tipo: "gaveta_lat_esq",
         larguraMm: 500,
         alturaMm: 200,
         espessuraMm: 16,
-        slideType: "Genérica",
-        metalBoxType: "Nenhuma",
       },
       defaultRulesConfig
     );
@@ -54,7 +55,7 @@ describe("Fase 5 — frente interna + externa", () => {
       {
         tipo: "gaveta_frente_ext",
         larguraMm: 562,
-        alturaMm: 198,
+        alturaMm: 215,
         espessuraMm: 19,
         handleType: "Puxador",
         handleCenterDistanceMm: 96,
@@ -63,15 +64,14 @@ describe("Fase 5 — frente interna + externa", () => {
       defaultRulesConfig
     );
 
-    const intHoles = intResult.data?.drillHoles ?? [];
+    const latHoles = latResult.data?.drillHoles ?? [];
     const extHoles = extResult.data?.drillHoles ?? [];
-    expect(intHoles.some((h) => h.holeType === "fixacao_estrutural")).toBe(true);
-    expect(intHoles.some((h) => h.holeType === "puxador")).toBe(false);
+    expect(latHoles.some((h) => h.holeSubtype === "groove")).toBe(true);
     expect(extHoles.filter((h) => h.holeType === "puxador")).toHaveLength(2);
     expect(extHoles.some((h) => h.holeType === "fixacao_estrutural")).toBe(false);
   });
 
-  it("Blum Legrabox — int com fixação metálica, ext decorativa", () => {
+  it("Blum Legrabox — int + ext apenas", () => {
     const settings = {
       ...settingsDefaults.gavetas,
       gavetaTipoCaixaMetalica: "Blum Legrabox" as const,
@@ -89,6 +89,8 @@ describe("Fase 5 — frente interna + externa", () => {
       availableDepths: settings.gavetaProfundidadesDisponiveisMm,
       drawerSettings: settings,
       drawerOverrides: [{ metalBoxType: "Blum Legrabox", metalBoxHeightMm: 128, nominalDepthMm: 500 }],
+      espessuraCostaMm: 10,
+      costaAtiva: true,
     });
     const [layer] = drawerGroupToLayerItems(group);
     layer.handleType = "Puxador";
@@ -99,10 +101,15 @@ describe("Fase 5 — frente interna + externa", () => {
     };
 
     const cutlist = drawerLayerItemToCutList(layer, 0, "mdf_branco", "Modulo_B");
-    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
+    expect(cutlist.map((p) => p.tipo).sort()).toEqual([
+      "gaveta_frente_ext",
+      "gaveta_frente_int",
+      "gaveta_fundo",
+      "gaveta_traseira",
+    ]);
 
-    const frontInt = cutlist[0];
-    const frontExt = cutlist[1];
+    const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int")!;
+    const frontExt = cutlist.find((p) => p.tipo === "gaveta_frente_ext")!;
     const intDrilled = buildPanelDrillingResult(
       {
         tipo: frontInt.tipo,

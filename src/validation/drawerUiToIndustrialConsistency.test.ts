@@ -135,7 +135,7 @@ describe("Certificação — consistência UI → Industrial", () => {
     const box = minimalBoxWithDrawers(layers, { gavetas: 3 });
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    expect(drawerPieces).toHaveLength(18);
+    expect(drawerPieces).toHaveLength(15);
     const ids = new Set(drawerPieces.map((p) => p.id));
     expect(ids.size).toBe(drawerPieces.length);
   });

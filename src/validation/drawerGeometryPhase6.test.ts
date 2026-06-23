@@ -27,7 +27,7 @@ describe("FASE 6 — geometria industrial + overrides UI", () => {
 
     expect(specs.nominalDepthMm).toBe(550);
     expect(specs.runnerClearanceMm).toBe(25);
-    expect(specs.body.depth).toBe(516);
+    expect(specs.body.depth).toBe(550);
   });
 
   it("aplica metadata.nominalDepth como override de profundidade", () => {
@@ -39,7 +39,7 @@ describe("FASE 6 — geometria industrial + overrides UI", () => {
     );
 
     expect(specs.nominalDepthMm).toBe(400);
-    expect(specs.body.depth).toBe(380);
+    expect(specs.body.depth).toBe(400);
   });
 
   it("aplica overrides UI de slideType, metalBox e softClose", () => {
@@ -77,7 +77,7 @@ describe("FASE 6 — geometria industrial + overrides UI", () => {
     });
 
     const [layer] = drawerGroupToLayerItems(group);
-    expect(layer.bodyDepth).toBe(430);
+    expect(layer.bodyDepth).toBe(450);
     expect(layer.slideType).toBe("Hettich InnoTech");
     expect(layer.metadata?.nominalDepth).toBe(450);
   });

@@ -10,6 +10,11 @@ import {
   pickCompatibleMetalDepth,
   resolveMetalBoxProfile,
 } from "../core/drawers/drawerMetalBoxCatalog";
+import {
+  isDrawerSlideLengthMm,
+  resolveDrawerSlideLength,
+  resolveDrawerUsableDepthMm,
+} from "../core/drawers/drawerSlideDepth";
 import { generateDrawerGroup, drawerGroupToLayerItems } from "../core/drawers";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
@@ -149,21 +154,25 @@ describe("Certificação — stress tests (robustez)", () => {
 
       const layers = drawerGroupToLayerItems(group);
       expect(layers).toHaveLength(2);
+      const usable = resolveDrawerUsableDepthMm(
+        560,
+        19,
+        DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm
+      );
       const metalProfile =
         metalBox !== "Nenhuma" ? resolveMetalBoxProfile(metalBox) : null;
       const effectiveNominal = metalProfile
-        ? pickCompatibleMetalDepth(metalProfile, Math.min(nominalDepthMm, 560))
+        ? pickCompatibleMetalDepth(metalProfile, Math.min(nominalDepthMm, usable))
         : nominalDepthMm;
-      expect(layers[0].bodyDepth).toBe(
-        Math.min(
-          effectiveNominal - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm,
-          560 - 19 - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm
-        )
-      );
+      const capped = Math.min(effectiveNominal, usable);
+      const expectedBody = isDrawerSlideLengthMm(capped)
+        ? capped
+        : resolveDrawerSlideLength(capped);
+      expect(layers[0].bodyDepth).toBe(expectedBody);
       expect(layers[0].slideType).toBe(slideType);
 
       const overrides = drawerParametricOverridesFromLayerItem(layers[0]);
-      expect(overrides?.nominalDepthMm).toBe(effectiveNominal);
+      expect(overrides?.nominalDepthMm).toBe(expectedBody);
       expect(overrides?.slideType).toBe(slideType);
     }
   });
@@ -216,8 +225,13 @@ describe("Certificação — stress tests (robustez)", () => {
         runnerClearanceMm: clearance,
         drawerOverrides: [{ nominalDepthMm: nominal }],
       });
-      expect(layers[0].bodyDepth).toBe(nominal - clearance);
-      expect(layers[0].metadata?.nominalDepth).toBe(nominal);
+      const usable = resolveDrawerUsableDepthMm(650, 19, clearance);
+      const capped = Math.min(nominal, usable);
+      const expectedBody = isDrawerSlideLengthMm(capped)
+        ? capped
+        : resolveDrawerSlideLength(capped);
+      expect(layers[0].bodyDepth).toBe(expectedBody);
+      expect(layers[0].metadata?.nominalDepth).toBe(expectedBody);
     }
   });
 });

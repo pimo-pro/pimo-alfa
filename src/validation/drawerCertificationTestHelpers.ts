@@ -62,6 +62,8 @@ export function buildDrawerScenario(config: DrawerScenarioConfig) {
     drawerOverrides: config.drawerOverrides,
     originX: config.originX,
     originY: config.originY,
+    espessuraCostaMm: 10,
+    costaAtiva: true,
   };
 
   const group = generateDrawerGroup(genConfig);

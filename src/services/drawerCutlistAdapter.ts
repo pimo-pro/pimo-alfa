@@ -106,6 +106,7 @@ export type DrawerIndustrialBom = {
 export const DRAWER_FRONT_USES_BODY_THICKNESS = true;
 export const DRAWER_BACK_THICKNESS_MM = 16;
 export const DRAWER_BOTTOM_THICKNESS_MM = 10;
+export const DRAWER_METAL_BOTTOM_THICKNESS_MM = 16;
 
 function resolveDrawerExternalFrontThicknessMm(item: DrawerLayerItem): number {
   const fromLayer = Number(item.frontThickness);
@@ -190,8 +191,10 @@ export function drawerLayerItemToCutList(
   const sideMaterial = resolveDrawerSideMaterial(materialContext.bodyMaterialId);
   const sideThickness = DRAWER_SIDE_THICKNESS_MM;
   const backThickness = DRAWER_BACK_THICKNESS_MM;
-  const bottomThickness =
-    Number.isFinite(item.bottomThickness) && (item.bottomThickness ?? 0) > 0
+  const hasMetalBox = item.metalBoxType != null && item.metalBoxType !== "Nenhuma";
+  const bottomThickness = hasMetalBox
+    ? DRAWER_METAL_BOTTOM_THICKNESS_MM
+    : Number.isFinite(item.bottomThickness) && (item.bottomThickness ?? 0) > 0
       ? Number(item.bottomThickness)
       : DRAWER_BOTTOM_THICKNESS_MM;
   const bottomMaterial = resolveDrawerBottomMaterial(
@@ -205,7 +208,6 @@ export function drawerLayerItemToCutList(
   const pieces: CutListItem[] = [];
 
   const baseId = `${item.parentBoxId}-drawer-${drawerIndex}`;
-  const hasMetalBox = item.metalBoxType != null && item.metalBoxType !== "Nenhuma";
   const metalProfile = hasMetalBox
     ? resolveMetalBoxProfile(
         item.metalBoxType,
@@ -269,69 +271,70 @@ export function drawerLayerItemToCutList(
     handleOffsetXMm: item.metadata?.handleOffsetXMm,
     handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
     handleOffsetMm: item.handleOffsetMm ?? 0,
+    slideType: item.slideType ?? "Genérica",
+    softClose: Boolean(item.softClose),
+    metalBoxType: item.metalBoxType ?? "Nenhuma",
   };
 
-  // FRENTE INTERNA — estrutural (FRENTE_INT.xml / fixação metálica)
-  pieces.push(
-    withDrawerIndustrialMeta(
-      {
-        id: `${baseId}-front-int`,
-        nome: `Gaveta ${drawerIndex1Based} - Frente Interna`,
-        quantidade: 1,
-        dimensoes: {
-          largura: internalFrontWidthMm,
-          altura: internalFrontHeightMm,
-          profundidade: internalFrontThicknessMm,
-        },
-        espessura: internalFrontThicknessMm,
-        material: sideMaterial.label,
-        tipo: "gaveta_frente_int",
-        sourceType: "parametric",
-        boxId: item.parentBoxId,
-        materialId: sideMaterial.materialId,
-        grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_int" }),
-        metadata: {
-          drawerHardware,
-          drawerRules: structuralDrawerRules,
-        },
+  const externalFrontPiece = withDrawerIndustrialMeta(
+    {
+      id: `${baseId}-front-ext`,
+      nome: `Gaveta ${drawerIndex1Based} - Frente Externa`,
+      quantidade: 1,
+      dimensoes: {
+        largura: item.width,
+        altura: externalFrontHeightMm,
+        profundidade: externalFrontThicknessMm,
       },
-      item,
-      safeBoxName,
-      drawerIndex1Based
-    )
+      espessura: externalFrontThicknessMm,
+      material: frontMaterialLabel,
+      tipo: "gaveta_frente_ext",
+      sourceType: "parametric",
+      boxId: item.parentBoxId,
+      materialId: frontOfficial?.canonicalId ?? frontMaterialId,
+      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_ext" }),
+      metadata: {
+        drawerHardware,
+        drawerRules: decorativeDrawerRules,
+      },
+    },
+    item,
+    safeBoxName,
+    drawerIndex1Based
   );
 
-  // FRENTE EXTERNA — decorativa (overlay + puxador)
-  pieces.push(
-    withDrawerIndustrialMeta(
-      {
-        id: `${baseId}-front-ext`,
-        nome: `Gaveta ${drawerIndex1Based} - Frente Externa`,
-        quantidade: 1,
-        dimensoes: {
-          largura: item.width,
-          altura: externalFrontHeightMm,
-          profundidade: externalFrontThicknessMm,
-        },
-        espessura: externalFrontThicknessMm,
-        material: frontMaterialLabel,
-        tipo: "gaveta_frente_ext",
-        sourceType: "parametric",
-        boxId: item.parentBoxId,
-        materialId: frontOfficial?.canonicalId ?? frontMaterialId,
-        grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_ext" }),
-        metadata: {
-          drawerHardware,
-          drawerRules: decorativeDrawerRules,
-        },
+  const internalFrontPiece = withDrawerIndustrialMeta(
+    {
+      id: `${baseId}-front-int`,
+      nome: `Gaveta ${drawerIndex1Based} - Frente Interna`,
+      quantidade: 1,
+      dimensoes: {
+        largura: internalFrontWidthMm,
+        altura: internalFrontHeightMm,
+        profundidade: internalFrontThicknessMm,
       },
-      item,
-      safeBoxName,
-      drawerIndex1Based
-    )
+      espessura: internalFrontThicknessMm,
+      material: sideMaterial.label,
+      tipo: "gaveta_frente_int",
+      sourceType: "parametric",
+      boxId: item.parentBoxId,
+      materialId: sideMaterial.materialId,
+      grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_int" }),
+      metadata: {
+        drawerHardware,
+        drawerRules: structuralDrawerRules,
+      },
+    },
+    item,
+    safeBoxName,
+    drawerIndex1Based
   );
 
-  if (hasMetalBox) return pieces;
+  if (hasMetalBox) {
+    pieces.push(internalFrontPiece);
+  }
+
+  pieces.push(externalFrontPiece);
 
   const hasLeftSide =
     (item.leftSideWidth ?? 0) > 0 ||
@@ -342,8 +345,8 @@ export function drawerLayerItemToCutList(
     (item.rightSideHeight ?? 0) > 0 ||
     (item.rightSideDepth ?? 0) > 0;
 
-  // LATERAL ESQUERDA (1×)
-  if (hasLeftSide) {
+  // LATERAL ESQUERDA (1×) — só gaveta de madeira
+  if (!hasMetalBox && hasLeftSide) {
     pieces.push(
       withDrawerIndustrialMeta(
         {
@@ -370,8 +373,8 @@ export function drawerLayerItemToCutList(
     );
   }
 
-  // LATERAL DIREITA (1×)
-  if (hasRightSide) {
+  // LATERAL DIREITA (1×) — só gaveta de madeira
+  if (!hasMetalBox && hasRightSide) {
     pieces.push(
       withDrawerIndustrialMeta(
         {

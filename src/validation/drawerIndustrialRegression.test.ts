@@ -11,6 +11,10 @@ import {
 import { resolveDrawerVerticalPositions } from "../core/drawers/drawerVerticalPosition";
 import { calculateDrawerHeights } from "../core/drawers/DrawerGroup";
 import {
+  resolveDrawerSlideLength,
+  resolveDrawerUsableDepthMm,
+} from "../core/drawers/drawerSlideDepth";
+import {
   buildDrawerScenario,
   buildWardrobeHjDrawerScenario,
   countDrawerPiecesByTipo,
@@ -39,18 +43,18 @@ describe("Certificação — regressão industrial (snapshots)", () => {
         expect(layer.posY).toBe(group.drawers[i].position.y);
         expect(layer.posY).toBeCloseTo(positions[i], 0);
         expect(layer.width).toBe(598);
-        expect(layer.bodyDepth).toBe(521);
-        expect(layer.pullDistanceMm).toBe(521);
+        expect(layer.bodyDepth).toBe(500);
+        expect(layer.pullDistanceMm).toBe(500);
         expect(snapshotDrawerLayer(layer, i)).toMatchSnapshot();
       });
 
       const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
       const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-      expect(drawerPieces).toHaveLength(drawerCount * 6);
+      expect(drawerPieces).toHaveLength(drawerCount * 5);
 
       const counts = countDrawerPiecesByTipo(drawerPieces.map((p) => p.tipo));
-      expect(counts.gaveta_frente_int).toBe(drawerCount);
       expect(counts.gaveta_frente_ext).toBe(drawerCount);
+      expect(counts.gaveta_frente_int ?? 0).toBe(0);
       expect(counts.gaveta_lat_esq).toBe(drawerCount);
       expect(counts.gaveta_lat_dir).toBe(drawerCount);
       expect(counts.gaveta_fundo).toBe(drawerCount);
@@ -59,7 +63,7 @@ describe("Certificação — regressão industrial (snapshots)", () => {
   });
 
   describe.each([1, 2])("gavetas metálicas — count=%i", (drawerCount) => {
-    it("só gera frente e ferragens de caixa metálica", () => {
+    it("gera 4 peças de madeira + ferragens de caixa metálica", () => {
       const { layers } = buildDrawerScenario({
         boxWidth: 600,
         boxHeight: 600,
@@ -70,8 +74,12 @@ describe("Certificação — regressão industrial (snapshots)", () => {
 
       const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
       const tipos = cutlist.map((p) => p.tipo);
-      expect(tipos.every((t) => t === "gaveta_frente_int" || t === "gaveta_frente_ext")).toBe(true);
-      expect(tipos).toHaveLength(drawerCount * 2);
+      expect(tipos).toHaveLength(drawerCount * 4);
+      expect(tipos.every((t) => t !== "gaveta_lat_esq" && t !== "gaveta_lat_dir")).toBe(true);
+      expect(tipos.filter((t) => t === "gaveta_frente_int")).toHaveLength(drawerCount);
+      expect(tipos.filter((t) => t === "gaveta_frente_ext")).toHaveLength(drawerCount);
+      expect(tipos.filter((t) => t === "gaveta_fundo")).toHaveLength(drawerCount);
+      expect(tipos.filter((t) => t === "gaveta_traseira")).toHaveLength(drawerCount);
 
       const bom = extractDrawerIndustrialBomFromLayerItems(layers);
       expect(bom.hardware).toHaveLength(drawerCount);
@@ -93,8 +101,8 @@ describe("Certificação — regressão industrial (snapshots)", () => {
       });
 
       const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
-      const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int");
-      const rules = frontInt?.metadata?.drawerRules as { slideType?: string } | undefined;
+      const frontExt = cutlist.find((p) => p.tipo === "gaveta_frente_ext");
+      const rules = frontExt?.metadata?.drawerRules as { slideType?: string } | undefined;
       expect(rules?.slideType).toBe(slideType);
       expect(layers[0].slideType).toBe(slideType);
     });
@@ -126,8 +134,8 @@ describe("Certificação — regressão industrial (snapshots)", () => {
       drawerOverrides: [{ nominalDepthMm: 450 }, { nominalDepthMm: 500 }],
     });
 
-    expect(layers[0].bodyDepth).toBe(430);
-    expect(layers[1].bodyDepth).toBe(480);
+    expect(layers[0].bodyDepth).toBe(450);
+    expect(layers[1].bodyDepth).toBe(500);
     expect(layers[0].metadata?.nominalDepth).toBe(450);
     expect(layers[1].metadata?.nominalDepth).toBe(500);
   });
@@ -141,9 +149,9 @@ describe("Certificação — regressão industrial (snapshots)", () => {
         drawerCount: 1,
         runnerClearanceMm,
       });
-      const nominalBody = 550 - runnerClearanceMm;
-      const maxBody = 560 - 19 - runnerClearanceMm;
-      expect(layers[0].bodyDepth).toBe(Math.min(nominalBody, maxBody));
+      const usable = resolveDrawerUsableDepthMm(560, 19, runnerClearanceMm);
+      const expectedSlide = resolveDrawerSlideLength(usable);
+      expect(layers[0].bodyDepth).toBe(expectedSlide);
     });
   });
 
@@ -166,7 +174,7 @@ describe("Certificação — regressão industrial (snapshots)", () => {
       drawerCount: 1,
       drawerOverrides: [{ nominalDepthMm: 600 }],
     });
-    expect(layers[0].bodyDepth).toBe(580);
+    expect(layers[0].bodyDepth).toBe(600);
     expect(layers[0].metadata?.nominalDepth).toBe(600);
   });
 
@@ -187,7 +195,7 @@ describe("Certificação — regressão industrial (snapshots)", () => {
     const box = minimalBoxWithDrawers(layers);
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    expect(drawerPieces).toHaveLength(12);
+    expect(drawerPieces).toHaveLength(10);
 
     const legacyFronts = cutlist.filter(
       (p) => p.tipo === "gaveta_frente" && !String(p.id).includes("drawer")
@@ -201,7 +209,7 @@ describe("Certificação — regressão industrial (snapshots)", () => {
     expect(corredicaHoles.every((h) => h.face === "B")).toBe(true);
   });
 
-  it("furação europeia na frente overlay — snapshot offsets", () => {
+  it("furação europeia na lateral — snapshot offsets do rasgo", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 600,
@@ -210,10 +218,10 @@ describe("Certificação — regressão industrial (snapshots)", () => {
     });
     const result = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente_int",
-        larguraMm: layers[0].bodyWidth ?? layers[0].width,
-        alturaMm: layers[0].bodyHeight ?? layers[0].height,
-        espessuraMm: layers[0].frontIntThickness ?? 16,
+        tipo: "gaveta_lat_esq",
+        larguraMm: layers[0].leftSideDepth ?? layers[0].bodyDepth ?? 500,
+        alturaMm: layers[0].bodyHeight ?? 200,
+        espessuraMm: layers[0].sideThickness ?? 16,
         slideType: layers[0].slideType,
       },
       defaultRulesConfig
