@@ -277,7 +277,7 @@ async function runPhase(phase: Phase): Promise<BenchmarkPayload> {
   });
 
   const sampleItems = items.filter((i) =>
-    ["porta_simples", "gaveta_frente", "separador", "divisorio", "costa", "remate", "rodape"].includes(
+    ["porta_simples", "gaveta_frente_ext", "separador", "divisorio", "costa", "remate", "rodape"].includes(
       String(i.tipo)
     )
   );

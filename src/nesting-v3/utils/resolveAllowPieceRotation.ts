@@ -33,11 +33,15 @@ export function resolveAllowPieceRotationFromProject(
   const panelId = typeof meta?.panelId === "string" ? meta.panelId : undefined;
   const tipo = cp.pieceTipo ?? "";
 
-  if (tipo === "gaveta_frente" && panelId && box.panelIds?.gavetas) {
+  if (
+    (tipo === "gaveta_frente_ext" || tipo === "gaveta_frente_int" || tipo === "gaveta_frente") &&
+    panelId &&
+    box.panelIds?.gavetas
+  ) {
     const drawerIdx = box.panelIds.gavetas.indexOf(panelId);
     if (drawerIdx >= 0) return box.drawersLayer?.[drawerIdx]?.allowPieceRotation;
   }
-  if (tipo === "gaveta_frente") {
+  if (tipo === "gaveta_frente_ext" || tipo === "gaveta_frente_int" || tipo === "gaveta_frente") {
     return box.drawersLayer?.[0]?.allowPieceRotation;
   }
 

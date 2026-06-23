@@ -226,7 +226,7 @@ export function buildRealWorldBenchmarkScenario(): FullIndustrialScenario {
 export function applyRealWorldMixedMaterials(items: CutListItemComPreco[]): CutListItemComPreco[] {
   return items.map((item) => {
     const tipo = String(item.tipo ?? "");
-    if (tipo === "porta_simples" || tipo === "gaveta_frente" || tipo === "remate") {
+    if (tipo === "porta_simples" || tipo === "gaveta_frente_ext" || tipo === "gaveta_frente" || tipo === "remate") {
       return { ...item, materialId: "carvalho", material: "carvalho" };
     }
     return {
@@ -374,7 +374,7 @@ export function inferIndustrialPieceKind(item: {
   const nome = String(item.nome ?? "").toUpperCase();
   if (tipo === "remate" || nome.includes("_REMATE_")) return "REMATE";
   if (tipo === "rodape" || nome.includes("_RODA_PE_")) return "RODAPE";
-  if (tipo === "gaveta_frente") return "FRENTE_GAVETA";
+  if (tipo === "gaveta_frente_ext" || tipo === "gaveta_frente_int" || tipo === "gaveta_frente") return "FRENTE_GAVETA";
   if (tipo === "porta_simples" || tipo === "porta_dupla" || tipo === "porta_correr") return "PORTA";
   if (tipo === "divisorio" || nome.includes("_DIV_")) return "DIV";
   if (tipo === "separador" || nome.includes("_SEP_")) return "SEP";

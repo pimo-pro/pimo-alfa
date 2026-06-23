@@ -28,7 +28,7 @@ describe("Drawer Rules — caixas metálicas", () => {
 
     expect(layer.metalBoxType).toBe("Blum Legrabox");
     expect(layer.leftSideWidth).toBe(0);
-    expect(cutlist.map((item) => item.tipo)).toEqual(["gaveta_frente"]);
+    expect(cutlist.map((item) => item.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
     expect(cutlist[0].metadata?.drawerHardware).toBeTruthy();
   });
 

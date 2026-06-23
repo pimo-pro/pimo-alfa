@@ -330,7 +330,7 @@ function runLabelsContract(
 ): ScenarioMetrics["labelsContract"] {
   const all = buildCutlistItemsForIndustrialExport(snap);
   const sampleItems = all.filter((i) =>
-    ["remate", "rodape", "divisorio", "gaveta_frente"].includes(String(i.tipo))
+    ["remate", "rodape", "divisorio", "gaveta_frente_ext"].includes(String(i.tipo))
   );
   const pieceKindsSample = Object.fromEntries(
     sampleItems.slice(0, 6).map((i) => [String(i.nome ?? i.tipo), inferIndustrialPieceKind(i)])

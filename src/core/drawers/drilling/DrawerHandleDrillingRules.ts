@@ -28,6 +28,15 @@ export type DrawerHandleDrillingInput = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+/** Catálogo usa «tras» na peça única legada; na frente externa o puxador fica na face visível (frente). */
+function resolveHandleHoleFace(
+  pieceTipo: string,
+  catalogFace: TechnicalDrillHole["face"]
+): TechnicalDrillHole["face"] {
+  if (pieceTipo === "gaveta_frente_ext" && catalogFace === "tras") return "frente";
+  return catalogFace;
+}
+
 function pushCircularHole(
   out: TechnicalDrillHole[],
   x: number,
@@ -77,7 +86,7 @@ export function computeDrawerHandleHoles(
   piece: DrawerHandleDrillingInput,
   profileOverride?: DrawerHandleProfile | null
 ): TechnicalDrillHole[] {
-  if (piece.tipo !== "gaveta_frente" && piece.tipo !== "gaveta") return [];
+  if (piece.tipo !== "gaveta_frente_ext" && piece.tipo !== "gaveta_frente" && piece.tipo !== "gaveta") return [];
   if (!piece.handleType || piece.handleType === "Nenhum") return [];
 
   const profile =
@@ -114,7 +123,7 @@ export function computeDrawerHandleHoles(
       hole.diametro,
       hole.profundidade,
       piece.espessura,
-      hole.face
+      resolveHandleHoleFace(piece.tipo, hole.face)
     );
   }
 
@@ -130,7 +139,7 @@ export function computeDrawerHandleHoles(
       grooveLength,
       profile.groove.profundidade,
       piece.espessura,
-      profile.groove.face
+      resolveHandleHoleFace(piece.tipo, profile.groove.face)
     );
   }
 

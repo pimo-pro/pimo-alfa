@@ -81,7 +81,8 @@ describe("Sistema europeu de gavetas", () => {
     const tipos = cutlist.map((item) => item.tipo);
 
     expect(tipos).toEqual([
-      "gaveta_frente",
+      "gaveta_frente_int",
+      "gaveta_frente_ext",
       "gaveta_lat_esq",
       "gaveta_lat_dir",
       "gaveta_fundo",
@@ -113,10 +114,10 @@ describe("Sistema europeu de gavetas", () => {
     expect(holes.every((hole) => hole.face === "B")).toBe(true);
   });
 
-  it("aplica furacao de montagem na frente overlay", () => {
+  it("aplica furacao de montagem na frente interna estrutural", () => {
     const result = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_int",
         larguraMm: 598,
         alturaMm: 200,
         espessuraMm: 19,

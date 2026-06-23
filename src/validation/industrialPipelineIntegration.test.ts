@@ -53,7 +53,7 @@ describe("Pipeline industrial A→D — integração final (Fase E)", () => {
     const { snap } = buildFullIndustrialScenario();
     const all = buildCutlistItemsForIndustrialExport(snap);
 
-    const drawerFront = all.find((i) => i.tipo === "gaveta_frente");
+    const drawerFront = all.find((i) => i.tipo === "gaveta_frente_ext");
     const drawerLat = all.find((i) => i.tipo === "gaveta_lat_esq");
     const remateDir = all.find((i) => i.tipo === "remate" && i.metadata?.remateKind === "DIR");
     const rodape = all.find((i) => i.tipo === "rodape");
@@ -217,7 +217,7 @@ describe("Pipeline industrial A→D — integração final (Fase E)", () => {
     const remate = all.find((i) => i.tipo === "remate");
     const rodape = all.find((i) => i.tipo === "rodape");
     const div = all.find((i) => i.tipo === "divisorio");
-    const drawerFront = all.find((i) => i.tipo === "gaveta_frente");
+    const drawerFront = all.find((i) => i.tipo === "gaveta_frente_ext");
 
     expect(inferIndustrialPieceKind(remate!)).toBe("REMATE");
     expect(inferIndustrialPieceKind(rodape!)).toBe("RODAPE");
@@ -268,7 +268,7 @@ describe("Pipeline industrial A→D — integração final (Fase E)", () => {
     });
     const drawerPieces = all.filter((i) => isDrawerPieceTipo(i.tipo));
     expect(drawerPieces.length).toBeGreaterThan(0);
-    expect(drawerPieces.find((p) => p.tipo === "gaveta_frente")?.grainDirection).toBe("YY");
+    expect(drawerPieces.find((p) => p.tipo === "gaveta_frente_ext")?.grainDirection).toBe("YY");
     expect(drawerPieces.find((p) => p.tipo === "gaveta_lat_esq")?.grainDirection).toBe("XX");
   });
 });

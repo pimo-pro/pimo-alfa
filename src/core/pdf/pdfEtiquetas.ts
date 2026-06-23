@@ -450,7 +450,14 @@ function inferPieceKind(item: LabelItem): PieceProductionKind {
   if (nome.includes("SENSOR") && nome.includes("FUNDO")) return "FUNDO_COM_SENSOR";
   if (tipo === "cima" || nome.includes("CIMA") || nome.includes("TOPO")) return "CIMA";
   if (tipo === "prateleira" || nome.includes("PRATELEIRA")) return "PRATELEIRA";
-  if (tipo === "gaveta_frente" || nome.includes("GAVETA_FRENTE") || nome.includes("GAV_FRENT")) return "FRENTE_GAVETA";
+  if (
+    tipo === "gaveta_frente_ext" ||
+    tipo === "gaveta_frente_int" ||
+    tipo === "gaveta_frente" ||
+    nome.includes("GAVETA_FRENTE") ||
+    nome.includes("GAV_FRENT")
+  )
+    return "FRENTE_GAVETA";
   if (tipo === "gaveta_lat_esq" || tipo === "gaveta_lat_dir" || nome.includes("GAV_LAT")) return "GAV_LATERAIS";
   if (tipo === "gaveta_traseira" || nome.includes("GAV_COST") || nome.includes("GAV_TRA")) return "GAV_TRAS";
   if (tipo === "gaveta_fundo" || nome.includes("GAV_FUN") || nome.includes("GAVETA_FUNDO")) return "FUNDO_GAVETA";

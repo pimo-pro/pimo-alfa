@@ -37,6 +37,8 @@ export type PieceType =
   | "porta_correr"
   | "gaveta"
   | "gaveta_frente"
+  | "gaveta_frente_int"
+  | "gaveta_frente_ext"
   | "gaveta_lat_esq"
   | "gaveta_lat_dir"
   | "gaveta_fundo"
@@ -168,7 +170,8 @@ export function getInternalFace(pieceType: PieceType): DrillFace {
   if (pieceType.startsWith("porta")) return "tras";
   if (pieceType === "gaveta_lat_esq") return "direita";
   if (pieceType === "gaveta_lat_dir") return "esquerda";
-  if (pieceType === "gaveta_frente" || pieceType === "gaveta") return "tras";
+  if (pieceType === "gaveta_frente_int" || pieceType === "gaveta_frente" || pieceType === "gaveta") return "tras";
+  if (pieceType === "gaveta_frente_ext") return "frente";
   if (pieceType === "gaveta_fundo") return "cima";   // face interior = topo do painel (lado para dentro da gaveta)
   if (pieceType === "gaveta_traseira") return "frente"; // face interior = frente do painel (lado para dentro da gaveta)
   if (pieceType === "prateleira") return "fundo";   // FINAL: face interna = baixo (B), face externa = cima (A)
@@ -338,6 +341,13 @@ function calcCorredica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
 }
 
 function calcHandle(piece: PieceInput, out: TechnicalDrillHole[]) {
+  if (
+    piece.tipo !== "gaveta_frente_ext" &&
+    piece.tipo !== "gaveta_frente" &&
+    piece.tipo !== "gaveta"
+  ) {
+    return;
+  }
   const handleHoles = computeDrawerHandleHoles(piece);
   out.push(...handleHoles);
 }
@@ -487,7 +497,7 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
       espessura: piece.espessura,
     });
     out.push(...holes);
-  } else if (piece.tipo === "gaveta_frente") {
+  } else if (piece.tipo === "gaveta_frente_int" || piece.tipo === "gaveta_frente") {
     if (isMetalBoxCatalogType(piece.metalBoxType)) {
       const holes = computeDrawerMetalBoxFrontHoles({
         tipo: piece.tipo,

@@ -126,7 +126,14 @@ export function minimalBoxWithDrawers(
 export function classifyDrawerPieceForEtiqueta(tipo: string, nome: string): string {
   const t = tipo.toLowerCase();
   const n = nome.toUpperCase();
-  if (t === "gaveta_frente" || n.includes("GAVETA_FRENTE") || n.includes("GAV_FRENT")) return "FRENTE_GAVETA";
+  if (
+    t === "gaveta_frente_ext" ||
+    t === "gaveta_frente_int" ||
+    t === "gaveta_frente" ||
+    n.includes("GAVETA_FRENTE") ||
+    n.includes("GAV_FRENT")
+  )
+    return "FRENTE_GAVETA";
   if (t === "gaveta_lat_esq" || t === "gaveta_lat_dir" || n.includes("GAV_LAT")) return "GAV_LATERAIS";
   if (t === "gaveta_traseira" || n.includes("GAV_COST") || n.includes("GAV_TRA")) return "GAV_TRAS";
   if (t === "gaveta_fundo" || n.includes("GAV_FUN") || n.includes("GAVETA_FUNDO")) return "FUNDO_GAVETA";

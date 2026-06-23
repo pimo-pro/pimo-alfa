@@ -39,6 +39,7 @@ export interface Drawer {
   // Peças individuais (posições locais relativas ao grupo da gaveta)
   pieces: {
     front: DrawerPiece;
+    frontInt: DrawerPiece;
     body: {
       width: number;
       height: number;
@@ -79,7 +80,9 @@ export function createDrawer(
   type: "normal" | "pro" = "normal"
 ): Drawer {
   // Dimensões das peças
-  const frontThickness = specs.front.thickness;
+  const extThickness = specs.frontExt.thickness;
+  const intThickness = specs.frontInt.thickness;
+  const combinedFrontThickness = extThickness + intThickness;
   const sideThickness = specs.leftSide.width;
   const bottomThickness = specs.bottom.thickness;
   const backThickness = specs.back.thickness;
@@ -100,19 +103,22 @@ export function createDrawer(
     softClose: specs.slide.softClose,
     specs,
     pieces: {
-      // ===== FRENTE =====
-      // Frente flush: origem da gaveta no centro da frente (face alinhada ao módulo).
       front: {
-        width: specs.front.width,
-        height: specs.front.height,
-        depth: frontThickness,
+        width: specs.frontExt.width,
+        height: specs.frontExt.height,
+        depth: extThickness,
         positionX: 0,
         positionY: 0,
         positionZ: specs.positioning.frontOffsetZ,
       },
-      
-      // ===== CORPO (REFERÊNCIA) =====
-      // Origem: corpo atras da frente externa.
+      frontInt: {
+        width: specs.frontInt.width,
+        height: specs.frontInt.height,
+        depth: intThickness,
+        positionX: 0,
+        positionY: 0,
+        positionZ: specs.positioning.frontOffsetZ - extThickness,
+      },
       body: {
         width: bodyWidth,
         height: bodyHeight,
@@ -160,7 +166,7 @@ export function createDrawer(
         depth: backThickness,
         positionX: 0,
         positionY: 0,
-        positionZ: -frontThickness / 2 - bodyDepth + backThickness / 2,
+        positionZ: -combinedFrontThickness / 2 - bodyDepth + backThickness / 2,
       },
     },
     motion: {

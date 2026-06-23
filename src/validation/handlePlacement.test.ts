@@ -54,7 +54,7 @@ describe("Drawer Rules — handles", () => {
   it("gera furação de puxador com holeType puxador (CC 96)", () => {
     const result = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_ext",
         larguraMm: 560,
         alturaMm: 198,
         espessuraMm: 19,
@@ -76,7 +76,7 @@ describe("Drawer Rules — handles", () => {
   it("gera rasgo para cava (separado da estrutural)", () => {
     const result = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_ext",
         larguraMm: 560,
         alturaMm: 198,
         espessuraMm: 19,
@@ -89,7 +89,7 @@ describe("Drawer Rules — handles", () => {
     expect(result.success).toBe(true);
     const structural = result.data?.drillHoles.filter((h) => h.holeType === "fixacao_estrutural") ?? [];
     const groove = result.data?.drillHoles.filter((h) => h.holeSubtype === "groove") ?? [];
-    expect(structural.length).toBeGreaterThan(0);
+    expect(structural.length).toBe(0);
     expect(groove).toHaveLength(1);
     expect(groove[0].holeType).toBe("puxador");
   });
@@ -119,7 +119,7 @@ describe("Drawer Rules — handles", () => {
     };
 
     const cutlist = drawerLayerItemToCutList(layer, 0, "mdf_branco", "Modulo_A");
-    const front = cutlist.find((p) => p.tipo === "gaveta_frente");
+    const front = cutlist.find((p) => p.tipo === "gaveta_frente_ext");
     expect(front).toBeTruthy();
     expect(front?.metadata?.drawerRules).toMatchObject({
       handleType: "Puxador",

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
-import { resolveDrawerFrontHeightMm, resolveDrawerDisplayName } from "../../core/drawers/drawerLayerCustomization";
+import { resolveDrawerExternalFrontHeightMm, resolveDrawerDisplayName, resolveDrawerInternalFrontHeightMm } from "../../core/drawers/drawerLayerCustomization";
 import { devLogger } from "../../utils/devLogger";
 import { PanelFactory } from "./PanelFactory";
 import { getEdgeMaterial, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
@@ -62,6 +62,9 @@ export type DrawerSpec = {
   heightM: number;
   depthM: number;
   frontThicknessM: number;
+  frontIntWidthM?: number;
+  frontIntHeightM?: number;
+  frontIntThicknessM?: number;
   bodyWidthM?: number;
   bodyHeightM?: number;
   bodyDepthM?: number;
@@ -125,9 +128,15 @@ export function buildDrawerSpecs(
     id: item.id,
     type: "drawer",
     widthM: Math.max(0.001, item.width / 1000),
-    heightM: Math.max(0.001, resolveDrawerFrontHeightMm(item) / 1000),
+    heightM: Math.max(0.001, resolveDrawerExternalFrontHeightMm(item) / 1000),
     depthM: Math.max(0.001, item.depth / 1000),
     frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
+    frontIntWidthM: Math.max(0.001, (item.frontIntWidth ?? item.bodyWidth ?? item.width) / 1000),
+    frontIntHeightM: Math.max(0.001, resolveDrawerInternalFrontHeightMm(item) / 1000),
+    frontIntThicknessM: Math.max(
+      0.001,
+      (item.frontIntThickness ?? item.sideThickness ?? 16) / 1000
+    ),
     bodyWidthM: item.bodyWidth ? Math.max(0.001, item.bodyWidth / 1000) : undefined,
     bodyHeightM: item.bodyHeight ? Math.max(0.001, item.bodyHeight / 1000) : undefined,
     bodyDepthM: item.bodyDepth ? Math.max(0.001, item.bodyDepth / 1000) : undefined,
@@ -352,6 +361,9 @@ export function createDrawerObject(
   const bodyPanelMaterial = bodyMaterial.clone();
   bodyPanelMaterial.needsUpdate = true;
 
+  const frontIntMaterial = bodyMaterial.clone();
+  frontIntMaterial.needsUpdate = true;
+
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
   group.userData.drawerDisplayName = spec.drawerDisplayName;
@@ -367,24 +379,38 @@ export function createDrawerObject(
   drawerGroup.position.set(0, 0, Number.isFinite(prevPosition) ? (prevPosition as number) : targetPullOffset);
   animateDrawerBodyZ(spec.id, drawerGroup, targetPullOffset);
 
-  const front = panelFactory.createPanel(
+  const frontExt = panelFactory.createPanel(
     spec.widthM,
     spec.heightM,
     spec.frontThicknessM,
-    `drawer-front-${spec.id}`,
+    `drawer-front-ext-${spec.id}`,
     "front",
     { edgeMaterial: getEdgeMaterial(), faceMaterial: frontFaceMaterial }
   );
   if (Number.isFinite(spec.frontPosX) && Number.isFinite(spec.frontPosY) && Number.isFinite(spec.frontPosZ)) {
-    front.position.set(spec.frontPosX as number, spec.frontPosY as number, spec.frontPosZ as number);
+    frontExt.position.set(spec.frontPosX as number, spec.frontPosY as number, spec.frontPosZ as number);
   } else {
-    front.position.set(0, 0, 0);
+    frontExt.position.set(0, 0, 0);
   }
-  applyDrawerClickTargetIdentity(front, spec.id, "front");
+  applyDrawerClickTargetIdentity(frontExt, spec.id, "front");
   if (spec.frontDisplayName) {
-    front.userData.pieceDisplayName = spec.frontDisplayName;
+    frontExt.userData.pieceDisplayName = spec.frontDisplayName;
   }
-  drawerGroup.add(front);
+  drawerGroup.add(frontExt);
+
+  if (spec.frontIntWidthM && spec.frontIntHeightM && spec.frontIntThicknessM) {
+    const frontInt = panelFactory.createPanel(
+      spec.frontIntWidthM,
+      spec.frontIntHeightM,
+      spec.frontIntThicknessM,
+      `drawer-front-int-${spec.id}`,
+      "front",
+      { singleMaterial: frontIntMaterial }
+    );
+    frontInt.position.set(0, 0, -spec.frontThicknessM);
+    applyDrawerBodyPartIdentity(frontInt, "front-int");
+    drawerGroup.add(frontInt);
+  }
 
   const clickTarget = new THREE.Mesh(
     new THREE.BoxGeometry(spec.widthM, spec.heightM, 0.002),
@@ -478,7 +504,8 @@ export function createDrawerObject(
   }
 
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
-    const bodyOffsetZ = -(spec.frontThicknessM / 2 + spec.bodyDepthM / 2);
+    const intThicknessM = spec.frontIntThicknessM ?? 0;
+    const bodyOffsetZ = -(spec.frontThicknessM + intThicknessM / 2 + spec.bodyDepthM / 2);
     if (spec.metalBoxType && spec.metalBoxType !== "Nenhuma") {
       const metalProfile = resolveMetalBoxProfile(
         spec.metalBoxType,
@@ -599,10 +626,16 @@ export function createDrawerObject(
       roughness: 0.4,
       metalness: 0.1,
     });
-    const pieceTypes = ["gaveta_lat_esq", "gaveta_frente", "gaveta_traseira"] as const;
+    const pieceTypes = ["gaveta_lat_esq", "gaveta_frente_int", "gaveta_traseira"] as const;
     for (const pieceType of pieceTypes) {
-      const larguraMm = pieceType === "gaveta_frente" ? spec.widthM * 1000 : (spec.bodyDepthM ?? spec.depthM) * 1000;
-      const alturaMm = pieceType === "gaveta_frente" ? spec.heightM * 1000 : (spec.bodyHeightM ?? spec.heightM) * 1000;
+      const larguraMm =
+        pieceType === "gaveta_frente_int"
+          ? (spec.frontIntWidthM ?? spec.bodyWidthM ?? spec.widthM) * 1000
+          : (spec.bodyDepthM ?? spec.depthM) * 1000;
+      const alturaMm =
+        pieceType === "gaveta_frente_int"
+          ? (spec.frontIntHeightM ?? spec.bodyHeightM ?? spec.heightM) * 1000
+          : (spec.bodyHeightM ?? spec.heightM) * 1000;
       const holes = computeDrawerPieceCorredicaHoles({
         pieceType,
         largura: larguraMm,
@@ -614,9 +647,10 @@ export function createDrawerObject(
         const x = (hole.x / 1000) - larguraMm / 2000;
         const y = alturaMm / 2000 - hole.y / 1000;
         const z =
-          pieceType === "gaveta_frente"
-            ? spec.frontThicknessM / 2
-            : -(spec.frontThicknessM / 2 + (spec.bodyDepthM ?? spec.depthM) / 2) + hole.x / 1000;
+          pieceType === "gaveta_frente_int"
+            ? -spec.frontThicknessM - (spec.frontIntThicknessM ?? 0) / 2
+            : -(spec.frontThicknessM + (spec.frontIntThicknessM ?? 0) / 2 + (spec.bodyDepthM ?? spec.depthM) / 2) +
+              hole.x / 1000;
         sphere.position.set(x, y, z);
         sphere.userData.drawerPart = "drill-marker";
         drawerGroup.add(sphere);
@@ -627,7 +661,7 @@ export function createDrawerObject(
       const frontWidthMm = spec.widthM * 1000;
       const frontHeightMm = spec.heightM * 1000;
       const handleHoles = computeDrawerHandleHoles({
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_ext",
         largura: frontWidthMm,
         altura: frontHeightMm,
         espessura: spec.frontThicknessM * 1000,
@@ -658,22 +692,22 @@ export function createDrawerObject(
         roughness: 0.4,
         metalness: 0.1,
       });
-      const frontWidthMm = spec.widthM * 1000;
-      const frontHeightMm = spec.heightM * 1000;
       const metalHoles = computeDrawerMetalBoxFrontHoles({
-        tipo: "gaveta_frente",
-        largura: frontWidthMm,
-        altura: frontHeightMm,
-        espessura: spec.frontThicknessM * 1000,
+        tipo: "gaveta_frente_int",
+        largura: (spec.frontIntWidthM ?? spec.bodyWidthM ?? spec.widthM) * 1000,
+        altura: (spec.frontIntHeightM ?? spec.bodyHeightM ?? spec.heightM) * 1000,
+        espessura: (spec.frontIntThicknessM ?? 0.016) * 1000,
         metalBoxType: spec.metalBoxType,
         metalBoxProfileId: spec.metalBoxProfileId,
         metalBoxHeightMm: spec.metalBoxHeightMm,
       });
       for (const hole of metalHoles) {
         const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 8), metalMarkerMaterial);
-        const x = hole.x / 1000 - frontWidthMm / 2000;
-        const y = frontHeightMm / 2000 - hole.y / 1000;
-        sphere.position.set(x, y, -spec.frontThicknessM / 2 - 0.002);
+        const intWidthM = spec.frontIntWidthM ?? spec.bodyWidthM ?? spec.widthM;
+        const intHeightM = spec.frontIntHeightM ?? spec.bodyHeightM ?? spec.heightM;
+        const x = hole.x / 1000 - intWidthM / 2;
+        const y = intHeightM / 2 - hole.y / 1000;
+        sphere.position.set(x, y, -spec.frontThicknessM - (spec.frontIntThicknessM ?? 0) / 2 - 0.002);
         sphere.userData.drawerPart = "metal-fixation-drill-marker";
         drawerGroup.add(sphere);
       }

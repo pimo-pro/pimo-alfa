@@ -145,7 +145,10 @@ export function shouldDrillCorredicaOnDrawerPieceType(
 
   const isSide =
     pieceType === "gaveta_lat_esq" || pieceType === "gaveta_lat_dir" || pieceType === "gaveta";
-  const isFrontOrBack = pieceType === "gaveta_frente" || pieceType === "gaveta_traseira";
+  const isFrontOrBack =
+    pieceType === "gaveta_frente_int" ||
+    pieceType === "gaveta_frente" ||
+    pieceType === "gaveta_traseira";
 
   if (
     rules.skipLateralWoodPieces &&
@@ -160,7 +163,7 @@ export function shouldDrillCorredicaOnDrawerPieceType(
 export function getDrawerPieceCorredicaFace(pieceType: PieceType): DrillFace {
   if (pieceType === "gaveta_lat_esq") return "direita";
   if (pieceType === "gaveta_lat_dir") return "esquerda";
-  if (pieceType === "gaveta_frente") return "tras";
+  if (pieceType === "gaveta_frente_int" || pieceType === "gaveta_frente") return "tras";
   if (pieceType === "gaveta_traseira") return "frente";
   return "frente";
 }

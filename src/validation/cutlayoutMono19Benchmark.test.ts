@@ -279,7 +279,7 @@ async function runPhase(phase: Phase): Promise<BenchmarkPayload> {
   });
 
   const sampleItems = items.filter((i) =>
-    ["gaveta_frente", "gaveta_fundo", "separador", "divisorio", "remate", "rodape"].includes(String(i.tipo))
+    ["gaveta_frente_ext", "gaveta_fundo", "separador", "divisorio", "remate", "rodape"].includes(String(i.tipo))
   );
 
   let tcnRegression: ScenarioMetrics["tcnRegression"] = {

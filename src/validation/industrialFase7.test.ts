@@ -32,6 +32,8 @@ const INTERNAL_FACE_MATRIX: Array<{ tipo: PieceType; esperado: string }> = [
   { tipo: "porta_dupla", esperado: "tras" },
   { tipo: "porta_correr", esperado: "tras" },
   { tipo: "porta", esperado: "tras" },
+  { tipo: "gaveta_frente_int", esperado: "tras" },
+  { tipo: "gaveta_frente_ext", esperado: "frente" },
   { tipo: "gaveta_frente", esperado: "tras" },
   { tipo: "gaveta", esperado: "tras" },
   { tipo: "gaveta_lat_esq", esperado: "direita" },
@@ -71,6 +73,12 @@ describe("Fase 7 — drillFaceToPanelFace (face interna = B)", () => {
   it("porta: tras (interno) → B", () => {
     expect(drillFaceToPanelFace("tras", "porta_simples")).toBe("B");
     expect(drillFaceToPanelFace("frente", "porta_simples")).toBe("A");
+  });
+  it("gaveta_frente_int: tras → B", () => {
+    expect(drillFaceToPanelFace("tras", "gaveta_frente_int")).toBe("B");
+  });
+  it("gaveta_frente_ext: frente (visível) → B", () => {
+    expect(drillFaceToPanelFace("frente", "gaveta_frente_ext")).toBe("B");
   });
   it("gaveta_frente: tras → B", () => {
     expect(drillFaceToPanelFace("tras", "gaveta_frente")).toBe("B");
@@ -116,6 +124,8 @@ describe("Fase 7 — Furação por tipo (buildPanelDrillingResult)", () => {
     "prateleira",
     "porta_simples",
     "gaveta",
+    "gaveta_frente_int",
+    "gaveta_frente_ext",
     "gaveta_frente",
     "gaveta_lat_esq",
     "gaveta_lat_dir",

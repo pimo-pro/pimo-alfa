@@ -23,7 +23,7 @@ describe("Nesting industrial — integração gavetas com corpo", () => {
     });
     const box = minimalBoxWithDrawers(layers);
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
-    const frontItem = cutlist.find((p) => p.tipo === "gaveta_frente");
+    const frontItem = cutlist.find((p) => p.tipo === "gaveta_frente_ext");
     const bodyLateralItem = cutlist.find((p) => p.tipo === "lateral_esquerda");
     expect(frontItem).toBeDefined();
     expect(bodyLateralItem).toBeDefined();

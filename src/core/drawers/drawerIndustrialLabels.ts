@@ -2,6 +2,8 @@ import type { DrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 
 /** Tokens industriais canónicos por tipo de peça de gaveta. */
 export const DRAWER_PIECE_INDUSTRIAL_TOKEN: Record<DrawerPieceTipo, string> = {
+  gaveta_frente_int: "gav_frent_int",
+  gaveta_frente_ext: "gav_frent_ext",
   gaveta_lat_esq: "gav_lat_esq",
   gaveta_lat_dir: "gav_lat_dir",
   gaveta_traseira: "gav_cost",

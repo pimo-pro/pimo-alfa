@@ -15,6 +15,8 @@ import {
 } from "./drawerCertificationTestHelpers";
 
 const EXPECTED_DRAWER_PREFIXES: Record<string, string> = {
+  gaveta_frente_int: "gav_frent_int",
+  gaveta_frente_ext: "gav_frent_ext",
   gaveta_frente: "gav_frent",
   gaveta_lat_esq: "gav_lat_esq",
   gaveta_lat_dir: "gav_lat_dir",
@@ -31,11 +33,11 @@ describe("Certificação CNC — peças de gaveta", () => {
 
   it("nome CNC composto boxPrefix_piecePrefix", () => {
     const name = buildCutLayoutProPartName(
-      { tipo: "gaveta_frente", nome: "Gaveta 1 - Frente" },
+      { tipo: "gaveta_frente_ext", nome: "Gaveta 1 - Frente" },
       "Módulo 1",
       "Projeto Teste"
     );
-    expect(name).toMatch(/_gav_frent$/);
+    expect(name).toMatch(/_gav_frent_ext$/);
   });
 
   it("espessura, orientação e dimensões corretas na cutlist industrial", () => {
@@ -49,15 +51,19 @@ describe("Certificação CNC — peças de gaveta", () => {
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
 
-    expect(drawerPieces).toHaveLength(5);
-    expect(new Set(drawerPieces.map((p) => p.tipo)).size).toBe(5);
+    expect(drawerPieces).toHaveLength(6);
+    expect(new Set(drawerPieces.map((p) => p.tipo)).size).toBe(6);
 
-    const front = drawerPieces.find((p) => p.tipo === "gaveta_frente");
-    expect(front?.espessura).toBe(19);
-    expect(front?.nome).toMatch(/_gav_frent_01$/);
-    expect(front?.grainDirection).toBe("YY");
-    expect(front?.dimensoes.largura).toBe(598);
-    expect(front?.dimensoes.altura).toBeGreaterThan(0);
+    const frontExt = drawerPieces.find((p) => p.tipo === "gaveta_frente_ext");
+    expect(frontExt?.espessura).toBe(19);
+    expect(frontExt?.nome).toMatch(/_gav_frent_ext_01$/);
+    expect(frontExt?.grainDirection).toBe("YY");
+    expect(frontExt?.dimensoes.largura).toBe(598);
+    expect(frontExt?.dimensoes.altura).toBeGreaterThan(0);
+
+    const frontInt = drawerPieces.find((p) => p.tipo === "gaveta_frente_int");
+    expect(frontInt?.espessura).toBe(16);
+    expect(frontInt?.nome).toMatch(/_gav_frent_int_01$/);
 
     const lat = drawerPieces.find((p) => p.tipo === "gaveta_lat_esq");
     expect(lat?.espessura).toBe(16);
@@ -113,8 +119,8 @@ describe("Certificação CNC — peças de gaveta", () => {
     const box = minimalBoxWithDrawers(layers);
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    expect(drawerPieces.map((p) => p.tipo)).toEqual(["gaveta_frente"]);
-    expect(drawerPieces[0].drillHoles?.filter((h) => h.holeType === "corredica").length ?? 0).toBeGreaterThan(0);
+    expect(drawerPieces.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
+    expect(drawerPieces[0].drillHoles?.length ?? 0).toBeGreaterThan(0);
   });
 
   it("cutlistToPieces + nomes PRO geram partName estável", () => {
@@ -142,7 +148,7 @@ describe("Certificação CNC — peças de gaveta", () => {
 
     expect(pieces.length).toBeGreaterThan(0);
     pieces.forEach((p) => {
-      expect(p.partName).toMatch(/_gav_(frent|lat_esq|lat_dir|fun|cost)_\d{2}$/);
+      expect(p.partName).toMatch(/_gav_(frent_int|frent_ext|lat_esq|lat_dir|fun|cost)_\d{2}$/);
       expect(p.largura_mm).toBeGreaterThan(0);
       expect(p.altura_mm).toBeGreaterThan(0);
     });
@@ -172,7 +178,7 @@ describe("Certificação CNC — peças de gaveta", () => {
     });
   });
 
-  it("frente usa espessura do corpo do móvel", () => {
+  it("frente externa usa espessura do corpo do móvel", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 600,
@@ -182,7 +188,7 @@ describe("Certificação CNC — peças de gaveta", () => {
     });
     const box = minimalBoxWithDrawers(layers, { espessura: 18 });
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
-    const front = cutlist.find((p) => p.tipo === "gaveta_frente");
+    const front = cutlist.find((p) => p.tipo === "gaveta_frente_ext");
     expect(front?.espessura).toBe(18);
   });
 

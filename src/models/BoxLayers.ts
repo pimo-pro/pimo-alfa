@@ -44,8 +44,12 @@ export type DrawerLayerMetadata = {
   drawerType?: "normal" | "pro";
   /** Altura só da frente (mm). Vazio = altura do corpo (drawerHeight). */
   frontHeightMm?: number;
-  /** Nome industrial / cutlist da peça frente (substitui label automático). */
+  /** Nome industrial / cutlist da frente externa (substitui label automático). */
   frontPieceName?: string;
+  /** Nome industrial da frente interna estrutural. */
+  frontIntPieceName?: string;
+  /** Nome industrial da frente externa decorativa. */
+  frontExtPieceName?: string;
   /** Nome do grupo da gaveta (prefixo industrial + viewer). */
   drawerGroupName?: string;
   /** Perfil de puxador do catálogo (override do tipo). */
@@ -86,6 +90,9 @@ export interface DrawerLayerItem {
   height: number;
   depth: number;
   frontThickness: number;
+  frontIntWidth?: number;
+  frontIntHeight?: number;
+  frontIntThickness?: number;
   // Dimensões do CORPO (interno, com folgas para corrediças)
   bodyWidth?: number;
   bodyHeight?: number;

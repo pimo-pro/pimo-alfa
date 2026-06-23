@@ -11,7 +11,8 @@ import {
 } from "../core/drawers/drawerMetalBoxCatalog";
 import type { CutListItem } from "../core/types";
 import {
-  resolveDrawerFrontHeightMm,
+  resolveDrawerExternalFrontHeightMm,
+  resolveDrawerInternalFrontHeightMm,
   resolveDrawerPieceIndustrialLabel,
 } from "../core/drawers/drawerLayerCustomization";
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
@@ -27,6 +28,8 @@ import {
 export const DRAWER_SLIDES_PER_DRAWER = 2;
 
 export const DRAWER_PIECE_TIPOS = [
+  "gaveta_frente_int",
+  "gaveta_frente_ext",
   "gaveta_frente",
   "gaveta_lat_esq",
   "gaveta_lat_dir",
@@ -38,6 +41,18 @@ export type DrawerPieceTipo = (typeof DRAWER_PIECE_TIPOS)[number];
 
 export function isDrawerPieceTipo(tipo: string): tipo is DrawerPieceTipo {
   return (DRAWER_PIECE_TIPOS as readonly string[]).includes(tipo);
+}
+
+export function isDrawerFrontExtPieceTipo(tipo: string): boolean {
+  return tipo === "gaveta_frente_ext" || tipo === "gaveta_frente";
+}
+
+export function isDrawerFrontIntPieceTipo(tipo: string): boolean {
+  return tipo === "gaveta_frente_int";
+}
+
+export function isDrawerFrontFamilyPieceTipo(tipo: string): boolean {
+  return isDrawerFrontExtPieceTipo(tipo) || isDrawerFrontIntPieceTipo(tipo);
 }
 
 export function isDrawerSideOrBackPieceTipo(tipo: string): boolean {
@@ -92,10 +107,22 @@ export const DRAWER_FRONT_USES_BODY_THICKNESS = true;
 export const DRAWER_BACK_THICKNESS_MM = 16;
 export const DRAWER_BOTTOM_THICKNESS_MM = 10;
 
-function resolveDrawerFrontThicknessMm(item: DrawerLayerItem): number {
+function resolveDrawerExternalFrontThicknessMm(item: DrawerLayerItem): number {
   const fromLayer = Number(item.frontThickness);
   if (Number.isFinite(fromLayer) && fromLayer > 0) return fromLayer;
   return 19;
+}
+
+function resolveDrawerInternalFrontThicknessMm(item: DrawerLayerItem): number {
+  const fromLayer = Number(item.frontIntThickness ?? item.sideThickness);
+  if (Number.isFinite(fromLayer) && fromLayer > 0) return fromLayer;
+  return DRAWER_SIDE_THICKNESS_MM;
+}
+
+function resolveDrawerInternalFrontWidthMm(item: DrawerLayerItem): number {
+  const w = Number(item.frontIntWidth ?? item.bodyWidth);
+  if (Number.isFinite(w) && w > 0) return w;
+  return item.width;
 }
 
 function withDrawerIndustrialMeta(
@@ -115,6 +142,8 @@ function withDrawerIndustrialMeta(
       drawerIndex: drawerIndex1Based,
       drawerGroupName: item.metadata?.drawerGroupName,
       frontPieceName: item.metadata?.frontPieceName,
+      frontIntPieceName: item.metadata?.frontIntPieceName,
+      frontExtPieceName: item.metadata?.frontExtPieceName,
     },
   };
 }
@@ -169,7 +198,6 @@ export function drawerLayerItemToCutList(
     materialContext.bodyMaterialId,
     bottomThickness
   );
-  const frontThicknessMm = resolveDrawerFrontThicknessMm(item);
   const frontMaterialId = item.materialId ?? materialContext.bodyMaterialId;
   const frontOfficial = resolveMaterial(frontMaterialId);
   const frontMaterialLabel = frontOfficial?.label ?? frontMaterialId;
@@ -218,44 +246,83 @@ export function drawerLayerItemToCutList(
       : []),
   ];
 
-  const frontHeightMm = resolveDrawerFrontHeightMm(item);
+  const externalFrontHeightMm = resolveDrawerExternalFrontHeightMm(item);
+  const internalFrontHeightMm = resolveDrawerInternalFrontHeightMm(item);
+  const externalFrontThicknessMm = resolveDrawerExternalFrontThicknessMm(item);
+  const internalFrontThicknessMm = resolveDrawerInternalFrontThicknessMm(item);
+  const internalFrontWidthMm = resolveDrawerInternalFrontWidthMm(item);
 
-  // FRENTE — espessura do corpo do móvel
+  const structuralDrawerRules = {
+    slideType: item.slideType ?? "Genérica",
+    softClose: Boolean(item.softClose),
+    metalBoxType: item.metalBoxType ?? "Nenhuma",
+    metalBoxProfileId: item.metadata?.metalBoxProfileId,
+    metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
+  };
+
+  const decorativeDrawerRules = {
+    handleType: item.handleType ?? "Nenhum",
+    handleProfileId: item.metadata?.handleProfileId,
+    handleCenterDistanceMm: item.metadata?.handleCenterDistanceMm,
+    handlePosition: item.handlePosition ?? "Centro",
+    handlePositionPercent: item.metadata?.handlePositionPercent,
+    handleOffsetXMm: item.metadata?.handleOffsetXMm,
+    handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
+    handleOffsetMm: item.handleOffsetMm ?? 0,
+  };
+
+  // FRENTE INTERNA — estrutural (FRENTE_INT.xml / fixação metálica)
   pieces.push(
     withDrawerIndustrialMeta(
       {
-        id: `${baseId}-front`,
-        nome: `Gaveta ${drawerIndex1Based} - Frente`,
+        id: `${baseId}-front-int`,
+        nome: `Gaveta ${drawerIndex1Based} - Frente Interna`,
+        quantidade: 1,
+        dimensoes: {
+          largura: internalFrontWidthMm,
+          altura: internalFrontHeightMm,
+          profundidade: internalFrontThicknessMm,
+        },
+        espessura: internalFrontThicknessMm,
+        material: sideMaterial.label,
+        tipo: "gaveta_frente_int",
+        sourceType: "parametric",
+        boxId: item.parentBoxId,
+        materialId: sideMaterial.materialId,
+        grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_int" }),
+        metadata: {
+          drawerHardware,
+          drawerRules: structuralDrawerRules,
+        },
+      },
+      item,
+      safeBoxName,
+      drawerIndex1Based
+    )
+  );
+
+  // FRENTE EXTERNA — decorativa (overlay + puxador)
+  pieces.push(
+    withDrawerIndustrialMeta(
+      {
+        id: `${baseId}-front-ext`,
+        nome: `Gaveta ${drawerIndex1Based} - Frente Externa`,
         quantidade: 1,
         dimensoes: {
           largura: item.width,
-          altura: frontHeightMm,
-          profundidade: frontThicknessMm,
+          altura: externalFrontHeightMm,
+          profundidade: externalFrontThicknessMm,
         },
-        espessura: frontThicknessMm,
+        espessura: externalFrontThicknessMm,
         material: frontMaterialLabel,
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_ext",
         sourceType: "parametric",
         boxId: item.parentBoxId,
         materialId: frontOfficial?.canonicalId ?? frontMaterialId,
-        grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente" }),
+        grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_ext" }),
         metadata: {
           drawerHardware,
-          drawerRules: {
-            slideType: item.slideType ?? "Genérica",
-            softClose: Boolean(item.softClose),
-            metalBoxType: item.metalBoxType ?? "Nenhuma",
-            metalBoxProfileId: item.metadata?.metalBoxProfileId,
-            metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
-            handleType: item.handleType ?? "Nenhum",
-            handleProfileId: item.metadata?.handleProfileId,
-            handleCenterDistanceMm: item.metadata?.handleCenterDistanceMm,
-            handlePosition: item.handlePosition ?? "Centro",
-            handlePositionPercent: item.metadata?.handlePositionPercent,
-            handleOffsetXMm: item.metadata?.handleOffsetXMm,
-            handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
-            handleOffsetMm: item.handleOffsetMm ?? 0,
-          },
+          drawerRules: decorativeDrawerRules,
         },
       },
       item,

@@ -29,7 +29,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 export function computeDrawerMetalBoxFrontHoles(
   piece: DrawerMetalBoxFrontDrillingInput
 ): TechnicalDrillHole[] {
-  if (piece.tipo !== "gaveta_frente" && piece.tipo !== "gaveta") return [];
+  if (piece.tipo !== "gaveta_frente_int" && piece.tipo !== "gaveta_frente" && piece.tipo !== "gaveta") return [];
   if (!isMetalBoxCatalogType(piece.metalBoxType)) return [];
 
   const profile = resolveMetalBoxProfile(

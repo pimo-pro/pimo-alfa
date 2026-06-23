@@ -5,6 +5,8 @@ describe("drawerIndustrialLabels", () => {
   it("expõe tokens canónicos por tipo", () => {
     expect(DRAWER_PIECE_INDUSTRIAL_TOKEN.gaveta_lat_esq).toBe("gav_lat_esq");
     expect(DRAWER_PIECE_INDUSTRIAL_TOKEN.gaveta_traseira).toBe("gav_cost");
+    expect(DRAWER_PIECE_INDUSTRIAL_TOKEN.gaveta_frente_int).toBe("gav_frent_int");
+    expect(DRAWER_PIECE_INDUSTRIAL_TOKEN.gaveta_frente_ext).toBe("gav_frent_ext");
     expect(DRAWER_PIECE_INDUSTRIAL_TOKEN.gaveta_frente).toBe("gav_frent");
   });
 

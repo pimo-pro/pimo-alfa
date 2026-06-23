@@ -52,11 +52,14 @@ export function drawerToLayerItem(drawer: Drawer): DrawerLayerItem {
     capacityKg: specs.slide.capacityKg,
     drawerWarnings: specs.validation.warnings,
     
-    // Dimensões da frente
-    width: specs.front.width,
-    height: specs.front.height,
-    depth: specs.body.depth + specs.front.thickness,
-    frontThickness: specs.front.thickness,
+    // Dimensões da frente externa (overlay)
+    width: specs.frontExt.width,
+    height: specs.frontExt.height,
+    depth: specs.body.depth + specs.frontExt.thickness,
+    frontThickness: specs.frontExt.thickness,
+    frontIntWidth: specs.frontInt.width,
+    frontIntHeight: specs.frontInt.height,
+    frontIntThickness: specs.frontInt.thickness,
     
     // Dimensões do corpo
     bodyWidth: specs.body.width,

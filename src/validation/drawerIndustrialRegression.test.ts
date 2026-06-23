@@ -46,10 +46,11 @@ describe("Certificação — regressão industrial (snapshots)", () => {
 
       const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
       const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-      expect(drawerPieces).toHaveLength(drawerCount * 5);
+      expect(drawerPieces).toHaveLength(drawerCount * 6);
 
       const counts = countDrawerPiecesByTipo(drawerPieces.map((p) => p.tipo));
-      expect(counts.gaveta_frente).toBe(drawerCount);
+      expect(counts.gaveta_frente_int).toBe(drawerCount);
+      expect(counts.gaveta_frente_ext).toBe(drawerCount);
       expect(counts.gaveta_lat_esq).toBe(drawerCount);
       expect(counts.gaveta_lat_dir).toBe(drawerCount);
       expect(counts.gaveta_fundo).toBe(drawerCount);
@@ -69,8 +70,8 @@ describe("Certificação — regressão industrial (snapshots)", () => {
 
       const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
       const tipos = cutlist.map((p) => p.tipo);
-      expect(tipos.every((t) => t === "gaveta_frente")).toBe(true);
-      expect(tipos).toHaveLength(drawerCount);
+      expect(tipos.every((t) => t === "gaveta_frente_int" || t === "gaveta_frente_ext")).toBe(true);
+      expect(tipos).toHaveLength(drawerCount * 2);
 
       const bom = extractDrawerIndustrialBomFromLayerItems(layers);
       expect(bom.hardware).toHaveLength(drawerCount);
@@ -92,8 +93,8 @@ describe("Certificação — regressão industrial (snapshots)", () => {
       });
 
       const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
-      const front = cutlist.find((p) => p.tipo === "gaveta_frente");
-      const rules = front?.metadata?.drawerRules as { slideType?: string } | undefined;
+      const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int");
+      const rules = frontInt?.metadata?.drawerRules as { slideType?: string } | undefined;
       expect(rules?.slideType).toBe(slideType);
       expect(layers[0].slideType).toBe(slideType);
     });
@@ -186,7 +187,7 @@ describe("Certificação — regressão industrial (snapshots)", () => {
     const box = minimalBoxWithDrawers(layers);
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    expect(drawerPieces).toHaveLength(10);
+    expect(drawerPieces).toHaveLength(12);
 
     const legacyFronts = cutlist.filter(
       (p) => p.tipo === "gaveta_frente" && !String(p.id).includes("drawer")
@@ -209,10 +210,11 @@ describe("Certificação — regressão industrial (snapshots)", () => {
     });
     const result = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
-        larguraMm: layers[0].width,
-        alturaMm: layers[0].height,
-        espessuraMm: layers[0].frontThickness ?? 19,
+        tipo: "gaveta_frente_int",
+        larguraMm: layers[0].bodyWidth ?? layers[0].width,
+        alturaMm: layers[0].bodyHeight ?? layers[0].height,
+        espessuraMm: layers[0].frontIntThickness ?? 16,
+        slideType: layers[0].slideType,
       },
       defaultRulesConfig
     );

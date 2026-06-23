@@ -48,7 +48,11 @@ export interface DrawerPieceSpec {
 }
 
 export interface DrawerCalculatedSpecs {
-  // Frente (maior - cobre abertura)
+  /** Frente interna estrutural (ligação ao corpo / caixa metálica). */
+  frontInt: DrawerPieceSpec & { thickness: number };
+  /** Frente externa decorativa (overlay + puxador). */
+  frontExt: DrawerPieceSpec & { thickness: number };
+  /** @deprecated Alias de frontExt — compatibilidade com layers legadas. */
   front: DrawerPieceSpec & { thickness: number };
   
   // Corpo (menor - espaço para corrediças)
@@ -326,6 +330,14 @@ export function calculateDrawerSpecs(
   const woodBodyHeight =
     metalBoxEnabled && resolvedMetalHeight > 0 ? resolvedMetalHeight : bodyHeight;
 
+  const internalFrontWidth = bodyWidth;
+  const internalFrontHeight = woodBodyHeight;
+  const internalFrontThickness = sideThickness;
+  const externalFrontWidth = frontWidth;
+  const externalFrontHeight = frontHeight;
+  const externalFrontThickness = frontThickness;
+  const combinedFrontThickness = externalFrontThickness + internalFrontThickness;
+
   // ===== LATERAIS =====
   const leftSideWidth = metalBoxEnabled ? 0 : sideThickness;
   const leftSideHeight = metalBoxEnabled ? 0 : bodyHeight;
@@ -346,7 +358,7 @@ export function calculateDrawerSpecs(
   // ===== POSICIONAMENTO =====
   // Frente flush na face frontal do módulo; corpo recuado para trás da frente.
   const frontOffsetZ = 0;
-  const bodyOffsetZ = -(frontThickness / 2 + bodyDepth / 2);
+  const bodyOffsetZ = -(combinedFrontThickness / 2 + bodyDepth / 2);
   const pullDistance = resolveSlideCourse(settings, bodyDepth);
 
   if (frontHeight < settings.gavetaAlturaMinimaMm) {
@@ -382,11 +394,23 @@ export function calculateDrawerSpecs(
   }
 
   return {
+    frontInt: {
+      width: internalFrontWidth,
+      height: internalFrontHeight,
+      depth: internalFrontThickness,
+      thickness: internalFrontThickness,
+    },
+    frontExt: {
+      width: externalFrontWidth,
+      height: externalFrontHeight,
+      depth: externalFrontThickness,
+      thickness: externalFrontThickness,
+    },
     front: {
-      width: frontWidth,
-      height: frontHeight,
-      depth: frontThickness,
-      thickness: frontThickness,
+      width: externalFrontWidth,
+      height: externalFrontHeight,
+      depth: externalFrontThickness,
+      thickness: externalFrontThickness,
     },
     body: {
       width: bodyWidth,
@@ -459,13 +483,18 @@ export function calculateDrawerSpecs(
  * Valida se as dimensões calculadas são válidas
  */
 export function validateDrawerSpecs(specs: DrawerCalculatedSpecs): boolean {
-  if (specs.front.width <= specs.body.width) {
-    devLogger.warn("DrawerParametrics: frente deve ser mais larga que o corpo (overlay lateral)");
+  if (specs.frontExt.width <= specs.body.width) {
+    devLogger.warn("DrawerParametrics: frente externa deve ser mais larga que o corpo (overlay lateral)");
     return false;
   }
 
-  if (Math.abs(specs.front.height - specs.body.height) > 0.51) {
-    devLogger.warn("DrawerParametrics: frente e corpo devem ter a mesma altura");
+  if (specs.frontExt.height < specs.body.height - 0.51) {
+    devLogger.warn("DrawerParametrics: frente externa nao pode ser mais baixa que o corpo");
+    return false;
+  }
+
+  if (specs.frontInt.height <= 0 || specs.frontInt.width <= 0) {
+    devLogger.warn("DrawerParametrics: frente interna invalida");
     return false;
   }
 
@@ -491,8 +520,8 @@ export function getDrawerBoundingBox(specs: DrawerCalculatedSpecs): {
   depth: number;
 } {
   return {
-    width: specs.front.width,
-    height: specs.front.height,
-    depth: specs.front.thickness + specs.body.depth,
+    width: specs.frontExt.width,
+    height: specs.frontExt.height,
+    depth: specs.frontExt.thickness + specs.frontInt.thickness + specs.body.depth,
   };
 }

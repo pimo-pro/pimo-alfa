@@ -126,7 +126,9 @@ function buildGavetaRowsFromModernCutlist(
   for (const drawerIndex of [...drawerIndices].sort((a, b) => a - b)) {
     const prefix = `${box.id}-drawer-${drawerIndex}`;
     const drawerPieces = drawerPieceIds.filter((item) => item.id.startsWith(prefix));
-    const front = drawerPieces.find((item) => item.tipo === "gaveta_frente");
+    const front = drawerPieces.find(
+      (item) => item.tipo === "gaveta_frente_ext" || item.tipo === "gaveta_frente"
+    );
     if (!front) continue;
 
     rows.push({

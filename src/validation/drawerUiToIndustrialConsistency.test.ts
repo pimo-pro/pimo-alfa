@@ -77,7 +77,7 @@ describe("Certificação — consistência UI → Industrial", () => {
     });
 
     const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
-    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente"]);
+    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
     expect(cutlist[0].metadata?.drawerHardware?.some((h) => h.tipo === "caixa_metalica")).toBe(true);
   });
 
@@ -135,7 +135,7 @@ describe("Certificação — consistência UI → Industrial", () => {
     const box = minimalBoxWithDrawers(layers, { gavetas: 3 });
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    expect(drawerPieces).toHaveLength(15);
+    expect(drawerPieces).toHaveLength(18);
     const ids = new Set(drawerPieces.map((p) => p.id));
     expect(ids.size).toBe(drawerPieces.length);
   });

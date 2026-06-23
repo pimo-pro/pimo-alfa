@@ -47,7 +47,7 @@ function metalDrawerLayer(
 
 describe("computeDrawerMetalBoxFrontHoles", () => {
   const base = {
-    tipo: "gaveta_frente" as const,
+    tipo: "gaveta_frente_int" as const,
     largura: 562,
     altura: 198,
     espessura: 19,
@@ -69,7 +69,7 @@ describe("computeDrawerMetalBoxFrontHoles", () => {
   it("não gera furos estruturais de madeira quando metal activo", () => {
     const result = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_int",
         larguraMm: 562,
         alturaMm: 198,
         espessuraMm: 19,
@@ -91,18 +91,19 @@ describe("metal box cutlist + XML", () => {
   it("Blum Legrabox — só frente + BOM metálico", () => {
     const layer = metalDrawerLayer("Blum Legrabox", 128, 500);
     const cutlist = drawerLayerItemToCutList(layer, 0, "mdf_branco", "Modulo_A");
-    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente"]);
-    const hw = cutlist[0].metadata?.drawerHardware as Array<{ tipo: string; nome: string }>;
+    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
+    const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int")!;
+    const hw = frontInt.metadata?.drawerHardware as Array<{ tipo: string; nome: string }>;
     expect(hw.some((h) => h.tipo === "caixa_metalica" && h.nome === "Blum Legrabox")).toBe(true);
     expect(hw.some((h) => h.tipo === "corredica")).toBe(true);
 
-    const rules = cutlist[0].metadata?.drawerRules as Record<string, unknown>;
+    const rules = frontInt.metadata?.drawerRules as Record<string, unknown>;
     const drilled = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
-        larguraMm: cutlist[0].dimensoes.largura,
-        alturaMm: cutlist[0].dimensoes.altura,
-        espessuraMm: cutlist[0].espessura,
+        tipo: "gaveta_frente_int",
+        larguraMm: frontInt.dimensoes.largura,
+        alturaMm: frontInt.dimensoes.altura,
+        espessuraMm: frontInt.espessura,
         metalBoxType: rules.metalBoxType as string,
         metalBoxProfileId: rules.metalBoxProfileId as string,
         metalBoxHeightMm: rules.metalBoxHeightMm as number,
@@ -114,7 +115,7 @@ describe("metal box cutlist + XML", () => {
     expect(metalHoles).toHaveLength(2);
 
     const files = buildDrillFilesForProject(
-      [{ ...cutlist[0], drillHoles: holes, preco: 0, precoTotal: 0 }],
+      [{ ...frontInt, drillHoles: holes, preco: 0, precoTotal: 0 }],
       { projectName: "legrabox", boxes: [], workspaceBoxes: [] } as never
     );
     const xml = files[0]?.xml ?? "";
@@ -130,23 +131,24 @@ describe("metal box cutlist + XML", () => {
     expect(layer.leftSideWidth).toBe(0);
 
     const cutlist = drawerLayerItemToCutList(layer, 0, "mdf_branco", "Modulo_B");
-    const rules = cutlist[0].metadata?.drawerRules as Record<string, unknown>;
+    const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int")!;
+    const rules = frontInt.metadata?.drawerRules as Record<string, unknown>;
     expect(rules.metalBoxType).toBe("Hettich ArciTech");
     expect(rules.metalBoxHeightMm).toBe(128);
 
     const drilled = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
-        larguraMm: cutlist[0].dimensoes.largura,
-        alturaMm: cutlist[0].dimensoes.altura,
-        espessuraMm: cutlist[0].espessura,
+        tipo: "gaveta_frente_int",
+        larguraMm: frontInt.dimensoes.largura,
+        alturaMm: frontInt.dimensoes.altura,
+        espessuraMm: frontInt.espessura,
         metalBoxType: "Hettich ArciTech",
         metalBoxHeightMm: 128,
       },
       defaultRulesConfig
     );
     const xml = buildDrillFilesForProject(
-      [{ ...cutlist[0], drillHoles: drilled.data?.drillHoles ?? [], preco: 0, precoTotal: 0 }],
+      [{ ...frontInt, drillHoles: drilled.data?.drillHoles ?? [], preco: 0, precoTotal: 0 }],
       { projectName: "arcitech", boxes: [], workspaceBoxes: [] } as never
     )[0]?.xml;
     expect(xml).toContain("Vertical Hole");

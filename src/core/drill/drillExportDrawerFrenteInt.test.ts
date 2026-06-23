@@ -10,7 +10,7 @@ const FRENTE_INT_DIMS = { largura: 500, altura: 200, espessura: 16 } as const;
 function buildFrenteIntXml(): string {
   const drilling = buildPanelDrillingResult(
     {
-      tipo: "gaveta_frente",
+      tipo: "gaveta_frente_int",
       larguraMm: FRENTE_INT_DIMS.largura,
       alturaMm: FRENTE_INT_DIMS.altura,
       espessuraMm: FRENTE_INT_DIMS.espessura,
@@ -22,7 +22,7 @@ function buildFrenteIntXml(): string {
   const item: CutListItemComPreco = {
     id: "frente-int-test",
     nome: "FRENTE_INT",
-    tipo: "gaveta_frente",
+    tipo: "gaveta_frente_int",
     quantidade: 1,
     dimensoes: {
       largura: FRENTE_INT_DIMS.largura,

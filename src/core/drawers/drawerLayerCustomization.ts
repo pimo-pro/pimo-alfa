@@ -13,20 +13,32 @@ export function sanitizeDrawerIndustrialName(value: string): string {
   );
 }
 
-/** Altura do corpo / vão da gaveta (laterais, costa, fundo). */
+/** Altura do corpo / vão da gaveta (laterais, costa, fundo, frente interna). */
 export function resolveDrawerBodyHeightMm(item: DrawerLayerItem): number {
   const body = Number(item.bodyHeight);
   if (Number.isFinite(body) && body > 0) return body;
   return Number(item.height) > 0 ? Number(item.height) : 1;
 }
 
+/** Altura da frente interna estrutural (≈ corpo). */
+export function resolveDrawerInternalFrontHeightMm(item: DrawerLayerItem): number {
+  const fromLayer = Number(item.frontIntHeight ?? item.bodyHeight);
+  if (Number.isFinite(fromLayer) && fromLayer > 0) return fromLayer;
+  return resolveDrawerBodyHeightMm(item);
+}
+
 /**
- * Altura efectiva da frente: override UI ou altura do corpo (drawerHeight).
+ * Altura da frente externa decorativa: override UI (frontHeightMm) ou altura do corpo.
  */
-export function resolveDrawerFrontHeightMm(item: DrawerLayerItem): number {
+export function resolveDrawerExternalFrontHeightMm(item: DrawerLayerItem): number {
   const override = item.metadata?.frontHeightMm;
   if (override != null && Number.isFinite(override) && override > 0) return override;
   return resolveDrawerBodyHeightMm(item);
+}
+
+/** @deprecated Usar resolveDrawerExternalFrontHeightMm */
+export function resolveDrawerFrontHeightMm(item: DrawerLayerItem): number {
+  return resolveDrawerExternalFrontHeightMm(item);
 }
 
 /** Prefixo industrial do grupo da gaveta (substitui box.nome quando definido). */
@@ -42,18 +54,43 @@ export function resolveDrawerDisplayName(item: DrawerLayerItem, index0Based: num
   return `Gaveta ${index0Based + 1}`;
 }
 
+export function resolveDrawerFrontIntPieceLabel(
+  item: DrawerLayerItem,
+  boxName: string,
+  drawerIndex1Based: number
+): string {
+  const custom = sanitizeDrawerIndustrialName(item.metadata?.frontIntPieceName ?? "");
+  if (custom) return custom;
+  return buildDrawerIndustrialLabel(
+    resolveDrawerGroupPrefix(item, boxName),
+    "gaveta_frente_int",
+    drawerIndex1Based
+  );
+}
+
+export function resolveDrawerFrontExtPieceLabel(
+  item: DrawerLayerItem,
+  boxName: string,
+  drawerIndex1Based: number
+): string {
+  const custom = sanitizeDrawerIndustrialName(
+    item.metadata?.frontExtPieceName ?? item.metadata?.frontPieceName ?? ""
+  );
+  if (custom) return custom;
+  return buildDrawerIndustrialLabel(
+    resolveDrawerGroupPrefix(item, boxName),
+    "gaveta_frente_ext",
+    drawerIndex1Based
+  );
+}
+
+/** @deprecated Usar resolveDrawerFrontExtPieceLabel */
 export function resolveDrawerFrontPieceLabel(
   item: DrawerLayerItem,
   boxName: string,
   drawerIndex1Based: number
 ): string {
-  const custom = sanitizeDrawerIndustrialName(item.metadata?.frontPieceName ?? "");
-  if (custom) return custom;
-  return buildDrawerIndustrialLabel(
-    resolveDrawerGroupPrefix(item, boxName),
-    "gaveta_frente",
-    drawerIndex1Based
-  );
+  return resolveDrawerFrontExtPieceLabel(item, boxName, drawerIndex1Based);
 }
 
 export function resolveDrawerPieceIndustrialLabel(
@@ -62,8 +99,11 @@ export function resolveDrawerPieceIndustrialLabel(
   pieceTipo: DrawerPieceTipo,
   drawerIndex1Based: number
 ): string {
-  if (pieceTipo === "gaveta_frente") {
-    return resolveDrawerFrontPieceLabel(item, boxName, drawerIndex1Based);
+  if (pieceTipo === "gaveta_frente_int") {
+    return resolveDrawerFrontIntPieceLabel(item, boxName, drawerIndex1Based);
+  }
+  if (pieceTipo === "gaveta_frente_ext" || pieceTipo === "gaveta_frente") {
+    return resolveDrawerFrontExtPieceLabel(item, boxName, drawerIndex1Based);
   }
   return buildDrawerIndustrialLabel(
     resolveDrawerGroupPrefix(item, boxName),

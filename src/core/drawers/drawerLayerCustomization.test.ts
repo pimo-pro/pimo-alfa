@@ -83,7 +83,7 @@ describe("cutlist + XML com personalização", () => {
     };
 
     const cutlist = drawerLayerItemToCutList(item, 0, "mdf_branco-19", "Modulo_A");
-    const front = cutlist.find((p) => p.tipo === "gaveta_frente");
+    const front = cutlist.find((p) => p.tipo === "gaveta_frente_ext");
     const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
 
     expect(front?.nome).toBe("FRENTE_PERSO");
@@ -92,10 +92,13 @@ describe("cutlist + XML com personalização", () => {
 
     const drilling = buildPanelDrillingResult(
       {
-        tipo: "gaveta_frente",
+        tipo: "gaveta_frente_ext",
         larguraMm: front!.dimensoes.largura,
         alturaMm: front!.dimensoes.altura,
         espessuraMm: front!.espessura,
+        handleType: "Puxador",
+        handleCenterDistanceMm: 96,
+        handlePosition: "Centro",
       },
       defaultRulesConfig
     );
@@ -104,7 +107,7 @@ describe("cutlist + XML com personalização", () => {
     const cutItem: CutListItemComPreco = {
       id: "front-perso",
       nome: front!.nome,
-      tipo: "gaveta_frente",
+      tipo: "gaveta_frente_ext",
       quantidade: 1,
       dimensoes: front!.dimensoes,
       espessura: front!.espessura,
@@ -122,7 +125,6 @@ describe("cutlist + XML com personalização", () => {
     })[0].xml;
 
     expect(xml).toContain("<PanelWidth>220.00</PanelWidth>");
-    expect(xml).toContain("<Y1>190.00</Y1>");
-    expect(xml).not.toContain("<Y1>170.00</Y1>");
+    expect(xml).toContain("<Y1>110.00</Y1>");
   });
 });

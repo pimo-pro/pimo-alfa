@@ -22,7 +22,11 @@ import {
   resolveMetalBoxProfile,
 } from "../../core/drawers/drawerMetalBoxCatalog";
 import { validateDrawerLayerItem } from "../../core/drawers/drawerUiValidation";
-import { resolveDrawerBodyHeightMm } from "../../core/drawers/drawerLayerCustomization";
+import {
+  resolveDrawerBodyHeightMm,
+  resolveDrawerExternalFrontHeightMm,
+  resolveDrawerInternalFrontHeightMm,
+} from "../../core/drawers/drawerLayerCustomization";
 import type {
   DrawerHandlePosition,
   DrawerHandleType,
@@ -73,6 +77,8 @@ function buildDrawerConfigPatch(
     frontMaterial: patch.material ?? patch.metadata?.frontMaterial ?? drawer.material,
     frontHeightMm: patch.metadata?.frontHeightMm ?? drawer.metadata?.frontHeightMm,
     frontPieceName: patch.metadata?.frontPieceName ?? drawer.metadata?.frontPieceName,
+    frontIntPieceName: patch.metadata?.frontIntPieceName ?? drawer.metadata?.frontIntPieceName,
+    frontExtPieceName: patch.metadata?.frontExtPieceName ?? drawer.metadata?.frontExtPieceName,
     drawerGroupName: patch.metadata?.drawerGroupName ?? drawer.metadata?.drawerGroupName,
   });
 
@@ -158,8 +164,11 @@ export default function DrawerConfigPanel({
   const nominalDepth = drawer.metadata?.nominalDepth ?? drawer.depth;
   const material = drawer.material ?? drawer.materialId ?? "";
   const bodyHeight = Math.round(resolveDrawerBodyHeightMm(drawer));
+  const internalFrontHeight = Math.round(resolveDrawerInternalFrontHeightMm(drawer));
+  const externalFrontHeight = Math.round(resolveDrawerExternalFrontHeightMm(drawer));
   const frontHeightOverride = drawer.metadata?.frontHeightMm;
-  const frontPieceName = drawer.metadata?.frontPieceName ?? "";
+  const frontPieceName = drawer.metadata?.frontExtPieceName ?? drawer.metadata?.frontPieceName ?? "";
+  const frontIntPieceName = drawer.metadata?.frontIntPieceName ?? "";
   const drawerGroupName = drawer.metadata?.drawerGroupName ?? "";
 
   const update = (patch: Partial<DrawerLayerItem> & { metadata?: DrawerLayerMetadata }) => {
@@ -510,7 +519,7 @@ export default function DrawerConfigPanel({
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome da Frente da Gaveta</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome da Frente Externa</span>
         <input
           className="input input-xs"
           type="text"
@@ -519,6 +528,7 @@ export default function DrawerConfigPanel({
           onChange={(e) =>
             update({
               metadata: {
+                frontExtPieceName: e.target.value.trim() || undefined,
                 frontPieceName: e.target.value.trim() || undefined,
               },
             })
@@ -527,8 +537,25 @@ export default function DrawerConfigPanel({
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Nome da Frente Interna</span>
+        <input
+          className="input input-xs"
+          type="text"
+          placeholder="Automático (industrial)"
+          value={frontIntPieceName}
+          onChange={(e) =>
+            update({
+              metadata: {
+                frontIntPieceName: e.target.value.trim() || undefined,
+              },
+            })
+          }
+        />
+      </label>
+
+      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          Altura da Frente (mm)
+          Altura da Frente Externa (mm)
         </span>
         <input
           className="input input-xs"
@@ -571,13 +598,13 @@ export default function DrawerConfigPanel({
       <div className="muted-text" style={{ fontSize: 10 }}>
         {metalProfile ? (
           <>
-            Caixa metálica: {metalHeightMm} mm · Frente: {Math.round(drawer.height)} mm · Profundidade:{" "}
-            {Math.round(nominalDepth)} mm · Corrediça: {metalProfile.defaultSlideType}
+            Caixa metálica: {metalHeightMm} mm · Frente ext.: {externalFrontHeight} mm · Frente int.:{" "}
+            {internalFrontHeight} mm · Profundidade: {Math.round(nominalDepth)} mm
           </>
         ) : (
           <>
-            Corpo: {bodyHeight} mm · Frente: {Math.round(drawer.height)} mm · Profundidade:{" "}
-            {Math.round(drawer.depth)} mm
+            Frente ext.: {externalFrontHeight} mm · Frente int.: {internalFrontHeight} mm · Corpo:{" "}
+            {bodyHeight} mm · Profundidade: {Math.round(drawer.depth)} mm
           </>
         )}
       </div>

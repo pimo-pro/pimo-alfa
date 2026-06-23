@@ -14,6 +14,8 @@ import {
 } from "./drawerCertificationTestHelpers";
 
 const EXPECTED_ETIQUETA_KINDS: Record<string, string> = {
+  gaveta_frente_int: "FRENTE_GAVETA",
+  gaveta_frente_ext: "FRENTE_GAVETA",
   gaveta_frente: "FRENTE_GAVETA",
   gaveta_lat_esq: "GAV_LATERAIS",
   gaveta_lat_dir: "GAV_LATERAIS",
@@ -42,7 +44,7 @@ describe("Certificação PDF — etiquetas e BOM de gavetas", () => {
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
 
     drawerPieces
-      .filter((p) => p.tipo === "gaveta_frente")
+      .filter((p) => p.tipo === "gaveta_frente_ext")
       .forEach((p, i) => {
         expect(p.dimensoes.largura).toBe(layers[i].width);
         expect(p.dimensoes.altura).toBe(layers[i].height);
@@ -85,7 +87,7 @@ describe("Certificação PDF — etiquetas e BOM de gavetas", () => {
     });
 
     const bom = extractDrawerIndustrialBomFromLayerItems(layers);
-    expect(bom.pieces.length).toBe(15);
+    expect(bom.pieces.length).toBe(18);
     expect(bom.hardware.length).toBe(3);
   });
 
@@ -103,7 +105,7 @@ describe("Certificação PDF — etiquetas e BOM de gavetas", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("sem peças faltando — 5 tipos por gaveta normal", () => {
+  it("sem peças faltando — 6 tipos por gaveta normal", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 600,
@@ -113,7 +115,14 @@ describe("Certificação PDF — etiquetas e BOM de gavetas", () => {
     const box = minimalBoxWithDrawers(layers);
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    const required = ["gaveta_frente", "gaveta_lat_esq", "gaveta_lat_dir", "gaveta_fundo", "gaveta_traseira"];
+    const required = [
+      "gaveta_frente_int",
+      "gaveta_frente_ext",
+      "gaveta_lat_esq",
+      "gaveta_lat_dir",
+      "gaveta_fundo",
+      "gaveta_traseira",
+    ];
     required.forEach((tipo) => {
       expect(drawerPieces.filter((p) => p.tipo === tipo).length).toBe(2);
     });
@@ -132,6 +141,6 @@ describe("Certificação PDF — etiquetas e BOM de gavetas", () => {
     const kinds = cutlist
       .filter((p) => isDrawerPieceTipo(p.tipo))
       .map((p) => classifyDrawerPieceForEtiqueta(p.tipo, p.nome));
-    expect(kinds).toEqual(["FRENTE_GAVETA"]);
+    expect(kinds).toEqual(["FRENTE_GAVETA", "FRENTE_GAVETA"]);
   });
 });

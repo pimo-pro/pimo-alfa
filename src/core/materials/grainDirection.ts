@@ -38,7 +38,9 @@ function isRemateCompletoLateral(input: IndustrialGrainInput): boolean {
 /** Resolve YY/XX conforme regras industriais aprovadas. */
 export function resolveIndustrialGrainCode(input: IndustrialGrainInput): IndustrialGrainCode {
   if (PORTA_TIPOS.has(input.tipo)) return "YY";
-  if (input.tipo === "gaveta_frente") return "YY";
+  if (input.tipo === "gaveta_frente" || input.tipo === "gaveta_frente_ext" || input.tipo === "gaveta_frente_int") {
+    return "YY";
+  }
   if (isRemateCompletoLateral(input)) return "YY";
   if (input.tipo === "remate") return "XX";
   return "XX";
