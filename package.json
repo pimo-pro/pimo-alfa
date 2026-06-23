@@ -9,6 +9,7 @@
     "publish": "node scripts/publish.js",
     "deploy": "git add . && git commit -m \"Auto deploy\" && git push origin main && npm run publish",
     "test": "vitest run",
+    "tsc:strict": "tsc -b tsconfig.strict.json",
     "test:watch": "vitest",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"scripts/**/*.ts\"",
     "pimo": "bash ./scripts/pimo.sh",

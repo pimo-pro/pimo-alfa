@@ -1,4 +1,4 @@
-import { industrialAdminFeatureFlags } from '@/app/admin/settings/industrial/feature-flags';
+import { industrialFeatureFlags } from '../config/featureFlags';
 
 export const realtimeAlertsConfig = {
   taskDelayMinutes: 45,
@@ -10,7 +10,7 @@ export const realtimeAlertsConfig = {
 
 /** RTO-Engine 1.0 activo quando a flag admin está ligada ou em desenvolvimento. */
 export function isRtoEngineEnabled(): boolean {
-  if (industrialAdminFeatureFlags.realtimeTracking) return true;
+  if (industrialFeatureFlags.realtimeTracking) return true;
   return import.meta.env.DEV;
 }
 

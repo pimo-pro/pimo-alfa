@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-06-21T14:18:37.999Z",
+  "generatedAt": "2026-06-23T21:07:03.667Z",
   "layoutOptions": "getDefaultCncLayoutOptions()",
   "scenarios": [
     {
@@ -9,7 +9,7 @@
       "description": "Projeto real importado (TEST 1.txt) — mix heterogéneo",
       "pieceCount": 2,
       "mode": "IMPORT",
-      "executionMs": 25.3,
+      "executionMs": 47.1,
       "totalSheets": 1,
       "avgWastePercent": 92.25,
       "totalMicroGapsLt5mm": 0,
@@ -49,45 +49,45 @@
       "description": "Pipeline industrial SPM — caixa completa",
       "pieceCount": 14,
       "mode": "SPM",
-      "executionMs": 44.3,
+      "executionMs": 101.9,
       "totalSheets": 3,
-      "avgWastePercent": 72.76,
+      "avgWastePercent": 72.66,
       "totalMicroGapsLt5mm": 0,
       "totalInternalIslands": 0,
-      "avgWasteScatterIndex": 0.882,
-      "utilizationPercent": 27.24,
+      "avgWasteScatterIndex": 0.881,
+      "utilizationPercent": 27.34,
       "selectedStrategy": "shelf",
       "selectedBinHeuristic": "bestFit",
       "perSheet": [
         {
           "sheetIndex": 1,
-          "usedAreaMm2": 3010454,
-          "wastePercent": 48.06,
+          "usedAreaMm2": 3005670,
+          "wastePercent": 48.14,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.753,
-          "bboxUsedMaxX": 2068,
+          "wasteScatterIndex": 0.757,
+          "bboxUsedMaxX": 2060,
           "bboxUsedMaxY": 1788
         },
         {
           "sheetIndex": 2,
-          "usedAreaMm2": 705480,
-          "wastePercent": 87.83,
+          "usedAreaMm2": 690000,
+          "wastePercent": 88.1,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.975,
+          "wasteScatterIndex": 0.974,
           "bboxUsedMaxX": 730,
-          "bboxUsedMaxY": 1141
+          "bboxUsedMaxY": 1125
         },
         {
           "sheetIndex": 3,
-          "usedAreaMm2": 1021248,
-          "wastePercent": 82.38,
+          "usedAreaMm2": 1058168,
+          "wastePercent": 81.74,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.918,
-          "bboxUsedMaxX": 1321,
-          "bboxUsedMaxY": 1071
+          "wasteScatterIndex": 0.911,
+          "bboxUsedMaxX": 1421,
+          "bboxUsedMaxY": 1041
         }
       ],
       "tcnRegression": {
@@ -97,13 +97,13 @@
         "structuralHash": "material-unresolved",
         "fullHash": "",
         "validationErrors": [
-          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 6 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 3 peça(s) (Gaveta 1 - Frente, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 1 peça(s) (Gaveta 1 - Fundo)."
+          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 6 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 3 peça(s) (Armario_Full_gav_frent_ext_01, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 1 peça(s) (Armario_Full_gav_fun_01)."
         ]
       },
       "labelsContract": {
         "pieceKindsSample": {
           "Armario_Full_DIV_01": "DIV",
-          "Gaveta 1 - Frente": "FRENTE_GAVETA",
+          "Armario_Full_gav_frent_ext_01": "FRENTE_GAVETA",
           "Armario_Full_REMATE_DIR_01": "REMATE",
           "Armario_Full_RODA_PE_01": "RODAPE"
         },
@@ -116,55 +116,55 @@
       "description": "Pipeline industrial MPM — duas caixas",
       "pieceCount": 24,
       "mode": "MPM",
-      "executionMs": 31694.2,
+      "executionMs": 31840.7,
       "totalSheets": 4,
-      "avgWastePercent": 65.31,
+      "avgWastePercent": 65.14,
       "totalMicroGapsLt5mm": 0,
       "totalInternalIslands": 0,
-      "avgWasteScatterIndex": 0.875,
-      "utilizationPercent": 34.69,
-      "selectedStrategy": "shelf",
+      "avgWasteScatterIndex": 0.758,
+      "utilizationPercent": 34.87,
+      "selectedStrategy": "skyline",
       "selectedBinHeuristic": "bestFit",
       "perSheet": [
         {
           "sheetIndex": 1,
-          "usedAreaMm2": 2919158,
-          "wastePercent": 49.63,
+          "usedAreaMm2": 2556770,
+          "wastePercent": 55.89,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.754,
+          "wasteScatterIndex": 0.673,
           "bboxUsedMaxX": 2086,
-          "bboxUsedMaxY": 1738
+          "bboxUsedMaxY": 1733
         },
         {
           "sheetIndex": 2,
-          "usedAreaMm2": 1859100,
-          "wastePercent": 67.92,
+          "usedAreaMm2": 2211920,
+          "wastePercent": 61.84,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.874,
-          "bboxUsedMaxX": 1922,
-          "bboxUsedMaxY": 1225
+          "wasteScatterIndex": 0.683,
+          "bboxUsedMaxX": 2647,
+          "bboxUsedMaxY": 1265
         },
         {
           "sheetIndex": 3,
-          "usedAreaMm2": 1410960,
-          "wastePercent": 75.66,
+          "usedAreaMm2": 1380000,
+          "wastePercent": 76.19,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.941,
+          "wasteScatterIndex": 0.939,
           "bboxUsedMaxX": 1465,
-          "bboxUsedMaxY": 1141
+          "bboxUsedMaxY": 1125
         },
         {
           "sheetIndex": 4,
-          "usedAreaMm2": 1853376,
-          "wastePercent": 68.02,
+          "usedAreaMm2": 1934416,
+          "wastePercent": 66.62,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.929,
-          "bboxUsedMaxX": 1321,
-          "bboxUsedMaxY": 1614
+          "wasteScatterIndex": 0.738,
+          "bboxUsedMaxX": 1894,
+          "bboxUsedMaxY": 1556
         }
       ],
       "tcnRegression": {
@@ -174,13 +174,14 @@
         "structuralHash": "material-unresolved",
         "fullHash": "",
         "validationErrors": [
-          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Gaveta 1 - Frente, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 2 peça(s) (Gaveta 1 - Fundo)."
+          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Armario_Full_gav_frent_ext_01, Gaveta_Second_gav_frent_ext_01, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 2 peça(s) (Armario_Full_gav_fun_01, Gaveta_Second_gav_fun_01)."
         ]
       },
       "labelsContract": {
         "pieceKindsSample": {
           "Armario_Full_DIV_01": "DIV",
-          "Gaveta 1 - Frente": "FRENTE_GAVETA",
+          "Armario_Full_gav_frent_ext_01": "FRENTE_GAVETA",
+          "Gaveta_Second_gav_frent_ext_01": "FRENTE_GAVETA",
           "Armario_Full_REMATE_DIR_01": "REMATE",
           "Armario_Full_RODA_PE_01": "RODAPE"
         },

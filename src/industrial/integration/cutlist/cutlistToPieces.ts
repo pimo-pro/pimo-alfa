@@ -48,10 +48,13 @@ function inferOperationsFromCutlistItem(item: CutlistPieceInput): IndustrialPiec
 }
 
 /**
- * Converte a cutlist atual do pimo-criativo para o novo dominio industrial.
- * O mapeamento e intencionalmente fino: nao importa regras CNC/nesting antigas.
+ * Converte cutlist do pimo-criativo para peças industriais (`IndustrialPiece`).
+ * Nome canónico — não confundir com `cutlistToPieces` de `core/cutlayout/cutLayoutEngine` (nesting/CNC).
  */
-export function cutlistToPieces(items: CutlistPieceInput[], options: CutlistToPiecesOptions = {}): IndustrialPiece[] {
+export function mapCutlistToIndustrialPieces(
+  items: CutlistPieceInput[],
+  options: CutlistToPiecesOptions = {},
+): IndustrialPiece[] {
   return items.map((item) =>
     createPiece({
       projectId: options.projectId,
@@ -74,11 +77,18 @@ export function cutlistToPieces(items: CutlistPieceInput[], options: CutlistToPi
   );
 }
 
+/**
+ * @deprecated Usar `mapCutlistToIndustrialPieces`. Mantido para compatibilidade Fase 2.
+ */
+export function cutlistToPieces(items: CutlistPieceInput[], options: CutlistToPiecesOptions = {}): IndustrialPiece[] {
+  return mapCutlistToIndustrialPieces(items, options);
+}
+
 export function cutlistToPieceOperations(
   items: CutlistPieceInput[],
   options: CutlistToPiecesOptions = {},
 ): PieceOperation[] {
-  return cutlistToPieces(items, options).flatMap(pieceToOperations);
+  return mapCutlistToIndustrialPieces(items, options).flatMap(pieceToOperations);
 }
 
 export function cutlistToOperationTrackingPayloads(

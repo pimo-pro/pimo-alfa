@@ -1,5 +1,11 @@
 export type WorkOrderPriority = 'low' | 'medium' | 'high' | 'urgent';
 
+/**
+ * Modelo legado PIMO-TRAK (tabela `work_orders`, workflow departamental).
+ *
+ * @deprecated Para produção por estação usar `IndustrialWorkOrder` em
+ * `@/industrial/work-orders/WorkOrder`. Ponte read-only: `legacyWorkflowWorkOrderAdapter`.
+ */
 export interface WorkOrder {
   id: string;
   order_number?: string | null;

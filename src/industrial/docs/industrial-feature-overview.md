@@ -4,6 +4,8 @@
 **Última atualização:** Junho 2026  
 **Público-alvo:** Utilizadores finais, operadores de fábrica, gestores de produção e equipa técnica
 
+> **Estado pós Fases 0–4:** ver complemento técnico [industrial-system-2026-06.md](./industrial-system-2026-06.md) e [release notes](../../../../docs/release-notes/RELEASE-2026-06-pimo-industrial.md).
+
 ---
 
 ## Índice

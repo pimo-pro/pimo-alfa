@@ -1,23 +1,10 @@
-import { persistWorkOrderDraft } from '@/industrial/persistence/work-orders/persistWorkOrder';
+import { persistWorkOrderDraft } from '../persistence/work-orders/persistWorkOrder';
+import { loadWorkOrders } from '../persistence/work-orders/loadWorkOrders';
 
-import { generateDrillOrder } from './generateDrillOrder';
-import { generateEmbalagemOrder } from './generateEmbalagemOrder';
-import { generateMontagemOrder } from './generateMontagemOrder';
-import { generateNestingOrder } from './generateNestingOrder';
-import { generateOrlarOrder } from './generateOrlarOrder';
-import { generateWarehouseOrder } from './generateWarehouseOrder';
 import { resolveProjectCutlist } from './resolveProjectCutlist';
+import { generateAllStationOrderDrafts } from './stationOrderFactory';
 import type { GeneratedWorkOrderDraft, IndustrialWorkOrder } from './types';
-
-const GENERATORS = [
-  generateWarehouseOrder,
-  generateNestingOrder,
-  generateDrillOrder,
-  generateOrlarOrder,
-  generateMontagemOrder,
-  generateEmbalagemOrder,
-] as const;
-
+import { woIdempotencyConfig } from './woIdempotencyConfig';
 export interface CreateWorkOrdersResult {
   projectId: string;
   projectName: string;
@@ -31,7 +18,7 @@ export async function createWorkOrdersForProject(projectId: string): Promise<Cre
     throw new Error(`Projeto não encontrado ou sem cutlist: ${projectId}`);
   }
 
-  const drafts: GeneratedWorkOrderDraft[] = GENERATORS.map((generate) => generate(context.pieces));
+  const drafts: GeneratedWorkOrderDraft[] = generateAllStationOrderDrafts(context.pieces);
   const skippedStations: string[] = [];
   const orders: IndustrialWorkOrder[] = [];
 
@@ -39,6 +26,24 @@ export async function createWorkOrdersForProject(projectId: string): Promise<Cre
     if (draft.tasks.length === 0) {
       skippedStations.push(draft.station);
       continue;
+    }
+
+    if (woIdempotencyConfig.skipExistingStationOrders || woIdempotencyConfig.warnOnDuplicate) {
+      const existing = await loadWorkOrders({
+        projectId: context.projectId,
+        station: draft.station,
+      });
+      if (existing.length > 0) {
+        if (woIdempotencyConfig.warnOnDuplicate) {
+          console.warn(
+            `[WO] Ordem existente para projeto ${context.projectId} estação ${draft.station}: ${existing[0].id}`,
+          );
+        }
+        if (woIdempotencyConfig.skipExistingStationOrders) {
+          orders.push(existing[0]);
+          continue;
+        }
+      }
     }
 
     const order = await persistWorkOrderDraft(projectId, draft);

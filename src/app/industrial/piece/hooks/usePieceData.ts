@@ -20,8 +20,7 @@ import type { ReworkRequest } from '@/industrial/core/rework/types';
 import { createReworkRequest } from '@/industrial/core/rework/actions';
 import type { TimeTrackingEntry } from '@/industrial/core/time-tracking/types';
 import { startTimeTracking, stopTimeTracking } from '@/industrial/core/time-tracking/actions';
-import { getWorkOrderTracking } from '@/industrial/core/tracking/actions';
-import type { TrackingSnapshot } from '@/industrial/core/tracking/types';
+import { resolvePieceTracking } from '../../../../industrial/tracking/resolvePieceTracking';
 import type { IndustrialSystemEvent } from '@/industrial/infra/supabase/events';
 import { loadPieceQuality } from '@/industrial/persistence/piece/savePieceQuality';
 import { loadPieceTimeTracking } from '@/industrial/persistence/piece/savePieceTimeTracking';
@@ -193,10 +192,7 @@ export function usePieceData(pieceId: string | undefined): PieceDataState {
       ]);
 
       const pieceEvents = allEvents.filter((event) => eventMatchesPiece(event, pieceId));
-      let tracking: TrackingSnapshot | null = null;
-      if (context.piece.workOrderId) {
-        tracking = await getWorkOrderTracking(context.piece.workOrderId);
-      }
+      const tracking = await resolvePieceTracking(pieceId, context.piece.workOrderId);
 
       const operations = mergeOperations(context.operations, persistedOperations);
       const quality = [

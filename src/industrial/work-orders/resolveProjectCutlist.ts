@@ -1,6 +1,6 @@
 import type { CutListItem } from '@/core/types';
 import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
-import { cutlistToPieces, type CutlistPieceInput } from '@/industrial/integration/cutlist/cutlistToPieces';
+import { mapCutlistToIndustrialPieces, type CutlistPieceInput } from '@/industrial/integration/cutlist/cutlistToPieces';
 import type { IndustrialPiece } from '@/industrial/core/pieces/types';
 
 export interface ProjectCutlistContext {
@@ -41,7 +41,7 @@ export function resolveProjectCutlist(projectId: string): ProjectCutlistContext 
 
   const cutList = Array.isArray(state.cutList) ? (state.cutList as CutListItem[]) : [];
   const cutlist = cutList.map(toCutlistInput);
-  const pieces = cutlistToPieces(cutlist, { projectId });
+  const pieces = mapCutlistToIndustrialPieces(cutlist, { projectId });
 
   return {
     projectId,

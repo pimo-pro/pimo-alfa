@@ -5,6 +5,8 @@ import { resolveLabelSystemConfig } from "../../labelSystem/resolveLabelSystemCo
 
 /**
  * Wrapper de compatibilidade — delega integralmente a `resolveLabelSystemConfig` (SSOT).
+ *
+ * @deprecated Usar `resolveLabelSystemConfig` de `@/core/labelSystem/resolveLabelSystemConfig`.
  */
 export function resolveUnifiedLabelConfig(
   rules: RulesConfig,

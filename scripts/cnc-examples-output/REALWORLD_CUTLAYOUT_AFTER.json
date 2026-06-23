@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-06-21T14:29:50.622Z",
+  "generatedAt": "2026-06-23T21:06:31.807Z",
   "inputFixture": "src/validation/industrialPipelineTestHelpers.ts → buildRealWorldBenchmarkScenario()",
   "scenario": {
     "scenarioId": "REALWORLD_SPM_ROUPEIRO",
@@ -104,122 +104,122 @@
         "materialId": "carvalho"
       },
       {
-        "nome": "Gaveta 1 - Frente",
-        "tipo": "gaveta_frente",
+        "nome": "Roupeiro_RealBench_gav_frent_ext_01",
+        "tipo": "gaveta_frente_ext",
         "largura_mm": 898,
-        "altura_mm": 418,
+        "altura_mm": 416,
         "espessura_mm": 19,
         "materialId": "carvalho"
       },
       {
-        "nome": "Gaveta 1 - Lateral Esquerda",
+        "nome": "Roupeiro_RealBench_gav_lat_esq_01",
         "tipo": "gaveta_lat_esq",
-        "largura_mm": 530,
-        "altura_mm": 348,
+        "largura_mm": 500,
+        "altura_mm": 404,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 1 - Lateral Direita",
+        "nome": "Roupeiro_RealBench_gav_lat_dir_01",
         "tipo": "gaveta_lat_dir",
-        "largura_mm": 530,
-        "altura_mm": 348,
+        "largura_mm": 500,
+        "altura_mm": 404,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 1 - Fundo",
+        "nome": "Roupeiro_RealBench_gav_fun_01",
         "tipo": "gaveta_fundo",
         "largura_mm": 816,
-        "altura_mm": 530,
+        "altura_mm": 500,
         "espessura_mm": 10,
         "materialId": "mdf_branco-10"
       },
       {
-        "nome": "Gaveta 1 - Traseira",
+        "nome": "Roupeiro_RealBench_gav_cost_01",
         "tipo": "gaveta_traseira",
         "largura_mm": 816,
-        "altura_mm": 348,
+        "altura_mm": 404,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 2 - Frente",
-        "tipo": "gaveta_frente",
+        "nome": "Roupeiro_RealBench_gav_frent_ext_02",
+        "tipo": "gaveta_frente_ext",
         "largura_mm": 898,
-        "altura_mm": 838,
+        "altura_mm": 833,
         "espessura_mm": 19,
         "materialId": "carvalho"
       },
       {
-        "nome": "Gaveta 2 - Lateral Esquerda",
+        "nome": "Roupeiro_RealBench_gav_lat_esq_02",
         "tipo": "gaveta_lat_esq",
-        "largura_mm": 530,
-        "altura_mm": 768,
+        "largura_mm": 500,
+        "altura_mm": 821,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 2 - Lateral Direita",
+        "nome": "Roupeiro_RealBench_gav_lat_dir_02",
         "tipo": "gaveta_lat_dir",
-        "largura_mm": 530,
-        "altura_mm": 768,
+        "largura_mm": 500,
+        "altura_mm": 821,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 2 - Fundo",
+        "nome": "Roupeiro_RealBench_gav_fun_02",
         "tipo": "gaveta_fundo",
         "largura_mm": 816,
-        "altura_mm": 530,
+        "altura_mm": 500,
         "espessura_mm": 10,
         "materialId": "mdf_branco-10"
       },
       {
-        "nome": "Gaveta 2 - Traseira",
+        "nome": "Roupeiro_RealBench_gav_cost_02",
         "tipo": "gaveta_traseira",
         "largura_mm": 816,
-        "altura_mm": 768,
+        "altura_mm": 821,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 3 - Frente",
-        "tipo": "gaveta_frente",
+        "nome": "Roupeiro_RealBench_gav_frent_ext_03",
+        "tipo": "gaveta_frente_ext",
         "largura_mm": 898,
-        "altura_mm": 838,
+        "altura_mm": 833,
         "espessura_mm": 19,
         "materialId": "carvalho"
       },
       {
-        "nome": "Gaveta 3 - Lateral Esquerda",
+        "nome": "Roupeiro_RealBench_gav_lat_esq_03",
         "tipo": "gaveta_lat_esq",
-        "largura_mm": 530,
-        "altura_mm": 768,
+        "largura_mm": 500,
+        "altura_mm": 821,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 3 - Lateral Direita",
+        "nome": "Roupeiro_RealBench_gav_lat_dir_03",
         "tipo": "gaveta_lat_dir",
-        "largura_mm": 530,
-        "altura_mm": 768,
+        "largura_mm": 500,
+        "altura_mm": 821,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
       {
-        "nome": "Gaveta 3 - Fundo",
+        "nome": "Roupeiro_RealBench_gav_fun_03",
         "tipo": "gaveta_fundo",
         "largura_mm": 816,
-        "altura_mm": 530,
+        "altura_mm": 500,
         "espessura_mm": 10,
         "materialId": "mdf_branco-10"
       },
       {
-        "nome": "Gaveta 3 - Traseira",
+        "nome": "Roupeiro_RealBench_gav_cost_03",
         "tipo": "gaveta_traseira",
         "largura_mm": 816,
-        "altura_mm": 768,
+        "altura_mm": 821,
         "espessura_mm": 16,
         "materialId": "mdf_branco-16"
       },
@@ -241,15 +241,15 @@
       }
     ],
     "mode": "SPM",
-    "executionMs": 84.2,
+    "executionMs": 223.2,
     "totalSheets": 6,
-    "avgWastePercent": 46.77,
+    "avgWastePercent": 46.49,
     "totalMicroGapsLt5mm": 0,
     "totalInternalIslands": 0,
-    "avgWasteScatterIndex": 0.555,
-    "avgHorizontalDensity": 0.869,
-    "avgVerticalDensity": 0.779,
-    "utilizationPercent": 53.23,
+    "avgWasteScatterIndex": 0.605,
+    "avgHorizontalDensity": 0.855,
+    "avgVerticalDensity": 0.773,
+    "utilizationPercent": 53.51,
     "selectedStrategy": "skyline",
     "selectedBinHeuristic": "bestFit",
     "perSheet": [
@@ -269,54 +269,54 @@
       {
         "sheetIndex": 2,
         "pieceCount": 5,
-        "usedAreaMm2": 4152172,
-        "wastePercent": 28.36,
+        "usedAreaMm2": 4143192,
+        "wastePercent": 28.52,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.314,
+        "wasteScatterIndex": 0.32,
         "horizontalDensity": 0.977,
-        "verticalDensity": 0.932,
+        "verticalDensity": 0.93,
         "bboxUsedMaxX": 2736,
-        "bboxUsedMaxY": 1930
+        "bboxUsedMaxY": 1925
       },
       {
         "sheetIndex": 3,
         "pieceCount": 4,
-        "usedAreaMm2": 1757984,
-        "wastePercent": 69.67,
+        "usedAreaMm2": 1756188,
+        "wastePercent": 69.7,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
         "wasteScatterIndex": 0.781,
         "horizontalDensity": 0.623,
-        "verticalDensity": 0.732,
+        "verticalDensity": 0.731,
         "bboxUsedMaxX": 1745,
-        "bboxUsedMaxY": 1515
+        "bboxUsedMaxY": 1513
       },
       {
         "sheetIndex": 4,
         "pieceCount": 4,
-        "usedAreaMm2": 3187440,
-        "wastePercent": 45.01,
+        "usedAreaMm2": 3114000,
+        "wastePercent": 46.27,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.535,
-        "horizontalDensity": 0.948,
+        "wasteScatterIndex": 0.539,
+        "horizontalDensity": 0.938,
         "verticalDensity": 0.8,
-        "bboxUsedMaxX": 2655,
+        "bboxUsedMaxX": 2625,
         "bboxUsedMaxY": 1657
       },
       {
         "sheetIndex": 5,
         "pieceCount": 9,
-        "usedAreaMm2": 3534384,
-        "wastePercent": 39.02,
+        "usedAreaMm2": 3715536,
+        "wastePercent": 35.89,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.267,
-        "horizontalDensity": 0.964,
-        "verticalDensity": 0.929,
-        "bboxUsedMaxX": 2699,
-        "bboxUsedMaxY": 1924
+        "wasteScatterIndex": 0.557,
+        "horizontalDensity": 0.892,
+        "verticalDensity": 0.897,
+        "bboxUsedMaxX": 2498,
+        "bboxUsedMaxY": 1856
       },
       {
         "sheetIndex": 6,
@@ -336,7 +336,7 @@
       "ok": true,
       "structuralHash": "material-unresolved",
       "validationErrors": [
-        "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Gaveta 1 - Frente, Gaveta 2 - Frente, Gaveta 3 - Frente, Roupeiro_RealBench_RODA_PE_01).; mdf_branco-10: 10 mm em 3 peça(s) (Gaveta 1 - Fundo, Gaveta 2 - Fundo, Gaveta 3 - Fundo).; carvalho-20: 20 mm em 1 peça(s) (Roupeiro_RealBench_REMATE_DIR_01)."
+        "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Roupeiro_RealBench_gav_frent_ext_01, Roupeiro_RealBench_gav_frent_ext_02, Roupeiro_RealBench_gav_frent_ext_03, Roupeiro_RealBench_RODA_PE_01).; mdf_branco-10: 10 mm em 3 peça(s) (Roupeiro_RealBench_gav_fun_01, Roupeiro_RealBench_gav_fun_02, Roupeiro_RealBench_gav_fun_03).; carvalho-20: 20 mm em 1 peça(s) (Roupeiro_RealBench_REMATE_DIR_01)."
       ]
     },
     "labelsContract": {
@@ -348,8 +348,8 @@
         "Roupeiro_RealBench_SEP_02": "SEP",
         "Roupeiro_RealBench_SEP_03": "SEP",
         "porta_simples": "PORTA",
-        "Gaveta 1 - Frente": "FRENTE_GAVETA",
-        "Gaveta 2 - Frente": "FRENTE_GAVETA"
+        "Roupeiro_RealBench_gav_frent_ext_01": "FRENTE_GAVETA",
+        "Roupeiro_RealBench_gav_frent_ext_02": "FRENTE_GAVETA"
       }
     }
   }

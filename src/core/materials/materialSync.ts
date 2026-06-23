@@ -10,6 +10,7 @@ import {
 import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
 import { decodeSelectionId } from "../viewer/selectionIds";
 import { getIndustrialMaterial } from "./service";
+import { refreshViewerAfterMaterialSync } from "../../industrial/viewerIntegration";
 
 export type MaterialSyncTarget =
   | { kind: "project"; material: Material | null; materialId?: string }
@@ -360,23 +361,4 @@ export function propagateMaterialSyncEffects(
   refreshViewerAfterMaterialSync(sync);
 }
 
-export function refreshViewerAfterMaterialSync(
-  result: Pick<MaterialSyncResult, "affectedRemateIds" | "affectedRodapeIds">
-): void {
-  if (typeof window === "undefined") return;
-  const run = () => {
-    const core = window.viewerCore;
-    if (!core) return;
-    if (result.affectedRemateIds.length > 0) {
-      core.syncRemateVisuals?.();
-    }
-    if (result.affectedRodapeIds.length > 0) {
-      core.syncRodapeVisuals?.();
-    }
-  };
-  if (typeof requestAnimationFrame === "function") {
-    requestAnimationFrame(run);
-  } else {
-    run();
-  }
-}
+export { refreshViewerAfterMaterialSync } from "../../industrial/viewerIntegration";

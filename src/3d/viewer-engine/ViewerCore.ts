@@ -9,15 +9,10 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 import { SceneManager } from "./scene";
-import type { SceneOptions } from "./scene";
 import { CameraManager } from "./camera";
-import type { CameraOptions } from "./camera";
 import { RendererManager } from "./renderer";
-import type { RendererOptions } from "./renderer";
 import { Lights } from "./lighting";
-import type { LightsOptions } from "./lighting";
 import { Controls } from "./controls";
-import type { ControlsOptions } from "./controls";
 import {
   applyMouseInputMappingToOrbitControls,
   getMouseInputMapping,
@@ -32,7 +27,6 @@ import { SnapshotRenderer } from "./snapshot";
 import { HighlightManager } from "./highlight";
 import { EdgeOutlineSystem, type EdgeOutlineBoxEntry } from "../outline";
 import { ViewerRaycastSystem } from "./raycast/ViewerRaycastSystem";
-import type { EnvironmentOptions } from "./environment";
 import { ViewerState } from "./state";
 import { EventsManager } from "./events";
 import type { IViewerEventEngine } from "./events/EventEngineTypes";
@@ -76,21 +70,16 @@ import {
   VIEWER_LAYOUT_PROXY_LAYER,
 } from "./box/boxAabbUtils";
 import { applyFinishMovementConstraints } from "./constraints/finishCollision";
-
-/**
- * Propaga userData.boxId e layer 0 para todos os filhos do grupo da caixa.
- * O proxy de layout (`viewerLayoutBounds`) fica na layer dedicada (raycaster/picking = layer 0).
- */
-function tagBoxGroupWithId(group: THREE.Object3D, boxId: string) {
-  group.traverse((child) => {
-    if (isViewerLayoutProxyObject(child)) return;
-    child.userData = child.userData || {};
-    child.userData.boxId = boxId;
-    if (child.layers && typeof child.layers.set === "function") {
-      child.layers.set(0);
-    }
-  });
-}
+import {
+  aabb3FromThreeBox3,
+  clearSnapUserData,
+  getTransformGizmoSizeForBox as computeTransformGizmoSizeForBox,
+  isMeshInsideOrTouchingRoomBounds,
+  parametricRulerHitToThree,
+  tagBoxGroupWithId,
+} from "@/viewer/core/viewerUtils";
+import type { ViewerOptions } from "@/viewer/core/viewerTypes";
+export type { ViewerOptions } from "@/viewer/core/viewerTypes";
 import { RoomBuilder } from "../room/RoomBuilder";
 import type { RoomConfig, DoorWindowConfig } from "../room/types";
 import {
@@ -186,7 +175,6 @@ import {
   floorClearanceMeasurement,
   nearestBoxGapBetweenPair,
   nearestWallMeasurement,
-  type Aabb3,
   type ParametricRulerHit,
 } from "./measurement/parametricDimensions";
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
@@ -221,22 +209,6 @@ import {
 import type { DivisorItem, SeparadorItem } from "../../core/divSep/types";
 import type { SelectedDivSep } from "./state/ViewerState";
 
-function aabb3FromThreeBox3(b: THREE.Box3): Aabb3 {
-  return {
-    min: { x: b.min.x, y: b.min.y, z: b.min.z },
-    max: { x: b.max.x, y: b.max.y, z: b.max.z },
-  };
-}
-
-function parametricRulerHitToThree(hit: ParametricRulerHit): RulerMeasurementHit {
-  return {
-    kind: hit.kind,
-    distanceM: hit.distanceM,
-    start: new THREE.Vector3(hit.start.x, hit.start.y, hit.start.z),
-    end: new THREE.Vector3(hit.end.x, hit.end.y, hit.end.z),
-  };
-}
-
 /**
  * ViewerCore: orquestrador do motor 3D.
  * Coordena ViewerState (seleção, hover, tool), EventsManager (canvas/pointer) e ViewerTools (TransformControls, outline, clamp).
@@ -244,20 +216,6 @@ function parametricRulerHitToThree(hit: ParametricRulerHit): RulerMeasurementHit
  *
  * API multi-box: addBox, removeBox, updateBox, setBoxIndex, addModelToBox, selectBox, etc.
  */
-
-export type ViewerOptions = {
-  background?: string;
-  scene?: SceneOptions;
-  environment?: EnvironmentOptions;
-  camera?: CameraOptions;
-  renderer?: RendererOptions;
-  lights?: LightsOptions;
-  controls?: ControlsOptions;
-  enableControls?: boolean;
-  box?: BoxOptions;
-  /** Se true, não cria o box inicial "main"; módulos só aparecem ao gerar design ou carregar modelo. */
-  skipInitialBox?: boolean;
-};
 
 export class ViewerCore {
   private container: HTMLElement;
@@ -6505,22 +6463,9 @@ export class ViewerCore {
     entry.layoutBoundsMesh = m;
   }
 
-  /**
-   * Caixa segue lógica da sala apenas quando está dentro ou encostada ao perímetro em X/Z.
-   * Caixas totalmente fora da sala ficam livres (sem auto-rotate/snap da sala).
-   */
   private isMeshInsideOrTouchingRoom(movingMesh: THREE.Object3D, tolerance = 0.02): boolean {
     if (!this.roomBounds) return false;
-    movingMesh.updateMatrixWorld(true);
-    const box = new THREE.Box3();
-    setBox3FromObjectExcludingLayoutProxy(box, movingMesh);
-    const { minX, maxX, minZ, maxZ } = this.roomBounds;
-    return !(
-      box.max.x < minX - tolerance ||
-      box.min.x > maxX + tolerance ||
-      box.max.z < minZ - tolerance ||
-      box.min.z > maxZ + tolerance
-    );
+    return isMeshInsideOrTouchingRoomBounds(movingMesh, this.roomBounds, tolerance, this._boundingBox);
   }
 
   private getRoomOpeningsForSnapping(): import("./snapping/smartSnappingTypes").RoomOpeningLike[] {
@@ -6560,16 +6505,11 @@ export class ViewerCore {
   }
 
   private clearSnapState(object: THREE.Object3D): void {
-    const snapData = object.userData as Record<string, unknown>;
-    delete snapData.currentWallId;
-    delete snapData.lastWallId;
-    delete snapData.movementDirection;
-    delete snapData.lastSnapPosition;
+    clearSnapUserData(object);
   }
 
   private getTransformGizmoSizeForBox(entry: { width: number; height: number; depth: number }): number {
-    const maxDimension = Math.max(entry.width, entry.height, entry.depth);
-    return THREE.MathUtils.clamp(maxDimension * 0.45, 0.22, 0.5);
+    return computeTransformGizmoSizeForBox(entry);
   }
 
   private notifyWallTransform() {

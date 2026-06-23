@@ -482,6 +482,11 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
 
 /** Furação estrutural de montagem das peças de gaveta (cavilha, fixação lateral, rasgos de fundo). */
 function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
+  const drawerPieceTypes = [
+    "gaveta_lat_esq", "gaveta_lat_dir",
+    "gaveta_traseira", "gaveta_frente", "gaveta_frente_int",
+  ];
+  if (!drawerPieceTypes.includes(piece.tipo)) return;
   if (piece.tipo === "gaveta_lat_esq" || piece.tipo === "gaveta_lat_dir") {
     const holes = computeDrawerLateralStructuralHoles({
       largura: piece.largura,
