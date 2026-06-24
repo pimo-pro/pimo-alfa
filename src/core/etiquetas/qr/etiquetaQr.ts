@@ -40,22 +40,19 @@ export function resolveUnifiedEtiquetaQrCode(
 }
 
 /**
- * Código curto legível na faixa inferior (ex.: AN504-6) — não usado no QR.
+ * Código legível na faixa inferior — derivado do nome industrial completo + número.
+ * Ex.: NP2624619_CAIXA_FORNO_SEP_02-6 (não usa sigla do projecto).
  */
 export function resolveEtiquetaDisplayCodeV5(
   item: EtiquetaPieceLike,
   ctx: EtiquetaQrContext,
-  piecesPerSheet: Map<string, number>,
+  _piecesPerSheet: Map<string, number>,
   index0: number
 ): string {
-  const key = labelItemSheetKey(item.boxId, item.nome);
-  const totalPiecesInSheet = piecesPerSheet.get(key) ?? 0;
+  const boxNome = ctx.boxes.find((b) => b.id === item.boxId)?.nome;
   const pieceSeq = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
-  return buildEtiquetaCodeV5({
-    projectName: String(ctx.projectName ?? "PROJETO"),
-    pieceSeq,
-    totalPiecesInSheet,
-  });
+  const industrialRef = resolveIndustrialPieceRef(item, boxNome, ctx.projectName);
+  return buildEtiquetaQrPayloadV5({ industrialPieceRef: industrialRef, pieceSeq });
 }
 
 /**
