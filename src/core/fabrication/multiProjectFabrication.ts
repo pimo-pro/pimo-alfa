@@ -472,7 +472,7 @@ export async function generateMultiProjectFabrication(
           projectName: `${layoutTitle || "Multi-projeto"} — ${bundle.bucket}`,
           nestingTopRightOrigin: true,
         });
-        safeAddPdf(zip, industrialThicknessLayoutPdfPath(bundle.thicknessMm), docLayout);
+        safeAddPdf(zip, industrialThicknessLayoutPdfPath(bundle.bucket), docLayout);
 
         const globalEtiquetasProj: ProjectForEtiquetasPdf = {
           projectName: layoutTitle || "Multi-projeto",
@@ -483,7 +483,7 @@ export async function generateMultiProjectFabrication(
           cutLayoutPlacements: bundle.layoutResult.sheets.flatMap((s) => s.placements),
         };
         const docEtiquetasTodas = await UnifiedEtiquetaEngine.build(globalEtiquetasProj);
-        safeAddPdf(zip, industrialThicknessEtiquetasPdfPath(bundle.thicknessMm), docEtiquetasTodas);
+        safeAddPdf(zip, industrialThicknessEtiquetasPdfPath(bundle.bucket), docEtiquetasTodas);
       }
     } catch (err) {
       devLogger.error("multiProjectFabrication: layout/etiquetas por espessura", err);
@@ -585,7 +585,7 @@ export async function generateMultiProjectFabrication(
           const files = bundle.cncBundle.cnc?.files ?? [];
           for (const file of files) {
             if (!file || file.tcn == null) continue;
-            const tcnDir = `${basePath}/${industrialThicknessTcnDirPath(bundle.thicknessMm)}`;
+            const tcnDir = `${basePath}/${industrialThicknessTcnDirPath(bundle.bucket)}`;
             const base = buildTcnExportBaseName(
               bundle.cncBundle.layoutResult,
               file.panelIndex,
@@ -660,7 +660,7 @@ export async function generateMultiProjectFabrication(
       const files = bundle.cncBundle.cnc?.files ?? [];
       for (const file of files) {
         if (!file || file.tcn == null) continue;
-        const tcnDir = industrialThicknessTcnDirPath(bundle.thicknessMm);
+        const tcnDir = industrialThicknessTcnDirPath(bundle.bucket);
         const base = buildTcnExportBaseName(
           bundle.cncBundle.layoutResult,
           file.panelIndex,

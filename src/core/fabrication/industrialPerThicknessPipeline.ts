@@ -8,10 +8,15 @@ import type { CutLayoutEngineOptions, CutLayoutResult, CutPlacement } from "../c
 import { getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 import {
-  formatThicknessBucket,
-  groupCutlistItemsByThickness,
-  sortThicknessKeys,
+  formatMaterialThicknessFolderName,
+  groupCutlistItemsByMaterialAndThickness,
+  resolveMaterialLabelForCutlistItem,
+  sortMaterialThicknessGroupKeys,
 } from "../cnc/industrialThicknessGroups";
+import {
+  inferCutlistItemThicknessMm,
+  resolveCanonicalMaterialIdForNesting,
+} from "../cnc/industrialNestingGroup";
 import {
   buildCncFromCutlistItemsInWorker,
   runCutLayoutInWorker,
@@ -21,7 +26,10 @@ type CncBundle = NonNullable<Awaited<ReturnType<typeof buildCncFromCutlistItemsI
 
 export type PerThicknessLayoutBundle = {
   thicknessMm: number;
+  materialId: string;
+  materialLabel: string;
   bucket: string;
+  groupKey: string;
   items: CutlistItemForPieces[];
   layoutResult: CutLayoutResult;
 };
@@ -47,8 +55,22 @@ function withSheetDefaults(
   };
 }
 
+function buildBundleMeta(
+  groupKey: string,
+  groupItems: CutlistItemForPieces[],
+  materials: MaterialRecord[]
+): Pick<PerThicknessLayoutBundle, "thicknessMm" | "materialId" | "materialLabel" | "bucket" | "groupKey"> {
+  const sample = groupItems[0]!;
+  const thicknessMm = inferCutlistItemThicknessMm(sample);
+  const materialRef = String(sample.materialId ?? sample.material ?? "").trim();
+  const materialId = resolveCanonicalMaterialIdForNesting(materialRef, thicknessMm);
+  const materialLabel = resolveMaterialLabelForCutlistItem(sample, materials);
+  const bucket = formatMaterialThicknessFolderName(materialLabel, thicknessMm);
+  return { thicknessMm, materialId, materialLabel, bucket, groupKey };
+}
+
 /**
- * Executa CutLayout uma vez por espessura, devolvendo um resultado independente por grupo.
+ * Executa CutLayout uma vez por material+espessura, devolvendo um resultado independente por grupo.
  */
 export async function runCutLayoutPerThickness(
   settings: SettingsSchema,
@@ -57,13 +79,14 @@ export async function runCutLayoutPerThickness(
   layoutOptions: CutLayoutEngineOptions,
   projectCtx?: CutlistToPiecesContext
 ): Promise<PerThicknessLayoutBundle[]> {
-  const groups = groupCutlistItemsByThickness(items);
+  const groups = groupCutlistItemsByMaterialAndThickness(items);
   const sheetDef = getSheetDefinitionFromSettings();
   const opts = withSheetDefaults(layoutOptions, sheetDef);
   const results: PerThicknessLayoutBundle[] = [];
 
-  for (const thicknessMm of sortThicknessKeys(groups.keys())) {
-    const groupItems = groups.get(thicknessMm)!;
+  for (const groupKey of sortMaterialThicknessGroupKeys(groups.keys(), groups, materials)) {
+    const groupItems = groups.get(groupKey)!;
+    const meta = buildBundleMeta(groupKey, groupItems, materials);
     const pieces = cutlistToPieces(groupItems, {
       projectName: projectCtx?.projectName ?? "Projeto",
       boxes: (projectCtx?.boxes ?? []) as never[],
@@ -73,8 +96,7 @@ export async function runCutLayoutPerThickness(
     const layoutResult = await runCutLayoutInWorker(settings, materials, pieces, opts);
     applyRotationGeometryToSheets(layoutResult.sheets);
     results.push({
-      thicknessMm,
-      bucket: formatThicknessBucket(thicknessMm),
+      ...meta,
       items: groupItems,
       layoutResult,
     });
@@ -84,7 +106,7 @@ export async function runCutLayoutPerThickness(
 }
 
 /**
- * Executa nesting + exportação TCN uma vez por espessura.
+ * Executa nesting + exportação TCN uma vez por material+espessura.
  */
 export async function buildCncBundlesPerThickness(
   settings: SettingsSchema,
@@ -93,13 +115,14 @@ export async function buildCncBundlesPerThickness(
   items: CutlistItemForPieces[],
   layoutOptions: CutLayoutEngineOptions
 ): Promise<PerThicknessCncBundle[]> {
-  const groups = groupCutlistItemsByThickness(items);
+  const groups = groupCutlistItemsByMaterialAndThickness(items);
   const sheetDef = getSheetDefinitionFromSettings();
   const opts = withSheetDefaults(layoutOptions, sheetDef);
   const results: PerThicknessCncBundle[] = [];
 
-  for (const thicknessMm of sortThicknessKeys(groups.keys())) {
-    const groupItems = groups.get(thicknessMm)!;
+  for (const groupKey of sortMaterialThicknessGroupKeys(groups.keys(), groups, materials)) {
+    const groupItems = groups.get(groupKey)!;
+    const meta = buildBundleMeta(groupKey, groupItems, materials);
     const cncBundle = await buildCncFromCutlistItemsInWorker(
       settings,
       materials,
@@ -109,8 +132,7 @@ export async function buildCncBundlesPerThickness(
     );
     if (!cncBundle?.layoutResult) continue;
     results.push({
-      thicknessMm,
-      bucket: formatThicknessBucket(thicknessMm),
+      ...meta,
       items: groupItems,
       layoutResult: cncBundle.layoutResult,
       cncBundle,

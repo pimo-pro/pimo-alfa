@@ -401,7 +401,7 @@ export function useGerarArquivoHandlers() {
           precomputedItems: bundle.items as CutListItemComPreco[],
           cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
         });
-        doc.save(`${slug}_${industrialThicknessEtiquetasPdfFileName(bundle.thicknessMm)}`);
+        doc.save(`${slug}_${industrialThicknessEtiquetasPdfFileName(bundle.bucket)}`);
       }
       showToast(
         thicknessBundles.length === 1
@@ -536,7 +536,7 @@ export function useGerarArquivoHandlers() {
           projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
           nestingTopRightOrigin: true,
         });
-        doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.thicknessMm)}`);
+        doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.bucket)}`);
       }
       showToast(
         thicknessBundles.length === 1
@@ -629,7 +629,7 @@ export function useGerarArquivoHandlers() {
           for (const bundle of thicknessBundles) {
             const files = bundle.cncBundle.cnc?.files ?? [];
             if (!files.length) continue;
-            const tcnDir = industrialThicknessTcnDirPath(bundle.thicknessMm);
+            const tcnDir = industrialThicknessTcnDirPath(bundle.bucket);
             const usedNames = new Set<string>();
             for (const file of files) {
               const base = buildTcnExportBaseName(
@@ -875,7 +875,7 @@ export function useGerarArquivoHandlers() {
             precomputedItems: bundle.items as CutListItemComPreco[],
             cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
           });
-          const etiquetasPath = industrialThicknessEtiquetasPdfPath(bundle.thicknessMm);
+          const etiquetasPath = industrialThicknessEtiquetasPdfPath(bundle.bucket);
           if (!safeAddPdf(zip, etiquetasPath, docEtiquetas)) {
             errors.push({
               step: `PDF Etiquetas (${bundle.bucket})`,
@@ -887,7 +887,7 @@ export function useGerarArquivoHandlers() {
             projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
             nestingTopRightOrigin: true,
           });
-          const layoutPath = industrialThicknessLayoutPdfPath(bundle.thicknessMm);
+          const layoutPath = industrialThicknessLayoutPdfPath(bundle.bucket);
           if (!safeAddPdf(zip, layoutPath, docLayout)) {
             errors.push({
               step: `Layout de Corte PRO (${bundle.bucket})`,
@@ -928,7 +928,7 @@ export function useGerarArquivoHandlers() {
               });
               continue;
             }
-            const tcnDir = industrialThicknessTcnDirPath(bundle.thicknessMm);
+            const tcnDir = industrialThicknessTcnDirPath(bundle.bucket);
             const base = buildTcnExportBaseName(
               bundle.cncBundle.layoutResult,
               file.panelIndex,
