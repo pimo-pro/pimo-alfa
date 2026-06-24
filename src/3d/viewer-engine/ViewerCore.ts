@@ -71,11 +71,9 @@ import {
 } from "./box/boxAabbUtils";
 import { applyFinishMovementConstraints } from "./constraints/finishCollision";
 import {
-  aabb3FromThreeBox3,
   clearSnapUserData,
   getTransformGizmoSizeForBox as computeTransformGizmoSizeForBox,
   isMeshInsideOrTouchingRoomBounds,
-  parametricRulerHitToThree,
   tagBoxGroupWithId,
 } from "@/viewer/core/viewerUtils";
 import type { ViewerOptions } from "@/viewer/core/viewerTypes";
@@ -111,14 +109,22 @@ import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
 import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
-import { InternalRuler, type InternalRulerMeasurement } from "./measurement/InternalRuler";
+import { InternalRuler } from "./measurement/InternalRuler";
+import { createInternalRulerFacade, type InternalRulerFacade } from "./measurement/internalRulerFacade";
 import { InternalRulerOverlay } from "./measurement/InternalRulerOverlay";
 import type { InternalCavityMeasurements } from "./measurement/internalRulerOverlayTypes";
 import type { InternalMeasurementEntry } from "./measurement/internalRulerTypes";
+import { computeInternalCavityMeasurements } from "./selection/boxCavityBounds";
 import {
-  computeBoxCavityBoundsLocal,
-  computeInternalCavityMeasurements,
-} from "./selection/boxCavityBounds";
+  computeDistanceToFloor as computeParametricDistanceToFloor,
+  computeDistanceToNearestBox as computeParametricDistanceToNearestBox,
+  computeDistanceToNearestWall as computeParametricDistanceToNearestWall,
+} from "./measurement/parametricRulerDistances";
+import { syncInternalRulerOverlay as syncInternalRulerOverlayState } from "./measurement/internalRulerOverlaySync";
+import {
+  createMeasurementAnchorFromWorldHit,
+  syncMeasurementAnchorsToVisualizer,
+} from "./measurement/measurementAnchorsBridge";
 import {
   InternalSelectionOutline,
   type InternalSelectionHit,
@@ -129,11 +135,17 @@ import { MultiSelectionOutline, type MultiOutlineTarget } from "./selection/Mult
 import { MeasurementAnchorsVisualizer } from "./measurement/MeasurementAnchorsVisualizer";
 import { historyManager } from "../../core/viewer/historyManager";
 import type { MeasurementAnchorEntry } from "../../core/viewer/measurementAnchors";
-import { decodeSelectionId, remateSelectionId, rodapeSelectionId } from "../../core/viewer/selectionIds";
+import { decodeSelectionId } from "../../core/viewer/selectionIds";
 import { encodeSelectionIdFromLayerHit } from "../../core/viewer/selectionHitEncoding";
 import { SmartSnapping } from "./snapping/SmartSnapping";
+import { createSnappingFacade, type SnappingFacade } from "./snapping/snappingFacade";
+import { registerAdminSnappingRules } from "./snapping/adminSnappingRules";
 import { RemateSmartSnapping } from "./snapping/RemateSmartSnapping";
 import { SmartAlignSnapOverlay } from "./snapping/smartAlignSnapOverlay";
+import {
+  createSmartAlignOverlayFacade,
+  type SmartAlignOverlayFacade,
+} from "./snapping/smartAlignOverlayFacade";
 import type { SmartAlignSnapContext } from "./snapping/smartAlignSnapTypes";
 import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
@@ -153,9 +165,9 @@ import { ManufacturingReportEngine } from "./snapping/manufacturingReportEngine"
 import type { ManufacturingFullReport, ManufacturingUiReport } from "./snapping/manufacturingTypes";
 import { CostReportEngine } from "./snapping/costReportEngine";
 import type { CostChangeInput, CostFullReport, CostUiSummary, CostSuggestion } from "./snapping/costTypes";
-import { getRoomRules, getSnapRules } from "./snapping/rulesRuntime";
 import { rulesStore } from "../../admin/rules/rulesStore";
 import type { SmartLayoutBridge } from "./snapping/smartLayoutTypes";
+import { createDisabledSmartLayoutDeps } from "./snapping/smartLayoutDepsFactory";
 import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
 import { RematePieceVisualizer, type RematePieceVisualBridge } from "./remate/RematePieceVisualizer";
 import {
@@ -171,32 +183,28 @@ import {
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
 import { mToMm } from "../../utils/units";
-import {
-  floorClearanceMeasurement,
-  nearestBoxGapBetweenPair,
-  nearestWallMeasurement,
-  type ParametricRulerHit,
-} from "./measurement/parametricDimensions";
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
 import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
 import { ViewerOverlayCoordinator } from "./overlays/ViewerOverlayCoordinator";
+import { bindViewerOverlayCoordinator } from "./overlays/bindViewerOverlayCoordinator";
+import { createViewerVisualFacades, type ViewerVisualFacade } from "./overlays/viewerVisualFacades";
+import { registerViewerWindowEvents } from "./input/viewerWindowEvents";
+import { PointerPickingFacade } from "./input/PointerPickingFacade";
+import { clearCompetingSelectionsFor } from "./input/neutralSelection";
+import { shouldProcessTransformDragEnd } from "./transforms/transformDragLifecycle";
 import {
   applyAlignment,
   type AlignmentType,
   type AlignableObject,
 } from "./commands/alignmentCommands";
 import {
-  computeUnifiedBoxDimensions,
-  createDimensionsOverlay,
-  updateDimensionsOverlay,
-  disposeDimensionsOverlay,
-  getDimensionsOverlayData,
-  getPrintReadyDimensions,
   type BoxBoundsInput,
-  type DimensionsOverlayHandle,
   type DimensionOverlayDataEntry,
   type PrintReadyDimensions,
 } from "./overlays/boxDimensionsOverlay";
+import { DimensionsOverlayController } from "./overlays/DimensionsOverlayController";
+import { SelectionOutlineController } from "./overlays/SelectionOutlineController";
+import { WallSelectionOutlineController } from "./overlays/WallSelectionOutlineController";
 import { ViewerBoundsCache } from "./cache/ViewerBoundsCache";
 import type { MouseMenuTarget } from "../../ui/context-menu/ContextMenuEngine";
 import type { DivSepVisualBridge } from "./divSep/DivSepVisualBridge";
@@ -252,6 +260,7 @@ export class ViewerCore {
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
   private readonly raycastSystem: ViewerRaycastSystem;
+  private readonly pointerPicking: PointerPickingFacade;
   private readonly viewerState = new ViewerState();
   private onBoxSelected: ((_id: string | null) => void) | null = null;
   private onMultiSelectToggle: ((_encodedId: string) => void) | null = null;
@@ -299,8 +308,6 @@ export class ViewerCore {
   private readonly _frustum = new THREE.Frustum();
   private readonly _projScreenMatrix = new THREE.Matrix4();
   private readonly isMobile: boolean;
-  private outlineCurrentOpacity = 0;
-  private outlineTargetOpacity = 0;
   private onRoomElementPlaced: ((_wallId: number, _config: DoorWindowConfig, _type: "door" | "window") => void) | null = null;
   private onRoomElementSelected: ((_data: { elementId: string; wallId: number; type: "door" | "window"; config: DoorWindowConfig } | null) => void) | null = null;
   private onWallSelected: ((_wallId: number | null) => void) | null = null;
@@ -363,18 +370,13 @@ export class ViewerCore {
   private manualHiddenWallId: number | null = null;
 
   /** Overlay unificado de medidas do conjunto de caixas (visualização apenas). */
-  private dimensionsOverlayVisible = false;
-  private dimensionsOverlayHandle: DimensionsOverlayHandle | null = null;
+  private dimensionsOverlay!: DimensionsOverlayController;
 
   private turntableEnabled = false;
   private turntableSpeed = 0.15;
   private lights: Lights;
   /** Grupo com um wireframe L×A×P de layout (contorno azul de seleção). */
-  private selectionOutline: THREE.Group | null = null;
-  private selectionOutlineTarget: THREE.Object3D | null = null;
-  /** Evita reconstruir os helpers a cada frame quando a lista de peças não mudou. */
-  private selectionOutlinePiecesSig: string | null = null;
-  private selectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
+  private selectionOutline!: SelectionOutlineController;
   private readonly pendingViewerVisualSync = {
     orla: false,
     remate: false,
@@ -383,8 +385,7 @@ export class ViewerCore {
   };
   private readonly pendingBoxStructureUpdates = new Map<string, Partial<BoxOptions>>();
   /** Outline da parede selecionada (Room Box). */
-  private wallSelectionOutline: THREE.BoxHelper | null = null;
-  private wallSelectionOutlineMaterial: THREE.LineBasicMaterial | null = null;
+  private wallSelectionOutline!: WallSelectionOutlineController;
   /** Highlight por mesh (hover + seleção): portas, gavetas, painéis, furos. Só ativo quando highlightEnabled. */
   private highlightManager: HighlightManager | null = null;
   /** Outline global e isolado: apenas visual, usado para mostrar arestas das peças. */
@@ -486,6 +487,8 @@ export class ViewerCore {
   private smartSnappingEngine!: SmartSnapping;
   private remateSmartSnapping!: RemateSmartSnapping;
   private smartAlignSnapOverlay!: SmartAlignSnapOverlay;
+  private smartAlignOverlay!: SmartAlignOverlayFacade;
+  private unregisterAdminSnappingRules: (() => void) | null = null;
   readonly settings = {
     enableSmartAlignSnap: false,
   };
@@ -510,35 +513,11 @@ export class ViewerCore {
   private rodapeVisualizer = new RodapeVisualizer();
   private readonly overlayCoordinator = new ViewerOverlayCoordinator();
   private readonly boundsCache = new ViewerBoundsCache();
+  private unregisterWindowEvents: (() => void) | null = null;
   /** Evita processar fim de drag duas vezes (mouseUp + dragging-changed). */
   private transformDragEndStamp = -1;
-  readonly internalRuler: {
-    enableForBox: (_boxId: string) => void;
-    disable: () => void;
-    isActive: () => boolean;
-    getLastMeasurement: () => InternalRulerMeasurement | null;
-    getActiveBoxId: () => string | null;
-    syncFromProject: (_entries: InternalMeasurementEntry[]) => void;
-  };
-  readonly snapping: {
-    enable: () => void;
-    disable: () => void;
-    isEnabled: () => boolean;
-    setGridSize: (_mm: number) => void;
-    setCaptureRadius: (_mm: number) => void;
-    setMagnetStrength: (_value: number) => void;
-    setMode: (_mode: import("./snapping/SmartSnapping").SmartSnapMode) => void;
-    getMode: () => import("./snapping/SmartSnapping").SmartSnapMode;
-    setRoomSnappingEnabled: (_enabled: boolean) => void;
-    isRoomSnappingEnabled: () => boolean;
-    setAutoAlignmentEnabled: (_enabled: boolean) => void;
-    isAutoAlignmentEnabled: () => boolean;
-    setAutoSpacingEnabled: (_enabled: boolean) => void;
-    isAutoSpacingEnabled: () => boolean;
-    setWallOffset: (_mm: number) => void;
-    getWallOffset: () => number;
-    getActiveAlignmentType: () => import("./snapping/SmartSnapping").ActiveAlignmentType;
-  };
+  readonly internalRuler: InternalRulerFacade;
+  readonly snapping: SnappingFacade;
   readonly autoLayout: {
     fillWallWithModule: (_wallId: string | number, _moduleBoxId: string) => boolean;
     extendAlongWallFromBox: (_boxId: string) => boolean;
@@ -596,18 +575,10 @@ export class ViewerCore {
     suggestPremium: (_seedBoxId: string) => boolean;
     suggestBalanced: (_seedBoxId: string) => boolean;
   };
-  readonly orlaVisual: {
-    syncAll: () => void;
-  };
-  readonly remateVisual: {
-    syncAll: () => void;
-  };
-  readonly hematiVisual: {
-    syncAll: () => void;
-  };
-  readonly rodapeVisual: {
-    syncAll: () => void;
-  };
+  readonly orlaVisual: ViewerVisualFacade;
+  readonly remateVisual: ViewerVisualFacade;
+  readonly hematiVisual: ViewerVisualFacade;
+  readonly rodapeVisual: ViewerVisualFacade;
   private panelVisibility!: ViewerPanelVisibility;
   private runtimeLoop!: ViewerRuntimeLoop;
 
@@ -657,34 +628,12 @@ export class ViewerCore {
     };
     this.defaultPixelRatio = this.rendererManager.renderer.getPixelRatio();
     this.baseToneMappingExposure = this.rendererManager.renderer.toneMappingExposure;
-    this.selectionOutlineMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color("#7dd3fc"),
-      linewidth: 1,
-      opacity: 0.6,
-      transparent: true,
-      depthTest: true,
-      depthWrite: false,
-      toneMapped: false,
+    this.selectionOutline = new SelectionOutlineController({
+      scene: this.sceneManager.scene,
+      getBoxes: () => this.boxes,
     });
-    this.selectionOutline = new THREE.Group();
-    this.selectionOutline.name = "selectionOutlinePieces";
-    this.selectionOutline.visible = false;
-    this.sceneManager.scene.add(this.selectionOutline);
 
-    this.wallSelectionOutlineMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color("#3b82f6"),
-      linewidth: 1,
-      opacity: 0.9,
-      transparent: true,
-      depthTest: true,
-    });
-    this.wallSelectionOutline = new THREE.BoxHelper(new THREE.Object3D(), 0x3b82f6);
-    if (this.wallSelectionOutlineMaterial) {
-      (this.wallSelectionOutline.material as THREE.Material).dispose();
-      this.wallSelectionOutline.material = this.wallSelectionOutlineMaterial;
-    }
-    this.wallSelectionOutline.visible = false;
-    this.sceneManager.scene.add(this.wallSelectionOutline);
+    this.wallSelectionOutline = new WallSelectionOutlineController(this.sceneManager.scene);
 
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
     this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
@@ -712,11 +661,16 @@ export class ViewerCore {
       getHematiRoot: () => this.hematiVisualizer.getRoot(),
       getRodapeRoot: () => this.rodapeVisualizer.getRoot(),
     });
+    this.pointerPicking = new PointerPickingFacade({
+      raycastSystem: this.raycastSystem,
+      getPlacementMode: () => this.viewerState.getPlacementMode(),
+      hasRoomElementPlacementHandler: () => Boolean(this.onRoomElementPlaced),
+    });
 
     this.panelVisibility = new ViewerPanelVisibility({
       getBoxes: () => this.boxes,
       getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
-      getBoxIdByMesh: (mesh) => this.raycastSystem.getBoxIdByMesh(mesh),
+      getBoxIdByMesh: (mesh) => this.pointerPicking.getBoxIdByMesh(mesh),
       getSharedPanelEdgeMaterial: () => getSharedPanelEdgeMaterial(),
     });
 
@@ -751,14 +705,7 @@ export class ViewerCore {
       getProjectMeasurements: () => this.getProjectMeasurementsFn(),
       onMeasurementSaved: (entry) => this.onInternalMeasurementSavedFn(entry),
     });
-    this.internalRuler = {
-      enableForBox: (boxId) => this.internalRulerEngine.enableForBox(boxId),
-      disable: () => this.internalRulerEngine.disable(),
-      isActive: () => this.internalRulerEngine.isActive(),
-      getLastMeasurement: () => this.internalRulerEngine.getLastMeasurement(),
-      getActiveBoxId: () => this.internalRulerEngine.getActiveBoxId(),
-      syncFromProject: (entries) => this.internalRulerEngine.syncFromProject(entries),
-    };
+    this.internalRuler = createInternalRulerFacade(this.internalRulerEngine);
 
     this.internalRulerOverlay = new InternalRulerOverlay({
       getContainer: () => this.container,
@@ -785,55 +732,25 @@ export class ViewerCore {
       getContainer: () => this.container,
       projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
     });
+    this.smartAlignOverlay = createSmartAlignOverlayFacade(this.smartAlignSnapOverlay);
 
-    this.snapping = {
-      enable: () => this.smartSnappingEngine.enable(),
-      disable: () => this.smartSnappingEngine.disable(),
-      isEnabled: () => this.smartSnappingEngine.isEnabled(),
-      setGridSize: (mm) => this.smartSnappingEngine.setGridSize(mm),
-      setCaptureRadius: (mm) => this.smartSnappingEngine.setCaptureRadius(mm),
-      setMagnetStrength: (value) => this.smartSnappingEngine.setMagnetStrength(value),
-      setMode: (mode) => this.smartSnappingEngine.setMode(mode),
-      getMode: () => this.smartSnappingEngine.getMode(),
-      setRoomSnappingEnabled: (enabled) => this.smartSnappingEngine.setRoomSnappingEnabled(enabled),
-      isRoomSnappingEnabled: () => this.smartSnappingEngine.isRoomSnappingEnabled(),
-      setAutoAlignmentEnabled: (enabled) => this.smartSnappingEngine.setAutoAlignmentEnabled(enabled),
-      isAutoAlignmentEnabled: () => this.smartSnappingEngine.isAutoAlignmentEnabled(),
-      setAutoSpacingEnabled: (enabled) => this.smartSnappingEngine.setAutoSpacingEnabled(enabled),
-      isAutoSpacingEnabled: () => this.smartSnappingEngine.isAutoSpacingEnabled(),
-      setWallOffset: (mm) => this.smartSnappingEngine.setWallOffset(mm),
-      getWallOffset: () => this.smartSnappingEngine.getWallOffset(),
-      getActiveAlignmentType: () => this.smartSnappingEngine.getActiveAlignmentType(),
-    };
+    this.snapping = createSnappingFacade(this.smartSnappingEngine);
 
-    this.overlayCoordinator.bind({
-      syncRulerWithExternalSelectionMovement: () =>
-        this.measurementOverlay.syncRulerWithExternalSelectionMovement(),
-      clearRulerOverlayIfMovementIdle: (nowMs) =>
-        this.measurementOverlay.clearRulerOverlayIfMovementIdle(nowMs),
-      refreshInternalRuler: () => this.internalRulerEngine.refreshOverlay(),
+    bindViewerOverlayCoordinator({
+      coordinator: this.overlayCoordinator,
+      measurementOverlay: this.measurementOverlay,
+      internalRulerEngine: this.internalRulerEngine,
+      smartSnappingEngine: this.smartSnappingEngine,
       refreshInternalRulerOverlay: () => this.refreshInternalRulerOverlay(),
-      refreshSnapping: () => this.smartSnappingEngine.refreshOverlay(),
-      refreshSmartAlignSnap: () => this.clearSmartAlignSnapOverlay(),
-      clearMovementRuler: () => this.measurementOverlay.clearRulerOverlay(),
-      clearSmartAlignSnap: () => this.clearSmartAlignSnapOverlay(),
+      clearSmartAlignSnapOverlay: () => this.clearSmartAlignSnapOverlay(),
     });
 
     this.autoLayoutEngine = new AutoLayoutEngine();
-    const smartLayoutDeps = {
+    const smartLayoutDeps = createDisabledSmartLayoutDeps({
       getBridge: () => this.smartLayoutBridge,
-      refineBoxWithSmartSnap: () => {},
-      isSmartSnapEnabled: () => false,
       buildSnapContext: () => this.buildDisabledSmartSnapContext(),
-      getBoxWorldPosition: (boxId: string) => {
-        const entry = this.boxes.get(boxId);
-        return entry ? entry.mesh.position.clone() : null;
-      },
-      setBoxWorldPosition: (boxId: string, pos: THREE.Vector3) => {
-        const entry = this.boxes.get(boxId);
-        if (entry) entry.mesh.position.copy(pos);
-      },
-    };
+      getBoxEntry: (boxId) => this.boxes.get(boxId),
+    });
     this.autoWallFillEngine = new AutoWallFillEngine(smartLayoutDeps);
     this.autoRoomFillEngine = new AutoRoomFillEngine(smartLayoutDeps);
     this.autoDistributionEngine = new AutoDistributionEngine(smartLayoutDeps);
@@ -870,7 +787,7 @@ export class ViewerCore {
       previewPlan: (plan, label, previewId) => {
         const { overlay } = buildPredictiveLayoutResult(this.predictiveLayoutEngine, plan, label);
         this.predictiveLayoutEngine.previewDesigns([{ id: previewId, plan, label }]);
-        this.smartAlignSnapOverlay.setState(overlay);
+        this.smartAlignOverlay.setState(overlay);
       },
       applyPlan: (plan, meta) => {
         const ok = this.intelligentDesignerEngine.applyPlanDirect(plan, {
@@ -1002,22 +919,21 @@ export class ViewerCore {
       suggestPremium: (seedBoxId) => this.previewCostSuggestionByTier(seedBoxId, "premium"),
       suggestBalanced: (seedBoxId) => this.previewCostSuggestionByTier(seedBoxId, "balanced"),
     };
-    this.orlaVisual = {
-      syncAll: () => this.syncOrlaVisuals(),
-    };
-    this.remateVisual = {
-      syncAll: () => this.syncRemateVisuals(),
-    };
-    this.hematiVisual = {
-      syncAll: () => this.syncHematiVisuals(),
-    };
-    this.rodapeVisual = {
-      syncAll: () => this.syncRodapeVisuals(),
-    };
+    const visualFacades = createViewerVisualFacades({
+      syncOrlaVisuals: () => this.syncOrlaVisuals(),
+      syncRemateVisuals: () => this.syncRemateVisuals(),
+      syncHematiVisuals: () => this.syncHematiVisuals(),
+      syncRodapeVisuals: () => this.syncRodapeVisuals(),
+    });
+    this.orlaVisual = visualFacades.orlaVisual;
+    this.remateVisual = visualFacades.remateVisual;
+    this.hematiVisual = visualFacades.hematiVisual;
+    this.rodapeVisual = visualFacades.rodapeVisual;
 
-    this.applyAdminRulesSettings();
-    rulesStore.snapRules.subscribe(() => this.applyAdminRulesSettings());
-    rulesStore.roomRules.subscribe(() => this.applyAdminRulesSettings());
+    this.unregisterAdminSnappingRules = registerAdminSnappingRules(this.smartSnappingEngine, {
+      snapRules: rulesStore.snapRules,
+      roomRules: rulesStore.roomRules,
+    });
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -1090,6 +1006,16 @@ export class ViewerCore {
     this.sceneManager.scene.add(this.transformControlsHelper);
     this.groupGizmo = new GroupGizmo(this.sceneManager.scene);
     this.measurementAnchorsVisualizer = new MeasurementAnchorsVisualizer(this.sceneManager.scene);
+    this.dimensionsOverlay = new DimensionsOverlayController({
+      scene: this.sceneManager.scene,
+      camera: this.cameraManager.camera,
+      getViewportSize: () => ({
+        width: this.container?.clientWidth ?? 1280,
+        height: this.container?.clientHeight ?? 720,
+      }),
+      collectBoxBounds: () => this.collectBoxBoundsForDimensions(),
+      projectWorldToScreen: (world) => this.projectWorldToScreen(world),
+    });
     this.logTransformDiagnostic("transform-listeners-ready", {
       domTag: this.rendererManager.renderer.domElement.tagName,
       helperVisible: this.transformControlsHelper.visible,
@@ -1146,9 +1072,9 @@ export class ViewerCore {
       setGridVisible: (visible) => this.sceneManager.setGridVisible(visible),
       getRoomGroup: () => this.roomBuilder.getGroup(),
       getRoomWalls: () => this.roomBoxWalls,
-      getSelectionOutline: () => this.selectionOutline,
-      getWallSelectionOutline: () => this.wallSelectionOutline,
-      getDimensionsOverlayGroup: () => this.dimensionsOverlayHandle?.group ?? null,
+      getSelectionOutline: () => this.selectionOutline.getGroup(),
+      getWallSelectionOutline: () => this.wallSelectionOutline.getHelper(),
+      getDimensionsOverlayGroup: () => this.dimensionsOverlay.group,
       getWallGizmoGroup: () => this.wallGizmo?.group ?? null,
       ensureShowcaseComposer: () => {
         if (!this.composer) this.initShowcaseComposer();
@@ -1199,9 +1125,11 @@ export class ViewerCore {
     materialEngineSetLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
 
     this.start();
-    window.addEventListener("resize", this.updateCanvasSize);
-    window.addEventListener("keydown", this.boundShiftKeyDown);
-    window.addEventListener("keyup", this.boundShiftKeyUp);
+    this.unregisterWindowEvents = registerViewerWindowEvents({
+      resize: this.updateCanvasSize,
+      keydown: this.boundShiftKeyDown,
+      keyup: this.boundShiftKeyUp,
+    });
   }
 
   getCurrentMode(): "performance" | "showcase" {
@@ -1298,15 +1226,7 @@ export class ViewerCore {
   selectRemate(remateId: string | null): void {
     this.viewerState.setSelectedRemate(remateId);
     this.onRemateSelected?.(remateId);
-    if (remateId) {
-      this.viewerState.setSelectedHemati(null);
-      this.viewerState.setSelectedRodape(null);
-      this.viewerState.setSelectedDivSep(null);
-      this.viewerState.setSelectedBox(null);
-      this.viewerState.setSelectedWallIndex(null);
-      this.viewerState.setSelectedRoomElementId(null);
-      this.viewerState.clearGroupTransformMemberIds();
-    }
+    clearCompetingSelectionsFor(this.viewerState, "remate", remateId);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
   }
@@ -1342,19 +1262,13 @@ export class ViewerCore {
   }
 
   getDivSepHitAtPointer(event: { clientX: number; clientY: number }): SelectedDivSep | null {
-    return this.raycastSystem.getDivSepHitAtPointer(event);
+    return this.pointerPicking.getDivSepHitAtPointer(event);
   }
 
   selectDivSep(selection: SelectedDivSep | null): void {
     this.viewerState.setSelectedDivSep(selection);
     if (selection) {
-      this.viewerState.setSelectedRemate(null);
-      this.viewerState.setSelectedHemati(null);
-      this.viewerState.setSelectedRodape(null);
-      this.viewerState.setSelectedBox(null);
-      this.viewerState.setSelectedWallIndex(null);
-      this.viewerState.setSelectedRoomElementId(null);
-      this.viewerState.clearGroupTransformMemberIds();
+      clearCompetingSelectionsFor(this.viewerState, "divSep", selection);
       if (this.viewerState.getCurrentTool() !== "translate") {
         this.viewerState.setCurrentTool("translate");
       }
@@ -1411,24 +1325,16 @@ export class ViewerCore {
   }
 
   getHematiIdAtPointer(event: { clientX: number; clientY: number }): string | null {
-    return this.raycastSystem.getHematiIdAtPointer(event);
+    return this.pointerPicking.getHematiIdAtPointer(event);
   }
 
   getRodapeIdAtPointer(event: { clientX: number; clientY: number }): string | null {
-    return this.raycastSystem.getRodapeIdAtPointer(event);
+    return this.pointerPicking.getRodapeIdAtPointer(event);
   }
 
   selectHemati(hematiId: string | null): void {
     this.viewerState.setSelectedHemati(hematiId);
-    if (hematiId) {
-      this.viewerState.setSelectedRodape(null);
-      this.viewerState.setSelectedRemate(null);
-      this.viewerState.setSelectedDivSep(null);
-      this.viewerState.setSelectedBox(null);
-      this.viewerState.setSelectedWallIndex(null);
-      this.viewerState.setSelectedRoomElementId(null);
-      this.viewerState.clearGroupTransformMemberIds();
-    }
+    clearCompetingSelectionsFor(this.viewerState, "hemati", hematiId);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
   }
@@ -1436,15 +1342,7 @@ export class ViewerCore {
   selectRodape(rodapeId: string | null): void {
     this.viewerState.setSelectedRodape(rodapeId);
     this.onRodapeSelected?.(rodapeId);
-    if (rodapeId) {
-      this.viewerState.setSelectedHemati(null);
-      this.viewerState.setSelectedRemate(null);
-      this.viewerState.setSelectedDivSep(null);
-      this.viewerState.setSelectedBox(null);
-      this.viewerState.setSelectedWallIndex(null);
-      this.viewerState.setSelectedRoomElementId(null);
-      this.viewerState.clearGroupTransformMemberIds();
-    }
+    clearCompetingSelectionsFor(this.viewerState, "rodape", rodapeId);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
   }
@@ -1841,19 +1739,11 @@ export class ViewerCore {
     anchors: MeasurementAnchorEntry[],
     selectedMesh?: THREE.Object3D | null
   ): void {
-    const pos = selectedMesh ? new THREE.Vector3() : null;
-    selectedMesh?.getWorldPosition(pos!);
-    this.measurementAnchorsVisualizer?.sync(anchors, pos);
+    syncMeasurementAnchorsToVisualizer(this.measurementAnchorsVisualizer, anchors, selectedMesh);
   }
 
   addMeasurementAnchorAtPointer(event: { clientX: number; clientY: number }): MeasurementAnchorEntry | null {
-    const hit = this.raycastSystem.getPointerWorldHit(event);
-    if (!hit) return null;
-    return {
-      id: `anchor-${Date.now()}`,
-      position: { x: hit.x, y: hit.y, z: hit.z },
-      createdAt: Date.now(),
-    };
+    return createMeasurementAnchorFromWorldHit(this.pointerPicking.getPointerWorldHit(event));
   }
 
   applySmartSnapForGroup(_pointerPosition?: { x: number; y: number; z: number }): boolean {
@@ -1895,7 +1785,7 @@ export class ViewerCore {
   }
 
   isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
-    return this.raycastSystem.isPointerOnSelectableObject(event);
+    return this.pointerPicking.isPointerOnSelectableObject(event);
   }
 
   setOnMultiSelectToggle(callback: ((_encodedId: string) => void) | null): void {
@@ -1903,14 +1793,7 @@ export class ViewerCore {
   }
 
   getPointerSelectionEncodedId(event: { clientX: number; clientY: number }): string | null {
-    const hit = this.getContextMenuLayerHit(event);
-    const fromHit = encodeSelectionIdFromLayerHit(hit);
-    if (fromHit && !fromHit.startsWith("box:")) return fromHit;
-    const remateId = this.getRemateIdAtPointer(event);
-    if (remateId) return remateSelectionId(remateId);
-    const rodapeId = this.getRodapeIdAtPointer(event);
-    if (rodapeId) return rodapeSelectionId(rodapeId);
-    return null;
+    return this.pointerPicking.getPointerSelectionEncodedId(event);
   }
 
   private resolveMultiOutlineTarget(encoded: string): MultiOutlineTarget | null {
@@ -1989,26 +1872,15 @@ export class ViewerCore {
   }
 
   setDimensionsOverlayVisible(visible: boolean): void {
-    this.dimensionsOverlayVisible = visible;
-    if (visible && !this.dimensionsOverlayHandle) {
-      this.dimensionsOverlayHandle = createDimensionsOverlay(this.sceneManager.scene);
-    }
-    if (this.dimensionsOverlayHandle) {
-      this.dimensionsOverlayHandle.group.visible = visible;
-    }
-    if (!visible) {
-      this.updateDimensionsOverlay();
-    }
+    this.dimensionsOverlay.setVisible(visible);
   }
 
   getDimensionsOverlayVisible(): boolean {
-    return this.dimensionsOverlayVisible;
+    return this.dimensionsOverlay.isVisible();
   }
 
   toggleDimensionsOverlay(): boolean {
-    const next = !this.dimensionsOverlayVisible;
-    this.setDimensionsOverlayVisible(next);
-    return next;
+    return this.dimensionsOverlay.toggle();
   }
 
   /**
@@ -2123,7 +1995,7 @@ export class ViewerCore {
 
   /** Fase 5 Parte A — picking interno (face / aresta / ponto). */
   getInternalSelectionHit(event: { clientX: number; clientY: number }): InternalSelectionHit | null {
-    return this.raycastSystem.getInternalSelectionHit(event);
+    return this.pointerPicking.getInternalSelectionHit(event);
   }
 
   getInternalSelection(): InternalSelectionState | null {
@@ -2187,24 +2059,12 @@ export class ViewerCore {
   }
 
   private syncInternalRulerOverlay(): void {
-    if (!this.internalRulerOverlay) return;
-    if (!this.viewerState.getInternalSelectionEnabled()) {
-      this.internalRulerOverlay.sync(null, null, null);
-      return;
-    }
-    const selection = this.viewerState.getInternalSelection();
-    if (!selection) {
-      this.internalRulerOverlay.sync(null, null, null);
-      return;
-    }
-    const entry = this.boxes.get(selection.boxId);
-    if (!entry) {
-      this.internalRulerOverlay.sync(null, null, null);
-      return;
-    }
-    const bounds = computeBoxCavityBoundsLocal(entry);
-    const measurements = computeInternalCavityMeasurements(selection.boxId, entry);
-    this.internalRulerOverlay.sync(selection, measurements, bounds);
+    syncInternalRulerOverlayState({
+      enabled: this.viewerState.getInternalSelectionEnabled(),
+      selection: this.viewerState.getInternalSelection(),
+      boxes: this.boxes,
+      overlay: this.internalRulerOverlay,
+    });
   }
 
   private refreshInternalRulerOverlay(): void {
@@ -2292,30 +2152,15 @@ export class ViewerCore {
   }
 
   private updateDimensionsOverlay(): void {
-    if (!this.dimensionsOverlayVisible || !this.dimensionsOverlayHandle) return;
-    const dimensions = computeUnifiedBoxDimensions(this.collectBoxBoundsForDimensions());
-    const viewportH = this.container?.clientHeight ?? 720;
-    const viewportW = this.container?.clientWidth ?? 1280;
-    updateDimensionsOverlay(
-      this.dimensionsOverlayHandle,
-      dimensions,
-      this.cameraManager.camera,
-      viewportH,
-      viewportW,
-      (world) => this.projectWorldToScreen(world)
-    );
+    this.dimensionsOverlay.update();
   }
 
   getDimensionsOverlayData(): DimensionOverlayDataEntry[] {
-    if (!this.dimensionsOverlayHandle) return [];
-    return getDimensionsOverlayData(this.dimensionsOverlayHandle);
+    return this.dimensionsOverlay.getData();
   }
 
   getPrintReadyDimensions(): PrintReadyDimensions {
-    if (!this.dimensionsOverlayHandle) {
-      return { entries: [], generatedAt: Date.now() };
-    }
-    return getPrintReadyDimensions(this.dimensionsOverlayHandle);
+    return this.dimensionsOverlay.getPrintReadyDimensions();
   }
 
   private initShowcaseComposer(): void {
@@ -2737,7 +2582,7 @@ export class ViewerCore {
   }
 
   private getTransformGizmoIntersections(event: { clientX: number; clientY: number }): number {
-    return this.raycastSystem.getTransformGizmoIntersections(event);
+    return this.pointerPicking.getTransformGizmoIntersections(event);
   }
 
   setMousePreset(preset: ViewerMousePreset): void {
@@ -4513,10 +4358,7 @@ export class ViewerCore {
       this.transformControls?.detach();
       if (this.transformControlsHelper) this.transformControlsHelper.visible = false;
     }
-    if (this.selectionOutlineTarget && !this.isObjectAttachedToScene(this.selectionOutlineTarget)) {
-      this.selectionOutlineTarget = null;
-      this.selectionOutlinePiecesSig = null;
-    }
+    this.selectionOutline.sanitizeStaleTarget((object) => this.isObjectAttachedToScene(object));
   }
 
   private incrementLifecycleCount(map: Map<string, number>, id: unknown): void {
@@ -4575,7 +4417,7 @@ export class ViewerCore {
       staleFinishMeshes: Array.from(new Set(staleFinishMeshes)),
       remateRodapeOverlap,
       staleTransformTarget: Boolean(this.transformControls?.object && !this.isObjectAttachedToScene(this.transformControls.object)),
-      staleOutlineTarget: Boolean(this.selectionOutlineTarget && !this.isObjectAttachedToScene(this.selectionOutlineTarget)),
+      staleOutlineTarget: this.selectionOutline.hasStaleTarget((object) => this.isObjectAttachedToScene(object)),
     };
     const hasIssues = Object.values(issues).some((value) => Array.isArray(value) ? value.length > 0 : value);
     if (hasIssues) {
@@ -4736,7 +4578,7 @@ export class ViewerCore {
   }
 
   getRemateIdAtPointer(event: { clientX: number; clientY: number }): string | null {
-    return this.raycastSystem.getRemateIdAtPointer(event);
+    return this.pointerPicking.getRemateIdAtPointer(event);
   }
 
   /** Posição do modelo em espaço local da caixa (metros; origem no centro da caixa). */
@@ -5289,7 +5131,7 @@ export class ViewerCore {
       getInternalSelectionHit: (e) => this.getInternalSelectionHit(e),
       setInternalSelection: (selection) => this.setInternalSelection(selection),
       getPointerWorldHit: (event) => {
-        const hit = this.raycastSystem.getPointerWorldHit(event);
+        const hit = this.pointerPicking.getPointerWorldHit(event);
         return hit ? { x: hit.x, y: hit.y, z: hit.z } : null;
       },
       setTransformGizmoAnchor: (point) => this.viewerState.setTransformGizmoAnchor(point),
@@ -5324,8 +5166,8 @@ export class ViewerCore {
       },
       applyTransformControlsMouseGuard: () => this.applyTransformControlsMouseGuard(),
       logTransformDiagnostic: (name, data) => this.logTransformDiagnostic(name, data),
-      getSelectionOutline: () => this.selectionOutline,
-      getSelectionOutlineMaterial: () => this.selectionOutlineMaterial,
+      getSelectionOutline: () => this.selectionOutline.getGroup(),
+      getSelectionOutlineMaterial: () => this.selectionOutline.getMaterial(),
       getHoveredBoxId: () => this.viewerState.getHoveredBox(),
       getHoveredRemateId: () => this.viewerState.getHoveredRemate(),
       getBoxesIntersectingWalls: () => this.boxesIntersectingWalls,
@@ -5343,154 +5185,13 @@ export class ViewerCore {
     };
   }
 
-  private hasVisibleAncestorsForOutline(node: THREE.Object3D): boolean {
-    let current: THREE.Object3D | null = node;
-    while (current) {
-      if (!current.visible) return false;
-      current = current.parent;
-    }
-    return true;
-  }
-
-  private clearSelectionOutlineHelpers(): void {
-    const g = this.selectionOutline;
-    if (!g) return;
-    while (g.children.length > 0) {
-      const ch = g.children[0];
-      g.remove(ch);
-      if (ch instanceof THREE.LineSegments) {
-        ch.geometry.dispose();
-        if (ch.material && ch.material !== this.selectionOutlineMaterial) {
-          (ch.material as THREE.Material).dispose();
-        }
-      }
-    }
-  }
-
-  /** Assinatura layout (L×A×P externo) para reconstruir geometria do contorno azul quando as dimensões mudam. */
-  private isRemateOutlineTarget(target: THREE.Object3D): boolean {
-    return (
-      target.userData?.isRematePiece === true ||
-      (typeof target.userData?.remateId === "string" && target.userData.remateId.length > 0)
-    );
-  }
-
-  private getRemateOutlineDimensions(target: THREE.Object3D): { w: number; h: number; d: number } | null {
-    if (!(target instanceof THREE.Mesh)) return null;
-    const geo = target.geometry;
-    if (!(geo instanceof THREE.BufferGeometry)) return null;
-    geo.computeBoundingBox();
-    const size = new THREE.Vector3();
-    geo.boundingBox?.getSize(size);
-    return {
-      w: Math.max(0.001, size.x * target.scale.x),
-      h: Math.max(0.001, size.y * target.scale.y),
-      d: Math.max(0.001, size.z * target.scale.z),
-    };
-  }
-
-  private getSelectionOutlinePiecesSignature(target: THREE.Object3D): string {
-    if (this.isRemateOutlineTarget(target)) {
-      const remateId = String(target.userData?.remateId ?? target.uuid);
-      const dims = this.getRemateOutlineDimensions(target);
-      return `remate:${remateId}:${dims?.w ?? 0}:${dims?.h ?? 0}:${dims?.d ?? 0}`;
-    }
-    const boxId =
-      typeof target.userData?.boxId === "string" && target.userData.boxId.trim().length > 0
-        ? target.userData.boxId.trim()
-        : "";
-    if (!boxId) return `${target.uuid}:no-boxId`;
-    const entry = this.boxes.get(boxId);
-    if (!entry) return `${target.uuid}:no-entry`;
-    return `${boxId}:${entry.width}:${entry.height}:${entry.depth}:${entry.carcassDepth ?? "u"}:${entry.cadOnly ? 1 : 0}`;
-  }
-
-  /** Um único wireframe L×A×P de layout (`ViewerBoxEntry`), alinhado ao grupo da caixa em mundo. */
-  private rebuildSelectionOutlinePieceHelpers(target: THREE.Object3D): void {
-    if (!this.selectionOutline || !this.selectionOutlineMaterial) return;
-    this.clearSelectionOutlineHelpers();
-    const group = this.selectionOutline;
-
-    if (this.isRemateOutlineTarget(target)) {
-      const dims = this.getRemateOutlineDimensions(target);
-      if (!dims) return;
-      const boxGeo = new THREE.BoxGeometry(dims.w, dims.h, dims.d);
-      const edges = new THREE.EdgesGeometry(boxGeo);
-      boxGeo.dispose();
-      const wireframe = new THREE.LineSegments(edges, this.selectionOutlineMaterial);
-      wireframe.name = "selection-outline-layout";
-      wireframe.raycast = () => null;
-      wireframe.frustumCulled = false;
-      wireframe.renderOrder =
-        typeof target.userData?.remateOutlineRenderOrder === "number"
-          ? target.userData.remateOutlineRenderOrder
-          : 2001;
-      wireframe.matrixAutoUpdate = false;
-      group.add(wireframe);
-      return;
-    }
-
-    const boxId =
-      typeof target.userData?.boxId === "string" && target.userData.boxId.trim().length > 0
-        ? target.userData.boxId.trim()
-        : "";
-    const entry = boxId ? this.boxes.get(boxId) : undefined;
-    if (!entry) return;
-
-    const w = Math.max(0.001, entry.width);
-    const h = Math.max(0.001, entry.height);
-    const d = Math.max(0.001, entry.carcassDepth ?? entry.depth);
-    const boxGeo = new THREE.BoxGeometry(w, h, d);
-    const edges = new THREE.EdgesGeometry(boxGeo);
-    boxGeo.dispose();
-
-    const wireframe = new THREE.LineSegments(edges, this.selectionOutlineMaterial);
-    wireframe.name = "selection-outline-layout";
-    wireframe.raycast = () => null;
-    wireframe.frustumCulled = false;
-    wireframe.renderOrder = 2001;
-    wireframe.matrixAutoUpdate = false;
-    group.add(wireframe);
-  }
-
-  private updateSelectionOutlineGeometry(target: THREE.Object3D): void {
-    if (!this.selectionOutline) return;
-    const sig = this.getSelectionOutlinePiecesSignature(target);
-    if (this.selectionOutlinePiecesSig !== sig) {
-      this.selectionOutlinePiecesSig = sig;
-      this.rebuildSelectionOutlinePieceHelpers(target);
-    }
-    target.updateMatrixWorld(true);
-    const show = this.hasVisibleAncestorsForOutline(target);
-    for (const child of this.selectionOutline.children) {
-      if (child instanceof THREE.LineSegments && child.name === "selection-outline-layout") {
-        child.visible = show;
-        if (show) {
-          child.matrix.copy(target.matrixWorld);
-        }
-      }
-    }
-  }
-
   private setOutlineTarget(mesh: THREE.Object3D | null, opacity: number, colorHex: number): void {
-    this.selectionOutlineTarget = mesh;
-    this.outlineTargetOpacity = opacity;
-    if (!this.selectionOutline || !this.selectionOutlineMaterial) return;
-    if (!mesh) {
-      this.clearSelectionOutlineHelpers();
-      this.selectionOutlinePiecesSig = null;
-      this.selectionOutline.visible = false;
-      return;
-    }
-    this.selectionOutlineMaterial.color.setHex(colorHex);
-    this.selectionOutlineMaterial.needsUpdate = true;
-    this.selectionOutline.visible = true;
-    this.updateSelectionOutlineGeometry(mesh);
+    this.selectionOutline.setTarget(mesh, opacity, colorHex);
   }
 
   /** Obtém boxId a partir de um mesh (grupo ou filho/GLB); sobe na hierarquia até encontrar userData.boxId ou o grupo da caixa. */
   private getBoxIdByMesh(mesh: THREE.Object3D): string | null {
-    return this.raycastSystem.getBoxIdByMesh(mesh);
+    return this.pointerPicking.getBoxIdByMesh(mesh);
   }
 
   private setSelectedBox(id: string | null) {
@@ -5557,7 +5258,7 @@ export class ViewerCore {
   /** Fim de drag unificado — evita duplicação mouseUp + dragging-changed. */
   private finishTransformDrag(_source: "mouseUp" | "dragging-changed"): void {
     const stamp = performance.now();
-    if (stamp - this.transformDragEndStamp < 8) return;
+    if (!shouldProcessTransformDragEnd(this.transformDragEndStamp, stamp)) return;
     this.transformDragEndStamp = stamp;
     this.dragStartZForShiftLock = undefined;
     this.viewerState.setTransformControlsDragging(false);
@@ -5852,7 +5553,7 @@ export class ViewerCore {
       designs.map((d) => ({ id: d.id, plan: d.plan, label: d.label }))
     );
     if (overlays[0]) {
-      this.smartAlignSnapOverlay.setState(
+      this.smartAlignOverlay.setState(
         this.predictiveLayoutEngine.showDesignPreview(0) ?? { visible: false, mode: "predictive", guides: [] }
       );
     }
@@ -5862,7 +5563,7 @@ export class ViewerCore {
   private previewIntelligentDesign(id: DesignVariantId): boolean {
     const state = this.predictiveLayoutEngine.showDesignById(id);
     if (!state) return false;
-    this.smartAlignSnapOverlay.setState(state);
+    this.smartAlignOverlay.setState(state);
     return true;
   }
 
@@ -5906,7 +5607,7 @@ export class ViewerCore {
     if (!result) return false;
     const { overlay } = buildPredictiveLayoutResult(this.predictiveLayoutEngine, result.plan, result.label);
     this.predictiveLayoutEngine.previewDesigns([{ id: styleId, plan: result.plan, label: result.label }]);
-    this.smartAlignSnapOverlay.setState(overlay);
+    this.smartAlignOverlay.setState(overlay);
     return true;
   }
 
@@ -5914,15 +5615,6 @@ export class ViewerCore {
     const ok = this.intelligentDesignerEngine.applyStyle(styleId, seedBoxId);
     if (ok) this.clearSmartAlignSnapOverlay();
     return ok;
-  }
-
-  private applyAdminRulesSettings(): void {
-    const snap = getSnapRules();
-    const room = getRoomRules();
-    this.smartSnappingEngine.setCaptureRadius(snap.captureRadiusMm);
-    this.smartSnappingEngine.setMagnetStrength(snap.magnetStrength);
-    this.smartSnappingEngine.setGridSize(snap.gridSizeMm);
-    this.smartSnappingEngine.setWallOffset(room.wallOffsetMm);
   }
 
   private resolveCostSeedBoxId(): string {
@@ -5954,7 +5646,7 @@ export class ViewerCore {
     this.predictiveLayoutEngine.previewDesigns([
       { id: `cost-${suggestion.kind}`, plan: suggestion.plan, label: suggestion.label },
     ]);
-    this.smartAlignSnapOverlay.setState(overlay);
+    this.smartAlignOverlay.setState(overlay);
   }
 
   private previewCostSuggestionByTier(
@@ -5999,7 +5691,7 @@ export class ViewerCore {
     this.predictiveLayoutEngine.previewDesigns([
       { id: "manufacturing-fix", plan: fixPlan.plan, label: fixPlan.label },
     ]);
-    this.smartAlignSnapOverlay.setState(overlay);
+    this.smartAlignOverlay.setState(overlay);
     return true;
   }
 
@@ -6023,7 +5715,7 @@ export class ViewerCore {
       }))
     );
     if (overlays[0]) {
-      this.smartAlignSnapOverlay.setState(
+      this.smartAlignOverlay.setState(
         this.predictiveLayoutEngine.showDesignPreview(0) ?? { visible: false, mode: "predictive", guides: [] }
       );
     }
@@ -6031,7 +5723,7 @@ export class ViewerCore {
   }
 
   private clearSmartAlignSnapOverlay(): void {
-    this.smartAlignSnapOverlay.clear();
+    this.smartAlignOverlay.clear();
   }
 
   private previewSmartWallFill(wallId: string | number, moduleBoxId: string): boolean {
@@ -6047,7 +5739,7 @@ export class ViewerCore {
       plan,
       "Auto-Wall-Fill sugerido"
     );
-    this.smartAlignSnapOverlay.setState(overlay);
+    this.smartAlignOverlay.setState(overlay);
     return true;
   }
 
@@ -6220,61 +5912,27 @@ export class ViewerCore {
   }
 
   private computeDistanceToNearestBox(): RulerMeasurementHit | null {
-    const selectedBoxId = this.viewerState.getSelectedBox();
-    if (!selectedBoxId) return null;
-    const selectedEntry = this.boxes.get(selectedBoxId);
-    if (!selectedEntry) return null;
-
-    selectedEntry.mesh.updateMatrixWorld(true);
-    const selectedThree = new THREE.Box3();
-    setBox3FromObjectExcludingLayoutProxy(selectedThree, selectedEntry.mesh);
-    const selectedAabb = aabb3FromThreeBox3(selectedThree);
-
-    let best: ParametricRulerHit | null = null;
-    this.boxes.forEach((entry, id) => {
-      if (id === selectedBoxId) return;
-      entry.mesh.updateMatrixWorld(true);
-      const otherBox = new THREE.Box3();
-      setBox3FromObjectExcludingLayoutProxy(otherBox, entry.mesh);
-      const otherAabb = aabb3FromThreeBox3(otherBox);
-      const hit = nearestBoxGapBetweenPair(selectedAabb, otherAabb);
-      if (hit && (!best || hit.distanceM < best.distanceM)) best = hit;
+    return computeParametricDistanceToNearestBox({
+      boxes: this.boxes,
+      selectedBoxId: this.viewerState.getSelectedBox(),
+      roomBounds: this.roomBounds,
     });
-    return best ? parametricRulerHitToThree(best) : null;
   }
 
   private computeDistanceToNearestWall(): RulerMeasurementHit | null {
-    const selectedBoxId = this.viewerState.getSelectedBox();
-    if (!selectedBoxId) return null;
-    const selectedEntry = this.boxes.get(selectedBoxId);
-    if (!selectedEntry || !this.roomBounds) return null;
-
-    selectedEntry.mesh.updateMatrixWorld(true);
-    const wallSelBox = new THREE.Box3();
-    setBox3FromObjectExcludingLayoutProxy(wallSelBox, selectedEntry.mesh);
-    const boxAabb = aabb3FromThreeBox3(wallSelBox);
-    const hit = nearestWallMeasurement(boxAabb, {
-      minX: this.roomBounds.minX,
-      maxX: this.roomBounds.maxX,
-      minZ: this.roomBounds.minZ,
-      maxZ: this.roomBounds.maxZ,
+    return computeParametricDistanceToNearestWall({
+      boxes: this.boxes,
+      selectedBoxId: this.viewerState.getSelectedBox(),
+      roomBounds: this.roomBounds,
     });
-    return hit ? parametricRulerHitToThree(hit) : null;
   }
 
   private computeDistanceToFloor(): RulerMeasurementHit | null {
-    const selectedBoxId = this.viewerState.getSelectedBox();
-    if (!selectedBoxId) return null;
-    const selectedEntry = this.boxes.get(selectedBoxId);
-    if (!selectedEntry) return null;
-
-    selectedEntry.mesh.updateMatrixWorld(true);
-    const floorSelBox = new THREE.Box3();
-    setBox3FromObjectExcludingLayoutProxy(floorSelBox, selectedEntry.mesh);
-    const boxAabb = aabb3FromThreeBox3(floorSelBox);
-    const floorY = this.roomBounds?.minY ?? 0;
-    const hit = floorClearanceMeasurement(boxAabb, floorY);
-    return hit ? parametricRulerHitToThree(hit) : null;
+    return computeParametricDistanceToFloor({
+      boxes: this.boxes,
+      selectedBoxId: this.viewerState.getSelectedBox(),
+      roomBounds: this.roomBounds,
+    });
   }
 
   /** Atualiza o conjunto de caixas que intersectam paredes (para destaque quando lock desativado). */
@@ -6328,7 +5986,7 @@ export class ViewerCore {
   }
 
   private getWallIdInFrontOfCamera(): number | null {
-    return this.raycastSystem.getWallIdInFrontOfCamera();
+    return this.pointerPicking.getWallIdInFrontOfCamera();
   }
 
   /** Esconde/mostra uma parede manualmente. Auto-hide continua ativo. */
@@ -6608,11 +6266,11 @@ export class ViewerCore {
   }
 
   private getHighlightIntersects(event: { clientX: number; clientY: number }): THREE.Intersection[] {
-    return this.raycastSystem.getHighlightIntersects(event);
+    return this.pointerPicking.getHighlightIntersects(event);
   }
 
   private getBoxIdAtPointer(event: { clientX: number; clientY: number }) {
-    return this.raycastSystem.getBoxIdAtPointer(event);
+    return this.pointerPicking.getBoxIdAtPointer(event);
   }
 
   /**
@@ -6623,15 +6281,15 @@ export class ViewerCore {
   }
 
   private getDoorHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; doorLayerId: string } | null {
-    return this.raycastSystem.getDoorHitAtPointer(event);
+    return this.pointerPicking.getDoorHitAtPointer(event);
   }
 
   private getDrawerHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string; drawerLayerId: string } | null {
-    return this.raycastSystem.getDrawerHitAtPointer(event);
+    return this.pointerPicking.getDrawerHitAtPointer(event);
   }
 
   private getBoxBodyHitAtPointer(event: { clientX: number; clientY: number }): { boxId: string } | null {
-    return this.raycastSystem.getBoxBodyHitAtPointer(event);
+    return this.pointerPicking.getBoxBodyHitAtPointer(event);
   }
 
   /**
@@ -6640,11 +6298,11 @@ export class ViewerCore {
    * Depende de userData.doorLayerId propagado em createDoorObject e de userData.boxId em applyPanelIdsToBox.
    */
   getContextMenuLayerHit(event: { clientX: number; clientY: number }): MouseMenuTarget | null {
-    return this.raycastSystem.getContextMenuLayerHit(event);
+    return this.pointerPicking.getContextMenuLayerHit(event);
   }
 
   private getWallIdAtPointer(event: { clientX: number; clientY: number }): number | null {
-    return this.raycastSystem.getWallIdAtPointer(event);
+    return this.pointerPicking.getWallIdAtPointer(event);
   }
 
   private getWallHitAtPointer(event: { clientX: number; clientY: number }): {
@@ -6652,9 +6310,7 @@ export class ViewerCore {
     config: DoorWindowConfig;
     type: "door" | "window";
   } | null {
-    const mode = this.viewerState.getPlacementMode();
-    if (!mode || !this.onRoomElementPlaced) return null;
-    return this.raycastSystem.getWallPlacementHit(event, mode);
+    return this.pointerPicking.getWallHitAtPointer(event);
   }
 
   private getRoomElementAtPointer(event: { clientX: number; clientY: number }): {
@@ -6663,7 +6319,7 @@ export class ViewerCore {
     type: "door" | "window";
     config: DoorWindowConfig;
   } | null {
-    return this.raycastSystem.getRoomElementAtPointer(event);
+    return this.pointerPicking.getRoomElementAtPointer(event);
   }
 
   private getRoomUtilityAtPointer(event: { clientX: number; clientY: number }): {
@@ -6671,26 +6327,14 @@ export class ViewerCore {
     wallId: number;
     config: ProjectRoomUtility;
   } | null {
-    const rect = this.rendererManager.renderer.domElement.getBoundingClientRect();
-    this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
-    const roots: THREE.Object3D[] = [];
-    this.roomBoxWalls.forEach((entry) => {
-      entry.mesh.children.forEach((child) => {
-        if (child.userData?.roomUtilityId) roots.push(child);
-      });
+    return this.pointerPicking.getRoomUtilityAtPointer({
+      event,
+      canvas: this.rendererManager.renderer.domElement,
+      pointer: this.pointer,
+      raycaster: this.raycaster,
+      camera: this.cameraManager.camera,
+      roomBoxWalls: this.roomBoxWalls,
     });
-    const hit = this.raycaster.intersectObjects(roots, true)[0];
-    if (!hit) return null;
-    let node: THREE.Object3D | null = hit.object;
-    while (node && !node.userData?.roomUtilityId) node = node.parent;
-    if (!node) return null;
-    const wall = node.parent instanceof THREE.Mesh ? node.parent : null;
-    const wallEntry = wall ? this.roomBoxWalls.find((entry) => entry.mesh === wall) : null;
-    const config = node.userData.roomUtility as ProjectRoomUtility | undefined;
-    if (!wallEntry || !config) return null;
-    return { utilityId: config.id, wallId: wallEntry.id, config };
   }
 
   private updateCanvasSize = () => {
@@ -6735,18 +6379,7 @@ export class ViewerCore {
     if (this.snapDebugOverlay && this.lastSnapDebugData) {
       this.snapDebugOverlay.update(this.lastSnapDebugData);
     }
-    if (this.selectionOutline && this.selectionOutlineMaterial) {
-      this.outlineCurrentOpacity += (this.outlineTargetOpacity - this.outlineCurrentOpacity) * 0.25;
-      const shouldShow = this.outlineCurrentOpacity > 0.02 && this.selectionOutlineTarget;
-      if (shouldShow && this.selectionOutlineTarget) {
-        this.selectionOutline.visible = true;
-        this.updateSelectionOutlineGeometry(this.selectionOutlineTarget);
-      } else if (!shouldShow) {
-        this.selectionOutline.visible = false;
-      }
-      this.selectionOutlineMaterial.opacity = Math.max(0, Math.min(1, this.outlineCurrentOpacity));
-      this.selectionOutlineMaterial.needsUpdate = true;
-    }
+    this.selectionOutline.updateFrame();
     this.multiSelectionOutline?.updateMatrices();
 
     this.highlightManager?.update();
@@ -6761,17 +6394,10 @@ export class ViewerCore {
       }
     }
 
-    if (this.wallSelectionOutline && this.wallSelectionOutlineMaterial) {
-      const wallEntry = this.viewerState.getSelectedWallIndex() !== null
-        ? this.roomBoxWalls.find((w) => w.id === this.viewerState.getSelectedWallIndex())
-        : null;
-      if (wallEntry) {
-        this.wallSelectionOutline.visible = true;
-        this.wallSelectionOutline.update(wallEntry.mesh);
-      } else {
-        this.wallSelectionOutline.visible = false;
-      }
-    }
+    const wallEntry = this.viewerState.getSelectedWallIndex() !== null
+      ? this.roomBoxWalls.find((w) => w.id === this.viewerState.getSelectedWallIndex())
+      : null;
+    this.wallSelectionOutline.update(wallEntry ? { mesh: wallEntry.mesh } : null);
   }
 
   private onAfterRenderTick(): void {
@@ -6793,9 +6419,8 @@ export class ViewerCore {
 
   dispose() {
     this.runtimeLoop.stop();
-    window.removeEventListener("resize", this.updateCanvasSize);
-    window.removeEventListener("keydown", this.boundShiftKeyDown);
-    window.removeEventListener("keyup", this.boundShiftKeyUp);
+    this.unregisterWindowEvents?.();
+    this.unregisterWindowEvents = null;
     this.disposeComposer();
     this.disposeMainComposer();
     this.controls?.dispose();
@@ -6848,28 +6473,10 @@ export class ViewerCore {
     }
     this.snapshotRenderer = null;
     this.selectedBoxChangeListeners.clear();
-    if (this.selectionOutline) {
-      this.clearSelectionOutlineHelpers();
-      this.sceneManager.scene.remove(this.selectionOutline);
-      if (this.selectionOutlineMaterial) {
-        this.selectionOutlineMaterial.dispose();
-      }
-      this.selectionOutline = null;
-      this.selectionOutlineMaterial = null;
-      this.selectionOutlineTarget = null;
-      this.selectionOutlinePiecesSig = null;
-    }
+    this.selectionOutline.dispose();
     this.multiSelectionOutline?.dispose(this.sceneManager.scene);
     this.multiSelectionOutline = null;
-    if (this.wallSelectionOutline) {
-      this.sceneManager.scene.remove(this.wallSelectionOutline);
-      this.wallSelectionOutline.geometry.dispose();
-      if (this.wallSelectionOutlineMaterial) {
-        this.wallSelectionOutlineMaterial.dispose();
-      }
-      this.wallSelectionOutline = null;
-      this.wallSelectionOutlineMaterial = null;
-    }
+    this.wallSelectionOutline.dispose();
     if (this.highlightManager) {
       this.highlightManager.dispose();
       this.highlightManager = null;
@@ -6886,13 +6493,13 @@ export class ViewerCore {
       this.internalRulerOverlay.dispose();
       this.internalRulerOverlay = null;
     }
-    if (this.dimensionsOverlayHandle) {
-      disposeDimensionsOverlay(this.dimensionsOverlayHandle, this.sceneManager.scene);
-      this.dimensionsOverlayHandle = null;
-    }
+    this.dimensionsOverlay.dispose();
     this.measurementOverlay.dispose();
     this.internalRulerEngine.dispose();
+    this.unregisterAdminSnappingRules?.();
+    this.unregisterAdminSnappingRules = null;
     this.smartSnappingEngine.dispose();
+    this.smartAlignOverlay.dispose();
     this.remateSmartSnapping.dispose();
     // Limpar todos os caixotes corretamente
     this.clearBoxes();

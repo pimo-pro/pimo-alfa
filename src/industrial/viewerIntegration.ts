@@ -1,3 +1,5 @@
+import type { ViewerMaterialSyncSurface } from "../3d/viewer-engine/integration/viewerIndustrialSurface";
+
 /**
  * Boundary viewer ↔ mundo industrial / app.
  *
@@ -13,11 +15,7 @@ export type MaterialSyncViewerRefresh = {
 };
 
 /** Callbacks opcionais expostos em `window.viewerCore` usados após sync de materiais. */
-export type ViewerCoreIndustrialSurface = {
-  syncRemateVisuals?: () => void;
-  syncRodapeVisuals?: () => void;
-  syncOrlaVisuals?: () => void;
-};
+export type ViewerCoreIndustrialSurface = ViewerMaterialSyncSurface;
 
 /**
  * Actualiza overlays do viewer após alteração de materiais (remates/rodapés).

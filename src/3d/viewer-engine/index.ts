@@ -30,3 +30,21 @@ export type { TransformMode, PlacementMode, ViewerRenderMode } from "./state";
 export type { InternalSelectionHit, InternalSelectionState } from "./selection";
 export { ViewerTools } from "./tools";
 export type { IViewerToolsEngine } from "./tools";
+export type { InternalRulerFacade } from "./measurement/internalRulerFacade";
+export { DimensionsOverlayController } from "./overlays/DimensionsOverlayController";
+export { SelectionOutlineController } from "./overlays/SelectionOutlineController";
+export { WallSelectionOutlineController } from "./overlays/WallSelectionOutlineController";
+export { PointerPickingFacade } from "./input/PointerPickingFacade";
+export { clearCompetingSelectionsFor } from "./input/neutralSelection";
+export {
+  applyAdminSnappingRules,
+  registerAdminSnappingRules,
+} from "./snapping/adminSnappingRules";
+export { createSmartAlignOverlayFacade } from "./snapping/smartAlignOverlayFacade";
+export { createDisabledSmartLayoutDeps } from "./snapping/smartLayoutDepsFactory";
+export type { SnappingFacade } from "./snapping/snappingFacade";
+export type {
+  ViewerIndustrialSurface,
+  ViewerMaterialSyncSurface,
+  ViewerMcDimensionsSurface,
+} from "./integration/viewerIndustrialSurface";
