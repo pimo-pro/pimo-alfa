@@ -34,25 +34,34 @@ import { ViewerTools } from "./tools";
 import { GroupGizmo } from "./tools/GroupGizmo";
 import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
 
-import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
-import { defaultMaterialSet, mergeMaterialSet } from "../materials/MaterialLibrary";
 import type { MaterialSet } from "../materials/MaterialLibrary";
+import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
+import type { MaterialMode } from "./materials";
 import {
-  loadMaterial as materialEngineLoadMaterial,
-  getMaterialMode,
-  setMaterialMode as materialEngineSetMaterialMode,
-  setLacqueredClearcoatPipeline as materialEngineSetLacqueredClearcoatPipeline,
-  getSceneMaterialConfig,
-  getSharedPanelEdgeMaterial,
-  disposeSharedPanelEdgeMaterial,
-} from "./materials";
+  createMaterialPipelineFacade,
+  type MaterialPipelineFacade,
+} from "./materials/materialPipelineFacade";
+import { DisplayMaterialController } from "./materials/displayMaterialController";
+import { UltraMaterialController } from "./materials/ultraMaterialController";
+import {
+  createInitialMaterialSet,
+  mergeViewerMaterialSet,
+} from "./materials/materialSetState";
+import {
+  normalizeViewerMaterialQuality,
+  resolveMaterialModeForQuality,
+} from "./materials/materialQualityMode";
+import {
+  disposeLoadedWoodMaterial,
+  isDoorOrDrawerFrontNode,
+  isKitchenFeetNode,
+} from "./materials/boxMaterialHelpers";
 import {
   createRoomFloorOutline,
   createRoomFloorOverlayMaterial,
   getRoomFloorExpandM,
   getRoomFloorOverlayAppearance,
 } from "./materials/roomFloorOverlay";
-import type { MaterialMode } from "./materials";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { ViewerBoxEntry } from "./types";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
@@ -443,28 +452,13 @@ export class ViewerCore {
     shadowRadius: number;
   } | null = null;
   private readonly LIGHT_LERP_FACTOR = 0.14;
-  private ultraMaterialState = new Map<
-    string,
-    { roughness: number; metalness: number; envMapIntensity: number; flatShading: boolean }
-  >();
-  /** Snapshot dos valores PBR base por material.uuid (capturado após preset/MaterialEngine).
-   * Fonte única para derivação de qualidade, gloss e matte — sem duplicação de estado. */
-  private displayMaterialBaseByUuid = new Map<
-    string,
-    {
-      roughness: number;
-      metalness: number;
-      envMapIntensity: number;
-      map: THREE.Texture | null;
-      clearcoat?: number;
-      clearcoatRoughness?: number;
-    }
-  >();
+  private materialPipeline!: MaterialPipelineFacade;
+  private displayMaterials!: DisplayMaterialController;
+  private ultraMaterials!: UltraMaterialController;
   /** Intensidade de brilho visual (1 = preset original, 0 = fosco). Só afeta exibição. */
   private glossIntensity = 1;
   /** Modo fosco: sobrepõe gloss e clearcoat, envMapIntensity → 0. Reversível. */
   private matteMode = false;
-  private premiumTexture: THREE.CanvasTexture | null = null;
   private _diagnosticsLogged = false;
   /** Evita aplicar rotação duplicada no mesmo mesh. */
   private appliedRotationByMeshUuid = new Map<string, number>();
@@ -667,14 +661,18 @@ export class ViewerCore {
       hasRoomElementPlacementHandler: () => Boolean(this.onRoomElementPlaced),
     });
 
+    this.materialPipeline = createMaterialPipelineFacade();
+    this.displayMaterials = new DisplayMaterialController();
+    this.ultraMaterials = new UltraMaterialController();
+
     this.panelVisibility = new ViewerPanelVisibility({
       getBoxes: () => this.boxes,
       getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
       getBoxIdByMesh: (mesh) => this.pointerPicking.getBoxIdByMesh(mesh),
-      getSharedPanelEdgeMaterial: () => getSharedPanelEdgeMaterial(),
+      getSharedPanelEdgeMaterial: () => this.materialPipeline.getSharedPanelEdgeMaterial(),
     });
 
-    this.materialSet = mergeMaterialSet(defaultMaterialSet);
+    this.materialSet = createInitialMaterialSet();
 
     this.controls = options.enableControls === false
       ? null
@@ -1122,7 +1120,7 @@ export class ViewerCore {
     this.eventsManager = new EventsManager(this.getEventEngineApi());
     this.eventsManager.register(this.rendererManager.renderer.domElement);
 
-    materialEngineSetLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
+    this.materialPipeline.setLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
 
     this.start();
     this.unregisterWindowEvents = registerViewerWindowEvents({
@@ -1556,39 +1554,7 @@ export class ViewerCore {
   }
 
   private applyUltraMaterialProfile(flat2Active: boolean, aggressive: boolean): void {
-    this.sceneManager.root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      const materials = Array.isArray(node.material) ? node.material : [node.material];
-      materials.forEach((material) => {
-        if (!(material instanceof THREE.MeshStandardMaterial)) return;
-        if (!this.ultraMaterialState.has(material.uuid)) {
-          this.ultraMaterialState.set(material.uuid, {
-            roughness: material.roughness,
-            metalness: material.metalness,
-            envMapIntensity: material.envMapIntensity,
-            flatShading: material.flatShading,
-          });
-        }
-        const original = this.ultraMaterialState.get(material.uuid);
-        if (!original) return;
-        if (!flat2Active) {
-          material.roughness = original.roughness;
-          material.metalness = original.metalness;
-          material.envMapIntensity = original.envMapIntensity;
-          material.flatShading = original.flatShading;
-          material.needsUpdate = true;
-          return;
-        }
-        material.roughness = aggressive ? 1 : 0.95;
-        material.metalness = 0;
-        material.envMapIntensity = aggressive ? 0 : 0.06;
-        material.flatShading = true;
-        material.needsUpdate = true;
-      });
-    });
-    if (!flat2Active) {
-      this.ultraMaterialState.clear();
-    }
+    this.ultraMaterials.apply(this.sceneManager.root, flat2Active, aggressive);
   }
 
   private lerpLightsToTarget(): void {
@@ -2242,7 +2208,7 @@ export class ViewerCore {
   }
 
   loadMaterialSet(materialConfig?: MaterialSet) {
-    this.materialSet = mergeMaterialSet(this.materialSet, materialConfig);
+    this.materialSet = mergeViewerMaterialSet(this.materialSet, materialConfig);
   }
 
   updateBoxMaterial(id: string, materialName: string) {
@@ -2253,23 +2219,16 @@ export class ViewerCore {
 
     entry.materialName = materialName;
 
-    // Atualizar material apenas dos painéis da caixa (left, right, top, bottom, back) e prateleiras.
-    // Nunca aplicar à porta (userData.doorLayerId) nem à frente de gaveta (drawerPart === "front") para evitar compartilhamento.
-    const isDoorOrDrawerFront = (node: THREE.Object3D): boolean => {
-      const ud = (node as THREE.Mesh & { userData: { doorLayerId?: string; drawerPart?: string } }).userData;
-      return ud?.doorLayerId != null || ud?.drawerPart === "front";
-    };
-
     if (entry.mesh instanceof THREE.Group) {
       entry.mesh.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          if (this.isKitchenFeetNode(child)) return;
-          if (isDoorOrDrawerFront(child)) return;
+          if (isKitchenFeetNode(child)) return;
+          if (isDoorOrDrawerFrontNode(child)) return;
           child.material = nextMaterial.material;
         }
       });
     } else if (entry.mesh instanceof THREE.Mesh) {
-      if (!this.isKitchenFeetNode(entry.mesh)) {
+      if (!isKitchenFeetNode(entry.mesh)) {
         entry.mesh.material = nextMaterial.material;
       }
     }
@@ -2277,25 +2236,11 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === id) {
       this.refreshOutlineTarget();
     }
-    if (entry.material) {
-      entry.material.material.dispose();
-      entry.material.textures.forEach((texture) => texture.dispose());
-    }
+    disposeLoadedWoodMaterial(entry.material);
     entry.material = nextMaterial;
     if (this.viewerState.getSelectedBox() === id) {
       this.refreshOutlineTarget();
     }
-  }
-
-  private isKitchenFeetNode(node: THREE.Object3D): boolean {
-    let current: THREE.Object3D | null = node;
-    while (current) {
-      if (current.userData?.isKitchenFeet === true || current.name === "kitchen-feet-group") {
-        return true;
-      }
-      current = current.parent;
-    }
-    return false;
   }
 
   /** Reaplica materiais a todas as caixas (ao trocar modo performance/showcase/realistic). */
@@ -2450,12 +2395,12 @@ export class ViewerCore {
    * Define o modo de materiais (performance/showcase/realistic) e reaplica a todas as caixas.
    */
   setMaterialMode(mode: MaterialMode): void {
-    materialEngineSetMaterialMode(mode);
+    this.materialPipeline.setMaterialMode(mode);
     this.reapplyAllBoxMaterials();
   }
 
   getMaterialMode(): MaterialMode {
-    return getMaterialMode();
+    return this.materialPipeline.getMaterialMode();
   }
 
   /**
@@ -2672,82 +2617,10 @@ export class ViewerCore {
   /** Orquestrador: quality → glossIntensity → matteMode.
    * Único ponto de reconciliação de brilho. Substitui applyMaterialQualityProfile. */
   private reapplyDisplayMaterials(): void {
-    this.sceneManager.root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      const materials = Array.isArray(node.material) ? node.material : [node.material];
-      materials.forEach((material) => {
-        if (!(material instanceof THREE.MeshStandardMaterial)) return;
-        const isPhysical = material instanceof THREE.MeshPhysicalMaterial;
-
-        // Captura snapshot base pós-preset (uma única vez por material.uuid).
-        if (!this.displayMaterialBaseByUuid.has(material.uuid)) {
-          const snap: {
-            roughness: number; metalness: number; envMapIntensity: number;
-            map: THREE.Texture | null; clearcoat?: number; clearcoatRoughness?: number;
-          } = {
-            roughness: material.roughness,
-            metalness: material.metalness,
-            envMapIntensity: material.envMapIntensity,
-            map: material.map,
-          };
-          if (isPhysical) {
-            snap.clearcoat = (material as THREE.MeshPhysicalMaterial).clearcoat;
-            snap.clearcoatRoughness = (material as THREE.MeshPhysicalMaterial).clearcoatRoughness;
-          }
-          this.displayMaterialBaseByUuid.set(material.uuid, snap);
-        }
-        const base = this.displayMaterialBaseByUuid.get(material.uuid);
-        if (!base) return;
-
-        // Passo 2: derivar quality a partir da base.
-        let roughness = base.roughness;
-        let metalness = base.metalness;
-        let envMapIntensity = base.envMapIntensity;
-        let clearcoat = base.clearcoat;
-        let clearcoatRoughness = base.clearcoatRoughness;
-
-        if (this.materialQuality === "lacquered") {
-          roughness = Math.min(base.roughness, 0.18);
-          metalness = Math.max(base.metalness, 0.1);
-          envMapIntensity = Math.max(base.envMapIntensity, 1.1);
-        } else if (this.materialQuality === "premium") {
-          roughness = Math.max(0.24, base.roughness * 0.8);
-          metalness = Math.max(0.04, base.metalness * 1.1);
-          envMapIntensity = Math.max(base.envMapIntensity, 0.78);
-        }
-        // standard: valores da base preservados
-
-        // Passo 3: aplicar glossIntensity (não afeta metalness; só env, roughness, clearcoat).
-        if (!this.matteMode) {
-          const t = this.glossIntensity;
-          roughness = roughness + (1 - t) * (1 - roughness);
-          envMapIntensity = envMapIntensity * t;
-          if (clearcoat !== undefined) {
-            clearcoat = clearcoat * t;
-            if (clearcoatRoughness !== undefined) {
-              clearcoatRoughness = clearcoatRoughness + (1 - t) * (1 - clearcoatRoughness);
-            }
-          }
-        } else {
-          // Passo 4: matteMode sobrepõe gloss.
-          roughness = Math.max(roughness, 0.92);
-          envMapIntensity = 0;
-          if (clearcoat !== undefined) clearcoat = 0;
-        }
-
-        // Aplicar resultado final.
-        material.roughness = roughness;
-        material.metalness = metalness;
-        material.envMapIntensity = envMapIntensity;
-        if (isPhysical && clearcoat !== undefined) {
-          (material as THREE.MeshPhysicalMaterial).clearcoat = clearcoat;
-          if (clearcoatRoughness !== undefined) {
-            (material as THREE.MeshPhysicalMaterial).clearcoatRoughness = clearcoatRoughness;
-          }
-        }
-        // material.map preservado (definido pelo MaterialEngine)
-        material.needsUpdate = true;
-      });
+    this.displayMaterials.reapply(this.sceneManager.root, {
+      materialQuality: this.materialQuality,
+      glossIntensity: this.glossIntensity,
+      matteMode: this.matteMode,
     });
   }
 
@@ -2780,18 +2653,11 @@ export class ViewerCore {
   }
 
   setMaterialQuality(quality: ViewerMaterialQuality): void {
-    this.materialQuality =
-      quality === "premium" || quality === "lacquered" ? quality : "standard";
-    materialEngineSetLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
+    this.materialQuality = normalizeViewerMaterialQuality(quality);
+    this.materialPipeline.setLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
     this.sceneManager.setMaterialQuality(this.materialQuality);
     this.reapplyDisplayMaterials();
-    const mode: MaterialMode =
-      this.materialQuality === "premium"
-        ? "showcase"
-        : this.materialQuality === "lacquered"
-          ? "realistic"
-          : "realistic";
-    this.setMaterialMode(mode);
+    this.setMaterialMode(resolveMaterialModeForQuality(this.materialQuality));
   }
 
   getMaterialQuality(): ViewerMaterialQuality {
@@ -3810,7 +3676,7 @@ export class ViewerCore {
     const depth = Math.max(0.01, maxZ - minZ);
     const height = Math.max(0.01, maxY - minY);
     const t = ViewerCore.ROOM_WALL_THICKNESS_M;
-    const sceneConfig = getSceneMaterialConfig();
+    const sceneConfig = this.materialPipeline.getSceneMaterialConfig();
     const roomBoxConfig = sceneConfig.roomBox;
     const wallMat = new THREE.MeshStandardMaterial({
       color: roomBoxConfig.color,
@@ -3916,7 +3782,7 @@ export class ViewerCore {
   private rebuildRoomFloorAndCeiling(): void {
     if (!this.roomBoxGroup || !this.roomBounds) return;
     this.clearRoomFloorRoot();
-    const sceneConfig = getSceneMaterialConfig();
+    const sceneConfig = this.materialPipeline.getSceneMaterialConfig();
     const group = new THREE.Group();
     group.name = "room-floor-root";
     const expandM = getRoomFloorExpandM(this.roomFloorMode);
@@ -6240,10 +6106,7 @@ export class ViewerCore {
   }
 
   private loadMaterial(materialName: string): LoadedWoodMaterial | null {
-    const result = materialEngineLoadMaterial(materialName, getMaterialMode(), {
-      useLacqueredClearcoat: this.materialQuality === "lacquered",
-    });
-    return result as LoadedWoodMaterial | null;
+    return this.materialPipeline.loadMaterial(materialName, this.materialQuality);
   }
 
   /** Delega ao ViewerTools. */
@@ -6504,12 +6367,8 @@ export class ViewerCore {
     // Limpar todos os caixotes corretamente
     this.clearBoxes();
     this.roomBuilder.clearRoom();
-    this.displayMaterialBaseByUuid.clear();
-    if (this.premiumTexture) {
-      this.premiumTexture.dispose();
-      this.premiumTexture = null;
-    }
-    disposeSharedPanelEdgeMaterial();
+    this.displayMaterials.dispose();
+    this.materialPipeline.disposeSharedPanelEdgeMaterial();
 
     this.sceneManager.dispose();
     this.rendererManager.dispose();

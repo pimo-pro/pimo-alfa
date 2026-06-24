@@ -48,3 +48,8 @@ export type {
   ViewerMaterialSyncSurface,
   ViewerMcDimensionsSurface,
 } from "./integration/viewerIndustrialSurface";
+export { createMaterialPipelineFacade } from "./materials/materialPipelineFacade";
+export type { MaterialPipelineFacade } from "./materials/materialPipelineFacade";
+export { DisplayMaterialController } from "./materials/displayMaterialController";
+export { createTextureLoaderFacade } from "./loaders/textureLoaderFacade";
+export type { TextureLoaderFacade } from "./loaders/textureLoaderFacade";
