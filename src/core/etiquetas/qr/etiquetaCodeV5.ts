@@ -1,6 +1,7 @@
 /**
- * Código de etiqueta v5: [NOME_INDUSTRIAL]_[SIGLA][NUM_CAIXA]-[SEQ]
- * Motor QR canónico do UnifiedEtiquetaEngine (UEE).
+ * Código display v5: [LETRAS][NUM_CAIXA_3]-[SEQ] — ex.: NCFS003-6
+ * (AAA é acrescentado na faixa inferior por pdfEtiquetas.)
+ * QR canónico: buildEtiquetaQrPayloadV5 (inalterado).
  */
 
 import { buildV5BottomStripIndustrialName } from "../industrialDisplayName";
@@ -9,9 +10,9 @@ export interface EtiquetaCodeV5Input {
   projectName: string;
   pieceSeq: number;
   totalPiecesInSheet: number;
-  /** Nome de exibição da caixa — necessário para prefixo industrial completo. */
+  /** Nome de exibição da caixa — ex.: «Caixa 1» → prefixo C1. */
   boxName?: string;
-  /** Nome industrial da peça (PRO ou metadata.industrialLabel). */
+  /** Nome/tipo industrial da peça — ex.: C1_top, metadata.industrialLabel. */
   nomeIndustrial?: string;
 }
 
@@ -47,23 +48,75 @@ export function formatNumCaixa(totalPiecesInSheet: number): string {
   return String(clamped).padStart(2, "0");
 }
 
-export function buildEtiquetaCodeV5(input: EtiquetaCodeV5Input): string {
-  const sigla = extractProjectSigla(input.projectName);
-  const numCaixa = formatNumCaixa(input.totalPiecesInSheet);
-  const seq = Math.max(1, Math.floor(Number(input.pieceSeq) || 1));
-  const suffix = `${sigla}${numCaixa}-${seq}`;
+/** NUM_CAIXA no displayCode curto — 3 dígitos (ex.: 3 → 003). */
+export function formatNumCaixa3Digits(totalPiecesInSheet: number): string {
+  const n = Math.floor(Number(totalPiecesInSheet));
+  if (!Number.isFinite(n) || n <= 0) return "000";
+  const clamped = Math.min(999, n);
+  return String(clamped).padStart(3, "0");
+}
 
-  const nomeIndustrial = String(input.nomeIndustrial ?? "").trim();
-  if (!nomeIndustrial) {
-    return suffix;
+/**
+ * Prefixo de letras a partir do nome industrial completo.
+ * Ex.: NP2624622_Caixa_Forno_SEP_03 → NCFS
+ */
+export function buildIndustrialShortCodeFromFullName(industrialFullName: string): string {
+  const tokens = String(industrialFullName ?? "")
+    .trim()
+    .split("_")
+    .filter(Boolean);
+
+  if (tokens.length === 0) return "X";
+
+  const [projectToken, ...rest] = tokens;
+  const letters: string[] = [];
+
+  const projectLetter = projectToken.match(/[a-zA-Z]/)?.[0];
+  if (projectLetter) letters.push(projectLetter.toUpperCase());
+
+  const semanticTokens = rest.filter((t, idx) => {
+    const isLast = idx === rest.length - 1;
+    const isNumeric = /^\d+$/.test(t);
+    return !isLast || !isNumeric;
+  });
+
+  for (const t of semanticTokens) {
+    const letter = t.match(/[a-zA-Z]/)?.[0];
+    if (letter) letters.push(letter.toUpperCase());
   }
 
-  const industrialFullName = buildV5BottomStripIndustrialName(
-    input.projectName,
-    input.boxName ?? "",
-    nomeIndustrial
-  );
-  return `${industrialFullName}_${suffix}`;
+  return letters.join("") || "X";
+}
+
+/** @deprecated Alias — usar buildIndustrialShortCodeFromFullName com nome completo. */
+export function buildIndustrialShortCode(
+  projectName: string,
+  boxName: string,
+  pieceName: string
+): string {
+  const fullName = buildV5BottomStripIndustrialName(projectName, boxName, pieceName);
+  return buildIndustrialShortCodeFromFullName(fullName);
+}
+
+export function buildEtiquetaCodeV5(input: EtiquetaCodeV5Input): string {
+  const seq = Math.max(1, Math.floor(Number(input.pieceSeq) || 1));
+
+  const nomeIndustrial = String(input.nomeIndustrial ?? "").trim();
+  const boxName = String(input.boxName ?? "").trim();
+  if (nomeIndustrial && boxName) {
+    const industrialFullName = buildV5BottomStripIndustrialName(
+      input.projectName,
+      boxName,
+      nomeIndustrial
+    );
+    const prefix = buildIndustrialShortCodeFromFullName(industrialFullName);
+    const numCaixaStr = formatNumCaixa3Digits(input.totalPiecesInSheet);
+    return `${prefix}${numCaixaStr}-${seq}`;
+  }
+
+  const sigla = extractProjectSigla(input.projectName);
+  const numCaixa = formatNumCaixa(input.totalPiecesInSheet);
+  return `${sigla}${numCaixa}-${seq}`;
 }
 
 export interface EtiquetaQrPayloadV5Input {

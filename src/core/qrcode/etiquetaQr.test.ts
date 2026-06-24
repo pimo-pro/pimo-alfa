@@ -57,10 +57,10 @@ describe("resolveUnifiedEtiquetaQrCode", () => {
     expect(qr).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6");
   });
 
-  it("código de display inclui nome industrial + sufixo legado", () => {
+  it("código de display curto industrial + NUM_CAIXA + seq", () => {
     const piecesPerSheet = new Map([["box-1::Remate L B", 4]]);
     const display = resolveEtiquetaDisplayCodeV5(item, ctx, piecesPerSheet, 0);
-    expect(display).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01_AN504-6");
+    expect(display).toBe("ANCRLB004-6");
     expect(display).not.toBe(resolveUnifiedEtiquetaQrCode(item, ctx, piecesPerSheet, 0));
   });
 

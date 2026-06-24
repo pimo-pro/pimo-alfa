@@ -31,28 +31,37 @@ describe("etiquetaCodeV5", () => {
     ).toBe("CAP12-5");
   });
 
-  it("prefixo industrial completo + sufixo legado", () => {
+  it("código curto industrial + NUM_CAIXA (3 dígitos) + seq", () => {
     expect(
       buildEtiquetaCodeV5({
         projectName: "NP262269",
-        totalPiecesInSheet: 4,
-        pieceSeq: 6,
+        totalPiecesInSheet: 5,
+        pieceSeq: 1,
         boxName: "Caixa 1",
-        nomeIndustrial: "C1_lat_esq",
+        nomeIndustrial: "C1_top",
       })
-    ).toBe("NP262269_Caixa_1_lat_esq_N04-6");
+    ).toBe("NCT005-1");
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "NP2624622",
+        totalPiecesInSheet: 3,
+        pieceSeq: 6,
+        boxName: "Caixa Forno",
+        nomeIndustrial: "NP2624622_Caixa_Forno_SEP_03",
+      })
+    ).toBe("NCFS003-6");
   });
 
-  it("metadata industrialLabel já completo + sufixo", () => {
+  it("metadata industrialLabel — letras dos tokens semânticos", () => {
     expect(
       buildEtiquetaCodeV5({
         projectName: "ANTONIO_NOVO_5",
-        totalPiecesInSheet: 12,
-        pieceSeq: 4,
+        totalPiecesInSheet: 4,
+        pieceSeq: 6,
         boxName: "CC4",
         nomeIndustrial: "ANTONIO_NOVO_5_CC4_REMATE_L_B_01",
       })
-    ).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01_AN512-4");
+    ).toBe("ANCRLB004-6");
   });
 
   it("NUM_CAIXA inválido → 00", () => {
