@@ -31,7 +31,10 @@ import {
   type LabelObservationRulesLike,
 } from "./labelObservationsV5";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
-import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
+import {
+  buildV5BottomStripIndustrialName,
+  resolveNomeIndustrialForEtiqueta,
+} from "../etiquetas/industrialDisplayName";
 import {
   computePieceSequence,
   type PieceData,
@@ -87,13 +90,8 @@ type LabelItem = CutListItemComPreco & {
 
 /** Nome industrial alinhado ao Layout de Corte PRO (`<prefixoCaixa>_<prefixoPeca>`). */
 function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiquetasPdf): string {
-  const fromMeta = item.metadata?.industrialLabel;
-  if (typeof fromMeta === "string" && fromMeta.trim()) {
-    return fromMeta.trim();
-  }
   const projectName = item.sourceProjectName ?? project.projectName;
-  const boxNome = item.boxNome;
-  return buildCutLayoutProPartName(item, boxNome, projectName);
+  return resolveNomeIndustrialForEtiqueta(item, projectName, item.boxNome);
 }
 
 /** Código S1 — apenas referência legada (`labelPdfLegacyRenderRefs`); produção usa `etiquetaQr`. */
@@ -779,7 +777,7 @@ function drawV5_CutLine(doc: jsPDF, y: number, width: number): void {
 
 /**
  * Faixa inferior — fundo branco (igual ao resto), 10 mm, delimitada por linha fina no topo.
- * Esquerda: CODIGO / AAA · Direita: PROJETO / PEÇA (texto preto).
+ * Esquerda: CODIGO / AAA · Direita: nome industrial completo (texto preto).
  */
 function drawV5_BottomStrip(
   doc: jsPDF,
@@ -788,9 +786,7 @@ function drawV5_BottomStrip(
   height: number,
   etiquetaCode: string,
   aaa: string,
-  projectName: string,
-  boxName: string,
-  pieceName: string
+  industrialDisplayName: string
 ): void {
   doc.setFillColor(255, 255, 255);
   doc.rect(0, y, width, height, "F");
@@ -802,7 +798,7 @@ function drawV5_BottomStrip(
   const PAD = 3;
   const centerY = y + height / 2 + v5Pt(11) * 0.12;
   const leftText = `${etiquetaCode} / ${aaa}`;
-  const rightText = `${projectName} / ${boxName} / ${pieceName}`;
+  const rightText = industrialDisplayName;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(v5Pt(11));
@@ -990,6 +986,11 @@ async function renderEtiquetaPageV5(
   drawV5_CutLine(doc, cutY, w);
 
   // ── Faixa inferior ────────────────────────────────────────────────────────
+  const bottomStripIndustrialName = buildV5BottomStripIndustrialName(
+    effectiveProjectName || "PROJETO",
+    item.boxNome ?? item.boxId ?? "—",
+    nomeIndustrial
+  );
   drawV5_BottomStrip(
     doc,
     bottomY,
@@ -997,9 +998,7 @@ async function renderEtiquetaPageV5(
     bottomStripMm,
     bottomStripCode,
     aaa,
-    effectiveProjectName || "PROJETO",
-    item.boxNome ?? item.boxId ?? "—",
-    nomeIndustrial
+    bottomStripIndustrialName
   );
 }
 

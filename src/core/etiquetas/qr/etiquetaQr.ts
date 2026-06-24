@@ -1,6 +1,7 @@
 import type { BoxModule, CutListItemComPreco } from "../../types";
 import type { RulesConfig } from "../../rules/rulesConfig";
 import { resolveIndustrialPieceRef } from "../../cutlayout/cutLayoutProPieceNaming";
+import { resolveNomeIndustrialForEtiqueta } from "../industrialDisplayName";
 import { resolveAuthoritativeLabelNumber } from "../../qrcode/panelLabelNumber";
 import { buildLocalQrPayload } from "../../qrcode/qrcodeService";
 import {
@@ -40,7 +41,7 @@ export function resolveUnifiedEtiquetaQrCode(
 }
 
 /**
- * Código curto legível na faixa inferior (ex.: AN504-6) — não usado no QR.
+ * Código display v5 na faixa inferior — nome industrial completo + sufixo AN04-6.
  */
 export function resolveEtiquetaDisplayCodeV5(
   item: EtiquetaPieceLike,
@@ -51,10 +52,17 @@ export function resolveEtiquetaDisplayCodeV5(
   const key = labelItemSheetKey(item.boxId, item.nome);
   const totalPiecesInSheet = piecesPerSheet.get(key) ?? 0;
   const pieceSeq = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
+  const effectiveProjectName = String(
+    (item as { sourceProjectName?: string }).sourceProjectName ?? ctx.projectName ?? "PROJETO"
+  );
+  const boxNome = ctx.boxes.find((b) => b.id === item.boxId)?.nome;
+  const nomeIndustrial = resolveNomeIndustrialForEtiqueta(item, effectiveProjectName, boxNome);
   return buildEtiquetaCodeV5({
-    projectName: String(ctx.projectName ?? "PROJETO"),
+    projectName: effectiveProjectName,
     pieceSeq,
     totalPiecesInSheet,
+    boxName: boxNome ?? item.boxId ?? "",
+    nomeIndustrial,
   });
 }
 

@@ -20,7 +20,7 @@ describe("etiquetaCodeV5", () => {
     ).toBe("NPKCVLD08-1");
   });
 
-  it("exemplo 2: CAP12-5", () => {
+  it("exemplo 2: CAP12-5 (sem nome industrial — sufixo legado)", () => {
     expect(extractProjectSigla("COZINHA AZUL PREMIUM")).toBe("CAP");
     expect(
       buildEtiquetaCodeV5({
@@ -29,6 +29,30 @@ describe("etiquetaCodeV5", () => {
         pieceSeq: 5,
       })
     ).toBe("CAP12-5");
+  });
+
+  it("prefixo industrial completo + sufixo legado", () => {
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "NP262269",
+        totalPiecesInSheet: 4,
+        pieceSeq: 6,
+        boxName: "Caixa 1",
+        nomeIndustrial: "C1_lat_esq",
+      })
+    ).toBe("NP262269_Caixa_1_lat_esq_N04-6");
+  });
+
+  it("metadata industrialLabel já completo + sufixo", () => {
+    expect(
+      buildEtiquetaCodeV5({
+        projectName: "ANTONIO_NOVO_5",
+        totalPiecesInSheet: 12,
+        pieceSeq: 4,
+        boxName: "CC4",
+        nomeIndustrial: "ANTONIO_NOVO_5_CC4_REMATE_L_B_01",
+      })
+    ).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01_AN512-4");
   });
 
   it("NUM_CAIXA inválido → 00", () => {

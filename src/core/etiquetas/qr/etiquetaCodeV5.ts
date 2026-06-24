@@ -1,12 +1,18 @@
 /**
- * Código de etiqueta v5: [SIGLA][NUM_CAIXA]-[SEQ]
+ * Código de etiqueta v5: [NOME_INDUSTRIAL]_[SIGLA][NUM_CAIXA]-[SEQ]
  * Motor QR canónico do UnifiedEtiquetaEngine (UEE).
  */
+
+import { buildV5BottomStripIndustrialName } from "../industrialDisplayName";
 
 export interface EtiquetaCodeV5Input {
   projectName: string;
   pieceSeq: number;
   totalPiecesInSheet: number;
+  /** Nome de exibição da caixa — necessário para prefixo industrial completo. */
+  boxName?: string;
+  /** Nome industrial da peça (PRO ou metadata.industrialLabel). */
+  nomeIndustrial?: string;
 }
 
 /** Chave de lookup alinhada a orderByCutLayoutPro em pdfEtiquetas. */
@@ -45,7 +51,19 @@ export function buildEtiquetaCodeV5(input: EtiquetaCodeV5Input): string {
   const sigla = extractProjectSigla(input.projectName);
   const numCaixa = formatNumCaixa(input.totalPiecesInSheet);
   const seq = Math.max(1, Math.floor(Number(input.pieceSeq) || 1));
-  return `${sigla}${numCaixa}-${seq}`;
+  const suffix = `${sigla}${numCaixa}-${seq}`;
+
+  const nomeIndustrial = String(input.nomeIndustrial ?? "").trim();
+  if (!nomeIndustrial) {
+    return suffix;
+  }
+
+  const industrialFullName = buildV5BottomStripIndustrialName(
+    input.projectName,
+    input.boxName ?? "",
+    nomeIndustrial
+  );
+  return `${industrialFullName}_${suffix}`;
 }
 
 export interface EtiquetaQrPayloadV5Input {
