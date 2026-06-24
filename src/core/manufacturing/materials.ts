@@ -12,7 +12,9 @@ export type MaterialPbrId =
   | "nogueira"
   | "mdf_branco"
   | "laminado_linho_cancun"
-  | "mdf_preto";
+  | "mdf_preto"
+  | "hdf_cru"
+  | "hdf_lacado";
 
 export const MATERIAIS_PBR_OPCOES: { id: MaterialPbrId; label: string }[] = [
   { id: "carvalho_natural", label: "Carvalho" },
@@ -21,6 +23,8 @@ export const MATERIAIS_PBR_OPCOES: { id: MaterialPbrId; label: string }[] = [
   { id: "mdf_branco", label: "MDF Branco" },
   { id: "laminado_linho_cancun", label: "Laminado Linho Cancun" },
   { id: "mdf_preto", label: "MDF Preto" },
+  { id: "hdf_cru", label: "HDF Cru" },
+  { id: "hdf_lacado", label: "HDF Lacado" },
 ];
 
 export type MaterialIndustrial = {

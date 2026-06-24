@@ -155,6 +155,22 @@ const INDUSTRIAL_SHEETS_SEED: IndustrialSheetSeed[] = [
     custo_m2: 40,
     densidade: 750,
   },
+  // HDF Cru
+  {
+    canonicalId: "hdf_cru-19",
+    label: "HDF CRU 19mm",
+    espessuraPadrao: 19,
+    viewerMaterialId: "hdf_cru",
+    custo_m2: 30,
+    densidade: 900,
+    legacyAliases: [
+      "hdf_cru",
+      "hdf_cru_19",
+      "HDF Cru",
+      "HDF CRU",
+      "HDF CRU 19mm",
+    ],
+  },
   // Carvalho
   {
     canonicalId: "carvalho-20",
