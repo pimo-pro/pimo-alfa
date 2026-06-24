@@ -1,8 +1,12 @@
 import type { CutListItemComPreco, PanelDrillHole } from "../types";
 import type { BoxModule } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { buildLocalQrPayload } from "../qrcode/qrcodeService";
+import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
+import {
+  buildIndustrialListPiecesPerSheet,
+} from "../pdf/industrialListQr";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
+import { resolveUnifiedEtiquetaQrCode } from "../etiquetas/qr/etiquetaQr";
 import { isLateralPanel } from "./lateralDowels";
 import { getDrillBackDistance, getDrillFrontDistance } from "./drillConfig";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
@@ -19,8 +23,82 @@ function resolveHorizontalHoleQuadrant(x: number, panelLength: number): 1 | 2 {
   return 1;
 }
 
+function sanitizeFilenamePart(value: string): string {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}_-]/gu, "")
+    .slice(0, 64) || "PECA";
+}
+
 function sanitizeFilename(code: string): string {
-  return code.replace(/[^\p{L}\p{N}_-]/gu, "_").slice(0, 64) || "piece";
+  return sanitizeFilenamePart(code);
+}
+
+function readPieceQrCodeFromMetadata(item: CutListItemComPreco): string | null {
+  const meta = item.metadata as { qrCode?: unknown; QrCode?: unknown } | undefined;
+  const raw = meta?.qrCode ?? meta?.QrCode;
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
+  return null;
+}
+
+/** True se a peça tem etiqueta/QR atribuído (metadados, N.º QR ou pieceNumber). */
+export function pieceHasEtiquetaQr(item: CutListItemComPreco): boolean {
+  if (readPieceQrCodeFromMetadata(item)) return true;
+  if (resolveAuthoritativeLabelNumber(item) != null) return true;
+  const pn = Number(item.pieceNumber ?? 0);
+  return Number.isFinite(pn) && pn > 0;
+}
+
+/** QR canónico v5 — igual à coluna N.º QR do unificado.pdf / etiquetas. */
+export function resolvePieceQrCode(
+  item: CutListItemComPreco,
+  project: ProjectContext,
+  piecesPerSheet: Map<string, number>,
+  index0: number
+): string | null {
+  const fromMeta = readPieceQrCodeFromMetadata(item);
+  if (fromMeta) return fromMeta;
+  if (!pieceHasEtiquetaQr(item)) return null;
+  return resolveUnifiedEtiquetaQrCode(
+    item,
+    {
+      projectName: project.projectName,
+      boxes: project.boxes,
+      rules: project.rules,
+    },
+    piecesPerSheet,
+    index0
+  );
+}
+
+/** Nome completo quando a peça não tem QR: PROJETO_CAIXA_PECA */
+export function buildDrillXmlFallbackFileName(
+  item: CutListItemComPreco,
+  project: Pick<ProjectContext, "projectName" | "boxes">
+): string {
+  const projectName = String(project.projectName ?? "PROJETO").trim() || "PROJETO";
+  const boxNome =
+    project.boxes.find((b) => b.id === item.boxId)?.nome?.trim() ||
+    String(item.boxId ?? "BOX").trim() ||
+    "BOX";
+  const pieceName = resolveIndustrialPieceRef(item, boxNome, projectName);
+  return [projectName, boxNome, pieceName].map(sanitizeFilenamePart).join("_");
+}
+
+/**
+ * Nome base do ficheiro XML industrial (.xml).
+ * Com etiqueta: valor do QR (v5 / metadata.qrCode). Sem etiqueta: PROJETO_CAIXA_PECA.
+ */
+export function panelFileNameFromPiece(
+  item: CutListItemComPreco,
+  project: ProjectContext,
+  piecesPerSheet: Map<string, number>,
+  index0: number
+): string {
+  const qrCode = resolvePieceQrCode(item, project, piecesPerSheet, index0);
+  if (qrCode) return sanitizeFilename(qrCode);
+  return sanitizeFilename(buildDrillXmlFallbackFileName(item, project));
 }
 
 /**
@@ -196,6 +274,7 @@ export function buildDrillFilesForProject(
   const frontDist = getDrillFrontDistance();
   const backDist = getDrillBackDistance();
   const usedNames = new Set<string>();
+  const piecesPerSheet = buildIndustrialListPiecesPerSheet(items);
 
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
@@ -225,14 +304,8 @@ export function buildDrillFilesForProject(
       continue;
     }
 
-    const auth = resolveAuthoritativeLabelNumber(item);
-    const industrialLabel = (item.metadata as { industrialLabel?: string } | undefined)?.industrialLabel;
-    const code =
-      industrialLabel?.trim() ||
-      (auth != null
-        ? item.shortCode ?? buildLocalQrPayload(item, project, auth)
-        : item.shortCode ?? `${item.tipo ?? "piece"}-${item.id ?? String(idx)}`);
-    let filenameBase = sanitizeFilename(code);
+    const code = panelFileNameFromPiece(item, project, piecesPerSheet, idx);
+    let filenameBase = code;
     let dedupe = 2;
     while (usedNames.has(filenameBase)) {
       filenameBase = sanitizeFilename(`${code}_${dedupe}`);
