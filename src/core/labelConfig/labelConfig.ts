@@ -44,8 +44,8 @@ export interface LabelConfig {
 
 export const DEFAULT_LABEL_CONFIG: LabelConfig = {
   dimensions: {
-    totalWidth_mm: 98,
-    totalHeight_mm: 60,
+    totalWidth_mm: 100,
+    totalHeight_mm: 50,
     bottomStrip_mm: 10,
     qrSize_mm: 30,
     qrColumnWidth_mm: 32,

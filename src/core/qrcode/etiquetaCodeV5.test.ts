@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildEtiquetaCodeV5,
+  buildEtiquetaQrPayloadV5,
   buildPiecesPerSheetMap,
   extractProjectSigla,
   formatNumCaixa,
@@ -40,6 +41,15 @@ describe("etiquetaCodeV5", () => {
         pieceSeq: 1,
       })
     ).toBe("T00-1");
+  });
+
+  it("payload QR v5 — nome industrial completo + número", () => {
+    expect(
+      buildEtiquetaQrPayloadV5({
+        industrialPieceRef: "ANTONIO_NOVO_5_CC4_REMATE_L_B_01",
+        pieceSeq: 6,
+      })
+    ).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6");
   });
 });
 

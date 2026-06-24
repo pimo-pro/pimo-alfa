@@ -1,9 +1,11 @@
 import type { BoxModule, CutListItemComPreco } from "../../types";
 import type { RulesConfig } from "../../rules/rulesConfig";
+import { resolveIndustrialPieceRef } from "../../cutlayout/cutLayoutProPieceNaming";
 import { resolveAuthoritativeLabelNumber } from "../../qrcode/panelLabelNumber";
 import { buildLocalQrPayload } from "../../qrcode/qrcodeService";
 import {
   buildEtiquetaCodeV5,
+  buildEtiquetaQrPayloadV5,
   buildPiecesPerSheetMap,
   labelItemSheetKey,
   type LabelSheetPlacement,
@@ -22,9 +24,25 @@ export type EtiquetaQrContext = {
 };
 
 /**
- * QR canónico do UEE (formato v5).
+ * QR canónico do UEE — nome industrial completo + número da etiqueta.
+ * Ex.: ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6
  */
 export function resolveUnifiedEtiquetaQrCode(
+  item: EtiquetaPieceLike,
+  ctx: EtiquetaQrContext,
+  _piecesPerSheet: Map<string, number>,
+  index0: number
+): string {
+  const boxNome = ctx.boxes.find((b) => b.id === item.boxId)?.nome;
+  const pieceSeq = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
+  const industrialRef = resolveIndustrialPieceRef(item, boxNome, ctx.projectName);
+  return buildEtiquetaQrPayloadV5({ industrialPieceRef: industrialRef, pieceSeq });
+}
+
+/**
+ * Código curto legível na faixa inferior (ex.: AN504-6) — não usado no QR.
+ */
+export function resolveEtiquetaDisplayCodeV5(
   item: EtiquetaPieceLike,
   ctx: EtiquetaQrContext,
   piecesPerSheet: Map<string, number>,
@@ -33,9 +51,8 @@ export function resolveUnifiedEtiquetaQrCode(
   const key = labelItemSheetKey(item.boxId, item.nome);
   const totalPiecesInSheet = piecesPerSheet.get(key) ?? 0;
   const pieceSeq = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
-  const effectiveProjectName = String(ctx.projectName ?? "PROJETO");
   return buildEtiquetaCodeV5({
-    projectName: effectiveProjectName,
+    projectName: String(ctx.projectName ?? "PROJETO"),
     pieceSeq,
     totalPiecesInSheet,
   });
@@ -57,7 +74,7 @@ export function resolveLegacyShortQrCode(
   return buildLocalQrPayload(item, ctx, 1);
 }
 
-export { buildEtiquetaCodeV5, buildPiecesPerSheetMap, labelItemSheetKey, type LabelSheetPlacement };
+export { buildEtiquetaCodeV5, buildEtiquetaQrPayloadV5, buildPiecesPerSheetMap, labelItemSheetKey, type LabelSheetPlacement };
 
 export {
   generateEtiquetaCode,

@@ -180,12 +180,23 @@ function migrateLabelSystemV5(input: LabelSystemV5 | null): LabelSystemV5 {
     return buildDefaultLabelSystemV5();
   }
 
-  // Versão 1 → versão corrente (sem alterações estruturais nesta fase)
   if (input.schemaVersion === LABEL_SYSTEM_V5_SCHEMA_VERSION) {
     return { ...buildDefaultLabelSystemV5(), ...input };
   }
 
-  // Schema futuro desconhecido: usar defaults por segurança
+  // v1 → v2: corrigir dimensões legadas 98×60 → 100×50 mm
+  if (input.schemaVersion === 1) {
+    const migrated: LabelSystemV5 = {
+      ...buildDefaultLabelSystemV5(),
+      ...input,
+      schemaVersion: LABEL_SYSTEM_V5_SCHEMA_VERSION,
+      dimensions: { ...input.dimensions },
+    };
+    if (migrated.dimensions.widthMm === 98) migrated.dimensions.widthMm = 100;
+    if (migrated.dimensions.heightMm === 60) migrated.dimensions.heightMm = 50;
+    return migrated;
+  }
+
   return buildDefaultLabelSystemV5();
 }
 

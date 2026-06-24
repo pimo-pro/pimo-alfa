@@ -9,6 +9,7 @@ import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 import { buildPiecesPerSheetMap, labelItemSheetKey } from "../etiquetas/qr/etiquetaCodeV5";
 import {
   resolveLegacyShortQrCode,
+  resolveEtiquetaDisplayCodeV5,
   resolveUnifiedEtiquetaQrCode,
 } from "../etiquetas/qr/etiquetaQr";
 import type { LabelConfig } from "../labelConfig/labelConfig";
@@ -19,6 +20,11 @@ import {
 import type { QrPolicy } from "../labelSystem/LabelSystemV5";
 import { normalizeCutLayoutPlacements } from "../etiquetas/engine/nestingAdapter";
 import { formatDimensionV5, formatNumberV5 } from "./labelMeasuresV5";
+import {
+  computeV5LabelLayout,
+  V5_LAYOUT_PAD_MM,
+  V5_LAYOUT_QR_GAP_BELOW_MM,
+} from "./labelLayoutV5";
 import {
   collectObservationsForItem,
   observationsToV5Slots,
@@ -382,7 +388,7 @@ async function renderEtiquetaPage(
 }
 
 // ============================================================================
-// Renderer v5 — layout FINAL (98×60 mm, faixa inferior, grelha produção)
+// Renderer v5 — layout FINAL (100×50 mm, faixa inferior 10 mm, grelha produção)
 // ============================================================================
 
 /** px CSS @96dpi → mm (maqueta PIMO_LABEL_DESIGN_PREVIEW). */
@@ -405,6 +411,17 @@ const V5_INFO_GAP_MM = v5Px(12);
 const V5_LABEL_COL_MM = v5Px(26);
 const V5_SEQ_BOX_MM = v5Px(21);
 const V5_OBS_LABEL_W_MM = v5Px(14);
+
+/** Rótulos abreviados da grelha de produção v5. */
+const V5_PRODUCTION_GRID_LABELS = {
+  nisting: "CNC",
+  manual: "MAN",
+  drill: "DRILL",
+  limpezas: "LIMP",
+  orlar: "ORLAR",
+  montagem: "MONT",
+  embalagem: "EMB",
+} as const;
 
 function mapPaletteGroupToAAA(group: string): string {
   const g = String(group ?? "").trim().toUpperCase();
@@ -664,19 +681,19 @@ function drawV5_ProductionGrid(
   doc.rect(x, y, width, height);
 
   // Linha 1
-  drawV5_SeqBox(doc, x,            y,      colW, rowH, "NISTING",   seq.nisting);
-  drawV5_SeqBox(doc, x + colW,     y,      colW, rowH, "MANUAL",    seq.manual);
-  drawV5_SeqBox(doc, x + 2 * colW, y,      colW, rowH, "LIMPEZAS",  seq.limpezas);
+  drawV5_SeqBox(doc, x,            y,      colW, rowH, V5_PRODUCTION_GRID_LABELS.nisting,   seq.nisting);
+  drawV5_SeqBox(doc, x + colW,     y,      colW, rowH, V5_PRODUCTION_GRID_LABELS.manual,    seq.manual);
+  drawV5_SeqBox(doc, x + 2 * colW, y,      colW, rowH, V5_PRODUCTION_GRID_LABELS.limpezas,  seq.limpezas);
   // Linha 2
   const y1 = y + rowH;
-  drawV5_SeqBox(doc, x,            y1, colW, rowH, "DRILL",     seq.drill);
+  drawV5_SeqBox(doc, x,            y1, colW, rowH, V5_PRODUCTION_GRID_LABELS.drill,     seq.drill);
   drawV5_GridDataLine(doc, x + colW, y1, colW, rowH, formatDrillDistancesGridV5(seq));
-  drawV5_SeqBox(doc, x + 2 * colW, y1, colW, rowH, "MONTAGEM",  seq.montagem);
+  drawV5_SeqBox(doc, x + 2 * colW, y1, colW, rowH, V5_PRODUCTION_GRID_LABELS.montagem,  seq.montagem);
   // Linha 3
   const y2 = y + 2 * rowH;
-  drawV5_SeqBox(doc, x,            y2, colW, rowH, "ORLAR",     seq.orlar);
+  drawV5_SeqBox(doc, x,            y2, colW, rowH, V5_PRODUCTION_GRID_LABELS.orlar,     seq.orlar);
   drawV5_GridDataLine(doc, x + colW, y2, colW, rowH, formatOrlarSidesGridV5(seq.orlarSides));
-  drawV5_SeqBox(doc, x + 2 * colW, y2, colW, rowH, "EMBALAGEM", seq.embalagem);
+  drawV5_SeqBox(doc, x + 2 * colW, y2, colW, rowH, V5_PRODUCTION_GRID_LABELS.embalagem, seq.embalagem);
 }
 
 /**
@@ -717,6 +734,35 @@ function drawV5_ObservationBar(
   doc.setTextColor(...V5_TEXT);
 }
 
+/**
+ * Badge preto com número da etiqueta (leitura humana rápida).
+ * Posicionado no canto superior direito, sem sobrepor o QR.
+ */
+function drawV5_EtiquetaNumberBadge(
+  doc: jsPDF,
+  pageW: number,
+  pad: number,
+  etiquetaNumber: number
+): void {
+  const text = String(Math.max(1, Math.floor(Number(etiquetaNumber) || 1)));
+  const fontPt = v5Pt(13);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(fontPt);
+  const textW = doc.getTextWidth(text);
+  const padH = 1.4;
+  const padV = 0.9;
+  const boxW = textW + padH * 2;
+  const boxH = fontPt * 0.38 + padV * 2;
+  const x = pageW - pad - boxW;
+  const y = pad;
+
+  doc.setFillColor(0, 0, 0);
+  doc.rect(x, y, boxW, boxH, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.text(text, x + padH, y + padV + fontPt * 0.3);
+  doc.setTextColor(...V5_TEXT);
+}
+
 function drawV5_CutLine(doc: jsPDF, y: number, width: number): void {
   doc.setDrawColor(...V5_LINE_CUT);
   doc.setLineWidth(v5Px(2.5));
@@ -743,6 +789,7 @@ function drawV5_BottomStrip(
   etiquetaCode: string,
   aaa: string,
   projectName: string,
+  boxName: string,
   pieceName: string
 ): void {
   doc.setFillColor(255, 255, 255);
@@ -755,7 +802,7 @@ function drawV5_BottomStrip(
   const PAD = 3;
   const centerY = y + height / 2 + v5Pt(11) * 0.12;
   const leftText = `${etiquetaCode} / ${aaa}`;
-  const rightText = `${projectName} / ${pieceName}`;
+  const rightText = `${projectName} / ${boxName} / ${pieceName}`;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(v5Pt(11));
@@ -805,12 +852,14 @@ async function renderEtiquetaPageV5(
     boxes: project.boxes,
     rules: project.rules,
   };
-  const codeV5 = resolveUnifiedEtiquetaQrCode(item, qrCtx, piecesPerSheet, index0);
+  const codeV5Qr = resolveUnifiedEtiquetaQrCode(item, qrCtx, piecesPerSheet, index0);
+  const codeV5Display = resolveEtiquetaDisplayCodeV5(item, qrCtx, piecesPerSheet, index0);
   const codeShort = resolveLegacyShortQrCode(item, qrCtx);
+  const etiquetaNumber = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
 
   let primaryQrCode: string;
   let secondaryQrCode: string | null = null;
-  let bottomStripCode = codeV5;
+  let bottomStripCode = codeV5Display;
 
   switch (qrPolicy) {
     case "short":
@@ -818,13 +867,13 @@ async function renderEtiquetaPageV5(
       bottomStripCode = codeShort;
       break;
     case "dual":
-      primaryQrCode = codeV5;
+      primaryQrCode = codeV5Qr;
       secondaryQrCode = codeShort;
-      bottomStripCode = codeV5;
+      bottomStripCode = codeV5Display;
       break;
     case "v5":
     default:
-      primaryQrCode = codeV5;
+      primaryQrCode = codeV5Qr;
       break;
   }
 
@@ -837,26 +886,24 @@ async function renderEtiquetaPageV5(
   const aaa = mapPaletteGroupToAAA(seq.paletteGroup);
   const observations = observationsToV5Slots(item.observations ?? []);
 
-  // ── Coordenadas — calcula de baixo para cima ──────────────────────────────
-  const PAD = 2.5;
+  const layout = computeV5LabelLayout(dims);
+  const PAD = V5_LAYOUT_PAD_MM;
   const QR_INFO_GAP = 3;
-  const bottomStripMm = 10;
-  const bottomY  = h - bottomStripMm;              // faixa inferior fixa 10 mm
-  const cutY     = bottomY - 0.5;                    // linha de corte
-  const obsY     = cutY - dims.observationHeight_mm; // barra de observações
-  const contentH = obsY - PAD;                       // altura disponível para QR + info
+  const bottomStripMm = layout.bottomStripMm;
+  const bottomY = layout.bottomY;
+  const cutY = layout.cutY;
+  const obsY = layout.obsY;
 
   // Coluna da esquerda (QR)
   const qrColW = dims.qrColumnWidth_mm;
-  const qrX    = PAD;
+  const qrX = PAD;
 
   // Coluna da direita (info)
   const infoX = PAD + qrColW + QR_INFO_GAP;
   const infoW = w - infoX - PAD;
 
-  // ── QR(s) conforme qrPolicy — sem texto short abaixo do QR ──
-  const obsBelowQrReserveMm = dims.observationHeight_mm + 2;
-  const qrSize1 = Math.min(dims.qrSize_mm, Math.max(12, contentH - obsBelowQrReserveMm));
+  // ── QR(s) conforme qrPolicy — tamanho exacto quando cabe na secção superior (40 mm) ──
+  const qrSize1 = layout.qrSizeMm;
   const qrY1 = PAD;
   const logoUrl = runtime.qrLogoDataUrl;
   const logoPct = runtime.qrLogoSizePercent;
@@ -876,11 +923,14 @@ async function renderEtiquetaPageV5(
       logoPct,
       project.settings
     );
-    belowQrY = qrY1 + dualSize + 1.2;
+    belowQrY = qrY1 + dualSize + V5_LAYOUT_QR_GAP_BELOW_MM;
   } else {
     await drawV5_QR(doc, primaryQrCode, qrX, qrY1, qrSize1, logoUrl, logoPct, project.settings);
-    belowQrY = qrY1 + qrSize1 + 1.2;
+    belowQrY = qrY1 + qrSize1 + V5_LAYOUT_QR_GAP_BELOW_MM;
   }
+
+  // Badge do número da etiqueta — canto superior direito (Opção A)
+  drawV5_EtiquetaNumberBadge(doc, w, PAD, etiquetaNumber);
 
   const obsBlockH = Math.min(dims.observationHeight_mm, Math.max(3.5, obsY - belowQrY));
   drawV5_ObservationBar(doc, qrX, belowQrY, w - qrX - PAD, obsBlockH, observations, {
@@ -890,8 +940,8 @@ async function renderEtiquetaPageV5(
   // ── Secção de informação ──────────────────────────────────────────────────
   const yMaterial = PAD;
   const yMedidas  = yMaterial + dims.materialHeight_mm;
-  const yGrid     = yMedidas  + dims.medidasHeight_mm;
-  const gridH     = obsY - yGrid;       // preenche o espaço restante
+  const yGrid = yMedidas + dims.medidasHeight_mm;
+  const gridH = layout.gridH;
 
   // Rótulo "MATRIAL" + valor
   const LABEL_COL_W = 16;
@@ -941,9 +991,14 @@ async function renderEtiquetaPageV5(
 
   // ── Faixa inferior ────────────────────────────────────────────────────────
   drawV5_BottomStrip(
-    doc, bottomY, w, bottomStripMm,
-    bottomStripCode, aaa,
+    doc,
+    bottomY,
+    w,
+    bottomStripMm,
+    bottomStripCode,
+    aaa,
     effectiveProjectName || "PROJETO",
+    item.boxNome ?? item.boxId ?? "—",
     nomeIndustrial
   );
 }

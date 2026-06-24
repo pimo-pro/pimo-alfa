@@ -70,7 +70,8 @@ describe("drillExport — nomes XML alinhados ao sistema de etiquetas", () => {
 
     expect(filename).toBe(nQr);
     expect(filename).not.toBe(item.shortCode);
-    expect(filename).toMatch(/^[A-Z0-9]+-\d+$/);
+    expect(filename).toMatch(/^[A-Z0-9_]+-\d+$/);
+    expect(filename).toContain("_");
   });
 
   it("com metadata.qrCode — usa exactamente esse valor", () => {

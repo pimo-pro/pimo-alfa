@@ -12,7 +12,7 @@ import type { PaletteGroup, ProductionStep } from "../labelConfig/labelConfig";
 // ─── Versão do schema ─────────────────────────────────────────────────────────
 
 /** Versão corrente do schema.  Incrementar a cada migração não-compatível. */
-export const LABEL_SYSTEM_V5_SCHEMA_VERSION = 1;
+export const LABEL_SYSTEM_V5_SCHEMA_VERSION = 2;
 
 // ─── Dimensões ────────────────────────────────────────────────────────────────
 
