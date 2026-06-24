@@ -9,6 +9,7 @@ import {
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
+import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/dimensions";
@@ -297,17 +298,19 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     custo: 0,
   });
 
-  paineis.push({
-    id: getStructuralPanelId(box, "costa"),
-    tipo: "COSTA",
-    largura_mm: clampPositive(largura),
-    altura_mm: clampPositive(altura),
-    espessura_mm: costaMaterial.thicknessMm,
-    material: costaMaterial.label,
-    orientacaoFibra: "vertical",
-    quantidade: 1,
-    custo: 0,
-  });
+  if (resolveCostaAtivaForBox(box)) {
+    paineis.push({
+      id: getStructuralPanelId(box, "costa"),
+      tipo: "COSTA",
+      largura_mm: clampPositive(largura),
+      altura_mm: clampPositive(altura),
+      espessura_mm: costaMaterial.thicknessMm,
+      material: costaMaterial.label,
+      orientacaoFibra: "vertical",
+      quantidade: 1,
+      custo: 0,
+    });
+  }
 
   // 3.4 Prateleiras: largura com folgas; profundidade = profundidade útil interna − 5 mm (folga frontal).
   if (box.prateleiras > 0) {

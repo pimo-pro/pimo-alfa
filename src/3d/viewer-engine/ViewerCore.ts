@@ -78,7 +78,8 @@ import {
   setBox3FromObjectExcludingLayoutProxy,
   VIEWER_LAYOUT_PROXY_LAYER,
 } from "./box/boxAabbUtils";
-import { applyFinishMovementConstraints } from "./constraints/finishCollision";
+import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
+import { SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import {
   clearSnapUserData,
   getTransformGizmoSizeForBox as computeTransformGizmoSizeForBox,
@@ -117,6 +118,7 @@ import type { SnapDebugData } from "../snapping/ModelWallSnap";
 import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
+import { applyFinishMovementConstraints } from "./constraints/finishCollision";
 import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
 import { InternalRuler } from "./measurement/InternalRuler";
 import { createInternalRulerFacade, type InternalRulerFacade } from "./measurement/internalRulerFacade";
@@ -2254,6 +2256,35 @@ export class ViewerCore {
   }
 
   /**
+   * Activa/desactiva costa traseira no viewer (mesh `back` + profundidade útil).
+   * O estado de projecto deve ser actualizado via `setWorkspaceBoxNoBackPanel` na UI.
+   */
+  setBoxNoBackPanel(boxId: string, enabled: boolean): boolean {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return false;
+    const layoutDepthM = entry.depth;
+    const backM = SYSTEM_BACK_MM / 1000;
+    const carcassDepthM = enabled
+      ? layoutDepthM
+      : Math.max(0.001, entry.carcassDepth ?? layoutDepthM - backM);
+    const ok = this.updateBox(boxId, {
+      noBackPanel: enabled,
+      costaAtiva: !enabled,
+      layoutDepthM,
+      carcassDepthM,
+    });
+    if (ok) {
+      const updated = this.boxes.get(boxId);
+      if (updated) updated.noBackPanel = enabled;
+      if (this.viewerState.getSelectedBox() === boxId) {
+        this.refreshOutlineTarget();
+      }
+      this.refreshTransformControlsAttachment();
+    }
+    return ok;
+  }
+
+  /**
    * Aplica um material a uma porta específica (por boxId e doorLayerId).
    * Localiza o grupo door-layer-{doorLayerId}, extrai DoorSpec, remove a porta antiga, cria nova com createDoorObject
    * preservando doorHoles e aplica applyPanelIdsToBox para manter userData.boxId/doorLayerId para seleção e outline.
@@ -2953,6 +2984,7 @@ export class ViewerCore {
       material,
       drillMarkersByPanel: opts.drillMarkersByPanel,
       materialName: materialName,
+      noBackPanel: resolveNoBackPanelFromOptions(opts),
     });
     const createdEntry = this.boxes.get(id);
     if (createdEntry) {
@@ -3050,7 +3082,9 @@ export class ViewerCore {
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
       opts.drillMarkersByPanel !== undefined ||
-      opts.thickness !== undefined;
+      opts.thickness !== undefined ||
+      opts.noBackPanel !== undefined ||
+      opts.costaAtiva !== undefined;
     if (onlyTransform && !hasStructureOpts) {
       if (import.meta.env.DEV) {
         devLogger.debug("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
@@ -3121,7 +3155,9 @@ export class ViewerCore {
       opts.shelves !== undefined ||
       opts.doorLayerItems !== undefined ||
       opts.drawerLayerItems !== undefined ||
-      opts.drillMarkersByPanel !== undefined;
+      opts.drillMarkersByPanel !== undefined ||
+      opts.noBackPanel !== undefined ||
+      opts.costaAtiva !== undefined;
     if (structureChanged && this.viewerState.getTransformControlsDragging()) {
       this.pendingBoxStructureUpdates.set(id, {
         ...(this.pendingBoxStructureUpdates.get(id) ?? {}),
@@ -3325,6 +3361,12 @@ export class ViewerCore {
     entry.height = height;
     entry.depth = layoutDepth;
     entry.carcassDepth = carcassDepth;
+    if (opts.noBackPanel !== undefined || opts.costaAtiva !== undefined) {
+      entry.noBackPanel = resolveNoBackPanelFromOptions({
+        noBackPanel: opts.noBackPanel ?? entry.noBackPanel,
+        costaAtiva: opts.costaAtiva,
+      });
+    }
     if (structureChanged) {
       this.attachLayoutBoundsMesh(entry);
     }

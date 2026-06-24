@@ -3,6 +3,7 @@ import type { RulesConfig } from "../../../core/rules/rulesConfig";
 import { getSettings } from "../../../core/settings/settingsService";
 import { getMaterialForBox, getIndustrialMaterial } from "../../../core/materials/service";
 import { resolveCostaMaterialForBox } from "../../../core/materials/materials.api";
+import { resolveCostaAtivaForBox } from "../../../core/box/backPanelFlags";
 import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas, type PiModelSettings } from "./settings";
 import { PI_BASE_BOX_HEIGHT_MM, PI_BASE_DEPTH_MM } from "./models";
 import { buildPiDrawerLayoutForFronts } from "./drilling";
@@ -113,7 +114,10 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       quantidade: 1,
       custo: 0,
     },
-    {
+  ];
+
+  if (resolveCostaAtivaForBox(box)) {
+    panels.push({
       id: box.panelIds?.costa ?? "pi-costa-1",
       tipo: "COSTA",
       largura_mm: clampPositive(largura),
@@ -123,8 +127,8 @@ export function gerarPaineisPi(box: BoxModule): PiPainelIndustrial[] {
       orientacaoFibra: "vertical",
       quantidade: 1,
       custo: 0,
-    },
-  ];
+    });
+  }
 
   return panels;
 }

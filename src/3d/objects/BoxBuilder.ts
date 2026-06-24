@@ -108,6 +108,10 @@ export type BoxOptions = {
   baseCabinetId?: string;
   /** Debug FASE 5: marcadores visuais de furação nas gavetas. */
   showDrawerDrilling?: boolean;
+  /** Sem costa traseira: não gera mesh `back` no viewer. Sincronizado com `costaAtiva`. */
+  noBackPanel?: boolean;
+  /** @deprecated Preferir `noBackPanel`; mantido para compatibilidade de sync. */
+  costaAtiva?: boolean;
   /** Divisórios e separadores dinâmicos (estado da caixa). */
   divisores?: import("../../core/divSep/types").DivisorItem[];
   separadores?: import("../../core/divSep/types").SeparadorItem[];

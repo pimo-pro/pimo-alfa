@@ -13,6 +13,7 @@ import {
 } from "../../utils/roomWorkspaceBounds";
 import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
 import { syncCaixaFornoOnDimensoesChange, isCaixaFornoBox } from "../../core/moveis/generators/caixaFornoGenerator";
+import { applyNoBackPanelState } from "../../core/box/backPanelFlags";
 
 export type BoxTransformActions = Pick<
   ProjectActions,
@@ -27,6 +28,7 @@ export type BoxTransformActions = Pick<
   | "setWorkspaceBoxLocked"
   | "setWorkspaceBoxPiHideDrawerHoles"
   | "setWorkspaceBoxCostaMaterial"
+  | "setWorkspaceBoxNoBackPanel"
   | "setTipoBorda"
   | "setTipoFundo"
   | "alignFrontWithNeighbor"
@@ -262,6 +264,18 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
             }
             return next;
           });
+          return recomputeState(prev, { workspaceBoxes }, true);
+        },
+        true
+      );
+    };
+
+    a.setWorkspaceBoxNoBackPanel = (boxId, enabled) => {
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? applyNoBackPanelState(box, enabled) : box
+          );
           return recomputeState(prev, { workspaceBoxes }, true);
         },
         true

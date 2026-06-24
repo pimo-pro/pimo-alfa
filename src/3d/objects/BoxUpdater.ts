@@ -13,6 +13,7 @@ import {
   hasWardrobeLowerDrawers,
 } from "../../core/wardrobe/wardrobeRules";
 import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
+import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
 import type { PanelType } from "./PanelFactory";
 
 type BoxUpdaterDeps = {
@@ -74,8 +75,13 @@ export function updateBoxModelWithDeps(model: BoxModel, options: BoxOptions | un
   const { width, height, depth } = deps.resolveDimensions(opts);
   const material = opts.material ?? model.panels.left.material;
   const specs = deps.getPanelSpecs(width, height, depth);
+  const skipBack = resolveNoBackPanelFromOptions(opts);
   const panelKeys: (keyof typeof model.panels)[] = ["left", "right", "top", "bottom", "back"];
   panelKeys.forEach((key) => {
+    if (key === "back" && skipBack) {
+      if (model.panels.back.parent) model.panels.back.parent.remove(model.panels.back);
+      return;
+    }
     const [wx, hy, dz] = specs[key].size;
     const [px, py, pz] = specs[key].pos;
     deps.panelFactory.updatePanelGeometry(model.panels[key], wx, hy, dz);
@@ -107,8 +113,26 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   (group.userData as Record<string, unknown>)[deps.lastDimsKey] = dims;
 
   const specs = deps.getPanelSpecs(width, height, depth);
+  const skipBack = resolveNoBackPanelFromOptions(opts);
   const baseMaterial = group.children[0] instanceof THREE.Mesh ? (group.children[0] as THREE.Mesh).material : deps.getFallbackPBRMaterial();
   const mat = Array.isArray(baseMaterial) ? baseMaterial[0] : baseMaterial;
+
+  let backPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "back") as THREE.Mesh | undefined;
+  if (skipBack) {
+    if (backPanel) group.remove(backPanel);
+    backPanel = undefined;
+  } else if (!backPanel) {
+    backPanel = deps.panelFactory.createPanel(
+      specs.back.size[0],
+      specs.back.size[1],
+      specs.back.size[2],
+      "back",
+      "back",
+      { singleMaterial: mat as THREE.Material }
+    );
+    group.add(backPanel);
+  }
+
   const drillMap = opts.drillMarkersByPanel ?? { cima: [], fundo: [], lateral_esquerda: [], lateral_direita: [], porta: [] };
   const shelfCountForDrill = Math.max(0, Math.floor(opts.shelves ?? 0));
   // Roupeiro: prateleiras existem na zona superior mesmo que existam gavetas na zona inferior.
@@ -127,6 +151,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
 
   if (!dimensionsUnchanged) {
     for (const panelName of deps.panelNames) {
+      if (panelName === "back" && skipBack) continue;
       const child = group.children.find((c) => c.name === panelName);
       if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
       const spec = specs[panelName as keyof BoxPanelLayoutSpecs];

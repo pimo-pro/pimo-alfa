@@ -14,6 +14,7 @@ import {
 type CostaMaterialControlProps = {
   box: WorkspaceBox;
   projectMaterialId?: string;
+  disabled?: boolean;
   onApply: (costaMaterialId: string, costaThicknessMm: number) => void;
   onReset: () => void;
 };
@@ -46,6 +47,7 @@ function resolveEffectiveThicknessMm(box: WorkspaceBox, projectMaterialId?: stri
 export default function CostaMaterialControl({
   box,
   projectMaterialId,
+  disabled = false,
   onApply,
   onReset,
 }: CostaMaterialControlProps) {
@@ -75,8 +77,16 @@ export default function CostaMaterialControl({
       id="costa-material-popover"
       fullWidth
       triggerVariant="ghost"
-      triggerTitle="Material e espessura da peça COSTA (costas)."
-      trigger={<span>Material da costa</span>}
+      triggerTitle={
+        disabled
+          ? "Active a costa para editar o material."
+          : "Material e espessura da peça COSTA (costas)."
+      }
+      trigger={
+        <span style={{ opacity: disabled ? 0.45 : 1, pointerEvents: disabled ? "none" : "auto" }}>
+          Material da costa
+        </span>
+      }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 240, padding: 4 }}>
         <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>

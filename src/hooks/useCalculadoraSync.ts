@@ -3,6 +3,7 @@ import type { BoxModule, WorkspaceBox } from "../core/types";
 import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../core/materials/materials.api";
+import { resolveCostaAtivaForBox, resolveNoBackPanel } from "../core/box/backPanelFlags";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
@@ -116,6 +117,10 @@ function getStructureFingerprint(
     pe_cm: wsBox.pe_cm,
     feetHeight: wsBox.feetHeight,
     feetOffsetFront: wsBox.feetOffsetFront,
+    noBackPanel: resolveNoBackPanel(wsBox),
+    costaMaterialId: wsBox.costaMaterialId,
+    costaThicknessMm: wsBox.costaThicknessMm,
+    profundidadeExterna: wsBox.profundidadeExterna,
     viewerDebug: viewerDebug ?? null,
   });
 }
@@ -291,7 +296,7 @@ export const useCalculadoraSync = (
             espessura: wsBox.espessura,
             portaTipo: wsBox.portaTipo,
             doorsLayer: wsBox.doorsLayer,
-            costaAtiva: wsBox.costaAtiva,
+            costaAtiva: resolveCostaAtivaForBox(wsBox),
           },
           espessuraCostaMm
         );
@@ -376,6 +381,8 @@ export const useCalculadoraSync = (
           separadores: wsBox.separadores ?? [],
           drillMarkersByPanel,
           showDrawerDrilling: viewerDebug.showDrawerDrilling,
+          noBackPanel: resolveNoBackPanel(wsBox),
+          costaAtiva: resolveCostaAtivaForBox(wsBox),
           ...posRot,
         });
         lastStructureFingerprintRef.current.set(
@@ -428,6 +435,8 @@ export const useCalculadoraSync = (
             separadores: wsBox.separadores ?? [],
             drillMarkersByPanel,
             showDrawerDrilling: viewerDebug.showDrawerDrilling,
+            noBackPanel: resolveNoBackPanel(wsBox),
+            costaAtiva: resolveCostaAtivaForBox(wsBox),
             ...posRot,
           });
           lastStructureFingerprintRef.current.set(wsBox.id, structureFingerprint);

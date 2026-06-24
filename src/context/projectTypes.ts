@@ -533,6 +533,8 @@ export interface ProjectActions {
     _costaMaterialId?: string,
     _costaThicknessMm?: number
   ) => void;
+  /** Activa/desactiva costa traseira (visual + industrial). */
+  setWorkspaceBoxNoBackPanel: (_boxId: string, _enabled: boolean) => void;
   /** Alinha a frente do box (eixo Z) com a frente do box vizinho mais próximo no eixo X. */
   alignFrontWithNeighbor: (_boxId: string) => void;
   /** Alinha a base da caixa selecionada à base da vizinha mais próxima no plano XZ (só Y); sem outras caixas, chão em Y=0. */

@@ -1,6 +1,7 @@
 import { SYSTEM_BACK_MM, SYSTEM_THICKNESS_MM } from "../../../core/baseCabinets";
 import type { InternalCavityMeasurements, BoxCavityBoundsLocal } from "../measurement/internalRulerOverlayTypes";
 import type { ViewerBoxEntry } from "../types";
+import { resolveNoBackPanel } from "../../../core/box/backPanelFlags";
 
 const THICKNESS_M = SYSTEM_THICKNESS_MM / 1000;
 const BACK_M = SYSTEM_BACK_MM / 1000;
@@ -15,7 +16,7 @@ export function computeBoxCavityBoundsLocal(entry: ViewerBoxEntry): BoxCavityBou
   const maxX = halfW - THICKNESS_M;
   const minY = -halfH + THICKNESS_M;
   const maxY = halfH - THICKNESS_M;
-  const minZ = -halfD + BACK_M;
+  const minZ = -halfD + (resolveNoBackPanel(entry) ? 0 : BACK_M);
   const maxZ = halfD - FRONT_OPEN_EPS_M;
   const sizeX = Math.max(0.001, maxX - minX);
   const sizeY = Math.max(0.001, maxY - minY);

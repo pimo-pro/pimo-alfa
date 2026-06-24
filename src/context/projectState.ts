@@ -262,6 +262,7 @@ export const createWorkspaceBox = (
     locked: false,
     piHideDrawerHoles: overrides?.piHideDrawerHoles === true,
     costaAtiva: true,
+    noBackPanel: false,
     profundidadeExterna: dimensoes.profundidade,
     remateIds: [],
   };
@@ -537,6 +538,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     baseCabinetId: box.baseCabinetId,
     piHideDrawerHoles: box.piHideDrawerHoles === true,
     costaAtiva: box.costaAtiva,
+    noBackPanel: box.noBackPanel ?? box.costaAtiva === false,
     costaMaterialId: box.costaMaterialId,
     costaThicknessMm: box.costaThicknessMm,
     profundidadeExterna: box.profundidadeExterna,

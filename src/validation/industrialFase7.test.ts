@@ -269,6 +269,34 @@ describe("Fase 7 — Cutlist (cutlistFromBoxes)", () => {
     });
   });
 
+  it("caixa sem costa (noBackPanel) omite COSTA na cutlist", () => {
+    const box: BoxModule = {
+      id: "box-no-back",
+      nome: "Caixa sem costa",
+      dimensoes: { largura: 600, altura: 400, profundidade: 300 },
+      espessura: 19,
+      tipoBorda: "reta",
+      tipoFundo: "integrado",
+      models: [],
+      prateleiras: 0,
+      portaTipo: "sem_porta",
+      gavetas: 0,
+      alturaGaveta: 0,
+      doorsLayer: [],
+      drawersLayer: [],
+      cutList: [],
+      cutListComPreco: [],
+      ferragens: [],
+      precoTotalPecas: 0,
+      estrutura3D: null,
+      noBackPanel: true,
+      costaAtiva: false,
+    };
+    const list = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const tipos = list.map((p) => p.tipo);
+    expect(tipos.some((t) => t === "COSTA" || t === "costa")).toBe(false);
+  });
+
   it("caixa com prateleiras inclui tipo prateleira", () => {
     const box: BoxModule = {
       id: "box-2",

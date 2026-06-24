@@ -112,6 +112,7 @@ export function reviveState(snapshot: unknown): ProjectState | null {
             const { modelId: _modelId, ...rest } = box;
             const next: WorkspaceBox = { ...rest, models, locked: rest.locked === true };
             if (next.costaAtiva === undefined) next.costaAtiva = true;
+            if (next.noBackPanel === undefined) next.noBackPanel = next.costaAtiva === false;
             if (next.profundidadeExterna === undefined) {
               next.profundidadeExterna = next.dimensoes?.profundidade ?? 0;
             }

@@ -22,6 +22,7 @@ import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
 import { isCaixaFornoBox } from "../../core/moveis/generators/caixaFornoGenerator";
 import { renderCaixaForno } from "../../core/moveis/viewer/renderCaixaForno";
 import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
+import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -99,11 +100,10 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     back: deps.panelFactory.createPanel(specs.back.size[0], specs.back.size[1], specs.back.size[2], "back", "back", panelOptions("back")),
   };
 
-  // Rodar apenas no eixo Y para espelhar esquerda/direita sem inverter o eixo vertical (Y).
-  panels.right.rotation.y = 0;
-  panels.right.rotation.z = 0;
+  const skipBack = resolveNoBackPanelFromOptions(opts);
   (panelTypes as readonly string[]).forEach((key) => {
     const k = key as keyof typeof panels;
+    if (k === "back" && skipBack) return;
     const p = panels[k];
     const pos = specs[k].pos;
     p.position.set(pos[0], pos[1], pos[2]);

@@ -327,6 +327,8 @@ export interface BoxModule {
   precoTotalPecas: number;
   /** FASE 2 — Ver `WorkspaceBox.costaAtiva`. */
   costaAtiva?: boolean;
+  /** Sem costa traseira (visual + industrial). Sincronizado com `costaAtiva` (`noBackPanel === !costaAtiva`). */
+  noBackPanel?: boolean;
   /** Material industrial explícito da COSTA (canonicalId, ex.: carvalho-10). Omitido = família do corpo. */
   costaMaterialId?: string;
   /** Espessura explícita da COSTA (mm). Omitido = 10 mm (ou espessura da variante escolhida). */
@@ -418,6 +420,8 @@ export interface WorkspaceBox {
    * Ver `resolveCostaAtiva` em `boxDepthModel.ts`.
    */
   costaAtiva?: boolean;
+  /** Sem costa traseira (visual + industrial). Sincronizado com `costaAtiva` (`noBackPanel === !costaAtiva`). */
+  noBackPanel?: boolean;
   /** Material industrial explícito da COSTA (canonicalId). */
   costaMaterialId?: string;
   /** Espessura explícita da COSTA (mm). */

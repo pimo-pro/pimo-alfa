@@ -13,6 +13,7 @@ import { isPiBaseCabinetId } from "../../../data/moveisUnificados/pi/models";
 import { computeBoxProfundidadeLeituraMm } from "../../../utils/boxProfundidadeLeituraUi";
 import { Icon } from "@/components/icons";
 import SelecionarMaterialSection from "../../settings/material/SelecionarMaterialSection";
+import { resolveNoBackPanel } from "../../../core/box/backPanelFlags";
 import CostaMaterialControl from "./CostaMaterialControl";
 import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
 import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
@@ -395,9 +396,35 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                       </div>
                       <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
                     </div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 12,
+                        color: "var(--text-main)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={resolveNoBackPanel(selectedBox)}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          actions.setWorkspaceBoxNoBackPanel(selectedBox.id, enabled);
+                          viewerApi?.setBoxNoBackPanel?.(selectedBox.id, enabled);
+                          showToast(
+                            enabled ? "Costa removida (visual + industrial)." : "Costa restaurada.",
+                            "info"
+                          );
+                        }}
+                      />
+                      Sem costa
+                    </label>
                     <CostaMaterialControl
                       box={selectedBox}
                       projectMaterialId={project.materialId}
+                      disabled={resolveNoBackPanel(selectedBox)}
                       onApply={(costaMaterialId, costaThicknessMm) => {
                         actions.setWorkspaceBoxCostaMaterial(
                           selectedBox.id,

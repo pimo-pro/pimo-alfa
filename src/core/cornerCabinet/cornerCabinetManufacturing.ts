@@ -7,6 +7,7 @@ import {
 } from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
+import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { getCornerCabinetConfig, computeCornerLayoutForBox, inferCornerSideFromBox } from "./cornerCabinetRules";
 import { getSettings } from "../settings/settingsService";
 
@@ -154,7 +155,9 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
       quantidade: 1,
       custo: 0,
     },
-    {
+  );
+  if (resolveCostaAtivaForBox(box)) {
+    paineis.push({
       id: getStructuralPanelId(box, "costa"),
       tipo: "COSTA",
       largura_mm: clampPositive(largura),
@@ -165,8 +168,8 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
       orientacaoFibra: "vertical",
       quantidade: 1,
       custo: 0,
-    }
-  );
+    });
+  }
 
   const shelfDepthRecess = 5 + layout.shelfDepthExtraRecessMm;
   const larguraPrateleira = clampPositive(largura - espessura * 2 - 2);

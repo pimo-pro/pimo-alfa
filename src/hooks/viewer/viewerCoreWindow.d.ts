@@ -396,6 +396,7 @@ declare global {
       addDoorToRoom?: (...args: unknown[]) => unknown;
       addWindowToRoom?: (...args: unknown[]) => unknown;
       updateBoxMaterial?: (id: string, materialName: string) => void;
+      setBoxNoBackPanel?: (boxId: string, enabled: boolean) => boolean;
       updateDoorMaterial?: (boxId: string, doorLayerId: string, materialName: string) => void;
       updateDrawerMaterial?: (boxId: string, drawerLayerId: string, materialName: string) => void;
       setMaterialMode?: (mode: unknown) => void;
