@@ -8,6 +8,36 @@ import { execSync } from "node:child_process";
 
 const rootDir = process.cwd();
 const versionFilePath = path.join(rootDir, "version.json");
+const publicVersionPath = path.join(rootDir, "public", "version.json");
+const distVersionPath = path.join(rootDir, "dist", "version.json");
+
+function readVersionJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, ""));
+}
+
+/** Grava version.json na raiz e espelha em public/ (copiado pelo Vite para dist/). */
+function writeVersionFiles(data) {
+  const json = `${JSON.stringify(data, null, 2)}\n`;
+  fs.writeFileSync(versionFilePath, json, "utf8");
+  fs.mkdirSync(path.dirname(publicVersionPath), { recursive: true });
+  fs.writeFileSync(publicVersionPath, json, "utf8");
+}
+
+function assertVersionFilesInSync() {
+  if (!fs.existsSync(distVersionPath)) {
+    console.error("ERRO: dist/version.json ausente apos build.");
+    process.exit(1);
+  }
+  const root = readVersionJson(versionFilePath);
+  const pub = readVersionJson(publicVersionPath);
+  const dist = readVersionJson(distVersionPath);
+  const samePayload = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (!samePayload(root, pub) || !samePayload(root, dist)) {
+    console.error("ERRO: version.json, public/version.json e dist/version.json divergem.");
+    process.exit(1);
+  }
+  console.log("Versao sincronizada: version.json, public/version.json, dist/version.json");
+}
 
 function pad2(value) {
   return String(value).padStart(2, "0");
@@ -38,7 +68,7 @@ const nextData = {
   updatedAt,
 };
 
-fs.writeFileSync(versionFilePath, `${JSON.stringify(nextData, null, 2)}\n`, "utf8");
+writeVersionFiles(nextData);
 
 function runStep(description, command) {
   console.log(description);
@@ -61,8 +91,10 @@ function runOutput(command) {
 
 console.log(`Nova versao: ${nextVersion}`);
 console.log(`updatedAt: ${nextData.updatedAt}`);
+console.log("Sincronizado public/version.json antes do build.");
 
 runStep("Executando build...", "npm run build");
+assertVersionFilesInSync();
 // Evitar adicionar repositórios embutidos (ex.: backend/ tem o seu próprio .git)
 // para não criar gitlinks/submodules acidentais no repo principal.
 runStep("Adicionando arquivos ao git...", "git add . \":(exclude)backend\"");
