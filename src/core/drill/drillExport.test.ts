@@ -70,7 +70,7 @@ describe("drillExport — nomes XML alinhados ao sistema de etiquetas", () => {
 
     expect(filename).toBe(nQr);
     expect(filename).not.toBe(item.shortCode);
-    expect(filename).toMatch(/^[A-Za-z0-9_]+-\d+$/);
+    expect(filename).toMatch(/^[A-Z0-9_]+-\d+$/);
     expect(filename).toContain("_");
   });
 
@@ -83,11 +83,11 @@ describe("drillExport — nomes XML alinhados ao sistema de etiquetas", () => {
     expect(filename).toBe("C1_LAT_DIR_03");
   });
 
-  it("sem etiqueta — nome completo projecto_caixa_peça", () => {
+  it("sem etiqueta — nome completo PROJETO_CAIXA_PECA", () => {
     const item = lateralItem({ pieceNumber: undefined, shortCode: undefined });
     expect(pieceHasEtiquetaQr(item)).toBe(false);
-    expect(buildDrillXmlFallbackFileName(item, project)).toBe("ANTONIO_NOVO_5_CC1_lateral_esquerda");
-    expect(panelFileNameFromPiece(item, project, new Map(), 0)).toBe("ANTONIO_NOVO_5_CC1_lateral_esquerda");
+    expect(buildDrillXmlFallbackFileName(item, project)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_ESQ");
+    expect(panelFileNameFromPiece(item, project, new Map(), 0)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_ESQ");
   });
 
   it("buildDrillFilesForProject — filenameBase alinhado ao QR v5", () => {

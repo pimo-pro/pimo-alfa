@@ -119,85 +119,19 @@ export function buildCutLayoutProPartName(
   return `${boxPrefix}_${piecePrefix}`;
 }
 
-/** Normaliza um segmento do nome industrial (espaços → `_`). */
-export function normalizeIndustrialSegment(value: string): string {
-  return (
-    String(value ?? "")
-      .trim()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-zA-Z0-9_\-]/g, "")
-      .replace(/_+/g, "_")
-      .replace(/^[-_]+|[-_]+$/g, "") || "X"
-  );
-}
-
-function stripIndustrialPrefix(value: string, prefix: string): string {
-  if (!prefix) return value;
-  const upper = value.toUpperCase();
-  const pref = prefix.toUpperCase();
-  if (upper === pref) return "";
-  const withSep = `${pref}_`;
-  if (upper.startsWith(withSep)) {
-    return value.slice(withSep.length);
-  }
-  return value;
-}
-
 /**
- * Sufixo da peça (sem projecto nem caixa) — evita repetições em metadata/nome legado.
- */
-export function resolveIndustrialPieceName(
-  item: { nome?: string; tipo?: string; metadata?: Record<string, unknown> },
-  boxNome: string | undefined,
-  projectName: string
-): string {
-  const projectCode = normalizeIndustrialSegment(projectName);
-  const boxCode = normalizeIndustrialSegment(boxNome ?? "BOX");
-
-  const fromMeta = item.metadata?.industrialLabel;
-  if (typeof fromMeta === "string" && fromMeta.trim()) {
-    let label = normalizeIndustrialSegment(fromMeta);
-    label = stripIndustrialPrefix(label, projectCode);
-    label = stripIndustrialPrefix(label, boxCode);
-    if (label) return label;
-  }
-
-  const tipo = String(item.tipo ?? "").trim();
-  if (tipo) return normalizeIndustrialSegment(tipo);
-
-  const nome = String(item.nome ?? "").trim();
-  if (nome) {
-    let label = normalizeIndustrialSegment(nome);
-    label = stripIndustrialPrefix(label, projectCode);
-    label = stripIndustrialPrefix(label, boxCode);
-    if (label) return label;
-  }
-
-  return normalizeIndustrialSegment(piecePrefixForCutLayoutPro(item));
-}
-
-/** Referência industrial canónica: `${projectCode}_${boxCode}_${pieceCode}`. */
-export function buildIndustrialPieceRef(
-  projectName: string,
-  boxNome: string | undefined,
-  pieceName: string
-): string {
-  const projectCode = normalizeIndustrialSegment(projectName);
-  const boxCode = normalizeIndustrialSegment(boxNome ?? "BOX");
-  const pieceCode = normalizeIndustrialSegment(pieceName);
-  return `${projectCode}_${boxCode}_${pieceCode}`;
-}
-
-/**
- * REF PEÇA / nome industrial — formato único projecto_caixa_peça.
+ * REF PEÇA / nome industrial — mesma regra das etiquetas (metadata.industrialLabel ou PRO name).
  */
 export function resolveIndustrialPieceRef(
   item: { nome?: string; tipo?: string; metadata?: Record<string, unknown> },
   boxNome: string | undefined,
   projectName: string
 ): string {
-  const pieceName = resolveIndustrialPieceName(item, boxNome, projectName);
-  return buildIndustrialPieceRef(projectName, boxNome, pieceName);
+  const fromMeta = item.metadata?.industrialLabel;
+  if (typeof fromMeta === "string" && fromMeta.trim()) {
+    return fromMeta.trim().toUpperCase();
+  }
+  return buildCutLayoutProPartName(item, boxNome, projectName).toUpperCase();
 }
 
 export type BoxNomeLookup = ReadonlyMap<string, string> | Record<string, string>;
