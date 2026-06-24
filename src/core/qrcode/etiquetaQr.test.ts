@@ -57,67 +57,11 @@ describe("resolveUnifiedEtiquetaQrCode", () => {
     expect(qr).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6");
   });
 
-  it("displayCode deriva do nome industrial completo, não do projecto", () => {
+  it("código de display curto permanece separado do QR", () => {
     const piecesPerSheet = new Map([["box-1::Remate L B", 4]]);
     const display = resolveEtiquetaDisplayCodeV5(item, ctx, piecesPerSheet, 0);
-    expect(display).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6");
-    expect(display).toBe(resolveUnifiedEtiquetaQrCode(item, ctx, piecesPerSheet, 0));
-    expect(display).not.toMatch(/^AN\d+-6$/);
-  });
-
-  it("displayCode distingue peças pelo industrialRef (NP2624619)", () => {
-    const fornoCtx = {
-      projectName: "NP2624619",
-      boxes: [
-        {
-          ...boxes[0],
-          id: "forno-1",
-          nome: "Caixa Forno",
-        },
-      ],
-      rules: defaultRulesConfig,
-    };
-    const piecesPerSheet = new Map();
-
-    const sep02: CutListItemComPreco = {
-      id: "sep-02",
-      nome: "SEP 02",
-      tipo: "prateleira",
-      quantidade: 1,
-      dimensoes: { largura: 400, altura: 300, profundidade: 19 },
-      espessura: 19,
-      material: "mdf_branco",
-      boxId: "forno-1",
-      precoUnitario: 0,
-      precoTotal: 0,
-      metadata: { industrialLabel: "NP2624619_Caixa_Forno_SEP_02" },
-      pieceNumber: 2,
-    };
-    const sep03: CutListItemComPreco = {
-      ...sep02,
-      id: "sep-03",
-      nome: "SEP 03",
-      metadata: { industrialLabel: "NP2624619_Caixa_Forno_SEP_03" },
-      pieceNumber: 3,
-    };
-    const porta: CutListItemComPreco = {
-      ...sep02,
-      id: "porta-sup",
-      nome: "porta superior",
-      tipo: "porta_simples",
-      metadata: { industrialLabel: "NP2624619_Caixa_Forno_porta_superior" },
-      pieceNumber: 5,
-    };
-
-    expect(resolveEtiquetaDisplayCodeV5(sep02, fornoCtx, piecesPerSheet, 0)).toBe(
-      "NP2624619_CAIXA_FORNO_SEP_02-2"
-    );
-    expect(resolveEtiquetaDisplayCodeV5(sep03, fornoCtx, piecesPerSheet, 1)).toBe(
-      "NP2624619_CAIXA_FORNO_SEP_03-3"
-    );
-    expect(resolveEtiquetaDisplayCodeV5(porta, fornoCtx, piecesPerSheet, 2)).toBe(
-      "NP2624619_CAIXA_FORNO_PORTA_SUPERIOR-5"
-    );
+    expect(display).toMatch(/^AN\d+-6$/);
+    expect(display).not.toBe(resolveUnifiedEtiquetaQrCode(item, ctx, piecesPerSheet, 0));
   });
 
   it("peça com attachQrCodes — QR ≠ shortCode", () => {
