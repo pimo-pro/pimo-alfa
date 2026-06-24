@@ -9,8 +9,6 @@ import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 import { buildPiecesPerSheetMap, labelItemSheetKey } from "../etiquetas/qr/etiquetaCodeV5";
 import {
   resolveLegacyShortQrCode,
-  resolveEtiquetaDisplayCodeV5,
-  resolveUnifiedEtiquetaQrCode,
 } from "../etiquetas/qr/etiquetaQr";
 import type { LabelConfig } from "../labelConfig/labelConfig";
 import {
@@ -31,7 +29,8 @@ import {
   type LabelObservationRulesLike,
 } from "./labelObservationsV5";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
-import { buildCutLayoutProPartName } from "../cutlayout/cutLayoutProPieceNaming";
+import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
+import { buildEtiquetaQrPayloadV5 } from "../etiquetas/qr/etiquetaCodeV5";
 import {
   computePieceSequence,
   type PieceData,
@@ -85,15 +84,15 @@ type LabelItem = CutListItemComPreco & {
   observations?: string[];
 };
 
-/** Nome industrial alinhado ao Layout de Corte PRO (`<prefixoCaixa>_<prefixoPeca>`). */
-function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiquetasPdf): string {
-  const fromMeta = item.metadata?.industrialLabel;
-  if (typeof fromMeta === "string" && fromMeta.trim()) {
-    return fromMeta.trim();
-  }
+function industrialRefParaEtiqueta(item: LabelItem, project: ProjectForEtiquetasPdf): string {
   const projectName = item.sourceProjectName ?? project.projectName;
-  const boxNome = item.boxNome;
-  return buildCutLayoutProPartName(item, boxNome, projectName);
+  const boxNome = item.boxNome ?? project.boxes.find((b) => b.id === item.boxId)?.nome;
+  return resolveIndustrialPieceRef(item, boxNome, projectName);
+}
+
+/** @deprecated legado S1 — delega para referência industrial canónica. */
+function nomeIndustrialParaEtiqueta(item: LabelItem, project: ProjectForEtiquetasPdf): string {
+  return industrialRefParaEtiqueta(item, project);
 }
 
 /** Código S1 — apenas referência legada (`labelPdfLegacyRenderRefs`); produção usa `etiquetaQr`. */
@@ -422,14 +421,6 @@ const V5_PRODUCTION_GRID_LABELS = {
   montagem: "MONT",
   embalagem: "EMB",
 } as const;
-
-function mapPaletteGroupToAAA(group: string): string {
-  const g = String(group ?? "").trim().toUpperCase();
-  if (g.length >= 3) return g.slice(0, 3);
-  if (g.length === 2) return `${g[0]}${g[1]}${g[0]}`;
-  if (g.length === 1) return g.repeat(3);
-  return "---";
-}
 
 function formatDrillDistancesGridV5(seq: PieceProductionSequence): string {
   if (!seq.drillDistances || seq.drillDistances.every((d) => d <= 0)) return "– – – –";
@@ -778,19 +769,14 @@ function drawV5_CutLine(doc: jsPDF, y: number, width: number): void {
 }
 
 /**
- * Faixa inferior — fundo branco (igual ao resto), 10 mm, delimitada por linha fina no topo.
- * Esquerda: CODIGO / AAA · Direita: PROJETO / PEÇA (texto preto).
+ * Faixa inferior — fundo branco, linha fina no topo, referência industrial única.
  */
 function drawV5_BottomStrip(
   doc: jsPDF,
   y: number,
   width: number,
   height: number,
-  etiquetaCode: string,
-  aaa: string,
-  projectName: string,
-  boxName: string,
-  pieceName: string
+  industrialRef: string
 ): void {
   doc.setFillColor(255, 255, 255);
   doc.rect(0, y, width, height, "F");
@@ -801,23 +787,11 @@ function drawV5_BottomStrip(
 
   const PAD = 3;
   const centerY = y + height / 2 + v5Pt(11) * 0.12;
-  const leftText = `${etiquetaCode} / ${aaa}`;
-  const rightText = `${projectName} / ${boxName} / ${pieceName}`;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(v5Pt(11));
   doc.setTextColor(...V5_TEXT);
-  doc.text(leftText, PAD, centerY);
-
-  const leftW = doc.getTextWidth(leftText);
-  const sepX = PAD + leftW + 4;
-  doc.setDrawColor(...V5_LINE_LIGHT);
-  doc.setLineWidth(0.12);
-  doc.line(sepX, y + 1.2, sepX, y + height - 1.2);
-
-  const rightX = sepX + PAD;
-  const rightMaxW = width - rightX - PAD;
-  doc.text(rightText, rightX, centerY, { maxWidth: rightMaxW });
+  doc.text(industrialRef, PAD, centerY, { maxWidth: width - PAD * 2 });
 }
 
 /**
@@ -829,7 +803,7 @@ async function renderEtiquetaPageV5(
   project: ProjectForEtiquetasPdf,
   runtime: ResolvedLabelRuntime,
   seq: PieceProductionSequence,
-  piecesPerSheet: Map<string, number>,
+  _piecesPerSheet: Map<string, number>,
   index0: number
 ): Promise<void> {
   const config = runtime.labelConfig;
@@ -852,38 +826,21 @@ async function renderEtiquetaPageV5(
     boxes: project.boxes,
     rules: project.rules,
   };
-  const codeV5Qr = resolveUnifiedEtiquetaQrCode(item, qrCtx, piecesPerSheet, index0);
-  const codeV5Display = resolveEtiquetaDisplayCodeV5(item, qrCtx, piecesPerSheet, index0);
-  const codeShort = resolveLegacyShortQrCode(item, qrCtx);
   const etiquetaNumber = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
+  const industrialRef = industrialRefParaEtiqueta(item, project);
+  const codeShort = resolveLegacyShortQrCode(item, qrCtx);
 
-  let primaryQrCode: string;
-  let secondaryQrCode: string | null = null;
-  let bottomStripCode = codeV5Display;
-
-  switch (qrPolicy) {
-    case "short":
-      primaryQrCode = codeShort;
-      bottomStripCode = codeShort;
-      break;
-    case "dual":
-      primaryQrCode = codeV5Qr;
-      secondaryQrCode = codeShort;
-      bottomStripCode = codeV5Display;
-      break;
-    case "v5":
-    default:
-      primaryQrCode = codeV5Qr;
-      break;
-  }
-
-  const nomeIndustrial = nomeIndustrialParaEtiqueta(item, project);
+  // Produção v5 — QR sempre com payload industrial completo (nunca código curto).
+  const primaryQrCode = buildEtiquetaQrPayloadV5({
+    industrialPieceRef: industrialRef,
+    pieceSeq: etiquetaNumber,
+  });
+  const secondaryQrCode = qrPolicy === "dual" ? codeShort : null;
   const material = (item.material ?? "—").toUpperCase();
   const medidas = formatMedidasLabelV5(
     item.dimensoes?.largura ?? 0,
     item.dimensoes?.altura ?? 0
   );
-  const aaa = mapPaletteGroupToAAA(seq.paletteGroup);
   const observations = observationsToV5Slots(item.observations ?? []);
 
   const layout = computeV5LabelLayout(dims);
@@ -990,17 +947,7 @@ async function renderEtiquetaPageV5(
   drawV5_CutLine(doc, cutY, w);
 
   // ── Faixa inferior ────────────────────────────────────────────────────────
-  drawV5_BottomStrip(
-    doc,
-    bottomY,
-    w,
-    bottomStripMm,
-    bottomStripCode,
-    aaa,
-    effectiveProjectName || "PROJETO",
-    item.boxNome ?? item.boxId ?? "—",
-    nomeIndustrial
-  );
+  drawV5_BottomStrip(doc, bottomY, w, bottomStripMm, industrialRef);
 }
 
 /**

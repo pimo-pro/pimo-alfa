@@ -82,8 +82,7 @@ export function buildDrillXmlFallbackFileName(
     project.boxes.find((b) => b.id === item.boxId)?.nome?.trim() ||
     String(item.boxId ?? "BOX").trim() ||
     "BOX";
-  const pieceName = resolveIndustrialPieceRef(item, boxNome, projectName);
-  return [projectName, boxNome, pieceName].map(sanitizeFilenamePart).join("_");
+  return sanitizeFilenamePart(resolveIndustrialPieceRef(item, boxNome, projectName));
 }
 
 /**

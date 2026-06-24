@@ -57,6 +57,20 @@ describe("resolveUnifiedEtiquetaQrCode", () => {
     expect(qr).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6");
   });
 
+  it("metadata parcial — compõe projecto_caixa_peça", () => {
+    const qr = resolveUnifiedEtiquetaQrCode(
+      {
+        ...item,
+        metadata: { industrialLabel: "CC4_REMATE_L_B_01" },
+        boxId: "box-1",
+      },
+      { ...ctx, boxes: [{ ...ctx.boxes[0]!, nome: "CC4" }] },
+      new Map(),
+      0
+    );
+    expect(qr).toBe("ANTONIO_NOVO_5_CC4_REMATE_L_B_01-6");
+  });
+
   it("código de display curto permanece separado do QR", () => {
     const piecesPerSheet = new Map([["box-1::Remate L B", 4]]);
     const display = resolveEtiquetaDisplayCodeV5(item, ctx, piecesPerSheet, 0);
