@@ -86,7 +86,17 @@ function PreviewCanvas({ item, config }: { item: UnifiedModelItem; config: BoxCo
       feetEnabled: item.tipo === "moveis" ? false : config.pes,
       baseCabinetId: item.tipo === "moveis" ? item.sourceId : undefined,
       separadores: item.tipo === "moveis" && item.sourceId === CAIXA_FORNO_ID
-        ? buildCaixaFornoSeparadores(19)
+        ? buildCaixaFornoSeparadores({
+            dimensoes: {
+              largura: item.dimensoes.largura_mm,
+              altura: item.dimensoes.altura_mm,
+              profundidade: item.dimensoes.profundidade_mm,
+            },
+            espessura: 19,
+            profundidadeExterna: item.dimensoes.profundidade_mm,
+            portaTipo: "porta_simples",
+            doorsLayer: [{ thickness: 19 } as import("../../../models/BoxLayers").DoorLayerItem],
+          })
         : undefined,
       castShadow: true, receiveShadow: true,
     };

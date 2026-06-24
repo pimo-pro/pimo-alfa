@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCutlistForCaixaForno,
+  CAIXA_FORNO_SEPARADOR_ESPESSURA_MM,
   computeCaixaFornoLayout,
   createCaixaForno,
   getCaixaFornoSepBottomsMm,
   gerarPaineisCaixaForno,
+  resolveCaixaFornoSeparadorProfundidadeMm,
   syncCaixaFornoOnDimensoesChange,
 } from "./caixaFornoGenerator";
 import { defaultRulesConfig, getNumDobradicas } from "../../rules/rulesConfig";
@@ -37,10 +39,10 @@ function parafusoUniaoOffsetsFromLateralBottom(
 
 describe("caixaFornoGenerator", () => {
   it("mantém seps fixos e ajusta só o compartimento superior", () => {
-    const seps = getCaixaFornoSepBottomsMm(19);
+    const seps = getCaixaFornoSepBottomsMm();
     expect(seps.sep1BottomMm).toBe(900);
-    expect(seps.sep2BottomMm).toBe(1519);
-    expect(seps.sep3BottomMm).toBe(1938);
+    expect(seps.sep2BottomMm).toBe(1510);
+    expect(seps.sep3BottomMm).toBe(1920);
 
     const layout2550 = computeCaixaFornoLayout({
       dimensoes: { largura: 600, altura: 2550, profundidade: 600 },
@@ -73,6 +75,48 @@ describe("caixaFornoGenerator", () => {
     expect(cfg.separadores).toHaveLength(3);
     expect(cfg.doorsLayer).toHaveLength(2);
     expect(cfg.dimensoes.altura).toBe(2550);
+  });
+
+  it("gerarPaineisCaixaForno — separadores com espessura 10 mm e profundidade correta", () => {
+    const cfg = createCaixaForno({ id: "forno-test" });
+    const box = convertWorkspaceToBox({
+      ...cfg,
+      models: [],
+      posicaoX_mm: 0,
+      posicaoY_mm: 1275,
+      rotacaoY_90: false,
+      tipoBorda: "reta",
+      locked: false,
+      drawersLayer: [],
+    } as WorkspaceBox);
+
+    const paineis = gerarPaineisCaixaForno(box);
+    const seps = paineis.filter((p) => p.tipo === "separador");
+    expect(seps).toHaveLength(3);
+    seps.forEach((sep) => {
+      expect(sep.espessura_mm).toBe(CAIXA_FORNO_SEPARADOR_ESPESSURA_MM);
+      expect(sep.altura_mm).toBe(581);
+    });
+  });
+
+  it("resolveCaixaFornoSeparadorProfundidadeMm — com e sem porta", () => {
+    const withDoor = resolveCaixaFornoSeparadorProfundidadeMm({
+      dimensoes: { largura: 600, altura: 2550, profundidade: 600 },
+      profundidadeExterna: 600,
+      portaTipo: "porta_simples",
+      doorsLayer: [{ thickness: 19 } as import("../../../models/BoxLayers").DoorLayerItem],
+      espessura: 19,
+    });
+    expect(withDoor).toBe(581);
+
+    const withoutDoor = resolveCaixaFornoSeparadorProfundidadeMm({
+      dimensoes: { largura: 600, altura: 2550, profundidade: 600 },
+      profundidadeExterna: 600,
+      portaTipo: "sem_porta",
+      doorsLayer: [],
+      espessura: 19,
+    });
+    expect(withoutDoor).toBe(600);
   });
 
   it("gerarPaineisCaixaForno — inclui laterais, cima, seps, portas e costa superior", () => {

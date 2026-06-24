@@ -7,6 +7,7 @@ import { SYSTEM_BACK_MM, SYSTEM_THICKNESS_MM } from "../../baseCabinets";
 import {
   buildCaixaFornoDoorsLayer,
   computeCaixaFornoLayout,
+  getCaixaFornoSeparadorMeshSpecs,
   isCaixaFornoBox,
 } from "../generators/caixaFornoGenerator";
 import { getDivSepMeshSpecs } from "../../divSep/visualSpecs";
@@ -144,7 +145,7 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     separadores: opts.separadores ?? [],
     divisores: opts.divisores ?? [],
   };
-  getDivSepMeshSpecs(divSepBoxLike, width, height, depth, thicknessM).forEach((spec) => {
+  getCaixaFornoSeparadorMeshSpecs(divSepBoxLike, width, height, depth).forEach((spec) => {
     const mesh = deps.panelFactory.createPanel(
       spec.size[0],
       spec.size[1],
@@ -158,6 +159,23 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     mesh.userData.divSepKind = "sep";
     root.add(mesh);
   });
+
+  if ((opts.divisores ?? []).length > 0) {
+    getDivSepMeshSpecs({ ...divSepBoxLike, separadores: [] }, width, height, depth, thicknessM).forEach((spec) => {
+      const mesh = deps.panelFactory.createPanel(
+        spec.size[0],
+        spec.size[1],
+        spec.size[2],
+        spec.name,
+        "top",
+        panelOpts
+      );
+      mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+      mesh.userData.divSepId = spec.name;
+      mesh.userData.divSepKind = "div";
+      root.add(mesh);
+    });
+  }
 
   const doorSpecs = deps.buildDoorSpecs(doorsLayer);
   doorSpecs.forEach((spec, doorIndex) => {
