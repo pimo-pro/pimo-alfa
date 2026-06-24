@@ -27,6 +27,9 @@ import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
 } from "../core/cnc/industrialThicknessResolution";
+import { throwFirstUnresolvedThicknessError } from "../core/industrial/industrialThicknessErrors";
+import { isIndustrialError } from "../core/industrial/IndustrialError";
+import type { ToastMessage } from "../context/ToastContext";
 import {
   industrialThicknessEtiquetasPdfFileName,
   industrialThicknessLayoutPdfFileName,
@@ -48,6 +51,38 @@ import { loadMcDimensionsConfig } from "../config/mcDimensionsConfig";
 import PiLoader from "../components/PiLoader/PiLoader";
 
 let cutLayoutLoaderRoot: Root | null = null;
+
+function showIndustrialErrorToast(
+  showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void,
+  err: unknown
+): boolean {
+  if (!isIndustrialError(err)) return false;
+  showToast(err.formatForToast(), "error", 12000);
+  return true;
+}
+
+function toastExportError(
+  showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void,
+  err: unknown,
+  fallback: string
+): void {
+  if (showIndustrialErrorToast(showToast, err)) return;
+  const msg = err instanceof Error ? err.message : String(err);
+  showToast(`${fallback}${msg ? ` — ${msg}` : ""}`, "error");
+}
+
+function pushFullExportError(
+  errors: Array<{ step: string; message?: string; error?: string }>,
+  err: unknown,
+  step: string
+): void {
+  if (isIndustrialError(err)) {
+    errors.push({ step: err.getTitle(), message: err.formatForToast() });
+    return;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  errors.push({ step, message: msg });
+}
 let cutLayoutLoaderHost: HTMLDivElement | null = null;
 
 function yieldToMainThread(): Promise<void> {
@@ -228,9 +263,7 @@ export function useGerarArquivoHandlers() {
     <T extends CutlistItemForPieces>(items: T[], materialsSnapshot: ReturnType<typeof listMaterials>): T[] | null => {
       const resolution = resolveIndustrialThicknesses(items, materialsSnapshot);
       if (resolution.unresolved.length > 0) {
-        const detail = resolution.unresolved.map(formatIndustrialThicknessIssue).join("\n");
-        showToast(`Matéria-prima sem chapa válida: ${detail}`, "error");
-        return null;
+        throwFirstUnresolvedThicknessError(items, resolution.unresolved);
       }
       if (resolution.adjustments.length > 0) {
         const detail = resolution.adjustments.map(formatIndustrialThicknessIssue).join("\n");
@@ -378,7 +411,7 @@ export function useGerarArquivoHandlers() {
       );
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de etiquetas:", err);
-      showToast("Erro ao gerar PDF.", "error");
+      toastExportError(showToast, err, "Erro ao gerar PDF de etiquetas.");
     }
   }, [hasBoxes, showToast, pdfProject, slug, boxes, project, prepareItemsForCnc]);
 
@@ -512,9 +545,8 @@ export function useGerarArquivoHandlers() {
         "info"
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
       devLogger.error("Layout de Corte PRO:", err);
-      showToast(`Layout de Corte PRO: falha — ${msg}`, "error");
+      toastExportError(showToast, err, "Layout de Corte PRO: falha");
     } finally {
       try {
         viewerSync.setUltraPerformanceMode(false);
@@ -672,8 +704,7 @@ export function useGerarArquivoHandlers() {
         }, 700);
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast(`Falha na exportação CNC: ${msg}`, "error");
+      toastExportError(showToast, err, "Falha na exportação CNC");
       setLayoutProgress({ visible: false, percent: 0, message: "", mode: "pro" });
     } finally {
       try {
@@ -828,8 +859,7 @@ export function useGerarArquivoHandlers() {
           }
         );
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "Nesting por espessura", message: msg });
+        pushFullExportError(errors, err, "Nesting por espessura");
         devLogger.error("Full export: Nesting por espessura", err);
       } finally {
         hideCutLayoutLoader();
@@ -926,8 +956,7 @@ export function useGerarArquivoHandlers() {
           errors.push({ step: "CNC (TCN)", message: "Nenhum ficheiro TCN foi gerado." });
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "CNC (TCN)", message: msg });
+        pushFullExportError(errors, err, "CNC (TCN)");
         devLogger.error("Full export: CNC", err);
       }
 
@@ -1013,7 +1042,7 @@ export function useGerarArquivoHandlers() {
       });
     } catch (err) {
       devLogger.error("Arquivo completo: falha global", err);
-      throw err;
+      toastExportError(showToast, err, "Erro ao gerar arquivo completo");
     } finally {
       try {
         viewerSync.setUltraPerformanceMode(false);

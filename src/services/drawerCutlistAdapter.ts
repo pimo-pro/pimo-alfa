@@ -18,6 +18,10 @@ import {
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
+  resolveIndustrialBoxId,
+} from "../core/industrial/industrialValidation";
+import { IndustrialError, buildIndustrialPieceId } from "../core/industrial/IndustrialError";
+import {
   DRAWER_SIDE_THICKNESS_MM,
   resolveDrawerBottomMaterial,
   resolveDrawerSideMaterial,
@@ -187,7 +191,28 @@ export function drawerLayerItemToCutList(
 ): CutListItem[] {
   const materialContext = normalizeDrawerMaterialContext(bodyMaterialIdOrLegacyLabel);
   const drawerIndex1Based = drawerIndex + 1;
-  const safeBoxName = boxName?.trim() || "BOX";
+  const safeBoxName = boxName?.trim() || resolveIndustrialBoxId({ id: item.parentBoxId, nome: undefined });
+  const boxId = safeBoxName;
+
+  const bodyW = Number(item.bodyWidth ?? item.width) || 0;
+  const bodyH = Number(item.bodyHeight ?? item.height) || 0;
+  const bodyD = Number(item.bodyDepth ?? item.depth) || 0;
+  if (bodyW <= 0 || bodyH <= 0 || bodyD <= 0) {
+    throw IndustrialError.invalidMeasure({
+      boxId,
+      pieceId: buildIndustrialPieceId(boxId, `GAVETA_${drawerIndex1Based}`),
+      detail: `Volume da gaveta ${drawerIndex1Based} inválido (${bodyW}×${bodyH}×${bodyD} mm).`,
+    });
+  }
+
+  if (!resolveMaterial(materialContext.bodyMaterialId)) {
+    throw IndustrialError.materialNotFound({
+      boxId,
+      pieceId: buildIndustrialPieceId(boxId, `GAVETA_${drawerIndex1Based}`),
+      materialKey: materialContext.bodyMaterialId,
+    });
+  }
+
   const sideMaterial = resolveDrawerSideMaterial(materialContext.bodyMaterialId);
   const sideThickness = DRAWER_SIDE_THICKNESS_MM;
   const backThickness = DRAWER_BACK_THICKNESS_MM;

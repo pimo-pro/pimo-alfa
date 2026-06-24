@@ -22,6 +22,7 @@ import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
 } from "../cnc/industrialThicknessResolution";
+import { throwFirstUnresolvedThicknessError } from "../industrial/industrialThicknessErrors";
 import {
   industrialThicknessEtiquetasPdfPath,
   industrialThicknessLayoutPdfPath,
@@ -441,10 +442,9 @@ export async function generateMultiProjectFabrication(
     materialsSnapshot
   );
   if (cncThicknessResolution.unresolved.length > 0) {
-    throw new Error(
-      `multiProjectFabrication: matéria-prima sem chapa válida (${cncThicknessResolution.unresolved
-        .map(formatIndustrialThicknessIssue)
-        .join("; ")}).`
+    throwFirstUnresolvedThicknessError(
+      allPrefixedItems as CutlistItemForPieces[],
+      cncThicknessResolution.unresolved
     );
   }
   if (cncThicknessResolution.adjustments.length > 0) {

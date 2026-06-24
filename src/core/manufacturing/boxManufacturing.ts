@@ -16,6 +16,13 @@ import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 import { isCornerFixedFrontModel, gerarPaineisCorner } from "../cornerCabinet";
 import { gerarPaineisCaixaForno, isCaixaFornoBox, computeCaixaFornoLayout } from "../moveis/generators/caixaFornoGenerator";
+import {
+  assertBoxModuleDimensions,
+  assertPanelDimensions,
+  assertDoorDimensions,
+  resolveIndustrialBoxId,
+} from "../industrial/industrialValidation";
+import { buildIndustrialPieceId, IndustrialError } from "../industrial/IndustrialError";
 
 type PainelIndustrial = {
   id: string;
@@ -219,6 +226,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     }));
   }
 
+  assertBoxModuleDimensions(box);
+
   const largura = Number(box.dimensoes.largura) || 0;
   const altura = Number(box.dimensoes.altura) || 0;
   const profundidadeExterna = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
@@ -249,9 +258,21 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   /** P útil em profundidade: mesma base que `larguraLateral` (externa − costa se ativa − porta, via getProfundidadeInternaUtilMm). */
   const profundidadeUtil = profundidadeInterna;
 
+  if (profundidadeInterna <= 0) {
+    const boxId = resolveIndustrialBoxId(box);
+    throw IndustrialError.invalidMeasure({
+      boxId,
+      pieceId: buildIndustrialPieceId(boxId, "PROFUNDIDADE"),
+      detail: `Profundidade útil interna inválida (${profundidadeInterna} mm).`,
+      costaApplicable: resolveCostaAtivaForBox(box),
+    });
+  }
+
   // 3.2 Cima e Fundo: largura total × profundidade útil (alinhada às laterais) × espessura do corpo
+  const cimaId = getStructuralPanelId(box, "cima");
+  assertPanelDimensions(box, cimaId, "cima", largura, profundidadeUtil, espessura);
   paineis.push({
-    id: getStructuralPanelId(box, "cima"),
+    id: cimaId,
     tipo: "cima",
     largura_mm: clampPositive(largura),
     altura_mm: clampPositive(profundidadeUtil),
@@ -274,6 +295,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     custo: 0,
   });
 
+  assertPanelDimensions(box, getStructuralPanelId(box, "lateral_esquerda"), "lateral_esquerda", larguraLateral, alturaLateral, espessura);
+
   paineis.push({
     id: getStructuralPanelId(box, "lateral_esquerda"),
     tipo: "lateral_esquerda",
@@ -285,6 +308,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     quantidade: 1,
     custo: 0,
   });
+
+  assertPanelDimensions(box, getStructuralPanelId(box, "lateral_direita"), "lateral_direita", larguraLateral, alturaLateral, espessura);
 
   paineis.push({
     id: getStructuralPanelId(box, "lateral_direita"),
@@ -299,8 +324,10 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   });
 
   if (resolveCostaAtivaForBox(box)) {
+    const costaId = getStructuralPanelId(box, "costa");
+    assertPanelDimensions(box, costaId, "COSTA", largura, altura, costaMaterial.thicknessMm);
     paineis.push({
-      id: getStructuralPanelId(box, "costa"),
+      id: costaId,
       tipo: "COSTA",
       largura_mm: clampPositive(largura),
       altura_mm: clampPositive(altura),
@@ -318,8 +345,10 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     const profundidadePrateleira = clampPositive(profundidadeInterna - 5);
     const nPrateleiras = Math.max(0, Math.floor(box.prateleiras));
     for (let i = 0; i < nPrateleiras; i++) {
+      const prateleiraId = getArrayPanelId(box, "prateleiras", i);
+      assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
       paineis.push({
-        id: getArrayPanelId(box, "prateleiras", i),
+        id: prateleiraId,
         tipo: "prateleira",
         largura_mm: larguraPrateleira,
         altura_mm: profundidadePrateleira,
@@ -381,12 +410,16 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
             : box.portaTipo === "porta_correr"
               ? "porta_correr"
               : "porta_simples";
+        const larguraPorta = clampPositive(Number(door.width) || 0);
+        const alturaPorta = clampPositive(Number(door.height) || 0);
+        const espessuraPorta = clampPositive(Number(door.thickness) || espessura);
+        assertDoorDimensions(box, index, larguraPorta, alturaPorta, espessuraPorta);
         paineis.push({
           id: getArrayPanelId(box, "portas", index),
           tipo: tipoPainel,
-          largura_mm: clampPositive(Number(door.width) || 0),
-          altura_mm: clampPositive(Number(door.height) || 0),
-          espessura_mm: clampPositive(Number(door.thickness) || espessura),
+          largura_mm: larguraPorta,
+          altura_mm: alturaPorta,
+          espessura_mm: espessuraPorta,
           material,
           orientacaoFibra: "vertical",
           quantidade: 1,
@@ -549,6 +582,7 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
       : alturaInterna - folga * 2;
   const alturaPorta = clampPositive(alturaBase);
   const larguraPorta = clampPositive(larguraBase);
+  assertDoorDimensions(box, 0, larguraPorta, alturaPorta, espessura);
   const dobradicas = getNumDobradicas(alturaPorta, rules);
 
   if (box.portaTipo === "porta_dupla") {
