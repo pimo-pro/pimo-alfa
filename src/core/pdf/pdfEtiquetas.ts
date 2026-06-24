@@ -6,8 +6,9 @@ import type { SettingsSchema } from "../settings/settingsService";
 import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
 import { buildLocalQrPayload, generateQrCanvasWithLogo } from "../qrcode/qrcodeService";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
-import { buildPiecesPerSheetMap, labelItemSheetKey } from "../etiquetas/qr/etiquetaCodeV5";
+import { buildPiecesPerSheetMap, labelItemSheetKey, buildEtiquetaQrPayloadV5 } from "../etiquetas/qr/etiquetaCodeV5";
 import {
+  resolveEtiquetaDisplayCodeV5,
   resolveLegacyShortQrCode,
 } from "../etiquetas/qr/etiquetaQr";
 import type { LabelConfig } from "../labelConfig/labelConfig";
@@ -30,7 +31,6 @@ import {
 } from "./labelObservationsV5";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
 import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
-import { buildEtiquetaQrPayloadV5 } from "../etiquetas/qr/etiquetaCodeV5";
 import {
   computePieceSequence,
   type PieceData,
@@ -769,13 +769,26 @@ function drawV5_CutLine(doc: jsPDF, y: number, width: number): void {
 }
 
 /**
- * Faixa inferior — fundo branco, linha fina no topo, referência industrial única.
+ * Código de palete na faixa inferior — peças na folha/chapa (ex.: PAL 12).
+ */
+function formatPaleteCodeV5(totalPiecesInSheet: number): string {
+  const n = Math.floor(Number(totalPiecesInSheet));
+  const safe = Number.isFinite(n) && n > 0 ? Math.min(99, n) : 0;
+  return `PAL ${safe}`;
+}
+
+/**
+ * Faixa inferior (10 mm) — duas linhas:
+ *   1) esquerda: displayCode | paleteCode
+ *   2) direita:  industrialRef
  */
 function drawV5_BottomStrip(
   doc: jsPDF,
   y: number,
   width: number,
   height: number,
+  displayCode: string,
+  paleteCode: string,
   industrialRef: string
 ): void {
   doc.setFillColor(255, 255, 255);
@@ -785,13 +798,22 @@ function drawV5_BottomStrip(
   doc.setLineWidth(0.12);
   doc.line(0, y, width, y);
 
-  const PAD = 3;
-  const centerY = y + height / 2 + v5Pt(11) * 0.12;
+  const PAD = 2.5;
+  const line1Pt = v5Pt(9);
+  const line2Pt = v5Pt(7.5);
+  const line1Y = y + height * 0.36 + line1Pt * 0.12;
+  const line2Y = y + height * 0.82 + line2Pt * 0.1;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(v5Pt(11));
+  doc.setFontSize(line1Pt);
   doc.setTextColor(...V5_TEXT);
-  doc.text(industrialRef, PAD, centerY, { maxWidth: width - PAD * 2 });
+  doc.text(`${displayCode} | ${paleteCode}`, PAD, line1Y);
+
+  doc.setFontSize(line2Pt);
+  doc.text(industrialRef, width - PAD, line2Y, {
+    align: "right",
+    maxWidth: width - PAD * 2,
+  });
 }
 
 /**
@@ -803,7 +825,7 @@ async function renderEtiquetaPageV5(
   project: ProjectForEtiquetasPdf,
   runtime: ResolvedLabelRuntime,
   seq: PieceProductionSequence,
-  _piecesPerSheet: Map<string, number>,
+  piecesPerSheet: Map<string, number>,
   index0: number
 ): Promise<void> {
   const config = runtime.labelConfig;
@@ -828,6 +850,9 @@ async function renderEtiquetaPageV5(
   };
   const etiquetaNumber = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
   const industrialRef = industrialRefParaEtiqueta(item, project);
+  const displayCode = resolveEtiquetaDisplayCodeV5(item, qrCtx, piecesPerSheet, index0);
+  const sheetKey = labelItemSheetKey(item.boxId, item.nome);
+  const paleteCode = formatPaleteCodeV5(piecesPerSheet.get(sheetKey) ?? item.numCaixa ?? 0);
   const codeShort = resolveLegacyShortQrCode(item, qrCtx);
 
   // Produção v5 — QR sempre com payload industrial completo (nunca código curto).
@@ -947,7 +972,7 @@ async function renderEtiquetaPageV5(
   drawV5_CutLine(doc, cutY, w);
 
   // ── Faixa inferior ────────────────────────────────────────────────────────
-  drawV5_BottomStrip(doc, bottomY, w, bottomStripMm, industrialRef);
+  drawV5_BottomStrip(doc, bottomY, w, bottomStripMm, displayCode, paleteCode, industrialRef);
 }
 
 /**
