@@ -10,7 +10,6 @@ import { buildPiecesPerSheetMap, labelItemSheetKey } from "../etiquetas/qr/etiqu
 import {
   resolveLegacyShortQrCode,
   resolveEtiquetaDisplayCodeV5,
-  resolveUnifiedEtiquetaQrCode,
 } from "../etiquetas/qr/etiquetaQr";
 import type { LabelConfig } from "../labelConfig/labelConfig";
 import {
@@ -796,12 +795,12 @@ function drawV5_BottomStrip(
   doc.line(0, y, width, y);
 
   const PAD = 3;
-  const centerY = y + height / 2 + v5Pt(11) * 0.12;
+  const centerY = y + height / 2 + v5Pt(13) * 0.12;
   const leftText = `${etiquetaCode} / ${aaa}`;
   const rightText = industrialDisplayName;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(v5Pt(11));
+  doc.setFontSize(v5Pt(13));
   doc.setTextColor(...V5_TEXT);
   doc.text(leftText, PAD, centerY);
 
@@ -814,6 +813,14 @@ function drawV5_BottomStrip(
   const rightX = sepX + PAD;
   const rightMaxW = width - rightX - PAD;
   doc.text(rightText, rightX, centerY, { maxWidth: rightMaxW });
+}
+
+/**
+ * Código efectivo para rasterizar a imagem QR na etiqueta v5.
+ * Deve ser idêntico ao código identificador impresso (faixa inferior).
+ */
+export function resolveV5QrImageCode(bottomStripCode: string): string {
+  return bottomStripCode;
 }
 
 /**
@@ -848,28 +855,23 @@ async function renderEtiquetaPageV5(
     boxes: project.boxes,
     rules: project.rules,
   };
-  const codeV5Qr = resolveUnifiedEtiquetaQrCode(item, qrCtx, piecesPerSheet, index0);
   const codeV5Display = resolveEtiquetaDisplayCodeV5(item, qrCtx, piecesPerSheet, index0);
   const codeShort = resolveLegacyShortQrCode(item, qrCtx);
   const etiquetaNumber = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
 
-  let primaryQrCode: string;
   let secondaryQrCode: string | null = null;
   let bottomStripCode = codeV5Display;
 
   switch (qrPolicy) {
     case "short":
-      primaryQrCode = codeShort;
       bottomStripCode = codeShort;
       break;
     case "dual":
-      primaryQrCode = codeV5Qr;
       secondaryQrCode = codeShort;
       bottomStripCode = codeV5Display;
       break;
     case "v5":
     default:
-      primaryQrCode = codeV5Qr;
       break;
   }
 
@@ -904,11 +906,13 @@ async function renderEtiquetaPageV5(
   const logoUrl = runtime.qrLogoDataUrl;
   const logoPct = runtime.qrLogoSizePercent;
 
+  const qrImageCode = resolveV5QrImageCode(bottomStripCode);
+
   let belowQrY: number;
   if (qrPolicy === "dual" && secondaryQrCode) {
     const gapMm = 1;
     const dualSize = Math.min((qrColW - gapMm) / 2, qrSize1);
-    await drawV5_QR(doc, primaryQrCode, qrX, qrY1, dualSize, logoUrl, logoPct, project.settings);
+    await drawV5_QR(doc, qrImageCode, qrX, qrY1, dualSize, logoUrl, logoPct, project.settings);
     await drawV5_QR(
       doc,
       secondaryQrCode,
@@ -921,7 +925,7 @@ async function renderEtiquetaPageV5(
     );
     belowQrY = qrY1 + dualSize + V5_LAYOUT_QR_GAP_BELOW_MM;
   } else {
-    await drawV5_QR(doc, primaryQrCode, qrX, qrY1, qrSize1, logoUrl, logoPct, project.settings);
+    await drawV5_QR(doc, qrImageCode, qrX, qrY1, qrSize1, logoUrl, logoPct, project.settings);
     belowQrY = qrY1 + qrSize1 + V5_LAYOUT_QR_GAP_BELOW_MM;
   }
 
@@ -941,8 +945,8 @@ async function renderEtiquetaPageV5(
 
   // Rótulo "MATRIAL" + valor
   const LABEL_COL_W = 16;
-  const labelPt = v5Pt(7.5);
-  const valuePt = v5Pt(10);
+  const labelPt = v5Pt(9);
+  const valuePt = v5Pt(12.5);
   const valX    = infoX + LABEL_COL_W;
   const valMaxW = infoW - LABEL_COL_W - 0.5;
 

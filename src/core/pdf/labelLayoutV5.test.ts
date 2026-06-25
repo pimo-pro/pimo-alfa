@@ -11,7 +11,7 @@ describe("DEFAULT_LABEL_CONFIG — dimensões físicas v5", () => {
     expect(d.totalWidth_mm).toBe(100);
     expect(d.totalHeight_mm).toBe(50);
     expect(d.bottomStrip_mm).toBe(10);
-    expect(d.qrSize_mm).toBe(30);
+    expect(d.qrSize_mm).toBe(25);
   });
 });
 
@@ -28,9 +28,9 @@ describe("computeV5LabelLayout", () => {
     expect(layout.maxY).toBe(50);
   });
 
-  it("QR 30×30 mm cabe na secção superior sem overflow", () => {
+  it("QR 25×25 mm cabe na secção superior sem overflow", () => {
     const layout = computeV5LabelLayout(dims);
-    expect(layout.qrSizeMm).toBe(30);
+    expect(layout.qrSizeMm).toBe(25);
 
     const qrBottom = V5_LAYOUT_PAD_MM + layout.qrSizeMm;
     expect(qrBottom).toBeLessThanOrEqual(layout.topSectionMm);

@@ -47,7 +47,7 @@ export const DEFAULT_LABEL_CONFIG: LabelConfig = {
     totalWidth_mm: 100,
     totalHeight_mm: 50,
     bottomStrip_mm: 10,
-    qrSize_mm: 30,
+    qrSize_mm: 25,
     qrColumnWidth_mm: 32,
     materialHeight_mm: 8,
     medidasHeight_mm: 5,
