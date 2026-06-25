@@ -207,6 +207,7 @@ describe("industrialLayoutContract", () => {
     });
 
     const placement = out.sheets[0].placements[0];
+    expect(placement.originalDrillHoles).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
     expect(placement.drillHoles).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
     expect(placement.holes).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
     expect(placement.innerContours).toEqual([

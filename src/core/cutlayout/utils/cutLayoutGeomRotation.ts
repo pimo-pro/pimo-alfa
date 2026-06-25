@@ -319,9 +319,11 @@ export function applyRotationGeometryToSheets(sheets: SheetLike[]): void {
 
       const origHoles = p.originalDrillHoles ?? rawHoles;
       if (origHoles && origHoles.length > 0) {
-        const validHoles = origHoles
-          .filter((h) => isHoleInsidePlacementAndSheet(p, h, rotation, origW, origH, s.sheet))
-          .map((h) => toConsumerHole(h, rotation, origW, origH));
+        const validOriginalHoles = origHoles.filter((h) =>
+          isHoleInsidePlacementAndSheet(p, h, rotation, origW, origH, s.sheet)
+        );
+        const validHoles = validOriginalHoles.map((h) => toConsumerHole(h, rotation, origW, origH));
+        p.originalDrillHoles = validOriginalHoles.length > 0 ? validOriginalHoles.map((h) => ({ ...h })) : undefined;
         p.drillHoles = validHoles.length > 0 ? validHoles : undefined;
         if (p.holes !== undefined) p.holes = validHoles.length > 0 ? validHoles : undefined;
       }

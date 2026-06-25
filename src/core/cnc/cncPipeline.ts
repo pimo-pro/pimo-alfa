@@ -9,6 +9,7 @@ import {
   resolveIndustrialThicknesses,
 } from "./industrialThicknessResolution";
 import { sanitizeIndustrialFileToken } from "./industrialNestingGroup";
+import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
 
 /** Opções de nesting alinhadas ao TCN: kerf = minSpacing (entre contornos) + 2×raio da fresa. */
 export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
@@ -244,6 +245,7 @@ export function buildCncFromCutlistItems(
       ...layoutResult,
       sheets: enrichedSheets,
     };
+    applyRotationGeometryToSheets(finalLayoutResult.sheets);
     const cnc = exportCncFiles(project, finalLayoutResult, []);
     return { pieces, layoutResult: finalLayoutResult, cnc };
   } catch (err) {

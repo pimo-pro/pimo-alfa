@@ -1,9 +1,12 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { clearAllCutlistCache } from "../core/manufacturing/cutlistFromBoxes";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
 import { buildIndustrialDataForProject } from "../core/fabrication/industrialPipeline";
 import { cutlistToPieces, runCutLayout } from "../core/cutlayout/cutLayoutEngine";
-import { getDefaultCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
+import { buildCncFromCutlistItems, getDefaultCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
+import { settingsDefaults } from "../core/settings/settingsSchema";
+import { setIndustrialSettingsReadOverride } from "../core/settings/settingsStorage";
+import { setIndustrialMaterialsReadOverride } from "../core/materials/service";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { buildRodapeCutlistItems } from "../core/rodape/rodapeCutlist";
 import { isRotatablePiece } from "../core/cutlayout/utils/cutLayoutUtils";
@@ -28,6 +31,11 @@ import {
 describe("Pipeline industrial A→D — integração final (Fase E)", () => {
   beforeEach(() => {
     clearAllCutlistCache();
+  });
+
+  afterEach(() => {
+    setIndustrialSettingsReadOverride(null);
+    setIndustrialMaterialsReadOverride(null);
   });
 
   it("export unificado inclui caixa, DIV/SEP, gaveta, remate e rodapé com QR único", () => {
@@ -193,6 +201,61 @@ describe("Pipeline industrial A→D — integração final (Fase E)", () => {
     } catch (err) {
       expect(String(err)).toMatch(/Matéria-prima|chapa/i);
     }
+  });
+
+  it("TCN/CNC — layoutResult sai saneado antes de PDF e TCN consumirem operações", () => {
+    setIndustrialSettingsReadOverride({
+      ...settingsDefaults,
+      materiais: {
+        ...settingsDefaults.materiais,
+        sheetWidthMm: 300,
+        sheetHeightMm: 200,
+        sheetThicknessMm: 19,
+        sheetName: "MDF Teste 19",
+      },
+    });
+    setIndustrialMaterialsReadOverride([
+      {
+        id: "mdf_teste",
+        label: "MDF Teste 19",
+        categoryId: "mdf",
+        espessura: 19,
+        sheetWidthMm: 300,
+        sheetHeightMm: 200,
+        sheetThicknessMm: 19,
+      },
+    ]);
+
+    const bundle = buildCncFromCutlistItems(
+      { projectName: "Layout saneado" },
+      [
+        {
+          nome: "Painel saneado",
+          tipo: "lateral",
+          boxId: "box1",
+          materialId: "mdf_teste",
+          material: "mdf_teste",
+          dimensoes: { largura: 80, altura: 40, profundidade: 19 },
+          espessura: 19,
+          quantidade: 1,
+          drillHoles: [
+            { x: 20, y: 20, diameter: 5, depth: 12 },
+            { x: 100, y: 20, diameter: 5, depth: 12 },
+          ],
+        },
+      ],
+      undefined,
+      {
+        ...getDefaultCncLayoutOptions(),
+        rotationPreferenceMode: "disabled",
+        useMetaHeuristics: false,
+      }
+    );
+
+    const placement = bundle?.layoutResult.sheets[0]?.placements[0];
+    expect(placement?.originalDrillHoles).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
+    expect(placement?.drillHoles).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
+    expect(bundle?.cnc?.files?.[0]?.tcn).toContain("W#81");
   });
 
   it("XML furação — inclui laterais da caixa; exclui remate e rodapé", () => {

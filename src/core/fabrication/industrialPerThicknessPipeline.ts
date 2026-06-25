@@ -131,6 +131,7 @@ export async function buildCncBundlesPerThickness(
       opts
     );
     if (!cncBundle?.layoutResult) continue;
+    applyRotationGeometryToSheets(cncBundle.layoutResult.sheets);
     results.push({
       ...meta,
       items: groupItems,
