@@ -5,14 +5,16 @@ import type { PanelType } from "../../../3d/objects/PanelFactory";
 import type { ViewerDrillMarkersByPanel } from "../../types";
 import { SYSTEM_BACK_MM, SYSTEM_THICKNESS_MM } from "../../baseCabinets";
 import {
+  resolveCostaMaterialForBox,
+  resolveSeparadorMaterialForBox,
+} from "../../materials/materials.api";
+import {
   buildCaixaFornoDoorsLayer,
   computeCaixaFornoLayout,
-  getCaixaFornoSeparadorMeshSpecs,
   isCaixaFornoBox,
 } from "../generators/caixaFornoGenerator";
 import { getDivSepMeshSpecs } from "../../divSep/visualSpecs";
 
-const THICKNESS_M = SYSTEM_THICKNESS_MM / 1000;
 const BACK_THICKNESS_M = SYSTEM_BACK_MM / 1000;
 
 export type RenderCaixaFornoDeps = {
@@ -46,9 +48,22 @@ export type RenderCaixaFornoDeps = {
 export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCaixaFornoDeps): BoxModel {
   const opts = options ?? {};
   const { width, height, depth } = deps.resolveDimensions(opts);
-  const thicknessM = THICKNESS_M;
+  const thicknessM = Math.max(0.001, opts.thickness ?? SYSTEM_THICKNESS_MM / 1000);
   const backThicknessM = BACK_THICKNESS_M;
   const baseMaterial = deps.baseMaterial;
+  const boxEspessuraMm = thicknessM * 1000;
+  const bodyMaterialId =
+    opts.bodyMaterialId?.trim() || deps.getDefaultOfficialMaterialId();
+  const costaMaterial = resolveCostaMaterialForBox(
+    { costaMaterialId: opts.costaMaterialId },
+    bodyMaterialId
+  );
+  const separadorMaterial = resolveSeparadorMaterialForBox(
+    { separadorMaterialId: opts.separadorMaterialId },
+    bodyMaterialId
+  );
+  const costaPanelMaterial = deps.getMaterialForOfficialId(costaMaterial.materialId);
+  const separadorPanelMaterial = deps.getMaterialForOfficialId(separadorMaterial.materialId);
 
   const boxLike = {
     id: "caixa-forno-preview",
@@ -57,7 +72,7 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
       altura: height * 1000,
       profundidade: (opts.layoutDepthM ?? depth) * 1000,
     },
-    espessura: thicknessM * 1000,
+    espessura: boxEspessuraMm,
     profundidadeExterna: (opts.layoutDepthM ?? depth) * 1000,
     portaTipo: "porta_simples" as const,
     doorsLayer: opts.doorLayerItems ?? [],
@@ -123,7 +138,7 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
   const upperStartLocalM = layout.upperStartMm / 1000 - height / 2;
   const costaHeightM = Math.max(0.001, layout.costaSuperiorAlturaMm / 1000);
   const costaCenterY = upperStartLocalM + costaHeightM / 2;
-  const backWidth = Math.max(0.001, layout.larguraInternaMm / 1000);
+  const backWidth = Math.max(0.001, width);
 
   const back = deps.panelFactory.createPanel(
     backWidth,
@@ -131,7 +146,7 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     backThicknessM,
     "back-upper",
     "back",
-    panelOpts
+    { singleMaterial: costaPanelMaterial as THREE.Material }
   );
   back.position.set(0, costaCenterY, -depth / 2 + backThicknessM / 2);
   back.name = "costa-superior";
@@ -142,17 +157,21 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     dimensoes: boxLike.dimensoes,
     espessura: boxLike.espessura,
     profundidadeExterna: boxLike.profundidadeExterna,
+    portaTipo: boxLike.portaTipo,
+    doorsLayer: doorsLayer,
+    costaAtiva: boxLike.costaAtiva,
     separadores: opts.separadores ?? [],
     divisores: opts.divisores ?? [],
   };
-  getCaixaFornoSeparadorMeshSpecs(divSepBoxLike, width, height, depth).forEach((spec) => {
+  getDivSepMeshSpecs(divSepBoxLike, width, height, depth, thicknessM).forEach((spec) => {
+    if (!spec.name.includes("divsep-sep-")) return;
     const mesh = deps.panelFactory.createPanel(
       spec.size[0],
       spec.size[1],
       spec.size[2],
       spec.name,
       "top",
-      panelOpts
+      { singleMaterial: separadorPanelMaterial as THREE.Material }
     );
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.divSepId = spec.name;

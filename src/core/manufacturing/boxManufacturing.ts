@@ -5,6 +5,7 @@ import {
   getDefaultOfficialMaterial,
   resolveCostaMaterialForBox,
   resolveCostaThicknessMm,
+  resolveSeparadorMaterialForBox,
 } from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
@@ -209,10 +210,23 @@ export function gerarModeloIndustrial(box: BoxModule, rules: RulesConfig): Model
 
 export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustrial[] {
   if (isCaixaFornoBox(box)) {
-    const materialInfo = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+    const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
+    const materialInfo = getIndustrialMaterial(bodyMaterialId);
+    const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialId);
+    const costaMaterialInfo = getIndustrialMaterial(costaMaterial.materialId);
+    const separadorMaterial = resolveSeparadorMaterialForBox(box, bodyMaterialId);
+    const separadorMaterialInfo = getIndustrialMaterial(separadorMaterial.materialId);
     return gerarPaineisCaixaForno(box).map((painel) => ({
       ...painel,
-      custo: calcularCustoPainel(painel, materialInfo) * painel.quantidade,
+      custo:
+        calcularCustoPainel(
+          painel,
+          painel.tipo === "costa_superior"
+            ? costaMaterialInfo
+            : painel.tipo === "separador"
+              ? separadorMaterialInfo
+              : materialInfo
+        ) * painel.quantidade,
     }));
   }
   if (isCornerFixedFrontModel(box.baseCabinetId)) {
@@ -251,6 +265,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
   const material = getNomeMaterial(box);
   const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
   const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialId);
+  const separadorMaterial = resolveSeparadorMaterialForBox(box, bodyMaterialId);
   const alturaLateral = rules.madeira.calcularAlturaLaterais
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
@@ -390,7 +405,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
       largura_mm: clampPositive(dims.larguraMm),
       altura_mm: clampPositive(dims.profundidadeMm),
       espessura_mm: clampPositive(dims.alturaMm),
-      material,
+      material: separadorMaterial.label,
       orientacaoFibra: "none",
       quantidade: 1,
       custo: 0,
@@ -464,12 +479,17 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 
   const materialInfo = getIndustrialMaterial(bodyMaterialId);
   const costaMaterialInfo = getIndustrialMaterial(costaMaterial.materialId);
+  const separadorMaterialInfo = getIndustrialMaterial(separadorMaterial.materialId);
   return paineis.map((painel) => ({
     ...painel,
     custo:
       calcularCustoPainel(
         painel,
-        painel.tipo === "COSTA" ? costaMaterialInfo : materialInfo
+        painel.tipo === "COSTA"
+          ? costaMaterialInfo
+          : painel.tipo === "separador"
+            ? separadorMaterialInfo
+            : materialInfo
       ) * painel.quantidade,
   }));
 }

@@ -418,6 +418,28 @@ export function resolveCostaThicknessMm(
 }
 
 /** Material e espessura efectivos da COSTA (override da caixa ou família do corpo + 10 mm). */
+/** Material do separador horizontal: override da caixa ou mesmo material do corpo. */
+export function resolveSeparadorMaterialForBox(
+  box: { separadorMaterialId?: string } | undefined,
+  bodyMaterialId: string
+): CostaMaterialResolution {
+  const customId = box?.separadorMaterialId?.trim();
+  if (customId) {
+    const chosen = resolveMaterial(customId);
+    if (chosen) {
+      return {
+        materialId: chosen.canonicalId,
+        label: chosen.label,
+      };
+    }
+  }
+  const body = resolveMaterial(bodyMaterialId) ?? getDefaultOfficialMaterial();
+  return {
+    materialId: body.canonicalId,
+    label: body.label,
+  };
+}
+
 export function resolveCostaMaterialForBox(
   box: { costaMaterialId?: string; costaThicknessMm?: number } | undefined,
   bodyMaterialId: string

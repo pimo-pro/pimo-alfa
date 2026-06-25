@@ -8,7 +8,7 @@ import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
-import { resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterialForBox, resolveCostaThicknessMm } from "../materials/materials.api";
+import { resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterialForBox, resolveCostaThicknessMm, resolveSeparadorMaterialForBox } from "../materials/materials.api";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import {
@@ -134,6 +134,7 @@ export function cutlistComPrecoFromBox(
   const matInfo = getMaterialDisplayInfo(bodyMaterialKey);
   const material = matInfo.label;
   const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialKey);
+  const separadorMaterial = resolveSeparadorMaterialForBox(box, bodyMaterialKey);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
   const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
     {
@@ -272,7 +273,7 @@ export function cutlistComPrecoFromBox(
                 : isBottomPanel && hasDoorBottom
                   ? "bottom"
                   : undefined;
-    const isCostaPanel = p.tipo === "COSTA";
+    const isCostaPanel = p.tipo === "COSTA" || p.tipo === "costa_superior";
     const isDivisor = p.tipo === "divisorio";
     const isSeparador = p.tipo === "separador";
     const doorOfficial = isDoor && doorsLayer[doorIndex]?.material
@@ -282,8 +283,14 @@ export function cutlistComPrecoFromBox(
       ? (doorOfficial?.label ?? doorsLayer[doorIndex]?.material ?? getDefaultOfficialMaterial().label)
       : isCostaPanel
         ? costaMaterial.label
-        : material;
-    const itemMaterialId = isCostaPanel ? costaMaterial.materialId : materialId;
+        : isSeparador
+          ? separadorMaterial.label
+          : material;
+    const itemMaterialId = isCostaPanel
+      ? costaMaterial.materialId
+      : isSeparador
+        ? separadorMaterial.materialId
+        : materialId;
     if (isDoor) doorPanelIndex += 1;
     const doorHeightForLateral =
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;

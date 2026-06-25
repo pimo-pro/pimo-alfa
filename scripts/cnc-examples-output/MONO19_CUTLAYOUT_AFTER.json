@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-06-24T11:39:38.015Z",
+  "generatedAt": "2026-06-25T19:11:09.911Z",
   "inputFixture": "src/validation/industrialPipelineTestHelpers.ts → buildMono19BenchmarkScenario()",
   "scenario": {
     "scenarioId": "MONO19_SPM_COZINHA",
@@ -173,63 +173,63 @@
       }
     ],
     "mode": "SPM",
-    "executionMs": 208.9,
+    "executionMs": 131,
     "totalSheets": 3,
-    "avgWastePercent": 39.33,
+    "avgWastePercent": 39.34,
     "totalMicroGapsLt5mm": 0,
     "totalInternalIslands": 0,
-    "avgWasteScatterIndex": 0.623,
-    "avgHorizontalDensity": 0.856,
-    "avgVerticalDensity": 0.897,
+    "avgWasteScatterIndex": 0.701,
+    "avgHorizontalDensity": 0.88,
+    "avgVerticalDensity": 0.802,
     "utilizationPercent": 60.66,
     "selectedStrategy": "skyline",
     "selectedBinHeuristic": "bestFit",
     "perSheet": [
       {
         "sheetIndex": 1,
-        "pieceCount": 4,
-        "usedAreaMm2": 4147350,
-        "wastePercent": 28.44,
+        "pieceCount": 6,
+        "usedAreaMm2": 4269150,
+        "wastePercent": 26.34,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.861,
-        "horizontalDensity": 0.866,
-        "verticalDensity": 0.872,
-        "bboxUsedMaxX": 2425,
-        "bboxUsedMaxY": 1805
+        "wasteScatterIndex": 0.89,
+        "horizontalDensity": 0.924,
+        "verticalDensity": 0.829,
+        "bboxUsedMaxX": 2587,
+        "bboxUsedMaxY": 1715
       },
       {
         "sheetIndex": 2,
         "pieceCount": 7,
-        "usedAreaMm2": 3568976,
-        "wastePercent": 38.42,
+        "usedAreaMm2": 4149310,
+        "wastePercent": 28.41,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.489,
-        "horizontalDensity": 0.842,
-        "verticalDensity": 0.964,
-        "bboxUsedMaxX": 2358,
-        "bboxUsedMaxY": 1996
+        "wasteScatterIndex": 0.403,
+        "horizontalDensity": 0.91,
+        "verticalDensity": 0.973,
+        "bboxUsedMaxX": 2547,
+        "bboxUsedMaxY": 2015
       },
       {
         "sheetIndex": 3,
-        "pieceCount": 8,
-        "usedAreaMm2": 2831776,
-        "wastePercent": 51.14,
+        "pieceCount": 6,
+        "usedAreaMm2": 2129642,
+        "wastePercent": 63.26,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.52,
-        "horizontalDensity": 0.86,
-        "verticalDensity": 0.854,
-        "bboxUsedMaxX": 2408,
-        "bboxUsedMaxY": 1767
+        "wasteScatterIndex": 0.81,
+        "horizontalDensity": 0.806,
+        "verticalDensity": 0.605,
+        "bboxUsedMaxX": 2258,
+        "bboxUsedMaxY": 1252
       }
     ],
     "tcnRegression": {
       "ok": true,
       "structuralHash": "material-unresolved",
       "validationErrors": [
-        "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 10 peça(s) (Cozinha_Mono19_gav_frent_ext_01, Cozinha_Mono19_gav_fun_01, Cozinha_Mono19_gav_frent_ext_02, Cozinha_Mono19_gav_fun_02...)."
+        "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 6 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 14 peça(s) (Cozinha_Mono19_SEP_01, Cozinha_Mono19_SEP_02, Cozinha_Mono19_SEP_03, Cozinha_Mono19_SEP_04...)."
       ]
     },
     "labelsContract": {

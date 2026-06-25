@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
-import { listOfficialMaterials } from "../../../core/materials/materials.api";
+import { listOfficialMaterials, resolveSeparadorMaterialForBox } from "../../../core/materials/materials.api";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
@@ -36,6 +36,10 @@ export default function SelecionarMaterialSection({
   const currentMaterialId = fallbackMaterialId;
   const hasDoor = box.portaTipo !== "sem_porta" && (box.doorsLayer?.length ?? 0) > 0;
   const hasDrawers = (box.gavetas ?? 0) > 0 && (box.drawersLayer?.length ?? 0) > 0;
+  const hasSeparadores = (box.separadores?.length ?? 0) > 0;
+  const separadorMaterialId =
+    box.separadorMaterialId ??
+    resolveSeparadorMaterialForBox(box, currentMaterialId).materialId;
 
   const content = (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -82,6 +86,32 @@ export default function SelecionarMaterialSection({
           ))}
         </select>
       </section>
+
+      {hasSeparadores && (
+        <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+            Separador
+          </div>
+          <select
+            className="select"
+            value={separadorMaterialId}
+            onChange={(e) => {
+              const materialId = e.target.value;
+              const isBodyDefault = materialId === currentMaterialId;
+              actions.setWorkspaceBoxSeparadorMaterial(
+                boxId,
+                isBodyDefault ? undefined : materialId
+              );
+            }}
+          >
+            {woodMaterials.map((material) => (
+              <option key={material.canonicalId} value={material.canonicalId}>
+                {material.label}
+              </option>
+            ))}
+          </select>
+        </section>
+      )}
 
       {hasDoor &&
         (box.doorsLayer ?? []).map((door, index) => {

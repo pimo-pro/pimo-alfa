@@ -533,6 +533,8 @@ export interface ProjectActions {
     _costaMaterialId?: string,
     _costaThicknessMm?: number
   ) => void;
+  /** Material explícito dos separadores horizontais; omitir restaura o material do corpo. */
+  setWorkspaceBoxSeparadorMaterial: (_boxId: string, _separadorMaterialId?: string) => void;
   /** Activa/desactiva costa traseira (visual + industrial). */
   setWorkspaceBoxNoBackPanel: (_boxId: string, _enabled: boolean) => void;
   /** Alinha a frente do box (eixo Z) com a frente do box vizinho mais próximo no eixo X. */

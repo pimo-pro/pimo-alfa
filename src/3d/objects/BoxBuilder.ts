@@ -115,6 +115,12 @@ export type BoxOptions = {
   /** Divisórios e separadores dinâmicos (estado da caixa). */
   divisores?: import("../../core/divSep/types").DivisorItem[];
   separadores?: import("../../core/divSep/types").SeparadorItem[];
+  /** Material industrial do corpo (canonicalId) para painéis com material próprio (costa/separador). */
+  bodyMaterialId?: string;
+  /** Override de material da COSTA (canonicalId). */
+  costaMaterialId?: string;
+  /** Override de material dos separadores (canonicalId). */
+  separadorMaterialId?: string;
 };
 
 export type BoxModel = {

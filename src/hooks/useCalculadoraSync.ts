@@ -120,6 +120,7 @@ function getStructureFingerprint(
     noBackPanel: resolveNoBackPanel(wsBox),
     costaMaterialId: wsBox.costaMaterialId,
     costaThicknessMm: wsBox.costaThicknessMm,
+    separadorMaterialId: wsBox.separadorMaterialId,
     profundidadeExterna: wsBox.profundidadeExterna,
     viewerDebug: viewerDebug ?? null,
   });
@@ -383,6 +384,9 @@ export const useCalculadoraSync = (
           showDrawerDrilling: viewerDebug.showDrawerDrilling,
           noBackPanel: resolveNoBackPanel(wsBox),
           costaAtiva: resolveCostaAtivaForBox(wsBox),
+          bodyMaterialId: wsBox.material,
+          costaMaterialId: wsBox.costaMaterialId,
+          separadorMaterialId: wsBox.separadorMaterialId,
           ...posRot,
         });
         lastStructureFingerprintRef.current.set(
@@ -437,6 +441,9 @@ export const useCalculadoraSync = (
             showDrawerDrilling: viewerDebug.showDrawerDrilling,
             noBackPanel: resolveNoBackPanel(wsBox),
             costaAtiva: resolveCostaAtivaForBox(wsBox),
+            bodyMaterialId: wsBox.material,
+            costaMaterialId: wsBox.costaMaterialId,
+            separadorMaterialId: wsBox.separadorMaterialId,
             ...posRot,
           });
           lastStructureFingerprintRef.current.set(wsBox.id, structureFingerprint);

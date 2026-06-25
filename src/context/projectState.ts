@@ -541,6 +541,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     noBackPanel: box.noBackPanel ?? box.costaAtiva === false,
     costaMaterialId: box.costaMaterialId,
     costaThicknessMm: box.costaThicknessMm,
+    separadorMaterialId: box.separadorMaterialId,
     profundidadeExterna: box.profundidadeExterna,
     orlaPresetId: box.orlaPresetId,
     remateIds: box.remateIds ?? [],

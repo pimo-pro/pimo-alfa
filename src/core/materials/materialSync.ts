@@ -11,6 +11,7 @@ import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlis
 import { decodeSelectionId } from "../viewer/selectionIds";
 import { getIndustrialMaterial } from "./service";
 import { refreshViewerAfterMaterialSync } from "../../industrial/viewerIntegration";
+import { isCaixaFornoBox, syncCaixaFornoOnDimensoesChange } from "../moveis/generators/caixaFornoGenerator";
 
 export type MaterialSyncTarget =
   | { kind: "project"; material: Material | null; materialId?: string }
@@ -195,11 +196,14 @@ export function applyMaterialSync(
       const espessuraMm = getIndustrialMaterial(target.materialId).espessuraPadrao;
       return {
         ...emptyMaterialSyncResult(project),
-        workspaceBoxes: project.workspaceBoxes.map((box) =>
-          box.id === target.boxId
-            ? { ...box, material: target.materialId, espessura: espessuraMm }
-            : box
-        ),
+        workspaceBoxes: project.workspaceBoxes.map((box) => {
+          if (box.id !== target.boxId) return box;
+          let updated = { ...box, material: target.materialId, espessura: espessuraMm };
+          if (isCaixaFornoBox(updated)) {
+            updated = syncCaixaFornoOnDimensoesChange(updated);
+          }
+          return updated;
+        }),
         affectedBoxIds: [target.boxId],
       };
     }

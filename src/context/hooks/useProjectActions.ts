@@ -218,6 +218,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "setWorkspaceBoxAllowPieceRotation",
         "setWorkspaceBoxLocked",
         "setWorkspaceBoxCostaMaterial",
+        "setWorkspaceBoxSeparadorMaterial",
         "setWorkspaceBoxNoBackPanel",
         "alignFrontWithNeighbor",
         "alignBottomSelectedBoxes",

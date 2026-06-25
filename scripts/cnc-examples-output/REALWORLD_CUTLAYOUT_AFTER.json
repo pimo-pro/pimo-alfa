@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-06-24T11:39:37.994Z",
+  "generatedAt": "2026-06-25T19:11:09.060Z",
   "inputFixture": "src/validation/industrialPipelineTestHelpers.ts → buildRealWorldBenchmarkScenario()",
   "scenario": {
     "scenarioId": "REALWORLD_SPM_ROUPEIRO",
@@ -77,7 +77,7 @@
         "largura_mm": 860,
         "altura_mm": 526,
         "espessura_mm": 19,
-        "materialId": "mdf_branco"
+        "materialId": "mdf_branco-19"
       },
       {
         "nome": "Roupeiro_RealBench_SEP_02",
@@ -85,7 +85,7 @@
         "largura_mm": 860,
         "altura_mm": 526,
         "espessura_mm": 19,
-        "materialId": "mdf_branco"
+        "materialId": "mdf_branco-19"
       },
       {
         "nome": "Roupeiro_RealBench_SEP_03",
@@ -93,7 +93,7 @@
         "largura_mm": 860,
         "altura_mm": 526,
         "espessura_mm": 19,
-        "materialId": "mdf_branco"
+        "materialId": "mdf_branco-19"
       },
       {
         "nome": "porta_simples",
@@ -241,56 +241,56 @@
       }
     ],
     "mode": "SPM",
-    "executionMs": 189.3,
-    "totalSheets": 6,
-    "avgWastePercent": 46.49,
+    "executionMs": 182.4,
+    "totalSheets": 7,
+    "avgWastePercent": 52.11,
     "totalMicroGapsLt5mm": 0,
     "totalInternalIslands": 0,
-    "avgWasteScatterIndex": 0.605,
-    "avgHorizontalDensity": 0.855,
-    "avgVerticalDensity": 0.773,
-    "utilizationPercent": 53.51,
+    "avgWasteScatterIndex": 0.71,
+    "avgHorizontalDensity": 0.788,
+    "avgVerticalDensity": 0.724,
+    "utilizationPercent": 47.89,
     "selectedStrategy": "skyline",
     "selectedBinHeuristic": "bestFit",
     "perSheet": [
       {
         "sheetIndex": 1,
         "pieceCount": 4,
-        "usedAreaMm2": 4487420,
-        "wastePercent": 22.58,
+        "usedAreaMm2": 4477110,
+        "wastePercent": 22.76,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.441,
+        "wasteScatterIndex": 0.447,
         "horizontalDensity": 0.934,
-        "verticalDensity": 0.964,
+        "verticalDensity": 0.962,
         "bboxUsedMaxX": 2615,
-        "bboxUsedMaxY": 1996
+        "bboxUsedMaxY": 1991
       },
       {
         "sheetIndex": 2,
-        "pieceCount": 5,
-        "usedAreaMm2": 4143192,
-        "wastePercent": 28.52,
+        "pieceCount": 7,
+        "usedAreaMm2": 3730156,
+        "wastePercent": 35.64,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.32,
-        "horizontalDensity": 0.977,
-        "verticalDensity": 0.93,
-        "bboxUsedMaxX": 2736,
-        "bboxUsedMaxY": 1925
+        "wasteScatterIndex": 0.322,
+        "horizontalDensity": 0.949,
+        "verticalDensity": 0.932,
+        "bboxUsedMaxX": 2658,
+        "bboxUsedMaxY": 1930
       },
       {
         "sheetIndex": 3,
-        "pieceCount": 4,
-        "usedAreaMm2": 1756188,
-        "wastePercent": 69.7,
+        "pieceCount": 2,
+        "usedAreaMm2": 2179534,
+        "wastePercent": 62.4,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.781,
-        "horizontalDensity": 0.623,
-        "verticalDensity": 0.731,
-        "bboxUsedMaxX": 1745,
-        "bboxUsedMaxY": 1513
+        "wasteScatterIndex": 0.983,
+        "horizontalDensity": 0.74,
+        "verticalDensity": 0.523,
+        "bboxUsedMaxX": 2072,
+        "bboxUsedMaxY": 1082
       },
       {
         "sheetIndex": 4,
@@ -299,27 +299,40 @@
         "wastePercent": 46.27,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.539,
-        "horizontalDensity": 0.938,
-        "verticalDensity": 0.8,
-        "bboxUsedMaxX": 2625,
-        "bboxUsedMaxY": 1657
+        "wasteScatterIndex": 0.635,
+        "horizontalDensity": 0.754,
+        "verticalDensity": 0.937,
+        "bboxUsedMaxX": 2110,
+        "bboxUsedMaxY": 1940
       },
       {
         "sheetIndex": 5,
-        "pieceCount": 9,
-        "usedAreaMm2": 3715536,
-        "wastePercent": 35.89,
+        "pieceCount": 7,
+        "usedAreaMm2": 2894536,
+        "wastePercent": 50.06,
         "microGapsLt5mm": 0,
         "internalIslands": 0,
-        "wasteScatterIndex": 0.557,
-        "horizontalDensity": 0.892,
+        "wasteScatterIndex": 0.605,
+        "horizontalDensity": 0.777,
         "verticalDensity": 0.897,
-        "bboxUsedMaxX": 2498,
+        "bboxUsedMaxX": 2177,
         "bboxUsedMaxY": 1856
       },
       {
         "sheetIndex": 6,
+        "pieceCount": 4,
+        "usedAreaMm2": 1642000,
+        "wastePercent": 71.67,
+        "microGapsLt5mm": 0,
+        "internalIslands": 0,
+        "wasteScatterIndex": 0.984,
+        "horizontalDensity": 0.595,
+        "verticalDensity": 0.495,
+        "bboxUsedMaxX": 1667,
+        "bboxUsedMaxY": 1025
+      },
+      {
+        "sheetIndex": 7,
         "pieceCount": 1,
         "usedAreaMm2": 1391000,
         "wastePercent": 76,
@@ -336,7 +349,7 @@
       "ok": true,
       "structuralHash": "material-unresolved",
       "validationErrors": [
-        "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 10 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Roupeiro_RealBench_gav_frent_ext_01, Roupeiro_RealBench_gav_frent_ext_02, Roupeiro_RealBench_gav_frent_ext_03, Roupeiro_RealBench_RODA_PE_01).; mdf_branco-10: 10 mm em 3 peça(s) (Roupeiro_RealBench_gav_fun_01, Roupeiro_RealBench_gav_fun_02, Roupeiro_RealBench_gav_fun_03).; carvalho-20: 20 mm em 1 peça(s) (Roupeiro_RealBench_REMATE_DIR_01)."
+        "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 7 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 7 peça(s) (Roupeiro_RealBench_SEP_01, Roupeiro_RealBench_SEP_02, Roupeiro_RealBench_SEP_03, Roupeiro_RealBench_gav_frent_ext_01...).; mdf_branco-10: 10 mm em 3 peça(s) (Roupeiro_RealBench_gav_fun_01, Roupeiro_RealBench_gav_fun_02, Roupeiro_RealBench_gav_fun_03).; carvalho-20: 20 mm em 1 peça(s) (Roupeiro_RealBench_REMATE_DIR_01)."
       ]
     },
     "labelsContract": {

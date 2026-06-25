@@ -28,6 +28,7 @@ export type BoxTransformActions = Pick<
   | "setWorkspaceBoxLocked"
   | "setWorkspaceBoxPiHideDrawerHoles"
   | "setWorkspaceBoxCostaMaterial"
+  | "setWorkspaceBoxSeparadorMaterial"
   | "setWorkspaceBoxNoBackPanel"
   | "setTipoBorda"
   | "setTipoFundo"
@@ -261,6 +262,25 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
               delete next.costaThicknessMm;
             } else {
               next.costaThicknessMm = costaThicknessMm;
+            }
+            return next;
+          });
+          return recomputeState(prev, { workspaceBoxes }, true);
+        },
+        true
+      );
+    };
+
+    a.setWorkspaceBoxSeparadorMaterial = (boxId, separadorMaterialId) => {
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+            if (box.id !== boxId) return box;
+            const next = { ...box } as typeof box;
+            if (separadorMaterialId === undefined) {
+              delete next.separadorMaterialId;
+            } else {
+              next.separadorMaterialId = separadorMaterialId;
             }
             return next;
           });
