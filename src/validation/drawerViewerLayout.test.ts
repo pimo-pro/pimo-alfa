@@ -5,6 +5,7 @@ import {
   buildDrawerWoodViewerPieceBoxes,
   resolveDrawerBodyCenterOffsetYMm,
   resolveDrawerBodyCenterZMm,
+  resolveDrawerFrontFlushLayoutMm,
   resolveDrawerGroupPosZMm,
   resolveDrawerViewerPosZAdjustmentMm,
 } from "../core/drawers/drawerViewerLayout";
@@ -20,6 +21,14 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
     const posZ = resolveDrawerGroupPosZMm(layout, frontT);
     const dz = resolveDrawerViewerPosZAdjustmentMm(layout, carcass);
     expect(posZ + dz + frontT / 2).toBeCloseTo(carcass / 2, 3);
+  });
+
+  it("resolveDrawerFrontFlushLayoutMm — frente flush na profundidade útil", () => {
+    const layout = resolveDrawerFrontFlushLayoutMm(550, 19, 500);
+    expect(layout.frontOuterZ).toBe(275);
+    expect(layout.frontPosZ).toBe(265.5);
+    expect(layout.bodyCenterLocalZ).toBeCloseTo(-259.5, 3);
+    expect(layout.frontPosZ + 19 / 2).toBe(layout.frontOuterZ);
   });
 
   it("corpo Z = −(esp. frente + slideLength)/2", () => {

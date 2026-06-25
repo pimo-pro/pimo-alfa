@@ -43,7 +43,7 @@ type BoxUpdaterDeps = {
   buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
   buildDrawerSpecs: (
     _items: DrawerLayerItem[],
-    _options?: { showDrillingMarkers?: boolean }
+    _options?: { showDrillingMarkers?: boolean; profundidadeUtilM?: number }
   ) => DrawerSpec[];
   getDoorSpecFingerprint: (_spec: DoorSpec, _materialName?: string) => string;
   getDrawerSpecFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
@@ -69,6 +69,67 @@ type BoxUpdaterDeps = {
 
 export function dimensionsEqual(a: { width: number; height: number; depth: number }, b: { width: number; height: number; depth: number }): boolean {
   return Math.abs(a.width - b.width) < 1e-9 && Math.abs(a.height - b.height) < 1e-9 && Math.abs(a.depth - b.depth) < 1e-9;
+}
+
+const LATERAL_PANEL_NAMES = ["left", "right"] as const;
+
+function disposePanelGeometry(panel: THREE.Mesh): void {
+  panel.traverse((child) => {
+    if (child instanceof THREE.Mesh && child.geometry) {
+      child.geometry.dispose();
+    }
+  });
+}
+
+/** Mantém um único mesh estrutural por nome; remove duplicados do grupo. */
+function dedupeStructuralPanel(group: THREE.Group, panelName: string): THREE.Mesh | undefined {
+  const matches = group.children.filter(
+    (c): c is THREE.Mesh => c instanceof THREE.Mesh && c.name === panelName
+  );
+  if (matches.length === 0) return undefined;
+  const [keeper, ...duplicates] = matches;
+  for (const duplicate of duplicates) {
+    group.remove(duplicate);
+    disposePanelGeometry(duplicate);
+  }
+  return keeper;
+}
+
+function applyLateralPanelLayout(
+  panel: THREE.Mesh,
+  panelName: (typeof LATERAL_PANEL_NAMES)[number],
+  spec: { size: readonly [number, number, number]; pos: readonly [number, number, number] },
+  panelFactory: BoxUpdaterDeps["panelFactory"]
+): void {
+  panelFactory.updatePanelGeometry(panel, spec.size[0], spec.size[1], spec.size[2]);
+  panel.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+  panel.rotation.y = panelName === "right" ? Math.PI : 0;
+  panel.rotation.z = 0;
+  delete (panel.userData as Record<string, unknown>).explodedBasePosition;
+  panel.updateMatrix();
+}
+
+function ensureLateralPanel(
+  group: THREE.Group,
+  panelName: (typeof LATERAL_PANEL_NAMES)[number],
+  spec: { size: readonly [number, number, number]; pos: readonly [number, number, number] },
+  mat: THREE.Material,
+  deps: BoxUpdaterDeps
+): THREE.Mesh {
+  let panel = dedupeStructuralPanel(group, panelName);
+  if (!panel) {
+    panel = deps.panelFactory.createPanel(
+      spec.size[0],
+      spec.size[1],
+      spec.size[2],
+      panelName,
+      panelName,
+      { singleMaterial: mat }
+    );
+    group.add(panel);
+  }
+  applyLateralPanelLayout(panel, panelName, spec, deps.panelFactory);
+  return panel;
 }
 
 export function updateBoxModelWithDeps(model: BoxModel, options: BoxOptions | undefined, deps: BoxUpdaterDeps): BoxModel {
@@ -150,22 +211,21 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     ? drillMap.lateral_direita
     : [];
 
+  const leftPanel = ensureLateralPanel(group, "left", specs.left, mat as THREE.Material, deps);
+  const rightPanel = ensureLateralPanel(group, "right", specs.right, mat as THREE.Material, deps);
+
   if (!dimensionsUnchanged) {
     for (const panelName of deps.panelNames) {
       if (panelName === "back" && skipBack) continue;
+      if (panelName === "left" || panelName === "right") continue;
       const child = group.children.find((c) => c.name === panelName);
       if (!(child instanceof THREE.Mesh) || !child.geometry) continue;
       const spec = specs[panelName as keyof BoxPanelLayoutSpecs];
       if (!spec) continue;
       deps.panelFactory.updatePanelGeometry(child, spec.size[0], spec.size[1], spec.size[2]);
       child.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
-      if (panelName === "right") {
-        child.rotation.y = Math.PI;
-        child.rotation.z = 0;
-      } else {
-        child.rotation.y = 0;
-        child.rotation.z = 0;
-      }
+      child.rotation.y = 0;
+      child.rotation.z = 0;
       delete (child.userData as Record<string, unknown>).explodedBasePosition;
       child.updateMatrix();
     }
@@ -173,24 +233,6 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
 
   const topPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "top") as THREE.Mesh | undefined;
   const bottomPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "bottom") as THREE.Mesh | undefined;
-  const leftPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "left") as THREE.Mesh | undefined;
-  const rightPanel = group.children.find((c) => c instanceof THREE.Mesh && c.name === "right") as THREE.Mesh | undefined;
-  if (!applyLateralDrillHoles) {
-    if (leftPanel) {
-      const leftSpec = specs.left;
-      deps.panelFactory.updatePanelGeometry(leftPanel, leftSpec.size[0], leftSpec.size[1], leftSpec.size[2]);
-      leftPanel.position.set(leftSpec.pos[0], leftSpec.pos[1], leftSpec.pos[2]);
-      leftPanel.rotation.y = 0;
-      leftPanel.rotation.z = 0;
-    }
-    if (rightPanel) {
-      const rightSpec = specs.right;
-      deps.panelFactory.updatePanelGeometry(rightPanel, rightSpec.size[0], rightSpec.size[1], rightSpec.size[2]);
-      rightPanel.position.set(rightSpec.pos[0], rightSpec.pos[1], rightSpec.pos[2]);
-      rightPanel.rotation.y = Math.PI;
-      rightPanel.rotation.z = 0;
-    }
-  }
   if (topPanel) deps.applyDrillHolesToPanelGeometry(topPanel, "top", drillMap.cima);
   if (bottomPanel) deps.applyDrillHolesToPanelGeometry(bottomPanel, "bottom", drillMap.fundo);
   if (leftPanel) deps.applyDrillHolesToPanelGeometry(leftPanel, "left", lateralLeftHoles);
@@ -225,6 +267,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   } else {
     const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
       showDrillingMarkers: opts.showDrawerDrilling === true,
+      profundidadeUtilM: opts.carcassDepthM ?? depth,
     });
     const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
     for (const c of group.children.filter((c) => c.name.startsWith("drawer-layer-"))) {

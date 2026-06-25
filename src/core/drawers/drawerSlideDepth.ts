@@ -3,6 +3,8 @@
  * Comprimentos permitidos: 350–600 mm (passo de 50 mm).
  */
 
+import { SYSTEM_BACK_MM } from "../baseCabinets";
+
 /** Comprimentos industriais de corrediça (mm) — únicos valores permitidos. */
 export const DRAWER_SLIDE_LENGTHS_MM = [350, 400, 450, 500, 550, 600] as const;
 
@@ -35,6 +37,66 @@ export function resolveDrawerUsableDepthMm(
     (Number.isFinite(front) && front > 0 ? front : 0) +
     (Number.isFinite(clearance) && clearance > 0 ? clearance : 0);
   return Math.max(0, external - subtract);
+}
+
+/** Face frontal externa da caixa (mm, origem no centro da caixa). */
+export function resolveDrawerFrontOuterZMm(profundidadeExternaMm: number): number {
+  return Math.max(0, Number(profundidadeExternaMm)) / 2;
+}
+
+/**
+ * Centro Z da frente da gaveta flush com a face frontal externa da caixa.
+ * frontPosZ = (profundidadeExterna / 2) − (espessuraFrente / 2)
+ */
+export function resolveDrawerFrontPosZMm(
+  profundidadeExternaMm: number,
+  frontThicknessMm: number
+): number {
+  const frontT = Math.max(0, Number(frontThicknessMm));
+  return resolveDrawerFrontOuterZMm(profundidadeExternaMm) - frontT / 2;
+}
+
+/**
+ * Profundidade do corpo da gaveta no viewer (mm).
+ * bodyDepthMm = profundidadeUtilMm − folgaCorredicaMm
+ */
+export function resolveDrawerViewerBodyDepthMm(
+  profundidadeUtilMm: number,
+  folgaCorredicaMm: number
+): number {
+  const util = Math.max(0, Number(profundidadeUtilMm));
+  const folga = Math.max(0, Number(folgaCorredicaMm));
+  return Math.max(0, util - folga);
+}
+
+/** Centro Z absoluto do corpo (mm, origem no centro da caixa). */
+export function resolveDrawerBodyCenterZFromFrontMm(
+  frontPosZMm: number,
+  frontThicknessMm: number,
+  bodyDepthMm: number
+): number {
+  const frontT = Math.max(0, Number(frontThicknessMm));
+  const bodyDepth = Math.max(0, Number(bodyDepthMm));
+  return Number(frontPosZMm) - frontT / 2 - bodyDepth / 2;
+}
+
+/**
+ * Reconstitui P externa a partir da P útil interna (modelo boxDepthModel).
+ * profundidadeExterna = profundidadeUtil + espessuraFrente + espessuraCosta (se ativa)
+ */
+export function resolveProfundidadeExternaFromUtilMm(
+  profundidadeUtilMm: number,
+  frontThicknessMm: number,
+  backThicknessMm: number = SYSTEM_BACK_MM,
+  costaAtiva: boolean = true
+): number {
+  const util = Math.max(0, Number(profundidadeUtilMm));
+  const front = Math.max(0, Number(frontThicknessMm));
+  const back =
+    costaAtiva && Number.isFinite(Number(backThicknessMm)) && Number(backThicknessMm) > 0
+      ? Number(backThicknessMm)
+      : 0;
+  return util + front + back;
 }
 
 /**

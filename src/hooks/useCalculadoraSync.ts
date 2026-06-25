@@ -4,7 +4,7 @@ import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../core/materials/materials.api";
 import { resolveCostaAtivaForBox, resolveNoBackPanel } from "../core/box/backPanelFlags";
-import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
+import type { DoorLayerItem } from "../models/BoxLayers";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
 import type { BoxOptions } from "../3d/objects/BoxBuilder";
@@ -271,8 +271,6 @@ export const useCalculadoraSync = (
       let layoutDepthM: number | undefined;
       let carcassDepthM: number | undefined;
       let doorLayerItems: DoorLayerItem[] = wsBox?.doorsLayer ?? [];
-      let profundidadeExternaForViewerMm: number | undefined;
-      let profundidadeInternaForViewerMm: number | undefined;
       if (depthMm !== undefined && Number.isFinite(depthMm)) {
         const profundidadeExternaMm = Number(wsBox.profundidadeExterna ?? depthMm) || 0;
         const espessuraCostaMm = resolveCostaThicknessMm(wsBox);
@@ -288,8 +286,6 @@ export const useCalculadoraSync = (
           },
           espessuraCostaMm
         );
-        profundidadeExternaForViewerMm = profundidadeExternaMm;
-        profundidadeInternaForViewerMm = profundidadeInternaUtilMm;
         layoutDepthM = mmToM(profundidadeExternaMm);
         carcassDepthM = mmToM(profundidadeInternaUtilMm);
         doorLayerItems = doorLayerItemsForViewer(wsBox?.doorsLayer ?? [], profundidadeExternaMm, profundidadeInternaUtilMm);

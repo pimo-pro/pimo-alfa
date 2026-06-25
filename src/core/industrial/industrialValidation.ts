@@ -1,7 +1,7 @@
 import type { BoxModule } from "../types";
 import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { resolveMaterial } from "../materials/materials.api";
-import { getIndustrialMaterialKeyForBox, getMaterialForBox, resolveIndustrialMaterialKey } from "../materials/service";
+import { getIndustrialMaterialKeyForBox, resolveIndustrialMaterialKey } from "../materials/service";
 import {
   IndustrialError,
   buildIndustrialPieceId,

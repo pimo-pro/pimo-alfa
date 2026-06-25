@@ -51,7 +51,7 @@ type BoxAssemblerDeps = {
   buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
   buildDrawerSpecs: (
     _items: DrawerLayerItem[],
-    _options?: { showDrillingMarkers?: boolean }
+    _options?: { showDrillingMarkers?: boolean; profundidadeUtilM?: number }
   ) => DrawerSpec[];
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
   createDrawerObject: (
@@ -109,6 +109,9 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     const pos = specs[k].pos;
     p.position.set(pos[0], pos[1], pos[2]);
     if (k === "right") {
+      p.rotation.y = Math.PI;
+      p.rotation.z = 0;
+    } else {
       p.rotation.y = 0;
       p.rotation.z = 0;
     }
@@ -250,7 +253,6 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   }
 
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
-  const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
   const doorSpecs = deps.buildDoorSpecs(doorLayerItems);
   const cornerCfg = getCornerCabinetConfig(opts.baseCabinetId);
   const cornerSide = cornerCfg
@@ -318,9 +320,11 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     root.add(ff);
   }
 
+  const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
   if (!DISABLE_DRAWER_RENDERING) {
     const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
       showDrillingMarkers: opts.showDrawerDrilling === true,
+      profundidadeUtilM: opts.carcassDepthM ?? depth,
     });
     drawerSpecs.forEach((spec, drawerIndex) => {
       const drawerItem = drawerLayerItems[drawerIndex];

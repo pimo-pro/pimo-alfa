@@ -34,6 +34,8 @@ export type DivSepBoxLike = {
   profundidadeExterna?: number;
   portaTipo?: string;
   doorsLayer?: unknown[];
+  drawersLayer?: readonly { frontThickness?: number }[];
+  gavetas?: number;
   costaAtiva?: boolean;
   divisores?: DivisorItem[];
   separadores?: SeparadorItem[];
