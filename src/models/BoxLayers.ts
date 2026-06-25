@@ -66,6 +66,8 @@ export type DrawerLayerMetadata = {
   metalBoxProfileId?: string;
   /** Altura nominal da caixa metálica (mm, lista do catálogo). */
   metalBoxHeightMm?: number;
+  /** Profundidade externa do módulo (mm) — referência flush da frente no 3D. */
+  profundidadeUtilMm?: number;
 };
 
 export interface DrawerLayerItem {

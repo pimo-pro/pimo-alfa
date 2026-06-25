@@ -1,12 +1,13 @@
 import type { BoxModule } from "../types";
 import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { resolveMaterial } from "../materials/materials.api";
-import { getMaterialForBox } from "../materials/service";
+import { getIndustrialMaterialKeyForBox, getMaterialForBox, resolveIndustrialMaterialKey } from "../materials/service";
 import {
   IndustrialError,
   buildIndustrialPieceId,
   buildIndustrialPieceIdFromPanel,
 } from "./IndustrialError";
+import type { CutListItem } from "../types";
 
 export function resolveIndustrialBoxId(box: Pick<BoxModule, "id" | "nome">): string {
   const nome = box.nome?.trim();
@@ -23,14 +24,36 @@ export function assertIndustrialMaterial(
   const boxId = resolveIndustrialBoxId(box);
   const pieceId = buildIndustrialPieceId(boxId, pieceKey);
   const key = materialKey?.trim();
-  if (!key) return;
-  if (!resolveMaterial(key)) {
+  if (!key) {
+    throw IndustrialError.materialNotFound({
+      boxId,
+      pieceId,
+      materialKey: "(vazio)",
+      costaApplicable: opts?.costaApplicable,
+    });
+  }
+  const resolved = resolveIndustrialMaterialKey(key);
+  if (!resolveMaterial(resolved)) {
     throw IndustrialError.materialNotFound({
       boxId,
       pieceId,
       materialKey: key,
       costaApplicable: opts?.costaApplicable,
     });
+  }
+}
+
+/** Garante materialId industrial válido em cada peça da cutlist antes de persistir/exportar. */
+export function assertCutlistIndustrialMaterials(
+  box: Pick<BoxModule, "id" | "nome">,
+  items: readonly Pick<CutListItem, "tipo" | "materialId">[],
+  fallbackCanonicalId?: string
+): void {
+  const fallback = resolveIndustrialMaterialKey(undefined, fallbackCanonicalId);
+  for (const item of items) {
+    const pieceKey = (item.tipo ?? "PECA").toUpperCase().replace(/[^A-Z0-9_]+/g, "_");
+    const resolved = resolveIndustrialMaterialKey(item.materialId, fallback);
+    assertIndustrialMaterial(box, pieceKey, resolved);
   }
 }
 
@@ -50,7 +73,7 @@ export function assertBoxModuleDimensions(box: BoxModule): void {
     });
   }
 
-  const bodyMaterialId = getMaterialForBox(box, undefined);
+  const bodyMaterialId = getIndustrialMaterialKeyForBox(box, undefined);
   if (bodyMaterialId) {
     assertIndustrialMaterial(box, "CORPO", bodyMaterialId);
   }

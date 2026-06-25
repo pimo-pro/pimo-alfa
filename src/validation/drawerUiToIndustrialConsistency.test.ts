@@ -27,9 +27,7 @@ describe("Certificação — consistência UI → Industrial", () => {
     });
 
     expect(layers[0].metadata?.nominalDepth).toBe(nominalDepthMm);
-    expect(layers[0].bodyDepth).toBe(
-      nominalDepthMm - DRAWER_SETTINGS.gavetaRecuoProfundidadeCorredicaMm
-    );
+    expect(layers[0].bodyDepth).toBe(nominalDepthMm);
 
     const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
     const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
@@ -77,7 +75,12 @@ describe("Certificação — consistência UI → Industrial", () => {
     });
 
     const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
-    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
+    expect(cutlist.map((p) => p.tipo).sort()).toEqual([
+      "gaveta_frente_ext",
+      "gaveta_frente_int",
+      "gaveta_fundo",
+      "gaveta_traseira",
+    ]);
     expect(cutlist[0].metadata?.drawerHardware?.some((h) => h.tipo === "caixa_metalica")).toBe(true);
   });
 

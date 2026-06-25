@@ -14,6 +14,7 @@ import {
 } from "../../core/wardrobe/wardrobeRules";
 import { getDivSepMeshSpecs } from "../../core/divSep/visualSpecs";
 import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
+import { DISABLE_DRAWER_RENDERING } from "./drawerRenderingFlags";
 import type { PanelType } from "./PanelFactory";
 
 type BoxUpdaterDeps = {
@@ -217,56 +218,62 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   });
 
   const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
-  const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
-    showDrillingMarkers: opts.showDrawerDrilling === true,
-  });
-  const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
-  for (const c of group.children.filter((c) => c.name.startsWith("drawer-layer-"))) {
-    const id = c.name.replace("drawer-layer-", "");
-    if (!requiredDrawerIds.has(id)) group.remove(c);
-  }
-  drawerSpecs.forEach((spec, drawerIndex) => {
-    const drawerItem = drawerLayerItems[drawerIndex];
-    const defaultMaterialId = deps.getDefaultOfficialMaterialId();
-    const bodyMaterialId =
-      typeof opts.materialName === "string" && opts.materialName.trim().length > 0
-        ? opts.materialName.trim()
-        : defaultMaterialId;
-    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
-    const structureFingerprint = deps.getDrawerStructureFingerprint(spec, {
-      frontMaterial: frontMaterialId,
-      bodyMaterial: bodyMaterialId,
-    });
-    const motionKey = deps.getDrawerMotionKey(spec);
-    const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
-    const drawerUserData = existingDrawer?.userData as Record<string, unknown> | undefined;
-    if (existingDrawer && drawerUserData?.[deps.drawerSpecFingerprintKey] === structureFingerprint) {
-      if (drawerUserData?.drawerMotionKey !== motionKey) {
-        deps.syncDrawerLayerMotion(existingDrawer, spec);
-        drawerUserData.drawerMotionKey = motionKey;
-      }
-      return;
+  if (DISABLE_DRAWER_RENDERING) {
+    for (const c of group.children.filter((child) => child.name.startsWith("drawer-layer-"))) {
+      group.remove(c);
     }
-    if (existingDrawer) group.remove(existingDrawer);
-    const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
-    const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
-    const newDrawer = deps.createDrawerObject(spec, {
-      front: frontMaterial as THREE.Material,
-      body: bodyMaterial as THREE.Material,
+  } else {
+    const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
+      showDrillingMarkers: opts.showDrawerDrilling === true,
     });
-    const newUserData = newDrawer.userData as Record<string, unknown>;
-    newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;
-    newUserData.drawerMotionKey = motionKey;
-    group.add(newDrawer);
-    newDrawer.traverse((child) => {
-      if (
-        child instanceof THREE.Mesh &&
-        (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
-      ) {
-        child.userData.drawerFrontMaterialId = frontMaterialId;
+    const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
+    for (const c of group.children.filter((c) => c.name.startsWith("drawer-layer-"))) {
+      const id = c.name.replace("drawer-layer-", "");
+      if (!requiredDrawerIds.has(id)) group.remove(c);
+    }
+    drawerSpecs.forEach((spec, drawerIndex) => {
+      const drawerItem = drawerLayerItems[drawerIndex];
+      const defaultMaterialId = deps.getDefaultOfficialMaterialId();
+      const bodyMaterialId =
+        typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+          ? opts.materialName.trim()
+          : defaultMaterialId;
+      const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
+      const structureFingerprint = deps.getDrawerStructureFingerprint(spec, {
+        frontMaterial: frontMaterialId,
+        bodyMaterial: bodyMaterialId,
+      });
+      const motionKey = deps.getDrawerMotionKey(spec);
+      const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
+      const drawerUserData = existingDrawer?.userData as Record<string, unknown> | undefined;
+      if (existingDrawer && drawerUserData?.[deps.drawerSpecFingerprintKey] === structureFingerprint) {
+        if (drawerUserData?.drawerMotionKey !== motionKey) {
+          deps.syncDrawerLayerMotion(existingDrawer, spec);
+          drawerUserData.drawerMotionKey = motionKey;
+        }
+        return;
       }
+      if (existingDrawer) group.remove(existingDrawer);
+      const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
+      const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
+      const newDrawer = deps.createDrawerObject(spec, {
+        front: frontMaterial as THREE.Material,
+        body: bodyMaterial as THREE.Material,
+      });
+      const newUserData = newDrawer.userData as Record<string, unknown>;
+      newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;
+      newUserData.drawerMotionKey = motionKey;
+      group.add(newDrawer);
+      newDrawer.traverse((child) => {
+        if (
+          child instanceof THREE.Mesh &&
+          (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
+        ) {
+          child.userData.drawerFrontMaterialId = frontMaterialId;
+        }
+      });
     });
-  });
+  }
 
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
   const shelfSpecs = deps.getShelfSpecs(width, height, depth, shelfCount, opts);

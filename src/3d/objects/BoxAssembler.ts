@@ -23,6 +23,7 @@ import { isCaixaFornoBox } from "../../core/moveis/generators/caixaFornoGenerato
 import { renderCaixaForno } from "../../core/moveis/viewer/renderCaixaForno";
 import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
+import { DISABLE_DRAWER_RENDERING } from "./drawerRenderingFlags";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -251,9 +252,6 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
   const drawerLayerItems = Array.isArray(opts.drawerLayerItems) ? opts.drawerLayerItems : [];
   const doorSpecs = deps.buildDoorSpecs(doorLayerItems);
-  const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
-    showDrillingMarkers: opts.showDrawerDrilling === true,
-  });
   const cornerCfg = getCornerCabinetConfig(opts.baseCabinetId);
   const cornerSide = cornerCfg
     ? inferCornerSideFromBox({ baseCabinetId: opts.baseCabinetId, rotacaoY: opts.rotationY })
@@ -319,30 +317,36 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     }
     root.add(ff);
   }
-  drawerSpecs.forEach((spec, drawerIndex) => {
-    const drawerItem = drawerLayerItems[drawerIndex];
-    const defaultMaterialId = deps.getDefaultOfficialMaterialId();
-    const bodyMaterialId =
-      typeof opts.materialName === "string" && opts.materialName.trim().length > 0
-        ? opts.materialName.trim()
-        : defaultMaterialId;
-    const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
-    const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
-    const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
-    const drawerGroup = deps.createDrawerObject(spec, {
-      front: frontMaterial as THREE.Material,
-      body: bodyMaterial as THREE.Material,
+
+  if (!DISABLE_DRAWER_RENDERING) {
+    const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
+      showDrillingMarkers: opts.showDrawerDrilling === true,
     });
-    drawerGroup.traverse((child) => {
-      if (
-        child instanceof THREE.Mesh &&
-        (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
-      ) {
-        child.userData.drawerFrontMaterialId = frontMaterialId;
-      }
+    drawerSpecs.forEach((spec, drawerIndex) => {
+      const drawerItem = drawerLayerItems[drawerIndex];
+      const defaultMaterialId = deps.getDefaultOfficialMaterialId();
+      const bodyMaterialId =
+        typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+          ? opts.materialName.trim()
+          : defaultMaterialId;
+      const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
+      const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
+      const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
+      const drawerGroup = deps.createDrawerObject(spec, {
+        front: frontMaterial as THREE.Material,
+        body: bodyMaterial as THREE.Material,
+      });
+      drawerGroup.traverse((child) => {
+        if (
+          child instanceof THREE.Mesh &&
+          (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
+        ) {
+          child.userData.drawerFrontMaterialId = frontMaterialId;
+        }
+      });
+      root.add(drawerGroup);
     });
-    root.add(drawerGroup);
-  });
+  }
 
   root.position.set(0, 0, 0);
   return { root, panels, dimensions: { width, height, depth, thickness: deps.thicknessM } };

@@ -174,6 +174,8 @@ const getDimensoesInternas = (box: BoxModule, espessura: number, _rules: RulesCo
         espessura: box.espessura,
         portaTipo: box.portaTipo,
         doorsLayer: box.doorsLayer,
+        drawersLayer: box.drawersLayer,
+        gavetas: box.gavetas,
         costaAtiva: box.costaAtiva,
       },
       espessuraCostaMm
@@ -253,6 +255,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
         espessura: box.espessura,
         portaTipo: box.portaTipo,
         doorsLayer: box.doorsLayer,
+        drawersLayer: box.drawersLayer,
+        gavetas: box.gavetas,
         costaAtiva: box.costaAtiva,
       },
       espessuraCostaMm
@@ -270,7 +274,7 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     ? clampPositive(altura - espessura * 2)
     : clampPositive(altura);
   const larguraLateral = profundidadeInterna;
-  /** P útil em profundidade: mesma base que `larguraLateral` (externa − costa se ativa − porta, via getProfundidadeInternaUtilMm). */
+  /** P útil em profundidade: externa − costa (se ativa) − porta ou frente de gaveta. */
   const profundidadeUtil = profundidadeInterna;
 
   if (profundidadeInterna <= 0) {

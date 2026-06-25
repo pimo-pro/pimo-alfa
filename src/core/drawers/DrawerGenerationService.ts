@@ -7,10 +7,10 @@
 
 import { devLogger } from "../../utils/devLogger";
 import { settingsDefaults } from "../settings/settingsSchema";
+import { computeProfundidadeInternaUtilMm } from "../box/boxDepthModel";
 import {
   calculateDrawerSpecs,
   validateDrawerSpecs,
-  resolveDrawerBoxUsableDepthMm,
   type DrawerDimensions,
   type DrawerParametricOverrides,
   type DrawerParametricSettings,
@@ -91,19 +91,32 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     kitchenZoneProfile,
     minDrawerHeightMm,
     maxDrawerHeightMm,
+    espessuraCostaMm,
+    costaAtiva,
   } = config;
+
+  const runnerClearanceMm =
+    drawerSettings?.gavetaRecuoProfundidadeCorredicaMm ??
+    settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm;
+  const frontThicknessMm = boxThickness;
+  const profundidadeInternaUtilMm = computeProfundidadeInternaUtilMm({
+    profundidadeExternaMm: boxDepth,
+    costaAtiva: costaAtiva !== false,
+    espessuraCostaMm: espessuraCostaMm ?? 10,
+    temPorta: false,
+    espessuraPortaMm: 0,
+    temGavetaFrente: true,
+    espessuraGavetaFrenteMm: frontThicknessMm,
+  });
 
   // Dimensões internas do box
   const boxInternalWidth = boxWidth - 2 * boxThickness;
   const boxInternalHeight = boxHeight;
-  const boxInternalDepth = resolveDrawerBoxUsableDepthMm(boxDepth, boxThickness, {
-    clearanceMm:
-      drawerSettings?.gavetaRecuoProfundidadeCorredicaMm ??
-      settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm,
-  });
+  const boxInternalDepth = Math.max(
+    0,
+    profundidadeInternaUtilMm - runnerClearanceMm
+  );
 
-  // Calcula alturas das gavetas (distribuição proporcional)
-  // Regra: altura corpo = (boxHeight / N) - 6mm
   const heights = calculateDrawerHeights(
     drawerCount,
     boxHeight,
@@ -147,7 +160,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       devLogger.warn(`DrawerGenerationService: specs inválidas para gaveta ${i}`);
     }
 
-    // Posicao Z: frente flush com a face frontal do módulo (origem local no centro da caixa).
+    // Posicao Z: frente flush com a face externa do módulo (profundidade externa).
     const drawer = createDrawer(
       `drawer-${boxId}-${i}`,
       boxId,

@@ -24,6 +24,8 @@ export function getDivSepInternalDims(box: DivSepBoxLike): DivSepInternalDims {
       espessura,
       portaTipo: box.portaTipo as "sem_porta" | "porta_simples" | "porta_dupla" | "porta_correr" | undefined,
       doorsLayer: box.doorsLayer as { width?: number }[] | undefined,
+      drawersLayer: box.drawersLayer as { frontThickness?: number }[] | undefined,
+      gavetas: box.gavetas,
       costaAtiva: box.costaAtiva,
     },
     espessuraCostaMm

@@ -16,9 +16,9 @@ describe("Regras industriais — profundidade de corrediças", () => {
     expect(resolveDrawerSlideLength(0)).toBe(350);
   });
 
-  it("profundidade útil = P externa − espessura frente − folgas", () => {
-    expect(resolveDrawerUsableDepthMm(560, 19, 20)).toBe(521);
-    expect(resolveDrawerUsableDepthMm(500, 19, 20)).toBe(461);
+  it("profundidade útil = P externa − costa − espessura frente − folgas", () => {
+    expect(resolveDrawerUsableDepthMm(560, 19, 20)).toBe(511);
+    expect(resolveDrawerUsableDepthMm(500, 19, 20)).toBe(451);
   });
 
   it("bodyDepth da gaveta é igual ao comprimento da corrediça", () => {

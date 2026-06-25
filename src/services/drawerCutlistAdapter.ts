@@ -19,6 +19,7 @@ import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
   resolveIndustrialBoxId,
+  assertIndustrialMaterial,
 } from "../core/industrial/industrialValidation";
 import { IndustrialError, buildIndustrialPieceId } from "../core/industrial/IndustrialError";
 import {
@@ -27,6 +28,7 @@ import {
   resolveDrawerSideMaterial,
   resolveMaterial,
 } from "../core/materials/materials.api";
+import { resolveIndustrialMaterialKey } from "../core/materials/service";
 
 /** Convenção industrial unificada (FASE 2): uma corrediça por lado. */
 export const DRAWER_SLIDES_PER_DRAWER = 2;
@@ -160,10 +162,7 @@ export type DrawerCutlistMaterialContext = {
 function normalizeDrawerMaterialContext(
   bodyMaterialIdOrLegacyLabel?: string
 ): DrawerCutlistMaterialContext {
-  const raw = bodyMaterialIdOrLegacyLabel?.trim();
-  if (!raw) return { bodyMaterialId: "mdf_branco-19" };
-  if (resolveMaterial(raw)) return { bodyMaterialId: raw };
-  return { bodyMaterialId: "mdf_branco-19" };
+  return { bodyMaterialId: resolveIndustrialMaterialKey(bodyMaterialIdOrLegacyLabel) };
 }
 
 /**
@@ -193,6 +192,7 @@ export function drawerLayerItemToCutList(
   const drawerIndex1Based = drawerIndex + 1;
   const safeBoxName = boxName?.trim() || resolveIndustrialBoxId({ id: item.parentBoxId, nome: undefined });
   const boxId = safeBoxName;
+  const boxRef = { id: item.parentBoxId, nome: safeBoxName };
 
   const bodyW = Number(item.bodyWidth ?? item.width) || 0;
   const bodyH = Number(item.bodyHeight ?? item.height) || 0;
@@ -205,13 +205,7 @@ export function drawerLayerItemToCutList(
     });
   }
 
-  if (!resolveMaterial(materialContext.bodyMaterialId)) {
-    throw IndustrialError.materialNotFound({
-      boxId,
-      pieceId: buildIndustrialPieceId(boxId, `GAVETA_${drawerIndex1Based}`),
-      materialKey: materialContext.bodyMaterialId,
-    });
-  }
+  assertIndustrialMaterial(boxRef, `GAVETA_${drawerIndex1Based}_CORPO`, materialContext.bodyMaterialId);
 
   const sideMaterial = resolveDrawerSideMaterial(materialContext.bodyMaterialId);
   const sideThickness = DRAWER_SIDE_THICKNESS_MM;
@@ -226,9 +220,13 @@ export function drawerLayerItemToCutList(
     materialContext.bodyMaterialId,
     bottomThickness
   );
-  const frontMaterialId = item.materialId ?? materialContext.bodyMaterialId;
-  const frontOfficial = resolveMaterial(frontMaterialId);
-  const frontMaterialLabel = frontOfficial?.label ?? frontMaterialId;
+  const frontMaterialId = resolveIndustrialMaterialKey(
+    item.materialId,
+    materialContext.bodyMaterialId
+  );
+  assertIndustrialMaterial(boxRef, `GAVETA_${drawerIndex1Based}_FRENTE`, frontMaterialId);
+  const frontOfficial = resolveMaterial(frontMaterialId)!;
+  const frontMaterialLabel = frontOfficial.label;
 
   const pieces: CutListItem[] = [];
 
@@ -316,7 +314,7 @@ export function drawerLayerItemToCutList(
       tipo: "gaveta_frente_ext",
       sourceType: "parametric",
       boxId: item.parentBoxId,
-      materialId: frontOfficial?.canonicalId ?? frontMaterialId,
+      materialId: frontOfficial.canonicalId,
       grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_frente_ext" }),
       metadata: {
         drawerHardware,

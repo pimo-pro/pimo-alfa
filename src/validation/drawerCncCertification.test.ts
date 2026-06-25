@@ -116,7 +116,12 @@ describe("Certificação CNC — peças de gaveta", () => {
     const box = minimalBoxWithDrawers(layers);
     const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const drawerPieces = cutlist.filter((p) => isDrawerPieceTipo(p.tipo));
-    expect(drawerPieces.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
+    expect(drawerPieces.map((p) => p.tipo).sort()).toEqual([
+      "gaveta_frente_ext",
+      "gaveta_frente_int",
+      "gaveta_fundo",
+      "gaveta_traseira",
+    ]);
     expect(drawerPieces[0].drillHoles?.length ?? 0).toBeGreaterThan(0);
   });
 

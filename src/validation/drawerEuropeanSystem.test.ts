@@ -28,13 +28,13 @@ describe("Sistema europeu de gavetas", () => {
     expect(specs.front.height).toBe(200);
     expect(specs.front.thickness).toBe(19);
     expect(specs.body.width).toBe(548);
-    expect(specs.body.depth).toBe(530);
-    expect(specs.body.height).toBe(185);
+    expect(specs.body.depth).toBe(550);
+    expect(specs.body.height).toBe(188);
     expect(specs.leftSide.width).toBe(16);
     expect(specs.rightSide.width).toBe(16);
     expect(specs.back.thickness).toBe(16);
     expect(specs.bottom.thickness).toBe(10);
-    expect(specs.positioning.pullDistance).toBe(530);
+    expect(specs.positioning.pullDistance).toBe(550);
   });
 
   it("gera frente externa overlay e abertura limitada", () => {

@@ -144,21 +144,6 @@ function doorLayerItemsForViewer(
   }));
 }
 
-/** Gavetas: mesma compensação Z que portas (flush com face frontal da carcaça). */
-function drawerLayerItemsForViewer(
-  items: DrawerLayerItem[],
-  profundidadeExternaMm: number,
-  profundidadeInternaUtilMm: number
-): DrawerLayerItem[] {
-  if (items.length === 0) return items;
-  const dzMm = (profundidadeInternaUtilMm - profundidadeExternaMm) / 2;
-  if (dzMm === 0) return items;
-  return items.map((d) => ({
-    ...d,
-    posZ: (d.posZ ?? 0) + dzMm,
-  }));
-}
-
 /** Posição/rotação da caixa no viewer (metros / radianos). Reutilizado pelo showroom para alinhar a pré-visualização ao Workspace. */
 export function getBoxPositionAndRotation(workspaceBox: WorkspaceBox | undefined): Partial<BoxOptions> {
   if (!workspaceBox) return {};
@@ -297,6 +282,8 @@ export const useCalculadoraSync = (
             espessura: wsBox.espessura,
             portaTipo: wsBox.portaTipo,
             doorsLayer: wsBox.doorsLayer,
+            drawersLayer: wsBox.drawersLayer,
+            gavetas: wsBox.gavetas,
             costaAtiva: resolveCostaAtivaForBox(wsBox),
           },
           espessuraCostaMm
@@ -330,14 +317,7 @@ export const useCalculadoraSync = (
       const pe_cm = feetHeight / 10;
       const feetEnabled = wsBox?.feetEnabled ?? (cabinetType === "lower");
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
-      const drawerLayerItems =
-        profundidadeExternaForViewerMm != null && profundidadeInternaForViewerMm != null
-          ? drawerLayerItemsForViewer(
-              wsBox?.drawersLayer ?? [],
-              profundidadeExternaForViewerMm,
-              profundidadeInternaForViewerMm
-            )
-          : (wsBox?.drawersLayer ?? []);
+      const drawerLayerItems = wsBox?.drawersLayer ?? [];
       if (import.meta.env.DEV && doorLayerItems.length > 0) {
         devLogger.debug("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
           boxId: wsBox.id,

@@ -434,6 +434,48 @@ export function getMaterialForBox(
   return projectMaterialId ?? "";
 }
 
+/**
+ * Converte id/label do workspace ou CRUD para canonicalId industrial reconhecido por resolveMaterial().
+ * UUIDs órfãos, labels antigos ou chaves desconhecidas → material oficial por defeito.
+ */
+export function resolveIndustrialMaterialKey(
+  materialKey: string | undefined | null,
+  fallbackCanonicalId?: string
+): string {
+  const fallback =
+    fallbackCanonicalId?.trim() ||
+    getDefaultOfficialMaterial().canonicalId;
+  const raw = materialKey?.trim();
+  if (!raw) return fallback;
+
+  const official = resolveMaterial(raw);
+  if (official) return official.canonicalId;
+
+  const crud = getMaterialByIdOrLabel(raw);
+  if (crud) {
+    const industrialId = crud.industrialMaterialId?.trim();
+    if (industrialId) {
+      const linked = resolveMaterial(industrialId);
+      if (linked) return linked.canonicalId;
+    }
+    const byLabel = crud.label?.trim();
+    if (byLabel) {
+      const fromLabel = resolveMaterial(byLabel);
+      if (fromLabel) return fromLabel.canonicalId;
+    }
+  }
+
+  return fallback;
+}
+
+/** Material industrial efectivo da caixa (canonicalId), seguro para cutlist/CNC. */
+export function getIndustrialMaterialKeyForBox(
+  box: BoxModule,
+  projectMaterialId?: string
+): string {
+  return resolveIndustrialMaterialKey(getMaterialForBox(box, projectMaterialId) || undefined);
+}
+
 const FALLBACK_LABEL = getDefaultOfficialMaterial().label;
 const FALLBACK_PRECO = 0;
 

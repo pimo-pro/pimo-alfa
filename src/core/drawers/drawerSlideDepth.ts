@@ -10,18 +10,28 @@ export type DrawerSlideLengthMm = (typeof DRAWER_SLIDE_LENGTHS_MM)[number];
 
 /**
  * Profundidade útil para seleção de corrediça:
- * profundidade_externa − espessura_frente − folgas traseiras.
+ * profundidade_externa − costa (se ativa) − espessura_frente − folgas traseiras.
+ * Mesma base que portas: P − costa − frente, menos recuo de corrediça.
  */
 export function resolveDrawerUsableDepthMm(
   depthExternalMm: number,
   frontThicknessMm: number,
-  clearanceMm: number
+  clearanceMm: number,
+  options?: { espessuraCostaMm?: number; costaAtiva?: boolean }
 ): number {
   const external = Number(depthExternalMm);
   const front = Number(frontThicknessMm);
   const clearance = Number(clearanceMm);
   if (!Number.isFinite(external) || external <= 0) return 0;
+  const costaAtiva = options?.costaAtiva !== false;
+  const costa =
+    costaAtiva && Number.isFinite(Number(options?.espessuraCostaMm)) && Number(options?.espessuraCostaMm) > 0
+      ? Number(options!.espessuraCostaMm)
+      : costaAtiva
+        ? 10
+        : 0;
   const subtract =
+    costa +
     (Number.isFinite(front) && front > 0 ? front : 0) +
     (Number.isFinite(clearance) && clearance > 0 ? clearance : 0);
   return Math.max(0, external - subtract);

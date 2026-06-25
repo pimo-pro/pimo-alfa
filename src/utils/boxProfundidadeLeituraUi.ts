@@ -15,6 +15,8 @@ export type BoxLikeProfundidadeLeitura = Pick<
   | "espessura"
   | "portaTipo"
   | "doorsLayer"
+  | "drawersLayer"
+  | "gavetas"
   | "costaAtiva"
   | "costaThicknessMm"
   | "profundidadeExterna"
@@ -36,6 +38,8 @@ export function computeBoxProfundidadeLeituraMm(
       espessura: box.espessura,
       portaTipo: box.portaTipo,
       doorsLayer: box.doorsLayer,
+      drawersLayer: box.drawersLayer,
+      gavetas: box.gavetas,
       costaAtiva: box.costaAtiva,
     },
     resolveCostaThicknessMm(box)

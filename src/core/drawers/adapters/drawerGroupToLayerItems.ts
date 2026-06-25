@@ -13,13 +13,13 @@ import type { DrawerGroup } from "../DrawerGroup";
  * Converte um grupo de gavetas para o formato de layers
  */
 export function drawerGroupToLayerItems(group: DrawerGroup): DrawerLayerItem[] {
-  return group.drawers.map((drawer) => drawerToLayerItem(drawer));
+  return group.drawers.map((drawer) => drawerToLayerItem(drawer, group.boxDimensions.depth));
 }
 
 /**
  * Converte uma gaveta individual para LayerItem
  */
-export function drawerToLayerItem(drawer: Drawer): DrawerLayerItem {
+export function drawerToLayerItem(drawer: Drawer, profundidadeUtilMm?: number): DrawerLayerItem {
   const {
     id,
     parentBoxId,
@@ -127,6 +127,10 @@ export function drawerToLayerItem(drawer: Drawer): DrawerLayerItem {
       metalBoxHeightMm: specs.metalBox.height,
       softClose: specs.slide.softClose,
       drawerType: type,
+      profundidadeUtilMm:
+        Number.isFinite(profundidadeUtilMm) && (profundidadeUtilMm ?? 0) > 0
+          ? profundidadeUtilMm
+          : undefined,
     },
   };
 }

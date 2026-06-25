@@ -140,6 +140,6 @@ describe("Certificação PDF — etiquetas e BOM de gavetas", () => {
     const kinds = cutlist
       .filter((p) => isDrawerPieceTipo(p.tipo))
       .map((p) => classifyDrawerPieceForEtiqueta(p.tipo, p.nome));
-    expect(kinds).toEqual(["FRENTE_GAVETA", "FRENTE_GAVETA"]);
+    expect(kinds.sort()).toEqual(["FRENTE_GAVETA", "FRENTE_GAVETA", "FUNDO_GAVETA", "GAV_TRAS"].sort());
   });
 });

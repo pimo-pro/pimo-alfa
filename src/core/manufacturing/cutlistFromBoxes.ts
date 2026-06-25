@@ -7,7 +7,7 @@ import type {
 import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { getMaterialForBox, getMaterialDisplayInfo } from "../materials/materialsService";
+import { getMaterialForBox, getMaterialDisplayInfo, getIndustrialMaterialKeyForBox, resolveIndustrialMaterialKey } from "../materials/materialsService";
 import { resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterialForBox, resolveCostaThicknessMm, resolveSeparadorMaterialForBox } from "../materials/materials.api";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
@@ -30,6 +30,7 @@ import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
 import { buildDivSepIndustrialLabel } from "../divSep/labels";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import { resolveDoorIndustrialLabel, resolveDoorLabel, resolveDoorPositionKind } from "../doors/doorLabels";
+import { assertCutlistIndustrialMaterials } from "../industrial/industrialValidation";
 
 /** Portas empilhadas verticalmente (ex.: caixa forno): dobradiças usam a altura da folha, não a lateral inteira. */
 function hasVerticallyStackedDoors(doorsLayer: { posY?: number }[]): boolean {
@@ -130,8 +131,8 @@ export function cutlistComPrecoFromBox(
 
   const effRules = buildEffectiveDrillingRules(rules);
   const modelo = gerarModeloIndustrial(box, effRules);
-  const materialId = getMaterialForBox(box, projectMaterialId) || undefined;
-  const bodyMaterialKey = materialId || "mdf_branco";
+  const rawMaterialId = getMaterialForBox(box, projectMaterialId) || undefined;
+  const bodyMaterialKey = getIndustrialMaterialKeyForBox(box, projectMaterialId);
   const matInfo = getMaterialDisplayInfo(bodyMaterialKey);
   const material = matInfo.label;
   const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialKey);
@@ -143,11 +144,13 @@ export function cutlistComPrecoFromBox(
       espessura: box.espessura,
       portaTipo: box.portaTipo,
       doorsLayer: box.doorsLayer,
+      drawersLayer: box.drawersLayer,
+      gavetas: box.gavetas,
       costaAtiva: box.costaAtiva,
     },
     resolveCostaThicknessMm(box)
   );
-  const visualMaterial = materialId
+  const visualMaterial = rawMaterialId
     ? getVisualMaterialForBox(box, projectMaterialId)
     : getFallbackMaterial();
   const items: CutListItemComPreco[] = [];
@@ -163,7 +166,7 @@ export function cutlistComPrecoFromBox(
   const baseItem = {
     sourceType: "parametric" as const,
     boxId: box.id,
-    materialId,
+    materialId: bodyMaterialKey,
     visualMaterial,
     faceMaterials: { top: visualMaterial, front: visualMaterial } as { top?: typeof visualMaterial; front?: typeof visualMaterial },
     boxProfundidadeExternaMm: profundidadeExternaMm,
@@ -278,20 +281,22 @@ export function cutlistComPrecoFromBox(
     const isDivisor = p.tipo === "divisorio";
     const isSeparador = p.tipo === "separador";
     const doorOfficial = isDoor && doorsLayer[doorIndex]?.material
-      ? resolveMaterial(doorsLayer[doorIndex].material)
+      ? resolveMaterial(resolveIndustrialMaterialKey(doorsLayer[doorIndex].material, bodyMaterialKey))
       : null;
     const itemMaterial = isDoor
-      ? (doorOfficial?.label ?? doorsLayer[doorIndex]?.material ?? getDefaultOfficialMaterial().label)
+      ? (doorOfficial?.label ?? getDefaultOfficialMaterial().label)
       : isCostaPanel
         ? costaMaterial.label
         : isSeparador
           ? separadorMaterial.label
           : material;
-    const itemMaterialId = isCostaPanel
-      ? costaMaterial.materialId
-      : isSeparador
-        ? separadorMaterial.materialId
-        : materialId;
+    const itemMaterialId = isDoor
+      ? resolveIndustrialMaterialKey(doorsLayer[doorIndex]?.material, bodyMaterialKey)
+      : isCostaPanel
+        ? costaMaterial.materialId
+        : isSeparador
+          ? separadorMaterial.materialId
+          : bodyMaterialKey;
     if (isDoor) doorPanelIndex += 1;
     const doorHeightForLateral =
       isLateralLeft && hasDoorLeft ? doorHeightMm : isLateralRight && hasDoorRight ? doorHeightMm : undefined;
@@ -463,7 +468,7 @@ export function cutlistComPrecoFromBox(
       return {
         ...baseItem,
         ...item,
-        materialId: item.materialId ?? materialId,
+        materialId: resolveIndustrialMaterialKey(item.materialId, bodyMaterialKey),
         material: item.material ?? material,
         visualMaterial,
         faceMaterials: baseItem.faceMaterials,
@@ -514,6 +519,11 @@ export function cutlistComPrecoFromBox(
       }
     }
   }
+
+  for (const item of items) {
+    item.materialId = resolveIndustrialMaterialKey(item.materialId, bodyMaterialKey);
+  }
+  assertCutlistIndustrialMaterials(box, items, bodyMaterialKey);
 
   cutlistPorCaixaCache.set(box.id, { chave: chaveCaixa, items });
   return items;
