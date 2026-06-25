@@ -15,6 +15,9 @@ type DrillHole = {
   depth: number;
   holeType?: string;
   topDrillable?: boolean;
+  rotation?: number;
+  rotacao?: number;
+  angle?: number;
 };
 
 type InnerContour = {
@@ -34,13 +37,44 @@ type PlacementLike = {
   innerContours?: InnerContour[];
 };
 
+const rotatedContourPlacements = new WeakSet<PlacementLike>();
+
+function normalizeRotation(rotacao: number): 0 | 90 | 180 | 270 {
+  const r = ((Math.round(rotacao) % 360) + 360) % 360;
+  if (r === 90 || r === 180 || r === 270) return r;
+  return 0;
+}
+
+function addRotation<T extends DrillHole>(op: T, angle: 0 | 90 | 180 | 270): T {
+  if (angle === 0) return op;
+  const next = { ...op };
+  if (typeof next.rotation === "number") next.rotation = (next.rotation + angle) % 360;
+  if (typeof next.rotacao === "number") next.rotacao = (next.rotacao + angle) % 360;
+  if (typeof next.angle === "number") next.angle = (next.angle + angle) % 360;
+  return next;
+}
+
 /**
  * Roda um array de furos 90° CCW dado o largura original da peça.
  *   novo_x = hy
  *   novo_y = origW − hx
  */
 export function rotateDrillHoles90CCW(holes: DrillHole[], origW: number): DrillHole[] {
-  return holes.map((h) => ({ ...h, x: h.y, y: origW - h.x }));
+  return rotateDrillHoles(holes, 90, origW, 0);
+}
+
+export function rotateDrillHoles(
+  holes: DrillHole[],
+  angle: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number
+): DrillHole[] {
+  if (angle === 0) return holes.map((h) => ({ ...h }));
+  return holes.map((h) => {
+    if (angle === 90) return addRotation({ ...h, x: h.y, y: origW - h.x }, angle);
+    if (angle === 180) return addRotation({ ...h, x: origW - h.x, y: origH - h.y }, angle);
+    return addRotation({ ...h, x: origH - h.y, y: h.x }, angle);
+  });
 }
 
 /**
@@ -51,12 +85,40 @@ export function rotateDrillHoles90CCW(holes: DrillHole[], origW: number): DrillH
  *   altura_new  = largura_mm
  */
 export function rotateInnerContours90CCW(contours: InnerContour[], origW: number): InnerContour[] {
-  return contours.map((c) => ({
-    x_mm: c.y_mm,
-    y_mm: origW - c.x_mm - c.largura_mm,
-    largura_mm: c.altura_mm,
-    altura_mm: c.largura_mm,
-  }));
+  return rotateInnerContours(contours, 90, origW, 0);
+}
+
+export function rotateInnerContours(
+  contours: InnerContour[],
+  angle: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number
+): InnerContour[] {
+  if (angle === 0) return contours.map((c) => ({ ...c }));
+  return contours.map((c) => {
+    if (angle === 90) {
+      return {
+        x_mm: c.y_mm,
+        y_mm: origW - c.x_mm - c.largura_mm,
+        largura_mm: c.altura_mm,
+        altura_mm: c.largura_mm,
+      };
+    }
+    if (angle === 180) {
+      return {
+        x_mm: origW - c.x_mm - c.largura_mm,
+        y_mm: origH - c.y_mm - c.altura_mm,
+        largura_mm: c.largura_mm,
+        altura_mm: c.altura_mm,
+      };
+    }
+    return {
+      x_mm: origH - c.y_mm - c.altura_mm,
+      y_mm: c.x_mm,
+      largura_mm: c.altura_mm,
+      altura_mm: c.largura_mm,
+    };
+  });
 }
 
 /**
@@ -81,7 +143,7 @@ export function canRotatePieceGeometry(piece: {
  *
  * Para cada placement:
  *  1. Garante que originalDrillHoles contém sempre as coords pré-rotação (para PDF).
- *  2. Para rotaco=90: transforma drillHoles e innerContours para o espaço colocado
+ *  2. Para rotacao=90/180/270: transforma drillHoles e innerContours para o espaço colocado
  *     (para consumidores industriais que leem drillHoles diretamente).
  *
  * Relação de dims após rotação pelo motor:
@@ -99,20 +161,23 @@ export function applyRotationGeometryToSheets(sheets: Array<{ placements: Placem
         p.originalDrillHoles = rawHoles.map((h) => ({ ...h }));
       }
 
-      if (p.rotacao !== 90) continue;
+      const rotation = normalizeRotation(p.rotacao);
+      if (rotation === 0) continue;
 
-      // origW = largura original da peça = placed.altura_mm (motor swapou as dims)
-      const origW = p.altura_mm;
+      const swapsDims = rotation === 90 || rotation === 270;
+      const origW = swapsDims ? p.altura_mm : p.largura_mm;
+      const origH = swapsDims ? p.largura_mm : p.altura_mm;
 
       const origHoles = p.originalDrillHoles ?? rawHoles;
       if (origHoles && origHoles.length > 0) {
-        const rotatedHoles = rotateDrillHoles90CCW(origHoles, origW);
+        const rotatedHoles = rotateDrillHoles(origHoles, rotation, origW, origH);
         p.drillHoles = rotatedHoles;
         if (p.holes !== undefined) p.holes = rotatedHoles;
       }
 
-      if (p.innerContours && p.innerContours.length > 0) {
-        p.innerContours = rotateInnerContours90CCW(p.innerContours, origW);
+      if (p.innerContours && p.innerContours.length > 0 && !rotatedContourPlacements.has(p)) {
+        p.innerContours = rotateInnerContours(p.innerContours, rotation, origW, origH);
+        rotatedContourPlacements.add(p);
       }
     }
   }

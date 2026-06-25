@@ -47,6 +47,9 @@ const LATE_SHEET_INDEX_THRESHOLD = 0.0;
  */
 const LATE_SHEET_WASTE_THRESHOLD = 0.15;
 
+/** Chapas com desperdício até este valor são consideradas boas e não são mexidas. */
+const STABLE_SHEET_WASTE_THRESHOLD = 0.12;
+
 /**
  * Regras de congelamento para Single-Project Mode (SPM Lock).
  * Impedem que o pocket filling perturbe chapas já bem aproveitadas.
@@ -534,7 +537,7 @@ export function aplicarPocketFilling(
     const sheetArea = Math.max(1, destSheet.sheet.largura_mm * destSheet.sheet.altura_mm);
     const usedArea = destSheet.placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
     const wasteRatio = Math.max(0, (sheetArea - usedArea) / sheetArea);
-    if (wasteRatio < wasteThr) continue;
+    if (wasteRatio <= wasteThr || wasteRatio <= STABLE_SHEET_WASTE_THRESHOLD) continue;
 
     // ── Guard SPM Lock — Protecção de chapas estáveis ──────────────────────
     // Chapas com desperdício ≤ stableDestThreshold estão bem aproveitadas:
@@ -556,6 +559,10 @@ export function aplicarPocketFilling(
         if (srcSheet.placements.length === 0) continue;
         // Guard a): nunca mover peças da chapa com menor desperdício do run
         if (sj === bestSrcIdx) continue;
+        const srcArea = Math.max(1, srcSheet.sheet.largura_mm * srcSheet.sheet.altura_mm);
+        const srcUsed = srcSheet.placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
+        const srcWasteRatio = Math.max(0, (srcArea - srcUsed) / srcArea);
+        if (srcWasteRatio <= STABLE_SHEET_WASTE_THRESHOLD) continue;
 
         const candidates = selecionarPeçasParaPocket(pocket, srcSheet.placements);
         if (candidates.length === 0) continue;

@@ -28,10 +28,10 @@ export const LATE_SHEET_COMPACT_WINDOW = 6;
 export const LATE_SHEET_MIN_WASTE_RATIO = 0.15;
 
 /**
- * Rácio de desperdício abaixo do qual uma chapa é "Excelente" e não pode ser
+ * Rácio de desperdício abaixo do qual uma chapa é "Boa" e não pode ser
  * recompactada mesmo que caia dentro da janela tardia.
  */
-const COMPACTOR_EXCELLENT_THRESHOLD = 0.10;
+const COMPACTOR_STABLE_THRESHOLD = 0.12;
 
 export type LateSheetSortStrategy = "area_desc" | "height_desc";
 
@@ -294,18 +294,18 @@ export function tryCompactLateSheetsOfRun(
   if (lateWasteRatio < minWaste) return null;
 
 
-  // ── Protecção de chapas Excelentes dentro da janela tardia ─────────────────
-  // Chapas Excelentes (≤ 10% desperdício) que caem dentro da janela tardios
+  // ── Protecção de chapas boas dentro da janela tardia ───────────────────────
+  // Chapas boas (≤ 12% desperdício) que caem dentro da janela tardia
   // são retiradas do repack e preservadas intactas.
-  const excellentInLate: SheetResult[] = [];
+  const stableInLate: SheetResult[] = [];
   const weakInLate: SheetResult[] = [];
   for (const ls of lateSheets) {
     const lsArea = Math.max(1, ls.sheet.largura_mm * ls.sheet.altura_mm);
     const lsUsed = ls.placements.reduce((acc, p) => acc + p.largura_mm * p.altura_mm, 0);
     const lsWaste = Math.max(0, (lsArea - lsUsed) / lsArea);
-    if (lsWaste <= COMPACTOR_EXCELLENT_THRESHOLD) {
-      excellentInLate.push(ls);
-      console.log(`[COMPACTOR] Chapa Excelente protegida dentro da janela tardia (desperdício=${(lsWaste * 100).toFixed(1)}%)`);
+    if (lsWaste <= COMPACTOR_STABLE_THRESHOLD) {
+      stableInLate.push(ls);
+      console.log(`[COMPACTOR] Chapa boa protegida dentro da janela tardia (desperdício=${(lsWaste * 100).toFixed(1)}%)`);
     } else {
       weakInLate.push(ls);
     }
@@ -326,15 +326,15 @@ export function tryCompactLateSheetsOfRun(
   const improved = compacted.wasteArea < weakWaste;
 
   console.log(
-    `[COMPACTOR] late-sheet repack: weakSheets=${piecesToCompact.length} | excellentProtected=${excellentInLate.length} | ` +
+    `[COMPACTOR] late-sheet repack: weakSheets=${piecesToCompact.length} | stableProtected=${stableInLate.length} | ` +
       `originalWaste=${weakWaste.toFixed(0)}mm² | compactedWaste=${compacted.wasteArea.toFixed(0)}mm² | ` +
       `improved=${improved} | strategy=${compacted.sortStrategy}`
   );
 
-  // Resultado: chapas protegidas (earlySheets + Excelentes da janela) + chapas Fracas recompactadas
+  // Resultado: chapas protegidas (earlySheets + boas da janela) + chapas fracas recompactadas
   const finalLateSheets = improved ? compacted.sheets : piecesToCompact;
   return {
-    earlySheets: [...earlySheets, ...excellentInLate],
+    earlySheets: [...earlySheets, ...stableInLate],
     lateSheets: finalLateSheets,
     improved,
   };

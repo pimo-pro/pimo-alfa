@@ -7,6 +7,7 @@
 
 import type { CutLayoutResult, CutPlacement, SheetDefinition, SheetResult } from "../cutLayoutTypes";
 import { applyFixedMarginOffset, cloneSheets, isInsideSheet, overlaps } from "../utils/cutLayoutUtils";
+import { applyRotationGeometryToSheets } from "../utils/cutLayoutGeomRotation";
 import { aplicarCompactacaoTranslacional } from "../solver/layoutCompactionPass";
 import { aplicarPocketFilling, type PocketFillingOptions } from "../solver/pocketFilling2";
 
@@ -85,7 +86,7 @@ function pocketFillingOptionsForProfile(profile: IndustrialLayoutPocketFillingPr
       lateIndexThreshold: 0,
       wasteThreshold: 0.15,
       spmLock: {
-        stableDestThreshold: 0.10,
+        stableDestThreshold: 0.12,
         minTotalWasteImprovement: 0.05,
       },
     };
@@ -203,9 +204,11 @@ export function finalizeIndustrialLayout(
   deps: IndustrialLayoutFinalizeDeps = {}
 ): CutLayoutResult {
   if (opts.mode === "preserve-positions") {
+    const sheets = cloneSheets(result.sheets);
+    applyRotationGeometryToSheets(sheets);
     return {
       ...result,
-      sheets: cloneSheets(result.sheets),
+      sheets,
     };
   }
 
@@ -224,6 +227,8 @@ export function finalizeIndustrialLayout(
   sheets = aplicarCompactacaoTranslacional(sheets, opts.kerfMm);
 
   sheets = applyFixedMarginOffset(sheets, opts.physicalSheet, opts.marginMm);
+
+  applyRotationGeometryToSheets(sheets);
 
   if (opts.originTopRight && deps.normalizeTopRightOrigin) {
     sheets = sheets.map((s) => deps.normalizeTopRightOrigin!(s));

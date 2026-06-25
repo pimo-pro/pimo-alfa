@@ -31,7 +31,6 @@ import {
 import {
   buildCncBundlesPerThickness,
   mergePerThicknessPlacements,
-  runCutLayoutPerThickness,
 } from "./industrialPerThicknessPipeline";
 import { buildDrillFilesForProject } from "../drill/drillExport";
 import { getSettings } from "../settings/settingsService";
@@ -339,11 +338,6 @@ export async function generateMultiProjectFabrication(
     }
   };
 
-  const layoutOpts =
-    nestingMode === "none"
-      ? { ...getFastCncLayoutOptions(), originTopRight: true }
-      : { ...getDefaultCncLayoutOptions(), originTopRight: true };
-
   const cncPipelineOpts = nestingMode === "none" ? getFastCncLayoutOptions() : getDefaultCncLayoutOptions();
   const tcnSuffix = tcnMethodSuffix(getSettings()?.cnc?.tcnMetodo);
   const settingsSnapshot = getSettings();
@@ -408,29 +402,30 @@ export async function generateMultiProjectFabrication(
 
   const allItemsForLayout = allPrefixedItems as CutlistItemForPieces[];
   const layoutTitle = projectNames.join(" + ");
-  let thicknessLayoutBundles: Awaited<ReturnType<typeof runCutLayoutPerThickness>> = [];
+  let globalThicknessBundles: Awaited<ReturnType<typeof buildCncBundlesPerThickness>> = [];
   let combinedPlacements: CutPlacement[] = [];
 
   try {
     if (allItemsForLayout.length > 0) {
       emit(2, "Otimizando layout por espessura…", "Executando nesting…");
-      thicknessLayoutBundles = await runCutLayoutPerThickness(
+      globalThicknessBundles = await buildCncBundlesPerThickness(
         settingsSnapshot,
         materialsSnapshot,
+        globalProjectStub,
         allItemsForLayout,
-        layoutOpts
+        cncPipelineOpts
       );
-      combinedPlacements = mergePerThicknessPlacements(thicknessLayoutBundles);
+      combinedPlacements = mergePerThicknessPlacements(globalThicknessBundles);
     }
   } catch (err) {
     devLogger.error("multiProjectFabrication: layout por espessura", err);
   }
 
   const layoutResult: CutLayoutResult | null =
-    thicknessLayoutBundles.length > 0
+    globalThicknessBundles.length > 0
       ? {
-          ...thicknessLayoutBundles[0]!.layoutResult,
-          sheets: thicknessLayoutBundles.flatMap((b) => b.layoutResult.sheets),
+          ...globalThicknessBundles[0]!.cncBundle.layoutResult,
+          sheets: globalThicknessBundles.flatMap((b) => b.cncBundle.layoutResult.sheets),
         }
       : null;
 
@@ -464,13 +459,13 @@ export async function generateMultiProjectFabrication(
   let tcnFilesAdded = 0;
   const tcnManifestFiles: Array<{ path: string; content: string }> = [];
 
-  if (thicknessLayoutBundles.length > 0) {
+  if (globalThicknessBundles.length > 0) {
     try {
       const { buildCutLayoutPdf } = await import("../cutlayout/cutLayoutPdf");
-      for (const bundle of thicknessLayoutBundles) {
-        const docLayout = await buildCutLayoutPdf(bundle.layoutResult, {
+      for (const bundle of globalThicknessBundles) {
+        const layout = bundle.cncBundle.layoutResult;
+        const docLayout = await buildCutLayoutPdf(layout, {
           projectName: `${layoutTitle || "Multi-projeto"} — ${bundle.bucket}`,
-          nestingTopRightOrigin: true,
         });
         safeAddPdf(zip, industrialThicknessLayoutPdfPath(bundle.bucket), docLayout);
 
@@ -480,7 +475,7 @@ export async function generateMultiProjectFabrication(
           rules: rulesForGlobal,
           settings: getSettings(),
           precomputedItems: bundle.items as CutListItemComPreco[],
-          cutLayoutPlacements: bundle.layoutResult.sheets.flatMap((s) => s.placements),
+          cutLayoutPlacements: layout.sheets.flatMap((s) => s.placements),
         };
         const docEtiquetasTodas = await UnifiedEtiquetaEngine.build(globalEtiquetasProj);
         safeAddPdf(zip, industrialThicknessEtiquetasPdfPath(bundle.bucket), docEtiquetasTodas);
@@ -649,13 +644,6 @@ export async function generateMultiProjectFabrication(
     checkAbort();
     emit(5, "Gerando ficheiros TCN/CNC globais…", "nesting por espessura");
     const usedTcnNamesByPath = new Set<string>();
-    const globalThicknessBundles = await buildCncBundlesPerThickness(
-      settingsSnapshot,
-      materialsSnapshot,
-      globalProjectStub,
-      allPrefixedCncItems as CutlistItemForPieces[],
-      cncPipelineOpts
-    );
     for (const bundle of globalThicknessBundles) {
       const files = bundle.cncBundle.cnc?.files ?? [];
       for (const file of files) {

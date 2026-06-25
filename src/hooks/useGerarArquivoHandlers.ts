@@ -494,21 +494,14 @@ export function useGerarArquivoHandlers() {
 
       await yieldToMainThread();
 
-      const thicknessBundles = await measureTime("Layout de corte PRO (nesting por espessura)", async () =>
-        runCutLayoutPerThickness(
+      const thicknessBundles = await measureTime("Layout de corte PRO (layout CNC por espessura)", async () =>
+        buildCncBundlesPerThickness(
           settingsSnapshot,
           materialsSnapshot,
+          { projectName: project.projectName ?? "Projeto" },
           cncItems,
           {
             ...getDefaultCncLayoutOptions(),
-            originTopRight: true,
-            minUtilizationPercent: 0.92,
-            rotationPreferenceMode: "aggressive",
-            collectDiagnostics: true,
-          },
-          {
-            projectName: project.projectName ?? "Projeto",
-            boxes,
           }
         )
       );
@@ -532,9 +525,8 @@ export function useGerarArquivoHandlers() {
       await yieldToMainThread();
       const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
       for (const bundle of thicknessBundles) {
-        const doc = await buildCutLayoutPdf(bundle.layoutResult, {
+        const doc = await buildCutLayoutPdf(bundle.cncBundle.layoutResult, {
           projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
-          nestingTopRightOrigin: true,
         });
         doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.bucket)}`);
       }
@@ -835,8 +827,8 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: PDF Unificado", err);
       }
 
-      // --- Nesting por espessura (Layout PRO + Etiquetas em cnc/<espessura>/) ---
-      let thicknessLayoutBundles: Awaited<ReturnType<typeof runCutLayoutPerThickness>> = [];
+      // --- Nesting por espessura (fonte única CNC para Layout PRO + Etiquetas + TCN) ---
+      let thicknessCncBundles: Awaited<ReturnType<typeof buildCncBundlesPerThickness>> = [];
       try {
         const cncItemsForLayout = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
         if (!cncItemsForLayout) {
@@ -845,17 +837,13 @@ export function useGerarArquivoHandlers() {
         }
         showCutLayoutLoader();
         await yieldToMainThread();
-        thicknessLayoutBundles = await runCutLayoutPerThickness(
+        thicknessCncBundles = await buildCncBundlesPerThickness(
           settingsSnapshot,
           materialsSnapshot,
+          cncProjectStub,
           cncItemsForLayout,
           {
             ...getDefaultCncLayoutOptions(),
-            originTopRight: true,
-          },
-          {
-            projectName: project.projectName ?? "Projeto",
-            boxes: proj.boxes ?? boxes,
           }
         );
       } catch (err) {
@@ -868,8 +856,9 @@ export function useGerarArquivoHandlers() {
       // --- Etiquetas UEE (um PDF por espessura em cnc/<espessura>/) ---
       try {
         const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
-        for (const bundle of thicknessLayoutBundles) {
-          const nestingPlacements = bundle.layoutResult.sheets.flatMap((s) => s.placements);
+        for (const bundle of thicknessCncBundles) {
+          const layoutResult = bundle.cncBundle.layoutResult;
+          const nestingPlacements = layoutResult.sheets.flatMap((s) => s.placements);
           const docEtiquetas = await UnifiedEtiquetaEngine.build({
             ...proj,
             precomputedItems: bundle.items as CutListItemComPreco[],
@@ -883,9 +872,8 @@ export function useGerarArquivoHandlers() {
             });
           }
 
-          const docLayout = await buildCutLayoutPdf(bundle.layoutResult, {
+          const docLayout = await buildCutLayoutPdf(layoutResult, {
             projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
-            nestingTopRightOrigin: true,
           });
           const layoutPath = industrialThicknessLayoutPdfPath(bundle.bucket);
           if (!safeAddPdf(zip, layoutPath, docLayout)) {
@@ -903,21 +891,12 @@ export function useGerarArquivoHandlers() {
 
       // --- CNC (TCN): um nesting por espessura ---
       try {
-        const cncOptions = getDefaultCncLayoutOptions();
-        const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
-        if (!cncItems) {
+        if (thicknessCncBundles.length === 0) {
           abortFullExport = true;
-          throw new Error("Exportação cancelada por matéria-prima sem chapa válida.");
+          throw new Error("Nenhum layout CNC disponível para gerar TCN.");
         }
         const usedTcnNamesByPath = new Set<string>();
         let tcnFilesAdded = 0;
-        const thicknessCncBundles = await buildCncBundlesPerThickness(
-          settingsSnapshot,
-          materialsSnapshot,
-          cncProjectStub,
-          cncItems as CutlistItemForPieces[],
-          cncOptions
-        );
         for (const bundle of thicknessCncBundles) {
           const files = bundle.cncBundle.cnc?.files ?? [];
           for (const file of files) {

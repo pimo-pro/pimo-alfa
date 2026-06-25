@@ -13,58 +13,28 @@ export function getPieceAspectRatio(piece: CutPiece): number {
   return a / b;
 }
 
-/** Agrupa dimensões semelhantes (útil para shelf e skyline). */
-function nestingHeightBucket(piece: CutPiece): number {
-  return Math.round(Math.max(piece.largura_mm, piece.altura_mm) / 25) * 25;
-}
-
-function nestingWidthBucket(piece: CutPiece): number {
-  return Math.round(Math.min(piece.largura_mm, piece.altura_mm) / 10) * 10;
-}
-
 /**
- * Ordenação industrial partilhada: material → altura semelhante → área → lados.
- * Melhora encaixe em shelf e reduz micro-gaps horizontais.
+ * Ordenação industrial partilhada: material → altura desc → largura desc → área desc.
+ * Mantém a geometria original e só altera a prioridade de tentativa no nesting.
  */
 export function comparePiecesForNesting(a: CutPiece, b: CutPiece): number {
   const matA = a.materialId ?? "";
   const matB = b.materialId ?? "";
   if (matA !== matB) return matA.localeCompare(matB);
 
-  const hbA = nestingHeightBucket(a);
-  const hbB = nestingHeightBucket(b);
-  if (hbA !== hbB) return hbB - hbA;
-
-  const wbA = nestingWidthBucket(a);
-  const wbB = nestingWidthBucket(b);
-  if (wbA !== wbB) return wbB - wbA;
-
+  if (b.altura_mm !== a.altura_mm) return b.altura_mm - a.altura_mm;
+  if (b.largura_mm !== a.largura_mm) return b.largura_mm - a.largura_mm;
   const areaDiff = getPieceArea(b) - getPieceArea(a);
-  if (areaDiff !== 0) {
-    const maxAb = Math.max(getPieceArea(a), getPieceArea(b));
-    if (maxAb > 1 && Math.abs(areaDiff) <= maxAb * 0.05) {
-      const ar = getPieceAspectRatio(b) - getPieceAspectRatio(a);
-      if (ar !== 0) return ar;
-    } else {
-      return areaDiff;
-    }
-  }
-
-  const bMax = Math.max(b.largura_mm, b.altura_mm);
-  const aMax = Math.max(a.largura_mm, a.altura_mm);
-  if (bMax !== aMax) return bMax - aMax;
-  const bMin = Math.min(b.largura_mm, b.altura_mm);
-  const aMin = Math.min(a.largura_mm, a.altura_mm);
-  if (bMin !== aMin) return bMin - aMin;
+  if (areaDiff !== 0) return areaDiff;
   return getPieceAspectRatio(b) - getPieceAspectRatio(a);
 }
 
-/** Limiar relativo para classificar peças "pequenas" na ordenação sandwich (A4). */
+/** Limiar relativo para classificar peças "pequenas" no grupo de gap-fill. */
 const SANDWICH_SMALL_AREA_RATIO = 0.12;
 
 /**
- * Fase A (A4): após ordenação por buckets, intercala peças pequenas a cada 3 grandes.
- * Só usado em reorderPieces mode=production — não afecta gap-fill.
+ * Agrupa peças pequenas no fim da lista de produção para ficarem disponíveis ao
+ * scan de gap-fill/rescue sem perturbar as chapas principais já compactas.
  */
 export function applySandwichOrdering(sorted: CutPiece[]): CutPiece[] {
   if (sorted.length <= 4) return sorted;
@@ -81,28 +51,7 @@ export function applySandwichOrdering(sorted: CutPiece[]): CutPiece[] {
 
   if (small.length === 0 || large.length === 0) return sorted;
 
-  const result: CutPiece[] = [];
-  let li = 0;
-  let si = 0;
-  while (li < large.length || si < small.length) {
-    for (let g = 0; g < 3 && li < large.length; g++) {
-      result.push(large[li]!);
-      li++;
-    }
-    if (si < small.length) {
-      result.push(small[si]!);
-      si++;
-    }
-  }
-  while (li < large.length) {
-    result.push(large[li]!);
-    li++;
-  }
-  while (si < small.length) {
-    result.push(small[si]!);
-    si++;
-  }
-  return result;
+  return [...large, ...small];
 }
 
 /**
