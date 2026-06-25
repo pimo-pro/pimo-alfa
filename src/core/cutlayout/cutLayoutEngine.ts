@@ -747,8 +747,8 @@ export function cutlistToPieces(
       normalizedHoles.push({ x, y, diameter: d, depth: dep, holeType: ht, topDrillable: td });
     };
     // Quando as dimensões são reordenadas (largura < altura → peça fica altura×largura no layout),
-    // as coordenadas dos furos (x,y) estão no espaço (largura, altura) do painel; no layout o eixo X
-    // corresponde à altura e o Y à largura → trocar (x,y) para (y,x) para alinhar ao Layout de Corte PRO.
+    // as coordenadas locais precisam acompanhar a mesma rotação do retângulo, não apenas trocar eixos.
+    // A conversão preserva a origem industrial bottom-left: (x, y) → (y, larguraOriginal - x).
     const origL = Number(item.dimensoes?.largura) || 0;
     const origA = Number(item.dimensoes?.altura) || 0;
     const dimensionsSwapped = origL > 0 && origA > 0 && origL < origA;
@@ -757,7 +757,7 @@ export function cutlistToPieces(
       let x = Number(h?.x);
       let y = Number(h?.y);
       if (dimensionsSwapped) {
-        [x, y] = [y, x];
+        [x, y] = [y, origL - x];
       }
       const diameter = Number(h?.diameter);
       const depth = Number(h?.depth);

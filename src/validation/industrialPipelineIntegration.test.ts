@@ -186,6 +186,26 @@ describe("Pipeline industrial A→D — integração final (Fase E)", () => {
     expect(placed.some((pl) => pl.partName.includes("_RODA_PE_"))).toBe(true);
   });
 
+  it("cutlistToPieces — roda furos com a normalização de peças altas", () => {
+    const [piece] = cutlistToPieces([
+      {
+        nome: "Painel alto",
+        tipo: "lateral",
+        boxId: "box1",
+        materialId: "mdf_branco",
+        material: "mdf_branco",
+        dimensoes: { largura: 80, altura: 200, profundidade: 19 },
+        espessura: 19,
+        quantidade: 1,
+        drillHoles: [{ x: 10, y: 30, diameter: 5, depth: 12 }],
+      },
+    ]);
+
+    expect(piece?.largura_mm).toBe(200);
+    expect(piece?.altura_mm).toBe(80);
+    expect(piece?.drillHoles?.[0]).toMatchObject({ x: 30, y: 70 });
+  });
+
   it("TCN/CNC — pipeline industrial aceita cutlist completa ou falha só por matéria-prima", () => {
     const { snap } = buildFullIndustrialScenario();
     try {
