@@ -100,14 +100,37 @@ export function resolveCaixaFornoPortaEspessuraMm(
   return Math.max(1, Number(box.espessura) || 19);
 }
 
-/** Profundidade do separador: P externa − espessura da porta (com porta) ou P externa (sem porta). */
+/** Profundidade do separador = profundidade da peça CIMA (P útil interna, igual às laterais). */
 export function resolveCaixaFornoSeparadorProfundidadeMm(
-  box: Pick<BoxModule, "dimensoes" | "profundidadeExterna" | "portaTipo" | "doorsLayer" | "espessura">
+  box: Pick<
+    BoxModule,
+    "dimensoes" | "espessura" | "profundidadeExterna" | "portaTipo" | "doorsLayer" | "costaAtiva"
+  >
 ): number {
+  const espessuraMm = Math.max(1, Number(box.espessura) || 19);
   const profundidadeExternaMm =
     Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || CAIXA_FORNO_DEFAULT_DIMS.profundidade;
-  if (!hasCaixaFornoPorta(box)) return clampPositive(profundidadeExternaMm);
-  return clampPositive(profundidadeExternaMm - resolveCaixaFornoPortaEspessuraMm(box));
+  return clampPositive(
+    getProfundidadeInternaUtilMm(
+      {
+        dimensoes: { profundidade: profundidadeExternaMm },
+        espessura: espessuraMm,
+        portaTipo: box.portaTipo,
+        doorsLayer: box.doorsLayer,
+        costaAtiva: box.costaAtiva,
+      },
+      resolveCostaThicknessMm(box as BoxModule)
+    )
+  );
+}
+
+/** Altura da costa superior: da borda inferior da CIMA até a borda inferior do separador mais próximo. */
+export function computeCaixaFornoCostaSuperiorAlturaMm(
+  alturaTotalMm: number,
+  nearestSepBottomMm: number,
+  cimaEspessuraMm: number
+): number {
+  return clampPositive(alturaTotalMm - nearestSepBottomMm - cimaEspessuraMm);
 }
 
 export function getCaixaFornoSepBottomsMm(
@@ -132,25 +155,22 @@ export function computeCaixaFornoLayout(
   const larguraMm = Math.max(1, Number(box.dimensoes.largura) || CAIXA_FORNO_DEFAULT_DIMS.largura);
   const profundidadeExternaMm =
     Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || CAIXA_FORNO_DEFAULT_DIMS.profundidade;
-  const seps = getCaixaFornoSepBottomsMm(espessuraMm);
+  const seps = getCaixaFornoSepBottomsMm(CAIXA_FORNO_SEPARADOR_ESPESSURA_MM);
   const larguraInternaMm = clampPositive(larguraMm - espessuraMm * 2);
-  const profundidadeInternaMm = clampPositive(
-    getProfundidadeInternaUtilMm(
-      {
-        dimensoes: { profundidade: profundidadeExternaMm },
-        espessura: espessuraMm,
-        portaTipo: box.portaTipo,
-        doorsLayer: box.doorsLayer,
-        costaAtiva: box.costaAtiva,
-      },
-      resolveCostaThicknessMm(box as BoxModule)
-    )
-  );
+  const profundidadeInternaMm = resolveCaixaFornoSeparadorProfundidadeMm({
+    ...box,
+    dimensoes: { ...box.dimensoes, profundidade: profundidadeExternaMm },
+    profundidadeExterna: profundidadeExternaMm,
+  });
   const portaInferiorAlturaMm = clampPositive(seps.sep1BottomMm - CAIXA_FORNO_DOOR_FLOOR_GAP_MM);
   const portaSuperiorAlturaMm = clampPositive(alturaTotalMm - seps.upperStartMm);
-  const costaSuperiorAlturaMm = portaSuperiorAlturaMm;
+  const costaSuperiorAlturaMm = computeCaixaFornoCostaSuperiorAlturaMm(
+    alturaTotalMm,
+    seps.upperStartMm,
+    espessuraMm
+  );
   const larguraUtilPortaMm = clampPositive(larguraMm - DOOR_GAP_MM * 2);
-  const profundidadeSeparadorMm = resolveCaixaFornoSeparadorProfundidadeMm(box);
+  const profundidadeSeparadorMm = profundidadeInternaMm;
 
   return {
     ...seps,
@@ -176,7 +196,10 @@ function separadorPositionMmFromBottom(
 }
 
 export function buildCaixaFornoSeparadores(
-  box: Pick<BoxModule, "dimensoes" | "espessura" | "profundidadeExterna" | "portaTipo" | "doorsLayer">
+  box: Pick<
+    BoxModule,
+    "dimensoes" | "espessura" | "profundidadeExterna" | "portaTipo" | "doorsLayer" | "costaAtiva"
+  >
 ): SeparadorItem[] {
   const boxEspessuraMm = Math.max(1, Number(box.espessura) || 19);
   const sepEspessuraMm = CAIXA_FORNO_SEPARADOR_ESPESSURA_MM;
@@ -350,11 +373,12 @@ type CaixaFornoPainelIndustrial = {
 export function gerarPaineisCaixaForno(box: BoxModule): CaixaFornoPainelIndustrial[] {
   const layout = computeCaixaFornoLayout(box);
   const bodyMaterialId = getMaterialForBox(box, undefined) || "mdf_branco";
-  const material = getIndustrialMaterial(bodyMaterialId).nome;
+  const materialInfo = getIndustrialMaterial(bodyMaterialId);
+  const material = materialInfo.nome;
   const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialId);
   const espessura = layout.espessuraMm;
   const sepEspessura = CAIXA_FORNO_SEPARADOR_ESPESSURA_MM;
-  const sepProfundidade = layout.profundidadeSeparadorMm;
+  const sepProfundidade = layout.profundidadeInternaMm;
   const largura = Number(box.dimensoes.largura) || 0;
   const profundidadeUtil = layout.profundidadeInternaMm;
   const panelIds = box.panelIds;
@@ -454,19 +478,17 @@ export function gerarPaineisCaixaForno(box: BoxModule): CaixaFornoPainelIndustri
       largura_mm: layout.larguraInternaMm,
       altura_mm: layout.costaSuperiorAlturaMm,
       espessura_mm: costaMaterial.thicknessMm,
-      material: costaMaterial.label,
+      material,
       orientacaoFibra: "vertical",
       quantidade: 1,
       custo: 0,
     },
   ];
 
-  const materialInfo = getIndustrialMaterial(bodyMaterialId);
   return paineis.map((painel) => ({
     ...painel,
     custo: 0,
-    material:
-      painel.tipo === "costa_superior" ? costaMaterial.label : materialInfo.nome,
+    material: painel.tipo === "costa_superior" ? costaMaterial.label : materialInfo.nome,
     espessura_mm:
       painel.tipo === "costa_superior"
         ? costaMaterial.thicknessMm
@@ -503,10 +525,10 @@ export function getCaixaFornoSeparadorMeshSpecs(
   const sepThicknessM = CAIXA_FORNO_SEPARADOR_ESPESSURA_MM / 1000;
   const specs: CaixaFornoSepMeshSpec[] = [];
 
+  const layout = computeCaixaFornoLayout(box as BoxModule);
+
   for (const sep of box.separadores ?? []) {
-    const profundidadeMm =
-      sep.profundidadeMm ??
-      resolveCaixaFornoSeparadorProfundidadeMm(box as BoxModule);
+    const profundidadeMm = sep.profundidadeMm ?? layout.profundidadeInternaMm;
     const larguraMm =
       sep.larguraMm ?? Math.max(1, widthM * 1000 - boxEspessuraMm * 2 - SHELF_WIDTH_CLEARANCE_MM);
     const centerYAbs = resolveSeparadorCenterY(box, sep);

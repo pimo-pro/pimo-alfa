@@ -96,6 +96,7 @@ function PreviewCanvas({ item, config }: { item: UnifiedModelItem; config: BoxCo
             profundidadeExterna: item.dimensoes.profundidade_mm,
             portaTipo: "porta_simples",
             doorsLayer: [{ thickness: 19 } as import("../../../models/BoxLayers").DoorLayerItem],
+            costaAtiva: true,
           })
         : undefined,
       castShadow: true, receiveShadow: true,

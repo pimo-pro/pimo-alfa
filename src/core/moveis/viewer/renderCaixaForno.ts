@@ -123,7 +123,7 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
   const upperStartLocalM = layout.upperStartMm / 1000 - height / 2;
   const costaHeightM = Math.max(0.001, layout.costaSuperiorAlturaMm / 1000);
   const costaCenterY = upperStartLocalM + costaHeightM / 2;
-  const backWidth = Math.max(0.001, (width * 1000 - layout.espessuraMm * 2) / 1000);
+  const backWidth = Math.max(0.001, layout.larguraInternaMm / 1000);
 
   const back = deps.panelFactory.createPanel(
     backWidth,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCutlistForCaixaForno,
   CAIXA_FORNO_SEPARADOR_ESPESSURA_MM,
+  computeCaixaFornoCostaSuperiorAlturaMm,
   computeCaixaFornoLayout,
   createCaixaForno,
   getCaixaFornoSepBottomsMm,
@@ -14,6 +15,7 @@ import { convertWorkspaceToBox } from "../../../context/projectState";
 import type { PanelDrillHole, WorkspaceBox } from "../../types";
 import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
 import { computeDoorVerticalGaps } from "../../doors/doorLayerGeometry";
+import { COSTA_FIXED_THICKNESS_MM } from "../../materials/materials.api";
 
 function hingeOffsetsFromDoorBottom(holes: PanelDrillHole[] | undefined, doorHeightMm: number): number[] {
   if (!holes?.length || doorHeightMm <= 0) return [];
@@ -53,8 +55,10 @@ describe("caixaFornoGenerator", () => {
       costaAtiva: true,
     });
     expect(layout2550.portaInferiorAlturaMm).toBe(800);
-    expect(layout2550.portaSuperiorAlturaMm).toBe(612);
-    expect(layout2550.costaSuperiorAlturaMm).toBe(612);
+    expect(layout2550.portaSuperiorAlturaMm).toBe(630);
+    expect(layout2550.costaSuperiorAlturaMm).toBe(611);
+    expect(layout2550.profundidadeSeparadorMm).toBe(571);
+    expect(computeCaixaFornoCostaSuperiorAlturaMm(2550, 1920, 19)).toBe(611);
 
     const layout2700 = computeCaixaFornoLayout({
       dimensoes: { largura: 600, altura: 2700, profundidade: 600 },
@@ -65,7 +69,7 @@ describe("caixaFornoGenerator", () => {
       costaAtiva: true,
     });
     expect(layout2700.portaInferiorAlturaMm).toBe(800);
-    expect(layout2700.portaSuperiorAlturaMm).toBe(762);
+    expect(layout2700.portaSuperiorAlturaMm).toBe(780);
   });
 
   it("createCaixaForno — sem fundo, sem pés, 3 seps e 2 portas", () => {
@@ -95,19 +99,20 @@ describe("caixaFornoGenerator", () => {
     expect(seps).toHaveLength(3);
     seps.forEach((sep) => {
       expect(sep.espessura_mm).toBe(CAIXA_FORNO_SEPARADOR_ESPESSURA_MM);
-      expect(sep.altura_mm).toBe(581);
+      expect(sep.altura_mm).toBe(571);
     });
   });
 
-  it("resolveCaixaFornoSeparadorProfundidadeMm — com e sem porta", () => {
+  it("resolveCaixaFornoSeparadorProfundidadeMm — profundidade da CIMA (P útil interna)", () => {
     const withDoor = resolveCaixaFornoSeparadorProfundidadeMm({
       dimensoes: { largura: 600, altura: 2550, profundidade: 600 },
       profundidadeExterna: 600,
       portaTipo: "porta_simples",
       doorsLayer: [{ thickness: 19 } as import("../../../models/BoxLayers").DoorLayerItem],
       espessura: 19,
+      costaAtiva: true,
     });
-    expect(withDoor).toBe(581);
+    expect(withDoor).toBe(571);
 
     const withoutDoor = resolveCaixaFornoSeparadorProfundidadeMm({
       dimensoes: { largura: 600, altura: 2550, profundidade: 600 },
@@ -115,8 +120,32 @@ describe("caixaFornoGenerator", () => {
       portaTipo: "sem_porta",
       doorsLayer: [],
       espessura: 19,
+      costaAtiva: true,
     });
-    expect(withoutDoor).toBe(600);
+    expect(withoutDoor).toBe(590);
+  });
+
+  it("gerarPaineisCaixaForno — costa superior com espessura 10 mm e altura correta", () => {
+    const cfg = createCaixaForno({ id: "forno-costa" });
+    const box = convertWorkspaceToBox({
+      ...cfg,
+      models: [],
+      posicaoX_mm: 0,
+      posicaoY_mm: 1275,
+      rotacaoY_90: false,
+      tipoBorda: "reta",
+      locked: false,
+      drawersLayer: [],
+    } as WorkspaceBox);
+
+    const paineis = gerarPaineisCaixaForno(box);
+    const costa = paineis.find((p) => p.tipo === "costa_superior");
+    const cima = paineis.find((p) => p.tipo === "cima");
+    expect(costa?.espessura_mm).toBe(COSTA_FIXED_THICKNESS_MM);
+    expect(costa?.altura_mm).toBe(611);
+    expect(costa?.largura_mm).toBe(562);
+    expect(cima?.altura_mm).toBe(571);
+    expect(paineis.filter((p) => p.tipo === "separador").every((sep) => sep.altura_mm === cima?.altura_mm)).toBe(true);
   });
 
   it("gerarPaineisCaixaForno — inclui laterais, cima, seps, portas e costa superior", () => {
@@ -179,7 +208,7 @@ describe("caixaFornoGenerator", () => {
     } as WorkspaceBox);
 
     expect(synced.separadores[0]?.positionMm).toBe(cfg.separadores[0]?.positionMm);
-    expect(synced.doorsLayer[1]?.height).toBe(762);
+    expect(synced.doorsLayer[1]?.height).toBe(780);
   });
 
   it("buildCutlistForCaixaForno — portas independentes com furos e laterais alinhados", () => {
