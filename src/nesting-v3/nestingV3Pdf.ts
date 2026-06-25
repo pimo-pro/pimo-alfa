@@ -630,14 +630,23 @@ export function generateNestingV3Pdf(
 }
 
 /**
- * Download directo do PDF.
+ * Download do Layout PRO industrial (mesmo pipeline geométrico que TCN).
  */
-export function downloadNestingV3Pdf(state: NestingV3State, projectName = "Projeto"): void {
-  const blob = generateNestingV3Pdf(state, projectName);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${projectName.replace(/\s+/g, "_")}_NestingV3.pdf`;
-  a.click();
-  URL.revokeObjectURL(url);
+export async function downloadNestingV3LayoutProPdf(
+  state: NestingV3State,
+  projectName = "Projeto"
+): Promise<void> {
+  const { prepareNestingV3IndustrialLayout } = await import("./nestingV3Export");
+  const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+  const layoutResult = prepareNestingV3IndustrialLayout(state);
+  const doc = await buildCutLayoutPdf(layoutResult, { projectName });
+  doc.save(`${projectName.replace(/\s+/g, "_")}_Layout_PRO.pdf`);
+}
+
+/**
+ * Download directo do PDF.
+ * Usa Layout PRO industrial (buildCutLayoutPdf) — alinhado com TCN e produção individual/lote.
+ */
+export async function downloadNestingV3Pdf(state: NestingV3State, projectName = "Projeto"): Promise<void> {
+  await downloadNestingV3LayoutProPdf(state, projectName);
 }

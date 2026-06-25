@@ -6,7 +6,6 @@ import { getSettings } from "../core/settings/settingsService";
 import { listMaterials } from "../core/materials/service";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
 import {
-  runCutLayoutInWorker,
   terminateIndustrialWorker,
 } from "../core/fabrication/industrialWorkerRunner";
 import {
@@ -20,9 +19,9 @@ import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
 import { UnifiedEtiquetaEngine } from "../core/etiquetas";
-import { cutlistToPieces, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
+import type { CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutListItemComPreco } from "../core/types";
-import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../core/cnc/cncPipeline";
+import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions } from "../core/cnc/cncPipeline";
 import {
   formatIndustrialThicknessIssue,
   resolveIndustrialThicknesses,
@@ -306,12 +305,15 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    beginIndustrialFileGeneration();
     try {
       const doc = await buildCutlistPdf(pdfProject());
       doc.save(`${slug}_cutlist.pdf`);
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de cutlist:", err);
       showToast("Erro ao gerar PDF.", "error");
+    } finally {
+      endIndustrialFileGeneration();
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
 
@@ -321,12 +323,15 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    beginIndustrialFileGeneration();
     try {
       const doc = await buildUnifiedPdf(pdfProject());
       doc.save(`${slug}_unificado.pdf`);
     } catch (err) {
       devLogger.error("Erro ao gerar PDF unificado:", err);
       showToast("Erro ao gerar PDF unificado.", "error");
+    } finally {
+      endIndustrialFileGeneration();
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
 
@@ -336,6 +341,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    beginIndustrialFileGeneration();
     try {
       const proj = pdfProject();
       const docCutlist = await buildCutlistPdf(proj);
@@ -351,6 +357,8 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       devLogger.error("Erro ao gerar PDFs:", err);
       showToast("Erro ao gerar PDFs.", "error");
+    } finally {
+      endIndustrialFileGeneration();
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
 
@@ -359,6 +367,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    beginIndustrialFileGeneration();
     try {
       const proj = pdfProject();
       const allItems = buildCutlistItemsForIndustrialExport({
@@ -379,10 +388,7 @@ export function useGerarArquivoHandlers() {
         settingsSnapshot,
         materialsSnapshot,
         cncItems,
-        {
-          ...getDefaultCncLayoutOptions(),
-          originTopRight: true,
-        },
+        getDefaultCncLayoutOptions(),
         {
           projectName: project.projectName ?? "Projeto",
           boxes: proj.boxes ?? boxes,
@@ -412,6 +418,8 @@ export function useGerarArquivoHandlers() {
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de etiquetas:", err);
       toastExportError(showToast, err, "Erro ao gerar PDF de etiquetas.");
+    } finally {
+      endIndustrialFileGeneration();
     }
   }, [hasBoxes, showToast, pdfProject, slug, boxes, project, prepareItemsForCnc]);
 
@@ -420,37 +428,48 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
-    const allItems = buildCutlistItemsForIndustrialExport({
-      boxes,
-      rules: project.rules,
-      materialId: project.materialId,
-      projectName: project.projectName,
-      remates: project.remates ?? [],
-      rodapes: project.rodapes ?? [],
-      extractedPartsByBoxId: project.extractedPartsByBoxId,
-    });
-    const pieces = cutlistToPieces(allItems);
-    if (pieces.length === 0) {
-      showToast("Nenhuma peça na cutlist para o layout de corte.", "warning");
-      return;
+    beginIndustrialFileGeneration();
+    try {
+      const allItems = buildCutlistItemsForIndustrialExport({
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+      });
+      const settingsSnapshot = getSettings();
+      const materialsSnapshot = listMaterials();
+      const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
+      if (!cncItems) return;
+
+      const thicknessBundles = await buildCncBundlesPerThickness(
+        settingsSnapshot,
+        materialsSnapshot,
+        { projectName: project.projectName ?? "Projeto" },
+        cncItems,
+        getDefaultCncLayoutOptions()
+      );
+
+      if (thicknessBundles.length === 0) {
+        showToast("Nenhuma peça com espessura válida para o layout de corte.", "warning");
+        return;
+      }
+
+      const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+      for (const bundle of thicknessBundles) {
+        const doc = await buildCutLayoutPdf(bundle.cncBundle.layoutResult, {
+          projectName: project.projectName ?? "Projeto",
+        });
+        doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.bucket)}`);
+      }
+    } catch (err) {
+      devLogger.error("Erro ao gerar layout de corte:", err);
+      toastExportError(showToast, err, "Erro ao gerar layout de corte.");
+    } finally {
+      endIndustrialFileGeneration();
     }
-    const sheetDef = getSheetDefinitionFromSettings();
-    const settingsSnapshot = getSettings();
-    const materialsSnapshot = listMaterials();
-    const result = await runCutLayoutInWorker(settingsSnapshot, materialsSnapshot, pieces, {
-      ...getDefaultCncLayoutOptions(),
-      originTopRight: true,
-      sheetLargura_mm: sheetDef.largura_mm,
-      sheetAltura_mm: sheetDef.altura_mm,
-    });
-    const { buildCutLayoutPdf } = await import(
-      "../core/cutlayout/cutLayoutPdf"
-    );
-    const doc = await buildCutLayoutPdf(result, {
-      projectName: project.projectName ?? "Projeto",
-      nestingTopRightOrigin: true,
-    });
-    doc.save(`${slug}_layout_corte.pdf`);
   }, [
     hasBoxes,
     showToast,
@@ -460,6 +479,7 @@ export function useGerarArquivoHandlers() {
     project.projectName,
     project.extractedPartsByBoxId,
     slug,
+    prepareItemsForCnc,
   ]);
 
   /** Handler legado: gera Layout de Corte PRO (distribuição das peças em chapa MDF). */

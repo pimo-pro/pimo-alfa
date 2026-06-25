@@ -13,6 +13,7 @@ import {
   buildIndustrialListPiecesPerSheet,
   resolveIndustrialListNqr,
 } from "./industrialListQr";
+import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
 
 /** Grelha preta fina — impressão e conferência manual. */
 const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
@@ -176,6 +177,7 @@ export function renderCutlistTable(
 }
 
 function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF {
+  assertIndustrialOutputAuthorized("pdf-cutlist");
   const doc = existingDoc ?? new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   if (existingDoc) {

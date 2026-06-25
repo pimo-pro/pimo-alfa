@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
 import { holeLocalToSheetOffsetMm } from "./layoutCoordinateSystem";
+import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 
@@ -295,6 +296,7 @@ export async function buildCutLayoutPdf(
   result: CutLayoutResult,
   options?: CutLayoutPdfOptions
 ): Promise<jsPDF> {
+  assertIndustrialOutputAuthorized("pdf-layout-pro");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const opts: CutLayoutPdfOptions = options ?? {};
   const logoDataUrl = await loadLogoPiDataUrl();

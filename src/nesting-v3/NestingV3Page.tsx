@@ -24,6 +24,10 @@ import { calcSheetUtilization, rotateHoles } from "./nestingV3Engine";
 import { downloadNestingV3Tcn, getV3ExportStats } from "./nestingV3Export";
 import { downloadNestingV3Pdf } from "./nestingV3Pdf";
 import { downloadNestingV3Labels } from "./nestingV3Labels";
+import {
+  beginIndustrialFileGeneration,
+  endIndustrialFileGeneration,
+} from "../core/fabrication/industrialGenerationSuspend";
 import type { V3Piece, V3Placement } from "./nestingV3Types";
 import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
 import { Icon } from "../components/icons/Icon";
@@ -650,15 +654,35 @@ export default function NestingV3Page({
 
   const handleGenerateAll = useCallback(async () => {
     setGenerating(true);
+    beginIndustrialFileGeneration();
     try {
-      await new Promise((r) => setTimeout(r, 20)); // yield to UI
-      downloadNestingV3Pdf(state, resolvedProjectName);
+      await new Promise((r) => setTimeout(r, 20));
+      await downloadNestingV3Pdf(state, resolvedProjectName);
       await new Promise((r) => setTimeout(r, 100));
       downloadNestingV3Tcn(state, resolvedProjectName);
       await new Promise((r) => setTimeout(r, 100));
       downloadNestingV3Labels(state, resolvedProjectName);
     } finally {
+      endIndustrialFileGeneration();
       setGenerating(false);
+    }
+  }, [state, resolvedProjectName]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    beginIndustrialFileGeneration();
+    try {
+      await downloadNestingV3Pdf(state, resolvedProjectName);
+    } finally {
+      endIndustrialFileGeneration();
+    }
+  }, [state, resolvedProjectName]);
+
+  const handleDownloadTcn = useCallback(() => {
+    beginIndustrialFileGeneration();
+    try {
+      downloadNestingV3Tcn(state, resolvedProjectName);
+    } finally {
+      endIndustrialFileGeneration();
     }
   }, [state, resolvedProjectName]);
 
@@ -748,11 +772,15 @@ export default function NestingV3Page({
         <div style={{ width:1, height:18, background:C.border }}/>
 
         {/* Export individual */}
-        <button type="button" onClick={() => downloadNestingV3Pdf(state, resolvedProjectName)}
-          style={toolBtn(C.muted)} title="Exportar PDF técnico">PDF</button>
-        <button type="button" onClick={() => downloadNestingV3Tcn(state, resolvedProjectName)}
+        <button type="button" onClick={() => { void handleDownloadPdf(); }}
+          style={toolBtn(C.muted)} title="Exportar Layout PRO (PDF industrial)">PDF</button>
+        <button type="button" onClick={handleDownloadTcn}
           style={toolBtn(C.muted)} title="Exportar TCN">TCN</button>
-        <button type="button" onClick={() => downloadNestingV3Labels(state, resolvedProjectName)}
+        <button type="button" onClick={() => {
+          beginIndustrialFileGeneration();
+          try { downloadNestingV3Labels(state, resolvedProjectName); }
+          finally { endIndustrialFileGeneration(); }
+        }}
           style={toolBtn(C.muted)} title="Exportar etiquetas">Etiquetas</button>
 
         {/* Generate all */}

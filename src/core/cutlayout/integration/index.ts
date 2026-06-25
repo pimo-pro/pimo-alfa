@@ -18,7 +18,8 @@ export {
   type IndustrialLayoutValidationIssueCode,
   type IndustrialLayoutCoordinateFrame,
 } from "./industrialLayoutContract";
-
+export { fixedPlacementsFromV3State, v3StateToCutLayoutResult, ensureIndustrialLayoutGeometry } from "./fixedPlacementsAdapter";
+export type { FixedPlacementsFromV3Result } from "./fixedPlacementsAdapter";
 export { v3PiecesToCutPieces } from "./v3ToCutPieces";
 export { cutLayoutResultToV3State } from "./cutLayoutResultToV3State";
 export {

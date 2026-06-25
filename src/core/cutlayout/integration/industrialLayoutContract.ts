@@ -2,7 +2,7 @@
  * Contrato industrial de layout — pós-processamento e validação partilhados.
  *
  * Centraliza compactação, pocket filling, offset de margem e validação kerf/margem
- * para SPM, MPM e (futuro) exportação Nesting V3, sem alterar geradores TCN/TRO.
+ * para SPM, MPM e exportação Nesting V3 (via fixedPlacementsAdapter), sem alterar geradores TCN/TRO.
  */
 
 import type { CutLayoutResult, CutPlacement, SheetDefinition, SheetResult } from "../cutLayoutTypes";

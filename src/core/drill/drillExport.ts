@@ -10,6 +10,7 @@ import { resolveUnifiedEtiquetaQrCode } from "../etiquetas/qr/etiquetaQr";
 import { isLateralPanel } from "./lateralDowels";
 import { getDrillBackDistance, getDrillFrontDistance } from "./drillConfig";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
+import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
@@ -270,6 +271,7 @@ export function buildDrillFilesForProject(
   items: CutListItemComPreco[],
   project: ProjectContext
 ): DrillExportFile[] {
+  assertIndustrialOutputAuthorized("txml");
   const out: DrillExportFile[] = [];
   const frontDist = getDrillFrontDistance();
   const backDist = getDrillBackDistance();

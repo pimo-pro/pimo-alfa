@@ -4,6 +4,7 @@
  */
 
 import type { CutLayoutResult } from "../cutlayout/cutLayoutTypes";
+import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
 import type { CncDrillOperation, CncExportResult, CncExportFile } from "./cncTypes";
 import { generateTcnForPanel } from "./tcnGenerator";
 import { generateTcnForPanelV2New } from "./tcnGeneratorV2New";
@@ -19,6 +20,7 @@ export function exportCncFiles(
   layoutResult: CutLayoutResult,
   _drillOperations: CncDrillOperation[]
 ): CncExportResult {
+  assertIndustrialOutputAuthorized("tcn");
   const projectName =
     typeof _project === "object" &&
     _project !== null &&
