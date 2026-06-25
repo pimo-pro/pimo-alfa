@@ -1,0 +1,24 @@
+Fase B — Comparação vs Fase A (cutlayout)
+Gerado: 2026-06-24T23:10:49.475Z
+
+=== INDUSTRIAL_DENSE ===
+Chapas:        10 → 10 (Δ 0)
+Desperdício:   10553400 → 10553400 mm² (0.00%)
+Pockets grid:  28 → 5 (Δ 23)
+Pockets ≥150:  374 → 445 (Δ -71)
+Fragmentação:  0.6493 → 0.4670 (Δ 0.1823)
+Tempo:         220.3 → 113.2 ms (Δ -107.1 ms)
+
+=== VARIED_CUTS ===
+Chapas:        9 → 9 (Δ 0)
+Desperdício:   12805300 → 11370100 mm² (11.21%)
+Pockets grid:  12 → 9 (Δ 3)
+Pockets ≥150:  528 → 338 (Δ 190)
+Fragmentação:  0.5404 → 0.4835 (Δ 0.0569)
+Tempo:         397.8 → 156.9 ms (Δ -240.9 ms)
+
+--- Resumo ---
+Redução total chapas: 0
+Redução total desperdício: 1435200 mm²
+Redução pockets (grid): 26
+Δ tempo médio: -174 ms

@@ -7,14 +7,18 @@
  * Puro: sem efeitos colaterais no pipeline TCN.
  * Contrato de dados TCN inalterado.
  *
- * SEGURANÇA DE ROTAÇÃO:
- *   As peças são movidas mantendo a rotação original (sem re-rotação).
- *   Isto garante que grainDirection e topDrillable são respeitados.
+ * SEGURANÇA DE ROTAÇÃO (Fase A A5):
+ *   Rotação 90° permitida durante pocket fill quando grainDirection/topDrillable o permitem.
+ *   Caso contrário mantém-se a orientação original.
  */
 
 import type { CutPlacement, SheetDefinition, SheetResult } from "../cutLayoutTypes";
+import { canRotatePieceGeometry } from "../utils/cutLayoutGeomRotation";
 
 const EPS = 0.001;
+
+/** Área máxima de peça elegível a gap/pocket fill alargado (Fase A A5). */
+export const POCKET_GAP_FILL_MAX_PIECE_AREA_MM2 = 80_000;
 
 /** Dimensões mínimas para um bolsão ser considerado útil (mm). */
 const MIN_POCKET_W = 150;
@@ -105,6 +109,58 @@ function logWhRatio(w: number, h: number): number {
 }
 
 export type FreeRect = { x: number; y: number; w: number; h: number };
+
+type PlacementOrientation = { w: number; h: number; rotacao: number };
+
+function isRotatablePlacement(p: CutPlacement): boolean {
+  if (p.largura_mm === p.altura_mm) return false;
+  const meta = p.metadata;
+  if (meta && meta.industrialGrainCode === "YY") return false;
+  if (meta && typeof meta.grainDirection === "string" && meta.grainDirection) return false;
+  const holes = p.originalDrillHoles ?? p.drillHoles ?? p.holes ?? [];
+  return canRotatePieceGeometry({ drillHoles: holes, holes });
+}
+
+function getPlacementOrientations(p: CutPlacement): PlacementOrientation[] {
+  const primary: PlacementOrientation = {
+    w: p.largura_mm,
+    h: p.altura_mm,
+    rotacao: p.rotacao ?? 0,
+  };
+  const out: PlacementOrientation[] = [primary];
+  if (!isRotatablePlacement(p)) return out;
+  const altRot = primary.rotacao === 90 ? 0 : 90;
+  const alt: PlacementOrientation = { w: p.altura_mm, h: p.largura_mm, rotacao: altRot };
+  if (alt.w !== primary.w || alt.h !== primary.h) out.push(alt);
+  return out;
+}
+
+function pieceFitsPocket(pocket: FreeRect, w: number, h: number): boolean {
+  return w <= pocket.w + EPS && h <= pocket.h + EPS;
+}
+
+function pushPlacedPiece(
+  piece: CutPlacement,
+  x: number,
+  y: number,
+  o: PlacementOrientation,
+  destSheetIndex: number,
+  localPlaced: Array<{ x: number; y: number; w: number; h: number }>,
+  result: CutPlacement[]
+): CutPlacement {
+  const placed: CutPlacement = {
+    ...piece,
+    x_mm: x,
+    y_mm: y,
+    largura_mm: o.w,
+    altura_mm: o.h,
+    rotacao: o.rotacao,
+    sheetIndex: destSheetIndex,
+  };
+  result.push(placed);
+  localPlaced.push({ x, y, w: o.w, h: o.h });
+  return placed;
+}
 
 // ---------------------------------------------------------------------------
 // Utilitários internos
@@ -221,7 +277,7 @@ export function detectarBolsões(
 
 /**
  * Seleciona, de uma lista de placements candidatos, os que cabem no bolsão
- * (na sua rotação actual — sem re-rotação, por segurança de grainDirection).
+ * (orientação actual ou 90° quando permitido pela geometria industrial).
  *
  * Fase 7C: ordenação por compatibilidade de proporção com o bolsão, peças
  * quadradas-friendly em bolsões quadrados, alinhamento de tiras longas (≥3:1)
@@ -231,8 +287,8 @@ export function selecionarPeçasParaPocket(
   pocket: FreeRect,
   candidates: CutPlacement[]
 ): CutPlacement[] {
-  const fitting = candidates.filter(
-    (p) => p.largura_mm <= pocket.w + EPS && p.altura_mm <= pocket.h + EPS
+  const fitting = candidates.filter((p) =>
+    getPlacementOrientations(p).some((o) => pieceFitsPocket(pocket, o.w, o.h))
   );
 
   const pocketLong = pieceLongStripMm(pocket.w, pocket.h);
@@ -272,8 +328,8 @@ function selecionarPeçasParaPocketAreaAsc(
   pocket: FreeRect,
   candidates: CutPlacement[]
 ): CutPlacement[] {
-  const fitting = candidates.filter(
-    (p) => p.largura_mm <= pocket.w + EPS && p.altura_mm <= pocket.h + EPS
+  const fitting = candidates.filter((p) =>
+    getPlacementOrientations(p).some((o) => pieceFitsPocket(pocket, o.w, o.h))
   );
   fitting.sort((a, b) => a.largura_mm * a.altura_mm - b.largura_mm * b.altura_mm);
   return fitting;
@@ -287,7 +343,7 @@ function selecionarPeçasParaPocketAreaAsc(
  * Tenta colocar até MAX_PIECES_PER_POCKET peças dentro do bolsão
  * usando mini-shelves (faixas horizontais).
  *
- * A rotação original de cada peça é preservada (sem re-rotação).
+ * Fase A (A5): tenta rotação 90° quando permitido pela geometria industrial.
  * Valida ausência de sobreposição com as peças já existentes na chapa.
  *
  * @param pocket             Bolsão livre (posição + dimensões).
@@ -340,45 +396,49 @@ export function preencherPocket(
 
     let placedThisRound = false;
     for (const piece of ordered) {
-      const pw = piece.largura_mm;
-      const ph = piece.altura_mm;
+      const orientations = getPlacementOrientations(piece);
+      let piecePlaced = false;
 
-      let placed = false;
-      if (
-        curX + pw <= pocket.x + pocket.w + EPS &&
-        curY + ph <= pocket.y + pocket.h + EPS &&
-        !overlapsAny(curX, curY, pw, ph, localPlaced, kerf)
-      ) {
-        result.push({ ...piece, x_mm: curX, y_mm: curY, sheetIndex: destSheetIndex });
-        localPlaced.push({ x: curX, y: curY, w: pw, h: ph });
-        curX += pw + kerf;
-        shelfH = Math.max(shelfH, ph);
-        count++;
-        remaining = remaining.filter((p) => p !== piece);
-        placed = true;
-        placedThisRound = true;
-        break;
-      }
-
-      if (!placed && shelfH > 0) {
-        const newY = curY + shelfH + kerf;
-        const newX = pocket.x;
+      for (const o of orientations) {
+        const pw = o.w;
+        const ph = o.h;
         if (
-          newX + pw <= pocket.x + pocket.w + EPS &&
-          newY + ph <= pocket.y + pocket.h + EPS &&
-          !overlapsAny(newX, newY, pw, ph, localPlaced, kerf)
+          curX + pw <= pocket.x + pocket.w + EPS &&
+          curY + ph <= pocket.y + pocket.h + EPS &&
+          !overlapsAny(curX, curY, pw, ph, localPlaced, kerf)
         ) {
-          result.push({ ...piece, x_mm: newX, y_mm: newY, sheetIndex: destSheetIndex });
-          localPlaced.push({ x: newX, y: newY, w: pw, h: ph });
-          curX = newX + pw + kerf;
-          curY = newY;
-          shelfH = ph;
+          pushPlacedPiece(piece, curX, curY, o, destSheetIndex, localPlaced, result);
+          curX += pw + kerf;
+          shelfH = Math.max(shelfH, ph);
           count++;
           remaining = remaining.filter((p) => p !== piece);
+          piecePlaced = true;
           placedThisRound = true;
           break;
         }
+
+        if (shelfH > 0) {
+          const newY = curY + shelfH + kerf;
+          const newX = pocket.x;
+          if (
+            newX + pw <= pocket.x + pocket.w + EPS &&
+            newY + ph <= pocket.y + pocket.h + EPS &&
+            !overlapsAny(newX, newY, pw, ph, localPlaced, kerf)
+          ) {
+            pushPlacedPiece(piece, newX, newY, o, destSheetIndex, localPlaced, result);
+            curX = newX + pw + kerf;
+            curY = newY;
+            shelfH = ph;
+            count++;
+            remaining = remaining.filter((p) => p !== piece);
+            piecePlaced = true;
+            placedThisRound = true;
+            break;
+          }
+        }
       }
+
+      if (piecePlaced) break;
     }
 
     if (!placedThisRound) {

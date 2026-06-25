@@ -92,6 +92,7 @@ import {
   computeSolutionMetrics as computeSolutionMetricsScoring,
   type GlobalScoreMetrics,
 } from "./scoring/solutionMetrics";
+import type { ContextoChapa } from "./scoring/placementScoring";
 import { optimizeLastSheetLocally as optimizeLastSheetLocallyOpt } from "./optimization/lastSheetRefine";
 import {
   applyLnsRepack as applyLnsRepackOpt,
@@ -415,7 +416,8 @@ function pickBestPieceForSheet(
   kerf: number,
   searchWindow: number,
   rotationCfg: RotationScoringConfig,
-  bin: BinHeuristic
+  bin: BinHeuristic,
+  ctx?: ContextoChapa
 ): { index: number; placement: PlacementCandidate } | null {
   return pickBestPieceForSheetSelector(
     remaining,
@@ -433,7 +435,8 @@ function pickBestPieceForSheet(
       findPlacementGuillotine,
       calculateSheetUtilization,
       scorePlacement,
-    }
+    },
+    ctx
   );
 }
 

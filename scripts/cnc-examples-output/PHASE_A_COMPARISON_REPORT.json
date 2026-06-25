@@ -1,0 +1,65 @@
+{
+  "title": "Fase A — Comparação Nesting cutlayout (antes vs depois)",
+  "generatedAt": "2026-06-24T23:11:09.432Z",
+  "changes": [
+    "A1 ContextoChapa",
+    "A2 janela 128 + amostragem estratificada",
+    "A4 ordenação sandwich",
+    "A5 gap-fill 80k + rotação pocket fill"
+  ],
+  "comparisons": [
+    {
+      "scenario": "INDUSTRIAL_DENSE",
+      "before": {
+        "totalSheets": 10,
+        "wasteArea": 10553400
+      },
+      "after": {
+        "totalSheets": 10,
+        "wasteArea": 10553400,
+        "usedArea": 39771600,
+        "pocketsCount": 5,
+        "fragmentationScore": 0.4670138888888889,
+        "largePockets150": 445,
+        "elapsedMs": 148.7,
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      },
+      "delta": {
+        "sheets": 0,
+        "wasteArea": 0,
+        "wastePercent": "0.00%",
+        "elapsedMs": 148.7
+      }
+    },
+    {
+      "scenario": "VARIED_CUTS",
+      "before": {
+        "totalSheets": 9,
+        "wasteArea": 12805300
+      },
+      "after": {
+        "totalSheets": 9,
+        "wasteArea": 11370100,
+        "usedArea": 33922400,
+        "pocketsCount": 9,
+        "fragmentationScore": 0.4835069444444445,
+        "largePockets150": 338,
+        "elapsedMs": 198.7,
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      },
+      "delta": {
+        "sheets": 0,
+        "wasteArea": 1435200,
+        "wastePercent": "11.21%",
+        "elapsedMs": 198.7
+      }
+    }
+  ],
+  "summary": {
+    "totalSheetReduction": 0,
+    "totalWasteReduction": 1435200,
+    "avgElapsedMs": 173.7
+  }
+}

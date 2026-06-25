@@ -1,6 +1,6 @@
 {
   "title": "Nesting v3.2 Benchmark (v2 vs v3 vs v3.1 vs v3.2)",
-  "generatedAt": "2026-06-24T23:02:22.786Z",
+  "generatedAt": "2026-06-24T22:58:27.130Z",
   "scenarios": [
     {
       "scenario": "INDUSTRIAL_DENSE",
@@ -38,10 +38,10 @@
         "legacyComparableScore": 20553400
       },
       "compactness": {
-        "v2": 0.8703,
-        "v3": 0.8703,
-        "v31": 0.8703,
-        "v32": 0.8703
+        "v2": 0.847,
+        "v3": 0.847,
+        "v31": 0.847,
+        "v32": 0.847
       },
       "deltas": {
         "panelReduction": 0,

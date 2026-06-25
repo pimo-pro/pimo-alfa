@@ -1,0 +1,21 @@
+Fase A — Comparação Nesting cutlayout (antes vs depois)
+Gerado: 2026-06-24T23:11:09.432Z
+
+=== INDUSTRIAL_DENSE ===
+Chapas:     10 → 10 (Δ -0)
+Desperdício: 10553400 → 10553400 mm² (Δ 0.00%)
+Pockets (grid): 5 | Pockets ≥150×150: 445
+Fragmentação: 0.4670
+Tempo: 148.7 ms | Estratégia: skyline/bestFit
+
+=== VARIED_CUTS ===
+Chapas:     9 → 9 (Δ -0)
+Desperdício: 12805300 → 11370100 mm² (Δ 11.21%)
+Pockets (grid): 9 | Pockets ≥150×150: 338
+Fragmentação: 0.4835
+Tempo: 198.7 ms | Estratégia: skyline/bestFit
+
+--- Resumo ---
+Redução total chapas: 0
+Redução total desperdício: 1435200 mm²
+Tempo médio: 173.7 ms

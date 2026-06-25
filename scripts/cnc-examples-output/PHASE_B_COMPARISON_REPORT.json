@@ -1,0 +1,86 @@
+{
+  "title": "Fase B — Comparação vs Fase A (cutlayout)",
+  "generatedAt": "2026-06-24T23:10:49.475Z",
+  "changes": [
+    "B1 Residual rectangle scan",
+    "B2 Lookahead 1-pass (top 3)",
+    "B3 Pair packing virtual",
+    "B4 Micro-placement 5mm grid"
+  ],
+  "comparisons": [
+    {
+      "scenario": "INDUSTRIAL_DENSE",
+      "beforePhaseA": {
+        "totalSheets": 10,
+        "wasteArea": 10553400,
+        "usedArea": 39771600,
+        "pocketsCount": 28,
+        "fragmentationScore": 0.6493055555555556,
+        "largePockets150": 374,
+        "elapsedMs": 220.3,
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      },
+      "afterPhaseB": {
+        "totalSheets": 10,
+        "wasteArea": 10553400,
+        "usedArea": 39771600,
+        "pocketsCount": 5,
+        "fragmentationScore": 0.4670138888888889,
+        "largePockets150": 445,
+        "elapsedMs": 113.2,
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      },
+      "delta": {
+        "sheets": 0,
+        "wasteArea": 0,
+        "wastePercent": "0.00%",
+        "pockets": 23,
+        "fragmentation": 0.1823,
+        "largePockets150": -71,
+        "elapsedMs": -107.1
+      }
+    },
+    {
+      "scenario": "VARIED_CUTS",
+      "beforePhaseA": {
+        "totalSheets": 9,
+        "wasteArea": 12805300,
+        "usedArea": 32487200,
+        "pocketsCount": 12,
+        "fragmentationScore": 0.5403645833333334,
+        "largePockets150": 528,
+        "elapsedMs": 397.8,
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      },
+      "afterPhaseB": {
+        "totalSheets": 9,
+        "wasteArea": 11370100,
+        "usedArea": 33922400,
+        "pocketsCount": 9,
+        "fragmentationScore": 0.4835069444444445,
+        "largePockets150": 338,
+        "elapsedMs": 156.9,
+        "strategy": "skyline",
+        "binHeuristic": "bestFit"
+      },
+      "delta": {
+        "sheets": 0,
+        "wasteArea": 1435200,
+        "wastePercent": "11.21%",
+        "pockets": 3,
+        "fragmentation": 0.0569,
+        "largePockets150": 190,
+        "elapsedMs": -240.9
+      }
+    }
+  ],
+  "summary": {
+    "totalSheetReduction": 0,
+    "totalWasteReduction": 1435200,
+    "totalPocketReduction": 26,
+    "avgElapsedDeltaMs": -174
+  }
+}

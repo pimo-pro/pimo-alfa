@@ -14,6 +14,8 @@ export type ContextoChapa = {
   sheetIndex: number;
   /** Estimativa do número total de chapas no layout atual. */
   totalSheets: number;
+  /** Chapa tardia (índice relativo > 40% do total estimado). */
+  isLateSheet?: boolean;
 };
 
 export function buildCandidateCoordinates(
@@ -136,13 +138,23 @@ export function scorePlacement(
     Math.min(0.5, expectedUtil * 0.55) +
     (expectedUtil > 0.80 ? Math.min(0.25, (expectedUtil - 0.80) * 2.5) : 0);
 
+  const tightnessVal = placement.tightnessScore ?? 0;
+
   // Fator de chapa tardia: 0.0 nas primeiras chapas, crescendo linearmente até 1.0 a partir de 40% do total.
   const lateFactor =
     ctx && ctx.totalSheets > 1
-      ? Math.max(0, Math.min(1, (ctx.sheetIndex / ctx.totalSheets - 0.4) / 0.6))
+      ? ctx.isLateSheet === true
+        ? 1
+        : ctx.isLateSheet === false
+          ? 0
+          : Math.max(0, Math.min(1, (ctx.sheetIndex / ctx.totalSheets - 0.4) / 0.6))
       : 0;
 
-  const tightnessVal = placement.tightnessScore ?? 0;
+  // Fase A (A1): favorecer compactação precoce nas chapas iniciais.
+  const earlyCompactionBonus =
+    ctx?.isLateSheet === false
+      ? utilizationReward * 0.08 + compactnessScore * 0.12 + (tightnessVal >= 0.5 ? 0.06 : 0)
+      : 0;
 
   // Fase 3: tightnessBonus reforçado nas chapas tardias para forçar compactação.
   const tightnessBonus = tightnessVal * (0.60 + lateFactor * 0.38);
@@ -179,7 +191,8 @@ export function scorePlacement(
     rotationScore +
     compactnessScore +
     tightnessBonus +
-    gapFillBonus -
+    gapFillBonus +
+    earlyCompactionBonus -
     isolationPenalty -
     islandPenalty
   );

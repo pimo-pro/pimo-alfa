@@ -59,6 +59,52 @@ export function comparePiecesForNesting(a: CutPiece, b: CutPiece): number {
   return getPieceAspectRatio(b) - getPieceAspectRatio(a);
 }
 
+/** Limiar relativo para classificar peças "pequenas" na ordenação sandwich (A4). */
+const SANDWICH_SMALL_AREA_RATIO = 0.12;
+
+/**
+ * Fase A (A4): após ordenação por buckets, intercala peças pequenas a cada 3 grandes.
+ * Só usado em reorderPieces mode=production — não afecta gap-fill.
+ */
+export function applySandwichOrdering(sorted: CutPiece[]): CutPiece[] {
+  if (sorted.length <= 4) return sorted;
+
+  const maxArea = Math.max(...sorted.map(getPieceArea));
+  const smallThreshold = maxArea * SANDWICH_SMALL_AREA_RATIO;
+
+  const large: CutPiece[] = [];
+  const small: CutPiece[] = [];
+  for (const p of sorted) {
+    if (getPieceArea(p) >= smallThreshold) large.push(p);
+    else small.push(p);
+  }
+
+  if (small.length === 0 || large.length === 0) return sorted;
+
+  const result: CutPiece[] = [];
+  let li = 0;
+  let si = 0;
+  while (li < large.length || si < small.length) {
+    for (let g = 0; g < 3 && li < large.length; g++) {
+      result.push(large[li]!);
+      li++;
+    }
+    if (si < small.length) {
+      result.push(small[si]!);
+      si++;
+    }
+  }
+  while (li < large.length) {
+    result.push(large[li]!);
+    li++;
+  }
+  while (si < small.length) {
+    result.push(small[si]!);
+    si++;
+  }
+  return result;
+}
+
 /**
  * Determina se uma peça pode ser rodada 90° pelo motor de nesting.
  * Verifica grainDirection, dimensões quadradas e operações geométricas direcionais
@@ -79,10 +125,12 @@ export function reorderPieces(pieces: CutPiece[], mode: "production" | "gapFill"
   };
   const pieceLongStrip = (p: CutPiece): boolean => getPieceAspectRatio(p) >= 3;
 
+  if (mode === "production") {
+    const sorted = [...pieces].sort(comparePiecesForNesting);
+    return applySandwichOrdering(sorted);
+  }
+
   return [...pieces].sort((a, b) => {
-    if (mode === "production") {
-      return comparePiecesForNesting(a, b);
-    }
     const longA = pieceLongStrip(a) ? 1 : 0;
     const longB = pieceLongStrip(b) ? 1 : 0;
     if (longA !== longB) return longA - longB;
