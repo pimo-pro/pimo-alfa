@@ -28,6 +28,8 @@ type InnerContour = {
 };
 
 type PlacementLike = {
+  x_mm: number;
+  y_mm: number;
   rotacao: number;
   largura_mm: number;
   altura_mm: number;
@@ -35,9 +37,18 @@ type PlacementLike = {
   holes?: DrillHole[];
   originalDrillHoles?: DrillHole[];
   innerContours?: InnerContour[];
+  originalInnerContours?: InnerContour[];
 };
 
-const rotatedContourPlacements = new WeakSet<PlacementLike>();
+type SheetLike = {
+  sheet?: {
+    largura_mm: number;
+    altura_mm: number;
+  };
+  placements: PlacementLike[];
+};
+
+const EPS = 0.001;
 
 function normalizeRotation(rotacao: number): 0 | 90 | 180 | 270 {
   const r = ((Math.round(rotacao) % 360) + 360) % 360;
@@ -52,6 +63,146 @@ function addRotation<T extends DrillHole>(op: T, angle: 0 | 90 | 180 | 270): T {
   if (typeof next.rotacao === "number") next.rotacao = (next.rotacao + angle) % 360;
   if (typeof next.angle === "number") next.angle = (next.angle + angle) % 360;
   return next;
+}
+
+function isFinitePositive(value: number): boolean {
+  return Number.isFinite(value) && value > 0;
+}
+
+function within(min: number, value: number, max: number): boolean {
+  return value >= min - EPS && value <= max + EPS;
+}
+
+function originalDimensions(p: PlacementLike, rotation: 0 | 90 | 180 | 270): { w: number; h: number } {
+  const swapsDims = rotation === 90 || rotation === 270;
+  return {
+    w: swapsDims ? p.altura_mm : p.largura_mm,
+    h: swapsDims ? p.largura_mm : p.altura_mm,
+  };
+}
+
+function holeFinalOffset(
+  h: DrillHole,
+  rotation: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number
+): { x: number; y: number } {
+  if (rotation === 90) return { x: h.y, y: origW - h.x };
+  if (rotation === 180) return { x: origW - h.x, y: origH - h.y };
+  if (rotation === 270) return { x: origH - h.y, y: h.x };
+  return { x: h.x, y: h.y };
+}
+
+function contourFinalRect(
+  c: InnerContour,
+  rotation: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number
+): InnerContour {
+  if (rotation === 90) {
+    return {
+      x_mm: c.y_mm,
+      y_mm: origW - c.x_mm - c.largura_mm,
+      largura_mm: c.altura_mm,
+      altura_mm: c.largura_mm,
+    };
+  }
+  if (rotation === 180) {
+    return {
+      x_mm: origW - c.x_mm - c.largura_mm,
+      y_mm: origH - c.y_mm - c.altura_mm,
+      largura_mm: c.largura_mm,
+      altura_mm: c.altura_mm,
+    };
+  }
+  if (rotation === 270) {
+    return {
+      x_mm: origH - c.y_mm - c.altura_mm,
+      y_mm: c.x_mm,
+      largura_mm: c.altura_mm,
+      altura_mm: c.largura_mm,
+    };
+  }
+  return { ...c };
+}
+
+function isHoleInsidePlacementAndSheet(
+  p: PlacementLike,
+  h: DrillHole,
+  rotation: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number,
+  sheet?: SheetLike["sheet"]
+): boolean {
+  if (!Number.isFinite(h.x) || !Number.isFinite(h.y)) return false;
+  const r = Number.isFinite(h.diameter) && h.diameter > 0 ? h.diameter / 2 : 0;
+  const off = holeFinalOffset(h, rotation, origW, origH);
+  if (!within(r, off.x, p.largura_mm - r) || !within(r, off.y, p.altura_mm - r)) return false;
+  if (!sheet) return true;
+  const absX = p.x_mm + off.x;
+  const absY = p.y_mm + off.y;
+  return within(r, absX, sheet.largura_mm - r) && within(r, absY, sheet.altura_mm - r);
+}
+
+function isContourInsidePlacementAndSheet(p: PlacementLike, rect: InnerContour, sheet?: SheetLike["sheet"]): boolean {
+  if (
+    !Number.isFinite(rect.x_mm) ||
+    !Number.isFinite(rect.y_mm) ||
+    !isFinitePositive(rect.largura_mm) ||
+    !isFinitePositive(rect.altura_mm)
+  ) {
+    return false;
+  }
+
+  const insidePlacement =
+    rect.x_mm >= -EPS &&
+    rect.y_mm >= -EPS &&
+    rect.x_mm + rect.largura_mm <= p.largura_mm + EPS &&
+    rect.y_mm + rect.altura_mm <= p.altura_mm + EPS;
+  if (!insidePlacement) return false;
+
+  if (!sheet) return true;
+  return (
+    p.x_mm + rect.x_mm >= -EPS &&
+    p.y_mm + rect.y_mm >= -EPS &&
+    p.x_mm + rect.x_mm + rect.largura_mm <= sheet.largura_mm + EPS &&
+    p.y_mm + rect.y_mm + rect.altura_mm <= sheet.altura_mm + EPS
+  );
+}
+
+/**
+ * Coordenadas que os geradores atuais esperam receber:
+ * - rot=90: furos continuam no referencial original, porque o gerador aplica rotacao.
+ * - rot=180/270: geradores tratam como offset direto; enviamos já no espaço colocado.
+ */
+function toConsumerHole(
+  h: DrillHole,
+  rotation: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number
+): DrillHole {
+  const withAngle = addRotation({ ...h }, rotation);
+  if (rotation === 0 || rotation === 90) return withAngle;
+  const off = holeFinalOffset(h, rotation, origW, origH);
+  return { ...withAngle, x: off.x, y: off.y };
+}
+
+function toConsumerContour(
+  c: InnerContour,
+  rotation: 0 | 90 | 180 | 270,
+  origW: number,
+  origH: number
+): InnerContour {
+  if (rotation === 90) {
+    return {
+      // O gerador calcula sy = placedHeight - x_mm; usar a aresta direita original.
+      x_mm: c.x_mm + c.largura_mm,
+      y_mm: c.y_mm,
+      largura_mm: c.largura_mm,
+      altura_mm: c.altura_mm,
+    };
+  }
+  return contourFinalRect(c, rotation, origW, origH);
 }
 
 /**
@@ -139,19 +290,17 @@ export function canRotatePieceGeometry(piece: {
 }
 
 /**
- * Pós-processamento geométrico de todas as chapas após runCutLayout.
+ * Pós-processamento geométrico de todas as chapas após o layout final.
  *
  * Para cada placement:
- *  1. Garante que originalDrillHoles contém sempre as coords pré-rotação (para PDF).
- *  2. Para rotacao=90/180/270: transforma drillHoles e innerContours para o espaço colocado
- *     (para consumidores industriais que leem drillHoles diretamente).
+ *  1. Garante backups das coords originais.
+ *  2. Calcula a geometria absoluta final implícita (placement + rotação).
+ *  3. Remove operações que ficariam fora da peça ou fora da chapa.
+ *  4. Devolve coords compatíveis com os consumidores atuais sem alterar geradores.
  *
- * Relação de dims após rotação pelo motor:
- *   placed.largura_mm = original altura   → placed.altura_mm = original largura (origW)
- *
- * Seguro chamar múltiplas vezes: idempotente graças ao guarda originalDrillHoles.
+ * Seguro chamar múltiplas vezes: a fonte é sempre originalDrillHoles/originalInnerContours.
  */
-export function applyRotationGeometryToSheets(sheets: Array<{ placements: PlacementLike[] }>): void {
+export function applyRotationGeometryToSheets(sheets: SheetLike[]): void {
   for (const s of sheets) {
     for (const p of s.placements) {
       const rawHoles = p.drillHoles ?? p.holes;
@@ -161,23 +310,29 @@ export function applyRotationGeometryToSheets(sheets: Array<{ placements: Placem
         p.originalDrillHoles = rawHoles.map((h) => ({ ...h }));
       }
 
-      const rotation = normalizeRotation(p.rotacao);
-      if (rotation === 0) continue;
+      if (!p.originalInnerContours && p.innerContours && p.innerContours.length > 0) {
+        p.originalInnerContours = p.innerContours.map((c) => ({ ...c }));
+      }
 
-      const swapsDims = rotation === 90 || rotation === 270;
-      const origW = swapsDims ? p.altura_mm : p.largura_mm;
-      const origH = swapsDims ? p.largura_mm : p.altura_mm;
+      const rotation = normalizeRotation(p.rotacao);
+      const { w: origW, h: origH } = originalDimensions(p, rotation);
 
       const origHoles = p.originalDrillHoles ?? rawHoles;
       if (origHoles && origHoles.length > 0) {
-        const rotatedHoles = rotateDrillHoles(origHoles, rotation, origW, origH);
-        p.drillHoles = rotatedHoles;
-        if (p.holes !== undefined) p.holes = rotatedHoles;
+        const validHoles = origHoles
+          .filter((h) => isHoleInsidePlacementAndSheet(p, h, rotation, origW, origH, s.sheet))
+          .map((h) => toConsumerHole(h, rotation, origW, origH));
+        p.drillHoles = validHoles.length > 0 ? validHoles : undefined;
+        if (p.holes !== undefined) p.holes = validHoles.length > 0 ? validHoles : undefined;
       }
 
-      if (p.innerContours && p.innerContours.length > 0 && !rotatedContourPlacements.has(p)) {
-        p.innerContours = rotateInnerContours(p.innerContours, rotation, origW, origH);
-        rotatedContourPlacements.add(p);
+      const origContours = p.originalInnerContours ?? p.innerContours;
+      if (origContours && origContours.length > 0) {
+        const validContours = origContours
+          .map((c) => ({ original: c, final: contourFinalRect(c, rotation, origW, origH) }))
+          .filter(({ final }) => isContourInsidePlacementAndSheet(p, final, s.sheet))
+          .map(({ original }) => toConsumerContour(original, rotation, origW, origH));
+        p.innerContours = validContours.length > 0 ? validContours : undefined;
       }
     }
   }

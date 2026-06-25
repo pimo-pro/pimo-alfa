@@ -123,7 +123,7 @@ describe("industrialLayoutContract", () => {
     expect(out.sheets[0].placements[0].y_mm).toBe(5);
   });
 
-  it("roda furos e rasgos com a peça sem alterar a fonte original", () => {
+  it("prepara furos e rasgos para a rotação final sem alterar a fonte original", () => {
     const input: CutLayoutResult = {
       sheets: [
         {
@@ -156,13 +156,61 @@ describe("industrialLayoutContract", () => {
 
     const placement = out.sheets[0].placements[0];
     expect(placement.originalDrillHoles?.[0]).toMatchObject({ x: 10, y: 20 });
-    expect(placement.drillHoles?.[0]).toMatchObject({ x: 20, y: 90 });
-    expect(placement.holes?.[0]).toMatchObject({ x: 20, y: 90 });
+    expect(placement.drillHoles?.[0]).toMatchObject({ x: 10, y: 20 });
+    expect(placement.holes?.[0]).toMatchObject({ x: 10, y: 20 });
     expect(placement.innerContours?.[0]).toEqual({
-      x_mm: 10,
-      y_mm: 75,
-      largura_mm: 30,
-      altura_mm: 20,
+      x_mm: 25,
+      y_mm: 10,
+      largura_mm: 20,
+      altura_mm: 30,
     });
+  });
+
+  it("descarta operações que ficariam fora da peça ou da chapa após a rotação final", () => {
+    const input: CutLayoutResult = {
+      sheets: [
+        {
+          sheet: { largura_mm: 120, altura_mm: 120, espessura_mm: 19 },
+          placements: [
+            {
+              x_mm: 70,
+              y_mm: 10,
+              largura_mm: 40,
+              altura_mm: 80,
+              rotacao: 90,
+              sheetIndex: 0,
+              boxId: "b1",
+              partName: "Lateral com operacoes invalidas",
+              drillHoles: [
+                { x: 20, y: 20, diameter: 5, depth: 12 },
+                { x: 2, y: 78, diameter: 8, depth: 12 },
+              ],
+              holes: [
+                { x: 20, y: 20, diameter: 5, depth: 12 },
+                { x: 2, y: 78, diameter: 8, depth: 12 },
+              ],
+              innerContours: [
+                { x_mm: 10, y_mm: 10, largura_mm: 20, altura_mm: 10 },
+                { x_mm: 60, y_mm: 10, largura_mm: 30, altura_mm: 10 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const out = finalizeIndustrialLayout(input, {
+      mode: "preserve-positions",
+      kerfMm: 4,
+      marginMm: 5,
+      physicalSheet,
+    });
+
+    const placement = out.sheets[0].placements[0];
+    expect(placement.drillHoles).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
+    expect(placement.holes).toEqual([{ x: 20, y: 20, diameter: 5, depth: 12 }]);
+    expect(placement.innerContours).toEqual([
+      { x_mm: 30, y_mm: 10, largura_mm: 20, altura_mm: 10 },
+    ]);
   });
 });
