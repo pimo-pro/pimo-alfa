@@ -56,6 +56,24 @@ function canFormHorizontalPair(a: CutPiece, b: CutPiece, sheetWidth: number, ker
   return wA + wB + kerf <= sheetWidth;
 }
 
+function combinedRotationGuard(a: CutPiece, b: CutPiece): Pick<CutPiece, "drillHoles" | "holes" | "grainDirection" | "industrialGrainCode"> {
+  const holes = [
+    ...(a.originalDrillHoles ?? a.drillHoles ?? a.holes ?? []),
+    ...(b.originalDrillHoles ?? b.drillHoles ?? b.holes ?? []),
+  ];
+  const grainDirection = a.grainDirection ?? b.grainDirection;
+  const industrialGrainCode = a.industrialGrainCode === "YY" || b.industrialGrainCode === "YY"
+    ? "YY"
+    : (a.industrialGrainCode ?? b.industrialGrainCode);
+
+  return {
+    drillHoles: holes.length > 0 ? holes : undefined,
+    holes: holes.length > 0 ? holes : undefined,
+    grainDirection,
+    industrialGrainCode,
+  };
+}
+
 function buildVirtualPairPiece(a: CutPiece, b: CutPiece, kerf: number): CutPiece {
   const wA = piecePairWidth(a);
   const wB = piecePairWidth(b);
@@ -66,6 +84,7 @@ function buildVirtualPairPiece(a: CutPiece, b: CutPiece, kerf: number): CutPiece
     largura_mm: wA + wB + kerf,
     altura_mm: h,
     partName: `${a.partName}+${b.partName}`,
+    ...combinedRotationGuard(a, b),
     metadata: { ...a.metadata, [PAIR_PACK_META_KEY]: meta },
   };
 }
@@ -112,6 +131,19 @@ export type ExpandedPairPlacement = {
   placement: PlacementCandidate;
 };
 
+type LocalPairRect = {
+  piece: CutPiece;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+function normalizePlacementRotation(rotation: number | undefined): 0 | 90 {
+  const r = ((Math.round(rotation ?? 0) % 360) + 360) % 360;
+  return r === 90 ? 90 : 0;
+}
+
 /** Divide super-peça colocada em duas peças reais lado a lado. */
 export function expandPairPlacement(
   virtualPiece: CutPiece,
@@ -130,26 +162,49 @@ export function expandPairPlacement(
   const hA = meta.hA * scaleY;
   const hB = meta.hB * scaleY;
   const gap = kerf * scaleX;
+  const rotation = normalizePlacementRotation(placement.rotation);
 
-  return [
-    {
-      piece: meta.pieceA,
-      placement: {
-        ...placement,
-        w: wA,
-        h: hA,
-        rotation: 0,
+  if (rotation === 0) {
+    return [
+      {
+        piece: meta.pieceA,
+        placement: {
+          ...placement,
+          w: wA,
+          h: hA,
+          rotation: 0,
+        },
       },
-    },
-    {
-      piece: meta.pieceB,
-      placement: {
-        ...placement,
-        x: placement.x + wA + gap,
-        w: wB,
-        h: hB,
-        rotation: 0,
+      {
+        piece: meta.pieceB,
+        placement: {
+          ...placement,
+          x: placement.x + wA + gap,
+          w: wB,
+          h: hB,
+          rotation: 0,
+        },
       },
-    },
+    ];
+  }
+
+  const originalVirtualWidth = virtualPiece.largura_mm;
+  const sx = placement.h / originalVirtualWidth;
+  const sy = placement.w / virtualPiece.altura_mm;
+  const rects: LocalPairRect[] = [
+    { piece: meta.pieceA, x: 0, y: 0, w: meta.wA, h: meta.hA },
+    { piece: meta.pieceB, x: meta.wA + kerf, y: 0, w: meta.wB, h: meta.hB },
   ];
+
+  return rects.map((rect) => ({
+    piece: rect.piece,
+    placement: {
+      ...placement,
+      x: placement.x + rect.y * sy,
+      y: placement.y + (originalVirtualWidth - rect.x - rect.w) * sx,
+      w: rect.h * sy,
+      h: rect.w * sx,
+      rotation: 90,
+    },
+  }));
 }
