@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
-import { holePhysicalDisplayOffset } from "./layoutCoordinateSystem";
+import { holeLocalToSheetOffsetMm } from "./layoutCoordinateSystem";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 
@@ -42,9 +42,44 @@ export type CutLayoutPdfOptions = {
 };
 
 type EdgeBands = { top?: boolean; right?: boolean; bottom?: boolean; left?: boolean };
+type PdfHole = NonNullable<CutPlacement["drillHoles"]>[number];
 
 function placementEdgeBands(pl: CutPlacement): EdgeBands | undefined {
   return (pl as CutPlacement & { fitaBordas?: EdgeBands }).fitaBordas;
+}
+
+function normalizedRotation(rotacao: number | undefined): number {
+  return ((rotacao ?? 0) % 360 + 360) % 360;
+}
+
+function placementPhysicalLeft(pl: CutPlacement, sheetWidthMm: number, topRightOrigin: boolean): number {
+  return topRightOrigin ? sheetWidthMm - pl.x_mm - pl.largura_mm : pl.x_mm;
+}
+
+function pdfDisplayHoleOffset(pl: CutPlacement, h: PdfHole): { sx: number; sy: number } {
+  return holeLocalToSheetOffsetMm(h.x, h.y, normalizedRotation(pl.rotacao), pl.largura_mm, pl.altura_mm);
+}
+
+function isHoleInsidePlacementAndSheet(
+  pl: CutPlacement,
+  h: PdfHole,
+  sheet: SheetResult["sheet"],
+  topRightOrigin: boolean
+): boolean {
+  if (!Number.isFinite(h.x) || !Number.isFinite(h.y)) return false;
+  const r = Number.isFinite(h.diameter) && h.diameter > 0 ? h.diameter / 2 : 0;
+  const off = pdfDisplayHoleOffset(pl, h);
+  if (off.sx < r || off.sy < r) return false;
+  if (off.sx > pl.largura_mm - r || off.sy > pl.altura_mm - r) return false;
+
+  const absX = placementPhysicalLeft(pl, sheet.largura_mm, topRightOrigin) + off.sx;
+  const absY = pl.y_mm + off.sy;
+  return absX >= r && absY >= r && absX <= sheet.largura_mm - r && absY <= sheet.altura_mm - r;
+}
+
+function holesForPdf(pl: CutPlacement, sheet: SheetResult["sheet"], topRightOrigin: boolean): PdfHole[] {
+  const holes = pl.drillHoles ?? pl.holes ?? [];
+  return holes.filter((h) => isHoleInsidePlacementAndSheet(pl, h, sheet, topRightOrigin));
 }
 
 function formatDatePt(): string {
@@ -195,8 +230,7 @@ function drawSheetDiagram(
     px: originX + (topRightOrigin
       ? (sheet.largura_mm - pl.x_mm - pl.largura_mm)
       : pl.x_mm) * scale,
-    // Inverter eixo Y: y=0 é o fundo físico → deve aparecer no FUNDO do diagrama.
-    py: originY + (sheet.altura_mm - pl.y_mm - pl.altura_mm) * scale,
+    py: originY + pl.y_mm * scale,
     pw: pl.largura_mm * scale,
     ph: pl.altura_mm * scale,
   }));
@@ -216,19 +250,15 @@ function drawSheetDiagram(
       if (bands.right) drawDottedLine(doc, px + pw - inset, py + inset, px + pw - inset, py + ph - inset);
     }
 
-    const origHoles = pl.originalDrillHoles ?? [];
-    if (origHoles.length > 0) {
+    const displayHoles = holesForPdf(pl, sheet, topRightOrigin);
+    if (displayHoles.length > 0) {
       doc.setFillColor(30, 30, 30);
       doc.setDrawColor(30, 30, 30);
-      // piecePhysLeft = x físico da aresta esquerda (A) da peça, medido do lado A da chapa.
-      // Já calculado como a mesma expressão usada no px da peça acima.
-      const piecePhysLeft = topRightOrigin
-        ? (sheet.largura_mm - pl.x_mm - pl.largura_mm)
-        : pl.x_mm;
-      for (const h of origHoles) {
-        const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.altura_mm);
-        const hx = originX + (piecePhysLeft + off.dx) * scale;
-        const hy = py + off.dy * scale;
+      const piecePhysLeft = placementPhysicalLeft(pl, sheet.largura_mm, topRightOrigin);
+      for (const h of displayHoles) {
+        const off = pdfDisplayHoleOffset(pl, h);
+        const hx = originX + (piecePhysLeft + off.sx) * scale;
+        const hy = originY + (pl.y_mm + off.sy) * scale;
         const r = Math.max(0.35, Math.min(1.1, ((h.diameter ?? 5) / 2) * scale * 0.85));
         doc.circle(hx, hy, r, "FD");
       }
@@ -370,15 +400,13 @@ function drawPieceTablePaginated(
         const ry = ty + (th - rh) / 2;
         doc.setDrawColor(...BRAND_RED);
         doc.rect(rx, ry, rw, rh, "S");
-        const thumbHoles = pl.originalDrillHoles ?? [];
+        const thumbHoles = holesForPdf(pl, sheet, false);
         if (thumbHoles.length > 0) {
           doc.setFillColor(25, 25, 25);
           for (const h of thumbHoles) {
-            const off = holePhysicalDisplayOffset(h.x, h.y, pl.rotacao ?? 0, pl.altura_mm);
-            // off.dx = distância física do furo ao lado A (esquerda) da peça
-            // off.dy = distância física do furo ao lado C (topo) da peça
-            const hx = rx + (off.dx / pl.largura_mm) * rw;
-            const hy = ry + (off.dy / pl.altura_mm) * rh;
+            const off = pdfDisplayHoleOffset(pl, h);
+            const hx = rx + (off.sx / pl.largura_mm) * rw;
+            const hy = ry + (off.sy / pl.altura_mm) * rh;
             const hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.largura_mm) * rw));
             doc.circle(hx, hy, hr, "F");
           }
