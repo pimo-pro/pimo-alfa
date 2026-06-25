@@ -11,6 +11,8 @@ export type ProjectRodape = {
   heightMm: number;
   dimensions: FinishDimensions;
   name: string;
+  /** Nome editável pelo utilizador; substitui o rótulo industrial na UI e cutlist. */
+  nomePersonalizado?: string;
   transform?: FinishTransform;
   placementFree?: boolean;
   parentGroupId?: string;
@@ -43,6 +45,7 @@ export type UpdateRodapeInput = Partial<
     | "parentBoxId"
     | "visible"
     | "parentWallId"
+    | "nomePersonalizado"
   >
 >;
 

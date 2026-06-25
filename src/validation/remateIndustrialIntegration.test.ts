@@ -117,4 +117,26 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     expect(pieces[0]?.industrialGrainCode).toBe("YY");
     expect(pieces[0]?.materialId).toBeTruthy();
   });
+
+  it("nomePersonalizado substitui nome na cutlist mas preserva industrialLabel", () => {
+    const wsBox = makeWorkspaceBox();
+    const remates = createRematePieces(
+      { productType: "COMPLETO", mountSlot: "DIR", parentBoxId: wsBox.id, followBox: true },
+      {
+        box: wsBox,
+        materialPresetId: "mdf_branco",
+        thicknessMm: 19,
+        boxDimsM: { widthM: 0.6, heightM: 0.72, depthM: 0.56 },
+      }
+    );
+    const customized = remates.map((r) =>
+      r.tipo === "DIR" ? { ...r, nomePersonalizado: "REMATE_DIR_CUSTOM" } : r
+    );
+    const cutlist = buildRemateCutlistItems(customized, [
+      makeDivSepTestBox({ id: wsBox.id, nome: wsBox.nome }),
+    ]);
+    const dir = cutlist.find((i) => i.metadata?.remateKind === "DIR");
+    expect(dir?.nome).toBe("REMATE_DIR_CUSTOM");
+    expect(dir?.metadata?.industrialLabel).toMatch(/^Armario_Test_REMATE_DIR_\d{2}$/);
+  });
 });

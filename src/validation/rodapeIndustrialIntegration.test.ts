@@ -152,4 +152,26 @@ describe("Rodapé — integração industrial (cutlist + QR + nesting livre)", (
     expect(pieces[0]?.partName).toBe("Armario_Test_RODA_PE_01");
     expect(pieces[0]?.materialId).toBeTruthy();
   });
+
+  it("nomePersonalizado substitui nome na cutlist mas preserva industrialLabel", () => {
+    const wsBox = makeWorkspaceBox();
+    const rodape = createRodapesForBox({
+      box: wsBox,
+      allBoxes: [wsBox],
+      room: null,
+      roomBoundsM: null,
+      input: { kind: "SIMPLE", parentBoxId: wsBox.id },
+      materialId: "mdf_branco",
+      thicknessMm: 19,
+      heightMm: 100,
+      existingCount: 0,
+    })[0];
+    const customized = { ...rodape!, nomePersonalizado: "RODA_PE_ESQ" };
+    const cutlist = buildRodapeCutlistItems(
+      [customized],
+      [makeDivSepTestBox({ id: wsBox.id, nome: wsBox.nome })]
+    );
+    expect(cutlist[0]?.nome).toBe("RODA_PE_ESQ");
+    expect(cutlist[0]?.metadata?.industrialLabel).toBe("Armario_Test_RODA_PE_01");
+  });
 });

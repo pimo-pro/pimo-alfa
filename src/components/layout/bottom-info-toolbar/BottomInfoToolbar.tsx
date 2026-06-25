@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomInfoContext";
 import { useProject } from "../../../context/useProject";
 import { Icon } from "@/components/icons";
+import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 
 type HistoryFilter = "all" | "move" | "resize" | "add" | "remove" | "height" | "other";
 
@@ -324,22 +325,34 @@ export default function BottomInfoToolbar() {
         });
       }
 
-      const doorIds = new Set<string>(box.panelIds?.portas ?? []);
-      for (const door of box.doorsLayer ?? []) {
-        doorIds.add(`door:${door.id}`);
-      }
-      Array.from(doorIds)
-        .filter((id) => (id?.trim()?.length ?? 0) > 0)
-        .forEach((id, idx) => {
-          const label = `Porta ${idx + 1}`;
+      const doors = box.doorsLayer ?? [];
+      if (doors.length > 0) {
+        doors.forEach((door, index) => {
+          const pieceId = `door:${door.id}`;
+          const label = resolveDoorLabel(door, index, doors);
           entries.push({
-            id,
+            id: pieceId,
             boxId: box.id,
             boxName: box.nome,
             label,
             searchText: `${box.nome} ${label} ${box.id}`.toLowerCase(),
           });
         });
+      } else {
+        const doorIds = box.panelIds?.portas ?? [];
+        doorIds
+          .filter((id) => (id?.trim()?.length ?? 0) > 0)
+          .forEach((id, idx) => {
+            const label = resolveDoorLabel(undefined, idx);
+            entries.push({
+              id,
+              boxId: box.id,
+              boxName: box.nome,
+              label,
+              searchText: `${box.nome} ${label} ${box.id}`.toLowerCase(),
+            });
+          });
+      }
 
       for (const drawer of box.drawersLayer ?? []) {
         (Object.keys(drawerPartLabels) as Array<keyof typeof drawerPartLabels>).forEach((part) => {

@@ -89,6 +89,8 @@ export type RematePiece = {
   /** Acompanha transform do módulo preservando offsets à face. */
   followBox: boolean;
   name: string;
+  /** Nome editável pelo utilizador; substitui o rótulo industrial na UI e cutlist. */
+  nomePersonalizado?: string;
   /** Agrupa peças L / RODAPE_L / Completo multi-peça. */
   parentGroupId?: string;
   partIndex?: 1 | 2;
@@ -131,6 +133,7 @@ export type UpdateRematePieceInput = Partial<
     | "rotation"
     | "followBox"
     | "name"
+    | "nomePersonalizado"
     | "allowPieceRotation"
   >
 >;

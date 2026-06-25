@@ -17,6 +17,7 @@ export function duplicateRematePiece(source: RematePiece, offsetMm = 30): Remate
     ...source,
     id: newId,
     name: `${source.name} (cópia)`,
+    nomePersonalizado: undefined,
     placementMode: "FREE",
     parentGroupId: undefined,
     faceOffsets: source.faceOffsets

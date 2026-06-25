@@ -92,3 +92,22 @@ export function buildRemateIndustrialLabelsForRemates(
 
   return labels;
 }
+
+/** Nome exibido na UI/cutlist: personalizado ou rótulo industrial automático. */
+export function resolveRematePieceDisplayName(
+  remate: RematePiece,
+  autoIndustrialLabel: string
+): string {
+  const custom = remate.nomePersonalizado?.trim();
+  if (custom) return custom;
+  return autoIndustrialLabel;
+}
+
+export function resolveRematePieceNomeForRemate(
+  remate: RematePiece,
+  boxNameById: ReadonlyMap<string, string> | Record<string, string>
+): string {
+  const autoLabel =
+    buildRemateIndustrialLabelsForRemates([remate], boxNameById).get(remate.id) ?? remate.name;
+  return resolveRematePieceDisplayName(remate, autoLabel);
+}

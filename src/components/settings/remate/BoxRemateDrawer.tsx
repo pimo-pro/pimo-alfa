@@ -18,6 +18,7 @@ import {
   inferProductTypeFromLegacy,
 } from "../../../core/remate/remateProductRules";
 import BoxRodapeSection from "../rodape/BoxRodapeSection";
+import { resolveRematePieceNomeForRemate } from "../../../core/remate/labels";
 
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
@@ -90,6 +91,14 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
     () => (project.remates ?? []).filter((r) => r.parentBoxId === boxId),
     [project.remates, boxId]
   );
+
+  const remateDisplayNames = useMemo(() => {
+    const boxNameById: Record<string, string> = {};
+    for (const box of project.workspaceBoxes) {
+      if (box?.id) boxNameById[box.id] = typeof box.nome === "string" ? box.nome : box.id;
+    }
+    return new Map(remates.map((r) => [r.id, resolveRematePieceNomeForRemate(r, boxNameById)]));
+  }, [remates, project.workspaceBoxes]);
 
   const mountSlotSelectable =
     productType === "AVISTA" || productType === "COMPLETO" || productType === "L";
@@ -290,7 +299,9 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
                       onClose();
                     }}
                   >
-                    <span style={{ fontWeight: 600, fontSize: 12 }}>{remate.name}</span>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>
+                      {remateDisplayNames.get(remate.id) ?? remate.name}
+                    </span>
                     <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                       {REMATE_PRODUCT_TYPE_LABELS[pt]}
                       {slotLabel ? ` · ${slotLabel}` : ""}

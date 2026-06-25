@@ -21,6 +21,7 @@ import {
   boxUsesModernDrawerPipeline,
   isDrawerPieceTipo,
 } from "../services/drawerCutlistAdapter";
+import { resolveRematePieceNomeForRemate } from "../core/remate/labels";
 
 export type PainelRow = {
   key: string;
@@ -290,12 +291,17 @@ export function useCutlistData() {
       });
     });
 
+    const remateBoxNameById: Record<string, string> = {};
+    for (const b of boxes) {
+      if (b?.id) remateBoxNameById[b.id] = typeof b.nome === "string" ? b.nome : b.id;
+    }
+
     (project.remates ?? []).forEach((remate) => {
       const box = boxes.find((b) => b.id === remate.parentBoxId);
       allRemates.push({
         key: remate.id,
         boxNome: box?.nome ?? remate.parentBoxId ?? "Standalone",
-        nome: remate.name,
+        nome: resolveRematePieceNomeForRemate(remate, remateBoxNameById),
         material: remate.materialPresetId,
         largura_mm: remate.width,
         altura_mm: remate.height,

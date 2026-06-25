@@ -2,6 +2,9 @@ import type { ProjectState, ScalingMode } from "../../context/projectTypes";
 import { resolveScalableTargets } from "./selectionTransformService";
 import { maxLengthAcross, scaleDimensionValues } from "./scalingModes";
 import { decodeSelectionId } from "./selectionIds";
+import { resolveRematePieceNomeForRemate } from "../remate/labels";
+import { resolveRodapePieceNomeForRodape } from "../rodape/labels";
+import { resolveDoorLabel } from "../doors/doorLabels";
 
 export type ScalingPreviewRow = {
   encodedId: string;
@@ -22,17 +25,35 @@ export type ScalingPreviewData = {
 function labelForEncoded(project: ProjectState, encoded: string): string {
   const decoded = decodeSelectionId(encoded);
   if (!decoded) return encoded;
+  const boxNameById: Record<string, string> = {};
+  for (const box of project.workspaceBoxes) {
+    if (box?.id) boxNameById[box.id] = typeof box.nome === "string" ? box.nome : box.id;
+  }
   if (decoded.kind === "box") {
     const box = project.workspaceBoxes.find((b) => b.id === decoded.id);
     return box?.nome ? `Caixa: ${box.nome}` : `Caixa ${decoded.id}`;
   }
-  if (decoded.kind === "door") return `Porta ${decoded.id}`;
+  if (decoded.kind === "door") {
+    for (const box of project.workspaceBoxes) {
+      const doors = box.doorsLayer ?? [];
+      const doorIndex = doors.findIndex((d) => d.id === decoded.id);
+      if (doorIndex >= 0) {
+        return resolveDoorLabel(doors[doorIndex], doorIndex, doors);
+      }
+    }
+    return `Porta ${decoded.id}`;
+  }
   if (decoded.kind === "drawer") return `Gaveta ${decoded.id}`;
   if (decoded.kind === "remate") {
     const remate = (project.remates ?? []).find((r) => r.id === decoded.id);
-    return remate?.name ? `Remate: ${remate.name}` : `Remate ${decoded.id}`;
+    if (!remate) return `Remate ${decoded.id}`;
+    return `Remate: ${resolveRematePieceNomeForRemate(remate, boxNameById)}`;
   }
-  if (decoded.kind === "rodape") return `Rodapé ${decoded.id}`;
+  if (decoded.kind === "rodape") {
+    const rodape = (project.rodapes ?? []).find((r) => r.id === decoded.id);
+    if (!rodape) return `Rodapé ${decoded.id}`;
+    return `Rodapé: ${resolveRodapePieceNomeForRodape(rodape, boxNameById)}`;
+  }
   return encoded;
 }
 

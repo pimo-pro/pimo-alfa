@@ -3,6 +3,8 @@ import {
   buildRemateIndustrialLabel,
   buildRemateIndustrialLabelsForRemates,
   resolveRemateIndustrialSuffix,
+  resolveRematePieceDisplayName,
+  resolveRematePieceNomeForRemate,
 } from "./labels";
 import type { RematePiece } from "./rematePieceTypes";
 
@@ -45,5 +47,20 @@ describe("remate industrial labels", () => {
     expect(labels.get("r1")).toBe("MOD1_REMATE_DIR_01");
     expect(labels.get("r2")).toBe("MOD1_REMATE_DIR_02");
     expect(labels.get("r3")).toBe("MOD1_REMATE_ESQ_01");
+  });
+
+  it("resolveRematePieceDisplayName — personalizado ou automático", () => {
+    const piece = remate({
+      id: "r1",
+      tipo: "DIR",
+      productType: "COMPLETO",
+      parentBoxId: "b1",
+      nomePersonalizado: "REMATE_CUSTOM",
+    });
+    expect(resolveRematePieceDisplayName(piece, "MOD1_REMATE_DIR_01")).toBe("REMATE_CUSTOM");
+    expect(resolveRematePieceNomeForRemate(piece, { b1: "MOD1" })).toBe("REMATE_CUSTOM");
+
+    const auto = remate({ id: "r2", tipo: "DIR", productType: "COMPLETO", parentBoxId: "b1" });
+    expect(resolveRematePieceNomeForRemate(auto, { b1: "MOD1" })).toBe("MOD1_REMATE_DIR_01");
   });
 });

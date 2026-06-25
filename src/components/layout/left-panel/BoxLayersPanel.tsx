@@ -8,6 +8,7 @@ import {
   resolveDrawerBodyHeightMm,
   resolveDrawerDisplayName,
 } from "../../../core/drawers/drawerLayerCustomization";
+import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 import { normalizeDrawerPresets } from "../../../core/drawers/drawerPresets";
 import Panel from "../../ui/Panel";
 import DrawerConfigPanel, {
@@ -103,7 +104,7 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
             style={{ width: "100%" }}
             onClick={() => actions.setDoorLayerItemOpen(item.id, !item.isOpen)}
           >
-            Porta {index + 1}: {item.isOpen ? "Fechar" : "Abrir"}
+            {resolveDoorLabel(item, index, doors)}: {item.isOpen ? "Fechar" : "Abrir"}
           </button>
         ))}
       </div>
@@ -113,7 +114,7 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
         {doors.length === 0 ? (
           <div className="muted-text">Sem portas.</div>
         ) : (
-          doors.map((item) => (
+          doors.map((item, index) => (
             <div key={item.id} style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 10 }}>
               <button
                 type="button"
@@ -137,7 +138,10 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                 }}
               >
                 <span style={{ fontSize: 12, fontWeight: 600 }}>
-                  {Math.round(item.width)}×{Math.round(item.height)}
+                  {resolveDoorLabel(item, index, doors)}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {Math.round(item.width)}×{Math.round(item.height)} mm
                 </span>
                 <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
                   {expandedDoorIds[item.id] ? "Ocultar" : "Detalhes"}

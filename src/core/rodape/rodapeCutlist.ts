@@ -3,7 +3,10 @@ import { getMaterialByIdOrLabel } from "../materials/service";
 import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
 import type { ProjectRodape } from "./rodapeTypes";
-import { buildRodapeIndustrialLabelsForRodapes } from "./labels";
+import {
+  buildRodapeIndustrialLabelsForRodapes,
+  resolveRodapePieceDisplayName,
+} from "./labels";
 
 function buildBoxNameLookup(boxes: readonly BoxModule[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -43,10 +46,11 @@ export function buildRodapeCutlistItems(
     const boxId = rodape.parentBoxId ?? "";
     const dims = toCutDimensions(rodape);
     const industrialLabel = industrialLabels.get(rodape.id) ?? rodape.name;
+    const nome = resolveRodapePieceDisplayName(rodape, industrialLabel);
 
     return {
       id: rodape.id,
-      nome: industrialLabel,
+      nome,
       quantidade: 1,
       dimensoes: dims,
       espessura: dims.profundidade,

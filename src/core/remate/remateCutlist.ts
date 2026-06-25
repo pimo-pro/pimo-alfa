@@ -9,6 +9,7 @@ import { resolveRemateSheetCutDimensions } from "./remateSheetDimensions";
 import {
   buildRemateIndustrialLabelsForRemates,
   resolveRemateIndustrialSuffix,
+  resolveRematePieceDisplayName,
 } from "./labels";
 
 function toCutDimensions(remate: RematePiece): CutListItem["dimensoes"] {
@@ -42,10 +43,11 @@ export function buildRemateCutlistItems(
     const productType = remate.productType ?? inferProductTypeFromLegacy(remate);
     const suffix = resolveRemateIndustrialSuffix(remate);
     const industrialLabel = industrialLabels.get(remate.id) ?? remate.name;
+    const nome = resolveRematePieceDisplayName(remate, industrialLabel);
 
     return {
       id: remate.id,
-      nome: industrialLabel,
+      nome,
       quantidade: 1,
       dimensoes: toCutDimensions(remate),
       espessura: resolveRemateSheetCutDimensions(remate).espessuraMm,

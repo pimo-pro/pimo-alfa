@@ -92,4 +92,33 @@ describe("cutlist — dimensões manuais da porta", () => {
     expect(lowered.bottomGapMm).toBeLessThan(centered.bottomGapMm);
     expect(lowered.topGapMm).toBeGreaterThan(centered.topGapMm);
   });
+
+  it("nome e industrialLabel — posição lateral (port_esq / Porta Esquerda)", () => {
+    const door = baseDoor({ hingeSide: "left" });
+    const list = cutlistComPrecoFromBox(baseBox([door]), defaultRulesConfig);
+    const porta = list.find((item) => item.tipo === "porta_simples");
+    expect(porta?.nome).toBe("port_esq");
+    expect(porta?.metadata?.industrialLabel).toBe("port_esq");
+    expect(porta?.metadata?.doorDisplayLabel).toBe("Porta Esquerda");
+    expect(porta?.metadata?.doorPositionKind).toBe("esq");
+  });
+
+  it("porta dupla — port_dir e port_esq na cutlist", () => {
+    const left = baseDoor({ id: "d-esq", hingeSide: "left" });
+    const right = baseDoor({
+      id: "d-dir",
+      hingeSide: "right",
+      openDirection: "right",
+      pivot: "right-edge",
+      posX: 297,
+    });
+    const box = {
+      ...baseBox([left, right]),
+      portaTipo: "porta_dupla" as const,
+    };
+    const list = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const portas = list.filter((item) => item.tipo === "porta_dupla");
+    expect(portas).toHaveLength(2);
+    expect(portas.map((p) => p.nome).sort()).toEqual(["port_dir", "port_esq"]);
+  });
 });

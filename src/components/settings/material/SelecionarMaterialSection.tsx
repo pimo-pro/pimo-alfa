@@ -5,6 +5,7 @@ import { listOfficialMaterials, resolveSeparadorMaterialForBox } from "../../../
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
+import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 
 type SelecionarMaterialSectionProps = {
   boxId: string;
@@ -116,7 +117,7 @@ export default function SelecionarMaterialSection({
       {hasDoor &&
         (box.doorsLayer ?? []).map((door, index) => {
           const doorMaterialId = door.material ?? door.materialId ?? fallbackMaterialId;
-          const label = (box.doorsLayer?.length ?? 0) > 1 ? `Porta ${index + 1}` : "Porta";
+          const label = resolveDoorLabel(door, index, box.doorsLayer ?? []);
           return (
             <section key={door.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>

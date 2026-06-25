@@ -42,3 +42,22 @@ export function buildRodapeIndustrialLabelsForRodapes(
 
   return labels;
 }
+
+/** Nome exibido na UI/cutlist: personalizado ou rótulo industrial automático. */
+export function resolveRodapePieceDisplayName(
+  rodape: ProjectRodape,
+  autoIndustrialLabel: string
+): string {
+  const custom = rodape.nomePersonalizado?.trim();
+  if (custom) return custom;
+  return autoIndustrialLabel;
+}
+
+export function resolveRodapePieceNomeForRodape(
+  rodape: ProjectRodape,
+  boxNameById: ReadonlyMap<string, string> | Record<string, string>
+): string {
+  const autoLabel =
+    buildRodapeIndustrialLabelsForRodapes([rodape], boxNameById).get(rodape.id) ?? rodape.name;
+  return resolveRodapePieceDisplayName(rodape, autoLabel);
+}

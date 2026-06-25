@@ -1,5 +1,6 @@
 import type { WorkspaceBox } from "../../../core/types";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
+import { resolveRematePieceNomeForRemate } from "../../../core/remate/labels";
 import type { ProjectRodape } from "../../../core/rodape/rodapeTypes";
 import {
   type ManufacturingConflict,
@@ -76,7 +77,7 @@ export class ManufacturingAnalysisEngine {
     this.checkHeights(boxes, conflicts);
     this.checkDepths(boxes, conflicts);
     this.checkDepthConsistency(boxes, conflicts);
-    this.checkRemates(context.remates, conflicts);
+    this.checkRemates(context.remates, boxes, conflicts);
     this.checkRodapes(context.rodapes, boxes, conflicts);
     this.checkDoorClearance(boxes, conflicts);
     this.checkDrawerClearance(boxes, conflicts);
@@ -170,8 +171,16 @@ export class ManufacturingAnalysisEngine {
     }
   }
 
-  private checkRemates(remates: RematePiece[], conflicts: ManufacturingConflict[]): void {
+  private checkRemates(
+    remates: RematePiece[],
+    boxes: WorkspaceBox[],
+    conflicts: ManufacturingConflict[]
+  ): void {
     const t = getManufacturingRules();
+    const boxNameById: Record<string, string> = {};
+    for (const box of boxes) {
+      if (box?.id) boxNameById[box.id] = typeof box.nome === "string" ? box.nome : box.id;
+    }
     for (const remate of remates) {
       if (remate.placementMode !== "FREE") continue;
       const offsets = remate.faceOffsets;
@@ -186,7 +195,7 @@ export class ManufacturingAnalysisEngine {
         id: nextConflictId(),
         kind: "remateMisaligned",
         severity: maxOff > 5 ? "warning" : "info",
-        title: `Remate desalinhado — ${remate.name || remate.tipo}`,
+        title: `Remate desalinhado — ${resolveRematePieceNomeForRemate(remate, boxNameById) || remate.tipo}`,
         detail: `Offset manual de ${Math.round(maxOff)} mm na face.`,
         boxIds: remate.parentBoxId ? [remate.parentBoxId] : [],
         remateIds: [remate.id],

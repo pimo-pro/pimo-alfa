@@ -5,8 +5,36 @@ import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import { rodapeKindLabel } from "../../../core/rodape/rodapeTypes";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import { RODAPE_DEFAULT_HEIGHT_MM } from "../../../core/kitchenFinish/finishTypes";
+import { resolveRodapePieceNomeForRodape } from "../../../core/rodape/labels";
 
 type Props = { rodapeId: string };
+
+function useTextField(
+  value: string,
+  onCommit: (next: string) => void
+): {
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+} {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+  return {
+    value: draft,
+    onChange: (e) => setDraft(e.target.value),
+    onBlur: () => {
+      const trimmed = draft.trim();
+      if (!trimmed) {
+        setDraft(value);
+        return;
+      }
+      onCommit(trimmed);
+      setDraft(trimmed);
+    },
+  };
+}
 
 function useNumericField(
   value: number,
@@ -54,6 +82,26 @@ export default function RodapePropertiesPanel({ rodapeId }: Props) {
     }
   );
 
+  const boxNameById = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const box of project.workspaceBoxes) {
+      if (box?.id) out[box.id] = typeof box.nome === "string" ? box.nome : box.id;
+    }
+    return out;
+  }, [project.workspaceBoxes]);
+
+  const autoNome = useMemo(() => {
+    if (!rodape) return "";
+    return resolveRodapePieceNomeForRodape(rodape, boxNameById);
+  }, [rodape, boxNameById]);
+
+  const nomeField = useTextField(autoNome, (trimmed) => {
+    if (!rodape) return;
+    actions.updateRodape(rodape.id, {
+      nomePersonalizado: trimmed === autoNome ? undefined : trimmed,
+    });
+  });
+
   if (!rodape) return null;
 
   const material = getMaterialByIdOrLabel(rodape.materialId);
@@ -64,8 +112,12 @@ export default function RodapePropertiesPanel({ rodapeId }: Props) {
     : null;
 
   return (
-    <Panel title="Propriedades do Roda Pé" description={rodape.name}>
+    <Panel title="Propriedades do Roda Pé" description={autoNome}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Nome da peça
+          <input className="input input-sm" type="text" {...nomeField} />
+        </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Tipo
           <input className="input input-sm" readOnly value={rodapeKindLabel(rodape.kind, rodape.partIndex)} />

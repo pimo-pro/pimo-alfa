@@ -29,6 +29,7 @@ import { extractDrawerCutlistFromLayerItems, isDrawerPieceTipo } from "../../ser
 import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
 import { buildDivSepIndustrialLabel } from "../divSep/labels";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
+import { resolveDoorIndustrialLabel, resolveDoorLabel, resolveDoorPositionKind } from "../doors/doorLabels";
 
 /** Portas empilhadas verticalmente (ex.: caixa forno): dobradiças usam a altura da folha, não a lateral inteira. */
 function hasVerticallyStackedDoors(doorsLayer: { posY?: number }[]): boolean {
@@ -365,7 +366,17 @@ export function cutlistComPrecoFromBox(
 
     let industrialLabel: string | undefined;
     let displayNome = getPieceLabel(p.tipo);
-    if (isDivisor) {
+    let doorMetadata: Record<string, unknown> = {};
+    if (isDoor) {
+      const doorLayer = doorsLayer[doorIndex];
+      industrialLabel = resolveDoorIndustrialLabel(doorLayer, doorIndex, doorsLayer);
+      displayNome = industrialLabel;
+      doorMetadata = {
+        doorId: doorLayer?.id,
+        doorPositionKind: resolveDoorPositionKind(doorLayer, doorIndex, doorsLayer),
+        doorDisplayLabel: resolveDoorLabel(doorLayer, doorIndex, doorsLayer),
+      };
+    } else if (isDivisor) {
       divIndex += 1;
       industrialLabel = buildDivSepIndustrialLabel(box.nome, "DIV", divIndex);
       displayNome = industrialLabel;
@@ -381,7 +392,10 @@ export function cutlistComPrecoFromBox(
       nome: displayNome,
       metadata: {
         panelId: p.id,
-        ...(industrialLabel ? { industrialLabel, divSepKind: isDivisor ? "DIV" : "SEP" } : {}),
+        ...(industrialLabel ? { industrialLabel } : {}),
+        ...(isDivisor ? { divSepKind: "DIV" as const } : {}),
+        ...(isSeparador ? { divSepKind: "SEP" as const } : {}),
+        ...doorMetadata,
       },
       quantidade: p.quantidade,
       dimensoes: {

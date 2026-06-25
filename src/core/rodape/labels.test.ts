@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRodapeIndustrialLabel, buildRodapeIndustrialLabelsForRodapes } from "./labels";
+import { buildRodapeIndustrialLabel, buildRodapeIndustrialLabelsForRodapes, resolveRodapePieceDisplayName, resolveRodapePieceNomeForRodape } from "./labels";
 import type { ProjectRodape } from "./rodapeTypes";
 
 function rodape(partial: Partial<ProjectRodape> & Pick<ProjectRodape, "id">): ProjectRodape {
@@ -43,5 +43,14 @@ describe("rodape industrial labels", () => {
     );
     expect(labels.has("r1")).toBe(false);
     expect(labels.get("r2")).toBe("MOD1_RODA_PE_01");
+  });
+
+  it("resolveRodapePieceDisplayName — personalizado ou automático", () => {
+    const piece = rodape({ id: "r1", nomePersonalizado: "RODA_PE_ESQ" });
+    expect(resolveRodapePieceDisplayName(piece, "MOD1_RODA_PE_01")).toBe("RODA_PE_ESQ");
+    expect(resolveRodapePieceNomeForRodape(piece, { b1: "MOD1" })).toBe("RODA_PE_ESQ");
+
+    const auto = rodape({ id: "r2" });
+    expect(resolveRodapePieceNomeForRodape(auto, { b1: "MOD1" })).toBe("MOD1_RODA_PE_01");
   });
 });

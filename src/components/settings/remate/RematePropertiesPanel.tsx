@@ -24,8 +24,36 @@ import WoodGrainRotationToggle from "../material/WoodGrainRotationToggle";
 import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/remateGapMeasure";
 import RemateRulesSection from "./RemateRulesSection";
 import { OPPOSITE_MOUNT_SLOT } from "../../../core/remate/remateCloneUtils";
+import { resolveRematePieceNomeForRemate } from "../../../core/remate/labels";
 
 type Props = { remateId: string };
+
+function useTextField(
+  value: string,
+  onCommit: (next: string) => void
+): {
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+} {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+  return {
+    value: draft,
+    onChange: (e) => setDraft(e.target.value),
+    onBlur: () => {
+      const trimmed = draft.trim();
+      if (!trimmed) {
+        setDraft(value);
+        return;
+      }
+      onCommit(trimmed);
+      setDraft(trimmed);
+    },
+  };
+}
 
 function useNumericField(
   value: number,
@@ -114,6 +142,26 @@ export default function RematePropertiesPanel({ remateId }: Props) {
     actions.updateRemate(remate.id, { height });
   });
 
+  const boxNameById = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const box of project.workspaceBoxes) {
+      if (box?.id) out[box.id] = typeof box.nome === "string" ? box.nome : box.id;
+    }
+    return out;
+  }, [project.workspaceBoxes]);
+
+  const autoNome = useMemo(() => {
+    if (!remate) return "";
+    return resolveRematePieceNomeForRemate(remate, boxNameById);
+  }, [remate, boxNameById]);
+
+  const nomeField = useTextField(autoNome, (trimmed) => {
+    if (!remate) return;
+    actions.updateRemate(remate.id, {
+      nomePersonalizado: trimmed === autoNome ? undefined : trimmed,
+    });
+  });
+
   if (!remate) return null;
 
   const productType = remate.productType ?? inferProductTypeFromLegacy(remate);
@@ -144,8 +192,12 @@ export default function RematePropertiesPanel({ remateId }: Props) {
   const completoRules = productOptions.completoRules ?? defaultCompletoRules();
 
   return (
-    <Panel title="Propriedades do Remate" description={remate.name}>
+    <Panel title="Propriedades do Remate" description={autoNome}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Nome da peça
+          <input className="input input-sm" type="text" {...nomeField} />
+        </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Tipo de produto
           <select
