@@ -44,6 +44,10 @@ import { captureMcDimensionsFromViewer } from "../industrial/mcDimensions/mcDime
 import { exportMCDimensionsForZip } from "../industrial/mcDimensions/mcDimensionsGenerator";
 import { loadMcDimensionsConfig } from "../../config/mcDimensionsConfig";
 import { mergePieceObservacoesStores } from "../observacoes/ObservacoesService";
+import {
+  beginIndustrialFileGeneration,
+  endIndustrialFileGeneration,
+} from "./industrialGenerationSuspend";
 import { measureTime } from "../../utils/measureTime";
 
 export interface GeneratedFabricationPackage {
