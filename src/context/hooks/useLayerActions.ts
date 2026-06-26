@@ -18,7 +18,7 @@ import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValid
 import { getSettings } from "../../core/settings/settingsService";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
-import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
+import { commitMaterialSync, refreshViewerAfterMaterialSync, syncDrawerFrontMaterialToViewer } from "../../core/materials/materialSync";
 
 export type LayerActions = Pick<
   ProjectActions,
@@ -237,6 +237,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           },
           true
         );
+        syncDrawerFrontMaterialToViewer(boxId, drawerLayerId, material);
       },
       setDoorAllowPieceRotation: (boxId, doorLayerId, allow) => {
         updateProject(
@@ -625,6 +626,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               true
             );
             refreshViewerAfterMaterialSync(sync);
+            syncDrawerFrontMaterialToViewer(selected.id, id, materialId);
             return {
               ...next,
               selectedWorkspaceBoxId: selected.id,

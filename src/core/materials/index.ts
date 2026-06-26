@@ -45,5 +45,6 @@ export {
   materialSyncPatch,
   propagateMaterialSyncEffects,
   refreshViewerAfterMaterialSync,
+  syncDrawerFrontMaterialToViewer,
 } from "./materialSync";
 export type { MaterialSyncResult, MaterialSyncTarget } from "./materialSync";

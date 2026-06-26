@@ -95,6 +95,9 @@ export function createDrawer(
   const bodyDepth = specs.body.depth;
   const woodBackHeight = specs.back.height;
   const bodyCenterOffsetY = specs.bodyCenterOffsetY;
+  const woodSideDepth = specs.leftSide.depth;
+  const sideCenterZ =
+    woodSideDepth > 0 ? specs.positioning.sideOffsetZ : specs.positioning.bodyOffsetZ;
 
   return {
     id,
@@ -140,7 +143,7 @@ export function createDrawer(
         depth: specs.leftSide.depth,
         positionX: -bodyWidth / 2 + sideThickness / 2,
         positionY: bodyCenterOffsetY,
-        positionZ: specs.positioning.bodyOffsetZ,
+        positionZ: sideCenterZ,
       },
       
       // ===== LATERAL DIREITA =====
@@ -151,7 +154,7 @@ export function createDrawer(
         depth: specs.rightSide.depth,
         positionX: bodyWidth / 2 - sideThickness / 2,
         positionY: bodyCenterOffsetY,
-        positionZ: specs.positioning.bodyOffsetZ,
+        positionZ: sideCenterZ,
       },
       
       // ===== FUNDO =====
@@ -175,7 +178,7 @@ export function createDrawer(
         positionY: bodyCenterOffsetY,
         positionZ: resolveDrawerBackCenterZMm(
           combinedFrontThickness,
-          bodyDepth,
+          woodSideDepth > 0 ? woodSideDepth : bodyDepth,
           backThickness
         ),
       },

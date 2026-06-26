@@ -58,7 +58,8 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
     expect(spec.frontPosZ).toBe(0);
     expect(spec.frontPosY).toBe(0);
     expect(spec.bodyDepthM).toBeCloseTo(0.5, 3);
-    expect(spec.leftSidePosZ).toBeCloseTo(resolveDrawerBodyCenterZMm(19, 500) / 1000, 4);
+    expect(spec.leftSideDepthM).toBeCloseTo(0.49, 3);
+    expect(spec.leftSidePosZ).toBeCloseTo(resolveDrawerBodyCenterZMm(19, 490) / 1000, 4);
     expect(spec.leftSidePosY).toBeCloseTo(
       resolveDrawerBodyCenterOffsetYMm(layer.height!) / 1000,
       4

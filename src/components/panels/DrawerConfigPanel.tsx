@@ -40,6 +40,8 @@ export type DrawerConfigPanelProps = {
   box: WorkspaceBox;
   showHardware?: boolean;
   onUpdate: (partial: Partial<DrawerLayerItem>) => void;
+  /** Atualização imediata do material da frente no viewer 3D (sem rebuild estrutural). */
+  onFrontMaterialChange?: (materialId: string) => void;
 };
 
 function mergeDrawerMetadata(
@@ -127,6 +129,7 @@ export default function DrawerConfigPanel({
   box,
   showHardware = true,
   onUpdate,
+  onFrontMaterialChange,
 }: DrawerConfigPanelProps) {
   const settings = getSettings().gavetas;
   const woodMaterials = listOfficialMaterials().filter((m) => m.industrial && m.visual);
@@ -579,13 +582,15 @@ export default function DrawerConfigPanel({
         <select
           className="select select-xs"
           value={material}
-          onChange={(e) =>
+          onChange={(e) => {
+            const materialId = e.target.value;
             update({
-              material: e.target.value,
-              materialId: e.target.value,
-              metadata: { frontMaterial: e.target.value },
-            })
-          }
+              material: materialId,
+              materialId,
+              metadata: { frontMaterial: materialId },
+            });
+            onFrontMaterialChange?.(materialId);
+          }}
         >
           {woodMaterials.map((m) => (
             <option key={m.canonicalId} value={m.canonicalId}>

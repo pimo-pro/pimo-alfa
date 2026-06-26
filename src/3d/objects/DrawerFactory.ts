@@ -38,7 +38,7 @@ import {
   type DrawerViewerWoodSideLayoutMm,
   shouldRenderGenericDrawerSlideRails,
 } from "../../core/drawers/drawerViewerLayout";
-import { resolveProfundidadeExternaFromUtilMm } from "../../core/drawers/drawerSlideDepth";
+import { resolveProfundidadeExternaFromUtilMm, resolveDrawerSideDepthMm } from "../../core/drawers/drawerSlideDepth";
 import { settingsDefaults } from "../../core/settings/settingsSchema";
 
 const drawerOpenState = new Map<string, boolean>();
@@ -254,13 +254,30 @@ function normalizeDrawerObjectMaterials(
   return { front: shared, body: shared };
 }
 
-/** Aplica material à face visível da frente (índice 1 quando há orlas/edge groups). */
+/**
+ * Índice do material da face larga visível (BoxGeometry faces +Z/-Z) num painel frente com edge groups.
+ * Usa o grupo geométrico em vez de índice fixo para evitar inversão face/orla.
+ */
+export function resolveDrawerFrontFaceMaterialIndex(mesh: THREE.Mesh): number {
+  const geometry = mesh.geometry as THREE.BufferGeometry;
+  const groups = geometry.groups;
+  if (Array.isArray(mesh.material) && mesh.material.length >= 2 && groups && groups.length >= 6) {
+    const faceGroup = groups[4] ?? groups[5];
+    if (faceGroup != null && Number.isFinite(faceGroup.materialIndex)) {
+      return faceGroup.materialIndex;
+    }
+  }
+  return Array.isArray(mesh.material) && mesh.material.length >= 2 ? 1 : 0;
+}
+
+/** Aplica material à face visível da frente (grupo largo +Z/-Z quando há orlas/edge groups). */
 export function applyDrawerFrontMaterialToMesh(mesh: THREE.Mesh, frontMaterial: THREE.Material): void {
   const mat = frontMaterial.clone();
   mat.needsUpdate = true;
   if (Array.isArray(mesh.material) && mesh.material.length >= 2) {
+    const faceIndex = resolveDrawerFrontFaceMaterialIndex(mesh);
     const next = mesh.material.slice() as THREE.Material[];
-    next[1] = mat;
+    next[faceIndex] = mat;
     mesh.material = next;
     return;
   }
@@ -300,33 +317,45 @@ function resolveViewerBodyDepthM(spec: DrawerSpec): number | undefined {
 function resolveSpecBodyCenterZM(spec: DrawerSpec): number {
   const flush = resolveDrawerFlushLayoutM(spec);
   if (flush) return flush.bodyCenterLocalZ / 1000;
+  if (Number.isFinite(spec.bottomPosZ)) return spec.bottomPosZ as number;
+  const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
+    ? (spec.frontIntThicknessM ?? 0) * 1000
+    : 0;
+  const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
+  const bodyDepthMm = (resolveViewerBodyDepthM(spec) ?? spec.bodyDepthM ?? spec.depthM) * 1000;
+  return resolveDrawerBodyCenterZMm(combinedFrontMm, bodyDepthMm) / 1000;
+}
+
+function resolveSpecSideCenterZM(spec: DrawerSpec): number {
   if (Number.isFinite(spec.leftSidePosZ)) return spec.leftSidePosZ as number;
   const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
     ? (spec.frontIntThicknessM ?? 0) * 1000
     : 0;
   const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
-  const bodyDepthMm = (resolveViewerBodyDepthM(spec) ?? spec.depthM) * 1000;
-  return resolveDrawerBodyCenterZMm(combinedFrontMm, bodyDepthMm) / 1000;
+  const slideLengthMm = (spec.bodyDepthM ?? resolveViewerBodyDepthM(spec) ?? spec.depthM) * 1000;
+  const sideDepthMm =
+    (spec.leftSideDepthM ?? 0) > 0
+      ? spec.leftSideDepthM! * 1000
+      : resolveDrawerSideDepthMm(slideLengthMm);
+  return resolveDrawerBodyCenterZMm(combinedFrontMm, sideDepthMm) / 1000;
 }
 
 function resolveSpecBackCenterZM(spec: DrawerSpec): number {
   const flush = resolveDrawerFlushLayoutM(spec);
-  if (flush) {
-    const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
-      ? (spec.frontIntThicknessM ?? 0) * 1000
-      : 0;
-    const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
-    const backMm = (spec.backThicknessM ?? 0.016) * 1000;
-    return resolveDrawerBackCenterZMm(combinedFrontMm, flush.bodyDepthMm, backMm) / 1000;
-  }
-  if (Number.isFinite(spec.backPosZ)) return spec.backPosZ as number;
   const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
     ? (spec.frontIntThicknessM ?? 0) * 1000
     : 0;
   const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
-  const bodyDepthMm = (resolveViewerBodyDepthM(spec) ?? spec.depthM) * 1000;
   const backMm = (spec.backThicknessM ?? 0.016) * 1000;
-  return resolveDrawerBackCenterZMm(combinedFrontMm, bodyDepthMm, backMm) / 1000;
+  const slideLengthMm = flush
+    ? flush.bodyDepthMm
+    : (resolveViewerBodyDepthM(spec) ?? spec.bodyDepthM ?? spec.depthM) * 1000;
+  const sideDepthMm =
+    (spec.leftSideDepthM ?? 0) > 0
+      ? spec.leftSideDepthM! * 1000
+      : resolveDrawerSideDepthMm(slideLengthMm);
+  if (Number.isFinite(spec.backPosZ)) return spec.backPosZ as number;
+  return resolveDrawerBackCenterZMm(combinedFrontMm, sideDepthMm, backMm) / 1000;
 }
 
 function resolveSpecBottomCenterYM(spec: DrawerSpec): number {
@@ -354,7 +383,7 @@ function resolveSpecSideCenterYM(spec: DrawerSpec): number {
   );
 }
 
-const DRAWER_VIEWER_LAYOUT_REV = "wood-side-base-elev-17mm-v3";
+const DRAWER_VIEWER_LAYOUT_REV = "wood-side-slide-clearance-10mm-v4";
 
 export function getDrawerStructureFingerprint(
   spec: DrawerSpec,
@@ -520,14 +549,14 @@ export function createDrawerObject(
     spec.bodyHeightM &&
     spec.bodyDepthM
   ) {
-    const viewerBodyDepthM = resolveViewerBodyDepthM(spec) ?? spec.bodyDepthM;
     const frontPosYMm = frontLocalY * 1000;
+    const slideLengthMm = (spec.bodyDepthM ?? resolveViewerBodyDepthM(spec) ?? 0) * 1000;
     woodSideLayout = resolveDrawerViewerWoodSideLayoutMm({
       frontPosYMm,
       frontHeightMm: spec.heightM * 1000,
       bodyWidthMm: spec.bodyWidthM * 1000,
       sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
-      bodyDepthMm: viewerBodyDepthM * 1000,
+      slideLengthMm,
     });
     // Frente permanece em frontLocalY (âncora Y=0 no grupo); laterais posicionam-se relativamente a ela.
   }
@@ -662,10 +691,15 @@ export function createDrawerObject(
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
     const viewerBodyDepthM = resolveViewerBodyDepthM(spec) ?? spec.bodyDepthM;
     const bodyCenterZm = resolveSpecBodyCenterZM(spec);
+    const sideCenterZm = resolveSpecSideCenterZM(spec);
     const sideCenterYm = resolveSpecSideCenterYM(spec);
     const woodSideHeightM = spec.woodBodyHeightM ?? spec.leftSideHeightM ?? spec.bodyHeightM;
     const sideMode = resolveDrawerSideRenderMode(spec);
     let woodBottomBackLayout: DrawerViewerWoodBottomBackLayoutMm | null = null;
+    const structuralFrontMm = isMetalBoxCatalogType(spec.metalBoxType)
+      ? (spec.frontIntThicknessM ?? 0) * 1000
+      : 0;
+    const combinedFrontMm = spec.frontThicknessM * 1000 + structuralFrontMm;
 
     if (sideMode === "metal") {
       const metalMaterial = new THREE.MeshStandardMaterial({
@@ -705,18 +739,20 @@ export function createDrawerObject(
           frontHeightMm: spec.heightM * 1000,
           bodyWidthMm: spec.bodyWidthM * 1000,
           sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
-          bodyDepthMm: viewerBodyDepthM * 1000,
+          slideLengthMm: (spec.bodyDepthM ?? viewerBodyDepthM) * 1000,
         });
       }
       const viewerSideHeightM = woodSideLayout.sideHeightMm / 1000;
       const viewerSidePosYM = woodSideLayout.sidePosYMm / 1000;
+      const sideDepthM = (spec.leftSideDepthM ?? woodSideLayout.sideDepthMm / 1000);
       woodBottomBackLayout = resolveDrawerViewerWoodBottomBackLayoutMm({
         sidePosYMm: woodSideLayout.sidePosYMm,
         sideHeightMm: woodSideLayout.sideHeightMm,
         internalWidthMm: woodSideLayout.internalWidthMm,
         sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
         bodyDepthMm: woodSideLayout.bodyDepthMm,
-        bodyCenterLocalZMm: bodyCenterZm * 1000,
+        sideDepthMm: woodSideLayout.sideDepthMm,
+        combinedFrontThicknessMm: combinedFrontMm,
         floorThicknessMm: (spec.bottomThicknessM ?? 0.01) * 1000,
         backThicknessMm: (spec.backThicknessM ?? 0.016) * 1000,
       });
@@ -725,7 +761,7 @@ export function createDrawerObject(
         const leftSide = panelFactory.createPanel(
           spec.leftSideWidthM,
           viewerSideHeightM,
-          viewerBodyDepthM,
+          sideDepthM,
           `drawer-left-${spec.id}`,
           "left",
           { singleMaterial: bodyPanelMaterial }
@@ -733,7 +769,7 @@ export function createDrawerObject(
         leftSide.position.set(
           woodSideLayout.leftPosXMm / 1000,
           viewerSidePosYM,
-          bodyCenterZm
+          sideCenterZm
         );
         applyDrawerBodyPartIdentity(leftSide, "left-side");
         drawerGroup.add(leftSide);
@@ -742,7 +778,7 @@ export function createDrawerObject(
         const rightSide = panelFactory.createPanel(
           spec.rightSideWidthM,
           viewerSideHeightM,
-          viewerBodyDepthM,
+          sideDepthM,
           `drawer-right-${spec.id}`,
           "right",
           { singleMaterial: bodyPanelMaterial }
@@ -750,7 +786,7 @@ export function createDrawerObject(
         rightSide.position.set(
           woodSideLayout.rightPosXMm / 1000,
           viewerSidePosYM,
-          bodyCenterZm
+          sideCenterZm
         );
         applyDrawerBodyPartIdentity(rightSide, "right-side");
         drawerGroup.add(rightSide);

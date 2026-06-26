@@ -11,6 +11,8 @@ import type { BoxOptions } from "../3d/objects/BoxBuilder";
 import { mmToM } from "../utils/units";
 import { devLogger } from "../utils/devLogger";
 import { getViewerMaterialId } from "../core/materials/service";
+import { resolveDrawerFrontMaterialId } from "../core/drawers/drawerFrontMaterial";
+import { syncDrawerFrontMaterialToViewer } from "../industrial/viewerIntegration";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { isIndustrialFileGenerationActive } from "../core/fabrication/industrialGenerationSuspend";
@@ -22,6 +24,7 @@ type ViewerApi = {
   updateBox: (_id: string, _options: Partial<BoxOptions>) => boolean;
   setBoxIndex: (_id: string, _index: number) => boolean;
   setBoxGap: (_gap: number) => void;
+  updateDrawerMaterial?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
 };
 
 type BoxState = { index: number };
@@ -126,6 +129,19 @@ function getStructureFingerprint(
   });
 }
 
+/** Material das frentes de gaveta (independente do corpo) — sync imediato sem rebuild estrutural. */
+function getDrawerFrontMaterialsFingerprint(
+  wsBox: WorkspaceBox,
+  fallbackMaterialId: string
+): string {
+  return JSON.stringify(
+    (wsBox.drawersLayer ?? []).map((drawer) => ({
+      id: drawer.id,
+      materialId: resolveDrawerFrontMaterialId(drawer, wsBox.material ?? fallbackMaterialId),
+    }))
+  );
+}
+
 /**
  * Portas enviadas ao Viewer: compensar Z quando a carcaça usa P útil (centrada) e o estado guarda posZ para P externa.
  * Não altera `workspaceBoxes` / estado do projeto.
@@ -210,6 +226,7 @@ export const useCalculadoraSync = (
   const prevViewerReadyRef = useRef<boolean | undefined>(false);
   /** Última estrutura conhecida por box id; quando igual, só enviamos position/rotation para evitar rebuild no Viewer. */
   const lastStructureFingerprintRef = useRef<Map<string, string>>(new Map());
+  const lastDrawerFrontMaterialsFingerprintRef = useRef<Map<string, string>>(new Map());
 
   // Atualizar refs durante o render para que o effect de sync use sempre boxes/workspaceBoxes mais recentes
   // (evita condição de corrida em que o effect roda antes dos refs serem atualizados).
@@ -237,6 +254,16 @@ export const useCalculadoraSync = (
     if (isIndustrialFileGenerationActive()) return;
     const api = viewerApiRef.current;
     if (!api) return;
+    const syncDrawerFrontMaterialsIfNeeded = (wsBox: WorkspaceBox, resolvedMat: string) => {
+      const drawerMatFp = getDrawerFrontMaterialsFingerprint(wsBox, resolvedMat);
+      const lastDrawerMatFp = lastDrawerFrontMaterialsFingerprintRef.current.get(wsBox.id);
+      if (lastDrawerMatFp === drawerMatFp) return;
+      for (const drawer of wsBox.drawersLayer ?? []) {
+        const matId = resolveDrawerFrontMaterialId(drawer, wsBox.material ?? resolvedMat);
+        syncDrawerFrontMaterialToViewer(wsBox.id, drawer.id, matId);
+      }
+      lastDrawerFrontMaterialsFingerprintRef.current.set(wsBox.id, drawerMatFp);
+    };
     const currentBoxes = boxesRef.current ?? [];
     const wsBoxes = workspaceBoxesRef.current ?? [];
     const viewerDebug = { showDrawerDrilling: showDrawerDrillingRef.current };
@@ -369,6 +396,10 @@ export const useCalculadoraSync = (
           wsBox.id,
           getStructureFingerprint(wsBox, piLateralDrillCountSig, viewerDebug)
         );
+        lastDrawerFrontMaterialsFingerprintRef.current.set(
+          wsBox.id,
+          getDrawerFrontMaterialsFingerprint(wsBox, resolvedMaterialName)
+        );
       } else {
         const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig, viewerDebug);
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
@@ -381,6 +412,7 @@ export const useCalculadoraSync = (
           }
           // Apenas posição/rotação mudaram (ex.: drag no viewer). Só atualizar transform para não disparar rebuild (updateBoxGroup/createDoorObject).
           api.updateBox(wsBox.id, { ...posRot, locked });
+          syncDrawerFrontMaterialsIfNeeded(wsBox, resolvedMaterialName);
         } else {
           if (import.meta.env.DEV) {
             devLogger.debug("[DOOR-MAT] useCalculadoraSync FULL updateBox (fingerprint mudou)", {
@@ -423,6 +455,7 @@ export const useCalculadoraSync = (
             ...posRot,
           });
           lastStructureFingerprintRef.current.set(wsBox.id, structureFingerprint);
+          syncDrawerFrontMaterialsIfNeeded(wsBox, resolvedMaterialName);
         }
       }
     });
@@ -431,6 +464,7 @@ export const useCalculadoraSync = (
       if (!currentIds.has(id)) {
         api.removeBox(id);
         lastStructureFingerprintRef.current.delete(id);
+        lastDrawerFrontMaterialsFingerprintRef.current.delete(id);
       }
     });
 

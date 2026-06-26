@@ -15,6 +15,7 @@ import {
   resolveDrawerBodyCenterZFromFrontMm,
   resolveDrawerFrontOuterZMm,
   resolveDrawerFrontPosZMm,
+  resolveDrawerSideDepthMm,
   resolveDrawerViewerBodyDepthMm,
 } from "./drawerSlideDepth";
 
@@ -145,6 +146,9 @@ export type DrawerViewerWoodSideLayoutMm = {
   sidePosYMm: number;
   leftPosXMm: number;
   rightPosXMm: number;
+  /** Comprimento industrial das laterais (corrediça − 10 mm). */
+  sideDepthMm: number;
+  /** Comprimento do fundo (= corrediça). */
   bodyDepthMm: number;
   internalWidthMm: number;
 };
@@ -211,10 +215,13 @@ export function resolveDrawerViewerWoodSideLayoutMm(input: {
   frontHeightMm: number;
   bodyWidthMm: number;
   sideThicknessMm: number;
-  bodyDepthMm: number;
+  /** Comprimento nominal da corrediça (mm). */
+  slideLengthMm: number;
 }): DrawerViewerWoodSideLayoutMm {
   const sideHeightMm = resolveDrawerViewerSideHeightMm(input.frontHeightMm);
   const internalWidthMm = resolveDrawerViewerInternalWidthMm(input.bodyWidthMm);
+  const slideLength = Math.max(0, Number(input.slideLengthMm));
+  const sideDepthMm = resolveDrawerSideDepthMm(slideLength);
   return {
     sideHeightMm,
     sidePosYMm: resolveDrawerViewerSidePosYMm(
@@ -232,7 +239,8 @@ export function resolveDrawerViewerWoodSideLayoutMm(input: {
       input.sideThicknessMm,
       "right"
     ),
-    bodyDepthMm: Math.max(0, Number(input.bodyDepthMm)),
+    sideDepthMm,
+    bodyDepthMm: slideLength,
     internalWidthMm,
   };
 }
@@ -272,8 +280,11 @@ export function resolveDrawerViewerWoodBottomBackLayoutMm(input: {
   sideHeightMm: number;
   internalWidthMm: number;
   sideThicknessMm: number;
+  /** Comprimento nominal da corrediça (fundo). */
   bodyDepthMm: number;
-  bodyCenterLocalZMm: number;
+  /** Comprimento das laterais/costa (corrediça − 10 mm). */
+  sideDepthMm: number;
+  combinedFrontThicknessMm: number;
   floorThicknessMm: number;
   backThicknessMm: number;
 }): DrawerViewerWoodBottomBackLayoutMm {
@@ -282,7 +293,11 @@ export function resolveDrawerViewerWoodBottomBackLayoutMm(input: {
   const floorT = Math.max(0, Number(input.floorThicknessMm));
   const backT = Math.max(0, Number(input.backThicknessMm));
   const bodyDepth = Math.max(0, Number(input.bodyDepthMm));
-  const bodyCenterZ = Number(input.bodyCenterLocalZMm);
+  const sideDepth = Math.max(0, Number(input.sideDepthMm));
+  const bodyCenterZ = resolveDrawerBodyCenterZMm(
+    input.combinedFrontThicknessMm,
+    bodyDepth
+  );
   const floorWidth = resolveDrawerViewerFloorWidthMm(
     input.internalWidthMm,
     input.sideThicknessMm
@@ -294,7 +309,11 @@ export function resolveDrawerViewerWoodBottomBackLayoutMm(input: {
     sideH - DRAWER_VIEWER_FLOOR_ABOVE_SIDE_BASE_MM - floorT
   );
   const backPosY = sideY + sideH / 2 - backHeight / 2;
-  const backPosZ = bodyCenterZ - bodyDepth / 2 + backT / 2;
+  const backPosZ = resolveDrawerBackCenterZMm(
+    input.combinedFrontThicknessMm,
+    sideDepth > 0 ? sideDepth : bodyDepth,
+    backT
+  );
 
   return {
     floorWidthMm: floorWidth,
@@ -399,8 +418,10 @@ export function buildDrawerWoodViewerPieceBoxes(input: {
   const woodH = input.woodBodyHeightMm;
   const offsetY = resolveDrawerBodyCenterOffsetYMm(input.frontHeightMm, woodH);
   const combinedFront = input.frontThicknessMm;
-  const bodyZ = resolveDrawerBodyCenterZMm(combinedFront, input.slideLengthMm);
-  const backZ = resolveDrawerBackCenterZMm(combinedFront, input.slideLengthMm, input.backThicknessMm);
+  const sideDepth = resolveDrawerSideDepthMm(input.slideLengthMm);
+  const bodyZ = resolveDrawerBodyCenterZMm(combinedFront, sideDepth);
+  const floorZ = resolveDrawerBodyCenterZMm(combinedFront, input.slideLengthMm);
+  const backZ = resolveDrawerBackCenterZMm(combinedFront, sideDepth, input.backThicknessMm);
   const bottomY = resolveDrawerBottomCenterYMm(woodH, input.bottomThicknessMm, offsetY);
   const halfW = input.bodyWidthMm / 2;
 
@@ -413,7 +434,7 @@ export function buildDrawerWoodViewerPieceBoxes(input: {
       bodyZ,
       input.sideThicknessMm,
       woodH,
-      input.slideLengthMm
+      sideDepth
     ),
     boxFromCenter(
       "lat_dir",
@@ -422,9 +443,9 @@ export function buildDrawerWoodViewerPieceBoxes(input: {
       bodyZ,
       input.sideThicknessMm,
       woodH,
-      input.slideLengthMm
+      sideDepth
     ),
-    boxFromCenter("fundo", 0, bottomY, bodyZ, input.backWidthMm, input.bottomThicknessMm, input.slideLengthMm),
+    boxFromCenter("fundo", 0, bottomY, floorZ, input.backWidthMm, input.bottomThicknessMm, input.slideLengthMm),
     boxFromCenter("costa", 0, offsetY, backZ, input.backWidthMm, woodH, input.backThicknessMm),
   ];
 }

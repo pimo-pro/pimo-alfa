@@ -2392,6 +2392,7 @@ export class ViewerCore {
         }
       }
     });
+    this.requestRender();
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
 
@@ -2420,6 +2421,7 @@ export class ViewerCore {
         ud.drawerFrontMaterialId = frontMaterialId;
       });
     }
+    this.requestRender();
   }
 
   /**

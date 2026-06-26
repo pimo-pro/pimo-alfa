@@ -114,3 +114,15 @@ export function resolveDrawerSlideLength(usableDepthMm: number): DrawerSlideLeng
 export function isDrawerSlideLengthMm(value: number): value is DrawerSlideLengthMm {
   return (DRAWER_SLIDE_LENGTHS_MM as readonly number[]).includes(value);
 }
+
+/** Folga traseira das laterais face ao comprimento nominal da corrediça (mm). */
+export const DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM = 10;
+
+/**
+ * Comprimento industrial das laterais/costa ao longo da corrediça.
+ * Redução aplicada na traseira; a frente da gaveta permanece alinhada.
+ */
+export function resolveDrawerSideDepthMm(slideLengthMm: number): number {
+  const slide = Math.max(0, Number(slideLengthMm));
+  return Math.max(0, slide - DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM);
+}

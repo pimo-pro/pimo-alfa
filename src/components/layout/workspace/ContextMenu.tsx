@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
+import { getViewerMaterialId } from "../../../core/materials/service";
 import type { ViewerMousePreset } from "../../../context/projectTypes";
 import { Icon } from "@/components/icons";
 import ContextMenuPortal from "./ContextMenuPortal";
@@ -361,7 +362,7 @@ export default function ContextMenu({
           const box = project.workspaceBoxes.find((b) =>
             (b.drawersLayer ?? []).some((d) => d.id === decoded.id)
           );
-          if (box) viewerApi?.updateDrawerMaterial?.(box.id, decoded.id, materialId);
+          if (box) viewerApi?.updateDrawerMaterial?.(box.id, decoded.id, getViewerMaterialId(materialId));
         }
       }
       window.viewerCore?.syncRemateVisuals?.();

@@ -230,11 +230,14 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole)", () => {
     });
 
     const lateralXml = xmlFiles.find((f) => f.partName.includes("gav_lat"));
-    const frenteXml = xmlFiles.find((f) => f.partName.includes("gav_frent"));
+    const costaXml = xmlFiles.find((f) => f.partName.includes("gav_cost"));
+    const frenteExtXml = xmlFiles.find((f) => f.partName.includes("gav_frent_ext"));
     expect(lateralXml?.xml).toContain("<TypeNo>3</TypeNo>");
     expect(lateralXml?.xml).toContain("<BeginX>");
     expect(lateralXml?.xml).not.toContain("<X2>");
-    expect(frenteXml?.xml).not.toContain("<TypeNo>3</TypeNo>");
-    expect((frenteXml?.xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
+    expect(costaXml?.xml).not.toContain("<TypeNo>3</TypeNo>");
+    expect((costaXml?.xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
+    expect((costaXml?.xml.match(/<TypeNo>1<\/TypeNo>/g) ?? []).length).toBe(2);
+    expect(frenteExtXml).toBeUndefined();
   });
 });

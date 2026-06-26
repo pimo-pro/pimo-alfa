@@ -88,10 +88,15 @@ describe("computeDrawerMetalBoxFrontHoles", () => {
 });
 
 describe("metal box cutlist + XML", () => {
-  it("Blum Legrabox — só frente + BOM metálico", () => {
+  it("Blum Legrabox — frentes + fundo/costa + BOM metálico", () => {
     const layer = metalDrawerLayer("Blum Legrabox", 128, 500);
     const cutlist = drawerLayerItemToCutList(layer, 0, "mdf_branco", "Modulo_A");
-    expect(cutlist.map((p) => p.tipo)).toEqual(["gaveta_frente_int", "gaveta_frente_ext"]);
+    expect(cutlist.map((p) => p.tipo).sort()).toEqual([
+      "gaveta_frente_ext",
+      "gaveta_frente_int",
+      "gaveta_fundo",
+      "gaveta_traseira",
+    ]);
     const frontInt = cutlist.find((p) => p.tipo === "gaveta_frente_int")!;
     const hw = frontInt.metadata?.drawerHardware as Array<{ tipo: string; nome: string }>;
     expect(hw.some((h) => h.tipo === "caixa_metalica" && h.nome === "Blum Legrabox")).toBe(true);

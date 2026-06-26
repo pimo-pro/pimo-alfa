@@ -29,6 +29,7 @@ import {
 import {
   DRAWER_SLIDE_LENGTHS_MM,
   isDrawerSlideLengthMm,
+  resolveDrawerSideDepthMm,
   resolveDrawerSlideLength,
   resolveDrawerUsableDepthMm,
 } from "./drawerSlideDepth";
@@ -90,7 +91,8 @@ export interface DrawerCalculatedSpecs {
   // Posicionamento
   positioning: {
     frontOffsetZ: number;      // +19mm à frente
-    bodyOffsetZ: number;       // Centro do corpo
+    bodyOffsetZ: number;       // Centro do fundo (comprimento = corrediça)
+    sideOffsetZ: number;       // Centro das laterais (comprimento = corrediça − 10 mm)
     pullDistance: number;      // Distância máxima de abertura
   };
 
@@ -362,13 +364,14 @@ export function calculateDrawerSpecs(
     externalFrontThickness + (needsStructuralFrontInt ? internalFrontThickness : 0);
 
   // ===== LATERAIS =====
+  const woodSideDepth = metalBoxEnabled ? 0 : resolveDrawerSideDepthMm(bodyDepth);
   const leftSideWidth = metalBoxEnabled ? 0 : sideThickness;
   const leftSideHeight = metalBoxEnabled ? 0 : bodyHeight;
-  const leftSideDepth = metalBoxEnabled ? 0 : bodyDepth;
+  const leftSideDepth = woodSideDepth;
 
   const rightSideWidth = metalBoxEnabled ? 0 : sideThickness;
   const rightSideHeight = metalBoxEnabled ? 0 : bodyHeight;
-  const rightSideDepth = metalBoxEnabled ? 0 : bodyDepth;
+  const rightSideDepth = woodSideDepth;
 
   // ===== TRASEIRA =====
   const backWidth = clampMm(bodyWidth - 2 * sideThickness);
@@ -383,6 +386,10 @@ export function calculateDrawerSpecs(
   // Frente flush na face frontal do módulo; corpo recuado para trás da frente.
   const frontOffsetZ = 0;
   const bodyOffsetZ = resolveDrawerBodyCenterZMm(combinedFrontThickness, bodyDepth);
+  const sideOffsetZ =
+    woodSideDepth > 0
+      ? resolveDrawerBodyCenterZMm(combinedFrontThickness, woodSideDepth)
+      : bodyOffsetZ;
   const pullDistance = resolveSlideCourse(settings, bodyDepth);
 
   if (frontHeight < settings.gavetaAlturaMinimaMm) {
@@ -467,6 +474,7 @@ export function calculateDrawerSpecs(
     positioning: {
       frontOffsetZ,
       bodyOffsetZ,
+      sideOffsetZ,
       pullDistance,
     },
     slide: {

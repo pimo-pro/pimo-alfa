@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useProject } from "../../../context/useProject";
+import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
+import { getViewerMaterialId } from "../../../core/materials/service";
 import { getSettings } from "../../../core/settings/settingsService";
 import { DRAWER_HEIGHT_MODES } from "../../../core/drawers/drawerUiConstants";
 import type { DrawerHeightMode } from "../../../core/drawers/drawerHeightModeTypes";
@@ -40,6 +42,7 @@ const badgeStyle = {
 
 export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps) {
   const { project, actions } = useProject();
+  const { viewerApi } = usePimoViewerContext();
   const [expandedDoorIds, setExpandedDoorIds] = useState<Record<string, boolean>>({});
   const [expandedDrawerIds, setExpandedDrawerIds] = useState<Record<string, boolean>>({});
   const [showHeightEditor, setShowHeightEditor] = useState(false);
@@ -429,6 +432,13 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                       box={selectedBox}
                       showHardware={showAllHardware || expandedDrawerIds[item.id]}
                       onUpdate={(partial) => actions.updateDrawerLayerItem(item.id, partial)}
+                      onFrontMaterialChange={(materialId) => {
+                        viewerApi?.updateDrawerMaterial?.(
+                          selectedBox.id,
+                          item.id,
+                          getViewerMaterialId(materialId)
+                        );
+                      }}
                     />
                     <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                       <button

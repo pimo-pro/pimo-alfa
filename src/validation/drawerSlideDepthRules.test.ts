@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM,
   DRAWER_SLIDE_LENGTHS_MM,
+  resolveDrawerSideDepthMm,
   resolveDrawerSlideLength,
   resolveDrawerUsableDepthMm,
 } from "../core/drawers/drawerSlideDepth";
@@ -42,5 +44,28 @@ describe("Regras industriais — profundidade de corrediças", () => {
     expect(layer.bodyDepth).toBe(expectedSlide);
     expect(layer.pullDistanceMm).toBe(expectedSlide);
     expect(DRAWER_SLIDE_LENGTHS_MM).toContain(layer.bodyDepth);
+  });
+
+  it("laterais têm comprimento = corrediça − 10 mm (regra industrial)", () => {
+    const group = generateDrawerGroup({
+      boxWidth: 600,
+      boxHeight: 400,
+      boxDepth: 560,
+      boxThickness: 19,
+      boxId: "side-depth",
+      drawerCount: 1,
+      drawerType: "normal",
+      heightMode: "equal",
+      availableDepths: settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm,
+      drawerSettings: settingsDefaults.gavetas,
+    });
+    const [layer] = drawerGroupToLayerItems(group);
+    const slide = layer.bodyDepth ?? 0;
+
+    expect(slide).toBe(500);
+    expect(layer.leftSideDepth).toBe(slide - DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM);
+    expect(layer.rightSideDepth).toBe(slide - DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM);
+    expect(resolveDrawerSideDepthMm(400)).toBe(390);
+    expect(resolveDrawerSideDepthMm(450)).toBe(440);
   });
 });

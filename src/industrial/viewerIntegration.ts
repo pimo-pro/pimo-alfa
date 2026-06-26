@@ -1,4 +1,5 @@
 import type { ViewerMaterialSyncSurface } from "../3d/viewer-engine/integration/viewerIndustrialSurface";
+import { getViewerMaterialId } from "../core/materials/service";
 
 /**
  * Boundary viewer ↔ mundo industrial / app.
@@ -32,6 +33,34 @@ export function refreshViewerAfterMaterialSync(result: MaterialSyncViewerRefresh
     if (result.affectedRodapeIds.length > 0) {
       core.syncRodapeVisuals?.();
     }
+  };
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(run);
+  } else {
+    run();
+  }
+}
+
+/**
+ * Aplica material à frente da gaveta no viewer 3D (sem rebuild estrutural).
+ * Usado por actions de material e como fallback em useCalculadoraSync.
+ */
+export function syncDrawerFrontMaterialToViewer(
+  boxId: string,
+  drawerLayerId: string,
+  materialId: string
+): void {
+  if (typeof window === "undefined") return;
+  const viewerMaterialId = getViewerMaterialId(materialId);
+  const run = () => {
+    const core = (
+      window as Window & {
+        viewerCore?: ViewerCoreIndustrialSurface & {
+          updateDrawerMaterial?: (b: string, d: string, m: string) => void;
+        };
+      }
+    ).viewerCore;
+    core?.updateDrawerMaterial?.(boxId, drawerLayerId, viewerMaterialId);
   };
   if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(run);

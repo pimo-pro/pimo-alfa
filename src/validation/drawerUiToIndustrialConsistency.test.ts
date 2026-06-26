@@ -8,6 +8,7 @@ import {
   isDrawerPieceTipo,
 } from "../services/drawerCutlistAdapter";
 import { resolveDrawerMotionCurve, resolveDrawerAnimationDurationMs } from "../core/drawers/DrawerMotionCurves";
+import { DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM } from "../core/drawers/drawerSlideDepth";
 import { drawerGroupToLayerItems, generateDrawerGroup } from "../core/drawers";
 import {
   buildDrawerScenario,
@@ -31,7 +32,8 @@ describe("Certificação — consistência UI → Industrial", () => {
 
     const cutlist = extractDrawerCutlistFromLayerItems(layers, "MDF");
     const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
-    expect(lat?.dimensoes.largura).toBe(layers[0].bodyDepth);
+    expect(lat?.dimensoes.largura).toBe(nominalDepthMm - DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM);
+    expect(layers[0].leftSideDepth).toBe(nominalDepthMm - DRAWER_SIDE_DEPTH_SLIDE_CLEARANCE_MM);
   });
 
   it("UI slideType → furação com regras da corrediça", () => {

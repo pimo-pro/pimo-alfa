@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { resolveDrawerFrontMaterialId } from "./drawerFrontMaterial";
-import { applyDrawerFrontMaterialToMesh } from "../../3d/objects/DrawerFactory";
+import { applyDrawerFrontMaterialToMesh, resolveDrawerFrontFaceMaterialIndex } from "../../3d/objects/DrawerFactory";
 import { PanelFactory } from "../../3d/objects/PanelFactory";
 import { resolvePanelMaterialOptions } from "../../3d/objects/BoxMaterialApplier";
 
@@ -21,7 +21,7 @@ describe("drawerFrontMaterial", () => {
     ).toBe("nogueira");
   });
 
-  it("applyDrawerFrontMaterialToMesh — atualiza faceMaterial (índice 1) sem tocar na orla", () => {
+  it("applyDrawerFrontMaterialToMesh — atualiza faceMaterial (grupo +Z) sem tocar na orla", () => {
     const panelFactory = new PanelFactory({ resolvePanelMaterialOptions });
     const edge = new THREE.MeshStandardMaterial({ color: 0xb8a898 });
     const oldFace = new THREE.MeshStandardMaterial({ color: 0xffffff });
@@ -31,9 +31,11 @@ describe("drawerFrontMaterial", () => {
     });
     expect(Array.isArray(mesh.material)).toBe(true);
 
+    const faceIndex = resolveDrawerFrontFaceMaterialIndex(mesh);
+    expect(faceIndex).toBe(1);
+
     const groups = (mesh.geometry as THREE.BufferGeometry).groups;
-    const largeFaceGroup = groups.find((g) => g.materialIndex === 1);
-    expect(largeFaceGroup).toBeDefined();
+    expect(groups[4]?.materialIndex).toBe(faceIndex);
 
     const newFace = new THREE.MeshStandardMaterial({ color: 0x224466 });
     applyDrawerFrontMaterialToMesh(mesh, newFace);
@@ -41,7 +43,7 @@ describe("drawerFrontMaterial", () => {
     expect(Array.isArray(mesh.material)).toBe(true);
     const materials = mesh.material as THREE.Material[];
     expect(materials[0]).toBe(edge);
-    expect(materials[1]).not.toBe(oldFace);
-    expect((materials[1] as THREE.MeshStandardMaterial).color.getHex()).toBe(0x224466);
+    expect(materials[faceIndex]).not.toBe(oldFace);
+    expect((materials[faceIndex] as THREE.MeshStandardMaterial).color.getHex()).toBe(0x224466);
   });
 });
