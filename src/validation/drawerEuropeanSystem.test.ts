@@ -29,7 +29,7 @@ describe("Sistema europeu de gavetas", () => {
     expect(specs.front.thickness).toBe(19);
     expect(specs.body.width).toBe(548);
     expect(specs.body.depth).toBe(550);
-    expect(specs.body.height).toBe(188);
+    expect(specs.body.height).toBe(150);
     expect(specs.leftSide.width).toBe(16);
     expect(specs.rightSide.width).toBe(16);
     expect(specs.back.thickness).toBe(16);

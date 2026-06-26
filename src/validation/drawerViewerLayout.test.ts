@@ -9,7 +9,7 @@ import {
   resolveDrawerGroupPosZMm,
   resolveDrawerViewerPosZAdjustmentMm,
 } from "../core/drawers/drawerViewerLayout";
-import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "../core/drawers/drawerGeometryConstants";
+import { DRAWER_SIDE_BASE_ELEVATION_MM, DRAWER_SIDE_TOP_CLEARANCE_RATIO } from "../core/drawers/drawerGeometryConstants";
 import { drawerGroupToLayerItems, generateDrawerGroup } from "../core/drawers";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 
@@ -24,7 +24,7 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
   });
 
   it("resolveDrawerFrontFlushLayoutMm — frente flush na profundidade útil", () => {
-    const layout = resolveDrawerFrontFlushLayoutMm(550, 19, 500);
+    const layout = resolveDrawerFrontFlushLayoutMm(550, 521, 19, 21);
     expect(layout.frontOuterZ).toBe(275);
     expect(layout.frontPosZ).toBe(265.5);
     expect(layout.bodyCenterLocalZ).toBeCloseTo(-259.5, 3);
@@ -35,8 +35,8 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
     expect(resolveDrawerBodyCenterZMm(19, 500)).toBeCloseTo(-(19 / 2 + 500 / 2), 3);
   });
 
-  it("laterais 12 mm mais baixas — offset Y = −6 mm", () => {
-    expect(resolveDrawerBodyCenterOffsetYMm(12)).toBe(-6);
+  it("laterais elevadas — offset Y = −(H−H_body)/2 + elevação", () => {
+    expect(resolveDrawerBodyCenterOffsetYMm(200)).toBe(-25 + DRAWER_SIDE_BASE_ELEVATION_MM);
   });
 
   it("layer → spec → posições coerentes com domínio", () => {
@@ -59,7 +59,10 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
     expect(spec.frontPosY).toBe(0);
     expect(spec.bodyDepthM).toBeCloseTo(0.5, 3);
     expect(spec.leftSidePosZ).toBeCloseTo(resolveDrawerBodyCenterZMm(19, 500) / 1000, 4);
-    expect(spec.leftSidePosY).toBeCloseTo(-0.006, 4);
+    expect(spec.leftSidePosY).toBeCloseTo(
+      resolveDrawerBodyCenterOffsetYMm(layer.height!) / 1000,
+      4
+    );
     expect(spec.heightM).toBeGreaterThan(spec.woodBodyHeightM ?? 0);
   });
 
@@ -71,7 +74,7 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
       bodyWidthMm: 548,
       slideLengthMm: 500,
       sideThicknessMm: 16,
-      woodBodyHeightMm: 378,
+      woodBodyHeightMm: 292.5,
       bottomThicknessMm: 10,
       backThicknessMm: 16,
       backWidthMm: 516,
@@ -81,11 +84,11 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
     const latDir = boxes.find((b) => b.name === "lat_dir")!;
     expect(assertDrawerWoodPiecesDisjoint([front, latEsq])).toBeNull();
     expect(assertDrawerWoodPiecesDisjoint([front, latDir])).toBeNull();
-    expect(front.minY - latEsq.minY).toBeCloseTo(0, 0);
+    expect(front.minY - latEsq.minY).toBeCloseTo(-DRAWER_SIDE_BASE_ELEVATION_MM, 0);
     expect(front.maxZ - latEsq.maxZ).toBeGreaterThan(0);
   });
 
-  it("delta altura frente vs corpo = 12 mm", () => {
+  it("delta altura frente vs corpo = 25% da frente", () => {
     const group = generateDrawerGroup({
       boxWidth: 600,
       boxHeight: 400,
@@ -99,6 +102,9 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
       drawerSettings: settingsDefaults.gavetas,
     });
     const [layer] = drawerGroupToLayerItems(group);
-    expect(layer.height! - (layer.backHeight ?? 0)).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
+    expect(layer.height! - (layer.backHeight ?? 0)).toBeCloseTo(
+      layer.height! * DRAWER_SIDE_TOP_CLEARANCE_RATIO,
+      0
+    );
   });
 });

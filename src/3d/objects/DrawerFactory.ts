@@ -33,7 +33,6 @@ import {
   resolveDrawerFrontFlushLayoutMm,
   resolveDrawerManufacturedSideMode,
   resolveDrawerViewerWoodSideLayoutMm,
-  resolveDrawerViewerFrontPosYMm,
   resolveDrawerViewerWoodBottomBackLayoutMm,
   type DrawerViewerWoodBottomBackLayoutMm,
   type DrawerViewerWoodSideLayoutMm,
@@ -198,7 +197,7 @@ export function buildDrawerSpecs(
         : undefined,
     bodyCenterOffsetYM: Number.isFinite(item.bodyCenterOffsetY)
       ? (item.bodyCenterOffsetY as number) / 1000
-      : resolveDrawerBodyCenterOffsetYMm() / 1000,
+      : resolveDrawerBodyCenterOffsetYMm(resolveDrawerExternalFrontHeightMm(item)) / 1000,
     frontIntPosZ: undefined,
     sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
     x: (item.posX ?? 0) / 1000,
@@ -332,8 +331,11 @@ function resolveSpecBackCenterZM(spec: DrawerSpec): number {
 
 function resolveSpecBottomCenterYM(spec: DrawerSpec): number {
   if (Number.isFinite(spec.bottomPosY)) return spec.bottomPosY as number;
+  const frontHm = spec.heightM;
   const woodHm = spec.woodBodyHeightM ?? spec.leftSideHeightM ?? spec.bodyHeightM ?? 0.1;
-  const offsetYm = spec.bodyCenterOffsetYM ?? resolveDrawerBodyCenterOffsetYMm() / 1000;
+  const offsetYm =
+    spec.bodyCenterOffsetYM ??
+    resolveDrawerBodyCenterOffsetYMm(frontHm * 1000, woodHm * 1000) / 1000;
   return (
     resolveDrawerBottomCenterYMm(
       woodHm * 1000,
@@ -345,8 +347,14 @@ function resolveSpecBottomCenterYM(spec: DrawerSpec): number {
 
 function resolveSpecSideCenterYM(spec: DrawerSpec): number {
   if (Number.isFinite(spec.leftSidePosY)) return spec.leftSidePosY as number;
-  return spec.bodyCenterOffsetYM ?? resolveDrawerBodyCenterOffsetYMm() / 1000;
+  const frontHm = spec.heightM;
+  return (
+    spec.bodyCenterOffsetYM ??
+    resolveDrawerBodyCenterOffsetYMm(frontHm * 1000) / 1000
+  );
 }
+
+const DRAWER_VIEWER_LAYOUT_REV = "wood-side-base-elev-17mm-v3";
 
 export function getDrawerStructureFingerprint(
   spec: DrawerSpec,
@@ -362,6 +370,7 @@ export function getDrawerStructureFingerprint(
       ? materials.bodyMaterial
       : legacyName ?? frontMaterial;
   return JSON.stringify({
+    drawerViewerLayoutRev: DRAWER_VIEWER_LAYOUT_REV,
     id: spec.id,
     widthM: spec.widthM,
     heightM: spec.heightM,
@@ -512,19 +521,15 @@ export function createDrawerObject(
     spec.bodyDepthM
   ) {
     const viewerBodyDepthM = resolveViewerBodyDepthM(spec) ?? spec.bodyDepthM;
+    const frontPosYMm = frontLocalY * 1000;
     woodSideLayout = resolveDrawerViewerWoodSideLayoutMm({
-      frontPosYMm: 0,
+      frontPosYMm,
       frontHeightMm: spec.heightM * 1000,
       bodyWidthMm: spec.bodyWidthM * 1000,
       sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
       bodyDepthMm: viewerBodyDepthM * 1000,
     });
-    frontLocalY =
-      resolveDrawerViewerFrontPosYMm(
-        woodSideLayout.sidePosYMm,
-        woodSideLayout.sideHeightMm,
-        spec.heightM * 1000
-      ) / 1000;
+    // Frente permanece em frontLocalY (âncora Y=0 no grupo); laterais posicionam-se relativamente a ela.
   }
 
   const frontExt = panelFactory.createPanel(
@@ -694,8 +699,9 @@ export function createDrawerObject(
       drawerGroup.add(rightMetal);
     } else if (sideMode === "wood") {
       if (!woodSideLayout) {
+        const frontPosYMm = frontLocalY * 1000;
         woodSideLayout = resolveDrawerViewerWoodSideLayoutMm({
-          frontPosYMm: 0,
+          frontPosYMm,
           frontHeightMm: spec.heightM * 1000,
           bodyWidthMm: spec.bodyWidthM * 1000,
           sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,

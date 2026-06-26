@@ -6,7 +6,7 @@ import {
   drawerGroupToLayerItems,
   calculateDrawerSpecs,
 } from "../core/drawers";
-import { DRAWER_VERTICAL_GAP_MM, DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "../core/drawers/drawerGeometryConstants";
+import { DRAWER_VERTICAL_GAP_MM, DRAWER_SIDE_TOP_CLEARANCE_RATIO } from "../core/drawers/drawerGeometryConstants";
 import {
   buildDrawerVerticalSlots,
   drawerVerticalSlotsOverlap,
@@ -65,7 +65,10 @@ describe("Geometria da gaveta no módulo", () => {
         expect(layer.height).toBeCloseTo(drawer.specs.frontExt.height, 1);
         expect(layer.bodyHeight).toBeCloseTo(drawer.specs.body.height, 1);
         expect(layer.height).toBeGreaterThan(layer.bodyHeight!);
-        expect(layer.height! - layer.bodyHeight!).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
+        expect(layer.height! - layer.bodyHeight!).toBeCloseTo(
+          layer.height! * DRAWER_SIDE_TOP_CLEARANCE_RATIO,
+          0
+        );
         expect(layer.posZ).toBeCloseTo(boxD / 2 - layer.frontThickness / 2, 1);
         expect(layer.posX ?? 0).toBeCloseTo(0, 1);
         expect(layer.width).toBe(boxW - 2 * drawerSettings.gavetaFolgaFrenteMm);
@@ -130,6 +133,9 @@ describe("Geometria da gaveta no módulo", () => {
       drawerSettings
     );
     expect(specs.body.depth).toBe(500);
-    expect(specs.frontExt.height - specs.back.height).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
+    expect(specs.frontExt.height - specs.back.height).toBeCloseTo(
+      specs.frontExt.height * DRAWER_SIDE_TOP_CLEARANCE_RATIO,
+      0
+    );
   });
 });

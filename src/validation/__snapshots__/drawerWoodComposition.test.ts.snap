@@ -52,7 +52,7 @@ exports[`Composição industrial — gaveta de madeira (5 peças) > cutlist com 
   {
     "boxId": "wood-comp",
     "dimensoes": {
-      "altura": 378,
+      "altura": 292.5,
       "largura": 500,
       "profundidade": 16,
     },
@@ -77,7 +77,7 @@ exports[`Composição industrial — gaveta de madeira (5 peças) > cutlist com 
   {
     "boxId": "wood-comp",
     "dimensoes": {
-      "altura": 378,
+      "altura": 292.5,
       "largura": 500,
       "profundidade": 16,
     },
@@ -127,7 +127,7 @@ exports[`Composição industrial — gaveta de madeira (5 peças) > cutlist com 
   {
     "boxId": "wood-comp",
     "dimensoes": {
-      "altura": 378,
+      "altura": 292.5,
       "largura": 516,
       "profundidade": 16,
     },

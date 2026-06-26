@@ -3,7 +3,13 @@
  * Origem local do grupo da gaveta: centro da frente externa (X/Y/Z).
  * Z+ = para a frente do módulo; Y+ = para cima.
  */
-import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "./drawerGeometryConstants";
+import {
+  DRAWER_SIDE_BASE_ELEVATION_MAX_MM,
+  DRAWER_SIDE_BASE_ELEVATION_MIN_MM,
+  DRAWER_SIDE_BASE_ELEVATION_MM,
+  DRAWER_SIDE_HEIGHT_RATIO,
+  DRAWER_SIDE_TOP_CLEARANCE_RATIO,
+} from "./drawerGeometryConstants";
 import { isMetalBoxCatalogType } from "./drawerMetalBoxCatalog";
 import {
   resolveDrawerBodyCenterZFromFrontMm,
@@ -22,22 +28,44 @@ export type DrawerViewerPieceBox = {
   maxZ: number;
 };
 
-/** Altura do corpo madeira (laterais/costa) = frente − delta industrial. */
-export function resolveDrawerWoodBodyHeightMm(
-  frontHeightMm: number,
-  deltaMm: number = DRAWER_BODY_HEIGHT_BELOW_FRONT_MM
+/** Folga vertical no topo da frente (mm) — 25% da altura da frente. */
+export function resolveDrawerSideTopClearanceMm(frontHeightMm: number): number {
+  const frontH = Math.max(0, Number(frontHeightMm));
+  return frontH * DRAWER_SIDE_TOP_CLEARANCE_RATIO;
+}
+
+/** Elevação da base das laterais acima da base da frente (mm), clamp 15–22. */
+export function resolveDrawerSideBaseElevationMm(
+  overrideMm?: number
 ): number {
-  return Math.max(1, frontHeightMm - deltaMm);
+  if (overrideMm != null && Number.isFinite(overrideMm)) {
+    return Math.min(
+      DRAWER_SIDE_BASE_ELEVATION_MAX_MM,
+      Math.max(DRAWER_SIDE_BASE_ELEVATION_MIN_MM, overrideMm)
+    );
+  }
+  return DRAWER_SIDE_BASE_ELEVATION_MM;
+}
+
+/** Altura do corpo madeira (laterais/costa) = 75% da frente. */
+export function resolveDrawerWoodBodyHeightMm(frontHeightMm: number): number {
+  const frontH = Math.max(0, Number(frontHeightMm));
+  return Math.max(1, frontH * DRAWER_SIDE_HEIGHT_RATIO);
 }
 
 /**
- * Offset Y do centro das laterais/costa para alinhar o fundo com o fundo da frente.
- * Frente centrada em Y=0 → laterais centradas em −delta/2.
+ * Offset Y do centro das laterais/costa.
+ * Base da lateral = base da frente + elevação industrial (15–22 mm).
  */
 export function resolveDrawerBodyCenterOffsetYMm(
-  deltaMm: number = DRAWER_BODY_HEIGHT_BELOW_FRONT_MM
+  frontHeightMm: number,
+  woodBodyHeightMm?: number,
+  baseElevationMm: number = resolveDrawerSideBaseElevationMm()
 ): number {
-  return -deltaMm / 2;
+  const frontH = Math.max(0, Number(frontHeightMm));
+  const bodyH = woodBodyHeightMm ?? resolveDrawerWoodBodyHeightMm(frontH);
+  const elevation = resolveDrawerSideBaseElevationMm(baseElevationMm);
+  return -(frontH - bodyH) / 2 + elevation;
 }
 
 /** Centro Z do corpo (laterais/fundo) atrás da frente, coords locais (origem = centro da frente). */
@@ -61,7 +89,7 @@ export function resolveDrawerBackCenterZMm(
 export function resolveDrawerBottomCenterYMm(
   woodBodyHeightMm: number,
   bottomThicknessMm: number,
-  bodyCenterOffsetYMm: number = resolveDrawerBodyCenterOffsetYMm()
+  bodyCenterOffsetYMm: number
 ): number {
   return -woodBodyHeightMm / 2 + bottomThicknessMm / 2 + bodyCenterOffsetYMm;
 }
@@ -109,8 +137,7 @@ export function shouldRenderGenericDrawerSlideRails(
 }
 
 /** Paridade viewer ↔ XML industrial — laterais de madeira. */
-export const DRAWER_VIEWER_SIDE_HEIGHT_RATIO = 0.75;
-export const DRAWER_VIEWER_SIDE_BOTTOM_OFFSET_MM = 17;
+export const DRAWER_VIEWER_SIDE_HEIGHT_RATIO = DRAWER_SIDE_HEIGHT_RATIO;
 export const DRAWER_VIEWER_SIDE_WALL_GAP_MM = 7;
 
 export type DrawerViewerWoodSideLayoutMm = {
@@ -122,10 +149,9 @@ export type DrawerViewerWoodSideLayoutMm = {
   internalWidthMm: number;
 };
 
-/** Altura da lateral: 75% da frente (redução ~25%). */
+/** Altura da lateral: 75% da frente (topo ~25% abaixo do topo da frente). */
 export function resolveDrawerViewerSideHeightMm(frontHeightMm: number): number {
-  const frontH = Math.max(0, Number(frontHeightMm));
-  return Math.max(1, frontH * DRAWER_VIEWER_SIDE_HEIGHT_RATIO);
+  return resolveDrawerWoodBodyHeightMm(frontHeightMm);
 }
 
 /** Largura interna útil da caixa a partir da largura do corpo (bodyWidth = interna − 2×folga). */
@@ -136,18 +162,19 @@ export function resolveDrawerViewerInternalWidthMm(
   return Math.max(0, Number(bodyWidthMm)) + 2 * Math.max(0, wallGapMm);
 }
 
-/** Posição Y do centro da lateral (coords locais da gaveta, mm). */
+/** Posição Y do centro da lateral — base elevada acima da base da frente (coords locais, mm). */
 export function resolveDrawerViewerSidePosYMm(
   frontPosYMm: number,
   frontHeightMm: number,
   sideHeightMm: number,
-  bottomOffsetMm: number = DRAWER_VIEWER_SIDE_BOTTOM_OFFSET_MM
+  baseElevationMm: number = resolveDrawerSideBaseElevationMm()
 ): number {
+  const elevation = resolveDrawerSideBaseElevationMm(baseElevationMm);
   return (
-    Number(frontPosYMm) +
-    Number(frontHeightMm) / 2 -
-    Number(sideHeightMm) / 2 -
-    Math.max(0, bottomOffsetMm)
+    Number(frontPosYMm) -
+    Number(frontHeightMm) / 2 +
+    Number(sideHeightMm) / 2 +
+    elevation
   );
 }
 
@@ -165,18 +192,16 @@ export function resolveDrawerViewerSidePosXMm(
   return side === "left" ? -magnitude : magnitude;
 }
 
-/** Posição Y do centro da frente alinhada à base industrial do gavetão (mm). */
+/** Posição Y do centro da frente quando as laterais definem a base (mm). Não usar no viewer quando a frente é a âncora em Y=0. */
 export function resolveDrawerViewerFrontPosYMm(
   sidePosYMm: number,
   sideHeightMm: number,
-  frontHeightMm: number,
-  bottomOffsetMm: number = DRAWER_VIEWER_SIDE_BOTTOM_OFFSET_MM
+  frontHeightMm: number
 ): number {
   return (
     Number(sidePosYMm) +
     Number(sideHeightMm) / 2 -
-    Number(frontHeightMm) / 2 +
-    Math.max(0, bottomOffsetMm)
+    Number(frontHeightMm) / 2
   );
 }
 
@@ -370,11 +395,9 @@ export function buildDrawerWoodViewerPieceBoxes(input: {
   bottomThicknessMm: number;
   backThicknessMm: number;
   backWidthMm: number;
-  deltaMm?: number;
 }): DrawerViewerPieceBox[] {
-  const delta = input.deltaMm ?? DRAWER_BODY_HEIGHT_BELOW_FRONT_MM;
   const woodH = input.woodBodyHeightMm;
-  const offsetY = resolveDrawerBodyCenterOffsetYMm(delta);
+  const offsetY = resolveDrawerBodyCenterOffsetYMm(input.frontHeightMm, woodH);
   const combinedFront = input.frontThicknessMm;
   const bodyZ = resolveDrawerBodyCenterZMm(combinedFront, input.slideLengthMm);
   const backZ = resolveDrawerBackCenterZMm(combinedFront, input.slideLengthMm, input.backThicknessMm);

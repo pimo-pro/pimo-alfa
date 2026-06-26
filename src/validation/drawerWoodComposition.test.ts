@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildDrillFilesForProject } from "../core/drill/drillExport";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
-import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "../core/drawers/drawerGeometryConstants";
+import { DRAWER_SIDE_TOP_CLEARANCE_RATIO } from "../core/drawers/drawerGeometryConstants";
 import { DRAWER_PIECE_INDUSTRIAL_TOKEN } from "../core/drawers/drawerIndustrialLabels";
 import {
   drawerLayerItemToCutList,
@@ -56,7 +56,10 @@ describe("Composição industrial — gaveta de madeira (5 peças)", () => {
     );
     expect(
       byTipo.gaveta_frente_ext!.dimensoes.altura - byTipo.gaveta_lat_esq!.dimensoes.altura
-    ).toBeCloseTo(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM, 0);
+    ).toBeCloseTo(
+      byTipo.gaveta_frente_ext!.dimensoes.altura * DRAWER_SIDE_TOP_CLEARANCE_RATIO,
+      0
+    );
 
     for (const piece of cutlist) {
       const token = DRAWER_PIECE_INDUSTRIAL_TOKEN[piece.tipo as keyof typeof DRAWER_PIECE_INDUSTRIAL_TOKEN];

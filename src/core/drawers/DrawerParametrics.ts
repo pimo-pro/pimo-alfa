@@ -21,7 +21,6 @@ import {
   resolveMetalBoxHeightMm,
   resolveMetalBoxProfile,
 } from "./drawerMetalBoxCatalog";
-import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "./drawerGeometryConstants";
 import {
   resolveDrawerBodyCenterOffsetYMm,
   resolveDrawerBodyCenterZMm,
@@ -344,13 +343,12 @@ export function calculateDrawerSpecs(
   const frontHeight = clampMm(frontHeightOverride ?? drawerHeight);
 
   // ===== CORPO =====
-  // Laterais + costa mais baixas que a frente externa (rasgo do fundo + folga).
-  const bodyHeightDelta = DRAWER_BODY_HEIGHT_BELOW_FRONT_MM;
-  const bodyWidth = clampMm(boxInternalWidth - 2 * sideGap);
-  const woodBodyHeight = resolveDrawerWoodBodyHeightMm(frontHeight, bodyHeightDelta);
+  // Laterais + costa mais baixas que a frente externa (quarto superior livre).
+  const woodBodyHeight = resolveDrawerWoodBodyHeightMm(frontHeight);
   const bodyHeight =
     metalBoxEnabled && resolvedMetalHeight > 0 ? resolvedMetalHeight : woodBodyHeight;
-  const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(bodyHeightDelta);
+  const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(frontHeight, woodBodyHeight);
+  const bodyWidth = clampMm(boxInternalWidth - 2 * sideGap);
   const bodyDepth = clampMm(nominalDepth);
 
   const needsStructuralFrontInt = metalBoxEnabled;

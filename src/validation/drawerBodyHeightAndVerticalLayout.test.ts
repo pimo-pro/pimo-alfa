@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DRAWER_BODY_HEIGHT_BELOW_FRONT_MM } from "../core/drawers/drawerGeometryConstants";
+import { DRAWER_SIDE_BASE_ELEVATION_MM, DRAWER_SIDE_TOP_CLEARANCE_RATIO } from "../core/drawers/drawerGeometryConstants";
 import { calculateDrawerSpecs } from "../core/drawers/DrawerParametrics";
 import {
   calculateDrawerHeights,
@@ -10,6 +10,8 @@ import {
 import {
   resolveDrawerWoodBodyHeightMm,
   resolveDrawerBodyCenterOffsetYMm,
+  resolveDrawerViewerSideHeightMm,
+  resolveDrawerViewerSidePosYMm,
   buildDrawerWoodViewerPieceBoxes,
 } from "../core/drawers/drawerViewerLayout";
 import {
@@ -19,13 +21,13 @@ import { resolveDrawerBodyHeightMm } from "../core/drawers/drawerLayerCustomizat
 import { settingsDefaults } from "../core/settings/settingsSchema";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 
-describe("altura do corpo da gaveta (frente − 12 mm)", () => {
-  it("H_body = H_front − 12 mm", () => {
-    expect(resolveDrawerWoodBodyHeightMm(200)).toBe(188);
-    expect(resolveDrawerWoodBodyHeightMm(180)).toBe(168);
+describe("altura do corpo da gaveta (frente × 75%)", () => {
+  it("H_body = H_front × 0,75", () => {
+    expect(resolveDrawerWoodBodyHeightMm(200)).toBe(150);
+    expect(resolveDrawerWoodBodyHeightMm(180)).toBe(135);
   });
 
-  it("calculateDrawerSpecs aplica delta nas laterais e costa", () => {
+  it("calculateDrawerSpecs aplica ratio nas laterais e costa", () => {
     const specs = calculateDrawerSpecs(
       {
         boxInternalWidth: 562,
@@ -41,12 +43,12 @@ describe("altura do corpo da gaveta (frente − 12 mm)", () => {
       settingsDefaults.gavetas
     );
     expect(specs.frontExt.height).toBe(200);
-    expect(specs.body.height).toBe(200 - DRAWER_BODY_HEIGHT_BELOW_FRONT_MM);
-    expect(specs.back.height).toBe(200 - DRAWER_BODY_HEIGHT_BELOW_FRONT_MM);
+    expect(specs.body.height).toBe(150);
+    expect(specs.back.height).toBe(150);
   });
 
-  it("bounding boxes madeira — frente mais alta que laterais", () => {
-    const woodH = 200 - DRAWER_BODY_HEIGHT_BELOW_FRONT_MM;
+  it("bounding boxes madeira — frente mais alta que laterais, bases alinhadas", () => {
+    const woodH = 150;
     const boxes = buildDrawerWoodViewerPieceBoxes({
       frontWidthMm: 598,
       frontHeightMm: 200,
@@ -64,10 +66,30 @@ describe("altura do corpo da gaveta (frente − 12 mm)", () => {
     expect(front.maxY - front.minY).toBe(200);
     expect(lat.maxY - lat.minY).toBe(woodH);
     expect(front.maxY - front.minY).toBeGreaterThan(lat.maxY - lat.minY);
+    expect(lat.minY - front.minY).toBeCloseTo(DRAWER_SIDE_BASE_ELEVATION_MM, 0);
+    expect(front.maxY - lat.maxY).toBeCloseTo(
+      200 * DRAWER_SIDE_TOP_CLEARANCE_RATIO - DRAWER_SIDE_BASE_ELEVATION_MM,
+      0
+    );
   });
 
-  it("offset Y do corpo = −(H_front − H_body)/2", () => {
-    expect(resolveDrawerBodyCenterOffsetYMm(DRAWER_BODY_HEIGHT_BELOW_FRONT_MM)).toBe(-6);
+  it("offset Y do corpo = −(H_front − H_body)/2 + elevação", () => {
+    expect(resolveDrawerBodyCenterOffsetYMm(200)).toBe(-25 + DRAWER_SIDE_BASE_ELEVATION_MM);
+  });
+
+  it("laterais — base elevada, altura 75%%, topo proporcional", () => {
+    const frontH = 200;
+    const sideH = resolveDrawerViewerSideHeightMm(frontH);
+    const sideY = resolveDrawerViewerSidePosYMm(0, frontH, sideH);
+    const sideTop = sideY + sideH / 2;
+    const sideBottom = sideY - sideH / 2;
+    expect(sideH).toBe(150);
+    expect(sideBottom).toBeCloseTo(-100 + DRAWER_SIDE_BASE_ELEVATION_MM, 3);
+    expect(sideTop).toBeCloseTo(sideBottom + sideH, 3);
+    expect(frontH / 2 - sideTop).toBeCloseTo(
+      frontH * DRAWER_SIDE_TOP_CLEARANCE_RATIO - DRAWER_SIDE_BASE_ELEVATION_MM,
+      3
+    );
   });
 });
 
