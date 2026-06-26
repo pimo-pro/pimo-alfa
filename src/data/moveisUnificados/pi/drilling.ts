@@ -197,13 +197,7 @@ function addDrawerSlideHolesUnified(
   });
 
   for (const spec of specs) {
-    addHole(
-      holes,
-      spec.x,
-      spec.y,
-      spec.isMarkOnly ? MARK_HOLE_DEPTH_MM : FULL_HOLE_DEPTH_MM,
-      "corredica"
-    );
+    addHole(holes, spec.x, spec.y, spec.depth, "corredica");
   }
 }
 

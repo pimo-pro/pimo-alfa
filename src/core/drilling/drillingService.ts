@@ -63,6 +63,8 @@ type PieceInput = {
   metalBoxProfileId?: string;
   metalBoxHeightMm?: number;
   softClose?: boolean;
+  /** Gaveta mais baixa do módulo (índice 0 = inferior). */
+  isLowestDrawer?: boolean;
   /** Se false, desativa explicitamente os furos de prateleira para a peça. */
   shelfHolesEnabled?: boolean;
   hingeSide?: "left" | "right" | "top" | "bottom";
@@ -519,6 +521,7 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
         largura: piece.largura,
         altura: piece.altura,
         espessura: piece.espessura,
+        isLowestDrawer: piece.isLowestDrawer === true,
       });
       out.push(...holes);
     }

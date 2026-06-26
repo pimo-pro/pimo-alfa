@@ -88,10 +88,10 @@ describe("Certificação CNC — peças de gaveta", () => {
     const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
     const holes = lat?.drillHoles?.filter((h) => h.holeType === "corredica") ?? [];
 
-    expect(holes).toHaveLength(2);
+    expect(holes).toHaveLength(3);
     holes.forEach((h) => {
-      expect(h.diameter).toBeGreaterThan(0);
-      expect(h.depth).toBeGreaterThan(0);
+      expect(h.diameter).toBe(5);
+      expect(h.depth).toBe(1);
       expect(h.face).toBe("B");
       expect(h.x).toBeGreaterThan(0);
       expect(h.y).toBeGreaterThan(0);

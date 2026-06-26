@@ -53,17 +53,18 @@ describe("drillExport — LAT_DIR alinhado com XML industrial", () => {
     expect(xml).toContain("<PanelThickness>16.00</PanelThickness>");
   });
 
-  it("exclui corrediça do XML estrutural (5 blocos CAD activos)", () => {
+  it("inclui corrediça no XML estrutural (8 blocos CAD activos)", () => {
     const xml = buildLatDirXml();
-    expect((xml.match(/<CAD>/g) ?? []).length).toBe(5);
-    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
+    expect((xml.match(/<CAD>/g) ?? []).length).toBe(8);
+    expect(xml).toContain("<Diameter>5.00</Diameter>");
+    expect(xml).toContain("<Depth>1.00</Depth>");
   });
 
   it("furos verticais TypeNo=1 em X=L-T/2 com Z1=0.00", () => {
     const xml = buildLatDirXml();
     expect(xml).toContain("<X1>492.00</X1>");
     expect(xml).toContain("<Y1>15.00</Y1>");
-    expect(xml).toContain("<Y1>162.00</Y1>");
+    expect(xml).toContain("<Y1>159.00</Y1>");
     expect(xml).toContain("<Z1>0.00</Z1>");
     expect(xml).not.toContain("<X1>8.00</X1>");
   });

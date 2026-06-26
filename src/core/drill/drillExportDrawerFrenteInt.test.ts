@@ -53,11 +53,12 @@ describe("drillExport — FRENTE_INT alinhado com XML industrial", () => {
     expect(xml).toContain("<PanelThickness>16.00</PanelThickness>");
   });
 
-  it("apenas 4 blocos CAD horizontais TypeNo=2 (sem rasgo)", () => {
+  it("4 fixações horizontais TypeNo=2 + 3 corrediças TypeNo=1", () => {
     const xml = buildFrenteIntXml();
-    expect((xml.match(/<CAD>/g) ?? []).length).toBe(4);
+    expect((xml.match(/<CAD>/g) ?? []).length).toBe(7);
     expect(xml).not.toContain("<TypeNo>3</TypeNo>");
-    expect(xml).not.toContain("<TypeNo>1</TypeNo>");
+    expect((xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
+    expect((xml.match(/<TypeNo>1<\/TypeNo>/g) ?? []).length).toBe(3);
   });
 
   it("furos horizontais X=0 e X=L com Y=30 e W-30", () => {

@@ -94,7 +94,7 @@ describe("Sistema europeu de gavetas", () => {
     expect(cutlist.find((item) => item.tipo === "gaveta_traseira")?.materialId).toBe("mdf_branco-16");
   });
 
-  it("aplica furacao europeia de corredicas a 37 mm do fundo", () => {
+  it("aplica furacao europeia de corredicas a 41 mm do fundo (3 furos por lateral)", () => {
     const result = buildPanelDrillingResult(
       {
         tipo: "gaveta_lat_esq",
@@ -107,9 +107,10 @@ describe("Sistema europeu de gavetas", () => {
 
     expect(result.success).toBe(true);
     const holes = result.data?.drillHoles.filter((hole) => hole.holeType === "corredica") ?? [];
-    expect(holes).toHaveLength(2);
-    expect(holes.map((hole) => hole.x)).toEqual([37, 493]);
-    expect(holes.every((hole) => hole.y === 163)).toBe(true);
+    expect(holes).toHaveLength(3);
+    expect(holes.map((hole) => hole.x)).toEqual([38, 69, 492]);
+    expect(holes.every((hole) => hole.y === 159)).toBe(true);
+    expect(holes.every((hole) => hole.depth === 1)).toBe(true);
     expect(holes.every((hole) => hole.face === "B")).toBe(true);
   });
 

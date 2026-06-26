@@ -71,6 +71,8 @@ export type PanelDrillingInput = {
   metalBoxProfileId?: string;
   metalBoxHeightMm?: number;
   softClose?: boolean;
+  /** Gaveta mais baixa do módulo — pino inferior a 41 mm da base da frente. */
+  isLowestDrawer?: boolean;
 };
 
 export type PanelDrillingOutput = {
@@ -401,6 +403,7 @@ export function buildPanelDrillingResult(
         metalBoxProfileId: input.metalBoxProfileId,
         metalBoxHeightMm: input.metalBoxHeightMm,
         softClose: input.softClose,
+        isLowestDrawer: input.isLowestDrawer,
         shelfHolesEnabled,
         hingeSide: input.hingeSide,
         hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,

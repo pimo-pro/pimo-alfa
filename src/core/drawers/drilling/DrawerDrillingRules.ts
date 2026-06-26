@@ -6,7 +6,7 @@
 
 import type { PieceType } from "../../drilling/drillingService";
 import { defaultRulesConfig, type RulesConfig } from "../../rules/rulesConfig";
-import type { TechnicalDrillHole } from "../../types";
+import type { PanelDrillHole, TechnicalDrillHole } from "../../types";
 import {
   settingsDefaults,
   type DrawerMetalBoxType,
@@ -20,6 +20,7 @@ import {
   normalizeDrawerMetalBoxType,
   resolveMetalBoxProfile,
 } from "../drawerMetalBoxCatalog";
+import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "../drawerVerticalPosition";
 
 export type DrawerDrillingMode = "drawer_piece" | "pi_module_lateral";
 
@@ -62,10 +63,11 @@ export type DrawerCorredicaHoleSpec = {
   isMarkOnly?: boolean;
 };
 
-const BLUM_SLIDES = new Set<string>(["Blum Tandem", "Blum Movento"]);
 const PI_LEGACY_REAR_X = 293;
 const PI_LEGACY_MARK_X = 69;
 const PI_LEGACY_FRONT_X = 37;
+/** Distância industrial da base ao eixo da corrediça / pino inferior (mm). */
+export const DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM = 41;
 
 function clampMm(value: number, min: number, max?: number): number {
   const v = Number.isFinite(value) ? value : min;
@@ -105,15 +107,16 @@ export function getDrawerSlideDrillingRules(
   const metalProfile = metalEnabled ? resolveMetalBoxProfile(resolvedMetal) : null;
 
   const offsetFrente =
-    metalProfile?.slideOffsetFrontMm ??
-    (BLUM_SLIDES.has(resolvedSlide) ? 37 : clampMm(cfg?.offsetFrente ?? 37, 5));
+    metalProfile?.slideOffsetFrontMm ?? clampMm(cfg?.offsetFrente ?? 38, 5);
   const offsetFundo =
-    metalProfile?.slideOffsetRearMm ??
-    (BLUM_SLIDES.has(resolvedSlide) ? 37 : clampMm(cfg?.offsetFundo ?? 37, 5));
-  const alturaRelativaFundo = clampMm(cfg?.alturaRelativaFundo ?? 37, 5);
+    metalProfile?.slideOffsetRearMm ?? clampMm(cfg?.offsetFundo ?? 38, 5);
+  const offsetMark = clampMm(cfg?.offsetMark ?? PI_LEGACY_MARK_X, 5);
+  const alturaRelativaFundo = clampMm(cfg?.alturaRelativaFundo ?? 41, 5);
   const offsetVerticalAdicional = clampMm(cfg?.offsetVerticalAdicional ?? 0, 0);
   const softCloseVerticalOffsetMm = softClose ? 2 : 0;
   const mode = ctx.mode ?? "drawer_piece";
+  const profundidadeMm = clampMm(cfg?.profundidade ?? 1, 0.1);
+  const profundidadeMarkMm = clampMm(cfg?.profundidadeMark ?? cfg?.profundidade ?? 1, 0.1);
 
   return {
     enabled: cfg?.enabled !== false,
@@ -125,13 +128,13 @@ export function getDrawerSlideDrillingRules(
     yLineMode: mode === "pi_module_lateral" ? "pi_runner_lines" : "single_from_bottom",
     offsetFrenteMm: offsetFrente,
     offsetFundoMm: offsetFundo,
-    offsetMarkMm: PI_LEGACY_MARK_X,
+    offsetMarkMm: offsetMark,
     alturaRelativaFundoMm: alturaRelativaFundo,
     offsetVerticalAdicionalMm: offsetVerticalAdicional,
     softCloseVerticalOffsetMm,
     diametroMm: clampMm(cfg?.diametro ?? 5, 1),
-    profundidadeMm: clampMm(cfg?.profundidade ?? 10, 1),
-    profundidadeMarkMm: 0.8,
+    profundidadeMm,
+    profundidadeMarkMm,
     mirrorLeftRight: true,
   };
 }
@@ -181,7 +184,7 @@ function resolvePiRearOffsetFromFront(panelDepthMm: number, offsetFundoMm: numbe
 }
 
 /**
- * Furos de corrediça numa peça de gaveta (modo europeu — 1 linha Y, 2 furos X).
+ * Furos de corrediça numa peça de gaveta (1 linha Y, 3 furos X: frontal + marca + traseiro).
  */
 export function computeDrawerPieceCorredicaHoles(params: {
   pieceType: PieceType;
@@ -194,17 +197,28 @@ export function computeDrawerPieceCorredicaHoles(params: {
 
   const face = getDrawerPieceCorredicaFace(pieceType);
   const y = yFromBottomOffset(altura, rules);
+  const xFront = rules.offsetFrenteMm;
+  const xMark = rules.offsetMarkMm;
+  const xRear = largura - rules.offsetFundoMm;
 
   return [
     {
-      x: rules.offsetFrenteMm,
+      x: xFront,
       y,
       diametro: rules.diametroMm,
       profundidade: rules.profundidadeMm,
       face,
     },
     {
-      x: largura - rules.offsetFundoMm,
+      x: xMark,
+      y,
+      diametro: rules.diametroMm,
+      profundidade: rules.profundidadeMarkMm,
+      face,
+      isMarkOnly: true,
+    },
+    {
+      x: xRear,
       y,
       diametro: rules.diametroMm,
       profundidade: rules.profundidadeMm,
@@ -311,6 +325,65 @@ export function computePiModuleLateralCorredicaHoles(params: {
 }
 
 /**
+ * Linhas Y (topo=0) nas laterais do módulo europeu — 41 mm acima da base de cada gaveta.
+ */
+export function resolveEuropeanModuleRunnerLinesYMm(params: {
+  panelHeightMm: number;
+  boxInternalHeightMm: number;
+  drawers: Array<{ posYMm: number; frontHeightMm: number }>;
+  rules?: DrawerSlideDrillingRules;
+}): number[] {
+  const rules =
+    params.rules ??
+    getDrawerSlideDrillingRules(undefined, undefined, { mode: "pi_module_lateral" });
+  const internalBottomCenterY = -params.boxInternalHeightMm / 2 + DRAWER_VERTICAL_BASE_OFFSET_MM;
+  const sorted = [...params.drawers].sort((a, b) => a.posYMm - b.posYMm);
+
+  return sorted.map((drawer) => {
+    const drawerBottomCenterY = drawer.posYMm - drawer.frontHeightMm / 2;
+    const slideFromModuleBaseMm =
+      drawerBottomCenterY - internalBottomCenterY + rules.alturaRelativaFundoMm;
+    return clampMm(params.panelHeightMm - slideFromModuleBaseMm, 1, params.panelHeightMm);
+  });
+}
+
+/** Furos de corrediça nas laterais do módulo (europeu) — paridade com cutlist / viewer / XML. */
+export function buildEuropeanModuleLateralCorredicaDrilling(input: {
+  runnerLinesYMm: number[];
+  panelDepthMm: number;
+  side: "left" | "right";
+  slideType?: string;
+  metalBoxType?: string;
+  softClose?: boolean;
+  corredicaConfig?: RulesConfig["furos"]["tecnicos"]["corredica"];
+}): PanelDrillHole[] {
+  const rules = getDrawerSlideDrillingRules(input.slideType, input.metalBoxType, {
+    softClose: input.softClose === true,
+    mode: "pi_module_lateral",
+    corredicaConfig: input.corredicaConfig,
+  });
+  if (!rules.enabled) return [];
+
+  const specs = computePiModuleLateralCorredicaHoles({
+    runnerLinesYMm: input.runnerLinesYMm,
+    panelDepthMm: input.panelDepthMm,
+    side: input.side,
+    rules,
+    useLegacyPiOffsets: false,
+  });
+
+  return specs.map((spec) => ({
+    x: spec.x,
+    y: spec.y,
+    diameter: rules.diametroMm,
+    depth: spec.isMarkOnly ? rules.profundidadeMarkMm : rules.profundidadeMm,
+    holeType: "corredica" as const,
+    face: "B" as const,
+    topDrillable: true,
+  }));
+}
+
+/**
  * Contagem oficial de gavetas para furação PI.
  */
 export function resolvePiDrawerCountForDrilling(input: {
@@ -354,7 +427,7 @@ export function computeDrawerLateralStructuralHoles(params: {
 
   // Furos verticais — face "cima" (cavilha de montagem)
   holes.push({ x: cavilhaX, y: 15,          diametro: 10, profundidade: 13, tipo: "cavilha",             face: "cima" });
-  holes.push({ x: cavilhaX, y: altura - 38, diametro: 10, profundidade: 13, tipo: "cavilha",             face: "cima" });
+  holes.push({ x: cavilhaX, y: altura - DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM, diametro: 10, profundidade: 13, tipo: "cavilha", face: "cima" });
 
   // Furos horizontais — fixação da costa (tras em esq, frente em dir)
   holes.push({ x: costaX, y: 15,          diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: costaFace });
@@ -416,17 +489,20 @@ export function computeDrawerFrenteIntStructuralHoles(params: {
   largura: number;
   altura: number;
   espessura: number;
+  /** Gaveta mais baixa do módulo — pino inferior a 41 mm da base da frente. */
+  isLowestDrawer?: boolean;
 }): TechnicalDrillHole[] {
-  const { largura, altura } = params;
+  const { largura, altura, isLowestDrawer } = params;
   const holes: TechnicalDrillHole[] = [];
+  const lowerPinY = isLowestDrawer ? altura - DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM : altura - 30;
 
   // Furos horizontais — face esquerda (X=0, Quadrante 2)
   holes.push({ x: 0, y: 30,           diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "esquerda" });
-  holes.push({ x: 0, y: altura - 30,  diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "esquerda" });
+  holes.push({ x: 0, y: lowerPinY,   diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "esquerda" });
 
   // Furos horizontais — face direita (X=L, Quadrante 1)
   holes.push({ x: largura, y: 30,           diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "direita" });
-  holes.push({ x: largura, y: altura - 30,  diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "direita" });
+  holes.push({ x: largura, y: lowerPinY,     diametro: 10, profundidade: 30, tipo: "fixacao_estrutural", face: "direita" });
 
   return holes;
 }

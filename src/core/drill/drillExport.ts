@@ -234,11 +234,6 @@ function buildXmlFromDrillHoles(
   return `<?xml version="1.0" encoding="UTF-8"?>\n<KDTPanelFormat>\n${body}\n</KDTPanelFormat>`;
 }
 
-/** XML estrutural de gaveta — exclui corrediça (mantida na cutlist / viewer). */
-function drawerHolesForStructuralXml(holes: PanelDrillHole[]): PanelDrillHole[] {
-  return holes.filter((h) => h.holeType !== "corredica");
-}
-
 function resolveDrawerPanelDimensions(item: CutListItemComPreco): {
   panelLength: number;
   panelWidth: number;
@@ -290,7 +285,11 @@ export function buildDrillFilesForProject(
       panelLength = item.dimensoes?.altura ?? 0;
       panelWidth = item.dimensoes?.largura ?? 0;
       if (panelLength <= 0 || panelWidth <= 0) continue;
-      xml = buildXmlForLateral(panelLength, panelWidth, panelThickness, frontDist, backDist);
+      if (item.drillHoles?.length) {
+        xml = buildXmlFromDrillHoles(panelLength, panelWidth, panelThickness, item.drillHoles);
+      } else {
+        xml = buildXmlForLateral(panelLength, panelWidth, panelThickness, frontDist, backDist);
+      }
     } else if (isDrawerPieceTipo(item.tipo) && (item.drillHoles?.length ?? 0) > 0) {
       const dims = resolveDrawerPanelDimensions(item);
       if (!dims) continue;
@@ -300,7 +299,7 @@ export function buildDrillFilesForProject(
         panelLength,
         panelWidth,
         panelThickness,
-        drawerHolesForStructuralXml(item.drillHoles!)
+        item.drillHoles!
       );
     } else {
       continue;

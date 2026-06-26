@@ -190,10 +190,14 @@ export type RulesConfig = {
         enabled: boolean;
         offsetFrente: number;
         offsetFundo: number;
+        /** Furo intermédio traseiro (marca) — distância da frente (mm). */
+        offsetMark: number;
         alturaRelativaFundo: number;
         offsetVerticalAdicional: number;
         diametro: number;
         profundidade: number;
+        /** Profundidade do furo de marca (mm); igual à corrediça quando não definido. */
+        profundidadeMark?: number;
       };
       prateleira: {
         enabled: boolean;
@@ -399,12 +403,14 @@ export const defaultRulesConfig: RulesConfig = {
       },
       corredica: {
         enabled: true,
-        offsetFrente: 37,
-        offsetFundo: 37,
-        alturaRelativaFundo: 37,
+        offsetFrente: 38,
+        offsetFundo: 38,
+        offsetMark: 69,
+        alturaRelativaFundo: 41,
         offsetVerticalAdicional: 0,
         diametro: 5,
-        profundidade: 10,
+        profundidade: 1,
+        profundidadeMark: 1,
       },
       prateleira: {
         enabled: true,

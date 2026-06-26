@@ -42,7 +42,7 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole)", () => {
         }),
         expect.objectContaining({
           x: LATERAL.espessura / 2,
-          y: LATERAL.altura - 38,
+          y: LATERAL.altura - 41,
           diametro: 10,
           profundidade: 13,
           face: "cima",
@@ -104,7 +104,7 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole)", () => {
     expect(cavilhas).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ y: 15, diametro: 10, profundidade: 13, face: "cima" }),
-        expect.objectContaining({ y: LATERAL.altura - 38, diametro: 10, profundidade: 13, face: "cima" }),
+        expect.objectContaining({ y: LATERAL.altura - 41, diametro: 10, profundidade: 13, face: "cima" }),
       ])
     );
 
@@ -179,7 +179,7 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole)", () => {
     const structuralLat = lat.filter((h) => h.tipo === "fixacao_estrutural" || h.tipo === "cavilha");
     expect(structuralLat.length).toBeGreaterThanOrEqual(5);
     expect(lat.some((h) => h.holeSubtype === "groove")).toBe(true);
-    expect(lat.filter((h) => h.tipo === "corredica")).toHaveLength(2);
+    expect(lat.filter((h) => h.tipo === "corredica")).toHaveLength(3);
 
     const costa = calculateTechnicalDrillingsForPiece(
       { tipo: "gaveta_traseira", largura: COSTA.largura, altura: COSTA.altura, espessura: COSTA.espessura },
@@ -237,7 +237,7 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole)", () => {
     expect(lateralXml?.xml).not.toContain("<X2>");
     expect(costaXml?.xml).not.toContain("<TypeNo>3</TypeNo>");
     expect((costaXml?.xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
-    expect((costaXml?.xml.match(/<TypeNo>1<\/TypeNo>/g) ?? []).length).toBe(2);
+    expect((costaXml?.xml.match(/<TypeNo>1<\/TypeNo>/g) ?? []).length).toBe(5);
     expect(frenteExtXml).toBeUndefined();
   });
 });
