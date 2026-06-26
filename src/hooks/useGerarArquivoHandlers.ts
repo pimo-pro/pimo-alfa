@@ -254,6 +254,7 @@ export function useGerarArquivoHandlers() {
       materialId: project.materialId,
       extractedPartsByBoxId: project.extractedPartsByBoxId ?? {},
       settings: settings ?? undefined,
+      pieceObservacoes: project.pieceObservacoes ?? {},
     }),
     [project, boxes, settings]
   );
@@ -296,6 +297,7 @@ export function useGerarArquivoHandlers() {
     const doc = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
       materialId: proj.materialId,
       extractedPartsByBoxId: proj.extractedPartsByBoxId,
+      pieceObservacoes: proj.pieceObservacoes,
     });
     doc.save(`${slug}_tecnico.pdf`);
   }, [hasBoxes, showToast, pdfProject, slug]);
@@ -349,6 +351,7 @@ export function useGerarArquivoHandlers() {
       const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
         materialId: proj.materialId,
         extractedPartsByBoxId: proj.extractedPartsByBoxId,
+        pieceObservacoes: proj.pieceObservacoes,
       });
       docTecnico.save(`${slug}_tecnico.pdf`);
       const docUnificado = await buildUnifiedPdf(proj);
@@ -825,6 +828,7 @@ export function useGerarArquivoHandlers() {
         const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
           materialId: proj.materialId,
           extractedPartsByBoxId: proj.extractedPartsByBoxId,
+          pieceObservacoes: proj.pieceObservacoes,
         });
         if (!safeAddPdf(zip, `${safeSlug}_tecnico.pdf`, docTecnico)) {
           errors.push({ step: "PDF Técnico", message: "Documento ou blob inválido." });

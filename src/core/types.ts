@@ -341,6 +341,8 @@ export interface BoxModule {
   orlaPresetId?: string;
   /** Remate V1 — IDs dos remates associados a esta caixa. */
   remateIds?: string[];
+  /** Observações da caixa (nível box). */
+  observacoes?: string[];
 }
 
 export interface WorkspaceBox {
@@ -439,6 +441,8 @@ export interface WorkspaceBox {
   orlaPresetId?: string;
   /** Remate V1 — IDs dos remates associados a esta caixa. */
   remateIds?: string[];
+  /** Observações da caixa (nível box). */
+  observacoes?: string[];
 }
 
 export interface ProjetoConfig {

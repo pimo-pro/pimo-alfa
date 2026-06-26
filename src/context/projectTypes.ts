@@ -157,6 +157,8 @@ export interface ProjectState {
   drawerPresets: import("../core/drawers/drawerPresetTypes").DrawerPreset[];
   /** Orla V1 — configuração por peça (chave = panelId estável). */
   orlaPieces: Record<string, import("../core/orla/orlaTypes").PieceOrlaConfig>;
+  /** Observações por peça (chave = panelId estável ou id industrial). */
+  pieceObservacoes: Record<string, string[]>;
   /** Orla V1 — pares de bordas partilhadas (Orla Junto). */
   orlaJuntoPairs: import("../core/orla/orlaTypes").OrlaJuntoPair[];
   /** Orla V1 — ferragem calculada (metros, custo). */
@@ -663,6 +665,12 @@ export interface ProjectActions {
   upsertOrlaPreset: (_preset: import("../core/orla/orlaTypes").OrlaPreset) => void;
   /** Orla V1 — remove preset de orla (se não estiver em uso). */
   removeOrlaPreset: (_presetId: string) => void;
+  /** Observações — adiciona/remove observação da caixa. */
+  addBoxObservacao: (_boxId: string, _text: string) => void;
+  removeBoxObservacao: (_boxId: string, _index: number) => void;
+  /** Observações — adiciona/remove observação de peça (panelId / id industrial). */
+  addPieceObservacao: (_pieceId: string, _text: string) => void;
+  removePieceObservacao: (_pieceId: string, _index: number) => void;
   /** Gavetas — cria ou atualiza preset de gavetas no projecto. */
   upsertDrawerPreset: (_preset: import("../core/drawers/drawerPresetTypes").DrawerPreset) => void;
   /** Gavetas — remove preset de gavetas do catálogo. */

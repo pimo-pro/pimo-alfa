@@ -32,6 +32,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
         rules: currentProject.rules,
         extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
         settings: getSettings(),
+        pieceObservacoes: currentProject.pieceObservacoes ?? {},
       };
       const doc = await buildCutlistPdf(pdfProject);
       doc.save(`${safeProjectName(projectName)}_cutlist.pdf`);
@@ -49,6 +50,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
       const doc = gerarPdfTecnicoCompleto(boxesToExport, currentProject.rules, projectName, {
         materialId: currentProject.materialId,
         extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        pieceObservacoes: currentProject.pieceObservacoes ?? {},
       });
       doc.save(`${safeProjectName(projectName)}_tecnico.pdf`);
     }, [projectRef]),
@@ -68,6 +70,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
         materialId: currentProject.materialId,
         extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
         settings: getSettings(),
+        pieceObservacoes: currentProject.pieceObservacoes ?? {},
       };
       const doc = await buildUnifiedPdf(pdfProject);
       doc.save(`${safeProjectName(projectName)}_completo.pdf`);

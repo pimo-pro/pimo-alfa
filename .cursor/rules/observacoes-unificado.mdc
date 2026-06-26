@@ -1,0 +1,41 @@
+---
+description: Sistema Unificado de Observações — arquitetura oficial (ObservacoesService)
+globs: pimo-criativo/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Observações — padrão oficial
+
+Implementação definitiva em `src/core/observacoes/ObservacoesService.ts`. Ver `src/core/observacoes/README.md`.
+
+## Fonte única
+
+- Caixa: `box.observacoes: string[]`
+- Peça: `project.pieceObservacoes[pieceId]: string[]`
+
+## Obrigatório
+
+- Sanitizar, deduplicar, resolver e formatar observações **apenas** via `ObservacoesService`
+- Pipeline industrial (PDFs, etiquetas v5, cutlist, unificado, multi-projeto) lê **exclusivamente** `pieceObservacoes`
+- UI usa `useObservacoesActions` + funções do serviço (`getPieceObservacoes`, `getBoxObservacoes`, etc.)
+- Migração legado **somente** na carga (`migrateProjectPieceObservacoes`); nunca sobrescrever existentes
+
+## Proibido
+
+- Ler `metadata.observacao` / `obs` / `observacoes` na pipeline (só migração)
+- Usar `rules.etiqueta.observacoesPadrao`, `runtime.observations` ou misturar `box.observacoes` em observações de peça nos exports
+- Manipular `piece.notes` (Pimo-Trak) no ObservacoesService
+- Importar `labelObservationsV5.ts` em código novo (usar `../observacoes`)
+- Lógica paralela de sanitização/deduplicação fora do serviço
+
+## Regressão
+
+Manter 21 testes a passar:
+
+```bash
+npx vitest run src/core/observacoes/ src/core/pdf/labelObservationsV5.test.ts
+```
+
+## Evolução futura (PIMO.PRO-V5)
+
+Roadmap, checklist de regressão e diagramas: `docs/PIMO-PRO-V5-OBSERVACOES.md`. Qualquer feature nova deve estender o `ObservacoesService`, nunca criar caminho paralelo.

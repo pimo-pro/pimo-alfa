@@ -11,6 +11,8 @@ import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomIn
 import { useProject } from "../../../context/useProject";
 import { Icon } from "@/components/icons";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
+import { hasObservacoes } from "../../../core/observacoes/ObservacoesService";
+import PieceObservacoesOverlay from "../overlays/PieceObservacoesOverlay";
 
 type HistoryFilter = "all" | "move" | "resize" | "add" | "remove" | "height" | "other";
 
@@ -271,6 +273,7 @@ export default function BottomInfoToolbar() {
     return "all";
   });
   const [pieceSearch, setPieceSearch] = useState("");
+  const [obsOverlayPiece, setObsOverlayPiece] = useState<{ id: string; label: string } | null>(null);
   const [layoutInsets, setLayoutInsets] = useState({ top: 56, bottom: 42 });
   const [componentsPanelTop, setComponentsPanelTop] = useState(56);
   const componentsGroupRef = useRef<HTMLDivElement | null>(null);
@@ -705,19 +708,45 @@ export default function BottomInfoToolbar() {
                 <span style={{ color: "var(--text-muted)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {entry.boxName} · {entry.label}
                 </span>
-                <input
-                  type="checkbox"
-                  checked={!hidden}
-                  disabled={hiddenGlobally}
-                  onChange={() => toggleHiddenPiece(entry.id)}
-                  title={
-                    hiddenGlobally
-                      ? "Tipo de painel está escondido globalmente"
-                      : hidden
-                        ? "Mostrar peça"
-                        : "Esconder peça"
-                  }
-                />
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  {hasObservacoes(entry.id, project.pieceObservacoes) ? (
+                    <button
+                      type="button"
+                      title="Ver observações"
+                      aria-label={`Observações: ${entry.label}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setObsOverlayPiece({ id: entry.id, label: `${entry.boxName} · ${entry.label}` });
+                      }}
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: "2px 5px",
+                        borderRadius: 4,
+                        border: "1px solid rgba(251, 191, 36, 0.35)",
+                        background: "rgba(251, 191, 36, 0.15)",
+                        color: "#fbbf24",
+                        cursor: "pointer",
+                      }}
+                    >
+                      OBS
+                    </button>
+                  ) : null}
+                  <input
+                    type="checkbox"
+                    checked={!hidden}
+                    disabled={hiddenGlobally}
+                    onChange={() => toggleHiddenPiece(entry.id)}
+                    title={
+                      hiddenGlobally
+                        ? "Tipo de painel está escondido globalmente"
+                        : hidden
+                          ? "Mostrar peça"
+                          : "Esconder peça"
+                    }
+                  />
+                </span>
               </label>
             );
           })
@@ -958,6 +987,16 @@ export default function BottomInfoToolbar() {
 
       {componentsPanelOpen ? createPortal(componentsSidePanel, document.body) : null}
       {historyPanelOpen && historyPanel ? createPortal(historyPanel, document.body) : null}
+      {obsOverlayPiece
+        ? createPortal(
+            <PieceObservacoesOverlay
+              pieceId={obsOverlayPiece.id}
+              pieceName={obsOverlayPiece.label}
+              onClose={() => setObsOverlayPiece(null)}
+            />,
+            document.body
+          )
+        : null}
     </>
   );
 }

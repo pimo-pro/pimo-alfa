@@ -425,6 +425,45 @@ const basePhases: Phase[] = [
     ],
   },
   {
+    id: "phase_5d_observacoes_pimo_pro_v5",
+    title: "Phase 5d: Sistema Unificado de Observações (PIMO.PRO-V5)",
+    description:
+      "Base consolidada via ObservacoesService (box.observacoes + pieceObservacoes). " +
+      "Evolução futura documentada em docs/PIMO-PRO-V5-OBSERVACOES.md.",
+    status: "in_progress",
+    tasks: [
+      {
+        id: "obs_v5_task_consolidacao",
+        title: "Consolidação ObservacoesService (baseline oficial)",
+        description:
+          "Fonte única: box.observacoes + pieceObservacoes. Pipeline industrial, UI, persistência, 21 testes. " +
+          "Ver src/core/observacoes/README.md.",
+        status: "done",
+      },
+      {
+        id: "obs_v5_task_categorias",
+        title: "Observações categorizadas (evolução futura)",
+        description:
+          "Industrial, Qualidade, Montagem, Campo, Cliente, Design. Modelo { categoria, texto }. Ícones/cores por categoria.",
+        status: "todo",
+      },
+      {
+        id: "obs_v5_task_templates",
+        title: "Templates industriais de observações (evolução futura)",
+        description:
+          "Templates por tipo de peça, projeto (Cozinha/Roupeiro/Escritório) e material. Seleção adiciona observações via ObservacoesService.",
+        status: "todo",
+      },
+      {
+        id: "obs_v5_task_rule_based",
+        title: "Notas automáticas por regra (evolução futura)",
+        description:
+          "Regras configuráveis JSON + UI Admin. Ex.: dimensão > X mm, material lacado, porta push-open, furos especiais.",
+        status: "todo",
+      },
+    ],
+  },
+  {
     id: "phase_6_configurador",
     title: "Phase 6: Integração Completa do Configurador 3D",
     description:
@@ -677,6 +716,8 @@ export const PHASE_DEPENDENCIES: Record<string, string[]> = {
   phase_4b_dynamic_rules: [],
   phase_5_smart_layout: [],
   phase_5_ui_ux: [],
+  phase_5c_models_catalog: [],
+  phase_5d_observacoes_pimo_pro_v5: [],
   phase_6_configurador: ["phase_3d_multibox", "phase_5_smart_layout"],
   phase_7_performance: ["phase_6_configurador"],
   phase_8_export: ["phase_6_configurador"],
@@ -692,6 +733,7 @@ export const roadmapInstructions = [
   "Índice de arquitetura (módulos, fluxos, docs) em core/docs/architectureIndex.ts.",
   "Phase 6 depende de Phase 3d e Phase 5; Phases 7–11 dependem de Phase 6. Ver PHASE_DEPENDENCIES.",
   "OBRIGATÓRIO: Novas fases devem declarar dependências em PHASE_DEPENDENCIES: { phase_id: [\"phase_X\", ...] }.",
+  "Documentação PIMO.PRO-V5 Observações: docs/PIMO-PRO-V5-OBSERVACOES.md (evolução futura + checklist regressão).",
   "Fases sem dependências: usar array vazio []; fases dependentes: listar IDs exatos das fases pré-requisito.",
 ];
 

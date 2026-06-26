@@ -18,6 +18,7 @@ import { useInternalMeasurementActions } from "./useInternalMeasurementActions";
 import { useDesignActions } from "./useDesignActions";
 import { useRoomActions } from "./useRoomActions";
 import { useOrlaActions } from "./useOrlaActions";
+import { useObservacoesActions } from "./useObservacoesActions";
 import { useDrawerPresetActions } from "./useDrawerPresetActions";
 import { useRemateActions } from "./useRemateActions";
 import { useHematiActions } from "./useHematiActions";
@@ -69,6 +70,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const designActions = useDesignActions(executionContext);
   const roomActions = useRoomActions(executionContext);
   const orlaActions = useOrlaActions(executionContext);
+  const observacoesActions = useObservacoesActions(executionContext);
   const drawerPresetActions = useDrawerPresetActions(executionContext);
   const remateActions = useRemateActions(executionContext);
   const hematiActions = useHematiActions(executionContext);
@@ -160,6 +162,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       designActions,
       roomActions,
       orlaActions,
+      observacoesActions,
       drawerPresetActions,
       remateActions,
       hematiActions,

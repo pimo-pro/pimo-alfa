@@ -35,6 +35,7 @@ import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
 import { createEmptyObjectGroups } from "../core/viewer/groupTypes";
 import { computeOrlaFerragem } from "../core/orla/orlaCalculator";
+import { migrateProjectPieceObservacoes } from "../core/observacoes/ObservacoesService";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import { normalizeDrawerPresets } from "../core/drawers/drawerPresets";
 import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
@@ -318,6 +319,7 @@ export const defaultState: ProjectState = {
   orlaPresets: normalizeOrlaPresets(undefined),
   drawerPresets: normalizeDrawerPresets(undefined),
   orlaPieces: {},
+  pieceObservacoes: {},
   orlaJuntoPairs: [],
   ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },
   remates: [],
@@ -396,10 +398,15 @@ export const applyResultados = (state: ProjectState): ProjectState => {
       orlaPieces: state.orlaPieces ?? {},
       orlaJuntoPairs: state.orlaJuntoPairs ?? [],
     });
+    const pieceObservacoes = migrateProjectPieceObservacoes(
+      state.pieceObservacoes ?? {},
+      boxesWithCutList
+    );
     return {
       ...stateWithBoxes,
       resultados,
       ferragemOrla,
+      pieceObservacoes,
       ultimaAtualizacao: new Date(),
       estaCarregando: false,
       erro: null,
@@ -545,6 +552,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     profundidadeExterna: box.profundidadeExterna,
     orlaPresetId: box.orlaPresetId,
     remateIds: box.remateIds ?? [],
+    observacoes: box.observacoes,
   };
 };
 

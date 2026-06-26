@@ -201,6 +201,7 @@ export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Prom
     materialId: project.materialId,
     extractedPartsByBoxId: project.extractedPartsByBoxId,
     precomputedItems: project.precomputedItems,
+    pieceObservacoes: project.pieceObservacoes,
   });
   await buildCutlistPdf(project, doc);
   addPainéisSection(doc, project);

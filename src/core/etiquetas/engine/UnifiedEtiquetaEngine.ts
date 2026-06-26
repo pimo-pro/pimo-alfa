@@ -58,5 +58,6 @@ function toPdfProject(project: UnifiedEtiquetaProjectInput): ProjectForEtiquetas
     designerConfig: project.designerConfig,
     precomputedItems: project.precomputedItems,
     orlaPiecesByPanelId: project.orlaPiecesByPanelId,
+    pieceObservacoes: project.pieceObservacoes,
   };
 }

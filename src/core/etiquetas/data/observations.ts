@@ -1,11 +1,5 @@
 /**
- * Observações v5 — UnifiedEtiquetaEngine (UEE).
+ * Observações v5 — reexporta o serviço unificado (UEE / PDFs / UI).
  */
 
-export {
-  MAX_LABEL_OBSERVATIONS_V5,
-  collectObservationsForItem,
-  observationsToV5Slots,
-  type LabelObservationItemLike,
-  type LabelObservationRulesLike,
-} from "../../pdf/labelObservationsV5";
+export * from "../../observacoes";

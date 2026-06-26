@@ -19,6 +19,7 @@ export type UnifiedEtiquetaProjectInput = {
   designerConfig?: LabelDesignerConfig;
   precomputedItems?: CutListItemComPreco[];
   orlaPiecesByPanelId?: Record<string, PieceOrlaConfigInput>;
+  pieceObservacoes?: Record<string, string[]>;
   /**
    * Configuração unificada de etiquetas v5 (LabelSystemV5).
    * Quando presente, o UEE usa-a como SSOT em vez de resolver regras legadas.

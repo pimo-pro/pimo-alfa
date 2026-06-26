@@ -15,6 +15,12 @@ import {
   resolveIndustrialListNqr,
 } from "./industrialListQr";
 import { safeGetItem } from "../../utils/storage";
+import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
+import {
+  formatObservacoesForPdf,
+  normalizeObservacoesList,
+  resolveObservacoesForCutListItem,
+} from "../observacoes/ObservacoesService";
 
 import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
 import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
@@ -123,6 +129,8 @@ export type GerarPdfTecnicoOpcoes = {
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
   /** Itens já com shortCode (ex.: fabricação multi‑projeto). */
   precomputedItems?: CutListItemComPreco[];
+  /** Observações por peça (panelId). */
+  pieceObservacoes?: PieceObservacoesStore;
 };
 
 function loadCutlistForIndustrialList(
@@ -149,7 +157,10 @@ function construirLinhas(
   componentTypes: ComponentType[],
   materials: MaterialIndustrial[],
   projectName: string,
-  pdfOpts?: Pick<GerarPdfTecnicoOpcoes, "materialId" | "extractedPartsByBoxId" | "precomputedItems">
+  pdfOpts?: Pick<
+    GerarPdfTecnicoOpcoes,
+    "materialId" | "extractedPartsByBoxId" | "precomputedItems" | "pieceObservacoes"
+  >
 ): LinhaPeca[] {
   const ctById = Object.fromEntries(componentTypes.map((c) => [c.id, c]));
   const boxById = new Map(boxes.map((b) => [b.id, b]));
@@ -170,6 +181,7 @@ function construirLinhas(
     material: string;
     qtd: number;
     nQr: string;
+    observacoes: string[];
   }> = [];
 
   cutlist.forEach((item, index0) => {
@@ -178,6 +190,9 @@ function construirLinhas(
     const boxNome = box?.nome ?? item.boxId ?? "";
     const refPeca = resolveIndustrialPieceRef(item, boxNome, projectName);
     const materialNome = item.material ?? box?.material ?? "mdf_branco";
+    const itemObs = resolveObservacoesForCutListItem(item, {
+      pieceObservacoes: pdfOpts?.pieceObservacoes,
+    });
 
     pecasCompletas.push({
       box,
@@ -190,6 +205,7 @@ function construirLinhas(
       material: materialNome,
       qtd: item.quantidade,
       nQr: resolveIndustrialListNqr(item, qrCtx, piecesPerSheet, index0),
+      observacoes: itemObs,
     });
   });
 
@@ -201,7 +217,10 @@ function construirLinhas(
     return a.refPeca.localeCompare(b.refPeca);
   });
 
-  const agrupado = new Map<string, LinhaPeca>();
+  const agrupado = new Map<
+    string,
+    LinhaPeca & { observacoesLista: string[] }
+  >();
 
   for (const p of pecasCompletas) {
     const componentId = TIPO_TO_COMPONENT_ID[p.tipo] ?? p.tipo;
@@ -217,6 +236,8 @@ function construirLinhas(
     const exist = agrupado.get(key);
     if (exist) {
       exist.qtd += p.qtd;
+      exist.observacoesLista = normalizeObservacoesList([...exist.observacoesLista, ...p.observacoes]);
+      exist.observacoes = formatObservacoesForPdf(exist.observacoesLista);
     } else {
       agrupado.set(key, {
         refPeca: p.refPeca,
@@ -235,7 +256,8 @@ function construirLinhas(
         f3: ladosFuro.has("fundo") ? "X" : "",
         f4: ladosFuro.has("esquerda") ? "X" : "",
         f5: ladosFuro.has("direita") ? "X" : "",
-        observacoes: "",
+        observacoes: formatObservacoesForPdf(p.observacoes),
+        observacoesLista: normalizeObservacoesList(p.observacoes),
         nQr: p.nQr,
         boxNome: p.box?.nome || p.box?.id || "—",
         boxIndex: p.boxIndex,
@@ -245,7 +267,7 @@ function construirLinhas(
     }
   }
 
-  const resultado = Array.from(agrupado.values());
+  const resultado = Array.from(agrupado.values()).map(({ observacoesLista: _omit, ...row }) => row);
   resultado.sort((a, b) => {
     const boxCmp = a.boxIndex - b.boxIndex;
     if (boxCmp !== 0) return boxCmp;
@@ -325,6 +347,7 @@ export function gerarPdfTecnicoCompleto(
     materialId: opcoes?.materialId,
     extractedPartsByBoxId: opcoes?.extractedPartsByBoxId,
     precomputedItems: opcoes?.precomputedItems,
+    pieceObservacoes: opcoes?.pieceObservacoes,
   });
 
   const head = [

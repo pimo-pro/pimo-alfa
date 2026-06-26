@@ -14,6 +14,11 @@ import {
   resolveIndustrialListNqr,
 } from "./industrialListQr";
 import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
+import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
+import {
+  formatObservacoesForPdf,
+  resolveObservacoesForCutListItem,
+} from "../observacoes/ObservacoesService";
 
 /** Grelha preta fina — impressão e conferência manual. */
 const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
@@ -28,6 +33,8 @@ export type ProjectForPdf = {
   settings?: unknown;
   /** Itens pré-calculados com numeração global (modo fabricação em massa). */
   precomputedItems?: CutListItemComPreco[];
+  /** Observações por peça (panelId). */
+  pieceObservacoes?: PieceObservacoesStore;
 };
 
 const MARGIN = 14;
@@ -122,6 +129,11 @@ export function renderCutlistTable(
     }
     const refPeca = resolveIndustrialPieceRef(p, p.boxNome, project.projectName);
     const nQr = resolveIndustrialListNqr(p, qrCtx, piecesPerSheet, index0);
+    const obsText = formatObservacoesForPdf(
+      resolveObservacoesForCutListItem(p, {
+        pieceObservacoes: project.pieceObservacoes,
+      })
+    );
     return [
       p.boxNome ?? "—",
       refPeca,
@@ -131,7 +143,7 @@ export function renderCutlistTable(
       "",
       "",
       "",
-      "",
+      obsText,
       nQr,
     ];
   });

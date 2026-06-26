@@ -27,8 +27,7 @@ import {
 import {
   collectObservationsForItem,
   observationsToV5Slots,
-  type LabelObservationRulesLike,
-} from "./labelObservationsV5";
+} from "../observacoes/ObservacoesService";
 import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
 import {
   buildV5BottomStripIndustrialName,
@@ -74,6 +73,8 @@ export type ProjectForEtiquetasPdf = {
   precomputedItems?: CutListItemComPreco[];
   /** Orla V1 por panelId — opcional para renderer v5. */
   orlaPiecesByPanelId?: Record<string, PieceOrlaConfigInput>;
+  /** Observações por peça (panelId). */
+  pieceObservacoes?: import("../observacoes/observacoesTypes").PieceObservacoesStore;
 };
 
 type LabelItem = CutListItemComPreco & {
@@ -1019,8 +1020,8 @@ export async function buildProductionEtiquetasV5Pdf(
   for (const item of ordered) {
     const key = labelItemSheetKey(item.boxId, item.nome);
     item.numCaixa = piecesPerSheet.get(key) ?? 0;
-    const collected = collectObservationsForItem(item, project.rules as LabelObservationRulesLike);
-    item.observations = [...runtime.observations, ...collected].slice(0, 3);
+    const collected = collectObservationsForItem(item, undefined, project.pieceObservacoes);
+    item.observations = collected;
   }
 
   const dims = labelConfig.dimensions;

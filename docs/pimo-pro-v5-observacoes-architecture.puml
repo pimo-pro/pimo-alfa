@@ -1,0 +1,93 @@
+@startuml PIMO-PRO-V5-Observacoes
+!theme plain
+skinparam componentStyle rectangle
+
+title PIMO.PRO-V5 — Sistema Unificado de Observações (arquitectura oficial)
+
+package "Modelo de dados" {
+  class WorkspaceBox {
+    observacoes: string[]
+  }
+  class ProjectState {
+    pieceObservacoes: Record<pieceId, string[]>
+  }
+  class CutListItem {
+    metadata.panelId
+  }
+}
+
+package "ObservacoesService\n(fonte única)" #LightBlue {
+  component Sanitize
+  component Normalize
+  component ResolveIndustrial
+  component MigrateLegacy
+  component MergeMultiProject
+  component FormatPdf
+}
+
+package "UI" #LightGreen {
+  component BoxPecasObservacoesSection
+  component PieceObservacoesEditor
+  component PieceObservacoesOverlay
+  component useObservacoesActions
+}
+
+package "Viewer" #LightGreen {
+  component BottomInfoToolbar
+}
+
+package "Pipeline industrial" #LightYellow {
+  component gerarPdfTecnico
+  component pdfCutlist
+  component pdfUnified
+  component pdfEtiquetas
+  component UnifiedEtiquetaEngine
+  component multiProjectFabrication
+}
+
+package "Persistência" #Wheat {
+  component projectPersistence
+  component projectState
+}
+
+package "Domínio separado\n(nunca misturar)" #Pink {
+  component PimoTrakNotes as "piece.notes\n(Pimo-Trak)"
+  component MaterialObs as "materials.api\nobservacoes"
+}
+
+WorkspaceBox --> useObservacoesActions
+ProjectState --> useObservacoesActions
+useObservacoesActions --> Sanitize
+Sanitize --> Normalize
+
+BoxPecasObservacoesSection --> ResolveIndustrial
+PieceObservacoesOverlay --> ResolveIndustrial
+BottomInfoToolbar --> ResolveIndustrial
+
+ProjectState --> ResolveIndustrial
+CutListItem --> ResolveIndustrial
+
+ResolveIndustrial --> gerarPdfTecnico
+ResolveIndustrial --> pdfCutlist
+ResolveIndustrial --> pdfUnified
+ResolveIndustrial --> pdfEtiquetas
+ResolveIndustrial --> UnifiedEtiquetaEngine
+
+ProjectState --> MergeMultiProject
+MergeMultiProject --> multiProjectFabrication
+multiProjectFabrication --> pdfEtiquetas
+
+projectPersistence --> Normalize
+projectState --> MigrateLegacy
+MigrateLegacy ..> ProjectState : só na carga
+
+PimoTrakNotes -[hidden]- MaterialObs
+
+note right of ObservacoesService
+  Implementação oficial fixada.
+  Evolução futura deve estender
+  este serviço — nunca criar
+  caminho paralelo.
+end note
+
+@enduml

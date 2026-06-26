@@ -12,6 +12,7 @@ import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/
 import { normalizeProjectRoom } from "../3d/viewer-engine/room/RoomEngine";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import { normalizeDrawerPresets } from "../core/drawers/drawerPresets";
+import { normalizeObservacoesList } from "../core/observacoes/ObservacoesService";
 import {
   normalizeRematesFromPersistence,
   upgradeRematesAfterLoad,
@@ -199,6 +200,15 @@ export function reviveState(snapshot: unknown): ProjectState | null {
       restored.orlaPieces && typeof restored.orlaPieces === "object"
         ? { ...(restored.orlaPieces as ProjectState["orlaPieces"]) }
         : defaultState.orlaPieces,
+    pieceObservacoes:
+      restored.pieceObservacoes && typeof restored.pieceObservacoes === "object"
+        ? Object.fromEntries(
+            Object.entries(restored.pieceObservacoes as Record<string, unknown>).map(([k, v]) => [
+              k,
+              normalizeObservacoesList(v),
+            ])
+          )
+        : defaultState.pieceObservacoes,
     orlaJuntoPairs: Array.isArray(restored.orlaJuntoPairs)
       ? restored.orlaJuntoPairs
       : defaultState.orlaJuntoPairs,

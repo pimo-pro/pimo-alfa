@@ -43,7 +43,7 @@ import type { McDimensionsViewerSource } from "../industrial/mcDimensions/mcDime
 import { captureMcDimensionsFromViewer } from "../industrial/mcDimensions/mcDimensionsCapture";
 import { exportMCDimensionsForZip } from "../industrial/mcDimensions/mcDimensionsGenerator";
 import { loadMcDimensionsConfig } from "../../config/mcDimensionsConfig";
-import { beginIndustrialFileGeneration, endIndustrialFileGeneration } from "./industrialGenerationSuspend";
+import { mergePieceObservacoesStores } from "../observacoes/ObservacoesService";
 import { measureTime } from "../../utils/measureTime";
 
 export interface GeneratedFabricationPackage {
@@ -146,6 +146,7 @@ function stateToProjectForPdf(state: ProjectState): ProjectForPdf {
     rules: state.rules,
     materialId: state.materialId,
     extractedPartsByBoxId: state.extractedPartsByBoxId ?? {},
+    pieceObservacoes: state.pieceObservacoes ?? {},
   };
 }
 
@@ -369,6 +370,10 @@ export async function generateMultiProjectFabrication(
     loaded.push({ state, recordId, prefix: `P${i + 1}_` });
   }
 
+  const mergedPieceObservacoes = mergePieceObservacoesStores(
+    ...loaded.map((entry) => entry.state.pieceObservacoes)
+  );
+
   checkAbort();
 
   const projectNames: string[] = [];
@@ -476,6 +481,7 @@ export async function generateMultiProjectFabrication(
           settings: getSettings(),
           precomputedItems: bundle.items as CutListItemComPreco[],
           cutLayoutPlacements: layout.sheets.flatMap((s) => s.placements),
+          pieceObservacoes: mergedPieceObservacoes,
         };
         const docEtiquetasTodas = await UnifiedEtiquetaEngine.build(globalEtiquetasProj);
         safeAddPdf(zip, industrialThicknessEtiquetasPdfPath(bundle.bucket), docEtiquetasTodas);
@@ -528,6 +534,7 @@ export async function generateMultiProjectFabrication(
         materialId: proj.materialId,
         extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
         precomputedItems: projDisplayItems,
+        pieceObservacoes: proj.pieceObservacoes,
       });
       safeAddPdf(zip, `${basePath}/tecnico.pdf`, docTecnico);
     } catch (err) {
@@ -555,6 +562,7 @@ export async function generateMultiProjectFabrication(
         settings: getSettings(),
         precomputedItems: projDisplayItems,
         cutLayoutPlacements: projPlacements.length > 0 ? projPlacements : undefined,
+        pieceObservacoes: proj.pieceObservacoes,
       });
       safeAddPdf(zip, `${basePath}/etiquetas.pdf`, docEtiquetas);
     } catch (err) {

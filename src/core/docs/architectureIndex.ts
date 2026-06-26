@@ -39,6 +39,8 @@ export const DOC_LINKS: DocLink[] = [
   { id: "glb-integration", title: "Integração GLB", path: "docs/glb-integration-reference.md", description: "Pipeline GLB → peças e cutlist" },
   { id: "multi-model", title: "Multi-Model Multi-Box", path: "docs/multi-model-multi-box-reference.md", description: "Múltiplos modelos por caixa" },
   { id: "viewer-integration", title: "Viewer Integration", path: "docs/viewer-integration-reference.md", description: "Integração Viewer com ProjectContext" },
+  { id: "observacoes-unificado", title: "Sistema Unificado de Observações", path: "src/core/observacoes/README.md", description: "ObservacoesService — implementação oficial" },
+  { id: "pimo-pro-v5-observacoes", title: "PIMO.PRO-V5 Observações", path: "docs/PIMO-PRO-V5-OBSERVACOES.md", description: "Roadmap evolução, checklist regressão e diagramas" },
 ];
 
 /** Items de navegação lateral do Painel de Referência (anchor links) */
@@ -126,6 +128,7 @@ export const MODULES: ModuleRef[] = [
   { id: "pimo-viewer-context", name: "PimoViewerContext", path: "src/context/PimoViewerContext.tsx", responsibility: "Registo e acesso à API do Viewer (registerViewerApi, viewerApi)", relatedModules: ["viewer", "workspace"] },
   { id: "project-roadmap", name: "ProjectRoadmap", path: "src/core/docs/projectRoadmap.ts", responsibility: "Fases, tarefas e progresso do projeto", relatedModules: ["progresso-resumo"] },
   { id: "progresso-resumo", name: "progressoResumo", path: "src/core/docs/progressoResumo.ts", responsibility: "Tarefas concluídas, em andamento e próximas etapas", relatedModules: ["project-roadmap"] },
+  { id: "observacoes-service", name: "ObservacoesService", path: "src/core/observacoes/ObservacoesService.ts", responsibility: "Sistema unificado de observações — sanitização, migração, pipeline industrial", relatedModules: ["project-provider", "pdf-export"] },
 ];
 
 /** Fluxos principais de dados */
