@@ -4,8 +4,10 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import { useMemo } from "react";
 import { useProject } from "../../context/useProject";
 import { useGerarArquivoHandlers } from "../../hooks/useGerarArquivoHandlers";
+import { wrapArquivoCompletoWithSgpi } from "../../industrial/sgpi/industrialExportBridge";
 import {
   useSendProjectPackage,
   type SendSelections,
@@ -121,6 +123,18 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
     onEtiquetas,
     onArquivosCnc,
   } = useGerarArquivoHandlers();
+
+  const onArquivoCompletoWithSgpi = useMemo(
+    () =>
+      wrapArquivoCompletoWithSgpi(
+        {
+          projectName: project.projectName,
+          currentProjectId: project.currentProjectId,
+        },
+        onArquivoCompleto
+      ),
+    [project.projectName, project.currentProjectId, onArquivoCompleto]
+  );
 
   const wrap = (fn: () => void) => () => {
     fn();
@@ -336,7 +350,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                 variant="primary"
                 fullWidth
                 disabled={project.estaCarregando}
-                onClick={() => void wrap(onArquivoCompleto)()}
+                onClick={() => void wrap(onArquivoCompletoWithSgpi)()}
               >
                 Gerar arquivo completo
               </Button>
