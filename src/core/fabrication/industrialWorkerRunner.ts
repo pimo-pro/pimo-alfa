@@ -6,6 +6,7 @@ import type { CutPiece } from "../cutlayout/cutLayoutTypes";
 import { runCutLayout, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import { getSheetDefinitionFromSettings, buildCncFromCutlistItems } from "../cnc/cncPipeline";
 import { cloneSerializableCutLayoutEngineOptions } from "./industrialLayoutOptionsClone";
+import { isIndustrialOutputSessionActive } from "../industrial/industrialOutputGuard";
 import type { IndustrialWorkerJobMessage } from "../../workers/industrialGeneration.worker";
 
 type CncBundle = NonNullable<Awaited<ReturnType<typeof buildCncFromCutlistItems>>>;
@@ -42,6 +43,13 @@ function getIndustrialWorker(): Worker | null {
 }
 
 function postJob<R>(msg: IndustrialWorkerJobMessage): Promise<R> {
+  if (!isIndustrialOutputSessionActive()) {
+    return Promise.reject(
+      new Error(
+        "Industrial worker job requer sessão autorizada (beginIndustrialFileGeneration / withIndustrialOutputAuthorization)."
+      )
+    );
+  }
   const w = getIndustrialWorker();
   if (!w) return Promise.reject(new Error("NO_WORKER"));
   return new Promise<R>((resolve, reject) => {

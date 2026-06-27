@@ -7,6 +7,7 @@ import { setIndustrialMaterialsReadOverride } from "../core/materials/service";
 import { runCutLayout, type CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutLayoutEngineOptions, CutPiece } from "../core/cutlayout/cutLayoutTypes";
 import { getSheetDefinitionFromSettings, buildCncFromCutlistItems } from "../core/cnc/cncPipeline";
+import { withIndustrialOutputAuthorization } from "../core/industrial/industrialOutputGuard";
 
 const abortedJobs = new Set<string>();
 
@@ -48,20 +49,21 @@ function handleJob(msg: IndustrialWorkerJobMessage): void {
   setIndustrialMaterialsReadOverride(materials);
   let outbound: WorkerOutbound;
   try {
-    if (abortedJobs.has(jobId)) throw new Error("Aborted");
-    if (msg.kind === "buildCncFromItems") {
-      const result = buildCncFromCutlistItems(
-        msg.projectStub,
-        msg.items,
-        undefined,
-        wrapOpts(jobId, msg.layoutOptions)
-      );
-      outbound = { type: "result", jobId, ok: true, result };
-    } else {
+    outbound = withIndustrialOutputAuthorization("all", () => {
+      if (abortedJobs.has(jobId)) throw new Error("Aborted");
+      if (msg.kind === "buildCncFromItems") {
+        const result = buildCncFromCutlistItems(
+          msg.projectStub,
+          msg.items,
+          undefined,
+          wrapOpts(jobId, msg.layoutOptions)
+        );
+        return { type: "result", jobId, ok: true as const, result };
+      }
       const sheet = getSheetDefinitionFromSettings();
       const result = runCutLayout(msg.pieces, sheet, wrapOpts(jobId, msg.layoutOptions));
-      outbound = { type: "result", jobId, ok: true, result };
-    }
+      return { type: "result", jobId, ok: true as const, result };
+    });
   } catch (e) {
     outbound = {
       type: "result",

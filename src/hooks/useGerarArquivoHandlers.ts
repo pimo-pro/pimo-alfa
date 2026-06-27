@@ -17,6 +17,7 @@ import {
 import {
   beginIndustrialFileGeneration,
   endIndustrialFileGeneration,
+  runAuthorizedIndustrialFileGeneration,
 } from "../core/fabrication/industrialGenerationSuspend";
 import { measureTime } from "../utils/measureTime";
 import { useToast } from "../context/ToastContext";
@@ -788,14 +789,14 @@ export function useGerarArquivoHandlers() {
         return;
       }
 
-      beginIndustrialFileGeneration();
       try {
         viewerSync.setUltraPerformanceMode(true);
       } catch {
         /* ignore */
       }
 
-      await measureTime("Arquivo completo (ZIP)", async () => {
+      await runAuthorizedIndustrialFileGeneration("all", async () =>
+      measureTime("Arquivo completo (ZIP)", async () => {
       type StepError = { step: string; message?: string; error?: string; detail?: string };
       const errors: StepError[] = [];
       const zip = new JSZip();
@@ -1078,7 +1079,7 @@ export function useGerarArquivoHandlers() {
           window.location.href = `/PROJETOS/${redirectProjectId}`;
         }
       }
-      });
+      }));
     } catch (err) {
       devLogger.error("Arquivo completo: falha global", err);
       toastExportError(showToast, err, "Erro ao gerar arquivo completo");
@@ -1088,7 +1089,6 @@ export function useGerarArquivoHandlers() {
       } catch {
         /* ignore */
       }
-      endIndustrialFileGeneration();
     }
   }, [
     hasBoxes,
