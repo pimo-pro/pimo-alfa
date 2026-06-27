@@ -101,9 +101,6 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
     );
     const bevelRadius = radius + Math.min(0.0009, Math.max(0.00025, radius * 0.32));
     const { a, b } = getHole2DLocalPosition(panelType, width, height, hole);
-    if (import.meta.env.DEV && (panelType === "left" || panelType === "right") && (hole.tipo === "dobradica_fixacao" || hole.tipo === "dobradica")) {
-      console.log('[HINGE]', panelType, '| hole.x:', hole.x, '| hole.y:', hole.y, '| face:', hole.face, '| a:', a.toFixed(4));
-    }
     const entryOffset = thickness / 2;
     const entry = new THREE.Vector3();
     let axisInward: THREE.Vector3;
