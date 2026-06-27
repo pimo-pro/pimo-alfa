@@ -1,4 +1,4 @@
-
+﻿
 name: Publish and Deploy
 
 on:
@@ -66,12 +66,13 @@ jobs:
           port: 21
           local-dir: dist/
           server-dir: /public_html/
-          # Não apagar no servidor ficheiros que não existem em dist/ (dados persistentes).
+          # N├úo apagar no servidor ficheiros que n├úo existem em dist/ (dados persistentes).
           dangerous-clean-slate: false
+          # Preserva JSON de projectos no servidor; PHP/.htaccess em api/projects/ são enviados pelo build.
           exclude: |
             **/textures/**
             **/api/data/**
-            **/api/projects/**
+            **/api/projects/data/project-*.json
             **/api/materials/**
 
 
