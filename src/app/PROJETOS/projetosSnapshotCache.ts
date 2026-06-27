@@ -1,4 +1,5 @@
 import type { PersistedProjectSnapshot, SavedProjectRecord } from "@/core/projects/types";
+import { projetosPageSlugFromRecord } from "./projetosPageSlug";
 
 let snapshot: SavedProjectRecord | null = null;
 
@@ -22,14 +23,15 @@ type SaveProjectRecordMeta = Partial<
 >;
 
 export async function saveProjectRecord(
-  projectId: string,
+  internalProjectId: string,
   persistedSnapshot: PersistedProjectSnapshot,
   meta: SaveProjectRecordMeta = {}
-): Promise<void> {
+): Promise<string> {
   const timestamp = meta.updatedAt ?? new Date().toISOString();
+  const name = meta.name ?? "Projeto";
   const record: SavedProjectRecord = {
-    id: projectId,
-    name: meta.name ?? "Projeto",
+    id: internalProjectId,
+    name,
     sequence: meta.sequence ?? 1,
     createdAt: meta.createdAt ?? timestamp,
     updatedAt: timestamp,
@@ -39,4 +41,5 @@ export async function saveProjectRecord(
     snapshot: persistedSnapshot,
   };
   setProjetosSnapshot(record);
+  return projetosPageSlugFromRecord(record);
 }

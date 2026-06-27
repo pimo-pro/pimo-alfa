@@ -6,7 +6,7 @@ export type ProjetosFocusLevel = "project" | "box" | "piece";
 type ProjetosShowroomPanelProps = {
   snapshot: SavedProjectRecord | null;
   focusLevel: ProjetosFocusLevel;
-  projectId: string | undefined;
+  projectPageSlug: string | undefined;
   boxId: string | undefined;
   pieceId: string | undefined;
 };
@@ -14,7 +14,7 @@ type ProjetosShowroomPanelProps = {
 export default function ProjetosShowroomPanel({
   snapshot,
   focusLevel,
-  projectId,
+  projectPageSlug,
   boxId,
   pieceId,
 }: ProjetosShowroomPanelProps) {
@@ -23,7 +23,7 @@ export default function ProjetosShowroomPanel({
       <ShowroomViewer
         snapshot={snapshot}
         mode={focusLevel}
-        projectId={projectId}
+        projectId={projectPageSlug}
         boxId={boxId}
         pieceId={pieceId}
         readOnly

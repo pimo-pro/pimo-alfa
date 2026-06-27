@@ -8,6 +8,7 @@ import type { ProjectSnapshot, ProjectState } from "../context/projectTypes";
 import { getCurrentProjectUser } from "../core/projects/currentUser";
 import { saveProject } from "../core/projects/projectsClient";
 import { saveProjectRecord } from "../app/PROJETOS/projetosSnapshotCache";
+import { buildProjetosPagePath } from "../app/PROJETOS/projetosPageSlug";
 import { getSettings } from "../core/settings/settingsService";
 import { listMaterials } from "../core/materials/service";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
@@ -781,7 +782,7 @@ export function useGerarArquivoHandlers() {
 
   /** Gera todos os arquivos disponíveis, coloca numa pasta (ZIP) e descarrega. */
   const onArquivoCompleto = useCallback(async () => {
-    let redirectProjectId: string | null = null;
+    let redirectProjectPagePath: string | null = null;
 
     try {
       if (!hasBoxes) {
@@ -820,10 +821,15 @@ export function useGerarArquivoHandlers() {
           snapshot: persistedSnapshot,
           localProjectId: project.currentProjectId ?? undefined,
         });
-        const projectId = saved?.id ?? project.currentProjectId ?? null;
-        if (projectId) {
-          redirectProjectId = projectId;
-          await saveProjectRecord(projectId, persistedSnapshot, saved ?? undefined);
+        const internalProjectId = saved?.id ?? project.currentProjectId ?? null;
+        const projectName =
+          saved?.name ?? stateForSnapshot.projectName ?? project.projectName ?? "Projeto";
+        if (internalProjectId) {
+          await saveProjectRecord(internalProjectId, persistedSnapshot, {
+            ...(saved ?? {}),
+            name: projectName,
+          });
+          redirectProjectPagePath = buildProjetosPagePath({ name: projectName });
         }
       } catch (err) {
         devLogger.warn("PROJETOS: falha ao guardar snapshot antes do arquivo completo", err);
@@ -1075,8 +1081,8 @@ export function useGerarArquivoHandlers() {
         showToast(`Erro ao gerar arquivo completo — ${detail}`, "error");
       } else {
         showToast("Arquivo completo (ZIP) gerado.", "info");
-        if (redirectProjectId && typeof window !== "undefined") {
-          window.location.href = `/PROJETOS/${redirectProjectId}`;
+        if (redirectProjectPagePath && typeof window !== "undefined") {
+          window.location.href = redirectProjectPagePath;
         }
       }
       }));

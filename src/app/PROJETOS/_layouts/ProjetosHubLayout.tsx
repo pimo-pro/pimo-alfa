@@ -1,4 +1,3 @@
-import { loadProjectRecord } from "@/core/projects/projectsClient";
 import type { SavedProjectRecord } from "@/core/projects/types";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
@@ -8,6 +7,12 @@ import {
   getProjetosSnapshot,
   setProjetosSnapshot,
 } from "../projetosSnapshotCache";
+import {
+  loadProjectRecordByPageSlug,
+} from "../projetosProjectLoader";
+import {
+  snapshotMatchesProjetosPageSlug,
+} from "../projetosPageSlug";
 
 function resolveFocusLevel(boxId?: string, pieceId?: string): ProjetosFocusLevel {
   if (pieceId) return "piece";
@@ -15,30 +20,30 @@ function resolveFocusLevel(boxId?: string, pieceId?: string): ProjetosFocusLevel
   return "project";
 }
 
-function snapshotMatchesProject(snapshot: SavedProjectRecord | null, projectId: string | undefined) {
-  return snapshot !== null && projectId !== undefined && snapshot.id === projectId;
+function snapshotMatchesProject(snapshot: SavedProjectRecord | null, pageSlug: string | undefined) {
+  return snapshotMatchesProjetosPageSlug(snapshot, pageSlug);
 }
 
 export default function ProjetosHubLayout({ children }: { children?: ReactNode }) {
-  const { project: projectId, box: boxId, piece: pieceId } = useParams();
+  const { project: pageSlug, box: boxId, piece: pieceId } = useParams();
   const focusLevel = useMemo(() => resolveFocusLevel(boxId, pieceId), [boxId, pieceId]);
 
   const [snapshot, setSnapshot] = useState<SavedProjectRecord | null>(() => {
     const cached = getProjetosSnapshot();
-    return snapshotMatchesProject(cached, projectId) ? cached : null;
+    return snapshotMatchesProject(cached, pageSlug) ? cached : null;
   });
-  const [loading, setLoading] = useState(() => !snapshotMatchesProject(getProjetosSnapshot(), projectId));
+  const [loading, setLoading] = useState(() => !snapshotMatchesProject(getProjetosSnapshot(), pageSlug));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!projectId) {
+    if (!pageSlug) {
       setError("Projeto não especificado na URL.");
       setLoading(false);
       return;
     }
 
     const cached = getProjetosSnapshot();
-    if (snapshotMatchesProject(cached, projectId)) {
+    if (snapshotMatchesProject(cached, pageSlug)) {
       setSnapshot(cached);
       setLoading(false);
       setError(null);
@@ -49,7 +54,7 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
     setLoading(true);
     setError(null);
 
-    void loadProjectRecord(projectId).then((record) => {
+    void loadProjectRecordByPageSlug(pageSlug).then((record) => {
       if (cancelled) return;
 
       if (!record) {
@@ -67,7 +72,7 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [pageSlug]);
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
@@ -85,7 +90,7 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
             <ProjetosShowroomPanel
               snapshot={snapshot}
               focusLevel={focusLevel}
-              projectId={projectId}
+              projectPageSlug={pageSlug}
               boxId={boxId}
               pieceId={pieceId}
             />
