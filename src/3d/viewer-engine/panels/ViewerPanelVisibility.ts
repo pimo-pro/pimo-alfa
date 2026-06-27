@@ -356,7 +356,7 @@ export class ViewerPanelVisibility {
     } else if (panelType === "right") {
       const sh2 = sideH / 2;
       const d2 = depth / 2;
-      const x0 = -t / 2 - ViewerPanelVisibility.OVERLAY_INSET_M;
+      const x0 = t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
       pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
       pushSegment(x0, sh2, -d2, x0, sh2, d2);
       pushSegment(x0, sh2, d2, x0, -sh2, d2);
