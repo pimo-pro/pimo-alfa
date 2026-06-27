@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { buildMaterialsApiPayload } from './src/server/materialsApi'
 import { fileURLToPath, URL } from 'node:url'
-import { handleIndustrialApi } from '../pimo-pro-industrial/server/industrialApi'
 
 const buildVersion = `${process.env.npm_package_version ?? '0.0.0'}+${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)}`;
 
@@ -16,29 +15,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    {
-      name: 'industrial-api-middleware',
-      configureServer(server) {
-        server.middlewares.use(async (req, res, next) => {
-          const url = req.url?.split('?')[0] ?? ''
-          if (url.startsWith('/api/industrial')) {
-            const handled = await handleIndustrialApi(req, res, url)
-            if (handled) return
-          }
-          next()
-        })
-      },
-      configurePreviewServer(server) {
-        server.middlewares.use(async (req, res, next) => {
-          const url = req.url?.split('?')[0] ?? ''
-          if (url.startsWith('/api/industrial')) {
-            const handled = await handleIndustrialApi(req, res, url)
-            if (handled) return
-          }
-          next()
-        })
-      },
-    },
     {
       name: 'materials-api-middleware',
       configureServer(server) {
