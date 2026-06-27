@@ -1,7 +1,8 @@
 /**
- * Após `vite build`, coloca PHP de auth/users (e .gitkeep de data) em dist/
+ * Após `vite build`, coloca PHP de auth/users/projects (e .gitkeep de data) em dist/
  * para o FTP-Deploy enviar tudo dentro de public_html.
  * Layout: dist/api/auth/index.php (stub) → ../_impl/auth/index.php
+ * Projects: dist/api/projects/ ← hostinger/api/projects/ (ficheiros estáticos; data/ no servidor preserva JSON existente)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -18,6 +19,35 @@ function ensureDir(p) {
 function copyFile(src, dest) {
   ensureDir(path.dirname(dest));
   fs.copyFileSync(src, dest);
+}
+
+/** Copia API de projetos (PHP + .htaccess). Não copia JSON de data/ — dados no servidor ficam intactos. */
+function copyProjectsApiToDist() {
+  const srcProjects = path.join(root, "hostinger", "api", "projects");
+  const destProjects = path.join(dist, "api", "projects");
+  if (!fs.existsSync(srcProjects)) {
+    console.warn("[copyDeployApiToDist] hostinger/api/projects em falta — projects não copiado.");
+    return false;
+  }
+  const required = ["index.php", "list.php", ".htaccess"];
+  for (const name of required) {
+    const src = path.join(srcProjects, name);
+    if (!fs.existsSync(src)) {
+      console.warn(`[copyDeployApiToDist] hostinger/api/projects/${name} em falta — projects não copiado.`);
+      return false;
+    }
+    copyFile(src, path.join(destProjects, name));
+  }
+  const dataHtaccess = path.join(srcProjects, "data", ".htaccess");
+  ensureDir(path.join(destProjects, "data"));
+  if (fs.existsSync(dataHtaccess)) {
+    copyFile(dataHtaccess, path.join(destProjects, "data", ".htaccess"));
+  }
+  const gitkeepDest = path.join(destProjects, "data", ".gitkeep");
+  if (!fs.existsSync(gitkeepDest)) {
+    fs.writeFileSync(gitkeepDest, "", "utf8");
+  }
+  return true;
 }
 
 if (!fs.existsSync(dist)) {
@@ -85,8 +115,12 @@ if (fs.existsSync(srcGlobalConfig)) {
 const extras = [];
 if (fs.existsSync(srcUserSettings)) extras.push("user-settings");
 if (fs.existsSync(srcGlobalConfig)) extras.push("global-config");
+const projectsCopied = copyProjectsApiToDist();
+if (projectsCopied) extras.push("projects");
 console.log(
   "[copyDeployApiToDist] Copiado auth/users" +
     (extras.length ? "/" + extras.join("/") : "") +
-    " para dist/api/ (_impl + stubs)."
+    " para dist/api/ (_impl + stubs" +
+    (projectsCopied ? "; projects em dist/api/projects/" : "") +
+    ")."
 );

@@ -131,13 +131,18 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
 
       axisInward = getInwardAxisForHole(panelType, hole).normalize();
       const lateralInterior =
-        String(hole.face) === "B" || hole.face === "direita";
+        String(hole.face) === "B" ||
+        (panelType === "left" && hole.face === "direita") ||
+        (panelType === "right" && hole.face === "esquerda");
       if (panelType === "left") {
         entry.set(lateralInterior ? entryOffset : -entryOffset, b, a);
       } else if (panelType === "right") {
         entry.set(lateralInterior ? entryOffset : -entryOffset, b, a);
       } else {
         entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
+      }
+      if (import.meta.env.DEV && (panelType === "left" || panelType === "right")) {
+        console.log('[DEBUG]', panelType, '| face:', hole.face, '| lateralInterior:', lateralInterior, '| entry.x:', entry.x?.toFixed(4));
       }
     }
     quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisInward);
