@@ -10,22 +10,24 @@ import { ShowroomRotatePointer } from "./ShowroomRotatePointer";
 
 type Props = {
   children: ReactNode;
+  readOnly?: boolean;
+  fillHeight?: boolean;
 };
 
 /**
  * Canvas 3D do showroom: sem ProjectProvider, sem sala. Ferramentas locais via Zustand.
  */
-export function ShowroomCanvas({ children }: Props) {
+export function ShowroomCanvas({ children, readOnly = false, fillHeight = false }: Props) {
   return (
     <div
       style={{
-        height: "min(78vh, 760px)",
+        height: fillHeight ? "100%" : "min(78vh, 760px)",
         width: "100%",
-        borderRadius: 8,
+        borderRadius: fillHeight ? 0 : 8,
         overflow: "hidden",
-        border: "1px solid var(--border, #ccc)",
+        border: fillHeight ? "none" : "1px solid var(--border, #ccc)",
         background: "#d8dce3",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+        boxShadow: fillHeight ? "none" : "0 2px 8px rgba(0,0,0,0.07)",
       }}
     >
       <Canvas
@@ -33,6 +35,7 @@ export function ShowroomCanvas({ children }: Props) {
         gl={{ antialias: true, alpha: false }}
         shadows={false}
         onPointerMissed={() => {
+          if (readOnly) return;
           const { activeTool, setSelectedId } = useShowroomStore.getState();
           if (activeTool !== "measure") setSelectedId(null);
         }}
@@ -42,12 +45,12 @@ export function ShowroomCanvas({ children }: Props) {
         <directionalLight position={[12, 18, 8]} intensity={1.05} />
         <hemisphereLight args={["#ffffff", "#9096a0", 0.35]} />
         <ShowroomOrbitControls />
-        <ShowroomRotatePointer />
-        <ShowroomArrowKeys />
+        {!readOnly ? <ShowroomRotatePointer /> : null}
+        {!readOnly ? <ShowroomArrowKeys /> : null}
         <gridHelper args={[80, 40, "#b0b4bc", "#c8ccd4"]} position={[0, 0, 0]} />
         {children}
-        <ShowroomMeasureFloor />
-        <ShowroomMeasureLine />
+        {!readOnly ? <ShowroomMeasureFloor /> : null}
+        {!readOnly ? <ShowroomMeasureLine /> : null}
       </Canvas>
     </div>
   );

@@ -4730,7 +4730,7 @@ export class ViewerCore {
     cabinetType?: "lower" | "upper";
     feetEnabled?: boolean;
   }): boolean {
-    return entry.cabinetType === "lower" && entry.feetEnabled !== false;
+    return entry.cabinetType === "lower" && entry.feetEnabled === true;
   }
 
   private shouldRenderFeet(entry: {

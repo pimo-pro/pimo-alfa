@@ -486,7 +486,7 @@ export function buildViewerDrillMarkersByPanelResult(
     if (!item?.drillHoles?.length) return [];
     if (tipo === "lateral_esquerda" || tipo === "lateral_direita") {
       const holesToUse = onlyInternalFaceHoles(item.drillHoles);
-      const lateralFace: DrillFace = tipo === "lateral_esquerda" ? "direita" : "direita";
+      const lateralFace: DrillFace = tipo === "lateral_esquerda" ? "direita" : "esquerda";
       return holesToUse.map((h) => {
         if (h.holeType === "cavilha" && h.topDrillable === false) {
           return {

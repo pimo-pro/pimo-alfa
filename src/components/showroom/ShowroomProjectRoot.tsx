@@ -13,6 +13,7 @@ type Props = {
   projectState: ProjectState;
   offsetMm: ShowroomOffsetMm;
   displayName?: string | null;
+  readOnly?: boolean;
 };
 
 const MM_TO_M = 0.001;
@@ -20,7 +21,13 @@ const MM_TO_M = 0.001;
 /**
  * Grupo por projeto: grelha + transform local do showroom, seleção, drag XZ (modo Mover).
  */
-export function ShowroomProjectRoot({ projectId, projectState, offsetMm, displayName }: Props) {
+export function ShowroomProjectRoot({
+  projectId,
+  projectState,
+  offsetMm,
+  displayName,
+  readOnly = false,
+}: Props) {
   const { camera, gl } = useThree();
   const entity = useShowroomStore((s) => s.entities[projectId]);
   const selectedId = useShowroomStore((s) => s.selectedId);
@@ -43,6 +50,7 @@ export function ShowroomProjectRoot({ projectId, projectState, offsetMm, display
   if (!entity) return null;
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (readOnly) return;
     e.stopPropagation();
     if (activeTool === "measure") return;
 
@@ -101,7 +109,7 @@ export function ShowroomProjectRoot({ projectId, projectState, offsetMm, display
         <group userData={{ projectId, showroom: true }}>
           <ShowroomParametricBoxes projectState={projectState} />
         </group>
-        {selected ? (
+        {selected && !readOnly ? (
           <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} userData={{ projectId, showroom: true }}>
             <ringGeometry args={[0.35, 0.42, 48]} />
             <meshBasicMaterial color="#ff8800" transparent opacity={0.85} depthWrite={false} />

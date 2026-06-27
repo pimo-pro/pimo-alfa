@@ -74,6 +74,10 @@ import IndustrialAdminSettingsPage from "./app/admin/settings/industrial/index";
 import RealtimeAlertsAdminPage from "./app/admin/system-settings/industrial/realtime-alerts";
 import PieceMainView from "./app/industrial/piece/PieceMainView";
 import IndustrialSupervisorDashboardPage from "./app/industrial/supervisor/index";
+import ProjetosIndexPage from "./app/PROJETOS/page";
+import ProjetosProjectPage from "./app/PROJETOS/[project]/page";
+import ProjetosBoxPage from "./app/PROJETOS/[project]/[box]/page";
+import ProjetosPiecePage from "./app/PROJETOS/[project]/[box]/[piece]/page";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -476,6 +480,10 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/pieces/:id" element={<PieceAliasRedirect />} />
           <Route path="/studio/piece/:id" element={<PieceAliasRedirect />} />
+          <Route path="/PROJETOS" element={<ProjetosIndexPage />} />
+          <Route path="/PROJETOS/:project" element={<ProjetosProjectPage />} />
+          <Route path="/PROJETOS/:project/:box" element={<ProjetosBoxPage />} />
+          <Route path="/PROJETOS/:project/:box/:piece" element={<ProjetosPiecePage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/me" element={<MePage />} />

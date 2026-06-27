@@ -2,6 +2,12 @@ import { createElement, useCallback, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import JSZip from "jszip";
 import { useProject } from "../context/useProject";
+import { applyResultados } from "../context/projectState";
+import { captureRoomSnapshot, serializeState } from "../context/projectPersistence";
+import type { ProjectSnapshot, ProjectState } from "../context/projectTypes";
+import { getCurrentProjectUser } from "../core/projects/currentUser";
+import { saveProject } from "../core/projects/projectsClient";
+import { saveProjectRecord } from "../app/PROJETOS/projetosSnapshotCache";
 import { getSettings } from "../core/settings/settingsService";
 import { listMaterials } from "../core/materials/service";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
@@ -774,6 +780,8 @@ export function useGerarArquivoHandlers() {
 
   /** Gera todos os arquivos disponíveis, coloca numa pasta (ZIP) e descarrega. */
   const onArquivoCompleto = useCallback(async () => {
+    let redirectProjectId: string | null = null;
+
     try {
       if (!hasBoxes) {
         showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
@@ -794,6 +802,31 @@ export function useGerarArquivoHandlers() {
       const proj = pdfProject();
       const tcnManifestFiles: Array<{ path: string; content: string }> = [];
       let abortFullExport = false;
+
+      // --- Snapshot final → cache PROJETOS (antes de PDFs/ZIP) ---
+      try {
+        const currentUser = getCurrentProjectUser();
+        const stateForSnapshot = applyResultados(project as ProjectState);
+        const persistedSnapshot: ProjectSnapshot = {
+          projectState: serializeState(stateForSnapshot),
+          viewerSnapshot: viewerSync.saveViewerSnapshot(),
+          roomSnapshot: captureRoomSnapshot(),
+        };
+        const saved = await saveProject({
+          name: stateForSnapshot.projectName ?? project.projectName ?? "Projeto",
+          ownerId: currentUser.ownerId,
+          ownerName: currentUser.ownerName,
+          snapshot: persistedSnapshot,
+          localProjectId: project.currentProjectId ?? undefined,
+        });
+        const projectId = saved?.id ?? project.currentProjectId ?? null;
+        if (projectId) {
+          redirectProjectId = projectId;
+          await saveProjectRecord(projectId, persistedSnapshot, saved ?? undefined);
+        }
+      } catch (err) {
+        devLogger.warn("PROJETOS: falha ao guardar snapshot antes do arquivo completo", err);
+      }
 
       const allItems = buildCutlistItemsForIndustrialExport({
         boxes,
@@ -1041,6 +1074,9 @@ export function useGerarArquivoHandlers() {
         showToast(`Erro ao gerar arquivo completo — ${detail}`, "error");
       } else {
         showToast("Arquivo completo (ZIP) gerado.", "info");
+        if (redirectProjectId && typeof window !== "undefined") {
+          window.location.href = `/PROJETOS/${redirectProjectId}`;
+        }
       }
       });
     } catch (err) {
