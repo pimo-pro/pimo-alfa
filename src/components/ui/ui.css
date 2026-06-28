@@ -593,6 +593,28 @@
   gap: var(--ui-space-6);
 }
 
+.ui-projetos-hub {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .ui-projetos-hub {
+    flex-direction: column;
+  }
+
+  .ui-projetos-hub__sidebar {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    max-height: 40vh;
+    border-right: none !important;
+    border-bottom: 1px solid #e4e4e7;
+  }
+}
+
 .ui-kv-list {
   display: flex;
   flex-direction: column;

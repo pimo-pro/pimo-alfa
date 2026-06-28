@@ -60,18 +60,7 @@ export async function remoteSaveProject(
   return null;
 }
 
-export async function remoteListProjects(
-  scope: "mine" | "all",
-  ownerId: string | undefined,
-  deps: ProjectsApiDeps
-): Promise<SavedProjectMeta[]> {
-  // Em DEV também pode listar remoto (Render), então não bloquear aqui.
-  const params = new URLSearchParams({ scope });
-  if (ownerId) params.set("ownerId", ownerId);
-  const response = await fetch(buildProjectsUrl(params));
-  if (!response.ok) return [];
-  const payload = (await toJson(response)) as { projects?: unknown[] } | null;
-  const rows = Array.isArray(payload?.projects) ? payload.projects : [];
+function mapRemoteProjectRows(rows: unknown[], deps: ProjectsApiDeps): SavedProjectMeta[] {
   return rows
     .map((item, index) => {
       const row = deps.asObject(item);
@@ -103,6 +92,35 @@ export async function remoteListProjects(
       return null;
     })
     .filter((v): v is SavedProjectMeta => Boolean(v));
+}
+
+export async function remoteListProjects(
+  scope: "mine" | "all",
+  ownerId: string | undefined,
+  deps: ProjectsApiDeps
+): Promise<SavedProjectMeta[]> {
+  const params = new URLSearchParams({ scope });
+  if (ownerId) params.set("ownerId", ownerId);
+  const response = await fetch(buildProjectsUrl(params));
+  if (!response.ok) return [];
+  const payload = (await toJson(response)) as { projects?: unknown[] } | null;
+  const rows = Array.isArray(payload?.projects) ? payload.projects : [];
+  return mapRemoteProjectRows(rows, deps);
+}
+
+/** Lista apenas projectos com ficheiro {nome}.json (páginas PROJETOS). */
+export async function remoteListProjetosPageProjects(
+  scope: "mine" | "all",
+  ownerId: string | undefined,
+  deps: ProjectsApiDeps
+): Promise<SavedProjectMeta[]> {
+  const params = new URLSearchParams({ action: "projetos", scope });
+  if (ownerId) params.set("ownerId", ownerId);
+  const response = await fetch(buildProjectsUrl(params));
+  if (!response.ok) return [];
+  const payload = (await toJson(response)) as { projects?: unknown[] } | null;
+  const rows = Array.isArray(payload?.projects) ? payload.projects : [];
+  return mapRemoteProjectRows(rows, deps);
 }
 
 export async function remoteLoadProjectRecord(

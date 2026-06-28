@@ -85,8 +85,9 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div className="ui-projetos-hub">
       <aside
+        className="ui-projetos-hub__sidebar"
         style={{
           width: 280,
           minWidth: 240,

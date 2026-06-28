@@ -378,16 +378,21 @@ if ($method === "POST") {
     respond_json(["status" => "ok", "project" => $input]);
 }
 
-// --- GET: listagem ?scope=mine|all&ownerId=... ---
-if ($method === "GET" && $action === "") {
-    $scope = isset($_GET["scope"]) ? (string)$_GET["scope"] : "mine";
-    $ownerId = isset($_GET["ownerId"]) ? (string)$_GET["ownerId"] : "";
+/**
+ * Constrói metadados de listagem a partir de entradas em disco.
+ *
+ * @param array<int, array{file: string, data: array, legacy: bool}> $entries
+ * @param bool $namedOnly Apenas ficheiros {nome}.json (páginas PROJETOS)
+ */
+function build_projects_list(array $entries, string $scope, string $ownerId, bool $namedOnly = false): array
+{
     $now = gmdate("c");
-
-    $entries = list_project_entries($dataDir);
     $projects = [];
 
     foreach ($entries as $entry) {
+        if ($namedOnly && !empty($entry["legacy"])) {
+            continue;
+        }
         $data = $entry["data"];
         $pid = isset($data["id"]) ? trim((string)$data["id"]) : "";
         if ($pid === "") {
@@ -422,6 +427,31 @@ if ($method === "GET" && $action === "") {
         $p["sequence"] = $i + 1;
     }
     unset($p);
+
+    return $projects;
+}
+
+// --- GET ?action=projetos — apenas ficheiros {nome}.json (hub PROJETOS) ---
+if ($method === "GET" && $action === "projetos") {
+    $scope = isset($_GET["scope"]) ? (string)$_GET["scope"] : "all";
+    $ownerId = isset($_GET["ownerId"]) ? (string)$_GET["ownerId"] : "";
+    $entries = list_project_entries($dataDir);
+    $projects = build_projects_list($entries, $scope, $ownerId, true);
+
+    respond_json([
+        "status" => "ok",
+        "scope" => $scope,
+        "ownerId" => $ownerId !== "" ? $ownerId : null,
+        "projects" => $projects,
+    ]);
+}
+
+// --- GET: listagem ?scope=mine|all&ownerId=... ---
+if ($method === "GET" && $action === "") {
+    $scope = isset($_GET["scope"]) ? (string)$_GET["scope"] : "mine";
+    $ownerId = isset($_GET["ownerId"]) ? (string)$_GET["ownerId"] : "";
+    $entries = list_project_entries($dataDir);
+    $projects = build_projects_list($entries, $scope, $ownerId, false);
 
     respond_json([
         "status" => "ok",
