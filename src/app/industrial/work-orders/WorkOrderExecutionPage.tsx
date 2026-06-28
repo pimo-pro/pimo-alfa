@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router-dom';
 
 import { useAuth } from '@/auth/useAuth';
 import { fetchWorkOrderDetail, finishTask, rejectTask, startTask } from '@/industrial/api/workOrderActions';
+import { resolveWorkOrderProjectDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
 import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
 
 import QrScannerPanel from './components/QrScannerPanel';
 import TaskExecutionList from './components/TaskExecutionList';
+import WorkOrderSummaryCard from './components/WorkOrderSummaryCard';
 
 export default function WorkOrderExecutionPage() {
   useIndustrialPageState();
@@ -68,10 +70,12 @@ export default function WorkOrderExecutionPage() {
     );
   }
 
+  const projectCode = order ? resolveWorkOrderProjectDisplay(order.projectId) : '—';
+
   return (
     <IndustrialLayout
       title={order ? `Ordem · ${STATION_LABELS[order.station]}` : 'Ordem de trabalho'}
-      description={order ? `Projeto ${order.projectId} · Estado ${order.status}` : 'Execução operacional'}
+      description={order ? `Projecto ${projectCode} · Estado ${order.status}` : 'Execução operacional'}
     >
       <div style={{ marginBottom: 12 }}>
         <Link to="/industrial/work-orders" style={{ fontSize: 13, color: '#2563eb' }}>
@@ -84,15 +88,13 @@ export default function WorkOrderExecutionPage() {
 
       {order ? (
         <div style={{ display: 'grid', gap: 16 }}>
-          <section style={{ display: 'grid', gap: 6, fontSize: 13, color: '#475569' }}>
-            <div>Peças: {order.pieceIds.length}</div>
-            <div>Operações: {order.operationTypes.join(', ')}</div>
-          </section>
+          <WorkOrderSummaryCard order={order} tasks={tasks} />
 
           <QrScannerPanel onPieceScanned={setHighlightPieceId} />
 
           <TaskExecutionList
             tasks={tasks}
+            projectId={order.projectId}
             busyTaskId={busyTaskId}
             highlightPieceId={highlightPieceId}
             onStart={(task) => void runTaskAction(task, 'start')}

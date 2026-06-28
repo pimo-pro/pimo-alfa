@@ -266,6 +266,7 @@ try {
     "industrial_operations",
     "industrial_quality",
     "industrial_time_tracking",
+    "industrial_work_order_tasks_view",
     "industrial_tracking",
     "industrial_rework",
     "industrial_events",

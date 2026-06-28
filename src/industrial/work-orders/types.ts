@@ -37,6 +37,17 @@ export interface IndustrialWorkOrderTask {
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  /** Nomes industriais (etiqueta) — preenchido pelo resolver ou view Supabase. */
+  display?: WorkOrderPieceDisplay;
+}
+
+/** Nomenclatura industrial alinhada à etiqueta v5. */
+export interface WorkOrderPieceDisplay {
+  projectCode: string;
+  boxCode: string;
+  pieceCode: string;
+  fullIndustrialName: string;
+  nqrCode: string;
 }
 
 export interface IndustrialWorkOrderEvent {

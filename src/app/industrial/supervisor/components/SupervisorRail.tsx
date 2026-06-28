@@ -76,6 +76,22 @@ export default function SupervisorRail({ activeView, onSelect, alertCount = 0 }:
       ))}
 
       <Link
+        to="/industrial/operador"
+        title="Operador"
+        style={{
+          ...industrialBtnStyle(false),
+          width: 40,
+          height: 40,
+          display: 'grid',
+          placeItems: 'center',
+          textDecoration: 'none',
+          padding: 0,
+        }}
+      >
+        <IndustrialSpriteIcon name="industrial-stations" size={16} />
+      </Link>
+
+      <Link
         to="/industrial/work-orders"
         title="Work Orders"
         style={{

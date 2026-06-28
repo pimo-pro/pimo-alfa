@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
-
 import type { IndustrialWorkOrderTask, WorkOrderTaskStatus } from '@/industrial/work-orders/types';
+
+import WorkOrderPieceRow from './WorkOrderPieceRow';
 
 interface TaskExecutionListProps {
   tasks: IndustrialWorkOrderTask[];
+  projectId: string;
   busyTaskId?: string | null;
   onStart?: (task: IndustrialWorkOrderTask) => void;
   onComplete?: (task: IndustrialWorkOrderTask) => void;
@@ -27,6 +28,7 @@ const STATUS_COLOR: Record<WorkOrderTaskStatus, string> = {
 
 export default function TaskExecutionList({
   tasks,
+  projectId,
   busyTaskId,
   onStart,
   onComplete,
@@ -40,64 +42,57 @@ export default function TaskExecutionList({
   return (
     <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
       {tasks.map((task) => {
-        const highlighted = highlightPieceId && task.pieceId === highlightPieceId;
+        const highlighted = Boolean(highlightPieceId && task.pieceId === highlightPieceId);
         return (
-          <li
-            key={task.id}
-            style={{
-              border: highlighted ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              borderRadius: 8,
-              padding: 12,
-              background: highlighted ? 'rgba(37, 99, 235, 0.06)' : '#fff',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>
-                  <Link to={`/industrial/piece/${task.pieceId}`} style={{ color: '#0f172a' }}>
-                    {task.pieceId}
-                  </Link>
-                </div>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                  Operação: {task.operationType}
-                </div>
-                <div style={{ fontSize: 12, color: STATUS_COLOR[task.status], marginTop: 4, fontWeight: 600 }}>
-                  {STATUS_LABEL[task.status]}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {task.status === 'pending' && onStart ? (
-                  <button
-                    type="button"
-                    disabled={busyTaskId === task.id}
-                    onClick={() => onStart(task)}
-                    style={actionButtonStyle('#2563eb')}
-                  >
-                    Iniciar
-                  </button>
-                ) : null}
-                {task.status === 'in_progress' && onComplete ? (
-                  <button
-                    type="button"
-                    disabled={busyTaskId === task.id}
-                    onClick={() => onComplete(task)}
-                    style={actionButtonStyle('#16a34a')}
-                  >
-                    Concluir
-                  </button>
-                ) : null}
-                {(task.status === 'pending' || task.status === 'in_progress') && onReject ? (
-                  <button
-                    type="button"
-                    disabled={busyTaskId === task.id}
-                    onClick={() => onReject(task)}
-                    style={actionButtonStyle('#dc2626')}
-                  >
-                    Rejeitar
-                  </button>
-                ) : null}
-              </div>
-            </div>
+          <li key={task.id}>
+            <WorkOrderPieceRow
+              task={task}
+              projectId={projectId}
+              highlighted={highlighted}
+              secondary={
+                <>
+                  Operação: {task.operationType} ·{' '}
+                  <span style={{ color: STATUS_COLOR[task.status], fontWeight: 600 }}>
+                    {STATUS_LABEL[task.status]}
+                  </span>
+                </>
+              }
+              style={{ background: highlighted ? 'rgba(37, 99, 235, 0.06)' : '#fff', borderColor: highlighted ? '#2563eb' : '#e2e8f0' }}
+              actions={
+                <>
+                  {task.status === 'pending' && onStart ? (
+                    <button
+                      type="button"
+                      disabled={busyTaskId === task.id}
+                      onClick={() => onStart(task)}
+                      style={actionButtonStyle('#2563eb')}
+                    >
+                      Iniciar
+                    </button>
+                  ) : null}
+                  {task.status === 'in_progress' && onComplete ? (
+                    <button
+                      type="button"
+                      disabled={busyTaskId === task.id}
+                      onClick={() => onComplete(task)}
+                      style={actionButtonStyle('#16a34a')}
+                    >
+                      Concluir
+                    </button>
+                  ) : null}
+                  {(task.status === 'pending' || task.status === 'in_progress') && onReject ? (
+                    <button
+                      type="button"
+                      disabled={busyTaskId === task.id}
+                      onClick={() => onReject(task)}
+                      style={actionButtonStyle('#dc2626')}
+                    >
+                      Rejeitar
+                    </button>
+                  ) : null}
+                </>
+              }
+            />
           </li>
         );
       })}

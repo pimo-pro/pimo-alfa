@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 
-import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
+import { getWorkOrderPieceDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
+import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import { industrialListItemStyle, industrialSectionTitleStyle } from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationHistorySidebarProps {
   tasks: IndustrialWorkOrderTask[];
+  orders: IndustrialWorkOrder[];
   eventLog: Array<{ id: string; type: string; at: string }>;
 }
 
@@ -17,8 +19,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export default function StationHistorySidebar({ tasks, eventLog }: StationHistorySidebarProps) {
+function taskProjectId(task: IndustrialWorkOrderTask, orders: IndustrialWorkOrder[]): string {
+  return orders.find((order) => order.id === task.workOrderId)?.projectId ?? '';
+}
+
+export default function StationHistorySidebar({ tasks, orders, eventLog }: StationHistorySidebarProps) {
   const completed = tasks.filter((t) => t.status === 'completed' || t.status === 'rejected');
+
+  const renderTask = (task: IndustrialWorkOrderTask) => {
+    const display = getWorkOrderPieceDisplay(task, taskProjectId(task, orders));
+    return (
+      <>
+        <div style={{ fontWeight: 600, fontSize: 12 }}>{display.fullIndustrialName}</div>
+        <div style={{ color: '#94a3b8', marginTop: 2, fontSize: 10, fontFamily: 'monospace' }}>
+          {display.nqrCode} · {task.status}
+        </div>
+      </>
+    );
+  };
 
   return (
     <aside
@@ -37,8 +55,7 @@ export default function StationHistorySidebar({ tasks, eventLog }: StationHistor
             .filter((t) => t.status === 'pending' || t.status === 'in_progress')
             .map((task) => (
               <li key={task.id} style={industrialListItemStyle}>
-                <div style={{ fontWeight: 600 }}>{task.pieceId}</div>
-                <div style={{ color: '#94a3b8', marginTop: 2 }}>{task.status}</div>
+                {renderTask(task)}
               </li>
             ))}
         </ul>
@@ -51,8 +68,7 @@ export default function StationHistorySidebar({ tasks, eventLog }: StationHistor
           ) : (
             completed.slice(0, 12).map((task) => (
               <li key={task.id} style={industrialListItemStyle}>
-                <div style={{ fontWeight: 600 }}>{task.pieceId}</div>
-                <div style={{ color: '#94a3b8', marginTop: 2 }}>{task.status}</div>
+                {renderTask(task)}
               </li>
             ))
           )}

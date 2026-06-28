@@ -14,7 +14,7 @@ import { threeSyncAdapter } from '../ThreeSyncAdapter';
 import type { RtoAlertPayload, RtoChatPayload, RtoThreeSyncPayload } from '../types';
 
 export interface UseIndustrialRealtimeOptions {
-  mode: 'supervisor' | 'station';
+  mode: 'supervisor' | 'station' | 'operator';
   station?: IndustrialStation;
   onDataRefresh?: () => void;
 }
@@ -77,6 +77,11 @@ export function useIndustrialRealtime(options: UseIndustrialRealtimeOptions) {
       if (mode === 'station') {
         setRealtimeNotifications((prev) =>
           [alertToNotification(alert), ...prev.filter((n) => n.id !== alert.id)].slice(0, 30),
+        );
+      }
+      if (mode === 'operator') {
+        setRealtimeNotifications((prev) =>
+          [alertToNotification(alert), ...prev.filter((n) => n.id !== alert.id)].slice(0, 20),
         );
       }
     },

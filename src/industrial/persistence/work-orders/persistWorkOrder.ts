@@ -1,6 +1,7 @@
 import { supabase } from '@/industrial/infra/db';
 import type { GeneratedWorkOrderDraft, IndustrialWorkOrder } from '@/industrial/work-orders/types';
 
+import { buildTaskMetadataForPiece } from './loadWorkOrders';
 import { mapWorkOrderRow } from './mappers';
 import { WORK_ORDER_TABLES } from './tables';
 
@@ -33,7 +34,7 @@ export async function persistWorkOrderDraft(
     piece_id: task.pieceId,
     operation_type: task.operationType,
     status: 'pending',
-    metadata: {},
+    metadata: buildTaskMetadataForPiece(task.pieceId, projectId),
     updated_at: now,
   }));
 

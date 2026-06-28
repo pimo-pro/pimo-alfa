@@ -1,4 +1,8 @@
 import type { IndustrialPiece } from '@/industrial/core/pieces/types';
+import {
+  getWorkOrderPieceDisplay,
+  resolveWorkOrderPieceDisplay,
+} from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { resolveProjectCutlist } from '@/industrial/work-orders/resolveProjectCutlist';
 import type { IndustrialStation, IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import type { StationListSection } from '@/industrial/ui/components/stationTypes';
@@ -12,16 +16,24 @@ function pieceById(orders: IndustrialWorkOrder[], pieceId: string): IndustrialPi
   return undefined;
 }
 
+function pieceLabel(task: IndustrialWorkOrderTask, orders: IndustrialWorkOrder[]): string {
+  const order = orders.find((o) => o.id === task.workOrderId);
+  if (task.display?.fullIndustrialName) return task.display.fullIndustrialName;
+  if (order) {
+    const display = resolveWorkOrderPieceDisplay(task.pieceId, order.projectId);
+    if (display) return display.fullIndustrialName;
+  }
+  const piece = pieceById(orders, task.pieceId);
+  return piece?.name ?? getWorkOrderPieceDisplay(task, order?.projectId ?? '').fullIndustrialName;
+}
+
 function taskItems(tasks: IndustrialWorkOrderTask[], orders: IndustrialWorkOrder[]) {
-  return tasks.map((task) => {
-    const piece = pieceById(orders, task.pieceId);
-    return {
-      id: task.id,
-      pieceId: task.pieceId,
-      primary: piece?.name ?? task.pieceId,
-      secondary: `${task.operationType} · ${task.status}`,
-    };
-  });
+  return tasks.map((task) => ({
+    id: task.id,
+    pieceId: task.pieceId,
+    primary: pieceLabel(task, orders),
+    secondary: `${task.operationType} · ${task.status}`,
+  }));
 }
 
 export function buildStationListSections(
@@ -77,7 +89,7 @@ export function buildStationListSections(
             sheetTasks.map((task) => ({
               id: `${sheet}-${task.id}`,
               pieceId: task.pieceId,
-              primary: pieceById(orders, task.pieceId)?.name ?? task.pieceId,
+              primary: pieceLabel(task, orders),
               secondary: `Chapa: ${sheet}`,
             })),
           ),
@@ -95,7 +107,7 @@ export function buildStationListSections(
             return {
               id: task.id,
               pieceId: task.pieceId,
-              primary: piece?.name ?? task.pieceId,
+              primary: pieceLabel(task, orders),
               secondary: hasTxml ? 'TXML disponível' : 'TXML pendente',
             };
           }),
@@ -113,7 +125,7 @@ export function buildStationListSections(
             return {
               id: task.id,
               pieceId: task.pieceId,
-              primary: piece?.name ?? task.pieceId,
+              primary: pieceLabel(task, orders),
               secondary: edges ? `Bordas: ${String(edges)}` : '4 bordas (padrão)',
             };
           }),
@@ -124,11 +136,14 @@ export function buildStationListSections(
     case 'montagem': {
       const modules = new Map<string, IndustrialWorkOrderTask[]>();
       for (const task of active) {
-        const piece = pieceById(orders, task.pieceId);
-        const moduleId = String(piece?.boxId ?? piece?.metadata?.modulo ?? 'Módulo geral');
-        const list = modules.get(moduleId) ?? [];
+        const order = orders.find((o) => o.id === task.workOrderId);
+        const boxCode =
+          task.display?.boxCode ??
+          (order ? resolveWorkOrderPieceDisplay(task.pieceId, order.projectId)?.boxCode : null) ??
+          'Modulo';
+        const list = modules.get(boxCode) ?? [];
         list.push(task);
-        modules.set(moduleId, list);
+        modules.set(boxCode, list);
       }
       return [
         {
@@ -152,7 +167,7 @@ export function buildStationListSections(
             return {
               id: task.id,
               pieceId: task.pieceId,
-              primary: piece?.name ?? task.pieceId,
+              primary: pieceLabel(task, orders),
               secondary: `${piece?.dimensions.widthMm ?? '—'}×${piece?.dimensions.heightMm ?? '—'} mm`,
             };
           }),
@@ -182,10 +197,12 @@ export function buildCanvasPieces(
   const uniquePieceIds = Array.from(new Set(active.map((t) => t.pieceId)));
 
   return uniquePieceIds.map((pieceId) => {
+    const task = active.find((t) => t.pieceId === pieceId);
     const piece = pieceById(orders, pieceId);
+    const label = task ? pieceLabel(task, orders) : piece?.name ?? pieceId;
     return {
       id: pieceId,
-      label: piece?.name ?? pieceId,
+      label,
       widthMm: piece?.dimensions.widthMm ?? 600,
       heightMm: piece?.dimensions.heightMm ?? 400,
       thicknessMm: piece?.dimensions.thicknessMm ?? 18,

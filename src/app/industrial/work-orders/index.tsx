@@ -5,8 +5,8 @@ import { useAuth } from '@/auth/useAuth';
 import { generateProjectWorkOrders } from '@/industrial/api/workOrderActions';
 import {
   resolveProjetosLinkForProjectId,
-  resolveProjectDisplayName,
 } from '@/industrial/integration/projetos/projetosProjectLinks';
+import { resolveWorkOrderProjectDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
@@ -200,7 +200,9 @@ export default function IndustrialWorkOrdersRoute() {
                   return (
                   <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: 8 }}>
-                      <div>{resolveProjectDisplayName(order.projectId)}</div>
+                      <div style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                        {resolveWorkOrderProjectDisplay(order.projectId)}
+                      </div>
                       {projetosLink ? (
                         <Link to={projetosLink.href} style={{ fontSize: 11, color: '#2563eb' }}>
                           Abrir PROJETOS

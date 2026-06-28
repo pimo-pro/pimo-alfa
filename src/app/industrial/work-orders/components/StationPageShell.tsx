@@ -45,7 +45,7 @@ export default function StationPageShell({ station }: StationPageShellProps) {
         />
       }
       history={
-        <StationHistorySidebar tasks={page.tasks} eventLog={page.eventLog} />
+        <StationHistorySidebar tasks={page.tasks} orders={page.orders} eventLog={page.eventLog} />
       }
       left={
         <StationPanel

@@ -5,6 +5,7 @@ import type {
   IndustrialWorkOrderTask,
   WorkOrderStatus,
   WorkOrderTaskStatus,
+  WorkOrderPieceDisplay,
 } from '@/industrial/work-orders/types';
 
 interface WorkOrderRow {
@@ -32,6 +33,15 @@ interface TaskRow {
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+}
+
+interface TaskViewRow extends TaskRow {
+  project_id?: string;
+  project_code?: string | null;
+  box_code?: string | null;
+  piece_code?: string | null;
+  full_industrial_name?: string | null;
+  nqr_code?: string | null;
 }
 
 interface EventRow {
@@ -77,6 +87,24 @@ export function mapTaskRow(row: TaskRow): IndustrialWorkOrderTask {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function displayFromViewRow(row: TaskViewRow): WorkOrderPieceDisplay | undefined {
+  const fullIndustrialName = String(row.full_industrial_name ?? '').trim();
+  if (!fullIndustrialName) return undefined;
+  return {
+    projectCode: String(row.project_code ?? '').trim() || '—',
+    boxCode: String(row.box_code ?? '').trim() || '—',
+    pieceCode: String(row.piece_code ?? '').trim() || '—',
+    fullIndustrialName,
+    nqrCode: String(row.nqr_code ?? '').trim() || fullIndustrialName,
+  };
+}
+
+export function mapTaskViewRow(row: TaskViewRow): IndustrialWorkOrderTask {
+  const task = mapTaskRow(row);
+  const display = displayFromViewRow(row);
+  return display ? { ...task, display } : task;
 }
 
 export function mapEventRow(row: EventRow): IndustrialWorkOrderEvent {
