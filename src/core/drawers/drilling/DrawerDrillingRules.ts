@@ -297,7 +297,7 @@ export function computePiModuleLateralCorredicaHoles(params: {
 
   for (const y of runnerLinesYMm) {
     const xFront = side === "left" ? panelDepthMm - frontOff : frontOff;
-    const xMark = side === "left" ? panelDepthMm - markOff : markOff;
+    const xMark = panelDepthMm - markOff;
     const xRear = side === "left" ? panelDepthMm - rearOff : rearOff;
 
     holes.push({

@@ -498,8 +498,15 @@ export function buildViewerDrillMarkersByPanelResult(
             face: h.y === 0 ? "fundo" as DrillFace : "cima" as DrillFace,
           };
         }
+        const xForViewer =
+          tipo === "lateral_direita" &&
+          (h.holeType === "dobradica_fixacao" || h.holeType === "dobradica" || h.holeType === "dobradica_parafuso_uniao")
+            ? item.dimensoes.largura - h.x
+          : tipo === "lateral_esquerda" && h.holeType === "corredica"
+            ? item.dimensoes.largura - h.x
+            : h.x;
         return {
-          x: h.x,
+          x: xForViewer,
           y: h.y,
           diametro: h.diameter,
           profundidade: h.depth,
