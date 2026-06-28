@@ -226,11 +226,18 @@ try {
 
     const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
     console.log(`APPLY ${file}`);
-    await client.query(sql);
-    await client.query(
-      "INSERT INTO public._pimo_schema_migrations (filename) VALUES ($1)",
-      [file],
-    );
+    await client.query("BEGIN");
+    try {
+      await client.query(sql);
+      await client.query(
+        "INSERT INTO public._pimo_schema_migrations (filename) VALUES ($1)",
+        [file],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
   }
 
   const tables = [
@@ -253,6 +260,27 @@ try {
       throw new Error(`Tabela em falta após migrations: ${table}`);
     }
     console.log(`OK table ${table}`);
+  }
+
+  const views = [
+    "industrial_operations",
+    "industrial_quality",
+    "industrial_time_tracking",
+    "industrial_tracking",
+    "industrial_rework",
+    "industrial_events",
+    "industrial_settings",
+  ];
+
+  for (const view of views) {
+    const check = await client.query(
+      `SELECT to_regclass($1) AS reg`,
+      [`public.${view}`],
+    );
+    if (!check.rows[0]?.reg) {
+      throw new Error(`View em falta após migrations: ${view}`);
+    }
+    console.log(`OK view ${view}`);
   }
 } finally {
   await client.end();
