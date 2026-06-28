@@ -1,5 +1,7 @@
 import { createQualityInspection } from '@/industrial/core/quality/actions';
 import type { QualityDecision } from '@/industrial/core/quality/types';
+import { resolveValidatedWorkOrderIdForPiece } from '@/industrial/persistence/work-orders/resolvePieceWorkOrderId';
+import { validateWorkOrderId } from '@/industrial/persistence/work-orders/validateWorkOrderId';
 
 import { logPieceEvent } from '../events/logEvent';
 import { savePieceQuality } from '../piece/savePieceQuality';
@@ -26,9 +28,16 @@ export async function updateQualityState(
     },
   });
 
+  let workOrderId = context?.workOrderId
+    ? await validateWorkOrderId(context.workOrderId, `quality:piece=${pieceId}`)
+    : null;
+  if (!workOrderId) {
+    workOrderId = await resolveValidatedWorkOrderIdForPiece(pieceId);
+  }
+
   await logPieceEvent(pieceId, {
     type: decision === 'rework' ? 'rework_requested' : 'quality_checked',
-    workOrderId: context?.workOrderId,
+    workOrderId: workOrderId ?? undefined,
     userId: context?.inspectorId,
     metadata: {
       quality_inspection: inspection,

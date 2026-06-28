@@ -1,5 +1,7 @@
 import { startTimeTracking, stopTimeTracking } from '@/industrial/core/time-tracking/actions';
 import type { TimeTrackingEntry } from '@/industrial/core/time-tracking/types';
+import { resolveValidatedWorkOrderIdForPiece } from '@/industrial/persistence/work-orders/resolvePieceWorkOrderId';
+import { validateWorkOrderId } from '@/industrial/persistence/work-orders/validateWorkOrderId';
 
 import { logPieceEvent } from '../events/logEvent';
 import { savePieceTimeTracking } from '../piece/savePieceTimeTracking';
@@ -22,9 +24,17 @@ export async function startPieceTime(
   });
 
   await savePieceTimeTracking(pieceId, { ...entry, action: 'start' });
+
+  let workOrderId = context.workOrderId
+    ? await validateWorkOrderId(context.workOrderId, `time_start:piece=${pieceId}`)
+    : null;
+  if (!workOrderId) {
+    workOrderId = await resolveValidatedWorkOrderIdForPiece(pieceId, context.stationId);
+  }
+
   await logPieceEvent(pieceId, {
     type: 'time_started',
-    workOrderId: context.workOrderId,
+    workOrderId: workOrderId ?? undefined,
     userId: context.userId,
     metadata: { time_entry: entry },
   });
@@ -39,9 +49,18 @@ export async function stopPieceTime(
 ): Promise<TimeTrackingEntry> {
   const stopped = stopTimeTracking(entry);
   await savePieceTimeTracking(pieceId, { ...stopped, action: 'stop' });
+
+  const rawWorkOrderId = context?.workOrderId ?? entry.workOrderId;
+  let workOrderId = rawWorkOrderId
+    ? await validateWorkOrderId(rawWorkOrderId, `time_stop:piece=${pieceId}`)
+    : null;
+  if (!workOrderId) {
+    workOrderId = await resolveValidatedWorkOrderIdForPiece(pieceId);
+  }
+
   await logPieceEvent(pieceId, {
     type: 'time_stopped',
-    workOrderId: context?.workOrderId ?? entry.workOrderId,
+    workOrderId: workOrderId ?? undefined,
     userId: context?.userId ?? entry.userId,
     metadata: {
       time_entry: stopped,

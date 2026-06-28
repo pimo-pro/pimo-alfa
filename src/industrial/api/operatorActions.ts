@@ -3,6 +3,7 @@ import {
   recordProjetosPieceOperation,
 } from '@/industrial/api/projetosIndustrialActions';
 import { logWorkOrderEvent } from '@/industrial/persistence/work-orders/logWorkOrderEvent';
+import { resolveValidatedWorkOrderIdFromTasks } from '@/industrial/persistence/work-orders/resolvePieceWorkOrderId';
 import {
   loadTasksByOperator,
   loadTasksByWorkOrder,
@@ -192,23 +193,30 @@ export async function recordOperatorOperation(
     const lookup = resolvePieceByCode(pieceId) ?? (await resolvePieceByCodeAsync(pieceId));
     const state = await fetchProjetosPieceIndustrialState(pieceId);
     const task = resolveTaskForOperation(state.tasks, operationType);
+    const workOrderId = await resolveValidatedWorkOrderIdFromTasks(state.tasks, operationType);
 
     await recordProjetosPieceOperation(pieceId, operationType, action, operatorId);
 
-    await logWorkOrderEvent({
-      workOrderId: task?.workOrderId,
-      taskId: task?.id,
-      eventType: action === 'start' ? 'operator_operation_started' : 'operator_operation_completed',
-      operatorId,
-      metadata: {
-        pieceId,
-        nqrCode: lookup?.etiquetaCode ?? null,
-        operationType,
-        operatorSession,
-        notes: notes ?? null,
-        source: 'operator_page',
-      },
-    });
+    if (workOrderId && task) {
+      await logWorkOrderEvent({
+        workOrderId,
+        taskId: task.id,
+        eventType: action === 'start' ? 'operator_operation_started' : 'operator_operation_completed',
+        operatorId,
+        metadata: {
+          pieceId,
+          nqrCode: lookup?.etiquetaCode ?? null,
+          operationType,
+          operatorSession,
+          notes: notes ?? null,
+          source: 'operator_page',
+        },
+      });
+    } else {
+      console.warn(
+        `[industrial] Operação ${operationType} (${action}) na peça ${pieceId} sem work_order_id válido — evento operador ignorado.`,
+      );
+    }
 
     logs.push(
       buildLogEntry(
@@ -216,7 +224,7 @@ export async function recordOperatorOperation(
         operationType,
         action,
         operatorSession,
-        task?.workOrderId,
+        workOrderId ?? undefined,
         lookup?.etiquetaCode,
         notes,
       ),

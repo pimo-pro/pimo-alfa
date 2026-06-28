@@ -24,6 +24,35 @@ function enrichTasks(tasks: IndustrialWorkOrderTask[], orders: IndustrialWorkOrd
   return attachDisplayToTasks(tasks, projectMap);
 }
 
+/** Exclui tarefas cujo `work_order_id` não existe em `industrial_work_orders`. */
+async function filterTasksWithExistingOrders(
+  tasks: IndustrialWorkOrderTask[],
+): Promise<IndustrialWorkOrderTask[]> {
+  if (tasks.length === 0) return [];
+
+  const orderIds = Array.from(new Set(tasks.map((task) => task.workOrderId).filter(Boolean)));
+  if (orderIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from(WORK_ORDER_TABLES.orders)
+    .select('id')
+    .in('id', orderIds);
+
+  if (error) throw new Error(error.message);
+
+  const validIds = new Set((data ?? []).map((row) => row.id));
+  const filtered = tasks.filter((task) => validIds.has(task.workOrderId));
+
+  if (filtered.length < tasks.length) {
+    const dropped = tasks.length - filtered.length;
+    console.warn(
+      `[industrial] ${dropped} tarefa(s) ignorada(s) — work_order_id inexistente em industrial_work_orders.`,
+    );
+  }
+
+  return filtered;
+}
+
 async function loadTasksFromView(
   build: (table: typeof INDUSTRIAL_VIEW_TABLES.tasksView) => Promise<IndustrialWorkOrderTask[]>,
 ): Promise<IndustrialWorkOrderTask[] | null> {
@@ -148,7 +177,14 @@ export async function loadTasksByPiece(pieceId: string): Promise<IndustrialWorkO
     return (data ?? []).map((row) => mapTaskViewRow(row as Parameters<typeof mapTaskViewRow>[0]));
   });
 
-  if (fromView && fromView.length > 0) return fromView;
+  if (fromView && fromView.length > 0) {
+    const validTasks = await filterTasksWithExistingOrders(fromView);
+    const orderIds = Array.from(new Set(validTasks.map((task) => task.workOrderId)));
+    const orders = (
+      await Promise.all(orderIds.map((id) => loadWorkOrderById(id)))
+    ).filter((order): order is IndustrialWorkOrder => order !== null);
+    return enrichTasks(validTasks, orders);
+  }
 
   const { data, error } = await supabase
     .from(WORK_ORDER_TABLES.tasks)
@@ -158,10 +194,11 @@ export async function loadTasksByPiece(pieceId: string): Promise<IndustrialWorkO
 
   if (error) throw new Error(error.message);
   const tasks = (data ?? []).map(mapTaskRow);
-  const orderIds = Array.from(new Set(tasks.map((task) => task.workOrderId)));
+  const validTasks = await filterTasksWithExistingOrders(tasks);
+  const orderIds = Array.from(new Set(validTasks.map((task) => task.workOrderId)));
   const orders = await Promise.all(orderIds.map((id) => loadWorkOrderById(id)));
   const validOrders = orders.filter((order): order is IndustrialWorkOrder => order !== null);
-  return enrichTasks(tasks, validOrders);
+  return enrichTasks(validTasks, validOrders);
 }
 
 export async function loadTaskById(taskId: string): Promise<IndustrialWorkOrderTask | null> {

@@ -1,5 +1,7 @@
 import { updatePieceOperationStatus } from '@/industrial/core/piece-operations/actions';
 import type { PieceOperation, PieceOperationStatus } from '@/industrial/core/piece-operations/types';
+import { resolveValidatedWorkOrderIdForPiece } from '@/industrial/persistence/work-orders/resolvePieceWorkOrderId';
+import { validateWorkOrderId } from '@/industrial/persistence/work-orders/validateWorkOrderId';
 
 import { logPieceEvent } from '../events/logEvent';
 import { savePieceOperations } from '../piece/savePieceOperations';
@@ -48,9 +50,19 @@ export async function updateTrackingState(
           ? 'rework_requested'
           : 'operation_started';
 
+  let workOrderId = context?.workOrderId
+    ? await validateWorkOrderId(
+        context.workOrderId,
+        `operation:${operation.type}:piece=${pieceId}`,
+      )
+    : null;
+  if (!workOrderId) {
+    workOrderId = await resolveValidatedWorkOrderIdForPiece(pieceId, operation.type);
+  }
+
   await logPieceEvent(pieceId, {
     type: eventType,
-    workOrderId: context?.workOrderId,
+    workOrderId: workOrderId ?? undefined,
     userId: context?.userId,
     metadata: {
       operation_id: operation.id,

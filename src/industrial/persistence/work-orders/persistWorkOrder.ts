@@ -4,6 +4,7 @@ import { buildTaskMetadataForPiece } from '@/industrial/work-orders/resolveWorkO
 
 import { mapWorkOrderRow } from './mappers';
 import { WORK_ORDER_TABLES } from './tables';
+import { markWorkOrderIdKnownValid } from './validateWorkOrderId';
 
 export interface PersistWorkOrderOptions {
   pieceDisplayById?: Map<string, WorkOrderPieceDisplay>;
@@ -38,6 +39,8 @@ export async function persistWorkOrderDraft(
   if (orderError || !orderRow) {
     throw new Error(orderError?.message ?? 'Falha ao criar ordem de trabalho.');
   }
+
+  markWorkOrderIdKnownValid(orderRow.id);
 
   const taskRows = draft.tasks.map((task) => {
     const display = pieceDisplayById?.get(task.pieceId) ?? null;
