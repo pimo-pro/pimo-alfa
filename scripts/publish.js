@@ -89,9 +89,43 @@ function runOutput(command) {
 }
 
 
+function ensureProductionEnv() {
+  const prodPath = path.join(rootDir, ".env.production");
+  const base = fs.existsSync(prodPath) ? fs.readFileSync(prodPath, "utf8") : "";
+  const updates = {
+    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    VITE_API_URL: process.env.VITE_API_URL,
+    VITE_TEXTURES_URL: process.env.VITE_TEXTURES_URL,
+  };
+
+  let merged = base.endsWith("\n") || base === "" ? base : `${base}\n`;
+  for (const [key, value] of Object.entries(updates)) {
+    if (typeof value !== "string" || value.trim() === "") continue;
+    const pattern = new RegExp(`^${key}=.*$`, "m");
+    merged = pattern.test(merged)
+      ? merged.replace(pattern, `${key}=${value}`)
+      : `${merged}${key}=${value}\n`;
+  }
+
+  fs.writeFileSync(prodPath, merged, "utf8");
+
+  const hasUrl = /^VITE_SUPABASE_URL=\s*\S+/m.test(merged);
+  const hasKey = /^VITE_SUPABASE_ANON_KEY=\s*\S+/m.test(merged);
+  if (!hasUrl || !hasKey) {
+    console.warn(
+      "AVISO: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY ausentes no build local. " +
+        "Configure .env.production ou secrets GitHub (CI injeta no deploy)."
+    );
+  } else {
+    console.log("Supabase industrial: variaveis presentes para o build.");
+  }
+}
+
 console.log(`Nova versao: ${nextVersion}`);
 console.log(`updatedAt: ${nextData.updatedAt}`);
 console.log("Sincronizado public/version.json antes do build.");
+ensureProductionEnv();
 
 runStep("Executando build...", "npm run build");
 assertVersionFilesInSync();

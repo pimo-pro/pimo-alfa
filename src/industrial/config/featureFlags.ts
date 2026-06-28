@@ -5,11 +5,11 @@
  * @see docs/architecture/industrial-feature-flags.md
  */
 export const industrialFeatureFlags = {
-  operationsUi: false,
-  realtimeTracking: false,
-  qualityGate: false,
-  reworkFlow: false,
-  adminRulesEditor: false,
+  operationsUi: true,
+  realtimeTracking: true,
+  qualityGate: true,
+  reworkFlow: true,
+  adminRulesEditor: true,
 } as const;
 
 export type IndustrialFeatureFlagKey = keyof typeof industrialFeatureFlags;
