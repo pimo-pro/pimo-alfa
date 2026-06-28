@@ -3,6 +3,7 @@
  * Requer DATABASE_URL ou SUPABASE_DB_PASSWORD + VITE_SUPABASE_URL.
  */
 import dns from "node:dns";
+import { lookup as dnsLookup } from "node:dns/promises";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +26,8 @@ const POOLER_REGIONS = [
   "ap-southeast-1",
 ];
 
+const POOLER_PREFIXES = ["aws-1", "aws-0"];
+
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
   const out = {};
@@ -43,38 +46,6 @@ function projectRefFromUrl(url) {
   return match?.[1] ?? "";
 }
 
-function buildPoolerUrls(databaseUrl, preferredRegion) {
-  try {
-    const normalized = databaseUrl.replace(/^postgres:\/\//, "postgresql://");
-    const parsed = new URL(normalized);
-    const directMatch = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
-    if (!directMatch) return [];
-
-    const ref = directMatch[1];
-    const password = parsed.password;
-    const database = parsed.pathname.replace(/^\//, "") || "postgres";
-    const regions = preferredRegion
-      ? [preferredRegion, ...POOLER_REGIONS.filter((r) => r !== preferredRegion)]
-      : POOLER_REGIONS;
-
-    return regions.flatMap((region) => [
-      `postgresql://postgres.${ref}:${password}@aws-0-${region}.pooler.supabase.com:5432/${database}`,
-      `postgresql://postgres.${ref}:${password}@aws-0-${region}.pooler.supabase.com:6543/${database}`,
-    ]);
-  } catch {
-    return [];
-  }
-}
-
-function connectionCandidates(env) {
-  const primary = resolveDatabaseUrl(env);
-  if (!primary) return [];
-
-  const preferredRegion = env.SUPABASE_REGION?.trim();
-  const pooler = buildPoolerUrls(primary, preferredRegion);
-  return [...new Set([primary, ...pooler])];
-}
-
 function resolveDatabaseUrl(env) {
   if (env.DATABASE_URL?.trim()) return env.DATABASE_URL.trim();
   const password = env.SUPABASE_DB_PASSWORD?.trim();
@@ -90,6 +61,62 @@ function resolveDatabaseUrl(env) {
     return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${db}`;
   }
   return "";
+}
+
+async function ipv4DatabaseUrl(databaseUrl) {
+  try {
+    const normalized = databaseUrl.replace(/^postgres:\/\//, "postgresql://");
+    const parsed = new URL(normalized);
+    if (!parsed.hostname.endsWith(".supabase.co")) return null;
+    const { address } = await dnsLookup(parsed.hostname, { family: 4 });
+    parsed.hostname = address;
+    return parsed.toString().replace(/^postgres:/, "postgresql:");
+  } catch {
+    return null;
+  }
+}
+
+function buildPoolerUrls(databaseUrl, preferredRegion) {
+  try {
+    const normalized = databaseUrl.replace(/^postgres:\/\//, "postgresql://");
+    const parsed = new URL(normalized);
+    const directMatch = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    if (!directMatch) return [];
+
+    const ref = directMatch[1];
+    const password = parsed.password;
+    const database = parsed.pathname.replace(/^\//, "") || "postgres";
+    const regions = preferredRegion
+      ? [preferredRegion, ...POOLER_REGIONS.filter((r) => r !== preferredRegion)]
+      : POOLER_REGIONS;
+
+    const urls = [];
+    for (const prefix of POOLER_PREFIXES) {
+      for (const region of regions) {
+        for (const port of ["5432", "6543"]) {
+          urls.push(
+            `postgresql://postgres.${ref}:${password}@${prefix}-${region}.pooler.supabase.com:${port}/${database}`,
+          );
+        }
+      }
+    }
+    urls.push(
+      `postgresql://postgres.${ref}:${password}@db.${ref}.supabase.co:6543/${database}`,
+    );
+    return urls;
+  } catch {
+    return [];
+  }
+}
+
+async function connectionCandidates(env) {
+  const primary = resolveDatabaseUrl(env);
+  if (!primary) return [];
+
+  const preferredRegion = env.SUPABASE_REGION?.trim();
+  const ipv4Direct = await ipv4DatabaseUrl(primary);
+  const pooler = buildPoolerUrls(primary, preferredRegion);
+  return [...new Set([primary, ipv4Direct, ...pooler].filter(Boolean))];
 }
 
 async function connectPg(candidates) {
@@ -122,7 +149,7 @@ const env = {
   ...process.env,
 };
 
-const candidates = connectionCandidates(env);
+const candidates = await connectionCandidates(env);
 if (candidates.length === 0) {
   console.error(
     "ERRO: configure DATABASE_URL ou SUPABASE_DB_PASSWORD + VITE_SUPABASE_URL.",
