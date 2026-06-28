@@ -95,9 +95,10 @@ export function ShowroomParametricBoxes({
   }, [projectState, sceneGroup]);
 
   useLayoutEffect(() => {
-    const root = rootRef.current ?? sceneGroup;
-    applyShowroomBoxSeparation(root, boxExplode, boxIntensity);
-    root.children.forEach((child) => {
+    // usar sceneGroup directamente — os box-wrappers são filhos do sceneGroup (primitive),
+    // não do rootRef.current (group exterior)
+    applyShowroomBoxSeparation(sceneGroup, boxExplode, boxIntensity);
+    sceneGroup.children.forEach((child) => {
       if (!child.name.startsWith("showroom-box-wrap-")) return;
       if (focusBoxId && !child.name.endsWith(focusBoxId)) return;
       applyShowroomExplodedView(child, pieceExplode, pieceIntensity);

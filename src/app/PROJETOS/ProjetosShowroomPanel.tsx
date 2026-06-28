@@ -1,7 +1,6 @@
 import ShowroomViewer from "@/components/showroom/ShowroomViewer";
-import ShowroomViewerControls, {
-  useShowroomExplodeDefaults,
-} from "@/components/showroom/ShowroomViewerControls";
+import { useShowroomExplodeDefaults } from "@/components/showroom/ShowroomViewerControls";
+import { ShowroomViewerTopBar } from "@/components/showroom/ShowroomViewerTopBar";
 import type { SavedProjectRecord } from "@/core/projects/types";
 
 export type ProjetosFocusLevel = "project" | "box" | "piece";
@@ -31,32 +30,29 @@ export default function ProjetosShowroomPanel({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        position: "relative",
       }}
     >
-      <ShowroomViewerControls
+      <ShowroomViewerTopBar
         focusLevel={focusLevel}
         boxExplode={explode.boxExplode}
-        boxIntensity={explode.boxIntensity}
         pieceExplode={explode.pieceExplode}
-        pieceIntensity={explode.pieceIntensity}
-        onBoxExplodeChange={explode.setBoxExplode}
-        onBoxIntensityChange={explode.setBoxIntensity}
-        onPieceExplodeChange={explode.setPieceExplode}
-        onPieceIntensityChange={explode.setPieceIntensity}
+        onBoxExplodeToggle={() => explode.setBoxExplode(!explode.boxExplode)}
+        onPieceExplodeToggle={() => explode.setPieceExplode(!explode.pieceExplode)}
       />
-      <ShowroomViewer
-        snapshot={snapshot}
-        mode={focusLevel}
-        projectId={projectPageSlug}
-        boxId={boxId}
-        pieceId={pieceId}
-        readOnly
-        boxExplode={explode.boxExplode}
-        boxIntensity={explode.boxIntensity}
-        pieceExplode={explode.pieceExplode}
-        pieceIntensity={explode.pieceIntensity}
-      />
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        <ShowroomViewer
+          snapshot={snapshot}
+          mode={focusLevel}
+          projectId={projectPageSlug}
+          boxId={boxId}
+          pieceId={pieceId}
+          readOnly
+          boxExplode={explode.boxExplode}
+          boxIntensity={explode.boxIntensity}
+          pieceExplode={explode.pieceExplode}
+          pieceIntensity={explode.pieceIntensity}
+        />
+      </div>
     </div>
   );
 }
