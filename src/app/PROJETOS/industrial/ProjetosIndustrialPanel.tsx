@@ -12,6 +12,7 @@ import {
   type ProjetosIndustrialSummary,
 } from "@/industrial/api/projetosIndustrialActions";
 import { resolveProjetosIndustrialRef } from "@/industrial/integration/projetos/resolveProjetosIndustrialRef";
+import { projectCodeFromName } from "@/industrial/work-orders/resolveWorkOrderPiece";
 import { PROJETOS_PIECE_OPERATIONS } from "@/industrial/integration/projetos/types";
 import { useAuth } from "@/auth/useAuth";
 
@@ -148,7 +149,10 @@ export default function ProjetosIndustrialPanel({
             <p style={rowStyle}>
               Ordens: {summary.orders.length} · Tarefas: {summary.completedTasks}/{summary.totalTasks}
             </p>
-            <Link to={`/industrial/work-orders?project=${encodeURIComponent(ref.projectId)}`} style={linkStyle}>
+            <Link
+              to={`/industrial/work-orders?project=${encodeURIComponent(projectCodeFromName(ref.projectName))}`}
+              style={linkStyle}
+            >
               Abrir Work Orders
             </Link>
             <Link to={`/industrial/supervisor?project=${encodeURIComponent(ref.projectId)}`} style={linkStyle}>

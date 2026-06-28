@@ -296,3 +296,28 @@ export function resolveWorkOrderProjectDisplay(projectId: string): string {
   if (ctx) return projectCodeFromName(ctx.projectName);
   return projectCodeFromName(resolveProjectDisplayName(projectId));
 }
+
+export function resolveProjectIdByProjectCode(projectCode: string): string | null {
+  const normalized = projectCode.trim().toUpperCase();
+  if (!normalized) return null;
+
+  for (const project of readOfflineProjects()) {
+    if (project.deleted) continue;
+    const name = project.name?.trim() || 'Projeto';
+    if (projectCodeFromName(name) === normalized) return project.id;
+  }
+  return null;
+}
+
+export function resolveOrderProjectCode(
+  order: { projectId: string; metadata?: Record<string, unknown> },
+  tasks: IndustrialWorkOrderTask[] = [],
+): string {
+  const fromMeta = String(order.metadata?.project_code ?? '').trim();
+  if (fromMeta) return fromMeta;
+
+  const fromTask = tasks.find((task) => task.display?.projectCode)?.display?.projectCode;
+  if (fromTask) return fromTask;
+
+  return resolveWorkOrderProjectDisplay(order.projectId);
+}

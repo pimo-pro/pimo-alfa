@@ -10,6 +10,7 @@ import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 
 export interface WorkOrderFilters {
   projectId?: string;
+  projectCode?: string;
   station?: IndustrialStation;
   status?: string;
 }
@@ -34,6 +35,10 @@ async function loadTasksFromView(
 }
 
 export async function loadWorkOrders(filters: WorkOrderFilters = {}): Promise<IndustrialWorkOrder[]> {
+  if (filters.projectCode) {
+    return loadWorkOrdersByProjectCode(filters.projectCode, filters);
+  }
+
   let query = supabase.from(WORK_ORDER_TABLES.orders).select('*').order('created_at', { ascending: false });
 
   if (filters.projectId) query = query.eq('project_id', filters.projectId);
@@ -42,6 +47,54 @@ export async function loadWorkOrders(filters: WorkOrderFilters = {}): Promise<In
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
+  return (data ?? []).map(mapWorkOrderRow);
+}
+
+/** Filtra ordens via `industrial_work_order_tasks_view.project_code`. */
+export async function loadWorkOrdersByProjectCode(
+  projectCode: string,
+  filters: Omit<WorkOrderFilters, 'projectCode' | 'projectId'> = {},
+): Promise<IndustrialWorkOrder[]> {
+  const code = projectCode.trim();
+  if (!code) return loadWorkOrders({ station: filters.station, status: filters.status });
+
+  const { data: viewRows, error: viewError } = await supabase
+    .from(INDUSTRIAL_VIEW_TABLES.tasksView)
+    .select('*')
+    .eq('project_code', code.toUpperCase());
+
+  if (viewError) throw new Error(viewError.message);
+
+  let tasks = (viewRows ?? []).map((row) =>
+    mapTaskViewRow(row as Parameters<typeof mapTaskViewRow>[0]),
+  );
+
+  if (tasks.length === 0 && code !== code.toUpperCase()) {
+    const retry = await supabase
+      .from(INDUSTRIAL_VIEW_TABLES.tasksView)
+      .select('*')
+      .eq('project_code', code);
+    if (retry.error) throw new Error(retry.error.message);
+    tasks = (retry.data ?? []).map((row) =>
+      mapTaskViewRow(row as Parameters<typeof mapTaskViewRow>[0]),
+    );
+  }
+
+  const workOrderIds = Array.from(new Set(tasks.map((task) => task.workOrderId)));
+  if (workOrderIds.length === 0) return [];
+
+  let query = supabase
+    .from(WORK_ORDER_TABLES.orders)
+    .select('*')
+    .in('id', workOrderIds)
+    .order('created_at', { ascending: false });
+
+  if (filters.station) query = query.eq('station', filters.station);
+  if (filters.status) query = query.eq('status', filters.status);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
   return (data ?? []).map(mapWorkOrderRow);
 }
 

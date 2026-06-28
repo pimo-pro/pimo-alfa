@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchWorkOrders } from '@/industrial/api/workOrderActions';
 import type { IndustrialStation, IndustrialWorkOrder } from '@/industrial/work-orders/types';
 
-export function useWorkOrders(filters?: { projectId?: string; station?: IndustrialStation }) {
+export function useWorkOrders(filters?: { projectCode?: string; station?: IndustrialStation }) {
   const [orders, setOrders] = useState<IndustrialWorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export function useWorkOrders(filters?: { projectId?: string; station?: Industri
     } finally {
       setLoading(false);
     }
-  }, [filters?.projectId, filters?.station]);
+  }, [filters?.projectCode, filters?.station]);
 
   useEffect(() => {
     void reload();

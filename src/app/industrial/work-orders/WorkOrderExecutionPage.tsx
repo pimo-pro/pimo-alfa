@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { useAuth } from '@/auth/useAuth';
 import { fetchWorkOrderDetail, finishTask, rejectTask, startTask } from '@/industrial/api/workOrderActions';
-import { resolveWorkOrderProjectDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
+import { resolveOrderProjectCode } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
 import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
@@ -70,7 +70,7 @@ export default function WorkOrderExecutionPage() {
     );
   }
 
-  const projectCode = order ? resolveWorkOrderProjectDisplay(order.projectId) : '—';
+  const projectCode = order ? resolveOrderProjectCode(order, tasks) : '—';
 
   return (
     <IndustrialLayout

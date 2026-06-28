@@ -1,5 +1,5 @@
 import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
-import { resolveWorkOrderProjectDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
+import { resolveOrderProjectCode } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
 
 type Props = {
@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function WorkOrderSummaryCard({ order, tasks = [] }: Props) {
-  const projectCode = resolveWorkOrderProjectDisplay(order.projectId);
+  const projectCode = resolveOrderProjectCode(order, tasks);
   const sampleNames = tasks
     .map((task) => task.display?.fullIndustrialName)
     .filter(Boolean)

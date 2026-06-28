@@ -28,7 +28,11 @@ export async function generateProjectWorkOrders(projectId: string) {
   return createWorkOrdersForProject(projectId);
 }
 
-export async function fetchWorkOrders(filters?: { projectId?: string; station?: IndustrialStation }) {
+export async function fetchWorkOrders(filters?: {
+  projectId?: string;
+  projectCode?: string;
+  station?: IndustrialStation;
+}) {
   return loadWorkOrders(filters);
 }
 
