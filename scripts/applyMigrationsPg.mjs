@@ -69,8 +69,10 @@ async function ipv4DatabaseUrl(databaseUrl) {
     const parsed = new URL(normalized);
     if (!parsed.hostname.endsWith(".supabase.co")) return null;
     const { address } = await dnsLookup(parsed.hostname, { family: 4 });
-    parsed.hostname = address;
-    return parsed.toString().replace(/^postgres:/, "postgresql:");
+    return normalized.replace(`//${parsed.username}:`, `//${parsed.username}:`).replace(
+      `${parsed.username}:${parsed.password}@${parsed.hostname}`,
+      `${parsed.username}:${parsed.password}@${address}`,
+    );
   } catch {
     return null;
   }
@@ -78,14 +80,13 @@ async function ipv4DatabaseUrl(databaseUrl) {
 
 function buildPoolerUrls(databaseUrl, preferredRegion) {
   try {
-    const normalized = databaseUrl.replace(/^postgres:\/\//, "postgresql://");
-    const parsed = new URL(normalized);
-    const directMatch = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    const config = parsePgConfig(databaseUrl);
+    const directMatch = config.host.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
     if (!directMatch) return [];
 
     const ref = directMatch[1];
-    const password = parsed.password;
-    const database = parsed.pathname.replace(/^\//, "") || "postgres";
+    const password = encodeURIComponent(config.password);
+    const database = config.database;
     const regions = preferredRegion
       ? [preferredRegion, ...POOLER_REGIONS.filter((r) => r !== preferredRegion)]
       : POOLER_REGIONS;
@@ -93,7 +94,7 @@ function buildPoolerUrls(databaseUrl, preferredRegion) {
     const urls = [];
     for (const prefix of POOLER_PREFIXES) {
       for (const region of regions) {
-        for (const port of ["5432", "6543"]) {
+        for (const port of ["6543", "5432"]) {
           urls.push(
             `postgresql://postgres.${ref}:${password}@${prefix}-${region}.pooler.supabase.com:${port}/${database}`,
           );
@@ -113,10 +114,28 @@ async function connectionCandidates(env) {
   const primary = resolveDatabaseUrl(env);
   if (!primary) return [];
 
-  const preferredRegion = env.SUPABASE_REGION?.trim();
-  const ipv4Direct = await ipv4DatabaseUrl(primary);
+  const primaryConfig = parsePgConfig(primary);
+  if (primaryConfig.host.includes("pooler.supabase.com")) {
+    return [primary];
+  }
+
+  const preferredRegion = env.SUPABASE_REGION?.trim() || "eu-central-1";
   const pooler = buildPoolerUrls(primary, preferredRegion);
-  return [...new Set([primary, ipv4Direct, ...pooler].filter(Boolean))];
+  const ipv4Direct = await ipv4DatabaseUrl(primary);
+  return [...new Set([...pooler, ipv4Direct, primary].filter(Boolean))];
+}
+
+function parsePgConfig(connectionString) {
+  const normalized = connectionString.replace(/^postgres:\/\//, "postgresql://");
+  const parsed = new URL(normalized);
+  return {
+    host: parsed.hostname,
+    port: Number(parsed.port || 5432),
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: parsed.pathname.replace(/^\//, "") || "postgres",
+    ssl: { rejectUnauthorized: false },
+  };
 }
 
 async function connectPg(candidates) {
@@ -124,12 +143,10 @@ async function connectPg(candidates) {
   for (let i = 0; i < candidates.length; i += 1) {
     const connectionString = candidates[i];
     const label = i === 0 ? "primary" : `fallback-${i}`;
-    const client = new pg.Client({
-      connectionString,
-      ssl: { rejectUnauthorized: false },
-    });
+    const config = parsePgConfig(connectionString);
+    const client = new pg.Client(config);
     try {
-      console.log(`Tentativa de ligação (${label})...`);
+      console.log(`Tentativa de ligação (${label}) → ${config.user}@${config.host}:${config.port}`);
       await client.connect();
       console.log(`Ligação OK (${label}).`);
       return client;
