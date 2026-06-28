@@ -78,14 +78,15 @@ async function ipv4DatabaseUrl(databaseUrl) {
   }
 }
 
-function buildPoolerUrls(databaseUrl, preferredRegion) {
+function buildPoolerUrls(databaseUrl, preferredRegion, overridePassword) {
   try {
     const config = parsePgConfig(databaseUrl);
     const directMatch = config.host.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
     if (!directMatch) return [];
 
     const ref = directMatch[1];
-    const password = encodeURIComponent(config.password);
+    const rawPassword = overridePassword || config.password;
+    const password = encodeURIComponent(rawPassword);
     const database = config.database;
     const regions = preferredRegion
       ? [preferredRegion, ...POOLER_REGIONS.filter((r) => r !== preferredRegion)]
@@ -119,10 +120,11 @@ async function connectionCandidates(env) {
     return [primary];
   }
 
+  const overridePassword = env.SUPABASE_DB_PASSWORD?.trim() || "";
   const preferredRegion = env.SUPABASE_REGION?.trim() || "eu-central-1";
-  const pooler = buildPoolerUrls(primary, preferredRegion);
+  const pooler = buildPoolerUrls(primary, preferredRegion, overridePassword || undefined);
   const ipv4Direct = await ipv4DatabaseUrl(primary);
-  return [...new Set([...pooler, ipv4Direct, primary].filter(Boolean))];
+  return [...new Set([...pooler, ipv4Direct].filter(Boolean))];
 }
 
 function parsePgConfig(connectionString) {
@@ -157,7 +159,10 @@ async function connectPg(candidates) {
       await client.end().catch(() => undefined);
     }
   }
-  throw lastError ?? new Error("Não foi possível ligar ao Postgres.");
+  throw lastError ?? new Error(
+    "Não foi possível ligar ao Postgres. Use DATABASE_URL = URI Session pooler do Supabase Dashboard, " +
+      "ou adicione SUPABASE_DB_PASSWORD (password raw) nos secrets GitHub.",
+  );
 }
 
 const env = {
