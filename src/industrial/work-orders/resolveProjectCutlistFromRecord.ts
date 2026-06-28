@@ -2,11 +2,22 @@ import { applyResultados } from "@/context/projectState";
 import { reviveState } from "@/context/projectPersistence";
 import type { SavedProjectRecord } from "@/core/projects/types";
 import type { CutListItem } from "@/core/types";
+import { buildBoxNomeByIdFromBoxes } from "@/core/cutlayout/cutLayoutProPieceNaming";
 import { buildCutlistItemsForIndustrialExport } from "@/core/fabrication/buildCutlistItemsForIndustrialExport";
 
 import { mapCutlistToIndustrialPieces, type CutlistPieceInput } from "../integration/cutlist/cutlistToPieces";
+import type { IndustrialPiece } from "../core/pieces/types";
 
-import type { ProjectCutlistContext } from "./resolveProjectCutlist";
+export interface ProjectCutlistContext {
+  projectId: string;
+  projectName: string;
+  cutlist: CutlistPieceInput[];
+  pieces: IndustrialPiece[];
+  /** Cutlist bruta para nomenclatura industrial (etiqueta v5). */
+  cutListItems: CutListItem[];
+  /** Mapa boxId → nome de caixa para códigos industriais. */
+  boxNameById: Record<string, string>;
+}
 
 function toCutlistInput(item: CutListItem): CutlistPieceInput {
   return {
@@ -51,11 +62,14 @@ export function resolveProjectCutlistFromRecord(
 
   const cutlist = exported.map(toCutlistInput);
   const pieces = mapCutlistToIndustrialPieces(cutlist, { projectId });
+  const boxNameById = buildBoxNomeByIdFromBoxes(state.boxes ?? []);
 
   return {
     projectId,
     projectName,
     cutlist,
     pieces,
+    cutListItems: exported,
+    boxNameById,
   };
 }

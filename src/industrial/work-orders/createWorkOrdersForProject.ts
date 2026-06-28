@@ -5,6 +5,10 @@ import { loadWorkOrders } from '../persistence/work-orders/loadWorkOrders';
 
 import { resolveProjectCutlist } from './resolveProjectCutlist';
 import { resolveProjectCutlistFromRecord } from './resolveProjectCutlistFromRecord';
+import {
+  buildWorkOrderDisplayMapFromContext,
+  projectCodeFromName,
+} from './resolveWorkOrderPiece';
 import { generateAllStationOrderDrafts } from './stationOrderFactory';
 import type { GeneratedWorkOrderDraft, IndustrialWorkOrder } from './types';
 import { woIdempotencyConfig } from './woIdempotencyConfig';
@@ -37,6 +41,7 @@ async function createWorkOrdersForProjectContext(
   context: NonNullable<ReturnType<typeof resolveProjectCutlist>>,
 ): Promise<CreateWorkOrdersResult> {
   const projectId = context.projectId;
+  const pieceDisplayById = buildWorkOrderDisplayMapFromContext(context);
 
   const drafts: GeneratedWorkOrderDraft[] = generateAllStationOrderDrafts(context.pieces);
   const skippedStations: string[] = [];
@@ -66,7 +71,10 @@ async function createWorkOrdersForProjectContext(
       }
     }
 
-    const order = await persistWorkOrderDraft(projectId, draft);
+    const order = await persistWorkOrderDraft(projectId, draft, {
+      pieceDisplayById,
+      projectCode: projectCodeFromName(context.projectName),
+    });
     orders.push(order);
   }
 

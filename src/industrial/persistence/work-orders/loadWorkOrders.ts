@@ -1,8 +1,6 @@
 import { supabase } from '@/industrial/infra/db';
 import {
   attachDisplayToTasks,
-  displayToTaskMetadata,
-  resolveWorkOrderPieceDisplay,
 } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import type { IndustrialStation, IndustrialWorkOrder } from '@/industrial/work-orders/types';
 
@@ -59,6 +57,8 @@ export async function loadWorkOrderById(workOrderId: string): Promise<Industrial
 }
 
 export async function loadTasksByWorkOrder(workOrderId: string): Promise<IndustrialWorkOrderTask[]> {
+  const order = await loadWorkOrderById(workOrderId);
+
   const fromView = await loadTasksFromView(async () => {
     const { data, error } = await supabase
       .from(INDUSTRIAL_VIEW_TABLES.tasksView)
@@ -69,9 +69,10 @@ export async function loadTasksByWorkOrder(workOrderId: string): Promise<Industr
     return (data ?? []).map((row) => mapTaskViewRow(row as Parameters<typeof mapTaskViewRow>[0]));
   });
 
-  if (fromView && fromView.some((task) => task.display)) return fromView;
+  if (fromView && fromView.length > 0) {
+    return order ? enrichTasks(fromView, [order]) : fromView;
+  }
 
-  const order = await loadWorkOrderById(workOrderId);
   const { data, error } = await supabase
     .from(WORK_ORDER_TABLES.tasks)
     .select('*')
@@ -326,9 +327,4 @@ export async function loadTrackingByPieceIds(pieceIds: string[]): Promise<Indust
 
   if (fromView) return fromView;
   return loadTasksByPiece(pieceIds[0]!);
-}
-
-export function buildTaskMetadataForPiece(pieceId: string, projectId: string): Record<string, string> {
-  const display = resolveWorkOrderPieceDisplay(pieceId, projectId);
-  return display ? displayToTaskMetadata(display) : {};
 }

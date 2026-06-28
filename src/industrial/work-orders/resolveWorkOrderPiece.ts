@@ -14,6 +14,8 @@ import type { CutListItem } from '@/core/types';
 import { resolveProjectDisplayName } from '../integration/projetos/projetosProjectLinks';
 
 import { resolveProjectCutlist } from './resolveProjectCutlist';
+import type { ProjectCutlistContext } from './resolveProjectCutlistFromRecord';
+import type { CutlistPieceInput } from '../integration/cutlist/cutlistToPieces';
 import type { IndustrialWorkOrderTask, WorkOrderPieceDisplay } from './types';
 
 const METADATA_KEYS = {
@@ -113,15 +115,23 @@ function findCutlistMatch(projectId: string, pieceId: string): ProjectCutlistMat
   return { item, projectName, boxName, cutlist };
 }
 
-/** Resolve nomenclatura industrial a partir da cutlist local (igual à etiqueta). */
-export function resolveWorkOrderPieceDisplay(
-  pieceId: string,
-  projectId: string,
-): WorkOrderPieceDisplay | null {
-  const match = findCutlistMatch(projectId, pieceId);
-  if (!match) return null;
+function cutlistInputMatchesId(item: CutlistPieceInput, pieceId: string): boolean {
+  const candidates = [
+    item.id,
+    `${item.boxId}:${item.nome}`,
+    `${item.boxId}:${item.name}`,
+    `${item.boxId}:${item.id}`,
+    item.shortCode,
+  ].filter(Boolean);
+  return candidates.some((value) => String(value) === pieceId);
+}
 
-  const { item, projectName, boxName, cutlist } = match;
+function buildDisplayFromCutlistItem(
+  item: CutListItem,
+  projectName: string,
+  boxName: string,
+  cutlist: CutListItem[],
+): WorkOrderPieceDisplay {
   const nomeIndustrial = resolveNomeIndustrialForEtiqueta(item, projectName, boxName);
   const projectCode = projectCodeFromName(projectName);
   const boxCode = boxCodeFromName(boxName);
@@ -144,6 +154,92 @@ export function resolveWorkOrderPieceDisplay(
     fullIndustrialName,
     nqrCode,
   };
+}
+
+function cutlistInputToItem(input: CutlistPieceInput, pieceId: string): CutListItem {
+  return {
+    id: input.id ?? pieceId,
+    nome: input.nome ?? input.name ?? 'Peca',
+    boxId: input.boxId,
+    tipo: String(input.metadata?.tipo ?? ''),
+    material: input.material,
+    materialId: input.materialId,
+    quantidade: input.quantidade ?? 1,
+    dimensoes: {
+      largura: input.dimensoes?.largura ?? 0,
+      altura: input.dimensoes?.altura ?? 0,
+      profundidade: input.dimensoes?.profundidade ?? 0,
+    },
+    espessura: input.espessura,
+  };
+}
+
+function resolveDisplayFromContext(
+  context: ProjectCutlistContext,
+  pieceId: string,
+): WorkOrderPieceDisplay | null {
+  const { projectName, cutListItems, cutlist, boxNameById, pieces } = context;
+
+  let cutListItem = cutListItems.find((row) => cutlistItemMatchesId(row, pieceId));
+  if (!cutListItem) {
+    const piece = pieces.find((row) => row.id === pieceId);
+    if (piece?.sourceItemId) {
+      cutListItem = cutListItems.find((row) => cutlistItemMatchesId(row, piece.sourceItemId!));
+    }
+  }
+  if (!cutListItem) {
+    const input = cutlist.find((row) => cutlistInputMatchesId(row, pieceId));
+    if (!input) {
+      const piece = pieces.find((row) => row.id === pieceId);
+      const fallbackInput = piece?.sourceItemId
+        ? cutlist.find((row) => row.id === piece.sourceItemId)
+        : undefined;
+      if (!fallbackInput) return null;
+      const pseudoItem = cutlistInputToItem(fallbackInput, pieceId);
+      const boxName = boxNameById[pseudoItem.boxId ?? ''] ?? pseudoItem.boxId ?? 'Caixa';
+      return buildDisplayFromCutlistItem(pseudoItem, projectName, boxName, cutListItems);
+    }
+    const pseudoItem = cutlistInputToItem(input, pieceId);
+    const boxName = boxNameById[pseudoItem.boxId ?? ''] ?? pseudoItem.boxId ?? 'Caixa';
+    return buildDisplayFromCutlistItem(pseudoItem, projectName, boxName, cutListItems);
+  }
+
+  const boxName = boxNameById[cutListItem.boxId ?? ''] ?? cutListItem.boxId ?? 'Caixa';
+  return buildDisplayFromCutlistItem(cutListItem, projectName, boxName, cutListItems);
+}
+
+/** Mapa pieceId → nomenclatura industrial a partir do contexto PROJETOS (PIMO-TRAK). */
+export function buildWorkOrderDisplayMapFromContext(
+  context: ProjectCutlistContext,
+): Map<string, WorkOrderPieceDisplay> {
+  const map = new Map<string, WorkOrderPieceDisplay>();
+  for (const piece of context.pieces) {
+    const display = resolveDisplayFromContext(context, piece.id);
+    if (display) map.set(piece.id, display);
+  }
+  return map;
+}
+
+export function buildTaskMetadataForPiece(
+  pieceId: string,
+  projectId: string,
+  displayOverride?: WorkOrderPieceDisplay | null,
+): Record<string, string> {
+  if (displayOverride) return displayToTaskMetadata(displayOverride);
+  const display = resolveWorkOrderPieceDisplay(pieceId, projectId);
+  return display ? displayToTaskMetadata(display) : {};
+}
+
+/** Resolve nomenclatura industrial a partir da cutlist local (igual à etiqueta). */
+export function resolveWorkOrderPieceDisplay(
+  pieceId: string,
+  projectId: string,
+): WorkOrderPieceDisplay | null {
+  const match = findCutlistMatch(projectId, pieceId);
+  if (!match) return null;
+
+  const { item, projectName, boxName, cutlist } = match;
+  return buildDisplayFromCutlistItem(item, projectName, boxName, cutlist);
 }
 
 export function resolveWorkOrderPieceFromTask(
