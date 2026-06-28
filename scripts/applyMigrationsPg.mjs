@@ -2,14 +2,28 @@
  * Aplica ficheiros SQL em supabase/migrations via conexão Postgres directa.
  * Requer DATABASE_URL ou SUPABASE_DB_PASSWORD + VITE_SUPABASE_URL.
  */
+import dns from "node:dns";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
+dns.setDefaultResultOrder("ipv4first");
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const migrationsDir = path.join(root, "supabase", "migrations");
+
+const POOLER_REGIONS = [
+  "eu-central-1",
+  "eu-west-1",
+  "eu-west-2",
+  "eu-west-3",
+  "eu-north-1",
+  "us-east-1",
+  "us-west-1",
+  "ap-southeast-1",
+];
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -29,6 +43,38 @@ function projectRefFromUrl(url) {
   return match?.[1] ?? "";
 }
 
+function buildPoolerUrls(databaseUrl, preferredRegion) {
+  try {
+    const normalized = databaseUrl.replace(/^postgres:\/\//, "postgresql://");
+    const parsed = new URL(normalized);
+    const directMatch = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    if (!directMatch) return [];
+
+    const ref = directMatch[1];
+    const password = parsed.password;
+    const database = parsed.pathname.replace(/^\//, "") || "postgres";
+    const regions = preferredRegion
+      ? [preferredRegion, ...POOLER_REGIONS.filter((r) => r !== preferredRegion)]
+      : POOLER_REGIONS;
+
+    return regions.flatMap((region) => [
+      `postgresql://postgres.${ref}:${password}@aws-0-${region}.pooler.supabase.com:5432/${database}`,
+      `postgresql://postgres.${ref}:${password}@aws-0-${region}.pooler.supabase.com:6543/${database}`,
+    ]);
+  } catch {
+    return [];
+  }
+}
+
+function connectionCandidates(env) {
+  const primary = resolveDatabaseUrl(env);
+  if (!primary) return [];
+
+  const preferredRegion = env.SUPABASE_REGION?.trim();
+  const pooler = buildPoolerUrls(primary, preferredRegion);
+  return [...new Set([primary, ...pooler])];
+}
+
 function resolveDatabaseUrl(env) {
   if (env.DATABASE_URL?.trim()) return env.DATABASE_URL.trim();
   const password = env.SUPABASE_DB_PASSWORD?.trim();
@@ -46,14 +92,38 @@ function resolveDatabaseUrl(env) {
   return "";
 }
 
+async function connectPg(candidates) {
+  let lastError;
+  for (let i = 0; i < candidates.length; i += 1) {
+    const connectionString = candidates[i];
+    const label = i === 0 ? "primary" : `fallback-${i}`;
+    const client = new pg.Client({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+    });
+    try {
+      console.log(`Tentativa de ligação (${label})...`);
+      await client.connect();
+      console.log(`Ligação OK (${label}).`);
+      return client;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`Falha (${label}): ${message}`);
+      await client.end().catch(() => undefined);
+    }
+  }
+  throw lastError ?? new Error("Não foi possível ligar ao Postgres.");
+}
+
 const env = {
   ...loadEnvFile(path.join(root, ".env")),
   ...loadEnvFile(path.join(root, ".env.production")),
   ...process.env,
 };
 
-const databaseUrl = resolveDatabaseUrl(env);
-if (!databaseUrl) {
+const candidates = connectionCandidates(env);
+if (candidates.length === 0) {
   console.error(
     "ERRO: configure DATABASE_URL ou SUPABASE_DB_PASSWORD + VITE_SUPABASE_URL.",
   );
@@ -67,12 +137,7 @@ const files = fs
 
 console.log(`Aplicar ${files.length} migrations...`);
 
-const client = new pg.Client({
-  connectionString: databaseUrl,
-  ssl: { rejectUnauthorized: false },
-});
-
-await client.connect();
+const client = await connectPg(candidates);
 
 try {
   await client.query(`
