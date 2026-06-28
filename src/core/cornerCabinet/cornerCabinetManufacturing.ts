@@ -8,7 +8,7 @@ import {
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
-import { getCornerCabinetConfig, computeCornerLayoutForBox, inferCornerSideFromBox } from "./cornerCabinetRules";
+import { getCornerCabinetConfig, computeCornerLayoutForBox, resolveCornerDoorGapSettings, inferCornerSideFromBox } from "./cornerCabinetRules";
 import { getSettings } from "../settings/settingsService";
 
 type PainelCorner = {
@@ -75,11 +75,7 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
   if (!cfg) return [];
 
   const settings = getSettings();
-  const layout = computeCornerLayoutForBox(box, {
-    gapVerticalMm: settings.portas.portaGapVerticalMm,
-    gapHorizontalMm: settings.portas.portaGapHorizontalMm,
-    doorPosZOffsetMm: settings.portas.portaPosZOffsetMm,
-  });
+  const layout = computeCornerLayoutForBox(box, resolveCornerDoorGapSettings(settings));
   if (!layout) return [];
 
   const largura = Number(box.dimensoes.largura) || 0;
@@ -193,7 +189,7 @@ export function gerarPaineisCorner(box: BoxModule, rules: RulesConfig): PainelCo
     id: getFixedFrontPanelId(box),
     tipo: "frente_fixa",
     largura_mm: clampPositive(layout.fixedFrontWidthMm),
-    altura_mm: clampPositive(layout.doorHeightMm),
+    altura_mm: clampPositive(layout.fixedFrontHeightMm ?? layout.doorHeightMm),
     espessura_mm: espessura,
     material,
     orientacaoFibra: "vertical",

@@ -18,7 +18,7 @@ import {
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { computeDoorVerticalGaps } from "../doors/doorLayerGeometry";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
-import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide } from "../cornerCabinet";
+import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, stripCornerFixedFrontHingeHoles } from "../cornerCabinet";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
@@ -261,6 +261,7 @@ export function cutlistComPrecoFromBox(
     const isDoor = isIndustrialDoorPanelTipo(p.tipo);
     const isFixedFront = p.tipo === "frente_fixa";
     const isCornerBox = isCornerFixedFrontModel(box.baseCabinetId);
+    const isCornerDireita = isCornerDireitaInferiorModel(box.baseCabinetId);
     const isLateralLeft = p.tipo === "lateral_esquerda";
     const isLateralRight = p.tipo === "lateral_direita";
     const isTopPanel = p.tipo === "cima";
@@ -270,7 +271,7 @@ export function cutlistComPrecoFromBox(
     const hingeSide =
       isDoor && doorsLayer[doorIndex]
         ? doorsLayer[doorIndex].hingeSide
-        : isFixedFront && isCornerBox
+        : isFixedFront && isCornerBox && !isCornerDireita
           ? getCornerFixedFrontHingeSide(box)
           : isLateralLeft && hasDoorLeft
             ? "left"
@@ -307,7 +308,7 @@ export function cutlistComPrecoFromBox(
     const doorWidthForTopBottom =
       (isTopPanel && hasDoorTop) || (isBottomPanel && hasDoorBottom) ? doorWidthMm : undefined;
     const hingePositionsForLateral =
-      isFixedFront && isCornerBox && (doorHingeSide === "left" || doorHingeSide === "right")
+      isFixedFront && isCornerBox && !isCornerDireita && (doorHingeSide === "left" || doorHingeSide === "right")
         ? hingePositionsBySide[doorHingeSide]
         : isLateralLeft && hasDoorLeft
           ? hingePositionsBySide.left
@@ -544,6 +545,43 @@ export function cutlistComPrecoFromBox(
     }));
 
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
+  }
+
+  if (isCornerDireitaInferiorModel(box.baseCabinetId)) {
+    const cornerLayout = computeCornerLayoutForBox(box, resolveCornerDoorGapSettings());
+    const lateralItem = items.find((i) => i.tipo === "lateral_esquerda");
+    const lateralHeightMm = lateralItem?.dimensoes?.altura ?? box.dimensoes.altura;
+    if (cornerLayout) {
+      const cimaItem = items.find((i) => i.tipo === "cima");
+      const fixedFrontSide = cornerLayout.side === "right" ? "left" : "right";
+      const dowelHoles = buildCornerFixedFrontDowelHoles(
+        {
+          fixedFrontWidthMm: cornerLayout.fixedFrontWidthMm,
+          fixedFrontHeightMm: cornerLayout.fixedFrontHeightMm ?? cornerLayout.doorHeightMm,
+          panelWidthMm: cimaItem?.dimensoes?.largura ?? box.dimensoes.largura,
+          fixedFrontSide,
+        },
+        lateralHeightMm
+      );
+      const panelTypes = [
+        "cima",
+        "fundo",
+        "lateral_esquerda",
+        "lateral_direita",
+        "frente_fixa",
+      ] as const;
+      for (const tipo of panelTypes) {
+        const extra = dowelHoles[tipo];
+        if (!extra?.length) continue;
+        const item = items.find((i) => i.tipo === tipo);
+        if (!item) continue;
+        const base =
+          tipo === "frente_fixa" || tipo === "lateral_esquerda" || tipo === "lateral_direita"
+            ? stripCornerFixedFrontHingeHoles(item.drillHoles ?? [])
+            : item.drillHoles ?? [];
+        item.drillHoles = [...base, ...extra];
+      }
+    }
   }
 
   const prevById = new Map((box.cutListComPreco ?? []).map((x) => [x.id, x]));

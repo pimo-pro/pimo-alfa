@@ -10,6 +10,7 @@ export type CornerVisualLayoutInput = {
   config: CornerCabinetConfig;
   gapVerticalMm?: number;
   gapHorizontalMm?: number;
+  doorFixedGapMm?: number;
   doorPosZOffsetMm?: number;
 };
 
@@ -31,6 +32,7 @@ export function computeCornerVisualLayout(input: CornerVisualLayoutInput): Corne
     config: input.config,
     gapVerticalMm: input.gapVerticalMm,
     gapHorizontalMm: input.gapHorizontalMm,
+    doorFixedGapMm: input.doorFixedGapMm,
     doorPosZOffsetMm: input.doorPosZOffsetMm,
   });
 
@@ -43,14 +45,15 @@ export function cornerLayoutMmToVisual(
   depthM: number
 ): CornerVisualSpec {
   const ffW = layout.fixedFrontWidthMm / 1000;
-  const ffH = layout.doorHeightMm / 1000;
+  const ffH = (layout.fixedFrontHeightMm ?? layout.doorHeightMm) / 1000;
   const ffX = layout.fixedFront.posX / 1000;
+  const ffY = layout.fixedFront.posY / 1000;
   const ffZ = layout.fixedFront.posZ / 1000 - depthM / 2 + thicknessM / 2;
 
   return {
     fixedFront: {
       size: [ffW, ffH, thicknessM],
-      pos: [ffX, 0, ffZ],
+      pos: [ffX, ffY, ffZ],
     },
     doorFrameInsetM: layout.doorFrameVisualMm / 1000,
   };

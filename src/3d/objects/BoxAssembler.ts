@@ -300,6 +300,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       config: cornerCfg,
       gapVerticalMm: portasSettings.portaGapVerticalMm,
       gapHorizontalMm: portasSettings.portaGapHorizontalMm,
+      doorFixedGapMm: portasSettings.portaGapDuplaMm,
       doorPosZOffsetMm: portasSettings.portaPosZOffsetMm,
     });
     const ffMat = baseMaterial;

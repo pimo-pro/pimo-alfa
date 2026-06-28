@@ -1060,7 +1060,7 @@ export const BOX_MODELS_REGISTRY: BaseCabinetModel[] = [
   // Caixas de canto — frente fixa + porta única (subcategoria: caixas-de-canto)
   {
     id: "corner-ff-cozinha-inferior",
-    nome: "Canto — Frente Fixa (Inferior)",
+    nome: "Canto — Direita (Inferior)",
     widthMm: 900,
     heightMm: 720,
     depthMm: 600,

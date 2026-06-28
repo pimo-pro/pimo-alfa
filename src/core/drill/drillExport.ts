@@ -246,6 +246,21 @@ function resolveDrawerPanelDimensions(item: CutListItemComPreco): {
   return { panelLength: largura, panelWidth: altura };
 }
 
+function resolveFlatPanelDimensions(item: CutListItemComPreco): {
+  panelLength: number;
+  panelWidth: number;
+} | null {
+  return resolveDrawerPanelDimensions(item);
+}
+
+function isTopBottomPanel(item: CutListItemComPreco): boolean {
+  return item.tipo === "cima" || item.tipo === "fundo";
+}
+
+function isFixedFrontPanel(item: CutListItemComPreco): boolean {
+  return item.tipo === "frente_fixa";
+}
+
 export type DrillExportFile = {
   filenameBase: string;
   partName: string;
@@ -260,7 +275,7 @@ type ProjectContext = {
 };
 
 /**
- * Gera um ficheiro XML por cada peça lateral do projecto e por cada peça de gaveta com furação.
+ * Gera um ficheiro XML por cada peça lateral, cima/fundo/frente fixa com furação, e gavetas com furos.
  */
 export function buildDrillFilesForProject(
   items: CutListItemComPreco[],
@@ -292,6 +307,20 @@ export function buildDrillFilesForProject(
       }
     } else if (isDrawerPieceTipo(item.tipo) && (item.drillHoles?.length ?? 0) > 0) {
       const dims = resolveDrawerPanelDimensions(item);
+      if (!dims) continue;
+      panelLength = dims.panelLength;
+      panelWidth = dims.panelWidth;
+      xml = buildXmlFromDrillHoles(
+        panelLength,
+        panelWidth,
+        panelThickness,
+        item.drillHoles!
+      );
+    } else if (
+      (isTopBottomPanel(item) || isFixedFrontPanel(item)) &&
+      (item.drillHoles?.length ?? 0) > 0
+    ) {
+      const dims = resolveFlatPanelDimensions(item);
       if (!dims) continue;
       panelLength = dims.panelLength;
       panelWidth = dims.panelWidth;

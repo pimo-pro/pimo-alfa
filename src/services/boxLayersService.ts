@@ -19,7 +19,7 @@ import {
   hasWardrobeLowerDrawers,
   isWardrobeModel,
 } from "../core/wardrobe/wardrobeRules";
-import { getCornerCabinetConfig, computeCornerLayoutForBox } from "../core/cornerCabinet";
+import { getCornerCabinetConfig, computeCornerLayoutForBox, resolveCornerDoorGapSettings } from "../core/cornerCabinet";
 import {
   buildCaixaFornoDoorsLayer,
   isCaixaFornoBox,
@@ -131,9 +131,9 @@ export function regenerateLayersForBox(
     const cornerCfg = getCornerCabinetConfig(box.baseCabinetId);
     if (cornerCfg && box.portaTipo === "porta_simples") {
       const layout = computeCornerLayoutForBox(box, {
+        ...resolveCornerDoorGapSettings(settings),
         gapVerticalMm: gapVertical,
         gapHorizontalMm: gapHorizontal,
-        doorPosZOffsetMm: settings.portas.portaPosZOffsetMm,
       });
       if (layout) {
         const doorPosZ = boxDepth / 2 + clamp(settings.portas.portaPosZOffsetMm, 0);
