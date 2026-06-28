@@ -49,25 +49,13 @@ jobs:
           echo "Migrations em supabase/migrations:"
           ls -1 supabase/migrations/*.sql | sort
 
-      - name: Link remote project
+      - name: Apply migrations (Postgres direct)
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
-            supabase link --project-ref ${{ steps.meta.outputs.project_ref }} --yes
-          elif [ -n "$SUPABASE_DB_PASSWORD" ]; then
-            supabase link --project-ref ${{ steps.meta.outputs.project_ref }} --password "$SUPABASE_DB_PASSWORD" --yes
-          else
-            echo "ERRO: configure SUPABASE_ACCESS_TOKEN ou SUPABASE_DB_PASSWORD nos secrets GitHub."
-            exit 1
-          fi
-
-      - name: Push migrations
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: supabase db push --yes
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/applyMigrationsPg.mjs
 
       - name: Verify industrial tables (REST)
         env:
