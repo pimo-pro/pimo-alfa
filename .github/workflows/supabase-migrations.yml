@@ -68,10 +68,30 @@ jobs:
             code=$(curl -s -o /dev/null -w "%{http_code}" \
               -H "apikey: ${API_KEY}" \
               -H "Authorization: Bearer ${API_KEY}" \
-              "${VITE_SUPABASE_URL}/rest/v1/${table}?select=id&limit=1")
+              "${VITE_SUPABASE_URL}/rest/v1/${table}?limit=1")
             echo "${table} -> HTTP ${code}"
             if [ "$code" != "200" ]; then
               echo "ERRO: tabela ${table} inacessível"
+              exit 1
+            fi
+          done
+          VIEWS=(
+            industrial_operations
+            industrial_quality
+            industrial_time_tracking
+            industrial_tracking
+            industrial_rework
+            industrial_events
+            industrial_settings
+          )
+          for view in "${VIEWS[@]}"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "apikey: ${API_KEY}" \
+              -H "Authorization: Bearer ${API_KEY}" \
+              "${VITE_SUPABASE_URL}/rest/v1/${view}?limit=1")
+            echo "${view} -> HTTP ${code}"
+            if [ "$code" != "200" ]; then
+              echo "ERRO: view ${view} inacessível"
               exit 1
             fi
           done
