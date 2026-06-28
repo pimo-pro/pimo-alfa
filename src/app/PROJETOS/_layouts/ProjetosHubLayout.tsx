@@ -14,10 +14,11 @@ import {
 import {
   snapshotMatchesProjetosPageSlug,
 } from "../projetosPageSlug";
+import { resolveProjetosFocusFromSegments } from "../projetosFocusSlug";
 
-function resolveFocusLevel(boxId?: string, pieceId?: string): ProjetosFocusLevel {
-  if (pieceId) return "piece";
-  if (boxId) return "box";
+function resolveFocusLevel(boxSegment?: string, pieceSegment?: string): ProjetosFocusLevel {
+  if (pieceSegment) return "piece";
+  if (boxSegment) return "box";
   return "project";
 }
 
@@ -26,8 +27,11 @@ function snapshotMatchesProject(snapshot: SavedProjectRecord | null, pageSlug: s
 }
 
 export default function ProjetosHubLayout({ children }: { children?: ReactNode }) {
-  const { project: pageSlug, box: boxId, piece: pieceId } = useParams();
-  const focusLevel = useMemo(() => resolveFocusLevel(boxId, pieceId), [boxId, pieceId]);
+  const { project: pageSlug, box: boxSegment, piece: pieceSegment } = useParams();
+  const focusLevel = useMemo(
+    () => resolveFocusLevel(boxSegment, pieceSegment),
+    [boxSegment, pieceSegment]
+  );
 
   const [snapshot, setSnapshot] = useState<SavedProjectRecord | null>(() => {
     const cached = getProjetosSnapshot();
@@ -75,6 +79,11 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
     };
   }, [pageSlug]);
 
+  const resolvedFocus = useMemo(
+    () => resolveProjetosFocusFromSegments(snapshot, boxSegment, pieceSegment),
+    [snapshot, boxSegment, pieceSegment]
+  );
+
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       <aside
@@ -121,8 +130,8 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
               snapshot={snapshot}
               focusLevel={focusLevel}
               projectPageSlug={pageSlug}
-              boxId={boxId}
-              pieceId={pieceId}
+              boxId={resolvedFocus.boxId}
+              pieceId={resolvedFocus.pieceId}
             />
           )}
           {children}

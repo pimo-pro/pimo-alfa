@@ -4,6 +4,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { SavedProjectRecord } from "../../core/projects/types";
 import { buildProjetosPagePath } from "./projetosPageSlug";
 import {
+  buildProjetosFocusPath,
+  rowMatchesFocusUrl,
+} from "./projetosFocusSlug";
+import {
   buildProjetosElementGroups,
   type ProjetosElementRow,
 } from "./projetosSnapshotGroups";
@@ -13,26 +17,18 @@ type SectionProps = {
   rows: ProjetosElementRow[];
   emptyLabel: string;
   projectSlug: string;
-  activeBoxId?: string;
-  activePieceId?: string;
+  activeBoxSegment?: string;
+  activePieceSegment?: string;
   defaultOpen?: boolean;
 };
-
-function buildFocusPath(projectSlug: string, row: ProjetosElementRow): string {
-  const base = `/PROJETOS/${encodeURIComponent(projectSlug)}`;
-  if (!row.boxId) return base;
-  const boxPart = encodeURIComponent(row.boxId);
-  if (!row.pieceId || row.pieceId === row.boxId) return `${base}/${boxPart}`;
-  return `${base}/${boxPart}/${encodeURIComponent(row.pieceId)}`;
-}
 
 function ProjetosSection({
   title,
   rows,
   emptyLabel,
   projectSlug,
-  activeBoxId,
-  activePieceId,
+  activeBoxSegment,
+  activePieceSegment,
   defaultOpen = true,
 }: SectionProps) {
   const navigate = useNavigate();
@@ -70,14 +66,13 @@ function ProjetosSection({
         ) : (
           <ul style={{ listStyle: "none", margin: "0 0 8px", padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
             {rows.map((row) => {
-              const isActive =
-                (activePieceId && row.pieceId === activePieceId) ||
-                (!activePieceId && activeBoxId && row.boxId === activeBoxId && row.id === activeBoxId);
+              const isActive = rowMatchesFocusUrl(row, activeBoxSegment, activePieceSegment);
+              const displayLabel = row.industrialName && row.pieceId ? row.industrialName : row.label;
               return (
                 <li key={row.id}>
                   <button
                     type="button"
-                    onClick={() => navigate(buildFocusPath(projectSlug, row))}
+                    onClick={() => navigate(buildProjetosFocusPath(projectSlug, row))}
                     style={{
                       width: "100%",
                       textAlign: "left",
@@ -89,7 +84,7 @@ function ProjetosSection({
                     }}
                   >
                     <div style={{ fontSize: 12, fontWeight: 600, color: "#18181b", lineHeight: 1.3 }}>
-                      {row.label}
+                      {displayLabel}
                     </div>
                     {row.subtitle ? (
                       <div style={{ fontSize: 10, color: "#71717a", marginTop: 2, lineHeight: 1.3 }}>
@@ -114,7 +109,7 @@ type Props = {
 
 export default function ProjetosElementSections({ snapshot }: Props) {
   const navigate = useNavigate();
-  const { project: pageSlug, box: boxId, piece: pieceId } = useParams();
+  const { project: pageSlug, box: boxSegment, piece: pieceSegment } = useParams();
   const projectSlug = pageSlug ?? "";
 
   const groups = useMemo(() => buildProjetosElementGroups(snapshot), [snapshot]);
@@ -174,7 +169,7 @@ export default function ProjetosElementSections({ snapshot }: Props) {
             fontSize: 11,
             borderRadius: 6,
             border: "1px solid #e4e4e7",
-            background: !boxId && !pieceId ? "#fff7ed" : "#fff",
+            background: !boxSegment && !pieceSegment ? "#fff7ed" : "#fff",
             cursor: "pointer",
           }}
         >
@@ -187,40 +182,40 @@ export default function ProjetosElementSections({ snapshot }: Props) {
         rows={groups.boxes}
         emptyLabel="Sem caixas no projeto."
         projectSlug={projectSlug}
-        activeBoxId={boxId}
-        activePieceId={pieceId}
+        activeBoxSegment={boxSegment}
+        activePieceSegment={pieceSegment}
       />
       <ProjetosSection
         title="Remates"
         rows={groups.remates}
         emptyLabel="Sem remates associados."
         projectSlug={projectSlug}
-        activeBoxId={boxId}
-        activePieceId={pieceId}
+        activeBoxSegment={boxSegment}
+        activePieceSegment={pieceSegment}
       />
       <ProjetosSection
         title="Roda pé"
         rows={groups.rodapes}
         emptyLabel="Sem roda pé no projeto."
         projectSlug={projectSlug}
-        activeBoxId={boxId}
-        activePieceId={pieceId}
+        activeBoxSegment={boxSegment}
+        activePieceSegment={pieceSegment}
       />
       <ProjetosSection
         title="Peças industriais"
         rows={groups.industrialPieces}
         emptyLabel="Sem peças paramétricas na cutlist."
         projectSlug={projectSlug}
-        activeBoxId={boxId}
-        activePieceId={pieceId}
+        activeBoxSegment={boxSegment}
+        activePieceSegment={pieceSegment}
       />
       <ProjetosSection
         title="Peças prontas"
         rows={groups.readyPieces}
         emptyLabel="Sem peças CAD importadas."
         projectSlug={projectSlug}
-        activeBoxId={boxId}
-        activePieceId={pieceId}
+        activeBoxSegment={boxSegment}
+        activePieceSegment={pieceSegment}
         defaultOpen={groups.readyPieces.length > 0}
       />
       <ProjetosSection
@@ -228,8 +223,8 @@ export default function ProjetosElementSections({ snapshot }: Props) {
         rows={groups.standalonePieces}
         emptyLabel="Sem peças independentes."
         projectSlug={projectSlug}
-        activeBoxId={boxId}
-        activePieceId={pieceId}
+        activeBoxSegment={boxSegment}
+        activePieceSegment={pieceSegment}
         defaultOpen={groups.standalonePieces.length > 0}
       />
     </div>
