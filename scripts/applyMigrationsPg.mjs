@@ -65,14 +65,10 @@ function resolveDatabaseUrl(env) {
 
 async function ipv4DatabaseUrl(databaseUrl) {
   try {
-    const normalized = databaseUrl.replace(/^postgres:\/\//, "postgresql://");
-    const parsed = new URL(normalized);
-    if (!parsed.hostname.endsWith(".supabase.co")) return null;
-    const { address } = await dnsLookup(parsed.hostname, { family: 4 });
-    return normalized.replace(`//${parsed.username}:`, `//${parsed.username}:`).replace(
-      `${parsed.username}:${parsed.password}@${parsed.hostname}`,
-      `${parsed.username}:${parsed.password}@${address}`,
-    );
+    const config = parsePgConfig(databaseUrl);
+    if (!config.host.endsWith(".supabase.co")) return null;
+    const { address } = await dnsLookup(config.host, { family: 4 });
+    return `postgresql://${encodeURIComponent(config.user)}:${encodeURIComponent(config.password)}@${address}:${config.port}/${config.database}`;
   } catch {
     return null;
   }
@@ -122,20 +118,42 @@ async function connectionCandidates(env) {
 
   const overridePassword = env.SUPABASE_DB_PASSWORD?.trim() || "";
   const preferredRegion = env.SUPABASE_REGION?.trim() || "eu-central-1";
-  const pooler = buildPoolerUrls(primary, preferredRegion, overridePassword || undefined);
   const ipv4Direct = await ipv4DatabaseUrl(primary);
-  return [...new Set([...pooler, ipv4Direct].filter(Boolean))];
+  const pooler = buildPoolerUrls(primary, preferredRegion, overridePassword || undefined);
+  return [...new Set([ipv4Direct, ...pooler].filter(Boolean))];
 }
 
 function parsePgConfig(connectionString) {
-  const normalized = connectionString.replace(/^postgres:\/\//, "postgresql://");
-  const parsed = new URL(normalized);
+  const normalized = connectionString.trim().replace(/^postgres:\/\//, "postgresql://");
+  if (!normalized.startsWith("postgresql://")) {
+    throw new Error("URI Postgres inválida.");
+  }
+
+  const withoutProto = normalized.slice("postgresql://".length);
+  const atIdx = withoutProto.lastIndexOf("@");
+  if (atIdx === -1) {
+    throw new Error("URI Postgres sem credenciais.");
+  }
+
+  const userPart = withoutProto.slice(0, atIdx);
+  const hostPart = withoutProto.slice(atIdx + 1);
+  const colonIdx = userPart.indexOf(":");
+  const user = decodeURIComponent(colonIdx === -1 ? userPart : userPart.slice(0, colonIdx));
+  const password = decodeURIComponent(colonIdx === -1 ? "" : userPart.slice(colonIdx + 1));
+
+  const slashIdx = hostPart.indexOf("/");
+  const hostPort = slashIdx === -1 ? hostPart : hostPart.slice(0, slashIdx);
+  const database = (slashIdx === -1 ? "postgres" : hostPart.slice(slashIdx + 1)).split("?")[0] || "postgres";
+  const [host, portStr] = hostPort.includes(":")
+    ? [hostPort.slice(0, hostPort.lastIndexOf(":")), hostPort.slice(hostPort.lastIndexOf(":") + 1)]
+    : [hostPort, "5432"];
+
   return {
-    host: parsed.hostname,
-    port: Number(parsed.port || 5432),
-    user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
-    database: parsed.pathname.replace(/^\//, "") || "postgres",
+    host,
+    port: Number(portStr || 5432),
+    user,
+    password,
+    database,
     ssl: { rejectUnauthorized: false },
   };
 }
