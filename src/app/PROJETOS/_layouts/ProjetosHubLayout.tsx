@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 
 import ProjetosShowroomPanel, { type ProjetosFocusLevel } from "../ProjetosShowroomPanel";
+import ProjetosElementSections from "../ProjetosElementSections";
 import {
   getProjetosSnapshot,
   setProjetosSnapshot,
@@ -76,12 +77,41 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
-      <aside style={{ width: 240, background: "#f2f2f2" }}>
-        HUB — Sidebar (placeholder)
+      <aside
+        style={{
+          width: 280,
+          minWidth: 240,
+          maxWidth: 320,
+          background: "#f4f4f5",
+          borderRight: "1px solid #e4e4e7",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {!loading && !error ? (
+          <ProjetosElementSections snapshot={snapshot} />
+        ) : (
+          <div style={{ padding: 12, fontSize: 12, color: "#71717a" }}>
+            {loading ? "A carregar…" : error}
+          </div>
+        )}
       </aside>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header style={{ height: 56, background: "#e6e6e6" }}>
-          HUB — Topbar (placeholder)
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <header
+          style={{
+            height: 48,
+            padding: "0 16px",
+            display: "flex",
+            alignItems: "center",
+            background: "#fafafa",
+            borderBottom: "1px solid #e4e4e7",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#3f3f46",
+          }}
+        >
+          {snapshot?.name?.trim() || decodeURIComponent(pageSlug ?? "Projeto")}
         </header>
         <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {loading && <div style={{ padding: 16 }}>A carregar projeto…</div>}
