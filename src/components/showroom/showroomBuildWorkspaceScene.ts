@@ -73,6 +73,12 @@ function applyTransformFromWorkspace(wsBox: WorkspaceBox, target: THREE.Object3D
   target.userData.boxId = wsBox.id;
 }
 
+function applyBoxIdToSubtree(root: THREE.Object3D, boxId: string): void {
+  root.traverse((node) => {
+    node.userData.boxId = boxId;
+  });
+}
+
 /**
  * Um grupo por caixa do workspace, com posição/rotação alinhadas ao viewer.
  */
@@ -157,6 +163,7 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
     const parametric = buildBoxLegacy(boxOptions);
     parametric.name = wsBox.id;
     parametric.userData.boxId = wsBox.id;
+    applyBoxIdToSubtree(parametric, wsBox.id);
     if (wsBox.costaRotationY != null && Number.isFinite(wsBox.costaRotationY)) {
       parametric.userData.costaRotationY = wsBox.costaRotationY;
     }

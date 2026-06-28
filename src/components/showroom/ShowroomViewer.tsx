@@ -8,6 +8,7 @@ import type { ProjectState } from "@/context/projectTypes";
 import type { SavedProjectRecord } from "@/core/projects/types";
 import { ShowroomCanvas } from "@/components/showroom/ShowroomCanvas";
 import { ShowroomProjectRoot } from "@/components/showroom/ShowroomProjectRoot";
+import { ShowroomReadOnlyInteractions } from "@/components/showroom/ShowroomReadOnlyInteractions";
 import { ShowroomToolbar } from "@/components/showroom/ShowroomToolbar";
 import { useShowroomStore } from "@/components/showroom/showroomStore";
 
@@ -199,6 +200,7 @@ export default function ShowroomViewer({
             readOnly={readOnly}
           />
           <ShowroomFocusController mode={mode} focusBoxId={focusBoxId} pieceId={pieceId} />
+          {readOnly ? <ShowroomReadOnlyInteractions projectState={projectState} /> : null}
         </ShowroomCanvas>
       </div>
     </div>
