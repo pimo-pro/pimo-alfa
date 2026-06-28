@@ -14,6 +14,11 @@ type Props = {
   offsetMm: ShowroomOffsetMm;
   displayName?: string | null;
   readOnly?: boolean;
+  focusBoxId?: string;
+  boxExplode?: boolean;
+  boxIntensity?: number;
+  pieceExplode?: boolean;
+  pieceIntensity?: number;
 };
 
 const MM_TO_M = 0.001;
@@ -27,6 +32,11 @@ export function ShowroomProjectRoot({
   offsetMm,
   displayName,
   readOnly = false,
+  focusBoxId,
+  boxExplode = false,
+  boxIntensity = 0.45,
+  pieceExplode = false,
+  pieceIntensity = 0.35,
 }: Props) {
   const { camera, gl } = useThree();
   const entity = useShowroomStore((s) => s.entities[projectId]);
@@ -107,7 +117,14 @@ export function ShowroomProjectRoot({
         userData={{ projectId, showroom: true }}
       >
         <group userData={{ projectId, showroom: true }}>
-          <ShowroomParametricBoxes projectState={projectState} />
+          <ShowroomParametricBoxes
+            projectState={projectState}
+            focusBoxId={focusBoxId}
+            boxExplode={boxExplode}
+            boxIntensity={boxIntensity}
+            pieceExplode={pieceExplode}
+            pieceIntensity={pieceIntensity}
+          />
         </group>
         {selected && !readOnly ? (
           <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} userData={{ projectId, showroom: true }}>

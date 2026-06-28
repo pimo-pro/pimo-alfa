@@ -47,6 +47,12 @@ function copyProjectsApiToDist() {
   if (!fs.existsSync(gitkeepDest)) {
     fs.writeFileSync(gitkeepDest, "", "utf8");
   }
+  const thumbsDir = path.join(destProjects, "thumbs");
+  ensureDir(thumbsDir);
+  const thumbsGitkeep = path.join(thumbsDir, ".gitkeep");
+  if (!fs.existsSync(thumbsGitkeep)) {
+    fs.writeFileSync(thumbsGitkeep, "", "utf8");
+  }
   return true;
 }
 

@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 
 import ProjetosShowroomPanel, { type ProjetosFocusLevel } from "../ProjetosShowroomPanel";
 import ProjetosElementSections from "../ProjetosElementSections";
+import ProjetosIndustrialPanel from "../industrial/ProjetosIndustrialPanel";
 import {
   getProjetosSnapshot,
   setProjetosSnapshot,
@@ -123,19 +124,30 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
         >
           {snapshot?.name?.trim() || decodeURIComponent(pageSlug ?? "Projeto")}
         </header>
-        <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {loading && <div style={{ padding: 16 }}>A carregar projeto…</div>}
-          {!loading && error && <div style={{ padding: 16 }}>{error}</div>}
-          {!loading && !error && (
-            <ProjetosShowroomPanel
+        <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row", overflow: "hidden" }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            {loading && <div style={{ padding: 16 }}>A carregar projeto…</div>}
+            {!loading && error && <div style={{ padding: 16 }}>{error}</div>}
+            {!loading && !error && (
+              <ProjetosShowroomPanel
+                snapshot={snapshot}
+                focusLevel={focusLevel}
+                projectPageSlug={pageSlug}
+                boxId={resolvedFocus.boxId}
+                pieceId={resolvedFocus.pieceId}
+              />
+            )}
+            {children}
+          </div>
+          {!loading && !error ? (
+            <ProjetosIndustrialPanel
               snapshot={snapshot}
               focusLevel={focusLevel}
-              projectPageSlug={pageSlug}
-              boxId={resolvedFocus.boxId}
-              pieceId={resolvedFocus.pieceId}
+              pageSlug={pageSlug}
+              boxSegment={boxSegment}
+              pieceSegment={pieceSegment}
             />
-          )}
-          {children}
+          ) : null}
         </main>
       </div>
     </div>

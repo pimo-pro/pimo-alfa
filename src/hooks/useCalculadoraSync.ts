@@ -4,6 +4,7 @@ import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../core/materials/materials.api";
 import { resolveCostaAtivaForBox, resolveNoBackPanel } from "../core/box/backPanelFlags";
+import { doorLayerItemsForViewer } from "../core/box/doorLayerItemsForViewer";
 import type { DoorLayerItem } from "../models/BoxLayers";
 import { isPiBaseCabinetId } from "../data/moveisUnificados/pi/models";
 import { getSettings } from "../core/settings/settingsService";
@@ -143,21 +144,15 @@ function getDrawerFrontMaterialsFingerprint(
 }
 
 /**
- * Portas enviadas ao Viewer: compensar Z quando a carcaça usa P útil (centrada) e o estado guarda posZ para P externa.
- * Não altera `workspaceBoxes` / estado do projeto.
+ * Portas enviadas ao Viewer: compensar Z quando a carcaça usa P útil (centrada).
+ * @deprecated import from core/box/doorLayerItemsForViewer
  */
-function doorLayerItemsForViewer(
+function doorLayerItemsForViewerLocal(
   items: DoorLayerItem[],
   profundidadeExternaMm: number,
   profundidadeInternaUtilMm: number
 ): DoorLayerItem[] {
-  if (items.length === 0) return items;
-  const dzMm = (profundidadeInternaUtilMm - profundidadeExternaMm) / 2;
-  if (dzMm === 0) return items;
-  return items.map((d) => ({
-    ...d,
-    posZ: (d.posZ ?? 0) + dzMm,
-  }));
+  return doorLayerItemsForViewer(items, profundidadeExternaMm, profundidadeInternaUtilMm);
 }
 
 /** Posição/rotação da caixa no viewer (metros / radianos). Reutilizado pelo showroom para alinhar a pré-visualização ao Workspace. */
@@ -315,7 +310,7 @@ export const useCalculadoraSync = (
         );
         layoutDepthM = mmToM(profundidadeExternaMm);
         carcassDepthM = mmToM(profundidadeInternaUtilMm);
-        doorLayerItems = doorLayerItemsForViewer(wsBox?.doorsLayer ?? [], profundidadeExternaMm, profundidadeInternaUtilMm);
+        doorLayerItems = doorLayerItemsForViewerLocal(wsBox?.doorsLayer ?? [], profundidadeExternaMm, profundidadeInternaUtilMm);
       }
 
       const thicknessMm = Number.isFinite(wsBox.espessura) ? wsBox.espessura : undefined;

@@ -11,16 +11,32 @@ import {
   disposeShowroomObject3D,
 } from "./showroomBuildWorkspaceScene";
 import { createShowroomFinishVisuals, type ShowroomFinishVisuals } from "./showroomFinishVisuals";
+import {
+  applyShowroomBoxSeparation,
+  applyShowroomExplodedView,
+} from "./showroomExplodedView";
 
 type Props = {
   projectState: ProjectState;
+  focusBoxId?: string;
+  boxExplode?: boolean;
+  boxIntensity?: number;
+  pieceExplode?: boolean;
+  pieceIntensity?: number;
 };
 
 /**
  * Pré-visualização 3D alinhada ao motor paramétrico do workspace (buildBoxLegacy),
  * com remates, roda pé, hematis e modelos CAD/GLB — sem ViewerCore.
  */
-export function ShowroomParametricBoxes({ projectState }: Props) {
+export function ShowroomParametricBoxes({
+  projectState,
+  focusBoxId,
+  boxExplode = false,
+  boxIntensity = 0.45,
+  pieceExplode = false,
+  pieceIntensity = 0.35,
+}: Props) {
   const sceneGroup = useMemo(() => buildShowroomWorkspaceSceneGroup(projectState), [projectState]);
   const rootRef = useRef<THREE.Group>(null);
   const finishRef = useRef<ShowroomFinishVisuals | null>(null);
@@ -77,6 +93,16 @@ export function ShowroomParametricBoxes({ projectState }: Props) {
       cancelled = true;
     };
   }, [projectState, sceneGroup]);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current ?? sceneGroup;
+    applyShowroomBoxSeparation(root, boxExplode, boxIntensity);
+    root.children.forEach((child) => {
+      if (!child.name.startsWith("showroom-box-wrap-")) return;
+      if (focusBoxId && !child.name.endsWith(focusBoxId)) return;
+      applyShowroomExplodedView(child, pieceExplode, pieceIntensity);
+    });
+  }, [sceneGroup, boxExplode, boxIntensity, pieceExplode, pieceIntensity, focusBoxId]);
 
   useEffect(() => {
     return () => {

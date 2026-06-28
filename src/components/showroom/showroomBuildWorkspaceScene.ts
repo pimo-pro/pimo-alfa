@@ -15,6 +15,11 @@ import { getViewerMaterialId } from "../../core/materials/service";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { mmToM } from "../../utils/units";
 import { getBoxPositionAndRotation } from "../../hooks/useCalculadoraSync";
+import { getProfundidadeInternaUtilMm } from "../../core/box/boxDepthHelpers";
+import { resolveCostaThicknessMm } from "../../core/materials/materials.api";
+import { resolveCostaAtivaForBox, resolveNoBackPanel } from "../../core/box/backPanelFlags";
+import { doorLayerItemsForViewer } from "../../core/box/doorLayerItemsForViewer";
+import { attachKitchenFeetIfNeeded } from "./kitchenFeetVisual";
 
 export function disposeShowroomObject3D(root: THREE.Object3D): void {
   root.traverse((child) => {
@@ -115,6 +120,28 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
     const thicknessMm = Number.isFinite(wsBox.espessura) ? wsBox.espessura : 19;
     const thickness = mmToM(thicknessMm);
 
+    const profundidadeExternaMm = Number(wsBox.profundidadeExterna ?? depthMm) || depthMm;
+    const espessuraCostaMm = resolveCostaThicknessMm(wsBox);
+    const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
+      {
+        dimensoes: { profundidade: profundidadeExternaMm },
+        espessura: wsBox.espessura,
+        portaTipo: wsBox.portaTipo,
+        doorsLayer: wsBox.doorsLayer,
+        drawersLayer: wsBox.drawersLayer,
+        gavetas: wsBox.gavetas,
+        costaAtiva: resolveCostaAtivaForBox(wsBox),
+      },
+      espessuraCostaMm
+    );
+    const layoutDepthM = mmToM(profundidadeExternaMm);
+    const carcassDepthM = mmToM(profundidadeInternaUtilMm);
+    const doorLayerItems = doorLayerItemsForViewer(
+      wsBox.doorsLayer ?? [],
+      profundidadeExternaMm,
+      profundidadeInternaUtilMm
+    );
+
     const effectiveMaterial =
       wsBox.material ?? boxModule?.material ?? project.materialId ?? project.material?.tipo ?? "mdf_branco";
     const resolvedMaterialName = getViewerMaterialId(effectiveMaterial);
@@ -148,13 +175,20 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
       width,
       height,
       depth,
+      layoutDepthM,
+      carcassDepthM,
       thickness,
       panelIds: wsBox.panelIds,
       shelves,
       materialName: resolvedMaterialName,
-      doorLayerItems: wsBox.doorsLayer ?? [],
+      doorLayerItems,
       drawerLayerItems: wsBox.drawersLayer ?? [],
       drillMarkersByPanel,
+      divisores: wsBox.divisores,
+      separadores: wsBox.separadores,
+      noBackPanel: resolveNoBackPanel(wsBox),
+      costaMaterialId: wsBox.costaMaterialId,
+      separadorMaterialId: wsBox.separadorMaterialId,
       locked: wsBox.locked === true,
       ...cabinetOpts,
       ...extra,
@@ -167,6 +201,15 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
     if (wsBox.costaRotationY != null && Number.isFinite(wsBox.costaRotationY)) {
       parametric.userData.costaRotationY = wsBox.costaRotationY;
     }
+    attachKitchenFeetIfNeeded(
+      parametric,
+      width,
+      height,
+      depth,
+      feetEnabled,
+      mmToM(feetHeight),
+      mmToM(feetOffsetFront)
+    );
     boxGroup.add(parametric);
     root.add(boxGroup);
   }

@@ -1,7 +1,10 @@
+import type { SavedProjectRecord } from '@/core/projects/types';
+
 import { persistWorkOrderDraft } from '../persistence/work-orders/persistWorkOrder';
 import { loadWorkOrders } from '../persistence/work-orders/loadWorkOrders';
 
 import { resolveProjectCutlist } from './resolveProjectCutlist';
+import { resolveProjectCutlistFromRecord } from './resolveProjectCutlistFromRecord';
 import { generateAllStationOrderDrafts } from './stationOrderFactory';
 import type { GeneratedWorkOrderDraft, IndustrialWorkOrder } from './types';
 import { woIdempotencyConfig } from './woIdempotencyConfig';
@@ -12,11 +15,28 @@ export interface CreateWorkOrdersResult {
   skippedStations: string[];
 }
 
+export async function createWorkOrdersForProjetosRecord(
+  record: SavedProjectRecord,
+): Promise<CreateWorkOrdersResult> {
+  const context = resolveProjectCutlistFromRecord(record);
+  if (!context) {
+    throw new Error(`Projeto PROJETOS sem cutlist: ${record.name}`);
+  }
+  return createWorkOrdersForProjectContext(context);
+}
+
 export async function createWorkOrdersForProject(projectId: string): Promise<CreateWorkOrdersResult> {
   const context = resolveProjectCutlist(projectId);
   if (!context) {
     throw new Error(`Projeto não encontrado ou sem cutlist: ${projectId}`);
   }
+  return createWorkOrdersForProjectContext(context);
+}
+
+async function createWorkOrdersForProjectContext(
+  context: NonNullable<ReturnType<typeof resolveProjectCutlist>>,
+): Promise<CreateWorkOrdersResult> {
+  const projectId = context.projectId;
 
   const drafts: GeneratedWorkOrderDraft[] = generateAllStationOrderDrafts(context.pieces);
   const skippedStations: string[] = [];

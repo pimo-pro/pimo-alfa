@@ -3,6 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/auth/useAuth';
 import { generateProjectWorkOrders } from '@/industrial/api/workOrderActions';
+import {
+  resolveProjetosLinkForProjectId,
+  resolveProjectDisplayName,
+} from '@/industrial/integration/projetos/projetosProjectLinks';
 import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
@@ -191,9 +195,18 @@ export default function IndustrialWorkOrdersRoute() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {orders.map((order) => {
+                  const projetosLink = resolveProjetosLinkForProjectId(order.projectId);
+                  return (
                   <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: 8 }}>{order.projectId}</td>
+                    <td style={{ padding: 8 }}>
+                      <div>{resolveProjectDisplayName(order.projectId)}</div>
+                      {projetosLink ? (
+                        <Link to={projetosLink.href} style={{ fontSize: 11, color: '#2563eb' }}>
+                          Abrir PROJETOS
+                        </Link>
+                      ) : null}
+                    </td>
                     <td style={{ padding: 8 }}>{STATION_LABELS[order.station]}</td>
                     <td style={{ padding: 8 }}>{STATUS_LABEL[order.status] ?? order.status}</td>
                     <td style={{ padding: 8 }}>{order.pieceIds.length}</td>
@@ -207,7 +220,8 @@ export default function IndustrialWorkOrdersRoute() {
                       </Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}

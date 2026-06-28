@@ -34,6 +34,11 @@ if (!is_dir($dataDir)) {
     }
 }
 
+$thumbsDir = __DIR__ . "/thumbs";
+if (!is_dir($thumbsDir)) {
+    @mkdir($thumbsDir, 0755, true);
+}
+
 function respond_json(array $data, int $code = 200): void
 {
     http_response_code($code);
@@ -221,6 +226,33 @@ function thumbnail_from_project(array $data): ?string
     return null;
 }
 
+/** URL pública da thumbnail em disco (/api/projects/thumbs/{nome}.webp|.jpg). */
+function thumbnail_file_url(string $thumbsDir, string $projectName): ?string
+{
+    $safe = sanitize_filename($projectName);
+    if ($safe === null) {
+        return null;
+    }
+    foreach (["webp", "jpg", "jpeg"] as $ext) {
+        if (is_file($thumbsDir . "/" . $safe . "." . $ext)) {
+            return "/api/projects/thumbs/" . rawurlencode($safe) . "." . $ext;
+        }
+    }
+    return null;
+}
+
+function resolve_project_thumbnail(array $data, string $thumbsDir): ?string
+{
+    $name = isset($data["name"]) ? trim((string)$data["name"]) : "";
+    if ($name !== "") {
+        $fileUrl = thumbnail_file_url($thumbsDir, $name);
+        if ($fileUrl !== null) {
+            return $fileUrl;
+        }
+    }
+    return thumbnail_from_project($data);
+}
+
 function apply_project_name(array $data, string $name): array
 {
     $data["name"] = $name;
@@ -384,7 +416,13 @@ if ($method === "POST") {
  * @param array<int, array{file: string, data: array, legacy: bool}> $entries
  * @param bool $namedOnly Apenas ficheiros {nome}.json (páginas PROJETOS)
  */
-function build_projects_list(array $entries, string $scope, string $ownerId, bool $namedOnly = false): array
+function build_projects_list(
+    array $entries,
+    string $scope,
+    string $ownerId,
+    string $thumbsDir,
+    bool $namedOnly = false
+): array {
 {
     $now = gmdate("c");
     $projects = [];
@@ -412,7 +450,7 @@ function build_projects_list(array $entries, string $scope, string $ownerId, boo
             "updatedAt" => isset($data["updatedAt"]) && is_string($data["updatedAt"]) ? $data["updatedAt"] : (isset($data["createdAt"]) ? $data["createdAt"] : ""),
             "ownerId" => isset($data["ownerId"]) ? (string)$data["ownerId"] : "usuario-local",
             "ownerName" => isset($data["ownerName"]) ? (string)$data["ownerName"] : (string)($data["ownerId"] ?? "Utilizador"),
-            "thumbnailDataUrl" => thumbnail_from_project($data),
+            "thumbnailDataUrl" => resolve_project_thumbnail($data, $thumbsDir),
         ];
     }
 
@@ -431,12 +469,72 @@ function build_projects_list(array $entries, string $scope, string $ownerId, boo
     return $projects;
 }
 
+// --- GET|HEAD ?action=thumb&name={projectName} — verificar thumbnail em disco ---
+if (($method === "GET" || $method === "HEAD") && $action === "thumb") {
+    $lookupName = sanitize_filename((string)($_GET["name"] ?? ""));
+    if ($lookupName === null) {
+        respond_json(["status" => "error", "message" => "name inválido"], 400);
+    }
+    $url = thumbnail_file_url($thumbsDir, $lookupName);
+    if ($method === "HEAD") {
+        http_response_code($url !== null ? 200 : 404);
+        exit;
+    }
+    respond_json([
+        "status" => "ok",
+        "exists" => $url !== null,
+        "url" => $url,
+    ]);
+}
+
+// --- POST ?action=thumb — gravar thumbnail (multipart: name + file) ---
+if ($method === "POST" && $action === "thumb") {
+    $uploadName = sanitize_filename((string)($_POST["name"] ?? ""));
+    if ($uploadName === null) {
+        respond_json(["status" => "error", "message" => "name inválido"], 400);
+    }
+    if (!isset($_FILES["file"]) || !is_uploaded_file((string)($_FILES["file"]["tmp_name"] ?? ""))) {
+        respond_json(["status" => "error", "message" => "ficheiro em falta"], 400);
+    }
+
+    $tmpPath = (string)$_FILES["file"]["tmp_name"];
+    $mime = "";
+    if (function_exists("finfo_open")) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo !== false) {
+            $detected = finfo_file($finfo, $tmpPath);
+            finfo_close($finfo);
+            if (is_string($detected)) {
+                $mime = $detected;
+            }
+        }
+    }
+    if ($mime === "") {
+        $mime = (string)($_FILES["file"]["type"] ?? "");
+    }
+
+    $ext = str_contains(strtolower($mime), "webp") ? "webp" : "jpg";
+    foreach (["webp", "jpg", "jpeg"] as $oldExt) {
+        delete_file_if_exists($thumbsDir . "/" . $uploadName . "." . $oldExt);
+    }
+
+    $destPath = $thumbsDir . "/" . $uploadName . "." . $ext;
+    if (!move_uploaded_file($tmpPath, $destPath)) {
+        respond_json(["status" => "error", "message" => "Falha ao gravar thumbnail"], 500);
+    }
+
+    respond_json([
+        "status" => "ok",
+        "url" => thumbnail_file_url($thumbsDir, $uploadName),
+    ]);
+}
+
 // --- GET ?action=projetos — apenas ficheiros {nome}.json (hub PROJETOS) ---
 if ($method === "GET" && $action === "projetos") {
     $scope = isset($_GET["scope"]) ? (string)$_GET["scope"] : "all";
     $ownerId = isset($_GET["ownerId"]) ? (string)$_GET["ownerId"] : "";
     $entries = list_project_entries($dataDir);
-    $projects = build_projects_list($entries, $scope, $ownerId, true);
+    $projects = build_projects_list($entries, $scope, $ownerId, $thumbsDir, true);
 
     respond_json([
         "status" => "ok",
@@ -451,7 +549,7 @@ if ($method === "GET" && $action === "") {
     $scope = isset($_GET["scope"]) ? (string)$_GET["scope"] : "mine";
     $ownerId = isset($_GET["ownerId"]) ? (string)$_GET["ownerId"] : "";
     $entries = list_project_entries($dataDir);
-    $projects = build_projects_list($entries, $scope, $ownerId, false);
+    $projects = build_projects_list($entries, $scope, $ownerId, $thumbsDir, false);
 
     respond_json([
         "status" => "ok",

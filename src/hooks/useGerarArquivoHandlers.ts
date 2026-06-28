@@ -9,6 +9,10 @@ import { getCurrentProjectUser } from "../core/projects/currentUser";
 import { saveProject } from "../core/projects/projectsClient";
 import { saveProjectRecord } from "../app/PROJETOS/projetosSnapshotCache";
 import { buildProjetosPagePath } from "../app/PROJETOS/projetosPageSlug";
+import {
+  captureWorkspaceProjectThumbnail,
+  uploadProjectThumbnail,
+} from "../core/projects/projectThumbnail";
 import { getSettings } from "../core/settings/settingsService";
 import { listMaterials } from "../core/materials/service";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
@@ -830,6 +834,15 @@ export function useGerarArquivoHandlers() {
             name: projectName,
           });
           redirectProjectPagePath = buildProjetosPagePath({ name: projectName });
+
+          if (typeof viewerSync.renderScene === "function") {
+            const thumbBlob = await captureWorkspaceProjectThumbnail((opts) =>
+              viewerSync.renderScene!(opts)
+            );
+            if (thumbBlob) {
+              await uploadProjectThumbnail(projectName, thumbBlob);
+            }
+          }
         }
       } catch (err) {
         devLogger.warn("PROJETOS: falha ao guardar snapshot antes do arquivo completo", err);

@@ -9,6 +9,7 @@ import type { SavedProjectRecord } from "@/core/projects/types";
 import { ShowroomCanvas } from "@/components/showroom/ShowroomCanvas";
 import { ShowroomProjectRoot } from "@/components/showroom/ShowroomProjectRoot";
 import { ShowroomReadOnlyInteractions } from "@/components/showroom/ShowroomReadOnlyInteractions";
+import ShowroomThumbnailCapture from "@/components/showroom/ShowroomThumbnailCapture";
 import { ShowroomToolbar } from "@/components/showroom/ShowroomToolbar";
 import { useShowroomStore } from "@/components/showroom/showroomStore";
 
@@ -21,6 +22,10 @@ export type ShowroomViewerProps = {
   boxId?: string;
   pieceId?: string;
   readOnly?: boolean;
+  boxExplode?: boolean;
+  boxIntensity?: number;
+  pieceExplode?: boolean;
+  pieceIntensity?: number;
 };
 
 const FOCUS_OPACITY = 1;
@@ -155,6 +160,10 @@ export default function ShowroomViewer({
   boxId,
   pieceId,
   readOnly = true,
+  boxExplode = false,
+  boxIntensity = 0.45,
+  pieceExplode = false,
+  pieceIntensity = 0.35,
 }: ShowroomViewerProps) {
   const projectState = useMemo(() => reviveProjectState(snapshot), [snapshot]);
   const resolvedProjectId = projectId ?? snapshot?.id ?? "";
@@ -190,7 +199,7 @@ export default function ShowroomViewer({
       }}
     >
       {!readOnly ? <ShowroomToolbar /> : null}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
         <ShowroomCanvas readOnly={readOnly} fillHeight>
           <ShowroomProjectRoot
             projectId={resolvedProjectId}
@@ -198,8 +207,16 @@ export default function ShowroomViewer({
             offsetMm={{ xMm: 0, zMm: 0 }}
             displayName={snapshot.name}
             readOnly={readOnly}
+            focusBoxId={focusBoxId}
+            boxExplode={boxExplode}
+            boxIntensity={boxIntensity}
+            pieceExplode={pieceExplode}
+            pieceIntensity={pieceIntensity}
           />
           <ShowroomFocusController mode={mode} focusBoxId={focusBoxId} pieceId={pieceId} />
+          {readOnly && mode === "project" ? (
+            <ShowroomThumbnailCapture projectName={snapshot.name} enabled />
+          ) : null}
           {readOnly ? <ShowroomReadOnlyInteractions projectState={projectState} /> : null}
         </ShowroomCanvas>
       </div>

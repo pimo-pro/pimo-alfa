@@ -2,6 +2,11 @@ import IndustrialSpriteIcon from '@/components/icons/IndustrialSpriteIcon';
 import { industrialListItemStyle, industrialSectionTitleStyle } from '@/industrial/ui/layouts/industrialStyles';
 import { INDUSTRIAL_STATIONS, STATION_LABELS } from '@/industrial/work-orders/types';
 import type { SupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/types';
+import {
+  resolveProjetosLinkForProjectId,
+  resolveProjectDisplayName,
+} from '@/industrial/integration/projetos/projetosProjectLinks';
+import { Link } from 'react-router-dom';
 
 import type { UseSupervisorDashboardReturn } from '../hooks/useSupervisorDashboard';
 
@@ -31,7 +36,9 @@ export default function SupervisorFiltersPanel({ snapshot, state }: SupervisorFi
           {projects.length === 0 ? (
             <li style={{ fontSize: 12, color: '#94a3b8' }}>Sem projetos.</li>
           ) : (
-            projects.map((project) => (
+            projects.map((project) => {
+              const projetosLink = resolveProjetosLinkForProjectId(project.projectId);
+              return (
               <li key={project.projectId}>
                 <button
                   type="button"
@@ -48,11 +55,21 @@ export default function SupervisorFiltersPanel({ snapshot, state }: SupervisorFi
                     color: 'inherit',
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>{project.projectId}</div>
+                  <div style={{ fontWeight: 600 }}>{resolveProjectDisplayName(project.projectId)}</div>
                   <div style={{ color: '#94a3b8', marginTop: 2 }}>{project.progressPct}% · {project.totalTasks} tarefas</div>
+                  {projetosLink ? (
+                    <Link
+                      to={projetosLink.href}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ fontSize: 11, color: '#38bdf8', display: 'inline-block', marginTop: 4 }}
+                    >
+                      Abrir PROJETOS
+                    </Link>
+                  ) : null}
                 </button>
               </li>
-            ))
+              );
+            })
           )}
         </ul>
       </section>

@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 
 import Button from "@/components/ui/Button";
+import { resolveProjectThumbnailSrc } from "@/core/projects/projectThumbnail";
 import type { SavedProjectMeta } from "@/core/projects/types";
 
 import { buildProjetosPagePath } from "./projetosPageSlug";
@@ -53,6 +55,15 @@ type Props = {
 export default function ProjetosProjectCard({ project }: Props) {
   const displayName = project.name?.trim() || "Projeto sem nome";
   const href = buildProjetosPagePath(project);
+  const [thumbBroken, setThumbBroken] = useState(false);
+
+  const thumbnailSrc = useMemo(
+    () =>
+      thumbBroken
+        ? null
+        : resolveProjectThumbnailSrc(project.name, project.thumbnailDataUrl, project.updatedAt),
+    [project.name, project.thumbnailDataUrl, project.updatedAt, thumbBroken]
+  );
 
   return (
     <Link
@@ -86,11 +97,14 @@ export default function ProjetosProjectCard({ project }: Props) {
         }}
       >
         <div style={{ height: 120, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-          {project.thumbnailDataUrl ? (
+          {thumbnailSrc ? (
             <img
-              src={project.thumbnailDataUrl}
+              src={thumbnailSrc}
               alt={`Thumbnail de ${displayName}`}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              loading="lazy"
+              decoding="async"
+              onError={() => setThumbBroken(true)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
           ) : (
             <ThumbnailFallback />
