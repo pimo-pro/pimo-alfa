@@ -423,7 +423,6 @@ function build_projects_list(
     string $thumbsDir,
     bool $namedOnly = false
 ): array {
-{
     $now = gmdate("c");
     $projects = [];
 
