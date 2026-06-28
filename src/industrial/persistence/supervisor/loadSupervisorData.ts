@@ -1,14 +1,25 @@
 import { supabase } from '@/industrial/infra/db';
 import { PIECE_PERSISTENCE_TABLES } from '@/industrial/persistence/tables';
-import { mapTaskRow, mapWorkOrderRow } from '@/industrial/persistence/work-orders/mappers';
-import { WORK_ORDER_TABLES } from '@/industrial/persistence/work-orders/tables';
+import { mapTaskRow, mapTaskViewRow, mapWorkOrderRow } from '@/industrial/persistence/work-orders/mappers';
+import { INDUSTRIAL_VIEW_TABLES, WORK_ORDER_TABLES } from '@/industrial/persistence/work-orders/tables';
+import {
+  attachDisplayToTasks,
+  resolveWorkOrderProjectDisplay,
+} from '@/industrial/work-orders/resolveWorkOrderPiece';
 import {
   INDUSTRIAL_STATIONS,
   STATION_LABELS,
   type IndustrialStation,
+  type IndustrialWorkOrder,
   type IndustrialWorkOrderTask,
 } from '@/industrial/work-orders/types';
 
+import {
+  projectIdForTask,
+  projectIdMapFromOrders,
+  taskIndustrialLabel,
+  taskPieceDisplay,
+} from './supervisorTaskDisplay';
 import type {
   SupervisorAlertItem,
   SupervisorDashboardSnapshot,
@@ -30,12 +41,34 @@ function emptyStationMap(): Record<IndustrialStation, number> {
   );
 }
 
+async function loadTasksWithDisplay(orders: IndustrialWorkOrder[]): Promise<IndustrialWorkOrderTask[]> {
+  const projectMap = projectIdMapFromOrders(orders);
+
+  const viewRes = await supabase
+    .from(INDUSTRIAL_VIEW_TABLES.tasksView)
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (!viewRes.error && viewRes.data) {
+    const fromView = viewRes.data.map((row) =>
+      mapTaskViewRow(row as Parameters<typeof mapTaskViewRow>[0]),
+    );
+    return attachDisplayToTasks(fromView, projectMap);
+  }
+
+  const tasksRes = await supabase
+    .from(WORK_ORDER_TABLES.tasks)
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (tasksRes.error) throw new Error(tasksRes.error.message);
+  return attachDisplayToTasks((tasksRes.data ?? []).map(mapTaskRow), projectMap);
+}
+
 function buildStationKpis(tasks: IndustrialWorkOrderTask[]): SupervisorStationKpi[] {
   return INDUSTRIAL_STATIONS.map((station) => {
     const stationTasks = tasks.filter((task) => task.operationType === station || task.metadata?.station === station);
-    const byOrderStation = tasks.filter((task) => {
-      return task.operationType === station;
-    });
+    const byOrderStation = tasks.filter((task) => task.operationType === station);
     const scoped = stationTasks.length > 0 ? stationTasks : byOrderStation;
     const rework = scoped.filter((t) => t.status === 'rejected' || t.metadata?.rework).length;
     return {
@@ -64,10 +97,11 @@ function buildProjectKpis(
     const total = projectTasks.length;
     const criticalPieces = projectTasks
       .filter((t) => t.status === 'rejected' || t.status === 'in_progress')
-      .map((t) => t.pieceId)
+      .map((t) => taskIndustrialLabel(t, orders))
       .slice(0, 5);
     return {
       projectId,
+      projectCode: resolveWorkOrderProjectDisplay(projectId),
       totalTasks: total,
       completed,
       rejected,
@@ -97,6 +131,22 @@ function buildOperatorKpis(tasks: IndustrialWorkOrderTask[]): SupervisorOperator
   return Array.from(map.values()).sort((a, b) => b.completed - a.completed);
 }
 
+function resolveAlertPieceLabel(
+  pieceId: string,
+  tasks: IndustrialWorkOrderTask[],
+  orders: SupervisorDashboardSnapshot['orders'],
+): { label: string; display: ReturnType<typeof taskPieceDisplay> | null } {
+  const task = tasks.find((row) => row.pieceId === pieceId);
+  if (!task) {
+    return { label: pieceId, display: null };
+  }
+  const display = taskPieceDisplay(task, orders);
+  return {
+    label: display.fullIndustrialName,
+    display,
+  };
+}
+
 function buildAlerts(
   tasks: IndustrialWorkOrderTask[],
   events: SupervisorSystemEventRow[],
@@ -114,18 +164,26 @@ function buildAlerts(
       event.type === 'task_complete' ||
       meta.success === true;
 
+    const order = orders.find((o) => o.id === event.workOrderId);
+    const projectId = order?.projectId;
+    const projectCode = projectId ? resolveWorkOrderProjectDisplay(projectId) : undefined;
+    const pieceInfo = pieceId ? resolveAlertPieceLabel(pieceId, tasks, orders) : null;
+
     alerts.push({
       id: `evt-${event.id}`,
       level: isSuccess ? 'success' : event.type.includes('reject') || event.type.includes('error') ? 'error' : 'warning',
       title: isSuccess ? 'Operação concluída' : 'Evento industrial',
       message:
         pieceId && station
-          ? `Peça ${pieceId} registada com sucesso na estação ${STATION_LABELS[station] ?? station}.`
+          ? `Peça ${pieceInfo?.label ?? pieceId} (${pieceInfo?.display?.nqrCode ?? pieceId}) registada na estação ${STATION_LABELS[station] ?? station}.`
           : event.type,
       createdAt: event.createdAt,
       station,
-      projectId: orders.find((o) => o.id === event.workOrderId)?.projectId,
+      projectId,
+      projectCode,
       pieceId: pieceId || undefined,
+      nqrCode: pieceInfo?.display?.nqrCode,
+      fullIndustrialName: pieceInfo?.display?.fullIndustrialName,
     });
   }
 
@@ -134,13 +192,17 @@ function buildAlerts(
     const started = task.startedAt ? new Date(task.startedAt).getTime() : 0;
     const minutes = started ? (Date.now() - started) / 60000 : 0;
     if (minutes > 45) {
+      const display = taskPieceDisplay(task, orders);
       alerts.push({
         id: `delay-${task.id}`,
         level: 'warning',
         title: 'Tempo elevado',
-        message: `Tarefa ${task.pieceId} em execução há ${Math.round(minutes)} min.`,
+        message: `${display.fullIndustrialName} (${display.nqrCode}) em execução há ${Math.round(minutes)} min.`,
         createdAt: new Date().toISOString(),
         pieceId: task.pieceId,
+        nqrCode: display.nqrCode,
+        fullIndustrialName: display.fullIndustrialName,
+        projectCode: resolveWorkOrderProjectDisplay(projectIdForTask(task, orders)),
       });
     }
   }
@@ -149,9 +211,8 @@ function buildAlerts(
 }
 
 export async function loadSupervisorDashboardSnapshot(): Promise<SupervisorDashboardSnapshot> {
-  const [ordersRes, tasksRes, woEventsRes, sysEventsRes, qualityRes, timeRes] = await Promise.all([
+  const [ordersRes, woEventsRes, sysEventsRes, qualityRes, timeRes] = await Promise.all([
     supabase.from(WORK_ORDER_TABLES.orders).select('*').order('created_at', { ascending: false }),
-    supabase.from(WORK_ORDER_TABLES.tasks).select('*').order('updated_at', { ascending: false }),
     supabase.from(WORK_ORDER_TABLES.events).select('*').order('created_at', { ascending: false }).limit(80),
     supabase.from(PIECE_PERSISTENCE_TABLES.systemEvents).select('*').order('created_at', { ascending: false }).limit(80),
     supabase.from(PIECE_PERSISTENCE_TABLES.quality).select('*').order('updated_at', { ascending: false }).limit(200),
@@ -159,14 +220,13 @@ export async function loadSupervisorDashboardSnapshot(): Promise<SupervisorDashb
   ]);
 
   if (ordersRes.error) throw new Error(ordersRes.error.message);
-  if (tasksRes.error) throw new Error(tasksRes.error.message);
   if (woEventsRes.error) throw new Error(woEventsRes.error.message);
   if (sysEventsRes.error) throw new Error(sysEventsRes.error.message);
   if (qualityRes.error) throw new Error(qualityRes.error.message);
   if (timeRes.error) throw new Error(timeRes.error.message);
 
   const orders = (ordersRes.data ?? []).map(mapWorkOrderRow);
-  const tasks = (tasksRes.data ?? []).map(mapTaskRow);
+  const tasks = await loadTasksWithDisplay(orders);
 
   const woEvents: SupervisorSystemEventRow[] = (woEventsRes.data ?? []).map((row) => ({
     id: row.id,

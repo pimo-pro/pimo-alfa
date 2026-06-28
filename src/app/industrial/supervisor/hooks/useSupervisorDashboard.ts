@@ -72,7 +72,9 @@ export function useSupervisorDashboard() {
 
   useEffect(() => {
     if (!pieceFromQuery || !snapshot) return;
-    const task = snapshot.tasks.find((t) => t.pieceId === pieceFromQuery);
+    const task =
+      snapshot.tasks.find((t) => t.pieceId === pieceFromQuery) ??
+      snapshot.tasks.find((t) => t.display?.nqrCode === pieceFromQuery);
     if (task) setSelectedTaskId(task.id);
   }, [pieceFromQuery, snapshot]);
 

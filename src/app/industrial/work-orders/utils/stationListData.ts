@@ -28,12 +28,16 @@ function pieceLabel(task: IndustrialWorkOrderTask, orders: IndustrialWorkOrder[]
 }
 
 function taskItems(tasks: IndustrialWorkOrderTask[], orders: IndustrialWorkOrder[]) {
-  return tasks.map((task) => ({
-    id: task.id,
-    pieceId: task.pieceId,
-    primary: pieceLabel(task, orders),
-    secondary: `${task.operationType} · ${task.status}`,
-  }));
+  return tasks.map((task) => {
+    const order = orders.find((o) => o.id === task.workOrderId);
+    const display = getWorkOrderPieceDisplay(task, order?.projectId ?? '');
+    return {
+      id: task.id,
+      pieceId: task.pieceId,
+      primary: pieceLabel(task, orders),
+      secondary: `${display.nqrCode} · ${task.operationType} · ${task.status}`,
+    };
+  });
 }
 
 export function buildStationListSections(

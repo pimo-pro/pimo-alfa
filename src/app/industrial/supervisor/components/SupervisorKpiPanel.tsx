@@ -1,5 +1,6 @@
 import { industrialSectionTitleStyle } from '@/industrial/ui/layouts/industrialStyles';
 import { useRealtimeKpis } from '@/industrial/realtime';
+import { taskPieceDisplay } from '@/industrial/persistence/supervisor/supervisorTaskDisplay';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
 import type { SupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/types';
 
@@ -32,6 +33,8 @@ export default function SupervisorKpiPanel({ snapshot, state }: SupervisorKpiPan
   const productionPending = liveKpis.productionPending;
   const productionRunning = liveKpis.productionRunning;
   const selected = state.selectedTask;
+  const selectedDisplay =
+    selected && snapshot ? taskPieceDisplay(selected, snapshot.orders) : null;
   const stationStatuses = state.stationStatuses;
 
   return (
@@ -89,11 +92,15 @@ export default function SupervisorKpiPanel({ snapshot, state }: SupervisorKpiPan
         ))}
       </div>
 
-      {selected ? (
+      {selected && selectedDisplay ? (
         <div style={{ display: 'grid', gap: 6, paddingTop: 8, borderTop: '1px solid var(--border, #334155)' }}>
           <h3 style={industrialSectionTitleStyle}>Selecção actual</h3>
           <dl style={{ margin: 0, fontSize: 12, display: 'grid', gap: 4 }}>
-            <div><dt style={{ color: '#94a3b8' }}>Peça</dt><dd style={{ margin: 0 }}>{selected.pieceId}</dd></div>
+            <div><dt style={{ color: '#94a3b8' }}>Nome industrial</dt><dd style={{ margin: 0 }}>{selectedDisplay.fullIndustrialName}</dd></div>
+            <div><dt style={{ color: '#94a3b8' }}>NQR</dt><dd style={{ margin: 0, fontFamily: 'monospace' }}>{selectedDisplay.nqrCode}</dd></div>
+            <div><dt style={{ color: '#94a3b8' }}>Projecto</dt><dd style={{ margin: 0 }}>{selectedDisplay.projectCode}</dd></div>
+            <div><dt style={{ color: '#94a3b8' }}>Caixa</dt><dd style={{ margin: 0 }}>{selectedDisplay.boxCode}</dd></div>
+            <div><dt style={{ color: '#94a3b8' }}>Peça</dt><dd style={{ margin: 0 }}>{selectedDisplay.pieceCode}</dd></div>
             <div><dt style={{ color: '#94a3b8' }}>Operação</dt><dd style={{ margin: 0 }}>{selected.operationType}</dd></div>
             <div><dt style={{ color: '#94a3b8' }}>Estado</dt><dd style={{ margin: 0 }}>{selected.status}</dd></div>
             <div><dt style={{ color: '#94a3b8' }}>Operador</dt><dd style={{ margin: 0 }}>{selected.operatorId ?? '—'}</dd></div>

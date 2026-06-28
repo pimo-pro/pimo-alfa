@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import IndustrialSpriteIcon from '@/components/icons/IndustrialSpriteIcon';
 import { industrialCanvasShellStyle } from '@/industrial/ui/layouts/industrialStyles';
+import { taskPieceDisplay } from '@/industrial/persistence/supervisor/supervisorTaskDisplay';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
 
 import type { UseSupervisorDashboardReturn } from '../hooks/useSupervisorDashboard';
@@ -93,12 +94,12 @@ export default function SupervisorInfoCards({ state }: SupervisorInfoCardsProps)
         {snapshot.projectKpis.map((project) => (
           <Card
             key={project.projectId}
-            title={`Projeto · ${project.projectId}`}
+            title={`Projeto · ${project.projectCode}`}
             onClick={() => state.setSelectedProjectId(project.projectId)}
           >
             <div style={{ fontSize: 12, color: '#94a3b8' }}>Progresso {project.progressPct}%</div>
             <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-              Críticas: {project.criticalPieces.join(', ') || '—'}
+              Críticas: {project.criticalPieces.join(' · ') || '—'}
             </div>
           </Card>
         ))}
@@ -120,12 +121,15 @@ export default function SupervisorInfoCards({ state }: SupervisorInfoCardsProps)
           <thead>
             <tr style={{ textAlign: 'left', color: '#94a3b8' }}>
               <th style={{ padding: 6 }}>Peça</th>
+              <th style={{ padding: 6 }}>NQR</th>
               <th style={{ padding: 6 }}>Operação</th>
               <th style={{ padding: 6 }}>Estado</th>
             </tr>
           </thead>
           <tbody>
-            {state.filteredTasks.slice(0, 20).map((task) => (
+            {state.filteredTasks.slice(0, 20).map((task) => {
+              const display = taskPieceDisplay(task, snapshot.orders);
+              return (
               <tr
                 key={task.id}
                 style={{ borderTop: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}
@@ -133,13 +137,18 @@ export default function SupervisorInfoCards({ state }: SupervisorInfoCardsProps)
               >
                 <td style={{ padding: 6 }}>
                   <Link to={`/industrial/piece/${task.pieceId}`} style={{ color: '#60a5fa' }} onClick={(e) => e.stopPropagation()}>
-                    {task.pieceId}
+                    {display.fullIndustrialName}
                   </Link>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                    {display.projectCode} · {display.boxCode} · {display.pieceCode}
+                  </div>
                 </td>
+                <td style={{ padding: 6, fontFamily: 'monospace', fontSize: 10 }}>{display.nqrCode}</td>
                 <td style={{ padding: 6 }}>{task.operationType}</td>
                 <td style={{ padding: 6 }}>{task.status}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </section>

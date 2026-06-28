@@ -6,6 +6,7 @@ import {
   resolveProjetosLinkForProjectId,
   resolveProjectDisplayName,
 } from '@/industrial/integration/projetos/projetosProjectLinks';
+import { orderProjectCode } from '@/industrial/persistence/supervisor/supervisorTaskDisplay';
 import { Link } from 'react-router-dom';
 
 import type { UseSupervisorDashboardReturn } from '../hooks/useSupervisorDashboard';
@@ -55,7 +56,7 @@ export default function SupervisorFiltersPanel({ snapshot, state }: SupervisorFi
                     color: 'inherit',
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>{resolveProjectDisplayName(project.projectId)}</div>
+                  <div style={{ fontWeight: 600 }}>{project.projectCode || resolveProjectDisplayName(project.projectId)}</div>
                   <div style={{ color: '#94a3b8', marginTop: 2 }}>{project.progressPct}% · {project.totalTasks} tarefas</div>
                   {projetosLink ? (
                     <Link
@@ -87,7 +88,7 @@ export default function SupervisorFiltersPanel({ snapshot, state }: SupervisorFi
               tabIndex={0}
             >
               <div style={{ fontWeight: 600 }}>{STATION_LABELS[order.station]}</div>
-              <div style={{ color: '#94a3b8', marginTop: 2 }}>{order.projectId} · {order.status}</div>
+              <div style={{ color: '#94a3b8', marginTop: 2 }}>{orderProjectCode(order)} · {order.status}</div>
             </li>
           ))}
         </ul>

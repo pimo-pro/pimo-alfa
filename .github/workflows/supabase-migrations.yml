@@ -96,3 +96,12 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Validate industrial metadata (Postgres)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_REGION: eu-central-1
+        run: node scripts/validateIndustrialMetadata.mjs

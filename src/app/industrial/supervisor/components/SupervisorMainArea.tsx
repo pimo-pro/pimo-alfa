@@ -5,6 +5,7 @@ import StationCanvas from '@/industrial/ui/components/StationCanvas';
 import StationChatOverlay from '@/industrial/ui/components/StationChatOverlay';
 import { industrialBtnStyle, industrialCanvasShellStyle } from '@/industrial/ui/layouts/industrialStyles';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
+import { buildCanvasPieces } from '@/app/industrial/work-orders/utils/stationListData';
 
 import type { UseSupervisorDashboardReturn } from '../hooks/useSupervisorDashboard';
 import SupervisorInfoCards from './SupervisorInfoCards';
@@ -23,32 +24,27 @@ const MODES = [
 
 export default function SupervisorMainArea({ state }: SupervisorMainAreaProps) {
   const tasks = state.filteredTasks;
-  const pieceIds = useMemo(() => Array.from(new Set(tasks.map((t) => t.pieceId))).slice(0, 24), [tasks]);
+  const orders = state.snapshot?.orders ?? [];
 
-  const canvasPieces = useMemo(
-    () =>
-      pieceIds.map((id) => {
-        const syncPiece = state.lastThreeSync?.pieceId === id ? state.lastThreeSync : null;
-        const syncColor =
-          syncPiece?.action === 'completed'
-            ? '#16a34a'
-            : syncPiece?.action === 'rejected'
-              ? '#dc2626'
-              : syncPiece?.action === 'rework'
-                ? '#f59e0b'
-                : undefined;
-        return {
-          id,
-          label: id,
-          widthMm: 600,
-          heightMm: 400,
-          thicknessMm: 18,
-          highlighted: state.selectedTask?.pieceId === id,
-          color: syncColor ?? (state.selectedTask?.pieceId === id ? '#38bdf8' : '#8b9cb3'),
-        };
-      }),
-    [pieceIds, state.selectedTask?.pieceId, state.lastThreeSync, state.canvasRevision],
-  );
+  const canvasPieces = useMemo(() => {
+    const base = buildCanvasPieces(tasks, orders, state.selectedTask?.pieceId ?? null);
+    return base.map((piece) => {
+      const syncPiece = state.lastThreeSync?.pieceId === piece.id ? state.lastThreeSync : null;
+      const syncColor =
+        syncPiece?.action === 'completed'
+          ? '#16a34a'
+          : syncPiece?.action === 'rejected'
+            ? '#dc2626'
+            : syncPiece?.action === 'rework'
+              ? '#f59e0b'
+              : undefined;
+      return {
+        ...piece,
+        color: syncColor ?? (state.selectedTask?.pieceId === piece.id ? '#38bdf8' : piece.color),
+        highlighted: state.selectedTask?.pieceId === piece.id,
+      };
+    });
+  }, [tasks, orders, state.selectedTask?.pieceId, state.lastThreeSync, state.canvasRevision]);
 
   const conversations = useMemo(
     () => [

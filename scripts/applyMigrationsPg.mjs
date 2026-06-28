@@ -107,7 +107,7 @@ function buildPoolerUrls(databaseUrl, preferredRegion, overridePassword) {
   }
 }
 
-async function connectionCandidates(env) {
+export async function connectionCandidates(env) {
   const primary = resolveDatabaseUrl(env);
   if (!primary) return [];
 
@@ -123,7 +123,7 @@ async function connectionCandidates(env) {
   return [...new Set([ipv4Direct, ...pooler].filter(Boolean))];
 }
 
-function parsePgConfig(connectionString) {
+export function parsePgConfig(connectionString) {
   const normalized = connectionString.trim().replace(/^postgres:\/\//, "postgresql://");
   if (!normalized.startsWith("postgresql://")) {
     throw new Error("URI Postgres inválida.");

@@ -14,6 +14,7 @@ export interface SupervisorStationKpi {
 
 export interface SupervisorProjectKpi {
   projectId: string;
+  projectCode: string;
   totalTasks: number;
   completed: number;
   rejected: number;
@@ -58,7 +59,10 @@ export interface SupervisorAlertItem {
   createdAt: string;
   station?: IndustrialStation;
   projectId?: string;
+  projectCode?: string;
   pieceId?: string;
+  nqrCode?: string;
+  fullIndustrialName?: string;
 }
 
 export interface SupervisorDashboardSnapshot {
