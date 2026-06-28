@@ -28,7 +28,7 @@ import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../
 /** Grelha preta fina — impressão e conferência manual. */
 const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
 const TABLE_GRID_WIDTH = 0.15;
-const MARGIN = 14;
+const MARGIN = 15;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
 
 /** Mapeamento tipo peça (boxManufacturing) → id componentType */
@@ -327,28 +327,125 @@ export function gerarPdfTecnicoCompleto(
   const componentTypes = loadComponentTypesFromStorage();
   const materials = loadMaterialsFromStorage();
 
-  let y = MARGIN;
+  const acabamentos = getAcabamentosUnicos(boxes, materials);
+  const dataHoje = new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const pageW = 297; // A4 landscape
+  const designer = "KHALED"; // TODO: substituir por username autenticado
 
-  doc.setFontSize(18);
+  // — Cabeçalho topo: π PIMO | Data de design | Designer —
+  let y = MARGIN + 8;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.text("PIMO Studio", MARGIN, y);
-  y += 8;
+  doc.text("π", MARGIN, y);
+  doc.setFontSize(18);
+  doc.text("PIMO", MARGIN + 10, y - 1);
 
-  doc.setFontSize(11);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`PROJETO / MÓVEL: ${projectName || "Projeto"}`, MARGIN, y);
+  const headerRight = `Data de design: ${dataHoje}     Designer: ${designer}`;
+  const hrW = doc.getTextWidth(headerRight);
+  doc.text(headerRight, pageW - MARGIN - hrW, y - 1);
   y += 6;
 
-  const acabamentos = getAcabamentosUnicos(boxes, materials);
-  doc.text(`Acabamento: ${acabamentos.length > 0 ? acabamentos.join(" | ") : "—"}`, MARGIN, y);
-  y += 12;
+  // — Retângulo central: 180mm, centrado —
+  const rectW = 180;
+  const rectX = (pageW - rectW) / 2;
+  const rowH = 8;
+  const infoRows = 2;   // bloco de info: 2 linhas
+  const dateRows = 5;   // bloco de datas: 5 linhas (CNC, Drill, Orlar, Limp, Mont)
+  const infoH = infoRows * rowH;
+  const dateH = dateRows * rowH;
+  const rectH = infoH + dateH + 1; // +1 para a linha divisória horizontal
+  const rectY = y;
 
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.4);
+  doc.rect(rectX, rectY, rectW, rectH);
+
+  // linha divisória vertical (meio)
+  const midX = rectX + rectW / 2;
+  doc.line(midX, rectY, midX, rectY + rectH);
+
+  // linha divisória horizontal (entre info e datas)
+  const divY = rectY + infoH;
+  doc.line(rectX, divY, rectX + rectW, divY);
+
+  // helper para desenhar campo com label + sublinha
+  const drawField = (label: string, lx: number, ly: number, lineLen: number) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(label, lx, ly);
+    const lw = doc.getTextWidth(label);
+    doc.setLineWidth(0.25);
+    doc.line(lx + lw + 1, ly + 0.5, lx + lw + 1 + lineLen, ly + 0.5);
+  };
+
+  // helper para campo de data/hora: __/__/____  H__:__
+  const drawDateTime = (label: string, lx: number, ly: number) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(label, lx, ly);
+    const lw = doc.getTextWidth(label);
+    const fx = lx + lw + 2;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.text("__/__/____", fx, ly);
+    const dw = doc.getTextWidth("__/__/____");
+    doc.text("H__:__", fx + dw + 2, ly);
+  };
+
+  // — Bloco info (linha 1: PROJETO + Nº Caixas) —
+  const c1x = rectX + 4;
+  const c2x = midX + 4;
+  let iy = rectY + rowH - 1;
+
+  drawField("PROJETO / MÓVEL:", c1x, iy, 48);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  // escreve valor do projeto à direita da label
+  doc.text(projectName || "Projeto", c1x + doc.getTextWidth("PROJETO / MÓVEL:") + 3, iy);
+
+  drawField("Acabamento:", c2x, iy, 40);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(acabamentos.length > 0 ? acabamentos[0] : "—", c2x + doc.getTextWidth("Acabamento:") + 3, iy);
+
+  iy += rowH;
+  drawField("Nº de Caixas:", c1x, iy, 20);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(String(boxes.length), c1x + doc.getTextWidth("Nº de Caixas:") + 3, iy);
+
+  // "Peças Total" — placeholder, preenchido após construirLinhas
+  drawField("Peças Total:", c2x, iy, 20);
+  const totalPecasPos = { x: c2x + doc.getTextWidth("Peças Total:") + 3, y: iy };
+
+  // — Bloco datas (5 linhas) —
+  iy = divY + rowH - 1;
+  const etapas = ["CNC", "Drill", "Orlar", "Limp", "Mont"];
+  for (const etapa of etapas) {
+    drawDateTime(`Início ${etapa}:`, c1x, iy);
+    drawDateTime(`Fim ${etapa}:`, c2x, iy);
+    iy += rowH;
+  }
+
+  y = rectY + rectH + 6;
+
+  // — Construir linhas (dados) —
   const linhas = construirLinhas(boxes, rules, componentTypes, materials, projectName, {
     materialId: opcoes?.materialId,
     extractedPartsByBoxId: opcoes?.extractedPartsByBoxId,
     precomputedItems: opcoes?.precomputedItems,
     pieceObservacoes: opcoes?.pieceObservacoes,
   });
+
+  // Preencher "Peças Total" com valor real
+  const totalPecasReal = linhas.reduce((sum, r) => sum + r.qtd, 0);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(0, 0, 0);
+  doc.text(String(totalPecasReal), totalPecasPos.x, totalPecasPos.y);
 
   const head = [
     "REF PEÇA",
@@ -453,12 +550,12 @@ export function gerarPdfTecnicoCompleto(
     },
   });
 
-  doc.setFontSize(9);
-  doc.setTextColor(128, 128, 128);
+  doc.setFontSize(7.5);
+  doc.setTextColor(140, 140, 140);
   doc.text(
-    `${new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" })}  |  ${linhas.length} peça(s)`,
+    `π PIMO  |  ${dataHoje}  |  ${linhas.length} referência(s)  |  ${totalPecasReal} peça(s)`,
     MARGIN,
-    200
+    205
   );
   doc.setTextColor(0, 0, 0);
 
