@@ -68,11 +68,11 @@ jobs:
           server-dir: /public_html/
           # N├úo apagar no servidor ficheiros que n├úo existem em dist/ (dados persistentes).
           dangerous-clean-slate: false
-          # Preserva JSON de projectos no servidor; PHP/.htaccess em api/projects/ são enviados pelo build.
+          # Preserva JSON de projectos no servidor (legacy project-*.json e {nome}.json); PHP enviado pelo build.
           exclude: |
             **/textures/**
             **/api/data/**
-            **/api/projects/data/project-*.json
+            **/api/projects/data/*.json
             **/api/materials/**
 
 

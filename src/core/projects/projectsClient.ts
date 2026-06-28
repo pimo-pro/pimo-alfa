@@ -158,7 +158,7 @@ export async function loadProjectRecord(id: string): Promise<SavedProjectRecord 
   const projects = readOfflineProjects();
   const local = projects.find((project) => !project.deleted && projectMatchesId(project, id)) ?? null;
   if (local) {
-    void attemptBackgroundProjectRefresh(local.remoteId ?? id, projectsApiDeps);
+    void attemptBackgroundProjectRefresh(local.name.trim() || id, projectsApiDeps);
     return toSavedRecordFromOffline(local);
   }
   if (!isOnline()) return null;

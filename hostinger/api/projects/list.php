@@ -71,7 +71,8 @@ function list_thumbnail(array $data): ?string
     return null;
 }
 
-$files    = glob($dataDir . "/project-*.json") ?: [];
+$files    = glob($dataDir . "/*.json") ?: [];
+$byId     = [];
 $projects = [];
 
 foreach ($files as $file) {
@@ -82,6 +83,23 @@ foreach ($files as $file) {
         continue;
     }
 
+    $pid = isset($data["id"]) ? trim((string)$data["id"]) : "";
+    if ($pid === "") {
+        continue;
+    }
+
+    $legacy = str_starts_with(basename($file), "project-");
+    if (!isset($byId[$pid])) {
+        $byId[$pid] = ["data" => $data, "legacy" => $legacy];
+        continue;
+    }
+    if ($byId[$pid]["legacy"] && !$legacy) {
+        $byId[$pid] = ["data" => $data, "legacy" => $legacy];
+    }
+}
+
+foreach ($byId as $entry) {
+    $data = $entry["data"];
     $pid = isset($data["id"]) ? trim((string)$data["id"]) : "";
     if ($pid === "") {
         continue;

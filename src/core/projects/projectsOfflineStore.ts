@@ -329,7 +329,8 @@ export function compareByUpdatedDesc(
 }
 
 export function projectMatchesId(project: OfflineProjectRecord, id: string): boolean {
-  return project.id === id || project.remoteId === id;
+  const key = id.trim();
+  return project.id === key || project.remoteId === key || project.name.trim() === key;
 }
 
 let genericOwnerMigrationDone = false;

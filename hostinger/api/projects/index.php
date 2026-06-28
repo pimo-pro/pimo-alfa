@@ -1,13 +1,11 @@
 <?php
 /**
  * API de projetos PIMO — persistência em JSON (Hostinger / PHP 8+).
- * Contrato alinhado com src/core/projects/projectsApi.ts
+ * Ficheiros por nome: data/{name}.json (id interno pimo-xxxx dentro do JSON).
+ * Compatível com legacy: data/project-{id}.json
  */
 declare(strict_types=1);
 
-// Diagnóstico de routing/WAF: confirma que o script PHP é realmente executado.
-// Visível em: Hostinger → Logs → PHP error log (ou equivalente).
-// Remover após confirmar que o routing está correto e o sync funciona.
 error_log(sprintf(
     "[PIMO-API] projects/index.php reached — method=%s uri=%s",
     $_SERVER["REQUEST_METHOD"] ?? "?",
@@ -43,7 +41,7 @@ function respond_json(array $data, int $code = 200): void
     exit;
 }
 
-/** IDs seguros para nome de ficheiro */
+/** IDs internos seguros (pimo-xxxx) */
 function sanitize_id(?string $id): ?string
 {
     if ($id === null) {
@@ -59,14 +57,155 @@ function sanitize_id(?string $id): ?string
     return null;
 }
 
+/** Nome de projecto seguro para nome de ficheiro */
+function sanitize_filename(?string $name): ?string
+{
+    if ($name === null) {
+        return null;
+    }
+    $name = trim($name);
+    if ($name === "") {
+        return null;
+    }
+    if (str_contains($name, "..") || preg_match('/[\/\\\\<>:"|?*\x00]/', $name)) {
+        return null;
+    }
+    if (strlen($name) > 160) {
+        return null;
+    }
+    return $name;
+}
+
+function is_internal_project_id(string $value): bool
+{
+    return (bool)preg_match('/^pimo-[a-f0-9]{16}$/', trim($value));
+}
+
 function generate_id(): string
 {
     return "pimo-" . bin2hex(random_bytes(8));
 }
 
-function project_path(string $dataDir, string $id): string
+function name_based_path(string $dataDir, string $name): string
+{
+    return $dataDir . "/" . $name . ".json";
+}
+
+function legacy_project_path(string $dataDir, string $id): string
 {
     return $dataDir . "/project-" . $id . ".json";
+}
+
+function read_project_file(string $path): ?array
+{
+    if (!is_file($path)) {
+        return null;
+    }
+    $raw = file_get_contents($path);
+    $data = json_decode($raw !== false ? $raw : "null", true);
+    return is_array($data) ? $data : null;
+}
+
+function write_project_file(string $path, array $data): bool
+{
+    $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    return $encoded !== false && file_put_contents($path, $encoded) !== false;
+}
+
+function delete_file_if_exists(string $path): void
+{
+    if ($path !== "" && is_file($path)) {
+        @unlink($path);
+    }
+}
+
+function is_legacy_project_file(string $path): bool
+{
+    return str_starts_with(basename($path), "project-");
+}
+
+/** Localiza ficheiro por nome, id interno ou scan do conteúdo JSON */
+function find_project_file(string $dataDir, string $lookup): ?string
+{
+    $lookup = trim($lookup);
+    if ($lookup === "") {
+        return null;
+    }
+
+    $safeName = sanitize_filename($lookup);
+    if ($safeName !== null) {
+        $path = name_based_path($dataDir, $safeName);
+        if (is_file($path)) {
+            return $path;
+        }
+    }
+
+    $legacyId = sanitize_id($lookup);
+    if ($legacyId !== null) {
+        $legacyPath = legacy_project_path($dataDir, $legacyId);
+        if (is_file($legacyPath)) {
+            return $legacyPath;
+        }
+    }
+
+    foreach (glob($dataDir . "/*.json") ?: [] as $file) {
+        $data = read_project_file($file);
+        if ($data === null) {
+            continue;
+        }
+        $jsonId = isset($data["id"]) ? trim((string)$data["id"]) : "";
+        $jsonName = isset($data["name"]) ? trim((string)$data["name"]) : "";
+        if ($jsonId === $lookup || $jsonName === $lookup) {
+            return $file;
+        }
+        if ($safeName !== null && $jsonName === $safeName) {
+            return $file;
+        }
+    }
+
+    return null;
+}
+
+/** Lista projectos deduplicados por id interno (preferir ficheiro por nome) */
+function list_project_entries(string $dataDir): array
+{
+    $byId = [];
+    foreach (glob($dataDir . "/*.json") ?: [] as $file) {
+        $data = read_project_file($file);
+        if ($data === null) {
+            continue;
+        }
+        $pid = isset($data["id"]) ? trim((string)$data["id"]) : "";
+        if ($pid === "") {
+            continue;
+        }
+        $legacy = is_legacy_project_file($file);
+        if (!isset($byId[$pid])) {
+            $byId[$pid] = ["file" => $file, "data" => $data, "legacy" => $legacy];
+            continue;
+        }
+        if ($byId[$pid]["legacy"] && !$legacy) {
+            $byId[$pid] = ["file" => $file, "data" => $data, "legacy" => $legacy];
+        }
+    }
+    return array_values($byId);
+}
+
+function remove_stale_project_files(string $dataDir, string $internalId, string $keepPath): void
+{
+    foreach (glob($dataDir . "/*.json") ?: [] as $file) {
+        if ($file === $keepPath) {
+            continue;
+        }
+        $data = read_project_file($file);
+        if ($data === null) {
+            continue;
+        }
+        $jsonId = isset($data["id"]) ? trim((string)$data["id"]) : "";
+        if ($jsonId === $internalId) {
+            delete_file_if_exists($file);
+        }
+    }
 }
 
 function thumbnail_from_project(array $data): ?string
@@ -82,71 +221,84 @@ function thumbnail_from_project(array $data): ?string
     return null;
 }
 
+function apply_project_name(array $data, string $name): array
+{
+    $data["name"] = $name;
+    if (isset($data["centerDisplay"]) && is_array($data["centerDisplay"])) {
+        $data["centerDisplay"]["projectName"] = $name;
+    }
+    return $data;
+}
+
 $method = $_SERVER["REQUEST_METHOD"] ?? "GET";
 $action = isset($_GET["action"]) ? (string)$_GET["action"] : "";
 
-// --- GET ?action=load&id=... ---
+// --- GET ?action=load&id={project.name|pimo-id} ---
 if ($method === "GET" && $action === "load") {
-    $id = sanitize_id($_GET["id"] ?? null);
-    if ($id === null) {
+    $lookup = trim((string)($_GET["id"] ?? ""));
+    if ($lookup === "") {
         respond_json(["status" => "error", "message" => "id inválido"], 400);
     }
-    $path = project_path($dataDir, $id);
-    if (!is_file($path)) {
+    $path = find_project_file($dataDir, $lookup);
+    if ($path === null) {
         respond_json(["status" => "error", "message" => "Não encontrado"], 404);
     }
-    $raw = file_get_contents($path);
-    $data = json_decode($raw !== false ? $raw : "null", true);
-    if (!is_array($data)) {
+    $data = read_project_file($path);
+    if ($data === null) {
         respond_json(["status" => "error", "message" => "Ficheiro inválido"], 500);
     }
     respond_json(["status" => "ok", "project" => $data]);
 }
 
-// --- PUT ?action=update&id=...  (rename) ---
+// --- PUT ?action=update&id={pimo-id interno} (rename) ---
 if ($method === "PUT" && $action === "update") {
     $id = sanitize_id($_GET["id"] ?? null);
     if ($id === null) {
         respond_json(["status" => "error", "message" => "id inválido"], 400);
     }
-    $path = project_path($dataDir, $id);
-    if (!is_file($path)) {
+    $path = find_project_file($dataDir, $id);
+    if ($path === null) {
         respond_json(["status" => "error", "message" => "Não encontrado"], 404);
     }
-    $raw = file_get_contents($path);
-    $data = json_decode($raw !== false ? $raw : "null", true);
-    if (!is_array($data)) {
+    $data = read_project_file($path);
+    if ($data === null) {
         respond_json(["status" => "error", "message" => "Ficheiro inválido"], 500);
     }
     $input = json_decode(file_get_contents("php://input") ?: "{}", true);
     if (!is_array($input)) {
         respond_json(["status" => "error", "message" => "JSON inválido"], 400);
     }
-    $name = isset($input["name"]) ? trim((string)$input["name"]) : "";
-    if ($name === "") {
+    $name = sanitize_filename(isset($input["name"]) ? (string)$input["name"] : null);
+    if ($name === null) {
         respond_json(["status" => "error", "message" => "name obrigatório"], 400);
     }
-    $data["name"] = $name;
-    if (isset($data["centerDisplay"]) && is_array($data["centerDisplay"])) {
-        $data["centerDisplay"]["projectName"] = $name;
-    }
+    $data = apply_project_name($data, $name);
     $data["updatedAt"] = gmdate("c");
-    $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-    if ($encoded === false || file_put_contents($path, $encoded) === false) {
+    $newPath = name_based_path($dataDir, $name);
+    if (!write_project_file($newPath, $data)) {
         respond_json(["status" => "error", "message" => "Falha ao gravar"], 500);
     }
+    if ($path !== $newPath) {
+        delete_file_if_exists($path);
+    }
+    remove_stale_project_files($dataDir, $id, $newPath);
     respond_json(["status" => "ok", "project" => $data]);
 }
 
-// --- DELETE ?action=delete&id=... ---
+// --- DELETE ?action=delete&id={pimo-id|nome} ---
 if ($method === "DELETE" && $action === "delete") {
-    $id = sanitize_id($_GET["id"] ?? null);
-    if ($id === null) {
+    $lookup = trim((string)($_GET["id"] ?? ""));
+    if ($lookup === "") {
         respond_json(["status" => "error", "message" => "id inválido"], 400);
     }
-    $path = project_path($dataDir, $id);
-    if (is_file($path)) {
-        @unlink($path);
+    $path = find_project_file($dataDir, $lookup);
+    if ($path !== null) {
+        $data = read_project_file($path);
+        $internalId = is_array($data) && isset($data["id"]) ? trim((string)$data["id"]) : "";
+        delete_file_if_exists($path);
+        if ($internalId !== "") {
+            remove_stale_project_files($dataDir, $internalId, "");
+        }
     }
     respond_json(["status" => "ok"]);
 }
@@ -158,45 +310,70 @@ if ($method === "POST") {
         respond_json(["status" => "error", "message" => "JSON inválido"], 400);
     }
 
+    $name = sanitize_filename(isset($input["name"]) ? (string)$input["name"] : null);
+    if ($name === null) {
+        respond_json(["status" => "error", "message" => "name obrigatório"], 400);
+    }
+
     $now = gmdate("c");
     $incomingId = isset($input["id"]) ? trim((string)$input["id"]) : "";
     $sid = sanitize_id($incomingId);
 
-    if ($sid !== null) {
-        // UPSERT: usa o ID fornecido pelo cliente.
-        // Atualiza o ficheiro se existir; cria-o se não existir.
-        // Evita 404 quando o servidor perdeu os dados (ex.: redeployment, limpeza de disco).
-        $id   = $sid;
-        $path = project_path($dataDir, $id);
-        if (is_file($path)) {
-            $oldRaw    = file_get_contents($path);
-            $old       = json_decode($oldRaw !== false ? $oldRaw : "null", true);
-            $createdAt = is_array($old) && isset($old["createdAt"]) && is_string($old["createdAt"])
-                ? $old["createdAt"]
-                : $now;
-        } else {
-            // Ficheiro inexistente: criar com o ID fornecido (UPSERT — não retornar 404).
-            $createdAt = isset($input["createdAt"]) && is_string($input["createdAt"])
-                ? $input["createdAt"]
-                : $now;
+    $existingPath = null;
+    $internalId = null;
+
+    if ($sid !== null && is_internal_project_id($sid)) {
+        $existingPath = find_project_file($dataDir, $sid);
+        $internalId = $sid;
+    } elseif ($sid !== null) {
+        $existingPath = find_project_file($dataDir, $sid);
+        if ($existingPath !== null) {
+            $old = read_project_file($existingPath);
+            $internalId = is_array($old) && isset($old["id"]) ? trim((string)$old["id"]) : $sid;
         }
-        $input["id"]        = $id;
-        $input["createdAt"] = $createdAt;
-        $input["updatedAt"] = $now;
-    } else {
-        $id = generate_id();
-        $path = project_path($dataDir, $id);
-        $input["id"] = $id;
-        if (!isset($input["createdAt"]) || !is_string($input["createdAt"])) {
-            $input["createdAt"] = $now;
-        }
-        $input["updatedAt"] = $now;
     }
 
-    $encoded = json_encode($input, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-    if ($encoded === false || file_put_contents($path, $encoded) === false) {
+    if ($internalId === null) {
+        $existingPath = find_project_file($dataDir, $name);
+        if ($existingPath !== null) {
+            $old = read_project_file($existingPath);
+            if (is_array($old) && isset($old["id"])) {
+                $candidate = trim((string)$old["id"]);
+                $internalId = $candidate !== "" ? $candidate : generate_id();
+            } else {
+                $internalId = generate_id();
+            }
+        } else {
+            $internalId = generate_id();
+        }
+    }
+
+    if ($existingPath === null) {
+        $existingPath = find_project_file($dataDir, $internalId);
+    }
+
+    if ($existingPath !== null && is_file($existingPath)) {
+        $old = read_project_file($existingPath);
+        $createdAt = is_array($old) && isset($old["createdAt"]) && is_string($old["createdAt"])
+            ? $old["createdAt"]
+            : $now;
+    } else {
+        $createdAt = isset($input["createdAt"]) && is_string($input["createdAt"])
+            ? $input["createdAt"]
+            : $now;
+    }
+
+    $input = apply_project_name($input, $name);
+    $input["id"] = $internalId;
+    $input["createdAt"] = $createdAt;
+    $input["updatedAt"] = $now;
+
+    $targetPath = name_based_path($dataDir, $name);
+    if (!write_project_file($targetPath, $input)) {
         respond_json(["status" => "error", "message" => "Falha ao gravar (permissões?)"], 500);
     }
+
+    remove_stale_project_files($dataDir, $internalId, $targetPath);
 
     respond_json(["status" => "ok", "project" => $input]);
 }
@@ -207,23 +384,15 @@ if ($method === "GET" && $action === "") {
     $ownerId = isset($_GET["ownerId"]) ? (string)$_GET["ownerId"] : "";
     $now = gmdate("c");
 
-    $files = glob($dataDir . "/project-*.json") ?: [];
+    $entries = list_project_entries($dataDir);
     $projects = [];
 
-    foreach ($files as $file) {
-        $raw = file_get_contents($file);
-        $data = json_decode($raw !== false ? $raw : "null", true);
-        if (!is_array($data)) {
-            continue;
-        }
+    foreach ($entries as $entry) {
+        $data = $entry["data"];
         $pid = isset($data["id"]) ? trim((string)$data["id"]) : "";
         if ($pid === "") {
             continue;
         }
-            // scope=all  → sem filtro: devolve TODOS os projectos do sistema,
-        //               incluindo ownerId com prefixo "guest-" (visitantes),
-        //               "anon-" (sistema legacy) e utilizadores registados.
-        // scope=mine → filtra pelo ownerId exacto enviado pelo cliente.
         if ($scope === "mine" && $ownerId !== "") {
             if (($data["ownerId"] ?? "") !== $ownerId) {
                 continue;

@@ -13,18 +13,19 @@ function offlineRecordMatchesPageSlug(record: OfflineProjectRecord, pageSlug: st
 
 /** Carrega projecto pelo slug da URL (nome). Compatível com URLs antigas por id interno. */
 export async function loadProjectRecordByPageSlug(pageSlug: string): Promise<SavedProjectRecord | null> {
+  const projectName = decodeProjetosPageSlug(pageSlug);
   const projects = readOfflineProjects();
   const byName = projects.find(
     (project) => !project.deleted && offlineRecordMatchesPageSlug(project, pageSlug)
   );
   if (byName) {
-    return loadProjectRecord(byName.remoteId ?? byName.id);
+    return loadProjectRecord(projectName);
   }
   const byLegacyId = projects.find(
     (project) => !project.deleted && projectMatchesId(project, pageSlug)
   );
   if (byLegacyId) {
-    return loadProjectRecord(byLegacyId.remoteId ?? byLegacyId.id);
+    return loadProjectRecord(projectName || (byLegacyId.remoteId ?? byLegacyId.id));
   }
-  return loadProjectRecord(pageSlug);
+  return loadProjectRecord(projectName);
 }
