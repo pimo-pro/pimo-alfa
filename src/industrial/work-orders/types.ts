@@ -68,7 +68,7 @@ export interface GeneratedWorkOrderDraft {
 }
 
 export const STATION_LABELS: Record<IndustrialStation, string> = {
-  warehouse: 'Almoxarifado',
+  warehouse: 'Supervisor Geral',
   nesting: 'Nesting',
   drill: 'Drill',
   orlar: 'Orlar',

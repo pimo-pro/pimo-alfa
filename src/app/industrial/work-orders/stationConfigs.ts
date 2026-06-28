@@ -4,7 +4,7 @@ import { STATION_LABELS } from '@/industrial/work-orders/types';
 
 const BASE: Record<IndustrialStation, Omit<StationPageConfig, 'station'>> = {
   warehouse: {
-    panelTitle: 'Almoxarifado',
+    panelTitle: 'Supervisor Geral',
     confirmLabel: 'Confirmar entrega',
   },
   nesting: {
