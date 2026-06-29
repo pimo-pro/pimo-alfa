@@ -23,24 +23,29 @@ import {
   resolveObservacoesForCutListItem,
 } from "../observacoes/ObservacoesService";
 import {
-  PDF_INDUSTRIAL_ETQ_COL_WIDTH,
-  PDF_INDUSTRIAL_ESP_COL_WIDTH,
   PDF_INDUSTRIAL_HEADER_COLOR,
   PDF_INDUSTRIAL_MARGIN,
   PDF_INDUSTRIAL_PAGE_W,
-  PDF_INDUSTRIAL_QTD_COL_WIDTH,
   PDF_INDUSTRIAL_ROW_ALT,
-  PDF_INDUSTRIAL_ROW_MIN_H,
+  PDF_INDUSTRIAL_TABLE_W,
+  applyEtqCellStyle,
+  buildColumnStylesFromWidths,
   drawIndustrialOperationalDatesBlock,
   drawIndustrialPdfFooter,
   drawIndustrialPdfTitleHeader,
   drawIndustrialProjectInfoBlock,
   drawIndustrialSectionTitle,
+  formatEtqForPdf,
   formatIndustrialDesignDate,
   getIndustrialAutoTableMargins,
   getIndustrialAutoTableStyles,
   getIndustrialHeadStyles,
 } from "./pdfIndustrialListShell";
+import {
+  PDF_TECNICO_COL_COUNT,
+  PDF_TECNICO_TABLE_HEAD,
+  buildTecnicoColumnWidthsMm,
+} from "./pdfExcelModelLayout";
 
 import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
 import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
@@ -67,6 +72,7 @@ interface LinhaPeca {
   refPeca: string;
   boxIndex: number;
   material: string;
+  matRef: string;
   qtd: number;
   comp: number;
   larg: number;
@@ -81,6 +87,7 @@ interface LinhaPeca {
   f3: string;
   f4: string;
   f5: string;
+  go: string;
   observacoes: string;
   nQr: string;
   boxNome: string;
@@ -190,6 +197,7 @@ function construirLinhas(
     comp: number;
     esp: number;
     material: string;
+    matRef: string;
     qtd: number;
     nQr: string;
     observacoes: string[];
@@ -201,6 +209,8 @@ function construirLinhas(
     const boxNome = box?.nome ?? item.boxId ?? "";
     const refPeca = resolveIndustrialPieceRef(item, boxNome, projectName);
     const materialNome = item.material ?? box?.material ?? "mdf_branco";
+    const matInfo = materials.find((m) => m.nome === materialNome || m.id === materialNome) ?? getMaterial(materialNome);
+    const matRef = matInfo.id ?? materialNome;
     const itemObs = resolveObservacoesForCutListItem(item, {
       pieceObservacoes: pdfOpts?.pieceObservacoes,
     });
@@ -214,6 +224,7 @@ function construirLinhas(
       comp: item.dimensoes.altura,
       esp: item.espessura,
       material: materialNome,
+      matRef,
       qtd: item.quantidade,
       nQr: resolveIndustrialListNqr(item, qrCtx, piecesPerSheet, index0),
       observacoes: itemObs,
@@ -250,6 +261,7 @@ function construirLinhas(
       agrupado.set(key, {
         refPeca: p.refPeca,
         material: materialStr,
+        matRef: p.matRef,
         qtd: p.qtd,
         comp: p.comp,
         larg: p.larg,
@@ -264,6 +276,7 @@ function construirLinhas(
         f3: ladosFuro.has("fundo") ? "X" : "",
         f4: ladosFuro.has("esquerda") ? "X" : "",
         f5: ladosFuro.has("direita") ? "X" : "",
+        go: "",
         observacoes: formatObservacoesForPdf(p.observacoes),
         observacoesLista: normalizeObservacoesList(p.observacoes),
         nQr: p.nQr,
@@ -310,7 +323,8 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
   return acc;
 }
 
-const COL_COUNT = 18;
+const COL_COUNT = PDF_TECNICO_COL_COUNT;
+const ETQ_COL_INDEX = COL_COUNT - 1;
 
 /**
  * Gera PDF técnico industrial em tabela (landscape, paginada).
@@ -331,7 +345,7 @@ export function gerarPdfTecnicoCompleto(
 
   let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje });
 
-  const blockW = PDF_INDUSTRIAL_PAGE_W - PDF_INDUSTRIAL_MARGIN * 2;
+  const blockW = PDF_INDUSTRIAL_TABLE_W;
   const blockX = PDF_INDUSTRIAL_MARGIN;
   const c1x = blockX + 4;
   const c2x = blockX + blockW / 2 + 4;
@@ -344,7 +358,7 @@ export function gerarPdfTecnicoCompleto(
   });
   y = nextY;
 
-  y = drawIndustrialOperationalDatesBlock(doc, blockX, y, blockW, c1x, c2x) + 2;
+  y = drawIndustrialOperationalDatesBlock(doc, blockX, y, blockW, c1x, c2x);
 
   const linhas = construirLinhas(boxes, rules, componentTypes, materials, projectName, {
     materialId: opcoes?.materialId,
@@ -360,26 +374,26 @@ export function gerarPdfTecnicoCompleto(
 
   y = drawIndustrialSectionTitle(doc, y, "Lista de Corte - Painéis");
 
-  const head = [
-    "REF PECA",
-    "MATERIAL",
-    "QTD",
-    "COMP",
-    "LARG",
-    "ESP",
-    "CNC",
-    "Drill",
-    "O2",
-    "O3",
-    "O4",
-    "O5",
-    "F2",
-    "F3",
-    "F4",
-    "F5",
-    "OBSERVAÇÕES",
-    "No ETQ",
-  ];
+  const head = [...PDF_TECNICO_TABLE_HEAD];
+  const colWidths = buildTecnicoColumnWidthsMm(doc);
+  const columnStyles = buildColumnStylesFromWidths(colWidths, {
+    3: { halign: "center" },
+    4: { halign: "right" },
+    5: { halign: "right" },
+    6: { halign: "center" },
+    7: { halign: "center" },
+    8: { halign: "center" },
+    9: { halign: "center" },
+    10: { halign: "center" },
+    11: { halign: "center" },
+    12: { halign: "center" },
+    13: { halign: "center" },
+    14: { halign: "center" },
+    15: { halign: "center" },
+    16: { halign: "center" },
+    17: { halign: "center" },
+    [ETQ_COL_INDEX]: { halign: "center" },
+  });
 
   const bodyRows: string[][] = [];
   const separatorRowIndices = new Set<number>();
@@ -398,6 +412,7 @@ export function gerarPdfTecnicoCompleto(
       bodyRows.push([
         r.refPeca,
         r.material,
+        r.matRef,
         String(r.qtd),
         String(r.comp),
         String(r.larg),
@@ -412,8 +427,9 @@ export function gerarPdfTecnicoCompleto(
         r.f3,
         r.f4,
         r.f5,
+        r.go,
         r.observacoes,
-        String(r.nQr),
+        formatEtqForPdf(String(r.nQr)),
       ]);
     }
   }
@@ -426,22 +442,19 @@ export function gerarPdfTecnicoCompleto(
     theme: "grid",
     showHead: "everyPage",
     rowPageBreak: "avoid",
+    tableWidth: PDF_INDUSTRIAL_TABLE_W,
     didParseCell: (data) => {
       if (data.section === "head") {
         data.cell.styles.fillColor = PDF_INDUSTRIAL_HEADER_COLOR;
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 7;
+        data.cell.styles.fontSize = 6.5;
       }
       if (data.section === "body") {
-        data.cell.styles.minCellHeight = PDF_INDUSTRIAL_ROW_MIN_H;
         data.cell.styles.overflow = "hidden";
-        if (data.column.index === 17) {
-          data.cell.styles.cellWidth = PDF_INDUSTRIAL_ETQ_COL_WIDTH;
-        }
+        applyEtqCellStyle(data, ETQ_COL_INDEX);
         if (isSeparatorRow(data.row.index)) {
           data.cell.styles.fillColor = [235, 238, 242];
-          data.cell.styles.minCellHeight = PDF_INDUSTRIAL_ROW_MIN_H;
         } else if (data.row.index % 2 === 0) {
           data.cell.styles.fillColor = [255, 255, 255];
         } else {
@@ -453,26 +466,7 @@ export function gerarPdfTecnicoCompleto(
     styles: getIndustrialAutoTableStyles(),
     headStyles: getIndustrialHeadStyles(),
     margin: getIndustrialAutoTableMargins(),
-    columnStyles: {
-      0: { cellWidth: 32, overflow: "hidden" },
-      1: { cellWidth: 40, overflow: "hidden" },
-      2: { cellWidth: PDF_INDUSTRIAL_QTD_COL_WIDTH, halign: "center" },
-      3: { cellWidth: 13, halign: "right" },
-      4: { cellWidth: 13, halign: "right" },
-      5: { cellWidth: PDF_INDUSTRIAL_ESP_COL_WIDTH, halign: "center" },
-      6: { cellWidth: 10, halign: "center" },
-      7: { cellWidth: 7, halign: "center" },
-      8: { cellWidth: 6, halign: "center" },
-      9: { cellWidth: 6, halign: "center" },
-      10: { cellWidth: 6, halign: "center" },
-      11: { cellWidth: 6, halign: "center" },
-      12: { cellWidth: 6, halign: "center" },
-      13: { cellWidth: 6, halign: "center" },
-      14: { cellWidth: 6, halign: "center" },
-      15: { cellWidth: 6, halign: "center" },
-      16: { cellWidth: 34, overflow: "hidden" },
-      17: { cellWidth: PDF_INDUSTRIAL_ETQ_COL_WIDTH, overflow: "hidden", halign: "center" },
-    },
+    columnStyles,
   });
 
   drawIndustrialPdfFooter(doc, dataHoje, linhas.length, totalPecasReal);

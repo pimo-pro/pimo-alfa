@@ -21,23 +21,25 @@ import {
 } from "../observacoes/ObservacoesService";
 import { getCurrentProjectUser } from "../projects/currentUser";
 import {
-  PDF_INDUSTRIAL_ETQ_COL_WIDTH,
   PDF_INDUSTRIAL_HEADER_COLOR,
   PDF_INDUSTRIAL_MARGIN,
   PDF_INDUSTRIAL_PAGE_W,
-  PDF_INDUSTRIAL_QTD_COL_WIDTH,
   PDF_INDUSTRIAL_ROW_ALT,
-  PDF_INDUSTRIAL_ROW_MIN_H,
+  PDF_INDUSTRIAL_TABLE_W,
+  applyEtqCellStyle,
+  buildColumnStylesFromWidths,
   drawIndustrialOperationalDatesBlock,
   drawIndustrialPdfFooter,
   drawIndustrialPdfTitleHeader,
   drawIndustrialProjectInfoBlock,
   drawIndustrialSectionTitle,
+  formatEtqForPdf,
   formatIndustrialDesignDate,
   getIndustrialAutoTableMargins,
   getIndustrialAutoTableStyles,
   getIndustrialHeadStyles,
 } from "./pdfIndustrialListShell";
+import { buildCutlistColumnWidthsMm } from "./pdfExcelModelLayout";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -149,13 +151,24 @@ export function renderCutlistTable(
       "",
       "",
       obsText,
-      nQr,
+      formatEtqForPdf(nQr),
     ];
   });
 
   if (body.length === 0) {
     body.push(["Nenhuma peça", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
   }
+
+  const colWidths = buildCutlistColumnWidthsMm(doc);
+  const etqColIndex = 9;
+  const columnStyles = buildColumnStylesFromWidths(colWidths, {
+    2: { halign: "center" },
+    3: { halign: "right" },
+    5: { halign: "center" },
+    6: { halign: "center" },
+    7: { halign: "center" },
+    [etqColIndex]: { halign: "center" },
+  });
 
   autoTable(doc, {
     head: [head],
@@ -164,19 +177,17 @@ export function renderCutlistTable(
     theme: "grid",
     showHead: "everyPage",
     rowPageBreak: "avoid",
+    tableWidth: PDF_INDUSTRIAL_TABLE_W,
     didParseCell: (data) => {
       if (data.section === "head") {
         data.cell.styles.fillColor = PDF_INDUSTRIAL_HEADER_COLOR;
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 7;
+        data.cell.styles.fontSize = 6.5;
       }
       if (data.section === "body") {
-        data.cell.styles.minCellHeight = PDF_INDUSTRIAL_ROW_MIN_H;
         data.cell.styles.overflow = "hidden";
-        if (data.column.index === 9) {
-          data.cell.styles.cellWidth = PDF_INDUSTRIAL_ETQ_COL_WIDTH;
-        }
+        applyEtqCellStyle(data, etqColIndex);
         if (data.row.index % 2 === 0) {
           data.cell.styles.fillColor = [255, 255, 255];
         } else {
@@ -187,18 +198,7 @@ export function renderCutlistTable(
     styles: getIndustrialAutoTableStyles(),
     headStyles: getIndustrialHeadStyles(),
     margin: getIndustrialAutoTableMargins(),
-    columnStyles: {
-      0: { cellWidth: 22, overflow: "hidden" },
-      1: { cellWidth: 32, overflow: "hidden" },
-      2: { cellWidth: PDF_INDUSTRIAL_QTD_COL_WIDTH, halign: "center" },
-      3: { cellWidth: 24, halign: "right" },
-      4: { cellWidth: 16, overflow: "hidden" },
-      5: { cellWidth: 11, halign: "center" },
-      6: { cellWidth: 11, halign: "center" },
-      7: { cellWidth: 13, halign: "center" },
-      8: { cellWidth: 36, overflow: "hidden" },
-      9: { cellWidth: PDF_INDUSTRIAL_ETQ_COL_WIDTH, overflow: "hidden", halign: "center" },
-    },
+    columnStyles,
   });
 
   const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? startY;
@@ -220,7 +220,7 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
 
   let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje });
 
-  const blockW = PDF_INDUSTRIAL_PAGE_W - PDF_INDUSTRIAL_MARGIN * 2;
+  const blockW = PDF_INDUSTRIAL_TABLE_W;
   const blockX = PDF_INDUSTRIAL_MARGIN;
   const c1x = blockX + 4;
   const c2x = blockX + blockW / 2 + 4;
@@ -237,7 +237,7 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
   doc.setFontSize(7.5);
   doc.text(String(totalPecas), totalPiecesLabelPos.x, totalPiecesLabelPos.y);
 
-  y = drawIndustrialOperationalDatesBlock(doc, blockX, y, blockW, c1x, c2x) + 2;
+  y = drawIndustrialOperationalDatesBlock(doc, blockX, y, blockW, c1x, c2x);
   y = drawIndustrialSectionTitle(doc, y, "Lista de Corte — Detalhada");
 
   renderCutlistTable(doc, parts, project, y);

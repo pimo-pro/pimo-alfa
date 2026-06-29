@@ -61,7 +61,8 @@ describe("PDF layout industrial — geração de amostra", () => {
     expect(text).toContain("CORTE manual");
     expect(text).toContain("OBSERVA");
     expect(text).toContain("No ETQ");
-    expect(text).toContain("REF PECA");
+    expect(text).toContain("REF PEÇA");
+    expect(text).toContain("Mat. Ref.");
     expect(text).toContain("CNC");
     expect(text).not.toMatch(/CORTE DISCO|CORTE NESTING|FOLHEAGEM|NESTING/);
 
