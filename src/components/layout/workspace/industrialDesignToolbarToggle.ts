@@ -24,8 +24,10 @@ export function nextIndustrialDesignToolbarEnabled(currentActive: boolean): bool
 /** Aplica toggle do modo Design Industrial (viewer + painel lateral). */
 export function applyIndustrialDesignToolbarToggle(
   deps: IndustrialDesignToolbarDeps,
-  enabled: boolean
+  enabled: boolean,
+  options?: { viewerReady?: boolean }
 ): void {
+  if (enabled && options?.viewerReady === false) return;
   deps.setIndustrialDesignWorkspaceEnabled?.(enabled);
   deps.setIndustrialDesignPanelOpen(enabled);
   if (enabled) {
@@ -43,14 +45,14 @@ export type IndustrialDesignToolbarViewerApi = Pick<
 >;
 
 export function buildIndustrialDesignToolbarDeps(
-  viewerApi: IndustrialDesignToolbarViewerApi | undefined,
+  viewerApi: IndustrialDesignToolbarViewerApi,
   setIndustrialDesignPanelOpen: (open: boolean) => void
 ): IndustrialDesignToolbarDeps {
   return {
-    getIndustrialDesignWorkspaceEnabled: viewerApi?.getIndustrialDesignWorkspaceEnabled?.bind(viewerApi),
-    setIndustrialDesignWorkspaceEnabled: viewerApi?.setIndustrialDesignWorkspaceEnabled?.bind(viewerApi),
+    getIndustrialDesignWorkspaceEnabled: viewerApi.getIndustrialDesignWorkspaceEnabled?.bind(viewerApi),
+    setIndustrialDesignWorkspaceEnabled: viewerApi.setIndustrialDesignWorkspaceEnabled?.bind(viewerApi),
     setIndustrialDesignPanelOpen,
-    setPanelRenderingEnabled: viewerApi?.setPanelRenderingEnabled?.bind(viewerApi),
-    setPanelEdgesVisible: viewerApi?.setPanelEdgesVisible?.bind(viewerApi),
+    setPanelRenderingEnabled: viewerApi.setPanelRenderingEnabled?.bind(viewerApi),
+    setPanelEdgesVisible: viewerApi.setPanelEdgesVisible?.bind(viewerApi),
   };
 }

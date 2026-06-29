@@ -11,6 +11,7 @@ import Tools3DToolbar from "../viewer-toolbar/Tools3DToolbar";
 import { useToolbarModal } from "../../../context/ToolbarModalContext";
 import { defaultState } from "../../../context/projectState";
 import { loadViewerCore } from "../../../core/viewer/viewerEngineLoader";
+import { isViewerApiReady } from "../../../core/viewer/viewerReadiness";
 import { mToMm } from "../../../utils/units";
 import { useWallStore, wallStore } from "../../../stores/wallStore";
 import { applyRoomMeshFromWallStore, applyRoomOpeningsFromWallStore, getRoomMeshFingerprintFromWallStore } from "../../../utils/roomMeshFromWallStore";
@@ -73,6 +74,7 @@ export default function Workspace({
     [viewerBackground, viewerOptions]
   );
   const viewerApi = usePimoViewer();
+  const viewerReady = isViewerApiReady(viewerApi);
   const { registerViewerApi } = usePimoViewerContext();
   const isRoomOpen = useWallStore((state) => state.isOpen);
   const walls = useWallStore((state) => state.walls);
@@ -155,8 +157,8 @@ export default function Workspace({
   const [showKeyboardShortcutsHelp, setShowKeyboardShortcutsHelp] = useState(false);
   const [, setViewerMounted] = useState(false);
 
-  // Montar ViewerCore no container via import dinâmico (evita 500 ao servir ViewerCore.ts estático).
-  // viewerMounted força re-render para que usePimoViewer leia window.viewerCore e viewerReady fique true só após o core estar pronto.
+  // Montar ViewerCore via import dinâmico. window.viewerCore só é exposto dentro de setOnViewerReady.
+  // viewerMounted força re-render quando viewerReady passa a true (usePimoViewer / contexto).
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -396,10 +398,10 @@ export default function Workspace({
   useEffect(() => {
     const core = window.viewerCore as { setMultiSelectionOutlines?: (ids: string[]) => void } | undefined;
     core?.setMultiSelectionOutlines?.(selectedObjects);
-  }, [selectedObjects, viewerApi.viewerReady]);
+  }, [selectedObjects, viewerReady]);
 
   useEffect(() => {
-    if (!viewerApi.viewerReady) return;
+    if (!viewerReady) return;
     const { activeGroupId, ephemeralMemberIds } = groupStore.getState();
     const members = resolveActiveGroupMembers(project.objectGroups, activeGroupId, ephemeralMemberIds);
     const fallback = selectedObjects.length >= 2 ? selectedObjects : members;
@@ -413,10 +415,10 @@ export default function Workspace({
     } else {
       core?.clearGroupTransformMembers?.();
     }
-  }, [selectedObjects, project.objectGroups, viewerApi.viewerReady]);
+  }, [selectedObjects, project.objectGroups, viewerReady]);
 
   useEffect(() => {
-    if (!viewerApi.viewerReady) return;
+    if (!viewerReady) return;
     const core = window.viewerCore as {
       syncMeasurementAnchors?: (
         anchors: typeof project.measurements.anchors,
@@ -424,10 +426,10 @@ export default function Workspace({
       ) => void;
     } | undefined;
     core?.syncMeasurementAnchors?.(project.measurements.anchors ?? [], null);
-  }, [project.measurements.anchors, viewerApi.viewerReady, project.selectedWorkspaceBoxId]);
+  }, [project.measurements.anchors, viewerReady, project.selectedWorkspaceBoxId]);
 
   useEffect(() => {
-    if (!viewerApi.viewerReady) return;
+    if (!viewerReady) return;
     const core = window.viewerCore as {
       setOnTransformDragStart?: (cb: (() => void) | null) => void;
       setOnTransformDragEnd?: (cb: (() => void) | null) => void;
@@ -448,7 +450,7 @@ export default function Workspace({
       core?.setOnTransformDragStart?.(null);
       core?.setOnTransformDragEnd?.(null);
     };
-  }, [viewerApi.viewerReady]);
+  }, [viewerReady]);
 
   useEffect(() => {
     viewerApi.setOnDoorLayerDoubleClick((boxId, doorLayerId) => {
@@ -754,7 +756,7 @@ const hasShownViewerReadyToastRef = useRef(false);
   }, [project]);
 
   useEffect(() => {
-    if (!viewerApi.viewerReady) return;
+    if (!viewerReady) return;
     const core = window.viewerCore;
     core?.bindInternalMeasurementBridge?.(
       () => projectRef.current.measurements?.internal ?? [],
@@ -988,10 +990,10 @@ const hasShownViewerReadyToastRef = useRef(false);
         actionsRef.current.updateSeparador(itemId, { positionMm });
       }
     });
-  }, [viewerApi.viewerReady, setSelectedObject, setSelectedTool, clearUiSelection]);
+  }, [viewerReady, setSelectedObject, setSelectedTool, clearUiSelection]);
 
   useEffect(() => {
-    if (!viewerApi.viewerReady) return;
+    if (!viewerReady) return;
     window.viewerCore?.syncOrlaVisuals?.();
     window.viewerCore?.syncRemateVisuals?.();
     window.viewerCore?.syncHematiVisuals?.();
@@ -1011,13 +1013,13 @@ const hasShownViewerReadyToastRef = useRef(false);
     project.workspaceBoxes,
     project.boxes,
     settings.orlaRules,
-    viewerApi.viewerReady,
+    viewerReady,
   ]);
 
   useEffect(() => {
-    if (!viewerApi.viewerReady) return;
+    if (!viewerReady) return;
     viewerApi.internalRuler?.syncFromProject?.(project.measurements?.internal ?? []);
-  }, [project.measurements?.internal, viewerApi.viewerReady, viewerApi.internalRuler]);
+  }, [project.measurements?.internal, viewerReady, viewerApi.internalRuler]);
 
   useEffect(() => {
     const clearKeyboardMoveTimers = () => {
@@ -1333,7 +1335,7 @@ const hasShownViewerReadyToastRef = useRef(false);
   }, [workspacePositionKey, project.estaCarregando]);
 
   useEffect(() => {
-    if (viewerApi.viewerReady) {
+    if (viewerReady) {
       if (!hasShownViewerReadyToastRef.current) {
         hasShownViewerReadyToastRef.current = true;
         showToast("Viewer pronto.", "info", 1400);
@@ -1341,7 +1343,7 @@ const hasShownViewerReadyToastRef = useRef(false);
     } else {
       hasShownViewerReadyToastRef.current = false;
     }
-  }, [viewerApi.viewerReady, showToast]);
+  }, [viewerReady, showToast]);
 
 return (
     <>
@@ -1416,7 +1418,7 @@ return (
             />
             <SelectionMarquee
               containerRef={containerRef}
-              enabled={(project.activeViewerTool ?? "select") === "select" && viewerApi.viewerReady}
+              enabled={(project.activeViewerTool ?? "select") === "select" && viewerReady}
               canStartAtPointer={(event) => {
                 const core = window.viewerCore as
                   | { isPointerOnSelectableObject?: (e: { clientX: number; clientY: number }) => boolean }
@@ -1459,7 +1461,7 @@ return (
               <IndustrialDesignPanel />
             </div>
           </div>
-          {!viewerApi.viewerReady && (
+          {!viewerReady && (
             <div className="workspace-loading-overlay" aria-live="polite">
               <span className="workspace-loading-spinner" aria-hidden="true" />
               <span>A carregar viewer 3D...</span>

@@ -43,7 +43,7 @@ export function IndustrialDesignToolbarButton() {
     if (!viewerReady) return;
     const next = nextIndustrialDesignToolbarEnabled(isActive);
     const deps = buildIndustrialDesignToolbarDeps(viewerApi, setIndustrialDesignPanelOpen);
-    applyIndustrialDesignToolbarToggle(deps, next);
+    applyIndustrialDesignToolbarToggle(deps, next, { viewerReady });
   }, [isActive, setIndustrialDesignPanelOpen, viewerApi, viewerReady]);
 
   return (

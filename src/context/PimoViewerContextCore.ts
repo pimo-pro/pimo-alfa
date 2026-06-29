@@ -16,7 +16,7 @@ import type { MouseMenuTarget } from "../ui/context-menu/ContextMenuEngine";
 
 export type PimoViewerApi = {
   viewerRef: React.MutableRefObject<Viewer | null>;
-  /** True quando window.viewerCore está montado e pronto. */
+  /** True após ViewerCore.setOnViewerReady / notifyViewerReady (nunca true no stub inicial). */
   viewerReady?: boolean;
   addBox: (_id: string, _options?: BoxOptions) => boolean;
   removeBox: (_id: string) => boolean;
@@ -286,8 +286,15 @@ export type PimoViewerApi = {
 };
 
 export type PimoViewerContextValue = {
+  /** Sempre definida — stub NOOP antes do Workspace registar a API real. */
   viewerApi: PimoViewerApi;
+  /** null desregista e repõe o stub; nunca expõe null ao contexto. */
   registerViewerApi: (_api: PimoViewerApi | null) => void;
+};
+
+/** Valor devolvido por usePimoViewerContext — viewerApi nunca null. */
+export type PimoViewerContextHookValue = PimoViewerContextValue & {
+  viewerReady: boolean;
 };
 
 export const PimoViewerContext = createContext<PimoViewerContextValue | null>(null);

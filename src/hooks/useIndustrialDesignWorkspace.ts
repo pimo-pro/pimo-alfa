@@ -65,7 +65,7 @@ export function useIndustrialDesignWorkspace({
   const syncDesignBox = useCallback(
     (box: IndustrialDesignBox | null, targetBoxId?: string | null) => {
       setDesignBox(box);
-      if (!viewerApi?.viewerReady) return;
+      if (!isViewerApiReady(viewerApi)) return;
       viewerApi.setIndustrialDesignBox?.(box, targetBoxId ?? box?.id ?? null);
     },
     [viewerApi]
@@ -73,7 +73,7 @@ export function useIndustrialDesignWorkspace({
 
   const setSelectedHoleTypeId = useCallback((id: HoleTypeId | null) => {
     setSelectedHoleTypeIdState(id);
-    if (!viewerApi?.viewerReady) return;
+    if (!isViewerApiReady(viewerApi)) return;
     if (!insertOnClick) {
       viewerApi.setIndustrialDesignActiveHoleType?.(null);
       return;
@@ -84,7 +84,7 @@ export function useIndustrialDesignWorkspace({
   const setInsertOnClick = useCallback(
     (active: boolean) => {
       setInsertOnClickState(active);
-      if (!viewerApi?.viewerReady) return;
+      if (!isViewerApiReady(viewerApi)) return;
       viewerApi.setIndustrialDesignWorkspaceEnabled?.(active);
       viewerApi.setIndustrialDesignActiveHoleType?.(active ? selectedHoleTypeId : null);
       if (active) {
@@ -96,7 +96,7 @@ export function useIndustrialDesignWorkspace({
   );
 
   useEffect(() => {
-    if (!insertOnClick || !viewerApi?.viewerReady) return;
+    if (!insertOnClick || !isViewerApiReady(viewerApi)) return;
     viewerApi.setIndustrialDesignActiveHoleType?.(selectedHoleTypeId);
   }, [insertOnClick, selectedHoleTypeId, viewerApi]);
 
@@ -161,7 +161,7 @@ export function useIndustrialDesignWorkspace({
 
   const removeHole = useCallback(
     (panelId: string, holeId: string) => {
-      if (!designBox || !viewerApi?.viewerReady) return;
+      if (!designBox || !isViewerApiReady(viewerApi)) return;
       const updated = removeDesignDrillHole(designBox, panelId, holeId);
       syncDesignBox(updated, workspaceBox?.id);
       setValidationIssues(viewerApi.refreshIndustrialDesignValidation?.() ?? []);
@@ -170,7 +170,7 @@ export function useIndustrialDesignWorkspace({
   );
 
   const autoAdjustSelectedPanel = useCallback(() => {
-    if (!designBox || !selectedPanelId || !viewerApi?.viewerReady) return;
+    if (!designBox || !selectedPanelId || !isViewerApiReady(viewerApi)) return;
     const updated = applyAutoAdjustPanelToInnerSpace(designBox, selectedPanelId);
     syncDesignBox(updated, workspaceBox?.id);
     setValidationIssues(viewerApi.refreshIndustrialDesignValidation?.() ?? []);

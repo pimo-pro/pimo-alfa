@@ -1,3 +1,8 @@
+/**
+ * API stub segura do Viewer — contrato de inicialização.
+ * PimoViewerProvider expõe sempre este objeto (ou API real registada) — nunca null.
+ * viewerReady permanece false até ViewerCore.notifyViewerReady().
+ */
 import type { PimoViewerApi } from "./PimoViewerContextCore";
 
 /** Stubs NOOP — API segura antes do ViewerCore estar montado. */

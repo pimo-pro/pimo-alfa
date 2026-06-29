@@ -41,6 +41,23 @@ describe("industrialDesignToolbarToggle", () => {
     expect(setPanelEdgesVisible).toHaveBeenCalledWith(true);
   });
 
+  it("applyIndustrialDesignToolbarToggle não activa se viewerReady false", () => {
+    const setWorkspaceEnabled = vi.fn();
+    const setPanelOpen = vi.fn();
+
+    applyIndustrialDesignToolbarToggle(
+      {
+        setIndustrialDesignWorkspaceEnabled: setWorkspaceEnabled,
+        setIndustrialDesignPanelOpen: setPanelOpen,
+      },
+      true,
+      { viewerReady: false }
+    );
+
+    expect(setWorkspaceEnabled).not.toHaveBeenCalled();
+    expect(setPanelOpen).not.toHaveBeenCalled();
+  });
+
   it("applyIndustrialDesignToolbarToggle desactiva viewer e painel", () => {
     const setWorkspaceEnabled = vi.fn();
     const setPanelOpen = vi.fn();
