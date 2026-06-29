@@ -8,7 +8,7 @@ export type CornerDoorGapSettings = {
   doorPosZOffsetMm: number;
 };
 
-/** Folgas reais de porta (settings.portas) — fonte única para layout e frente fixa. */
+/** Folgas de porta (settings.portas) — aplicam-se à porta direita; a frente fixa usa +2 mm fixos sobre a porta esquerda hipotética. */
 export function resolveCornerDoorGapSettings(
   settings = getSettings()
 ): CornerDoorGapSettings {
@@ -27,6 +27,12 @@ export type CornerLayoutMode = "legacy" | "direita";
 
 export const CORNER_FF_COZINHA_INFERIOR_ID = "corner-ff-cozinha-inferior";
 
+/** Modelo industrial v2 — layout SSOT; não usa doorsLayer legado. */
+export const CORNER_DIREITA_INFERIOR_V2_ID = "corner-direita-inferior-v2";
+
+/** Compensação fixa da frente fixa em relação à porta esquerda hipotética (+largura, +altura). */
+export const CORNER_FIXED_FRONT_OVERSIZE_MM = 2;
+
 export type CornerCabinetConfig = {
   style: CornerStyle;
   fixedFrontWidthMm: number;
@@ -37,15 +43,18 @@ export type CornerCabinetConfig = {
   layoutMode?: CornerLayoutMode;
 };
 
+const CORNER_DIREITA_INFERIOR_CONFIG: CornerCabinetConfig = {
+  style: "cozinha",
+  fixedFrontWidthMm: 180,
+  shelfDepthExtraRecessMm: 40,
+  doorFrameVisualMm: 0,
+  defaultSide: "right",
+  layoutMode: "direita",
+};
+
 const CORNER_MODEL_CONFIG: Record<string, CornerCabinetConfig> = {
-  [CORNER_FF_COZINHA_INFERIOR_ID]: {
-    style: "cozinha",
-    fixedFrontWidthMm: 180,
-    shelfDepthExtraRecessMm: 40,
-    doorFrameVisualMm: 0,
-    defaultSide: "right",
-    layoutMode: "direita",
-  },
+  [CORNER_DIREITA_INFERIOR_V2_ID]: { ...CORNER_DIREITA_INFERIOR_CONFIG },
+  [CORNER_FF_COZINHA_INFERIOR_ID]: { ...CORNER_DIREITA_INFERIOR_CONFIG },
   "corner-ff-cozinha-superior": {
     style: "cozinha",
     fixedFrontWidthMm: 180,
@@ -70,11 +79,24 @@ const CORNER_MODEL_CONFIG: Record<string, CornerCabinetConfig> = {
 };
 
 export function isCornerFixedFrontModel(baseCabinetId?: string | null): boolean {
-  return typeof baseCabinetId === "string" && baseCabinetId.startsWith("corner-ff-");
+  if (!baseCabinetId) return false;
+  return baseCabinetId === CORNER_DIREITA_INFERIOR_V2_ID || baseCabinetId.startsWith("corner-ff-");
+}
+
+/** Modelo v2: portas e furação derivam sempre do layout industrial (ignora doorsLayer persistido). */
+export function isCornerLayoutSsotModel(baseCabinetId?: string | null): boolean {
+  return baseCabinetId === CORNER_DIREITA_INFERIOR_V2_ID;
+}
+
+export function isCornerDireitaInferiorV2Model(baseCabinetId?: string | null): boolean {
+  return baseCabinetId === CORNER_DIREITA_INFERIOR_V2_ID;
 }
 
 export function isCornerDireitaInferiorModel(baseCabinetId?: string | null): boolean {
-  return baseCabinetId === CORNER_FF_COZINHA_INFERIOR_ID;
+  return (
+    baseCabinetId === CORNER_FF_COZINHA_INFERIOR_ID ||
+    baseCabinetId === CORNER_DIREITA_INFERIOR_V2_ID
+  );
 }
 
 export function getCornerCabinetConfig(baseCabinetId?: string | null): CornerCabinetConfig | null {
@@ -111,6 +133,9 @@ export type CornerLayoutInput = {
 export type CornerLayoutMm = {
   fixedFrontWidthMm: number;
   fixedFrontHeightMm: number;
+  /** Porta esquerda hipotética (vão esquerdo do módulo de canto). */
+  leftDoorWidthMm: number;
+  leftDoorHeightMm: number;
   doorWidthMm: number;
   doorHeightMm: number;
   side: CornerSide;
@@ -133,79 +158,127 @@ export type CornerLayoutMm = {
   };
 };
 
+/** Dimensões da porta esquerda hipotética (faixa esquerda do canto, mesmas regras de altura da porta direita). */
+function computeHypotheticalLeftDoorMm(
+  input: CornerLayoutInput,
+  rightDoorHeightMm: number
+): { widthMm: number; heightMm: number } {
+  return {
+    widthMm: Math.max(40, input.config.fixedFrontWidthMm),
+    heightMm: rightDoorHeightMm,
+  };
+}
+
+function buildCornerDireitaLayoutResult(
+  input: CornerLayoutInput,
+  params: {
+    side: CornerSide;
+    gapH: number;
+    rightDoorHeight: number;
+    rightDoorWidth: number;
+    leftDoor: { widthMm: number; heightMm: number };
+    fixedFrontWidth: number;
+    fixedFrontHeight: number;
+    fixedFrontCenterX: number;
+    fixedFrontPosY: number;
+    doorCenterX: number;
+    pivotX: number;
+    hingeSide: "left" | "right";
+    openDirection: "left" | "right";
+    pivot: "left-edge" | "right-edge";
+    doorPosZ: number;
+  }
+): CornerLayoutMm {
+  return {
+    fixedFrontWidthMm: params.fixedFrontWidth,
+    fixedFrontHeightMm: params.fixedFrontHeight,
+    leftDoorWidthMm: params.leftDoor.widthMm,
+    leftDoorHeightMm: params.leftDoor.heightMm,
+    doorWidthMm: params.rightDoorWidth,
+    doorHeightMm: params.rightDoorHeight,
+    side: params.side,
+    shelfDepthExtraRecessMm: input.config.shelfDepthExtraRecessMm,
+    doorFrameVisualMm: input.config.doorFrameVisualMm,
+    door: {
+      posX: params.pivotX,
+      posY: 0,
+      posZ: params.doorPosZ,
+      hingeSide: params.hingeSide,
+      openDirection: params.openDirection,
+      pivot: params.pivot,
+      pivotX: params.pivotX,
+      centerX: params.doorCenterX,
+    },
+    fixedFront: {
+      posX: params.fixedFrontCenterX,
+      posY: params.fixedFrontPosY,
+      posZ: params.doorPosZ,
+    },
+  };
+}
+
 function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm {
   const gapV = Math.max(0, input.gapVerticalMm ?? 0);
   const gapH = Math.max(0, input.gapHorizontalMm ?? 0);
   const doorFixedGap = Math.max(0, input.doorFixedGapMm ?? 0);
-  const doorHeight = Math.max(1, input.boxHeightMm - 2 * gapV);
+  const rightDoorHeight = Math.max(1, input.boxHeightMm - 2 * gapV);
   const fixedFrontNominal = Math.max(40, input.config.fixedFrontWidthMm);
-  const fixedFrontWidth = fixedFrontNominal + gapH;
-  const fixedFrontHeight = doorHeight + gapV;
-  const doorWidth = Math.max(
+  const rightDoorWidth = Math.max(
     80,
     input.boxWidthMm - 2 * gapH - fixedFrontNominal - doorFixedGap
   );
+  const leftDoor = computeHypotheticalLeftDoorMm(input, rightDoorHeight);
+  const fixedFrontWidth = leftDoor.widthMm + CORNER_FIXED_FRONT_OVERSIZE_MM;
+  const fixedFrontHeight = leftDoor.heightMm + CORNER_FIXED_FRONT_OVERSIZE_MM;
   const doorPosZ = input.boxDepthMm / 2 + Math.max(0, input.doorPosZOffsetMm ?? 0);
-  const doorPosY = 0;
-  const fixedFrontPosY = gapV / 2;
+  const halfOver = CORNER_FIXED_FRONT_OVERSIZE_MM / 2;
+  const fixedFrontPosY = halfOver;
 
   if (input.side === "right") {
-    const fixedFrontCenterX = -input.boxWidthMm / 2 + gapH + fixedFrontWidth / 2;
-    const doorCenterX = input.boxWidthMm / 2 - gapH - doorWidth / 2;
-    const pivotX = doorCenterX + doorWidth / 2;
-    return {
-      fixedFrontWidthMm: fixedFrontWidth,
-      fixedFrontHeightMm: fixedFrontHeight,
-      doorWidthMm: doorWidth,
-      doorHeightMm: doorHeight,
+    const leftDoorCenterX = -input.boxWidthMm / 2 + gapH + leftDoor.widthMm / 2;
+    const fixedFrontCenterX = leftDoorCenterX - halfOver;
+    const doorCenterX = input.boxWidthMm / 2 - gapH - rightDoorWidth / 2;
+    const pivotX = doorCenterX + rightDoorWidth / 2;
+    return buildCornerDireitaLayoutResult(input, {
       side: input.side,
-      shelfDepthExtraRecessMm: input.config.shelfDepthExtraRecessMm,
-      doorFrameVisualMm: input.config.doorFrameVisualMm,
-      door: {
-        posX: pivotX,
-        posY: doorPosY,
-        posZ: doorPosZ,
-        hingeSide: "right",
-        openDirection: "left",
-        pivot: "right-edge",
-        pivotX,
-        centerX: doorCenterX,
-      },
-      fixedFront: {
-        posX: fixedFrontCenterX,
-        posY: fixedFrontPosY,
-        posZ: doorPosZ,
-      },
-    };
+      gapH,
+      rightDoorHeight,
+      rightDoorWidth,
+      leftDoor,
+      fixedFrontWidth,
+      fixedFrontHeight,
+      fixedFrontCenterX,
+      fixedFrontPosY,
+      doorCenterX,
+      pivotX,
+      hingeSide: "right",
+      openDirection: "left",
+      pivot: "right-edge",
+      doorPosZ,
+    });
   }
 
-  const fixedFrontCenterX = input.boxWidthMm / 2 - gapH - fixedFrontWidth / 2;
-  const doorCenterX = -input.boxWidthMm / 2 + gapH + doorWidth / 2;
-  const pivotX = doorCenterX - doorWidth / 2;
-  return {
-    fixedFrontWidthMm: fixedFrontWidth,
-    fixedFrontHeightMm: fixedFrontHeight,
-    doorWidthMm: doorWidth,
-    doorHeightMm: doorHeight,
+  const leftDoorCenterX = input.boxWidthMm / 2 - gapH - leftDoor.widthMm / 2;
+  const fixedFrontCenterX = leftDoorCenterX + halfOver;
+  const doorCenterX = -input.boxWidthMm / 2 + gapH + rightDoorWidth / 2;
+  const pivotX = doorCenterX - rightDoorWidth / 2;
+  return buildCornerDireitaLayoutResult(input, {
     side: input.side,
-    shelfDepthExtraRecessMm: input.config.shelfDepthExtraRecessMm,
-    doorFrameVisualMm: input.config.doorFrameVisualMm,
-    door: {
-      posX: pivotX,
-      posY: doorPosY,
-      posZ: doorPosZ,
-      hingeSide: "left",
-      openDirection: "right",
-      pivot: "left-edge",
-      pivotX,
-      centerX: doorCenterX,
-    },
-    fixedFront: {
-      posX: fixedFrontCenterX,
-      posY: fixedFrontPosY,
-      posZ: doorPosZ,
-    },
-  };
+    gapH,
+    rightDoorHeight,
+    rightDoorWidth,
+    leftDoor,
+    fixedFrontWidth,
+    fixedFrontHeight,
+    fixedFrontCenterX,
+    fixedFrontPosY,
+    doorCenterX,
+    pivotX,
+    hingeSide: "left",
+    openDirection: "right",
+    pivot: "left-edge",
+    doorPosZ,
+  });
 }
 
 export function computeCornerLayoutMm(input: CornerLayoutInput): CornerLayoutMm {
@@ -233,6 +306,8 @@ export function computeCornerLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
     return {
       fixedFrontWidthMm: fixedFrontWidth,
       fixedFrontHeightMm: fixedFrontHeight,
+      leftDoorWidthMm: fixedFrontWidth,
+      leftDoorHeightMm: fixedFrontHeight,
       doorWidthMm: doorWidth,
       doorHeightMm: doorHeight,
       side: input.side,
@@ -262,6 +337,8 @@ export function computeCornerLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
   return {
     fixedFrontWidthMm: fixedFrontWidth,
     fixedFrontHeightMm: fixedFrontHeight,
+    leftDoorWidthMm: fixedFrontWidth,
+    leftDoorHeightMm: fixedFrontHeight,
     doorWidthMm: doorWidth,
     doorHeightMm: doorHeight,
     side: input.side,

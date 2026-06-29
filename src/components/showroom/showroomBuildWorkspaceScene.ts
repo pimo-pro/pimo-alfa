@@ -18,6 +18,7 @@ import { getBoxPositionAndRotation } from "../../hooks/useCalculadoraSync";
 import { getProfundidadeInternaUtilMm } from "../../core/box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../../core/materials/materials.api";
 import { resolveCostaAtivaForBox, resolveNoBackPanel } from "../../core/box/backPanelFlags";
+import { buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../../core/cornerCabinet";
 import { doorLayerItemsForViewer } from "../../core/box/doorLayerItemsForViewer";
 import { attachKitchenFeetIfNeeded } from "./kitchenFeetVisual";
 
@@ -136,8 +137,13 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
     );
     const layoutDepthM = mmToM(profundidadeExternaMm);
     const carcassDepthM = mmToM(profundidadeInternaUtilMm);
+    const wsBoxSynced = syncCornerWorkspaceBoxDoorsLayer(wsBox);
+    const resolvedDoors =
+      getCornerCabinetConfig(wsBoxSynced.baseCabinetId) && wsBoxSynced.portaTipo === "porta_simples"
+        ? buildCornerDoorLayerItems(wsBoxSynced, wsBoxSynced.doorsLayer)
+        : wsBoxSynced.doorsLayer ?? [];
     const doorLayerItems = doorLayerItemsForViewer(
-      wsBox.doorsLayer ?? [],
+      resolvedDoors,
       profundidadeExternaMm,
       profundidadeInternaUtilMm
     );
@@ -146,7 +152,7 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
       wsBox.material ?? boxModule?.material ?? project.materialId ?? project.material?.tipo ?? "mdf_branco";
     const resolvedMaterialName = getViewerMaterialId(effectiveMaterial);
 
-    const effectiveBox = boxModule ?? convertWorkspaceToBox(wsBox);
+    const effectiveBox = boxModule ?? convertWorkspaceToBox(wsBoxSynced);
     const cutListForBox = project.rules ? cutlistComPrecoFromBox(effectiveBox, project.rules) : [];
     const drillMarkersByPanel = filterViewerDrillMarkersForMesh(buildViewerDrillMarkersByPanel(cutListForBox));
 

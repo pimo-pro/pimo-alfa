@@ -16,6 +16,7 @@ import { resolveDrawerFrontMaterialId } from "../core/drawers/drawerFrontMateria
 import { syncDrawerFrontMaterialToViewer } from "../industrial/viewerIntegration";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
+import { buildCornerDoorLayerItems, getCornerCabinetConfig, isCornerLayoutSsotModel, syncCornerWorkspaceBoxDoorsLayer } from "../core/cornerCabinet";
 import { isIndustrialFileGenerationActive } from "../core/fabrication/industrialGenerationSuspend";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 
@@ -292,7 +293,14 @@ export const useCalculadoraSync = (
 
       let layoutDepthM: number | undefined;
       let carcassDepthM: number | undefined;
-      let doorLayerItems: DoorLayerItem[] = wsBox?.doorsLayer ?? [];
+      const wsBoxSynced = syncCornerWorkspaceBoxDoorsLayer(wsBox);
+      let doorLayerItems: DoorLayerItem[] = wsBoxSynced.doorsLayer ?? [];
+      const cornerCfg = getCornerCabinetConfig(wsBoxSynced.baseCabinetId);
+      if (cornerCfg && wsBoxSynced.portaTipo === "porta_simples") {
+        doorLayerItems = buildCornerDoorLayerItems(wsBoxSynced, wsBoxSynced.doorsLayer);
+      } else if (isCornerLayoutSsotModel(wsBoxSynced.baseCabinetId)) {
+        doorLayerItems = [];
+      }
       if (depthMm !== undefined && Number.isFinite(depthMm)) {
         const profundidadeExternaMm = Number(wsBox.profundidadeExterna ?? depthMm) || 0;
         const espessuraCostaMm = resolveCostaThicknessMm(wsBox);
@@ -351,7 +359,7 @@ export const useCalculadoraSync = (
       // [CORRIGIDO 2026-03] Sempre recalcular cutlist a partir do box atual (dimensões + layers) para furações paramétricas.
       // drillMarkersByPanel deve SEMPRE ser recalculado e passado explicitamente para updateBox.
       // Nunca usar valor antigo/cached: isso garante atualização 100% paramétrica e elimina furos congelados.
-      const effectiveBox = box ?? convertWorkspaceToBox(wsBox);
+      const effectiveBox = box ?? convertWorkspaceToBox(syncCornerWorkspaceBoxDoorsLayer(wsBox));
       const cutListForBox = rules ? cutlistComPrecoFromBox(effectiveBox, rules) : [];
       const drillMarkersByPanel = buildViewerDrillMarkersByPanel(cutListForBox);
       const piLateralDrillCountSig = isPiBaseCabinetId(wsBox.baseCabinetId)

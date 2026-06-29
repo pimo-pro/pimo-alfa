@@ -1,7 +1,11 @@
 export {
   isCornerFixedFrontModel,
+  isCornerLayoutSsotModel,
   isCornerDireitaInferiorModel,
+  isCornerDireitaInferiorV2Model,
   CORNER_FF_COZINHA_INFERIOR_ID,
+  CORNER_DIREITA_INFERIOR_V2_ID,
+  CORNER_FIXED_FRONT_OVERSIZE_MM,
   getCornerCabinetConfig,
   inferCornerSideFromBox,
   computeCornerLayoutMm,
@@ -15,6 +19,7 @@ export {
   type CornerDoorGapSettings,
 } from "./cornerCabinetRules";
 export { gerarPaineisCorner, getCornerFixedFrontHingeSide } from "./cornerCabinetManufacturing";
+export { buildCornerDoorLayerItems, syncCornerWorkspaceBoxDoorsLayer } from "./cornerCabinetLayers";
 export { computeCornerVisualLayout, cornerLayoutMmToVisual } from "./cornerCabinetVisual";
 export {
   buildCornerFixedFrontDowelHoles,

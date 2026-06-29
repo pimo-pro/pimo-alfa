@@ -3,6 +3,7 @@ import type {
   BoxModule,
   CutListItemComPreco,
   PanelDrillHole,
+  WorkspaceBox,
 } from "../types";
 import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
@@ -18,7 +19,7 @@ import {
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { computeDoorVerticalGaps } from "../doors/doorLayerGeometry";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
-import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, stripCornerFixedFrontHingeHoles } from "../cornerCabinet";
+import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, stripCornerFixedFrontHingeHoles, buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../cornerCabinet";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
@@ -127,16 +128,17 @@ export function cutlistComPrecoFromBox(
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
-  const chaveCaixa = `${jsonIndustrialBoxParaCutlist(box)}\0${JSON.stringify(rules)}\0${projectMaterialId ?? ""}`;
-  const entradaCaixa = cutlistPorCaixaCache.get(box.id);
+  const syncedBox = syncCornerWorkspaceBoxDoorsLayer(box as WorkspaceBox) as BoxModule;
+  const chaveCaixa = `${jsonIndustrialBoxParaCutlist(syncedBox)}\0${JSON.stringify(rules)}\0${projectMaterialId ?? ""}`;
+  const entradaCaixa = cutlistPorCaixaCache.get(syncedBox.id);
   if (entradaCaixa && entradaCaixa.chave === chaveCaixa) {
     return entradaCaixa.items;
   }
 
   const effRules = buildEffectiveDrillingRules(rules);
-  const modelo = gerarModeloIndustrial(box, effRules);
-  const rawMaterialId = getMaterialForBox(box, projectMaterialId) || undefined;
-  const bodyMaterialKey = getIndustrialMaterialKeyForBox(box, projectMaterialId);
+  const modelo = gerarModeloIndustrial(syncedBox, effRules);
+  const rawMaterialId = getMaterialForBox(syncedBox, projectMaterialId) || undefined;
+  const bodyMaterialKey = getIndustrialMaterialKeyForBox(syncedBox, projectMaterialId);
   const matInfo = getMaterialDisplayInfo(bodyMaterialKey);
   const material = matInfo.label;
   const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialKey);
@@ -179,7 +181,11 @@ export function cutlistComPrecoFromBox(
 
   const firstDoorPanel = modelo.paineis.find((panel) => isIndustrialDoorPanelTipo(panel.tipo));
   const doorHeightMm = firstDoorPanel?.altura_mm ?? (modelo.portas.length > 0 ? modelo.portas[0].altura_mm : undefined);
-  const doorsLayer = box.doorsLayer ?? [];
+  const cornerCfg = getCornerCabinetConfig(syncedBox.baseCabinetId);
+  const doorsLayer =
+    cornerCfg && syncedBox.portaTipo === "porta_simples"
+      ? buildCornerDoorLayerItems(syncedBox, syncedBox.doorsLayer)
+      : syncedBox.doorsLayer ?? [];
   const doorsLayerCount = doorsLayer.length;
   const hasDoorLeft = doorsLayer.some((d) => d.hingeSide === "left");
   const hasDoorRight = doorsLayer.some((d) => d.hingeSide === "right");
@@ -547,8 +553,8 @@ export function cutlistComPrecoFromBox(
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
   }
 
-  if (isCornerDireitaInferiorModel(box.baseCabinetId)) {
-    const cornerLayout = computeCornerLayoutForBox(box, resolveCornerDoorGapSettings());
+  if (isCornerDireitaInferiorModel(syncedBox.baseCabinetId)) {
+    const cornerLayout = computeCornerLayoutForBox(syncedBox, resolveCornerDoorGapSettings());
     const lateralItem = items.find((i) => i.tipo === "lateral_esquerda");
     const lateralHeightMm = lateralItem?.dimensoes?.altura ?? box.dimensoes.altura;
     if (cornerLayout) {
@@ -607,7 +613,7 @@ export function cutlistComPrecoFromBox(
   }
   assertCutlistIndustrialMaterials(box, items, bodyMaterialKey);
 
-  cutlistPorCaixaCache.set(box.id, { chave: chaveCaixa, items });
+  cutlistPorCaixaCache.set(syncedBox.id, { chave: chaveCaixa, items });
   return items;
 }
 

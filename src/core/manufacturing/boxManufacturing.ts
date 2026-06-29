@@ -15,7 +15,7 @@ import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/dimensions";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
-import { isCornerFixedFrontModel, gerarPaineisCorner } from "../cornerCabinet";
+import { isCornerFixedFrontModel, gerarPaineisCorner, computeCornerLayoutForBox, resolveCornerDoorGapSettings } from "../cornerCabinet";
 import { gerarPaineisCaixaForno, isCaixaFornoBox, computeCaixaFornoLayout } from "../moveis/generators/caixaFornoGenerator";
 import {
   assertBoxModuleDimensions,
@@ -589,6 +589,30 @@ export function gerarPortas(box: BoxModule, rules: RulesConfig): PortaIndustrial
         material
       ),
     }));
+  }
+
+  if (isCornerFixedFrontModel(box.baseCabinetId) && box.portaTipo === "porta_simples") {
+    const layout = computeCornerLayoutForBox(box, resolveCornerDoorGapSettings());
+    if (!layout) return [];
+    const espessura = getEspessura(box);
+    const material = getIndustrialMaterial(getMaterialForBox(box, undefined) || "mdf_branco");
+    const altura_mm = clampPositive(layout.doorHeightMm);
+    const largura_mm = clampPositive(layout.doorWidthMm);
+    assertDoorDimensions(box, 0, largura_mm, altura_mm, espessura);
+    return [
+      {
+        id: getArrayPanelId(box, "portas", 0),
+        largura_mm,
+        altura_mm,
+        espessura_mm: espessura,
+        tipo: "overlay" as const,
+        dobradicas: getNumDobradicas(altura_mm, rules),
+        custo: calcularCustoPainel(
+          { largura_mm, altura_mm, material: material.nome } as PainelIndustrial,
+          material
+        ),
+      },
+    ];
   }
 
   const espessura = getEspessura(box);

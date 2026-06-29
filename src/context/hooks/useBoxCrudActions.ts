@@ -121,6 +121,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
                     prateleiras: defaultModel.prateleiras,
                     portaTipo: defaultModel.portaTipo,
                     gavetas: defaultModel.gavetas,
+                    baseCabinetId: defaultModel.id,
                   }
                 : {}),
               cabinetType: "lower",
@@ -246,6 +247,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
               prateleiras: baseModel.shelves,
               portaTipo: modelToPortaTipo(baseModel.doors),
               gavetas: isPiModel ? 0 : baseModel.drawers,
+              baseCabinetId: baseModel.id,
               cabinetType: isUpperModel ? "upper" : "lower",
               feetEnabled: !isUpperModel,
               feetHeight: 100,
@@ -382,6 +384,7 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
                 prateleiras: 0,
                 portaTipo: fornoConfig.portaTipo,
                 gavetas: 0,
+                baseCabinetId: fornoConfig.baseCabinetId,
                 cabinetType: fornoConfig.cabinetType,
                 feetEnabled: false,
                 feetHeight: 0,

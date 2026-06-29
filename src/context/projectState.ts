@@ -19,7 +19,7 @@ import type {
   WorkspaceBox,
 } from "../core/types";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
-import { isCornerFixedFrontModel } from "../core/cornerCabinet";
+import { isCornerFixedFrontModel, syncCornerWorkspaceBoxDoorsLayer } from "../core/cornerCabinet";
 import type { ProjectState, ViewerSettings } from "./projectTypes";
 import { validateBoxModels } from "../core/rules/validation";
 import {
@@ -186,6 +186,8 @@ export type CreateWorkspaceBoxOverrides = {
   feetEnabled?: boolean;
   piHideDrawerHoles?: boolean;
   cornerFixedFront?: boolean;
+  /** Deve ser definido antes de regenerateLayersForBox (módulos corner-ff-*). */
+  baseCabinetId?: string;
   divisores?: WorkspaceBox["divisores"];
   separadores?: WorkspaceBox["separadores"];
 };
@@ -220,6 +222,7 @@ export const createWorkspaceBox = (
   const pe_cm = feetHeight / 10;
   const feetOffsetFront = Math.max(0, overrides?.feetOffsetFront ?? 100);
   const feetEnabled = overrides?.feetEnabled ?? (cabinetType === "lower");
+  const baseCabinetId = overrides?.baseCabinetId ?? catalogItemId;
   const alturaMm = dimensoes?.altura ?? 0;
   const posicaoY_mm =
     cabinetType === "lower" && feetEnabled !== false
@@ -249,6 +252,7 @@ export const createWorkspaceBox = (
     rotacaoY: 0,
     manualPosition: false,
     catalogItemId,
+    baseCabinetId,
     cabinetType,
     pe_cm,
     feetHeight,
@@ -384,9 +388,11 @@ const calcularResultadosBoxes = (state: ProjectState): ResultadosCalculo | null 
 
 export const applyResultados = (state: ProjectState): ProjectState => {
   try {
+    const workspaceBoxes = state.workspaceBoxes.map(syncCornerWorkspaceBoxDoorsLayer);
+    const stateSynced = { ...state, workspaceBoxes };
     // Sincroniza boxes com workspaceBoxes (single source of truth para o viewer e cálculo).
-    const boxes = buildBoxesFromWorkspace(state);
-    const stateWithBoxes = { ...state, boxes };
+    const boxes = buildBoxesFromWorkspace(stateSynced);
+    const stateWithBoxes = { ...stateSynced, boxes };
     const boxesWithCutList = boxes.map((box) => buildBoxDesign(stateWithBoxes, box));
     const resultados =
       boxes.length > 0
