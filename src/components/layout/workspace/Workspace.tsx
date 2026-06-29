@@ -20,6 +20,7 @@ import { serializeState, reviveState } from "../../../context/projectPersistence
 import { clampOpeningNoOverlap } from "../../../utils/openingConstraints";
 import BoxInfoOverlay from "./BoxInfoOverlay";
 import InternalMeasurementsPanel from "./InternalMeasurementsPanel";
+import IndustrialDesignPanel from "./IndustrialDesignPanel";
 import ContextMenu from "./ContextMenu";
 import SelectionMarquee from "./SelectionMarquee";
 import { devLogger } from "../../../utils/devLogger";
@@ -101,6 +102,21 @@ export default function Workspace({
   }, [actions]);
 
   useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Control" || e.key === "Meta") ctrlKeyActiveRef.current = true;
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Control" || e.key === "Meta") ctrlKeyActiveRef.current = false;
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
     registerWorkspaceUndoRedo({ handleUndo, handleRedo });
     return () => {
       registerWorkspaceUndoRedo(null);
@@ -124,6 +140,7 @@ export default function Workspace({
   const projectRef = useRef(project);
   const ctrlOrMetaPressedRef = useRef(false);
   const pointerToggleSelectionRef = useRef(false);
+  const ctrlKeyActiveRef = useRef(false);
   const multiSelectedBoxIdsRef = useRef<string[]>([]);
   const dragPreStateRef = useRef<typeof project | null>(null);
   const keyboardMoveRef = useRef<{
@@ -243,7 +260,7 @@ export default function Workspace({
         });
       }
       if (boxId) {
-        const toggleSelection = pointerToggleSelectionRef.current || ctrlOrMetaPressedRef.current;
+        const toggleSelection = ctrlKeyActiveRef.current;
         const encodedId = boxSelectionId(boxId);
         if (toggleSelection) {
           const currentSelection = multiSelectedBoxIdsRef.current;
@@ -1434,6 +1451,7 @@ return (
             >
               <BoxInfoOverlay />
               <InternalMeasurementsPanel />
+              <IndustrialDesignPanel />
             </div>
           </div>
           {!viewerApi.viewerReady && (
