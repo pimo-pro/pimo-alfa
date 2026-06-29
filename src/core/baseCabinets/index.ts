@@ -10,12 +10,17 @@ export { modelToPortaTipo } from "./types";
 export { BASE_CABINET_MODELS } from "./models";
 
 import type { BaseCabinetModel } from "./types";
-import { BASE_CABINET_MODELS } from "./models";
+import { BASE_CABINET_STATIC_MODELS } from "./models";
+import { listIndustrialCatalogModelsAsBaseCabinet } from "../industrialDesigner/customIndustrialModel";
+
+export function getBaseCabinetModelsMerged(): BaseCabinetModel[] {
+  return [...BASE_CABINET_STATIC_MODELS, ...listIndustrialCatalogModelsAsBaseCabinet()];
+}
 
 export function getBaseCabinetById(id: string): BaseCabinetModel | undefined {
-  return BASE_CABINET_MODELS.find((m) => m.id === id);
+  return getBaseCabinetModelsMerged().find((m) => m.id === id);
 }
 
 export function getBaseCabinets(): BaseCabinetModel[] {
-  return BASE_CABINET_MODELS.slice();
+  return getBaseCabinetModelsMerged().slice();
 }

@@ -559,6 +559,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     orlaPresetId: box.orlaPresetId,
     remateIds: box.remateIds ?? [],
     observacoes: box.observacoes,
+    customIndustrialModelId: box.customIndustrialModelId,
   };
 };
 

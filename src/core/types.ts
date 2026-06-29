@@ -343,6 +343,8 @@ export interface BoxModule {
   remateIds?: string[];
   /** Observações da caixa (nível box). */
   observacoes?: string[];
+  /** ID do modelo industrial personalizado (custom-model-*). */
+  customIndustrialModelId?: string;
 }
 
 export interface WorkspaceBox {
@@ -443,6 +445,10 @@ export interface WorkspaceBox {
   remateIds?: string[];
   /** Observações da caixa (nível box). */
   observacoes?: string[];
+  /** ID do modelo industrial personalizado (custom-model-*). */
+  customIndustrialModelId?: string;
+  /** Snapshot do designBox para instâncias do modelo personalizado. */
+  industrialDesignBox?: import("./industrialDesigner/types").IndustrialDesignBox;
 }
 
 export interface ProjetoConfig {

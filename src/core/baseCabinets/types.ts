@@ -36,7 +36,10 @@ export interface BaseCabinetModel {
   /** Grupo organizacional do catalogo (somente UI). */
   grupoCatalogo?: "br" | "pt" | "pi";
   /** Categoria para filtro na UI. */
-  categoria: "base" | "upper";
+  categoria: "base" | "upper" | "corner" | "gavetas";
+  /** Modelo criado na Workspace Industrial de Design. */
+  tipo?: "standard" | "industrial-designer";
+  designWorkspace?: boolean;
 }
 
 export type PortaTipoFromModel = "sem_porta" | "porta_simples" | "porta_dupla";

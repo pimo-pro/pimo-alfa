@@ -18,6 +18,9 @@ export interface UiStoreState {
   /** Painel esquerdo: definições de captura (Photo Mode); o viewport principal é a pré-visualização. */
   photoModePanelOpen: boolean;
   setPhotoModePanelOpen: (_open: boolean) => void;
+  /** Painel lateral da Workspace Industrial de Design (furos / validação). */
+  industrialDesignPanelOpen: boolean;
+  setIndustrialDesignPanelOpen: (_open: boolean) => void;
   setSelectedTool: (_toolId: string) => void;
   setSelectedObject: (_selected: SelectedObject) => void;
   setSelectedObjects: (_ids: string[]) => void;
@@ -44,10 +47,17 @@ export const uiStore = createStore<UiStoreState>((set) => ({
   selectedObject: { type: "none" },
   selectedObjects: [],
   photoModePanelOpen: false,
+  industrialDesignPanelOpen: false,
   setPhotoModePanelOpen: (open) => {
     set((state) => {
       if (state.photoModePanelOpen === open) return state;
       return { ...state, photoModePanelOpen: open };
+    });
+  },
+  setIndustrialDesignPanelOpen: (open) => {
+    set((state) => {
+      if (state.industrialDesignPanelOpen === open) return state;
+      return { ...state, industrialDesignPanelOpen: open };
     });
   },
   setSelectedTool: (toolId) => {

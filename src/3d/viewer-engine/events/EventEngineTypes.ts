@@ -113,4 +113,6 @@ export interface IViewerEventEngine {
   getLayerSelectionHitAtPointer(_event: { clientX: number; clientY: number }): MouseMenuTarget | null;
   encodeLayerHitToSelectionId(_hit: MouseMenuTarget | null): string | null;
   getPointerSelectionEncodedId(_event: { clientX: number; clientY: number }): string | null;
+  getIndustrialDesignWorkspaceEnabled(): boolean;
+  handleIndustrialDesignPointerClick(_event: { clientX: number; clientY: number }): boolean;
 }

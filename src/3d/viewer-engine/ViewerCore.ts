@@ -195,6 +195,12 @@ import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisual
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
 import { mToMm } from "../../utils/units";
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
+import { IndustrialDesignViewerOverlay } from "./overlays/IndustrialDesignViewerOverlay";
+import { IndustrialDesignWorkspaceMode } from "./modes/IndustrialDesignWorkspaceMode";
+import type { HoleTypeId } from "../../core/drill/holeCatalog";
+import type { DesignDrillHole, IndustrialDesignBox } from "../../core/industrialDesigner/types";
+import type { DesignValidationIssue } from "../../core/industrialDesigner/geometryValidation";
+import { DesignValidationError } from "../../core/industrialDesigner/geometryValidation";
 import { ViewerRuntimeLoop } from "./runtime/ViewerRuntimeLoop";
 import { ViewerOverlayCoordinator } from "./overlays/ViewerOverlayCoordinator";
 import { bindViewerOverlayCoordinator } from "./overlays/bindViewerOverlayCoordinator";
@@ -576,6 +582,8 @@ export class ViewerCore {
   readonly hematiVisual: ViewerVisualFacade;
   readonly rodapeVisual: ViewerVisualFacade;
   private panelVisibility!: ViewerPanelVisibility;
+  private readonly industrialDesignViewerOverlay = new IndustrialDesignViewerOverlay();
+  private readonly industrialDesignMode: IndustrialDesignWorkspaceMode;
   private runtimeLoop!: ViewerRuntimeLoop;
 
   constructor(container: HTMLElement, options: ViewerOptions = {}) {
@@ -672,6 +680,33 @@ export class ViewerCore {
       getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
       getBoxIdByMesh: (mesh) => this.pointerPicking.getBoxIdByMesh(mesh),
       getSharedPanelEdgeMaterial: () => this.materialPipeline.getSharedPanelEdgeMaterial(),
+      getIndustrialDesignWorkspaceEnabled: () => this.industrialDesignMode.isEnabled(),
+    });
+
+    this.industrialDesignMode = new IndustrialDesignWorkspaceMode({
+      getBoxEntry: (id) => this.boxes.get(id),
+      getBoxMesh: (id) => this.boxes.get(id)?.mesh ?? null,
+      raycastIntersects: (event) => this.getBoxPanelRaycastHits(event),
+      updateBoxDrillMarkers: (boxId, markers) => {
+        const entry = this.boxes.get(boxId);
+        if (!entry) return;
+        entry.drillMarkersByPanel = markers;
+        this.applyPanelVisibilityForObject(entry.mesh);
+        this.syncIndustrialDesignViewerOverlay(boxId);
+      },
+      setPanelRenderingEnabled: (enabled) => {
+        this.setPanelRenderingEnabled(enabled);
+        if (enabled) this.setPanelEdgesVisible(true);
+      },
+      setValidationHighlightPanels: (boxId, panelIds) => {
+        this.setIndustrialDesignValidationHighlight(boxId, panelIds);
+      },
+      setSelectionHighlightPanel: (boxId, panelId) => {
+        this.setIndustrialDesignSelectionHighlight(boxId, panelId);
+      },
+      syncDesignVisuals: (boxId) => {
+        this.syncIndustrialDesignViewerOverlay(boxId);
+      },
     });
 
     this.materialSet = createInitialMaterialSet();
@@ -2825,6 +2860,150 @@ export class ViewerCore {
 
   getPanelRenderingEnabled(): boolean {
     return this.panelVisibility.getPanelRenderingEnabled();
+  }
+
+  /** Workspace Industrial de Design — activa/desactiva modo de inserção de furos. */
+  setIndustrialDesignWorkspaceEnabled(enabled: boolean): void {
+    this.industrialDesignMode.setEnabled(enabled);
+  }
+
+  getIndustrialDesignWorkspaceEnabled(): boolean {
+    return this.industrialDesignMode.isEnabled();
+  }
+
+  setIndustrialDesignActiveHoleType(id: HoleTypeId | null): void {
+    this.industrialDesignMode.setActiveHoleTypeId(id);
+  }
+
+  getIndustrialDesignActiveHoleType(): HoleTypeId | null {
+    return this.industrialDesignMode.getActiveHoleTypeId();
+  }
+
+  setIndustrialDesignBox(box: IndustrialDesignBox | null, targetBoxId?: string | null): void {
+    this.industrialDesignMode.setDesignBox(box, targetBoxId);
+  }
+
+  getIndustrialDesignBox(): IndustrialDesignBox | null {
+    return this.industrialDesignMode.getDesignBox();
+  }
+
+  getIndustrialDesignSelectedPanelId(): string | null {
+    return this.industrialDesignMode.getSelectedPanelId();
+  }
+
+  private industrialDesignCallbacks: {
+    onPanelSelected?: (panelId: string | null, boxId: string | null) => void;
+    onHolePlaced?: (
+      panelId: string,
+      hole: DesignDrillHole,
+      paired?: { panelId: string; hole: DesignDrillHole }
+    ) => void;
+    onDesignChanged?: (box: IndustrialDesignBox) => void;
+    onValidationChanged?: (issues: DesignValidationIssue[]) => void;
+    onValidationFailed?: (error: DesignValidationError) => void;
+  } = {};
+
+  setOnIndustrialDesignPanelSelected(
+    callback: ((panelId: string | null, boxId: string | null) => void) | null
+  ): void {
+    this.industrialDesignCallbacks.onPanelSelected = callback ?? undefined;
+    this.industrialDesignMode.setCallbacks({ ...this.industrialDesignCallbacks });
+  }
+
+  setOnIndustrialDesignHolePlaced(
+    callback: ((
+      panelId: string,
+      hole: DesignDrillHole,
+      paired?: { panelId: string; hole: DesignDrillHole }
+    ) => void) | null
+  ): void {
+    this.industrialDesignCallbacks.onHolePlaced = callback ?? undefined;
+    this.industrialDesignMode.setCallbacks({ ...this.industrialDesignCallbacks });
+  }
+
+  setOnIndustrialDesignChanged(
+    callback: ((box: IndustrialDesignBox) => void) | null
+  ): void {
+    this.industrialDesignCallbacks.onDesignChanged = callback ?? undefined;
+    this.industrialDesignMode.setCallbacks({ ...this.industrialDesignCallbacks });
+  }
+
+  setOnIndustrialDesignValidationChanged(
+    callback: ((issues: DesignValidationIssue[]) => void) | null
+  ): void {
+    this.industrialDesignCallbacks.onValidationChanged = callback ?? undefined;
+    this.industrialDesignMode.setCallbacks({ ...this.industrialDesignCallbacks });
+  }
+
+  setOnIndustrialDesignValidationFailed(
+    callback: ((error: DesignValidationError) => void) | null
+  ): void {
+    this.industrialDesignCallbacks.onValidationFailed = callback ?? undefined;
+    this.industrialDesignMode.setCallbacks({ ...this.industrialDesignCallbacks });
+  }
+
+  getIndustrialDesignValidationIssues(): DesignValidationIssue[] {
+    return this.industrialDesignMode.getValidationIssues();
+  }
+
+  refreshIndustrialDesignValidation(): DesignValidationIssue[] {
+    return this.industrialDesignMode.refreshValidation();
+  }
+
+  /** Destaca painéis com erro de validação (contorno vermelho). */
+  setIndustrialDesignValidationHighlight(boxId: string, panelIds: string[]): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    const idSet = new Set(panelIds);
+    entry.mesh.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const panelId = node.userData?.panelId as string | undefined;
+      if (!panelId) return;
+      node.userData.industrialDesignValidationError = idSet.has(panelId);
+    });
+    this.applyPanelVisibilityForObject(entry.mesh);
+  }
+
+  /** Destaca painel seleccionado no modo design (contorno azul). */
+  setIndustrialDesignSelectionHighlight(boxId: string, panelId: string | null): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    entry.mesh.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const pid = node.userData?.panelId as string | undefined;
+      if (!pid) return;
+      node.userData.industrialDesignSelected = panelId != null && pid === panelId;
+    });
+    this.applyPanelVisibilityForObject(entry.mesh);
+  }
+
+  private syncIndustrialDesignViewerOverlay(boxId: string): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    const enabled = this.industrialDesignMode.isEnabled();
+    const designBox = this.industrialDesignMode.getDesignBox();
+    const targetId = this.industrialDesignMode.getTargetBoxId();
+    if (!enabled || targetId !== boxId) {
+      this.industrialDesignViewerOverlay.clear(boxId, entry.mesh);
+      return;
+    }
+    this.industrialDesignViewerOverlay.syncPairingLines(boxId, entry.mesh, designBox, enabled);
+  }
+
+  /** Raycast em meshes de painéis das caixas (para modo design industrial). */
+  private getBoxPanelRaycastHits(event: { clientX: number; clientY: number }): THREE.Intersection[] {
+    const canvas = this.rendererManager.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return [];
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    this.pointer.set(x, y);
+    this.raycaster.setFromCamera(this.pointer, this.cameraManager.camera);
+    this.raycaster.layers.set(0);
+    const roots: THREE.Object3D[] = [];
+    this.boxes.forEach((entry) => roots.push(entry.mesh));
+    if (!roots.length) return [];
+    return this.raycaster.intersectObjects(roots, true);
   }
 
   setRoomCeilingVisible(visible: boolean): void {
@@ -5045,6 +5224,8 @@ export class ViewerCore {
         return hit ? { x: hit.x, y: hit.y, z: hit.z } : null;
       },
       setTransformGizmoAnchor: (point) => this.viewerState.setTransformGizmoAnchor(point),
+      getIndustrialDesignWorkspaceEnabled: () => this.industrialDesignMode.isEnabled(),
+      handleIndustrialDesignPointerClick: (event) => this.industrialDesignMode.handlePointerClick(event),
     };
   }
 

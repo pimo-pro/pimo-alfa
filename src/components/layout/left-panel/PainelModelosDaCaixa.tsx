@@ -15,6 +15,7 @@ import LayoutWarningsAlert from "../../ui/LayoutWarningsAlert";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import { Icon } from "@/components/icons";
+import { useUiStore } from "../../../stores/uiStore";
 
 const OFFICIAL_WOOD_OPTIONS = listOfficialMaterials();
 const VISUAL_WOOD_OPTIONS = OFFICIAL_WOOD_OPTIONS.filter((m) => m.visual);
@@ -25,6 +26,7 @@ export default function PainelModelosDaCaixa() {
     (box) => box.id === project.selectedWorkspaceBoxId
   );
   const [accordionOpen, setAccordionOpen] = useState(false);
+  const setIndustrialDesignPanelOpen = useUiStore((s) => s.setIndustrialDesignPanelOpen);
 
   if (!selectedBox) {
     return (
@@ -43,6 +45,23 @@ export default function PainelModelosDaCaixa() {
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
         Configuração do módulo <strong>{selectedBox.nome}</strong>. O fluxo CAD/GLB legado foi removido.
       </p>
+
+      <Panel
+        title="Workspace Industrial de Design"
+        description="Inserir furos manualmente e exportar cutlist/TXML."
+      >
+        <button
+          type="button"
+          className="btn btn--primary"
+          style={{ width: "100%", marginBottom: 4 }}
+          onClick={() => setIndustrialDesignPanelOpen(true)}
+        >
+          Abrir Design Industrial
+        </button>
+        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+          Catálogo de furos, validação geométrica e exportação industrial.
+        </p>
+      </Panel>
 
       <Panel
         title="Opções da caixa"

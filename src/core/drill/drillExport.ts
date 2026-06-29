@@ -261,6 +261,19 @@ function isFixedFrontPanel(item: CutListItemComPreco): boolean {
   return item.tipo === "frente_fixa";
 }
 
+/** Painéis planos com furação manual (design workspace, prateleiras, portas, costa). */
+function isFlatDrillExportPanel(item: CutListItemComPreco): boolean {
+  return (
+    isTopBottomPanel(item) ||
+    isFixedFrontPanel(item) ||
+    item.tipo === "prateleira" ||
+    item.tipo === "divisorio" ||
+    item.tipo === "porta" ||
+    item.tipo === "porta_simples" ||
+    item.tipo === "COSTA"
+  );
+}
+
 export type DrillExportFile = {
   filenameBase: string;
   partName: string;
@@ -316,10 +329,7 @@ export function buildDrillFilesForProject(
         panelThickness,
         item.drillHoles!
       );
-    } else if (
-      (isTopBottomPanel(item) || isFixedFrontPanel(item)) &&
-      (item.drillHoles?.length ?? 0) > 0
-    ) {
+    } else if (isFlatDrillExportPanel(item) && (item.drillHoles?.length ?? 0) > 0) {
       const dims = resolveFlatPanelDimensions(item);
       if (!dims) continue;
       panelLength = dims.panelLength;

@@ -23,6 +23,11 @@ import { getMoveisCatalogItem } from "../../core/moveis";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { isCornerFixedFrontModel } from "../../core/cornerCabinet";
+import {
+  getCustomIndustrialModel,
+  instantiateCustomIndustrialModelForWorkspaceBox,
+  isIndustrialCatalogModelId,
+} from "../../core/industrialDesigner/customIndustrialModel";
 import { wallStore } from "../../stores/wallStore";
 import {
   getFloorBoundsMmFromWalls,
@@ -302,6 +307,26 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
             newBox.rotacaoY_90 = Math.round(Math.abs(spawn.rotacaoY) / (Math.PI / 2)) % 2 === 1;
           }
           newBox.baseCabinetId = baseModel.id;
+
+          if (baseModel.tipo === "industrial-designer" || isIndustrialCatalogModelId(baseModel.id)) {
+            const instance = instantiateCustomIndustrialModelForWorkspaceBox(
+              baseModel.id,
+              newBox.id,
+              newBox.nome
+            );
+            if (instance) {
+              const record = getCustomIndustrialModel(baseModel.id);
+              newBox.customIndustrialModelId = baseModel.id;
+              newBox.industrialDesignBox = instance.designBox;
+              newBox.prateleiras = instance.designBox.panels.filter((p) => p.tipo === "prateleira").length;
+              newBox.portaTipo = "sem_porta";
+              newBox.gavetas = 0;
+              if (record) {
+                newBox.espessura = record.metadata.espessuraMm;
+                newBox.material = record.metadata.materialId;
+              }
+            }
+          }
 
           const nextWorkspaceBoxes = [...prev.workspaceBoxes, newBox];
           const nextPrev = { ...prev, workspaceBoxes: nextWorkspaceBoxes };

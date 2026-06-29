@@ -68,6 +68,23 @@ const VIEWER_CORE_UTILITY_METHODS = [
   "getCombinedBoundingBox",
 ] as const;
 
+const VIEWER_CORE_INDUSTRIAL_DESIGN_METHODS = [
+  "setIndustrialDesignWorkspaceEnabled",
+  "getIndustrialDesignWorkspaceEnabled",
+  "setIndustrialDesignActiveHoleType",
+  "getIndustrialDesignActiveHoleType",
+  "setIndustrialDesignBox",
+  "getIndustrialDesignBox",
+  "getIndustrialDesignSelectedPanelId",
+  "setOnIndustrialDesignPanelSelected",
+  "setOnIndustrialDesignHolePlaced",
+  "setOnIndustrialDesignChanged",
+  "setOnIndustrialDesignValidationChanged",
+  "setOnIndustrialDesignValidationFailed",
+  "getIndustrialDesignValidationIssues",
+  "refreshIndustrialDesignValidation",
+] as const;
+
 /** Stubs para métodos opcionais de PimoViewerApi não expostos pelos hooks (settings, etc.). */
 const PIMO_VIEWER_STUBS: Record<string, unknown> = {
   setPanelEdgesVisible: () => {},
@@ -159,6 +176,20 @@ const PIMO_VIEWER_STUBS: Record<string, unknown> = {
     distributeBoxesEvenly: () => false,
     autoStackShelvesInBox: () => false,
   },
+  setIndustrialDesignWorkspaceEnabled: () => {},
+  getIndustrialDesignWorkspaceEnabled: () => false,
+  setIndustrialDesignActiveHoleType: () => {},
+  getIndustrialDesignActiveHoleType: () => null,
+  setIndustrialDesignBox: () => {},
+  getIndustrialDesignBox: () => null,
+  getIndustrialDesignSelectedPanelId: () => null,
+  setOnIndustrialDesignPanelSelected: () => {},
+  setOnIndustrialDesignHolePlaced: () => {},
+  setOnIndustrialDesignChanged: () => {},
+  setOnIndustrialDesignValidationChanged: () => {},
+  setOnIndustrialDesignValidationFailed: () => {},
+  getIndustrialDesignValidationIssues: () => [],
+  refreshIndustrialDesignValidation: () => [],
 };
 
 /**
@@ -188,6 +219,7 @@ export function usePimoViewer() {
           ? [
               ...VIEWER_CORE_SETTING_METHODS,
               ...VIEWER_CORE_UTILITY_METHODS,
+              ...VIEWER_CORE_INDUSTRIAL_DESIGN_METHODS,
             ].reduce<Record<string, unknown>>((acc, name) => {
               const fn = (viewerCore as Record<string, unknown>)[name];
               if (typeof fn === "function") acc[name] = fn.bind(viewerCore);

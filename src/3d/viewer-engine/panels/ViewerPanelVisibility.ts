@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../../core/types";
 import { filterTechnicalDrillHolesForViewerMesh } from "../drill/viewerCncDrillFilter";
+import {
+  resolveDrillHoleViewerColorHex,
+  resolvePanelOutlineColorHex,
+  resolvePanelOutlineHighlight,
+} from "../../../core/industrialDesigner/drillHoleViewerColors";
 
 type ViewerBoxLike = {
   mesh: THREE.Object3D;
@@ -25,6 +30,7 @@ type ViewerPanelVisibilityDeps = {
   getHighlightEnabled: () => boolean;
   getBoxIdByMesh: (_mesh: THREE.Object3D) => string | null;
   getSharedPanelEdgeMaterial: () => THREE.LineBasicMaterial;
+  getIndustrialDesignWorkspaceEnabled?: () => boolean;
 };
 
 export class ViewerPanelVisibility {
@@ -35,6 +41,9 @@ export class ViewerPanelVisibility {
   private explodedViewEnabled = false;
   private explodedViewIntensity = 0.35;
   private panelRenderingEnabled = false;
+  private validationEdgeMaterial: THREE.LineBasicMaterial | null = null;
+  private selectionEdgeMaterial: THREE.LineBasicMaterial | null = null;
+  private readonly holeColorMaterials = new Map<number, THREE.LineBasicMaterial>();
 
   private static readonly PANEL_THICKNESS_M = 0.019;
   private static readonly PANEL_BACK_THICKNESS_M = 0.01;
@@ -48,6 +57,46 @@ export class ViewerPanelVisibility {
 
   constructor(deps: ViewerPanelVisibilityDeps) {
     this.deps = deps;
+  }
+
+  private getValidationEdgeMaterial(): THREE.LineBasicMaterial {
+    if (!this.validationEdgeMaterial) {
+      this.validationEdgeMaterial = new THREE.LineBasicMaterial({
+        color: 0xff3344,
+        linewidth: 2,
+        depthTest: true,
+        transparent: false,
+      });
+    }
+    return this.validationEdgeMaterial;
+  }
+
+  private getSelectionEdgeMaterial(): THREE.LineBasicMaterial {
+    if (!this.selectionEdgeMaterial) {
+      this.selectionEdgeMaterial = new THREE.LineBasicMaterial({
+        color: 0x3b82f6,
+        linewidth: 2,
+        depthTest: true,
+        transparent: false,
+      });
+    }
+    return this.selectionEdgeMaterial;
+  }
+
+  private getHoleColorMaterial(colorHex: number): THREE.LineBasicMaterial {
+    const cached = this.holeColorMaterials.get(colorHex);
+    if (cached) return cached;
+    const material = new THREE.LineBasicMaterial({
+      color: colorHex,
+      depthTest: true,
+      transparent: false,
+    });
+    this.holeColorMaterials.set(colorHex, material);
+    return material;
+  }
+
+  private isIndustrialDesignActive(): boolean {
+    return this.deps.getIndustrialDesignWorkspaceEnabled?.() === true;
   }
 
   setPanelEdgesVisible(visible: boolean): void {
@@ -418,6 +467,80 @@ export class ViewerPanelVisibility {
     return geo;
   }
 
+  private static createHoleCircleGeometry(
+    panelType: PanelType | "front",
+    width: number,
+    height: number,
+    depth: number,
+    hole: TechnicalDrillHole
+  ): THREE.BufferGeometry | null {
+    const t = ViewerPanelVisibility.PANEL_THICKNESS_M;
+    const sideH = Math.max(0.001, height - 2 * t);
+    const segs: number[] = [];
+    const pushSegment = (x1: number, y1: number, z1: number, x2: number, y2: number, z2: number) => {
+      segs.push(x1, y1, z1, x2, y2, z2);
+    };
+
+    const panelW = panelType === "left" || panelType === "right" ? depth : width;
+    const panelH =
+      panelType === "left" || panelType === "right"
+        ? sideH
+        : panelType === "top" || panelType === "bottom"
+          ? depth
+          : height;
+
+    const a = hole.x / 1000 - panelW / 2;
+    const b = panelH / 2 - hole.y / 1000;
+    const r = Math.max(0.0005, hole.diametro / 2000);
+
+    if (panelType === "top") {
+      const y0 = -t / 2 - ViewerPanelVisibility.OVERLAY_INSET_M;
+      for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
+        const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        const t1 = ((i + 1) * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        pushSegment(
+          a + r * Math.cos(t0), y0, b + r * Math.sin(t0),
+          a + r * Math.cos(t1), y0, b + r * Math.sin(t1)
+        );
+      }
+    } else if (panelType === "bottom") {
+      const y0 = t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
+      for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
+        const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        const t1 = ((i + 1) * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        pushSegment(
+          a + r * Math.cos(t0), y0, b + r * Math.sin(t0),
+          a + r * Math.cos(t1), y0, b + r * Math.sin(t1)
+        );
+      }
+    } else if (panelType === "left" || panelType === "right") {
+      const x0 = t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
+      for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
+        const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        const t1 = ((i + 1) * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
+      }
+    } else if (panelType === "front") {
+      const zInside = -depth / 2 - ViewerPanelVisibility.OVERLAY_INSET_M;
+      for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
+        const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        const t1 = ((i + 1) * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
+        pushSegment(
+          a + r * Math.cos(t0), b + r * Math.sin(t0), zInside,
+          a + r * Math.cos(t1), b + r * Math.sin(t1), zInside
+        );
+      }
+    } else {
+      return null;
+    }
+
+    if (!segs.length) return null;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(segs), 3));
+    geo.computeBoundingSphere();
+    return geo;
+  }
+
   /**
    * Contorno completo de caixa alinhado ao BoxGeometry local (12 arestas).
    * Usado para gavetas, prateleiras finas e remates — dimensões reais do mesh,
@@ -499,10 +622,12 @@ export class ViewerPanelVisibility {
     mesh: THREE.Mesh,
     visible: boolean
   ): void {
-    overlay.userData.isPanelEdgeOverlay = true;
-    overlay.userData.pieceId =
-      mesh.userData.pieceId ?? mesh.userData.panelId ?? mesh.userData.remateId;
-    overlay.userData.parentPieceUuid = mesh.uuid;
+    overlay.userData.isPanelEdgeOverlay = overlay.userData.isIndustrialDesignHoleOverlay !== true;
+    if (overlay.userData.isPanelEdgeOverlay) {
+      overlay.userData.pieceId =
+        mesh.userData.pieceId ?? mesh.userData.panelId ?? mesh.userData.remateId;
+      overlay.userData.parentPieceUuid = mesh.uuid;
+    }
     overlay.raycast = () => null;
     overlay.frustumCulled = false;
     const remateOutlineOrder = mesh.userData?.remateOutlineRenderOrder as number | undefined;
@@ -515,17 +640,27 @@ export class ViewerPanelVisibility {
   }
 
   private ensurePanelEdges(mesh: THREE.Mesh, visible: boolean): void {
-    const existing = mesh.children.find((child) => child.userData?.isPanelEdgeOverlay) as THREE.LineSegments | undefined;
-    if (existing) {
+    const overlayChildren = mesh.children.filter(
+      (child) =>
+        child.userData?.isPanelEdgeOverlay === true ||
+        child.userData?.isIndustrialDesignHoleOverlay === true
+    );
+    for (const existing of overlayChildren) {
       mesh.remove(existing);
-      existing.geometry.dispose();
-      const shared = this.deps.getSharedPanelEdgeMaterial();
-      if (!Array.isArray(existing.material) && existing.material !== shared) {
-        existing.material.dispose();
+      if (existing instanceof THREE.LineSegments) {
+        existing.geometry.dispose();
+        const shared = this.deps.getSharedPanelEdgeMaterial();
+        if (!Array.isArray(existing.material) && existing.material !== shared) {
+          const isHoleMat = [...this.holeColorMaterials.values()].includes(
+            existing.material as THREE.LineBasicMaterial
+          );
+          if (!isHoleMat) {
+            existing.material.dispose();
+          }
+        }
       }
     }
 
-    const material = this.deps.getSharedPanelEdgeMaterial();
     const panelType = mesh.userData?.panelType as PanelType | undefined;
     const boxId = mesh.userData?.boxId as string | undefined;
     const entry = boxId ? this.deps.getBoxes().get(boxId) : undefined;
@@ -554,13 +689,51 @@ export class ViewerPanelVisibility {
                 ? (drillMap?.lateral_direita ?? [])
                 : [];
       const holes = filterTechnicalDrillHolesForViewerMesh(holesRaw);
+      const industrialActive = this.isIndustrialDesignActive();
       geometry = ViewerPanelVisibility.createContourEdgesGeometry(
         panelType,
         entry.width,
         entry.height,
         entry.depth,
-        holes
+        industrialActive ? [] : holes
       );
+
+      if (!geometry) return;
+
+      const highlight = resolvePanelOutlineHighlight(
+        mesh.userData?.industrialDesignValidationError === true,
+        mesh.userData?.industrialDesignSelected === true
+      );
+      const outlineColor = industrialActive ? resolvePanelOutlineColorHex(highlight) : null;
+      const material =
+        outlineColor != null
+          ? highlight === "error"
+            ? this.getValidationEdgeMaterial()
+            : this.getSelectionEdgeMaterial()
+          : mesh.userData?.industrialDesignValidationError === true
+            ? this.getValidationEdgeMaterial()
+            : this.deps.getSharedPanelEdgeMaterial();
+      const overlay = new THREE.LineSegments(geometry, material);
+      this.finalizePanelEdgeOverlay(overlay, mesh, visible);
+
+      if (industrialActive && holes.length > 0) {
+        for (const hole of holes) {
+          const holeGeo = ViewerPanelVisibility.createHoleCircleGeometry(
+            panelType,
+            entry.width,
+            entry.height,
+            entry.depth,
+            hole
+          );
+          if (!holeGeo) continue;
+          const holeMat = this.getHoleColorMaterial(resolveDrillHoleViewerColorHex(hole.tipo));
+          const holeOverlay = new THREE.LineSegments(holeGeo, holeMat);
+          holeOverlay.userData.isIndustrialDesignHoleOverlay = true;
+          holeOverlay.userData.holeType = hole.tipo;
+          this.finalizePanelEdgeOverlay(holeOverlay, mesh, visible);
+        }
+      }
+      return;
     } else if (
       (mesh.name && mesh.name.startsWith("door-leaf-")) ||
       mesh.userData?.doorLayerId != null ||
@@ -593,6 +766,20 @@ export class ViewerPanelVisibility {
 
     if (!geometry) return;
 
+    const industrialActive = this.isIndustrialDesignActive();
+    const highlight = resolvePanelOutlineHighlight(
+      mesh.userData?.industrialDesignValidationError === true,
+      mesh.userData?.industrialDesignSelected === true
+    );
+    const outlineColor = industrialActive ? resolvePanelOutlineColorHex(highlight) : null;
+    const material =
+      outlineColor != null
+        ? highlight === "error"
+          ? this.getValidationEdgeMaterial()
+          : this.getSelectionEdgeMaterial()
+        : mesh.userData?.industrialDesignValidationError === true
+          ? this.getValidationEdgeMaterial()
+          : this.deps.getSharedPanelEdgeMaterial();
     const overlay = new THREE.LineSegments(geometry, material);
     this.finalizePanelEdgeOverlay(overlay, mesh, visible);
   }

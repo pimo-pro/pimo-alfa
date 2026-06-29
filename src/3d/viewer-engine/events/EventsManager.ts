@@ -106,6 +106,11 @@ export class EventsManager {
       e.setSuppressNextCanvasClick(false);
       return;
     }
+    if (e.getIndustrialDesignWorkspaceEnabled()) {
+      if (e.handleIndustrialDesignPointerClick(event)) {
+        return;
+      }
+    }
     if (e.getInternalSelectionEnabled()) {
       const internalHit = e.getInternalSelectionHit(event);
       if (internalHit) {

@@ -18,6 +18,7 @@ import CameraViewMenu from "../viewer-toolbar/CameraViewMenu";
 import { useUiStore, uiStore } from "../../../stores/uiStore";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
+import WorkspaceToolbar from "../workspace/WorkspaceToolbar";
 
 const cfgNovo = VIEWER_TOOLBAR_ITEMS.find((i) => i.id === "novo");
 const cfgProjeto = VIEWER_TOOLBAR_ITEMS.find((i) => i.id === "projeto");
@@ -881,6 +882,7 @@ export default function UnifiedTopToolbar({
             </div>
           )}
         </div>
+        <WorkspaceToolbar />
         <RoomIconButton />
       </div>
 

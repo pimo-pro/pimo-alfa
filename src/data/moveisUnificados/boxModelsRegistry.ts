@@ -1,4 +1,5 @@
 import type { BaseCabinetModel } from "../../core/baseCabinets/types";
+import { listIndustrialCatalogModelsAsBaseCabinet } from "../../core/industrialDesigner/customIndustrialModel";
 
 /**
  * Registro unificado dos modelos parametricos de caixas.
@@ -1121,3 +1122,11 @@ export const BOX_MODELS_REGISTRY: BaseCabinetModel[] = [
     cornerDefaultSide: "right",
   },
 ];
+
+/**
+ * Registro estático + modelos personalizados (Workspace Industrial).
+ * Para catálogo completo com PI, usar getBaseCabinetModelsMerged() em core/baseCabinets.
+ */
+export function getMergedBoxModelsRegistry(): BaseCabinetModel[] {
+  return [...BOX_MODELS_REGISTRY, ...listIndustrialCatalogModelsAsBaseCabinet()];
+}

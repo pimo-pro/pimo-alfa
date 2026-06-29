@@ -251,6 +251,38 @@ export type PimoViewerApi = {
   /** Obtém boxId a partir de um mesh (para régua: referência a partir do hover). */
   getBoxIdByMesh?: (_mesh: import("three").Object3D) => string | null;
   getExplodedViewIntensity?: () => number;
+  /** Workspace Industrial de Design — modo de inserção de furos. */
+  setIndustrialDesignWorkspaceEnabled?: (_enabled: boolean) => void;
+  getIndustrialDesignWorkspaceEnabled?: () => boolean;
+  setIndustrialDesignActiveHoleType?: (_id: import("../core/drill/holeCatalog").HoleTypeId | null) => void;
+  getIndustrialDesignActiveHoleType?: () => import("../core/drill/holeCatalog").HoleTypeId | null;
+  setIndustrialDesignBox?: (
+    _box: import("../core/industrialDesigner/types").IndustrialDesignBox | null,
+    _targetBoxId?: string | null
+  ) => void;
+  getIndustrialDesignBox?: () => import("../core/industrialDesigner/types").IndustrialDesignBox | null;
+  getIndustrialDesignSelectedPanelId?: () => string | null;
+  setOnIndustrialDesignPanelSelected?: (
+    _callback: ((_panelId: string | null, _boxId: string | null) => void) | null
+  ) => void;
+  setOnIndustrialDesignHolePlaced?: (
+    _callback: ((
+      _panelId: string,
+      _hole: import("../core/industrialDesigner/types").DesignDrillHole,
+      _paired?: { panelId: string; hole: import("../core/industrialDesigner/types").DesignDrillHole }
+    ) => void) | null
+  ) => void;
+  setOnIndustrialDesignChanged?: (
+    _callback: ((box: import("../core/industrialDesigner/types").IndustrialDesignBox) => void) | null
+  ) => void;
+  setOnIndustrialDesignValidationChanged?: (
+    _callback: ((issues: import("../core/industrialDesigner/geometryValidation").DesignValidationIssue[]) => void) | null
+  ) => void;
+  setOnIndustrialDesignValidationFailed?: (
+    _callback: ((error: import("../core/industrialDesigner/geometryValidation").DesignValidationError) => void) | null
+  ) => void;
+  getIndustrialDesignValidationIssues?: () => import("../core/industrialDesigner/geometryValidation").DesignValidationIssue[];
+  refreshIndustrialDesignValidation?: () => import("../core/industrialDesigner/geometryValidation").DesignValidationIssue[];
 };
 
 export type PimoViewerContextValue = {

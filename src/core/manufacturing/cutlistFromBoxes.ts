@@ -33,6 +33,7 @@ import {
 import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
 import { buildDivSepIndustrialLabel } from "../divSep/labels";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
+import { resolveCustomIndustrialCutlistForBox } from "../industrialDesigner/customIndustrialModel";
 import { resolveDoorIndustrialLabel, resolveDoorLabel, resolveDoorPositionKind } from "../doors/doorLabels";
 import { assertCutlistIndustrialMaterials } from "../industrial/industrialValidation";
 
@@ -127,6 +128,16 @@ export function cutlistComPrecoFromBox(
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
+  const customCutlist = resolveCustomIndustrialCutlistForBox(box);
+  if (customCutlist) {
+    const priced = calcularPrecoCutList(customCutlist);
+    cutlistPorCaixaCache.set(box.id, {
+      chave: `custom-industrial:${box.baseCabinetId ?? box.id}`,
+      items: priced,
+    });
+    return priced;
+  }
+
   const syncedBox = syncCornerWorkspaceBoxDoorsLayer(box);
   const chaveCaixa = `${jsonIndustrialBoxParaCutlist(syncedBox)}\0${JSON.stringify(rules)}\0${projectMaterialId ?? ""}`;
   const entradaCaixa = cutlistPorCaixaCache.get(syncedBox.id);
