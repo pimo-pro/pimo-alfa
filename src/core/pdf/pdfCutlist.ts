@@ -1,6 +1,6 @@
 /**
- * PDF Lista de Corte — tabela de peças para corte (cutlistFromBoxes, modelo FINAL).
- * Colunas: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N.º QR.
+ * PDF Lista de Corte — layout industrial partilhado (A4 landscape, linhas compactas).
+ * Colunas: Caixa, Peça, Qtd, L×A×P, Borda, Limpeza, Montagem, Verificação, OBSERVAÇÕES, No ETQ.
  */
 
 import jsPDF from "jspdf";
@@ -19,10 +19,25 @@ import {
   formatObservacoesForPdf,
   resolveObservacoesForCutListItem,
 } from "../observacoes/ObservacoesService";
-
-/** Grelha preta fina — impressão e conferência manual. */
-const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
-const TABLE_GRID_WIDTH = 0.15;
+import { getCurrentProjectUser } from "../projects/currentUser";
+import {
+  PDF_INDUSTRIAL_ETQ_COL_WIDTH,
+  PDF_INDUSTRIAL_HEADER_COLOR,
+  PDF_INDUSTRIAL_MARGIN,
+  PDF_INDUSTRIAL_PAGE_W,
+  PDF_INDUSTRIAL_QTD_COL_WIDTH,
+  PDF_INDUSTRIAL_ROW_ALT,
+  PDF_INDUSTRIAL_ROW_MIN_H,
+  drawIndustrialOperationalDatesBlock,
+  drawIndustrialPdfFooter,
+  drawIndustrialPdfTitleHeader,
+  drawIndustrialProjectInfoBlock,
+  drawIndustrialSectionTitle,
+  formatIndustrialDesignDate,
+  getIndustrialAutoTableMargins,
+  getIndustrialAutoTableStyles,
+  getIndustrialHeadStyles,
+} from "./pdfIndustrialListShell";
 
 export type ProjectForPdf = {
   projectName: string;
@@ -31,19 +46,13 @@ export type ProjectForPdf = {
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
   settings?: unknown;
-  /** Itens pré-calculados com numeração global (modo fabricação em massa). */
   precomputedItems?: CutListItemComPreco[];
-  /** Observações por peça (panelId). */
   pieceObservacoes?: PieceObservacoesStore;
 };
-
-const MARGIN = 14;
-const HEADER_COLOR: [number, number, number] = [15, 23, 42];
 
 function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { boxNome: string; tipoBorda?: string }> {
   const boxById = new Map(project.boxes.map((b) => [b.id, b]));
 
-  // Modo fabricação em massa: usar itens pré-calculados com numeração global
   if (project.precomputedItems && project.precomputedItems.length > 0) {
     return project.precomputedItems.map((p) => {
       const box = boxById.get(p.boxId ?? "");
@@ -73,7 +82,6 @@ function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { b
   });
 }
 
-/** Detecta se o contexto (projeto/caixa/peça) é de cozinha para regra da coluna Borda. */
 function isCozinhaContext(
   project: ProjectForPdf,
   p: CutListItemComPreco & { boxNome?: string; tipoBorda?: string }
@@ -85,10 +93,7 @@ function isCozinhaContext(
 }
 
 /**
- * Renderiza tabela de lista de corte.
- * Ordem: Caixa, Peça, Qtd, L×A×P, Borda (fita), Limpeza, Montagem, Verificação, OBSERVAÇÕES, N.º QR.
- * Borda: 10 mm → "—"; cozinha + reta → "TODAS"; demais → tipoBorda ou "todos os lados".
- * N.º QR: código v5 unificado (mesmo das etiquetas industriais).
+ * Tabela cutlist detalhada — mesmo shell visual do PDF técnico.
  */
 export function renderCutlistTable(
   doc: jsPDF,
@@ -106,7 +111,7 @@ export function renderCutlistTable(
     "Montagem",
     "Verificação",
     "OBSERVAÇÕES",
-    "N.º QR",
+    "No ETQ",
   ];
   const qrCtx = {
     projectName: project.projectName,
@@ -157,30 +162,42 @@ export function renderCutlistTable(
     body,
     startY,
     theme: "grid",
-    styles: {
-      fontSize: 7,
-      cellPadding: 1.5,
-      lineColor: TABLE_GRID_LINE,
-      lineWidth: TABLE_GRID_WIDTH,
+    showHead: "everyPage",
+    rowPageBreak: "avoid",
+    didParseCell: (data) => {
+      if (data.section === "head") {
+        data.cell.styles.fillColor = PDF_INDUSTRIAL_HEADER_COLOR;
+        data.cell.styles.textColor = [255, 255, 255];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fontSize = 7;
+      }
+      if (data.section === "body") {
+        data.cell.styles.minCellHeight = PDF_INDUSTRIAL_ROW_MIN_H;
+        data.cell.styles.overflow = "hidden";
+        if (data.column.index === 9) {
+          data.cell.styles.cellWidth = PDF_INDUSTRIAL_ETQ_COL_WIDTH;
+        }
+        if (data.row.index % 2 === 0) {
+          data.cell.styles.fillColor = [255, 255, 255];
+        } else {
+          data.cell.styles.fillColor = PDF_INDUSTRIAL_ROW_ALT;
+        }
+      }
     },
-    headStyles: {
-      fillColor: HEADER_COLOR,
-      fontSize: 7,
-      lineColor: TABLE_GRID_LINE,
-      lineWidth: TABLE_GRID_WIDTH,
-    },
-    margin: { left: MARGIN, right: MARGIN },
+    styles: getIndustrialAutoTableStyles(),
+    headStyles: getIndustrialHeadStyles(),
+    margin: getIndustrialAutoTableMargins(),
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 32 },
-      2: { cellWidth: 10 },
-      3: { cellWidth: 28 },
-      4: { cellWidth: 18 },
-      5: { cellWidth: 14 },
-      6: { cellWidth: 14 },
-      7: { cellWidth: 16 },
-      8: { cellWidth: 22 },
-      9: { cellWidth: 70, overflow: "linebreak", cellPadding: 1.5 },
+      0: { cellWidth: 22, overflow: "hidden" },
+      1: { cellWidth: 32, overflow: "hidden" },
+      2: { cellWidth: PDF_INDUSTRIAL_QTD_COL_WIDTH, halign: "center" },
+      3: { cellWidth: 24, halign: "right" },
+      4: { cellWidth: 16, overflow: "hidden" },
+      5: { cellWidth: 11, halign: "center" },
+      6: { cellWidth: 11, halign: "center" },
+      7: { cellWidth: 13, halign: "center" },
+      8: { cellWidth: 36, overflow: "hidden" },
+      9: { cellWidth: PDF_INDUSTRIAL_ETQ_COL_WIDTH, overflow: "hidden", halign: "center" },
     },
   });
 
@@ -196,36 +213,39 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
     existingDoc.addPage("a4", "landscape");
   }
 
-  let y = MARGIN;
-
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("Lista de Corte", MARGIN, y);
-  y += 8;
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Projeto: ${project.projectName || "Projeto"}`, MARGIN, y);
-  y += 6;
-
-  doc.setFontSize(9);
-  doc.text(
-    `Data: ${new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" })}`,
-    MARGIN,
-    y
-  );
-  y += 9;
-
+  const dataHoje = formatIndustrialDesignDate();
+  const designer = getCurrentProjectUser().ownerName || "—";
   const parts = getFullCutlist(project);
-  y = renderCutlistTable(doc, parts, project, y);
+  const totalPecas = parts.reduce((s, p) => s + p.quantidade, 0);
+
+  let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje });
+
+  const blockW = PDF_INDUSTRIAL_PAGE_W - PDF_INDUSTRIAL_MARGIN * 2;
+  const blockX = PDF_INDUSTRIAL_MARGIN;
+  const c1x = blockX + 4;
+  const c2x = blockX + blockW / 2 + 4;
+
+  const { nextY, totalPiecesLabelPos } = drawIndustrialProjectInfoBlock(doc, y, {
+    projectName: project.projectName || "Projeto",
+    acabamento: "—",
+    boxCount: project.boxes.length,
+    totalPieces: totalPecas,
+  });
+  y = nextY;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.text(String(totalPecas), totalPiecesLabelPos.x, totalPiecesLabelPos.y);
+
+  y = drawIndustrialOperationalDatesBlock(doc, blockX, y, blockW, c1x, c2x) + 2;
+  y = drawIndustrialSectionTitle(doc, y, "Lista de Corte — Detalhada");
+
+  renderCutlistTable(doc, parts, project, y);
+  drawIndustrialPdfFooter(doc, dataHoje, parts.length, totalPecas);
 
   return doc;
 }
 
-/**
- * Gera PDF de lista de corte (cutlistFromBoxes). API async para compatibilidade com fluxo atual.
- * @param existingDoc Se fornecido, adiciona as páginas ao documento existente.
- */
 export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {
   return Promise.resolve(buildCutlistPdfSync(project, existingDoc));
 }

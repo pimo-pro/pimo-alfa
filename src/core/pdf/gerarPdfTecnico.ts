@@ -22,22 +22,28 @@ import {
   normalizeObservacoesList,
   resolveObservacoesForCutListItem,
 } from "../observacoes/ObservacoesService";
+import {
+  PDF_INDUSTRIAL_ETQ_COL_WIDTH,
+  PDF_INDUSTRIAL_ESP_COL_WIDTH,
+  PDF_INDUSTRIAL_HEADER_COLOR,
+  PDF_INDUSTRIAL_MARGIN,
+  PDF_INDUSTRIAL_PAGE_W,
+  PDF_INDUSTRIAL_QTD_COL_WIDTH,
+  PDF_INDUSTRIAL_ROW_ALT,
+  PDF_INDUSTRIAL_ROW_MIN_H,
+  drawIndustrialOperationalDatesBlock,
+  drawIndustrialPdfFooter,
+  drawIndustrialPdfTitleHeader,
+  drawIndustrialProjectInfoBlock,
+  drawIndustrialSectionTitle,
+  formatIndustrialDesignDate,
+  getIndustrialAutoTableMargins,
+  getIndustrialAutoTableStyles,
+  getIndustrialHeadStyles,
+} from "./pdfIndustrialListShell";
 
 import { COMPONENT_TYPES_DEFAULT } from "../components/componentTypes";
 import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../manufacturing/materials";
-
-/** Grelha preta fina — impressão e conferência manual. */
-const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
-const TABLE_GRID_WIDTH = 0.15;
-const MARGIN = 8;
-const PAGE_W = 297;
-const FOOTER_Y = 207;
-const HEADER_COLOR: [number, number, number] = [15, 23, 42];
-const ROW_ALT_COLOR: [number, number, number] = [245, 245, 245];
-/** Altura mínima de linha — ~38 linhas úteis por página de continuação. */
-const TABLE_ROW_MIN_H = 4.8;
-/** Largura fixa da coluna No ETQ (13 caracteres @ 7pt). */
-const ETQ_COL_WIDTH = 18;
 
 /** Mapeamento tipo peça (boxManufacturing) → id componentType */
 const TIPO_TO_COMPONENT_ID: Record<string, string> = {
@@ -126,7 +132,6 @@ function getFurosLados(componentType: ComponentType): Set<string> {
   return lados;
 }
 
-/** Furos laterais = fundo, esquerda ou direita (não topo). Drill só "X" se houver lateral. */
 function temFurosLaterais(ladosFuro: Set<string>): boolean {
   return ladosFuro.has("fundo") || ladosFuro.has("esquerda") || ladosFuro.has("direita");
 }
@@ -135,9 +140,7 @@ export type GerarPdfTecnicoOpcoes = {
   incluirPaginaPrecos?: boolean;
   materialId?: string;
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
-  /** Itens já com shortCode (ex.: fabricação multi‑projeto). */
   precomputedItems?: CutListItemComPreco[];
-  /** Observações por peça (panelId). */
   pieceObservacoes?: PieceObservacoesStore;
 };
 
@@ -225,10 +228,7 @@ function construirLinhas(
     return a.refPeca.localeCompare(b.refPeca);
   });
 
-  const agrupado = new Map<
-    string,
-    LinhaPeca & { observacoesLista: string[] }
-  >();
+  const agrupado = new Map<string, LinhaPeca & { observacoesLista: string[] }>();
 
   for (const p of pecasCompletas) {
     const componentId = TIPO_TO_COMPONENT_ID[p.tipo] ?? p.tipo;
@@ -288,16 +288,6 @@ function construirLinhas(
 }
 
 function gerarPdfPrecos(doc: jsPDF, boxes: BoxModule[], rules: RulesConfig): void {
-  adicionarResumoFinanceiro(doc, null);
-  adicionarCustosPorCaixa(doc, boxes, rules);
-}
-
-function adicionarResumoFinanceiro(doc: jsPDF, dados: unknown): void {
-  void doc;
-  void dados;
-}
-
-function adicionarCustosPorCaixa(doc: jsPDF, boxes: BoxModule[], rules: RulesConfig): void {
   void doc;
   void boxes;
   void rules;
@@ -320,83 +310,10 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
   return acc;
 }
 
-function desenharBlocoDatasOperacionais(
-  doc: jsPDF,
-  blockX: number,
-  blockY: number,
-  blockW: number,
-  c1x: number,
-  c2x: number
-): number {
-  const etapas = ["CORTE NESTING", "CORTE manual", "ORLAGEM", "MONTAGEM"];
-  const dateRowH = 7;
-  const dateBlockH = etapas.length * dateRowH;
-  const midDateX = blockX + blockW / 2;
-
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.rect(blockX, blockY, blockW, dateBlockH);
-  doc.line(midDateX, blockY, midDateX, blockY + dateBlockH);
-
-  for (let i = 0; i < etapas.length; i++) {
-    const rowY = blockY + i * dateRowH;
-    if (i > 0) {
-      doc.setLineWidth(0.15);
-      doc.line(blockX, rowY, blockX + blockW, rowY);
-    }
-    const textY = rowY + dateRowH - 2;
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.text(etapas[i], c1x, textY);
-    const labelW = doc.getTextWidth(etapas[i]);
-    doc.setFont("helvetica", "normal");
-    doc.text("  inicio:", c1x + labelW, textY);
-    const siW = doc.getTextWidth("  inicio:");
-    doc.setLineWidth(0.2);
-    doc.line(c1x + labelW + siW + 1, textY + 0.3, c1x + labelW + siW + 25, textY + 0.3);
-    doc.text(" h:", c1x + labelW + siW + 27, textY);
-    const hW = doc.getTextWidth(" h:");
-    doc.line(c1x + labelW + siW + 27 + hW + 1, textY + 0.3, c1x + labelW + siW + 27 + hW + 12, textY + 0.3);
-
-    doc.setFont("helvetica", "normal");
-    doc.text("fim:", c2x, textY);
-    const fW = doc.getTextWidth("fim:");
-    doc.line(c2x + fW + 1, textY + 0.3, c2x + fW + 25, textY + 0.3);
-    doc.text(" h:", c2x + fW + 27, textY);
-    doc.line(c2x + fW + 27 + hW + 1, textY + 0.3, c2x + fW + 27 + hW + 12, textY + 0.3);
-  }
-
-  return blockY + dateBlockH;
-}
-
-function desenharRodape(
-  doc: jsPDF,
-  dataHoje: string,
-  numRefs: number,
-  totalPecas: number
-): void {
-  const pageCount = (doc as jsPDF & { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `PIMO  |  ${dataHoje}  |  ${numRefs} ref.  |  ${totalPecas} pecas  |  pag. ${p}/${pageCount}`,
-      MARGIN,
-      FOOTER_Y
-    );
-  }
-  doc.setTextColor(0, 0, 0);
-}
-
 const COL_COUNT = 18;
 
 /**
  * Gera PDF técnico industrial em tabela (landscape, paginada).
- * @param opcoes.incluirPaginaPrecos — quando true (futuro), adiciona Página 2 com preços
- * @param opcoes.materialId — opcional (compatibilidade com ProjectProvider)
  */
 export function gerarPdfTecnicoCompleto(
   boxes: BoxModule[],
@@ -409,66 +326,25 @@ export function gerarPdfTecnicoCompleto(
   const materials = loadMaterialsFromStorage();
 
   const acabamentos = getAcabamentosUnicos(boxes, materials);
-  const dataHoje = new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const dataHoje = formatIndustrialDesignDate();
   const designer = getCurrentProjectUser().ownerName || "—";
 
-  // — CABEÇALHO: PIMO + designer + data (tipografia maior) —
-  let y = MARGIN;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(0, 0, 0);
-  doc.text("PIMO", MARGIN, y + 6);
+  let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje });
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(60, 60, 60);
-  const infoRight = `Designer: ${designer}     Data de design: ${dataHoje}`;
-  doc.text(infoRight, PAGE_W - MARGIN - doc.getTextWidth(infoRight), y + 6);
-  doc.setTextColor(0, 0, 0);
-  y += 12;
-
-  // — BLOCO DE INFO DO PROJETO —
-  const blockW = PAGE_W - MARGIN * 2;
-  const rowH = 7;
-  const infoH = rowH * 2;
-  const blockX = MARGIN;
-  let blockY = y;
-
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.rect(blockX, blockY, blockW, infoH);
-  doc.line(blockX, blockY + rowH, blockX + blockW, blockY + rowH);
-  doc.line(blockX + blockW / 2, blockY, blockX + blockW / 2, blockY + infoH);
-
+  const blockW = PDF_INDUSTRIAL_PAGE_W - PDF_INDUSTRIAL_MARGIN * 2;
+  const blockX = PDF_INDUSTRIAL_MARGIN;
   const c1x = blockX + 4;
   const c2x = blockX + blockW / 2 + 4;
-  const boldLabel = (label: string, lx: number, ly: number) => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.text(label, lx, ly);
-  };
-  const normalVal = (val: string, lx: number, ly: number) => {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.text(val, lx, ly);
-  };
 
-  let iy = blockY + rowH - 1.5;
-  boldLabel("PROJETO / MOVEL:", c1x, iy);
-  normalVal(projectName || "Projeto", c1x + doc.getTextWidth("PROJETO / MOVEL:") + 2, iy);
-  boldLabel("Acabamento:", c2x, iy);
-  normalVal(acabamentos.length > 0 ? acabamentos[0] : "—", c2x + doc.getTextWidth("Acabamento:") + 2, iy);
+  const { nextY, totalPiecesLabelPos } = drawIndustrialProjectInfoBlock(doc, y, {
+    projectName: projectName || "Projeto",
+    acabamento: acabamentos.length > 0 ? acabamentos[0] : "—",
+    boxCount: boxes.length,
+    totalPieces: 0,
+  });
+  y = nextY;
 
-  iy += rowH;
-  boldLabel("No. de Caixas:", c1x, iy);
-  normalVal(String(boxes.length), c1x + doc.getTextWidth("No. de Caixas:") + 2, iy);
-  boldLabel("Pecas Total:", c2x, iy);
-  const totalPecasPos = { x: c2x + doc.getTextWidth("Pecas Total:") + 2, y: iy };
-
-  y = blockY + infoH + 1;
-
-  // — DATAS OPERACIONAIS (sem FOLHEAGEM nem CNC) —
-  y = desenharBlocoDatasOperacionais(doc, blockX, y, blockW, c1x, c2x) + 2;
+  y = drawIndustrialOperationalDatesBlock(doc, blockX, y, blockW, c1x, c2x) + 2;
 
   const linhas = construirLinhas(boxes, rules, componentTypes, materials, projectName, {
     materialId: opcoes?.materialId,
@@ -480,16 +356,9 @@ export function gerarPdfTecnicoCompleto(
   const totalPecasReal = linhas.reduce((sum, r) => sum + r.qtd, 0);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.text(String(totalPecasReal), totalPecasPos.x, totalPecasPos.y);
+  doc.text(String(totalPecasReal), totalPiecesLabelPos.x, totalPiecesLabelPos.y);
 
-  // — TÍTULO DA SECÇÃO —
-  doc.setFillColor(200, 200, 200);
-  doc.rect(blockX, y, blockW, 6, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  const titulo = "Lista de Corte - Painéis";
-  doc.text(titulo, blockX + (blockW - doc.getTextWidth(titulo)) / 2, y + 4.2);
-  y += 7;
+  y = drawIndustrialSectionTitle(doc, y, "Lista de Corte - Painéis");
 
   const head = [
     "REF PECA",
@@ -559,66 +428,54 @@ export function gerarPdfTecnicoCompleto(
     rowPageBreak: "avoid",
     didParseCell: (data) => {
       if (data.section === "head") {
-        data.cell.styles.fillColor = HEADER_COLOR;
+        data.cell.styles.fillColor = PDF_INDUSTRIAL_HEADER_COLOR;
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fontSize = 7;
       }
       if (data.section === "body") {
-        data.cell.styles.minCellHeight = TABLE_ROW_MIN_H;
+        data.cell.styles.minCellHeight = PDF_INDUSTRIAL_ROW_MIN_H;
         data.cell.styles.overflow = "hidden";
         if (data.column.index === 17) {
-          data.cell.styles.cellWidth = ETQ_COL_WIDTH;
+          data.cell.styles.cellWidth = PDF_INDUSTRIAL_ETQ_COL_WIDTH;
         }
         if (isSeparatorRow(data.row.index)) {
           data.cell.styles.fillColor = [235, 238, 242];
-          data.cell.styles.minCellHeight = TABLE_ROW_MIN_H;
+          data.cell.styles.minCellHeight = PDF_INDUSTRIAL_ROW_MIN_H;
         } else if (data.row.index % 2 === 0) {
           data.cell.styles.fillColor = [255, 255, 255];
         } else {
-          data.cell.styles.fillColor = ROW_ALT_COLOR;
+          data.cell.styles.fillColor = PDF_INDUSTRIAL_ROW_ALT;
         }
       }
     },
     startY: y,
-    styles: {
-      fontSize: 7,
-      cellPadding: 1,
-      lineColor: TABLE_GRID_LINE,
-      lineWidth: TABLE_GRID_WIDTH,
-      overflow: "hidden",
-      minCellHeight: TABLE_ROW_MIN_H,
-    },
-    headStyles: {
-      fillColor: HEADER_COLOR,
-      textColor: [255, 255, 255],
-      lineColor: TABLE_GRID_LINE,
-      lineWidth: TABLE_GRID_WIDTH,
-    },
-    margin: { left: MARGIN, right: MARGIN, top: MARGIN, bottom: 12 },
+    styles: getIndustrialAutoTableStyles(),
+    headStyles: getIndustrialHeadStyles(),
+    margin: getIndustrialAutoTableMargins(),
     columnStyles: {
-      0: { cellWidth: 36, overflow: "hidden" },
-      1: { cellWidth: 44, overflow: "hidden" },
-      2: { cellWidth: 8, halign: "center" },
-      3: { cellWidth: 14, halign: "right" },
-      4: { cellWidth: 14, halign: "right" },
-      5: { cellWidth: 9, halign: "center" },
-      6: { cellWidth: 8, halign: "center" },
-      7: { cellWidth: 8, halign: "center" },
-      8: { cellWidth: 7, halign: "center" },
-      9: { cellWidth: 7, halign: "center" },
-      10: { cellWidth: 7, halign: "center" },
-      11: { cellWidth: 7, halign: "center" },
-      12: { cellWidth: 7, halign: "center" },
-      13: { cellWidth: 7, halign: "center" },
-      14: { cellWidth: 7, halign: "center" },
-      15: { cellWidth: 7, halign: "center" },
-      16: { cellWidth: 38, overflow: "hidden" },
-      17: { cellWidth: ETQ_COL_WIDTH, overflow: "hidden", halign: "center" },
+      0: { cellWidth: 32, overflow: "hidden" },
+      1: { cellWidth: 40, overflow: "hidden" },
+      2: { cellWidth: PDF_INDUSTRIAL_QTD_COL_WIDTH, halign: "center" },
+      3: { cellWidth: 13, halign: "right" },
+      4: { cellWidth: 13, halign: "right" },
+      5: { cellWidth: PDF_INDUSTRIAL_ESP_COL_WIDTH, halign: "center" },
+      6: { cellWidth: 10, halign: "center" },
+      7: { cellWidth: 7, halign: "center" },
+      8: { cellWidth: 6, halign: "center" },
+      9: { cellWidth: 6, halign: "center" },
+      10: { cellWidth: 6, halign: "center" },
+      11: { cellWidth: 6, halign: "center" },
+      12: { cellWidth: 6, halign: "center" },
+      13: { cellWidth: 6, halign: "center" },
+      14: { cellWidth: 6, halign: "center" },
+      15: { cellWidth: 6, halign: "center" },
+      16: { cellWidth: 34, overflow: "hidden" },
+      17: { cellWidth: PDF_INDUSTRIAL_ETQ_COL_WIDTH, overflow: "hidden", halign: "center" },
     },
   });
 
-  desenharRodape(doc, dataHoje, linhas.length, totalPecasReal);
+  drawIndustrialPdfFooter(doc, dataHoje, linhas.length, totalPecasReal);
 
   if (opcoes?.incluirPaginaPrecos) {
     gerarPdfPrecos(doc, boxes, rules);
