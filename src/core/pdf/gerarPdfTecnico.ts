@@ -451,10 +451,7 @@ export function gerarPdfTecnicoCompleto(
       }
       if (data.section === "body") {
         data.cell.styles.overflow = "hidden";
-        applyEtqCellStyle(
-          data as { section: string; column: { index: number }; cell: { styles: Record<string, unknown> } },
-          ETQ_COL_INDEX
-        );
+        applyEtqCellStyle(data, ETQ_COL_INDEX);
         if (isSeparatorRow(data.row.index)) {
           data.cell.styles.fillColor = [235, 238, 242];
         } else if (data.row.index % 2 === 0) {

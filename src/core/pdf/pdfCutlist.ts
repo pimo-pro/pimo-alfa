@@ -186,10 +186,7 @@ export function renderCutlistTable(
       }
       if (data.section === "body") {
         data.cell.styles.overflow = "hidden";
-        applyEtqCellStyle(
-          data as { section: string; column: { index: number }; cell: { styles: Record<string, unknown> } },
-          etqColIndex
-        );
+        applyEtqCellStyle(data, etqColIndex);
         if (data.row.index % 2 === 0) {
           data.cell.styles.fillColor = [255, 255, 255];
         } else {

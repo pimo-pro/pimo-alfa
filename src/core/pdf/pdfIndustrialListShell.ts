@@ -241,17 +241,15 @@ export function buildColumnStylesFromWidths(
   return styles;
 }
 
-export function applyEtqCellStyle(
-  data: {
+export function applyEtqCellStyle(data: unknown, etqColIndex: number): void {
+  const hook = data as {
     section: string;
     column: { index: number };
     cell: { styles: Record<string, unknown> };
-  },
-  etqColIndex: number
-): void {
-  if (data.section === "body" && data.column.index === etqColIndex) {
-    data.cell.styles.overflow = "hidden";
-    data.cell.styles.fontSize = 6.5;
+  };
+  if (hook.section === "body" && hook.column.index === etqColIndex) {
+    hook.cell.styles.overflow = "hidden";
+    hook.cell.styles.fontSize = 6.5;
   }
 }
 
