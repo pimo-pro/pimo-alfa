@@ -286,7 +286,7 @@ export type PimoViewerApi = {
 };
 
 export type PimoViewerContextValue = {
-  viewerApi: PimoViewerApi | null;
+  viewerApi: PimoViewerApi;
   registerViewerApi: (_api: PimoViewerApi | null) => void;
 };
 

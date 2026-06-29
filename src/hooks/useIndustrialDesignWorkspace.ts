@@ -64,6 +64,7 @@ export function useIndustrialDesignWorkspace({
   const syncDesignBox = useCallback(
     (box: IndustrialDesignBox | null, targetBoxId?: string | null) => {
       setDesignBox(box);
+      if (!viewerApi?.viewerReady) return;
       viewerApi.setIndustrialDesignBox?.(box, targetBoxId ?? box?.id ?? null);
     },
     [viewerApi]
@@ -71,6 +72,7 @@ export function useIndustrialDesignWorkspace({
 
   const setSelectedHoleTypeId = useCallback((id: HoleTypeId | null) => {
     setSelectedHoleTypeIdState(id);
+    if (!viewerApi?.viewerReady) return;
     if (!insertOnClick) {
       viewerApi.setIndustrialDesignActiveHoleType?.(null);
       return;
@@ -81,6 +83,7 @@ export function useIndustrialDesignWorkspace({
   const setInsertOnClick = useCallback(
     (active: boolean) => {
       setInsertOnClickState(active);
+      if (!viewerApi?.viewerReady) return;
       viewerApi.setIndustrialDesignWorkspaceEnabled?.(active);
       viewerApi.setIndustrialDesignActiveHoleType?.(active ? selectedHoleTypeId : null);
       if (active) {
@@ -92,13 +95,20 @@ export function useIndustrialDesignWorkspace({
   );
 
   useEffect(() => {
-    if (insertOnClick) {
-      viewerApi.setIndustrialDesignActiveHoleType?.(selectedHoleTypeId);
-    }
+    if (!insertOnClick || !viewerApi?.viewerReady) return;
+    viewerApi.setIndustrialDesignActiveHoleType?.(selectedHoleTypeId);
   }, [insertOnClick, selectedHoleTypeId, viewerApi]);
 
+  const viewerReady = viewerApi?.viewerReady === true;
+
   useEffect(() => {
-    if (!enabled || !viewerApi.viewerReady || !workspaceBox) {
+    if (!viewerApi || !viewerReady) {
+      viewerApi?.setIndustrialDesignWorkspaceEnabled?.(false);
+      viewerApi?.setIndustrialDesignActiveHoleType?.(null);
+      return;
+    }
+
+    if (!enabled || !workspaceBox) {
       viewerApi.setIndustrialDesignWorkspaceEnabled?.(false);
       viewerApi.setIndustrialDesignActiveHoleType?.(null);
       return;
@@ -136,6 +146,7 @@ export function useIndustrialDesignWorkspace({
     setSelectedPanelId(viewerApi.getIndustrialDesignSelectedPanelId?.() ?? null);
 
     return () => {
+      if (!viewerApi) return;
       viewerApi.setOnIndustrialDesignPanelSelected?.(null);
       viewerApi.setOnIndustrialDesignChanged?.(null);
       viewerApi.setOnIndustrialDesignHolePlaced?.(null);
@@ -145,11 +156,11 @@ export function useIndustrialDesignWorkspace({
       viewerApi.setIndustrialDesignActiveHoleType?.(null);
       setInsertOnClickState(false);
     };
-  }, [enabled, viewerApi, viewerApi.viewerReady, workspaceBox]);
+  }, [enabled, viewerApi, viewerReady, workspaceBox]);
 
   const removeHole = useCallback(
     (panelId: string, holeId: string) => {
-      if (!designBox) return;
+      if (!designBox || !viewerApi?.viewerReady) return;
       const updated = removeDesignDrillHole(designBox, panelId, holeId);
       syncDesignBox(updated, workspaceBox?.id);
       setValidationIssues(viewerApi.refreshIndustrialDesignValidation?.() ?? []);
@@ -158,7 +169,7 @@ export function useIndustrialDesignWorkspace({
   );
 
   const autoAdjustSelectedPanel = useCallback(() => {
-    if (!designBox || !selectedPanelId) return;
+    if (!designBox || !selectedPanelId || !viewerApi?.viewerReady) return;
     const updated = applyAutoAdjustPanelToInnerSpace(designBox, selectedPanelId);
     syncDesignBox(updated, workspaceBox?.id);
     setValidationIssues(viewerApi.refreshIndustrialDesignValidation?.() ?? []);

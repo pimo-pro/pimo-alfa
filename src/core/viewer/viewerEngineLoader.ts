@@ -4,7 +4,11 @@
  * Usado pelo Workspace para montar o viewer quando o container estiver disponível.
  */
 
-export type ViewerCoreInstance = { dispose: () => void };
+export type ViewerCoreInstance = {
+  dispose: () => void;
+  viewerReady: boolean;
+  setOnViewerReady: (callback: (() => void) | null) => void;
+};
 
 export type ViewerCoreConstructor = new (
   _container: HTMLElement,

@@ -5,6 +5,7 @@ import { useViewerCamera } from "./viewer/useViewerCamera";
 import { useViewerMaterials } from "./viewer/useViewerMaterials";
 import type { Viewer } from "../3d/core/Viewer";
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
+import { PIMO_VIEWER_STUBS } from "../context/pimoViewerStubApi";
 
 /** Nomes de métodos do viewerCore que devem ser expostos na API (override dos stubs). */
 const VIEWER_CORE_SETTING_METHODS = [
@@ -85,112 +86,14 @@ const VIEWER_CORE_INDUSTRIAL_DESIGN_METHODS = [
   "refreshIndustrialDesignValidation",
 ] as const;
 
-/** Stubs para métodos opcionais de PimoViewerApi não expostos pelos hooks (settings, etc.). */
-const PIMO_VIEWER_STUBS: Record<string, unknown> = {
-  setPanelEdgesVisible: () => {},
-  setAllPanelsHidden: () => {},
-  setHiddenPanels: () => {},
-  setPanelHidden: () => {},
-  setPanelRenderingEnabled: () => {},
-  getPanelRenderingEnabled: () => false,
-  setRoomCeilingVisible: () => {},
-  setRoomFloorMode: () => {},
-  setRoomHiddenWalls: () => {},
-  setRoomUtilities: () => {},
-  setWallEditMode: () => {},
-  setMousePreset: () => {},
-  setBackgroundMode: () => {},
-  getBackgroundMode: () => "studio" as const,
-  setMaterialQuality: () => {},
-  setReflectionsEnabled: () => {},
-  setGlossIntensity: () => {},
-  getGlossIntensity: () => 1,
-  setMatteMode: () => {},
-  getMatteMode: () => false,
-  setPhotoModeEnabled: () => {},
-  setMode: () => {},
-  setShowcaseMode: () => {},
-  getCurrentMode: () => "performance" as const,
-  getShowcaseMode: () => false,
-  setExplodedViewEnabled: () => {},
-  setExplodedViewIntensity: () => {},
-  setHighlightEnabled: () => {},
-  setUltraPerformanceModeOptions: () => {},
-  setUltraPerformanceMode: () => {},
-  setGlobalLightIntensity: () => {},
-  getGlobalLightIntensity: () => 1,
-  setShadowIntensity: () => {},
-  getShadowIntensity: () => 1,
-  getBoxIdByMesh: () => null,
-  projectWorldToScreen: () => null,
-  getSelectedBoxDepthAxisWorldSegment: () => null,
-  getBoxIdAtPointerPublic: () => null,
-  setInternalMeasurementMode: () => {},
-  getInternalMeasurementMode: () => false,
-  getInternalSelectionHit: () => null,
-  getInternalSelection: () => null,
-  setInternalSelection: () => {},
-  setInternalSelectionEnabled: () => {},
-  getInternalSelectionEnabled: () => false,
-  setOnInternalSurfaceSelected: () => {},
-  setOnInternalEdgeSelected: () => {},
-  setOnInternalPointSelected: () => {},
-  enableInternalRuler: () => {},
-  disableInternalRuler: () => {},
-  getInternalMeasurements: () => null,
-  isInternalRulerOverlayActive: () => false,
-  getSelectedObjects: () => [],
-  align: () => false,
-  getDimensionsOverlayData: () => [],
-  getPrintReadyDimensions: () => ({ entries: [], generatedAt: 0 }),
-  internalRuler: {
-    enableForBox: () => {},
-    disable: () => {},
-    isActive: () => false,
-    getLastMeasurement: () => null,
-    getActiveBoxId: () => null,
-    syncFromProject: () => {},
-  },
-  snapping: {
-    enable: () => {},
-    disable: () => {},
-    isEnabled: () => false,
-    setGridSize: () => {},
-    setCaptureRadius: () => {},
-    setMagnetStrength: () => {},
-    setMode: () => {},
-    getMode: () => "basic" as const,
-    setRoomSnappingEnabled: () => {},
-    isRoomSnappingEnabled: () => false,
-    setAutoAlignmentEnabled: () => {},
-    isAutoAlignmentEnabled: () => true,
-    setAutoSpacingEnabled: () => {},
-    isAutoSpacingEnabled: () => false,
-    setWallOffset: () => {},
-    getWallOffset: () => 0,
-    getActiveAlignmentType: () => null,
-  },
-  autoLayout: {
-    fillWallWithModule: () => false,
-    extendAlongWallFromBox: () => false,
-    distributeBoxesEvenly: () => false,
-    autoStackShelvesInBox: () => false,
-  },
-  setIndustrialDesignWorkspaceEnabled: () => {},
-  getIndustrialDesignWorkspaceEnabled: () => false,
-  setIndustrialDesignActiveHoleType: () => {},
-  getIndustrialDesignActiveHoleType: () => null,
-  setIndustrialDesignBox: () => {},
-  getIndustrialDesignBox: () => null,
-  getIndustrialDesignSelectedPanelId: () => null,
-  setOnIndustrialDesignPanelSelected: () => {},
-  setOnIndustrialDesignHolePlaced: () => {},
-  setOnIndustrialDesignChanged: () => {},
-  setOnIndustrialDesignValidationChanged: () => {},
-  setOnIndustrialDesignValidationFailed: () => {},
-  getIndustrialDesignValidationIssues: () => [],
-  refreshIndustrialDesignValidation: () => [],
-};
+/** Indica se o ViewerCore terminou a inicialização (setOnViewerReady). */
+function isViewerCoreReady(
+  viewerCore: NonNullable<typeof window.viewerCore> | undefined
+): boolean {
+  if (!viewerCore) return false;
+  const readyFlag = (viewerCore as { viewerReady?: boolean }).viewerReady;
+  return readyFlag === true;
+}
 
 /**
  * Retorna uma API plana para o viewer (boxes, room, camera, materials, ruler).
@@ -210,7 +113,7 @@ export function usePimoViewer() {
       ({
         ...PIMO_VIEWER_STUBS,
         viewerRef,
-        viewerReady: Boolean(viewerCore),
+        viewerReady: isViewerCoreReady(viewerCore),
         ...boxes,
         ...room,
         ...camera,

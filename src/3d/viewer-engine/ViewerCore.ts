@@ -584,6 +584,8 @@ export class ViewerCore {
   private panelVisibility!: ViewerPanelVisibility;
   private readonly industrialDesignViewerOverlay = new IndustrialDesignViewerOverlay();
   private readonly industrialDesignMode: IndustrialDesignWorkspaceMode;
+  private viewerReadyFlag = false;
+  private readonly viewerReadyCallbacks: Array<() => void> = [];
   private runtimeLoop!: ViewerRuntimeLoop;
 
   constructor(container: HTMLElement, options: ViewerOptions = {}) {
@@ -1160,6 +1162,7 @@ export class ViewerCore {
     this.materialPipeline.setLacqueredClearcoatPipeline(this.materialQuality === "lacquered");
 
     this.start();
+    queueMicrotask(() => this.notifyViewerReady());
     this.unregisterWindowEvents = registerViewerWindowEvents({
       resize: this.updateCanvasSize,
       keydown: this.boundShiftKeyDown,
@@ -1169,6 +1172,34 @@ export class ViewerCore {
 
   getCurrentMode(): "performance" | "showcase" {
     return this.viewerState.getCurrentMode();
+  }
+
+  /** True após inicialização completa do motor (boxes, eventos, loop). */
+  get viewerReady(): boolean {
+    return this.viewerReadyFlag;
+  }
+
+  /** Callback invocado uma vez quando o viewer está pronto (ou imediatamente se já estiver). */
+  setOnViewerReady(callback: (() => void) | null): void {
+    if (!callback) return;
+    if (this.viewerReadyFlag) {
+      callback();
+      return;
+    }
+    this.viewerReadyCallbacks.push(callback);
+  }
+
+  private notifyViewerReady(): void {
+    if (this.viewerReadyFlag) return;
+    this.viewerReadyFlag = true;
+    const pending = this.viewerReadyCallbacks.splice(0);
+    for (const callback of pending) {
+      try {
+        callback();
+      } catch (err) {
+        devLogger.error("[ViewerCore] setOnViewerReady callback failed", err);
+      }
+    }
   }
 
   bindInternalMeasurementBridge(

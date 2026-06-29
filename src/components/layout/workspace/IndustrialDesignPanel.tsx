@@ -50,7 +50,7 @@ export default function IndustrialDesignPanel() {
   const ws = useIndustrialDesignWorkspace({
     viewerApi,
     workspaceBox,
-    enabled: open,
+    enabled: open && viewerApi.viewerReady === true,
   });
 
   const [selectedHoleId, setSelectedHoleId] = useState<string | null>(null);

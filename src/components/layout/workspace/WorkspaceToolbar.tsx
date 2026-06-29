@@ -33,30 +33,36 @@ export function IndustrialDesignToolbarButton() {
   const { viewerApi } = usePimoViewerContext();
   const panelOpen = useUiStore((s) => s.industrialDesignPanelOpen);
   const setIndustrialDesignPanelOpen = useUiStore((s) => s.setIndustrialDesignPanelOpen);
+  const viewerReady = viewerApi.viewerReady === true;
 
   const isActive = isIndustrialDesignToolbarActive(
     panelOpen,
-    viewerApi?.getIndustrialDesignWorkspaceEnabled
+    viewerApi.getIndustrialDesignWorkspaceEnabled
   );
 
   const handleToggle = useCallback(() => {
+    if (!viewerReady) return;
     const next = nextIndustrialDesignToolbarEnabled(isActive);
     const deps = buildIndustrialDesignToolbarDeps(viewerApi, setIndustrialDesignPanelOpen);
     applyIndustrialDesignToolbarToggle(deps, next);
-  }, [isActive, setIndustrialDesignPanelOpen, viewerApi]);
+  }, [isActive, setIndustrialDesignPanelOpen, viewerApi, viewerReady]);
 
   return (
     <button
       type="button"
       className="viewer-action-icon"
-      title="Design Industrial"
+      title={viewerReady ? "Design Industrial" : "Design Industrial (a aguardar viewer…)"}
       aria-label="Design Industrial"
       aria-pressed={isActive}
+      aria-disabled={!viewerReady}
+      disabled={!viewerReady}
       onClick={handleToggle}
       style={{
         ...TOOLBAR_BTN,
         background: isActive ? "rgba(59, 130, 246, 0.18)" : "transparent",
         boxShadow: isActive ? "inset 0 0 0 1px rgba(59, 130, 246, 0.45)" : undefined,
+        opacity: viewerReady ? 1 : 0.45,
+        cursor: viewerReady ? "pointer" : "not-allowed",
       }}
       onMouseEnter={(e) => {
         if (!isActive) e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";

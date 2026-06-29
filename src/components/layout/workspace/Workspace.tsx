@@ -167,8 +167,11 @@ export default function Workspace({
         if (!mounted) return;
         const core = new ViewerCore(container, viewerOptionsStable as Record<string, unknown>);
         viewerCoreInstanceRef.current = core;
-        window.viewerCore = core as typeof window.viewerCore;
-        setViewerMounted(true);
+        core.setOnViewerReady(() => {
+          if (!mounted) return;
+          window.viewerCore = core as unknown as typeof window.viewerCore;
+          setViewerMounted(true);
+        });
       })
       .catch((err) => {
         if (import.meta.env.DEV) {
