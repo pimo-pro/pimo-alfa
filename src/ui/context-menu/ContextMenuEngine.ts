@@ -94,6 +94,7 @@ export type MouseMenuActionId =
   | "alignment.back"
   | "alignment.top"
   | "alignment.bottom"
+  | "alignment.ctrlClickHint"
   | "intelligentDesigner.generateABC"
   | "intelligentDesigner.generateVariations"
   | "intelligentDesigner.applyA"
@@ -211,7 +212,7 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
     });
   }
 
-  if (target.type === "remate" || (!isGeneralTarget(target) && input.hasRemates)) {
+  if (target.type === "remate") {
     categories.push({
       id: "remate",
       label: "Remate",
@@ -220,6 +221,15 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
         { id: "remate.snapFrente", label: "Alinhar à Frente" },
         { id: "remate.snapFundo", label: "Alinhar por Baixo" },
         { id: "remate.snapCima", label: "Alinhar por Cima" },
+        { id: "remate.remove", label: "Remover remate", danger: true },
+      ],
+    });
+  } else if (!isGeneralTarget(target) && input.hasRemates) {
+    categories.push({
+      id: "remate",
+      label: "Remate",
+      actions: [
+        { id: "remate.material", label: "Alterar material" },
         { id: "remate.remove", label: "Remover remate", danger: true },
       ],
     });
@@ -252,6 +262,14 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
         { id: "alignment.back", label: "Alinhar Atrás" },
         { id: "alignment.top", label: "Alinhar Acima" },
         { id: "alignment.bottom", label: "Alinhar Abaixo" },
+      ],
+    });
+  } else if (input.hasSelectedBox) {
+    categories.push({
+      id: "alignment",
+      label: "Alinhamento",
+      actions: [
+        { id: "alignment.ctrlClickHint", label: "Ctrl+Click para selecionar múltiplas caixas" },
       ],
     });
   }
