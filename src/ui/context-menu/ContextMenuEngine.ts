@@ -49,6 +49,9 @@ export type MouseMenuActionId =
   | "peca.material"
   | "remate.remove"
   | "remate.material"
+  | "remate.snapFrente"
+  | "remate.snapFundo"
+  | "remate.snapCima"
   | "sala.roomSnappingToggle"
   | "materiais.mousePreset"
   | "cutlist.open"
@@ -214,6 +217,9 @@ export function buildMouseMenu(input: MouseMenuEngineInput): MouseMenuCategory[]
       label: "Remate",
       actions: [
         { id: "remate.material", label: "Alterar material" },
+        { id: "remate.snapFrente", label: "Alinhar à Frente" },
+        { id: "remate.snapFundo", label: "Alinhar por Baixo" },
+        { id: "remate.snapCima", label: "Alinhar por Cima" },
         { id: "remate.remove", label: "Remover remate", danger: true },
       ],
     });

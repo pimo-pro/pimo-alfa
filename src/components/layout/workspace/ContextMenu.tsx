@@ -429,6 +429,18 @@ export default function ContextMenu({
     if (actionId === "remate.remove" && contextMenuLayerTarget?.type === "remate" && contextMenuLayerTarget.remateId) {
       actions.removeRemate(contextMenuLayerTarget.remateId);
     }
+    if (actionId === "remate.snapFrente" && contextMenuLayerTarget?.remateId) {
+      actions.resetRemateSnap(contextMenuLayerTarget.remateId, "FRENTE");
+      window.viewerCore?.syncRemateVisuals?.();
+    }
+    if (actionId === "remate.snapFundo" && contextMenuLayerTarget?.remateId) {
+      actions.resetRemateSnap(contextMenuLayerTarget.remateId, "FUNDO");
+      window.viewerCore?.syncRemateVisuals?.();
+    }
+    if (actionId === "remate.snapCima" && contextMenuLayerTarget?.remateId) {
+      actions.resetRemateSnap(contextMenuLayerTarget.remateId, "CIMA");
+      window.viewerCore?.syncRemateVisuals?.();
+    }
     if (actionId === "ferramentas.internalRulerToggle" && selectedBoxId) {
       if (internalRulerActive) viewerApi?.internalRuler?.disable?.();
       else viewerApi?.internalRuler?.enableForBox?.(selectedBoxId);

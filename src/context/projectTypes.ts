@@ -691,6 +691,8 @@ export interface ProjectActions {
   removeRemate: (_remateId: string) => void;
   /** Remate 2.0 — reencosta remate (ou grupo) à face do módulo. */
   resnapRemateToFace: (_remateId: string) => void;
+  /** Remate 2.0 — força SNAPPED em todos os remates do mesmo parentBoxId e mountSlot. */
+  resetRemateSnap: (_remateId: string, _slot: import("../core/remate/rematePieceTypes").RemateMountSlot) => void;
   /** Remate 2.0 — duplica peça com offset lateral (mm). Devolve id da nova peça. */
   duplicateRemate: (_remateId: string) => string | null;
   /** Remate 2.0 — cria peça no slot oposto (ESQ↔DIR, CIMA↔FUNDO, FRENTE↔TRAS). */

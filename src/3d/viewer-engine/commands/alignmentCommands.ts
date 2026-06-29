@@ -5,7 +5,7 @@
  */
 
 import * as THREE from "three";
-import { setBox3FromObjectExcludingLayoutProxy } from "../box/boxAabbUtils";
+import { setBox3FromObjectExcludingLayoutProxy, setBox3FromLayoutProxyOnly } from "../box/boxAabbUtils";
 
 export type AlignmentType = "right" | "left" | "front" | "back" | "top" | "bottom";
 
@@ -22,9 +22,16 @@ export type WorldAabb = {
 };
 
 const _bounds = new THREE.Box3();
+const _structuralBounds = new THREE.Box3();
 
 export function getWorldAabb(mesh: THREE.Object3D): WorldAabb {
   mesh.updateMatrixWorld(true);
+  // Preferir bounds estruturais do proxy de layout (exclui portas/puxadores salientes).
+  // Fallback para bbox visual quando não existe proxy (remates, objetos standalone).
+  const hasProxy = setBox3FromLayoutProxyOnly(_structuralBounds, mesh);
+  if (hasProxy) {
+    return { min: _structuralBounds.min.clone(), max: _structuralBounds.max.clone() };
+  }
   setBox3FromObjectExcludingLayoutProxy(_bounds, mesh);
   return { min: _bounds.min.clone(), max: _bounds.max.clone() };
 }

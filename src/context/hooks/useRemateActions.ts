@@ -5,7 +5,8 @@ import { applyResultados, appendChangelog } from "../projectState";
 import { createRematePieces, refreshRemateMountSnap } from "../../core/remate/rematePieceFactory";
 import { createRematesForBox } from "../../core/remate/remateFactory";
 import { getMaterialByIdOrLabel } from "../../core/materials/service";
-import type { CreateRematePieceInput } from "../../core/remate/rematePieceTypes";
+import type { CreateRematePieceInput, RemateMountSlot } from "../../core/remate/rematePieceTypes";
+import { resolveMountSlot } from "../../core/remate/remateMountFrame";
 import { applyProductPatch, computeDimensionsForProduct, inferProductTypeFromLegacy, normalizeProductOptions } from "../../core/remate/remateProductRules";
 import { createOppositeRematePiece, duplicateRematePiece } from "../../core/remate/remateCloneUtils";
 import {
@@ -22,6 +23,7 @@ export type RemateActions = Pick<
   | "removeRemate"
   | "selectRematePiece"
   | "resnapRemateToFace"
+  | "resetRemateSnap"
   | "duplicateRemate"
   | "createOppositeRemate"
 >;
@@ -228,6 +230,28 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
               remates: (prev.remates ?? []).map((r) => {
                 if (!idsToSnap.includes(r.id)) return r;
                 return refreshRemateMountSnap(r, box, boxDimsFromWorkspace(box));
+              }),
+            });
+          },
+          true
+        );
+      },
+
+      resetRemateSnap: (remateId, slot: RemateMountSlot) => {
+        updateProject(
+          (prev) => {
+            const source = prev.remates?.find((r) => r.id === remateId);
+            if (!source?.parentBoxId) return prev;
+            const box = prev.workspaceBoxes.find((b) => b.id === source.parentBoxId);
+            if (!box) return prev;
+            const parentBoxId = source.parentBoxId;
+            const dimsM = boxDimsFromWorkspace(box);
+            return applyResultados({
+              ...prev,
+              remates: (prev.remates ?? []).map((r) => {
+                if (r.parentBoxId !== parentBoxId) return r;
+                if (resolveMountSlot(r) !== slot) return r;
+                return refreshRemateMountSnap(r, box, dimsM);
               }),
             });
           },

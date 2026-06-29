@@ -77,3 +77,25 @@ export function setBox3FromObjectExcludingLayoutProxy(target: THREE.Box3, root: 
   target.makeEmpty();
   return expandBox3ByObjectExcludingLayoutProxy(target, root);
 }
+
+/**
+ * Bbox APENAS do proxy de layout (volume L×A×P estrutural da caixa).
+ * Não verifica node.visible — o proxy está normalmente invisível.
+ * Retorna true se encontrou proxy; false se não havia proxy (objeto não é caixa paramétrica).
+ */
+export function setBox3FromLayoutProxyOnly(target: THREE.Box3, root: THREE.Object3D): boolean {
+  target.makeEmpty();
+  root.updateWorldMatrix(true, true);
+  root.traverse((node) => {
+    if (!isViewerLayoutProxyObject(node)) return;
+    if (!(node instanceof THREE.Mesh)) return;
+    const geometry = node.geometry;
+    if (!geometry) return;
+    if (!geometry.boundingBox) geometry.computeBoundingBox();
+    if (!geometry.boundingBox) return;
+    const bb = geometry.boundingBox.clone();
+    bb.applyMatrix4(node.matrixWorld);
+    target.union(bb);
+  });
+  return !target.isEmpty();
+}
