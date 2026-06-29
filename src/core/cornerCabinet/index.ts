@@ -20,6 +20,12 @@ export {
 } from "./cornerCabinetRules";
 export { gerarPaineisCorner, getCornerFixedFrontHingeSide } from "./cornerCabinetManufacturing";
 export { buildCornerDoorLayerItems, syncCornerWorkspaceBoxDoorsLayer } from "./cornerCabinetLayers";
+export {
+  migrateCornerDireitaInferiorBoxToV2,
+  migrateCornerDireitaInferiorBoxes,
+  isLegacyCornerDireitaInferiorId,
+  LEGACY_CORNER_DIREITA_INFERIOR_IDS,
+} from "./cornerCabinetMigration";
 export { computeCornerVisualLayout, cornerLayoutMmToVisual } from "./cornerCabinetVisual";
 export {
   buildCornerFixedFrontDowelHoles,

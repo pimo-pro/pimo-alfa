@@ -54,7 +54,6 @@ const CORNER_DIREITA_INFERIOR_CONFIG: CornerCabinetConfig = {
 
 const CORNER_MODEL_CONFIG: Record<string, CornerCabinetConfig> = {
   [CORNER_DIREITA_INFERIOR_V2_ID]: { ...CORNER_DIREITA_INFERIOR_CONFIG },
-  [CORNER_FF_COZINHA_INFERIOR_ID]: { ...CORNER_DIREITA_INFERIOR_CONFIG },
   "corner-ff-cozinha-superior": {
     style: "cozinha",
     fixedFrontWidthMm: 180,
@@ -93,10 +92,7 @@ export function isCornerDireitaInferiorV2Model(baseCabinetId?: string | null): b
 }
 
 export function isCornerDireitaInferiorModel(baseCabinetId?: string | null): boolean {
-  return (
-    baseCabinetId === CORNER_FF_COZINHA_INFERIOR_ID ||
-    baseCabinetId === CORNER_DIREITA_INFERIOR_V2_ID
-  );
+  return baseCabinetId === CORNER_DIREITA_INFERIOR_V2_ID;
 }
 
 export function getCornerCabinetConfig(baseCabinetId?: string | null): CornerCabinetConfig | null {

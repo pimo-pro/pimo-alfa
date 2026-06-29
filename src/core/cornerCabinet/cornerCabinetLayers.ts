@@ -11,15 +11,17 @@ import {
 
 const defaultDoorMaterial = getDefaultOfficialMaterial().canonicalId;
 
+type CornerDoorsLayerBox = Pick<
+  WorkspaceBox,
+  "id" | "baseCabinetId" | "rotacaoY" | "dimensoes" | "espessura" | "portaTipo" | "doorsLayer"
+>;
+
 /**
  * Portas 3D/cutlist para módulos corner: uma única folha a partir do layout industrial.
  * Em modelos v2 (SSOT) ignora totalmente doorsLayer legado (só preserva material/abertura).
  */
 export function buildCornerDoorLayerItems(
-  box: Pick<
-    WorkspaceBox,
-    "id" | "baseCabinetId" | "rotacaoY" | "dimensoes" | "espessura" | "portaTipo"
-  >,
+  box: CornerDoorsLayerBox,
   existingDoors?: DoorLayerItem[]
 ): DoorLayerItem[] {
   const ssot = isCornerLayoutSsotModel(box.baseCabinetId);
@@ -91,8 +93,7 @@ function cornerDoorLayersMatch(current: DoorLayerItem[], expected: DoorLayerItem
 }
 
 /** Corrige doorsLayer legado em caixas corner já persistidas no projeto. */
-export function syncCornerWorkspaceBoxDoorsLayer(box: WorkspaceBox): WorkspaceBox {
-  const cfg = getCornerCabinetConfig(box.baseCabinetId);
+export function syncCornerWorkspaceBoxDoorsLayer<T extends CornerDoorsLayerBox>(box: T): T {  const cfg = getCornerCabinetConfig(box.baseCabinetId);
   if (!cfg || box.portaTipo !== "porta_simples") return box;
 
   const expected = buildCornerDoorLayerItems(box, box.doorsLayer);

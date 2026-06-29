@@ -18,7 +18,7 @@ import { getBoxPositionAndRotation } from "../../hooks/useCalculadoraSync";
 import { getProfundidadeInternaUtilMm } from "../../core/box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../../core/materials/materials.api";
 import { resolveCostaAtivaForBox, resolveNoBackPanel } from "../../core/box/backPanelFlags";
-import { buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../../core/cornerCabinet";
+import { buildCornerDoorLayerItems, getCornerCabinetConfig, migrateCornerDireitaInferiorBoxToV2, syncCornerWorkspaceBoxDoorsLayer } from "../../core/cornerCabinet";
 import { doorLayerItemsForViewer } from "../../core/box/doorLayerItemsForViewer";
 import { attachKitchenFeetIfNeeded } from "./kitchenFeetVisual";
 
@@ -137,7 +137,7 @@ export function buildShowroomWorkspaceSceneGroup(project: ProjectState): THREE.G
     );
     const layoutDepthM = mmToM(profundidadeExternaMm);
     const carcassDepthM = mmToM(profundidadeInternaUtilMm);
-    const wsBoxSynced = syncCornerWorkspaceBoxDoorsLayer(wsBox);
+    const wsBoxSynced = migrateCornerDireitaInferiorBoxToV2(syncCornerWorkspaceBoxDoorsLayer(wsBox));
     const resolvedDoors =
       getCornerCabinetConfig(wsBoxSynced.baseCabinetId) && wsBoxSynced.portaTipo === "porta_simples"
         ? buildCornerDoorLayerItems(wsBoxSynced, wsBoxSynced.doorsLayer)

@@ -16,7 +16,7 @@ import { resolveDrawerFrontMaterialId } from "../core/drawers/drawerFrontMateria
 import { syncDrawerFrontMaterialToViewer } from "../industrial/viewerIntegration";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
-import { buildCornerDoorLayerItems, getCornerCabinetConfig, isCornerLayoutSsotModel, syncCornerWorkspaceBoxDoorsLayer } from "../core/cornerCabinet";
+import { buildCornerDoorLayerItems, getCornerCabinetConfig, isCornerLayoutSsotModel, migrateCornerDireitaInferiorBoxToV2, syncCornerWorkspaceBoxDoorsLayer } from "../core/cornerCabinet";
 import { isIndustrialFileGenerationActive } from "../core/fabrication/industrialGenerationSuspend";
 import type { RulesConfig } from "../core/rules/rulesConfig";
 
@@ -293,7 +293,7 @@ export const useCalculadoraSync = (
 
       let layoutDepthM: number | undefined;
       let carcassDepthM: number | undefined;
-      const wsBoxSynced = syncCornerWorkspaceBoxDoorsLayer(wsBox);
+      const wsBoxSynced = migrateCornerDireitaInferiorBoxToV2(syncCornerWorkspaceBoxDoorsLayer(wsBox));
       let doorLayerItems: DoorLayerItem[] = wsBoxSynced.doorsLayer ?? [];
       const cornerCfg = getCornerCabinetConfig(wsBoxSynced.baseCabinetId);
       if (cornerCfg && wsBoxSynced.portaTipo === "porta_simples") {

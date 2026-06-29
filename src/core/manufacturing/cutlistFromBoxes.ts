@@ -3,7 +3,6 @@ import type {
   BoxModule,
   CutListItemComPreco,
   PanelDrillHole,
-  WorkspaceBox,
 } from "../types";
 import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
@@ -128,7 +127,7 @@ export function cutlistComPrecoFromBox(
   rules: RulesConfig,
   projectMaterialId?: string
 ): CutListItemComPreco[] {
-  const syncedBox = syncCornerWorkspaceBoxDoorsLayer(box as WorkspaceBox) as BoxModule;
+  const syncedBox = syncCornerWorkspaceBoxDoorsLayer(box);
   const chaveCaixa = `${jsonIndustrialBoxParaCutlist(syncedBox)}\0${JSON.stringify(rules)}\0${projectMaterialId ?? ""}`;
   const entradaCaixa = cutlistPorCaixaCache.get(syncedBox.id);
   if (entradaCaixa && entradaCaixa.chave === chaveCaixa) {

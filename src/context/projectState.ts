@@ -19,7 +19,7 @@ import type {
   WorkspaceBox,
 } from "../core/types";
 import { ensureBoxPanelIds } from "../core/box/panelIds";
-import { isCornerFixedFrontModel, syncCornerWorkspaceBoxDoorsLayer } from "../core/cornerCabinet";
+import { isCornerFixedFrontModel, migrateCornerDireitaInferiorBoxes } from "../core/cornerCabinet";
 import type { ProjectState, ViewerSettings } from "./projectTypes";
 import { validateBoxModels } from "../core/rules/validation";
 import {
@@ -388,7 +388,7 @@ const calcularResultadosBoxes = (state: ProjectState): ResultadosCalculo | null 
 
 export const applyResultados = (state: ProjectState): ProjectState => {
   try {
-    const workspaceBoxes = state.workspaceBoxes.map(syncCornerWorkspaceBoxDoorsLayer);
+    const workspaceBoxes = migrateCornerDireitaInferiorBoxes(state.workspaceBoxes);
     const stateSynced = { ...state, workspaceBoxes };
     // Sincroniza boxes com workspaceBoxes (single source of truth para o viewer e cálculo).
     const boxes = buildBoxesFromWorkspace(stateSynced);

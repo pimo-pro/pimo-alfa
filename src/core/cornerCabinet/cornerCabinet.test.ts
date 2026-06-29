@@ -3,8 +3,8 @@ import { settingsDefaults } from "../settings/settingsSchema";
 import {
   computeCornerLayoutMm,
   getCornerCabinetConfig,
-  CORNER_FF_COZINHA_INFERIOR_ID,
   CORNER_DIREITA_INFERIOR_V2_ID,
+  CORNER_FF_COZINHA_INFERIOR_ID,
   isCornerLayoutSsotModel,
   CORNER_FIXED_FRONT_OVERSIZE_MM,
   resolveCornerDoorGapSettings,
@@ -19,6 +19,7 @@ import {
   resolveFrenteFixaLateralHoleYFromTop,
 } from "./cornerFixedFrontDowels";
 import { buildCornerDoorLayerItems, syncCornerWorkspaceBoxDoorsLayer } from "./cornerCabinetLayers";
+import { migrateCornerDireitaInferiorBoxToV2 } from "./cornerCabinetMigration";
 import { gerarPaineisCorner } from "./cornerCabinetManufacturing";
 import { createWorkspaceBox } from "../../context/projectState";
 import { cutlistComPrecoFromBox } from "../manufacturing/cutlistFromBoxes";
@@ -27,8 +28,8 @@ import { defaultRulesConfig } from "../rules/rulesConfig";
 import type { BoxModule, CutListItemComPreco, WorkspaceBox } from "../types";
 import type { DoorLayerItem } from "../../models/BoxLayers";
 
-describe("cornerCabinet — Canto Direita Inferior", () => {
-  const cfg = getCornerCabinetConfig(CORNER_FF_COZINHA_INFERIOR_ID)!;
+describe("cornerCabinet — Canto Direita Inferior v2", () => {
+  const cfg = getCornerCabinetConfig(CORNER_DIREITA_INFERIOR_V2_ID)!;
   const gaps = settingsDefaults.portas;
 
   it("frente fixa = porta esquerda + 2 mm (largura e altura), sem folgas de porta", () => {
@@ -93,7 +94,7 @@ describe("cornerCabinet — Canto Direita Inferior", () => {
       rotacaoY_90: false,
       rotacaoY: 0,
       manualPosition: false,
-      baseCabinetId: CORNER_FF_COZINHA_INFERIOR_ID,
+      baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
       doorsLayer: [
         {
           id: "door-left",
@@ -154,9 +155,9 @@ describe("cornerCabinet — Canto Direita Inferior", () => {
       [],
       "reta",
       "recuado",
-      CORNER_FF_COZINHA_INFERIOR_ID,
+      CORNER_DIREITA_INFERIOR_V2_ID,
       {
-        baseCabinetId: CORNER_FF_COZINHA_INFERIOR_ID,
+        baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
         portaTipo: "porta_simples",
         prateleiras: 2,
         cornerFixedFront: true,
@@ -164,7 +165,7 @@ describe("cornerCabinet — Canto Direita Inferior", () => {
       }
     );
 
-    expect(box.baseCabinetId).toBe(CORNER_FF_COZINHA_INFERIOR_ID);
+    expect(box.baseCabinetId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
     expect(box.doorsLayer).toHaveLength(1);
     expect(box.doorsLayer[0]?.hingeSide).toBe("right");
     expect(box.doorsLayer[0]?.width).toBe(716);
@@ -174,7 +175,7 @@ describe("cornerCabinet — Canto Direita Inferior", () => {
   it("manufacturing gera frente_fixa 182×720 e uma única porta direita (sem porta esquerda)", () => {
     const box: BoxModule = {
       id: "box-canto-test",
-      baseCabinetId: CORNER_FF_COZINHA_INFERIOR_ID,
+      baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
       dimensoes: { largura: 900, altura: 720, profundidade: 600 },
       espessura: 19,
       portaTipo: "porta_simples",
@@ -195,7 +196,7 @@ describe("cornerCabinet — Canto Direita Inferior", () => {
   it("cutlist usa frente fixa do layout mesmo com doorsLayer legado de porta dupla", () => {
     const box: BoxModule = {
       id: "box-canto-legacy-doors",
-      baseCabinetId: CORNER_FF_COZINHA_INFERIOR_ID,
+      baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
       dimensoes: { largura: 900, altura: 720, profundidade: 600 },
       espessura: 19,
       portaTipo: "porta_simples",
@@ -254,7 +255,7 @@ describe("cornerCabinet — Canto Direita Inferior", () => {
     const doors = buildCornerDoorLayerItems(
       {
         id: "box-canto",
-        baseCabinetId: CORNER_FF_COZINHA_INFERIOR_ID,
+        baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
         rotacaoY: 0,
         dimensoes: { largura: 900, altura: 720, profundidade: 600 },
         espessura: 19,
@@ -434,6 +435,43 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
   it("é modelo SSOT e tem layoutMode direita", () => {
     expect(isCornerLayoutSsotModel(CORNER_DIREITA_INFERIOR_V2_ID)).toBe(true);
     expect(v2Cfg.layoutMode).toBe("direita");
+  });
+
+  it("migrateCornerDireitaInferiorBoxToV2 converte corner-ff-cozinha-inferior legado", () => {
+    const legacy: WorkspaceBox = {
+      id: "box-legacy-mig",
+      nome: "Canto — Direita (Inferior) [legado]",
+      dimensoes: { largura: 900, altura: 720, profundidade: 600 },
+      espessura: 19,
+      tipoBorda: "reta",
+      tipoFundo: "recuado",
+      models: [],
+      prateleiras: 2,
+      portaTipo: "porta_simples",
+      gavetas: 0,
+      alturaGaveta: 200,
+      posicaoX_mm: 0,
+      posicaoY_mm: 460,
+      posicaoZ_mm: 0,
+      rotacaoY_90: false,
+      rotacaoY: 0,
+      manualPosition: false,
+      baseCabinetId: CORNER_FF_COZINHA_INFERIOR_ID,
+      catalogItemId: CORNER_FF_COZINHA_INFERIOR_ID,
+      doorsLayer: legacyTwoDoors,
+      drawersLayer: [],
+      divisores: [],
+      separadores: [],
+      locked: false,
+      costaAtiva: true,
+      profundidadeExterna: 600,
+      remateIds: [],
+    };
+    const migrated = migrateCornerDireitaInferiorBoxToV2(legacy);
+    expect(migrated.baseCabinetId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
+    expect(migrated.catalogItemId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
+    expect(migrated.doorsLayer).toHaveLength(1);
+    expect(migrated.doorsLayer[0]?.hingeSide).toBe("right");
   });
 
   it("createWorkspaceBox v2 nasce com 1 porta direita e frente_fixa no panelIds", () => {
