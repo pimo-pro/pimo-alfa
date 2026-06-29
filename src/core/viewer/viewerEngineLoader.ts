@@ -10,6 +10,13 @@ export type ViewerCoreInstance = {
   setOnViewerReady: (callback: (() => void) | null) => void;
 };
 
+declare global {
+  interface Window {
+    /** Callback global — registra listener para quando o ViewerCore estiver pronto. */
+    setOnViewerReady?: (callback: (() => void) | null) => void;
+  }
+}
+
 export type ViewerCoreConstructor = new (
   _container: HTMLElement,
   _options?: Record<string, unknown>

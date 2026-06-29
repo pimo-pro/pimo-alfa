@@ -42,7 +42,7 @@ export default function IndustrialDesignPanel() {
   const open = useUiStore((s) => s.industrialDesignPanelOpen);
   const setOpen = useUiStore((s) => s.setIndustrialDesignPanelOpen);
   const { project } = useProject();
-  const { viewerApi } = usePimoViewerContext();
+  const { viewerApi, viewerReady } = usePimoViewerContext();
   const workspaceBox = project.workspaceBoxes.find(
     (b) => b.id === project.selectedWorkspaceBoxId
   );
@@ -50,7 +50,7 @@ export default function IndustrialDesignPanel() {
   const ws = useIndustrialDesignWorkspace({
     viewerApi,
     workspaceBox,
-    enabled: open && viewerApi.viewerReady === true,
+    enabled: open && viewerReady,
   });
 
   const [selectedHoleId, setSelectedHoleId] = useState<string | null>(null);

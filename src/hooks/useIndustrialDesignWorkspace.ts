@@ -12,6 +12,7 @@ import {
   type DesignValidationIssue,
   type IndustrialDesignBox,
 } from "@/core/industrialDesigner";
+import { isViewerApiReady } from "@/core/viewer/viewerReadiness";
 import type { PimoViewerApi } from "@/context/PimoViewerContextCore";
 
 function workspaceBoxToDesignBox(box: WorkspaceBox): IndustrialDesignBox {
@@ -99,7 +100,7 @@ export function useIndustrialDesignWorkspace({
     viewerApi.setIndustrialDesignActiveHoleType?.(selectedHoleTypeId);
   }, [insertOnClick, selectedHoleTypeId, viewerApi]);
 
-  const viewerReady = viewerApi?.viewerReady === true;
+  const viewerReady = isViewerApiReady(viewerApi);
 
   useEffect(() => {
     if (!viewerApi || !viewerReady) {

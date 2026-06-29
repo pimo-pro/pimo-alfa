@@ -14,12 +14,19 @@ export const PimoViewerProvider = ({ children }: { children: React.ReactNode }) 
       setViewerApi(stubApiRef.current);
       return;
     }
-    if (registeredApiRef.current === api) return;
-    registeredApiRef.current = api;
-    setViewerApi(api);
+    const safeApi = api ?? stubApiRef.current;
+    if (registeredApiRef.current === safeApi) return;
+    registeredApiRef.current = safeApi;
+    setViewerApi(safeApi);
   }, []);
 
-  const value = useMemo(() => ({ viewerApi, registerViewerApi }), [viewerApi, registerViewerApi]);
+  const value = useMemo(
+    () => ({
+      viewerApi: viewerApi ?? stubApiRef.current,
+      registerViewerApi,
+    }),
+    [viewerApi, registerViewerApi]
+  );
 
   return <PimoViewerContext.Provider value={value}>{children}</PimoViewerContext.Provider>;
 };

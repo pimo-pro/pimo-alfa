@@ -49,6 +49,8 @@ export type IndustrialDesignWorkspaceDeps = {
   setValidationHighlightPanels: (boxId: string, panelIds: string[]) => void;
   setSelectionHighlightPanel: (boxId: string, panelId: string | null) => void;
   syncDesignVisuals: (boxId: string) => void;
+  /** Quando false, o modo ignora mutações até o ViewerCore estar pronto. */
+  getViewerReady?: () => boolean;
 };
 
 export class IndustrialDesignWorkspaceMode {
@@ -63,6 +65,10 @@ export class IndustrialDesignWorkspaceMode {
 
   constructor(deps: IndustrialDesignWorkspaceDeps) {
     this.deps = deps;
+  }
+
+  private isViewerReady(): boolean {
+    return this.deps.getViewerReady?.() !== false;
   }
 
   isEnabled(): boolean {
@@ -114,6 +120,7 @@ export class IndustrialDesignWorkspaceMode {
   }
 
   setEnabled(enabled: boolean): void {
+    if (!this.isViewerReady()) return;
     this.enabled = enabled;
     this.deps.setPanelRenderingEnabled(enabled);
     if (!enabled) {
@@ -131,6 +138,7 @@ export class IndustrialDesignWorkspaceMode {
   }
 
   setDesignBox(box: IndustrialDesignBox | null, targetBoxId?: string | null): void {
+    if (!this.isViewerReady()) return;
     this.designBox = box;
     this.targetBoxId = targetBoxId ?? box?.id ?? null;
     if (box && this.targetBoxId) {
@@ -194,7 +202,7 @@ export class IndustrialDesignWorkspaceMode {
    * @returns true se o evento foi consumido.
    */
   handlePointerClick(event: { clientX: number; clientY: number }): boolean {
-    if (!this.enabled) return false;
+    if (!this.isViewerReady() || !this.enabled) return false;
 
     const hit = this.resolvePanelHit(event);
     if (!hit) return false;
@@ -245,7 +253,7 @@ export class IndustrialDesignWorkspaceMode {
 
   /** Sincroniza furos do designBox com o viewer 3D. */
   syncToViewer(): void {
-    if (!this.targetBoxId || !this.designBox) return;
+    if (!this.isViewerReady() || !this.targetBoxId || !this.designBox) return;
     const entry = this.deps.getBoxEntry(this.targetBoxId);
     const designMarkers = buildViewerDrillMarkersFromDesign(this.designBox);
     const merged = mergeViewerDrillMarkers(entry?.drillMarkersByPanel, designMarkers);

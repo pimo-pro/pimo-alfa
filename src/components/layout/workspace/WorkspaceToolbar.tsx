@@ -30,10 +30,9 @@ const INACTIVE_COLOR = "#64748b";
 const ACTIVE_COLOR = "#3b82f6";
 
 export function IndustrialDesignToolbarButton() {
-  const { viewerApi } = usePimoViewerContext();
+  const { viewerApi, viewerReady } = usePimoViewerContext();
   const panelOpen = useUiStore((s) => s.industrialDesignPanelOpen);
   const setIndustrialDesignPanelOpen = useUiStore((s) => s.setIndustrialDesignPanelOpen);
-  const viewerReady = viewerApi.viewerReady === true;
 
   const isActive = isIndustrialDesignToolbarActive(
     panelOpen,

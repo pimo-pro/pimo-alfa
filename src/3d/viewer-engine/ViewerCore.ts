@@ -677,14 +677,6 @@ export class ViewerCore {
     this.displayMaterials = new DisplayMaterialController();
     this.ultraMaterials = new UltraMaterialController();
 
-    this.panelVisibility = new ViewerPanelVisibility({
-      getBoxes: () => this.boxes,
-      getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
-      getBoxIdByMesh: (mesh) => this.pointerPicking.getBoxIdByMesh(mesh),
-      getSharedPanelEdgeMaterial: () => this.materialPipeline.getSharedPanelEdgeMaterial(),
-      getIndustrialDesignWorkspaceEnabled: () => this.industrialDesignMode.isEnabled(),
-    });
-
     this.industrialDesignMode = new IndustrialDesignWorkspaceMode({
       getBoxEntry: (id) => this.boxes.get(id),
       getBoxMesh: (id) => this.boxes.get(id)?.mesh ?? null,
@@ -709,6 +701,15 @@ export class ViewerCore {
       syncDesignVisuals: (boxId) => {
         this.syncIndustrialDesignViewerOverlay(boxId);
       },
+      getViewerReady: () => this.viewerReadyFlag,
+    });
+
+    this.panelVisibility = new ViewerPanelVisibility({
+      getBoxes: () => this.boxes,
+      getHighlightEnabled: () => this.viewerState.getHighlightEnabled(),
+      getBoxIdByMesh: (mesh) => this.pointerPicking.getBoxIdByMesh(mesh),
+      getSharedPanelEdgeMaterial: () => this.materialPipeline.getSharedPanelEdgeMaterial(),
+      getIndustrialDesignWorkspaceEnabled: () => this.industrialDesignMode.isEnabled(),
     });
 
     this.materialSet = createInitialMaterialSet();

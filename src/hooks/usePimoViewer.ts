@@ -6,6 +6,7 @@ import { useViewerMaterials } from "./viewer/useViewerMaterials";
 import type { Viewer } from "../3d/core/Viewer";
 import type { PimoViewerApi } from "../context/PimoViewerContextCore";
 import { PIMO_VIEWER_STUBS } from "../context/pimoViewerStubApi";
+import { isViewerCoreReady } from "../core/viewer/viewerReadiness";
 
 /** Nomes de métodos do viewerCore que devem ser expostos na API (override dos stubs). */
 const VIEWER_CORE_SETTING_METHODS = [
@@ -86,18 +87,9 @@ const VIEWER_CORE_INDUSTRIAL_DESIGN_METHODS = [
   "refreshIndustrialDesignValidation",
 ] as const;
 
-/** Indica se o ViewerCore terminou a inicialização (setOnViewerReady). */
-function isViewerCoreReady(
-  viewerCore: NonNullable<typeof window.viewerCore> | undefined
-): boolean {
-  if (!viewerCore) return false;
-  const readyFlag = (viewerCore as { viewerReady?: boolean }).viewerReady;
-  return readyFlag === true;
-}
-
 /**
  * Retorna uma API plana para o viewer (boxes, room, camera, materials, ruler).
- * Quando window.viewerCore está definido, os hooks expõem a API real; caso contrário NOOP.
+ * Métodos do ViewerCore só são expostos após `viewerReady === true`.
  */
 export function usePimoViewer() {
   const boxes = useViewerBoxes();
@@ -105,7 +97,8 @@ export function usePimoViewer() {
   const camera = useViewerCamera();
   const materials = useViewerMaterials();
   const viewerCore =
-    typeof window !== "undefined" ? window.viewerCore : undefined;
+    typeof window !== "undefined" ? window.viewerCore ?? undefined : undefined;
+  const coreReady = isViewerCoreReady(viewerCore);
   const viewerRef = useRef<Viewer | null>(null);
 
   return useMemo(
@@ -113,12 +106,12 @@ export function usePimoViewer() {
       ({
         ...PIMO_VIEWER_STUBS,
         viewerRef,
-        viewerReady: isViewerCoreReady(viewerCore),
+        viewerReady: coreReady,
         ...boxes,
         ...room,
         ...camera,
         ...materials,
-        ...(viewerCore
+        ...(coreReady && viewerCore
           ? [
               ...VIEWER_CORE_SETTING_METHODS,
               ...VIEWER_CORE_UTILITY_METHODS,
@@ -130,27 +123,29 @@ export function usePimoViewer() {
             }, {})
           : {}),
         getBoxIdByMesh:
-          viewerCore && typeof (viewerCore as { getBoxIdByMeshPublic?: unknown }).getBoxIdByMeshPublic === "function"
+          coreReady &&
+          viewerCore &&
+          typeof (viewerCore as { getBoxIdByMeshPublic?: unknown }).getBoxIdByMeshPublic === "function"
             ? (viewerCore as { getBoxIdByMeshPublic: (..._args: unknown[]) => unknown }).getBoxIdByMeshPublic.bind(viewerCore)
             : PIMO_VIEWER_STUBS.getBoxIdByMesh,
         internalRuler:
-          viewerCore && (viewerCore as { internalRuler?: PimoViewerApi["internalRuler"] }).internalRuler
+          coreReady && viewerCore && (viewerCore as { internalRuler?: PimoViewerApi["internalRuler"] }).internalRuler
             ? (viewerCore as { internalRuler: NonNullable<PimoViewerApi["internalRuler"]> }).internalRuler
             : PIMO_VIEWER_STUBS.internalRuler,
         snapping:
-          viewerCore && (viewerCore as { snapping?: PimoViewerApi["snapping"] }).snapping
+          coreReady && viewerCore && (viewerCore as { snapping?: PimoViewerApi["snapping"] }).snapping
             ? (viewerCore as { snapping: NonNullable<PimoViewerApi["snapping"]> }).snapping
             : PIMO_VIEWER_STUBS.snapping,
         autoLayout:
-          viewerCore && (viewerCore as { autoLayout?: PimoViewerApi["autoLayout"] }).autoLayout
+          coreReady && viewerCore && (viewerCore as { autoLayout?: PimoViewerApi["autoLayout"] }).autoLayout
             ? (viewerCore as { autoLayout: NonNullable<PimoViewerApi["autoLayout"]> }).autoLayout
             : PIMO_VIEWER_STUBS.autoLayout,
-        smartLayout: viewerCore?.smartLayout,
-        intelligentDesigner: viewerCore?.intelligentDesigner,
-        conversationalDesigner: viewerCore?.conversationalDesigner,
-        manufacturing: viewerCore?.manufacturing,
-        costEstimator: viewerCore?.costEstimator,
+        smartLayout: coreReady ? viewerCore?.smartLayout : undefined,
+        intelligentDesigner: coreReady ? viewerCore?.intelligentDesigner : undefined,
+        conversationalDesigner: coreReady ? viewerCore?.conversationalDesigner : undefined,
+        manufacturing: coreReady ? viewerCore?.manufacturing : undefined,
+        costEstimator: coreReady ? viewerCore?.costEstimator : undefined,
       }) as PimoViewerApi,
-    [boxes, room, camera, materials, viewerCore]
+    [boxes, room, camera, materials, viewerCore, coreReady]
   );
 }

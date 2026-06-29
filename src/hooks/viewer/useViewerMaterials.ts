@@ -3,6 +3,7 @@
  * Obtém a API de materiais a partir de window.viewerCore.
  */
 import { useMemo } from "react";
+import { isViewerCoreReady } from "../../core/viewer/viewerReadiness";
 
 const NOOP = () => {};
 const NOOP_RETURN_UNDEFINED = () => undefined;
@@ -28,7 +29,7 @@ export function useViewerMaterials() {
     typeof window !== "undefined" ? (window as Window).viewerCore : undefined;
 
   return useMemo(() => {
-    if (!viewerCore) return MATERIALS_NOOP_API;
+    if (!isViewerCoreReady(viewerCore)) return MATERIALS_NOOP_API;
 
     const bind = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;

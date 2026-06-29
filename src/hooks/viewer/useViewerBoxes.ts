@@ -3,6 +3,7 @@
  * Obtém a API de boxes a partir de window.viewerCore.
  */
 import { useMemo } from "react";
+import { isViewerCoreReady } from "../../core/viewer/viewerReadiness";
 
 const NOOP = () => {};
 const NOOP_SELECT_BOX = () => {};
@@ -50,7 +51,7 @@ export function useViewerBoxes() {
     typeof window !== "undefined" ? (window as Window).viewerCore : undefined;
 
   return useMemo(() => {
-    if (!viewerCore) return BOXES_NOOP_API;
+    if (!isViewerCoreReady(viewerCore)) return BOXES_NOOP_API;
 
     const fromCore = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;

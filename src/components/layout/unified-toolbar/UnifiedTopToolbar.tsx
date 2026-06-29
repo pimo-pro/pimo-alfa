@@ -101,7 +101,7 @@ export default function UnifiedTopToolbar({
 }: UnifiedTopToolbarProps) {
   const { project, actions } = useProject();
   const navigate = useNavigate();
-  const { viewerApi } = usePimoViewerContext() ?? {};
+  const { viewerApi } = usePimoViewerContext();
   const [exportPanelOpen, setExportPanelOpen] = useState(false);
   const photoModePanelOpen = useUiStore((s) => s.photoModePanelOpen);
   const setPhotoModePanelOpen = useUiStore((s) => s.setPhotoModePanelOpen);

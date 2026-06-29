@@ -3,6 +3,7 @@
  * Obtém a API de sala a partir de window.viewerCore.
  */
 import { useMemo } from "react";
+import { isViewerCoreReady } from "../../core/viewer/viewerReadiness";
 
 const NOOP = () => {};
 const NOOP_RETURN_FALSE = () => false;
@@ -49,7 +50,7 @@ export function useViewerRoom() {
     typeof window !== "undefined" ? (window as Window).viewerCore : undefined;
 
   return useMemo(() => {
-    if (!viewerCore) return ROOM_NOOP_API;
+    if (!isViewerCoreReady(viewerCore)) return ROOM_NOOP_API;
 
     const room = viewerCore.roomManager;
     const bindMaybe = (

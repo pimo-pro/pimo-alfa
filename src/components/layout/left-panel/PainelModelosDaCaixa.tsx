@@ -21,7 +21,7 @@ const OFFICIAL_WOOD_OPTIONS = listOfficialMaterials();
 const VISUAL_WOOD_OPTIONS = OFFICIAL_WOOD_OPTIONS.filter((m) => m.visual);
 export default function PainelModelosDaCaixa() {
   const { project, actions } = useProject();
-  const { viewerApi } = usePimoViewerContext();
+  const { viewerApi, viewerReady } = usePimoViewerContext();
   const selectedBox = project.workspaceBoxes.find(
     (box) => box.id === project.selectedWorkspaceBoxId
   );
@@ -53,8 +53,13 @@ export default function PainelModelosDaCaixa() {
         <button
           type="button"
           className="btn btn--primary"
-          style={{ width: "100%", marginBottom: 4 }}
-          onClick={() => setIndustrialDesignPanelOpen(true)}
+          style={{ width: "100%", marginBottom: 4, opacity: viewerReady ? 1 : 0.5 }}
+          disabled={!viewerReady}
+          title={viewerReady ? "Abrir Design Industrial" : "A aguardar viewer 3D…"}
+          onClick={() => {
+            if (!viewerReady) return;
+            setIndustrialDesignPanelOpen(true);
+          }}
         >
           Abrir Design Industrial
         </button>
