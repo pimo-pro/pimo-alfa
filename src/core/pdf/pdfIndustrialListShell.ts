@@ -228,7 +228,7 @@ export function getIndustrialHeadStyles() {
 /** Estilos autoTable columnStyles a partir de array de larguras mm. */
 export function buildColumnStylesFromWidths(
   widthsMm: number[],
-  overrides?: Record<number, Partial<{ halign: "left" | "center" | "right"; overflow: "hidden" | "linebreak" }>>
+  overrides?: Record<number, Partial<{ halign: "left" | "center" | "right" }>>
 ): Record<number, { cellWidth: number; overflow: "hidden"; halign?: "left" | "center" | "right" }> {
   const styles: Record<number, { cellWidth: number; overflow: "hidden"; halign?: "left" | "center" | "right" }> = {};
   widthsMm.forEach((w, i) => {
@@ -242,7 +242,11 @@ export function buildColumnStylesFromWidths(
 }
 
 export function applyEtqCellStyle(
-  data: { section: string; column: { index: number }; cell: { styles: Record<string, unknown> } },
+  data: {
+    section: string;
+    column: { index: number };
+    cell: { styles: Record<string, unknown> };
+  },
   etqColIndex: number
 ): void {
   if (data.section === "body" && data.column.index === etqColIndex) {

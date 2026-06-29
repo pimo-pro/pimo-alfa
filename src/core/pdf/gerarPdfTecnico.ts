@@ -25,7 +25,6 @@ import {
 import {
   PDF_INDUSTRIAL_HEADER_COLOR,
   PDF_INDUSTRIAL_MARGIN,
-  PDF_INDUSTRIAL_PAGE_W,
   PDF_INDUSTRIAL_ROW_ALT,
   PDF_INDUSTRIAL_TABLE_W,
   applyEtqCellStyle,
@@ -452,7 +451,10 @@ export function gerarPdfTecnicoCompleto(
       }
       if (data.section === "body") {
         data.cell.styles.overflow = "hidden";
-        applyEtqCellStyle(data, ETQ_COL_INDEX);
+        applyEtqCellStyle(
+          data as { section: string; column: { index: number }; cell: { styles: Record<string, unknown> } },
+          ETQ_COL_INDEX
+        );
         if (isSeparatorRow(data.row.index)) {
           data.cell.styles.fillColor = [235, 238, 242];
         } else if (data.row.index % 2 === 0) {

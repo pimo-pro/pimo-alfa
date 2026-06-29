@@ -23,7 +23,6 @@ import { getCurrentProjectUser } from "../projects/currentUser";
 import {
   PDF_INDUSTRIAL_HEADER_COLOR,
   PDF_INDUSTRIAL_MARGIN,
-  PDF_INDUSTRIAL_PAGE_W,
   PDF_INDUSTRIAL_ROW_ALT,
   PDF_INDUSTRIAL_TABLE_W,
   applyEtqCellStyle,
@@ -187,7 +186,10 @@ export function renderCutlistTable(
       }
       if (data.section === "body") {
         data.cell.styles.overflow = "hidden";
-        applyEtqCellStyle(data, etqColIndex);
+        applyEtqCellStyle(
+          data as { section: string; column: { index: number }; cell: { styles: Record<string, unknown> } },
+          etqColIndex
+        );
         if (data.row.index % 2 === 0) {
           data.cell.styles.fillColor = [255, 255, 255];
         } else {
