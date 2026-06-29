@@ -1,6 +1,6 @@
 /**
- * PDF Técnico Industrial — tabela única estilo Excel.
- * Uma única página landscape com todas as peças do projeto (modelo FINAL).
+ * PDF Técnico Industrial — tabela estilo Excel, A4 landscape.
+ * Lista de corte com paginação densa (35–40 linhas por página de continuação).
  */
 
 import jsPDF from "jspdf";
@@ -14,6 +14,7 @@ import {
   buildIndustrialListPiecesPerSheet,
   resolveIndustrialListNqr,
 } from "./industrialListQr";
+import { getCurrentProjectUser } from "../projects/currentUser";
 import { safeGetItem } from "../../utils/storage";
 import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
 import {
@@ -29,27 +30,14 @@ import { MATERIAIS_INDUSTRIAIS, getMaterial, type MaterialIndustrial } from "../
 const TABLE_GRID_LINE: [number, number, number] = [0, 0, 0];
 const TABLE_GRID_WIDTH = 0.15;
 const MARGIN = 8;
-const HEADER_COLOR: [number, number, number] = [80, 80, 80];
+const PAGE_W = 297;
+const FOOTER_Y = 207;
+const HEADER_COLOR: [number, number, number] = [15, 23, 42];
 const ROW_ALT_COLOR: [number, number, number] = [245, 245, 245];
-
-/** Carrega logo como base64 via XHR síncrono (browser context). Fallback: null. */
-function loadLogoBase64(): string | null {
-  try {
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/logo-pi.png", false);
-    xhr.responseType = "arraybuffer";
-    xhr.send();
-    if (xhr.status === 200) {
-      const arr = new Uint8Array(xhr.response as ArrayBuffer);
-      let binary = "";
-      arr.forEach((b) => { binary += String.fromCharCode(b); });
-      return btoa(binary);
-    }
-  } catch {
-    /* fallback para texto */
-  }
-  return null;
-}
+/** Altura mínima de linha — ~38 linhas úteis por página de continuação. */
+const TABLE_ROW_MIN_H = 4.8;
+/** Largura fixa da coluna No ETQ (13 caracteres @ 7pt). */
+const ETQ_COL_WIDTH = 18;
 
 /** Mapeamento tipo peça (boxManufacturing) → id componentType */
 const TIPO_TO_COMPONENT_ID: Record<string, string> = {
@@ -77,7 +65,7 @@ interface LinhaPeca {
   comp: number;
   larg: number;
   esp: number;
-  nesting: string;
+  cnc: string;
   drill: string;
   o2: string;
   o3: string;
@@ -138,7 +126,7 @@ function getFurosLados(componentType: ComponentType): Set<string> {
   return lados;
 }
 
-/** Furos laterais = fundo, esquerda ou direita (não topo). Topo = Nesting. Drill só "X" se houver lateral. */
+/** Furos laterais = fundo, esquerda ou direita (não topo). Drill só "X" se houver lateral. */
 function temFurosLaterais(ladosFuro: Set<string>): boolean {
   return ladosFuro.has("fundo") || ladosFuro.has("esquerda") || ladosFuro.has("direita");
 }
@@ -266,7 +254,7 @@ function construirLinhas(
         comp: p.comp,
         larg: p.larg,
         esp: p.esp,
-        nesting: "X",
+        cnc: "X",
         drill: temFurosLateraisPiece ? "X" : "",
         o2: o2o5,
         o3: o2o5,
@@ -332,8 +320,81 @@ function getAcabamentosUnicos(boxes: BoxModule[], materials: MaterialIndustrial[
   return acc;
 }
 
+function desenharBlocoDatasOperacionais(
+  doc: jsPDF,
+  blockX: number,
+  blockY: number,
+  blockW: number,
+  c1x: number,
+  c2x: number
+): number {
+  const etapas = ["CORTE NESTING", "CORTE manual", "ORLAGEM", "MONTAGEM"];
+  const dateRowH = 7;
+  const dateBlockH = etapas.length * dateRowH;
+  const midDateX = blockX + blockW / 2;
+
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.rect(blockX, blockY, blockW, dateBlockH);
+  doc.line(midDateX, blockY, midDateX, blockY + dateBlockH);
+
+  for (let i = 0; i < etapas.length; i++) {
+    const rowY = blockY + i * dateRowH;
+    if (i > 0) {
+      doc.setLineWidth(0.15);
+      doc.line(blockX, rowY, blockX + blockW, rowY);
+    }
+    const textY = rowY + dateRowH - 2;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text(etapas[i], c1x, textY);
+    const labelW = doc.getTextWidth(etapas[i]);
+    doc.setFont("helvetica", "normal");
+    doc.text("  inicio:", c1x + labelW, textY);
+    const siW = doc.getTextWidth("  inicio:");
+    doc.setLineWidth(0.2);
+    doc.line(c1x + labelW + siW + 1, textY + 0.3, c1x + labelW + siW + 25, textY + 0.3);
+    doc.text(" h:", c1x + labelW + siW + 27, textY);
+    const hW = doc.getTextWidth(" h:");
+    doc.line(c1x + labelW + siW + 27 + hW + 1, textY + 0.3, c1x + labelW + siW + 27 + hW + 12, textY + 0.3);
+
+    doc.setFont("helvetica", "normal");
+    doc.text("fim:", c2x, textY);
+    const fW = doc.getTextWidth("fim:");
+    doc.line(c2x + fW + 1, textY + 0.3, c2x + fW + 25, textY + 0.3);
+    doc.text(" h:", c2x + fW + 27, textY);
+    doc.line(c2x + fW + 27 + hW + 1, textY + 0.3, c2x + fW + 27 + hW + 12, textY + 0.3);
+  }
+
+  return blockY + dateBlockH;
+}
+
+function desenharRodape(
+  doc: jsPDF,
+  dataHoje: string,
+  numRefs: number,
+  totalPecas: number
+): void {
+  const pageCount = (doc as jsPDF & { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `PIMO  |  ${dataHoje}  |  ${numRefs} ref.  |  ${totalPecas} pecas  |  pag. ${p}/${pageCount}`,
+      MARGIN,
+      FOOTER_Y
+    );
+  }
+  doc.setTextColor(0, 0, 0);
+}
+
+const COL_COUNT = 18;
+
 /**
- * Gera PDF técnico industrial em tabela única (landscape).
+ * Gera PDF técnico industrial em tabela (landscape, paginada).
  * @param opcoes.incluirPaginaPrecos — quando true (futuro), adiciona Página 2 com preços
  * @param opcoes.materialId — opcional (compatibilidade com ProjectProvider)
  */
@@ -349,32 +410,25 @@ export function gerarPdfTecnicoCompleto(
 
   const acabamentos = getAcabamentosUnicos(boxes, materials);
   const dataHoje = new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const pageW = 297; // A4 landscape
-  const designer = "KHALED"; // TODO: substituir por username autenticado
+  const designer = getCurrentProjectUser().ownerName || "—";
 
-  // — HEADER: Logo + info direita —
+  // — CABEÇALHO: PIMO + designer + data (tipografia maior) —
   let y = MARGIN;
-  const logoB64 = loadLogoBase64();
-  const logoH = 14;
-  const logoW = 40;
-  if (logoB64) {
-    doc.addImage(logoB64, "PNG", MARGIN, y, logoW, logoH);
-  } else {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
-    doc.text("PIMO", MARGIN, y + 10);
-  }
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(60, 60, 60);
-  const infoRight = `Data de design: ${dataHoje}     Designer: ${designer}`;
-  doc.text(infoRight, pageW - MARGIN - doc.getTextWidth(infoRight), y + 5);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
   doc.setTextColor(0, 0, 0);
-  y += logoH + 3;
+  doc.text("PIMO", MARGIN, y + 6);
 
-  // — BLOCO DE INFO (tabela com bordas, largura total) —
-  const blockW = pageW - MARGIN * 2;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  const infoRight = `Designer: ${designer}     Data de design: ${dataHoje}`;
+  doc.text(infoRight, PAGE_W - MARGIN - doc.getTextWidth(infoRight), y + 6);
+  doc.setTextColor(0, 0, 0);
+  y += 12;
+
+  // — BLOCO DE INFO DO PROJETO —
+  const blockW = PAGE_W - MARGIN * 2;
   const rowH = 7;
   const infoH = rowH * 2;
   const blockX = MARGIN;
@@ -382,11 +436,8 @@ export function gerarPdfTecnicoCompleto(
 
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.3);
-  // exterior
   doc.rect(blockX, blockY, blockW, infoH);
-  // linha horizontal central
   doc.line(blockX, blockY + rowH, blockX + blockW, blockY + rowH);
-  // linha vertical central
   doc.line(blockX + blockW / 2, blockY, blockX + blockW / 2, blockY + infoH);
 
   const c1x = blockX + 4;
@@ -403,8 +454,8 @@ export function gerarPdfTecnicoCompleto(
   };
 
   let iy = blockY + rowH - 1.5;
-  boldLabel("PROJETO / MÓVEL:", c1x, iy);
-  normalVal(projectName || "Projeto", c1x + doc.getTextWidth("PROJETO / MÓVEL:") + 2, iy);
+  boldLabel("PROJETO / MOVEL:", c1x, iy);
+  normalVal(projectName || "Projeto", c1x + doc.getTextWidth("PROJETO / MOVEL:") + 2, iy);
   boldLabel("Acabamento:", c2x, iy);
   normalVal(acabamentos.length > 0 ? acabamentos[0] : "—", c2x + doc.getTextWidth("Acabamento:") + 2, iy);
 
@@ -416,58 +467,9 @@ export function gerarPdfTecnicoCompleto(
 
   y = blockY + infoH + 1;
 
-  // — BLOCO DE DATAS OPERACIONAIS (6 etapas, 2 colunas: inicio | fim) —
-  const etapas = [
-    "CORTE NESTING",
-    "CORTE DISCO",
-    "FOLHEAGEM",
-    "CNC",
-    "ORLAGEM",
-    "MONTAGEM",
-  ];
-  const dateRowH = 7;
-  const dateBlockH = etapas.length * dateRowH;
-  blockY = y;
-  const midDateX = blockX + blockW / 2;
+  // — DATAS OPERACIONAIS (sem FOLHEAGEM nem CNC) —
+  y = desenharBlocoDatasOperacionais(doc, blockX, y, blockW, c1x, c2x) + 2;
 
-  doc.setLineWidth(0.3);
-  doc.rect(blockX, blockY, blockW, dateBlockH);
-  doc.line(midDateX, blockY, midDateX, blockY + dateBlockH);
-
-  for (let i = 0; i < etapas.length; i++) {
-    const rowY = blockY + i * dateRowH;
-    if (i > 0) {
-      doc.setLineWidth(0.15);
-      doc.line(blockX, rowY, blockX + blockW, rowY);
-    }
-    const textY = rowY + dateRowH - 2;
-
-    // coluna esquerda: label + início
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.text(`${etapas[i]}`, c1x, textY);
-    const labelW = doc.getTextWidth(etapas[i]);
-    doc.setFont("helvetica", "normal");
-    doc.text("  inicio:", c1x + labelW, textY);
-    const siW = doc.getTextWidth("  inicio:");
-    doc.setLineWidth(0.2);
-    doc.line(c1x + labelW + siW + 1, textY + 0.3, c1x + labelW + siW + 25, textY + 0.3);
-    doc.text(" h:", c1x + labelW + siW + 27, textY);
-    const hW = doc.getTextWidth(" h:");
-    doc.line(c1x + labelW + siW + 27 + hW + 1, textY + 0.3, c1x + labelW + siW + 27 + hW + 12, textY + 0.3);
-
-    // coluna direita: fim
-    doc.setFont("helvetica", "normal");
-    doc.text("fim:", c2x, textY);
-    const fW = doc.getTextWidth("fim:");
-    doc.line(c2x + fW + 1, textY + 0.3, c2x + fW + 25, textY + 0.3);
-    doc.text(" h:", c2x + fW + 27, textY);
-    doc.line(c2x + fW + 27 + hW + 1, textY + 0.3, c2x + fW + 27 + hW + 12, textY + 0.3);
-  }
-
-  y = blockY + dateBlockH + 2;
-
-  // — Construir linhas (dados) —
   const linhas = construirLinhas(boxes, rules, componentTypes, materials, projectName, {
     materialId: opcoes?.materialId,
     extractedPartsByBoxId: opcoes?.extractedPartsByBoxId,
@@ -475,19 +477,16 @@ export function gerarPdfTecnicoCompleto(
     pieceObservacoes: opcoes?.pieceObservacoes,
   });
 
-  // Preencher "Peças Total" com valor real
   const totalPecasReal = linhas.reduce((sum, r) => sum + r.qtd, 0);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(0, 0, 0);
   doc.text(String(totalPecasReal), totalPecasPos.x, totalPecasPos.y);
 
-  // — TÍTULO DE SECÇÃO —
+  // — TÍTULO DA SECÇÃO —
   doc.setFillColor(200, 200, 200);
   doc.rect(blockX, y, blockW, 6, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
   const titulo = "Lista de Corte - Painéis";
   doc.text(titulo, blockX + (blockW - doc.getTextWidth(titulo)) / 2, y + 4.2);
   y += 7;
@@ -499,8 +498,6 @@ export function gerarPdfTecnicoCompleto(
     "COMP",
     "LARG",
     "ESP",
-    "No ETQ",
-    "NESTING",
     "CNC",
     "Drill",
     "O2",
@@ -510,6 +507,9 @@ export function gerarPdfTecnicoCompleto(
     "F2",
     "F3",
     "F4",
+    "F5",
+    "OBSERVAÇÕES",
+    "No ETQ",
   ];
 
   const bodyRows: string[][] = [];
@@ -517,12 +517,13 @@ export function gerarPdfTecnicoCompleto(
   let prevBoxIndex = 0;
 
   if (linhas.length === 0) {
-    bodyRows.push(["Nenhuma peca", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—", "—"]);
+    bodyRows.push(Array(COL_COUNT).fill("—"));
+    bodyRows[0][0] = "Nenhuma peca";
   } else {
     for (const r of linhas) {
       if (prevBoxIndex > 0 && prevBoxIndex !== r.boxIndex) {
         separatorRowIndices.add(bodyRows.length);
-        bodyRows.push(Array(17).fill(""));
+        bodyRows.push(Array(COL_COUNT).fill(""));
       }
       prevBoxIndex = r.boxIndex;
       bodyRows.push([
@@ -532,9 +533,7 @@ export function gerarPdfTecnicoCompleto(
         String(r.comp),
         String(r.larg),
         String(r.esp),
-        String(r.nQr),
-        r.nesting,
-        r.drill,
+        r.cnc,
         r.drill,
         r.o2,
         r.o3,
@@ -543,6 +542,9 @@ export function gerarPdfTecnicoCompleto(
         r.f2,
         r.f3,
         r.f4,
+        r.f5,
+        r.observacoes,
+        String(r.nQr),
       ]);
     }
   }
@@ -553,17 +555,24 @@ export function gerarPdfTecnicoCompleto(
     head: [head],
     body: bodyRows,
     theme: "grid",
+    showHead: "everyPage",
+    rowPageBreak: "avoid",
     didParseCell: (data) => {
       if (data.section === "head") {
-        data.cell.styles.fillColor = [80, 80, 80];
+        data.cell.styles.fillColor = HEADER_COLOR;
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fontSize = 7;
       }
       if (data.section === "body") {
+        data.cell.styles.minCellHeight = TABLE_ROW_MIN_H;
+        data.cell.styles.overflow = "hidden";
+        if (data.column.index === 17) {
+          data.cell.styles.cellWidth = ETQ_COL_WIDTH;
+        }
         if (isSeparatorRow(data.row.index)) {
-          data.cell.styles.fillColor = [220, 220, 220];
-          data.cell.styles.minCellHeight = 3;
+          data.cell.styles.fillColor = [235, 238, 242];
+          data.cell.styles.minCellHeight = TABLE_ROW_MIN_H;
         } else if (data.row.index % 2 === 0) {
           data.cell.styles.fillColor = [255, 255, 255];
         } else {
@@ -574,9 +583,11 @@ export function gerarPdfTecnicoCompleto(
     startY: y,
     styles: {
       fontSize: 7,
-      cellPadding: 1.2,
+      cellPadding: 1,
       lineColor: TABLE_GRID_LINE,
       lineWidth: TABLE_GRID_WIDTH,
+      overflow: "hidden",
+      minCellHeight: TABLE_ROW_MIN_H,
     },
     headStyles: {
       fillColor: HEADER_COLOR,
@@ -584,41 +595,30 @@ export function gerarPdfTecnicoCompleto(
       lineColor: TABLE_GRID_LINE,
       lineWidth: TABLE_GRID_WIDTH,
     },
-    margin: { left: MARGIN, right: MARGIN },
+    margin: { left: MARGIN, right: MARGIN, top: MARGIN, bottom: 12 },
     columnStyles: {
-      0: { cellWidth: 30 },
-      1: { cellWidth: 46 },
-      2: { cellWidth: 10 },
-      3: { cellWidth: 16 },
-      4: { cellWidth: 16 },
-      5: { cellWidth: 10 },
-      6: { cellWidth: 14 },
-      7: { cellWidth: 14 },
-      8: { cellWidth: 10 },
-      9: { cellWidth: 10 },
-      10: { cellWidth: 8 },
-      11: { cellWidth: 8 },
-      12: { cellWidth: 8 },
-      13: { cellWidth: 8 },
-      14: { cellWidth: 8 },
-      15: { cellWidth: 8 },
-      16: { cellWidth: 8 },
+      0: { cellWidth: 36, overflow: "hidden" },
+      1: { cellWidth: 44, overflow: "hidden" },
+      2: { cellWidth: 8, halign: "center" },
+      3: { cellWidth: 14, halign: "right" },
+      4: { cellWidth: 14, halign: "right" },
+      5: { cellWidth: 9, halign: "center" },
+      6: { cellWidth: 8, halign: "center" },
+      7: { cellWidth: 8, halign: "center" },
+      8: { cellWidth: 7, halign: "center" },
+      9: { cellWidth: 7, halign: "center" },
+      10: { cellWidth: 7, halign: "center" },
+      11: { cellWidth: 7, halign: "center" },
+      12: { cellWidth: 7, halign: "center" },
+      13: { cellWidth: 7, halign: "center" },
+      14: { cellWidth: 7, halign: "center" },
+      15: { cellWidth: 7, halign: "center" },
+      16: { cellWidth: 38, overflow: "hidden" },
+      17: { cellWidth: ETQ_COL_WIDTH, overflow: "hidden", halign: "center" },
     },
   });
 
-  // rodapé
-  const pageCount = (doc as jsPDF & { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFontSize(6.5);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `PIMO  |  ${dataHoje}  |  ${linhas.length} ref.  |  ${totalPecasReal} pecas  |  pag. ${p}/${pageCount}`,
-      MARGIN,
-      207
-    );
-  }
-  doc.setTextColor(0, 0, 0);
+  desenharRodape(doc, dataHoje, linhas.length, totalPecasReal);
 
   if (opcoes?.incluirPaginaPrecos) {
     gerarPdfPrecos(doc, boxes, rules);
