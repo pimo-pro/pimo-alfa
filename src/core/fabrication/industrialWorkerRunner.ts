@@ -101,7 +101,10 @@ export async function buildCncFromCutlistItemsInWorker(
       items,
       layoutOptions: layoutOptionsClean,
     })) as CncBundle | null;
-  } catch {
+  } catch (err) {
+    if (!isIndustrialOutputSessionActive()) {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
     return buildCncFromCutlistItems(projectStub, items, undefined, layoutOptions);
   }
 }
@@ -124,7 +127,10 @@ export async function runCutLayoutInWorker(
       pieces,
       layoutOptions: layoutOptionsClean,
     })) as CutLayoutResult;
-  } catch {
+  } catch (err) {
+    if (!isIndustrialOutputSessionActive()) {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
     return runCutLayout(pieces, getSheetDefinitionFromSettings(), layoutOptions);
   }
 }

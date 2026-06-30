@@ -748,36 +748,38 @@ export function useGerarArquivoHandlers() {
     await onExportarCnc();
     if (!hasBoxes) return;
     try {
-      const allItems = buildCutlistItemsForIndustrialExport({
-        boxes,
-        rules: project.rules,
-        materialId: project.materialId,
-        projectName: project.projectName,
-        remates: project.remates ?? [],
-        rodapes: project.rodapes ?? [],
-        extractedPartsByBoxId: project.extractedPartsByBoxId,
+      await runAuthorizedIndustrialFileGeneration("txml", async () => {
+        const allItems = buildCutlistItemsForIndustrialExport({
+          boxes,
+          rules: project.rules,
+          materialId: project.materialId,
+          projectName: project.projectName,
+          remates: project.remates ?? [],
+          rodapes: project.rodapes ?? [],
+          extractedPartsByBoxId: project.extractedPartsByBoxId,
+        });
+        const drillFiles = buildDrillFilesForProject(allItems, {
+          projectName: project.projectName ?? "Projeto",
+          boxes: boxes ?? [],
+          rules: project.rules,
+        });
+        if (drillFiles.length === 0) {
+          showToast("Nenhum ficheiro XML de furação para exportar.", "info");
+          return;
+        }
+        const urls: string[] = [];
+        for (const f of drillFiles) {
+          const blob = new Blob([f.xml], { type: "application/xml" });
+          const url = URL.createObjectURL(blob);
+          urls.push(url);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${f.filenameBase}.xml`;
+          a.click();
+        }
+        setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
+        showToast("XML de furação gerado.", "info");
       });
-      const drillFiles = buildDrillFilesForProject(allItems, {
-        projectName: project.projectName ?? "Projeto",
-        boxes: boxes ?? [],
-        rules: project.rules,
-      });
-      if (drillFiles.length === 0) {
-        showToast("Nenhum ficheiro XML de furação para exportar.", "info");
-        return;
-      }
-      const urls: string[] = [];
-      for (const f of drillFiles) {
-        const blob = new Blob([f.xml], { type: "application/xml" });
-        const url = URL.createObjectURL(blob);
-        urls.push(url);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${f.filenameBase}.xml`;
-        a.click();
-      }
-      setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
-      showToast("XML de furação gerado.", "info");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       showToast(`Falha ao gerar XML: ${msg}`, "error");

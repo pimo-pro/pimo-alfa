@@ -8,6 +8,7 @@
 import {
   beginIndustrialOutputSession,
   endIndustrialOutputSession,
+  withIndustrialOutputAuthorization,
   withIndustrialOutputAuthorizationAsync,
   type IndustrialOutputAuthorizationScope,
 } from "../industrial/industrialOutputGuard";
@@ -42,4 +43,12 @@ export async function runAuthorizedIndustrialFileGeneration<T>(
   } finally {
     endIndustrialFileGeneration();
   }
+}
+
+/**
+ * Bootstrap de catálogo industrial (built-in) — gera TXML/cutlist uma vez por módulo.
+ * Deve envolver registos que chamam buildDrillFilesFromDesignBox sem handler UI.
+ */
+export function runAuthorizedIndustrialCatalogBootstrap<T>(fn: () => T): T {
+  return withIndustrialOutputAuthorization("all", fn);
 }

@@ -13,6 +13,7 @@ import {
   type IndustrialDesignBox,
 } from "@/core/industrialDesigner";
 import { isViewerApiReady } from "@/core/viewer/viewerReadiness";
+import { withIndustrialOutputAuthorization } from "@/core/industrial/industrialOutputGuard";
 import type { PimoViewerApi } from "@/context/PimoViewerContextCore";
 
 function workspaceBoxToDesignBox(box: WorkspaceBox): IndustrialDesignBox {
@@ -191,18 +192,20 @@ export function useIndustrialDesignWorkspace({
     (nome?: string): CreateCustomIndustrialModelResult | null => {
       if (!designBox) return null;
       try {
-        const result = createCustomIndustrialModelFromDesignBox({
-          designBox,
-          nome,
-          project: {
-            projectName: workspaceBox?.nome ?? "MODELO_INDUSTRIAL",
-            boxes: [],
+        return withIndustrialOutputAuthorization("all", () => {
+          const result = createCustomIndustrialModelFromDesignBox({
+            designBox,
+            nome,
+            project: {
+              projectName: workspaceBox?.nome ?? "MODELO_INDUSTRIAL",
+              boxes: [],
+              rules: defaultRulesConfig,
+            },
             rules: defaultRulesConfig,
-          },
-          rules: defaultRulesConfig,
+          });
+          setLastCreatedModelId(result.record.id);
+          return result;
         });
-        setLastCreatedModelId(result.record.id);
-        return result;
       } catch {
         return null;
       }

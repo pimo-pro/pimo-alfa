@@ -8,6 +8,7 @@ import {
   endIndustrialOutputSession,
   isIndustrialOutputSessionActive,
 } from "./industrialOutputGuard";
+import { runAuthorizedIndustrialCatalogBootstrap } from "../fabrication/industrialGenerationSuspend";
 
 describe("industrialOutputGuard", () => {
   afterEach(() => {
@@ -40,5 +41,14 @@ describe("industrialOutputGuard", () => {
       endIndustrialOutputSession();
     }
     expect(() => assertIndustrialOutputAuthorized("tcn")).toThrow(IndustrialOutputBlockedError);
+  });
+
+  it("runAuthorizedIndustrialCatalogBootstrap autoriza txml durante bootstrap", () => {
+    __disableIndustrialOutputTestBypass(true);
+    runAuthorizedIndustrialCatalogBootstrap(() => {
+      assertIndustrialOutputAuthorized("txml");
+      assertIndustrialOutputAuthorized("tcn");
+    });
+    expect(() => assertIndustrialOutputAuthorized("txml")).toThrow(IndustrialOutputBlockedError);
   });
 });
