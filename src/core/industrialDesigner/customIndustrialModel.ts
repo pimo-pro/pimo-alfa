@@ -21,6 +21,7 @@ import {
   isIndustrialCatalogModelId,
   listBuiltinIndustrialModelsAsBaseCabinet,
 } from "./staticIndustrialRegistry";
+import { listBuiltinIndustrialCatalogStubs } from "./builtinIndustrialCatalogStubs";
 
 export type { CustomIndustrialModelMetadata, CustomIndustrialModelRecord } from "./industrialCatalogTypes";
 
@@ -44,9 +45,12 @@ export function getIndustrialCatalogModel(id: string): CustomIndustrialModelReco
   return getBuiltinIndustrialModel(id) ?? getCustomIndustrialModel(id);
 }
 
+/** Listagem de catálogo — stubs leves; bootstrap pesado só em getIndustrialCatalogModel. */
 export function listIndustrialCatalogModelsAsBaseCabinet(): BaseCabinetModel[] {
-  ensureBuiltinIndustrialModelsRegistered();
-  return [...listBuiltinIndustrialModelsAsBaseCabinet(), ...listCustomIndustrialModelsAsBaseCabinet()];
+  const registered = listBuiltinIndustrialModelsAsBaseCabinet();
+  const builtins =
+    registered.length > 0 ? registered : listBuiltinIndustrialCatalogStubs();
+  return [...builtins, ...listCustomIndustrialModelsAsBaseCabinet()];
 }
 
 /** Apenas testes — IDs determinísticos. */

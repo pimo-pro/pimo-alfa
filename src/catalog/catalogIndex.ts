@@ -39,7 +39,7 @@ function rebuildCatalogCache(): CatalogItem[] {
   return catalogCache;
 }
 
-/** Catálogo completo (estático + industrial). Primeira chamada dispara bootstrap autorizado. */
+/** Catálogo completo (estático + industrial). Listagem instantânea; bootstrap industrial só ao usar o modelo. */
 export function getCatalogItems(): CatalogItem[] {
   if (!catalogCache) return rebuildCatalogCache();
   return catalogCache;
