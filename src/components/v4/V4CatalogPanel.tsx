@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CATALOG_ITEMS } from "../../catalog/catalogIndex";
+import { getCatalogItems } from "../../catalog/catalogIndex";
 import type { CatalogItem } from "../../catalog/catalogTypes";
 
 interface V4CatalogPanelProps {
@@ -80,7 +80,7 @@ export default function V4CatalogPanel({ onPreview, previewItemId }: V4CatalogPa
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return term ? CATALOG_ITEMS.filter((i) => i.nome.toLowerCase().includes(term)) : CATALOG_ITEMS;
+    return term ? getCatalogItems().filter((i) => i.nome.toLowerCase().includes(term)) : getCatalogItems();
   }, [search]);
 
   const sections = useMemo(() => splitSections(filtered), [filtered]);

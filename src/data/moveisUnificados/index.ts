@@ -1,6 +1,6 @@
 import type { DesignTemplate } from "../../templates/types";
 import { TEMPLATES } from "../../templates/templatesIndex";
-import { CATALOG_ITEMS } from "../../catalog/catalogIndex";
+import { getCatalogItems } from "../../catalog/catalogIndex";
 import { MOVEIS_CATALOG } from "../../core/moveis";
 
 export type ModeloTipo = "pronto" | "3d" | "moveis";
@@ -109,7 +109,7 @@ export const buildUnifiedMoveis = (): UnifiedModelItem[] => {
     };
   });
 
-  const catalogo3d = CATALOG_ITEMS.map((item) => ({
+  const catalogo3d = getCatalogItems().map((item) => ({
     id: `3d:${item.id}`,
     sourceId: item.id,
     tipo: "3d" as const,
