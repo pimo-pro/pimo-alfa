@@ -49,9 +49,10 @@ const BOXES_NOOP_API = {
 export function useViewerBoxes() {
   const viewerCore =
     typeof window !== "undefined" ? (window as Window).viewerCore : undefined;
+  const coreReady = isViewerCoreReady(viewerCore);
 
   return useMemo(() => {
-    if (!isViewerCoreReady(viewerCore)) return BOXES_NOOP_API;
+    if (!coreReady || !viewerCore) return BOXES_NOOP_API;
 
     const fromCore = (fn: ((..._args: unknown[]) => unknown) | undefined) =>
       fn ? fn.bind(viewerCore) : NOOP;
@@ -90,5 +91,5 @@ export function useViewerBoxes() {
         ? viewerCore.getContextMenuLayerHit.bind(viewerCore)
         : NOOP_RETURN_NULL,
     };
-  }, [viewerCore]);
+  }, [viewerCore, coreReady]);
 }

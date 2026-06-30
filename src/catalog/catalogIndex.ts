@@ -1,12 +1,13 @@
 import type { CatalogItem } from "./catalogTypes";
-import { BASE_CABINET_MODELS } from "../core/baseCabinets";
+import { getBaseCabinetModelsMerged } from "../core/baseCabinets";
 
 /**
  * Catálogo de módulos: Base Cabinets (sistema único e padronizado).
  * Cada item corresponde a um modelo base; regras de espessura, costa e pés são aplicadas pelo sistema.
+ * Inclui modelos industriais built-in e personalizados (runtime merge).
  */
 
-export const CATALOG_ITEMS: CatalogItem[] = BASE_CABINET_MODELS.map((m) => ({
+export const CATALOG_ITEMS: CatalogItem[] = getBaseCabinetModelsMerged().map((m) => ({
   id: m.id,
   nome: m.nome,
   categoria: m.categoria,

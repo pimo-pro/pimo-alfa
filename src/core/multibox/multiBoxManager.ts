@@ -15,6 +15,7 @@
 
 import { useCallback } from "react";
 import { useCalculadoraSync } from "../../hooks/useCalculadoraSync";
+import { isViewerApiReady } from "../viewer/viewerReadiness";
 import type { ProjectActions, ProjectState } from "../../context/projectTypes";
 import type { MultiBoxManagerApi, MultiBoxViewerApi } from "./types";
 
@@ -53,7 +54,7 @@ export function useMultiBoxManager({
   project,
   actions,
 }: UseMultiBoxManagerParams): MultiBoxManagerApi {
-  const viewerReady = Boolean(viewerApi && (viewerApi as MultiBoxViewerApi).viewerReady);
+  const viewerReady = isViewerApiReady(viewerApi as import("../../context/PimoViewerContextCore").PimoViewerApi | null);
   const gap = 0;
   const api = viewerApi ?? NOOP_VIEWER_API;
 

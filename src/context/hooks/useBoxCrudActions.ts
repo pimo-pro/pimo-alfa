@@ -354,6 +354,10 @@ export function useBoxCrudActions(ctx: ProjectActionsExecutionContext): BoxCrudA
     };
 
     a.addWorkspaceBoxFromMoveis = (moveisId) => {
+      if (moveisId !== CAIXA_FORNO_ID && getBaseCabinetById(moveisId)) {
+        a.addWorkspaceBoxFromCatalog(moveisId);
+        return;
+      }
       const catalogItem = getMoveisCatalogItem(moveisId);
       if (!catalogItem) return;
       const rightmostX_m = viewerSync.getRightmostX();

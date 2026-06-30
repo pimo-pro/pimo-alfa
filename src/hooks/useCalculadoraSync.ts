@@ -279,7 +279,6 @@ export const useCalculadoraSync = (
     wsBoxes.forEach((wsBox, index) => {
       const box = boxById.get(wsBox.id);
       currentIds.add(wsBox.id);
-      nextState.set(wsBox.id, { index });
       const posRot = getBoxPositionAndRotation(wsBox);
 
       const widthMm = Number.isFinite(wsBox.dimensoes?.largura) ? wsBox.dimensoes.largura : undefined;
@@ -366,7 +365,7 @@ export const useCalculadoraSync = (
         ? `${drillMarkersByPanel.lateral_esquerda?.length ?? 0}|${drillMarkersByPanel.lateral_direita?.length ?? 0}`
         : null;
       if (!stateRef.current.has(wsBox.id)) {
-        api.addBox(wsBox.id, {
+        const added = api.addBox(wsBox.id, {
           width,
           height,
           depth: layoutDepthM ?? depth,
@@ -395,6 +394,15 @@ export const useCalculadoraSync = (
           separadorMaterialId: wsBox.separadorMaterialId,
           ...posRot,
         });
+        if (!added) {
+          if (import.meta.env.DEV) {
+            devLogger.debug("[useCalculadoraSync] addBox falhou — retry no próximo sync", {
+              boxId: wsBox.id,
+            });
+          }
+          return;
+        }
+        nextState.set(wsBox.id, { index });
         lastStructureFingerprintRef.current.set(
           wsBox.id,
           getStructureFingerprint(wsBox, piLateralDrillCountSig, viewerDebug)
@@ -404,6 +412,7 @@ export const useCalculadoraSync = (
           getDrawerFrontMaterialsFingerprint(wsBox, resolvedMaterialName)
         );
       } else {
+        nextState.set(wsBox.id, { index });
         const structureFingerprint = getStructureFingerprint(wsBox, piLateralDrillCountSig, viewerDebug);
         const lastFingerprint = lastStructureFingerprintRef.current.get(wsBox.id);
         if (lastFingerprint === structureFingerprint) {
