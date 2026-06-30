@@ -38,3 +38,9 @@ export {
   type CornerFixedFrontDowelLayout,
   type CornerFixedFrontDowelHolesByPanel,
 } from "./cornerFixedFrontDowels";
+export {
+  buildCornerFixedFrontHingeHoles,
+  stripCornerLateralHingeHoles,
+  CORNER_FF_HINGE_DEPTH_FROM_FRONT_MM,
+  type CornerFixedFrontHingeLayout,
+} from "./cornerFixedFrontHinges";

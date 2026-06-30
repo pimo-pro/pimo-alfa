@@ -17,6 +17,10 @@ import {
   dedupePanelDrillHoles,
   resolveFrenteFixaLateralHoleYFromTop,
 } from "./cornerFixedFrontDowels";
+import {
+  buildCornerFixedFrontHingeHoles,
+  CORNER_FF_HINGE_DEPTH_FROM_FRONT_MM,
+} from "./cornerFixedFrontHinges";
 import { buildCornerDoorLayerItems, syncCornerWorkspaceBoxDoorsLayer } from "./cornerCabinetLayers";
 import { migrateCornerDireitaInferiorBoxToV2 } from "./cornerCabinetMigration";
 import { gerarPaineisCorner } from "./cornerCabinetManufacturing";
@@ -605,6 +609,58 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     expect(portas).toHaveLength(1);
     expect(latEsq?.drillHoles?.some((h) => h.holeType === "dobradica")).toBe(false);
     expect(ff?.drillHoles?.length).toBeGreaterThan(0);
+  });
+
+  it("cutlist v2: dobradiças na frente_fixa (31 mm + esp/2), lateral direita sem furos de dobradiça", () => {
+    const box: BoxModule = {
+      id: "box-v2-hinge",
+      baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
+      dimensoes: { largura: 900, altura: 720, profundidade: 600 },
+      espessura: 19,
+      portaTipo: "porta_simples",
+      prateleiras: 0,
+      gavetas: 0,
+      material: "mdf_branco",
+    };
+    const items = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const ff = items.find((i) => i.tipo === "frente_fixa");
+    const latDir = items.find((i) => i.tipo === "lateral_direita");
+    const porta = items.find((i) => i.tipo === "porta_simples");
+
+    expect(latDir?.drillHoles?.some((h) => h.holeType?.startsWith("dobradica"))).toBe(false);
+    const ffHinge = ff?.drillHoles?.filter((h) => h.holeType?.startsWith("dobradica")) ?? [];
+    expect(ffHinge.length).toBeGreaterThanOrEqual(6);
+
+    const edgeOffset = 9.5;
+    const ffW = ff?.dimensoes?.largura ?? 448;
+    expect(ffHinge.some((h) => Math.abs(h.x - (ffW - edgeOffset)) < 0.01)).toBe(true);
+    expect(ffHinge.some((h) => Math.abs(h.x - CORNER_FF_HINGE_DEPTH_FROM_FRONT_MM) < 0.01)).toBe(true);
+
+    const doorCaneco = porta?.drillHoles?.filter((h) => h.holeType === "dobradica") ?? [];
+    expect(doorCaneco.length).toBeGreaterThanOrEqual(2);
+    expect(ffHinge.filter((h) => h.holeType === "dobradica_parafuso_uniao").length).toBe(doorCaneco.length);
+  });
+
+  it("buildCornerFixedFrontHingeHoles: calço na borda esp/2, união a 31 mm da frente", () => {
+    const ffW = 448;
+    const ffH = 720;
+    const t = 19;
+    const holes = buildCornerFixedFrontHingeHoles(
+      {
+        fixedFrontWidthMm: ffW,
+        fixedFrontHeightMm: ffH,
+        fixedFrontSide: "left",
+        thicknessMm: t,
+        hingePositionsMm: [100, 600],
+      },
+      defaultRulesConfig
+    );
+    expect(holes).toHaveLength(6);
+    expect(holes.every((h) => h.topDrillable === true && h.face === "B")).toBe(true);
+    expect(holes.filter((h) => h.holeType === "dobradica_fixacao").every((h) => Math.abs(h.x - (ffW - t / 2)) < 0.01)).toBe(true);
+    expect(holes.filter((h) => h.holeType === "dobradica_parafuso_uniao").every((h) => Math.abs(h.x - CORNER_FF_HINGE_DEPTH_FROM_FRONT_MM) < 0.01)).toBe(true);
+    const yCenter100 = ffH - (100 + t);
+    expect(holes.some((h) => Math.abs(h.y - yCenter100) < 0.01)).toBe(true);
   });
 
   it("visual v2: frente fixa 448×720 mm no viewer", () => {

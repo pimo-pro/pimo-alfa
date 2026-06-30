@@ -642,7 +642,7 @@ export class ViewerCore {
     this.wallSelectionOutline = new WallSelectionOutlineController(this.sceneManager.scene);
 
     this.highlightManager = new HighlightManager(this.sceneManager.scene);
-    this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene);
+    this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene, false);
     this.internalSelectionOutline = new InternalSelectionOutline(this.sceneManager.scene);
     this.multiSelectionOutline = new MultiSelectionOutline(this.sceneManager.scene);
 

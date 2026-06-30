@@ -72,9 +72,15 @@ export class EdgeOutlineSystem {
   private readonly overlayGroup = new THREE.Group();
   private readonly material: THREE.LineBasicMaterial;
   private readonly entries = new Map<string, InternalEntry>();
+  private readonly enabled: boolean;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, enabled = true) {
     this.scene = scene;
+    this.enabled = enabled;
+    if (!enabled) {
+      this.material = new THREE.LineBasicMaterial();
+      return;
+    }
     this.overlayGroup.name = "EdgeOutlineOverlayGroup";
     this.overlayGroup.renderOrder = 2000;
     this.scene.add(this.overlayGroup);
@@ -90,6 +96,7 @@ export class EdgeOutlineSystem {
   }
 
   syncRoot(_root: THREE.Object3D, boxes: ReadonlyMap<string, EdgeOutlineBoxEntry> | null): void {
+    if (!this.enabled) return;
     if (!boxes) {
       this.clearAllEntries();
       return;
@@ -155,6 +162,7 @@ export class EdgeOutlineSystem {
   }
 
   update(): void {
+    if (!this.enabled) return;
     this.entries.forEach((entry) => {
       entry.mesh.updateWorldMatrix(true, false);
       const show = hasVisibleAncestors(entry.mesh) && entry.mesh.visible;

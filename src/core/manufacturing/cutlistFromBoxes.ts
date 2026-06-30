@@ -18,7 +18,7 @@ import {
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { computeDoorVerticalGaps } from "../doors/doorLayerGeometry";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
-import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, stripCornerFixedFrontHingeHoles, buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../cornerCabinet";
+import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, buildCornerFixedFrontHingeHoles, stripCornerFixedFrontHingeHoles, stripCornerLateralHingeHoles, buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../cornerCabinet";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
@@ -291,7 +291,7 @@ export function cutlistComPrecoFromBox(
           ? getCornerFixedFrontHingeSide(box)
           : isLateralLeft && hasDoorLeft
             ? "left"
-            : isLateralRight && hasDoorRight
+            : isLateralRight && hasDoorRight && !isCornerDireita
               ? "right"
               : isTopPanel && hasDoorTop
                 ? "top"
@@ -597,6 +597,33 @@ export function cutlistComPrecoFromBox(
             ? stripCornerFixedFrontHingeHoles(item.drillHoles ?? [])
             : item.drillHoles ?? [];
         item.drillHoles = [...base, ...extra];
+      }
+
+      const thicknessMm = syncedBox.espessura ?? lateralItem?.espessura ?? 19;
+      const doorHingeSide = doorsLayer[0]?.hingeSide;
+      const hingePositions =
+        doorHingeSide === "left" || doorHingeSide === "right"
+          ? hingePositionsBySide[doorHingeSide] ?? []
+          : [];
+      if (hingePositions.length > 0) {
+        const ffItem = items.find((i) => i.tipo === "frente_fixa");
+        const latRightItem = items.find((i) => i.tipo === "lateral_direita");
+        if (latRightItem) {
+          latRightItem.drillHoles = stripCornerLateralHingeHoles(latRightItem.drillHoles ?? []);
+        }
+        if (ffItem) {
+          const hingeHoles = buildCornerFixedFrontHingeHoles(
+            {
+              fixedFrontWidthMm: cornerLayout.fixedFrontWidthMm,
+              fixedFrontHeightMm: cornerLayout.fixedFrontHeightMm ?? cornerLayout.doorHeightMm,
+              fixedFrontSide,
+              thicknessMm,
+              hingePositionsMm: hingePositions,
+            },
+            effRules
+          );
+          ffItem.drillHoles = [...(ffItem.drillHoles ?? []), ...hingeHoles];
+        }
       }
     }
   }

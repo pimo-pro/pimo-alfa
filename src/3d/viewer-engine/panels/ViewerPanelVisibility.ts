@@ -12,6 +12,7 @@ type ViewerBoxLike = {
   width: number;
   height: number;
   depth: number;
+  carcassDepth?: number;
   drillMarkersByPanel?: ViewerDrillMarkersByPanel;
 };
 
@@ -385,7 +386,7 @@ export class ViewerPanelVisibility {
     } else if (panelType === "left") {
       const sh2 = sideH / 2;
       const d2 = depth / 2;
-      const x0 = t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
+      const x0 = -(t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M);
       pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
       pushSegment(x0, sh2, -d2, x0, sh2, d2);
       pushSegment(x0, sh2, d2, x0, -sh2, d2);
@@ -707,7 +708,7 @@ export class ViewerPanelVisibility {
         panelType,
         entry.width,
         entry.height,
-        entry.depth,
+        entry.carcassDepth ?? entry.depth,
         industrialActive ? [] : holes
       );
 
