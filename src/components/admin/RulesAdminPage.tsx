@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { useProject } from "../../context/useProject";
 import { useSettings } from "../../context/SettingsContext";
 import { defaultRulesConfig, normalizeRulesConfig } from "../../core/rules/rulesConfig";
-import type { RulesConfig, PortaRange, PeRange } from "../../core/rules/rulesConfig";
+import type { RulesConfig, PeRange } from "../../core/rules/rulesConfig";
 import Panel from "../ui/Panel";
 import { useToast } from "../../context/ToastContext";
 import qrcode from "qrcode-generator";
@@ -72,27 +72,6 @@ export default function RulesAdminPage() {
     actions.updateRulesInProfile(perfilAtivoId, defaults);
     setConfirmResetOpen(false);
     showToast("Regras repostas para o padrão.", "info");
-  };
-
-  const updatePortaRange = (index: number, field: keyof PortaRange, value: number) => {
-    const nextRanges = [...rules.portas.ranges];
-    nextRanges[index] = { ...nextRanges[index], [field]: value };
-    setRules((prev) => ({ ...prev, portas: { ...prev.portas, ranges: nextRanges } }));
-  };
-
-  const addPortaRange = () => {
-    const last = rules.portas.ranges[rules.portas.ranges.length - 1];
-    const newRange: PortaRange = { min: (last?.max ?? 0) + 1, max: (last?.max ?? 0) + 50, dobradicas: 2 };
-    setRules((prev) => ({ ...prev, portas: { ...prev.portas, ranges: [...prev.portas.ranges, newRange] } }));
-  };
-
-  const removePortaRange = (index: number) => {
-    if (rules.portas.ranges.length <= 1) {
-      showToast("Deve existir pelo menos um range.", "warning");
-      return;
-    }
-    const next = rules.portas.ranges.filter((_, i) => i !== index);
-    setRules((prev) => ({ ...prev, portas: { ...prev.portas, ranges: next } }));
   };
 
   const updatePeRange = (index: number, field: keyof PeRange, value: number) => {
@@ -195,45 +174,10 @@ export default function RulesAdminPage() {
       )}
 
       <div style={{ maxWidth: 900, display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Regras da Porta */}
-        <Panel title="Regras da Porta" description="Altura (mm) → Número de dobradiças">
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {rules.portas.ranges.map((range, index) => (
-              <div key={index} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}>
-                <input
-                  type="number"
-                  value={range.min}
-                  onChange={(e) => updatePortaRange(index, "min", Number(e.target.value))}
-                  placeholder="De (mm)"
-                  className="input input-xs"
-                  style={{ width: 80 }}
-                />
-                <span>–</span>
-                <input
-                  type="number"
-                  value={range.max}
-                  onChange={(e) => updatePortaRange(index, "max", Number(e.target.value))}
-                  placeholder="Até (mm)"
-                  className="input input-xs"
-                  style={{ width: 80 }}
-                />
-                <span>mm →</span>
-                <input
-                  type="number"
-                  value={range.dobradicas}
-                  onChange={(e) => updatePortaRange(index, "dobradicas", Number(e.target.value))}
-                  placeholder="Dobradiças"
-                  className="input input-xs"
-                  style={{ width: 80 }}
-                />
-                <button type="button" onClick={() => removePortaRange(index)} className="button button-ghost" style={{ padding: "4px 8px" }}>
-                  Remover
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={addPortaRange} className="button button-ghost" style={{ marginTop: 4 }}>
-              + Adicionar range
-            </button>
+        <Panel title="Regras da Porta" description="Movido para o menu Admin → Regras da Porta.">
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            Ranges de altura, folgas, furação de caneco e fixação lateral estão centralizados em{" "}
+            <strong>Regras da Porta</strong> no painel de administração.
           </div>
         </Panel>
 
@@ -436,22 +380,8 @@ export default function RulesAdminPage() {
 
             <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 10 }}>
               <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Dobradiça (porta + caixa)</div>
-              <label style={{ fontSize: 12 }}><input type="checkbox" checked={rules.furos.tecnicos.dobradica.enabled} onChange={(e) => updateTecnico("dobradica", { enabled: e.target.checked })} /> Ativar</label>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Caneco (porta): taça 35 mm</div>
-              <div className="form-grid" style={{ gridTemplateColumns: "repeat(6, minmax(120px, 1fr))", gap: 8, marginTop: 8 }}>
-                <label style={{ fontSize: 12 }}>Diâm. caneco <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.diametro} onChange={(e) => updateTecnico("dobradica", { diametro: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Prof. caneco <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.profundidade} onChange={(e) => updateTecnico("dobradica", { profundidade: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Dist. centro caneco <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaCentroDaBorda ?? rules.furos.tecnicos.dobradica.distanciaBordaLateral} onChange={(e) => updateTecnico("dobradica", { distanciaCentroDaBorda: Number(e.target.value), distanciaBordaLateral: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Offset sup. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetSuperior} onChange={(e) => updateTecnico("dobradica", { offsetSuperior: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Offset inf. <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.offsetInferior} onChange={(e) => updateTecnico("dobradica", { offsetInferior: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Qtd/porta <input className="input input-xs" type="number" min={2} value={rules.furos.tecnicos.dobradica.numeroPorPorta} onChange={(e) => updateTecnico("dobradica", { numeroPorPorta: Math.max(2, Number(e.target.value)) })} /></label>
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>Furos de fixação na porta (medidas ao centro do furo)</div>
-              <div className="form-grid" style={{ gridTemplateColumns: "repeat(4, minmax(140px, 1fr))", gap: 8, marginTop: 4 }}>
-                <label style={{ fontSize: 12 }}>Dist. borda → centro (mm) <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaFurosFixacaoBorda ?? 28} onChange={(e) => updateTecnico("dobradica", { distanciaFurosFixacaoBorda: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Entre centros (mm) <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.distanciaEntreFurosFixacao ?? 52} onChange={(e) => updateTecnico("dobradica", { distanciaEntreFurosFixacao: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Diâm. fixação <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.diametroFurosFixacao ?? 10} onChange={(e) => updateTecnico("dobradica", { diametroFurosFixacao: Number(e.target.value) })} /></label>
-                <label style={{ fontSize: 12 }}>Prof. fixação <input className="input input-xs" type="number" value={rules.furos.tecnicos.dobradica.profundidadeFurosFixacao ?? 12} onChange={(e) => updateTecnico("dobradica", { profundidadeFurosFixacao: Number(e.target.value) })} /></label>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Movido para <strong>Admin → Regras da Porta</strong> (caneco, fixação na porta e lateral).
               </div>
             </div>
 

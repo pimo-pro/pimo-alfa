@@ -13,6 +13,7 @@ import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
 import DrawerSystemUnifiedAdminPage from "../components/admin/DrawerSystemUnifiedAdminPage";
 import { DivSepRulesAdminPage } from "../admin/rules/divSepRules/DivSepRulesAdminPage";
+import { DoorRulesAdminPage } from "../admin/rules/doorRules/DoorRulesAdminPage";
 import AdminRulesPage from "../components/admin/AdminRulesPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
 import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
@@ -40,6 +41,7 @@ type AdminTab =
   | "Regras das Gavetas"
   | "Configurações das Gavetas (Sistema Unificado)"
   | "DIV/SEP Rules"
+  | "Regras da Porta"
   | "Configuração de Etiquetas (v5)"
   | "Dimensões Técnicas (MC Overlay)"
   | "Projetos Salvos"
@@ -64,6 +66,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Gestão de Materiais", label: "Gestão de Materiais" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
   { type: "item", id: "Component Types", label: "Component Types" },
+  { type: "item", id: "Regras da Porta", label: "Regras da Porta" },
   { type: "item", id: "Configuração de Regras", label: "Configuração de Regras" },
   { type: "item", id: "Sistema de Regras", label: "Sistema de Regras (Rules System)" },
   { type: "item", id: "Perfis de Regras", label: "Perfis de Regras" },
@@ -97,6 +100,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Regras das Gavetas": "adminRuler",
   "Configurações das Gavetas (Sistema Unificado)": "adminRuler",
   "DIV/SEP Rules": "adminRuler",
+  "Regras da Porta": "adminRuler",
   "Configuração de Etiquetas (v5)": "adminTag",
   "Dimensões Técnicas (MC Overlay)": "adminRuler",
   "Projetos Salvos": "adminSave",
@@ -287,6 +291,8 @@ export default function AdminPanel() {
             <DrawerSystemUnifiedAdminPage />
           ) : active === "DIV/SEP Rules" ? (
             <DivSepRulesAdminPage />
+          ) : active === "Regras da Porta" ? (
+            <DoorRulesAdminPage />
           ) : active === "Project Progress" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <ProjectProgress />
