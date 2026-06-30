@@ -50,10 +50,15 @@ export function getHole2DLocalPosition(
   panelHeight: number,
   hole: TechnicalDrillHole
 ): { a: number; b: number } {
+  const useBottomOriginY =
+    hole.tipo === "cavilha" &&
+    (panelType === "front" || panelType === "left" || panelType === "right");
   const a = (hole.x / 1000) - panelWidth / 2;
-  const b = panelHeight / 2 - (hole.y / 1000);
+  const b = useBottomOriginY
+    ? (hole.y / 1000) - panelHeight / 2
+    : panelHeight / 2 - (hole.y / 1000);
   if (panelType === "left" || panelType === "right") {
-    return { a: a, b };
+    return { a, b };
   }
   return { a, b };
 }
@@ -79,6 +84,7 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
     const profundidadeRealM = Math.max(DRILL_MIN_DEPTH_M, hole.profundidade / 1000);
 
     const isTopOrBottom = panelType === "top" || panelType === "bottom";
+    const isFrontPanel = panelType === "front";
     const isNonThrough = hole.tipo === "cavilha" || hole.tipo === "parafuso";
     const isLeftOrRight = panelType === "left" || panelType === "right";
     const isShelfOrHinge =
@@ -91,9 +97,13 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
     const cylinderHeight =
       isTopOrBottom && isNonThrough
         ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
-        : isLeftOrRightShelfOrHinge
+        : isFrontPanel && isNonThrough
           ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
-          : Math.max(DRILL_MIN_DEPTH_M, Math.min(validDepthMax, profundidadeRealM));
+          : isLeftOrRight && isNonThrough
+            ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
+            : isLeftOrRightShelfOrHinge
+              ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
+              : Math.max(DRILL_MIN_DEPTH_M, Math.min(validDepthMax, profundidadeRealM));
 
     const bevelDepth = Math.min(
       DRILL_BEVEL_MAX_M,
@@ -121,14 +131,16 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
           axisInward = new THREE.Vector3(0, -1, 0);
         }
       }
-    } else {
-      if (
-        (panelType === "left" || panelType === "right") &&
-        hole.tipo === "cavilha"
-      ) {
-        continue; // furos de cavilha lateral: visualização 3D desactivada temporariamente
+    } else if (panelType === "front") {
+      const drillFromFront = hole.face === "frente";
+      if (drillFromFront) {
+        entry.set(a, b, entryOffset);
+        axisInward = new THREE.Vector3(0, 0, -1);
+      } else {
+        entry.set(a, b, -entryOffset);
+        axisInward = new THREE.Vector3(0, 0, 1);
       }
-
+    } else {
       axisInward = getInwardAxisForHole(panelType, hole).normalize();
       const lateralInterior =
         String(hole.face) === "B" ||
@@ -141,7 +153,6 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
       } else {
         entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
       }
-
     }
     quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisInward);
 

@@ -303,12 +303,16 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     const ffW = 448;
     const ffH = 720;
     const latH = 682;
+    const thickness = 19;
+    const edgeOffset = thickness / 2;
+    const depthOffset = 60;
     const holes = buildCornerFixedFrontDowelHoles(
       {
         fixedFrontWidthMm: ffW,
         fixedFrontHeightMm: ffH,
         panelWidthMm: 900,
         fixedFrontSide: "left",
+        thicknessMm: thickness,
       },
       latH
     );
@@ -332,16 +336,19 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
       expect(h.topDrillable).toBe(true);
     }
 
-    expect(holes.cima[0]?.x).toBe(60);
-    expect(holes.cima[1]?.x).toBe(ffW - 60);
-    expect(holes.lateral_esquerda?.[0]?.y).toBe(latH - 60);
-    expect(holes.lateral_esquerda?.[1]?.y).toBe(60);
+    expect(holes.cima[0]?.x).toBe(depthOffset);
+    expect(holes.cima[1]?.x).toBe(ffW - depthOffset);
+    expect(holes.lateral_esquerda?.[0]?.y).toBe(latH - edgeOffset);
+    expect(holes.lateral_esquerda?.[1]?.y).toBe(edgeOffset);
+    expect(holes.frente_fixa.some((h) => h.x === depthOffset && h.y === ffH - edgeOffset)).toBe(true);
+    expect(holes.frente_fixa.some((h) => h.x === ffW - depthOffset && h.y === ffH - edgeOffset)).toBe(true);
   });
 
   it("alinha furos laterais da frente fixa com a altura da lateral", () => {
-    const y = resolveFrenteFixaLateralHoleYFromTop(720, 682, 60);
-    expect(y.topY).toBe(79);
-    expect(y.bottomY).toBe(641);
+    const edgeOffset = 9.5;
+    const y = resolveFrenteFixaLateralHoleYFromTop(720, 682, edgeOffset);
+    expect(y.topY).toBe(691.5);
+    expect(y.bottomY).toBe(28.5);
   });
 
   it("espelha furos na lateral direita e cima/fundo quando FF está à direita", () => {
@@ -352,6 +359,7 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
         fixedFrontHeightMm: 720,
         panelWidthMm: 900,
         fixedFrontSide: "right",
+        thicknessMm: 19,
       },
       682
     );
@@ -366,32 +374,35 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     const ffW = 398;
     const ffH = 900;
     const latH = 862;
-    const offset = 60;
+    const thickness = 19;
+    const edgeOffset = thickness / 2;
+    const depthOffset = 60;
     const holes = buildCornerFixedFrontDowelHoles(
       {
         fixedFrontWidthMm: ffW,
         fixedFrontHeightMm: ffH,
         panelWidthMm: 800,
         fixedFrontSide: "left",
+        thicknessMm: thickness,
       },
       latH
     );
-    const lateralY = resolveFrenteFixaLateralHoleYFromTop(ffH, latH, offset);
+    const lateralY = resolveFrenteFixaLateralHoleYFromTop(ffH, latH, edgeOffset);
     const latHoles = holes.lateral_esquerda ?? [];
     const ffLateralHoles = holes.frente_fixa.filter(
       (h) =>
-        Math.abs(h.x - offset) < 0.01 &&
+        Math.abs(h.x - edgeOffset) < 0.01 &&
         (Math.abs(h.y - lateralY.topY) < 0.01 || Math.abs(h.y - lateralY.bottomY) < 0.01)
     );
 
     expect(latHoles).toHaveLength(2);
     expect(ffLateralHoles).toHaveLength(2);
-    expect(latHoles[0]?.x).toBe(offset);
-    expect(ffLateralHoles[0]?.x).toBe(offset);
+    expect(latHoles[0]?.x).toBe(depthOffset);
+    expect(ffLateralHoles[0]?.x).toBe(edgeOffset);
     expect(ffLateralHoles[0]?.y).toBe(lateralY.topY);
     expect(ffLateralHoles[1]?.y).toBe(lateralY.bottomY);
-    expect(latHoles[0]?.y).toBe(latH - offset);
-    expect(latHoles[1]?.y).toBe(offset);
+    expect(latHoles[0]?.y).toBe(latH - edgeOffset);
+    expect(latHoles[1]?.y).toBe(edgeOffset);
   });
 
   it("dedupePanelDrillHoles remove coordenadas duplicadas", () => {

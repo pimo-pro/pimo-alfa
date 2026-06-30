@@ -1,4 +1,4 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import type { PanelMaterialOptions } from "./BoxMaterialApplier";
 import type { BoxModel, BoxOptions, BoxPanelLayoutSpecs } from "./BoxBuilder";
 import type { DoorSpec } from "./DoorFactory";
@@ -120,7 +120,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
 
   const drillMap = opts.drillMarkersByPanel ?? { cima: [], fundo: [], lateral_esquerda: [], lateral_direita: [], porta: [] };
   const shelfCount = Math.max(0, Math.floor(opts.shelves ?? 0));
-  // Roupeiro (e gavetas em zona inferior): as prateleiras continuam a existir na zona superior; permitir furos de prateleira mesmo quando há gavetas.
+  // Roupeiro (e gavetas em zona inferior): as prateleiras continuam a existir na zona superior; permitir furos de prateleira mesmo quando h├í gavetas.
   const useLateralShelfHoles = shelfCount > 0;
   const hasLateralDrillMarkers =
     (drillMap.lateral_esquerda?.length ?? 0) > 0 || (drillMap.lateral_direita?.length ?? 0) > 0;
@@ -180,7 +180,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     root.add(mesh);
   });
 
-  // Roupeiro (H/J): divisores internos e varões de cabides (geometry visual).
+  // Roupeiro (H/J): divisores internos e var├Áes de cabides (geometry visual).
   const wardrobeGroup = getWardrobeGroupFromBaseCabinetId(opts.baseCabinetId);
   if (wardrobeGroup && wardrobeGroup !== "T") {
     const feetHeightMm = Math.max(40, opts.feetHeight ?? (opts.pe_cm ?? 10) * 10);
@@ -195,7 +195,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       feetHeightMm,
     });
 
-    // Divisor horizontal: separa “zona inferior” (gavetas/varão) e “zona superior” (prateleira).
+    // Divisor horizontal: separa ÔÇ£zona inferiorÔÇØ (gavetas/var├úo) e ÔÇ£zona superiorÔÇØ (prateleira).
     if (layout.horizontalDividerCenterY_mm != null) {
       const dividerMat = baseMaterial;
       const dividerH = new THREE.Mesh(
@@ -207,7 +207,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       root.add(dividerH);
     }
 
-    // Divisor vertical: obrigatório quando largura >= 800mm.
+    // Divisor vertical: obrigat├│rio quando largura >= 800mm.
     if (layout.verticalDividerEnabled) {
       const dividerMat = baseMaterial;
       const dividerV = new THREE.Mesh(
@@ -219,7 +219,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       root.add(dividerV);
     }
 
-    // Varão de cabides (posição e lado dependem de cfg7/cfg8).
+    // Var├úo de cabides (posi├º├úo e lado dependem de cfg7/cfg8).
     const hasDrawersLower = hasWardrobeLowerDrawers(opts.baseCabinetId);
     const railThicknessM = 6 / 1000; // paridade com regras
     const railRadiusM = Math.max(0.001, railThicknessM / 2);
@@ -230,7 +230,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       const cyl = new THREE.Mesh(new THREE.CylinderGeometry(railRadiusM, railRadiusM, Math.max(0.001, lengthM), 12), baseMaterial);
       cyl.name = name;
       cyl.position.set(x, railY, railZ);
-      // CylinderGeometry gera eixo em Y; rodar para alinhar ao eixo X (varão atravessando a largura).
+      // CylinderGeometry gera eixo em Y; rodar para alinhar ao eixo X (var├úo atravessando a largura).
       cyl.rotation.z = Math.PI / 2;
       root.add(cyl);
     };
@@ -247,7 +247,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
         createRail("wardrobe-rail-right", rightX, rightLen);
       }
     } else {
-      // Sem divisor vertical: um único varão
+      // Sem divisor vertical: um ├║nico var├úo
       createRail("wardrobe-rail-center", 0, layout.railWidthFull_mm / 1000);
     }
   }

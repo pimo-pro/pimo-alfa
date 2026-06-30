@@ -195,7 +195,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     group.add(backPanel);
   }
 
-  const drillMap = opts.drillMarkersByPanel ?? { cima: [], fundo: [], lateral_esquerda: [], lateral_direita: [], porta: [] };
+  const drillMap = opts.drillMarkersByPanel ?? { cima: [], fundo: [], lateral_esquerda: [], lateral_direita: [], porta: [], frente_fixa: [] };
   const shelfCountForDrill = Math.max(0, Math.floor(opts.shelves ?? 0));
   // Roupeiro: prateleiras existem na zona superior mesmo que existam gavetas na zona inferior.
   const useLateralShelfHoles = shelfCountForDrill > 0;
@@ -237,6 +237,14 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
   if (bottomPanel) deps.applyDrillHolesToPanelGeometry(bottomPanel, "bottom", drillMap.fundo);
   if (leftPanel) deps.applyDrillHolesToPanelGeometry(leftPanel, "left", lateralLeftHoles);
   if (rightPanel) deps.applyDrillHolesToPanelGeometry(rightPanel, "right", lateralRightHoles);
+
+  const ffPanel = group.children.find(
+    (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
+  ) as THREE.Mesh | undefined;
+  const ffHoles = drillMap.frente_fixa ?? [];
+  if (ffPanel && ffHoles.length > 0) {
+    deps.applyDrillHolesToPanelGeometry(ffPanel, "front", ffHoles);
+  }
 
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
   const doorSpecs = deps.buildDoorSpecs(doorLayerItems);

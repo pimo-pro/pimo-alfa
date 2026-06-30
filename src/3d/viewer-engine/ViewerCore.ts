@@ -3118,6 +3118,7 @@ export class ViewerCore {
         lateral_esquerda: [],
         lateral_direita: [],
         porta: [],
+        frente_fixa: [],
       };
       const boxOptions: BoxOptions = {
         ...opts,
@@ -3403,6 +3404,7 @@ export class ViewerCore {
           lateral_esquerda: [],
           lateral_direita: [],
           porta: [],
+          frente_fixa: [],
         };
         const drillMarkers: ViewerDrillMarkersByPanel =
           opts.drillMarkersByPanel ?? emptyDrillMarkers;

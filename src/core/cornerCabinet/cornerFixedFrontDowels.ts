@@ -16,6 +16,8 @@ export type CornerFixedFrontDowelLayout = {
   panelWidthMm: number;
   /** Lado da caixa onde a frente fixa está montada. */
   fixedFrontSide: "left" | "right";
+  /** Espessura do material (mm) — distância à borda = espessura/2. */
+  thicknessMm?: number;
 };
 
 export type CornerFixedFrontDowelHolesByPanel = {
@@ -25,6 +27,21 @@ export type CornerFixedFrontDowelHolesByPanel = {
   lateral_direita?: PanelDrillHole[];
   frente_fixa: PanelDrillHole[];
 };
+
+export type CornerDowelOffsets = {
+  /** Centro do furo a espessura/2 da borda perpendicular (mm). */
+  edgeOffset: number;
+  /** 60 mm para dentro a partir da face frontal (mm). */
+  depthOffset: number;
+};
+
+export function resolveCornerDowelOffsets(thicknessMm: number): CornerDowelOffsets {
+  const thickness = Math.max(1, thicknessMm);
+  return {
+    edgeOffset: thickness / 2,
+    depthOffset: getDrillFrontDistance(),
+  };
+}
 
 function edgeDowelHole(x: number, y: number): PanelDrillHole {
   return {
@@ -52,50 +69,65 @@ function faceDowelHole(x: number, y: number): PanelDrillHole {
 
 function resolveFixedFrontHoleSpanX(
   layout: CornerFixedFrontDowelLayout,
-  offset: number
+  depthOffset: number,
+  edgeOffset: number
 ): { xStart: number; xEnd: number; xLateralEdge: number } {
-  const ffW = Math.max(offset * 2 + 1, layout.fixedFrontWidthMm);
+  const ffW = Math.max(depthOffset * 2 + 1, layout.fixedFrontWidthMm);
   if (layout.fixedFrontSide === "left") {
-    return { xStart: offset, xEnd: ffW - offset, xLateralEdge: offset };
+    return {
+      xStart: depthOffset,
+      xEnd: ffW - depthOffset,
+      xLateralEdge: edgeOffset,
+    };
   }
   const panelW = Math.max(ffW, layout.panelWidthMm);
   return {
-    xStart: panelW - ffW + offset,
-    xEnd: panelW - offset,
-    xLateralEdge: panelW - ffW + offset,
+    xStart: panelW - ffW + depthOffset,
+    xEnd: panelW - depthOffset,
+    xLateralEdge: panelW - ffW + edgeOffset,
   };
 }
 
-/** Mapeia 60 mm do topo/base da lateral para coordenadas Y da frente fixa (Y=0 no topo). */
+/**
+ * Coordenadas Y da frente fixa alinhadas à lateral (origem Y=0 na base — Layout PRO / cutlist).
+ * edgeOffset = espessura/2 da borda superior/inferior da lateral.
+ */
 export function resolveFrenteFixaLateralHoleYFromTop(
   frenteHeightMm: number,
   lateralHeightMm: number,
-  offset: number
+  edgeOffset: number
 ): { topY: number; bottomY: number } {
   const inset = Math.max(0, (frenteHeightMm - lateralHeightMm) / 2);
   return {
-    topY: inset + offset,
-    bottomY: inset + Math.max(offset, lateralHeightMm - offset),
+    topY: inset + Math.max(edgeOffset, lateralHeightMm - edgeOffset),
+    bottomY: inset + edgeOffset,
   };
 }
 
 /**
  * Furos de cavilha entre CIMA/FUNDO/lateral e frente fixa (módulo Canto — Direita Inferior).
- * Frente fixa: 6 ligações na face (2 cima + 2 fundo + 2 lateral), deduplicadas se coincidentes.
+ * Convenção industrial (Layout PRO): origem canto inferior-esquerdo, Y↑.
+ * - Borda perpendicular: centro a espessura/2
+ * - Face frontal: 60 mm para dentro (depthOffset)
  */
 export function buildCornerFixedFrontDowelHoles(
   layout: CornerFixedFrontDowelLayout,
   lateralHeightMm: number
 ): CornerFixedFrontDowelHolesByPanel {
-  const offset = getDrillFrontDistance();
-  const ffH = Math.max(offset * 2 + 1, layout.fixedFrontHeightMm);
-  const { xStart, xEnd, xLateralEdge } = resolveFixedFrontHoleSpanX(layout, offset);
-  const yTop = offset;
-  const yBottom = ffH - offset;
-  const lateralY = resolveFrenteFixaLateralHoleYFromTop(ffH, lateralHeightMm, offset);
-  const latTop = Math.max(offset, lateralHeightMm - offset);
-  const latBottom = offset;
-  const lateralHoles = [edgeDowelHole(offset, latTop), edgeDowelHole(offset, latBottom)];
+  const { edgeOffset, depthOffset } = resolveCornerDowelOffsets(layout.thicknessMm ?? 19);
+  const ffH = Math.max(edgeOffset * 2 + 1, layout.fixedFrontHeightMm);
+  const { xStart, xEnd, xLateralEdge } = resolveFixedFrontHoleSpanX(layout, depthOffset, edgeOffset);
+
+  const yTop = ffH - edgeOffset;
+  const yBottom = edgeOffset;
+  const lateralY = resolveFrenteFixaLateralHoleYFromTop(ffH, lateralHeightMm, edgeOffset);
+
+  const latTopY = Math.max(edgeOffset, lateralHeightMm - edgeOffset);
+  const latBottomY = edgeOffset;
+  const lateralHoles = [
+    edgeDowelHole(depthOffset, latTopY),
+    edgeDowelHole(depthOffset, latBottomY),
+  ];
 
   const frenteFaceHoles: PanelDrillHole[] = [
     faceDowelHole(xStart, yTop),
@@ -107,8 +139,8 @@ export function buildCornerFixedFrontDowelHoles(
   ];
 
   const result: CornerFixedFrontDowelHolesByPanel = {
-    cima: [edgeDowelHole(xStart, offset), edgeDowelHole(xEnd, offset)],
-    fundo: [edgeDowelHole(xStart, offset), edgeDowelHole(xEnd, offset)],
+    cima: [edgeDowelHole(xStart, depthOffset), edgeDowelHole(xEnd, depthOffset)],
+    fundo: [edgeDowelHole(xStart, depthOffset), edgeDowelHole(xEnd, depthOffset)],
     frente_fixa: dedupePanelDrillHoles(frenteFaceHoles),
   };
 

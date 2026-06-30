@@ -394,7 +394,7 @@ export class ViewerPanelVisibility {
       const panelH = sideH;
       for (const hole of holes) {
         const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
+        const b = ViewerPanelVisibility.holeLocalB("left", panelH, hole);
         const r = Math.max(0.0005, hole.diametro / 2000);
         for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
           const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
@@ -414,7 +414,7 @@ export class ViewerPanelVisibility {
       const panelH = sideH;
       for (const hole of holes) {
         const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
+        const b = ViewerPanelVisibility.holeLocalB("right", panelH, hole);
         const r = Math.max(0.0005, hole.diametro / 2000);
         for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
           const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
@@ -440,7 +440,7 @@ export class ViewerPanelVisibility {
       const panelH = height;
       for (const hole of holes) {
         const a = hole.x / 1000 - panelW / 2;
-        const b = panelH / 2 - hole.y / 1000;
+        const b = ViewerPanelVisibility.holeLocalB("front", panelH, hole);
         const r = Math.max(0.0005, hole.diametro / 2000);
         for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
           const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
@@ -467,6 +467,19 @@ export class ViewerPanelVisibility {
     return geo;
   }
 
+  private static holeLocalB(
+    panelType: PanelType | "front",
+    panelH: number,
+    hole: TechnicalDrillHole
+  ): number {
+    const useBottomOriginY =
+      hole.tipo === "cavilha" &&
+      (panelType === "front" || panelType === "left" || panelType === "right");
+    return useBottomOriginY
+      ? hole.y / 1000 - panelH / 2
+      : panelH / 2 - hole.y / 1000;
+  }
+
   private static createHoleCircleGeometry(
     panelType: PanelType | "front",
     width: number,
@@ -490,7 +503,7 @@ export class ViewerPanelVisibility {
           : height;
 
     const a = hole.x / 1000 - panelW / 2;
-    const b = panelH / 2 - hole.y / 1000;
+    const b = ViewerPanelVisibility.holeLocalB(panelType, panelH, hole);
     const r = Math.max(0.0005, hole.diametro / 2000);
 
     if (panelType === "top") {
@@ -723,6 +736,38 @@ export class ViewerPanelVisibility {
             entry.width,
             entry.height,
             entry.depth,
+            hole
+          );
+          if (!holeGeo) continue;
+          const holeMat = this.getHoleColorMaterial(resolveDrillHoleViewerColorHex(hole.tipo));
+          const holeOverlay = new THREE.LineSegments(holeGeo, holeMat);
+          holeOverlay.userData.isIndustrialDesignHoleOverlay = true;
+          holeOverlay.userData.holeType = hole.tipo;
+          this.finalizePanelEdgeOverlay(holeOverlay, mesh, visible);
+        }
+      }
+      return;
+    } else if (mesh.name === "frente-fixa" && entry) {
+      const size = this.getMeshBoundingSize(mesh);
+      const holes = filterTechnicalDrillHolesForViewerMesh(entry.drillMarkersByPanel?.frente_fixa ?? []);
+      const industrialActive = this.isIndustrialDesignActive();
+      geometry = ViewerPanelVisibility.createContourEdgesGeometry(
+        "front",
+        size.x,
+        size.y,
+        size.z,
+        industrialActive ? [] : holes
+      );
+      if (!geometry) return;
+      const overlay = new THREE.LineSegments(geometry, this.deps.getSharedPanelEdgeMaterial());
+      this.finalizePanelEdgeOverlay(overlay, mesh, visible);
+      if (industrialActive && holes.length > 0) {
+        for (const hole of holes) {
+          const holeGeo = ViewerPanelVisibility.createHoleCircleGeometry(
+            "front",
+            size.x,
+            size.y,
+            size.z,
             hole
           );
           if (!holeGeo) continue;

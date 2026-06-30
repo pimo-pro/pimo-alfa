@@ -150,9 +150,49 @@ export type CornerLayoutMm = {
   fixedFront: {
     posX: number;
     posY: number;
+    /** Valor para cornerCabinetVisual (compensado); plano frontal = door.posZ. */
+    posZ: number;
+  };
+  /** Posição da porta esquerda hipotética (porta dupla) — referência da frente fixa. */
+  leftDoor: {
+    centerX: number;
+    pivotX: number;
+    posY: number;
     posZ: number;
   };
 };
+
+/** Centro X da folha esquerda numa porta dupla simétrica (boxLayersService). */
+export function computeLeftDoubleDoorCenterX(leafWidthMm: number, doorFixedGapMm: number): number {
+  return -(leafWidthMm / 2 + doorFixedGapMm / 2);
+}
+
+/** Pivot X da folha esquerda (left-edge). */
+export function computeLeftDoubleDoorPivotX(leafWidthMm: number, doorFixedGapMm: number): number {
+  return computeLeftDoubleDoorCenterX(leafWidthMm, doorFixedGapMm) - leafWidthMm / 2;
+}
+
+/** Centro X da folha direita numa porta dupla simétrica. */
+export function computeRightDoubleDoorCenterX(leafWidthMm: number, doorFixedGapMm: number): number {
+  return leafWidthMm / 2 + doorFixedGapMm / 2;
+}
+
+/** Pivot X da folha direita (right-edge). */
+export function computeRightDoubleDoorPivotX(leafWidthMm: number, doorFixedGapMm: number): number {
+  return computeRightDoubleDoorCenterX(leafWidthMm, doorFixedGapMm) + leafWidthMm / 2;
+}
+
+/**
+ * cornerCabinetVisual aplica: viewerZ = posZ/1000 - depth/2 + thickness/2.
+ * Codifica posZ para o plano frontal coincidir com doorsLayer.posZ (= doorPosZ).
+ */
+export function encodeFixedFrontViewerPosZ(
+  doorPlanePosZMm: number,
+  boxDepthMm: number,
+  thicknessMm: number
+): number {
+  return doorPlanePosZMm + boxDepthMm / 2 - thicknessMm / 2;
+}
 
 /** Largura de cada folha numa porta dupla simétrica (metades iguais). */
 function computeDoubleDoorHalfWidthMm(input: CornerLayoutInput): number {
@@ -188,6 +228,9 @@ function buildCornerDireitaLayoutResult(
     fixedFrontHeight: number;
     fixedFrontCenterX: number;
     fixedFrontPosY: number;
+    fixedFrontPosZ: number;
+    leftDoorCenterX: number;
+    leftDoorPivotX: number;
     doorCenterX: number;
     pivotX: number;
     hingeSide: "left" | "right";
@@ -219,6 +262,12 @@ function buildCornerDireitaLayoutResult(
     fixedFront: {
       posX: params.fixedFrontCenterX,
       posY: params.fixedFrontPosY,
+      posZ: params.fixedFrontPosZ,
+    },
+    leftDoor: {
+      centerX: params.leftDoorCenterX,
+      pivotX: params.leftDoorPivotX,
+      posY: params.fixedFrontPosY,
       posZ: params.doorPosZ,
     },
   };
@@ -227,19 +276,22 @@ function buildCornerDireitaLayoutResult(
 function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm {
   const gapV = Math.max(0, input.gapVerticalMm ?? 0);
   const gapH = Math.max(0, input.gapHorizontalMm ?? 0);
+  const doorFixedGap = Math.max(0, input.doorFixedGapMm ?? 0);
+  const thicknessMm = Math.max(1, input.thicknessMm);
   const rightDoorHeight = Math.max(1, input.boxHeightMm - 2 * gapV);
   const leftDoor = computeHypotheticalLeftDoorMm(input, rightDoorHeight);
   const rightDoorWidth = leftDoor.widthMm;
-  /** Frente fixa: mesma largura da porta esquerda; altura = módulo (+folgas verticais vs porta). */
   const fixedFrontWidth = leftDoor.widthMm;
   const fixedFrontHeight = input.boxHeightMm;
-  const fixedFrontPosY = gapV;
+  const doorPosY = 0;
   const doorPosZ = input.boxDepthMm / 2 + Math.max(0, input.doorPosZOffsetMm ?? 0);
+  const fixedFrontPosZ = encodeFixedFrontViewerPosZ(doorPosZ, input.boxDepthMm, thicknessMm);
 
   if (input.side === "right") {
-    const fixedFrontCenterX = -input.boxWidthMm / 2 + gapH + fixedFrontWidth / 2;
-    const doorCenterX = input.boxWidthMm / 2 - gapH - rightDoorWidth / 2;
-    const pivotX = doorCenterX + rightDoorWidth / 2;
+    const leftDoorCenterX = computeLeftDoubleDoorCenterX(rightDoorWidth, doorFixedGap);
+    const leftDoorPivotX = computeLeftDoubleDoorPivotX(rightDoorWidth, doorFixedGap);
+    const doorCenterX = computeRightDoubleDoorCenterX(rightDoorWidth, doorFixedGap);
+    const pivotX = computeRightDoubleDoorPivotX(rightDoorWidth, doorFixedGap);
     return buildCornerDireitaLayoutResult(input, {
       side: input.side,
       gapH,
@@ -248,8 +300,11 @@ function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
       leftDoor,
       fixedFrontWidth,
       fixedFrontHeight,
-      fixedFrontCenterX,
-      fixedFrontPosY,
+      fixedFrontCenterX: leftDoorCenterX,
+      fixedFrontPosY: doorPosY,
+      fixedFrontPosZ,
+      leftDoorCenterX,
+      leftDoorPivotX,
       doorCenterX,
       pivotX,
       hingeSide: "right",
@@ -259,9 +314,10 @@ function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
     });
   }
 
-  const fixedFrontCenterX = input.boxWidthMm / 2 - gapH - fixedFrontWidth / 2;
-  const doorCenterX = -input.boxWidthMm / 2 + gapH + rightDoorWidth / 2;
-  const pivotX = doorCenterX - rightDoorWidth / 2;
+  const leftDoorCenterX = computeRightDoubleDoorCenterX(rightDoorWidth, doorFixedGap);
+  const leftDoorPivotX = computeRightDoubleDoorPivotX(rightDoorWidth, doorFixedGap);
+  const doorCenterX = computeLeftDoubleDoorCenterX(rightDoorWidth, doorFixedGap);
+  const pivotX = computeLeftDoubleDoorPivotX(rightDoorWidth, doorFixedGap);
   return buildCornerDireitaLayoutResult(input, {
     side: input.side,
     gapH,
@@ -270,8 +326,11 @@ function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
     leftDoor,
     fixedFrontWidth,
     fixedFrontHeight,
-    fixedFrontCenterX,
-    fixedFrontPosY,
+    fixedFrontCenterX: leftDoorCenterX,
+    fixedFrontPosY: doorPosY,
+    fixedFrontPosZ,
+    leftDoorCenterX,
+    leftDoorPivotX,
     doorCenterX,
     pivotX,
     hingeSide: "left",
@@ -326,6 +385,12 @@ export function computeCornerLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
       fixedFront: {
         posX: fixedFrontCenterX,
         posY: doorPosY,
+        posZ: encodeFixedFrontViewerPosZ(doorPosZ, input.boxDepthMm, Math.max(1, input.thicknessMm)),
+      },
+      leftDoor: {
+        centerX: fixedFrontCenterX,
+        pivotX: fixedFrontCenterX - fixedFrontWidth / 2,
+        posY: doorPosY,
         posZ: doorPosZ,
       },
     };
@@ -356,6 +421,12 @@ export function computeCornerLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
     },
     fixedFront: {
       posX: fixedFrontCenterX,
+      posY: doorPosY,
+      posZ: encodeFixedFrontViewerPosZ(doorPosZ, input.boxDepthMm, Math.max(1, input.thicknessMm)),
+    },
+    leftDoor: {
+      centerX: fixedFrontCenterX,
+      pivotX: fixedFrontCenterX + fixedFrontWidth / 2,
       posY: doorPosY,
       posZ: doorPosZ,
     },

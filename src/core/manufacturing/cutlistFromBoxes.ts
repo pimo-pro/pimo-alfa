@@ -576,6 +576,7 @@ export function cutlistComPrecoFromBox(
           fixedFrontHeightMm: cornerLayout.fixedFrontHeightMm ?? cornerLayout.doorHeightMm,
           panelWidthMm: cimaItem?.dimensoes?.largura ?? box.dimensoes.largura,
           fixedFrontSide,
+          thicknessMm: syncedBox.espessura ?? lateralItem?.espessura ?? 19,
         },
         lateralHeightMm
       );

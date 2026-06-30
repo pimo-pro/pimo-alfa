@@ -86,6 +86,7 @@ const EMPTY_VIEWER_DRILL_MARKERS: ViewerDrillMarkersByPanel = {
   lateral_direita: [],
   porta: [],
   portaPerDoor: [],
+  frente_fixa: [],
 };
 
 const clampNumber = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
@@ -495,7 +496,7 @@ export function buildViewerDrillMarkersByPanelResult(
             diametro: h.diameter,
             profundidade: h.depth,
             tipo: "cavilha" as DrillType,
-            face: h.y === 0 ? "fundo" as DrillFace : "cima" as DrillFace,
+            face: lateralFace,
           };
         }
         const xForViewer =
@@ -525,7 +526,14 @@ export function buildViewerDrillMarkersByPanelResult(
   const frenteFixaItem = byType.get("frente_fixa");
   const frente_fixa =
     frenteFixaItem?.drillHoles?.length
-      ? panelDrillHolesToTechnical(onlyInternalFaceHoles(frenteFixaItem.drillHoles), "direita")
+      ? onlyInternalFaceHoles(frenteFixaItem.drillHoles).map((h) => ({
+          x: h.x,
+          y: h.y,
+          diametro: h.diameter,
+          profundidade: h.depth,
+          tipo: (h.holeType ?? "cavilha") as DrillType,
+          face: "frente" as DrillFace,
+        }))
       : [];
 
   const result = {

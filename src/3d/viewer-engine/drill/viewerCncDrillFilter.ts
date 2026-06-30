@@ -1,25 +1,18 @@
 import type { DrillType, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../../core/types";
 
 /**
- * Tipos de furo tratados como furação CNC / montagem estrutural no Viewer.
- * Não são mostrados na malha nem nos contornos; permanecem na cutlist/manufatura.
- * Visíveis: dobradiças, corrediças, prateleiras e restantes tipos (ex.: variantes de nesting importadas).
+ * Todos os furos industriais do SSOT (cutlist / PanelDrillHole) são visíveis no viewer 3D.
+ * A filtragem por tipo foi removida — cavilha, parafuso e minifix aparecem na peça correcta.
  */
-const VIEWER_MESH_HIDDEN_MANUFACTURING_TIPOS: ReadonlySet<DrillType> = new Set([
-  "cavilha",
-  "parafuso",
-  "minifix",
-]);
-
-export function isViewerManufacturingCncDrillTipo(tipo: DrillType): boolean {
-  return VIEWER_MESH_HIDDEN_MANUFACTURING_TIPOS.has(tipo);
+export function isViewerManufacturingCncDrillTipo(_tipo: DrillType): boolean {
+  return false;
 }
 
 export function filterTechnicalDrillHolesForViewerMesh(
   holes: TechnicalDrillHole[] | undefined | null
 ): TechnicalDrillHole[] {
   if (!holes?.length) return [];
-  return holes.filter((h) => !isViewerManufacturingCncDrillTipo(h.tipo));
+  return holes;
 }
 
 export function filterViewerDrillMarkersForMesh(markers: ViewerDrillMarkersByPanel): ViewerDrillMarkersByPanel {
@@ -30,5 +23,6 @@ export function filterViewerDrillMarkersForMesh(markers: ViewerDrillMarkersByPan
     lateral_direita: filterTechnicalDrillHolesForViewerMesh(markers.lateral_direita),
     porta: filterTechnicalDrillHolesForViewerMesh(markers.porta),
     portaPerDoor: markers.portaPerDoor?.map((row) => filterTechnicalDrillHolesForViewerMesh(row)),
+    frente_fixa: filterTechnicalDrillHolesForViewerMesh(markers.frente_fixa),
   };
 }
