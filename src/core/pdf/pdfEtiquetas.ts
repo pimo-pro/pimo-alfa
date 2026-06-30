@@ -813,7 +813,11 @@ function drawV5_BottomStrip(
 
   const rightX = sepX + PAD;
   const rightMaxW = width - rightX - PAD;
-  doc.text(rightText, rightX, centerY, { maxWidth: rightMaxW });
+  const rightFontPt = v5Pt(13 + 1.5);
+  const rightCenterY = y + height / 2 + rightFontPt * 0.12;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(rightFontPt);
+  doc.text(rightText, rightX, rightCenterY, { maxWidth: rightMaxW });
 }
 
 /**
@@ -948,6 +952,7 @@ async function renderEtiquetaPageV5(
   const LABEL_COL_W = 16;
   const labelPt = v5Pt(9);
   const valuePt = v5Pt(12.5);
+  const materialValuePt = v5Pt(12.5 + 1.5);
   const valX    = infoX + LABEL_COL_W;
   const valMaxW = infoW - LABEL_COL_W - 0.5;
 
@@ -957,7 +962,7 @@ async function renderEtiquetaPageV5(
   doc.text("MATRIAL", infoX, yMaterial + dims.materialHeight_mm * 0.62);
 
   doc.setFont("courier", "bold");
-  doc.setFontSize(valuePt);
+  doc.setFontSize(materialValuePt);
   doc.setTextColor(...V5_TEXT);
   const matLines = doc.splitTextToSize(material, valMaxW);
   doc.text(matLines.slice(0, 1) as string[], valX, yMaterial + dims.materialHeight_mm * 0.62);
