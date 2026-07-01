@@ -23,6 +23,8 @@ import type { ProjectState } from "../../context/projectTypes";
 import { formatCurrency } from "../../utils/formatting";
 import { formatObservacoesForPdf, resolveObservacoesForCutListItem } from "../observacoes/ObservacoesService";
 import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
+import type { IndustrialPieceEditsStore } from "./industrialPieceEditsTypes";
+import { isIndustrialPieceEdited } from "./IndustrialPieceEditsService";
 
 export type PecasTotaisRow = {
   categoria: string;
@@ -49,7 +51,16 @@ function pieceWeightKg(
 }
 
 export function buildPecasTotaisRows(
-  project: Pick<ProjectState, "boxes" | "rules" | "materialId" | "projectName" | "remates" | "rodapes" | "extractedPartsByBoxId">,
+  project: Pick<
+    ProjectState,
+    | "boxes"
+    | "rules"
+    | "materialId"
+    | "projectName"
+    | "remates"
+    | "rodapes"
+    | "extractedPartsByBoxId"
+  > & { industrialPieceEdits?: import("./industrialPieceEditsTypes").IndustrialPieceEditsStore },
   materials: MaterialIndustrial[]
 ): PecasTotaisRow[] {
   const boxes = project.boxes ?? [];
@@ -61,6 +72,7 @@ export function buildPecasTotaisRows(
     remates: project.remates ?? [],
     rodapes: project.rodapes ?? [],
     extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: project.industrialPieceEdits,
   });
   const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome?.trim() || b.id]));
   const rows: PecasTotaisRow[] = [];
@@ -250,19 +262,21 @@ export function buildTotaisProjetoPdfRows(
 export function buildResumoIndustriaisRows(
   items: CutListItemComPreco[],
   boxes: BoxModule[],
-  pieceObservacoes?: PieceObservacoesStore
+  pieceObservacoes?: PieceObservacoesStore,
+  industrialPieceEdits?: IndustrialPieceEditsStore
 ): Array<{ caixa: string; peca: string; dimensoes: string; observacoes: string; modified: boolean }> {
   const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome?.trim() || b.id]));
   return items.map((item) => {
     const obs = formatObservacoesForPdf(
       resolveObservacoesForCutListItem(item, { pieceObservacoes })
     );
+    const edit = industrialPieceEdits?.[item.id];
     return {
       caixa: boxNomeById[item.boxId ?? ""] ?? item.boxId ?? "—",
       peca: item.tipo,
       dimensoes: `${item.dimensoes.largura}×${item.dimensoes.altura}×${item.espessura} mm`,
       observacoes: obs,
-      modified: obs.length > 0 && obs !== "—",
+      modified: isIndustrialPieceEdited(edit) || (obs.length > 0 && obs !== "—"),
     };
   });
 }

@@ -8,7 +8,8 @@ import autoTable from "jspdf-autotable";
 import type { ComponentType } from "../components/componentTypes";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
+import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
+import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
 import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
 import {
   buildIndustrialListPiecesPerSheet,
@@ -148,24 +149,38 @@ export type GerarPdfTecnicoOpcoes = {
   extractedPartsByBoxId?: Record<string, Record<string, CutListItemComPreco[]>>;
   precomputedItems?: CutListItemComPreco[];
   pieceObservacoes?: PieceObservacoesStore;
+  industrialPieceEdits?: IndustrialPieceEditsStore;
+  remates?: import("../remate/rematePieceTypes").RematePiece[];
+  rodapes?: import("../rodape/rodapeTypes").ProjectRodape[];
 };
 
 function loadCutlistForIndustrialList(
   boxes: BoxModule[],
   rules: RulesConfig,
   projectName: string,
-  pdfOpts?: Pick<GerarPdfTecnicoOpcoes, "materialId" | "extractedPartsByBoxId" | "precomputedItems">
+  pdfOpts?: Pick<
+    GerarPdfTecnicoOpcoes,
+    | "materialId"
+    | "extractedPartsByBoxId"
+    | "precomputedItems"
+    | "industrialPieceEdits"
+    | "remates"
+    | "rodapes"
+  >
 ): CutListItemComPreco[] {
   if (pdfOpts?.precomputedItems && pdfOpts.precomputedItems.length > 0) {
     return pdfOpts.precomputedItems;
   }
-  return buildGlobalQrCutlistMerged(
+  return buildCutlistItemsForIndustrialExport({
     boxes,
     rules,
-    pdfOpts?.materialId,
+    materialId: pdfOpts?.materialId,
     projectName,
-    pdfOpts?.extractedPartsByBoxId
-  );
+    remates: pdfOpts?.remates ?? [],
+    rodapes: pdfOpts?.rodapes ?? [],
+    extractedPartsByBoxId: pdfOpts?.extractedPartsByBoxId,
+    industrialPieceEdits: pdfOpts?.industrialPieceEdits,
+  });
 }
 
 function construirLinhas(

@@ -10,6 +10,9 @@ export type BottomInfoPanelId =
   | "ferragensTotais"
   | "totais"
   | "resumoIndustriais"
+  | "operacoesIndustriais"
+  | "consumoMateriais"
+  | "chapasReal"
   | null;
 
 type BottomInfoContextValue = {

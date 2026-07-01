@@ -160,6 +160,7 @@ function buildItemsForCncExportFromState(state: ProjectState): CutListItemComPre
     remates: state.remates ?? [],
     rodapes: state.rodapes ?? [],
     extractedPartsByBoxId: state.extractedPartsByBoxId,
+    industrialPieceEdits: state.industrialPieceEdits,
   });
 }
 
@@ -649,6 +650,7 @@ export async function generateMultiProjectFabrication(
           remates: entry.state.remates ?? [],
           rodapes: entry.state.rodapes ?? [],
           pieceObservacoes: proj.pieceObservacoes,
+          industrialPieceEdits: entry.state.industrialPieceEdits ?? {},
         },
         materials: industrialMaterialsSnapshot,
         componentTypes: exportComponentTypes,

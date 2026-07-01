@@ -59,6 +59,7 @@ export function useIndustrialBottomPdf() {
         remates: project.remates,
         rodapes: project.rodapes,
         extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
       },
       materials
     );

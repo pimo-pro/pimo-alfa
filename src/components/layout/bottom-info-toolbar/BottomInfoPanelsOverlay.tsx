@@ -9,6 +9,9 @@ import PecasTotaisPanel from "../../panels/PecasTotaisPanel";
 import FerragensTotaisPanel from "../../panels/FerragensTotaisPanel";
 import TotaisProjetoPanel from "../../panels/TotaisProjetoPanel";
 import PainelResumoIndustriais from "../../panels/painelResumoIndustriais";
+import PainelOperacoesIndustriais from "../../panels/painelOperacoesIndustriais";
+import PainelConsumoMateriais from "../../panels/painelConsumoMateriais";
+import PainelChapasReal from "../../panels/painelChapasReal";
 
 const overlayStyle: React.CSSProperties = {
   position: "absolute",
@@ -62,6 +65,12 @@ function PanelContent({ panelId }: { panelId: Exclude<BottomInfoPanelId, null> }
       return <TotaisProjetoPanel />;
     case "resumoIndustriais":
       return <PainelResumoIndustriais />;
+    case "operacoesIndustriais":
+      return <PainelOperacoesIndustriais />;
+    case "consumoMateriais":
+      return <PainelConsumoMateriais />;
+    case "chapasReal":
+      return <PainelChapasReal />;
     default:
       return null;
   }

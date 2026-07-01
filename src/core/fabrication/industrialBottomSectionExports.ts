@@ -31,7 +31,7 @@ export function buildBottomSectionPdfs(input: {
     | "rodapes"
     | "extractedPartsByBoxId"
     | "pieceObservacoes"
-  >;
+  > & { industrialPieceEdits?: import("../industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore };
   materials: MaterialIndustrial[];
   componentTypes: ComponentType[];
   ferragens: Ferragem[];

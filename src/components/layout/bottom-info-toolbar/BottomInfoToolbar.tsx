@@ -66,6 +66,9 @@ const INDUSTRIAL_PANELS: { id: Exclude<BottomInfoPanelId, null>; label: string }
   { id: "ferragensTotais", label: "Ferragens totais" },
   { id: "totais", label: "Totais do Projeto" },
   { id: "resumoIndustriais", label: "Resumo Industriais" },
+  { id: "operacoesIndustriais", label: "Operações" },
+  { id: "consumoMateriais", label: "Consumo Materiais" },
+  { id: "chapasReal", label: "Chapas Real" },
 ];
 
 const toolbarStyle: React.CSSProperties = {

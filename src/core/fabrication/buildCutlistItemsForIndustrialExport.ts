@@ -6,6 +6,8 @@ import { buildRemateCutlistItems } from "../remate/remateCutlist";
 import { buildRodapeCutlistItems } from "../rodape/rodapeCutlist";
 import type { RematePiece } from "../remate/rematePieceTypes";
 import type { ProjectRodape } from "../rodape/rodapeTypes";
+import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
+import { applyIndustrialPieceEdits } from "../industrial/IndustrialPieceEditsService";
 
 /**
  * Snapshot mínimo para gerar a mesma lista de itens que o fluxo CNC/PDF (cutlist + peças CAD extraídas + remates + rodapés).
@@ -19,6 +21,7 @@ export type IndustrialExportProjectSnapshot = {
   remates?: readonly RematePiece[];
   rodapes?: readonly ProjectRodape[];
   extractedPartsByBoxId?: Record<string, Record<string, unknown[]>>;
+  industrialPieceEdits?: IndustrialPieceEditsStore;
 };
 
 export function buildCutlistItemsForIndustrialExport(
@@ -32,6 +35,7 @@ export function buildCutlistItemsForIndustrialExport(
     remates = [],
     rodapes = [],
     extractedPartsByBoxId = {},
+    industrialPieceEdits,
   } = snap;
 
   const rawParam = boxes.flatMap((box) => cutlistComPrecoFromBox(box, rules, materialId));
@@ -48,9 +52,12 @@ export function buildCutlistItemsForIndustrialExport(
     boxId: p.boxId ?? "",
   }));
 
-  return attachQrCodesToCutlist(merged, {
-    projectName,
-    boxes,
-    rules,
-  });
+  return applyIndustrialPieceEdits(
+    attachQrCodesToCutlist(merged, {
+      projectName,
+      boxes,
+      rules,
+    }),
+    industrialPieceEdits
+  );
 }

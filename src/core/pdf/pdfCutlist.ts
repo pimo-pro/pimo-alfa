@@ -7,7 +7,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
-import { buildGlobalQrCutlistMerged } from "../manufacturing/cutlistFromBoxes";
+import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
+import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
 import { resolveIndustrialPieceRef } from "../cutlayout/cutLayoutProPieceNaming";
 import {
   buildIndustrialListPiecesPerSheet,
@@ -49,6 +50,9 @@ export type ProjectForPdf = {
   settings?: unknown;
   precomputedItems?: CutListItemComPreco[];
   pieceObservacoes?: PieceObservacoesStore;
+  industrialPieceEdits?: IndustrialPieceEditsStore;
+  remates?: import("../remate/rematePieceTypes").RematePiece[];
+  rodapes?: import("../rodape/rodapeTypes").ProjectRodape[];
 };
 
 function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { boxNome: string; tipoBorda?: string }> {
@@ -65,13 +69,16 @@ function getFullCutlist(project: ProjectForPdf): Array<CutListItemComPreco & { b
     });
   }
 
-  const merged = buildGlobalQrCutlistMerged(
-    project.boxes,
-    project.rules,
-    project.materialId,
-    project.projectName,
-    project.extractedPartsByBoxId
-  );
+  const merged = buildCutlistItemsForIndustrialExport({
+    boxes: project.boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName: project.projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: project.industrialPieceEdits,
+  });
 
   return merged.map((p) => {
     const box = boxById.get(p.boxId ?? "");

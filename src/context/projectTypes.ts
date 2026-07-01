@@ -159,6 +159,10 @@ export interface ProjectState {
   orlaPieces: Record<string, import("../core/orla/orlaTypes").PieceOrlaConfig>;
   /** Observações por peça (chave = panelId estável ou id industrial). */
   pieceObservacoes: Record<string, string[]>;
+  /** Edições industriais manuais (medidas, mover, apagar) — painel mestre. */
+  industrialPieceEdits: import("../core/industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore;
+  /** Estado das operações industriais (Nesting, CNC, …). */
+  industrialOperacoes: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperacoesStore;
   /** Orla V1 — pares de bordas partilhadas (Orla Junto). */
   orlaJuntoPairs: import("../core/orla/orlaTypes").OrlaJuntoPair[];
   /** Orla V1 — ferragem calculada (metros, custo). */
@@ -676,6 +680,17 @@ export interface ProjectActions {
   /** Observações — adiciona/remove observação de peça (panelId / id industrial). */
   addPieceObservacao: (_pieceId: string, _text: string) => void;
   removePieceObservacao: (_pieceId: string, _index: number) => void;
+  /** Industrial — atualizar medidas de peça (COMP/LARG/ESP). */
+  updateIndustrialPieceDimensions: (
+    _pieceId: string,
+    _dims: { largura?: number; altura?: number; espessura?: number }
+  ) => void;
+  /** Industrial — mover peça para outra caixa. */
+  moveIndustrialPiece: (_pieceId: string, _targetBoxId: string) => void;
+  /** Industrial — apagar peça do fluxo industrial. */
+  deleteIndustrialPiece: (_pieceId: string) => void;
+  /** Industrial — marcar operação como concluída. */
+  completeIndustrialOperacao: (_operationId: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperationId) => void;
   /** Gavetas — cria ou atualiza preset de gavetas no projecto. */
   upsertDrawerPreset: (_preset: import("../core/drawers/drawerPresetTypes").DrawerPreset) => void;
   /** Gavetas — remove preset de gavetas do catálogo. */

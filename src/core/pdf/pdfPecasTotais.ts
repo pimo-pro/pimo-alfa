@@ -18,7 +18,7 @@ export function buildPecasTotaisPdf(
   project: Pick<
     ProjectState,
     "boxes" | "rules" | "materialId" | "projectName" | "remates" | "rodapes" | "extractedPartsByBoxId"
-  >,
+  > & { industrialPieceEdits?: import("../industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore },
   materials: MaterialIndustrial[]
 ): jsPDF {
   const rows = buildPecasTotaisRows(project, materials);

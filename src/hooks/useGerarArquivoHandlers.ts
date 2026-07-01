@@ -31,6 +31,10 @@ import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf, type UnifiedPdfIndustrialContext } from "../core/pdf/pdfUnified";
 import { buildBottomSectionPdfs } from "../core/fabrication/industrialBottomSectionExports";
+import { computeConsumoMateriais } from "../core/industrial/computeConsumoMateriais";
+import { computeChapasReal } from "../core/industrial/computeChapasReal";
+import { buildConsumoMateriaisPdf, consumoMateriaisPdfFileName } from "../core/pdf/pdfConsumoMateriais";
+import { buildChapasRealPdf, chapasRealPdfFileName } from "../core/pdf/pdfChapasReal";
 import { enviarParaFabrica } from "../core/fabrication/enviarParaFabrica";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
@@ -211,6 +215,7 @@ export function buildItemsForCncExport(
     remates?: import("../core/remate/rematePieceTypes").RematePiece[];
     rodapes?: import("../core/rodape/rodapeTypes").ProjectRodape[];
     extractedPartsByBoxId?: Record<string, Record<string, unknown[]>>;
+    industrialPieceEdits?: import("../core/industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore;
   },
   boxes: Array<{ id: string }>
 ): Array<Record<string, unknown>> {
@@ -222,6 +227,7 @@ export function buildItemsForCncExport(
     remates: project.remates ?? [],
     rodapes: project.rodapes ?? [],
     extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: project.industrialPieceEdits,
   });
   return items as unknown as Array<Record<string, unknown>>;
 }
@@ -303,6 +309,7 @@ export function useGerarArquivoHandlers() {
       extractedPartsByBoxId: project.extractedPartsByBoxId ?? {},
       settings: settings ?? undefined,
       pieceObservacoes: project.pieceObservacoes ?? {},
+      industrialPieceEdits: project.industrialPieceEdits ?? {},
       remates: project.remates ?? [],
       rodapes: project.rodapes ?? [],
     }),
@@ -502,6 +509,7 @@ export function useGerarArquivoHandlers() {
         remates: project.remates ?? [],
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
       });
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
@@ -562,6 +570,7 @@ export function useGerarArquivoHandlers() {
         remates: project.remates ?? [],
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
       });
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
@@ -629,6 +638,7 @@ export function useGerarArquivoHandlers() {
         remates: project.remates ?? [],
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
       });
 
       const settingsSnapshot = getSettings();
@@ -968,6 +978,7 @@ export function useGerarArquivoHandlers() {
         remates: project.remates ?? [],
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
       });
 
       const settingsSnapshot = getSettings();
@@ -1062,6 +1073,7 @@ export function useGerarArquivoHandlers() {
             remates: project.remates ?? [],
             rodapes: project.rodapes ?? [],
             pieceObservacoes: proj.pieceObservacoes,
+            industrialPieceEdits: project.industrialPieceEdits,
           },
           materials: listIndustrialMaterialsSnapshot(),
           componentTypes,
@@ -1078,6 +1090,20 @@ export function useGerarArquivoHandlers() {
           if (!safeAddPdf(zip, name, doc)) {
             errors.push({ step: `PDF ${name}`, message: "Documento inválido." });
           }
+        }
+
+        const consumoSummary = computeConsumoMateriais(
+          allItems,
+          listIndustrialMaterialsSnapshot(),
+          proj.projectName ?? safeSlug,
+          boxes
+        );
+        if (!safeAddPdf(zip, consumoMateriaisPdfFileName(safeSlug), buildConsumoMateriaisPdf(proj.projectName ?? safeSlug, consumoSummary))) {
+          errors.push({ step: "PDF consumo_materiais", message: "Documento inválido." });
+        }
+        const chapasReal = computeChapasReal(allItems, proj.projectName ?? safeSlug, boxes);
+        if (!safeAddPdf(zip, chapasRealPdfFileName(safeSlug), buildChapasRealPdf(proj.projectName ?? safeSlug, chapasReal))) {
+          errors.push({ step: "PDF chapas_real", message: "Documento inválido." });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -1251,9 +1277,28 @@ export function useGerarArquivoHandlers() {
       if (!abortFullExport) {
         try {
           assertIndustrialRequiredArtifactsComplete();
-          const fabricaCheck = enviarParaFabrica(proj.projectName ?? safeSlug, Object.keys(zip.files));
+          const fabricaCheck = enviarParaFabrica(
+            {
+              projectName: proj.projectName,
+              currentProjectId: project.currentProjectId,
+              boxes: proj.boxes,
+              rules: proj.rules,
+              materialId: proj.materialId,
+              remates: project.remates ?? [],
+              rodapes: project.rodapes ?? [],
+              extractedPartsByBoxId: proj.extractedPartsByBoxId,
+              pieceObservacoes: proj.pieceObservacoes,
+              industrialPieceEdits: project.industrialPieceEdits,
+            },
+            Object.keys(zip.files)
+          );
           if (!fabricaCheck.ok) {
             devLogger.warn("enviarParaFabrica: artefactos em falta", fabricaCheck.missing);
+          } else if (fabricaCheck.payload) {
+            devLogger.info("enviarParaFabrica: payload preparado", {
+              pecas: fabricaCheck.payload.pecas.length,
+              caixas: fabricaCheck.payload.caixas.length,
+            });
           }
           const blob = await zip.generateAsync({ type: "blob" });
           if (!blob || blob.size === 0) {

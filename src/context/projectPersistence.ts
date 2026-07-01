@@ -209,6 +209,14 @@ export function reviveState(snapshot: unknown): ProjectState | null {
             ])
           )
         : defaultState.pieceObservacoes,
+    industrialPieceEdits:
+      restored.industrialPieceEdits && typeof restored.industrialPieceEdits === "object"
+        ? { ...(restored.industrialPieceEdits as ProjectState["industrialPieceEdits"]) }
+        : defaultState.industrialPieceEdits,
+    industrialOperacoes:
+      restored.industrialOperacoes && typeof restored.industrialOperacoes === "object"
+        ? { ...(restored.industrialOperacoes as ProjectState["industrialOperacoes"]) }
+        : defaultState.industrialOperacoes,
     orlaJuntoPairs: Array.isArray(restored.orlaJuntoPairs)
       ? restored.orlaJuntoPairs
       : defaultState.orlaJuntoPairs,

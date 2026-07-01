@@ -268,6 +268,7 @@ export async function buildUnifiedPdf(
         remates: project.remates ?? [],
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
       },
       industrial.materials
     );

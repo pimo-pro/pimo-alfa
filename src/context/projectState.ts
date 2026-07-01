@@ -324,6 +324,8 @@ export const defaultState: ProjectState = {
   drawerPresets: normalizeDrawerPresets(undefined),
   orlaPieces: {},
   pieceObservacoes: {},
+  industrialPieceEdits: {},
+  industrialOperacoes: {},
   orlaJuntoPairs: [],
   ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },
   remates: [],

@@ -85,6 +85,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
           remates: currentProject.remates ?? [],
           rodapes: currentProject.rodapes ?? [],
           pieceObservacoes: currentProject.pieceObservacoes ?? {},
+          industrialPieceEdits: currentProject.industrialPieceEdits,
         },
         materials: ctx.materials,
         componentTypes: ctx.componentTypes,
