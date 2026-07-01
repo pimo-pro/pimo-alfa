@@ -9,10 +9,11 @@ import {
   snapToMountRule,
 } from "./remateMountFrame";
 import {
-  deriveLegacyTipo,
   inferProductTypeFromLegacy,
   normalizeProductOptions,
+  deriveLegacyTipo,
 } from "./remateProductRules";
+import { isLRematePiece, snapLRemateGroupCorners } from "./remateLGeometry";
 
 function isRematePieceV2(raw: unknown): raw is RematePiece {
   return (
@@ -108,12 +109,35 @@ export function upgradeRematesAfterLoad(
   remates: RematePiece[],
   workspaceBoxes: readonly WorkspaceBox[]
 ): RematePiece[] {
-  return remates.map((piece) => {
+  const upgraded = remates.map((piece) => {
     const box = piece.parentBoxId
       ? workspaceBoxes.find((b) => b.id === piece.parentBoxId) ?? null
       : null;
     return upgradeRematePiece(piece, box);
   });
+
+  const groupIds = new Set(
+    upgraded.filter((p) => isLRematePiece(p) && p.parentGroupId).map((p) => p.parentGroupId!)
+  );
+  let result = upgraded;
+  for (const groupId of groupIds) {
+    const group = result.filter((r) => r.parentGroupId === groupId && isLRematePiece(r));
+    const ext = group.find((r) => r.partIndex === 1);
+    const int = group.find((r) => r.partIndex === 2);
+    const box = ext?.parentBoxId
+      ? workspaceBoxes.find((b) => b.id === ext.parentBoxId) ?? null
+      : null;
+    if (!ext || !int || !box) continue;
+    const dims = boxDimsFromWorkspace(box);
+    const bounds = getRemateEnvelopeBoundsM(dims.widthM, dims.heightM, dims.depthM, box);
+    const snapped = snapLRemateGroupCorners(ext, int, bounds);
+    result = result.map((r) => {
+      if (r.id === snapped.ext.id) return snapped.ext;
+      if (r.id === snapped.int.id) return snapped.int;
+      return r;
+    });
+  }
+  return result;
 }
 
 export function normalizeRematesFromPersistence(rawList: unknown[]): RematePiece[] {

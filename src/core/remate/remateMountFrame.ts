@@ -1,5 +1,11 @@
 import type { StructuralBoundsM } from "./rematePlacement";
-import { computeLRemateCenterM } from "./remateLGeometry";
+import {
+  computeLRemateExtCornerMm,
+  isLRematePiece,
+  lSecondaryMountSlot,
+  resolveLPrimarySlot,
+  resolveLRemateRenderPose,
+} from "./remateLGeometry";
 import type {
   RemateFaceOffsets,
   RemateMountSlot,
@@ -134,14 +140,23 @@ export function defaultFaceOffsetsForPiece(piece: RematePiece, bounds: Structura
   }
 
   if (piece.tipo === "L" || piece.productType === "L") {
-    const slot = resolveMountSlot(piece);
-    const frame = computeMountFrameM(bounds, slot);
-    const center = computeLRemateCenterM(piece, bounds);
-    return faceOffsetsFromPositionM(frame, {
-      xMm: center.x * 1000,
-      yMm: center.y * 1000,
-      zMm: center.z * 1000,
-    });
+    const primary = resolveLPrimarySlot(piece);
+    const corner = computeLRemateExtCornerMm(primary, piece, bounds);
+    if (piece.partIndex === 2) {
+      return {
+        offsetAlongNormalMm: 0,
+        offsetTangentUMm: 0,
+        offsetTangentVMm: 0,
+        rotationSnapIndex: 0,
+      };
+    }
+    void corner;
+    return {
+      offsetAlongNormalMm: 0,
+      offsetTangentUMm: 0,
+      offsetTangentVMm: 0,
+      rotationSnapIndex: 0,
+    };
   }
 
   if (piece.tipo === "RODAPE_L") {
@@ -196,6 +211,28 @@ export function defaultFaceOffsetsForPiece(piece: RematePiece, bounds: Structura
 
 /** Regra de montagem — só na criação ou comando explícito (não no sync visual). */
 export function snapToMountRule(piece: RematePiece, bounds: StructuralBoundsM): RematePiece {
+  if (isLRematePiece(piece)) {
+    const primary = resolveLPrimarySlot(piece);
+    if (piece.partIndex === 2) {
+      return {
+        ...piece,
+        mountSlot: lSecondaryMountSlot(primary),
+        placementMode: "SNAPPED",
+        faceOffsets: undefined,
+        rotation: ZERO_ROT,
+      };
+    }
+    const extCorner = computeLRemateExtCornerMm(primary, piece, bounds);
+    return {
+      ...piece,
+      mountSlot: primary,
+      placementMode: "SNAPPED",
+      faceOffsets: undefined,
+      position: extCorner,
+      rotation: ZERO_ROT,
+    };
+  }
+
   const mountSlot = resolveMountSlot(piece);
   const frame = computeMountFrameM(bounds, mountSlot);
   const faceOffsets = defaultFaceOffsetsForPiece(piece, bounds);
@@ -215,6 +252,15 @@ export function resolveRematePoseLocal(
   piece: RematePiece,
   bounds: StructuralBoundsM
 ): { position: RematePiecePosition; rotation: RematePieceRotation } {
+  if (isLRematePiece(piece)) {
+    if (piece.placementMode === "SNAPPED" && piece.partIndex === 1) {
+      const primary = resolveLPrimarySlot(piece);
+      const corner = computeLRemateExtCornerMm(primary, piece, bounds);
+      return resolveLRemateRenderPose({ ...piece, position: corner });
+    }
+    return resolveLRemateRenderPose(piece);
+  }
+
   const slot = resolveMountSlot(piece);
   const frame = computeMountFrameM(bounds, slot);
 
