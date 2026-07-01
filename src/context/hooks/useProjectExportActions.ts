@@ -8,6 +8,9 @@ import { buildCutlistPdf } from "../../core/pdf/pdfCutlist";
 import { buildUnifiedPdf } from "../../core/pdf/pdfUnified";
 import { getSettings } from "../../core/settings/settingsService";
 import type { ProjectState } from "../projectTypes";
+import { buildIndustrialFerragensForProject } from "../../core/industriais/buildIndustrialFerragensForProject";
+import { buildFerragensIndustriaisPdf } from "../../core/pdf/pdfFerragensIndustriais";
+import { industrialFerragensPdfFileName } from "../../core/fabrication/industrialProjectArtifacts";
 
 export interface UseProjectExportActionsParams {
   projectRef: React.MutableRefObject<ProjectState>;
@@ -74,6 +77,28 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
       };
       const doc = await buildUnifiedPdf(pdfProject);
       doc.save(`${safeProjectName(projectName)}_completo.pdf`);
+    }, [projectRef]),
+
+    exportarPdfFerragensIndustriais: useCallback(async () => {
+      const currentProject = projectRef.current;
+      const boxesToExport = currentProject.boxes ?? [];
+      if (boxesToExport.length === 0) {
+        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+        return;
+      }
+      const projectName = currentProject.projectName?.trim() || "Projeto";
+      const data = buildIndustrialFerragensForProject({
+        projectName,
+        boxes: boxesToExport,
+        rules: currentProject.rules,
+        materialId: currentProject.materialId,
+        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        remates: currentProject.remates ?? [],
+        rodapes: currentProject.rodapes ?? [],
+        pieceObservacoes: currentProject.pieceObservacoes ?? {},
+      });
+      const doc = buildFerragensIndustriaisPdf(data);
+      doc.save(industrialFerragensPdfFileName(safeProjectName(projectName)));
     }, [projectRef]),
   };
 }

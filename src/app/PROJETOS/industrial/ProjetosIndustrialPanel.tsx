@@ -15,6 +15,14 @@ import { resolveProjetosIndustrialRef } from "@/industrial/integration/projetos/
 import { projectCodeFromName } from "@/industrial/work-orders/resolveWorkOrderPiece";
 import { PROJETOS_PIECE_OPERATIONS } from "@/industrial/integration/projetos/types";
 import { useAuth } from "@/auth/useAuth";
+import { applyResultados } from "@/context/projectState";
+import { reviveState } from "@/context/projectPersistence";
+import { buildIndustrialFerragensForProject } from "@/core/industriais/buildIndustrialFerragensForProject";
+import { buildFerragensIndustriaisPdf } from "@/core/pdf/pdfFerragensIndustriais";
+import {
+  INDUSTRIAL_PROJECT_ARTIFACTS,
+  industrialFerragensPdfFileName,
+} from "@/core/fabrication/industrialProjectArtifacts";
 
 type Props = {
   snapshot: SavedProjectRecord | null;
@@ -46,6 +54,7 @@ export default function ProjetosIndustrialPanel({
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingFerragens, setDownloadingFerragens] = useState(false);
 
   const reload = async () => {
     if (!ref?.projectId) return;
@@ -97,6 +106,37 @@ export default function ProjetosIndustrialPanel({
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao registar operação");
+    }
+  };
+
+  const handleDownloadFerragensPdf = async () => {
+    if (!snapshot) return;
+    setDownloadingFerragens(true);
+    setError(null);
+    try {
+      const revived = reviveState(snapshot.snapshot?.projectState);
+      if (!revived) throw new Error("Snapshot do projeto indisponível.");
+      const state = applyResultados(revived);
+      const boxes = state.boxes ?? [];
+      if (boxes.length === 0) throw new Error("Projeto sem caixas para exportar ferragens.");
+      const projectName = state.projectName?.trim() || ref.projectName || "Projeto";
+      const data = buildIndustrialFerragensForProject({
+        projectName,
+        boxes,
+        rules: state.rules,
+        materialId: state.materialId,
+        extractedPartsByBoxId: state.extractedPartsByBoxId,
+        remates: state.remates ?? [],
+        rodapes: state.rodapes ?? [],
+        pieceObservacoes: state.pieceObservacoes ?? {},
+      });
+      const doc = buildFerragensIndustriaisPdf(data);
+      doc.save(industrialFerragensPdfFileName(projectName));
+      setMessage("PDF de ferragens industriais descarregado.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao gerar PDF de ferragens");
+    } finally {
+      setDownloadingFerragens(false);
     }
   };
 
@@ -158,6 +198,29 @@ export default function ProjetosIndustrialPanel({
             <Link to={`/industrial/supervisor?project=${encodeURIComponent(ref.projectId)}`} style={linkStyle}>
               Abrir Supervisor
             </Link>
+          </section>
+        ) : null}
+
+        {focusLevel === "project" ? (
+          <section style={cardStyle}>
+            <h3 style={titleStyle}>Arquivos industriais</h3>
+            <p style={rowStyle}>Incluídos no arquivo completo ou exportação manual.</p>
+            <ul style={{ margin: "6px 0 0", paddingLeft: 16, fontSize: 11, color: "#52525b" }}>
+              {INDUSTRIAL_PROJECT_ARTIFACTS.map((file) => (
+                <li key={file.id} style={{ marginBottom: 4 }}>
+                  <strong>{file.label}</strong> — <code>{file.filename}</code>
+                  {file.description ? ` · ${file.description}` : ""}
+                </li>
+              ))}
+            </ul>
+            <Button
+              variant="secondary"
+              disabled={!snapshot || downloadingFerragens}
+              onClick={() => void handleDownloadFerragensPdf()}
+              style={{ width: "100%", marginTop: 10, fontSize: 12 }}
+            >
+              {downloadingFerragens ? "A gerar…" : "Descarregar ferragens (PDF)"}
+            </Button>
           </section>
         ) : null}
 

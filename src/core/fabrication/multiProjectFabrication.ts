@@ -49,6 +49,9 @@ import {
   endIndustrialFileGeneration,
 } from "./industrialGenerationSuspend";
 import { measureTime } from "../../utils/measureTime";
+import { buildIndustrialFerragensForProject } from "../industriais/buildIndustrialFerragensForProject";
+import { buildFerragensIndustriaisPdf } from "../pdf/pdfFerragensIndustriais";
+import { industrialFerragensPdfFileName } from "./industrialProjectArtifacts";
 
 export interface GeneratedFabricationPackage {
   zipBlob: Blob;
@@ -554,6 +557,23 @@ export async function generateMultiProjectFabrication(
       safeAddPdf(zip, `${basePath}/unificado.pdf`, docUnificado);
     } catch (err) {
       devLogger.error("multiProjectFabrication: unificado PDF", err);
+    }
+
+    try {
+      const ferragensData = buildIndustrialFerragensForProject({
+        projectName: proj.projectName,
+        boxes: proj.boxes,
+        rules: proj.rules,
+        materialId: proj.materialId,
+        extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
+        remates: entry.state.remates ?? [],
+        rodapes: entry.state.rodapes ?? [],
+        pieceObservacoes: proj.pieceObservacoes,
+      });
+      const docFerragens = buildFerragensIndustriaisPdf(ferragensData);
+      safeAddPdf(zip, `${basePath}/${industrialFerragensPdfFileName(folder)}`, docFerragens);
+    } catch (err) {
+      devLogger.error("multiProjectFabrication: ferragens PDF", err);
     }
 
     // Etiquetas com numeração global e nome do projeto original

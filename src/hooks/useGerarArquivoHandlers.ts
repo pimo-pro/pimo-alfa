@@ -60,6 +60,9 @@ import { captureMcDimensionsFromViewer } from "../core/industrial/mcDimensions/m
 import { exportMCDimensionsForZip } from "../core/industrial/mcDimensions/mcDimensionsGenerator";
 import { loadMcDimensionsConfig } from "../config/mcDimensionsConfig";
 import PiLoader from "../components/PiLoader/PiLoader";
+import { buildIndustrialFerragensForProject } from "../core/industriais/buildIndustrialFerragensForProject";
+import { buildFerragensIndustriaisPdf } from "../core/pdf/pdfFerragensIndustriais";
+import { industrialFerragensPdfFileName } from "../core/fabrication/industrialProjectArtifacts";
 
 let cutLayoutLoaderRoot: Root | null = null;
 
@@ -348,6 +351,33 @@ export function useGerarArquivoHandlers() {
       endIndustrialFileGeneration();
     }
   }, [hasBoxes, showToast, pdfProject, slug]);
+
+  const onFerragensIndustriais = useCallback(async () => {
+    if (!hasBoxes) {
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
+      return;
+    }
+    beginIndustrialFileGeneration();
+    try {
+      const data = buildIndustrialFerragensForProject({
+        projectName: project.projectName,
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        pieceObservacoes: project.pieceObservacoes ?? {},
+      });
+      const doc = buildFerragensIndustriaisPdf(data);
+      doc.save(industrialFerragensPdfFileName(slug));
+      showToast("PDF de ferragens industriais gerado.", "info");
+    } catch (err) {
+      toastExportError(showToast, err, "Erro ao gerar PDF de ferragens industriais");
+    } finally {
+      endIndustrialFileGeneration();
+    }
+  }, [hasBoxes, showToast, project, boxes, slug]);
 
   /** Gera e descarrega os três PDFs em separado: Cutlist, PDF Técnico, Arquivo Unificado. */
   const onAmbos = useCallback(async () => {
@@ -906,6 +936,28 @@ export function useGerarArquivoHandlers() {
         devLogger.error("Full export: PDF Unificado", err);
       }
 
+      // --- Ferragens Industriais ---
+      try {
+        const ferragensData = buildIndustrialFerragensForProject({
+          projectName: proj.projectName,
+          boxes: proj.boxes,
+          rules: proj.rules,
+          materialId: proj.materialId,
+          extractedPartsByBoxId: proj.extractedPartsByBoxId,
+          remates: project.remates ?? [],
+          rodapes: project.rodapes ?? [],
+          pieceObservacoes: proj.pieceObservacoes,
+        });
+        const docFerragens = buildFerragensIndustriaisPdf(ferragensData);
+        if (!safeAddPdf(zip, industrialFerragensPdfFileName(safeSlug), docFerragens)) {
+          errors.push({ step: "PDF Ferragens Industriais", message: "Documento ou blob inválido." });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push({ step: "PDF Ferragens Industriais", message: msg });
+        devLogger.error("Full export: PDF Ferragens Industriais", err);
+      }
+
       // --- Nesting por espessura (fonte única CNC para Layout PRO + Etiquetas + TCN) ---
       let thicknessCncBundles: Awaited<ReturnType<typeof buildCncBundlesPerThickness>> = [];
       try {
@@ -1130,6 +1182,7 @@ export function useGerarArquivoHandlers() {
     onPdfTecnico,
     onCutlist,
     onUnificado,
+    onFerragensIndustriais,
     onAmbos,
     onArquivoCompleto,
     onLayoutCorte,

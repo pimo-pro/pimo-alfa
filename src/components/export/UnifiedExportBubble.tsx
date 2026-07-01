@@ -125,6 +125,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
     onCutlist,
     onPdfTecnico,
     onUnificado,
+    onFerragensIndustriais,
     onAmbos,
     onLayoutCortePro,
     onArquivoCompleto,
@@ -246,6 +247,12 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                 onClick={wrap(onUnificado)}
                 disabled={!hasBoxes}
                 icon={<Icon name="adminFolder" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Ferragens Industriais"
+                onClick={wrap(onFerragensIndustriais)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminTools" size={18} aria-hidden />}
               />
               <ExportRow
                 label="Cutlist + PDF + Unificado"
