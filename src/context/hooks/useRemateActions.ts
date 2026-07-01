@@ -5,9 +5,16 @@ import { applyResultados, appendChangelog } from "../projectState";
 import { createRematePieces, refreshRemateMountSnap } from "../../core/remate/rematePieceFactory";
 import { createRematesForBox } from "../../core/remate/remateFactory";
 import { getMaterialByIdOrLabel } from "../../core/materials/service";
-import type { CreateRematePieceInput, RemateMountSlot } from "../../core/remate/rematePieceTypes";
+import type { CreateRematePieceInput, RemateMountSlot, RematePiece } from "../../core/remate/rematePieceTypes";
 import { resolveMountSlot } from "../../core/remate/remateMountFrame";
 import { applyProductPatch, computeDimensionsForProduct, inferProductTypeFromLegacy, normalizeProductOptions } from "../../core/remate/remateProductRules";
+import {
+  applyLRemateGroupCoupling,
+  isLRematePiece,
+  normalizeLRemateTransformPatch,
+  snapLRemateGroupCorners,
+} from "../../core/remate/remateLGeometry";
+import { getRemateEnvelopeBoundsM } from "../../core/remate/rematePlacement";
 import { createOppositeRematePiece, duplicateRematePiece } from "../../core/remate/remateCloneUtils";
 import {
   invalidateMaterialCutlistCache,
@@ -34,6 +41,25 @@ function boxDimsFromWorkspace(box: import("../../core/types").WorkspaceBox) {
     heightM: Math.max(0.001, (box.dimensoes?.altura ?? 720) / 1000),
     depthM: Math.max(0.001, (box.dimensoes?.profundidade ?? 600) / 1000),
   };
+}
+
+function refreshLRemateGroupSnap(
+  remates: RematePiece[],
+  groupId: string,
+  box: import("../../core/types").WorkspaceBox,
+  boxDimsM: ReturnType<typeof boxDimsFromWorkspace>
+): RematePiece[] {
+  const group = remates.filter((r) => r.parentGroupId === groupId && isLRematePiece(r));
+  const ext = group.find((r) => r.partIndex === 1);
+  const int = group.find((r) => r.partIndex === 2);
+  if (!ext || !int) return remates;
+  const bounds = getRemateEnvelopeBoundsM(boxDimsM.widthM, boxDimsM.heightM, boxDimsM.depthM, box);
+  const snapped = snapLRemateGroupCorners(ext, int, bounds);
+  return remates.map((r) => {
+    if (r.id === snapped.ext.id) return snapped.ext;
+    if (r.id === snapped.int.id) return snapped.int;
+    return r;
+  });
 }
 
 export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateActions {
@@ -145,13 +171,16 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                 invalidateGlobalCache: false,
               });
             }
-            const next = applyResultados({
-              ...prev,
-              remates: (prev.remates ?? []).map((remate) => {
-                if (remate.id !== remateId) return remate;
-                const { depth: _depthPatchIgnored, ...patchWithoutDepth } = patch;
-                void _depthPatchIgnored;
-                let nextRemate = applyProductPatch(remate, patchWithoutDepth);
+            const source = prev.remates?.find((r) => r.id === remateId);
+            const normalizedPatch = source
+              ? normalizeLRemateTransformPatch(source, patch)
+              : patch;
+
+            let remates = (prev.remates ?? []).map((remate) => {
+              if (remate.id !== remateId) return remate;
+              const { depth: _depthPatchIgnored, ...patchWithoutDepth } = normalizedPatch;
+              void _depthPatchIgnored;
+              let nextRemate = applyProductPatch(remate, patchWithoutDepth);
                 const box = nextRemate.parentBoxId
                   ? prev.workspaceBoxes.find((b) => b.id === nextRemate.parentBoxId)
                   : null;
@@ -198,7 +227,19 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                   }
                 }
                 return nextRemate;
-              }),
+              });
+
+            if (
+              normalizedPatch.position != null ||
+              normalizedPatch.height != null ||
+              normalizedPatch.width != null
+            ) {
+              remates = applyLRemateGroupCoupling(remates, remateId);
+            }
+
+            const next = applyResultados({
+              ...prev,
+              remates,
             });
             if (patch.materialPresetId != null) {
               const remate = next.remates?.find((r) => r.id === remateId);
@@ -222,6 +263,13 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
             const box = prev.workspaceBoxes.find((b) => b.id === remate.parentBoxId);
             if (!box) return prev;
             const groupId = remate.parentGroupId;
+            const dimsM = boxDimsFromWorkspace(box);
+            if (groupId && isLRematePiece(remate)) {
+              return applyResultados({
+                ...prev,
+                remates: refreshLRemateGroupSnap(prev.remates ?? [], groupId, box, dimsM),
+              });
+            }
             const idsToSnap = groupId
               ? (prev.remates ?? []).filter((r) => r.parentGroupId === groupId).map((r) => r.id)
               : [remateId];
@@ -229,7 +277,7 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
               ...prev,
               remates: (prev.remates ?? []).map((r) => {
                 if (!idsToSnap.includes(r.id)) return r;
-                return refreshRemateMountSnap(r, box, boxDimsFromWorkspace(box));
+                return refreshRemateMountSnap(r, box, dimsM);
               }),
             });
           },

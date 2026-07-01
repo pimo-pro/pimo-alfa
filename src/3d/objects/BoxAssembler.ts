@@ -1,4 +1,4 @@
-﻿import * as THREE from "three";
+import * as THREE from "three";
 import type { PanelMaterialOptions } from "./BoxMaterialApplier";
 import type { BoxModel, BoxOptions, BoxPanelLayoutSpecs } from "./BoxBuilder";
 import type { DoorSpec } from "./DoorFactory";
@@ -14,7 +14,7 @@ import {
 } from "../../core/wardrobe/wardrobeRules";
 import {
   getCornerCabinetConfig,
-  inferCornerSideFromBox,
+  resolveCornerSideForBox,
   computeCornerVisualLayout,
 } from "../../core/cornerCabinet";
 import { getSettings } from "../../core/settings/settingsService";
@@ -256,7 +256,11 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
   const doorSpecs = deps.buildDoorSpecs(doorLayerItems);
   const cornerCfg = getCornerCabinetConfig(opts.baseCabinetId);
   const cornerSide = cornerCfg
-    ? inferCornerSideFromBox({ baseCabinetId: opts.baseCabinetId, rotacaoY: opts.rotationY })
+    ? resolveCornerSideForBox({
+        baseCabinetId: opts.baseCabinetId,
+        orientation: opts.orientation,
+        rotacaoY: opts.rotationY,
+      })
     : null;
   const portasSettings = getSettings().portas;
 

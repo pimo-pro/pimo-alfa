@@ -1,4 +1,5 @@
 import type { RematePiece } from "./rematePieceTypes";
+import { isLRematePiece } from "./remateLGeometry";
 import { resolveMountSlot } from "./remateMountFrame";
 
 /**
@@ -13,6 +14,11 @@ export function remateGeometryExtentsM(piece: Pick<RematePiece, "width" | "heigh
   const comprimento = Math.max(0.001, piece.width / 1000);
   const largura = Math.max(0.001, piece.height / 1000);
   const espessura = Math.max(0.001, piece.depth / 1000);
+
+  if (isLRematePiece(piece as RematePiece)) {
+    return { w: comprimento, h: largura, d: espessura };
+  }
+
   const slot = resolveMountSlot(piece as RematePiece);
 
   switch (slot) {

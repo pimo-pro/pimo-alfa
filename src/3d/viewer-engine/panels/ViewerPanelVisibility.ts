@@ -386,11 +386,12 @@ export class ViewerPanelVisibility {
     } else if (panelType === "left") {
       const sh2 = sideH / 2;
       const d2 = depth / 2;
-      const x0 = -(t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M);
-      pushSegment(x0, -sh2, -d2, x0, sh2, -d2);
-      pushSegment(x0, sh2, -d2, x0, sh2, d2);
-      pushSegment(x0, sh2, d2, x0, -sh2, d2);
-      pushSegment(x0, -sh2, d2, x0, -sh2, -d2);
+      const xExterior = -(t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M);
+      const xInterior = t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
+      pushSegment(xExterior, -sh2, -d2, xExterior, sh2, -d2);
+      pushSegment(xExterior, sh2, -d2, xExterior, sh2, d2);
+      pushSegment(xExterior, sh2, d2, xExterior, -sh2, d2);
+      pushSegment(xExterior, -sh2, d2, xExterior, -sh2, -d2);
       const panelW = depth;
       const panelH = sideH;
       for (const hole of holes) {
@@ -400,7 +401,7 @@ export class ViewerPanelVisibility {
         for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
           const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
           const t1 = ((i + 1) * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
-          pushSegment(x0, b + r * Math.cos(t0), a + r * Math.sin(t0), x0, b + r * Math.cos(t1), a + r * Math.sin(t1));
+          pushSegment(xInterior, b + r * Math.cos(t0), a + r * Math.sin(t0), xInterior, b + r * Math.cos(t1), a + r * Math.sin(t1));
         }
       }
     } else if (panelType === "right") {
@@ -528,7 +529,10 @@ export class ViewerPanelVisibility {
         );
       }
     } else if (panelType === "left" || panelType === "right") {
-      const x0 = t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
+      const x0 =
+        panelType === "left"
+          ? t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M
+          : t / 2 + ViewerPanelVisibility.OVERLAY_INSET_M;
       for (let i = 0; i < ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS; i += 1) {
         const t0 = (i * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
         const t1 = ((i + 1) * 2 * Math.PI) / ViewerPanelVisibility.HOLE_CIRCLE_SEGMENTS;
@@ -736,7 +740,7 @@ export class ViewerPanelVisibility {
             panelType,
             entry.width,
             entry.height,
-            entry.depth,
+            entry.carcassDepth ?? entry.depth,
             hole
           );
           if (!holeGeo) continue;

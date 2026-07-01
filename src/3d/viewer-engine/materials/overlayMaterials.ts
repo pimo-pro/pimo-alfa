@@ -22,8 +22,8 @@ export function getSharedPanelEdgeMaterial(): THREE.LineBasicMaterial {
       depthWrite: false,
       toneMapped: false,
       polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
+      polygonOffsetFactor: -6,
+      polygonOffsetUnits: -6,
     });
   }
   return sharedPanelEdgeMaterial;

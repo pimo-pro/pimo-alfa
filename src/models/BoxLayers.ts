@@ -30,6 +30,12 @@ export interface DoorLayerItem {
   verticalAdjustOrigin?: "top" | "bottom";
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
+  /** Viewer: animação outward do Canto — Direita (Inferior) v2. */
+  cornerDireitaV2Viewer?: boolean;
+  /** Orientação canto v2 — sincronizada com WorkspaceBox.orientation. */
+  cornerOrientation?: "direita" | "esquerda";
+  /** Pivot animação na linha FF + folga (mm). Só canto v2. */
+  viewerHingePivotXMm?: number;
 }
 
 export type DrawerLayerMetadata = {

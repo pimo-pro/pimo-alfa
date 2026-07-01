@@ -23,6 +23,8 @@ export function resolveCornerDoorGapSettings(
 
 export type CornerStyle = "cozinha" | "roupeiro";
 export type CornerSide = "left" | "right";
+/** Orientação do módulo canto v2 (UI / persistência). */
+export type CornerOrientation = "direita" | "esquerda";
 export type CornerLayoutMode = "legacy" | "direita";
 
 export const CORNER_FF_COZINHA_INFERIOR_ID = "corner-ff-cozinha-inferior";
@@ -100,7 +102,7 @@ export function getCornerCabinetConfig(baseCabinetId?: string | null): CornerCab
   return CORNER_MODEL_CONFIG[baseCabinetId] ?? null;
 }
 
-/** Inverte lado quando o módulo está rodado ~180° no eixo Y. */
+/** Inverte lado quando o módulo está rodado ~180° no eixo Y (legado / corner-ff). */
 export function inferCornerSideFromBox(box: {
   baseCabinetId?: string;
   rotacaoY?: number;
@@ -111,6 +113,28 @@ export function inferCornerSideFromBox(box: {
   const flipped = Math.abs(Math.abs(rot) - Math.PI) < 0.35;
   if (!flipped) return base;
   return base === "right" ? "left" : "right";
+}
+
+export function resolveCornerOrientationFromBox(box: {
+  orientation?: CornerOrientation;
+}): CornerOrientation {
+  return box.orientation === "esquerda" ? "esquerda" : "direita";
+}
+
+export function resolveCornerSideFromOrientation(orientation: CornerOrientation): CornerSide {
+  return orientation === "esquerda" ? "left" : "right";
+}
+
+/** Lado efectivo do layout — v2 usa `orientation`; legado usa rotação Y. */
+export function resolveCornerSideForBox(box: {
+  baseCabinetId?: string;
+  orientation?: CornerOrientation;
+  rotacaoY?: number;
+}): CornerSide {
+  if (isCornerDireitaInferiorV2Model(box.baseCabinetId)) {
+    return resolveCornerSideFromOrientation(resolveCornerOrientationFromBox(box));
+  }
+  return inferCornerSideFromBox(box);
 }
 
 export type CornerLayoutInput = {
@@ -307,7 +331,7 @@ function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
       leftDoorPivotX,
       doorCenterX,
       pivotX,
-      hingeSide: "right",
+      hingeSide: "left",
       openDirection: "left",
       pivot: "right-edge",
       doorPosZ,
@@ -317,7 +341,7 @@ function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
   const leftDoorCenterX = computeRightDoubleDoorCenterX(rightDoorWidth, doorFixedGap);
   const leftDoorPivotX = computeRightDoubleDoorPivotX(rightDoorWidth, doorFixedGap);
   const doorCenterX = computeLeftDoubleDoorCenterX(rightDoorWidth, doorFixedGap);
-  const pivotX = computeLeftDoubleDoorPivotX(rightDoorWidth, doorFixedGap);
+  const pivotX = doorCenterX + rightDoorWidth / 2;
   return buildCornerDireitaLayoutResult(input, {
     side: input.side,
     gapH,
@@ -333,9 +357,9 @@ function computeCornerDireitaLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
     leftDoorPivotX,
     doorCenterX,
     pivotX,
-    hingeSide: "left",
+    hingeSide: "right",
     openDirection: "right",
-    pivot: "left-edge",
+    pivot: "right-edge",
     doorPosZ,
   });
 }
@@ -434,13 +458,13 @@ export function computeCornerLayoutMm(input: CornerLayoutInput): CornerLayoutMm 
 }
 
 export function computeCornerLayoutForBox(
-  box: Pick<WorkspaceBox, "baseCabinetId" | "rotacaoY" | "dimensoes" | "espessura">,
+  box: Pick<WorkspaceBox, "baseCabinetId" | "orientation" | "rotacaoY" | "dimensoes" | "espessura">,
   settings?: CornerDoorGapSettings
 ): CornerLayoutMm | null {
   const cfg = getCornerCabinetConfig(box.baseCabinetId);
   if (!cfg) return null;
   const gaps = settings ?? resolveCornerDoorGapSettings();
-  const side = inferCornerSideFromBox(box);
+  const side = resolveCornerSideForBox(box);
   return computeCornerLayoutMm({
     boxWidthMm: box.dimensoes.largura,
     boxHeightMm: box.dimensoes.altura,

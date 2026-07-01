@@ -539,6 +539,11 @@ export interface ProjectActions {
   setWorkspaceBoxSeparadorMaterial: (_boxId: string, _separadorMaterialId?: string) => void;
   /** Activa/desactiva costa traseira (visual + industrial). */
   setWorkspaceBoxNoBackPanel: (_boxId: string, _enabled: boolean) => void;
+  /** Canto v2: orientação dinâmica (direita/esquerda) — FF, porta, furos e viewer. */
+  setCornerOrientation: (
+    _boxId: string,
+    _orientation: import("../core/cornerCabinet/cornerCabinetRules").CornerOrientation
+  ) => void;
   /** Alinha a frente do box (eixo Z) com a frente do box vizinho mais próximo no eixo X. */
   alignFrontWithNeighbor: (_boxId: string) => void;
   /** Alinha a base da caixa selecionada à base da vizinha mais próxima no plano XZ (só Y); sem outras caixas, chão em Y=0. */

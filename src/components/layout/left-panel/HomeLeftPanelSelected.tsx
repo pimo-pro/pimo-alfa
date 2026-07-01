@@ -17,6 +17,7 @@ import SelecionarMaterialSection from "../../settings/material/SelecionarMateria
 import { resolveNoBackPanel } from "../../../core/box/backPanelFlags";
 import CostaMaterialControl from "./CostaMaterialControl";
 import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
+import CornerOrientationPanel from "../../settings/corner/CornerOrientationPanel";
 import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
 
 const HOME_SELECTED_SECTION_HELP_TEXT =
@@ -481,6 +482,15 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                   : project.material.tipo}
               </div>
             </Panel>
+          )}
+
+          {selectedBox && (
+            <CornerOrientationPanel
+              box={selectedBox}
+              onOrientationChange={(orientation) =>
+                actions.setCornerOrientation(selectedBox.id, orientation)
+              }
+            />
           )}
 
           {selectedBox && (

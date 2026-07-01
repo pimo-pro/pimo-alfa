@@ -19,6 +19,7 @@ import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../mod
 import { computeDoorVerticalGaps } from "../doors/doorLayerGeometry";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, buildCornerFixedFrontHingeHoles, stripCornerFixedFrontHingeHoles, stripCornerLateralHingeHoles, buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../cornerCabinet";
+import { mirrorDoorHingeHolesX } from "../cornerCabinet/doorHingeBuilder";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
 import { calcLateralDowelHoles } from "../drill/lateralDowels";
@@ -216,10 +217,14 @@ export function cutlistComPrecoFromBox(
   const divSepDrilling = buildDivSepDrilling(box, box.panelIds);
   let divIndex = 0;
   let sepIndex = 0;
+  const isCornerDireitaBox = isCornerDireitaInferiorModel(syncedBox.baseCabinetId);
   for (let i = 0; i < doorPanelsInOrder.length; i++) {
     const p = doorPanelsInOrder[i]!;
     if (!p || !Number.isFinite(p.largura_mm) || !Number.isFinite(p.altura_mm) || !Number.isFinite(p.espessura_mm)) continue;
     const hingeSide = doorsLayer[i]?.hingeSide;
+    /** Canto direita: perfuração master continua com dobradiça à direita; espelha-se para porta esquerda. */
+    const drillHingeSide =
+      isCornerDireitaBox && (hingeSide === "left" || hingeSide === "right") ? "right" : hingeSide;
     const openingH = Number.isFinite(openingHeightMm) && Number(openingHeightMm) > 0 ? Number(openingHeightMm) : p.altura_mm;
     const doorLayer = doorsLayer[i];
     const { bottomGap, topGap } = doorLayer
@@ -243,22 +248,27 @@ export function cutlistComPrecoFromBox(
         openingHeightMm: doorOpeningForHinges,
         bottomGapMm: drillingBottomGap,
         topGapMm: topGap,
-        hingeSide,
+        hingeSide: drillHingeSide,
         portaTipo: box.portaTipo,
         doorsLayerCount,
       },
       effRules
     );
-    const drillHoles =
+    let drillHoles =
       drillingResult.success && drillingResult.data?.drillHoles?.length ? drillingResult.data.drillHoles : [];
+    if (isCornerDireitaBox && hingeSide === "left") {
+      drillHoles = mirrorDoorHingeHolesX(drillHoles, p.largura_mm);
+    }
     doorDrillHolesByIndex.set(i, drillHoles);
-    if (hingeSide === "left" || hingeSide === "right") {
+    const hingeSideForPositions =
+      isCornerDireitaBox && (hingeSide === "left" || hingeSide === "right") ? "right" : drillHingeSide;
+    if (hingeSideForPositions === "left" || hingeSideForPositions === "right") {
       const hingeOffsetsDoorLocal = extractDoorHingeOffsetsFromBottomMm(drillHoles, p.altura_mm);
       // Converter offsets locais da porta para offsets globais do vão (base do vão).
       const hingeOffsetsGlobal = hingeOffsetsDoorLocal.map((o) => o + bottomGap);
       if (hingeOffsetsGlobal.length > 0) {
-        hingePositionsBySide[hingeSide] = mergeHingeOffsetsFromBottom(
-          hingePositionsBySide[hingeSide],
+        hingePositionsBySide[hingeSideForPositions] = mergeHingeOffsetsFromBottom(
+          hingePositionsBySide[hingeSideForPositions],
           hingeOffsetsGlobal
         );
       }
@@ -600,16 +610,16 @@ export function cutlistComPrecoFromBox(
       }
 
       const thicknessMm = syncedBox.espessura ?? lateralItem?.espessura ?? 19;
-      const doorHingeSide = doorsLayer[0]?.hingeSide;
-      const hingePositions =
-        doorHingeSide === "left" || doorHingeSide === "right"
-          ? hingePositionsBySide[doorHingeSide] ?? []
-          : [];
+      const hingePositions = hingePositionsBySide.right ?? [];
       if (hingePositions.length > 0) {
         const ffItem = items.find((i) => i.tipo === "frente_fixa");
         const latRightItem = items.find((i) => i.tipo === "lateral_direita");
-        if (latRightItem) {
+        const latLeftItem = items.find((i) => i.tipo === "lateral_esquerda");
+        if (fixedFrontSide === "left" && latRightItem) {
           latRightItem.drillHoles = stripCornerLateralHingeHoles(latRightItem.drillHoles ?? []);
+        }
+        if (fixedFrontSide === "right" && latLeftItem) {
+          latLeftItem.drillHoles = stripCornerLateralHingeHoles(latLeftItem.drillHoles ?? []);
         }
         if (ffItem) {
           const hingeHoles = buildCornerFixedFrontHingeHoles(

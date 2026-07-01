@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import {
+  isCornerV2DoorViewer,
+  resolveCornerDoorTransformByOrientation,
+} from "../../core/cornerCabinet/cornerDoorViewer";
 import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import type { DoorLayerItem } from "../../models/BoxLayers";
 import type { TechnicalDrillHole } from "../../core/types";
@@ -32,6 +36,9 @@ export type DoorSpec = {
   hingeSide: DoorLayerItem["hingeSide"];
   pivot: DoorLayerItem["pivot"];
   isOpen: boolean;
+  cornerDireitaV2Viewer?: boolean;
+  cornerOrientation?: "direita" | "esquerda";
+  viewerHingePivotXMm?: number;
 };
 
 export function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
@@ -50,6 +57,9 @@ export function buildDoorSpecs(items: DoorLayerItem[]): DoorSpec[] {
     hingeSide: item.hingeSide,
     pivot: item.pivot,
     isOpen: Boolean(item.isOpen),
+    cornerDireitaV2Viewer: item.cornerDireitaV2Viewer,
+    cornerOrientation: item.cornerOrientation,
+    viewerHingePivotXMm: item.viewerHingePivotXMm,
   }));
 }
 
@@ -103,7 +113,32 @@ export function createDoorObject(spec: DoorSpec, material: THREE.Material, doorH
       : spec.openDirection === "right"
         ? "right"
         : "left";
-  const effectiveDoorHoles = mapDoorHolesByHingeSide(doorHoles, spec.widthM, resolvedHingeSide);
+  /** Canto v2: dobradiças na FF; posX = borda da folha junto às dobradiças. */
+  const isCornerV2Door =
+    Boolean(spec.cornerDireitaV2Viewer) &&
+    isCornerV2DoorViewer(spec.pivot, resolvedHingeSide);
+  const cornerOrientation = spec.cornerOrientation === "esquerda" ? "esquerda" : "direita";
+  const cornerDoorViewer = isCornerV2Door
+    ? resolveCornerDoorTransformByOrientation({
+        orientation: cornerOrientation,
+        storedPivotEdgeXM: spec.x,
+        hingePivotXM:
+          spec.viewerHingePivotXMm != null && Number.isFinite(spec.viewerHingePivotXMm)
+            ? spec.viewerHingePivotXMm / 1000
+            : cornerOrientation === "esquerda"
+              ? spec.x
+              : spec.x - spec.widthM,
+        pivotYM: spec.y,
+        pivotZM: spec.z,
+        widthM: spec.widthM,
+        baseRotationY: spec.rotY ?? 0,
+        isOpen: spec.isOpen,
+        hingeSide: resolvedHingeSide === "right" ? "right" : "left",
+      })
+    : null;
+  const holeMapSide =
+    isCornerV2Door && resolvedHingeSide === "left" ? "right" : resolvedHingeSide;
+  const effectiveDoorHoles = mapDoorHolesByHingeSide(doorHoles, spec.widthM, holeMapSide);
 
   const mesh = panelFactory.createPanel(
     spec.widthM,
@@ -133,14 +168,20 @@ export function createDoorObject(spec: DoorSpec, material: THREE.Material, doorH
     mesh.position.set(0, -spec.heightM / 2, 0);
   } else if (spec.pivot === "bottom-edge" || resolvedOpenDirection === "down") {
     mesh.position.set(0, spec.heightM / 2, 0);
-  } else if (!isVerticalOpening && resolvedHingeSide === "left") {
-    mesh.position.set(spec.widthM / 2, 0, 0);
+  } else if (isCornerV2Door && cornerDoorViewer) {
+    mesh.position.set(cornerDoorViewer.meshOffsetXM, 0, 0);
   } else if (!isVerticalOpening && resolvedHingeSide === "right") {
     mesh.position.set(-spec.widthM / 2, 0, 0);
+  } else if (!isVerticalOpening && resolvedHingeSide === "left") {
+    mesh.position.set(spec.widthM / 2, 0, 0);
   } else {
     mesh.position.set(spec.openDirection === "left" ? spec.widthM / 2 : -spec.widthM / 2, 0, 0);
   }
-  pivot.position.set(spec.x, spec.y, spec.z);
+  if (cornerDoorViewer) {
+    pivot.position.set(cornerDoorViewer.pivotXM, cornerDoorViewer.pivotYM, cornerDoorViewer.pivotZM);
+  } else {
+    pivot.position.set(spec.x, spec.y, spec.z);
+  }
   if (spec.rotY !== 0) pivot.rotation.y = spec.rotY;
   const baseRotationY = pivot.rotation.y;
   const baseRotationX = pivot.rotation.x;
@@ -154,7 +195,10 @@ export function createDoorObject(spec: DoorSpec, material: THREE.Material, doorH
     y:
       resolvedOpenDirection === "left" || resolvedOpenDirection === "right"
         ? (spec.isOpen
-            ? baseRotationY + (resolvedHingeSide === "right" ? 1 : -1) * (Math.PI / 2)
+            ? cornerDoorViewer
+              ? cornerDoorViewer.rotationY
+              : baseRotationY +
+                (resolvedHingeSide === "right" ? 1 : -1) * (Math.PI / 2)
             : baseRotationY)
         : baseRotationY,
   };

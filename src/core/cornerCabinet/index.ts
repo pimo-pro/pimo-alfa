@@ -8,11 +8,15 @@ export {
   CORNER_FIXED_FRONT_OVERSIZE_MM,
   getCornerCabinetConfig,
   inferCornerSideFromBox,
+  resolveCornerOrientationFromBox,
+  resolveCornerSideFromOrientation,
+  resolveCornerSideForBox,
   computeCornerLayoutMm,
   computeCornerLayoutForBox,
   resolveCornerDoorGapSettings,
   type CornerStyle,
   type CornerSide,
+  type CornerOrientation,
   type CornerLayoutMode,
   type CornerCabinetConfig,
   type CornerLayoutMm,
@@ -44,3 +48,20 @@ export {
   CORNER_FF_HINGE_DEPTH_FROM_FRONT_MM,
   type CornerFixedFrontHingeLayout,
 } from "./cornerFixedFrontHinges";
+export { mirrorDoorHingeHolesX, isDoorHingeHole } from "./doorHingeBuilder";
+export {
+  isCornerV2DoorViewer,
+  isCornerDireitaInferiorDoorViewer,
+  resolveCornerDoorTransformByOrientation,
+  resolveCornerDireitaInferiorDoorViewerTransform,
+  cornerDireitaClosedDoorCenterXM,
+  computeCornerV2HingePivotXMm,
+  computeCornerDireitaV2HingePivotXMm,
+  cornerDoorFreeEdgeWorldZ,
+  cornerDireitaDoorFreeEdgeWorldZ,
+  CORNER_DIREITA_V2_FF_HINGE_GAP_MM,
+} from "./cornerDoorViewer";
+export {
+  applyCornerOrientationToBox,
+  resolveCornerOrientationLabel,
+} from "./cornerOrientation";

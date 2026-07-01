@@ -107,6 +107,7 @@ function getStructureFingerprint(
     shelves: wsBox.prateleiras,
     portaTipo: wsBox.portaTipo,
     baseCabinetId: wsBox.baseCabinetId,
+    orientation: wsBox.orientation ?? "direita",
     piHideDrawerHoles: wsBox.piHideDrawerHoles === true,
     piDrillSig,
     /** Evita update só posRot quando o cutlist/view ficou com furação lateral PI atrasada (ex. box ainda não existia em project.boxes). */
@@ -378,6 +379,7 @@ export const useCalculadoraSync = (
           index,
           cadOnly,
           baseCabinetId: wsBox.baseCabinetId,
+          orientation: wsBox.orientation ?? "direita",
           ...cabinetOpts,
           ...rotateOpts,
           locked,
@@ -450,6 +452,7 @@ export const useCalculadoraSync = (
             materialName: resolvedMaterialName,
             index,
             baseCabinetId: wsBox.baseCabinetId,
+            orientation: wsBox.orientation ?? "direita",
             ...cabinetOpts,
             ...rotateOpts,
             locked,

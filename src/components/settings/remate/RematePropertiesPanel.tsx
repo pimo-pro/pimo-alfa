@@ -327,7 +327,7 @@ export default function RematePropertiesPanel({ remateId }: Props) {
 
         {productType === "L" && remate.partIndex === 2 ? (
           <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
-            Peça B — perpendicular à peça A (REMATE_L_B)
+            Peça int (rem_L_int) — unida geometricamente à ext (rem_L_ext)
           </p>
         ) : null}
 

@@ -21,6 +21,7 @@ import { useOrlaActions } from "./useOrlaActions";
 import { useObservacoesActions } from "./useObservacoesActions";
 import { useDrawerPresetActions } from "./useDrawerPresetActions";
 import { useRemateActions } from "./useRemateActions";
+import { useCornerOrientationActions } from "./useCornerOrientationActions";
 import { useHematiActions } from "./useHematiActions";
 import { useRodapeActions } from "./useRodapeActions";
 import { useAutoRoomFillActions } from "./useAutoRoomFillActions";
@@ -73,6 +74,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const observacoesActions = useObservacoesActions(executionContext);
   const drawerPresetActions = useDrawerPresetActions(executionContext);
   const remateActions = useRemateActions(executionContext);
+  const cornerOrientationActions = useCornerOrientationActions(executionContext);
   const hematiActions = useHematiActions(executionContext);
   const rodapeActions = useRodapeActions(executionContext);
   const autoRoomFillActions = useAutoRoomFillActions(executionContext);
@@ -165,6 +167,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       observacoesActions,
       drawerPresetActions,
       remateActions,
+      cornerOrientationActions,
       hematiActions,
       rodapeActions,
       autoRoomFillActions,
@@ -303,6 +306,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     orlaActions,
     drawerPresetActions,
     remateActions,
+    cornerOrientationActions,
     hematiActions,
     rodapeActions,
     autoRoomFillActions,

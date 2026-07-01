@@ -13,6 +13,7 @@ import {
 } from "./remateProductRules";
 import { getRemateEnvelopeBoundsM } from "./rematePlacement";
 import { snapToMountRule } from "./remateMountFrame";
+import { snapLRemateGroupCorners } from "./remateLGeometry";
 
 import { remateLIndustrialName } from "./remateLGeometry";
 
@@ -109,7 +110,7 @@ export function createRematePieces(
   const specs = buildProductPieceSpecs(input);
   const groupId = specs.length > 1 ? nextRemateId("remate-group") : undefined;
 
-  return specs.map((spec) => {
+  const created = specs.map((spec) => {
     const productType = spec.productType;
     const mountSlot = spec.mountSlot;
     const opts = normalizeProductOptions(productType, spec.productOptions);
@@ -152,4 +153,22 @@ export function createRematePieces(
     }
     return piece;
   });
+
+  if (input.parentBoxId && ctx.box && ctx.boxDimsM && specs.length === 2 && specs[0]?.productType === "L") {
+    const bounds = getRemateEnvelopeBoundsM(
+      ctx.boxDimsM.widthM,
+      ctx.boxDimsM.heightM,
+      ctx.boxDimsM.depthM,
+      ctx.box
+    );
+    const extIdx = created.findIndex((p) => p.partIndex === 1);
+    const intIdx = created.findIndex((p) => p.partIndex === 2);
+    if (extIdx >= 0 && intIdx >= 0) {
+      const snapped = snapLRemateGroupCorners(created[extIdx]!, created[intIdx]!, bounds);
+      created[extIdx] = snapped.ext;
+      created[intIdx] = snapped.int;
+    }
+  }
+
+  return created;
 }

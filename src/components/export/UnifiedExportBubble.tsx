@@ -4,7 +4,7 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useProject } from "../../context/useProject";
 import { useGerarArquivoHandlers } from "../../hooks/useGerarArquivoHandlers";
 import { wrapArquivoCompletoWithSgpi } from "../../industrial/sgpi/industrialExportBridge";
@@ -51,10 +51,10 @@ const divider: CSSProperties = {
   margin: "24px 0",
 };
 
-const rowGap16: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 16,
+const sectionDivider: CSSProperties = {
+  border: "none",
+  borderTop: "2px solid rgba(255,255,255,0.18)",
+  margin: "32px 0",
 };
 
 const checkboxRow: CSSProperties = {
@@ -82,18 +82,26 @@ function ExportRow({
   icon?: ReactNode;
 }) {
   return (
-    <Button type="button" variant="secondary" fullWidth disabled={disabled} onClick={onClick}>
+    <Button
+      type="button"
+      variant="secondary"
+      fullWidth
+      disabled={disabled}
+      onClick={onClick}
+      style={{ minHeight: 72, padding: "10px 8px" }}
+    >
       <span
         style={{
           display: "inline-flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 10,
+          gap: 6,
           width: "100%",
         }}
       >
         <Icon20>{icon ?? <span style={{ width: 18, height: 18 }} aria-hidden />}</Icon20>
-        <span style={{ lineHeight: 1.25, textAlign: "center" }}>{label}</span>
+        <span style={{ lineHeight: 1.2, textAlign: "center", fontSize: 11, fontWeight: 600 }}>{label}</span>
       </span>
     </Button>
   );
@@ -123,6 +131,8 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
     onEtiquetas,
     onArquivosCnc,
   } = useGerarArquivoHandlers();
+
+  const [packageExpanded, setPackageExpanded] = useState(false);
 
   const onArquivoCompletoWithSgpi = useMemo(
     () =>
@@ -174,8 +184,8 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
       <div
         className="modal-card"
         style={{
-          width: "min(100%, 1000px)",
-          maxWidth: 1000,
+          width: "min(100%, 960px)",
+          maxWidth: 960,
           maxHeight: "90vh",
           overflow: "hidden",
           display: "flex",
@@ -197,35 +207,173 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
             flex: 1,
             minHeight: 0,
             display: "flex",
-            flexDirection: "row",
-            gap: 32,
-            overflow: "hidden",
+            flexDirection: "column",
+            overflowY: "auto",
             boxSizing: "border-box",
           }}
         >
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              overflowY: "auto",
-              paddingRight: 4,
-            }}
-          >
-            <div style={rowGap16}>
-              <div>
-                <h2 style={{ ...sectionTitle, marginBottom: 4 }}>Enviar projeto</h2>
-                <p style={{ ...sectionMeta, marginBottom: 0 }}>
-                  Configure o pacote e o canal antes de guardar e enviar.
-                </p>
-              </div>
+          {/* ── SECÇÃO 1: Gerar arquivo ── */}
+          <div>
+            <h3 style={sectionTitle}>Gerar arquivo</h3>
+            <p style={sectionMeta}>Exportações a partir do estado atual do projeto.</p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+                gap: 10,
+              }}
+            >
+              <ExportRow
+                label="PDF Técnico"
+                onClick={wrap(onPdfTecnico)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminDocs" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Cutlist"
+                onClick={wrap(onCutlist)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminChecklist" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Etiquetas (UEE v5)"
+                onClick={wrap(onEtiquetas)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminTag" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Arquivo Unificado"
+                onClick={wrap(onUnificado)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminFolder" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Cutlist + PDF + Unificado"
+                onClick={wrap(onAmbos)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminArchive" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Layout de Corte PRO"
+                onClick={wrap(onLayoutCortePro)}
+                disabled={!hasBoxes}
+                icon={<Icon name="blueprint" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Nesting V3 (Manual)"
+                onClick={() => { onClose(); onOpenNestingV3?.(); }}
+                disabled={!hasBoxes || !onOpenNestingV3}
+                icon={<Icon name="grid" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Arquivos CNC"
+                onClick={wrap(onArquivosCnc)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminTools" size={18} aria-hidden />}
+              />
+            </div>
+          </div>
 
-              <hr style={divider} />
+          <hr style={divider} />
 
-              <div>
-                <h3 style={sectionTitle}>Conteúdo do pacote</h3>
-                <p style={sectionMeta}>Selecione o que deve ser incluído no envio.</p>
+          {/* ── SECÇÃO 2: Ações finais ── */}
+          <div>
+            <h3 style={{ ...sectionTitle, marginBottom: 16 }}>Ações finais</h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: 12,
+              }}
+            >
+              <Button
+                type="button"
+                variant="primary"
+                fullWidth
+                disabled={project.estaCarregando}
+                onClick={() => void handlePedirFabricacao()}
+                style={{ background: "#22c55e", borderColor: "#16a34a", color: "#fff", minHeight: 56 }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "center", width: "100%" }}>
+                  <Icon name="send" size={16} aria-hidden />
+                  Salvar e pedir orçamento
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                fullWidth
+                disabled={project.estaCarregando}
+                onClick={handleDownloadPacote}
+                style={{ minHeight: 56 }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "center", width: "100%" }}>
+                  <Icon name="adminSave" size={16} aria-hidden />
+                  Download local (JSON)
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                fullWidth
+                disabled={project.estaCarregando}
+                onClick={() => void wrap(onArquivoCompletoWithSgpi)()}
+                style={{ minHeight: 56 }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "center", width: "100%" }}>
+                  <Icon name="adminFolder" size={16} aria-hidden />
+                  Gerar arquivo completo
+                </span>
+              </Button>
+            </div>
+          </div>
+
+          {/* ── Divisor de secção ── */}
+          <hr style={sectionDivider} />
+
+          {/* ── SECÇÃO 3: Enviar projeto ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <h2 style={{ ...sectionTitle, marginBottom: 4 }}>Enviar projeto</h2>
+              <p style={{ ...sectionMeta, marginBottom: 0 }}>
+                Configure o pacote e o canal antes de guardar e enviar.
+              </p>
+            </div>
+
+            <hr style={divider} />
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setPackageExpanded((v) => !v)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  width: "100%",
+                  marginBottom: 8,
+                  color: "var(--text-main)",
+                }}
+                aria-expanded={packageExpanded}
+              >
+                <h3 style={{ ...sectionTitle, margin: 0, flex: 1, textAlign: "left" }}>Conteúdo do pacote</h3>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    transition: "transform 0.2s",
+                    transform: packageExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  <Icon name="chevronRight" size={16} aria-hidden />
+                </span>
+              </button>
+              <p style={sectionMeta}>Selecione o que deve ser incluído no envio.</p>
+              {packageExpanded && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {selectionKeys.map(([key, label]) => (
                     <label key={key} style={checkboxRow}>
@@ -238,127 +386,41 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                     </label>
                   ))}
                 </div>
-              </div>
-
-              <hr style={divider} />
-
-              <div>
-                <h3 style={sectionTitle}>Método de envio</h3>
-                <p style={sectionMeta}>
-                  WhatsApp e Email: use «Salvar e Gerar Design» na barra superior para guardar; a integração
-                  destes canais segue o fluxo da app. O pacote JSON pode ser descarregado em «Ações finais».
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                  <Button
-                    type="button"
-                    variant={sendMethod === "whatsapp" ? "primary" : "outline"}
-                    onClick={() => setSendMethod("whatsapp")}
-                  >
-                    WhatsApp
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={sendMethod === "email" ? "primary" : "outline"}
-                    onClick={() => setSendMethod("email")}
-                  >
-                    Email
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
 
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: 24,
-              overflowY: "auto",
-              paddingLeft: 4,
-            }}
-          >
+            <hr style={divider} />
+
             <div>
-              <h3 style={sectionTitle}>Gerar arquivo</h3>
-              <p style={sectionMeta}>Exportações a partir do estado atual do projeto.</p>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                  gap: 16,
-                }}
-              >
-                <ExportRow label="Gerar PDF Técnico" onClick={wrap(onPdfTecnico)} disabled={!hasBoxes} />
-                <ExportRow label="Gerar Cutlist" onClick={wrap(onCutlist)} disabled={!hasBoxes} />
-                <ExportRow
-                  label="Gerar Etiquetas (UEE v5)"
-                  onClick={wrap(onEtiquetas)}
-                  disabled={!hasBoxes}
-                />
-                <ExportRow label="Gerar Arquivo Unificado (NOVO)" onClick={wrap(onUnificado)} disabled={!hasBoxes} />
-                <ExportRow
-                  label="Ambos (Cutlist + PDF + Unificado)"
-                  onClick={wrap(onAmbos)}
-                  disabled={!hasBoxes}
-                />
-                <ExportRow
-                  label="Layout de Corte PRO"
-                  onClick={wrap(onLayoutCortePro)}
-                  disabled={!hasBoxes}
-                  icon={<Icon name="blueprint" size={18} aria-hidden />}
-                />
-                <ExportRow
-                  label="Layout de Corte MANUAL (Nesting V3)"
-                  onClick={() => { onClose(); onOpenNestingV3?.(); }}
-                  disabled={!hasBoxes || !onOpenNestingV3}
-                  icon={<Icon name="grid" size={18} aria-hidden />}
-                />
-                <ExportRow label="arquivos cnc" onClick={wrap(onArquivosCnc)} disabled={!hasBoxes} />
+              <h3 style={sectionTitle}>Método de envio</h3>
+              <p style={sectionMeta}>
+                WhatsApp e Email: use «Salvar e Gerar Design» na barra superior para guardar; a integração
+                destes canais segue o fluxo da app. O pacote JSON pode ser descarregado em «Ações finais».
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                <Button
+                  type="button"
+                  variant={sendMethod === "whatsapp" ? "primary" : "outline"}
+                  onClick={() => setSendMethod("whatsapp")}
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <Icon name="whatsapp" size={16} aria-hidden />
+                    WhatsApp
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={sendMethod === "email" ? "primary" : "outline"}
+                  onClick={() => setSendMethod("email")}
+                >
+                  Email
+                </Button>
               </div>
-            </div>
-
-            <hr style={{ ...divider, margin: 0 }} />
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <h3 style={{ ...sectionTitle, marginBottom: 0 }}>Ações finais</h3>
-              <Button
-                type="button"
-                variant="primary"
-                fullWidth
-                disabled={project.estaCarregando}
-                onClick={() => void handlePedirFabricacao()}
-                style={{
-                  background: "#22c55e",
-                  borderColor: "#16a34a",
-                  color: "#fff",
-                }}
-              >
-                Enviar para Fábrica
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                fullWidth
-                disabled={project.estaCarregando}
-                onClick={handleDownloadPacote}
-              >
-                Download local (JSON)
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                fullWidth
-                disabled={project.estaCarregando}
-                onClick={() => void wrap(onArquivoCompletoWithSgpi)()}
-              >
-                Gerar arquivo completo
-              </Button>
             </div>
 
             {sendSelections.image ? (
               <>
-                <hr style={{ ...divider, margin: 0 }} />
+                <hr style={divider} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <h3 style={sectionTitle}>Imagem renderizada</h3>
                   <p style={sectionMeta}>
@@ -380,35 +442,15 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                         link.click();
                       }}
                     >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 10,
-                          width: "100%",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Icon20>
-                          <Icon name="adminSave" size={18} aria-hidden />
-                        </Icon20>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 10, width: "100%", justifyContent: "center" }}>
+                        <Icon20><Icon name="adminSave" size={18} aria-hidden /></Icon20>
                         Pré-visualizar / descarregar imagem
                       </span>
                     </Button>
                   ) : (
                     <Button type="button" variant="primary" fullWidth onClick={() => void captureImageForSend()}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 10,
-                          width: "100%",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Icon20>
-                          <Icon name="adminSave" size={18} aria-hidden />
-                        </Icon20>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 10, width: "100%", justifyContent: "center" }}>
+                        <Icon20><Icon name="camera" size={18} aria-hidden /></Icon20>
                         Capturar agora
                       </span>
                     </Button>

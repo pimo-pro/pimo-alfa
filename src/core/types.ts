@@ -316,6 +316,8 @@ export interface BoxModule {
   catalogItemId?: string;
   /** ID do modelo base que originou a caixa. */
   baseCabinetId?: string;
+  /** Canto v2: orientação do módulo (frente fixa + porta). Default: direita. */
+  orientation?: import("./cornerCabinet/cornerCabinetRules").CornerOrientation;
   /**
    * PI: oculta apenas furos de corrediça nas laterais (settings). Não afeta grelha 32 mm nem dobradiça.
    */
@@ -389,6 +391,8 @@ export interface WorkspaceBox {
   catalogItemId?: string;
   /** ID do modelo Base Cabinet que originou esta caixa (para expansão: guardar como modelo personalizado). */
   baseCabinetId?: string;
+  /** Canto v2: orientação do módulo (frente fixa + porta). Default: direita. */
+  orientation?: import("./cornerCabinet/cornerCabinetRules").CornerOrientation;
   /**
    * PI: oculta apenas furos de corrediça nas laterais. Grelha e dobradiça mantêm-se conforme modelo PI.
    */

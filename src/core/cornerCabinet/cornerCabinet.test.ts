@@ -21,6 +21,7 @@ import {
   buildCornerFixedFrontHingeHoles,
   CORNER_FF_HINGE_DEPTH_FROM_FRONT_MM,
 } from "./cornerFixedFrontHinges";
+import { mirrorDoorHingeHolesX } from "./doorHingeBuilder";
 import { buildCornerDoorLayerItems, syncCornerWorkspaceBoxDoorsLayer } from "./cornerCabinetLayers";
 import { migrateCornerDireitaInferiorBoxToV2 } from "./cornerCabinetMigration";
 import { gerarPaineisCorner } from "./cornerCabinetManufacturing";
@@ -54,7 +55,7 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     expect(layout.doorHeightMm).toBe(718);
     expect(layout.fixedFrontWidthMm).toBe(448);
     expect(layout.fixedFrontHeightMm).toBe(720);
-    expect(layout.door.hingeSide).toBe("right");
+    expect(layout.door.hingeSide).toBe("left");
     expect(layout.fixedFront.posX).toBeLessThan(0);
     expect(layout.door.centerX).toBeGreaterThan(0);
     expect(layout.fixedFront.posY).toBe(gaps.portaGapVerticalMm);
@@ -148,7 +149,7 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     };
     const synced = syncCornerWorkspaceBoxDoorsLayer(legacy);
     expect(synced.doorsLayer).toHaveLength(1);
-    expect(synced.doorsLayer[0]?.hingeSide).toBe("right");
+    expect(synced.doorsLayer[0]?.hingeSide).toBe("left");
     expect(synced.doorsLayer[0]?.width).toBe(448);
   });
 
@@ -174,7 +175,7 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
 
     expect(box.baseCabinetId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
     expect(box.doorsLayer).toHaveLength(1);
-    expect(box.doorsLayer[0]?.hingeSide).toBe("right");
+    expect(box.doorsLayer[0]?.hingeSide).toBe("left");
     expect(box.doorsLayer[0]?.width).toBe(448);
     expect(box.doorsLayer[0]?.height).toBe(718);
   });
@@ -290,7 +291,7 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
       ]
     );
     expect(doors).toHaveLength(1);
-    expect(doors[0]?.hingeSide).toBe("right");
+    expect(doors[0]?.hingeSide).toBe("left");
     expect(doors[0]?.width).toBe(448);
     expect(doors[0]?.height).toBe(718);
     expect(doors[0]?.posX).toBeGreaterThan(0);
@@ -521,7 +522,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     expect(migrated.baseCabinetId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
     expect(migrated.catalogItemId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
     expect(migrated.doorsLayer).toHaveLength(1);
-    expect(migrated.doorsLayer[0]?.hingeSide).toBe("right");
+    expect(migrated.doorsLayer[0]?.hingeSide).toBe("left");
   });
 
   it("createWorkspaceBox v2 nasce com 1 porta direita e frente_fixa no panelIds", () => {
@@ -546,7 +547,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     expect(box.baseCabinetId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
     expect(box.panelIds?.frente_fixa).toBeTruthy();
     expect(box.doorsLayer).toHaveLength(1);
-    expect(box.doorsLayer[0]?.hingeSide).toBe("right");
+    expect(box.doorsLayer[0]?.hingeSide).toBe("left");
     expect(box.doorsLayer[0]?.width).toBe(448);
   });
 
@@ -563,9 +564,11 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
       legacyTwoDoors
     );
     expect(doors).toHaveLength(1);
-    expect(doors[0]?.hingeSide).toBe("right");
+    expect(doors[0]?.hingeSide).toBe("left");
     expect(doors[0]?.width).toBe(448);
     expect(doors[0]?.height).toBe(718);
+    expect(doors[0]?.cornerDireitaV2Viewer).toBe(true);
+    expect(doors[0]?.viewerHingePivotXMm).toBeCloseTo(1, 5);
   });
 
   it("manufacturing v2: frente_fixa 448×720 + 1 porta", () => {
@@ -639,6 +642,39 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     const doorCaneco = porta?.drillHoles?.filter((h) => h.holeType === "dobradica") ?? [];
     expect(doorCaneco.length).toBeGreaterThanOrEqual(2);
     expect(ffHinge.filter((h) => h.holeType === "dobradica_parafuso_uniao").length).toBe(doorCaneco.length);
+  });
+
+  it("mirrorDoorHingeHolesX espelha X mantendo Y", () => {
+    const mirrored = mirrorDoorHingeHolesX(
+      [
+        { x: 400, y: 100, diameter: 35, depth: 13, holeType: "dobradica", topDrillable: true, face: "B" },
+        { x: 60, y: 200, diameter: 10, depth: 12, holeType: "dobradica_fixacao", topDrillable: true, face: "B" },
+      ],
+      448
+    );
+    expect(mirrored[0]?.x).toBe(48);
+    expect(mirrored[0]?.y).toBe(100);
+    expect(mirrored[1]?.x).toBe(388);
+  });
+
+  it("cutlist v2: furos de dobradiça da porta no lado esquerdo (espelhados)", () => {
+    const box: BoxModule = {
+      id: "box-v2-door-left",
+      baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
+      dimensoes: { largura: 900, altura: 720, profundidade: 600 },
+      espessura: 19,
+      portaTipo: "porta_simples",
+      prateleiras: 0,
+      gavetas: 0,
+      material: "mdf_branco",
+    };
+    const items = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const porta = items.find((i) => i.tipo === "porta_simples");
+    const doorW = porta?.dimensoes?.largura ?? 448;
+    const caneco = porta?.drillHoles?.find((h) => h.holeType === "dobradica");
+    expect(caneco).toBeTruthy();
+    expect(caneco!.x).toBeLessThan(doorW / 2);
+    expect(caneco!.x).toBeLessThan(80);
   });
 
   it("buildCornerFixedFrontHingeHoles: calço na borda esp/2, união a 31 mm da frente", () => {

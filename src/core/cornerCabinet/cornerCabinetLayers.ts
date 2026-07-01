@@ -5,16 +5,19 @@ import { getSettings } from "../settings/settingsService";
 import {
   computeCornerLayoutForBox,
   getCornerCabinetConfig,
+  isCornerDireitaInferiorV2Model,
   isCornerLayoutSsotModel,
   resolveCornerDoorGapSettings,
+  resolveCornerOrientationFromBox,
   type CornerLayoutMm,
 } from "./cornerCabinetRules";
+import { computeCornerV2HingePivotXMm } from "./cornerDoorViewer";
 
 const defaultDoorMaterial = getDefaultOfficialMaterial().canonicalId;
 
 type CornerDoorsLayerBox = Pick<
   WorkspaceBox,
-  "id" | "baseCabinetId" | "rotacaoY" | "dimensoes" | "espessura" | "portaTipo" | "doorsLayer"
+  "id" | "baseCabinetId" | "orientation" | "rotacaoY" | "dimensoes" | "espessura" | "portaTipo" | "doorsLayer"
 >;
 
 /** Posicionamento da frente fixa — ocupa o lugar da folha esquerda da porta dupla. */
@@ -71,11 +74,21 @@ export function buildCornerDoorLayerItems(
 }
 
 function buildCornerDoorLayerItemFromLayout(
-  box: Pick<WorkspaceBox, "id">,
+  box: Pick<WorkspaceBox, "id" | "baseCabinetId" | "orientation">,
   layout: NonNullable<ReturnType<typeof computeCornerLayoutForBox>>,
   preserved: DoorLayerItem | undefined,
   thickness: number
 ): DoorLayerItem {
+  const isV2 = isCornerDireitaInferiorV2Model(box.baseCabinetId);
+  const orientation = resolveCornerOrientationFromBox(box);
+  const viewerHingePivotXMm = isV2
+    ? computeCornerV2HingePivotXMm({
+        orientation,
+        fixedFrontCenterXMm: layout.fixedFront.posX,
+        fixedFrontWidthMm: layout.fixedFrontWidthMm,
+      })
+    : undefined;
+
   return {
     id: preserved?.id ?? `door-${box.id}`,
     parentBoxId: box.id,
@@ -93,6 +106,9 @@ function buildCornerDoorLayerItemFromLayout(
     posY: layout.door.posY,
     posZ: layout.door.posZ,
     rotY: preserved?.rotY ?? 0,
+    cornerDireitaV2Viewer: isV2 || undefined,
+    cornerOrientation: isV2 ? orientation : undefined,
+    viewerHingePivotXMm,
   };
 }
 

@@ -41,7 +41,7 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     expect(dir?.tipo).toBe("remate");
   });
 
-  it("remate L → MOD1_REMATE_L_A / L_B com grain YY nas laterais", () => {
+  it("remate L → MOD1_REMATE_L_ext / L_int com grain YY/XX", () => {
     const wsBox = { ...makeWorkspaceBox(), nome: "MOD1" };
     const remates = createRematePieces(
       { productType: "L", mountSlot: "DIR", parentBoxId: wsBox.id, followBox: true },
@@ -56,12 +56,14 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     const cutlist = buildRemateCutlistItems(remates, [makeDivSepTestBox({ id: wsBox.id, nome: "MOD1" })]);
     expect(cutlist).toHaveLength(2);
 
-    const a = cutlist.find((i) => i.metadata?.remateKind === "L_A");
-    const b = cutlist.find((i) => i.metadata?.remateKind === "L_B");
-    expect(a?.nome).toBe("MOD1_REMATE_L_A_01");
-    expect(b?.nome).toBe("MOD1_REMATE_L_B_01");
-    expect(a?.grainDirection).toBe("YY");
-    expect(b?.grainDirection).toBe("XX");
+    const ext = cutlist.find((i) => i.metadata?.remateKind === "L_ext");
+    const int = cutlist.find((i) => i.metadata?.remateKind === "L_int");
+    expect(ext?.nome).toBe("MOD1_REMATE_L_ext_01");
+    expect(int?.nome).toBe("MOD1_REMATE_L_int_01");
+    expect(ext?.grainDirection).toBe("YY");
+    expect(int?.grainDirection).toBe("XX");
+    expect(ext?.dimensoes).toEqual({ largura: 100, altura: 720, profundidade: 19 });
+    expect(int?.dimensoes).toEqual({ largura: 600, altura: 100, profundidade: 19 });
   });
 
   it("buildCutlistItemsForIndustrialExport inclui remates com shortCode e pieceNumber", () => {

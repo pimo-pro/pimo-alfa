@@ -1,4 +1,5 @@
 import type { RematePiece, RematePieceTipo } from "./rematePieceTypes";
+import { remateLIndustrialSuffix } from "./remateLGeometry";
 import { inferProductTypeFromLegacy } from "./remateProductRules";
 
 /** Sanitiza nome de caixa para etiqueta industrial (espelha DIV/SEP). */
@@ -12,12 +13,12 @@ export function sanitizeRemateBoxName(boxName: string): string {
   );
 }
 
-/** Suffix industrial após `_REMATE_` (ex.: DIR, L_A, CIMA). */
+/** Suffix industrial após `_REMATE_` (ex.: DIR, L_ext, CIMA). */
 export function resolveRemateIndustrialSuffix(remate: RematePiece): string {
   const productType = remate.productType ?? inferProductTypeFromLegacy(remate);
 
   if (productType === "L" || remate.tipo === "L") {
-    return remate.partIndex === 2 ? "L_B" : "L_A";
+    return remateLIndustrialSuffix(remate.partIndex);
   }
 
   if (productType === "RODAPE_L" || remate.tipo === "RODAPE_L") {

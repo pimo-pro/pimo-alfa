@@ -106,6 +106,8 @@ export type BoxOptions = {
   locked?: boolean;
   /** Modelo base (ex.: pi-base-600); usado pelo viewer para furação lateral PI sem depender de prateleiras/gavetas. */
   baseCabinetId?: string;
+  /** Canto v2: orientação do módulo (frente fixa + porta). */
+  orientation?: import("../../core/cornerCabinet/cornerCabinetRules").CornerOrientation;
   /** Debug FASE 5: marcadores visuais de furação nas gavetas. */
   showDrawerDrilling?: boolean;
   /** Sem costa traseira: não gera mesh `back` no viewer. Sincronizado com `costaAtiva`. */
