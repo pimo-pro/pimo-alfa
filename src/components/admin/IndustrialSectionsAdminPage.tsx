@@ -32,26 +32,18 @@ export default function IndustrialSectionsAdminPage() {
   };
 
   return (
-    <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ margin: 0 }}>Secções industriais (BottomInfoToolbar)</h2>
+        <h2 style={{ margin: 0, color: "var(--admin-text)" }}>Secções industriais (BottomInfoToolbar)</h2>
         <Button type="button" variant="secondary" onClick={() => setSections(getDefaultIndustrialSectionsConfig())}>
           Restaurar padrão
         </Button>
       </div>
 
       {sections.map((section) => (
-        <section
-          key={section.id}
-          style={{
-            border: "1px solid var(--border-subtle, #e4e4e7)",
-            borderRadius: 8,
-            padding: 12,
-            background: "var(--surface-elevated, #fff)",
-          }}
-        >
-          <h3 style={{ margin: "0 0 8px" }}>{section.label}</h3>
-          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 6 }}>
+        <section key={section.id} className="admin-section-card">
+          <h3 style={{ margin: "0 0 8px", color: "var(--admin-text)" }}>{section.label}</h3>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 6, color: "var(--admin-text)" }}>
             <input
               type="checkbox"
               checked={section.enabled}
@@ -59,7 +51,7 @@ export default function IndustrialSectionsAdminPage() {
             />
             Secção activa
           </label>
-          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 6 }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 6, color: "var(--admin-text)" }}>
             <input
               type="checkbox"
               checked={section.showPrices}
@@ -67,7 +59,7 @@ export default function IndustrialSectionsAdminPage() {
             />
             Mostrar preços
           </label>
-          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 10 }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 10, color: "var(--admin-text)" }}>
             <input
               type="checkbox"
               checked={section.adminOnlyPrices}
@@ -76,10 +68,10 @@ export default function IndustrialSectionsAdminPage() {
             Preços apenas ADMIN
           </label>
 
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Colunas visíveis</div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--text-muted)" }}>Colunas visíveis</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {section.columns.map((col) => (
-              <label key={col.id} style={{ fontSize: 12, display: "flex", gap: 4, alignItems: "center" }}>
+              <label key={col.id} style={{ fontSize: 12, display: "flex", gap: 4, alignItems: "center", color: "var(--admin-text)" }}>
                 <input
                   type="checkbox"
                   checked={col.visible}

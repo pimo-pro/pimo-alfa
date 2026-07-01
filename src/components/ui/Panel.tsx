@@ -14,15 +14,14 @@ export interface PanelProps {
 }
 
 const panelRootStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "var(--card-bg)",
+  border: "1px solid var(--card-border)",
   borderRadius: "var(--radius)",
   padding: "12px 14px",
   display: "flex",
   flexDirection: "column",
   gap: "10px",
   width: "100%",
-  backdropFilter: "blur(6px)",
 };
 
 const titleStyle: React.CSSProperties = {

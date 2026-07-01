@@ -22,7 +22,7 @@ const inputStyle: React.CSSProperties = {
   color: "var(--text-main)",
 };
 
-export default function PainelResumoIndustriais() {
+export default function PainelResumoIndustriais({ embedded }: { embedded?: boolean } = {}) {
   const { project, actions } = useProject();
   const { materials } = useMaterials();
   const [obsPiece, setObsPiece] = useState<{ id: string; label: string } | null>(null);
@@ -136,14 +136,14 @@ export default function PainelResumoIndustriais() {
 
   if (boxes.length === 0) {
     return (
-      <Panel title="Resumo Industriais — Painel Mestre">
+      <Panel title={embedded ? undefined : "Resumo Industriais — Painel Mestre"}>
         <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Adicione caixas para controlar peças industriais.</div>
       </Panel>
     );
   }
 
   return (
-    <Panel title="Resumo Industriais — Painel Mestre">
+    <Panel title={embedded ? undefined : "Resumo Industriais — Painel Mestre"}>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
         Edite medidas (COMP/LARG/ESP) com validação industrial. Peso, área e consumo recalculam automaticamente.
         Refletem-se em cutlist, técnico, etiquetas, unified e PDFs industriais.

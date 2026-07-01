@@ -1,76 +1,21 @@
 /**
- * Overlay de painéis de informação acima da BottomInfoToolbar.
+ * Overlay de painéis agrupados acima da BottomInfoToolbar.
  */
 
 import { useRef, useEffect } from "react";
-import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomInfoContext";
-import ResumoFinanceiroPanel from "../../panels/ResumoFinanceiroPanel";
-import PecasTotaisPanel from "../../panels/PecasTotaisPanel";
-import FerragensTotaisPanel from "../../panels/FerragensTotaisPanel";
-import TotaisProjetoPanel from "../../panels/TotaisProjetoPanel";
-import PainelResumoIndustriais from "../../panels/painelResumoIndustriais";
-import PainelOperacoesIndustriais from "../../panels/painelOperacoesIndustriais";
-import PainelConsumoMateriais from "../../panels/painelConsumoMateriais";
-import PainelChapasReal from "../../panels/painelChapasReal";
+import { useBottomInfo } from "../../../context/BottomInfoContext";
+import FinanceiroHub from "./hubs/FinanceiroHub";
+import IndustriaisHub from "./hubs/IndustriaisHub";
+import OperacoesHub from "./hubs/OperacoesHub";
 
-const overlayStyle: React.CSSProperties = {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  top: 0,
-  bottom: 0,
-  zIndex: 50,
-  display: "flex",
-  flexDirection: "column",
-  background: "rgba(5, 8, 22, 0.92)",
-  borderTop: "1px solid rgba(255,255,255,0.08)",
-  boxShadow: "0 -4px 24px rgba(0,0,0,0.3)",
-  overflow: "hidden",
-};
-
-const scrollAreaStyle: React.CSSProperties = {
-  flex: 1,
-  overflow: "auto",
-  padding: "16px 20px",
-  minHeight: 0,
-};
-
-const closeButtonStyle: React.CSSProperties = {
-  position: "absolute",
-  top: 10,
-  right: 14,
-  width: 28,
-  height: 28,
-  borderRadius: 6,
-  border: "1px solid rgba(255,255,255,0.15)",
-  background: "rgba(255,255,255,0.06)",
-  color: "var(--text-muted)",
-  cursor: "pointer",
-  fontSize: 14,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 2,
-};
-
-function PanelContent({ panelId }: { panelId: Exclude<BottomInfoPanelId, null> }) {
-  switch (panelId) {
-    case "resumo":
-      return <ResumoFinanceiroPanel />;
-    case "pecasTotais":
-      return <PecasTotaisPanel />;
-    case "ferragensTotais":
-      return <FerragensTotaisPanel />;
-    case "totais":
-      return <TotaisProjetoPanel />;
-    case "resumoIndustriais":
-      return <PainelResumoIndustriais />;
-    case "operacoesIndustriais":
-      return <PainelOperacoesIndustriais />;
-    case "consumoMateriais":
-      return <PainelConsumoMateriais />;
-    case "chapasReal":
-      return <PainelChapasReal />;
+function HubContent({ group }: { group: "financeiro" | "industriais" | "operacoes" }) {
+  switch (group) {
+    case "financeiro":
+      return <FinanceiroHub />;
+    case "industriais":
+      return <IndustriaisHub />;
+    case "operacoes":
+      return <OperacoesHub />;
     default:
       return null;
   }
@@ -93,19 +38,18 @@ export default function BottomInfoPanelsOverlay() {
       className="bottom-info-panels-overlay"
       role="dialog"
       aria-label={`Painel ${openPanel}`}
-      style={overlayStyle}
     >
       <button
         type="button"
+        className="bottom-info-panels-overlay__close"
         title="Fechar painel"
         aria-label="Fechar painel"
         onClick={() => setOpenPanel(null)}
-        style={closeButtonStyle}
       >
         ×
       </button>
-      <div ref={scrollRef} style={scrollAreaStyle}>
-        <PanelContent panelId={openPanel} />
+      <div ref={scrollRef} className="bottom-info-panels-overlay__scroll">
+        <HubContent group={openPanel} />
       </div>
     </div>
   );

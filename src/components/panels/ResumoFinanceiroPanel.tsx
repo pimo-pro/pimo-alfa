@@ -25,14 +25,14 @@ import { useBottomInfo } from "../../context/BottomInfoContext";
 
 const microTextStyle: React.CSSProperties = { fontSize: 12, lineHeight: 1.4, color: "var(--text-muted)" };
 
-export default function ResumoFinanceiroPanel() {
+export default function ResumoFinanceiroPanel({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
   const { materials } = useMaterials();
   const { hasPermission } = useAuth();
   const isAdmin = hasFullAccess(hasPermission);
   const showPrices = canShowSectionPrices("resumoFinanceiro", isAdmin);
   const { exportResumoFinanceiroPdf } = useIndustrialBottomPdf();
-  const { togglePanel } = useBottomInfo();
+  const { openGroupSection } = useBottomInfo();
   const [showPecasList, setShowPecasList] = useState(false);
 
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
@@ -65,7 +65,7 @@ export default function ResumoFinanceiroPanel() {
   }, [areaTotalM2]);
 
   return (
-    <Panel title="Resumo Financeiro">
+    <Panel title={embedded ? undefined : "Resumo Financeiro"}>
       <IndustrialPanelPdfActions onGeneratePdf={exportResumoFinanceiroPdf} disabled={boxes.length === 0} />
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button
@@ -110,7 +110,7 @@ export default function ResumoFinanceiroPanel() {
           <p style={{ ...microTextStyle, marginTop: 8 }}>Preços visíveis apenas para administradores.</p>
         )}
 
-        <button type="button" className="button button-secondary" style={{ marginTop: 8 }} onClick={() => togglePanel("pecasTotais")}>
+        <button type="button" className="button button-secondary" style={{ marginTop: 8 }} onClick={() => openGroupSection("industriais", "pecasTotais")}>
           Abrir Peças totais
         </button>
       </div>

@@ -78,6 +78,8 @@ export const theme = {
 
 export type AppTheme = typeof theme;
 
+export { surfaceTheme } from "../styles/theme";
+
 export function applyThemeVariables(): void {
   const root = document.documentElement;
   const vars: Record<string, string | number> = {

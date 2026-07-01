@@ -149,30 +149,9 @@ export default function AdminPanel() {
   };
 
   return (
-    <main
-      style={{
-        flex: 1,
-        display: "flex",
-        height: "100%",
-        background: "radial-gradient(circle at top, var(--blue-dark), var(--black) 60%)",
-      }}
-    >
-      <aside
-        style={{
-          width: 250,
-          background: "color-mix(in srgb, var(--navy) 92%, transparent)",
-          borderRight: "1px solid rgba(255,255,255,0.08)",
-          padding: "18px 12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          overflowY: "auto",
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginBottom: 8 }}>
+    <main className="admin-panel-root">
+      <aside className="admin-panel-sidebar">
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--admin-text)", marginBottom: 8 }}>
           Admin Panel
         </div>
         {adminMenu
@@ -203,20 +182,10 @@ export default function AdminPanel() {
             <button
               key={entry.id}
               onClick={() => !isDisabled && setActiveTab(entry.id)}
+              className={`admin-panel-nav-btn${isActive ? " admin-panel-nav-btn--active" : ""}`}
               style={{
-                textAlign: "left",
-                padding: "9px 10px",
-                borderRadius: "var(--radius)",
-                border: isActive ? "1px solid rgba(59,130,246,0.45)" : "1px solid rgba(255,255,255,0.08)",
-                background: isActive ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
-                color: "var(--text-main)",
-                fontSize: 12,
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 opacity: isDisabled ? 0.4 : 1,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 8,
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -244,25 +213,9 @@ export default function AdminPanel() {
         })}
       </aside>
 
-      <section
-        style={{
-          flex: 1,
-          padding: "20px",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "var(--radius)",
-            padding: "20px",
-            minHeight: "calc(100vh - 48px)",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", marginBottom: 12 }}>
+      <section className="admin-panel-content">
+        <div className="admin-panel-card">
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--admin-text)", marginBottom: 12 }}>
             {active}
           </div>
 

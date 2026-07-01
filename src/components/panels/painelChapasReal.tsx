@@ -10,7 +10,7 @@ import {
   endIndustrialFileGeneration,
 } from "../../core/fabrication/industrialGenerationSuspend";
 
-export default function PainelChapasReal() {
+export default function PainelChapasReal({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
   const boxes = project.boxes ?? [];
   const projectName = project.projectName?.trim() || "Projeto";
@@ -39,7 +39,7 @@ export default function PainelChapasReal() {
   };
 
   return (
-    <Panel title="Cálculo de Chapas Real">
+    <Panel title={embedded ? undefined : "Cálculo de Chapas Real"}>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
         Distribuição real das peças nas chapas via motor de nesting industrial.
       </p>

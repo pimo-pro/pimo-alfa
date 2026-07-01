@@ -10,7 +10,7 @@ import Panel from "../ui/Panel";
 import Button from "../ui/Button";
 import { ModalPortal } from "../ui/ModalPortal";
 
-export default function PainelOperacoesIndustriais() {
+export default function PainelOperacoesIndustriais({ embedded }: { embedded?: boolean } = {}) {
   const { project, actions } = useProject();
   const operacoes = project.industrialOperacoes ?? {};
   const [pendingOp, setPendingOp] = useState<IndustrialOperationId | null>(null);
@@ -43,7 +43,7 @@ export default function PainelOperacoesIndustriais() {
   const currentUser = getCurrentProjectUser();
 
   return (
-    <Panel title="Operações Industriais">
+    <Panel title={embedded ? undefined : "Operações Industriais"}>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
         Registo de conclusão por operação (funcionário, timestamp, notas). Linha verde quando concluída.
         Sincroniza com o Painel Mestre e PIMO TRAK ao enviar para fábrica.

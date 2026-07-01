@@ -15,7 +15,7 @@ import {
 import { buildPecasTotaisRows } from "../../core/industrial/industrialBottomSectionData";
 import { formatCurrency } from "../../utils/formatting";
 
-export default function TotaisProjetoPanel() {
+export default function TotaisProjetoPanel({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
   const { materials } = useMaterials();
   const { hasPermission } = useAuth();
@@ -39,7 +39,7 @@ export default function TotaisProjetoPanel() {
   }
 
   return (
-    <Panel title="Totais do Projeto (project.boxes)">
+    <Panel title={embedded ? undefined : "Totais do Projeto (project.boxes)"}>
       <IndustrialPanelPdfActions onGeneratePdf={exportTotaisProjetoPdf} />
       <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
         <div>Caixas: {data.boxes.length}</div>

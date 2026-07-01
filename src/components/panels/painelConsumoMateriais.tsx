@@ -11,7 +11,7 @@ import {
   endIndustrialFileGeneration,
 } from "../../core/fabrication/industrialGenerationSuspend";
 
-export default function PainelConsumoMateriais() {
+export default function PainelConsumoMateriais({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
   const { materials } = useMaterials();
   const boxes = project.boxes ?? [];
@@ -41,7 +41,7 @@ export default function PainelConsumoMateriais() {
   };
 
   return (
-    <Panel title="Consumo de Materiais">
+    <Panel title={embedded ? undefined : "Consumo de Materiais"}>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
         Consumo por chapa e por peça, com estimativa de desperdício (nesting quando disponível).
       </p>

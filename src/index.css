@@ -34,14 +34,14 @@
 :root {
   --radius: 6px;
 
-  /* EspaÁamento unificado: toolbars e painÈis */
+  /* Espaùamento unificado: toolbars e painùis */
   --space-toolbar-gap: 4px;
   --space-toolbar-padding-y: 6px;
   --space-toolbar-padding-x: 10px;
   --size-toolbar-icon: 28px;
 }
 
-/* ========== TEMA ESCURO (padr„o) ========== */
+/* ========== TEMA ESCURO (padrùo) ========== */
 .theme-dark {
   --black: #0b0f17;
   --navy: #0f172a;
@@ -50,7 +50,7 @@
   --blue-light: #3b82f6;
   --glass: rgba(255,255,255,0.06);
   --border: rgba(255,255,255,0.12);
-  --text-main: #e2e8f0;
+  --text-main: #e6e6e6;
   --text-muted: #94a3b8;
   --primary: #38bdf8;
 
@@ -141,6 +141,14 @@
   --panel-resizer-hover: rgba(59,130,246,0.2);
   --cube-face-border: rgba(255, 255, 255, 0.12);
   --cube-shadow: rgba(0, 0, 0, 0.3);
+
+  --admin-bg: #1a1a1a;
+  --admin-text: #e6e6e6;
+  --admin-sidebar-bg: #141414;
+  --admin-card-bg: rgba(255, 255, 255, 0.04);
+  --admin-card-border: rgba(255, 255, 255, 0.08);
+  --bottom-info-panel-inner-bg: #111111;
+  --bottom-info-toolbar-height: 52px;
 }
 
 /* ========== TEMA CLARO (invertido) ========== */
@@ -152,7 +160,7 @@
   --blue-light: #2563eb;
   --glass: rgba(0,0,0,0.06);
   --border: rgba(0,0,0,0.12);
-  --text-main: #0f172a;
+  --text-main: #222222;
   --text-muted: #64748b;
   --primary: #2563eb;
 
@@ -243,9 +251,17 @@
   --panel-resizer-hover: rgba(59,130,246,0.25);
   --cube-face-border: rgba(0, 0, 0, 0.12);
   --cube-shadow: rgba(0, 0, 0, 0.15);
+
+  --admin-bg: #f5f5f5;
+  --admin-text: #222222;
+  --admin-sidebar-bg: #ebebeb;
+  --admin-card-bg: rgba(0, 0, 0, 0.03);
+  --admin-card-border: rgba(0, 0, 0, 0.08);
+  --bottom-info-panel-inner-bg: #fafafa;
+  --bottom-info-toolbar-height: 52px;
 }
 
-/* Layout fixo: sem scroll global; cada ·rea com scroll interno */
+/* Layout fixo: sem scroll global; cada ùrea com scroll interno */
 html,
 body,
 #root {
@@ -283,7 +299,7 @@ body {
   overflow: auto;
 }
 
-/* Vista de design: sem scroll no container; overflow aplicado nos painÈis internos */
+/* Vista de design: sem scroll no container; overflow aplicado nos painùis internos */
 .app-main-content-fixed {
   overflow: hidden !important;
 }
@@ -304,7 +320,7 @@ body {
   flex-shrink: 0;
 }
 
-/* Sidebar: estilo clean ? Ìcone + nome por baixo; scroll interno se muitos itens */
+/* Sidebar: estilo clean ? ùcone + nome por baixo; scroll interno se muitos itens */
 .left-toolbar {
   width: 48px;
   min-width: 48px;
@@ -541,7 +557,7 @@ body {
   overflow: hidden;
 }
 
-/* Conte˙do do painel lateral: scroll vertical para todo o conte˙do ficar acessÌvel */
+/* Conteùdo do painel lateral: scroll vertical para todo o conteùdo ficar acessùvel */
 .left-panel-content {
   display: flex;
   flex-direction: column;
@@ -557,7 +573,7 @@ body {
   scrollbar-width: thin;
 }
 
-/* ¡rea de scroll do painel esquerdo (conte˙do expansÌvel) */
+/* ùrea de scroll do painel esquerdo (conteùdo expansùvel) */
 .left-panel-scroll {
   flex: 1;
   min-height: 0;
@@ -567,7 +583,7 @@ body {
   flex-direction: column;
 }
 
-/* Photo Mode: preenche a altura do painel; definiÁıes com scroll, aÁ„o no rodapÈ */
+/* Photo Mode: preenche a altura do painel; definiùùes com scroll, aùùo no rodapù */
 .photo-mode-settings-root {
   flex: 1;
   display: flex;
@@ -582,7 +598,7 @@ body {
   overflow-x: hidden;
 }
 
-/* RodapÈ fixo no fundo do painel esquerdo (bot„o Criar Caixa) */
+/* Rodapù fixo no fundo do painel esquerdo (botùo Criar Caixa) */
 .left-panel-footer {
   flex-shrink: 0;
   padding: 12px 16px;
@@ -756,7 +772,7 @@ body {
   box-sizing: border-box;
 }
 
-/* Painel lateral: conte˙do pode crescer; scroll no container pai (.left-panel-content ou .left-panel-scroll) */
+/* Painel lateral: conteùdo pode crescer; scroll no container pai (.left-panel-content ou .left-panel-scroll) */
 .panel-content.panel-content--side {
   min-height: min-content;
   flex: 0 0 auto;
@@ -873,7 +889,7 @@ body {
   overflow: hidden;
 }
 
-/* Toolbar no topo do Viewer: n„o encolher e ficar acima do canvas */
+/* Toolbar no topo do Viewer: nùo encolher e ficar acima do canvas */
 .workspace-toolbars {
   flex-shrink: 0;
   position: relative;
@@ -888,7 +904,7 @@ body {
   box-shadow: none;
 }
 
-/* ViewerToolbar: Ìcones com cor clara visÌvel no fundo escuro */
+/* ViewerToolbar: ùcones com cor clara visùvel no fundo escuro */
 .viewer-toolbar {
   display: flex;
   align-items: center;
@@ -1088,7 +1104,7 @@ body {
   min-width: 300px;
 }
 
-/* Botıes do popover n„o devem herdar o tamanho fixo de Ìcone da .viewer-toolbar */
+/* Botùes do popover nùo devem herdar o tamanho fixo de ùcone da .viewer-toolbar */
 .viewer-toolbar .display-quality-panel button {
   width: auto;
   height: auto;
@@ -1611,7 +1627,7 @@ body {
   background-repeat: no-repeat;
 }
 
-/* Painel de ReferÍncia ? sidebar: foco visÌvel e acessibilidade */
+/* Painel de Referùncia ? sidebar: foco visùvel e acessibilidade */
 .painel-sidebar-toggle:focus-visible,
 .painel-sidebar-nav-item:focus-visible {
   outline: 2px solid var(--blue-light, #3b82f6);
@@ -1959,4 +1975,219 @@ body {
 
 .moveis-bubble__add:hover {
   background: #2563eb;
+}
+
+/* ========== ADMIN PANEL ========== */
+.admin-panel-root {
+  flex: 1;
+  display: flex;
+  height: 100%;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-panel-sidebar {
+  width: 250px;
+  background: var(--admin-sidebar-bg);
+  border-right: 1px solid var(--card-border);
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.admin-panel-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: var(--admin-bg);
+}
+
+.admin-panel-card {
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  min-height: calc(100vh - 48px);
+  box-shadow: var(--ui-shadow-sm, 0 6px 18px rgba(0, 0, 0, 0.12));
+  color: var(--admin-text);
+}
+
+.admin-panel-nav-btn {
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--button-ghost-border);
+  background: var(--button-ghost-bg);
+  color: var(--admin-text);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-panel-nav-btn--active {
+  border-color: var(--border-selected);
+  background: var(--toolbar-pressed-bg);
+}
+
+.admin-section-card {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--card-bg);
+  color: var(--admin-text);
+}
+
+.admin-section-card input[type="checkbox"] {
+  accent-color: var(--blue-light);
+}
+
+/* ========== BOTTOM INFO TOOLBAR HUBS ========== */
+.bottom-info-panels-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--bottom-info-panel-inner-bg);
+  border-top: 1px solid var(--toolbar-border);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.bottom-info-panels-overlay__close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--button-ghost-border);
+  background: var(--button-ghost-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.bottom-info-panels-overlay__scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  min-height: 0;
+}
+
+.bottom-info-hub {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  min-height: 280px;
+  height: 100%;
+}
+
+.bottom-info-hub__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  overflow: auto;
+}
+
+.bottom-info-hub__sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.bottom-info-hub__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bottom-info-hub__nav-item {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.bottom-info-hub__nav-item:hover {
+  opacity: 0.8;
+  background: var(--bg-item-hover);
+}
+
+.bottom-info-hub__nav-item--active {
+  color: var(--text-main);
+  background: var(--toolbar-pressed-bg);
+  border-color: var(--border-selected);
+}
+
+.bottom-info-hub__content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  overflow: hidden;
+}
+
+.bottom-info-hub__content-header {
+  padding: 12px 12px 0;
+}
+
+.bottom-info-hub__content-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+.bottom-info-hub__card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.bottom-info-hub__card-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.theme-light .bottom-info-toolbar__main-btn img {
+  filter: brightness(0.2);
+}
+
+@media (max-width: 900px) {
+  .bottom-info-hub {
+    grid-template-columns: 1fr;
+  }
 }

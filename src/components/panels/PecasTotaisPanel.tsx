@@ -6,7 +6,7 @@ import IndustrialPanelPdfActions from "./IndustrialPanelPdfActions";
 import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import { buildPecasTotaisRows } from "../../core/industrial/industrialBottomSectionData";
 
-export default function PecasTotaisPanel() {
+export default function PecasTotaisPanel({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
   const { materials } = useMaterials();
   const { exportPecasTotaisPdf } = useIndustrialBottomPdf();
@@ -22,7 +22,7 @@ export default function PecasTotaisPanel() {
   }
 
   return (
-    <Panel title="Peças totais — Cutlist + Portas + Gavetas + Remates">
+    <Panel title={embedded ? undefined : "Peças totais — Cutlist + Portas + Gavetas + Remates"}>
       <IndustrialPanelPdfActions onGeneratePdf={exportPecasTotaisPdf} />
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
         {rows.length} linhas · {rows.reduce((s, r) => s + r.qtd, 0)} unidades

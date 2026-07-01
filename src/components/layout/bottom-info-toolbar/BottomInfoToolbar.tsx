@@ -7,7 +7,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomInfoContext";
+import { useBottomInfo, type BottomInfoGroupId } from "../../../context/BottomInfoContext";
+import IndustrialToolbarIcon from "../../icons/industrialToolbar/IndustrialToolbarIcon";
 import { useProject } from "../../../context/useProject";
 import { Icon } from "@/components/icons";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
@@ -16,7 +17,6 @@ import PieceObservacoesOverlay from "../overlays/PieceObservacoesOverlay";
 import { useCutlistData } from "../../../hooks/useCutlistData";
 import { buildPecasTotaisRows } from "../../../core/industrial/industrialBottomSectionData";
 import { useMaterials } from "../../../hooks/useMaterials";
-import { useEnviarParaFabrica } from "../../../hooks/useEnviarParaFabrica";
 
 type HistoryFilter = "all" | "move" | "resize" | "add" | "remove" | "height" | "other";
 
@@ -58,30 +58,27 @@ const panelKeyByType = {
   back: "costa",
 } as const;
 
-const FINANCIAL_PANELS: { id: Exclude<BottomInfoPanelId, null>; label: string }[] = [
-  { id: "resumo", label: "Resumo Financeiro" },
-];
-
-const INDUSTRIAL_PANELS: { id: Exclude<BottomInfoPanelId, null>; label: string }[] = [
-  { id: "pecasTotais", label: "Peças totais" },
-  { id: "ferragensTotais", label: "Ferragens totais" },
-  { id: "totais", label: "Totais do Projeto" },
-  { id: "resumoIndustriais", label: "Resumo Industriais" },
-  { id: "operacoesIndustriais", label: "Operações" },
-  { id: "consumoMateriais", label: "Consumo Materiais" },
-  { id: "chapasReal", label: "Chapas Real" },
+const MAIN_TOOLBAR_GROUPS: {
+  id: BottomInfoGroupId;
+  label: string;
+  icon: "finance" | "industrial" | "operations";
+}[] = [
+  { id: "financeiro", label: "Financeiro", icon: "finance" },
+  { id: "industriais", label: "Industriais", icon: "industrial" },
+  { id: "operacoes", label: "Operações", icon: "operations" },
 ];
 
 const toolbarStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 6,
-  padding: "6px 12px",
-  background: "rgba(15, 23, 42, 0.85)",
-  borderTop: "1px solid rgba(255,255,255,0.08)",
-  borderBottom: "1px solid rgba(255,255,255,0.06)",
+  gap: 8,
+  padding: "0 12px",
+  background: "var(--viewer-toolbar-bg)",
+  borderTop: "1px solid var(--toolbar-border)",
+  borderBottom: "1px solid var(--toolbar-border)",
   flexShrink: 0,
-  minHeight: 40,
+  minHeight: 52,
+  height: 52,
   boxSizing: "border-box",
 };
 
@@ -93,15 +90,19 @@ const leftButtonsWrapStyle: React.CSSProperties = {
 };
 
 const buttonBaseStyle: React.CSSProperties = {
-  padding: "6px 12px",
-  border: "none",
-  borderRadius: 4,
+  padding: "8px 12px",
+  border: "1px solid var(--button-ghost-border)",
+  borderRadius: 6,
   fontSize: 12,
   fontWeight: 500,
   cursor: "pointer",
   color: "var(--text-main)",
-  background: "transparent",
+  background: "var(--button-ghost-bg)",
   whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  transition: "opacity 0.15s ease",
 };
 
 const componentsGroupStyle: React.CSSProperties = {
@@ -238,16 +239,6 @@ const piecePanelListStyle: React.CSSProperties = {
   gap: 6,
 };
 
-const groupLabelStyle: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
-  color: "var(--text-muted)",
-  marginRight: 4,
-  whiteSpace: "nowrap",
-};
-
 const badgeStyle: React.CSSProperties = {
   marginLeft: 6,
   padding: "1px 6px",
@@ -273,7 +264,6 @@ export default function BottomInfoToolbar() {
   const { actions, project, history } = useProject();
   const cutlistData = useCutlistData();
   const { materials } = useMaterials();
-  const { sending: enviandoFabrica, enviar: enviarParaFabrica } = useEnviarParaFabrica(project, materials);
   const pecasCount = useMemo(
     () => buildPecasTotaisRows(project, materials).reduce((s, r) => s + r.qtd, 0),
     [project, materials]
@@ -934,74 +924,43 @@ export default function BottomInfoToolbar() {
         style={toolbarStyle}
       >
         <div style={leftButtonsWrapStyle}>
-          <span style={groupLabelStyle}>A) Financeiro</span>
-          {FINANCIAL_PANELS.map(({ id, label }) => {
-            const isActive = openPanel === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                title={isActive ? `Fechar ${label}` : `Abrir ${label}`}
-                aria-label={isActive ? `Fechar ${label}` : `Abrir ${label}`}
-                aria-pressed={isActive}
-                onClick={() => togglePanel(id)}
-                style={{
-                  ...buttonBaseStyle,
-                  background: isActive ? "rgba(59, 130, 246, 0.25)" : "transparent",
-                  color: isActive ? "var(--text-main)" : "var(--text-muted)",
-                }}
-              >
-                {label}
-                {id === "resumo" ? <span style={badgeStyle}>{pecasCount}</span> : null}
-              </button>
-            );
-          })}
-
-          <span style={{ ...groupLabelStyle, marginLeft: 10 }}>B) Industriais</span>
-          {INDUSTRIAL_PANELS.map(({ id, label }) => {
+          {MAIN_TOOLBAR_GROUPS.map(({ id, label, icon }) => {
             const isActive = openPanel === id;
             const badge =
-              id === "pecasTotais"
+              id === "financeiro"
                 ? pecasCount
-                : id === "ferragensTotais"
-                  ? cutlistData.totalFerragensQty
-                  : id === "totais"
-                    ? cutlistData.totalPecas
+                : id === "industriais"
+                  ? cutlistData.totalPecas
+                  : id === "operacoes"
+                    ? Object.values(project.industrialOperacoes ?? {}).filter((o) => o?.completedAt).length
                     : null;
             return (
               <button
                 key={id}
                 type="button"
+                className="bottom-info-toolbar__main-btn"
                 title={isActive ? `Fechar ${label}` : `Abrir ${label}`}
                 aria-pressed={isActive}
                 onClick={() => togglePanel(id)}
                 style={{
                   ...buttonBaseStyle,
-                  background: isActive ? "rgba(59, 130, 246, 0.25)" : "transparent",
+                  background: isActive ? "var(--toolbar-pressed-bg)" : "var(--button-ghost-bg)",
+                  borderColor: isActive ? "var(--border-selected)" : "var(--button-ghost-border)",
                   color: isActive ? "var(--text-main)" : "var(--text-muted)",
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.8";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
               >
+                <IndustrialToolbarIcon name={icon} size={18} />
                 {label}
-                {badge != null ? <span style={badgeStyle}>{badge}</span> : null}
+                {badge != null && badge > 0 ? <span style={badgeStyle}>{badge}</span> : null}
               </button>
             );
           })}
-
-          <button
-            type="button"
-            title="Enviar ordem industrial para PIMO TRAK"
-            disabled={enviandoFabrica || (project.boxes ?? []).length === 0}
-            onClick={() => void enviarParaFabrica()}
-            style={{
-              ...buttonBaseStyle,
-              marginLeft: 8,
-              background: "rgba(34, 197, 94, 0.2)",
-              color: "#86efac",
-              opacity: enviandoFabrica || (project.boxes ?? []).length === 0 ? 0.5 : 1,
-            }}
-          >
-            {enviandoFabrica ? "A enviar…" : "Enviar para Fábrica"}
-          </button>
         </div>
 
         <div ref={componentsGroupRef} style={componentsGroupStyle}>

@@ -8,7 +8,7 @@ import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import { buildFerragensTotaisPdfData } from "../../core/industrial/industrialBottomSectionData";
 import { useCutlistData } from "../../hooks/useCutlistData";
 
-export default function FerragensTotaisPanel() {
+export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
   const { componentTypes } = useComponentTypes();
   const { ferragens } = useFerragens();
@@ -35,7 +35,7 @@ export default function FerragensTotaisPanel() {
   );
 
   return (
-    <Panel title="Ferragens totais">
+    <Panel title={embedded ? undefined : "Ferragens totais"}>
       <IndustrialPanelPdfActions onGeneratePdf={exportFerragensTotaisPdf} />
       <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
         Total de unidades: <strong style={{ color: "var(--text-main)" }}>{totalFerragensQty}</strong>
