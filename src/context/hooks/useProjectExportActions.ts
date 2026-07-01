@@ -10,7 +10,11 @@ import { getSettings } from "../../core/settings/settingsService";
 import type { ProjectState } from "../projectTypes";
 import { buildIndustrialFerragensForProject } from "../../core/industriais/buildIndustrialFerragensForProject";
 import { buildFerragensIndustriaisPdf } from "../../core/pdf/pdfFerragensIndustriais";
-import { industrialFerragensPdfFileName } from "../../core/fabrication/industrialProjectArtifacts";
+import {
+  industrialFerragensPdfFileName,
+  industrialFerragensXlsxFileName,
+} from "../../core/fabrication/industrialProjectArtifacts";
+import { buildFerragensIndustriaisXlsxBuffer } from "../../core/xlsx/xlsxFerragensIndustriais";
 
 export interface UseProjectExportActionsParams {
   projectRef: React.MutableRefObject<ProjectState>;
@@ -74,6 +78,8 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
         extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
         settings: getSettings(),
         pieceObservacoes: currentProject.pieceObservacoes ?? {},
+        remates: currentProject.remates ?? [],
+        rodapes: currentProject.rodapes ?? [],
       };
       const doc = await buildUnifiedPdf(pdfProject);
       doc.save(`${safeProjectName(projectName)}_completo.pdf`);
@@ -99,6 +105,36 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
       });
       const doc = buildFerragensIndustriaisPdf(data);
       doc.save(industrialFerragensPdfFileName(safeProjectName(projectName)));
+    }, [projectRef]),
+
+    exportarXlsxFerragensIndustriais: useCallback(async () => {
+      const currentProject = projectRef.current;
+      const boxesToExport = currentProject.boxes ?? [];
+      if (boxesToExport.length === 0) {
+        alert("Nenhuma caixa no projeto. Gere o design primeiro.");
+        return;
+      }
+      const projectName = currentProject.projectName?.trim() || "Projeto";
+      const data = buildIndustrialFerragensForProject({
+        projectName,
+        boxes: boxesToExport,
+        rules: currentProject.rules,
+        materialId: currentProject.materialId,
+        extractedPartsByBoxId: currentProject.extractedPartsByBoxId ?? {},
+        remates: currentProject.remates ?? [],
+        rodapes: currentProject.rodapes ?? [],
+        pieceObservacoes: currentProject.pieceObservacoes ?? {},
+      });
+      const buffer = await buildFerragensIndustriaisXlsxBuffer(data);
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = industrialFerragensXlsxFileName(safeProjectName(projectName));
+      a.click();
+      URL.revokeObjectURL(url);
     }, [projectRef]),
   };
 }

@@ -62,7 +62,17 @@ import { loadMcDimensionsConfig } from "../config/mcDimensionsConfig";
 import PiLoader from "../components/PiLoader/PiLoader";
 import { buildIndustrialFerragensForProject } from "../core/industriais/buildIndustrialFerragensForProject";
 import { buildFerragensIndustriaisPdf } from "../core/pdf/pdfFerragensIndustriais";
-import { industrialFerragensPdfFileName } from "../core/fabrication/industrialProjectArtifacts";
+import {
+  industrialFerragensPdfFileName,
+  industrialFerragensXlsxFileName,
+} from "../core/fabrication/industrialProjectArtifacts";
+import { buildFerragensIndustriaisXlsxBuffer } from "../core/xlsx/xlsxFerragensIndustriais";
+import {
+  assertIndustrialRequiredArtifactsComplete,
+  beginIndustrialRequiredArtifactTracking,
+  endIndustrialRequiredArtifactTracking,
+  IndustrialRequiredArtifactsMissingError,
+} from "../core/industrial/industrialOutputGuard";
 
 let cutLayoutLoaderRoot: Root | null = null;
 
@@ -228,6 +238,18 @@ function safeAddPdf(
   }
 }
 
+function safeAddXlsx(zip: JSZip, zipPath: string, buffer: ArrayBuffer | null | undefined): boolean {
+  if (!buffer || buffer.byteLength === 0) return false;
+  const safePath = sanitizeZipPath(zipPath);
+  if (!safePath) return false;
+  try {
+    zip.file(safePath, buffer);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function confirmIndustrialThicknessAdjustments(messageDetail: string): boolean {
   if (typeof window === "undefined" || typeof window.confirm !== "function") {
     return true;
@@ -270,6 +292,8 @@ export function useGerarArquivoHandlers() {
       extractedPartsByBoxId: project.extractedPartsByBoxId ?? {},
       settings: settings ?? undefined,
       pieceObservacoes: project.pieceObservacoes ?? {},
+      remates: project.remates ?? [],
+      rodapes: project.rodapes ?? [],
     }),
     [project, boxes, settings]
   );
@@ -374,6 +398,41 @@ export function useGerarArquivoHandlers() {
       showToast("PDF de ferragens industriais gerado.", "info");
     } catch (err) {
       toastExportError(showToast, err, "Erro ao gerar PDF de ferragens industriais");
+    } finally {
+      endIndustrialFileGeneration();
+    }
+  }, [hasBoxes, showToast, project, boxes, slug]);
+
+  const onFerragensIndustriaisXlsx = useCallback(async () => {
+    if (!hasBoxes) {
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
+      return;
+    }
+    beginIndustrialFileGeneration();
+    try {
+      const data = buildIndustrialFerragensForProject({
+        projectName: project.projectName,
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        pieceObservacoes: project.pieceObservacoes ?? {},
+      });
+      const buffer = await buildFerragensIndustriaisXlsxBuffer(data);
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = industrialFerragensXlsxFileName(slug);
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("XLSX de ferragens industriais gerado.", "info");
+    } catch (err) {
+      toastExportError(showToast, err, "Erro ao gerar XLSX de ferragens industriais");
     } finally {
       endIndustrialFileGeneration();
     }
@@ -840,7 +899,8 @@ export function useGerarArquivoHandlers() {
       const proj = pdfProject();
       const tcnManifestFiles: Array<{ path: string; content: string }> = [];
       let abortFullExport = false;
-
+      beginIndustrialRequiredArtifactTracking();
+      try {
       // --- Snapshot final → cache PROJETOS (antes de PDFs/ZIP) ---
       try {
         const currentUser = getCurrentProjectUser();
@@ -952,10 +1012,22 @@ export function useGerarArquivoHandlers() {
         if (!safeAddPdf(zip, industrialFerragensPdfFileName(safeSlug), docFerragens)) {
           errors.push({ step: "PDF Ferragens Industriais", message: "Documento ou blob inválido." });
         }
+        const xlsxBuffer = await buildFerragensIndustriaisXlsxBuffer(ferragensData);
+        if (!safeAddXlsx(zip, industrialFerragensXlsxFileName(safeSlug), xlsxBuffer)) {
+          errors.push({ step: "XLSX Ferragens Industriais", message: "Ficheiro XLSX inválido." });
+        }
+        assertIndustrialRequiredArtifactsComplete();
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push({ step: "PDF Ferragens Industriais", message: msg });
-        devLogger.error("Full export: PDF Ferragens Industriais", err);
+        if (err instanceof IndustrialRequiredArtifactsMissingError) {
+          errors.push({
+            step: "Ferragens Industriais",
+            message: `Artefactos obrigatórios em falta: ${err.missing.join(", ")}`,
+          });
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push({ step: "Ferragens Industriais", message: msg });
+        }
+        devLogger.error("Full export: Ferragens Industriais", err);
       }
 
       // --- Nesting por espessura (fonte única CNC para Layout PRO + Etiquetas + TCN) ---
@@ -1123,6 +1195,7 @@ export function useGerarArquivoHandlers() {
       // --- Gerar e descarregar ZIP ---
       if (!abortFullExport) {
         try {
+          assertIndustrialRequiredArtifactsComplete();
           const blob = await zip.generateAsync({ type: "blob" });
           if (!blob || blob.size === 0) {
             errors.push({ step: "ZIP", message: "ZIP gerado está vazio ou inválido." });
@@ -1135,8 +1208,15 @@ export function useGerarArquivoHandlers() {
             URL.revokeObjectURL(url);
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          errors.push({ step: "ZIP (generateAsync)", message: msg });
+          if (err instanceof IndustrialRequiredArtifactsMissingError) {
+            errors.push({
+              step: "ZIP",
+              message: `Artefactos industriais obrigatórios em falta: ${err.missing.join(", ")}`,
+            });
+          } else {
+            const msg = err instanceof Error ? err.message : String(err);
+            errors.push({ step: "ZIP (generateAsync)", message: msg });
+          }
           devLogger.error("Full export: zip.generateAsync", err);
         }
       }
@@ -1151,6 +1231,9 @@ export function useGerarArquivoHandlers() {
         if (redirectProjectPagePath && typeof window !== "undefined") {
           window.location.href = redirectProjectPagePath;
         }
+      }
+      } finally {
+        endIndustrialRequiredArtifactTracking();
       }
       }));
     } catch (err) {
@@ -1183,6 +1266,7 @@ export function useGerarArquivoHandlers() {
     onCutlist,
     onUnificado,
     onFerragensIndustriais,
+    onFerragensIndustriaisXlsx,
     onAmbos,
     onArquivoCompleto,
     onLayoutCorte,

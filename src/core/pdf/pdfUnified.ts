@@ -9,6 +9,10 @@ import { gerarPdfTecnicoCompleto } from "./gerarPdfTecnico";
 import { buildCutlistPdf, type ProjectForPdf } from "./pdfCutlist";
 import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildIndustrialFerragensForProject } from "../industriais/buildIndustrialFerragensForProject";
+import { appendFerragensIndustriaisSection } from "./pdfFerragensIndustriais";
+import type { RematePiece } from "../remate/rematePieceTypes";
+import type { ProjectRodape } from "../rodape/rodapeTypes";
 import {
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
@@ -16,7 +20,10 @@ import {
 import { formatCurrency } from "../../utils/formatting";
 
 /** Alias ao `ProjectForPdf` da cutlist (inclui extractedPartsByBoxId e precomputedItems). */
-export type ProjectForPdfWithExtracted = ProjectForPdf;
+export type ProjectForPdfWithExtracted = ProjectForPdf & {
+  remates?: RematePiece[];
+  rodapes?: ProjectRodape[];
+};
 
 const MARGIN = 14;
 const HEADER_COLOR: [number, number, number] = [15, 23, 42];
@@ -134,6 +141,23 @@ function addFerragensDetalhadoSection(doc: jsPDF, project: ProjectForPdfWithExtr
   });
 }
 
+function addFerragensIndustriaisResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void {
+  const data = buildIndustrialFerragensForProject({
+    projectName: project.projectName,
+    boxes: project.boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    pieceObservacoes: project.pieceObservacoes,
+  });
+  appendFerragensIndustriaisSection(doc, data, {
+    includePageBreak: true,
+    includeHeader: true,
+  });
+}
+
 function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void {
   doc.addPage("a4", "portrait");
   let y = MARGIN;
@@ -209,6 +233,7 @@ export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Prom
   addGavetasSection(doc, project);
   addFerragensSection(doc, project);
   addFerragensDetalhadoSection(doc, project);
+  addFerragensIndustriaisResumoSection(doc, project);
   addTotaisEResumoSection(doc, project);
   return doc;
 }

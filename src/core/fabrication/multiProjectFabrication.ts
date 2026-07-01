@@ -51,7 +51,17 @@ import {
 import { measureTime } from "../../utils/measureTime";
 import { buildIndustrialFerragensForProject } from "../industriais/buildIndustrialFerragensForProject";
 import { buildFerragensIndustriaisPdf } from "../pdf/pdfFerragensIndustriais";
-import { industrialFerragensPdfFileName } from "./industrialProjectArtifacts";
+import { buildFerragensIndustriaisXlsxBuffer } from "../xlsx/xlsxFerragensIndustriais";
+import {
+  industrialFerragensPdfFileName,
+  industrialFerragensXlsxFileName,
+} from "./industrialProjectArtifacts";
+import {
+  assertIndustrialRequiredArtifactsComplete,
+  beginIndustrialRequiredArtifactTracking,
+  endIndustrialRequiredArtifactTracking,
+  resetIndustrialRequiredArtifacts,
+} from "../industrial/industrialOutputGuard";
 
 export interface GeneratedFabricationPackage {
   zipBlob: Blob;
@@ -169,6 +179,18 @@ function safeAddPdf(
     const blob = pdfToBlob(doc);
     if (!blob || blob.size === 0) return false;
     zip.file(safePath, blob);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeAddXlsx(zip: JSZip, zipPath: string, buffer: ArrayBuffer | null | undefined): boolean {
+  if (!buffer || buffer.byteLength === 0) return false;
+  const safePath = sanitizeZipPath(zipPath);
+  if (!safePath) return false;
+  try {
+    zip.file(safePath, buffer);
     return true;
   } catch {
     return false;
@@ -470,6 +492,7 @@ export async function generateMultiProjectFabrication(
   const folderNamesUsed = new Set<string>();
   let tcnFilesAdded = 0;
   const tcnManifestFiles: Array<{ path: string; content: string }> = [];
+  beginIndustrialRequiredArtifactTracking();
 
   if (globalThicknessBundles.length > 0) {
     try {
@@ -553,6 +576,8 @@ export async function generateMultiProjectFabrication(
       const docUnificado = await buildUnifiedPdf({
         ...proj,
         precomputedItems: projDisplayItems,
+        remates: entry.state.remates ?? [],
+        rodapes: entry.state.rodapes ?? [],
       });
       safeAddPdf(zip, `${basePath}/unificado.pdf`, docUnificado);
     } catch (err) {
@@ -560,6 +585,7 @@ export async function generateMultiProjectFabrication(
     }
 
     try {
+      resetIndustrialRequiredArtifacts();
       const ferragensData = buildIndustrialFerragensForProject({
         projectName: proj.projectName,
         boxes: proj.boxes,
@@ -572,8 +598,12 @@ export async function generateMultiProjectFabrication(
       });
       const docFerragens = buildFerragensIndustriaisPdf(ferragensData);
       safeAddPdf(zip, `${basePath}/${industrialFerragensPdfFileName(folder)}`, docFerragens);
+      const xlsxBuffer = await buildFerragensIndustriaisXlsxBuffer(ferragensData);
+      safeAddXlsx(zip, `${basePath}/${industrialFerragensXlsxFileName(folder)}`, xlsxBuffer);
+      assertIndustrialRequiredArtifactsComplete();
     } catch (err) {
-      devLogger.error("multiProjectFabrication: ferragens PDF", err);
+      devLogger.error("multiProjectFabrication: ferragens PDF/XLSX", err);
+      throw err;
     }
 
     // Etiquetas com numeração global e nome do projeto original
@@ -776,5 +806,6 @@ export async function generateMultiProjectFabrication(
     });
   } finally {
     endIndustrialFileGeneration();
+    endIndustrialRequiredArtifactTracking();
   }
 }

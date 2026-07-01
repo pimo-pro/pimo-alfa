@@ -1,12 +1,20 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { ProjectIndustrialFerragens } from "../industriais/buildIndustrialFerragensForProject";
+import {
+  assertIndustrialOutputAuthorized,
+  registerIndustrialRequiredArtifact,
+} from "../industrial/industrialOutputGuard";
 import { formatIndustrialDesignDate } from "./pdfIndustrialListShell";
 
 const MARGIN = 14;
 const FONT_SIZE = 11;
 const LINE_HEIGHT_FACTOR = 1.2;
 const GRID_COLOR: [number, number, number] = [0, 0, 0];
+
+const FERRAGENS_TABLE_HEAD = [
+  ["Caixa", "Peça", "Ferragem", "Qtd", "Material", "Código Industrial", "ShortCode", "Observações"],
+];
 
 function formatGeneratedDate(iso: string): string {
   const d = new Date(iso);
@@ -18,47 +26,31 @@ function formatGeneratedDate(iso: string): string {
   });
 }
 
-export function buildFerragensIndustriaisPdf(data: ProjectIndustrialFerragens): jsPDF {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  let y = MARGIN;
+function ferragensTableBody(data: ProjectIndustrialFerragens): string[][] {
+  if (data.rows.length === 0) {
+    return [["—", "—", "Sem ferragens", "0", "—", "—", "—", "—"]];
+  }
+  return data.rows.map((r) => [
+    r.caixa,
+    r.peca,
+    r.ferragem,
+    String(r.qtd),
+    r.material,
+    r.codigoIndustrial,
+    r.shortCode,
+    r.observacoes,
+  ]);
+}
 
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("Ferragens Industriais — Resumo Geral", MARGIN, y);
-  y += 8;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(FONT_SIZE);
-  const lineStep = (FONT_SIZE * LINE_HEIGHT_FACTOR * 25.4) / 72;
-  doc.text(`Projeto: ${data.projectName}`, MARGIN, y);
-  y += lineStep;
-  doc.text(`Código: ${data.projectCode}`, MARGIN, y);
-  y += lineStep;
-  doc.text(`Data: ${formatGeneratedDate(data.generatedAt)}`, MARGIN, y);
-  y += lineStep * 1.2;
-
-  const head = [
-    ["Caixa", "Peça", "Ferragem", "Qtd", "Material", "Código Industrial", "ShortCode", "Observações"],
-  ];
-  const body =
-    data.rows.length > 0
-      ? data.rows.map((r) => [
-          r.caixa,
-          r.peca,
-          r.ferragem,
-          String(r.qtd),
-          r.material,
-          r.codigoIndustrial,
-          r.shortCode,
-          r.observacoes,
-        ])
-      : [["—", "—", "Sem ferragens", "0", "—", "—", "—", "—"]];
-
+function drawFerragensIndustriaisTable(
+  doc: jsPDF,
+  data: ProjectIndustrialFerragens,
+  startY: number
+): void {
   autoTable(doc, {
-    head,
-    body,
-    startY: y,
+    head: FERRAGENS_TABLE_HEAD,
+    body: ferragensTableBody(data),
+    startY,
     styles: {
       font: "helvetica",
       fontSize: FONT_SIZE,
@@ -78,6 +70,57 @@ export function buildFerragensIndustriaisPdf(data: ProjectIndustrialFerragens): 
     margin: { left: MARGIN, right: MARGIN },
     theme: "grid",
   });
+}
 
+export type FerragensIndustriaisPdfSectionOptions = {
+  includePageBreak?: boolean;
+  includeHeader?: boolean;
+};
+
+/** Desenha secção de ferragens industriais num documento existente (ex.: PDF unificado). */
+export function appendFerragensIndustriaisSection(
+  doc: jsPDF,
+  data: ProjectIndustrialFerragens,
+  options?: FerragensIndustriaisPdfSectionOptions
+): void {
+  const includePageBreak = options?.includePageBreak ?? true;
+  const includeHeader = options?.includeHeader ?? true;
+
+  if (includePageBreak) {
+    doc.addPage("a4", "portrait");
+  }
+
+  let y = MARGIN;
+  doc.setTextColor(0, 0, 0);
+
+  if (includeHeader) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("Ferragens Industriais — Resumo Geral", MARGIN, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(FONT_SIZE);
+    const lineStep = (FONT_SIZE * LINE_HEIGHT_FACTOR * 25.4) / 72;
+    doc.text(`Projeto: ${data.projectName}`, MARGIN, y);
+    y += lineStep;
+    doc.text(`Código: ${data.projectCode}`, MARGIN, y);
+    y += lineStep;
+    doc.text(`Data: ${formatGeneratedDate(data.generatedAt)}`, MARGIN, y);
+    y += lineStep * 1.2;
+  }
+
+  drawFerragensIndustriaisTable(doc, data, y);
+}
+
+export function buildFerragensIndustriaisPdf(data: ProjectIndustrialFerragens): jsPDF {
+  assertIndustrialOutputAuthorized("pdf-ferragens-industriais");
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  appendFerragensIndustriaisSection(doc, data, {
+    includePageBreak: false,
+    includeHeader: true,
+  });
+  registerIndustrialRequiredArtifact("pdf-ferragens-industriais");
   return doc;
 }

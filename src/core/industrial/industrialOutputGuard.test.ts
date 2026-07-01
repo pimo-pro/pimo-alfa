@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   __disableIndustrialOutputTestBypass,
   assertIndustrialOutputAuthorized,
+  assertIndustrialRequiredArtifactsComplete,
+  beginIndustrialRequiredArtifactTracking,
+  endIndustrialRequiredArtifactTracking,
   IndustrialOutputBlockedError,
+  IndustrialRequiredArtifactsMissingError,
+  registerIndustrialRequiredArtifact,
   withIndustrialOutputAuthorization,
   beginIndustrialOutputSession,
   endIndustrialOutputSession,
@@ -50,5 +55,23 @@ describe("industrialOutputGuard", () => {
       assertIndustrialOutputAuthorized("tcn");
     });
     expect(() => assertIndustrialOutputAuthorized("txml")).toThrow(IndustrialOutputBlockedError);
+  });
+
+  it("bloqueia saída industrial se faltarem artefactos obrigatórios de ferragens", () => {
+    __disableIndustrialOutputTestBypass(true);
+    beginIndustrialRequiredArtifactTracking();
+    try {
+      expect(() => assertIndustrialRequiredArtifactsComplete()).toThrow(
+        IndustrialRequiredArtifactsMissingError
+      );
+      registerIndustrialRequiredArtifact("pdf-ferragens-industriais");
+      expect(() => assertIndustrialRequiredArtifactsComplete()).toThrow(
+        IndustrialRequiredArtifactsMissingError
+      );
+      registerIndustrialRequiredArtifact("xlsx-ferragens-industriais");
+      expect(() => assertIndustrialRequiredArtifactsComplete()).not.toThrow();
+    } finally {
+      endIndustrialRequiredArtifactTracking();
+    }
   });
 });

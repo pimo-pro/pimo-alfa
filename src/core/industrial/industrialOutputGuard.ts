@@ -10,7 +10,28 @@ export type IndustrialOutputKind =
   | "txml"
   | "pdf-layout-pro"
   | "pdf-cutlist"
-  | "pdf-etiquetas";
+  | "pdf-etiquetas"
+  | "pdf-ferragens-industriais"
+  | "xlsx-ferragens-industriais";
+
+export type IndustrialRequiredArtifactKind =
+  | "pdf-ferragens-industriais"
+  | "xlsx-ferragens-industriais";
+
+export const INDUSTRIAL_REQUIRED_ARTIFACT_KINDS: readonly IndustrialRequiredArtifactKind[] = [
+  "pdf-ferragens-industriais",
+  "xlsx-ferragens-industriais",
+] as const;
+
+const ALL_OUTPUT_KINDS: IndustrialOutputKind[] = [
+  "tcn",
+  "txml",
+  "pdf-layout-pro",
+  "pdf-cutlist",
+  "pdf-etiquetas",
+  "pdf-ferragens-industriais",
+  "xlsx-ferragens-industriais",
+];
 
 export class IndustrialOutputBlockedError extends Error {
   readonly kind: IndustrialOutputKind;
@@ -21,6 +42,18 @@ export class IndustrialOutputBlockedError extends Error {
     );
     this.name = "IndustrialOutputBlockedError";
     this.kind = kind;
+  }
+}
+
+export class IndustrialRequiredArtifactsMissingError extends Error {
+  readonly missing: IndustrialRequiredArtifactKind[];
+
+  constructor(missing: IndustrialRequiredArtifactKind[]) {
+    super(
+      `Saída industrial bloqueada: artefactos obrigatórios em falta (${missing.join(", ")}).`
+    );
+    this.name = "IndustrialRequiredArtifactsMissingError";
+    this.missing = missing;
   }
 }
 
@@ -35,11 +68,16 @@ export const INDUSTRIAL_LOCKED_GENERATOR_PATHS = [
   "src/core/cutlayout/cutLayoutPdf.ts",
   "src/core/pdf/pdfCutlist.ts",
   "src/core/pdf/pdfEtiquetas.ts",
+  "src/core/pdf/pdfFerragensIndustriais.ts",
+  "src/core/xlsx/xlsxFerragensIndustriais.ts",
 ] as const;
 
 let authorizationDepth = 0;
 const authorizedKinds = new Set<IndustrialOutputKind>();
 let sessionDepth = 0;
+
+let requiredArtifactTrackingDepth = 0;
+const registeredRequiredArtifacts = new Set<IndustrialRequiredArtifactKind>();
 
 let testBypassDisabled = false;
 
@@ -69,6 +107,40 @@ export function isIndustrialOutputSessionActive(): boolean {
   return sessionDepth > 0;
 }
 
+export function beginIndustrialRequiredArtifactTracking(): void {
+  requiredArtifactTrackingDepth += 1;
+  registeredRequiredArtifacts.clear();
+}
+
+export function endIndustrialRequiredArtifactTracking(): void {
+  requiredArtifactTrackingDepth = Math.max(0, requiredArtifactTrackingDepth - 1);
+  if (requiredArtifactTrackingDepth === 0) {
+    registeredRequiredArtifacts.clear();
+  }
+}
+
+export function resetIndustrialRequiredArtifacts(): void {
+  if (requiredArtifactTrackingDepth > 0) {
+    registeredRequiredArtifacts.clear();
+  }
+}
+
+export function registerIndustrialRequiredArtifact(kind: IndustrialRequiredArtifactKind): void {
+  if (requiredArtifactTrackingDepth > 0) {
+    registeredRequiredArtifacts.add(kind);
+  }
+}
+
+export function assertIndustrialRequiredArtifactsComplete(): void {
+  if (requiredArtifactTrackingDepth <= 0) return;
+  const missing = INDUSTRIAL_REQUIRED_ARTIFACT_KINDS.filter(
+    (kind) => !registeredRequiredArtifacts.has(kind)
+  );
+  if (missing.length > 0) {
+    throw new IndustrialRequiredArtifactsMissingError(missing);
+  }
+}
+
 export function isIndustrialOutputAuthorized(kind: IndustrialOutputKind): boolean {
   if (isTestEnvironment()) return true;
   if (authorizationDepth <= 0) return false;
@@ -84,6 +156,13 @@ export function assertIndustrialOutputAuthorized(kind: IndustrialOutputKind): vo
 
 export type IndustrialOutputAuthorizationScope = IndustrialOutputKind | IndustrialOutputKind[] | "all";
 
+function resolveAuthorizationKinds(
+  scope: IndustrialOutputAuthorizationScope
+): IndustrialOutputKind[] {
+  if (scope === "all") return [...ALL_OUTPUT_KINDS];
+  return Array.isArray(scope) ? scope : [scope];
+}
+
 /**
  * Autoriza exportações industriais durante a execução de um handler explícito do utilizador.
  */
@@ -92,12 +171,7 @@ export function withIndustrialOutputAuthorization<T>(
   fn: () => T
 ): T {
   authorizationDepth += 1;
-  const kindsToAdd =
-    scope === "all"
-      ? (["tcn", "txml", "pdf-layout-pro", "pdf-cutlist", "pdf-etiquetas"] as IndustrialOutputKind[])
-      : Array.isArray(scope)
-        ? scope
-        : [scope];
+  const kindsToAdd = resolveAuthorizationKinds(scope);
 
   for (const kind of kindsToAdd) {
     authorizedKinds.add(kind);
@@ -118,12 +192,7 @@ export async function withIndustrialOutputAuthorizationAsync<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   authorizationDepth += 1;
-  const kindsToAdd =
-    scope === "all"
-      ? (["tcn", "txml", "pdf-layout-pro", "pdf-cutlist", "pdf-etiquetas"] as IndustrialOutputKind[])
-      : Array.isArray(scope)
-        ? scope
-        : [scope];
+  const kindsToAdd = resolveAuthorizationKinds(scope);
 
   for (const kind of kindsToAdd) {
     authorizedKinds.add(kind);

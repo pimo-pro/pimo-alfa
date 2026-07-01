@@ -19,9 +19,11 @@ import { applyResultados } from "@/context/projectState";
 import { reviveState } from "@/context/projectPersistence";
 import { buildIndustrialFerragensForProject } from "@/core/industriais/buildIndustrialFerragensForProject";
 import { buildFerragensIndustriaisPdf } from "@/core/pdf/pdfFerragensIndustriais";
+import { buildFerragensIndustriaisXlsxBuffer } from "@/core/xlsx/xlsxFerragensIndustriais";
 import {
   INDUSTRIAL_PROJECT_ARTIFACTS,
   industrialFerragensPdfFileName,
+  industrialFerragensXlsxFileName,
 } from "@/core/fabrication/industrialProjectArtifacts";
 
 type Props = {
@@ -55,6 +57,7 @@ export default function ProjetosIndustrialPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadingFerragens, setDownloadingFerragens] = useState(false);
+  const [downloadingFerragensXlsx, setDownloadingFerragensXlsx] = useState(false);
 
   const reload = async () => {
     if (!ref?.projectId) return;
@@ -140,6 +143,45 @@ export default function ProjetosIndustrialPanel({
     }
   };
 
+  const handleDownloadFerragensXlsx = async () => {
+    if (!snapshot) return;
+    setDownloadingFerragensXlsx(true);
+    setError(null);
+    try {
+      const revived = reviveState(snapshot.snapshot?.projectState);
+      if (!revived) throw new Error("Snapshot do projeto indisponível.");
+      const state = applyResultados(revived);
+      const boxes = state.boxes ?? [];
+      if (boxes.length === 0) throw new Error("Projeto sem caixas para exportar ferragens.");
+      const projectName = state.projectName?.trim() || ref.projectName || "Projeto";
+      const data = buildIndustrialFerragensForProject({
+        projectName,
+        boxes,
+        rules: state.rules,
+        materialId: state.materialId,
+        extractedPartsByBoxId: state.extractedPartsByBoxId,
+        remates: state.remates ?? [],
+        rodapes: state.rodapes ?? [],
+        pieceObservacoes: state.pieceObservacoes ?? {},
+      });
+      const buffer = await buildFerragensIndustriaisXlsxBuffer(data);
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = industrialFerragensXlsxFileName(projectName);
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage("XLSX de ferragens industriais descarregado.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao gerar XLSX de ferragens");
+    } finally {
+      setDownloadingFerragensXlsx(false);
+    }
+  };
+
   if (!ref) return null;
 
   return (
@@ -220,6 +262,14 @@ export default function ProjetosIndustrialPanel({
               style={{ width: "100%", marginTop: 10, fontSize: 12 }}
             >
               {downloadingFerragens ? "A gerar…" : "Descarregar ferragens (PDF)"}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!snapshot || downloadingFerragensXlsx}
+              onClick={() => void handleDownloadFerragensXlsx()}
+              style={{ width: "100%", marginTop: 8, fontSize: 12 }}
+            >
+              {downloadingFerragensXlsx ? "A gerar…" : "Descarregar ferragens (XLSX)"}
             </Button>
           </section>
         ) : null}
