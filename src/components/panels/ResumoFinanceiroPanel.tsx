@@ -1,11 +1,12 @@
-/**
- * Painel Resumo Financeiro do Projeto.
- * Conteúdo extraído do antigo BottomPanel; exibido no overlay da BottomInfoToolbar.
- */
-
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useProject } from "../../context/useProject";
+import { useMaterials } from "../../hooks/useMaterials";
+import { useAuth } from "../../auth/useAuth";
+import { hasFullAccess } from "../../auth/rbac";
+import { canShowSectionPrices } from "../../admin/industrialSectionsConfig";
 import Panel from "../ui/Panel";
+import IndustrialPanelPdfActions from "./IndustrialPanelPdfActions";
+import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import {
   cutlistComPrecoFromBoxes,
   ferragensFromBoxes,
@@ -17,16 +18,23 @@ import {
 import {
   CHAPA_PADRAO_LARGURA,
   CHAPA_PADRAO_ALTURA,
-  DENSIDADE_PADRAO,
 } from "../../core/manufacturing/materials";
-import { useMaterials } from "../../hooks/useMaterials";
+import { buildPecasTotaisRows } from "../../core/industrial/industrialBottomSectionData";
 import { formatCurrency } from "../../utils/formatting";
+import { useBottomInfo } from "../../context/BottomInfoContext";
 
 const microTextStyle: React.CSSProperties = { fontSize: 12, lineHeight: 1.4, color: "var(--text-muted)" };
 
 export default function ResumoFinanceiroPanel() {
   const { project } = useProject();
   const { materials } = useMaterials();
+  const { hasPermission } = useAuth();
+  const isAdmin = hasFullAccess(hasPermission);
+  const showPrices = canShowSectionPrices("resumoFinanceiro", isAdmin);
+  const { exportResumoFinanceiroPdf } = useIndustrialBottomPdf();
+  const { togglePanel } = useBottomInfo();
+  const [showPecasList, setShowPecasList] = useState(false);
+
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const cutlist = useMemo(
     () => cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId, project.projectName),
@@ -34,76 +42,52 @@ export default function ResumoFinanceiroPanel() {
   );
   const ferragens = useMemo(() => ferragensFromBoxes(boxes, project.rules), [boxes, project.rules]);
   const totalPecas = cutlist.reduce((sum, item) => sum + item.quantidade, 0);
-  const totalFerragens = ferragens.reduce((sum, a) => sum + a.quantidade, 0);
-  const totalItens = totalPecas + totalFerragens;
-  const custoPecas = cutlist.length > 0 ? calcularPrecoTotalPecas(cutlist) : null;
-  const custoFerragens =
-    ferragens.length > 0 ? ferragens.reduce((s, a) => s + a.precoTotal, 0) : null;
-  const custoMateriais =
-    custoPecas != null && custoFerragens != null
-      ? custoPecas + custoFerragens
-      : custoPecas ?? custoFerragens ?? null;
-  const precoTotal =
-    custoPecas != null && custoFerragens != null
-      ? calcularPrecoTotalProjeto(custoPecas + custoFerragens)
-      : null;
-  const precoPorPeca = precoTotal != null && totalPecas > 0 ? precoTotal / totalPecas : null;
-  const custoMontagem =
-    precoTotal != null && custoPecas != null && custoFerragens != null
-      ? precoTotal - (custoPecas + custoFerragens)
-      : null;
-  const precoPorCaixa = precoTotal != null && boxes.length > 0 ? precoTotal / boxes.length : null;
+  const pecasRows = useMemo(() => buildPecasTotaisRows(project, materials), [project, materials]);
 
-  const areaTotalMm2 = useMemo(() => {
-    return cutlist.reduce((sum, item) => {
-      const largura = item.dimensoes?.largura ?? 0;
-      const altura = item.dimensoes?.altura ?? 0;
-      const qty = item.quantidade;
-      return sum + largura * altura * qty;
-    }, 0);
-  }, [cutlist]);
-  const areaTotalM2 = areaTotalMm2 / 1_000_000;
+  const precoTotal = useMemo(() => {
+    if (!showPrices) return null;
+    const custoPecas = cutlist.length > 0 ? calcularPrecoTotalPecas(cutlist) : 0;
+    const custoFerragens = ferragens.reduce((s, a) => s + (a.precoTotal ?? 0), 0);
+    return calcularPrecoTotalProjeto(custoPecas + custoFerragens);
+  }, [showPrices, cutlist, ferragens]);
 
   const pesoTotalKg = useMemo(() => {
-    return cutlist.reduce((sum, item) => {
-      const largura = item.dimensoes?.largura ?? 0;
-      const altura = item.dimensoes?.altura ?? 0;
-      const espessura = item.espessura ?? item.dimensoes?.profundidade ?? 18;
-      const qty = item.quantidade;
-      const mat = materials.find((m) => m.nome === item.material);
-      const densidade = mat?.densidade ?? DENSIDADE_PADRAO;
-      const volumeM3 = (largura * altura * espessura * qty) / 1_000_000_000;
-      return sum + volumeM3 * densidade;
-    }, 0);
-  }, [cutlist, materials]);
+    return pecasRows.reduce((s, r) => s + r.pesoKg, 0);
+  }, [pecasRows]);
 
-  const areaChapaMm2 = CHAPA_PADRAO_LARGURA * CHAPA_PADRAO_ALTURA;
-  const numeroChapas = areaTotalMm2 > 0 ? Math.ceil(areaTotalMm2 / areaChapaMm2) : 0;
+  const areaTotalM2 = useMemo(() => {
+    return cutlist.reduce((s, i) => s + (i.dimensoes?.largura ?? 0) * (i.dimensoes?.altura ?? 0) * i.quantidade, 0) / 1_000_000;
+  }, [cutlist]);
+
+  const numeroChapas = useMemo(() => {
+    const areaMm2 = areaTotalM2 * 1_000_000;
+    return areaMm2 > 0 ? Math.ceil(areaMm2 / (CHAPA_PADRAO_LARGURA * CHAPA_PADRAO_ALTURA)) : 0;
+  }, [areaTotalM2]);
 
   return (
-    <Panel title="Resumo Financeiro do Projeto">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "4px 0" }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-main)", marginBottom: 2 }}>
-          Quantidades
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
+    <Panel title="Resumo Financeiro">
+      <IndustrialPanelPdfActions onGeneratePdf={exportResumoFinanceiroPdf} disabled={boxes.length === 0} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button
+          type="button"
+          className="button button-ghost"
+          style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: 12 }}
+          onClick={() => setShowPecasList((v) => !v)}
+        >
           <span>Peças totais</span>
-          <span style={{ color: "var(--text-main)" }}>{totalPecas}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Ferragens totais</span>
-          <span style={{ color: "var(--text-main)" }}>{totalFerragens}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Total de itens</span>
-          <span style={{ color: "var(--text-main)" }}>{totalItens}</span>
-        </div>
+          <span style={{ fontWeight: 700, color: "var(--blue-light)" }}>{totalPecas}</span>
+        </button>
 
-        <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0 2px 0" }} />
+        {showPecasList ? (
+          <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 8 }}>
+            {pecasRows.map((row) => (
+              <div key={`${row.caixa}-${row.tipo}-${row.dimensoes}`} style={{ fontSize: 11, marginBottom: 6, color: "var(--text-muted)" }}>
+                <strong style={{ color: "var(--text-main)" }}>{row.caixa}</strong> — {row.categoria} / {row.tipo} — {row.dimensoes} ×{row.qtd}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-main)", marginBottom: 2 }}>
-          Materiais
-        </div>
         <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
           <span>Área total</span>
           <span style={{ color: "var(--text-main)" }}>{areaTotalM2.toFixed(3)} m²</span>
@@ -117,53 +101,18 @@ export default function ResumoFinanceiroPanel() {
           <span style={{ color: "var(--text-main)" }}>{numeroChapas}</span>
         </div>
 
-        <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0 2px 0" }} />
+        {showPrices ? (
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 8 }}>
+            <span>Total geral</span>
+            <span style={{ color: "var(--blue-light)" }}>{formatCurrency(precoTotal)}</span>
+          </div>
+        ) : (
+          <p style={{ ...microTextStyle, marginTop: 8 }}>Preços visíveis apenas para administradores.</p>
+        )}
 
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-main)", marginBottom: 2 }}>
-          Custos
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Materiais</span>
-          <span style={{ color: "var(--text-main)" }}>
-            {formatCurrency(custoMateriais)}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Peças</span>
-          <span style={{ color: "var(--text-main)" }}>
-            {formatCurrency(custoPecas)}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Ferragens</span>
-          <span style={{ color: "var(--text-main)" }}>
-            {formatCurrency(custoFerragens)}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Montagem</span>
-          <span style={{ color: "var(--text-main)" }}>
-            {formatCurrency(custoMontagem)}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
-          <span style={{ color: "var(--text-main)" }}>Total geral</span>
-          <span style={{ color: "var(--blue-light)" }}>
-            {formatCurrency(precoTotal)}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Preço por peça</span>
-          <span style={{ color: "var(--text-main)" }}>
-            {formatCurrency(precoPorPeca)}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Preço por caixa</span>
-          <span style={{ color: "var(--text-main)" }}>
-            {formatCurrency(precoPorCaixa)}
-          </span>
-        </div>
+        <button type="button" className="button button-secondary" style={{ marginTop: 8 }} onClick={() => togglePanel("pecasTotais")}>
+          Abrir Peças totais
+        </button>
       </div>
     </Panel>
   );

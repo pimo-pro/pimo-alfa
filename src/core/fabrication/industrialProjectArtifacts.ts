@@ -14,6 +14,22 @@ export function industrialFerragensXlsxFileName(projectNameOrSlug: string): stri
   return `${sanitizeIndustrialSlug(projectNameOrSlug)}_industrial_ferragens.xlsx`;
 }
 
+export function resumoFinanceiroIndustrialFileName(projectNameOrSlug: string): string {
+  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_resumo_financeiro.pdf`;
+}
+
+export function pecasTotaisIndustrialFileName(projectNameOrSlug: string): string {
+  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_pecas_totais.pdf`;
+}
+
+export function ferragensTotaisIndustrialFileName(projectNameOrSlug: string): string {
+  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_ferragens_totais.pdf`;
+}
+
+export function totaisProjetoIndustrialFileName(projectNameOrSlug: string): string {
+  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_totais_projeto.pdf`;
+}
+
 export type IndustrialProjectArtifact = {
   id: string;
   label: string;
@@ -26,6 +42,10 @@ export const INDUSTRIAL_PROJECT_ARTIFACTS: readonly IndustrialProjectArtifact[] 
   { id: "cutlist", label: "Cutlist", filename: "{slug}_cutlist.pdf" },
   { id: "tecnico", label: "PDF Técnico", filename: "{slug}_tecnico.pdf" },
   { id: "unificado", label: "Arquivo Unificado", filename: "{slug}_unificado.pdf" },
+  { id: "resumo-financeiro", label: "Resumo Financeiro", filename: "{slug}_resumo_financeiro.pdf" },
+  { id: "pecas-totais", label: "Peças totais", filename: "{slug}_pecas_totais.pdf" },
+  { id: "ferragens-totais", label: "Ferragens totais", filename: "{slug}_ferragens_totais.pdf" },
+  { id: "totais-projeto", label: "Totais do Projeto", filename: "{slug}_totais_projeto.pdf" },
   {
     id: "ferragens-pdf",
     label: "Ferragens Industriais (PDF)",
@@ -37,7 +57,7 @@ export const INDUSTRIAL_PROJECT_ARTIFACTS: readonly IndustrialProjectArtifact[] 
     id: "ferragens-xlsx",
     label: "Ferragens Industriais (XLSX)",
     filename: "{slug}_industrial_ferragens.xlsx",
-    description: "Versão para armazém — mesmas colunas do PDF",
+    description: "Versão para armazém",
     downloadable: true,
   },
   { id: "etiquetas", label: "Etiquetas", filename: "cnc/{espessura}/etiquetas_{espessura}.pdf" },

@@ -17,6 +17,7 @@ import { DoorRulesAdminPage } from "../admin/rules/doorRules/DoorRulesAdminPage"
 import AdminRulesPage from "../components/admin/AdminRulesPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
 import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
+import IndustrialSectionsAdminPage from "../components/admin/IndustrialSectionsAdminPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
@@ -45,6 +46,7 @@ type AdminTab =
   | "Configuração de Etiquetas (v5)"
   | "Dimensões Técnicas (MC Overlay)"
   | "Projetos Salvos"
+  | "Secções Industriais (Viewer)"
   | "icons";
 
 type AdminMenuEntry =
@@ -80,6 +82,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Configuração de Etiquetas (v5)", label: "Configuração de Etiquetas (v5)", adminOnly: true },
   { type: "item", id: "Dimensões Técnicas (MC Overlay)", label: "Dimensões Técnicas (MC Overlay)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
+  { type: "item", id: "Secções Industriais (Viewer)", label: "Secções Industriais (Viewer)" },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
   { type: "group", label: "Sistema" },
@@ -104,6 +107,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Configuração de Etiquetas (v5)": "adminTag",
   "Dimensões Técnicas (MC Overlay)": "adminRuler",
   "Projetos Salvos": "adminSave",
+  "Secções Industriais (Viewer)": "adminChecklist",
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
   icons: "projects",
@@ -315,6 +319,8 @@ export default function AdminPanel() {
             )
           ) : active === "Projetos Salvos" ? (
             <SavedProjectsAdminPage />
+          ) : active === "Secções Industriais (Viewer)" ? (
+            <IndustrialSectionsAdminPage />
           ) : active === "Painel Referência" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <PainelReferencia />

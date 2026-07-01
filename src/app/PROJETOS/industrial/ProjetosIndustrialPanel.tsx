@@ -25,6 +25,11 @@ import {
   industrialFerragensPdfFileName,
   industrialFerragensXlsxFileName,
 } from "@/core/fabrication/industrialProjectArtifacts";
+import { buildBottomSectionPdfs } from "@/core/fabrication/industrialBottomSectionExports";
+import { listIndustrialMaterialsSnapshot } from "@/core/materials/service";
+import { COMPONENT_TYPES_DEFAULT, type ComponentType } from "@/core/components/componentTypes";
+import { FERRAGENS_DEFAULT, type Ferragem } from "@/core/ferragens/ferragens";
+import { safeGetItem } from "@/utils/storage";
 
 type Props = {
   snapshot: SavedProjectRecord | null;
@@ -58,6 +63,29 @@ export default function ProjetosIndustrialPanel({
   const [error, setError] = useState<string | null>(null);
   const [downloadingFerragens, setDownloadingFerragens] = useState(false);
   const [downloadingFerragensXlsx, setDownloadingFerragensXlsx] = useState(false);
+  const [downloadingSecoes, setDownloadingSecoes] = useState(false);
+
+  const loadComponentTypes = (): ComponentType[] => {
+    const raw = safeGetItem("pimo_component_types");
+    if (!raw) return COMPONENT_TYPES_DEFAULT;
+    try {
+      const parsed = JSON.parse(raw) as ComponentType[];
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : COMPONENT_TYPES_DEFAULT;
+    } catch {
+      return COMPONENT_TYPES_DEFAULT;
+    }
+  };
+
+  const loadFerragens = (): Ferragem[] => {
+    const raw = safeGetItem("pimo_ferragens");
+    if (!raw) return FERRAGENS_DEFAULT;
+    try {
+      const parsed = JSON.parse(raw) as Ferragem[];
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : FERRAGENS_DEFAULT;
+    } catch {
+      return FERRAGENS_DEFAULT;
+    }
+  };
 
   const reload = async () => {
     if (!ref?.projectId) return;
@@ -182,6 +210,50 @@ export default function ProjetosIndustrialPanel({
     }
   };
 
+  const handleDownloadSecoesIndustriais = async () => {
+    if (!snapshot) return;
+    setDownloadingSecoes(true);
+    setError(null);
+    try {
+      const revived = reviveState(snapshot.snapshot?.projectState);
+      if (!revived) throw new Error("Snapshot do projeto indisponível.");
+      const state = applyResultados(revived);
+      const boxes = state.boxes ?? [];
+      if (boxes.length === 0) throw new Error("Projeto sem caixas para exportar secções industriais.");
+      const projectName = state.projectName?.trim() || ref.projectName || "Projeto";
+      const bottomPdfs = buildBottomSectionPdfs({
+        project: {
+          projectName,
+          boxes,
+          rules: state.rules,
+          materialId: state.materialId,
+          extractedPartsByBoxId: state.extractedPartsByBoxId,
+          remates: state.remates ?? [],
+          rodapes: state.rodapes ?? [],
+          pieceObservacoes: state.pieceObservacoes ?? {},
+        },
+        materials: listIndustrialMaterialsSnapshot(),
+        componentTypes: loadComponentTypes(),
+        ferragens: loadFerragens(),
+        showPrices: false,
+      });
+      const entries = [
+        [bottomPdfs.fileNames.resumoFinanceiro, bottomPdfs.resumoFinanceiro],
+        [bottomPdfs.fileNames.pecasTotais, bottomPdfs.pecasTotais],
+        [bottomPdfs.fileNames.ferragensTotais, bottomPdfs.ferragensTotais],
+        [bottomPdfs.fileNames.totaisProjeto, bottomPdfs.totaisProjeto],
+      ] as const;
+      for (const [fileName, doc] of entries) {
+        doc.save(fileName);
+      }
+      setMessage("PDFs das secções industriais descarregados.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao gerar PDFs das secções");
+    } finally {
+      setDownloadingSecoes(false);
+    }
+  };
+
   if (!ref) return null;
 
   return (
@@ -255,6 +327,14 @@ export default function ProjetosIndustrialPanel({
                 </li>
               ))}
             </ul>
+            <Button
+              variant="secondary"
+              disabled={!snapshot || downloadingSecoes}
+              onClick={() => void handleDownloadSecoesIndustriais()}
+              style={{ width: "100%", marginTop: 8, fontSize: 12 }}
+            >
+              {downloadingSecoes ? "A gerar…" : "Descarregar secções industriais (4 PDFs)"}
+            </Button>
             <Button
               variant="secondary"
               disabled={!snapshot || downloadingFerragens}

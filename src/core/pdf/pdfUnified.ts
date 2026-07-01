@@ -11,8 +11,15 @@ import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { buildIndustrialFerragensForProject } from "../industriais/buildIndustrialFerragensForProject";
 import { appendFerragensIndustriaisSection } from "./pdfFerragensIndustriais";
+import { appendResumoFinanceiroSection } from "./pdfResumoFinanceiro";
+import { appendPecasTotaisSection } from "./pdfPecasTotais";
+import { appendFerragensTotaisSection } from "./pdfFerragensTotais";
+import { appendTotaisProjetoSection, type TotaisProjetoPdfExtras } from "./pdfTotaisProjeto";
 import type { RematePiece } from "../remate/rematePieceTypes";
 import type { ProjectRodape } from "../rodape/rodapeTypes";
+import type { MaterialIndustrial } from "../manufacturing/materials";
+import type { ComponentType } from "../components/componentTypes";
+import type { Ferragem } from "../ferragens/ferragens";
 import {
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
@@ -23,6 +30,14 @@ import { formatCurrency } from "../../utils/formatting";
 export type ProjectForPdfWithExtracted = ProjectForPdf & {
   remates?: RematePiece[];
   rodapes?: ProjectRodape[];
+};
+
+export type UnifiedPdfIndustrialContext = {
+  materials: MaterialIndustrial[];
+  componentTypes: ComponentType[];
+  ferragens: Ferragem[];
+  showPrices?: boolean;
+  totaisExtras?: TotaisProjetoPdfExtras;
 };
 
 const MARGIN = 14;
@@ -220,7 +235,10 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
  * Gera PDF unificado: Técnico + Cutlist + Painéis + Portas (se existir) + Gavetas (se existir)
  * + Ferragens Industriais + Totais e Resumo Financeiro.
  */
-export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Promise<jsPDF> {
+export async function buildUnifiedPdf(
+  project: ProjectForPdfWithExtracted,
+  industrial?: UnifiedPdfIndustrialContext
+): Promise<jsPDF> {
   const doc = gerarPdfTecnicoCompleto(project.boxes, project.rules, project.projectName, {
     materialId: project.materialId,
     extractedPartsByBoxId: project.extractedPartsByBoxId,
@@ -229,11 +247,63 @@ export async function buildUnifiedPdf(project: ProjectForPdfWithExtracted): Prom
   });
   await buildCutlistPdf(project, doc);
   addPainéisSection(doc, project);
-  addPortasSection(doc, project);
-  addGavetasSection(doc, project);
-  addFerragensSection(doc, project);
-  addFerragensDetalhadoSection(doc, project);
-  addFerragensIndustriaisResumoSection(doc, project);
-  addTotaisEResumoSection(doc, project);
+
+  if (industrial) {
+    appendResumoFinanceiroSection(
+      doc,
+      project.boxes,
+      project.rules,
+      project.materialId,
+      project.projectName,
+      industrial.materials,
+      industrial.showPrices ?? false
+    );
+    appendPecasTotaisSection(
+      doc,
+      {
+        boxes: project.boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+      },
+      industrial.materials
+    );
+    appendFerragensTotaisSection(
+      doc,
+      {
+        boxes: project.boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        pieceObservacoes: project.pieceObservacoes ?? {},
+      },
+      industrial.componentTypes,
+      industrial.ferragens
+    );
+    addFerragensIndustriaisResumoSection(doc, project);
+    appendTotaisProjetoSection(
+      doc,
+      project.boxes,
+      project.rules,
+      project.materialId,
+      project.projectName,
+      industrial.materials,
+      industrial.showPrices ?? false,
+      industrial.totaisExtras
+    );
+  } else {
+    addPortasSection(doc, project);
+    addGavetasSection(doc, project);
+    addFerragensSection(doc, project);
+    addFerragensDetalhadoSection(doc, project);
+    addFerragensIndustriaisResumoSection(doc, project);
+    addTotaisEResumoSection(doc, project);
+  }
   return doc;
 }

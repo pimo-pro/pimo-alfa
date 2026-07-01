@@ -1,17 +1,14 @@
 /**
  * Overlay de painéis de informação acima da BottomInfoToolbar.
- * Renderiza o painel ativo (Resumo, Cutlist, Portas, etc.) numa área com scroll;
- * não aumenta a altura da página — sobrepõe a área de design.
  */
 
 import { useRef, useEffect } from "react";
 import { useBottomInfo, type BottomInfoPanelId } from "../../../context/BottomInfoContext";
 import ResumoFinanceiroPanel from "../../panels/ResumoFinanceiroPanel";
-import CutlistPanel from "../../panels/CutlistPanel";
-import PortasPanel from "../../panels/PortasPanel";
-import FerragensPanel from "../../panels/FerragensPanel";
-import FerragensDetalhadoPanel from "../../panels/FerragensDetalhadoPanel";
+import PecasTotaisPanel from "../../panels/PecasTotaisPanel";
+import FerragensTotaisPanel from "../../panels/FerragensTotaisPanel";
 import TotaisProjetoPanel from "../../panels/TotaisProjetoPanel";
+import PainelResumoIndustriais from "../../panels/painelResumoIndustriais";
 
 const overlayStyle: React.CSSProperties = {
   position: "absolute",
@@ -57,16 +54,14 @@ function PanelContent({ panelId }: { panelId: Exclude<BottomInfoPanelId, null> }
   switch (panelId) {
     case "resumo":
       return <ResumoFinanceiroPanel />;
-    case "cutlist":
-      return <CutlistPanel />;
-    case "portas":
-      return <PortasPanel />;
-    case "ferragens":
-      return <FerragensPanel />;
-    case "ferragensDetalhado":
-      return <FerragensDetalhadoPanel />;
+    case "pecasTotais":
+      return <PecasTotaisPanel />;
+    case "ferragensTotais":
+      return <FerragensTotaisPanel />;
     case "totais":
       return <TotaisProjetoPanel />;
+    case "resumoIndustriais":
+      return <PainelResumoIndustriais />;
     default:
       return null;
   }
@@ -97,14 +92,6 @@ export default function BottomInfoPanelsOverlay() {
         aria-label="Fechar painel"
         onClick={() => setOpenPanel(null)}
         style={closeButtonStyle}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-          e.currentTarget.style.color = "var(--text-main)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-          e.currentTarget.style.color = "var(--text-muted)";
-        }}
       >
         ×
       </button>

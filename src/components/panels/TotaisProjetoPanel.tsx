@@ -1,94 +1,70 @@
-/**
- * Painel focado em Totais do Projeto (project.boxes).
- * Conteúdo extraído do CutlistPanel; exibido no overlay da BottomInfoToolbar.
- */
-
+import { useMemo } from "react";
+import { useProject } from "../../context/useProject";
+import { useMaterials } from "../../hooks/useMaterials";
+import { useAuth } from "../../auth/useAuth";
+import { hasFullAccess } from "../../auth/rbac";
+import { canShowSectionPrices } from "../../admin/industrialSectionsConfig";
 import Panel from "../ui/Panel";
+import IndustrialPanelPdfActions from "./IndustrialPanelPdfActions";
+import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import { useCutlistData } from "../../hooks/useCutlistData";
+import {
+  CHAPA_PADRAO_LARGURA,
+  CHAPA_PADRAO_ALTURA,
+} from "../../core/manufacturing/materials";
+import { buildPecasTotaisRows } from "../../core/industrial/industrialBottomSectionData";
 import { formatCurrency } from "../../utils/formatting";
 
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 700,
-  color: "var(--text-main)",
-  marginBottom: 8,
-};
-const totalValueStyle: React.CSSProperties = {
-  color: "rgba(74, 222, 128, 0.9)",
-  textAlign: "right",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-};
-
 export default function TotaisProjetoPanel() {
-  const {
-    boxes,
-    totalAreaM2,
-    totalPecas,
-    totalFerragensQty,
-    custoTotalPaineis,
-    custoTotalPortas,
-    custoTotalGavetas,
-    custoTotalFerragens,
-    totalOrlaMetros,
-    custoTotalOrla,
-    custoTotalRemates,
-    custoTotal,
-  } = useCutlistData();
+  const { project } = useProject();
+  const { materials } = useMaterials();
+  const { hasPermission } = useAuth();
+  const isAdmin = hasFullAccess(hasPermission);
+  const showPrices = canShowSectionPrices("totaisProjeto", isAdmin);
+  const { exportTotaisProjetoPdf } = useIndustrialBottomPdf();
+  const data = useCutlistData();
+  const pecasRows = useMemo(() => buildPecasTotaisRows(project, materials), [project, materials]);
+  const pesoTotalKg = pecasRows.reduce((s, r) => s + r.pesoKg, 0);
+  const numeroChapas =
+    data.totalAreaMm2 > 0
+      ? Math.ceil(data.totalAreaMm2 / (CHAPA_PADRAO_LARGURA * CHAPA_PADRAO_ALTURA))
+      : 0;
 
-  if (boxes.length === 0) {
+  if (data.boxes.length === 0) {
     return (
       <Panel title="Totais do Projeto">
-        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          Adicione caixas para visualizar totais.
-        </div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Adicione caixas para visualizar totais.</div>
       </Panel>
     );
   }
 
   return (
     <Panel title="Totais do Projeto (project.boxes)">
-      <div
-        style={{
-          fontSize: 12,
-          color: "var(--text-main)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}
-      >
-        <div style={{ ...sectionTitleStyle, marginBottom: 4 }}>Totais do Projeto (project.boxes)</div>
-        <div>Área total de painéis: {totalAreaM2.toFixed(3)} m²</div>
-        <div>Quantidade total de peças: {totalPecas}</div>
-        <div>Quantidade total de ferragens: {totalFerragensQty}</div>
-        <div>Total de orla usada: {totalOrlaMetros.toFixed(2)} m</div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Custo total de painéis:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotalPaineis)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Custo total de portas:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotalPortas)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Custo total de gavetas:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotalGavetas)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Custo total de ferragens:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotalFerragens)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Custo total de orla:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotalOrla)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Custo total de remates:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotalRemates)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
-          <span>Custo total do projeto:</span>
-          <span style={totalValueStyle}>{formatCurrency(custoTotal)}</span>
-        </div>
+      <IndustrialPanelPdfActions onGeneratePdf={exportTotaisProjetoPdf} />
+      <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div>Caixas: {data.boxes.length}</div>
+        <div>Total de itens (peças): {data.totalPecas}</div>
+        <div>Ferragens: {data.totalFerragensQty}</div>
+        <div>Área total: {data.totalAreaM2.toFixed(3)} m²</div>
+        <div>Peso total: {pesoTotalKg.toFixed(2)} kg</div>
+        <div>Nº de chapas (estimado): {numeroChapas}</div>
+        <div>Orla total: {data.totalOrlaMetros.toFixed(2)} m</div>
+        {showPrices ? (
+          <>
+            <div style={{ marginTop: 8, fontWeight: 700 }}>Custos</div>
+            <div>Painéis: {formatCurrency(data.custoTotalPaineis)}</div>
+            <div>Portas: {formatCurrency(data.custoTotalPortas)}</div>
+            <div>Gavetas: {formatCurrency(data.custoTotalGavetas)}</div>
+            <div>Ferragens: {formatCurrency(data.custoTotalFerragens)}</div>
+            <div>Orla: {formatCurrency(data.custoTotalOrla)}</div>
+            <div>Remates: {formatCurrency(data.custoTotalRemates)}</div>
+            <div style={{ fontWeight: 700, color: "var(--blue-light)" }}>
+              Total: {formatCurrency(data.custoTotal)}
+            </div>
+          </>
+        ) : (
+          <p style={{ color: "var(--text-muted)", marginTop: 8 }}>Preços visíveis apenas para administradores.</p>
+        )}
       </div>
     </Panel>
   );

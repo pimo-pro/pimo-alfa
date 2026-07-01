@@ -7,6 +7,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useProject } from "../../context/useProject";
 import { useGerarArquivoHandlers } from "../../hooks/useGerarArquivoHandlers";
+import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import { wrapArquivoCompletoWithSgpi } from "../../industrial/sgpi/industrialExportBridge";
 import {
   useSendProjectPackage,
@@ -134,6 +135,20 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
     onArquivosCnc,
   } = useGerarArquivoHandlers();
 
+  const {
+    exportResumoFinanceiroPdf,
+    exportPecasTotaisPdf,
+    exportFerragensTotaisPdf,
+    exportTotaisProjetoPdf,
+  } = useIndustrialBottomPdf();
+
+  const onSecoesIndustriaisPdfs = () => {
+    exportResumoFinanceiroPdf();
+    exportPecasTotaisPdf();
+    exportFerragensTotaisPdf();
+    exportTotaisProjetoPdf();
+  };
+
   const [packageExpanded, setPackageExpanded] = useState(false);
 
   const onArquivoCompletoWithSgpi = useMemo(
@@ -217,7 +232,11 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
           {/* ── SECÇÃO 1: Gerar arquivo ── */}
           <div>
             <h3 style={sectionTitle}>Gerar arquivo</h3>
-            <p style={sectionMeta}>Exportações a partir do estado atual do projeto.</p>
+            <p style={sectionMeta}>
+              Exportações a partir do estado atual do projeto. Os PDFs das secções industriais (resumo
+              financeiro, peças, ferragens e totais) estão incluídos no arquivo completo e na barra inferior
+              do Viewer.
+            </p>
             <div
               style={{
                 display: "grid",
@@ -258,6 +277,12 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
               <ExportRow
                 label="Ferragens XLSX"
                 onClick={wrap(onFerragensIndustriaisXlsx)}
+                disabled={!hasBoxes}
+                icon={<Icon name="adminChecklist" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Secções Industriais (4 PDFs)"
+                onClick={wrap(onSecoesIndustriaisPdfs)}
                 disabled={!hasBoxes}
                 icon={<Icon name="adminChecklist" size={18} aria-hidden />}
               />

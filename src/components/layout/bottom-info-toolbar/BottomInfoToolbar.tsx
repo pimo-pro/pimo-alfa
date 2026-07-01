@@ -13,6 +13,9 @@ import { Icon } from "@/components/icons";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 import { hasObservacoes } from "../../../core/observacoes/ObservacoesService";
 import PieceObservacoesOverlay from "../overlays/PieceObservacoesOverlay";
+import { useCutlistData } from "../../../hooks/useCutlistData";
+import { buildPecasTotaisRows } from "../../../core/industrial/industrialBottomSectionData";
+import { useMaterials } from "../../../hooks/useMaterials";
 
 type HistoryFilter = "all" | "move" | "resize" | "add" | "remove" | "height" | "other";
 
@@ -54,13 +57,15 @@ const panelKeyByType = {
   back: "costa",
 } as const;
 
-const PANELS: { id: Exclude<BottomInfoPanelId, null>; label: string }[] = [
+const FINANCIAL_PANELS: { id: Exclude<BottomInfoPanelId, null>; label: string }[] = [
   { id: "resumo", label: "Resumo Financeiro" },
-  { id: "cutlist", label: "Cutlist Industrial" },
-  { id: "portas", label: "Portas" },
-  { id: "ferragens", label: "Ferragens Industriais" },
-  { id: "ferragensDetalhado", label: "Ferragens Detalhado" },
+];
+
+const INDUSTRIAL_PANELS: { id: Exclude<BottomInfoPanelId, null>; label: string }[] = [
+  { id: "pecasTotais", label: "Peças totais" },
+  { id: "ferragensTotais", label: "Ferragens totais" },
   { id: "totais", label: "Totais do Projeto" },
+  { id: "resumoIndustriais", label: "Resumo Industriais" },
 ];
 
 const toolbarStyle: React.CSSProperties = {
@@ -229,6 +234,26 @@ const piecePanelListStyle: React.CSSProperties = {
   gap: 6,
 };
 
+const groupLabelStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  color: "var(--text-muted)",
+  marginRight: 4,
+  whiteSpace: "nowrap",
+};
+
+const badgeStyle: React.CSSProperties = {
+  marginLeft: 6,
+  padding: "1px 6px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 700,
+  background: "rgba(59, 130, 246, 0.25)",
+  color: "var(--text-main)",
+};
+
 const piecePanelHeaderButtonStyle: React.CSSProperties = {
   border: "none",
   background: "transparent",
@@ -242,6 +267,12 @@ const piecePanelHeaderButtonStyle: React.CSSProperties = {
 export default function BottomInfoToolbar() {
   const { openPanel, togglePanel } = useBottomInfo();
   const { actions, project, history } = useProject();
+  const cutlistData = useCutlistData();
+  const { materials } = useMaterials();
+  const pecasCount = useMemo(
+    () => buildPecasTotaisRows(project, materials).reduce((s, r) => s + r.qtd, 0),
+    [project, materials]
+  );
   const [componentsPopoverOpen, setComponentsPopoverOpen] = useState(false);
   const [componentsPanelOpen, setComponentsPanelOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
@@ -898,7 +929,8 @@ export default function BottomInfoToolbar() {
         style={toolbarStyle}
       >
         <div style={leftButtonsWrapStyle}>
-          {PANELS.map(({ id, label }) => {
+          <span style={groupLabelStyle}>A) Financeiro</span>
+          {FINANCIAL_PANELS.map(({ id, label }) => {
             const isActive = openPanel === id;
             return (
               <button
@@ -913,15 +945,39 @@ export default function BottomInfoToolbar() {
                   background: isActive ? "rgba(59, 130, 246, 0.25)" : "transparent",
                   color: isActive ? "var(--text-main)" : "var(--text-muted)",
                 }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                  else e.currentTarget.style.background = "rgba(59, 130, 246, 0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = isActive ? "rgba(59, 130, 246, 0.25)" : "transparent";
+              >
+                {label}
+                {id === "resumo" ? <span style={badgeStyle}>{pecasCount}</span> : null}
+              </button>
+            );
+          })}
+
+          <span style={{ ...groupLabelStyle, marginLeft: 10 }}>B) Industriais</span>
+          {INDUSTRIAL_PANELS.map(({ id, label }) => {
+            const isActive = openPanel === id;
+            const badge =
+              id === "pecasTotais"
+                ? pecasCount
+                : id === "ferragensTotais"
+                  ? cutlistData.totalFerragensQty
+                  : id === "totais"
+                    ? cutlistData.totalPecas
+                    : null;
+            return (
+              <button
+                key={id}
+                type="button"
+                title={isActive ? `Fechar ${label}` : `Abrir ${label}`}
+                aria-pressed={isActive}
+                onClick={() => togglePanel(id)}
+                style={{
+                  ...buttonBaseStyle,
+                  background: isActive ? "rgba(59, 130, 246, 0.25)" : "transparent",
+                  color: isActive ? "var(--text-main)" : "var(--text-muted)",
                 }}
               >
                 {label}
+                {badge != null ? <span style={badgeStyle}>{badge}</span> : null}
               </button>
             );
           })}

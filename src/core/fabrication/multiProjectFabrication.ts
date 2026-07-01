@@ -34,7 +34,7 @@ import {
 } from "./industrialPerThicknessPipeline";
 import { buildDrillFilesForProject } from "../drill/drillExport";
 import { getSettings } from "../settings/settingsService";
-import { listMaterials } from "../materials/service";
+import { listMaterials, listIndustrialMaterialsSnapshot } from "../materials/service";
 import { buildIndustrialManifest } from "./industrialManifest";
 import { sanitizeZipPath } from "../../utils/sanitization";
 import { devLogger } from "../../utils/devLogger";
@@ -56,6 +56,10 @@ import {
   industrialFerragensPdfFileName,
   industrialFerragensXlsxFileName,
 } from "./industrialProjectArtifacts";
+import { buildBottomSectionPdfs } from "./industrialBottomSectionExports";
+import { COMPONENT_TYPES_DEFAULT, type ComponentType } from "../components/componentTypes";
+import { FERRAGENS_DEFAULT, type Ferragem } from "../ferragens/ferragens";
+import { safeGetItem } from "../../utils/storage";
 import {
   assertIndustrialRequiredArtifactsComplete,
   beginIndustrialRequiredArtifactTracking,
@@ -86,6 +90,28 @@ export type MultiProjectFabricationOptions = {
   /** Fonte opcional de medidas MC (viewer). Se omitido, MC não é gerado. */
   mcDimensionsViewer?: McDimensionsViewerSource;
 };
+
+function loadExportComponentTypes(): ComponentType[] {
+  const raw = safeGetItem("pimo_component_types");
+  if (!raw) return COMPONENT_TYPES_DEFAULT;
+  try {
+    const parsed = JSON.parse(raw) as ComponentType[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : COMPONENT_TYPES_DEFAULT;
+  } catch {
+    return COMPONENT_TYPES_DEFAULT;
+  }
+}
+
+function loadExportFerragens(): Ferragem[] {
+  const raw = safeGetItem("pimo_ferragens");
+  if (!raw) return FERRAGENS_DEFAULT;
+  try {
+    const parsed = JSON.parse(raw) as Ferragem[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : FERRAGENS_DEFAULT;
+  } catch {
+    return FERRAGENS_DEFAULT;
+  }
+}
 
 function pdfToBlob(doc: { output: (_type: string) => ArrayBuffer | Uint8Array }): Blob {
   const arr = doc.output("arraybuffer");
@@ -372,6 +398,9 @@ export async function generateMultiProjectFabrication(
   const tcnSuffix = tcnMethodSuffix(getSettings()?.cnc?.tcnMetodo);
   const settingsSnapshot = getSettings();
   const materialsSnapshot = listMaterials();
+  const industrialMaterialsSnapshot = listIndustrialMaterialsSnapshot();
+  const exportComponentTypes = loadExportComponentTypes();
+  const exportFerragens = loadExportFerragens();
 
   type LoadedEntry = {
     state: ProjectState;
@@ -573,12 +602,20 @@ export async function generateMultiProjectFabrication(
 
     // PDF Unificado (inalterado)
     try {
-      const docUnificado = await buildUnifiedPdf({
-        ...proj,
-        precomputedItems: projDisplayItems,
-        remates: entry.state.remates ?? [],
-        rodapes: entry.state.rodapes ?? [],
-      });
+      const docUnificado = await buildUnifiedPdf(
+        {
+          ...proj,
+          precomputedItems: projDisplayItems,
+          remates: entry.state.remates ?? [],
+          rodapes: entry.state.rodapes ?? [],
+        },
+        {
+          materials: industrialMaterialsSnapshot,
+          componentTypes: exportComponentTypes,
+          ferragens: exportFerragens,
+          showPrices: false,
+        }
+      );
       safeAddPdf(zip, `${basePath}/unificado.pdf`, docUnificado);
     } catch (err) {
       devLogger.error("multiProjectFabrication: unificado PDF", err);
@@ -601,6 +638,27 @@ export async function generateMultiProjectFabrication(
       const xlsxBuffer = await buildFerragensIndustriaisXlsxBuffer(ferragensData);
       safeAddXlsx(zip, `${basePath}/${industrialFerragensXlsxFileName(folder)}`, xlsxBuffer);
       assertIndustrialRequiredArtifactsComplete();
+
+      const bottomPdfs = buildBottomSectionPdfs({
+        project: {
+          projectName: proj.projectName,
+          boxes: proj.boxes,
+          rules: proj.rules,
+          materialId: proj.materialId,
+          extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
+          remates: entry.state.remates ?? [],
+          rodapes: entry.state.rodapes ?? [],
+          pieceObservacoes: proj.pieceObservacoes,
+        },
+        materials: industrialMaterialsSnapshot,
+        componentTypes: exportComponentTypes,
+        ferragens: exportFerragens,
+        showPrices: false,
+      });
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.resumoFinanceiro}`, bottomPdfs.resumoFinanceiro);
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.pecasTotais}`, bottomPdfs.pecasTotais);
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.ferragensTotais}`, bottomPdfs.ferragensTotais);
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.totaisProjeto}`, bottomPdfs.totaisProjeto);
     } catch (err) {
       devLogger.error("multiProjectFabrication: ferragens PDF/XLSX", err);
       throw err;

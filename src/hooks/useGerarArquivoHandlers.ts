@@ -14,7 +14,7 @@ import {
   uploadProjectThumbnail,
 } from "../core/projects/projectThumbnail";
 import { getSettings } from "../core/settings/settingsService";
-import { listMaterials } from "../core/materials/service";
+import { listMaterials, listIndustrialMaterialsSnapshot } from "../core/materials/service";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
 import {
   terminateIndustrialWorker,
@@ -29,7 +29,14 @@ import { useToast } from "../context/ToastContext";
 import { useSettings } from "../context/SettingsContext";
 import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
-import { buildUnifiedPdf } from "../core/pdf/pdfUnified";
+import { buildUnifiedPdf, type UnifiedPdfIndustrialContext } from "../core/pdf/pdfUnified";
+import { buildBottomSectionPdfs } from "../core/fabrication/industrialBottomSectionExports";
+import { enviarParaFabrica } from "../core/fabrication/enviarParaFabrica";
+import { useComponentTypes } from "./useComponentTypes";
+import { useFerragens } from "./useFerragens";
+import { useAuth } from "../auth/useAuth";
+import { hasFullAccess } from "../auth/rbac";
+import { canShowSectionPrices } from "../admin/industrialSectionsConfig";
 import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import type { CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutListItemComPreco } from "../core/types";
@@ -268,6 +275,10 @@ export function useGerarArquivoHandlers() {
   const { project, viewerSync } = useProject();
   const { settings } = useSettings();
   const { showToast } = useToast();
+  const { componentTypes } = useComponentTypes();
+  const { ferragens } = useFerragens();
+  const { hasPermission } = useAuth();
+  const isAdmin = hasFullAccess(hasPermission);
   const abortIndustrialLayoutRef = useRef(false);
   const [layoutProgress, setLayoutProgress] = useState<LayoutProgressState>({
     visible: false,
@@ -297,6 +308,15 @@ export function useGerarArquivoHandlers() {
     }),
     [project, boxes, settings]
   );
+
+  const unifiedIndustrialContext = useCallback((): UnifiedPdfIndustrialContext => {
+    return {
+      materials: listIndustrialMaterialsSnapshot(),
+      componentTypes,
+      ferragens,
+      showPrices: canShowSectionPrices("resumoFinanceiro", isAdmin),
+    };
+  }, [componentTypes, ferragens, isAdmin]);
 
   const prepareItemsForCnc = useCallback(
     <T extends CutlistItemForPieces>(items: T[], materialsSnapshot: ReturnType<typeof listMaterials>): T[] | null => {
@@ -366,7 +386,7 @@ export function useGerarArquivoHandlers() {
     }
     beginIndustrialFileGeneration();
     try {
-      const doc = await buildUnifiedPdf(pdfProject());
+      const doc = await buildUnifiedPdf(pdfProject(), unifiedIndustrialContext());
       doc.save(`${slug}_unificado.pdf`);
     } catch (err) {
       devLogger.error("Erro ao gerar PDF unificado:", err);
@@ -455,7 +475,7 @@ export function useGerarArquivoHandlers() {
         pieceObservacoes: proj.pieceObservacoes,
       });
       docTecnico.save(`${slug}_tecnico.pdf`);
-      const docUnificado = await buildUnifiedPdf(proj);
+      const docUnificado = await buildUnifiedPdf(proj, unifiedIndustrialContext());
       docUnificado.save(`${slug}_unificado.pdf`);
       showToast("Cutlist, PDF Técnico e Unificado gerados.", "info");
     } catch (err) {
@@ -986,7 +1006,7 @@ export function useGerarArquivoHandlers() {
 
       // --- Unificado ---
       try {
-        const docUnificado = await buildUnifiedPdf(proj);
+        const docUnificado = await buildUnifiedPdf(proj, unifiedIndustrialContext());
         if (!safeAddPdf(zip, `${safeSlug}_unificado.pdf`, docUnificado)) {
           errors.push({ step: "PDF Unificado", message: "Documento ou blob inválido." });
         }
@@ -1028,6 +1048,41 @@ export function useGerarArquivoHandlers() {
           errors.push({ step: "Ferragens Industriais", message: msg });
         }
         devLogger.error("Full export: Ferragens Industriais", err);
+      }
+
+      // --- PDFs industriais por secção (BottomInfoToolbar) ---
+      try {
+        const bottomPdfs = buildBottomSectionPdfs({
+          project: {
+            projectName: proj.projectName,
+            boxes: proj.boxes,
+            rules: proj.rules,
+            materialId: proj.materialId,
+            extractedPartsByBoxId: proj.extractedPartsByBoxId,
+            remates: project.remates ?? [],
+            rodapes: project.rodapes ?? [],
+            pieceObservacoes: proj.pieceObservacoes,
+          },
+          materials: listIndustrialMaterialsSnapshot(),
+          componentTypes,
+          ferragens,
+          showPrices: canShowSectionPrices("resumoFinanceiro", isAdmin),
+        });
+        const bottomEntries: Array<[string, ReturnType<typeof buildFerragensIndustriaisPdf>]> = [
+          [bottomPdfs.fileNames.resumoFinanceiro, bottomPdfs.resumoFinanceiro],
+          [bottomPdfs.fileNames.pecasTotais, bottomPdfs.pecasTotais],
+          [bottomPdfs.fileNames.ferragensTotais, bottomPdfs.ferragensTotais],
+          [bottomPdfs.fileNames.totaisProjeto, bottomPdfs.totaisProjeto],
+        ];
+        for (const [name, doc] of bottomEntries) {
+          if (!safeAddPdf(zip, name, doc)) {
+            errors.push({ step: `PDF ${name}`, message: "Documento inválido." });
+          }
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push({ step: "PDFs secções industriais", message: msg });
+        devLogger.error("Full export: PDFs secções industriais", err);
       }
 
       // --- Nesting por espessura (fonte única CNC para Layout PRO + Etiquetas + TCN) ---
@@ -1196,6 +1251,10 @@ export function useGerarArquivoHandlers() {
       if (!abortFullExport) {
         try {
           assertIndustrialRequiredArtifactsComplete();
+          const fabricaCheck = enviarParaFabrica(proj.projectName ?? safeSlug, Object.keys(zip.files));
+          if (!fabricaCheck.ok) {
+            devLogger.warn("enviarParaFabrica: artefactos em falta", fabricaCheck.missing);
+          }
           const blob = await zip.generateAsync({ type: "blob" });
           if (!blob || blob.size === 0) {
             errors.push({ step: "ZIP", message: "ZIP gerado está vazio ou inválido." });

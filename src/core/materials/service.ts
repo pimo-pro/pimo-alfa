@@ -559,6 +559,11 @@ export function getIndustrialMaterial(materialIdOrLabel: string): MaterialIndust
   };
 }
 
+/** Snapshot industrial para PDFs/exportação (converte CRUD → MaterialIndustrial). */
+export function listIndustrialMaterialsSnapshot(): MaterialIndustrial[] {
+  return listMaterials().map((m) => getIndustrialMaterial(m.id));
+}
+
 /**
  * Converte id/label do CRUD (ou string legada) no materialName aceite pelo Viewer (MaterialLibrary).
  * Não altera MaterialLibrary nem WoodMaterial; apenas devolve a string a passar em updateBox(..., { materialName }).
