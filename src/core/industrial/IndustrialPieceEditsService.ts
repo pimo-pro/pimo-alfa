@@ -1,14 +1,62 @@
 import type { CutListItemComPreco } from "../types";
 import type { ProjectState } from "../../context/projectTypes";
-import type { IndustrialPieceDimensionEdit, IndustrialPieceEdit, IndustrialPieceEditsStore } from "./industrialPieceEditsTypes";
+import type {
+  IndustrialOperacoesStore,
+  IndustrialPieceDimensionEdit,
+  IndustrialPieceEdit,
+  IndustrialPieceEditsStore,
+} from "./industrialPieceEditsTypes";
+import { INDUSTRIAL_OPERATION_IDS, INDUSTRIAL_OPERATION_LABELS } from "./industrialPieceEditsTypes";
 import { normalizeObservacoesList } from "../observacoes/ObservacoesService";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import type { MaterialIndustrial } from "../manufacturing/materials";
+import { DENSIDADE_PADRAO } from "../manufacturing/materials";
+
+/** Limites industriais para validação de medidas (mm). */
+export const INDUSTRIAL_DIM_MIN_MM = 1;
+export const INDUSTRIAL_DIM_MAX_MM = 6000;
+
+export type IndustrialPieceMetrics = {
+  areaMm2: number;
+  pesoKg: number;
+  consumoM2: number;
+};
+
+export function computeIndustrialPieceMetrics(
+  item: CutListItemComPreco,
+  materials: MaterialIndustrial[] = []
+): IndustrialPieceMetrics {
+  const largura = item.dimensoes.largura ?? 0;
+  const altura = item.dimensoes.altura ?? 0;
+  const esp = item.espessura ?? item.dimensoes.profundidade ?? 18;
+  const qty = item.quantidade ?? 1;
+  const areaMm2 = largura * altura * qty;
+  const mat = materials.find((m) => m.nome === item.material || m.id === item.materialId);
+  const densidade = mat?.densidade ?? DENSIDADE_PADRAO;
+  const volumeM3 = (largura * altura * esp * qty) / 1_000_000_000;
+  return {
+    areaMm2,
+    pesoKg: volumeM3 * densidade,
+    consumoM2: areaMm2 / 1_000_000,
+  };
+}
 
 export function validateIndustrialDimensions(dims: IndustrialPieceDimensionEdit): string | null {
-  const values = [dims.largura, dims.altura, dims.espessura].filter((v) => v !== undefined);
-  for (const v of values) {
-    if (!Number.isFinite(v) || (v as number) <= 0) {
-      return "Medidas devem ser números positivos (maiores que zero).";
+  const entries: Array<[string, number | undefined]> = [
+    ["Largura", dims.largura],
+    ["Comprimento", dims.altura],
+    ["Espessura", dims.espessura],
+  ];
+  for (const [label, v] of entries) {
+    if (v === undefined) continue;
+    if (!Number.isFinite(v) || v <= 0) {
+      return `${label}: medida deve ser um número positivo (maiores que zero).`;
+    }
+    if (v < INDUSTRIAL_DIM_MIN_MM) {
+      return `${label}: mínimo industrial ${INDUSTRIAL_DIM_MIN_MM} mm.`;
+    }
+    if (v > INDUSTRIAL_DIM_MAX_MM) {
+      return `${label}: máximo industrial ${INDUSTRIAL_DIM_MAX_MM} mm.`;
     }
   }
   return null;
@@ -173,7 +221,7 @@ export function patchProjectForIndustrialPieceDimensions(
   };
 }
 
-/** Payload preparado para integração futura com PIMO TRAK. */
+/** Payload para integração com PIMO TRAK (POST /api/industrial/orders). */
 export type EnviarParaFabricaPayload = {
   projeto: { nome: string; id?: string | null };
   caixas: Array<{ id: string; nome: string }>;
@@ -187,10 +235,20 @@ export type EnviarParaFabricaPayload = {
     quantidade: number;
     material: string;
     observacoes: string[];
+    areaMm2: number;
+    pesoKg: number;
   }>;
   ferragens: Array<{ id: string; tipo: string; quantidade: number }>;
-  medidas: { totalPecas: number; areaMm2: number; pesoKgEstimado: number };
+  medidas: { totalPecas: number; areaMm2: number; pesoKgEstimado: number; consumoM2: number };
   observacoes: Record<string, string[]>;
+  operacoes: Array<{
+    id: string;
+    label: string;
+    completedAt?: string;
+    employeeId?: string;
+    employeeName?: string;
+    notas?: string;
+  }>;
 };
 
 export function buildEnviarParaFabricaPayload(
@@ -202,22 +260,27 @@ export function buildEnviarParaFabricaPayload(
     | "rules"
     | "pieceObservacoes"
     | "industrialPieceEdits"
+    | "industrialOperacoes"
     | "materialId"
     | "remates"
     | "rodapes"
     | "extractedPartsByBoxId"
   >,
-  items: CutListItemComPreco[]
+  items: CutListItemComPreco[],
+  materials: MaterialIndustrial[] = []
 ): EnviarParaFabricaPayload {
   const boxes = project.boxes ?? [];
   const boxNome = Object.fromEntries(boxes.map((b) => [b.id, b.nome?.trim() || b.id]));
 
   let areaMm2 = 0;
+  let pesoKgEstimado = 0;
   const pecas = items.map((item) => {
     const largura = item.dimensoes.largura;
     const comprimento = item.dimensoes.altura;
     const espessura = item.espessura ?? item.dimensoes.profundidade ?? 0;
-    areaMm2 += largura * comprimento * (item.quantidade ?? 1);
+    const metrics = computeIndustrialPieceMetrics(item, materials);
+    areaMm2 += metrics.areaMm2;
+    pesoKgEstimado += metrics.pesoKg;
     const obs = normalizeObservacoesList(project.pieceObservacoes?.[item.id]);
     return {
       id: item.id,
@@ -229,6 +292,8 @@ export function buildEnviarParaFabricaPayload(
       quantidade: item.quantidade ?? 1,
       material: item.material ?? "—",
       observacoes: obs,
+      areaMm2: metrics.areaMm2,
+      pesoKg: metrics.pesoKg,
     };
   });
 
@@ -239,6 +304,8 @@ export function buildEnviarParaFabricaPayload(
     quantidade: f.quantidade,
   }));
 
+  const operacoes = buildOperacoesPayload(project.industrialOperacoes);
+
   return {
     projeto: { nome: project.projectName?.trim() || "Projeto", id: project.currentProjectId },
     caixas: boxes.map((b) => ({ id: b.id, nome: boxNome[b.id] ?? b.id })),
@@ -247,8 +314,24 @@ export function buildEnviarParaFabricaPayload(
     medidas: {
       totalPecas: pecas.reduce((s, p) => s + p.quantidade, 0),
       areaMm2,
-      pesoKgEstimado: areaMm2 * 0.00075 * 18,
+      pesoKgEstimado,
+      consumoM2: areaMm2 / 1_000_000,
     },
     observacoes: project.pieceObservacoes ?? {},
+    operacoes,
   };
+}
+
+function buildOperacoesPayload(store?: IndustrialOperacoesStore): EnviarParaFabricaPayload["operacoes"] {
+  return INDUSTRIAL_OPERATION_IDS.map((id) => {
+    const state = store?.[id];
+    return {
+      id,
+      label: INDUSTRIAL_OPERATION_LABELS[id],
+      completedAt: state?.completedAt,
+      employeeId: state?.employeeId,
+      employeeName: state?.employeeName,
+      notas: state?.notas,
+    };
+  });
 }

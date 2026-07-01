@@ -9,8 +9,7 @@ import {
   validateIndustrialDimensions,
 } from "../../core/industrial/IndustrialPieceEditsService";
 import type { IndustrialOperationId } from "../../core/industrial/industrialPieceEditsTypes";
-
-const PLACEHOLDER_EMPLOYEE = "FUNC-PLACEHOLDER";
+import { getCurrentProjectUser } from "../../core/projects/currentUser";
 
 export type IndustrialPieceEditsActions = Pick<
   ProjectActions,
@@ -86,7 +85,8 @@ export function useIndustrialPieceEditsActions(
         );
       },
 
-      completeIndustrialOperacao: (operationId: IndustrialOperationId) => {
+      completeIndustrialOperacao: (operationId: IndustrialOperationId, notas?: string) => {
+        const user = getCurrentProjectUser();
         updateProject(
           (prev) =>
             applyResultados({
@@ -95,7 +95,9 @@ export function useIndustrialPieceEditsActions(
                 ...(prev.industrialOperacoes ?? {}),
                 [operationId]: {
                   completedAt: new Date().toISOString(),
-                  employeeId: PLACEHOLDER_EMPLOYEE,
+                  employeeId: user.ownerId,
+                  employeeName: user.ownerName,
+                  notas: notas?.trim() || undefined,
                 },
               },
               changelog: appendChangelog(prev.changelog, {

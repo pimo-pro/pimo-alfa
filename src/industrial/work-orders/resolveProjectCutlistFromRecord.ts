@@ -58,6 +58,7 @@ export function resolveProjectCutlistFromRecord(
           remates: state.remates ?? [],
           rodapes: state.rodapes ?? [],
           extractedPartsByBoxId: state.extractedPartsByBoxId,
+          industrialPieceEdits: state.industrialPieceEdits,
         });
 
   const cutlist = exported.map(toCutlistInput);

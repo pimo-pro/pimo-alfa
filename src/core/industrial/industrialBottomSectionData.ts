@@ -24,7 +24,7 @@ import { formatCurrency } from "../../utils/formatting";
 import { formatObservacoesForPdf, resolveObservacoesForCutListItem } from "../observacoes/ObservacoesService";
 import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
 import type { IndustrialPieceEditsStore } from "./industrialPieceEditsTypes";
-import { isIndustrialPieceEdited } from "./IndustrialPieceEditsService";
+import { isIndustrialPieceEdited, computeIndustrialPieceMetrics } from "./IndustrialPieceEditsService";
 
 export type PecasTotaisRow = {
   categoria: string;
@@ -263,18 +263,32 @@ export function buildResumoIndustriaisRows(
   items: CutListItemComPreco[],
   boxes: BoxModule[],
   pieceObservacoes?: PieceObservacoesStore,
-  industrialPieceEdits?: IndustrialPieceEditsStore
-): Array<{ caixa: string; peca: string; dimensoes: string; observacoes: string; modified: boolean }> {
+  industrialPieceEdits?: IndustrialPieceEditsStore,
+  materials: MaterialIndustrial[] = []
+): Array<{
+  caixa: string;
+  peca: string;
+  dimensoes: string;
+  areaM2: number;
+  pesoKg: number;
+  consumoM2: number;
+  observacoes: string;
+  modified: boolean;
+}> {
   const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome?.trim() || b.id]));
   return items.map((item) => {
     const obs = formatObservacoesForPdf(
       resolveObservacoesForCutListItem(item, { pieceObservacoes })
     );
     const edit = industrialPieceEdits?.[item.id];
+    const metrics = computeIndustrialPieceMetrics(item, materials);
     return {
       caixa: boxNomeById[item.boxId ?? ""] ?? item.boxId ?? "—",
       peca: item.tipo,
       dimensoes: `${item.dimensoes.largura}×${item.dimensoes.altura}×${item.espessura} mm`,
+      areaM2: metrics.consumoM2,
+      pesoKg: metrics.pesoKg,
+      consumoM2: metrics.consumoM2,
       observacoes: obs,
       modified: isIndustrialPieceEdited(edit) || (obs.length > 0 && obs !== "—"),
     };

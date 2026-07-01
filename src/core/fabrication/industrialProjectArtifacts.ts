@@ -75,4 +75,5 @@ export const INDUSTRIAL_PROJECT_ARTIFACTS: readonly IndustrialProjectArtifact[] 
   { id: "tcn", label: "CNC / TCN", filename: "cnc/{espessura}/tcn/*.tcn" },
   { id: "drill", label: "Furação (XML)", filename: "drill/XML/*.xml" },
   { id: "manifest", label: "Manifesto industrial", filename: "manifest-industrial.json" },
+  { id: "trak-order", label: "Ordem PIMO TRAK", filename: "industrial_order.json" },
 ] as const;

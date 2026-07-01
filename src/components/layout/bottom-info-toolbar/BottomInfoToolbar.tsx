@@ -16,6 +16,7 @@ import PieceObservacoesOverlay from "../overlays/PieceObservacoesOverlay";
 import { useCutlistData } from "../../../hooks/useCutlistData";
 import { buildPecasTotaisRows } from "../../../core/industrial/industrialBottomSectionData";
 import { useMaterials } from "../../../hooks/useMaterials";
+import { useEnviarParaFabrica } from "../../../hooks/useEnviarParaFabrica";
 
 type HistoryFilter = "all" | "move" | "resize" | "add" | "remove" | "height" | "other";
 
@@ -272,6 +273,7 @@ export default function BottomInfoToolbar() {
   const { actions, project, history } = useProject();
   const cutlistData = useCutlistData();
   const { materials } = useMaterials();
+  const { sending: enviandoFabrica, enviar: enviarParaFabrica } = useEnviarParaFabrica(project, materials);
   const pecasCount = useMemo(
     () => buildPecasTotaisRows(project, materials).reduce((s, r) => s + r.qtd, 0),
     [project, materials]
@@ -984,6 +986,22 @@ export default function BottomInfoToolbar() {
               </button>
             );
           })}
+
+          <button
+            type="button"
+            title="Enviar ordem industrial para PIMO TRAK"
+            disabled={enviandoFabrica || (project.boxes ?? []).length === 0}
+            onClick={() => void enviarParaFabrica()}
+            style={{
+              ...buttonBaseStyle,
+              marginLeft: 8,
+              background: "rgba(34, 197, 94, 0.2)",
+              color: "#86efac",
+              opacity: enviandoFabrica || (project.boxes ?? []).length === 0 ? 0.5 : 1,
+            }}
+          >
+            {enviandoFabrica ? "A enviar…" : "Enviar para Fábrica"}
+          </button>
         </div>
 
         <div ref={componentsGroupRef} style={componentsGroupStyle}>

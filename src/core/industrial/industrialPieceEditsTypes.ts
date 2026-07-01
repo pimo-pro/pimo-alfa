@@ -46,6 +46,8 @@ export const INDUSTRIAL_OPERATION_LABELS: Record<IndustrialOperationId, string> 
 export type IndustrialOperacaoState = {
   completedAt?: string;
   employeeId?: string;
+  employeeName?: string;
+  notas?: string;
 };
 
 export type IndustrialOperacoesStore = Partial<Record<IndustrialOperationId, IndustrialOperacaoState>>;

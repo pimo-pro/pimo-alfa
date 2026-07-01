@@ -35,7 +35,7 @@ import { computeConsumoMateriais } from "../core/industrial/computeConsumoMateri
 import { computeChapasReal } from "../core/industrial/computeChapasReal";
 import { buildConsumoMateriaisPdf, consumoMateriaisPdfFileName } from "../core/pdf/pdfConsumoMateriais";
 import { buildChapasRealPdf, chapasRealPdfFileName } from "../core/pdf/pdfChapasReal";
-import { enviarParaFabrica } from "../core/fabrication/enviarParaFabrica";
+import { enviarParaFabrica, submitEnviarParaFabrica } from "../core/fabrication/enviarParaFabrica";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
 import { useAuth } from "../auth/useAuth";
@@ -1277,20 +1277,24 @@ export function useGerarArquivoHandlers() {
       if (!abortFullExport) {
         try {
           assertIndustrialRequiredArtifactsComplete();
+          const fabricaProject = {
+            projectName: proj.projectName,
+            currentProjectId: project.currentProjectId,
+            boxes: proj.boxes,
+            rules: proj.rules,
+            materialId: proj.materialId,
+            remates: project.remates ?? [],
+            rodapes: project.rodapes ?? [],
+            extractedPartsByBoxId: proj.extractedPartsByBoxId,
+            pieceObservacoes: proj.pieceObservacoes,
+            industrialPieceEdits: project.industrialPieceEdits,
+            industrialOperacoes: project.industrialOperacoes,
+          };
+          const materialsSnapshot = listIndustrialMaterialsSnapshot();
           const fabricaCheck = enviarParaFabrica(
-            {
-              projectName: proj.projectName,
-              currentProjectId: project.currentProjectId,
-              boxes: proj.boxes,
-              rules: proj.rules,
-              materialId: proj.materialId,
-              remates: project.remates ?? [],
-              rodapes: project.rodapes ?? [],
-              extractedPartsByBoxId: proj.extractedPartsByBoxId,
-              pieceObservacoes: proj.pieceObservacoes,
-              industrialPieceEdits: project.industrialPieceEdits,
-            },
-            Object.keys(zip.files)
+            fabricaProject,
+            Object.keys(zip.files),
+            materialsSnapshot
           );
           if (!fabricaCheck.ok) {
             devLogger.warn("enviarParaFabrica: artefactos em falta", fabricaCheck.missing);
@@ -1299,6 +1303,16 @@ export function useGerarArquivoHandlers() {
               pecas: fabricaCheck.payload.pecas.length,
               caixas: fabricaCheck.payload.caixas.length,
             });
+            const submitResult = await submitEnviarParaFabrica(fabricaProject, materialsSnapshot, {
+              skipArtifactValidation: true,
+            });
+            if (submitResult.submit?.ok) {
+              devLogger.info("enviarParaFabrica: ordem enviada ao PIMO TRAK", {
+                orderId: submitResult.submit.orderId,
+              });
+            } else if (submitResult.submit?.error) {
+              devLogger.warn("enviarParaFabrica: falha no envio TRAK", submitResult.submit.error);
+            }
           }
           const blob = await zip.generateAsync({ type: "blob" });
           if (!blob || blob.size === 0) {

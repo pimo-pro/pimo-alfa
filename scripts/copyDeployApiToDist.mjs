@@ -123,10 +123,32 @@ if (fs.existsSync(srcUserSettings)) extras.push("user-settings");
 if (fs.existsSync(srcGlobalConfig)) extras.push("global-config");
 const projectsCopied = copyProjectsApiToDist();
 if (projectsCopied) extras.push("projects");
+
+function copyIndustrialOrdersApiToDist() {
+  const srcOrders = path.join(root, "api", "industrial", "orders", "index.php");
+  const destOrders = path.join(dist, "api", "industrial", "orders");
+  if (!fs.existsSync(srcOrders)) {
+    console.warn("[copyDeployApiToDist] api/industrial/orders/index.php em falta — industrial orders não copiado.");
+    return false;
+  }
+  copyFile(srcOrders, path.join(destOrders, "index.php"));
+  const dataDir = path.join(destOrders, "data");
+  ensureDir(dataDir);
+  const gitkeep = path.join(dataDir, ".gitkeep");
+  if (!fs.existsSync(gitkeep)) {
+    fs.writeFileSync(gitkeep, "", "utf8");
+  }
+  return true;
+}
+
+const industrialOrdersCopied = copyIndustrialOrdersApiToDist();
+if (industrialOrdersCopied) extras.push("industrial/orders");
+
 console.log(
   "[copyDeployApiToDist] Copiado auth/users" +
     (extras.length ? "/" + extras.join("/") : "") +
     " para dist/api/ (_impl + stubs" +
     (projectsCopied ? "; projects em dist/api/projects/" : "") +
+    (industrialOrdersCopied ? "; industrial/orders em dist/api/industrial/orders/" : "") +
     ")."
 );

@@ -690,7 +690,10 @@ export interface ProjectActions {
   /** Industrial — apagar peça do fluxo industrial. */
   deleteIndustrialPiece: (_pieceId: string) => void;
   /** Industrial — marcar operação como concluída. */
-  completeIndustrialOperacao: (_operationId: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperationId) => void;
+  completeIndustrialOperacao: (
+    _operationId: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperationId,
+    _notas?: string
+  ) => void;
   /** Gavetas — cria ou atualiza preset de gavetas no projecto. */
   upsertDrawerPreset: (_preset: import("../core/drawers/drawerPresetTypes").DrawerPreset) => void;
   /** Gavetas — remove preset de gavetas do catálogo. */

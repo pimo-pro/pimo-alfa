@@ -1,8 +1,12 @@
 import { useMemo, useState } from "react";
 import { useProject } from "../../context/useProject";
+import { useMaterials } from "../../hooks/useMaterials";
 import { buildCutlistItemsForIndustrialExport } from "../../core/fabrication/buildCutlistItemsForIndustrialExport";
 import { buildResumoIndustriaisRows } from "../../core/industrial/industrialBottomSectionData";
-import { validateIndustrialDimensions } from "../../core/industrial/IndustrialPieceEditsService";
+import {
+  validateIndustrialDimensions,
+  computeIndustrialPieceMetrics,
+} from "../../core/industrial/IndustrialPieceEditsService";
 import Panel from "../ui/Panel";
 import PieceObservacoesOverlay from "../layout/overlays/PieceObservacoesOverlay";
 import { ModalPortal } from "../ui/ModalPortal";
@@ -20,6 +24,7 @@ const inputStyle: React.CSSProperties = {
 
 export default function PainelResumoIndustriais() {
   const { project, actions } = useProject();
+  const { materials } = useMaterials();
   const [obsPiece, setObsPiece] = useState<{ id: string; label: string } | null>(null);
   const [movePiece, setMovePiece] = useState<{ id: string; label: string } | null>(null);
   const [moveTarget, setMoveTarget] = useState("");
@@ -45,9 +50,46 @@ export default function PainelResumoIndustriais() {
   );
 
   const rows = useMemo(
-    () => buildResumoIndustriaisRows(items, boxes, project.pieceObservacoes, project.industrialPieceEdits),
-    [items, boxes, project.pieceObservacoes, project.industrialPieceEdits]
+    () =>
+      buildResumoIndustriaisRows(
+        items,
+        boxes,
+        project.pieceObservacoes,
+        project.industrialPieceEdits,
+        materials
+      ),
+    [items, boxes, project.pieceObservacoes, project.industrialPieceEdits, materials]
   );
+
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (acc, r) => ({
+          areaM2: acc.areaM2 + r.areaM2,
+          pesoKg: acc.pesoKg + r.pesoKg,
+        }),
+        { areaM2: 0, pesoKg: 0 }
+      ),
+    [rows]
+  );
+
+  const previewMetrics = (itemId: string, item: (typeof items)[0]) => {
+    const d = getDraft(itemId, item);
+    const largura = Number(d.larg);
+    const altura = Number(d.comp);
+    const espessura = Number(d.esp);
+    if (![largura, altura, espessura].every((v) => Number.isFinite(v) && v > 0)) {
+      return computeIndustrialPieceMetrics(item, materials);
+    }
+    return computeIndustrialPieceMetrics(
+      {
+        ...item,
+        dimensoes: { ...item.dimensoes, largura, altura, profundidade: espessura },
+        espessura,
+      },
+      materials
+    );
+  };
 
   const getDraft = (itemId: string, item: (typeof items)[0]) => {
     const existing = draftDims[itemId];
@@ -103,14 +145,25 @@ export default function PainelResumoIndustriais() {
   return (
     <Panel title="Resumo Industriais — Painel Mestre">
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
-        Edite medidas (COMP/LARG/ESP), mova ou apague peças. Linhas amarelas = alterações manuais. Refletem-se em
-        cutlist, técnico, etiquetas, unified e PDFs industriais.
+        Edite medidas (COMP/LARG/ESP) com validação industrial. Peso, área e consumo recalculam automaticamente.
+        Refletem-se em cutlist, técnico, etiquetas, unified e PDFs industriais.
       </p>
+      <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 12 }}>
+        <span>
+          Área total: <strong>{totals.areaM2.toFixed(4)} m²</strong>
+        </span>
+        <span>
+          Peso total: <strong>{totals.pesoKg.toFixed(2)} kg</strong>
+        </span>
+        <span>
+          Peças: <strong>{rows.length}</strong>
+        </span>
+      </div>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-              {["Caixa", "Peça", "LARG", "COMP", "ESP", "Observações", "Ações"].map((h) => (
+              {["Caixa", "Peça", "LARG", "COMP", "ESP", "Área m²", "Peso kg", "Observações", "Ações"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-muted)" }}>
                   {h}
                 </th>
@@ -121,6 +174,7 @@ export default function PainelResumoIndustriais() {
             {rows.map((row, idx) => {
               const item = items[idx];
               const draft = getDraft(item.id, item);
+              const metrics = previewMetrics(item.id, item);
               return (
                 <tr
                   key={item.id}
@@ -169,6 +223,12 @@ export default function PainelResumoIndustriais() {
                       }
                       onBlur={() => commitDims(item.id)}
                     />
+                  </td>
+                  <td style={{ padding: "6px 8px", color: "var(--text-muted)" }}>
+                    {metrics.consumoM2.toFixed(4)}
+                  </td>
+                  <td style={{ padding: "6px 8px", color: "var(--text-muted)" }}>
+                    {metrics.pesoKg.toFixed(3)}
                   </td>
                   <td style={{ padding: "6px 8px", maxWidth: 180 }}>{row.observacoes || "—"}</td>
                   <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
