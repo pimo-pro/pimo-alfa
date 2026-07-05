@@ -2630,6 +2630,24 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
 
+  /** Aplica material independente à peça frente-fixa (canto v2). */
+  updateFixedFrontMaterial(boxId: string, materialName: string): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry) return;
+    const nextMaterial = this.loadMaterial(materialName);
+    if (!nextMaterial) return;
+    const ffPanel = entry.mesh.children.find(
+      (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
+    ) as THREE.Mesh | undefined;
+    if (!ffPanel) return;
+    const mat = (nextMaterial.material as THREE.Material).clone();
+    mat.needsUpdate = true;
+    ffPanel.material = mat;
+    (ffPanel.userData as Record<string, unknown>).frenteFixaMaterialId = materialName;
+    this.requestRender();
+    if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
+  }
+
   /** Garante material independente nas frentes após rebuild incremental da caixa. */
   private syncDrawerFrontMaterialsForBox(
     boxId: string,

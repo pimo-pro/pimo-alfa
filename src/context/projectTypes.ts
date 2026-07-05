@@ -541,6 +541,7 @@ export interface ProjectActions {
   ) => void;
   /** Material explícito dos separadores horizontais; omitir restaura o material do corpo. */
   setWorkspaceBoxSeparadorMaterial: (_boxId: string, _separadorMaterialId?: string) => void;
+  setWorkspaceBoxFrenteFixaMaterial: (_boxId: string, _frenteFixaMaterialId?: string) => void;
   /** Activa/desactiva costa traseira (visual + industrial). */
   setWorkspaceBoxNoBackPanel: (_boxId: string, _enabled: boolean) => void;
   /** Canto v2: orientação dinâmica (direita/esquerda) — FF, porta, furos e viewer. */

@@ -337,6 +337,8 @@ export interface BoxModule {
   costaThicknessMm?: number;
   /** Material industrial explícito dos separadores horizontais. Omitido = material do corpo. */
   separadorMaterialId?: string;
+  /** Material industrial explícito da frente fixa (canto v2). Omitido = material do corpo. */
+  frenteFixaMaterialId?: string;
   /** FASE 2 — Ver `WorkspaceBox.profundidadeExterna`. */
   profundidadeExterna?: number;
   /** Orla V1 — preset aplicado a todas as peças do caixote. */
@@ -438,6 +440,8 @@ export interface WorkspaceBox {
   costaThicknessMm?: number;
   /** Material industrial explícito dos separadores horizontais. Omitido = material do corpo. */
   separadorMaterialId?: string;
+  /** Material industrial explícito da frente fixa (canto v2). Omitido = material do corpo. */
+  frenteFixaMaterialId?: string;
   /**
    * FASE 2 — Profundidade externa explícita (mm), alinhada a `dimensoes.profundidade`.
    * Mantida em sincrono nas ações de dimensão; facilita FASE 3–4.

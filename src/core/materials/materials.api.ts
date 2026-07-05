@@ -440,6 +440,28 @@ export function resolveSeparadorMaterialForBox(
   };
 }
 
+/** Material da frente fixa (canto v2): override da caixa ou mesmo material do corpo. */
+export function resolveFrenteFixaMaterialForBox(
+  box: { frenteFixaMaterialId?: string } | undefined,
+  bodyMaterialId: string
+): CostaMaterialResolution {
+  const customId = box?.frenteFixaMaterialId?.trim();
+  if (customId) {
+    const chosen = resolveMaterial(customId);
+    if (chosen) {
+      return {
+        materialId: chosen.canonicalId,
+        label: chosen.label,
+      };
+    }
+  }
+  const body = resolveMaterial(bodyMaterialId) ?? getDefaultOfficialMaterial();
+  return {
+    materialId: body.canonicalId,
+    label: body.label,
+  };
+}
+
 export function resolveCostaMaterialForBox(
   box: { costaMaterialId?: string; costaThicknessMm?: number } | undefined,
   bodyMaterialId: string

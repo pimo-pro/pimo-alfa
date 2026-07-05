@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
-import { listOfficialMaterials, resolveSeparadorMaterialForBox } from "../../../core/materials/materials.api";
+import { listOfficialMaterials, resolveSeparadorMaterialForBox, resolveFrenteFixaMaterialForBox } from "../../../core/materials/materials.api";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
+import { isCornerDireitaInferiorModel } from "../../../core/cornerCabinet";
 
 type SelecionarMaterialSectionProps = {
   boxId: string;
@@ -14,6 +15,7 @@ type SelecionarMaterialSectionProps = {
   onViewerMaterialChange?: (_boxId: string, _materialId: string) => void;
   onDoorMaterialChange?: (_boxId: string, _doorLayerId: string, _materialId: string) => void;
   onDrawerMaterialChange?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
+  onFixedFrontMaterialChange?: (_boxId: string, _materialId: string) => void;
 };
 
 export default function SelecionarMaterialSection({
@@ -22,6 +24,7 @@ export default function SelecionarMaterialSection({
   onViewerMaterialChange,
   onDoorMaterialChange,
   onDrawerMaterialChange,
+  onFixedFrontMaterialChange,
 }: SelecionarMaterialSectionProps) {
   const { project, actions } = useProject();
   const box = project.workspaceBoxes.find((item) => item.id === boxId);
@@ -38,9 +41,13 @@ export default function SelecionarMaterialSection({
   const hasDoor = box.portaTipo !== "sem_porta" && (box.doorsLayer?.length ?? 0) > 0;
   const hasDrawers = (box.gavetas ?? 0) > 0 && (box.drawersLayer?.length ?? 0) > 0;
   const hasSeparadores = (box.separadores?.length ?? 0) > 0;
+  const hasFixedFront = isCornerDireitaInferiorModel(box.baseCabinetId);
   const separadorMaterialId =
     box.separadorMaterialId ??
     resolveSeparadorMaterialForBox(box, currentMaterialId).materialId;
+  const fixedFrontMaterialId =
+    box.frenteFixaMaterialId ??
+    resolveFrenteFixaMaterialForBox(box, currentMaterialId).materialId;
 
   const content = (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -103,6 +110,33 @@ export default function SelecionarMaterialSection({
                 boxId,
                 isBodyDefault ? undefined : materialId
               );
+            }}
+          >
+            {woodMaterials.map((material) => (
+              <option key={material.canonicalId} value={material.canonicalId}>
+                {material.label}
+              </option>
+            ))}
+          </select>
+        </section>
+      )}
+
+      {hasFixedFront && (
+        <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+            Material da frente fixa
+          </div>
+          <select
+            className="select"
+            value={fixedFrontMaterialId}
+            onChange={(e) => {
+              const materialId = e.target.value;
+              const isBodyDefault = materialId === currentMaterialId;
+              actions.setWorkspaceBoxFrenteFixaMaterial(
+                boxId,
+                isBodyDefault ? undefined : materialId
+              );
+              onFixedFrontMaterialChange?.(boxId, getViewerMaterialId(materialId));
             }}
           >
             {woodMaterials.map((material) => (

@@ -123,6 +123,8 @@ export type BoxOptions = {
   costaMaterialId?: string;
   /** Override de material dos separadores (canonicalId). */
   separadorMaterialId?: string;
+  /** Override de material da frente fixa canto v2 (canonicalId). */
+  frenteFixaMaterialId?: string;
 };
 
 export type BoxModel = {

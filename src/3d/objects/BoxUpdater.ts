@@ -242,8 +242,24 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
   ) as THREE.Mesh | undefined;
   const ffHoles = drillMap.frente_fixa ?? [];
-  if (ffPanel && ffHoles.length > 0) {
-    deps.applyDrillHolesToPanelGeometry(ffPanel, "front", ffHoles);
+  const ffMaterialId =
+    typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
+      ? opts.frenteFixaMaterialId.trim()
+      : typeof opts.bodyMaterialId === "string" && opts.bodyMaterialId.trim().length > 0
+        ? opts.bodyMaterialId.trim()
+        : typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+          ? opts.materialName.trim()
+          : deps.getDefaultOfficialMaterialId();
+  if (ffPanel) {
+    const ffUserData = ffPanel.userData as Record<string, unknown>;
+    if (ffUserData.frenteFixaMaterialId !== ffMaterialId) {
+      const ffMat = deps.getMaterialForOfficialId(ffMaterialId) as THREE.Material;
+      ffPanel.material = ffMat;
+      ffUserData.frenteFixaMaterialId = ffMaterialId;
+    }
+    if (ffHoles.length > 0) {
+      deps.applyDrillHolesToPanelGeometry(ffPanel, "front", ffHoles);
+    }
   }
 
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];

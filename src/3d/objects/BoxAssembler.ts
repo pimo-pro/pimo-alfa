@@ -307,7 +307,15 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       doorFixedGapMm: portasSettings.portaGapDuplaMm,
       doorPosZOffsetMm: portasSettings.portaPosZOffsetMm,
     });
-    const ffMat = baseMaterial;
+    const ffMaterialId =
+      typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
+        ? opts.frenteFixaMaterialId.trim()
+        : typeof opts.bodyMaterialId === "string" && opts.bodyMaterialId.trim().length > 0
+          ? opts.bodyMaterialId.trim()
+          : typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+            ? opts.materialName.trim()
+            : deps.getDefaultOfficialMaterialId();
+    const ffMat = deps.getMaterialForOfficialId(ffMaterialId) as THREE.Material;
     const ff = deps.panelFactory.createPanel(
       visual.fixedFront.size[0],
       visual.fixedFront.size[1],
@@ -318,6 +326,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     );
     ff.name = "frente-fixa";
     ff.position.set(...visual.fixedFront.pos);
+    (ff.userData as Record<string, unknown>).frenteFixaMaterialId = ffMaterialId;
     const ffHoles = drillMap.frente_fixa ?? [];
     if (ffHoles.length > 0) {
       deps.applyDrillHolesToPanelGeometry(ff, "front", ffHoles);

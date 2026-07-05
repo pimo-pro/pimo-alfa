@@ -8,7 +8,7 @@ import { resolveIndustrialGrainCode } from "../materials/grainDirection";
 import { gerarModeloIndustrial, getPieceLabel } from "./boxManufacturing";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getMaterialForBox, getMaterialDisplayInfo, getIndustrialMaterialKeyForBox, resolveIndustrialMaterialKey } from "../materials/materialsService";
-import { resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterialForBox, resolveCostaThicknessMm, resolveSeparadorMaterialForBox } from "../materials/materials.api";
+import { resolveMaterial, getDefaultOfficialMaterial, resolveCostaMaterialForBox, resolveCostaThicknessMm, resolveSeparadorMaterialForBox, resolveFrenteFixaMaterialForBox } from "../materials/materials.api";
 import { getVisualMaterialForBox, getFallbackMaterial } from "../materials/materialLibraryV2";
 import { attachQrCodesToCutlist } from "../qrcode/qrcodeService";
 import {
@@ -154,6 +154,7 @@ export function cutlistComPrecoFromBox(
   const material = matInfo.label;
   const costaMaterial = resolveCostaMaterialForBox(box, bodyMaterialKey);
   const separadorMaterial = resolveSeparadorMaterialForBox(box, bodyMaterialKey);
+  const frenteFixaMaterial = resolveFrenteFixaMaterialForBox(box, bodyMaterialKey);
   const profundidadeExternaMm = Number(box.profundidadeExterna ?? box.dimensoes.profundidade) || 0;
   const profundidadeInternaUtilMm = getProfundidadeInternaUtilMm(
     {
@@ -316,6 +317,8 @@ export function cutlistComPrecoFromBox(
       : null;
     const itemMaterial = isDoor
       ? (doorOfficial?.label ?? getDefaultOfficialMaterial().label)
+      : isFixedFront
+        ? frenteFixaMaterial.label
       : isCostaPanel
         ? costaMaterial.label
         : isSeparador
@@ -323,6 +326,8 @@ export function cutlistComPrecoFromBox(
           : material;
     const itemMaterialId = isDoor
       ? resolveIndustrialMaterialKey(doorsLayer[doorIndex]?.material, bodyMaterialKey)
+      : isFixedFront
+        ? frenteFixaMaterial.materialId
       : isCostaPanel
         ? costaMaterial.materialId
         : isSeparador

@@ -557,6 +557,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     costaMaterialId: box.costaMaterialId,
     costaThicknessMm: box.costaThicknessMm,
     separadorMaterialId: box.separadorMaterialId,
+    frenteFixaMaterialId: box.frenteFixaMaterialId,
     profundidadeExterna: box.profundidadeExterna,
     orlaPresetId: box.orlaPresetId,
     remateIds: box.remateIds ?? [],

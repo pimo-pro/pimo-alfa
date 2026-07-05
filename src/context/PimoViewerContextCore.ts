@@ -233,6 +233,7 @@ export type PimoViewerApi = {
   setBoxNoBackPanel?: (_boxId: string, _enabled: boolean) => boolean;
   updateDoorMaterial?: (_boxId: string, _doorLayerId: string, _materialId: string) => void;
   updateDrawerMaterial?: (_boxId: string, _drawerLayerId: string, _materialId: string) => void;
+  updateFixedFrontMaterial?: (_boxId: string, _materialId: string) => void;
   setMaterialMode?: (_mode: "performance" | "showcase" | "realistic") => void;
   getMaterialMode?: () => "performance" | "showcase" | "realistic";
   setReflectionsEnabled?: (_enabled: boolean) => void;

@@ -323,6 +323,10 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                     viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName);
                     showToast("Material aplicado à gaveta.", "info");
                   }}
+                  onFixedFrontMaterialChange={(boxId, materialName) => {
+                    viewerApi?.updateFixedFrontMaterial?.(boxId, materialName);
+                    showToast("Material aplicado à frente fixa.", "info");
+                  }}
                 />
               </UnifiedPopover>
 
