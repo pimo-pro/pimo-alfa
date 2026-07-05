@@ -18,6 +18,11 @@ import type {
   ObservacoesCollectionContext,
   PieceObservacoesStore,
 } from "./observacoesTypes";
+import {
+  isRemateLIndustrialMetadata,
+  isRemateLIndustrialPiece,
+  REMATE_L_INDUSTRIAL_OBSERVACAO,
+} from "../remate/remateLGeometry";
 
 export const MAX_OBSERVATION_TEXT_LENGTH = 240;
 export const MAX_LABEL_OBSERVATIONS_V5 = 3;
@@ -79,6 +84,22 @@ export function normalizeObservacoesList(values: unknown): string[] {
     result.push(normalized);
   }
   return result;
+}
+
+function mergeRemateLFixedObservacoes(
+  observations: string[],
+  meta?: Record<string, unknown>
+): string[] {
+  if (!isRemateLIndustrialMetadata(meta)) return observations;
+  return normalizeObservacoesList([REMATE_L_INDUSTRIAL_OBSERVACAO, ...observations]);
+}
+
+function mergeRemateLFixedObservacoesForEntry(
+  observations: string[],
+  entry?: Pick<IndustrialPieceEntry, "tipo" | "categoria">
+): string[] {
+  if (entry?.categoria !== "remate" || entry.tipo !== "L") return observations;
+  return normalizeObservacoesList([REMATE_L_INDUSTRIAL_OBSERVACAO, ...observations]);
 }
 
 function pushUniqueSanitized(result: string[], value: string): void {
@@ -144,7 +165,8 @@ export function resolveObservacoesForCutListItem(
   context?: Pick<ObservacoesCollectionContext, "pieceObservacoes">
 ): string[] {
   const pieceId = panelIdFromCutListItem(item);
-  return resolveObservacoesForPiece(pieceId, context);
+  const userObs = resolveObservacoesForPiece(pieceId, context);
+  return mergeRemateLFixedObservacoes(userObs, item.metadata);
 }
 
 /** Etiqueta v5 — máx. 3 slots. */
@@ -171,10 +193,10 @@ export function collectObservationsForItem(
       : typeof item.id === "string"
         ? item.id
         : "";
-  return resolveObservacoesForPiece(pieceId, { pieceObservacoes }).slice(
-    0,
-    MAX_LABEL_OBSERVATIONS_V5
-  );
+  return mergeRemateLFixedObservacoes(
+    resolveObservacoesForPiece(pieceId, { pieceObservacoes }),
+    item.metadata
+  ).slice(0, MAX_LABEL_OBSERVATIONS_V5);
 }
 
 function inferCategoryFromTipo(tipo: string): IndustrialPieceCategory {
@@ -307,6 +329,30 @@ function migrateProjectPieceObservacoesFull(input: MigrateProjectInput): PieceOb
   return changed ? next : store;
 }
 
+export function resolveObservacoesForIndustrialEntry(
+  entry: IndustrialPieceEntry,
+  store?: PieceObservacoesStore
+): string[] {
+  const userObs = getPieceObservacoes(entry.pieceId, store);
+  return mergeRemateLFixedObservacoesForEntry(userObs, entry);
+}
+
+export function resolveObservacoesForRematePiece(
+  remate: Pick<RematePiece, "id" | "productType" | "tipo">,
+  store?: PieceObservacoesStore
+): string[] {
+  const userObs = getPieceObservacoes(remate.id, store);
+  if (!isRemateLIndustrialPiece(remate)) return userObs;
+  return normalizeObservacoesList([REMATE_L_INDUSTRIAL_OBSERVACAO, ...userObs]);
+}
+
 export function hasObservacoes(pieceId: string, store?: PieceObservacoesStore): boolean {
   return getPieceObservacoes(pieceId, store).length > 0;
+}
+
+export function hasObservacoesForIndustrialEntry(
+  entry: IndustrialPieceEntry,
+  store?: PieceObservacoesStore
+): boolean {
+  return resolveObservacoesForIndustrialEntry(entry, store).length > 0;
 }

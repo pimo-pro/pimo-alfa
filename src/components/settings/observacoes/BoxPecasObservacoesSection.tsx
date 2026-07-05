@@ -4,7 +4,7 @@ import Panel from "../../ui/Panel";
 import {
   enumerateIndustrialPiecesForBox,
   getBoxObservacoes,
-  getPieceObservacoes,
+  resolveObservacoesForIndustrialEntry,
 } from "../../../core/observacoes/ObservacoesService";
 import { buildBoxesWithCutList } from "../../../context/projectState";
 import PieceObservacoesEditor from "./PieceObservacoesEditor";
@@ -70,7 +70,7 @@ export default function BoxPecasObservacoesSection({ boxId, boxNome }: BoxPecasO
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {pieces.map((piece) => {
-              const obs = getPieceObservacoes(piece.pieceId, project.pieceObservacoes);
+              const obs = resolveObservacoesForIndustrialEntry(piece, project.pieceObservacoes);
               const expanded = expandedPieceId === piece.pieceId;
               return (
                 <div

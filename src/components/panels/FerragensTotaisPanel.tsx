@@ -42,11 +42,11 @@ export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean 
       </p>
 
       <h4 style={{ fontSize: 12, margin: "12px 0 6px", color: "var(--text-main)" }}>Por tipo</h4>
-      <div style={{ display: "grid", gap: 4, marginBottom: 16 }}>
+      <div className="data-list" style={{ marginBottom: 16 }}>
         {porTipo.map(([tipo, total]) => (
-          <div key={tipo} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-            <span>{tipo}</span>
-            <strong>{total}</strong>
+          <div key={tipo} className="data-list__row">
+            <span className="data-list__label">{tipo}</span>
+            <span className="data-list__value">{total}</span>
           </div>
         ))}
       </div>

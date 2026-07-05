@@ -332,8 +332,10 @@ export default function LandingPage() {
                 <span style={{ color: "var(--blue-light,#3b82f6)" }}>em minutos</span>
               </h1>
               <p style={{ fontSize: "1.08rem", lineHeight: 1.7, color: "var(--text-muted,#94a3b8)", margin: "0 0 32px", maxWidth: 520 }}>
-                O PIMO é a única plataforma que reúne configurador 3D paramétrico + CNC/TCN + XML de furação +
-                nesting + rastreio de produção num só lugar, a preços acessíveis para PME.
+                O PIMO é a única plataforma de design industrial paramétrico que permite conceber e produzir
+                mobiliário completo — cozinhas, quartos e qualquer projeto em madeira — gerando automaticamente
+                ficheiros industriais (nesting, drill) em múltiplos formatos compatíveis com qualquer máquina CNC,
+                com rastreio e controlo de produção integrado, tudo a preços acessíveis para PME.
               </p>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 36 }}>
                 <button type="button" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 9, border: "none", background: "var(--blue-light,#3b82f6)", color: "#fff", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer" }}>

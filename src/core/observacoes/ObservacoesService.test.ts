@@ -89,6 +89,42 @@ describe("ObservacoesService — pipeline industrial", () => {
     );
     expect(obs).toEqual(["Store"]);
   });
+
+  it("Remate L inclui observação fixa ME manual (ext e int)", () => {
+    for (const remateKind of ["L_ext", "L_int"] as const) {
+      const obs = resolveObservacoesForCutListItem(
+        {
+          id: `remate-${remateKind}`,
+          nome: `MOD1_REMATE_${remateKind}_01`,
+          quantidade: 1,
+          dimensoes: { largura: 900, altura: 100, profundidade: 19 },
+          espessura: 19,
+          material: "mdf",
+          tipo: "remate",
+          metadata: { panelId: `remate-${remateKind}`, productType: "L", remateKind },
+        },
+        { pieceObservacoes: {} }
+      );
+      expect(obs).toEqual(["ME manual"]);
+    }
+  });
+
+  it("Remate L preserva observações do utilizador após a fixa", () => {
+    const obs = resolveObservacoesForCutListItem(
+      {
+        id: "remate-l-ext",
+        nome: "MOD1_REMATE_L_ext_01",
+        quantidade: 1,
+        dimensoes: { largura: 100, altura: 720, profundidade: 19 },
+        espessura: 19,
+        material: "mdf",
+        tipo: "remate",
+        metadata: { panelId: "remate-l-ext", productType: "L", remateKind: "L_ext" },
+      },
+      { pieceObservacoes: { "remate-l-ext": ["Extra"] } }
+    );
+    expect(obs).toEqual(["ME manual", "Extra"]);
+  });
 });
 
 describe("collectObservationsForItem", () => {

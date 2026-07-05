@@ -14,7 +14,7 @@
       "nome": "Cima",
       "tipo": "cima",
       "largura_mm": 800,
-      "altura_mm": 560,
+      "altura_mm": 541,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
@@ -22,14 +22,14 @@
       "nome": "Fundo",
       "tipo": "fundo",
       "largura_mm": 800,
-      "altura_mm": 560,
+      "altura_mm": 541,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Lateral esquerda",
       "tipo": "lateral_esquerda",
-      "largura_mm": 560,
+      "largura_mm": 541,
       "altura_mm": 1762,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
@@ -37,7 +37,7 @@
     {
       "nome": "Lateral direita",
       "tipo": "lateral_direita",
-      "largura_mm": 560,
+      "largura_mm": 541,
       "altura_mm": 1762,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
@@ -45,7 +45,7 @@
     {
       "nome": "Cozinha_Mono19_DIV_01",
       "tipo": "divisorio",
-      "largura_mm": 555,
+      "largura_mm": 536,
       "altura_mm": 1762,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
@@ -53,7 +53,7 @@
     {
       "nome": "Cozinha_Mono19_DIV_02",
       "tipo": "divisorio",
-      "largura_mm": 555,
+      "largura_mm": 536,
       "altura_mm": 1762,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
@@ -62,7 +62,7 @@
       "nome": "Cozinha_Mono19_SEP_01",
       "tipo": "separador",
       "largura_mm": 760,
-      "altura_mm": 555,
+      "altura_mm": 536,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
@@ -70,7 +70,7 @@
       "nome": "Cozinha_Mono19_SEP_02",
       "tipo": "separador",
       "largura_mm": 760,
-      "altura_mm": 555,
+      "altura_mm": 536,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
@@ -78,7 +78,7 @@
       "nome": "Cozinha_Mono19_SEP_03",
       "tipo": "separador",
       "largura_mm": 760,
-      "altura_mm": 555,
+      "altura_mm": 536,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
@@ -86,7 +86,7 @@
       "nome": "Cozinha_Mono19_SEP_04",
       "tipo": "separador",
       "largura_mm": 760,
-      "altura_mm": 555,
+      "altura_mm": 536,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
@@ -172,5 +172,5 @@
     }
   ],
   "fixture": "buildMono19BenchmarkScenario()",
-  "generatedAt": "2026-06-25T19:11:09.682Z"
+  "generatedAt": "2026-07-05T00:01:00.414Z"
 }

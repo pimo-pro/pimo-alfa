@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-06-25T19:11:40.820Z",
+  "generatedAt": "2026-07-05T00:01:30.607Z",
   "layoutOptions": "getDefaultCncLayoutOptions()",
   "scenarios": [
     {
@@ -9,7 +9,7 @@
       "description": "Projeto real importado (TEST 1.txt) — mix heterogéneo",
       "pieceCount": 2,
       "mode": "IMPORT",
-      "executionMs": 64.2,
+      "executionMs": 61.3,
       "totalSheets": 1,
       "avgWastePercent": 92.25,
       "totalMicroGapsLt5mm": 0,
@@ -49,25 +49,25 @@
       "description": "Pipeline industrial SPM — caixa completa",
       "pieceCount": 14,
       "mode": "SPM",
-      "executionMs": 117.8,
+      "executionMs": 142.4,
       "totalSheets": 3,
-      "avgWastePercent": 72.66,
+      "avgWastePercent": 74.58,
       "totalMicroGapsLt5mm": 0,
       "totalInternalIslands": 0,
-      "avgWasteScatterIndex": 0.824,
-      "utilizationPercent": 27.34,
-      "selectedStrategy": "shelf",
+      "avgWasteScatterIndex": 0.845,
+      "utilizationPercent": 25.42,
+      "selectedStrategy": "skyline",
       "selectedBinHeuristic": "bestFit",
       "perSheet": [
         {
           "sheetIndex": 1,
-          "usedAreaMm2": 3005670,
-          "wastePercent": 48.14,
+          "usedAreaMm2": 2933356,
+          "wastePercent": 49.39,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.588,
-          "bboxUsedMaxX": 2398,
-          "bboxUsedMaxY": 1733
+          "wasteScatterIndex": 0.627,
+          "bboxUsedMaxX": 2360,
+          "bboxUsedMaxY": 1695
         },
         {
           "sheetIndex": 2,
@@ -81,13 +81,13 @@
         },
         {
           "sheetIndex": 3,
-          "usedAreaMm2": 1058168,
-          "wastePercent": 81.74,
+          "usedAreaMm2": 797368,
+          "wastePercent": 86.24,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.911,
-          "bboxUsedMaxX": 1421,
-          "bboxUsedMaxY": 1041
+          "wasteScatterIndex": 0.934,
+          "bboxUsedMaxX": 1091,
+          "bboxUsedMaxY": 1031
         }
       ],
       "tcnRegression": {
@@ -97,7 +97,7 @@
         "structuralHash": "material-unresolved",
         "fullHash": "",
         "validationErrors": [
-          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 5 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 4 peça(s) (Armario_Full_SEP_01, Armario_Full_gav_frent_ext_01, Armario_Full_REMATE_DIR_01, Armario_Full_RODA_PE_01).; mdf_branco-10: 10 mm em 1 peça(s) (Armario_Full_gav_fun_01)."
+          "Error: Matéria-prima sem chapa válida: mdf_branco-19: 19 mm em 9 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-10: 10 mm em 1 peça(s) (Armario_Full_gav_fun_01)."
         ]
       },
       "labelsContract": {
@@ -116,35 +116,35 @@
       "description": "Pipeline industrial MPM — duas caixas",
       "pieceCount": 24,
       "mode": "MPM",
-      "executionMs": 31723.8,
+      "executionMs": 31915.3,
       "totalSheets": 4,
-      "avgWastePercent": 65.13,
+      "avgWastePercent": 67.7,
       "totalMicroGapsLt5mm": 0,
       "totalInternalIslands": 0,
-      "avgWasteScatterIndex": 0.789,
-      "utilizationPercent": 34.87,
-      "selectedStrategy": "skyline",
+      "avgWasteScatterIndex": 0.863,
+      "utilizationPercent": 32.3,
+      "selectedStrategy": "guillotine",
       "selectedBinHeuristic": "bestFit",
       "perSheet": [
         {
           "sheetIndex": 1,
-          "usedAreaMm2": 3497290,
-          "wastePercent": 39.66,
+          "usedAreaMm2": 3120098,
+          "wastePercent": 46.17,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.481,
-          "bboxUsedMaxX": 2783,
-          "bboxUsedMaxY": 1685
+          "wasteScatterIndex": 0.827,
+          "bboxUsedMaxX": 2114,
+          "bboxUsedMaxY": 1695
         },
         {
           "sheetIndex": 2,
-          "usedAreaMm2": 1271400,
-          "wastePercent": 78.06,
+          "usedAreaMm2": 1527562,
+          "wastePercent": 73.64,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.908,
-          "bboxUsedMaxX": 1325,
-          "bboxUsedMaxY": 1273
+          "wasteScatterIndex": 0.967,
+          "bboxUsedMaxX": 1383,
+          "bboxUsedMaxY": 1206
         },
         {
           "sheetIndex": 3,
@@ -158,13 +158,13 @@
         },
         {
           "sheetIndex": 4,
-          "usedAreaMm2": 1934416,
-          "wastePercent": 66.62,
+          "usedAreaMm2": 1460096,
+          "wastePercent": 74.81,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.928,
-          "bboxUsedMaxX": 1421,
-          "bboxUsedMaxY": 1556
+          "wasteScatterIndex": 0.821,
+          "bboxUsedMaxX": 1579,
+          "bboxUsedMaxY": 1416
         }
       ],
       "tcnRegression": {
@@ -174,7 +174,7 @@
         "structuralHash": "material-unresolved",
         "fullHash": "",
         "validationErrors": [
-          "Error: Matéria-prima sem chapa válida: mdf_branco: 19 mm em 9 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-19: 19 mm em 5 peça(s) (Armario_Full_SEP_01, Armario_Full_gav_frent_ext_01, Gaveta_Second_gav_frent_ext_01, Armario_Full_REMATE_DIR_01...).; mdf_branco-10: 10 mm em 2 peça(s) (Armario_Full_gav_fun_01, Gaveta_Second_gav_fun_01)."
+          "Error: Matéria-prima sem chapa válida: mdf_branco-19: 19 mm em 14 peça(s) (Cima, Fundo, Lateral esquerda, Lateral direita...).; mdf_branco-10: 10 mm em 2 peça(s) (Armario_Full_gav_fun_01, Gaveta_Second_gav_fun_01)."
         ]
       },
       "labelsContract": {

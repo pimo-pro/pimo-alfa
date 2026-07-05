@@ -4,7 +4,6 @@
   "pieceCount": 28,
   "materialIds": [
     "carvalho",
-    "mdf_branco",
     "mdf_branco-10",
     "mdf_branco-16",
     "mdf_branco-19"
@@ -16,7 +15,7 @@
       "largura_mm": 900,
       "altura_mm": 531,
       "espessura_mm": 19,
-      "materialId": "mdf_branco"
+      "materialId": "mdf_branco-19"
     },
     {
       "nome": "Fundo",
@@ -24,7 +23,7 @@
       "largura_mm": 900,
       "altura_mm": 531,
       "espessura_mm": 19,
-      "materialId": "mdf_branco"
+      "materialId": "mdf_branco-19"
     },
     {
       "nome": "Lateral esquerda",
@@ -32,7 +31,7 @@
       "largura_mm": 531,
       "altura_mm": 2062,
       "espessura_mm": 19,
-      "materialId": "mdf_branco"
+      "materialId": "mdf_branco-19"
     },
     {
       "nome": "Lateral direita",
@@ -40,7 +39,7 @@
       "largura_mm": 531,
       "altura_mm": 2062,
       "espessura_mm": 19,
-      "materialId": "mdf_branco"
+      "materialId": "mdf_branco-19"
     },
     {
       "nome": "COSTA",
@@ -56,7 +55,7 @@
       "largura_mm": 526,
       "altura_mm": 2062,
       "espessura_mm": 19,
-      "materialId": "mdf_branco"
+      "materialId": "mdf_branco-19"
     },
     {
       "nome": "Roupeiro_RealBench_DIV_02",
@@ -64,7 +63,7 @@
       "largura_mm": 526,
       "altura_mm": 2062,
       "espessura_mm": 19,
-      "materialId": "mdf_branco"
+      "materialId": "mdf_branco-19"
     },
     {
       "nome": "Roupeiro_RealBench_SEP_01",
@@ -91,7 +90,7 @@
       "materialId": "mdf_branco-19"
     },
     {
-      "nome": "porta_simples",
+      "nome": "port_esq",
       "tipo": "porta_simples",
       "largura_mm": 894,
       "altura_mm": 2064,
@@ -109,16 +108,16 @@
     {
       "nome": "Roupeiro_RealBench_gav_lat_esq_01",
       "tipo": "gaveta_lat_esq",
-      "largura_mm": 500,
-      "altura_mm": 404,
+      "largura_mm": 490,
+      "altura_mm": 312,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_lat_dir_01",
       "tipo": "gaveta_lat_dir",
-      "largura_mm": 500,
-      "altura_mm": 404,
+      "largura_mm": 490,
+      "altura_mm": 312,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -134,7 +133,7 @@
       "nome": "Roupeiro_RealBench_gav_cost_01",
       "tipo": "gaveta_traseira",
       "largura_mm": 816,
-      "altura_mm": 404,
+      "altura_mm": 312,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -149,16 +148,16 @@
     {
       "nome": "Roupeiro_RealBench_gav_lat_esq_02",
       "tipo": "gaveta_lat_esq",
-      "largura_mm": 500,
-      "altura_mm": 821,
+      "largura_mm": 490,
+      "altura_mm": 625,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_lat_dir_02",
       "tipo": "gaveta_lat_dir",
-      "largura_mm": 500,
-      "altura_mm": 821,
+      "largura_mm": 490,
+      "altura_mm": 625,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -174,7 +173,7 @@
       "nome": "Roupeiro_RealBench_gav_cost_02",
       "tipo": "gaveta_traseira",
       "largura_mm": 816,
-      "altura_mm": 821,
+      "altura_mm": 625,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -189,16 +188,16 @@
     {
       "nome": "Roupeiro_RealBench_gav_lat_esq_03",
       "tipo": "gaveta_lat_esq",
-      "largura_mm": 500,
-      "altura_mm": 821,
+      "largura_mm": 490,
+      "altura_mm": 625,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_lat_dir_03",
       "tipo": "gaveta_lat_dir",
-      "largura_mm": 500,
-      "altura_mm": 821,
+      "largura_mm": 490,
+      "altura_mm": 625,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -214,7 +213,7 @@
       "nome": "Roupeiro_RealBench_gav_cost_03",
       "tipo": "gaveta_traseira",
       "largura_mm": 816,
-      "altura_mm": 821,
+      "altura_mm": 625,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -236,5 +235,5 @@
     }
   ],
   "fixture": "buildRealWorldBenchmarkScenario()",
-  "generatedAt": "2026-06-25T19:11:08.732Z"
+  "generatedAt": "2026-07-05T00:01:00.630Z"
 }

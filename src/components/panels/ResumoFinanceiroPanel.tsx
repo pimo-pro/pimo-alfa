@@ -68,15 +68,40 @@ export default function ResumoFinanceiroPanel({ embedded }: { embedded?: boolean
     <Panel title={embedded ? undefined : "Resumo Financeiro"}>
       <IndustrialPanelPdfActions onGeneratePdf={exportResumoFinanceiroPdf} disabled={boxes.length === 0} />
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <button
-          type="button"
-          className="button button-ghost"
-          style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: 12 }}
-          onClick={() => setShowPecasList((v) => !v)}
-        >
-          <span>Peças totais</span>
-          <span style={{ fontWeight: 700, color: "var(--blue-light)" }}>{totalPecas}</span>
-        </button>
+        <div className="data-list">
+          <button
+            type="button"
+            className="data-list__row data-list__row--interactive"
+            onClick={() => setShowPecasList((v) => !v)}
+          >
+            <span className="data-list__label">Peças totais</span>
+            <span className="data-list__value data-list__value--accent">{totalPecas}</span>
+          </button>
+
+          <div className="data-list__row">
+            <span className="data-list__label">Área total</span>
+            <span className="data-list__value">{areaTotalM2.toFixed(3)} m²</span>
+          </div>
+          <div className="data-list__row">
+            <span className="data-list__label">Peso total</span>
+            <span className="data-list__value">{pesoTotalKg.toFixed(2)} kg</span>
+          </div>
+          <div className="data-list__row">
+            <span className="data-list__label">Nº de chapas</span>
+            <span className="data-list__value">{numeroChapas}</span>
+          </div>
+
+          {showPrices ? (
+            <div className="data-list__row data-list__row--total">
+              <span className="data-list__label">Total geral</span>
+              <span className="data-list__value data-list__value--accent">{formatCurrency(precoTotal)}</span>
+            </div>
+          ) : null}
+        </div>
+
+        {!showPrices ? (
+          <p style={{ ...microTextStyle, marginTop: 0 }}>Preços visíveis apenas para administradores.</p>
+        ) : null}
 
         {showPecasList ? (
           <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 8 }}>
@@ -87,28 +112,6 @@ export default function ResumoFinanceiroPanel({ embedded }: { embedded?: boolean
             ))}
           </div>
         ) : null}
-
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Área total</span>
-          <span style={{ color: "var(--text-main)" }}>{areaTotalM2.toFixed(3)} m²</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Peso total</span>
-          <span style={{ color: "var(--text-main)" }}>{pesoTotalKg.toFixed(2)} kg</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", ...microTextStyle }}>
-          <span>Nº de chapas</span>
-          <span style={{ color: "var(--text-main)" }}>{numeroChapas}</span>
-        </div>
-
-        {showPrices ? (
-          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 8 }}>
-            <span>Total geral</span>
-            <span style={{ color: "var(--blue-light)" }}>{formatCurrency(precoTotal)}</span>
-          </div>
-        ) : (
-          <p style={{ ...microTextStyle, marginTop: 8 }}>Preços visíveis apenas para administradores.</p>
-        )}
 
         <button type="button" className="button button-secondary" style={{ marginTop: 8 }} onClick={() => openGroupSection("industriais", "pecasTotais")}>
           Abrir Peças totais

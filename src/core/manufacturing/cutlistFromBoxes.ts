@@ -555,14 +555,15 @@ export function cutlistComPrecoFromBox(
   for (const item of items) {
     if (item.tipo !== "lateral_esquerda" && item.tipo !== "lateral_direita") continue;
 
-    const panelLength = item.dimensoes?.altura ?? 0;
-    if (panelLength <= 0) continue;
+    const panelDepthMm = item.dimensoes?.largura ?? 0;
+    const panelHeightMm = item.dimensoes?.altura ?? 0;
+    if (panelDepthMm <= 0 || panelHeightMm <= 0) continue;
 
-    const dowelHoles = calcLateralDowelHoles(panelLength);
+    const dowelHoles = calcLateralDowelHoles(panelDepthMm);
 
     const newHoles: PanelDrillHole[] = dowelHoles.map((h) => ({
       x: h.x,
-      y: h.edge === "top" ? panelLength : 0,
+      y: h.edge === "top" ? panelHeightMm : 0,
       diameter: h.diameter,
       depth: h.depth,
       holeType: "cavilha" as const,

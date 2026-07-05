@@ -20,6 +20,7 @@ export {
   getBoxObservacoes,
   getPieceObservacoes,
   hasObservacoes,
+  hasObservacoesForIndustrialEntry,
   mergePieceObservacoesStores,
   migrateLegacyMetadataObservations,
   migrateProjectPieceObservacoes,
@@ -28,7 +29,9 @@ export {
   observationsToV5Slots,
   panelIdFromCutListItem,
   resolveObservacoesForCutListItem,
+  resolveObservacoesForIndustrialEntry,
   resolveObservacoesForPiece,
+  resolveObservacoesForRematePiece,
   sanitizeObservationText,
   type LabelObservationItemLike,
 } from "./ObservacoesService";

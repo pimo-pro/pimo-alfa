@@ -46,21 +46,16 @@ export default function PainelCustosAdmin() {
   return (
     <div className="bottom-info-hub__card">
       <h3 className="bottom-info-hub__card-title">Custos do projeto (ADMIN)</h3>
-      <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+      <div className="data-list">
         {rows.map(([label, value]) => (
           <div
             key={label}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "8px 10px",
-              borderRadius: 6,
-              background: "var(--card-bg)",
-              border: "1px solid var(--card-border)",
-            }}
+            className={`data-list__row${label === "Total projeto" ? " data-list__row--total" : ""}`}
           >
-            <span style={{ color: "var(--text-muted)" }}>{label}</span>
-            <strong>{value}</strong>
+            <span className="data-list__label">{label}</span>
+            <span className={`data-list__value${label === "Total projeto" ? " data-list__value--accent" : ""}`}>
+              {value}
+            </span>
           </div>
         ))}
       </div>
