@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import type { StructuralBoundsM } from "./rematePlacement";
 import type { RemateMountSlot, RematePiece, RematePiecePosition, RematePieceRotation } from "./rematePieceTypes";
 
@@ -20,6 +21,37 @@ export function resolveLRemateRotation(piece: RematePiece): RematePieceRotation 
     return REMATE_L_CIMA_INT_ROTATION;
   }
   return ZERO_ROT;
+}
+
+/** Lead id do grupo L CIMA (ext) para seleção, gizmo e UI de rotação. */
+export function resolveLRemateCimaCompositeLeadId(
+  remateId: string,
+  remates: readonly RematePiece[]
+): string {
+  const piece = remates.find((p) => p.id === remateId);
+  if (!piece?.parentGroupId || !isLRematePiece(piece)) return remateId;
+  if (piece.partIndex === 1 && resolveLPrimarySlot(piece) === "CIMA") return remateId;
+  if (piece.partIndex !== 2 || resolveLPrimarySlot(piece) !== "CIMA") return remateId;
+  const ext = remates.find(
+    (p) =>
+      p.parentGroupId === piece.parentGroupId &&
+      isLRematePiece(p) &&
+      p.partIndex === 1 &&
+      resolveLPrimarySlot(p) === "CIMA"
+  );
+  return ext?.id ?? remateId;
+}
+
+/** Transformações FREE de L CIMA composite aplicam-se sempre na peça ext (lead). */
+export function resolveLRemateTransformLeadId(
+  remateId: string,
+  remates: readonly RematePiece[],
+  patch?: Partial<Pick<RematePiece, "position" | "rotation" | "placementMode">>
+): string {
+  if (patch && patch.position == null && patch.rotation == null && patch.placementMode == null) {
+    return remateId;
+  }
+  return resolveLRemateCimaCompositeLeadId(remateId, remates);
 }
 
 export function isLRematePiece(piece: Pick<RematePiece, "productType" | "tipo">): boolean {
@@ -199,24 +231,49 @@ export function computeLRemateExtCornerMm(
 }
 
 /**
+ * Offset canto int ← canto ext em mm (frame local da peça ext, CIMA).
+ * Encaixe industrial: int recua ext.depth ao longo do -Z local da ext, depois roda com a ext.
+ */
+export function computeLRemateCimaIntCornerOffsetMm(
+  ext: Pick<RematePiece, "depth" | "rotation">
+): RematePiecePosition {
+  const v = new THREE.Vector3(0, 0, -Math.max(1, ext.depth));
+  const rot = ext.rotation ?? ZERO_ROT;
+  v.applyEuler(new THREE.Euler(rot.xRad, rot.yRad, rot.zRad));
+  return { xMm: v.x, yMm: v.y, zMm: v.z };
+}
+
+/** Offset do centro int ← centro ext em mm, no frame local da ext (CIMA, pivô ext). */
+export function computeLRemateCimaIntLocalOffsetMm(
+  ext: Pick<RematePiece, "height" | "depth">
+): RematePiecePosition {
+  return {
+    xMm: 0,
+    yMm: ext.depth / 2 - ext.height / 2,
+    zMm: -ext.depth / 2 - ext.height / 2,
+  };
+}
+
+/**
  * União geométrica CIMA (modelo interno): int encaixada em ext em Z, mesma X/Y.
  * Laterais legacy (DIR/ESQ): int acima de ext em Y.
  */
 export function computeLRemateIntCornerFromExt(
   extCorner: RematePiecePosition,
-  extDims: Pick<RematePiece, "width" | "height" | "depth">,
+  extRef: Pick<RematePiece, "width" | "height" | "depth" | "rotation">,
   primary: RemateMountSlot = "DIR"
 ): RematePiecePosition {
   if (primary === "CIMA") {
+    const offset = computeLRemateCimaIntCornerOffsetMm(extRef);
     return {
-      xMm: extCorner.xMm,
-      yMm: extCorner.yMm,
-      zMm: extCorner.zMm - extDims.depth,
+      xMm: extCorner.xMm + offset.xMm,
+      yMm: extCorner.yMm + offset.yMm,
+      zMm: extCorner.zMm + offset.zMm,
     };
   }
   return {
     xMm: extCorner.xMm,
-    yMm: extCorner.yMm + extDims.height,
+    yMm: extCorner.yMm + extRef.height,
     zMm: extCorner.zMm,
   };
 }
@@ -227,36 +284,36 @@ export function computeLRemateIntCornerFromExtPiece(ext: RematePiece): RematePie
 
 export function computeLRemateExtCornerFromInt(
   intCorner: RematePiecePosition,
-  extDims: Pick<RematePiece, "width" | "height" | "depth">,
+  extRef: Pick<RematePiece, "width" | "height" | "depth" | "rotation">,
   primary: RemateMountSlot = "DIR"
 ): RematePiecePosition {
   if (primary === "CIMA") {
+    const offset = computeLRemateCimaIntCornerOffsetMm(extRef);
     return {
-      xMm: intCorner.xMm,
-      yMm: intCorner.yMm,
-      zMm: intCorner.zMm + extDims.depth,
+      xMm: intCorner.xMm - offset.xMm,
+      yMm: intCorner.yMm - offset.yMm,
+      zMm: intCorner.zMm - offset.zMm,
     };
   }
   return {
     xMm: intCorner.xMm,
-    yMm: intCorner.yMm - extDims.height,
+    yMm: intCorner.yMm - extRef.height,
     zMm: intCorner.zMm,
   };
 }
 
-/** Pose de render: centro 3D + rotação (CIMA int Rx90°). */
+/** Pose de render: centro 3D + rotação (ext FREE usa estado; CIMA int Rx90° industrial). */
 export function resolveLRemateRenderPose(
   piece: RematePiece,
   _bounds?: StructuralBoundsM
 ): { position: RematePiecePosition; rotation: RematePieceRotation } {
-  const position =
-    piece.placementMode === "FREE"
-      ? piece.position
-      : lRemateCornerToCenterForPiece(piece, piece.position);
-
+  const rotation =
+    isLRemateInt(piece) || piece.placementMode !== "FREE"
+      ? resolveLRemateRotation(piece)
+      : (piece.rotation ?? ZERO_ROT);
   return {
-    position,
-    rotation: resolveLRemateRotation(piece),
+    position: lRemateCornerToCenterForPiece(piece, piece.position),
+    rotation,
   };
 }
 
@@ -324,7 +381,6 @@ export function applyLRemateGroupCoupling(remates: RematePiece[], movedId: strin
       ? {
           ...r,
           position: extCorner,
-          rotation: resolveLRemateRotation(r),
           placementMode: moved.placementMode,
         }
       : r
@@ -340,10 +396,12 @@ export function normalizeLRemateTransformPatch<T extends Partial<Pick<RematePiec
   if (!isLRematePiece(piece)) return patch;
   const next: T = {
     ...patch,
-    rotation: resolveLRemateRotation(piece),
     faceOffsets: undefined,
-    placementMode: patch.placementMode ?? "FREE",
+    placementMode: patch.placementMode ?? piece.placementMode ?? "FREE",
   } as T;
+  if (patch.rotation != null) {
+    next.rotation = isLRemateExt(piece) ? patch.rotation : resolveLRemateRotation(piece);
+  }
   if (patch.position) {
     next.position = lRemateCenterToCornerForPiece(piece, patch.position);
   }

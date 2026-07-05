@@ -12,6 +12,7 @@ import {
   applyLRemateGroupCoupling,
   isLRematePiece,
   normalizeLRemateTransformPatch,
+  resolveLRemateTransformLeadId,
   snapLRemateGroupCorners,
 } from "../../core/remate/remateLGeometry";
 import { getRemateEnvelopeBoundsM } from "../../core/remate/rematePlacement";
@@ -63,7 +64,7 @@ function refreshLRemateGroupSnap(
 }
 
 export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateActions {
-  const { updateProject } = ctx;
+  const { updateProject, projectRef } = ctx;
 
   return useMemo(
     () => ({
@@ -171,13 +172,18 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                 invalidateGlobalCache: false,
               });
             }
-            const source = prev.remates?.find((r) => r.id === remateId);
+            const transformTargetId = resolveLRemateTransformLeadId(
+              remateId,
+              prev.remates ?? [],
+              patch
+            );
+            const source = prev.remates?.find((r) => r.id === transformTargetId);
             const normalizedPatch = source
               ? normalizeLRemateTransformPatch(source, patch)
               : patch;
 
             let remates = (prev.remates ?? []).map((remate) => {
-              if (remate.id !== remateId) return remate;
+              if (remate.id !== transformTargetId) return remate;
               const { depth: _depthPatchIgnored, ...patchWithoutDepth } = normalizedPatch;
               void _depthPatchIgnored;
               let nextRemate = applyProductPatch(remate, patchWithoutDepth);
@@ -231,16 +237,18 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
 
             if (
               normalizedPatch.position != null ||
+              normalizedPatch.rotation != null ||
               normalizedPatch.height != null ||
               normalizedPatch.width != null
             ) {
-              remates = applyLRemateGroupCoupling(remates, remateId);
+              remates = applyLRemateGroupCoupling(remates, transformTargetId);
             }
 
             const next = applyResultados({
               ...prev,
               remates,
             });
+            projectRef.current = next;
             if (patch.materialPresetId != null) {
               const remate = next.remates?.find((r) => r.id === remateId);
               refreshViewerAfterMaterialSync({

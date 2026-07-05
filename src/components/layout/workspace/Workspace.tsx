@@ -1070,60 +1070,17 @@ const hasShownViewerReadyToastRef = useRef(false);
     const performRemateMoveStep = (
       remateId: string,
       key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
-      stepMm: number
+      stepMm: number,
+      shiftKey = false
     ) => {
-      const remate = projectRef.current.remates?.find((r) => r.id === remateId);
-      if (!remate) return;
-
-      const stepM = stepMm / 1000;
-      let localU = 0;
-      let localV = 0;
-      if (key === "ArrowUp") localV = stepM;
-      else if (key === "ArrowDown") localV = -stepM;
-      else if (key === "ArrowLeft") localU = -stepM;
-      else localU = stepM;
-
-      const yaw = remate.rotation?.yRad ?? 0;
-      const cos = Math.cos(yaw);
-      const sin = Math.sin(yaw);
-      const delta = new Vector3(
-        localU * cos - localV * sin,
-        localV,
-        localU * sin + localV * cos
-      );
-
-      let nextPosition = { ...remate.position };
-
-      if (remate.parentBoxId) {
-        const worldMatrix = window.viewerCore?.getBoxWorldMatrix?.(remate.parentBoxId) as Matrix4 | undefined;
-        if (worldMatrix) {
-          const inv = new Matrix4().copy(worldMatrix).invert();
-          const deltaLocal = delta.clone().applyMatrix4(inv);
-          nextPosition = {
-            xMm: remate.position.xMm + deltaLocal.x * 1000,
-            yMm: remate.position.yMm + deltaLocal.y * 1000,
-            zMm: remate.position.zMm + deltaLocal.z * 1000,
-          };
-        }
-      } else {
-        nextPosition = {
-          xMm: remate.position.xMm + delta.x * 1000,
-          yMm: remate.position.yMm + delta.y * 1000,
-          zMm: remate.position.zMm + delta.z * 1000,
-        };
-      }
-
-      const current = projectRef.current;
-      const nextPatch = { position: nextPosition, placementMode: "FREE" as const };
-      projectRef.current = {
-        ...current,
-        remates: (current.remates ?? []).map((r) =>
-          r.id === remateId ? { ...r, ...nextPatch } : r
-        ),
+      const core = window.viewerCore as typeof window.viewerCore & {
+        applyRemateKeyboardTransform?: (
+          id: string,
+          arrowKey: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+          options?: { stepMm?: number; stepDeg?: number; shiftKey?: boolean }
+        ) => boolean;
       };
-      actionsRef.current.updateRemate(remateId, nextPatch);
-      window.viewerCore?.syncRemateVisuals?.();
-      window.viewerCore?.resolveFinishCollisionAfterSync?.({ remateId });
+      core?.applyRemateKeyboardTransform?.(remateId, key, { stepMm, shiftKey });
     };
 
     const performRodapeMoveStep = (
@@ -1292,11 +1249,11 @@ const hasShownViewerReadyToastRef = useRef(false);
       const uiSelection = uiStore.getState().selectedObject;
       const finishStepMm = 1;
       if (uiSelection.type === "remate") {
-        performRemateMoveStep(uiSelection.id, key, finishStepMm);
+        performRemateMoveStep(uiSelection.id, key, finishStepMm, event.shiftKey);
         state.accelTimeoutId = window.setTimeout(() => {
           state.repeatIntervalId = window.setInterval(() => {
             if (keyboardMoveRef.current.activeKey !== key) return;
-            performRemateMoveStep(uiSelection.id, key, finishStepMm);
+            performRemateMoveStep(uiSelection.id, key, finishStepMm, event.shiftKey);
           }, 40);
         }, 200);
         return;

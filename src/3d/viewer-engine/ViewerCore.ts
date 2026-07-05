@@ -185,6 +185,12 @@ import { createDisabledSmartLayoutDeps } from "./snapping/smartLayoutDepsFactory
 import { OrlaVisualizer, type OrlaVisualBridge } from "./orla/OrlaVisualizer";
 import { RematePieceVisualizer, type RematePieceVisualBridge } from "./remate/RematePieceVisualizer";
 import {
+  listRemateIdsInSameLComposite,
+  resolveLRemateCimaLeadId,
+  resolveRemateTransformRoot,
+} from "./remate/remateLCompositeVisual";
+import { isLRematePiece } from "../../core/remate/remateLGeometry";
+import {
   computeMountFrameM,
   faceOffsetsFromPositionM,
   resolveMountSlot,
@@ -972,7 +978,9 @@ export class ViewerCore {
       historyManager.beginDragSession("transform.drag", "Transformação");
       this.onTransformDragStart?.();
       if (this.viewerState.getSelectedRemate()) {
-        const obj = this.transformControls!.object;
+        const remateId = this.viewerState.getSelectedRemate()!;
+        const rawMesh = this.remateVisualizer.getMeshByRemateId(remateId);
+        const obj = resolveRemateTransformRoot(rawMesh) ?? rawMesh ?? this.transformControls!.object;
         if (obj) this.remateSmartSnapping.onDragStart(obj as THREE.Object3D);
       } else if (this.viewerState.getSelectedDivSep()) {
         const sel = this.viewerState.getSelectedDivSep()!;
@@ -1272,10 +1280,87 @@ export class ViewerCore {
     return this.remateVisualizer.getMeshByRemateId(remateId) ?? null;
   }
 
+  /**
+   * Nudge de remate via teclado — opera no root de transform (grupo L CIMA composite quando aplicável),
+   * propaga via notifyRemateTransform (mesmo pipeline do gizmo).
+   */
+  applyRemateKeyboardTransform(
+    remateId: string,
+    key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+    options?: { stepMm?: number; stepDeg?: number; shiftKey?: boolean }
+  ): boolean {
+    const pieces = this.remateVisualBridge?.listRematePieces() ?? [];
+    const leadId = resolveLRemateCimaLeadId(remateId, pieces);
+    const rawMesh = this.remateVisualizer.getMeshByRemateId(leadId);
+    const mesh = resolveRemateTransformRoot(rawMesh) ?? rawMesh;
+    if (!mesh) return false;
+
+    const tool = this.viewerState.getCurrentTool();
+    if (tool === "scale") return false;
+
+    const stepMm = options?.stepMm ?? 1;
+    const stepDeg = options?.stepDeg ?? 1;
+    const shiftKey = options?.shiftKey ?? false;
+    const stepM = stepMm / 1000;
+    const stepRad = (stepDeg * Math.PI) / 180;
+
+    if (tool === "rotate") {
+      const axis = new THREE.Vector3();
+      let sign = 1;
+      if (shiftKey) {
+        axis.set(0, 0, 1);
+        if (key === "ArrowUp") sign = 1;
+        else if (key === "ArrowDown") sign = -1;
+        else return false;
+      } else if (key === "ArrowLeft" || key === "ArrowRight") {
+        axis.set(0, 1, 0);
+        sign = key === "ArrowLeft" ? 1 : -1;
+      } else if (key === "ArrowUp" || key === "ArrowDown") {
+        axis.set(1, 0, 0);
+        sign = key === "ArrowUp" ? 1 : -1;
+      } else {
+        return false;
+      }
+      mesh.rotateOnWorldAxis(axis, sign * stepRad);
+    } else {
+      const delta = new THREE.Vector3();
+      if (shiftKey) {
+        if (key === "ArrowUp") delta.z = stepM;
+        else if (key === "ArrowDown") delta.z = -stepM;
+        else return false;
+      } else if (key === "ArrowUp") delta.y = stepM;
+      else if (key === "ArrowDown") delta.y = -stepM;
+      else if (key === "ArrowLeft") delta.x = -stepM;
+      else if (key === "ArrowRight") delta.x = stepM;
+      else return false;
+      mesh.position.add(delta);
+    }
+
+    mesh.updateMatrixWorld(true);
+
+    const prevSelected = this.viewerState.getSelectedRemate();
+    if (prevSelected !== leadId) this.viewerState.setSelectedRemate(leadId);
+    this.notifyRemateTransform();
+    if (prevSelected !== leadId) this.viewerState.setSelectedRemate(prevSelected);
+
+    this.syncRemateVisuals();
+
+    const isLCimaComposite = mesh.userData?.isRemateLComposite === true;
+    if (!isLCimaComposite && this.lockEnabled) {
+      this.resolveFinishCollisionAfterSync({ remateId: leadId });
+    }
+
+    return true;
+  }
+
   selectRemate(remateId: string | null): void {
-    this.viewerState.setSelectedRemate(remateId);
-    this.onRemateSelected?.(remateId);
-    clearCompetingSelectionsFor(this.viewerState, "remate", remateId);
+    const resolvedId =
+      remateId != null
+        ? resolveLRemateCimaLeadId(remateId, this.remateVisualBridge?.listRematePieces() ?? [])
+        : null;
+    this.viewerState.setSelectedRemate(resolvedId);
+    this.onRemateSelected?.(resolvedId);
+    clearCompetingSelectionsFor(this.viewerState, "remate", resolvedId);
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
   }
@@ -5054,6 +5139,8 @@ export class ViewerCore {
       this.measurementOverlay.onRulerMovementTick("transform");
       if (this.groupGizmo?.isActive()) {
         this.notifyGroupTransform();
+      } else if (this.viewerState.getSelectedRemate()) {
+        this.notifyRemateTransform();
       } else {
         this.notifyBoxTransform();
       }
@@ -5097,7 +5184,8 @@ export class ViewerCore {
   private notifyRemateTransform(): void {
     const remateId = this.viewerState.getSelectedRemate();
     if (!remateId) return;
-    const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
+    const rawMesh = this.remateVisualizer.getMeshByRemateId(remateId);
+    const mesh = resolveRemateTransformRoot(rawMesh) ?? rawMesh;
     if (!mesh) return;
     const p = mesh.position;
     if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
@@ -5109,6 +5197,7 @@ export class ViewerCore {
 
     const tool = this.viewerState.getCurrentTool();
     if (tool === "scale") {
+      if (!(mesh instanceof THREE.Mesh)) return;
       mesh.geometry.computeBoundingBox();
       const size = new THREE.Vector3();
       mesh.geometry.boundingBox?.getSize(size);
@@ -5143,6 +5232,15 @@ export class ViewerCore {
       const rotation = { xRad: euler.x, yRad: euler.y, zRad: euler.z };
 
       const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === remateId);
+      if (piece && isLRematePiece(piece)) {
+        this.onRemateTransform?.(remateId, {
+          position,
+          rotation,
+          placementMode: "FREE",
+        });
+        return;
+      }
+
       let faceOffsets = piece?.faceOffsets;
       if (piece?.parentBoxId) {
         const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
@@ -5273,7 +5371,8 @@ export class ViewerCore {
   resolveFinishCollisionAfterSync(params: { remateId?: string; rodapeId?: string }): void {
     const { remateId, rodapeId } = params;
     if (remateId) {
-      const mesh = this.remateVisualizer.getMeshByRemateId(remateId);
+      const rawMesh = this.remateVisualizer.getMeshByRemateId(remateId);
+      const mesh = resolveRemateTransformRoot(rawMesh) ?? rawMesh;
       if (!mesh) return;
       const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === remateId);
       const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
@@ -5304,11 +5403,24 @@ export class ViewerCore {
   ): void {
     if (!this.lockEnabled) return;
 
+    const excludeRemateIds = new Set<string>();
+    if (excludeRemateId) {
+      for (const id of listRemateIdsInSameLComposite(
+        excludeRemateId,
+        this.remateVisualBridge?.listRematePieces() ?? []
+      )) {
+        excludeRemateIds.add(id);
+      }
+    }
+
     const otherMeshes: THREE.Object3D[] = [];
+    const seenMeshUuids = new Set<string>();
     for (const piece of this.remateVisualBridge?.listRematePieces() ?? []) {
-      if (piece.id === excludeRemateId) continue;
+      if (excludeRemateIds.has(piece.id)) continue;
       const mesh = this.remateVisualizer.getMeshByRemateId(piece.id);
-      if (mesh) otherMeshes.push(mesh);
+      if (!mesh || mesh === movingMesh || seenMeshUuids.has(mesh.uuid)) continue;
+      seenMeshUuids.add(mesh.uuid);
+      otherMeshes.push(mesh);
     }
     for (const cfg of this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []) {
       for (const rodape of cfg.rodapes) {
@@ -5624,26 +5736,30 @@ export class ViewerCore {
     }
 
     if (selectedRemateId) {
-      const mesh = this.remateVisualizer.getMeshByRemateId(selectedRemateId);
+      const rawMesh = this.remateVisualizer.getMeshByRemateId(selectedRemateId);
+      const mesh = resolveRemateTransformRoot(rawMesh) ?? rawMesh;
       const obj = this.transformControls?.object;
       if (isDragging && mesh && obj === mesh) {
         const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === selectedRemateId);
         const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
         const entry = boxId ? this.boxes.get(boxId) : undefined;
 
-        if (currentTool === "translate" && entry && piece && boxId) {
+        const snapTarget = mesh as THREE.Mesh;
+        const isLCimaComposite = mesh.userData?.isRemateLComposite === true;
+
+        if (currentTool === "translate" && entry && piece && boxId && !isLCimaComposite) {
           const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
           if (cfg) {
             this.remateSmartSnapping.applyDuringTranslate({
-              mesh,
+              mesh: snapTarget,
               boxEntry: entry,
               boxConfig: cfg,
             });
           }
-        } else if (currentTool === "translate" && piece && !boxId) {
-          this.remateSmartSnapping.applyStandaloneGridSnap(mesh);
-        } else if (currentTool === "rotate") {
-          applyRemateRotationSnapToMesh(mesh, entry?.mesh ?? null);
+        } else if (currentTool === "translate" && piece && !boxId && !isLCimaComposite) {
+          this.remateSmartSnapping.applyStandaloneGridSnap(snapTarget);
+        } else if (currentTool === "rotate" && !isLCimaComposite) {
+          applyRemateRotationSnapToMesh(snapTarget, entry?.mesh ?? null);
         }
 
         if (currentTool === "translate" && mesh && obj === mesh) {

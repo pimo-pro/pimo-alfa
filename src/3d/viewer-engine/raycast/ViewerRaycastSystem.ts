@@ -15,6 +15,7 @@ import { clampOpeningToWall } from "../../../utils/openingConstraints";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 import type { InternalSelectionHit } from "../selection/internalSelectionTypes";
 import { resolveInternalSelectionHit } from "../selection/InternalSelectionResolver";
+import { resolveRemateIdFromFinishHit } from "../remate/remateLCompositeVisual";
 
 /** Layer lógica interna (raycast continua em layer 0; classificação separa interno vs externo). */
 export const VIEWER_INTERNAL_PICK_LAYER = 30;
@@ -153,6 +154,11 @@ export class ViewerRaycastSystem {
     const hits = this.deps.raycaster.intersectObjects([root], true);
     for (const hit of hits) {
       if (hit.object.userData?.[skipMergeKey] === true) continue;
+      if (idKey === "remateId") {
+        const remateId = resolveRemateIdFromFinishHit(hit.object);
+        if (remateId) return remateId;
+        continue;
+      }
       const id = hit.object.userData?.[idKey];
       if (typeof id === "string" && id.length > 0) return id;
     }
@@ -194,6 +200,10 @@ export class ViewerRaycastSystem {
         if (hit.object.userData?.isHematiMergeVisual === true) continue;
         if (hit.object.userData?.isRodapeMergeVisual === true) continue;
         if (hit.object.userData?.isRemateMergeVisual === true) continue;
+        const remateId = resolveRemateIdFromFinishHit(hit.object);
+        if (remateId) {
+          return hit.point.clone();
+        }
         const id =
           hit.object.userData?.hematiId ??
           hit.object.userData?.rodapeId ??

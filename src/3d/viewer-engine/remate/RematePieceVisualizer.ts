@@ -5,6 +5,13 @@ import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
 import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
+import {
+  applyRemateLCompositeChildUserData,
+  applyRemateLCompositeUserData,
+  collectLRemateCimaGroups,
+  isLRemateCimaCompositeCandidate,
+  layoutLRemateCimaComposite,
+} from "./remateLCompositeVisual";
 
 export type RematePieceVisualBoxConfig = {
   boxId: string;
@@ -31,6 +38,8 @@ export class RematePieceVisualizer {
   private bridge: RematePieceVisualBridge | null = null;
   private readonly root = new THREE.Group();
   private readonly meshById = new Map<string, THREE.Mesh>();
+  private readonly compositeGroupById = new Map<string, THREE.Group>();
+  private readonly compositeMeshByRemateId = new Map<string, THREE.Group>();
   private readonly mergeGroupById = new Map<string, THREE.Mesh>();
 
   constructor() {
@@ -42,8 +51,8 @@ export class RematePieceVisualizer {
     return this.root;
   }
 
-  getMeshByRemateId(remateId: string): THREE.Mesh | undefined {
-    return this.meshById.get(remateId);
+  getMeshByRemateId(remateId: string): THREE.Object3D | undefined {
+    return this.compositeMeshByRemateId.get(remateId) ?? this.meshById.get(remateId);
   }
 
   bindBridge(bridge: RematePieceVisualBridge | null): void {
@@ -57,13 +66,24 @@ export class RematePieceVisualizer {
     }
 
     const remateList = this.bridge.listRematePieces().filter((piece) => !isRodapeLikeRematePiece(piece));
-    const expectedIds = new Set(remateList.map((piece) => piece.id));
+    const lCimaGroups = collectLRemateCimaGroups(remateList);
+    const compositeRemateIds = new Set<string>();
+    for (const { ext, int } of lCimaGroups.values()) {
+      compositeRemateIds.add(ext.id);
+      compositeRemateIds.add(int.id);
+      this.upsertLRemateCimaComposite(ext, int);
+    }
 
-    // Cada remate permanece visível e clicável; rodapés pertencem ao RodapeVisualizer.
     for (const piece of remateList) {
+      if (compositeRemateIds.has(piece.id)) continue;
       this.upsertMesh(piece, false);
     }
-    this.removeStaleMeshes(this.meshById, expectedIds);
+
+    this.removeStaleMeshes(
+      this.meshById,
+      new Set(remateList.filter((p) => !compositeRemateIds.has(p.id)).map((p) => p.id))
+    );
+    this.removeStaleCompositeGroups(lCimaGroups);
     this.removeStaleMeshes(this.mergeGroupById, new Set());
 
     // Merge visual reservado — método mantido para reativação futura sem perder lógica.
@@ -79,6 +99,7 @@ export class RematePieceVisualizer {
     this.disposeMeshes(this.mergeGroupById);
     this.mergeGroupById.clear();
 
+    this.disposeCompositeGroups();
     this.disposeMeshes(this.meshById);
     this.meshById.clear();
   }
@@ -88,7 +109,53 @@ export class RematePieceVisualizer {
     this.bridge = null;
   }
 
+  private upsertLRemateCimaComposite(ext: RematePiece, int: RematePiece): void {
+    const groupId = ext.parentGroupId ?? ext.id;
+    let group = this.compositeGroupById.get(groupId);
+    if (!group) {
+      group = new THREE.Group();
+      applyRemateLCompositeUserData(group, ext, int);
+      group.renderOrder = REMATE_RENDER_ORDER;
+      this.compositeGroupById.set(groupId, group);
+      this.root.add(group);
+    } else {
+      applyRemateLCompositeUserData(group, ext, int);
+    }
+
+    this.upsertCompositeChild(group, ext);
+    this.upsertCompositeChild(group, int);
+    layoutLRemateCimaComposite(group, ext, int, this.bridge);
+
+    this.compositeMeshByRemateId.set(ext.id, group);
+    this.compositeMeshByRemateId.set(int.id, group);
+  }
+
+  private upsertCompositeChild(group: THREE.Group, piece: RematePiece): void {
+    const { w, h, d } = remateGeometryExtentsM(piece);
+    const existing = group.children.find(
+      (child) => child.userData?.rematePartIndex === piece.partIndex
+    ) as THREE.Mesh | undefined;
+
+    let mesh = existing;
+    if (!mesh) {
+      mesh = this.createMesh(piece, w, h, d);
+      applyRemateLCompositeChildUserData(mesh, piece);
+      mesh.name = `remate-l-part-${piece.partIndex}-${piece.id}`;
+      group.add(mesh);
+    } else {
+      mesh.geometry.dispose();
+      mesh.geometry = new THREE.BoxGeometry(w, h, d);
+      this.applyMaterial(mesh, piece);
+      applyRemateLCompositeChildUserData(mesh, piece);
+    }
+
+    mesh.visible = true;
+    mesh.renderOrder = REMATE_RENDER_ORDER;
+    mesh.userData.remateOutlineRenderOrder = REMATE_OUTLINE_RENDER_ORDER;
+  }
+
   private upsertMesh(piece: RematePiece, hidden: boolean): void {
+    if (isLRemateCimaCompositeCandidate(piece)) return;
     const { w, h, d } = remateGeometryExtentsM(piece);
 
     let mesh = this.meshById.get(piece.id);
@@ -116,6 +183,32 @@ export class RematePieceVisualizer {
       this.disposeMesh(mesh);
       map.delete(id);
     }
+  }
+
+  private removeStaleCompositeGroups(
+    expected: Map<string, { ext: RematePiece; int: RematePiece }>
+  ): void {
+    for (const [groupId, group] of this.compositeGroupById.entries()) {
+      if (expected.has(groupId)) continue;
+      for (const [remateId, mapped] of this.compositeMeshByRemateId.entries()) {
+        if (mapped === group) this.compositeMeshByRemateId.delete(remateId);
+      }
+      this.disposeCompositeGroup(group);
+      this.compositeGroupById.delete(groupId);
+    }
+  }
+
+  private disposeCompositeGroups(): void {
+    this.compositeGroupById.forEach((group) => this.disposeCompositeGroup(group));
+    this.compositeGroupById.clear();
+    this.compositeMeshByRemateId.clear();
+  }
+
+  private disposeCompositeGroup(group: THREE.Group): void {
+    group.children.slice().forEach((child) => {
+      if (child instanceof THREE.Mesh) this.disposeMesh(child);
+    });
+    group.removeFromParent();
   }
 
   private disposeMeshes(map: Map<string, THREE.Mesh>): void {

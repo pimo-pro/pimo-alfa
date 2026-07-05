@@ -2,12 +2,15 @@ import { describe, it, expect } from "vitest";
 import { getRemateEnvelopeBoundsM } from "./rematePlacement";
 import {
   applyLRemateGroupCoupling,
+  computeLRemateCimaIntLocalOffsetMm,
+  computeLRemateExtCornerFromInt,
   computeLRemateExtCornerMm,
   computeLRemateIntCornerFromExt,
   computeLRemateSheetDimensions,
   lRemateCenterToCornerMm,
   lRemateCornerToCenterMm,
   lSecondaryMountSlot,
+  normalizeLRemateTransformPatch,
   REMATE_L_CIMA_INT_ROTATION,
   REMATE_L_STRIP_WIDTH_MM,
   remateLIndustrialName,
@@ -16,6 +19,7 @@ import {
   resolveLRemateRotation,
   snapLRemateGroupCorners,
 } from "./remateLGeometry";
+import type { RematePiece } from "./rematePieceTypes";
 import { buildProductPieceSpecs, computeDimensionsForProduct } from "./remateProductRules";
 import { createRematePieces } from "./rematePieceFactory";
 
@@ -277,6 +281,120 @@ describe("remate L geometry — khaled-pro", () => {
     const corner = { xMm: 300, yMm: -360, zMm: 270 };
     const center = lRemateCornerToCenterMm(piece, corner);
     expect(lRemateCenterToCornerMm(piece, center)).toEqual(corner);
+  });
+
+  it("computeLRemateCimaIntLocalOffsetMm encaixa int atrás da espessura ext", () => {
+    const offset = computeLRemateCimaIntLocalOffsetMm({ height: 100, depth: 19 });
+    expect(offset).toEqual({ xMm: 0, yMm: -40.5, zMm: -59.5 });
+  });
+
+  it("coupling CIMA com rotação Y mantém encaixe pela espessura", () => {
+    const ext: RematePiece = {
+      id: "ext-r",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      parentGroupId: "g-rot",
+      mountSlot: "CIMA",
+      width: 600,
+      height: 100,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 281 },
+      rotation: { xRad: 0, yRad: Math.PI / 2, zRad: 0 },
+      followBox: true,
+      name: "ext",
+      placementMode: "FREE",
+    };
+    const int: RematePiece = {
+      ...ext,
+      id: "int-r",
+      partIndex: 2,
+      mountSlot: "DIR",
+      name: "int",
+      position: { xMm: 0, yMm: 0, zMm: 0 },
+      rotation: REMATE_L_CIMA_INT_ROTATION,
+    };
+    const coupled = applyLRemateGroupCoupling([ext, int], "ext-r");
+    const nextInt = coupled.find((p) => p.id === "int-r");
+    expect(nextInt?.position.xMm).not.toBe(ext.position.xMm);
+    expect(nextInt?.position.zMm).not.toBe(ext.position.zMm - ext.depth);
+    const back = computeLRemateExtCornerFromInt(nextInt!.position, ext, "CIMA");
+    expect(back.xMm).toBeCloseTo(ext.position.xMm, 3);
+    expect(back.yMm).toBeCloseTo(ext.position.yMm, 3);
+    expect(back.zMm).toBeCloseTo(ext.position.zMm, 3);
+  });
+
+  it("FREE: canto armazenado ↔ centro render (roundtrip viewer)", () => {
+    const ext: RematePiece = {
+      id: "ext-free",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      mountSlot: "CIMA",
+      width: 600,
+      height: 100,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 271.5 },
+      rotation: { xRad: 0, yRad: 0.4, zRad: 0 },
+      followBox: true,
+      name: "ext",
+      placementMode: "FREE",
+    };
+    const corner = ext.position;
+    const rendered = resolveLRemateRenderPose(ext, undefined);
+    expect(rendered.rotation.yRad).toBeCloseTo(0.4, 5);
+    const backCorner = lRemateCenterToCornerMm(ext, rendered.position);
+    expect(backCorner.xMm).toBeCloseTo(corner.xMm, 3);
+    expect(backCorner.yMm).toBeCloseTo(corner.yMm, 3);
+    expect(backCorner.zMm).toBeCloseTo(corner.zMm, 3);
+  });
+
+  it("normalizeLRemateTransformPatch: patch só posição não zera rotação ext", () => {
+    const ext: RematePiece = {
+      id: "ext-free",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      mountSlot: "CIMA",
+      width: 600,
+      height: 100,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 271.5 },
+      rotation: { xRad: 0, yRad: Math.PI / 2, zRad: 0 },
+      followBox: true,
+      name: "ext",
+      placementMode: "FREE",
+    };
+    const normalized = normalizeLRemateTransformPatch(ext, {
+      position: { xMm: 10, yMm: 720, zMm: 271.5 },
+    });
+    expect(normalized.rotation).toBeUndefined();
+  });
+
+  it("normalizeLRemateTransformPatch: patch rotação ext é preservado", () => {
+    const ext: RematePiece = {
+      id: "ext-free",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      mountSlot: "CIMA",
+      width: 600,
+      height: 100,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 271.5 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: true,
+      name: "ext",
+      placementMode: "FREE",
+    };
+    const normalized = normalizeLRemateTransformPatch(ext, {
+      rotation: { xRad: 0, yRad: Math.PI / 2, zRad: 0 },
+    });
+    expect(normalized.rotation?.yRad).toBeCloseTo(Math.PI / 2, 5);
   });
 
   it("applyLRemateGroupCoupling move parceiro ao mover ext (legacy Y)", () => {
