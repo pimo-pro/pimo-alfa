@@ -36,7 +36,7 @@ export interface IViewerEventEngine {
   } | null;
   getHighlightIntersects(_event: { clientX: number; clientY: number }): THREE.Intersection[];
   getBoxIdByMesh(_mesh: THREE.Object3D): string | null;
-  setSelectedBox(_id: string | null): void;
+  setSelectedBox(_id: string | null, _options?: { preserveGroupMembers?: boolean }): void;
   setHoveredBox(_id: string | null): void;
   setHoveredRemate(_id: string | null): void;
   getOnRoomElementSelected(): ((_data: RoomElementHit | null) => void) | null;

@@ -267,33 +267,25 @@ export default function Workspace({
         });
       }
       if (boxId) {
-        const toggleSelection = ctrlKeyActiveRef.current;
+        const isMultiSelect =
+          pointerToggleSelectionRef.current ||
+          ctrlKeyActiveRef.current ||
+          ctrlOrMetaPressedRef.current;
         const encodedId = boxSelectionId(boxId);
-        if (toggleSelection) {
-          const currentSelection = multiSelectedBoxIdsRef.current;
-          const alreadySelected = currentSelection.includes(boxId);
-          const nextSelection = alreadySelected
-            ? currentSelection.filter((id) => id !== boxId)
-            : [...currentSelection, boxId];
-          multiSelectedBoxIdsRef.current = nextSelection;
-          toggleSelectedObject(encodedId);
-          if (alreadySelected) {
-            const fallbackBoxId = nextSelection[nextSelection.length - 1];
-            if (fallbackBoxId) {
-              actions.selectBox(fallbackBoxId);
-            } else {
-              actions.clearSelection();
-              clearUiSelection();
-            }
-            return;
-          }
-        } else {
+        if (!isMultiSelect) {
           multiSelectedBoxIdsRef.current = [boxId];
           setSelectedObjects([encodedId]);
+          groupStore.getState().clearGroupSelection();
+        } else {
+          multiSelectedBoxIdsRef.current = uiStore
+            .getState()
+            .selectedObjects.filter((id) => id.startsWith("box:"))
+            .map((id) => id.replace(/^box:/, ""));
         }
         if (import.meta.env.DEV) {
           devLogger.debug("[SELECTION][Workspace] onBoxSelected:actions.selectBox", {
             boxId,
+            isMultiSelect,
           });
         }
         actions.selectBox(boxId);
@@ -383,6 +375,14 @@ export default function Workspace({
   useEffect(() => {
     const selectedBoxId = project.selectedWorkspaceBoxId;
     const validIds = new Set(project.workspaceBoxes.map((box) => box.id));
+    const fromUi = selectedObjects
+      .filter((id) => id.startsWith("box:"))
+      .map((id) => id.replace(/^box:/, ""))
+      .filter((id) => validIds.has(id));
+    if (fromUi.length >= 2) {
+      multiSelectedBoxIdsRef.current = fromUi;
+      return;
+    }
     const filteredSelection = multiSelectedBoxIdsRef.current.filter((id) => validIds.has(id));
     if (!selectedBoxId) {
       multiSelectedBoxIdsRef.current = filteredSelection;
@@ -393,7 +393,7 @@ export default function Workspace({
       return;
     }
     multiSelectedBoxIdsRef.current = filteredSelection;
-  }, [project.selectedWorkspaceBoxId, project.workspaceBoxes]);
+  }, [project.selectedWorkspaceBoxId, project.workspaceBoxes, selectedObjects]);
 
   useEffect(() => {
     const core = window.viewerCore as { setMultiSelectionOutlines?: (ids: string[]) => void } | undefined;
@@ -849,30 +849,56 @@ const hasShownViewerReadyToastRef = useRef(false);
       const decoded = decodeSelectionId(encodedId);
       if (!decoded) return;
       toggleSelectedObject(encodedId);
+      const selected = uiStore.getState().selectedObjects;
       if (decoded.kind === "box") {
         const boxId = decoded.id;
-        const already = multiSelectedBoxIdsRef.current.includes(boxId);
-        multiSelectedBoxIdsRef.current = already
-          ? multiSelectedBoxIdsRef.current.filter((id) => id !== boxId)
-          : [...multiSelectedBoxIdsRef.current, boxId];
-        if (!already) {
+        multiSelectedBoxIdsRef.current = selected
+          .filter((id) => id.startsWith("box:"))
+          .map((id) => id.replace(/^box:/, ""));
+        if (selected.includes(encodedId)) {
           actionsRef.current.selectBox(boxId);
           setSelectedObject({ type: "box", id: boxId });
+        } else {
+          const fallback = multiSelectedBoxIdsRef.current[multiSelectedBoxIdsRef.current.length - 1];
+          if (fallback) {
+            actionsRef.current.selectBox(fallback);
+            setSelectedObject({ type: "box", id: fallback });
+          } else {
+            actionsRef.current.clearSelection();
+            clearUiSelection();
+          }
         }
         return;
       }
       if (decoded.kind === "remate") {
-        if (projectRef.current.selectedWorkspaceBoxId) {
-          actionsRef.current.clearSelection();
+        multiSelectedBoxIdsRef.current = selected
+          .filter((id) => id.startsWith("box:"))
+          .map((id) => id.replace(/^box:/, ""));
+        if (selected.includes(encodedId)) {
+          if (projectRef.current.selectedWorkspaceBoxId) {
+            actionsRef.current.clearSelection();
+          }
+          setSelectedObject({ type: "remate", id: decoded.id });
+        } else {
+          const current = uiStore.getState().selectedObject;
+          if (current.type === "remate" && current.id === decoded.id) {
+            clearUiSelection();
+          }
         }
-        setSelectedObject({ type: "remate", id: decoded.id });
         return;
       }
       if (decoded.kind === "rodape") {
-        if (projectRef.current.selectedWorkspaceBoxId) {
-          actionsRef.current.clearSelection();
+        if (selected.includes(encodedId)) {
+          if (projectRef.current.selectedWorkspaceBoxId) {
+            actionsRef.current.clearSelection();
+          }
+          setSelectedObject({ type: "rodape", id: decoded.id });
+        } else {
+          const current = uiStore.getState().selectedObject;
+          if (current.type === "rodape" && current.id === decoded.id) {
+            clearUiSelection();
+          }
         }
-        setSelectedObject({ type: "rodape", id: decoded.id });
         return;
       }
       if (decoded.kind === "door" || decoded.kind === "drawer") {
@@ -883,7 +909,7 @@ const hasShownViewerReadyToastRef = useRef(false);
           }
           return (b.drawersLayer ?? []).some((d) => d.id === layerId);
         });
-        if (box) {
+        if (box && selected.includes(encodedId)) {
           actionsRef.current.selectBox(box.id);
           setSelectedObject({ type: "box", id: box.id });
         }

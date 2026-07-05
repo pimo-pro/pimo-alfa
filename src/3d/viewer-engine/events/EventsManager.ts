@@ -6,6 +6,7 @@
 import { getPointerNdc } from "../utils";
 import type { IViewerEventEngine } from "./EventEngineTypes";
 import { devLogger } from "../../../utils/devLogger";
+import { boxSelectionId, remateSelectionId } from "../../../core/viewer/selectionIds";
 
 export class EventsManager {
   private readonly engine: IViewerEventEngine;
@@ -190,6 +191,9 @@ export class EventsManager {
     }
     const remateId = e.getRemateIdAtPointer(event);
     if (remateId) {
+      if (this.isMultiSelectModifier(event)) {
+        this.emitMultiSelectToggle(event, remateSelectionId(remateId));
+      }
       e.selectRemate(remateId);
       e.getOnRemateSelected?.()?.(remateId);
       e.setHoveredBox(null);
@@ -202,13 +206,7 @@ export class EventsManager {
     }
     const boxId = e.getBoxIdAtPointer(event);
     if (boxId) {
-      e.selectHemati(null);
-      e.selectRodape(null);
-      e.selectRemate(null);
-      e.setHoveredBox(boxId);
-      e.setSelectedBox(boxId);
-      e.getOnRoomElementSelected()?.(null);
-      e.getOnWallSelected()?.(null);
+      this.selectBoxFromPointer(event, boxId);
       return;
     }
     const roomHit = e.getRoomElementAtPointer(event);
@@ -368,58 +366,10 @@ export class EventsManager {
           selectedBoxBeforeSet: e.getSelectedBoxId(),
         });
       }
-      if (boxId != null && boxId !== e.getSelectedBoxId()) {
-        const previousSelected = e.getSelectedBoxId();
-        event.preventDefault();
-        event.stopPropagation();
-        e.setHoveredBox(boxId);
-        if (import.meta.env.DEV) {
-          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox BEFORE", {
-            boxId,
-            previousSelected,
-          });
-        }
-        e.setSelectedBox(boxId);
-        if (import.meta.env.DEV) {
-          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox AFTER", {
-            boxId,
-            selectedBoxAfterSet: e.getSelectedBoxId(),
-          });
-        }
-        e.getOnRoomElementSelected()?.(null);
-        e.getOnWallSelected()?.(null);
-        e.setSuppressNextCanvasClick(true);
-        if (import.meta.env.DEV) {
-          devLogger.debug("[SELECTION][EventsManager] suppressNextCanvasClick=true", {
-            reason: "selected-other-box-on-pointerdown",
-            boxId,
-          });
-        }
-        e.logTransformDiagnostic("box-selected-pointerDown-other-box", {
-          boxId,
-          previousSelected,
-        });
-        return;
-      }
       if (boxId != null) {
         event.preventDefault();
         event.stopPropagation();
-        e.setHoveredBox(boxId);
-        if (import.meta.env.DEV) {
-          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox BEFORE", {
-            boxId,
-            previousSelected: e.getSelectedBoxId(),
-          });
-        }
-        e.setSelectedBox(boxId);
-        if (import.meta.env.DEV) {
-          devLogger.debug("[SELECTION][EventsManager] pointerdown:setSelectedBox AFTER", {
-            boxId,
-            selectedBoxAfterSet: e.getSelectedBoxId(),
-          });
-        }
-        e.getOnRoomElementSelected()?.(null);
-        e.getOnWallSelected()?.(null);
+        this.selectBoxFromPointer(event, boxId);
         e.setSuppressNextCanvasClick(true);
         if (import.meta.env.DEV) {
           devLogger.debug("[SELECTION][EventsManager] suppressNextCanvasClick=true", {
@@ -535,5 +485,32 @@ export class EventsManager {
     this.isDraggingCamera = false;
     e.setWallGizmoDragging(false);
     e.setCameraControlsEnabled(true);
+  }
+
+  private isMultiSelectModifier(event: MouseEvent | PointerEvent): boolean {
+    return event.ctrlKey || event.metaKey;
+  }
+
+  private emitMultiSelectToggle(event: MouseEvent | PointerEvent, encodedId: string): boolean {
+    if (!this.isMultiSelectModifier(event)) return false;
+    const toggle = this.engine.getOnMultiSelectToggle();
+    if (!toggle) return false;
+    toggle(encodedId);
+    return true;
+  }
+
+  private selectBoxFromPointer(event: MouseEvent | PointerEvent, boxId: string): void {
+    const e = this.engine;
+    const preserveGroup = this.isMultiSelectModifier(event);
+    if (preserveGroup) {
+      this.emitMultiSelectToggle(event, boxSelectionId(boxId));
+    }
+    e.selectHemati(null);
+    e.selectRodape(null);
+    e.selectRemate(null);
+    e.setHoveredBox(boxId);
+    e.setSelectedBox(boxId, preserveGroup ? { preserveGroupMembers: true } : undefined);
+    e.getOnRoomElementSelected()?.(null);
+    e.getOnWallSelected()?.(null);
   }
 }

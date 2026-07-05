@@ -106,7 +106,8 @@ export class TransformConstraints {
   applyCollisionConstraint(
     movingMesh: THREE.Object3D,
     boxes: Map<string, ViewerBoxEntry>,
-    selectedBoxId: string | null
+    selectedBoxId: string | null,
+    excludeBoxIds?: ReadonlySet<string>
   ): void {
     const maxIterations = 8;
     for (let iter = 0; iter < maxIterations; iter++) {
@@ -116,6 +117,7 @@ export class TransformConstraints {
       let anyOverlap = false;
       boxes.forEach((entry, boxId) => {
         if (boxId === selectedBoxId) return;
+        if (excludeBoxIds?.has(boxId)) return;
         entry.mesh.updateMatrixWorld(true);
         const otherBox = new THREE.Box3();
         setBox3FromObjectExcludingLayoutProxy(otherBox, entry.mesh);

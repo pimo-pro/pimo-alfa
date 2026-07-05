@@ -116,6 +116,8 @@ import { devLogger } from "../../utils/devLogger";
 import { WallGizmo } from "../gizmos/WallGizmo";
 import { updateWallCulling } from "../visibility/WallRaycastCulling";
 import type { SnapDebugData } from "../snapping/ModelWallSnap";
+import { snapModelToNearestWall } from "../snapping/ModelWallSnap";
+import { keepModelInsideRoom, preventModelWallIntersection } from "../collision/ModelCollision";
 import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
@@ -982,6 +984,14 @@ export class ViewerCore {
             z: mesh.position.z,
           };
         }
+      } else if (this.groupGizmo?.isActive()) {
+        const members = this.groupGizmo.getMembers();
+        for (const member of members) {
+          const decoded = decodeSelectionId(member.encodedId);
+          if (decoded?.kind !== "box") continue;
+          this.smartSnappingEngine.onDragStart(member.mesh);
+          break;
+        }
       } else if (this.viewerState.getSelectedBox()) {
         const obj = this.transformControls!.object;
         if (obj && "position" in obj) {
@@ -1755,10 +1765,41 @@ export class ViewerCore {
 
   /**
    * Extension point reservado para smart snap de grupos.
-   * Contrato atual: sem efeito e retorna false para preservar comportamento existente.
+   * Aplica snap ao primeiro membro caixa e propaga delta ao pivô do grupo.
    */
   applySmartSnapForGroup(_pointerPosition?: { x: number; y: number; z: number }): boolean {
-    return false;
+    if (!this.groupGizmo?.isActive()) return false;
+    if (this.viewerState.getCurrentTool() !== "translate") return false;
+    if (!this.viewerState.getTransformControlsDragging()) return false;
+
+    const members = this.groupGizmo.getMembers();
+    let primaryBoxId: string | null = null;
+    let primaryMesh: THREE.Object3D | null = null;
+    for (const member of members) {
+      const decoded = decodeSelectionId(member.encodedId);
+      if (decoded?.kind !== "box") continue;
+      primaryBoxId = decoded.id;
+      primaryMesh = member.mesh;
+      break;
+    }
+    if (!primaryBoxId || !primaryMesh) return false;
+
+    const before = primaryMesh.position.clone();
+    this.smartSnappingEngine.applyDuringTranslate({
+      mesh: primaryMesh,
+      selectedBoxId: primaryBoxId,
+      boxes: this.boxes,
+      isDragging: true,
+      currentTool: "translate",
+      roomBounds: this.roomBounds,
+    });
+    const delta = primaryMesh.position.clone().sub(before);
+    if (delta.lengthSq() < 1e-10) return false;
+
+    primaryMesh.position.copy(before);
+    this.groupGizmo.getPivot().position.add(delta);
+    this.groupGizmo.applyPivotTransform();
+    return true;
   }
 
   resolveMemberMesh(encoded: string): THREE.Object3D | null {
@@ -1769,12 +1810,14 @@ export class ViewerCore {
     this.groupGizmo?.applyPivotTransform();
   }
 
-  notifyGroupTransform(): void {
+  notifyGroupTransform(options?: { recordHistory?: boolean }): void {
     if (!this.groupGizmo?.isActive()) return;
     for (const member of this.groupGizmo.getMembers()) {
       const decoded = decodeSelectionId(member.encodedId);
       if (!decoded) continue;
       if (decoded.kind === "box") {
+        const entry = this.boxes.get(decoded.id);
+        if (entry?.locked) continue;
         const { x, y, z } = member.mesh.position;
         const r = member.mesh.rotation;
         this.onBoxTransform?.(decoded.id, { x, y, z }, { x: r.x, y: r.y, z: r.z });
@@ -1786,13 +1829,62 @@ export class ViewerCore {
         this.notifyRodapeTransform();
       }
     }
-    historyManager.recordEvent("group.transform", "Transformar grupo");
+    if (options?.recordHistory) {
+      historyManager.recordEvent("group.transform", "Transformar grupo");
+    }
   }
 
   clampGroupTransform(): void {
     if (!this.groupGizmo?.isActive()) return;
     if (this.viewerState.getCurrentTool() !== "translate") return;
     if (!this.viewerState.getTransformControlsDragging()) return;
+
+    this.applySmartSnapForGroup();
+
+    const members = this.groupGizmo.getMembers();
+    if (members.length === 0) return;
+
+    const groupBoxIds = new Set<string>();
+    for (const member of members) {
+      const decoded = decodeSelectionId(member.encodedId);
+      if (decoded?.kind === "box") groupBoxIds.add(decoded.id);
+    }
+
+    if (this.lockEnabled) {
+      this._boundingBox.makeEmpty();
+      for (const member of members) {
+        member.mesh.updateMatrixWorld(true);
+        expandBox3ByObjectExcludingLayoutProxy(this._boundingBox, member.mesh);
+      }
+      if (!this._boundingBox.isEmpty() && this._boundingBox.min.y < 0) {
+        const shiftY = -this._boundingBox.min.y;
+        this.groupGizmo.getPivot().position.y += shiftY;
+        for (const member of members) {
+          member.mesh.position.y += shiftY;
+        }
+      }
+
+      for (const member of members) {
+        const decoded = decodeSelectionId(member.encodedId);
+        if (decoded?.kind !== "box") continue;
+        const entry = this.boxes.get(decoded.id);
+        if (!entry || entry.mesh !== member.mesh) continue;
+        this.applyFloorConstraint(member.mesh);
+        this.constraints.applyCollisionConstraint(member.mesh, this.boxes, decoded.id, groupBoxIds);
+        if (this.roomBounds && this.isMeshInsideOrTouchingRoom(member.mesh)) {
+          const wallsMain = this.roomBoxWalls
+            .map((w) => w.mesh)
+            .filter((w) => w.userData?.isMainWall === true);
+          const allRoomWalls = this.roomBoxWalls.map((w) => w.mesh);
+          snapModelToNearestWall(member.mesh, wallsMain);
+          preventModelWallIntersection(member.mesh, allRoomWalls);
+          keepModelInsideRoom(member.mesh, this.roomBounds);
+          this.applyRoomConstraint(member.mesh, { ignoreY: entry.manualPosition });
+        }
+      }
+    }
+
+    this.updateBoxesIntersectingWalls();
   }
 
   isPointerOnSelectableObject(event: { clientX: number; clientY: number }): boolean {
@@ -4740,7 +4832,7 @@ export class ViewerCore {
       getHighlightManager: () => this.highlightManager,
       getHighlightIntersects: (e) => this.getHighlightIntersects(e),
       getBoxIdByMesh: (mesh) => this.getBoxIdByMesh(mesh),
-      setSelectedBox: (id) => this.setSelectedBox(id),
+      setSelectedBox: (id, options) => this.setSelectedBox(id, options),
       setHoveredBox: (id) => this.setHoveredBox(id),
       setHoveredRemate: (id) => this.setHoveredRemate(id),
       getOnRoomElementSelected: () => this.onRoomElementSelected,
@@ -4875,7 +4967,7 @@ export class ViewerCore {
     return this.pointerPicking.getBoxIdByMesh(mesh);
   }
 
-  private setSelectedBox(id: string | null) {
+  private setSelectedBox(id: string | null, options?: { preserveGroupMembers?: boolean }) {
     if (import.meta.env.DEV) {
       devLogger.debug("[SELECTION][ViewerCore] setSelectedBox:entrada", {
         nextBoxId: id,
@@ -4906,7 +4998,9 @@ export class ViewerCore {
     this.viewerState.setSelectedDivSep(null);
     this.viewerState.setSelectedWallIndex(null);
     this.viewerState.setSelectedRoomElementId(null);
-    this.viewerState.clearGroupTransformMemberIds();
+    if (!options?.preserveGroupMembers) {
+      this.viewerState.clearGroupTransformMemberIds();
+    }
     this.refreshTransformControlsAttachment();
     this.refreshOutlineTarget();
     if (import.meta.env.DEV) {
@@ -4958,7 +5052,11 @@ export class ViewerCore {
       }
       this.viewerTools.applyCurrentTool();
       this.measurementOverlay.onRulerMovementTick("transform");
-      this.notifyBoxTransform();
+      if (this.groupGizmo?.isActive()) {
+        this.notifyGroupTransform();
+      } else {
+        this.notifyBoxTransform();
+      }
       this.logTransformDiagnostic("drag(objectChange)");
     } finally {
       this.isApplyingTransformConstraints = false;
@@ -4977,7 +5075,7 @@ export class ViewerCore {
     this.remateSmartSnapping.onDragEnd();
     this.viewerState.setSuppressNextCanvasClick(true);
     if (this.groupGizmo?.isActive()) {
-      this.notifyGroupTransform();
+      this.notifyGroupTransform({ recordHistory: true });
     }
     this.viewerTools.restoreTransformGizmoPivot();
     this.viewerTools.applyCurrentTool();
