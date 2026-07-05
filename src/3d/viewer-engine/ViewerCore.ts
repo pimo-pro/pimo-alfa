@@ -156,11 +156,14 @@ import { createSnappingFacade, type SnappingFacade } from "./snapping/snappingFa
 import { registerAdminSnappingRules } from "./snapping/adminSnappingRules";
 import { RemateSmartSnapping } from "./snapping/RemateSmartSnapping";
 import { SmartAlignSnapOverlay } from "./snapping/smartAlignSnapOverlay";
+import { SmartAlignSnapEngine } from "./snapping/SmartAlignSnapEngine";
 import {
   createSmartAlignOverlayFacade,
   type SmartAlignOverlayFacade,
 } from "./snapping/smartAlignOverlayFacade";
-import type { SmartAlignSnapContext } from "./snapping/smartAlignSnapTypes";
+import type { SmartAlignSnapContext, SmartSnapEntity } from "./snapping/smartAlignSnapTypes";
+import { DEFAULT_UNIFIED_CAPTURE_MM, DEFAULT_UNIFIED_MAGNET } from "./snapping/smartAlignSnapTypes";
+import { getEntityWorldBoxAabb } from "./snapping/smartAlignSnapAabb";
 import { AutoLayoutEngine } from "./autoLayout/AutoLayoutEngine";
 import type { AutoLayoutBridge, AutoLayoutOpeningMm, AutoLayoutRoomBoundsMm, AutoStackShelvesOptions } from "./autoLayout/autoLayoutTypes";
 import { AutoWallFillEngine } from "./snapping/autoWallFillEngine";
@@ -202,7 +205,7 @@ import {
 } from "../../core/remate/remateRotationSnap";
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
-import { mToMm } from "../../utils/units";
+import { mToMm, mmToM } from "../../utils/units";
 import { ViewerPanelVisibility } from "./panels/ViewerPanelVisibility";
 import { IndustrialDesignViewerOverlay } from "./overlays/IndustrialDesignViewerOverlay";
 import { IndustrialDesignWorkspaceMode } from "./modes/IndustrialDesignWorkspaceMode";
@@ -499,10 +502,11 @@ export class ViewerCore {
   private smartSnappingEngine!: SmartSnapping;
   private remateSmartSnapping!: RemateSmartSnapping;
   private smartAlignSnapOverlay!: SmartAlignSnapOverlay;
+  private smartAlignSnapEngine!: SmartAlignSnapEngine;
   private smartAlignOverlay!: SmartAlignOverlayFacade;
   private unregisterAdminSnappingRules: (() => void) | null = null;
   readonly settings = {
-    enableSmartAlignSnap: false,
+    enableSmartAlignSnap: true,
   };
   private autoLayoutEngine!: AutoLayoutEngine;
   private smartLayoutBridge: SmartLayoutBridge | null = null;
@@ -764,6 +768,11 @@ export class ViewerCore {
     });
     this.smartAlignOverlay = createSmartAlignOverlayFacade(this.smartAlignSnapOverlay);
 
+    this.smartAlignSnapEngine = new SmartAlignSnapEngine({
+      isInternalRulerActive: () => this.internalRulerEngine.isActive(),
+    });
+    this.smartAlignSnapEngine.enable();
+
     this.snapping = createSnappingFacade(this.smartSnappingEngine);
 
     bindViewerOverlayCoordinator({
@@ -771,7 +780,9 @@ export class ViewerCore {
       measurementOverlay: this.measurementOverlay,
       internalRulerEngine: this.internalRulerEngine,
       smartSnappingEngine: this.smartSnappingEngine,
+      smartAlignSnapEngine: this.smartAlignSnapEngine,
       refreshInternalRulerOverlay: () => this.refreshInternalRulerOverlay(),
+      syncSmartAlignSnapOverlay: () => this.syncSmartAlignSnapOverlayFromEngine(),
       clearSmartAlignSnapOverlay: () => this.clearSmartAlignSnapOverlay(),
     });
 
@@ -960,10 +971,14 @@ export class ViewerCore {
     this.hematiVisual = visualFacades.hematiVisual;
     this.rodapeVisual = visualFacades.rodapeVisual;
 
-    this.unregisterAdminSnappingRules = registerAdminSnappingRules(this.smartSnappingEngine, {
-      snapRules: rulesStore.snapRules,
-      roomRules: rulesStore.roomRules,
-    });
+    this.unregisterAdminSnappingRules = registerAdminSnappingRules(
+      this.smartSnappingEngine,
+      {
+        snapRules: rulesStore.snapRules,
+        roomRules: rulesStore.roomRules,
+      },
+      this.smartAlignSnapEngine
+    );
 
     this.transformControls = new TransformControls(
       this.cameraManager.camera,
@@ -977,6 +992,7 @@ export class ViewerCore {
     this.transformControls.addEventListener("mouseDown", () => {
       historyManager.beginDragSession("transform.drag", "Transformação");
       this.onTransformDragStart?.();
+      this.smartAlignSnapEngine.onDragStart();
       if (this.viewerState.getSelectedRemate()) {
         const remateId = this.viewerState.getSelectedRemate()!;
         const rawMesh = this.remateVisualizer.getMeshByRemateId(remateId);
@@ -1870,13 +1886,11 @@ export class ViewerCore {
     if (!primaryBoxId || !primaryMesh) return false;
 
     const before = primaryMesh.position.clone();
-    this.smartSnappingEngine.applyDuringTranslate({
+    this.applyDynamicAlignSnap({
       mesh: primaryMesh,
-      selectedBoxId: primaryBoxId,
-      boxes: this.boxes,
+      entity: { kind: "box", id: primaryBoxId },
       isDragging: true,
       currentTool: "translate",
-      roomBounds: this.roomBounds,
     });
     const delta = primaryMesh.position.clone().sub(before);
     if (delta.lengthSq() < 1e-10) return false;
@@ -5159,6 +5173,7 @@ export class ViewerCore {
     this.viewerState.setTransformControlsDragging(false);
     this.overlayCoordinator.clearTransientOverlays();
     this.smartSnappingEngine.onDragEnd();
+    this.smartAlignSnapEngine.onDragEnd();
     this.remateSmartSnapping.onDragEnd();
     this.viewerState.setSuppressNextCanvasClick(true);
     if (this.groupGizmo?.isActive()) {
@@ -5454,6 +5469,86 @@ export class ViewerCore {
       roomWallMeshes: this.roomBoxWalls.map((w) => w.mesh),
       isInsideRoom: (mesh) => this.isMeshInsideOrTouchingRoom(mesh),
     });
+  }
+
+  private collectAllSnapEntities(): SmartSnapEntity[] {
+    const entities: SmartSnapEntity[] = [];
+    this.boxes.forEach((entry, id) => {
+      entities.push({ kind: "box", id, mesh: entry.mesh as THREE.Mesh });
+    });
+    for (const piece of this.remateVisualBridge?.listRematePieces() ?? []) {
+      const raw = this.remateVisualizer.getMeshByRemateId(piece.id);
+      const mesh = resolveRemateTransformRoot(raw) ?? raw;
+      if (!mesh || !(mesh instanceof THREE.Mesh)) continue;
+      entities.push({
+        kind: "remate",
+        id: piece.id,
+        mesh,
+        parentBoxId: piece.parentBoxId,
+      });
+    }
+    for (const cfg of this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []) {
+      for (const rodape of cfg.rodapes) {
+        const mesh = this.rodapeVisualizer.getMeshByRodapeId(rodape.id);
+        if (!mesh || !(mesh instanceof THREE.Mesh)) continue;
+        entities.push({
+          kind: "rodape",
+          id: rodape.id,
+          mesh,
+          parentBoxId: cfg.boxId,
+        });
+      }
+    }
+    return entities;
+  }
+
+  private buildSmartAlignSnapContextForDrag(): SmartAlignSnapContext {
+    return {
+      boxes: this.boxes,
+      captureRadiusM: mmToM(DEFAULT_UNIFIED_CAPTURE_MM),
+      magnetStrength: DEFAULT_UNIFIED_MAGNET,
+      rematePieces: this.remateVisualBridge?.listRematePieces() ?? [],
+      rodapes: (this.rodapeVisualBridge?.listBoxRodapeConfigs() ?? []).flatMap((c) => c.rodapes),
+      getBoxConfig: (boxId) => this.remateVisualBridge?.getBoxConfig(boxId) ?? null,
+      getWorldAabb: (mesh) => getEntityWorldBoxAabb(mesh, "box"),
+      roomBounds: this.roomBounds,
+      roomBoundsFull: this.roomBounds,
+      roomOpenings: this.getRoomOpeningsForSnapping(),
+      wallOffsetMm: this.smartSnappingEngine.getWallOffset(),
+      explicitModeActive: false,
+      allEntities: this.collectAllSnapEntities(),
+    };
+  }
+
+  private syncSmartAlignSnapOverlayFromEngine(): void {
+    if (!this.settings.enableSmartAlignSnap) return;
+    const state = this.smartAlignSnapEngine.getOverlayState();
+    if (state.visible) {
+      this.smartAlignOverlay.setState(state);
+    } else {
+      this.clearSmartAlignSnapOverlay();
+    }
+  }
+
+  private applyDynamicAlignSnap(params: {
+    mesh: THREE.Object3D;
+    entity: {
+      kind: import("./snapping/smartAlignSnapTypes").SmartSnapEntityKind;
+      id: string;
+      parentBoxId?: string;
+    };
+    isDragging: boolean;
+    currentTool: string;
+  }): void {
+    if (!this.settings.enableSmartAlignSnap || !this.smartAlignSnapEngine.isEnabled()) return;
+    this.smartAlignSnapEngine.applyDuringTranslate({
+      mesh: params.mesh,
+      entity: params.entity,
+      ctx: this.buildSmartAlignSnapContextForDrag(),
+      isDragging: params.isDragging,
+      currentTool: params.currentTool,
+    });
+    this.syncSmartAlignSnapOverlayFromEngine();
   }
 
   private buildDisabledSmartSnapContext(): SmartAlignSnapContext {
@@ -5762,6 +5857,15 @@ export class ViewerCore {
           applyRemateRotationSnapToMesh(snapTarget, entry?.mesh ?? null);
         }
 
+        if (currentTool === "translate" && !isLCimaComposite) {
+          this.applyDynamicAlignSnap({
+            mesh: snapTarget,
+            entity: { kind: "remate", id: selectedRemateId, parentBoxId: boxId },
+            isDragging,
+            currentTool,
+          });
+        }
+
         if (currentTool === "translate" && mesh && obj === mesh) {
           const boxId = piece?.parentBoxId ?? (mesh.userData.boxId as string | undefined);
           this.applyFinishCollisionConstraint(mesh, boxId, selectedRemateId);
@@ -5780,6 +5884,12 @@ export class ViewerCore {
       const obj = this.transformControls?.object;
       if (isDragging && mesh && obj === mesh && currentTool === "translate") {
         const boxId = mesh.userData.boxId as string | undefined;
+        this.applyDynamicAlignSnap({
+          mesh,
+          entity: { kind: "rodape", id: selectedRodapeId, parentBoxId: boxId },
+          isDragging,
+          currentTool,
+        });
         this.applyFinishCollisionConstraint(mesh, boxId, undefined, selectedRodapeId);
       }
       return;
@@ -5790,13 +5900,11 @@ export class ViewerCore {
       const entry = this.boxes.get(selectedBoxId);
       const obj = this.transformControls?.object;
       if (entry && obj === entry.mesh) {
-        this.smartSnappingEngine.applyDuringTranslate({
+        this.applyDynamicAlignSnap({
           mesh: entry.mesh,
-          selectedBoxId,
-          boxes: this.boxes,
+          entity: { kind: "box", id: selectedBoxId },
           isDragging,
           currentTool,
-          roomBounds: this.roomBounds,
         });
       }
     }

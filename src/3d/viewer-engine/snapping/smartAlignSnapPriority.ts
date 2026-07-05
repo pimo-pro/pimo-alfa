@@ -6,6 +6,8 @@ import { roomSnapPriorityScore } from "./smartRoomSnapIntegration";
 
 /** Porta sala > Janela > … > Porta módulo > Gaveta > Face > AABB > Continuidade > Rodapé */
 export function smartPriorityScore(kind: string): number {
+  if (kind.startsWith("align_")) return 0;
+  if (kind.startsWith("adjacent_")) return 1;
   if (kind.startsWith("room_")) return roomSnapPriorityScore(kind.replace(/_side$/, ""));
   if (kind === "DOOR_FRONT") return 0;
   if (kind === "DRAWER_FRONT") return 1;

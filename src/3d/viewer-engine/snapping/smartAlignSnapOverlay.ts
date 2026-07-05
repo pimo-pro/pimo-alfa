@@ -6,7 +6,8 @@ export type SmartAlignOverlayMode =
   | "explicit"
   | "continuity"
   | "flush"
-  | "predictive";
+  | "predictive"
+  | "reference";
 
 export type SmartAlignOverlayGuide = {
   start: THREE.Vector3;
@@ -30,6 +31,7 @@ const COLORS: Record<SmartAlignOverlayMode, { stroke: string; fill: string; dash
   continuity: { stroke: "#a78bfa", fill: "#c4b5fd", dash: "#ddd6fe" },
   flush: { stroke: "#22c55e", fill: "#4ade80", dash: "#86efac" },
   predictive: { stroke: "#94a3b8", fill: "#cbd5e1", dash: "#e2e8f0" },
+  reference: { stroke: "#94a3b8", fill: "#94a3b8", dash: "#cbd5e1" },
 };
 
 type Deps = {
@@ -112,20 +114,21 @@ export class SmartAlignSnapOverlay {
 
     const colors = COLORS[this.state.mode];
     const isPredictive = this.state.mode === "predictive";
+    const isReference = this.state.mode === "reference";
 
     for (const guide of this.state.guides) {
       const a = this.deps.projectWorldToScreen(guide.start);
       const b = this.deps.projectWorldToScreen(guide.end);
       if (!a || !b) continue;
-      ctx.strokeStyle = isPredictive ? colors.dash : colors.stroke;
-      ctx.lineWidth = isPredictive ? 1.25 : 2;
+      ctx.strokeStyle = isPredictive || isReference ? colors.dash : colors.stroke;
+      ctx.lineWidth = isReference ? 1 : isPredictive ? 1.25 : 2;
       ctx.setLineDash(isPredictive ? [6, 5] : []);
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
       ctx.stroke();
       ctx.setLineDash([]);
-      if (!isPredictive) this.drawArrowHead(ctx, a, b, colors.stroke);
+      if (!isPredictive && !isReference) this.drawArrowHead(ctx, a, b, colors.stroke);
     }
 
     if (this.state.arrowFrom && this.state.arrowTo) {
@@ -157,16 +160,16 @@ export class SmartAlignSnapOverlay {
       const p = this.deps.projectWorldToScreen(this.state.snapPoint);
       if (p) {
         ctx.fillStyle = colors.fill;
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255,255,255,0.85)";
+        ctx.lineWidth = isReference ? 1 : 2;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, isPredictive ? 5 : 7, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, isReference ? 4 : isPredictive ? 5 : 7, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
     }
 
-    if (this.state.label && this.state.snapPoint) {
+    if (this.state.label && this.state.snapPoint && !isReference) {
       const p = this.deps.projectWorldToScreen(this.state.snapPoint);
       if (p) {
         ctx.font = "600 11px system-ui, sans-serif";

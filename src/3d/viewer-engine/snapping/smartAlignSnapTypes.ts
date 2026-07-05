@@ -78,5 +78,8 @@ export type SmartAlignSnapContext = {
   allEntities?: SmartSnapEntity[];
 };
 
-export const DEFAULT_UNIFIED_CAPTURE_MM = 12;
-export const DEFAULT_UNIFIED_MAGNET = 0.85;
+export const DEFAULT_UNIFIED_CAPTURE_MM = 10;
+/** Força magnética média — snap suave sem puxar agressivamente. */
+export const DEFAULT_UNIFIED_MAGNET = 0.55;
+/** Factor de lerp base (médio) aplicado sobre magnetStrength. */
+export const DEFAULT_UNIFIED_LERP = 0.55;

@@ -1,5 +1,6 @@
 import type { InternalRuler } from "../measurement/InternalRuler";
 import type { ViewerMeasurementOverlay } from "../measurement/ViewerMeasurementOverlay";
+import type { SmartAlignSnapEngine } from "../snapping/SmartAlignSnapEngine";
 import type { SmartSnapping } from "../snapping/SmartSnapping";
 import type { ViewerOverlayCoordinator } from "./ViewerOverlayCoordinator";
 
@@ -8,7 +9,9 @@ export type ViewerOverlayCoordinatorDeps = {
   measurementOverlay: ViewerMeasurementOverlay;
   internalRulerEngine: InternalRuler;
   smartSnappingEngine: SmartSnapping;
+  smartAlignSnapEngine: SmartAlignSnapEngine;
   refreshInternalRulerOverlay: () => void;
+  syncSmartAlignSnapOverlay: () => void;
   clearSmartAlignSnapOverlay: () => void;
 };
 
@@ -17,7 +20,9 @@ export function bindViewerOverlayCoordinator({
   measurementOverlay,
   internalRulerEngine,
   smartSnappingEngine,
+  smartAlignSnapEngine,
   refreshInternalRulerOverlay,
+  syncSmartAlignSnapOverlay,
   clearSmartAlignSnapOverlay,
 }: ViewerOverlayCoordinatorDeps): void {
   coordinator.bind({
@@ -28,7 +33,10 @@ export function bindViewerOverlayCoordinator({
     refreshInternalRuler: () => internalRulerEngine.refreshOverlay(),
     refreshInternalRulerOverlay,
     refreshSnapping: () => smartSnappingEngine.refreshOverlay(),
-    refreshSmartAlignSnap: clearSmartAlignSnapOverlay,
+    refreshSmartAlignSnap: () => {
+      smartAlignSnapEngine.refreshOverlay();
+      syncSmartAlignSnapOverlay();
+    },
     clearMovementRuler: () => measurementOverlay.clearRulerOverlay(),
     clearSmartAlignSnap: clearSmartAlignSnapOverlay,
   });
