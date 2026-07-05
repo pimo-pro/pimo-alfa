@@ -179,6 +179,7 @@ export function computeDimensionsForProduct(
       boxAlturaMm: altura,
       boxLarguraMm: largura,
       thicknessMm: t,
+      boxPanelThicknessMm: ctx.box?.espessura ?? t,
     });
   }
 

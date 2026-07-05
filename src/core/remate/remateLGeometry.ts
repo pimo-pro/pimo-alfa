@@ -1,12 +1,26 @@
 import type { StructuralBoundsM } from "./rematePlacement";
-import type { RemateMountSlot, RematePiece, RematePiecePosition } from "./rematePieceTypes";
+import type { RemateMountSlot, RematePiece, RematePiecePosition, RematePieceRotation } from "./rematePieceTypes";
 
 /** Largura fixa da chapa de remate L (mm) — faixa visível. */
 export const REMATE_L_STRIP_WIDTH_MM = 100;
 
 const L_PRIMARY_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
 
-const ZERO_ROT = { xRad: 0, yRad: 0, zRad: 0 } as const;
+const ZERO_ROT: RematePieceRotation = { xRad: 0, yRad: 0, zRad: 0 };
+
+/** Rotação da peça int CIMA: faixa de 100 mm deitada em Z (L real visto de lado). */
+export const REMATE_L_CIMA_INT_ROTATION: RematePieceRotation = {
+  xRad: Math.PI / 2,
+  yRad: 0,
+  zRad: 0,
+};
+
+export function resolveLRemateRotation(piece: RematePiece): RematePieceRotation {
+  if (isLRemateInt(piece) && resolveLPrimarySlot(piece) === "CIMA") {
+    return REMATE_L_CIMA_INT_ROTATION;
+  }
+  return ZERO_ROT;
+}
 
 export function isLRematePiece(piece: Pick<RematePiece, "productType" | "tipo">): boolean {
   return piece.productType === "L" || piece.tipo === "L";
@@ -52,8 +66,8 @@ export function resolveLPrimarySlot(piece: Pick<RematePiece, "mountSlot" | "part
 
 /**
  * Dimensões khaled-pro por peça (largura × altura × profundidade).
- * ext (vertical): largura=faixa, altura=comprimento vertical, profundidade=espessura.
- * int (horizontal): largura=comprimento horizontal, altura=faixa, profundidade=espessura.
+ * CIMA: largura=comprimento, altura=faixa, profundidade=espessura.
+ * Laterais (DIR/ESQ legacy): ext=faixa×altura, int=largura×faixa.
  */
 export function computeLRemateSheetDimensions(params: {
   primarySlot: RemateMountSlot;
@@ -61,13 +75,23 @@ export function computeLRemateSheetDimensions(params: {
   boxAlturaMm: number;
   boxLarguraMm: number;
   thicknessMm: number;
+  boxPanelThicknessMm?: number;
 }): { width: number; height: number; depth: number } {
   const { primarySlot, partIndex, boxAlturaMm, boxLarguraMm, thicknessMm } = params;
+  const esp = Math.max(1, thicknessMm);
+  const faixa = REMATE_L_STRIP_WIDTH_MM;
+
+  if (primarySlot === "CIMA") {
+    return {
+      width: Math.max(1, boxLarguraMm),
+      height: faixa,
+      depth: esp,
+    };
+  }
+
   const lateral = isLateralLSlot(primarySlot);
   const comprimentoExt = lateral ? boxAlturaMm : boxLarguraMm;
   const comprimentoInt = lateral ? boxLarguraMm : boxAlturaMm;
-  const esp = Math.max(1, thicknessMm);
-  const faixa = REMATE_L_STRIP_WIDTH_MM;
 
   if (partIndex === 1) {
     return {
@@ -93,6 +117,48 @@ export function lRemateCornerToCenterMm(
     yMm: corner.yMm + piece.height / 2,
     zMm: corner.zMm - piece.depth / 2,
   };
+}
+
+function lRemateCornerToCenterCimaFrame(
+  piece: RematePiece,
+  corner: RematePiecePosition
+): RematePiecePosition {
+  if (isLRemateInt(piece)) {
+    return {
+      xMm: corner.xMm + piece.width / 2,
+      yMm: corner.yMm + piece.depth / 2,
+      zMm: corner.zMm - piece.height / 2,
+    };
+  }
+  return lRemateCornerToCenterMm(piece, corner);
+}
+
+function lRemateCenterToCornerCimaFrame(
+  piece: RematePiece,
+  center: RematePiecePosition
+): RematePiecePosition {
+  if (isLRemateInt(piece)) {
+    return {
+      xMm: center.xMm - piece.width / 2,
+      yMm: center.yMm - piece.depth / 2,
+      zMm: center.zMm + piece.height / 2,
+    };
+  }
+  return lRemateCenterToCornerMm(piece, center);
+}
+
+function lRemateCornerToCenterForPiece(piece: RematePiece, corner: RematePiecePosition): RematePiecePosition {
+  if (resolveLPrimarySlot(piece) === "CIMA") {
+    return lRemateCornerToCenterCimaFrame(piece, corner);
+  }
+  return lRemateCornerToCenterMm(piece, corner);
+}
+
+function lRemateCenterToCornerForPiece(piece: RematePiece, center: RematePiecePosition): RematePiecePosition {
+  if (resolveLPrimarySlot(piece) === "CIMA") {
+    return lRemateCenterToCornerCimaFrame(piece, center);
+  }
+  return lRemateCenterToCornerMm(piece, center);
 }
 
 export function lRemateCenterToCornerMm(
@@ -133,15 +199,21 @@ export function computeLRemateExtCornerMm(
 }
 
 /**
- * União geométrica obrigatória (90°) — int exatamente acima de ext, mesma origem X/Z.
- * rem_L_int.posX = rem_L_ext.posX
- * rem_L_int.posY = rem_L_ext.posY + rem_L_ext.altura
- * rem_L_int.posZ = rem_L_ext.posZ
+ * União geométrica CIMA (modelo interno): int encaixada em ext em Z, mesma X/Y.
+ * Laterais legacy (DIR/ESQ): int acima de ext em Y.
  */
 export function computeLRemateIntCornerFromExt(
   extCorner: RematePiecePosition,
-  extDims: Pick<RematePiece, "height">
+  extDims: Pick<RematePiece, "width" | "height" | "depth">,
+  primary: RemateMountSlot = "DIR"
 ): RematePiecePosition {
+  if (primary === "CIMA") {
+    return {
+      xMm: extCorner.xMm,
+      yMm: extCorner.yMm,
+      zMm: extCorner.zMm - extDims.depth,
+    };
+  }
   return {
     xMm: extCorner.xMm,
     yMm: extCorner.yMm + extDims.height,
@@ -150,13 +222,21 @@ export function computeLRemateIntCornerFromExt(
 }
 
 export function computeLRemateIntCornerFromExtPiece(ext: RematePiece): RematePiecePosition {
-  return computeLRemateIntCornerFromExt(ext.position, ext);
+  return computeLRemateIntCornerFromExt(ext.position, ext, resolveLPrimarySlot(ext));
 }
 
 export function computeLRemateExtCornerFromInt(
   intCorner: RematePiecePosition,
-  extDims: Pick<RematePiece, "height">
+  extDims: Pick<RematePiece, "width" | "height" | "depth">,
+  primary: RemateMountSlot = "DIR"
 ): RematePiecePosition {
+  if (primary === "CIMA") {
+    return {
+      xMm: intCorner.xMm,
+      yMm: intCorner.yMm,
+      zMm: intCorner.zMm + extDims.depth,
+    };
+  }
   return {
     xMm: intCorner.xMm,
     yMm: intCorner.yMm - extDims.height,
@@ -164,13 +244,19 @@ export function computeLRemateExtCornerFromInt(
   };
 }
 
-/** Pose de render: centro 3D + rotação zero (khaled-pro — só posicionamento). */
+/** Pose de render: centro 3D + rotação (CIMA int Rx90°). */
 export function resolveLRemateRenderPose(
-  piece: RematePiece
-): { position: RematePiecePosition; rotation: typeof ZERO_ROT } {
+  piece: RematePiece,
+  _bounds?: StructuralBoundsM
+): { position: RematePiecePosition; rotation: RematePieceRotation } {
+  const position =
+    piece.placementMode === "FREE"
+      ? piece.position
+      : lRemateCornerToCenterForPiece(piece, piece.position);
+
   return {
-    position: lRemateCornerToCenterMm(piece, piece.position),
-    rotation: ZERO_ROT,
+    position,
+    rotation: resolveLRemateRotation(piece),
   };
 }
 
@@ -181,8 +267,11 @@ export function snapLRemateGroupCorners(
   bounds: StructuralBoundsM
 ): { ext: RematePiece; int: RematePiece } {
   const primary = resolveLPrimarySlot(ext);
+  const extRotation = resolveLRemateRotation(ext);
+  const intRotation = resolveLRemateRotation(int);
   const extCorner = computeLRemateExtCornerMm(primary, ext, bounds);
-  const intCorner = computeLRemateIntCornerFromExt(extCorner, ext);
+  const intCorner = computeLRemateIntCornerFromExt(extCorner, ext, primary);
+
   return {
     ext: {
       ...ext,
@@ -190,7 +279,7 @@ export function snapLRemateGroupCorners(
       placementMode: "SNAPPED",
       faceOffsets: undefined,
       position: extCorner,
-      rotation: ZERO_ROT,
+      rotation: extRotation,
     },
     int: {
       ...int,
@@ -198,7 +287,7 @@ export function snapLRemateGroupCorners(
       placementMode: "SNAPPED",
       faceOffsets: undefined,
       position: intCorner,
-      rotation: ZERO_ROT,
+      rotation: intRotation,
     },
   };
 }
@@ -213,33 +302,50 @@ export function applyLRemateGroupCoupling(remates: RematePiece[], movedId: strin
   const int = group.find((r) => r.partIndex === 2);
   if (!ext || !int) return remates;
 
+  const primary = resolveLPrimarySlot(ext);
+
   if (moved.partIndex === 1) {
     const intCorner = computeLRemateIntCornerFromExtPiece(ext);
     return remates.map((r) =>
-      r.id === int.id ? { ...r, position: intCorner, rotation: ZERO_ROT, placementMode: moved.placementMode } : r
+      r.id === int.id
+        ? {
+            ...r,
+            position: intCorner,
+            rotation: resolveLRemateRotation(r),
+            placementMode: moved.placementMode,
+          }
+        : r
     );
   }
 
-  const extCorner = computeLRemateExtCornerFromInt(int.position, ext);
+  const extCorner = computeLRemateExtCornerFromInt(int.position, ext, primary);
   return remates.map((r) =>
-    r.id === ext.id ? { ...r, position: extCorner, rotation: ZERO_ROT, placementMode: moved.placementMode } : r
+    r.id === ext.id
+      ? {
+          ...r,
+          position: extCorner,
+          rotation: resolveLRemateRotation(r),
+          placementMode: moved.placementMode,
+        }
+      : r
   );
 }
 
 /** Converte patch vindo do viewer (centro) para canto khaled-pro. */
 export function normalizeLRemateTransformPatch<T extends Partial<Pick<RematePiece, "position" | "rotation" | "faceOffsets" | "placementMode">>>(
   piece: RematePiece,
-  patch: T
+  patch: T,
+  _bounds?: StructuralBoundsM
 ): T {
   if (!isLRematePiece(piece)) return patch;
   const next: T = {
     ...patch,
-    rotation: ZERO_ROT,
+    rotation: resolveLRemateRotation(piece),
     faceOffsets: undefined,
     placementMode: patch.placementMode ?? "FREE",
   } as T;
   if (patch.position) {
-    next.position = lRemateCenterToCornerMm(piece, patch.position);
+    next.position = lRemateCenterToCornerForPiece(piece, patch.position);
   }
   return next;
 }
@@ -247,19 +353,10 @@ export function normalizeLRemateTransformPatch<T extends Partial<Pick<RematePiec
 /** @deprecated Preferir resolveLRemateRenderPose / computeLRemateExtCornerMm */
 export function computeLRemateCenterM(
   piece: Pick<RematePiece, "width" | "height" | "depth" | "mountSlot" | "partIndex" | "position">,
-  _bounds: StructuralBoundsM
+  bounds: StructuralBoundsM
 ): { x: number; y: number; z: number } {
   const full = piece as RematePiece;
-  const pose = resolveLRemateRenderPose({
-    ...full,
-    position: piece.position ?? { xMm: 0, yMm: 0, zMm: 0 },
-    rotation: ZERO_ROT,
-    id: "tmp",
-    tipo: "L",
-    materialPresetId: "m",
-    followBox: true,
-    name: "tmp",
-  });
+  const pose = resolveLRemateRenderPose(full, bounds);
   return {
     x: pose.position.xMm / 1000,
     y: pose.position.yMm / 1000,
@@ -275,4 +372,20 @@ export function remateLIndustrialName(partIndex: 1 | 2, boxCode?: string): strin
 
 export function remateLIndustrialSuffix(partIndex: 1 | 2 | undefined): "L_ext" | "L_int" {
   return partIndex === 2 ? "L_int" : "L_ext";
+}
+
+/** Observação industrial obrigatória para Remate L (ext e int, todos os slots). */
+export const REMATE_L_INDUSTRIAL_OBSERVACAO = "ME manual";
+
+export function isRemateLIndustrialMetadata(metadata?: Record<string, unknown>): boolean {
+  if (!metadata) return false;
+  if (metadata.productType === "L") return true;
+  const kind = metadata.remateKind;
+  return kind === "L_ext" || kind === "L_int";
+}
+
+export function isRemateLIndustrialPiece(
+  piece: Pick<RematePiece, "productType" | "tipo">
+): boolean {
+  return piece.productType === "L" || piece.tipo === "L";
 }

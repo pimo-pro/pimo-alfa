@@ -518,6 +518,8 @@ export class ViewerCore {
   private unregisterWindowEvents: (() => void) | null = null;
   /** Evita processar fim de drag duas vezes (mouseUp + dragging-changed). */
   private transformDragEndStamp = -1;
+  /** Evita reentrância objectChange → clampTransform → mover mesh → objectChange. */
+  private isApplyingTransformConstraints = false;
   readonly internalRuler: InternalRulerFacade;
   readonly snapping: SnappingFacade;
   readonly autoLayout: {
@@ -1022,22 +1024,7 @@ export class ViewerCore {
       }
     });
     this.transformControls.addEventListener("objectChange", () => {
-      if (this.groupGizmo?.isActive()) {
-        this.groupGizmo.applyPivotTransform();
-      }
-      if (
-        this.viewerState.getTransformControlsDragging() &&
-        this.viewerState.getSelectedBox() &&
-        this.shiftKeyHeld &&
-        this.dragStartZForShiftLock !== undefined
-      ) {
-        const obj = this.transformControls!.object;
-        if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
-      }
-      this.viewerTools.applyCurrentTool();
-      this.measurementOverlay.onRulerMovementTick("transform");
-      this.notifyBoxTransform();
-      this.logTransformDiagnostic("drag(objectChange)");
+      this.handleTransformObjectChange();
     });
     this.transformControlsHelper = this.transformControls.getHelper();
     this.transformControlsHelper.visible = false;
@@ -5383,6 +5370,35 @@ export class ViewerCore {
     this.internalRulerEngine.onSelectionChanged(id);
   }
 
+  /**
+   * Listener único de objectChange — protegido contra reentrância quando Lock/colisão
+   * altera mesh.position e o TransformControls re-emite objectChange na mesma stack.
+   */
+  private handleTransformObjectChange(): void {
+    if (this.isApplyingTransformConstraints) return;
+    this.isApplyingTransformConstraints = true;
+    try {
+      if (this.groupGizmo?.isActive()) {
+        this.groupGizmo.applyPivotTransform();
+      }
+      if (
+        this.viewerState.getTransformControlsDragging() &&
+        this.viewerState.getSelectedBox() &&
+        this.shiftKeyHeld &&
+        this.dragStartZForShiftLock !== undefined
+      ) {
+        const obj = this.transformControls!.object;
+        if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
+      }
+      this.viewerTools.applyCurrentTool();
+      this.measurementOverlay.onRulerMovementTick("transform");
+      this.notifyBoxTransform();
+      this.logTransformDiagnostic("drag(objectChange)");
+    } finally {
+      this.isApplyingTransformConstraints = false;
+    }
+  }
+
   /** Fim de drag unificado — evita duplicação mouseUp + dragging-changed. */
   private finishTransformDrag(_source: "mouseUp" | "dragging-changed"): void {
     const stamp = performance.now();
@@ -5638,11 +5654,25 @@ export class ViewerCore {
       }
     }
 
+    const parentBoxEntry =
+      excludeBoxId && this.boxes.has(excludeBoxId)
+        ? (() => {
+            const entry = this.boxes.get(excludeBoxId)!;
+            return {
+              boxId: excludeBoxId,
+              mesh: entry.mesh,
+              width: entry.width,
+              height: entry.height,
+              depth: entry.depth,
+            };
+          })()
+        : undefined;
+
     applyFinishMovementConstraints({
       movingMesh,
       boxes: this.boxes,
-      excludeBoxIds: excludeBoxId ? new Set([excludeBoxId]) : undefined,
       otherMeshes,
+      parentBox: parentBoxEntry,
       applyFloorConstraint: (mesh) => this.applyFloorConstraint(mesh),
       roomBounds: this.roomBounds,
       roomWallMeshes: this.roomBoxWalls.map((w) => w.mesh),

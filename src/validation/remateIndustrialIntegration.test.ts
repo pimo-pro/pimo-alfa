@@ -3,6 +3,7 @@ import { clearAllCutlistCache } from "../core/manufacturing/cutlistFromBoxes";
 import { buildCutlistItemsForIndustrialExport } from "../core/fabrication/buildCutlistItemsForIndustrialExport";
 import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
 import { createRematePieces } from "../core/remate/rematePieceFactory";
+import { resolveObservacoesForCutListItem } from "../core/observacoes/ObservacoesService";
 import { makeDivSepTestBox } from "../core/divSep/divSepTestHelpers";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
 import { cutlistToPieces } from "../core/cutlayout/cutLayoutEngine";
@@ -41,10 +42,10 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     expect(dir?.tipo).toBe("remate");
   });
 
-  it("remate L → MOD1_REMATE_L_ext / L_int com grain YY/XX", () => {
+  it("remate L CIMA → MOD1_REMATE_L_ext / L_int com dimensões e grain", () => {
     const wsBox = { ...makeWorkspaceBox(), nome: "MOD1" };
     const remates = createRematePieces(
-      { productType: "L", mountSlot: "DIR", parentBoxId: wsBox.id, followBox: true },
+      { productType: "L", mountSlot: "CIMA", parentBoxId: wsBox.id, followBox: true },
       {
         box: wsBox,
         materialPresetId: "mdf_branco",
@@ -60,10 +61,12 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     const int = cutlist.find((i) => i.metadata?.remateKind === "L_int");
     expect(ext?.nome).toBe("MOD1_REMATE_L_ext_01");
     expect(int?.nome).toBe("MOD1_REMATE_L_int_01");
-    expect(ext?.grainDirection).toBe("YY");
-    expect(int?.grainDirection).toBe("XX");
-    expect(ext?.dimensoes).toEqual({ largura: 100, altura: 720, profundidade: 19 });
+    expect(ext?.grainDirection).toBe("XX");
+    expect(int?.grainDirection).toBe("YY");
+    expect(ext?.dimensoes).toEqual({ largura: 600, altura: 100, profundidade: 19 });
     expect(int?.dimensoes).toEqual({ largura: 600, altura: 100, profundidade: 19 });
+    expect(resolveObservacoesForCutListItem(ext!, {})).toEqual(["ME manual"]);
+    expect(resolveObservacoesForCutListItem(int!, {})).toEqual(["ME manual"]);
   });
 
   it("buildCutlistItemsForIndustrialExport inclui remates com shortCode e pieceNumber", () => {

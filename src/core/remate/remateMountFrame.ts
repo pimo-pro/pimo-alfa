@@ -5,6 +5,7 @@ import {
   lSecondaryMountSlot,
   resolveLPrimarySlot,
   resolveLRemateRenderPose,
+  resolveLRemateRotation,
 } from "./remateLGeometry";
 import type {
   RemateFaceOffsets,
@@ -219,7 +220,7 @@ export function snapToMountRule(piece: RematePiece, bounds: StructuralBoundsM): 
         mountSlot: lSecondaryMountSlot(primary),
         placementMode: "SNAPPED",
         faceOffsets: undefined,
-        rotation: ZERO_ROT,
+        rotation: resolveLRemateRotation(piece),
       };
     }
     const extCorner = computeLRemateExtCornerMm(primary, piece, bounds);
@@ -229,7 +230,7 @@ export function snapToMountRule(piece: RematePiece, bounds: StructuralBoundsM): 
       placementMode: "SNAPPED",
       faceOffsets: undefined,
       position: extCorner,
-      rotation: ZERO_ROT,
+      rotation: resolveLRemateRotation(piece),
     };
   }
 
@@ -256,9 +257,9 @@ export function resolveRematePoseLocal(
     if (piece.placementMode === "SNAPPED" && piece.partIndex === 1) {
       const primary = resolveLPrimarySlot(piece);
       const corner = computeLRemateExtCornerMm(primary, piece, bounds);
-      return resolveLRemateRenderPose({ ...piece, position: corner });
+      return resolveLRemateRenderPose({ ...piece, position: corner }, bounds);
     }
-    return resolveLRemateRenderPose(piece);
+    return resolveLRemateRenderPose(piece, bounds);
   }
 
   const slot = resolveMountSlot(piece);

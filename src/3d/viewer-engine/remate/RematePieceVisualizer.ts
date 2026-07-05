@@ -5,7 +5,6 @@ import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
 import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
-import { isLRematePiece } from "../../../core/remate/remateLGeometry";
 
 export type RematePieceVisualBoxConfig = {
   boxId: string;
@@ -104,6 +103,10 @@ export class RematePieceVisualizer {
     }
 
     mesh.visible = !hidden;
+    mesh.userData.remateProductType = piece.productType;
+    mesh.userData.rematePartIndex = piece.partIndex;
+    mesh.userData.remateParentGroupId = piece.parentGroupId ?? null;
+    mesh.userData.remateDepthMm = piece.depth;
     this.applyWorldTransform(mesh, piece);
   }
 
@@ -191,6 +194,10 @@ export class RematePieceVisualizer {
     mesh.renderOrder = REMATE_RENDER_ORDER;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    mesh.userData.remateProductType = piece.productType;
+    mesh.userData.rematePartIndex = piece.partIndex;
+    mesh.userData.remateParentGroupId = piece.parentGroupId ?? null;
+    mesh.userData.remateDepthMm = piece.depth;
     return mesh;
   }
 
@@ -220,22 +227,14 @@ export class RematePieceVisualizer {
           local.applyMatrix4(worldMatrix);
           mesh.position.copy(local);
           const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
-          if (isLRematePiece(piece)) {
-            mesh.quaternion.copy(boxQuat);
-          } else {
-            const partQuat = new THREE.Quaternion().setFromEuler(
-              new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
-            );
-            mesh.quaternion.copy(boxQuat).multiply(partQuat);
-          }
+          const partQuat = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
+          );
+          mesh.quaternion.copy(boxQuat).multiply(partQuat);
           return;
         }
         mesh.position.set(pose.position.xMm / 1000, pose.position.yMm / 1000, pose.position.zMm / 1000);
-        if (isLRematePiece(piece)) {
-          mesh.rotation.set(0, 0, 0);
-        } else {
-          mesh.rotation.set(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad);
-        }
+        mesh.rotation.set(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad);
         return;
       }
     }
