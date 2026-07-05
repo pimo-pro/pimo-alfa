@@ -6346,6 +6346,7 @@ export class ViewerCore {
     this.internalRulerEngine.resize();
     this.internalRulerOverlay?.resize();
     this.smartSnappingEngine.resize();
+    this.smartAlignOverlay.resize();
   };
 
   private start() {

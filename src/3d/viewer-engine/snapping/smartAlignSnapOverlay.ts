@@ -72,9 +72,9 @@ export class SmartAlignSnapOverlay {
     const container = this.deps.getContainer();
     const w = Math.max(1, container.clientWidth || 1);
     const h = Math.max(1, container.clientHeight || 1);
-    if (this.canvas.width !== w) this.canvas.width = w;
-    if (this.canvas.height !== h) this.canvas.height = h;
-    if (this.state.visible) this.draw();
+    if (this.canvas.width === w && this.canvas.height === h) return;
+    this.canvas.width = w;
+    this.canvas.height = h;
   }
 
   dispose(): void {
@@ -107,7 +107,6 @@ export class SmartAlignSnapOverlay {
 
   private draw(): void {
     if (!this.canvas || !this.ctx) return;
-    this.resize();
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.canvas.style.display = "block";
