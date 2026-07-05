@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-07-05T00:01:30.607Z",
+  "generatedAt": "2026-07-05T00:15:16.297Z",
   "layoutOptions": "getDefaultCncLayoutOptions()",
   "scenarios": [
     {
@@ -9,7 +9,7 @@
       "description": "Projeto real importado (TEST 1.txt) — mix heterogéneo",
       "pieceCount": 2,
       "mode": "IMPORT",
-      "executionMs": 61.3,
+      "executionMs": 71.8,
       "totalSheets": 1,
       "avgWastePercent": 92.25,
       "totalMicroGapsLt5mm": 0,
@@ -49,7 +49,7 @@
       "description": "Pipeline industrial SPM — caixa completa",
       "pieceCount": 14,
       "mode": "SPM",
-      "executionMs": 142.4,
+      "executionMs": 150.8,
       "totalSheets": 3,
       "avgWastePercent": 74.58,
       "totalMicroGapsLt5mm": 0,
@@ -116,7 +116,7 @@
       "description": "Pipeline industrial MPM — duas caixas",
       "pieceCount": 24,
       "mode": "MPM",
-      "executionMs": 31915.3,
+      "executionMs": 31938.2,
       "totalSheets": 4,
       "avgWastePercent": 67.7,
       "totalMicroGapsLt5mm": 0,

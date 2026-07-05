@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-07-05T00:01:00.906Z",
+  "generatedAt": "2026-07-05T00:14:44.418Z",
   "inputFixture": "src/validation/industrialPipelineTestHelpers.ts → buildRealWorldBenchmarkScenario()",
   "scenario": {
     "scenarioId": "REALWORLD_SPM_ROUPEIRO",
@@ -240,7 +240,7 @@
       }
     ],
     "mode": "SPM",
-    "executionMs": 148.2,
+    "executionMs": 209.9,
     "totalSheets": 6,
     "avgWastePercent": 49.11,
     "totalMicroGapsLt5mm": 0,

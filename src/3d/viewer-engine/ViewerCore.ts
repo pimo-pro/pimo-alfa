@@ -14,6 +14,13 @@ import { RendererManager } from "./renderer";
 import { Lights } from "./lighting";
 import { Controls } from "./controls";
 import {
+  createViewerControls,
+  createViewerDisplayFacade,
+  createViewerFoundation,
+  createViewerMaterialSystems,
+  createViewerSelectionSystems,
+} from "./composition/ViewerCompositionRoot";
+import {
   applyMouseInputMappingToOrbitControls,
   getMouseInputMapping,
   getPointerActionForButton,
@@ -22,10 +29,11 @@ import {
   type MouseInputPreset,
 } from "./controls/MouseInputMapper";
 import { isObjectInScreenRect } from "./utils/screenSelection";
+import { BoxSceneController } from "./box/BoxSceneController";
 import { ViewerBoxManager } from "./box";
 import { SnapshotRenderer } from "./snapshot";
-import { HighlightManager } from "./highlight";
-import { EdgeOutlineSystem, type EdgeOutlineBoxEntry } from "../outline";
+import type { HighlightManager } from "./highlight";
+import type { EdgeOutlineBoxEntry, EdgeOutlineSystem } from "../outline";
 import { ViewerRaycastSystem } from "./raycast/ViewerRaycastSystem";
 import { ViewerState } from "./state";
 import { EventsManager } from "./events";
@@ -37,12 +45,9 @@ import type { IViewerToolsEngine } from "./tools/ToolsEngineTypes";
 import type { MaterialSet } from "../materials/MaterialLibrary";
 import type { LoadedWoodMaterial } from "../materials/WoodMaterial";
 import type { MaterialMode } from "./materials";
-import {
-  createMaterialPipelineFacade,
-  type MaterialPipelineFacade,
-} from "./materials/materialPipelineFacade";
-import { DisplayMaterialController } from "./materials/displayMaterialController";
-import { UltraMaterialController } from "./materials/ultraMaterialController";
+import type { MaterialPipelineFacade } from "./materials/materialPipelineFacade";
+import type { DisplayMaterialController } from "./materials/displayMaterialController";
+import type { UltraMaterialController } from "./materials/ultraMaterialController";
 import {
   createInitialMaterialSet,
   mergeViewerMaterialSet,
@@ -64,27 +69,23 @@ import {
 } from "./materials/roomFloorOverlay";
 import type { BoxOptions } from "../objects/BoxBuilder";
 import type { ViewerBoxEntry } from "./types";
-import type { BoxPanelIds, TechnicalDrillHole, ViewerDrillMarkersByPanel } from "../../core/types";
-import { buildBoxLegacy, createDoorObject, getDoorSpecFromGroup, updateBoxGroup } from "../objects/BoxBuilder";
+import type { BoxPanelIds, TechnicalDrillHole } from "../../core/types";
+import { createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
 import { applyDrawerFrontMaterialToMesh } from "../objects/DrawerFactory";
 import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 import {
   expandBox3ByObjectExcludingLayoutProxy,
-  isViewerLayoutProxyObject,
   runWithAllLayoutBoundsProxiesVisible,
   runWithLayoutBoundsProxiesVisible,
   setBox3FromObjectExcludingLayoutProxy,
-  VIEWER_LAYOUT_PROXY_LAYER,
 } from "./box/boxAabbUtils";
-import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
 import { SYSTEM_BACK_MM } from "../../core/baseCabinets";
 import {
   clearSnapUserData,
   getTransformGizmoSizeForBox as computeTransformGizmoSizeForBox,
   isMeshInsideOrTouchingRoomBounds,
-  tagBoxGroupWithId,
 } from "@/viewer/core/viewerUtils";
 import type { ViewerOptions } from "@/viewer/core/viewerTypes";
 export type { ViewerOptions } from "@/viewer/core/viewerTypes";
@@ -137,12 +138,12 @@ import {
   syncMeasurementAnchorsToVisualizer,
 } from "./measurement/measurementAnchorsBridge";
 import {
-  InternalSelectionOutline,
+  type InternalSelectionOutline,
   type InternalSelectionHit,
   type InternalSelectionState,
   cloneInternalSelectionState,
 } from "./selection";
-import { MultiSelectionOutline, type MultiOutlineTarget } from "./selection/MultiSelectionOutline";
+import type { MultiOutlineTarget, MultiSelectionOutline } from "./selection/MultiSelectionOutline";
 import { MeasurementAnchorsVisualizer } from "./measurement/MeasurementAnchorsVisualizer";
 import { historyManager } from "../../core/viewer/historyManager";
 import type { MeasurementAnchorEntry } from "../../core/viewer/measurementAnchors";
@@ -220,8 +221,8 @@ import {
   type PrintReadyDimensions,
 } from "./overlays/boxDimensionsOverlay";
 import { DimensionsOverlayController } from "./overlays/DimensionsOverlayController";
-import { SelectionOutlineController } from "./overlays/SelectionOutlineController";
-import { WallSelectionOutlineController } from "./overlays/WallSelectionOutlineController";
+import type { SelectionOutlineController } from "./overlays/SelectionOutlineController";
+import type { WallSelectionOutlineController } from "./overlays/WallSelectionOutlineController";
 import { ViewerBoundsCache } from "./cache/ViewerBoundsCache";
 import type { MouseMenuTarget } from "../../ui/context-menu/ContextMenuEngine";
 import type { DivSepVisualBridge } from "./divSep/DivSepVisualBridge";
@@ -249,6 +250,7 @@ export class ViewerCore {
   private rendererManager: RendererManager;
   private controls: Controls | null;
   private readonly boxManager = new ViewerBoxManager();
+  private readonly boxSceneController = new BoxSceneController();
   get boxes(): Map<string, ViewerBoxEntry> {
     return this.boxManager.getBoxes();
   }
@@ -601,52 +603,29 @@ export class ViewerCore {
     );
     this.reflectionUpdateIntervalFrames = this.isMobile ? 36 : 24;
     this.container = container;
-    const background = options.background ?? options.scene?.background;
-    this.sceneManager = new SceneManager({
-      background,
-      environment: options.environment,
+    const foundation = createViewerFoundation(container, options, this.isMobile);
+    this.sceneManager = foundation.sceneManager;
+    this.defaultGroundSize = foundation.defaultGroundSize;
+    this.cameraManager = foundation.cameraManager;
+    this.rendererManager = foundation.rendererManager;
+    this.lights = foundation.lights;
+    this.baseLightIntensities = foundation.baseLightIntensities;
+    this.display = createViewerDisplayFacade({
+      getShadowIntensity: () => this.shadowIntensityValue,
+      updateShadowIntensity: (value) => this.updateShadowIntensity(value),
     });
-    this.defaultGroundSize = options.environment?.groundSize ?? 20;
-    this.cameraManager = new CameraManager(options.camera);
-    this.rendererManager = new RendererManager(container, {
-      ...options.renderer,
-      clearColor: background,
-    });
-    const shadowMapSize = this.isMobile ? 1024 : (options.lights?.shadowMapSize ?? 4096);
-    this.lights = new Lights(this.sceneManager.scene, {
-      ...options.lights,
-      shadowMapSize,
-    });
-    this.baseLightIntensities = {
-      ambient: this.lights.ambient.intensity,
-      hemisphere: this.lights.hemisphere.intensity,
-      key: this.lights.keyLight.intensity,
-      fill: this.lights.fillLight.intensity,
-      rim: this.lights.rimLight.intensity,
-    };
-    // eslint-disable-next-line @typescript-eslint/no-this-alias -- getters no objeto precisam fechar sobre a instância do viewer
-    const engine = this;
-    this.display = {
-      get shadowIntensity() {
-        return engine.shadowIntensityValue;
-      },
-      set shadowIntensity(v: number) {
-        engine.updateShadowIntensity(v);
-      },
-    };
-    this.defaultPixelRatio = this.rendererManager.renderer.getPixelRatio();
-    this.baseToneMappingExposure = this.rendererManager.renderer.toneMappingExposure;
-    this.selectionOutline = new SelectionOutlineController({
+    this.defaultPixelRatio = foundation.defaultPixelRatio;
+    this.baseToneMappingExposure = foundation.baseToneMappingExposure;
+    const selectionSystems = createViewerSelectionSystems({
       scene: this.sceneManager.scene,
       getBoxes: () => this.boxes,
     });
-
-    this.wallSelectionOutline = new WallSelectionOutlineController(this.sceneManager.scene);
-
-    this.highlightManager = new HighlightManager(this.sceneManager.scene);
-    this.edgeOutlineSystem = new EdgeOutlineSystem(this.sceneManager.scene, false);
-    this.internalSelectionOutline = new InternalSelectionOutline(this.sceneManager.scene);
-    this.multiSelectionOutline = new MultiSelectionOutline(this.sceneManager.scene);
+    this.selectionOutline = selectionSystems.selectionOutline;
+    this.wallSelectionOutline = selectionSystems.wallSelectionOutline;
+    this.highlightManager = selectionSystems.highlightManager;
+    this.edgeOutlineSystem = selectionSystems.edgeOutlineSystem;
+    this.internalSelectionOutline = selectionSystems.internalSelectionOutline;
+    this.multiSelectionOutline = selectionSystems.multiSelectionOutline;
 
     this.roomBuilder = new RoomBuilder(() => this.roomBoxWalls.map((w) => w.mesh));
     this.sceneManager.add(this.roomBuilder.getGroup());
@@ -675,9 +654,10 @@ export class ViewerCore {
       hasRoomElementPlacementHandler: () => Boolean(this.onRoomElementPlaced),
     });
 
-    this.materialPipeline = createMaterialPipelineFacade();
-    this.displayMaterials = new DisplayMaterialController();
-    this.ultraMaterials = new UltraMaterialController();
+    const materialSystems = createViewerMaterialSystems();
+    this.materialPipeline = materialSystems.materialPipeline;
+    this.displayMaterials = materialSystems.displayMaterials;
+    this.ultraMaterials = materialSystems.ultraMaterials;
 
     this.industrialDesignMode = new IndustrialDesignWorkspaceMode({
       getBoxEntry: (id) => this.boxes.get(id),
@@ -716,9 +696,11 @@ export class ViewerCore {
 
     this.materialSet = createInitialMaterialSet();
 
-    this.controls = options.enableControls === false
-      ? null
-      : new Controls(this.cameraManager.camera, this.rendererManager.renderer.domElement, options.controls);
+    this.controls = createViewerControls(
+      this.cameraManager.camera,
+      this.rendererManager.renderer.domElement,
+      options
+    );
     this.applyMousePresetToControls();
     this.applyBackgroundMode();
     this.measurementOverlay = new ViewerMeasurementOverlay({
@@ -1771,6 +1753,10 @@ export class ViewerCore {
     return createMeasurementAnchorFromWorldHit(this.pointerPicking.getPointerWorldHit(event));
   }
 
+  /**
+   * Extension point reservado para smart snap de grupos.
+   * Contrato atual: sem efeito e retorna false para preservar comportamento existente.
+   */
   applySmartSnapForGroup(_pointerPosition?: { x: number; y: number; z: number }): boolean {
     return false;
   }
@@ -2818,7 +2804,10 @@ export class ViewerCore {
     this.applyPanelVisibilityForAllBoxes();
   }
 
-  /** LEGACY: compatibilidade com API antiga; não ativa o modo régua antigo. */
+  /**
+   * @deprecated Compatibilidade com API antiga da régua.
+   * Mantém apenas o cursor visual; não reativa o modo de régua legado nem altera medições atuais.
+   */
   setRulerEnabled(enabled: boolean): void {
     this.rendererManager.renderer.domElement.style.cursor = enabled ? "crosshair" : "";
   }
@@ -3080,145 +3069,40 @@ export class ViewerCore {
         "ViewerCore not ready: boxes/boxManager not initialized. Ensure viewerReady is true before calling addBox."
       );
     }
-    if (this.boxes.has(id)) return false;
-    const opts = options ?? {};
-    const cadOnly = opts.cadOnly === true;
-    const { width, height, depth: layoutDepth } = this.getBoxDimensionsFromOptions(opts);
-    const index = opts.index ?? this.getNextBoxIndex();
-    const manualPosition = opts.manualPosition === true;
-    const carcassDepthForEntry = cadOnly
-      ? layoutDepth
-      : Math.max(0.001, opts.carcassDepthM ?? opts.depth ?? layoutDepth);
-
-    let box: THREE.Object3D;
-    let material: LoadedWoodMaterial | null = null;
-    const materialName = opts.materialName ?? this.defaultMaterialName;
-
-    if (cadOnly) {
-      box = new THREE.Group();
-      box.name = id;
-    } else {
-      material = this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
-      const emptyDrill: ViewerDrillMarkersByPanel = {
-        cima: [],
-        fundo: [],
-        lateral_esquerda: [],
-        lateral_direita: [],
-        porta: [],
-        frente_fixa: [],
-      };
-      const boxOptions: BoxOptions = {
-        ...opts,
-        width: opts.width ?? 1,
-        height: opts.height ?? 1,
-        depth: carcassDepthForEntry,
-        thickness: opts.thickness ?? 0.019,
-        index: opts.index,
-        materialName,
-        drillMarkersByPanel: filterViewerDrillMarkersForMesh(opts.drillMarkersByPanel ?? emptyDrill),
-      };
-      if (material?.material != null) {
-        boxOptions.material = material.material;
-      }
-      box = buildBoxLegacy(boxOptions);
-      tagBoxGroupWithId(box, id);
-    }
-
-    box.frustumCulled = false;
-    box.matrixAutoUpdate = true;
-    box.visible = true;
-    box.layers.set(0);
-    box.userData.boxId = id;
-    // Garantir que todos os descendentes estejam na layer 0 para o raycaster detectar clique.
-    box.traverse((child) => {
-      if (isViewerLayoutProxyObject(child)) {
-        child.layers.set(VIEWER_LAYOUT_PROXY_LAYER);
-        return;
-      }
-      child.layers.set(0);
+    return this.boxSceneController.addBox({
+      id,
+      options,
+      boxes: this.boxes,
+      boxManager: this.boxManager,
+      defaultMaterialName: this.defaultMaterialName,
+      nextIndex: this.getNextBoxIndex(),
+      heightBaseCm: ViewerCore.HEIGHT_BASE_CM,
+      loadMaterial: (materialName) => this.loadMaterial(materialName),
+      filterViewerDrillMarkersForMesh,
+      getFixedYForCabinet: (entry) => this.getFixedYForCabinet(entry),
+      applyRotationIfNeeded: (mesh, rotation) => this.applyRotationIfNeeded(mesh, rotation),
+      syncFeetVisualForBox: (entry) => this.syncFeetVisualForBox(entry),
+      sceneAdd: (object) => this.sceneManager.add(object),
+      applyPanelIdsToBox: (root, boxId, panelIds, materialPresetId) =>
+        this.applyPanelIdsToBox(root, boxId, panelIds, materialPresetId),
+      applyPanelVisibilityForObject: (root) => this.applyPanelVisibilityForObject(root),
+      applyExplodedViewForObject: (root) => this.applyExplodedViewForObject(root),
+      syncOrlaForBox: (boxId) => this.syncOrlaForBox(boxId),
+      syncRemateForBox: (boxId) => this.syncRemateForBox(boxId),
+      syncEdgeOutlines: () =>
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
+      applyBackgroundMode: () => this.applyBackgroundMode(),
+      reapplyDisplayMaterials: () => this.reapplyDisplayMaterials(),
+      isMeshInsideOrTouchingRoom: (mesh) => this.isMeshInsideOrTouchingRoom(mesh),
+      hasRoomBounds: () => this.roomBounds != null,
+      getLockEnabled: () => this.lockEnabled,
+      applyRoomConstraint: (mesh, roomOptions) => this.applyRoomConstraint(mesh, roomOptions),
+      ensureBoxesBaseAtFloor: () => this.ensureBoxesBaseAtFloor(),
+      reflowBoxes: () => this.reflowBoxes(),
+      updateCameraTargetToBox: (boxId, cameraOptions) =>
+        this.updateCameraTargetToBox(boxId, cameraOptions),
+      updateCameraTarget: () => this.updateCameraTarget(),
     });
-    this.applyViewerDrillHoleSceneRules(box);
-    box.userData.costaRotationY =
-      opts.costaRotationY != null && Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
-    const baseY = height / 2;
-    // Posição inicial aplicada IMEDIATAMENTE; sem recenter, clamp, colisão nem bbox antes.
-    let position =
-      manualPosition && opts.position
-        ? { x: opts.position.x, y: opts.position.y, z: opts.position.z }
-        : cadOnly
-          ? { x: 0, y: baseY, z: 0 }
-          : (opts.position ?? { x: 0, y: baseY, z: 0 });
-    const cabinetType =
-      opts.cabinetType === "lower" || opts.cabinetType === "upper"
-        ? opts.cabinetType
-        : undefined;
-    const feetEnabled = opts.feetEnabled ?? (cabinetType === "lower");
-    const feetHeight = Math.max(40, opts.feetHeight ?? ((opts.pe_cm ?? ViewerCore.HEIGHT_BASE_CM) * 10));
-    const feetOffsetFront = Math.max(0, opts.feetOffsetFront ?? 100);
-    if (cabinetType === "lower" && feetEnabled) {
-      position = {
-        ...position,
-        y: this.getFixedYForCabinet({ height, cabinetType, pe_cm: feetHeight / 10 }),
-      };
-    }
-    box.position.set(position.x, position.y, position.z);
-    this.applyRotationIfNeeded(box, {
-      x: opts.rotationX,
-      y: opts.rotationY,
-      z: opts.rotationZ,
-    });
-    // Registar no BoxManager ANTES de adicionar à cena (getRightmostX e restante lógica usam este mapa).
-    this.boxManager.addEntry(id, {
-      mesh: box,
-      width,
-      height,
-      carcassDepth: carcassDepthForEntry,
-      depth: layoutDepth,
-      index,
-      cadOnly: cadOnly || undefined,
-      manualPosition,
-      cabinetType: cabinetType ?? undefined,
-      pe_cm: feetHeight / 10,
-      feetHeight,
-      feetOffsetFront,
-      feetEnabled,
-      autoRotateEnabled: opts.autoRotateEnabled !== false,
-      locked: opts.locked === true,
-      cadModels: [],
-      material,
-      drillMarkersByPanel: opts.drillMarkersByPanel,
-      materialName: materialName,
-      noBackPanel: resolveNoBackPanelFromOptions(opts),
-    });
-    const createdEntry = this.boxes.get(id);
-    if (createdEntry) {
-      this.attachLayoutBoundsMesh(createdEntry);
-      this.syncFeetVisualForBox(createdEntry);
-    }
-    this.sceneManager.add(box);
-    this.applyPanelIdsToBox(box, id, opts.panelIds, materialName);
-    this.applyPanelVisibilityForObject(box);
-    this.applyExplodedViewForObject(box);
-    this.syncOrlaForBox(id);
-    this.syncRemateForBox(id);
-    tagBoxGroupWithId(box, id);
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
-    this.applyBackgroundMode();
-    this.reapplyDisplayMaterials();
-    if (this.roomBounds && this.isMeshInsideOrTouchingRoom(box)) {
-      // auto-rotate disabled — centralizado no snapping
-      // this.applyAutoRotateToRoom(box, { snapPosition: this.lockEnabled });
-      if (this.lockEnabled) this.applyRoomConstraint(box, { ignoreY: manualPosition });
-    }
-    // Base do box em Y=0 (após exploded view) e câmera no centro do bbox real — só após box totalmente construído.
-    this.ensureBoxesBaseAtFloor();
-    this.reflowBoxes();
-    if (this.boxes.size === 1) {
-      this.updateCameraTargetToBox(id, { onlyMovePositionIfOutOfFrame: true });
-    } else {
-      this.updateCameraTarget();
-    }
-    return true;
   }
 
   updateBox(id: string, options: Partial<BoxOptions> = {}): boolean {
@@ -3268,27 +3152,8 @@ export class ViewerCore {
     }
 
     // Atualização apenas de posição/rotação (ex.: após drag ou sync do projeto). Não fazer rebuild (updateBoxGroup/createDoorObject).
-    const onlyTransform =
-      opts.position !== undefined ||
-      opts.rotationX !== undefined ||
-      opts.rotationY !== undefined ||
-      opts.rotationZ !== undefined ||
-      opts.manualPosition !== undefined ||
-      opts.costaRotationY !== undefined;
-    const hasStructureOpts =
-      opts.width !== undefined ||
-      opts.height !== undefined ||
-      opts.depth !== undefined ||
-      opts.layoutDepthM !== undefined ||
-      opts.carcassDepthM !== undefined ||
-      opts.size !== undefined ||
-      opts.shelves !== undefined ||
-      opts.doorLayerItems !== undefined ||
-      opts.drawerLayerItems !== undefined ||
-      opts.drillMarkersByPanel !== undefined ||
-      opts.thickness !== undefined ||
-      opts.noBackPanel !== undefined ||
-      opts.costaAtiva !== undefined;
+    const structurePlan = this.boxSceneController.createUpdateBoxStructurePlan(entry, opts);
+    const { onlyTransform, hasStructureOpts } = structurePlan;
     if (onlyTransform && !hasStructureOpts) {
       if (import.meta.env.DEV) {
         devLogger.debug("[DOOR-MAT] ViewerCore.updateBox ramo onlyTransform — NÃO chama updateBoxGroup", { boxId: id, onlyTransform: true, hasStructureOpts: false });
@@ -3299,69 +3164,19 @@ export class ViewerCore {
       const isActiveDragForThisBox =
         this.viewerState.getTransformControlsDragging() &&
         this.viewerState.getSelectedBox() === id;
-
-      if (!isActiveDragForThisBox) {
-        if (entry.manualPosition && !opts.position) {
-          // nada a alterar
-        } else if (opts.position && !this.shouldUseFeetLock(entry)) {
-          entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
-        } else if (this.shouldUseFeetLock(entry)) {
-          const fixedY = this.getFixedYForCabinet({
-            height: entry.height,
-            cabinetType: entry.cabinetType,
-            pe_cm: entry.pe_cm,
-          });
-          if (opts.position) {
-            entry.mesh.position.set(opts.position.x, fixedY, opts.position.z);
-          } else {
-            entry.mesh.position.y = fixedY;
-          }
-        } else if (opts.position) {
-          entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
-        }
-        this.applyRotationIfNeeded(entry.mesh, {
-          x: opts.rotationX,
-          y: opts.rotationY,
-          z: opts.rotationZ,
-        });
-      }
-      if (opts.costaRotationY !== undefined) {
-        (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
-          Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
-      }
-      if (opts.manualPosition !== undefined) {
-        entry.manualPosition = opts.manualPosition;
-      }
-      if (opts.locked !== undefined) {
-        entry.locked = opts.locked === true;
-      }
-      entry.mesh.updateMatrixWorld(true);
-      this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
-      return true;
+      return this.boxSceneController.applyOnlyTransformUpdate({
+        entry,
+        opts,
+        isActiveDragForThisBox,
+        shouldUseFeetLock: (boxEntry) => this.shouldUseFeetLock(boxEntry),
+        getFixedYForCabinet: (boxEntry) => this.getFixedYForCabinet(boxEntry),
+        applyRotationIfNeeded: (mesh, rotation) => this.applyRotationIfNeeded(mesh, rotation),
+        syncEdgeOutlines: () =>
+          this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
+      });
     }
 
-    let width = entry.width;
-    let height = entry.height;
-    let layoutDepth = entry.depth;
-    let carcassDepth = entry.carcassDepth ?? layoutDepth;
-    let heightChanged = false;
-    let indexChanged = false;
-    const dimensionsChanged =
-      opts.width !== undefined ||
-      opts.height !== undefined ||
-      opts.depth !== undefined ||
-      opts.layoutDepthM !== undefined ||
-      opts.carcassDepthM !== undefined ||
-      opts.size !== undefined ||
-      opts.thickness !== undefined;
-    const structureChanged =
-      dimensionsChanged ||
-      opts.shelves !== undefined ||
-      opts.doorLayerItems !== undefined ||
-      opts.drawerLayerItems !== undefined ||
-      opts.drillMarkersByPanel !== undefined ||
-      opts.noBackPanel !== undefined ||
-      opts.costaAtiva !== undefined;
+    const { dimensionsChanged, structureChanged } = structurePlan;
     if (structureChanged && this.viewerState.getTransformControlsDragging()) {
       this.pendingBoxStructureUpdates.set(id, {
         ...(this.pendingBoxStructureUpdates.get(id) ?? {}),
@@ -3370,274 +3185,70 @@ export class ViewerCore {
       return true;
     }
     if (structureChanged) {
-      width = Math.max(0.001, opts.width ?? opts.size ?? width);
-      height = Math.max(0.001, opts.height ?? opts.size ?? height);
-      layoutDepth = Math.max(0.001, opts.layoutDepthM ?? opts.depth ?? opts.size ?? layoutDepth);
-      carcassDepth = Math.max(0.001, opts.carcassDepthM ?? opts.depth ?? opts.size ?? layoutDepth);
-      heightChanged = height !== entry.height;
-      const hasLayerUpdate =
-        opts.doorLayerItems !== undefined ||
-        opts.drawerLayerItems !== undefined ||
-        opts.drillMarkersByPanel !== undefined;
-      // Só pular updateBoxGroup para caixa CAD-only quando não há alteração de dimensões nem de portas/gavetas.
-      if (entry.cadOnly && !hasLayerUpdate && !dimensionsChanged) {
-        if (!entry.manualPosition) {
-          entry.mesh.position.y = height / 2;
-        }
-      } else {
-        const emptyDrillMarkers: ViewerDrillMarkersByPanel = {
-          cima: [],
-          fundo: [],
-          lateral_esquerda: [],
-          lateral_direita: [],
-          porta: [],
-          frente_fixa: [],
-        };
-        const drillMarkers: ViewerDrillMarkersByPanel =
-          opts.drillMarkersByPanel ?? emptyDrillMarkers;
-        const materialName = opts.materialName ?? entry.materialName ?? this.defaultMaterialName;
-        const loadedMat = entry.material ?? this.loadMaterial(materialName) ?? this.loadMaterial("mdf_branco");
-        const boxOptions: BoxOptions = {
-          ...opts,
-          width,
-          height,
-          depth: carcassDepth,
-          thickness: opts.thickness ?? 0.019,
-          shelves: opts.shelves,
-          doorLayerItems: opts.doorLayerItems,
-          drawerLayerItems: opts.drawerLayerItems,
-          drillMarkersByPanel: filterViewerDrillMarkersForMesh(drillMarkers),
-          materialName,
-        };
-        if (loadedMat?.material != null) boxOptions.material = loadedMat.material;
-
-        const canIncrementalUpdate = !dimensionsChanged && !entry.cadOnly;
-        if (canIncrementalUpdate) {
-          updateBoxGroup(entry.mesh as THREE.Group, boxOptions);
-          tagBoxGroupWithId(entry.mesh, id);
-          this.applyViewerDrillHoleSceneRules(entry.mesh);
-          entry.width = width;
-          entry.height = height;
-          entry.depth = layoutDepth;
-          entry.carcassDepth = carcassDepth;
-          if (!entry.material && loadedMat) entry.material = loadedMat;
-          this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
-          this.requestRender();
-        } else {
-        const savedPosition = new THREE.Vector3().setFromMatrixPosition(entry.mesh.matrixWorld);
-        const savedQuaternion = new THREE.Quaternion().copy(entry.mesh.quaternion);
-        const savedCostaRotationY = (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData?.costaRotationY;
-
-        // Desanexar modelos CAD antes de dispor o mesh (não dispor os GLBs).
-        const cadModels = entry.cadModels ? [...entry.cadModels] : [];
-        cadModels.forEach((m) => {
-          if (m.object.parent) m.object.parent.remove(m.object);
-        });
-
-        this.appliedRotationByMeshUuid.delete(entry.mesh.uuid);
-        this.disposeBoxMeshFromScene(entry.mesh);
-
-        let newBox: THREE.Object3D;
-        if (entry.cadOnly) {
-          newBox = new THREE.Group();
-          newBox.name = id;
-        } else {
-          newBox = buildBoxLegacy(boxOptions);
-          tagBoxGroupWithId(newBox, id);
-          if (!entry.material && loadedMat) entry.material = loadedMat;
-        }
-
-        newBox.frustumCulled = false;
-        newBox.matrixAutoUpdate = true;
-        newBox.visible = true;
-        newBox.layers.set(0);
-        newBox.traverse((child) => {
-          if (isViewerLayoutProxyObject(child)) {
-            child.layers.set(VIEWER_LAYOUT_PROXY_LAYER);
-            return;
-          }
-          child.layers.set(0);
-        });
-        this.applyViewerDrillHoleSceneRules(newBox);
-        newBox.userData.boxId = id;
-        newBox.userData.costaRotationY =
-          opts.costaRotationY != null && Number.isFinite(opts.costaRotationY)
-            ? opts.costaRotationY
-            : savedCostaRotationY ?? 0;
-        newBox.position.copy(savedPosition);
-        newBox.quaternion.copy(savedQuaternion);
-
-        entry.mesh = newBox;
-        entry.drillMarkersByPanel = drillMarkers;
-
-        this.sceneManager.root.add(newBox);
-        cadModels.forEach((m) => newBox.add(m.object));
-
-        if (import.meta.env.DEV && dimensionsChanged) {
-          devLogger.debug("[ViewerCore.updateBox] mesh reconstruído (estrutura alterada)", {
-            boxId: id,
-            width,
-            height,
-            layoutDepth,
-            carcassDepth,
-          });
-        }
-        // [CORRIGIDO 2026-03] Forçar rebuild completo do Scene Graph após mesh rebuild (sem alterar transforms ou offsets)
-        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
-        this.requestRender();
-        }
-      }
-    }
-    if (opts.index !== undefined && opts.index !== entry.index) {
-      entry.index = opts.index;
-      indexChanged = true;
-    }
-    if (opts.materialName && !entry.cadOnly) {
-      this.updateBoxMaterial(id, opts.materialName);
-      this.syncDrawerFrontMaterialsForBox(
+      this.boxSceneController.applyStructuralUpdate({
         id,
-        opts.drawerLayerItems,
-        opts.materialName ?? entry.materialName ?? this.defaultMaterialName
-      );
-      this.reapplyDisplayMaterials();
-    }
-    if (opts.cabinetType !== undefined) {
-      entry.cabinetType =
-        opts.cabinetType === "lower" || opts.cabinetType === "upper"
-          ? opts.cabinetType
-          : undefined;
-    }
-    if (opts.pe_cm !== undefined) entry.pe_cm = opts.pe_cm;
-    if (opts.feetHeight !== undefined) {
-      entry.feetHeight = Math.max(40, opts.feetHeight);
-      entry.pe_cm = entry.feetHeight / 10;
-    }
-    if (opts.feetOffsetFront !== undefined) {
-      entry.feetOffsetFront = Math.max(0, opts.feetOffsetFront);
-    }
-    if (opts.feetEnabled !== undefined) entry.feetEnabled = opts.feetEnabled;
-    if (opts.autoRotateEnabled !== undefined) entry.autoRotateEnabled = opts.autoRotateEnabled;
-    if (opts.locked !== undefined) entry.locked = opts.locked === true;
-    if (entry.manualPosition && !opts.position) {
-      // Nunca alterar position.x/y/z quando manualPosition sem opts.position explícito.
-    } else if (opts.position && !this.shouldUseFeetLock(entry)) {
-      entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
-    } else if (this.shouldUseFeetLock(entry)) {
-      const fixedY = this.getFixedYForCabinet({
-        height,
-        cabinetType: entry.cabinetType,
-        pe_cm: entry.pe_cm,
+        entry,
+        opts,
+        plan: structurePlan,
+        defaultMaterialName: this.defaultMaterialName,
+        loadMaterial: (materialName) => this.loadMaterial(materialName),
+        filterViewerDrillMarkersForMesh,
+        deleteRotationCacheForMesh: (meshUuid) => this.appliedRotationByMeshUuid.delete(meshUuid),
+        sceneRootAdd: (object) => this.sceneManager.root.add(object),
+        syncEdgeOutlines: () =>
+          this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
+        requestRender: () => this.requestRender(),
+        logStructuralRebuild: import.meta.env.DEV && dimensionsChanged
+          ? (payload) => devLogger.debug("[ViewerCore.updateBox] mesh reconstruído (estrutura alterada)", payload)
+          : undefined,
       });
-      if (opts.position) {
-        entry.mesh.position.set(opts.position.x, fixedY, opts.position.z);
-      } else {
-        entry.mesh.position.y = fixedY;
-      }
-    } else if (opts.position) {
-      entry.mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
-    } else if (!entry.manualPosition) {
-      entry.mesh.position.y = height / 2;
     }
-    if (dimensionsChanged && !entry.manualPosition && !this.shouldUseFeetLock(entry)) {
-      entry.mesh.position.y = height / 2;
-    }
-    this.applyRotationIfNeeded(entry.mesh, {
-      x: opts.rotationX,
-      y: opts.rotationY,
-      z: opts.rotationZ,
-    });
-    this.applyPanelIdsToBox(
-      entry.mesh,
+    return this.boxSceneController.applyPostUpdateFlow({
       id,
-      opts.panelIds,
-      opts.materialName ?? entry.materialName ?? this.defaultMaterialName
-    );
-    this.applyExplodedViewForObject(entry.mesh);
-    if (opts.costaRotationY !== undefined) {
-      (entry.mesh as THREE.Object3D & { userData: { costaRotationY?: number } }).userData.costaRotationY =
-        Number.isFinite(opts.costaRotationY) ? opts.costaRotationY : 0;
-    }
-    if (opts.manualPosition !== undefined) {
-      entry.manualPosition = opts.manualPosition;
-    }
-    entry.mesh.updateMatrixWorld();
-    entry.mesh.matrixAutoUpdate = true;
-    entry.width = width;
-    entry.height = height;
-    entry.depth = layoutDepth;
-    entry.carcassDepth = carcassDepth;
-    if (opts.noBackPanel !== undefined || opts.costaAtiva !== undefined) {
-      entry.noBackPanel = resolveNoBackPanelFromOptions({
-        noBackPanel: opts.noBackPanel ?? entry.noBackPanel,
-        costaAtiva: opts.costaAtiva,
-      });
-    }
-    if (structureChanged) {
-      this.attachLayoutBoundsMesh(entry);
-    }
-    this.syncFeetVisualForBox(entry);
-    tagBoxGroupWithId(entry.mesh, id);
-    if (opts.drillMarkersByPanel !== undefined) {
-      entry.drillMarkersByPanel = opts.drillMarkersByPanel;
-    }
-    // Recriar overlays de bordas/furos no mesh reconstruído (structureChanged).
-    // applyPanelVisibilityForObject lê entry.drillMarkersByPanel (já atualizado acima)
-    // e mesh.userData.boxId (setado por applyPanelIdsToBox). Deve ser chamado aqui,
-    // pois updateBox não chama applyPanelVisibilityForObject (diferente de addBox).
-    if (structureChanged) {
-      this.applyPanelVisibilityForObject(entry.mesh);
-    }
-    if (opts.drawerLayerItems !== undefined) {
-      this.syncDrawerFrontMaterialsForBox(
-        id,
-        opts.drawerLayerItems,
-        opts.materialName ?? entry.materialName ?? this.defaultMaterialName
-      );
-    }
-    this.syncOrlaForBox(id);
-    this.syncRemateForBox(id);
-    if (this.lockEnabled) this.applyFloorConstraint(entry.mesh);
-    if (dimensionsChanged && entry.cadOnly) {
-      entry.cadModels.forEach((model) => {
-        if (model.object.userData?.isCatalogGlb) {
-          this.applyCatalogModelScale(entry, model.object);
-        }
-      });
-    }
-    const reflowNeeded =
-      indexChanged || (dimensionsChanged && entry.cadOnly);
-    if (reflowNeeded) {
-      this.reflowBoxes();
-      if (!structureChanged) this.updateCameraTarget();
-    }
-    if (structureChanged) {
-      this.updateCameraTargetToBox(id, { onlyMovePositionIfOutOfFrame: true });
-      this.refreshViewerAttachmentsAfterMeshMutation();
-    }
-    if (heightChanged && !entry.cadOnly) {
-      this.updateModelsVerticalPosition(entry);
-    }
-    if (this.roomBounds && this.isMeshInsideOrTouchingRoom(entry.mesh)) {
-      // auto-rotate disabled — centralizado no snapping
-      // this.applyAutoRotateToRoom(entry.mesh, { snapPosition: this.lockEnabled });
-      if (this.lockEnabled) this.applyRoomConstraint(entry.mesh, { ignoreY: entry.manualPosition });
-    }
-    if (id === this.viewerState.getSelectedBox()) {
-      this.selectedBoxChangeListeners.forEach((cb) => {
-        try {
-          cb(id);
-        } catch {
-          /* ignore */
-        }
-      });
-    }
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
-
-    // Forçar render imediato após alteração estrutural (rebuild do mesh) para que furações e geometria nova apareçam sem segunda ação.
-    if (structureChanged) {
-      this.requestRender();
-    }
-    return true;
+      entry,
+      opts,
+      plan: structurePlan,
+      defaultMaterialName: this.defaultMaterialName,
+      updateBoxMaterial: (boxId, materialName) => this.updateBoxMaterial(boxId, materialName),
+      syncDrawerFrontMaterialsForBox: (boxId, drawerLayerItems, materialName) =>
+        this.syncDrawerFrontMaterialsForBox(boxId, drawerLayerItems, materialName),
+      reapplyDisplayMaterials: () => this.reapplyDisplayMaterials(),
+      shouldUseFeetLock: (boxEntry) => this.shouldUseFeetLock(boxEntry),
+      getFixedYForCabinet: (boxEntry) => this.getFixedYForCabinet(boxEntry),
+      applyRotationIfNeeded: (mesh, rotation) => this.applyRotationIfNeeded(mesh, rotation),
+      applyPanelIdsToBox: (root, boxId, panelIds, materialPresetId) =>
+        this.applyPanelIdsToBox(root, boxId, panelIds, materialPresetId),
+      applyExplodedViewForObject: (root) => this.applyExplodedViewForObject(root),
+      syncFeetVisualForBox: (boxEntry) => this.syncFeetVisualForBox(boxEntry),
+      applyPanelVisibilityForObject: (root) => this.applyPanelVisibilityForObject(root),
+      syncOrlaForBox: (boxId) => this.syncOrlaForBox(boxId),
+      syncRemateForBox: (boxId) => this.syncRemateForBox(boxId),
+      getLockEnabled: () => this.lockEnabled,
+      applyFloorConstraint: (mesh) => this.applyFloorConstraint(mesh),
+      applyCatalogModelScale: (boxEntry, model) => this.applyCatalogModelScale(boxEntry, model),
+      reflowBoxes: () => this.reflowBoxes(),
+      updateCameraTarget: () => this.updateCameraTarget(),
+      updateCameraTargetToBox: (boxId, cameraOptions) =>
+        this.updateCameraTargetToBox(boxId, cameraOptions),
+      refreshViewerAttachmentsAfterMeshMutation: () => this.refreshViewerAttachmentsAfterMeshMutation(),
+      updateModelsVerticalPosition: (boxEntry) => this.updateModelsVerticalPosition(boxEntry),
+      hasRoomBounds: () => this.roomBounds != null,
+      isMeshInsideOrTouchingRoom: (mesh) => this.isMeshInsideOrTouchingRoom(mesh),
+      applyRoomConstraint: (mesh, roomOptions) => this.applyRoomConstraint(mesh, roomOptions),
+      isSelectedBox: (boxId) => boxId === this.viewerState.getSelectedBox(),
+      notifySelectedBoxChange: (boxId) => {
+        this.selectedBoxChangeListeners.forEach((cb) => {
+          try {
+            cb(boxId);
+          } catch {
+            /* ignore */
+          }
+        });
+      },
+      syncEdgeOutlines: () =>
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
+      requestRender: () => this.requestRender(),
+    });
   }
 
   /** Agenda um frame de render no próximo requestAnimationFrame. Usado após rebuild de mesh para atualizar a tela imediatamente. */
@@ -3660,58 +3271,23 @@ export class ViewerCore {
    * Os furos estruturais em painéis são filtrados antes do CSG via viewerCncDrillFilter.
    */
   private applyViewerDrillHoleSceneRules(root: THREE.Object3D): void {
-    root.traverse((node) => {
-      if (node.userData?.isDrillHole === true) {
-        node.visible = false;
-        if (node instanceof THREE.Mesh) {
-          node.raycast = () => null;
-        }
-      }
-    });
-  }
-
-  /** Remove e dispõe geometrias/materiais do mesh da cena (não dispõe entry.material, que é cache). */
-  private disposeBoxMeshFromScene(mesh: THREE.Object3D): void {
-    if (mesh.parent) mesh.parent.remove(mesh);
-    const disposedGeometries = new Set<THREE.BufferGeometry>();
-    const disposedMaterials = new Set<THREE.Material>();
-    mesh.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return;
-      if (node.geometry && !disposedGeometries.has(node.geometry)) {
-        node.geometry.dispose();
-        disposedGeometries.add(node.geometry);
-      }
-      if (Array.isArray(node.material)) {
-        node.material.forEach((m) => {
-          if (!disposedMaterials.has(m)) {
-            m.dispose();
-            disposedMaterials.add(m);
-          }
-        });
-      } else if (node.material && !disposedMaterials.has(node.material)) {
-        node.material.dispose();
-        disposedMaterials.add(node.material);
-      }
-    });
+    this.boxSceneController.applyViewerDrillHoleSceneRules(root);
   }
 
   removeBox(id: string): boolean {
-    const entry = this.boxes.get(id);
-    if (!entry) return false;
-    if (this.viewerState.getSelectedBox() === id) {
-      this.setSelectedBox(null);
-    }
-    this.clearModelsFromBox(id);
-    this.disposeBoxMeshFromScene(entry.mesh);
-    this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap());
-    if (entry.material) {
-      entry.material.textures.forEach((texture) => texture.dispose());
-    }
-    this.boxManager.removeEntry(id);
-    this.appliedRotationByMeshUuid.delete(entry.mesh.uuid);
-    this.reflowBoxes();
-    this.updateCameraTarget();
-    return true;
+    return this.boxSceneController.removeBox({
+      id,
+      boxes: this.boxes,
+      boxManager: this.boxManager,
+      getSelectedBoxId: () => this.viewerState.getSelectedBox(),
+      clearSelectedBox: () => this.setSelectedBox(null),
+      clearModelsFromBox: (boxId) => this.clearModelsFromBox(boxId),
+      syncEdgeOutlines: () =>
+        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
+      deleteRotationCacheForMesh: (meshUuid) => this.appliedRotationByMeshUuid.delete(meshUuid),
+      reflowBoxes: () => this.reflowBoxes(),
+      updateCameraTarget: () => this.updateCameraTarget(),
+    });
   }
 
   clearBoxes(): void {
@@ -4155,7 +3731,7 @@ export class ViewerCore {
     originZ?: number;
   }): void {
     void bounds;
-    // Sistema de sala desativado temporariamente.
+    // Compatibilidade legada: bounds diretos foram substituídos por RoomManager/createRoomWithDimensions.
     this.clearRoomBounds();
   }
 
@@ -4368,7 +3944,10 @@ export class ViewerCore {
     this.onBoxSelected = callback;
   }
 
-  /** LEGACY / NO-OP: callback legado da régua mantido apenas para compatibilidade externa. */
+  /**
+   * @deprecated Callback legado da régua.
+   * NO-OP intencional: medições atuais usam InternalRuler/ViewerMeasurementOverlay.
+   */
   setOnRulerTick(callback: (() => void) | null): void {
     void callback;
   }
@@ -4408,6 +3987,10 @@ export class ViewerCore {
     this.viewerTools.updateTransformControlsAttachment();
   }
 
+  /**
+   * Extension point interno preservado para EventsManager.
+   * Contrato atual: NO-OP, porque o refresh é controlado pelo lifecycle de drag.
+   */
   private setTransformAttachmentRefreshSuspended(_v: boolean): void {
     void _v;
   }
@@ -4919,16 +4502,6 @@ export class ViewerCore {
     }
   }
 
-  private getBoxDimensionsFromOptions(options?: BoxOptions) {
-    const width = Math.max(0.001, options?.width ?? options?.size ?? 1);
-    const height = Math.max(0.001, options?.height ?? options?.size ?? 1);
-    const depth = Math.max(
-      0.001,
-      options?.layoutDepthM ?? options?.depth ?? options?.size ?? 1
-    );
-    return { width, height, depth };
-  }
-
   private shouldUseFeetLock(entry: {
     cabinetType?: "lower" | "upper";
     feetEnabled?: boolean;
@@ -5096,14 +4669,7 @@ export class ViewerCore {
   }
 
   private getNextBoxIndex() {
-    if (this.boxes.size === 0) return 0;
-    let maxIndex = -1;
-    this.boxes.forEach((entry) => {
-      if (entry.index > maxIndex) {
-        maxIndex = entry.index;
-      }
-    });
-    return maxIndex + 1;
+    return this.boxSceneController.getNextBoxIndex(this.boxes);
   }
 
   private getNextModelId() {
@@ -5702,6 +5268,10 @@ export class ViewerCore {
     };
   }
 
+  /**
+   * Extension point para refinamento centralizado de planos inteligentes/manufacturing.
+   * Contrato atual: NO-OP; engines chamadoras não devem depender de efeitos colaterais.
+   */
   private refineLayoutPlan(_plan: import("./autoLayout/autoLayoutTypes").AutoLayoutPlan): void {}
 
   private generateIntelligentDesigns(seedBoxId: string): boolean {
@@ -6220,9 +5790,6 @@ export class ViewerCore {
   /** Recuo lateral dos pés (m). */
   private static readonly FEET_SIDE_INSET_M = 0.06;
 
-  /** Filho do grupo da caixa: volume L×A×P de layout para AABB de câmara (layer dedicada; não entra em raycast/reflow/colisão). */
-  private static readonly VIEWER_LAYOUT_BOUNDS_NAME = "viewer-layout-bounds";
-
   private getEdgeOutlineBoxesMap(): ReadonlyMap<string, EdgeOutlineBoxEntry> {
     const map = new Map<string, EdgeOutlineBoxEntry>();
     this.boxes.forEach((entry, id) => {
@@ -6236,47 +5803,6 @@ export class ViewerCore {
       });
     });
     return map;
-  }
-
-  /**
-   * Proxy L×A×P de layout: `visible: false` no render; só `visible: true` temporariamente em
-   * `runWithLayoutBoundsProxiesVisible` para bbox de câmara. Material não escreve cor/depth.
-   */
-  private attachLayoutBoundsMesh(entry: ViewerBoxEntry): void {
-    const name = ViewerCore.VIEWER_LAYOUT_BOUNDS_NAME;
-    const existing = entry.mesh.getObjectByName(name);
-    if (existing) {
-      entry.mesh.remove(existing);
-      if (existing instanceof THREE.Mesh) {
-        existing.geometry.dispose();
-        const mat = existing.material;
-        if (!Array.isArray(mat) && mat instanceof THREE.Material) mat.dispose();
-      }
-    }
-    entry.layoutBoundsMesh = undefined;
-    if (entry.cadOnly) return;
-
-    const w = Math.max(0.001, entry.width);
-    const h = Math.max(0.001, entry.height);
-    const d = Math.max(0.001, entry.depth);
-    const geom = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      depthTest: false,
-      colorWrite: false,
-    });
-    const m = new THREE.Mesh(geom, mat);
-    m.name = name;
-    m.renderOrder = -999999;
-    m.frustumCulled = false;
-    m.raycast = () => null;
-    m.userData.viewerLayoutBounds = true;
-    m.layers.set(VIEWER_LAYOUT_PROXY_LAYER);
-    entry.mesh.add(m);
-    m.visible = false;
-    entry.layoutBoundsMesh = m;
   }
 
   private isMeshInsideOrTouchingRoom(movingMesh: THREE.Object3D, tolerance = 0.02): boolean {
@@ -6556,7 +6082,7 @@ export class ViewerCore {
   }
 
   private onAfterRenderTick(): void {
-    // Hook reservado para pós-frame.
+    // Extension point reservado para pós-frame; sem efeitos no contrato atual.
   }
 
   saveSnapshot(): import("../../context/projectTypes").ViewerSnapshot | null {
