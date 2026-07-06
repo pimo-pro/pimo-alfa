@@ -5,8 +5,10 @@ import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../../cornerCabinet/cornerFixedFr
 
 type CaixaFornoIndustrialBaseline = {
   model: string;
+  status: string;
   baselineTag: string;
   baselineCommit: string;
+  immutableReference: { tag: string; commit: string };
   contractTestSuite: string[];
   expectedTestCount: number;
   invariants: {
@@ -29,11 +31,14 @@ function loadBaseline(): CaixaFornoIndustrialBaseline {
 describe("Caixa Forno — baseline industrial oficial", () => {
   const baseline = loadBaseline();
 
-  it("manifesto de baseline existe e referencia tag v6.0706.1215", () => {
+  it("manifesto de baseline existe e é ponto de partida obrigatório do pipeline", () => {
     expect(baseline.model).toBe("caixa_forno");
+    expect(baseline.status).toBe("mandatory_pipeline_starting_point");
     expect(baseline.baselineTag).toBe("v6.0706.1215");
     expect(baseline.baselineCommit).toBe("9e0a7c9");
-    expect(baseline.expectedTestCount).toBe(52);
+    expect(baseline.immutableReference.tag).toBe("v6.0706.1215");
+    expect(baseline.immutableReference.commit).toBe("9e0a7c9");
+    expect(baseline.expectedTestCount).toBe(54);
     expect(baseline.contractTestSuite.length).toBeGreaterThanOrEqual(6);
     expect(baseline.ssotModules.length).toBeGreaterThanOrEqual(4);
     expect(baseline.guardrails.length).toBeGreaterThanOrEqual(4);
