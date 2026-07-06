@@ -19,6 +19,7 @@ import { COSTA_FIXED_THICKNESS_MM, resolveSeparadorMaterialForBox } from "../../
 import { getDivSepMeshSpecs } from "../../divSep/visualSpecs";
 import { SYSTEM_BACK_MM } from "../../baseCabinets";
 import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
+import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../../cornerCabinet/cornerFixedFrontDowels";
 
 function toBox(cfg: ReturnType<typeof createCaixaForno>, extra: Partial<WorkspaceBox> = {}): WorkspaceBox {
   return convertWorkspaceToBox({
@@ -104,6 +105,71 @@ describe("Validação final — Caixa Forno + sistema de caixas", () => {
       expect(sep.dimensoes.altura).toBe(571);
       expect(sep.dimensoes.largura).toBe(562);
     });
+  });
+
+  it("Industrial — contrato cavilhas SEP: espessura 30 mm, laterais pareadas, interior", () => {
+    const seps = cutlist.filter((i) => i.tipo === "separador");
+    const latEsq = cutlist.find((i) => i.tipo === "lateral_esquerda");
+    const latDir = cutlist.find((i) => i.tipo === "lateral_direita");
+    const cima = cutlist.find((i) => i.tipo === "cima");
+    const fundo = cutlist.find((i) => i.tipo === "fundo");
+    const sepLargura = seps[0]?.dimensoes.largura ?? 0;
+
+    expect(seps).toHaveLength(3);
+    for (const sep of seps) {
+      const cavilhas = (sep.drillHoles ?? []).filter((h) => h.holeType === "cavilha");
+      expect(cavilhas.length).toBeGreaterThan(0);
+      for (const h of cavilhas) {
+        expect(h.topDrillable).toBe(false);
+        expect(h.depth).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+        expect(h.x === 0 || h.x === sepLargura).toBe(true);
+      }
+    }
+
+    const sepDepthYs = [...new Set(
+      seps.flatMap((s) =>
+        (s.drillHoles ?? [])
+          .filter((h) => h.holeType === "cavilha")
+          .map((h) => Math.round(h.y * 1000) / 1000)
+      )
+    )].sort((a, b) => a - b);
+
+    const latEsqXs = [...new Set(
+      (latEsq?.drillHoles ?? [])
+        .filter((h) => h.holeType === "cavilha" && h.topDrillable === false)
+        .map((h) => Math.round(h.x * 1000) / 1000)
+    )].sort((a, b) => a - b);
+    const latDirXs = [...new Set(
+      (latDir?.drillHoles ?? [])
+        .filter((h) => h.holeType === "cavilha" && h.topDrillable === false)
+        .map((h) => Math.round(h.x * 1000) / 1000)
+    )].sort((a, b) => a - b);
+
+    expect(latEsqXs).toEqual(sepDepthYs);
+    expect(latDirXs).toEqual(sepDepthYs);
+    for (const h of [...(latEsq?.drillHoles ?? []), ...(latDir?.drillHoles ?? [])].filter(
+      (x) => x.holeType === "cavilha" && x.topDrillable === false
+    )) {
+      expect(h.depth).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+    }
+
+    expect((cima?.drillHoles ?? []).some((h) => h.holeType === "cavilha" && h.topDrillable === false)).toBe(false);
+    expect((fundo?.drillHoles ?? []).some((h) => h.holeType === "cavilha" && h.topDrillable === false)).toBe(false);
+
+    const markers = buildViewerDrillMarkersByPanel(cutlist);
+    expect(Object.keys(markers.separadoresById ?? {}).length).toBe(3);
+    for (const holes of Object.values(markers.separadoresById ?? {})) {
+      for (const h of holes.filter((x) => x.tipo === "cavilha")) {
+        expect(h.face === "esquerda" || h.face === "direita").toBe(true);
+        expect(h.profundidade).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+      }
+    }
+    for (const h of (markers.lateral_direita ?? []).filter((x) => x.tipo === "cavilha")) {
+      expect(h.face).toBe("esquerda");
+    }
+    for (const h of (markers.lateral_esquerda ?? []).filter((x) => x.tipo === "cavilha")) {
+      expect(h.face).toBe("direita");
+    }
   });
 
   it("Industrial — furação portas e laterais sem regressão", () => {
