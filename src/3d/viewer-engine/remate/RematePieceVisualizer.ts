@@ -8,9 +8,9 @@ import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
 import {
   applyRemateLCompositeChildUserData,
   applyRemateLCompositeUserData,
-  collectLRemateCimaGroups,
-  isLRemateCimaCompositeCandidate,
-  layoutLRemateCimaComposite,
+  collectLRemateCompositeGroups,
+  isLRemateCompositeCandidate,
+  layoutLRemateComposite,
 } from "./remateLCompositeVisual";
 
 export type RematePieceVisualBoxConfig = {
@@ -66,12 +66,12 @@ export class RematePieceVisualizer {
     }
 
     const remateList = this.bridge.listRematePieces().filter((piece) => !isRodapeLikeRematePiece(piece));
-    const lCimaGroups = collectLRemateCimaGroups(remateList);
+    const lCompositeGroups = collectLRemateCompositeGroups(remateList);
     const compositeRemateIds = new Set<string>();
-    for (const { ext, int } of lCimaGroups.values()) {
+    for (const { ext, int } of lCompositeGroups.values()) {
       compositeRemateIds.add(ext.id);
       compositeRemateIds.add(int.id);
-      this.upsertLRemateCimaComposite(ext, int);
+      this.upsertLRemateComposite(ext, int);
     }
 
     for (const piece of remateList) {
@@ -83,7 +83,7 @@ export class RematePieceVisualizer {
       this.meshById,
       new Set(remateList.filter((p) => !compositeRemateIds.has(p.id)).map((p) => p.id))
     );
-    this.removeStaleCompositeGroups(lCimaGroups);
+    this.removeStaleCompositeGroups(lCompositeGroups);
     this.removeStaleMeshes(this.mergeGroupById, new Set());
 
     // Merge visual reservado — método mantido para reativação futura sem perder lógica.
@@ -109,7 +109,7 @@ export class RematePieceVisualizer {
     this.bridge = null;
   }
 
-  private upsertLRemateCimaComposite(ext: RematePiece, int: RematePiece): void {
+  private upsertLRemateComposite(ext: RematePiece, int: RematePiece): void {
     const groupId = ext.parentGroupId ?? ext.id;
     let group = this.compositeGroupById.get(groupId);
     if (!group) {
@@ -124,7 +124,7 @@ export class RematePieceVisualizer {
 
     this.upsertCompositeChild(group, ext);
     this.upsertCompositeChild(group, int);
-    layoutLRemateCimaComposite(group, ext, int, this.bridge);
+    layoutLRemateComposite(group, ext, int, this.bridge);
 
     this.compositeMeshByRemateId.set(ext.id, group);
     this.compositeMeshByRemateId.set(int.id, group);
@@ -155,7 +155,7 @@ export class RematePieceVisualizer {
   }
 
   private upsertMesh(piece: RematePiece, hidden: boolean): void {
-    if (isLRemateCimaCompositeCandidate(piece)) return;
+    if (isLRemateCompositeCandidate(piece)) return;
     const { w, h, d } = remateGeometryExtentsM(piece);
 
     let mesh = this.meshById.get(piece.id);

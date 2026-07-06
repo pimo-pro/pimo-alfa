@@ -55,7 +55,11 @@ function refreshLRemateGroupSnap(
   const int = group.find((r) => r.partIndex === 2);
   if (!ext || !int) return remates;
   const bounds = getRemateEnvelopeBoundsM(boxDimsM.widthM, boxDimsM.heightM, boxDimsM.depthM, box);
-  const snapped = snapLRemateGroupCorners(ext, int, bounds);
+  const snapped = snapLRemateGroupCorners(ext, int, bounds, {
+    boxLarguraMm: box.dimensoes?.largura ?? 600,
+    boxAlturaMm: box.dimensoes?.altura ?? 720,
+    thicknessMm: Number(box.espessura) || 19,
+  });
   return remates.map((r) => {
     if (r.id === snapped.ext.id) return snapped.ext;
     if (r.id === snapped.int.id) return snapped.int;

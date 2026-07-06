@@ -10,8 +10,10 @@ import {
   lRemateCenterToCornerMm,
   lRemateCornerToCenterMm,
   lSecondaryMountSlot,
+  normalizeLRemateGroupToCima,
   normalizeLRemateTransformPatch,
   REMATE_L_CIMA_INT_ROTATION,
+  resolveLRemateCompositeLeadId,
   REMATE_L_STRIP_WIDTH_MM,
   remateLIndustrialName,
   remateLIndustrialSuffix,
@@ -20,7 +22,7 @@ import {
   snapLRemateGroupCorners,
 } from "./remateLGeometry";
 import type { RematePiece } from "./rematePieceTypes";
-import { buildProductPieceSpecs, computeDimensionsForProduct } from "./remateProductRules";
+import { buildProductPieceSpecs, computeDimensionsForProduct, defaultMountSlotForProduct } from "./remateProductRules";
 import { createRematePieces } from "./rematePieceFactory";
 
 const box = {
@@ -29,55 +31,40 @@ const box = {
   dimensoes: { largura: 600, altura: 720, profundidade: 500 },
 } as never;
 
-describe("remate L geometry — khaled-pro", () => {
-  it("buildProductPieceSpecs gera duas peças independentes", () => {
+describe("remate L geometry — khaled-pro (CIMA only)", () => {
+  it("defaultMountSlotForProduct L → CIMA", () => {
+    expect(defaultMountSlotForProduct("L")).toBe("CIMA");
+  });
+
+  it("buildProductPieceSpecs gera duas peças CIMA+DIR (ignora slot legado)", () => {
     const specs = buildProductPieceSpecs({ productType: "L", mountSlot: "DIR" });
     expect(specs).toHaveLength(2);
     expect(specs[0]?.partIndex).toBe(1);
     expect(specs[1]?.partIndex).toBe(2);
-    expect(specs[0]?.mountSlot).toBe("DIR");
-    expect(specs[1]?.mountSlot).toBe("FRENTE");
+    expect(specs[0]?.mountSlot).toBe("CIMA");
+    expect(specs[1]?.mountSlot).toBe("DIR");
   });
 
-  it("dimensões lateral legacy DIR: ext=100×720×19, int=600×100×19", () => {
+  it("dimensões CIMA: ext e int = largura×faixa×espessura", () => {
     const ext = computeLRemateSheetDimensions({
-      primarySlot: "DIR",
+      primarySlot: "CIMA",
       partIndex: 1,
       boxAlturaMm: 720,
       boxLarguraMm: 600,
       thicknessMm: 19,
     });
     const int = computeLRemateSheetDimensions({
-      primarySlot: "DIR",
+      primarySlot: "CIMA",
       partIndex: 2,
       boxAlturaMm: 720,
       boxLarguraMm: 600,
       thicknessMm: 19,
     });
-    expect(ext).toEqual({ width: 100, height: 720, depth: 19 });
-    expect(int).toEqual({ width: 600, height: 100, depth: 19 });
+    expect(ext).toEqual({ width: 600, height: REMATE_L_STRIP_WIDTH_MM, depth: 19 });
+    expect(int).toEqual({ width: 600, height: REMATE_L_STRIP_WIDTH_MM, depth: 19 });
   });
 
-  it("dimensões ESQ (legacy): ext=100×720×19, int=600×100×19", () => {
-    const ext = computeLRemateSheetDimensions({
-      primarySlot: "ESQ",
-      partIndex: 1,
-      boxAlturaMm: 720,
-      boxLarguraMm: 600,
-      thicknessMm: 19,
-    });
-    const int = computeLRemateSheetDimensions({
-      primarySlot: "ESQ",
-      partIndex: 2,
-      boxAlturaMm: 720,
-      boxLarguraMm: 600,
-      thicknessMm: 19,
-    });
-    expect(ext).toEqual({ width: 100, height: 720, depth: 19 });
-    expect(int).toEqual({ width: 600, height: 100, depth: 19 });
-  });
-
-  it("dimensões cima: ext e int = largura×faixa×espessura", () => {
+  it("dimensões cima via computeDimensionsForProduct", () => {
     const a = computeDimensionsForProduct({
       box,
       productType: "L",
@@ -120,7 +107,7 @@ describe("remate L geometry — khaled-pro", () => {
     expect(int).toEqual({ width: 900, height: 100, depth: 19 });
   });
 
-  it("createRematePieces cria REMATE_L_ext e REMATE_L_int", () => {
+  it("createRematePieces cria REMATE_L_ext e REMATE_L_int em CIMA", () => {
     const pieces = createRematePieces(
       { productType: "L", mountSlot: "DIR", parentBoxId: "box-1", followBox: true },
       {
@@ -133,40 +120,38 @@ describe("remate L geometry — khaled-pro", () => {
     expect(pieces).toHaveLength(2);
     expect(pieces[0]?.name).toBe("MOD1_REMATE_L_ext");
     expect(pieces[1]?.name).toBe("MOD1_REMATE_L_int");
+    expect(pieces[0]?.mountSlot).toBe("CIMA");
+    expect(pieces[1]?.mountSlot).toBe("DIR");
     expect(pieces[0]?.parentGroupId).toBeTruthy();
     expect(pieces[1]?.parentGroupId).toBe(pieces[0]?.parentGroupId);
   });
 
-  it("união geométrica lateral legacy: int.pos = ext.pos + ext.altura em Y", () => {
-    const bounds = getRemateEnvelopeBoundsM(0.6, 0.72, 0.5, null);
-    const ext = {
+  it("normalizeLRemateGroupToCima converte legado ESQ para modelo CIMA", () => {
+    const ext: RematePiece = {
+      id: "ext-legacy",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      parentGroupId: "g1",
+      mountSlot: "ESQ",
       width: 100,
       height: 720,
       depth: 19,
-      mountSlot: "DIR" as const,
-      partIndex: 1 as const,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 0, zMm: 0 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: true,
+      name: "ext",
     };
-    const extCorner = computeLRemateExtCornerMm("DIR", ext, bounds);
-    const intCorner = computeLRemateIntCornerFromExt(extCorner, ext, "DIR");
-    expect(intCorner.xMm).toBe(extCorner.xMm);
-    expect(intCorner.zMm).toBe(extCorner.zMm);
-    expect(intCorner.yMm).toBe(extCorner.yMm + ext.height);
-  });
-
-  it("união geométrica ESQ (legacy): int.pos = ext.pos + ext.altura em Y", () => {
-    const bounds = getRemateEnvelopeBoundsM(0.6, 0.72, 0.5, null);
-    const ext = {
-      width: 100,
-      height: 720,
-      depth: 19,
-      mountSlot: "ESQ" as const,
-      partIndex: 1 as const,
-    };
-    const extCorner = computeLRemateExtCornerMm("ESQ", ext, bounds);
-    const intCorner = computeLRemateIntCornerFromExt(extCorner, ext, "ESQ");
-    expect(intCorner.xMm).toBe(extCorner.xMm);
-    expect(intCorner.zMm).toBe(extCorner.zMm);
-    expect(intCorner.yMm).toBe(extCorner.yMm + ext.height);
+    const int: RematePiece = { ...ext, id: "int-legacy", partIndex: 2, mountSlot: "FRENTE", name: "int" };
+    const normalized = normalizeLRemateGroupToCima(ext, int, {
+      boxLarguraMm: 600,
+      boxAlturaMm: 720,
+      thicknessMm: 19,
+    });
+    expect(normalized.ext.mountSlot).toBe("CIMA");
+    expect(normalized.int.mountSlot).toBe("DIR");
+    expect(normalized.ext).toEqual(expect.objectContaining({ width: 600, height: 100, depth: 19 }));
   });
 
   it("união geométrica cima: int encaixada em ext em Z pela espessura, mesma X/Y", () => {
@@ -184,7 +169,6 @@ describe("remate L geometry — khaled-pro", () => {
     expect(intCorner.yMm).toBe(extCorner.yMm);
     expect(intCorner.zMm).toBe(extCorner.zMm - ext.depth);
     expect(extCorner.yMm).toBe(bounds.maxY * 1000);
-    expect(extCorner.yMm).toBeLessThan(bounds.maxY * 1000 + 200);
   });
 
   it("snap cima 900×720×600: peças no envelope do topo, int atrás em Z", () => {
@@ -227,7 +211,6 @@ describe("remate L geometry — khaled-pro", () => {
     expect(snapped.ext.position.yMm).toBe(bounds.maxY * 1000);
     expect(snapped.int.position.yMm).toBe(snapped.ext.position.yMm);
     expect(snapped.int.position.zMm).toBe(snapped.ext.position.zMm - snapped.ext.depth);
-    expect(snapped.ext.position.yMm).toBeLessThan(bounds.maxY * 1000 + snapped.ext.height + 1);
   });
 
   it("cima int: rotação 90° em X; ext mantém rotação zero", () => {
@@ -276,9 +259,36 @@ describe("remate L geometry — khaled-pro", () => {
     expect(resolveLRemateRotation(snapped.int)).toEqual(REMATE_L_CIMA_INT_ROTATION);
   });
 
+  it("resolveLRemateCompositeLeadId resolve ext a partir de int CIMA", () => {
+    const ext: RematePiece = {
+      id: "ext-cima",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      parentGroupId: "g-cima",
+      mountSlot: "CIMA",
+      width: 600,
+      height: 100,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 481 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: true,
+      name: "ext",
+    };
+    const int: RematePiece = {
+      ...ext,
+      id: "int-cima",
+      partIndex: 2,
+      mountSlot: "DIR",
+      name: "int",
+    };
+    expect(resolveLRemateCompositeLeadId("int-cima", [ext, int])).toBe("ext-cima");
+  });
+
   it("canto ↔ centro converte sem perda", () => {
-    const piece = { width: 100, height: 720, depth: 19 };
-    const corner = { xMm: 300, yMm: -360, zMm: 270 };
+    const piece = { width: 600, height: 100, depth: 19 };
+    const corner = { xMm: 0, yMm: 720, zMm: 481 };
     const center = lRemateCornerToCenterMm(piece, corner);
     expect(lRemateCenterToCornerMm(piece, center)).toEqual(corner);
   });
@@ -325,79 +335,7 @@ describe("remate L geometry — khaled-pro", () => {
     expect(back.zMm).toBeCloseTo(ext.position.zMm, 3);
   });
 
-  it("FREE: canto armazenado ↔ centro render (roundtrip viewer)", () => {
-    const ext: RematePiece = {
-      id: "ext-free",
-      tipo: "L",
-      productType: "L",
-      partIndex: 1,
-      mountSlot: "CIMA",
-      width: 600,
-      height: 100,
-      depth: 19,
-      materialPresetId: "m",
-      position: { xMm: 0, yMm: 720, zMm: 271.5 },
-      rotation: { xRad: 0, yRad: 0.4, zRad: 0 },
-      followBox: true,
-      name: "ext",
-      placementMode: "FREE",
-    };
-    const corner = ext.position;
-    const rendered = resolveLRemateRenderPose(ext, undefined);
-    expect(rendered.rotation.yRad).toBeCloseTo(0.4, 5);
-    const backCorner = lRemateCenterToCornerMm(ext, rendered.position);
-    expect(backCorner.xMm).toBeCloseTo(corner.xMm, 3);
-    expect(backCorner.yMm).toBeCloseTo(corner.yMm, 3);
-    expect(backCorner.zMm).toBeCloseTo(corner.zMm, 3);
-  });
-
-  it("normalizeLRemateTransformPatch: patch só posição não zera rotação ext", () => {
-    const ext: RematePiece = {
-      id: "ext-free",
-      tipo: "L",
-      productType: "L",
-      partIndex: 1,
-      mountSlot: "CIMA",
-      width: 600,
-      height: 100,
-      depth: 19,
-      materialPresetId: "m",
-      position: { xMm: 0, yMm: 720, zMm: 271.5 },
-      rotation: { xRad: 0, yRad: Math.PI / 2, zRad: 0 },
-      followBox: true,
-      name: "ext",
-      placementMode: "FREE",
-    };
-    const normalized = normalizeLRemateTransformPatch(ext, {
-      position: { xMm: 10, yMm: 720, zMm: 271.5 },
-    });
-    expect(normalized.rotation).toBeUndefined();
-  });
-
-  it("normalizeLRemateTransformPatch: patch rotação ext é preservado", () => {
-    const ext: RematePiece = {
-      id: "ext-free",
-      tipo: "L",
-      productType: "L",
-      partIndex: 1,
-      mountSlot: "CIMA",
-      width: 600,
-      height: 100,
-      depth: 19,
-      materialPresetId: "m",
-      position: { xMm: 0, yMm: 720, zMm: 271.5 },
-      rotation: { xRad: 0, yRad: 0, zRad: 0 },
-      followBox: true,
-      name: "ext",
-      placementMode: "FREE",
-    };
-    const normalized = normalizeLRemateTransformPatch(ext, {
-      rotation: { xRad: 0, yRad: Math.PI / 2, zRad: 0 },
-    });
-    expect(normalized.rotation?.yRad).toBeCloseTo(Math.PI / 2, 5);
-  });
-
-  it("applyLRemateGroupCoupling move parceiro ao mover ext (legacy Y)", () => {
+  it("applyLRemateGroupCoupling move parceiro ao mover ext (CIMA Z)", () => {
     const bounds = getRemateEnvelopeBoundsM(0.6, 0.72, 0.5, null);
     const base = snapLRemateGroupCorners(
       {
@@ -406,15 +344,15 @@ describe("remate L geometry — khaled-pro", () => {
         productType: "L",
         partIndex: 1,
         parentGroupId: "g1",
-        width: 100,
-        height: 720,
+        width: 600,
+        height: 100,
         depth: 19,
         materialPresetId: "m",
         position: { xMm: 0, yMm: 0, zMm: 0 },
         rotation: { xRad: 0, yRad: 0, zRad: 0 },
         followBox: true,
         name: "ext",
-        mountSlot: "DIR",
+        mountSlot: "CIMA",
       },
       {
         id: "int",
@@ -430,7 +368,7 @@ describe("remate L geometry — khaled-pro", () => {
         rotation: { xRad: 0, yRad: 0, zRad: 0 },
         followBox: true,
         name: "int",
-        mountSlot: "FRENTE",
+        mountSlot: "DIR",
       },
       bounds
     );
@@ -442,8 +380,8 @@ describe("remate L geometry — khaled-pro", () => {
     const coupled = applyLRemateGroupCoupling([movedExt, base.int], "ext");
     const int = coupled.find((p) => p.id === "int")!;
     expect(int.position.xMm).toBe(movedExt.position.xMm);
-    expect(int.position.yMm).toBe(movedExt.position.yMm + movedExt.height);
-    expect(int.position.zMm).toBe(movedExt.position.zMm);
+    expect(int.position.yMm).toBe(movedExt.position.yMm);
+    expect(int.position.zMm).toBe(movedExt.position.zMm - movedExt.depth);
   });
 
   it("suffix industrial L_ext / L_int", () => {

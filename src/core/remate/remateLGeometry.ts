@@ -5,7 +5,11 @@ import type { RemateMountSlot, RematePiece, RematePiecePosition, RematePieceRota
 /** Largura fixa da chapa de remate L (mm) — faixa visível. */
 export const REMATE_L_STRIP_WIDTH_MM = 100;
 
-const L_PRIMARY_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
+/** Slot primário único suportado (modelo industrial CIMA). */
+export const REMATE_L_PRIMARY_SLOT: RemateMountSlot = "CIMA";
+
+/** Slot da peça int (perpendicular à ext CIMA). */
+export const REMATE_L_SECONDARY_SLOT: RemateMountSlot = "DIR";
 
 const ZERO_ROT: RematePieceRotation = { xRad: 0, yRad: 0, zRad: 0 };
 
@@ -16,33 +20,43 @@ export const REMATE_L_CIMA_INT_ROTATION: RematePieceRotation = {
   zRad: 0,
 };
 
+/** Slots L removidos (DIR/ESQ/FUNDO) — normalizados para CIMA. */
+export function isRemovedLRematePrimarySlot(slot: RemateMountSlot): boolean {
+  return slot === "DIR" || slot === "ESQ" || slot === "FUNDO";
+}
+
+export function isLRemateCompositePrimary(primary: RemateMountSlot): boolean {
+  return primary === REMATE_L_PRIMARY_SLOT;
+}
+
 export function resolveLRemateRotation(piece: RematePiece): RematePieceRotation {
-  if (isLRemateInt(piece) && resolveLPrimarySlot(piece) === "CIMA") {
+  if (isLRemateInt(piece)) {
     return REMATE_L_CIMA_INT_ROTATION;
   }
   return ZERO_ROT;
 }
 
-/** Lead id do grupo L CIMA (ext) para seleção, gizmo e UI de rotação. */
-export function resolveLRemateCimaCompositeLeadId(
+/** Lead id do grupo L composite (ext) para seleção, gizmo e UI de rotação. */
+export function resolveLRemateCompositeLeadId(
   remateId: string,
   remates: readonly RematePiece[]
 ): string {
   const piece = remates.find((p) => p.id === remateId);
   if (!piece?.parentGroupId || !isLRematePiece(piece)) return remateId;
-  if (piece.partIndex === 1 && resolveLPrimarySlot(piece) === "CIMA") return remateId;
-  if (piece.partIndex !== 2 || resolveLPrimarySlot(piece) !== "CIMA") return remateId;
+  if (piece.partIndex === 1) return remateId;
   const ext = remates.find(
     (p) =>
       p.parentGroupId === piece.parentGroupId &&
       isLRematePiece(p) &&
-      p.partIndex === 1 &&
-      resolveLPrimarySlot(p) === "CIMA"
+      p.partIndex === 1
   );
   return ext?.id ?? remateId;
 }
 
-/** Transformações FREE de L CIMA composite aplicam-se sempre na peça ext (lead). */
+/** @deprecated Use resolveLRemateCompositeLeadId */
+export const resolveLRemateCimaCompositeLeadId = resolveLRemateCompositeLeadId;
+
+/** Transformações FREE de L composite aplicam-se sempre na peça ext (lead). */
 export function resolveLRemateTransformLeadId(
   remateId: string,
   remates: readonly RematePiece[],
@@ -51,7 +65,7 @@ export function resolveLRemateTransformLeadId(
   if (patch && patch.position == null && patch.rotation == null && patch.placementMode == null) {
     return remateId;
   }
-  return resolveLRemateCimaCompositeLeadId(remateId, remates);
+  return resolveLRemateCompositeLeadId(remateId, remates);
 }
 
 export function isLRematePiece(piece: Pick<RematePiece, "productType" | "tipo">): boolean {
@@ -66,75 +80,49 @@ export function isLRemateInt(piece: Pick<RematePiece, "partIndex" | "productType
   return isLRematePiece(piece) && piece.partIndex === 2;
 }
 
-export function isLateralLSlot(slot: RemateMountSlot): boolean {
-  return slot === "DIR" || slot === "ESQ";
-}
-
-/** Face perpendicular à peça ext onde a peça int encosta. */
+/** Face perpendicular à peça ext onde a peça int encosta (modelo CIMA). */
 export function lSecondaryMountSlot(primary: RemateMountSlot): RemateMountSlot {
-  switch (primary) {
-    case "DIR":
-    case "ESQ":
-      return "FRENTE";
-    case "CIMA":
-    case "FUNDO":
-      return "DIR";
-    default:
-      return "FRENTE";
-  }
+  return primary === REMATE_L_PRIMARY_SLOT ? REMATE_L_SECONDARY_SLOT : "FRENTE";
 }
 
-export function resolveLPrimarySlot(piece: Pick<RematePiece, "mountSlot" | "partIndex">): RemateMountSlot {
-  if (piece.partIndex === 2 && piece.mountSlot) {
-    for (const primary of L_PRIMARY_SLOTS) {
-      if (lSecondaryMountSlot(primary) === piece.mountSlot) return primary;
-    }
+export function resolveLPrimarySlot(
+  piece: Pick<RematePiece, "mountSlot" | "partIndex">
+): RemateMountSlot {
+  if (piece.partIndex === 2 && piece.mountSlot === REMATE_L_SECONDARY_SLOT) {
+    return REMATE_L_PRIMARY_SLOT;
   }
-  if (piece.mountSlot && L_PRIMARY_SLOTS.includes(piece.mountSlot)) {
-    return piece.mountSlot;
+  if (piece.mountSlot === REMATE_L_PRIMARY_SLOT) {
+    return REMATE_L_PRIMARY_SLOT;
   }
-  return "DIR";
+  if (piece.mountSlot && isRemovedLRematePrimarySlot(piece.mountSlot)) {
+    return REMATE_L_PRIMARY_SLOT;
+  }
+  return REMATE_L_PRIMARY_SLOT;
+}
+
+/** Mount slot industrial por peça (ext=CIMA, int=DIR). */
+export function coerceLRemateMountSlot(
+  piece: Pick<RematePiece, "partIndex">
+): RemateMountSlot {
+  return piece.partIndex === 2 ? REMATE_L_SECONDARY_SLOT : REMATE_L_PRIMARY_SLOT;
 }
 
 /**
- * Dimensões khaled-pro por peça (largura × altura × profundidade).
- * CIMA: largura=comprimento, altura=faixa, profundidade=espessura.
- * Laterais (DIR/ESQ legacy): ext=faixa×altura, int=largura×faixa.
+ * Dimensões khaled-pro CIMA: largura=comprimento, altura=faixa, profundidade=espessura.
+ * `primarySlot` mantido por compatibilidade; ignorado (sempre modelo CIMA).
  */
 export function computeLRemateSheetDimensions(params: {
-  primarySlot: RemateMountSlot;
+  primarySlot?: RemateMountSlot;
   partIndex: 1 | 2;
   boxAlturaMm: number;
   boxLarguraMm: number;
   thicknessMm: number;
   boxPanelThicknessMm?: number;
 }): { width: number; height: number; depth: number } {
-  const { primarySlot, partIndex, boxAlturaMm, boxLarguraMm, thicknessMm } = params;
-  const esp = Math.max(1, thicknessMm);
-  const faixa = REMATE_L_STRIP_WIDTH_MM;
-
-  if (primarySlot === "CIMA") {
-    return {
-      width: Math.max(1, boxLarguraMm),
-      height: faixa,
-      depth: esp,
-    };
-  }
-
-  const lateral = isLateralLSlot(primarySlot);
-  const comprimentoExt = lateral ? boxAlturaMm : boxLarguraMm;
-  const comprimentoInt = lateral ? boxLarguraMm : boxAlturaMm;
-
-  if (partIndex === 1) {
-    return {
-      width: faixa,
-      height: Math.max(1, comprimentoExt),
-      depth: esp,
-    };
-  }
+  const esp = Math.max(1, params.thicknessMm);
   return {
-    width: Math.max(1, comprimentoInt),
-    height: faixa,
+    width: Math.max(1, params.boxLarguraMm),
+    height: REMATE_L_STRIP_WIDTH_MM,
     depth: esp,
   };
 }
@@ -180,17 +168,11 @@ function lRemateCenterToCornerCimaFrame(
 }
 
 function lRemateCornerToCenterForPiece(piece: RematePiece, corner: RematePiecePosition): RematePiecePosition {
-  if (resolveLPrimarySlot(piece) === "CIMA") {
-    return lRemateCornerToCenterCimaFrame(piece, corner);
-  }
-  return lRemateCornerToCenterMm(piece, corner);
+  return lRemateCornerToCenterCimaFrame(piece, corner);
 }
 
 function lRemateCenterToCornerForPiece(piece: RematePiece, center: RematePiecePosition): RematePiecePosition {
-  if (resolveLPrimarySlot(piece) === "CIMA") {
-    return lRemateCenterToCornerCimaFrame(piece, center);
-  }
-  return lRemateCenterToCornerMm(piece, center);
+  return lRemateCenterToCornerCimaFrame(piece, center);
 }
 
 export function lRemateCenterToCornerMm(
@@ -204,30 +186,15 @@ export function lRemateCenterToCornerMm(
   };
 }
 
-/** Posição de canto inicial da peça ext (rem_L_ext) encostada ao módulo. */
+/** Posição de canto inicial da peça ext (rem_L_ext) encostada ao topo do módulo. */
 export function computeLRemateExtCornerMm(
-  primary: RemateMountSlot,
+  _primary: RemateMountSlot,
   extDims: Pick<RematePiece, "width" | "height" | "depth">,
   bounds: StructuralBoundsM
 ): RematePiecePosition {
-  const w = extDims.width;
-  const h = extDims.height;
   const d = extDims.depth;
-  const minY = bounds.minY * 1000;
   const maxZ = bounds.maxZ * 1000;
-
-  switch (primary) {
-    case "DIR":
-      return { xMm: bounds.maxX * 1000, yMm: minY, zMm: maxZ };
-    case "ESQ":
-      return { xMm: bounds.minX * 1000 - w, yMm: minY, zMm: maxZ };
-    case "CIMA":
-      return { xMm: bounds.minX * 1000, yMm: bounds.maxY * 1000, zMm: maxZ - d };
-    case "FUNDO":
-      return { xMm: bounds.minX * 1000, yMm: bounds.minY * 1000 - h, zMm: maxZ - d };
-    default:
-      return { xMm: bounds.maxX * 1000, yMm: minY, zMm: maxZ };
-  }
+  return { xMm: bounds.minX * 1000, yMm: bounds.maxY * 1000, zMm: maxZ - d };
 }
 
 /**
@@ -254,51 +221,71 @@ export function computeLRemateCimaIntLocalOffsetMm(
   };
 }
 
-/**
- * União geométrica CIMA (modelo interno): int encaixada em ext em Z, mesma X/Y.
- * Laterais legacy (DIR/ESQ): int acima de ext em Y.
- */
+/** União geométrica CIMA: int encaixada em ext em Z, mesma X/Y. */
 export function computeLRemateIntCornerFromExt(
   extCorner: RematePiecePosition,
   extRef: Pick<RematePiece, "width" | "height" | "depth" | "rotation">,
-  primary: RemateMountSlot = "DIR"
+  _primary: RemateMountSlot = REMATE_L_PRIMARY_SLOT
 ): RematePiecePosition {
-  if (primary === "CIMA") {
-    const offset = computeLRemateCimaIntCornerOffsetMm(extRef);
-    return {
-      xMm: extCorner.xMm + offset.xMm,
-      yMm: extCorner.yMm + offset.yMm,
-      zMm: extCorner.zMm + offset.zMm,
-    };
-  }
+  const offset = computeLRemateCimaIntCornerOffsetMm(extRef);
   return {
-    xMm: extCorner.xMm,
-    yMm: extCorner.yMm + extRef.height,
-    zMm: extCorner.zMm,
+    xMm: extCorner.xMm + offset.xMm,
+    yMm: extCorner.yMm + offset.yMm,
+    zMm: extCorner.zMm + offset.zMm,
   };
 }
 
 export function computeLRemateIntCornerFromExtPiece(ext: RematePiece): RematePiecePosition {
-  return computeLRemateIntCornerFromExt(ext.position, ext, resolveLPrimarySlot(ext));
+  return computeLRemateIntCornerFromExt(ext.position, ext, REMATE_L_PRIMARY_SLOT);
 }
 
 export function computeLRemateExtCornerFromInt(
   intCorner: RematePiecePosition,
   extRef: Pick<RematePiece, "width" | "height" | "depth" | "rotation">,
-  primary: RemateMountSlot = "DIR"
+  _primary: RemateMountSlot = REMATE_L_PRIMARY_SLOT
 ): RematePiecePosition {
-  if (primary === "CIMA") {
-    const offset = computeLRemateCimaIntCornerOffsetMm(extRef);
-    return {
-      xMm: intCorner.xMm - offset.xMm,
-      yMm: intCorner.yMm - offset.yMm,
-      zMm: intCorner.zMm - offset.zMm,
-    };
-  }
+  const offset = computeLRemateCimaIntCornerOffsetMm(extRef);
   return {
-    xMm: intCorner.xMm,
-    yMm: intCorner.yMm - extRef.height,
-    zMm: intCorner.zMm,
+    xMm: intCorner.xMm - offset.xMm,
+    yMm: intCorner.yMm - offset.yMm,
+    zMm: intCorner.zMm - offset.zMm,
+  };
+}
+
+/** Normaliza peças L legadas (DIR/ESQ/FUNDO) para o modelo CIMA. */
+export function normalizeLRemateGroupToCima(
+  ext: RematePiece,
+  int: RematePiece,
+  ctx: { boxLarguraMm: number; boxAlturaMm: number; thicknessMm: number }
+): { ext: RematePiece; int: RematePiece } {
+  const legacy =
+    isRemovedLRematePrimarySlot(ext.mountSlot ?? "CIMA") ||
+    ext.mountSlot === "FRENTE" ||
+    ext.height !== REMATE_L_STRIP_WIDTH_MM;
+  if (!legacy) {
+    return { ext, int };
+  }
+  const dims = computeLRemateSheetDimensions({
+    partIndex: 1,
+    boxAlturaMm: ctx.boxAlturaMm,
+    boxLarguraMm: ctx.boxLarguraMm,
+    thicknessMm: ctx.thicknessMm,
+  });
+  return {
+    ext: {
+      ...ext,
+      mountSlot: REMATE_L_PRIMARY_SLOT,
+      width: dims.width,
+      height: dims.height,
+      depth: dims.depth,
+    },
+    int: {
+      ...int,
+      mountSlot: REMATE_L_SECONDARY_SLOT,
+      width: dims.width,
+      height: dims.height,
+      depth: dims.depth,
+    },
   };
 }
 
@@ -317,30 +304,39 @@ export function resolveLRemateRenderPose(
   };
 }
 
-/** Snap inicial das duas peças L com cantos encadeados. */
+/** Snap inicial das duas peças L com cantos encadeados (modelo CIMA). */
 export function snapLRemateGroupCorners(
   ext: RematePiece,
   int: RematePiece,
-  bounds: StructuralBoundsM
+  bounds: StructuralBoundsM,
+  ctx?: { boxLarguraMm: number; boxAlturaMm: number; thicknessMm: number }
 ): { ext: RematePiece; int: RematePiece } {
-  const primary = resolveLPrimarySlot(ext);
-  const extRotation = resolveLRemateRotation(ext);
-  const intRotation = resolveLRemateRotation(int);
-  const extCorner = computeLRemateExtCornerMm(primary, ext, bounds);
-  const intCorner = computeLRemateIntCornerFromExt(extCorner, ext, primary);
+  let nextExt = ext;
+  let nextInt = int;
+  if (ctx) {
+    const normalized = normalizeLRemateGroupToCima(ext, int, ctx);
+    nextExt = normalized.ext;
+    nextInt = normalized.int;
+  }
+
+  const primary = REMATE_L_PRIMARY_SLOT;
+  const extRotation = resolveLRemateRotation(nextExt);
+  const intRotation = resolveLRemateRotation(nextInt);
+  const extCorner = computeLRemateExtCornerMm(primary, nextExt, bounds);
+  const intCorner = computeLRemateIntCornerFromExt(extCorner, nextExt, primary);
 
   return {
     ext: {
-      ...ext,
-      mountSlot: primary,
+      ...nextExt,
+      mountSlot: REMATE_L_PRIMARY_SLOT,
       placementMode: "SNAPPED",
       faceOffsets: undefined,
       position: extCorner,
       rotation: extRotation,
     },
     int: {
-      ...int,
-      mountSlot: lSecondaryMountSlot(primary),
+      ...nextInt,
+      mountSlot: REMATE_L_SECONDARY_SLOT,
       placementMode: "SNAPPED",
       faceOffsets: undefined,
       position: intCorner,
@@ -359,8 +355,6 @@ export function applyLRemateGroupCoupling(remates: RematePiece[], movedId: strin
   const int = group.find((r) => r.partIndex === 2);
   if (!ext || !int) return remates;
 
-  const primary = resolveLPrimarySlot(ext);
-
   if (moved.partIndex === 1) {
     const intCorner = computeLRemateIntCornerFromExtPiece(ext);
     return remates.map((r) =>
@@ -375,7 +369,7 @@ export function applyLRemateGroupCoupling(remates: RematePiece[], movedId: strin
     );
   }
 
-  const extCorner = computeLRemateExtCornerFromInt(int.position, ext, primary);
+  const extCorner = computeLRemateExtCornerFromInt(int.position, ext, REMATE_L_PRIMARY_SLOT);
   return remates.map((r) =>
     r.id === ext.id
       ? {
@@ -432,7 +426,7 @@ export function remateLIndustrialSuffix(partIndex: 1 | 2 | undefined): "L_ext" |
   return partIndex === 2 ? "L_int" : "L_ext";
 }
 
-/** Observação industrial obrigatória para Remate L (ext e int, todos os slots). */
+/** Observação industrial obrigatória para Remate L (ext e int). */
 export const REMATE_L_INDUSTRIAL_OBSERVACAO = "ME manual";
 
 export function isRemateLIndustrialMetadata(metadata?: Record<string, unknown>): boolean {

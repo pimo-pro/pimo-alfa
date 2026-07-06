@@ -32,11 +32,13 @@ export function duplicateRematePiece(source: RematePiece, offsetMm = 30): Remate
 }
 
 export function createOppositeRematePiece(source: RematePiece): RematePiece | null {
+  const productType = source.productType ?? inferProductTypeFromLegacy(source);
+  if (productType === "L") return null;
+
   const currentSlot = source.mountSlot ?? "FRENTE";
   const oppositeSlot = OPPOSITE_MOUNT_SLOT[currentSlot];
   if (!oppositeSlot) return null;
 
-  const productType = source.productType ?? inferProductTypeFromLegacy(source);
   const patched = applyProductPatch(source, {
     mountSlot: oppositeSlot,
     tipo: deriveLegacyTipo(productType, oppositeSlot),

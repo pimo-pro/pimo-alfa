@@ -28,7 +28,6 @@ export type RemateProductOptions = {
   includeTopBottomRemates?: boolean;
   asPuxador?: boolean;
   lGapMaxMm?: number;
-  lSide?: "DIR" | "ESQ";
   /** Regras de dimensão automática para tipo COMPLETO. */
   completoRules?: RemateCompletoRules;
 };

@@ -164,7 +164,11 @@ export function createRematePieces(
     const extIdx = created.findIndex((p) => p.partIndex === 1);
     const intIdx = created.findIndex((p) => p.partIndex === 2);
     if (extIdx >= 0 && intIdx >= 0) {
-      const snapped = snapLRemateGroupCorners(created[extIdx]!, created[intIdx]!, bounds);
+      const snapped = snapLRemateGroupCorners(created[extIdx]!, created[intIdx]!, bounds, {
+        boxLarguraMm: ctx.box.dimensoes?.largura ?? 600,
+        boxAlturaMm: ctx.box.dimensoes?.altura ?? 720,
+        thicknessMm: ctx.thicknessMm,
+      });
       created[extIdx] = snapped.ext;
       created[intIdx] = snapped.int;
     }

@@ -55,7 +55,7 @@ export function resolveMountSlot(piece: RematePiece): RemateMountSlot {
     case "RODAPE_L":
       return "FUNDO";
     case "L":
-      return piece.partIndex === 2 ? "FRENTE" : "DIR";
+      return piece.partIndex === 2 ? "DIR" : "CIMA";
     default:
       return "FRENTE";
   }

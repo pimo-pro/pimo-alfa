@@ -22,7 +22,6 @@ import { resolveRematePieceNomeForRemate } from "../../../core/remate/labels";
 
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
-const L_MOUNT_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
 
 const drawerShellStyle: React.CSSProperties = {
   position: "fixed",
@@ -100,9 +99,8 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
     return new Map(remates.map((r) => [r.id, resolveRematePieceNomeForRemate(r, boxNameById)]));
   }, [remates, project.workspaceBoxes]);
 
-  const mountSlotSelectable =
-    productType === "AVISTA" || productType === "COMPLETO" || productType === "L";
-  const activeMountSlots = productType === "L" ? L_MOUNT_SLOTS : MOUNT_SLOTS;
+  const mountSlotSelectable = productType === "AVISTA" || productType === "COMPLETO";
+  const activeMountSlots = MOUNT_SLOTS;
 
   if (!open || typeof document === "undefined") return null;
 
@@ -179,7 +177,7 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
 
             {mountSlotSelectable ? (
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-                {productType === "L" ? "Posição do L" : "Face de montagem"}
+                Face de montagem
                 <select
                   className="select input-sm"
                   value={mountSlot}

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
 import {
   computeLRemateCimaIntLocalOffsetMm,
+  isLRemateCompositePrimary,
   isLRematePiece,
   resolveLPrimarySlot,
   resolveLRemateRotation,
@@ -11,24 +12,35 @@ import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
 import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
 import type { RematePieceVisualBridge } from "./RematePieceVisualizer";
 
-export function isLRemateCimaCompositeCandidate(
+export function isLRemateCompositeCandidate(
   piece: Pick<RematePiece, "productType" | "tipo" | "mountSlot" | "partIndex" | "parentGroupId">
 ): boolean {
-  return isLRematePiece(piece) && resolveLPrimarySlot(piece) === "CIMA" && !!piece.parentGroupId;
+  return (
+    isLRematePiece(piece) &&
+    isLRemateCompositePrimary(resolveLPrimarySlot(piece)) &&
+    !!piece.parentGroupId
+  );
 }
 
-export function resolveLRemateCimaLeadId(remateId: string, pieces: readonly RematePiece[]): string {
+/** @deprecated Use isLRemateCompositeCandidate */
+export const isLRemateCimaCompositeCandidate = isLRemateCompositeCandidate;
+
+export function resolveLRemateCompositeLeadId(remateId: string, pieces: readonly RematePiece[]): string {
   const piece = pieces.find((p) => p.id === remateId);
-  if (!piece || !isLRemateCimaCompositeCandidate(piece)) return remateId;
+  if (!piece || !isLRemateCompositeCandidate(piece)) return remateId;
+  const primary = resolveLPrimarySlot(piece);
   const ext = pieces.find(
     (p) =>
       p.parentGroupId === piece.parentGroupId &&
       isLRematePiece(p) &&
       p.partIndex === 1 &&
-      resolveLPrimarySlot(p) === "CIMA"
+      resolveLPrimarySlot(p) === primary
   );
   return ext?.id ?? remateId;
 }
+
+/** @deprecated Use resolveLRemateCompositeLeadId */
+export const resolveLRemateCimaLeadId = resolveLRemateCompositeLeadId;
 
 export function resolveRemateTransformRoot(object: THREE.Object3D | null | undefined): THREE.Object3D | null {
   if (!object) return null;
@@ -40,12 +52,12 @@ export function resolveRemateTransformRoot(object: THREE.Object3D | null | undef
   return object;
 }
 
-export function collectLRemateCimaGroups(
+export function collectLRemateCompositeGroups(
   pieces: readonly RematePiece[]
 ): Map<string, { ext: RematePiece; int: RematePiece }> {
   const partial = new Map<string, { ext?: RematePiece; int?: RematePiece }>();
   for (const piece of pieces) {
-    if (!isLRemateCimaCompositeCandidate(piece) || !piece.parentGroupId) continue;
+    if (!isLRemateCompositeCandidate(piece) || !piece.parentGroupId) continue;
     const entry = partial.get(piece.parentGroupId) ?? {};
     if (piece.partIndex === 2) entry.int = piece;
     else entry.ext = piece;
@@ -57,6 +69,9 @@ export function collectLRemateCimaGroups(
   }
   return groups;
 }
+
+/** @deprecated Use collectLRemateCompositeGroups */
+export const collectLRemateCimaGroups = collectLRemateCompositeGroups;
 
 export function computeRematePieceWorldPose(
   piece: RematePiece,
@@ -100,7 +115,7 @@ export function computeRematePieceWorldPose(
 }
 
 /** Posiciona o grupo no pivô (centro) da peça ext; int com offset local industrial fixo. */
-export function layoutLRemateCimaComposite(
+export function layoutLRemateComposite(
   group: THREE.Group,
   ext: RematePiece,
   _int: RematePiece,
@@ -129,6 +144,9 @@ export function layoutLRemateCimaComposite(
   );
 }
 
+/** @deprecated Use layoutLRemateComposite */
+export const layoutLRemateCimaComposite = layoutLRemateComposite;
+
 export function applyRemateLCompositeUserData(
   group: THREE.Group,
   ext: RematePiece,
@@ -143,6 +161,7 @@ export function applyRemateLCompositeUserData(
   group.userData.remateParentGroupId = ext.parentGroupId ?? null;
   group.userData.remateProductType = ext.productType ?? "L";
   group.userData.remateTipo = ext.tipo;
+  group.userData.rematePrimarySlot = resolveLPrimarySlot(ext);
   group.userData.boxId = ext.parentBoxId ?? null;
   group.userData.remateDepthMm = ext.depth;
 }
@@ -183,7 +202,7 @@ export function listRemateIdsInSameLComposite(
   pieces: readonly RematePiece[]
 ): string[] {
   const piece = pieces.find((p) => p.id === remateId);
-  if (!piece?.parentGroupId || !isLRemateCimaCompositeCandidate(piece)) return [remateId];
+  if (!piece?.parentGroupId || !isLRemateCompositeCandidate(piece)) return [remateId];
   return pieces
     .filter((p) => p.parentGroupId === piece.parentGroupId && isLRematePiece(p))
     .map((p) => p.id);

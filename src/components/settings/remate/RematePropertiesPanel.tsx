@@ -85,7 +85,6 @@ function useNumericField(
 }
 
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
-const L_MOUNT_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
 
 export default function RematePropertiesPanel({ remateId }: Props) {
@@ -167,7 +166,6 @@ export default function RematePropertiesPanel({ remateId }: Props) {
   const productType = remate.productType ?? inferProductTypeFromLegacy(remate);
   const productOptions = remate.productOptions ?? {};
   const faceEditable = productType === "AVISTA" || productType === "COMPLETO";
-  const lPrimaryEditable = productType === "L" && remate.partIndex !== 2;
   const isMain = !remate.partRole || remate.partRole === "MAIN";
   const isCompleto = productType === "COMPLETO";
 
@@ -303,26 +301,10 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           </>
         ) : null}
 
-        {lPrimaryEditable ? (
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-            Posição do L (peça A)
-            <select
-              className="select input-sm"
-              value={remate.mountSlot ?? "DIR"}
-              onChange={(e) =>
-                actions.updateRemate(remate.id, {
-                  mountSlot: e.target.value as RemateMountSlot,
-                  followBox: Boolean(remate.parentBoxId),
-                })
-              }
-            >
-              {L_MOUNT_SLOTS.map((slot) => (
-                <option key={slot} value={slot}>
-                  {REMATE_MOUNT_SLOT_LABELS[slot]}
-                </option>
-              ))}
-            </select>
-          </label>
+        {productType === "L" && remate.partIndex !== 2 ? (
+          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+            Remate L — posição CIMA (topo). Variantes DIR/ESQ/FUNDO serão reintroduzidas numa fase posterior.
+          </p>
         ) : null}
 
         {productType === "L" && remate.partIndex === 2 ? (
@@ -434,7 +416,7 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           Duplicar Remate
         </button>
 
-        {OPPOSITE_MOUNT_SLOT[remate.mountSlot ?? "FRENTE"] ? (
+        {OPPOSITE_MOUNT_SLOT[remate.mountSlot ?? "FRENTE"] && productType !== "L" ? (
           <button
             type="button"
             className="btn"

@@ -11,6 +11,7 @@ import type {
   UpdateRematePieceInput,
 } from "./rematePieceTypes";
 import {
+  coerceLRemateMountSlot,
   computeLRemateSheetDimensions,
   lSecondaryMountSlot,
   resolveLPrimarySlot,
@@ -47,7 +48,7 @@ export function defaultMountSlotForProduct(productType: RemateProductType): Rema
     case "RODAPE_L":
       return "FUNDO";
     case "L":
-      return "DIR";
+      return "CIMA";
     default:
       return "FRENTE";
   }
@@ -118,7 +119,7 @@ export function normalizeProductOptions(
     };
   }
   if (productType === "L") {
-    return { lGapMaxMm: base.lGapMaxMm ?? DEFAULT_L_GAP_MAX_MM, lSide: base.lSide ?? "DIR" };
+    return { lGapMaxMm: base.lGapMaxMm ?? DEFAULT_L_GAP_MAX_MM };
   }
   return base;
 }
@@ -169,7 +170,7 @@ export function computeDimensionsForProduct(
   if (ctx.productType === "L") {
     const partIndex = (ctx.partIndex ?? 1) as 1 | 2;
     const primarySlot = resolveLPrimarySlot({
-      mountSlot: ctx.mountSlot ?? "DIR",
+      mountSlot: ctx.mountSlot ?? "CIMA",
       partIndex,
     });
     const { largura, altura } = spanMetrics(ctx.box);
@@ -252,12 +253,7 @@ export function buildProductPieceSpecs(input: CreateRematePieceInput): ProductPi
 
   if (productType === "L" || productType === "RODAPE_L") {
     if (productType === "L") {
-      const primarySlot: RemateMountSlot =
-        input.mountSlot === "ESQ" || input.mountSlot === "CIMA" || input.mountSlot === "FUNDO"
-          ? input.mountSlot
-          : opts.lSide === "ESQ"
-            ? "ESQ"
-            : "DIR";
+      const primarySlot: RemateMountSlot = "CIMA";
       return ([1, 2] as const).map((partIndex) => ({
         productType,
         mountSlot: partIndex === 1 ? primarySlot : lSecondaryMountSlot(primarySlot),
@@ -322,7 +318,10 @@ export function buildProductPieceSpecs(input: CreateRematePieceInput): ProductPi
 
 export function applyProductPatch(piece: RematePiece, patch: UpdateRematePieceInput): RematePiece {
   const productType = patch.productType ?? piece.productType ?? inferProductTypeFromLegacy(piece);
-  const mountSlot = patch.mountSlot ?? piece.mountSlot ?? defaultMountSlotForProduct(productType);
+  let mountSlot = patch.mountSlot ?? piece.mountSlot ?? defaultMountSlotForProduct(productType);
+  if (productType === "L") {
+    mountSlot = coerceLRemateMountSlot({ partIndex: piece.partIndex ?? 1 });
+  }
   const productOptions = normalizeProductOptions(productType, {
     ...piece.productOptions,
     ...patch.productOptions,

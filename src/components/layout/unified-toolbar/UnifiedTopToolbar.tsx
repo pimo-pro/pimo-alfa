@@ -16,7 +16,7 @@ import { Icon } from "@/components/icons";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
 import CameraViewMenu from "../viewer-toolbar/CameraViewMenu";
 import { useUiStore, uiStore } from "../../../stores/uiStore";
-import { resolveLRemateCimaCompositeLeadId } from "../../../core/remate/remateLGeometry";
+import { resolveLRemateCompositeLeadId } from "../../../core/remate/remateLGeometry";
 import DisplayMenuButton from "../topbar/DisplayMenuButton";
 import RoomIconButton from "../../viewer/toolbar/RoomIconButton";
 import WorkspaceToolbar from "../workspace/WorkspaceToolbar";
@@ -134,7 +134,7 @@ export default function UnifiedTopToolbar({
   const selectedObject = useUiStore((s) => s.selectedObject);
   const rawSelectedRemateId = selectedObject.type === "remate" ? selectedObject.id : null;
   const selectedRemateId = rawSelectedRemateId
-    ? resolveLRemateCimaCompositeLeadId(rawSelectedRemateId, project.remates ?? [])
+    ? resolveLRemateCompositeLeadId(rawSelectedRemateId, project.remates ?? [])
     : null;
   const selectedRemate = selectedRemateId
     ? (project.remates ?? []).find((r) => r.id === selectedRemateId)

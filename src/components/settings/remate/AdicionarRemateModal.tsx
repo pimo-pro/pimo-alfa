@@ -16,7 +16,6 @@ import {
 
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
-const L_MOUNT_SLOTS: RemateMountSlot[] = ["DIR", "ESQ", "CIMA", "FUNDO"];
 
 type Props = {
   boxId: string;
@@ -30,9 +29,8 @@ export default function AdicionarRemateModal({ open, onClose, onConfirm }: Props
   const [mountSlot, setMountSlot] = useState<RemateMountSlot>("FRENTE");
   const [productOptions, setProductOptions] = useState<RemateProductOptions>({});
 
-  const mountSlotSelectable =
-    productType === "AVISTA" || productType === "COMPLETO" || productType === "L";
-  const activeMountSlots = productType === "L" ? L_MOUNT_SLOTS : MOUNT_SLOTS;
+  const mountSlotSelectable = productType === "AVISTA" || productType === "COMPLETO";
+  const activeMountSlots = MOUNT_SLOTS;
 
   if (!open) return null;
 
@@ -90,7 +88,7 @@ export default function AdicionarRemateModal({ open, onClose, onConfirm }: Props
 
         {mountSlotSelectable ? (
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, marginBottom: 10 }}>
-            {productType === "L" ? "Posição do L" : "Face de montagem"}
+            Face de montagem
             <select
               className="select"
               value={mountSlot}
