@@ -107,10 +107,11 @@ function drillSeparador(
   }
 
   const lateralDepthPositions = calcularPosicoesCavilha(dims.profundidadeMm, rules);
+  const lateralCavilhaDepth = CORNER_FF_EDGE_DOWEL_DEPTH_MM;
   for (const latX of lateralDepthPositions) {
-    pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, cavilhaDepth, "cavilha", "B", false);
+    pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, lateralCavilhaDepth, "cavilha", "B", false);
     addScrewFromCavilha(bucket.lateral_esquerda, latX, centerY, internal.espessura, 1, rules);
-    pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, cavilhaDepth, "cavilha", "B", false);
+    pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, lateralCavilhaDepth, "cavilha", "B", false);
     addScrewFromCavilha(bucket.lateral_direita, latX, centerY, internal.espessura, -1, rules);
   }
 

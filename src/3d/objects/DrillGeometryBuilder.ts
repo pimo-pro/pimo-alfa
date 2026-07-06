@@ -54,13 +54,18 @@ export function isLateralInteriorDrill(panelType: PanelType, hole: TechnicalDril
   return String(hole.face) === "B" || String(hole.face) === "interior";
 }
 
-/** Posição X de entrada do furo na chapa lateral (+ = interior para left/right). */
+/** Posição X de entrada do furo na chapa lateral (face interior). */
 export function lateralDrillEntryXM(panelType: PanelType, thicknessM: number): number {
   const entryOffset = thicknessM / 2;
-  if (panelType === "left" || panelType === "right") {
-    return entryOffset;
-  }
+  if (panelType === "left") return entryOffset;
+  if (panelType === "right") return -entryOffset;
   return entryOffset;
+}
+
+/** Eixo de perfuração horizontal nas laterais: sempre da face interior para dentro da chapa. */
+export function lateralInteriorDrillAxis(panelType: PanelType, entryXM: number): THREE.Vector3 {
+  void panelType;
+  return new THREE.Vector3(Math.sign(-entryXM) || 1, 0, 0);
 }
 
 export function getHole2DLocalPosition(
@@ -166,10 +171,12 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
         axisInward = new THREE.Vector3(0, 0, 1);
       }
     } else {
-      axisInward = getInwardAxisForHole(panelType, hole).normalize();
       if (panelType === "left" || panelType === "right") {
-        entry.set(lateralDrillEntryXM(panelType, thickness), b, a);
+        const entryX = lateralDrillEntryXM(panelType, thickness);
+        entry.set(entryX, b, a);
+        axisInward = lateralInteriorDrillAxis(panelType, entryX);
       } else {
+        axisInward = getInwardAxisForHole(panelType, hole).normalize();
         entry.set(a, b, axisInward.z < 0 ? entryOffset : -entryOffset);
       }
     }

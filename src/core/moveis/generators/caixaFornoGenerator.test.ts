@@ -14,6 +14,7 @@ import { defaultRulesConfig, getNumDobradicas } from "../../rules/rulesConfig";
 import { convertWorkspaceToBox } from "../../../context/projectState";
 import type { PanelDrillHole, WorkspaceBox } from "../../types";
 import { buildViewerDrillMarkersByPanel } from "../../../modules/drilling/drillingAdapter";
+import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../../cornerCabinet/cornerFixedFrontDowels";
 import { computeDoorVerticalGaps } from "../../doors/doorLayerGeometry";
 import { COSTA_FIXED_THICKNESS_MM } from "../../materials/materials.api";
 
@@ -322,6 +323,19 @@ describe("caixaFornoGenerator", () => {
     const markers = buildViewerDrillMarkersByPanel(items);
     const sepPanelId = String(sep?.metadata?.panelId ?? "");
     expect(markers.separadoresById?.[sepPanelId]?.length ?? 0).toBeGreaterThan(0);
+
+    const latDir = items.find((i) => i.tipo === "lateral_direita");
+    const latDirCavilhas = (latDir?.drillHoles ?? []).filter((h) => h.holeType === "cavilha");
+    expect(latDirCavilhas.length).toBeGreaterThan(0);
+    for (const h of latDirCavilhas) {
+      expect(h.topDrillable).toBe(false);
+      expect(h.depth).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+    }
+    const viewerLatDirSepCavilhas = (markers.lateral_direita ?? []).filter((h) => h.tipo === "cavilha");
+    expect(viewerLatDirSepCavilhas.length).toBeGreaterThan(0);
+    for (const h of viewerLatDirSepCavilhas) {
+      expect(h.face).toBe("esquerda");
+    }
   });
 
   it("buildCutlistForCaixaForno — portas independentes com furos e laterais alinhados", () => {

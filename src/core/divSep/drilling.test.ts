@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildDivSepDrilling } from "./drilling";
 import {
   calcularPosicoesCavilha,
-  getCavilhaDepthMm,
   getCavilhaDiameterMm,
   getParafusoDistanceFromCavilhaMm,
 } from "./cavilhaRules";
@@ -33,7 +32,6 @@ describe("buildDivSepDrilling — cavilha e parafuso", () => {
   const rules = DIV_SEP_TEST_RULES;
   const parafusoDist = getParafusoDistanceFromCavilhaMm(rules);
   const cavilhaD = getCavilhaDiameterMm(rules);
-  const cavilhaDepth = getCavilhaDepthMm(rules);
 
   const box = makeDivSepTestBox({
     divisores: [defaultDivisorItem()],
@@ -127,7 +125,7 @@ describe("buildDivSepDrilling — cavilha e parafuso", () => {
     }
   });
 
-  it("cavilhas laterais usam diâmetro 10 mm e profundidade 13 mm (face)", () => {
+  it("cavilhas laterais usam diâmetro 10 mm e profundidade 30 mm (par SEP na espessura)", () => {
     const lateralCavilhas = [
       ...getExtraHoles("lateral_esquerda"),
       ...getExtraHoles("lateral_direita"),
@@ -136,7 +134,23 @@ describe("buildDivSepDrilling — cavilha e parafuso", () => {
     expect(lateralCavilhas.length).toBeGreaterThan(0);
     for (const h of lateralCavilhas) {
       expect(roundMm(h.diameter)).toBe(cavilhaD);
-      expect(roundMm(h.depth)).toBe(cavilhaDepth);
+      expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+    }
+  });
+
+  it("SEP ↔ lateral_direita: mesma posição em profundidade e profundidade de cavilha", () => {
+    const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
+    const latRight = getExtraHoles("lateral_direita").filter((h) => h.holeType === "cavilha");
+    const panelLarguraMm = defaultSeparadorItem().larguraMm ?? sepDims.larguraMm;
+    const sepDepthYs = [...new Set(
+      sepHoles
+        .filter((h) => isSeparadorEdgeCavilha(h, panelLarguraMm))
+        .map((h) => roundMm(h.y))
+    )].sort((a, b) => a - b);
+    const latDepthXs = latRight.map((h) => roundMm(h.x)).sort((a, b) => a - b);
+    expect(sepDepthYs).toEqual(latDepthXs);
+    for (const h of latRight) {
+      expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
     }
   });
 
