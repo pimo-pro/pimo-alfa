@@ -8,8 +8,10 @@ import {
 } from "./cavilhaRules";
 import {
   resolveDivisorDimensions,
+  resolveSeparadorCenterY,
   resolveSeparadorDimensions,
 } from "./dimensions";
+import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../cornerCabinet/cornerFixedFrontDowels";
 import {
   defaultDivisorItem,
   defaultSeparadorItem,
@@ -19,6 +21,13 @@ import {
   parafusoOffsetsFromCavilha,
   roundMm,
 } from "./divSepTestHelpers";
+
+const PANEL_EDGE_EPS_MM = 0.5;
+
+function isSeparadorEdgeCavilha(h: { x: number; holeType?: string; topDrillable?: boolean }, larguraMm: number): boolean {
+  if (h.holeType !== "cavilha" || h.topDrillable !== false) return false;
+  return h.x <= PANEL_EDGE_EPS_MM || h.x >= larguraMm - PANEL_EDGE_EPS_MM;
+}
 
 describe("buildDivSepDrilling — cavilha e parafuso", () => {
   const rules = DIV_SEP_TEST_RULES;
@@ -36,14 +45,45 @@ describe("buildDivSepDrilling — cavilha e parafuso", () => {
 
   const sepDims = resolveSeparadorDimensions(box, defaultSeparadorItem());
   const divDims = resolveDivisorDimensions(box, defaultDivisorItem());
-  const sepDepthCenter = sepDims.profundidadeMm / 2;
+  const sepCenterY = resolveSeparadorCenterY(box, defaultSeparadorItem());
   const divDepthCenter = divDims.profundidadeMm / 2;
 
-  it("posiciona cavilhas do SEP nas faixas corretas ao longo da largura", () => {
+  it("posiciona cavilhas do SEP nas faixas corretas ao longo da profundidade (eixo Y)", () => {
     const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
-    const expectedX = calcularPosicoesCavilha(sepDims.larguraMm, rules);
-    const cavilhaXs = sepHoles.filter((h) => h.holeType === "cavilha").map((h) => roundMm(h.x));
-    expect(cavilhaXs.sort((a, b) => a - b)).toEqual(expectedX.map(roundMm).sort((a, b) => a - b));
+    const expectedY = calcularPosicoesCavilha(sepDims.profundidadeMm, rules);
+    const panelLarguraMm = defaultSeparadorItem().larguraMm ?? sepDims.larguraMm;
+    const edgeCavilhas = sepHoles.filter((h) => isSeparadorEdgeCavilha(h, panelLarguraMm));
+    const cavilhaYs = edgeCavilhas.map((h) => roundMm(h.y));
+    expect(new Set(cavilhaYs)).toEqual(new Set(expectedY.map(roundMm)));
+  });
+
+  it("cavilhas do SEP ficam na espessura (bordas X=0 e X=largura), nunca no rosto", () => {
+    const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
+    const panelLarguraMm = defaultSeparadorItem().larguraMm ?? sepDims.larguraMm;
+    const edgeCavilhas = sepHoles.filter((h) => h.holeType === "cavilha");
+    expect(edgeCavilhas.length).toBeGreaterThan(0);
+    for (const h of edgeCavilhas) {
+      expect(h.topDrillable).toBe(false);
+      expect(
+        roundMm(h.x) === 0 || roundMm(h.x) === roundMm(panelLarguraMm)
+      ).toBe(true);
+      expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+    }
+  });
+
+  it("SEP ↔ lateral: mesma posição em profundidade (SEP.y === lateral.x)", () => {
+    const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
+    const latLeft = getExtraHoles("lateral_esquerda").filter((h) => h.holeType === "cavilha");
+    const panelLarguraMm = defaultSeparadorItem().larguraMm ?? sepDims.larguraMm;
+    const sepDepthYs = [...new Set(
+      sepHoles
+        .filter((h) => isSeparadorEdgeCavilha(h, panelLarguraMm))
+        .map((h) => roundMm(h.y))
+    )].sort((a, b) => a - b);
+    const latDepthXs = latLeft.map((h) => roundMm(h.x)).sort((a, b) => a - b);
+    expect(sepDepthYs).toEqual(latDepthXs);
+    const latYs = latLeft.map((h) => roundMm(h.y));
+    expect(new Set(latYs)).toEqual(new Set([roundMm(sepCenterY)]));
   });
 
   it("posiciona cavilhas do DIV nas faixas corretas ao longo da altura", () => {
@@ -53,14 +93,7 @@ describe("buildDivSepDrilling — cavilha e parafuso", () => {
     expect(cavilhaYs.sort((a, b) => a - b)).toEqual(expectedY.map(roundMm).sort((a, b) => a - b));
   });
 
-  it("centra cavilhas no eixo de profundidade da peça (profundidade / 2)", () => {
-    const sepCavilhas = getExtraHoles("separador", panelIds.separadores[0]).filter(
-      (h) => h.holeType === "cavilha"
-    );
-    for (const h of sepCavilhas) {
-      expect(roundMm(h.y)).toBe(roundMm(sepDepthCenter));
-    }
-
+  it("centra cavilhas do DIV no eixo de profundidade da peça (profundidade / 2)", () => {
     const divCavilhas = getExtraHoles("divisorio", panelIds.divisores[0]).filter(
       (h) => h.holeType === "cavilha"
     );
@@ -94,18 +127,14 @@ describe("buildDivSepDrilling — cavilha e parafuso", () => {
     }
   });
 
-  it("cavilhas usam diâmetro 10 mm e profundidade 13 mm", () => {
-    const allCavilhas = [
-      ...getExtraHoles("separador", panelIds.separadores[0]),
-      ...getExtraHoles("divisorio", panelIds.divisores[0]),
+  it("cavilhas laterais usam diâmetro 10 mm e profundidade 13 mm (face)", () => {
+    const lateralCavilhas = [
       ...getExtraHoles("lateral_esquerda"),
       ...getExtraHoles("lateral_direita"),
-      ...getExtraHoles("cima"),
-      ...getExtraHoles("fundo"),
     ].filter((h) => h.holeType === "cavilha");
 
-    expect(allCavilhas.length).toBeGreaterThan(0);
-    for (const h of allCavilhas) {
+    expect(lateralCavilhas.length).toBeGreaterThan(0);
+    for (const h of lateralCavilhas) {
       expect(roundMm(h.diameter)).toBe(cavilhaD);
       expect(roundMm(h.depth)).toBe(cavilhaDepth);
     }

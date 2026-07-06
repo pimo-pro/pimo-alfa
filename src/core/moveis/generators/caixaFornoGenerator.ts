@@ -209,12 +209,14 @@ export function buildCaixaFornoSeparadores(
   const sepEspessuraMm = boxEspessuraMm;
   const seps = getCaixaFornoSepBottomsMm(sepEspessuraMm);
   const profundidadeMm = resolveCaixaFornoSeparadorProfundidadeMm(box);
+  const layout = computeCaixaFornoLayout(box);
 
   const buildOne = (id: string, bottomMm: number): SeparadorItem => ({
     id,
     positionMm: separadorPositionMmFromBottom(bottomMm, sepEspessuraMm, boxEspessuraMm),
     referenceEdge: "bottom",
     profundidadeMm,
+    larguraMm: layout.larguraInternaMm,
   });
 
   return [

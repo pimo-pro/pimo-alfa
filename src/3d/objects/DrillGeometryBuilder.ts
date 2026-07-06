@@ -114,9 +114,11 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
     const isLeftOrRightShelfOrHinge = isLeftOrRight && isShelfOrHinge;
 
     const cylinderHeight =
-      isTopOrBottom && isNonThrough
+      isTopOrBottom && isNonThrough && hole.face !== "esquerda" && hole.face !== "direita"
         ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
-        : isFrontPanel && isNonThrough
+        : isTopOrBottom && isNonThrough && (hole.face === "esquerda" || hole.face === "direita")
+          ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, validDepthMax))
+          : isFrontPanel && isNonThrough
           ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
           : isLeftOrRight && isNonThrough
             ? Math.max(DRILL_MIN_DEPTH_M, Math.min(profundidadeRealM, thickness))
@@ -135,7 +137,11 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
     let axisInward: THREE.Vector3;
 
     if (panelType === "top" || panelType === "bottom") {
-      if (hole.face === "fundo") {
+      if (hole.face === "esquerda" || hole.face === "direita") {
+        const fromLeft = hole.face === "esquerda";
+        entry.set(fromLeft ? -width / 2 : width / 2, 0, b);
+        axisInward = fromLeft ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(-1, 0, 0);
+      } else if (hole.face === "fundo") {
         entry.set(a, -entryOffset, b);
         axisInward = new THREE.Vector3(0, 1, 0);
       } else if (hole.face === "cima") {

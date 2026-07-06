@@ -378,7 +378,12 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     mesh.userData.divSepId = spec.name;
     if (spec.name.startsWith("divsep-sep-")) {
       mesh.userData.divSepKind = "sep";
-      mesh.userData.divSepItemId = spec.name.slice("divsep-sep-".length);
+      const sepItemId = spec.name.slice("divsep-sep-".length);
+      mesh.userData.divSepItemId = sepItemId;
+      const sepHoles = drillMap.separadoresById?.[sepItemId];
+      if (sepHoles?.length) {
+        deps.applyDrillHolesToPanelGeometry(mesh, "top", sepHoles);
+      }
     } else if (spec.name.startsWith("divsep-div-")) {
       mesh.userData.divSepKind = "div";
       mesh.userData.divSepItemId = spec.name.slice("divsep-div-".length);

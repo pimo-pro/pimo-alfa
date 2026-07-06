@@ -176,6 +176,12 @@ export function renderCaixaForno(options: BoxOptions | undefined, deps: RenderCa
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.divSepId = spec.name;
     mesh.userData.divSepKind = "sep";
+    const sepItemId = spec.name.slice("divsep-sep-".length);
+    mesh.userData.divSepItemId = sepItemId;
+    const sepHoles = drillMap.separadoresById?.[sepItemId];
+    if (deps.applyDrillHolesToPanelGeometry && sepHoles?.length) {
+      deps.applyDrillHolesToPanelGeometry(mesh, "top", sepHoles);
+    }
     root.add(mesh);
   });
 

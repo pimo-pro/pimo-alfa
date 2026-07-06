@@ -1,5 +1,6 @@
 import type { PanelDrillHole } from "../types";
 import type { DivSepRules } from "../../admin/rules/divSepRules/rulesDefaults";
+import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../cornerCabinet/cornerFixedFrontDowels";
 import {
   calcularPosicoesCavilha,
   getCavilhaDepthMm,
@@ -61,6 +62,29 @@ function addScrewFromCavilha(
   pushHole(out, cx + direction * dist, cy, 5, receptorThickness, "parafuso", "B");
 }
 
+/** Cavilha na espessura (borda esq/dir) — alinhada ao catálogo cavilha_10x30. */
+function pushSeparadorEdgeCavilha(
+  out: PanelDrillHole[],
+  xEdgeMm: number,
+  depthPosMm: number,
+  rules: DivSepRules,
+  receptorThickness: number
+): void {
+  const cavilhaD = getCavilhaDiameterMm(rules);
+  pushHole(
+    out,
+    xEdgeMm,
+    depthPosMm,
+    cavilhaD,
+    CORNER_FF_EDGE_DOWEL_DEPTH_MM,
+    "cavilha",
+    "B",
+    false
+  );
+  addScrewFromCavilha(out, xEdgeMm, depthPosMm, receptorThickness, 1, rules);
+  addScrewFromCavilha(out, xEdgeMm, depthPosMm, receptorThickness, -1, rules);
+}
+
 function drillSeparador(
   bucket: HoleBucket,
   box: DivSepBoxLike,
@@ -72,23 +96,22 @@ function drillSeparador(
   const dims = resolveSeparadorDimensions(box, item);
   const centerY = resolveSeparadorCenterY(box, item);
   const sepHoles: PanelDrillHole[] = [];
-  const cavilhaPositions = calcularPosicoesCavilha(dims.larguraMm, rules);
   const cavilhaD = getCavilhaDiameterMm(rules);
   const cavilhaDepth = getCavilhaDepthMm(rules);
-  const depthCenter = dims.profundidadeMm / 2;
+  const depthPositions = calcularPosicoesCavilha(dims.profundidadeMm, rules);
+  const panelLarguraMm = item.larguraMm ?? dims.larguraMm;
 
-  for (const xPos of cavilhaPositions) {
-    pushHole(sepHoles, xPos, depthCenter, cavilhaD, cavilhaDepth, "cavilha", "B");
-    addScrewFromCavilha(sepHoles, xPos, depthCenter, internal.espessura, 1, rules);
-    addScrewFromCavilha(sepHoles, xPos, depthCenter, internal.espessura, -1, rules);
+  for (const depthPos of depthPositions) {
+    pushSeparadorEdgeCavilha(sepHoles, 0, depthPos, rules, internal.espessura);
+    pushSeparadorEdgeCavilha(sepHoles, panelLarguraMm, depthPos, rules, internal.espessura);
+  }
 
-    const lateralDepthPositions = calcularPosicoesCavilha(internal.profundidadeInterna, rules);
-    for (const latX of lateralDepthPositions) {
-      pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, cavilhaDepth, "cavilha", "B", false);
-      addScrewFromCavilha(bucket.lateral_esquerda, latX, centerY, internal.espessura, 1, rules);
-      pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, cavilhaDepth, "cavilha", "B", false);
-      addScrewFromCavilha(bucket.lateral_direita, latX, centerY, internal.espessura, -1, rules);
-    }
+  const lateralDepthPositions = calcularPosicoesCavilha(dims.profundidadeMm, rules);
+  for (const latX of lateralDepthPositions) {
+    pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, cavilhaDepth, "cavilha", "B", false);
+    addScrewFromCavilha(bucket.lateral_esquerda, latX, centerY, internal.espessura, 1, rules);
+    pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, cavilhaDepth, "cavilha", "B", false);
+    addScrewFromCavilha(bucket.lateral_direita, latX, centerY, internal.espessura, -1, rules);
   }
 
   bucket.separador.set(panelId, sepHoles);

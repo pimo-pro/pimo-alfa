@@ -285,6 +285,45 @@ describe("caixaFornoGenerator", () => {
     });
   });
 
+  it("buildCutlistForCaixaForno — separadores com cavilhas na espessura alinhadas às laterais", () => {
+    const cfg = createCaixaForno({ id: "forno-sep-drill" });
+    const box = convertWorkspaceToBox({
+      ...cfg,
+      models: [],
+      posicaoX_mm: 0,
+      posicaoY_mm: 1275,
+      rotacaoY_90: false,
+      tipoBorda: "reta",
+      locked: false,
+      drawersLayer: [],
+    } as WorkspaceBox);
+
+    const items = buildCutlistForCaixaForno(box, defaultRulesConfig, "mdf_branco");
+    const sep = items.find((i) => i.tipo === "separador");
+    const latEsq = items.find((i) => i.tipo === "lateral_esquerda");
+    expect(sep?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
+
+    const larguraSep = sep?.dimensoes.largura ?? 0;
+    const edgeCavilhas = (sep?.drillHoles ?? []).filter((h) => h.holeType === "cavilha");
+    expect(edgeCavilhas.length).toBeGreaterThan(0);
+    for (const h of edgeCavilhas) {
+      expect(h.topDrillable).toBe(false);
+      expect(h.x === 0 || h.x === larguraSep).toBe(true);
+    }
+
+    const sepDepthYs = [...new Set(edgeCavilhas.map((h) => h.y))].sort((a, b) => a - b);
+    const latDepthXs = [...new Set(
+      (latEsq?.drillHoles ?? [])
+        .filter((h) => h.holeType === "cavilha")
+        .map((h) => h.x)
+    )].sort((a, b) => a - b);
+    expect(sepDepthYs).toEqual(latDepthXs);
+
+    const markers = buildViewerDrillMarkersByPanel(items);
+    const sepPanelId = String(sep?.metadata?.panelId ?? "");
+    expect(markers.separadoresById?.[sepPanelId]?.length ?? 0).toBeGreaterThan(0);
+  });
+
   it("buildCutlistForCaixaForno — portas independentes com furos e laterais alinhados", () => {
     const cfg = createCaixaForno({ id: "forno-hinges" });
     const box = convertWorkspaceToBox({

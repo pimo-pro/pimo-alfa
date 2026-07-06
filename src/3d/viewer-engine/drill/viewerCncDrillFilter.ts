@@ -24,5 +24,13 @@ export function filterViewerDrillMarkersForMesh(markers: ViewerDrillMarkersByPan
     porta: filterTechnicalDrillHolesForViewerMesh(markers.porta),
     portaPerDoor: markers.portaPerDoor?.map((row) => filterTechnicalDrillHolesForViewerMesh(row)),
     frente_fixa: filterTechnicalDrillHolesForViewerMesh(markers.frente_fixa),
+    separadoresById: markers.separadoresById
+      ? Object.fromEntries(
+          Object.entries(markers.separadoresById).map(([id, holes]) => [
+            id,
+            filterTechnicalDrillHolesForViewerMesh(holes),
+          ])
+        )
+      : undefined,
   };
 }

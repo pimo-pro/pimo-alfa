@@ -83,6 +83,8 @@ export interface ViewerDrillMarkersByPanel extends Record<DrillPanelKey, Technic
   portaPerDoor?: TechnicalDrillHole[][];
   /** Frente fixa (caixas de canto — calço alinhado à porta). */
   frente_fixa?: TechnicalDrillHole[];
+  /** Furos por separador horizontal (chave = panelId / item id do SEP). */
+  separadoresById?: Record<string, TechnicalDrillHole[]>;
 }
 
 export interface DrillHole {

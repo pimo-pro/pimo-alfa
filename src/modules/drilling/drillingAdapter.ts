@@ -87,7 +87,33 @@ const EMPTY_VIEWER_DRILL_MARKERS: ViewerDrillMarkersByPanel = {
   porta: [],
   portaPerDoor: [],
   frente_fixa: [],
+  separadoresById: {},
 };
+
+const SEP_EDGE_EPS_MM = 0.5;
+
+/** Converte furos do SEP para o viewer 3D (cavilhas na espessura = faces esquerda/direita). */
+export function panelSeparadorDrillHoleToTechnical(
+  h: PanelDrillHole,
+  larguraMm: number
+): TechnicalDrillHole {
+  const holeType = (h.holeType ?? "cavilha") as DrillType;
+  let face: DrillFace = "fundo";
+  if (holeType === "cavilha" && h.topDrillable === false) {
+    if (h.x <= SEP_EDGE_EPS_MM) face = "esquerda";
+    else if (h.x >= larguraMm - SEP_EDGE_EPS_MM) face = "direita";
+  } else if (holeType === "parafuso") {
+    face = h.x <= larguraMm / 2 ? "esquerda" : "direita";
+  }
+  return {
+    x: h.x,
+    y: h.y,
+    diametro: h.diameter,
+    profundidade: h.depth,
+    tipo: holeType,
+    face,
+  };
+}
 
 const clampNumber = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
@@ -536,6 +562,16 @@ export function buildViewerDrillMarkersByPanelResult(
         }))
       : [];
 
+  const separadoresById: Record<string, TechnicalDrillHole[]> = {};
+  for (const item of cutList) {
+    if (item.tipo !== "separador" || !item.drillHoles?.length) continue;
+    const panelId = String(item.metadata?.panelId ?? item.id);
+    const larguraMm = Number(item.dimensoes?.largura) || 0;
+    separadoresById[panelId] = onlyInternalFaceHoles(item.drillHoles).map((h) =>
+      panelSeparadorDrillHoleToTechnical(h, larguraMm)
+    );
+  }
+
   const result = {
     cima: getHolesFor("cima"),
     fundo: getHolesFor("fundo"),
@@ -544,6 +580,7 @@ export function buildViewerDrillMarkersByPanelResult(
     porta: portaMerged,
     portaPerDoor: portaPerDoor.length > 0 ? portaPerDoor : undefined,
     frente_fixa,
+    separadoresById: Object.keys(separadoresById).length > 0 ? separadoresById : undefined,
   };
   if (import.meta.env.DEV) {
     // Log resultado do mapeamento
