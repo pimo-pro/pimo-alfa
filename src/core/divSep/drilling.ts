@@ -97,7 +97,6 @@ function drillSeparador(
   const centerY = resolveSeparadorCenterY(box, item);
   const sepHoles: PanelDrillHole[] = [];
   const cavilhaD = getCavilhaDiameterMm(rules);
-  const cavilhaDepth = getCavilhaDepthMm(rules);
   const depthPositions = calcularPosicoesCavilha(dims.profundidadeMm, rules);
   const panelLarguraMm = item.larguraMm ?? dims.larguraMm;
 
