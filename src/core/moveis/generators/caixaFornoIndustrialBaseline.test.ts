@@ -1,36 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../../cornerCabinet/cornerFixedFrontDowels";
-
-type CaixaFornoIndustrialBaseline = {
-  model: string;
-  status: string;
-  baselineTag: string;
-  baselineCommit: string;
-  immutableReference: { tag: string; commit: string };
-  contractTestSuite: string[];
-  expectedTestCount: number;
-  invariants: {
-    sepCavilhaDepthMm: number;
-    lateralCavilhaDepthMm: number;
-    sepCount: number;
-    cimaFundoWithoutSepCavilhas: boolean;
-    viewerLateralDireitaInteriorFace: string;
-    viewerLateralEsquerdaInteriorFace: string;
-  };
-  ssotModules: string[];
-  guardrails: string[];
-};
-
-function loadBaseline(): CaixaFornoIndustrialBaseline {
-  const path = resolve(process.cwd(), "scripts/baselines/caixa-forno-industrial-baseline.json");
-  return JSON.parse(readFileSync(path, "utf8")) as CaixaFornoIndustrialBaseline;
-}
+import baseline from "../../../../scripts/baselines/caixa-forno-industrial-baseline.json";
 
 describe("Caixa Forno — baseline industrial oficial", () => {
-  const baseline = loadBaseline();
-
   it("manifesto de baseline existe e é ponto de partida obrigatório do pipeline", () => {
     expect(baseline.model).toBe("caixa_forno");
     expect(baseline.status).toBe("mandatory_pipeline_starting_point");
