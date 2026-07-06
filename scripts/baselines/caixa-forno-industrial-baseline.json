@@ -8,6 +8,12 @@
     "commit": "9e0a7c9",
     "note": "Referência imutável para fases seguintes do pipeline industrial Caixa Forno"
   },
+  "postDeployStable": {
+    "tag": "v6.0706.1544",
+    "commit": "180a75c",
+    "publishedAt": "06.07.2026 15:44",
+    "note": "Último deploy validado (54/54 testes) — baseline imutável preservado"
+  },
   "publishedAt": "06.07.2026 12:15",
   "registeredAt": "06.07.2026 12:34",
   "contractTestSuite": [
@@ -19,7 +25,7 @@
     "src/validation/divSepIndustrialIntegration.test.ts",
     "src/core/moveis/generators/caixaFornoIndustrialBaseline.test.ts"
   ],
-  "expectedTestCount": 54,
+  "expectedTestCount": 55,
   "invariants": {
     "sepCount": 3,
     "sepCavilhaDepthMm": 30,
@@ -42,7 +48,7 @@
     "Alterações mínimas; sem novos sistemas paralelos de furação",
     "Manter CORNER_FF_EDGE_DOWEL_DEPTH_MM (30 mm) para cavilhas SEP e laterais pareadas",
     "Não alterar lateralDrillEntryXM / lateralInteriorDrillAxis sem atualizar testes 3D",
-    "Suite de 54 testes (contrato + baseline) deve passar antes de qualquer publish",
+    "Suite de 55 testes (contrato + baseline) deve passar antes de qualquer publish",
     "Não alterar outros modelos (corner, PI, gavetas) fora de escopo explícito"
   ]
 }

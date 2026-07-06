@@ -10,7 +10,7 @@ describe("Caixa Forno — baseline industrial oficial", () => {
     expect(baseline.baselineCommit).toBe("9e0a7c9");
     expect(baseline.immutableReference.tag).toBe("v6.0706.1215");
     expect(baseline.immutableReference.commit).toBe("9e0a7c9");
-    expect(baseline.expectedTestCount).toBe(54);
+    expect(baseline.expectedTestCount).toBe(55);
     expect(baseline.contractTestSuite.length).toBeGreaterThanOrEqual(6);
     expect(baseline.ssotModules.length).toBeGreaterThanOrEqual(4);
     expect(baseline.guardrails.length).toBeGreaterThanOrEqual(4);
@@ -23,5 +23,14 @@ describe("Caixa Forno — baseline industrial oficial", () => {
     expect(baseline.invariants.cimaFundoWithoutSepCavilhas).toBe(true);
     expect(baseline.invariants.viewerLateralDireitaInteriorFace).toBe("esquerda");
     expect(baseline.invariants.viewerLateralEsquerdaInteriorFace).toBe("direita");
+  });
+
+  it("pós-deploy estável registado sem alterar baseline imutável", () => {
+    expect(baseline.postDeployStable.tag).toBe("v6.0706.1544");
+    expect(baseline.postDeployStable.commit).toBe("180a75c");
+    expect(baseline.immutableReference.tag).toBe("v6.0706.1215");
+    expect(baseline.immutableReference.commit).toBe("9e0a7c9");
+    expect(baseline.baselineTag).toBe(baseline.immutableReference.tag);
+    expect(baseline.baselineCommit).toBe(baseline.immutableReference.commit);
   });
 });
