@@ -351,6 +351,10 @@ export interface BoxModule {
   observacoes?: string[];
   /** ID do modelo industrial personalizado (custom-model-*). */
   customIndustrialModelId?: string;
+  /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
+  allowPieceRotation?: boolean;
+  /** true = manter veio da madeira (proibir rotação no nesting). */
+  lockWoodGrain?: boolean;
 }
 
 export interface WorkspaceBox {

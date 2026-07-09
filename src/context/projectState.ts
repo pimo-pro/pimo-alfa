@@ -563,6 +563,8 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     remateIds: box.remateIds ?? [],
     observacoes: box.observacoes,
     customIndustrialModelId: box.customIndustrialModelId,
+    allowPieceRotation: box.allowPieceRotation,
+    lockWoodGrain: box.lockWoodGrain,
   };
 };
 

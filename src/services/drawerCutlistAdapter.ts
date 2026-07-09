@@ -16,6 +16,7 @@ import {
   resolveDrawerPieceIndustrialLabel,
 } from "../core/drawers/drawerLayerCustomization";
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
+import { buildCutlistRotationMetadata } from "../core/manufacturing/cutlistRotationMetadata";
 import type { DrawerLayerItem } from "../models/BoxLayers";
 import {
   resolveIndustrialBoxId,
@@ -140,6 +141,11 @@ function withDrawerIndustrialMeta(
 ): CutListItem {
   const tipo = piece.tipo as DrawerPieceTipo;
   const industrialLabel = resolveDrawerPieceIndustrialLabel(item, boxName, tipo, drawerIndex1Based);
+  const rotationMeta = buildCutlistRotationMetadata({
+    allowPieceRotation: item.allowPieceRotation,
+    lockWoodGrain: item.lockWoodGrain,
+    materialId: piece.materialId,
+  });
   return {
     ...piece,
     nome: industrialLabel,
@@ -151,6 +157,8 @@ function withDrawerIndustrialMeta(
       frontPieceName: item.metadata?.frontPieceName,
       frontIntPieceName: item.metadata?.frontIntPieceName,
       frontExtPieceName: item.metadata?.frontExtPieceName,
+      panelId: piece.id,
+      ...rotationMeta,
     },
   };
 }

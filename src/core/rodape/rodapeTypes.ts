@@ -22,6 +22,8 @@ export type ProjectRodape = {
   autoLengthMm?: number;
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
+  /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
+  lockWoodGrain?: boolean;
 };
 
 export type CreateRodapeInput = {
@@ -46,6 +48,8 @@ export type UpdateRodapeInput = Partial<
     | "visible"
     | "parentWallId"
     | "nomePersonalizado"
+    | "allowPieceRotation"
+    | "lockWoodGrain"
   >
 >;
 

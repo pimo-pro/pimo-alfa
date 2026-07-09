@@ -37,6 +37,7 @@ import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import { resolveCustomIndustrialCutlistForBox } from "../industrialDesigner/customIndustrialModel";
 import { resolveDoorIndustrialLabel, resolveDoorLabel, resolveDoorPositionKind } from "../doors/doorLabels";
 import { assertCutlistIndustrialMaterials } from "../industrial/industrialValidation";
+import { buildCutlistRotationMetadata } from "./cutlistRotationMetadata";
 
 /** Portas empilhadas verticalmente (ex.: caixa forno): dobradiças usam a altura da folha, não a lateral inteira. */
 function hasVerticallyStackedDoors(doorsLayer: { posY?: number }[]): boolean {
@@ -458,6 +459,24 @@ export function cutlistComPrecoFromBox(
       displayNome = industrialLabel;
     }
 
+    const doorLayer = isDoor ? doorsLayer[doorIndex] : undefined;
+    const rotationSource = isDoor
+      ? doorLayer
+      : isFixedFront
+        ? doorsLayer[0]
+        : box;
+    const rotationMeta = buildCutlistRotationMetadata({
+      allowPieceRotation:
+        rotationSource && "allowPieceRotation" in rotationSource
+          ? rotationSource.allowPieceRotation
+          : box.allowPieceRotation,
+      lockWoodGrain:
+        rotationSource && "lockWoodGrain" in rotationSource
+          ? rotationSource.lockWoodGrain
+          : box.lockWoodGrain,
+      materialId: itemMaterialId,
+    });
+
     items.push({
       ...baseItem,
       id: `${box.id}-${p.id}`,
@@ -468,6 +487,7 @@ export function cutlistComPrecoFromBox(
         ...(isDivisor ? { divSepKind: "DIV" as const } : {}),
         ...(isSeparador ? { divSepKind: "SEP" as const } : {}),
         ...doorMetadata,
+        ...rotationMeta,
       },
       quantidade: p.quantidade,
       dimensoes: {

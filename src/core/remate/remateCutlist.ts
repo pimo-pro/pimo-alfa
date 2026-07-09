@@ -3,7 +3,7 @@ import { getMaterialByIdOrLabel } from "../materials/service";
 import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
 import { resolveIndustrialGrainCode } from "../materials/grainDirection";
-import { isMaterialMadeira } from "../materials/nestingGrainLock";
+import { buildCutlistRotationMetadata } from "../manufacturing/cutlistRotationMetadata";
 import type { RematePiece } from "./rematePieceTypes";
 import { inferProductTypeFromLegacy } from "./remateProductRules";
 import { resolveRemateSheetCutDimensions } from "./remateSheetDimensions";
@@ -45,6 +45,12 @@ export function buildRemateCutlistItems(
     const suffix = resolveRemateIndustrialSuffix(remate);
     const industrialLabel = industrialLabels.get(remate.id) ?? remate.name;
     const nome = resolveRematePieceDisplayName(remate, industrialLabel);
+    const materialId = material?.id ?? remate.materialPresetId;
+    const rotationMeta = buildCutlistRotationMetadata({
+      allowPieceRotation: remate.allowPieceRotation,
+      lockWoodGrain: remate.lockWoodGrain,
+      materialId,
+    });
 
     return {
       id: remate.id,
@@ -81,10 +87,7 @@ export function buildRemateCutlistItems(
         followBox: remate.followBox,
         placementMode: remate.placementMode ?? (remate.followBox ? "SNAPPED" : "FREE"),
         faceOffsets: remate.faceOffsets,
-        allowPieceRotation: remate.allowPieceRotation,
-        lockWoodGrain:
-          remate.lockWoodGrain ??
-          (isMaterialMadeira(material?.id ?? remate.materialPresetId) ? true : undefined),
+        ...rotationMeta,
       },
     };
   });

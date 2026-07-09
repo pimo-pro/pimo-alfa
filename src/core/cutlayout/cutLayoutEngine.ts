@@ -20,9 +20,9 @@ import type {
 import type { LayoutVisualMaterial, OperationResult, IndustrialGrainCode } from "../types";
 import { industrialGrainToLayoutAxis } from "../materials/grainDirection";
 import {
-  isMaterialMadeira,
   resolveNestingLayoutGrainDirection,
 } from "../materials/nestingGrainLock";
+import { buildCutlistRotationMetadata } from "../manufacturing/cutlistRotationMetadata";
 import { getDefaultOfficialMaterial, resolveMaterial, resolveIndustrialMaterialAtThickness, COSTA_FIXED_THICKNESS_MM, DRAWER_SIDE_THICKNESS_MM } from "../materials/materials.api";
 import { getIndustrialMaterial, getMaterialByIdOrLabel } from "../materials/service";
 import {
@@ -772,15 +772,19 @@ export function cutlistToPieces(
     const itemMeta = (item as { metadata?: Record<string, unknown> }).metadata;
     const metaAllow = itemMeta?.allowPieceRotation;
     const metaLock = itemMeta?.lockWoodGrain;
-    const materialMadeira = isMaterialMadeira(pieceMaterialId);
+    const rotationMeta = buildCutlistRotationMetadata({
+      allowPieceRotation:
+        metaAllow === true ? true : metaAllow === false ? false : undefined,
+      lockWoodGrain:
+        metaLock === true ? true : metaLock === false ? false : undefined,
+      materialId: pieceMaterialId,
+    });
     const nestingGrain = resolveNestingLayoutGrainDirection({
       materialId: pieceMaterialId,
       industrialGrainCode: industrialCode,
       pieceTipo: item.tipo,
-      allowPieceRotation:
-        metaAllow === true ? true : metaAllow === false ? false : undefined,
-      lockWoodGrain:
-        metaLock === true ? true : metaLock === false ? false : materialMadeira ? true : undefined,
+      allowPieceRotation: rotationMeta.allowPieceRotation,
+      lockWoodGrain: rotationMeta.lockWoodGrain,
     });
     const grainDirection =
       nestingGrain ??
@@ -817,7 +821,10 @@ export function cutlistToPieces(
         uvRotationOverride: item.uvRotationOverride,
         pieceNumber: itemWithMeta.pieceNumber,
         shortCode: itemWithMeta.shortCode,
-        metadata: (item as { metadata?: Record<string, unknown> }).metadata,
+        metadata: {
+          ...(itemMeta ?? {}),
+          ...rotationMeta,
+        },
       });
     }
     return pieces;

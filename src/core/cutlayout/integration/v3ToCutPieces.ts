@@ -54,6 +54,8 @@ export function v3PiecesToCutPieces(pieces: V3Piece[], settings: NestingV3Settin
         v3Rotation: piece.rotation,
         v3SourceBoxId: piece.sourceBoxId,
         v3SourceProjectId: piece.sourceProjectId,
+        allowPieceRotation: piece.allowPieceRotation,
+        lockWoodGrain: piece.lockWoodGrain,
       },
     };
   });

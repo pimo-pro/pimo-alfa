@@ -16,6 +16,7 @@ import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
 import { loadNestingV3SettingsFromGlobal, type NestingV3Settings, allowRotationForPiece } from "./nestingV3Settings";
 import { buildInitialSheetsForPieces, cloneDefaultSheet, defaultSheetFromSettings } from "./nestingSheetsFactory";
 import { findValidPlacement } from "./nestingV3Placement";
+import { isMaterialMadeira } from "../core/materials/nestingGrainLock";
 
 function makeDefaultState(): NestingV3State {
   const settings = loadNestingV3SettingsFromGlobal();
@@ -64,7 +65,13 @@ export function cutPieceToV3(
     (metaAllow === true ? true : metaAllow === false ? false : undefined);
   const lockWoodGrain =
     options?.lockWoodGrain ??
-    (metaLock === true ? true : metaLock === false ? false : undefined);
+    (metaLock === true
+      ? true
+      : metaLock === false
+        ? false
+        : isMaterialMadeira(cp.materialId)
+          ? true
+          : undefined);
   return {
     id: nextPieceId(),
     name: cp.partName,

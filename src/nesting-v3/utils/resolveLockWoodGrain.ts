@@ -29,8 +29,10 @@ export function resolveLockWoodGrainFromProject(
   const rodapeId = typeof meta?.rodapeId === "string" ? meta.rodapeId : undefined;
   if (rodapeId) {
     const rodape = (project.rodapes ?? []).find((r) => r.id === rodapeId);
+    if (rodape?.lockWoodGrain === true) return true;
+    if (rodape?.lockWoodGrain === false) return false;
     if (isMaterialMadeira(rodape?.materialId)) return true;
-    return undefined;
+    return rodape?.lockWoodGrain;
   }
 
   const boxId = cp.boxId;

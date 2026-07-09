@@ -2,6 +2,7 @@ import type { BoxModule, CutListItem, CutListItemComPreco } from "../types";
 import { getMaterialByIdOrLabel } from "../materials/service";
 import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
+import { buildCutlistRotationMetadata } from "../manufacturing/cutlistRotationMetadata";
 import type { ProjectRodape } from "./rodapeTypes";
 import {
   buildRodapeIndustrialLabelsForRodapes,
@@ -47,6 +48,12 @@ export function buildRodapeCutlistItems(
     const dims = toCutDimensions(rodape);
     const industrialLabel = industrialLabels.get(rodape.id) ?? rodape.name;
     const nome = resolveRodapePieceDisplayName(rodape, industrialLabel);
+    const materialId = material?.id ?? rodape.materialId;
+    const rotationMeta = buildCutlistRotationMetadata({
+      allowPieceRotation: rodape.allowPieceRotation,
+      lockWoodGrain: rodape.lockWoodGrain,
+      materialId,
+    });
 
     return {
       id: rodape.id,
@@ -58,7 +65,7 @@ export function buildRodapeCutlistItems(
       tipo: "rodape",
       sourceType: "parametric",
       boxId,
-      materialId: material?.id ?? rodape.materialId,
+      materialId,
       visualMaterial: getFallbackMaterial(),
       drillHoles: [],
       metadata: {
@@ -69,6 +76,7 @@ export function buildRodapeCutlistItems(
         parentGroupId: rodape.parentGroupId,
         industrialLabel,
         rodapeIndustrialLabel: "RODA_PE",
+        ...rotationMeta,
       },
     };
   });
