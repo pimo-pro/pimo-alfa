@@ -5,6 +5,7 @@ import { listOfficialMaterials, resolveSeparadorMaterialForBox, resolveFrenteFix
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
+import WoodGrainLockToggle from "./WoodGrainLockToggle";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 import { isCornerDireitaInferiorModel } from "../../../core/cornerCabinet";
 
@@ -74,6 +75,11 @@ export default function SelecionarMaterialSection({
           materialId={currentMaterialId}
           allowPieceRotation={box.allowPieceRotation}
           onChange={(allow) => actions.setWorkspaceBoxAllowPieceRotation(boxId, allow)}
+        />
+        <WoodGrainLockToggle
+          materialId={currentMaterialId}
+          lockWoodGrain={box.lockWoodGrain}
+          onChange={(lock) => actions.setWorkspaceBoxLockWoodGrain(boxId, lock)}
         />
       </section>
 
@@ -178,6 +184,12 @@ export default function SelecionarMaterialSection({
                 onChange={(allow) => actions.setDoorAllowPieceRotation(boxId, door.id, allow)}
                 compact
               />
+              <WoodGrainLockToggle
+                materialId={doorMaterialId}
+                lockWoodGrain={door.lockWoodGrain}
+                onChange={(lock) => actions.setDoorLockWoodGrain(boxId, door.id, lock)}
+                compact
+              />
             </section>
           );
         })}
@@ -213,6 +225,12 @@ export default function SelecionarMaterialSection({
                 materialId={drawerMaterialId}
                 allowPieceRotation={drawer.allowPieceRotation}
                 onChange={(allow) => actions.setDrawerAllowPieceRotation(boxId, drawer.id, allow)}
+                compact
+              />
+              <WoodGrainLockToggle
+                materialId={drawerMaterialId}
+                lockWoodGrain={drawer.lockWoodGrain}
+                onChange={(lock) => actions.setDrawerLockWoodGrain(boxId, drawer.id, lock)}
                 compact
               />
             </section>

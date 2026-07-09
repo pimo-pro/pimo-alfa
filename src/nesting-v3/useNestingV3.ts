@@ -52,15 +52,19 @@ function nextPieceId() { return `v3p-${_pieceIdCounter++}`; }
 export function cutPieceToV3(
   cp: CutPiece,
   index: number,
-  options?: { allowPieceRotation?: boolean }
+  options?: { allowPieceRotation?: boolean; lockWoodGrain?: boolean }
 ): V3Piece {
   const holes = (cp.drillHoles ?? cp.holes ?? []).map((h) => ({
     x: h.x, y: h.y, diameter: h.diameter, depth: h.depth, holeType: h.holeType,
   }));
   const metaAllow = cp.metadata?.allowPieceRotation;
+  const metaLock = cp.metadata?.lockWoodGrain;
   const allowPieceRotation =
     options?.allowPieceRotation ??
     (metaAllow === true ? true : metaAllow === false ? false : undefined);
+  const lockWoodGrain =
+    options?.lockWoodGrain ??
+    (metaLock === true ? true : metaLock === false ? false : undefined);
   return {
     id: nextPieceId(),
     name: cp.partName,
@@ -76,6 +80,7 @@ export function cutPieceToV3(
     industrialGrainCode: cp.industrialGrainCode,
     pieceTipo: cp.pieceTipo,
     allowPieceRotation,
+    lockWoodGrain,
   };
 }
 

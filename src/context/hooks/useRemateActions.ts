@@ -223,13 +223,19 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                 } else {
                   nextRemate = { ...nextRemate, depth: thicknessMm };
                 }
+                if (patch.followBox === true) {
+                  nextRemate = { ...nextRemate, placementMode: "SNAPPED" };
+                } else if (patch.followBox === false) {
+                  nextRemate = { ...nextRemate, placementMode: "FREE" };
+                }
                 const shouldResnap =
+                  nextRemate.followBox &&
+                  nextRemate.placementMode !== "FREE" &&
                   (patch.tipo != null ||
                     patch.mountSlot != null ||
                     patch.productType != null ||
-                    patch.productOptions != null) &&
-                  nextRemate.followBox &&
-                  nextRemate.placementMode !== "FREE";
+                    patch.productOptions != null ||
+                    patch.followBox === true);
                 if (shouldResnap && nextRemate.parentBoxId) {
                   const parentBox = prev.workspaceBoxes.find((b) => b.id === nextRemate.parentBoxId);
                   if (parentBox) {

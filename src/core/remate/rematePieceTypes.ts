@@ -95,6 +95,8 @@ export type RematePiece = {
   partIndex?: 1 | 2;
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
+  /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
+  lockWoodGrain?: boolean;
 };
 
 export type CreateRematePieceInput = {
@@ -134,6 +136,7 @@ export type UpdateRematePieceInput = Partial<
     | "name"
     | "nomePersonalizado"
     | "allowPieceRotation"
+    | "lockWoodGrain"
   >
 >;
 

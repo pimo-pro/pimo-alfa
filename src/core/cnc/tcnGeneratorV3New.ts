@@ -17,6 +17,7 @@ import {
   resolveTcnPanelThicknessMm,
   resolveTcnUnmDsMm,
 } from "./tcnPanelThickness";
+import { resolveTcnDrillDepthMm, resolveTcnDrillDiameterMm } from "./tcnDrillParams";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -350,7 +351,6 @@ export function generateTcnForPanelV3New(
   const allDrillOps: CncDrillOperation[] = [];
   for (const pl of sanitizedPlacements) {
     logTcnThicknessDebug(pl, sheet);
-    const panelMm = resolveTcnPanelThicknessMm(pl, sheet);
     const rot = ((pl.rotacao ?? 0) % 360 + 360) % 360;
     for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
@@ -365,8 +365,8 @@ export function generateTcnForPanelV3New(
         x: tcnPt.x,
         y: tcnPt.y,
         z: 0,
-        diametro: hole.diameter,
-        profundidade: Math.min(hole.depth, panelMm),
+        diametro: resolveTcnDrillDiameterMm(hole),
+        profundidade: resolveTcnDrillDepthMm(pl, sheet),
         tipo: "vertical",
       });
     }

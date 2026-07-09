@@ -21,6 +21,7 @@ import {
 } from "../../../core/remate/remateProductRules";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import WoodGrainRotationToggle from "../material/WoodGrainRotationToggle";
+import WoodGrainLockToggle from "../material/WoodGrainLockToggle";
 import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/remateGapMeasure";
 import RemateRulesSection from "./RemateRulesSection";
 import { OPPOSITE_MOUNT_SLOT } from "../../../core/remate/remateCloneUtils";
@@ -373,14 +374,11 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           onChange={(allow) => actions.updateRemate(remate.id, { allowPieceRotation: allow })}
         />
 
-        {/* Regras de dimensionamento — só para tipo COMPLETO */}
-        {isCompleto && isMain ? (
-          <RemateRulesSection
-            rules={completoRules}
-            feetHeightMm={feetHeightMm}
-            onChange={patchCompletoRules}
-          />
-        ) : null}
+        <WoodGrainLockToggle
+          materialId={remate.materialPresetId}
+          lockWoodGrain={remate.lockWoodGrain}
+          onChange={(lock) => actions.updateRemate(remate.id, { lockWoodGrain: lock })}
+        />
 
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
           <input
@@ -391,6 +389,15 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           />
           Seguir módulo (mantém offset à face)
         </label>
+
+        {/* Regras de dimensionamento — só para tipo COMPLETO */}
+        {isCompleto && isMain ? (
+          <RemateRulesSection
+            rules={completoRules}
+            feetHeightMm={feetHeightMm}
+            onChange={patchCompletoRules}
+          />
+        ) : null}
 
         {remate.parentBoxId ? (
           <button

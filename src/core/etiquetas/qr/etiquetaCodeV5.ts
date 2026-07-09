@@ -145,6 +145,10 @@ export type LabelSheetPlacement = {
   sheetIndex: number;
   x_mm: number;
   y_mm: number;
+  /** Posição dentro do painel (ordem do array do nesting). */
+  placementIndex?: number;
+  /** Posição global no flatten de placements (fallback). */
+  globalPlacementIndex?: number;
 };
 
 export type LabelItemLike = {

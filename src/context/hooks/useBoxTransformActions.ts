@@ -25,6 +25,7 @@ export type BoxTransformActions = Pick<
   | "setWorkspaceBoxNome"
   | "setWorkspaceBoxMaterial"
   | "setWorkspaceBoxAllowPieceRotation"
+  | "setWorkspaceBoxLockWoodGrain"
   | "setWorkspaceBoxLocked"
   | "setWorkspaceBoxPiHideDrawerHoles"
   | "setWorkspaceBoxCostaMaterial"
@@ -217,6 +218,18 @@ export function useBoxTransformActions(ctx: ProjectActionsExecutionContext): Box
         (prev) => {
           const workspaceBoxes = prev.workspaceBoxes.map((box) =>
             box.id === boxId ? { ...box, allowPieceRotation: allow } : box
+          );
+          return { ...prev, workspaceBoxes };
+        },
+        true
+      );
+    };
+
+    a.setWorkspaceBoxLockWoodGrain = (boxId, lock) => {
+      updateProject(
+        (prev) => {
+          const workspaceBoxes = prev.workspaceBoxes.map((box) =>
+            box.id === boxId ? { ...box, lockWoodGrain: lock } : box
           );
           return { ...prev, workspaceBoxes };
         },

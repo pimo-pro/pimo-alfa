@@ -16,6 +16,7 @@ function mapGrainDirection(piece: V3Piece): CutPiece["grainDirection"] {
     industrialGrainCode: piece.industrialGrainCode,
     pieceTipo: piece.pieceTipo,
     allowPieceRotation: piece.allowPieceRotation,
+    lockWoodGrain: piece.lockWoodGrain,
   });
   if (nestingLock) return nestingLock;
   if (piece.industrialGrainCode === "YY") return "length";

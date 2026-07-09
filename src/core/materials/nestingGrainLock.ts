@@ -15,8 +15,10 @@ export type NestingGrainLockInput = {
   materialId?: string;
   industrialGrainCode?: IndustrialGrainCode;
   pieceTipo?: string;
-  /** false = veio fixo no nesting; true = permite rodar mesmo com materialMadeira; undefined = regra por material. */
+  /** false = veio fixo no nesting; true = permite rodar (ignorado em material de madeira); undefined = regra por material. */
   allowPieceRotation?: boolean;
+  /** true = proibir rotação no nesting (veio fixo). Auto-activo para material de madeira. */
+  lockWoodGrain?: boolean;
 };
 
 /** Lê materialMadeira do CRUD (com inferência em applyInferredIndustrialFields). */
@@ -54,15 +56,22 @@ export function inferMaterialMadeiraFromRecord(input: {
   return false;
 }
 
+/** Bloqueio efectivo de veio (madeira ou toggle explícito). */
+export function isWoodGrainLockActive(input: NestingGrainLockInput): boolean {
+  if (input.lockWoodGrain === true) return true;
+  if (isMaterialMadeira(input.materialId)) return true;
+  return false;
+}
+
 /**
  * true → nesting não pode rodar a peça (0° apenas).
- * Respeita override explícito allowPieceRotation por peça.
+ * Material de madeira ignora completamente allowPieceRotation.
  */
 export function isNestingRotationLocked(input: NestingGrainLockInput): boolean {
-  if (input.allowPieceRotation === true) return false;
+  if (isWoodGrainLockActive(input)) return true;
   if (input.allowPieceRotation === false) return true;
+  if (input.allowPieceRotation === true) return false;
   if (isGrainRotationLocked(input.industrialGrainCode)) return true;
-  if (isMaterialMadeira(input.materialId)) return true;
   return false;
 }
 

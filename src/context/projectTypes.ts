@@ -497,9 +497,11 @@ export interface ProjectActions {
   /** Altera o material simples da porta (Material Picker: Madeira, Branco, etc.). */
   setDoorMaterial: (_boxId: string, _doorLayerId: string, _material: string) => void;
   setDoorAllowPieceRotation: (_boxId: string, _doorLayerId: string, _allow: boolean) => void;
+  setDoorLockWoodGrain: (_boxId: string, _doorLayerId: string, _lock: boolean) => void;
   /** Altera o material simples da gaveta (Material Picker: Madeira, Branco, etc.). */
   setDrawerMaterial: (_boxId: string, _drawerLayerId: string, _material: string) => void;
   setDrawerAllowPieceRotation: (_boxId: string, _drawerLayerId: string, _allow: boolean) => void;
+  setDrawerLockWoodGrain: (_boxId: string, _drawerLayerId: string, _lock: boolean) => void;
   /** Atualiza posição X da caixa no workspace (mm). Fonte única para atualização de posição. */
   updateWorkspacePosition: (_boxId: string, _posicaoX_mm: number) => void;
   /** Atualiza posição/rotação/manual da caixa no viewer (manipulação visual; não altera cut list). */
@@ -529,6 +531,7 @@ export interface ProjectActions {
   setWorkspaceBoxMaterial: (_boxId: string, _materialId: string) => void;
   /** Override nesting: true = permite rodar peça com material de madeira. */
   setWorkspaceBoxAllowPieceRotation: (_boxId: string, _allow: boolean) => void;
+  setWorkspaceBoxLockWoodGrain: (_boxId: string, _lock: boolean) => void;
   /** Bloqueia ou desbloqueia a peça (impede movimento e transformações quando locked). */
   setWorkspaceBoxLocked: (_boxId: string, _locked: boolean) => void;
   /** PI: ocultar só furos de corrediça nas laterais (cutlist + viewer). */

@@ -10,19 +10,31 @@ export type CutLayoutPlacementLike = {
 };
 
 /**
- * Normaliza placements do nesting industrial para o UEE (NUM_CAIXA + ordenação).
+ * Normaliza placements do nesting industrial para o UEE.
+ * Preserva a ordem real dentro de cada painel (placementIndex).
  */
 export function normalizeCutLayoutPlacements(
   placements?: CutLayoutPlacementLike[]
 ): LabelSheetPlacement[] | undefined {
   if (!placements || placements.length === 0) return undefined;
-  return placements.map((p) => ({
-    partName: p.partName,
-    boxId: p.boxId,
-    sheetIndex: p.sheetIndex,
-    x_mm: p.x_mm ?? 0,
-    y_mm: p.y_mm ?? 0,
-  }));
+
+  const perSheetCounter = new Map<number, number>();
+
+  return placements.map((p, globalIndex) => {
+    const sheetIndex = p.sheetIndex ?? 0;
+    const placementIndex = perSheetCounter.get(sheetIndex) ?? 0;
+    perSheetCounter.set(sheetIndex, placementIndex + 1);
+
+    return {
+      partName: p.partName,
+      boxId: p.boxId,
+      sheetIndex,
+      x_mm: p.x_mm ?? 0,
+      y_mm: p.y_mm ?? 0,
+      placementIndex,
+      globalPlacementIndex: globalIndex,
+    };
+  });
 }
 
 /**

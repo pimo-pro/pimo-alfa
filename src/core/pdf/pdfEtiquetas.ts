@@ -18,6 +18,8 @@ import {
 } from "../labelSystem/resolveLabelSystemConfig";
 import type { QrPolicy } from "../labelSystem/LabelSystemV5";
 import { normalizeCutLayoutPlacements } from "../etiquetas/engine/nestingAdapter";
+import { prepareEtiquetasForPrint } from "../etiquetas/engine/nestingLabelOrder";
+import { drawAutoFitLabelText } from "../etiquetas/render/labelTextAutoFit";
 import { formatDimensionV5, formatNumberV5 } from "./labelMeasuresV5";
 import {
   computeV5LabelLayout,
@@ -134,37 +136,6 @@ function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
     boxNome: boxById.get(p.boxId ?? "")?.nome ?? p.boxId ?? "—",
     pieceName: p.nome,
   }));
-}
-
-/**
- * Ordena as etiquetas pela posição real das peças nas chapas do nesting.
- * Ordem: chapa → base para topo (y decrescente) → direita para esquerda (x crescente em TRO).
- * Peças sem correspondência no nesting ficam no fim.
- */
-function orderByCutLayoutPro(items: LabelItem[], placements?: SheetPlacement[]): LabelItem[] {
-  if (!placements || placements.length === 0) return items;
-
-  const lookup = new Map<string, { sheetIndex: number; x_mm: number; y_mm: number }>();
-  for (const p of placements) {
-    const key = `${p.boxId ?? ""}::${p.partName ?? ""}`;
-    if (!lookup.has(key)) {
-      lookup.set(key, { sheetIndex: p.sheetIndex, x_mm: p.x_mm, y_mm: p.y_mm });
-    }
-  }
-
-  return [...items].sort((a, b) => {
-    const keyA = `${a.boxId ?? ""}::${a.nome ?? ""}`;
-    const keyB = `${b.boxId ?? ""}::${b.nome ?? ""}`;
-    const infoA = lookup.get(keyA);
-    const infoB = lookup.get(keyB);
-    if (!infoA && !infoB) return 0;
-    if (!infoA) return 1;
-    if (!infoB) return -1;
-    if (infoA.sheetIndex !== infoB.sheetIndex) return infoA.sheetIndex - infoB.sheetIndex;
-    const yDiff = infoB.y_mm - infoA.y_mm; // y maior = base da chapa = primeiro
-    if (Math.abs(yDiff) > 1) return yDiff;
-    return infoA.x_mm - infoB.x_mm; // x menor em TRO = lado direito = primeiro
-  });
 }
 
 function drawQrFromCode(doc: jsPDF, code: string, x: number, y: number, size: number) {
@@ -287,16 +258,28 @@ async function renderEtiquetaPageFromDesignerConfig(
       const tEl = el as LabelTextElement;
       const text = dataMap[el.type] ?? "";
       if (!text) continue;
-      doc.setFont(tEl.fontFamily ?? "Helvetica", tEl.fontWeight === "bold" ? "bold" : "normal");
-      doc.setFontSize(tEl.fontSize);
       const hex = (tEl.color ?? "#111111").replace("#", "").padEnd(6, "0");
       doc.setTextColor(
         parseInt(hex.slice(0, 2), 16) || 0,
         parseInt(hex.slice(2, 4), 16) || 0,
         parseInt(hex.slice(4, 6), 16) || 0,
       );
-      const lines = doc.splitTextToSize(text, el.width);
-      doc.text(lines, x, y + tEl.fontSize * 0.35);
+      if (el.type === "projeto" || el.type === "peca") {
+        drawAutoFitLabelText(doc, text, x, y, {
+          maxFontPt: tEl.fontSize,
+          minFontPx: 8,
+          boxWidthMm: el.width,
+          boxHeightMm: el.height,
+          fontName: tEl.fontFamily ?? "Helvetica",
+          fontStyle: tEl.fontWeight === "bold" ? "bold" : "normal",
+          lineHeight: tEl.lineHeight ?? 1.15,
+        });
+      } else {
+        doc.setFont(tEl.fontFamily ?? "Helvetica", tEl.fontWeight === "bold" ? "bold" : "normal");
+        doc.setFontSize(tEl.fontSize);
+        const lines = doc.splitTextToSize(text, el.width);
+        doc.text(lines, x, y + tEl.fontSize * 0.35);
+      }
     }
   }
 }
@@ -813,11 +796,15 @@ function drawV5_BottomStrip(
 
   const rightX = sepX + PAD;
   const rightMaxW = width - rightX - PAD;
-  const rightFontPt = v5Pt(13 + 1.5);
-  const rightCenterY = y + height / 2 + rightFontPt * 0.12;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(rightFontPt);
-  doc.text(rightText, rightX, rightCenterY, { maxWidth: rightMaxW });
+  drawAutoFitLabelText(doc, rightText, rightX, y, {
+    maxFontPt: v5Pt(13 + 1.5),
+    minFontPx: 8,
+    boxWidthMm: rightMaxW,
+    boxHeightMm: height,
+    fontName: "helvetica",
+    fontStyle: "bold",
+  });
 }
 
 /**
@@ -838,7 +825,7 @@ async function renderEtiquetaPageV5(
   runtime: ResolvedLabelRuntime,
   seq: PieceProductionSequence,
   piecesPerSheet: Map<string, number>,
-  index0: number
+  _index0: number
 ): Promise<void> {
   const config = runtime.labelConfig;
   const dims = config.dimensions;
@@ -860,9 +847,12 @@ async function renderEtiquetaPageV5(
     boxes: project.boxes,
     rules: project.rules,
   };
-  const codeV5Display = resolveEtiquetaDisplayCodeV5(item, qrCtx, piecesPerSheet, index0);
+  const etiquetaNumber = resolveAuthoritativeLabelNumber(item);
+  if (etiquetaNumber == null) {
+    throw new Error("Etiqueta sem número único atribuído antes da impressão.");
+  }
+  const codeV5Display = resolveEtiquetaDisplayCodeV5(item, qrCtx, piecesPerSheet, etiquetaNumber - 1);
   const codeShort = resolveLegacyShortQrCode(item, qrCtx);
-  const etiquetaNumber = resolveAuthoritativeLabelNumber(item) ?? index0 + 1;
 
   let secondaryQrCode: string | null = null;
   let bottomStripCode = codeV5Display;
@@ -1020,7 +1010,8 @@ export async function buildProductionEtiquetasV5Pdf(
   runtime: ResolvedLabelRuntime
 ): Promise<jsPDF> {
   const labelConfig = runtime.labelConfig;
-  const ordered = orderByCutLayoutPro(getCutlistWithMetadata(project), project.cutLayoutPlacements);
+  const items = getCutlistWithMetadata(project);
+  const ordered = prepareEtiquetasForPrint(items, project.cutLayoutPlacements);
   const piecesPerSheet = buildPiecesPerSheetMap(ordered, project.cutLayoutPlacements);
   for (const item of ordered) {
     const key = labelItemSheetKey(item.boxId, item.nome);

@@ -91,6 +91,7 @@ export function allowRotationForPiece(
       industrialGrainCode: piece.industrialGrainCode,
       pieceTipo: piece.pieceTipo,
       allowPieceRotation: piece.allowPieceRotation,
+      lockWoodGrain: piece.lockWoodGrain,
     })
   ) {
     return false;

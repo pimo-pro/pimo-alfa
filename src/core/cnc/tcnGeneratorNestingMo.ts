@@ -14,6 +14,7 @@ import {
   resolveTcnPanelThicknessMm,
   resolveTcnUnmDsMm,
 } from "./tcnPanelThickness";
+import { resolveTcnDrillDepthMm, resolveTcnDrillDiameterMm } from "./tcnDrillParams";
 
 const HEADER = "TPA\\ALBATROS\\EDICAD\\00.00:0";
 
@@ -356,7 +357,6 @@ export function generateTcnForPanelNestingMo(
   const allDrillOps: CncDrillOperation[] = [];
   for (const pl of sanitizedPlacements) {
     logTcnThicknessDebug(pl, sheet);
-    const panelMm = resolveTcnPanelThicknessMm(pl, sheet);
     for (const hole of pl.drillHoles ?? pl.holes ?? []) {
       const topDrillable = (hole as { topDrillable?: boolean }).topDrillable;
       if (topDrillable === false) continue;
@@ -367,8 +367,8 @@ export function generateTcnForPanelNestingMo(
         x: conv.tcnX,
         y: conv.tcnY,
         z: 0,
-        diametro: hole.diameter,
-        profundidade: Math.min(hole.depth, panelMm),
+        diametro: resolveTcnDrillDiameterMm(hole),
+        profundidade: resolveTcnDrillDepthMm(pl, sheet),
         tipo: "vertical",
       });
     }

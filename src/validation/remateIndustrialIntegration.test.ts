@@ -40,6 +40,9 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     expect(dir?.nome).toMatch(/^Armario_Test_REMATE_DIR_\d{2}$/);
     expect(dir?.metadata?.industrialLabel).toBe(dir?.nome);
     expect(dir?.tipo).toBe("remate");
+    expect(dir?.metadata?.followBox).toBe(true);
+    expect(dir?.metadata?.placementMode).toBe("SNAPPED");
+    expect(dir?.metadata?.faceOffsets).toBeDefined();
   });
 
   it("remate L CIMA → MOD1_REMATE_L_ext / L_int com dimensões e grain", () => {
@@ -143,5 +146,28 @@ describe("Remate — integração industrial (cutlist + QR + layout PRO)", () =>
     const dir = cutlist.find((i) => i.metadata?.remateKind === "DIR");
     expect(dir?.nome).toBe("REMATE_DIR_CUSTOM");
     expect(dir?.metadata?.industrialLabel).toMatch(/^Armario_Test_REMATE_DIR_\d{2}$/);
+  });
+
+  it("cutlistToPieces preserva ordem comprimento×largura dos remates (sem swap)", () => {
+    const wsBox = makeWorkspaceBox();
+    const remates = createRematePieces(
+      { productType: "COMPLETO", mountSlot: "DIR", parentBoxId: wsBox.id, followBox: true },
+      {
+        box: wsBox,
+        materialPresetId: "mdf_branco",
+        thicknessMm: 19,
+        boxDimsM: { widthM: 0.6, heightM: 0.72, depthM: 0.56 },
+      }
+    );
+    const customized = remates.map((r) =>
+      r.tipo === "DIR" ? { ...r, width: 100, height: 720 } : r
+    );
+    const cutlist = buildRemateCutlistItems(customized, [
+      makeDivSepTestBox({ id: wsBox.id, nome: wsBox.nome }),
+    ]);
+    const pieces = cutlistToPieces(cutlist);
+    const dir = pieces.find((p) => p.pieceTipo === "remate");
+    expect(dir?.largura_mm).toBe(100);
+    expect(dir?.altura_mm).toBe(720);
   });
 });

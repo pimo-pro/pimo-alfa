@@ -3,6 +3,7 @@ import { getMaterialByIdOrLabel } from "../materials/service";
 import { getFallbackMaterial } from "../materials/materialLibraryV2";
 import { calcularPrecoCutList } from "../pricing/pricing";
 import { resolveIndustrialGrainCode } from "../materials/grainDirection";
+import { isMaterialMadeira } from "../materials/nestingGrainLock";
 import type { RematePiece } from "./rematePieceTypes";
 import { inferProductTypeFromLegacy } from "./remateProductRules";
 import { resolveRemateSheetCutDimensions } from "./remateSheetDimensions";
@@ -77,6 +78,13 @@ export function buildRemateCutlistItems(
         industrialLabel,
         remateIndustrialLabel: suffix,
         remateKind: suffix,
+        followBox: remate.followBox,
+        placementMode: remate.placementMode ?? (remate.followBox ? "SNAPPED" : "FREE"),
+        faceOffsets: remate.faceOffsets,
+        allowPieceRotation: remate.allowPieceRotation,
+        lockWoodGrain:
+          remate.lockWoodGrain ??
+          (isMaterialMadeira(material?.id ?? remate.materialPresetId) ? true : undefined),
       },
     };
   });

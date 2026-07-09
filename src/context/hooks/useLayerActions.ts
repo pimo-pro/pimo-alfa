@@ -28,8 +28,10 @@ export type LayerActions = Pick<
   | "setPortaTipo"
   | "setDoorMaterial"
   | "setDoorAllowPieceRotation"
+  | "setDoorLockWoodGrain"
   | "setDrawerMaterial"
   | "setDrawerAllowPieceRotation"
+  | "setDrawerLockWoodGrain"
   | "addDoorLayerItem"
   | "addDrawerLayerItem"
   | "removeDoorLayerItem"
@@ -254,6 +256,21 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           true
         );
       },
+      setDoorLockWoodGrain: (boxId, doorLayerId, lock) => {
+        updateProject(
+          (prev) => {
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== boxId) return box;
+              const doorsLayer = (box.doorsLayer ?? []).map((door) =>
+                door.id === doorLayerId ? { ...door, lockWoodGrain: lock } : door
+              );
+              return { ...box, doorsLayer };
+            });
+            return { ...prev, workspaceBoxes };
+          },
+          true
+        );
+      },
       setDrawerAllowPieceRotation: (boxId, drawerLayerId, allow) => {
         updateProject(
           (prev) => {
@@ -261,6 +278,21 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               if (box.id !== boxId) return box;
               const drawersLayer = (box.drawersLayer ?? []).map((drawer) =>
                 drawer.id === drawerLayerId ? { ...drawer, allowPieceRotation: allow } : drawer
+              );
+              return { ...box, drawersLayer };
+            });
+            return { ...prev, workspaceBoxes };
+          },
+          true
+        );
+      },
+      setDrawerLockWoodGrain: (boxId, drawerLayerId, lock) => {
+        updateProject(
+          (prev) => {
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== boxId) return box;
+              const drawersLayer = (box.drawersLayer ?? []).map((drawer) =>
+                drawer.id === drawerLayerId ? { ...drawer, lockWoodGrain: lock } : drawer
               );
               return { ...box, drawersLayer };
             });

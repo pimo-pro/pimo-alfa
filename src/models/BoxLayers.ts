@@ -30,6 +30,8 @@ export interface DoorLayerItem {
   verticalAdjustOrigin?: "top" | "bottom";
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
+  /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
+  lockWoodGrain?: boolean;
   /** Viewer: animação outward do Canto — Direita (Inferior) v2. */
   cornerDireitaV2Viewer?: boolean;
   /** Orientação canto v2 — sincronizada com WorkspaceBox.orientation. */
@@ -148,4 +150,6 @@ export interface DrawerLayerItem {
   metadata?: DrawerLayerMetadata;
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
+  /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
+  lockWoodGrain?: boolean;
 }

@@ -1,5 +1,26 @@
 import type { CutPiece, CutPlacement, SheetDefinition, SheetResult } from "../cutLayoutTypes";
+import { isNestingRotationLocked } from "../../materials/nestingGrainLock";
 import { canRotatePieceGeometry } from "./cutLayoutGeomRotation";
+
+function resolvePieceRotationFlags(piece: CutPiece): {
+  allowPieceRotation?: boolean;
+  lockWoodGrain?: boolean;
+} {
+  const meta = piece.metadata;
+  const allow =
+    meta?.allowPieceRotation === true
+      ? true
+      : meta?.allowPieceRotation === false
+        ? false
+        : undefined;
+  const lock =
+    meta?.lockWoodGrain === true
+      ? true
+      : meta?.lockWoodGrain === false
+        ? false
+        : undefined;
+  return { allowPieceRotation: allow, lockWoodGrain: lock };
+}
 
 const EPS = 0.001;
 
@@ -63,6 +84,18 @@ export const isRotatablePiece = (piece: CutPiece): boolean => {
   if (piece.pieceTipo === "rodape") return canRotatePieceGeometry(piece);
   if (piece.industrialGrainCode === "YY") return false;
   if (piece.largura_mm === piece.altura_mm) return false;
+  const flags = resolvePieceRotationFlags(piece);
+  if (
+    isNestingRotationLocked({
+      materialId: piece.materialId,
+      industrialGrainCode: piece.industrialGrainCode,
+      pieceTipo: piece.pieceTipo,
+      allowPieceRotation: flags.allowPieceRotation,
+      lockWoodGrain: flags.lockWoodGrain,
+    })
+  ) {
+    return false;
+  }
   return canRotatePieceGeometry(piece);
 };
 

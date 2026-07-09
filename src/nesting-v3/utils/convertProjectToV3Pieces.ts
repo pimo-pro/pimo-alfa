@@ -4,6 +4,7 @@ import { cutlistToPieces } from "../../core/cutlayout/cutLayoutEngine";
 import { cutPieceToV3 } from "../useNestingV3";
 import type { V3Piece } from "../nestingV3Types";
 import { resolveAllowPieceRotationFromProject } from "./resolveAllowPieceRotation";
+import { resolveLockWoodGrainFromProject } from "./resolveLockWoodGrain";
 
 export function convertProjectToV3Pieces(project: ProjectState): V3Piece[] {
   if (!project.boxes || project.boxes.length === 0) return [];
@@ -26,6 +27,7 @@ export function convertProjectToV3Pieces(project: ProjectState): V3Piece[] {
   return cutPieces.map((piece, index) =>
     cutPieceToV3(piece, index, {
       allowPieceRotation: resolveAllowPieceRotationFromProject(project, piece),
+      lockWoodGrain: resolveLockWoodGrainFromProject(project, piece),
     })
   );
 }

@@ -12,6 +12,14 @@ export type { UnifiedEtiquetaProjectInput } from "./types";
 /** @deprecated Usar `resolveLabelSystemConfig` de `@/core/labelSystem`. */
 export { resolveUnifiedLabelConfig } from "./config/unifiedLabelConfig";
 export { normalizeCutLayoutPlacements } from "./engine/nestingAdapter";
+export {
+  orderLabelsByNestingPlacements,
+  assignUniqueEtiquetaNumbers,
+  assertUniqueEtiquetaNumbers,
+  prepareEtiquetasForPrint,
+  nestingPlacementPrintOrder,
+} from "./engine/nestingLabelOrder";
+export { fitLabelTextInBox, drawAutoFitLabelText } from "./render/labelTextAutoFit";
 export { shouldUseDesignerInProductionExport } from "./ui/designerPreview";
 export * from "./qr/etiquetaQr";
 export * from "./data/measures";

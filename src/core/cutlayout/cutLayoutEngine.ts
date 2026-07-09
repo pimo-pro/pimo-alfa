@@ -19,6 +19,10 @@ import type {
 } from "./cutLayoutTypes";
 import type { LayoutVisualMaterial, OperationResult, IndustrialGrainCode } from "../types";
 import { industrialGrainToLayoutAxis } from "../materials/grainDirection";
+import {
+  isMaterialMadeira,
+  resolveNestingLayoutGrainDirection,
+} from "../materials/nestingGrainLock";
 import { getDefaultOfficialMaterial, resolveMaterial, resolveIndustrialMaterialAtThickness, COSTA_FIXED_THICKNESS_MM, DRAWER_SIDE_THICKNESS_MM } from "../materials/materials.api";
 import { getIndustrialMaterial, getMaterialByIdOrLabel } from "../materials/service";
 import {
@@ -661,10 +665,9 @@ export function cutlistToPieces(
       Number(item.dimensoes?.profundidade) || 0,
     ].filter((n) => Number.isFinite(n) && n > 0);
     const dims = raw.length >= 2 ? [...raw].sort((a, b) => b - a) : [Math.max(raw[0] ?? 1, 1), 1];
-    const largura = Math.round(Math.max(dims[0] ?? 1, 1));
-    const altura = Math.round(Math.max(dims[1] ?? 1, 1));
     const tipoToken = String((item as { tipo?: unknown }).tipo ?? "").trim().toLowerCase();
     const nomeToken = String(item.nome ?? "").trim().toLowerCase();
+    const isRemate = tipoToken === "remate";
     const isCosta = tipoToken === "costa" || nomeToken === "costa";
     const isDrawerSideOrBack =
       tipoToken === "gaveta_lat_esq" ||
@@ -751,7 +754,7 @@ export function cutlistToPieces(
     // A conversão preserva a origem industrial bottom-left: (x, y) → (y, larguraOriginal - x).
     const origL = Number(item.dimensoes?.largura) || 0;
     const origA = Number(item.dimensoes?.altura) || 0;
-    const dimensionsSwapped = origL > 0 && origA > 0 && origL < origA;
+    const dimensionsSwapped = !isRemate && origL > 0 && origA > 0 && origL < origA;
     for (const h of item.drillHoles ?? []) {
       if ((h as { holeType?: string }).holeType === "cavilha" && (h as { topDrillable?: boolean }).topDrillable === false) continue;
       let x = Number(h?.x);
@@ -766,8 +769,28 @@ export function cutlistToPieces(
       }
     }
     const industrialCode = item.grainDirection;
+    const itemMeta = (item as { metadata?: Record<string, unknown> }).metadata;
+    const metaAllow = itemMeta?.allowPieceRotation;
+    const metaLock = itemMeta?.lockWoodGrain;
+    const materialMadeira = isMaterialMadeira(pieceMaterialId);
+    const nestingGrain = resolveNestingLayoutGrainDirection({
+      materialId: pieceMaterialId,
+      industrialGrainCode: industrialCode,
+      pieceTipo: item.tipo,
+      allowPieceRotation:
+        metaAllow === true ? true : metaAllow === false ? false : undefined,
+      lockWoodGrain:
+        metaLock === true ? true : metaLock === false ? false : materialMadeira ? true : undefined,
+    });
     const grainDirection =
-      industrialCode === "YY" ? industrialGrainToLayoutAxis("YY", item.tipo) : undefined;
+      nestingGrain ??
+      (industrialCode === "YY" ? industrialGrainToLayoutAxis("YY", item.tipo) : undefined);
+    const largura = isRemate
+      ? Math.round(Math.max(origL > 0 ? origL : dims[0] ?? 1, 1))
+      : Math.round(Math.max(dims[0] ?? 1, 1));
+    const altura = isRemate
+      ? Math.round(Math.max(origA > 0 ? origA : dims[1] ?? 1, 1))
+      : Math.round(Math.max(dims[1] ?? 1, 1));
     const pieces: CutPiece[] = [];
     const itemWithMeta = item as typeof item & { pieceNumber?: number; shortCode?: string };
     const qty = Math.max(1, Number(item.quantidade) || 1);

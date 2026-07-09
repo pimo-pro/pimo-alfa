@@ -38,10 +38,12 @@ export interface V3Piece {
   /** YY = veio fixo (sem rotação); XX = livre; omitido = peça livre (ex.: rodapé). */
   industrialGrainCode?: "YY" | "XX";
   /**
-   * Override por peça: false = veio fixo no nesting; true = permite rodar mesmo com materialMadeira.
+   * Override por peça: false = veio fixo no nesting; true = permite rodar (ignorado em madeira).
    * Omitido → regra automática (materialMadeira + código industrial).
    */
   allowPieceRotation?: boolean;
+  /** true = manter veio (proibir rotação). Auto em material de madeira. */
+  lockWoodGrain?: boolean;
   /** Tipo industrial da peça (ex.: rodape, remate, lateral_esquerda). */
   pieceTipo?: string;
   /** Cor de fundo para display 2D. Calculada a partir do material. */

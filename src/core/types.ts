@@ -427,6 +427,8 @@ export interface WorkspaceBox {
   material?: string;
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
+  /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
+  lockWoodGrain?: boolean;
   /** Se true, a peça não pode ser movida, redimensionada nem transformada (apenas selecionável para medição). */
   locked?: boolean;
   /**
