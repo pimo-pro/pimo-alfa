@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
 import { useProject } from "../../../context/useProject";
 import { useUiStore } from "../../../stores/uiStore";
 import Panel from "../../ui/Panel";
@@ -6,9 +6,11 @@ import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import type {
   RemateCompletoRules,
   RemateMountSlot,
+  RematePiece,
   RemateProductOptions,
   RemateProductType,
 } from "../../../core/remate/rematePieceTypes";
+import type { ProjectActions } from "../../../context/projectTypes";
 import {
   REMATE_MOUNT_SLOT_LABELS,
   REMATE_PRODUCT_TYPE_LABELS,
@@ -26,6 +28,7 @@ import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/re
 import RemateRulesSection from "./RemateRulesSection";
 import { OPPOSITE_MOUNT_SLOT } from "../../../core/remate/remateCloneUtils";
 import { resolveRematePieceNomeForRemate } from "../../../core/remate/labels";
+import { isLRemateExt, isLRemateInt } from "../../../core/remate/remateLGeometry";
 
 type Props = { remateId: string };
 
@@ -87,6 +90,78 @@ function useNumericField(
 
 const MOUNT_SLOTS: RemateMountSlot[] = ["FRENTE", "DIR", "ESQ", "CIMA", "FUNDO"];
 const PRODUCTS: RemateProductType[] = ["AVISTA", "COMPLETO", "L", "RODAPE", "RODAPE_L"];
+
+const lDimCardStyle: CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 6,
+  border: "1px solid var(--border-muted, #333)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+};
+
+type LRemateDimensionsCardsProps = {
+  ext: RematePiece;
+  int: RematePiece | undefined;
+  thicknessMm: number;
+  actions: Pick<ProjectActions, "updateRemate">;
+};
+
+function LRemateDimensionsCards({ ext, int, thicknessMm, actions }: LRemateDimensionsCardsProps) {
+  const extWidthField = useNumericField(ext.width ?? 1, (width) => {
+    actions.updateRemate(ext.id, { width });
+  });
+  const extHeightField = useNumericField(ext.height ?? 1, (height) => {
+    actions.updateRemate(ext.id, { height });
+  });
+  const intWidthField = useNumericField(int?.width ?? 1, (width) => {
+    if (!int) return;
+    actions.updateRemate(int.id, { width });
+  });
+  const intHeightField = useNumericField(int?.height ?? 1, (height) => {
+    if (!int) return;
+    actions.updateRemate(int.id, { height });
+  });
+
+  return (
+    <>
+      <div style={lDimCardStyle}>
+        <div style={{ fontWeight: 600, fontSize: 12 }}>Remate L EXT (rem_L_ext)</div>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Comprimento (mm)
+          <input className="input input-sm" type="number" min={1} {...extWidthField} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Largura (mm)
+          <input className="input input-sm" type="number" min={1} {...extHeightField} />
+        </label>
+        <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+          Espessura: {thicknessMm} mm (material)
+        </p>
+      </div>
+
+      {int ? (
+        <div style={lDimCardStyle}>
+          <div style={{ fontWeight: 600, fontSize: 12 }}>Remate L INT (rem_L_int)</div>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+            Unida geometricamente à ext — medidas independentes.
+          </p>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+            Comprimento (mm)
+            <input className="input input-sm" type="number" min={1} {...intWidthField} />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+            Largura (mm)
+            <input className="input input-sm" type="number" min={1} {...intHeightField} />
+          </label>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+            Espessura: {thicknessMm} mm (material)
+          </p>
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 export default function RematePropertiesPanel({ remateId }: Props) {
   const { project, actions } = useProject();
@@ -154,6 +229,19 @@ export default function RematePropertiesPanel({ remateId }: Props) {
     if (!remate) return "";
     return resolveRematePieceNomeForRemate(remate, boxNameById);
   }, [remate, boxNameById]);
+
+  const lGroupPieces = useMemo(() => {
+    if (!remate) return null;
+    const pt = remate.productType ?? inferProductTypeFromLegacy(remate);
+    if (pt !== "L" || !remate.parentGroupId) return null;
+    const group = (project.remates ?? []).filter(
+      (r) => r.parentGroupId === remate.parentGroupId && r.productType === "L"
+    );
+    const ext = group.find((r) => isLRemateExt(r));
+    const int = group.find((r) => isLRemateInt(r));
+    if (!ext) return null;
+    return { ext, int };
+  }, [remate, project.remates]);
 
   const nomeField = useTextField(autoNome, (trimmed) => {
     if (!remate) return;
@@ -308,28 +396,32 @@ export default function RematePropertiesPanel({ remateId }: Props) {
           </p>
         ) : null}
 
-        {productType === "L" && remate.partIndex === 2 ? (
-          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
-            Peça int (rem_L_int) — unida geometricamente à ext (rem_L_ext)
-          </p>
-        ) : null}
-
         {remate.placementMode === "FREE" ? (
           <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>Posição livre</p>
         ) : null}
 
-        {/* Dimensões de chapa — comprimento/largura editáveis; espessura do material */}
-        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-          Comprimento (mm)
-          <input className="input input-sm" type="number" min={1} {...widthField} />
-        </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-          Largura (mm)
-          <input className="input input-sm" type="number" min={1} {...heightField} />
-        </label>
-        <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
-          Espessura: {thicknessMm} mm (material)
-        </p>
+        {lGroupPieces ? (
+          <LRemateDimensionsCards
+            ext={lGroupPieces.ext}
+            int={lGroupPieces.int}
+            thicknessMm={thicknessMm}
+            actions={actions}
+          />
+        ) : (
+          <>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+              Comprimento (mm)
+              <input className="input input-sm" type="number" min={1} {...widthField} />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+              Largura (mm)
+              <input className="input input-sm" type="number" min={1} {...heightField} />
+            </label>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+              Espessura: {thicknessMm} mm (material)
+            </p>
+          </>
+        )}
 
         {gapMeasure ? (
           <div

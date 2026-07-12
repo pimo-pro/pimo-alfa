@@ -97,6 +97,8 @@ export type RematePiece = {
   allowPieceRotation?: boolean;
   /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
   lockWoodGrain?: boolean;
+  /** true = medidas editadas manualmente; nunca sobrescrever por recalc/resnap/migração. */
+  userDimensionsLocked?: boolean;
 };
 
 export type CreateRematePieceInput = {
@@ -137,6 +139,7 @@ export type UpdateRematePieceInput = Partial<
     | "nomePersonalizado"
     | "allowPieceRotation"
     | "lockWoodGrain"
+    | "userDimensionsLocked"
   >
 >;
 

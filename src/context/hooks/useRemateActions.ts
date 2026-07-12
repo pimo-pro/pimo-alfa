@@ -12,6 +12,7 @@ import {
   applyLRemateGroupCoupling,
   isLRematePiece,
   normalizeLRemateTransformPatch,
+  resolveLRemateGroupCouplingLeadId,
   resolveLRemateTransformLeadId,
   snapLRemateGroupCorners,
 } from "../../core/remate/remateLGeometry";
@@ -55,11 +56,7 @@ function refreshLRemateGroupSnap(
   const int = group.find((r) => r.partIndex === 2);
   if (!ext || !int) return remates;
   const bounds = getRemateEnvelopeBoundsM(boxDimsM.widthM, boxDimsM.heightM, boxDimsM.depthM, box);
-  const snapped = snapLRemateGroupCorners(ext, int, bounds, {
-    boxLarguraMm: box.dimensoes?.largura ?? 600,
-    boxAlturaMm: box.dimensoes?.altura ?? 720,
-    thicknessMm: Number(box.espessura) || 19,
-  });
+  const snapped = snapLRemateGroupCorners(ext, int, bounds);
   return remates.map((r) => {
     if (r.id === snapped.ext.id) return snapped.ext;
     if (r.id === snapped.int.id) return snapped.int;
@@ -186,11 +183,17 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
               ? normalizeLRemateTransformPatch(source, patch)
               : patch;
 
+            const userEditedDimensions =
+              patch.width != null || patch.height != null || patch.depth != null;
+
             let remates = (prev.remates ?? []).map((remate) => {
               if (remate.id !== transformTargetId) return remate;
               const { depth: _depthPatchIgnored, ...patchWithoutDepth } = normalizedPatch;
               void _depthPatchIgnored;
               let nextRemate = applyProductPatch(remate, patchWithoutDepth);
+              if (userEditedDimensions) {
+                nextRemate = { ...nextRemate, userDimensionsLocked: true };
+              }
                 const box = nextRemate.parentBoxId
                   ? prev.workspaceBoxes.find((b) => b.id === nextRemate.parentBoxId)
                   : null;
@@ -201,7 +204,7 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                   patch.productOptions != null ||
                   patch.productType != null ||
                   patch.mountSlot != null;
-                if (shouldRecalcDims) {
+                if (shouldRecalcDims && !nextRemate.userDimensionsLocked) {
                   const productType = nextRemate.productType ?? inferProductTypeFromLegacy(nextRemate);
                   const opts = normalizeProductOptions(productType, nextRemate.productOptions);
                   const dims = computeDimensionsForProduct({
@@ -245,13 +248,19 @@ export function useRemateActions(ctx: ProjectActionsExecutionContext): RemateAct
                 return nextRemate;
               });
 
+            const couplingLeadId = resolveLRemateGroupCouplingLeadId(
+              transformTargetId,
+              prev.remates ?? [],
+              normalizedPatch
+            );
+
             if (
               normalizedPatch.position != null ||
               normalizedPatch.rotation != null ||
               normalizedPatch.height != null ||
               normalizedPatch.width != null
             ) {
-              remates = applyLRemateGroupCoupling(remates, transformTargetId);
+              remates = applyLRemateGroupCoupling(remates, couplingLeadId);
             }
 
             const next = applyResultados({

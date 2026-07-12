@@ -68,6 +68,35 @@ export function resolveLRemateTransformLeadId(
   return resolveLRemateCompositeLeadId(remateId, remates);
 }
 
+/** Lead id para applyLRemateGroupCoupling após patch de dimensões/transform. */
+export function resolveLRemateGroupCouplingLeadId(
+  remateId: string,
+  remates: readonly RematePiece[],
+  patch?: Partial<
+    Pick<RematePiece, "position" | "rotation" | "width" | "height" | "placementMode">
+  >
+): string {
+  const piece = remates.find((p) => p.id === remateId);
+  if (!piece || !isLRematePiece(piece) || !piece.parentGroupId) return remateId;
+
+  if (
+    isLRemateInt(piece) &&
+    (patch?.width != null || patch?.height != null) &&
+    patch?.position == null &&
+    patch?.rotation == null
+  ) {
+    const ext = remates.find(
+      (p) =>
+        p.parentGroupId === piece.parentGroupId &&
+        isLRematePiece(p) &&
+        p.partIndex === 1
+    );
+    return ext?.id ?? remateId;
+  }
+
+  return resolveLRemateTransformLeadId(remateId, remates, patch);
+}
+
 export function isLRematePiece(piece: Pick<RematePiece, "productType" | "tipo">): boolean {
   return piece.productType === "L" || piece.tipo === "L";
 }
@@ -252,17 +281,21 @@ export function computeLRemateExtCornerFromInt(
   };
 }
 
+/** Slots L obsoletos que exigem migração para CIMA (não inclui dimensões customizadas). */
+export function isLegacyLRemateMountForMigration(
+  ext: Pick<RematePiece, "mountSlot">
+): boolean {
+  const slot = ext.mountSlot ?? "CIMA";
+  return isRemovedLRematePrimarySlot(slot) || slot === "FRENTE";
+}
+
 /** Normaliza peças L legadas (DIR/ESQ/FUNDO) para o modelo CIMA. */
 export function normalizeLRemateGroupToCima(
   ext: RematePiece,
   int: RematePiece,
   ctx: { boxLarguraMm: number; boxAlturaMm: number; thicknessMm: number }
 ): { ext: RematePiece; int: RematePiece } {
-  const legacy =
-    isRemovedLRematePrimarySlot(ext.mountSlot ?? "CIMA") ||
-    ext.mountSlot === "FRENTE" ||
-    ext.height !== REMATE_L_STRIP_WIDTH_MM;
-  if (!legacy) {
+  if (!isLegacyLRemateMountForMigration(ext)) {
     return { ext, int };
   }
   const dims = computeLRemateSheetDimensions({
@@ -275,16 +308,16 @@ export function normalizeLRemateGroupToCima(
     ext: {
       ...ext,
       mountSlot: REMATE_L_PRIMARY_SLOT,
-      width: dims.width,
-      height: dims.height,
-      depth: dims.depth,
+      ...(ext.userDimensionsLocked
+        ? {}
+        : { width: dims.width, height: dims.height, depth: dims.depth }),
     },
     int: {
       ...int,
       mountSlot: REMATE_L_SECONDARY_SLOT,
-      width: dims.width,
-      height: dims.height,
-      depth: dims.depth,
+      ...(int.userDimensionsLocked
+        ? {}
+        : { width: dims.width, height: dims.height, depth: dims.depth }),
     },
   };
 }

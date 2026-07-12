@@ -16,6 +16,7 @@ import {
 import {
   coerceLRemateMountSlot,
   isLRematePiece,
+  isLegacyLRemateMountForMigration,
   snapLRemateGroupCorners,
 } from "./remateLGeometry";
 
@@ -134,11 +135,14 @@ export function upgradeRematesAfterLoad(
     if (!ext || !int || !box) continue;
     const dims = boxDimsFromWorkspace(box);
     const bounds = getRemateEnvelopeBoundsM(dims.widthM, dims.heightM, dims.depthM, box);
-    const snapped = snapLRemateGroupCorners(ext, int, bounds, {
-      boxLarguraMm: box.dimensoes?.largura ?? 600,
-      boxAlturaMm: box.dimensoes?.altura ?? 720,
-      thicknessMm: Number(ext.depth) || Number(box.espessura) || 19,
-    });
+    const migrateCtx = isLegacyLRemateMountForMigration(ext)
+      ? {
+          boxLarguraMm: box.dimensoes?.largura ?? 600,
+          boxAlturaMm: box.dimensoes?.altura ?? 720,
+          thicknessMm: Number(ext.depth) || Number(box.espessura) || 19,
+        }
+      : undefined;
+    const snapped = snapLRemateGroupCorners(ext, int, bounds, migrateCtx);
     result = result.map((r) => {
       if (r.id === snapped.ext.id) return snapped.ext;
       if (r.id === snapped.int.id) return snapped.int;

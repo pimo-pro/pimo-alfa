@@ -14,6 +14,7 @@ import {
   normalizeLRemateTransformPatch,
   REMATE_L_CIMA_INT_ROTATION,
   resolveLRemateCompositeLeadId,
+  resolveLRemateGroupCouplingLeadId,
   REMATE_L_STRIP_WIDTH_MM,
   remateLIndustrialName,
   remateLIndustrialSuffix,
@@ -152,6 +153,78 @@ describe("remate L geometry — khaled-pro (CIMA only)", () => {
     expect(normalized.ext.mountSlot).toBe("CIMA");
     expect(normalized.int.mountSlot).toBe("DIR");
     expect(normalized.ext).toEqual(expect.objectContaining({ width: 600, height: 100, depth: 19 }));
+  });
+
+  it("normalizeLRemateGroupToCima não repõe medidas customizadas em CIMA", () => {
+    const ext: RematePiece = {
+      id: "ext-custom",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      parentGroupId: "g-custom",
+      mountSlot: "CIMA",
+      width: 800,
+      height: 150,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 281 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: true,
+      name: "ext",
+      userDimensionsLocked: true,
+    };
+    const int: RematePiece = {
+      ...ext,
+      id: "int-custom",
+      partIndex: 2,
+      mountSlot: "DIR",
+      width: 700,
+      height: 120,
+      name: "int",
+    };
+    const normalized = normalizeLRemateGroupToCima(ext, int, {
+      boxLarguraMm: 600,
+      boxAlturaMm: 720,
+      thicknessMm: 19,
+    });
+    expect(normalized.ext.width).toBe(800);
+    expect(normalized.ext.height).toBe(150);
+    expect(normalized.int.width).toBe(700);
+    expect(normalized.int.height).toBe(120);
+  });
+
+  it("snapLRemateGroupCorners sem ctx preserva medidas customizadas", () => {
+    const bounds = getRemateEnvelopeBoundsM(0.6, 0.72, 0.5, null);
+    const ext: RematePiece = {
+      id: "ext-snap",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      parentGroupId: "g-snap",
+      mountSlot: "CIMA",
+      width: 800,
+      height: 150,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 0, zMm: 0 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: true,
+      name: "ext",
+    };
+    const int: RematePiece = {
+      ...ext,
+      id: "int-snap",
+      partIndex: 2,
+      mountSlot: "DIR",
+      width: 700,
+      height: 120,
+      name: "int",
+    };
+    const snapped = snapLRemateGroupCorners(ext, int, bounds);
+    expect(snapped.ext.width).toBe(800);
+    expect(snapped.ext.height).toBe(150);
+    expect(snapped.int.width).toBe(700);
+    expect(snapped.int.height).toBe(120);
   });
 
   it("união geométrica cima: int encaixada em ext em Z pela espessura, mesma X/Y", () => {
@@ -382,6 +455,30 @@ describe("remate L geometry — khaled-pro (CIMA only)", () => {
     expect(int.position.xMm).toBe(movedExt.position.xMm);
     expect(int.position.yMm).toBe(movedExt.position.yMm);
     expect(int.position.zMm).toBe(movedExt.position.zMm - movedExt.depth);
+  });
+
+  it("resolveLRemateGroupCouplingLeadId: dim INT usa ext como lead", () => {
+    const ext: RematePiece = {
+      id: "ext-d",
+      tipo: "L",
+      productType: "L",
+      partIndex: 1,
+      parentGroupId: "g-dim",
+      width: 600,
+      height: 100,
+      depth: 19,
+      materialPresetId: "m",
+      position: { xMm: 0, yMm: 720, zMm: 281 },
+      rotation: { xRad: 0, yRad: 0, zRad: 0 },
+      followBox: true,
+      name: "ext",
+      mountSlot: "CIMA",
+    };
+    const int: RematePiece = { ...ext, id: "int-d", partIndex: 2, mountSlot: "DIR", name: "int" };
+    const remates = [ext, int];
+    expect(resolveLRemateGroupCouplingLeadId("int-d", remates, { width: 500 })).toBe("ext-d");
+    expect(resolveLRemateGroupCouplingLeadId("int-d", remates, { height: 80 })).toBe("ext-d");
+    expect(resolveLRemateGroupCouplingLeadId("ext-d", remates, { width: 700 })).toBe("ext-d");
   });
 
   it("suffix industrial L_ext / L_int", () => {
