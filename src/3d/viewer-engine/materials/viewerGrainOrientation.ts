@@ -11,6 +11,7 @@
 import * as THREE from "three";
 import { resolveIndustrialGrainCode, type IndustrialGrainInput } from "../../../core/materials/grainDirection";
 import { isMaterialMadeira, isViewerGrainFlipped } from "../../../core/materials/nestingGrainLock";
+import { resolveDrawerFrontFaceMaterialIndex } from "../../objects/DrawerFactory";
 
 /** Rotação do veio para peças YY (longitudinal). Ajustável após validação visual. */
 const YY_GRAIN_ROTATION_RAD = Math.PI / 2;
@@ -32,7 +33,8 @@ export function resolveMeshGrainCode(mesh: THREE.Mesh): "YY" | "XX" | undefined 
   const ud = mesh.userData as GrainMeshUserData;
   if (ud.doorLayerId) return "YY";
   if (ud.drawerPart === "front") return "YY";
-  if (mesh.name === "frente-fixa") return "YY";
+  // frente-fixa: veio/UV via preset (igual porta em repouso — sem +90° extra no viewer)
+  if (mesh.name === "frente-fixa") return undefined;
   if (ud.isRematePiece) {
     return resolveIndustrialGrainCode({
       tipo: "remate",
@@ -97,6 +99,49 @@ export function applyMeshGrainOrientation(
   };
 
   tryApply();
+}
+
+/** Roda veio YY num material concreto (retry até mapas async existirem). */
+export function applyMeshGrainOrientationToMaterial(
+  material: THREE.MeshStandardMaterial,
+  materialId: string | undefined,
+  onApplied?: () => void
+): void {
+  if (!isMaterialMadeira(materialId)) return;
+  let attempts = 0;
+  const tryApply = () => {
+    if (rotateMaterialTextures(material, YY_GRAIN_ROTATION_RAD)) {
+      onApplied?.();
+      return;
+    }
+    if (attempts++ < MAX_TEXTURE_WAIT_FRAMES) {
+      requestAnimationFrame(tryApply);
+    }
+  };
+  tryApply();
+}
+
+/** Grain + render apenas no faceMaterial da frente de gaveta (índice edge/face). */
+export function applyDrawerFrontFaceGrain(
+  mesh: THREE.Mesh,
+  materialId: string,
+  onApplied?: () => void
+): void {
+  if (!isMaterialMadeira(materialId)) {
+    onApplied?.();
+    return;
+  }
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const faceIndex =
+    Array.isArray(mesh.material) && mesh.material.length >= 2
+      ? resolveDrawerFrontFaceMaterialIndex(mesh)
+      : 0;
+  const faceMat = mats[faceIndex];
+  if (faceMat instanceof THREE.MeshStandardMaterial) {
+    applyMeshGrainOrientationToMaterial(faceMat, materialId, onApplied);
+  } else {
+    onApplied?.();
+  }
 }
 
 /**

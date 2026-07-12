@@ -326,6 +326,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
       const newDrawer = deps.createDrawerObject(spec, {
         front: frontMaterial as THREE.Material,
         body: bodyMaterial as THREE.Material,
+        frontMaterialId,
       });
       const newUserData = newDrawer.userData as Record<string, unknown>;
       newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;

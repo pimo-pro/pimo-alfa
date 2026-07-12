@@ -112,6 +112,31 @@ export function createMaterialForOfficialId(
 }
 
 /**
+ * Clone exclusivo para face de peça (gaveta / frente-fixa).
+ * Re-dispara applyMapsToMaterialAsync no clone — mapas async da instância loadMaterial
+ * não propagam via .clone() se feito antes do Promise resolver.
+ */
+export function createClonedMaterialWithDetailMaps(
+  materialId: string,
+  options?: { onMapsApplied?: () => void }
+): THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial | null {
+  const key = (materialId ?? "").trim() || getDefaultOfficialMaterial().canonicalId;
+  const result = loadMaterial(key, currentMode, {
+    useLacqueredClearcoat: lacqueredClearcoatPipeline,
+  });
+  if (!result?.material) return null;
+  const preset = getPreset(key) ?? getDefaultPreset();
+  const mat = result.material.clone();
+  if (preset.textureUrl || preset.normalMapUrl || preset.roughnessMapUrl) {
+    applyMapsToMaterialAsync(mat, preset, options?.onMapsApplied);
+  } else {
+    options?.onMapsApplied?.();
+  }
+  mat.needsUpdate = true;
+  return mat;
+}
+
+/**
  * Devolve o preset normalizado por materialId (resolve aliases via materials.api).
  */
 export function loadPreset(materialId: string): MaterialPresetDefinition | null {

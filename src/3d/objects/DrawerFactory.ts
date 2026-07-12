@@ -1,10 +1,12 @@
 import * as THREE from "three";
+import { createClonedMaterialWithDetailMaps } from "../viewer-engine/materials/MaterialEngine";
+import { applyDrawerFrontFaceGrain } from "../viewer-engine/materials/viewerGrainOrientation";
 import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { resolveDrawerExternalFrontHeightMm, resolveDrawerDisplayName, resolveDrawerInternalFrontHeightMm } from "../../core/drawers/drawerLayerCustomization";
 import { devLogger } from "../../utils/devLogger";
 import { PanelFactory } from "./PanelFactory";
-import { getEdgeMaterial, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
+import { getEdgeMaterial, getMaterialForOfficialId, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
 import {
   computeDrawerPieceCorredicaHoles,
   getDrawerSlideDrillingRules,
@@ -232,6 +234,8 @@ export function buildDrawerSpecs(
 export type DrawerObjectMaterials = {
   front: THREE.Material;
   body: THREE.Material;
+  /** Id canónico/viewer do material da face (para mapas PBR no clone). */
+  frontMaterialId?: string;
 };
 
 export type DrawerStructureMaterials = {
@@ -261,23 +265,86 @@ function normalizeDrawerObjectMaterials(
 export function resolveDrawerFrontFaceMaterialIndex(mesh: THREE.Mesh): number {
   const geometry = mesh.geometry as THREE.BufferGeometry;
   const groups = geometry.groups;
-  if (Array.isArray(mesh.material) && mesh.material.length >= 2 && groups && groups.length >= 6) {
-    const faceGroup = groups[4] ?? groups[5];
-    if (faceGroup != null && Number.isFinite(faceGroup.materialIndex)) {
-      return faceGroup.materialIndex;
+  // PanelFactory: [edgeMaterial=0, faceMaterial=1] com groups de 6 faces
+  if (Array.isArray(mesh.material) && mesh.material.length >= 2) {
+    if (groups && groups.length >= 6) {
+      const faceGroup = groups.find((g) => g.materialIndex === 1) ?? groups[4] ?? groups[5];
+      if (faceGroup != null && Number.isFinite(faceGroup.materialIndex)) {
+        return faceGroup.materialIndex;
+      }
+      return 1;
     }
+    // Sem groups: Three.js usa só material[0]
+    return 0;
   }
-  return Array.isArray(mesh.material) && mesh.material.length >= 2 ? 1 : 0;
+  return 0;
 }
 
-/** Aplica material à face visível da frente (grupo largo +Z/-Z quando há orlas/edge groups). */
-export function applyDrawerFrontMaterialToMesh(mesh: THREE.Mesh, frontMaterial: THREE.Material): void {
-  const mat = frontMaterial.clone();
-  mat.needsUpdate = true;
+/** Copia mapas já carregados do material partilhado (cache quente) para clone exclusivo. */
+function copyExclusiveMapsFromShared(
+  target: THREE.MeshStandardMaterial,
+  source: THREE.MeshStandardMaterial
+): boolean {
+  let copied = false;
+  const copyMap = (tex: THREE.Texture | null): THREE.Texture | null => {
+    if (!tex) return null;
+    const clone = tex.clone();
+    clone.needsUpdate = true;
+    return clone;
+  };
+  if (source.map && !target.map) {
+    target.map = copyMap(source.map);
+    copied = true;
+  }
+  if (source.normalMap && !target.normalMap) {
+    target.normalMap = copyMap(source.normalMap);
+    copied = true;
+  }
+  if (source.roughnessMap && !target.roughnessMap) {
+    target.roughnessMap = copyMap(source.roughnessMap);
+    copied = true;
+  }
+  if (copied) target.needsUpdate = true;
+  return copied;
+}
+
+/** Aplica material com mapas PBR à face visível da frente. */
+export function applyDrawerFrontMaterialToMesh(
+  mesh: THREE.Mesh,
+  materialId: string,
+  onMapsApplied?: () => void
+): void {
+  const geometry = mesh.geometry as THREE.BufferGeometry;
+  const hasEdgeFaceGroups = Boolean(geometry.groups?.length >= 6);
+  const faceIndex =
+    Array.isArray(mesh.material) && mesh.material.length >= 2
+      ? resolveDrawerFrontFaceMaterialIndex(mesh)
+      : 0;
+  const shared = getMaterialForOfficialId(materialId) as THREE.MeshStandardMaterial;
+
+  const finish = () => {
+    applyDrawerFrontFaceGrain(mesh, materialId, onMapsApplied);
+  };
+
+  const mat = createClonedMaterialWithDetailMaps(materialId, {
+    onMapsApplied: finish,
+  });
+  if (!mat) return;
+
+  // Cache quente: mapas imediatos (igual ao rebuild via getMaterialForOfficialId().clone())
+  if (copyExclusiveMapsFromShared(mat, shared)) {
+    finish();
+  }
+
   if (Array.isArray(mesh.material) && mesh.material.length >= 2) {
-    const faceIndex = resolveDrawerFrontFaceMaterialIndex(mesh);
     const next = mesh.material.slice() as THREE.Material[];
     next[faceIndex] = mat;
+    if (hasEdgeFaceGroups) {
+      next[0] = getEdgeMaterial();
+    } else {
+      // Sem groups — único slot visível
+      next[0] = mat;
+    }
     mesh.material = next;
     return;
   }
@@ -511,8 +578,11 @@ export function createDrawerObject(
   spec: DrawerSpec,
   materials: DrawerObjectMaterials | THREE.Material
 ): THREE.Object3D {
-  const { front: frontMaterial, body: bodyMaterial } = normalizeDrawerObjectMaterials(materials);
-  const frontFaceMaterial = frontMaterial.clone();
+  const { front: frontMaterial, body: bodyMaterial, frontMaterialId } =
+    normalizeDrawerObjectMaterials(materials);
+  const frontFaceMaterial =
+    (frontMaterialId ? createClonedMaterialWithDetailMaps(frontMaterialId) : null) ??
+    frontMaterial.clone();
   frontFaceMaterial.needsUpdate = true;
   const bodyPanelMaterial = bodyMaterial.clone();
   bodyPanelMaterial.needsUpdate = true;

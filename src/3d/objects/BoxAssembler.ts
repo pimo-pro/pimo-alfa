@@ -358,6 +358,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       const drawerGroup = deps.createDrawerObject(spec, {
         front: frontMaterial as THREE.Material,
         body: bodyMaterial as THREE.Material,
+        frontMaterialId,
       });
       drawerGroup.traverse((child) => {
         if (

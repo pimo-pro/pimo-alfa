@@ -41,7 +41,8 @@ export function clearMapsFromMaterial(mat: StandardOrPhysical): void {
  */
 export function applyMapsToMaterialAsync(
   mat: StandardOrPhysical,
-  preset: MaterialPresetDefinition
+  preset: MaterialPresetDefinition,
+  onMapsApplied?: () => void
 ): void {
   const repeat = preset.repeat ?? { x: 1, y: 1 };
   const rotationRad = ((preset.rotation ?? 0) * Math.PI) / 180;
@@ -78,7 +79,10 @@ export function applyMapsToMaterialAsync(
       preset.roughnessMapUrl ? loadTextureAsync(preset.roughnessMapUrl) : Promise.resolve(null),
     ]).then(([mapTex, normalTex, roughnessTex]) => {
       apply(mapTex ?? null, normalTex ?? null, roughnessTex ?? null);
+      onMapsApplied?.();
     });
+  } else {
+    onMapsApplied?.();
   }
 }
 

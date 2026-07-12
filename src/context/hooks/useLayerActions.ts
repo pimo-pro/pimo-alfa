@@ -235,11 +235,17 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               true
             );
             refreshViewerAfterMaterialSync(sync);
+            const box = next.workspaceBoxes.find((b) => b.id === boxId);
+            syncDrawerFrontMaterialToViewer(
+              boxId,
+              drawerLayerId,
+              material,
+              box?.drawersLayer
+            );
             return next;
           },
           true
         );
-        syncDrawerFrontMaterialToViewer(boxId, drawerLayerId, material);
       },
       setDoorAllowPieceRotation: (boxId, doorLayerId, allow) => {
         updateProject(
@@ -658,7 +664,8 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
               true
             );
             refreshViewerAfterMaterialSync(sync);
-            syncDrawerFrontMaterialToViewer(selected.id, id, materialId);
+            const box = next.workspaceBoxes.find((b) => b.id === selected.id);
+            syncDrawerFrontMaterialToViewer(selected.id, id, materialId, box?.drawersLayer);
             return {
               ...next,
               selectedWorkspaceBoxId: selected.id,

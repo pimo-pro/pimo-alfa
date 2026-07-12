@@ -1,5 +1,6 @@
 import type { ViewerMaterialSyncSurface } from "../3d/viewer-engine/integration/viewerIndustrialSurface";
 import { getViewerMaterialId } from "../core/materials/service";
+import type { DrawerLayerItem } from "../models/BoxLayers";
 
 /**
  * Boundary viewer ↔ mundo industrial / app.
@@ -42,13 +43,14 @@ export function refreshViewerAfterMaterialSync(result: MaterialSyncViewerRefresh
 }
 
 /**
- * Aplica material à frente da gaveta no viewer 3D (sem rebuild estrutural).
+ * Aplica material à frente da gaveta no viewer 3D (rebuild via updateBox quando há drawerLayerItems).
  * Usado por actions de material e como fallback em useCalculadoraSync.
  */
 export function syncDrawerFrontMaterialToViewer(
   boxId: string,
   drawerLayerId: string,
-  materialId: string
+  materialId: string,
+  drawerLayerItems?: DrawerLayerItem[]
 ): void {
   if (typeof window === "undefined") return;
   const viewerMaterialId = getViewerMaterialId(materialId);
@@ -56,11 +58,16 @@ export function syncDrawerFrontMaterialToViewer(
     const core = (
       window as Window & {
         viewerCore?: ViewerCoreIndustrialSurface & {
-          updateDrawerMaterial?: (b: string, d: string, m: string) => void;
+          updateDrawerMaterial?: (
+            b: string,
+            d: string,
+            m: string,
+            items?: DrawerLayerItem[]
+          ) => void;
         };
       }
     ).viewerCore;
-    core?.updateDrawerMaterial?.(boxId, drawerLayerId, viewerMaterialId);
+    core?.updateDrawerMaterial?.(boxId, drawerLayerId, viewerMaterialId, drawerLayerItems);
   };
   if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(run);

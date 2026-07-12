@@ -73,8 +73,10 @@ import type { ViewerBoxEntry } from "./types";
 import type { BoxPanelIds, TechnicalDrillHole } from "../../core/types";
 import { createDoorObject, getDoorSpecFromGroup } from "../objects/BoxBuilder";
 import { applyDrawerFrontMaterialToMesh } from "../objects/DrawerFactory";
+import { createClonedMaterialWithDetailMaps } from "./materials/MaterialEngine";
 import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
+import { getViewerMaterialId } from "../../core/materials/service";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 import {
   expandBox3ByObjectExcludingLayoutProxy,
@@ -411,6 +413,11 @@ export class ViewerCore {
     rodape: false,
   };
   private readonly pendingBoxStructureUpdates = new Map<string, Partial<BoxOptions>>();
+  /** Contexto transitório para sync de frentes independentes durante updateBox(materialName). */
+  private readonly pendingMaterialSyncContext = new Map<
+    string,
+    { drawerLayerItems?: DrawerLayerItem[]; frenteFixaMaterialId?: string }
+  >();
   /** Outline da parede selecionada (Room Box). */
   private wallSelectionOutline!: WallSelectionOutlineController;
   /** Highlight por mesh (hover + seleção): portas, gavetas, painéis, furos. Só ativo quando highlightEnabled. */
@@ -2457,6 +2464,7 @@ export class ViewerCore {
         if (child instanceof THREE.Mesh) {
           if (isKitchenFeetNode(child)) return;
           if (isDoorOrDrawerFrontNode(child)) return;
+          if (child.name === "frente-fixa") return;
           child.material = nextMaterial.material;
         }
       });
@@ -2474,6 +2482,9 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === id) {
       this.refreshOutlineTarget();
     }
+    const syncCtx = this.pendingMaterialSyncContext.get(id);
+    this.syncDrawerFrontMaterialsForBox(id, syncCtx?.drawerLayerItems, materialName);
+    this.syncFixedFrontMaterialForBox(id, materialName, syncCtx?.frenteFixaMaterialId);
   }
 
   /** Reaplica materiais a todas as caixas (ao trocar modo performance/showcase/realistic). */
@@ -2610,25 +2621,42 @@ export class ViewerCore {
 
   /**
    * Aplica um material à frente de uma gaveta (por boxId e drawerLayerId).
-   * Usado quando o utilizador altera o material da gaveta pelo menu de contexto.
+   * Com drawerLayerItems completos, delega em updateBox (rebuild = fluxo A).
    */
-  updateDrawerMaterial(boxId: string, drawerLayerId: string, materialName: string): void {
+  updateDrawerMaterial(
+    boxId: string,
+    drawerLayerId: string,
+    materialName: string,
+    drawerLayerItems?: DrawerLayerItem[]
+  ): void {
     const entry = this.boxes.get(boxId);
     if (!entry) return;
-    const nextMaterial = this.loadMaterial(materialName);
-    if (!nextMaterial) return;
-    const drawerMat = (nextMaterial.material as THREE.Material).clone();
-    drawerMat.needsUpdate = true;
+
+    if (drawerLayerItems?.length) {
+      this.updateBox(boxId, {
+        drawerLayerItems,
+        materialName: entry.materialName ?? this.defaultMaterialName,
+      });
+      if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
+      return;
+    }
+
     entry.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         const ud = (child as THREE.Mesh & { userData: { drawerLayerId?: string; drawerPart?: string; drawerFrontMaterialId?: string } }).userData;
         if (ud?.drawerLayerId === drawerLayerId && ud?.drawerPart === "front") {
-          applyDrawerFrontMaterialToMesh(child, drawerMat);
+          applyDrawerFrontMaterialToMesh(child, materialName, () => this.requestRender());
           ud.drawerFrontMaterialId = materialName;
-          applyMeshGrainOrientation(child, materialName, () => this.requestRender());
         }
       }
     });
+    this.applyPanelIdsToBox(
+      entry.mesh,
+      boxId,
+      undefined,
+      entry.materialName ?? this.defaultMaterialName
+    );
+    this.reapplyDisplayMaterials();
     this.requestRender();
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
@@ -2637,19 +2665,57 @@ export class ViewerCore {
   updateFixedFrontMaterial(boxId: string, materialName: string): void {
     const entry = this.boxes.get(boxId);
     if (!entry) return;
-    const nextMaterial = this.loadMaterial(materialName);
-    if (!nextMaterial) return;
     const ffPanel = entry.mesh.children.find(
       (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
     ) as THREE.Mesh | undefined;
     if (!ffPanel) return;
-    const mat = (nextMaterial.material as THREE.Material).clone();
-    mat.needsUpdate = true;
+    const mat = createClonedMaterialWithDetailMaps(materialName, {
+      onMapsApplied: () => this.requestRender(),
+    });
+    if (!mat) return;
     ffPanel.material = mat;
     (ffPanel.userData as Record<string, unknown>).frenteFixaMaterialId = materialName;
-    applyMeshGrainOrientation(ffPanel, materialName, () => this.requestRender());
     this.requestRender();
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
+  }
+
+  private findFixedFrontPanel(root: THREE.Object3D): THREE.Mesh | undefined {
+    return root.children.find(
+      (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
+    ) as THREE.Mesh | undefined;
+  }
+
+  private discoverDrawerLayerItemsFromMesh(
+    root: THREE.Object3D,
+    drawerLayerItems?: DrawerLayerItem[]
+  ): DrawerLayerItem[] {
+    if (drawerLayerItems?.length) return drawerLayerItems;
+    const items: DrawerLayerItem[] = [];
+    const seen = new Set<string>();
+    root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const ud = child.userData as { drawerLayerId?: string; drawerPart?: string };
+      if (ud.drawerPart !== "front" || !ud.drawerLayerId?.trim()) return;
+      const layerId = ud.drawerLayerId.trim();
+      if (seen.has(layerId)) return;
+      seen.add(layerId);
+      items.push({ id: layerId } as DrawerLayerItem);
+    });
+    return items;
+  }
+
+  /** Reaplica material independente à frente fixa (canto v2) após troca de material da caixa. */
+  private syncFixedFrontMaterialForBox(
+    boxId: string,
+    boxMaterialId: string,
+    explicitFrenteFixaMaterialId?: string
+  ): void {
+    const entry = this.boxes.get(boxId);
+    if (!entry || !this.findFixedFrontPanel(entry.mesh)) return;
+    const materialId = explicitFrenteFixaMaterialId?.trim()
+      ? getViewerMaterialId(explicitFrenteFixaMaterialId)
+      : boxMaterialId;
+    this.updateFixedFrontMaterial(boxId, materialId);
   }
 
   /** Garante material independente nas frentes após rebuild incremental da caixa. */
@@ -2658,24 +2724,20 @@ export class ViewerCore {
     drawerLayerItems: DrawerLayerItem[] | undefined,
     boxMaterialId: string
   ): void {
-    if (!drawerLayerItems?.length) return;
     const entry = this.boxes.get(boxId);
     if (!entry) return;
-    for (const drawerItem of drawerLayerItems) {
+    const items = this.discoverDrawerLayerItemsFromMesh(entry.mesh, drawerLayerItems);
+    if (!items.length) return;
+    for (const drawerItem of items) {
       const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, boxMaterialId);
-      const loaded = this.loadMaterial(frontMaterialId);
-      if (!loaded) continue;
-      const drawerMat = (loaded.material as THREE.Material).clone();
-      drawerMat.needsUpdate = true;
       entry.mesh.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return;
         const ud = (child as THREE.Mesh & {
           userData: { drawerLayerId?: string; drawerPart?: string; drawerFrontMaterialId?: string };
         }).userData;
         if (ud?.drawerLayerId !== drawerItem.id || ud?.drawerPart !== "front") return;
-        applyDrawerFrontMaterialToMesh(child, drawerMat);
+        applyDrawerFrontMaterialToMesh(child, frontMaterialId, () => this.requestRender());
         ud.drawerFrontMaterialId = frontMaterialId;
-        applyMeshGrainOrientation(child, frontMaterialId, () => this.requestRender());
       });
     }
     this.requestRender();
@@ -3408,52 +3470,62 @@ export class ViewerCore {
           : undefined,
       });
     }
-    return this.boxSceneController.applyPostUpdateFlow({
-      id,
-      entry,
-      opts,
-      plan: structurePlan,
-      defaultMaterialName: this.defaultMaterialName,
-      updateBoxMaterial: (boxId, materialName) => this.updateBoxMaterial(boxId, materialName),
-      syncDrawerFrontMaterialsForBox: (boxId, drawerLayerItems, materialName) =>
-        this.syncDrawerFrontMaterialsForBox(boxId, drawerLayerItems, materialName),
-      reapplyDisplayMaterials: () => this.reapplyDisplayMaterials(),
-      shouldUseFeetLock: (boxEntry) => this.shouldUseFeetLock(boxEntry),
-      getFixedYForCabinet: (boxEntry) => this.getFixedYForCabinet(boxEntry),
-      applyRotationIfNeeded: (mesh, rotation) => this.applyRotationIfNeeded(mesh, rotation),
-      applyPanelIdsToBox: (root, boxId, panelIds, materialPresetId) =>
-        this.applyPanelIdsToBox(root, boxId, panelIds, materialPresetId),
-      applyExplodedViewForObject: (root) => this.applyExplodedViewForObject(root),
-      syncFeetVisualForBox: (boxEntry) => this.syncFeetVisualForBox(boxEntry),
-      applyPanelVisibilityForObject: (root) => this.applyPanelVisibilityForObject(root),
-      syncOrlaForBox: (boxId) => this.syncOrlaForBox(boxId),
-      syncRemateForBox: (boxId) => this.syncRemateForBox(boxId),
-      getLockEnabled: () => this.lockEnabled,
-      applyFloorConstraint: (mesh) => this.applyFloorConstraint(mesh),
-      applyCatalogModelScale: (boxEntry, model) => this.applyCatalogModelScale(boxEntry, model),
-      reflowBoxes: () => this.reflowBoxes(),
-      updateCameraTarget: () => this.updateCameraTarget(),
-      updateCameraTargetToBox: (boxId, cameraOptions) =>
-        this.updateCameraTargetToBox(boxId, cameraOptions),
-      refreshViewerAttachmentsAfterMeshMutation: () => this.refreshViewerAttachmentsAfterMeshMutation(),
-      updateModelsVerticalPosition: (boxEntry) => this.updateModelsVerticalPosition(boxEntry),
-      hasRoomBounds: () => this.roomBounds != null,
-      isMeshInsideOrTouchingRoom: (mesh) => this.isMeshInsideOrTouchingRoom(mesh),
-      applyRoomConstraint: (mesh, roomOptions) => this.applyRoomConstraint(mesh, roomOptions),
-      isSelectedBox: (boxId) => boxId === this.viewerState.getSelectedBox(),
-      notifySelectedBoxChange: (boxId) => {
-        this.selectedBoxChangeListeners.forEach((cb) => {
-          try {
-            cb(boxId);
-          } catch {
-            /* ignore */
-          }
-        });
-      },
-      syncEdgeOutlines: () =>
-        this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
-      requestRender: () => this.requestRender(),
-    });
+    if (opts.materialName) {
+      this.pendingMaterialSyncContext.set(id, {
+        drawerLayerItems: opts.drawerLayerItems,
+        frenteFixaMaterialId: opts.frenteFixaMaterialId,
+      });
+    }
+    try {
+      return this.boxSceneController.applyPostUpdateFlow({
+        id,
+        entry,
+        opts,
+        plan: structurePlan,
+        defaultMaterialName: this.defaultMaterialName,
+        updateBoxMaterial: (boxId, materialName) => this.updateBoxMaterial(boxId, materialName),
+        syncDrawerFrontMaterialsForBox: (boxId, drawerLayerItems, materialName) =>
+          this.syncDrawerFrontMaterialsForBox(boxId, drawerLayerItems, materialName),
+        reapplyDisplayMaterials: () => this.reapplyDisplayMaterials(),
+        shouldUseFeetLock: (boxEntry) => this.shouldUseFeetLock(boxEntry),
+        getFixedYForCabinet: (boxEntry) => this.getFixedYForCabinet(boxEntry),
+        applyRotationIfNeeded: (mesh, rotation) => this.applyRotationIfNeeded(mesh, rotation),
+        applyPanelIdsToBox: (root, boxId, panelIds, materialPresetId) =>
+          this.applyPanelIdsToBox(root, boxId, panelIds, materialPresetId),
+        applyExplodedViewForObject: (root) => this.applyExplodedViewForObject(root),
+        syncFeetVisualForBox: (boxEntry) => this.syncFeetVisualForBox(boxEntry),
+        applyPanelVisibilityForObject: (root) => this.applyPanelVisibilityForObject(root),
+        syncOrlaForBox: (boxId) => this.syncOrlaForBox(boxId),
+        syncRemateForBox: (boxId) => this.syncRemateForBox(boxId),
+        getLockEnabled: () => this.lockEnabled,
+        applyFloorConstraint: (mesh) => this.applyFloorConstraint(mesh),
+        applyCatalogModelScale: (boxEntry, model) => this.applyCatalogModelScale(boxEntry, model),
+        reflowBoxes: () => this.reflowBoxes(),
+        updateCameraTarget: () => this.updateCameraTarget(),
+        updateCameraTargetToBox: (boxId, cameraOptions) =>
+          this.updateCameraTargetToBox(boxId, cameraOptions),
+        refreshViewerAttachmentsAfterMeshMutation: () => this.refreshViewerAttachmentsAfterMeshMutation(),
+        updateModelsVerticalPosition: (boxEntry) => this.updateModelsVerticalPosition(boxEntry),
+        hasRoomBounds: () => this.roomBounds != null,
+        isMeshInsideOrTouchingRoom: (mesh) => this.isMeshInsideOrTouchingRoom(mesh),
+        applyRoomConstraint: (mesh, roomOptions) => this.applyRoomConstraint(mesh, roomOptions),
+        isSelectedBox: (boxId) => boxId === this.viewerState.getSelectedBox(),
+        notifySelectedBoxChange: (boxId) => {
+          this.selectedBoxChangeListeners.forEach((cb) => {
+            try {
+              cb(boxId);
+            } catch {
+              /* ignore */
+            }
+          });
+        },
+        syncEdgeOutlines: () =>
+          this.edgeOutlineSystem?.syncRoot(this.sceneManager.root, this.getEdgeOutlineBoxesMap()),
+        requestRender: () => this.requestRender(),
+      });
+    } finally {
+      this.pendingMaterialSyncContext.delete(id);
+    }
   }
 
   /** Agenda um frame de render no próximo requestAnimationFrame. Usado após rebuild de mesh para atualizar a tela imediatamente. */

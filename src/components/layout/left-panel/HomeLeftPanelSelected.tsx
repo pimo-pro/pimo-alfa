@@ -312,15 +312,18 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                   embedded
                   boxId={selectedBox.id}
                   onViewerMaterialChange={(boxId, materialName) => {
-                    viewerApi?.updateBox(boxId, { materialName });
+                    viewerApi?.updateBox(boxId, {
+                      materialName,
+                      drawerLayerItems: selectedBox.drawersLayer ?? [],
+                      frenteFixaMaterialId: selectedBox.frenteFixaMaterialId,
+                    });
                     showToast("Material aplicado à caixa.", "info");
                   }}
                   onDoorMaterialChange={(boxId, doorLayerId, materialName) => {
                     viewerApi?.updateDoorMaterial?.(boxId, doorLayerId, materialName);
                     showToast("Material aplicado à porta.", "info");
                   }}
-                  onDrawerMaterialChange={(boxId, drawerLayerId, materialName) => {
-                    viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName);
+                  onDrawerMaterialChange={() => {
                     showToast("Material aplicado à gaveta.", "info");
                   }}
                   onFixedFrontMaterialChange={(boxId, materialName) => {
