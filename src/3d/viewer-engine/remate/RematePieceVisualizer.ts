@@ -2,6 +2,8 @@ import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
 import { applyMaterialToMesh } from "../materials/MaterialEngine";
 import { applyRemateGrainOnSnap } from "../materials/viewerGrainOrientation";
+import { isNestingRotationLocked } from "../../../core/materials/nestingGrainLock";
+import { resolveIndustrialGrainCode } from "../../../core/materials/grainDirection";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
@@ -153,7 +155,9 @@ export class RematePieceVisualizer {
     mesh.visible = true;
     mesh.renderOrder = REMATE_RENDER_ORDER;
     mesh.userData.remateOutlineRenderOrder = REMATE_OUTLINE_RENDER_ORDER;
-    applyRemateGrainOnSnap(mesh, piece.materialPresetId, piece.faceOffsets?.rotationSnapIndex ?? 0);
+    applyRemateGrainOnSnap(mesh, piece.materialPresetId, piece.faceOffsets?.rotationSnapIndex ?? 0, {
+      grainLocked: this.isRemateGrainLocked(piece),
+    });
   }
 
   private upsertMesh(piece: RematePiece, hidden: boolean): void {
@@ -177,7 +181,9 @@ export class RematePieceVisualizer {
     mesh.userData.remateParentGroupId = piece.parentGroupId ?? null;
     mesh.userData.remateDepthMm = piece.depth;
     this.applyWorldTransform(mesh, piece);
-    applyRemateGrainOnSnap(mesh, piece.materialPresetId, piece.faceOffsets?.rotationSnapIndex ?? 0);
+    applyRemateGrainOnSnap(mesh, piece.materialPresetId, piece.faceOffsets?.rotationSnapIndex ?? 0, {
+      grainLocked: this.isRemateGrainLocked(piece),
+    });
   }
 
   private removeStaleMeshes(map: Map<string, THREE.Mesh>, expectedIds: Set<string>): void {
@@ -299,6 +305,21 @@ export class RematePieceVisualizer {
 
   private applyMaterialPreset(mesh: THREE.Mesh, piece: RematePiece): void {
     applyMaterialToMesh(mesh, piece.materialPresetId);
+  }
+
+  /** Veio bloqueado (mesma lógica das portas/frentes): madeira/lock vs "Rodar peça". */
+  private isRemateGrainLocked(piece: RematePiece): boolean {
+    return isNestingRotationLocked({
+      materialId: piece.materialPresetId,
+      industrialGrainCode: resolveIndustrialGrainCode({
+        tipo: "remate",
+        remateProductType: piece.productType,
+        remateTipo: piece.tipo,
+        remateMountSlot: piece.mountSlot,
+      }),
+      allowPieceRotation: piece.allowPieceRotation,
+      lockWoodGrain: piece.lockWoodGrain,
+    });
   }
 
   private applyMaterial(mesh: THREE.Mesh, piece: RematePiece): void {

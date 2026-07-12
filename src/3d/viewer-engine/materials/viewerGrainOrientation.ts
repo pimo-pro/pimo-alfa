@@ -111,9 +111,10 @@ export function applyRemateGrainOnSnap(
   mesh: THREE.Mesh,
   materialId: string | undefined,
   rotationSnapIndex: number | undefined,
-  onApplied?: () => void
+  options?: { grainLocked?: boolean; onApplied?: () => void }
 ): void {
   if (!isMaterialMadeira(materialId)) return;
+  if (options?.grainLocked === false) return; // "Rodar peça" ON → veio livre, sem compensação
   if (!isViewerGrainFlipped(rotationSnapIndex)) return;
 
   const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -127,7 +128,7 @@ export function applyRemateGrainOnSnap(
       }
     }
     if (done) {
-      onApplied?.();
+      options?.onApplied?.();
       return;
     }
     if (attempts++ < MAX_TEXTURE_WAIT_FRAMES) {
