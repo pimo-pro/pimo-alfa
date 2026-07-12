@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
 import { applyMaterialToMesh } from "../materials/MaterialEngine";
-import { applyMeshGrainOrientation } from "../materials/viewerGrainOrientation";
+import { applyRemateGrainOnSnap } from "../materials/viewerGrainOrientation";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
@@ -153,6 +153,7 @@ export class RematePieceVisualizer {
     mesh.visible = true;
     mesh.renderOrder = REMATE_RENDER_ORDER;
     mesh.userData.remateOutlineRenderOrder = REMATE_OUTLINE_RENDER_ORDER;
+    applyRemateGrainOnSnap(mesh, piece.materialPresetId, piece.faceOffsets?.rotationSnapIndex ?? 0);
   }
 
   private upsertMesh(piece: RematePiece, hidden: boolean): void {
@@ -176,6 +177,7 @@ export class RematePieceVisualizer {
     mesh.userData.remateParentGroupId = piece.parentGroupId ?? null;
     mesh.userData.remateDepthMm = piece.depth;
     this.applyWorldTransform(mesh, piece);
+    applyRemateGrainOnSnap(mesh, piece.materialPresetId, piece.faceOffsets?.rotationSnapIndex ?? 0);
   }
 
   private removeStaleMeshes(map: Map<string, THREE.Mesh>, expectedIds: Set<string>): void {
@@ -297,7 +299,6 @@ export class RematePieceVisualizer {
 
   private applyMaterialPreset(mesh: THREE.Mesh, piece: RematePiece): void {
     applyMaterialToMesh(mesh, piece.materialPresetId);
-    applyMeshGrainOrientation(mesh, piece.materialPresetId);
   }
 
   private applyMaterial(mesh: THREE.Mesh, piece: RematePiece): void {
