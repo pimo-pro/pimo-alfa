@@ -4,18 +4,15 @@
  * LEGACY / caminho paralelo: orientado a MaterialRecord + presets de domínio (CRUD / caixas).
  * Para materiais de caixas no viewer 3D, a fonte preferida é {@link loadMaterial} em
  * `viewer-engine/materials/MaterialEngine` + `updateBoxMaterial` no ViewerCore.
- * Este módulo mantém-se para integração dados→VisualMaterial e aplicação pontual em meshes
- * (`applyVisualMaterialToMesh`), sem remover a API até uma fase futura de consolidação.
+ * Este módulo mantém-se para integração dados→VisualMaterial (cutlist / layout):
+ * {@link getVisualMaterialForBox}, {@link buildVisualMaterial}, {@link getFallbackMaterial}.
  */
 
-import * as THREE from "three";
 import type { MaterialRecord } from "./types";
 import type { MaterialPreset } from "./presets";
 import { getMaterialForBox, getMaterialByIdOrLabel } from "./service";
 import { getPresetById, getDefaultPreset } from "./presetService";
 import type { BoxModule } from "../types";
-import { loadTextureAsync } from "../../3d/viewer-engine/materials/textureCache";
-import { isMaterialMadeira, isViewerGrainFlipped, resolveViewerGrainUvScale } from "./nestingGrainLock";
 
 /** Objeto visual final para renderização (cor, textura, UV, PBR). */
 export interface VisualMaterial {
@@ -72,115 +69,9 @@ export function getVisualMaterialForBox(
 }
 
 /**
- * Cria um THREE.MeshStandardMaterial a partir de VisualMaterial (cor, roughness, metallic).
- * Texturas (map) não são carregadas aqui — usam o mesmo `textureCache` do MaterialEngine em
- * {@link applyVisualMaterialToMesh} (`loadTextureAsync`), evitando duplicar texturas em memória.
- */
-export function getThreeJsMaterial(visualMaterial: VisualMaterial): THREE.MeshStandardMaterial {
-  const color = new THREE.Color(visualMaterial.color ?? "#f5f5f5");
-  const roughness = Math.max(0, Math.min(1, visualMaterial.roughness ?? DEFAULT_ROUGHNESS));
-  const metalness = Math.max(0, Math.min(1, visualMaterial.metallic ?? DEFAULT_METALLIC));
-  return new THREE.MeshStandardMaterial({
-    color,
-    roughness,
-    metalness,
-    emissive: new THREE.Color(0x000000),
-  });
-}
-
-/**
  * Fallback seguro quando não há record nem preset.
  */
 export function getFallbackMaterial(): VisualMaterial {
   const preset = getDefaultPreset();
   return buildVisualMaterial(null, preset);
-}
-
-/** Peça com campos opcionais de material/UV (Layout Engine). */
-export interface PieceWithMaterialFields {
-  visualMaterial?: VisualMaterial;
-  grainDirection?: "horizontal" | "vertical" | "none";
-  uvScaleOverride?: { x: number; y: number };
-  uvRotationOverride?: number;
-  materialId?: string;
-  /** Índice de rotação 0–3 (remates virados no viewer). */
-  rotationSnapIndex?: number;
-}
-
-/**
- * Calcula a escala UV efetiva para uma peça: overrides têm prioridade; senão, regra por grainDirection.
- * horizontal → uvScale.x > uvScale.y (ex.: 2, 1); vertical → uvScale.y > uvScale.x (ex.: 1, 2); none → preset.
- */
-export function getEffectiveUvScaleForPiece(piece: PieceWithMaterialFields): { x: number; y: number } {
-  if (piece.uvScaleOverride && Number.isFinite(piece.uvScaleOverride.x) && Number.isFinite(piece.uvScaleOverride.y)) {
-    return piece.uvScaleOverride;
-  }
-  const base = piece.visualMaterial?.uvScale ?? DEFAULT_UV_SCALE;
-  const madeira = isMaterialMadeira(piece.materialId);
-  const grainFlipped = isViewerGrainFlipped(piece.rotationSnapIndex);
-  return resolveViewerGrainUvScale(base, {
-    materialMadeira: madeira,
-    grainFlipped,
-    grainDirection: piece.grainDirection,
-  });
-}
-
-/**
- * Calcula a rotação UV efetiva para uma peça: override ou valor do preset.
- */
-export function getEffectiveUvRotationForPiece(piece: PieceWithMaterialFields): number {
-  if (piece.uvRotationOverride !== undefined && Number.isFinite(piece.uvRotationOverride)) {
-    return piece.uvRotationOverride;
-  }
-  return piece.visualMaterial?.uvRotation ?? 0;
-}
-
-/**
- * LEGACY: aplicação pontual por `VisualMaterial` (domínio CRUD / layout).
- * Não substitui `ViewerCore.updateBoxMaterial` nem `MaterialEngine.loadMaterial` — são o fluxo
- * principal de materiais das caixas no viewer.
- * Se o mesh tiver material array (edge/face), aplica ao primeiro MeshStandardMaterial encontrado.
- */
-export function applyVisualMaterialToMesh(
-  mesh: THREE.Mesh,
-  visualMaterial: VisualMaterial
-): void {
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  const uvScale = visualMaterial.uvScale ?? DEFAULT_UV_SCALE;
-  const uvRotationDeg = visualMaterial.uvRotation ?? 0;
-
-  for (let i = 0; i < materials.length; i++) {
-    const current = materials[i];
-    let mat: THREE.MeshStandardMaterial;
-
-    if (current instanceof THREE.MeshStandardMaterial) {
-      mat = current;
-    } else {
-      mat = getThreeJsMaterial(visualMaterial);
-      if (Array.isArray(mesh.material)) {
-        const arr = [...(mesh.material as THREE.Material[])];
-        arr[i] = mat;
-        mesh.material = arr;
-      } else {
-        mesh.material = mat;
-      }
-    }
-
-    mat.color.set(visualMaterial.color ?? "#f5f5f5");
-    mat.roughness = Math.max(0, Math.min(1, visualMaterial.roughness ?? DEFAULT_ROUGHNESS));
-    mat.metalness = Math.max(0, Math.min(1, visualMaterial.metallic ?? DEFAULT_METALLIC));
-    mat.needsUpdate = true;
-
-    if (visualMaterial.textureUrl && visualMaterial.textureUrl.trim()) {
-      void loadTextureAsync(visualMaterial.textureUrl.trim()).then((texture) => {
-        if (!texture) return;
-        mat.map = texture;
-        texture.repeat.set(uvScale.x, uvScale.y);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.rotation = (uvRotationDeg * Math.PI) / 180;
-        mat.needsUpdate = true;
-      });
-    }
-  }
 }

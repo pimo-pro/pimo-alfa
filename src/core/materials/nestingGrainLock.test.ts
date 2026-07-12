@@ -35,12 +35,23 @@ describe("isNestingRotationLocked", () => {
     ).toBe(true);
   });
 
-  it("allowPieceRotation true NÃO libera rotação em material de madeira", () => {
+  it("allowPieceRotation true LIBERA rotação em material de madeira (autorização explícita)", () => {
     expect(
       isNestingRotationLocked({
         industrialGrainCode: "XX",
         materialId: "carvalho",
         allowPieceRotation: true,
+      })
+    ).toBe(false);
+  });
+
+  it("lockWoodGrain true prevalece sobre allowPieceRotation true", () => {
+    expect(
+      isNestingRotationLocked({
+        industrialGrainCode: "XX",
+        materialId: "carvalho",
+        allowPieceRotation: true,
+        lockWoodGrain: true,
       })
     ).toBe(true);
   });

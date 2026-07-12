@@ -61,6 +61,7 @@ import {
   isDoorOrDrawerFrontNode,
   isKitchenFeetNode,
 } from "./materials/boxMaterialHelpers";
+import { applyMeshGrainOrientation } from "./materials/viewerGrainOrientation";
 import {
   createRoomFloorOutline,
   createRoomFloorOverlayMaterial,
@@ -106,10 +107,6 @@ import type {
   ViewerRenderResult,
 } from "../../context/projectTypes";
 import { loadGLB } from "../../core/glb/glbLoader";
-import {
-  applyVisualMaterialToMesh as applyVisualMaterialToMeshV2,
-  type VisualMaterial,
-} from "../../core/materials/materialLibraryV2";
 import { snapHorizontalOffset } from "../../utils/openingConstraints";
 import type { ProjectRoomUtility, RoomFloorMode } from "./room/roomEngineTypes";
 import { devLogger } from "../../utils/devLogger";
@@ -2580,6 +2577,11 @@ export class ViewerCore {
       filterTechnicalDrillHolesForViewerMesh(doorHoles)
     );
     boxGroup.add(newDoor);
+    newDoor.traverse((n) => {
+      if (n instanceof THREE.Mesh) {
+        applyMeshGrainOrientation(n, materialName, () => this.requestRender());
+      }
+    });
     this.applyViewerDrillHoleSceneRules(newDoor);
     if (import.meta.env.DEV) {
       devLogger.debug("[DOOR-MAT] Material aplicado independentemente:", {
@@ -2623,6 +2625,7 @@ export class ViewerCore {
         if (ud?.drawerLayerId === drawerLayerId && ud?.drawerPart === "front") {
           applyDrawerFrontMaterialToMesh(child, drawerMat);
           ud.drawerFrontMaterialId = materialName;
+          applyMeshGrainOrientation(child, materialName, () => this.requestRender());
         }
       }
     });
@@ -2644,6 +2647,7 @@ export class ViewerCore {
     mat.needsUpdate = true;
     ffPanel.material = mat;
     (ffPanel.userData as Record<string, unknown>).frenteFixaMaterialId = materialName;
+    applyMeshGrainOrientation(ffPanel, materialName, () => this.requestRender());
     this.requestRender();
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
@@ -2671,6 +2675,7 @@ export class ViewerCore {
         if (ud?.drawerLayerId !== drawerItem.id || ud?.drawerPart !== "front") return;
         applyDrawerFrontMaterialToMesh(child, drawerMat);
         ud.drawerFrontMaterialId = frontMaterialId;
+        applyMeshGrainOrientation(child, frontMaterialId, () => this.requestRender());
       });
     }
     this.requestRender();
@@ -2686,15 +2691,6 @@ export class ViewerCore {
 
   getMaterialMode(): MaterialMode {
     return this.materialPipeline.getMaterialMode();
-  }
-
-  /**
-   * Ponte opcional para {@link applyVisualMaterialToMesh} em materialLibrary v2 (LEGACY / dados CRUD).
-   * O fluxo principal de materiais das caixas no 3D é `updateBoxMaterial` → MaterialEngine.loadMaterial
-   * (presets viewer + modo performance/showcase/realistic). Não misturar os dois no mesmo mesh sem necessidade.
-   */
-  applyVisualMaterialToMesh(mesh: THREE.Mesh, visualMaterial: VisualMaterial): void {
-    applyVisualMaterialToMeshV2(mesh, visualMaterial);
   }
 
   updateBoxDimensions(

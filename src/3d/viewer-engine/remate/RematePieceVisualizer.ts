@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { RematePiece } from "../../../core/remate/rematePieceTypes";
 import { applyMaterialToMesh } from "../materials/MaterialEngine";
+import { applyMeshGrainOrientation } from "../materials/viewerGrainOrientation";
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
@@ -296,6 +297,7 @@ export class RematePieceVisualizer {
 
   private applyMaterialPreset(mesh: THREE.Mesh, piece: RematePiece): void {
     applyMaterialToMesh(mesh, piece.materialPresetId);
+    applyMeshGrainOrientation(mesh, piece.materialPresetId);
   }
 
   private applyMaterial(mesh: THREE.Mesh, piece: RematePiece): void {

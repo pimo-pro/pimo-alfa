@@ -207,19 +207,6 @@ export function applyMaterialToMesh(
 }
 
 /**
- * Reaplica materiais a todos os meshes da cena que tenham userData.boxId (caixas).
- * Útil ao trocar de modo; percorre root e atualiza apenas meshes de caixas (precisa do mapa boxId → materialId).
- * Esta versão não altera nada; a reaplicação real será feita pelo ViewerCore que tem o mapa id → materialName.
- */
-export function reapplyAllMaterials(
-  _scene: THREE.Scene,
-  _mode: MaterialMode
-): void {
-  currentMode = _mode;
-  // ViewerCore deve chamar updateBoxMaterial para cada caixa quando o modo mudar.
-}
-
-/**
  * Configuração unificada de materiais de cena (paredes, chão, room box, ground).
  */
 export function getSceneMaterialConfig() {
