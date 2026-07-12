@@ -1,7 +1,7 @@
 import type { Group } from "three";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
 import type { DrawerHeightMode } from "./drawers/drawerHeightModeTypes";
-export type { DivisorItem, SeparadorItem, DivisorReferenceEdge, SeparadorReferenceEdge } from "./divSep/types";
+export type { DivisorItem, SeparadorItem, DivisorReferenceEdge, SeparadorReferenceEdge, DivisorPrateleiraLado } from "./divSep/types";
 
 export type OperationResult<T> = {
   success: boolean;
@@ -85,6 +85,8 @@ export interface ViewerDrillMarkersByPanel extends Record<DrillPanelKey, Technic
   frente_fixa?: TechnicalDrillHole[];
   /** Furos por separador horizontal (chave = panelId / item id do SEP). */
   separadoresById?: Record<string, TechnicalDrillHole[]>;
+  /** Furos por divisório vertical (chave = panelId / item id do DIV). */
+  divisoresById?: Record<string, TechnicalDrillHole[]>;
 }
 
 export interface DrillHole {

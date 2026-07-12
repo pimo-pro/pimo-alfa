@@ -133,6 +133,11 @@ export function useDivSepActions(ctx: ProjectActionsExecutionContext): DivSepAct
                 ? {
                     ...box,
                     separadores,
+                    divisores: (box.divisores ?? []).map((div) =>
+                      div.linkedSeparadorId === id
+                        ? { ...div, linkedSeparadorId: undefined }
+                        : div
+                    ),
                     panelIds: ensureBoxPanelIds(box.panelIds, {
                       prateleiras: box.prateleiras,
                       portaTipo: box.portaTipo,

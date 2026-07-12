@@ -14,6 +14,13 @@ import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { resolveDivisorDimensions, resolveSeparadorDimensions } from "../divSep/dimensions";
+import { buildDivSepDrilling } from "../divSep/drilling";
+import { countDivSepFerragens } from "../divSep/ferragens";
+import {
+  boxUsesDivShelfMode,
+  resolveShelfWidthForDivSide,
+  resolveVerticalCompartments,
+} from "../divSep/shelfDrilling";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 import { isCornerFixedFrontModel, gerarPaineisCorner, computeCornerLayoutForBox, resolveCornerDoorGapSettings } from "../cornerCabinet";
 import { gerarPaineisCaixaForno, isCaixaFornoBox, computeCaixaFornoLayout } from "../moveis/generators/caixaFornoGenerator";
@@ -360,23 +367,50 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 
   // 3.4 Prateleiras: largura com folgas; profundidade = profundidade útil interna − 5 mm (folga frontal).
   if (box.prateleiras > 0) {
-    const larguraPrateleira = clampPositive(largura - espessura * 2 - 2);
     const profundidadePrateleira = clampPositive(profundidadeInterna - 5);
     const nPrateleiras = Math.max(0, Math.floor(box.prateleiras));
-    for (let i = 0; i < nPrateleiras; i++) {
-      const prateleiraId = getArrayPanelId(box, "prateleiras", i);
-      assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
-      paineis.push({
-        id: prateleiraId,
-        tipo: "prateleira",
-        largura_mm: larguraPrateleira,
-        altura_mm: profundidadePrateleira,
-        espessura_mm: espessura,
-        material,
-        orientacaoFibra: "none",
-        quantidade: 1,
-        custo: 0,
-      });
+    if (boxUsesDivShelfMode(box)) {
+      const compartments = resolveVerticalCompartments(box);
+      const divisores = box.divisores ?? [];
+      let shelfIndex = 0;
+      for (const div of divisores) {
+        const larguraPrateleira = clampPositive(resolveShelfWidthForDivSide(box, div));
+        for (let z = 0; z < compartments.length; z++) {
+          for (let i = 0; i < nPrateleiras; i++) {
+            const prateleiraId = getArrayPanelId(box, "prateleiras", shelfIndex);
+            assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
+            paineis.push({
+              id: prateleiraId,
+              tipo: "prateleira",
+              largura_mm: larguraPrateleira,
+              altura_mm: profundidadePrateleira,
+              espessura_mm: espessura,
+              material,
+              orientacaoFibra: "none",
+              quantidade: 1,
+              custo: 0,
+            });
+            shelfIndex += 1;
+          }
+        }
+      }
+    } else {
+      const larguraPrateleira = clampPositive(largura - espessura * 2 - 2);
+      for (let i = 0; i < nPrateleiras; i++) {
+        const prateleiraId = getArrayPanelId(box, "prateleiras", i);
+        assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
+        paineis.push({
+          id: prateleiraId,
+          tipo: "prateleira",
+          largura_mm: larguraPrateleira,
+          altura_mm: profundidadePrateleira,
+          espessura_mm: espessura,
+          material,
+          orientacaoFibra: "none",
+          quantidade: 1,
+          custo: 0,
+        });
+      }
     }
   }
 
@@ -508,6 +542,8 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
     dobradicas: 2.5,
     corredicas: 19,
     suportes_prateleira: 0.9,
+    cavilha_10mm: 0.12,
+    parafuso_4x50: 0.15,
   };
   const addFerragem = (tipo: string, quantidade: number) => {
     if (quantidade <= 0) return;
@@ -540,7 +576,19 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
 
   if (box.prateleiras > 0) {
     const suportes = rules.prateleiras.suportesPorPrateleira;
-    addFerragem("suportes_prateleira", Math.max(0, Math.floor(box.prateleiras)) * suportes);
+    const shelfCount = boxUsesDivShelfMode(box)
+      ? Math.max(0, Math.floor(box.prateleiras)) *
+        resolveVerticalCompartments(box).length *
+        Math.max(1, box.divisores?.length ?? 0)
+      : Math.max(0, Math.floor(box.prateleiras));
+    addFerragem("suportes_prateleira", shelfCount * suportes);
+  }
+
+  if ((box.divisores?.length ?? 0) > 0 || (box.separadores?.length ?? 0) > 0) {
+    const divSepDrilling = buildDivSepDrilling(box, box.panelIds);
+    const { cavilhas10, parafusos4x50 } = countDivSepFerragens(box, divSepDrilling);
+    addFerragem("cavilha_10mm", cavilhas10);
+    addFerragem("parafuso_4x50", parafusos4x50);
   }
 
   return ferragens;

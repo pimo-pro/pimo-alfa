@@ -12,8 +12,8 @@ export const DIV_SEP_TEST_RULES = {
   cavilhaDiameterMm: 10,
   cavilhaDepthMm: 13,
   parafusoDistanceFromCavilhaMm: 30,
-  enableShelfHoles: false,
-  enableDivSepCombinations: false,
+  enableShelfHoles: true,
+  enableDivSepCombinations: true,
 } as const;
 
 export const DIV_SEP_BOX_DIMS = {

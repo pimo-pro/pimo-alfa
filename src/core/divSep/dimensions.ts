@@ -1,5 +1,6 @@
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../materials/materials.api";
+import { resolveDivisorLinkedHeightMm, findSeparadorById } from "./coupling";
 import type { DivisorItem, DivSepBoxLike, SeparadorItem } from "./types";
 
 const SHELF_WIDTH_CLEARANCE_MM = 2;
@@ -43,9 +44,13 @@ export function resolveDivisorDimensions(
   item: DivisorItem
 ): { larguraMm: number; alturaMm: number; profundidadeMm: number } {
   const internal = getDivSepInternalDims(box);
+  const linkedSep = findSeparadorById(box, item.linkedSeparadorId);
+  const alturaMm = linkedSep
+    ? resolveDivisorLinkedHeightMm(box, item, linkedSep)
+    : item.alturaMm ?? internal.alturaInterna;
   return {
     larguraMm: internal.espessura,
-    alturaMm: item.alturaMm ?? internal.alturaInterna,
+    alturaMm: Math.max(1, alturaMm),
     profundidadeMm: item.profundidadeMm ?? Math.max(1, internal.profundidadeInterna - SHELF_DEPTH_CLEARANCE_MM),
   };
 }

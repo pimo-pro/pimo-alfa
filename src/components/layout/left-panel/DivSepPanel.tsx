@@ -8,7 +8,11 @@ import {
   resolveDivisorDimensions,
   resolveSeparadorDimensions,
 } from "../../../core/divSep/dimensions";
-import type { DivisorReferenceEdge, SeparadorReferenceEdge } from "../../../core/divSep/types";
+import type {
+  DivisorPrateleiraLado,
+  DivisorReferenceEdge,
+  SeparadorReferenceEdge,
+} from "../../../core/divSep/types";
 
 type DivSepPanelProps = {
   box: WorkspaceBox;
@@ -22,6 +26,7 @@ export default function DivSepPanel({ box, actions }: DivSepPanelProps) {
   const internal = useMemo(() => getDivSepInternalDims(box), [box]);
   const separadores = box.separadores ?? [];
   const divisores = box.divisores ?? [];
+  const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
 
   return (
     <Panel title="DIVISÓRIOS E SEPARADORES">
@@ -119,6 +124,7 @@ export default function DivSepPanel({ box, actions }: DivSepPanelProps) {
       {divisores.map((div, index) => {
         const dims = resolveDivisorDimensions(box, div);
         const maxPos = internal.larguraInterna - dims.larguraMm / 2;
+        const linked = Boolean(div.linkedSeparadorId);
         return (
           <div
             key={div.id}
@@ -163,6 +169,29 @@ export default function DivSepPanel({ box, actions }: DivSepPanelProps) {
                 max={maxPos}
               />
             </label>
+            {separadores.length > 0 ? (
+              <label style={{ display: "block", fontSize: 11, marginBottom: 6 }}>
+                Ligar ao SEP
+                <select
+                  className="input input-sm"
+                  value={div.linkedSeparadorId ?? ""}
+                  onChange={(e) => {
+                    const linkedSeparadorId = e.target.value || undefined;
+                    actions.updateDivisor(div.id, {
+                      linkedSeparadorId,
+                      alturaMm: linkedSeparadorId ? undefined : div.alturaMm,
+                    });
+                  }}
+                >
+                  <option value="">Nenhum (altura livre)</option>
+                  {separadores.map((sep, sepIndex) => (
+                    <option key={sep.id} value={sep.id}>
+                      SEP {sepIndex + 1}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label style={{ display: "block", fontSize: 11, marginBottom: 6 }}>
               Profundidade (mm)
               <NumericInput
@@ -172,15 +201,39 @@ export default function DivSepPanel({ box, actions }: DivSepPanelProps) {
                 max={internal.profundidadeInterna}
               />
             </label>
-            <label style={{ display: "block", fontSize: 11, marginBottom: 8 }}>
+            <label style={{ display: "block", fontSize: 11, marginBottom: hasShelves ? 6 : 8 }}>
               Altura (mm)
-              <NumericInput
-                value={div.alturaMm ?? dims.alturaMm}
-                onChange={(v) => actions.updateDivisor(div.id, { alturaMm: v })}
-                min={50}
-                max={internal.alturaInterna}
-              />
+              {linked ? (
+                <span style={{ display: "block", fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>
+                  Altura ajustada automaticamente ao SEP ligado: {dims.alturaMm} mm
+                </span>
+              ) : (
+                <NumericInput
+                  value={dims.alturaMm}
+                  onChange={(v) => actions.updateDivisor(div.id, { alturaMm: v, linkedSeparadorId: undefined })}
+                  min={50}
+                  max={internal.alturaInterna}
+                />
+              )}
             </label>
+            {hasShelves ? (
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <button
+                  type="button"
+                  className={`button button-sm ${(div.prateleiraLado ?? "direita") === "esquerda" ? "button-primary" : "button-ghost"}`}
+                  onClick={() => actions.updateDivisor(div.id, { prateleiraLado: "esquerda" as DivisorPrateleiraLado })}
+                >
+                  Prateleiras Esquerda
+                </button>
+                <button
+                  type="button"
+                  className={`button button-sm ${(div.prateleiraLado ?? "direita") === "direita" ? "button-primary" : "button-ghost"}`}
+                  onClick={() => actions.updateDivisor(div.id, { prateleiraLado: "direita" as DivisorPrateleiraLado })}
+                >
+                  Prateleiras Direita
+                </button>
+              </div>
+            ) : null}
             <button
               type="button"
               className="button button-ghost button-sm"

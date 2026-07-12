@@ -32,5 +32,13 @@ export function filterViewerDrillMarkersForMesh(markers: ViewerDrillMarkersByPan
           ])
         )
       : undefined,
+    divisoresById: markers.divisoresById
+      ? Object.fromEntries(
+          Object.entries(markers.divisoresById).map(([id, holes]) => [
+            id,
+            filterTechnicalDrillHolesForViewerMesh(holes),
+          ])
+        )
+      : undefined,
   };
 }

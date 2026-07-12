@@ -88,11 +88,12 @@ const EMPTY_VIEWER_DRILL_MARKERS: ViewerDrillMarkersByPanel = {
   portaPerDoor: [],
   frente_fixa: [],
   separadoresById: {},
+  divisoresById: {},
 };
 
 const SEP_EDGE_EPS_MM = 0.5;
 
-/** Converte furos do SEP para o viewer 3D (cavilhas na espessura = faces esquerda/direita). */
+/** Converte furos do SEP para o viewer 3D (cavilhas na espessura = faces esquerda/direita; face inferior = fundo). */
 export function panelSeparadorDrillHoleToTechnical(
   h: PanelDrillHole,
   larguraMm: number
@@ -102,8 +103,8 @@ export function panelSeparadorDrillHoleToTechnical(
   if (holeType === "cavilha" && h.topDrillable === false) {
     if (h.x <= SEP_EDGE_EPS_MM) face = "esquerda";
     else if (h.x >= larguraMm - SEP_EDGE_EPS_MM) face = "direita";
-  } else if (holeType === "parafuso") {
-    face = h.x <= larguraMm / 2 ? "esquerda" : "direita";
+  } else if (holeType === "cavilha" && h.topDrillable === true) {
+    face = "fundo";
   }
   return {
     x: h.x,
@@ -112,6 +113,18 @@ export function panelSeparadorDrillHoleToTechnical(
     profundidade: h.depth,
     tipo: holeType,
     face,
+  };
+}
+
+/** Converte furos do DIV para o viewer 3D (face principal = frente). */
+export function panelDivisorDrillHoleToTechnical(h: PanelDrillHole): TechnicalDrillHole {
+  return {
+    x: h.x,
+    y: h.y,
+    diametro: h.diameter,
+    profundidade: h.depth,
+    tipo: (h.holeType ?? "parafuso") as DrillType,
+    face: "frente",
   };
 }
 
@@ -572,6 +585,15 @@ export function buildViewerDrillMarkersByPanelResult(
     );
   }
 
+  const divisoresById: Record<string, TechnicalDrillHole[]> = {};
+  for (const item of cutList) {
+    if (item.tipo !== "divisorio" || !item.drillHoles?.length) continue;
+    const panelId = String(item.metadata?.panelId ?? item.id);
+    divisoresById[panelId] = onlyInternalFaceHoles(item.drillHoles).map((h) =>
+      panelDivisorDrillHoleToTechnical(h)
+    );
+  }
+
   const result = {
     cima: getHolesFor("cima"),
     fundo: getHolesFor("fundo"),
@@ -581,6 +603,7 @@ export function buildViewerDrillMarkersByPanelResult(
     portaPerDoor: portaPerDoor.length > 0 ? portaPerDoor : undefined,
     frente_fixa,
     separadoresById: Object.keys(separadoresById).length > 0 ? separadoresById : undefined,
+    divisoresById: Object.keys(divisoresById).length > 0 ? divisoresById : undefined,
   };
   if (import.meta.env.DEV) {
     // Log resultado do mapeamento

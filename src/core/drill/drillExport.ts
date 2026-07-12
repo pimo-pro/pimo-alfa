@@ -268,6 +268,7 @@ function isFlatDrillExportPanel(item: CutListItemComPreco): boolean {
     isFixedFrontPanel(item) ||
     item.tipo === "prateleira" ||
     item.tipo === "divisorio" ||
+    item.tipo === "separador" ||
     item.tipo === "porta" ||
     item.tipo === "porta_simples" ||
     item.tipo === "COSTA"

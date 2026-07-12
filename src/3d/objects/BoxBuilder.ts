@@ -33,6 +33,13 @@ import {
 } from "./BoxUpdater";
 import { getWardrobeGroupFromBaseCabinetId, isWardrobeVerticalDividerEnabled } from "../../core/wardrobe/wardrobeRules";
 import { getCornerCabinetConfig } from "../../core/cornerCabinet";
+import {
+  boxUsesDivShelfMode,
+  resolveShelfWidthForDivSide,
+  resolveVerticalCompartments,
+} from "../../core/divSep/shelfDrilling";
+import type { DivSepBoxLike } from "../../core/divSep/types";
+import { resolveDivisorCenterX } from "../../core/divSep/dimensions";
 
 /**
  * Camada oficial de fabricação: gera TODAS as peças segundo as regras industriais.
@@ -290,6 +297,47 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
 
   const spacing = interiorHeight / (count + 1);
   const yMin = -height / 2 + THICKNESS_M + spacing;
+
+  const divShelfBox: DivSepBoxLike | null =
+    opts?.divisores?.length && count >= 1
+      ? {
+          dimensoes: { largura: width * 1000, altura: height * 1000, profundidade: depth * 1000 },
+          espessura: THICKNESS_M * 1000,
+          profundidadeExterna: depth * 1000,
+          prateleiras: count,
+          divisores: opts.divisores,
+          separadores: opts.separadores,
+        }
+      : null;
+
+  if (divShelfBox && boxUsesDivShelfMode(divShelfBox)) {
+    const compartments = resolveVerticalCompartments(divShelfBox);
+    for (const div of opts!.divisores!) {
+      const shelfWidthM = Math.max(0.001, resolveShelfWidthForDivSide(divShelfBox, div) / 1000);
+      const divCenterXAbs = resolveDivisorCenterX(divShelfBox, div);
+      const divCenterXM = divCenterXAbs / 1000 - width / 2;
+      const lado = div.prateleiraLado ?? "direita";
+      const shelfCenterX =
+        lado === "esquerda"
+          ? -width / 2 + THICKNESS_M + shelfWidthM / 2 + 0.001
+          : divCenterXM + THICKNESS_M / 2 + shelfWidthM / 2 + 0.001;
+
+      for (const zone of compartments) {
+        const zoneHeightM = (zone.yMax - zone.yMin) / 1000;
+        const zoneCenterYM = (zone.yMin + zone.yMax) / 2000 - height / 2;
+        const zoneSpacing = zoneHeightM / (count + 1);
+        for (let i = 0; i < count; i++) {
+          const y = zoneCenterYM - zoneHeightM / 2 + THICKNESS_M + zoneSpacing * (i + 1);
+          specs.push({
+            size: [shelfWidthM, THICKNESS_M, shelfDepth],
+            pos: [shelfCenterX, y, centerZ],
+          });
+        }
+      }
+    }
+    return specs;
+  }
+
   for (let i = 0; i < count; i++) {
     const y = yMin + i * spacing;
     specs.push({

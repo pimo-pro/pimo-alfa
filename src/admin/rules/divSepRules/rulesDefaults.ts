@@ -25,6 +25,6 @@ export const DIV_SEP_RULES_DEFAULTS: DivSepRules = {
   cavilhaDiameterMm: 10,
   cavilhaDepthMm: 13,
   parafusoDistanceFromCavilhaMm: 30,
-  enableShelfHoles: false,
-  enableDivSepCombinations: false,
+  enableShelfHoles: true,
+  enableDivSepCombinations: true,
 };

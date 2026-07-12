@@ -180,7 +180,12 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       }
     } else if (spec.name.startsWith("divsep-div-")) {
       mesh.userData.divSepKind = "div";
-      mesh.userData.divSepItemId = spec.name.slice("divsep-div-".length);
+      const divItemId = spec.name.slice("divsep-div-".length);
+      mesh.userData.divSepItemId = divItemId;
+      const divHoles = drillMap.divisoresById?.[divItemId];
+      if (divHoles?.length) {
+        deps.applyDrillHolesToPanelGeometry(mesh, "top", divHoles);
+      }
     }
     root.add(mesh);
   });

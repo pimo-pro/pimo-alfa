@@ -32,6 +32,7 @@ import {
   resolveEuropeanModuleRunnerLinesYMm,
 } from "../drawers/drilling/DrawerDrillingRules";
 import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
+import { boxUsesDivShelfMode, buildDivShelfDrilling } from "../divSep/shelfDrilling";
 import { buildDivSepIndustrialLabel } from "../divSep/labels";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import { resolveCustomIndustrialCutlistForBox } from "../industrialDesigner/customIndustrialModel";
@@ -217,6 +218,9 @@ export function cutlistComPrecoFromBox(
   const doorDrillHolesByIndex = new Map<number, PanelDrillHole[]>();
   const hingePositionsBySide: Partial<Record<"left" | "right", number[]>> = {};
   const divSepDrilling = buildDivSepDrilling(box, box.panelIds);
+  const divShelfDrilling = buildDivShelfDrilling(box, box.panelIds, effRules);
+  const useDivShelfMode = boxUsesDivShelfMode(box);
+  const hasShelvesForPanelDrilling = hasShelves && !useDivShelfMode;
   let divIndex = 0;
   let sepIndex = 0;
   const isCornerDireitaBox = isCornerDireitaInferiorModel(syncedBox.baseCabinetId);
@@ -383,7 +387,7 @@ export function cutlistComPrecoFromBox(
             larguraMm: p.largura_mm,
             alturaMm: p.altura_mm,
             espessuraMm: p.espessura_mm,
-            hasShelves,
+            hasShelves: hasShelvesForPanelDrilling,
             hasDrawers: hasDrawersForShelfDrilling,
             doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
             doorWidthMm: doorWidthForTopBottom,
@@ -436,6 +440,15 @@ export function cutlistComPrecoFromBox(
 
     const panelIdForDivSep = p.id;
     drillHoles = mergeDrillHoles(drillHoles, divSepDrilling.getExtraHoles(p.tipo, panelIdForDivSep));
+    if (divShelfDrilling) {
+      if (p.tipo === "lateral_esquerda") {
+        drillHoles = mergeDrillHoles(drillHoles, divShelfDrilling.lateral_esquerda);
+      } else if (p.tipo === "lateral_direita") {
+        drillHoles = mergeDrillHoles(drillHoles, divShelfDrilling.lateral_direita);
+      } else if (isDivisor) {
+        drillHoles = mergeDrillHoles(drillHoles, divShelfDrilling.divisorio.get(panelIdForDivSep) ?? []);
+      }
+    }
 
     let industrialLabel: string | undefined;
     let displayNome = getPieceLabel(p.tipo);
