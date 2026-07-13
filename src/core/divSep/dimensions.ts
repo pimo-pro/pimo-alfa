@@ -1,5 +1,6 @@
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { resolveCostaThicknessMm } from "../materials/materials.api";
+import { getDivSepRules } from "./cavilhaRules";
 import { resolveDivisorLinkedHeightMm, findSeparadorById } from "./coupling";
 import type { DivisorItem, DivSepBoxLike, SeparadorItem } from "./types";
 
@@ -44,7 +45,10 @@ export function resolveDivisorDimensions(
   item: DivisorItem
 ): { larguraMm: number; alturaMm: number; profundidadeMm: number } {
   const internal = getDivSepInternalDims(box);
-  const linkedSep = findSeparadorById(box, item.linkedSeparadorId);
+  const linkedSep =
+    getDivSepRules().enableDivSepCombinations
+      ? findSeparadorById(box, item.linkedSeparadorId)
+      : undefined;
   const alturaMm = linkedSep
     ? resolveDivisorLinkedHeightMm(box, item, linkedSep)
     : item.alturaMm ?? internal.alturaInterna;

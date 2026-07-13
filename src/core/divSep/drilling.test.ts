@@ -6,11 +6,14 @@ import {
   getParafusoDistanceFromCavilhaMm,
 } from "./cavilhaRules";
 import {
+  getDivSepInternalDims,
+  resolveDivisorCenterX,
   resolveDivisorDimensions,
   resolveSeparadorCenterY,
   resolveSeparadorDimensions,
 } from "./dimensions";
 import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../cornerCabinet/cornerFixedFrontDowels";
+import { countDivSepFerragens } from "./ferragens";
 import {
   defaultDivisorItem,
   defaultSeparadorItem,
@@ -126,6 +129,98 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     for (const h of faceCavilhas) {
       expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
     }
+  });
+
+  it("não cria furos estruturais em CIMA quando DIV está ligado ao SEP", () => {
+    const cimaStructural = getExtraHoles("cima").filter(
+      (h) => h.holeType === "cavilha" || h.holeType === "parafuso"
+    );
+    expect(cimaStructural.length).toBe(0);
+  });
+
+  it("cria furos de bordo em FUNDO para o DIV ligado", () => {
+    const divCenterX = resolveDivisorCenterX(box, div);
+    const divDims = resolveDivisorDimensions(box, div);
+    const depthPos = calcDepthHolePositions(divDims.profundidadeMm, rules);
+    const fundoCavilhas = getExtraHoles("fundo").filter((h) => h.holeType === "cavilha");
+    const fundoParafusos = getExtraHoles("fundo").filter((h) => h.holeType === "parafuso");
+
+    expect(fundoCavilhas.length).toBeGreaterThan(0);
+    expect(fundoParafusos.length).toBeGreaterThan(0);
+    expect(fundoCavilhas.every((h) => roundMm(h.x) === roundMm(divCenterX))).toBe(true);
+    expect(fundoParafusos.every((h) => roundMm(h.x) === roundMm(divCenterX))).toBe(true);
+    expect(fundoCavilhas.map((h) => roundMm(h.y)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
+    expect(fundoParafusos.map((h) => roundMm(h.y)).sort()).toEqual(depthPos.parafuso.map(roundMm).sort());
+    for (const p of fundoParafusos) {
+      expect(roundMm(p.depth)).toBe(DIV_SEP_ESPESSURA);
+    }
+  });
+
+  it("conta ferragens a partir dos furos gerados", () => {
+    const drilling = buildDivSepDrilling(box, panelIds, rules);
+    const counts = countDivSepFerragens(box, drilling);
+    expect(counts).toEqual(drilling.countFerragens());
+    expect(counts.cavilhas10).toBeGreaterThan(0);
+    expect(counts.parafusos4x50).toBeGreaterThan(0);
+  });
+});
+
+describe("buildDivSepDrilling — múltiplos DIV no mesmo SEP", () => {
+  const rules = DIV_SEP_TEST_RULES;
+  const sep = defaultSeparadorItem({ id: "sep-multi", positionMm: 400 });
+  const divLeft = defaultDivisorItem({
+    id: "div-left",
+    linkedSeparadorId: "sep-multi",
+    positionMm: 150,
+  });
+  const divRight = defaultDivisorItem({
+    id: "div-right",
+    linkedSeparadorId: "sep-multi",
+    positionMm: 450,
+  });
+  const box = makeDivSepTestBox({
+    separadores: [sep],
+    divisores: [divLeft, divRight],
+  });
+  const panelIds = box.panelIds!;
+  const { getExtraHoles } = buildDivSepDrilling(box, panelIds, rules);
+
+  it("cria cavilhas na face inferior do SEP para cada DIV ligado", () => {
+    const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
+    const faceCavilhas = sepHoles.filter((h) => h.holeType === "cavilha" && h.topDrillable === true);
+    const xs = [...new Set(faceCavilhas.map((h) => roundMm(h.x)))].sort((a, b) => a - b);
+
+    const internal = getDivSepInternalDims(box);
+    const sepDims = resolveSeparadorDimensions(box, sep);
+    const sepLeftX = internal.espessura + (internal.larguraInterna - sepDims.larguraMm) / 2;
+    const expectedXs = [divLeft, divRight]
+      .map((item) => roundMm(resolveDivisorCenterX(box, item) - sepLeftX))
+      .sort((a, b) => a - b);
+
+    expect(xs).toEqual(expectedXs);
+  });
+});
+
+describe("buildDivSepDrilling — flags Admin", () => {
+  it("ignora ligação SEP+DIV quando enableDivSepCombinations=false", () => {
+    const rules = { ...DIV_SEP_TEST_RULES, enableDivSepCombinations: false };
+    const sep = defaultSeparadorItem({ id: "sep-flag", positionMm: 400 });
+    const div = defaultDivisorItem({
+      id: "div-flag",
+      linkedSeparadorId: "sep-flag",
+      positionMm: 281,
+    });
+    const box = makeDivSepTestBox({ separadores: [sep], divisores: [div] });
+    const panelIds = box.panelIds!;
+    const { getExtraHoles } = buildDivSepDrilling(box, panelIds, rules);
+
+    const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
+    expect(sepHoles.some((h) => h.topDrillable === true)).toBe(false);
+
+    const cima = getExtraHoles("cima").filter((h) => h.holeType === "cavilha");
+    const fundo = getExtraHoles("fundo").filter((h) => h.holeType === "cavilha");
+    expect(cima.length).toBeGreaterThan(0);
+    expect(fundo.length).toBeGreaterThan(0);
   });
 });
 

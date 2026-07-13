@@ -8,6 +8,7 @@ import {
   getDivSepRules,
   getParafusoDistanceFromCavilhaMm,
 } from "./cavilhaRules";
+import { findSeparadorById } from "./coupling";
 import {
   getDivSepInternalDims,
   resolveDivisorCenterX,
@@ -29,6 +30,11 @@ type HoleBucket = {
 export type DepthHolePositions = {
   cavilha: number[];
   parafuso: number[];
+};
+
+type TopBottomPanels = {
+  includeCima: boolean;
+  includeFundo: boolean;
 };
 
 function createHoleBucket(): HoleBucket {
@@ -126,7 +132,7 @@ function drillSeparador(
   item: SeparadorItem,
   panelId: string,
   rules: DivSepRules,
-  linkedDiv?: DivisorItem
+  linkedDivs: DivisorItem[]
 ): void {
   const internal = getDivSepInternalDims(box);
   const dims = resolveSeparadorDimensions(box, item);
@@ -137,11 +143,13 @@ function drillSeparador(
   drillSeparadorEdgeHoles(sepHoles, panelLarguraMm, dims.profundidadeMm, rules);
   drillLateralAtSepHeight(bucket, dims.profundidadeMm, centerY, internal.espessura, rules);
 
-  if (linkedDiv) {
-    const divCenterX = resolveDivisorCenterX(box, linkedDiv);
-    const sepLocalX = mapDivCenterXToSepLocalX(box, item, divCenterX);
-    if (sepLocalX >= 0 && sepLocalX <= panelLarguraMm) {
-      drillSeparadorBottomFaceForDiv(sepHoles, sepLocalX, dims.profundidadeMm, rules);
+  if (rules.enableDivSepCombinations) {
+    for (const linkedDiv of linkedDivs) {
+      const divCenterX = resolveDivisorCenterX(box, linkedDiv);
+      const sepLocalX = mapDivCenterXToSepLocalX(box, item, divCenterX);
+      if (sepLocalX >= 0 && sepLocalX <= panelLarguraMm) {
+        drillSeparadorBottomFaceForDiv(sepHoles, sepLocalX, dims.profundidadeMm, rules);
+      }
     }
   }
 
@@ -153,7 +161,7 @@ function drillTopBottomForDiv(
   box: DivSepBoxLike,
   item: DivisorItem,
   rules: DivSepRules,
-  includeFundo: boolean
+  panels: TopBottomPanels
 ): void {
   const internal = getDivSepInternalDims(box);
   const dims = resolveDivisorDimensions(box, item);
@@ -161,10 +169,11 @@ function drillTopBottomForDiv(
   const depthPos = calcDepthHolePositions(dims.profundidadeMm, rules);
   const cavilhaD = getCavilhaDiameterMm(rules);
 
-  const panels: PanelDrillHole[][] = [bucket.cima];
-  if (includeFundo) panels.push(bucket.fundo);
+  const targetPanels: PanelDrillHole[][] = [];
+  if (panels.includeCima) targetPanels.push(bucket.cima);
+  if (panels.includeFundo) targetPanels.push(bucket.fundo);
 
-  for (const panelHoles of panels) {
+  for (const panelHoles of targetPanels) {
     for (const yPos of depthPos.cavilha) {
       pushHole(panelHoles, centerX, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false);
     }
@@ -174,13 +183,22 @@ function drillTopBottomForDiv(
   }
 }
 
+function resolveDivTopBottomPanels(item: DivisorItem, box: DivSepBoxLike, rules: DivSepRules): TopBottomPanels {
+  const linked =
+    rules.enableDivSepCombinations && Boolean(findSeparadorById(box, item.linkedSeparadorId));
+  return {
+    includeCima: !linked,
+    includeFundo: true,
+  };
+}
+
 function drillDivisor(
   bucket: HoleBucket,
   box: DivSepBoxLike,
   item: DivisorItem,
   rules: DivSepRules
 ): void {
-  drillTopBottomForDiv(bucket, box, item, rules, true);
+  drillTopBottomForDiv(bucket, box, item, rules, resolveDivTopBottomPanels(item, box, rules));
 }
 
 export type DivSepDrillingResult = {
@@ -198,6 +216,19 @@ function countHoleTypes(holes: PanelDrillHole[]): { cavilhas10: number; parafuso
   return { cavilhas10, parafusos4x50 };
 }
 
+function buildSepToLinkedDivsMap(box: DivSepBoxLike, rules: DivSepRules): Map<string, DivisorItem[]> {
+  const sepToLinkedDivs = new Map<string, DivisorItem[]>();
+  if (!rules.enableDivSepCombinations) return sepToLinkedDivs;
+
+  for (const div of box.divisores ?? []) {
+    if (!div.linkedSeparadorId) continue;
+    const existing = sepToLinkedDivs.get(div.linkedSeparadorId) ?? [];
+    existing.push(div);
+    sepToLinkedDivs.set(div.linkedSeparadorId, existing);
+  }
+  return sepToLinkedDivs;
+}
+
 export function buildDivSepDrilling(
   box: DivSepBoxLike,
   panelIds: { divisores?: string[]; separadores?: string[] } | undefined,
@@ -208,18 +239,12 @@ export function buildDivSepDrilling(
 
   const divisores = box.divisores ?? [];
   const separadores = box.separadores ?? [];
-
-  const sepToLinkedDiv = new Map<string, DivisorItem>();
-  for (const div of divisores) {
-    if (div.linkedSeparadorId) {
-      sepToLinkedDiv.set(div.linkedSeparadorId, div);
-    }
-  }
+  const sepToLinkedDivs = buildSepToLinkedDivsMap(box, cfg);
 
   separadores.forEach((sep, i) => {
     const pid = panelIds?.separadores?.[i] ?? sep.id;
-    const linkedDiv = sepToLinkedDiv.get(sep.id);
-    drillSeparador(bucket, box, sep, pid, cfg, linkedDiv);
+    const linkedDivs = sepToLinkedDivs.get(sep.id) ?? [];
+    drillSeparador(bucket, box, sep, pid, cfg, linkedDivs);
   });
 
   divisores.forEach((div) => {

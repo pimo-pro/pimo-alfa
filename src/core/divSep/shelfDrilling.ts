@@ -1,5 +1,6 @@
 import type { RulesConfig } from "../rules/rulesConfig";
 import type { PanelDrillHole } from "../types";
+import { getDivSepRules } from "./cavilhaRules";
 import { resolveSeparadorBottomY } from "./coupling";
 import {
   getDivSepInternalDims,
@@ -84,6 +85,8 @@ export function buildDivShelfDrilling(
   panelIds: { divisores?: string[] } | undefined,
   rules: RulesConfig
 ): DivShelfDrillingResult | null {
+  if (!getDivSepRules().enableShelfHoles) return null;
+
   const prateleiras = Math.max(0, Math.floor(box.prateleiras ?? 0));
   if (prateleiras <= 0) return null;
   const divisores = box.divisores ?? [];
