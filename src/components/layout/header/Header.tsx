@@ -138,7 +138,7 @@ export default function Header() {
         <HeaderUndoRedoButtons />
       </div>
 
-      {/* Área Direita */}
+      {/* Área Direita — da direita p/ esquerda: Notificações → Idioma → Tema → Industrial → … → Upload */}
       <div
         style={{
           marginLeft: "auto",
@@ -148,21 +148,12 @@ export default function Header() {
           fontSize: 13,
         }}
       >
-        <HeaderIndustrialMenu />
-        <InvariantNotificationBell />
         <HeaderActionButton
-          onClick={() => navigateInternal("/login")}
-          title="Abrir página de login"
-          ariaLabel="Abrir página de login"
+          onClick={handleProjectUpload}
+          title="Selecionar ficheiro de projeto"
+          ariaLabel="Selecionar ficheiro de projeto"
         >
-          <Icon name="user" size={18} aria-hidden />
-        </HeaderActionButton>
-        <HeaderActionButton
-          onClick={() => navigateInternal("/definicoes")}
-          title="Abrir definições"
-          ariaLabel="Abrir definições"
-        >
-          <Icon name="settings" size={18} aria-hidden />
+          <Icon name="upload" size={18} aria-hidden />
         </HeaderActionButton>
         <HeaderActionButton
           onClick={() => navigateInternal("/meus-projetos")}
@@ -172,11 +163,26 @@ export default function Header() {
           <Icon name="projects" size={18} aria-hidden />
         </HeaderActionButton>
         <HeaderActionButton
-          onClick={handleProjectUpload}
-          title="Selecionar ficheiro de projeto"
-          ariaLabel="Selecionar ficheiro de projeto"
+          onClick={() => navigateInternal("/definicoes")}
+          title="Abrir definições"
+          ariaLabel="Abrir definições"
         >
-          <Icon name="upload" size={18} aria-hidden />
+          <Icon name="settings" size={18} aria-hidden />
+        </HeaderActionButton>
+        <HeaderActionButton
+          onClick={() => navigateInternal("/login")}
+          title="Abrir página de login"
+          ariaLabel="Abrir página de login"
+        >
+          <Icon name="user" size={18} aria-hidden />
+        </HeaderActionButton>
+        <HeaderIndustrialMenu />
+        <HeaderActionButton
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Usar tema claro" : "Usar tema escuro"}
+          ariaLabel={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
+        >
+          {theme === "dark" ? <Icon name="themeSun" size={18} aria-hidden /> : <Icon name="themeMoon" size={18} aria-hidden />}
         </HeaderActionButton>
         <HeaderActionButton
           onClick={handleLanguageControl}
@@ -185,13 +191,7 @@ export default function Header() {
         >
           🌐 PT
         </HeaderActionButton>
-        <HeaderActionButton
-          onClick={toggleTheme}
-          title={theme === "dark" ? "Usar tema claro" : "Usar tema escuro"}
-          ariaLabel={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
-        >
-          {theme === "dark" ? <Icon name="themeSun" size={18} aria-hidden /> : <Icon name="themeMoon" size={18} aria-hidden />}
-        </HeaderActionButton>
+        <InvariantNotificationBell />
       </div>
       <input
         ref={fileInputRef}

@@ -146,6 +146,15 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                   {Math.round(item.width)}×{Math.round(item.height)} mm
                 </span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {item.openDirection === "left"
+                    ? "Abertura: para a esquerda"
+                    : item.openDirection === "right"
+                      ? "Abertura: para a direita"
+                      : item.openDirection === "up"
+                        ? "Abertura: para cima"
+                        : "Abertura: para baixo"}
+                </span>
                 <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
                   {expandedDoorIds[item.id] ? "Ocultar" : "Detalhes"}
                 </span>
@@ -153,6 +162,32 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
 
               {expandedDoorIds[item.id] && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  {selectedBox.portaTipo !== "porta_correr" ? (
+                    <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                        Orientação da porta
+                      </span>
+                      <select
+                        className="select select-xs"
+                        value={item.openDirection}
+                        disabled={
+                          selectedBox.portaTipo === "porta_dupla" || item.groupType === "dupla"
+                        }
+                        onChange={(e) =>
+                          actions.setDoorLayerItemDirection(
+                            item.id,
+                            e.target.value as "left" | "right" | "up" | "down"
+                          )
+                        }
+                        title="Lado da porta / abertura para cima ou baixo"
+                      >
+                        <option value="left">Lado: esquerda</option>
+                        <option value="right">Lado: direita</option>
+                        <option value="up">Abertura: para cima</option>
+                        <option value="down">Abertura: para baixo</option>
+                      </select>
+                    </label>
+                  ) : null}
                   <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Largura da porta (mm)</span>
                     <input
