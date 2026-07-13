@@ -43,7 +43,7 @@ import { hasFullAccess } from "../auth/rbac";
 import { canShowSectionPrices } from "../admin/industrialSectionsConfig";
 import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import type { CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
-import type { CutListItemComPreco } from "../core/types";
+import type { CutListItem, CutListItemComPreco } from "../core/types";
 import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions } from "../core/cnc/cncPipeline";
 import {
   formatIndustrialThicknessIssue,
@@ -84,6 +84,8 @@ import {
   endIndustrialRequiredArtifactTracking,
   IndustrialRequiredArtifactsMissingError,
 } from "../core/industrial/industrialOutputGuard";
+import { assertExportInvariantsAllowed } from "../core/invariants/integration/invariantContract";
+import { InvariantViolationError } from "../core/invariants/errors/InvariantViolationError";
 
 let cutLayoutLoaderRoot: Root | null = null;
 
@@ -101,9 +103,31 @@ function toastExportError(
   err: unknown,
   fallback: string
 ): void {
+  if (err instanceof InvariantViolationError) {
+    showToast(err.formatForToast(), "error", 12000);
+    return;
+  }
   if (showIndustrialErrorToast(showToast, err)) return;
   const msg = err instanceof Error ? err.message : String(err);
   showToast(`${fallback}${msg ? ` — ${msg}` : ""}`, "error");
+}
+
+function guardIndustrialExport(
+  project: ProjectState,
+  showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void,
+  cutList?: CutListItemComPreco[] | CutListItem[]
+): boolean {
+  try {
+    assertExportInvariantsAllowed({
+      project,
+      cutList: cutList ?? project.cutListComPreco ?? project.cutList,
+      phase: "export",
+    });
+    return true;
+  } catch (err) {
+    toastExportError(showToast, err, "Exportação bloqueada");
+    return false;
+  }
 }
 
 function pushFullExportError(
@@ -373,6 +397,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const doc = await buildCutlistPdf(pdfProject());
@@ -391,6 +416,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const doc = await buildUnifiedPdf(pdfProject(), unifiedIndustrialContext());
@@ -408,6 +434,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const data = buildIndustrialFerragensForProject({
@@ -435,6 +462,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const data = buildIndustrialFerragensForProject({
@@ -471,6 +499,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const proj = pdfProject();
@@ -498,6 +527,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const proj = pdfProject();
@@ -560,6 +590,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
       const allItems = buildCutlistItemsForIndustrialExport({
@@ -621,6 +652,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     try {
       showCutLayoutLoader();
       await yieldToMainThread();
@@ -717,6 +749,7 @@ export function useGerarArquivoHandlers() {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    if (!guardIndustrialExport(project, showToast)) return;
     showToast("Gerando layout industrial otimizado… aguarde.", "info");
     abortIndustrialLayoutRef.current = false;
     const forceFastMode = false;
@@ -864,8 +897,9 @@ export function useGerarArquivoHandlers() {
 
   /** TCN (via fluxo existente) + XML de furação; só orquestração, mesmas funções de export. */
   const onArquivosCnc = useCallback(async () => {
-    await onExportarCnc();
     if (!hasBoxes) return;
+    if (!guardIndustrialExport(project, showToast)) return;
+    await onExportarCnc();
     try {
       await runAuthorizedIndustrialFileGeneration("txml", async () => {
         const allItems = buildCutlistItemsForIndustrialExport({
@@ -914,6 +948,8 @@ export function useGerarArquivoHandlers() {
         showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
         return;
       }
+
+      if (!guardIndustrialExport(project, showToast)) return;
 
       try {
         viewerSync.setUltraPerformanceMode(true);

@@ -77,3 +77,28 @@ export const IconAlertError: FC<IconProps> = ({
     <path d="M15 9l-6 6M9 9l6 6" />
   </svg>
 );
+
+export const IconBell: FC<IconProps> = ({
+  size,
+  color = "currentColor",
+  className,
+  "aria-hidden": ariaHidden = true,
+  title,
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden={ariaHidden}
+  >
+    {title ? <title>{title}</title> : null}
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);

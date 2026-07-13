@@ -13,6 +13,7 @@ import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
 import DrawerSystemUnifiedAdminPage from "../components/admin/DrawerSystemUnifiedAdminPage";
 import { DivSepRulesAdminPage } from "../admin/rules/divSepRules/DivSepRulesAdminPage";
+import { InvariantRulesAdminPage } from "../admin/invariants/InvariantRulesAdminPage";
 import { DoorRulesAdminPage } from "../admin/rules/doorRules/DoorRulesAdminPage";
 import AdminRulesPage from "../components/admin/AdminRulesPage";
 import LabelConfigPage from "../components/admin/LabelConfigPage";
@@ -42,6 +43,7 @@ type AdminTab =
   | "Regras das Gavetas"
   | "Configurações das Gavetas (Sistema Unificado)"
   | "DIV/SEP Rules"
+  | "Invariant Rules"
   | "Regras da Porta"
   | "Configuração de Etiquetas (v5)"
   | "Dimensões Técnicas (MC Overlay)"
@@ -64,6 +66,7 @@ const adminMenu: AdminMenuEntry[] = [
     label: "Configurações das Gavetas (Sistema Unificado)",
   },
   { type: "item", id: "DIV/SEP Rules", label: "DIV/SEP Rules" },
+  { type: "item", id: "Invariant Rules", label: "Invariant Rules" },
   { type: "group", label: "Configuração" },
   { type: "item", id: "Gestão de Materiais", label: "Gestão de Materiais" },
   { type: "item", id: "Ferragens", label: "Ferragens" },
@@ -103,6 +106,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Regras das Gavetas": "adminRuler",
   "Configurações das Gavetas (Sistema Unificado)": "adminRuler",
   "DIV/SEP Rules": "adminRuler",
+  "Invariant Rules": "alertWarning",
   "Regras da Porta": "adminRuler",
   "Configuração de Etiquetas (v5)": "adminTag",
   "Dimensões Técnicas (MC Overlay)": "adminRuler",
@@ -248,6 +252,8 @@ export default function AdminPanel() {
             <DrawerSystemUnifiedAdminPage />
           ) : active === "DIV/SEP Rules" ? (
             <DivSepRulesAdminPage />
+          ) : active === "Invariant Rules" ? (
+            <InvariantRulesAdminPage />
           ) : active === "Regras da Porta" ? (
             <DoorRulesAdminPage />
           ) : active === "Project Progress" ? (

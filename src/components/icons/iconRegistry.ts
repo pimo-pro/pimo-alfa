@@ -71,7 +71,7 @@ import {
   IconAdminChart,
   IconAdminDocs,
 } from "./groups/admin";
-import { IconAlertWarning, IconAlertInfo, IconAlertError } from "./groups/alerts";
+import { IconAlertWarning, IconAlertInfo, IconAlertError, IconBell } from "./groups/alerts";
 import { IconWhatsapp } from "./groups/social";
 import { IconBlueprint } from "./groups/manufacturing";
 
@@ -138,6 +138,7 @@ export const iconRegistry: Record<IconName, FC<IconProps>> = {
   alertWarning: IconAlertWarning,
   alertInfo: IconAlertInfo,
   alertError: IconAlertError,
+  bell: IconBell,
   whatsapp: IconWhatsapp,
   blueprint: IconBlueprint,
 };

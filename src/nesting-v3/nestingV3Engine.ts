@@ -17,6 +17,8 @@ import { cutLayoutResultToV3State } from "../core/cutlayout/integration/cutLayou
 import { defaultSheetFromSettings } from "./nestingSheetsFactory";
 import { runHybridNesting } from "../core/nesting3/hybridNesting";
 import type { Nesting3Piece, Nesting3Sheet } from "../core/nesting3/nesting3Types";
+import { validateAndRecordInvariants } from "../core/invariants/integration/invariantContract";
+import { defaultState } from "../context/projectState";
 
 function effectiveDims(piece: V3Piece): { w: number; h: number } {
   const rotated = piece.rotation === 90 || piece.rotation === 270;
@@ -59,6 +61,11 @@ export function runV3IndustrialAutoLayoutPipeline(baseState: NestingV3State): V3
   const layoutOptions = buildIndustrialLayoutOptions(sheetDef, settings);
 
   const layoutResult = runCutLayout(cutPieces, sheetDef, layoutOptions);
+  validateAndRecordInvariants({
+    project: defaultState,
+    layoutResult,
+    phase: "cutlayout",
+  });
   const newState = cutLayoutResultToV3State(layoutResult, {
     ...baseState,
     sheets: activeSheets,

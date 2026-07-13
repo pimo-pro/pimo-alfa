@@ -5,6 +5,7 @@ import { ProjectContext } from "../../../context/projectContext";
 import { Icon } from "@/components/icons";
 import HeaderUndoRedoButtons from "./HeaderUndoRedoButtons";
 import HeaderIndustrialMenu from "./HeaderIndustrialMenu";
+import InvariantNotificationBell from "../../invariants/InvariantNotificationBell";
 
 type HeaderActionButtonProps = {
   title: string;
@@ -148,6 +149,7 @@ export default function Header() {
         }}
       >
         <HeaderIndustrialMenu />
+        <InvariantNotificationBell />
         <HeaderActionButton
           onClick={() => navigateInternal("/login")}
           title="Abrir página de login"

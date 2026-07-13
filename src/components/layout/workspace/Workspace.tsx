@@ -30,6 +30,7 @@ import {
   decodeSelectionId,
 } from "../../../core/viewer/selectionIds";
 import { useWorkspaceUndoRedoRegistry } from "../../../context/WorkspaceUndoRedoRegistryContext";
+import { useProjectInvariants } from "../../../hooks/useProjectInvariants";
 import { runProjectRedo, runProjectUndo } from "./workspaceUndoRedoHandlers";
 import { buildBoxesWithCutList } from "../../../context/projectState";
 import { resolvePieceOrlaConfig } from "../../../core/orla/orlaCalculator";
@@ -57,6 +58,7 @@ export default function Workspace({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerSurfaceRef = useRef<HTMLDivElement | null>(null);
   const { project, actions, viewerSync } = useProject();
+  useProjectInvariants();
   const { settings } = useSettings();
   const { registerWorkspaceUndoRedo } = useWorkspaceUndoRedoRegistry();
   const { openModal } = useToolbarModal();
