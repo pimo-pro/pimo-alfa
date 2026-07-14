@@ -144,7 +144,8 @@ assertVersionFilesInSync();
 // Evitar adicionar repositórios embutidos (ex.: backend/ tem o seu próprio .git)
 // para não criar gitlinks/submodules acidentais no repo principal.
 runStep("Adicionando arquivos ao git...", "git add . \":(exclude)backend\"");
-runStep("Criando commit...", `git commit -m "Publicação automática"`);
+// pimo-kep-fix-002 — protegido, não modificar sem autorização
+runStep("Criando commit...", `git commit -m "Publicação PIMO — Sistema Industrial"`);
 const localTagRef = runOutput(`git rev-parse -q --verify refs/tags/${nextVersion}`);
 if (!localTagRef) {
   runStep("Criando tag...", `git tag ${nextVersion}`);
