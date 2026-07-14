@@ -1,4 +1,11 @@
 {
   "_pimoKep": "pimo-kep-fix-001",
-  "publications": []
+  "publications": [
+    {
+      "publishedAt": "2026-07-14T21:52:00.970Z",
+      "author": "pimo-pro",
+      "commitMessage": "release: versão completa — publicação industrial",
+      "version": "v6.0714.2252"
+    }
+  ]
 }
