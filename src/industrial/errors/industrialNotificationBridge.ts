@@ -350,3 +350,35 @@ export function validateCncExportFailure(err: unknown, options?: NotifyUserOptio
 export function buildCompleteExportFailure(err: unknown, step: string, options?: NotifyUserOptions): void {
   reportIndustrialError(err, { step, source: "export" }, options);
 }
+
+function formatAutoThicknessCorrectionMessage(adjustment: IndustrialThicknessAdjustment): string {
+  const material = adjustment.suggestedMaterialLabel?.trim() || adjustment.materialKey;
+  return `Espessura corrigida automaticamente: ${adjustment.requestedThicknessMm} mm → ${adjustment.suggestedThicknessMm} mm (${material}).`;
+}
+
+/** Aviso após auto-correção aplicada (Notificações + painel export + toast opcional). */
+export function notifyAutoThicknessCorrection(
+  adjustment: IndustrialThicknessAdjustment,
+  options?: NotifyUserOptions
+): void {
+  notifyUser(
+    {
+      source: "espessura",
+      severity: "info",
+      step: "Auto-correção de espessura",
+      message: formatAutoThicknessCorrectionMessage(adjustment),
+      phase: "export",
+      kind: "invalid_thickness",
+    },
+    options
+  );
+}
+
+export function notifyAutoThicknessCorrections(
+  adjustments: IndustrialThicknessAdjustment[],
+  options?: NotifyUserOptions
+): void {
+  for (const adjustment of adjustments) {
+    notifyAutoThicknessCorrection(adjustment, options);
+  }
+}

@@ -45,11 +45,7 @@ import { UnifiedEtiquetaEngine } from "../core/etiquetas";
 import type { CutlistItemForPieces } from "../core/cutlayout/cutLayoutEngine";
 import type { CutListItem, CutListItemComPreco } from "../core/types";
 import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions } from "../core/cnc/cncPipeline";
-import {
-  formatIndustrialThicknessIssue,
-  resolveIndustrialThicknesses,
-} from "../core/cnc/industrialThicknessResolution";
-import { throwFirstUnresolvedThicknessError } from "../core/industrial/industrialThicknessErrors";
+import { validateCncExport } from "../industrial/autoCorrection/industrialThicknessAutoCorrection";
 import { isIndustrialError } from "../core/industrial/IndustrialError";
 import type { ToastMessage } from "../context/ToastContext";
 import {
@@ -92,7 +88,6 @@ import {
   payloadFromIndustrialError,
   payloadFromUnknownError,
   reportIndustrialError,
-  validateCncExportCancelled,
 } from "../industrial/errors/industrialNotificationBridge";
 
 let cutLayoutLoaderRoot: Root | null = null;
@@ -297,20 +292,6 @@ function safeAddXlsx(zip: JSZip, zipPath: string, buffer: ArrayBuffer | null | u
   }
 }
 
-function confirmIndustrialThicknessAdjustments(messageDetail: string): boolean {
-  if (typeof window === "undefined" || typeof window.confirm !== "function") {
-    return true;
-  }
-  return window.confirm(
-    [
-      "A matéria-prima selecionada não possui chapa configurada para esta espessura.",
-      "Deseja substituir por uma espessura próxima?",
-      "",
-      messageDetail,
-    ].join("\n")
-  );
-}
-
 export function useGerarArquivoHandlers() {
   const { project, viewerSync } = useProject();
   const { settings } = useSettings();
@@ -360,20 +341,8 @@ export function useGerarArquivoHandlers() {
   }, [componentTypes, ferragens, isAdmin]);
 
   const prepareItemsForCnc = useCallback(
-    <T extends CutlistItemForPieces>(items: T[], materialsSnapshot: ReturnType<typeof listMaterials>): T[] | null => {
-      const resolution = resolveIndustrialThicknesses(items, materialsSnapshot);
-      if (resolution.unresolved.length > 0) {
-        throwFirstUnresolvedThicknessError(items, resolution.unresolved);
-      }
-      if (resolution.adjustments.length > 0) {
-        const detail = resolution.adjustments.map(formatIndustrialThicknessIssue).join("\n");
-        const accepted = confirmIndustrialThicknessAdjustments(detail);
-        if (!accepted) {
-          validateCncExportCancelled(detail, { showToast });
-          return null;
-        }
-      }
-      return resolution.items;
+    <T extends CutlistItemForPieces>(items: T[], materialsSnapshot: ReturnType<typeof listMaterials>): T[] => {
+      return validateCncExport(items, materialsSnapshot, { showToast });
     },
     [showToast]
   );
@@ -554,7 +523,6 @@ export function useGerarArquivoHandlers() {
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
       const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
-      if (!cncItems) return;
 
       const thicknessBundles = await runCutLayoutPerThickness(
         settingsSnapshot,
@@ -616,7 +584,6 @@ export function useGerarArquivoHandlers() {
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
       const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
-      if (!cncItems) return;
 
       const thicknessBundles = await buildCncBundlesPerThickness(
         settingsSnapshot,
@@ -686,7 +653,6 @@ export function useGerarArquivoHandlers() {
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
       const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
-      if (!cncItems) return;
 
       await yieldToMainThread();
 
@@ -783,10 +749,6 @@ export function useGerarArquivoHandlers() {
         const settingsSnapshot = getSettings();
         const materialsSnapshot = listMaterials();
         const cncItems = prepareItemsForCnc(allItems, materialsSnapshot);
-        if (!cncItems) {
-          setLayoutProgress({ visible: false, percent: 0, message: "", mode: "pro" });
-          return;
-        }
 
         const cncProjectStub = { projectName: project.projectName ?? "Projeto" };
 
@@ -1161,13 +1123,6 @@ export function useGerarArquivoHandlers() {
       let thicknessCncBundles: Awaited<ReturnType<typeof buildCncBundlesPerThickness>> = [];
       try {
         const cncItemsForLayout = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
-        if (!cncItemsForLayout) {
-          abortFullExport = true;
-          errors.push({
-            step: "Nesting por espessura",
-            message: "Exportação cancelada por matéria-prima sem chapa válida.",
-          });
-        } else {
         showCutLayoutLoader();
         await yieldToMainThread();
         thicknessCncBundles = await buildCncBundlesPerThickness(
@@ -1179,7 +1134,6 @@ export function useGerarArquivoHandlers() {
             ...getDefaultCncLayoutOptions(),
           }
         );
-        }
       } catch (err) {
         pushFullExportError(errors, err, "Nesting por espessura");
         devLogger.error("Full export: Nesting por espessura", err);

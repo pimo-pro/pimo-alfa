@@ -19,10 +19,8 @@ import type { CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import type { CutLayoutResult, CutPlacement } from "../cutlayout/cutLayoutTypes";
 import { buildTcnExportBaseName, getDefaultCncLayoutOptions, getFastCncLayoutOptions } from "../cnc/cncPipeline";
 import {
-  formatIndustrialThicknessIssue,
-  resolveIndustrialThicknesses,
-} from "../cnc/industrialThicknessResolution";
-import { throwFirstUnresolvedThicknessError } from "../industrial/industrialThicknessErrors";
+  autoFixCncThicknessMismatch,
+} from "../../industrial/autoCorrection/industrialThicknessAutoCorrection";
 import {
   industrialThicknessEtiquetasPdfPath,
   industrialThicknessLayoutPdfPath,
@@ -238,20 +236,6 @@ function uniqueFolderSegment(base: string, used: Set<string>): string {
   }
   used.add(candidate);
   return candidate;
-}
-
-function confirmIndustrialThicknessAdjustments(messageDetail: string): boolean {
-  if (typeof window === "undefined" || typeof window.confirm !== "function") {
-    return true;
-  }
-  return window.confirm(
-    [
-      "A matéria-prima selecionada não possui chapa configurada para esta espessura.",
-      "Deseja substituir por uma espessura próxima?",
-      "",
-      messageDetail,
-    ].join("\n")
-  );
 }
 
 // --- Numeração global de peças (Fabricação em Massa) ---
@@ -496,23 +480,10 @@ export async function generateMultiProjectFabrication(
   // Atribuir numeração global única e projeto de origem a todos os itens prefixados
   const globalIndex = buildGlobalPieceIndex(allPrefixedItems, layoutResult?.sheets ?? []);
   applyGlobalPieceNumbers(allPrefixedItems, globalIndex, prefixToProjectName);
-  const cncThicknessResolution = resolveIndustrialThicknesses(
+  const allPrefixedCncItems = autoFixCncThicknessMismatch(
     allPrefixedItems as CutlistItemForPieces[],
     materialsSnapshot
-  );
-  if (cncThicknessResolution.unresolved.length > 0) {
-    throwFirstUnresolvedThicknessError(
-      allPrefixedItems as CutlistItemForPieces[],
-      cncThicknessResolution.unresolved
-    );
-  }
-  if (cncThicknessResolution.adjustments.length > 0) {
-    const detail = cncThicknessResolution.adjustments.map(formatIndustrialThicknessIssue).join("\n");
-    if (!confirmIndustrialThicknessAdjustments(detail)) {
-      throw new Error(`multiProjectFabrication: exportação cancelada por matéria-prima sem chapa válida (${detail}).`);
-    }
-  }
-  const allPrefixedCncItems = cncThicknessResolution.items as CutListItemComPreco[];
+  ) as CutListItemComPreco[];
 
   // PASSO 3 — PDF do layout de corte PRO + etiquetas globais (um conjunto por espessura em cnc/)
   checkAbort();
