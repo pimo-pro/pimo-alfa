@@ -81,6 +81,7 @@ import ProjetosIndexPage from "./app/PROJETOS/page";
 import ProjetosProjectPage from "./app/PROJETOS/[project]/page";
 import ProjetosBoxPage from "./app/PROJETOS/[project]/[box]/page";
 import ProjetosPiecePage from "./app/PROJETOS/[project]/[box]/[piece]/page";
+import { ajudaRoutes } from "./routes/ajudaRoutes";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -194,14 +195,7 @@ function LegacyApp() {
   };
 
   const navigateToAjuda = () => {
-    window.history.pushState({}, "", "/ajuda");
-    setShowAjuda(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowDevTest(false);
-    setShowPainelReferencia(false);
-    setShowUserProjects(false);
+    navigate("/ajuda");
   };
 
   const navigateToPainelReferencia = () => {
@@ -482,6 +476,9 @@ export default function App() {
           />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          {ajudaRoutes.map((route) => (
+            <Route key={route.path} path={route.path} element={route.element} />
+          ))}
           <Route path="/pieces/:id" element={<PieceAliasRedirect />} />
           <Route path="/studio/piece/:id" element={<PieceAliasRedirect />} />
           <Route path="/PROJETOS" element={<ProjetosIndexPage />} />

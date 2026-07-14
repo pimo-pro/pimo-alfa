@@ -6,7 +6,9 @@
  */
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import SystemDocumentationPage from "../components/help/SystemDocumentationPage";
+import { AJUDA_WHATS_NEW_PATH } from "../routes/ajudaRoutes";
 import type { SystemDocCategoryId } from "../utils/loadSystemDoc";
 import { SYSTEM_DOC_CATEGORIES } from "../utils/loadSystemDoc";
 
@@ -455,6 +457,13 @@ export default function HelpPage() {
                 {s.label}
               </a>
             ))}
+            <Link
+              to={AJUDA_WHATS_NEW_PATH}
+              style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,fontWeight:400,color:C.muted,background:"transparent",border:"1px solid transparent",textDecoration:"none",transition:"all 0.1s",fontFamily:font,marginTop:4 }}
+            >
+              <span aria-hidden style={{ fontSize:12,lineHeight:1 }}>🆕</span>
+              Novidades do Sistema
+            </Link>
 
             <p style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",color:C.muted,padding:"14px 10px 8px",margin:0,borderTop:`1px solid ${C.border}`,marginTop:8 }}>
               System Documentation
