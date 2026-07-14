@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build && node scripts/copyDeployApiToDist.mjs",
     "publish": "node scripts/releaseNotesPublishFlow.js publish",
     "deploy": "git add . && git commit -m \"Auto deploy\" && git push origin main && node scripts/releaseNotesPublishFlow.js deploy",
+    "release:daily": "node scripts/releaseNotesDailyBuilder.js",
     "test": "vitest run",
     "tsc:strict": "tsc -b tsconfig.strict.json",
     "test:watch": "vitest",
