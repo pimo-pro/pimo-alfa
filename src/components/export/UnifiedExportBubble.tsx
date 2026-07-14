@@ -9,6 +9,7 @@ import { useProject } from "../../context/useProject";
 import { useGerarArquivoHandlers } from "../../hooks/useGerarArquivoHandlers";
 import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import { wrapArquivoCompletoWithSgpi } from "../../industrial/sgpi/industrialExportBridge";
+import { useIndustrialExportPanel } from "../../stores/industrialExportPanelStore";
 import {
   useSendProjectPackage,
   type SendSelections,
@@ -150,6 +151,9 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
   };
 
   const [packageExpanded, setPackageExpanded] = useState(false);
+  const exportPanelMessages = useIndustrialExportPanel((s) => s.messages);
+  const markExportPanelRead = useIndustrialExportPanel((s) => s.markAllRead);
+  const exportPanelUnread = useIndustrialExportPanel((s) => s.unreadCount());
 
   const onArquivoCompletoWithSgpi = useMemo(
     () =>
@@ -237,6 +241,57 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
               financeiro, peças, ferragens e totais) estão incluídos no arquivo completo e na barra inferior
               do Viewer.
             </p>
+            {exportPanelMessages.length > 0 ? (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  borderRadius: 8,
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  background: "rgba(239, 68, 68, 0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    marginBottom: 8,
+                  }}
+                >
+                  <strong style={{ fontSize: 13 }}>
+                    Avisos de exportação{exportPanelUnread > 0 ? ` (${exportPanelUnread} novos)` : ""}
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => markExportPanelRead()}
+                    style={{
+                      fontSize: 11,
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Marcar lidos
+                  </button>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.45 }}>
+                  {exportPanelMessages.slice(0, 6).map((msg) => (
+                    <li key={msg.id} style={{ marginBottom: 6, opacity: msg.read ? 0.75 : 1 }}>
+                      <strong>{msg.step}:</strong> {msg.message}
+                      {msg.hints.length > 0 ? (
+                        <div style={{ marginTop: 4, color: "var(--text-muted)" }}>
+                          Sugestão: {msg.hints[0]}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div
               style={{
                 display: "grid",

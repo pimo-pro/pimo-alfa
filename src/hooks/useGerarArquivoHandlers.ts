@@ -86,28 +86,36 @@ import {
 } from "../core/industrial/industrialOutputGuard";
 import { assertExportInvariantsAllowed } from "../core/invariants/integration/invariantContract";
 import { InvariantViolationError } from "../core/invariants/errors/InvariantViolationError";
+import {
+  dispatchIndustrialNotification,
+  notifyUser,
+  payloadFromIndustrialError,
+  payloadFromUnknownError,
+  reportIndustrialError,
+  validateCncExportCancelled,
+} from "../industrial/errors/industrialNotificationBridge";
 
 let cutLayoutLoaderRoot: Root | null = null;
-
-function showIndustrialErrorToast(
-  showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void,
-  err: unknown
-): boolean {
-  if (!isIndustrialError(err)) return false;
-  showToast(err.formatForToast(), "error", 12000);
-  return true;
-}
 
 function toastExportError(
   showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void,
   err: unknown,
-  fallback: string
+  fallback: string,
+  step = "Exportação industrial"
 ): void {
   if (err instanceof InvariantViolationError) {
-    showToast(err.formatForToast(), "error", 12000);
+    notifyUser(payloadFromUnknownError(err, { step: "Invariantes", source: "export" }), {
+      showToast: (text) => showToast(text, "error", 12000),
+    });
     return;
   }
-  if (showIndustrialErrorToast(showToast, err)) return;
+  if (isIndustrialError(err)) {
+    notifyUser(payloadFromIndustrialError(err, { step, source: "export" }), {
+      showToast: (text) => showToast(text, "error", 12000),
+    });
+    return;
+  }
+  reportIndustrialError(err, { step, source: "export" });
   const msg = err instanceof Error ? err.message : String(err);
   showToast(`${fallback}${msg ? ` — ${msg}` : ""}`, "error");
 }
@@ -135,6 +143,8 @@ function pushFullExportError(
   err: unknown,
   step: string
 ): void {
+  const payload = payloadFromUnknownError(err, { step });
+  dispatchIndustrialNotification(payload);
   if (isIndustrialError(err)) {
     errors.push({ step: err.getTitle(), message: err.formatForToast() });
     return;
@@ -359,7 +369,7 @@ export function useGerarArquivoHandlers() {
         const detail = resolution.adjustments.map(formatIndustrialThicknessIssue).join("\n");
         const accepted = confirmIndustrialThicknessAdjustments(detail);
         if (!accepted) {
-          showToast(`Exportação CNC cancelada: ${detail}`, "warning");
+          validateCncExportCancelled(detail, { showToast });
           return null;
         }
       }
@@ -1153,8 +1163,11 @@ export function useGerarArquivoHandlers() {
         const cncItemsForLayout = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
         if (!cncItemsForLayout) {
           abortFullExport = true;
-          throw new Error("Exportação cancelada por matéria-prima sem chapa válida.");
-        }
+          errors.push({
+            step: "Nesting por espessura",
+            message: "Exportação cancelada por matéria-prima sem chapa válida.",
+          });
+        } else {
         showCutLayoutLoader();
         await yieldToMainThread();
         thicknessCncBundles = await buildCncBundlesPerThickness(
@@ -1166,6 +1179,7 @@ export function useGerarArquivoHandlers() {
             ...getDefaultCncLayoutOptions(),
           }
         );
+        }
       } catch (err) {
         pushFullExportError(errors, err, "Nesting por espessura");
         devLogger.error("Full export: Nesting por espessura", err);
