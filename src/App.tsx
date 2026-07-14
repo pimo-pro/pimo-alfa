@@ -75,6 +75,7 @@ import RealtimeAlertsAdminPage from "./app/admin/system-settings/industrial/real
 import PieceMainView from "./app/industrial/piece/PieceMainView";
 import IndustrialSupervisorDashboardPage from "./app/industrial/supervisor/index";
 import IndustrialOperadorPage from "./app/industrial/operador/index";
+import IndustrialReleaseNotesPage from "./app/industrial/release-notes/IndustrialReleaseNotesPage";
 import ProjetosIndexPage from "./app/PROJETOS/page";
 import ProjetosProjectPage from "./app/PROJETOS/[project]/page";
 import ProjetosBoxPage from "./app/PROJETOS/[project]/[box]/page";
@@ -541,6 +542,7 @@ export default function App() {
               }
             />
             <Route path="/nesting_v3" element={<NestingV3RoutePage />} />
+            <Route path="/industrial/release-notes" element={<IndustrialReleaseNotesPage />} />
             <Route path="/industrial" element={<IndustrialHomePage />} />
             <Route path="/industrial/supervisor" element={<IndustrialSupervisorDashboardPage />} />
             <Route path="/industrial/operador" element={<IndustrialOperadorPage />} />
