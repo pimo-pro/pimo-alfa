@@ -1,5 +1,7 @@
 import type { FinishTransform } from "../kitchenFinish/finishTypes";
 
+export type RemateProductType = "AVISTA" | "COMPLETO" | "L" | "RODAPE" | "RODAPE_L";
+
 export type RematePartRole = "MAIN" | "TOP" | "BOTTOM";
 
 /** Regras de cálculo automático de dimensões para Remate Completo. */

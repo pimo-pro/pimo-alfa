@@ -309,7 +309,7 @@ export class ViewerCore {
   ) => void) | null = null;
   private onRodapeTransform: ((
     _rodapeId: string,
-    _patch: { transform: { xMm: number; yMm: number; zMm: number; rotacaoXRad: number; rotacaoYRad: number; rotacaoZRad: number }; placementFree: boolean }
+    _patch: import("../../core/rodape/rodapeTypes").UpdateRodapeInput
   ) => void) | null = null;
   private onDivSepTransform: ((
     _params: { boxId: string; kind: "div" | "sep"; itemId: string; positionMm: number }

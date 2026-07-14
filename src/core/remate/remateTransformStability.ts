@@ -76,8 +76,6 @@ export function markRematePlacementSettled(piece: RematePiece): RematePiece {
 
 export function shouldSkipRemateUpgradeSnap(piece: RematePiece): boolean {
   if (piece.placementMode === "FREE" || !piece.followBox) return true;
-  const t = piece.transform ?? remateTransformFromPiece(piece);
-  if (t && piece.faceOffsets && piece.placementMode === "FREE") return true;
   if (hasSavedRemateTransform(piece)) return true;
   return false;
 }
