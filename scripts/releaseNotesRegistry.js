@@ -1,4 +1,9 @@
 // pimo-kep-fix-001 — protegido, não modificar sem autorização
+//
+// Convencao de commits pimo-kep (nome industrial obrigatorio, nunca apenas numeros):
+//   feat(pimo-kep-<nome-industrial>): descricao clara
+//   fix(pimo-kep-<nome-industrial>): descricao clara
+// Exemplos: pimo-kep-release-notes, pimo-kep-publish-label, pimo-kep-industrial-env
 
 import fs from "node:fs";
 import path from "node:path";
