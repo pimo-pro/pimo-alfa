@@ -5,10 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import {
-  appendPublicationEntry,
-  capturePrePublishCommitInfo,
-} from "./releaseNotesRegistry.js";
+import { registerPublicationForFlow } from "./releaseNotesPublishHook.js";
 
 const rootDir = process.cwd();
 const versionFilePath = path.join(rootDir, "version.json");
@@ -131,13 +128,8 @@ console.log(`updatedAt: ${nextData.updatedAt}`);
 console.log("Sincronizado public/version.json antes do build.");
 ensureProductionEnv();
 
-const releaseCommitInfo = capturePrePublishCommitInfo(runOutput);
-appendPublicationEntry(rootDir, {
-  publishedAt: new Date().toISOString(),
-  author: releaseCommitInfo.author,
-  commitMessage: releaseCommitInfo.commitMessage,
-  version: nextVersion,
-});
+// pimo-kep-fix-003 — protegido, não modificar sem autorização
+registerPublicationForFlow(rootDir, runOutput, nextVersion);
 
 runStep("Executando build...", "npm run build");
 assertVersionFilesInSync();
