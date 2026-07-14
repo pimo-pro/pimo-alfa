@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-14T22:27:24.295Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(remate-rodape-stability): corrigir build de publicacao (RemateProductType e tipos rodape)",
+      "version": "v6.0714.2327"
+    },
+    {
+      "publishedAt": "2026-07-14T22:21:43.736Z",
+      "author": "pimo-pro",
+      "commitMessage": "release: versão completa — estabilidade remate/rodape",
+      "version": "v6.0714.2321"
+    },
+    {
       "publishedAt": "2026-07-14T21:52:00.970Z",
       "author": "pimo-pro",
       "commitMessage": "release: versão completa — publicação industrial",
