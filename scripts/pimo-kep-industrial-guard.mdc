@@ -1,0 +1,153 @@
+# pimo-kep-industrial-guard — protegido, não modificar sem autorização
+
+Política industrial obrigatória para todas as etapas **pimo-kep**.  
+Este ficheiro documenta regras de proteção. **Não contém código executável.**
+
+Aplica-se a agentes, implementações manuais e commits futuros com prefixo `pimo-kep-*`.
+
+---
+
+## Zona Proibida (.env*)
+
+**Regra A — Proibição de overwrite em ficheiros de ambiente**
+
+- **PROIBIDO** usar overwrite total (`Write` completo, substituição de ficheiro) em:
+  - `.env`
+  - `.env.production`
+  - `.env.local`
+  - `.env.development`
+  - `.env.example`
+  - qualquer ficheiro que corresponda ao padrão `.env*`
+- **PROIBIDO** alterar `.env.production` em etapas pimo-kep, salvo autorização industrial explícita e documentada.
+- **PROIBIDO** assumir que ficheiros `.example` são descartáveis ou regeneráveis.
+- **PERMITIDO** apenas com autorização explícita:
+  - leitura prévia do ficheiro existente;
+  - diff mínimo apresentado;
+  - **append** de secção identificada, nunca substituição total.
+
+Formato recomendado para secção nova em `.env.example`:
+
+```
+# --- pimo-kep-<nome-industrial> ---
+```
+
+Conteúdo da secção: **apenas** variáveis do escopo autorizado da etapa.
+
+---
+
+## Variáveis Industriais
+
+**Regra B — Detecção e proteção de variáveis críticas**
+
+As seguintes variáveis e padrões são **industriais e críticas**. Alteração automática **bloqueada**:
+
+| Padrão | Exemplos | Acção |
+|--------|----------|--------|
+| `VITE_*` | `VITE_API_URL`, `VITE_TEXTURES_URL` | Bloquear remoção ou substituição |
+| `SUPABASE_*` / `VITE_SUPABASE_*` | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Bloquear remoção ou substituição |
+| URLs de backend industrial | `https://pimo-backend.onrender.com` | Preservar em templates/documentação |
+
+**Obrigatório antes de tocar em qualquer ficheiro `.env*`:**
+
+1. Ler o conteúdo actual (`Read` ou equivalente).
+2. Comparar com `git show HEAD:<ficheiro>`.
+3. Identificar linhas industriais existentes.
+4. Garantir que **nenhuma** linha industrial é removida.
+5. Parar e pedir autorização se houver remoção, rename ou alteração de valor industrial.
+
+**Nota metodológica (incidente fix-005):** ficheiros `.example` documentam contratos industriais. Ignorar o conteúdo existente por não ler o ficheiro antes de gravar constitui violação desta regra.
+
+---
+
+## Isolamento pimo-kep
+
+**Regra C — Separação entre release notes e industrial core**
+
+**pimo-kep** cobre exclusivamente:
+
+- Registo de publicações (`public/industrial/release/`)
+- Scripts de publish metadata (`scripts/releaseNotes*.js`, `scripts/releaseNotesPublish*.js`)
+- Página de leitura `/industrial/release-notes`
+- Preparação de export diário e ponto de e-mail (`release:daily`, `release:email`)
+- Ajustes mínimos em `scripts/publish.js` e `package.json` **quando explicitamente autorizados** na etapa
+
+**Zona industrial proibida** (sem autorização explícita fora do escopo da etapa):
+
+| Path | Motivo |
+|------|--------|
+| `src/industrial/core/**` | Motor PIMO-TRAK |
+| `src/industrial/infra/**` | Persistência Supabase |
+| `src/industrial/persistence/**` | Dados industriais |
+| `src/industrial/work-orders/**` | Ordens de trabalho |
+| `src/core/industrial/**` | Pipeline industrial de fabrico |
+| `src/core/cnc/**` | TCN/CNC |
+| `src/core/cutlayout/**` | Cut layout |
+| `src/3d/**` | Viewer 3D |
+| `.env.production` | Runtime de produção |
+
+**Princípio:** Release Notes **não interfere** com runtime industrial. Apenas ficheiros JSON locais, leitura HTTP estática e scripts npm manuais ou integrados no publish conforme etapa autorizada.
+
+---
+
+## Convenção de Commits
+
+**Regra D — Nomenclatura industrial obrigatória**
+
+- **PROIBIDO** usar apenas números sequenciais sem significado (ex.: `pimo-kep-fix-005`).
+- **OBRIGATÓRIO** usar nome industrial descritivo:
+
+```
+feat(pimo-kep-<nome-industrial>): descrição clara do que foi implementado
+fix(pimo-kep-<nome-industrial>): descrição clara do que foi corrigido
+chore(pimo-kep-<nome-industrial>): descrição clara (documentação, regras, auditoria)
+```
+
+**Exemplos válidos:**
+
+- `pimo-kep-release-notes`
+- `pimo-kep-publish-label`
+- `pimo-kep-release-flow`
+- `pimo-kep-daily-export`
+- `pimo-kep-release-email`
+- `pimo-kep-industrial-env`
+- `pimo-kep-industrial-rules`
+
+**pimo-kep** é sistema de **nomes industriais**, não prefixo genérico.
+
+Referência complementar: comentário em `scripts/releaseNotesRegistry.js`.
+
+---
+
+## Procedimento de Segurança
+
+**Checklist obrigatório antes de qualquer escrita em etapa pimo-kep:**
+
+1. **Confirmar escopo** — listar ficheiros autorizados na instrução da etapa.
+2. **Ler antes de gravar** — nunca gravar ficheiro de config ou industrial sem leitura prévia.
+3. **Diff mínimo** — alteração focada; sem reorganização de pastas não solicitada.
+4. **Verificar Git** — `git status` e diff; confirmar que só entram ficheiros do escopo.
+5. **Proibir overwrite** — em `.env*` e zonas industriais proibidas (Regra C).
+6. **Isolar runtime** — não tocar `.env.production` nem módulos industrial core.
+7. **Commit único** — conforme instrução da etapa, com nome industrial (Regra D).
+8. **Sem deploy** — salvo autorização explícita na etapa.
+
+**Em caso de dúvida:** parar, reportar, aguardar autorização. Não improvisar merge nem substituição.
+
+---
+
+## Autorização Industrial
+
+Alterações que **exigem autorização explícita** do responsável industrial (fora do escopo normal pimo-kep):
+
+- Qualquer modificação em `.env.production`, `.env` ou `.env.local`
+- Overwrite ou remoção de linhas em `.env.example` com variáveis `VITE_*` ou `SUPABASE_*`
+- Alteração a paths listados em **Isolamento pimo-kep** (Regra C)
+- Integração de Release Notes com APIs, Supabase ou serviços externos
+- Deploy ou publicação (`npm run publish`, `npm run deploy`) não solicitados na etapa
+- Modificação deste ficheiro (`pimo-kep-industrial-guard.mdc`)
+
+**Autorização válida:** instrução explícita na conversa ou ticket da etapa, com ficheiros e paths enumerados.
+
+---
+
+*Política formalizada na etapa pimo-kep-industrial-rules. Incidente de referência: substituição indevida de `.env.example` em pimo-kep-fix-005, corrigida em `9743eda`.*
