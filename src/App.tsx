@@ -16,6 +16,7 @@ import { ToolbarModalProvider } from "./context/ToolbarModalContext";
 import { ToastProvider } from "./context/ToastContext";
 import { PendingWorkspaceMergeEffect } from "./context/PendingWorkspaceMergeEffect";
 import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
+import { PendingImportedProjectEffect } from "./workspace/PendingImportedProjectEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
@@ -268,6 +269,7 @@ function LegacyApp() {
           <ToastProvider>
             <PendingWorkspaceMergeEffect />
             <PendingSingleLoadEffect />
+            <PendingImportedProjectEffect />
             <PimoViewerProvider>
             <div className="app-root">
         <Header />
@@ -576,6 +578,8 @@ export default function App() {
         <Route path="/" element={<LegacyApp />} />
         {/* Painel legacy (AdminPanel): mesmo shell que / — syncRoute em LegacyApp lê pathname /admin */}
         <Route path="/admin" element={<LegacyApp />} />
+        {/* Projeto importado de ficheiro — workspace completo em /{slug} */}
+        <Route path="/:projectSlug" element={<LegacyApp />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ThemeProvider>

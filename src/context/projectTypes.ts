@@ -811,6 +811,8 @@ export interface ProjectActions {
   /** @internal Implementada em useProjectIoActions. Backup manual; não exposto na UI atual. */
   saveManualBackupSnapshot: () => void;
   loadProjectSnapshot: (_id: string) => Promise<void>;
+  /** Carrega ProjectState importado de ficheiro (sem migrações REMATE/RODA PÉ nem buildDesignState). */
+  loadImportedPimoProject: (_snapshot: ProjectSnapshot, _projectNameSlug: string) => Promise<void>;
   /** Combina vários snapshots guardados num único estado de workspace (opcional; não altera os projetos guardados). */
   mergeSnapshots: (_ids: string[]) => Promise<void>;
   /** @deprecated LEGADO — Templates não implementados. Sem implementação em runtime. Candidato a remoção futura. */

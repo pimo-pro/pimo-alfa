@@ -1,16 +1,24 @@
 import logoPimo from "../../../assets/logo-pi.png";
-import { useContext, useRef, type ChangeEvent, type ReactNode } from "react";
+import { useContext, useRef, type ChangeEvent, type MouseEvent, type ReactNode } from "react";
 import { useTheme } from "../../../context/ThemeContext";
 import { ProjectContext } from "../../../context/projectContext";
+import { useToast } from "../../../context/ToastContext";
 import { Icon } from "@/components/icons";
 import HeaderUndoRedoButtons from "./HeaderUndoRedoButtons";
 import HeaderIndustrialMenu from "./HeaderIndustrialMenu";
 import InvariantNotificationBell from "../../invariants/InvariantNotificationBell";
+import {
+  loadPimoProjectState,
+  readPimoImportFilesFromDirectoryHandle,
+  readPimoImportFilesFromFileList,
+} from "../../../industrial/import/importPimoProjectFromFiles";
+import { buildImportedPimoProjectPayload } from "../../../industrial/import/loadImportedPimoProject";
+import { storePendingImportedProject } from "../../../workspace/pendingImportedProjectUtils";
 
 type HeaderActionButtonProps = {
   title: string;
   ariaLabel: string;
-  onClick?: () => void;
+  onClick?: (_event: MouseEvent<HTMLButtonElement>) => void;
   children: ReactNode;
 };
 
@@ -44,40 +52,102 @@ function HeaderActionButton({ title, ariaLabel, onClick, children }: HeaderActio
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const projectContext = useContext(ProjectContext);
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
+
   const navigateInternal = (path: string) => {
     window.history.pushState({}, "", path);
     window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const openImportedProject = async (payload: ReturnType<typeof buildImportedPimoProjectPayload>) => {
+    if (!payload) {
+      showToast("Não foi possível ler o projeto PIMO a partir do ficheiro.", "error");
+      return;
+    }
+    storePendingImportedProject({
+      slug: payload.projectNameSlug,
+      snapshot: payload.snapshot,
+      projectName: payload.projectName,
+    });
+    navigateInternal(`/${payload.projectNameSlug}`);
+  };
+
+  const ingestImportFiles = async (files: FileList | File[]) => {
+    const importFiles = await readPimoImportFilesFromFileList(files);
+    const loaded = loadPimoProjectState(importFiles);
+    if (!loaded) {
+      showToast("Ficheiro não reconhecido como projeto PIMO.", "error");
+      return;
+    }
+    const payload = buildImportedPimoProjectPayload(loaded.snapshot, loaded.projectName);
+    await openImportedProject(payload);
   };
 
   const handleLanguageControl = () => {
     // @PIMO-SOON: Troca de idioma (atualmente fixo em PT).
   };
 
-  const handleProjectUpload = () => {
+  const handleProjectUpload = async (event: MouseEvent<HTMLButtonElement>) => {
+    if (event.shiftKey) {
+      if (typeof window !== "undefined" && "showDirectoryPicker" in window) {
+        try {
+          const dirHandle = await (
+            window as Window & { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }
+          ).showDirectoryPicker();
+          const importFiles = await readPimoImportFilesFromDirectoryHandle(dirHandle);
+          const loaded = loadPimoProjectState(importFiles);
+          if (!loaded) {
+            showToast("Pasta não reconhecida como projeto PIMO.", "error");
+            return;
+          }
+          const payload = buildImportedPimoProjectPayload(loaded.snapshot, loaded.projectName);
+          await openImportedProject(payload);
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          const msg = err instanceof Error ? err.message : String(err);
+          showToast(`Erro ao ler pasta do projeto: ${msg}`, "error");
+        }
+        return;
+      }
+      folderInputRef.current?.click();
+      return;
+    }
     fileInputRef.current?.click();
   };
 
   const handleProjectFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
-    const file = input.files?.[0];
+    const files = input.files;
     input.value = "";
-    if (!file) return;
-    const load = projectContext?.actions.loadProjectSnapshot;
-    if (!load) return;
+    if (!files?.length) return;
+    if (!projectContext?.actions.loadImportedPimoProject) {
+      showToast("Importação indisponível nesta página.", "error");
+      return;
+    }
     try {
-      const text = await file.text();
-      const data = JSON.parse(text) as unknown;
-      let id: string | null = null;
-      if (typeof data === "object" && data !== null) {
-        const o = data as Record<string, unknown>;
-        if (typeof o.id === "string") id = o.id;
-        else if (typeof o.projectId === "string") id = o.projectId;
-      }
-      if (id) await load(id);
-      // @PIMO-SOON: Importar snapshot completo (projectState) a partir de ficheiro.
-    } catch {
-      // @PIMO-SOON: Toast em erro (JSON inválido, rede, etc.).
+      await ingestImportFiles(files);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Erro ao importar projeto: ${msg}`, "error");
+    }
+  };
+
+  const handleProjectFolderChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const files = input.files;
+    input.value = "";
+    if (!files?.length) return;
+    if (!projectContext?.actions.loadImportedPimoProject) {
+      showToast("Importação indisponível nesta página.", "error");
+      return;
+    }
+    try {
+      await ingestImportFiles(files);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Erro ao importar pasta do projeto: ${msg}`, "error");
     }
   };
 
@@ -196,11 +266,22 @@ export default function Header() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json"
+        accept=".json,.zip,application/json,application/zip"
         style={{ display: "none" }}
         aria-hidden
         tabIndex={-1}
         onChange={handleProjectFileChange}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        // @ts-expect-error webkitdirectory não está nos tipos DOM padrão
+        webkitdirectory=""
+        style={{ display: "none" }}
+        aria-hidden
+        tabIndex={-1}
+        onChange={handleProjectFolderChange}
       />
     </header>
   );

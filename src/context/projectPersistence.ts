@@ -80,7 +80,12 @@ export function serializeStateForAutosave(state: ProjectState): unknown {
   return serializeState(rest as ProjectState);
 }
 
-export function reviveState(snapshot: unknown): ProjectState | null {
+export type ReviveStateOptions = {
+  /** Importação de ficheiro: não aplicar upgradeRematesAfterLoad / upgradeRodapesAfterLoad. */
+  skipLoadUpgrades?: boolean;
+};
+
+export function reviveState(snapshot: unknown, options?: ReviveStateOptions): ProjectState | null {
   if (!snapshot || typeof snapshot !== "object") return null;
   const restored = JSON.parse(
     JSON.stringify(snapshot),
@@ -145,10 +150,12 @@ export function reviveState(snapshot: unknown): ProjectState | null {
           : "");
 
   const remates = Array.isArray(restored.remates)
-    ? upgradeRematesAfterLoad(
-        normalizeRematesFromPersistence(restored.remates),
-        workspaceBoxes
-      )
+    ? options?.skipLoadUpgrades
+      ? normalizeRematesFromPersistence(restored.remates)
+      : upgradeRematesAfterLoad(
+          normalizeRematesFromPersistence(restored.remates),
+          workspaceBoxes
+        )
     : [];
 
   return {
@@ -251,16 +258,18 @@ export function reviveState(snapshot: unknown): ProjectState | null {
         ).map((h) => ({ ...h, visible: h.visible !== false, placementFree: h.placementFree ?? false }))
       : [],
     rodapes: Array.isArray(restored.rodapes)
-      ? upgradeRodapesAfterLoad(
-          restored.rodapes.filter(
+      ? (() => {
+          const filtered = restored.rodapes.filter(
             (r): r is ProjectRodape =>
               r != null &&
               typeof r === "object" &&
               typeof (r as ProjectRodape).id === "string" &&
               typeof (r as ProjectRodape).parentBoxId === "string"
-          ).map((r) => ({ ...r, visible: r.visible !== false, placementFree: r.placementFree ?? false })),
-          workspaceBoxes
-        )
+          ).map((r) => ({ ...r, visible: r.visible !== false, placementFree: r.placementFree ?? false }));
+          return options?.skipLoadUpgrades
+            ? filtered
+            : upgradeRodapesAfterLoad(filtered, workspaceBoxes);
+        })()
       : [],
     autoFill:
       restored.autoFill && typeof restored.autoFill === "object"

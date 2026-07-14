@@ -25,12 +25,14 @@ import { devLogger } from "../../utils/devLogger";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
 import { useToast } from "../../context/ToastContext";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
+import { prepareImportedProjectState } from "../../industrial/import/loadImportedPimoProject";
 
 export type ProjectIoActions = Pick<
   ProjectActions,
   | "saveProjectSnapshot"
   | "saveManualBackupSnapshot"
   | "loadProjectSnapshot"
+  | "loadImportedPimoProject"
   | "mergeSnapshots"
   | "listSavedProjects"
   | "createNewProject"
@@ -120,6 +122,42 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         }
         clearAllCutlistCache();
         updateProject(() => ({ ...applyResultados(restored), currentProjectId: id }));
+      },
+      loadImportedPimoProject: async (snapshot, projectNameSlug) => {
+        const restored = prepareImportedProjectState(snapshot.projectState);
+        if (!restored) {
+          showToast("Ficheiro de projeto inválido ou incompatível.", "error");
+          return;
+        }
+        viewerSync.restoreViewerSnapshot(
+          (snapshot.viewerSnapshot ?? null) as ProjectSnapshot["viewerSnapshot"]
+        );
+        if (restored.room) {
+          applyProjectRoomToWallStore(restored.room);
+        } else if (snapshot.roomSnapshot !== undefined) {
+          if (snapshot.roomSnapshot) {
+            wallStore
+              .getState()
+              .loadRoomConfig(snapshot.roomSnapshot as import("../projectTypes").RoomSnapshot);
+          } else {
+            wallStore.getState().clearRoom();
+          }
+        }
+        undoStackRef.current = [];
+        redoStackRef.current = [];
+        clearAllCutlistCache();
+        logProjectIo("imported-project-loaded", {
+          slug: projectNameSlug,
+          boxes: restored.workspaceBoxes?.length ?? 0,
+        });
+        updateProject(
+          () => ({
+            ...restored,
+            projectName: restored.projectName?.trim() || restored.projectName,
+            currentProjectId: null,
+          }),
+          false
+        );
       },
       mergeSnapshots: async (ids) => {
         const merged = await mergeProjectSnapshotsIntoWorkspace(ids);
