@@ -192,16 +192,7 @@ import {
   resolveRemateTransformRoot,
 } from "./remate/remateLCompositeVisual";
 import { isLRematePiece } from "../../core/remate/remateLGeometry";
-import {
-  computeMountFrameM,
-  faceOffsetsFromPositionM,
-  resolveMountSlot,
-} from "../../core/remate/remateMountFrame";
-import { getRemateEnvelopeBoundsM } from "../../core/remate/rematePlacement";
-import {
-  applyRemateRotationSnapToMesh,
-  rotationSnapIndexFromLocalY,
-} from "../../core/remate/remateRotationSnap";
+import { applyRemateRotationSnapToMesh } from "../../core/remate/remateRotationSnap";
 import { HematiVisualizer, type HematiVisualBridge } from "./hemati/HematiVisualizer";
 import { RodapeVisualizer, type RodapeVisualBridge } from "./rodape/RodapeVisualizer";
 import { mToMm, mmToM } from "../../utils/units";
@@ -1273,6 +1264,7 @@ export class ViewerCore {
     this.syncRemateVisuals();
   }
 
+  /** Sync visual de remates — aplica apenas transform guardado no estado (sem re-snap à caixa). */
   syncRemateVisuals(): void {
     if (this.viewerState.getTransformControlsDragging()) {
       this.pendingViewerVisualSync.remate = true;
@@ -1460,6 +1452,7 @@ export class ViewerCore {
     this.syncRodapeVisuals();
   }
 
+  /** Sync visual de rodapés — aplica apenas transform guardado no estado (sem re-snap à caixa). */
   syncRodapeVisuals(): void {
     if (this.viewerState.getTransformControlsDragging()) {
       this.pendingViewerVisualSync.rodape = true;
@@ -5311,9 +5304,28 @@ export class ViewerCore {
         height: heightMm,
         depth: depthMm,
         placementMode: "FREE",
+        isInitialPlacement: false,
       });
       return;
     }
+
+    const buildRemateTransformPatch = (
+      position: { xMm: number; yMm: number; zMm: number },
+      rotation: { xRad: number; yRad: number; zRad: number }
+    ) => ({
+      position,
+      rotation,
+      transform: {
+        xMm: position.xMm,
+        yMm: position.yMm,
+        zMm: position.zMm,
+        rotacaoXRad: rotation.xRad,
+        rotacaoYRad: rotation.yRad,
+        rotacaoZRad: rotation.zRad,
+      },
+      placementMode: "FREE" as const,
+      isInitialPlacement: false,
+    });
 
     if (entry?.mesh && boxId) {
       entry.mesh.updateMatrixWorld(true);
@@ -5334,51 +5346,25 @@ export class ViewerCore {
 
       const piece = this.remateVisualBridge?.listRematePieces().find((r) => r.id === remateId);
       if (piece && isLRematePiece(piece)) {
-        this.onRemateTransform?.(remateId, {
-          position,
-          rotation,
-          placementMode: "FREE",
-        });
+        this.onRemateTransform?.(remateId, buildRemateTransformPatch(position, rotation));
         return;
       }
 
-      let faceOffsets = piece?.faceOffsets;
-      if (piece?.parentBoxId) {
-        const cfg = this.remateVisualBridge?.getBoxConfig(boxId);
-        if (cfg) {
-          const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
-          const slot = piece.mountSlot ?? resolveMountSlot(piece);
-          const frame = computeMountFrameM(bounds, slot);
-          const snapIdx =
-            tool === "rotate"
-              ? rotationSnapIndexFromLocalY(rotation.yRad)
-              : piece?.faceOffsets?.rotationSnapIndex;
-          faceOffsets = faceOffsetsFromPositionM(frame, position, snapIdx);
-        }
-      }
-
-      this.onRemateTransform?.(remateId, {
-        position,
-        rotation,
-        placementMode: "FREE",
-        ...(faceOffsets ? { faceOffsets } : {}),
-      });
+      this.onRemateTransform?.(remateId, buildRemateTransformPatch(position, rotation));
       return;
     }
 
-    this.onRemateTransform?.(remateId, {
-      position: {
-        xMm: mesh.position.x * 1000,
-        yMm: mesh.position.y * 1000,
-        zMm: mesh.position.z * 1000,
-      },
-      rotation: {
-        xRad: mesh.rotation.x,
-        yRad: mesh.rotation.y,
-        zRad: mesh.rotation.z,
-      },
-      placementMode: "FREE",
-    });
+    const position = {
+      xMm: mesh.position.x * 1000,
+      yMm: mesh.position.y * 1000,
+      zMm: mesh.position.z * 1000,
+    };
+    const rotation = {
+      xRad: mesh.rotation.x,
+      yRad: mesh.rotation.y,
+      zRad: mesh.rotation.z,
+    };
+    this.onRemateTransform?.(remateId, buildRemateTransformPatch(position, rotation));
   }
 
   private notifyHematiTransform(): void {
@@ -5428,6 +5414,7 @@ export class ViewerCore {
         rotacaoZRad: mesh.rotation.z,
       },
       placementFree: true,
+      isInitialPlacement: false,
     });
   }
 

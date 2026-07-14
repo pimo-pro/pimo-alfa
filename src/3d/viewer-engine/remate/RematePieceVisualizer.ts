@@ -7,6 +7,10 @@ import { resolveIndustrialGrainCode } from "../../../core/materials/grainDirecti
 import type { RemateBoxMeta } from "../../../core/remate/remateDimensions";
 import { remateGeometryExtentsM } from "../../../core/remate/remateGeometryExtents";
 import { resolveRematePoseLocal } from "../../../core/remate/remateMountFrame";
+import {
+  getRemateSavedPoseLocal,
+  shouldResolveRematePoseFromBounds,
+} from "../../../core/remate/remateTransformStability";
 import { getRemateEnvelopeBoundsM } from "../../../core/remate/rematePlacement";
 import {
   applyRemateLCompositeChildUserData,
@@ -329,34 +333,38 @@ export class RematePieceVisualizer {
   }
 
   private applyWorldTransform(mesh: THREE.Mesh, piece: RematePiece): void {
+    const pose = shouldResolveRematePoseFromBounds(piece)
+      ? (() => {
+          if (!piece.parentBoxId) {
+            return getRemateSavedPoseLocal(piece);
+          }
+          const cfg = this.bridge?.getBoxConfig(piece.parentBoxId);
+          if (!cfg) return getRemateSavedPoseLocal(piece);
+          const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
+          return resolveRematePoseLocal(piece, bounds);
+        })()
+      : getRemateSavedPoseLocal(piece);
+
     if (piece.parentBoxId) {
-      const cfg = this.bridge?.getBoxConfig(piece.parentBoxId);
       const worldMatrix = this.bridge?.getBoxWorldMatrix(piece.parentBoxId);
-      if (cfg) {
-        const bounds = getRemateEnvelopeBoundsM(cfg.widthM, cfg.heightM, cfg.depthM, cfg.box ?? null);
-        const pose = resolveRematePoseLocal(piece, bounds);
-        if (worldMatrix) {
-          const local = new THREE.Vector3(
-            pose.position.xMm / 1000,
-            pose.position.yMm / 1000,
-            pose.position.zMm / 1000
-          );
-          local.applyMatrix4(worldMatrix);
-          mesh.position.copy(local);
-          const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
-          const partQuat = new THREE.Quaternion().setFromEuler(
-            new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
-          );
-          mesh.quaternion.copy(boxQuat).multiply(partQuat);
-          return;
-        }
-        mesh.position.set(pose.position.xMm / 1000, pose.position.yMm / 1000, pose.position.zMm / 1000);
-        mesh.rotation.set(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad);
+      if (worldMatrix) {
+        const local = new THREE.Vector3(
+          pose.position.xMm / 1000,
+          pose.position.yMm / 1000,
+          pose.position.zMm / 1000
+        );
+        local.applyMatrix4(worldMatrix);
+        mesh.position.copy(local);
+        const boxQuat = new THREE.Quaternion().setFromRotationMatrix(worldMatrix);
+        const partQuat = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad)
+        );
+        mesh.quaternion.copy(boxQuat).multiply(partQuat);
         return;
       }
     }
 
-    mesh.position.set(piece.position.xMm / 1000, piece.position.yMm / 1000, piece.position.zMm / 1000);
-    mesh.rotation.set(piece.rotation.xRad, piece.rotation.yRad, piece.rotation.zRad);
+    mesh.position.set(pose.position.xMm / 1000, pose.position.yMm / 1000, pose.position.zMm / 1000);
+    mesh.rotation.set(pose.rotation.xRad, pose.rotation.yRad, pose.rotation.zRad);
   }
 }

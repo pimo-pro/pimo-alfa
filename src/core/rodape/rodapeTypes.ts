@@ -20,6 +20,8 @@ export type ProjectRodape = {
   parentWallId?: string;
   visible?: boolean;
   autoLengthMm?: number;
+  /** true = apenas na criação; sync usa transform guardado. */
+  isInitialPlacement?: boolean;
   /** false = veio fixo no nesting; true = permite rodar mesmo com material de madeira. */
   allowPieceRotation?: boolean;
   /** true = manter veio da madeira (proibir rotação no nesting). Auto em material de madeira. */
@@ -50,6 +52,7 @@ export type UpdateRodapeInput = Partial<
     | "nomePersonalizado"
     | "allowPieceRotation"
     | "lockWoodGrain"
+    | "isInitialPlacement"
   >
 >;
 

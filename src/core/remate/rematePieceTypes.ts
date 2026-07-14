@@ -1,4 +1,4 @@
-export type RemateProductType = "AVISTA" | "COMPLETO" | "L" | "RODAPE" | "RODAPE_L";
+import type { FinishTransform } from "../kitchenFinish/finishTypes";
 
 export type RematePartRole = "MAIN" | "TOP" | "BOTTOM";
 
@@ -79,6 +79,10 @@ export type RematePiece = {
   placementMode?: RematePlacementMode;
   /** Offsets relativos à face (normal + tangentes). */
   faceOffsets?: RemateFaceOffsets;
+  /** true = apenas na criação; sync/load/design usam transform guardado. */
+  isInitialPlacement?: boolean;
+  /** Transform absoluto local à caixa (mm + rad) — espelho de position/rotation. */
+  transform?: FinishTransform;
   width: number;
   height: number;
   depth: number;
@@ -140,6 +144,8 @@ export type UpdateRematePieceInput = Partial<
     | "allowPieceRotation"
     | "lockWoodGrain"
     | "userDimensionsLocked"
+    | "isInitialPlacement"
+    | "transform"
   >
 >;
 

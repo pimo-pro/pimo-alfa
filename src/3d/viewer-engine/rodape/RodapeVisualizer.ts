@@ -2,6 +2,10 @@ import * as THREE from "three";
 import type { ProjectRodape } from "../../../core/rodape/rodapeTypes";
 import { applyMaterialToMesh } from "../materials/MaterialEngine";
 import { computeRodapePlacementLocal, getStructuralBoundsM } from "../../../core/rodape/rodapePlacement";
+import {
+  hasSavedRodapeTransform,
+  shouldComputeRodapePlacementFromBounds,
+} from "../../../core/rodape/rodapeTransformStability";
 import { computeRodapeVisualMergeGroups, rodapeIdsInMergeGroup } from "../../../core/rodape/rodapeMerge";
 
 export type RodapeVisualBoxConfig = {
@@ -125,8 +129,21 @@ export class RodapeVisualizer {
     }
 
     mesh.visible = !hidden;
-    if (!rodape.placementFree) this.applyInitialPlacement(mesh, rodape, cfg);
-    else if (rodape.transform) this.applyTransform(mesh, rodape, cfg.boxId);
+    this.applyRodapeTransform(mesh, rodape, cfg);
+  }
+
+  private applyRodapeTransform(mesh: THREE.Mesh, rodape: ProjectRodape, cfg: RodapeVisualBoxConfig): void {
+    if (hasSavedRodapeTransform(rodape) && rodape.transform) {
+      this.applyTransform(mesh, rodape, cfg.boxId);
+      return;
+    }
+    if (shouldComputeRodapePlacementFromBounds(rodape)) {
+      this.applyInitialPlacement(mesh, rodape, cfg);
+      return;
+    }
+    if (rodape.placementFree && rodape.transform) {
+      this.applyTransform(mesh, rodape, cfg.boxId);
+    }
   }
 
   private upsertMergeMesh(
@@ -158,7 +175,7 @@ export class RodapeVisualizer {
       mesh.geometry = new THREE.BoxGeometry(mergeW, h, d);
     }
     mesh.renderOrder = RENDER_ORDER + 1;
-    if (!ref.placementFree) this.applyInitialPlacement(mesh, ref, cfg);
+    this.applyRodapeTransform(mesh, ref, cfg);
   }
 
   private createMesh(rodape: ProjectRodape, w: number, h: number, d: number): THREE.Mesh {
@@ -191,7 +208,7 @@ export class RodapeVisualizer {
 
   private applyInitialPlacement(mesh: THREE.Mesh, rodape: ProjectRodape, cfg: RodapeVisualBoxConfig): void {
     const bounds = getStructuralBoundsM(cfg.widthM, cfg.heightM, cfg.depthM);
-    const local = computeRodapePlacementLocal(rodape, bounds);
+    const local = computeRodapePlacementLocal(rodape, bounds, true);
     this.applyLocalToWorld(mesh, local, cfg.boxId);
   }
 

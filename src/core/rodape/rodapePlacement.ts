@@ -11,8 +11,24 @@ export { getStructuralBoundsM };
 
 export function computeRodapePlacementLocal(
   rodape: ProjectRodape,
-  bounds: StructuralBoundsM
+  bounds: StructuralBoundsM,
+  initialCreation = false
 ): RodapePlacementLocal {
+  if (!initialCreation) {
+    const t = rodape.transform;
+    if (t?.xMm != null && t.yMm != null && t.zMm != null) {
+      return {
+        position: [t.xMm / 1000, t.yMm / 1000, t.zMm / 1000],
+        rotation: [
+          t.rotacaoXRad ?? 0,
+          t.rotacaoYRad ?? 0,
+          t.rotacaoZRad ?? 0,
+        ],
+      };
+    }
+    return { position: [0, 0, 0], rotation: [0, 0, 0] };
+  }
+
   const w = rodape.dimensions.widthMm / 1000;
   const h = (rodape.dimensions.heightMm ?? rodape.heightMm) / 1000;
   const d = rodape.dimensions.depthMm / 1000;

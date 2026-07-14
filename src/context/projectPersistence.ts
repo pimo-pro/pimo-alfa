@@ -17,6 +17,9 @@ import {
   normalizeRematesFromPersistence,
   upgradeRematesAfterLoad,
 } from "../core/remate/rematePieceMigration";
+import { stabilizeRemateForPersistence } from "../core/remate/remateTransformStability";
+import { upgradeRodapesAfterLoad } from "../core/rodape/rodapePieceMigration";
+import { stabilizeRodapeForPersistence } from "../core/rodape/rodapeTransformStability";
 import type { ProjectHemati } from "../core/hemati/hematiTypes";
 import type { ProjectRodape } from "../core/rodape/rodapeTypes";
 import {
@@ -57,8 +60,13 @@ export function normalizeExtractedParts(
 }
 
 export function serializeState(state: ProjectState): unknown {
+  const stabilized: ProjectState = {
+    ...state,
+    remates: (state.remates ?? []).map(stabilizeRemateForPersistence),
+    rodapes: (state.rodapes ?? []).map(stabilizeRodapeForPersistence),
+  };
   return JSON.parse(
-    JSON.stringify(state, (_key, value) => {
+    JSON.stringify(stabilized, (_key, value) => {
       if (value instanceof Date) {
         return { __date: value.toISOString() };
       }
@@ -243,13 +251,16 @@ export function reviveState(snapshot: unknown): ProjectState | null {
         ).map((h) => ({ ...h, visible: h.visible !== false, placementFree: h.placementFree ?? false }))
       : [],
     rodapes: Array.isArray(restored.rodapes)
-      ? restored.rodapes.filter(
-          (r): r is ProjectRodape =>
-            r != null &&
-            typeof r === "object" &&
-            typeof (r as ProjectRodape).id === "string" &&
-            typeof (r as ProjectRodape).parentBoxId === "string"
-        ).map((r) => ({ ...r, visible: r.visible !== false, placementFree: r.placementFree ?? false }))
+      ? upgradeRodapesAfterLoad(
+          restored.rodapes.filter(
+            (r): r is ProjectRodape =>
+              r != null &&
+              typeof r === "object" &&
+              typeof (r as ProjectRodape).id === "string" &&
+              typeof (r as ProjectRodape).parentBoxId === "string"
+          ).map((r) => ({ ...r, visible: r.visible !== false, placementFree: r.placementFree ?? false })),
+          workspaceBoxes
+        )
       : [],
     autoFill:
       restored.autoFill && typeof restored.autoFill === "object"

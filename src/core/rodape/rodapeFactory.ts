@@ -12,9 +12,27 @@ import {
 } from "../kitchenFinish/roomContext";
 import type { ProjectRoomConfig } from "../../3d/viewer-engine/room/roomEngineTypes";
 import type { CreateRodapeInput, ProjectRodape } from "./rodapeTypes";
+import { getStructuralBoundsM } from "../remate/rematePlacement";
+import { computeRodapePlacementLocal } from "./rodapePlacement";
+import {
+  markRodapePlacementSettled,
+  rodapeTransformFromPlacementLocal,
+} from "./rodapeTransformStability";
 
 function normalizeBoxCode(box: WorkspaceBox): string {
   return (box.nome || box.id).trim().replace(/\s+/g, "_").toUpperCase();
+}
+
+function settleRodapeTransform(rodape: ProjectRodape, box: WorkspaceBox): ProjectRodape {
+  const widthM = Math.max(0.001, (box.dimensoes?.largura ?? 600) / 1000);
+  const heightM = Math.max(0.001, (box.dimensoes?.altura ?? 720) / 1000);
+  const depthM = Math.max(0.001, (box.dimensoes?.profundidade ?? 600) / 1000);
+  const bounds = getStructuralBoundsM(widthM, heightM, depthM);
+  const local = computeRodapePlacementLocal(rodape, bounds, true);
+  return markRodapePlacementSettled({
+    ...rodape,
+    transform: rodapeTransformFromPlacementLocal(local),
+  });
 }
 
 export function createRodapesForBox(params: {
@@ -55,6 +73,7 @@ export function createRodapesForBox(params: {
     placementFree: false,
     visible: true,
     autoLengthMm,
+    isInitialPlacement: true,
   });
 
   const baseSimple = (): { widthMm: number; heightMm: number; depthMm: number } => ({
@@ -72,16 +91,22 @@ export function createRodapesForBox(params: {
       positiveDirection: true,
     });
     return [
-      makePiece(
-        1,
-        { widthMm: thicknessMm, heightMm, depthMm: Math.min(spanZ, HEMATI_AVISTA_DEPTH_MM) },
-        "L1"
+      settleRodapeTransform(
+        makePiece(
+          1,
+          { widthMm: thicknessMm, heightMm, depthMm: Math.min(spanZ, HEMATI_AVISTA_DEPTH_MM) },
+          "L1"
+        ),
+        box
       ),
-      makePiece(
-        2,
-        applyAutoWidth({ widthMm: largura, heightMm, depthMm: thicknessMm }, spanZ, "width"),
-        "L2",
-        spanZ
+      settleRodapeTransform(
+        makePiece(
+          2,
+          applyAutoWidth({ widthMm: largura, heightMm, depthMm: thicknessMm }, spanZ, "width"),
+          "L2",
+          spanZ
+        ),
+        box
       ),
     ];
   }
@@ -103,14 +128,23 @@ export function createRodapesForBox(params: {
       positiveDirection: true,
     });
     return [
-      makePiece(1, { widthMm: thicknessMm, heightMm, depthMm: Math.min(spanZ, 800) }, "U1"),
-      makePiece(
-        2,
-        applyAutoWidth({ widthMm: largura, heightMm, depthMm: thicknessMm }, spanX, "width"),
-        "U2",
-        spanX
+      settleRodapeTransform(
+        makePiece(1, { widthMm: thicknessMm, heightMm, depthMm: Math.min(spanZ, 800) }, "U1"),
+        box
       ),
-      makePiece(3, { widthMm: thicknessMm, heightMm, depthMm: Math.min(spanZ, 800) }, "U3"),
+      settleRodapeTransform(
+        makePiece(
+          2,
+          applyAutoWidth({ widthMm: largura, heightMm, depthMm: thicknessMm }, spanX, "width"),
+          "U2",
+          spanX
+        ),
+        box
+      ),
+      settleRodapeTransform(
+        makePiece(3, { widthMm: thicknessMm, heightMm, depthMm: Math.min(spanZ, 800) }, "U3"),
+        box
+      ),
     ];
   }
 
@@ -138,5 +172,5 @@ export function createRodapesForBox(params: {
     autoLengthMm = span;
   }
 
-  return [makePiece(undefined, dimensions, input.kind === "SIMPLE" ? "SIMPLE" : input.kind, autoLengthMm)];
+  return [settleRodapeTransform(makePiece(undefined, dimensions, input.kind === "SIMPLE" ? "SIMPLE" : input.kind, autoLengthMm), box)];
 }

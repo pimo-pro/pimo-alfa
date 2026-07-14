@@ -19,6 +19,10 @@ import {
   isLegacyLRemateMountForMigration,
   snapLRemateGroupCorners,
 } from "./remateLGeometry";
+import {
+  markRematePlacementSettled,
+  shouldSkipRemateUpgradeSnap,
+} from "./remateTransformStability";
 
 function isRematePieceV2(raw: unknown): raw is RematePiece {
   return (
@@ -76,6 +80,17 @@ export function migrateRemateV1ToRematePiece(v1: ProjectRemate): RematePiece {
     name: v1.name,
     parentGroupId: v1.parentGroupId,
     partIndex: v1.partIndex,
+    isInitialPlacement: false,
+    transform: v1.transform
+      ? {
+          xMm: v1.transform.xMm,
+          yMm: v1.transform.yMm,
+          zMm: v1.transform.zMm,
+          rotacaoXRad: v1.transform.rotacaoXRad,
+          rotacaoYRad: v1.transform.rotacaoYRad,
+          rotacaoZRad: v1.transform.rotacaoZRad,
+        }
+      : undefined,
   };
 }
 
@@ -98,16 +113,16 @@ function upgradeRematePiece(piece: RematePiece, box: WorkspaceBox | null): Remat
     tipo: productType === "L" ? "L" : (piece.tipo ?? deriveLegacyTipo(productType, mountSlot)),
     placementMode: piece.placementMode ?? (piece.followBox ? "SNAPPED" : "FREE"),
   };
-  if (next.placementMode === "FREE" || !next.followBox) return next;
-  if (!box) return next;
+  if (shouldSkipRemateUpgradeSnap(next)) {
+    return markRematePlacementSettled(next);
+  }
+  if (!box) return markRematePlacementSettled(next);
   const dims = boxDimsFromWorkspace(box);
   const bounds = getRemateEnvelopeBoundsM(dims.widthM, dims.heightM, dims.depthM, box);
   if (!next.faceOffsets || isLegacyCenterZSnap(next) || isCorruptedMountOffsetSnap(next)) {
-    next = snapToMountRule(next, bounds);
-  } else if (productType === "L" && next.placementMode === "SNAPPED") {
-    next = snapToMountRule(next, bounds);
+    next = markRematePlacementSettled(snapToMountRule(next, bounds));
   }
-  return next;
+  return markRematePlacementSettled(next);
 }
 
 export function upgradeRematesAfterLoad(
@@ -133,19 +148,18 @@ export function upgradeRematesAfterLoad(
       ? workspaceBoxes.find((b) => b.id === ext.parentBoxId) ?? null
       : null;
     if (!ext || !int || !box) continue;
+    if (!isLegacyLRemateMountForMigration(ext)) continue;
     const dims = boxDimsFromWorkspace(box);
     const bounds = getRemateEnvelopeBoundsM(dims.widthM, dims.heightM, dims.depthM, box);
-    const migrateCtx = isLegacyLRemateMountForMigration(ext)
-      ? {
-          boxLarguraMm: box.dimensoes?.largura ?? 600,
-          boxAlturaMm: box.dimensoes?.altura ?? 720,
-          thicknessMm: Number(ext.depth) || Number(box.espessura) || 19,
-        }
-      : undefined;
+    const migrateCtx = {
+      boxLarguraMm: box.dimensoes?.largura ?? 600,
+      boxAlturaMm: box.dimensoes?.altura ?? 720,
+      thicknessMm: Number(ext.depth) || Number(box.espessura) || 19,
+    };
     const snapped = snapLRemateGroupCorners(ext, int, bounds, migrateCtx);
     result = result.map((r) => {
-      if (r.id === snapped.ext.id) return snapped.ext;
-      if (r.id === snapped.int.id) return snapped.int;
+      if (r.id === snapped.ext.id) return markRematePlacementSettled(snapped.ext);
+      if (r.id === snapped.int.id) return markRematePlacementSettled(snapped.int);
       return r;
     });
   }

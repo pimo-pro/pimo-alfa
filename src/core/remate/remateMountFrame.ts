@@ -14,6 +14,10 @@ import type {
   RematePiecePosition,
   RematePieceRotation,
 } from "./rematePieceTypes";
+import {
+  getRemateSavedPoseLocal,
+  shouldResolveRematePoseFromBounds,
+} from "./remateTransformStability";
 
 export type MountFrameM = {
   originM: { x: number; y: number; z: number };
@@ -248,11 +252,15 @@ export function snapToMountRule(piece: RematePiece, bounds: StructuralBoundsM): 
   };
 }
 
-/** Pose para render/sync: offsets + frame atual (followBoxTransform). */
+/** Pose para render/sync: offsets + frame atual (followBoxTransform). Só na criação inicial. */
 export function resolveRematePoseLocal(
   piece: RematePiece,
   bounds: StructuralBoundsM
 ): { position: RematePiecePosition; rotation: RematePieceRotation } {
+  if (!shouldResolveRematePoseFromBounds(piece)) {
+    return getRemateSavedPoseLocal(piece);
+  }
+
   if (isLRematePiece(piece)) {
     if (piece.placementMode === "SNAPPED" && piece.partIndex === 1) {
       const primary = resolveLPrimarySlot(piece);

@@ -14,6 +14,7 @@ import {
 import { getRemateEnvelopeBoundsM } from "./rematePlacement";
 import { snapToMountRule } from "./remateMountFrame";
 import { snapLRemateGroupCorners } from "./remateLGeometry";
+import { markRematePlacementSettled } from "./remateTransformStability";
 
 import { remateLIndustrialName } from "./remateLGeometry";
 
@@ -80,7 +81,7 @@ function applyMountSnapIfNeeded(
     boxDimsM.depthM,
     box
   );
-  return snapToMountRule(piece, bounds);
+  return markRematePlacementSettled(snapToMountRule(piece, bounds));
 }
 
 export function refreshRemateMountSnap(
@@ -94,7 +95,9 @@ export function refreshRemateMountSnap(
     boxDimsM.depthM,
     box
   );
-  return snapToMountRule({ ...piece, placementMode: "SNAPPED" }, bounds);
+  return markRematePlacementSettled(
+    snapToMountRule({ ...piece, placementMode: "SNAPPED" }, bounds)
+  );
 }
 
 export function createRematePieces(
@@ -142,6 +145,7 @@ export function createRematePieces(
       name: buildRematePieceName(ctx.box ?? null, productType, mountSlot, spec.partRole, spec.partIndex),
       parentGroupId: groupId,
       partIndex: spec.partIndex,
+      isInitialPlacement: true,
     };
 
     if (input.parentBoxId && ctx.box && ctx.boxDimsM) {
@@ -150,6 +154,9 @@ export function createRematePieces(
       piece.position = input.workspacePosition ?? defaultStandalonePosition(ctx.allBoxes ?? [], piece);
       piece.followBox = false;
       piece.placementMode = "FREE";
+      piece = markRematePlacementSettled(piece);
+    } else {
+      piece = markRematePlacementSettled(piece);
     }
     return piece;
   });
@@ -169,8 +176,8 @@ export function createRematePieces(
         boxAlturaMm: ctx.box.dimensoes?.altura ?? 720,
         thicknessMm: ctx.thicknessMm,
       });
-      created[extIdx] = snapped.ext;
-      created[intIdx] = snapped.int;
+      created[extIdx] = markRematePlacementSettled(snapped.ext);
+      created[intIdx] = markRematePlacementSettled(snapped.int);
     }
   }
 
