@@ -16,12 +16,27 @@ const logWoEventPath = path.join(rootDir, "src/industrial/persistence/work-order
 
 const SAMPLE_UUID = "a1b2c3d4-e5f6-4789-a012-3456789abcde";
 
+const migrationPath = path.join(rootDir, "supabase/migrations/011_restore_public_users.sql");
+
 describe("industrialUserIntegrity", () => {
+  it("migration restaura tabela public.users com schema base", () => {
+    expect(fs.existsSync(migrationPath)).toBe(true);
+    const sql = fs.readFileSync(migrationPath, "utf8");
+    expect(sql).toContain("CREATE TABLE IF NOT EXISTS public.users");
+    expect(sql).toContain("id UUID PRIMARY KEY");
+    expect(sql).toContain("email TEXT");
+    expect(sql).toContain("name TEXT");
+    expect(sql).toContain("role TEXT");
+    expect(sql).toContain("created_at TIMESTAMPTZ");
+    expect(sql).toContain("NOTIFY pgrst, 'reload schema'");
+  });
+
   it("getOrCreateIndustrialUser define utilizador industrial padrão", () => {
     const source = fs.readFileSync(getUserPath, "utf8");
     expect(source).toContain("getOrCreateIndustrialUser");
     expect(source).toContain("USERS_TABLE = 'users'");
     expect(source).toContain("pimo-trak-industrial@pimo.pro");
+    expect(source).toContain("PIMO-TRAK Industrial");
     expect(source).toContain("createDefaultIndustrialUser");
   });
 

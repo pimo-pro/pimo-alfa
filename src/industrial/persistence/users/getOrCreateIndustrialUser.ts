@@ -6,7 +6,7 @@ export { isValidIndustrialUserId } from './industrialUserIds';
 
 export const DEFAULT_INDUSTRIAL_USER = {
   email: 'pimo-trak-industrial@pimo.pro',
-  username: 'pimo-trak-industrial',
+  name: 'PIMO-TRAK Industrial',
   role: 'operator',
 } as const;
 
@@ -15,15 +15,18 @@ export const USERS_TABLE = 'users';
 export type IndustrialUserRecord = {
   id: string;
   email?: string | null;
-  username?: string | null;
+  name?: string | null;
+  role?: string | null;
 };
 
 let cachedDefaultUserId: string | null = null;
 
+const USER_SELECT = 'id, email, name, role';
+
 async function fetchUserById(id: string): Promise<IndustrialUserRecord | null> {
   const { data, error } = await supabase
     .from(USERS_TABLE)
-    .select('id, email, username')
+    .select(USER_SELECT)
     .eq('id', id.trim())
     .maybeSingle();
 
@@ -34,8 +37,8 @@ async function fetchUserById(id: string): Promise<IndustrialUserRecord | null> {
 async function fetchUserByEmail(email: string): Promise<IndustrialUserRecord | null> {
   const { data, error } = await supabase
     .from(USERS_TABLE)
-    .select('id, email, username')
-    .eq('email', email)
+    .select(USER_SELECT)
+    .ilike('email', email)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -43,17 +46,14 @@ async function fetchUserByEmail(email: string): Promise<IndustrialUserRecord | n
 }
 
 async function createDefaultIndustrialUser(): Promise<IndustrialUserRecord> {
-  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from(USERS_TABLE)
     .insert({
       email: DEFAULT_INDUSTRIAL_USER.email,
-      username: DEFAULT_INDUSTRIAL_USER.username,
+      name: DEFAULT_INDUSTRIAL_USER.name,
       role: DEFAULT_INDUSTRIAL_USER.role,
-      created_at: now,
-      updated_at: now,
     })
-    .select('id, email, username')
+    .select(USER_SELECT)
     .single();
 
   if (error) {
