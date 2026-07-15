@@ -1,7 +1,7 @@
 import { updatePieceOperationStatus } from '@/industrial/core/piece-operations/actions';
 import type { PieceOperation, PieceOperationStatus } from '@/industrial/core/piece-operations/types';
 import { resolveValidatedWorkOrderIdForPiece } from '@/industrial/persistence/work-orders/resolvePieceWorkOrderId';
-import { validateWorkOrderId } from '@/industrial/persistence/work-orders/validateWorkOrderId';
+import { validateWorkOrderBeforeEvent } from '@/industrial/persistence/work-orders/validateWorkOrderBeforeEvent';
 
 import { logPieceEvent } from '../events/logEvent';
 import { savePieceOperations } from '../piece/savePieceOperations';
@@ -51,10 +51,10 @@ export async function updateTrackingState(
           : 'operation_started';
 
   let workOrderId = context?.workOrderId
-    ? await validateWorkOrderId(
+    ? (await validateWorkOrderBeforeEvent(
         context.workOrderId,
         `operation:${operation.type}:piece=${pieceId}`,
-      )
+      )).workOrderId
     : null;
   if (!workOrderId) {
     workOrderId = await resolveValidatedWorkOrderIdForPiece(pieceId, operation.type);

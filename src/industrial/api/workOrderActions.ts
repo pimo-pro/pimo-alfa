@@ -9,7 +9,11 @@ import {
   loadWorkOrders,
 } from '@/industrial/persistence/work-orders/loadWorkOrders';
 import { logWorkOrderEvent } from '@/industrial/persistence/work-orders/logWorkOrderEvent';
-import { validateWorkOrderId } from '@/industrial/persistence/work-orders/validateWorkOrderId';
+import {
+  notifyWorkOrderSyncError,
+  validateWorkOrderBeforeEvent,
+  WORK_ORDER_SYNC_ERROR_MESSAGE,
+} from '@/industrial/persistence/work-orders/validateWorkOrderBeforeEvent';
 import {
   assignTaskOperator,
   syncWorkOrderStatusFromTasks,
@@ -101,17 +105,17 @@ async function syncPieceOnTaskAction(
   operatorId?: string,
   reason?: string,
 ) {
-  const validatedWorkOrderId = await validateWorkOrderId(
+  const validation = await validateWorkOrderBeforeEvent(
     task.workOrderId,
     `syncPiece:task=${task.id}:piece=${task.pieceId}`,
   );
-  if (!validatedWorkOrderId) {
-    console.warn(
-      `[industrial] Sincronização de peça ignorada para eventos — task ${task.id} sem work_order_id válido.`,
-    );
+  if (!validation.ok) {
+    notifyWorkOrderSyncError();
+    throw new Error(validation.message ?? WORK_ORDER_SYNC_ERROR_MESSAGE);
   }
 
-  const workOrderContext = validatedWorkOrderId ? { workOrderId: validatedWorkOrderId } : undefined;
+  const validatedWorkOrderId = validation.workOrderId;
+  const workOrderContext = { workOrderId: validatedWorkOrderId };
   const pieceOperation = await resolvePieceOperation(task.pieceId, task.operationType);
 
   if (pieceOperation) {

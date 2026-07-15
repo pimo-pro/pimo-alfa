@@ -1,6 +1,7 @@
 import { supabase } from '@/industrial/infra/db';
 import { industrialEventUtils, type IndustrialEventFilter, type IndustrialSystemEvent } from '@/industrial/infra/supabase/events';
 import { INDUSTRIAL_TABLES } from '@/industrial/infra/supabase/tables';
+import { validateWorkOrderBeforeEvent } from '@/industrial/persistence/work-orders/validateWorkOrderBeforeEvent';
 
 export interface IndustrialEventPayload {
   work_order_id?: string;
@@ -14,13 +15,23 @@ export interface IndustrialEventPayload {
  * Registra eventos industriais sem acoplar o core a componentes ou rotas.
  */
 export async function logEvent(type: string, payload: IndustrialEventPayload = {}): Promise<IndustrialSystemEvent | null> {
+  let industrialWorkOrderId: string | null = null;
+  if (payload.work_order_id) {
+    const validation = await validateWorkOrderBeforeEvent(payload.work_order_id, `core.logEvent:${type}`);
+    industrialWorkOrderId = validation.ok ? validation.workOrderId : null;
+  }
+
   const { data, error } = await supabase.from(INDUSTRIAL_TABLES.systemEvents).insert({
     type,
-    work_order_id: payload.work_order_id ?? null,
-    task_id: payload.task_id ?? null,
+    work_order_id: null,
+    task_id: null,
     user_id: payload.user_id ?? null,
     department_id: payload.department_id ?? null,
-    metadata: industrialEventUtils.createMetadata(payload.metadata ?? {}),
+    metadata: industrialEventUtils.createMetadata({
+      ...(industrialWorkOrderId ? { industrial_work_order_id: industrialWorkOrderId } : {}),
+      ...(payload.task_id ? { industrial_task_id: payload.task_id } : {}),
+      ...payload.metadata,
+    }),
   }).select().single();
 
   if (error) {

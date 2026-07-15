@@ -27,7 +27,8 @@ export type IndustrialNotificationSource =
   | "chapa"
   | "espessura"
   | "material"
-  | "cutlist";
+  | "cutlist"
+  | "trak";
 
 export type IndustrialNotificationPayload = {
   source: IndustrialNotificationSource;
@@ -69,6 +70,8 @@ function ruleNameForSource(source: IndustrialNotificationSource): string {
       return "Material industrial";
     case "cutlist":
       return "Cutlist industrial";
+    case "trak":
+      return "PIMO-TRAK";
     default:
       return "Exportação industrial";
   }

@@ -7,10 +7,10 @@ import type { SavedProjectRecord } from "@/core/projects/types";
 import {
   fetchProjetosIndustrialSummary,
   fetchProjetosPieceIndustrialState,
-  generateWorkOrdersFromProjetosRecord,
   recordProjetosPieceOperation,
   type ProjetosIndustrialSummary,
 } from "@/industrial/api/projetosIndustrialActions";
+import { iniciarProducaoHandler } from "@/industrial/api/iniciarProducaoHandler";
 import { resolveProjetosIndustrialRef } from "@/industrial/integration/projetos/resolveProjetosIndustrialRef";
 import { projectCodeFromName } from "@/industrial/work-orders/resolveWorkOrderPiece";
 import { PROJETOS_PIECE_OPERATIONS } from "@/industrial/integration/projetos/types";
@@ -119,7 +119,7 @@ export default function ProjetosIndustrialPanel({
     setError(null);
     setMessage(null);
     try {
-      const result = await generateWorkOrdersFromProjetosRecord(snapshot);
+      const result = await iniciarProducaoHandler(snapshot);
       setMessage(`Criadas ${result.orders.length} ordens para "${result.projectName}".`);
       await reload();
     } catch (err) {

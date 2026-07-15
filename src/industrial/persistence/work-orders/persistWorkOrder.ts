@@ -4,6 +4,7 @@ import { buildTaskMetadataForPiece } from '@/industrial/work-orders/resolveWorkO
 
 import { mapWorkOrderRow } from './mappers';
 import { WORK_ORDER_TABLES } from './tables';
+import { assertIndustrialWorkOrderId } from './validateWorkOrderBeforeEvent';
 import { markWorkOrderIdKnownValid } from './validateWorkOrderId';
 
 export interface PersistWorkOrderOptions {
@@ -40,6 +41,7 @@ export async function persistWorkOrderDraft(
     throw new Error(orderError?.message ?? 'Falha ao criar ordem de trabalho.');
   }
 
+  assertIndustrialWorkOrderId(orderRow.id);
   markWorkOrderIdKnownValid(orderRow.id);
 
   const taskRows = draft.tasks.map((task) => {
@@ -65,6 +67,7 @@ export async function persistWorkOrderDraft(
     throw new Error(tasksError.message);
   }
 
+  // Eventos WO: apenas após ordem + tasks persistidas (industrial_work_order_events, não system_events).
   await supabase.from(WORK_ORDER_TABLES.events).insert({
     work_order_id: orderRow.id,
     event_type: 'work_order_created',

@@ -1,4 +1,3 @@
-import { createWorkOrdersForProjetosRecord } from '@/industrial/work-orders/createWorkOrdersForProject';
 import {
   fetchWorkOrders,
   fetchPieceWorkOrderTasks,
@@ -15,9 +14,7 @@ import type { PieceOperation } from '@/industrial/core/piece-operations/types';
 
 import type { ProjetosPieceOperationId } from '../integration/projetos/types';
 
-export async function generateWorkOrdersFromProjetosRecord(record: SavedProjectRecord) {
-  return createWorkOrdersForProjetosRecord(record);
-}
+export { generateWorkOrdersFromProjetosRecord } from '@/industrial/work-orders/generateWorkOrdersFromProjetosRecord';
 
 export async function fetchProjetosProjectWorkOrders(projectId: string): Promise<IndustrialWorkOrder[]> {
   return fetchWorkOrders({ projectId });
