@@ -20,16 +20,18 @@ type DivSepPanelProps = {
     ProjectActions,
     "addSeparador" | "addDivisor" | "removeSeparador" | "removeDivisor" | "updateSeparador" | "updateDivisor"
   >;
+  /** Sem Panel wrapper (ex.: dentro de UnifiedPopover). */
+  embedded?: boolean;
 };
 
-export default function DivSepPanel({ box, actions }: DivSepPanelProps) {
+export default function DivSepPanel({ box, actions, embedded = false }: DivSepPanelProps) {
   const internal = useMemo(() => getDivSepInternalDims(box), [box]);
   const separadores = box.separadores ?? [];
   const divisores = box.divisores ?? [];
   const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
 
-  return (
-    <Panel title="DIVISÓRIOS E SEPARADORES">
+  const content = (
+    <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         <button type="button" className="button button-ghost button-sm" onClick={() => actions.addSeparador()}>
           Adicionar SEPARADOR
@@ -244,6 +246,10 @@ export default function DivSepPanel({ box, actions }: DivSepPanelProps) {
           </div>
         );
       })}
-    </Panel>
+    </>
   );
+
+  if (embedded) return content;
+
+  return <Panel title="DIVISÓRIOS E SEPARADORES">{content}</Panel>;
 }

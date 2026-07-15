@@ -22,6 +22,11 @@ export type UnifiedPopoverProps = {
   triggerVariant?: "inline" | "primary" | "ghost";
   /** Tooltip nativo ao hover no botão trigger. */
   triggerTitle?: string;
+  /** inline: painel expande abaixo do botão (empurra conteúdo); overlay: posição absoluta (padrão). */
+  layout?: "inline" | "overlay";
+  /** Modo controlado (ex.: accordion exclusivo no painel da caixa). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export default function UnifiedPopover({
@@ -33,15 +38,31 @@ export default function UnifiedPopover({
   fullWidth = false,
   triggerVariant = "inline",
   triggerTitle,
+  layout = "overlay",
+  open: openControlled,
+  onOpenChange,
 }: UnifiedPopoverProps) {
-  const [open, setOpen] = useState(false);
+  const [openUncontrolled, setOpenUncontrolled] = useState(false);
+  const isControlled = openControlled !== undefined;
+  const open = isControlled ? openControlled : openUncontrolled;
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleClickOutside = useCallback((e: MouseEvent) => {
-    if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-      setOpen(false);
-    }
-  }, []);
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (isControlled) onOpenChange?.(next);
+      else setOpenUncontrolled(next);
+    },
+    [isControlled, onOpenChange],
+  );
+
+  const handleClickOutside = useCallback(
+    (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    },
+    [setOpen],
+  );
 
   useEffect(() => {
     if (open) {
@@ -53,12 +74,13 @@ export default function UnifiedPopover({
   const isPrimaryTrigger = triggerVariant === "primary";
   const isGhostTrigger = triggerVariant === "ghost";
   const isPanelTrigger = isPrimaryTrigger || isGhostTrigger;
+  const isInline = layout === "inline";
 
   return (
     <div
       ref={containerRef}
       style={{
-        position: "relative",
+        position: isInline ? "static" : "relative",
         display: fullWidth ? "block" : "inline-block",
         width: fullWidth ? "100%" : undefined,
       }}
@@ -71,7 +93,7 @@ export default function UnifiedPopover({
         aria-expanded={open}
         title={triggerTitle}
         aria-label={triggerTitle}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(!open)}
         className={
           isPrimaryTrigger
             ? "button button-primary"
@@ -81,7 +103,20 @@ export default function UnifiedPopover({
         }
         style={
           isPanelTrigger
-            ? { width: fullWidth ? "100%" : undefined }
+            ? {
+                width: fullWidth ? "100%" : undefined,
+                ...(open && isGhostTrigger
+                  ? {
+                      borderColor: "var(--accent, #38bdf8)",
+                      background: "rgba(56, 189, 248, 0.12)",
+                      boxShadow: "inset 0 0 0 1px var(--accent, #38bdf8)",
+                    }
+                  : open && isPrimaryTrigger
+                    ? {
+                        boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.35)",
+                      }
+                    : {}),
+              }
             : {
                 background: "transparent",
                 border: "1px solid var(--border)",
@@ -99,23 +134,36 @@ export default function UnifiedPopover({
         <div
           role="dialog"
           aria-labelledby={id}
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: align === "start" ? 0 : align === "end" ? "auto" : "50%",
-            right: align === "end" ? 0 : undefined,
-            transform: align === "center" ? "translateX(-50%)" : undefined,
-            marginTop: 4,
-            padding: 12,
-            background: "var(--navy, #0f172a)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-            zIndex: 1000,
-            minWidth: 160,
-            width: fullWidth ? "100%" : undefined,
-            boxSizing: "border-box",
-          }}
+          style={
+            isInline
+              ? {
+                  position: "static",
+                  marginTop: 4,
+                  padding: 12,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }
+              : {
+                  position: "absolute",
+                  top: "100%",
+                  left: align === "start" ? 0 : align === "end" ? "auto" : "50%",
+                  right: align === "end" ? 0 : undefined,
+                  transform: align === "center" ? "translateX(-50%)" : undefined,
+                  marginTop: 4,
+                  padding: 12,
+                  background: "var(--navy, #0f172a)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  zIndex: 1000,
+                  minWidth: 160,
+                  width: fullWidth ? "100%" : undefined,
+                  boxSizing: "border-box",
+                }
+          }
         >
           {children}
         </div>
@@ -135,6 +183,9 @@ export function StepperPopover({
   fullWidth,
   triggerVariant,
   triggerTitle,
+  layout,
+  open,
+  onOpenChange,
 }: {
   label: string;
   value: number;
@@ -145,6 +196,9 @@ export function StepperPopover({
   fullWidth?: boolean;
   triggerVariant?: "inline" | "primary" | "ghost";
   triggerTitle?: string;
+  layout?: "inline" | "overlay";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const v = Math.max(min, Math.min(max, Math.floor(value)));
   const separator = triggerVariant && triggerVariant !== "inline" ? " — " : ": ";
@@ -154,6 +208,9 @@ export function StepperPopover({
       fullWidth={fullWidth}
       triggerVariant={triggerVariant}
       triggerTitle={triggerTitle}
+      layout={layout}
+      open={open}
+      onOpenChange={onOpenChange}
       trigger={
         <span>
           {label}{separator}<strong>{v}</strong>

@@ -74,12 +74,20 @@ const bodyStyle: React.CSSProperties = {
 
 type Props = {
   boxId: string;
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
   defaultMaterialId?: string;
+  /** Conteúdo inline (sem portal/drawer lateral). */
+  embedded?: boolean;
 };
 
-export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialId }: Props) {
+export default function BoxRemateDrawer({
+  boxId,
+  open = false,
+  onClose,
+  defaultMaterialId,
+  embedded = false,
+}: Props) {
   const { project, actions } = useProject();
   const setSelectedObject = useUiStore((s) => s.setSelectedObject);
   const [productType, setProductType] = useState<RemateProductType>("AVISTA");
@@ -102,8 +110,6 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
   const mountSlotSelectable = productType === "AVISTA" || productType === "COMPLETO";
   const activeMountSlots = MOUNT_SLOTS;
 
-  if (!open || typeof document === "undefined") return null;
-
   const materialPreset =
     defaultMaterialId || project.materialId || project.material.tipo || "default";
 
@@ -125,6 +131,188 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
     setProductOptions({});
   };
 
+  const bodyContent = (
+    <>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.45 }}>
+        Remate do módulo — escolha o tipo de produto e a face de montagem.
+      </p>
+
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-main)" }}>Adicionar remate</div>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+          Tipo de produto
+          <select
+            className="select input-sm"
+            value={productType}
+            onChange={(e) => handleProductChange(e.target.value as RemateProductType)}
+          >
+            {PRODUCTS.map((p) => (
+              <option key={p} value={p}>
+                {REMATE_PRODUCT_TYPE_LABELS[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {mountSlotSelectable ? (
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+            Face de montagem
+            <select
+              className="select input-sm"
+              value={mountSlot}
+              onChange={(e) => setMountSlot(e.target.value as RemateMountSlot)}
+            >
+              {activeMountSlots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {REMATE_MOUNT_SLOT_LABELS[slot]}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
+        {productType === "AVISTA" ? (
+          <>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+              Largura avista (mm)
+              <input
+                className="input input-sm"
+                type="number"
+                min={10}
+                value={productOptions.avistaWidthMm ?? DEFAULT_AVISTA_WIDTH_MM}
+                onChange={(e) =>
+                  setProductOptions((o) => ({
+                    ...o,
+                    avistaWidthMm: Math.max(10, Number(e.target.value) || DEFAULT_AVISTA_WIDTH_MM),
+                  }))
+                }
+              />
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+              <input
+                type="checkbox"
+                checked={productOptions.avistaFlushToDoor ?? false}
+                onChange={(e) =>
+                  setProductOptions((o) => ({ ...o, avistaFlushToDoor: e.target.checked }))
+                }
+              />
+              Encostar à porta (~20 mm)
+            </label>
+          </>
+        ) : null}
+
+        {productType === "COMPLETO" ? (
+          <>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+              Largura extra (mm)
+              <input
+                className="input input-sm"
+                type="number"
+                min={0}
+                value={productOptions.coverageExtraMm ?? 0}
+                onChange={(e) =>
+                  setProductOptions((o) => ({
+                    ...o,
+                    coverageExtraMm: Math.max(0, Number(e.target.value) || 0),
+                  }))
+                }
+              />
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+              <input
+                type="checkbox"
+                checked={productOptions.includeTopBottomRemates ?? false}
+                onChange={(e) =>
+                  setProductOptions((o) => ({ ...o, includeTopBottomRemates: e.target.checked }))
+                }
+              />
+              Remate cima + remate fundo
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+              <input
+                type="checkbox"
+                checked={productOptions.asPuxador ?? false}
+                onChange={(e) =>
+                  setProductOptions((o) => ({ ...o, asPuxador: e.target.checked }))
+                }
+              />
+              Modo puxador
+            </label>
+          </>
+        ) : null}
+
+        <button type="button" className="button button-primary" onClick={handleCreate}>
+          Criar remate
+        </button>
+      </div>
+
+      <BoxRodapeSection boxId={boxId} embedded />
+
+      {remates.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-main)" }}>
+            Remates deste módulo ({remates.length})
+          </div>
+          {remates.map((remate) => {
+            const pt = remate.productType ?? inferProductTypeFromLegacy(remate);
+            const slotLabel = remate.mountSlot
+              ? REMATE_MOUNT_SLOT_LABELS[remate.mountSlot]
+              : "";
+            return (
+              <button
+                key={remate.id}
+                type="button"
+                className="btn"
+                style={{
+                  textAlign: "left",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  padding: "10px 12px",
+                }}
+                onClick={() => {
+                  setSelectedObject({ type: "remate", id: remate.id });
+                  window.viewerCore?.selectRemate?.(remate.id);
+                  if (!embedded) onClose?.();
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: 12 }}>
+                  {remateDisplayNames.get(remate.id) ?? remate.name}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {REMATE_PRODUCT_TYPE_LABELS[pt]}
+                  {slotLabel ? ` · ${slotLabel}` : ""}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+          Nenhum remate neste módulo. Use o formulário acima para criar.
+        </p>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{bodyContent}</div>
+    );
+  }
+
+  if (!open || typeof document === "undefined") return null;
+
   return createPortal(
     <div className="box-remate-drawer" style={drawerShellStyle} role="presentation">
       <div style={backdropStyle} onClick={onClose} aria-hidden />
@@ -143,177 +331,7 @@ export default function BoxRemateDrawer({ boxId, open, onClose, defaultMaterialI
           </button>
         </header>
 
-        <div style={bodyStyle}>
-          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.45 }}>
-            Remate do módulo — escolha o tipo de produto e a face de montagem.
-          </p>
-
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.1)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-main)" }}>Adicionar remate</div>
-
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-              Tipo de produto
-              <select
-                className="select input-sm"
-                value={productType}
-                onChange={(e) => handleProductChange(e.target.value as RemateProductType)}
-              >
-                {PRODUCTS.map((p) => (
-                  <option key={p} value={p}>
-                    {REMATE_PRODUCT_TYPE_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {mountSlotSelectable ? (
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-                Face de montagem
-                <select
-                  className="select input-sm"
-                  value={mountSlot}
-                  onChange={(e) => setMountSlot(e.target.value as RemateMountSlot)}
-                >
-                  {activeMountSlots.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {REMATE_MOUNT_SLOT_LABELS[slot]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-
-            {productType === "AVISTA" ? (
-              <>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-                  Largura avista (mm)
-                  <input
-                    className="input input-sm"
-                    type="number"
-                    min={10}
-                    value={productOptions.avistaWidthMm ?? DEFAULT_AVISTA_WIDTH_MM}
-                    onChange={(e) =>
-                      setProductOptions((o) => ({
-                        ...o,
-                        avistaWidthMm: Math.max(10, Number(e.target.value) || DEFAULT_AVISTA_WIDTH_MM),
-                      }))
-                    }
-                  />
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                  <input
-                    type="checkbox"
-                    checked={productOptions.avistaFlushToDoor ?? false}
-                    onChange={(e) =>
-                      setProductOptions((o) => ({ ...o, avistaFlushToDoor: e.target.checked }))
-                    }
-                  />
-                  Encostar à porta (~20 mm)
-                </label>
-              </>
-            ) : null}
-
-            {productType === "COMPLETO" ? (
-              <>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-                  Largura extra (mm)
-                  <input
-                    className="input input-sm"
-                    type="number"
-                    min={0}
-                    value={productOptions.coverageExtraMm ?? 0}
-                    onChange={(e) =>
-                      setProductOptions((o) => ({
-                        ...o,
-                        coverageExtraMm: Math.max(0, Number(e.target.value) || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                  <input
-                    type="checkbox"
-                    checked={productOptions.includeTopBottomRemates ?? false}
-                    onChange={(e) =>
-                      setProductOptions((o) => ({ ...o, includeTopBottomRemates: e.target.checked }))
-                    }
-                  />
-                  Remate cima + remate fundo
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                  <input
-                    type="checkbox"
-                    checked={productOptions.asPuxador ?? false}
-                    onChange={(e) =>
-                      setProductOptions((o) => ({ ...o, asPuxador: e.target.checked }))
-                    }
-                  />
-                  Modo puxador
-                </label>
-              </>
-            ) : null}
-
-            <button type="button" className="button button-primary" onClick={handleCreate}>
-              Criar remate
-            </button>
-          </div>
-
-          <BoxRodapeSection boxId={boxId} embedded />
-
-          {remates.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-main)" }}>
-                Remates deste módulo ({remates.length})
-              </div>
-              {remates.map((remate) => {
-                const pt = remate.productType ?? inferProductTypeFromLegacy(remate);
-                const slotLabel = remate.mountSlot
-                  ? REMATE_MOUNT_SLOT_LABELS[remate.mountSlot]
-                  : "";
-                return (
-                  <button
-                    key={remate.id}
-                    type="button"
-                    className="btn"
-                    style={{
-                      textAlign: "left",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                      padding: "10px 12px",
-                    }}
-                    onClick={() => {
-                      setSelectedObject({ type: "remate", id: remate.id });
-                      window.viewerCore?.selectRemate?.(remate.id);
-                      onClose();
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, fontSize: 12 }}>
-                      {remateDisplayNames.get(remate.id) ?? remate.name}
-                    </span>
-                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                      {REMATE_PRODUCT_TYPE_LABELS[pt]}
-                      {slotLabel ? ` · ${slotLabel}` : ""}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-              Nenhum remate neste módulo. Use o formulário acima para criar.
-            </p>
-          )}
-        </div>
+        <div style={bodyStyle}>{bodyContent}</div>
       </aside>
     </div>,
     document.body

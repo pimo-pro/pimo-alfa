@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import UnifiedPopover, { StepperPopover } from "../../ui/UnifiedPopover";
 import { usePimoViewerContext } from "../../../hooks/usePimoViewerContext";
@@ -23,6 +23,27 @@ import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
 const HOME_SELECTED_SECTION_HELP_TEXT =
   "Controles principais da caixa selecionada e definição inicial do projeto.";
 
+const BOX_PANEL_IDS = {
+  dimensoes: "dimensoes-popover",
+  prateleiras: "prateleiras-popover",
+  divSep: "div-sep-popover",
+  gavetas: "gavetas-popover",
+  porta: "porta-popover",
+  remate: "remate-popover",
+  pes: "pes-popover",
+  material: "selecionar-material-popover",
+} as const;
+
+function formatDivSepSummary(sepCount: number, divCount: number): string {
+  if (sepCount === 0 && divCount === 0) return "0";
+  return [
+    sepCount > 0 ? `${sepCount} SEP` : null,
+    divCount > 0 ? `${divCount} DIV` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
 };
@@ -37,7 +58,16 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
   const selectedGavetas = selectedBox?.gavetas ?? 0;
   void materialsPicker;
   const { viewerApi } = usePimoViewerContext();
-  const [remateDrawerOpen, setRemateDrawerOpen] = useState(false);
+  const [activePanelId, setActivePanelId] = useState<string | null>(null);
+
+  const isPanelOpen = (panelId: string) => activePanelId === panelId;
+  const setPanelOpen = (panelId: string, open: boolean) => {
+    setActivePanelId(open ? panelId : null);
+  };
+
+  useEffect(() => {
+    setActivePanelId(null);
+  }, [selectedBox?.id]);
 
   const profundidadeLeitura = useMemo(
     () => (selectedBox ? computeBoxProfundidadeLeituraMm(selectedBox, project.rules) : null),
@@ -52,6 +82,16 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
         : selectedBox?.portaTipo === "porta_correr"
           ? "Correr"
           : "Dupla";
+
+  const sepCount = selectedBox?.separadores?.length ?? 0;
+  const divCount = selectedBox?.divisores?.length ?? 0;
+  const divSepSummary = formatDivSepSummary(sepCount, divCount);
+  const remateCount = useMemo(
+    () => (project.remates ?? []).filter((r) => r.parentBoxId === selectedBox?.id).length,
+    [project.remates, selectedBox?.id],
+  );
+
+  const panelPopoverLayout = "inline" as const;
 
   return (
     <div className="left-panel-content">
@@ -96,9 +136,13 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
 
           {selectedBox && (
             <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
               <UnifiedPopover
-                id="dimensoes-popover"
+                id={BOX_PANEL_IDS.dimensoes}
                 fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.dimensoes)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.dimensoes, open)}
                 triggerVariant="ghost"
                 triggerTitle="Definir largura, altura e profundidade do módulo."
                 trigger={<span>Dimensões</span>}
@@ -138,24 +182,153 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                     />
                   </div>
                 </div>
+                {profundidadeLeitura && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      paddingTop: 12,
+                      borderTop: "1px solid var(--border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                      fontSize: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: "var(--text-main)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Icon name="ruler" size={16} aria-hidden />
+                      Profundidade da caixa (referência)
+                    </div>
+                    <div
+                      style={{
+                        paddingLeft: 10,
+                        borderLeft: "3px solid #38bdf8",
+                        color: "var(--text-main)",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        Externa
+                      </div>
+                      <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeExternaMm} mm</div>
+                    </div>
+                    <div
+                      style={{
+                        paddingLeft: 10,
+                        borderLeft: "3px solid #c4b5fd",
+                        color: "var(--text-main)",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        Útil interna
+                      </div>
+                      <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
+                    </div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 12,
+                        color: "var(--text-main)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={resolveNoBackPanel(selectedBox)}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          actions.setWorkspaceBoxNoBackPanel(selectedBox.id, enabled);
+                          viewerApi?.setBoxNoBackPanel?.(selectedBox.id, enabled);
+                          showToast(
+                            enabled ? "Costa removida (visual + industrial)." : "Costa restaurada.",
+                            "info"
+                          );
+                        }}
+                      />
+                      Sem costa
+                    </label>
+                    <CostaMaterialControl
+                      box={selectedBox}
+                      projectMaterialId={project.materialId}
+                      disabled={resolveNoBackPanel(selectedBox)}
+                      onApply={(costaMaterialId, costaThicknessMm) => {
+                        actions.setWorkspaceBoxCostaMaterial(
+                          selectedBox.id,
+                          costaMaterialId,
+                          costaThicknessMm
+                        );
+                        showToast("Material da costa actualizado.", "info");
+                      }}
+                      onReset={() => {
+                        actions.setWorkspaceBoxCostaMaterial(selectedBox.id);
+                        showToast("Costa reposta para o padrão (família + 10 mm).", "info");
+                      }}
+                    />
+                  </div>
+                )}
               </UnifiedPopover>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
               <StepperPopover
-                id="prateleiras-popover"
+                id={BOX_PANEL_IDS.prateleiras}
                 label="Prateleiras"
                 value={selectedPrateleiras}
                 onChange={(v) => actions.setPrateleiras(v)}
                 fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.prateleiras)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.prateleiras, open)}
                 triggerVariant="ghost"
                 triggerTitle="Número de prateleiras internas do módulo."
               />
+              <UnifiedPopover
+                id={BOX_PANEL_IDS.divSep}
+                fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.divSep)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.divSep, open)}
+                triggerVariant="ghost"
+                triggerTitle="Adicionar e configurar divisórios e separadores internos."
+                trigger={
+                  <span>
+                    DIVISÓRIOS E SEPARADORES — <strong>{divSepSummary}</strong>
+                  </span>
+                }
+              >
+                <DivSepPanel box={selectedBox} actions={actions} embedded />
+              </UnifiedPopover>
               <StepperPopover
-                id="gavetas-popover"
+                id={BOX_PANEL_IDS.gavetas}
                 label="Gavetas"
                 value={selectedGavetas}
                 onChange={(v) => actions.setGavetas(v)}
                 fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.gavetas)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.gavetas, open)}
                 triggerVariant="ghost"
                 triggerTitle="Quantidade de gavetas aplicadas ao módulo."
               />
@@ -174,7 +347,11 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                 </div>
               )}
               <UnifiedPopover
+                id={BOX_PANEL_IDS.porta}
                 fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.porta)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.porta, open)}
                 triggerVariant="ghost"
                 triggerTitle="Selecione o tipo de porta para este módulo."
                 trigger={
@@ -199,18 +376,34 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                   <option value="porta_correr">Porta de correr</option>
                 </select>
               </UnifiedPopover>
-              <button
-                type="button"
-                className="button button-ghost"
-                style={{ width: "100%" }}
-                title="Adicionar e configurar remates e roda pé do módulo."
-                aria-label="Adicionar e configurar remates e roda pé do módulo."
-                onClick={() => setRemateDrawerOpen(true)}
-              >
-                Remate
-              </button>
               <UnifiedPopover
+                id={BOX_PANEL_IDS.remate}
                 fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.remate)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.remate, open)}
+                triggerVariant="ghost"
+                triggerTitle="Adicionar e configurar remates e roda pé do módulo."
+                trigger={
+                  <span>
+                    Remate — <strong>{remateCount}</strong>
+                  </span>
+                }
+              >
+                <BoxRemateDrawer
+                  embedded
+                  boxId={selectedBox.id}
+                  defaultMaterialId={
+                    selectedBox.material || project.materialId || project.material.tipo
+                  }
+                />
+              </UnifiedPopover>
+              <UnifiedPopover
+                id={BOX_PANEL_IDS.pes}
+                fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.pes)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.pes, open)}
                 triggerVariant="ghost"
                 triggerTitle="Ativar e configurar pés do módulo."
                 trigger={<span>Pés</span>}
@@ -302,8 +495,11 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                 })()}
               </UnifiedPopover>
               <UnifiedPopover
-                id="selecionar-material-popover"
+                id={BOX_PANEL_IDS.material}
                 fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.material)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.material, open)}
                 triggerVariant="ghost"
                 triggerTitle="Selecionar materiais do módulo, porta e gavetas."
                 trigger={<span>Selecionar Material</span>}
@@ -332,137 +528,8 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                   }}
                 />
               </UnifiedPopover>
-
-              {profundidadeLeitura && (
-                <details
-                  style={{
-                    marginTop: 8,
-                    padding: "12px 12px",
-                    borderRadius: "var(--radius)",
-                    border: "1px solid var(--border)",
-                    background: "var(--surface)",
-                    fontSize: 12,
-                  }}
-                >
-                  <summary
-                    style={{
-                      cursor: "pointer",
-                      fontWeight: 600,
-                      color: "var(--text-main)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Icon name="ruler" size={16} aria-hidden />
-                    Profundidade da caixa (referência)
-                  </summary>
-                  <div
-                    style={{
-                      marginTop: 12,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    <div
-                      style={{
-                        paddingLeft: 10,
-                        borderLeft: "3px solid #38bdf8",
-                        color: "var(--text-main)",
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.04em",
-                        }}
-                      >
-                        Externa
-                      </div>
-                      <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeExternaMm} mm</div>
-                    </div>
-                    <div
-                      style={{
-                        paddingLeft: 10,
-                        borderLeft: "3px solid #c4b5fd",
-                        color: "var(--text-main)",
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.04em",
-                        }}
-                      >
-                        Útil interna
-                      </div>
-                      <div style={{ fontWeight: 600 }}>{profundidadeLeitura.profundidadeInternaUtilMm} mm</div>
-                    </div>
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        fontSize: 12,
-                        color: "var(--text-main)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={resolveNoBackPanel(selectedBox)}
-                        onChange={(e) => {
-                          const enabled = e.target.checked;
-                          actions.setWorkspaceBoxNoBackPanel(selectedBox.id, enabled);
-                          viewerApi?.setBoxNoBackPanel?.(selectedBox.id, enabled);
-                          showToast(
-                            enabled ? "Costa removida (visual + industrial)." : "Costa restaurada.",
-                            "info"
-                          );
-                        }}
-                      />
-                      Sem costa
-                    </label>
-                    <CostaMaterialControl
-                      box={selectedBox}
-                      projectMaterialId={project.materialId}
-                      disabled={resolveNoBackPanel(selectedBox)}
-                      onApply={(costaMaterialId, costaThicknessMm) => {
-                        actions.setWorkspaceBoxCostaMaterial(
-                          selectedBox.id,
-                          costaMaterialId,
-                          costaThicknessMm
-                        );
-                        showToast("Material da costa actualizado.", "info");
-                      }}
-                      onReset={() => {
-                        actions.setWorkspaceBoxCostaMaterial(selectedBox.id);
-                        showToast("Costa reposta para o padrão (família + 10 mm).", "info");
-                      }}
-                    />
-                  </div>
-                </details>
-              )}
               </div>
             </>
-          )}
-
-          {selectedBox && (
-            <BoxRemateDrawer
-              boxId={selectedBox.id}
-              open={remateDrawerOpen}
-              onClose={() => setRemateDrawerOpen(false)}
-              defaultMaterialId={
-                selectedBox.material || project.materialId || project.material.tipo
-              }
-            />
           )}
 
           {!selectedBox && (
@@ -503,9 +570,6 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
           {selectedBox && (
             <Panel title="Opções do box">
               <BoxLayersPanel embedded />
-              <div style={{ marginTop: 12 }}>
-                <DivSepPanel box={selectedBox} actions={actions} />
-              </div>
               <div style={{ marginTop: 12 }}>
                 <BoxPecasObservacoesSection boxId={selectedBox.id} boxNome={selectedBox.nome} />
               </div>
