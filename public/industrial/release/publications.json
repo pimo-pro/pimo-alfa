@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-15T21:58:35.537Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(div-sep): eliminar intersecao DIV/SEP no Viewer e no modelo industrial",
+      "version": "v6.0715.2258"
+    },
+    {
       "publishedAt": "2026-07-15T21:02:23.524Z",
       "author": "pimo-pro",
       "commitMessage": "fix(div-sep): alinhar Viewer, HXML de bordo e parafusos laterais condicionais",
