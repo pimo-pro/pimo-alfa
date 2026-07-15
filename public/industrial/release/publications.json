@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-15T00:35:01.535Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(system-events): corrigir user_id fkey e garantir utilizador industrial válido",
+      "version": "v6.0715.0135"
+    },
+    {
       "publishedAt": "2026-07-15T00:05:49.082Z",
       "author": "pimo-pro",
       "commitMessage": "release: versão completa — work-orders + pimo-trak + eventos industriais",
