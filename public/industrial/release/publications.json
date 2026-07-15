@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-15T21:02:23.524Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(div-sep): alinhar Viewer, HXML de bordo e parafusos laterais condicionais",
+      "version": "v6.0715.2202"
+    },
+    {
       "publishedAt": "2026-07-15T16:46:49.334Z",
       "author": "pimo-pro",
       "commitMessage": "Auto deploy",
