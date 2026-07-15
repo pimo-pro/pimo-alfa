@@ -119,7 +119,7 @@ export default function ProjetosIndustrialPanel({
     setError(null);
     setMessage(null);
     try {
-      const result = await iniciarProducaoHandler(snapshot);
+      const result = await iniciarProducaoHandler(snapshot, user?.id);
       setMessage(`Criadas ${result.orders.length} ordens para "${result.projectName}".`);
       await reload();
     } catch (err) {

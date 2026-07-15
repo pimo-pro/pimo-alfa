@@ -22,10 +22,12 @@ describe("workOrdersIntegrity", () => {
       "piece-abc",
       { type: "operation_started", workOrderId: SAMPLE_UUID },
       SAMPLE_UUID,
+      SAMPLE_UUID,
     );
-    expect(payload.work_order_id).toBeNull();
-    expect(payload.metadata.industrial_work_order_id).toBe(SAMPLE_UUID);
-    expect(payload.metadata.piece_id).toBe("piece-abc");
+    expect(payload?.work_order_id).toBeNull();
+    expect(payload?.user_id).toBeNull();
+    expect(payload?.metadata.industrial_work_order_id).toBe(SAMPLE_UUID);
+    expect(payload?.metadata.industrial_user_id).toBe(SAMPLE_UUID);
   });
 
   it("validateWorkOrderBeforeEvent expõe mensagem de bloqueio padrão", () => {

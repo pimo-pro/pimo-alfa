@@ -6,6 +6,7 @@ import {
   notifyWorkOrderSyncError,
   validateWorkOrderBeforeEvent,
 } from '@/industrial/persistence/work-orders/validateWorkOrderBeforeEvent';
+import { getOrCreateIndustrialUser } from '@/industrial/persistence/users/getOrCreateIndustrialUser';
 
 import { PIECE_PERSISTENCE_TABLES } from '../tables';
 import { assertPieceId } from '../shared/validation';
@@ -32,8 +33,21 @@ export async function logPieceEvent(pieceId: string, payload: PieceEventPayload)
     return null;
   }
 
+  const industrialUser = await getOrCreateIndustrialUser(payload.userId);
   const industrialWorkOrderId = validation.ok ? validation.workOrderId : null;
-  const insertPayload = buildSystemEventInsertPayload(pieceId, payload, industrialWorkOrderId);
+  const insertPayload = buildSystemEventInsertPayload(
+    pieceId,
+    payload,
+    industrialWorkOrderId,
+    industrialUser.id,
+  );
+
+  if (!insertPayload) {
+    console.warn(
+      `[industrial] Evento "${payload.type}" não registado — industrial_user_id inválido (peça ${pieceId}).`,
+    );
+    return null;
+  }
 
   const { data, error } = await supabase
     .from(PIECE_PERSISTENCE_TABLES.systemEvents)

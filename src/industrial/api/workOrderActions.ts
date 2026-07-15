@@ -9,6 +9,7 @@ import {
   loadWorkOrders,
 } from '@/industrial/persistence/work-orders/loadWorkOrders';
 import { logWorkOrderEvent } from '@/industrial/persistence/work-orders/logWorkOrderEvent';
+import { resolveIndustrialUserId } from '@/industrial/persistence/users/getOrCreateIndustrialUser';
 import {
   notifyWorkOrderSyncError,
   validateWorkOrderBeforeEvent,
@@ -114,7 +115,8 @@ async function syncPieceOnTaskAction(
     throw new Error(validation.message ?? WORK_ORDER_SYNC_ERROR_MESSAGE);
   }
 
-  const validatedWorkOrderId = validation.workOrderId;
+  const validatedWorkOrderId = validation.workOrderId!;
+  const industrialUserId = await resolveIndustrialUserId(operatorId);
   const workOrderContext = { workOrderId: validatedWorkOrderId };
   const pieceOperation = await resolvePieceOperation(task.pieceId, task.operationType);
 
@@ -122,33 +124,33 @@ async function syncPieceOnTaskAction(
     if (action === 'start') {
       await updatePieceOperationState(task.pieceId, pieceOperation, 'start', {
         ...workOrderContext,
-        userId: operatorId,
+        userId: industrialUserId,
       });
       await updatePieceTime(
         task.pieceId,
         {
           operationId: pieceOperation.id,
-          userId: operatorId ?? 'operator',
+          userId: industrialUserId,
           stationId: pieceOperation.type,
         },
         'start',
-        { ...workOrderContext, userId: operatorId },
+        { ...workOrderContext, userId: industrialUserId },
       );
     } else if (action === 'complete') {
       await updatePieceOperationState(task.pieceId, pieceOperation, 'finish', {
         ...workOrderContext,
-        userId: operatorId,
+        userId: industrialUserId,
       });
       await updatePieceTime(
         task.pieceId,
-        { operationId: pieceOperation.id, userId: operatorId ?? 'operator' },
+        { operationId: pieceOperation.id, userId: industrialUserId },
         'stop',
-        { ...workOrderContext, userId: operatorId },
+        { ...workOrderContext, userId: industrialUserId },
       );
     } else if (action === 'reject') {
       await updatePieceOperationState(task.pieceId, pieceOperation, 'reject', {
         ...workOrderContext,
-        userId: operatorId,
+        userId: industrialUserId,
         reason,
       });
     }
@@ -156,25 +158,23 @@ async function syncPieceOnTaskAction(
 
   if (action === 'complete' && (task.operationType === 'embalagem' || task.operationType === 'montagem')) {
     await updatePieceQuality(task.pieceId, 'approved', {
-      inspectorId: operatorId,
+      inspectorId: industrialUserId,
       ...workOrderContext,
       notes: `Aprovação automática na estação ${task.operationType}`,
     });
   }
 
-  if (validatedWorkOrderId) {
-    await logPieceEventAction(task.pieceId, {
-      type: `work_order_task_${action}`,
-      workOrderId: validatedWorkOrderId,
-      userId: operatorId,
-      metadata: {
-        taskId: task.id,
-        operationType: task.operationType,
-        station: task.operationType,
-        reason,
-      },
-    });
-  }
+  await logPieceEventAction(task.pieceId, {
+    type: `work_order_task_${action}`,
+    workOrderId: validatedWorkOrderId,
+    userId: industrialUserId,
+    metadata: {
+      taskId: task.id,
+      operationType: task.operationType,
+      station: task.operationType,
+      reason,
+    },
+  });
 }
 
 async function applyTaskStatus(
@@ -184,10 +184,11 @@ async function applyTaskStatus(
   operatorId?: string,
   reason?: string,
 ) {
+  const industrialUserId = await resolveIndustrialUserId(operatorId);
   const updated = await updateTaskState({
     taskId: task.id,
     status,
-    operatorId,
+    operatorId: industrialUserId,
     reason,
   });
 
@@ -195,11 +196,11 @@ async function applyTaskStatus(
     workOrderId: task.workOrderId,
     taskId: task.id,
     eventType: `task_${action}`,
-    operatorId,
+    operatorId: industrialUserId,
     metadata: { pieceId: task.pieceId, operationType: task.operationType, reason },
   });
 
-  await syncPieceOnTaskAction(task, action, operatorId, reason);
+  await syncPieceOnTaskAction(task, action, industrialUserId, reason);
   if (task.workOrderId) {
     await syncWorkOrderStatusFromTasks(task.workOrderId);
   }
@@ -211,8 +212,9 @@ export async function startTask(taskId: string, operatorId?: string) {
   if (task.status !== 'pending') {
     throw new Error('Apenas tarefas pendentes podem ser iniciadas.');
   }
-  if (operatorId) await assignTaskOperator(taskId, operatorId);
-  return applyTaskStatus(task, 'in_progress', 'start', operatorId);
+  const industrialUserId = await resolveIndustrialUserId(operatorId);
+  if (operatorId) await assignTaskOperator(taskId, industrialUserId);
+  return applyTaskStatus(task, 'in_progress', 'start', industrialUserId);
 }
 
 export async function finishTask(taskId: string, operatorId?: string) {
@@ -224,8 +226,9 @@ export async function finishTask(taskId: string, operatorId?: string) {
     await applyTaskStatus(task, 'in_progress', 'start', operatorId);
   }
   const current = await requireTask(taskId);
-  if (operatorId) await assignTaskOperator(taskId, operatorId);
-  return applyTaskStatus(current, 'completed', 'complete', operatorId);
+  const industrialUserId = await resolveIndustrialUserId(operatorId);
+  if (operatorId) await assignTaskOperator(taskId, industrialUserId);
+  return applyTaskStatus(current, 'completed', 'complete', industrialUserId);
 }
 
 export async function rejectTask(taskId: string, reason?: string, operatorId?: string) {
@@ -233,7 +236,7 @@ export async function rejectTask(taskId: string, reason?: string, operatorId?: s
   if (task.status === 'completed' || task.status === 'rejected') {
     throw new Error('Tarefa já finalizada.');
   }
-  if (operatorId) await assignTaskOperator(taskId, operatorId);
+  if (operatorId) await assignTaskOperator(taskId, await resolveIndustrialUserId(operatorId));
   return applyTaskStatus(task, 'rejected', 'reject', operatorId, reason);
 }
 

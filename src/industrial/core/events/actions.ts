@@ -1,6 +1,7 @@
 import { supabase } from '@/industrial/infra/db';
 import { industrialEventUtils, type IndustrialEventFilter, type IndustrialSystemEvent } from '@/industrial/infra/supabase/events';
 import { INDUSTRIAL_TABLES } from '@/industrial/infra/supabase/tables';
+import { getOrCreateIndustrialUser } from '@/industrial/persistence/users/getOrCreateIndustrialUser';
 import { validateWorkOrderBeforeEvent } from '@/industrial/persistence/work-orders/validateWorkOrderBeforeEvent';
 
 export interface IndustrialEventPayload {
@@ -21,13 +22,17 @@ export async function logEvent(type: string, payload: IndustrialEventPayload = {
     industrialWorkOrderId = validation.ok ? validation.workOrderId : null;
   }
 
+  const industrialUser = await getOrCreateIndustrialUser(payload.user_id);
+
   const { data, error } = await supabase.from(INDUSTRIAL_TABLES.systemEvents).insert({
     type,
     work_order_id: null,
     task_id: null,
-    user_id: payload.user_id ?? null,
+    user_id: null,
     department_id: payload.department_id ?? null,
     metadata: industrialEventUtils.createMetadata({
+      industrial_user_id: industrialUser.id,
+      ...(payload.user_id ? { requested_user_id: payload.user_id } : {}),
       ...(industrialWorkOrderId ? { industrial_work_order_id: industrialWorkOrderId } : {}),
       ...(payload.task_id ? { industrial_task_id: payload.task_id } : {}),
       ...payload.metadata,
