@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-15T16:46:49.334Z",
+      "author": "pimo-pro",
+      "commitMessage": "Auto deploy",
+      "version": "v6.0715.1746"
+    },
+    {
       "publishedAt": "2026-07-15T14:53:13.169Z",
       "author": "pimo-pro",
       "commitMessage": "Auto deploy",
