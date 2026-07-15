@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-15T14:53:13.169Z",
+      "author": "pimo-pro",
+      "commitMessage": "Auto deploy",
+      "version": "v6.0715.1553"
+    },
+    {
       "publishedAt": "2026-07-15T11:24:25.995Z",
       "author": "pimo-pro",
       "commitMessage": "Publicação PIMO — Sistema Industrial",
