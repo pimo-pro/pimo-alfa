@@ -22,32 +22,58 @@ type DivSepPanelProps = {
   >;
   /** Sem Panel wrapper (ex.: dentro de UnifiedPopover). */
   embedded?: boolean;
+  /** Filtra apresentação: divisórios, separadores ou ambos (padrão). */
+  section?: "div" | "sep" | "both";
 };
 
-export default function DivSepPanel({ box, actions, embedded = false }: DivSepPanelProps) {
+export default function DivSepPanel({
+  box,
+  actions,
+  embedded = false,
+  section = "both",
+}: DivSepPanelProps) {
   const internal = useMemo(() => getDivSepInternalDims(box), [box]);
   const separadores = box.separadores ?? [];
   const divisores = box.divisores ?? [];
   const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
+  const showSeparadores = section === "sep" || section === "both";
+  const showDivisores = section === "div" || section === "both";
 
   const content = (
     <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <button type="button" className="button button-ghost button-sm" onClick={() => actions.addSeparador()}>
-          Adicionar SEPARADOR
-        </button>
-        <button type="button" className="button button-ghost button-sm" onClick={() => actions.addDivisor()}>
-          Adicionar DIVISÓRIO
-        </button>
+        {showSeparadores ? (
+          <button type="button" className="button button-ghost button-sm" onClick={() => actions.addSeparador()}>
+            Adicionar SEPARADOR
+          </button>
+        ) : null}
+        {showDivisores ? (
+          <button type="button" className="button button-ghost button-sm" onClick={() => actions.addDivisor()}>
+            Adicionar DIVISÓRIO
+          </button>
+        ) : null}
       </div>
 
-      {separadores.length === 0 && divisores.length === 0 ? (
+      {showSeparadores && section !== "both" && separadores.length === 0 ? (
+        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+          Nenhum separador. As peças herdam material e espessura da caixa.
+        </p>
+      ) : null}
+
+      {showDivisores && section !== "both" && divisores.length === 0 ? (
+        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+          Nenhum divisório. As peças herdam material e espessura da caixa.
+        </p>
+      ) : null}
+
+      {section === "both" && separadores.length === 0 && divisores.length === 0 ? (
         <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
           Nenhum separador ou divisório. As peças herdam material e espessura da caixa.
         </p>
       ) : null}
 
-      {separadores.map((sep, index) => {
+      {showSeparadores
+        ? separadores.map((sep, index) => {
         const dims = resolveSeparadorDimensions(box, sep);
         const maxPos = internal.alturaInterna - dims.alturaMm / 2;
         return (
@@ -121,9 +147,11 @@ export default function DivSepPanel({ box, actions, embedded = false }: DivSepPa
             </button>
           </div>
         );
-      })}
+      })
+        : null}
 
-      {divisores.map((div, index) => {
+      {showDivisores
+        ? divisores.map((div, index) => {
         const dims = resolveDivisorDimensions(box, div);
         const maxPos = internal.larguraInterna - dims.larguraMm / 2;
         const linked = Boolean(div.linkedSeparadorId);
@@ -245,11 +273,19 @@ export default function DivSepPanel({ box, actions, embedded = false }: DivSepPa
             </button>
           </div>
         );
-      })}
+      })
+        : null}
     </>
   );
 
   if (embedded) return content;
 
-  return <Panel title="DIVISÓRIOS E SEPARADORES">{content}</Panel>;
+  const panelTitle =
+    section === "div"
+      ? "DIVISÓRIOS"
+      : section === "sep"
+        ? "SEPARADORES"
+        : "DIVISÓRIOS E SEPARADORES";
+
+  return <Panel title={panelTitle}>{content}</Panel>;
 }

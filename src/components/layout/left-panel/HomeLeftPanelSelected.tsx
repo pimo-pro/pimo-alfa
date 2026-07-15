@@ -26,23 +26,14 @@ const HOME_SELECTED_SECTION_HELP_TEXT =
 const BOX_PANEL_IDS = {
   dimensoes: "dimensoes-popover",
   prateleiras: "prateleiras-popover",
-  divSep: "div-sep-popover",
+  divisores: "divisores-popover",
+  separadores: "separadores-popover",
   gavetas: "gavetas-popover",
   porta: "porta-popover",
   remate: "remate-popover",
   pes: "pes-popover",
   material: "selecionar-material-popover",
 } as const;
-
-function formatDivSepSummary(sepCount: number, divCount: number): string {
-  if (sepCount === 0 && divCount === 0) return "0";
-  return [
-    sepCount > 0 ? `${sepCount} SEP` : null,
-    divCount > 0 ? `${divCount} DIV` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
 
 export type HomeLeftPanelSelectedProps = {
   materialsPicker: UseMaterialsForPickerResult;
@@ -85,7 +76,6 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
 
   const sepCount = selectedBox?.separadores?.length ?? 0;
   const divCount = selectedBox?.divisores?.length ?? 0;
-  const divSepSummary = formatDivSepSummary(sepCount, divCount);
   const remateCount = useMemo(
     () => (project.remates ?? []).filter((r) => r.parentBoxId === selectedBox?.id).length,
     [project.remates, selectedBox?.id],
@@ -305,20 +295,36 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                 triggerTitle="Número de prateleiras internas do módulo."
               />
               <UnifiedPopover
-                id={BOX_PANEL_IDS.divSep}
+                id={BOX_PANEL_IDS.divisores}
                 fullWidth
                 layout={panelPopoverLayout}
-                open={isPanelOpen(BOX_PANEL_IDS.divSep)}
-                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.divSep, open)}
+                open={isPanelOpen(BOX_PANEL_IDS.divisores)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.divisores, open)}
                 triggerVariant="ghost"
-                triggerTitle="Adicionar e configurar divisórios e separadores internos."
+                triggerTitle="Adicionar e configurar divisórios internos."
                 trigger={
                   <span>
-                    DIVISÓRIOS E SEPARADORES — <strong>{divSepSummary}</strong>
+                    DIVISÓRIOS — <strong>{divCount}</strong>
                   </span>
                 }
               >
-                <DivSepPanel box={selectedBox} actions={actions} embedded />
+                <DivSepPanel box={selectedBox} actions={actions} embedded section="div" />
+              </UnifiedPopover>
+              <UnifiedPopover
+                id={BOX_PANEL_IDS.separadores}
+                fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.separadores)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.separadores, open)}
+                triggerVariant="ghost"
+                triggerTitle="Adicionar e configurar separadores internos."
+                trigger={
+                  <span>
+                    SEPARADORES — <strong>{sepCount}</strong>
+                  </span>
+                }
+              >
+                <DivSepPanel box={selectedBox} actions={actions} embedded section="sep" />
               </UnifiedPopover>
               <StepperPopover
                 id={BOX_PANEL_IDS.gavetas}
