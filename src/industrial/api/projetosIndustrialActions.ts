@@ -7,7 +7,6 @@ import {
 import { resolvePieceTracking } from '@/industrial/tracking/resolvePieceTracking';
 import { updatePieceOperationState } from '@/industrial/api/pieceActions';
 import { loadPieceOperations } from '@/industrial/persistence/piece/savePieceOperations';
-import type { SavedProjectRecord } from '@/core/projects/types';
 import type { IndustrialWorkOrder } from '@/industrial/work-orders/types';
 import type { TrackingSnapshot } from '@/industrial/core/tracking/types';
 import type { PieceOperation } from '@/industrial/core/piece-operations/types';
