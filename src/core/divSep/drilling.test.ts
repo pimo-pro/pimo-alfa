@@ -55,19 +55,15 @@ describe("buildDivSepDrilling — SEP", () => {
     expect(sepHoles.some((h) => h.holeType === "parafuso")).toBe(false);
   });
 
-  it("cria cavilhas de face e parafusos nas laterais a 60/90 mm", () => {
+  it("cria cavilhas nas laterais a 60 mm (SEP isolado sem parafusos laterais)", () => {
     const depthPos = calcDepthHolePositions(sepDims.profundidadeMm, rules);
     const latLeft = getExtraHoles("lateral_esquerda");
     const cavilhas = latLeft.filter((h) => h.holeType === "cavilha");
     const parafusos = latLeft.filter((h) => h.holeType === "parafuso");
     expect(cavilhas.every((h) => h.topDrillable === true)).toBe(true);
-    expect(parafusos.every((h) => h.topDrillable === true)).toBe(true);
+    expect(parafusos.length).toBe(0);
     expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
-    expect(parafusos.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.parafuso.map(roundMm).sort());
     expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(new Set([roundMm(sepCenterY)]));
-    for (const p of parafusos) {
-      expect(roundMm(p.depth)).toBe(DIV_SEP_ESPESSURA);
-    }
     for (const c of cavilhas) {
       expect(roundMm(c.depth)).toBe(getCavilhaDepthMm(rules));
     }
@@ -129,6 +125,21 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     for (const h of faceCavilhas) {
       expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
     }
+  });
+
+  it("cria cavilhas e parafusos nas laterais quando SEP tem DIV ligado", () => {
+    const sepDims = resolveSeparadorDimensions(box, sep);
+    const depthPos = calcDepthHolePositions(sepDims.profundidadeMm, rules);
+    const sepCenterY = resolveSeparadorCenterY(box, sep);
+    const latLeft = getExtraHoles("lateral_esquerda");
+    const cavilhas = latLeft.filter((h) => h.holeType === "cavilha");
+    const parafusos = latLeft.filter((h) => h.holeType === "parafuso");
+    expect(cavilhas.length).toBeGreaterThan(0);
+    expect(parafusos.length).toBeGreaterThan(0);
+    expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
+    expect(parafusos.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.parafuso.map(roundMm).sort());
+    expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(new Set([roundMm(sepCenterY)]));
+    expect(new Set(parafusos.map((h) => roundMm(h.y)))).toEqual(new Set([roundMm(sepCenterY)]));
   });
 
   it("não cria furos estruturais em CIMA quando DIV está ligado ao SEP", () => {

@@ -98,7 +98,8 @@ function drillLateralAtSepHeight(
   profundidadeMm: number,
   centerY: number,
   receptorThickness: number,
-  rules: DivSepRules
+  rules: DivSepRules,
+  includeParafuso: boolean
 ): void {
   const cavilhaD = getCavilhaDiameterMm(rules);
   const faceCavilhaDepth = getCavilhaDepthMm(rules);
@@ -107,6 +108,7 @@ function drillLateralAtSepHeight(
     pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, faceCavilhaDepth, "cavilha", "B", true);
     pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, faceCavilhaDepth, "cavilha", "B", true);
   }
+  if (!includeParafuso) return;
   for (const latX of depthPos.parafuso) {
     pushHole(bucket.lateral_esquerda, latX, centerY, 5, receptorThickness, "parafuso", "B", true);
     pushHole(bucket.lateral_direita, latX, centerY, 5, receptorThickness, "parafuso", "B", true);
@@ -141,7 +143,14 @@ function drillSeparador(
   const panelLarguraMm = item.larguraMm ?? dims.larguraMm;
 
   drillSeparadorEdgeHoles(sepHoles, panelLarguraMm, dims.profundidadeMm, rules);
-  drillLateralAtSepHeight(bucket, dims.profundidadeMm, centerY, internal.espessura, rules);
+  drillLateralAtSepHeight(
+    bucket,
+    dims.profundidadeMm,
+    centerY,
+    internal.espessura,
+    rules,
+    linkedDivs.length > 0
+  );
 
   if (rules.enableDivSepCombinations) {
     for (const linkedDiv of linkedDivs) {

@@ -75,8 +75,9 @@ export function getHole2DLocalPosition(
   hole: TechnicalDrillHole
 ): { a: number; b: number } {
   const useBottomOriginY =
-    hole.tipo === "cavilha" &&
-    (panelType === "front" || panelType === "left" || panelType === "right");
+    panelType === "left" || panelType === "right"
+      ? hole.tipo === "cavilha" || hole.tipo === "parafuso"
+      : hole.tipo === "cavilha" && panelType === "front";
   const a = (hole.x / 1000) - panelWidth / 2;
   const b = useBottomOriginY
     ? (hole.y / 1000) - panelHeight / 2
