@@ -114,7 +114,7 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
   it("ajusta altura do DIV ao SEP ligado", () => {
     const dims = resolveDivisorDimensions(box, div);
     const sepBottom = resolveSeparadorCenterY(box, sep) - resolveSeparadorDimensions(box, sep).alturaMm / 2;
-    const expected = Math.round(sepBottom - DIV_SEP_ESPESSURA);
+    const expected = Math.floor(sepBottom - DIV_SEP_ESPESSURA);
     expect(dims.alturaMm).toBe(expected);
   });
 

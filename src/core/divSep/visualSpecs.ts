@@ -1,4 +1,5 @@
 import {
+  getDivSepInternalDims,
   resolveDivisorCenterX,
   resolveDivisorDimensions,
   resolveSeparadorCenterY,
@@ -23,6 +24,8 @@ export function getDivSepMeshSpecs(
 ): DivSepMeshSpec[] {
   const specs: DivSepMeshSpec[] = [];
   const widthMm = widthM * 1000;
+  const internal = getDivSepInternalDims(box);
+  const divBottomYAbs = internal.espessura;
 
   for (const sep of box.separadores ?? []) {
     const dims = resolveSeparadorDimensions(box, sep);
@@ -41,12 +44,15 @@ export function getDivSepMeshSpecs(
     const dims = resolveDivisorDimensions(box, div);
     const centerXAbs = resolveDivisorCenterX(box, div);
     const centerXM = centerXAbs / 1000 - widthMm / 1000 / 2;
+    const divHeightM = Math.max(0.001, dims.alturaMm / 1000);
+    const centerYAbs = divBottomYAbs + dims.alturaMm / 2;
+    const centerYM = centerYAbs / 1000 - heightM / 2;
     const divDepthM = Math.max(0.001, dims.profundidadeMm / 1000);
     const centerZ = -depthM / 2 + divDepthM / 2 + SHELF_VISUAL_INSET_M;
     specs.push({
       name: `divsep-div-${div.id}`,
-      size: [thicknessM, Math.max(0.001, dims.alturaMm / 1000), divDepthM],
-      pos: [centerXM, 0, centerZ],
+      size: [thicknessM, divHeightM, divDepthM],
+      pos: [centerXM, centerYM, centerZ],
     });
   }
 

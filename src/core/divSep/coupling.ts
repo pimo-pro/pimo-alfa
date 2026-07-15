@@ -35,7 +35,7 @@ export function resolveDivisorLinkedHeightMm(
   const internal = getDivSepInternalDims(box);
   const sepBottomY = resolveSeparadorBottomY(box, sep);
   const divBottomY = internal.espessura;
-  return Math.max(1, Math.round(sepBottomY - divBottomY));
+  return Math.max(1, Math.floor(sepBottomY - divBottomY));
 }
 
 /** Altura efetiva do DIV (acoplada ao SEP quando `linkedSeparadorId` definido). */
