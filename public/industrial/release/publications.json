@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-15T10:31:48.303Z",
+      "author": "pimo-pro",
+      "commitMessage": "chore(supabase): validar public.users após migrations industriais",
+      "version": "v6.0715.1131"
+    },
+    {
       "publishedAt": "2026-07-15T00:35:01.535Z",
       "author": "pimo-pro",
       "commitMessage": "fix(system-events): corrigir user_id fkey e garantir utilizador industrial válido",
