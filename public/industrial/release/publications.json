@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-16T09:22:37.603Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(div-sep): grelha industrial 32mm e prateleiras espelhadas com DIV",
+      "version": "v6.0716.1022"
+    },
+    {
       "publishedAt": "2026-07-15T21:58:35.537Z",
       "author": "pimo-pro",
       "commitMessage": "fix(div-sep): eliminar intersecao DIV/SEP no Viewer e no modelo industrial",
