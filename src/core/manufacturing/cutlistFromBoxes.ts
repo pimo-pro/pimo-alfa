@@ -388,6 +388,7 @@ export function cutlistComPrecoFromBox(
             alturaMm: p.altura_mm,
             espessuraMm: p.espessura_mm,
             hasShelves: hasShelvesForPanelDrilling,
+            shelfMode: useDivShelfMode ? "div" : "standard",
             hasDrawers: hasDrawersForShelfDrilling,
             doorHeightMm: isDoor ? doorHeightMm : doorHeightForLateral,
             doorWidthMm: doorWidthForTopBottom,

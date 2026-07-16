@@ -28,6 +28,8 @@ export type PanelDrillingInput = {
   espessuraMm: number;
   /** Contexto do módulo: há prateleiras paramétricas. */
   hasShelves?: boolean;
+  /** Modo explícito de prateleiras: standard = motor lateral; div = modo DIV/SEP. */
+  shelfMode?: "standard" | "div";
   /** Contexto do módulo: há gavetas (qualquer tipo). */
   hasDrawers?: boolean;
   doorHeightMm?: number;
@@ -445,6 +447,7 @@ export function buildPanelDrillingResult(
         softClose: input.softClose,
         isLowestDrawer: input.isLowestDrawer,
         shelfHolesEnabled,
+        shelfMode: input.shelfMode,
         hingeSide: input.hingeSide,
         hingePositionsMm: hingePositions.length > 0 ? hingePositions : undefined,
       },

@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach, beforeEach } from "vitest";
 import { divSepRulesStore } from "../../admin/rules/divSepRules/rulesStore";
 import { DIV_SEP_RULES_DEFAULTS } from "../../admin/rules/divSepRules/rulesDefaults";
 import { defaultRulesConfig } from "../rules/rulesConfig";
+import { getDivSepInternalDims, resolveDivisorDimensions } from "./dimensions";
 import {
   boxUsesDivShelfMode,
   buildDivShelfDrilling,
@@ -25,6 +26,14 @@ const SHELF_RULES = {
     },
   },
 };
+
+function toAbsoluteLateralYs(boxHeight: number, ys: number[]): number[] {
+  return ys.map((y) => roundMm(boxHeight - y)).sort((a, b) => a - b);
+}
+
+function toAbsoluteDivYs(divTopY: number, ys: number[]): number[] {
+  return ys.map((y) => roundMm(divTopY - y)).sort((a, b) => a - b);
+}
 
 describe("buildDivShelfDrilling — prateleiras com DIV", () => {
   beforeEach(() => {
@@ -66,11 +75,62 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
 
   it("alinha Y dos furos entre lateral e DIV", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
-    const lateralYs = [...new Set(result.lateral_direita.map((h) => roundMm(h.y)))].sort((a, b) => a - b);
-    const divYs = [...new Set((result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))].sort(
-      (a, b) => a - b
-    );
+    const divDims = resolveDivisorDimensions(box, div);
+    const divTopY = getDivSepInternalDims(box).espessura + divDims.alturaMm;
+    const lateralYs = [
+      ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
+    ];
+    const divYs = [
+      ...new Set(toAbsoluteDivYs(divTopY, (result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))),
+    ];
     expect(divYs).toEqual(lateralYs);
+  });
+
+  it("usa passo industrial exacto de 32 mm por compartimento", () => {
+    const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
+    const cfg = SHELF_RULES.furos.tecnicos.prateleira;
+    const absoluteYs = [...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y))))];
+    for (const zone of resolveVerticalCompartments(box)) {
+      const minY = roundMm(zone.yMin + (cfg.margemBase ?? 0));
+      const maxY = roundMm(zone.yMax - (cfg.margemTopo ?? 0));
+      const zoneYs = absoluteYs.filter((y) => y >= minY && y <= maxY);
+      const steps = zoneYs.slice(1).map((y, index) => roundMm(y - zoneYs[index]!));
+      expect(new Set(steps)).toEqual(new Set([32]));
+    }
+  });
+
+  it("deduplica furos laterais com múltiplos DIV no mesmo lado", () => {
+    const multiDivBox = makeDivSepTestBox({
+      dimensoes: { largura: 900, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [
+        defaultDivisorItem({ id: "div-a", positionMm: 200, prateleiraLado: "direita" }),
+        defaultDivisorItem({ id: "div-b", positionMm: 500, prateleiraLado: "direita" }),
+      ],
+    });
+    const result = buildDivShelfDrilling(multiDivBox, multiDivBox.panelIds, SHELF_RULES)!;
+    const signatures = new Set(
+      result.lateral_direita.map((h) => [roundMm(h.x), roundMm(h.y), roundMm(h.diameter), roundMm(h.depth)].join("|"))
+    );
+    expect(signatures.size).toBe(result.lateral_direita.length);
+  });
+
+  it("respeita compartimentos com SEP sem furos fora da grelha util", () => {
+    const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
+    const zones = resolveVerticalCompartments(box);
+    const absoluteYs = [
+      ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
+    ];
+    const cfg = SHELF_RULES.furos.tecnicos.prateleira;
+    for (const y of absoluteYs) {
+      const inSomeZone = zones.some((zone) => {
+        const minY = roundMm(zone.yMin + (cfg.margemBase ?? 0));
+        const maxY = roundMm(zone.yMax - (cfg.margemTopo ?? 0));
+        return y >= minY && y <= maxY;
+      });
+      expect(inSomeZone).toBe(true);
+    }
   });
 
   it("calcula largura da prateleira sem atravessar o DIV", () => {

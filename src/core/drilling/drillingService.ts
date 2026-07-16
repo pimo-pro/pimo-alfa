@@ -67,6 +67,8 @@ type PieceInput = {
   isLowestDrawer?: boolean;
   /** Se false, desativa explicitamente os furos de prateleira para a peça. */
   shelfHolesEnabled?: boolean;
+  /** Modo explícito de prateleira: standard = motor lateral, div = motor DIV/SEP. */
+  shelfMode?: "standard" | "div";
   hingeSide?: "left" | "right" | "top" | "bottom";
   /**
    * Dobradiças em abertura left/right (eixo vertical):
@@ -363,6 +365,7 @@ function calcPrateleira32mm(piece: PieceInput, rules: RulesConfig, out: Technica
   const cfg = rules.furos.tecnicos.prateleira;
   if (!cfg.enabled) return;
   if (piece.shelfHolesEnabled === false) return;
+  if (piece.shelfMode === "div") return;
   if (piece.tipo !== "lateral_esquerda" && piece.tipo !== "lateral_direita") return;
   const face = piece.tipo === "lateral_esquerda" ? "direita" : "esquerda";
 
