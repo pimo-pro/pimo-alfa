@@ -185,6 +185,86 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
       expect(inDisabledZone).toBe(false);
     }
   });
+
+  it("com prateleiras, o DIV recebe furos no lado correspondente", () => {
+    const right = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
+    const rightHoles = right.divisorio.get("pid-div-shelf") ?? [];
+    expect(rightHoles.length).toBeGreaterThan(0);
+    expect(rightHoles.every((h) => h.face === "A")).toBe(true);
+
+    const leftDiv = defaultDivisorItem({
+      id: "div-left-shelf",
+      positionMm: 281,
+      prateleiraLado: "esquerda",
+    });
+    const leftBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [leftDiv],
+      panelIds: { divisores: ["pid-div-left-shelf"] },
+    });
+    const left = buildDivShelfDrilling(leftBox, leftBox.panelIds, SHELF_RULES)!;
+    expect(left.lateral_direita.length).toBe(0);
+    expect(left.lateral_esquerda.length).toBeGreaterThan(0);
+    const leftHoles = left.divisorio.get("pid-div-left-shelf") ?? [];
+    expect(leftHoles.length).toBeGreaterThan(0);
+    expect(leftHoles.every((h) => h.face === "B")).toBe(true);
+  });
+
+  it("DIV e lateral têm grelha idêntica", () => {
+    const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
+    const divDims = resolveDivisorDimensions(box, div);
+    const divTopY = getDivSepInternalDims(box).espessura + divDims.alturaMm;
+    const lateralYs = [
+      ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
+    ];
+    const divYs = [
+      ...new Set(toAbsoluteDivYs(divTopY, (result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))),
+    ];
+    expect(divYs.length).toBeGreaterThan(0);
+    expect(divYs).toEqual(lateralYs);
+  });
+
+  it("nenhum furo no DIV acima do SEP", () => {
+    const linkedDiv = defaultDivisorItem({
+      id: "div-no-above",
+      positionMm: 281,
+      linkedSeparadorId: "sep-shelf",
+      prateleiraLado: "direita",
+    });
+    const linkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [linkedDiv],
+      panelIds: { divisores: ["pid-div-no-above"] },
+    });
+    const result = buildDivShelfDrilling(linkedBox, linkedBox.panelIds, SHELF_RULES)!;
+    const divDims = resolveDivisorDimensions(linkedBox, linkedDiv);
+    const divTopY = getDivSepInternalDims(linkedBox).espessura + divDims.alturaMm;
+    const sepBottomY = roundMm(resolveSeparadorBottomY(linkedBox, sep));
+    const divYs = [
+      ...new Set(
+        toAbsoluteDivYs(divTopY, (result.divisorio.get("pid-div-no-above") ?? []).map((h) => roundMm(h.y)))
+      ),
+    ];
+    expect(divYs.length).toBeGreaterThan(0);
+    expect(divYs.every((y) => y < sepBottomY)).toBe(true);
+  });
+
+  it("usa panelId industrial divisorio-N quando panelIds.divisores está vazio", () => {
+    const bare = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [defaultDivisorItem({ id: "uuid-only", prateleiraLado: "direita" })],
+    });
+    bare.panelIds = { ...bare.panelIds!, divisores: [] };
+    const result = buildDivShelfDrilling(bare, bare.panelIds, SHELF_RULES)!;
+    expect(result.divisorio.get("divisorio-1")?.length ?? 0).toBeGreaterThan(0);
+    expect(result.divisorio.get("uuid-only")?.length ?? 0).toBeGreaterThan(0);
+  });
 });
 
 describe("buildDivShelfDrilling — flag enableShelfHoles", () => {

@@ -108,6 +108,25 @@ function absoluteYToDivisorPanelY(divBottomY: number, divHeightMm: number, absol
   return roundHoleMm(divTopY - absoluteY);
 }
 
+/** ID do painel DIV alinhado com `getArrayPanelId` em boxManufacturing. */
+function resolveDivisorShelfPanelId(
+  panelIds: { divisores?: string[] } | undefined,
+  div: DivisorItem,
+  index: number
+): string {
+  const fromBox = panelIds?.divisores?.[index];
+  if (typeof fromBox === "string" && fromBox.length > 0) return fromBox;
+  return `divisorio-${index + 1}`;
+}
+
+/**
+ * Face do DIV virada para o compartimento das prateleiras.
+ * direita = face A (lado direito do DIV); esquerda = face B (lado esquerdo).
+ */
+function resolveDivisorShelfFace(lado: "esquerda" | "direita"): "A" | "B" {
+  return lado === "direita" ? "A" : "B";
+}
+
 function dedupePanelDrillHoles(holes: PanelDrillHole[]): PanelDrillHole[] {
   const deduped = new Map<string, PanelDrillHole>();
   for (const hole of holes) {
@@ -160,7 +179,8 @@ export function buildDivShelfDrilling(
 
   divisores.forEach((div, index) => {
     const lado = div.prateleiraLado ?? "direita";
-    const panelId = panelIds?.divisores?.[index] ?? div.id;
+    const panelId = resolveDivisorShelfPanelId(panelIds, div, index);
+    const divFace = resolveDivisorShelfFace(lado);
     const divHoles: PanelDrillHole[] = [];
     const divDims = resolveDivisorDimensions(box, div);
     const divBottomY = internal.espessura;
@@ -176,6 +196,7 @@ export function buildDivShelfDrilling(
     const divXFundo = divDims.profundidadeMm - margemFundo;
 
     for (const zone of compartments) {
+      // Clamp só no Y útil (LAT+DIV); nunca desactiva o lado do DIV num compartimento válido.
       const shelfBounds = resolveEffectiveShelfBounds(zone, divBottomY, divTopY);
       if (!shelfBounds) continue;
       const absoluteYs = calcShelfGridYs(shelfBounds.yMin, shelfBounds.yMax, rules);
@@ -200,13 +221,14 @@ export function buildDivShelfDrilling(
           face: "B",
           topDrillable: true,
         });
+        // Mesma grelha absoluta Y → Y local do DIV; face = lado das prateleiras.
         divHoles.push({
           x: divXFrente,
           y: divisorY,
           diameter: diametro,
           depth: profundidade,
           holeType: "prateleira",
-          face: "B",
+          face: divFace,
           topDrillable: true,
         });
         divHoles.push({
@@ -215,13 +237,18 @@ export function buildDivShelfDrilling(
           diameter: diametro,
           depth: profundidade,
           holeType: "prateleira",
-          face: "B",
+          face: divFace,
           topDrillable: true,
         });
       }
     }
 
-    if (divHoles.length) divisorio.set(panelId, dedupePanelDrillHoles(divHoles));
+    if (divHoles.length) {
+      const deduped = dedupePanelDrillHoles(divHoles);
+      divisorio.set(panelId, deduped);
+      // Alias para caixas que ainda referenciam o id do item DIV.
+      if (div.id && div.id !== panelId) divisorio.set(div.id, deduped);
+    }
   });
 
   if (!lateral_esquerda.length && !lateral_direita.length && divisorio.size === 0) return null;

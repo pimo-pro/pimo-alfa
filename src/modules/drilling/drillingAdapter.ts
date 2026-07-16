@@ -118,7 +118,7 @@ export function panelSeparadorDrillHoleToTechnical(
   };
 }
 
-/** Converte furos do DIV para o viewer 3D (face principal = frente). */
+/** Converte furos do DIV para o viewer 3D (A = direita, B = esquerda do painel). */
 export function panelDivisorDrillHoleToTechnical(h: PanelDrillHole): TechnicalDrillHole {
   return {
     x: h.x,
@@ -126,7 +126,7 @@ export function panelDivisorDrillHoleToTechnical(h: PanelDrillHole): TechnicalDr
     diametro: h.diameter,
     profundidade: h.depth,
     tipo: (h.holeType ?? "parafuso") as DrillType,
-    face: "frente",
+    face: h.face === "A" ? "direita" : "esquerda",
   };
 }
 
@@ -592,9 +592,8 @@ export function buildViewerDrillMarkersByPanelResult(
   for (const item of cutList) {
     if (item.tipo !== "divisorio" || !item.drillHoles?.length) continue;
     const panelId = String(item.metadata?.panelId ?? item.id);
-    divisoresById[panelId] = onlyInternalFaceHoles(item.drillHoles).map((h) =>
-      panelDivisorDrillHoleToTechnical(h)
-    );
+    // Prateleiras no DIV: face A/B indica o lado (direita/esquerda); não filtrar face A.
+    divisoresById[panelId] = item.drillHoles.map((h) => panelDivisorDrillHoleToTechnical(h));
   }
 
   const result = {
