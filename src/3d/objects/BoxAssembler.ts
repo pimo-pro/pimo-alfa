@@ -24,6 +24,11 @@ import { renderCaixaForno } from "../../core/moveis/viewer/renderCaixaForno";
 import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 import { resolveNoBackPanelFromOptions } from "../../core/box/backPanelFlags";
 import { DISABLE_DRAWER_RENDERING } from "./drawerRenderingFlags";
+import {
+  filterDivisorViewerShelfHoles,
+  resolveDivisorViewerDrillHoles,
+  resolveDivisorViewerPanelType,
+} from "../viewer-engine/drill/divSepViewerDrillLookup";
 
 type BoxAssemblerDeps = {
   resolveDimensions: (_options?: BoxOptions) => { width: number; height: number; depth: number };
@@ -159,18 +164,42 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     divisores: opts?.divisores ?? [],
     separadores: opts?.separadores ?? [],
   };
+  let divSepDivIndex = 0;
   getDivSepMeshSpecs(divSepBoxLike, width, height, depth, deps.thicknessM).forEach((spec) => {
+    const isDivMesh = spec.name.startsWith("divsep-div-");
+    const isSepMesh = spec.name.startsWith("divsep-sep-");
+    let meshPanelType: PanelType = "top";
+    let divItemId = "";
+    let divIndex = -1;
+    let divShelfHoles: TechnicalDrillHole[] = [];
+    if (isDivMesh) {
+      divItemId = spec.name.slice("divsep-div-".length);
+      divIndex = divSepDivIndex;
+      divSepDivIndex += 1;
+      const lado = opts.divisores?.[divIndex]?.prateleiraLado;
+      meshPanelType = resolveDivisorViewerPanelType(lado);
+      divShelfHoles = filterDivisorViewerShelfHoles(
+        resolveDivisorViewerDrillHoles(drillMap.divisoresById, {
+          divItemId,
+          divIndex,
+          panelIds: opts.panelIds,
+        })
+      );
+    }
+
     const mesh = deps.panelFactory.createPanel(
       spec.size[0],
       spec.size[1],
       spec.size[2],
       spec.name,
-      "top",
+      meshPanelType,
       { singleMaterial: baseMaterial }
     );
     mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
     mesh.userData.divSepId = spec.name;
-    if (spec.name.startsWith("divsep-sep-")) {
+    mesh.userData.panelType = meshPanelType;
+    mesh.userData.authoredSize = [spec.size[0], spec.size[1], spec.size[2]] as [number, number, number];
+    if (isSepMesh) {
       mesh.userData.divSepKind = "sep";
       const sepItemId = spec.name.slice("divsep-sep-".length);
       mesh.userData.divSepItemId = sepItemId;
@@ -178,14 +207,12 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       if (sepHoles?.length) {
         deps.applyDrillHolesToPanelGeometry(mesh, "top", sepHoles);
       }
-    } else if (spec.name.startsWith("divsep-div-")) {
+    } else if (isDivMesh) {
       mesh.userData.divSepKind = "div";
-      const divItemId = spec.name.slice("divsep-div-".length);
       mesh.userData.divSepItemId = divItemId;
-      const divHoles = drillMap.divisoresById?.[divItemId];
-      if (divHoles?.length) {
-        deps.applyDrillHolesToPanelGeometry(mesh, "top", divHoles);
-      }
+      mesh.userData.divSepIndex = divIndex;
+      // DIV: só marcadores de overlay (sem CSG). Sem prateleiras → array vazio.
+      mesh.userData.divViewerHoles = divShelfHoles;
     }
     root.add(mesh);
   });

@@ -244,6 +244,12 @@ export function buildDrillCutGeometries(panelType: PanelType, panel: THREE.Mesh,
 export function applyDrillHolesToPanelGeometry(panel: THREE.Mesh, panelType: PanelType, holes: TechnicalDrillHole[] | undefined): void {
   if (!holes || holes.length === 0) return;
 
+  // DIV: furos só via marcadores de overlay — CSG no painel fino gera artefactos visuais.
+  const isDiv =
+    panel.userData?.divSepKind === "div" ||
+    (typeof panel.name === "string" && panel.name.startsWith("divsep-div-"));
+  if (isDiv) return;
+
   if (import.meta.env.DEV) {
     devLogger.debug("[DRILL-DIAG] applyDrillHolesToPanelGeometry ENTRADA", {
       panelType,
