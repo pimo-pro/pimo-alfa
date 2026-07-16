@@ -111,7 +111,6 @@ function absoluteYToDivisorPanelY(divBottomY: number, divHeightMm: number, absol
 /** ID do painel DIV alinhado com `getArrayPanelId` em boxManufacturing. */
 function resolveDivisorShelfPanelId(
   panelIds: { divisores?: string[] } | undefined,
-  div: DivisorItem,
   index: number
 ): string {
   const fromBox = panelIds?.divisores?.[index];
@@ -179,7 +178,7 @@ export function buildDivShelfDrilling(
 
   divisores.forEach((div, index) => {
     const lado = div.prateleiraLado ?? "direita";
-    const panelId = resolveDivisorShelfPanelId(panelIds, div, index);
+    const panelId = resolveDivisorShelfPanelId(panelIds, index);
     const divFace = resolveDivisorShelfFace(lado);
     const divHoles: PanelDrillHole[] = [];
     const divDims = resolveDivisorDimensions(box, div);
