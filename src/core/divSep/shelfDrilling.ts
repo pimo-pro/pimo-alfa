@@ -15,7 +15,34 @@ const SHELF_GRID_STEP_MM = 32;
 export type VerticalCompartment = {
   yMin: number;
   yMax: number;
+  /** Zona utilizável para prateleiras curtas (LAT+DIV). Acima do SEP superior = false por omissão. */
+  shelfEnabled: boolean;
 };
+
+const MIN_SHELF_COMPARTMENT_HEIGHT_MM = 80;
+
+function compartmentHasDivSupport(
+  zone: VerticalCompartment,
+  divBottomY: number,
+  divTopY: number
+): boolean {
+  if (!zone.shelfEnabled) return false;
+  const effectiveYMin = Math.max(zone.yMin, divBottomY);
+  const effectiveYMax = Math.min(zone.yMax, divTopY);
+  return effectiveYMax - effectiveYMin > MIN_SHELF_COMPARTMENT_HEIGHT_MM;
+}
+
+function resolveEffectiveShelfBounds(
+  zone: VerticalCompartment,
+  divBottomY: number,
+  divTopY: number
+): { yMin: number; yMax: number } | null {
+  if (!compartmentHasDivSupport(zone, divBottomY, divTopY)) return null;
+  return {
+    yMin: Math.max(zone.yMin, divBottomY),
+    yMax: Math.min(zone.yMax, divTopY),
+  };
+}
 
 function roundHoleMm(value: number): number {
   return Math.round(value * 1000) / 1000;
@@ -28,7 +55,7 @@ export function resolveVerticalCompartments(box: DivSepBoxLike): VerticalCompart
   const yTop = internal.espessura + internal.alturaInterna;
   const separadores = box.separadores ?? [];
   if (separadores.length === 0) {
-    return [{ yMin: yBottom, yMax: yTop }];
+    return [{ yMin: yBottom, yMax: yTop, shelfEnabled: true }];
   }
 
   const boundaries = [yBottom, ...separadores.map((s) => resolveSeparadorBottomY(box, s)), yTop]
@@ -39,9 +66,15 @@ export function resolveVerticalCompartments(box: DivSepBoxLike): VerticalCompart
   for (let i = 0; i < boundaries.length - 1; i++) {
     const yMin = boundaries[i]!;
     const yMax = boundaries[i + 1]!;
-    if (yMax - yMin > 80) zones.push({ yMin, yMax });
+    if (yMax - yMin <= MIN_SHELF_COMPARTMENT_HEIGHT_MM) continue;
+    const isTopZoneAboveSeparador = i === boundaries.length - 2;
+    zones.push({
+      yMin,
+      yMax,
+      shelfEnabled: !isTopZoneAboveSeparador,
+    });
   }
-  return zones.length > 0 ? zones : [{ yMin: yBottom, yMax: yTop }];
+  return zones.length > 0 ? zones : [{ yMin: yBottom, yMax: yTop, shelfEnabled: true }];
 }
 
 function calcShelfGridYs(
@@ -131,6 +164,7 @@ export function buildDivShelfDrilling(
     const divHoles: PanelDrillHole[] = [];
     const divDims = resolveDivisorDimensions(box, div);
     const divBottomY = internal.espessura;
+    const divTopY = divBottomY + divDims.alturaMm;
 
     const lateralTipo = lado === "esquerda" ? "lateral_esquerda" : "lateral_direita";
     const lateralOut = lateralTipo === "lateral_esquerda" ? lateral_esquerda : lateral_direita;
@@ -142,7 +176,9 @@ export function buildDivShelfDrilling(
     const divXFundo = divDims.profundidadeMm - margemFundo;
 
     for (const zone of compartments) {
-      const absoluteYs = calcShelfGridYs(zone.yMin, zone.yMax, rules);
+      const shelfBounds = resolveEffectiveShelfBounds(zone, divBottomY, divTopY);
+      if (!shelfBounds) continue;
+      const absoluteYs = calcShelfGridYs(shelfBounds.yMin, shelfBounds.yMax, rules);
       for (const absoluteY of absoluteYs) {
         const lateralY = absoluteYToLateralPanelY(box, absoluteY);
         const divisorY = absoluteYToDivisorPanelY(divBottomY, divDims.alturaMm, absoluteY);

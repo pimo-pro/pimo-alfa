@@ -3,6 +3,7 @@ import { divSepRulesStore } from "../../admin/rules/divSepRules/rulesStore";
 import { DIV_SEP_RULES_DEFAULTS } from "../../admin/rules/divSepRules/rulesDefaults";
 import { defaultRulesConfig } from "../rules/rulesConfig";
 import { getDivSepInternalDims, resolveDivisorDimensions } from "./dimensions";
+import { resolveSeparadorBottomY } from "./coupling";
 import {
   boxUsesDivShelfMode,
   buildDivShelfDrilling,
@@ -63,6 +64,8 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
   it("cria compartimentos verticais delimitados pelos SEP", () => {
     const zones = resolveVerticalCompartments(box);
     expect(zones.length).toBeGreaterThanOrEqual(1);
+    expect(zones.some((zone) => zone.shelfEnabled)).toBe(true);
+    expect(zones.some((zone) => !zone.shelfEnabled)).toBe(true);
   });
 
   it("fura apenas a lateral escolhida e o DIV", () => {
@@ -90,7 +93,7 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
     const cfg = SHELF_RULES.furos.tecnicos.prateleira;
     const absoluteYs = [...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y))))];
-    for (const zone of resolveVerticalCompartments(box)) {
+    for (const zone of resolveVerticalCompartments(box).filter((z) => z.shelfEnabled)) {
       const minY = roundMm(zone.yMin + (cfg.margemBase ?? 0));
       const maxY = roundMm(zone.yMax - (cfg.margemTopo ?? 0));
       const zoneYs = absoluteYs.filter((y) => y >= minY && y <= maxY);
@@ -118,7 +121,7 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
 
   it("respeita compartimentos com SEP sem furos fora da grelha util", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
-    const zones = resolveVerticalCompartments(box);
+    const zones = resolveVerticalCompartments(box).filter((zone) => zone.shelfEnabled);
     const absoluteYs = [
       ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
     ];
@@ -137,6 +140,50 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
     const width = resolveShelfWidthForDivSide(box, div);
     expect(width).toBeGreaterThan(0);
     expect(width).toBeLessThan(box.dimensoes.largura - box.espessura * 2);
+  });
+
+  it("com DIV+SEP, nenhum furo de prateleira acima do SEP", () => {
+    const linkedDiv = defaultDivisorItem({
+      id: "div-linked-shelf",
+      positionMm: 281,
+      linkedSeparadorId: "sep-shelf",
+      prateleiraLado: "direita",
+    });
+    const linkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [linkedDiv],
+      panelIds: { divisores: ["pid-div-linked-shelf"] },
+    });
+    const result = buildDivShelfDrilling(linkedBox, linkedBox.panelIds, SHELF_RULES);
+    expect(result).not.toBeNull();
+
+    const sepBottomY = roundMm(resolveSeparadorBottomY(linkedBox, sep));
+    const cfg = SHELF_RULES.furos.tecnicos.prateleira;
+    const margemBase = cfg.margemBase ?? 0;
+    const forbiddenMinY = roundMm(sepBottomY + margemBase);
+    const disabledZones = resolveVerticalCompartments(linkedBox).filter((zone) => !zone.shelfEnabled);
+
+    const absoluteYs = [
+      ...new Set(
+        toAbsoluteLateralYs(
+          linkedBox.dimensoes.altura,
+          result!.lateral_direita.map((h) => roundMm(h.y))
+        )
+      ),
+    ];
+
+    expect(absoluteYs.length).toBeGreaterThan(0);
+    expect(absoluteYs.every((y) => y < forbiddenMinY)).toBe(true);
+    for (const y of absoluteYs) {
+      const inDisabledZone = disabledZones.some((zone) => {
+        const minY = roundMm(zone.yMin + margemBase);
+        const maxY = roundMm(zone.yMax - (cfg.margemTopo ?? 0));
+        return y >= minY && y <= maxY;
+      });
+      expect(inDisabledZone).toBe(false);
+    }
   });
 });
 
