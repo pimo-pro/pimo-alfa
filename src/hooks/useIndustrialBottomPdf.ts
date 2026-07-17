@@ -37,6 +37,24 @@ export function useIndustrialBottomPdf() {
     }
   }, []);
 
+  const buildFerragensTotaisDoc = useCallback(() => {
+    return buildFerragensTotaisPdf(
+      {
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName,
+        remates: project.remates,
+        rodapes: project.rodapes,
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        pieceObservacoes: project.pieceObservacoes,
+      },
+      componentTypes,
+      ferragens,
+      materials
+    );
+  }, [boxes, project, projectName, componentTypes, ferragens, materials]);
+
   const exportResumoFinanceiroPdf = useCallback(() => {
     const doc = buildResumoFinanceiroPdf(
       boxes,
@@ -67,22 +85,22 @@ export function useIndustrialBottomPdf() {
   }, [boxes, project, projectName, materials, savePdf]);
 
   const exportFerragensTotaisPdf = useCallback(() => {
-    const doc = buildFerragensTotaisPdf(
-      {
-        boxes,
-        rules: project.rules,
-        materialId: project.materialId,
-        projectName,
-        remates: project.remates,
-        rodapes: project.rodapes,
-        extractedPartsByBoxId: project.extractedPartsByBoxId,
-        pieceObservacoes: project.pieceObservacoes,
-      },
-      componentTypes,
-      ferragens
-    );
+    const doc = buildFerragensTotaisDoc();
     savePdf(doc, ferragensTotaisPdfFileName(projectName));
-  }, [boxes, project, projectName, componentTypes, ferragens, savePdf]);
+  }, [buildFerragensTotaisDoc, projectName, savePdf]);
+
+  const viewFerragensTotaisPdf = useCallback(() => {
+    beginIndustrialFileGeneration();
+    try {
+      const doc = buildFerragensTotaisDoc();
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } finally {
+      endIndustrialFileGeneration();
+    }
+  }, [buildFerragensTotaisDoc]);
 
   const exportTotaisProjetoPdf = useCallback(() => {
     const doc = buildTotaisProjetoPdf(
@@ -110,6 +128,7 @@ export function useIndustrialBottomPdf() {
     exportResumoFinanceiroPdf,
     exportPecasTotaisPdf,
     exportFerragensTotaisPdf,
+    viewFerragensTotaisPdf,
     exportTotaisProjetoPdf,
     isAdmin,
   };

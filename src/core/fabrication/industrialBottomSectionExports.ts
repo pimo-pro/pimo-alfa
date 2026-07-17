@@ -51,7 +51,12 @@ export function buildBottomSectionPdfs(input: {
       input.showPrices
     ),
     pecasTotais: buildPecasTotaisPdf(input.project, input.materials),
-    ferragensTotais: buildFerragensTotaisPdf(input.project, input.componentTypes, input.ferragens),
+    ferragensTotais: buildFerragensTotaisPdf(
+      input.project,
+      input.componentTypes,
+      input.ferragens,
+      input.materials
+    ),
     totaisProjeto: buildTotaisProjetoPdf(
       boxes,
       input.project.rules,

@@ -12,7 +12,7 @@ export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean 
   const { project } = useProject();
   const { componentTypes } = useComponentTypes();
   const { ferragens } = useFerragens();
-  const { exportFerragensTotaisPdf } = useIndustrialBottomPdf();
+  const { exportFerragensTotaisPdf, viewFerragensTotaisPdf } = useIndustrialBottomPdf();
   const { totalFerragensQty } = useCutlistData();
 
   const { detalhe, porTipo } = useMemo(
@@ -36,7 +36,10 @@ export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean 
 
   return (
     <Panel title={embedded ? undefined : "Ferragens totais"}>
-      <IndustrialPanelPdfActions onGeneratePdf={exportFerragensTotaisPdf} />
+      <IndustrialPanelPdfActions
+        onViewPdf={viewFerragensTotaisPdf}
+        onDownloadPdf={exportFerragensTotaisPdf}
+      />
       <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
         Total de unidades: <strong style={{ color: "var(--text-main)" }}>{totalFerragensQty}</strong>
       </p>

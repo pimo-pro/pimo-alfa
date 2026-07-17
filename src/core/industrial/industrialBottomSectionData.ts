@@ -14,6 +14,8 @@ import {
 import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
 import { buildIndustrialFerragensForProject } from "../industriais/buildIndustrialFerragensForProject";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../industriais/ferragensIndustriais";
+import { computeChapasReal } from "./computeChapasReal";
+import { getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { RulesConfig } from "../rules/rulesConfig";
 import type { ComponentType } from "../components/componentTypes";
@@ -149,8 +151,148 @@ export function buildResumoFinanceiroPdfRows(
   return { summary, pecas };
 }
 
+export type FerragensTotaisArmazemRow = {
+  material: string;
+  ref: string;
+  medida: string;
+  quantidade: number;
+};
+
+type FerragensTotaisProjectSlice = Pick<
+  ProjectState,
+  | "boxes"
+  | "rules"
+  | "materialId"
+  | "projectName"
+  | "remates"
+  | "rodapes"
+  | "extractedPartsByBoxId"
+  | "pieceObservacoes"
+>;
+
+/**
+ * Totais agregados para o PDF ferragens_totais (armazém):
+ * chapas por material/espessura + ferragens somadas (sem caixa/peça).
+ */
+export function buildFerragensTotaisArmazemData(
+  project: FerragensTotaisProjectSlice,
+  _componentTypes: ComponentType[],
+  catalogFerragens: Ferragem[],
+  materials: MaterialIndustrial[]
+): { materiaisChapas: FerragensTotaisArmazemRow[]; ferragens: FerragensTotaisArmazemRow[] } {
+  const boxes = project.boxes ?? [];
+  const projectName = project.projectName?.trim() || "Projeto";
+  const items = buildCutlistItemsForIndustrialExport({
+    boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: undefined,
+  });
+
+  const chapas = computeChapasReal(items, projectName, boxes);
+  const sheetDef = getSheetDefinitionFromSettings();
+  const defaultW = sheetDef.largura_mm || CHAPA_PADRAO_LARGURA;
+  const defaultH = sheetDef.altura_mm || CHAPA_PADRAO_ALTURA;
+
+  const chapasMap = new Map<
+    string,
+    { material: string; espessuraMm: number; qty: number; w: number; h: number }
+  >();
+
+  if (chapas.sheets.length > 0) {
+    for (const s of chapas.sheets) {
+      const key = `${s.material}||${s.espessuraMm}`;
+      const prev = chapasMap.get(key);
+      if (prev) {
+        prev.qty += 1;
+      } else {
+        const mat = materials.find((m) => m.nome === s.material || m.id === s.material);
+        chapasMap.set(key, {
+          material: s.material,
+          espessuraMm: s.espessuraMm,
+          qty: 1,
+          w: mat?.larguraChapa ?? defaultW,
+          h: mat?.alturaChapa ?? defaultH,
+        });
+      }
+    }
+  } else if (chapas.totalSheets > 0) {
+    const matName = sheetDef.materialName ?? "MDF";
+    const esp = sheetDef.espessura_mm ?? 18;
+    chapasMap.set(`${matName}||${esp}`, {
+      material: matName,
+      espessuraMm: esp,
+      qty: chapas.totalSheets,
+      w: defaultW,
+      h: defaultH,
+    });
+  }
+
+  const materiaisChapas: FerragensTotaisArmazemRow[] = [...chapasMap.values()]
+    .sort((a, b) => a.material.localeCompare(b.material, "pt") || a.espessuraMm - b.espessuraMm)
+    .map((r) => {
+      const mat = materials.find((m) => m.nome === r.material || m.id === r.material);
+      return {
+        material: r.material,
+        ref: mat?.id ?? "—",
+        medida: `${r.w}×${r.h}×${r.espessuraMm} mm`,
+        quantidade: r.qty,
+      };
+    });
+
+  const industrial = buildIndustrialFerragensForProject({
+    projectName: project.projectName,
+    boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    pieceObservacoes: project.pieceObservacoes,
+  });
+
+  const byFerragem = new Map<string, { nome: string; ref: string; medida: string; qty: number }>();
+  const catalogByNome = new Map(catalogFerragens.map((f) => [f.nome.trim().toLowerCase(), f]));
+  const catalogById = new Map(catalogFerragens.map((f) => [f.id, f]));
+
+  for (const row of industrial.rows) {
+    const nome = row.ferragem.trim() || "—";
+    const cat =
+      catalogByNome.get(nome.toLowerCase()) ??
+      catalogById.get(nome) ??
+      catalogFerragens.find((f) => f.nome.includes(nome) || nome.includes(f.nome));
+    const key = cat?.id ?? nome.toLowerCase();
+    const prev = byFerragem.get(key);
+    if (prev) {
+      prev.qty += row.qtd;
+    } else {
+      byFerragem.set(key, {
+        nome: cat?.nome ?? nome,
+        ref: cat?.id ?? "—",
+        medida: cat?.medidas?.trim() || "—",
+        qty: row.qtd,
+      });
+    }
+  }
+
+  const ferragens: FerragensTotaisArmazemRow[] = [...byFerragem.values()]
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt"))
+    .map((r) => ({
+      material: r.nome,
+      ref: r.ref,
+      medida: r.medida,
+      quantidade: r.qty,
+    }));
+
+  return { materiaisChapas, ferragens };
+}
+
 export function buildFerragensTotaisPdfData(
-  project: Pick<ProjectState, "boxes" | "rules" | "materialId" | "projectName" | "remates" | "rodapes" | "extractedPartsByBoxId" | "pieceObservacoes">,
+  project: FerragensTotaisProjectSlice,
   componentTypes: ComponentType[],
   catalogFerragens: Ferragem[]
 ): { detalhe: string[][]; porTipo: string[][] } {
