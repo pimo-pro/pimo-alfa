@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-17T11:15:00.000Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(industrial): logótipo industrial dedicado e atribuição designer/responsável nos PDFs",
+      "version": "v6.0717.1215-branding"
+    },
+    {
       "publishedAt": "2026-07-17T10:45:00.000Z",
       "author": "pimo-pro",
       "commitMessage": "feat(industrial): reestruturar ferragens_totais.pdf em landscape com totais agregados",
