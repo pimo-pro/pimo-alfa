@@ -117,19 +117,22 @@ export default function HeaderProjectsSwitcher() {
           >
             Projetos PIMO
           </div>
-          {PIMO_PROJECTS.map((item) =>
-            item.soon ? (
-              <button
-                key={item.id}
-                type="button"
-                role="menuitem"
-                disabled
-                style={{ ...menuButtonStyle, opacity: 0.55, cursor: "default" }}
-              >
-                {item.label}{" "}
-                <span style={{ fontSize: 11, opacity: 0.8 }}>(em breve)</span>
-              </button>
-            ) : (
+          {PIMO_PROJECTS.map((item) => {
+            if (item.soon) {
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="menuitem"
+                  disabled
+                  style={{ ...menuButtonStyle, opacity: 0.55, cursor: "default" }}
+                >
+                  {item.label}{" "}
+                  <span style={{ fontSize: 11, opacity: 0.8 }}>(em breve)</span>
+                </button>
+              );
+            }
+            return (
               <button
                 key={item.id}
                 type="button"
@@ -139,8 +142,8 @@ export default function HeaderProjectsSwitcher() {
               >
                 {item.label}
               </button>
-            )
-          )}
+            );
+          })}
         </div>
       ) : null}
     </div>
