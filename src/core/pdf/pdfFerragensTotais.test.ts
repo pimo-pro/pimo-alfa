@@ -10,10 +10,10 @@ vi.mock("../industrial/industrialBottomSectionData", async (importOriginal) => {
     ...actual,
     buildFerragensTotaisArmazemData: () => ({
       materiaisChapas: [
-        { material: "MDF Branco", ref: "mdf_branco-19", medida: "2780×2070×19 mm", quantidade: 3 },
+        { material: "MDF Branco", ref: "mdf_branco-19", medida: "2780ï¿½2070ï¿½19 mm", quantidade: 3 },
       ],
       ferragens: [
-        { material: "Parafuso 4×50", ref: "parafuso_4x50", medida: "4mm × 50mm", quantidade: 120 },
+        { material: "Parafuso 4ï¿½50", ref: "parafuso_4x50", medida: "4mm ï¿½ 50mm", quantidade: 120 },
       ],
     }),
   };

@@ -28,7 +28,7 @@ describe("resolveIndustrialPdfAttribution", () => {
     vi.resetModules();
   });
 
-  it("Visitante mantém o nome", async () => {
+  it("Visitante mantï¿½m o nome", async () => {
     localStorage.setItem("pimo_current_user_name", "Visitante");
     const { invalidateCurrentProjectUserCache } = await import("../projects/currentUser");
     invalidateCurrentProjectUserCache();
@@ -38,7 +38,7 @@ describe("resolveIndustrialPdfAttribution", () => {
     expect(r.responsible).toBe("khaled");
   });
 
-  it("não-admin usa o nome do designer", async () => {
+  it("nï¿½o-admin usa o nome do designer", async () => {
     localStorage.setItem("pimo_auth_token", "tok");
     localStorage.setItem(
       "pimo_auth_user",
@@ -66,7 +66,7 @@ describe("resolveIndustrialPdfAttribution", () => {
     expect(r.responsible).toBe("khaled");
   });
 
-  it("substitui Designer admin por khaled mesmo com role não-admin", async () => {
+  it("substitui Designer admin por khaled mesmo com role nï¿½o-admin", async () => {
     localStorage.setItem("pimo_auth_token", "tok");
     localStorage.setItem(
       "pimo_auth_user",
