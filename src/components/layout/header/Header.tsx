@@ -6,6 +6,7 @@ import { useToast } from "../../../context/ToastContext";
 import { Icon } from "@/components/icons";
 import HeaderUndoRedoButtons from "./HeaderUndoRedoButtons";
 import HeaderIndustrialMenu from "./HeaderIndustrialMenu";
+import HeaderProjectsSwitcher from "./HeaderProjectsSwitcher";
 import InvariantNotificationBell from "../../invariants/InvariantNotificationBell";
 import {
   loadPimoProjectState,
@@ -205,6 +206,7 @@ export default function Header() {
             <div style={{ fontSize: 16, fontWeight: 600 }}>PiMo Studio</div>
           </div>
         </div>
+        <HeaderProjectsSwitcher />
         <HeaderUndoRedoButtons />
       </div>
 
