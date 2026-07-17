@@ -61,6 +61,22 @@ describe("cutlist merge — furos de prateleira no DIV", () => {
     expect(shelves).toHaveLength(2);
   });
 
+  it("gerarPaineis com DIV não ligado ao SEP também cria exactamente N (sem duplicar acima)", () => {
+    const sep = defaultSeparadorItem({ id: "sep-unlinked", positionMm: 400 });
+    const div = defaultDivisorItem({
+      id: "div-unlinked",
+      prateleiraLado: "direita",
+    });
+    const box = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [div],
+    });
+    const paineis = gerarPaineis(box, TALL_RULES);
+    expect(paineis.filter((p) => p.tipo === "prateleira")).toHaveLength(2);
+  });
+
   it("furos LAT de prateleira ficam abaixo do SEP e alinhados ao DIV", () => {
     const sep = defaultSeparadorItem({ id: "sep-align", positionMm: 1200 });
     const div = defaultDivisorItem({

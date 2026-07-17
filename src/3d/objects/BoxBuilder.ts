@@ -35,8 +35,8 @@ import { getWardrobeGroupFromBaseCabinetId, isWardrobeVerticalDividerEnabled } f
 import { getCornerCabinetConfig } from "../../core/cornerCabinet";
 import {
   boxUsesDivShelfMode,
+  resolvePrimaryDivShelfPlacementZone,
   resolveShelfWidthForDivSide,
-  resolveVerticalCompartments,
 } from "../../core/divSep/shelfDrilling";
 import type { DivSepBoxLike } from "../../core/divSep/types";
 import { resolveDivisorCenterX } from "../../core/divSep/dimensions";
@@ -311,7 +311,6 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
       : null;
 
   if (divShelfBox && boxUsesDivShelfMode(divShelfBox)) {
-    const compartments = resolveVerticalCompartments(divShelfBox);
     for (const div of opts!.divisores!) {
       const shelfWidthM = Math.max(0.001, resolveShelfWidthForDivSide(divShelfBox, div) / 1000);
       const divCenterXAbs = resolveDivisorCenterX(divShelfBox, div);
@@ -322,17 +321,18 @@ function getShelfSpecs(width: number, height: number, depth: number, count: numb
           ? -width / 2 + THICKNESS_M + shelfWidthM / 2 + 0.001
           : divCenterXM + THICKNESS_M / 2 + shelfWidthM / 2 + 0.001;
 
-      for (const zone of compartments) {
-        const zoneHeightM = (zone.yMax - zone.yMin) / 1000;
-        const zoneCenterYM = (zone.yMin + zone.yMax) / 2000 - height / 2;
-        const zoneSpacing = zoneHeightM / (count + 1);
-        for (let i = 0; i < count; i++) {
-          const y = zoneCenterYM - zoneHeightM / 2 + THICKNESS_M + zoneSpacing * (i + 1);
-          specs.push({
-            size: [shelfWidthM, THICKNESS_M, shelfDepth],
-            pos: [shelfCenterX, y, centerZ],
-          });
-        }
+      // SSOT industrial: exactamente N na zona LAT+DIV+SEP — nunca acima do SEP.
+      const zone = resolvePrimaryDivShelfPlacementZone(divShelfBox, div);
+      if (!zone) continue;
+      const zoneHeightM = (zone.yMax - zone.yMin) / 1000;
+      const zoneCenterYM = (zone.yMin + zone.yMax) / 2000 - height / 2;
+      const zoneSpacing = zoneHeightM / (count + 1);
+      for (let i = 0; i < count; i++) {
+        const y = zoneCenterYM - zoneHeightM / 2 + THICKNESS_M + zoneSpacing * (i + 1);
+        specs.push({
+          size: [shelfWidthM, THICKNESS_M, shelfDepth],
+          pos: [shelfCenterX, y, centerZ],
+        });
       }
     }
     return specs;

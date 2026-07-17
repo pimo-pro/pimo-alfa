@@ -19,7 +19,7 @@ import { countDivSepFerragens } from "../divSep/ferragens";
 import {
   boxUsesDivShelfMode,
   countDivShelfPanels,
-  resolveDivShelfPlacementZones,
+  resolvePrimaryDivShelfPlacementZone,
   resolveShelfWidthForDivSide,
 } from "../divSep/shelfDrilling";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
@@ -375,25 +375,23 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
       let shelfIndex = 0;
       for (const div of divisores) {
         const larguraPrateleira = clampPositive(resolveShelfWidthForDivSide(box, div));
-        // Só zonas shelfEnabled com apoio LAT+DIV (nunca duplicar acima do SEP sem apoio).
-        const placementZones = resolveDivShelfPlacementZones(box, div);
-        for (let z = 0; z < placementZones.length; z++) {
-          for (let i = 0; i < nPrateleiras; i++) {
-            const prateleiraId = getArrayPanelId(box, "prateleiras", shelfIndex);
-            assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
-            paineis.push({
-              id: prateleiraId,
-              tipo: "prateleira",
-              largura_mm: larguraPrateleira,
-              altura_mm: profundidadePrateleira,
-              espessura_mm: espessura,
-              material,
-              orientacaoFibra: "none",
-              quantidade: 1,
-              custo: 0,
-            });
-            shelfIndex += 1;
-          }
+        // Exactamente N peças por DIV no compartimento LAT+DIV+SEP (nunca × zonas / acima do SEP).
+        if (resolvePrimaryDivShelfPlacementZone(box, div) == null) continue;
+        for (let i = 0; i < nPrateleiras; i++) {
+          const prateleiraId = getArrayPanelId(box, "prateleiras", shelfIndex);
+          assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
+          paineis.push({
+            id: prateleiraId,
+            tipo: "prateleira",
+            largura_mm: larguraPrateleira,
+            altura_mm: profundidadePrateleira,
+            espessura_mm: espessura,
+            material,
+            orientacaoFibra: "none",
+            quantidade: 1,
+            custo: 0,
+          });
+          shelfIndex += 1;
         }
       }
     } else {

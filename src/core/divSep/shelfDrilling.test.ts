@@ -9,7 +9,9 @@ import {
   buildDivShelfDrilling,
   countDivShelfPanels,
   MIN_ABOVE_SEP_SHELF_HEIGHT_MM,
+  resolveDivShelfAbsoluteCenterYs,
   resolveDivShelfPlacementZones,
+  resolvePrimaryDivShelfPlacementZone,
   resolveShelfWidthForDivSide,
   resolveVerticalCompartments,
 } from "./shelfDrilling";
@@ -301,8 +303,71 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
       divisores: [linkedDiv],
     });
     expect(resolveVerticalCompartments(linkedBox).length).toBeGreaterThanOrEqual(2);
-    expect(resolveDivShelfPlacementZones(linkedBox, linkedDiv)).toHaveLength(1);
+    expect(resolveDivShelfPlacementZones(linkedBox, linkedDiv).length).toBeGreaterThanOrEqual(1);
     expect(countDivShelfPanels(linkedBox)).toBe(2);
+  });
+
+  it("placement zones nunca incluem a zona acima do SEP", () => {
+    const linkedDiv = defaultDivisorItem({
+      id: "div-no-above-zone",
+      linkedSeparadorId: "sep-shelf",
+      prateleiraLado: "direita",
+    });
+    const linkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 3,
+      separadores: [sep],
+      divisores: [linkedDiv],
+    });
+    const sepBottom = resolveSeparadorBottomY(linkedBox, sep);
+    const zones = resolveDivShelfPlacementZones(linkedBox, linkedDiv);
+    expect(zones.length).toBeGreaterThan(0);
+    expect(zones.every((z) => z.yMax <= sepBottom + 0.5)).toBe(true);
+    expect(zones.every((z) => z.shelfEnabled)).toBe(true);
+    expect(countDivShelfPanels(linkedBox)).toBe(3);
+  });
+
+  it("Y absolutos das N prateleiras ficam todos abaixo do SEP (zero acima)", () => {
+    const linkedDiv = defaultDivisorItem({
+      id: "div-abs-ys",
+      linkedSeparadorId: "sep-shelf",
+      prateleiraLado: "direita",
+    });
+    const linkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [linkedDiv],
+    });
+    const sepBottom = resolveSeparadorBottomY(linkedBox, sep);
+    const allZones = resolveVerticalCompartments(linkedBox);
+    // Bug antigo: N × todas as zonas (incluindo acima do SEP) → 4 peças.
+    expect(allZones.length * 2).toBeGreaterThan(2);
+
+    const ys = resolveDivShelfAbsoluteCenterYs(linkedBox, linkedDiv, 2);
+    expect(ys).toHaveLength(2);
+    expect(ys.every((y) => y < sepBottom)).toBe(true);
+    expect(resolvePrimaryDivShelfPlacementZone(linkedBox, linkedDiv)?.yMax).toBeLessThanOrEqual(
+      sepBottom + 0.5
+    );
+  });
+
+  it("DIV não ligado: Ys industriais também nunca acima do SEP", () => {
+    const unlinkedDiv = defaultDivisorItem({
+      id: "div-unlinked-ys",
+      prateleiraLado: "direita",
+    });
+    const unlinkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [unlinkedDiv],
+    });
+    const sepBottom = resolveSeparadorBottomY(unlinkedBox, sep);
+    const ys = resolveDivShelfAbsoluteCenterYs(unlinkedBox, unlinkedDiv, 2);
+    expect(ys).toHaveLength(2);
+    expect(ys.every((y) => y < sepBottom)).toBe(true);
+    expect(countDivShelfPanels(unlinkedBox)).toBe(2);
   });
 
   it("Y industrial da LAT fica abaixo do SEP e não o sobrepõe", () => {

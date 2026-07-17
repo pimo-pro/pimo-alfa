@@ -292,7 +292,7 @@ export function boxUsesDivShelfMode(box: DivSepBoxLike): boolean {
 
 /**
  * Zonas industriais onde cada DIV pode receber prateleiras (shelfEnabled + apoio LAT+DIV).
- * Usado pela cutlist/peças — não pela malha do Viewer.
+ * Nunca inclui a zona acima do SEP.
  */
 export function resolveDivShelfPlacementZones(
   box: DivSepBoxLike,
@@ -302,12 +302,59 @@ export function resolveDivShelfPlacementZones(
   const divDims = resolveDivisorDimensions(box, div);
   const divBottomY = internal.espessura;
   const divTopY = divBottomY + divDims.alturaMm;
-  return resolveVerticalCompartments(box).filter(
-    (zone) => resolveEffectiveShelfBounds(zone, divBottomY, divTopY) != null
-  );
+
+  const sepBottoms = (box.separadores ?? [])
+    .map((s) => resolveSeparadorBottomY(box, s))
+    .filter((y) => Number.isFinite(y) && y > 0);
+  const highestSepBottom = sepBottoms.length > 0 ? Math.max(...sepBottoms) : null;
+
+  return resolveVerticalCompartments(box).filter((zone) => {
+    if (!zone.shelfEnabled) return false;
+    // Cinto de segurança: qualquer zona que comece no SEP ou acima fica excluída.
+    if (highestSepBottom != null && zone.yMin >= highestSepBottom - 0.5) return false;
+    // Zona acima do SEP superior nunca é válida (mesmo se shelfEnabled falhar).
+    if (highestSepBottom != null && zone.yMax > highestSepBottom + 0.5 && zone.yMin >= highestSepBottom - 0.5) {
+      return false;
+    }
+    return resolveEffectiveShelfBounds(zone, divBottomY, divTopY) != null;
+  });
 }
 
-/** Número exacto de painéis prateleira no modo DIV (N × zonas válidas × DIV). */
+/** Compartimento principal LAT+DIV+SEP (mais baixo entre as zonas válidas). */
+export function resolvePrimaryDivShelfPlacementZone(
+  box: DivSepBoxLike,
+  div: DivisorItem
+): VerticalCompartment | null {
+  const zones = resolveDivShelfPlacementZones(box, div);
+  if (zones.length === 0) return null;
+  return zones.reduce((best, zone) => (zone.yMin < best.yMin ? zone : best));
+}
+
+/**
+ * Centros Y absolutos (mm, origem = base da caixa) das N prateleiras industriais.
+ * Exactamente N, todos dentro da zona LAT+DIV+SEP — nenhum acima do SEP.
+ */
+export function resolveDivShelfAbsoluteCenterYs(
+  box: DivSepBoxLike,
+  div: DivisorItem,
+  count: number
+): number[] {
+  const n = Math.max(0, Math.floor(count));
+  const zone = resolvePrimaryDivShelfPlacementZone(box, div);
+  if (!zone || n < 1) return [];
+  const spacing = (zone.yMax - zone.yMin) / (n + 1);
+  const ys: number[] = [];
+  for (let i = 0; i < n; i++) {
+    ys.push(roundHoleMm(zone.yMin + spacing * (i + 1)));
+  }
+  return ys;
+}
+
+/**
+ * Número exacto de painéis prateleira no modo DIV.
+ * Exactamente N por DIV com pelo menos um compartimento válido (LAT+DIV+SEP) —
+ * nunca N × zonas (evita duplicar acima do SEP).
+ */
 export function countDivShelfPanels(box: DivSepBoxLike): number {
   const n = Math.max(0, Math.floor(box.prateleiras ?? 0));
   if (n <= 0) return 0;
@@ -315,7 +362,7 @@ export function countDivShelfPanels(box: DivSepBoxLike): number {
   if (divisores.length === 0) return n;
   let total = 0;
   for (const div of divisores) {
-    total += n * resolveDivShelfPlacementZones(box, div).length;
+    if (resolvePrimaryDivShelfPlacementZone(box, div) != null) total += n;
   }
   return total;
 }
