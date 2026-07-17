@@ -76,7 +76,7 @@ export function getHole2DLocalPosition(
 ): { a: number; b: number } {
   const useBottomOriginY =
     panelType === "left" || panelType === "right"
-      ? hole.tipo === "cavilha" || hole.tipo === "parafuso"
+      ? hole.tipo === "cavilha" || hole.tipo === "parafuso" || hole.tipo === "prateleira"
       : hole.tipo === "cavilha" && panelType === "front";
   const a = (hole.x / 1000) - panelWidth / 2;
   const b = useBottomOriginY

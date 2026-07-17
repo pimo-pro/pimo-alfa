@@ -78,28 +78,26 @@ describe("cutlist merge — furos de prateleira no DIV", () => {
     const items = cutlistComPrecoFromBox(box, TALL_RULES);
     const lat = items.find((i) => i.tipo === "lateral_direita");
     const divItem = items.find((i) => i.tipo === "divisorio");
-    const latYs = [
+    const latLocal = [
       ...new Set(
         (lat?.drillHoles ?? [])
           .filter((h) => h.holeType === "prateleira")
-          .map((h) => Math.round((box.dimensoes.altura - h.y) * 1000) / 1000)
+          .map((h) => Math.round(h.y * 1000) / 1000)
       ),
     ].sort((a, b) => a - b);
-    const divYs = [
+    const divLocal = [
       ...new Set(
         (divItem?.drillHoles ?? [])
           .filter((h) => h.holeType === "prateleira")
-          .map((h) => {
-            const divH = divItem!.dimensoes.altura;
-            const divBottom = box.espessura;
-            const divTop = divBottom + divH;
-            return Math.round((divTop - h.y) * 1000) / 1000;
-          })
+          .map((h) => Math.round(h.y * 1000) / 1000)
       ),
     ].sort((a, b) => a - b);
+    const latYs = latLocal.map((y) => Math.round((y + box.espessura) * 1000) / 1000);
     const sepBottom = resolveSeparadorBottomY(box, sep);
-    expect(latYs.length).toBeGreaterThan(0);
-    expect(latYs).toEqual(divYs);
+    expect(latLocal.length).toBeGreaterThan(0);
+    expect(divLocal).toEqual(latLocal);
+    expect(latLocal[0]).toBe(divLocal[0]);
+    expect(latLocal[latLocal.length - 1]).toBe(divLocal[divLocal.length - 1]);
     expect(latYs.every((y) => y < sepBottom)).toBe(true);
   });
 });

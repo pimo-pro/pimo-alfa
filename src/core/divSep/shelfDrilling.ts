@@ -103,13 +103,19 @@ function calcShelfGridYs(
 }
 
 function absoluteYToLateralPanelY(box: DivSepBoxLike, absoluteY: number): number {
-  const totalHeight = Number(box.dimensoes.altura) || 0;
-  return roundHoleMm(totalHeight - absoluteY);
+  const espessura = Math.max(0, Number(box.espessura) || 0);
+  // Convenção industrial (cutlist / TCN / SEP na LAT): Y desde a base do painel.
+  // Laterais inset (entre CIMA e FUNDO): base do painel = espessura (topo do FUNDO).
+  // Antes: alturaCaixa − absoluteY (Y desde o topo) → CNC lia como base → furos demasiado altos / sobre SEP.
+  return roundHoleMm(absoluteY - espessura);
 }
 
-function absoluteYToDivisorPanelY(divBottomY: number, divHeightMm: number, absoluteY: number): number {
-  const divTopY = divBottomY + divHeightMm;
-  return roundHoleMm(divTopY - absoluteY);
+function absoluteYToDivisorPanelY(divBottomY: number, _divHeightMm: number, absoluteY: number): number {
+  // Mesma convenção industrial que a LAT: Y desde a base do painel.
+  // LAT e DIV partilham a base (topo do FUNDO = espessura) → mesmo absoluteY ⇒ mesmo Y local.
+  // Antes: divTop − absoluteY (desde o topo) → na chapa os Y não coincidiam com a LAT.
+  void _divHeightMm;
+  return roundHoleMm(absoluteY - divBottomY);
 }
 
 /** ID do painel DIV alinhado com `getArrayPanelId` em boxManufacturing. */

@@ -397,7 +397,10 @@ function calcPrateleira32mm(piece: PieceInput, rules: RulesConfig, out: Technica
 
   const step = numFuros > 1 ? zonaUtil / (numFuros - 1) : zonaUtil;
   for (let i = 0; i < numFuros; i++) {
-    const y = margemTopo + (numFuros > 1 ? i * step : zonaUtil / 2);
+    // Y desde a base do painel (mesma convenção cutlist/TCN/SEP na LAT).
+    // Distância ao topo = margemTopo + i*step → y = altura − essa distância.
+    const distFromTop = margemTopo + (numFuros > 1 ? i * step : zonaUtil / 2);
+    const y = piece.altura - distFromTop;
     pushHole(out, piece, xFrente, y, diametro, profundidade, "prateleira", face);
     pushHole(out, piece, xFundo, y, diametro, profundidade, "prateleira", face);
   }

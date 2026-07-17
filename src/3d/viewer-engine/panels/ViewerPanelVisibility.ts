@@ -479,8 +479,10 @@ export class ViewerPanelVisibility {
     hole: TechnicalDrillHole
   ): number {
     const useBottomOriginY =
-      hole.tipo === "cavilha" &&
-      (panelType === "front" || panelType === "left" || panelType === "right");
+      panelType === "left" || panelType === "right"
+        ? hole.tipo === "cavilha" || hole.tipo === "parafuso" || hole.tipo === "prateleira"
+        : hole.tipo === "cavilha" && panelType === "front";
+    // Laterais: prateleira usa Y desde a base (igual SEP/cavilha e cutlist industrial).
     return useBottomOriginY
       ? hole.y / 1000 - panelH / 2
       : panelH / 2 - hole.y / 1000;

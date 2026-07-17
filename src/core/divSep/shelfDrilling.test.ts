@@ -31,12 +31,14 @@ const SHELF_RULES = {
   },
 };
 
-function toAbsoluteLateralYs(boxHeight: number, ys: number[]): number[] {
-  return ys.map((y) => roundMm(boxHeight - y)).sort((a, b) => a - b);
+function toAbsoluteLateralYs(espessura: number, ys: number[]): number[] {
+  // LAT industrial: Y desde a base do painel inset → absoluto = y + espessura.
+  return ys.map((y) => roundMm(y + espessura)).sort((a, b) => a - b);
 }
 
-function toAbsoluteDivYs(divTopY: number, ys: number[]): number[] {
-  return ys.map((y) => roundMm(divTopY - y)).sort((a, b) => a - b);
+function toAbsoluteDivYs(divBottomY: number, ys: number[]): number[] {
+  // DIV industrial: Y desde a base do painel → absoluto = y + divBottomY.
+  return ys.map((y) => roundMm(y + divBottomY)).sort((a, b) => a - b);
 }
 
 describe("buildDivShelfDrilling — prateleiras com DIV", () => {
@@ -81,21 +83,32 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
 
   it("alinha Y dos furos entre lateral e DIV", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
-    const divDims = resolveDivisorDimensions(box, div);
-    const divTopY = getDivSepInternalDims(box).espessura + divDims.alturaMm;
+    const divBottomY = getDivSepInternalDims(box).espessura;
     const lateralYs = [
-      ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
+      ...new Set(toAbsoluteLateralYs(box.espessura, result.lateral_direita.map((h) => roundMm(h.y)))),
     ];
     const divYs = [
-      ...new Set(toAbsoluteDivYs(divTopY, (result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))),
+      ...new Set(toAbsoluteDivYs(divBottomY, (result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))),
     ];
     expect(divYs).toEqual(lateralYs);
+  });
+
+  it("LAT e DIV têm exactamente os mesmos Y locais (1:1 na chapa)", () => {
+    const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
+    const latLocal = [...new Set(result.lateral_direita.map((h) => roundMm(h.y)))].sort((a, b) => a - b);
+    const divLocal = [
+      ...new Set((result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y))),
+    ].sort((a, b) => a - b);
+    expect(latLocal.length).toBeGreaterThan(0);
+    expect(divLocal).toEqual(latLocal);
+    expect(divLocal[0]).toBe(latLocal[0]);
+    expect(divLocal[divLocal.length - 1]).toBe(latLocal[latLocal.length - 1]);
   });
 
   it("usa passo industrial exacto de 32 mm por compartimento", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
     const cfg = SHELF_RULES.furos.tecnicos.prateleira;
-    const absoluteYs = [...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y))))];
+    const absoluteYs = [...new Set(toAbsoluteLateralYs(box.espessura, result.lateral_direita.map((h) => roundMm(h.y))))];
     for (const zone of resolveVerticalCompartments(box).filter((z) => z.shelfEnabled)) {
       const minY = roundMm(zone.yMin + (cfg.margemBase ?? 0));
       const maxY = roundMm(zone.yMax - (cfg.margemTopo ?? 0));
@@ -126,7 +139,7 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
     const zones = resolveVerticalCompartments(box).filter((zone) => zone.shelfEnabled);
     const absoluteYs = [
-      ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
+      ...new Set(toAbsoluteLateralYs(box.espessura, result.lateral_direita.map((h) => roundMm(h.y)))),
     ];
     const cfg = SHELF_RULES.furos.tecnicos.prateleira;
     for (const y of absoluteYs) {
@@ -171,7 +184,7 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
     const absoluteYs = [
       ...new Set(
         toAbsoluteLateralYs(
-          linkedBox.dimensoes.altura,
+          linkedBox.espessura,
           result!.lateral_direita.map((h) => roundMm(h.y))
         )
       ),
@@ -217,13 +230,12 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
 
   it("DIV e lateral têm grelha idêntica", () => {
     const result = buildDivShelfDrilling(box, box.panelIds, SHELF_RULES)!;
-    const divDims = resolveDivisorDimensions(box, div);
-    const divTopY = getDivSepInternalDims(box).espessura + divDims.alturaMm;
+    const divBottomY = getDivSepInternalDims(box).espessura;
     const lateralYs = [
-      ...new Set(toAbsoluteLateralYs(box.dimensoes.altura, result.lateral_direita.map((h) => roundMm(h.y)))),
+      ...new Set(toAbsoluteLateralYs(box.espessura, result.lateral_direita.map((h) => roundMm(h.y)))),
     ];
     const divYs = [
-      ...new Set(toAbsoluteDivYs(divTopY, (result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))),
+      ...new Set(toAbsoluteDivYs(divBottomY, (result.divisorio.get("pid-div-shelf") ?? []).map((h) => roundMm(h.y)))),
     ];
     expect(divYs.length).toBeGreaterThan(0);
     expect(divYs).toEqual(lateralYs);
@@ -244,12 +256,11 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
       panelIds: { divisores: ["pid-div-no-above"] },
     });
     const result = buildDivShelfDrilling(linkedBox, linkedBox.panelIds, SHELF_RULES)!;
-    const divDims = resolveDivisorDimensions(linkedBox, linkedDiv);
-    const divTopY = getDivSepInternalDims(linkedBox).espessura + divDims.alturaMm;
+    const divBottomY = getDivSepInternalDims(linkedBox).espessura;
     const sepBottomY = roundMm(resolveSeparadorBottomY(linkedBox, sep));
     const divYs = [
       ...new Set(
-        toAbsoluteDivYs(divTopY, (result.divisorio.get("pid-div-no-above") ?? []).map((h) => roundMm(h.y)))
+        toAbsoluteDivYs(divBottomY, (result.divisorio.get("pid-div-no-above") ?? []).map((h) => roundMm(h.y)))
       ),
     ];
     expect(divYs.length).toBeGreaterThan(0);
@@ -292,6 +303,30 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
     expect(resolveVerticalCompartments(linkedBox).length).toBeGreaterThanOrEqual(2);
     expect(resolveDivShelfPlacementZones(linkedBox, linkedDiv)).toHaveLength(1);
     expect(countDivShelfPanels(linkedBox)).toBe(2);
+  });
+
+  it("Y industrial da LAT fica abaixo do SEP e não o sobrepõe", () => {
+    const linkedDiv = defaultDivisorItem({
+      id: "div-y-lat",
+      positionMm: 281,
+      linkedSeparadorId: "sep-shelf",
+      prateleiraLado: "direita",
+    });
+    const linkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [linkedDiv],
+      panelIds: { divisores: ["pid-div-y-lat"] },
+    });
+    const result = buildDivShelfDrilling(linkedBox, linkedBox.panelIds, SHELF_RULES)!;
+    // SEP na LAT grava Y = centerY absoluto (convenção desde a base / valor absoluto).
+    const sepYOnLat = roundMm(
+      resolveSeparadorBottomY(linkedBox, sep) + linkedBox.espessura / 2
+    );
+    const latPanelYs = result.lateral_direita.map((h) => roundMm(h.y));
+    expect(latPanelYs.length).toBeGreaterThan(0);
+    expect(Math.max(...latPanelYs)).toBeLessThan(sepYOnLat);
   });
 });
 
