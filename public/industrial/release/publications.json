@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-17T08:31:47.317Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(industrial): alinhar Y dos furos de prateleira LAT e DIV",
+      "version": "v6.0717.0931"
+    },
+    {
       "publishedAt": "2026-07-17T07:27:28.690Z",
       "author": "pimo-pro",
       "commitMessage": "fix(industrial): N prateleiras so no compartimento LAT+DIV+SEP",
