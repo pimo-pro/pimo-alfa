@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-17T22:28:46.618Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(pdf): normalizar ferragens_totais com tabela unica landscape",
+      "version": "v6.0717.2328"
+    },
+    {
       "publishedAt": "2026-07-17T21:59:28.645Z",
       "author": "pimo-pro",
       "commitMessage": "fix(header): discriminar itens do Projects Switcher via path",
