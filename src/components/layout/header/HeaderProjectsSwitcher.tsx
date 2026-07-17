@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
 type SwitcherItem =
-  | { id: string; label: string; path: string; soon?: false }
+  | { id: string; label: string; path: string }
   | { id: string; label: string; soon: true };
 
 const PIMO_PROJECTS: SwitcherItem[] = [
@@ -118,7 +118,7 @@ export default function HeaderProjectsSwitcher() {
             Projetos PIMO
           </div>
           {PIMO_PROJECTS.map((item) => {
-            if (item.soon) {
+            if (!("path" in item)) {
               return (
                 <button
                   key={item.id}
