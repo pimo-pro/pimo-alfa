@@ -9,21 +9,37 @@ vi.mock("../industrial/industrialBottomSectionData", async (importOriginal) => {
   return {
     ...actual,
     buildFerragensTotaisArmazemData: () => ({
-      materiaisChapas: [
-        { material: "MDF Branco", ref: "mdf_branco-19", medida: "2780�2070�19 mm", quantidade: 3 },
-      ],
+      materiaisChapas: [],
       ferragens: [
-        { material: "Parafuso 4�50", ref: "parafuso_4x50", medida: "4mm � 50mm", quantidade: 120 },
+        { material: "Cavilha 8mm", ref: "cavilha_8mm", medida: "Ø8mm", quantidade: 16 },
+        { material: "Corrediça Lateral Esquerda", ref: "corredica_esq", medida: "", quantidade: 2 },
+        { material: "Corrediça Lateral Direita", ref: "corredica_dir", medida: "", quantidade: 2 },
+        { material: "Dobradiça 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 2 },
+        { material: "Parafuso para Puxador", ref: "parafuso_puxador", medida: "M4", quantidade: 4 },
+        { material: "Prego para Costa", ref: "prego_costa", medida: "2mm", quantidade: 12 },
+        { material: "Suporte de Prateleira", ref: "suporte_prateleira", medida: "", quantidade: 4 },
       ],
     }),
   };
 });
 
+vi.mock("../fabrication/buildCutlistItemsForIndustrialExport", () => ({
+  buildCutlistItemsForIndustrialExport: () => [
+    { tipo: "COSTA", dimensoes: { largura: 720, altura: 560 }, quantidade: 1 },
+  ],
+}));
+
 describe("buildFerragensTotaisPdf", () => {
-  it("gera PDF landscape com totais agregados", () => {
+  it("gera PDF landscape com tabela única normalizada", () => {
     const doc = buildFerragensTotaisPdf(
       {
-        boxes: [],
+        boxes: [
+          {
+            id: "b1",
+            gavetas: 1,
+            dimensoes: { largura: 600, altura: 720, profundidade: 450 },
+          } as never,
+        ],
         rules: {} as never,
         materialId: undefined,
         projectName: "Projeto Teste",

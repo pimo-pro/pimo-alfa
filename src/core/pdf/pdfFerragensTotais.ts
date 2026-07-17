@@ -7,12 +7,14 @@ import {
   buildFerragensTotaisArmazemData,
   buildFerragensTotaisPdfData,
 } from "../industrial/industrialBottomSectionData";
+import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
 import {
   drawIndustrialSectionPdfHeader,
   drawIndustrialSectionTable,
   industrialSectionPdfFileName,
   resolveIndustrialSectionPdfMeta,
 } from "./pdfIndustrialSectionShell";
+import { normalizeFerragensTotaisForPdf } from "./pdfFerragensTotaisNormalize";
 
 export function ferragensTotaisPdfFileName(projectName: string): string {
   return industrialSectionPdfFileName(projectName, "ferragens_totais");
@@ -30,16 +32,17 @@ type FerragensTotaisProject = Pick<
   | "pieceObservacoes"
 >;
 
-const HEAD = [["Material", "Ref", "Medida", "Quantidade total", "Preço", "Responsável"]];
-const HEAD_FER = [["Material / Ferragem", "Ref", "Medida", "Quantidade total", "Preço", "Responsável"]];
+const HEAD_FER = [
+  ["Material / Ferragem", "Ref", "Medida", "Quantidade Total", "Preço", "Responsável"],
+];
 
 function toBody(rows: Array<{ material: string; ref: string; medida: string; quantidade: number }>): string[][] {
   return rows.map((r) => [r.material, r.ref, r.medida, String(r.quantidade), "", ""]);
 }
 
 /**
- * PDF industrial ferragens_totais — landscape, totais agregados (chapas + ferragens).
- * Sem detalhe por caixa/peça. Preço e Responsável ficam vazios (edições futuras).
+ * PDF industrial ferragens_totais — landscape A4, tabela única de ferragens.
+ * Nomenclatura/quantidades normalizadas só para apresentação (sem alterar industrial).
  */
 export function buildFerragensTotaisPdf(
   project: FerragensTotaisProject,
@@ -48,12 +51,30 @@ export function buildFerragensTotaisPdf(
   materials: MaterialIndustrial[] = []
 ): jsPDF {
   const meta = resolveIndustrialSectionPdfMeta("Ferragens Totais", project.projectName ?? "Projeto");
-  const { materiaisChapas, ferragens } = buildFerragensTotaisArmazemData(
+  const { ferragens: rawFerragens } = buildFerragensTotaisArmazemData(
     project,
     componentTypes,
     catalogFerragens,
     materials
   );
+
+  const boxes = project.boxes ?? [];
+  const projectName = project.projectName?.trim() || "Projeto";
+  const cutlistItems = buildCutlistItemsForIndustrialExport({
+    boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+  });
+
+  const ferragens = normalizeFerragensTotaisForPdf({
+    ferragens: rawFerragens,
+    cutlistItems,
+    boxes,
+  });
 
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   let y = drawIndustrialSectionPdfHeader(doc, meta);
@@ -61,15 +82,6 @@ export function buildFerragensTotaisPdf(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text("Materiais (Chapas)", 14, y);
-  y += 5;
-
-  drawIndustrialSectionTable(doc, y, HEAD, toBody(materiaisChapas), { fontSize: 9 });
-  y = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 30;
-  y += 10;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
   doc.text("Ferragens Totais", 14, y);
   y += 5;
 
