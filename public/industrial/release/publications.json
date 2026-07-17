@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-17T10:45:00.000Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(industrial): reestruturar ferragens_totais.pdf em landscape com totais agregados",
+      "version": "v6.0717.1145-ferragens"
+    },
+    {
       "publishedAt": "2026-07-17T10:05:00.000Z",
       "author": "pimo-pro",
       "commitMessage": "feat(industrial): unificar chapas_real e consumo_materiais no PDF armazém",
