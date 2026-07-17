@@ -7,6 +7,9 @@ import { resolveSeparadorBottomY } from "./coupling";
 import {
   boxUsesDivShelfMode,
   buildDivShelfDrilling,
+  countDivShelfPanels,
+  MIN_ABOVE_SEP_SHELF_HEIGHT_MM,
+  resolveDivShelfPlacementZones,
   resolveShelfWidthForDivSide,
   resolveVerticalCompartments,
 } from "./shelfDrilling";
@@ -264,6 +267,31 @@ describe("buildDivShelfDrilling — prateleiras com DIV", () => {
     const result = buildDivShelfDrilling(bare, bare.panelIds, SHELF_RULES)!;
     expect(result.divisorio.get("divisorio-1")?.length ?? 0).toBeGreaterThan(0);
     expect(result.divisorio.get("uuid-only")?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it(`desactiva zona acima do SEP quando altura < ${MIN_ABOVE_SEP_SHELF_HEIGHT_MM} mm`, () => {
+    const zones = resolveVerticalCompartments(box);
+    const topZone = zones[zones.length - 1]!;
+    expect(topZone.yMax - topZone.yMin).toBeLessThan(MIN_ABOVE_SEP_SHELF_HEIGHT_MM);
+    expect(topZone.shelfEnabled).toBe(false);
+  });
+
+  it("com N prateleiras e DIV+SEP, countDivShelfPanels = N (sem duplicar acima do SEP)", () => {
+    const linkedDiv = defaultDivisorItem({
+      id: "div-count",
+      positionMm: 281,
+      linkedSeparadorId: "sep-shelf",
+      prateleiraLado: "direita",
+    });
+    const linkedBox = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 900, profundidade: 560 },
+      prateleiras: 2,
+      separadores: [sep],
+      divisores: [linkedDiv],
+    });
+    expect(resolveVerticalCompartments(linkedBox).length).toBeGreaterThanOrEqual(2);
+    expect(resolveDivShelfPlacementZones(linkedBox, linkedDiv)).toHaveLength(1);
+    expect(countDivShelfPanels(linkedBox)).toBe(2);
   });
 });
 

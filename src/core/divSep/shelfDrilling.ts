@@ -11,6 +11,8 @@ import type { DivisorItem, DivSepBoxLike } from "./types";
 
 const SHELF_DIV_CLEARANCE_MM = 1;
 const SHELF_GRID_STEP_MM = 32;
+/** Altura mínima (mm) da zona acima do SEP para eventual activação futura de prateleiras. */
+export const MIN_ABOVE_SEP_SHELF_HEIGHT_MM = 500;
 
 export type VerticalCompartment = {
   yMin: number;
@@ -71,6 +73,8 @@ export function resolveVerticalCompartments(box: DivSepBoxLike): VerticalCompart
     zones.push({
       yMin,
       yMax,
+      // Acima do SEP: desactivado (prateleiras só no compartimento LAT+DIV+SEP).
+      // Altura < 500 mm acima do SEP nunca activa prateleiras industriais.
       shelfEnabled: !isTopZoneAboveSeparador,
     });
   }
@@ -278,4 +282,34 @@ export function resolveShelfWidthForDivSide(
 
 export function boxUsesDivShelfMode(box: DivSepBoxLike): boolean {
   return Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0 && (box.divisores?.length ?? 0) > 0;
+}
+
+/**
+ * Zonas industriais onde cada DIV pode receber prateleiras (shelfEnabled + apoio LAT+DIV).
+ * Usado pela cutlist/peças — não pela malha do Viewer.
+ */
+export function resolveDivShelfPlacementZones(
+  box: DivSepBoxLike,
+  div: DivisorItem
+): VerticalCompartment[] {
+  const internal = getDivSepInternalDims(box);
+  const divDims = resolveDivisorDimensions(box, div);
+  const divBottomY = internal.espessura;
+  const divTopY = divBottomY + divDims.alturaMm;
+  return resolveVerticalCompartments(box).filter(
+    (zone) => resolveEffectiveShelfBounds(zone, divBottomY, divTopY) != null
+  );
+}
+
+/** Número exacto de painéis prateleira no modo DIV (N × zonas válidas × DIV). */
+export function countDivShelfPanels(box: DivSepBoxLike): number {
+  const n = Math.max(0, Math.floor(box.prateleiras ?? 0));
+  if (n <= 0) return 0;
+  const divisores = box.divisores ?? [];
+  if (divisores.length === 0) return n;
+  let total = 0;
+  for (const div of divisores) {
+    total += n * resolveDivShelfPlacementZones(box, div).length;
+  }
+  return total;
 }

@@ -18,8 +18,9 @@ import { buildDivSepDrilling } from "../divSep/drilling";
 import { countDivSepFerragens } from "../divSep/ferragens";
 import {
   boxUsesDivShelfMode,
+  countDivShelfPanels,
+  resolveDivShelfPlacementZones,
   resolveShelfWidthForDivSide,
-  resolveVerticalCompartments,
 } from "../divSep/shelfDrilling";
 import { gerarFerragensPi, gerarGavetasPi, gerarPaineisPi } from "../../data/moveisUnificados/pi/manufacturing";
 import { isCornerFixedFrontModel, gerarPaineisCorner, computeCornerLayoutForBox, resolveCornerDoorGapSettings } from "../cornerCabinet";
@@ -370,12 +371,13 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
     const profundidadePrateleira = clampPositive(profundidadeInterna - 5);
     const nPrateleiras = Math.max(0, Math.floor(box.prateleiras));
     if (boxUsesDivShelfMode(box)) {
-      const compartments = resolveVerticalCompartments(box);
       const divisores = box.divisores ?? [];
       let shelfIndex = 0;
       for (const div of divisores) {
         const larguraPrateleira = clampPositive(resolveShelfWidthForDivSide(box, div));
-        for (let z = 0; z < compartments.length; z++) {
+        // Só zonas shelfEnabled com apoio LAT+DIV (nunca duplicar acima do SEP sem apoio).
+        const placementZones = resolveDivShelfPlacementZones(box, div);
+        for (let z = 0; z < placementZones.length; z++) {
           for (let i = 0; i < nPrateleiras; i++) {
             const prateleiraId = getArrayPanelId(box, "prateleiras", shelfIndex);
             assertPanelDimensions(box, prateleiraId, "prateleira", larguraPrateleira, profundidadePrateleira, espessura);
@@ -577,9 +579,7 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   if (box.prateleiras > 0) {
     const suportes = rules.prateleiras.suportesPorPrateleira;
     const shelfCount = boxUsesDivShelfMode(box)
-      ? Math.max(0, Math.floor(box.prateleiras)) *
-        resolveVerticalCompartments(box).length *
-        Math.max(1, box.divisores?.length ?? 0)
+      ? countDivShelfPanels(box)
       : Math.max(0, Math.floor(box.prateleiras));
     addFerragem("suportes_prateleira", shelfCount * suportes);
   }
