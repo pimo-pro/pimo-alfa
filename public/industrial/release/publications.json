@@ -2,6 +2,24 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-17T21:59:28.645Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(header): discriminar itens do Projects Switcher via path",
+      "version": "v6.0717.2259"
+    },
+    {
+      "publishedAt": "2026-07-17T21:56:13.740Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(header): corrigir narrowing TypeScript no Projects Switcher",
+      "version": "v6.0717.2256"
+    },
+    {
+      "publishedAt": "2026-07-17T21:54:48.745Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(header): adicionar Projects Switcher no header",
+      "version": "v6.0717.2254"
+    },
+    {
       "publishedAt": "2026-07-17T21:25:15.730Z",
       "author": "pimo-pro",
       "commitMessage": "feat(materials): adicionar matéria-prima AGL_Carvalho (19/16/10 mm)",
