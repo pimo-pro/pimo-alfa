@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-17T07:27:28.690Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(industrial): N prateleiras so no compartimento LAT+DIV+SEP",
+      "version": "v6.0717.0827"
+    },
+    {
       "publishedAt": "2026-07-16T16:19:07.150Z",
       "author": "pimo-pro",
       "commitMessage": "fix(viewer): mostrar furos de prateleira no DIV via marcadores",
