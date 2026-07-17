@@ -132,6 +132,10 @@ export function generateQrCodeSvg(content: string, errorLevel: QrErrorLevel = "M
 export type QrLogoConfig = {
   logoDataUrl?: string;
   logoSizePercent?: number;
+  /** Tamanho absoluto do logo no centro do QR (mm). Tem prioridade sobre percentagem. */
+  logoSizeMm?: number;
+  /** Tamanho do QR em mm (necessário quando logoSizeMm é usado). */
+  qrSizeMm?: number;
   errorCorrection?: QrErrorLevel;
 };
 
@@ -140,7 +144,6 @@ export async function generateQrCanvasWithLogo(
   size: number,
   config: QrLogoConfig = {}
 ): Promise<HTMLCanvasElement> {
-  const logoPercent = Math.min(30, Math.max(10, config.logoSizePercent ?? 20));
   const qr = qrcode(0, config.errorCorrection ?? "H");
   qr.addData(data);
   qr.make();
@@ -176,7 +179,14 @@ export async function generateQrCanvasWithLogo(
         logoImg.src = config.logoDataUrl!;
       });
 
-      const logoDimension = (size * logoPercent) / 100;
+      let logoDimension: number;
+      if (config.logoSizeMm != null && config.logoSizeMm > 0 && config.qrSizeMm != null && config.qrSizeMm > 0) {
+        logoDimension = (size * config.logoSizeMm) / config.qrSizeMm;
+      } else {
+        const logoPercent = Math.min(30, Math.max(10, config.logoSizePercent ?? 20));
+        logoDimension = (size * logoPercent) / 100;
+      }
+
       const logoX = (size - logoDimension) / 2;
       const logoY = (size - logoDimension) / 2;
 

@@ -15,7 +15,7 @@ import {
   buildIndustrialListPiecesPerSheet,
   resolveIndustrialListNqr,
 } from "./industrialListQr";
-import { getCurrentProjectUser } from "../projects/currentUser";
+import { resolveIndustrialPdfAttribution } from "./industrialPdfAttribution";
 import { safeGetItem } from "../../utils/storage";
 import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
 import {
@@ -355,9 +355,9 @@ export function gerarPdfTecnicoCompleto(
 
   const acabamentos = getAcabamentosUnicos(boxes, materials);
   const dataHoje = formatIndustrialDesignDate();
-  const designer = getCurrentProjectUser().ownerName || "—";
+  const { designer, responsible } = resolveIndustrialPdfAttribution();
 
-  let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje });
+  let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje, responsible });
 
   const blockW = PDF_INDUSTRIAL_TABLE_W;
   const blockX = PDF_INDUSTRIAL_MARGIN;

@@ -1,8 +1,12 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatIndustrialDesignDate } from "./pdfIndustrialListShell";
-import { getCurrentProjectUser } from "../projects/currentUser";
-import { drawLogoPiInBox } from "./logoPiPublic";
+import { resolveIndustrialPdfAttribution } from "./industrialPdfAttribution";
+import {
+  drawLogoIndustrialInBox,
+  getCachedLogoIndustrialDataUrl,
+  LOGO_INDUSTRIAL_SIZE_MM,
+} from "./logoIndustrialPublic";
 
 const MARGIN = 14;
 const GRID_COLOR: [number, number, number] = [0, 0, 0];
@@ -22,17 +26,23 @@ export function resolveIndustrialSectionPdfMeta(
   projectName: string,
   overrides?: Partial<IndustrialSectionPdfMeta>
 ): IndustrialSectionPdfMeta {
-  const user = getCurrentProjectUser();
+  const attribution = resolveIndustrialPdfAttribution();
   return {
     sectionTitle,
     projectName: projectName?.trim() || "Projeto",
     companyName: overrides?.companyName ?? "PIMO PRO",
-    designer: overrides?.designer ?? (user.ownerName || "—"),
+    designer: overrides?.designer ?? attribution.designer,
     exportDate: overrides?.exportDate ?? formatIndustrialDesignDate(),
-    responsible: overrides?.responsible ?? "—",
+    responsible: overrides?.responsible ?? attribution.responsible,
   };
 }
 
+function resolveLogoDataUrl(options?: { logoDataUrl?: string | null }): string | null {
+  if (options?.logoDataUrl !== undefined) return options.logoDataUrl;
+  return getCachedLogoIndustrialDataUrl();
+}
+
+/** Cabeçalho industrial: logo 10×10 mm + PIMO PRO + meta. */
 export function drawIndustrialSectionPdfHeader(
   doc: jsPDF,
   meta: IndustrialSectionPdfMeta,
@@ -41,12 +51,16 @@ export function drawIndustrialSectionPdfHeader(
   let y = MARGIN;
   doc.setTextColor(0, 0, 0);
 
-  if (options?.showLogo) {
-    drawLogoPiInBox(doc, options.logoDataUrl ?? null, MARGIN, y, 12);
+  const logoDataUrl = resolveLogoDataUrl(options);
+  const showLogo = options?.showLogo !== false;
+  const logoSize = LOGO_INDUSTRIAL_SIZE_MM;
+
+  if (showLogo) {
+    drawLogoIndustrialInBox(doc, logoDataUrl, MARGIN, y, logoSize);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("PIMO PRO", MARGIN + 14, y + 8);
-    y += 16;
+    doc.text("PIMO PRO", MARGIN + logoSize + 2, y + logoSize * 0.65);
+    y += logoSize + 4;
   } else {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
@@ -74,14 +88,21 @@ export function drawIndustrialSectionPdfHeader(
   return y;
 }
 
-/** Cabeçalho compacto para páginas seguintes — apenas PIMO PRO + título. */
-export function drawIndustrialSectionPdfBrandOnly(doc: jsPDF, sectionTitle: string): number {
+/** Cabeçalho compacto — logo industrial + PIMO PRO + título. */
+export function drawIndustrialSectionPdfBrandOnly(
+  doc: jsPDF,
+  sectionTitle: string,
+  options?: { logoDataUrl?: string | null }
+): number {
   let y = MARGIN;
   doc.setTextColor(0, 0, 0);
+  const logoDataUrl = resolveLogoDataUrl(options);
+  const logoSize = LOGO_INDUSTRIAL_SIZE_MM;
+  drawLogoIndustrialInBox(doc, logoDataUrl, MARGIN, y, logoSize);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
-  doc.text("PIMO PRO", MARGIN, y);
-  y += 7;
+  doc.text("PIMO PRO", MARGIN + logoSize + 2, y + logoSize * 0.65);
+  y += logoSize + 3;
   doc.setFontSize(12);
   doc.text(sectionTitle, MARGIN, y);
   y += 8;
@@ -125,10 +146,10 @@ export function createIndustrialSectionPdf(
   meta: IndustrialSectionPdfMeta,
   head: string[][],
   body: string[][],
-  options?: { fontSize?: number }
+  options?: { fontSize?: number; logoDataUrl?: string | null }
 ): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const y = drawIndustrialSectionPdfHeader(doc, meta);
+  const y = drawIndustrialSectionPdfHeader(doc, meta, { logoDataUrl: options?.logoDataUrl });
   drawIndustrialSectionTable(doc, y, head, body, options);
   return doc;
 }

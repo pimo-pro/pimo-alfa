@@ -55,6 +55,7 @@ import {
   industrialFerragensXlsxFileName,
 } from "./industrialProjectArtifacts";
 import { buildBottomSectionPdfs } from "./industrialBottomSectionExports";
+import { ensureLogoIndustrialLoaded } from "../pdf/logoIndustrialPublic";
 import { computeConsumoMateriais } from "../industrial/computeConsumoMateriais";
 import { computeChapasReal } from "../industrial/computeChapasReal";
 import {
@@ -366,6 +367,7 @@ export async function generateMultiProjectFabrication(
 
   beginIndustrialFileGeneration();
   try {
+    await ensureLogoIndustrialLoaded();
     return await measureTime("Fabricação multi-projeto (ZIP)", async () => {
   const nestingMode = options?.nesting ?? "auto";
   const signal = options?.signal;
@@ -617,7 +619,7 @@ export async function generateMultiProjectFabrication(
       safeAddXlsx(zip, `${basePath}/${industrialFerragensXlsxFileName(folder)}`, xlsxBuffer);
       assertIndustrialRequiredArtifactsComplete();
 
-      const bottomPdfs = buildBottomSectionPdfs({
+      const bottomPdfs = await buildBottomSectionPdfs({
         project: {
           projectName: proj.projectName,
           boxes: proj.boxes,

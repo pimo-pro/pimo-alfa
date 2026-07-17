@@ -31,6 +31,7 @@ import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf, type UnifiedPdfIndustrialContext } from "../core/pdf/pdfUnified";
 import { buildBottomSectionPdfs } from "../core/fabrication/industrialBottomSectionExports";
+import { ensureLogoIndustrialLoaded } from "../core/pdf/logoIndustrialPublic";
 import { computeConsumoMateriais } from "../core/industrial/computeConsumoMateriais";
 import { computeChapasReal } from "../core/industrial/computeChapasReal";
 import {
@@ -359,11 +360,12 @@ export function useGerarArquivoHandlers() {
     );
   }, []);
 
-  const onPdfTecnico = useCallback(() => {
+  const onPdfTecnico = useCallback(async () => {
     if (!hasBoxes) {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
       return;
     }
+    await ensureLogoIndustrialLoaded();
     const proj = pdfProject();
     const doc = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
       materialId: proj.materialId,
@@ -483,6 +485,7 @@ export function useGerarArquivoHandlers() {
     if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
+      await ensureLogoIndustrialLoaded();
       const proj = pdfProject();
       const docCutlist = await buildCutlistPdf(proj);
       docCutlist.save(`${slug}_cutlist.pdf`);
@@ -996,6 +999,7 @@ export function useGerarArquivoHandlers() {
       const cncProjectStub = { projectName: project.projectName ?? "Projeto" };
 
       const safeSlug = sanitizeZipPath(slug) || "projeto";
+      await ensureLogoIndustrialLoaded();
 
       // --- Cutlist PDF ---
       try {
@@ -1073,7 +1077,7 @@ export function useGerarArquivoHandlers() {
 
       // --- PDFs industriais por secção (BottomInfoToolbar) ---
       try {
-        const bottomPdfs = buildBottomSectionPdfs({
+        const bottomPdfs = await buildBottomSectionPdfs({
           project: {
             projectName: proj.projectName,
             boxes: proj.boxes,

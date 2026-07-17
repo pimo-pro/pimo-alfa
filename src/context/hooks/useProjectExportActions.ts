@@ -67,7 +67,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
   }, [isAdmin]);
 
   const exportBottomSectionPdfs = useCallback(
-    (which?: "resumoFinanceiro" | "pecasTotais" | "ferragensTotais" | "totaisProjeto") => {
+    async (which?: "resumoFinanceiro" | "pecasTotais" | "ferragensTotais" | "totaisProjeto") => {
       const currentProject = projectRef.current;
       const boxesToExport = currentProject.boxes ?? [];
       if (boxesToExport.length === 0) {
@@ -75,7 +75,7 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
         return;
       }
       const ctx = industrialContext();
-      const bottomPdfs = buildBottomSectionPdfs({
+      const bottomPdfs = await buildBottomSectionPdfs({
         project: {
           projectName: currentProject.projectName,
           boxes: boxesToExport,
@@ -142,6 +142,8 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
         return;
       }
       const projectName = currentProject.projectName?.trim() || "Projeto";
+      const { ensureLogoIndustrialLoaded } = await import("../../core/pdf/logoIndustrialPublic");
+      await ensureLogoIndustrialLoaded();
       const { gerarPdfTecnicoCompleto } = await import("../../core/pdf/gerarPdfTecnico");
       const doc = gerarPdfTecnicoCompleto(boxesToExport, currentProject.rules, projectName, {
         materialId: currentProject.materialId,

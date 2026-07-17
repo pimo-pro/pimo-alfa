@@ -221,7 +221,7 @@ export default function ProjetosIndustrialPanel({
       const boxes = state.boxes ?? [];
       if (boxes.length === 0) throw new Error("Projeto sem caixas para exportar secções industriais.");
       const projectName = state.projectName?.trim() || ref.projectName || "Projeto";
-      const bottomPdfs = buildBottomSectionPdfs({
+      const bottomPdfs = await buildBottomSectionPdfs({
         project: {
           projectName,
           boxes,

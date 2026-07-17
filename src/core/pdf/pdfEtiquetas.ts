@@ -30,7 +30,7 @@ import {
   collectObservationsForItem,
   observationsToV5Slots,
 } from "../observacoes/ObservacoesService";
-import { drawLogoPiInBox, loadLogoPiDataUrl } from "./logoPiPublic";
+import { drawLogoIndustrialInBox, loadLogoIndustrialDataUrl, LOGO_INDUSTRIAL_SIZE_MM } from "./logoIndustrialPublic";
 import {
   buildV5BottomStripIndustrialName,
   resolveNomeIndustrialForEtiqueta,
@@ -162,15 +162,23 @@ async function drawQrWithLogoOrFallback(
   size: number,
   settings?: SettingsSchema
 ) {
-  if (!settings?.etiquetasQr?.logoAtivado || !settings?.etiquetasQr?.logoDataUrl) {
+  const industrialLogo = await loadLogoIndustrialDataUrl();
+  const logoUrl =
+    industrialLogo ||
+    (settings?.etiquetasQr?.logoAtivado && settings.etiquetasQr.logoDataUrl
+      ? settings.etiquetasQr.logoDataUrl
+      : "");
+  if (!logoUrl) {
     drawQrFromCode(doc, code, x, y, size);
     return;
   }
 
   try {
     const canvas = await generateQrCanvasWithLogo(code, size * 10, {
-      logoDataUrl: settings.etiquetasQr.logoDataUrl,
-      logoSizePercent: settings.etiquetasQr.logoTamanhoPorcento,
+      logoDataUrl: logoUrl,
+      logoSizeMm: LOGO_INDUSTRIAL_SIZE_MM,
+      qrSizeMm: size,
+      logoSizePercent: settings?.etiquetasQr?.logoTamanhoPorcento ?? 20,
     });
     const imgData = canvas.toDataURL("image/png");
     doc.addImage(imgData, "PNG", x, y, size, size);
@@ -303,10 +311,10 @@ async function renderEtiquetaPage(
   doc.setLineWidth(borderMm);
   doc.rect(0.5, 0.5, width - 1, height - 1);
 
-  const logoSizeMm = Math.min(7, Math.max(4, Math.min(width * 0.2, height * 0.14)));
+  const logoSizeMm = LOGO_INDUSTRIAL_SIZE_MM;
   const logoX = margin;
   const logoY = margin + 0.5;
-  drawLogoPiInBox(doc, logoDataUrl, logoX, logoY, logoSizeMm, BRAND_RED_ETI);
+  drawLogoIndustrialInBox(doc, logoDataUrl, logoX, logoY, logoSizeMm, BRAND_RED_ETI);
 
   const effectiveProjectName = item.sourceProjectName ?? project.projectName;
   const ref = `${effectiveProjectName || "PROJETO"}_${item.boxNome ?? item.boxId ?? "BOX"}_${item.pieceName ?? item.nome}`;
@@ -496,13 +504,11 @@ async function drawV5_QR(
 ): Promise<void> {
   const logoUrl =
     qrLogoDataUrl.trim() ||
+    (await loadLogoIndustrialDataUrl()) ||
     (settings?.etiquetasQr?.logoAtivado && settings.etiquetasQr.logoDataUrl
       ? settings.etiquetasQr.logoDataUrl
-      : "");
-  const logoPercent =
-    qrLogoDataUrl.trim() && qrLogoSizePercent > 0
-      ? qrLogoSizePercent
-      : (settings?.etiquetasQr?.logoTamanhoPorcento ?? 20);
+      : "") ||
+    "";
 
   if (!logoUrl) {
     drawQrFromCode(doc, code, x, y, sizeMm);
@@ -512,7 +518,9 @@ async function drawV5_QR(
   try {
     const canvas = await generateQrCanvasWithLogo(code, sizeMm * 10, {
       logoDataUrl: logoUrl,
-      logoSizePercent: logoPercent,
+      logoSizeMm: LOGO_INDUSTRIAL_SIZE_MM,
+      qrSizeMm: sizeMm,
+      logoSizePercent: qrLogoSizePercent > 0 ? qrLogoSizePercent : 20,
     });
     const imgData = canvas.toDataURL("image/png");
     doc.addImage(imgData, "PNG", x, y, sizeMm, sizeMm);
@@ -1040,6 +1048,7 @@ export async function buildProductionEtiquetasV5Pdf(
 
 /** Hub público — delega sempre ao motor v5 (`buildProductionEtiquetasV5Pdf`). */
 export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promise<jsPDF> {
+  const industrialLogo = (await loadLogoIndustrialDataUrl()) ?? "";
   const runtime = resolveLabelSystemConfig(
     project.rules,
     project.settings ?? null,
@@ -1048,7 +1057,10 @@ export async function buildEtiquetasPdf(project: ProjectForEtiquetasPdf): Promis
   const placements = normalizeCutLayoutPlacements(project.cutLayoutPlacements);
   return buildProductionEtiquetasV5Pdf(
     { ...project, cutLayoutPlacements: placements, designerConfig: undefined },
-    runtime
+    {
+      ...runtime,
+      qrLogoDataUrl: industrialLogo || runtime.qrLogoDataUrl,
+    }
   );
 }
 
@@ -1067,7 +1079,7 @@ export const labelPdfLegacyRenderRefs = {
   renderEtiquetaPageFromDesignerConfig,
   drawQrWithLogoOrFallback,
   resolveEtiquetaCodeParaEtiqueta,
-  loadLogoPiDataUrl,
-  drawLogoPiInBox,
+  loadLogoIndustrialDataUrl,
+  drawLogoIndustrialInBox,
   buildEtiquetasPdfLegacy,
 };

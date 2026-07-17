@@ -13,6 +13,11 @@ import {
   PDF_INDUSTRIAL_HEAD_ROW_MIN_H,
   PDF_INDUSTRIAL_ETQ_MAX_CHARS,
 } from "./pdfExcelModelLayout";
+import {
+  drawLogoIndustrialInBox,
+  getCachedLogoIndustrialDataUrl,
+  LOGO_INDUSTRIAL_SIZE_MM,
+} from "./logoIndustrialPublic";
 
 export {
   PDF_INDUSTRIAL_MARGIN,
@@ -35,6 +40,8 @@ export const PDF_OPERATIONAL_STAGES = ["CORTE manual", "ORLAGEM", "MONTAGEM"] as
 export type IndustrialPdfHeaderInfo = {
   designer: string;
   designDate: string;
+  responsible?: string;
+  logoDataUrl?: string | null;
 };
 
 export type IndustrialProjectBlockInfo = {
@@ -44,25 +51,32 @@ export type IndustrialProjectBlockInfo = {
   totalPieces: number;
 };
 
-/** Cabeçalho compacto — PIMO + Designer + Data (modelo ROSTO). */
+/** Cabeçalho compacto — logo industrial 10×10 + PIMO + Designer + Responsável + Data. */
 export function drawIndustrialPdfTitleHeader(doc: jsPDF, info: IndustrialPdfHeaderInfo): number {
   const y = PDF_INDUSTRIAL_MARGIN;
+  const logoSize = LOGO_INDUSTRIAL_SIZE_MM;
+  const logoDataUrl =
+    info.logoDataUrl !== undefined ? info.logoDataUrl : getCachedLogoIndustrialDataUrl();
+
+  drawLogoIndustrialInBox(doc, logoDataUrl, PDF_INDUSTRIAL_MARGIN, y, logoSize);
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
-  doc.text("PIMO", PDF_INDUSTRIAL_MARGIN, y + 5);
+  doc.text("PIMO", PDF_INDUSTRIAL_MARGIN + logoSize + 2, y + logoSize * 0.65);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
-  const infoRight = `Designer: ${info.designer}     Data de design: ${info.designDate}`;
+  const responsible = info.responsible ?? "khaled";
+  const infoRight = `Designer: ${info.designer}     Responsável: ${responsible}     Data de design: ${info.designDate}`;
   doc.text(
     infoRight,
     PDF_INDUSTRIAL_PAGE_W - PDF_INDUSTRIAL_MARGIN - doc.getTextWidth(infoRight),
-    y + 5
+    y + logoSize * 0.65
   );
   doc.setTextColor(0, 0, 0);
-  return y + 9;
+  return y + logoSize + 4;
 }
 
 export function drawIndustrialProjectInfoBlock(

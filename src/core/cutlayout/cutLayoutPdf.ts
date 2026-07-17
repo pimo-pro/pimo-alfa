@@ -8,7 +8,7 @@ import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
 import { holeLocalToSheetOffsetMm } from "./layoutCoordinateSystem";
 import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
-import { drawLogoPiInBox, loadLogoPiDataUrl } from "../pdf/logoPiPublic";
+import { drawLogoIndustrialInBox, loadLogoIndustrialDataUrl, LOGO_INDUSTRIAL_SIZE_MM } from "../pdf/logoIndustrialPublic";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
 
 /** A4 retrato: largura × altura (mm) */
@@ -145,11 +145,11 @@ function drawPageHeader(
   const rightColW = PAGE_W - MARGIN - rightX;
   const labelW = 34;
 
-  const logoSize = 9;
+  const logoSize = LOGO_INDUSTRIAL_SIZE_MM;
   const textStartX = MARGIN + logoSize + 2.5;
   const textMaxW = leftColW - logoSize - 3;
 
-  drawLogoPiInBox(doc, logoDataUrl, MARGIN, y0 + 0.5, logoSize, BRAND_RED);
+  drawLogoIndustrialInBox(doc, logoDataUrl, MARGIN, y0 + 0.5, logoSize, BRAND_RED);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(FONT_TITLE);
@@ -299,7 +299,7 @@ export async function buildCutLayoutPdf(
   assertIndustrialOutputAuthorized("pdf-layout-pro");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const opts: CutLayoutPdfOptions = options ?? {};
-  const logoDataUrl = await loadLogoPiDataUrl();
+  const logoDataUrl = await loadLogoIndustrialDataUrl();
 
   for (let i = 0; i < result.sheets.length; i++) {
     if (i > 0) doc.addPage("a4", "portrait");

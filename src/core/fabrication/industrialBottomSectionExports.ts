@@ -6,6 +6,7 @@ import { buildResumoFinanceiroPdf, resumoFinanceiroPdfFileName } from "../pdf/pd
 import { buildPecasTotaisPdf, pecasTotaisPdfFileName } from "../pdf/pdfPecasTotais";
 import { buildFerragensTotaisPdf, ferragensTotaisPdfFileName } from "../pdf/pdfFerragensTotais";
 import { buildTotaisProjetoPdf, totaisProjetoPdfFileName, type TotaisProjetoPdfExtras } from "../pdf/pdfTotaisProjeto";
+import { ensureLogoIndustrialLoaded } from "../pdf/logoIndustrialPublic";
 
 export type BottomSectionPdfBundle = {
   resumoFinanceiro: ReturnType<typeof buildResumoFinanceiroPdf>;
@@ -20,7 +21,7 @@ export type BottomSectionPdfBundle = {
   };
 };
 
-export function buildBottomSectionPdfs(input: {
+export async function buildBottomSectionPdfs(input: {
   project: Pick<
     ProjectState,
     | "boxes"
@@ -37,7 +38,8 @@ export function buildBottomSectionPdfs(input: {
   ferragens: Ferragem[];
   showPrices: boolean;
   totaisExtras?: TotaisProjetoPdfExtras;
-}): BottomSectionPdfBundle {
+}): Promise<BottomSectionPdfBundle> {
+  await ensureLogoIndustrialLoaded();
   const projectName = input.project.projectName?.trim() || "Projeto";
   const boxes = input.project.boxes ?? [];
 

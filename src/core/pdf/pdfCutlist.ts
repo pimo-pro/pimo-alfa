@@ -20,7 +20,8 @@ import {
   formatObservacoesForPdf,
   resolveObservacoesForCutListItem,
 } from "../observacoes/ObservacoesService";
-import { getCurrentProjectUser } from "../projects/currentUser";
+import { resolveIndustrialPdfAttribution } from "./industrialPdfAttribution";
+import { ensureLogoIndustrialLoaded } from "./logoIndustrialPublic";
 import {
   PDF_INDUSTRIAL_HEADER_COLOR,
   PDF_INDUSTRIAL_MARGIN,
@@ -220,11 +221,11 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
   }
 
   const dataHoje = formatIndustrialDesignDate();
-  const designer = getCurrentProjectUser().ownerName || "—";
+  const { designer, responsible } = resolveIndustrialPdfAttribution();
   const parts = getFullCutlist(project);
   const totalPecas = parts.reduce((s, p) => s + p.quantidade, 0);
 
-  let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje });
+  let y = drawIndustrialPdfTitleHeader(doc, { designer, designDate: dataHoje, responsible });
 
   const blockW = PDF_INDUSTRIAL_TABLE_W;
   const blockX = PDF_INDUSTRIAL_MARGIN;
@@ -253,5 +254,6 @@ function buildCutlistPdfSync(project: ProjectForPdf, existingDoc?: jsPDF): jsPDF
 }
 
 export async function buildCutlistPdf(project: ProjectForPdf, existingDoc?: jsPDF): Promise<jsPDF> {
-  return Promise.resolve(buildCutlistPdfSync(project, existingDoc));
+  await ensureLogoIndustrialLoaded();
+  return buildCutlistPdfSync(project, existingDoc);
 }
