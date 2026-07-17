@@ -213,6 +213,36 @@ const INDUSTRIAL_SHEETS_SEED: IndustrialSheetSeed[] = [
     custo_m2: 55,
     densidade: 720,
   },
+  // AGL_Carvalho
+  {
+    canonicalId: "agl_carvalho-19",
+    label: "AGL_Carvalho 19",
+    espessuraPadrao: 19,
+    viewerMaterialId: "agl_carvalho",
+    custo_m2: 48,
+    densidade: 720,
+    legacyAliases: [
+      "agl_carvalho",
+      "AGL_Carvalho",
+      "AGL Carvalho",
+    ],
+  },
+  {
+    canonicalId: "agl_carvalho-16",
+    label: "AGL_Carvalho 16",
+    espessuraPadrao: 16,
+    viewerMaterialId: "agl_carvalho",
+    custo_m2: 52,
+    densidade: 720,
+  },
+  {
+    canonicalId: "agl_carvalho-10",
+    label: "AGL_Carvalho 10",
+    espessuraPadrao: 10,
+    viewerMaterialId: "agl_carvalho",
+    custo_m2: 55,
+    densidade: 720,
+  },
   // Nogueira
   {
     canonicalId: "nogueira-20",

@@ -1,5 +1,5 @@
 /**
- * Wood Pack — 9 materiais (fonte única para MaterialEngine e Materiais & Fabricação).
+ * Wood Pack — 10 materiais (fonte única para MaterialEngine e Materiais & Fabricação).
  * viewerMaterialId único; texturas em public/textures/wood/<id>-base.jpg e <id>-normal.jpg.
  * Estrutura preparada para WebP no futuro (sem implementar).
  */
@@ -33,7 +33,7 @@ const TEXTURE_URLS = TEXTURES_BASE_URL
     } as const)
   : null;
 
-/** 9 presets Wood Pack — único centro de definição de materiais visuais. */
+/** 10 presets Wood Pack — único centro de definição de materiais visuais. */
 export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
   {
     id: "mdf_branco",
@@ -88,6 +88,16 @@ export const INITIAL_MATERIAL_PRESETS: MaterialPreset[] = [
   {
     id: "carvalho_natural",
     name: "Carvalho Natural",
+    color: "#c9a27a",
+    uvScale: { x: 2, y: 2 },
+    uvRotation: 0,
+    roughness: 0.55,
+    metallic: M,
+    textureUrl: TEXTURE_URLS?.carvalho,
+  },
+  {
+    id: "agl_carvalho",
+    name: "AGL_Carvalho",
     color: "#c9a27a",
     uvScale: { x: 2, y: 2 },
     uvRotation: 0,

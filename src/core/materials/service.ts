@@ -40,8 +40,8 @@ let materialsListReadOverride: MaterialRecord[] | null = null;
 export function setIndustrialMaterialsReadOverride(list: MaterialRecord[] | null): void {
   materialsListReadOverride = list;
 }
-/** Incrementar quando for necessário voltar a sincronizar o CRUD com o catálogo oficial (FASE 7M = 8). */
-const MATERIALS_CRUD_DATA_VERSION = 8;
+/** Incrementar quando for necessário voltar a sincronizar o CRUD com o catálogo oficial (FASE 7M = 9). */
+const MATERIALS_CRUD_DATA_VERSION = 9;
 const MATERIALS_CRUD_DATA_VERSION_KEY = "pimo_materials_crud_data_version";
 const DEFAULT_SHEET_WIDTH_MM = 2800;
 const DEFAULT_SHEET_HEIGHT_MM = 2070;

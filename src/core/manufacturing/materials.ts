@@ -9,6 +9,7 @@ import {
 export type MaterialPbrId =
   | "carvalho_natural"
   | "carvalho_escuro"
+  | "agl_carvalho"
   | "nogueira"
   | "mdf_branco"
   | "laminado_linho_cancun"
@@ -19,6 +20,7 @@ export type MaterialPbrId =
 export const MATERIAIS_PBR_OPCOES: { id: MaterialPbrId; label: string }[] = [
   { id: "carvalho_natural", label: "Carvalho" },
   { id: "carvalho_escuro", label: "Carvalho" },
+  { id: "agl_carvalho", label: "AGL_Carvalho" },
   { id: "nogueira", label: "Nogueira" },
   { id: "mdf_branco", label: "MDF Branco" },
   { id: "laminado_linho_cancun", label: "Laminado Linho Cancun" },

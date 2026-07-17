@@ -9,7 +9,7 @@ export type MaterialPreset = {
 
 export type MaterialSet = Record<string, MaterialPreset>;
 
-/** IDs dos materiais (Wood Pack 9 + fallback). Fonte única: presets.ts via presetService. */
+/** IDs dos materiais (Wood Pack 10 + fallback). Fonte única: presets.ts via presetService. */
 export const MATERIAIS_PBR_IDS = [
   "mdf_branco",
   "laminado_linho_cancun",
@@ -17,6 +17,7 @@ export const MATERIAIS_PBR_IDS = [
   "hdf_lacado",
   "hdf_cru",
   "carvalho_natural",
+  "agl_carvalho",
   "madeira_carvalho",
   "pinho_natural",
   "madeira_pinho",
@@ -34,6 +35,7 @@ function buildPbrLabels(): Record<MaterialPbrId, string> {
     hdf_lacado: map.get("hdf_lacado") ?? "HDF Lacado",
     hdf_cru: map.get("hdf_cru") ?? "HDF Cru",
     carvalho_natural: map.get("carvalho_natural") ?? "Carvalho Natural",
+    agl_carvalho: map.get("agl_carvalho") ?? "AGL_Carvalho",
     madeira_carvalho: map.get("madeira_carvalho") ?? "Madeira Carvalho",
     pinho_natural: map.get("pinho_natural") ?? "Pinho Natural",
     madeira_pinho: map.get("madeira_pinho") ?? "Madeira Pinho",
