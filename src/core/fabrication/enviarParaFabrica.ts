@@ -13,8 +13,7 @@ import { ferragensTotaisPdfFileName } from "../pdf/pdfFerragensTotais";
 import { pecasTotaisPdfFileName } from "../pdf/pdfPecasTotais";
 import { resumoFinanceiroPdfFileName } from "../pdf/pdfResumoFinanceiro";
 import { totaisProjetoPdfFileName } from "../pdf/pdfTotaisProjeto";
-import { consumoMateriaisPdfFileName } from "../pdf/pdfConsumoMateriais";
-import { chapasRealPdfFileName } from "../pdf/pdfChapasReal";
+import { industrialArmazemPdfFileName } from "../pdf/pdfIndustrialArmazem";
 import { industrialFerragensPdfFileName, industrialFerragensXlsxFileName } from "./industrialProjectArtifacts";
 import { buildCutlistItemsForIndustrialExport } from "./buildCutlistItemsForIndustrialExport";
 import {
@@ -42,8 +41,7 @@ const BOTTOM_SECTION_PDFS = [
   pecasTotaisPdfFileName,
   ferragensTotaisPdfFileName,
   totaisProjetoPdfFileName,
-  consumoMateriaisPdfFileName,
-  chapasRealPdfFileName,
+  industrialArmazemPdfFileName,
 ] as const;
 
 type IndustrialProjectSlice = Pick<
@@ -92,8 +90,7 @@ export function enviarParaFabrica(
     pecasTotaisPdfFileName(slug),
     ferragensTotaisPdfFileName(slug),
     totaisProjetoPdfFileName(slug),
-    consumoMateriaisPdfFileName(slug),
-    chapasRealPdfFileName(slug),
+    industrialArmazemPdfFileName(slug),
     industrialFerragensPdfFileName(slug),
     industrialFerragensXlsxFileName(slug),
   ];

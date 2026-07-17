@@ -1,5 +1,5 @@
 /**
- * Nesting V3 — Exportação TCN.
+ * Nesting V3 — Exportação TCN + PDF industrial armazém.
  *
  * Usa o contrato industrial partilhado (fixedPlacementsFromV3State) antes de
  * invocar exportCncFiles — o mesmo pipeline geométrico que produção individual/lote.
@@ -7,9 +7,16 @@
 
 import type { NestingV3State } from "./nestingV3Types";
 import type { CutLayoutResult } from "../core/cutlayout/cutLayoutTypes";
+import type { ChapasRealSummary } from "../core/industrial/computeChapasReal";
+import type { ConsumoMateriaisSummary } from "../core/industrial/computeConsumoMateriais";
 import { exportCncFiles } from "../core/cnc/cncExport";
 import type { CncExportResult } from "../core/cnc/cncTypes";
 import { fixedPlacementsFromV3State } from "../core/cutlayout/integration/fixedPlacementsAdapter";
+import {
+  buildIndustrialArmazemPdf,
+  industrialArmazemPdfFileName,
+} from "../core/pdf/pdfIndustrialArmazem";
+import type jsPDF from "jspdf";
 
 /**
  * Prepara layoutResult industrial a partir do estado V3 (manual ou pós auto-layout).
@@ -17,6 +24,92 @@ import { fixedPlacementsFromV3State } from "../core/cutlayout/integration/fixedP
 export function prepareNestingV3IndustrialLayout(state: NestingV3State): CutLayoutResult {
   const { result } = fixedPlacementsFromV3State(state);
   return result;
+}
+
+/** Converte layout industrial V3 → resumos usados pelo PDF armazém. */
+export function chapasAndConsumoFromCutLayout(layout: CutLayoutResult): {
+  chapas: ChapasRealSummary;
+  consumo: ConsumoMateriaisSummary;
+} {
+  const sheets = (layout.sheets ?? []).map((sheetResult, idx) => {
+    const sheetW = sheetResult.sheet.largura_mm ?? 0;
+    const sheetH = sheetResult.sheet.altura_mm ?? 0;
+    const sheetArea = sheetW * sheetH;
+    const usedArea = sheetResult.placements.reduce((s, p) => s + p.largura_mm * p.altura_mm, 0);
+    const waste = Math.max(0, sheetArea - usedArea);
+    return {
+      sheetIndex: idx + 1,
+      espessuraMm: sheetResult.sheet.espessura_mm ?? 18,
+      material: sheetResult.sheet.materialName ?? "MDF",
+      pieceCount: sheetResult.placements.length,
+      usedAreaMm2: usedArea,
+      sheetAreaMm2: sheetArea,
+      wasteMm2: waste,
+      wastePct: sheetArea > 0 ? (waste / sheetArea) * 100 : 0,
+      pieces: sheetResult.placements.map((p) => ({
+        nome: p.partName ?? "—",
+        boxId: p.boxId ?? "",
+        largura: p.largura_mm,
+        altura: p.altura_mm,
+      })),
+    };
+  });
+
+  const totalWaste = sheets.reduce((s, r) => s + r.wasteMm2, 0);
+  const totalArea = sheets.reduce((s, r) => s + r.sheetAreaMm2, 0);
+  const chapas: ChapasRealSummary = {
+    totalSheets: sheets.length,
+    totalWasteMm2: totalWaste,
+    totalWastePct: totalArea > 0 ? (totalWaste / totalArea) * 100 : 0,
+    sheets,
+    layout,
+  };
+
+  const porChapa = sheets.map((s) => ({
+    chapaIndex: s.sheetIndex,
+    material: s.material,
+    espessuraMm: s.espessuraMm,
+    areaUsadaMm2: s.usedAreaMm2,
+    areaChapaMm2: s.sheetAreaMm2,
+    desperdicioMm2: s.wasteMm2,
+    desperdicioPct: s.wastePct,
+  }));
+
+  const consumo: ConsumoMateriaisSummary = {
+    porPeca: sheets.flatMap((s) =>
+      s.pieces.map((p, i) => ({
+        pecaId: `${s.sheetIndex}-${i}`,
+        peca: p.nome,
+        caixa: p.boxId || "—",
+        material: s.material,
+        areaMm2: p.largura * p.altura,
+        pesoKg: 0,
+        quantidade: 1,
+      }))
+    ),
+    porChapa,
+    desperdicioTotalMm2: totalWaste,
+    desperdicioTotalPct: chapas.totalWastePct,
+  };
+
+  return { chapas, consumo };
+}
+
+export async function buildNestingV3IndustrialArmazemPdf(
+  state: NestingV3State,
+  projectName = "NestingV3"
+): Promise<jsPDF> {
+  const layout = prepareNestingV3IndustrialLayout(state);
+  const { chapas, consumo } = chapasAndConsumoFromCutLayout(layout);
+  return buildIndustrialArmazemPdf(projectName, chapas, consumo);
+}
+
+export async function downloadNestingV3ArmazemPdf(
+  state: NestingV3State,
+  projectName = "NestingV3"
+): Promise<void> {
+  const doc = await buildNestingV3IndustrialArmazemPdf(state, projectName);
+  doc.save(industrialArmazemPdfFileName(projectName));
 }
 
 /**

@@ -1,8 +1,13 @@
 import { useMemo } from "react";
 import { useProject } from "../../context/useProject";
+import { useMaterials } from "../../hooks/useMaterials";
 import { buildCutlistItemsForIndustrialExport } from "../../core/fabrication/buildCutlistItemsForIndustrialExport";
 import { computeChapasReal } from "../../core/industrial/computeChapasReal";
-import { buildChapasRealPdf, chapasRealPdfFileName } from "../../core/pdf/pdfChapasReal";
+import { computeConsumoMateriais } from "../../core/industrial/computeConsumoMateriais";
+import {
+  buildIndustrialArmazemPdf,
+  industrialArmazemPdfFileName,
+} from "../../core/pdf/pdfIndustrialArmazem";
 import Panel from "../ui/Panel";
 import Button from "../ui/Button";
 import {
@@ -12,30 +17,41 @@ import {
 
 export default function PainelChapasReal({ embedded }: { embedded?: boolean } = {}) {
   const { project } = useProject();
+  const { materials } = useMaterials();
   const boxes = project.boxes ?? [];
   const projectName = project.projectName?.trim() || "Projeto";
 
-  const chapas = useMemo(() => {
-    const items = buildCutlistItemsForIndustrialExport({
-      boxes,
-      rules: project.rules,
-      materialId: project.materialId,
-      projectName,
-      remates: project.remates ?? [],
-      rodapes: project.rodapes ?? [],
-      extractedPartsByBoxId: project.extractedPartsByBoxId,
-      industrialPieceEdits: project.industrialPieceEdits,
-    });
-    return computeChapasReal(items, projectName, boxes);
-  }, [boxes, project, projectName]);
+  const items = useMemo(
+    () =>
+      buildCutlistItemsForIndustrialExport({
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
+      }),
+    [boxes, project, projectName]
+  );
+
+  const chapas = useMemo(
+    () => computeChapasReal(items, projectName, boxes),
+    [items, projectName, boxes]
+  );
 
   const exportPdf = () => {
     beginIndustrialFileGeneration();
-    try {
-      buildChapasRealPdf(projectName, chapas).save(chapasRealPdfFileName(projectName));
-    } finally {
-      endIndustrialFileGeneration();
-    }
+    void (async () => {
+      try {
+        const consumo = computeConsumoMateriais(items, materials, projectName, boxes);
+        const doc = await buildIndustrialArmazemPdf(projectName, chapas, consumo);
+        doc.save(industrialArmazemPdfFileName(projectName));
+      } finally {
+        endIndustrialFileGeneration();
+      }
+    })();
   };
 
   return (

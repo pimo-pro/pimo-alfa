@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatIndustrialDesignDate } from "./pdfIndustrialListShell";
 import { getCurrentProjectUser } from "../projects/currentUser";
+import { drawLogoPiInBox } from "./logoPiPublic";
 
 const MARGIN = 14;
 const GRID_COLOR: [number, number, number] = [0, 0, 0];
@@ -32,13 +33,26 @@ export function resolveIndustrialSectionPdfMeta(
   };
 }
 
-export function drawIndustrialSectionPdfHeader(doc: jsPDF, meta: IndustrialSectionPdfMeta): number {
+export function drawIndustrialSectionPdfHeader(
+  doc: jsPDF,
+  meta: IndustrialSectionPdfMeta,
+  options?: { logoDataUrl?: string | null; showLogo?: boolean }
+): number {
   let y = MARGIN;
   doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("PIMO PRO", MARGIN, y);
-  y += 7;
+
+  if (options?.showLogo) {
+    drawLogoPiInBox(doc, options.logoDataUrl ?? null, MARGIN, y, 12);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("PIMO PRO", MARGIN + 14, y + 8);
+    y += 16;
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("PIMO PRO", MARGIN, y);
+    y += 7;
+  }
 
   doc.setFontSize(13);
   doc.text(meta.sectionTitle, MARGIN, y);
@@ -57,6 +71,20 @@ export function drawIndustrialSectionPdfHeader(doc: jsPDF, meta: IndustrialSecti
   line("Data de exportação", meta.exportDate ?? formatIndustrialDesignDate());
   line("Responsável", meta.responsible ?? "—");
   y += 2;
+  return y;
+}
+
+/** Cabeçalho compacto para páginas seguintes — apenas PIMO PRO + título. */
+export function drawIndustrialSectionPdfBrandOnly(doc: jsPDF, sectionTitle: string): number {
+  let y = MARGIN;
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("PIMO PRO", MARGIN, y);
+  y += 7;
+  doc.setFontSize(12);
+  doc.text(sectionTitle, MARGIN, y);
+  y += 8;
   return y;
 }
 

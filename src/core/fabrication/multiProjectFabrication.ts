@@ -55,6 +55,12 @@ import {
   industrialFerragensXlsxFileName,
 } from "./industrialProjectArtifacts";
 import { buildBottomSectionPdfs } from "./industrialBottomSectionExports";
+import { computeConsumoMateriais } from "../industrial/computeConsumoMateriais";
+import { computeChapasReal } from "../industrial/computeChapasReal";
+import {
+  buildIndustrialArmazemPdf,
+  industrialArmazemPdfFileName,
+} from "../pdf/pdfIndustrialArmazem";
 import { COMPONENT_TYPES_DEFAULT, type ComponentType } from "../components/componentTypes";
 import { FERRAGENS_DEFAULT, type Ferragem } from "../ferragens/ferragens";
 import { safeGetItem } from "../../utils/storage";
@@ -632,6 +638,30 @@ export async function generateMultiProjectFabrication(
       safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.pecasTotais}`, bottomPdfs.pecasTotais);
       safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.ferragensTotais}`, bottomPdfs.ferragensTotais);
       safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.totaisProjeto}`, bottomPdfs.totaisProjeto);
+
+      const armazemItems = buildCutlistItemsForIndustrialExport({
+        boxes: proj.boxes,
+        rules: proj.rules,
+        materialId: proj.materialId,
+        projectName: proj.projectName,
+        remates: entry.state.remates ?? [],
+        rodapes: entry.state.rodapes ?? [],
+        extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
+        industrialPieceEdits: entry.state.industrialPieceEdits ?? {},
+      });
+      const chapasReal = computeChapasReal(armazemItems, proj.projectName ?? folder, proj.boxes);
+      const consumoSummary = computeConsumoMateriais(
+        armazemItems,
+        industrialMaterialsSnapshot,
+        proj.projectName ?? folder,
+        proj.boxes
+      );
+      const armazemPdf = await buildIndustrialArmazemPdf(
+        proj.projectName ?? folder,
+        chapasReal,
+        consumoSummary
+      );
+      safeAddPdf(zip, `${basePath}/${industrialArmazemPdfFileName(folder)}`, armazemPdf);
     } catch (err) {
       devLogger.error("multiProjectFabrication: ferragens PDF/XLSX", err);
       throw err;

@@ -30,12 +30,18 @@ export function totaisProjetoIndustrialFileName(projectNameOrSlug: string): stri
   return `${sanitizeIndustrialSlug(projectNameOrSlug)}_totais_projeto.pdf`;
 }
 
-export function consumoMateriaisIndustrialFileName(projectNameOrSlug: string): string {
-  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_consumo_materiais.pdf`;
+export function industrialArmazemIndustrialFileName(projectNameOrSlug: string): string {
+  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_industrial_armazem.pdf`;
 }
 
+/** @deprecated Use industrialArmazemIndustrialFileName */
+export function consumoMateriaisIndustrialFileName(projectNameOrSlug: string): string {
+  return industrialArmazemIndustrialFileName(projectNameOrSlug);
+}
+
+/** @deprecated Use industrialArmazemIndustrialFileName */
 export function chapasRealIndustrialFileName(projectNameOrSlug: string): string {
-  return `${sanitizeIndustrialSlug(projectNameOrSlug)}_chapas_real.pdf`;
+  return industrialArmazemIndustrialFileName(projectNameOrSlug);
 }
 
 export type IndustrialProjectArtifact = {
@@ -54,8 +60,12 @@ export const INDUSTRIAL_PROJECT_ARTIFACTS: readonly IndustrialProjectArtifact[] 
   { id: "pecas-totais", label: "Peças totais", filename: "{slug}_pecas_totais.pdf" },
   { id: "ferragens-totais", label: "Ferragens totais", filename: "{slug}_ferragens_totais.pdf" },
   { id: "totais-projeto", label: "Totais do Projeto", filename: "{slug}_totais_projeto.pdf" },
-  { id: "consumo-materiais", label: "Consumo de Materiais", filename: "{slug}_consumo_materiais.pdf" },
-  { id: "chapas-real", label: "Chapas Real", filename: "{slug}_chapas_real.pdf" },
+  {
+    id: "industrial-armazem",
+    label: "Industrial Armazém",
+    filename: "{slug}_industrial_armazem.pdf",
+    description: "Resumo de chapas + consumo por chapa (PDF unificado para armazém)",
+  },
   {
     id: "ferragens-pdf",
     label: "Ferragens Industriais (PDF)",

@@ -33,8 +33,10 @@ import { buildUnifiedPdf, type UnifiedPdfIndustrialContext } from "../core/pdf/p
 import { buildBottomSectionPdfs } from "../core/fabrication/industrialBottomSectionExports";
 import { computeConsumoMateriais } from "../core/industrial/computeConsumoMateriais";
 import { computeChapasReal } from "../core/industrial/computeChapasReal";
-import { buildConsumoMateriaisPdf, consumoMateriaisPdfFileName } from "../core/pdf/pdfConsumoMateriais";
-import { buildChapasRealPdf, chapasRealPdfFileName } from "../core/pdf/pdfChapasReal";
+import {
+  buildIndustrialArmazemPdf,
+  industrialArmazemPdfFileName,
+} from "../core/pdf/pdfIndustrialArmazem";
 import { enviarParaFabrica, submitEnviarParaFabrica } from "../core/fabrication/enviarParaFabrica";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
@@ -1106,12 +1108,14 @@ export function useGerarArquivoHandlers() {
           proj.projectName ?? safeSlug,
           boxes
         );
-        if (!safeAddPdf(zip, consumoMateriaisPdfFileName(safeSlug), buildConsumoMateriaisPdf(proj.projectName ?? safeSlug, consumoSummary))) {
-          errors.push({ step: "PDF consumo_materiais", message: "Documento inválido." });
-        }
         const chapasReal = computeChapasReal(allItems, proj.projectName ?? safeSlug, boxes);
-        if (!safeAddPdf(zip, chapasRealPdfFileName(safeSlug), buildChapasRealPdf(proj.projectName ?? safeSlug, chapasReal))) {
-          errors.push({ step: "PDF chapas_real", message: "Documento inválido." });
+        const armazemPdf = await buildIndustrialArmazemPdf(
+          proj.projectName ?? safeSlug,
+          chapasReal,
+          consumoSummary
+        );
+        if (!safeAddPdf(zip, industrialArmazemPdfFileName(safeSlug), armazemPdf)) {
+          errors.push({ step: "PDF industrial_armazem", message: "Documento inválido." });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

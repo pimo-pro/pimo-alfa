@@ -645,8 +645,10 @@ export async function downloadNestingV3LayoutProPdf(
 
 /**
  * Download directo do PDF.
- * Usa Layout PRO industrial (buildCutLayoutPdf) — alinhado com TCN e produção individual/lote.
+ * Layout PRO (visual) + PDF industrial_armazem (resumo para armazém).
  */
 export async function downloadNestingV3Pdf(state: NestingV3State, projectName = "Projeto"): Promise<void> {
   await downloadNestingV3LayoutProPdf(state, projectName);
+  const { downloadNestingV3ArmazemPdf } = await import("./nestingV3Export");
+  await downloadNestingV3ArmazemPdf(state, projectName);
 }

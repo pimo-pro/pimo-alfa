@@ -1,61 +1,39 @@
+/**
+ * Wrapper legado — o PDF de chapas foi unificado em industrial_armazem.
+ * Mantido para imports antigos; gera o PDF unificado (sem páginas de peças).
+ */
+
 import type jsPDF from "jspdf";
 import type { ChapasRealSummary } from "../industrial/computeChapasReal";
+import type { ConsumoMateriaisSummary } from "../industrial/computeConsumoMateriais";
 import {
-  createIndustrialSectionPdf,
-  drawIndustrialSectionPdfHeader,
-  drawIndustrialSectionTable,
-  industrialSectionPdfFileName,
-  resolveIndustrialSectionPdfMeta,
-} from "./pdfIndustrialSectionShell";
+  buildIndustrialArmazemPdf,
+  industrialArmazemPdfFileName,
+} from "./pdfIndustrialArmazem";
 
 export function chapasRealPdfFileName(projectName: string): string {
-  return industrialSectionPdfFileName(projectName, "chapas_real");
+  return industrialArmazemPdfFileName(projectName);
 }
 
-export function buildChapasRealPdf(projectName: string, summary: ChapasRealSummary): jsPDF {
-  const meta = resolveIndustrialSectionPdfMeta("Cálculo de Chapas Real", projectName);
-  const resumo = [
-    ["Chapas necessárias", String(summary.totalSheets)],
-    ["Desperdício total (mm²)", summary.totalWasteMm2.toFixed(0)],
-    ["Desperdício total (%)", `${summary.totalWastePct.toFixed(1)}%`],
-  ];
-
-  const doc = createIndustrialSectionPdf(meta, [["Métrica", "Valor"]], resumo, { fontSize: 10 });
-
-  for (const sheet of summary.sheets) {
-    doc.addPage("a4", "portrait");
-    const sheetMeta = {
-      ...meta,
-      sectionTitle: `Chapa ${sheet.sheetIndex} — ${sheet.material} ${sheet.espessuraMm}mm`,
-    };
-    const y = drawIndustrialSectionPdfHeader(doc, sheetMeta);
-    const info = [
-      ["Peças na chapa", String(sheet.pieceCount)],
-      ["Área usada", `${(sheet.usedAreaMm2 / 1_000_000).toFixed(4)} m²`],
-      ["Desperdício", `${sheet.wastePct.toFixed(1)}%`],
-    ];
-    drawIndustrialSectionTable(doc, y, [["Métrica", "Valor"]], info, { fontSize: 9 });
-    const y2 = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 20;
-    drawIndustrialSectionTable(
-      doc,
-      y2 + 4,
-      [["Peça", "Caixa", "Largura", "Altura"]],
-      sheet.pieces.map((p) => [p.nome, p.boxId, `${p.largura} mm`, `${p.altura} mm`]),
-      { fontSize: 8 }
-    );
-  }
-
-  if (summary.sheets.length === 0) {
-    doc.addPage("a4", "portrait");
-    const y = drawIndustrialSectionPdfHeader(doc, meta);
-    drawIndustrialSectionTable(
-      doc,
-      y,
-      [["Nota"]],
-      [["Nesting indisponível — estimativa baseada em área total."]],
-      { fontSize: 10 }
-    );
-  }
-
-  return doc;
+/** @deprecated Use buildIndustrialArmazemPdf */
+export async function buildChapasRealPdf(
+  projectName: string,
+  summary: ChapasRealSummary,
+  consumo?: ConsumoMateriaisSummary
+): Promise<jsPDF> {
+  const consumoFallback: ConsumoMateriaisSummary = consumo ?? {
+    porPeca: [],
+    porChapa: summary.sheets.map((s) => ({
+      chapaIndex: s.sheetIndex,
+      material: s.material,
+      espessuraMm: s.espessuraMm,
+      areaUsadaMm2: s.usedAreaMm2,
+      areaChapaMm2: s.sheetAreaMm2,
+      desperdicioMm2: s.wasteMm2,
+      desperdicioPct: s.wastePct,
+    })),
+    desperdicioTotalMm2: summary.totalWasteMm2,
+    desperdicioTotalPct: summary.totalWastePct,
+  };
+  return buildIndustrialArmazemPdf(projectName, summary, consumoFallback);
 }
