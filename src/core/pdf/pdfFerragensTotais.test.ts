@@ -1,6 +1,4 @@
 import { describe, it, expect, vi } from "vitest";
-import { writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
 import {
   buildFerragensTotaisPdf,
   chapasRowsForFerragensTotaisPdf,
@@ -92,13 +90,6 @@ describe("buildFerragensTotaisPdf", () => {
     expect(doc.getNumberOfPages()).toBe(1);
     expect(ferragensTotaisPdfFileName("Projeto Teste")).toBe("Projeto_Teste_ferragens_totais.pdf");
     expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(500);
-
-    const outDir = join(process.cwd(), "tmp-report");
-    mkdirSync(outDir, { recursive: true });
-    writeFileSync(
-      join(outDir, "Projeto_Teste_ferragens_totais.pdf"),
-      Buffer.from(doc.output("arraybuffer"))
-    );
   });
 
   it("chapas: design original + Data; Preco/Responsavel vazios como no original", () => {
