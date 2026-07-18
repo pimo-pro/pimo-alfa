@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
+import { writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
 import {
   buildFerragensTotaisPdf,
   chapasRowsForFerragensTotaisPdf,
+  ferragensRowsForFerragensTotaisPdf,
   ferragensTotaisPdfFileName,
 } from "./pdfFerragensTotais";
+import { normalizeFerragensTotaisForPdf } from "./pdfFerragensTotaisNormalize";
 import type { ComponentType } from "../components/componentTypes";
 import type { Ferragem } from "../ferragens/ferragens";
 import type { MaterialIndustrial } from "../manufacturing/materials";
@@ -39,14 +43,30 @@ vi.mock("../industrial/industrialBottomSectionData", async (importOriginal) => {
   };
 });
 
+function mockCups(n: number) {
+  return Array.from({ length: n }, (_, i) => ({
+    x: 20,
+    y: 100 + i * 200,
+    diameter: 35,
+    depth: 13,
+    holeType: "dobradica" as const,
+  }));
+}
+
 vi.mock("../fabrication/buildCutlistItemsForIndustrialExport", () => ({
   buildCutlistItemsForIndustrialExport: () => [
     { tipo: "COSTA", dimensoes: { largura: 720, altura: 560 }, quantidade: 1 },
+    // ANTUNIS-like: 2+2+2+3+4 = 13 canecos
+    { tipo: "porta_simples", dimensoes: { largura: 598, altura: 758 }, quantidade: 1, drillHoles: mockCups(2), boxId: "b1" },
+    { tipo: "porta_simples", dimensoes: { largura: 598, altura: 758 }, quantidade: 1, drillHoles: mockCups(2), boxId: "b2" },
+    { tipo: "porta_simples", dimensoes: { largura: 598, altura: 758 }, quantidade: 1, drillHoles: mockCups(2), boxId: "b3" },
+    { tipo: "porta_simples", dimensoes: { largura: 598, altura: 918 }, quantidade: 1, drillHoles: mockCups(3), boxId: "b4" },
+    { tipo: "porta_simples", dimensoes: { largura: 598, altura: 2398 }, quantidade: 1, drillHoles: mockCups(4), boxId: "b5" },
   ],
 }));
 
 describe("buildFerragensTotaisPdf", () => {
-  it("gera PDF landscape com chapas (estilo armazem) + ferragens normalizadas", () => {
+  it("gera PDF landscape com duas seccoes e colunas completas", () => {
     const doc = buildFerragensTotaisPdf(
       {
         boxes: [
@@ -72,18 +92,49 @@ describe("buildFerragensTotaisPdf", () => {
     expect(doc.getNumberOfPages()).toBe(1);
     expect(ferragensTotaisPdfFileName("Projeto Teste")).toBe("Projeto_Teste_ferragens_totais.pdf");
     expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(500);
+
+    const outDir = join(process.cwd(), "tmp-report");
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(
+      join(outDir, "Projeto_Teste_ferragens_totais.pdf"),
+      Buffer.from(doc.output("arraybuffer"))
+    );
   });
 
-  it("chapasRowsForFerragensTotaisPdf usa estilo TOTAL Chapas | Material | Espessura", () => {
+  it("chapas: design original + Data; Preco/Responsavel vazios como no original", () => {
     const rows = chapasRowsForFerragensTotaisPdf([
       {
         material: "MDF Branco",
-        ref: "mdf",
+        ref: "mdf_branco",
         medida: "2800\u00d72070\u00d719 mm",
         quantidade: 3,
       },
     ]);
-    expect(rows).toEqual([["3", "MDF Branco", "19 mm"]]);
+    expect(rows).toEqual([
+      ["MDF Branco", "mdf_branco", "2800\u00d72070\u00d719 mm", "3", "", "__/__/__", ""],
+    ]);
+  });
+
+  it("ferragens: Preco total = unitario x qtd; Responsavel vazio", () => {
+    const rows = ferragensRowsForFerragensTotaisPdf([
+      {
+        material: "P\u00e9",
+        ref: "P\u00e9-Pl\u00e1stico",
+        medida: "100mm",
+        quantidade: 4,
+        preco: 2.8,
+      },
+      {
+        material: "Dobradi\u00e7a",
+        ref: "8654i",
+        medida: "35mm",
+        quantidade: 13,
+      },
+    ]);
+    expect(rows).toEqual([
+      ["P\u00e9", "P\u00e9-Pl\u00e1stico", "100mm", "4", "11.20\u20ac", ""],
+      ["Dobradi\u00e7a", "8654i", "35mm", "13", "", ""],
+    ]);
   });
 
   it("ferragens_totais esta na lista de exportacao (nao substituido por industrial_armazem)", () => {
@@ -93,5 +144,20 @@ describe("buildFerragensTotaisPdf", () => {
     expect(names).toContain("Projeto_Teste_ferragens_totais.pdf");
     expect(names).toContain("Projeto_Teste_industrial_armazem.pdf");
     expect(names.filter((n) => n.endsWith("_ferragens_totais.pdf"))).toHaveLength(1);
+  });
+
+  it("PDF usa 13 dobradicas (canecos) e ignora qty industrial 2", () => {
+    const rows = normalizeFerragensTotaisForPdf({
+      ferragens: [{ material: "Dobradica 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 2 }],
+      cutlistItems: [
+        { tipo: "porta_simples", dimensoes: { largura: 598, altura: 758 }, quantidade: 1, drillHoles: mockCups(2) },
+        { tipo: "porta_simples", dimensoes: { largura: 598, altura: 758 }, quantidade: 1, drillHoles: mockCups(2) },
+        { tipo: "porta_simples", dimensoes: { largura: 598, altura: 758 }, quantidade: 1, drillHoles: mockCups(2) },
+        { tipo: "porta_simples", dimensoes: { largura: 598, altura: 918 }, quantidade: 1, drillHoles: mockCups(3) },
+        { tipo: "porta_simples", dimensoes: { largura: 598, altura: 2398 }, quantidade: 1, drillHoles: mockCups(4) },
+      ],
+      boxes: [],
+    });
+    expect(rows.find((r) => r.material === "Dobradi\u00e7a")?.quantidade).toBe(13);
   });
 });

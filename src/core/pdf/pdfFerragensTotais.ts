@@ -17,7 +17,8 @@ import {
 } from "./pdfIndustrialSectionShell";
 import { normalizeFerragensTotaisForPdf } from "./pdfFerragensTotaisNormalize";
 
-const EM_DASH = "\u2014";
+/** Placeholder manual — unica adicao visual pedida na coluna Data. */
+const DATE_PLACEHOLDER = "__/__/__";
 
 export function ferragensTotaisPdfFileName(projectName: string): string {
   return industrialSectionPdfFileName(projectName, "ferragens_totais");
@@ -35,50 +36,65 @@ type FerragensTotaisProject = Pick<
   | "pieceObservacoes"
 >;
 
-const HEAD_CHAPAS = [["TOTAL Chapas", "Material", "Espessura"]];
+/**
+ * Design original (b303113) ampliado apenas com colunas pedidas:
+ * Chapas: + Data
+ * Ferragens: Preco → Preco total
+ * Formatação: fontSize 9, espacamento original, celulas vazias "" (nao "—").
+ */
+const HEAD_CHAPAS = [
+  ["Material", "Ref", "Medida", "Quantidade total", "Pre\u00e7o", "Data", "Respons\u00e1vel"],
+];
 const HEAD_FER = [
-  ["Material / Ferragem", "Ref", "Medida", "Quantidade Total", "Pre\u00e7o", "Respons\u00e1vel"],
+  [
+    "Material / Ferragem",
+    "Ref",
+    "Medida",
+    "Quantidade total",
+    "Pre\u00e7o total",
+    "Respons\u00e1vel",
+  ],
 ];
 
-function extractEspessuraLabel(medida: string): string {
-  const raw = String(medida ?? "").trim();
-  // Formato tipico: "2800x2070x19 mm" ou "2800\times2070\times19 mm"
-  const match = raw.match(/(\d+)\s*mm\s*$/i);
-  if (match) return `${match[1]} mm`;
-  const parts = raw.split(/[x\u00d7\times]/i).map((p) => p.trim());
-  const last = parts[parts.length - 1]?.replace(/[^\d.]/g, "");
-  if (last) return `${last} mm`;
-  return EM_DASH;
+function formatPrecoCell(value: number | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "";
+  return `${Number(value).toFixed(2)}\u20ac`;
 }
 
-/** Converte materiaisChapas para o estilo visual do industrial_armazem (UTF-8). */
+/** Linhas Materiais (Chapas) — design original + coluna Data. */
 export function chapasRowsForFerragensTotaisPdf(materiaisChapas: FerragensTotaisArmazemRow[]): string[][] {
-  if (!materiaisChapas.length) return [];
   return materiaisChapas.map((r) => [
+    r.material,
+    r.ref,
+    r.medida,
     String(r.quantidade),
-    r.material || EM_DASH,
-    extractEspessuraLabel(r.medida),
+    formatPrecoCell(r.preco),
+    DATE_PLACEHOLDER,
+    "",
   ]);
 }
 
-function toBody(
+/** Linhas Ferragens Totais — design original; Preço total preenchido quando existir. */
+export function ferragensRowsForFerragensTotaisPdf(
   rows: Array<{ material: string; ref: string; medida: string; quantidade: number; preco?: number }>
 ): string[][] {
-  return rows.map((r) => [
-    r.material,
-    r.ref || EM_DASH,
-    r.medida || EM_DASH,
-    String(r.quantidade),
-    r.preco != null && Number.isFinite(r.preco) ? `${Number(r.preco).toFixed(2)}\u20ac` : EM_DASH,
-    EM_DASH,
-  ]);
+  return rows.map((r) => {
+    const precoTotal =
+      r.preco != null && Number.isFinite(r.preco) ? r.preco * r.quantidade : undefined;
+    return [
+      r.material,
+      r.ref,
+      r.medida,
+      String(r.quantidade),
+      formatPrecoCell(precoTotal),
+      "",
+    ];
+  });
 }
 
 /**
- * PDF oficial ferragens_totais — landscape A4:
- * 1) Materiais (Chapas) no estilo industrial_armazem
- * 2) Ferragens Totais (tabela unica normalizada)
- * Nao substitui industrial_armazem.pdf.
+ * PDF industrial ferragens_totais — landscape, totais agregados (chapas + ferragens).
+ * Design original intacto; apenas colunas Data / Preço total adicionadas.
  */
 export function buildFerragensTotaisPdf(
   project: FerragensTotaisProject,
@@ -122,28 +138,24 @@ export function buildFerragensTotaisPdf(
   doc.text("Materiais (Chapas)", 14, y);
   y += 5;
 
-  const chapasBody = chapasRowsForFerragensTotaisPdf(materiaisChapas);
-  drawIndustrialSectionTable(
-    doc,
-    y,
-    HEAD_CHAPAS,
-    chapasBody.length > 0 ? chapasBody : [["0", EM_DASH, EM_DASH]],
-    { fontSize: 9 }
-  );
-  y = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 28;
-  y += 8;
+  drawIndustrialSectionTable(doc, y, HEAD_CHAPAS, chapasRowsForFerragensTotaisPdf(materiaisChapas), {
+    fontSize: 9,
+  });
+  y = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 30;
+  y += 10;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
   doc.text("Ferragens Totais", 14, y);
   y += 5;
 
-  drawIndustrialSectionTable(doc, y, HEAD_FER, toBody(ferragens), { fontSize: 9 });
+  drawIndustrialSectionTable(doc, y, HEAD_FER, ferragensRowsForFerragensTotaisPdf(ferragens), {
+    fontSize: 9,
+  });
   return doc;
 }
 
-/** Seccao legada para o PDF unificado — mantem formato anterior (nao alterar outros PDFs). */
+/** Secção legada para o PDF unificado — mantém formato anterior (não alterar outros PDFs). */
 export function appendFerragensTotaisSection(
   doc: jsPDF,
   project: Parameters<typeof buildFerragensTotaisPdf>[0],
@@ -162,9 +174,7 @@ export function appendFerragensTotaisSection(
     y,
     [["Caixa", "Ferragem", "Qtd", "Material", "C\u00f3digo Industrial"]],
     detalhe,
-    {
-      fontSize: 9,
-    }
+    { fontSize: 9 }
   );
   y = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 40;
   drawIndustrialSectionTable(doc, y + 8, [["Tipo / Ferragem", "Total"]], porTipo, { fontSize: 10 });

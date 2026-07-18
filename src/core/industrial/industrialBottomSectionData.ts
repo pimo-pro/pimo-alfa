@@ -32,6 +32,10 @@ import {
   loadPesPlasticoConfig,
   PE_PLASTICO_NOME,
 } from "../ferragens/pesPlasticoConfig";
+import {
+  countDobradicasForPdf,
+  countDobradicasPorCaixaForPdf,
+} from "../pdf/pdfFerragensTotaisNormalize";
 
 export type PecasTotaisRow = {
   categoria: string;
@@ -298,14 +302,35 @@ export function buildFerragensTotaisArmazemData(
   return { materiaisChapas, ferragens };
 }
 
+function isDobradicaFerragemLabel(nome: string): boolean {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .includes("dobradica");
+}
+
 export function buildFerragensTotaisPdfData(
   project: FerragensTotaisProjectSlice,
   componentTypes: ComponentType[],
   catalogFerragens: Ferragem[]
 ): { detalhe: string[][]; porTipo: string[][] } {
+  const boxes = project.boxes ?? [];
+  const projectName = project.projectName?.trim() || "Projeto";
+  const cutlistItems = buildCutlistItemsForIndustrialExport({
+    boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+  });
+
   const industrial = buildIndustrialFerragensForProject({
     projectName: project.projectName,
-    boxes: project.boxes ?? [],
+    boxes,
     rules: project.rules,
     materialId: project.materialId,
     extractedPartsByBoxId: project.extractedPartsByBoxId,
@@ -314,22 +339,23 @@ export function buildFerragensTotaisPdfData(
     pieceObservacoes: project.pieceObservacoes,
   });
 
-  const detalhe = industrial.rows.map((r) => [
-    r.caixa,
-    r.ferragem,
-    String(r.qtd),
-    r.material,
-    r.codigoIndustrial,
-  ]);
+  // Ignorar dobradiças industriais (fixas); usar canecos reais do cutlist/CNC.
+  const detalhe = industrial.rows
+    .filter((r) => !isDobradicaFerragemLabel(r.ferragem))
+    .map((r) => [r.caixa, r.ferragem, String(r.qtd), r.material, r.codigoIndustrial]);
 
   const byTipo = new Map<string, number>();
   for (const row of industrial.rows) {
+    if (isDobradicaFerragemLabel(row.ferragem)) continue;
     const key = row.ferragem.trim() || "—";
     byTipo.set(key, (byTipo.get(key) ?? 0) + row.qtd);
   }
 
   const catalog = gerarFerragensIndustriais(componentTypes, catalogFerragens);
   for (const entry of catalog) {
+    if (isDobradicaFerragemLabel(entry.ferragem_id)) {
+      continue;
+    }
     const key = entry.ferragem_id;
     const existing = byTipo.get(key) ?? 0;
     if (existing === 0) byTipo.set(key, entry.quantidade);
@@ -341,15 +367,24 @@ export function buildFerragensTotaisPdfData(
 
   const porComponente = agruparPorComponente(gerarFerragensIndustriais(componentTypes, catalogFerragens));
   for (const [comp, entries] of porComponente.entries()) {
+    if (isDobradicaFerragemLabel(comp)) continue;
     const qty = entries.reduce((s, e) => s + e.quantidade, 0);
     if (!porTipo.some(([t]) => t === comp)) {
       porTipo.push([`${comp} (catálogo)`, String(qty)]);
     }
   }
 
+  const dobradicaTotal = countDobradicasForPdf(cutlistItems, boxes, project.rules);
+  if (dobradicaTotal > 0) {
+    for (const row of countDobradicasPorCaixaForPdf(cutlistItems, boxes, project.rules)) {
+      detalhe.push([row.caixa, "Dobradi\u00e7a", String(row.quantidade), "35mm", "8654i"]);
+    }
+    porTipo.push(["Dobradi\u00e7a", String(dobradicaTotal)]);
+  }
+
   // Pés de plástico: ferragem de catálogo (não industrial) — só apresentação online/PDF.
   const peCfg = loadPesPlasticoConfig();
-  const pePorCaixa = listPesPlasticoPorCaixa(project.boxes ?? [], project.rules, peCfg);
+  const pePorCaixa = listPesPlasticoPorCaixa(boxes, project.rules, peCfg);
   let peTotalQty = 0;
   let peTotalPreco = 0;
   for (const pe of pePorCaixa) {

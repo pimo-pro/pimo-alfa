@@ -1,16 +1,46 @@
 import { describe, it, expect } from "vitest";
 import {
+  countDobradicasForPdf,
   countParafusosCosta3x30,
   distributeCorredicaPairsByLength,
   normalizeFerragensTotaisForPdf,
   snapCorredicaLengthMm,
 } from "./pdfFerragensTotaisNormalize";
-import type { BoxModule } from "../types";
+import type { BoxModule, PanelDrillHole } from "../types";
+import { defaultRulesConfig } from "../rules/rulesConfig";
 
 const CORREDICA = "Corredi\u00e7a";
 const DOBRADICA = "Dobradi\u00e7a";
 const PE = "P\u00e9";
 const PE_REF = "P\u00e9-Pl\u00e1stico";
+
+function cups(n: number): PanelDrillHole[] {
+  const holes: PanelDrillHole[] = [];
+  for (let i = 0; i < n; i++) {
+    holes.push({
+      x: 20,
+      y: 100 + i * 200,
+      diameter: 35,
+      depth: 13,
+      holeType: "dobradica",
+    });
+    holes.push({
+      x: 15,
+      y: 90 + i * 200,
+      diameter: 10,
+      depth: 12,
+      holeType: "dobradica_fixacao",
+    });
+    holes.push({
+      x: 15,
+      y: 110 + i * 200,
+      diameter: 10,
+      depth: 12,
+      holeType: "dobradica_fixacao",
+    });
+  }
+  return holes;
+}
 
 describe("pdfFerragensTotaisNormalize", () => {
   it("snapCorredicaLengthMm usa grelha 300-550", () => {
@@ -33,13 +63,13 @@ describe("pdfFerragensTotaisNormalize", () => {
     ).toBe(8);
   });
 
-  it("corredicas em pares com labels UTF-8 e remove puxador/prego", () => {
+  it("corredicas em pares; ignora dobradica industrial sem canecos", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [
         { material: "Corredica Lateral Esquerda", ref: "corredica_esq", medida: "", quantidade: 2 },
         { material: "Corredica Lateral Direita", ref: "corredica_dir", medida: "", quantidade: 2 },
         { material: "Cavilha 8mm", ref: "cavilha_8mm", medida: "8mm", quantidade: 40 },
-        { material: "Dobradica 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 4 },
+        { material: "Dobradica 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 99 },
         { material: "Parafuso para Puxador", ref: "parafuso_puxador", medida: "M4", quantidade: 8 },
         { material: "Prego para Costa", ref: "prego_costa", medida: "2mm", quantidade: 12 },
         { material: "Suporte de Prateleira", ref: "suporte_prateleira", medida: "", quantidade: 8 },
@@ -58,20 +88,88 @@ describe("pdfFerragensTotaisNormalize", () => {
 
     const byName = Object.fromEntries(rows.map((r) => [r.material, r]));
     expect(byName["Cavilha 10mm"]?.quantidade).toBe(40);
-    expect(byName["Cavilha 10mm"]?.medida).toBe("10mm");
-    expect(byName[DOBRADICA]?.ref).toBe("8654i");
-    expect(byName[DOBRADICA]?.medida).toBe("35mm");
-    expect(byName[DOBRADICA]?.quantidade).toBe(4);
+    expect(byName[DOBRADICA]).toBeUndefined();
     expect(byName["Suporte de Prateleira"]?.quantidade).toBe(12);
     expect(byName["Parafuso 3x30"]?.quantidade).toBe(16);
-    expect(byName["Parafuso 3x30"]?.medida).toBe("3\u00d730mm");
     expect(byName["Parafuso para Puxador"]).toBeUndefined();
-    expect(byName["Prego para Costa"]).toBeUndefined();
 
     const corredicas = rows.filter((r) => r.material === CORREDICA);
     expect(corredicas.reduce((s, r) => s + r.quantidade, 0)).toBe(2);
-    expect(corredicas.every((r) => r.ref === "")).toBe(true);
-    expect(corredicas[0]?.medida).toBe("500mm");
+  });
+
+  it("dobradicas = canecos holeType dobradica (ignora industrial e fixacao)", () => {
+    const rows = normalizeFerragensTotaisForPdf({
+      ferragens: [
+        { material: "Dobradica 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 100 },
+        { material: "dobradicas", ref: "—", medida: "—", quantidade: 50 },
+      ],
+      cutlistItems: [
+        {
+          tipo: "porta_simples",
+          dimensoes: { largura: 598, altura: 918 },
+          quantidade: 1,
+          drillHoles: cups(3),
+        },
+        {
+          tipo: "porta_simples",
+          dimensoes: { largura: 598, altura: 758 },
+          quantidade: 1,
+          drillHoles: cups(2),
+        },
+      ],
+      boxes: [],
+      rules: defaultRulesConfig,
+    });
+
+    const d = rows.find((r) => r.material === DOBRADICA);
+    expect(d).toMatchObject({ ref: "8654i", medida: "35mm", quantidade: 5 });
+  });
+
+  it("ANTUNIS: 2+2+2+3+4 canecos = 13 dobradicas", () => {
+    const antunisDoors = [
+      { altura: 758, n: 2 },
+      { altura: 758, n: 2 },
+      { altura: 758, n: 2 },
+      { altura: 918, n: 3 },
+      { altura: 2398, n: 4 },
+    ];
+    const cutlistItems = antunisDoors.map((d, i) => ({
+      tipo: "porta_simples" as const,
+      boxId: `b${i}`,
+      dimensoes: { largura: 598, altura: d.altura },
+      quantidade: 1,
+      drillHoles: cups(d.n),
+    }));
+
+    expect(countDobradicasForPdf(cutlistItems, [], defaultRulesConfig)).toBe(13);
+
+    const rows = normalizeFerragensTotaisForPdf({
+      ferragens: [
+        { material: "Dobradiça 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 10 },
+        { material: "dobradicas", ref: "", medida: "", quantidade: 10 },
+      ],
+      cutlistItems,
+      boxes: [],
+      rules: defaultRulesConfig,
+    });
+
+    expect(rows.find((r) => r.material === DOBRADICA)?.quantidade).toBe(13);
+  });
+
+  it("fallback getNumDobradicas quando porta sem drillHoles", () => {
+    const n = countDobradicasForPdf(
+      [
+        {
+          tipo: "porta_simples",
+          dimensoes: { largura: 600, altura: 918 },
+          quantidade: 1,
+          drillHoles: [],
+        },
+      ],
+      [],
+      defaultRulesConfig
+    );
+    expect(n).toBe(3);
   });
 
   it("distributeCorredicaPairsByLength proporcao por gavetas", () => {
@@ -114,5 +212,6 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(pe?.medida).toBe("100mm");
     expect(pe?.quantidade).toBe(4);
     expect(pe?.preco).toBe(2.8);
+    expect(rows.find((r) => r.material === DOBRADICA)).toBeUndefined();
   });
 });

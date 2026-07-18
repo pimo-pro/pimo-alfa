@@ -4,9 +4,10 @@
  * Literais PT usam escapes Unicode para evitar corrupcao de encoding no disco.
  */
 
-import type { BoxModule, CutListItemComPreco } from "../types";
+import type { BoxModule, CutListItemComPreco, PanelDrillHole } from "../types";
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
-import type { RulesConfig } from "../rules/rulesConfig";
+import { getNumDobradicas, type RulesConfig } from "../rules/rulesConfig";
+import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import {
   aggregatePesPlasticoFromBoxes,
   loadPesPlasticoConfig,
@@ -67,7 +68,7 @@ function normalizeKey(nome: string): string {
     .toLowerCase()
     .replace(/[x\u00d7\u00d7]/gi, "x")
     .replace(/\u00d7/g, "x")
-    .replace(/◊/g, "x");
+    .replace(/ù/g, "x");
 }
 
 type Bucket =
@@ -175,7 +176,9 @@ export function distributeCorredicaPairsByLength(
 
 export type NormalizeFerragensTotaisInput = {
   ferragens: FerragensTotaisArmazemRow[];
-  cutlistItems: Array<Pick<CutListItemComPreco, "tipo" | "dimensoes" | "quantidade">>;
+  cutlistItems: Array<
+    Pick<CutListItemComPreco, "tipo" | "dimensoes" | "quantidade" | "drillHoles" | "boxId">
+  >;
   boxes: BoxModule[];
   rules?: RulesConfig;
 };
@@ -183,6 +186,127 @@ export type NormalizeFerragensTotaisInput = {
 function isPlaceholderDash(value: string): boolean {
   const v = String(value ?? "").trim();
   return v === "" || v === EM_DASH || v === "-" || v === "?" || v === "\uFFFD";
+}
+
+function isDoorPanelTipo(tipo: string): boolean {
+  const t = String(tipo ?? "").trim().toLowerCase();
+  if (isIndustrialDoorPanelTipo(t)) return true;
+  return t === "porta" || t.startsWith("porta_");
+}
+
+function countCupsOnPanel(holes: PanelDrillHole[] | undefined): number {
+  if (!holes?.length) return 0;
+  return holes.filter((h) => h.holeType === "dobradica").length;
+}
+
+/**
+ * Contagem oficial de dobradiÁas para PDF/online (apresentacao).
+ * Fonte: canecos ÿ35 (holeType === "dobradica") nas pecas porta do cutlist.
+ * Fallback: getNumDobradicas(alturaMm, rules) por folha.
+ * Ignora gerarFerragens / ComponentTypes (nao usar como fonte).
+ */
+export function countDobradicasForPdf(
+  cutlistItems: Array<
+    Pick<CutListItemComPreco, "tipo" | "dimensoes" | "quantidade" | "drillHoles">
+  >,
+  boxes: BoxModule[],
+  rules?: RulesConfig
+): number {
+  let total = 0;
+  let doorPanelsSeen = 0;
+
+  for (const item of cutlistItems ?? []) {
+    if (!isDoorPanelTipo(String(item.tipo ?? ""))) continue;
+    const pieceQty = Math.max(1, Math.floor(Number(item.quantidade) || 1));
+    doorPanelsSeen += pieceQty;
+    const cups = countCupsOnPanel(item.drillHoles);
+    if (cups > 0) {
+      total += cups * pieceQty;
+      continue;
+    }
+    if (rules) {
+      const alturaMm =
+        Number(item.dimensoes?.altura) || Number(item.dimensoes?.largura) || 0;
+      total += getNumDobradicas(alturaMm, rules) * pieceQty;
+    }
+  }
+
+  if (doorPanelsSeen > 0 || total > 0) return total;
+
+  // Sem pecas porta na cutlist: fallback pelas caixas / doorsLayer.
+  if (!rules) return 0;
+  for (const box of boxes ?? []) {
+    const layer = box.doorsLayer ?? [];
+    if (layer.length > 0) {
+      for (const door of layer) {
+        total += getNumDobradicas(Math.max(0, Number(door.height) || 0), rules);
+      }
+      continue;
+    }
+    if (box.portaTipo && box.portaTipo !== "sem_porta") {
+      const alturaMm = Number(box.dimensoes?.altura) || 0;
+      const perLeaf = getNumDobradicas(alturaMm, rules);
+      total += box.portaTipo === "porta_dupla" ? perLeaf * 2 : perLeaf;
+    }
+  }
+  return total;
+}
+
+/** Quantidade de canecos por caixa (para detalhe online). */
+export function countDobradicasPorCaixaForPdf(
+  cutlistItems: Array<
+    Pick<CutListItemComPreco, "tipo" | "dimensoes" | "quantidade" | "drillHoles" | "boxId">
+  >,
+  boxes: BoxModule[],
+  rules?: RulesConfig
+): Array<{ caixa: string; quantidade: number }> {
+  const byBox = new Map<string, number>();
+  const boxNome = (id: string) => {
+    const b = boxes.find((x) => x.id === id);
+    return b?.nome?.trim() || id || EM_DASH;
+  };
+
+  let anyDoor = false;
+  for (const item of cutlistItems ?? []) {
+    if (!isDoorPanelTipo(String(item.tipo ?? ""))) continue;
+    anyDoor = true;
+    const pieceQty = Math.max(1, Math.floor(Number(item.quantidade) || 1));
+    const cups = countCupsOnPanel(item.drillHoles);
+    const n =
+      cups > 0
+        ? cups * pieceQty
+        : rules
+          ? getNumDobradicas(
+              Number(item.dimensoes?.altura) || Number(item.dimensoes?.largura) || 0,
+              rules
+            ) * pieceQty
+          : 0;
+    if (n <= 0) continue;
+    const id = String(item.boxId ?? "");
+    byBox.set(id, (byBox.get(id) ?? 0) + n);
+  }
+
+  if (!anyDoor && rules) {
+    for (const box of boxes ?? []) {
+      const layer = box.doorsLayer ?? [];
+      let n = 0;
+      if (layer.length > 0) {
+        n = layer.reduce(
+          (s, d) => s + getNumDobradicas(Math.max(0, Number(d.height) || 0), rules),
+          0
+        );
+      } else if (box.portaTipo && box.portaTipo !== "sem_porta") {
+        const perLeaf = getNumDobradicas(Number(box.dimensoes?.altura) || 0, rules);
+        n = box.portaTipo === "porta_dupla" ? perLeaf * 2 : perLeaf;
+      }
+      if (n > 0) byBox.set(box.id, n);
+    }
+  }
+
+  return [...byBox.entries()]
+    .filter(([, q]) => q > 0)
+    .map(([id, quantidade]) => ({ caixa: boxNome(id), quantidade }))
+    .sort((a, b) => a.caixa.localeCompare(b.caixa, "pt"));
 }
 
 /**
@@ -193,7 +317,6 @@ export function normalizeFerragensTotaisForPdf(
 ): FerragensTotaisArmazemRow[] {
   let cavilhaQty = 0;
   let corredicaPieces = 0;
-  let dobradicaQty = 0;
   let suporteQty = 0;
   const others = new Map<string, FerragensTotaisArmazemRow>();
 
@@ -208,14 +331,14 @@ export function normalizeFerragensTotaisForPdf(
       case "pe":
         // Pes: recalculados a partir das caixas (fonte oficial).
         break;
+      case "dobradica":
+        // Ignorar industrial (gerarFerragens + ComponentTypes). Fonte = canecos reais.
+        break;
       case "cavilha":
         cavilhaQty += qty;
         break;
       case "corredica":
         corredicaPieces += qty;
-        break;
-      case "dobradica":
-        dobradicaQty += qty;
         break;
       case "suporte":
         suporteQty += qty;
@@ -259,6 +382,7 @@ export function normalizeFerragensTotaisForPdf(
     });
   }
 
+  const dobradicaQty = countDobradicasForPdf(input.cutlistItems ?? [], input.boxes ?? [], input.rules);
   if (dobradicaQty > 0) {
     result.push({
       material: DOBRADICA_LABEL,
