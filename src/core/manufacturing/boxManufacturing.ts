@@ -9,6 +9,10 @@ import {
 } from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
+import {
+  loadPesPlasticoConfig,
+  quantidadePesParaCaixa,
+} from "../ferragens/pesPlasticoConfig";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
@@ -534,16 +538,30 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 
 export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndustrial[] {
   if (isPiBaseCabinetId(box.baseCabinetId)) {
-    return gerarFerragensPi(box, rules);
+    const peCfg = loadPesPlasticoConfig();
+    const peQty = quantidadePesParaCaixa(box, rules);
+    const base = gerarFerragensPi(box, rules);
+    if (!peCfg.ativo || peQty <= 0) return base;
+    return [
+      ...base,
+      {
+        id: buildId("pe_plastico", base.length),
+        tipo: "pe_plastico",
+        quantidade: peQty,
+        custo: peCfg.precoUnitario * peQty,
+      },
+    ];
   }
 
   const ferragens: FerragemIndustrial[] = [];
+  const peCfg = loadPesPlasticoConfig();
   const tabela: Record<string, number> = {
     dobradicas: 2.5,
     corredicas: 19,
     suportes_prateleira: 0.9,
     cavilha_10mm: 0.12,
     parafuso_4x50: 0.15,
+    pe_plastico: peCfg.precoUnitario,
   };
   const addFerragem = (tipo: string, quantidade: number) => {
     if (quantidade <= 0) return;
@@ -562,6 +580,9 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
       0
     );
     addFerragem("dobradicas", totalDobradicas);
+    if (peCfg.ativo) {
+      addFerragem("pe_plastico", quantidadePesParaCaixa(box, rules));
+    }
     return ferragens;
   }
 
@@ -589,6 +610,10 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
     addFerragem("parafuso_4x50", parafusos4x50);
   }
 
+  if (peCfg.ativo) {
+    addFerragem("pe_plastico", quantidadePesParaCaixa(box, rules));
+  }
+
   return ferragens;
 }
 
@@ -598,10 +623,12 @@ export function calcularCustoPainel(painel: PainelIndustrial, material = getMate
 }
 
 export function calcularCustoFerragens(ferragens: FerragemIndustrial[]) {
+  const peCfg = loadPesPlasticoConfig();
   const tabela: Record<string, number> = {
     dobradicas: 2.5,
     corredicas: 19,
     suportes_prateleira: 0.9,
+    pe_plastico: peCfg.precoUnitario,
   };
   return ferragens.reduce((total, item) => {
     if (Number.isFinite(item.custo)) {

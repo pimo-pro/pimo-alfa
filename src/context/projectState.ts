@@ -1,5 +1,11 @@
 import { calcularProjeto } from "../core/calculator/woodCalculator";
 import { buildFerragens } from "../core/ferragens/ferragens";
+import {
+  loadPesPlasticoConfig,
+  PE_PLASTICO_ID,
+  PE_PLASTICO_NOME,
+  quantidadePesParaCaixa,
+} from "../core/ferragens/pesPlasticoConfig";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import {
   calcularPrecoTotalPecas,
@@ -480,16 +486,18 @@ const buildBoxDesign = (prev: ProjectState, box: BoxModule): BoxModule => {
   const combinedCutList = cutListComPreco;
   const precoTotalPecas = calcularPrecoTotalPecas(cutListComPreco);
   const ferragensBase = buildFerragens(box.prateleiras, box.portaTipo, box.gavetas);
+  const peCfg = loadPesPlasticoConfig();
+  const peQty = quantidadePesParaCaixa(box, prev.rules);
   const ferragens =
-    box.cabinetType === "lower" && box.feetEnabled !== false
+    peCfg.ativo && peQty > 0
       ? [
           ...ferragensBase,
           {
-            id: "pe-cozinha-regulavel",
-            nome: "Pé de cozinha regulável",
-            tipo: "pe_regulavel",
-            quantidade: 4,
-            precoUnitario: 0,
+            id: PE_PLASTICO_ID,
+            nome: PE_PLASTICO_NOME,
+            tipo: "pe_plastico",
+            quantidade: peQty,
+            precoUnitario: peCfg.precoUnitario,
           },
         ]
       : ferragensBase;

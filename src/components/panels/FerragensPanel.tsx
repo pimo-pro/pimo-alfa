@@ -11,6 +11,7 @@ const aplicacaoFerragens: Record<string, string> = {
   dobradicas: "Portas",
   corredicas: "Gavetas",
   suportes_prateleira: "Prateleiras",
+  pe_plastico: "Pés",
 };
 
 const tableStyle: React.CSSProperties = {
@@ -75,7 +76,7 @@ export default function FerragensPanel() {
             {allFerragens.map((ferragem) => (
               <tr key={ferragem.key}>
                 <td style={bodyCellStyle}>{ferragem.boxNome}</td>
-                <td style={bodyCellStyle}>{ferragem.tipo}</td>
+                <td style={bodyCellStyle}>{ferragem.tipo === "pe_plastico" ? "Pé" : ferragem.tipo}</td>
                 <td style={{ ...bodyCellStyle, textAlign: "center" }}>{ferragem.quantidade}</td>
                 <td style={bodyCellStyle}>{aplicacaoFerragens[ferragem.tipo] ?? "Geral"}</td>
                 <td style={costCellStyle}>{formatCurrency(ferragem.custo)}</td>

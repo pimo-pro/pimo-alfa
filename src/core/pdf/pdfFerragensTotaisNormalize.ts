@@ -1,13 +1,27 @@
 /**
  * Normalizacao exclusiva do PDF ferragens_totais (apresentacao).
  * Nao altera catalogo industrial, CNC, furos nem outros PDFs.
+ * Literais PT usam escapes Unicode para evitar corrupcao de encoding no disco.
  */
 
 import type { BoxModule, CutListItemComPreco } from "../types";
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
+import type { RulesConfig } from "../rules/rulesConfig";
+import {
+  aggregatePesPlasticoFromBoxes,
+  loadPesPlasticoConfig,
+  PE_PLASTICO_ID,
+  PE_PLASTICO_NOME,
+} from "../ferragens/pesPlasticoConfig";
 
 export const CORREDICA_LENGTHS_MM = [300, 350, 400, 450, 500, 550] as const;
 export const PARAFUSO_COSTA_SPACING_MM = 180;
+
+const EM_DASH = "\u2014";
+const MULTIPLY = "\u00d7";
+const CORREDICA_LABEL = "Corredi\u00e7a";
+const DOBRADICA_LABEL = "Dobradi\u00e7a";
+const PE_REF_DEFAULT = "P\u00e9-Pl\u00e1stico";
 
 export function snapCorredicaLengthMm(depthMm: number): number {
   if (!Number.isFinite(depthMm) || depthMm <= 0) return 450;
@@ -51,6 +65,8 @@ function normalizeKey(nome: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
+    .replace(/[x\u00d7\u00d7]/gi, "x")
+    .replace(/\u00d7/g, "x")
     .replace(/×/g, "x");
 }
 
@@ -61,6 +77,7 @@ type Bucket =
   | "suporte"
   | "parafuso_puxador"
   | "prego_costa"
+  | "pe"
   | "other";
 
 function classifyFerragem(nome: string, ref: string): Bucket {
@@ -79,6 +96,18 @@ function classifyFerragem(nome: string, ref: string): Bucket {
   }
   if (n.includes("suporte") && n.includes("prateleira")) return "suporte";
   if (r === "suporte_prateleira" || n === "suportes_prateleira") return "suporte";
+  if (
+    r === PE_PLASTICO_ID ||
+    r === "pe-plastico" ||
+    r === normalizeKey(PE_REF_DEFAULT) ||
+    n === normalizeKey(PE_PLASTICO_NOME) ||
+    n.includes("pe de plastico") ||
+    n.includes("pe plastico") ||
+    (n.startsWith("pe") &&
+      (n.includes("cozinha") || n.includes("regulavel") || n.includes("plastico")))
+  ) {
+    return "pe";
+  }
   return "other";
 }
 
@@ -148,7 +177,13 @@ export type NormalizeFerragensTotaisInput = {
   ferragens: FerragensTotaisArmazemRow[];
   cutlistItems: Array<Pick<CutListItemComPreco, "tipo" | "dimensoes" | "quantidade">>;
   boxes: BoxModule[];
+  rules?: RulesConfig;
 };
+
+function isPlaceholderDash(value: string): boolean {
+  const v = String(value ?? "").trim();
+  return v === "" || v === EM_DASH || v === "-" || v === "?" || v === "\uFFFD";
+}
 
 /**
  * Aplica regras de nomenclatura/quantidade exclusivas do PDF ferragens_totais.
@@ -170,6 +205,8 @@ export function normalizeFerragensTotaisForPdf(
     switch (bucket) {
       case "parafuso_puxador":
       case "prego_costa":
+      case "pe":
+        // Pes: recalculados a partir das caixas (fonte oficial).
         break;
       case "cavilha":
         cavilhaQty += qty;
@@ -190,9 +227,10 @@ export function normalizeFerragensTotaisForPdf(
         else {
           others.set(key, {
             material: row.material,
-            ref: row.ref === "—" ? "" : row.ref,
-            medida: row.medida === "—" ? "" : row.medida,
+            ref: isPlaceholderDash(row.ref) ? "" : row.ref,
+            medida: isPlaceholderDash(row.medida) ? "" : row.medida,
             quantidade: qty,
+            preco: row.preco,
           });
         }
         break;
@@ -214,7 +252,7 @@ export function normalizeFerragensTotaisForPdf(
   const pairs = Math.floor(corredicaPieces / 2);
   for (const row of distributeCorredicaPairsByLength(pairs, input.boxes ?? [])) {
     result.push({
-      material: "Corrediça",
+      material: CORREDICA_LABEL,
       ref: "",
       medida: `${row.lengthMm}mm`,
       quantidade: row.qty,
@@ -223,7 +261,7 @@ export function normalizeFerragensTotaisForPdf(
 
   if (dobradicaQty > 0) {
     result.push({
-      material: "Dobradiça",
+      material: DOBRADICA_LABEL,
       ref: "8654i",
       medida: "35mm",
       quantidade: dobradicaQty,
@@ -235,7 +273,7 @@ export function normalizeFerragensTotaisForPdf(
     result.push({
       material: "Parafuso 3x30",
       ref: "",
-      medida: "3×30mm",
+      medida: `3${MULTIPLY}30mm`,
       quantidade: parafusosCosta,
     });
   }
@@ -246,6 +284,17 @@ export function normalizeFerragensTotaisForPdf(
       ref: "",
       medida: "",
       quantidade: suporteQty,
+    });
+  }
+
+  const peCfg = loadPesPlasticoConfig();
+  for (const pe of aggregatePesPlasticoFromBoxes(input.boxes ?? [], input.rules, peCfg)) {
+    result.push({
+      material: pe.material,
+      ref: pe.ref,
+      medida: pe.medida,
+      quantidade: pe.quantidade,
+      preco: pe.precoUnitario,
     });
   }
 

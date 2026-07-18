@@ -76,6 +76,14 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     descricao: "Parafuso para fixar puxadores",
     precoUnitario: 0.12,
   },
+  {
+    id: "pe_plastico",
+    nome: "Pé",
+    categoria: "acessorio",
+    medidas: "100mm",
+    descricao: "Pé de plástico ajustável",
+    precoUnitario: 2.8,
+  },
 ];
 
 const PRECO_FERRAGENS: Record<string, number> = {

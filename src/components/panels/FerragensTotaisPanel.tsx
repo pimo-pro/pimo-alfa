@@ -56,11 +56,17 @@ export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean 
 
       <h4 style={{ fontSize: 12, margin: "0 0 6px", color: "var(--text-main)" }}>Detalhe por caixa</h4>
       <div style={{ maxHeight: 280, overflow: "auto", fontSize: 11 }}>
-        {detalhe.map((row, idx) => (
-          <div key={`${row[0]}-${row[1]}-${idx}`} style={{ padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            {row[0]} — {row[1]} ×{row[2]}
-          </div>
-        ))}
+        {detalhe.map((row, idx) => {
+          const isPe = row[1] === "Pé";
+          const line = isPe
+            ? `${row[0]} — ${row[1]} — ${row[2]} unidades — ${row[3]} — total ${row[4]}`
+            : `${row[0]} — ${row[1]} ×${row[2]}`;
+          return (
+            <div key={`${row[0]}-${row[1]}-${idx}`} style={{ padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              {line}
+            </div>
+          );
+        })}
       </div>
     </Panel>
   );

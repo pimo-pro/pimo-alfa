@@ -777,21 +777,11 @@ export function ferragensFromBoxes(boxes: BoxModule[], rules: RulesConfig): Aces
     for (const f of modelo.ferragens) {
       acc.push({
         id: `${box.id}-${f.id}`,
-        nome: f.tipo,
+        nome: f.tipo === "pe_plastico" ? "Pé" : f.tipo,
         quantidade: f.quantidade,
         precoUnitario: f.quantidade > 0 ? f.custo / f.quantidade : 0,
         precoTotal: f.custo,
         tipo: f.tipo,
-      });
-    }
-    if (box.cabinetType === "lower" && box.feetEnabled !== false) {
-      acc.push({
-        id: `${box.id}-pe-cozinha-regulavel`,
-        nome: "Pé de cozinha regulável",
-        quantidade: 4,
-        precoUnitario: 0,
-        precoTotal: 0,
-        tipo: "pe_regulavel",
       });
     }
   }

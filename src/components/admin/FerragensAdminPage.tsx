@@ -9,6 +9,7 @@ import type { Ferragem } from "../../core/ferragens/ferragens";
 import { useFerragens } from "../../hooks/useFerragens";
 import { useToast } from "../../context/ToastContext";
 import OrlaSettingsPanel from "../settings/orla/OrlaSettingsPanel";
+import PesPlasticoSettingsPanel from "./PesPlasticoSettingsPanel";
 import { formatCurrency } from "../../utils/formatting";
 
 const CATEGORIAS: Ferragem["categoria"][] = [
@@ -336,6 +337,10 @@ export default function FerragensAdminPage() {
             })
           )}
         </div>
+      </Panel>
+
+      <Panel title="Pés de Plástico Ajustáveis">
+        <PesPlasticoSettingsPanel />
       </Panel>
 
       <Panel title="Orla">

@@ -27,6 +27,11 @@ import { formatObservacoesForPdf, resolveObservacoesForCutListItem } from "../ob
 import type { PieceObservacoesStore } from "../observacoes/observacoesTypes";
 import type { IndustrialPieceEditsStore } from "./industrialPieceEditsTypes";
 import { isIndustrialPieceEdited, computeIndustrialPieceMetrics } from "./IndustrialPieceEditsService";
+import {
+  listPesPlasticoPorCaixa,
+  loadPesPlasticoConfig,
+  PE_PLASTICO_NOME,
+} from "../ferragens/pesPlasticoConfig";
 
 export type PecasTotaisRow = {
   categoria: string;
@@ -156,6 +161,8 @@ export type FerragensTotaisArmazemRow = {
   ref: string;
   medida: string;
   quantidade: number;
+  /** Preço unitário (€) — opcional, usado na apresentação do PDF ferragens_totais. */
+  preco?: number;
 };
 
 type FerragensTotaisProjectSlice = Pick<
@@ -338,6 +345,29 @@ export function buildFerragensTotaisPdfData(
     if (!porTipo.some(([t]) => t === comp)) {
       porTipo.push([`${comp} (catálogo)`, String(qty)]);
     }
+  }
+
+  // Pés de plástico: ferragem de catálogo (não industrial) — só apresentação online/PDF.
+  const peCfg = loadPesPlasticoConfig();
+  const pePorCaixa = listPesPlasticoPorCaixa(project.boxes ?? [], project.rules, peCfg);
+  let peTotalQty = 0;
+  let peTotalPreco = 0;
+  for (const pe of pePorCaixa) {
+    peTotalQty += pe.quantidade;
+    peTotalPreco += pe.precoTotal;
+    detalhe.push([
+      pe.caixa,
+      PE_PLASTICO_NOME,
+      String(pe.quantidade),
+      pe.medida,
+      formatCurrency(pe.precoTotal),
+    ]);
+  }
+  if (peTotalQty > 0) {
+    porTipo.push([
+      PE_PLASTICO_NOME,
+      `${peTotalQty} un · ${formatCurrency(peTotalPreco)}`,
+    ]);
   }
 
   return { detalhe, porTipo };

@@ -44,6 +44,7 @@ const sectionTitleStyle: React.CSSProperties = {
 };
 
 const aplicacaoFerragens: Record<string, string> = {
+  pe_plastico: "Pés",
   dobradicas: "Portas",
   corredicas: "Gavetas",
   suportes_prateleira: "Prateleiras",

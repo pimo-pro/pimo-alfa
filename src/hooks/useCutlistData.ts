@@ -165,6 +165,8 @@ export function useCutlistData() {
       dobradicas: ["dobradica_35mm"],
       corredicas: ["corredica_esq", "corredica_dir"],
       suportes_prateleira: ["suporte_prateleira"],
+      pe_plastico: ["pe_plastico"],
+      pe_regulavel: ["pe_plastico"],
     };
     const categoryAliases: Record<string, Ferragem["categoria"]> = {
       dobradicas: "dobradica",

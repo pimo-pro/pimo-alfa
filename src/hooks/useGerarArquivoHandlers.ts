@@ -31,6 +31,7 @@ import { gerarPdfTecnicoCompleto } from "../core/pdf/gerarPdfTecnico";
 import { buildCutlistPdf } from "../core/pdf/pdfCutlist";
 import { buildUnifiedPdf, type UnifiedPdfIndustrialContext } from "../core/pdf/pdfUnified";
 import { buildBottomSectionPdfs } from "../core/fabrication/industrialBottomSectionExports";
+import { assertFerragensTotaisInExport } from "../core/fabrication/exportProjectFiles";
 import { ensureLogoIndustrialLoaded } from "../core/pdf/logoIndustrialPublic";
 import { computeConsumoMateriais } from "../core/industrial/computeConsumoMateriais";
 import { computeChapasReal } from "../core/industrial/computeChapasReal";
@@ -1094,10 +1095,12 @@ export function useGerarArquivoHandlers() {
           ferragens,
           showPrices: canShowSectionPrices("resumoFinanceiro", isAdmin),
         });
+        // Lista oficial: ferragens_totais e industrial_armazem coexistem (nao se substituem).
+        const expectedFerragensTotais = assertFerragensTotaisInExport(proj.projectName ?? safeSlug);
         const bottomEntries: Array<[string, ReturnType<typeof buildFerragensIndustriaisPdf>]> = [
           [bottomPdfs.fileNames.resumoFinanceiro, bottomPdfs.resumoFinanceiro],
           [bottomPdfs.fileNames.pecasTotais, bottomPdfs.pecasTotais],
-          [bottomPdfs.fileNames.ferragensTotais, bottomPdfs.ferragensTotais],
+          [bottomPdfs.fileNames.ferragensTotais || expectedFerragensTotais, bottomPdfs.ferragensTotais],
           [bottomPdfs.fileNames.totaisProjeto, bottomPdfs.totaisProjeto],
         ];
         for (const [name, doc] of bottomEntries) {
