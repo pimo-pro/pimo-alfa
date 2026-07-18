@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-18T21:26:16.931Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(ferragens): restaurar ferragens_totais.pdf, pe_plastico e exportacao dual",
+      "version": "v6.0718.2226"
+    },
+    {
       "publishedAt": "2026-07-17T22:28:46.618Z",
       "author": "pimo-pro",
       "commitMessage": "feat(pdf): normalizar ferragens_totais com tabela unica landscape",
