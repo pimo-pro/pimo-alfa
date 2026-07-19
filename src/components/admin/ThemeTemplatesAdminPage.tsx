@@ -3,7 +3,7 @@ import { useThemeTemplate } from "../../context/ThemeTemplateContext";
 import { useTheme } from "../../context/ThemeContext";
 import { AdminPageHeader, adminPageShellStyle } from "./AdminUi";
 import type { ButtonShape, ThemeTemplateId } from "../../theme/palettes/types";
-import { BUTTON_SHAPE_LABELS } from "../../theme/palettes/piButtonSystem";
+import { BUTTON_SHAPE_LABELS, BUTTON_SHAPE_RADIUS_PX } from "../../theme/palettes/piButtonSystem";
 
 const cardStyle = (active: boolean): CSSProperties => ({
   display: "flex",
@@ -21,7 +21,7 @@ const cardStyle = (active: boolean): CSSProperties => ({
 
 const SHAPE_OPTIONS: ButtonShape[] = ["square", "soft", "pill"];
 
-const shapeButtonStyle = (active: boolean): CSSProperties => ({
+const shapeButtonStyle = (active: boolean, shape: ButtonShape): CSSProperties => ({
   padding: "8px 14px",
   fontSize: 12,
   fontWeight: 600,
@@ -29,23 +29,24 @@ const shapeButtonStyle = (active: boolean): CSSProperties => ({
   border: active ? "1px solid var(--border-selected)" : "1px solid var(--button-ghost-border)",
   background: active ? "var(--toolbar-pressed-bg)" : "var(--button-ghost-bg)",
   color: "var(--text-main)",
-  borderRadius: "var(--pi-btn-radius, 6px)",
+  borderRadius: BUTTON_SHAPE_RADIUS_PX[shape],
 });
 
-const previewButtonStyle = (kind: "primary" | "ghost" | "danger"): CSSProperties => ({
+const previewButtonStyle = (kind: "primary" | "ghost" | "danger", shape: ButtonShape): CSSProperties => ({
   padding: "9px 16px",
   fontSize: 13,
   fontWeight: 600,
   cursor: "default",
-  borderRadius: "var(--pi-btn-radius)",
-  border: kind === "ghost" ? "1px solid var(--pi-btn-ghost-border)" : "none",
+  borderRadius: BUTTON_SHAPE_RADIUS_PX[shape],
+  border: kind === "ghost" ? "1px solid var(--pi-btn-secondary-border, var(--pi-btn-ghost-border))" : "none",
   background:
     kind === "primary"
       ? "var(--pi-btn-primary-bg)"
       : kind === "danger"
         ? "var(--pi-btn-danger-bg)"
-        : "var(--pi-btn-ghost-bg)",
-  color: kind === "ghost" ? "var(--text-main)" : "var(--pi-btn-on-accent-text)",
+        : "var(--pi-btn-secondary-bg, var(--pi-btn-ghost-bg))",
+  color:
+    kind === "ghost" ? "var(--pi-btn-secondary-color, var(--text-main))" : "var(--pi-btn-primary-color, var(--pi-btn-on-accent-text))",
 });
 
 export default function ThemeTemplatesAdminPage() {
@@ -124,7 +125,7 @@ export default function ThemeTemplatesAdminPage() {
               <button
                 key={shape}
                 type="button"
-                style={shapeButtonStyle(buttonShape === shape)}
+                style={shapeButtonStyle(buttonShape === shape, shape)}
                 onClick={() => setButtonShape(shape)}
                 aria-pressed={buttonShape === shape}
               >
@@ -134,13 +135,13 @@ export default function ThemeTemplatesAdminPage() {
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingTop: 4 }}>
-            <button type="button" style={previewButtonStyle("primary")} disabled>
+            <button type="button" style={previewButtonStyle("primary", buttonShape)} disabled>
               Exportar CNC
             </button>
-            <button type="button" style={previewButtonStyle("ghost")} disabled>
+            <button type="button" style={previewButtonStyle("ghost", buttonShape)} disabled>
               Cancelar
             </button>
-            <button type="button" style={previewButtonStyle("danger")} disabled>
+            <button type="button" style={previewButtonStyle("danger", buttonShape)} disabled>
               Excluir
             </button>
           </div>

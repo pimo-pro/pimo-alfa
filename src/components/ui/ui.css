@@ -970,7 +970,57 @@
   visibility: visible;
 }
 
-/* Fase 4 — sistema de botoes unificado, so quando o template Pi esta ativo */
-[data-theme-template="pi"] .ui-button {
-  border-radius: var(--pi-btn-radius);
+/* Fase 4 — radius unificado so no template Pi (via data-pi-button-shape; sem --pi-btn-radius no DOM) */
+[data-theme-template="pi"][data-pi-button-shape="square"] .ui-button {
+  border-radius: 0px;
+}
+[data-theme-template="pi"][data-pi-button-shape="soft"] .ui-button {
+  border-radius: 8px;
+}
+[data-theme-template="pi"][data-pi-button-shape="pill"] .ui-button {
+  border-radius: 999px;
+}
+
+/* Fase 4 / Passo 3 — cores unificadas so no Pi (Alpha --ui-* intacto) */
+[data-theme-template="pi"] .ui-button--primary {
+  background: var(--pi-btn-primary-bg);
+  border-color: var(--pi-btn-primary-bg);
+  color: var(--pi-btn-primary-color);
+}
+
+[data-theme-template="pi"] .ui-button--secondary,
+[data-theme-template="pi"] .ui-button--ghost {
+  background: var(--pi-btn-secondary-bg);
+  border-color: var(--pi-btn-secondary-border, var(--pi-btn-ghost-border));
+  color: var(--pi-btn-secondary-color);
+}
+
+[data-theme-template="pi"] .ui-button--secondary:not(:disabled):hover,
+[data-theme-template="pi"] .ui-button--ghost:not(:disabled):hover {
+  background: var(--button-ghost-hover);
+  filter: none;
+}
+
+[data-theme-template="pi"] .ui-button--outline {
+  background: transparent;
+  border-color: var(--pi-btn-secondary-border, var(--pi-btn-ghost-border));
+  color: var(--pi-btn-secondary-color);
+}
+
+[data-theme-template="pi"] .ui-button--outline:not(:disabled):hover {
+  border-color: var(--pi-btn-primary-bg);
+  color: var(--pi-btn-primary-bg);
+}
+
+[data-theme-template="pi"] .ui-button--danger {
+  background: var(--pi-btn-danger-bg);
+  border-color: var(--pi-btn-danger-bg);
+  color: var(--pi-btn-primary-color);
+}
+
+[data-theme-template="pi"] .ui-button--link {
+  color: var(--pi-btn-primary-bg);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }

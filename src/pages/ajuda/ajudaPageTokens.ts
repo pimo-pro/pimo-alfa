@@ -4,7 +4,9 @@ export const AJUDA_PAGE_TOKENS = {
   border: "var(--card-border,rgba(255,255,255,0.07))",
   text: "var(--text-main,#e2e8f0)",
   muted: "var(--text-muted,#94a3b8)",
-  accent: "#3b82f6",
+  accent: "var(--blue-light,#3b82f6)",
+  accentBg: "var(--accent-button-bg,rgba(59,130,246,0.1))",
+  accentBd: "var(--accent-button-border,rgba(59,130,246,0.25))",
 } as const;
 
 export const ajudaPageFont =

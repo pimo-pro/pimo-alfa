@@ -56,24 +56,39 @@ export interface StoredTokenOverrides {
   light: TokenValueMap;
 }
 
-const EMPTY_OVERRIDES: StoredTokenOverrides = { dark: {}, light: {} };
+/** Espelho em memória: localStorage pode faltar (SSR / testes Node). */
+let memoryTokenOverrides: StoredTokenOverrides = { dark: {}, light: {} };
+
+function cloneOverrides(overrides: StoredTokenOverrides): StoredTokenOverrides {
+  return {
+    dark: { ...overrides.dark },
+    light: { ...overrides.light },
+  };
+}
 
 export function readStoredTokenOverrides(): StoredTokenOverrides {
   try {
     const stored = localStorage.getItem(TOKEN_OVERRIDES_STORAGE_KEY);
-    if (!stored) return EMPTY_OVERRIDES;
-    const parsed = JSON.parse(stored) as Partial<StoredTokenOverrides>;
-    return { dark: parsed.dark ?? {}, light: parsed.light ?? {} };
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<StoredTokenOverrides>;
+      memoryTokenOverrides = {
+        dark: { ...(parsed.dark ?? {}) },
+        light: { ...(parsed.light ?? {}) },
+      };
+      return cloneOverrides(memoryTokenOverrides);
+    }
   } catch {
-    return EMPTY_OVERRIDES;
+    /* ignore — cai no espelho em memória */
   }
+  return cloneOverrides(memoryTokenOverrides);
 }
 
 export function storeTokenOverrides(overrides: StoredTokenOverrides): void {
+  memoryTokenOverrides = cloneOverrides(overrides);
   try {
-    localStorage.setItem(TOKEN_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    localStorage.setItem(TOKEN_OVERRIDES_STORAGE_KEY, JSON.stringify(memoryTokenOverrides));
   } catch {
-    /* ignore */
+    /* ignore — memória continua válida */
   }
 }
 

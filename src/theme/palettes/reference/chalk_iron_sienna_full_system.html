@@ -1,0 +1,343 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.page{padding:1.5rem 0}
+
+.section{font-size:10px;font-weight:500;letter-spacing:.1em;color:var(--color-text-tertiary);text-transform:uppercase;margin:2rem 0 .8rem}
+.section:first-child{margin-top:0}
+
+/* TOKEN TABLE */
+.token-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;margin-bottom:.75rem}
+.tok{padding:.6rem .5rem;text-align:center}
+.tok-swatch{height:32px;border-radius:4px;margin-bottom:5px}
+.tok-name{font-size:9px;font-weight:500;color:var(--color-text-secondary);display:block;margin-bottom:1px}
+.tok-hex{font-size:8px;font-family:var(--font-mono);color:var(--color-text-tertiary);display:block}
+.tok+.tok{border-left:0.5px solid var(--color-border-tertiary)}
+
+/* SCALE */
+.scale-row{display:flex;border-radius:8px;overflow:hidden;margin-bottom:.5rem;border:0.5px solid var(--color-border-tertiary)}
+.sc{flex:1;height:28px;display:flex;align-items:center;justify-content:center}
+.sc span{font-size:7px;font-family:var(--font-mono)}
+
+/* USAGE RULES */
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+.rule-card{border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:.7rem .85rem}
+.rule-title{font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:5px}
+.rule-item{font-size:10px;color:var(--color-text-secondary);line-height:1.6;display:flex;align-items:flex-start;gap:5px}
+.rule-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+
+/* CSS VARS */
+.code-block{background:#131518;border-radius:8px;padding:1rem 1.1rem;margin-bottom:1rem;overflow-x:auto}
+.code-block pre{font-family:var(--font-mono);font-size:10px;line-height:1.8;color:#D8D4CE}
+.cm{color:#4a6a8a}.cv{color:#8B4A1C}.ck{color:#90aac8}.cs{color:#6a8a6a}
+
+/* MOCK SCREENS */
+.screens{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.screen{border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden}
+.screen-lbl{font-size:10px;color:var(--color-text-tertiary);padding:.5rem .8rem .3rem;background:var(--color-background-secondary)}
+
+/* light screen */
+.ls-bar{background:#131518;padding:7px 10px;display:flex;align-items:center;justify-content:space-between}
+.ls-logo{font-size:10px;font-weight:500;color:#D8D4CE;letter-spacing:.05em}
+.ls-nav{display:flex;gap:8px}
+.ls-nav a{font-size:8px;color:#D8D4CE90;text-decoration:none}
+.ls-nav a.act{color:#D8D4CE}
+
+.ls-sidebar{width:52px;background:#F0EDE8;border-right:0.5px solid #D8D4CE;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px;flex-shrink:0}
+.ls-icon{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.ls-icon.act{background:#1C4A7A15;border:0.5px solid #1C4A7A30}
+
+.ls-main{display:flex;flex:1}
+.ls-panel{width:90px;background:#F8F6F2;border-right:0.5px solid #D8D4CE;padding:7px}
+.ls-panel-title{font-size:7px;font-weight:500;color:#2C2E30;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.ls-item{padding:4px 5px;border-radius:3px;font-size:7px;color:#2C2E30;margin-bottom:2px;cursor:pointer}
+.ls-item.sel{background:#1C4A7A12;color:#1C4A7A;border-left:2px solid #1C4A7A}
+.ls-item.warn{border-left:2px solid #8B4A1C;color:#8B4A1C;background:#8B4A1C08}
+
+.ls-canvas{flex:1;background:#F0EDE8;padding:7px;position:relative}
+.ls-card{background:#fff;border:0.5px solid #D8D4CE;border-radius:4px;padding:6px 7px;margin-bottom:4px}
+.ls-card-title{font-size:7.5px;font-weight:500;color:#131518;margin-bottom:3px}
+.ls-stat{display:flex;gap:4px}
+.ls-pill{font-size:6.5px;padding:1px 5px;border-radius:2px}
+
+.ls-toolbar{background:#131518;padding:5px 8px;display:flex;align-items:center;gap:5px;border-top:0.5px solid #2C2E30}
+.tb-btn{height:18px;padding:0 7px;border-radius:2px;font-size:7.5px;font-weight:500;display:inline-flex;align-items:center}
+
+/* dark screen */
+.ds-bar{background:#0A0B0C;padding:7px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid #2C2E30}
+.ds-sidebar{width:52px;background:#0E0F11;border-right:0.5px solid #2C2E30;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:6px;flex-shrink:0}
+.ds-icon{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.ds-icon.act{background:#1C4A7A30;border:0.5px solid #1C4A7A50}
+.ds-panel{width:90px;background:#0A0B0C;border-right:0.5px solid #2C2E30;padding:7px}
+.ds-item{padding:4px 5px;border-radius:3px;font-size:7px;color:#D8D4CE90;margin-bottom:2px}
+.ds-item.sel{background:#1C4A7A25;color:#90B8E0;border-left:2px solid #1C4A7A}
+.ds-item.warn{border-left:2px solid #8B4A1C;color:#C8845A;background:#8B4A1C12}
+.ds-canvas{flex:1;background:#131518;padding:7px}
+.ds-card{background:#0E0F11;border:0.5px solid #2C2E30;border-radius:4px;padding:6px 7px;margin-bottom:4px}
+
+/* SEMANTIC */
+.sem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.sem{border-radius:8px;padding:.65rem .75rem;border:0.5px solid}
+.sem-name{font-size:10px;font-weight:500;margin-bottom:2px}
+.sem-hex{font-size:9px;font-family:var(--font-mono);opacity:.7}
+.sem-use{font-size:9px;margin-top:4px;opacity:.8;line-height:1.4}
+</style>
+
+<div class="page">
+
+<!-- ══ PALETTE TOKENS ══ -->
+<div class="section">١ — توكنات اللون الأساسية</div>
+<div class="token-grid">
+  <div class="tok">
+    <div class="tok-swatch" style="background:#F0EDE8;border:0.5px solid #D8D4CE"></div>
+    <span class="tok-name">--chalk</span>
+    <span class="tok-hex">#F0EDE8</span>
+  </div>
+  <div class="tok">
+    <div class="tok-swatch" style="background:#D8D4CE"></div>
+    <span class="tok-name">--chalk-dim</span>
+    <span class="tok-hex">#D8D4CE</span>
+  </div>
+  <div class="tok">
+    <div class="tok-swatch" style="background:#2C2E30"></div>
+    <span class="tok-name">--iron</span>
+    <span class="tok-hex">#2C2E30</span>
+  </div>
+  <div class="tok">
+    <div class="tok-swatch" style="background:#131518"></div>
+    <span class="tok-name">--iron-deep</span>
+    <span class="tok-hex">#131518</span>
+  </div>
+  <div class="tok">
+    <div class="tok-swatch" style="background:#1C4A7A"></div>
+    <span class="tok-name">--prussian</span>
+    <span class="tok-hex">#1C4A7A</span>
+  </div>
+  <div class="tok">
+    <div class="tok-swatch" style="background:#8B4A1C"></div>
+    <span class="tok-name">--sienna</span>
+    <span class="tok-hex">#8B4A1C</span>
+  </div>
+</div>
+
+<!-- ══ SCALE ══ -->
+<div class="section">٢ — مقياس الأزرق البروسي (٧ درجات)</div>
+<div class="scale-row">
+  <div class="sc" style="background:#EBF1F8"><span style="color:#1C4A7A">50</span></div>
+  <div class="sc" style="background:#C0D4EA"><span style="color:#1C4A7A">100</span></div>
+  <div class="sc" style="background:#90B8E0"><span style="color:#1C4A7A">200</span></div>
+  <div class="sc" style="background:#5A8CBF"><span style="color:#fff">400</span></div>
+  <div class="sc" style="background:#1C4A7A"><span style="color:#fff">600</span></div>
+  <div class="sc" style="background:#0F2D50"><span style="color:#90B8E0">800</span></div>
+  <div class="sc" style="background:#071A30"><span style="color:#5A8CBF">900</span></div>
+</div>
+
+<div class="section">٢ — مقياس السيينا الخام (٧ درجات)</div>
+<div class="scale-row">
+  <div class="sc" style="background:#F5EDE6"><span style="color:#8B4A1C">50</span></div>
+  <div class="sc" style="background:#E8CCBA"><span style="color:#8B4A1C">100</span></div>
+  <div class="sc" style="background:#D4A882"><span style="color:#5c2e0c">200</span></div>
+  <div class="sc" style="background:#B87040"><span style="color:#fff">400</span></div>
+  <div class="sc" style="background:#8B4A1C"><span style="color:#fff">600</span></div>
+  <div class="sc" style="background:#5C2E0C"><span style="color:#D4A882">800</span></div>
+  <div class="sc" style="background:#321806"><span style="color:#B87040">900</span></div>
+</div>
+
+<!-- ══ SEMANTIC ══ -->
+<div class="section">٣ — ألوان دلالية (status)</div>
+<div class="sem-grid">
+  <div class="sem" style="background:#1C4A7A12;border-color:#1C4A7A30">
+    <div class="sem-name" style="color:#1C4A7A">info / primary</div>
+    <div class="sem-hex" style="color:#1C4A7A">#1C4A7A</div>
+    <div class="sem-use" style="color:#0f2d50">أزرقة CTA، لينكات، تحديد</div>
+  </div>
+  <div class="sem" style="background:#2E5C3A12;border-color:#2E5C3A30">
+    <div class="sem-name" style="color:#2E5C3A">success</div>
+    <div class="sem-hex" style="color:#2E5C3A">#2E5C3A</div>
+    <div class="sem-use" style="color:#1a3a22">مكتمل، معتمد، جاهز</div>
+  </div>
+  <div class="sem" style="background:#8B4A1C12;border-color:#8B4A1C30">
+    <div class="sem-name" style="color:#8B4A1C">warning / accent</div>
+    <div class="sem-hex" style="color:#8B4A1C">#8B4A1C</div>
+    <div class="sem-use" style="color:#5c2e0c">CNC، تنبيه، إجراء مهم</div>
+  </div>
+  <div class="sem" style="background:#8B1C1C12;border-color:#8B1C1C30">
+    <div class="sem-name" style="color:#8B1C1C">danger</div>
+    <div class="sem-hex" style="color:#8B1C1C">#8B1C1C</div>
+    <div class="sem-use" style="color:#5c0c0c">خطأ، حذف، إيقاف</div>
+  </div>
+</div>
+
+<!-- ══ MOCK SCREENS ══ -->
+<div class="section">٤ — معاينة الواجهة</div>
+<div class="screens">
+
+  <!-- LIGHT -->
+  <div class="screen">
+    <div class="screen-lbl">فاتح — PIMO Editor</div>
+    <div class="ls-bar">
+      <span class="ls-logo">PIMO</span>
+      <div class="ls-nav">
+        <a class="act">مشاريع</a>
+        <a>مكتبة</a>
+        <a>تصدير</a>
+      </div>
+    </div>
+    <div style="display:flex;height:160px">
+      <div class="ls-sidebar">
+        <div class="ls-icon act">⬛</div>
+        <div class="ls-icon">☰</div>
+        <div class="ls-icon">⚙</div>
+      </div>
+      <div class="ls-main">
+        <div class="ls-panel">
+          <div class="ls-panel-title">المشاريع</div>
+          <div class="ls-item sel">خزانة A3</div>
+          <div class="ls-item">مطبخ كلاسيك</div>
+          <div class="ls-item warn">باب تأخر</div>
+          <div class="ls-item">طاولة سفرة</div>
+        </div>
+        <div class="ls-canvas">
+          <div class="ls-card">
+            <div class="ls-card-title">خزانة A3 · ٩٠×٢٤٠×٦٠</div>
+            <div class="ls-stat">
+              <span class="ls-pill" style="background:#1C4A7A15;color:#0f2d50;border:0.5px solid #1C4A7A30">TCN جاهز</span>
+              <span class="ls-pill" style="background:#2E5C3A15;color:#1a3a22;border:0.5px solid #2E5C3A30">معتمد</span>
+            </div>
+          </div>
+          <div class="ls-card">
+            <div class="ls-card-title">مطبخ كلاسيك · ٣.٢م</div>
+            <div class="ls-stat">
+              <span class="ls-pill" style="background:#8B4A1C15;color:#5c2e0c;border:0.5px solid #8B4A1C30">CNC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ls-toolbar">
+      <span class="tb-btn" style="background:#1C4A7A;color:#fff">تصدير CNC</span>
+      <span class="tb-btn" style="background:#8B4A1C;color:#fff">TCN</span>
+      <span class="tb-btn" style="border:0.5px solid #D8D4CE30;color:#D8D4CE">معاينة 3D</span>
+    </div>
+  </div>
+
+  <!-- DARK -->
+  <div class="screen" style="background:#0A0B0C">
+    <div class="screen-lbl" style="background:#0E0F11;border-bottom:0.5px solid #2C2E30;color:#D8D4CE60">داكن — PIMO Editor</div>
+    <div class="ds-bar">
+      <span class="ls-logo" style="color:#D8D4CE">PIMO</span>
+      <div class="ls-nav">
+        <a class="act" style="color:#D8D4CE">مشاريع</a>
+        <a style="color:#D8D4CE50">مكتبة</a>
+        <a style="color:#D8D4CE50">تصدير</a>
+      </div>
+    </div>
+    <div style="display:flex;height:160px">
+      <div class="ds-sidebar">
+        <div class="ds-icon act">⬛</div>
+        <div class="ds-icon" style="opacity:.4">☰</div>
+        <div class="ds-icon" style="opacity:.4">⚙</div>
+      </div>
+      <div style="display:flex;flex:1">
+        <div class="ds-panel">
+          <div style="font-size:7px;font-weight:500;color:#D8D4CE50;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">المشاريع</div>
+          <div class="ds-item sel">خزانة A3</div>
+          <div class="ds-item">مطبخ كلاسيك</div>
+          <div class="ds-item warn">باب تأخر</div>
+          <div class="ds-item">طاولة سفرة</div>
+        </div>
+        <div class="ds-canvas">
+          <div class="ds-card">
+            <div style="font-size:7.5px;font-weight:500;color:#D8D4CE;margin-bottom:3px">خزانة A3 · ٩٠×٢٤٠×٦٠</div>
+            <div style="display:flex;gap:4px">
+              <span class="ls-pill" style="background:#1C4A7A25;color:#90B8E0;border:0.5px solid #1C4A7A40">TCN</span>
+              <span class="ls-pill" style="background:#2E5C3A20;color:#6dbc88;border:0.5px solid #2E5C3A30">معتمد</span>
+            </div>
+          </div>
+          <div class="ds-card">
+            <div style="font-size:7.5px;font-weight:500;color:#D8D4CE;margin-bottom:3px">مطبخ كلاسيك · ٣.٢م</div>
+            <div style="display:flex;gap:4px">
+              <span class="ls-pill" style="background:#8B4A1C20;color:#C8845A;border:0.5px solid #8B4A1C30">CNC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#0A0B0C;padding:5px 8px;display:flex;align-items:center;gap:5px;border-top:0.5px solid #2C2E30">
+      <span class="tb-btn" style="background:#1C4A7A;color:#fff">تصدير CNC</span>
+      <span class="tb-btn" style="background:#8B4A1C;color:#fff">TCN</span>
+      <span class="tb-btn" style="border:0.5px solid #2C2E3080;color:#D8D4CE60">معاينة 3D</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CSS VARS ══ -->
+<div class="section">٥ — CSS Variables جاهزة للنسخ</div>
+<div class="code-block"><pre><span class="cs">/* Chalk & Iron + Sienna — PIMO Design System */</span>
+<span class="ck">:root</span> {
+  <span class="cs">/* Base */</span>
+  <span class="cm">--ci-chalk</span>:       <span class="cv">#F0EDE8</span>;
+  <span class="cm">--ci-chalk-dim</span>:   <span class="cv">#D8D4CE</span>;
+  <span class="cm">--ci-iron</span>:        <span class="cv">#2C2E30</span>;
+  <span class="cm">--ci-iron-deep</span>:   <span class="cv">#131518</span>;
+
+  <span class="cs">/* Accents */</span>
+  <span class="cm">--ci-prussian</span>:    <span class="cv">#1C4A7A</span>;
+  <span class="cm">--ci-prussian-lt</span>: <span class="cv">#90B8E0</span>;
+  <span class="cm">--ci-prussian-dk</span>: <span class="cv">#0F2D50</span>;
+  <span class="cm">--ci-sienna</span>:      <span class="cv">#8B4A1C</span>;
+  <span class="cm">--ci-sienna-lt</span>:   <span class="cv">#D4A882</span>;
+  <span class="cm">--ci-sienna-dk</span>:   <span class="cv">#5C2E0C</span>;
+
+  <span class="cs">/* Semantic */</span>
+  <span class="cm">--ci-success</span>:     <span class="cv">#2E5C3A</span>;
+  <span class="cm">--ci-danger</span>:      <span class="cv">#8B1C1C</span>;
+
+  <span class="cs">/* Surfaces (light) */</span>
+  <span class="cm">--ci-bg</span>:          <span class="cv">#F0EDE8</span>;
+  <span class="cm">--ci-bg-raised</span>:   <span class="cv">#F8F6F2</span>;
+  <span class="cm">--ci-bg-card</span>:     <span class="cv">#FFFFFF</span>;
+  <span class="cm">--ci-border</span>:      <span class="cv">#D8D4CE</span>;
+
+  <span class="cs">/* Surfaces (dark) */</span>
+  <span class="cm">--ci-dark-bg</span>:     <span class="cv">#131518</span>;
+  <span class="cm">--ci-dark-raised</span>: <span class="cv">#0E0F11</span>;
+  <span class="cm">--ci-dark-card</span>:   <span class="cv">#0A0B0C</span>;
+  <span class="cm">--ci-dark-border</span>: <span class="cv">#2C2E30</span>;
+}</pre></div>
+
+<!-- USAGE RULES -->
+<div class="section">٦ — قواعد الاستخدام</div>
+<div class="rules-grid">
+  <div class="rule-card">
+    <div class="rule-title">الأزرق البروسي — متى تستخدمه</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#1C4A7A"></div>أزرار CTA الرئيسية (تصدير، حفظ)</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#1C4A7A"></div>العنصر المحدد في القوائم</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#1C4A7A"></div>اللينكات والتبويبات النشطة</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#1C4A7A"></div>شريط التنقل العلوي (داكن)</div>
+  </div>
+  <div class="rule-card">
+    <div class="rule-title">السيينا الخام — متى تستخدمه</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#8B4A1C"></div>إجراءات CNC / TCN / تصدير</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#8B4A1C"></div>أزرار الأكسنت الثانوية</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#8B4A1C"></div>حالة "تنبيه" (تأخر، ينتظر)</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#8B4A1C"></div>خط الـ border-left للبطاقات المميزة</div>
+  </div>
+  <div class="rule-card">
+    <div class="rule-title">الطباشير والحديد — الأسطح</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#F0EDE8"></div>خلفية الصفحة الرئيسية دائماً chalk</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#D8D4CE"></div>الحدود والفواصل chalk-dim</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#2C2E30"></div>نص ثانوي، أيقونات خاملة</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#131518"></div>الشريط العلوي، نص رئيسي داكن</div>
+  </div>
+  <div class="rule-card">
+    <div class="rule-title">قواعد ثابتة</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#2E5C3A"></div>لا تستخدم الأبيض #FFF كخلفية صفحة</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#2E5C3A"></div>لا تمزج السيينا مع الأزرق في نفس البطاقة</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#2E5C3A"></div>النص على الأزرق دائماً chalk (#F0EDE8)</div>
+    <div class="rule-item"><div class="rule-dot" style="background:#2E5C3A"></div>hover = +10% opacity على اللون</div>
+  </div>
+</div>
+
+</div>

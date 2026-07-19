@@ -17,7 +17,7 @@
   --v4-text-muted:   #7d8590;
   --v4-text-subtle:  #484f58;
 
-  --v4-accent:       #3b82f6;
+  --v4-accent:       var(--blue-light, #3b82f6);
   --v4-accent-hover: #2563eb;
   --v4-accent-muted: rgba(59, 130, 246, 0.12);
   --v4-accent-ring:  rgba(59, 130, 246, 0.30);
@@ -68,14 +68,29 @@
   --v4-success: var(--status-done-color);
   --v4-warning: var(--status-progress-color);
   --v4-danger: var(--pi-btn-danger-bg, #f85149);
+}
 
-  --v4-radius-sm: var(--pi-btn-radius);
-  --v4-radius-md: var(--pi-btn-radius);
-  --v4-radius-lg: var(--pi-btn-radius);
+/* Radius v4 so no Pi, via data-pi-button-shape (nao herda --pi-btn-radius global) */
+[data-theme-template="pi"][data-pi-button-shape="square"] .v4-root {
+  --v4-radius-sm: 0px;
+  --v4-radius-md: 0px;
+  --v4-radius-lg: 0px;
+}
+[data-theme-template="pi"][data-pi-button-shape="soft"] .v4-root {
+  --v4-radius-sm: 8px;
+  --v4-radius-md: 8px;
+  --v4-radius-lg: 8px;
+}
+[data-theme-template="pi"][data-pi-button-shape="pill"] .v4-root {
+  --v4-radius-sm: 999px;
+  --v4-radius-md: 999px;
+  --v4-radius-lg: 999px;
 }
 
 [data-theme-template="pi"] .v4-item-preview__add-btn {
-  color: var(--pi-btn-on-accent-text, #fff);
+  background: var(--pi-btn-primary-bg);
+  color: var(--pi-btn-primary-color, #fff);
+  border-color: var(--pi-btn-primary-bg);
 }
 
 /* ── Fase 5: Alpha modo claro — v4 passa a acompanhar o tema ──

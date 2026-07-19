@@ -330,7 +330,7 @@ export default function ProjectProgress() {
             <div style={projectProgressStyles.statLabel}>Planejado</div>
           </div>
           <div style={projectProgressStyles.statBox}>
-            <div style={{ ...projectProgressStyles.statNumber, color: "#8b5cf6" }}>
+            <div style={{ ...projectProgressStyles.statNumber, color: "var(--blue-light, #3b82f6)" }}>
               {stats.completionPercent}%
             </div>
             <div style={projectProgressStyles.statLabel}>Conclusão</div>

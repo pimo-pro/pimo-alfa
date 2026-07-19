@@ -4,16 +4,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import type { ButtonShape, ThemeTemplateId } from "../theme/palettes/types";
 import { ALL_THEME_TOKENS } from "../theme/palettes/tokenList";
-import { PI_PALETTE_OVERRIDES } from "../theme/palettes/piPalette";
-import { BUTTON_SHAPE_RADIUS_PX, PI_BUTTON_SYSTEM_TOKENS } from "../theme/palettes/piButtonSystem";
+import { BUTTON_SHAPE_ATTR, PI_BUTTON_SYSTEM_TOKENS } from "../theme/palettes/piButtonSystem";
 import { getThemeTemplate, THEME_TEMPLATES } from "../theme/palettes/templateRegistry";
 import {
   readStoredButtonShape,
   readStoredThemeTemplate,
-  readStoredTokenOverrides,
   storeButtonShape,
   storeThemeTemplate,
 } from "../theme/palettes/themeTemplateStorage";
+import {
+  resolvePiPaletteForMode,
+  subscribePiTokenOverrides,
+} from "../theme/palettes/piTokenOverridesApi";
 import { useTheme } from "./ThemeContext";
 
 /**
@@ -34,18 +36,19 @@ function applyTemplateTokens(templateId: ThemeTemplateId, mode: "dark" | "light"
   for (const token of BUTTON_SYSTEM_TOKEN_NAMES) {
     root.style.removeProperty(`--${token}`);
   }
+  // Nunca deixar --pi-btn-radius no DOM (vaza para industrial via var(..., fallback)).
+  root.style.removeProperty("--pi-btn-radius");
 
   if (templateId === "alpha") return;
 
-  const basePalette = templateId === "pi" ? PI_PALETTE_OVERRIDES[mode] : {};
-  const customOverrides = readStoredTokenOverrides()[mode];
-  const merged = { ...basePalette, ...customOverrides };
+  // Merge Fase 6: piPalette ← ciSsotBridge (vazio) ← userOverrides
+  const merged = resolvePiPaletteForMode(mode);
 
   for (const [token, value] of Object.entries(merged)) {
     if (value) root.style.setProperty(`--${token}`, value);
   }
 
-  // Sistema de botões unificado (Fase 4) — só existe quando o Pi está ativo.
+  // Sistema de botões unificado (Fase 4) — cores só quando o Pi está ativo.
   if (templateId === "pi") {
     for (const [token, value] of Object.entries(PI_BUTTON_SYSTEM_TOKENS[mode])) {
       if (value) root.style.setProperty(`--${token}`, value);
@@ -57,11 +60,25 @@ function applyTemplateToDocument(templateId: ThemeTemplateId) {
   document.documentElement.setAttribute("data-theme-template", templateId);
 }
 
-function applyButtonShapeToDocument(shape: ButtonShape) {
+/** Remove atributo de shape e qualquer --pi-btn-radius residual (Alpha / troca de template). */
+function clearButtonShapeFromDocument() {
   const root = document.documentElement;
-  root.setAttribute("data-pi-button-shape", shape);
-  // Inofensivo para o Alpha: nenhuma regra do Alpha lê --pi-btn-radius.
-  root.style.setProperty("--pi-btn-radius", BUTTON_SHAPE_RADIUS_PX[shape]);
+  root.removeAttribute(BUTTON_SHAPE_ATTR);
+  root.style.removeProperty("--pi-btn-radius");
+}
+
+/**
+ * Shape só no Pi: atributo data-pi-button-shape para CSS gated.
+ * Não define --pi-btn-radius no <html> (industrial continua no fallback local).
+ */
+function applyButtonShapeToDocument(shape: ButtonShape, templateId: ThemeTemplateId) {
+  if (templateId !== "pi") {
+    clearButtonShapeFromDocument();
+    return;
+  }
+  const root = document.documentElement;
+  root.setAttribute(BUTTON_SHAPE_ATTR, shape);
+  root.style.removeProperty("--pi-btn-radius");
 }
 
 type ThemeTemplateContextValue = {
@@ -86,10 +103,17 @@ export function ThemeTemplateProvider({ children }: { children: ReactNode }) {
     storeThemeTemplate(template);
   }, [template, theme]);
 
+  // Fase 6: se a API de overrides gravar (editor futuro), reaplicar tokens sem remount.
   useEffect(() => {
-    applyButtonShapeToDocument(buttonShape);
+    return subscribePiTokenOverrides(() => {
+      applyTemplateTokens(template, theme);
+    });
+  }, [template, theme]);
+
+  useEffect(() => {
+    applyButtonShapeToDocument(buttonShape, template);
     storeButtonShape(buttonShape);
-  }, [buttonShape]);
+  }, [buttonShape, template]);
 
   const setTemplate = useCallback((next: ThemeTemplateId) => {
     setTemplateState(next);
