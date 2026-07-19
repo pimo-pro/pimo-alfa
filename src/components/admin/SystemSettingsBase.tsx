@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Panel from "../ui/Panel";
 import { useSettings } from "../../context/SettingsContext";
 import { getSettings, saveSettings, type SettingsSchema } from "../../core/settings/settingsService";
+import { useTheme } from "../../context/ThemeContext";
 import { PANEL_PRESETS } from "../../core/panel/panelConstants";
 import {
   AdminPageHeader,
@@ -50,6 +51,7 @@ function NumberField({
 export default function SystemSettingsBase() {
   const feedback = useAdminFeedback();
   const { settings, refreshSettings, updateSettings, validate } = useSettings();
+  const { setThemePreference } = useTheme();
   const { project } = useProject();
   const [draft, setDraft] = useState<SettingsSchema>(settings);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -71,6 +73,8 @@ export default function SystemSettingsBase() {
     setFieldErrors(nextErrors);
     const result = updateSettings(validation.normalized);
     if (result.success) {
+      // Bridge: geral.theme (dark|light|system) → ThemeContext / DOM / pimo-theme*
+      setThemePreference(validation.normalized.geral.theme);
       feedback.success("Configurações globais guardadas com sucesso.");
     } else {
       feedback.warning(result.errors[0] ?? "Configurações guardadas com ajustes.");
@@ -243,7 +247,9 @@ export default function SystemSettingsBase() {
             ) : null}
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tema</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Tema (claro / escuro) — não confundir com Templates Alpha/Pi em Temas (Aparência)
+            </span>
             <select
               className="input"
               value={draft.geral.theme}
@@ -256,7 +262,7 @@ export default function SystemSettingsBase() {
             >
               <option value="dark">Dark</option>
               <option value="light">Light</option>
-              <option value="system">System</option>
+              <option value="system">System (OS)</option>
             </select>
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
