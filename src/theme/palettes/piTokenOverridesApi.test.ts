@@ -14,6 +14,8 @@ import {
   hasCiScaleTokens,
   isCiSsotBridgeEmpty,
 } from "./ciTokenSsot";
+import { CI_CSS } from "./ciRemap";
+import { PI_BUTTON_SYSTEM_TOKENS } from "./piButtonSystem";
 
 describe("piTokenOverridesApi (Fase 6 + CI SSOT)", () => {
   beforeEach(() => {
@@ -25,13 +27,19 @@ describe("piTokenOverridesApi (Fase 6 + CI SSOT)", () => {
     expect(hasCiScaleTokens()).toBe(true);
   });
 
-  it("merge sem overrides: remap Alpha intacto + escalas CI disponíveis", () => {
+  it("merge sem overrides: remap Pi usa CI vars; escalas CI disponíveis", () => {
     const resolved = resolvePiPaletteForMode("dark");
-    expect(resolved["blue-light"]).toBe(PI_PALETTE_OVERRIDES.dark["blue-light"]);
-    expect(resolved["text-main"]).toBe(PI_PALETTE_OVERRIDES.dark["text-main"]);
+    expect(resolved["blue-light"]).toBe(CI_CSS.prussian600);
+    expect(resolved["text-main"]).toBe(CI_CSS.chalk);
     expect(resolved["ci-prussian-600"]).toBe(CI_PRUSSIAN_SCALE[600]);
     expect(resolved["ci-sienna-600"]).toBe(CI_SIENNA_SCALE[600]);
     expect(resolved["ci-prussian"]).toBe(CI_PRUSSIAN_SCALE[600]);
+    expect(resolved["blue-light"]).toBe(PI_PALETTE_OVERRIDES.dark["blue-light"]);
+  });
+
+  it("botões Pi usam CI vars no primary", () => {
+    expect(PI_BUTTON_SYSTEM_TOKENS.dark["pi-btn-primary-bg"]).toBe(CI_CSS.prussian600);
+    expect(PI_BUTTON_SYSTEM_TOKENS.light["pi-btn-danger-bg"]).toBe(CI_CSS.danger);
   });
 
   it("user overrides ganham sobre piPalette", () => {

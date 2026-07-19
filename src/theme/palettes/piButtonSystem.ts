@@ -1,4 +1,5 @@
 import type { ButtonShape, TemplatePaletteOverrides } from "./types";
+import { applyCiRemapToPalette } from "./ciRemap";
 
 /**
  * Fase 4 — sistema de botões unificado (só quando o template Pi está ativo).
@@ -7,10 +8,10 @@ import type { ButtonShape, TemplatePaletteOverrides } from "./types";
  * Radius: NÃO usa --pi-btn-radius no DOM — só data-pi-button-shape + CSS gated
  * (Passo 2), para não vazar para Alpha nem para estilos industriais.
  *
- * Consumidores CSS devem referenciar estes tokens apenas sob
- * [data-theme-template="pi"] — o Alpha continua com .button-primary / --ui-*.
+ * Hex SSOT remapeados para `var(--ci-*)` via ciRemap (aplicação visual CI).
+ * Consumidores CSS sob [data-theme-template="pi"]; Alpha usa .button-primary / --ui-*.
  */
-export const PI_BUTTON_SYSTEM_TOKENS: TemplatePaletteOverrides = {
+const PI_BUTTON_SYSTEM_HEX: TemplatePaletteOverrides = {
   dark: {
     "pi-btn-primary-bg": "#1C4A7A",
     "pi-btn-primary-color": "#F0EDE8",
@@ -37,6 +38,9 @@ export const PI_BUTTON_SYSTEM_TOKENS: TemplatePaletteOverrides = {
     "pi-btn-ghost-border": "#D8D4CE",
   },
 };
+
+export const PI_BUTTON_SYSTEM_TOKENS: TemplatePaletteOverrides =
+  applyCiRemapToPalette(PI_BUTTON_SYSTEM_HEX);
 
 /**
  * Raio por formato — usado em CSS gated (data-pi-button-shape) e no preview admin.

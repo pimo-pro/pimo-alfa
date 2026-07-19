@@ -1,4 +1,5 @@
 import type { TemplatePaletteOverrides } from "./types";
+import { applyCiRemapToPalette } from "./ciRemap";
 
 /**
  * Overrides de token do template Pi (Chalk / Iron / Sienna / Prussian).
@@ -14,8 +15,11 @@ import type { TemplatePaletteOverrides } from "./types";
  *
  * Cada valor aqui substitui, em runtime, o token equivalente de src/index.css — que
  * continua intacto e é exatamente o que o template Alpha usa.
+ *
+ * Aplicação CI: `PI_PALETTE_OVERRIDES` remapeia hex SSOT → `var(--ci-*)` (ver ciRemap.ts).
+ * Hex originais ficam em `PI_PALETTE_HEX_OVERRIDES` para auditoria / fallback.
  */
-export const PI_PALETTE_OVERRIDES: TemplatePaletteOverrides = {
+export const PI_PALETTE_HEX_OVERRIDES: TemplatePaletteOverrides = {
   dark: {
     // Paleta-base
     black: "#131518",
@@ -253,3 +257,7 @@ export const PI_PALETTE_OVERRIDES: TemplatePaletteOverrides = {
     "admin-card-border": "#D8D4CE",
   },
 };
+
+/** Remap Pi runtime: hex SSOT → `var(--ci-*)` (só template Pi; Alpha não lê isto). */
+export const PI_PALETTE_OVERRIDES: TemplatePaletteOverrides =
+  applyCiRemapToPalette(PI_PALETTE_HEX_OVERRIDES);
