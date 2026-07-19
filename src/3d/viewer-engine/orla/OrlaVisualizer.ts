@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { OrlaPreset, PieceOrlaConfig } from "../../../core/orla/orlaTypes";
 import { findOrlaPreset } from "../../../core/orla/orlaPresets";
 import { loadTextureAsync } from "../materials/textureCache";
+import { ORLA_VIEWER_RENDERING_ENABLED } from "./orlaViewerFlags";
 import {
   getActiveOrlaVisualRules,
   getOrlaEdgesForVisualRule,
@@ -43,16 +44,23 @@ type OrlaEdgeDef = {
 };
 
 /**
- * Visualização de Orla — fitas por aresta, filtradas por tipo de peça e regras em SystemSettings.
+ * Visualização de Orla — fitas por aresta.
+ * Com ORLA_VIEWER_RENDERING_ENABLED=false: apenas limpa meshes existentes (não cria).
  */
 export class OrlaVisualizer {
   private bridge: OrlaVisualBridge | null = null;
 
   bindBridge(bridge: OrlaVisualBridge | null): void {
-    this.bridge = bridge;
+    this.bridge = ORLA_VIEWER_RENDERING_ENABLED ? bridge : null;
   }
 
   syncBoxRoot(boxId: string, root: THREE.Object3D): void {
+    // Sempre remover meshes antigos — projetos guardados com orla 3D não devem crashar.
+    if (!ORLA_VIEWER_RENDERING_ENABLED) {
+      this.clearOrlaBands(root);
+      return;
+    }
+
     const bridge = this.bridge;
     if (!bridge) {
       this.clearOrlaBands(root);
@@ -96,7 +104,12 @@ export class OrlaVisualizer {
     root.traverse((node) => {
       const toRemove: THREE.Object3D[] = [];
       node.children.forEach((child) => {
-        if (child.userData?.isOrlaBand === true) toRemove.push(child);
+        if (
+          child.userData?.isOrlaBand === true ||
+          child.userData?.isOrlaEdgeOverlay === true
+        ) {
+          toRemove.push(child);
+        }
       });
       for (const child of toRemove) {
         child.removeFromParent();
@@ -119,6 +132,8 @@ export class OrlaVisualizer {
     rules: ReturnType<typeof getActiveOrlaVisualRules>,
     expectedKeys: Set<string>
   ): void {
+    if (!ORLA_VIEWER_RENDERING_ENABLED) return;
+
     mesh.geometry.computeBoundingBox();
     const bb = mesh.geometry.boundingBox;
     if (!bb) return;

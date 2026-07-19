@@ -3,7 +3,6 @@ import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import { listOfficialMaterials, resolveSeparadorMaterialForBox, resolveFrenteFixaMaterialForBox } from "../../../core/materials/materials.api";
 import { getViewerMaterialId } from "../../../core/materials/service";
-import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
 import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
 import WoodGrainLockToggle from "./WoodGrainLockToggle";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
@@ -33,7 +32,6 @@ export default function SelecionarMaterialSection({
     () => listOfficialMaterials().filter((material) => material.industrial && material.visual),
     []
   );
-  const orlaPresets = normalizeOrlaPresets(project.orlaPresets);
 
   if (!box) return null;
 
@@ -81,24 +79,6 @@ export default function SelecionarMaterialSection({
           lockWoodGrain={box.lockWoodGrain}
           onChange={(lock) => actions.setWorkspaceBoxLockWoodGrain(boxId, lock)}
         />
-      </section>
-
-      <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-          Orla
-        </div>
-        <select
-          className="select"
-          value={box.orlaPresetId ?? ""}
-          onChange={(e) => actions.setBoxOrlaPreset(boxId, e.target.value || null)}
-        >
-          <option value="">Sem orla</option>
-          {orlaPresets.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.nome}
-            </option>
-          ))}
-        </select>
       </section>
 
       {hasSeparadores && (

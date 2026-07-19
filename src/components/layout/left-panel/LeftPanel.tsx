@@ -9,7 +9,6 @@ import PainelModelosDaCaixa from "./PainelModelosDaCaixa";
 import { useUiStore } from "../../../stores/uiStore";
 import type { SavedProjectInfo } from "../../../context/projectTypes";
 import { InfoPanelContent } from "./InfoPanelContent";
-import OrlaSettingsPanel from "../../settings/orla/OrlaSettingsPanel";
 import { PlaceholderLeftPanel } from "./PlaceholderLeftPanel";
 import { PainelSala } from "./PainelSala";
 import { LeftPanelCalculadora } from "./LeftPanelCalculadora";
@@ -148,14 +147,13 @@ export default function LeftPanel({ activeTab = "home" }: LeftPanelProps) {
     );
   }
 
-  // Acessórios — catálogo de orlas V1
+  // Acessórios — catálogo de orlas no Viewer desativado (industrial/Admin mantém presets).
   if (resolvedTab === LEFT_TOOLBAR_IDS.ACESSORIOS) {
     return (
-      <div className="left-panel-content">
-        <div className="left-panel-scroll">
-          <OrlaSettingsPanel />
-        </div>
-      </div>
+      <PlaceholderLeftPanel
+        title="Acessórios"
+        description="A visualização e edição de ORLA no Viewer está temporariamente desativada. Presets e cálculo industrial continuam ativos em Admin → Ferragens."
+      />
     );
   }
 

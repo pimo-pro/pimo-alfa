@@ -1,3 +1,4 @@
+import { ORLA_VIEWER_RENDERING_ENABLED } from "../../../3d/viewer-engine/orla/orlaViewerFlags";
 import { useMemo, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
@@ -18,7 +19,7 @@ type BoxOrlaSectionProps = {
   boxNome: string;
 };
 
-export default function BoxOrlaSection({ boxId, boxNome }: BoxOrlaSectionProps) {
+function BoxOrlaSectionActive({ boxId, boxNome }: BoxOrlaSectionProps) {
   const { project, actions } = useProject();
   const presets = normalizeOrlaPresets(project.orlaPresets);
   const wsBox = project.workspaceBoxes.find((b) => b.id === boxId);
@@ -78,75 +79,68 @@ export default function BoxOrlaSection({ boxId, boxNome }: BoxOrlaSectionProps) 
               >
                 <button
                   type="button"
-                  onClick={() => setExpandedPiece((id) => (id === panelId ? null : panelId))}
+                  className="btn btn-ghost"
                   style={{
                     width: "100%",
+                    justifyContent: "space-between",
                     padding: "8px 10px",
-                    background: "var(--surface)",
-                    border: "none",
-                    textAlign: "left",
                     fontSize: 12,
-                    cursor: "pointer",
-                    color: "var(--text-main)",
                   }}
+                  onClick={() =>
+                    setExpandedPiece((prev) => (prev === panelId ? null : panelId))
+                  }
                 >
-                  {nome}
+                  <span>{nome || panelId}</span>
+                  <span>{expandedPiece === panelId ? "▾" : "▸"}</span>
                 </button>
                 {expandedPiece === panelId && (
-                  <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {ORLA_SIDES.map((side) => {
-                      const sc = config.sides[side];
-                      return (
-                        <div key={side} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 11, minWidth: 72, color: "var(--text-muted)" }}>
-                            {SIDE_LABELS[side]}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={sc.enabled}
-                            onChange={(e) =>
-                              actions.setPieceOrlaSide(panelId, side, { enabled: e.target.checked })
-                            }
-                          />
-                          <select
-                            className="select input-sm"
-                            style={{ flex: 1 }}
-                            disabled={!sc.enabled}
-                            value={sc.presetId ?? ""}
-                            onChange={(e) =>
-                              actions.setPieceOrlaSide(panelId, side, {
-                                presetId: e.target.value || null,
-                              })
-                            }
-                          >
-                            <option value="">—</option>
-                            {presets.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.nome}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
-                        Orla Junto (IDs de peças adjacentes, separados por vírgula)
-                      </div>
-                      <input
-                        className="input input-sm"
-                        style={{ width: "100%" }}
-                        placeholder="ex: id-lateral, id-prateleira"
-                        defaultValue={(config.orlaJunto ?? []).join(", ")}
-                        onBlur={(e) => {
-                          const partnerIds = e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean);
-                          actions.setPieceOrlaJunto(panelId, partnerIds);
+                  <div style={{ padding: "0 10px 10px", display: "grid", gap: 6 }}>
+                    {ORLA_SIDES.map((side) => (
+                      <label
+                        key={side}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 12,
                         }}
-                      />
-                    </div>
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!config.sides[side]?.enabled}
+                          onChange={(e) => {
+                            actions.setPieceOrlaSide(panelId, side, {
+                              enabled: e.target.checked,
+                              presetId:
+                                config.sides[side]?.presetId ??
+                                wsBox?.orlaPresetId ??
+                                presets[0]?.id ??
+                                null,
+                            });
+                          }}
+                        />
+                        <span style={{ minWidth: 72 }}>{SIDE_LABELS[side]}</span>
+                        <select
+                          className="select"
+                          style={{ flex: 1 }}
+                          value={config.sides[side]?.presetId ?? ""}
+                          disabled={!config.sides[side]?.enabled}
+                          onChange={(e) => {
+                            actions.setPieceOrlaSide(panelId, side, {
+                              presetId: e.target.value || null,
+                              enabled: true,
+                            });
+                          }}
+                        >
+                          <option value="">Preset…</option>
+                          {presets.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
                   </div>
                 )}
               </div>
@@ -156,4 +150,10 @@ export default function BoxOrlaSection({ boxId, boxNome }: BoxOrlaSectionProps) 
       )}
     </>
   );
+}
+
+/** UI de orla no Viewer — desativada enquanto não houver renderização 3D dedicada. */
+export default function BoxOrlaSection(props: BoxOrlaSectionProps) {
+  if (!ORLA_VIEWER_RENDERING_ENABLED) return null;
+  return <BoxOrlaSectionActive {...props} />;
 }

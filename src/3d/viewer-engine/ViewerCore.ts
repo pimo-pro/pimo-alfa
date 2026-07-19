@@ -1232,6 +1232,7 @@ export class ViewerCore {
   }
 
   bindOrlaBridge(bridge: Pick<OrlaVisualBridge, "getBoxOrlaConfig"> | null): void {
+    // Renderização 3D desligada: bridge null + sync limpa meshes antigos.
     this.orlaVisualizer.bindBridge(bridge);
     this.syncOrlaVisuals();
   }

@@ -35,6 +35,7 @@ import { runProjectRedo, runProjectUndo } from "./workspaceUndoRedoHandlers";
 import { buildBoxesWithCutList } from "../../../context/projectState";
 import { resolvePieceOrlaConfig } from "../../../core/orla/orlaCalculator";
 import { normalizeOrlaPresets } from "../../../core/orla/orlaPresets";
+import { ORLA_VIEWER_RENDERING_ENABLED } from "../../../3d/viewer-engine/orla/orlaViewerFlags";
 import { useSettings } from "../../../context/SettingsContext";
 import type { MouseMenuTarget } from "../../../ui/context-menu/ContextMenuEngine";
 import { LEFT_TOOLBAR_IDS } from "../left-toolbar/LeftToolbar";
@@ -776,33 +777,39 @@ const hasShownViewerReadyToastRef = useRef(false);
         projectRef.current.projectName ??
         undefined,
     });
-    core?.bindOrlaBridge?.({
-      getBoxOrlaConfig: (boxId) => {
-        const state = projectRef.current;
-        const wsBox = state.workspaceBoxes.find((b) => b.id === boxId);
-        const boxesWithCut = buildBoxesWithCutList(state);
-        const box = boxesWithCut.find((b) => b.id === boxId);
-        if (!box) return null;
-        const presets = normalizeOrlaPresets(state.orlaPresets);
-        const pieces = (box.cutList ?? []).map((item) => {
-          const panelId =
-            typeof item.metadata?.panelId === "string" && item.metadata.panelId.trim().length > 0
-              ? item.metadata.panelId
-              : item.id;
-          return {
-            pieceId: panelId,
-            panelType: item.tipo,
-            config: resolvePieceOrlaConfig(
-              panelId,
-              state.orlaPieces,
-              wsBox?.orlaPresetId,
-              presets
-            ),
-          };
-        });
-        return { boxId, pieces, presets };
-      },
-    });
+    if (ORLA_VIEWER_RENDERING_ENABLED) {
+      core?.bindOrlaBridge?.({
+        getBoxOrlaConfig: (boxId) => {
+          const state = projectRef.current;
+          const wsBox = state.workspaceBoxes.find((b) => b.id === boxId);
+          const boxesWithCut = buildBoxesWithCutList(state);
+          const box = boxesWithCut.find((b) => b.id === boxId);
+          if (!box) return null;
+          const presets = normalizeOrlaPresets(state.orlaPresets);
+          const pieces = (box.cutList ?? []).map((item) => {
+            const panelId =
+              typeof item.metadata?.panelId === "string" && item.metadata.panelId.trim().length > 0
+                ? item.metadata.panelId
+                : item.id;
+            return {
+              pieceId: panelId,
+              panelType: item.tipo,
+              config: resolvePieceOrlaConfig(
+                panelId,
+                state.orlaPieces,
+                wsBox?.orlaPresetId,
+                presets
+              ),
+            };
+          });
+          return { boxId, pieces, presets };
+        },
+      });
+    } else {
+      // Limpa meshes de orla de projetos antigos; sem criar novos.
+      core?.bindOrlaBridge?.(null);
+      core?.syncOrlaVisuals?.();
+    }
     const buildFinishBoxDims = (boxId: string) => {
       const state = projectRef.current;
       const wsBox = state.workspaceBoxes.find((b) => b.id === boxId);
