@@ -31,6 +31,39 @@ const TIPO_TO_COMPONENT_ID: Record<string, string> = {
   gaveta_traseira: "gaveta_traseira",
 };
 
+/**
+ * Ferragens de junta estrutura: contadas uma vez (cima/fundo).
+ * Laterais repetem as mesmas juntas fisicas — nao somar de novo.
+ */
+const JOINT_FERRAGEM_IDS = new Set(["cavilha_8mm", "cavilha_10mm", "parafuso_4x50"]);
+const JOINT_COUNT_PIECE_TIPOS = new Set(["cima", "fundo"]);
+
+/**
+ * Tipos vindos de gerarModeloIndustrial que ja existem em ferragens_default por peca.
+ * Somar os dois duplica quantidades no PDF ferragens_totais.
+ */
+const MODELO_TIPOS_COBERTOS_POR_PECA = new Set([
+  "suportes_prateleira",
+  "dobradicas",
+  "corredicas",
+]);
+
+function dedupeBoxesById(boxes: BoxModule[]): BoxModule[] {
+  const seen = new Set<string>();
+  const out: BoxModule[] = [];
+  for (const box of boxes ?? []) {
+    const id = String(box?.id ?? "").trim();
+    if (!id) {
+      out.push(box);
+      continue;
+    }
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(box);
+  }
+  return out;
+}
+
 export type IndustrialFerragemPdfRow = {
   caixa: string;
   peca: string;
@@ -108,8 +141,17 @@ function pushPieceFerragens(
   const defs = ct?.ferragens_default ?? [];
   if (defs.length === 0) return;
 
+  const pieceTipo = String(item.tipo ?? "");
+  const qtyMult = Math.max(1, item.quantidade ?? 1);
+
   for (const def of defs) {
-    const qtd =
+    if (
+      JOINT_FERRAGEM_IDS.has(def.ferragem_id) &&
+      !JOINT_COUNT_PIECE_TIPOS.has(pieceTipo)
+    ) {
+      continue;
+    }
+    const qtdBase =
       def.quantidade_fixa ??
       (def.quantidade_por_lado != null
         ? def.quantidade_por_lado * Math.max(1, def.aplicar_em?.length ?? 1)
@@ -118,7 +160,7 @@ function pushPieceFerragens(
       caixa: boxNome,
       peca,
       ferragem: ferragemLabel(def.ferragem_id, ferragemById),
-      qtd,
+      qtd: qtdBase * qtyMult,
       material,
       codigoIndustrial,
       shortCode,
@@ -136,9 +178,10 @@ export function buildIndustrialFerragensForProject(
   const ctById = Object.fromEntries(componentTypes.map((ct) => [ct.id, ct]));
   const ferragemById = new Map(ferragens.map((f) => [f.id, f]));
   const rows: IndustrialFerragemPdfRow[] = [];
+  const boxes = dedupeBoxesById(project.boxes ?? []);
 
   const items = buildCutlistItemsForIndustrialExport({
-    boxes: project.boxes,
+    boxes,
     rules: project.rules,
     materialId: project.materialId,
     projectName,
@@ -148,7 +191,7 @@ export function buildIndustrialFerragensForProject(
   });
 
   const boxNomeById = Object.fromEntries(
-    (project.boxes ?? []).map((b) => [b.id, b.nome?.trim() || b.id])
+    boxes.map((b) => [b.id, b.nome?.trim() || b.id])
   );
 
   for (const item of items) {
@@ -164,10 +207,12 @@ export function buildIndustrialFerragensForProject(
     );
   }
 
-  for (const box of project.boxes ?? []) {
+  // Complemento box-level (pes, calcos, div/sep). Nao repetir tipos ja cobertos por peca.
+  for (const box of boxes) {
     const boxNome = box.nome?.trim() || box.id;
     const modelo = gerarModeloIndustrial(box, project.rules);
     for (const f of modelo.ferragens) {
+      if (MODELO_TIPOS_COBERTOS_POR_PECA.has(f.tipo)) continue;
       rows.push({
         caixa: boxNome,
         peca: "—",
