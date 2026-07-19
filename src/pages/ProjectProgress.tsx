@@ -223,9 +223,9 @@ const STATUS_CONFIG: Record<string, {
         <span>Concluído</span>
       </span>
     ),
-    color: "#22c55e",
-    bgColor: "rgba(34, 197, 94, 0.1)",
-    borderColor: "rgba(34, 197, 94, 0.3)",
+    color: "var(--status-done-color, #22c55e)",
+    bgColor: "var(--status-done-bg, rgba(34, 197, 94, 0.1))",
+    borderColor: "var(--status-done-border, rgba(34, 197, 94, 0.3))",
   },
   "in-progress": {
     label: (
@@ -234,9 +234,9 @@ const STATUS_CONFIG: Record<string, {
         <span>Em Andamento</span>
       </span>
     ),
-    color: "#3b82f6",
-    bgColor: "rgba(59, 130, 246, 0.1)",
-    borderColor: "rgba(59, 130, 246, 0.3)",
+    color: "var(--blue-light, #3b82f6)",
+    bgColor: "var(--bg-selected, rgba(59, 130, 246, 0.1))",
+    borderColor: "var(--border-selected, rgba(59, 130, 246, 0.3))",
   },
   planned: {
     label: (
@@ -245,9 +245,9 @@ const STATUS_CONFIG: Record<string, {
         <span>Planejado</span>
       </span>
     ),
-    color: "#f59e0b",
-    bgColor: "rgba(245, 158, 11, 0.1)",
-    borderColor: "rgba(245, 158, 11, 0.3)",
+    color: "var(--status-progress-color, #f59e0b)",
+    bgColor: "var(--status-progress-bg, rgba(245, 158, 11, 0.1))",
+    borderColor: "var(--status-progress-border, rgba(245, 158, 11, 0.3))",
   },
 };
 
@@ -312,19 +312,19 @@ export default function ProjectProgress() {
         {/* Progress Stats */}
         <div style={projectProgressStyles.statsContainer}>
           <div style={projectProgressStyles.statBox}>
-            <div style={{ ...projectProgressStyles.statNumber, color: "#22c55e" }}>
+            <div style={{ ...projectProgressStyles.statNumber, color: "var(--status-done-color, #22c55e)" }}>
               {stats.completed}
             </div>
             <div style={projectProgressStyles.statLabel}>Concluído</div>
           </div>
           <div style={projectProgressStyles.statBox}>
-            <div style={{ ...projectProgressStyles.statNumber, color: "#3b82f6" }}>
+            <div style={{ ...projectProgressStyles.statNumber, color: "var(--blue-light, #3b82f6)" }}>
               {stats.inProgress}
             </div>
             <div style={projectProgressStyles.statLabel}>Em Andamento</div>
           </div>
           <div style={projectProgressStyles.statBox}>
-            <div style={{ ...projectProgressStyles.statNumber, color: "#f59e0b" }}>
+            <div style={{ ...projectProgressStyles.statNumber, color: "var(--status-progress-color, #f59e0b)" }}>
               {stats.planned}
             </div>
             <div style={projectProgressStyles.statLabel}>Planejado</div>

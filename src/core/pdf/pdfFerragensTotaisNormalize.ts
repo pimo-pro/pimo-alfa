@@ -14,6 +14,15 @@ import {
   PE_PLASTICO_ID,
   PE_PLASTICO_NOME,
 } from "../ferragens/pesPlasticoConfig";
+import {
+  aggregateCalcoRowsForPdf,
+  CALCO_MATERIAL,
+  loadCalcoConfig,
+} from "../ferragens/calcoConfig";
+import { aggregateOrlaRowsForFerragensTotaisPdf } from "../orla/orlaCalculator";
+import type { OrlaPreset } from "../orla/orlaTypes";
+import type { ProjectFerragemOrla } from "../orla/orlaTypes";
+import { normalizeOrlaPresets } from "../orla/orlaPresets";
 
 export const CORREDICA_LENGTHS_MM = [300, 350, 400, 450, 500, 550] as const;
 export const PARAFUSO_COSTA_SPACING_MM = 180;
@@ -22,6 +31,8 @@ const EM_DASH = "\u2014";
 const MULTIPLY = "\u00d7";
 const CORREDICA_LABEL = "Corredi\u00e7a";
 const DOBRADICA_LABEL = "Dobradi\u00e7a";
+/** Ref industrial oficial da dobradia principal (PDF / totais). */
+export const DOBRADICA_REF = "I-Sensys 8645i";
 const PE_REF_DEFAULT = "P\u00e9-Pl\u00e1stico";
 
 export function snapCorredicaLengthMm(depthMm: number): number {
@@ -75,6 +86,7 @@ type Bucket =
   | "cavilha"
   | "corredica"
   | "dobradica"
+  | "calco"
   | "suporte"
   | "parafuso_puxador"
   | "prego_costa"
@@ -94,6 +106,9 @@ function classifyFerragem(nome: string, ref: string): Bucket {
   }
   if (n.includes("dobradica") || r.startsWith("dobradica") || n === "dobradicas") {
     return "dobradica";
+  }
+  if (n.includes("calco") || r.startsWith("calco_")) {
+    return "calco";
   }
   if (n.includes("suporte") && n.includes("prateleira")) return "suporte";
   if (r === "suporte_prateleira" || n === "suportes_prateleira") return "suporte";
@@ -181,6 +196,10 @@ export type NormalizeFerragensTotaisInput = {
   >;
   boxes: BoxModule[];
   rules?: RulesConfig;
+  /** Orla automatica industrial (metros / PDF). */
+  ferragemOrla?: ProjectFerragemOrla | null;
+  orlaPresets?: OrlaPreset[];
+  projectMaterialId?: string;
 };
 
 function isPlaceholderDash(value: string): boolean {
@@ -200,8 +219,8 @@ function countCupsOnPanel(holes: PanelDrillHole[] | undefined): number {
 }
 
 /**
- * Contagem oficial de dobradiças para PDF/online (apresentacao).
- * Fonte: canecos Ø35 (holeType === "dobradica") nas pecas porta do cutlist.
+ * Contagem oficial de dobradias para PDF/online (apresentacao).
+ * Fonte: canecos 35 (holeType === "dobradica") nas pecas porta do cutlist.
  * Fallback: getNumDobradicas(alturaMm, rules) por folha.
  * Ignora gerarFerragens / ComponentTypes (nao usar como fonte).
  */
@@ -334,6 +353,9 @@ export function normalizeFerragensTotaisForPdf(
       case "dobradica":
         // Ignorar industrial (gerarFerragens + ComponentTypes). Fonte = canecos reais.
         break;
+      case "calco":
+        // Calcos: recalculados (Ref 00/03). Ignorar industrial.
+        break;
       case "cavilha":
         cavilhaQty += qty;
         break;
@@ -386,9 +408,19 @@ export function normalizeFerragensTotaisForPdf(
   if (dobradicaQty > 0) {
     result.push({
       material: DOBRADICA_LABEL,
-      ref: "8654i",
+      ref: DOBRADICA_REF,
       medida: "35mm",
       quantidade: dobradicaQty,
+    });
+  }
+
+  for (const calco of aggregateCalcoRowsForPdf(dobradicaQty, input.boxes ?? [], loadCalcoConfig())) {
+    result.push({
+      material: calco.material,
+      ref: calco.ref,
+      medida: calco.medida,
+      quantidade: calco.quantidade,
+      preco: calco.precoUnitario,
     });
   }
 
@@ -426,5 +458,41 @@ export function normalizeFerragensTotaisForPdf(
     result.push(row);
   }
 
-  return result.sort((a, b) => a.material.localeCompare(b.material, "pt"));
+  const orlaRows = aggregateOrlaRowsForFerragensTotaisPdf(
+    input.ferragemOrla,
+    normalizeOrlaPresets(input.orlaPresets),
+    input.boxes ?? [],
+    input.projectMaterialId
+  );
+  for (const row of orlaRows) {
+    result.push(row);
+  }
+
+  return sortFerragensTotaisRows(result);
+}
+
+/** Ordem de apresentacao: Dobradica seguida imediatamente dos Calcos; Orla no fim. */
+function sortFerragensTotaisRows(rows: FerragensTotaisArmazemRow[]): FerragensTotaisArmazemRow[] {
+  const priority = (r: FerragensTotaisArmazemRow): number => {
+    const m = normalizeKey(r.material);
+    if (m.startsWith("cavilha")) return 10;
+    if (m.startsWith("corredica")) return 20;
+    if (m.startsWith("dobradica")) return 30;
+    if (m === normalizeKey(CALCO_MATERIAL) || m.startsWith("calco")) {
+      if (r.ref === "00") return 31;
+      if (r.ref === "03") return 32;
+      return 33;
+    }
+    if (m.startsWith("parafuso")) return 40;
+    if (m.startsWith("suporte")) return 50;
+    if (m === normalizeKey(PE_PLASTICO_NOME) || m.startsWith("pe")) return 60;
+    // Orla industrial: medida "12.34 m"
+    if (/^\d+([.,]\d+)?\s*m$/i.test(String(r.medida ?? "").trim())) return 70;
+    return 100;
+  };
+  return [...rows].sort((a, b) => {
+    const d = priority(a) - priority(b);
+    if (d !== 0) return d;
+    return a.material.localeCompare(b.material, "pt") || a.ref.localeCompare(b.ref, "pt");
+  });
 }

@@ -86,6 +86,8 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
           rodapes: currentProject.rodapes ?? [],
           pieceObservacoes: currentProject.pieceObservacoes ?? {},
           industrialPieceEdits: currentProject.industrialPieceEdits,
+          ferragemOrla: currentProject.ferragemOrla,
+          orlaPresets: currentProject.orlaPresets,
         },
         materials: ctx.materials,
         componentTypes: ctx.componentTypes,

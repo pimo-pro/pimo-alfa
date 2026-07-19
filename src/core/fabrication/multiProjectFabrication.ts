@@ -630,6 +630,8 @@ export async function generateMultiProjectFabrication(
           rodapes: entry.state.rodapes ?? [],
           pieceObservacoes: proj.pieceObservacoes,
           industrialPieceEdits: entry.state.industrialPieceEdits ?? {},
+          ferragemOrla: proj.ferragemOrla ?? entry.state.ferragemOrla,
+          orlaPresets: proj.orlaPresets ?? entry.state.orlaPresets,
         },
         materials: industrialMaterialsSnapshot,
         componentTypes: exportComponentTypes,

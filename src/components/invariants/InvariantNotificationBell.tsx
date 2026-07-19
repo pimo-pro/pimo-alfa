@@ -12,7 +12,7 @@ const bellButtonStyle = {
   height: 29,
   padding: 0,
   border: "1px solid var(--border)",
-  borderRadius: "var(--radius)",
+  borderRadius: "var(--pi-btn-radius, var(--radius))",
   background: "var(--button-ghost-bg)",
   color: "var(--text-main)",
   cursor: "pointer" as const,

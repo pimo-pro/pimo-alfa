@@ -101,7 +101,7 @@ describe("pdfFerragensTotaisNormalize", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [
         { material: "Dobradica 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 100 },
-        { material: "dobradicas", ref: "—", medida: "—", quantidade: 50 },
+        { material: "dobradicas", ref: "", medida: "", quantidade: 50 },
       ],
       cutlistItems: [
         {
@@ -122,7 +122,12 @@ describe("pdfFerragensTotaisNormalize", () => {
     });
 
     const d = rows.find((r) => r.material === DOBRADICA);
-    expect(d).toMatchObject({ ref: "8654i", medida: "35mm", quantidade: 5 });
+    expect(d).toMatchObject({ ref: "I-Sensys 8645i", medida: "35mm", quantidade: 5 });
+    const calco00 = rows.find((r) => r.material === "Cal\u00e7o" && r.ref === "00");
+    expect(calco00).toMatchObject({ medida: "37mm", quantidade: 5, preco: 0 });
+    const di = rows.findIndex((r) => r.material === DOBRADICA);
+    const ci = rows.findIndex((r) => r.material === "Cal\u00e7o" && r.ref === "00");
+    expect(ci).toBe(di + 1);
   });
 
   it("ANTUNIS: 2+2+2+3+4 canecos = 13 dobradicas", () => {
@@ -145,7 +150,7 @@ describe("pdfFerragensTotaisNormalize", () => {
 
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [
-        { material: "Dobradiça 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 10 },
+        { material: "Dobradia 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 10 },
         { material: "dobradicas", ref: "", medida: "", quantidade: 10 },
       ],
       cutlistItems,
@@ -154,6 +159,27 @@ describe("pdfFerragensTotaisNormalize", () => {
     });
 
     expect(rows.find((r) => r.material === DOBRADICA)?.quantidade).toBe(13);
+    expect(rows.find((r) => r.material === "Cal\u00e7o" && r.ref === "00")?.quantidade).toBe(13);
+  });
+
+  it("calco Ref 03: 1 por porta em modulo Frente Fixa", () => {
+    const rows = normalizeFerragensTotaisForPdf({
+      ferragens: [],
+      cutlistItems: [],
+      boxes: [
+        {
+          id: "ff1",
+          baseCabinetId: "corner-direita-inferior-v2",
+          portaTipo: "porta_simples",
+          doorsLayer: [{ id: "d1" }, { id: "d2" }],
+        } as never,
+      ],
+    });
+    expect(rows.find((r) => r.material === "Cal\u00e7o" && r.ref === "03")).toMatchObject({
+      medida: "37mm",
+      quantidade: 2,
+      preco: 0,
+    });
   });
 
   it("fallback getNumDobradicas quando porta sem drillHoles", () => {
@@ -213,5 +239,56 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(pe?.quantidade).toBe(4);
     expect(pe?.preco).toBe(2.8);
     expect(rows.find((r) => r.material === DOBRADICA)).toBeUndefined();
+  });
+
+  it("inclui Orla em metros com material sem espessura", () => {
+    const rows = normalizeFerragensTotaisForPdf({
+      ferragens: [],
+      cutlistItems: [],
+      boxes: [
+        {
+          id: "b1",
+          nome: "Caixa",
+          material: "mdf_branco",
+          dimensoes: { largura: 600, altura: 720, profundidade: 560 },
+        } as BoxModule,
+      ],
+      projectMaterialId: "mdf_branco",
+      orlaPresets: [
+        {
+          id: "pvc",
+          nome: "PVC",
+          tipo: "PVC",
+          espessuraMm: 0.8,
+          larguraMm: 23,
+          cor: "#fff",
+          precoPorMetro: 1.5,
+        },
+      ],
+      ferragemOrla: {
+        linhas: [
+          {
+            id: "1",
+            presetId: "pvc",
+            presetNome: "PVC",
+            metros: 12.345,
+            custo: 18.5175,
+            boxId: "b1",
+            boxNome: "Caixa",
+            tipo: "normal",
+          },
+        ],
+        metrosTotal: 12.345,
+        custoTotal: 18.5175,
+        porBox: {},
+      },
+    });
+
+    const orla = rows.find((r) => r.medida === "12.35 m");
+    expect(orla).toBeDefined();
+    expect(orla?.quantidade).toBe(12.35);
+    expect(orla?.ref).toBe("PVC 0.8mm 23mm");
+    expect(orla?.material).not.toMatch(/\d+\s*mm/i);
+    expect(orla?.preco).toBe(1.5);
   });
 });

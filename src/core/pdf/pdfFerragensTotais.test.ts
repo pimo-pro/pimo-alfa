@@ -102,7 +102,7 @@ describe("buildFerragensTotaisPdf", () => {
       },
     ]);
     expect(rows).toEqual([
-      ["MDF Branco", "mdf_branco", "2800\u00d72070\u00d719 mm", "3", "", "__/__/__", ""],
+      ["MDF Branco", "mdf_branco", "2800\u00d72070\u00d719 mm", "3", "", "__/__/__", "", ""],
     ]);
   });
 
@@ -117,14 +117,14 @@ describe("buildFerragensTotaisPdf", () => {
       },
       {
         material: "Dobradi\u00e7a",
-        ref: "8654i",
+        ref: "I-Sensys 8645i",
         medida: "35mm",
         quantidade: 13,
       },
     ]);
     expect(rows).toEqual([
-      ["P\u00e9", "P\u00e9-Pl\u00e1stico", "100mm", "4", "11.20\u20ac", ""],
-      ["Dobradi\u00e7a", "8654i", "35mm", "13", "", ""],
+      ["P\u00e9", "P\u00e9-Pl\u00e1stico", "100mm", "4", "11.20\u20ac", "", ""],
+      ["Dobradi\u00e7a", "I-Sensys 8645i", "35mm", "13", "", "", ""],
     ]);
   });
 

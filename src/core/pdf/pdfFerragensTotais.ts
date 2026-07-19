@@ -34,6 +34,8 @@ type FerragensTotaisProject = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "pieceObservacoes"
+  | "ferragemOrla"
+  | "orlaPresets"
 >;
 
 /**
@@ -43,7 +45,7 @@ type FerragensTotaisProject = Pick<
  * Formatação: fontSize 9, espacamento original, celulas vazias "" (nao "—").
  */
 const HEAD_CHAPAS = [
-  ["Material", "Ref", "Medida", "Quantidade total", "Pre\u00e7o", "Data", "Respons\u00e1vel"],
+  ["Material", "Ref", "Medida", "Quantidade total", "Pre\u00e7o", "Data", "Respons\u00e1vel", "Coloprador"],
 ];
 const HEAD_FER = [
   [
@@ -53,6 +55,7 @@ const HEAD_FER = [
     "Quantidade total",
     "Pre\u00e7o total",
     "Respons\u00e1vel",
+    "Coloprador",
   ],
 ];
 
@@ -71,6 +74,7 @@ export function chapasRowsForFerragensTotaisPdf(materiaisChapas: FerragensTotais
     formatPrecoCell(r.preco),
     DATE_PLACEHOLDER,
     "",
+    "",
   ]);
 }
 
@@ -81,12 +85,19 @@ export function ferragensRowsForFerragensTotaisPdf(
   return rows.map((r) => {
     const precoTotal =
       r.preco != null && Number.isFinite(r.preco) ? r.preco * r.quantidade : undefined;
+    const isMetros = /^\d+([.,]\d+)?\s*m$/i.test(String(r.medida ?? "").trim());
+    const qty = isMetros
+      ? Number(r.quantidade).toFixed(2)
+      : Number.isFinite(r.quantidade) && !Number.isInteger(r.quantidade)
+        ? r.quantidade.toFixed(2)
+        : String(r.quantidade);
     return [
       r.material,
       r.ref,
       r.medida,
-      String(r.quantidade),
+      qty,
       formatPrecoCell(precoTotal),
+      "",
       "",
     ];
   });
@@ -127,6 +138,9 @@ export function buildFerragensTotaisPdf(
     cutlistItems,
     boxes,
     rules: project.rules,
+    ferragemOrla: project.ferragemOrla,
+    orlaPresets: project.orlaPresets,
+    projectMaterialId: project.materialId,
   });
 
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });

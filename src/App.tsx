@@ -19,6 +19,7 @@ import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { PendingImportedProjectEffect } from "./workspace/PendingImportedProjectEffect";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeTemplateProvider } from "./context/ThemeTemplateContext";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
@@ -461,6 +462,7 @@ function PermissionRoute({
 export default function App() {
   return (
     <ThemeProvider>
+      <ThemeTemplateProvider>
       <Routes>
         <Route element={<AppChromeLayout />}>
           <Route path="/login" element={<LoginPage />} />
@@ -579,6 +581,7 @@ export default function App() {
         <Route path="/:projectSlug" element={<LegacyApp />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ThemeTemplateProvider>
     </ThemeProvider>
   );
 }

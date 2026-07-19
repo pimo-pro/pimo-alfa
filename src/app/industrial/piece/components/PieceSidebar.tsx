@@ -203,7 +203,7 @@ export default function PieceSidebar({
 const actionBtnStyle: CSSProperties = {
   padding: '5px 8px',
   fontSize: 11,
-  borderRadius: 6,
+  borderRadius: 'var(--pi-btn-radius, 6px)',
   border: '1px solid var(--border, #334155)',
   background: 'rgba(255,255,255,0.06)',
   color: 'var(--text-main, #f8fafc)',

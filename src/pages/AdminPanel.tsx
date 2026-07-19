@@ -20,6 +20,7 @@ import LabelConfigPage from "../components/admin/LabelConfigPage";
 import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
 import IndustrialSectionsAdminPage from "../components/admin/IndustrialSectionsAdminPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
+import ThemeTemplatesAdminPage from "../components/admin/ThemeTemplatesAdminPage";
 import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import { useAuth } from "../auth/useAuth";
@@ -49,6 +50,7 @@ type AdminTab =
   | "Dimensões Técnicas (MC Overlay)"
   | "Projetos Salvos"
   | "Secções Industriais (Viewer)"
+  | "Temas (Aparência)"
   | "icons";
 
 type AdminMenuEntry =
@@ -89,6 +91,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
   { type: "group", label: "Sistema" },
+  { type: "item", id: "Temas (Aparência)", label: "Temas (Aparência)" },
   { type: "item", id: "icons", label: "Biblioteca de Ícones" },
 ];
 
@@ -114,6 +117,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Secções Industriais (Viewer)": "adminChecklist",
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
+  "Temas (Aparência)": "adminTools",
   icons: "projects",
 };
 
@@ -280,6 +284,8 @@ export default function AdminPanel() {
             <SavedProjectsAdminPage />
           ) : active === "Secções Industriais (Viewer)" ? (
             <IndustrialSectionsAdminPage />
+          ) : active === "Temas (Aparência)" ? (
+            <ThemeTemplatesAdminPage />
           ) : active === "Painel Referência" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <PainelReferencia />

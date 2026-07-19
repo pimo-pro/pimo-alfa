@@ -92,7 +92,7 @@ const leftButtonsWrapStyle: React.CSSProperties = {
 const buttonBaseStyle: React.CSSProperties = {
   padding: "8px 12px",
   border: "1px solid var(--button-ghost-border)",
-  borderRadius: 6,
+  borderRadius: "var(--pi-btn-radius, 6px)",
   fontSize: 12,
   fontWeight: 500,
   cursor: "pointer",

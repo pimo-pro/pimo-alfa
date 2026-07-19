@@ -9,6 +9,8 @@
       (function () {
         var t = localStorage.getItem("pimo-theme");
         document.documentElement.classList.add(t === "light" ? "theme-light" : "theme-dark");
+        var tpl = localStorage.getItem("pimo-theme-template");
+        document.documentElement.setAttribute("data-theme-template", tpl === "pi" ? "pi" : "alpha");
       })();
     </script>
 

@@ -40,7 +40,7 @@ import { regenerateLayersForBox } from "../services/boxLayersService";
 import { getDefaultOfficialMaterial } from "../core/materials/materials.api";
 import { createEmptyProjectMeasurements } from "../3d/viewer-engine/measurement/internalRulerTypes";
 import { createEmptyObjectGroups } from "../core/viewer/groupTypes";
-import { computeOrlaFerragem } from "../core/orla/orlaCalculator";
+import { computeOrlaFerragem, syncOrlaPiecesForProject } from "../core/orla/orlaCalculator";
 import { migrateProjectPieceObservacoes } from "../core/observacoes/ObservacoesService";
 import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import { normalizeDrawerPresets } from "../core/drawers/drawerPresets";
@@ -406,11 +406,30 @@ export const applyResultados = (state: ProjectState): ProjectState => {
       boxes.length > 0
         ? calcularResultadosBoxes(stateWithBoxes)
         : calcularProjeto(buildConfig(stateWithBoxes));
+
+    const remateItems = buildRemateCutlistItems(state.remates ?? [], boxesWithCutList);
+    const rodapeItems = buildRodapeCutlistItems(state.rodapes ?? [], boxesWithCutList);
+    const extraCutListItems = [...remateItems, ...rodapeItems];
+    const extrasByBoxId: Record<string, typeof remateItems> = {};
+    for (const item of extraCutListItems) {
+      const bid = item.boxId ?? "";
+      if (!bid) continue;
+      (extrasByBoxId[bid] ??= []).push(item);
+    }
+
+    const orlaPresets = normalizeOrlaPresets(state.orlaPresets);
+    const orlaPieces = syncOrlaPiecesForProject(
+      boxesWithCutList,
+      state.orlaPieces ?? {},
+      null,
+      extrasByBoxId
+    );
     const ferragemOrla = computeOrlaFerragem({
       boxes: boxesWithCutList,
-      orlaPresets: normalizeOrlaPresets(state.orlaPresets),
-      orlaPieces: state.orlaPieces ?? {},
+      orlaPresets,
+      orlaPieces,
       orlaJuntoPairs: state.orlaJuntoPairs ?? [],
+      extraCutListItems,
     });
     const pieceObservacoes = migrateProjectPieceObservacoes(
       state.pieceObservacoes ?? {},
@@ -418,6 +437,7 @@ export const applyResultados = (state: ProjectState): ProjectState => {
     );
     return {
       ...stateWithBoxes,
+      orlaPieces,
       resultados,
       ferragemOrla,
       pieceObservacoes,

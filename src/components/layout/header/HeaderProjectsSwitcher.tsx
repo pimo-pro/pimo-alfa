@@ -156,7 +156,7 @@ const menuButtonStyle: CSSProperties = {
   textAlign: "left",
   padding: "8px 10px",
   border: "none",
-  borderRadius: 6,
+  borderRadius: "var(--pi-btn-radius, 6px)",
   background: "transparent",
   color: "var(--text-main)",
   cursor: "pointer",

@@ -1089,6 +1089,8 @@ export function useGerarArquivoHandlers() {
             rodapes: project.rodapes ?? [],
             pieceObservacoes: proj.pieceObservacoes,
             industrialPieceEdits: project.industrialPieceEdits,
+            ferragemOrla: proj.ferragemOrla ?? project.ferragemOrla,
+            orlaPresets: proj.orlaPresets ?? project.orlaPresets,
           },
           materials: listIndustrialMaterialsSnapshot(),
           componentTypes,

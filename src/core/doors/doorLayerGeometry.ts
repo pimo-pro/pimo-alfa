@@ -78,6 +78,21 @@ export function applyDoorWidthWithPivot(
   return { width, posX: door.posX };
 }
 
+/** Limiar (mm) para considerar portas empilhadas (ex. caixa forno), nao ajuste vertical ligeiro. */
+export const VERTICAL_STACK_MIN_DELTA_MM = 40;
+
+/**
+ * Portas empilhadas na vertical (forno): centros com Δ >= limiar.
+ * Ajuste vertical / altura assimetrica em porta dupla (Δ pequeno) NAO activa este modo.
+ */
+export function hasVerticallyStackedDoors(
+  doorsLayer: Array<{ posY?: number }>
+): boolean {
+  if (doorsLayer.length <= 1) return false;
+  const ys = doorsLayer.map((d) => Math.round(Number(d.posY) || 0));
+  return Math.max(...ys) - Math.min(...ys) >= VERTICAL_STACK_MIN_DELTA_MM;
+}
+
 export function mergeDoorDimensionUpdate(
   door: DoorLayerItem,
   partial: Partial<DoorLayerItem> & { applyVerticalAdjustMm?: number },

@@ -283,8 +283,8 @@ export const settingsDefaults: SettingsSchema = {
     enableV3IndustrialAutoLayout: true,
   },
   portas: {
-    portaGapVerticalMm: 1,
-    portaGapHorizontalMm: 1,
+    portaGapVerticalMm: 2,
+    portaGapHorizontalMm: 2,
     portaGapDuplaMm: 2,
     portaPosZOffsetMm: 9,
   },

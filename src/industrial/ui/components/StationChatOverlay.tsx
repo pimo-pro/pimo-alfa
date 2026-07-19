@@ -140,7 +140,14 @@ export default function StationChatOverlay({
             fontSize: 11,
           }}
         />
-        <button type="submit" style={{ ...overlayBtnStyle, background: '#2563eb', color: '#fff' }}>
+        <button
+          type="submit"
+          style={{
+            ...overlayBtnStyle,
+            background: 'var(--pi-btn-primary-bg, #2563eb)',
+            color: 'var(--pi-btn-on-accent-text, #fff)',
+          }}
+        >
           Enviar
         </button>
       </form>
@@ -150,7 +157,7 @@ export default function StationChatOverlay({
 
 const overlayBtnStyle = {
   padding: '4px 8px',
-  borderRadius: 6,
+  borderRadius: 'var(--pi-btn-radius, 6px)',
   border: '1px solid var(--border, #334155)',
   background: 'rgba(255,255,255,0.04)',
   color: '#e2e8f0',

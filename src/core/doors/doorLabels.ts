@@ -1,4 +1,5 @@
 import type { DoorLayerItem } from "../../models/BoxLayers";
+import { VERTICAL_STACK_MIN_DELTA_MM } from "./doorLayerGeometry";
 
 export type DoorPositionKind = "dir" | "esq" | "cima" | "baixa";
 
@@ -17,8 +18,6 @@ const INDUSTRIAL_CODES: Record<DoorPositionKind, string> = {
 };
 
 const LEGACY_INDEX_FALLBACK: DoorPositionKind[] = ["dir", "esq", "cima", "baixa"];
-
-const VERTICAL_STACK_MIN_DELTA_MM = 40;
 
 function fromHingeSide(hingeSide?: DoorLayerItem["hingeSide"]): DoorPositionKind | null {
   if (hingeSide === "right") return "dir";

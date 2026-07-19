@@ -32,6 +32,8 @@ export async function buildBottomSectionPdfs(input: {
     | "rodapes"
     | "extractedPartsByBoxId"
     | "pieceObservacoes"
+    | "ferragemOrla"
+    | "orlaPresets"
   > & { industrialPieceEdits?: import("../industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore };
   materials: MaterialIndustrial[];
   componentTypes: ComponentType[];

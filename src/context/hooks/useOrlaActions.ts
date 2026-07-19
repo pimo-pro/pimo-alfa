@@ -4,6 +4,8 @@ import type { OrlaPreset, OrlaSideId } from "../../core/orla/orlaTypes";
 import { EMPTY_ORLA_SIDES } from "../../core/orla/orlaTypes";
 import { normalizeOrlaPresets } from "../../core/orla/orlaPresets";
 import { buildOrlaPiecesForBox } from "../../core/orla/orlaCalculator";
+import { buildRemateCutlistItems } from "../../core/remate/remateCutlist";
+import { buildRodapeCutlistItems } from "../../core/rodape/rodapeCutlist";
 import { applyResultados, appendChangelog, buildBoxesWithCutList } from "../projectState";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 
@@ -30,9 +32,18 @@ export function useOrlaActions(ctx: ProjectActionsExecutionContext): OrlaActions
             const interim = { ...prev, workspaceBoxes };
             const boxesWithCut = buildBoxesWithCutList(interim);
             const box = boxesWithCut.find((b) => b.id === boxId);
+            const remates = buildRemateCutlistItems(prev.remates ?? [], boxesWithCut).filter(
+              (i) => i.boxId === boxId
+            );
+            const rodapes = buildRodapeCutlistItems(prev.rodapes ?? [], boxesWithCut).filter(
+              (i) => i.boxId === boxId
+            );
             let orlaPieces = { ...prev.orlaPieces };
-            if (box && presetId) {
-              orlaPieces = buildOrlaPiecesForBox(box, presetId, orlaPieces);
+            if (box) {
+              orlaPieces = buildOrlaPiecesForBox(box, presetId, orlaPieces, [
+                ...remates,
+                ...rodapes,
+              ]);
             }
             const next = {
               ...interim,

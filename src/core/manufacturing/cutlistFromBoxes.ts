@@ -16,7 +16,7 @@ import {
   readLabelNumberFromMetadata,
 } from "../qrcode/panelLabelNumber";
 import { buildEffectiveDrillingRules, buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
-import { computeDoorVerticalGaps } from "../doors/doorLayerGeometry";
+import { computeDoorVerticalGaps, hasVerticallyStackedDoors } from "../doors/doorLayerGeometry";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaInferiorModel, computeCornerLayoutForBox, resolveCornerDoorGapSettings, buildCornerFixedFrontDowelHoles, buildCornerFixedFrontHingeHoles, stripCornerFixedFrontHingeHoles, stripCornerLateralHingeHoles, buildCornerDoorLayerItems, getCornerCabinetConfig, syncCornerWorkspaceBoxDoorsLayer } from "../cornerCabinet";
 import { mirrorDoorHingeHolesX } from "../cornerCabinet/doorHingeBuilder";
@@ -40,13 +40,7 @@ import { resolveDoorIndustrialLabel, resolveDoorLabel, resolveDoorPositionKind }
 import { assertCutlistIndustrialMaterials } from "../industrial/industrialValidation";
 import { buildCutlistRotationMetadata } from "./cutlistRotationMetadata";
 
-/** Portas empilhadas verticalmente (ex.: caixa forno): dobradiças usam a altura da folha, não a lateral inteira. */
-function hasVerticallyStackedDoors(doorsLayer: { posY?: number }[]): boolean {
-  if (doorsLayer.length <= 1) return false;
-  const centers = doorsLayer.map((d) => Math.round(Number(d.posY) || 0));
-  return new Set(centers).size > 1;
-}
-
+/** Portas empilhadas (ex. caixa forno): dobradiças usam a altura da folha, não a lateral inteira. */
 function resolveDoorOpeningHeightForHinges(
   doorPanelHeightMm: number,
   fullOpeningHeightMm: number,

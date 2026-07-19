@@ -40,7 +40,7 @@ export function industrialBtnStyle(active = false): CSSProperties {
   return {
     padding: '6px 10px',
     fontSize: 12,
-    borderRadius: 6,
+    borderRadius: 'var(--pi-btn-radius, 6px)',
     border: '1px solid var(--border, #334155)',
     background: active ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.04)',
     color: 'var(--text-main, #f8fafc)',
@@ -51,19 +51,20 @@ export function industrialBtnStyle(active = false): CSSProperties {
 export const industrialActionBtnStyle: CSSProperties = {
   padding: '5px 8px',
   fontSize: 11,
-  borderRadius: 6,
+  borderRadius: 'var(--pi-btn-radius, 6px)',
   border: '1px solid var(--border, #334155)',
   background: 'rgba(255,255,255,0.06)',
   color: 'var(--text-main, #f8fafc)',
   cursor: 'pointer',
 };
 
+/** "Confirmar" mantem o verde semantico no Pi (--pi-btn-confirm-bg) — nao vira Prussian. */
 export const industrialConfirmBtnStyle: CSSProperties = {
   padding: '10px 18px',
-  borderRadius: 6,
+  borderRadius: 'var(--pi-btn-radius, 6px)',
   border: 'none',
-  background: '#16a34a',
-  color: '#fff',
+  background: 'var(--pi-btn-confirm-bg, #16a34a)',
+  color: 'var(--pi-btn-on-accent-text, #fff)',
   fontWeight: 600,
   fontSize: 12,
   cursor: 'pointer',

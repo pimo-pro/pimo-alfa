@@ -186,16 +186,16 @@ export function DoorRulesAdminPage() {
 
       <Panel title="Folgas e offsets (settings globais)" description="Parâmetros de folgas e posicionamento no viewer.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-          {numField("Gap vertical (mm)", draft.portas.portaGapVerticalMm, (v) =>
+          {numField("Folga superior/inferior (mm)", draft.portas.portaGapVerticalMm, (v) =>
             setDraft((p) => ({ ...p, portas: { ...p.portas, portaGapVerticalMm: v } }))
           , { step: 0.1 })}
-          {numField("Gap horizontal (mm)", draft.portas.portaGapHorizontalMm, (v) =>
+          {numField("Folga lateral (mm)", draft.portas.portaGapHorizontalMm, (v) =>
             setDraft((p) => ({ ...p, portas: { ...p.portas, portaGapHorizontalMm: v } }))
           , { step: 0.1 })}
-          {numField("Gap porta dupla (mm)", draft.portas.portaGapDuplaMm, (v) =>
+          {numField("Folga entre portas duplas (mm)", draft.portas.portaGapDuplaMm, (v) =>
             setDraft((p) => ({ ...p, portas: { ...p.portas, portaGapDuplaMm: v } }))
           , { step: 0.1 })}
-          {numField("Offset posZ (mm)", draft.portas.portaPosZOffsetMm, (v) =>
+          {numField("Offset frontal posZ (mm)", draft.portas.portaPosZOffsetMm, (v) =>
             setDraft((p) => ({ ...p, portas: { ...p.portas, portaPosZOffsetMm: v } }))
           , { step: 0.1 })}
         </div>

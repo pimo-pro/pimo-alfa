@@ -969,3 +969,8 @@
   opacity: 1;
   visibility: visible;
 }
+
+/* Fase 4 — sistema de botoes unificado, so quando o template Pi esta ativo */
+[data-theme-template="pi"] .ui-button {
+  border-radius: var(--pi-btn-radius);
+}

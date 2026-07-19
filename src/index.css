@@ -39,6 +39,9 @@
   --space-toolbar-padding-y: 6px;
   --space-toolbar-padding-x: 10px;
   --size-toolbar-icon: 28px;
+
+  /* Fase 4 — formato do botao unificado (so relevante quando o template Pi esta ativo) */
+  --pi-btn-radius: 6px;
 }
 
 /* ========== TEMA ESCURO (padr�o) ========== */
@@ -2240,4 +2243,29 @@ body {
   .bottom-info-hub {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   FASE 4 — Sistema de botoes unificado (SOMENTE template Pi)
+   Nao altera nenhuma regra do Alpha acima; so soma especificidade
+   quando [data-theme-template="pi"] esta presente no <html>.
+   ============================================================ */
+[data-theme-template="pi"] .button,
+[data-theme-template="pi"] .button-ghost,
+[data-theme-template="pi"] .button-primary,
+[data-theme-template="pi"] .panel-button,
+[data-theme-template="pi"] .icon-button,
+[data-theme-template="pi"] .admin-panel-nav-btn,
+[data-theme-template="pi"] .viewer-toolbar button,
+[data-theme-template="pi"] .viewer-display-mode-button,
+[data-theme-template="pi"] .moveis-bubble__add,
+[data-theme-template="pi"] .moveis-counter-btn,
+[data-theme-template="pi"] .modal-close,
+[data-theme-template="pi"] .modal-action,
+[data-theme-template="pi"] .settings-back-to-admin-btn {
+  border-radius: var(--pi-btn-radius);
+}
+
+[data-theme-template="pi"] .button-primary {
+  color: var(--pi-btn-on-accent-text, #fff);
 }

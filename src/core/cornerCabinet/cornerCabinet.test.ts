@@ -49,19 +49,19 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
       doorFixedGapMm: gaps.portaGapDuplaMm,
     });
 
-    expect(layout.leftDoorWidthMm).toBe(448);
-    expect(layout.leftDoorHeightMm).toBe(718);
-    expect(layout.doorWidthMm).toBe(448);
-    expect(layout.doorHeightMm).toBe(718);
-    expect(layout.fixedFrontWidthMm).toBe(448);
+    expect(layout.leftDoorWidthMm).toBe(447);
+    expect(layout.leftDoorHeightMm).toBe(716);
+    expect(layout.doorWidthMm).toBe(447);
+    expect(layout.doorHeightMm).toBe(716);
+    expect(layout.fixedFrontWidthMm).toBe(447);
     expect(layout.fixedFrontHeightMm).toBe(720);
     expect(layout.door.hingeSide).toBe("left");
     expect(layout.fixedFront.posX).toBeLessThan(0);
     expect(layout.door.centerX).toBeGreaterThan(0);
-    expect(layout.fixedFront.posY).toBe(gaps.portaGapVerticalMm);
+    expect(layout.fixedFront.posY).toBe(0);
   });
 
-  it("exemplo 800×900×500: porta direita 398×898, frente fixa 398×900", () => {
+  it("exemplo 800×900×500: porta direita 397×896, frente fixa 397×900", () => {
     const layout = computeCornerLayoutMm({
       boxWidthMm: 800,
       boxHeightMm: 900,
@@ -74,13 +74,13 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
       doorFixedGapMm: gaps.portaGapDuplaMm,
     });
 
-    expect(layout.doorWidthMm).toBe(398);
-    expect(layout.doorHeightMm).toBe(898);
-    expect(layout.fixedFrontWidthMm).toBe(398);
+    expect(layout.doorWidthMm).toBe(397);
+    expect(layout.doorHeightMm).toBe(896);
+    expect(layout.fixedFrontWidthMm).toBe(397);
     expect(layout.fixedFrontHeightMm).toBe(900);
-    expect(layout.leftDoorWidthMm).toBe(398);
-    expect(layout.fixedFront.posY).toBe(1);
-    expect(layout.fixedFront.posX).toBe(-200);
+    expect(layout.leftDoorWidthMm).toBe(397);
+    expect(layout.fixedFront.posY).toBe(0);
+    expect(layout.fixedFront.posX).toBe(-199.5);
   });
 
   it("syncCornerWorkspaceBoxDoorsLayer corrige doorsLayer legado com 2 portas", () => {
@@ -150,7 +150,7 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     const synced = syncCornerWorkspaceBoxDoorsLayer(legacy);
     expect(synced.doorsLayer).toHaveLength(1);
     expect(synced.doorsLayer[0]?.hingeSide).toBe("left");
-    expect(synced.doorsLayer[0]?.width).toBe(448);
+    expect(synced.doorsLayer[0]?.width).toBe(447);
   });
 
   it("createWorkspaceBox gera 1 porta corner quando baseCabinetId está definido antes das layers", () => {
@@ -176,11 +176,11 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     expect(box.baseCabinetId).toBe(CORNER_DIREITA_INFERIOR_V2_ID);
     expect(box.doorsLayer).toHaveLength(1);
     expect(box.doorsLayer[0]?.hingeSide).toBe("left");
-    expect(box.doorsLayer[0]?.width).toBe(448);
-    expect(box.doorsLayer[0]?.height).toBe(718);
+    expect(box.doorsLayer[0]?.width).toBe(447);
+    expect(box.doorsLayer[0]?.height).toBe(716);
   });
 
-  it("manufacturing gera frente_fixa 448×720 e uma única porta direita (sem porta esquerda)", () => {
+  it("manufacturing gera frente_fixa 447×720 e uma única porta direita (sem porta esquerda)", () => {
     const box: BoxModule = {
       id: "box-canto-test",
       baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
@@ -194,11 +194,11 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     const paineis = gerarPaineisCorner(box, defaultRulesConfig);
     const ff = paineis.find((p) => p.tipo === "frente_fixa");
     const portas = paineis.filter((p) => p.tipo === "porta_simples" || p.tipo === "porta_dupla");
-    expect(ff?.largura_mm).toBe(448);
+    expect(ff?.largura_mm).toBe(447);
     expect(ff?.altura_mm).toBe(720);
     expect(portas).toHaveLength(1);
-    expect(portas[0]?.largura_mm).toBe(448);
-    expect(portas[0]?.altura_mm).toBe(718);
+    expect(portas[0]?.largura_mm).toBe(447);
+    expect(portas[0]?.altura_mm).toBe(716);
   });
 
   it("cutlist usa frente fixa do layout mesmo com doorsLayer legado de porta dupla", () => {
@@ -253,10 +253,10 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     const items = cutlistComPrecoFromBox(box, defaultRulesConfig);
     const ff = items.find((i) => i.tipo === "frente_fixa");
     const portas = items.filter((i) => i.tipo === "porta_simples" || i.tipo === "porta_dupla");
-    expect(ff?.dimensoes?.largura).toBe(448);
+    expect(ff?.dimensoes?.largura).toBe(447);
     expect(ff?.dimensoes?.altura).toBe(720);
     expect(portas).toHaveLength(1);
-    expect(portas[0]?.dimensoes?.largura).toBe(448);
+    expect(portas[0]?.dimensoes?.largura).toBe(447);
   });
 
   it("buildCornerDoorLayerItems devolve só a porta direita a partir do layout", () => {
@@ -292,8 +292,8 @@ describe("cornerCabinet — Canto Direita Inferior v2", () => {
     );
     expect(doors).toHaveLength(1);
     expect(doors[0]?.hingeSide).toBe("left");
-    expect(doors[0]?.width).toBe(448);
-    expect(doors[0]?.height).toBe(718);
+    expect(doors[0]?.width).toBe(447);
+    expect(doors[0]?.height).toBe(716);
     expect(doors[0]?.posX).toBeGreaterThan(0);
   });
 
@@ -548,7 +548,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     expect(box.panelIds?.frente_fixa).toBeTruthy();
     expect(box.doorsLayer).toHaveLength(1);
     expect(box.doorsLayer[0]?.hingeSide).toBe("left");
-    expect(box.doorsLayer[0]?.width).toBe(448);
+    expect(box.doorsLayer[0]?.width).toBe(447);
   });
 
   it("buildCornerDoorLayerItems v2 ignora doorsLayer legado (2 portas)", () => {
@@ -565,13 +565,13 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     );
     expect(doors).toHaveLength(1);
     expect(doors[0]?.hingeSide).toBe("left");
-    expect(doors[0]?.width).toBe(448);
-    expect(doors[0]?.height).toBe(718);
+    expect(doors[0]?.width).toBe(447);
+    expect(doors[0]?.height).toBe(716);
     expect(doors[0]?.cornerDireitaV2Viewer).toBe(true);
     expect(doors[0]?.viewerHingePivotXMm).toBeCloseTo(1, 5);
   });
 
-  it("manufacturing v2: frente_fixa 448×720 + 1 porta", () => {
+  it("manufacturing v2: frente_fixa 447×720 + 1 porta", () => {
     const box: BoxModule = {
       id: "box-v2-mfg",
       baseCabinetId: CORNER_DIREITA_INFERIOR_V2_ID,
@@ -586,7 +586,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     const paineis = gerarPaineisCorner(box, defaultRulesConfig);
     const ff = paineis.find((p) => p.tipo === "frente_fixa");
     const portas = paineis.filter((p) => p.tipo === "porta_simples");
-    expect(ff?.largura_mm).toBe(448);
+    expect(ff?.largura_mm).toBe(447);
     expect(ff?.altura_mm).toBe(720);
     expect(portas).toHaveLength(1);
   });
@@ -607,7 +607,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     const ff = items.find((i) => i.tipo === "frente_fixa");
     const portas = items.filter((i) => i.tipo === "porta_simples" || i.tipo === "porta_dupla");
     const latEsq = items.find((i) => i.tipo === "lateral_esquerda");
-    expect(ff?.dimensoes?.largura).toBe(448);
+    expect(ff?.dimensoes?.largura).toBe(447);
     expect(ff?.dimensoes?.altura).toBe(720);
     expect(portas).toHaveLength(1);
     expect(latEsq?.drillHoles?.some((h) => h.holeType === "dobradica")).toBe(false);
@@ -699,7 +699,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
     expect(holes.some((h) => Math.abs(h.y - yCenter100) < 0.01)).toBe(true);
   });
 
-  it("visual v2: frente fixa 448×720 mm no viewer", () => {
+  it("visual v2: frente fixa 447×720 mm no viewer", () => {
     const visual = computeCornerVisualLayout({
       widthM: 0.9,
       heightM: 0.72,
@@ -711,7 +711,7 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
       gapHorizontalMm: gaps.portaGapHorizontalMm,
       doorFixedGapMm: gaps.portaGapDuplaMm,
     });
-    expect(visual.fixedFront.size[0]).toBeCloseTo(0.448, 3);
+    expect(visual.fixedFront.size[0]).toBeCloseTo(0.447, 3);
     expect(visual.fixedFront.size[1]).toBeCloseTo(0.72, 3);
     expect(visual.fixedFront.pos[0]).toBeLessThan(0);
   });
@@ -728,10 +728,10 @@ describe("cornerCabinet — Canto Direita Inferior v2 (SSOT industrial)", () => 
       gapHorizontalMm: gaps.portaGapHorizontalMm,
       doorFixedGapMm: gaps.portaGapDuplaMm,
     });
-    expect(layout.fixedFrontWidthMm).toBe(448);
+    expect(layout.fixedFrontWidthMm).toBe(447);
     expect(layout.fixedFrontHeightMm).toBe(720);
-    expect(layout.doorWidthMm).toBe(448);
-    expect(layout.doorHeightMm).toBe(718);
+    expect(layout.doorWidthMm).toBe(447);
+    expect(layout.doorHeightMm).toBe(716);
   });
 });
 

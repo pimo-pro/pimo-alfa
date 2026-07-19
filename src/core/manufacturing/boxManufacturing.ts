@@ -13,6 +13,12 @@ import {
   loadPesPlasticoConfig,
   quantidadePesParaCaixa,
 } from "../ferragens/pesPlasticoConfig";
+import {
+  CALCO_00_ID,
+  CALCO_03_ID,
+  countPortasFrenteFixa,
+  loadCalcoConfig,
+} from "../ferragens/calcoConfig";
 import { computeBoxProfundidadeAlvoFromBoxLike } from "../box/boxDepthModel";
 import { resolveCostaAtivaForBox } from "../box/backPanelFlags";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
@@ -555,6 +561,7 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
 
   const ferragens: FerragemIndustrial[] = [];
   const peCfg = loadPesPlasticoConfig();
+  const calcoCfg = loadCalcoConfig();
   const tabela: Record<string, number> = {
     dobradicas: 2.5,
     corredicas: 19,
@@ -562,6 +569,8 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
     cavilha_10mm: 0.12,
     parafuso_4x50: 0.15,
     pe_plastico: peCfg.precoUnitario,
+    [CALCO_00_ID]: calcoCfg.refs["00"].precoUnitario,
+    [CALCO_03_ID]: calcoCfg.refs["03"].precoUnitario,
   };
   const addFerragem = (tipo: string, quantidade: number) => {
     if (quantidade <= 0) return;
@@ -580,6 +589,12 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
       0
     );
     addFerragem("dobradicas", totalDobradicas);
+    if (calcoCfg.refs["00"].ativo) {
+      addFerragem(CALCO_00_ID, totalDobradicas);
+    }
+    if (calcoCfg.refs["03"].ativo) {
+      addFerragem(CALCO_03_ID, countPortasFrenteFixa(box));
+    }
     if (peCfg.ativo) {
       addFerragem("pe_plastico", quantidadePesParaCaixa(box, rules));
     }
@@ -589,6 +604,12 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   if (box.portaTipo !== "sem_porta") {
     const dobradicas = box.portaTipo === "porta_dupla" ? 4 : 2;
     addFerragem("dobradicas", dobradicas);
+    if (calcoCfg.refs["00"].ativo) {
+      addFerragem(CALCO_00_ID, dobradicas);
+    }
+  }
+  if (calcoCfg.refs["03"].ativo) {
+    addFerragem(CALCO_03_ID, countPortasFrenteFixa(box));
   }
 
   if (box.gavetas > 0 && (box.drawersLayer?.length ?? 0) === 0) {
@@ -624,11 +645,14 @@ export function calcularCustoPainel(painel: PainelIndustrial, material = getMate
 
 export function calcularCustoFerragens(ferragens: FerragemIndustrial[]) {
   const peCfg = loadPesPlasticoConfig();
+  const calcoCfg = loadCalcoConfig();
   const tabela: Record<string, number> = {
     dobradicas: 2.5,
     corredicas: 19,
     suportes_prateleira: 0.9,
     pe_plastico: peCfg.precoUnitario,
+    [CALCO_00_ID]: calcoCfg.refs["00"].precoUnitario,
+    [CALCO_03_ID]: calcoCfg.refs["03"].precoUnitario,
   };
   return ferragens.reduce((total, item) => {
     if (Number.isFinite(item.custo)) {

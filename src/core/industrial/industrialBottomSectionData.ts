@@ -33,8 +33,15 @@ import {
   PE_PLASTICO_NOME,
 } from "../ferragens/pesPlasticoConfig";
 import {
+  aggregateCalcoRowsForPdf,
+  CALCO_MATERIAL,
+  countPortasFrenteFixa,
+  loadCalcoConfig,
+} from "../ferragens/calcoConfig";
+import {
   countDobradicasForPdf,
   countDobradicasPorCaixaForPdf,
+  DOBRADICA_REF,
 } from "../pdf/pdfFerragensTotaisNormalize";
 
 export type PecasTotaisRow = {
@@ -377,9 +384,36 @@ export function buildFerragensTotaisPdfData(
   const dobradicaTotal = countDobradicasForPdf(cutlistItems, boxes, project.rules);
   if (dobradicaTotal > 0) {
     for (const row of countDobradicasPorCaixaForPdf(cutlistItems, boxes, project.rules)) {
-      detalhe.push([row.caixa, "Dobradi\u00e7a", String(row.quantidade), "35mm", "8654i"]);
+      detalhe.push([row.caixa, "Dobradi\u00e7a", String(row.quantidade), "35mm", DOBRADICA_REF]);
     }
     porTipo.push(["Dobradi\u00e7a", String(dobradicaTotal)]);
+  }
+
+  const calcoCfg = loadCalcoConfig();
+  for (const calco of aggregateCalcoRowsForPdf(dobradicaTotal, boxes, calcoCfg)) {
+    porTipo.push([`${CALCO_MATERIAL} ${calco.ref}`, String(calco.quantidade)]);
+  }
+  for (const box of boxes) {
+    const n00 = countDobradicasPorCaixaForPdf(cutlistItems, [box], project.rules)[0]?.quantidade ?? 0;
+    if (calcoCfg.refs["00"].ativo && n00 > 0) {
+      detalhe.push([
+        box.nome?.trim() || box.id,
+        CALCO_MATERIAL,
+        String(n00),
+        "37mm",
+        "00",
+      ]);
+    }
+    const n03 = countPortasFrenteFixa(box);
+    if (calcoCfg.refs["03"].ativo && n03 > 0) {
+      detalhe.push([
+        box.nome?.trim() || box.id,
+        CALCO_MATERIAL,
+        String(n03),
+        "37mm",
+        "03",
+      ]);
+    }
   }
 
   // Pés de plástico: ferragem de catálogo (não industrial) — só apresentação online/PDF.

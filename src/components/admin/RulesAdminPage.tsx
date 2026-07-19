@@ -174,10 +174,10 @@ export default function RulesAdminPage() {
       )}
 
       <div style={{ maxWidth: 900, display: "flex", flexDirection: "column", gap: 20 }}>
-        <Panel title="Regras da Porta" description="Movido para o menu Admin → Regras da Porta.">
+        <Panel title="Regras da Porta" description="Configuração em Admin → Regras da Porta.">
           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            Ranges de altura, folgas, furação de caneco e fixação lateral estão centralizados em{" "}
-            <strong>Regras da Porta</strong> no painel de administração.
+            Folga lateral, folga superior/inferior, folga entre portas duplas, ranges de
+            dobradiças e furação estão em <strong>Admin → Regras da Porta</strong>.
           </div>
         </Panel>
 

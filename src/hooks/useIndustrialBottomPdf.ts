@@ -50,6 +50,8 @@ export function useIndustrialBottomPdf() {
         rodapes: project.rodapes,
         extractedPartsByBoxId: project.extractedPartsByBoxId,
         pieceObservacoes: project.pieceObservacoes,
+        ferragemOrla: project.ferragemOrla,
+        orlaPresets: project.orlaPresets,
       },
       componentTypes,
       ferragens,

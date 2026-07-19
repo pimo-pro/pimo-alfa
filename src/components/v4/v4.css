@@ -44,6 +44,66 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Fase 4: template Pi remapeia a paleta v4 para os tokens Pi ──
+   O Alpha nunca faz match deste seletor (mais especifico), entao o
+   bloco .v4-root acima continua a ser o unico usado fora do Pi. ── */
+[data-theme-template="pi"] .v4-root {
+  --v4-bg: var(--navy);
+  --v4-bg-overlay: var(--overlay-backdrop);
+  --v4-surface: var(--card-bg);
+  --v4-surface-2: var(--card-bg);
+  --v4-surface-3: var(--card-bg);
+  --v4-border: var(--border);
+  --v4-border-muted: var(--border);
+
+  --v4-text: var(--text-main);
+  --v4-text-muted: var(--text-muted);
+  --v4-text-subtle: var(--text-muted);
+
+  --v4-accent: var(--blue-light);
+  --v4-accent-hover: var(--blue-light);
+  --v4-accent-muted: var(--accent-button-bg);
+  --v4-accent-ring: var(--focus-ring);
+
+  --v4-success: var(--status-done-color);
+  --v4-warning: var(--status-progress-color);
+  --v4-danger: var(--pi-btn-danger-bg, #f85149);
+
+  --v4-radius-sm: var(--pi-btn-radius);
+  --v4-radius-md: var(--pi-btn-radius);
+  --v4-radius-lg: var(--pi-btn-radius);
+}
+
+[data-theme-template="pi"] .v4-item-preview__add-btn {
+  color: var(--pi-btn-on-accent-text, #fff);
+}
+
+/* ── Fase 5: Alpha modo claro — v4 passa a acompanhar o tema ──
+   O escuro do Alpha mantém a identidade GitHub-dark original
+   do .v4-root (não fica igual ao resto do Alpha, só reage ao claro). ── */
+.theme-light .v4-root {
+  --v4-bg: var(--navy);
+  --v4-bg-overlay: var(--overlay-backdrop);
+  --v4-surface: var(--panel-left-bg);
+  --v4-surface-2: var(--card-bg);
+  --v4-surface-3: var(--bg-item-hover);
+  --v4-border: var(--border);
+  --v4-border-muted: var(--divider);
+
+  --v4-text: var(--text-main);
+  --v4-text-muted: var(--text-muted);
+  --v4-text-subtle: var(--text-muted);
+
+  --v4-accent: var(--blue-light);
+  --v4-accent-hover: var(--blue-light);
+  --v4-accent-muted: var(--accent-button-bg);
+  --v4-accent-ring: var(--focus-ring);
+
+  --v4-success: var(--status-done-color);
+  --v4-warning: var(--status-progress-color);
+  --v4-danger: var(--ui-color-danger, #f85149);
+}
+
 /* ── Full-screen shell ──────────────────────────────────────── */
 .v4-shell {
   width: 100vw;
