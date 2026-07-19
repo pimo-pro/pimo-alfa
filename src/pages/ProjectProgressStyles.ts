@@ -77,7 +77,7 @@ export const projectProgressStyles = {
 
   progressFill: {
     height: "100%",
-    background: "linear-gradient(90deg, var(--blue-light, #3b82f6), #8b5cf6, var(--status-done-color, #22c55e))",
+    background: "linear-gradient(90deg, var(--blue-light, #3b82f6), var(--status-progress-color, #f59e0b), var(--status-done-color, #22c55e))",
     borderRadius: "4px",
     transition: "width 0.5s ease",
   },

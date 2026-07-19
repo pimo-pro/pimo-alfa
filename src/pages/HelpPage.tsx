@@ -1,7 +1,8 @@
 /**
  * PIMO Criativo — Página de Ajuda + System Documentation
  * Conteúdo baseado em: howItWorks.ts, specs.ts, features.ts, projectProgress
- * Língua: PT-PT | Tema: dark navy
+ * Língua: PT-PT
+ * Tema: herda dark/light do ThemeContext via documentElement (não forçar theme-dark).
  * Sem lógica industrial.
  */
 
@@ -12,7 +13,7 @@ import { AJUDA_WHATS_NEW_PATH } from "../routes/ajudaRoutes";
 import type { SystemDocCategoryId } from "../utils/loadSystemDoc";
 import { SYSTEM_DOC_CATEGORIES } from "../utils/loadSystemDoc";
 
-// ── Tokens ────────────────────────────────────────────────────────────────────
+// ── Tokens (CSS vars do tema; fallbacks = Alpha dark histórico) ───────────────
 
 const C = {
   bg:      "var(--navy,#0f172a)",
@@ -20,12 +21,15 @@ const C = {
   border:  "var(--card-border,rgba(255,255,255,0.07))",
   text:    "var(--text-main,#e2e8f0)",
   muted:   "var(--text-muted,#94a3b8)",
-  accent:  "#3b82f6",
-  green:   "#34d399",
-  amber:   "#fbbf24",
-  purple:  "#a78bfa",
-  pink:    "#f472b6",
-  danger:  "#f85149",
+  accent:  "var(--blue-light,#3b82f6)",
+  green:   "var(--status-done-color,#34d399)",
+  amber:   "var(--status-progress-color,#fbbf24)",
+  purple:  "var(--blue-light,#a78bfa)",
+  pink:    "var(--primary,#f472b6)",
+  danger:  "var(--ui-color-danger,#f85149)",
+  system:  "var(--primary,#38bdf8)",
+  accentBg: "var(--accent-button-bg,rgba(59,130,246,0.1))",
+  accentBd: "var(--accent-button-border,rgba(59,130,246,0.25))",
 };
 
 const font = "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
@@ -319,7 +323,7 @@ function StepList({ steps, alerts }: { steps:Step[]; alerts?:Alert[] }) {
     <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
       {steps.map((step,i)=>(
         <div key={i} style={{ display:"flex",gap:12,alignItems:"flex-start" }}>
-          <div style={{ width:24,height:24,borderRadius:"50%",flexShrink:0,background:"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.accent }}>{i+1}</div>
+          <div style={{ width:24,height:24,borderRadius:"50%",flexShrink:0,background:C.accentBg,border:`1px solid ${C.accentBd}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.accent }}>{i+1}</div>
           <div>
             <p style={{ margin:"1px 0 3px",fontSize:13,fontWeight:600,color:C.text,fontFamily:font }}>{step.title}</p>
             <p style={{ margin:0,fontSize:12,color:C.muted,lineHeight:1.65,fontFamily:font }}>{step.text}</p>
@@ -403,12 +407,12 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="theme-dark" style={{ minHeight:"100vh",background:C.bg,color:C.text,fontFamily:font }}>
+    <div style={{ minHeight:"100vh",background:C.bg,color:C.text,fontFamily:font }}>
       <div style={{ maxWidth: viewMode === "system" ? 1200 : 1080, margin:"0 auto", padding:"0 20px 80px" }}>
 
         {/* Header */}
         <div style={{ padding:"48px 0 36px",borderBottom:`1px solid ${C.border}`,marginBottom:36 }}>
-          <div style={{ display:"inline-flex",alignItems:"center",gap:6,marginBottom:12,padding:"3px 10px",borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",background: viewMode === "system" ? "rgba(56,189,248,0.1)" : "rgba(59,130,246,0.1)",color: viewMode === "system" ? "#38bdf8" : C.accent,border: viewMode === "system" ? "1px solid rgba(56,189,248,0.25)" : "1px solid rgba(59,130,246,0.25)" }}>
+          <div style={{ display:"inline-flex",alignItems:"center",gap:6,marginBottom:12,padding:"3px 10px",borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",background: viewMode === "system" ? "var(--bg-selected,rgba(56,189,248,0.1))" : C.accentBg,color: viewMode === "system" ? C.system : C.accent,border: viewMode === "system" ? "1px solid var(--border-selected,rgba(56,189,248,0.25))" : `1px solid ${C.accentBd}` }}>
             {viewMode === "system" ? "System Documentation" : "Documentação"}
           </div>
           <h1 style={{ fontSize:"clamp(1.7rem,4vw,2.3rem)",fontWeight:800,margin:"0 0 10px",letterSpacing:"-0.02em" }}>
@@ -471,9 +475,9 @@ export default function HelpPage() {
             <button
               type="button"
               onClick={() => openSystemDocs("drawers")}
-              style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,width:"100%",textAlign:"left",fontWeight:600,color:"#38bdf8",background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.22)",cursor:"pointer",fontFamily:font,marginBottom:4 }}
+              style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,width:"100%",textAlign:"left",fontWeight:600,color:C.system,background:"var(--bg-selected,rgba(56,189,248,0.08))",border:"1px solid var(--border-selected,rgba(56,189,248,0.22))",cursor:"pointer",fontFamily:font,marginBottom:4 }}
             >
-              <Ico d={P.engineering} size={12} color="#38bdf8"/>
+              <Ico d={P.engineering} size={12} color={C.system}/>
               Índice técnico
             </button>
             {SYSTEM_DOC_CATEGORIES.map((cat) => (

@@ -30,7 +30,7 @@ export default function AjudaWhatsNewPage() {
   }, []);
 
   return (
-    <div className="theme-dark" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: font }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: font }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 20px 80px" }}>
         <div style={{ padding: "48px 0 36px", borderBottom: `1px solid ${C.border}`, marginBottom: 36 }}>
           <div
@@ -45,9 +45,9 @@ export default function AjudaWhatsNewPage() {
               fontWeight: 700,
               letterSpacing: "0.07em",
               textTransform: "uppercase",
-              background: "rgba(59,130,246,0.1)",
+              background: C.accentBg,
               color: C.accent,
-              border: "1px solid rgba(59,130,246,0.25)",
+              border: `1px solid ${C.accentBd}`,
             }}
           >
             Documentação
