@@ -1,10 +1,10 @@
 /**
- * API Fase 6 — overrides de tokens Pi (sem UI).
+ * API Fase 6 — overrides de tokens Pi.
  *
  * Camadas de merge (prioridade crescente):
  * 1. `PI_PALETTE_OVERRIDES` — runtime atual (remap Alpha ? Pi)
- * 2. `CI_SSOT_TOKEN_BRIDGE` — SSOT futuro do HTML oficial (hoje vazio)
- * 3. `pimo-pi-token-overrides` — overrides de utilizador / editor futuro
+ * 2. `CI_SSOT_TOKEN_BRIDGE` — namespace `--ci-*` / escalas (não redefine tokens Alpha)
+ * 3. `pimo-pi-token-overrides` — overrides de utilizador / editor
  *
  * Alpha nunca passa por este merge (ThemeTemplateContext sai cedo).
  * Botões (`PI_BUTTON_SYSTEM_TOKENS`) continuam aplicados à parte no Context.
@@ -33,7 +33,7 @@ export interface PiPaletteMergeLayers {
 
 const OVERRIDE_LISTENERS = new Set<() => void>();
 
-/** Subscreve mudanças de overrides (para o Context reaplicar tokens sem UI ainda). */
+/** Subscreve mudanças de overrides (Context / editor reaplica tokens). */
 export function subscribePiTokenOverrides(listener: () => void): () => void {
   OVERRIDE_LISTENERS.add(listener);
   return () => {
@@ -67,6 +67,7 @@ export function getPiPaletteLayers(mode: ThemeMode): PiPaletteMergeLayers {
 /**
  * Merge das camadas Pi para um modo.
  * Ordem: piPalette ? ciSsotBridge ? userOverrides.
+ * CI só adiciona chaves `ci-*` — o remap Alpha permanece intacto.
  */
 export function resolvePiPaletteForMode(mode: ThemeMode): TokenValueMap {
   const layers = getPiPaletteLayers(mode);
@@ -77,7 +78,7 @@ export function resolvePiPaletteForMode(mode: ThemeMode): TokenValueMap {
   };
 }
 
-/** Explica de que camada veio o valor efetivo de um token (debug / editor futuro). */
+/** Explica de que camada veio o valor efetivo de um token (debug / editor). */
 export function resolvePiTokenSource(
   mode: ThemeMode,
   token: string

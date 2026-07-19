@@ -8,21 +8,30 @@ import {
   setPiTokenOverride,
 } from "./piTokenOverridesApi";
 import { PI_PALETTE_OVERRIDES } from "./piPalette";
-import { isCiSsotBridgeEmpty } from "./ciTokenSsot";
+import {
+  CI_PRUSSIAN_SCALE,
+  CI_SIENNA_SCALE,
+  hasCiScaleTokens,
+  isCiSsotBridgeEmpty,
+} from "./ciTokenSsot";
 
-describe("piTokenOverridesApi (Fase 6 — sem UI)", () => {
+describe("piTokenOverridesApi (Fase 6 + CI SSOT)", () => {
   beforeEach(() => {
     clearAllPiTokenOverrides();
   });
 
-  it("SSOT bridge está vazio (nenhuma escala aplicada)", () => {
+  it("SSOT bridge não redefine tokens Alpha (só namespace ci-*)", () => {
     expect(isCiSsotBridgeEmpty()).toBe(true);
+    expect(hasCiScaleTokens()).toBe(true);
   });
 
-  it("merge sem overrides = piPalette", () => {
+  it("merge sem overrides: remap Alpha intacto + escalas CI disponíveis", () => {
     const resolved = resolvePiPaletteForMode("dark");
     expect(resolved["blue-light"]).toBe(PI_PALETTE_OVERRIDES.dark["blue-light"]);
     expect(resolved["text-main"]).toBe(PI_PALETTE_OVERRIDES.dark["text-main"]);
+    expect(resolved["ci-prussian-600"]).toBe(CI_PRUSSIAN_SCALE[600]);
+    expect(resolved["ci-sienna-600"]).toBe(CI_SIENNA_SCALE[600]);
+    expect(resolved["ci-prussian"]).toBe(CI_PRUSSIAN_SCALE[600]);
   });
 
   it("user overrides ganham sobre piPalette", () => {
@@ -32,15 +41,21 @@ describe("piTokenOverridesApi (Fase 6 — sem UI)", () => {
     expect(resolvePiTokenSource("dark", "blue-light").layer).toBe("userOverrides");
   });
 
+  it("fonte de escala CI é ciSsotBridge (não override de utilizador)", () => {
+    expect(resolvePiTokenSource("light", "ci-prussian-50").layer).toBe("ciSsotBridge");
+    expect(resolvePiTokenSource("light", "ci-sienna-900").value).toBe(CI_SIENNA_SCALE[900]);
+  });
+
   it("rejeita token não editável", () => {
     setPiTokenOverride("dark", "not-a-real-token", "#000");
     expect(listOverriddenPiTokens("dark")).not.toContain("not-a-real-token");
   });
 
-  it("camadas expõem piPalette e userOverrides", () => {
+  it("camadas expõem piPalette, CI e userOverrides", () => {
     const layers = getPiPaletteLayers("light");
     expect(Object.keys(layers.piPalette).length).toBeGreaterThan(10);
-    expect(Object.keys(layers.ciSsotBridge).length).toBe(0);
+    expect(Object.keys(layers.ciSsotBridge).length).toBeGreaterThan(10);
+    expect(layers.ciSsotBridge["ci-prussian-50"]).toBe(CI_PRUSSIAN_SCALE[50]);
     expect(Object.keys(layers.userOverrides).length).toBe(0);
   });
 });

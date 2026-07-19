@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { ButtonShape, ThemeTemplateId } from "../theme/palettes/types";
 import { ALL_THEME_TOKENS } from "../theme/palettes/tokenList";
 import { BUTTON_SHAPE_ATTR, PI_BUTTON_SYSTEM_TOKENS } from "../theme/palettes/piButtonSystem";
+import { CI_TOKEN_NAMES } from "../theme/palettes/ciTokenSsot";
 import { getThemeTemplate, THEME_TEMPLATES } from "../theme/palettes/templateRegistry";
 import {
   readStoredButtonShape,
@@ -36,12 +37,15 @@ function applyTemplateTokens(templateId: ThemeTemplateId, mode: "dark" | "light"
   for (const token of BUTTON_SYSTEM_TOKEN_NAMES) {
     root.style.removeProperty(`--${token}`);
   }
+  for (const token of CI_TOKEN_NAMES) {
+    root.style.removeProperty(`--${token}`);
+  }
   // Nunca deixar --pi-btn-radius no DOM (vaza para industrial via var(..., fallback)).
   root.style.removeProperty("--pi-btn-radius");
 
   if (templateId === "alpha") return;
 
-  // Merge Fase 6: piPalette ← ciSsotBridge (vazio) ← userOverrides
+  // Merge: piPalette ← CI (--ci-* only) ← userOverrides  (Alpha names unchanged by CI)
   const merged = resolvePiPaletteForMode(mode);
 
   for (const [token, value] of Object.entries(merged)) {

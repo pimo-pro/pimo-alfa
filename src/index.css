@@ -2243,6 +2243,60 @@ body {
 }
 
 /* ============================================================
+   CI Design System — namespace --ci-* (SOMENTE template Pi)
+   SSOT: src/theme/palettes/ciTokenSsot.ts + HTML de referência.
+   Escalas definidas para consumo futuro; componentes ainda NÃO
+   referenciam estas vars (zero mudança visual no remap atual).
+   ============================================================ */
+[data-theme-template="pi"] {
+  /* Base */
+  --ci-chalk: #F0EDE8;
+  --ci-chalk-dim: #D8D4CE;
+  --ci-iron: #2C2E30;
+  --ci-iron-deep: #131518;
+
+  /* Accents (aliases = degraus 600 / 200 / 800) */
+  --ci-prussian: #1C4A7A;
+  --ci-prussian-lt: #90B8E0;
+  --ci-prussian-dk: #0F2D50;
+  --ci-sienna: #8B4A1C;
+  --ci-sienna-lt: #D4A882;
+  --ci-sienna-dk: #5C2E0C;
+
+  /* Semantic */
+  --ci-success: #2E5C3A;
+  --ci-danger: #8B1C1C;
+
+  /* Surfaces light / dark (catálogo; não substituem --navy etc.) */
+  --ci-bg: #F0EDE8;
+  --ci-bg-raised: #F8F6F2;
+  --ci-bg-card: #FFFFFF;
+  --ci-border: #D8D4CE;
+  --ci-dark-bg: #131518;
+  --ci-dark-raised: #0E0F11;
+  --ci-dark-card: #0A0B0C;
+  --ci-dark-border: #2C2E30;
+
+  /* Prussian 50–900 */
+  --ci-prussian-50: #EBF1F8;
+  --ci-prussian-100: #C0D4EA;
+  --ci-prussian-200: #90B8E0;
+  --ci-prussian-400: #5A8CBF;
+  --ci-prussian-600: #1C4A7A;
+  --ci-prussian-800: #0F2D50;
+  --ci-prussian-900: #071A30;
+
+  /* Sienna 50–900 */
+  --ci-sienna-50: #F5EDE6;
+  --ci-sienna-100: #E8CCBA;
+  --ci-sienna-200: #D4A882;
+  --ci-sienna-400: #B87040;
+  --ci-sienna-600: #8B4A1C;
+  --ci-sienna-800: #5C2E0C;
+  --ci-sienna-900: #321806;
+}
+
+/* ============================================================
    FASE 4 — Sistema de botoes unificado (SOMENTE template Pi)
    Radius via data-pi-button-shape — NAO usa --pi-btn-radius no DOM
    (evita vazamento para Alpha e estilos industriais).
