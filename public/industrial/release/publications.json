@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-19T17:52:31.321Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(theme): remove hex remap; Pi palette is CI-native",
+      "version": "v6.0719.1852"
+    },
+    {
       "publishedAt": "2026-07-19T00:50:16.975Z",
       "author": "pimo-pro",
       "commitMessage": "feat(industrial): orla automatica, calcos, folgas, Coloprador e ajuste vertical — Orla tipada (costa=0, gav_frent_int so topo, metros no PDF); calcos Ref 00/03 + I-Sensys 8645i; Coloprador; folgas porta 2mm; limiar stack vertical 40mm. Modulos: orlaIndustrialRules.ts | orlaCalculator.ts | orlaEdgeLengths.ts | calcoConfig.ts | pdfFerragensTotais.ts | pdfFerragensTotaisNormalize.ts | doorLayerGeometry.ts | settingsSchema.ts | projectState.ts | useOrlaActions.ts",
