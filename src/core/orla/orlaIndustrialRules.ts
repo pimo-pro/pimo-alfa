@@ -1,11 +1,14 @@
 /**
  * Regras industriais de ORLA por tipo de peca (SSOT metros / PDF).
- * Costa nunca recebe orla. gav_frent_int / laterais / costa de gaveta: so aresta superior.
- * Literais PT usam escapes Unicode quando necessario.
+ * Costa nunca recebe orla. Painùis < 16 mm nao recebem orla.
+ * Gavetas (laterais / costa / frente int): so aresta superior.
  */
 
 import type { OrlaSideId } from "./orlaTypes";
 import { EMPTY_ORLA_SIDES, type PieceOrlaConfig } from "./orlaTypes";
+
+/** Espessura minima de chapa (mm) para aplicar orla ù excepto costa (sempre sem orla). */
+export const MIN_ORLA_PANEL_THICKNESS_MM = 16;
 
 /** Normaliza tipo cutlist para matching. */
 export function normalizeOrlaPieceTipo(tipoRaw: string): string {
@@ -19,9 +22,51 @@ export function normalizeOrlaPieceTipo(tipoRaw: string): string {
 export function isCostaPieceTipo(tipoRaw: string): boolean {
   const t = normalizeOrlaPieceTipo(tipoRaw);
   if (!t.includes("costa")) return false;
-  // costa de gaveta (gav_costa) nao e a costa do modulo
-  if (t.includes("gav") || t.includes("gaveta")) return false;
+  // costa de gaveta (gav_costa / gaveta_traseira) nao e a costa do modulo
+  if (t.includes("gav") || t.includes("gaveta") || t.includes("traseira")) return false;
   return true;
+}
+
+/** True se a espessura da chapa permite orla industrial. */
+export function pieceAllowsOrlaByThickness(espessuraMm: number): boolean {
+  return Number.isFinite(espessuraMm) && espessuraMm + 1e-6 >= MIN_ORLA_PANEL_THICKNESS_MM;
+}
+
+function isDrawerTopOnlyTipo(t: string): boolean {
+  if (/gav_lat|gaveta_lat|gav_lat_dir|gav_lat_esq/.test(t)) return true;
+  if (t.includes("gaveta") && (t.includes("lateral") || t.includes("lat_"))) return true;
+  // costa / traseira de gaveta
+  if (/gav_costa|gaveta_costa|gaveta_traseira/.test(t)) return true;
+  if (t.includes("gaveta") && (t.includes("costa") || t.includes("traseira"))) return true;
+  // frente interior de gaveta
+  if (/gav_frent_int|gaveta_frent_int|gaveta_frente_int|frente_int/.test(t)) return true;
+  if (t.includes("gaveta") && t.includes("frente") && t.includes("int")) return true;
+  return false;
+}
+
+function isDrawerBottomTipo(t: string): boolean {
+  return t.includes("gav") && (t.includes("fundo") || t.includes("bottom") || t.includes("base"));
+}
+
+function isBoxSideOrDividerTipo(t: string): boolean {
+  if (t.includes("lateral") && !t.includes("gav")) return true;
+  if (t.includes("separador") || t === "sep") return true;
+  if (t.startsWith("div") || t.includes("divisor")) return true;
+  return false;
+}
+
+function isAllEdgesTipo(t: string): boolean {
+  if (t.includes("porta")) return true;
+  if (t.includes("frente_fixa")) return true;
+  if (t.includes("prateleira") || t.includes("shelf")) return true;
+  if (t === "cima" || t === "fundo" || t.includes("tampo")) return true;
+  if (t.includes("remate") || t.includes("rodape") || t.includes("roda_pe") || t.includes("roda-pe")) {
+    return true;
+  }
+  // frente de gaveta (exterior) ù todas as bordas; frente_int ja filtrada acima
+  if (/gaveta_frente|gav_frente|frente_gaveta/.test(t)) return true;
+  if (t.includes("gaveta") && t.includes("frente") && !t.includes("int")) return true;
+  return false;
 }
 
 /**
@@ -32,49 +77,20 @@ export function resolveOrlaSidesForPieceTipo(tipoRaw: string): OrlaSideId[] {
   const t = normalizeOrlaPieceTipo(tipoRaw);
   if (!t) return [];
 
-  // C) Costa do modulo ó nunca
+  // Costa do modulo ù nunca
   if (isCostaPieceTipo(t)) return [];
 
-  // Fundo de gaveta ó sem orla
-  if (t.includes("gav") && (t.includes("fundo") || t.includes("bottom") || t.includes("base"))) {
-    return [];
-  }
+  // Fundo de gaveta ù sem orla
+  if (isDrawerBottomTipo(t)) return [];
 
-  // B) Gavetas ó so aresta superior (mapeada a `front` no calculo de metros)
-  if (
-    /gav_lat|gaveta_lat|gav_lat_dir|gav_lat_esq/.test(t) ||
-    (t.includes("gaveta") && (t.includes("lateral") || t.includes("lat_")))
-  ) {
-    return ["front"];
-  }
-  if (/gav_costa|gaveta_costa/.test(t) || (t.includes("gaveta") && t.includes("costa"))) {
-    return ["front"];
-  }
-  if (/gav_frent_int|gaveta_frent_int|frente_int/.test(t)) {
-    return ["front"];
-  }
+  // Gavetas: so aresta superior (mapeada a `front` no calculo de metros)
+  if (isDrawerTopOnlyTipo(t)) return ["front"];
 
-  // Laterais da caixa / sep / div ó frente e tras
-  if (t.includes("lateral") || t.includes("separador") || t.startsWith("div") || t.includes("divisor")) {
-    return ["front", "back"];
-  }
+  // Laterais da caixa / sep / div ù frente e tras
+  if (isBoxSideOrDividerTipo(t)) return ["front", "back"];
 
-  // A) Todas as bordas
-  if (
-    t.includes("porta") ||
-    t.includes("frente_fixa") ||
-    t.includes("prateleira") ||
-    t.includes("shelf") ||
-    t === "cima" ||
-    t === "fundo" ||
-    t.includes("tampo") ||
-    t.includes("remate") ||
-    t.includes("rodape") ||
-    /gaveta_frente|gav_frente|frente_gaveta/.test(t) ||
-    (t.includes("gaveta") && t.includes("frente") && !t.includes("int"))
-  ) {
-    return ["front", "back", "left", "right"];
-  }
+  // Todas as bordas (cima, fundo, porta, prateleira, remates, frente gaveta, ù)
+  if (isAllEdgesTipo(t)) return ["front", "back", "left", "right"];
 
   // Default pecas de caixa: todas as bordas (excepto costa ja filtrada)
   return ["front", "back", "left", "right"];
@@ -83,8 +99,12 @@ export function resolveOrlaSidesForPieceTipo(tipoRaw: string): OrlaSideId[] {
 export function buildPieceOrlaConfigForTipo(
   tipoRaw: string,
   presetId: string,
-  previous?: PieceOrlaConfig
+  previous?: PieceOrlaConfig,
+  espessuraMm?: number
 ): PieceOrlaConfig | null {
+  if (isCostaPieceTipo(tipoRaw)) return null;
+  if (espessuraMm != null && !pieceAllowsOrlaByThickness(espessuraMm)) return null;
+
   const sidesToEnable = resolveOrlaSidesForPieceTipo(tipoRaw);
   if (sidesToEnable.length === 0) return null;
   const sides = EMPTY_ORLA_SIDES();
@@ -97,21 +117,28 @@ export function buildPieceOrlaConfigForTipo(
   };
 }
 
-/** Remove espessura do nome de material (ex. "MDF Branco 19mm" -> "MDF Branco"). */
+/** Remove espessura do nome de material (ex. "MDF Branco 19mm" / "MDF Branco 19" -> "MDF Branco"). */
 export function stripMaterialThicknessLabel(label: string): string {
   const multiply = "[\u00d7xX]";
   return String(label ?? "")
     .replace(new RegExp(`\\s*\\d+([.,]\\d+)?\\s*${multiply}\\s*\\d+([.,]\\d+)?\\s*mm\\b`, "gi"), "")
     .replace(/\s*\d+([.,]\d+)?\s*mm\b/gi, "")
+    .replace(/\s+\d+([.,]\d+)?\s*$/g, "")
     .replace(new RegExp(`\\s*${multiply}\\s*$`, "g"), "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-/** Ref de orla para PDF: nome + espessura + largura. */
-export function formatOrlaRefForPdf(nome: string, espessuraMm: number, larguraMm: number): string {
+/** Ref de orla para PDF: nome + espessura (sem largura). */
+export function formatOrlaRefForPdf(nome: string, espessuraMm: number, _larguraMm?: number): string {
   const n = String(nome ?? "").trim() || "Orla";
+  // Se o nome ja inclui a espessura (ex. "PVC 0.8ù23 mm"), extrair base + espessura do preset
+  const cleaned = n
+    .replace(/\s*\d+([.,]\d+)?\s*[\u00d7xX]\s*\d+([.,]\d+)?\s*mm\b/gi, "")
+    .replace(/\s*\d+([.,]\d+)?\s*mm\b/gi, "")
+    .replace(/\s*\d+([.,]\d+)?\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   const e = Number.isFinite(espessuraMm) ? espessuraMm : 0.8;
-  const l = Number.isFinite(larguraMm) ? larguraMm : 23;
-  return `${n} ${e}mm ${l}mm`.replace(/\s+/g, " ").trim();
+  return `${cleaned || "Orla"} ${e}mm`.replace(/\s+/g, " ").trim();
 }

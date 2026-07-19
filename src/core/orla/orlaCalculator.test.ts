@@ -85,7 +85,7 @@ describe("orlaCalculator industrial", () => {
     expect(cleared.p1).toBeUndefined();
   });
 
-  it("PDF aggregate: metros, material sem espessura, ref com mm", () => {
+  it("PDF aggregate: metros, material sem espessura, ref nome+espessura", () => {
     const items = [piece("p1", "porta_simples", { largura: 1000, altura: 500 })];
     const box = boxWith(items);
     const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {});
@@ -106,9 +106,28 @@ describe("orlaCalculator industrial", () => {
     expect(rows[0]!.material).not.toMatch(/19\s*mm/i);
     expect(rows[0]!.quantidade).toBeCloseTo(3, 2); // 2*(1000+500)/1000
     expect(rows[0]!.medida).toMatch(/3\.00 m/);
-    expect(rows[0]!.ref).toMatch(/0\.8mm/);
-    expect(rows[0]!.ref).toMatch(/23mm/);
+    expect(rows[0]!.ref).toBe("Branco PVC 0.8mm");
+    expect(rows[0]!.ref).not.toMatch(/23mm/);
     expect(rows[0]!.preco).toBe(1.25);
+  });
+
+  it("gaveta_traseira so topo; nao mistura com costa do modulo", () => {
+    const items = [
+      piece("c1", "costa", { largura: 600, altura: 720 }),
+      piece("t1", "gaveta_traseira", { largura: 480, altura: 120, profundidade: 16 }),
+    ];
+    const box = boxWith(items);
+    const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {});
+    expect(orlaPieces.c1).toBeUndefined();
+    expect(orlaPieces.t1?.sides.front.enabled).toBe(true);
+    expect(orlaPieces.t1?.sides.back.enabled).toBe(false);
+    const ferragem = computeOrlaFerragem({
+      boxes: [{ ...box, cutList: items }],
+      orlaPresets: [PRESET],
+      orlaPieces,
+      orlaJuntoPairs: [],
+    });
+    expect(ferragem.metrosTotal).toBeCloseTo(0.48, 3);
   });
 
   it("inclui remate extra no calculo", () => {

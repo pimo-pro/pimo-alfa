@@ -6,7 +6,7 @@ import {
 } from "../cutlayout/cutLayoutEngine";
 import type { CutLayoutResult } from "../cutlayout/cutLayoutTypes";
 import {
-  getDefaultCncLayoutOptions,
+  getFastCncLayoutOptions,
   getSheetDefinitionFromSettings,
 } from "../cnc/cncPipeline";
 import {
@@ -45,8 +45,9 @@ export type ChapasRealSummary = {
 };
 
 /**
- * Contagem de chapas alinhada ao pipeline TCN:
- * 1 nesting por material+espessura, opções CNC default, label do grupo.
+ * Contagem de chapas alinhada ao agrupamento TCN (material + espessura).
+ * Usa opções CNC "fast" na thread principal — as metaheurísticas PRO bloqueariam o browser.
+ * O nesting PRO/TCN continua no worker via buildCncBundlesPerThickness.
  */
 export function computeChapasReal(
   items: CutListItemComPreco[],
@@ -70,7 +71,7 @@ export function computeChapasReal(
   const groupKeys = sortMaterialThicknessGroupKeys(groups.keys(), groups, materials);
 
   const layoutOptions = {
-    ...getDefaultCncLayoutOptions(sheetDef),
+    ...getFastCncLayoutOptions(sheetDef),
     kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
     groupByThicknessOnly: true as const,
     sheetLargura_mm: sheetDef.largura_mm,

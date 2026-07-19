@@ -65,7 +65,8 @@ export default function OrlaSettingsPanel() {
     <aside className="panel-content panel-content--side">
       <div className="section-title">Orlas — Catálogo</div>
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
-        Presets de orla disponíveis no projeto. Usados no caixote, peças e ferragem.
+        Catálogo Admin (nome, espessura, largura, preço/m). Aplicação automática por tipo de peça
+        nas caixas com orla seleccionada; totais em metros no PDF ferragens_totais.
       </p>
 
       <Panel title="Presets">

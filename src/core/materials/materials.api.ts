@@ -32,7 +32,7 @@ export const INDUSTRIAL_SHEET_HF_MM = 2070;
 /** Fallback da costa (10 mm, MDF Branco) quando a família do corpo não tem variante 10 mm. */
 export const COSTA_INDUSTRIAL_CANONICAL_ID = "mdf_branco-10";
 
-/** Espessura fixa da peça COSTA (mm). */
+/** Espessura fixa da peça COSTA (mm). Costa nunca recebe orla (ver orlaIndustrialRules). */
 export const COSTA_FIXED_THICKNESS_MM = 10;
 
 /** Espessura fixa das laterais e traseira de gaveta (mm). */

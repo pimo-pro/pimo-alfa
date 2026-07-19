@@ -14,6 +14,7 @@ import {
   buildPieceOrlaConfigForTipo,
   formatOrlaRefForPdf,
   isCostaPieceTipo,
+  pieceAllowsOrlaByThickness,
   stripMaterialThicknessLabel,
 } from "./orlaIndustrialRules";
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
@@ -110,7 +111,14 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
     item: CutListItem,
     ctx: { boxId: string; boxNome: string }
   ) => {
-    if (isCostaPieceTipo(item.tipo ?? item.nome ?? "")) return;
+    const tipo = item.tipo ?? item.nome ?? "";
+    if (isCostaPieceTipo(tipo)) return;
+    const esp =
+      Number(item.espessura) ||
+      Number((item as { espessura_mm?: number }).espessura_mm) ||
+      Number(item.dimensoes?.profundidade) ||
+      0;
+    if (!pieceAllowsOrlaByThickness(esp)) return;
     const pieceId = panelIdFromCutListItem(item);
     const cfg = lookupPieceOrlaConfig(pieceId, orlaPieces);
     if (!cfg) return;
@@ -131,7 +139,6 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
       }
       const preset = findOrlaPreset(orlaPresets, sc.presetId);
       if (!preset) continue;
-      if (isCostaPieceTipo(item.tipo ?? "") && preset.espessuraMm < 16) continue;
       const metros = (edges[side] / 1000) * Math.max(1, item.quantidade ?? 1);
       addMeters(sc.presetId, preset, metros, {
         boxId: ctx.boxId,
@@ -222,7 +229,12 @@ export function buildOrlaPiecesForBox(
       delete next[panelId];
       continue;
     }
-    const cfg = buildPieceOrlaConfigForTipo(tipo, presetId, current[panelId]);
+    const esp =
+      Number(item.espessura) ||
+      Number((item as { espessura_mm?: number }).espessura_mm) ||
+      Number(item.dimensoes?.profundidade) ||
+      0;
+    const cfg = buildPieceOrlaConfigForTipo(tipo, presetId, current[panelId], esp);
     if (!cfg) {
       delete next[panelId];
       continue;
@@ -281,7 +293,7 @@ export function resolveOrlaMaterialLabelForBox(
 
 /**
  * Agrega orla por (material da caixa, preset) para o PDF ferragens_totais.
- * Quantidade = metros (ex. 12.34); Ref = nome + espessura + largura.
+ * Quantidade = metros; Ref = nome + espessura; material = chapa da caixa sem espessura.
  */
 export function aggregateOrlaRowsForFerragensTotaisPdf(
   ferragemOrla: ProjectFerragemOrla | undefined | null,
@@ -322,7 +334,7 @@ export function aggregateOrlaRowsForFerragensTotaisPdf(
       "Orla";
     rows.push({
       material,
-      ref: formatOrlaRefForPdf(refBase, preset.espessuraMm, preset.larguraMm),
+      ref: formatOrlaRefForPdf(refBase, preset.espessuraMm),
       medida: `${qty.toFixed(2)} m`,
       quantidade: qty,
       preco: preset.precoPorMetro,

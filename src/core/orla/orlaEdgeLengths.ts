@@ -14,9 +14,14 @@ export function getOrlaEdgeLengthsMm(item: CutListItem): Record<OrlaSideId, numb
 
   // Gaveta corpo: aresta superior = largura da peca (w)
   if (
-    /gav_lat|gaveta_lat|gav_costa|gaveta_costa|gav_frent_int|frente_int/.test(t) ||
+    /gav_lat|gaveta_lat|gav_costa|gaveta_costa|gaveta_traseira|gav_frent_int|gaveta_frente_int|frente_int/.test(
+      t
+    ) ||
     (t.includes("gaveta") &&
-      (t.includes("lateral") || t.includes("costa") || (t.includes("frente") && t.includes("int"))))
+      (t.includes("lateral") ||
+        t.includes("costa") ||
+        t.includes("traseira") ||
+        (t.includes("frente") && t.includes("int"))))
   ) {
     return { front: w || h, back: 0, left: 0, right: 0 };
   }
@@ -33,8 +38,8 @@ export function getOrlaEdgeLengthsMm(item: CutListItem): Record<OrlaSideId, numb
   if (t.includes("porta") || t.includes("frente_fixa")) {
     return { front: w, back: w, left: h, right: h };
   }
-  if (t.includes("remate") || t.includes("rodape")) {
-    // Perimetro aproximado do perfil: 2*(L+A) distribuido
+  if (t.includes("remate") || t.includes("rodape") || t.includes("roda_pe")) {
+    // Perimetro do perfil: 2*(L+A)
     const peri = 2 * (w + h);
     const half = peri / 2;
     return { front: half / 2, back: half / 2, left: half / 2, right: half / 2 };

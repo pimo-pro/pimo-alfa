@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { CutListItemComPreco } from "../types";
 import { computeChapasReal } from "./computeChapasReal";
 import {
@@ -7,20 +7,10 @@ import {
 } from "../cnc/industrialThicknessGroups";
 import { cutlistToPieces, runCutLayout, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import {
-  getDefaultCncLayoutOptions,
+  getFastCncLayoutOptions,
   getSheetDefinitionFromSettings,
 } from "../cnc/cncPipeline";
 import { enrichPiecesWithMaterialSheetDimensions } from "../cnc/preparePiecesForNesting";
-
-// Metaheursticas CNC tornam o teste demasiado lento; a lgica crtica  o pr-agrupamento.
-vi.mock("../cnc/cncPipeline", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../cnc/cncPipeline")>();
-  return {
-    ...mod,
-    getDefaultCncLayoutOptions: (sheet?: Parameters<typeof mod.getDefaultCncLayoutOptions>[0]) =>
-      mod.getFastCncLayoutOptions(sheet),
-  };
-});
 
 function makeItem(
   overrides: Partial<CutListItemComPreco> & {
@@ -154,7 +144,7 @@ describe("computeChapasReal - parity with TCN grouping", () => {
 
     const groups = groupCutlistItemsByMaterialAndThickness(items as CutlistItemForPieces[]);
     const sheetDef = getSheetDefinitionFromSettings();
-    const opts = getDefaultCncLayoutOptions(sheetDef);
+    const opts = getFastCncLayoutOptions(sheetDef);
 
     const expectedByLabel = new Map<string, number>();
     for (const groupItems of groups.values()) {

@@ -30,7 +30,7 @@ export const ORLA_VISUAL_EDGE_IDS: OrlaVisualEdgeId[] = [
   "back",
 ];
 
-/** Regras oficiais (versão utilizador) — defaults do sistema. */
+/** Regras oficiais (versão utilizador) — defaults alinhados ao industrial (metros/PDF). */
 export const DEFAULT_ORLA_VISUAL_RULES: OrlaVisualRulesMap = {
   frontDoor: ["top", "bottom", "left", "right"],
   gavetaFrente: ["top", "bottom", "left", "right"],
@@ -40,9 +40,9 @@ export const DEFAULT_ORLA_VISUAL_RULES: OrlaVisualRulesMap = {
   prateleira: ["top", "bottom", "left", "right"],
   lateral: ["front", "back"],
   tampo: ["top", "bottom", "left", "right"],
-  base: ["front"],
+  base: ["top", "bottom", "left", "right"],
   fundo: ["top", "bottom", "left", "right"],
-  divisoria: ["front"],
+  divisoria: ["front", "back"],
   costa: [],
 };
 

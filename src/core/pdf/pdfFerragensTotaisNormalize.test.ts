@@ -287,7 +287,7 @@ describe("pdfFerragensTotaisNormalize", () => {
     const orla = rows.find((r) => r.medida === "12.35 m");
     expect(orla).toBeDefined();
     expect(orla?.quantidade).toBe(12.35);
-    expect(orla?.ref).toBe("PVC 0.8mm 23mm");
+    expect(orla?.ref).toBe("PVC 0.8mm");
     expect(orla?.material).not.toMatch(/\d+\s*mm/i);
     expect(orla?.preco).toBe(1.5);
   });
