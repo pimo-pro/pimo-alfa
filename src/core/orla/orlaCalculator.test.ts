@@ -89,7 +89,7 @@ describe("orlaCalculator industrial", () => {
   it("PDF aggregate: metros, material sem espessura, ref nome+espessura", () => {
     const items = [piece("p1", "porta_simples", { largura: 1000, altura: 500 })];
     const box = boxWith(items);
-    const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {});
+    const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {}, [], [PRESET]);
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: items }],
       orlaPresets: [PRESET],
@@ -104,12 +104,55 @@ describe("orlaCalculator industrial", () => {
       "MDF Branco 19mm"
     );
     expect(rows.length).toBe(1);
+    expect(rows[0]!.material).toBe("MDF Branco");
     expect(rows[0]!.material).not.toMatch(/19\s*mm/i);
     expect(rows[0]!.quantidade).toBeCloseTo(3, 2); // 2*(1000+500)/1000
     expect(rows[0]!.medida).toMatch(/3\.00 m/);
     expect(rows[0]!.ref).toBe("Branco PVC 0.8mm");
     expect(rows[0]!.ref).not.toMatch(/23mm/);
     expect(rows[0]!.preco).toBe(1.25);
+  });
+
+  it("PDF agrega materia por peca (nao so a da caixa)", () => {
+    const carvalhoPreset: OrlaPreset = {
+      id: "carvalho_pvc",
+      nome: "Carvalho PVC 0.8\u00d723 mm",
+      tipo: "PVC",
+      espessuraMm: 0.8,
+      larguraMm: 23,
+      cor: "#c4a574",
+      precoPorMetro: 1.45,
+    };
+    const presets = [PRESET, carvalhoPreset];
+    const items = [
+      { ...piece("cima1", "cima", { largura: 600, altura: 560 }), material: "MDF Branco 19mm" },
+      {
+        ...piece("porta1", "porta_simples", { largura: 598, altura: 700 }),
+        material: "Carvalho 19mm",
+        materialId: "carvalho-19",
+      },
+      {
+        ...piece("prat1", "prateleira", { largura: 560, altura: 400 }),
+        material: "MDF Branco 19mm",
+      },
+    ];
+    const box = boxWith(items);
+    const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {}, [], presets);
+    expect(orlaPieces.cima1?.orlaMaterialLabel).toMatch(/MDF Branco/i);
+    expect(orlaPieces.porta1?.orlaMaterialLabel).toMatch(/Carvalho/i);
+    expect(orlaPieces.porta1?.sides.front.presetId).toBe(carvalhoPreset.id);
+
+    const ferragem = computeOrlaFerragem({
+      boxes: [{ ...box, cutList: items }],
+      orlaPresets: presets,
+      orlaPieces,
+      orlaJuntoPairs: [],
+    });
+    const rows = aggregateOrlaRowsForFerragensTotaisPdf(ferragem, presets, [box]);
+    const mats = rows.map((r) => r.material).sort();
+    expect(mats.some((m) => /Carvalho/i.test(m))).toBe(true);
+    expect(mats.some((m) => /MDF Branco/i.test(m))).toBe(true);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 
   it("gaveta_traseira so topo; nao mistura com costa do modulo", () => {

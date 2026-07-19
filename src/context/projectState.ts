@@ -429,7 +429,8 @@ export const applyResultados = (state: ProjectState): ProjectState => {
       boxesWithCutList,
       state.orlaPieces ?? {},
       defaultOrlaId,
-      extrasByBoxId
+      extrasByBoxId,
+      orlaPresets
     );
     const ferragemOrla = computeOrlaFerragem({
       boxes: boxesWithCutList,

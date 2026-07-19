@@ -40,10 +40,13 @@ export function useOrlaActions(ctx: ProjectActionsExecutionContext): OrlaActions
             );
             let orlaPieces = { ...prev.orlaPieces };
             if (box) {
-              orlaPieces = buildOrlaPiecesForBox(box, presetId, orlaPieces, [
-                ...remates,
-                ...rodapes,
-              ]);
+              orlaPieces = buildOrlaPiecesForBox(
+                box,
+                presetId,
+                orlaPieces,
+                [...remates, ...rodapes],
+                normalizeOrlaPresets(prev.orlaPresets)
+              );
             }
             const next = {
               ...interim,

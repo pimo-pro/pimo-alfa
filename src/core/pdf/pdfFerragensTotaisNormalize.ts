@@ -476,7 +476,8 @@ export function normalizeFerragensTotaisForPdf(
       input.boxes ?? [],
       {},
       defaultOrlaId,
-      extrasByBoxId
+      extrasByBoxId,
+      orlaPresets
     );
     ferragemOrla = computeOrlaFerragem({
       boxes: input.boxes ?? [],

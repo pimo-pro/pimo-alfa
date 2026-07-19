@@ -275,6 +275,8 @@ describe("pdfFerragensTotaisNormalize", () => {
             custo: 18.5175,
             boxId: "b1",
             boxNome: "Caixa",
+            orlaMaterialId: "mdf_branco",
+            orlaMaterialLabel: "MDF Branco",
             tipo: "normal",
           },
         ],

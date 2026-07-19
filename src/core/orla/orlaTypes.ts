@@ -26,6 +26,10 @@ export type PieceOrlaConfig = {
   sides: Record<OrlaSideId, OrlaSideConfig>;
   /** IDs de peças adjacentes com orla partilhada (Orla Junto). */
   orlaJunto?: string[];
+  /** Material da chapa desta peca (SSOT PDF — nao usar materia da caixa). */
+  orlaMaterialId?: string | null;
+  /** Label da chapa sem espessura (coluna Material no PDF). */
+  orlaMaterialLabel?: string | null;
 };
 
 export type OrlaJuntoPair = {
@@ -47,6 +51,9 @@ export type OrlaFerragemLine = {
   boxNome?: string;
   pieceId?: string;
   pieceNome?: string;
+  /** Material da peca (chapa), nao da caixa. */
+  orlaMaterialId?: string;
+  orlaMaterialLabel?: string;
   tipo: "normal" | "orla_junto";
 };
 

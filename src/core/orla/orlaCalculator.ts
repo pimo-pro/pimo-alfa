@@ -17,6 +17,10 @@ import {
   pieceAllowsOrlaByThickness,
   stripMaterialThicknessLabel,
 } from "./orlaIndustrialRules";
+import {
+  resolveOrlaPresetIdForPiece,
+  resolvePieceOrlaMaterial,
+} from "./orlaMaterialResolve";
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
 import { getMaterialDisplayInfo, getMaterialForBox } from "../materials/service";
 
@@ -68,6 +72,15 @@ function collectPiecesForBox(
   return [...fromBox, ...fromExtra];
 }
 
+function pieceEspessuraMm(item: CutListItem): number {
+  return (
+    Number(item.espessura) ||
+    Number((item as { espessura_mm?: number }).espessura_mm) ||
+    Number(item.dimensoes?.profundidade) ||
+    0
+  );
+}
+
 export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
   const { boxes, orlaPresets, orlaPieces, orlaJuntoPairs } = input;
   const extras = input.extraCutListItems ?? [];
@@ -79,10 +92,18 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
     presetId: string,
     preset: OrlaPreset,
     metros: number,
-    ctx: { boxId: string; boxNome: string; pieceId: string; pieceNome: string; tipo: "normal" | "orla_junto" }
+    ctx: {
+      boxId: string;
+      boxNome: string;
+      pieceId: string;
+      pieceNome: string;
+      orlaMaterialId: string;
+      orlaMaterialLabel: string;
+      tipo: "normal" | "orla_junto";
+    }
   ) => {
     if (metros <= 0) return;
-    const key = `${ctx.tipo}:${presetId}:${ctx.boxId}:${ctx.pieceId}:${ctx.tipo}`;
+    const key = `${ctx.tipo}:${presetId}:${ctx.orlaMaterialId}:${ctx.boxId}:${ctx.pieceId}`;
     const existing = linhasMap.get(key);
     const custo = metros * preset.precoPorMetro;
     if (existing) {
@@ -99,6 +120,8 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
         boxNome: ctx.boxNome,
         pieceId: ctx.pieceId,
         pieceNome: ctx.pieceNome,
+        orlaMaterialId: ctx.orlaMaterialId,
+        orlaMaterialLabel: ctx.orlaMaterialLabel,
         tipo: ctx.tipo,
       });
     }
@@ -113,15 +136,15 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
   ) => {
     const tipo = item.tipo ?? item.nome ?? "";
     if (isCostaPieceTipo(tipo)) return;
-    const esp =
-      Number(item.espessura) ||
-      Number((item as { espessura_mm?: number }).espessura_mm) ||
-      Number(item.dimensoes?.profundidade) ||
-      0;
+    const esp = pieceEspessuraMm(item);
     if (!pieceAllowsOrlaByThickness(esp)) return;
     const pieceId = panelIdFromCutListItem(item);
     const cfg = lookupPieceOrlaConfig(pieceId, orlaPieces);
     if (!cfg) return;
+    const mat =
+      cfg.orlaMaterialId && cfg.orlaMaterialLabel
+        ? { orlaMaterialId: cfg.orlaMaterialId, orlaMaterialLabel: cfg.orlaMaterialLabel }
+        : resolvePieceOrlaMaterial(item);
     const edges = getOrlaEdgeLengthsMm(item);
     for (const side of ORLA_SIDES) {
       const sc = cfg.sides[side];
@@ -145,6 +168,8 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
         boxNome: ctx.boxNome,
         pieceId,
         pieceNome: item.nome,
+        orlaMaterialId: mat.orlaMaterialId,
+        orlaMaterialLabel: mat.orlaMaterialLabel,
         tipo: juntoPair ? "orla_junto" : "normal",
       });
       counted.add(ek);
@@ -158,7 +183,6 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
       processItem(item, { boxId: box.id, boxNome });
     }
   }
-  // Remates / rodapes sem parentBoxId (ou box inexistente)
   for (const item of extras) {
     if (item.boxId && boxIds.has(item.boxId)) continue;
     processItem(item, {
@@ -188,7 +212,6 @@ export function resolvePieceOrlaConfig(
     );
   }
   if (boxPresetId) {
-    // Legacy fallback — preferir regras industriais quando tipo conhecido
     return {
       sides: {
         front: { presetId: boxPresetId, enabled: true },
@@ -203,13 +226,15 @@ export function resolvePieceOrlaConfig(
 
 /**
  * Aplica orla automatica industrial por tipo de peca.
+ * Cada peca recebe materia propria + preset matched ao acabamento (fallback = caixa).
  * Costa nunca e incluida. Limpa entradas antigas da caixa quando preset e null.
  */
 export function buildOrlaPiecesForBox(
   box: BoxModule,
   presetId: string | null,
   current: Record<string, PieceOrlaConfig>,
-  extraItems: CutListItem[] = []
+  extraItems: CutListItem[] = [],
+  orlaPresets: OrlaPreset[] = []
 ): Record<string, PieceOrlaConfig> {
   const next = { ...current };
   const items = [...(box.cutList ?? []), ...extraItems];
@@ -229,17 +254,28 @@ export function buildOrlaPiecesForBox(
       delete next[panelId];
       continue;
     }
-    const esp =
-      Number(item.espessura) ||
-      Number((item as { espessura_mm?: number }).espessura_mm) ||
-      Number(item.dimensoes?.profundidade) ||
-      0;
-    const cfg = buildPieceOrlaConfigForTipo(tipo, presetId, current[panelId], esp);
+    const esp = pieceEspessuraMm(item);
+    const mat = resolvePieceOrlaMaterial(item);
+    const piecePresetId = resolveOrlaPresetIdForPiece(
+      mat.orlaMaterialLabel,
+      esp,
+      orlaPresets,
+      presetId
+    );
+    if (!piecePresetId) {
+      delete next[panelId];
+      continue;
+    }
+    const cfg = buildPieceOrlaConfigForTipo(tipo, piecePresetId, current[panelId], esp);
     if (!cfg) {
       delete next[panelId];
       continue;
     }
-    next[panelId] = cfg;
+    next[panelId] = {
+      ...cfg,
+      orlaMaterialId: mat.orlaMaterialId,
+      orlaMaterialLabel: mat.orlaMaterialLabel,
+    };
   }
   return next;
 }
@@ -260,12 +296,19 @@ export function syncOrlaPiecesForProject(
   boxes: BoxModule[],
   current: Record<string, PieceOrlaConfig>,
   defaultPresetId: string | null,
-  extrasByBoxId: Record<string, CutListItem[]> = {}
+  extrasByBoxId: Record<string, CutListItem[]> = {},
+  orlaPresets: OrlaPreset[] = []
 ): Record<string, PieceOrlaConfig> {
   let next = { ...current };
   for (const box of boxes) {
     const presetId = resolveBoxOrlaPresetId(box, defaultPresetId);
-    next = buildOrlaPiecesForBox(box, presetId, next, extrasByBoxId[box.id] ?? []);
+    next = buildOrlaPiecesForBox(
+      box,
+      presetId,
+      next,
+      extrasByBoxId[box.id] ?? [],
+      orlaPresets
+    );
   }
   return next;
 }
@@ -281,11 +324,12 @@ export function mergeOrlaIntoCutListItem(
       ...(item.metadata ?? {}),
       orla: cfg.sides,
       orlaJunto: cfg.orlaJunto,
+      orlaMaterialId: cfg.orlaMaterialId ?? undefined,
     },
   };
 }
 
-/** Resolve label de material da caixa sem espessura (PDF Orla). */
+/** Resolve label de material da caixa sem espessura (fallback legado). */
 export function resolveOrlaMaterialLabelForBox(
   box: BoxModule | undefined,
   projectMaterialId?: string,
@@ -302,8 +346,8 @@ export function resolveOrlaMaterialLabelForBox(
 }
 
 /**
- * Agrega orla por (material da caixa, preset) para o PDF ferragens_totais.
- * Quantidade = metros; Ref = nome + espessura; material = chapa da caixa sem espessura.
+ * Agrega orla por (materia da peca, preset) para o PDF ferragens_totais.
+ * Quantidade = metros; Ref = nome + espessura; material = chapa da peca sem espessura.
  */
 export function aggregateOrlaRowsForFerragensTotaisPdf(
   ferragemOrla: ProjectFerragemOrla | undefined | null,
@@ -322,12 +366,14 @@ export function aggregateOrlaRowsForFerragensTotaisPdf(
   for (const linha of ferragemOrla.linhas) {
     const preset = findOrlaPreset(orlaPresets, linha.presetId);
     if (!preset) continue;
-    const box = linha.boxId ? boxById.get(linha.boxId) : undefined;
-    const material = resolveOrlaMaterialLabelForBox(
-      box,
-      projectMaterialId,
-      fallbackMaterialLabel
-    );
+    const pieceLabel = stripMaterialThicknessLabel(String(linha.orlaMaterialLabel ?? "").trim());
+    const material =
+      pieceLabel ||
+      resolveOrlaMaterialLabelForBox(
+        linha.boxId ? boxById.get(linha.boxId) : undefined,
+        projectMaterialId,
+        fallbackMaterialLabel
+      );
     const key = `${material}||${linha.presetId}`;
     const prev = byKey.get(key);
     if (prev) prev.metros += linha.metros;
