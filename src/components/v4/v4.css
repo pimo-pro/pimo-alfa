@@ -89,9 +89,24 @@
 }
 
 [data-theme-template="pi"] .v4-item-preview__add-btn {
-  background: var(--pi-btn-primary-bg);
-  color: var(--pi-btn-primary-color, #fff);
-  border-color: var(--pi-btn-primary-bg);
+  background: var(--pi-btn-accent-bg);
+  color: var(--pi-btn-accent-color, var(--ci-chalk));
+  border-color: var(--pi-btn-accent-bg);
+}
+
+[data-theme-template="pi"] .v4-item-preview__add-btn:hover {
+  background: var(--pi-btn-accent-hover-bg);
+  border-color: var(--pi-btn-accent-hover-bg);
+}
+
+[data-theme-template="pi"] .v4-item-preview__add-btn:active {
+  background: var(--pi-btn-accent-active-bg);
+  border-color: var(--pi-btn-accent-active-bg);
+}
+
+[data-theme-template="pi"] .v4-item-preview__add-btn:focus-visible {
+  outline: 2px solid var(--pi-btn-accent-bg);
+  outline-offset: 2px;
 }
 
 /* ── Fase 5: Alpha modo claro — v4 passa a acompanhar o tema ──

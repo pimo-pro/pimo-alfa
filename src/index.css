@@ -2314,11 +2314,19 @@ body {
   background: var(--ci-prussian-600);
 }
 [data-theme-template="pi"] .moveis-bubble__add {
-  background: var(--pi-btn-primary-bg, var(--ci-prussian-600));
-  color: var(--pi-btn-primary-color, var(--ci-chalk));
+  background: var(--pi-btn-accent-bg, var(--ci-sienna-600));
+  color: var(--pi-btn-accent-color, var(--ci-chalk));
+  border: none;
 }
 [data-theme-template="pi"] .moveis-bubble__add:hover {
-  background: var(--ci-prussian-800);
+  background: var(--pi-btn-accent-hover-bg);
+}
+[data-theme-template="pi"] .moveis-bubble__add:active {
+  background: var(--pi-btn-accent-active-bg);
+}
+[data-theme-template="pi"] .moveis-bubble__add:focus-visible {
+  outline: 2px solid var(--pi-btn-accent-bg, var(--ci-sienna-600));
+  outline-offset: 2px;
 }
 
 /* ============================================================
@@ -2374,16 +2382,27 @@ body {
   border-radius: 999px;
 }
 
-/* ── Cores unificadas (Fase 4 / Passo 3) — Alpha .button* acima fica intacto ── */
+/* ── Cores unificadas — Alpha .button* acima fica intacto ── */
+/* CTA principal Pi = accent Sienna (não Prussian primary) */
 [data-theme-template="pi"] .button-primary {
-  background: var(--pi-btn-primary-bg);
+  background: var(--pi-btn-accent-bg);
   border: none;
-  color: var(--pi-btn-primary-color);
+  color: var(--pi-btn-accent-color);
 }
 
 [data-theme-template="pi"] .button-primary:hover {
-  opacity: 0.9;
-  filter: brightness(1.05);
+  background: var(--pi-btn-accent-hover-bg);
+  opacity: 1;
+  filter: none;
+}
+
+[data-theme-template="pi"] .button-primary:active {
+  background: var(--pi-btn-accent-active-bg);
+}
+
+[data-theme-template="pi"] .button-primary:focus-visible {
+  outline: 2px solid var(--pi-btn-accent-bg);
+  outline-offset: 2px;
 }
 
 [data-theme-template="pi"] .button,
@@ -2401,9 +2420,23 @@ body {
   background: var(--button-ghost-hover);
 }
 
-[data-theme-template="pi"] .modal-action.button-primary,
-[data-theme-template="pi"] .modal-action.button-primary:hover {
-  background: var(--pi-btn-primary-bg);
+[data-theme-template="pi"] .modal-action.button-primary {
+  background: var(--pi-btn-accent-bg);
   border: none;
-  color: var(--pi-btn-primary-color);
+  color: var(--pi-btn-accent-color);
+}
+
+[data-theme-template="pi"] .modal-action.button-primary:hover {
+  background: var(--pi-btn-accent-hover-bg);
+  border: none;
+  color: var(--pi-btn-accent-color);
+}
+
+[data-theme-template="pi"] .modal-action.button-primary:active {
+  background: var(--pi-btn-accent-active-bg);
+}
+
+[data-theme-template="pi"] .modal-action.button-primary:focus-visible {
+  outline: 2px solid var(--pi-btn-accent-bg);
+  outline-offset: 2px;
 }

@@ -41,6 +41,14 @@ describe("ciRemap + paleta CI pura (Incremento 4)", () => {
     expect(PI_BUTTON_SYSTEM_TOKENS.light["pi-btn-secondary-border"]).toBe(CI_CSS.chalkDim);
   });
 
+  it("CTA accent Pi e Sienna 600 com estados coerentes", () => {
+    expect(PI_BUTTON_SYSTEM_TOKENS.dark["pi-btn-accent-bg"]).toBe(CI_CSS.sienna600);
+    expect(PI_BUTTON_SYSTEM_TOKENS.dark["pi-btn-accent-color"]).toBe(CI_CSS.chalk);
+    expect(PI_BUTTON_SYSTEM_TOKENS.dark["pi-btn-accent-active-bg"]).toBe(CI_CSS.sienna800);
+    expect(PI_BUTTON_SYSTEM_TOKENS.dark["pi-btn-accent-hover-bg"]).toContain("--ci-sienna");
+    expect(PI_BUTTON_SYSTEM_TOKENS.light["pi-btn-accent-bg"]).toBe(CI_CSS.sienna600);
+  });
+
   it("residuos da paleta Pi sao so excepcoes deliberadas", () => {
     const residuals = listCiRemapResiduals(PI_PALETTE_OVERRIDES);
     for (const r of residuals) {

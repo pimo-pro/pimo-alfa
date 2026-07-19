@@ -42,12 +42,16 @@ const previewButtonStyle = (kind: "primary" | "ghost" | "danger", shape: ButtonS
   border: kind === "ghost" ? "1px solid var(--pi-btn-secondary-border, var(--pi-btn-ghost-border))" : "none",
   background:
     kind === "primary"
-      ? "var(--pi-btn-primary-bg)"
+      ? "var(--pi-btn-accent-bg, var(--pi-btn-primary-bg))"
       : kind === "danger"
         ? "var(--pi-btn-danger-bg)"
         : "var(--pi-btn-secondary-bg, var(--pi-btn-ghost-bg))",
   color:
-    kind === "ghost" ? "var(--pi-btn-secondary-color, var(--text-main))" : "var(--pi-btn-primary-color, var(--pi-btn-on-accent-text))",
+    kind === "ghost"
+      ? "var(--pi-btn-secondary-color, var(--text-main))"
+      : kind === "danger"
+        ? "var(--pi-btn-primary-color, var(--pi-btn-on-accent-text))"
+        : "var(--pi-btn-accent-color, var(--ci-chalk))",
 });
 
 export default function ThemeTemplatesAdminPage() {

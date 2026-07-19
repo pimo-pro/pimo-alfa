@@ -981,11 +981,28 @@
   border-radius: 999px;
 }
 
-/* Fase 4 / Passo 3 — cores unificadas so no Pi (Alpha --ui-* intacto) */
+/* CTA principal Pi = accent Sienna (Alpha --ui-* intacto) */
 [data-theme-template="pi"] .ui-button--primary {
-  background: var(--pi-btn-primary-bg);
-  border-color: var(--pi-btn-primary-bg);
-  color: var(--pi-btn-primary-color);
+  background: var(--pi-btn-accent-bg);
+  border-color: var(--pi-btn-accent-bg);
+  color: var(--pi-btn-accent-color);
+}
+
+[data-theme-template="pi"] .ui-button--primary:not(:disabled):hover {
+  background: var(--pi-btn-accent-hover-bg);
+  border-color: var(--pi-btn-accent-hover-bg);
+  filter: none;
+  box-shadow: var(--ui-shadow-sm);
+}
+
+[data-theme-template="pi"] .ui-button--primary:not(:disabled):active {
+  background: var(--pi-btn-accent-active-bg);
+  border-color: var(--pi-btn-accent-active-bg);
+}
+
+[data-theme-template="pi"] .ui-button--primary:focus-visible {
+  outline: 2px solid var(--pi-btn-accent-bg);
+  outline-offset: 2px;
 }
 
 [data-theme-template="pi"] .ui-button--secondary,
