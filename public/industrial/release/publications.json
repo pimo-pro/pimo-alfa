@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-19T00:50:16.975Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(build): tipagem opcional de orla nos exports PDF",
+      "version": "v6.0719.0150"
+    },
+    {
+      "publishedAt": "2026-07-19T00:46:46.365Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(industrial): orla automatica, calcos, folgas, Coloprador e ajuste vertical",
+      "version": "v6.0719.0146"
+    },
+    {
       "publishedAt": "2026-07-18T22:09:52.229Z",
       "author": "pimo-pro",
       "commitMessage": "fix(ferragens): dobradicas por canecos reais e design original do PDF — Contagem exclusiva holeType===dobradica (Dobradica/8654i/35mm, total real ex. 13 ANTUNIS); remocao regras fixas/duplicacao industrial; design restaurado fontSize 9; Chapas: Material|Ref|Medida|Qtd|Preco|Data|Responsavel; Ferragens: Material|Ref|Medida|Qtd|Preco total|Responsavel; UTF-8; export dual ferragens_totais+industrial_armazem. Modulos: pdfFerragensTotais.ts | pdfFerragensTotaisNormalize.ts | pdfFerragensTotais.test.ts | pdfFerragensTotaisNormalize.test.ts | industrialBottomSectionData.ts",
