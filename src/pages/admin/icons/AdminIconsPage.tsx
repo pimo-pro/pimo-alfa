@@ -22,12 +22,10 @@ export default function AdminIconsPage() {
     const missingIcons = allIconNames.filter((iconName) => !includedIcons.has(iconName));
 
     if (missingIcons.length > 0) {
-      if (!sections.misc) {
-        sections.misc = [];
-      }
+      const fallbackKey = (Object.keys(sections)[0] ?? "header") as Section;
       missingIcons.forEach((iconName) => {
-        if (!sections.misc.includes(iconName)) {
-          sections.misc.push(iconName);
+        if (!sections[fallbackKey].includes(iconName)) {
+          sections[fallbackKey].push(iconName);
         }
       });
     }

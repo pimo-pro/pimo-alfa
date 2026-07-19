@@ -233,8 +233,8 @@ export function buildFerragensTotaisArmazemData(
           material: s.material,
           espessuraMm: s.espessuraMm,
           qty: 1,
-          w: mat?.larguraChapa ?? defaultW,
-          h: mat?.alturaChapa ?? defaultH,
+          w: s.sheetLarguraMm || mat?.larguraChapa || defaultW,
+          h: s.sheetAlturaMm || mat?.alturaChapa || defaultH,
         });
       }
     }
@@ -250,14 +250,16 @@ export function buildFerragensTotaisArmazemData(
     });
   }
 
+  const MULTIPLY = "\u00d7";
+  const EM_DASH = "\u2014";
   const materiaisChapas: FerragensTotaisArmazemRow[] = [...chapasMap.values()]
     .sort((a, b) => a.material.localeCompare(b.material, "pt") || a.espessuraMm - b.espessuraMm)
     .map((r) => {
       const mat = materials.find((m) => m.nome === r.material || m.id === r.material);
       return {
         material: r.material,
-        ref: mat?.id ?? "—",
-        medida: `${r.w}×${r.h}×${r.espessuraMm} mm`,
+        ref: mat?.id ?? EM_DASH,
+        medida: `${r.w}${MULTIPLY}${r.h}${MULTIPLY}${r.espessuraMm} mm`,
         quantidade: r.qty,
       };
     });

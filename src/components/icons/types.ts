@@ -74,5 +74,4 @@ export type IconName =
   | "alertInfo"
   | "alertError"
   | "bell"
-  | "whatsapp"
   | "blueprint";

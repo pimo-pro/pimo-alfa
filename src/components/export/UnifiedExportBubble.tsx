@@ -497,10 +497,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                   variant={sendMethod === "whatsapp" ? "primary" : "outline"}
                   onClick={() => setSendMethod("whatsapp")}
                 >
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <Icon name="whatsapp" size={16} aria-hidden />
-                    WhatsApp
-                  </span>
+                  WhatsApp
                 </Button>
                 <Button
                   type="button"

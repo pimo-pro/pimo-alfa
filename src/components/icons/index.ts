@@ -10,5 +10,4 @@ export * from "./groups/contextMenu";
 export * from "./groups/toolbar";
 export * from "./groups/admin";
 export * from "./groups/alerts";
-export * from "./groups/social";
 export * from "./groups/manufacturing";

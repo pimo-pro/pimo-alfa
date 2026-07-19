@@ -7,7 +7,6 @@ import Footer from "./components/layout/footer/Footer";
 import BottomInfoToolbar from "./components/layout/bottom-info-toolbar/BottomInfoToolbar";
 import BottomInfoPanelsOverlay from "./components/layout/bottom-info-toolbar/BottomInfoPanelsOverlay";
 import { BottomInfoProvider } from "./context/BottomInfoContext";
-import WhatsAppButton from "./components/layout/WhatsAppButton";
 import { PimoViewerProvider } from "./context/PimoViewerContext";
 import { ProjectProvider } from "./context/ProjectProvider";
 import { WorkspaceUndoRedoRegistryProvider } from "./context/WorkspaceUndoRedoRegistryContext";
@@ -375,8 +374,6 @@ function LegacyApp() {
           onShowPainelReferencia={navigateToPainelReferencia}
           onShowLanding={navigateToLanding}
         />
-
-        <WhatsAppButton />
 
             </div>
             </PimoViewerProvider>

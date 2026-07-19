@@ -41,6 +41,8 @@ export function chapasAndConsumoFromCutLayout(layout: CutLayoutResult): {
       sheetIndex: idx + 1,
       espessuraMm: sheetResult.sheet.espessura_mm ?? 18,
       material: sheetResult.sheet.materialName ?? "MDF",
+      sheetLarguraMm: sheetW,
+      sheetAlturaMm: sheetH,
       pieceCount: sheetResult.placements.length,
       usedAreaMm2: usedArea,
       sheetAreaMm2: sheetArea,

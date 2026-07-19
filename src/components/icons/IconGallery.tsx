@@ -104,7 +104,6 @@ const ICON_GROUPS: { id: string; label: string; names: IconName[] }[] = [
     label: "Alerts",
     names: ["alertWarning", "alertInfo", "alertError"],
   },
-  { id: "social", label: "Social", names: ["whatsapp"] },
   {
     id: "manufacturing",
     label: "Manufacturing",

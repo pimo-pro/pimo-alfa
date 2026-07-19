@@ -26,7 +26,6 @@ import { IconBookOpen } from './admin/IconBookOpen';
 import { IconProject } from './toolbar/IconProject';
 import { IconNew } from './toolbar/IconNew';
 import { IconViewer } from './viewer/IconViewer';
-import { IconWhatsApp } from './misc/IconWhatsApp';
 
 export const allIcons = {
   // Header
@@ -61,8 +60,6 @@ export const allIcons = {
   IconNew,
   // Viewer
   IconViewer,
-  // Misc
-  IconWhatsApp,
 } as const;
 
 export type IconName = keyof typeof allIcons;
@@ -92,5 +89,4 @@ export const iconSections = {
   ] as IconName[],
   toolbar: ['IconProject', 'IconNew'] as IconName[],
   viewer: ['IconViewer'] as IconName[],
-  misc: ['IconWhatsApp'] as IconName[],
 } as const;

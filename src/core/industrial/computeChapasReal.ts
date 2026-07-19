@@ -1,13 +1,33 @@
 import type { CutListItemComPreco } from "../types";
-import { cutlistToPieces, runCutLayout, type CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
+import {
+  cutlistToPieces,
+  runCutLayout,
+  type CutlistItemForPieces,
+} from "../cutlayout/cutLayoutEngine";
 import type { CutLayoutResult } from "../cutlayout/cutLayoutTypes";
-import { getFastCncLayoutOptions, getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
+import {
+  getDefaultCncLayoutOptions,
+  getSheetDefinitionFromSettings,
+} from "../cnc/cncPipeline";
+import {
+  groupCutlistItemsByMaterialAndThickness,
+  resolveMaterialLabelForCutlistItem,
+  sortMaterialThicknessGroupKeys,
+} from "../cnc/industrialThicknessGroups";
+import { inferCutlistItemThicknessMm } from "../cnc/industrialNestingGroup";
+import { resolveIndustrialThicknesses } from "../cnc/industrialThicknessResolution";
+import { enrichPiecesWithMaterialSheetDimensions } from "../cnc/preparePiecesForNesting";
+import { listMaterials } from "../materials/service";
+import { getLayoutKerfMmForCncNesting } from "../cnc/tcnGenerator";
+import { getSettings } from "../settings/settingsService";
 import { CHAPA_PADRAO_LARGURA, CHAPA_PADRAO_ALTURA } from "../manufacturing/materials";
 
 export type ChapasRealSheetRow = {
   sheetIndex: number;
   espessuraMm: number;
   material: string;
+  sheetLarguraMm: number;
+  sheetAlturaMm: number;
   pieceCount: number;
   usedAreaMm2: number;
   sheetAreaMm2: number;
@@ -24,6 +44,10 @@ export type ChapasRealSummary = {
   layout: CutLayoutResult | null;
 };
 
+/**
+ * Contagem de chapas alinhada ao pipeline TCN:
+ * 1 nesting por material+espessura, opções CNC default, label do grupo.
+ */
 export function computeChapasReal(
   items: CutListItemComPreco[],
   projectName: string,
@@ -34,17 +58,90 @@ export function computeChapasReal(
   }
 
   const sheetDef = getSheetDefinitionFromSettings();
-  const pieces = cutlistToPieces(items as CutlistItemForPieces[], { projectName, boxes });
-  let layout: CutLayoutResult | null = null;
-  try {
-    layout = runCutLayout(pieces, sheetDef, getFastCncLayoutOptions(sheetDef));
-  } catch {
-    layout = null;
+  const materials = listMaterials();
+  const thicknessResolution = resolveIndustrialThicknesses(
+    items as CutlistItemForPieces[],
+    materials
+  );
+  // PDF: usa itens resolvidos mesmo com unresolved (não bloqueia o relatório).
+  const preparedItems = thicknessResolution.items as CutListItemComPreco[];
+
+  const groups = groupCutlistItemsByMaterialAndThickness(preparedItems as CutlistItemForPieces[]);
+  const groupKeys = sortMaterialThicknessGroupKeys(groups.keys(), groups, materials);
+
+  const layoutOptions = {
+    ...getDefaultCncLayoutOptions(sheetDef),
+    kerf_mm: getLayoutKerfMmForCncNesting(getSettings()),
+    groupByThicknessOnly: true as const,
+    sheetLargura_mm: sheetDef.largura_mm,
+    sheetAltura_mm: sheetDef.altura_mm,
+  };
+
+  const sheets: ChapasRealSheetRow[] = [];
+  const mergedLayoutSheets: CutLayoutResult["sheets"] = [];
+  let sheetIndex = 0;
+
+  for (const groupKey of groupKeys) {
+    const groupItems = groups.get(groupKey)!;
+    if (groupItems.length === 0) continue;
+
+    const sample = groupItems[0]!;
+    const materialLabel = resolveMaterialLabelForCutlistItem(sample, materials);
+    const thicknessMm = inferCutlistItemThicknessMm(sample);
+
+    let groupLayout: CutLayoutResult | null = null;
+    try {
+      const rawPieces = cutlistToPieces(groupItems, { projectName, boxes });
+      if (rawPieces.length === 0) continue;
+      const pieces = enrichPiecesWithMaterialSheetDimensions(rawPieces);
+      groupLayout = runCutLayout(pieces, sheetDef, layoutOptions);
+    } catch {
+      groupLayout = null;
+    }
+
+    if (!groupLayout?.sheets?.length) continue;
+
+    for (const sheetResult of groupLayout.sheets) {
+      sheetIndex += 1;
+      const sheetW = sheetResult.sheet.largura_mm ?? sheetDef.largura_mm ?? CHAPA_PADRAO_LARGURA;
+      const sheetH = sheetResult.sheet.altura_mm ?? sheetDef.altura_mm ?? CHAPA_PADRAO_ALTURA;
+      const sheetArea = sheetW * sheetH;
+      const usedArea = sheetResult.placements.reduce((s, p) => s + p.largura_mm * p.altura_mm, 0);
+      const waste = Math.max(0, sheetArea - usedArea);
+
+      sheets.push({
+        sheetIndex,
+        espessuraMm: thicknessMm || sheetResult.sheet.espessura_mm || sheetDef.espessura_mm || 18,
+        material: materialLabel,
+        sheetLarguraMm: sheetW,
+        sheetAlturaMm: sheetH,
+        pieceCount: sheetResult.placements.length,
+        usedAreaMm2: usedArea,
+        sheetAreaMm2: sheetArea,
+        wasteMm2: waste,
+        wastePct: sheetArea > 0 ? (waste / sheetArea) * 100 : 0,
+        pieces: sheetResult.placements.map((p) => ({
+          nome: p.partName ?? "\u2014",
+          boxId: p.boxId ?? "",
+          largura: p.largura_mm,
+          altura: p.altura_mm,
+        })),
+      });
+
+      mergedLayoutSheets.push({
+        ...sheetResult,
+        sheet: {
+          ...sheetResult.sheet,
+          materialName: materialLabel,
+          espessura_mm: thicknessMm || sheetResult.sheet.espessura_mm,
+        },
+      });
+    }
   }
 
-  if (!layout?.sheets?.length) {
+  if (sheets.length === 0) {
     const sheetArea = (sheetDef.largura_mm || CHAPA_PADRAO_LARGURA) * (sheetDef.altura_mm || CHAPA_PADRAO_ALTURA);
-    const used = items.reduce(
+    const used = preparedItems.reduce(
       (s, i) => s + i.dimensoes.largura * i.dimensoes.altura * (i.quantidade ?? 1),
       0
     );
@@ -52,38 +149,16 @@ export function computeChapasReal(
     return {
       totalSheets: estSheets,
       totalWasteMm2: estSheets * sheetArea - used,
-      totalWastePct: estSheets * sheetArea > 0 ? ((estSheets * sheetArea - used) / (estSheets * sheetArea)) * 100 : 0,
+      totalWastePct:
+        estSheets * sheetArea > 0 ? ((estSheets * sheetArea - used) / (estSheets * sheetArea)) * 100 : 0,
       sheets: [],
       layout: null,
     };
   }
 
-  const sheets: ChapasRealSheetRow[] = layout.sheets.map((sheetResult, idx) => {
-    const sheetW = sheetResult.sheet.largura_mm ?? sheetDef.largura_mm ?? CHAPA_PADRAO_LARGURA;
-    const sheetH = sheetResult.sheet.altura_mm ?? sheetDef.altura_mm ?? CHAPA_PADRAO_ALTURA;
-    const sheetArea = sheetW * sheetH;
-    const usedArea = sheetResult.placements.reduce((s, p) => s + p.largura_mm * p.altura_mm, 0);
-    const waste = Math.max(0, sheetArea - usedArea);
-    return {
-      sheetIndex: idx + 1,
-      espessuraMm: sheetResult.sheet.espessura_mm ?? sheetDef.espessura_mm ?? 18,
-      material: sheetResult.sheet.materialName ?? sheetDef.materialName ?? "MDF",
-      pieceCount: sheetResult.placements.length,
-      usedAreaMm2: usedArea,
-      sheetAreaMm2: sheetArea,
-      wasteMm2: waste,
-      wastePct: sheetArea > 0 ? (waste / sheetArea) * 100 : 0,
-      pieces: sheetResult.placements.map((p) => ({
-        nome: p.partName ?? "—",
-        boxId: p.boxId ?? "",
-        largura: p.largura_mm,
-        altura: p.altura_mm,
-      })),
-    };
-  });
-
   const totalWaste = sheets.reduce((s, r) => s + r.wasteMm2, 0);
   const totalArea = sheets.reduce((s, r) => s + r.sheetAreaMm2, 0);
+  const layout: CutLayoutResult = { sheets: mergedLayoutSheets };
 
   return {
     totalSheets: sheets.length,

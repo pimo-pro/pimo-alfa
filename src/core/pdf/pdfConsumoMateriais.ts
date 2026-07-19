@@ -29,6 +29,8 @@ export async function buildConsumoMateriaisPdf(
       sheetIndex: r.chapaIndex,
       espessuraMm: r.espessuraMm,
       material: r.material,
+      sheetLarguraMm: 0,
+      sheetAlturaMm: 0,
       pieceCount: 0,
       usedAreaMm2: r.areaUsadaMm2,
       sheetAreaMm2: r.areaChapaMm2,
