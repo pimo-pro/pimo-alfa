@@ -1,19 +1,19 @@
 /**
- * Camada de remapeamento Pi ? `--ci-*` (consolidaùùo do design system CI).
+ * Utilit·rios CI ó mapeamento hex/rgba SSOT ? `var(--ci-*)` / `color-mix`.
  *
- * Hex SSOT exacto ? `var(--ci-*)`
- * rgba com RGB SSOT ? `color-mix(in srgb, var(--ci-ù) ?%, transparent)`:
- *   - Prussian 600 / 200, Sienna 600
- *   - Chalk-dim, Iron-deep, Success (superfùcies / status Pi)
- * Hex / rgba / sombras sem correspondùncia clara ? intactos
+ * Incremento 4: a paleta Pi (`piPalette.ts`) e os botıes (`piButtonSystem.ts`)
+ * j· s„o CI puros em origem. Este mÛdulo:
+ *   - expıe `CI_CSS` (aliases canÛnicos)
+ *   - mantÈm remap hex/rgba para migraÁıes pontuais e auditoria
+ *   - `listCiRemapResiduals()` lista valores fora do SSOT CI
  *
- * Sù no runtime sob template Pi (piPalette / piButtonSystem).
- * Alpha e preload nùo usam este mùdulo.
+ * ResÌduos deliberados na paleta Pi: #C8845A, #6dbc88, #1a3a22, sombras rgba(0,0,0,*).
+ * Alpha e preload n„o usam este mÛdulo.
  */
 
 import type { TemplatePaletteOverrides, TokenValueMap } from "./types";
 
-/** Referùncias CSS canùnicas (aliases do SSOT). */
+/** ReferÍncias CSS canÛnicas (aliases do SSOT). */
 export const CI_CSS = {
   chalk: "var(--ci-chalk)",
   chalkDim: "var(--ci-chalk-dim)",
@@ -79,12 +79,13 @@ const HEX_TO_CI_VAR: Record<string, string> = {
   "#0E0F11": CI_CSS.darkRaised,
 };
 
-/** RGB canùnicos SSOT usados em rgba do remap Pi. */
+/** RGB canÛnicos SSOT usados em rgba do remap utilit·rio. */
 const RGB_TO_CI_VAR: Array<{ r: number; g: number; b: number; ciVar: string }> = [
   { r: 28, g: 74, b: 122, ciVar: CI_CSS.prussian600 },
   { r: 144, g: 184, b: 224, ciVar: CI_CSS.prussian200 },
   { r: 139, g: 74, b: 28, ciVar: CI_CSS.sienna600 },
   { r: 216, g: 212, b: 206, ciVar: CI_CSS.chalkDim },
+  { r: 240, g: 237, b: 232, ciVar: CI_CSS.chalk },
   { r: 19, g: 21, b: 24, ciVar: CI_CSS.ironDeep },
   { r: 46, g: 92, b: 58, ciVar: CI_CSS.success },
 ];
@@ -114,7 +115,7 @@ function colorMixCi(ciVar: string, alpha: number): string {
 
 /**
  * rgba(R,G,B,A) ? color-mix com token CI quando RGB = SSOT conhecido.
- * Aceita espaùos opcionais; alpha 0ù1.
+ * Aceita espaÁos opcionais; alpha 0ñ1.
  */
 export function remapRgbaToCiColorMix(value: string): string | null {
   const m = value
@@ -138,7 +139,7 @@ export function remapRgbaToCiColorMix(value: string): string | null {
   return null;
 }
 
-/** Remap completo de um valor de token (hex SSOT, rgba CI, ou intacto). */
+/** Remap de um valor (hex SSOT, rgba CI, ou intacto). Idempotente sobre valores j· CI. */
 export function remapValueToCi(value: string): string {
   if (!value) return value;
   if (value.startsWith("var(--ci-") || (value.startsWith("color-mix(") && value.includes("--ci-"))) {
@@ -151,7 +152,7 @@ export function remapValueToCi(value: string): string {
   const key = normalizeHexKey(value);
   if (key) return HEX_TO_CI_VAR[key] ?? value;
 
-  // Sombras / valores compostos com rgba(...) embutido (ex. inset Ö rgba(216,212,206,0.08))
+  // Sombras / valores compostos com rgba(...) embutido
   if (value.includes("rgba(")) {
     return value.replace(
       /rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0|0?\.\d+|1(?:\.0+)?)\s*\)/gi,
@@ -162,7 +163,7 @@ export function remapValueToCi(value: string): string {
   return value;
 }
 
-/** @deprecated Use remapValueToCi ó compatibilidade com testes do incremento 1. */
+/** @deprecated Prefer remapValueToCi ó alias de compatibilidade. */
 export function remapHexToCiVar(value: string): string {
   return remapValueToCi(value);
 }
@@ -183,8 +184,12 @@ export function applyCiRemapToPalette(palette: TemplatePaletteOverrides): Templa
 }
 
 /**
- * Tokens cujo valor pùs-remap ainda nùo ù `var(--ci-*)` nem `color-mix(...ci...)`.
- * ùtil para consolidaùùo: resùduos esperados (ex. #C8845A, sombras pretas).
+ * Auditoria Incremento 4: tokens cujo valor n„o usa `--ci-*` / `color-mix(...ci...)`.
+ *
+ * ResÌduos deliberados esperados na paleta Pi:
+ *   - #C8845A (status progress)
+ *   - #6dbc88 / #1a3a22 (status done dark/light)
+ *   - rgba(0,0,0,*) em sombras
  */
 export function listCiRemapResiduals(palette: TemplatePaletteOverrides): Array<{
   mode: "dark" | "light";

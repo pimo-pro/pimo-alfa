@@ -1,46 +1,42 @@
 import type { ButtonShape, TemplatePaletteOverrides } from "./types";
-import { applyCiRemapToPalette } from "./ciRemap";
+import { CI_CSS } from "./ciRemap";
 
 /**
  * Fase 4 — sistema de botões unificado (só quando o template Pi está ativo).
  *
- * Cores: aplicadas no <html> pelo ThemeTemplateContext quando template=pi.
- * Radius: NÃO usa --pi-btn-radius no DOM — só data-pi-button-shape + CSS gated
- * (Passo 2), para não vazar para Alpha nem para estilos industriais.
+ * Cores CI puras (`var(--ci-*)`), aplicadas no <html> pelo ThemeTemplateContext
+ * quando template=pi. Sem tabela hex intermediária.
  *
- * Hex SSOT remapeados para `var(--ci-*)` via ciRemap (aplicação visual CI).
- * Consumidores CSS sob [data-theme-template="pi"]; Alpha usa .button-primary / --ui-*.
+ * Radius: NÃO usa --pi-btn-radius no DOM — só data-pi-button-shape + CSS gated.
+ * Alpha usa .button-primary / --ui-* (não lê estes tokens).
  */
-const PI_BUTTON_SYSTEM_HEX: TemplatePaletteOverrides = {
+export const PI_BUTTON_SYSTEM_TOKENS: TemplatePaletteOverrides = {
   dark: {
-    "pi-btn-primary-bg": "#1C4A7A",
-    "pi-btn-primary-color": "#F0EDE8",
+    "pi-btn-primary-bg": CI_CSS.prussian600,
+    "pi-btn-primary-color": CI_CSS.chalk,
     /** Alias legado (= primary-color) — mantido para refs existentes. */
-    "pi-btn-on-accent-text": "#F0EDE8",
-    "pi-btn-secondary-bg": "#0A0B0C",
-    "pi-btn-secondary-color": "#F0EDE8",
-    "pi-btn-secondary-border": "#2C2E30",
-    "pi-btn-danger-bg": "#8B1C1C",
-    "pi-btn-confirm-bg": "#2E5C3A",
-    "pi-btn-ghost-bg": "#0A0B0C",
-    "pi-btn-ghost-border": "#2C2E30",
+    "pi-btn-on-accent-text": CI_CSS.chalk,
+    "pi-btn-secondary-bg": CI_CSS.darkCard,
+    "pi-btn-secondary-color": CI_CSS.chalk,
+    "pi-btn-secondary-border": CI_CSS.iron,
+    "pi-btn-danger-bg": CI_CSS.danger,
+    "pi-btn-confirm-bg": CI_CSS.success,
+    "pi-btn-ghost-bg": CI_CSS.darkCard,
+    "pi-btn-ghost-border": CI_CSS.iron,
   },
   light: {
-    "pi-btn-primary-bg": "#1C4A7A",
-    "pi-btn-primary-color": "#F0EDE8",
-    "pi-btn-on-accent-text": "#F0EDE8",
-    "pi-btn-secondary-bg": "#FFFFFF",
-    "pi-btn-secondary-color": "#131518",
-    "pi-btn-secondary-border": "#D8D4CE",
-    "pi-btn-danger-bg": "#8B1C1C",
-    "pi-btn-confirm-bg": "#2E5C3A",
-    "pi-btn-ghost-bg": "#FFFFFF",
-    "pi-btn-ghost-border": "#D8D4CE",
+    "pi-btn-primary-bg": CI_CSS.prussian600,
+    "pi-btn-primary-color": CI_CSS.chalk,
+    "pi-btn-on-accent-text": CI_CSS.chalk,
+    "pi-btn-secondary-bg": CI_CSS.bgCard,
+    "pi-btn-secondary-color": CI_CSS.ironDeep,
+    "pi-btn-secondary-border": CI_CSS.chalkDim,
+    "pi-btn-danger-bg": CI_CSS.danger,
+    "pi-btn-confirm-bg": CI_CSS.success,
+    "pi-btn-ghost-bg": CI_CSS.bgCard,
+    "pi-btn-ghost-border": CI_CSS.chalkDim,
   },
 };
-
-export const PI_BUTTON_SYSTEM_TOKENS: TemplatePaletteOverrides =
-  applyCiRemapToPalette(PI_BUTTON_SYSTEM_HEX);
 
 /**
  * Raio por formato — usado em CSS gated (data-pi-button-shape) e no preview admin.
