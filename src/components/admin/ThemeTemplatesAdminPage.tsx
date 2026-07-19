@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useThemeTemplate } from "../../context/ThemeTemplateContext";
 import { useTheme } from "../../context/ThemeContext";
 import { AdminPageHeader, adminPageShellStyle } from "./AdminUi";
+import AdminPiColorEditorPage from "./AdminPiColorEditorPage";
 import type { ButtonShape, ThemeTemplateId } from "../../theme/palettes/types";
 import { BUTTON_SHAPE_LABELS, BUTTON_SHAPE_RADIUS_PX } from "../../theme/palettes/piButtonSystem";
 
@@ -162,6 +163,9 @@ export default function ThemeTemplatesAdminPage() {
         (alternável no botão de sol/lua do cabeçalho) · Template ativo:{" "}
         <strong style={{ color: "var(--text-main)" }}>{template}</strong>
       </div>
+
+      {/* Fase 6 UI — editor de overrides; gated a template Pi (Alpha não passa pela API). */}
+      {isPi ? <AdminPiColorEditorPage /> : null}
     </div>
   );
 }
