@@ -1,8 +1,11 @@
 /**
  * Camada de remapeamento Pi ? `--ci-*` (aplicação visual incremental).
  *
- * Converte hex do SSOT Chalk/Iron/Sienna em `var(--ci-…)` quando há
- * correspondência exacta. Valores rgba / hex fora do SSOT ficam intactos.
+ * - Hex SSOT exacto ? `var(--ci-*)`
+ * - rgba Prussian `rgba(28,74,122,?)` ? `color-mix(… var(--ci-prussian-600) …)`
+ * - rgba Sienna `rgba(139,74,28,?)` ? `color-mix(… var(--ci-sienna-600) …)`
+ * - rgba Prussian-lt `rgba(144,184,224,?)` ? `color-mix(… var(--ci-prussian-200) …)`
+ * - Hex / rgba sem correspondência clara ? intactos
  *
  * Só entra no runtime sob template Pi (via piPalette / piButtonSystem).
  * Alpha e preload não usam este módulo.
@@ -76,6 +79,11 @@ const HEX_TO_CI_VAR: Record<string, string> = {
   "#0E0F11": CI_CSS.darkRaised,
 };
 
+/** RGB canónicos das escalas usadas em rgba do remap Pi. */
+const PRUSSIAN_600_RGB = { r: 28, g: 74, b: 122 };
+const PRUSSIAN_200_RGB = { r: 144, g: 184, b: 224 };
+const SIENNA_600_RGB = { r: 139, g: 74, b: 28 };
+
 function normalizeHexKey(value: string): string | null {
   const v = value.trim();
   if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v)) return null;
@@ -88,18 +96,69 @@ function normalizeHexKey(value: string): string | null {
   return v.toUpperCase();
 }
 
-/** Substitui hex SSOT por `var(--ci-*)`; deixa rgba / outros intactos. */
-export function remapHexToCiVar(value: string): string {
-  if (!value || value.startsWith("var(")) return value;
+function formatAlphaPercent(alpha: number): string {
+  const pct = Math.round(alpha * 10000) / 100;
+  if (Number.isInteger(pct)) return `${pct}%`;
+  const trimmed = pct.toFixed(2).replace(/\.?0+$/, "");
+  return `${trimmed}%`;
+}
+
+function colorMixCi(ciVar: string, alpha: number): string {
+  return `color-mix(in srgb, ${ciVar} ${formatAlphaPercent(alpha)}, transparent)`;
+}
+
+/**
+ * rgba(R,G,B,A) ? color-mix com token CI quando RGB = Prussian/Sienna SSOT.
+ * Aceita espaços opcionais; alpha 0–1.
+ */
+export function remapRgbaToCiColorMix(value: string): string | null {
+  const m = value
+    .trim()
+    .match(
+      /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(0|0?\.\d+|1(?:\.0+)?)\s*\)$/i
+    );
+  if (!m) return null;
+
+  const r = Number(m[1]);
+  const g = Number(m[2]);
+  const b = Number(m[3]);
+  const a = Number(m[4]);
+  if (a < 0 || a > 1) return null;
+
+  if (r === PRUSSIAN_600_RGB.r && g === PRUSSIAN_600_RGB.g && b === PRUSSIAN_600_RGB.b) {
+    return colorMixCi(CI_CSS.prussian600, a);
+  }
+  if (r === PRUSSIAN_200_RGB.r && g === PRUSSIAN_200_RGB.g && b === PRUSSIAN_200_RGB.b) {
+    return colorMixCi(CI_CSS.prussian200, a);
+  }
+  if (r === SIENNA_600_RGB.r && g === SIENNA_600_RGB.g && b === SIENNA_600_RGB.b) {
+    return colorMixCi(CI_CSS.sienna600, a);
+  }
+  return null;
+}
+
+/** Remap completo de um valor de token (hex SSOT, rgba CI, ou intacto). */
+export function remapValueToCi(value: string): string {
+  if (!value || value.startsWith("var(") || value.startsWith("color-mix(")) return value;
+
+  const rgbaMapped = remapRgbaToCiColorMix(value);
+  if (rgbaMapped) return rgbaMapped;
+
   const key = normalizeHexKey(value);
-  if (!key) return value;
-  return HEX_TO_CI_VAR[key] ?? value;
+  if (key) return HEX_TO_CI_VAR[key] ?? value;
+
+  return value;
+}
+
+/** @deprecated Use remapValueToCi — mantido para compatibilidade dos testes do incremento 1. */
+export function remapHexToCiVar(value: string): string {
+  return remapValueToCi(value);
 }
 
 export function applyCiRemapToTokenMap(map: TokenValueMap): TokenValueMap {
   const out: TokenValueMap = {};
   for (const [token, value] of Object.entries(map)) {
-    if (value != null) out[token] = remapHexToCiVar(value);
+    if (value != null) out[token] = remapValueToCi(value);
   }
   return out;
 }
