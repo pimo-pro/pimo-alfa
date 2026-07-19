@@ -14,10 +14,11 @@ export const projectProgressStyles = {
 
   header: {
     marginBottom: "3rem",
-    background: "linear-gradient(135deg, var(--bg-selected, rgba(59, 130, 246, 0.1)) 0%, rgba(139, 92, 246, 0.1) 100%)",
+    background:
+      "linear-gradient(135deg, var(--bg-selected, color-mix(in srgb, var(--ci-prussian-600, #3b82f6) 10%, transparent)) 0%, color-mix(in srgb, var(--ci-sienna-600, #8b5cf6) 10%, transparent) 100%)",
     padding: "2.5rem",
     borderRadius: "12px",
-    border: "1px solid var(--border-selected, rgba(59, 130, 246, 0.2))",
+    border: "1px solid var(--border-selected, color-mix(in srgb, var(--ci-prussian-600, #3b82f6) 20%, transparent))",
   },
 
   headerContent: {
@@ -77,7 +78,8 @@ export const projectProgressStyles = {
 
   progressFill: {
     height: "100%",
-    background: "linear-gradient(90deg, var(--blue-light, #3b82f6), var(--status-progress-color, #f59e0b), var(--status-done-color, #22c55e))",
+    background:
+      "linear-gradient(90deg, var(--ci-prussian-600, var(--blue-light, #3b82f6)), var(--status-progress-color, var(--ci-sienna-400, #f59e0b)), var(--status-done-color, var(--ci-success, #22c55e)))",
     borderRadius: "4px",
     transition: "width 0.5s ease",
   },
@@ -178,7 +180,7 @@ export const projectProgressStyles = {
     gap: "0.5rem",
     padding: "1rem",
     background: "var(--card-bg, rgba(15, 23, 42, 0.5))",
-    borderLeft: "3px solid rgba(139, 92, 246, 0.5)",
+    borderLeft: "3px solid color-mix(in srgb, var(--ci-prussian-600, #8b5cf6) 50%, transparent)",
     borderRadius: "6px",
   },
 
@@ -207,8 +209,8 @@ export const projectProgressStyles = {
   },
 
   infoBox: {
-    background: "var(--bg-selected, rgba(59, 130, 246, 0.1))",
-    border: "1px solid var(--border-selected, rgba(59, 130, 246, 0.2))",
+    background: "var(--bg-selected, color-mix(in srgb, var(--ci-prussian-600, #3b82f6) 10%, transparent))",
+    border: "1px solid var(--border-selected, color-mix(in srgb, var(--ci-prussian-600, #3b82f6) 20%, transparent))",
     borderRadius: "10px",
     padding: "1.5rem",
     backdropFilter: "blur(10px)",

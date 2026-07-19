@@ -12,8 +12,9 @@ import SystemDocumentationPage from "../components/help/SystemDocumentationPage"
 import { AJUDA_WHATS_NEW_PATH } from "../routes/ajudaRoutes";
 import type { SystemDocCategoryId } from "../utils/loadSystemDoc";
 import { SYSTEM_DOC_CATEGORIES } from "../utils/loadSystemDoc";
+import { ciTint } from "./ajuda/ajudaPageTokens";
 
-// ── Tokens (CSS vars do tema; fallbacks = Alpha dark histórico) ───────────────
+// ── Tokens (CI-native com fallback Alpha) ─────────────────────────────────────
 
 const C = {
   bg:      "var(--navy,#0f172a)",
@@ -21,15 +22,15 @@ const C = {
   border:  "var(--card-border,rgba(255,255,255,0.07))",
   text:    "var(--text-main,#e2e8f0)",
   muted:   "var(--text-muted,#94a3b8)",
-  accent:  "var(--blue-light,#3b82f6)",
-  green:   "var(--status-done-color,#34d399)",
-  amber:   "var(--status-progress-color,#fbbf24)",
-  purple:  "var(--blue-light,#a78bfa)",
+  accent:  "var(--ci-prussian-600, var(--blue-light,#3b82f6))",
+  green:   "var(--status-done-color, var(--ci-success, #34d399))",
+  amber:   "var(--status-progress-color, var(--ci-sienna-400, #fbbf24))",
+  purple:  "var(--ci-prussian-200, var(--blue-light,#a78bfa))",
   pink:    "var(--primary,#f472b6)",
-  danger:  "var(--ui-color-danger,#f85149)",
-  system:  "var(--primary,#38bdf8)",
-  accentBg: "var(--accent-button-bg,rgba(59,130,246,0.1))",
-  accentBd: "var(--accent-button-border,rgba(59,130,246,0.25))",
+  danger:  "var(--ui-color-danger, var(--ci-danger, #f85149))",
+  system:  "var(--ci-prussian-400, var(--primary,#38bdf8))",
+  accentBg: "var(--accent-button-bg, color-mix(in srgb, var(--ci-prussian-600, var(--blue-light,#3b82f6)) 10%, transparent))",
+  accentBd: "var(--accent-button-border, color-mix(in srgb, var(--ci-prussian-600, var(--blue-light,#3b82f6)) 25%, transparent))",
 };
 
 const font = "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
@@ -269,7 +270,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id:"atalhos", icon:"key", label:"Atalhos de Teclado", accent:"#94a3b8",
+    id:"atalhos", icon:"key", label:"Atalhos de Teclado", accent:C.muted,
     title:"Atalhos de teclado do viewport",
     intro:"O viewport 3D tem atalhos para as ações mais frequentes. Memorizar os principais acelera significativamente o fluxo de trabalho.",
     steps:[
@@ -294,7 +295,7 @@ const SECTIONS: Section[] = [
 
 function Kbd({ label }: { label: string }) {
   return (
-    <kbd style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:28,padding:"2px 7px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",borderBottom:"2px solid rgba(255,255,255,0.1)",borderRadius:5,fontSize:11,fontWeight:600,fontFamily:"monospace",color:C.text,flexShrink:0 }}>
+    <kbd style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:28,padding:"2px 7px",background:ciTint("var(--ci-chalk, #ffffff)", 7),border:`1px solid ${ciTint("var(--ci-chalk, #ffffff)", 15)}`,borderBottom:`2px solid ${ciTint("var(--ci-chalk, #ffffff)", 10)}`,borderRadius:5,fontSize:11,fontWeight:600,fontFamily:"monospace",color:C.text,flexShrink:0 }}>
       {label}
     </kbd>
   );
@@ -309,7 +310,7 @@ const ALERT_CFG: Record<AlertType,{ color:string; icon:string; label:string }> =
 function AlertBox({ type, text }: Alert) {
   const cfg = ALERT_CFG[type];
   return (
-    <div style={{ display:"flex",gap:9,padding:"9px 12px",background:`${cfg.color}0f`,border:`1px solid ${cfg.color}2a`,borderRadius:8 }}>
+    <div style={{ display:"flex",gap:9,padding:"9px 12px",background:ciTint(cfg.color, 6),border:`1px solid ${ciTint(cfg.color, 16)}`,borderRadius:8 }}>
       <Ico d={cfg.icon} size={13} color={cfg.color}/>
       <p style={{ margin:0,fontSize:12,color:C.muted,lineHeight:1.6,fontFamily:font }}>
         <strong style={{ color:cfg.color }}>{cfg.label}: </strong>{text}
@@ -327,7 +328,7 @@ function StepList({ steps, alerts }: { steps:Step[]; alerts?:Alert[] }) {
           <div>
             <p style={{ margin:"1px 0 3px",fontSize:13,fontWeight:600,color:C.text,fontFamily:font }}>{step.title}</p>
             <p style={{ margin:0,fontSize:12,color:C.muted,lineHeight:1.65,fontFamily:font }}>{step.text}</p>
-            {step.code&&<code style={{ display:"block",marginTop:6,padding:"5px 9px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:6,fontSize:11,color:C.accent,fontFamily:"monospace" }}>{step.code}</code>}
+            {step.code&&<code style={{ display:"block",marginTop:6,padding:"5px 9px",background:ciTint("var(--ci-chalk, #ffffff)", 4),border:`1px solid ${ciTint("var(--ci-chalk, #ffffff)", 7)}`,borderRadius:6,fontSize:11,color:C.accent,fontFamily:"monospace" }}>{step.code}</code>}
           </div>
         </div>
       ))}
@@ -339,10 +340,10 @@ function StepList({ steps, alerts }: { steps:Step[]; alerts?:Alert[] }) {
 function SectionCard({ section, isActive }: { section:Section; isActive:boolean }) {
   const isShortcuts = section.id === "atalhos";
   return (
-    <div id={section.id} style={{ background:C.surface,border:`1px solid ${isActive?section.accent+"44":C.border}`,borderRadius:14,overflow:"hidden",scrollMarginTop:80,transition:"border-color 0.2s" }}>
+    <div id={section.id} style={{ background:C.surface,border:`1px solid ${isActive?ciTint(section.accent, 27):C.border}`,borderRadius:14,overflow:"hidden",scrollMarginTop:80,transition:"border-color 0.2s" }}>
       {/* Header */}
-      <div style={{ display:"flex",alignItems:"center",gap:12,padding:"15px 20px",borderBottom:`1px solid ${C.border}`,background:"rgba(255,255,255,0.015)" }}>
-        <div style={{ width:34,height:34,borderRadius:9,flexShrink:0,background:`${section.accent}18`,border:`1px solid ${section.accent}30`,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,padding:"15px 20px",borderBottom:`1px solid ${C.border}`,background:ciTint("var(--ci-chalk, #ffffff)", 1.5) }}>
+        <div style={{ width:34,height:34,borderRadius:9,flexShrink:0,background:ciTint(section.accent, 9),border:`1px solid ${ciTint(section.accent, 19)}`,display:"flex",alignItems:"center",justifyContent:"center" }}>
           <Ico d={P[section.icon]} size={15} color={section.accent}/>
         </div>
         <div>
@@ -359,7 +360,7 @@ function SectionCard({ section, isActive }: { section:Section; isActive:boolean 
             {section.steps.map((step)=>{
               const [key,...rest] = step.title.split(" — ");
               return (
-                <div key={step.title} style={{ display:"flex",alignItems:"flex-start",gap:9,padding:"9px 11px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:8 }}>
+                <div key={step.title} style={{ display:"flex",alignItems:"flex-start",gap:9,padding:"9px 11px",background:ciTint("var(--ci-chalk, #ffffff)", 2),border:`1px solid ${ciTint("var(--ci-chalk, #ffffff)", 5)}`,borderRadius:8 }}>
                   <Kbd label={key}/>
                   <div>
                     <p style={{ margin:"0 0 2px",fontSize:12,fontWeight:600,color:C.text,fontFamily:font }}>{rest.join(" — ")}</p>
@@ -412,7 +413,7 @@ export default function HelpPage() {
 
         {/* Header */}
         <div style={{ padding:"48px 0 36px",borderBottom:`1px solid ${C.border}`,marginBottom:36 }}>
-          <div style={{ display:"inline-flex",alignItems:"center",gap:6,marginBottom:12,padding:"3px 10px",borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",background: viewMode === "system" ? "var(--bg-selected,rgba(56,189,248,0.1))" : C.accentBg,color: viewMode === "system" ? C.system : C.accent,border: viewMode === "system" ? "1px solid var(--border-selected,rgba(56,189,248,0.25))" : `1px solid ${C.accentBd}` }}>
+          <div style={{ display:"inline-flex",alignItems:"center",gap:6,marginBottom:12,padding:"3px 10px",borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",background: viewMode === "system" ? "var(--bg-selected, color-mix(in srgb, var(--ci-prussian-400, #38bdf8) 10%, transparent))" : C.accentBg,color: viewMode === "system" ? C.system : C.accent,border: viewMode === "system" ? "1px solid var(--border-selected, color-mix(in srgb, var(--ci-prussian-400, #38bdf8) 25%, transparent))" : `1px solid ${C.accentBd}` }}>
             {viewMode === "system" ? "System Documentation" : "Documentação"}
           </div>
           <h1 style={{ fontSize:"clamp(1.7rem,4vw,2.3rem)",fontWeight:800,margin:"0 0 10px",letterSpacing:"-0.02em" }}>
@@ -456,7 +457,7 @@ export default function HelpPage() {
           <nav style={{ position:"sticky",top:16,background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 6px" }}>
             <p style={{ fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",color:C.muted,padding:"4px 10px 8px",margin:0 }}>Conteúdo</p>
             {SECTIONS.map((s)=>(
-              <a key={s.id} href={`#${s.id}`} onClick={()=>setActive(s.id)} style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,fontWeight:active===s.id?600:400,color:active===s.id?s.accent:C.muted,background:active===s.id?`${s.accent}12`:"transparent",border:`1px solid ${active===s.id?s.accent+"30":"transparent"}`,textDecoration:"none",transition:"all 0.1s",fontFamily:font }}>
+              <a key={s.id} href={`#${s.id}`} onClick={()=>setActive(s.id)} style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,fontWeight:active===s.id?600:400,color:active===s.id?s.accent:C.muted,background:active===s.id?ciTint(s.accent, 7):"transparent",border:`1px solid ${active===s.id?ciTint(s.accent, 19):"transparent"}`,textDecoration:"none",transition:"all 0.1s",fontFamily:font }}>
                 <Ico d={P[s.icon]} size={12} color={active===s.id?s.accent:C.muted}/>
                 {s.label}
               </a>
@@ -475,7 +476,7 @@ export default function HelpPage() {
             <button
               type="button"
               onClick={() => openSystemDocs("drawers")}
-              style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,width:"100%",textAlign:"left",fontWeight:600,color:C.system,background:"var(--bg-selected,rgba(56,189,248,0.08))",border:"1px solid var(--border-selected,rgba(56,189,248,0.22))",cursor:"pointer",fontFamily:font,marginBottom:4 }}
+              style={{ display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:7,fontSize:12,width:"100%",textAlign:"left",fontWeight:600,color:C.system,background:"var(--bg-selected, color-mix(in srgb, var(--ci-prussian-400, #38bdf8) 8%, transparent))",border:"1px solid var(--border-selected, color-mix(in srgb, var(--ci-prussian-400, #38bdf8) 22%, transparent))",cursor:"pointer",fontFamily:font,marginBottom:4 }}
             >
               <Ico d={P.engineering} size={12} color={C.system}/>
               Índice técnico

@@ -2296,6 +2296,31 @@ body {
   --ci-sienna-900: #321806;
 }
 
+/* Pi — painel Móveis: acentos CI (baselines Alpha intactos acima) */
+[data-theme-template="pi"] .moveis-panel__search-input:focus {
+  border-color: var(--ci-prussian-600);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ci-prussian-600) 18%, transparent);
+}
+[data-theme-template="pi"] .moveis-item--active {
+  background: color-mix(in srgb, var(--ci-prussian-600) 10%, transparent);
+  border-color: color-mix(in srgb, var(--ci-prussian-600) 28%, transparent);
+}
+[data-theme-template="pi"] .moveis-opt-chip--on {
+  background: color-mix(in srgb, var(--ci-prussian-600) 14%, transparent);
+  color: var(--ci-prussian-600);
+  border-color: color-mix(in srgb, var(--ci-prussian-600) 35%, transparent);
+}
+[data-theme-template="pi"] .moveis-opt-chip__dot {
+  background: var(--ci-prussian-600);
+}
+[data-theme-template="pi"] .moveis-bubble__add {
+  background: var(--pi-btn-primary-bg, var(--ci-prussian-600));
+  color: var(--pi-btn-primary-color, var(--ci-chalk));
+}
+[data-theme-template="pi"] .moveis-bubble__add:hover {
+  background: var(--ci-prussian-800);
+}
+
 /* ============================================================
    FASE 4 — Sistema de botoes unificado (SOMENTE template Pi)
    Radius via data-pi-button-shape — NAO usa --pi-btn-radius no DOM

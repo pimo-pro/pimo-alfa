@@ -7,7 +7,9 @@ import type { TemplatePaletteOverrides } from "./types";
  * Sem tabela hex/rgba intermediária: o runtime aplica isto directamente sob template=pi.
  * Alpha não lê este módulo (early-return no ThemeTemplateContext).
  *
- * Resíduos deliberados fora do SSOT: #C8845A, #6dbc88, #1a3a22, sombras rgba(0,0,0,*).
+ * Resíduos deliberados fora do SSOT (sem equivalência CI clara):
+ *   #C8845A (status progress dark), #6dbc88 / #1a3a22 (status done),
+ *   sombras rgba(0,0,0,*).
  * Overrides de utilizador (Fase 6) continuam a ganhar no merge.
  */
 export const PI_PALETTE_OVERRIDES: TemplatePaletteOverrides = {

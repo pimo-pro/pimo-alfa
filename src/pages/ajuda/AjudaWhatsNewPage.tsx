@@ -126,8 +126,8 @@ export default function AjudaWhatsNewPage() {
                 fontSize: 12,
                 fontWeight: 600,
                 color: C.accent,
-                background: `${C.accent}12`,
-                border: `1px solid ${C.accent}30`,
+                background: C.accentBg,
+                border: `1px solid ${C.accentBd}`,
                 fontFamily: font,
               }}
             >

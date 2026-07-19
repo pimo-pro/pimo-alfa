@@ -60,14 +60,15 @@
   --v4-text-muted: var(--text-muted);
   --v4-text-subtle: var(--text-muted);
 
-  --v4-accent: var(--blue-light);
-  --v4-accent-hover: var(--blue-light);
-  --v4-accent-muted: var(--accent-button-bg);
-  --v4-accent-ring: var(--focus-ring);
+  /* CI nativo (sem remap --blue-light) */
+  --v4-accent: var(--ci-prussian-600);
+  --v4-accent-hover: var(--ci-prussian-800);
+  --v4-accent-muted: color-mix(in srgb, var(--ci-prussian-600) 12%, transparent);
+  --v4-accent-ring: color-mix(in srgb, var(--ci-prussian-600) 30%, transparent);
 
-  --v4-success: var(--status-done-color);
-  --v4-warning: var(--status-progress-color);
-  --v4-danger: var(--pi-btn-danger-bg, #f85149);
+  --v4-success: var(--status-done-color, var(--ci-success));
+  --v4-warning: var(--status-progress-color, var(--ci-sienna-400));
+  --v4-danger: var(--ci-danger, var(--pi-btn-danger-bg, #f85149));
 }
 
 /* Radius v4 so no Pi, via data-pi-button-shape (nao herda --pi-btn-radius global) */

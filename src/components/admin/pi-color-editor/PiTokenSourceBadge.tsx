@@ -5,14 +5,14 @@ import { LAYER_LABELS } from "./piTokenEditorShared";
 const badgeStyle = (layer: PiPaletteLayerId | "none"): CSSProperties => {
   const tones: Record<string, { bg: string; fg: string; bd: string }> = {
     userOverrides: {
-      bg: "var(--bg-selected, rgba(59,130,246,0.15))",
-      fg: "var(--blue-light, #3b82f6)",
-      bd: "var(--border-selected, rgba(59,130,246,0.35))",
+      bg: "var(--bg-selected, color-mix(in srgb, var(--ci-prussian-600, #3b82f6) 15%, transparent))",
+      fg: "var(--ci-prussian-600, var(--blue-light, #3b82f6))",
+      bd: "var(--border-selected, color-mix(in srgb, var(--ci-prussian-600, #3b82f6) 35%, transparent))",
     },
     ciSsotBridge: {
-      bg: "var(--status-progress-bg, rgba(250,204,21,0.12))",
-      fg: "var(--status-progress-color, #facc15)",
-      bd: "var(--status-progress-border, rgba(250,204,21,0.35))",
+      bg: "var(--status-progress-bg, color-mix(in srgb, var(--ci-sienna-400, #facc15) 12%, transparent))",
+      fg: "var(--status-progress-color, var(--ci-sienna-400, #facc15))",
+      bd: "var(--status-progress-border, color-mix(in srgb, var(--ci-sienna-400, #facc15) 35%, transparent))",
     },
     piPalette: {
       bg: "var(--button-ghost-bg)",

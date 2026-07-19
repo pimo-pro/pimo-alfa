@@ -10,12 +10,12 @@
   --icon-color: var(--text-muted, #475569);
   --icon-color-active: var(--text-main, #0f172a);
   --icon-color-muted: var(--text-muted, #94a3b8);
-  --icon-color-accent: var(--blue-light, #3b82f6);
+  --icon-color-accent: var(--ci-prussian-600, var(--blue-light, #3b82f6));
 }
 
 .theme-dark {
   --icon-color: var(--text-muted, #94a3b8);
   --icon-color-active: var(--text-main, #f1f5f9);
   --icon-color-muted: var(--blue-mid, #475569);
-  --icon-color-accent: var(--blue-light, #3b82f6);
+  --icon-color-accent: var(--ci-prussian-600, var(--blue-light, #3b82f6));
 }

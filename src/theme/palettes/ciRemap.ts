@@ -1,19 +1,21 @@
 /**
- * Utilitários CI — mapeamento hex/rgba SSOT ? `var(--ci-*)` / `color-mix`.
+ * Utilitarios CI ï¿½ mapeamento hex/rgba SSOT ? `var(--ci-*)` / `color-mix`.
  *
- * Incremento 4: a paleta Pi (`piPalette.ts`) e os botões (`piButtonSystem.ts`)
- * já são CI puros em origem. Este módulo:
- *   - expõe `CI_CSS` (aliases canónicos)
- *   - mantém remap hex/rgba para migrações pontuais e auditoria
+ * Incremento 4: a paleta Pi (`piPalette.ts`) e os botoes (`piButtonSystem.ts`)
+ * ja sao CI puros em origem. Este modulo:
+ *   - expoe `CI_CSS` (aliases canonicos)
+ *   - mantem remap hex/rgba para migracoes pontuais e auditoria
  *   - `listCiRemapResiduals()` lista valores fora do SSOT CI
  *
- * Resíduos deliberados na paleta Pi: #C8845A, #6dbc88, #1a3a22, sombras rgba(0,0,0,*).
- * Alpha e preload não usam este módulo.
+ * Residuos deliberados na paleta Pi (sem equivalencia CI clara):
+ *   #C8845A, #6dbc88, #1a3a22, sombras rgba(0,0,0,*).
+ * Consumidores finais (Help/Progress/v4) usam --ci-* com fallback Alpha.
+ * Alpha e preload nao usam este modulo.
  */
 
 import type { TemplatePaletteOverrides, TokenValueMap } from "./types";
 
-/** Referências CSS canónicas (aliases do SSOT). */
+/** Referï¿½ncias CSS canï¿½nicas (aliases do SSOT). */
 export const CI_CSS = {
   chalk: "var(--ci-chalk)",
   chalkDim: "var(--ci-chalk-dim)",
@@ -79,7 +81,7 @@ const HEX_TO_CI_VAR: Record<string, string> = {
   "#0E0F11": CI_CSS.darkRaised,
 };
 
-/** RGB canónicos SSOT usados em rgba do remap utilitário. */
+/** RGB canï¿½nicos SSOT usados em rgba do remap utilitï¿½rio. */
 const RGB_TO_CI_VAR: Array<{ r: number; g: number; b: number; ciVar: string }> = [
   { r: 28, g: 74, b: 122, ciVar: CI_CSS.prussian600 },
   { r: 144, g: 184, b: 224, ciVar: CI_CSS.prussian200 },
@@ -115,7 +117,7 @@ function colorMixCi(ciVar: string, alpha: number): string {
 
 /**
  * rgba(R,G,B,A) ? color-mix com token CI quando RGB = SSOT conhecido.
- * Aceita espaços opcionais; alpha 0–1.
+ * Aceita espaï¿½os opcionais; alpha 0ï¿½1.
  */
 export function remapRgbaToCiColorMix(value: string): string | null {
   const m = value
@@ -139,7 +141,7 @@ export function remapRgbaToCiColorMix(value: string): string | null {
   return null;
 }
 
-/** Remap de um valor (hex SSOT, rgba CI, ou intacto). Idempotente sobre valores já CI. */
+/** Remap de um valor (hex SSOT, rgba CI, ou intacto). Idempotente sobre valores jï¿½ CI. */
 export function remapValueToCi(value: string): string {
   if (!value) return value;
   if (value.startsWith("var(--ci-") || (value.startsWith("color-mix(") && value.includes("--ci-"))) {
@@ -163,7 +165,7 @@ export function remapValueToCi(value: string): string {
   return value;
 }
 
-/** @deprecated Prefer remapValueToCi — alias de compatibilidade. */
+/** @deprecated Prefer remapValueToCi ï¿½ alias de compatibilidade. */
 export function remapHexToCiVar(value: string): string {
   return remapValueToCi(value);
 }
@@ -184,12 +186,13 @@ export function applyCiRemapToPalette(palette: TemplatePaletteOverrides): Templa
 }
 
 /**
- * Auditoria Incremento 4: tokens cujo valor não usa `--ci-*` / `color-mix(...ci...)`.
+ * Auditoria: tokens cujo valor nao usa `--ci-*` / `color-mix(...ci...)`.
  *
- * Resíduos deliberados esperados na paleta Pi:
- *   - #C8845A (status progress)
+ * Residuos deliberados esperados na paleta Pi (sem equivalencia CI clara):
+ *   - #C8845A (status progress dark)
  *   - #6dbc88 / #1a3a22 (status done dark/light)
  *   - rgba(0,0,0,*) em sombras
+ * Consumidores finais usam --ci-* com fallback Alpha.
  */
 export function listCiRemapResiduals(palette: TemplatePaletteOverrides): Array<{
   mode: "dark" | "light";
