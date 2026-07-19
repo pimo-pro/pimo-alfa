@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-19T19:10:31.040Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(theme): add Pi CTA accent tokens using Sienna 600",
+      "version": "v6.0719.2010"
+    },
+    {
       "publishedAt": "2026-07-19T17:52:31.321Z",
       "author": "pimo-pro",
       "commitMessage": "feat(theme): remove hex remap; Pi palette is CI-native",
