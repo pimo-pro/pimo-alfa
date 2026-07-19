@@ -1,19 +1,19 @@
 /**
- * Camada de remapeamento Pi ? `--ci-*` (aplicaÁ„o visual incremental).
+ * Camada de remapeamento Pi ? `--ci-*` (consolidaùùo do design system CI).
  *
- * - Hex SSOT exacto ? `var(--ci-*)`
- * - rgba Prussian `rgba(28,74,122,?)` ? `color-mix(Ö var(--ci-prussian-600) Ö)`
- * - rgba Sienna `rgba(139,74,28,?)` ? `color-mix(Ö var(--ci-sienna-600) Ö)`
- * - rgba Prussian-lt `rgba(144,184,224,?)` ? `color-mix(Ö var(--ci-prussian-200) Ö)`
- * - Hex / rgba sem correspondÍncia clara ? intactos
+ * Hex SSOT exacto ? `var(--ci-*)`
+ * rgba com RGB SSOT ? `color-mix(in srgb, var(--ci-ù) ?%, transparent)`:
+ *   - Prussian 600 / 200, Sienna 600
+ *   - Chalk-dim, Iron-deep, Success (superfùcies / status Pi)
+ * Hex / rgba / sombras sem correspondùncia clara ? intactos
  *
- * SÛ entra no runtime sob template Pi (via piPalette / piButtonSystem).
- * Alpha e preload n„o usam este mÛdulo.
+ * Sù no runtime sob template Pi (piPalette / piButtonSystem).
+ * Alpha e preload nùo usam este mùdulo.
  */
 
 import type { TemplatePaletteOverrides, TokenValueMap } from "./types";
 
-/** ReferÍncias CSS canÛnicas (aliases do SSOT). */
+/** Referùncias CSS canùnicas (aliases do SSOT). */
 export const CI_CSS = {
   chalk: "var(--ci-chalk)",
   chalkDim: "var(--ci-chalk-dim)",
@@ -79,10 +79,15 @@ const HEX_TO_CI_VAR: Record<string, string> = {
   "#0E0F11": CI_CSS.darkRaised,
 };
 
-/** RGB canÛnicos das escalas usadas em rgba do remap Pi. */
-const PRUSSIAN_600_RGB = { r: 28, g: 74, b: 122 };
-const PRUSSIAN_200_RGB = { r: 144, g: 184, b: 224 };
-const SIENNA_600_RGB = { r: 139, g: 74, b: 28 };
+/** RGB canùnicos SSOT usados em rgba do remap Pi. */
+const RGB_TO_CI_VAR: Array<{ r: number; g: number; b: number; ciVar: string }> = [
+  { r: 28, g: 74, b: 122, ciVar: CI_CSS.prussian600 },
+  { r: 144, g: 184, b: 224, ciVar: CI_CSS.prussian200 },
+  { r: 139, g: 74, b: 28, ciVar: CI_CSS.sienna600 },
+  { r: 216, g: 212, b: 206, ciVar: CI_CSS.chalkDim },
+  { r: 19, g: 21, b: 24, ciVar: CI_CSS.ironDeep },
+  { r: 46, g: 92, b: 58, ciVar: CI_CSS.success },
+];
 
 function normalizeHexKey(value: string): string | null {
   const v = value.trim();
@@ -108,8 +113,8 @@ function colorMixCi(ciVar: string, alpha: number): string {
 }
 
 /**
- * rgba(R,G,B,A) ? color-mix com token CI quando RGB = Prussian/Sienna SSOT.
- * Aceita espaÁos opcionais; alpha 0ñ1.
+ * rgba(R,G,B,A) ? color-mix com token CI quando RGB = SSOT conhecido.
+ * Aceita espaùos opcionais; alpha 0ù1.
  */
 export function remapRgbaToCiColorMix(value: string): string | null {
   const m = value
@@ -125,21 +130,20 @@ export function remapRgbaToCiColorMix(value: string): string | null {
   const a = Number(m[4]);
   if (a < 0 || a > 1) return null;
 
-  if (r === PRUSSIAN_600_RGB.r && g === PRUSSIAN_600_RGB.g && b === PRUSSIAN_600_RGB.b) {
-    return colorMixCi(CI_CSS.prussian600, a);
-  }
-  if (r === PRUSSIAN_200_RGB.r && g === PRUSSIAN_200_RGB.g && b === PRUSSIAN_200_RGB.b) {
-    return colorMixCi(CI_CSS.prussian200, a);
-  }
-  if (r === SIENNA_600_RGB.r && g === SIENNA_600_RGB.g && b === SIENNA_600_RGB.b) {
-    return colorMixCi(CI_CSS.sienna600, a);
+  for (const entry of RGB_TO_CI_VAR) {
+    if (r === entry.r && g === entry.g && b === entry.b) {
+      return colorMixCi(entry.ciVar, a);
+    }
   }
   return null;
 }
 
 /** Remap completo de um valor de token (hex SSOT, rgba CI, ou intacto). */
 export function remapValueToCi(value: string): string {
-  if (!value || value.startsWith("var(") || value.startsWith("color-mix(")) return value;
+  if (!value) return value;
+  if (value.startsWith("var(--ci-") || (value.startsWith("color-mix(") && value.includes("--ci-"))) {
+    return value;
+  }
 
   const rgbaMapped = remapRgbaToCiColorMix(value);
   if (rgbaMapped) return rgbaMapped;
@@ -147,10 +151,18 @@ export function remapValueToCi(value: string): string {
   const key = normalizeHexKey(value);
   if (key) return HEX_TO_CI_VAR[key] ?? value;
 
+  // Sombras / valores compostos com rgba(...) embutido (ex. inset Ö rgba(216,212,206,0.08))
+  if (value.includes("rgba(")) {
+    return value.replace(
+      /rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0|0?\.\d+|1(?:\.0+)?)\s*\)/gi,
+      (match) => remapRgbaToCiColorMix(match) ?? match
+    );
+  }
+
   return value;
 }
 
-/** @deprecated Use remapValueToCi ó mantido para compatibilidade dos testes do incremento 1. */
+/** @deprecated Use remapValueToCi ó compatibilidade com testes do incremento 1. */
 export function remapHexToCiVar(value: string): string {
   return remapValueToCi(value);
 }
@@ -168,4 +180,28 @@ export function applyCiRemapToPalette(palette: TemplatePaletteOverrides): Templa
     dark: applyCiRemapToTokenMap(palette.dark),
     light: applyCiRemapToTokenMap(palette.light),
   };
+}
+
+/**
+ * Tokens cujo valor pùs-remap ainda nùo ù `var(--ci-*)` nem `color-mix(...ci...)`.
+ * ùtil para consolidaùùo: resùduos esperados (ex. #C8845A, sombras pretas).
+ */
+export function listCiRemapResiduals(palette: TemplatePaletteOverrides): Array<{
+  mode: "dark" | "light";
+  token: string;
+  value: string;
+}> {
+  const out: Array<{ mode: "dark" | "light"; token: string; value: string }> = [];
+  for (const mode of ["dark", "light"] as const) {
+    const mapped = applyCiRemapToTokenMap(palette[mode]);
+    for (const [token, value] of Object.entries(mapped)) {
+      if (!value) continue;
+      const usesCi =
+        value.includes("--ci-") ||
+        value.startsWith("var(--ci-") ||
+        (value.startsWith("color-mix(") && value.includes("--ci-"));
+      if (!usesCi) out.push({ mode, token, value });
+    }
+  }
+  return out;
 }

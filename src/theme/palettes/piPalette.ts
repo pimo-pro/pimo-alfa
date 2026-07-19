@@ -16,8 +16,10 @@ import { applyCiRemapToPalette } from "./ciRemap";
  * Cada valor aqui substitui, em runtime, o token equivalente de src/index.css — que
  * continua intacto e é exatamente o que o template Alpha usa.
  *
- * Aplicação CI: `PI_PALETTE_OVERRIDES` remapeia hex SSOT → `var(--ci-*)` (ver ciRemap.ts).
- * Hex originais ficam em `PI_PALETTE_HEX_OVERRIDES` para auditoria / fallback.
+ * Aplicação CI: `PI_PALETTE_OVERRIDES` = hex/rgba autorados remapeados para
+ * `var(--ci-*)` / `color-mix` (ver ciRemap.ts). A tabela hex/rgba em
+ * `PI_PALETTE_HEX_OVERRIDES` é só a fonte auditável — o runtime Pi consome CI.
+ * Resíduos deliberados (ex. #C8845A, sombras rgba(0,0,0,*)) ficam fora do SSOT.
  */
 export const PI_PALETTE_HEX_OVERRIDES: TemplatePaletteOverrides = {
   dark: {
