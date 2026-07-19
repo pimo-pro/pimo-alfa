@@ -345,8 +345,8 @@ export interface BoxModule {
   frenteFixaMaterialId?: string;
   /** FASE 2 — Ver `WorkspaceBox.profundidadeExterna`. */
   profundidadeExterna?: number;
-  /** Orla V1 — preset aplicado a todas as peças do caixote. */
-  orlaPresetId?: string;
+  /** Orla V1 — preset do caixote. `undefined` = auto (1.º Admin); `null` = sem orla. */
+  orlaPresetId?: string | null;
   /** Remate V1 — IDs dos remates associados a esta caixa. */
   remateIds?: string[];
   /** Observações da caixa (nível box). */
@@ -457,8 +457,8 @@ export interface WorkspaceBox {
    * Mantida em sincrono nas ações de dimensão; facilita FASE 3–4.
    */
   profundidadeExterna?: number;
-  /** Orla V1 — preset aplicado a todas as peças do caixote. */
-  orlaPresetId?: string;
+  /** Orla V1 — preset do caixote. `undefined` = auto (1.º Admin); `null` = sem orla. */
+  orlaPresetId?: string | null;
   /** Remate V1 — IDs dos remates associados a esta caixa. */
   remateIds?: string[];
   /** Observações da caixa (nível box). */

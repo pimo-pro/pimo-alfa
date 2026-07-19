@@ -27,7 +27,7 @@ export function useOrlaActions(ctx: ProjectActionsExecutionContext): OrlaActions
         updateProject(
           (prev) => {
             const workspaceBoxes = prev.workspaceBoxes.map((b) =>
-              b.id === boxId ? { ...b, orlaPresetId: presetId ?? undefined } : b
+              b.id === boxId ? { ...b, orlaPresetId: presetId } : b
             );
             const interim = { ...prev, workspaceBoxes };
             const boxesWithCut = buildBoxesWithCutList(interim);

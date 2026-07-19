@@ -81,6 +81,67 @@ function sanitize_filename(?string $name): ?string
     return $name;
 }
 
+/**
+ * Versão tolerante para thumbnails: substitui caracteres ilegais em vez de falhar.
+ * Aceita nomes com espaços/acentos; rejeita apenas vazio após limpeza.
+ */
+function coerce_safe_filename(?string $name): ?string
+{
+    if ($name === null) {
+        return null;
+    }
+    $name = trim($name);
+    if ($name === "") {
+        return null;
+    }
+    $name = str_replace(["../", "..\\", ".."], "", $name);
+    $name = preg_replace('/[\/\\\\<>:"|?*\x00]+/', "_", $name) ?? "";
+    $name = trim($name, " ._");
+    if ($name === "") {
+        return null;
+    }
+    if (strlen($name) > 160) {
+        $name = rtrim(substr($name, 0, 160));
+    }
+    return $name !== "" ? $name : null;
+}
+
+/** Detecta MIME de um ficheiro temporário de upload. */
+function detect_upload_mime(string $tmpPath, string $fallback = ""): string
+{
+    if (function_exists("finfo_open") && is_file($tmpPath)) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo !== false) {
+            $detected = finfo_file($finfo, $tmpPath);
+            finfo_close($finfo);
+            if (is_string($detected) && $detected !== "") {
+                return $detected;
+            }
+        }
+    }
+    return $fallback;
+}
+
+/** Grava bytes de thumbnail no destino (webp/jpg). */
+function save_thumbnail_bytes(string $thumbsDir, string $uploadName, string $bytes, string $mime): ?string
+{
+    if ($bytes === "" || $uploadName === "") {
+        return null;
+    }
+    if (!is_dir($thumbsDir) && !@mkdir($thumbsDir, 0755, true)) {
+        return null;
+    }
+    $ext = str_contains(strtolower($mime), "webp") ? "webp" : "jpg";
+    foreach (["webp", "jpg", "jpeg"] as $oldExt) {
+        delete_file_if_exists($thumbsDir . "/" . $uploadName . "." . $oldExt);
+    }
+    $destPath = $thumbsDir . "/" . $uploadName . "." . $ext;
+    if (@file_put_contents($destPath, $bytes) === false) {
+        return null;
+    }
+    return thumbnail_file_url($thumbsDir, $uploadName);
+}
+
 function is_internal_project_id(string $value): bool
 {
     return (bool)preg_match('/^pimo-[a-f0-9]{16}$/', trim($value));
@@ -470,13 +531,14 @@ function build_projects_list(
 
 // --- GET|HEAD ?action=thumb&name={projectName} — verificar thumbnail em disco ---
 if (($method === "GET" || $method === "HEAD") && $action === "thumb") {
-    $lookupName = sanitize_filename((string)($_GET["name"] ?? ""));
+    $lookupName = coerce_safe_filename((string)($_GET["name"] ?? ""));
     if ($lookupName === null) {
-        respond_json(["status" => "error", "message" => "name inválido"], 400);
+        respond_json(["status" => "error", "message" => "name inválido ou em falta"], 400);
     }
     $url = thumbnail_file_url($thumbsDir, $lookupName);
     if ($method === "HEAD") {
         http_response_code($url !== null ? 200 : 404);
+        header("Content-Type: application/json; charset=utf-8");
         exit;
     }
     respond_json([
@@ -486,46 +548,105 @@ if (($method === "GET" || $method === "HEAD") && $action === "thumb") {
     ]);
 }
 
-// --- POST ?action=thumb — gravar thumbnail (multipart: name + file) ---
+// --- POST ?action=thumb — gravar thumbnail (multipart name+file OU JSON {name,dataUrl}) ---
 if ($method === "POST" && $action === "thumb") {
-    $uploadName = sanitize_filename((string)($_POST["name"] ?? ""));
-    if ($uploadName === null) {
-        respond_json(["status" => "error", "message" => "name inválido"], 400);
-    }
-    if (!isset($_FILES["file"]) || !is_uploaded_file((string)($_FILES["file"]["tmp_name"] ?? ""))) {
-        respond_json(["status" => "error", "message" => "ficheiro em falta"], 400);
-    }
-
-    $tmpPath = (string)$_FILES["file"]["tmp_name"];
-    $mime = "";
-    if (function_exists("finfo_open")) {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        if ($finfo !== false) {
-            $detected = finfo_file($finfo, $tmpPath);
-            finfo_close($finfo);
-            if (is_string($detected)) {
-                $mime = $detected;
+    $jsonBody = null;
+    if (!isset($_FILES["file"])) {
+        $rawBody = file_get_contents("php://input");
+        if (is_string($rawBody) && $rawBody !== "") {
+            $decoded = json_decode($rawBody, true);
+            if (is_array($decoded)) {
+                $jsonBody = $decoded;
             }
         }
     }
-    if ($mime === "") {
-        $mime = (string)($_FILES["file"]["type"] ?? "");
+
+    $uploadName = coerce_safe_filename(
+        (string)(
+            $_GET["name"]
+            ?? $_POST["name"]
+            ?? ($jsonBody["name"] ?? "")
+        )
+    );
+    if ($uploadName === null) {
+        respond_json([
+            "status" => "error",
+            "message" => "name inválido ou em falta",
+            "hint" => "Envie name em query (?name=) e/ou no body (FormData/JSON).",
+        ], 400);
     }
 
-    $ext = str_contains(strtolower($mime), "webp") ? "webp" : "jpg";
-    foreach (["webp", "jpg", "jpeg"] as $oldExt) {
-        delete_file_if_exists($thumbsDir . "/" . $uploadName . "." . $oldExt);
+    // Caminho A: multipart/form-data com campo "file"
+    if (isset($_FILES["file"]) && is_array($_FILES["file"])) {
+        $fileErr = (int)($_FILES["file"]["error"] ?? UPLOAD_ERR_NO_FILE);
+        $tmpPath = (string)($_FILES["file"]["tmp_name"] ?? "");
+        if ($fileErr !== UPLOAD_ERR_OK) {
+            respond_json([
+                "status" => "error",
+                "message" => "falha no upload do ficheiro",
+                "uploadError" => $fileErr,
+            ], 400);
+        }
+        if ($tmpPath === "" || !is_file($tmpPath) || (int)filesize($tmpPath) <= 0) {
+            respond_json(["status" => "error", "message" => "ficheiro em falta ou vazio"], 400);
+        }
+
+        $mime = detect_upload_mime($tmpPath, (string)($_FILES["file"]["type"] ?? "image/jpeg"));
+        $ext = str_contains(strtolower($mime), "webp") ? "webp" : "jpg";
+        foreach (["webp", "jpg", "jpeg"] as $oldExt) {
+            delete_file_if_exists($thumbsDir . "/" . $uploadName . "." . $oldExt);
+        }
+        if (!is_dir($thumbsDir) && !@mkdir($thumbsDir, 0755, true)) {
+            respond_json(["status" => "error", "message" => "diretório thumbs indisponível"], 500);
+        }
+        $destPath = $thumbsDir . "/" . $uploadName . "." . $ext;
+        $moved = false;
+        if (is_uploaded_file($tmpPath)) {
+            $moved = move_uploaded_file($tmpPath, $destPath);
+        }
+        if (!$moved) {
+            // Proxies/alguns hosts invalidam is_uploaded_file — fallback seguro se o tmp existe.
+            $moved = @rename($tmpPath, $destPath);
+            if (!$moved) {
+                $moved = @copy($tmpPath, $destPath);
+                if ($moved) {
+                    @unlink($tmpPath);
+                }
+            }
+        }
+        if (!$moved) {
+            respond_json(["status" => "error", "message" => "Falha ao gravar thumbnail"], 500);
+        }
+        respond_json([
+            "status" => "ok",
+            "url" => thumbnail_file_url($thumbsDir, $uploadName),
+        ]);
     }
 
-    $destPath = $thumbsDir . "/" . $uploadName . "." . $ext;
-    if (!move_uploaded_file($tmpPath, $destPath)) {
-        respond_json(["status" => "error", "message" => "Falha ao gravar thumbnail"], 500);
+    // Caminho B: JSON com dataUrl (base64) — fallback quando multipart falha
+    $dataUrl = is_array($jsonBody) ? (string)($jsonBody["dataUrl"] ?? "") : "";
+    if ($dataUrl !== "" && preg_match('#^data:(image/(?:jpeg|jpg|png|webp));base64,#i', $dataUrl, $m)) {
+        $mime = strtolower($m[1]);
+        if ($mime === "image/jpg") {
+            $mime = "image/jpeg";
+        }
+        $b64 = substr($dataUrl, strlen($m[0]));
+        $bytes = base64_decode($b64, true);
+        if ($bytes === false || $bytes === "") {
+            respond_json(["status" => "error", "message" => "dataUrl inválido"], 400);
+        }
+        $url = save_thumbnail_bytes($thumbsDir, $uploadName, $bytes, $mime);
+        if ($url === null) {
+            respond_json(["status" => "error", "message" => "Falha ao gravar thumbnail"], 500);
+        }
+        respond_json(["status" => "ok", "url" => $url]);
     }
 
     respond_json([
-        "status" => "ok",
-        "url" => thumbnail_file_url($thumbsDir, $uploadName),
-    ]);
+        "status" => "error",
+        "message" => "ficheiro em falta",
+        "hint" => "Envie multipart field 'file' ou JSON { name, dataUrl }.",
+    ], 400);
 }
 
 // --- GET ?action=projetos — apenas ficheiros {nome}.json (hub PROJETOS) ---

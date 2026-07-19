@@ -244,7 +244,18 @@ export function buildOrlaPiecesForBox(
   return next;
 }
 
-/** Reconstroi orlaPieces para todas as caixas com preset (sync apos cutlist). */
+/** Resolve preset efectivo: null = desligado; undefined/vazio = default Admin. */
+export function resolveBoxOrlaPresetId(
+  box: { orlaPresetId?: string | null },
+  defaultPresetId: string | null
+): string | null {
+  if (box.orlaPresetId === null) return null;
+  const explicit = typeof box.orlaPresetId === "string" ? box.orlaPresetId.trim() : "";
+  if (explicit) return explicit;
+  return defaultPresetId;
+}
+
+/** Reconstroi orlaPieces para todas as caixas (sync apos cutlist). */
 export function syncOrlaPiecesForProject(
   boxes: BoxModule[],
   current: Record<string, PieceOrlaConfig>,
@@ -253,8 +264,7 @@ export function syncOrlaPiecesForProject(
 ): Record<string, PieceOrlaConfig> {
   let next = { ...current };
   for (const box of boxes) {
-    const presetId = box.orlaPresetId ?? defaultPresetId;
-    if (!presetId) continue;
+    const presetId = resolveBoxOrlaPresetId(box, defaultPresetId);
     next = buildOrlaPiecesForBox(box, presetId, next, extrasByBoxId[box.id] ?? []);
   }
   return next;

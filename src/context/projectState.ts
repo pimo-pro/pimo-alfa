@@ -396,8 +396,16 @@ const calcularResultadosBoxes = (state: ProjectState): ResultadosCalculo | null 
 
 export const applyResultados = (state: ProjectState): ProjectState => {
   try {
-    const workspaceBoxes = migrateCornerDireitaInferiorBoxes(state.workspaceBoxes);
-    const stateSynced = { ...state, workspaceBoxes };
+    const orlaPresets = normalizeOrlaPresets(state.orlaPresets);
+    const defaultOrlaId = orlaPresets[0]?.id ?? null;
+
+    // Auto-aplica 1.º preset Admin a caixas sem escolha (undefined). null = "Sem orla".
+    const workspaceBoxes = migrateCornerDireitaInferiorBoxes(state.workspaceBoxes).map((b) =>
+      b.orlaPresetId === undefined && defaultOrlaId
+        ? { ...b, orlaPresetId: defaultOrlaId }
+        : b
+    );
+    const stateSynced = { ...state, workspaceBoxes, orlaPresets };
     // Sincroniza boxes com workspaceBoxes (single source of truth para o viewer e cálculo).
     const boxes = buildBoxesFromWorkspace(stateSynced);
     const stateWithBoxes = { ...stateSynced, boxes };
@@ -417,11 +425,10 @@ export const applyResultados = (state: ProjectState): ProjectState => {
       (extrasByBoxId[bid] ??= []).push(item);
     }
 
-    const orlaPresets = normalizeOrlaPresets(state.orlaPresets);
     const orlaPieces = syncOrlaPiecesForProject(
       boxesWithCutList,
       state.orlaPieces ?? {},
-      null,
+      defaultOrlaId,
       extrasByBoxId
     );
     const ferragemOrla = computeOrlaFerragem({
@@ -437,6 +444,7 @@ export const applyResultados = (state: ProjectState): ProjectState => {
     );
     return {
       ...stateWithBoxes,
+      orlaPresets,
       orlaPieces,
       resultados,
       ferragemOrla,

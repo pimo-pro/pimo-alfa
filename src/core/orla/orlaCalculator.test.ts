@@ -3,6 +3,7 @@ import {
   buildOrlaPiecesForBox,
   computeOrlaFerragem,
   aggregateOrlaRowsForFerragensTotaisPdf,
+  syncOrlaPiecesForProject,
 } from "./orlaCalculator";
 import { getOrlaEdgeLengthsMm } from "./orlaEdgeLengths";
 import type { BoxModule, CutListItem } from "../types";
@@ -144,5 +145,27 @@ describe("orlaCalculator industrial", () => {
       extraCutListItems: [remate as CutListItem & { boxId: string }],
     });
     expect(ferragem.metrosTotal).toBeGreaterThan(2);
+  });
+
+  it("sync com defaultPreset aplica orla a caixa sem orlaPresetId", () => {
+    const items = [piece("prat1", "prateleira", { largura: 560, altura: 400, profundidade: 19 })];
+    const box = boxWith(items, null);
+    expect(box.orlaPresetId).toBeUndefined();
+    const orlaPieces = syncOrlaPiecesForProject([box], {}, PRESET.id);
+    expect(orlaPieces.prat1?.sides.front.enabled).toBe(true);
+    const ferragem = computeOrlaFerragem({
+      boxes: [{ ...box, cutList: items }],
+      orlaPresets: [PRESET],
+      orlaPieces,
+      orlaJuntoPairs: [],
+    });
+    expect(ferragem.metrosTotal).toBeGreaterThan(0);
+  });
+
+  it("sync com orlaPresetId null nao aplica default", () => {
+    const items = [piece("prat1", "prateleira", { largura: 560, altura: 400, profundidade: 19 })];
+    const box = { ...boxWith(items, null), orlaPresetId: null as string | null };
+    const orlaPieces = syncOrlaPiecesForProject([box], {}, PRESET.id);
+    expect(orlaPieces.prat1).toBeUndefined();
   });
 });

@@ -241,7 +241,7 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(rows.find((r) => r.material === DOBRADICA)).toBeUndefined();
   });
 
-  it("inclui Orla em metros com material sem espessura", () => {
+    it("inclui Orla em metros com material sem espessura", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [],
       cutlistItems: [],
@@ -289,6 +289,58 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(orla?.quantidade).toBe(12.35);
     expect(orla?.ref).toBe("PVC 0.8mm");
     expect(orla?.material).not.toMatch(/\d+\s*mm/i);
+    expect(orla?.preco).toBe(1.5);
+  });
+
+  it("recalcula Orla no PDF quando ferragemOrla esta vazio mas ha prateleira", () => {
+    const rows = normalizeFerragensTotaisForPdf({
+      ferragens: [],
+      cutlistItems: [
+        {
+          tipo: "prateleira",
+          boxId: "b1",
+          quantidade: 1,
+          dimensoes: { largura: 560, altura: 400, profundidade: 19 },
+        },
+      ],
+      boxes: [
+        {
+          id: "b1",
+          nome: "Caixa",
+          material: "mdf_branco",
+          cutList: [
+            {
+              id: "prat1",
+              nome: "prateleira",
+              tipo: "prateleira",
+              quantidade: 1,
+              dimensoes: { largura: 560, altura: 400, profundidade: 19 },
+              espessura: 19,
+              metadata: { panelId: "prat1" },
+            },
+          ],
+          dimensoes: { largura: 600, altura: 720, profundidade: 560 },
+        } as BoxModule,
+      ],
+      projectMaterialId: "mdf_branco",
+      orlaPresets: [
+        {
+          id: "pvc",
+          nome: "PVC",
+          tipo: "PVC",
+          espessuraMm: 0.8,
+          larguraMm: 23,
+          cor: "#fff",
+          precoPorMetro: 1.5,
+        },
+      ],
+      ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },
+    });
+
+    const orla = rows.find((r) => /^\d+([.,]\d+)?\s*m$/i.test(String(r.medida)));
+    expect(orla).toBeDefined();
+    expect(orla?.quantidade).toBeGreaterThan(0);
+    expect(orla?.ref).toMatch(/0\.8mm/);
     expect(orla?.preco).toBe(1.5);
   });
 });

@@ -4,7 +4,7 @@
  * Literais PT usam escapes Unicode para evitar corrupcao de encoding no disco.
  */
 
-import type { BoxModule, CutListItemComPreco, PanelDrillHole } from "../types";
+import type { BoxModule, CutListItem, CutListItemComPreco, PanelDrillHole } from "../types";
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
 import { getNumDobradicas, type RulesConfig } from "../rules/rulesConfig";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
@@ -19,7 +19,11 @@ import {
   CALCO_MATERIAL,
   loadCalcoConfig,
 } from "../ferragens/calcoConfig";
-import { aggregateOrlaRowsForFerragensTotaisPdf } from "../orla/orlaCalculator";
+import {
+  aggregateOrlaRowsForFerragensTotaisPdf,
+  computeOrlaFerragem,
+  syncOrlaPiecesForProject,
+} from "../orla/orlaCalculator";
 import type { OrlaPreset } from "../orla/orlaTypes";
 import type { ProjectFerragemOrla } from "../orla/orlaTypes";
 import { normalizeOrlaPresets } from "../orla/orlaPresets";
@@ -31,7 +35,7 @@ const EM_DASH = "\u2014";
 const MULTIPLY = "\u00d7";
 const CORREDICA_LABEL = "Corredi\u00e7a";
 const DOBRADICA_LABEL = "Dobradi\u00e7a";
-/** Ref industrial oficial da dobradia principal (PDF / totais). */
+/** Ref industrial oficial da dobradi?a principal (PDF / totais). */
 export const DOBRADICA_REF = "I-Sensys 8645i";
 const PE_REF_DEFAULT = "P\u00e9-Pl\u00e1stico";
 
@@ -77,9 +81,8 @@ function normalizeKey(nome: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
-    .replace(/[x\u00d7\u00d7]/gi, "x")
-    .replace(/\u00d7/g, "x")
-    .replace(//g, "x");
+    .replace(/[x\u00d7]/gi, "x")
+    .replace(/\u00d7/g, "x");
 }
 
 type Bucket =
@@ -219,8 +222,8 @@ function countCupsOnPanel(holes: PanelDrillHole[] | undefined): number {
 }
 
 /**
- * Contagem oficial de dobradias para PDF/online (apresentacao).
- * Fonte: canecos 35 (holeType === "dobradica") nas pecas porta do cutlist.
+ * Contagem oficial de dobradi?as para PDF/online (apresentacao).
+ * Fonte: canecos ?35 (holeType === "dobradica") nas pecas porta do cutlist.
  * Fallback: getNumDobradicas(alturaMm, rules) por folha.
  * Ignora gerarFerragens / ComponentTypes (nao usar como fonte).
  */
@@ -458,9 +461,37 @@ export function normalizeFerragensTotaisForPdf(
     result.push(row);
   }
 
+  const orlaPresets = normalizeOrlaPresets(input.orlaPresets);
+  let ferragemOrla = input.ferragemOrla;
+  // Fallback: se o estado ainda nao tem metros (caixa nova sem sync), recalcular no PDF.
+  if ((!ferragemOrla?.linhas?.length) && (input.boxes?.length ?? 0) > 0) {
+    const defaultOrlaId = orlaPresets[0]?.id ?? null;
+    const extrasByBoxId: Record<string, CutListItem[]> = {};
+    for (const item of input.cutlistItems ?? []) {
+      const bid = String(item.boxId ?? "");
+      if (!bid) continue;
+      (extrasByBoxId[bid] ??= []).push(item as CutListItem);
+    }
+    const orlaPieces = syncOrlaPiecesForProject(
+      input.boxes ?? [],
+      {},
+      defaultOrlaId,
+      extrasByBoxId
+    );
+    ferragemOrla = computeOrlaFerragem({
+      boxes: input.boxes ?? [],
+      orlaPresets,
+      orlaPieces,
+      orlaJuntoPairs: [],
+      extraCutListItems: (input.cutlistItems ?? []) as Array<
+        CutListItem & { boxId?: string; boxNome?: string }
+      >,
+    });
+  }
+
   const orlaRows = aggregateOrlaRowsForFerragensTotaisPdf(
-    input.ferragemOrla,
-    normalizeOrlaPresets(input.orlaPresets),
+    ferragemOrla,
+    orlaPresets,
     input.boxes ?? [],
     input.projectMaterialId
   );
