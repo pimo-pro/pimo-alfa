@@ -1,3 +1,76 @@
-/* Tema aplicado antes do bundle: evita quadrado preto e flash do Viewer */
+/* Tema aplicado antes do bundle: evita quadrado preto e flash do Viewer.
+ * Alpha: regras .theme-dark / .theme-light (inalteradas).
+ * Pi: só quando data-theme-template="pi" — especificidade maior, não afeta Alpha.
+ */
+
+/* ── Alpha (baseline) ───────────────────────────────────────────────────── */
 .theme-dark { --navy: #0f172a; --black: #0b0f17; --text-main: #e2e8f0; --text-muted: #94a3b8; --border: rgba(255,255,255,0.12); --button-ghost-bg: rgba(255,255,255,0.04); --radius: 6px; }
 .theme-light { --navy: #f1f5f9; --black: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --border: rgba(0,0,0,0.12); --button-ghost-bg: rgba(0,0,0,0.04); --radius: 6px; }
+
+/* ── Pi anti-FOUC (mínimo: superfícies, texto, primário, acentos, bordas) ──
+ * Fonte: src/theme/palettes/piPalette.ts (subset crítico do primeiro paint).
+ * Sem --pi-btn-* (Passo 3/4). Sem escalas 7 tons.
+ */
+html[data-theme-template="pi"].theme-dark {
+  background: #131518;
+  color: #F0EDE8;
+  --black: #131518;
+  --navy: #131518;
+  --blue-dark: #0E0F11;
+  --blue-mid: #2C2E30;
+  --blue-light: #1C4A7A;
+  --primary: #1C4A7A;
+  --text-main: #F0EDE8;
+  --text-muted: #D8D4CE;
+  --border: #2C2E30;
+  --button-ghost-bg: rgba(216,212,206,0.06);
+  --panel-left-bg: #0E0F11;
+  --card-bg: #0A0B0C;
+  --card-border: #2C2E30;
+  --modal-bg: #0A0B0C;
+  --modal-border: #2C2E30;
+  --viewer-toolbar-bg: #131518;
+  --top-toolbar-bg: #131518;
+  --piece-toolbar-bg: #131518;
+  --workspace-gradient-start: #0E0F11;
+  --workspace-gradient-end: #131518;
+  --bg-selected: rgba(28,74,122,0.25);
+  --border-selected: #1C4A7A;
+  --admin-bg: #131518;
+  --admin-sidebar-bg: #0E0F11;
+  --admin-text: #F0EDE8;
+  --admin-card-bg: #0A0B0C;
+  --admin-card-border: #2C2E30;
+}
+
+html[data-theme-template="pi"].theme-light {
+  background: #F0EDE8;
+  color: #131518;
+  --black: #F8F6F2;
+  --navy: #F0EDE8;
+  --blue-dark: #F8F6F2;
+  --blue-mid: #D8D4CE;
+  --blue-light: #1C4A7A;
+  --primary: #1C4A7A;
+  --text-main: #131518;
+  --text-muted: #2C2E30;
+  --border: #D8D4CE;
+  --button-ghost-bg: rgba(19,21,24,0.04);
+  --panel-left-bg: #F8F6F2;
+  --card-bg: #FFFFFF;
+  --card-border: #D8D4CE;
+  --modal-bg: #FFFFFF;
+  --modal-border: #D8D4CE;
+  --viewer-toolbar-bg: #F8F6F2;
+  --top-toolbar-bg: #F8F6F2;
+  --piece-toolbar-bg: #F8F6F2;
+  --workspace-gradient-start: #F8F6F2;
+  --workspace-gradient-end: #F0EDE8;
+  --bg-selected: rgba(28,74,122,0.07);
+  --border-selected: #1C4A7A;
+  --admin-bg: #F0EDE8;
+  --admin-sidebar-bg: #F8F6F2;
+  --admin-text: #131518;
+  --admin-card-bg: #FFFFFF;
+  --admin-card-border: #D8D4CE;
+}

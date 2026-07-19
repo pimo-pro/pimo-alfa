@@ -7,10 +7,45 @@
     <link rel="stylesheet" href="/theme-preload.css" />
     <script>
       (function () {
-        var t = localStorage.getItem("pimo-theme");
-        document.documentElement.classList.add(t === "light" ? "theme-light" : "theme-dark");
-        var tpl = localStorage.getItem("pimo-theme-template");
-        document.documentElement.setAttribute("data-theme-template", tpl === "pi" ? "pi" : "alpha");
+        /* Aplica modo + template ANTES do first paint.
+         * - Preferência: pimo-theme-preference | settings.geral.theme | pimo-theme
+         * - system → prefers-color-scheme
+         * - pimo-theme-template: pi|alpha (default alpha) — independente de dark/light
+         * Preload Pi só actua com data-theme-template="pi" (ver theme-preload.css). */
+        var root = document.documentElement;
+        var pref = null;
+        try {
+          pref = localStorage.getItem("pimo-theme-preference");
+        } catch (e) {}
+        if (pref !== "dark" && pref !== "light" && pref !== "system") {
+          try {
+            var raw = localStorage.getItem("pimo_system_settings_v1");
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              pref = parsed && parsed.geral && parsed.geral.theme;
+            }
+          } catch (e2) {}
+        }
+        var t = null;
+        if (pref === "system") {
+          t =
+            window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+        } else if (pref === "light" || pref === "dark") {
+          t = pref;
+        } else {
+          try {
+            t = localStorage.getItem("pimo-theme");
+          } catch (e3) {}
+          if (t !== "light" && t !== "dark") t = "dark";
+        }
+        root.classList.add(t === "light" ? "theme-light" : "theme-dark");
+        var tpl = null;
+        try {
+          tpl = localStorage.getItem("pimo-theme-template");
+        } catch (e4) {}
+        root.setAttribute("data-theme-template", tpl === "pi" ? "pi" : "alpha");
       })();
     </script>
 
