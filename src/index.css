@@ -39,9 +39,6 @@
   --space-toolbar-padding-y: 6px;
   --space-toolbar-padding-x: 10px;
   --size-toolbar-icon: 28px;
-
-  /* Fase 4 — formato do botao unificado (so relevante quando o template Pi esta ativo) */
-  --pi-btn-radius: 6px;
 }
 
 /* ========== TEMA ESCURO (padr�o) ========== */
@@ -2247,25 +2244,87 @@ body {
 
 /* ============================================================
    FASE 4 — Sistema de botoes unificado (SOMENTE template Pi)
-   Nao altera nenhuma regra do Alpha acima; so soma especificidade
-   quando [data-theme-template="pi"] esta presente no <html>.
+   Radius via data-pi-button-shape — NAO usa --pi-btn-radius no DOM
+   (evita vazamento para Alpha e estilos industriais).
    ============================================================ */
-[data-theme-template="pi"] .button,
-[data-theme-template="pi"] .button-ghost,
-[data-theme-template="pi"] .button-primary,
-[data-theme-template="pi"] .panel-button,
-[data-theme-template="pi"] .icon-button,
-[data-theme-template="pi"] .admin-panel-nav-btn,
-[data-theme-template="pi"] .viewer-toolbar button,
-[data-theme-template="pi"] .viewer-display-mode-button,
-[data-theme-template="pi"] .moveis-bubble__add,
-[data-theme-template="pi"] .moveis-counter-btn,
-[data-theme-template="pi"] .modal-close,
-[data-theme-template="pi"] .modal-action,
-[data-theme-template="pi"] .settings-back-to-admin-btn {
-  border-radius: var(--pi-btn-radius);
+[data-theme-template="pi"][data-pi-button-shape="square"] .button,
+[data-theme-template="pi"][data-pi-button-shape="square"] .button-ghost,
+[data-theme-template="pi"][data-pi-button-shape="square"] .button-primary,
+[data-theme-template="pi"][data-pi-button-shape="square"] .panel-button,
+[data-theme-template="pi"][data-pi-button-shape="square"] .icon-button,
+[data-theme-template="pi"][data-pi-button-shape="square"] .admin-panel-nav-btn,
+[data-theme-template="pi"][data-pi-button-shape="square"] .viewer-toolbar button,
+[data-theme-template="pi"][data-pi-button-shape="square"] .viewer-display-mode-button,
+[data-theme-template="pi"][data-pi-button-shape="square"] .moveis-bubble__add,
+[data-theme-template="pi"][data-pi-button-shape="square"] .moveis-counter-btn,
+[data-theme-template="pi"][data-pi-button-shape="square"] .modal-close,
+[data-theme-template="pi"][data-pi-button-shape="square"] .modal-action,
+[data-theme-template="pi"][data-pi-button-shape="square"] .settings-back-to-admin-btn {
+  border-radius: 0px;
 }
 
+[data-theme-template="pi"][data-pi-button-shape="soft"] .button,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .button-ghost,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .button-primary,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .panel-button,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .icon-button,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .admin-panel-nav-btn,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .viewer-toolbar button,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .viewer-display-mode-button,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .moveis-bubble__add,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .moveis-counter-btn,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .modal-close,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .modal-action,
+[data-theme-template="pi"][data-pi-button-shape="soft"] .settings-back-to-admin-btn {
+  border-radius: 8px;
+}
+
+[data-theme-template="pi"][data-pi-button-shape="pill"] .button,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .button-ghost,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .button-primary,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .panel-button,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .icon-button,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .admin-panel-nav-btn,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .viewer-toolbar button,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .viewer-display-mode-button,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .moveis-bubble__add,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .moveis-counter-btn,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .modal-close,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .modal-action,
+[data-theme-template="pi"][data-pi-button-shape="pill"] .settings-back-to-admin-btn {
+  border-radius: 999px;
+}
+
+/* ── Cores unificadas (Fase 4 / Passo 3) — Alpha .button* acima fica intacto ── */
 [data-theme-template="pi"] .button-primary {
-  color: var(--pi-btn-on-accent-text, #fff);
+  background: var(--pi-btn-primary-bg);
+  border: none;
+  color: var(--pi-btn-primary-color);
+}
+
+[data-theme-template="pi"] .button-primary:hover {
+  opacity: 0.9;
+  filter: brightness(1.05);
+}
+
+[data-theme-template="pi"] .button,
+[data-theme-template="pi"] .button-ghost,
+[data-theme-template="pi"] .panel-button,
+[data-theme-template="pi"] .modal-action:not(.button-primary),
+[data-theme-template="pi"] .settings-back-to-admin-btn {
+  background: var(--pi-btn-secondary-bg);
+  border: 1px solid var(--pi-btn-secondary-border, var(--pi-btn-ghost-border));
+  color: var(--pi-btn-secondary-color);
+}
+
+[data-theme-template="pi"] .button-ghost:hover,
+[data-theme-template="pi"] .button:hover {
+  background: var(--button-ghost-hover);
+}
+
+[data-theme-template="pi"] .modal-action.button-primary,
+[data-theme-template="pi"] .modal-action.button-primary:hover {
+  background: var(--pi-btn-primary-bg);
+  border: none;
+  color: var(--pi-btn-primary-color);
 }
