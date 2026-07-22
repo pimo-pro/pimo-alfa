@@ -11,7 +11,7 @@ export const industrialFeatureFlags = {
   reworkFlow: true,
   adminRulesEditor: true,
   /** Páginas online de análise de PDFs industriais (Fase 1+). Default off em produção. */
-  industrialOnlineAnalysis: false,
+  industrialOnlineAnalysis: true,
 } as const;
 
 export type IndustrialFeatureFlagKey = keyof typeof industrialFeatureFlags;
