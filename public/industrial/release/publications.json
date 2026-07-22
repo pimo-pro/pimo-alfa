@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-22T19:55:19.358Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat: Análise arquivo completo (Fases 1–6)",
+      "version": "v6.0722.2055"
+    },
+    {
       "publishedAt": "2026-07-19T22:25:29.709Z",
       "author": "pimo-pro",
       "commitMessage": "Auto deploy",
