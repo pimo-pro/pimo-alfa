@@ -81,6 +81,8 @@ import ProjetosIndexPage from "./app/PROJETOS/page";
 import ProjetosProjectPage from "./app/PROJETOS/[project]/page";
 import ProjetosBoxPage from "./app/PROJETOS/[project]/[box]/page";
 import ProjetosPiecePage from "./app/PROJETOS/[project]/[box]/[piece]/page";
+import ProjetosAnaliseIndexPage from "./app/PROJETOS/[project]/analise/page";
+import ProjetosAnaliseDocPage from "./app/PROJETOS/[project]/analise/[docId]/page";
 import { ajudaRoutes } from "./routes/ajudaRoutes";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
@@ -481,6 +483,8 @@ export default function App() {
           <Route path="/pieces/:id" element={<PieceAliasRedirect />} />
           <Route path="/studio/piece/:id" element={<PieceAliasRedirect />} />
           <Route path="/PROJETOS" element={<ProjetosIndexPage />} />
+          <Route path="/PROJETOS/:project/analise/:docId" element={<ProjetosAnaliseDocPage />} />
+          <Route path="/PROJETOS/:project/analise" element={<ProjetosAnaliseIndexPage />} />
           <Route path="/PROJETOS/:project" element={<ProjetosProjectPage />} />
           <Route path="/PROJETOS/:project/:box" element={<ProjetosBoxPage />} />
           <Route path="/PROJETOS/:project/:box/:piece" element={<ProjetosPiecePage />} />

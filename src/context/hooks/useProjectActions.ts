@@ -20,6 +20,7 @@ import { useRoomActions } from "./useRoomActions";
 import { useOrlaActions } from "./useOrlaActions";
 import { useObservacoesActions } from "./useObservacoesActions";
 import { useIndustrialPieceEditsActions } from "./useIndustrialPieceEditsActions";
+import { useIndustrialDocumentOverridesActions } from "./useIndustrialDocumentOverridesActions";
 import { useDrawerPresetActions } from "./useDrawerPresetActions";
 import { useRemateActions } from "./useRemateActions";
 import { useCornerOrientationActions } from "./useCornerOrientationActions";
@@ -74,6 +75,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
   const orlaActions = useOrlaActions(executionContext);
   const observacoesActions = useObservacoesActions(executionContext);
   const industrialPieceEditsActions = useIndustrialPieceEditsActions(executionContext);
+  const industrialDocumentOverridesActions = useIndustrialDocumentOverridesActions(executionContext);
   const drawerPresetActions = useDrawerPresetActions(executionContext);
   const remateActions = useRemateActions(executionContext);
   const cornerOrientationActions = useCornerOrientationActions(executionContext);
@@ -168,6 +170,7 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
       orlaActions,
       observacoesActions,
       industrialPieceEditsActions,
+      industrialDocumentOverridesActions,
       drawerPresetActions,
       remateActions,
       cornerOrientationActions,
@@ -311,6 +314,9 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     designActions,
     roomActions,
     orlaActions,
+    observacoesActions,
+    industrialPieceEditsActions,
+    industrialDocumentOverridesActions,
     drawerPresetActions,
     remateActions,
     cornerOrientationActions,

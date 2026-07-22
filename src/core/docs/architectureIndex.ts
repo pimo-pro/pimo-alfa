@@ -129,6 +129,14 @@ export const MODULES: ModuleRef[] = [
   { id: "project-roadmap", name: "ProjectRoadmap", path: "src/core/docs/projectRoadmap.ts", responsibility: "Fases, tarefas e progresso do projeto", relatedModules: ["progresso-resumo"] },
   { id: "progresso-resumo", name: "progressoResumo", path: "src/core/docs/progressoResumo.ts", responsibility: "Tarefas concluídas, em andamento e próximas etapas", relatedModules: ["project-roadmap"] },
   { id: "observacoes-service", name: "ObservacoesService", path: "src/core/observacoes/ObservacoesService.ts", responsibility: "Sistema unificado de observações — sanitização, migração, pipeline industrial", relatedModules: ["project-provider", "pdf-export"] },
+  {
+    id: "online-analysis",
+    name: "Industrial Online Analysis",
+    path: "src/core/industrial/onlineAnalysis/",
+    responsibility:
+      "Fases 1–6: análise online completa + robustez (validações, testes, polish) em /PROJETOS/:project/analise",
+    relatedModules: ["project-provider", "pdf-export"],
+  },
 ];
 
 /** Fluxos principais de dados */
@@ -138,6 +146,14 @@ export const DATA_FLOWS: DataFlowRef[] = [
   { id: "flow-3", name: "UI (Painéis) → useProject actions → ProjectProvider", from: "LeftPanel/RightPanel/Toolbar", to: "ProjectContext.actions", description: "Entrada principal de alterações de estado" },
   { id: "flow-4", name: "ProjectProvider → Workspace → Viewer", from: "project/workspaceBoxes", to: "viewerApi + window.viewerCore", description: "Render e sincronização visual" },
   { id: "flow-5", name: "UI Exportar → useGerarArquivoHandlers → Engines", from: "Workspace modal", to: "CutLayout/PDF/CNC/DRILL", description: "Exportação de layout, PDFs, TCN e Drill XML" },
+  {
+    id: "flow-6",
+    name: "UI Análise → onlineAnalysis → tabelas PROJETOS",
+    from: "UnifiedExportBubble / work-orders",
+    to: "/PROJETOS/:project/analise/:docId",
+    description:
+      "Consulta + edição + histórico + download seletivo; overrides.cutlist → UEE (whitelist); CNC sem document overrides",
+  },
 ];
 
 /** Estrutura de pastas atualizada (principais) */
@@ -156,7 +172,10 @@ src/
 │   ├── drill/        — Export Drill XML
 │   ├── rules/        — Dynamic rules, validação
 │   ├── layout/       — viewerLayoutAdapter, smartArrange
+│   ├── industrial/   — bottom sections, chapas, onlineAnalysis (PDFs online Fase 1)
 │   └── docs/         — projectRoadmap, progressoResumo, painelReferenciaSections, architectureIndex
+├── app/
+│   └── PROJETOS/     — hub showroom + /analise (páginas online read-only)
 ├── hooks/            — usePimoViewer, useCalculadoraSync, useViewerSync, useGerarArquivoHandlers
 ├── constants/        — viewerOptions, toolbarConfig, fileManagerConfig
 ├── components/

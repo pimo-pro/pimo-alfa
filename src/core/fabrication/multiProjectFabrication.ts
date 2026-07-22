@@ -43,6 +43,10 @@ import { exportMCDimensionsForZip } from "../industrial/mcDimensions/mcDimension
 import { loadMcDimensionsConfig } from "../../config/mcDimensionsConfig";
 import { mergePieceObservacoesStores } from "../observacoes/ObservacoesService";
 import {
+  applyDocumentaryOverridesToCutlistForEtiquetas,
+  applyMultiProjectDocumentaryOverridesForEtiquetas,
+} from "../industrial/onlineAnalysis/applyDocumentaryOverridesToCutlistForEtiquetas";
+import {
   beginIndustrialFileGeneration,
   endIndustrialFileGeneration,
 } from "./industrialGenerationSuspend";
@@ -506,6 +510,10 @@ export async function generateMultiProjectFabrication(
   if (globalThicknessBundles.length > 0) {
     try {
       const { buildCutLayoutPdf } = await import("../cutlayout/cutLayoutPdf");
+      const overrideEntries = loaded.map((entry) => ({
+        prefix: entry.prefix,
+        overrides: entry.state.industrialDocumentOverrides,
+      }));
       for (const bundle of globalThicknessBundles) {
         const layout = bundle.cncBundle.layoutResult;
         const docLayout = await buildCutLayoutPdf(layout, {
@@ -513,12 +521,17 @@ export async function generateMultiProjectFabrication(
         });
         safeAddPdf(zip, industrialThicknessLayoutPdfPath(bundle.bucket), docLayout);
 
+        // Fase 5: merge documental só nas etiquetas (layout/CNC usam items base)
+        const etiquetaItems = applyMultiProjectDocumentaryOverridesForEtiquetas(
+          bundle.items as CutListItemComPreco[],
+          overrideEntries
+        );
         const globalEtiquetasProj: ProjectForEtiquetasPdf = {
           projectName: layoutTitle || "Multi-projeto",
           boxes: allPrefixedBoxes,
           rules: rulesForGlobal,
           settings: getSettings(),
-          precomputedItems: bundle.items as CutListItemComPreco[],
+          precomputedItems: etiquetaItems,
           cutLayoutPlacements: layout.sheets.flatMap((s) => s.placements),
           pieceObservacoes: mergedPieceObservacoes,
         };
@@ -673,13 +686,17 @@ export async function generateMultiProjectFabrication(
 
     // Etiquetas com numeração global e nome do projeto original
     try {
+      const etiquetaItems = applyDocumentaryOverridesToCutlistForEtiquetas(
+        projDisplayItems,
+        entry.state.industrialDocumentOverrides
+      );
       const docEtiquetas = await UnifiedEtiquetaEngine.build({
         projectName: proj.projectName,
         boxes: proj.boxes,
         rules: proj.rules,
         materialId: proj.materialId,
         settings: getSettings(),
-        precomputedItems: projDisplayItems,
+        precomputedItems: etiquetaItems,
         cutLayoutPlacements: projPlacements.length > 0 ? projPlacements : undefined,
         pieceObservacoes: proj.pieceObservacoes,
       });

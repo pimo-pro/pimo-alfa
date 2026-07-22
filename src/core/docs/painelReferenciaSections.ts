@@ -175,4 +175,22 @@ export const painelReferenciaSections: DocSection[] = [
     files: ["src/context/ProjectProvider.tsx", "src/components/layout/right-tools/RightToolsBar.tsx"],
     interactions: "Restaura Viewer e ProjectState.",
   },
+  {
+    title: "Análise arquivo completo (PDFs industriais online)",
+    description:
+      "Fases 1–6: /analise completo + UEE whitelist + robustez (validações, testes, polish).",
+    internals:
+      "onlineAnalysis + validation/sanitize + __tests__. UEE só cutlist whitelist; CNC base intocado. " +
+      "Guardar bloqueia qtd/material inválidos. Flag off: páginas ocultas; merge UEE se overrides; toast no export.",
+    files: [
+      "src/core/industrial/onlineAnalysis/",
+      "src/core/industrial/onlineAnalysis/__tests__/",
+      "src/app/PROJETOS/analise/",
+      "src/hooks/useGerarArquivoHandlers.ts",
+      "src/core/fabrication/multiProjectFabrication.ts",
+    ],
+    interactions:
+      "Editar cutlist → validação no Guardar → etiquetas/PDFs reflectem; CNC intacto.",
+    notes: "Suite vitest P0+P1 em onlineAnalysis/__tests__.",
+  },
 ];

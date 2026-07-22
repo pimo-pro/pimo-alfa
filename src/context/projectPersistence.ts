@@ -27,6 +27,8 @@ import {
   EMPTY_WALL_SELECTION,
   type ProjectAutoFillState,
 } from "../core/autoRoomFill/autoRoomFillTypes";
+import { normalizeIndustrialDocumentOverrides } from "../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes";
+import { normalizeIndustrialDocumentHistory } from "../core/industrial/onlineAnalysis/industrialDocumentHistoryTypes";
 
 export const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 export const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
@@ -232,6 +234,12 @@ export function reviveState(snapshot: unknown, options?: ReviveStateOptions): Pr
       restored.industrialOperacoes && typeof restored.industrialOperacoes === "object"
         ? { ...(restored.industrialOperacoes as ProjectState["industrialOperacoes"]) }
         : defaultState.industrialOperacoes,
+    industrialDocumentOverrides: normalizeIndustrialDocumentOverrides(
+      restored.industrialDocumentOverrides
+    ),
+    industrialDocumentHistory: normalizeIndustrialDocumentHistory(
+      restored.industrialDocumentHistory
+    ),
     orlaJuntoPairs: Array.isArray(restored.orlaJuntoPairs)
       ? restored.orlaJuntoPairs
       : defaultState.orlaJuntoPairs,

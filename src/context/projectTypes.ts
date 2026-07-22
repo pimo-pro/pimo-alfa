@@ -163,6 +163,14 @@ export interface ProjectState {
   industrialPieceEdits: import("../core/industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore;
   /** Estado das operações industriais (Nesting, CNC, …). */
   industrialOperacoes: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperacoesStore;
+  /**
+   * Overrides documentais das páginas /analise (Fases 2–5).
+   * Não altera design 3D, regras, CNC/TCN/drill.
+   * Etiquetas UEE: só whitelist documental de overrides.cutlist (Fase 5).
+   */
+  industrialDocumentOverrides: import("../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes").IndustrialDocumentOverridesStore;
+  /** Histórico documental append-only das edições /analise (Fase 3). */
+  industrialDocumentHistory: import("../core/industrial/onlineAnalysis/industrialDocumentHistoryTypes").IndustrialDocumentHistoryStore;
   /** Orla V1 — pares de bordas partilhadas (Orla Junto). */
   orlaJuntoPairs: import("../core/orla/orlaTypes").OrlaJuntoPair[];
   /** Orla V1 — ferragem calculada (metros, custo). */
@@ -697,6 +705,28 @@ export interface ProjectActions {
   completeIndustrialOperacao: (
     _operationId: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperationId,
     _notas?: string
+  ) => void;
+  /** Análise online — substituir overrides de um documento. */
+  setDocumentOverrides: (
+    _docId: import("../core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs").IndustrialOnlineAnalysisDocId,
+    _override: import("../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes").IndustrialDocumentOverride
+  ) => void;
+  /** Análise online — patch de campos de uma linha. */
+  patchDocumentRow: (
+    _docId: import("../core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs").IndustrialOnlineAnalysisDocId,
+    _rowId: string,
+    _fields: Record<string, string>
+  ) => void;
+  /** Análise online — adicionar linha. */
+  addDocumentRow: (
+    _docId: import("../core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs").IndustrialOnlineAnalysisDocId,
+    _sectionId: string,
+    _fields: Record<string, string>
+  ) => void;
+  /** Análise online — remover linha. */
+  deleteDocumentRow: (
+    _docId: import("../core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs").IndustrialOnlineAnalysisDocId,
+    _rowId: string
   ) => void;
   /** Gavetas — cria ou atualiza preset de gavetas no projecto. */
   upsertDrawerPreset: (_preset: import("../core/drawers/drawerPresetTypes").DrawerPreset) => void;

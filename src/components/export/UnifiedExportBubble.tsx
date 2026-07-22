@@ -5,6 +5,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/useProject";
 import { useGerarArquivoHandlers } from "../../hooks/useGerarArquivoHandlers";
 import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
@@ -14,6 +15,8 @@ import {
   useSendProjectPackage,
   type SendSelections,
 } from "../../hooks/useSendProjectPackage";
+import { industrialFeatureFlags } from "@/industrial/config/featureFlags";
+import { buildIndustrialOnlineAnalysisIndexPath } from "@/core/industrial/onlineAnalysis";
 import Button from "../ui/Button";
 import { ModalPortal } from "../ui/ModalPortal";
 import { Icon } from "@/components/icons";
@@ -110,8 +113,10 @@ function ExportRow({
 }
 
 export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }: Props) {
+  const navigate = useNavigate();
   const { project, actions } = useProject();
   const sendPackage = useSendProjectPackage();
+  const onlineAnalysisEnabled = industrialFeatureFlags.industrialOnlineAnalysis;
   const {
     sendMethod,
     setSendMethod,
@@ -419,6 +424,33 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                   Gerar arquivo completo
                 </span>
               </Button>
+              {onlineAnalysisEnabled ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  fullWidth
+                  disabled={project.estaCarregando || !hasBoxes}
+                  onClick={() => {
+                    const name = project.projectName?.trim() || "Projeto";
+                    onClose();
+                    navigate(buildIndustrialOnlineAnalysisIndexPath(name));
+                  }}
+                  style={{ minHeight: 56 }}
+                >
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      justifyContent: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <Icon name="adminChecklist" size={16} aria-hidden />
+                    Análise arquivo completo
+                  </span>
+                </Button>
+              ) : null}
             </div>
           </div>
 

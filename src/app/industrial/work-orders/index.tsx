@@ -12,6 +12,8 @@ import {
 import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
+import { industrialFeatureFlags } from '@/industrial/config/featureFlags';
+import { buildIndustrialOnlineAnalysisIndexPath } from '@/core/industrial/onlineAnalysis';
 
 import QrScannerPanel from './components/QrScannerPanel';
 import { useWorkOrders } from './hooks/useWorkOrders';
@@ -177,6 +179,28 @@ export default function IndustrialWorkOrdersRoute() {
             >
               {generating ? 'A gerar…' : 'Gerar ordens'}
             </button>
+            {industrialFeatureFlags.industrialOnlineAnalysis && projectFilter
+              ? (() => {
+                  const selected = projects.find((p) => p.projectCode === projectFilter);
+                  if (!selected) return null;
+                  return (
+                    <Link
+                      to={buildIndustrialOnlineAnalysisIndexPath(selected.name)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 6,
+                        border: '1px solid #cbd5e1',
+                        background: '#fff',
+                        color: '#0f172a',
+                        textDecoration: 'none',
+                        fontSize: 13,
+                      }}
+                    >
+                      Análise arquivo completo
+                    </Link>
+                  );
+                })()
+              : null}
             {user?.id ? (
               <span style={{ fontSize: 12, color: '#64748b' }}>Operador: {user.id}</span>
             ) : null}

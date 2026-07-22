@@ -5,6 +5,7 @@
  */
 
 import drawerCertificationReportMd from "../core/drawers/DrawerIndustrialCertificationReport.md?raw";
+import industrialOnlineAnalysisMd from "../core/industrial/onlineAnalysis/IndustrialOnlineAnalysisSystemDoc.md?raw";
 import {
   DOCUMENTATION_EXPORT,
   DRAWER_GEOMETRY_PHASE6,
@@ -82,9 +83,13 @@ export const SYSTEM_DOC_CATEGORIES: SystemDocCategoryMeta[] = [
   {
     id: "pdf",
     label: "PDF Engine",
-    description: "PDF técnico e etiquetas v5 (em preparação).",
-    available: false,
-    sourceFiles: [],
+    description: "PDFs industriais e Análise arquivo completo (Fases 1–6).",
+    available: true,
+    sourceFiles: [
+      "src/core/industrial/onlineAnalysis/IndustrialOnlineAnalysisSystemDoc.md",
+      "src/core/industrial/onlineAnalysis/",
+      "src/components/help/system/PdfSystemDocs.tsx",
+    ],
   },
   {
     id: "viewer",
@@ -114,6 +119,11 @@ const MARKDOWN_REGISTRY: Record<string, { title: string; sourcePath: string; raw
     title: "Certificação Industrial — Gavetas",
     sourcePath: "src/core/drawers/DrawerIndustrialCertificationReport.md",
     raw: drawerCertificationReportMd,
+  },
+  "industrial-online-analysis": {
+    title: "Análise arquivo completo / PDFs industriais online",
+    sourcePath: "src/core/industrial/onlineAnalysis/IndustrialOnlineAnalysisSystemDoc.md",
+    raw: industrialOnlineAnalysisMd,
   },
 };
 

@@ -332,6 +332,8 @@ export const defaultState: ProjectState = {
   pieceObservacoes: {},
   industrialPieceEdits: {},
   industrialOperacoes: {},
+  industrialDocumentOverrides: {},
+  industrialDocumentHistory: [],
   orlaJuntoPairs: [],
   ferragemOrla: { linhas: [], metrosTotal: 0, custoTotal: 0, porBox: {} },
   remates: [],

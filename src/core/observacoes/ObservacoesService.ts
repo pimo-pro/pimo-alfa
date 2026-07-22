@@ -180,13 +180,21 @@ export type LabelObservationItemLike = {
   id?: string;
 };
 
-/** Recolha para etiquetas v5 — exclusivamente de `pieceObservacoes`. */
+/** Recolha para etiquetas v5 — pieceObservacoes, ou overlay documental (Fase 5). */
 export function collectObservationsForItem(
   item: LabelObservationItemLike,
   /** @deprecated Ignorado — legado removido da pipeline. */
   _legacyRules?: unknown,
   pieceObservacoes?: PieceObservacoesStore
 ): string[] {
+  const documentary = item.metadata?.documentaryObservacoes;
+  if (Array.isArray(documentary)) {
+    return normalizeObservacoesList(documentary).slice(0, MAX_LABEL_OBSERVATIONS_V5);
+  }
+  if (typeof documentary === "string") {
+    return normalizeObservacoesList([documentary]).slice(0, MAX_LABEL_OBSERVATIONS_V5);
+  }
+
   const pieceId =
     typeof item.metadata?.panelId === "string" && item.metadata.panelId.trim()
       ? item.metadata.panelId.trim()

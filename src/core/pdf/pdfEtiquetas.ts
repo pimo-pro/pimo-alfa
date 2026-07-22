@@ -116,12 +116,24 @@ function getCutlistWithMetadata(project: ProjectForEtiquetasPdf): LabelItem[] {
   const boxById = new Map(project.boxes.map((b) => [b.id, b]));
 
   if (project.precomputedItems) {
-    return project.precomputedItems.map((p) => ({
-      ...p,
-      boxNome: boxById.get(p.boxId ?? "")?.nome ?? p.boxId ?? "—",
-      pieceName: p.nome,
-      sourceProjectName: (p as unknown as Record<string, unknown>).sourceProjectName as string | undefined,
-    }));
+    return project.precomputedItems.map((p) => {
+      const documentaryBox =
+        typeof p.metadata?.documentaryBoxNome === "string"
+          ? p.metadata.documentaryBoxNome.trim()
+          : "";
+      return {
+        ...p,
+        boxNome:
+          documentaryBox ||
+          boxById.get(p.boxId ?? "")?.nome ||
+          p.boxId ||
+          "—",
+        pieceName: p.nome,
+        sourceProjectName: (p as unknown as Record<string, unknown>).sourceProjectName as
+          | string
+          | undefined,
+      };
+    });
   }
 
   const parametric = buildGlobalQrCutlistMerged(

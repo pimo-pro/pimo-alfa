@@ -39,6 +39,10 @@ import {
   buildIndustrialArmazemPdf,
   industrialArmazemPdfFileName,
 } from "../core/pdf/pdfIndustrialArmazem";
+import { resolveIndustrialZipPdf } from "../core/industrial/onlineAnalysis";
+import { applyDocumentaryOverridesToCutlistForEtiquetas } from "../core/industrial/onlineAnalysis/applyDocumentaryOverridesToCutlistForEtiquetas";
+import { documentHasOverrides } from "../core/industrial/onlineAnalysis/applyIndustrialDocumentOverrides";
+import { industrialFeatureFlags } from "../industrial/config/featureFlags";
 import { enviarParaFabrica, submitEnviarParaFabrica } from "../core/fabrication/enviarParaFabrica";
 import { useComponentTypes } from "./useComponentTypes";
 import { useFerragens } from "./useFerragens";
@@ -135,6 +139,20 @@ function guardIndustrialExport(
     toastExportError(showToast, err, "Exportação bloqueada");
     return false;
   }
+}
+
+/** Fase 6: aviso discreto se flag off mas cutlist tem overrides (etiquetas/PDFs ainda reflectem). */
+function warnCutlistOverridesWithFlagOff(
+  project: ProjectState,
+  showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void
+): void {
+  if (industrialFeatureFlags.industrialOnlineAnalysis) return;
+  if (!documentHasOverrides(project.industrialDocumentOverrides, "cutlist")) return;
+  showToast(
+    "Análise online desligada, mas a cutlist tem edições documentais — PDFs e etiquetas UEE reflectem-nas; CNC/TCN intactos.",
+    "warning",
+    5200
+  );
 }
 
 function pushFullExportError(
@@ -513,6 +531,7 @@ export function useGerarArquivoHandlers() {
       return;
     }
     if (!guardIndustrialExport(project, showToast)) return;
+    warnCutlistOverridesWithFlagOff(project, showToast);
     beginIndustrialFileGeneration();
     try {
       const proj = pdfProject();
@@ -526,6 +545,7 @@ export function useGerarArquivoHandlers() {
         extractedPartsByBoxId: project.extractedPartsByBoxId,
         industrialPieceEdits: project.industrialPieceEdits,
       });
+      // CNC/nesting: allItems base — nunca applyDocumentaryOverrides aqui
       const settingsSnapshot = getSettings();
       const materialsSnapshot = listMaterials();
       const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
@@ -548,17 +568,30 @@ export function useGerarArquivoHandlers() {
 
       for (const bundle of thicknessBundles) {
         const nestingPlacements = bundle.layoutResult.sheets.flatMap((s) => s.placements);
+        // Fase 5: merge documental só no ramo UEE (CNC/nesting usaram allItems base)
+        const etiquetaItems = applyDocumentaryOverridesToCutlistForEtiquetas(
+          bundle.items as CutListItemComPreco[],
+          project.industrialDocumentOverrides
+        );
         const doc = await UnifiedEtiquetaEngine.build({
           ...proj,
-          precomputedItems: bundle.items as CutListItemComPreco[],
+          precomputedItems: etiquetaItems,
           cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
         });
         doc.save(`${slug}_${industrialThicknessEtiquetasPdfFileName(bundle.bucket)}`);
       }
+      const cutlistOverridden = documentHasOverrides(
+        project.industrialDocumentOverrides,
+        "cutlist"
+      );
       showToast(
         thicknessBundles.length === 1
-          ? "PDF de etiquetas (UEE v5) gerado."
-          : `${thicknessBundles.length} PDFs de etiquetas gerados (um por espessura).`,
+          ? cutlistOverridden
+            ? "PDF de etiquetas (UEE v5) gerado (com edições documentais da cutlist)."
+            : "PDF de etiquetas (UEE v5) gerado."
+          : cutlistOverridden
+            ? `${thicknessBundles.length} PDFs de etiquetas gerados (com edições documentais da cutlist).`
+            : `${thicknessBundles.length} PDFs de etiquetas gerados (um por espessura).`,
         "info"
       );
     } catch (err) {
@@ -928,6 +961,7 @@ export function useGerarArquivoHandlers() {
       }
 
       if (!guardIndustrialExport(project, showToast)) return;
+      warnCutlistOverridesWithFlagOff(project, showToast);
 
       try {
         viewerSync.setUltraPerformanceMode(true);
@@ -1001,10 +1035,13 @@ export function useGerarArquivoHandlers() {
 
       const safeSlug = sanitizeZipPath(slug) || "projeto";
       await ensureLogoIndustrialLoaded();
+      const fullProjectState = applyResultados(project as ProjectState);
 
       // --- Cutlist PDF ---
       try {
-        const docCutlist = await buildCutlistPdf(proj);
+        const docCutlist = await resolveIndustrialZipPdf(fullProjectState, "cutlist", () =>
+          buildCutlistPdf(proj)
+        );
         if (!safeAddPdf(zip, `${safeSlug}_cutlist.pdf`, docCutlist)) {
           errors.push({ step: "Cutlist PDF", message: "Documento ou blob inválido." });
         }
@@ -1016,11 +1053,13 @@ export function useGerarArquivoHandlers() {
 
       // --- PDF Técnico ---
       try {
-        const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
-          materialId: proj.materialId,
-          extractedPartsByBoxId: proj.extractedPartsByBoxId,
-          pieceObservacoes: proj.pieceObservacoes,
-        });
+        const docTecnico = await resolveIndustrialZipPdf(fullProjectState, "tecnico", () =>
+          gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
+            materialId: proj.materialId,
+            extractedPartsByBoxId: proj.extractedPartsByBoxId,
+            pieceObservacoes: proj.pieceObservacoes,
+          })
+        );
         if (!safeAddPdf(zip, `${safeSlug}_tecnico.pdf`, docTecnico)) {
           errors.push({ step: "PDF Técnico", message: "Documento ou blob inválido." });
         }
@@ -1032,7 +1071,9 @@ export function useGerarArquivoHandlers() {
 
       // --- Unificado ---
       try {
-        const docUnificado = await buildUnifiedPdf(proj, unifiedIndustrialContext());
+        const docUnificado = await resolveIndustrialZipPdf(fullProjectState, "unificado", () =>
+          buildUnifiedPdf(proj, unifiedIndustrialContext())
+        );
         if (!safeAddPdf(zip, `${safeSlug}_unificado.pdf`, docUnificado)) {
           errors.push({ step: "PDF Unificado", message: "Documento ou blob inválido." });
         }
@@ -1054,7 +1095,11 @@ export function useGerarArquivoHandlers() {
           rodapes: project.rodapes ?? [],
           pieceObservacoes: proj.pieceObservacoes,
         });
-        const docFerragens = buildFerragensIndustriaisPdf(ferragensData);
+        const docFerragens = await resolveIndustrialZipPdf(
+          fullProjectState,
+          "industrial_ferragens",
+          () => buildFerragensIndustriaisPdf(ferragensData)
+        );
         if (!safeAddPdf(zip, industrialFerragensPdfFileName(safeSlug), docFerragens)) {
           errors.push({ step: "PDF Ferragens Industriais", message: "Documento ou blob inválido." });
         }
@@ -1099,11 +1144,29 @@ export function useGerarArquivoHandlers() {
         });
         // Lista oficial: ferragens_totais e industrial_armazem coexistem (nao se substituem).
         const expectedFerragensTotais = assertFerragensTotaisInExport(proj.projectName ?? safeSlug);
-        const bottomEntries: Array<[string, ReturnType<typeof buildFerragensIndustriaisPdf>]> = [
-          [bottomPdfs.fileNames.resumoFinanceiro, bottomPdfs.resumoFinanceiro],
-          [bottomPdfs.fileNames.pecasTotais, bottomPdfs.pecasTotais],
-          [bottomPdfs.fileNames.ferragensTotais || expectedFerragensTotais, bottomPdfs.ferragensTotais],
-          [bottomPdfs.fileNames.totaisProjeto, bottomPdfs.totaisProjeto],
+
+        const resumoDoc = await resolveIndustrialZipPdf(
+          fullProjectState,
+          "resumo_financeiro",
+          () => bottomPdfs.resumoFinanceiro
+        );
+        const pecasDoc = await resolveIndustrialZipPdf(fullProjectState, "pecas_totais", () =>
+          bottomPdfs.pecasTotais
+        );
+        const ferragensTotaisDoc = await resolveIndustrialZipPdf(
+          fullProjectState,
+          "ferragens_totais",
+          () => bottomPdfs.ferragensTotais
+        );
+        const totaisDoc = await resolveIndustrialZipPdf(fullProjectState, "totais_projeto", () =>
+          bottomPdfs.totaisProjeto
+        );
+
+        const bottomEntries: Array<[string, typeof resumoDoc]> = [
+          [bottomPdfs.fileNames.resumoFinanceiro, resumoDoc],
+          [bottomPdfs.fileNames.pecasTotais, pecasDoc],
+          [bottomPdfs.fileNames.ferragensTotais || expectedFerragensTotais, ferragensTotaisDoc],
+          [bottomPdfs.fileNames.totaisProjeto, totaisDoc],
         ];
         for (const [name, doc] of bottomEntries) {
           if (!safeAddPdf(zip, name, doc)) {
@@ -1118,10 +1181,10 @@ export function useGerarArquivoHandlers() {
           boxes
         );
         const chapasReal = computeChapasReal(allItems, proj.projectName ?? safeSlug, boxes);
-        const armazemPdf = await buildIndustrialArmazemPdf(
-          proj.projectName ?? safeSlug,
-          chapasReal,
-          consumoSummary
+        const armazemPdf = await resolveIndustrialZipPdf(
+          fullProjectState,
+          "industrial_armazem",
+          () => buildIndustrialArmazemPdf(proj.projectName ?? safeSlug, chapasReal, consumoSummary)
         );
         if (!safeAddPdf(zip, industrialArmazemPdfFileName(safeSlug), armazemPdf)) {
           errors.push({ step: "PDF industrial_armazem", message: "Documento inválido." });
@@ -1155,14 +1218,19 @@ export function useGerarArquivoHandlers() {
       }
 
       // --- Etiquetas UEE (um PDF por espessura em cnc/<espessura>/) ---
+      // Nesting/CNC usam thicknessCncBundles.items base; merge documental só aqui (Fase 5).
       try {
         const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
         for (const bundle of thicknessCncBundles) {
           const layoutResult = bundle.cncBundle.layoutResult;
           const nestingPlacements = layoutResult.sheets.flatMap((s) => s.placements);
+          const etiquetaItems = applyDocumentaryOverridesToCutlistForEtiquetas(
+            bundle.items as CutListItemComPreco[],
+            (project as ProjectState).industrialDocumentOverrides
+          );
           const docEtiquetas = await UnifiedEtiquetaEngine.build({
             ...proj,
-            precomputedItems: bundle.items as CutListItemComPreco[],
+            precomputedItems: etiquetaItems,
             cutLayoutPlacements: nestingPlacements.length > 0 ? nestingPlacements : undefined,
           });
           const etiquetasPath = industrialThicknessEtiquetasPdfPath(bundle.bucket);

@@ -231,6 +231,27 @@ const SECTIONS: Section[] = [
           { type:"best-practice", text:"Use o pacote ZIP como entregável padrão para a fábrica — garante que nenhum ficheiro falta." },
         ],
       },
+      {
+        title:"Análise arquivo completo (online)",
+        steps:[
+          { title:"O que é", text:"Consulta e edição documental online dos PDFs industriais em páginas PROJETOS (/analise). Mostra tabelas editáveis — não substitui o ZIP." },
+          { title:"Como aceder (Ações finais)", text:"Barra superior → Salvar e Gerar Design → Ações finais → «Análise arquivo completo». Abre o índice dos 9 documentos industriais." },
+          { title:"Como aceder (work-orders)", text:"Em /industrial/work-orders, seleccione um projeto e use «Análise arquivo completo»." },
+          { title:"Como navegar", text:"No índice, escolha um documento. Cada página mostra tabelas. Use o breadcrumb para voltar." },
+          { title:"Como editar", text:"Clique em «Editar», altere células, adicione ou remova linhas, depois «Guardar». «Cancelar» descarta o draft." },
+          { title:"Highlight", text:"Células e linhas modificadas ficam destacadas. Linhas novas mostram o badge «Nova»." },
+          { title:"Histórico", text:"No índice vê o histórico global; em cada documento vê o histórico desse PDF. Clique numa entrada para saltar à célula (jump-to-cell) com highlight temporário." },
+          { title:"Gerar PDF (documento)", text:"Em cada documento: «Gerar PDF» (com edições) ou «Gerar PDF original» (tabular sem overrides). Downloads não registam histórico." },
+          { title:"Multi-download (índice)", text:"Seleccione documentos e use: Gerar selecionados / modificados / todos PDFs industriais / originais. Vários ficheiros saem num ZIP só com PDFs (não é o arquivo completo)." },
+          { title:"Etiquetas e cutlist editada", text:"Edições na cutlist (material, qtd, observações, peça, caixa) passam às etiquetas UEE. Dimensões e CNC/TCN/drill não mudam. Linhas novas no documento não geram etiqueta; linhas apagadas no documento omitem só a etiqueta." },
+          { title:"Validação ao Guardar", text:"Quantidade deve ser inteiro ≥ 1 e material não pode ficar vazio nas linhas que editou — caso contrário o Guardar é bloqueado." },
+        ],
+        alerts:[
+          { type:"tip", text:"A funcionalidade pode estar desligada pela flag industrialOnlineAnalysis (default off em produção)." },
+          { type:"warning", text:"Mesmo com a flag off, se o projecto já tiver edições na cutlist, PDFs e etiquetas UEE continuam a reflecti-las; CNC/TCN não mudam. O export mostra um aviso discreto." },
+          { type:"best-practice", text:"Guarde o projeto antes de analisar/editar/descarregar, para o snapshot PROJETOS estar atualizado." },
+        ],
+      },
     ],
     steps:[],
     alerts:[

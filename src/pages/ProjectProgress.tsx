@@ -137,6 +137,36 @@ const PROJECT_SECTIONS = [
       { label: "Exportação CNC (TCN/KDT)", status: "completed" },
       { label: "Exportação Drill XML", status: "completed" },
       { label: "Pacote completo (ZIP) com múltiplos artefatos", status: "completed" },
+      {
+        label:
+          "Fase 1 — Análise arquivo completo: páginas online read-only (/PROJETOS/:project/analise), 9 docs industriais, flag industrialOnlineAnalysis off; ZIP/CNC/etiquetas intactos",
+        status: "completed",
+      },
+      {
+        label:
+          "Fase 2 — Edição online + industrialDocumentOverrides + highlight; ZIP PDFs usam rows efetivas; etiquetas/CNC intocados",
+        status: "completed",
+      },
+      {
+        label:
+          "Fase 3 — Histórico documental append-only (industrialDocumentHistory) + jump-to-cell; UI doc/global; pipeline CNC/etiquetas intacto",
+        status: "completed",
+      },
+      {
+        label:
+          "Fase 4 — Re-geração seletiva / multi-download PDFs industriais (effective/canonical); ZIP documental; ZIP clássico intacto",
+        status: "completed",
+      },
+      {
+        label:
+          "Fase 5 — Overrides.cutlist → etiquetas UEE (whitelist documental); CNC/TCN/drill/nesting intocados",
+        status: "completed",
+      },
+      {
+        label:
+          "Fase 6 — Robustez: validações/sanitize, testes P0+P1, polish UI/encoding, aviso export com flag off",
+        status: "completed",
+      },
       { label: "Exportação de imagens/snapshot do viewer", status: "in-progress" },
       { label: "Fix @PIMO-SOON: rotação de furos no Layout de Corte PRO quando peça roda 90°", status: "in-progress" },
       { label: "Exportação estruturada JSON para integrações externas", status: "planned" },
