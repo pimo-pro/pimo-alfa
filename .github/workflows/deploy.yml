@@ -79,23 +79,37 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq lftp
+          # Hostinger: home FTP pode ser / ou /public_html. SamKirkland usa server-dir=/public_html/.
+          # Apaga assets/industrial em ambos os caminhos e falha se ainda restarem JS hashed.
           lftp -c "
             set ssl:verify-certificate no;
             set ftp:passive-mode true;
             set ftp:list-options -a;
-            set net:max-retries 3;
-            set net:timeout 30;
-            set cmd:fail-exit yes;
+            set net:max-retries 5;
+            set net:timeout 60;
+            set cmd:fail-exit no;
             open -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" ftp://${FTP_HOST};
-            # Conta FTP Hostinger ja entra em public_html (cd public_html falharia com public_html/public_html).
             pwd;
+            ls;
             rm -r -f assets;
             rm -r -f industrial;
+            rm -r -f public_html/assets;
+            rm -r -f public_html/industrial;
+            rm -r -f /public_html/assets;
+            rm -r -f /public_html/industrial;
             rm -f .ftp-deploy-sync-state.json;
+            rm -f public_html/.ftp-deploy-sync-state.json;
+            rm -f /public_html/.ftp-deploy-sync-state.json;
             rm -f *.js.map;
+            rm -f public_html/*.js.map;
+            echo '--- after wipe ---';
+            pwd;
+            ls;
+            ls assets || echo 'assets gone at cwd';
+            ls public_html/assets || echo 'assets gone at public_html';
             bye
           "
-          echo "Remote clean done: assets/, industrial/, sync-state, *.js.map"
+          echo "Remote clean done (dual-path assets/industrial + sync-state)"
 
       - name: Upload via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
