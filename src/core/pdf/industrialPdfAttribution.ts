@@ -1,6 +1,6 @@
 /**
- * Atribui��o Designer / Respons�vel nos PDFs industriais.
- * N�o altera UI nem auth � apenas o texto impresso nos PDFs.
+ * Atribuição Designer / Responsável nos PDFs industriais.
+ * Não altera UI nem auth — apenas o texto impresso nos PDFs.
  */
 
 import { getCurrentProjectUser } from "../projects/currentUser";
@@ -42,10 +42,10 @@ function isVisitorName(name: string, hasAuth: boolean): boolean {
 /**
  * Regras:
  * - Visitante ? manter nome original (ex.: "Visitante")
- * - N�o-admin ? nome do designer
+ * - Não-admin ? nome do designer
  * - Admin (role ou nome) ? "khaled"
  * - Sempre: "admin" ? "khaled"
- * - Respons�vel ? sempre "khaled"
+ * - Responsável ? sempre "khaled"
  */
 export function resolveIndustrialPdfAttribution(): {
   designer: string;

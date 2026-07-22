@@ -18,7 +18,7 @@ function hingeOffsetsFromBottom(holes: { y: number; holeType?: string }[], panel
     .sort((a, b) => a - b);
 }
 
-describe("ajuste vertical vs stack ù alinhamento L/R", () => {
+describe("ajuste vertical vs stack ‚Äî alinhamento L/R", () => {
   it("? posY < limiar NAO activa stack (porta dupla com ajuste ligeiro)", () => {
     expect(VERTICAL_STACK_MIN_DELTA_MM).toBe(40);
     expect(hasVerticallyStackedDoors([{ posY: 0 }, { posY: 10 }])).toBe(false);
@@ -46,7 +46,7 @@ describe("ajuste vertical vs stack ù alinhamento L/R", () => {
 
     const gapsL = computeDoorVerticalGaps(openingH, leftAdj.height, leftAdj.posY);
     const gapsR = computeDoorVerticalGaps(openingH, doorH0, 0);
-    // Gaps diferentes por folha ù correcto; stack falso nao deve misturar eixos
+    // Gaps diferentes por folha ‚Äî correcto; stack falso nao deve misturar eixos
     expect(gapsL.bottomGapMm).not.toBe(gapsR.bottomGapMm);
   });
 

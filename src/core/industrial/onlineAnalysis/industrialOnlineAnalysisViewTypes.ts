@@ -17,6 +17,6 @@ export type IndustrialOnlineAnalysisTableSection = {
   title: string;
   columns: IndustrialOnlineAnalysisEditableColumn[];
   rows: IndustrialOnlineAnalysisRow[];
-  /** Secção contém overrides aplicados */
+  /** SecÃ§Ã£o contÃ©m overrides aplicados */
   modified?: boolean;
 };

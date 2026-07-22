@@ -1,13 +1,13 @@
 /**
  * Regras industriais de ORLA por tipo de peca (SSOT metros / PDF).
- * Costa nunca recebe orla. Painùis < 16 mm nao recebem orla.
+ * Costa nunca recebe orla. Pain√©is < 16 mm nao recebem orla.
  * Gavetas (laterais / costa / frente int): so aresta superior.
  */
 
 import type { OrlaSideId } from "./orlaTypes";
 import { EMPTY_ORLA_SIDES, type PieceOrlaConfig } from "./orlaTypes";
 
-/** Espessura minima de chapa (mm) para aplicar orla ù excepto costa (sempre sem orla). */
+/** Espessura minima de chapa (mm) para aplicar orla ‚Äî excepto costa (sempre sem orla). */
 export const MIN_ORLA_PANEL_THICKNESS_MM = 16;
 
 /** Normaliza tipo cutlist para matching. */
@@ -63,7 +63,7 @@ function isAllEdgesTipo(t: string): boolean {
   if (t.includes("remate") || t.includes("rodape") || t.includes("roda_pe") || t.includes("roda-pe")) {
     return true;
   }
-  // frente de gaveta (exterior) ù todas as bordas; frente_int ja filtrada acima
+  // frente de gaveta (exterior) ‚Äî todas as bordas; frente_int ja filtrada acima
   if (/gaveta_frente|gav_frente|frente_gaveta/.test(t)) return true;
   if (t.includes("gaveta") && t.includes("frente") && !t.includes("int")) return true;
   return false;
@@ -77,19 +77,19 @@ export function resolveOrlaSidesForPieceTipo(tipoRaw: string): OrlaSideId[] {
   const t = normalizeOrlaPieceTipo(tipoRaw);
   if (!t) return [];
 
-  // Costa do modulo ù nunca
+  // Costa do modulo ‚Äî nunca
   if (isCostaPieceTipo(t)) return [];
 
-  // Fundo de gaveta ù sem orla
+  // Fundo de gaveta ‚Äî sem orla
   if (isDrawerBottomTipo(t)) return [];
 
   // Gavetas: so aresta superior (mapeada a `front` no calculo de metros)
   if (isDrawerTopOnlyTipo(t)) return ["front"];
 
-  // Laterais da caixa / sep / div ù frente e tras
+  // Laterais da caixa / sep / div ‚Äî frente e tras
   if (isBoxSideOrDividerTipo(t)) return ["front", "back"];
 
-  // Todas as bordas (cima, fundo, porta, prateleira, remates, frente gaveta, ù)
+  // Todas as bordas (cima, fundo, porta, prateleira, remates, frente gaveta, ‚Äî)
   if (isAllEdgesTipo(t)) return ["front", "back", "left", "right"];
 
   // Default pecas de caixa: todas as bordas (excepto costa ja filtrada)
@@ -132,7 +132,7 @@ export function stripMaterialThicknessLabel(label: string): string {
 /** Ref de orla para PDF: nome + espessura (sem largura). */
 export function formatOrlaRefForPdf(nome: string, espessuraMm: number, _larguraMm?: number): string {
   const n = String(nome ?? "").trim() || "Orla";
-  // Se o nome ja inclui a espessura (ex. "PVC 0.8ù23 mm"), extrair base + espessura do preset
+  // Se o nome ja inclui a espessura (ex. "PVC 0.8‚Äî23 mm"), extrair base + espessura do preset
   const cleaned = n
     .replace(/\s*\d+([.,]\d+)?\s*[\u00d7xX]\s*\d+([.,]\d+)?\s*mm\b/gi, "")
     .replace(/\s*\d+([.,]\d+)?\s*mm\b/gi, "")

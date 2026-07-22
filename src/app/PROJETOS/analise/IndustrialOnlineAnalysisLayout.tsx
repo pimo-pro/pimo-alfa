@@ -60,7 +60,7 @@ export default function IndustrialOnlineAnalysisLayout({
   return (
     <div style={shell} className="ui-projetos-analise">
       <header style={header}>
-        <nav style={crumb} aria-label="Navegação da análise">
+        <nav style={crumb} aria-label="NavegaÃ§Ã£o da anÃ¡lise">
           <Link to="/PROJETOS" style={linkStyle}>
             PROJETOS
           </Link>
@@ -72,21 +72,21 @@ export default function IndustrialOnlineAnalysisLayout({
           {docLabel ? (
             <>
               <Link to={indexHref} style={linkStyle}>
-                Análise
+                AnÃ¡lise
               </Link>
               <span aria-hidden>/</span>
               <span style={{ color: "#334155", fontWeight: 600 }}>{docLabel}</span>
             </>
           ) : (
-            <span style={{ color: "#334155", fontWeight: 600 }}>Análise</span>
+            <span style={{ color: "#334155", fontWeight: 600 }}>AnÃ¡lise</span>
           )}
         </nav>
         <h1 style={{ margin: "10px 0 0", fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
-          {docLabel ? docLabel : "Análise arquivo completo"}
+          {docLabel ? docLabel : "AnÃ¡lise arquivo completo"}
         </h1>
         <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
-          Consulta, edição documental, histórico e download dos PDFs industriais. CNC/TCN/drill
-          permanecem no pipeline clássico; a cutlist editada alimenta as etiquetas UEE.
+          Consulta, ediÃ§Ã£o documental, histÃ³rico e download dos PDFs industriais. CNC/TCN/drill
+          permanecem no pipeline clÃ¡ssico; a cutlist editada alimenta as etiquetas UEE.
         </p>
       </header>
       <main style={main}>{children}</main>

@@ -1,7 +1,7 @@
 /**
- * GeraÁ„o de um PDF industrial a partir da vista tabular (Fase 4).
+ * Gera√ß√£o de um PDF industrial a partir da vista tabular (Fase 4).
  * effective = overrides; canonical = tabular sem overrides.
- * N„o toca CNC/TCN/drill/etiquetas nem no ZIP cl·ssico.
+ * N√£o toca CNC/TCN/drill/etiquetas nem no ZIP cl√°ssico.
  */
 
 import type jsPDF from "jspdf";

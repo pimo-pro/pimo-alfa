@@ -101,7 +101,7 @@ export function applyIndustrialDocumentOverrides(
   });
 }
 
-/** Diff draft sections ? override document (relativo ao canùnico sem overrides). */
+/** Diff draft sections ? override document (relativo ao can√≥nico sem overrides). */
 export function buildOverrideFromDraft(input: {
   docId: IndustrialOnlineAnalysisDocId;
   canonicalSections: IndustrialOnlineAnalysisTableSection[];

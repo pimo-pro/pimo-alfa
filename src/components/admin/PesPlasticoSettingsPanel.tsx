@@ -1,6 +1,6 @@
 /**
- * Admin ? Ferragens ? PÈs de Pl·stico Ajust·veis
- * Controla preÁo, medida/altura, ref e ativaÁ„o usados no PDF e nas p·ginas online.
+ * Admin ? Ferragens ? P√©s de Pl√°stico Ajust√°veis
+ * Controla pre√ßo, medida/altura, ref e ativa√ß√£o usados no PDF e nas p√°ginas online.
  */
 
 import { useEffect, useState } from "react";
@@ -32,7 +32,7 @@ export default function PesPlasticoSettingsPanel() {
         nome: PE_PLASTICO_NOME,
         categoria: "acessorio" as const,
         medidas: `${Math.round(cfg.alturaMm)}mm`,
-        descricao: "PÈ de pl·stico ajust·vel",
+        descricao: "P√© de pl√°stico ajust√°vel",
         precoUnitario: cfg.precoUnitario,
       };
       if (exists) {
@@ -47,11 +47,11 @@ export default function PesPlasticoSettingsPanel() {
       ativo: draft.ativo,
       precoUnitario: Math.max(0, Number(draft.precoUnitario) || 0),
       alturaMm: Math.max(1, Number(draft.alturaMm) || 100),
-      ref: draft.ref.trim() || "PÈ-Pl·stico",
+      ref: draft.ref.trim() || "P√©-Pl√°stico",
     };
     setConfig(next);
     syncCatalog(next);
-    showToast("ConfiguraÁ„o de PÈs de Pl·stico guardada.", "info");
+    showToast("Configura√ß√£o de P√©s de Pl√°stico guardada.", "info");
   };
 
   const labelStyle = { fontSize: 11, color: "var(--text-muted)", marginBottom: 4 };
@@ -59,15 +59,15 @@ export default function PesPlasticoSettingsPanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-        Valores usados no PDF ferragens_totais, nas p·ginas online e no custo do projeto.
+        Valores usados no PDF ferragens_totais, nas p√°ginas online e no custo do projeto.
         {ferragens.some((f) => f.id === PE_PLASTICO_ID)
-          ? ` Cat·logo sincronizado: ${PE_PLASTICO_NOME}.`
-          : " A ferragem ser· criada no cat·logo ao guardar."}
+          ? ` Cat√°logo sincronizado: ${PE_PLASTICO_NOME}.`
+          : " A ferragem ser√° criada no cat√°logo ao guardar."}
       </p>
 
       <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <div style={labelStyle}>PreÁo unit·rio (Ä)</div>
+          <div style={labelStyle}>Pre√ßo unit√°rio (‚Äî)</div>
           <input
             className="input"
             type="number"
@@ -96,7 +96,7 @@ export default function PesPlasticoSettingsPanel() {
             className="input"
             value={draft.ref}
             onChange={(e) => setDraft((p) => ({ ...p, ref: e.target.value }))}
-            placeholder="PÈ-Pl·stico"
+            placeholder="P√©-Pl√°stico"
           />
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 4 }}>
@@ -106,19 +106,19 @@ export default function PesPlasticoSettingsPanel() {
               checked={draft.ativo}
               onChange={(e) => setDraft((p) => ({ ...p, ativo: e.target.checked }))}
             />
-            Ativar pÈs no projeto
+            Ativar p√©s no projeto
           </label>
         </div>
       </div>
 
       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-        PrÈ-visualizaÁ„o: {PE_PLASTICO_NOME} ∑ Ref {draft.ref || "ó"} ∑ {Math.round(draft.alturaMm || 0)}mm ∑{" "}
-        {formatCurrency(draft.precoUnitario || 0)} / un ∑ {draft.ativo ? "ativo" : "desativado"}
+        Pr√©-visualiza√ß√£o: {PE_PLASTICO_NOME} ‚Äî Ref {draft.ref || "‚Äî"} ‚Äî {Math.round(draft.alturaMm || 0)}mm ‚Äî{" "}
+        {formatCurrency(draft.precoUnitario || 0)} / un ‚Äî {draft.ativo ? "ativo" : "desativado"}
       </div>
 
       <div>
         <button type="button" className="button" onClick={handleSave}>
-          Guardar configuraÁ„o
+          Guardar configura√ß√£o
         </button>
       </div>
     </div>

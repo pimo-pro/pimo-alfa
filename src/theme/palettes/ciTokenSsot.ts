@@ -1,27 +1,27 @@
 /**
  * SSOT do namespace `--ci-*` / escalas 7 tons
- * (derivado de `reference/chalk_iron_sienna_full_system.html` — ADR Opção C).
+ * (derivado de `reference/chalk_iron_sienna_full_system.html` â€” ADR OpÃ§Ã£o C).
  *
  * Esta camada define o design system CI. As chaves da bridge usam o prefixo
- * `ci-` (sem `--`) e **não** redefinem tokens Alpha (`blue-light`, etc.),
- * para o remap `piPalette.ts` permanecer visualmente intacto até um passo
- * explícito de aplicação nos componentes.
+ * `ci-` (sem `--`) e **nÃ£o** redefinem tokens Alpha (`blue-light`, etc.),
+ * para o remap `piPalette.ts` permanecer visualmente intacto atÃ© um passo
+ * explÃ­cito de aplicaÃ§Ã£o nos componentes.
  *
  * Merge runtime: piPalette ? CI_SSOT_TOKEN_BRIDGE ? userOverrides
- * (sem colisão com tokens Alpha, o remap vence nos nomes Alpha).
+ * (sem colisÃ£o com tokens Alpha, o remap vence nos nomes Alpha).
  *
- * Não expor no preload até um passo explícito.
+ * NÃ£o expor no preload atÃ© um passo explÃ­cito.
  */
 
 import type { TemplatePaletteOverrides, TokenValueMap } from "./types";
 import { ALL_THEME_TOKENS } from "./tokenList";
 
-/** Degraus oficiais das escalas (HTML de referência). */
+/** Degraus oficiais das escalas (HTML de referÃ©ncia). */
 export const CI_SCALE_STEPS = [50, 100, 200, 400, 600, 800, 900] as const;
 export type CiScaleStep = (typeof CI_SCALE_STEPS)[number];
 
 /**
- * Escala Prussian 50–900 (fundo do swatch no HTML oficial).
+ * Escala Prussian 50â€”900 (fundo do swatch no HTML oficial).
  * 600 = --ci-prussian; 200 ? --ci-prussian-lt; 800 ? --ci-prussian-dk.
  */
 export const CI_PRUSSIAN_SCALE: Record<CiScaleStep, string> = {
@@ -35,7 +35,7 @@ export const CI_PRUSSIAN_SCALE: Record<CiScaleStep, string> = {
 };
 
 /**
- * Escala Sienna 50–900 (fundo do swatch no HTML oficial).
+ * Escala Sienna 50â€”900 (fundo do swatch no HTML oficial).
  * 600 = --ci-sienna; 200 ? --ci-sienna-lt; 800 ? --ci-sienna-dk.
  */
 export const CI_SIENNA_SCALE: Record<CiScaleStep, string> = {
@@ -48,7 +48,7 @@ export const CI_SIENNA_SCALE: Record<CiScaleStep, string> = {
   900: "#321806",
 };
 
-/** Tokens base / semânticos / superfícies do bloco CSS do HTML oficial. */
+/** Tokens base / semÃ¡nticos / superfÃ­cies do bloco CSS do HTML oficial. */
 export const CI_CORE_TOKENS = {
   chalk: "#F0EDE8",
   "chalk-dim": "#D8D4CE",
@@ -85,15 +85,15 @@ function buildCiNamespaceTokenMap(): TokenValueMap {
   return out;
 }
 
-/** Mapa estático `ci-*` ? hex (igual em dark/light; escalas são do sistema, não do modo). */
+/** Mapa estÃ¡tico `ci-*` ? hex (igual em dark/light; escalas sÃ£o do sistema, nÃ£o do modo). */
 export const CI_NAMESPACE_TOKENS: TokenValueMap = buildCiNamespaceTokenMap();
 
-/** Nomes sem `--` — para limpar inline styles ao sair do template Pi. */
+/** Nomes sem `--` â€” para limpar inline styles ao sair do template Pi. */
 export const CI_TOKEN_NAMES: string[] = Object.keys(CI_NAMESPACE_TOKENS);
 
 /**
- * Bridge no merge Pi: só namespace `ci-*` (sem tokens Alpha).
- * Dark/light partilham o mesmo catálogo — superfícies light/dark ficam como
+ * Bridge no merge Pi: sÃ³ namespace `ci-*` (sem tokens Alpha).
+ * Dark/light partilham o mesmo catÃ¡logo â€” superfÃ­cies light/dark ficam como
  * `ci-bg*` / `ci-dark-*` para consumo futuro, sem remapear `--navy` etc.
  */
 export const CI_SSOT_TOKEN_BRIDGE: TemplatePaletteOverrides = {
@@ -102,8 +102,8 @@ export const CI_SSOT_TOKEN_BRIDGE: TemplatePaletteOverrides = {
 };
 
 /**
- * True se a bridge **não** redefine tokens Alpha do remap.
- * (Pode ter escalas `--ci-*` definidas — isso não conta como “remap aplicado”.)
+ * True se a bridge **nÃ£o** redefine tokens Alpha do remap.
+ * (Pode ter escalas `--ci-*` definidas â€” isso nÃ£o conta como â€”remap aplicadoâ€”.)
  */
 export function isCiSsotBridgeEmpty(): boolean {
   const keys = [
@@ -113,7 +113,7 @@ export function isCiSsotBridgeEmpty(): boolean {
   return keys.every((k) => !ALL_THEME_TOKENS.includes(k));
 }
 
-/** True se as escalas 7 tons estão presentes na bridge. */
+/** True se as escalas 7 tons estÃ£o presentes na bridge. */
 export function hasCiScaleTokens(): boolean {
   return (
     CI_SSOT_TOKEN_BRIDGE.dark["ci-prussian-600"] === CI_PRUSSIAN_SCALE[600] &&

@@ -831,17 +831,17 @@ interface ProjetosPiece {
 - `[IDEIA]` Galeria comparativa multi-projeto em `/PROJETOS?view=compare`
 - `[IDEIA]` Slugs amig?veis gerados na grava??o do projeto (persistidos no meta)
 
-### 5.9 Preparação do projeto ? checklist consolidado (ver §11)
+### 5.9 PreparaÃ§Ã£o do projeto ? checklist consolidado (ver â€”11)
 
-- `[PLAN]` `ProjetosIndexLayout` ? índice cartões (sem viewer/tracking)
+- `[PLAN]` `ProjetosIndexLayout` ? Ã­ndice cartÃµes (sem viewer/tracking)
 - `[PLAN]` `ProjetosHubLayout` ? hub S1/S2/S3 partilhado
-- `[PLAN]` Hub `/{project}` ? ? viewer + painéis industriais read-only
+- `[PLAN]` Hub `/{project}` ? ? viewer + painÃ©is industriais read-only
 - `[PLAN]` Hubs `/{box}` / `/{piece}` ? foco + cache snapshot
 - `[RULE]` Tracking/industrial **proibido** em `/PROJETOS`
 - `[TODO]` Loaders + cache + `focusLevel` por URL
-- `[IDEIA]` Painéis S2 dinâmicos por estado produção
+- `[IDEIA]` PainÃ©is S2 dinÃ¡micos por estado produÃ§Ã£o
 
-> **Referência:** §6 estrutura · §11 preparação · §12 explicação técnica.
+> **ReferÃ©ncia:** â€”6 estrutura â€” â€”11 preparaÃ§Ã£o â€” â€”12 explicaÃ§Ã£o tÃ©cnica.
 
 ---
 

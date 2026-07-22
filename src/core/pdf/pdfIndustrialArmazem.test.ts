@@ -9,7 +9,7 @@ vi.stubGlobal(
 );
 
 describe("buildIndustrialArmazemPdf", () => {
-  it("gera PDF unificado com resumo + consumo por chapa (sem pe�as)", async () => {
+  it("gera PDF unificado com resumo + consumo por chapa (sem peças)", async () => {
     const chapas: ChapasRealSummary = {
       totalSheets: 2,
       totalWasteMm2: 100000,

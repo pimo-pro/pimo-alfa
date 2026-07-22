@@ -1,7 +1,7 @@
 /**
  * Download seletivo de PDFs industriais (Fase 4).
- * 1 PDF ? blob direto; N PDFs ? ZIP documental (só PDFs).
- * Não escreve industrialDocumentHistory. Não chama onArquivoCompleto.
+ * 1 PDF ? blob direto; N PDFs ? ZIP documental (sÃ³ PDFs).
+ * NÃ£o escreve industrialDocumentHistory. NÃ£o chama onArquivoCompleto.
  */
 
 import JSZip from "jszip";

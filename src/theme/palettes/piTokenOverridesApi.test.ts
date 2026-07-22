@@ -22,12 +22,12 @@ describe("piTokenOverridesApi (Fase 6 + CI SSOT)", () => {
     clearAllPiTokenOverrides();
   });
 
-  it("SSOT bridge não redefine tokens Alpha (só namespace ci-*)", () => {
+  it("SSOT bridge nÃ£o redefine tokens Alpha (sÃ³ namespace ci-*)", () => {
     expect(isCiSsotBridgeEmpty()).toBe(true);
     expect(hasCiScaleTokens()).toBe(true);
   });
 
-  it("merge sem overrides: remap Pi usa CI vars; escalas CI disponíveis", () => {
+  it("merge sem overrides: remap Pi usa CI vars; escalas CI disponÃ­veis", () => {
     const resolved = resolvePiPaletteForMode("dark");
     expect(resolved["blue-light"]).toBe(CI_CSS.prussian600);
     expect(resolved["text-main"]).toBe(CI_CSS.chalk);
@@ -37,7 +37,7 @@ describe("piTokenOverridesApi (Fase 6 + CI SSOT)", () => {
     expect(resolved["blue-light"]).toBe(PI_PALETTE_OVERRIDES.dark["blue-light"]);
   });
 
-  it("botões Pi usam CI vars no primary", () => {
+  it("botÃµes Pi usam CI vars no primary", () => {
     expect(PI_BUTTON_SYSTEM_TOKENS.dark["pi-btn-primary-bg"]).toBe(CI_CSS.prussian600);
     expect(PI_BUTTON_SYSTEM_TOKENS.light["pi-btn-danger-bg"]).toBe(CI_CSS.danger);
   });
@@ -49,17 +49,17 @@ describe("piTokenOverridesApi (Fase 6 + CI SSOT)", () => {
     expect(resolvePiTokenSource("dark", "blue-light").layer).toBe("userOverrides");
   });
 
-  it("fonte de escala CI é ciSsotBridge (não override de utilizador)", () => {
+  it("fonte de escala CI â€” ciSsotBridge (nÃ£o override de utilizador)", () => {
     expect(resolvePiTokenSource("light", "ci-prussian-50").layer).toBe("ciSsotBridge");
     expect(resolvePiTokenSource("light", "ci-sienna-900").value).toBe(CI_SIENNA_SCALE[900]);
   });
 
-  it("rejeita token não editável", () => {
+  it("rejeita token nÃ£o editÃ¡vel", () => {
     setPiTokenOverride("dark", "not-a-real-token", "#000");
     expect(listOverriddenPiTokens("dark")).not.toContain("not-a-real-token");
   });
 
-  it("camadas expõem piPalette, CI e userOverrides", () => {
+  it("camadas expÃµem piPalette, CI e userOverrides", () => {
     const layers = getPiPaletteLayers("light");
     expect(Object.keys(layers.piPalette).length).toBeGreaterThan(10);
     expect(Object.keys(layers.ciSsotBridge).length).toBeGreaterThan(10);

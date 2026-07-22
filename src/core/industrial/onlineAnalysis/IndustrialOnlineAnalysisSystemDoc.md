@@ -1,27 +1,27 @@
-# Análise arquivo completo / PDFs industriais online
+# AnÃ¡lise arquivo completo / PDFs industriais online
 
-**Fase:** 1–6 (análise ? edição ? histórico ? download ? UEE ? robustez)  
-**Módulo:** `src/core/industrial/onlineAnalysis/`  
-**Flag:** `industrialOnlineAnalysis` (default `false`; controla páginas `/analise`)
+**Fase:** 1â€“6 (anÃ¡lise â†’ ediÃ§Ã£o â†’ histÃ³rico â†’ download â†’ UEE â†’ robustez)  
+**MÃ³dulo:** `src/core/industrial/onlineAnalysis/`  
+**Flag:** `industrialOnlineAnalysis` (default `false`; controla pÃ¡ginas `/analise`)
 
-## Fases 1–5 (resumo)
+## Fases 1â€“5 (resumo)
 
 - Rotas `/PROJETOS/:project/analise` (+ `:docId`)
-- Overrides + histórico append-only + download seletivo
-- UEE: `applyDocumentaryOverridesToCutlistForEtiquetas` (só `overrides.cutlist`)
+- Overrides + histÃ³rico append-only + download seletivo
+- UEE: `applyDocumentaryOverridesToCutlistForEtiquetas` (sÃ³ `overrides.cutlist`)
 - CNC/TCN/drill/nesting no item base (sem document overrides)
 
-## Fase 6 — Robustez e polish
+## Fase 6 â€” Robustez e polish
 
-### Validações
+### ValidaÃ§Ãµes
 
-- `validateIndustrialOnlineAnalysisDraft` — **bloqueia Guardar** se qtd/material/obs inválidos em linhas tocadas
-- `sanitizeIndustrialDocumentOverride` — remove keys bloqueadas; limpa patches em `deletedRowIds`
+- `validateIndustrialOnlineAnalysisDraft` â€” **bloqueia Guardar** se qtd/material/obs invÃ¡lidos em linhas tocadas
+- `sanitizeIndustrialDocumentOverride` â€” remove keys bloqueadas; limpa patches em `deletedRowIds`
 - Whitelist UEE usa os mesmos parsers (`parseIndustrialAnalysisQty`, material, obs)
 
 ### Testes
 
-`src/core/industrial/onlineAnalysis/__tests__/` — P0 + P1 (multi-prefix, CNC ? UEE)
+`src/core/industrial/onlineAnalysis/__tests__/` â€” P0 + P1 (multi-prefix, CNC â†’ UEE)
 
 ### Export
 
@@ -29,7 +29,7 @@ Aviso toast se flag off e cutlist com overrides (PDFs/etiquetas ainda reflectem;
 
 ### UI
 
-Encoding PT corrigido; copy alinhada à Fase 5; a11y básica (labels, roles, aria-live).
+Encoding PT corrigido; copy alinhada Ã¡ Fase 5; a11y bÃ¡sica (labels, roles, aria-live).
 
 ## Garantias
 

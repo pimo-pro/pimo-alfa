@@ -82,7 +82,7 @@ export default function CalcoSettingsPanel() {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
         Ref 00: 1 por dobradica I-Sensys 8645i. Ref 03: 1 por porta em modulo com Frente Fixa.
-        Preco default 0 — configurar manualmente. Ref 1503 adiada.
+        Preco default 0 â€” configurar manualmente. Ref 1503 adiada.
       </p>
 
       {(["00", "03"] as const).map((ref) => (
@@ -122,7 +122,7 @@ export default function CalcoSettingsPanel() {
             />
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", paddingBottom: 8 }}>
-            {CALCO_MATERIAL} · {CALCO_MEDIDA} · {formatCurrency(draft.refs[ref].precoUnitario || 0)}
+            {CALCO_MATERIAL} â€” {CALCO_MEDIDA} â€” {formatCurrency(draft.refs[ref].precoUnitario || 0)}
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, paddingBottom: 8 }}>
             <input

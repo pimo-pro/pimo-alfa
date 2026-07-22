@@ -135,7 +135,7 @@ export default function IndustrialOnlineAnalysisTable({
                 ))}
                 {editing ? (
                   <th style={thStyle} scope="col">
-                    Ações
+                    AÃ§Ãµes
                   </th>
                 ) : null}
               </tr>
@@ -194,7 +194,7 @@ export default function IndustrialOnlineAnalysisTable({
                           </>
                         ) : (
                           <span>
-                            {value || "—"}
+                            {value || "â€”"}
                             {row.origin === "added" && c === columns[0] ? (
                               <span style={{ ...badgeNew, marginLeft: 6 }}>Nova</span>
                             ) : null}

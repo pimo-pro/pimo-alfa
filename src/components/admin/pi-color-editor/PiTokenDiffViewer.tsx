@@ -30,7 +30,7 @@ export default function PiTokenDiffViewer({ mode }: { mode: ThemeMode }) {
   if (overridden.length === 0) {
     return (
       <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-        Sem overrides de utilizador neste modo. Os valores vêm da paleta Pi
+        Sem overrides de utilizador neste modo. Os valores vÃ¡o da paleta Pi
         {Object.keys(layers.ciSsotBridge).length > 0 ? " / SSOT" : ""}.
       </div>
     );
@@ -103,7 +103,7 @@ export default function PiTokenDiffViewer({ mode }: { mode: ThemeMode }) {
                 }}
                 title={base}
               >
-                {base ?? "—"}
+                {base ?? "â€”"}
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
@@ -118,10 +118,10 @@ export default function PiTokenDiffViewer({ mode }: { mode: ThemeMode }) {
                 }}
                 title={override}
               >
-                {override ?? "—"}
+                {override ?? "â€”"}
               </span>
             </div>
-            <PiTokenResetButton mode={mode} token={token} label="×" />
+            <PiTokenResetButton mode={mode} token={token} label="â€”" />
           </div>
         );
       })}

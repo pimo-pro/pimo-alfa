@@ -31,7 +31,7 @@ const inputStyle: CSSProperties = {
 
 /**
  * Editor de overrides de tokens Pi (Fase 6 UI).
- * Só é utilizável com template=pi — Alpha não passa pela API de overrides.
+ * SÃ³ â€” utilizÃ¡vel com template=pi â€” Alpha nÃ£o passa pela API de overrides.
  */
 export default function AdminPiColorEditorPage() {
   const { template } = useThemeTemplate();
@@ -48,11 +48,11 @@ export default function AdminPiColorEditorPage() {
       <div style={panelStyle}>
         <AdminPageHeader
           title="Editor de cores Pi"
-          subtitle="Disponível apenas com o template Pi ativo. O Alpha usa exclusivamente index.css e não aceita overrides."
+          subtitle="DisponÃ­vel apenas com o template Pi ativo. O Alpha usa exclusivamente index.css e nÃ£o aceita overrides."
         />
         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
-          Ative o template <strong style={{ color: "var(--text-main)" }}>Pi</strong> em Temas (Aparência)
-          para editar tokens. Nada é alterado no Alpha nem no industrial.
+          Ative o template <strong style={{ color: "var(--text-main)" }}>Pi</strong> em Temas (AparÃ©ncia)
+          para editar tokens. Nada â€” alterado no Alpha nem no industrial.
         </p>
       </div>
     );
@@ -62,7 +62,7 @@ export default function AdminPiColorEditorPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }} data-pi-color-editor="" data-revision={revision}>
       <AdminPageHeader
         title="Editor de cores Pi"
-        subtitle="Overrides por token sobre a paleta Pi (storage pimo-pi-token-overrides). Sem escalas --ci-* — a camada SSOT permanece vazia."
+        subtitle="Overrides por token sobre a paleta Pi (storage pimo-pi-token-overrides). Sem escalas --ci-* â€” a camada SSOT permanece vazia."
       />
 
       <div
@@ -78,13 +78,13 @@ export default function AdminPiColorEditorPage() {
         <span>
           Modo: <strong style={{ color: "var(--text-main)" }}>{mode === "dark" ? "Escuro" : "Claro"}</strong>
         </span>
-        <span>·</span>
+        <span>â€”</span>
         <span>
           Overrides neste modo:{" "}
           <strong style={{ color: "var(--text-main)" }}>{overridden.length}</strong>
         </span>
         <span style={{ fontSize: 11, opacity: 0.85 }}>
-          (alterar claro/escuro no cabeçalho para editar o outro modo)
+          (alterar claro/escuro no cabeÃ§alho para editar o outro modo)
         </span>
       </div>
 
@@ -103,7 +103,7 @@ export default function AdminPiColorEditorPage() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filtrar tokens…"
+              placeholder="Filtrar tokensÃ³"
               style={inputStyle}
               aria-label="Filtrar tokens"
             />
@@ -113,7 +113,7 @@ export default function AdminPiColorEditorPage() {
                 checked={onlyOverridden}
                 onChange={(e) => setOnlyOverridden(e.target.checked)}
               />
-              Só overrides
+              SÃ³ overrides
             </label>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflow: "auto", border: "1px solid var(--card-border)", borderRadius: "var(--radius)" }}>

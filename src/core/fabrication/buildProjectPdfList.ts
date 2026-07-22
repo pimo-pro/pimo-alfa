@@ -1,6 +1,6 @@
 /**
  * Lista oficial de PDFs do projeto (exportacao / download).
- * ferragens_totais.pdf e industrial_armazem.pdf coexistem — um nao substitui o outro.
+ * ferragens_totais.pdf e industrial_armazem.pdf coexistem â€” um nao substitui o outro.
  */
 
 import { ferragensTotaisPdfFileName } from "../pdf/pdfFerragensTotais";

@@ -8,9 +8,9 @@ type PdfLike = { output: (_type: string) => ArrayBuffer | Uint8Array };
 
 /**
  * Se existirem overrides para o docId, gera PDF a partir das rows efetivas.
- * Caso contr·rio, usa o builder cl·ssico (fallback).
- * CNC/TCN n„o passam por aqui. Etiquetas UEE usam
- * applyDocumentaryOverridesToCutlistForEtiquetas (sÛ cutlist whitelist).
+ * Caso contr√°rio, usa o builder cl√°ssico (fallback).
+ * CNC/TCN n√£o passam por aqui. Etiquetas UEE usam
+ * applyDocumentaryOverridesToCutlistForEtiquetas (s√≥ cutlist whitelist).
  */
 export async function resolveIndustrialZipPdf(
   project: ProjectState,

@@ -1,6 +1,6 @@
-# ADR ù Sistema de cor Pi (escalas de 7 tons)
+# ADR ‚Äî Sistema de cor Pi (escalas de 7 tons)
 
-- **Status:** Aceite (decisùo de representaùùo; aplicaùùo diferida)
+- **Status:** Aceite (decis√£o de representa√ß√£o; aplica√ß√£o diferida)
 - **Data:** 2026-07-19
 - **Branch:** `theme/pi-hardening`
 - **Contexto:** Passo 5 do plano de endurecimento do tema Pi
@@ -14,40 +14,40 @@ O HTML `chalk_iron_sienna_full_system.html` define:
 
 - Base: `--ci-chalk`, `--ci-chalk-dim`, `--ci-iron`, `--ci-iron-deep`
 - Accents: `--ci-prussian` (+ lt/dk), `--ci-sienna` (+ lt/dk)
-- Semùnticos: `--ci-success`, `--ci-danger`
-- Superfùcies light/dark
-- Escalas visuais 50ù900 (Prussian e Sienna) no documento de referùncia
+- Sem√°nticos: `--ci-success`, `--ci-danger`
+- Superf√≠cies light/dark
+- Escalas visuais 50‚Äî900 (Prussian e Sienna) no documento de refer√©ncia
 
-**Este ADR nùo aplica escalas ao CSS runtime.** Apenas define como o projeto as representarù quando forem introduzidas.
+**Este ADR n√£o aplica escalas ao CSS runtime.** Apenas define como o projeto as representar√° quando forem introduzidas.
 
-## Opùùes
+## Op√ß√µes
 
-### Opùùo A ù Sù CSS vars (`--ci-prussian-50` ù `--ci-prussian-900`)
+### Op√ß√£o A ‚Äî S√≥ CSS vars (`--ci-prussian-50` ‚Äî `--ci-prussian-900`)
 
-Definir variùveis CSS (ex. sob `[data-theme-template="pi"]`) e consumir diretamente no CSS.
+Definir vari√°veis CSS (ex. sob `[data-theme-template="pi"]`) e consumir diretamente no CSS.
 
-| Prùs | Contras |
+| Pr√≥s | Contras |
 |------|---------|
 | Familiar para designers/CSS | Duplica fonte se `piPalette` continuar a remapear Alpha |
-| ùtil no preload / DevTools | Alpha nùo deve herdar; exige gates rigorosos |
-| Escalas disponùveis sem JS | Editor Fase 6 teria de editar CSS ou gerar CSS |
+| √∫til no preload / DevTools | Alpha n√£o deve herdar; exige gates rigorosos |
+| Escalas dispon√≠veis sem JS | Editor Fase 6 teria de editar CSS ou gerar CSS |
 
-### Opùùo B ù Sù tokens JS (`piPalette.ts` / mùdulo `ciScales.ts`)
+### Op√ß√£o B ‚Äî S√≥ tokens JS (`piPalette.ts` / m√≥dulo `ciScales.ts`)
 
-Manter SSOT em TypeScript; consumidores leem constantes JS ou o Context injeta sù o que precisa.
+Manter SSOT em TypeScript; consumidores leem constantes JS ou o Context injeta s√≥ o que precisa.
 
-| Prùs | Contras |
+| Pr√≥s | Contras |
 |------|---------|
-| Alinhado ao remap atual | CSS puro nùo vù escalas sem injeùùo |
-| Fùcil de testar / versionar | Preload precisaria de subset gerado ou hardcode |
-| Fase 6 edita JSON/TS com validaùùo | Menos ùdesign tokens CSSù nativos |
+| Alinhado ao remap atual | CSS puro n√£o v√° escalas sem inje√ß√£o |
+| F√°cil de testar / versionar | Preload precisaria de subset gerado ou hardcode |
+| Fase 6 edita JSON/TS com valida√ß√£o | Menos ‚Äîdesign tokens CSS√≥ nativos |
 
-### Opùùo C ù Ambos, com prioridade definida (recomendada)
+### Op√ß√£o C ‚Äî Ambos, com prioridade definida (recomendada)
 
-1. **SSOT das escalas e do namespace `--ci-*`:** mùdulo JS derivado do HTML oficial (ex. `ciScales.ts` / `ciTokens.ts`), gerado ou mantido ù mùo a partir da referùncia versionada.
-2. **Runtime Pi (curto prazo):** continua o **remap Alpha** (`piPalette.ts`) ù sem mudar visual atù um passo explùcito.
-3. **Exposiùùo CSS (mùdio prazo):** quando houver consumidores, injetar `--ci-*` e `--ci-prussian-50`ù sù com `[data-theme-template="pi"]` (e opcionalmente no preload Pi, subset).
-4. **Prioridade em conflito:** valor JS SSOT > CSS injetado pelo provider > qualquer hardcode. O remap Alpha nùo redefine as escalas `--ci-*`; apenas mapeia tokens Alpha existentes.
+1. **SSOT das escalas e do namespace `--ci-*`:** m√≥dulo JS derivado do HTML oficial (ex. `ciScales.ts` / `ciTokens.ts`), gerado ou mantido ‚Äî m√£o a partir da refer√©ncia versionada.
+2. **Runtime Pi (curto prazo):** continua o **remap Alpha** (`piPalette.ts`) ‚Äî sem mudar visual at√© um passo expl√≠cito.
+3. **Exposi√ß√£o CSS (m√©dio prazo):** quando houver consumidores, injetar `--ci-*` e `--ci-prussian-50` ‚Äî s√≥ com `[data-theme-template="pi"]` (e opcionalmente no preload Pi, subset).
+4. **Prioridade em conflito:** valor JS SSOT > CSS injetado pelo provider > qualquer hardcode. O remap Alpha n√£o redefine as escalas `--ci-*`; apenas mapeia tokens Alpha existentes.
 
 ## Impactos
 
@@ -60,47 +60,47 @@ Manter SSOT em TypeScript; consumidores leem constantes JS ou o Context injeta s
 ### Pi
 
 - Visual atual (remap) **inalterado** por este ADR.
-- Futuro: escalas permitem hover/focus/sienna CTA sem ùinventarù hex fora do HTML oficial.
-- Botùes (`--pi-btn-*`) permanecem camada prùpria; podem referenciar `--ci-prussian` / `--ci-danger` numa migraùùo posterior, sem obrigaùùo imediata.
+- Futuro: escalas permitem hover/focus/sienna CTA sem ‚Äîinventar‚Ä¶ hex fora do HTML oficial.
+- Bot√µes (`--pi-btn-*`) permanecem camada pr√≥pria; podem referenciar `--ci-prussian` / `--ci-danger` numa migra√ß√£o posterior, sem obriga√ß√£o imediata.
 
 ### Preload (Passo 1)
 
-- Mantùm **subset mùnimo** anti-FOUC (jù alinhado aos hex do HTML).
-- Quando as escalas existirem no SSOT JS, o preload **nùo** precisa das 7 tons completas ù sù superfùcies/texto/primùrio.
-- Qualquer expansùo do preload deve continuar gated a `html[data-theme-template="pi"]`.
+- Mant√©m **subset m√≠nimo** anti-FOUC (j√° alinhado aos hex do HTML).
+- Quando as escalas existirem no SSOT JS, o preload **n√£o** precisa das 7 tons completas ‚Äî s√≥ superf√≠cies/texto/prim√°rio.
+- Qualquer expans√£o do preload deve continuar gated a `html[data-theme-template="pi"]`.
 
 ### Editor futuro (Fase 6)
 
 - Editor edita overrides do **remap Alpha** (`pimo-pi-token-overrides`) primeiro.
-- Escalas `--ci-*` / 50ù900: comeùar como **catùlogo sù de leitura** (picker), depois overrides opcionais por modo.
-- Nùo misturar no mesmo formulùrio ùtoken Alpha remapeadoù e ùdegrau de escalaù sem labels claros.
+- Escalas `--ci-*` / 50‚Äî900: come√ßar como **cat√°logo s√≥ de leitura** (picker), depois overrides opcionais por modo.
+- N√£o misturar no mesmo formul√°rio ‚Äîtoken Alpha remapeado‚Ä¶ e ‚Äîdegrau de escala‚Ä¶ sem labels claros.
 
-### Industrial / botùes (Passos 2ù3)
+### Industrial / bot√µes (Passos 2‚Äî3)
 
-- **Fora de ùmbito deste ADR.** Nenhuma alteraùùo a estilos industriais nem ao sistema de botùes neste passo.
-- Migraùùo futura de industriais para `--ci-*` seria passo explùcito separado.
+- **Fora de √¢mbito deste ADR.** Nenhuma altera√ß√£o a estilos industriais nem ao sistema de bot√µes neste passo.
+- Migra√ß√£o futura de industriais para `--ci-*` seria passo expl√≠cito separado.
 
-## Recomendaùùo final
+## Recomenda√ß√£o final
 
-**Adotar a Opùùo C.**
+**Adotar a Op√ß√£o C.**
 
 1. Versionar o HTML oficial em `src/theme/palettes/reference/` (feito neste passo).
-2. Prùximos passos de implementaùùo (nùo neste Passo 5):
+2. Pr√≥ximos passos de implementa√ß√£o (n√£o neste Passo 5):
    - Extrair constantes JS `CI_BASE` + `PRUSSIAN_SCALE` + `SIENNA_SCALE` a partir do HTML.
-   - Manter `piPalette.ts` como remap atù haver consumidores das escalas.
-   - Sù entùo expor CSS vars `--ci-*` gated ao template Pi.
-3. **Nùo aplicar escalas agora** ù zero mudanùa visual Alpha/Pi.
+   - Manter `piPalette.ts` como remap at√© haver consumidores das escalas.
+   - S√≥ ent√£o expor CSS vars `--ci-*` gated ao template Pi.
+3. **N√£o aplicar escalas agora** ‚Äî zero mudan√ßa visual Alpha/Pi.
 
-## Consequùncias
+## Consequ√©ncias
 
-- Fonte oficial auditùvel no repo (SHA do ficheiro de referùncia).
-- Decisùo clara para evitar um segundo SSOT acidental (hex espalhados no CSS).
+- Fonte oficial audit√°vel no repo (SHA do ficheiro de refer√©ncia).
+- Decis√£o clara para evitar um segundo SSOT acidental (hex espalhados no CSS).
 - Caminho seguro: Alpha intacto; Pi endurecido incrementalmente.
 
-## Referùncias
+## Refer√©ncias
 
 - Commit base do tema: `f8e577d`
 - `src/theme/palettes/piPalette.ts`
 - `src/theme/palettes/piButtonSystem.ts`
 - `public/theme-preload.css` (subset Pi anti-FOUC)
-- Plano: Passos 1ù4 do branch `theme/pi-hardening`
+- Plano: Passos 1‚Äî4 do branch `theme/pi-hardening`

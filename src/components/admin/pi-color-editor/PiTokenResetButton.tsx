@@ -29,7 +29,7 @@ export default function PiTokenResetButton({
       style={{ ...btnStyle, opacity: disabled ? 0.45 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
       disabled={disabled}
       onClick={() => clearPiTokenOverride(mode, token)}
-      title="Remove o override deste token (volta à paleta Pi / SSOT)"
+      title="Remove o override deste token (volta â€” paleta Pi / SSOT)"
     >
       {label}
     </button>

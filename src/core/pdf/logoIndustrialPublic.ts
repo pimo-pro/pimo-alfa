@@ -1,6 +1,6 @@
 /**
- * Log�tipo industrial exclusivo para PDFs (`public/pimo-logo-industrial.png`).
- * N�O substitui `logo-pi.png` usado no site / UI / Header.
+ * Logótipo industrial exclusivo para PDFs (`public/pimo-logo-industrial.png`).
+ * NÃO substitui `logo-pi.png` usado no site / UI / Header.
  */
 
 import type { jsPDF } from "jspdf";
@@ -19,7 +19,7 @@ function imageFormatFromDataUrl(dataUrl: string): "PNG" | "JPEG" | "WEBP" | null
   return null;
 }
 
-/** Cache s�ncrono (ap�s preload). `undefined` = ainda n�o carregado. */
+/** Cache síncrono (após preload). `undefined` = ainda não carregado. */
 export function getCachedLogoIndustrialDataUrl(): string | null {
   return cachedDataUrl === undefined ? null : cachedDataUrl;
 }
@@ -48,13 +48,13 @@ export async function loadLogoIndustrialDataUrl(): Promise<string | null> {
   }
 }
 
-/** Garante cache preenchido antes de gerar PDFs s�ncronos. */
+/** Garante cache preenchido antes de gerar PDFs síncronos. */
 export async function ensureLogoIndustrialLoaded(): Promise<string | null> {
   return loadLogoIndustrialDataUrl();
 }
 
 /**
- * Quadrado 10�10 mm (ou `boxMm`) com o log�tipo industrial.
+ * Quadrado 10—10 mm (ou `boxMm`) com o logótipo industrial.
  * Fallback: texto "PIMO" em vermelho.
  */
 export function drawLogoIndustrialInBox(

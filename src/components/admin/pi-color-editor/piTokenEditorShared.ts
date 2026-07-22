@@ -41,5 +41,5 @@ export const LAYER_LABELS = {
   piPalette: "Paleta Pi",
   ciSsotBridge: "SSOT",
   userOverrides: "Override",
-  none: "—",
+  none: "â€”",
 } as const;

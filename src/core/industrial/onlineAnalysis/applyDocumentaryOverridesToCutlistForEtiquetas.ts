@@ -1,11 +1,11 @@
 /**
- * Fase 5 — Merge documental whitelist da cutlist ? cutlist de etiquetas UEE.
- * Fase 6 — usa validadores partilhados; idempotente; prefix match por comprimento.
+ * Fase 5 â€” Merge documental whitelist da cutlist ? cutlist de etiquetas UEE.
+ * Fase 6 â€” usa validadores partilhados; idempotente; prefix match por comprimento.
  *
- * Fonte única: overrides.cutlist.
- * Não aplica tecnico/outros docs. Não gera etiquetas para addedRows.
- * deletedRowIds omitem só a etiqueta (CNC intocado).
- * Dimensões / boxId / geometria / furos / orlas: bloqueados.
+ * Fonte Ãºnica: overrides.cutlist.
+ * NÃ£o aplica tecnico/outros docs. NÃ£o gera etiquetas para addedRows.
+ * deletedRowIds omitem sÃ³ a etiqueta (CNC intocado).
+ * DimensÃµes / boxId / geometria / furos / orlas: bloqueados.
  */
 
 import type { CutListItemComPreco } from "@/core/types";
@@ -35,9 +35,9 @@ function stripPrefix(id: string, prefix?: string): string {
 }
 
 /**
- * Aplica overrides.cutlist (whitelist) a uma cópia dos items para UEE.
- * Items CNC/nesting devem continuar a usar a lista base (sem esta função).
- * Idempotente: apply(apply(x)) === apply(x) em conteúdo documental.
+ * Aplica overrides.cutlist (whitelist) a uma cÃ³pia dos items para UEE.
+ * Items CNC/nesting devem continuar a usar a lista base (sem esta funÃ§Ã£o).
+ * Idempotente: apply(apply(x)) === apply(x) em conteÃºdo documental.
  */
 export function applyDocumentaryOverridesToCutlistForEtiquetas(
   items: readonly CutListItemComPreco[],
@@ -132,7 +132,7 @@ export function applyDocumentaryOverridesToCutlistForEtiquetas(
 
 /**
  * Multi-projeto: cada item prefixado usa os overrides do projeto de origem.
- * Prefixos mais longos têm prioridade (P10_ antes de P1_).
+ * Prefixos mais longos tÃ©m prioridade (P10_ antes de P1_).
  */
 export function applyMultiProjectDocumentaryOverridesForEtiquetas(
   items: readonly CutListItemComPreco[],

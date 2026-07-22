@@ -1,6 +1,6 @@
 import type { IndustrialOnlineAnalysisDocId } from "./industrialOnlineAnalysisDocs";
 
-/** Hash curto e est·vel para rowIds derivados. */
+/** Hash curto e est√°vel para rowIds derivados. */
 export function stableHash(input: string): string {
   let h = 2166136261;
   for (let i = 0; i < input.length; i++) {

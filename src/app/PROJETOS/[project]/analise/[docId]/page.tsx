@@ -76,7 +76,7 @@ export default function ProjetosAnaliseDocPage() {
 
   useEffect(() => {
     if (!pageSlug) {
-      setError("Projeto n�o especificado na URL.");
+      setError("Projeto não especificado na URL.");
       setLoading(false);
       return;
     }
@@ -98,7 +98,7 @@ export default function ProjetosAnaliseDocPage() {
       if (!record) {
         setSnapshot(null);
         setLoading(false);
-        setError("Projeto n�o encontrado.");
+        setError("Projeto não encontrado.");
         return;
       }
       setProjetosSnapshot(record);
@@ -281,7 +281,7 @@ export default function ProjetosAnaliseDocPage() {
       setSnapshot(updated);
       setEditing(false);
       setDraft(null);
-      setSaveMsg("Altera��es guardadas.");
+      setSaveMsg("Alterações guardadas.");
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Falha ao guardar.");
     } finally {
@@ -297,7 +297,7 @@ export default function ProjetosAnaliseDocPage() {
         docLabel={validDoc ? docId : undefined}
       >
         <p style={{ color: "#64748b", fontSize: 14 }}>
-          A funcionalidade �An�lise arquivo completo� est� desativada (
+          A funcionalidade «Análise arquivo completo» está desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
       </IndustrialOnlineAnalysisLayout>
@@ -309,7 +309,7 @@ export default function ProjetosAnaliseDocPage() {
       <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
         <p style={{ color: "#dc2626" }}>Documento industrial desconhecido: {docId}</p>
         <Link to={buildIndustrialOnlineAnalysisIndexPath(projectName)} style={{ color: "#2563eb" }}>
-          Voltar ao �ndice
+          Voltar ao índice
         </Link>
       </IndustrialOnlineAnalysisLayout>
     );
@@ -321,10 +321,10 @@ export default function ProjetosAnaliseDocPage() {
       pageSlug={pageSlug ?? projectName}
       docLabel={view?.label ?? docId}
     >
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto�</p> : null}
+      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
       {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
       {!loading && !error && !view ? (
-        <p style={{ color: "#dc2626" }}>N�o foi poss�vel construir a vista deste documento.</p>
+        <p style={{ color: "#dc2626" }}>Não foi possível construir a vista deste documento.</p>
       ) : null}
       {!loading && !error && view ? (
         <>
@@ -338,8 +338,8 @@ export default function ProjetosAnaliseDocPage() {
             }}
           >
             <p style={{ margin: 0, fontSize: 13, color: "#64748b", flex: 1 }}>
-              {view.description} � projeto <strong>{view.projectName}</strong>
-              {editing ? " � modo edi��o (draft local)" : ""}
+              {view.description} — projeto <strong>{view.projectName}</strong>
+              {editing ? " — modo edição (draft local)" : ""}
             </p>
             {!editing ? (
               <>
@@ -357,7 +357,7 @@ export default function ProjetosAnaliseDocPage() {
                     fontSize: 13,
                   }}
                 >
-                  {generatingPdf ? "A gerar�" : "Gerar PDF"}
+                  {generatingPdf ? "A gerar…" : "Gerar PDF"}
                 </button>
                 <button
                   type="button"
@@ -406,7 +406,7 @@ export default function ProjetosAnaliseDocPage() {
                     fontSize: 13,
                   }}
                 >
-                  {saving ? "A guardar�" : "Guardar"}
+                  {saving ? "A guardar…" : "Guardar"}
                 </button>
                 <button
                   type="button"
@@ -442,9 +442,9 @@ export default function ProjetosAnaliseDocPage() {
             <p style={{ margin: "0 0 12px", fontSize: 13, color: "#1d4ed8" }}>{pdfMsg}</p>
           ) : null}
           <p style={{ margin: "0 0 16px", fontSize: 12, color: "#64748b" }}>
-            Overrides documentais: design 3D e CNC/TCN/drill n�o s�o alterados. A cutlist editada
-            alimenta as etiquetas UEE (whitelist). Remover linha omite s� a etiqueta. Downloads n�o
-            registam hist�rico. Quantidade e material inv�lidos bloqueiam o Guardar.
+            Overrides documentais: design 3D e CNC/TCN/drill não são alterados. A cutlist editada
+            alimenta as etiquetas UEE (whitelist). Remover linha omite só a etiqueta. Downloads não
+            registam histórico. Quantidade e material inválidos bloqueiam o Guardar.
           </p>
           {displaySections.map((section) => (
             <IndustrialOnlineAnalysisTable
@@ -464,14 +464,14 @@ export default function ProjetosAnaliseDocPage() {
               entries={historyEntries}
               projectName={projectName}
               lockedDocId={docId}
-              title="Hist�rico deste documento"
+              title="Histórico deste documento"
             />
           ) : null}
           <Link
             to={buildIndustrialOnlineAnalysisIndexPath(projectName)}
             style={{ fontSize: 13, color: "#2563eb" }}
           >
-            ? Voltar ao �ndice de an�lise
+            ? Voltar ao índice de análise
           </Link>
         </>
       ) : null}

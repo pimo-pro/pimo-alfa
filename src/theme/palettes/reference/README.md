@@ -1,8 +1,8 @@
-# Referência oficial — tema Pi (Chalk / Iron / Sienna)
+# ReferÃ©ncia oficial â€” tema Pi (Chalk / Iron / Sienna)
 
-| Ficheiro | Função |
+| Ficheiro | FunÃ§Ã£o |
 |----------|--------|
-| [`chalk_iron_sienna_full_system.html`](./chalk_iron_sienna_full_system.html) | SSOT visual e de tokens `--ci-*` + escalas 7 tons (conteúdo intacto) |
-| [`../../../docs/adr/adr-pi-color-system.md`](../../../docs/adr/adr-pi-color-system.md) | ADR: como representar escalas no código (sem aplicação runtime neste passo) |
+| [`chalk_iron_sienna_full_system.html`](./chalk_iron_sienna_full_system.html) | SSOT visual e de tokens `--ci-*` + escalas 7 tons (conteÃºdo intacto) |
+| [`../../../docs/adr/adr-pi-color-system.md`](../../../docs/adr/adr-pi-color-system.md) | ADR: como representar escalas no cÃ³digo (sem aplicaÃ§Ã£o runtime neste passo) |
 
-**Importante:** estes artefactos **não** são importados pelo runtime. O tema Pi em produção continua a usar o remap em `piPalette.ts` até um passo futuro aplicar escalas de forma gated.
+**Importante:** estes artefactos **nÃ£o** sÃ£o importados pelo runtime. O tema Pi em produÃ§Ã£o continua a usar o remap em `piPalette.ts` atÃ© um passo futuro aplicar escalas de forma gated.

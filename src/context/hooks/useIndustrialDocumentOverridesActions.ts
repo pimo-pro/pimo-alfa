@@ -34,7 +34,7 @@ export function useIndustrialDocumentOverridesActions(
               changelog: appendChangelog(prev.changelog, {
                 timestamp: new Date(),
                 type: "doc",
-                message: `Overrides industriais atualizados — ${docId}`,
+                message: `Overrides industriais atualizados â€” ${docId}`,
               }),
             }),
           true

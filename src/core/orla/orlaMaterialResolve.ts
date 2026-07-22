@@ -51,7 +51,7 @@ export type PieceOrlaMaterialRef = {
   orlaMaterialLabel: string;
 };
 
-/** Material da peca (chapa)  nunca forcar o da caixa. */
+/** Material da peca (chapa) â€” nunca forcar o da caixa. */
 export function resolvePieceOrlaMaterial(item: CutListItem): PieceOrlaMaterialRef {
   const idRaw = String(item.materialId ?? "").trim();
   const labelRaw = String(item.material ?? "").trim();
@@ -110,7 +110,7 @@ export function resolveOrlaPresetIdForPiece(
     if (family && nome.includes(family)) score += 100;
     if (Number.isFinite(espessuraMm) && espessuraMm > 0) {
       if (p.larguraMm + 1e-6 >= espessuraMm) score += 20;
-      // preferir sobra tipica ~35 mm
+      // preferir sobra tipica ~3â€”5 mm
       const target = espessuraMm + 4;
       score -= Math.min(30, Math.abs(p.larguraMm - target));
     }

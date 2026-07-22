@@ -1,13 +1,13 @@
 /**
- * API Fase 6 ó overrides de tokens Pi.
+ * API Fase 6 ‚Äî overrides de tokens Pi.
  *
  * Camadas de merge (prioridade crescente):
- * 1. `PI_PALETTE_OVERRIDES` ó paleta Pi CI pura (`var(--ci-*)` / color-mix)
- * 2. `CI_SSOT_TOKEN_BRIDGE` ó namespace `--ci-*` / escalas (n„o redefine tokens Alpha)
- * 3. `pimo-pi-token-overrides` ó overrides de utilizador / editor (ganham sobre CI)
+ * 1. `PI_PALETTE_OVERRIDES` ‚Äî paleta Pi CI pura (`var(--ci-*)` / color-mix)
+ * 2. `CI_SSOT_TOKEN_BRIDGE` ‚Äî namespace `--ci-*` / escalas (n√£o redefine tokens Alpha)
+ * 3. `pimo-pi-token-overrides` ‚Äî overrides de utilizador / editor (ganham sobre CI)
  *
  * Alpha nunca passa por este merge (ThemeTemplateContext sai cedo).
- * Botıes (`PI_BUTTON_SYSTEM_TOKENS`) continuam aplicados ‡ parte no Context.
+ * Bot√µes (`PI_BUTTON_SYSTEM_TOKENS`) continuam aplicados ‚Äî parte no Context.
  */
 
 import { PI_PALETTE_OVERRIDES } from "./piPalette";
@@ -33,7 +33,7 @@ export interface PiPaletteMergeLayers {
 
 const OVERRIDE_LISTENERS = new Set<() => void>();
 
-/** Subscreve mudanùas de overrides (Context / editor reaplica tokens). */
+/** Subscreve mudan√ßas de overrides (Context / editor reaplica tokens). */
 export function subscribePiTokenOverrides(listener: () => void): () => void {
   OVERRIDE_LISTENERS.add(listener);
   return () => {
@@ -55,7 +55,7 @@ export function isEditablePiToken(token: string): boolean {
   return ALL_THEME_TOKENS.includes(token);
 }
 
-/** Devolve as trùs camadas cruas (sem merge) para um modo. */
+/** Devolve as tr√©s camadas cruas (sem merge) para um modo. */
 export function getPiPaletteLayers(mode: ThemeMode): PiPaletteMergeLayers {
   return {
     piPalette: { ...(PI_PALETTE_OVERRIDES[mode] ?? {}) },
@@ -67,7 +67,7 @@ export function getPiPaletteLayers(mode: ThemeMode): PiPaletteMergeLayers {
 /**
  * Merge das camadas Pi para um modo.
  * Ordem: piPalette ? ciSsotBridge ? userOverrides.
- * CI sù adiciona chaves `ci-*` ù o remap Alpha permanece intacto.
+ * CI s√≥ adiciona chaves `ci-*` ‚Äî o remap Alpha permanece intacto.
  */
 export function resolvePiPaletteForMode(mode: ThemeMode): TokenValueMap {
   const layers = getPiPaletteLayers(mode);
@@ -108,7 +108,7 @@ export function writePiTokenOverrides(overrides: StoredTokenOverrides): StoredTo
 
 /**
  * Define ou remove (value=null) um override.
- * Tokens fora de ALL_THEME_TOKENS sùo rejeitados (nùo grava).
+ * Tokens fora de ALL_THEME_TOKENS s√£o rejeitados (n√£o grava).
  */
 export function setPiTokenOverride(
   mode: ThemeMode,

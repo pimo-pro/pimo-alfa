@@ -1,5 +1,5 @@
 /**
- * Diff puro entre overrides before/after ? entradas de histórico (Fase 3).
+ * Diff puro entre overrides before/after ? entradas de histÃ³rico (Fase 3).
  */
 
 import type {
@@ -150,7 +150,7 @@ export function diffOverridesToHistoryEntries(
     const b = before.rowPatches[rowId];
     const a = after.rowPatches[rowId];
     if (!a && b) {
-      // patch cleared without delete — treat field restores as modify to empty? skip if deleted
+      // patch cleared without delete â€” treat field restores as modify to empty? skip if deleted
       if (afterDeleted.has(rowId)) continue;
       for (const [key, oldV] of Object.entries(b.fields ?? {})) {
         push({

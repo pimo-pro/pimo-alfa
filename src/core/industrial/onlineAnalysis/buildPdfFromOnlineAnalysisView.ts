@@ -16,14 +16,14 @@ export function buildPdfFromOnlineAnalysisView(view: IndustrialOnlineAnalysisVie
   const sections = view.sections.filter((s) => s.rows.length > 0);
 
   if (sections.length === 0) {
-    return createIndustrialSectionPdf(meta, [[""]], [["Sem dados"]], { fontSize: 9 });
+    return createIndustrialSectionPdf(meta, [["â€”"]], [["Sem dados"]], { fontSize: 9 });
   }
 
   const first = sections[0];
   const doc = createIndustrialSectionPdf(
     meta,
     [first.columns.map((c) => c.label)],
-    first.rows.map((r) => first.columns.map((c) => r.cells[c.key] ?? "")),
+    first.rows.map((r) => first.columns.map((c) => r.cells[c.key] ?? "â€”")),
     { fontSize: 9 }
   );
 
@@ -31,7 +31,7 @@ export function buildPdfFromOnlineAnalysisView(view: IndustrialOnlineAnalysisVie
     const section = sections[i];
     doc.addPage("a4", "portrait");
     const sectionMeta = resolveIndustrialSectionPdfMeta(
-      `${view.label}  ${section.title}`,
+      `${view.label} â€” ${section.title}`,
       view.projectName
     );
     const y = drawIndustrialSectionPdfHeader(doc, sectionMeta);
@@ -39,7 +39,7 @@ export function buildPdfFromOnlineAnalysisView(view: IndustrialOnlineAnalysisVie
       doc,
       y,
       [section.columns.map((c) => c.label)],
-      section.rows.map((r) => section.columns.map((c) => r.cells[c.key] ?? "")),
+      section.rows.map((r) => section.columns.map((c) => r.cells[c.key] ?? "â€”")),
       { fontSize: 9 }
     );
   }

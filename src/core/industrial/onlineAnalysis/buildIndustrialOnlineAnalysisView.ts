@@ -1,6 +1,6 @@
 /**
  * Vista estruturada dos PDFs industriais.
- * Fase 2: secções canónicas com rowId + apply de industrialDocumentOverrides.
+ * Fase 2: secÃ§Ãµes canÃ³nicas com rowId + apply de industrialDocumentOverrides.
  */
 
 import type { ProjectState } from "@/context/projectTypes";
@@ -122,11 +122,11 @@ function buildCutlistLikeSections(
   const projectName = project.projectName?.trim() || "Projeto";
   const columns = [
     col("caixa", "Caixa", true),
-    col("peca", "Peça", true),
+    col("peca", "PeÃ§a", true),
     col("qtd", "Qtd", true),
-    col("dimensoes", "L×A×P (mm)", false),
+    col("dimensoes", "LÃ—AÃ—P (mm)", false),
     col("material", "Material", true),
-    col("observacoes", "Observações", true),
+    col("observacoes", "ObservaÃ§Ãµes", true),
     col("ref", "Ref.", false),
   ];
   return [
@@ -135,7 +135,7 @@ function buildCutlistLikeSections(
       title: "Lista de corte",
       columns,
       rows: items.map((item, index) => {
-        const caixa = boxNome[item.boxId ?? ""] ?? item.boxId ?? "—";
+        const caixa = boxNome[item.boxId ?? ""] ?? item.boxId ?? "â€”";
         const obs = formatObservacoesForPdf(
           resolveObservacoesForCutListItem(item, { pieceObservacoes: project.pieceObservacoes })
         );
@@ -154,9 +154,9 @@ function buildCutlistLikeSections(
           caixa,
           peca: item.tipo,
           qtd: String(item.quantidade ?? 1),
-          dimensoes: `${item.dimensoes.largura}×${item.dimensoes.altura}×${item.espessura ?? item.dimensoes.profundidade ?? "—"}`,
-          material: String(item.material ?? item.materialId ?? "—"),
-          observacoes: obs || "—",
+          dimensoes: `${item.dimensoes.largura}â€”${item.dimensoes.altura}â€”${item.espessura ?? item.dimensoes.profundidade ?? "â€”"}`,
+          material: String(item.material ?? item.materialId ?? "â€”"),
+          observacoes: obs || "â€”",
           ref,
         });
       }),
@@ -164,7 +164,7 @@ function buildCutlistLikeSections(
   ];
 }
 
-/** Secções canónicas (sem overrides). */
+/** SecÃ§Ãµes canÃ³nicas (sem overrides). */
 export function buildCanonicalIndustrialOnlineAnalysisSections(
   project: ProjectState,
   docId: IndustrialOnlineAnalysisDocId,
@@ -196,11 +196,11 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
         title: "Resumo industrial",
         columns: [
           col("caixa", "Caixa", true),
-          col("peca", "Peça", true),
-          col("dimensoes", "Dimensões", false),
-          col("areaM2", "Área m²", false),
+          col("peca", "PeÃ§a", true),
+          col("dimensoes", "DimensÃµes", false),
+          col("areaM2", "Ã¡rea mÂ²", false),
           col("pesoKg", "Peso kg", false),
-          col("consumoM2", "Consumo m²", false),
+          col("consumoM2", "Consumo mÂ²", false),
           col("observacoes", "Obs.", true),
           col("mod", "Mod.", false),
         ],
@@ -215,7 +215,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
               pesoKg: r.pesoKg.toFixed(2),
               consumoM2: r.consumoM2.toFixed(3),
               observacoes: r.observacoes,
-              mod: r.modified ? "sim" : "—",
+              mod: r.modified ? "sim" : "â€”",
             }
           )
         ),
@@ -246,11 +246,11 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "pecas",
-        title: "Peças",
+        title: "PeÃ§as",
         columns: [
           col("caixa", "Caixa", true),
           col("tipo", "Tipo", true),
-          col("dimensoes", "Dimensões", false),
+          col("dimensoes", "DimensÃµes", false),
           col("qtd", "Qtd", true),
           col("material", "Material", true),
         ],
@@ -272,12 +272,12 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
     return [
       {
         id: "pecas",
-        title: "Peças totais",
+        title: "PeÃ§as totais",
         columns: [
           col("categoria", "Categoria", true),
           col("caixa", "Caixa", true),
           col("tipo", "Tipo", true),
-          col("dimensoes", "Dimensões", false),
+          col("dimensoes", "DimensÃµes", false),
           col("material", "Material", true),
           col("pesoKg", "Peso kg", false),
           col("qtd", "Qtd", true),
@@ -317,7 +317,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
           col("ferragem", "Ferragem", true),
           col("qtd", "Qtd", true),
           col("material", "Material", true),
-          col("codigo", "Código", false),
+          col("codigo", "CÃ³digo", false),
         ],
         rows: pdfData.detalhe.map((r, index) =>
           rowFromCells(makeCanonicalRowId(docId, "detalhe", [r[0], r[1], r[4], index]), {
@@ -342,7 +342,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "chapas",
-        title: "Materiais / chapas (armazém)",
+        title: "Materiais / chapas (armazÃ©m)",
         columns: [
           col("material", "Material", true),
           col("ref", "Ref.", true),
@@ -360,7 +360,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "ferragensAgg",
-        title: "Ferragens agregadas (armazém)",
+        title: "Ferragens agregadas (armazÃ©m)",
         columns: [
           col("material", "Material", true),
           col("ref", "Ref.", true),
@@ -415,10 +415,10 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
           col("index", "#", false),
           col("material", "Material", true),
           col("espessura", "Esp. mm", false),
-          col("chapa", "Chapa L×A", false),
-          col("pecas", "Peças", true),
-          col("usado", "Usado m²", false),
-          col("desperdicio", "Desperdício %", false),
+          col("chapa", "Chapa LÃ—A", false),
+          col("pecas", "PeÃ§as", true),
+          col("usado", "Usado mÂ²", false),
+          col("desperdicio", "DesperdÃ­cio %", false),
         ],
         rows: chapas.sheets.map((s) =>
           rowFromCells(
@@ -427,7 +427,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
               index: String(s.sheetIndex),
               material: s.material,
               espessura: String(s.espessuraMm),
-              chapa: `${s.sheetLarguraMm}×${s.sheetAlturaMm}`,
+              chapa: `${s.sheetLarguraMm}â€”${s.sheetAlturaMm}`,
               pecas: String(s.pieceCount),
               usado: (s.usedAreaMm2 / 1_000_000).toFixed(3),
               desperdicio: s.wastePct.toFixed(1),
@@ -437,12 +437,12 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "consumoPeca",
-        title: "Consumo por peça",
+        title: "Consumo por peÃ§a",
         columns: [
-          col("peca", "Peça", true),
+          col("peca", "PeÃ§a", true),
           col("caixa", "Caixa", true),
           col("material", "Material", true),
-          col("area", "Área m²", false),
+          col("area", "Ã¡rea mÂ²", false),
           col("pesoKg", "Peso kg", false),
           col("qtd", "Qtd", true),
         ],
@@ -467,8 +467,8 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
           col("index", "#", false),
           col("material", "Material", true),
           col("espessura", "Esp. mm", false),
-          col("usado", "Usado m²", false),
-          col("desperdicio", "Desperdício %", false),
+          col("usado", "Usado mÂ²", false),
+          col("desperdicio", "DesperdÃ­cio %", false),
         ],
         rows: consumo.porChapa.map((r) =>
           rowFromCells(
@@ -502,11 +502,11 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       title: "Ferragens industriais",
       columns: [
         col("caixa", "Caixa", true),
-        col("peca", "Peça", true),
+        col("peca", "PeÃ§a", true),
         col("ferragem", "Ferragem", true),
         col("qtd", "Qtd", true),
         col("material", "Material", true),
-        col("codigo", "Código", false),
+        col("codigo", "CÃ³digo", false),
         col("short", "Short", false),
         col("observacoes", "Obs.", true),
       ],
@@ -521,7 +521,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
             material: r.material,
             codigo: r.codigoIndustrial,
             short: r.shortCode,
-            observacoes: r.observacoes || "—",
+            observacoes: r.observacoes || "â€”",
           }
         )
       ),
@@ -555,7 +555,7 @@ export function buildIndustrialOnlineAnalysisView(
   };
 }
 
-/** Ponto único UI + ZIP: rows efetivas (canónico + overrides). */
+/** Ponto Ãºnico UI + ZIP: rows efetivas (canÃ³nico + overrides). */
 export function getEffectiveRowsForDoc(
   project: ProjectState,
   docId: IndustrialOnlineAnalysisDocId,

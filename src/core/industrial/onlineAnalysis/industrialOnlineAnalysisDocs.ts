@@ -1,5 +1,5 @@
 /**
- * Cat·logo dos 9 PDFs industriais da An·lise arquivo completo (Fase 1).
+ * Cat√°logo dos 9 PDFs industriais da An√°lise arquivo completo (Fase 1).
  * Sem TCN / CNC / etiquetas / drill.
  */
 
@@ -26,14 +26,14 @@ export type IndustrialOnlineAnalysisDocMeta = {
 
 export const INDUSTRIAL_ONLINE_ANALYSIS_DOCS: readonly IndustrialOnlineAnalysisDocMeta[] = [
   { id: "cutlist", label: "Cutlist", description: "Lista de corte industrial" },
-  { id: "tecnico", label: "PDF TÈcnico", description: "Lista tÈcnica de peÁas" },
+  { id: "tecnico", label: "PDF T√©cnico", description: "Lista t√©cnica de pe√ßas" },
   { id: "unificado", label: "Arquivo Unificado", description: "Resumo industrial unificado" },
   {
     id: "resumo_financeiro",
     label: "Resumo Financeiro",
-    description: "Totais e peÁas com custos",
+    description: "Totais e pe√ßas com custos",
   },
-  { id: "pecas_totais", label: "PeÁas totais", description: "PeÁas agregadas do projeto" },
+  { id: "pecas_totais", label: "Pe√ßas totais", description: "Pe√ßas agregadas do projeto" },
   {
     id: "ferragens_totais",
     label: "Ferragens totais",
@@ -42,13 +42,13 @@ export const INDUSTRIAL_ONLINE_ANALYSIS_DOCS: readonly IndustrialOnlineAnalysisD
   { id: "totais_projeto", label: "Totais do Projeto", description: "Indicadores globais" },
   {
     id: "industrial_armazem",
-    label: "Industrial ArmazÈm",
+    label: "Industrial Armaz√©m",
     description: "Chapas e consumo de materiais",
   },
   {
     id: "industrial_ferragens",
     label: "Ferragens Industriais",
-    description: "Ferragens por caixa e peÁa",
+    description: "Ferragens por caixa e pe√ßa",
   },
 ] as const;
 

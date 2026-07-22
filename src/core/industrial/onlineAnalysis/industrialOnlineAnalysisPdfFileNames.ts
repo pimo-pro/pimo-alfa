@@ -1,6 +1,6 @@
 /**
- * Nomes est·veis dos PDFs / ZIP documentais da An·lise (Fase 4).
- * Alinhados aos nomes dos PDFs no ZIP cl·ssico; o pacote Fase 4 È sÛ PDFs.
+ * Nomes est√°veis dos PDFs / ZIP documentais da An√°lise (Fase 4).
+ * Alinhados aos nomes dos PDFs no ZIP cl√°ssico; o pacote Fase 4 ‚Äî s√≥ PDFs.
  */
 
 import { sanitizeExportFilename } from "@/utils/sanitization";

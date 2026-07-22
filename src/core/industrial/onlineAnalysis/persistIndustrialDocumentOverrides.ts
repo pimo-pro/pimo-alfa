@@ -1,5 +1,5 @@
 /**
- * Persistência de overrides + histórico industriais no snapshot PROJETOS / offline.
+ * PersistÃ©ncia de overrides + histÃ³rico industriais no snapshot PROJETOS / offline.
  */
 
 import { serializeState } from "@/context/projectPersistence";

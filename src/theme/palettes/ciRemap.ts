@@ -1,5 +1,5 @@
 /**
- * Utilitarios CI � mapeamento hex/rgba SSOT ? `var(--ci-*)` / `color-mix`.
+ * Utilitarios CI — mapeamento hex/rgba SSOT ? `var(--ci-*)` / `color-mix`.
  *
  * Incremento 4: a paleta Pi (`piPalette.ts`) e os botoes (`piButtonSystem.ts`)
  * ja sao CI puros em origem. Este modulo:
@@ -15,7 +15,7 @@
 
 import type { TemplatePaletteOverrides, TokenValueMap } from "./types";
 
-/** Refer�ncias CSS can�nicas (aliases do SSOT). */
+/** Referéncias CSS canónicas (aliases do SSOT). */
 export const CI_CSS = {
   chalk: "var(--ci-chalk)",
   chalkDim: "var(--ci-chalk-dim)",
@@ -81,7 +81,7 @@ const HEX_TO_CI_VAR: Record<string, string> = {
   "#0E0F11": CI_CSS.darkRaised,
 };
 
-/** RGB can�nicos SSOT usados em rgba do remap utilit�rio. */
+/** RGB canónicos SSOT usados em rgba do remap utilitário. */
 const RGB_TO_CI_VAR: Array<{ r: number; g: number; b: number; ciVar: string }> = [
   { r: 28, g: 74, b: 122, ciVar: CI_CSS.prussian600 },
   { r: 144, g: 184, b: 224, ciVar: CI_CSS.prussian200 },
@@ -117,7 +117,7 @@ function colorMixCi(ciVar: string, alpha: number): string {
 
 /**
  * rgba(R,G,B,A) ? color-mix com token CI quando RGB = SSOT conhecido.
- * Aceita espa�os opcionais; alpha 0�1.
+ * Aceita espaços opcionais; alpha 0–1.
  */
 export function remapRgbaToCiColorMix(value: string): string | null {
   const m = value
@@ -141,7 +141,7 @@ export function remapRgbaToCiColorMix(value: string): string | null {
   return null;
 }
 
-/** Remap de um valor (hex SSOT, rgba CI, ou intacto). Idempotente sobre valores j� CI. */
+/** Remap de um valor (hex SSOT, rgba CI, ou intacto). Idempotente sobre valores já CI. */
 export function remapValueToCi(value: string): string {
   if (!value) return value;
   if (value.startsWith("var(--ci-") || (value.startsWith("color-mix(") && value.includes("--ci-"))) {
@@ -165,7 +165,7 @@ export function remapValueToCi(value: string): string {
   return value;
 }
 
-/** @deprecated Prefer remapValueToCi � alias de compatibilidade. */
+/** @deprecated Prefer remapValueToCi — alias de compatibilidade. */
 export function remapHexToCiVar(value: string): string {
   return remapValueToCi(value);
 }

@@ -76,9 +76,9 @@ export default function IndustrialOnlineAnalysisDownloadBar({
           }}
           role="status"
         >
-          Existem edições documentais. Os downloads em modo efetivo (e o ZIP clássico nos PDFs)
-          reflectem-nas. A cutlist editada também alimenta as etiquetas UEE (material/obs/qtd/peça/caixa).
-          CNC/TCN/drill não são alterados. Este pacote não é o «arquivo completo».
+          Existem ediÃ§Ãµes documentais. Os downloads em modo efetivo (e o ZIP clÃ¡ssico nos PDFs)
+          reflectem-nas. A cutlist editada tambÃ©m alimenta as etiquetas UEE (material/obs/qtd/peÃ§a/caixa).
+          CNC/TCN/drill nÃ£o sÃ£o alterados. Este pacote nÃ£o Ã© o Â«arquivo completoÂ».
         </p>
       ) : null}
 
@@ -87,12 +87,12 @@ export default function IndustrialOnlineAnalysisDownloadBar({
           Selecionar todos
         </button>
         <button type="button" disabled={busy || selectedCount === 0} onClick={onClearSelection} style={btn}>
-          Limpar seleção
+          Limpar seleÃ§Ã£o
         </button>
         <span style={{ fontSize: 12, color: "#64748b" }}>
           {selectedCount} selecionado{selectedCount === 1 ? "" : "s"}
           {modifiedCount > 0
-            ? ` · ${modifiedCount} modificado${modifiedCount === 1 ? "" : "s"}`
+            ? ` â€” ${modifiedCount} modificado${modifiedCount === 1 ? "" : "s"}`
             : ""}
         </span>
       </div>
@@ -104,7 +104,7 @@ export default function IndustrialOnlineAnalysisDownloadBar({
           onClick={onGenerateSelected}
           style={btnPrimary}
         >
-          {busy ? "A gerar…" : "Gerar PDFs selecionados"}
+          {busy ? "A gerarâ€¦" : "Gerar PDFs selecionados"}
         </button>
         <button
           type="button"

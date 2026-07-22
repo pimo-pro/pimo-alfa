@@ -1,6 +1,6 @@
 /**
  * Configuracao e helpers da ferragem "Calco" (Refs 00 e 03).
- * Apresentacao / BOM — nao altera CNC, furos, Viewer nem cutlist dimensional.
+ * Apresentacao / BOM â€” nao altera CNC, furos, Viewer nem cutlist dimensional.
  * Ref 1503 adiada ate regra de produto explicita.
  * Literais PT usam escapes Unicode.
  */
@@ -96,7 +96,7 @@ export type CalcoAggregateRow = {
 
 /**
  * Linhas de calco para PDF (apos Dobradica).
- * @param dobradicaQty — qty I-Sensys (canecos) = calco Ref 00
+ * @param dobradicaQty â€” qty I-Sensys (canecos) = calco Ref 00
  */
 export function aggregateCalcoRowsForPdf(
   dobradicaQty: number,

@@ -101,7 +101,7 @@ describe("pdfFerragensTotaisNormalize", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [
         { material: "Dobradica 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 100 },
-        { material: "dobradicas", ref: "ù", medida: "ù", quantidade: 50 },
+        { material: "dobradicas", ref: "‚Äî", medida: "‚Äî", quantidade: 50 },
       ],
       cutlistItems: [
         {
@@ -150,7 +150,7 @@ describe("pdfFerragensTotaisNormalize", () => {
 
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [
-        { material: "Dobradiùa 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 10 },
+        { material: "Dobradi√ßa 35mm", ref: "dobradica_35mm", medida: "35mm", quantidade: 10 },
         { material: "dobradicas", ref: "", medida: "", quantidade: 10 },
       ],
       cutlistItems,

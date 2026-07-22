@@ -61,7 +61,7 @@ export function normalizeIndustrialDocumentHistory(raw: unknown): IndustrialDocu
       id: e.id,
       ts: e.ts,
       userId: typeof e.userId === "string" ? e.userId : "unknown",
-      userName: typeof e.userName === "string" ? e.userName : "—",
+      userName: typeof e.userName === "string" ? e.userName : "â€”",
       docId: e.docId as IndustrialOnlineAnalysisDocId,
       rowId: e.rowId,
       fieldKey,

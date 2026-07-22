@@ -28,16 +28,16 @@ function aggregateChapasByMaterial(summary: ChapasRealSummary): string[][] {
 }
 
 /**
- * PDF industrial unificado para armaz�m:
- * P�gina 1 � resumo + chapas por material/espessura (com log�tipo).
- * P�gina 2+ � consumo por chapa (sem pe�as / sem consumo por pe�a).
+ * PDF industrial unificado para armazém:
+ * Página 1 — resumo + chapas por material/espessura (com logótipo).
+ * Página 2+ — consumo por chapa (sem peças / sem consumo por peça).
  */
 export async function buildIndustrialArmazemPdf(
   projectName: string,
   chapas: ChapasRealSummary,
   consumo: ConsumoMateriaisSummary
 ): Promise<jsPDF> {
-  const meta = resolveIndustrialSectionPdfMeta("Resumo industrial � Armaz�m", projectName);
+  const meta = resolveIndustrialSectionPdfMeta("Resumo industrial — Armazém", projectName);
   const logoDataUrl = await loadLogoIndustrialDataUrl();
   const totalPecas =
     consumo.porPeca.reduce((s, r) => s + (r.quantidade || 0), 0) ||
@@ -50,12 +50,12 @@ export async function buildIndustrialArmazemPdf(
   });
 
   const resumo = [
-    ["Chapas necess�rias", String(chapas.totalSheets)],
-    ["Desperd�cio total (mm�)", chapas.totalWasteMm2.toFixed(0)],
-    ["Desperd�cio total (%)", `${chapas.totalWastePct.toFixed(1)}%`],
-    ["Pe�as totais", String(totalPecas)],
+    ["Chapas necessárias", String(chapas.totalSheets)],
+    ["Desperdício total (mm²)", chapas.totalWasteMm2.toFixed(0)],
+    ["Desperdício total (%)", `${chapas.totalWastePct.toFixed(1)}%`],
+    ["Peças totais", String(totalPecas)],
   ];
-  drawIndustrialSectionTable(doc, y, [["M�trica", "Valor"]], resumo, { fontSize: 10 });
+  drawIndustrialSectionTable(doc, y, [["Métrica", "Valor"]], resumo, { fontSize: 10 });
   y = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 28;
   y += 6;
 
@@ -66,7 +66,7 @@ export async function buildIndustrialArmazemPdf(
     [["TOTAL Chapas", "Material", "Espessura"]],
     porMaterial.length > 0
       ? porMaterial
-      : [[String(chapas.totalSheets), "� (estimativa)", "�"]],
+      : [[String(chapas.totalSheets), "— (estimativa)", "—"]],
     { fontSize: 10 }
   );
 
@@ -75,13 +75,13 @@ export async function buildIndustrialArmazemPdf(
   drawIndustrialSectionTable(
     doc,
     y,
-    [["Chapa", "Material", "Esp.", "�rea usada", "Desperd�cio", "%"]],
+    [["Chapa", "Material", "Esp.", "Área usada", "Desperdício", "%"]],
     consumo.porChapa.map((r) => [
       String(r.chapaIndex),
       r.material,
       `${r.espessuraMm} mm`,
-      `${(r.areaUsadaMm2 / 1_000_000).toFixed(4)} m�`,
-      `${(r.desperdicioMm2 / 1_000_000).toFixed(4)} m�`,
+      `${(r.areaUsadaMm2 / 1_000_000).toFixed(4)} m²`,
+      `${(r.desperdicioMm2 / 1_000_000).toFixed(4)} m²`,
       `${r.desperdicioPct.toFixed(1)}%`,
     ]),
     { fontSize: 8 }

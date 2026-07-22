@@ -1,5 +1,5 @@
 /**
- * Jump-to-cell para histórico industrial (Fase 3).
+ * Jump-to-cell para histÃ³rico industrial (Fase 3).
  */
 
 import type { IndustrialHistoryFocus } from "./industrialDocumentHistoryTypes";

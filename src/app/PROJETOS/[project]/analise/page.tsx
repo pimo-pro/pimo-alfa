@@ -49,7 +49,7 @@ export default function ProjetosAnaliseIndexPage() {
 
   useEffect(() => {
     if (!pageSlug) {
-      setError("Projeto n�o especificado na URL.");
+      setError("Projeto não especificado na URL.");
       setLoading(false);
       return;
     }
@@ -71,7 +71,7 @@ export default function ProjetosAnaliseIndexPage() {
       if (!record) {
         setSnapshot(null);
         setLoading(false);
-        setError("Projeto n�o encontrado.");
+        setError("Projeto não encontrado.");
         return;
       }
       setProjetosSnapshot(record);
@@ -158,7 +158,7 @@ export default function ProjetosAnaliseIndexPage() {
         pageSlug={pageSlug ?? projectName}
       >
         <p style={{ color: "#64748b", fontSize: 14 }}>
-          A funcionalidade �An�lise arquivo completo� est� desativada (
+          A funcionalidade «Análise arquivo completo» está desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
       </IndustrialOnlineAnalysisLayout>
@@ -167,10 +167,10 @@ export default function ProjetosAnaliseIndexPage() {
 
   return (
     <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto�</p> : null}
+      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
       {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
       {!loading && !error && !revivedOk ? (
-        <p style={{ color: "#dc2626" }}>N�o foi poss�vel ler o estado do projeto.</p>
+        <p style={{ color: "#dc2626" }}>Não foi possível ler o estado do projeto.</p>
       ) : null}
       {!loading && !error && revivedOk && projectState ? (
         <>
@@ -201,8 +201,8 @@ export default function ProjetosAnaliseIndexPage() {
           />
           <div style={{ display: "grid", gap: 10 }}>
             <p style={{ margin: "0 0 8px", fontSize: 13, color: "#64748b" }}>
-              Documentos industriais (leitura + edi��o documental + download seletivo). A cutlist
-              editada alimenta as etiquetas UEE (material/obs/qtd/pe�a/caixa) sem alterar CNC.
+              Documentos industriais (leitura + edição documental + download seletivo). A cutlist
+              editada alimenta as etiquetas UEE (material/obs/qtd/peça/caixa) sem alterar CNC.
             </p>
             {documentHasOverrides(projectState.industrialDocumentOverrides, "cutlist") ? (
               <p
@@ -215,8 +215,8 @@ export default function ProjetosAnaliseIndexPage() {
                   borderRadius: 6,
                 }}
               >
-                A cutlist tem edi��es documentais: as etiquetas UEE reflectem material, qtd,
-                observa��es, pe�a e caixa. CNC/TCN/drill/nesting n�o s�o alterados.
+                A cutlist tem edições documentais: as etiquetas UEE reflectem material, qtd,
+                observações, peça e caixa. CNC/TCN/drill/nesting não são alterados.
               </p>
             ) : null}
             {INDUSTRIAL_ONLINE_ANALYSIS_DOCS.map((doc) => {
@@ -282,7 +282,7 @@ export default function ProjetosAnaliseIndexPage() {
                       ) : null}
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                      {doc.description} � <code style={{ fontSize: 11 }}>{doc.id}</code>
+                      {doc.description} — <code style={{ fontSize: 11 }}>{doc.id}</code>
                     </div>
                   </Link>
                   <button
@@ -309,7 +309,7 @@ export default function ProjetosAnaliseIndexPage() {
           <IndustrialOnlineAnalysisHistoryPanel
             entries={historyEntries}
             projectName={projectName}
-            title="Hist�rico global"
+            title="Histórico global"
           />
         </>
       ) : null}
