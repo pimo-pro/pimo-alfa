@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-22T20:24:46.589Z",
+      "author": "pimo-pro",
+      "commitMessage": "chore: ativar flag industrialOnlineAnalysis",
+      "version": "v6.0722.2124"
+    },
+    {
       "publishedAt": "2026-07-22T19:55:19.358Z",
       "author": "pimo-pro",
       "commitMessage": "feat: Análise arquivo completo (Fases 1–6)",
