@@ -82,12 +82,15 @@ jobs:
           lftp -c "
             set ssl:verify-certificate no;
             set ftp:passive-mode true;
+            set ftp:list-options -a;
             set net:max-retries 3;
             set net:timeout 30;
+            set cmd:fail-exit yes;
             open -u \"${FTP_USERNAME}\",\"${FTP_PASSWORD}\" ftp://${FTP_HOST};
-            cd public_html;
-            glob -a rm -r assets;
-            glob -a rm -r industrial;
+            # Conta FTP Hostinger ja entra em public_html (cd public_html falharia com public_html/public_html).
+            pwd;
+            rm -r -f assets;
+            rm -r -f industrial;
             rm -f .ftp-deploy-sync-state.json;
             rm -f *.js.map;
             bye
