@@ -1,5 +1,5 @@
 /**
- * Builders classicos por docId — fallback da politica PDF binaria (P1).
+ * Builders classicos por docId  fallback da politica PDF binaria (P1).
  * Usado por ZIP, /analise, hubs e handlers individuais quando o projeto
  * nao tem overrides documentais.
  */
@@ -22,8 +22,7 @@ import {
 } from "@/core/pdf/pdfUnified";
 import { safeGetItem } from "@/utils/storage";
 import type { IndustrialOnlineAnalysisDocId } from "./industrialOnlineAnalysisDocs";
-
-type PdfLike = { output: (_type: string) => ArrayBuffer | Uint8Array };
+import type { IndustrialPdfDoc } from "./resolveIndustrialZipPdf";
 
 function loadComponentTypes(): ComponentType[] {
   const raw = safeGetItem("pimo_component_types");
@@ -79,7 +78,7 @@ export async function buildClassicIndustrialPdf(
   project: ProjectState,
   docId: IndustrialOnlineAnalysisDocId,
   options?: BuildClassicIndustrialPdfOptions
-): Promise<PdfLike> {
+): Promise<IndustrialPdfDoc> {
   const showPrices = options?.showPrices ?? false;
   const proj = toProjectForPdf(project);
   const projectName = proj.projectName;

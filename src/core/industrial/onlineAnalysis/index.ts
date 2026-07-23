@@ -30,7 +30,7 @@ export {
 } from "./applyIndustrialDocumentOverrides";
 export { buildPdfFromOnlineAnalysisView } from "./buildPdfFromOnlineAnalysisView";
 export { resolveIndustrialZipPdf } from "./resolveIndustrialZipPdf";
-export type { ResolveIndustrialPdfOptions } from "./resolveIndustrialZipPdf";
+export type { ResolveIndustrialPdfOptions, IndustrialPdfDoc } from "./resolveIndustrialZipPdf";
 export {
   getIndustrialPdfRenderMode,
   shouldUseShellIndustrialPdfs,

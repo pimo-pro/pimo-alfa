@@ -19,6 +19,7 @@ import { ensureLogoIndustrialLoaded } from "../core/pdf/logoIndustrialPublic";
 import { applyResultados } from "../context/projectState";
 import type { ProjectState } from "../context/projectTypes";
 import { resolveIndustrialZipPdf } from "../core/industrial/onlineAnalysis/resolveIndustrialZipPdf";
+import type { IndustrialPdfDoc } from "../core/industrial/onlineAnalysis/resolveIndustrialZipPdf";
 
 export function useIndustrialBottomPdf() {
   const { project } = useProject();
@@ -37,13 +38,13 @@ export function useIndustrialBottomPdf() {
     async (
       docId: "resumo_financeiro" | "pecas_totais" | "ferragens_totais" | "totais_projeto",
       fileName: string,
-      classic: () => { save: (name: string) => void; output: (type: string) => ArrayBuffer | Uint8Array }
+      classic: () => IndustrialPdfDoc
     ) => {
       beginIndustrialFileGeneration();
       try {
         await ensureLogoIndustrialLoaded();
         const doc = await resolveIndustrialZipPdf(fullProject(), docId, classic);
-        (doc as { save: (name: string) => void }).save(fileName);
+        doc.save(fileName);
       } finally {
         endIndustrialFileGeneration();
       }
@@ -117,7 +118,9 @@ export function useIndustrialBottomPdf() {
         "ferragens_totais",
         () => buildFerragensTotaisDoc()
       );
-      const blob = (doc as { output: (t: string) => Blob }).output("blob");
+      const out = doc.output("arraybuffer");
+      const bytes = out instanceof ArrayBuffer ? new Uint8Array(out) : new Uint8Array(out);
+      const blob = new Blob([bytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);

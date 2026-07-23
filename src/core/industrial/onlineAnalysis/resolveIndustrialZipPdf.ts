@@ -7,7 +7,11 @@ import {
 } from "./buildIndustrialOnlineAnalysisView";
 import { buildPdfFromOnlineAnalysisView } from "./buildPdfFromOnlineAnalysisView";
 
-type PdfLike = { output: (_type: string) => ArrayBuffer | Uint8Array };
+/** Documento PDF industrial (jsPDF classico ou shell). */
+export type IndustrialPdfDoc = {
+  output: (_type: string) => ArrayBuffer | Uint8Array;
+  save: (_name: string) => void;
+};
 
 export type ResolveIndustrialPdfOptions = {
   /** So aplica em modo shell: effective = com overrides; canonical = tabular sem overrides. */
@@ -25,9 +29,9 @@ export type ResolveIndustrialPdfOptions = {
 export async function resolveIndustrialZipPdf(
   project: ProjectState,
   docId: IndustrialOnlineAnalysisDocId,
-  fallback: () => PdfLike | Promise<PdfLike>,
+  fallback: () => IndustrialPdfDoc | Promise<IndustrialPdfDoc>,
   options?: ResolveIndustrialPdfOptions
-): Promise<PdfLike> {
+): Promise<IndustrialPdfDoc> {
   if (!shouldUseShellIndustrialPdfs(project)) {
     return fallback();
   }
