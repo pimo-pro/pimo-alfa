@@ -1,6 +1,6 @@
 import type { ProjectState } from "@/context/projectTypes";
 import type { IndustrialOnlineAnalysisDocId } from "./industrialOnlineAnalysisDocs";
-import { shouldUseShellIndustrialPdfs } from "./industrialPdfPolicy";
+import { shouldUseShellIndustrialPdfForDoc } from "./industrialPdfPolicy";
 import {
   getEffectiveRowsForDoc,
   buildIndustrialOnlineAnalysisView,
@@ -20,10 +20,9 @@ export type ResolveIndustrialPdfOptions = {
 };
 
 /**
- * Politica PDF binaria (P1):
- * - Qualquer override no projeto ? shell para TODOS os docs
- * - Sem overrides ? classico (fallback) para TODOS os docs
- * Nunca misturar shell + classico no mesmo pacote.
+ * Resolve PDF industrial (P1 + P2):
+ * - P1: com override no projeto ? shell; sem override ? classico
+ * - P2: ferragens_totais (e docs de apresentacao classica) ? SEMPRE classico
  * CNC/TCN nao passam por aqui. UEE usa whitelist cutlist.
  */
 export async function resolveIndustrialZipPdf(
@@ -32,7 +31,7 @@ export async function resolveIndustrialZipPdf(
   fallback: () => IndustrialPdfDoc | Promise<IndustrialPdfDoc>,
   options?: ResolveIndustrialPdfOptions
 ): Promise<IndustrialPdfDoc> {
-  if (!shouldUseShellIndustrialPdfs(project)) {
+  if (!shouldUseShellIndustrialPdfForDoc(project, docId)) {
     return fallback();
   }
 

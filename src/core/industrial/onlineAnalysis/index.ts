@@ -34,8 +34,14 @@ export type { ResolveIndustrialPdfOptions, IndustrialPdfDoc } from "./resolveInd
 export {
   getIndustrialPdfRenderMode,
   shouldUseShellIndustrialPdfs,
+  shouldUseShellIndustrialPdfForDoc,
+  mustUseClassicIndustrialPdf,
+  INDUSTRIAL_CLASSIC_PRESENTATION_DOC_IDS,
 } from "./industrialPdfPolicy";
-export type { IndustrialPdfRenderMode } from "./industrialPdfPolicy";
+export type {
+  IndustrialPdfRenderMode,
+  IndustrialClassicPresentationDocId,
+} from "./industrialPdfPolicy";
 export { buildClassicIndustrialPdf } from "./buildClassicIndustrialPdf";
 export type { BuildClassicIndustrialPdfOptions } from "./buildClassicIndustrialPdf";
 export type {
