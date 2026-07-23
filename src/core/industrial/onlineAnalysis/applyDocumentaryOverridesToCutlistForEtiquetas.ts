@@ -1,15 +1,16 @@
 /**
- * Fase 5 ‚Äî Merge documental whitelist da cutlist ? cutlist de etiquetas UEE.
- * Fase 6 ‚Äî usa validadores partilhados; idempotente; prefix match por comprimento.
+ * Fase 5 ù Merge documental whitelist da cutlist ? cutlist de etiquetas UEE.
+ * Fase 6 ù usa validadores partilhados; idempotente; prefix match por comprimento.
  *
- * Fonte √∫nica: overrides.cutlist.
- * N√£o aplica tecnico/outros docs. N√£o gera etiquetas para addedRows.
- * deletedRowIds omitem s√≥ a etiqueta (CNC intocado).
- * Dimens√µes / boxId / geometria / furos / orlas: bloqueados.
+ * Fonte ùnica: overrides.cutlist.
+ * Nùo aplica tecnico/outros docs. Nùo gera etiquetas para addedRows.
+ * deletedRowIds omitem sù a etiqueta (CNC intocado).
+ * Dimensùes / boxId / geometria / furos / orlas: bloqueados.
  */
 
 import type { CutListItemComPreco } from "@/core/types";
 import type { IndustrialDocumentOverridesStore } from "./industrialDocumentOverridesTypes";
+import { resolveDocumentaryOverride } from "./industrialDocumentarySsot";
 import {
   isBlockedIndustrialAnalysisField,
   isPlaceholderDocumentaryValue,
@@ -35,16 +36,16 @@ function stripPrefix(id: string, prefix?: string): string {
 }
 
 /**
- * Aplica overrides.cutlist (whitelist) a uma c√≥pia dos items para UEE.
- * Items CNC/nesting devem continuar a usar a lista base (sem esta fun√ß√£o).
- * Idempotente: apply(apply(x)) === apply(x) em conte√∫do documental.
+ * Aplica overrides.cutlist (whitelist) a uma cùpia dos items para UEE.
+ * Items CNC/nesting devem continuar a usar a lista base (sem esta funùùo).
+ * Idempotente: apply(apply(x)) === apply(x) em conteùdo documental.
  */
 export function applyDocumentaryOverridesToCutlistForEtiquetas(
   items: readonly CutListItemComPreco[],
   store: IndustrialDocumentOverridesStore | undefined,
   options?: { stripIdPrefix?: string }
 ): CutListItemComPreco[] {
-  const cutlist = store?.cutlist;
+  const cutlist = resolveDocumentaryOverride(store, "cutlist");
   if (!cutlist) return items.map((item) => ({ ...item, dimensoes: { ...item.dimensoes } }));
 
   const deleted = new Set(cutlist.deletedRowIds ?? []);
@@ -132,7 +133,7 @@ export function applyDocumentaryOverridesToCutlistForEtiquetas(
 
 /**
  * Multi-projeto: cada item prefixado usa os overrides do projeto de origem.
- * Prefixos mais longos t√©m prioridade (P10_ antes de P1_).
+ * Prefixos mais longos tùm prioridade (P10_ antes de P1_).
  */
 export function applyMultiProjectDocumentaryOverridesForEtiquetas(
   items: readonly CutListItemComPreco[],

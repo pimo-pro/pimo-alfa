@@ -10,6 +10,10 @@ import { captureRoomSnapshot, serializeStateForAutosave, reviveState } from "./p
 import { useProjectActions } from "./hooks/useProjectActions";
 import { useProjectState } from "../project/useProjectState";
 import { HISTORY_MAX_ENTRIES } from "./historyConfig";
+import {
+  getIndustrialLiveProject,
+  publishIndustrialLiveProject,
+} from "@/core/industrial/onlineAnalysis/industrialLiveProjectStore";
 
 function classifyHistoryAction(actionName: string): "move" | "resize" | "add" | "remove" | "height" | "other" {
   const text = actionName.trim().toLowerCase();
@@ -48,10 +52,19 @@ function classifyHistoryAction(actionName: string): "move" | "resize" | "add" | 
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const { project, setProject, projectRef } = useProjectState();
+  const { project, setProject, projectRef } = useProjectState(
+    () => getIndustrialLiveProject()?.state ?? null
+  );
+
   useEffect(() => {
     projectRef.current = project;
   }, [project, projectRef]);
+
+  // Publicar SSOT live em cada alteração — /analise e ZIP leem o mesmo estado.
+  useEffect(() => {
+    publishIndustrialLiveProject(project);
+  }, [project]);
+
   const viewerSync = useViewerSync(project);
   const exportActions = useProjectExportActions({ projectRef });
   useProjectPersistence(project, setProject, viewerSync, {

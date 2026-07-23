@@ -16,7 +16,17 @@ import {
   type SendSelections,
 } from "../../hooks/useSendProjectPackage";
 import { industrialFeatureFlags } from "@/industrial/config/featureFlags";
-import { buildIndustrialOnlineAnalysisIndexPath } from "@/core/industrial/onlineAnalysis";
+import {
+  buildIndustrialOnlineAnalysisIndexPath,
+} from "@/core/industrial/onlineAnalysis";
+import { publishIndustrialLiveProject } from "@/core/industrial/onlineAnalysis/industrialLiveProjectStore";
+import { serializeState, captureRoomSnapshot } from "@/context/projectPersistence";
+import { applyResultados } from "@/context/projectState";
+import type { ProjectState } from "@/context/projectTypes";
+import { getCurrentProjectUser } from "@/core/projects/currentUser";
+import { saveProject } from "@/core/projects/projectsClient";
+import type { PersistedProjectSnapshot } from "@/core/projects/types";
+import { saveProjectRecord } from "@/app/PROJETOS/projetosSnapshotCache";
 import Button from "../ui/Button";
 import { ModalPortal } from "../ui/ModalPortal";
 import { Icon } from "@/components/icons";
@@ -114,9 +124,10 @@ function ExportRow({
 
 export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }: Props) {
   const navigate = useNavigate();
-  const { project, actions } = useProject();
+  const { project, actions, viewerSync } = useProject();
   const sendPackage = useSendProjectPackage();
   const onlineAnalysisEnabled = industrialFeatureFlags.industrialOnlineAnalysis;
+  const [openingAnalise, setOpeningAnalise] = useState(false);
   const {
     sendMethod,
     setSendMethod,
@@ -429,11 +440,54 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                   type="button"
                   variant="primary"
                   fullWidth
-                  disabled={project.estaCarregando || !hasBoxes}
+                  disabled={project.estaCarregando || !hasBoxes || openingAnalise}
                   onClick={() => {
-                    const name = project.projectName?.trim() || "Projeto";
-                    onClose();
-                    navigate(buildIndustrialOnlineAnalysisIndexPath(name));
+                    void (async () => {
+                      setOpeningAnalise(true);
+                      try {
+                        const stateForSnapshot = applyResultados(project as ProjectState);
+                        publishIndustrialLiveProject(stateForSnapshot);
+                        const currentUser = getCurrentProjectUser();
+                        const persistedSnapshot: PersistedProjectSnapshot = {
+                          projectState: serializeState(stateForSnapshot),
+                          viewerSnapshot:
+                            typeof viewerSync?.saveViewerSnapshot === "function"
+                              ? viewerSync.saveViewerSnapshot()
+                              : null,
+                          roomSnapshot: captureRoomSnapshot(),
+                        };
+                        const saved = await saveProject({
+                          name: stateForSnapshot.projectName ?? project.projectName ?? "Projeto",
+                          ownerId: currentUser.ownerId,
+                          ownerName: currentUser.ownerName,
+                          snapshot: persistedSnapshot,
+                          localProjectId: project.currentProjectId ?? undefined,
+                        });
+                        const internalProjectId =
+                          saved?.id ?? project.currentProjectId ?? null;
+                        const name =
+                          saved?.name ??
+                          stateForSnapshot.projectName?.trim() ??
+                          project.projectName?.trim() ??
+                          "Projeto";
+                        if (internalProjectId) {
+                          await saveProjectRecord(internalProjectId, persistedSnapshot, {
+                            ...(saved ?? {}),
+                            name,
+                          });
+                        }
+                        onClose();
+                        navigate(buildIndustrialOnlineAnalysisIndexPath(name));
+                      } catch (err) {
+                        console.error("[UnifiedExportBubble] flush antes de /analise falhou", err);
+                        const name = project.projectName?.trim() || "Projeto";
+                        publishIndustrialLiveProject(applyResultados(project as ProjectState));
+                        onClose();
+                        navigate(buildIndustrialOnlineAnalysisIndexPath(name));
+                      } finally {
+                        setOpeningAnalise(false);
+                      }
+                    })();
                   }}
                   style={{ minHeight: 56 }}
                 >
@@ -447,7 +501,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                     }}
                   >
                     <Icon name="adminChecklist" size={16} aria-hidden />
-                    Análise arquivo completo
+                    {openingAnalise ? "A preparar…" : "Análise arquivo completo"}
                   </span>
                 </Button>
               ) : null}

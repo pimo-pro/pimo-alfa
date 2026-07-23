@@ -1,6 +1,6 @@
 import type { IndustrialOnlineAnalysisDocId } from "./industrialOnlineAnalysisDocs";
 
-/** Hash curto e estÃ¡vel para rowIds derivados. */
+/** Hash curto e estável para rowIds derivados. */
 export function stableHash(input: string): string {
   let h = 2166136261;
   for (let i = 0; i < input.length; i++) {
@@ -17,6 +17,13 @@ export function makeCanonicalRowId(
 ): string {
   const payload = parts.map((p) => String(p ?? "").trim()).join("|");
   return `c:${docId}:${sectionId}:${stableHash(payload)}`;
+}
+
+/** RowId estável da lista de corte (cutlist + técnico partilham o namespace `cutlist`). */
+export function makeSsotCutlistRowId(
+  parts: Array<string | number | null | undefined>
+): string {
+  return makeCanonicalRowId("cutlist", "cutlist", parts);
 }
 
 export function makeAddedRowId(): string {

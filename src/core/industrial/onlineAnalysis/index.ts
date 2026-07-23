@@ -38,7 +38,20 @@ export {
   emptyIndustrialDocumentOverride,
   normalizeIndustrialDocumentOverrides,
 } from "./industrialDocumentOverridesTypes";
-export { makeAddedRowId } from "./industrialOnlineAnalysisRowIds";
+export { makeAddedRowId, makeSsotCutlistRowId } from "./industrialOnlineAnalysisRowIds";
+export {
+  getDocumentaryOverrideDocId,
+  isCutlistSsotDocId,
+  resolveDocumentaryOverride,
+  legacyTecnicoRowIdAlias,
+} from "./industrialDocumentarySsot";
+export {
+  publishIndustrialLiveProject,
+  getIndustrialLiveProject,
+  getIndustrialLiveProjectMatchingSlug,
+  subscribeIndustrialLiveProject,
+  clearIndustrialLiveProject,
+} from "./industrialLiveProjectStore";
 export {
   INDUSTRIAL_DOCUMENT_HISTORY_CAP,
   appendIndustrialDocumentHistory,

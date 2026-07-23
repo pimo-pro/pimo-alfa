@@ -9,6 +9,10 @@ import type {
   IndustrialOnlineAnalysisTableSection,
 } from "./industrialOnlineAnalysisViewTypes";
 import { sanitizeIndustrialDocumentOverride } from "./industrialOnlineAnalysisValidation";
+import {
+  legacyTecnicoRowIdAlias,
+  resolveDocumentaryOverride,
+} from "./industrialDocumentarySsot";
 
 export type {
   IndustrialOnlineAnalysisEditableColumn,
@@ -16,12 +20,29 @@ export type {
   IndustrialOnlineAnalysisTableSection,
 } from "./industrialOnlineAnalysisViewTypes";
 
+function lookupRowPatch(
+  patches: IndustrialDocumentOverride["rowPatches"],
+  deleted: Set<string>,
+  rowId: string
+): { deleted: boolean; patch: IndustrialDocumentOverride["rowPatches"][string] | undefined } {
+  if (deleted.has(rowId)) return { deleted: true, patch: undefined };
+  const direct = patches[rowId];
+  if (direct) return { deleted: false, patch: direct };
+  const legacy = legacyTecnicoRowIdAlias(rowId);
+  if (legacy) {
+    if (deleted.has(legacy)) return { deleted: true, patch: undefined };
+    const legacyPatch = patches[legacy];
+    if (legacyPatch) return { deleted: false, patch: legacyPatch };
+  }
+  return { deleted: false, patch: undefined };
+}
+
 export function applyIndustrialDocumentOverrides(
   docId: IndustrialOnlineAnalysisDocId,
   sections: IndustrialOnlineAnalysisTableSection[],
   store: IndustrialDocumentOverridesStore | undefined
 ): IndustrialOnlineAnalysisTableSection[] {
-  const override = store?.[docId];
+  const override = resolveDocumentaryOverride(store, docId);
   if (!override) {
     return sections.map((section) => ({
       ...section,
@@ -40,8 +61,9 @@ export function applyIndustrialDocumentOverrides(
   return sections.map((section) => {
     const canonicalRows: IndustrialOnlineAnalysisRow[] = [];
     for (const row of section.rows) {
-      if (deleted.has(row.rowId)) continue;
-      const patch = patches[row.rowId];
+      const looked = lookupRowPatch(patches, deleted, row.rowId);
+      if (looked.deleted) continue;
+      const patch = looked.patch;
       if (!patch) {
         canonicalRows.push({
           ...row,
@@ -95,13 +117,19 @@ export function applyIndustrialDocumentOverrides(
     const rows = [...canonicalRows, ...addedRows];
     const modified =
       rows.some((r) => r.origin === "added" || r.modifiedFields.length > 0) ||
-      [...deleted].some((id) => section.rows.some((r) => r.rowId === id));
+      [...deleted].some((id) =>
+        section.rows.some((r) => {
+          if (r.rowId === id) return true;
+          const legacy = legacyTecnicoRowIdAlias(r.rowId);
+          return legacy != null && legacy === id;
+        })
+      );
 
     return { ...section, rows, modified };
   });
 }
 
-/** Diff draft sections ? override document (relativo ao canÃ³nico sem overrides). */
+/** Diff draft sections ? override document (relativo ao cannico sem overrides). */
 export function buildOverrideFromDraft(input: {
   docId: IndustrialOnlineAnalysisDocId;
   canonicalSections: IndustrialOnlineAnalysisTableSection[];
@@ -183,7 +211,7 @@ export function documentHasOverrides(
   store: IndustrialDocumentOverridesStore | undefined,
   docId: IndustrialOnlineAnalysisDocId
 ): boolean {
-  const o = store?.[docId];
+  const o = resolveDocumentaryOverride(store, docId);
   if (!o) return false;
   return (
     Object.keys(o.rowPatches ?? {}).length > 0 ||

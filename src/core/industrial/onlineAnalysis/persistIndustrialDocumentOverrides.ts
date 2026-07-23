@@ -1,5 +1,5 @@
 /**
- * Persist√©ncia de overrides + hist√≥rico industriais no snapshot PROJETOS / offline.
+ * Persistùncia de overrides + histùrico industriais no snapshot PROJETOS / offline.
  */
 
 import { serializeState } from "@/context/projectPersistence";
@@ -14,6 +14,7 @@ import type { IndustrialDocumentOverride } from "./industrialDocumentOverridesTy
 import type { IndustrialDocumentHistoryStore } from "./industrialDocumentHistoryTypes";
 import { appendIndustrialDocumentHistory } from "./industrialDocumentHistoryTypes";
 import { diffOverridesToHistoryEntries } from "./diffOverridesToHistoryEntries";
+import { getDocumentaryOverrideDocId } from "./industrialDocumentarySsot";
 
 export async function persistIndustrialDocumentOverridesToRecord(
   record: SavedProjectRecord,
@@ -25,12 +26,14 @@ export async function persistIndustrialDocumentOverridesToRecord(
   let nextHistory = projectState.industrialDocumentHistory ?? [];
 
   if (options?.historyDocId) {
+    const historyKey = getDocumentaryOverrideDocId(options.historyDocId);
     const before =
       options.previousOverride ??
-      projectState.industrialDocumentOverrides?.[options.historyDocId];
-    const after = nextOverrides[options.historyDocId];
+      projectState.industrialDocumentOverrides?.[historyKey] ??
+      (historyKey === "cutlist" ? projectState.industrialDocumentOverrides?.tecnico : undefined);
+    const after = nextOverrides[historyKey];
     const entries = diffOverridesToHistoryEntries(
-      options.historyDocId,
+      historyKey,
       before,
       after,
       { userId: user.ownerId, userName: user.ownerName }
@@ -70,15 +73,20 @@ export function mergeDocOverride(
   docId: IndustrialOnlineAnalysisDocId,
   override: IndustrialDocumentOverride
 ): IndustrialDocumentOverridesStore {
+  const key = getDocumentaryOverrideDocId(docId);
   const next = { ...(store ?? {}) };
   const empty =
     Object.keys(override.rowPatches).length === 0 &&
     override.addedRows.length === 0 &&
     override.deletedRowIds.length === 0;
   if (empty) {
-    delete next[docId];
+    delete next[key];
   } else {
-    next[docId] = override;
+    next[key] = override;
+  }
+  // Cutlist SSOT: limpar chave legado `tecnico` para nùo divergir.
+  if (key === "cutlist" && "tecnico" in next) {
+    delete next.tecnico;
   }
   return next;
 }
@@ -89,9 +97,12 @@ export function applyOverrideWithHistory(
   nextOverride: IndustrialDocumentOverride,
   actor: { userId: string; userName: string }
 ): Pick<ProjectState, "industrialDocumentOverrides" | "industrialDocumentHistory"> {
-  const before = prev.industrialDocumentOverrides?.[docId];
+  const storeKey = getDocumentaryOverrideDocId(docId);
+  const before =
+    prev.industrialDocumentOverrides?.[storeKey] ??
+    (storeKey === "cutlist" ? prev.industrialDocumentOverrides?.tecnico : undefined);
   const nextOverrides = mergeDocOverride(prev.industrialDocumentOverrides, docId, nextOverride);
-  const entries = diffOverridesToHistoryEntries(docId, before, nextOverrides[docId], actor);
+  const entries = diffOverridesToHistoryEntries(storeKey, before, nextOverrides[storeKey], actor);
   return {
     industrialDocumentOverrides: nextOverrides,
     industrialDocumentHistory: appendIndustrialDocumentHistory(

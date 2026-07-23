@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
-import { reviveState } from "@/context/projectPersistence";
-import { applyResultados } from "@/context/projectState";
-import type { ProjectState } from "@/context/projectTypes";
-import type { SavedProjectRecord } from "@/core/projects/types";
 import { getCurrentProjectUser } from "@/core/projects/currentUser";
 import {
   buildIndustrialOnlineAnalysisIndexPath,
@@ -19,25 +15,16 @@ import { buildOverrideFromDraft } from "@/core/industrial/onlineAnalysis/applyIn
 import { makeAddedRowId } from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisRowIds";
 import type { IndustrialOnlineAnalysisTableSection } from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisViewTypes";
 import type { IndustrialHistoryFocus } from "@/core/industrial/onlineAnalysis/industrialDocumentHistoryTypes";
-import {
-  mergeDocOverride,
-  persistIndustrialDocumentOverridesToRecord,
-} from "@/core/industrial/onlineAnalysis/persistIndustrialDocumentOverrides";
+import { mergeDocOverride } from "@/core/industrial/onlineAnalysis/persistIndustrialDocumentOverrides";
+import { getDocumentaryOverrideDocId } from "@/core/industrial/onlineAnalysis/industrialDocumentarySsot";
+import { resolveDocumentaryOverride } from "@/core/industrial/onlineAnalysis/industrialDocumentarySsot";
 import { jumpToIndustrialHistoryCell } from "@/core/industrial/onlineAnalysis/jumpToIndustrialHistoryCell";
 import { industrialFeatureFlags } from "@/industrial/config/featureFlags";
 
 import IndustrialOnlineAnalysisLayout from "../../../analise/IndustrialOnlineAnalysisLayout";
 import IndustrialOnlineAnalysisTable from "../../../analise/IndustrialOnlineAnalysisTable";
 import IndustrialOnlineAnalysisHistoryPanel from "../../../analise/IndustrialOnlineAnalysisHistoryPanel";
-import {
-  getProjetosSnapshot,
-  setProjetosSnapshot,
-} from "../../../projetosSnapshotCache";
-import { loadProjectRecordByPageSlug } from "../../../projetosProjectLoader";
-import {
-  decodeProjetosPageSlug,
-  snapshotMatchesProjetosPageSlug,
-} from "../../../projetosPageSlug";
+import { useIndustrialAnalysisProject } from "../../../analise/useIndustrialAnalysisProject";
 
 function cloneSections(
   sections: IndustrialOnlineAnalysisTableSection[]
@@ -59,69 +46,15 @@ export default function ProjetosAnaliseDocPage() {
   const enabled = industrialFeatureFlags.industrialOnlineAnalysis;
   const validDoc = isIndustrialOnlineAnalysisDocId(docId);
 
-  const [snapshot, setSnapshot] = useState<SavedProjectRecord | null>(() => {
-    const cached = getProjetosSnapshot();
-    return snapshotMatchesProjetosPageSlug(cached, pageSlug) ? cached : null;
-  });
-  const [loading, setLoading] = useState(
-    () => !snapshotMatchesProjetosPageSlug(getProjetosSnapshot(), pageSlug)
-  );
-  const [error, setError] = useState<string | null>(null);
+  const { projectState, projectName, loading, error, commitOverrides } =
+    useIndustrialAnalysisProject(pageSlug);
+
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<IndustrialOnlineAnalysisTableSection[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!pageSlug) {
-      setError("Projeto nÃ£o especificado na URL.");
-      setLoading(false);
-      return;
-    }
-
-    const cached = getProjetosSnapshot();
-    if (snapshotMatchesProjetosPageSlug(cached, pageSlug)) {
-      setSnapshot(cached);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    void loadProjectRecordByPageSlug(pageSlug).then((record) => {
-      if (cancelled) return;
-      if (!record) {
-        setSnapshot(null);
-        setLoading(false);
-        setError("Projeto nÃ£o encontrado.");
-        return;
-      }
-      setProjetosSnapshot(record);
-      setSnapshot(record);
-      setLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pageSlug]);
-
-  const projectName = useMemo(() => {
-    if (snapshot?.name?.trim()) return snapshot.name.trim();
-    return decodeProjetosPageSlug(pageSlug ?? "Projeto");
-  }, [snapshot, pageSlug]);
-
-  const projectState: ProjectState | null = useMemo(() => {
-    if (!snapshot?.snapshot?.projectState) return null;
-    const revived = reviveState(snapshot.snapshot.projectState);
-    if (!revived) return null;
-    return applyResultados(revived);
-  }, [snapshot]);
 
   const view = useMemo(() => {
     if (!validDoc || !projectState) return null;
@@ -246,7 +179,7 @@ export default function ProjetosAnaliseDocPage() {
   };
 
   const saveEdit = async () => {
-    if (!validDoc || !projectState || !draft || !snapshot) return;
+    if (!validDoc || !projectState || !draft) return;
     setSaving(true);
     setSaveMsg(null);
     try {
@@ -257,9 +190,13 @@ export default function ProjetosAnaliseDocPage() {
       }
 
       const user = getCurrentProjectUser();
-      const previousOverride = projectState.industrialDocumentOverrides?.[docId];
+      const storeKey = getDocumentaryOverrideDocId(docId);
+      const previousOverride = resolveDocumentaryOverride(
+        projectState.industrialDocumentOverrides,
+        docId
+      );
       const override = buildOverrideFromDraft({
-        docId,
+        docId: storeKey,
         canonicalSections,
         draftSections: draft,
         actor: { userId: user.ownerId, userName: user.ownerName },
@@ -271,17 +208,13 @@ export default function ProjetosAnaliseDocPage() {
         override
       );
 
-      const updated = await persistIndustrialDocumentOverridesToRecord(
-        snapshot,
-        projectState,
-        nextOverrides,
-        { historyDocId: docId, previousOverride }
-      );
-      setProjetosSnapshot(updated);
-      setSnapshot(updated);
+      await commitOverrides(nextOverrides, {
+        historyDocId: storeKey,
+        previousOverride,
+      });
       setEditing(false);
       setDraft(null);
-      setSaveMsg("AlteraÃ§Ãµes guardadas.");
+      setSaveMsg("Alterações guardadas.");
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Falha ao guardar.");
     } finally {
@@ -297,7 +230,7 @@ export default function ProjetosAnaliseDocPage() {
         docLabel={validDoc ? docId : undefined}
       >
         <p style={{ color: "#64748b", fontSize: 14 }}>
-          A funcionalidade Â«AnÃ¡lise arquivo completoÂ» estÃ¡ desativada (
+          A funcionalidade «Análise arquivo completo» está desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
       </IndustrialOnlineAnalysisLayout>
@@ -309,7 +242,7 @@ export default function ProjetosAnaliseDocPage() {
       <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
         <p style={{ color: "#dc2626" }}>Documento industrial desconhecido: {docId}</p>
         <Link to={buildIndustrialOnlineAnalysisIndexPath(projectName)} style={{ color: "#2563eb" }}>
-          Voltar ao Ã­ndice
+          Voltar ao índice
         </Link>
       </IndustrialOnlineAnalysisLayout>
     );
@@ -321,10 +254,10 @@ export default function ProjetosAnaliseDocPage() {
       pageSlug={pageSlug ?? projectName}
       docLabel={view?.label ?? docId}
     >
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projetoâ€¦</p> : null}
+      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
       {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
       {!loading && !error && !view ? (
-        <p style={{ color: "#dc2626" }}>NÃ£o foi possÃ­vel construir a vista deste documento.</p>
+        <p style={{ color: "#dc2626" }}>Não foi possível construir a vista deste documento.</p>
       ) : null}
       {!loading && !error && view ? (
         <>
@@ -338,8 +271,8 @@ export default function ProjetosAnaliseDocPage() {
             }}
           >
             <p style={{ margin: 0, fontSize: 13, color: "#64748b", flex: 1 }}>
-              {view.description} â€” projeto <strong>{view.projectName}</strong>
-              {editing ? " â€” modo ediÃ§Ã£o (draft local)" : ""}
+              {view.description} — projeto <strong>{view.projectName}</strong>
+              {editing ? " — modo edição (draft local)" : ""}
             </p>
             {!editing ? (
               <>
@@ -357,7 +290,7 @@ export default function ProjetosAnaliseDocPage() {
                     fontSize: 13,
                   }}
                 >
-                  {generatingPdf ? "A gerarâ€¦" : "Gerar PDF"}
+                  {generatingPdf ? "A gerar…" : "Gerar PDF"}
                 </button>
                 <button
                   type="button"
@@ -406,7 +339,7 @@ export default function ProjetosAnaliseDocPage() {
                     fontSize: 13,
                   }}
                 >
-                  {saving ? "A guardarâ€¦" : "Guardar"}
+                  {saving ? "A guardar…" : "Guardar"}
                 </button>
                 <button
                   type="button"
@@ -442,9 +375,9 @@ export default function ProjetosAnaliseDocPage() {
             <p style={{ margin: "0 0 12px", fontSize: 13, color: "#1d4ed8" }}>{pdfMsg}</p>
           ) : null}
           <p style={{ margin: "0 0 16px", fontSize: 12, color: "#64748b" }}>
-            Overrides documentais: design 3D e CNC/TCN/drill nÃ£o sÃ£o alterados. A cutlist editada
-            alimenta as etiquetas UEE (whitelist). Remover linha omite sÃ³ a etiqueta. Downloads nÃ£o
-            registam histÃ³rico. Quantidade e material invÃ¡lidos bloqueiam o Guardar.
+            Overrides documentais: design 3D e CNC/TCN/drill não são alterados. A cutlist editada
+            alimenta as etiquetas UEE (whitelist). Remover linha omite só a etiqueta. Downloads não
+            registam histórico. Quantidade e material inválidos bloqueiam o Guardar.
           </p>
           {displaySections.map((section) => (
             <IndustrialOnlineAnalysisTable
@@ -464,14 +397,14 @@ export default function ProjetosAnaliseDocPage() {
               entries={historyEntries}
               projectName={projectName}
               lockedDocId={docId}
-              title="HistÃ³rico deste documento"
+              title="Histórico deste documento"
             />
           ) : null}
           <Link
             to={buildIndustrialOnlineAnalysisIndexPath(projectName)}
             style={{ fontSize: 13, color: "#2563eb" }}
           >
-            ? Voltar ao Ã­ndice de anÃ¡lise
+            Voltar ao índice de análise
           </Link>
         </>
       ) : null}

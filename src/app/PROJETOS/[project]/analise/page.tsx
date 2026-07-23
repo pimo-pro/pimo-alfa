@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { reviveState } from "@/context/projectPersistence";
-import { applyResultados } from "@/context/projectState";
-import type { ProjectState } from "@/context/projectTypes";
-import type { SavedProjectRecord } from "@/core/projects/types";
 import type { IndustrialHistoryEntry } from "@/core/industrial/onlineAnalysis/industrialDocumentHistoryTypes";
 import type { IndustrialOnlineAnalysisDocId } from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs";
 import {
@@ -21,80 +17,18 @@ import { industrialFeatureFlags } from "@/industrial/config/featureFlags";
 import IndustrialOnlineAnalysisLayout from "../../analise/IndustrialOnlineAnalysisLayout";
 import IndustrialOnlineAnalysisHistoryPanel from "../../analise/IndustrialOnlineAnalysisHistoryPanel";
 import IndustrialOnlineAnalysisDownloadBar from "../../analise/IndustrialOnlineAnalysisDownloadBar";
-import {
-  getProjetosSnapshot,
-  setProjetosSnapshot,
-} from "../../projetosSnapshotCache";
-import { loadProjectRecordByPageSlug } from "../../projetosProjectLoader";
-import {
-  decodeProjetosPageSlug,
-  snapshotMatchesProjetosPageSlug,
-} from "../../projetosPageSlug";
+import { useIndustrialAnalysisProject } from "../../analise/useIndustrialAnalysisProject";
 
 export default function ProjetosAnaliseIndexPage() {
   const { project: pageSlug } = useParams();
   const enabled = industrialFeatureFlags.industrialOnlineAnalysis;
 
-  const [snapshot, setSnapshot] = useState<SavedProjectRecord | null>(() => {
-    const cached = getProjetosSnapshot();
-    return snapshotMatchesProjetosPageSlug(cached, pageSlug) ? cached : null;
-  });
-  const [loading, setLoading] = useState(
-    () => !snapshotMatchesProjetosPageSlug(getProjetosSnapshot(), pageSlug)
-  );
-  const [error, setError] = useState<string | null>(null);
+  const { projectState, projectName, loading, error } =
+    useIndustrialAnalysisProject(pageSlug);
+
   const [selected, setSelected] = useState<Set<IndustrialOnlineAnalysisDocId>>(new Set());
   const [busy, setBusy] = useState(false);
   const [dlMsg, setDlMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!pageSlug) {
-      setError("Projeto nÃ£o especificado na URL.");
-      setLoading(false);
-      return;
-    }
-
-    const cached = getProjetosSnapshot();
-    if (snapshotMatchesProjetosPageSlug(cached, pageSlug)) {
-      setSnapshot(cached);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    void loadProjectRecordByPageSlug(pageSlug).then((record) => {
-      if (cancelled) return;
-      if (!record) {
-        setSnapshot(null);
-        setLoading(false);
-        setError("Projeto nÃ£o encontrado.");
-        return;
-      }
-      setProjetosSnapshot(record);
-      setSnapshot(record);
-      setLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pageSlug]);
-
-  const projectName = useMemo(() => {
-    if (snapshot?.name?.trim()) return snapshot.name.trim();
-    return decodeProjetosPageSlug(pageSlug ?? "Projeto");
-  }, [snapshot, pageSlug]);
-
-  const projectState: ProjectState | null = useMemo(() => {
-    if (!snapshot?.snapshot?.projectState) return null;
-    const revived = reviveState(snapshot.snapshot.projectState);
-    if (!revived) return null;
-    return applyResultados(revived);
-  }, [snapshot]);
 
   const revivedOk = projectState != null;
   const historyEntries: IndustrialHistoryEntry[] =
@@ -158,7 +92,7 @@ export default function ProjetosAnaliseIndexPage() {
         pageSlug={pageSlug ?? projectName}
       >
         <p style={{ color: "#64748b", fontSize: 14 }}>
-          A funcionalidade Â«AnÃ¡lise arquivo completoÂ» estÃ¡ desativada (
+          A funcionalidade «Análise arquivo completo» está desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
       </IndustrialOnlineAnalysisLayout>
@@ -167,10 +101,10 @@ export default function ProjetosAnaliseIndexPage() {
 
   return (
     <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projetoâ€¦</p> : null}
+      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
       {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
       {!loading && !error && !revivedOk ? (
-        <p style={{ color: "#dc2626" }}>NÃ£o foi possÃ­vel ler o estado do projeto.</p>
+        <p style={{ color: "#dc2626" }}>Não foi possível ler o estado do projeto.</p>
       ) : null}
       {!loading && !error && revivedOk && projectState ? (
         <>
@@ -201,8 +135,8 @@ export default function ProjetosAnaliseIndexPage() {
           />
           <div style={{ display: "grid", gap: 10 }}>
             <p style={{ margin: "0 0 8px", fontSize: 13, color: "#64748b" }}>
-              Documentos industriais (leitura + ediÃ§Ã£o documental + download seletivo). A cutlist
-              editada alimenta as etiquetas UEE (material/obs/qtd/peÃ§a/caixa) sem alterar CNC.
+              Documentos industriais (leitura + edição documental + download seletivo). A cutlist
+              editada alimenta as etiquetas UEE (material/obs/qtd/peça/caixa) sem alterar CNC.
             </p>
             {documentHasOverrides(projectState.industrialDocumentOverrides, "cutlist") ? (
               <p
@@ -215,8 +149,8 @@ export default function ProjetosAnaliseIndexPage() {
                   borderRadius: 6,
                 }}
               >
-                A cutlist tem ediÃ§Ãµes documentais: as etiquetas UEE reflectem material, qtd,
-                observaÃ§Ãµes, peÃ§a e caixa. CNC/TCN/drill/nesting nÃ£o sÃ£o alterados.
+                A cutlist tem edições documentais: as etiquetas UEE reflectem material, qtd,
+                observações, peça e caixa. CNC/TCN/drill/nesting não são alterados.
               </p>
             ) : null}
             {INDUSTRIAL_ONLINE_ANALYSIS_DOCS.map((doc) => {
@@ -282,7 +216,7 @@ export default function ProjetosAnaliseIndexPage() {
                       ) : null}
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                      {doc.description} â€” <code style={{ fontSize: 11 }}>{doc.id}</code>
+                      {doc.description} — <code style={{ fontSize: 11 }}>{doc.id}</code>
                     </div>
                   </Link>
                   <button
@@ -309,7 +243,7 @@ export default function ProjetosAnaliseIndexPage() {
           <IndustrialOnlineAnalysisHistoryPanel
             entries={historyEntries}
             projectName={projectName}
-            title="HistÃ³rico global"
+            title="Histórico global"
           />
         </>
       ) : null}

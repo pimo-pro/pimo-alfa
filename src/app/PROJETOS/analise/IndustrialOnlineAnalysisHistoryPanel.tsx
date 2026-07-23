@@ -6,6 +6,7 @@ import type { IndustrialOnlineAnalysisDocId } from "@/core/industrial/onlineAnal
 import { INDUSTRIAL_ONLINE_ANALYSIS_DOCS } from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs";
 import { buildIndustrialOnlineAnalysisDocPath } from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisPaths";
 import { jumpToIndustrialHistoryCell } from "@/core/industrial/onlineAnalysis/jumpToIndustrialHistoryCell";
+import { isCutlistSsotDocId } from "@/core/industrial/onlineAnalysis/industrialDocumentarySsot";
 
 type Props = {
   entries: IndustrialHistoryEntry[];
@@ -23,9 +24,9 @@ const panel: CSSProperties = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
-  add: "Adi√ß√£o",
-  remove: "Remo√ß√£o",
-  modify: "Modifica√ß√£o",
+  add: "Adiùùo",
+  remove: "Remoùùo",
+  modify: "Modificaùùo",
 };
 
 function formatTs(ts: string): string {
@@ -37,16 +38,16 @@ function formatTs(ts: string): string {
 }
 
 function truncate(v: string | null, max = 48): string {
-  if (v == null) return "‚Äî";
+  if (v == null) return "ù";
   if (v.length <= max) return v;
-  return `${v.slice(0, max)}‚Ä¶`;
+  return `${v.slice(0, max)}ù`;
 }
 
 export default function IndustrialOnlineAnalysisHistoryPanel({
   entries,
   projectName,
   lockedDocId,
-  title = "Hist√≥rico",
+  title = "Histùrico",
 }: Props) {
   const navigate = useNavigate();
   const [docFilter, setDocFilter] = useState<string>(lockedDocId ?? "");
@@ -61,7 +62,13 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
 
   const filtered = useMemo(() => {
     const list = entries.filter((e) => {
-      if (lockedDocId && e.docId !== lockedDocId) return false;
+      if (lockedDocId) {
+        if (isCutlistSsotDocId(lockedDocId)) {
+          if (!isCutlistSsotDocId(e.docId as IndustrialOnlineAnalysisDocId)) return false;
+        } else if (e.docId !== lockedDocId) {
+          return false;
+        }
+      }
       if (!lockedDocId && docFilter && e.docId !== docFilter) return false;
       if (userFilter && e.userName !== userFilter) return false;
       if (typeFilter && e.changeType !== typeFilter) return false;
@@ -85,7 +92,7 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
     requestAnimationFrame(() => {
       const result = jumpToIndustrialHistoryCell(entry.focus);
       if (!result.ok) {
-        setMessage("Campo n√£o encontrado (linha removida ou documento alterado).");
+        setMessage("Campo nùo encontrado (linha removida ou documento alterado).");
       }
     });
   };
@@ -143,9 +150,9 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
             style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }}
           >
             <option value="">Todos os tipos</option>
-            <option value="modify">Modifica√ß√£o</option>
-            <option value="add">Adi√ß√£o</option>
-            <option value="remove">Remo√ß√£o</option>
+            <option value="modify">Modificaùùo</option>
+            <option value="add">Adiùùo</option>
+            <option value="remove">Remoùùo</option>
           </select>
         </label>
       </div>
@@ -158,7 +165,7 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
 
       {filtered.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: "#64748b" }} role="status">
-          Sem entradas de hist√≥rico.
+          Sem entradas de histùrico.
         </p>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 6 }}>
