@@ -14,7 +14,6 @@ import { gerarFerragensIndustriais, agruparPorComponente } from "../industriais/
 import { computeChapasReal } from "./computeChapasReal";
 import { getSheetDefinitionFromSettings } from "../cnc/cncPipeline";
 import type { BoxModule, CutListItemComPreco } from "../types";
-import type { RulesConfig } from "../rules/rulesConfig";
 import type { ComponentType } from "../components/componentTypes";
 import type { Ferragem } from "../ferragens/ferragens";
 import type { MaterialIndustrial } from "../manufacturing/materials";
