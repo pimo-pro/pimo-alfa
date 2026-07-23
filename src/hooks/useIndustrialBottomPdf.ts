@@ -20,6 +20,8 @@ import { applyResultados } from "../context/projectState";
 import type { ProjectState } from "../context/projectTypes";
 import { resolveIndustrialZipPdf } from "../core/industrial/onlineAnalysis/resolveIndustrialZipPdf";
 import type { IndustrialPdfDoc } from "../core/industrial/onlineAnalysis/resolveIndustrialZipPdf";
+import { buildClassicIndustrialPdf } from "../core/industrial/onlineAnalysis/buildClassicIndustrialPdf";
+import { industrialArmazemPdfFileName } from "../core/pdf/pdfIndustrialArmazem";
 
 export function useIndustrialBottomPdf() {
   const { project } = useProject();
@@ -36,9 +38,14 @@ export function useIndustrialBottomPdf() {
 
   const saveResolvedPdf = useCallback(
     async (
-      docId: "resumo_financeiro" | "pecas_totais" | "ferragens_totais" | "totais_projeto",
+      docId:
+        | "resumo_financeiro"
+        | "pecas_totais"
+        | "ferragens_totais"
+        | "totais_projeto"
+        | "industrial_armazem",
       fileName: string,
-      classic: () => IndustrialPdfDoc
+      classic: () => IndustrialPdfDoc | Promise<IndustrialPdfDoc>
     ) => {
       beginIndustrialFileGeneration();
       try {
@@ -75,15 +82,21 @@ export function useIndustrialBottomPdf() {
   const exportResumoFinanceiroPdf = useCallback(async () => {
     await saveResolvedPdf("resumo_financeiro", resumoFinanceiroPdfFileName(projectName), () =>
       buildResumoFinanceiroPdf(
-        boxes,
-        project.rules,
-        project.materialId,
-        projectName,
+        {
+          boxes,
+          rules: project.rules,
+          materialId: project.materialId,
+          projectName,
+          remates: project.remates,
+          rodapes: project.rodapes,
+          extractedPartsByBoxId: project.extractedPartsByBoxId,
+          industrialPieceEdits: project.industrialPieceEdits,
+        },
         materials,
         canShowSectionPrices("resumoFinanceiro", isAdmin)
       )
     );
-  }, [boxes, project.rules, project.materialId, projectName, materials, isAdmin, saveResolvedPdf]);
+  }, [boxes, project, projectName, materials, isAdmin, saveResolvedPdf]);
 
   const exportPecasTotaisPdf = useCallback(async () => {
     await saveResolvedPdf("pecas_totais", pecasTotaisPdfFileName(projectName), () =>
@@ -132,10 +145,16 @@ export function useIndustrialBottomPdf() {
   const exportTotaisProjetoPdf = useCallback(async () => {
     await saveResolvedPdf("totais_projeto", totaisProjetoPdfFileName(projectName), () =>
       buildTotaisProjetoPdf(
-        boxes,
-        project.rules,
-        project.materialId,
-        projectName,
+        {
+          boxes,
+          rules: project.rules,
+          materialId: project.materialId,
+          projectName,
+          remates: project.remates,
+          rodapes: project.rodapes,
+          extractedPartsByBoxId: project.extractedPartsByBoxId,
+          industrialPieceEdits: project.industrialPieceEdits,
+        },
         materials,
         canShowSectionPrices("totaisProjeto", isAdmin),
         {
@@ -152,12 +171,23 @@ export function useIndustrialBottomPdf() {
     );
   }, [boxes, project, projectName, materials, isAdmin, cutlistData, saveResolvedPdf]);
 
+  /** Hub armazem — sempre via resolve + classic (P3.2). */
+  const exportIndustrialArmazemPdf = useCallback(async () => {
+    const full = fullProject();
+    await saveResolvedPdf(
+      "industrial_armazem",
+      industrialArmazemPdfFileName(projectName),
+      () => buildClassicIndustrialPdf(full, "industrial_armazem")
+    );
+  }, [project, projectName, saveResolvedPdf]);
+
   return {
     exportResumoFinanceiroPdf,
     exportPecasTotaisPdf,
     exportFerragensTotaisPdf,
     viewFerragensTotaisPdf,
     exportTotaisProjetoPdf,
+    exportIndustrialArmazemPdf,
     isAdmin,
   };
 }

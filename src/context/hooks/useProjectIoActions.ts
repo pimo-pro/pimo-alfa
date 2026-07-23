@@ -23,6 +23,7 @@ import { mergeProjectSnapshotsIntoWorkspace } from "../../core/projects/projectM
 import { defaultState } from "../projectState";
 import { devLogger } from "../../utils/devLogger";
 import { clearAllCutlistCache } from "../../core/manufacturing/cutlistFromBoxes";
+import { clearIndustrialLiveProject } from "../../core/industrial/onlineAnalysis/industrialLiveProjectStore";
 import { useToast } from "../../context/ToastContext";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { prepareImportedProjectState } from "../../industrial/import/loadImportedPimoProject";
@@ -121,6 +122,8 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
           }
         }
         clearAllCutlistCache();
+        // P3.5 — trocar projeto: limpar live e republicar via ProjectProvider.
+        clearIndustrialLiveProject();
         updateProject(() => ({ ...applyResultados(restored), currentProjectId: id }));
       },
       loadImportedPimoProject: async (snapshot, projectNameSlug) => {
@@ -199,6 +202,7 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
         undoStackRef.current = [];
         redoStackRef.current = [];
         clearAllCutlistCache();
+        clearIndustrialLiveProject();
         updateProject(() => ({ ...freshState, lastAutosaveTime: saved.updatedAt }), false);
         return saved;
       },

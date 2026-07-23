@@ -1,7 +1,7 @@
 import type jsPDF from "jspdf";
-import type { BoxModule } from "../types";
-import type { RulesConfig } from "../rules/rulesConfig";
+import type { ProjectState } from "../../context/projectTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
+import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
 import { buildResumoFinanceiroPdfRows } from "../industrial/industrialBottomSectionData";
 import {
   createIndustrialSectionPdf,
@@ -15,29 +15,27 @@ export function resumoFinanceiroPdfFileName(projectName: string): string {
   return industrialSectionPdfFileName(projectName, "resumo_financeiro");
 }
 
+type ResumoProjectSlice = Pick<
+  ProjectState,
+  | "boxes"
+  | "rules"
+  | "materialId"
+  | "projectName"
+  | "remates"
+  | "rodapes"
+  | "extractedPartsByBoxId"
+> & { industrialPieceEdits?: IndustrialPieceEditsStore };
+
 export function buildResumoFinanceiroPdf(
-  boxes: BoxModule[],
-  rules: RulesConfig,
-  materialId: string | undefined,
-  projectName: string,
+  project: ResumoProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean
 ): jsPDF {
+  const projectName = project.projectName?.trim() || "Projeto";
   const meta = resolveIndustrialSectionPdfMeta("Resumo Financeiro — Detalhado", projectName);
-  const { summary, pecas } = buildResumoFinanceiroPdfRows(
-    boxes,
-    rules,
-    materialId,
-    projectName,
-    materials,
-    showPrices
-  );
+  const { summary, pecas } = buildResumoFinanceiroPdfRows(project, materials, showPrices);
 
-  const doc = createIndustrialSectionPdf(
-    meta,
-    [["Indicador", "Valor"]],
-    summary
-  );
+  const doc = createIndustrialSectionPdf(meta, [["Indicador", "Valor"]], summary);
 
   const y = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 80;
   drawIndustrialSectionTable(
@@ -52,22 +50,13 @@ export function buildResumoFinanceiroPdf(
 
 export function appendResumoFinanceiroSection(
   doc: jsPDF,
-  boxes: BoxModule[],
-  rules: RulesConfig,
-  materialId: string | undefined,
-  projectName: string,
+  project: ResumoProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean
 ): void {
+  const projectName = project.projectName?.trim() || "Projeto";
   const meta = resolveIndustrialSectionPdfMeta("Resumo Financeiro — Detalhado", projectName);
-  const { summary } = buildResumoFinanceiroPdfRows(
-    boxes,
-    rules,
-    materialId,
-    projectName,
-    materials,
-    showPrices
-  );
+  const { summary } = buildResumoFinanceiroPdfRows(project, materials, showPrices);
   doc.addPage("a4", "portrait");
   const y = drawIndustrialSectionPdfHeader(doc, meta);
   drawIndustrialSectionTable(doc, y, [["Indicador", "Valor"]], summary);

@@ -1,7 +1,7 @@
 import type jsPDF from "jspdf";
-import type { BoxModule } from "../types";
-import type { RulesConfig } from "../rules/rulesConfig";
+import type { ProjectState } from "../../context/projectTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
+import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
 import { buildTotaisProjetoPdfRows } from "../industrial/industrialBottomSectionData";
 import {
   createIndustrialSectionPdf,
@@ -26,48 +26,39 @@ export type TotaisProjetoPdfExtras = {
   custoTotal?: number;
 };
 
+type TotaisProjectSlice = Pick<
+  ProjectState,
+  | "boxes"
+  | "rules"
+  | "materialId"
+  | "projectName"
+  | "remates"
+  | "rodapes"
+  | "extractedPartsByBoxId"
+> & { industrialPieceEdits?: IndustrialPieceEditsStore };
+
 export function buildTotaisProjetoPdf(
-  boxes: BoxModule[],
-  rules: RulesConfig,
-  materialId: string | undefined,
-  projectName: string,
+  project: TotaisProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean,
   extras?: TotaisProjetoPdfExtras
 ): jsPDF {
+  const projectName = project.projectName?.trim() || "Projeto";
   const meta = resolveIndustrialSectionPdfMeta("Totais do Projeto", projectName);
-  const rows = buildTotaisProjetoPdfRows(
-    boxes,
-    rules,
-    materialId,
-    projectName,
-    materials,
-    showPrices,
-    extras
-  );
+  const rows = buildTotaisProjetoPdfRows(project, materials, showPrices, extras);
   return createIndustrialSectionPdf(meta, [["Métrica", "Valor"]], rows);
 }
 
 export function appendTotaisProjetoSection(
   doc: jsPDF,
-  boxes: BoxModule[],
-  rules: RulesConfig,
-  materialId: string | undefined,
-  projectName: string,
+  project: TotaisProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean,
   extras?: TotaisProjetoPdfExtras
 ): void {
+  const projectName = project.projectName?.trim() || "Projeto";
   const meta = resolveIndustrialSectionPdfMeta("Totais do Projeto", projectName);
-  const rows = buildTotaisProjetoPdfRows(
-    boxes,
-    rules,
-    materialId,
-    projectName,
-    materials,
-    showPrices,
-    extras
-  );
+  const rows = buildTotaisProjetoPdfRows(project, materials, showPrices, extras);
   doc.addPage("a4", "portrait");
   const y = drawIndustrialSectionPdfHeader(doc, meta);
   drawIndustrialSectionTable(doc, y, [["Métrica", "Valor"]], rows);

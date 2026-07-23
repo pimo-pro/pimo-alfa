@@ -43,17 +43,9 @@ export async function buildBottomSectionPdfs(input: {
 }): Promise<BottomSectionPdfBundle> {
   await ensureLogoIndustrialLoaded();
   const projectName = input.project.projectName?.trim() || "Projeto";
-  const boxes = input.project.boxes ?? [];
 
   return {
-    resumoFinanceiro: buildResumoFinanceiroPdf(
-      boxes,
-      input.project.rules,
-      input.project.materialId,
-      projectName,
-      input.materials,
-      input.showPrices
-    ),
+    resumoFinanceiro: buildResumoFinanceiroPdf(input.project, input.materials, input.showPrices),
     pecasTotais: buildPecasTotaisPdf(input.project, input.materials),
     ferragensTotais: buildFerragensTotaisPdf(
       input.project,
@@ -62,10 +54,7 @@ export async function buildBottomSectionPdfs(input: {
       input.materials
     ),
     totaisProjeto: buildTotaisProjetoPdf(
-      boxes,
-      input.project.rules,
-      input.project.materialId,
-      projectName,
+      input.project,
       input.materials,
       input.showPrices,
       input.totaisExtras

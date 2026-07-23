@@ -1,6 +1,9 @@
 /**
- * Motor de fabricação multiprojeto (Fase 1).
- * Agrega vários projetos num único ZIP sem alterar snapshots, estado em memória nem o motor industrial existente.
+ * Motor de fabricacao multiprojeto (Fase 1).
+ *
+ * @deprecated P3 — orfao sem caller UI. Preferir producao individual + IndustrialCenter.
+ * Mantido para eventual ligacao futura; nao usar em novos fluxos.
+ * Agrega varios projetos num unico ZIP sem alterar snapshots, estado em memoria nem o motor industrial existente.
  */
 
 import JSZip from "jszip";

@@ -4,10 +4,26 @@ import { applyResultados, appendChangelog } from "../projectState";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { getCurrentProjectUser } from "../../core/projects/currentUser";
 import type { IndustrialOnlineAnalysisDocId } from "../../core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs";
-import type { IndustrialDocumentOverride } from "../../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes";
+import type {
+  IndustrialDocumentOverride,
+  IndustrialDocumentOverridesStore,
+} from "../../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes";
 import { emptyIndustrialDocumentOverride } from "../../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes";
 import { makeAddedRowId } from "../../core/industrial/onlineAnalysis/industrialOnlineAnalysisRowIds";
+import { getDocumentaryOverrideDocId } from "../../core/industrial/onlineAnalysis/industrialDocumentarySsot";
 import { applyOverrideWithHistory } from "../../core/industrial/onlineAnalysis/persistIndustrialDocumentOverrides";
+
+function resolveCurrentDocOverride(
+  store: IndustrialDocumentOverridesStore | undefined,
+  docId: IndustrialOnlineAnalysisDocId
+): IndustrialDocumentOverride {
+  const key = getDocumentaryOverrideDocId(docId);
+  return (
+    store?.[key] ??
+    (key === "cutlist" ? store?.tecnico : undefined) ??
+    emptyIndustrialDocumentOverride()
+  );
+}
 
 export type IndustrialDocumentOverridesActions = Pick<
   ProjectActions,
@@ -45,8 +61,7 @@ export function useIndustrialDocumentOverridesActions(
         if (!rowId.trim()) return;
         const user = getCurrentProjectUser();
         updateProject((prev) => {
-          const current =
-            prev.industrialDocumentOverrides?.[docId] ?? emptyIndustrialDocumentOverride();
+          const current = resolveCurrentDocOverride(prev.industrialDocumentOverrides, docId);
           const existing = current.rowPatches[rowId];
           const nextOverride: IndustrialDocumentOverride = {
             ...current,
@@ -74,8 +89,7 @@ export function useIndustrialDocumentOverridesActions(
         const user = getCurrentProjectUser();
         const tempId = makeAddedRowId();
         updateProject((prev) => {
-          const current =
-            prev.industrialDocumentOverrides?.[docId] ?? emptyIndustrialDocumentOverride();
+          const current = resolveCurrentDocOverride(prev.industrialDocumentOverrides, docId);
           const nextOverride: IndustrialDocumentOverride = {
             ...current,
             addedRows: [
@@ -102,8 +116,7 @@ export function useIndustrialDocumentOverridesActions(
         if (!rowId.trim()) return;
         const user = getCurrentProjectUser();
         updateProject((prev) => {
-          const current =
-            prev.industrialDocumentOverrides?.[docId] ?? emptyIndustrialDocumentOverride();
+          const current = resolveCurrentDocOverride(prev.industrialDocumentOverrides, docId);
           let nextOverride: IndustrialDocumentOverride;
           if (rowId.startsWith("added:")) {
             nextOverride = {

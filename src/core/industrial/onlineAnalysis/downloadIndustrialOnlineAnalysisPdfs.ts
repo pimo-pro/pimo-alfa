@@ -14,11 +14,13 @@ import {
 import { documentHasOverrides } from "./applyIndustrialDocumentOverrides";
 import { buildClassicIndustrialPdf } from "./buildClassicIndustrialPdf";
 import { resolveIndustrialZipPdf } from "./resolveIndustrialZipPdf";
-import type { IndustrialOnlineAnalysisPdfRowsMode } from "./generateIndustrialOnlineAnalysisPdf";
 import {
   industrialOnlineAnalysisPdfFileName,
   industrialOnlineAnalysisPdfsZipFileName,
 } from "./industrialOnlineAnalysisPdfFileNames";
+
+/** Modo de linhas no shell (edicao online). PDFs de fabrico P3 usam sempre classic. */
+export type IndustrialOnlineAnalysisPdfRowsMode = "effective" | "canonical";
 
 export type DownloadIndustrialOnlineAnalysisResult = {
   ok: boolean;

@@ -8,9 +8,10 @@ import Panel from "../ui/Panel";
 import IndustrialPanelPdfActions from "./IndustrialPanelPdfActions";
 import { useIndustrialBottomPdf } from "../../hooks/useIndustrialBottomPdf";
 import {
-  cutlistComPrecoFromBoxes,
   ferragensFromBoxes,
 } from "../../core/manufacturing/cutlistFromBoxes";
+import { getCutlist } from "../../core/industrial/IndustrialCenter";
+import type { ProjectState } from "../../context/projectTypes";
 import {
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
@@ -37,8 +38,8 @@ export default function ResumoFinanceiroPanel({ embedded }: { embedded?: boolean
 
   const boxes = useMemo(() => project.boxes ?? [], [project.boxes]);
   const cutlist = useMemo(
-    () => cutlistComPrecoFromBoxes(boxes, project.rules, project.materialId, project.projectName),
-    [boxes, project.rules, project.materialId, project.projectName]
+    () => getCutlist(project as ProjectState, "withPieceEdits"),
+    [project]
   );
   const ferragens = useMemo(() => ferragensFromBoxes(boxes, project.rules), [boxes, project.rules]);
   const totalPecas = cutlist.reduce((sum, item) => sum + item.quantidade, 0);

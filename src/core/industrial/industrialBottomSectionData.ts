@@ -1,7 +1,4 @@
-import {
-  cutlistComPrecoFromBoxes,
-  ferragensFromBoxes,
-} from "../manufacturing/cutlistFromBoxes";
+import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import {
   calcularPrecoTotalPecas,
   calcularPrecoTotalProjeto,
@@ -116,16 +113,34 @@ export function buildPecasTotaisRows(
   return rows;
 }
 
+type IndustrialBottomProjectSlice = Pick<
+  ProjectState,
+  | "boxes"
+  | "rules"
+  | "materialId"
+  | "projectName"
+  | "remates"
+  | "rodapes"
+  | "extractedPartsByBoxId"
+> & { industrialPieceEdits?: IndustrialPieceEditsStore };
+
 export function buildResumoFinanceiroPdfRows(
-  boxes: BoxModule[],
-  rules: RulesConfig,
-  materialId: string | undefined,
-  projectName: string | undefined,
+  project: IndustrialBottomProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean
 ): { summary: string[][]; pecas: string[][] } {
-  const cutlist = cutlistComPrecoFromBoxes(boxes, rules, materialId, projectName);
-  const ferragens = ferragensFromBoxes(boxes, rules);
+  const boxes = project.boxes ?? [];
+  const cutlist = buildCutlistItemsForIndustrialExport({
+    boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName: project.projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: project.industrialPieceEdits,
+  });
+  const ferragens = ferragensFromBoxes(boxes, project.rules);
   const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0);
   const totalFerragens = ferragens.reduce((s, a) => s + a.quantidade, 0);
   const areaTotalMm2 = cutlist.reduce(
@@ -445,10 +460,7 @@ export function buildFerragensTotaisPdfData(
 }
 
 export function buildTotaisProjetoPdfRows(
-  boxes: BoxModule[],
-  rules: RulesConfig,
-  materialId: string | undefined,
-  projectName: string | undefined,
+  project: IndustrialBottomProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean,
   extras?: {
@@ -462,8 +474,18 @@ export function buildTotaisProjetoPdfRows(
     custoTotal?: number;
   }
 ): string[][] {
-  const cutlist = cutlistComPrecoFromBoxes(boxes, rules, materialId, projectName);
-  const ferragens = ferragensFromBoxes(boxes, rules);
+  const boxes = project.boxes ?? [];
+  const cutlist = buildCutlistItemsForIndustrialExport({
+    boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName: project.projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: project.industrialPieceEdits,
+  });
+  const ferragens = ferragensFromBoxes(boxes, project.rules);
   const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0);
   const totalFerragens = ferragens.reduce((s, a) => s + a.quantidade, 0);
   const areaTotalMm2 = cutlist.reduce(

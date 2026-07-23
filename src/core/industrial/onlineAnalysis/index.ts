@@ -106,15 +106,13 @@ export type {
   IndustrialAnalysisValidationResult,
 } from "./industrialOnlineAnalysisValidation";
 export {
-  generateIndustrialOnlineAnalysisPdf,
-  getCanonicalRowsForDoc,
-} from "./generateIndustrialOnlineAnalysisPdf";
-export type { IndustrialOnlineAnalysisPdfRowsMode } from "./generateIndustrialOnlineAnalysisPdf";
-export {
   downloadIndustrialOnlineAnalysisPdfs,
   listModifiedIndustrialDocIds,
 } from "./downloadIndustrialOnlineAnalysisPdfs";
-export type { DownloadIndustrialOnlineAnalysisResult } from "./downloadIndustrialOnlineAnalysisPdfs";
+export type {
+  DownloadIndustrialOnlineAnalysisResult,
+} from "./downloadIndustrialOnlineAnalysisPdfs";
+export type { IndustrialOnlineAnalysisPdfRowsMode } from "./downloadIndustrialOnlineAnalysisPdfs";
 export {
   industrialAnalysisProjectSlug,
   industrialOnlineAnalysisPdfFileName,

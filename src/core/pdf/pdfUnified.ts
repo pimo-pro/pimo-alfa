@@ -7,8 +7,8 @@ import type jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { gerarPdfTecnicoCompleto } from "./gerarPdfTecnico";
 import { buildCutlistPdf, type ProjectForPdf } from "./pdfCutlist";
-import { cutlistComPrecoFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
 import { buildIndustrialFerragensForProject } from "../industriais/buildIndustrialFerragensForProject";
 import { appendFerragensIndustriaisSection } from "./pdfFerragensIndustriais";
 import { appendResumoFinanceiroSection } from "./pdfResumoFinanceiro";
@@ -182,18 +182,17 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
   y += 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const cutlist = cutlistComPrecoFromBoxes(
-    project.boxes,
-    project.rules,
-    project.materialId,
-    project.projectName
-  );
-  const extracted = (project.extractedPartsByBoxId ?? {});
-  const extractedList = project.boxes.flatMap((b) =>
-    Object.values(extracted[b.id] ?? {}).flat()
-  );
-  const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0)
-    + extractedList.reduce((s, i) => s + i.quantidade, 0);
+  const cutlist = buildCutlistItemsForIndustrialExport({
+    boxes: project.boxes,
+    rules: project.rules,
+    materialId: project.materialId,
+    projectName: project.projectName,
+    remates: project.remates ?? [],
+    rodapes: project.rodapes ?? [],
+    extractedPartsByBoxId: project.extractedPartsByBoxId,
+    industrialPieceEdits: project.industrialPieceEdits,
+  });
+  const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0);
   doc.text(`Caixas: ${project.boxes.length}`, MARGIN, y);
   y += 6;
   doc.text(`Total de peças (cutlist): ${totalPecas}`, MARGIN, y);
@@ -205,9 +204,8 @@ function addTotaisEResumoSection(doc: jsPDF, project: ProjectForPdfWithExtracted
   y += 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const allCutlist = [...cutlist, ...extractedList];
   const totalPecasPreco =
-    allCutlist.length > 0 ? calcularPrecoTotalPecas(allCutlist) : 0;
+    cutlist.length > 0 ? calcularPrecoTotalPecas(cutlist) : 0;
   const ferragens = ferragensFromBoxes(project.boxes, project.rules);
   const totalFerragensPreco = ferragens.reduce((s, a) => s + (a.precoTotal ?? 0), 0);
   const baseTotal = totalPecasPreco + totalFerragensPreco;
@@ -251,10 +249,16 @@ export async function buildUnifiedPdf(
   if (industrial) {
     appendResumoFinanceiroSection(
       doc,
-      project.boxes,
-      project.rules,
-      project.materialId,
-      project.projectName,
+      {
+        boxes: project.boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
+      },
       industrial.materials,
       industrial.showPrices ?? false
     );
@@ -290,10 +294,16 @@ export async function buildUnifiedPdf(
     addFerragensIndustriaisResumoSection(doc, project);
     appendTotaisProjetoSection(
       doc,
-      project.boxes,
-      project.rules,
-      project.materialId,
-      project.projectName,
+      {
+        boxes: project.boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
+      },
       industrial.materials,
       industrial.showPrices ?? false,
       industrial.totaisExtras

@@ -4,13 +4,15 @@ import {
   mustUseClassicIndustrialPdf,
   shouldUseShellIndustrialPdfForDoc,
   shouldUseShellIndustrialPdfs,
+  INDUSTRIAL_CLASSIC_PRESENTATION_DOC_IDS,
 } from "../industrialPdfPolicy";
+import { INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS } from "../industrialOnlineAnalysisDocs";
 import type { ProjectState } from "@/context/projectTypes";
 import { emptyIndustrialDocumentOverride } from "../industrialDocumentOverridesTypes";
 
 function baseProject(overrides?: ProjectState["industrialDocumentOverrides"]): ProjectState {
   return {
-    projectName: "Teste P1/P2",
+    projectName: "Teste P1/P2/P3",
     boxes: [],
     rules: {} as ProjectState["rules"],
     industrialDocumentOverrides: overrides,
@@ -33,7 +35,7 @@ function projectWithCutlistOverride(): ProjectState {
   });
 }
 
-describe("industrialPdfPolicy — P1 binario + P2 classic presentation", () => {
+describe("industrialPdfPolicy — P1 binario + P3 classic-first", () => {
   it("sem overrides ? classic global", () => {
     const project = baseProject(undefined);
     expect(getIndustrialPdfRenderMode(project)).toBe("classic");
@@ -47,22 +49,26 @@ describe("industrialPdfPolicy — P1 binario + P2 classic presentation", () => {
     expect(getIndustrialPdfRenderMode(project)).toBe("classic");
   });
 
-  it("qualquer override ? shell global (P1)", () => {
+  it("qualquer override ? shell global (P1 flag)", () => {
     const project = projectWithCutlistOverride();
     expect(getIndustrialPdfRenderMode(project)).toBe("shell");
     expect(shouldUseShellIndustrialPdfs(project)).toBe(true);
   });
 
-  it("ferragens_totais deve sempre usar classic (P2)", () => {
-    expect(mustUseClassicIndustrialPdf("ferragens_totais")).toBe(true);
-    expect(mustUseClassicIndustrialPdf("cutlist")).toBe(false);
+  it("P3: todos os 9 docs industriais estao na lista classic-first", () => {
+    expect([...INDUSTRIAL_CLASSIC_PRESENTATION_DOC_IDS]).toEqual([
+      ...INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS,
+    ]);
+    for (const docId of INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS) {
+      expect(mustUseClassicIndustrialPdf(docId)).toBe(true);
+    }
   });
 
-  it("com override noutro doc ? ferragens_totais ainda classic; cutlist shell", () => {
+  it("com override noutro doc ? PDFs industriais ainda classic (P3)", () => {
     const project = projectWithCutlistOverride();
-    expect(shouldUseShellIndustrialPdfForDoc(project, "ferragens_totais")).toBe(false);
-    expect(shouldUseShellIndustrialPdfForDoc(project, "cutlist")).toBe(true);
-    expect(shouldUseShellIndustrialPdfForDoc(project, "pecas_totais")).toBe(true);
+    for (const docId of INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS) {
+      expect(shouldUseShellIndustrialPdfForDoc(project, docId)).toBe(false);
+    }
   });
 
   it("sem overrides ? nenhum doc usa shell", () => {

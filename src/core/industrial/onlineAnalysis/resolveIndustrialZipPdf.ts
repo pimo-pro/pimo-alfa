@@ -20,9 +20,9 @@ export type ResolveIndustrialPdfOptions = {
 };
 
 /**
- * Resolve PDF industrial (P1 + P2):
- * - P1: com override no projeto ? shell; sem override ? classico
- * - P2: ferragens_totais (e docs de apresentacao classica) ? SEMPRE classico
+ * Resolve PDF industrial (P1 + P2 + P3 classic-first):
+ * - P3: todos os 9 docs industriais usam sempre builder classico no PDF de fabrico
+ * - Shell tabular permanece so na UI de edicao /analise
  * CNC/TCN nao passam por aqui. UEE usa whitelist cutlist.
  */
 export async function resolveIndustrialZipPdf(

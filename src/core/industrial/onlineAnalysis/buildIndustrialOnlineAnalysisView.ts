@@ -227,10 +227,16 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
 
   if (docId === "resumo_financeiro") {
     const data = buildResumoFinanceiroPdfRows(
-      boxes,
-      project.rules,
-      project.materialId,
-      projectName,
+      {
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName,
+        remates: project.remates,
+        rodapes: project.rodapes,
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
+      },
       materials,
       showPrices
     );
@@ -383,10 +389,16 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
 
   if (docId === "totais_projeto") {
     const rows = buildTotaisProjetoPdfRows(
-      boxes,
-      project.rules,
-      project.materialId,
-      projectName,
+      {
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName,
+        remates: project.remates,
+        rodapes: project.rodapes,
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
+      },
       materials,
       showPrices
     );

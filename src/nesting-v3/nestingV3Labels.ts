@@ -1,9 +1,8 @@
 /**
- * Nesting V3 — Geração de Etiquetas
+ * Nesting V3 — Etiquetas da estacao de layout.
  *
- * Gera um PDF com etiquetas para cada peça colocada.
- * Cada etiqueta contém: nome, dimensões, folha, posição, QR code.
- * Completamente independente do motor industrial.
+ * Producao / ZIP / UEE: usar IndustrialCenter.getUeeItems() + UnifiedEtiquetaEngine.
+ * Este PDF e auxiliar da estacao (peca + folha + posicao V3); nao substitui UEE.
  */
 
 import jsPDF from "jspdf";
