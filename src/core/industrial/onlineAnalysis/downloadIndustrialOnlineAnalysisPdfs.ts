@@ -1,7 +1,8 @@
 /**
- * Download seletivo de PDFs industriais (Fase 4).
- * 1 PDF ? blob direto; N PDFs ? ZIP documental (só PDFs).
- * Não escreve industrialDocumentHistory. Não chama onArquivoCompleto.
+ * Download seletivo de PDFs industriais (Fase 4 + P1 politica binaria).
+ * 1 PDF → blob direto; N PDFs → ZIP documental (só PDFs).
+ * Nao escreve industrialDocumentHistory. Nao chama onArquivoCompleto.
+ * Politica: qualquer override → todos shell; senao → todos classico.
  */
 
 import JSZip from "jszip";
@@ -11,10 +12,9 @@ import {
   type IndustrialOnlineAnalysisDocId,
 } from "./industrialOnlineAnalysisDocs";
 import { documentHasOverrides } from "./applyIndustrialDocumentOverrides";
-import {
-  generateIndustrialOnlineAnalysisPdf,
-  type IndustrialOnlineAnalysisPdfRowsMode,
-} from "./generateIndustrialOnlineAnalysisPdf";
+import { buildClassicIndustrialPdf } from "./buildClassicIndustrialPdf";
+import { resolveIndustrialZipPdf } from "./resolveIndustrialZipPdf";
+import type { IndustrialOnlineAnalysisPdfRowsMode } from "./generateIndustrialOnlineAnalysisPdf";
 import {
   industrialOnlineAnalysisPdfFileName,
   industrialOnlineAnalysisPdfsZipFileName,
@@ -56,7 +56,7 @@ export function listModifiedIndustrialDocIds(
 export async function downloadIndustrialOnlineAnalysisPdfs(
   project: ProjectState,
   docIds: IndustrialOnlineAnalysisDocId[],
-  options?: { rowsMode?: IndustrialOnlineAnalysisPdfRowsMode }
+  options?: { rowsMode?: IndustrialOnlineAnalysisPdfRowsMode; showPrices?: boolean }
 ): Promise<DownloadIndustrialOnlineAnalysisResult> {
   const rowsMode = options?.rowsMode ?? "effective";
   const unique = [...new Set(docIds)];
@@ -67,7 +67,15 @@ export async function downloadIndustrialOnlineAnalysisPdfs(
 
   for (const docId of unique) {
     try {
-      const pdf = generateIndustrialOnlineAnalysisPdf(project, docId, { rowsMode });
+      const pdf = await resolveIndustrialZipPdf(
+        project,
+        docId,
+        () =>
+          buildClassicIndustrialPdf(project, docId, {
+            showPrices: options?.showPrices,
+          }),
+        { rowsMode, showPrices: options?.showPrices }
+      );
       const buffer = pdfToArrayBuffer(pdf);
       generated.push({
         docId,

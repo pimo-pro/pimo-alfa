@@ -16,6 +16,9 @@ import {
   endIndustrialFileGeneration,
 } from "../core/fabrication/industrialGenerationSuspend";
 import { ensureLogoIndustrialLoaded } from "../core/pdf/logoIndustrialPublic";
+import { applyResultados } from "../context/projectState";
+import type { ProjectState } from "../context/projectTypes";
+import { resolveIndustrialZipPdf } from "../core/industrial/onlineAnalysis/resolveIndustrialZipPdf";
 
 export function useIndustrialBottomPdf() {
   const { project } = useProject();
@@ -28,16 +31,25 @@ export function useIndustrialBottomPdf() {
 
   const projectName = project.projectName?.trim() || "Projeto";
   const boxes = project.boxes ?? [];
+  const fullProject = () => applyResultados(project as ProjectState);
 
-  const savePdf = useCallback(async (doc: { save: (name: string) => void }, fileName: string) => {
-    beginIndustrialFileGeneration();
-    try {
-      await ensureLogoIndustrialLoaded();
-      doc.save(fileName);
-    } finally {
-      endIndustrialFileGeneration();
-    }
-  }, []);
+  const saveResolvedPdf = useCallback(
+    async (
+      docId: "resumo_financeiro" | "pecas_totais" | "ferragens_totais" | "totais_projeto",
+      fileName: string,
+      classic: () => { save: (name: string) => void; output: (type: string) => ArrayBuffer | Uint8Array }
+    ) => {
+      beginIndustrialFileGeneration();
+      try {
+        await ensureLogoIndustrialLoaded();
+        const doc = await resolveIndustrialZipPdf(fullProject(), docId, classic);
+        (doc as { save: (name: string) => void }).save(fileName);
+      } finally {
+        endIndustrialFileGeneration();
+      }
+    },
+    [project]
+  );
 
   const buildFerragensTotaisDoc = useCallback(() => {
     return buildFerragensTotaisPdf(
@@ -60,78 +72,82 @@ export function useIndustrialBottomPdf() {
   }, [boxes, project, projectName, componentTypes, ferragens, materials]);
 
   const exportResumoFinanceiroPdf = useCallback(async () => {
-    await ensureLogoIndustrialLoaded();
-    const doc = buildResumoFinanceiroPdf(
-      boxes,
-      project.rules,
-      project.materialId,
-      projectName,
-      materials,
-      canShowSectionPrices("resumoFinanceiro", isAdmin)
+    await saveResolvedPdf("resumo_financeiro", resumoFinanceiroPdfFileName(projectName), () =>
+      buildResumoFinanceiroPdf(
+        boxes,
+        project.rules,
+        project.materialId,
+        projectName,
+        materials,
+        canShowSectionPrices("resumoFinanceiro", isAdmin)
+      )
     );
-    await savePdf(doc, resumoFinanceiroPdfFileName(projectName));
-  }, [boxes, project.rules, project.materialId, projectName, materials, isAdmin, savePdf]);
+  }, [boxes, project.rules, project.materialId, projectName, materials, isAdmin, saveResolvedPdf]);
 
   const exportPecasTotaisPdf = useCallback(async () => {
-    await ensureLogoIndustrialLoaded();
-    const doc = buildPecasTotaisPdf(
-      {
-        boxes,
-        rules: project.rules,
-        materialId: project.materialId,
-        projectName,
-        remates: project.remates,
-        rodapes: project.rodapes,
-        extractedPartsByBoxId: project.extractedPartsByBoxId,
-        industrialPieceEdits: project.industrialPieceEdits,
-      },
-      materials
+    await saveResolvedPdf("pecas_totais", pecasTotaisPdfFileName(projectName), () =>
+      buildPecasTotaisPdf(
+        {
+          boxes,
+          rules: project.rules,
+          materialId: project.materialId,
+          projectName,
+          remates: project.remates,
+          rodapes: project.rodapes,
+          extractedPartsByBoxId: project.extractedPartsByBoxId,
+          industrialPieceEdits: project.industrialPieceEdits,
+        },
+        materials
+      )
     );
-    await savePdf(doc, pecasTotaisPdfFileName(projectName));
-  }, [boxes, project, projectName, materials, savePdf]);
+  }, [boxes, project, projectName, materials, saveResolvedPdf]);
 
   const exportFerragensTotaisPdf = useCallback(async () => {
-    await ensureLogoIndustrialLoaded();
-    const doc = buildFerragensTotaisDoc();
-    await savePdf(doc, ferragensTotaisPdfFileName(projectName));
-  }, [buildFerragensTotaisDoc, projectName, savePdf]);
+    await saveResolvedPdf("ferragens_totais", ferragensTotaisPdfFileName(projectName), () =>
+      buildFerragensTotaisDoc()
+    );
+  }, [buildFerragensTotaisDoc, projectName, saveResolvedPdf]);
 
   const viewFerragensTotaisPdf = useCallback(async () => {
     beginIndustrialFileGeneration();
     try {
       await ensureLogoIndustrialLoaded();
-      const doc = buildFerragensTotaisDoc();
-      const blob = doc.output("blob");
+      const doc = await resolveIndustrialZipPdf(
+        fullProject(),
+        "ferragens_totais",
+        () => buildFerragensTotaisDoc()
+      );
+      const blob = (doc as { output: (t: string) => Blob }).output("blob");
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } finally {
       endIndustrialFileGeneration();
     }
-  }, [buildFerragensTotaisDoc]);
+  }, [buildFerragensTotaisDoc, project]);
 
   const exportTotaisProjetoPdf = useCallback(async () => {
-    await ensureLogoIndustrialLoaded();
-    const doc = buildTotaisProjetoPdf(
-      boxes,
-      project.rules,
-      project.materialId,
-      projectName,
-      materials,
-      canShowSectionPrices("totaisProjeto", isAdmin),
-      {
-        totalOrlaMetros: cutlistData.totalOrlaMetros,
-        custoTotalOrla: cutlistData.custoTotalOrla,
-        custoTotalRemates: cutlistData.custoTotalRemates,
-        custoTotalPaineis: cutlistData.custoTotalPaineis,
-        custoTotalPortas: cutlistData.custoTotalPortas,
-        custoTotalGavetas: cutlistData.custoTotalGavetas,
-        custoTotalFerragens: cutlistData.custoTotalFerragens,
-        custoTotal: cutlistData.custoTotal,
-      }
+    await saveResolvedPdf("totais_projeto", totaisProjetoPdfFileName(projectName), () =>
+      buildTotaisProjetoPdf(
+        boxes,
+        project.rules,
+        project.materialId,
+        projectName,
+        materials,
+        canShowSectionPrices("totaisProjeto", isAdmin),
+        {
+          totalOrlaMetros: cutlistData.totalOrlaMetros,
+          custoTotalOrla: cutlistData.custoTotalOrla,
+          custoTotalRemates: cutlistData.custoTotalRemates,
+          custoTotalPaineis: cutlistData.custoTotalPaineis,
+          custoTotalPortas: cutlistData.custoTotalPortas,
+          custoTotalGavetas: cutlistData.custoTotalGavetas,
+          custoTotalFerragens: cutlistData.custoTotalFerragens,
+          custoTotal: cutlistData.custoTotal,
+        }
+      )
     );
-    await savePdf(doc, totaisProjetoPdfFileName(projectName));
-  }, [boxes, project, projectName, materials, isAdmin, cutlistData, savePdf]);
+  }, [boxes, project, projectName, materials, isAdmin, cutlistData, saveResolvedPdf]);
 
   return {
     exportResumoFinanceiroPdf,

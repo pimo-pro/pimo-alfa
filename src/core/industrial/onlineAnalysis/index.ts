@@ -30,6 +30,14 @@ export {
 } from "./applyIndustrialDocumentOverrides";
 export { buildPdfFromOnlineAnalysisView } from "./buildPdfFromOnlineAnalysisView";
 export { resolveIndustrialZipPdf } from "./resolveIndustrialZipPdf";
+export type { ResolveIndustrialPdfOptions } from "./resolveIndustrialZipPdf";
+export {
+  getIndustrialPdfRenderMode,
+  shouldUseShellIndustrialPdfs,
+} from "./industrialPdfPolicy";
+export type { IndustrialPdfRenderMode } from "./industrialPdfPolicy";
+export { buildClassicIndustrialPdf } from "./buildClassicIndustrialPdf";
+export type { BuildClassicIndustrialPdfOptions } from "./buildClassicIndustrialPdf";
 export type {
   IndustrialDocumentOverride,
   IndustrialDocumentOverridesStore,

@@ -386,13 +386,16 @@ export function useGerarArquivoHandlers() {
     }
     await ensureLogoIndustrialLoaded();
     const proj = pdfProject();
-    const doc = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
-      materialId: proj.materialId,
-      extractedPartsByBoxId: proj.extractedPartsByBoxId,
-      pieceObservacoes: proj.pieceObservacoes,
-    });
-    doc.save(`${slug}_tecnico.pdf`);
-  }, [hasBoxes, showToast, pdfProject, slug]);
+    const full = applyResultados(project as ProjectState);
+    const doc = await resolveIndustrialZipPdf(full, "tecnico", () =>
+      gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
+        materialId: proj.materialId,
+        extractedPartsByBoxId: proj.extractedPartsByBoxId,
+        pieceObservacoes: proj.pieceObservacoes,
+      })
+    );
+    (doc as { save: (n: string) => void }).save(`${slug}_tecnico.pdf`);
+  }, [hasBoxes, showToast, pdfProject, slug, project]);
 
   const onCutlist = useCallback(async () => {
     if (!hasBoxes) {
@@ -402,15 +405,16 @@ export function useGerarArquivoHandlers() {
     if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
-      const doc = await buildCutlistPdf(pdfProject());
-      doc.save(`${slug}_cutlist.pdf`);
+      const full = applyResultados(project as ProjectState);
+      const doc = await resolveIndustrialZipPdf(full, "cutlist", () => buildCutlistPdf(pdfProject()));
+      (doc as { save: (n: string) => void }).save(`${slug}_cutlist.pdf`);
     } catch (err) {
       devLogger.error("Erro ao gerar PDF de cutlist:", err);
       showToast("Erro ao gerar PDF.", "error");
     } finally {
       endIndustrialFileGeneration();
     }
-  }, [hasBoxes, showToast, pdfProject, slug]);
+  }, [hasBoxes, showToast, pdfProject, slug, project]);
 
   /** Gera apenas o PDF unificado (técnico + cutlist num único documento). */
   const onUnificado = useCallback(async () => {
@@ -421,15 +425,18 @@ export function useGerarArquivoHandlers() {
     if (!guardIndustrialExport(project, showToast)) return;
     beginIndustrialFileGeneration();
     try {
-      const doc = await buildUnifiedPdf(pdfProject(), unifiedIndustrialContext());
-      doc.save(`${slug}_unificado.pdf`);
+      const full = applyResultados(project as ProjectState);
+      const doc = await resolveIndustrialZipPdf(full, "unificado", () =>
+        buildUnifiedPdf(pdfProject(), unifiedIndustrialContext())
+      );
+      (doc as { save: (n: string) => void }).save(`${slug}_unificado.pdf`);
     } catch (err) {
       devLogger.error("Erro ao gerar PDF unificado:", err);
       showToast("Erro ao gerar PDF unificado.", "error");
     } finally {
       endIndustrialFileGeneration();
     }
-  }, [hasBoxes, showToast, pdfProject, slug]);
+  }, [hasBoxes, showToast, pdfProject, slug, project, unifiedIndustrialContext]);
 
   const onFerragensIndustriais = useCallback(async () => {
     if (!hasBoxes) {
@@ -449,8 +456,11 @@ export function useGerarArquivoHandlers() {
         rodapes: project.rodapes ?? [],
         pieceObservacoes: project.pieceObservacoes ?? {},
       });
-      const doc = buildFerragensIndustriaisPdf(data);
-      doc.save(industrialFerragensPdfFileName(slug));
+      const full = applyResultados(project as ProjectState);
+      const doc = await resolveIndustrialZipPdf(full, "industrial_ferragens", () =>
+        buildFerragensIndustriaisPdf(data)
+      );
+      (doc as { save: (n: string) => void }).save(industrialFerragensPdfFileName(slug));
       showToast("PDF de ferragens industriais gerado.", "info");
     } catch (err) {
       toastExportError(showToast, err, "Erro ao gerar PDF de ferragens industriais");
@@ -506,16 +516,21 @@ export function useGerarArquivoHandlers() {
     try {
       await ensureLogoIndustrialLoaded();
       const proj = pdfProject();
-      const docCutlist = await buildCutlistPdf(proj);
-      docCutlist.save(`${slug}_cutlist.pdf`);
-      const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
-        materialId: proj.materialId,
-        extractedPartsByBoxId: proj.extractedPartsByBoxId,
-        pieceObservacoes: proj.pieceObservacoes,
-      });
-      docTecnico.save(`${slug}_tecnico.pdf`);
-      const docUnificado = await buildUnifiedPdf(proj, unifiedIndustrialContext());
-      docUnificado.save(`${slug}_unificado.pdf`);
+      const full = applyResultados(project as ProjectState);
+      const docCutlist = await resolveIndustrialZipPdf(full, "cutlist", () => buildCutlistPdf(proj));
+      (docCutlist as { save: (n: string) => void }).save(`${slug}_cutlist.pdf`);
+      const docTecnico = await resolveIndustrialZipPdf(full, "tecnico", () =>
+        gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
+          materialId: proj.materialId,
+          extractedPartsByBoxId: proj.extractedPartsByBoxId,
+          pieceObservacoes: proj.pieceObservacoes,
+        })
+      );
+      (docTecnico as { save: (n: string) => void }).save(`${slug}_tecnico.pdf`);
+      const docUnificado = await resolveIndustrialZipPdf(full, "unificado", () =>
+        buildUnifiedPdf(proj, unifiedIndustrialContext())
+      );
+      (docUnificado as { save: (n: string) => void }).save(`${slug}_unificado.pdf`);
       showToast("Cutlist, PDF Técnico e Unificado gerados.", "info");
     } catch (err) {
       devLogger.error("Erro ao gerar PDFs:", err);
@@ -523,7 +538,7 @@ export function useGerarArquivoHandlers() {
     } finally {
       endIndustrialFileGeneration();
     }
-  }, [hasBoxes, showToast, pdfProject, slug]);
+  }, [hasBoxes, showToast, pdfProject, slug, project, unifiedIndustrialContext]);
 
   const onEtiquetas = useCallback(async () => {
     if (!hasBoxes) {

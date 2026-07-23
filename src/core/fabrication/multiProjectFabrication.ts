@@ -75,6 +75,7 @@ import {
   endIndustrialRequiredArtifactTracking,
   resetIndustrialRequiredArtifacts,
 } from "../industrial/industrialOutputGuard";
+import { resolveIndustrialZipPdf } from "../industrial/onlineAnalysis/resolveIndustrialZipPdf";
 
 export interface GeneratedFabricationPackage {
   zipBlob: Blob;
@@ -574,40 +575,46 @@ export async function generateMultiProjectFabrication(
         ...proj,
         precomputedItems: projDisplayItems,
       };
-      const docCutlist = await buildCutlistPdf(projForCutlist);
+      const docCutlist = await resolveIndustrialZipPdf(entry.state, "cutlist", () =>
+        buildCutlistPdf(projForCutlist)
+      );
       safeAddPdf(zip, `${basePath}/cutlist.pdf`, docCutlist);
     } catch (err) {
       devLogger.error("multiProjectFabrication: cutlist PDF", err);
     }
 
-    // PDF Técnico (inalterado)
+    // PDF Técnico
     try {
-      const docTecnico = gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
-        materialId: proj.materialId,
-        extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
-        precomputedItems: projDisplayItems,
-        pieceObservacoes: proj.pieceObservacoes,
-      });
+      const docTecnico = await resolveIndustrialZipPdf(entry.state, "tecnico", () =>
+        gerarPdfTecnicoCompleto(proj.boxes, proj.rules, proj.projectName, {
+          materialId: proj.materialId,
+          extractedPartsByBoxId: proj.extractedPartsByBoxId ?? {},
+          precomputedItems: projDisplayItems,
+          pieceObservacoes: proj.pieceObservacoes,
+        })
+      );
       safeAddPdf(zip, `${basePath}/tecnico.pdf`, docTecnico);
     } catch (err) {
       devLogger.error("multiProjectFabrication: técnico PDF", err);
     }
 
-    // PDF Unificado (inalterado)
+    // PDF Unificado
     try {
-      const docUnificado = await buildUnifiedPdf(
-        {
-          ...proj,
-          precomputedItems: projDisplayItems,
-          remates: entry.state.remates ?? [],
-          rodapes: entry.state.rodapes ?? [],
-        },
-        {
-          materials: industrialMaterialsSnapshot,
-          componentTypes: exportComponentTypes,
-          ferragens: exportFerragens,
-          showPrices: false,
-        }
+      const docUnificado = await resolveIndustrialZipPdf(entry.state, "unificado", () =>
+        buildUnifiedPdf(
+          {
+            ...proj,
+            precomputedItems: projDisplayItems,
+            remates: entry.state.remates ?? [],
+            rodapes: entry.state.rodapes ?? [],
+          },
+          {
+            materials: industrialMaterialsSnapshot,
+            componentTypes: exportComponentTypes,
+            ferragens: exportFerragens,
+            showPrices: false,
+          }
+        )
       );
       safeAddPdf(zip, `${basePath}/unificado.pdf`, docUnificado);
     } catch (err) {
@@ -626,7 +633,11 @@ export async function generateMultiProjectFabrication(
         rodapes: entry.state.rodapes ?? [],
         pieceObservacoes: proj.pieceObservacoes,
       });
-      const docFerragens = buildFerragensIndustriaisPdf(ferragensData);
+      const docFerragens = await resolveIndustrialZipPdf(
+        entry.state,
+        "industrial_ferragens",
+        () => buildFerragensIndustriaisPdf(ferragensData)
+      );
       safeAddPdf(zip, `${basePath}/${industrialFerragensPdfFileName(folder)}`, docFerragens);
       const xlsxBuffer = await buildFerragensIndustriaisXlsxBuffer(ferragensData);
       safeAddXlsx(zip, `${basePath}/${industrialFerragensXlsxFileName(folder)}`, xlsxBuffer);
@@ -651,10 +662,22 @@ export async function generateMultiProjectFabrication(
         ferragens: exportFerragens,
         showPrices: false,
       });
-      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.resumoFinanceiro}`, bottomPdfs.resumoFinanceiro);
-      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.pecasTotais}`, bottomPdfs.pecasTotais);
-      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.ferragensTotais}`, bottomPdfs.ferragensTotais);
-      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.totaisProjeto}`, bottomPdfs.totaisProjeto);
+      const resumoDoc = await resolveIndustrialZipPdf(entry.state, "resumo_financeiro", () =>
+        bottomPdfs.resumoFinanceiro
+      );
+      const pecasDoc = await resolveIndustrialZipPdf(entry.state, "pecas_totais", () =>
+        bottomPdfs.pecasTotais
+      );
+      const ferragensTotaisDoc = await resolveIndustrialZipPdf(entry.state, "ferragens_totais", () =>
+        bottomPdfs.ferragensTotais
+      );
+      const totaisDoc = await resolveIndustrialZipPdf(entry.state, "totais_projeto", () =>
+        bottomPdfs.totaisProjeto
+      );
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.resumoFinanceiro}`, resumoDoc);
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.pecasTotais}`, pecasDoc);
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.ferragensTotais}`, ferragensTotaisDoc);
+      safeAddPdf(zip, `${basePath}/${bottomPdfs.fileNames.totaisProjeto}`, totaisDoc);
 
       const armazemItems = buildCutlistItemsForIndustrialExport({
         boxes: proj.boxes,
@@ -673,10 +696,8 @@ export async function generateMultiProjectFabrication(
         proj.projectName ?? folder,
         proj.boxes
       );
-      const armazemPdf = await buildIndustrialArmazemPdf(
-        proj.projectName ?? folder,
-        chapasReal,
-        consumoSummary
+      const armazemPdf = await resolveIndustrialZipPdf(entry.state, "industrial_armazem", () =>
+        buildIndustrialArmazemPdf(proj.projectName ?? folder, chapasReal, consumoSummary)
       );
       safeAddPdf(zip, `${basePath}/${industrialArmazemPdfFileName(folder)}`, armazemPdf);
     } catch (err) {
