@@ -1,7 +1,6 @@
 /**
- * Smoke P3  IndustrialCenter Opo A.
- * Valida: 9 PDFs classic, cutlist nica, armazm/resolve, Nesting getCncItems,
- * pieceEdits, ausncia de pipelines mortos, SSOT patch, live store / providers.
+ * Smoke P3 — IndustrialCenter Opção A.
+ * Fora de src/ para nao entrar no bundle Vite (node:fs/path).
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,29 +15,29 @@ import {
   publishLiveState,
   clearLiveState,
   getLiveState,
-} from "../IndustrialCenter";
+} from "@/core/industrial/IndustrialCenter";
 import {
   INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS,
   type IndustrialOnlineAnalysisDocId,
-} from "../onlineAnalysis/industrialOnlineAnalysisDocs";
+} from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisDocs";
 import {
   INDUSTRIAL_CLASSIC_PRESENTATION_DOC_IDS,
   mustUseClassicIndustrialPdf,
   shouldUseShellIndustrialPdfForDoc,
-} from "../onlineAnalysis/industrialPdfPolicy";
-import { resolveIndustrialZipPdf } from "../onlineAnalysis/resolveIndustrialZipPdf";
-import { buildClassicIndustrialPdf } from "../onlineAnalysis/buildClassicIndustrialPdf";
-import { buildResumoFinanceiroPdfRows } from "../industrialBottomSectionData";
-import { listIndustrialMaterialsSnapshot } from "../../materials/service";
-import { convertProjectToV3Pieces } from "../../../nesting-v3/utils/convertProjectToV3Pieces";
-import { buildFullIndustrialScenario } from "../../../validation/industrialPipelineTestHelpers";
+} from "@/core/industrial/onlineAnalysis/industrialPdfPolicy";
+import { resolveIndustrialZipPdf } from "@/core/industrial/onlineAnalysis/resolveIndustrialZipPdf";
+import { buildClassicIndustrialPdf } from "@/core/industrial/onlineAnalysis/buildClassicIndustrialPdf";
+import { buildResumoFinanceiroPdfRows } from "@/core/industrial/industrialBottomSectionData";
+import { listIndustrialMaterialsSnapshot } from "@/core/materials/service";
+import { convertProjectToV3Pieces } from "@/nesting-v3/utils/convertProjectToV3Pieces";
+import { buildFullIndustrialScenario } from "@/validation/industrialPipelineTestHelpers";
 import {
   applyOverrideWithHistory,
   mergeDocOverride,
-} from "../onlineAnalysis/persistIndustrialDocumentOverrides";
-import { getDocumentaryOverrideDocId } from "../onlineAnalysis/industrialDocumentarySsot";
-import { emptyIndustrialDocumentOverride } from "../onlineAnalysis/industrialDocumentOverridesTypes";
-import { defaultRulesConfig } from "../../rules/rulesConfig";
+} from "@/core/industrial/onlineAnalysis/persistIndustrialDocumentOverrides";
+import { getDocumentaryOverrideDocId } from "@/core/industrial/onlineAnalysis/industrialDocumentarySsot";
+import { emptyIndustrialDocumentOverride } from "@/core/industrial/onlineAnalysis/industrialDocumentOverridesTypes";
+import { defaultRulesConfig } from "@/core/rules/rulesConfig";
 
 function projectFromScenario(edits?: ProjectState["industrialPieceEdits"]): ProjectState {
   const { snap, box, wsBox } = buildFullIndustrialScenario();
@@ -64,11 +63,10 @@ function assertPdfDoc(doc: { output: (t: string) => ArrayBuffer | Uint8Array; sa
   const bytes =
     out instanceof ArrayBuffer ? new Uint8Array(out) : new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
   expect(bytes.byteLength).toBeGreaterThan(500);
-  // PDF magic
   expect(String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3])).toBe("%PDF");
 }
 
-describe("P3 Smoke  IndustrialCenter", () => {
+describe("P3 Smoke — IndustrialCenter", () => {
   beforeEach(() => {
     clearLiveState();
   });
@@ -122,7 +120,6 @@ describe("P3 Smoke  IndustrialCenter", () => {
     const qtyCenter = viaCenter.reduce((s, i) => s + i.quantidade, 0);
     const qtyFromPecasRows = pecas.reduce((s, r) => s + Number(r[3] ?? 0), 0);
     expect(qtyFromPecasRows).toBe(qtyCenter);
-    // summary[0] = Pecas totais (label encoding-safe via position)
     expect(summary[0]?.[0]?.toLowerCase()).toMatch(/pe/);
     expect(Number(summary[0]?.[1])).toBe(qtyCenter);
   });
@@ -177,7 +174,6 @@ describe("P3 Smoke  IndustrialCenter", () => {
     expect(editedItem?.dimensoes.largura).toBe(333);
     expect(editedItem?.dimensoes.altura).toBe(222);
 
-    // Pelo menos uma pea V3 reflecte a dimenso editada (ordem alinhada a cutlist)
     const dimsMatch = withPieces.some(
       (p) => Math.round(p.widthMm) === 333 || Math.round(p.heightMm) === 333
     );
@@ -187,10 +183,7 @@ describe("P3 Smoke  IndustrialCenter", () => {
   it("getUeeItems aplica whitelist; getCncItems nao muda com override documental", () => {
     const project = projectFromScenario();
     const cncBefore = getCncItems(project);
-    const first = cncBefore[0];
-    expect(first).toBeTruthy();
 
-    // Override documental de material nao deve alterar CNC
     project.industrialDocumentOverrides = {
       cutlist: {
         ...emptyIndustrialDocumentOverride(),
@@ -263,10 +256,7 @@ describe("P3 Smoke  IndustrialCenter", () => {
     expect(center).toContain("getCncItems");
     expect(center).toContain("renderPdf");
 
-    const convert = readFileSync(
-      join(root, "nesting-v3/utils/convertProjectToV3Pieces.ts"),
-      "utf8"
-    );
+    const convert = readFileSync(join(root, "nesting-v3/utils/convertProjectToV3Pieces.ts"), "utf8");
     expect(convert).toContain("getCncItems");
     expect(convert).not.toContain("buildCutlistItemsForIndustrialExport");
 
@@ -279,13 +269,12 @@ describe("P3 Smoke  IndustrialCenter", () => {
     );
     expect(policy).toContain("INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS");
 
-    // Nenhum doc industrial fora da lista classic
     for (const id of INDUSTRIAL_ONLINE_ANALYSIS_DOC_IDS as readonly IndustrialOnlineAnalysisDocId[]) {
       expect(mustUseClassicIndustrialPdf(id)).toBe(true);
     }
   });
 
-  it("4 ProjectProviders: App(3) + NestingV3RoutePage(1)  hydratam live, nao crasham contrato", () => {
+  it("4 ProjectProviders: App(3) + NestingV3RoutePage(1) — hydratam live, nao crasham contrato", () => {
     const appSrc = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
     const nestingRoute = readFileSync(
       join(process.cwd(), "src/app/nesting-v3/NestingV3RoutePage.tsx"),
@@ -301,10 +290,7 @@ describe("P3 Smoke  IndustrialCenter", () => {
     expect(provider).toContain("getIndustrialLiveProject");
     expect(provider).toContain("publishIndustrialLiveProject");
 
-    const io = readFileSync(
-      join(process.cwd(), "src/context/hooks/useProjectIoActions.ts"),
-      "utf8"
-    );
+    const io = readFileSync(join(process.cwd(), "src/context/hooks/useProjectIoActions.ts"), "utf8");
     expect(io).toContain("clearIndustrialLiveProject");
   });
 });

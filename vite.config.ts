@@ -16,6 +16,17 @@ export default defineConfig({
   plugins: [
     react(),
     {
+      name: 'exclude-tests-from-bundle',
+      enforce: 'pre',
+      resolveId(id) {
+        const clean = id.split('?')[0] ?? id;
+        if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(clean) || clean.includes('/__tests__/') || clean.includes('\\__tests__\\')) {
+          return { id: clean, external: true };
+        }
+        return null;
+      },
+    },
+    {
       name: 'materials-api-middleware',
       configureServer(server) {
         server.middlewares.use('/api/materials', (req, res) => {
