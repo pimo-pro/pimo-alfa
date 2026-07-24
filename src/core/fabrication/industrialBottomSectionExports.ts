@@ -35,10 +35,12 @@ export async function buildBottomSectionPdfs(input: {
     | "pieceObservacoes"
     | "ferragemOrla"
     | "orlaPresets"
-    | "orlaPieces"
-    | "financeiroOverrides"
-    | "financeiroAdminSettings"
-  > & { industrialPieceEdits?: import("../industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore };
+  > &
+    Partial<
+      Pick<ProjectState, "orlaPieces" | "financeiroOverrides" | "financeiroAdminSettings">
+    > & {
+      industrialPieceEdits?: import("../industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore;
+    };
   materials: MaterialIndustrial[];
   componentTypes: ComponentType[];
   ferragens: Ferragem[];

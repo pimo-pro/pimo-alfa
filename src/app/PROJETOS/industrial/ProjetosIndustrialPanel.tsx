@@ -234,6 +234,10 @@ export default function ProjetosIndustrialPanel({
           industrialPieceEdits: state.industrialPieceEdits,
           ferragemOrla: state.ferragemOrla,
           orlaPresets: state.orlaPresets,
+          // Campos financeiros/orla opcionais (tipos Partial — sem lógica nova)
+          financeiroOverrides: state.financeiroOverrides,
+          financeiroAdminSettings: state.financeiroAdminSettings,
+          orlaPieces: state.orlaPieces,
         },
         materials: listIndustrialMaterialsSnapshot(),
         componentTypes: loadComponentTypes(),

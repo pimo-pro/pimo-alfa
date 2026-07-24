@@ -1,5 +1,5 @@
 /**
- * Builders classicos por docId â€” fallback da politica PDF binaria (P1).
+ * Builders classicos por docId — fallback da politica PDF binaria (P1).
  * Usado por ZIP, /analise, hubs e handlers individuais quando o projeto
  * nao tem overrides documentais.
  */
@@ -50,6 +50,8 @@ function toProjectForPdf(project: ProjectState): ProjectForPdf & {
   ferragemOrla?: ProjectState["ferragemOrla"];
   financeiroOverrides?: ProjectState["financeiroOverrides"];
   financeiroAdminSettings?: ProjectState["financeiroAdminSettings"];
+  orlaPieces?: ProjectState["orlaPieces"];
+  orlaPresets?: ProjectState["orlaPresets"];
 } {
   return {
     projectName: project.projectName?.trim() || "Projeto",

@@ -4,14 +4,11 @@
  */
 
 import type jsPDF from "jspdf";
-import type { ProjectState } from "../../context/projectTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
-import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
-import type { FinanceiroOverrides } from "../financeiro/financeiroUnificadoTypes";
-import type { FinanceiroAdminSettings } from "../financeiro/financeiroAdminRules";
 import {
   buildResumoFinanceiroPdf,
   appendResumoFinanceiroSection,
+  type ResumoProjectSlice,
 } from "./pdfResumoFinanceiro";
 import { industrialSectionPdfFileName } from "./pdfIndustrialSectionShell";
 
@@ -31,23 +28,8 @@ export type TotaisProjetoPdfExtras = {
   custoTotal?: number;
 };
 
-type TotaisProjectSlice = Pick<
-  ProjectState,
-  | "boxes"
-  | "rules"
-  | "materialId"
-  | "projectName"
-  | "remates"
-  | "rodapes"
-  | "extractedPartsByBoxId"
-  | "ferragemOrla"
-  | "orlaPieces"
-  | "orlaPresets"
-> & {
-  industrialPieceEdits?: IndustrialPieceEditsStore;
-  financeiroOverrides?: FinanceiroOverrides;
-  financeiroAdminSettings?: FinanceiroAdminSettings;
-};
+/** Alias do slice financeiro — campos novos opcionais (Partial no Resumo). */
+type TotaisProjectSlice = ResumoProjectSlice;
 
 export function buildTotaisProjetoPdf(
   project: TotaisProjectSlice,

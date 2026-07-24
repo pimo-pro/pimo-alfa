@@ -1,5 +1,5 @@
 /**
- * P3.7 ‚Äî Sec√ß√£o PDF ‚Äî Financeiro pe√ßas (A4 landscape).
+ * P3.7 ó SecÁ„o PDF ó Financeiro peÁas (A4 landscape).
  */
 
 import type jsPDF from "jspdf";
@@ -27,13 +27,13 @@ export type FinanceiroPecasPdfProject = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "ferragemOrla"
-  | "financeiroOverrides"
-  | "financeiroAdminSettings"
-  | "orlaPieces"
   | "orlaPresets"
-> & {
-  industrialPieceEdits?: IndustrialPieceEditsStore;
-};
+> &
+  Partial<
+    Pick<ProjectState, "financeiroOverrides" | "financeiroAdminSettings" | "orlaPieces">
+  > & {
+    industrialPieceEdits?: IndustrialPieceEditsStore;
+  };
 
 function toBuildInput(project: FinanceiroPecasPdfProject): FinanceiroPecasBuildInput {
   return {
@@ -53,7 +53,7 @@ function toBuildInput(project: FinanceiroPecasPdfProject): FinanceiroPecasBuildI
   };
 }
 
-/** P√°gina landscape standalone (ou ap√≥s cabe√ßalho j√° desenhado). */
+/** P·gina landscape standalone (ou apÛs cabeÁalho j· desenhado). */
 export function appendFinanceiroPecasSection(
   doc: jsPDF,
   project: FinanceiroPecasPdfProject,
@@ -61,7 +61,7 @@ export function appendFinanceiroPecasSection(
   showPrices: boolean
 ): void {
   const projectName = project.projectName?.trim() || "Projeto";
-  const meta = resolveIndustrialSectionPdfMeta("Financeiro pe√ßas", projectName);
+  const meta = resolveIndustrialSectionPdfMeta("Financeiro peÁas", projectName);
   const head = [financeiroPecasPdfHead(showPrices)];
   const body = buildFinanceiroPecasPdfRows(toBuildInput(project), materials, showPrices);
 
@@ -70,7 +70,7 @@ export function appendFinanceiroPecasSection(
   drawIndustrialSectionTable(doc, y, head, body, { fontSize: 7 });
 }
 
-/** Desenha a sec√ß√£o na mesma p√°gina se houver espa√ßo; sen√£o nova p√°gina. */
+/** Desenha a secÁ„o na mesma p·gina se houver espaÁo; sen„o nova p·gina. */
 export function drawFinanceiroPecasSectionOnDoc(
   doc: jsPDF,
   startY: number,
@@ -84,7 +84,7 @@ export function drawFinanceiroPecasSectionOnDoc(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text("Financeiro pe√ßas", 14, startY);
+  doc.text("Financeiro peÁas", 14, startY);
   const y = startY + 5;
   drawIndustrialSectionTable(doc, y, head, body, { fontSize: 7 });
   return (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 40;

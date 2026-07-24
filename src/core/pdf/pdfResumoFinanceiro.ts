@@ -36,13 +36,15 @@ type ResumoProjectSlice = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "ferragemOrla"
-  | "financeiroOverrides"
-  | "financeiroAdminSettings"
-  | "orlaPieces"
   | "orlaPresets"
-> & {
-  industrialPieceEdits?: IndustrialPieceEditsStore;
-};
+> &
+  Partial<
+    Pick<ProjectState, "financeiroOverrides" | "financeiroAdminSettings" | "orlaPieces">
+  > & {
+    industrialPieceEdits?: IndustrialPieceEditsStore;
+  };
+
+export type { ResumoProjectSlice };
 
 function buildFinanceiroPdfBody(
   project: ResumoProjectSlice,

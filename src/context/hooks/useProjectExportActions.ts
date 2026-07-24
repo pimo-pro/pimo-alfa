@@ -88,6 +88,10 @@ export function useProjectExportActions({ projectRef }: UseProjectExportActionsP
           industrialPieceEdits: currentProject.industrialPieceEdits,
           ferragemOrla: currentProject.ferragemOrla,
           orlaPresets: currentProject.orlaPresets,
+          // Campos financeiros/orla opcionais (Partial no destino)
+          financeiroOverrides: currentProject.financeiroOverrides,
+          financeiroAdminSettings: currentProject.financeiroAdminSettings,
+          orlaPieces: currentProject.orlaPieces,
         },
         materials: ctx.materials,
         componentTypes: ctx.componentTypes,
