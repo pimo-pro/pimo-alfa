@@ -1,5 +1,5 @@
 /**
- * P3.7 — Secção PDF — Financeiro peças (A4 landscape).
+ * P3.7/P3.8 — Secao PDF — Financeiro pecas (A4 landscape).
  */
 
 import type jsPDF from "jspdf";
@@ -30,7 +30,10 @@ export type FinanceiroPecasPdfProject = Pick<
   | "orlaPresets"
 > &
   Partial<
-    Pick<ProjectState, "financeiroOverrides" | "financeiroAdminSettings" | "orlaPieces">
+    Pick<
+      ProjectState,
+      "financeiroOverrides" | "financeiroAdminSettings" | "orlaPieces" | "orlaJuntoPairs"
+    >
   > & {
     industrialPieceEdits?: IndustrialPieceEditsStore;
   };
@@ -50,10 +53,13 @@ function toBuildInput(project: FinanceiroPecasPdfProject): FinanceiroPecasBuildI
     financeiroAdminSettings: project.financeiroAdminSettings,
     orlaPieces: project.orlaPieces,
     orlaPresets: project.orlaPresets,
+    orlaJuntoPairs: project.orlaJuntoPairs,
   };
 }
 
-/** Página landscape standalone (ou após cabeçalho já desenhado). */
+const SECTION_TITLE = "Financeiro pe\u00e7as";
+
+/** Pagina landscape standalone (ou apos cabecalho ja desenhado). */
 export function appendFinanceiroPecasSection(
   doc: jsPDF,
   project: FinanceiroPecasPdfProject,
@@ -61,7 +67,7 @@ export function appendFinanceiroPecasSection(
   showPrices: boolean
 ): void {
   const projectName = project.projectName?.trim() || "Projeto";
-  const meta = resolveIndustrialSectionPdfMeta("Financeiro peças", projectName);
+  const meta = resolveIndustrialSectionPdfMeta(SECTION_TITLE, projectName);
   const head = [financeiroPecasPdfHead(showPrices)];
   const body = buildFinanceiroPecasPdfRows(toBuildInput(project), materials, showPrices);
 
@@ -70,7 +76,7 @@ export function appendFinanceiroPecasSection(
   drawIndustrialSectionTable(doc, y, head, body, { fontSize: 7 });
 }
 
-/** Desenha a secção na mesma página se houver espaço; senão nova página. */
+/** Desenha a secao na mesma pagina se houver espaco; senao nova pagina. */
 export function drawFinanceiroPecasSectionOnDoc(
   doc: jsPDF,
   startY: number,
@@ -84,7 +90,7 @@ export function drawFinanceiroPecasSectionOnDoc(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text("Financeiro peças", 14, startY);
+  doc.text(SECTION_TITLE, 14, startY);
   const y = startY + 5;
   drawIndustrialSectionTable(doc, y, head, body, { fontSize: 7 });
   return (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 40;

@@ -43,5 +43,7 @@ export {
   buildFinanceiroPecasRows,
   buildFinanceiroPecasPdfRows,
   financeiroPecasPdfHead,
+  FINANCEIRO_PECAS_CNC_EUR_POR_UNIDADE,
+  FINANCEIRO_PECAS_DRILL_EUR_POR_FURO,
 } from "./financeiroPecasBuilder";
 export type { FinanceiroPecaRow, FinanceiroPecasBuildInput } from "./financeiroPecasBuilder";
