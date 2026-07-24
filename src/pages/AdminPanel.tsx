@@ -24,6 +24,7 @@ import ThemeTemplatesAdminPage from "../components/admin/ThemeTemplatesAdminPage
 import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import FinanceiroAdminSettings from "./admin/FinanceiroAdminSettings";
+import DeployInfoPage from "./admin/DeployInfoPage";
 import { useAuth } from "../auth/useAuth";
 import { hasFullAccess } from "../auth/rbac";
 
@@ -53,6 +54,7 @@ type AdminTab =
   | "Secções Industriais (Viewer)"
   | "Temas (Aparência)"
   | "Financeiro (ADM / Montagem / Portes)"
+  | "Deploy Info"
   | "icons";
 
 type AdminMenuEntry =
@@ -105,6 +107,7 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
   { type: "group", label: "Sistema" },
   { type: "item", id: "Temas (Aparência)", label: "Temas (Aparência)" },
+  { type: "item", id: "Deploy Info", label: "Deploy Info", adminOnly: true },
   { type: "item", id: "icons", label: "Biblioteca de Ícones" },
 ];
 
@@ -132,6 +135,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
   "Temas (Aparência)": "adminTools",
+  "Deploy Info": "adminLab",
   icons: "projects",
 };
 
@@ -308,6 +312,14 @@ export default function AdminPanel() {
             )
           ) : active === "Temas (Aparência)" ? (
             <ThemeTemplatesAdminPage />
+          ) : active === "Deploy Info" ? (
+            canSeeAdminOnlyMenus ? (
+              <DeployInfoPage />
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Acesso restrito a administradores.
+              </div>
+            )
           ) : active === "Painel Referência" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
               <PainelReferencia />

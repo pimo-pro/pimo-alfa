@@ -40,6 +40,33 @@ jobs:
           fi
           echo "Resolved version: $(cat "$GITHUB_OUTPUT" | tr '\n' ' ')"
 
+      # Garante que o Footer/site exibem a tag publicada (nao um version.json antigo).
+      - name: Stamp version.json from deploy tag
+        if: github.ref_type == 'tag'
+        env:
+          DEPLOY_VERSION: ${{ github.ref_name }}
+          DEPLOY_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const pad = (n) => String(n).padStart(2, "0");
+          const now = new Date();
+          const updatedAt = `${pad(now.getUTCDate())}.${pad(now.getUTCMonth() + 1)}.${now.getUTCFullYear()} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`;
+          const data = {
+            version: process.env.DEPLOY_VERSION,
+            updatedAt,
+            tag: process.env.DEPLOY_VERSION,
+            commit: process.env.DEPLOY_SHA,
+            deployedAt: now.toISOString(),
+          };
+          const json = `${JSON.stringify(data, null, 2)}\n`;
+          fs.writeFileSync("version.json", json, "utf8");
+          fs.mkdirSync("public", { recursive: true });
+          fs.writeFileSync("public/version.json", json, "utf8");
+          console.log("Stamped version.json:", data.version, data.commit);
+          NODE
+
       - name: Install dependencies
         run: npm ci
 

@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import versionDataUrl from "../../../../version.json?url";
+import {
+  fetchPublishedVersion,
+  PUBLISHED_VERSION_FALLBACK,
+} from "../../../core/deploy/publishedVersion";
 
 interface FooterProps {
   onShowSystemDocs?: () => void;
@@ -21,19 +25,24 @@ export default function Footer({
   onShowLanding,
 }: FooterProps) {
   const navigate = useNavigate();
-  const [version, setVersion] = useState("V4.1.0.2.6");
+  const [version, setVersion] = useState(PUBLISHED_VERSION_FALLBACK);
 
   useEffect(() => {
-    fetch(versionDataUrl)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (data && typeof data.version === "string") {
-          setVersion(data.version);
-        }
-      })
-      .catch(() => {
-        // Mantem fallback caso a leitura do ficheiro falhe.
-      });
+    let cancelled = false;
+    void (async () => {
+      const fromAsset = await fetchPublishedVersion(versionDataUrl);
+      if (cancelled) return;
+      if (fromAsset?.version) {
+        setVersion(fromAsset.version);
+        return;
+      }
+      const fromPublic = await fetchPublishedVersion("/version.json");
+      if (cancelled) return;
+      if (fromPublic?.version) setVersion(fromPublic.version);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
