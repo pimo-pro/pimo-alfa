@@ -131,6 +131,12 @@ ensureProductionEnv();
 // pimo-kep-fix-003 — protegido, não modificar sem autorização
 registerPublicationForFlow(rootDir, runOutput, nextVersion);
 
+// Novidades do Sistema (/ajuda/whats-new) — public/updates/news.json
+runStep(
+  "Atualizando Whats New (news.json)...",
+  `node scripts/appendWhatsNewNews.mjs`
+);
+
 runStep("Executando build...", "npm run build");
 assertVersionFilesInSync();
 // Evitar adicionar repositórios embutidos (ex.: backend/ tem o seu próprio .git)

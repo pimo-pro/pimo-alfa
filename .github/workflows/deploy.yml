@@ -67,6 +67,26 @@ jobs:
           console.log("Stamped version.json:", data.version, data.commit);
           NODE
 
+      # Novidades do Sistema (/updates/news.json) — append automático em cada deploy.
+      - name: Append Whats New news.json
+        if: github.ref_type == 'tag'
+        env:
+          DEPLOY_VERSION: ${{ github.ref_name }}
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_PUBLISHED_AT: ${{ github.event.head_commit.timestamp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          MSG="$(git log -1 --format=%s 2>/dev/null || true)"
+          AUTHOR="$(git log -1 --format=%an 2>/dev/null || true)"
+          export DEPLOY_COMMIT_MESSAGE="${MSG:-Publicação ${DEPLOY_VERSION}}"
+          export DEPLOY_AUTHOR="${AUTHOR:-pimo-pro}"
+          if [ -z "${DEPLOY_PUBLISHED_AT:-}" ]; then
+            export DEPLOY_PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          fi
+          node scripts/appendWhatsNewNews.mjs
+          node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('public/updates/news.json','utf8')); if(!Array.isArray(j.news)||!j.news.length) process.exit(1); console.log('news.json OK', j.news[0].version, j.news.length);"
+
       - name: Install dependencies
         run: npm ci
 

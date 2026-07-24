@@ -2,16 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  parseReleasePublicationsFile,
-} from "../../src/industrial/release/loadReleasePublications";
-import { RELEASE_PUBLICATIONS_URL } from "../../src/industrial/release/releaseNotesTypes";
+  parseWhatsNewFile,
+  WHATS_NEW_NEWS_URL,
+} from "../../src/pages/ajuda/loadWhatsNewNews";
 
 const rootDir = path.resolve(import.meta.dirname, "../..");
-const publicationsPath = path.join(rootDir, "public/industrial/release/publications.json");
+const newsPath = path.join(rootDir, "public/updates/news.json");
 const helpPagePath = path.join(rootDir, "src/pages/HelpPage.tsx");
 const whatsNewPagePath = path.join(rootDir, "src/pages/ajuda/AjudaWhatsNewPage.tsx");
 const ajudaPagePath = path.join(rootDir, "src/pages/ajuda/AjudaPage.tsx");
 const ajudaRoutesPath = path.join(rootDir, "src/routes/ajudaRoutes.tsx");
+const appendScriptPath = path.join(rootDir, "scripts/appendWhatsNewNews.mjs");
+const deployYmlPath = path.join(rootDir, ".github/workflows/deploy.yml");
 
 describe("ajudaWhatsNewIntegrity", () => {
   it("declara rota /ajuda/whats-new sem erro", () => {
@@ -30,32 +32,34 @@ describe("ajudaWhatsNewIntegrity", () => {
     expect(source).toContain("Conteúdo");
   });
 
-  it("carrega JSON de publicacoes corretamente", () => {
-    expect(RELEASE_PUBLICATIONS_URL).toBe("/industrial/release/publications.json");
-    expect(fs.existsSync(publicationsPath)).toBe(true);
+  it("carrega JSON de novidades (/updates/news.json) corretamente", () => {
+    expect(WHATS_NEW_NEWS_URL).toBe("/updates/news.json");
+    expect(fs.existsSync(newsPath)).toBe(true);
+    expect(fs.existsSync(appendScriptPath)).toBe(true);
 
-    const raw = fs.readFileSync(publicationsPath, "utf8");
+    const raw = fs.readFileSync(newsPath, "utf8");
+    expect(raw.trim().toLowerCase().startsWith("<!doctype")).toBe(false);
     const data = JSON.parse(raw.replace(/^\uFEFF/, ""));
-    const publications = parseReleasePublicationsFile(data);
+    const news = parseWhatsNewFile(data);
 
-    expect(publications.length).toBeGreaterThan(0);
-    expect(publications[0]?.version).toMatch(/^v\d+\.\d{4}\.\d{4}$/);
-    expect(publications[0]?.publishedAt).toBeTruthy();
-    expect(publications[0]?.commitMessage).toBeTruthy();
-    expect(publications[0]?.author).toBeTruthy();
+    expect(news.length).toBeGreaterThan(0);
+    expect(news[0]?.version).toMatch(/^v\d+\./);
+    expect(news[0]?.publishedAt).toBeTruthy();
+    expect(news[0]?.title).toBeTruthy();
+    expect(news[0]?.description).toBeTruthy();
+    expect(["fix", "update", "feature"]).toContain(news[0]?.type);
   });
 
-  it("pagina whats-new exibe ultima versao publicada", () => {
-    const raw = fs.readFileSync(publicationsPath, "utf8");
-    const publications = parseReleasePublicationsFile(JSON.parse(raw.replace(/^\uFEFF/, "")));
-    const latest = publications[0];
+  it("deploy.yml append news.json antes do build", () => {
+    const yml = fs.readFileSync(deployYmlPath, "utf8");
+    expect(yml).toContain("appendWhatsNewNews.mjs");
+    expect(yml).toContain("Append Whats New news.json");
+  });
 
+  it("pagina whats-new usa loadWhatsNewNews", () => {
     const pageSource = fs.readFileSync(whatsNewPagePath, "utf8");
     expect(pageSource).toContain("Novidades do Sistema");
-    expect(pageSource).toContain("loadReleasePublications");
-    expect(pageSource).toContain("commitMessage");
-
-    expect(latest?.version).toBeTruthy();
-    expect(latest?.commitMessage.length).toBeGreaterThan(0);
+    expect(pageSource).toContain("loadWhatsNewNews");
+    expect(pageSource).toContain("entry.title");
   });
 });

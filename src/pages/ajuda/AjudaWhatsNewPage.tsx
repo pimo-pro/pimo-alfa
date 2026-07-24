@@ -1,18 +1,29 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { loadReleasePublications } from "@/industrial/release/loadReleasePublications";
-import type { ReleasePublicationEntry } from "@/industrial/release/releaseNotesTypes";
 import { AJUDA_PATH } from "@/routes/ajudaRoutes";
 import { AJUDA_PAGE_TOKENS as C, ajudaPageFont as font } from "./ajudaPageTokens";
+import { loadWhatsNewNews, type WhatsNewEntry, type WhatsNewType } from "./loadWhatsNewNews";
+
+const TYPE_LABEL: Record<WhatsNewType, string> = {
+  feature: "Feature",
+  fix: "Fix",
+  update: "Update",
+};
+
+const TYPE_COLOR: Record<WhatsNewType, string> = {
+  feature: "var(--status-done-color, var(--ci-success, #34d399))",
+  fix: "var(--status-progress-color, var(--ci-sienna-400, #fbbf24))",
+  update: C.accent,
+};
 
 export default function AjudaWhatsNewPage() {
-  const [entries, setEntries] = useState<ReleasePublicationEntry[]>([]);
+  const [entries, setEntries] = useState<WhatsNewEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    loadReleasePublications()
+    loadWhatsNewNews()
       .then((publications) => {
         if (!cancelled) setEntries(publications);
       })
@@ -158,11 +169,36 @@ export default function AjudaWhatsNewPage() {
                       padding: "16px 20px",
                     }}
                   >
-                    <strong style={{ fontSize: 15, color: C.text }}>{entry.version}</strong>
-                    <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
-                      {new Date(entry.publishedAt).toLocaleString("pt-PT")} · {entry.author}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <strong style={{ fontSize: 15, color: C.text }}>{entry.version}</strong>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          color: TYPE_COLOR[entry.type],
+                          border: `1px solid ${TYPE_COLOR[entry.type]}55`,
+                          background: `${TYPE_COLOR[entry.type]}14`,
+                        }}
+                      >
+                        {TYPE_LABEL[entry.type]}
+                      </span>
                     </div>
-                    <div style={{ fontSize: 14, marginTop: 8, color: C.text, lineHeight: 1.6 }}>{entry.commitMessage}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8, color: C.text }}>
+                      {entry.title}
+                    </div>
+                    <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
+                      {new Date(entry.publishedAt).toLocaleString("pt-PT")}
+                      {entry.author ? ` · ${entry.author}` : ""}
+                    </div>
+                    {entry.description && entry.description !== entry.title ? (
+                      <div style={{ fontSize: 14, marginTop: 8, color: C.text, lineHeight: 1.6 }}>
+                        {entry.description}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
