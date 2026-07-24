@@ -492,6 +492,69 @@ const { materials, setMaterials } = useMaterials();
         </div>
       </Panel>
 
+      <Panel title="P3.9 — Sistema Financeiro Industrial (F1–F4)">
+        <div style={bodyTextStyle}>
+          {`# P3.9 — Sistema Financeiro Industrial (F1–F4)
+
+## Fase 1 — Orçamentos (Schema Base)
+- Criação do módulo Orçamentos (Admin → Sistema → Orçamentos).
+- Campos base: perfurações, CNC, custos industriais, flags.
+- Defaults = 0 → baseline intacto.
+- Não altera CNC/TCN/cutlist/drill/PDFs.
+
+## Fase 2 — Unificação Ferragens
+- Sistema A→B unificado (catálogo + fallback + STRICT warnings).
+- Ferragens passam a ter tarifas controladas.
+- Flag enableUnificacao para ativar/desativar.
+- Sem impacto industrial.
+
+## Fase 3a — Operações CNC/Drill (SSOT)
+- Criação de computeOperacoesFinanceiras.
+- Tarifas: drillEurPorFuro, nestingEurPorOperacao.
+- Peças e Unificado usam SSOT.
+- Remoção de hardcoded 0.50/0.05.
+- Baseline intacto com tarifas 0.
+
+## Fase 3b — Desperdício / Serragem (€)
+- Leitura de wasteM2 real (computeChapasReal).
+- estimateSerragemM2 exportada.
+- Tarifas: desperdicioEurPorM2, serragemEurPorM2.
+- Flags enableDesperdicio / enableSerragem.
+- Rateio por área nas Peças.
+- Baseline intacto com flags off.
+
+## Fase 3c — Chapas Reais / Mão de Obra / Logística
+- materialCostMode exclusivo: por_peca / por_chapas_reais.
+- Chapas reais: totalSheets × custoChapaReal.
+- Mão de obra: minutos estimados × valorHoraMaquina.
+- Logística: pesoKg × custoLogisticaPorKg.
+- Nenhum impacto industrial.
+- Baseline intacto com defaults.
+
+## Fase 4 — Operações Industriais Avançadas
+- Tarifas tipadas:
+  - foro 5mm
+  - cavilha 10×13
+  - cavilha 10×30
+  - calço (grupo)
+  - dobradiça (grupo)
+  - rasgo gaveta
+  - corte manual (metro)
+  - me quadrilha
+- SSOT computeOperacoesIndustriaisAvancadas.
+- Peças: precoOperacoesAvancadas.
+- Unificado: custosComputed.operacoesAvancadas.
+- Baseline intacto com tarifas 0.
+
+## Baseline
+Com todos os valores a 0 → sistema financeiro igual ao pré-P3.9.
+
+## Integração
+- Orçamentos → Peças → Unificado.
+- Nenhum impacto em CNC/TCN/cutlist/drill/PDFs/portes.`}
+        </div>
+      </Panel>
+
       <Panel>
         <div style={sectionTitleStyle}>Changelog</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

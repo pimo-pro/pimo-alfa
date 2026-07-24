@@ -96,3 +96,12 @@ export type {
   CustosAvancadosFinanceirasResult,
   CustosAvancadosTarifas,
 } from "./computeCustosAvancadosFinanceiras";
+
+export {
+  computeOperacoesIndustriaisAvancadas,
+  OPS_ADV_MAP,
+} from "./computeOperacoesIndustriaisAvancadas";
+export type {
+  OperacoesAvancadasBreakdown,
+  OperacoesAvancadasFinanceirasResult,
+} from "./computeOperacoesIndustriaisAvancadas";

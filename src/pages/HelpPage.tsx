@@ -310,6 +310,64 @@ const SECTIONS: Section[] = [
       { type:"tip", text:"O menu de contexto (botão direito) no viewport é o acesso mais rápido às ações por módulo. Explore todas as opções disponíveis." },
     ],
   },
+  {
+    id:"orcamentos-p39",
+    icon:"ruler",
+    label:"Orçamentos P3.9",
+    accent:C.system,
+    title:"Orçamentos — Centro de Tarifas P3.9",
+    intro:"Sistema central de tarifas industriais e financeiras. Cada campo controla uma parte do Financeiro; valores 0 = sem impacto; flags ativam/desativam módulos.",
+    subsections:[
+      {
+        title:"O que é / Como funciona",
+        steps:[
+          { title:"Abrir Orçamentos", text:"Admin → Sistema → Orçamentos. Persistência em System Settings (pimo_system_settings_v1)." },
+          { title:"Defaults neutros", text:"Day-1: tarifas a 0 EUR e flags off. O Financeiro mantém o baseline pré-P3.9 até configurar valores." },
+          { title:"Flags e tarifas", text:"Flags (ex.: enableDesperdicio, enableMaoDeObra, enableUnificacao) ligam módulos. Tarifas > 0 passam a entrar no Unificado e nas Peças." },
+        ],
+        alerts:[
+          { type:"tip", text:"ADM / Montagem / Portes / IVA continuam no painel Financeiro (ADM / Montagem / Portes) — Orçamentos não os substitui." },
+        ],
+      },
+      {
+        title:"Perfurações / CNC",
+        steps:[
+          { title:"Drill (EUR / furo)", text:"Tarifa genérica por furo (F3a — computeOperacoesFinanceiras)." },
+          { title:"Nesting / CNC (EUR / operação)", text:"Tarifa por peça nestável (área + espessura)." },
+        ],
+      },
+      {
+        title:"Custos Industriais",
+        steps:[
+          { title:"Desperdício e serragem", text:"€/m² com flags enableDesperdicio / enableSerragem; rateio por área nas Peças." },
+          { title:"Chapas reais / MO / logística", text:"Modo exclusivo por_peca | por_chapas_reais; mão de obra (valorHoraMaquina); logística (€/kg) sem alterar portes P3.6." },
+        ],
+      },
+      {
+        title:"Operações Industriais Avançadas",
+        steps:[
+          { title:"Foros tipados", text:"Foro 5mm, cavilha 10×13, cavilha 10×30 — por furo." },
+          { title:"Grupos", text:"Calço (grupo de 3) e dobradiça da porta (1 caneco + 2 fixação) — preço por grupo." },
+          { title:"Rasgo / corte / quadrilha", text:"Rasgo da gaveta por operação; corte manual por metro (max L,A); me quadrilha por peça." },
+        ],
+        alerts:[
+          { type:"best-practice", text:"Exemplo: 1,30 € em foro 5mm → cada furo Ø5mm soma 1,30 € à peça (e ao Unificado)." },
+        ],
+      },
+      {
+        title:"Integração",
+        steps:[
+          { title:"Peças", text:"precoFinalDaPeca inclui precoOperacoesAvancadas e restantes quotas Orçamentos." },
+          { title:"Unificado", text:"custosComputed (operacoes, desperdicio, serragem, chapasReais, maoDeObra, logistica, operacoesAvancadas)." },
+          { title:"Industrial intacto", text:"Nenhum impacto em CNC/TCN/cutlist/drill/PDFs industriais." },
+        ],
+      },
+    ],
+    steps:[],
+    alerts:[
+      { type:"warning", text:"Não confundir Orçamentos com portes: logística (€/kg) é independente dos portes P3.6." },
+    ],
+  },
 ];
 
 // ── Componentes internos ──────────────────────────────────────────────────────
@@ -447,7 +505,7 @@ export default function HelpPage() {
           </p>
           {viewMode === "user" ? (
           <div style={{ display:"flex",gap:16,marginTop:20,flexWrap:"wrap" }}>
-            {[["10 secções","cobrindo todo o fluxo",C.accent],["Baseado em","código real",C.green],["PT-PT","português europeu",C.purple]].map(([a,b,c])=>(
+            {[["11 secções","cobrindo todo o fluxo",C.accent],["Baseado em","código real",C.green],["PT-PT","português europeu",C.purple]].map(([a,b,c])=>(
               <div key={a} style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.muted }}>
                 <div style={{ width:6,height:6,borderRadius:"50%",background:c as string,flexShrink:0 }}/>
                 <strong style={{ color:C.text }}>{a}</strong> — {b}

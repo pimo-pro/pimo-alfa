@@ -182,6 +182,95 @@ export default function OrcamentosAdminSettings() {
       </div>
 
       <div style={cardStyle}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Operacoes Industriais Avancadas</h3>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+          Tarifas tipadas (P3.9 F4). Defaults 0 = sem impacto. Nao altera CNC/TCN/cutlist/drill.
+        </p>
+        <div style={grid2}>
+          <NumberInput
+            label="Foro 5mm (EUR)"
+            value={draft.operacoesAvancadas.precoForo5mm}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoForo5mm: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Foro cavilha 10x13 (EUR)"
+            value={draft.operacoesAvancadas.precoForoCavilha10x13}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoForoCavilha10x13: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Foro cavilha 10x30 (EUR)"
+            value={draft.operacoesAvancadas.precoForoCavilha10x30}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoForoCavilha10x30: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Foro da calco (grupo) (EUR)"
+            value={draft.operacoesAvancadas.precoForoCalcoGrupo}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoForoCalcoGrupo: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Foro dobradica da porta (grupo) (EUR)"
+            value={draft.operacoesAvancadas.precoForoDobradicaGrupo}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoForoDobradicaGrupo: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Rasgo da gaveta (EUR)"
+            value={draft.operacoesAvancadas.precoRasgoGaveta}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoRasgoGaveta: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Corte manual por metro (EUR)"
+            value={draft.operacoesAvancadas.precoCorteManualPorMetro}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoCorteManualPorMetro: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Me quadrilha (EUR)"
+            value={draft.operacoesAvancadas.precoMeQuadrilha}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                operacoesAvancadas: { ...p.operacoesAvancadas, precoMeQuadrilha: v },
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div style={cardStyle}>
         <h3 style={{ margin: 0, fontSize: 14 }}>Custos industriais</h3>
         <div style={grid2}>
           <NumberInput
@@ -273,9 +362,9 @@ export default function OrcamentosAdminSettings() {
               <option value="por_chapas_reais">Por chapas reais (exclusivo)</option>
             </select>
             <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-              Por chapas reais substitui o custo material peÁ (paineis/portas/gavetas/remates)
-              ó anti double-count. MO usa valorHoraMaquina OrÁamentos; se 0, fallback System
-              Settings. LogÌstica (Ä/kg) n„o altera portes P3.6.
+              Por chapas reais substitui o custo material peù (paineis/portas/gavetas/remates)
+              ù anti double-count. MO usa valorHoraMaquina Orùamentos; se 0, fallback System
+              Settings. Logùstica (ù/kg) nùo altera portes P3.6.
             </p>
           </div>
         </div>

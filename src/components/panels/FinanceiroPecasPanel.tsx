@@ -212,7 +212,7 @@ export default function FinanceiroPecasPanel({ embedded }: { embedded?: boolean 
               {visibleRows.map((r) => (
                 <tr key={r.pieceId} title={
                   showPrices
-                    ? `Mat ${formatCurrency(r.precoMaterial)} | Orla ${formatCurrency(r.precoOrla)} | Ferr ${formatCurrency(r.precoFerragens)} | Ops ${formatCurrency(r.precoOperacoes)} | Desp ${formatCurrency(r.precoDesperdicio)} | Serr ${formatCurrency(r.precoSerragem)} | Chap ${formatCurrency(r.precoChapasShare)} | MO ${formatCurrency(r.precoMaoDeObra)} | Log ${formatCurrency(r.precoLogistica)}`
+                    ? `Mat ${formatCurrency(r.precoMaterial)} | Orla ${formatCurrency(r.precoOrla)} | Ferr ${formatCurrency(r.precoFerragens)} | Ops ${formatCurrency(r.precoOperacoes)} | Desp ${formatCurrency(r.precoDesperdicio)} | Serr ${formatCurrency(r.precoSerragem)} | Chap ${formatCurrency(r.precoChapasShare)} | MO ${formatCurrency(r.precoMaoDeObra)} | Log ${formatCurrency(r.precoLogistica)} | Adv ${formatCurrency(r.precoOperacoesAvancadas)} (F ${formatCurrency(r.precoForos)} | G ${formatCurrency(r.precoGrupos)} | R ${formatCurrency(r.precoRasgo)} | C ${formatCurrency(r.precoCorteManual)} | Q ${formatCurrency(r.precoQuadrilha)})`
                     : undefined
                 }>
                   <td style={tdStyle}>{r.caixa}</td>

@@ -30,6 +30,7 @@ const CUSTO_FIELDS: { key: FinanceiroCustoKey; label: string }[] = [
   { key: "chapasReais", label: "Chapas reais" },
   { key: "maoDeObra", label: "Mão de obra" },
   { key: "logistica", label: "Logística" },
+  { key: "operacoesAvancadas", label: "Ops avançadas" },
   { key: "adm", label: "ADM" },
   { key: "montagem", label: "Montagem" },
   { key: "portes", label: "Portes" },
@@ -77,6 +78,7 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
       "chapasReais",
       "maoDeObra",
       "logistica",
+      "operacoesAvancadas",
     ];
     const subtotal = materialKeys.reduce((s, k) => s + effective[k], 0);
     const ivaN = Number(String(ivaPct).replace(",", "."));

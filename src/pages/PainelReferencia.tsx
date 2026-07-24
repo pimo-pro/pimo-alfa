@@ -796,6 +796,66 @@ UI (addWorkspaceBox) → ProjectContext.actions → sincronização automática`
         </div>
       </Panel>
 
+      <Panel title="P3.9 — Referência técnica (F1–F4)">
+        <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+          Sistema Financeiro Industrial — impacto apenas financeiro (CNC/TCN/cutlist/drill/PDFs/portes intactos).
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: 12,
+              color: "var(--text-main)",
+            }}
+          >
+            <thead>
+              <tr>
+                {["Fase", "Módulo", "Output", "Impacto"].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      textAlign: "left",
+                      padding: "8px 10px",
+                      borderBottom: "1px solid rgba(255,255,255,0.12)",
+                      color: "var(--text-muted)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["F1", "Orçamentos", "Schema", "Sem impacto industrial"],
+                ["F2", "Ferragens", "Unificação", "Sem impacto industrial"],
+                ["F3a", "CNC/Drill", "SSOT", "Financeiro apenas"],
+                ["F3b", "Desperdício/Serragem", "€", "Financeiro apenas"],
+                ["F3c", "Chapas/MO/Logística", "Modos exclusivos", "Financeiro apenas"],
+                ["F4", "Operações avançadas", "Tipagem completa", "Financeiro apenas"],
+              ].map((row) => (
+                <tr key={row[0]}>
+                  {row.map((cell) => (
+                    <td
+                      key={`${row[0]}-${cell}`}
+                      style={{
+                        padding: "8px 10px",
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
       <Panel title="Índice de Funcionalidades">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {painelReferenciaSections.map((section) => (

@@ -6,12 +6,22 @@ import {
 } from "./orcamentosSettings";
 
 describe("orcamentosSettings (P3.9)", () => {
-  it("defaults are day-1 neutral (0 € / flags off / unificacao off)", () => {
+  it("defaults are day-1 neutral (0 / flags off / unificacao off)", () => {
     const d = defaultOrcamentosSettings();
     expect(d.perfuracoes.drillEurPorFuro).toBe(0);
     expect(d.custosIndustriais.enableDesperdicio).toBe(false);
     expect(d.margemGanho.enabled).toBe(false);
     expect(d.ferragens.enableUnificacao).toBe(false);
+    expect(d.operacoesAvancadas.precoForo5mm).toBe(0);
+    expect(d.operacoesAvancadas.precoMeQuadrilha).toBe(0);
+  });
+
+  it("normalize fills missing operacoesAvancadas", () => {
+    const n = normalizeOrcamentosSettings({
+      perfuracoes: { drillEurPorFuro: 0.05 },
+    });
+    expect(n.operacoesAvancadas.precoForoCalcoGrupo).toBe(0);
+    expect(n.ferragens.enableUnificacao).toBe(false);
   });
 
   it("normalize fills missing ferragens block", () => {

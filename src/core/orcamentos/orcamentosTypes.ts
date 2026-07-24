@@ -1,6 +1,7 @@
 /**
  * P3.9 — tipos Orçamentos (tarifas Admin).
  * Fase 1: schema. Fase 2: ferragens.enableUnificacao.
+ * Fase 4: operacoesAvancadas.
  */
 
 export type OrcamentosMaterialCostMode = "por_peca" | "por_chapas_reais";
@@ -53,9 +54,33 @@ export type OrcamentosFerragensSettings = {
   enableUnificacao: boolean;
 };
 
+/** P3.9 F4 — operação extra dinâmica (reserva). */
+export type OperacaoAvancada = {
+  id: string;
+  label: string;
+  preco: number;
+};
+
+/** P3.9 F4 — operações industriais avançadas (tarifas tipadas). */
+export type OrcamentosOperacoesAvancadasSettings = {
+  precoForo5mm: number;
+  precoForoCavilha10x13: number;
+  precoForoCavilha10x30: number;
+  /** Grupo de 3 furos calço = 1×. */
+  precoForoCalcoGrupo: number;
+  /** Grupo dobradiça (1 caneco + 2 fixação) = 1×. */
+  precoForoDobradicaGrupo: number;
+  precoRasgoGaveta: number;
+  precoCorteManualPorMetro: number;
+  precoMeQuadrilha: number;
+  /** Reserva futura — lista dinâmica. */
+  operacoesExtras?: OperacaoAvancada[];
+};
+
 export type OrcamentosSettings = {
   perfuracoes: OrcamentosPerfuracoesSettings;
   custosIndustriais: OrcamentosCustosIndustriaisSettings;
+  operacoesAvancadas: OrcamentosOperacoesAvancadasSettings;
   montagemAvancada: OrcamentosMontagemAvancadaSettings;
   margemGanho: OrcamentosMargemGanhoSettings;
   ferragens: OrcamentosFerragensSettings;

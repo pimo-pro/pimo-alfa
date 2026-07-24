@@ -27,6 +27,7 @@ export type FinanceiroCustoKey =
   | "chapasReais"
   | "maoDeObra"
   | "logistica"
+  | "operacoesAvancadas"
   | "adm"
   | "montagem"
   | "portes";
@@ -43,7 +44,8 @@ export type FinanceiroCustoMaterialKey =
   | "serragem"
   | "chapasReais"
   | "maoDeObra"
-  | "logistica";
+  | "logistica"
+  | "operacoesAvancadas";
 
 export type FinanceiroCustosOverrides = Partial<Record<FinanceiroCustoKey, number | null>>;
 
@@ -106,6 +108,16 @@ export type FinanceiroUnificadoSnapshot = {
   custosAvancadosWarnings?: string[];
   materialCostMode?: import("../orcamentos").OrcamentosMaterialCostMode;
 
+  /** P3.9 F4 — breakdown ops industriais avançadas. */
+  operacoesAvancadasBreakdown?: {
+    foros: number;
+    grupos: number;
+    rasgos: number;
+    cortes: number;
+    quadrilha: number;
+    total: number;
+  };
+
   /**
    * P3.9 F2 — diagnóstico STRICT da unificação ferragens (só se enableUnificacao).
    * Não afecta CNC/PDF industrial.
@@ -131,6 +143,7 @@ export const FINANCEIRO_CUSTO_MATERIAL_KEYS: FinanceiroCustoMaterialKey[] = [
   "chapasReais",
   "maoDeObra",
   "logistica",
+  "operacoesAvancadas",
 ];
 
 /** Keys de material peç substituídas por chapasReais no modo exclusivo. */

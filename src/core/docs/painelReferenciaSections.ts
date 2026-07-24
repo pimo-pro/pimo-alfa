@@ -193,4 +193,28 @@ export const painelReferenciaSections: DocSection[] = [
       "Editar cutlist → validação no Guardar → etiquetas/PDFs reflectem; CNC intacto.",
     notes: "Suite vitest P0+P1 em onlineAnalysis/__tests__.",
   },
+  {
+    title: "P3.9 — Sistema Financeiro Industrial (F1–F4)",
+    description:
+      "Centro de tarifas Orçamentos ligado a Financeiro Peças e Unificado. Defaults 0 = baseline pré-P3.9.",
+    internals:
+      "F1 schema orcamentos; F2 priceFerragensFromCatalog + enableUnificacao; " +
+      "F3a computeOperacoesFinanceiras; F3b computeDesperdicioSerragemFinanceiras; " +
+      "F3c computeCustosAvancadosFinanceiras (materialCostMode exclusivo); " +
+      "F4 computeOperacoesIndustriaisAvancadas. Sem alteração CNC/TCN/cutlist/drill/PDFs/portes.",
+    files: [
+      "src/core/orcamentos/",
+      "src/pages/admin/OrcamentosAdminSettings.tsx",
+      "src/core/financeiro/computeOperacoesFinanceiras.ts",
+      "src/core/financeiro/computeDesperdicioSerragemFinanceiras.ts",
+      "src/core/financeiro/computeCustosAvancadosFinanceiras.ts",
+      "src/core/financeiro/computeOperacoesIndustriaisAvancadas.ts",
+      "src/core/financeiro/financeiroUnificado.ts",
+      "src/core/financeiro/financeiroPecasBuilder.ts",
+    ],
+    interactions:
+      "Admin → Sistema → Orçamentos → tarifas/flags → Bottom Info Financeiro (Unificado / Peças).",
+    notes:
+      "Tabela de fases: F1 Schema | F2 Ferragens | F3a CNC/Drill | F3b Desperdício/Serragem | F3c Chapas/MO/Logística | F4 Ops avançadas — impacto financeiro apenas.",
+  },
 ];

@@ -35,6 +35,7 @@ import {
   estimateSerragemM2,
 } from "./computeDesperdicioSerragemFinanceiras";
 import { computeCustosAvancadosFinanceiras } from "./computeCustosAvancadosFinanceiras";
+import { computeOperacoesIndustriaisAvancadas } from "./computeOperacoesIndustriaisAvancadas";
 import {
   FINANCEIRO_CUSTO_MATERIAL_KEYS,
   FINANCEIRO_IVA_DEFAULT_PCT,
@@ -116,6 +117,7 @@ function emptyCustos(): Record<FinanceiroCustoKey, number> {
     chapasReais: 0,
     maoDeObra: 0,
     logistica: 0,
+    operacoesAvancadas: 0,
     adm: 0,
     montagem: 0,
     portes: 0,
@@ -132,6 +134,7 @@ const NON_CUTLIST_CUSTO_KEYS = new Set<FinanceiroCustoKey>([
   "chapasReais",
   "maoDeObra",
   "logistica",
+  "operacoesAvancadas",
 ]);
 
 function resolveAdminSettings(project: FinanceiroUnificadoProjectSlice): FinanceiroAdminSettings {
@@ -264,6 +267,17 @@ export function computeFinanceiroUnificado(
   custosComputed.logistica = avancados.precoLogistica;
   const custosAvancadosWarnings = avancados.warnings;
 
+  const opsAvancadas = computeOperacoesIndustriaisAvancadas(cutlist);
+  custosComputed.operacoesAvancadas = opsAvancadas.precoTotal;
+  const operacoesAvancadasBreakdown = {
+    foros: opsAvancadas.foros,
+    grupos: opsAvancadas.grupos,
+    rasgos: opsAvancadas.rasgos,
+    cortes: opsAvancadas.cortes,
+    quadrilha: opsAvancadas.quadrilha,
+    total: opsAvancadas.precoTotal,
+  };
+
   // Materiais efetivos (com overrides) ? base para ADM/montagem/portes e IVA
   const custosEffective = emptyCustos();
   const custoKeysOverridden: FinanceiroCustoKey[] = [];
@@ -349,6 +363,7 @@ export function computeFinanceiroUnificado(
     desperdicioSerragemWarnings,
     custosAvancadosWarnings,
     materialCostMode: avancados.materialCostMode,
+    operacoesAvancadasBreakdown,
     ferragensUnificacao,
   };
 }
@@ -389,6 +404,7 @@ export function financeiroCustoRows(
     { label: "Chapas reais", valor: snap.custosEffective.chapasReais },
     { label: "Mao de obra", valor: snap.custosEffective.maoDeObra },
     { label: "Logistica", valor: snap.custosEffective.logistica },
+    { label: "Ops avancadas", valor: snap.custosEffective.operacoesAvancadas },
     { label: "ADM", valor: snap.custosEffective.adm },
     { label: "Montagem", valor: snap.custosEffective.montagem },
     { label: "Portes", valor: snap.custosEffective.portes },

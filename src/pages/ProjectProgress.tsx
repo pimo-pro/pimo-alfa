@@ -238,6 +238,21 @@ const PROJECT_SECTIONS = [
       { label: "Cavilha com sideOffset hardcoded em 9.5mm (deve ser espessura/2)", status: "planned" },
     ],
   },
+  {
+    id: "p39-financeiro-industrial",
+    title: "15. P3.9 — Sistema Financeiro Industrial",
+    description: "Orçamentos, unificação ferragens, ops CNC/Drill, desperdício/serragem, chapas/MO/logística e ops avançadas",
+    status: "completed" as const,
+    items: [
+      { label: "F1 concluída: Orçamentos base (schema + Admin)", status: "completed" },
+      { label: "F2 concluída: Unificação ferragens A→B", status: "completed" },
+      { label: "F3a concluída: Operações CNC/Drill (SSOT)", status: "completed" },
+      { label: "F3b concluída: Desperdício/Serragem (€)", status: "completed" },
+      { label: "F3c concluída: Chapas reais / MO / logística (modos exclusivos)", status: "completed" },
+      { label: "F4 concluída: Operações industriais avançadas (tarifas tipadas)", status: "completed" },
+      { label: "Estado P3.9 F1–F4: 100% concluído (defaults 0 = baseline intacto)", status: "completed" },
+    ],
+  },
 ];
 
 const STATUS_CONFIG: Record<string, {

@@ -40,6 +40,7 @@ import {
 } from "./computeOperacoesFinanceiras";
 import { computeDesperdicioSerragemFinanceiras } from "./computeDesperdicioSerragemFinanceiras";
 import { computeCustosAvancadosFinanceiras } from "./computeCustosAvancadosFinanceiras";
+import { computeOperacoesIndustriaisAvancadas } from "./computeOperacoesIndustriaisAvancadas";
 import { computeChapasReal } from "../industrial/computeChapasReal";
 import { FINANCEIRO_PIECE_MATERIAL_KEYS } from "./financeiroUnificadoTypes";
 
@@ -72,17 +73,24 @@ export type FinanceiroPecaRow = {
   precoFerragens: number;
   /** CNC + Drill (+ especiais futuros). */
   precoOperacoes: number;
-  /** P3.9 F3b ó quota desperdicio (rateio area). */
+  /** P3.9 F3b ù quota desperdicio (rateio area). */
   precoDesperdicio: number;
-  /** P3.9 F3b ó quota serragem (rateio area). */
+  /** P3.9 F3b ù quota serragem (rateio area). */
   precoSerragem: number;
-  /** P3.9 F3c ó quota chapas reais (0 se por_peca). */
+  /** P3.9 F3c ù quota chapas reais (0 se por_peca). */
   precoChapasShare: number;
-  /** P3.9 F3c ó quota mao de obra. */
+  /** P3.9 F3c ù quota mao de obra. */
   precoMaoDeObra: number;
-  /** P3.9 F3c ó quota logistica (peso/area). */
+  /** P3.9 F3c ù quota logistica (peso/area). */
   precoLogistica: number;
-  /** Soma: material + orla + ferragens + operacoes + desp + serragem + F3c. */
+  /** P3.9 F4 ù ops industriais avanùadas (foros/grupos/rasgo/corte/quadrilha). */
+  precoOperacoesAvancadas: number;
+  precoForos: number;
+  precoGrupos: number;
+  precoRasgo: number;
+  precoCorteManual: number;
+  precoQuadrilha: number;
+  /** Soma: material + orla + ferragens + operacoes + desp + serragem + F3c + F4. */
   precoFinalDaPeca: number;
   /** Alias de precoFinalDaPeca (compat UI/PDF). */
   preco: number;
@@ -334,6 +342,7 @@ export function buildFinanceiroPecasRows(
     pesoTotalKg,
     pesoByPieceId,
   });
+  const opsAvancadas = computeOperacoesIndustriaisAvancadas(cutlist);
   const pieceMaterialKeySet = new Set<string>(FINANCEIRO_PIECE_MATERIAL_KEYS);
 
   return cutlist.map((item, index0) => {
@@ -347,7 +356,8 @@ export function buildFinanceiroPecasRows(
       custoKeyRaw === "serragem" ||
       custoKeyRaw === "chapasReais" ||
       custoKeyRaw === "maoDeObra" ||
-      custoKeyRaw === "logistica"
+      custoKeyRaw === "logistica" ||
+      custoKeyRaw === "operacoesAvancadas"
         ? "paineis"
         : (custoKeyRaw as FinanceiroCustoMaterialKey);
 
@@ -369,6 +379,12 @@ export function buildFinanceiroPecasRows(
     const precoChapasShare = avancados.chapasByPieceId.get(item.id) ?? 0;
     const precoMaoDeObra = avancados.maoDeObraByPieceId.get(item.id) ?? 0;
     const precoLogistica = avancados.logisticaByPieceId.get(item.id) ?? 0;
+    const precoForos = opsAvancadas.forosByPieceId.get(item.id) ?? 0;
+    const precoGrupos = opsAvancadas.gruposByPieceId.get(item.id) ?? 0;
+    const precoRasgo = opsAvancadas.rasgoByPieceId.get(item.id) ?? 0;
+    const precoCorteManual = opsAvancadas.corteByPieceId.get(item.id) ?? 0;
+    const precoQuadrilha = opsAvancadas.quadrilhaByPieceId.get(item.id) ?? 0;
+    const precoOperacoesAvancadas = opsAvancadas.eurByPieceId.get(item.id) ?? 0;
     const precoFinalDaPeca = round2(
       precoMaterial +
         precoOrla +
@@ -378,7 +394,8 @@ export function buildFinanceiroPecasRows(
         precoSerragem +
         precoChapasShare +
         precoMaoDeObra +
-        precoLogistica
+        precoLogistica +
+        precoOperacoesAvancadas
     );
 
     const L = item.dimensoes?.largura ?? 0;
@@ -409,6 +426,12 @@ export function buildFinanceiroPecasRows(
       precoChapasShare,
       precoMaoDeObra,
       precoLogistica,
+      precoOperacoesAvancadas,
+      precoForos,
+      precoGrupos,
+      precoRasgo,
+      precoCorteManual,
+      precoQuadrilha,
       precoFinalDaPeca,
       preco: precoFinalDaPeca,
       custoKey,

@@ -3,6 +3,7 @@
  */
 
 export type {
+  OperacaoAvancada,
   OrcamentosCustosIndustriaisSettings,
   OrcamentosFerragensSettings,
   OrcamentosMargemGanhoSettings,
@@ -10,12 +11,15 @@ export type {
   OrcamentosMaterialCostMode,
   OrcamentosMontagemAvancadaModo,
   OrcamentosMontagemAvancadaSettings,
+  OrcamentosOperacoesAvancadasSettings,
   OrcamentosPerfuracoesSettings,
   OrcamentosSettings,
 } from "./orcamentosTypes";
 
 export {
+  defaultOperacoesAvancadasSettings,
   defaultOrcamentosSettings,
   mergeOrcamentosSettings,
+  normalizeOperacoesAvancadasSettings,
   normalizeOrcamentosSettings,
 } from "./orcamentosSettings";
