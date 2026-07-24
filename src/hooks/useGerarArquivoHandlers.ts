@@ -349,6 +349,11 @@ export function useGerarArquivoHandlers() {
       industrialPieceEdits: project.industrialPieceEdits ?? {},
       remates: project.remates ?? [],
       rodapes: project.rodapes ?? [],
+      ferragemOrla: project.ferragemOrla,
+      financeiroOverrides: project.financeiroOverrides,
+      financeiroAdminSettings: project.financeiroAdminSettings,
+      orlaPieces: project.orlaPieces,
+      orlaPresets: project.orlaPresets,
     }),
     [project, boxes, settings]
   );
@@ -1151,6 +1156,9 @@ export function useGerarArquivoHandlers() {
             industrialPieceEdits: project.industrialPieceEdits,
             ferragemOrla: project.ferragemOrla,
             orlaPresets: project.orlaPresets,
+            orlaPieces: project.orlaPieces,
+            financeiroOverrides: project.financeiroOverrides,
+            financeiroAdminSettings: project.financeiroAdminSettings,
           },
           materials: listIndustrialMaterialsSnapshot(),
           componentTypes,

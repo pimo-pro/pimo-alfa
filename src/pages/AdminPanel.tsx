@@ -23,6 +23,7 @@ import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import ThemeTemplatesAdminPage from "../components/admin/ThemeTemplatesAdminPage";
 import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
+import FinanceiroAdminSettings from "./admin/FinanceiroAdminSettings";
 import { useAuth } from "../auth/useAuth";
 import { hasFullAccess } from "../auth/rbac";
 
@@ -51,6 +52,7 @@ type AdminTab =
   | "Projetos Salvos"
   | "Secções Industriais (Viewer)"
   | "Temas (Aparência)"
+  | "Financeiro (ADM / Montagem / Portes)"
   | "icons";
 
 type AdminMenuEntry =
@@ -93,6 +95,12 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Dimensões Técnicas (MC Overlay)", label: "Dimensões Técnicas (MC Overlay)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Secções Industriais (Viewer)", label: "Secções Industriais (Viewer)" },
+  {
+    type: "item",
+    id: "Financeiro (ADM / Montagem / Portes)",
+    label: "Financeiro (ADM / Montagem / Portes)",
+    adminOnly: true,
+  },
   { type: "item", id: "Project Progress", label: "Project Progress" },
   { type: "item", id: "Painel Referência", label: "Painel Referência" },
   { type: "group", label: "Sistema" },
@@ -120,6 +128,7 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Dimensões Técnicas (MC Overlay)": "adminRuler",
   "Projetos Salvos": "adminSave",
   "Secções Industriais (Viewer)": "adminChecklist",
+  "Financeiro (ADM / Montagem / Portes)": "adminTools",
   "Project Progress": "adminChart",
   "Painel Referência": "adminDocs",
   "Temas (Aparência)": "adminTools",
@@ -289,6 +298,14 @@ export default function AdminPanel() {
             <SavedProjectsAdminPage />
           ) : active === "Secções Industriais (Viewer)" ? (
             <IndustrialSectionsAdminPage />
+          ) : active === "Financeiro (ADM / Montagem / Portes)" ? (
+            canSeeAdminOnlyMenus ? (
+              <FinanceiroAdminSettings />
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Acesso restrito a administradores.
+              </div>
+            )
           ) : active === "Temas (Aparência)" ? (
             <ThemeTemplatesAdminPage />
           ) : active === "Painel Referência" ? (

@@ -92,7 +92,7 @@ export default function ProjetosAnaliseIndexPage() {
         pageSlug={pageSlug ?? projectName}
       >
         <p style={{ color: "#64748b", fontSize: 14 }}>
-          A funcionalidade «Análise arquivo completo» está desativada (
+          A funcionalidade â€” AnÃ¡lise arquivo completoâ€¦ estÃ¡ desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
       </IndustrialOnlineAnalysisLayout>
@@ -101,10 +101,10 @@ export default function ProjetosAnaliseIndexPage() {
 
   return (
     <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
+      {loading ? <p style={{ color: "#64748b" }}>A carregar projetoâ€¦</p> : null}
       {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
       {!loading && !error && !revivedOk ? (
-        <p style={{ color: "#dc2626" }}>Não foi possível ler o estado do projeto.</p>
+        <p style={{ color: "#dc2626" }}>NÃ£o foi possÃ­vel ler o estado do projeto.</p>
       ) : null}
       {!loading && !error && revivedOk && projectState ? (
         <>
@@ -135,8 +135,8 @@ export default function ProjetosAnaliseIndexPage() {
           />
           <div style={{ display: "grid", gap: 10 }}>
             <p style={{ margin: "0 0 8px", fontSize: 13, color: "#64748b" }}>
-              Documentos industriais (leitura + edição documental + download seletivo). A cutlist
-              editada alimenta as etiquetas UEE (material/obs/qtd/peça/caixa) sem alterar CNC.
+              Documentos industriais (leitura + ediÃ§Ã£o documental + download seletivo). A cutlist
+              editada alimenta as etiquetas UEE (material/obs/qtd/peÃ§a/caixa) sem alterar CNC.
             </p>
             {documentHasOverrides(projectState.industrialDocumentOverrides, "cutlist") ? (
               <p
@@ -149,8 +149,8 @@ export default function ProjetosAnaliseIndexPage() {
                   borderRadius: 6,
                 }}
               >
-                A cutlist tem edições documentais: as etiquetas UEE reflectem material, qtd,
-                observações, peça e caixa. CNC/TCN/drill/nesting não são alterados.
+                A cutlist tem ediÃ§Ãµes documentais: as etiquetas UEE reflectem material, qtd,
+                observaÃ§Ãµes, peÃ§a e caixa. CNC/TCN/drill/nesting nÃ£o sÃ£o alterados.
               </p>
             ) : null}
             {INDUSTRIAL_ONLINE_ANALYSIS_DOCS.map((doc) => {
@@ -216,7 +216,7 @@ export default function ProjetosAnaliseIndexPage() {
                       ) : null}
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                      {doc.description} — <code style={{ fontSize: 11 }}>{doc.id}</code>
+                      {doc.description} â€” <code style={{ fontSize: 11 }}>{doc.id}</code>
                     </div>
                   </Link>
                   <button
@@ -243,7 +243,7 @@ export default function ProjetosAnaliseIndexPage() {
           <IndustrialOnlineAnalysisHistoryPanel
             entries={historyEntries}
             projectName={projectName}
-            title="Histórico global"
+            title="HistÃ³rico global"
           />
         </>
       ) : null}

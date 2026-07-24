@@ -14,7 +14,6 @@ import { appendFerragensIndustriaisSection } from "./pdfFerragensIndustriais";
 import { appendResumoFinanceiroSection } from "./pdfResumoFinanceiro";
 import { appendPecasTotaisSection } from "./pdfPecasTotais";
 import { appendFerragensTotaisSection } from "./pdfFerragensTotais";
-import { appendTotaisProjetoSection, type TotaisProjetoPdfExtras } from "./pdfTotaisProjeto";
 import type { RematePiece } from "../remate/rematePieceTypes";
 import type { ProjectRodape } from "../rodape/rodapeTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
@@ -25,19 +24,28 @@ import {
   calcularPrecoTotalProjeto,
 } from "../pricing/pricing";
 import { formatCurrency } from "../../utils/formatting";
+import type { FinanceiroOverrides } from "../financeiro/financeiroUnificadoTypes";
+import type { FinanceiroAdminSettings } from "../financeiro/financeiroAdminRules";
 
 /** Alias ao `ProjectForPdf` da cutlist (inclui extractedPartsByBoxId e precomputedItems). */
 export type ProjectForPdfWithExtracted = ProjectForPdf & {
   remates?: RematePiece[];
   rodapes?: ProjectRodape[];
+  ferragemOrla?: ProjectStateFerragemOrla;
+  financeiroOverrides?: FinanceiroOverrides;
+  financeiroAdminSettings?: FinanceiroAdminSettings;
+  orlaPieces?: ProjectState["orlaPieces"];
+  orlaPresets?: ProjectState["orlaPresets"];
 };
+
+type ProjectStateFerragemOrla = import("../../context/projectTypes").ProjectState["ferragemOrla"];
+type ProjectState = import("../../context/projectTypes").ProjectState;
 
 export type UnifiedPdfIndustrialContext = {
   materials: MaterialIndustrial[];
   componentTypes: ComponentType[];
   ferragens: Ferragem[];
   showPrices?: boolean;
-  totaisExtras?: TotaisProjetoPdfExtras;
 };
 
 const MARGIN = 14;
@@ -258,6 +266,11 @@ export async function buildUnifiedPdf(
         rodapes: project.rodapes ?? [],
         extractedPartsByBoxId: project.extractedPartsByBoxId,
         industrialPieceEdits: project.industrialPieceEdits,
+        ferragemOrla: project.ferragemOrla,
+        financeiroOverrides: project.financeiroOverrides,
+        financeiroAdminSettings: project.financeiroAdminSettings,
+        orlaPieces: project.orlaPieces,
+        orlaPresets: project.orlaPresets,
       },
       industrial.materials,
       industrial.showPrices ?? false
@@ -292,22 +305,7 @@ export async function buildUnifiedPdf(
       industrial.ferragens
     );
     addFerragensIndustriaisResumoSection(doc, project);
-    appendTotaisProjetoSection(
-      doc,
-      {
-        boxes: project.boxes,
-        rules: project.rules,
-        materialId: project.materialId,
-        projectName: project.projectName,
-        remates: project.remates ?? [],
-        rodapes: project.rodapes ?? [],
-        extractedPartsByBoxId: project.extractedPartsByBoxId,
-        industrialPieceEdits: project.industrialPieceEdits,
-      },
-      industrial.materials,
-      industrial.showPrices ?? false,
-      industrial.totaisExtras
-    );
+    // P3.5 — Totais do Projeto absorvido pelo Resumo Financeiro — Detalhado (SSOT).
   } else {
     addPortasSection(doc, project);
     addGavetasSection(doc, project);

@@ -1,20 +1,25 @@
+/**
+ * P3.5 — totais_projeto.pdf é alias do Resumo Financeiro — Detalhado (SSOT).
+ * Mantido para compatibilidade de nomes de ficheiro no ZIP / análise online.
+ */
+
 import type jsPDF from "jspdf";
 import type { ProjectState } from "../../context/projectTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
 import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
-import { buildTotaisProjetoPdfRows } from "../industrial/industrialBottomSectionData";
+import type { FinanceiroOverrides } from "../financeiro/financeiroUnificadoTypes";
+import type { FinanceiroAdminSettings } from "../financeiro/financeiroAdminRules";
 import {
-  createIndustrialSectionPdf,
-  drawIndustrialSectionPdfHeader,
-  drawIndustrialSectionTable,
-  industrialSectionPdfFileName,
-  resolveIndustrialSectionPdfMeta,
-} from "./pdfIndustrialSectionShell";
+  buildResumoFinanceiroPdf,
+  appendResumoFinanceiroSection,
+} from "./pdfResumoFinanceiro";
+import { industrialSectionPdfFileName } from "./pdfIndustrialSectionShell";
 
 export function totaisProjetoPdfFileName(projectName: string): string {
   return industrialSectionPdfFileName(projectName, "totais_projeto");
 }
 
+/** @deprecated P3.5 — extras ignorados; conteúdo vem do SSOT financeiro. */
 export type TotaisProjetoPdfExtras = {
   totalOrlaMetros?: number;
   custoTotalOrla?: number;
@@ -35,18 +40,22 @@ type TotaisProjectSlice = Pick<
   | "remates"
   | "rodapes"
   | "extractedPartsByBoxId"
-> & { industrialPieceEdits?: IndustrialPieceEditsStore };
+  | "ferragemOrla"
+  | "orlaPieces"
+  | "orlaPresets"
+> & {
+  industrialPieceEdits?: IndustrialPieceEditsStore;
+  financeiroOverrides?: FinanceiroOverrides;
+  financeiroAdminSettings?: FinanceiroAdminSettings;
+};
 
 export function buildTotaisProjetoPdf(
   project: TotaisProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean,
-  extras?: TotaisProjetoPdfExtras
+  _extras?: TotaisProjetoPdfExtras
 ): jsPDF {
-  const projectName = project.projectName?.trim() || "Projeto";
-  const meta = resolveIndustrialSectionPdfMeta("Totais do Projeto", projectName);
-  const rows = buildTotaisProjetoPdfRows(project, materials, showPrices, extras);
-  return createIndustrialSectionPdf(meta, [["Métrica", "Valor"]], rows);
+  return buildResumoFinanceiroPdf(project, materials, showPrices);
 }
 
 export function appendTotaisProjetoSection(
@@ -54,12 +63,7 @@ export function appendTotaisProjetoSection(
   project: TotaisProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean,
-  extras?: TotaisProjetoPdfExtras
+  _extras?: TotaisProjetoPdfExtras
 ): void {
-  const projectName = project.projectName?.trim() || "Projeto";
-  const meta = resolveIndustrialSectionPdfMeta("Totais do Projeto", projectName);
-  const rows = buildTotaisProjetoPdfRows(project, materials, showPrices, extras);
-  doc.addPage("a4", "portrait");
-  const y = drawIndustrialSectionPdfHeader(doc, meta);
-  drawIndustrialSectionTable(doc, y, [["Métrica", "Valor"]], rows);
+  appendResumoFinanceiroSection(doc, project, materials, showPrices);
 }

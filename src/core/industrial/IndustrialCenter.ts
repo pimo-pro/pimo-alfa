@@ -1,10 +1,10 @@
 /**
- * P3 ù Fachada IndustrialCenter (Opcao A: classic-first).
+ * P3 ‚Äî Fachada IndustrialCenter (Opcao A: classic-first).
  *
  * Camada unica de acesso a:
  *   A) Dados SSOT (live ProjectState + cutlist canonica)
  *   B) Apresentacao PDF (resolve + classic presentation)
- *   C) Maquina (CNC/TCN/drill/nesting) ù cutlist base + pieceEdits, SEM overrides documentais
+ *   C) Maquina (CNC/TCN/drill/nesting) ‚Äî cutlist base + pieceEdits, SEM overrides documentais
  *
  * Thin wrappers: nao duplica logica; redireciona para os modulos SSOT existentes.
  */
@@ -88,7 +88,7 @@ export function getCncItems(project: ProjectState): CutListItemComPreco[] {
 }
 
 /**
- * Items UEE: cutlist + whitelist documental (material/qtd/obs/ù).
+ * Items UEE: cutlist + whitelist documental (material/qtd/obs/√ó).
  * Geometria CNC permanece em getCncItems().
  */
 export function getUeeItems(project: ProjectState): CutListItemComPreco[] {

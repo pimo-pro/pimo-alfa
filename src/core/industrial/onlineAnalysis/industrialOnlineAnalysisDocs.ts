@@ -31,7 +31,7 @@ export const INDUSTRIAL_ONLINE_ANALYSIS_DOCS: readonly IndustrialOnlineAnalysisD
   {
     id: "resumo_financeiro",
     label: "Resumo Financeiro",
-    description: "Totais e peças com custos",
+    description: "Painel financeiro unificado (métricas + custos + IVA)",
   },
   { id: "pecas_totais", label: "Peças totais", description: "Peças agregadas do projeto" },
   {
@@ -39,7 +39,11 @@ export const INDUSTRIAL_ONLINE_ANALYSIS_DOCS: readonly IndustrialOnlineAnalysisD
     label: "Ferragens totais",
     description: "Detalhe e totais de ferragens",
   },
-  { id: "totais_projeto", label: "Totais do Projeto", description: "Indicadores globais" },
+  {
+    id: "totais_projeto",
+    label: "Totais do Projeto",
+    description: "Alias P3.5 do Resumo Financeiro — Detalhado",
+  },
   {
     id: "industrial_armazem",
     label: "Industrial Armazém",

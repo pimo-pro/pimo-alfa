@@ -157,7 +157,7 @@ export async function uploadProjectThumbnail(
 
     const jsonResponse = await fetch(buildProjectsUrl(params), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({ name, dataUrl, mime: blob.type || "image/jpeg" }),
     });
     return parseUrl(jsonResponse);

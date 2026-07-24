@@ -5,14 +5,15 @@ import type { Ferragem } from "../ferragens/ferragens";
 import { buildResumoFinanceiroPdf, resumoFinanceiroPdfFileName } from "../pdf/pdfResumoFinanceiro";
 import { buildPecasTotaisPdf, pecasTotaisPdfFileName } from "../pdf/pdfPecasTotais";
 import { buildFerragensTotaisPdf, ferragensTotaisPdfFileName } from "../pdf/pdfFerragensTotais";
-import { buildTotaisProjetoPdf, totaisProjetoPdfFileName, type TotaisProjetoPdfExtras } from "../pdf/pdfTotaisProjeto";
+import { totaisProjetoPdfFileName } from "../pdf/pdfTotaisProjeto";
 import { ensureLogoIndustrialLoaded } from "../pdf/logoIndustrialPublic";
 
 export type BottomSectionPdfBundle = {
   resumoFinanceiro: ReturnType<typeof buildResumoFinanceiroPdf>;
   pecasTotais: ReturnType<typeof buildPecasTotaisPdf>;
   ferragensTotais: ReturnType<typeof buildFerragensTotaisPdf>;
-  totaisProjeto: ReturnType<typeof buildTotaisProjetoPdf>;
+  /** P3.5 — alias do resumo financeiro unificado (compat ZIP). */
+  totaisProjeto: ReturnType<typeof buildResumoFinanceiroPdf>;
   fileNames: {
     resumoFinanceiro: string;
     pecasTotais: string;
@@ -34,18 +35,27 @@ export async function buildBottomSectionPdfs(input: {
     | "pieceObservacoes"
     | "ferragemOrla"
     | "orlaPresets"
+    | "orlaPieces"
+    | "financeiroOverrides"
+    | "financeiroAdminSettings"
   > & { industrialPieceEdits?: import("../industrial/industrialPieceEditsTypes").IndustrialPieceEditsStore };
   materials: MaterialIndustrial[];
   componentTypes: ComponentType[];
   ferragens: Ferragem[];
   showPrices: boolean;
-  totaisExtras?: TotaisProjetoPdfExtras;
 }): Promise<BottomSectionPdfBundle> {
   await ensureLogoIndustrialLoaded();
   const projectName = input.project.projectName?.trim() || "Projeto";
 
+  // P3.5 — um único PDF financeiro SSOT; totais_projeto.pdf = mesmo conteúdo.
+  const financeiroPdf = buildResumoFinanceiroPdf(
+    input.project,
+    input.materials,
+    input.showPrices
+  );
+
   return {
-    resumoFinanceiro: buildResumoFinanceiroPdf(input.project, input.materials, input.showPrices),
+    resumoFinanceiro: financeiroPdf,
     pecasTotais: buildPecasTotaisPdf(input.project, input.materials),
     ferragensTotais: buildFerragensTotaisPdf(
       input.project,
@@ -53,12 +63,7 @@ export async function buildBottomSectionPdfs(input: {
       input.ferragens,
       input.materials
     ),
-    totaisProjeto: buildTotaisProjetoPdf(
-      input.project,
-      input.materials,
-      input.showPrices,
-      input.totaisExtras
-    ),
+    totaisProjeto: financeiroPdf,
     fileNames: {
       resumoFinanceiro: resumoFinanceiroPdfFileName(projectName),
       pecasTotais: pecasTotaisPdfFileName(projectName),

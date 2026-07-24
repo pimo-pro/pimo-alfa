@@ -10,7 +10,6 @@ import { buildResumoFinanceiroPdf, resumoFinanceiroPdfFileName } from "../core/p
 import { buildPecasTotaisPdf, pecasTotaisPdfFileName } from "../core/pdf/pdfPecasTotais";
 import { buildFerragensTotaisPdf, ferragensTotaisPdfFileName } from "../core/pdf/pdfFerragensTotais";
 import { buildTotaisProjetoPdf, totaisProjetoPdfFileName } from "../core/pdf/pdfTotaisProjeto";
-import { useCutlistData } from "./useCutlistData";
 import {
   beginIndustrialFileGeneration,
   endIndustrialFileGeneration,
@@ -30,7 +29,6 @@ export function useIndustrialBottomPdf() {
   const { ferragens } = useFerragens();
   const { hasPermission } = useAuth();
   const isAdmin = hasFullAccess(hasPermission);
-  const cutlistData = useCutlistData();
 
   const projectName = project.projectName?.trim() || "Projeto";
   const boxes = project.boxes ?? [];
@@ -91,6 +89,11 @@ export function useIndustrialBottomPdf() {
           rodapes: project.rodapes,
           extractedPartsByBoxId: project.extractedPartsByBoxId,
           industrialPieceEdits: project.industrialPieceEdits,
+          ferragemOrla: project.ferragemOrla,
+          financeiroOverrides: project.financeiroOverrides,
+          financeiroAdminSettings: project.financeiroAdminSettings,
+          orlaPieces: project.orlaPieces,
+          orlaPresets: project.orlaPresets,
         },
         materials,
         canShowSectionPrices("resumoFinanceiro", isAdmin)
@@ -143,6 +146,7 @@ export function useIndustrialBottomPdf() {
   }, [buildFerragensTotaisDoc, project]);
 
   const exportTotaisProjetoPdf = useCallback(async () => {
+    // P3.5 — mesmo SSOT que resumo_financeiro (compat nome de ficheiro).
     await saveResolvedPdf("totais_projeto", totaisProjetoPdfFileName(projectName), () =>
       buildTotaisProjetoPdf(
         {
@@ -154,22 +158,17 @@ export function useIndustrialBottomPdf() {
           rodapes: project.rodapes,
           extractedPartsByBoxId: project.extractedPartsByBoxId,
           industrialPieceEdits: project.industrialPieceEdits,
+          ferragemOrla: project.ferragemOrla,
+          financeiroOverrides: project.financeiroOverrides,
+          financeiroAdminSettings: project.financeiroAdminSettings,
+          orlaPieces: project.orlaPieces,
+          orlaPresets: project.orlaPresets,
         },
         materials,
-        canShowSectionPrices("totaisProjeto", isAdmin),
-        {
-          totalOrlaMetros: cutlistData.totalOrlaMetros,
-          custoTotalOrla: cutlistData.custoTotalOrla,
-          custoTotalRemates: cutlistData.custoTotalRemates,
-          custoTotalPaineis: cutlistData.custoTotalPaineis,
-          custoTotalPortas: cutlistData.custoTotalPortas,
-          custoTotalGavetas: cutlistData.custoTotalGavetas,
-          custoTotalFerragens: cutlistData.custoTotalFerragens,
-          custoTotal: cutlistData.custoTotal,
-        }
+        canShowSectionPrices("totaisProjeto", isAdmin)
       )
     );
-  }, [boxes, project, projectName, materials, isAdmin, cutlistData, saveResolvedPdf]);
+  }, [boxes, project, projectName, materials, isAdmin, saveResolvedPdf]);
 
   /** Hub armazem — sempre via resolve + classic (P3.2). */
   const exportIndustrialArmazemPdf = useCallback(async () => {

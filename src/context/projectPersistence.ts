@@ -29,6 +29,8 @@ import {
 } from "../core/autoRoomFill/autoRoomFillTypes";
 import { normalizeIndustrialDocumentOverrides } from "../core/industrial/onlineAnalysis/industrialDocumentOverridesTypes";
 import { normalizeIndustrialDocumentHistory } from "../core/industrial/onlineAnalysis/industrialDocumentHistoryTypes";
+import { normalizeFinanceiroOverrides } from "../core/financeiro/financeiroUnificadoTypes";
+import { normalizeFinanceiroAdminSettings } from "../core/financeiro/financeiroAdminRules";
 
 export const PROJECTS_STORAGE_KEY = "pimo_saved_projects";
 export const MANUAL_BACKUPS_STORAGE_KEY = "pimo_manual_backups";
@@ -236,6 +238,10 @@ export function reviveState(snapshot: unknown, options?: ReviveStateOptions): Pr
         : defaultState.industrialOperacoes,
     industrialDocumentOverrides: normalizeIndustrialDocumentOverrides(
       restored.industrialDocumentOverrides
+    ),
+    financeiroOverrides: normalizeFinanceiroOverrides(restored.financeiroOverrides),
+    financeiroAdminSettings: normalizeFinanceiroAdminSettings(
+      restored.financeiroAdminSettings ?? defaultState.financeiroAdminSettings
     ),
     industrialDocumentHistory: normalizeIndustrialDocumentHistory(
       restored.industrialDocumentHistory

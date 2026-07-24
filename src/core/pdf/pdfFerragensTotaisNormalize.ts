@@ -35,7 +35,7 @@ const EM_DASH = "\u2014";
 const MULTIPLY = "\u00d7";
 const CORREDICA_LABEL = "Corredi\u00e7a";
 const DOBRADICA_LABEL = "Dobradi\u00e7a";
-/** Ref industrial oficial da dobradi?a principal (PDF / totais). */
+/** Ref industrial oficial da dobradiça principal (PDF / totais). */
 export const DOBRADICA_REF = "I-Sensys 8645i";
 const PE_REF_DEFAULT = "P\u00e9-Pl\u00e1stico";
 
@@ -222,7 +222,7 @@ function countCupsOnPanel(holes: PanelDrillHole[] | undefined): number {
 }
 
 /**
- * Contagem oficial de dobradi?as para PDF/online (apresentacao).
+ * Contagem oficial de dobradiças para PDF/online (apresentacao).
  * Fonte: canecos ?35 (holeType === "dobradica") nas pecas porta do cutlist.
  * Fallback: getNumDobradicas(alturaMm, rules) por folha.
  * Ignora gerarFerragens / ComponentTypes (nao usar como fonte).

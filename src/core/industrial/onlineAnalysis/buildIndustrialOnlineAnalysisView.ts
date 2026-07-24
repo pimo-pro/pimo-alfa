@@ -1,6 +1,6 @@
 /**
  * Vista estruturada dos PDFs industriais.
- * Fase 2: secùùes canùnicas com rowId + apply de industrialDocumentOverrides.
+ * Fase 2: sec√ß√µes can√≥nicas com rowId + apply de industrialDocumentOverrides.
  */
 
 import type { ProjectState } from "@/context/projectTypes";
@@ -123,11 +123,11 @@ function buildCutlistLikeSections(
   const projectName = project.projectName?.trim() || "Projeto";
   const columns = [
     col("caixa", "Caixa", true),
-    col("peca", "Peùa", true),
+    col("peca", "Pe√ßa", true),
     col("qtd", "Qtd", true),
-    col("dimensoes", "LùAùP (mm)", false),
+    col("dimensoes", "L√óA√óP (mm)", false),
     col("material", "Material", true),
-    col("observacoes", "Observaùùes", true),
+    col("observacoes", "Observa√ß√µes", true),
     col("ref", "Ref.", false),
   ];
   return [
@@ -136,12 +136,12 @@ function buildCutlistLikeSections(
       title: "Lista de corte",
       columns,
       rows: items.map((item, index) => {
-        const caixa = boxNome[item.boxId ?? ""] ?? item.boxId ?? "ù";
+        const caixa = boxNome[item.boxId ?? ""] ?? item.boxId ?? "‚Äî";
         const obs = formatObservacoesForPdf(
           resolveObservacoesForCutListItem(item, { pieceObservacoes: project.pieceObservacoes })
         );
         const ref = resolveIndustrialPieceRef(item, caixa, projectName);
-        // Sempre namespace cutlist ù cutlist e tùcnico partilham o mesmo rowId SSOT.
+        // Sempre namespace cutlist ‚Äî cutlist e t√©cnico partilham o mesmo rowId SSOT.
         const rowId =
           item.id?.trim() ||
           makeSsotCutlistRowId([
@@ -156,9 +156,9 @@ function buildCutlistLikeSections(
           caixa,
           peca: item.tipo,
           qtd: String(item.quantidade ?? 1),
-          dimensoes: `${item.dimensoes.largura}ù${item.dimensoes.altura}ù${item.espessura ?? item.dimensoes.profundidade ?? "ù"}`,
-          material: String(item.material ?? item.materialId ?? "ù"),
-          observacoes: obs || "ù",
+          dimensoes: `${item.dimensoes.largura}√ó${item.dimensoes.altura}√ó${item.espessura ?? item.dimensoes.profundidade ?? "‚Äî"}`,
+          material: String(item.material ?? item.materialId ?? "‚Äî"),
+          observacoes: obs || "‚Äî",
           ref,
         });
       }),
@@ -166,7 +166,7 @@ function buildCutlistLikeSections(
   ];
 }
 
-/** Secùùes canùnicas (sem overrides). */
+/** Sec√ß√µes can√≥nicas (sem overrides). */
 export function buildCanonicalIndustrialOnlineAnalysisSections(
   project: ProjectState,
   docId: IndustrialOnlineAnalysisDocId,
@@ -198,11 +198,11 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
         title: "Resumo industrial",
         columns: [
           col("caixa", "Caixa", true),
-          col("peca", "Peùa", true),
-          col("dimensoes", "Dimensùes", false),
-          col("areaM2", "ùrea mù", false),
+          col("peca", "Pe√ßa", true),
+          col("dimensoes", "Dimens√µes", false),
+          col("areaM2", "√Årea m¬≤", false),
           col("pesoKg", "Peso kg", false),
-          col("consumoM2", "Consumo mù", false),
+          col("consumoM2", "Consumo m¬≤", false),
           col("observacoes", "Obs.", true),
           col("mod", "Mod.", false),
         ],
@@ -217,7 +217,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
               pesoKg: r.pesoKg.toFixed(2),
               consumoM2: r.consumoM2.toFixed(3),
               observacoes: r.observacoes,
-              mod: r.modified ? "sim" : "ù",
+              mod: r.modified ? "sim" : "‚Äî",
             }
           )
         ),
@@ -236,6 +236,9 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
         rodapes: project.rodapes,
         extractedPartsByBoxId: project.extractedPartsByBoxId,
         industrialPieceEdits: project.industrialPieceEdits,
+        ferragemOrla: project.ferragemOrla,
+        financeiroOverrides: project.financeiroOverrides,
+        financeiroAdminSettings: project.financeiroAdminSettings,
       },
       materials,
       showPrices
@@ -254,11 +257,11 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "pecas",
-        title: "Peùas",
+        title: "Pe√ßas",
         columns: [
           col("caixa", "Caixa", true),
           col("tipo", "Tipo", true),
-          col("dimensoes", "Dimensùes", false),
+          col("dimensoes", "Dimens√µes", false),
           col("qtd", "Qtd", true),
           col("material", "Material", true),
         ],
@@ -280,12 +283,12 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
     return [
       {
         id: "pecas",
-        title: "Peùas totais",
+        title: "Pe√ßas totais",
         columns: [
           col("categoria", "Categoria", true),
           col("caixa", "Caixa", true),
           col("tipo", "Tipo", true),
-          col("dimensoes", "Dimensùes", false),
+          col("dimensoes", "Dimens√µes", false),
           col("material", "Material", true),
           col("pesoKg", "Peso kg", false),
           col("qtd", "Qtd", true),
@@ -325,7 +328,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
           col("ferragem", "Ferragem", true),
           col("qtd", "Qtd", true),
           col("material", "Material", true),
-          col("codigo", "Cùdigo", false),
+          col("codigo", "C√≥digo", false),
         ],
         rows: pdfData.detalhe.map((r, index) =>
           rowFromCells(makeCanonicalRowId(docId, "detalhe", [r[0], r[1], r[4], index]), {
@@ -350,7 +353,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "chapas",
-        title: "Materiais / chapas (armazùm)",
+        title: "Materiais / chapas (armaz√©m)",
         columns: [
           col("material", "Material", true),
           col("ref", "Ref.", true),
@@ -368,7 +371,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "ferragensAgg",
-        title: "Ferragens agregadas (armazùm)",
+        title: "Ferragens agregadas (armaz√©m)",
         columns: [
           col("material", "Material", true),
           col("ref", "Ref.", true),
@@ -398,6 +401,9 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
         rodapes: project.rodapes,
         extractedPartsByBoxId: project.extractedPartsByBoxId,
         industrialPieceEdits: project.industrialPieceEdits,
+        ferragemOrla: project.ferragemOrla,
+        financeiroOverrides: project.financeiroOverrides,
+        financeiroAdminSettings: project.financeiroAdminSettings,
       },
       materials,
       showPrices
@@ -429,10 +435,10 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
           col("index", "#", false),
           col("material", "Material", true),
           col("espessura", "Esp. mm", false),
-          col("chapa", "Chapa LùA", false),
-          col("pecas", "Peùas", true),
-          col("usado", "Usado mù", false),
-          col("desperdicio", "Desperdùcio %", false),
+          col("chapa", "Chapa L√óA", false),
+          col("pecas", "Pe√ßas", true),
+          col("usado", "Usado m¬≤", false),
+          col("desperdicio", "Desperd√≠cio %", false),
         ],
         rows: chapas.sheets.map((s) =>
           rowFromCells(
@@ -441,7 +447,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
               index: String(s.sheetIndex),
               material: s.material,
               espessura: String(s.espessuraMm),
-              chapa: `${s.sheetLarguraMm}ù${s.sheetAlturaMm}`,
+              chapa: `${s.sheetLarguraMm}√ó${s.sheetAlturaMm}`,
               pecas: String(s.pieceCount),
               usado: (s.usedAreaMm2 / 1_000_000).toFixed(3),
               desperdicio: s.wastePct.toFixed(1),
@@ -451,12 +457,12 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       },
       {
         id: "consumoPeca",
-        title: "Consumo por peùa",
+        title: "Consumo por pe√ßa",
         columns: [
-          col("peca", "Peùa", true),
+          col("peca", "Pe√ßa", true),
           col("caixa", "Caixa", true),
           col("material", "Material", true),
-          col("area", "ùrea mù", false),
+          col("area", "√Årea m¬≤", false),
           col("pesoKg", "Peso kg", false),
           col("qtd", "Qtd", true),
         ],
@@ -481,8 +487,8 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
           col("index", "#", false),
           col("material", "Material", true),
           col("espessura", "Esp. mm", false),
-          col("usado", "Usado mù", false),
-          col("desperdicio", "Desperdùcio %", false),
+          col("usado", "Usado m¬≤", false),
+          col("desperdicio", "Desperd√≠cio %", false),
         ],
         rows: consumo.porChapa.map((r) =>
           rowFromCells(
@@ -516,11 +522,11 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
       title: "Ferragens industriais",
       columns: [
         col("caixa", "Caixa", true),
-        col("peca", "Peùa", true),
+        col("peca", "Pe√ßa", true),
         col("ferragem", "Ferragem", true),
         col("qtd", "Qtd", true),
         col("material", "Material", true),
-        col("codigo", "Cùdigo", false),
+        col("codigo", "C√≥digo", false),
         col("short", "Short", false),
         col("observacoes", "Obs.", true),
       ],
@@ -535,7 +541,7 @@ export function buildCanonicalIndustrialOnlineAnalysisSections(
             material: r.material,
             codigo: r.codigoIndustrial,
             short: r.shortCode,
-            observacoes: r.observacoes || "ù",
+            observacoes: r.observacoes || "‚Äî",
           }
         )
       ),
@@ -569,7 +575,7 @@ export function buildIndustrialOnlineAnalysisView(
   };
 }
 
-/** Ponto ùnico UI + ZIP: rows efetivas (canùnico + overrides). */
+/** Ponto ‚Äînico UI + ZIP: rows efetivas (can√≥nico + overrides). */
 export function getEffectiveRowsForDoc(
   project: ProjectState,
   docId: IndustrialOnlineAnalysisDocId,

@@ -1,8 +1,8 @@
 /**
- * SSOT em memória do ProjectState industrial partilhado entre o editor (ZIP)
- * e as páginas `/PROJETOS/.../analise` (fora do ProjectProvider).
+ * SSOT em memÃ³ria do ProjectState industrial partilhado entre o editor (ZIP)
+ * e as pÃ¡ginas `/PROJETOS/.../analise` (fora do ProjectProvider).
  *
- * Sobrevive à desmontagem do LegacyApp ao navegar para /analise.
+ * Sobrevive â€” desmontagem do LegacyApp ao navegar para /analise.
  */
 import type { ProjectState } from "@/context/projectTypes";
 import {

@@ -18,7 +18,7 @@ describe("industrialDocumentarySsot / cutlist?tecnico", () => {
     expect(isCutlistSsotDocId("cutlist")).toBe(true);
   });
 
-  it("gera o mesmo rowId SSOT para cutlist e técnico", () => {
+  it("gera o mesmo rowId SSOT para cutlist e tÃ©cnico", () => {
     const parts = ["box-1", "LAT_ESQ", 600, 720, 19, 0];
     const a = makeSsotCutlistRowId(parts);
     const b = makeCanonicalRowId("cutlist", "cutlist", parts);

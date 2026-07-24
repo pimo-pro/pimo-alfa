@@ -1,17 +1,19 @@
 /**
  * Contexto para a barra de informação inferior (BottomInfoToolbar).
+ * P3.6 — Financeiro sem tabs legadas; secção única `unificado`.
  */
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 export type BottomInfoGroupId = "financeiro" | "industriais" | "operacoes";
 
-/** IDs legados (sub-secções) — mantidos para compatibilidade interna. */
+/** IDs legados (sub-secções) — mantidos para compatibilidade de deep-links. */
 export type BottomInfoLegacySectionId =
   | "resumo"
+  | "totais"
+  | "custos"
   | "pecasTotais"
   | "ferragensTotais"
-  | "totais"
   | "resumoIndustriais"
   | "operacoesIndustriais"
   | "consumoMateriais"
@@ -19,7 +21,8 @@ export type BottomInfoLegacySectionId =
 
 export type BottomInfoPanelId = BottomInfoGroupId | BottomInfoLegacySectionId | null;
 
-export type FinanceiroSectionId = "resumo" | "totais" | "custos";
+/** P3.7 — Painel Unificado | Financeiro peças | Editar. */
+export type FinanceiroSectionId = "unificado" | "pecas" | "editar";
 export type IndustriaisSectionId =
   | "pecasTotais"
   | "ferragensTotais"
@@ -39,7 +42,7 @@ export type OperacoesSectionId =
 export type BottomInfoSectionId = FinanceiroSectionId | IndustriaisSectionId | OperacoesSectionId;
 
 const DEFAULT_SECTION: Record<BottomInfoGroupId, BottomInfoSectionId> = {
-  financeiro: "resumo",
+  financeiro: "unificado",
   industriais: "pecasTotais",
   operacoes: "todas",
 };
@@ -48,8 +51,10 @@ const LEGACY_TO_GROUP: Record<
   BottomInfoLegacySectionId,
   { group: BottomInfoGroupId; section: BottomInfoSectionId }
 > = {
-  resumo: { group: "financeiro", section: "resumo" },
-  totais: { group: "financeiro", section: "totais" },
+  // P3.6 — tabs financeiras antigas → Painel Unificado
+  resumo: { group: "financeiro", section: "unificado" },
+  totais: { group: "financeiro", section: "unificado" },
+  custos: { group: "financeiro", section: "unificado" },
   pecasTotais: { group: "industriais", section: "pecasTotais" },
   ferragensTotais: { group: "industriais", section: "ferragensTotais" },
   consumoMateriais: { group: "industriais", section: "consumoMateriais" },
@@ -80,14 +85,26 @@ type BottomInfoContextValue = {
 
 const BottomInfoContext = createContext<BottomInfoContextValue | null>(null);
 
+function normalizeFinanceiroSection(section: BottomInfoSectionId | string): BottomInfoSectionId {
+  // Compat: estados em memória / localStorage antigos (resumo/totais/custos)
+  if (section === "resumo" || section === "totais" || section === "custos") {
+    return "unificado";
+  }
+  return section as BottomInfoSectionId;
+}
+
 export function BottomInfoProvider({ children }: { children: React.ReactNode }) {
   const [openPanel, setOpenPanelState] = useState<BottomInfoGroupId | null>(null);
-  const [activeSection, setActiveSection] = useState<BottomInfoSectionId>("resumo");
+  const [activeSection, setActiveSectionState] = useState<BottomInfoSectionId>("unificado");
+
+  const setActiveSection = useCallback((section: BottomInfoSectionId) => {
+    setActiveSectionState(normalizeFinanceiroSection(section));
+  }, []);
 
   const openGroupSection = useCallback(
     (group: BottomInfoGroupId, section?: BottomInfoSectionId) => {
       setOpenPanelState(group);
-      setActiveSection(section ?? DEFAULT_SECTION[group]);
+      setActiveSectionState(normalizeFinanceiroSection(section ?? DEFAULT_SECTION[group]));
     },
     []
   );
@@ -99,20 +116,17 @@ export function BottomInfoProvider({ children }: { children: React.ReactNode }) 
     }
     const { group, section } = resolveOpenTarget(id);
     setOpenPanelState(group);
-    setActiveSection(section);
+    setActiveSectionState(normalizeFinanceiroSection(section));
   }, []);
 
-  const togglePanel = useCallback(
-    (id: Exclude<BottomInfoPanelId, null>) => {
-      const { group, section } = resolveOpenTarget(id);
-      setOpenPanelState((prev) => {
-        if (prev === group) return null;
-        setActiveSection(section);
-        return group;
-      });
-    },
-    []
-  );
+  const togglePanel = useCallback((id: Exclude<BottomInfoPanelId, null>) => {
+    const { group, section } = resolveOpenTarget(id);
+    setOpenPanelState((prev) => {
+      if (prev === group) return null;
+      setActiveSectionState(normalizeFinanceiroSection(section));
+      return group;
+    });
+  }, []);
 
   const value = useMemo<BottomInfoContextValue>(
     () => ({
@@ -123,7 +137,7 @@ export function BottomInfoProvider({ children }: { children: React.ReactNode }) 
       togglePanel,
       openGroupSection,
     }),
-    [openPanel, activeSection, setOpenPanel, togglePanel, openGroupSection]
+    [openPanel, activeSection, setOpenPanel, setActiveSection, togglePanel, openGroupSection]
   );
 
   return <BottomInfoContext.Provider value={value}>{children}</BottomInfoContext.Provider>;

@@ -1,8 +1,8 @@
 /**
  * Politica PDF industrial:
- * P1 — pacote binario por projeto (shell se houver overrides; senao classico).
- * P2 — excepcao de apresentacao: docs na lista CLASSIC usam SEMPRE o builder classico rico.
- * P3 — Opcao A classic-first: TODOS os 9 docs industriais com builder rico entram na lista;
+ * P1 â€” pacote binario por projeto (shell se houver overrides; senao classico).
+ * P2 â€” excepcao de apresentacao: docs na lista CLASSIC usam SEMPRE o builder classico rico.
+ * P3 â€” Opcao A classic-first: TODOS os 9 docs industriais com builder rico entram na lista;
  *      shell tabular fica so na edicao online (/analise), nao no PDF de fabrico.
  * CNC/TCN/drill/nesting fora de ambito.
  */
@@ -16,7 +16,7 @@ import {
 export type IndustrialPdfRenderMode = "shell" | "classic";
 
 /**
- * Docs com apresentacao industrial canonica — nunca shell no PDF.
+ * Docs com apresentacao industrial canonica â€” nunca shell no PDF.
  * Sempre buildClassicIndustrialPdf (ferragens_totais ? landscape + normalize).
  */
 export const INDUSTRIAL_CLASSIC_PRESENTATION_DOC_IDS =
@@ -46,7 +46,7 @@ export function shouldUseShellIndustrialPdfs(project: ProjectState): boolean {
 
 /**
  * Decisao por documento (P1 + P2 + P3 classic-first).
- * Com a lista expandida, PDFs industriais nunca usam shell — so builders classicos.
+ * Com a lista expandida, PDFs industriais nunca usam shell â€” so builders classicos.
  */
 export function shouldUseShellIndustrialPdfForDoc(
   project: ProjectState,

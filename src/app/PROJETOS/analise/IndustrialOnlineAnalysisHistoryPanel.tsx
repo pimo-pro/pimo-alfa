@@ -24,9 +24,9 @@ const panel: CSSProperties = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
-  add: "Adiùùo",
-  remove: "Remoùùo",
-  modify: "Modificaùùo",
+  add: "Adi√ß√£o",
+  remove: "Remo√ß√£o",
+  modify: "Modifica√ß√£o",
 };
 
 function formatTs(ts: string): string {
@@ -38,16 +38,16 @@ function formatTs(ts: string): string {
 }
 
 function truncate(v: string | null, max = 48): string {
-  if (v == null) return "ù";
+  if (v == null) return "‚Äî";
   if (v.length <= max) return v;
-  return `${v.slice(0, max)}ù`;
+  return `${v.slice(0, max)}‚Ä¶`;
 }
 
 export default function IndustrialOnlineAnalysisHistoryPanel({
   entries,
   projectName,
   lockedDocId,
-  title = "Histùrico",
+  title = "Hist√≥rico",
 }: Props) {
   const navigate = useNavigate();
   const [docFilter, setDocFilter] = useState<string>(lockedDocId ?? "");
@@ -92,7 +92,7 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
     requestAnimationFrame(() => {
       const result = jumpToIndustrialHistoryCell(entry.focus);
       if (!result.ok) {
-        setMessage("Campo nùo encontrado (linha removida ou documento alterado).");
+        setMessage("Campo n√£o encontrado (linha removida ou documento alterado).");
       }
     });
   };
@@ -150,9 +150,9 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
             style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }}
           >
             <option value="">Todos os tipos</option>
-            <option value="modify">Modificaùùo</option>
-            <option value="add">Adiùùo</option>
-            <option value="remove">Remoùùo</option>
+            <option value="modify">Modifica√ß√£o</option>
+            <option value="add">Adi√ß√£o</option>
+            <option value="remove">Remo√ß√£o</option>
           </select>
         </label>
       </div>
@@ -165,7 +165,7 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
 
       {filtered.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: "#64748b" }} role="status">
-          Sem entradas de histùrico.
+          Sem entradas de hist√≥rico.
         </p>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 6 }}>

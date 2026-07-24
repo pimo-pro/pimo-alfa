@@ -214,7 +214,7 @@ export default function ProjetosAnaliseDocPage() {
       });
       setEditing(false);
       setDraft(null);
-      setSaveMsg("Alterações guardadas.");
+      setSaveMsg("AlteraÃ§Ãµes guardadas.");
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Falha ao guardar.");
     } finally {
@@ -230,7 +230,7 @@ export default function ProjetosAnaliseDocPage() {
         docLabel={validDoc ? docId : undefined}
       >
         <p style={{ color: "#64748b", fontSize: 14 }}>
-          A funcionalidade «Análise arquivo completo» está desativada (
+          A funcionalidade â€” AnÃ¡lise arquivo completoâ€¦ estÃ¡ desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
       </IndustrialOnlineAnalysisLayout>
@@ -242,7 +242,7 @@ export default function ProjetosAnaliseDocPage() {
       <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
         <p style={{ color: "#dc2626" }}>Documento industrial desconhecido: {docId}</p>
         <Link to={buildIndustrialOnlineAnalysisIndexPath(projectName)} style={{ color: "#2563eb" }}>
-          Voltar ao índice
+          Voltar ao Ã­ndice
         </Link>
       </IndustrialOnlineAnalysisLayout>
     );
@@ -254,10 +254,10 @@ export default function ProjetosAnaliseDocPage() {
       pageSlug={pageSlug ?? projectName}
       docLabel={view?.label ?? docId}
     >
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
+      {loading ? <p style={{ color: "#64748b" }}>A carregar projetoâ€¦</p> : null}
       {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
       {!loading && !error && !view ? (
-        <p style={{ color: "#dc2626" }}>Não foi possível construir a vista deste documento.</p>
+        <p style={{ color: "#dc2626" }}>NÃ£o foi possÃ­vel construir a vista deste documento.</p>
       ) : null}
       {!loading && !error && view ? (
         <>
@@ -271,8 +271,8 @@ export default function ProjetosAnaliseDocPage() {
             }}
           >
             <p style={{ margin: 0, fontSize: 13, color: "#64748b", flex: 1 }}>
-              {view.description} — projeto <strong>{view.projectName}</strong>
-              {editing ? " — modo edição (draft local)" : ""}
+              {view.description} â€” projeto <strong>{view.projectName}</strong>
+              {editing ? " â€” modo ediÃ§Ã£o (draft local)" : ""}
             </p>
             {!editing ? (
               <>
@@ -290,7 +290,7 @@ export default function ProjetosAnaliseDocPage() {
                     fontSize: 13,
                   }}
                 >
-                  {generatingPdf ? "A gerar…" : "Gerar PDF"}
+                  {generatingPdf ? "A gerarâ€¦" : "Gerar PDF"}
                 </button>
                 <button
                   type="button"
@@ -339,7 +339,7 @@ export default function ProjetosAnaliseDocPage() {
                     fontSize: 13,
                   }}
                 >
-                  {saving ? "A guardar…" : "Guardar"}
+                  {saving ? "A guardarâ€¦" : "Guardar"}
                 </button>
                 <button
                   type="button"
@@ -375,9 +375,9 @@ export default function ProjetosAnaliseDocPage() {
             <p style={{ margin: "0 0 12px", fontSize: 13, color: "#1d4ed8" }}>{pdfMsg}</p>
           ) : null}
           <p style={{ margin: "0 0 16px", fontSize: 12, color: "#64748b" }}>
-            Overrides documentais: design 3D e CNC/TCN/drill não são alterados. A cutlist editada
-            alimenta as etiquetas UEE (whitelist). Remover linha omite só a etiqueta. Downloads não
-            registam histórico. Quantidade e material inválidos bloqueiam o Guardar.
+            Overrides documentais: design 3D e CNC/TCN/drill nÃ£o sÃ£o alterados. A cutlist editada
+            alimenta as etiquetas UEE (whitelist). Remover linha omite sÃ³ a etiqueta. Downloads nÃ£o
+            registam histÃ³rico. Quantidade e material invÃ¡lidos bloqueiam o Guardar.
           </p>
           {displaySections.map((section) => (
             <IndustrialOnlineAnalysisTable
@@ -397,14 +397,14 @@ export default function ProjetosAnaliseDocPage() {
               entries={historyEntries}
               projectName={projectName}
               lockedDocId={docId}
-              title="Histórico deste documento"
+              title="HistÃ³rico deste documento"
             />
           ) : null}
           <Link
             to={buildIndustrialOnlineAnalysisIndexPath(projectName)}
             style={{ fontSize: 13, color: "#2563eb" }}
           >
-            Voltar ao índice de análise
+            Voltar ao Ã­ndice de anÃ¡lise
           </Link>
         </>
       ) : null}

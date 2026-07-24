@@ -46,6 +46,7 @@ import { normalizeOrlaPresets } from "../core/orla/orlaPresets";
 import { normalizeDrawerPresets } from "../core/drawers/drawerPresets";
 import { buildRemateCutlistItems } from "../core/remate/remateCutlist";
 import { buildRodapeCutlistItems } from "../core/rodape/rodapeCutlist";
+import { loadGlobalFinanceiroAdminSettings } from "../core/financeiro/financeiroAdminRules";
 
 /** Extrai rules do perfil ativo; fallback para default se não existir. */
 function getRulesFromProfiles(config: RulesProfilesConfig) {
@@ -321,6 +322,8 @@ export const defaultState: ProjectState = {
   precoTotalPecas: null,
   precoTotalAcessorios: null,
   precoTotalProjeto: null,
+  financeiroOverrides: {},
+  financeiroAdminSettings: loadGlobalFinanceiroAdminSettings(),
   activeViewerTool: "select",
   viewerSettings: defaultViewerSettings,
   measurements: createEmptyProjectMeasurements(),

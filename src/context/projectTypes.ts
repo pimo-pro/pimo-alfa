@@ -139,6 +139,18 @@ export interface ProjectState {
   precoTotalAcessorios: number | null;
   precoTotalProjeto: number | null;
 
+  /**
+   * P3.5 — Overrides do Financeiro Unificado (IVA %, custos manuais, distância).
+   * Não altera cutlist/CNC; só exibição, PDF e total.
+   */
+  financeiroOverrides: import("../core/financeiro/financeiroUnificadoTypes").FinanceiroOverrides;
+
+  /**
+   * P3.6 — Regras ADMIN (ADM / montagem / portes) do projeto.
+   * Se vazio, usa defaults globais (Admin / localStorage).
+   */
+  financeiroAdminSettings: import("../core/financeiro/financeiroAdminRules").FinanceiroAdminSettings;
+
   /** Ferramenta 3D ativa no Viewer: select, move, rotate. Opcional para compatibilidade com snapshots antigos. */
   activeViewerTool?: "select" | "move" | "rotate" | "scale";
 
@@ -705,6 +717,14 @@ export interface ProjectActions {
   completeIndustrialOperacao: (
     _operationId: import("../core/industrial/industrialPieceEditsTypes").IndustrialOperationId,
     _notas?: string
+  ) => void;
+  /** P3.5 — grava overrides do painel financeiro unificado. */
+  setFinanceiroOverrides: (
+    _overrides: import("../core/financeiro/financeiroUnificadoTypes").FinanceiroOverrides
+  ) => void;
+  /** P3.6 — grava regras ADMIN (ADM / montagem / portes) do projeto. */
+  setFinanceiroAdminSettings: (
+    _settings: import("../core/financeiro/financeiroAdminRules").FinanceiroAdminSettings
   ) => void;
   /** Análise online — substituir overrides de um documento. */
   setDocumentOverrides: (

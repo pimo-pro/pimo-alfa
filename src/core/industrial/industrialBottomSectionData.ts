@@ -1,8 +1,3 @@
-import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
-import {
-  calcularPrecoTotalPecas,
-  calcularPrecoTotalProjeto,
-} from "../pricing/pricing";
 import {
   CHAPA_PADRAO_LARGURA,
   CHAPA_PADRAO_ALTURA,
@@ -39,6 +34,11 @@ import {
   countDobradicasPorCaixaForPdf,
   DOBRADICA_REF,
 } from "../pdf/pdfFerragensTotaisNormalize";
+import {
+  computeFinanceiroUnificado,
+  financeiroCustoRows,
+  financeiroMetricRows,
+} from "../financeiro/financeiroUnificado";
 
 export type PecasTotaisRow = {
   categoria: string;
@@ -121,14 +121,33 @@ type IndustrialBottomProjectSlice = Pick<
   | "remates"
   | "rodapes"
   | "extractedPartsByBoxId"
-> & { industrialPieceEdits?: IndustrialPieceEditsStore };
+  | "ferragemOrla"
+  | "financeiroOverrides"
+  | "financeiroAdminSettings"
+> & {
+  industrialPieceEdits?: IndustrialPieceEditsStore;
+};
 
+/** P3.5 — summary SSOT; pecas mantidas para vista online (lista). */
 export function buildResumoFinanceiroPdfRows(
   project: IndustrialBottomProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean
 ): { summary: string[][]; pecas: string[][] } {
   const boxes = project.boxes ?? [];
+  const snap = computeFinanceiroUnificado(project, materials);
+  const summary: string[][] = financeiroMetricRows(snap).map(([k, v]) => [k, v]);
+
+  if (showPrices) {
+    for (const row of financeiroCustoRows(snap)) {
+      const valor =
+        row.emBreve || row.valor == null
+          ? "em breve"
+          : formatCurrency(row.valor, { placement: "prefix", empty: "—" });
+      summary.push([row.label, valor]);
+    }
+  }
+
   const cutlist = buildCutlistItemsForIndustrialExport({
     boxes,
     rules: project.rules,
@@ -139,36 +158,6 @@ export function buildResumoFinanceiroPdfRows(
     extractedPartsByBoxId: project.extractedPartsByBoxId,
     industrialPieceEdits: project.industrialPieceEdits,
   });
-  const ferragens = ferragensFromBoxes(boxes, project.rules);
-  const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0);
-  const totalFerragens = ferragens.reduce((s, a) => s + a.quantidade, 0);
-  const areaTotalMm2 = cutlist.reduce(
-    (s, i) => s + (i.dimensoes?.largura ?? 0) * (i.dimensoes?.altura ?? 0) * i.quantidade,
-    0
-  );
-  const pesoTotalKg = cutlist.reduce((s, i) => s + pieceWeightKg(i, materials), 0);
-  const areaChapaMm2 = CHAPA_PADRAO_LARGURA * CHAPA_PADRAO_ALTURA;
-  const numeroChapas = areaTotalMm2 > 0 ? Math.ceil(areaTotalMm2 / areaChapaMm2) : 0;
-
-  const summary: string[][] = [
-    ["Peças totais", String(totalPecas)],
-    ["Ferragens totais", String(totalFerragens)],
-    ["Total de itens", String(totalPecas + totalFerragens)],
-    ["Área total", `${(areaTotalMm2 / 1_000_000).toFixed(3)} m²`],
-    ["Peso total", `${pesoTotalKg.toFixed(2)} kg`],
-    ["Nº de chapas", String(numeroChapas)],
-  ];
-
-  if (showPrices) {
-    const custoPecas = cutlist.length > 0 ? calcularPrecoTotalPecas(cutlist) : 0;
-    const custoFerragens = ferragens.reduce((s, a) => s + (a.precoTotal ?? 0), 0);
-    const total = calcularPrecoTotalProjeto(custoPecas + custoFerragens);
-    summary.push(
-      ["Total peças", formatCurrency(custoPecas, { placement: "prefix", empty: "—" })],
-      ["Total ferragens", formatCurrency(custoFerragens, { placement: "prefix", empty: "—" })],
-      ["Total projeto", formatCurrency(total, { placement: "prefix", empty: "—" })]
-    );
-  }
 
   const pecas: string[][] = cutlist.map((item) => [
     boxes.find((b) => b.id === item.boxId)?.nome ?? item.boxId ?? "—",
@@ -458,11 +447,12 @@ export function buildFerragensTotaisPdfData(
   return { detalhe, porTipo };
 }
 
+/** P3.5 — alias do SSOT financeiro (totais = resumo detalhado). */
 export function buildTotaisProjetoPdfRows(
   project: IndustrialBottomProjectSlice,
   materials: MaterialIndustrial[],
   showPrices: boolean,
-  extras?: {
+  _extras?: {
     totalOrlaMetros?: number;
     custoTotalOrla?: number;
     custoTotalRemates?: number;
@@ -473,54 +463,8 @@ export function buildTotaisProjetoPdfRows(
     custoTotal?: number;
   }
 ): string[][] {
-  const boxes = project.boxes ?? [];
-  const cutlist = buildCutlistItemsForIndustrialExport({
-    boxes,
-    rules: project.rules,
-    materialId: project.materialId,
-    projectName: project.projectName,
-    remates: project.remates ?? [],
-    rodapes: project.rodapes ?? [],
-    extractedPartsByBoxId: project.extractedPartsByBoxId,
-    industrialPieceEdits: project.industrialPieceEdits,
-  });
-  const ferragens = ferragensFromBoxes(boxes, project.rules);
-  const totalPecas = cutlist.reduce((s, i) => s + i.quantidade, 0);
-  const totalFerragens = ferragens.reduce((s, a) => s + a.quantidade, 0);
-  const areaTotalMm2 = cutlist.reduce(
-    (s, i) => s + (i.dimensoes?.largura ?? 0) * (i.dimensoes?.altura ?? 0) * i.quantidade,
-    0
-  );
-  const pesoTotalKg = cutlist.reduce((s, i) => s + pieceWeightKg(i, materials), 0);
-  const areaChapaMm2 = CHAPA_PADRAO_LARGURA * CHAPA_PADRAO_ALTURA;
-  const numeroChapas = areaTotalMm2 > 0 ? Math.ceil(areaTotalMm2 / areaChapaMm2) : 0;
-
-  const rows: string[][] = [
-    ["Caixas", String(boxes.length)],
-    ["Total de itens (peças)", String(totalPecas)],
-    ["Ferragens (unidades)", String(totalFerragens)],
-    ["Área total", `${(areaTotalMm2 / 1_000_000).toFixed(3)} m²`],
-    ["Peso total", `${pesoTotalKg.toFixed(2)} kg`],
-    ["Nº de chapas (estimado)", String(numeroChapas)],
-  ];
-
-  if (extras?.totalOrlaMetros != null) {
-    rows.push(["Orla total", `${extras.totalOrlaMetros.toFixed(2)} m`]);
-  }
-
-  if (showPrices && extras) {
-    rows.push(
-      ["Custo painéis", formatCurrency(extras.custoTotalPaineis ?? 0, { placement: "prefix", empty: "—" })],
-      ["Custo portas", formatCurrency(extras.custoTotalPortas ?? 0, { placement: "prefix", empty: "—" })],
-      ["Custo gavetas", formatCurrency(extras.custoTotalGavetas ?? 0, { placement: "prefix", empty: "—" })],
-      ["Custo ferragens", formatCurrency(extras.custoTotalFerragens ?? 0, { placement: "prefix", empty: "—" })],
-      ["Custo orla", formatCurrency(extras.custoTotalOrla ?? 0, { placement: "prefix", empty: "—" })],
-      ["Custo remates", formatCurrency(extras.custoTotalRemates ?? 0, { placement: "prefix", empty: "—" })],
-      ["Custo total projeto", formatCurrency(extras.custoTotal ?? 0, { placement: "prefix", empty: "—" })]
-    );
-  }
-
-  return rows;
+  const { summary } = buildResumoFinanceiroPdfRows(project, materials, showPrices);
+  return summary;
 }
 
 export function buildResumoIndustriaisRows(

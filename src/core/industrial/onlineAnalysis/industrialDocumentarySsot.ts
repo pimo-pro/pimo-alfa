@@ -1,6 +1,6 @@
 /**
- * Cutlist e técnico são duas vistas do mesmo SSOT documental.
- * Overrides e rowIds estáveis partilham a chave `cutlist`.
+ * Cutlist e tÃ©cnico sÃ£o duas vistas do mesmo SSOT documental.
+ * Overrides e rowIds estÃ¡veis partilham a chave `cutlist`.
  */
 import type {
   IndustrialDocumentOverride,
@@ -8,7 +8,7 @@ import type {
 } from "./industrialDocumentOverridesTypes";
 import type { IndustrialOnlineAnalysisDocId } from "./industrialOnlineAnalysisDocs";
 
-/** DocId onde vivem patches documentais da lista de corte (cutlist + técnico). */
+/** DocId onde vivem patches documentais da lista de corte (cutlist + tÃ©cnico). */
 export function getDocumentaryOverrideDocId(
   docId: IndustrialOnlineAnalysisDocId
 ): IndustrialOnlineAnalysisDocId {
@@ -22,7 +22,7 @@ export function isCutlistSsotDocId(docId: IndustrialOnlineAnalysisDocId): boolea
 
 /**
  * Resolve o override documental (cutlist SSOT).
- * Fallback legado: patches gravados sob `tecnico` antes da unificação.
+ * Fallback legado: patches gravados sob `tecnico` antes da unificaÃ§Ã£o.
  */
 export function resolveDocumentaryOverride(
   store: IndustrialDocumentOverridesStore | undefined,
@@ -36,7 +36,7 @@ export function resolveDocumentaryOverride(
   return undefined;
 }
 
-/** Prefixo legado de rowId gerado com namespace `tecnico` (antes do SSOT único). */
+/** Prefixo legado de rowId gerado com namespace `tecnico` (antes do SSOT â€”nico). */
 export function legacyTecnicoRowIdAlias(cutlistRowId: string): string | null {
   if (!cutlistRowId.startsWith("c:cutlist:")) return null;
   return `c:tecnico:${cutlistRowId.slice("c:cutlist:".length)}`;

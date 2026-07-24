@@ -1,5 +1,5 @@
 /**
- * Persistùncia de overrides + histùrico industriais no snapshot PROJETOS / offline.
+ * Persist√™ncia de overrides + hist√≥rico industriais no snapshot PROJETOS / offline.
  */
 
 import { serializeState } from "@/context/projectPersistence";
@@ -84,7 +84,7 @@ export function mergeDocOverride(
   } else {
     next[key] = override;
   }
-  // Cutlist SSOT: limpar chave legado `tecnico` para nùo divergir.
+  // Cutlist SSOT: limpar chave legado `tecnico` para n√£o divergir.
   if (key === "cutlist" && "tecnico" in next) {
     delete next.tecnico;
   }

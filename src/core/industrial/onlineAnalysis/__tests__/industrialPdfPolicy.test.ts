@@ -35,7 +35,7 @@ function projectWithCutlistOverride(): ProjectState {
   });
 }
 
-describe("industrialPdfPolicy — P1 binario + P3 classic-first", () => {
+describe("industrialPdfPolicy â€” P1 binario + P3 classic-first", () => {
   it("sem overrides ? classic global", () => {
     const project = baseProject(undefined);
     expect(getIndustrialPdfRenderMode(project)).toBe("classic");

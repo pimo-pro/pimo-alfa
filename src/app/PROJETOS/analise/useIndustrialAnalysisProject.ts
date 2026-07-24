@@ -1,6 +1,6 @@
 /**
- * Hook: ProjectState ˙nico para p·ginas `/analise` (mesmo SSOT que o ZIP/editor).
- * Prefere industrialLiveProjectStore; sen„o carrega o record e publica no store.
+ * Hook: ProjectState ‚Äînico para p√°ginas `/analise` (mesmo SSOT que o ZIP/editor).
+ * Prefere industrialLiveProjectStore; sen√£o carrega o record e publica no store.
  */
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
@@ -73,7 +73,7 @@ export function useIndustrialAnalysisProject(pageSlug: string | undefined): {
 
   useEffect(() => {
     if (!pageSlug) {
-      setError("Projeto n„o especificado na URL.");
+      setError("Projeto n√£o especificado na URL.");
       setLoading(false);
       return;
     }
@@ -106,14 +106,14 @@ export function useIndustrialAnalysisProject(pageSlug: string | undefined): {
       if (!loaded) {
         setRecord(null);
         setLoading(false);
-        setError("Projeto n„o encontrado.");
+        setError("Projeto n√£o encontrado.");
         return;
       }
       const revived = reviveFromRecord(loaded);
       if (!revived) {
         setRecord(null);
         setLoading(false);
-        setError("N„o foi possÌvel ler o estado do projeto.");
+        setError("N√£o foi poss√≠vel ler o estado do projeto.");
         return;
       }
       publishIndustrialLiveProject(revived);
@@ -158,7 +158,7 @@ export function useIndustrialAnalysisProject(pageSlug: string | undefined): {
       const live = getIndustrialLiveProjectMatchingSlug(pageSlug);
       const baseState = live ?? (record ? reviveFromRecord(record) : null);
       if (!baseState) {
-        throw new Error("Projeto n„o disponÌvel para guardar.");
+        throw new Error("Projeto n√£o dispon√≠vel para guardar.");
       }
 
       const baseRecord =

@@ -1,5 +1,5 @@
 /**
- * Builders classicos por docId ù fallback da politica PDF binaria (P1).
+ * Builders classicos por docId ‚Äî fallback da politica PDF binaria (P1).
  * Usado por ZIP, /analise, hubs e handlers individuais quando o projeto
  * nao tem overrides documentais.
  */
@@ -46,7 +46,11 @@ function loadFerragens(): Ferragem[] {
   }
 }
 
-function toProjectForPdf(project: ProjectState): ProjectForPdf {
+function toProjectForPdf(project: ProjectState): ProjectForPdf & {
+  ferragemOrla?: ProjectState["ferragemOrla"];
+  financeiroOverrides?: ProjectState["financeiroOverrides"];
+  financeiroAdminSettings?: ProjectState["financeiroAdminSettings"];
+} {
   return {
     projectName: project.projectName?.trim() || "Projeto",
     boxes: project.boxes ?? [],
@@ -57,6 +61,11 @@ function toProjectForPdf(project: ProjectState): ProjectForPdf {
     industrialPieceEdits: project.industrialPieceEdits ?? {},
     remates: project.remates ?? [],
     rodapes: project.rodapes ?? [],
+    ferragemOrla: project.ferragemOrla,
+    financeiroOverrides: project.financeiroOverrides,
+    financeiroAdminSettings: project.financeiroAdminSettings,
+    orlaPieces: project.orlaPieces,
+    orlaPresets: project.orlaPresets,
   };
 }
 
@@ -128,6 +137,9 @@ export async function buildClassicIndustrialPdf(
           industrialPieceEdits: project.industrialPieceEdits,
           ferragemOrla: project.ferragemOrla,
           orlaPresets: project.orlaPresets,
+          orlaPieces: project.orlaPieces,
+          financeiroOverrides: project.financeiroOverrides,
+          financeiroAdminSettings: project.financeiroAdminSettings,
         },
         materials,
         componentTypes,

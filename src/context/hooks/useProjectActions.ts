@@ -31,6 +31,8 @@ import { useSelectionTransformActions } from "./useSelectionTransformActions";
 import { useGroupActions } from "./useGroupActions";
 import { useMeasurementAnchorActions } from "./useMeasurementAnchorActions";
 import { commitMaterialSync, refreshViewerAfterMaterialSync } from "../../core/materials/materialSync";
+import { normalizeFinanceiroOverrides } from "../../core/financeiro/financeiroUnificadoTypes";
+import { normalizeFinanceiroAdminSettings } from "../../core/financeiro/financeiroAdminRules";
 
 export type UseProjectActionsParams = {
   updateProject: (_fn: (_prev: ProjectState) => ProjectState, _pushUndo?: boolean) => void;
@@ -106,6 +108,24 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
     };
     a.setReadyForProduction = (ready) => {
       updateProject((prev) => ({ ...prev, readyForProduction: ready }), false);
+    };
+    a.setFinanceiroOverrides = (overrides) => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          financeiroOverrides: normalizeFinanceiroOverrides(overrides),
+        }),
+        true
+      );
+    };
+    a.setFinanceiroAdminSettings = (settings) => {
+      updateProject(
+        (prev) => ({
+          ...prev,
+          financeiroAdminSettings: normalizeFinanceiroAdminSettings(settings),
+        }),
+        true
+      );
     };
 
     // --- setTipoProjeto ---
@@ -194,6 +214,8 @@ export function useProjectActions(params: UseProjectActionsParams): ProjectActio
         "setEspessura",
         "setDimensoes",
         "setReadyForProduction",
+        "setFinanceiroOverrides",
+        "setFinanceiroAdminSettings",
         "setProjectName",
         "addBox",
         "addWorkspaceBox",
