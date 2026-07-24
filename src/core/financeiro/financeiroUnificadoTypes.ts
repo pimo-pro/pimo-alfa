@@ -21,6 +21,12 @@ export type FinanceiroCustoKey =
   | "ferragens"
   | "orla"
   | "remates"
+  | "operacoes"
+  | "desperdicio"
+  | "serragem"
+  | "chapasReais"
+  | "maoDeObra"
+  | "logistica"
   | "adm"
   | "montagem"
   | "portes";
@@ -31,7 +37,13 @@ export type FinanceiroCustoMaterialKey =
   | "gavetas"
   | "ferragens"
   | "orla"
-  | "remates";
+  | "remates"
+  | "operacoes"
+  | "desperdicio"
+  | "serragem"
+  | "chapasReais"
+  | "maoDeObra"
+  | "logistica";
 
 export type FinanceiroCustosOverrides = Partial<Record<FinanceiroCustoKey, number | null>>;
 
@@ -77,6 +89,33 @@ export type FinanceiroUnificadoSnapshot = {
 
   overrides: FinanceiroOverrides;
   adminSettings: FinanceiroAdminSettings;
+
+  /**
+   * P3.9 F3a — breakdown CNC/Drill (custosComputed.operacoes = total).
+   */
+  operacoesBreakdown?: {
+    cnc: number;
+    drill: number;
+    total: number;
+  };
+
+  /** P3.9 F3b — warnings STRICT desperdicio/serragem (flags off, waste=0, …). */
+  desperdicioSerragemWarnings?: string[];
+
+  /** P3.9 F3c — chapas reais / MO / logística (warnings + modo). */
+  custosAvancadosWarnings?: string[];
+  materialCostMode?: import("../orcamentos").OrcamentosMaterialCostMode;
+
+  /**
+   * P3.9 F2 — diagnóstico STRICT da unificação ferragens (só se enableUnificacao).
+   * Não afecta CNC/PDF industrial.
+   */
+  ferragensUnificacao?: {
+    enabled: true;
+    warnings: import("./priceFerragensFromCatalog").FerragensStrictWarning[];
+    fallbacks: import("./priceFerragensFromCatalog").FerragensFallbackUsage[];
+    compare?: import("./priceFerragensFromCatalog").CompareFerragensAvsBResult;
+  };
 };
 
 export const FINANCEIRO_CUSTO_MATERIAL_KEYS: FinanceiroCustoMaterialKey[] = [
@@ -86,7 +125,18 @@ export const FINANCEIRO_CUSTO_MATERIAL_KEYS: FinanceiroCustoMaterialKey[] = [
   "ferragens",
   "orla",
   "remates",
+  "operacoes",
+  "desperdicio",
+  "serragem",
+  "chapasReais",
+  "maoDeObra",
+  "logistica",
 ];
+
+/** Keys de material peç substituídas por chapasReais no modo exclusivo. */
+export const FINANCEIRO_PIECE_MATERIAL_KEYS: Array<
+  Extract<FinanceiroCustoMaterialKey, "paineis" | "portas" | "gavetas" | "remates">
+> = ["paineis", "portas", "gavetas", "remates"];
 
 export const FINANCEIRO_CUSTO_KEYS: FinanceiroCustoKey[] = [
   ...FINANCEIRO_CUSTO_MATERIAL_KEYS,

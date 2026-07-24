@@ -1,0 +1,293 @@
+/**
+ * P3.9 F3c — chapas reais / mão de obra / logística (modos exclusivos).
+ * Não altera CNC/TCN/cutlist/drill/PDFs industriais nem portes P3.6.
+ */
+
+import type { CutListItemComPreco } from "../types";
+import { getSettings } from "../settings/settingsService";
+import type {
+  OrcamentosCustosIndustriaisSettings,
+  OrcamentosMaterialCostMode,
+} from "../orcamentos";
+import { pieceDrillHoleCount, pieceHasCncOperacao } from "./computeOperacoesFinanceiras";
+
+/** Minutos heurísticos por unidade CNC (não TCN real). */
+export const MO_MINUTOS_POR_PECA_CNC = 2;
+/** Minutos heurísticos por furo. */
+export const MO_MINUTOS_POR_FURO = 0.1;
+
+export type CustosAvancadosTarifas = Pick<
+  OrcamentosCustosIndustriaisSettings,
+  | "materialCostMode"
+  | "custoChapaReal"
+  | "valorHoraMaquina"
+  | "custoLogisticaPorKg"
+  | "enableMaoDeObra"
+  | "enableLogistica"
+>;
+
+export type CustosAvancadosFinanceirasResult = {
+  materialCostMode: OrcamentosMaterialCostMode;
+  /** true ? Unificado/Peças devem zerar paineis/portas/gavetas/remates. */
+  suppressPieceMaterial: boolean;
+  chapasCount: number;
+  precoChapasReais: number;
+  minutosEstimados: number;
+  precoMaoDeObra: number;
+  pesoTotalKg: number;
+  precoLogistica: number;
+  chapasByPieceId: Map<string, number>;
+  maoDeObraByPieceId: Map<string, number>;
+  logisticaByPieceId: Map<string, number>;
+  warnings: string[];
+  /** Orçamentos=0 e usou SystemSettings.precos.valorHoraMaquina. */
+  valorHoraMaquinaUsed: number;
+  valorHoraFromSystemFallback: boolean;
+};
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function numTarifa(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function boolFlag(v: unknown, fallback: boolean): boolean {
+  return typeof v === "boolean" ? v : fallback;
+}
+
+function pieceAreaMm2(item: CutListItemComPreco): number {
+  const w = item.dimensoes?.largura ?? 0;
+  const h = item.dimensoes?.altura ?? 0;
+  const qty = item.quantidade ?? 1;
+  if (w <= 0 || h <= 0) return 0;
+  return w * h * qty;
+}
+
+export function resolveCustosAvancadosTarifas(
+  override?: Partial<CustosAvancadosTarifas> | null
+): CustosAvancadosTarifas {
+  const fromSettings = (() => {
+    try {
+      return getSettings().orcamentos?.custosIndustriais;
+    } catch {
+      return undefined;
+    }
+  })();
+  const src = { ...fromSettings, ...override };
+  const mode =
+    src.materialCostMode === "por_chapas_reais" ? "por_chapas_reais" : "por_peca";
+  return {
+    materialCostMode: mode,
+    custoChapaReal: numTarifa(src.custoChapaReal),
+    valorHoraMaquina: numTarifa(src.valorHoraMaquina),
+    custoLogisticaPorKg: numTarifa(src.custoLogisticaPorKg),
+    enableMaoDeObra: boolFlag(src.enableMaoDeObra, false),
+    enableLogistica: boolFlag(src.enableLogistica, false),
+  };
+}
+
+function resolveValorHoraMaquina(tarifas: CustosAvancadosTarifas): {
+  valor: number;
+  fromSystemFallback: boolean;
+} {
+  if (tarifas.valorHoraMaquina > 0) {
+    return { valor: tarifas.valorHoraMaquina, fromSystemFallback: false };
+  }
+  try {
+    const orphan = numTarifa(getSettings().precos?.valorHoraMaquina);
+    if (orphan > 0) return { valor: orphan, fromSystemFallback: true };
+  } catch {
+    /* ignore */
+  }
+  return { valor: 0, fromSystemFallback: false };
+}
+
+function estimateMinutosMO(item: CutListItemComPreco): number {
+  const qty = Math.max(1, item.quantidade ?? 1);
+  let min = 0;
+  if (pieceHasCncOperacao(item)) min += MO_MINUTOS_POR_PECA_CNC * qty;
+  const holes = pieceDrillHoleCount(item);
+  if (holes > 0) min += MO_MINUTOS_POR_FURO * holes * qty;
+  return min;
+}
+
+function reconcileMaps(
+  map: Map<string, number>,
+  target: number,
+  order: Array<{ id: string; weight: number }>
+): void {
+  if (!(target > 0) || map.size === 0) return;
+  let sum = 0;
+  for (const v of map.values()) sum += v;
+  sum = round2(sum);
+  const delta = round2(target - sum);
+  if (Math.abs(delta) < 0.005) return;
+  for (let i = order.length - 1; i >= 0; i--) {
+    const id = order[i].id;
+    if (!(order[i].weight > 0) || !id || !map.has(id)) continue;
+    map.set(id, round2((map.get(id) ?? 0) + delta));
+    break;
+  }
+}
+
+function rateioByWeight(
+  cutlist: CutListItemComPreco[],
+  totalEur: number,
+  weightOf: (item: CutListItemComPreco) => number
+): Map<string, number> {
+  const map = new Map<string, number>();
+  if (!(totalEur > 0) || cutlist.length === 0) return map;
+  const rows = cutlist.map((item) => ({
+    id: String(item.id ?? ""),
+    weight: weightOf(item),
+  }));
+  const sumW = rows.reduce((s, r) => s + r.weight, 0);
+  if (!(sumW > 0)) return map;
+  for (const { id, weight } of rows) {
+    if (!(weight > 0) || !id) continue;
+    map.set(id, round2(totalEur * (weight / sumW)));
+  }
+  reconcileMaps(map, totalEur, rows);
+  return map;
+}
+
+/**
+ * Calcula chapas reais / MO / logística e rateios por peça.
+ * `por_chapas_reais` ? suppressPieceMaterial (anti double-count).
+ */
+export function computeCustosAvancadosFinanceiras(input: {
+  cutlist: CutListItemComPreco[];
+  /** Nº chapas reais (computeChapasReal.totalSheets). 0 se estimado. */
+  chapasCount: number;
+  /** true se nesting real produziu sheets. */
+  chapasModeReal: boolean;
+  pesoTotalKg: number;
+  /** Peso por pieceId (mesma base do Unificado). */
+  pesoByPieceId?: Map<string, number>;
+  tarifas?: Partial<CustosAvancadosTarifas> | null;
+}): CustosAvancadosFinanceirasResult {
+  const tarifas = resolveCustosAvancadosTarifas(input.tarifas);
+  const cutlist = input.cutlist ?? [];
+  const chapasCount =
+    typeof input.chapasCount === "number" && Number.isFinite(input.chapasCount)
+      ? Math.max(0, Math.floor(input.chapasCount))
+      : 0;
+  const pesoTotalKg =
+    typeof input.pesoTotalKg === "number" && Number.isFinite(input.pesoTotalKg)
+      ? Math.max(0, input.pesoTotalKg)
+      : 0;
+
+  const warnings: string[] = [];
+  const suppressPieceMaterial = tarifas.materialCostMode === "por_chapas_reais";
+
+  // --- Chapas reais ---
+  let precoChapasReais = 0;
+  if (suppressPieceMaterial) {
+    if (!input.chapasModeReal || !(chapasCount > 0)) {
+      warnings.push(
+        "materialCostMode=por_chapas_reais sem chapas reais ? chapasReais=0 (estimadas)"
+      );
+    } else if (!(tarifas.custoChapaReal > 0)) {
+      warnings.push("custoChapaReal=0 ? chapasReais=0");
+    } else {
+      precoChapasReais = round2(chapasCount * tarifas.custoChapaReal);
+    }
+  }
+
+  // --- Mão de obra ---
+  let minutosEstimados = 0;
+  let precoMaoDeObra = 0;
+  let valorHoraMaquinaUsed = 0;
+  let valorHoraFromSystemFallback = false;
+  const maoDeObraByPieceId = new Map<string, number>();
+
+  if (!tarifas.enableMaoDeObra) {
+    warnings.push("enableMaoDeObra=false ? custo maoDeObra = 0");
+  } else {
+    const resolved = resolveValorHoraMaquina(tarifas);
+    valorHoraMaquinaUsed = resolved.valor;
+    valorHoraFromSystemFallback = resolved.fromSystemFallback;
+    if (resolved.fromSystemFallback) {
+      warnings.push(
+        "valorHoraMaquina Orçamentos=0 ? fallback SystemSettings.precos.valorHoraMaquina"
+      );
+    }
+    if (!(valorHoraMaquinaUsed > 0)) {
+      warnings.push("valorHoraMaquina=0 ? custo maoDeObra = 0");
+    } else {
+      for (const item of cutlist) {
+        const id = String(item.id ?? "");
+        const min = estimateMinutosMO(item);
+        minutosEstimados += min;
+        if (min > 0 && id) {
+          const eur = round2((min / 60) * valorHoraMaquinaUsed);
+          if (eur > 0) maoDeObraByPieceId.set(id, eur);
+        }
+      }
+      minutosEstimados = round2(minutosEstimados);
+      precoMaoDeObra = round2((minutosEstimados / 60) * valorHoraMaquinaUsed);
+      // Fechar ? peças ao total (arredondamento)
+      reconcileMaps(
+        maoDeObraByPieceId,
+        precoMaoDeObra,
+        cutlist.map((item) => ({
+          id: String(item.id ?? ""),
+          weight: estimateMinutosMO(item),
+        }))
+      );
+    }
+  }
+
+  // --- Logística (independente de portes P3.6) ---
+  let precoLogistica = 0;
+  if (!tarifas.enableLogistica) {
+    warnings.push("enableLogistica=false ? custo logistica = 0");
+  } else if (!(pesoTotalKg > 0)) {
+    warnings.push("pesoTotalKg=0 ? custo logistica = 0");
+  } else if (!(tarifas.custoLogisticaPorKg > 0)) {
+    warnings.push("custoLogisticaPorKg=0 ? custo logistica = 0");
+  } else {
+    precoLogistica = round2(pesoTotalKg * tarifas.custoLogisticaPorKg);
+  }
+
+  const chapasByPieceId = rateioByWeight(cutlist, precoChapasReais, pieceAreaMm2);
+  const logisticaByPieceId = rateioByWeight(cutlist, precoLogistica, (item) => {
+    const id = String(item.id ?? "");
+    if (input.pesoByPieceId?.has(id)) return input.pesoByPieceId.get(id) ?? 0;
+    return pieceAreaMm2(item); // fallback área se sem peso
+  });
+
+  return {
+    materialCostMode: tarifas.materialCostMode,
+    suppressPieceMaterial,
+    chapasCount,
+    precoChapasReais,
+    minutosEstimados,
+    precoMaoDeObra,
+    pesoTotalKg,
+    precoLogistica,
+    chapasByPieceId,
+    maoDeObraByPieceId,
+    logisticaByPieceId,
+    warnings,
+    valorHoraMaquinaUsed,
+    valorHoraFromSystemFallback,
+  };
+}
+
+/** Assert de testes: material peç e chapas reais não coexistem. */
+export function assertNoMaterialDoubleCount(input: {
+  pieceMaterialSum: number;
+  chapasReais: number;
+}): void {
+  const piece = Number(input.pieceMaterialSum) || 0;
+  const chapas = Number(input.chapasReais) || 0;
+  if (piece > 0 && chapas > 0) {
+    throw new Error(
+      `anti-double-count: pieceMaterial=${piece} e chapasReais=${chapas} não podem coexistir`
+    );
+  }
+}

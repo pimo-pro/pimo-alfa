@@ -2,6 +2,7 @@ export {
   FINANCEIRO_IVA_DEFAULT_PCT,
   FINANCEIRO_CUSTO_KEYS,
   FINANCEIRO_CUSTO_MATERIAL_KEYS,
+  FINANCEIRO_PIECE_MATERIAL_KEYS,
   emptyFinanceiroOverrides,
   normalizeFinanceiroOverrides,
   defaultFinanceiroAdminSettings,
@@ -47,3 +48,51 @@ export {
   FINANCEIRO_PECAS_DRILL_EUR_POR_FURO,
 } from "./financeiroPecasBuilder";
 export type { FinanceiroPecaRow, FinanceiroPecasBuildInput } from "./financeiroPecasBuilder";
+
+export {
+  priceFerragensFromCatalog,
+  compareFerragensAvsB,
+  resolveFallbackPrecoA,
+  loadFerragensCatalogForPricing,
+  loadComponentTypesForPricing,
+} from "./priceFerragensFromCatalog";
+export type {
+  PriceFerragensFromCatalogResult,
+  CompareFerragensAvsBResult,
+  FerragensStrictWarning,
+  FerragensFallbackUsage,
+  FerragemCatalogLine,
+} from "./priceFerragensFromCatalog";
+
+export {
+  computeOperacoesFinanceiras,
+  resolveOperacoesTarifas,
+  pieceHasCncOperacao,
+  pieceDrillHoleCount,
+} from "./computeOperacoesFinanceiras";
+export type {
+  OperacoesFinanceirasResult,
+  OperacoesFinanceirasTarifas,
+} from "./computeOperacoesFinanceiras";
+
+export {
+  computeDesperdicioSerragemFinanceiras,
+  estimateSerragemM2,
+  resolveDesperdicioSerragemTarifas,
+} from "./computeDesperdicioSerragemFinanceiras";
+export type {
+  DesperdicioSerragemFinanceirasResult,
+  DesperdicioSerragemTarifas,
+} from "./computeDesperdicioSerragemFinanceiras";
+
+export {
+  computeCustosAvancadosFinanceiras,
+  resolveCustosAvancadosTarifas,
+  assertNoMaterialDoubleCount,
+  MO_MINUTOS_POR_PECA_CNC,
+  MO_MINUTOS_POR_FURO,
+} from "./computeCustosAvancadosFinanceiras";
+export type {
+  CustosAvancadosFinanceirasResult,
+  CustosAvancadosTarifas,
+} from "./computeCustosAvancadosFinanceiras";

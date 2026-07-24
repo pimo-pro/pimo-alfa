@@ -3,6 +3,7 @@
  */
 
 import type { SettingsSchema } from "./settingsSchema";
+import { mergeOrcamentosSettings } from "../orcamentos";
 
 export type ValidationResult = {
   valid: boolean;
@@ -35,6 +36,10 @@ export function deepMergeSettings(
     geral: { ...base.geral, ...(isObject(patch.geral) ? patch.geral : {}) },
     fabrica: { ...base.fabrica, ...(isObject(patch.fabrica) ? patch.fabrica : {}) },
     precos: { ...base.precos, ...(isObject(patch.precos) ? patch.precos : {}) },
+    orcamentos: mergeOrcamentosSettings(
+      base.orcamentos,
+      isObject(patch.orcamentos) ? patch.orcamentos : {}
+    ),
     materiais: { ...base.materiais, ...(isObject(patch.materiais) ? patch.materiais : {}) },
     cnc: { ...base.cnc, ...(isObject(patch.cnc) ? patch.cnc : {}) },
     nesting: { ...base.nesting, ...(isObject(patch.nesting) ? patch.nesting : {}) },

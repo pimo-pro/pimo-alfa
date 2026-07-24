@@ -16,6 +16,7 @@ import { ORLA_SIDES, type PieceOrlaConfig } from "../orla/orlaTypes";
 import { COMPONENT_TYPES_DEFAULT, type ComponentType } from "../components/componentTypes";
 import { FERRAGENS_DEFAULT, type Ferragem } from "../ferragens/ferragens";
 import { safeGetItem } from "../../utils/storage";
+import { getSettings } from "../settings/settingsService";
 import {
   buildIndustrialListPiecesPerSheet,
   resolveIndustrialListNqr,
@@ -28,10 +29,23 @@ import {
 } from "./financeiroUnificado";
 import type { FinanceiroCustoMaterialKey } from "./financeiroUnificadoTypes";
 import { FINANCEIRO_CUSTO_MATERIAL_KEYS } from "./financeiroUnificadoTypes";
+import {
+  loadComponentTypesForPricing,
+  loadFerragensCatalogForPricing,
+  priceFerragensFromCatalog,
+} from "./priceFerragensFromCatalog";
+import {
+  computeOperacoesFinanceiras,
+  pieceHasCncOperacao,
+} from "./computeOperacoesFinanceiras";
+import { computeDesperdicioSerragemFinanceiras } from "./computeDesperdicioSerragemFinanceiras";
+import { computeCustosAvancadosFinanceiras } from "./computeCustosAvancadosFinanceiras";
+import { computeChapasReal } from "../industrial/computeChapasReal";
+import { FINANCEIRO_PIECE_MATERIAL_KEYS } from "./financeiroUnificadoTypes";
 
-/** Defaults P3.8  operacoes (sem SSOT industrial de tempo-maquina). */
-export const FINANCEIRO_PECAS_CNC_EUR_POR_UNIDADE = 0.5;
-export const FINANCEIRO_PECAS_DRILL_EUR_POR_FURO = 0.05;
+/** @deprecated P3.9 F3a  tarifas passam a Oramentos (defaults 0). Mantido para compat. */
+export const FINANCEIRO_PECAS_CNC_EUR_POR_UNIDADE = 0;
+export const FINANCEIRO_PECAS_DRILL_EUR_POR_FURO = 0;
 
 const CHECK = "\u2714";
 const EM_DASH = "\u2014";
@@ -58,7 +72,17 @@ export type FinanceiroPecaRow = {
   precoFerragens: number;
   /** CNC + Drill (+ especiais futuros). */
   precoOperacoes: number;
-  /** Soma: material + orla + ferragens + operacoes. */
+  /** P3.9 F3b — quota desperdicio (rateio area). */
+  precoDesperdicio: number;
+  /** P3.9 F3b — quota serragem (rateio area). */
+  precoSerragem: number;
+  /** P3.9 F3c — quota chapas reais (0 se por_peca). */
+  precoChapasShare: number;
+  /** P3.9 F3c — quota mao de obra. */
+  precoMaoDeObra: number;
+  /** P3.9 F3c — quota logistica (peso/area). */
+  precoLogistica: number;
+  /** Soma: material + orla + ferragens + operacoes + desp + serragem + F3c. */
   precoFinalDaPeca: number;
   /** Alias de precoFinalDaPeca (compat UI/PDF). */
   preco: number;
@@ -147,14 +171,6 @@ function pieceHasOrla(
   return ORLA_SIDES.some((side) => cfg.sides[side]?.enabled);
 }
 
-/** CNC: peca de chapa nestavel (area + espessura). Sem ler ficheiros TCN. */
-function pieceHasCnc(item: CutListItemComPreco): boolean {
-  const w = item.dimensoes?.largura ?? 0;
-  const h = item.dimensoes?.altura ?? 0;
-  const e = item.espessura ?? item.dimensoes?.profundidade ?? 0;
-  return w > 0 && h > 0 && e > 0;
-}
-
 function pieceHasDrill(item: CutListItemComPreco): boolean {
   return (item.drillHoles?.length ?? 0) > 0;
 }
@@ -206,14 +222,6 @@ function priceFerragensForPiece(
     total += unit * qtd;
   });
   return round2(total);
-}
-
-function priceOperacoesForPiece(item: CutListItemComPreco, hasCnc: boolean): number {
-  const qty = Math.max(1, item.quantidade ?? 1);
-  const holes = item.drillHoles?.length ?? 0;
-  const cnc = hasCnc ? FINANCEIRO_PECAS_CNC_EUR_POR_UNIDADE * qty : 0;
-  const drill = holes * FINANCEIRO_PECAS_DRILL_EUR_POR_FURO * qty;
-  return round2(cnc + drill);
 }
 
 function buildOrlaCustoByPieceId(
@@ -290,28 +298,87 @@ export function buildFinanceiroPecasRows(
 
   const ctById = Object.fromEntries(loadComponentTypes().map((ct) => [ct.id, ct]));
   const ferragemById = new Map(loadFerragensCatalog().map((f) => [f.id, f]));
+  const enableUnificacao =
+    getSettings().orcamentos?.ferragens?.enableUnificacao === true;
+  const pricedUnified = enableUnificacao
+    ? priceFerragensFromCatalog({
+        cutlist,
+        componentTypes: loadComponentTypesForPricing(),
+        catalog: loadFerragensCatalogForPricing(),
+      })
+    : null;
   const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome?.trim() || b.id]));
   const piecesPerSheet = buildIndustrialListPiecesPerSheet(cutlist);
   const orlaPieces = project.orlaPieces ?? {};
   const orlaByPiece = buildOrlaCustoByPieceId(project);
+  const opsFinanceiras = computeOperacoesFinanceiras(cutlist);
+  const chapasReal = computeChapasReal(cutlist, projectName, boxes);
+  const isReal = chapasReal.sheets.length > 0;
+  const wasteM2 = isReal ? chapasReal.totalWasteMm2 / 1_000_000 : 0;
+  const despSerr = computeDesperdicioSerragemFinanceiras({
+    cutlist,
+    wasteM2,
+  });
+  const pesoByPieceId = new Map<string, number>();
+  let pesoTotalKg = 0;
+  for (const item of cutlist) {
+    const id = String(item.id ?? "");
+    const w = pieceWeightKg(item, materials);
+    if (id) pesoByPieceId.set(id, w);
+    pesoTotalKg += w;
+  }
+  const avancados = computeCustosAvancadosFinanceiras({
+    cutlist,
+    chapasCount: isReal ? chapasReal.totalSheets : 0,
+    chapasModeReal: isReal,
+    pesoTotalKg,
+    pesoByPieceId,
+  });
+  const pieceMaterialKeySet = new Set<string>(FINANCEIRO_PIECE_MATERIAL_KEYS);
 
   return cutlist.map((item, index0) => {
     const custoKeyRaw = classifyFinanceiroCustoKey(String(item.tipo ?? ""));
     const custoKey: FinanceiroCustoMaterialKey =
-      custoKeyRaw === "adm" || custoKeyRaw === "montagem" || custoKeyRaw === "portes"
+      custoKeyRaw === "adm" ||
+      custoKeyRaw === "montagem" ||
+      custoKeyRaw === "portes" ||
+      custoKeyRaw === "operacoes" ||
+      custoKeyRaw === "desperdicio" ||
+      custoKeyRaw === "serragem" ||
+      custoKeyRaw === "chapasReais" ||
+      custoKeyRaw === "maoDeObra" ||
+      custoKeyRaw === "logistica"
         ? "paineis"
         : (custoKeyRaw as FinanceiroCustoMaterialKey);
 
-    const baseMaterial = Number(item.precoTotal) || 0;
+    const baseMaterial =
+      avancados.suppressPieceMaterial && pieceMaterialKeySet.has(custoKey)
+        ? 0
+        : Number(item.precoTotal) || 0;
     const precoMaterial = round2(baseMaterial * (scales[custoKey] ?? 1));
     const pieceKey = panelIdFromCutListItem(item);
     const precoOrla = orlaByPiece.get(pieceKey) ?? orlaByPiece.get(item.id) ?? 0;
-    const precoFerragens = priceFerragensForPiece(item, ctById, ferragemById);
-    const hasCnc = pieceHasCnc(item);
+    const precoFerragens = pricedUnified
+      ? pricedUnified.eurByPieceId.get(item.id) ?? 0
+      : priceFerragensForPiece(item, ctById, ferragemById);
+    const hasCnc = pieceHasCncOperacao(item);
     const hasDrill = pieceHasDrill(item);
-    const precoOperacoes = priceOperacoesForPiece(item, hasCnc);
+    const precoOperacoes = opsFinanceiras.eurByPieceId.get(item.id) ?? 0;
+    const precoDesperdicio = despSerr.desperdicioByPieceId.get(item.id) ?? 0;
+    const precoSerragem = despSerr.serragemByPieceId.get(item.id) ?? 0;
+    const precoChapasShare = avancados.chapasByPieceId.get(item.id) ?? 0;
+    const precoMaoDeObra = avancados.maoDeObraByPieceId.get(item.id) ?? 0;
+    const precoLogistica = avancados.logisticaByPieceId.get(item.id) ?? 0;
     const precoFinalDaPeca = round2(
-      precoMaterial + precoOrla + precoFerragens + precoOperacoes
+      precoMaterial +
+        precoOrla +
+        precoFerragens +
+        precoOperacoes +
+        precoDesperdicio +
+        precoSerragem +
+        precoChapasShare +
+        precoMaoDeObra +
+        precoLogistica
     );
 
     const L = item.dimensoes?.largura ?? 0;
@@ -329,12 +396,19 @@ export function buildFinanceiroPecasRows(
       hasOrla: pieceHasOrla(item, orlaPieces),
       hasCnc,
       hasDrill,
-      ferragensQty: countFerragensForPiece(item, ctById),
+      ferragensQty: pricedUnified
+        ? pricedUnified.qtyByPieceId.get(item.id) ?? 0
+        : countFerragensForPiece(item, ctById),
       etq: resolveEtq(item, projectName, boxes, project.rules, piecesPerSheet, index0),
       precoMaterial,
       precoOrla,
       precoFerragens,
       precoOperacoes,
+      precoDesperdicio,
+      precoSerragem,
+      precoChapasShare,
+      precoMaoDeObra,
+      precoLogistica,
       precoFinalDaPeca,
       preco: precoFinalDaPeca,
       custoKey,

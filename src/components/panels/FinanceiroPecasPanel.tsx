@@ -212,7 +212,7 @@ export default function FinanceiroPecasPanel({ embedded }: { embedded?: boolean 
               {visibleRows.map((r) => (
                 <tr key={r.pieceId} title={
                   showPrices
-                    ? `Mat ${formatCurrency(r.precoMaterial)} | Orla ${formatCurrency(r.precoOrla)} | Ferr ${formatCurrency(r.precoFerragens)} | Ops ${formatCurrency(r.precoOperacoes)}`
+                    ? `Mat ${formatCurrency(r.precoMaterial)} | Orla ${formatCurrency(r.precoOrla)} | Ferr ${formatCurrency(r.precoFerragens)} | Ops ${formatCurrency(r.precoOperacoes)} | Desp ${formatCurrency(r.precoDesperdicio)} | Serr ${formatCurrency(r.precoSerragem)} | Chap ${formatCurrency(r.precoChapasShare)} | MO ${formatCurrency(r.precoMaoDeObra)} | Log ${formatCurrency(r.precoLogistica)}`
                     : undefined
                 }>
                   <td style={tdStyle}>{r.caixa}</td>

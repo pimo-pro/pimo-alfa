@@ -1,0 +1,105 @@
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import type { CutListItemComPreco } from "../types";
+import {
+  computeDesperdicioSerragemFinanceiras,
+  estimateSerragemM2,
+} from "./computeDesperdicioSerragemFinanceiras";
+import * as tcnGenerator from "../cnc/tcnGenerator";
+
+function piece(
+  partial: Partial<CutListItemComPreco> & { id: string; w?: number; h?: number; qty?: number }
+): CutListItemComPreco {
+  const w = partial.w ?? 600;
+  const h = partial.h ?? 400;
+  return {
+    id: partial.id,
+    nome: "p",
+    tipo: "lateral_esquerda",
+    material: "MDF",
+    quantidade: partial.qty ?? 1,
+    dimensoes: { largura: w, altura: h, profundidade: 18 },
+    espessura: 18,
+    precoUnitario: 0,
+    precoTotal: 0,
+    ...partial,
+  };
+}
+
+describe("computeDesperdicioSerragemFinanceiras (P3.9 F3b)", () => {
+  beforeEach(() => {
+    vi.spyOn(tcnGenerator, "getLayoutKerfMmForCncNesting").mockReturnValue(3);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("flags off ? euros 0 + warnings", () => {
+    const cutlist = [piece({ id: "a" }), piece({ id: "b", w: 300, h: 200 })];
+    const r = computeDesperdicioSerragemFinanceiras({
+      cutlist,
+      wasteM2: 1.5,
+      tarifas: {
+        enableDesperdicio: false,
+        enableSerragem: false,
+        desperdicioEurPorM2: 10,
+        serragemEurPorM2: 5,
+      },
+    });
+    expect(r.precoDesperdicio).toBe(0);
+    expect(r.precoSerragem).toBe(0);
+    expect(r.precoTotal).toBe(0);
+    expect(r.warnings.some((w) => w.includes("enableDesperdicio"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("enableSerragem"))).toBe(true);
+  });
+
+  it("flags on + tarifas ? monetiza e rateia por area", () => {
+    const cutlist = [
+      piece({ id: "a", w: 1000, h: 1000, qty: 1 }), // area 1e6
+      piece({ id: "b", w: 1000, h: 1000, qty: 1 }), // area 1e6
+    ];
+    const r = computeDesperdicioSerragemFinanceiras({
+      cutlist,
+      wasteM2: 2,
+      serragemM2: 1,
+      tarifas: {
+        enableDesperdicio: true,
+        enableSerragem: true,
+        desperdicioEurPorM2: 10,
+        serragemEurPorM2: 4,
+      },
+    });
+    expect(r.precoDesperdicio).toBe(20);
+    expect(r.precoSerragem).toBe(4);
+    expect(r.precoTotal).toBe(24);
+    const sumD =
+      Math.round(
+        [...r.desperdicioByPieceId.values()].reduce((s, v) => s + v, 0) * 100
+      ) / 100;
+    const sumS =
+      Math.round(
+        [...r.serragemByPieceId.values()].reduce((s, v) => s + v, 0) * 100
+      ) / 100;
+    expect(sumD).toBe(20);
+    expect(sumS).toBe(4);
+  });
+
+  it("wasteM2=0 com flag on ? desp 0 + warning", () => {
+    const r = computeDesperdicioSerragemFinanceiras({
+      cutlist: [piece({ id: "a" })],
+      wasteM2: 0,
+      tarifas: {
+        enableDesperdicio: true,
+        enableSerragem: false,
+        desperdicioEurPorM2: 10,
+        serragemEurPorM2: 0,
+      },
+    });
+    expect(r.precoDesperdicio).toBe(0);
+    expect(r.warnings.some((w) => w.includes("wasteM2=0"))).toBe(true);
+  });
+
+  it("estimateSerragemM2 > 0 with kerf", () => {
+    const m2 = estimateSerragemM2([piece({ id: "a", w: 1000, h: 500 })]);
+    expect(m2).toBeGreaterThan(0);
+  });
+});

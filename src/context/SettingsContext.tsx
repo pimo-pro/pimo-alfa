@@ -18,6 +18,7 @@ import {
   validateSettings,
   type SettingsSchema,
 } from "../core/settings/settingsService";
+import { mergeOrcamentosSettings } from "../core/orcamentos";
 
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends (infer U)[]
@@ -134,6 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       geral: { ...settings.geral, ...(patch.geral ?? {}) },
       fabrica: { ...settings.fabrica, ...(patch.fabrica ?? {}) },
       precos: { ...settings.precos, ...(patch.precos ?? {}) },
+      orcamentos: mergeOrcamentosSettings(settings.orcamentos, patch.orcamentos ?? {}),
       materiais: { ...settings.materiais, ...(patch.materiais ?? {}) },
       cnc: { ...settings.cnc, ...(patch.cnc ?? {}) },
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
@@ -171,6 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       geral: { ...settings.geral, ...(patch.geral ?? {}) },
       fabrica: { ...settings.fabrica, ...(patch.fabrica ?? {}) },
       precos: { ...settings.precos, ...(patch.precos ?? {}) },
+      orcamentos: mergeOrcamentosSettings(settings.orcamentos, patch.orcamentos ?? {}),
       materiais: { ...settings.materiais, ...(patch.materiais ?? {}) },
       cnc: { ...settings.cnc, ...(patch.cnc ?? {}) },
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },

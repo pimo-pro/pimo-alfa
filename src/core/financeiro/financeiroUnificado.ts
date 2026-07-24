@@ -15,7 +15,6 @@ import {
 import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { computeChapasReal } from "../industrial/computeChapasReal";
-import { getLayoutKerfMmForCncNesting } from "../cnc/tcnGenerator";
 import { getSettings } from "../settings/settingsService";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
@@ -27,8 +26,19 @@ import {
   type FinanceiroAdminSettings,
 } from "./financeiroAdminRules";
 import {
+  compareFerragensAvsB,
+  priceFerragensFromCatalog,
+} from "./priceFerragensFromCatalog";
+import { computeOperacoesFinanceiras } from "./computeOperacoesFinanceiras";
+import {
+  computeDesperdicioSerragemFinanceiras,
+  estimateSerragemM2,
+} from "./computeDesperdicioSerragemFinanceiras";
+import { computeCustosAvancadosFinanceiras } from "./computeCustosAvancadosFinanceiras";
+import {
   FINANCEIRO_CUSTO_MATERIAL_KEYS,
   FINANCEIRO_IVA_DEFAULT_PCT,
+  FINANCEIRO_PIECE_MATERIAL_KEYS,
   normalizeFinanceiroOverrides,
   type FinanceiroCustoKey,
   type FinanceiroOverrides,
@@ -92,20 +102,6 @@ function boxVolumeMontadoM3(box: BoxModule): number {
   return (L * A * P) / 1_000_000_000;
 }
 
-function estimateSerragemM2(cutlist: CutListItemComPreco[]): number {
-  const kerf = getLayoutKerfMmForCncNesting(getSettings());
-  if (!(kerf > 0) || cutlist.length === 0) return 0;
-  let mm2 = 0;
-  for (const item of cutlist) {
-    const w = item.dimensoes?.largura ?? 0;
-    const h = item.dimensoes?.altura ?? 0;
-    const qty = item.quantidade ?? 1;
-    if (w <= 0 || h <= 0) continue;
-    mm2 += 2 * (w + h) * kerf * 0.5 * qty;
-  }
-  return mm2 / 1_000_000;
-}
-
 function emptyCustos(): Record<FinanceiroCustoKey, number> {
   return {
     paineis: 0,
@@ -114,11 +110,29 @@ function emptyCustos(): Record<FinanceiroCustoKey, number> {
     ferragens: 0,
     orla: 0,
     remates: 0,
+    operacoes: 0,
+    desperdicio: 0,
+    serragem: 0,
+    chapasReais: 0,
+    maoDeObra: 0,
+    logistica: 0,
     adm: 0,
     montagem: 0,
     portes: 0,
   };
 }
+
+const NON_CUTLIST_CUSTO_KEYS = new Set<FinanceiroCustoKey>([
+  "adm",
+  "montagem",
+  "portes",
+  "operacoes",
+  "desperdicio",
+  "serragem",
+  "chapasReais",
+  "maoDeObra",
+  "logistica",
+]);
 
 function resolveAdminSettings(project: FinanceiroUnificadoProjectSlice): FinanceiroAdminSettings {
   if (project.financeiroAdminSettings) {
@@ -154,9 +168,36 @@ export function computeFinanceiroUnificado(
     industrialPieceEdits: project.industrialPieceEdits,
   });
 
-  const ferragens = ferragensFromBoxes(boxes, project.rules);
+  const enableUnificacao =
+    getSettings().orcamentos?.ferragens?.enableUnificacao === true;
+
+  let ferragensTotais = 0;
+  let ferragensEur = 0;
+  let ferragensUnificacao: FinanceiroUnificadoSnapshot["ferragensUnificacao"];
+
+  if (enableUnificacao) {
+    const priced = priceFerragensFromCatalog({ cutlist });
+    ferragensTotais = priced.totalQty;
+    ferragensEur = priced.totalEur;
+    let compare: ReturnType<typeof compareFerragensAvsB> | undefined;
+    try {
+      compare = compareFerragensAvsB(boxes, project.rules, cutlist);
+    } catch {
+      /* STRICT */
+    }
+    ferragensUnificacao = {
+      enabled: true,
+      warnings: priced.warnings,
+      fallbacks: priced.fallbacks,
+      compare,
+    };
+  } else {
+    const ferragens = ferragensFromBoxes(boxes, project.rules);
+    ferragensTotais = ferragens.reduce((s, a) => s + (a.quantidade ?? 0), 0);
+    ferragensEur = ferragens.reduce((s, a) => s + (Number(a.precoTotal) || 0), 0);
+  }
+
   const pecasTotais = cutlist.reduce((s, i) => s + (i.quantidade ?? 0), 0);
-  const ferragensTotais = ferragens.reduce((s, a) => s + (a.quantidade ?? 0), 0);
 
   const areaTotalMm2 = cutlist.reduce(
     (s, i) => s + (i.dimensoes?.largura ?? 0) * (i.dimensoes?.altura ?? 0) * (i.quantidade ?? 0),
@@ -172,11 +213,56 @@ export function computeFinanceiroUnificado(
   const custosComputed = emptyCustos();
   for (const item of cutlist) {
     const key = classifyFinanceiroCustoKey(String(item.tipo ?? ""));
-    if (key === "adm" || key === "montagem" || key === "portes") continue;
+    if (NON_CUTLIST_CUSTO_KEYS.has(key)) continue;
     custosComputed[key] += Number(item.precoTotal) || 0;
   }
-  custosComputed.ferragens = ferragens.reduce((s, a) => s + (Number(a.precoTotal) || 0), 0);
+  custosComputed.ferragens = ferragensEur;
   custosComputed.orla = custoOrla;
+
+  const opsFinanceiras = computeOperacoesFinanceiras(cutlist);
+  custosComputed.operacoes = opsFinanceiras.precoTotal;
+  const operacoesBreakdown = {
+    cnc: opsFinanceiras.precoCNC,
+    drill: opsFinanceiras.precoDrill,
+    total: opsFinanceiras.precoTotal,
+  };
+
+  // Chapas reais 1× — métricas + desperdício € + F3c avançados
+  const chapasReal = computeChapasReal(cutlist, projectName, boxes);
+  const isReal = chapasReal.sheets.length > 0;
+  const wasteM2 = isReal ? chapasReal.totalWasteMm2 / 1_000_000 : 0;
+  const serragemM2 = estimateSerragemM2(cutlist);
+  const despSerr = computeDesperdicioSerragemFinanceiras({
+    cutlist,
+    wasteM2,
+    serragemM2,
+  });
+  custosComputed.desperdicio = despSerr.precoDesperdicio;
+  custosComputed.serragem = despSerr.precoSerragem;
+  const desperdicioSerragemWarnings = despSerr.warnings;
+
+  const pesoByPieceId = new Map<string, number>();
+  for (const item of cutlist) {
+    const id = String(item.id ?? "");
+    if (!id) continue;
+    pesoByPieceId.set(id, pieceWeightKg(item, materials));
+  }
+  const avancados = computeCustosAvancadosFinanceiras({
+    cutlist,
+    chapasCount: isReal ? chapasReal.totalSheets : 0,
+    chapasModeReal: isReal,
+    pesoTotalKg,
+    pesoByPieceId,
+  });
+  if (avancados.suppressPieceMaterial) {
+    for (const k of FINANCEIRO_PIECE_MATERIAL_KEYS) {
+      custosComputed[k] = 0;
+    }
+  }
+  custosComputed.chapasReais = avancados.precoChapasReais;
+  custosComputed.maoDeObra = avancados.precoMaoDeObra;
+  custosComputed.logistica = avancados.precoLogistica;
+  const custosAvancadosWarnings = avancados.warnings;
 
   // Materiais efetivos (com overrides) ? base para ADM/montagem/portes e IVA
   const custosEffective = emptyCustos();
@@ -231,10 +317,8 @@ export function computeFinanceiroUnificado(
     subtotal + custosEffective.adm + custosEffective.montagem + custosEffective.portes;
   const totalProjeto = subtotalComAdmin + ivaValor;
 
-  const chapasReal = computeChapasReal(cutlist, projectName, boxes);
   const areaChapaMm2 = CHAPA_PADRAO_LARGURA * CHAPA_PADRAO_ALTURA;
   const chapasEstimadas = areaTotalMm2 > 0 ? Math.ceil(areaTotalMm2 / areaChapaMm2) : 0;
-  const isReal = chapasReal.sheets.length > 0;
 
   return {
     caixas: boxes.length,
@@ -246,8 +330,8 @@ export function computeFinanceiroUnificado(
       count: isReal ? chapasReal.totalSheets : chapasEstimadas,
       mode: isReal ? "real" : "estimado",
     },
-    desperdicioTotalM2: isReal ? chapasReal.totalWasteMm2 / 1_000_000 : 0,
-    serragemTotalM2: estimateSerragemM2(cutlist),
+    desperdicioTotalM2: wasteM2,
+    serragemTotalM2: serragemM2,
     ferragensTotais,
     orlaTotalM,
     custosComputed,
@@ -261,6 +345,11 @@ export function computeFinanceiroUnificado(
     totalProjeto,
     overrides,
     adminSettings,
+    operacoesBreakdown,
+    desperdicioSerragemWarnings,
+    custosAvancadosWarnings,
+    materialCostMode: avancados.materialCostMode,
+    ferragensUnificacao,
   };
 }
 
@@ -294,6 +383,12 @@ export function financeiroCustoRows(
     { label: "Ferragens", valor: snap.custosEffective.ferragens },
     { label: "Orla", valor: snap.custosEffective.orla },
     { label: "Remates", valor: snap.custosEffective.remates },
+    { label: "Operacoes (CNC/Drill)", valor: snap.custosEffective.operacoes },
+    { label: "Desperdicio", valor: snap.custosEffective.desperdicio },
+    { label: "Serragem", valor: snap.custosEffective.serragem },
+    { label: "Chapas reais", valor: snap.custosEffective.chapasReais },
+    { label: "Mao de obra", valor: snap.custosEffective.maoDeObra },
+    { label: "Logistica", valor: snap.custosEffective.logistica },
     { label: "ADM", valor: snap.custosEffective.adm },
     { label: "Montagem", valor: snap.custosEffective.montagem },
     { label: "Portes", valor: snap.custosEffective.portes },

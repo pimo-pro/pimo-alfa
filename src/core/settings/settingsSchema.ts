@@ -9,6 +9,10 @@ import {
   type PiTipoFrente,
 } from "../../data/moveisUnificados/pi/settings";
 import type { DrawerHeightMode } from "../drawers/drawerHeightModeTypes";
+import {
+  defaultOrcamentosSettings,
+  type OrcamentosSettings,
+} from "../orcamentos";
 
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -53,6 +57,11 @@ export interface SettingsSchema {
     multiplicadorBase: number;
     valorHoraMaquina: number;
   };
+  /**
+   * P3.9 — Orçamentos (tarifas Admin).
+   * Fase 1: persistido; sem ligação a cálculos financeiros.
+   */
+  orcamentos: OrcamentosSettings;
   materiais: {
     categoriaPadraoId: string;
     presetVisualPadraoId: string;
@@ -249,6 +258,7 @@ export const settingsDefaults: SettingsSchema = {
     multiplicadorBase: 1,
     valorHoraMaquina: 35,
   },
+  orcamentos: defaultOrcamentosSettings(),
   materiais: {
     categoriaPadraoId: "mdf",
     presetVisualPadraoId: "mdf_branco",

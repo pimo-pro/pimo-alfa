@@ -1,0 +1,444 @@
+/**
+ * P3.9 ù ADMIN ? Sistema ? Orùamentos.
+ * F1: tarifas. F2: flag unificaùùo ferragens. Sem ligar custos avanùados.
+ */
+
+import { useEffect, useState } from "react";
+import {
+  AdminPageHeader,
+  adminLabelStyle,
+  adminPageShellStyle,
+  AdminStickyActionBar,
+} from "../../components/admin/AdminUi";
+import Button from "../../components/ui/Button";
+import { useToast } from "../../context/ToastContext";
+import { useSettings } from "../../context/SettingsContext";
+import { getSettings, saveSettings } from "../../core/settings/settingsService";
+import {
+  defaultOrcamentosSettings,
+  normalizeOrcamentosSettings,
+  type OrcamentosMargemModo,
+  type OrcamentosMaterialCostMode,
+  type OrcamentosMontagemAvancadaModo,
+  type OrcamentosSettings,
+} from "../../core/orcamentos";
+
+const cardStyle: React.CSSProperties = {
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 8,
+  padding: 14,
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+
+const grid2: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 10,
+};
+
+const bannerStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "var(--text-muted)",
+  border: "1px solid rgba(245, 158, 11, 0.35)",
+  background: "rgba(245, 158, 11, 0.08)",
+  borderRadius: 8,
+  padding: "10px 12px",
+  lineHeight: 1.45,
+};
+
+function NumberInput({
+  label,
+  value,
+  onChange,
+  step = 0.01,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+}) {
+  return (
+    <div>
+      <span style={adminLabelStyle}>{label}</span>
+      <input
+        className="input"
+        type="number"
+        min={0}
+        step={step}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onChange(Number.isFinite(n) && n >= 0 ? n : 0);
+        }}
+      />
+    </div>
+  );
+}
+
+export default function OrcamentosAdminSettings() {
+  const { showToast } = useToast();
+  const { refreshSettings } = useSettings();
+  const [draft, setDraft] = useState<OrcamentosSettings>(() =>
+    normalizeOrcamentosSettings(getSettings().orcamentos)
+  );
+
+  useEffect(() => {
+    setDraft(normalizeOrcamentosSettings(getSettings().orcamentos));
+  }, []);
+
+  const handleSave = () => {
+    const next = normalizeOrcamentosSettings(draft);
+    const current = getSettings();
+    const result = saveSettings({ ...current, orcamentos: next });
+    setDraft(result.settings.orcamentos);
+    refreshSettings();
+    showToast(
+      result.success
+        ? "Orcamentos guardados. Unificacao ferragens so afecta totais se a flag estiver activa."
+        : result.message,
+      result.success ? "info" : "error"
+    );
+  };
+
+  const handleReset = () => {
+    setDraft(defaultOrcamentosSettings());
+  };
+
+  return (
+    <div style={adminPageShellStyle}>
+      <AdminPageHeader
+        title="Orcamentos"
+        subtitle="Centro de tarifas P3.9. F1 schema + F2 unificacao ferragens (flag). CNC/PDFs industriais intactos."
+      />
+
+      <div style={bannerStyle}>
+        Defaults day-1 = 0 EUR e flags off. ADM / Montagem / Portes / IVA continuam em{" "}
+        <strong>Financeiro (ADM / Montagem / Portes)</strong>. enableUnificacao=false preserva
+        totais actuais.
+      </div>
+
+      <AdminStickyActionBar>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          Persistencia: System Settings (`pimo_system_settings_v1`)
+        </span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button type="button" variant="secondary" onClick={handleReset}>
+            Restaurar defaults
+          </Button>
+          <Button type="button" onClick={handleSave}>
+            Guardar
+          </Button>
+        </div>
+      </AdminStickyActionBar>
+
+      <div style={cardStyle}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Ferragens (P3.9 F2)</h3>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+          Default off = Unificado Via A, Pecas Via B (comportamento actual). Com unificacao on:
+          ambos usam catalogo B + fallback A. STRICT = avisos no relatorio, sem bloquear
+          CNC/PDF/financeiro.
+        </p>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+          <input
+            type="checkbox"
+            checked={draft.ferragens.enableUnificacao}
+            onChange={(e) =>
+              setDraft((p) => ({
+                ...p,
+                ferragens: { ...p.ferragens, enableUnificacao: e.target.checked },
+              }))
+            }
+          />
+          Unificar ferragens (catalogo B + fallback A + STRICT)
+        </label>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Perfuracoes / CNC</h3>
+        <div style={grid2}>
+          <NumberInput
+            label="Drill (EUR / furo)"
+            value={draft.perfuracoes.drillEurPorFuro}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                perfuracoes: { ...p.perfuracoes, drillEurPorFuro: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Nesting / CNC (EUR / operacao)"
+            value={draft.perfuracoes.nestingEurPorOperacao}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                perfuracoes: { ...p.perfuracoes, nestingEurPorOperacao: v },
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Custos industriais</h3>
+        <div style={grid2}>
+          <NumberInput
+            label="Desperdicio (EUR / m2)"
+            value={draft.custosIndustriais.desperdicioEurPorM2}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, desperdicioEurPorM2: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Serragem (EUR / m2)"
+            value={draft.custosIndustriais.serragemEurPorM2}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, serragemEurPorM2: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Custo chapa real (EUR / chapa)"
+            value={draft.custosIndustriais.custoChapaReal}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, custoChapaReal: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Ops especiais (EUR / un)"
+            value={draft.custosIndustriais.custoOperacoesEspeciais}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, custoOperacoesEspeciais: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Valor hora maquina (EUR / h)"
+            value={draft.custosIndustriais.valorHoraMaquina}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, valorHoraMaquina: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Logistica (EUR / kg)"
+            value={draft.custosIndustriais.custoLogisticaPorKg}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, custoLogisticaPorKg: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Montagem por peca (EUR)"
+            value={draft.custosIndustriais.custoMontagemPorPeca}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                custosIndustriais: { ...p.custosIndustriais, custoMontagemPorPeca: v },
+              }))
+            }
+          />
+          <div>
+            <span style={adminLabelStyle}>Modo custo material</span>
+            <select
+              className="input"
+              value={draft.custosIndustriais.materialCostMode}
+              onChange={(e) =>
+                setDraft((p) => ({
+                  ...p,
+                  custosIndustriais: {
+                    ...p.custosIndustriais,
+                    materialCostMode: e.target.value as OrcamentosMaterialCostMode,
+                  },
+                }))
+              }
+            >
+              <option value="por_peca">Por peca (actual)</option>
+              <option value="por_chapas_reais">Por chapas reais (exclusivo)</option>
+            </select>
+            <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+              Por chapas reais substitui o custo material peÁ (paineis/portas/gavetas/remates)
+              ó anti double-count. MO usa valorHoraMaquina OrÁamentos; se 0, fallback System
+              Settings. LogÌstica (Ä/kg) n„o altera portes P3.6.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
+          {(
+            [
+              ["enableDesperdicio", "Activar desperdicio EUR"],
+              ["enableSerragem", "Activar serragem EUR"],
+              ["enableLogistica", "Activar logistica EUR"],
+              ["enableMaoDeObra", "Activar mao de obra EUR"],
+            ] as const
+          ).map(([key, label]) => (
+            <label
+              key={key}
+              style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}
+            >
+              <input
+                type="checkbox"
+                checked={draft.custosIndustriais[key]}
+                onChange={(e) =>
+                  setDraft((p) => ({
+                    ...p,
+                    custosIndustriais: { ...p.custosIndustriais, [key]: e.target.checked },
+                  }))
+                }
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Montagem avancada (em breve)</h3>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+          Schema reservado. Nao substitui Financeiro (ADM / Montagem / Portes). Nao ligado ao
+          calculo nesta fase.
+        </p>
+        <div style={grid2}>
+          <div>
+            <span style={adminLabelStyle}>Modo</span>
+            <select
+              className="input"
+              value={draft.montagemAvancada.modo}
+              onChange={(e) =>
+                setDraft((p) => ({
+                  ...p,
+                  montagemAvancada: {
+                    ...p.montagemAvancada,
+                    modo: e.target.value as OrcamentosMontagemAvancadaModo,
+                  },
+                }))
+              }
+            >
+              <option value="off">Off</option>
+              <option value="m2">EUR / m2</option>
+              <option value="caixa">EUR / caixa</option>
+              <option value="peca">EUR / peca</option>
+            </select>
+          </div>
+          <NumberInput
+            label="Preco / m2"
+            value={draft.montagemAvancada.precoPorM2}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                montagemAvancada: { ...p.montagemAvancada, precoPorM2: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Preco / caixa"
+            value={draft.montagemAvancada.precoPorCaixa}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                montagemAvancada: { ...p.montagemAvancada, precoPorCaixa: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Preco gavetas"
+            value={draft.montagemAvancada.precoGavetas}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                montagemAvancada: { ...p.montagemAvancada, precoGavetas: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Preco remate"
+            value={draft.montagemAvancada.precoRemate}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                montagemAvancada: { ...p.montagemAvancada, precoRemate: v },
+              }))
+            }
+          />
+          <NumberInput
+            label="Preco ferragens montagem"
+            value={draft.montagemAvancada.precoFerragensMontagem}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                montagemAvancada: { ...p.montagemAvancada, precoFerragensMontagem: v },
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Margem de ganho</h3>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+          Persistida aqui; activacao no calculo so na Fase 5. Default: desligada.
+        </p>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+          <input
+            type="checkbox"
+            checked={draft.margemGanho.enabled}
+            onChange={(e) =>
+              setDraft((p) => ({
+                ...p,
+                margemGanho: { ...p.margemGanho, enabled: e.target.checked },
+              }))
+            }
+          />
+          Activar margem (tarifas ù sem efeito no total ate Fase 5)
+        </label>
+        <div style={grid2}>
+          <div>
+            <span style={adminLabelStyle}>Modo</span>
+            <select
+              className="input"
+              value={draft.margemGanho.modo}
+              onChange={(e) =>
+                setDraft((p) => ({
+                  ...p,
+                  margemGanho: {
+                    ...p.margemGanho,
+                    modo: e.target.value as OrcamentosMargemModo,
+                  },
+                }))
+              }
+            >
+              <option value="percentual">Percentual</option>
+              <option value="fixo">Valor fixo (EUR)</option>
+            </select>
+          </div>
+          <NumberInput
+            label={draft.margemGanho.modo === "percentual" ? "Valor (%)" : "Valor (EUR)"}
+            value={draft.margemGanho.valor}
+            onChange={(v) =>
+              setDraft((p) => ({
+                ...p,
+                margemGanho: { ...p.margemGanho, valor: v },
+              }))
+            }
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

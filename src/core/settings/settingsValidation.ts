@@ -6,6 +6,7 @@ import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas } from "../../data/move
 import { sanitizeOrlaRulesInput } from "../../3d/viewer-engine/orla/orlaVisualRules";
 import { SETTINGS_SCHEMA_VERSION, settingsDefaults, type SettingsSchema } from "./settingsSchema";
 import { clamp, deepMergeSettings, normalizeDepths, toNumber, type ValidationResult } from "./settingsMerge";
+import { normalizeOrcamentosSettings } from "../orcamentos";
 
 const DRAWER_SLIDE_TYPES = [
   "Blum Tandem",
@@ -80,6 +81,7 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       multiplicadorBase: clamp(toNumber(merged.precos.multiplicadorBase, settingsDefaults.precos.multiplicadorBase), 0.1, 100),
       valorHoraMaquina: clamp(toNumber(merged.precos.valorHoraMaquina, settingsDefaults.precos.valorHoraMaquina), 0, 10000),
     },
+    orcamentos: normalizeOrcamentosSettings(merged.orcamentos),
     materiais: {
       categoriaPadraoId: typeof merged.materiais.categoriaPadraoId === "string" && merged.materiais.categoriaPadraoId.trim()
         ? merged.materiais.categoriaPadraoId.trim()
