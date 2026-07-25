@@ -144,10 +144,10 @@ const MARKET_BUILTIN_RAW: CentralPricingFile = {
     gaveta_metalica: 15,
   },
   operacoes: {
-    corte_cnc_metro: 0.28,
-    furo_cnc: 0.045,
-    rasgo_cnc_metro: 0.55,
-    drill_manual: 0.03,
+    corte_cnc_metro: 0.14,
+    furo_cnc: 0.0225,
+    rasgo_cnc_metro: 0.275,
+    drill_manual: 0.015,
   },
   desperdicio: { percentual: 0.18 },
   maoDeObra: {
@@ -157,7 +157,7 @@ const MARKET_BUILTIN_RAW: CentralPricingFile = {
   },
   custosAdicionais: {
     serragem: 0.8,
-    adm_percentual: 0.1,
+    adm_percentual: 0.05,
     logistica: 5,
   },
   portes: {
@@ -209,7 +209,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
   const mdfBranco = num(chapas.MDF_BRANCO_LAMINADO_19, 31);
   const mdfCru = num(chapas.MDF_CRU_19, 20);
   const serragem = num(custos.serragem, 0.8);
-  const admPct = num(custos.adm_percentual, 0.1);
+  const admPct = num(custos.adm_percentual, 0.05);
   const logistica = num(custos.logistica, 5);
   const portesSoComEscolha = portes.ativoSomenteComEscolha !== false;
 
@@ -223,7 +223,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     ...(src.orcamentos && typeof src.orcamentos === "object" ? src.orcamentos : {}),
     perfuracoes: {
       // Drill = furo CNC real; nesting flat-fee legado = 0 (CNC usa corte_cnc_metro).
-      drillEurPorFuro: num(operacoes.furo_cnc, 0.045),
+      drillEurPorFuro: num(operacoes.furo_cnc, 0.0225),
       nestingEurPorOperacao: 0,
       ...(typeof src.orcamentos === "object" && src.orcamentos && "perfuracoes" in src.orcamentos
         ? (src.orcamentos as { perfuracoes?: object }).perfuracoes
@@ -248,7 +248,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
         : {}),
     },
     operacoesAvancadas: {
-      precoRasgoGaveta: num(operacoes.rasgo_cnc_metro, 0.55),
+      precoRasgoGaveta: num(operacoes.rasgo_cnc_metro, 0.275),
       ...(typeof src.orcamentos === "object" && src.orcamentos && "operacoesAvancadas" in src.orcamentos
         ? (src.orcamentos as { operacoesAvancadas?: object }).operacoesAvancadas
         : {}),
@@ -346,7 +346,7 @@ export function normalizeCentralPricing(raw: unknown): CentralPricingFile {
       },
       custosAdicionais: {
         serragem: num(src.custosAdicionais?.serragem, 0.8),
-        adm_percentual: num(src.custosAdicionais?.adm_percentual, 0.1),
+        adm_percentual: num(src.custosAdicionais?.adm_percentual, 0.05),
         logistica: num(src.custosAdicionais?.logistica, 5),
       },
       portes: {

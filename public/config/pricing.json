@@ -30,10 +30,10 @@
   },
 
   "operacoes": {
-    "corte_cnc_metro": 0.28,
-    "furo_cnc": 0.045,
-    "rasgo_cnc_metro": 0.55,
-    "drill_manual": 0.03
+    "corte_cnc_metro": 0.14,
+    "furo_cnc": 0.0225,
+    "rasgo_cnc_metro": 0.275,
+    "drill_manual": 0.015
   },
 
   "desperdicio": {
@@ -48,7 +48,7 @@
 
   "custosAdicionais": {
     "serragem": 0.80,
-    "adm_percentual": 0.10,
+    "adm_percentual": 0.05,
     "logistica": 5
   },
 

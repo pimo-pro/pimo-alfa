@@ -54,17 +54,22 @@ export function resolveOperacoesTarifas(
   })();
   const src = { ...fromSettings, ...override };
   const corteFromOverride = numTarifa(override?.corteEurPorMetro);
+  // SSOT: pricing.json tem prioridade sobre settings locais stale.
   const corte =
     corteFromOverride > 0
       ? corteFromOverride
-      : numTarifa((pricingOps as { corte_cnc_metro?: number }).corte_cnc_metro) || 0.28;
+      : numTarifa((pricingOps as { corte_cnc_metro?: number }).corte_cnc_metro) || 0.14;
+  const furoFromPricing = numTarifa((pricingOps as { furo_cnc?: number }).furo_cnc);
   const furo =
-    numTarifa(src?.drillEurPorFuro) ||
-    numTarifa((pricingOps as { furo_cnc?: number }).furo_cnc) ||
-    0.045;
+    typeof override?.drillEurPorFuro === "number"
+      ? numTarifa(override.drillEurPorFuro)
+      : furoFromPricing > 0
+        ? furoFromPricing
+        : numTarifa(src?.drillEurPorFuro) || 0.0225;
   return {
-    drillEurPorFuro: typeof override?.drillEurPorFuro === "number" ? numTarifa(override.drillEurPorFuro) : furo,
-    corteEurPorMetro: typeof override?.corteEurPorMetro === "number" ? corteFromOverride : corte,
+    drillEurPorFuro: furo,
+    corteEurPorMetro:
+      typeof override?.corteEurPorMetro === "number" ? corteFromOverride : corte,
     nestingEurPorOperacao: numTarifa(src?.nestingEurPorOperacao),
   };
 }

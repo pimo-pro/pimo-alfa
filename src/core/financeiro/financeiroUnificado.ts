@@ -18,6 +18,7 @@ import { computeChapasReal } from "../industrial/computeChapasReal";
 import { getSettings } from "../settings/settingsService";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
+import { getCentralPricingCached } from "../pricing/centralPricingConfig";
 import {
   computeFinanceiroAdminCustos,
   defaultFinanceiroAdminSettings,
@@ -208,20 +209,41 @@ const NON_CUTLIST_CUSTO_KEYS = new Set<FinanceiroCustoKey>([
 ]);
 
 function resolveAdminSettings(project: FinanceiroUnificadoProjectSlice): FinanceiroAdminSettings {
+  let base: FinanceiroAdminSettings;
   if (project.financeiroAdminSettings) {
-    return normalizeFinanceiroAdminSettings(project.financeiroAdminSettings);
+    base = normalizeFinanceiroAdminSettings(project.financeiroAdminSettings);
+  } else {
+    try {
+      const fromSystem = getSettings().financeiroAdmin;
+      if (fromSystem) base = normalizeFinanceiroAdminSettings(fromSystem);
+      else base = loadGlobalFinanceiroAdminSettings();
+    } catch {
+      try {
+        base = loadGlobalFinanceiroAdminSettings();
+      } catch {
+        base = defaultFinanceiroAdminSettings();
+      }
+    }
   }
+
+  // SSOT pricing.json custosAdicionais.adm_percentual — ignora fallback antigo 10%.
   try {
-    const fromSystem = getSettings().financeiroAdmin;
-    if (fromSystem) return normalizeFinanceiroAdminSettings(fromSystem);
+    const fromPricing = getCentralPricingCached().financeiroAdmin?.adm;
+    if (fromPricing && typeof fromPricing.valor === "number" && Number.isFinite(fromPricing.valor)) {
+      return normalizeFinanceiroAdminSettings({
+        ...base,
+        adm: {
+          ...base.adm,
+          enabled: fromPricing.enabled !== false,
+          mode: fromPricing.mode ?? "percentagem",
+          valor: fromPricing.valor,
+        },
+      });
+    }
   } catch {
     /* ignore */
   }
-  try {
-    return loadGlobalFinanceiroAdminSettings();
-  } catch {
-    return defaultFinanceiroAdminSettings();
-  }
+  return base;
 }
 
 /**
@@ -313,6 +335,8 @@ export function computeFinanceiroUnificado(
   custosComputed.orla = custoOrla;
 
   const opsFinanceiras = computeOperacoesFinanceiras(cutlist);
+  // Mercado 50%: tarifas pricing.json (corte/furo/rasgo/drill) a metade
+  // → equivalente a custosComputed.operacoes *= 0.5 vs baseline anterior.
   custosComputed.operacoes = opsFinanceiras.precoTotal;
   const operacoesBreakdown = {
     cnc: opsFinanceiras.precoCNC,

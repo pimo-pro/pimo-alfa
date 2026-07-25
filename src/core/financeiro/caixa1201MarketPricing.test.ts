@@ -110,11 +110,15 @@ describe("CAIXA 1201 ù precos de mercado", () => {
     expect(c.orla, diag).toBeLessThan(6);
     expect(c.ferragens, diag).toBeGreaterThan(7);
     expect(c.ferragens, diag).toBeLessThan(15);
-    expect(c.operacoes, diag).toBeGreaterThan(5);
-    expect(c.operacoes, diag).toBeLessThan(25);
+    // CNC/Drill a 50% das tarifas anteriores (~2ñ12)
+    expect(c.operacoes, diag).toBeGreaterThan(2);
+    expect(c.operacoes, diag).toBeLessThan(12);
     expect(c.operacoesAvancadas ?? 0, diag).toBeLessThan(3);
+    // ADM 5% (n„o 10%)
+    expect(c.adm, diag).toBeGreaterThan(0);
+    expect(c.adm / Math.max(1e-6, snap.subtotal), diag).toBeCloseTo(0.05, 2);
 
-    // Materiais+servicos tipicos: 100ñ280 (UI com IVA ~180ñ260)
+    // Materiais+servicos tipicos: 100ù280 (UI com IVA ~180ù260)
     expect(total, diag).toBeGreaterThan(90);
     expect(total, diag).toBeLessThan(280);
   });

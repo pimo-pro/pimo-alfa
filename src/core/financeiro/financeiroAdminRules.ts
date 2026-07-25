@@ -70,7 +70,7 @@ export const FINANCEIRO_ADMIN_SETTINGS_STORAGE_KEY = "pimo_financeiro_admin_sett
 
 export function defaultFinanceiroAdminSettings(): FinanceiroAdminSettings {
   return {
-    adm: { enabled: true, mode: "percentagem", valor: 10 },
+    adm: { enabled: true, mode: "percentagem", valor: 5 },
     // pricing.json maoDeObra.montagem_caixa_m2 = 17 €/m²
     montagem: { enabled: true, mode: "eur_por_m2", valor: 17 },
     // Sem fallback de remates — remates/rodapés só via peças reais no Unificado.
