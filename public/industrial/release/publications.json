@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T17:48:15.113Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(autoRoomFill): silenciar parâmetro cornerAtStart não usado após remates off.",
+      "version": "v6.0725.1848"
+    },
+    {
+      "publishedAt": "2026-07-25T17:46:07.621Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): Portes só com escolha explícita; remates sem custo fantasma.",
+      "version": "v6.0725.1846"
+    },
+    {
       "publishedAt": "2026-07-22T22:07:46.857Z",
       "author": "pimo-pro",
       "commitMessage": "Publicação PIMO — Sistema Industrial",
