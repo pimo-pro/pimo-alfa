@@ -15,6 +15,14 @@ const NEWS_REL = path.join("public", "updates", "news.json");
 const NEWS_PATH = path.join(rootDir, NEWS_REL);
 const MAX_ENTRIES = 300;
 const PROD_NEWS_URL = process.env.PIMO_NEWS_URL || "https://pimo.pro/updates/news.json";
+const GITHUB_REPO = process.env.PIMO_GITHUB_REPO || "pimo-pro/pimo-criativo";
+
+const TYPE_ICONS = {
+  fix: "ðŸ› ï¸",
+  feature: "âœ¨",
+  update: "âš™ï¸",
+  docs: "ðŸ“„",
+};
 
 function run(cmd) {
   try {
@@ -26,9 +34,31 @@ function run(cmd) {
 
 function inferType(message) {
   const m = String(message || "").trim().toLowerCase();
-  if (m.startsWith("fix")) return "fix";
-  if (m.startsWith("feat") || m.startsWith("feature")) return "feature";
+  // Prefixo conventional: "fix:", "feat(scope):", "chore:", "docs:", etc.
+  const match = m.match(/^(fix|feat|feature|update|chore|docs)(\(|:|\b)/);
+  if (!match) return "update";
+  const prefix = match[1];
+  if (prefix === "fix") return "fix";
+  if (prefix === "feat" || prefix === "feature") return "feature";
+  if (prefix === "docs") return "docs";
+  // update: | chore:
   return "update";
+}
+
+function isNewsType(value) {
+  return value === "fix" || value === "feature" || value === "update" || value === "docs";
+}
+
+function iconForType(type) {
+  return TYPE_ICONS[isNewsType(type) ? type : "update"] || TYPE_ICONS.update;
+}
+
+function sortByPublishedAtDesc(list) {
+  return [...list].sort((a, b) => {
+    const tb = Date.parse(b.publishedAt) || 0;
+    const ta = Date.parse(a.publishedAt) || 0;
+    return tb - ta;
+  });
 }
 
 function shortTitle(message, version) {
@@ -36,7 +66,7 @@ function shortTitle(message, version) {
     .trim()
     .split(/\r?\n/)[0]
     .trim();
-  if (!line) return `Publicação ${version}`;
+  if (!line) return `PublicaÃ§Ã£o ${version}`;
   return line.length > 90 ? `${line.slice(0, 87)}...` : line;
 }
 
@@ -63,16 +93,23 @@ function normalizeEntry(raw) {
     typeof raw.publishedAt === "string" && raw.publishedAt
       ? raw.publishedAt
       : new Date().toISOString();
-  const type =
-    raw.type === "fix" || raw.type === "feature" || raw.type === "update"
-      ? raw.type
-      : inferType(description);
+  const type = isNewsType(raw.type) ? raw.type : inferType(description);
   const title =
     typeof raw.title === "string" && raw.title.trim()
       ? raw.title.trim()
       : shortTitle(description, version);
   const author = typeof raw.author === "string" && raw.author.trim() ? raw.author.trim() : "pimo-pro";
-  return { version, title, description, publishedAt, type, author };
+  const commit =
+    typeof raw.commit === "string" && raw.commit.trim() ? raw.commit.trim() : undefined;
+  const actionUrl =
+    typeof raw.actionUrl === "string" && raw.actionUrl.trim() ? raw.actionUrl.trim() : undefined;
+  const icon =
+    typeof raw.icon === "string" && raw.icon.trim() ? raw.icon.trim() : iconForType(type);
+
+  const out = { version, title, description, publishedAt, type, author, icon };
+  if (commit) out.commit = commit;
+  if (actionUrl) out.actionUrl = actionUrl;
+  return out;
 }
 
 function readLocalNews() {
@@ -125,29 +162,55 @@ function mergeNews(localList, remoteList) {
       byVersion.set(entry.version, entry);
       continue;
     }
-    // Keep the richer / newer publishedAt
+    // Prefer entry with richer metadata / newer publishedAt
     const prevT = Date.parse(prev.publishedAt) || 0;
     const nextT = Date.parse(entry.publishedAt) || 0;
-    if (nextT >= prevT) byVersion.set(entry.version, entry);
+    const prevScore =
+      (prev.commit ? 1 : 0) + (prev.actionUrl ? 1 : 0) + (prev.icon ? 1 : 0);
+    const nextScore =
+      (entry.commit ? 1 : 0) + (entry.actionUrl ? 1 : 0) + (entry.icon ? 1 : 0);
+    if (nextT > prevT || (nextT === prevT && nextScore >= prevScore)) {
+      byVersion.set(entry.version, { ...prev, ...entry, icon: entry.icon || prev.icon });
+    }
   }
-  return [...byVersion.values()].sort((a, b) => {
-    const tb = Date.parse(b.publishedAt) || 0;
-    const ta = Date.parse(a.publishedAt) || 0;
-    return tb - ta;
-  });
+  return sortByPublishedAtDesc([...byVersion.values()]);
 }
 
 function writeNews(file) {
   fs.mkdirSync(path.dirname(NEWS_PATH), { recursive: true });
   const payload = {
     updatedAt: new Date().toISOString(),
-    news: file.news.slice(0, MAX_ENTRIES),
+    news: sortByPublishedAtDesc(file.news).slice(0, MAX_ENTRIES),
   };
   const json = `${JSON.stringify(payload, null, 2)}\n`;
   // Validate round-trip
   JSON.parse(json);
   fs.writeFileSync(NEWS_PATH, json, "utf8");
   return payload;
+}
+
+function resolveActionUrl() {
+  const runId =
+    process.env.GITHUB_RUN_ID ||
+    process.env.DEPLOY_GITHUB_RUN_ID ||
+    "";
+  if (runId && /^\d+$/.test(String(runId))) {
+    return `https://github.com/${GITHUB_REPO}/actions/runs/${runId}`;
+  }
+  // Fallback: run number alone is not enough for a valid Actions URL ï¿½ omit.
+  return undefined;
+}
+
+function resolveCommitHash() {
+  const fromEnv =
+    process.env.DEPLOY_SHA ||
+    process.env.GITHUB_SHA ||
+    "";
+  if (fromEnv && /^[0-9a-f]{7,40}$/i.test(fromEnv)) {
+    return fromEnv.slice(0, 7).toLowerCase();
+  }
+  const short = run("git rev-parse --short HEAD");
+  return short || undefined;
 }
 
 function resolveMeta() {
@@ -168,25 +231,31 @@ function resolveMeta() {
   const commitMessage =
     process.env.DEPLOY_COMMIT_MESSAGE ||
     run("git log -1 --format=%s") ||
-    `Publicação ${version}`;
+    `PublicaÃ§Ã£o ${version}`;
 
   const author = process.env.DEPLOY_AUTHOR || run("git log -1 --format=%an") || "pimo-pro";
   const publishedAt = process.env.DEPLOY_PUBLISHED_AT || new Date().toISOString();
-  const type =
-    process.env.DEPLOY_NEWS_TYPE === "fix" ||
-    process.env.DEPLOY_NEWS_TYPE === "feature" ||
-    process.env.DEPLOY_NEWS_TYPE === "update"
-      ? process.env.DEPLOY_NEWS_TYPE
-      : inferType(commitMessage);
+  const type = isNewsType(process.env.DEPLOY_NEWS_TYPE)
+    ? process.env.DEPLOY_NEWS_TYPE
+    : inferType(commitMessage);
 
-  return {
+  const entry = {
     version: String(version).trim(),
     title: shortTitle(commitMessage, version),
     description: String(commitMessage).trim(),
     publishedAt,
     type,
     author: String(author).trim() || "pimo-pro",
+    icon: iconForType(type),
   };
+
+  const commit = resolveCommitHash();
+  if (commit) entry.commit = commit;
+
+  const actionUrl = resolveActionUrl();
+  if (actionUrl) entry.actionUrl = actionUrl;
+
+  return entry;
 }
 
 async function main() {
@@ -196,21 +265,30 @@ async function main() {
 
   const entry = resolveMeta();
   if (!entry.version || entry.version === "unknown") {
-    console.error("appendWhatsNewNews: versão inválida — abort.");
+    console.error("appendWhatsNewNews: versÃ£o invÃ¡lida ï¿½ abort.");
     process.exit(1);
   }
 
-  // Replace same version if re-deployed, else prepend
+  // Replace same version if re-deployed, else add
   news = news.filter((n) => n.version !== entry.version);
-  news.unshift(entry);
+  news.push(entry);
+  news = sortByPublishedAtDesc(news);
 
   const written = writeNews({ news });
   console.log(
-    `Whats New: ${entry.version} (${entry.type}) ? ${NEWS_REL} — total ${written.news.length} registos`
+    `Whats New: ${entry.version} (${entry.type} ${entry.icon}) â†’ ${NEWS_REL} â€” total ${written.news.length} registos` +
+      (entry.commit ? ` commit=${entry.commit}` : "") +
+      (entry.actionUrl ? ` action=${entry.actionUrl}` : "")
   );
 }
 
-main().catch((err) => {
-  console.error("appendWhatsNewNews failed:", err);
-  process.exit(1);
-});
+const isDirectRun =
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("appendWhatsNewNews failed:", err);
+    process.exit(1);
+  });
+}

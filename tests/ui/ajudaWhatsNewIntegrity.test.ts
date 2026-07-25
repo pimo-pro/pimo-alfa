@@ -47,7 +47,19 @@ describe("ajudaWhatsNewIntegrity", () => {
     expect(news[0]?.publishedAt).toBeTruthy();
     expect(news[0]?.title).toBeTruthy();
     expect(news[0]?.description).toBeTruthy();
-    expect(["fix", "update", "feature"]).toContain(news[0]?.type);
+    expect(["fix", "update", "feature", "docs"]).toContain(news[0]?.type);
+  });
+
+  it("infere type a partir do prefixo do commit", async () => {
+    const { inferWhatsNewType } = await import("../../src/pages/ajuda/loadWhatsNewNews");
+    expect(inferWhatsNewType("fix: corrige news.json")).toBe("fix");
+    expect(inferWhatsNewType("fix(ajuda): restaurar Novidades")).toBe("fix");
+    expect(inferWhatsNewType("feat: nova secção")).toBe("feature");
+    expect(inferWhatsNewType("feature: algo")).toBe("feature");
+    expect(inferWhatsNewType("chore: limpeza")).toBe("update");
+    expect(inferWhatsNewType("update: texto")).toBe("update");
+    expect(inferWhatsNewType("docs: atualizar ajuda")).toBe("docs");
+    expect(inferWhatsNewType("Publicação PIMO")).toBe("update");
   });
 
   it("deploy.yml append news.json antes do build", () => {
@@ -61,5 +73,27 @@ describe("ajudaWhatsNewIntegrity", () => {
     expect(pageSource).toContain("Novidades do Sistema");
     expect(pageSource).toContain("loadWhatsNewNews");
     expect(pageSource).toContain("entry.title");
+    expect(pageSource).toContain("entry.icon");
+    expect(pageSource).toContain("entry.actionUrl");
+  });
+
+  it("script append inclui actionUrl, commit, icon e ordenacao", () => {
+    const src = fs.readFileSync(appendScriptPath, "utf8");
+    expect(src).toContain("GITHUB_RUN_ID");
+    expect(src).toContain("actionUrl");
+    expect(src).toContain("git rev-parse --short HEAD");
+    expect(src).toContain("sortByPublishedAtDesc");
+    expect(src).toContain("🛠️");
+    expect(src).toContain("✨");
+    expect(src).toContain("⚙️");
+    expect(src).toContain("📄");
+  });
+
+  it("iconForWhatsNewType mapeia tipos", async () => {
+    const { iconForWhatsNewType } = await import("../../src/pages/ajuda/loadWhatsNewNews");
+    expect(iconForWhatsNewType("fix")).toBe("🛠️");
+    expect(iconForWhatsNewType("feature")).toBe("✨");
+    expect(iconForWhatsNewType("update")).toBe("⚙️");
+    expect(iconForWhatsNewType("docs")).toBe("📄");
   });
 });

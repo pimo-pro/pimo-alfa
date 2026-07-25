@@ -1,13 +1,23 @@
 {
-  "updatedAt": "2026-07-24T17:52:50.290Z",
+  "updatedAt": "2026-07-25T13:08:40.017Z",
   "news": [
+    {
+      "version": "v6.0724.1853",
+      "title": "fix(ajuda): restaurar Novidades com /updates/news.json automático no deploy",
+      "description": "fix(ajuda): restaurar Novidades com /updates/news.json automático no deploy",
+      "publishedAt": "2026-07-24T18:53:25+01:00",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "🛠️"
+    },
     {
       "version": "v6.0724.1837",
       "title": "P3.9 — Documentação oficial atualizada (F1–F4)",
       "description": "P3.9 — Documentação oficial atualizada: integração completa das Fases 1–4 em /documentacao, /project-progress, /painel-referencia e nova secção /ajuda. Sistema financeiro industrial P3.9 totalmente documentado.",
       "publishedAt": "2026-07-24T17:38:00.828Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0724.1755",
@@ -15,7 +25,8 @@
       "description": "P3.9 — Fases 1–3c concluídas: Orçamentos, unificação ferragens, CNC/Drill, desperdício/serragem, chapas reais/MO/logística (modo exclusivo). Baseline intacto com defaults.",
       "publishedAt": "2026-07-24T16:56:13.003Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0722.2307",
@@ -23,7 +34,8 @@
       "description": "Publicação PIMO — Sistema Industrial",
       "publishedAt": "2026-07-22T22:07:46.857Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0722.2258",
@@ -31,7 +43,8 @@
       "description": "Publicação PIMO — Sistema Industrial",
       "publishedAt": "2026-07-22T21:59:00.123Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0722.2225",
@@ -39,7 +52,8 @@
       "description": "Publicação PIMO — Sistema Industrial",
       "publishedAt": "2026-07-22T21:25:52.111Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0722.2215",
@@ -47,7 +61,8 @@
       "description": "Publicação PIMO — Sistema Industrial",
       "publishedAt": "2026-07-22T21:15:35.393Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0722.2202",
@@ -55,7 +70,8 @@
       "description": "fix: corrigir mojibake UTF-8 nos textos PT",
       "publishedAt": "2026-07-22T21:02:06.221Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0722.2124",
@@ -63,7 +79,8 @@
       "description": "chore: ativar flag industrialOnlineAnalysis",
       "publishedAt": "2026-07-22T20:24:46.589Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0722.2055",
@@ -71,7 +88,8 @@
       "description": "feat: Análise arquivo completo (Fases 1–6)",
       "publishedAt": "2026-07-22T19:55:19.358Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0719.2325",
@@ -79,7 +97,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T22:25:29.709Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2317",
@@ -87,7 +106,8 @@
       "description": "Publicação PIMO — Sistema Industrial",
       "publishedAt": "2026-07-19T22:17:30.057Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2311",
@@ -95,7 +115,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T22:11:37.114Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2257",
@@ -103,7 +124,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T21:57:52.374Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2248",
@@ -111,7 +133,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T21:48:07.907Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2229",
@@ -119,7 +142,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T21:29:36.447Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2138",
@@ -127,7 +151,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T20:38:04.348Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2109",
@@ -135,7 +160,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-19T20:09:01.583Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0719.2010",
@@ -143,7 +169,8 @@
       "description": "feat(theme): add Pi CTA accent tokens using Sienna 600",
       "publishedAt": "2026-07-19T19:10:31.040Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0719.1852",
@@ -151,7 +178,8 @@
       "description": "feat(theme): remove hex remap; Pi palette is CI-native",
       "publishedAt": "2026-07-19T17:52:31.321Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0719.0150",
@@ -159,7 +187,8 @@
       "description": "feat(industrial): orla automatica, calcos, folgas, Coloprador e ajuste vertical — Orla tipada (costa=0, gav_frent_int so topo, metros no PDF); calcos Ref 00/03 + I-Sensys 8645i; Coloprador; folgas porta 2mm; limiar stack vertical 40mm. Modulos: orlaIndustrialRules.ts | orlaCalculator.ts | orlaEdgeLengths.ts | calcoConfig.ts | pdfFerragensTotais.ts | pdfFerragensTotaisNormalize.ts | doorLayerGeometry.ts | settingsSchema.ts | projectState.ts | useOrlaActions.ts",
       "publishedAt": "2026-07-19T00:50:16.975Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0719.0146",
@@ -167,7 +196,8 @@
       "description": "feat(industrial): orla automatica, calcos, folgas, Coloprador e ajuste vertical",
       "publishedAt": "2026-07-19T00:46:46.365Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0718.2309",
@@ -175,7 +205,8 @@
       "description": "fix(ferragens): dobradicas por canecos reais e design original do PDF — Contagem exclusiva holeType===dobradica (Dobradica/8654i/35mm, total real ex. 13 ANTUNIS); remocao regras fixas/duplicacao industrial; design restaurado fontSize 9; Chapas: Material|Ref|Medida|Qtd|Preco|Data|Responsavel; Ferragens: Material|Ref|Medida|Qtd|Preco total|Responsavel; UTF-8; export dual ferragens_totais+industrial_armazem. Modulos: pdfFerragensTotais.ts | pdfFerragensTotaisNormalize.ts | pdfFerragensTotais.test.ts | pdfFerragensTotaisNormalize.test.ts | industrialBottomSectionData.ts",
       "publishedAt": "2026-07-18T22:09:52.229Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0718.2226",
@@ -183,7 +214,8 @@
       "description": "feat(ferragens): restaurar ferragens_totais.pdf, pe_plastico e exportacao dual | pdfFerragensTotais.ts | pdfFerragensTotaisNormalize.ts | pesPlasticoConfig.ts | PesPlasticoSettingsPanel.tsx | buildProjectPdfList.ts | exportProjectFiles.ts | FerragensTotaisPanel.tsx | useGerarArquivoHandlers.ts | boxManufacturing.ts | cutlistFromBoxes.ts | projectState.ts",
       "publishedAt": "2026-07-18T21:26:16.931Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.2328",
@@ -191,7 +223,8 @@
       "description": "feat(pdf): normalizar ferragens_totais com tabela unica landscape",
       "publishedAt": "2026-07-17T22:28:46.618Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.2259",
@@ -199,7 +232,8 @@
       "description": "fix(header): discriminar itens do Projects Switcher via path",
       "publishedAt": "2026-07-17T21:59:28.645Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0717.2256",
@@ -207,7 +241,8 @@
       "description": "fix(header): corrigir narrowing TypeScript no Projects Switcher",
       "publishedAt": "2026-07-17T21:56:13.740Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0717.2254",
@@ -215,7 +250,8 @@
       "description": "feat(header): adicionar Projects Switcher no header",
       "publishedAt": "2026-07-17T21:54:48.745Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.2225",
@@ -223,7 +259,8 @@
       "description": "feat(materials): adicionar matéria-prima AGL_Carvalho (19/16/10 mm)",
       "publishedAt": "2026-07-17T21:25:15.730Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.2152",
@@ -231,7 +268,8 @@
       "description": "chore(deploy): incluir build completo antes do commit e push",
       "publishedAt": "2026-07-17T20:52:19.053Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0717.1215-branding",
@@ -239,7 +277,8 @@
       "description": "feat(industrial): logótipo industrial dedicado e atribuição designer/responsável nos PDFs",
       "publishedAt": "2026-07-17T11:15:00.000Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.1145-ferragens",
@@ -247,7 +286,8 @@
       "description": "feat(industrial): reestruturar ferragens_totais.pdf em landscape com totais agregados",
       "publishedAt": "2026-07-17T10:45:00.000Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.1026-armazem",
@@ -255,7 +295,8 @@
       "description": "feat(industrial): unificar chapas_real e consumo_materiais no PDF armazém",
       "publishedAt": "2026-07-17T10:05:00.000Z",
       "type": "feature",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "✨"
     },
     {
       "version": "v6.0717.1026",
@@ -263,7 +304,8 @@
       "description": "fix(industrial): impedir prateleiras acima do SEP no pipeline completo",
       "publishedAt": "2026-07-17T09:26:44.213Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0717.0931",
@@ -271,7 +313,8 @@
       "description": "fix(industrial): alinhar Y dos furos de prateleira LAT e DIV",
       "publishedAt": "2026-07-17T08:31:47.317Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0717.0827",
@@ -279,7 +322,8 @@
       "description": "fix(industrial): N prateleiras so no compartimento LAT+DIV+SEP",
       "publishedAt": "2026-07-17T07:27:28.690Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0716.1719",
@@ -287,7 +331,8 @@
       "description": "fix(viewer): mostrar furos de prateleira no DIV via marcadores",
       "publishedAt": "2026-07-16T16:19:07.150Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0716.1232",
@@ -295,7 +340,8 @@
       "description": "fix(div-sep): remover parametro nao usado em resolveDivisorShelfPanelId",
       "publishedAt": "2026-07-16T11:32:26.912Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0716.1046",
@@ -303,7 +349,8 @@
       "description": "fix(div-sep): prateleiras apenas em compartimentos LAT+DIV abaixo do SEP",
       "publishedAt": "2026-07-16T09:46:20.135Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0716.1022",
@@ -311,7 +358,8 @@
       "description": "fix(div-sep): grelha industrial 32mm e prateleiras espelhadas com DIV",
       "publishedAt": "2026-07-16T09:22:37.603Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0715.2258",
@@ -319,7 +367,8 @@
       "description": "fix(div-sep): eliminar intersecao DIV/SEP no Viewer e no modelo industrial",
       "publishedAt": "2026-07-15T21:58:35.537Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0715.2202",
@@ -327,7 +376,8 @@
       "description": "fix(div-sep): alinhar Viewer, HXML de bordo e parafusos laterais condicionais",
       "publishedAt": "2026-07-15T21:02:23.524Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0715.1746",
@@ -335,7 +385,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-15T16:46:49.334Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.1553",
@@ -343,7 +394,8 @@
       "description": "Auto deploy",
       "publishedAt": "2026-07-15T14:53:13.169Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.1224",
@@ -351,7 +403,8 @@
       "description": "Publicação PIMO — Sistema Industrial",
       "publishedAt": "2026-07-15T11:24:25.995Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.1131",
@@ -359,7 +412,8 @@
       "description": "chore(supabase): validar public.users após migrations industriais",
       "publishedAt": "2026-07-15T10:31:48.303Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.0135",
@@ -367,7 +421,8 @@
       "description": "fix(system-events): corrigir user_id fkey e garantir utilizador industrial válido",
       "publishedAt": "2026-07-15T00:35:01.535Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0715.0105",
@@ -375,7 +430,8 @@
       "description": "release: versão completa — work-orders + pimo-trak + eventos industriais",
       "publishedAt": "2026-07-15T00:05:49.082Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.0104",
@@ -383,7 +439,8 @@
       "description": "release: versão completa — work-orders + pimo-trak + eventos industriais",
       "publishedAt": "2026-07-15T00:04:22.931Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.0042",
@@ -391,7 +448,8 @@
       "description": "release: versão completa — whats-new + auto-correction + notificações industriais",
       "publishedAt": "2026-07-14T23:42:00.442Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0715.0022",
@@ -399,7 +457,8 @@
       "description": "release: versão completa — auto-correction + notificações industriais",
       "publishedAt": "2026-07-14T23:22:36.290Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0714.2327",
@@ -407,7 +466,8 @@
       "description": "fix(remate-rodape-stability): corrigir build de publicacao (RemateProductType e tipos rodape)",
       "publishedAt": "2026-07-14T22:27:24.295Z",
       "type": "fix",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "🛠️"
     },
     {
       "version": "v6.0714.2321",
@@ -415,7 +475,8 @@
       "description": "release: versão completa — estabilidade remate/rodape",
       "publishedAt": "2026-07-14T22:21:43.736Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     },
     {
       "version": "v6.0714.2252",
@@ -423,7 +484,8 @@
       "description": "release: versão completa — publicação industrial",
       "publishedAt": "2026-07-14T21:52:00.970Z",
       "type": "update",
-      "author": "pimo-pro"
+      "author": "pimo-pro",
+      "icon": "⚙️"
     }
   ]
 }

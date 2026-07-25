@@ -8,12 +8,14 @@ const TYPE_LABEL: Record<WhatsNewType, string> = {
   feature: "Feature",
   fix: "Fix",
   update: "Update",
+  docs: "Docs",
 };
 
 const TYPE_COLOR: Record<WhatsNewType, string> = {
   feature: "var(--status-done-color, var(--ci-success, #34d399))",
   fix: "var(--status-progress-color, var(--ci-sienna-400, #fbbf24))",
   update: C.accent,
+  docs: "var(--ci-prussian-200, var(--blue-light, #a78bfa))",
 };
 
 export default function AjudaWhatsNewPage() {
@@ -170,6 +172,9 @@ export default function AjudaWhatsNewPage() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                        {entry.icon ?? "⚙️"}
+                      </span>
                       <strong style={{ fontSize: 15, color: C.text }}>{entry.version}</strong>
                       <span
                         style={{
@@ -193,11 +198,28 @@ export default function AjudaWhatsNewPage() {
                     <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
                       {new Date(entry.publishedAt).toLocaleString("pt-PT")}
                       {entry.author ? ` · ${entry.author}` : ""}
+                      {entry.commit ? ` · ${entry.commit}` : ""}
                     </div>
                     {entry.description && entry.description !== entry.title ? (
                       <div style={{ fontSize: 14, marginTop: 8, color: C.text, lineHeight: 1.6 }}>
                         {entry.description}
                       </div>
+                    ) : null}
+                    {entry.actionUrl ? (
+                      <a
+                        href={entry.actionUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-block",
+                          marginTop: 10,
+                          fontSize: 12,
+                          color: C.accent,
+                          textDecoration: "none",
+                        }}
+                      >
+                        Ver GitHub Action →
+                      </a>
                     ) : null}
                   </li>
                 ))}

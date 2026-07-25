@@ -3,7 +3,7 @@
  * Fallback: /industrial/release/publications.json (legado).
  */
 
-export type WhatsNewType = "fix" | "update" | "feature";
+export type WhatsNewType = "fix" | "update" | "feature" | "docs";
 
 export type WhatsNewEntry = {
   version: string;
@@ -12,16 +12,46 @@ export type WhatsNewEntry = {
   publishedAt: string;
   type: WhatsNewType;
   author?: string;
+  /** Emoji conforme tipo. */
+  icon?: string;
+  /** Hash curto do commit. */
+  commit?: string;
+  /** URL da run GitHub Actions. */
+  actionUrl?: string;
 };
 
 export const WHATS_NEW_NEWS_URL = "/updates/news.json";
 export const WHATS_NEW_LEGACY_URL = "/industrial/release/publications.json";
 
-function inferType(message: string): WhatsNewType {
+export const WHATS_NEW_TYPE_ICONS: Record<WhatsNewType, string> = {
+  fix: "🛠️",
+  feature: "✨",
+  update: "⚙️",
+  docs: "📄",
+};
+
+/** Dete��o autom�tica do tipo a partir do prefixo do commit (CI + publish). */
+export function inferWhatsNewType(message: string): WhatsNewType {
   const m = String(message || "").trim().toLowerCase();
-  if (m.startsWith("fix")) return "fix";
-  if (m.startsWith("feat") || m.startsWith("feature")) return "feature";
+  const match = m.match(/^(fix|feat|feature|update|chore|docs)(\(|:|\b)/);
+  if (!match) return "update";
+  const prefix = match[1];
+  if (prefix === "fix") return "fix";
+  if (prefix === "feat" || prefix === "feature") return "feature";
+  if (prefix === "docs") return "docs";
   return "update";
+}
+
+export function iconForWhatsNewType(type: WhatsNewType): string {
+  return WHATS_NEW_TYPE_ICONS[type] ?? WHATS_NEW_TYPE_ICONS.update;
+}
+
+function inferType(message: string): WhatsNewType {
+  return inferWhatsNewType(message);
+}
+
+function isNewsType(value: unknown): value is WhatsNewType {
+  return value === "fix" || value === "feature" || value === "update" || value === "docs";
 }
 
 function shortTitle(message: string, version: string): string {
@@ -29,8 +59,16 @@ function shortTitle(message: string, version: string): string {
     .trim()
     .split(/\r?\n/)[0]
     .trim();
-  if (!line) return `Publica��o ${version}`;
+  if (!line) return `Publica��o ${version}`;
   return line.length > 90 ? `${line.slice(0, 87)}...` : line;
+}
+
+function sortByPublishedAtDesc(entries: WhatsNewEntry[]): WhatsNewEntry[] {
+  return [...entries].sort((a, b) => {
+    const tb = Date.parse(b.publishedAt) || 0;
+    const ta = Date.parse(a.publishedAt) || 0;
+    return tb - ta;
+  });
 }
 
 function normalizeEntry(raw: unknown): WhatsNewEntry | null {
@@ -48,16 +86,34 @@ function normalizeEntry(raw: unknown): WhatsNewEntry | null {
     typeof src.publishedAt === "string" && src.publishedAt
       ? src.publishedAt
       : new Date().toISOString();
-  const type: WhatsNewType =
-    src.type === "fix" || src.type === "feature" || src.type === "update"
-      ? src.type
-      : inferType(description);
+  const type: WhatsNewType = isNewsType(src.type) ? src.type : inferType(description);
   const title =
     typeof src.title === "string" && src.title.trim()
       ? src.title.trim()
       : shortTitle(description, version);
   const author = typeof src.author === "string" ? src.author : undefined;
-  return { version, title, description, publishedAt, type, author };
+  const commit =
+    typeof src.commit === "string" && src.commit.trim() ? src.commit.trim() : undefined;
+  const actionUrl =
+    typeof src.actionUrl === "string" && src.actionUrl.trim()
+      ? src.actionUrl.trim()
+      : undefined;
+  const icon =
+    typeof src.icon === "string" && src.icon.trim()
+      ? src.icon.trim()
+      : iconForWhatsNewType(type);
+
+  return {
+    version,
+    title,
+    description,
+    publishedAt,
+    type,
+    author,
+    icon,
+    ...(commit ? { commit } : {}),
+    ...(actionUrl ? { actionUrl } : {}),
+  };
 }
 
 export function parseWhatsNewFile(data: unknown): WhatsNewEntry[] {
@@ -68,7 +124,9 @@ export function parseWhatsNewFile(data: unknown): WhatsNewEntry[] {
     : Array.isArray(src.publications)
       ? src.publications
       : [];
-  return list.map(normalizeEntry).filter((e): e is WhatsNewEntry => Boolean(e));
+  return sortByPublishedAtDesc(
+    list.map(normalizeEntry).filter((e): e is WhatsNewEntry => Boolean(e))
+  );
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -87,7 +145,7 @@ async function fetchJson(url: string): Promise<unknown> {
 }
 
 /**
- * Prefer�ncia: /updates/news.json. Se falhar (404/HTML), tenta o legado.
+ * Prefer�ncia: /updates/news.json. Se falhar (404/HTML), tenta o legado.
  */
 export async function loadWhatsNewNews(): Promise<WhatsNewEntry[]> {
   try {
