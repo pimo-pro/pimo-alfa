@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T18:05:22.442Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
+      "version": "v6.0725.1905"
+    },
+    {
       "publishedAt": "2026-07-25T17:48:15.113Z",
       "author": "pimo-pro",
       "commitMessage": "fix(autoRoomFill): silenciar parâmetro cornerAtStart não usado após remates off.",

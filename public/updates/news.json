@@ -1,15 +1,26 @@
 {
-  "updatedAt": "2026-07-25T17:48:16.323Z",
+  "updatedAt": "2026-07-25T18:05:23.232Z",
   "news": [
     {
-      "version": "v6.0725.1848",
-      "title": "fix(autoRoomFill): silenciar parâmetro cornerAtStart não usado após remates off.",
-      "description": "fix(autoRoomFill): silenciar parâmetro cornerAtStart não usado após remates off.",
-      "publishedAt": "2026-07-25T17:48:16.146Z",
+      "version": "v6.0725.1905",
+      "title": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
+      "description": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
+      "publishedAt": "2026-07-25T18:05:23.131Z",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "🛠️",
-      "commit": "c9d4945"
+      "commit": "ef7e143"
+    },
+    {
+      "version": "v6.0725.1848",
+      "title": "Publicação PIMO — Sistema Industrial",
+      "description": "Publicação PIMO — Sistema Industrial",
+      "publishedAt": "2026-07-25T18:50:13+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "⚙️",
+      "commit": "0d94b17",
+      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30168429113"
     },
     {
       "version": "v6.0725.1846",
