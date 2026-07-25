@@ -33,7 +33,8 @@ export function getOrlaEdgeLengthsMm(item: CutListItem): Record<OrlaSideId, numb
     return { front: h, back: h, left: w, right: w };
   }
   if (t.includes("prateleira") || t.includes("shelf")) {
-    return { front: w, back: w, left: d || h, right: d || h };
+    // Sem orla — comprimentos 0 (regra industrial).
+    return { front: 0, back: 0, left: 0, right: 0 };
   }
   if (t.includes("porta") || t.includes("frente_fixa")) {
     return { front: w, back: w, left: h, right: h };

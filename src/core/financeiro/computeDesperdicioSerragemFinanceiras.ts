@@ -1,17 +1,22 @@
 /**
  * P3.9 F3b — monetização desperdício + serragem.
- * Flags Orçamentos off / €=0 ? baseline intacto. 1× por snapshot.
+ * Desperdício = percentual (pricing.json) × custo real dos painéis.
+ * Serragem = m² × €/m² (flags Orçamentos).
  */
 
 import type { CutListItemComPreco } from "../types";
 import { getLayoutKerfMmForCncNesting } from "../cnc/tcnGenerator";
 import { getSettings } from "../settings/settingsService";
+import { getCentralPricingCached } from "../pricing/centralPricingConfig";
 import type { OrcamentosCustosIndustriaisSettings } from "../orcamentos";
 
 export type DesperdicioSerragemTarifas = Pick<
   OrcamentosCustosIndustriaisSettings,
   "desperdicioEurPorM2" | "serragemEurPorM2" | "enableDesperdicio" | "enableSerragem"
->;
+> & {
+  /** Fração 0–1 do custo de painéis (pricing.json desperdicio.percentual). */
+  desperdicioPercentual?: number;
+};
 
 export type DesperdicioSerragemFinanceirasResult = {
   wasteM2: number;
@@ -38,6 +43,20 @@ function boolFlag(v: unknown, fallback: boolean): boolean {
   return typeof v === "boolean" ? v : fallback;
 }
 
+/** Percentual de desperdício (0–1) a partir do override ou pricing.json. */
+export function resolveDesperdicioPercentual(override?: number | null): number {
+  if (typeof override === "number" && Number.isFinite(override) && override >= 0) {
+    return override;
+  }
+  try {
+    const p = getCentralPricingCached().desperdicio?.percentual;
+    if (typeof p === "number" && Number.isFinite(p) && p >= 0) return p;
+  } catch {
+    /* ignore */
+  }
+  return 0.18;
+}
+
 export function resolveDesperdicioSerragemTarifas(
   override?: Partial<DesperdicioSerragemTarifas> | null
 ): DesperdicioSerragemTarifas {
@@ -54,6 +73,9 @@ export function resolveDesperdicioSerragemTarifas(
     serragemEurPorM2: numTarifa(src.serragemEurPorM2),
     enableDesperdicio: boolFlag(src.enableDesperdicio, false),
     enableSerragem: boolFlag(src.enableSerragem, false),
+    desperdicioPercentual: resolveDesperdicioPercentual(
+      typeof src.desperdicioPercentual === "number" ? src.desperdicioPercentual : null
+    ),
   };
 }
 
@@ -87,12 +109,15 @@ function pieceAreaMm2(item: CutListItemComPreco): number {
 
 /**
  * Monetiza waste + serragem com flags Orçamentos; rateia por área às peças.
+ * Desperdício € = percentual × custoPaineisEur (não usa wasteM2 × €/m²).
  */
 export function computeDesperdicioSerragemFinanceiras(input: {
   cutlist: CutListItemComPreco[];
-  /** m² de desperdício (chapas reais). 0 se estimado / sem sheets. */
+  /** m² de desperdício (métrica / nesting). Não entra no €. */
   wasteM2: number;
   serragemM2?: number;
+  /** Custo real da linha Painéis (€). */
+  custoPaineisEur?: number;
   tarifas?: Partial<DesperdicioSerragemTarifas> | null;
 }): DesperdicioSerragemFinanceirasResult {
   const tarifas = resolveDesperdicioSerragemTarifas(input.tarifas);
@@ -105,20 +130,25 @@ export function computeDesperdicioSerragemFinanceiras(input: {
     typeof input.serragemM2 === "number" && Number.isFinite(input.serragemM2)
       ? Math.max(0, input.serragemM2)
       : estimateSerragemM2(cutlist);
+  const custoPaineis =
+    typeof input.custoPaineisEur === "number" && Number.isFinite(input.custoPaineisEur)
+      ? Math.max(0, input.custoPaineisEur)
+      : 0;
+  const pct = resolveDesperdicioPercentual(tarifas.desperdicioPercentual);
 
   const warnings: string[] = [];
   if (!tarifas.enableDesperdicio) {
     warnings.push("enableDesperdicio=false — custo desperdicio = 0");
-  } else if (!(wasteM2 > 0)) {
-    warnings.push("wasteM2=0 (chapas estimadas ou sem nesting) — custo desperdicio = 0");
+  } else if (!(custoPaineis > 0)) {
+    warnings.push("custoPaineisEur=0 — custo desperdicio = 0");
   }
   if (!tarifas.enableSerragem) {
     warnings.push("enableSerragem=false — custo serragem = 0");
   }
 
   const precoDesperdicio =
-    tarifas.enableDesperdicio && wasteM2 > 0 && tarifas.desperdicioEurPorM2 > 0
-      ? round2(wasteM2 * tarifas.desperdicioEurPorM2)
+    tarifas.enableDesperdicio && custoPaineis > 0 && pct > 0
+      ? round2(custoPaineis * pct)
       : 0;
   const precoSerragem =
     tarifas.enableSerragem && serragemM2 > 0 && tarifas.serragemEurPorM2 > 0
@@ -146,7 +176,6 @@ export function computeDesperdicioSerragemFinanceiras(input: {
       const t = round2(d + s);
       if (t > 0) eurByPieceId.set(id, t);
     }
-    // Ajuste residual no último piece com área para fechar ?
     reconcileMaps(desperdicioByPieceId, precoDesperdicio, areas);
     reconcileMaps(serragemByPieceId, precoSerragem, areas);
     for (const { id } of areas) {
@@ -183,7 +212,6 @@ function reconcileMaps(
   sum = round2(sum);
   const delta = round2(target - sum);
   if (Math.abs(delta) < 0.005) return;
-  // último com área > 0
   for (let i = areas.length - 1; i >= 0; i--) {
     const id = areas[i].id;
     if (!(areas[i].area > 0) || !id || !map.has(id)) continue;

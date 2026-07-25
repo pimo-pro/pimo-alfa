@@ -227,7 +227,8 @@ function mapMarketToLegacy(src: CentralPricingFile): {
         : {}),
     },
     custosIndustriais: {
-      desperdicioEurPorM2: mdfBranco,
+      // Desperdício monetizado em % do custo de painéis (pricing.json desperdicio.percentual).
+      desperdicioEurPorM2: 0,
       serragemEurPorM2: serragem,
       custoChapaReal: 0,
       custoOperacoesEspeciais: 0,
@@ -268,7 +269,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     },
     montagem: {
       enabled: num(mao.montagem_caixa_m2, 0) > 0,
-      mode: "fixo_por_caixa",
+      mode: "eur_por_m2",
       valor: num(mao.montagem_caixa_m2, 17),
     },
     portes: {

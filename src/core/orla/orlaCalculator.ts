@@ -14,7 +14,9 @@ import {
   buildPieceOrlaConfigForTipo,
   formatOrlaRefForPdf,
   isCostaPieceTipo,
+  isPrateleiraPieceTipo,
   pieceAllowsOrlaByThickness,
+  resolveOrlaSidesForPieceTipo,
   stripMaterialThicknessLabel,
 } from "./orlaIndustrialRules";
 import {
@@ -136,6 +138,7 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
   ) => {
     const tipo = item.tipo ?? item.nome ?? "";
     if (isCostaPieceTipo(tipo)) return;
+    if (isPrateleiraPieceTipo(tipo)) return;
     const esp = pieceEspessuraMm(item);
     if (!pieceAllowsOrlaByThickness(esp)) return;
     const pieceId = panelIdFromCutListItem(item);
@@ -145,8 +148,24 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
       cfg.orlaMaterialId && cfg.orlaMaterialLabel
         ? { orlaMaterialId: cfg.orlaMaterialId, orlaMaterialLabel: cfg.orlaMaterialLabel }
         : resolvePieceOrlaMaterial(item);
+    const pieceCtx = {
+      nome: item.nome,
+      hingeSide: typeof (item as { hingeSide?: string }).hingeSide === "string"
+        ? (item as { hingeSide?: string }).hingeSide
+        : typeof item.metadata?.hingeSide === "string"
+          ? String(item.metadata.hingeSide)
+          : undefined,
+      doorsLayerIndex:
+        typeof (item as { doorsLayerIndex?: number }).doorsLayerIndex === "number"
+          ? (item as { doorsLayerIndex?: number }).doorsLayerIndex
+          : typeof item.metadata?.doorsLayerIndex === "number"
+            ? Number(item.metadata.doorsLayerIndex)
+            : undefined,
+    };
+    const allowedSides = new Set(resolveOrlaSidesForPieceTipo(tipo, pieceCtx));
     const edges = getOrlaEdgeLengthsMm(item);
     for (const side of ORLA_SIDES) {
+      if (!allowedSides.has(side)) continue;
       const sc = cfg.sides[side];
       if (!sc?.enabled || !sc.presetId) continue;
       const ek = edgeKey(pieceId, side);
@@ -254,6 +273,10 @@ export function buildOrlaPiecesForBox(
       delete next[panelId];
       continue;
     }
+    if (isPrateleiraPieceTipo(tipo)) {
+      delete next[panelId];
+      continue;
+    }
     const esp = pieceEspessuraMm(item);
     const mat = resolvePieceOrlaMaterial(item);
     const piecePresetId = resolveOrlaPresetIdForPiece(
@@ -266,7 +289,20 @@ export function buildOrlaPiecesForBox(
       delete next[panelId];
       continue;
     }
-    const cfg = buildPieceOrlaConfigForTipo(tipo, piecePresetId, current[panelId], esp);
+    const cfg = buildPieceOrlaConfigForTipo(tipo, piecePresetId, current[panelId], esp, {
+      nome: item.nome,
+      hingeSide: typeof (item as { hingeSide?: string }).hingeSide === "string"
+        ? (item as { hingeSide?: string }).hingeSide
+        : typeof item.metadata?.hingeSide === "string"
+          ? String(item.metadata.hingeSide)
+          : undefined,
+      doorsLayerIndex:
+        typeof (item as { doorsLayerIndex?: number }).doorsLayerIndex === "number"
+          ? (item as { doorsLayerIndex?: number }).doorsLayerIndex
+          : typeof item.metadata?.doorsLayerIndex === "number"
+            ? Number(item.metadata.doorsLayerIndex)
+            : undefined,
+    });
     if (!cfg) {
       delete next[panelId];
       continue;

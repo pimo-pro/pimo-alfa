@@ -6,8 +6,6 @@ import { getBaseCabinetById, modelToPortaTipo } from "../baseCabinets";
 import { isCornerFixedFrontModel } from "../cornerCabinet";
 import { isPiBaseCabinetId } from "../../data/moveisUnificados/pi/models";
 import { createHematisForBox } from "../hemati/hematiFactory";
-import { createRodapesForBox } from "../rodape/rodapeFactory";
-import { createRematesForBox } from "../remate/remateFactory";
 import { getMaterialByIdOrLabel } from "../materials/service";
 import { HEMATI_DEFAULT_THICKNESS_MM } from "../kitchenFinish/finishTypes";
 import type {
@@ -208,43 +206,8 @@ export function applyAutoRoomFillPlan(
   for (const finish of plan.finishes) {
     const box = boxesByIndex[finish.boxIndex];
     if (!box) continue;
-    const remateCount = remates.filter((r) => r.parentBoxId === box.id).length;
+    // Remates / rodapés: Auto-Room-Fill não cria por defeito (flags false no plano).
     const hematiCount = hematis.filter((h) => h.parentBoxId === box.id).length;
-    const rodapeCount = rodapes.filter((r) => r.parentBoxId === box.id).length;
-
-    if (finish.remateL) {
-      const created = createRematesForBox({
-        box,
-        input: { type: "L", position: "dir", materialId },
-        materialId,
-        thicknessMm,
-        existingCount: remateCount,
-      });
-      remates = [...remates, ...created];
-      createdRemateIds.push(...created.map((r) => r.id));
-    }
-    if (finish.remateDir) {
-      const created = createRematesForBox({
-        box,
-        input: { type: "avista", position: "dir", materialId },
-        materialId,
-        thicknessMm,
-        existingCount: remateCount,
-      });
-      remates = [...remates, ...created];
-      createdRemateIds.push(...created.map((r) => r.id));
-    }
-    if (finish.remateEsq) {
-      const created = createRematesForBox({
-        box,
-        input: { type: "avista", position: "esq", materialId },
-        materialId,
-        thicknessMm,
-        existingCount: remateCount + 1,
-      });
-      remates = [...remates, ...created];
-      createdRemateIds.push(...created.map((r) => r.id));
-    }
 
     if (finish.hematiDir && isLowerCabinet(box)) {
       const created = createHematisForBox({
@@ -287,22 +250,6 @@ export function applyAutoRoomFillPlan(
       });
       hematis = [...hematis, ...created];
       createdHematiIds.push(...created.map((h) => h.id));
-    }
-
-    if (finish.rodapeSimple && isLowerCabinet(box)) {
-      const created = createRodapesForBox({
-        box,
-        allBoxes: workspaceBoxes,
-        room: prev.room,
-        roomBoundsM: null,
-        input: { kind: "SIMPLE", parentBoxId: box.id, materialId },
-        materialId,
-        thicknessMm,
-        heightMm: 150,
-        existingCount: rodapeCount,
-      });
-      rodapes = [...rodapes, ...created];
-      createdRodapeIds.push(...created.map((r) => r.id));
     }
   }
 

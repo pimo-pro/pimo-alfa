@@ -33,15 +33,16 @@ describe("computeDesperdicioSerragemFinanceiras (P3.9 F3b)", () => {
     vi.restoreAllMocks();
   });
 
-  it("flags off ? euros 0 + warnings", () => {
+  it("flags off → euros 0 + warnings", () => {
     const cutlist = [piece({ id: "a" }), piece({ id: "b", w: 300, h: 200 })];
     const r = computeDesperdicioSerragemFinanceiras({
       cutlist,
       wasteM2: 1.5,
+      custoPaineisEur: 100,
       tarifas: {
         enableDesperdicio: false,
         enableSerragem: false,
-        desperdicioEurPorM2: 10,
+        desperdicioPercentual: 0.18,
         serragemEurPorM2: 5,
       },
     });
@@ -52,50 +53,43 @@ describe("computeDesperdicioSerragemFinanceiras (P3.9 F3b)", () => {
     expect(r.warnings.some((w) => w.includes("enableSerragem"))).toBe(true);
   });
 
-  it("flags on + tarifas ? monetiza e rateia por area", () => {
+  it("desperdício = percentual × custo painéis (não wasteM2 × €/m²)", () => {
     const cutlist = [
-      piece({ id: "a", w: 1000, h: 1000, qty: 1 }), // area 1e6
-      piece({ id: "b", w: 1000, h: 1000, qty: 1 }), // area 1e6
+      piece({ id: "a", w: 1000, h: 1000, qty: 1 }),
+      piece({ id: "b", w: 1000, h: 1000, qty: 1 }),
     ];
     const r = computeDesperdicioSerragemFinanceiras({
       cutlist,
-      wasteM2: 2,
+      wasteM2: 99, // ignorado no €
       serragemM2: 1,
+      custoPaineisEur: 136.13,
       tarifas: {
         enableDesperdicio: true,
         enableSerragem: true,
-        desperdicioEurPorM2: 10,
+        desperdicioPercentual: 0.18,
+        desperdicioEurPorM2: 31, // legado — não usar
         serragemEurPorM2: 4,
       },
     });
-    expect(r.precoDesperdicio).toBe(20);
+    expect(r.precoDesperdicio).toBe(24.5);
     expect(r.precoSerragem).toBe(4);
-    expect(r.precoTotal).toBe(24);
-    const sumD =
-      Math.round(
-        [...r.desperdicioByPieceId.values()].reduce((s, v) => s + v, 0) * 100
-      ) / 100;
-    const sumS =
-      Math.round(
-        [...r.serragemByPieceId.values()].reduce((s, v) => s + v, 0) * 100
-      ) / 100;
-    expect(sumD).toBe(20);
-    expect(sumS).toBe(4);
+    expect(r.precoTotal).toBe(28.5);
   });
 
-  it("wasteM2=0 com flag on ? desp 0 + warning", () => {
+  it("custoPaineisEur=0 com flag on → desp 0 + warning", () => {
     const r = computeDesperdicioSerragemFinanceiras({
       cutlist: [piece({ id: "a" })],
-      wasteM2: 0,
+      wasteM2: 2,
+      custoPaineisEur: 0,
       tarifas: {
         enableDesperdicio: true,
         enableSerragem: false,
-        desperdicioEurPorM2: 10,
+        desperdicioPercentual: 0.18,
         serragemEurPorM2: 0,
       },
     });
     expect(r.precoDesperdicio).toBe(0);
-    expect(r.warnings.some((w) => w.includes("wasteM2=0"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("custoPaineisEur=0"))).toBe(true);
   });
 
   it("estimateSerragemM2 > 0 with kerf", () => {

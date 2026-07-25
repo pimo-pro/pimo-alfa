@@ -36,9 +36,9 @@ describe("orlaIndustrialRules", () => {
     expect(resolveOrlaSidesForPieceTipo("div")).toEqual(["front", "back"]);
   });
 
-  it("porta / prateleira / frente_fixa / remate / cima / fundo / frente gaveta: 4 lados", () => {
+  it("porta / frente_fixa / remate / cima / fundo / frente gaveta: 4 lados; prateleira: 0", () => {
     expect(resolveOrlaSidesForPieceTipo("porta_simples")).toEqual(["front", "back", "left", "right"]);
-    expect(resolveOrlaSidesForPieceTipo("prateleira")).toEqual(["front", "back", "left", "right"]);
+    expect(resolveOrlaSidesForPieceTipo("prateleira")).toEqual([]);
     expect(resolveOrlaSidesForPieceTipo("frente_fixa")).toEqual(["front", "back", "left", "right"]);
     expect(resolveOrlaSidesForPieceTipo("remate")).toEqual(["front", "back", "left", "right"]);
     expect(resolveOrlaSidesForPieceTipo("remate_l")).toEqual(["front", "back", "left", "right"]);
@@ -46,6 +46,34 @@ describe("orlaIndustrialRules", () => {
     expect(resolveOrlaSidesForPieceTipo("cima")).toEqual(["front", "back", "left", "right"]);
     expect(resolveOrlaSidesForPieceTipo("fundo")).toEqual(["front", "back", "left", "right"]);
     expect(resolveOrlaSidesForPieceTipo("gaveta_frente")).toEqual(["front", "back", "left", "right"]);
+  });
+
+  it("porta dupla: sem aresta de encontro (ESQ sem right, DIR sem left)", () => {
+    expect(resolveOrlaSidesForPieceTipo("porta_dupla", { hingeSide: "left" })).toEqual([
+      "front",
+      "back",
+      "left",
+    ]);
+    expect(resolveOrlaSidesForPieceTipo("porta_dupla", { hingeSide: "right" })).toEqual([
+      "front",
+      "back",
+      "right",
+    ]);
+    expect(resolveOrlaSidesForPieceTipo("porta_dupla", { doorsLayerIndex: 0 })).toEqual([
+      "front",
+      "back",
+      "left",
+    ]);
+    expect(resolveOrlaSidesForPieceTipo("porta", { nome: "PORT_ESQ" })).toEqual([
+      "front",
+      "back",
+      "left",
+    ]);
+    expect(resolveOrlaSidesForPieceTipo("porta", { nome: "PORT_DIR" })).toEqual([
+      "front",
+      "back",
+      "right",
+    ]);
   });
 
   it("espessura < 16 mm nao permite orla; costa sempre bloqueada", () => {

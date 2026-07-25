@@ -187,6 +187,7 @@ export default function FinanceiroAdminSettings() {
                 }))
               }
             >
+              <option value="eur_por_m2">€ / m² (montagem_caixa_m2)</option>
               <option value="fixo_por_caixa">€ fixo por caixa</option>
               <option value="percentagem_por_caixa">% × nº caixas (sobre subtotal)</option>
               <option value="fixo_total">€ fixo total</option>

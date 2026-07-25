@@ -213,6 +213,13 @@ export function computeFinanceiroUnificado(
     0
   );
   const areaTotalM2 = areaTotalMm2 / 1_000_000;
+  // Área de montagem = Σ (L×A) das caixas — não a soma das peças do cutlist.
+  const areaCaixasM2 = boxes.reduce((s, b) => {
+    const L = Number(b.dimensoes?.largura) || 0;
+    const A = Number(b.dimensoes?.altura) || 0;
+    if (L <= 0 || A <= 0) return s;
+    return s + (L * A) / 1_000_000;
+  }, 0);
   const pesoTotalKg = cutlist.reduce((s, i) => s + pieceWeightKg(i, materials), 0);
   const areaTotalMontadoM3 = boxes.reduce((s, b) => s + boxVolumeMontadoM3(b), 0);
 
@@ -245,6 +252,8 @@ export function computeFinanceiroUnificado(
     cutlist,
     wasteM2,
     serragemM2,
+    // 18% × custo real da linha Painéis (pricing.json desperdicio.percentual).
+    custoPaineisEur: custosComputed.paineis,
   });
   custosComputed.desperdicio = despSerr.precoDesperdicio;
   custosComputed.serragem = despSerr.precoSerragem;
@@ -324,6 +333,7 @@ export function computeFinanceiroUnificado(
   const adminCalc = computeFinanceiroAdminCustos({
     subtotalMateriais: subtotal,
     caixas: boxes.length,
+    areaTotalM2: areaCaixasM2,
     pesoTotalKg,
     volumeMontadoM3: areaTotalMontadoM3,
     distanciaKm,

@@ -16,7 +16,9 @@ export type FinanceiroMontagemMode =
   | "fixo_por_caixa"
   | "percentagem_por_caixa"
   | "fixo_total"
-  | "percentagem_subtotal";
+  | "percentagem_subtotal"
+  /** € / m² de área de caixa L×A (montagem_caixa_m2 do pricing.json). */
+  | "eur_por_m2";
 
 export type FinanceiroMontagemSettings = {
   enabled: boolean;
@@ -49,6 +51,8 @@ export type FinanceiroAdminSettings = {
 export type FinanceiroAdminCalcInput = {
   subtotalMateriais: number;
   caixas: number;
+  /** Área das caixas em m² (Σ L×A) — usada por montagem eur_por_m2 / montagem_caixa_m2. */
+  areaTotalM2?: number;
   pesoTotalKg: number;
   volumeMontadoM3: number;
   distanciaKm: number;
@@ -67,7 +71,8 @@ export const FINANCEIRO_ADMIN_SETTINGS_STORAGE_KEY = "pimo_financeiro_admin_sett
 export function defaultFinanceiroAdminSettings(): FinanceiroAdminSettings {
   return {
     adm: { enabled: true, mode: "percentagem", valor: 10 },
-    montagem: { enabled: true, mode: "fixo_por_caixa", valor: 50 },
+    // pricing.json maoDeObra.montagem_caixa_m2 = 17 €/m²
+    montagem: { enabled: true, mode: "eur_por_m2", valor: 17 },
     portes: {
       // Tarifas de fábrica; cobrança no projeto só com escolha explícita (incluirPortes).
       enabled: false,
@@ -107,10 +112,17 @@ export function normalizeFinanceiroAdminSettings(raw: unknown): FinanceiroAdminS
     "percentagem_por_caixa",
     "fixo_total",
     "percentagem_subtotal",
+    "eur_por_m2",
   ];
-  const montMode: FinanceiroMontagemMode = montModes.includes(montSrc.mode as FinanceiroMontagemMode)
+  let montMode: FinanceiroMontagemMode = montModes.includes(montSrc.mode as FinanceiroMontagemMode)
     ? (montSrc.mode as FinanceiroMontagemMode)
     : d.montagem.mode;
+  let montValor = num(montSrc.valor, d.montagem.valor);
+  // Migração legado: 50 €/caixa → 17 €/m² (pricing.json)
+  if (montMode === "fixo_por_caixa" && montValor === 50) {
+    montMode = "eur_por_m2";
+    montValor = 17;
+  }
 
   return {
     adm: {
@@ -121,7 +133,7 @@ export function normalizeFinanceiroAdminSettings(raw: unknown): FinanceiroAdminS
     montagem: {
       enabled: bool(montSrc.enabled, d.montagem.enabled),
       mode: montMode,
-      valor: num(montSrc.valor, d.montagem.valor),
+      valor: montValor,
     },
     portes: {
       enabled: bool(portSrc.enabled, d.portes.enabled),
@@ -139,7 +151,15 @@ export function normalizeFinanceiroAdminSettings(raw: unknown): FinanceiroAdminS
 export function computeFinanceiroAdminCustos(
   input: FinanceiroAdminCalcInput
 ): FinanceiroAdminCalcResult {
-  const { settings, subtotalMateriais, caixas, pesoTotalKg, volumeMontadoM3, distanciaKm } = input;
+  const {
+    settings,
+    subtotalMateriais,
+    caixas,
+    areaTotalM2 = 0,
+    pesoTotalKg,
+    volumeMontadoM3,
+    distanciaKm,
+  } = input;
   const dist = Math.max(0, distanciaKm);
 
   let adm = 0;
@@ -158,7 +178,6 @@ export function computeFinanceiroAdminCustos(
         montagem = v * Math.max(0, caixas);
         break;
       case "percentagem_por_caixa":
-        // % do subtotal repartido × nº caixas (interpretação: % de caixas sobre subtotal)
         montagem = subtotalMateriais * (v / 100) * Math.max(0, caixas);
         break;
       case "fixo_total":
@@ -166,6 +185,9 @@ export function computeFinanceiroAdminCustos(
         break;
       case "percentagem_subtotal":
         montagem = subtotalMateriais * (v / 100);
+        break;
+      case "eur_por_m2":
+        montagem = v * Math.max(0, areaTotalM2);
         break;
       default:
         montagem = 0;

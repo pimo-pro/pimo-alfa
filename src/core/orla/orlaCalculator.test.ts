@@ -132,7 +132,7 @@ describe("orlaCalculator industrial", () => {
         materialId: "carvalho-19",
       },
       {
-        ...piece("prat1", "prateleira", { largura: 560, altura: 400 }),
+        ...piece("fundo1", "fundo", { largura: 560, altura: 400 }),
         material: "MDF Branco 19mm",
       },
     ];
@@ -141,6 +141,7 @@ describe("orlaCalculator industrial", () => {
     expect(orlaPieces.cima1?.orlaMaterialLabel).toMatch(/MDF Branco/i);
     expect(orlaPieces.porta1?.orlaMaterialLabel).toMatch(/Carvalho/i);
     expect(orlaPieces.porta1?.sides.front.presetId).toBe(carvalhoPreset.id);
+    expect(orlaPieces.fundo1?.orlaMaterialLabel).toMatch(/MDF Branco/i);
 
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: items }],
@@ -190,12 +191,12 @@ describe("orlaCalculator industrial", () => {
     expect(ferragem.metrosTotal).toBeGreaterThan(2);
   });
 
-  it("sync com defaultPreset aplica orla a caixa sem orlaPresetId", () => {
-    const items = [piece("prat1", "prateleira", { largura: 560, altura: 400, profundidade: 19 })];
+  it("sync com defaultPreset aplica orla a caixa sem orlaPresetId (sem prateleira)", () => {
+    const items = [piece("cima1", "cima", { largura: 560, altura: 400, profundidade: 19 })];
     const box = boxWith(items, null);
     expect(box.orlaPresetId).toBeUndefined();
     const orlaPieces = syncOrlaPiecesForProject([box], {}, PRESET.id);
-    expect(orlaPieces.prat1?.sides.front.enabled).toBe(true);
+    expect(orlaPieces.cima1?.sides.front.enabled).toBe(true);
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: items }],
       orlaPresets: [PRESET],
@@ -205,10 +206,24 @@ describe("orlaCalculator industrial", () => {
     expect(ferragem.metrosTotal).toBeGreaterThan(0);
   });
 
-  it("sync com orlaPresetId null nao aplica default", () => {
+  it("prateleira nunca recebe orla", () => {
     const items = [piece("prat1", "prateleira", { largura: 560, altura: 400, profundidade: 19 })];
+    const box = boxWith(items);
+    const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {});
+    expect(orlaPieces.prat1).toBeUndefined();
+    const ferragem = computeOrlaFerragem({
+      boxes: [{ ...box, cutList: items }],
+      orlaPresets: [PRESET],
+      orlaPieces,
+      orlaJuntoPairs: [],
+    });
+    expect(ferragem.metrosTotal).toBe(0);
+  });
+
+  it("sync com orlaPresetId null nao aplica default", () => {
+    const items = [piece("cima1", "cima", { largura: 560, altura: 400, profundidade: 19 })];
     const box = { ...boxWith(items, null), orlaPresetId: null as string | null };
     const orlaPieces = syncOrlaPiecesForProject([box], {}, PRESET.id);
-    expect(orlaPieces.prat1).toBeUndefined();
+    expect(orlaPieces.cima1).toBeUndefined();
   });
 });

@@ -19,9 +19,10 @@ export function resolveRemateSheetCutDimensions(remate: Pick<RematePiece, "width
   espessuraMm: number;
 } {
   const espessuraMm = resolveRemateMaterialThicknessMm(remate);
+  // Não inventar 1×1 mm — dims em falta ficam 0 (cutlist filtra).
   return {
-    comprimentoMm: Math.max(1, remate.width),
-    larguraMm: Math.max(1, remate.height),
+    comprimentoMm: Math.max(0, Number(remate.width) || 0),
+    larguraMm: Math.max(0, Number(remate.height) || 0),
     espessuraMm,
   };
 }
