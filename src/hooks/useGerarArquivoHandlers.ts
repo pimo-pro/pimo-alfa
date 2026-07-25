@@ -95,10 +95,23 @@ import {
   notifyUser,
   payloadFromIndustrialError,
   payloadFromUnknownError,
-  reportIndustrialError,
+  reportExportStepErrors,
 } from "../industrial/errors/industrialNotificationBridge";
 
 let cutLayoutLoaderRoot: Root | null = null;
+
+type CutLayoutPdfModule = typeof import("../core/cutlayout/cutLayoutPdf");
+
+/** Import dinâmico com registo em Notificações/Invariantes se o chunk falhar (MIME HTML / 404). */
+async function loadCutLayoutPdfModule(step = "PDF Etiquetas / Layout PRO"): Promise<CutLayoutPdfModule> {
+  try {
+    return await import("../core/cutlayout/cutLayoutPdf");
+  } catch (err) {
+    const payload = payloadFromUnknownError(err, { step, source: "module" });
+    dispatchIndustrialNotification(payload);
+    throw err;
+  }
+}
 
 function toastExportError(
   showToast: (text: string, type?: ToastMessage["type"], duration?: number) => void,
@@ -118,9 +131,21 @@ function toastExportError(
     });
     return;
   }
-  reportIndustrialError(err, { step, source: "export" });
   const msg = err instanceof Error ? err.message : String(err);
-  showToast(`${fallback}${msg ? ` — ${msg}` : ""}`, "error");
+  const payload = payloadFromUnknownError(err, {
+    step,
+    source: "export",
+    severity: "error",
+  });
+  notifyUser(
+    {
+      ...payload,
+      message: `${fallback}${msg ? ` — ${msg}` : ""}`,
+    },
+    {
+      showToast: (text) => showToast(text, "error", 12000),
+    }
+  );
 }
 
 function guardIndustrialExport(
@@ -657,7 +682,7 @@ export function useGerarArquivoHandlers() {
         return;
       }
 
-      const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+      const { buildCutLayoutPdf } = await loadCutLayoutPdfModule("Layout de corte");
       for (const bundle of thicknessBundles) {
         const doc = await buildCutLayoutPdf(bundle.cncBundle.layoutResult, {
           projectName: project.projectName ?? "Projeto",
@@ -744,7 +769,7 @@ export function useGerarArquivoHandlers() {
       }
 
       await yieldToMainThread();
-      const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+      const { buildCutLayoutPdf } = await loadCutLayoutPdfModule("Layout de Corte PRO");
       for (const bundle of thicknessBundles) {
         const doc = await buildCutLayoutPdf(bundle.cncBundle.layoutResult, {
           projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
@@ -1243,7 +1268,9 @@ export function useGerarArquivoHandlers() {
       // --- Etiquetas UEE (um PDF por espessura em cnc/<espessura>/) ---
       // Nesting/CNC usam thicknessCncBundles.items base; merge documental só aqui (Fase 5).
       try {
-        const { buildCutLayoutPdf } = await import("../core/cutlayout/cutLayoutPdf");
+        const { buildCutLayoutPdf } = await loadCutLayoutPdfModule(
+          "PDF Etiquetas / Layout PRO (arquivo completo)"
+        );
         for (const bundle of thicknessCncBundles) {
           const layoutResult = bundle.cncBundle.layoutResult;
           const nestingPlacements = layoutResult.sheets.flatMap((s) => s.placements);
@@ -1451,6 +1478,10 @@ export function useGerarArquivoHandlers() {
         const first = errors[0];
         const detail = `${first.step}: ${first.message ?? first.error ?? "Erro desconhecido"}`;
         devLogger.error("Erro ao gerar arquivo completo:", errors);
+        reportExportStepErrors(errors, {
+          showToast: undefined,
+          projectName: project.projectName ?? slug,
+        });
         showToast(`Erro ao gerar arquivo completo — ${detail}`, "error");
       } else {
         showToast("Arquivo completo (ZIP) gerado.", "info");

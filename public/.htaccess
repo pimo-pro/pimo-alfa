@@ -7,6 +7,11 @@
   RewriteRule ^me$ api/auth/index.php [L]
   RewriteRule ^users$ api/users/index.php [L]
 
+  # Assets hashed Vite: NUNCA fallback SPA (senão MIME text/html em chunks em falta)
+  RewriteRule ^assets/ - [L]
+  RewriteRule ^config/ - [L]
+  RewriteRule ^updates/ - [L]
+
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

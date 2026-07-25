@@ -28,7 +28,9 @@ export type IndustrialNotificationSource =
   | "espessura"
   | "material"
   | "cutlist"
-  | "trak";
+  | "trak"
+  | "pdf"
+  | "module";
 
 export type IndustrialNotificationPayload = {
   source: IndustrialNotificationSource;
@@ -72,6 +74,10 @@ function ruleNameForSource(source: IndustrialNotificationSource): string {
       return "Cutlist industrial";
     case "trak":
       return "PIMO-TRAK";
+    case "pdf":
+      return "PDF industrial / Layout PRO";
+    case "module":
+      return "Módulo dinâmico (assets)";
     default:
       return "Exportação industrial";
   }
@@ -264,7 +270,27 @@ export function payloadFromUnknownError(
   const message = err instanceof Error ? err.message : String(err);
   const lower = message.toLowerCase();
   let source: IndustrialNotificationSource = ctx.source ?? "export";
-  if (lower.includes("chapa") || lower.includes("matéria-prima") || lower.includes("materia-prima")) {
+  let hints: string[] | undefined;
+  if (
+    lower.includes("dynamically imported module") ||
+    lower.includes("failed to fetch dynamically") ||
+    (lower.includes("mime type") && lower.includes("module")) ||
+    lower.includes("text/html")
+  ) {
+    source = "module";
+    hints = [
+      "Hard refresh (Ctrl+F5) — o browser pode ter um chunk antigo em cache após deploy.",
+      "Confirme que /assets/cutLayoutPdf-*.js existe em produção (não deve devolver HTML).",
+      "Se o ficheiro faltar, o .htaccess SPA estava a devolver index.html com MIME text/html.",
+    ];
+  } else if (
+    lower.includes("cutlayout") ||
+    lower.includes("layout pro") ||
+    lower.includes("etiquetas") ||
+    lower.includes("pdf")
+  ) {
+    source = ctx.source === "export" || !ctx.source ? "pdf" : source;
+  } else if (lower.includes("chapa") || lower.includes("matéria-prima") || lower.includes("materia-prima")) {
     source = "chapa";
   } else if (lower.includes("espessura")) {
     source = "espessura";
@@ -278,6 +304,7 @@ export function payloadFromUnknownError(
     severity: ctx.severity ?? "error",
     step: ctx.step,
     message,
+    hints,
     phase: source === "nesting" ? "cutlayout" : "export",
   };
 }
@@ -297,17 +324,53 @@ export function throwIndustrialError(err: IndustrialError): never {
 
 export function reportExportStepErrors(
   errors: Array<{ step: string; message?: string; error?: string }>,
-  options?: NotifyUserOptions
+  options?: NotifyUserOptions & {
+    projectName?: string;
+    boxId?: string;
+    pieceId?: string;
+  }
 ): void {
   for (const entry of errors) {
     const message = entry.message ?? entry.error ?? "Erro desconhecido";
+    const lower = `${entry.step} ${message}`.toLowerCase();
+    let source: IndustrialNotificationSource = "export";
+    if (
+      lower.includes("dynamically imported") ||
+      lower.includes("mime type") ||
+      lower.includes("cutlayoutpdf")
+    ) {
+      source = "module";
+    } else if (
+      lower.includes("pdf") ||
+      lower.includes("etiqueta") ||
+      lower.includes("layout") ||
+      lower.includes("cutlayout")
+    ) {
+      source = "pdf";
+    } else if (lower.includes("nesting")) {
+      source = "nesting";
+    } else if (lower.includes("cnc") || lower.includes("tcn")) {
+      source = "cnc";
+    }
     notifyUser(
       {
-        source: "export",
+        source,
         severity: "error",
         step: entry.step,
-        message,
-        phase: "export",
+        message:
+          options?.projectName && !message.includes(options.projectName)
+            ? `[${options.projectName}] ${message}`
+            : message,
+        phase: source === "nesting" ? "cutlayout" : "export",
+        boxId: options?.boxId,
+        pieceId: options?.pieceId,
+        hints:
+          source === "module"
+            ? [
+                "Hard refresh (Ctrl+F5) após deploy.",
+                "Verificar se /assets/cutLayoutPdf-*.js devolve JS (não HTML).",
+              ]
+            : undefined,
       },
       options
     );

@@ -177,6 +177,31 @@ jobs:
             **/api/projects/data/*.json
             **/api/materials/**
 
+      - name: Verify critical Vite assets on production
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHUNK="$(ls dist/assets/cutLayoutPdf-*.js | head -n 1 | xargs -n1 basename)"
+          echo "Expecting production asset: /assets/${CHUNK}"
+          sleep 5
+          URL="https://pimo.pro/assets/${CHUNK}"
+          CODE="$(curl -sS -o /tmp/pimo_chunk.bin -w '%{http_code}' -H 'Cache-Control: no-cache' "$URL")"
+          HEAD="$(curl -sSI -H 'Cache-Control: no-cache' "$URL" | tr -d '\r')"
+          echo "HTTP ${CODE}"
+          echo "$HEAD" | head -n 20
+          if [[ "$CODE" != "200" ]]; then
+            echo "::error::cutLayoutPdf asset missing on production (${URL})"
+            exit 1
+          fi
+          if echo "$HEAD" | grep -qi 'content-type:.*text/html'; then
+            echo "::error::cutLayoutPdf returned text/html (SPA fallback) — assets not published"
+            exit 1
+          fi
+          if head -c 64 /tmp/pimo_chunk.bin | grep -qiE '<!doctype|<html'; then
+            echo "::error::cutLayoutPdf body looks like HTML"
+            exit 1
+          fi
+          echo "OK: ${URL}"
 
 
 

@@ -1,40 +1,19 @@
-# PIMO — reescrita interna da API de projetos para o caminho real no servidor.
-# O browser continua a ver apenas /api/projects/... (sem [R], logo sem redirect).
-#
-# Se o Apache não aplicar caminhos absolutos do SO (alguns mod_rewrite tratam-nos como URL-path),
-# use uma ligação simbólica no DocumentRoot do domínio, por exemplo:
-#   ln -s /home/u100505900/public_html/api/projects /caminho/do/teu/public_html/api/projects
-# e remova ou comente a RewriteRule abaixo.
-
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # Auth JWT (frontend: https://pimo.pro/auth/login e /me)
+  # Auth API — tem de vir ANTES do fallback SPA (senão /me e /auth/login vão para index.html)
   RewriteRule ^auth/login$ api/auth/index.php [L]
-  RewriteRule ^auth/register$ api/auth/index.php [L]
   RewriteRule ^me$ api/auth/index.php [L]
   RewriteRule ^users$ api/users/index.php [L]
-  # User settings online (JWT) — GET/PATCH
-  RewriteRule ^user/settings$ api/user-settings/index.php [L]
-  # Global settings público (sem JWT)
-  RewriteRule ^config/global$ api/global-config/index.php [L]
 
-  # Nota: a RewriteRule para api/projects foi removida intencionalmente.
-  # O ficheiro public_html/api/projects/index.php existe fisicamente no disco,
-  # pelo que Apache serve-o diretamente sem necessidade de rewrite.
-  # A regra anterior reescrevia o URL para um caminho de SO (/home/u.../public_html/...)
-  # que mod_rewrite trata como URL-path — inexistente no DocumentRoot —
-  # fazendo com que POST/GET para /api/projects/ fossem servidos como index.html (SPA)
-  # e causando "Erro ao sincronizar" em todos os projetos.
+  # Assets hashed Vite: NUNCA fallback SPA (senão MIME text/html em chunks em falta)
+  RewriteRule ^assets/ - [L]
+  RewriteRule ^config/ - [L]
+  RewriteRule ^updates/ - [L]
 
-  # SPA React (Vite) — por último, para não capturar /me nem /auth/login
-  RewriteRule ^admin(?:/.*)?$ /index.html [L]
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_URI} !^/auth/
-  RewriteCond %{REQUEST_URI} !^/api/
-  RewriteCond %{REQUEST_URI} !^/admin/
   RewriteRule . /index.html [L]
 </IfModule>
