@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T19:55:08.440Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): tipar ADM do pricing central no Unificado.",
+      "version": "v6.0725.2055"
+    },
+    {
+      "publishedAt": "2026-07-25T19:53:47.591Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): reduzir CNC/Drill e ADM a 50% do valor anterior.",
+      "version": "v6.0725.2053"
+    },
+    {
       "publishedAt": "2026-07-25T19:35:40.458Z",
       "author": "pimo-pro",
       "commitMessage": "fix(financeiro): alinhar CAIXA 1201 a precos de mercado (paineis/orla/ferragens/CNC).",
