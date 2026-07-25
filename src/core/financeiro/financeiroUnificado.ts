@@ -228,14 +228,16 @@ function resolveAdminSettings(project: FinanceiroUnificadoProjectSlice): Finance
 
   // SSOT pricing.json custosAdicionais.adm_percentual — ignora fallback antigo 10%.
   try {
-    const fromPricing = getCentralPricingCached().financeiroAdmin?.adm;
+    const fromPricing = getCentralPricingCached().financeiroAdmin?.adm as
+      | { enabled?: boolean; mode?: string; valor?: number }
+      | undefined;
     if (fromPricing && typeof fromPricing.valor === "number" && Number.isFinite(fromPricing.valor)) {
       return normalizeFinanceiroAdminSettings({
         ...base,
         adm: {
           ...base.adm,
           enabled: fromPricing.enabled !== false,
-          mode: fromPricing.mode ?? "percentagem",
+          mode: (fromPricing.mode as "percentagem" | "fixo") ?? "percentagem",
           valor: fromPricing.valor,
         },
       });
