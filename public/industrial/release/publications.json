@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T19:35:40.458Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): alinhar CAIXA 1201 a precos de mercado (paineis/orla/ferragens/CNC).",
+      "version": "v6.0725.2035"
+    },
+    {
       "publishedAt": "2026-07-25T18:56:02.255Z",
       "author": "pimo-pro",
       "commitMessage": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",

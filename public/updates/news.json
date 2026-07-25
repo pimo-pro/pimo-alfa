@@ -1,15 +1,26 @@
 {
-  "updatedAt": "2026-07-25T18:56:03.161Z",
+  "updatedAt": "2026-07-25T19:35:41.242Z",
   "news": [
     {
-      "version": "v6.0725.1956",
-      "title": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
-      "description": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
-      "publishedAt": "2026-07-25T18:56:02.978Z",
+      "version": "v6.0725.2035",
+      "title": "fix(financeiro): alinhar CAIXA 1201 a precos de mercado (paineis/orla/ferragens/CNC).",
+      "description": "fix(financeiro): alinhar CAIXA 1201 a precos de mercado (paineis/orla/ferragens/CNC).",
+      "publishedAt": "2026-07-25T19:35:41.140Z",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "🛠️",
-      "commit": "7ec5514"
+      "commit": "8e99159"
+    },
+    {
+      "version": "v6.0725.1956",
+      "title": "Publicação PIMO — Sistema Industrial",
+      "description": "Publicação PIMO — Sistema Industrial",
+      "publishedAt": "2026-07-25T19:58:09+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "⚙️",
+      "commit": "06c4a76",
+      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30170678249"
     },
     {
       "version": "v6.0725.1953",
