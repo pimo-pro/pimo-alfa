@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  iconForWhatsNewType,
+  inferWhatsNewType,
   parseWhatsNewFile,
   WHATS_NEW_NEWS_URL,
 } from "../../src/pages/ajuda/loadWhatsNewNews";
@@ -48,10 +50,10 @@ describe("ajudaWhatsNewIntegrity", () => {
     expect(news[0]?.title).toBeTruthy();
     expect(news[0]?.description).toBeTruthy();
     expect(["fix", "update", "feature", "docs"]).toContain(news[0]?.type);
+    expect(news[0]?.description).not.toMatch(/^publica[cç][aã]o\b/i);
   });
 
-  it("infere type a partir do prefixo do commit", async () => {
-    const { inferWhatsNewType } = await import("../../src/pages/ajuda/loadWhatsNewNews");
+  it("infere type a partir do prefixo do commit", () => {
     expect(inferWhatsNewType("fix: corrige news.json")).toBe("fix");
     expect(inferWhatsNewType("fix(ajuda): restaurar Novidades")).toBe("fix");
     expect(inferWhatsNewType("feat: nova secção")).toBe("feature");
@@ -68,32 +70,33 @@ describe("ajudaWhatsNewIntegrity", () => {
     expect(yml).toContain("Append Whats New news.json");
   });
 
-  it("pagina whats-new usa loadWhatsNewNews", () => {
+  it("pagina whats-new usa Icon SVG e commit message real", () => {
     const pageSource = fs.readFileSync(whatsNewPagePath, "utf8");
     expect(pageSource).toContain("Novidades do Sistema");
     expect(pageSource).toContain("loadWhatsNewNews");
-    expect(pageSource).toContain("entry.title");
-    expect(pageSource).toContain("entry.icon");
-    expect(pageSource).toContain("entry.actionUrl");
+    expect(pageSource).toContain('Icon name={entry.icon');
+    expect(pageSource).toContain("entry.description || entry.title");
+    expect(pageSource).not.toContain("Ver GitHub Action");
+    expect(pageSource).not.toContain("entry.actionUrl");
+    expect(pageSource).not.toContain("⚙️");
   });
 
-  it("script append inclui actionUrl, commit, icon e ordenacao", () => {
+  it("script append resolve commit real e remove actionUrl", () => {
     const src = fs.readFileSync(appendScriptPath, "utf8");
-    expect(src).toContain("GITHUB_RUN_ID");
-    expect(src).toContain("actionUrl");
+    expect(src).toContain("isIgnoredCommitMessage");
+    expect(src).toContain("resolveRealCommitMessage");
     expect(src).toContain("git rev-parse --short HEAD");
     expect(src).toContain("sortByPublishedAtDesc");
-    expect(src).toContain("🛠️");
-    expect(src).toContain("✨");
-    expect(src).toContain("⚙️");
-    expect(src).toContain("📄");
+    expect(src).toContain("delete copy.actionUrl");
+    expect(src).not.toContain("🛠️");
+    expect(src).not.toContain("✨");
+    expect(src).not.toContain("⚙️");
   });
 
-  it("iconForWhatsNewType mapeia tipos", async () => {
-    const { iconForWhatsNewType } = await import("../../src/pages/ajuda/loadWhatsNewNews");
-    expect(iconForWhatsNewType("fix")).toBe("🛠️");
-    expect(iconForWhatsNewType("feature")).toBe("✨");
-    expect(iconForWhatsNewType("update")).toBe("⚙️");
-    expect(iconForWhatsNewType("docs")).toBe("📄");
+  it("iconForWhatsNewType mapeia tipos para SVG", () => {
+    expect(iconForWhatsNewType("fix")).toBe("check");
+    expect(iconForWhatsNewType("feature")).toBe("highlight");
+    expect(iconForWhatsNewType("update")).toBe("settings");
+    expect(iconForWhatsNewType("docs")).toBe("info");
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Icon } from "@/components/icons";
 import { AJUDA_PATH } from "@/routes/ajudaRoutes";
 import { AJUDA_PAGE_TOKENS as C, ajudaPageFont as font } from "./ajudaPageTokens";
 import { loadWhatsNewNews, type WhatsNewEntry, type WhatsNewType } from "./loadWhatsNewNews";
@@ -172,8 +173,15 @@ export default function AjudaWhatsNewPage() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
-                        {entry.icon ?? "⚙️"}
+                      <span
+                        aria-hidden
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          color: TYPE_COLOR[entry.type],
+                        }}
+                      >
+                        <Icon name={entry.icon ?? "settings"} size={18} />
                       </span>
                       <strong style={{ fontSize: 15, color: C.text }}>{entry.version}</strong>
                       <span
@@ -192,35 +200,14 @@ export default function AjudaWhatsNewPage() {
                         {TYPE_LABEL[entry.type]}
                       </span>
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8, color: C.text }}>
-                      {entry.title}
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8, color: C.text, lineHeight: 1.55 }}>
+                      {entry.description || entry.title}
                     </div>
                     <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
                       {new Date(entry.publishedAt).toLocaleString("pt-PT")}
                       {entry.author ? ` · ${entry.author}` : ""}
                       {entry.commit ? ` · ${entry.commit}` : ""}
                     </div>
-                    {entry.description && entry.description !== entry.title ? (
-                      <div style={{ fontSize: 14, marginTop: 8, color: C.text, lineHeight: 1.6 }}>
-                        {entry.description}
-                      </div>
-                    ) : null}
-                    {entry.actionUrl ? (
-                      <a
-                        href={entry.actionUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "inline-block",
-                          marginTop: 10,
-                          fontSize: 12,
-                          color: C.accent,
-                          textDecoration: "none",
-                        }}
-                      >
-                        Ver GitHub Action →
-                      </a>
-                    ) : null}
                   </li>
                 ))}
               </ul>

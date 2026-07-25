@@ -1,15 +1,15 @@
 {
-  "updatedAt": "2026-07-25T19:55:09.315Z",
+  "updatedAt": "2026-07-25T20:46:37.294Z",
   "news": [
     {
       "version": "v6.0725.2055",
       "title": "fix(financeiro): tipar ADM do pricing central no Unificado.",
       "description": "fix(financeiro): tipar ADM do pricing central no Unificado.",
-      "publishedAt": "2026-07-25T19:55:09.205Z",
+      "publishedAt": "2026-07-25T20:46:37.291Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️",
-      "commit": "72beb7f"
+      "icon": "fix",
+      "commit": "78aba58"
     },
     {
       "version": "v6.0725.2053",
@@ -18,30 +18,28 @@
       "publishedAt": "2026-07-25T19:53:48.298Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️",
+      "icon": "fix",
       "commit": "265b5c9"
     },
     {
       "version": "v6.0725.2035",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "fix(financeiro): alinhar CAIXA 1201 a precos de mercado (paineis/orla/ferragens/CNC).",
+      "description": "fix(financeiro): alinhar CAIXA 1201 a precos de mercado (paineis/orla/ferragens/CNC).",
       "publishedAt": "2026-07-25T20:37:47+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "c643d54",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30171988978"
+      "icon": "update",
+      "commit": "c643d54"
     },
     {
       "version": "v6.0725.1956",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
+      "description": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
       "publishedAt": "2026-07-25T19:58:09+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "06c4a76",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30170678249"
+      "icon": "update",
+      "commit": "06c4a76"
     },
     {
       "version": "v6.0725.1953",
@@ -50,41 +48,38 @@
       "publishedAt": "2026-07-25T18:53:24.963Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️",
+      "icon": "fix",
       "commit": "6aa7809"
     },
     {
       "version": "v6.0725.1924",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
+      "description": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
       "publishedAt": "2026-07-25T19:26:22+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "faf58b5",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30169629737"
+      "icon": "update",
+      "commit": "faf58b5"
     },
     {
       "version": "v6.0725.1905",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
+      "description": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
       "publishedAt": "2026-07-25T19:07:30+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "458b3ef",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30169004117"
+      "icon": "update",
+      "commit": "458b3ef"
     },
     {
       "version": "v6.0725.1848",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "fix(autoRoomFill): silenciar parâmetro cornerAtStart não usado após remates off.",
+      "description": "fix(autoRoomFill): silenciar parâmetro cornerAtStart não usado após remates off.",
       "publishedAt": "2026-07-25T18:50:13+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "0d94b17",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30168429113"
+      "icon": "update",
+      "commit": "0d94b17"
     },
     {
       "version": "v6.0725.1846",
@@ -93,7 +88,7 @@
       "publishedAt": "2026-07-25T17:46:08.312Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️",
+      "icon": "fix",
       "commit": "d4ba901"
     },
     {
@@ -103,9 +98,8 @@
       "publishedAt": "2026-07-25T18:22:38+01:00",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨",
-      "commit": "c1d934c",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30167518582"
+      "icon": "feature",
+      "commit": "c1d934c"
     },
     {
       "version": "v6.0725.1711",
@@ -114,9 +108,8 @@
       "publishedAt": "2026-07-25T17:11:22+01:00",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️",
-      "commit": "fc03ac6",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30165125800"
+      "icon": "fix",
+      "commit": "fc03ac6"
     },
     {
       "version": "v6.0725.1706",
@@ -125,9 +118,8 @@
       "publishedAt": "2026-07-25T17:05:58+01:00",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️",
-      "commit": "7efc8e1",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30164962058"
+      "icon": "fix",
+      "commit": "7efc8e1"
     },
     {
       "version": "v6.0725.1640",
@@ -136,9 +128,8 @@
       "publishedAt": "2026-07-25T16:39:25+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "9352efb",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30164107797"
+      "icon": "update",
+      "commit": "9352efb"
     },
     {
       "version": "v6.0725.1413",
@@ -147,9 +138,8 @@
       "publishedAt": "2026-07-25T14:13:45+01:00",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️",
-      "commit": "35563a8",
-      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30159353312"
+      "icon": "update",
+      "commit": "35563a8"
     },
     {
       "version": "v6.0724.1853",
@@ -158,7 +148,7 @@
       "publishedAt": "2026-07-24T18:53:25+01:00",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0724.1837",
@@ -167,7 +157,7 @@
       "publishedAt": "2026-07-24T17:38:00.828Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0724.1755",
@@ -176,43 +166,43 @@
       "publishedAt": "2026-07-24T16:56:13.003Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0722.2307",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "Release v6.0722.2307",
+      "description": "Release v6.0722.2307",
       "publishedAt": "2026-07-22T22:07:46.857Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0722.2258",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "Release v6.0722.2258",
+      "description": "Release v6.0722.2258",
       "publishedAt": "2026-07-22T21:59:00.123Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0722.2225",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "Release v6.0722.2225",
+      "description": "Release v6.0722.2225",
       "publishedAt": "2026-07-22T21:25:52.111Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0722.2215",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "Release v6.0722.2215",
+      "description": "Release v6.0722.2215",
       "publishedAt": "2026-07-22T21:15:35.393Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0722.2202",
@@ -221,7 +211,7 @@
       "publishedAt": "2026-07-22T21:02:06.221Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0722.2124",
@@ -230,7 +220,7 @@
       "publishedAt": "2026-07-22T20:24:46.589Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0722.2055",
@@ -239,7 +229,7 @@
       "publishedAt": "2026-07-22T19:55:19.358Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0719.2325",
@@ -248,16 +238,16 @@
       "publishedAt": "2026-07-19T22:25:29.709Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2317",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "Release v6.0719.2317",
+      "description": "Release v6.0719.2317",
       "publishedAt": "2026-07-19T22:17:30.057Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2311",
@@ -266,7 +256,7 @@
       "publishedAt": "2026-07-19T22:11:37.114Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2257",
@@ -275,7 +265,7 @@
       "publishedAt": "2026-07-19T21:57:52.374Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2248",
@@ -284,7 +274,7 @@
       "publishedAt": "2026-07-19T21:48:07.907Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2229",
@@ -293,7 +283,7 @@
       "publishedAt": "2026-07-19T21:29:36.447Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2138",
@@ -302,7 +292,7 @@
       "publishedAt": "2026-07-19T20:38:04.348Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2109",
@@ -311,7 +301,7 @@
       "publishedAt": "2026-07-19T20:09:01.583Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0719.2010",
@@ -320,7 +310,7 @@
       "publishedAt": "2026-07-19T19:10:31.040Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0719.1852",
@@ -329,7 +319,7 @@
       "publishedAt": "2026-07-19T17:52:31.321Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0719.0150",
@@ -338,7 +328,7 @@
       "publishedAt": "2026-07-19T00:50:16.975Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0719.0146",
@@ -347,7 +337,7 @@
       "publishedAt": "2026-07-19T00:46:46.365Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0718.2309",
@@ -356,7 +346,7 @@
       "publishedAt": "2026-07-18T22:09:52.229Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0718.2226",
@@ -365,7 +355,7 @@
       "publishedAt": "2026-07-18T21:26:16.931Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.2328",
@@ -374,7 +364,7 @@
       "publishedAt": "2026-07-17T22:28:46.618Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.2259",
@@ -383,7 +373,7 @@
       "publishedAt": "2026-07-17T21:59:28.645Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0717.2256",
@@ -392,7 +382,7 @@
       "publishedAt": "2026-07-17T21:56:13.740Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0717.2254",
@@ -401,7 +391,7 @@
       "publishedAt": "2026-07-17T21:54:48.745Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.2225",
@@ -410,7 +400,7 @@
       "publishedAt": "2026-07-17T21:25:15.730Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.2152",
@@ -419,7 +409,7 @@
       "publishedAt": "2026-07-17T20:52:19.053Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0717.1215-branding",
@@ -428,7 +418,7 @@
       "publishedAt": "2026-07-17T11:15:00.000Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.1145-ferragens",
@@ -437,7 +427,7 @@
       "publishedAt": "2026-07-17T10:45:00.000Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.1026-armazem",
@@ -446,7 +436,7 @@
       "publishedAt": "2026-07-17T10:05:00.000Z",
       "type": "feature",
       "author": "pimo-pro",
-      "icon": "✨"
+      "icon": "feature"
     },
     {
       "version": "v6.0717.1026",
@@ -455,7 +445,7 @@
       "publishedAt": "2026-07-17T09:26:44.213Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0717.0931",
@@ -464,7 +454,7 @@
       "publishedAt": "2026-07-17T08:31:47.317Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0717.0827",
@@ -473,7 +463,7 @@
       "publishedAt": "2026-07-17T07:27:28.690Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0716.1719",
@@ -482,7 +472,7 @@
       "publishedAt": "2026-07-16T16:19:07.150Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0716.1232",
@@ -491,7 +481,7 @@
       "publishedAt": "2026-07-16T11:32:26.912Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0716.1046",
@@ -500,7 +490,7 @@
       "publishedAt": "2026-07-16T09:46:20.135Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0716.1022",
@@ -509,7 +499,7 @@
       "publishedAt": "2026-07-16T09:22:37.603Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0715.2258",
@@ -518,7 +508,7 @@
       "publishedAt": "2026-07-15T21:58:35.537Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0715.2202",
@@ -527,7 +517,7 @@
       "publishedAt": "2026-07-15T21:02:23.524Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0715.1746",
@@ -536,7 +526,7 @@
       "publishedAt": "2026-07-15T16:46:49.334Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.1553",
@@ -545,16 +535,16 @@
       "publishedAt": "2026-07-15T14:53:13.169Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.1224",
-      "title": "Publicação PIMO — Sistema Industrial",
-      "description": "Publicação PIMO — Sistema Industrial",
+      "title": "Release v6.0715.1224",
+      "description": "Release v6.0715.1224",
       "publishedAt": "2026-07-15T11:24:25.995Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.1131",
@@ -563,7 +553,7 @@
       "publishedAt": "2026-07-15T10:31:48.303Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.0135",
@@ -572,7 +562,7 @@
       "publishedAt": "2026-07-15T00:35:01.535Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0715.0105",
@@ -581,7 +571,7 @@
       "publishedAt": "2026-07-15T00:05:49.082Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.0104",
@@ -590,7 +580,7 @@
       "publishedAt": "2026-07-15T00:04:22.931Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.0042",
@@ -599,7 +589,7 @@
       "publishedAt": "2026-07-14T23:42:00.442Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0715.0022",
@@ -608,7 +598,7 @@
       "publishedAt": "2026-07-14T23:22:36.290Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0714.2327",
@@ -617,7 +607,7 @@
       "publishedAt": "2026-07-14T22:27:24.295Z",
       "type": "fix",
       "author": "pimo-pro",
-      "icon": "🛠️"
+      "icon": "fix"
     },
     {
       "version": "v6.0714.2321",
@@ -626,7 +616,7 @@
       "publishedAt": "2026-07-14T22:21:43.736Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     },
     {
       "version": "v6.0714.2252",
@@ -635,7 +625,7 @@
       "publishedAt": "2026-07-14T21:52:00.970Z",
       "type": "update",
       "author": "pimo-pro",
-      "icon": "⚙️"
+      "icon": "update"
     }
   ]
 }

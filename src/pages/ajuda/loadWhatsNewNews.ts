@@ -3,6 +3,8 @@
  * Fallback: /industrial/release/publications.json (legado).
  */
 
+import type { IconName } from "@/components/icons";
+
 export type WhatsNewType = "fix" | "update" | "feature" | "docs";
 
 export type WhatsNewEntry = {
@@ -12,25 +14,34 @@ export type WhatsNewEntry = {
   publishedAt: string;
   type: WhatsNewType;
   author?: string;
-  /** Emoji conforme tipo. */
-  icon?: string;
+  /** Nome lógico do ícone SVG (IconName) conforme tipo. */
+  icon?: IconName;
   /** Hash curto do commit. */
   commit?: string;
-  /** URL da run GitHub Actions. */
-  actionUrl?: string;
 };
 
 export const WHATS_NEW_NEWS_URL = "/updates/news.json";
 export const WHATS_NEW_LEGACY_URL = "/industrial/release/publications.json";
 
-export const WHATS_NEW_TYPE_ICONS: Record<WhatsNewType, string> = {
-  fix: "🛠️",
-  feature: "✨",
-  update: "⚙️",
-  docs: "📄",
+/** Mapa tipo → SVG do sistema de ícones (sem emoji). */
+export const WHATS_NEW_TYPE_ICONS: Record<WhatsNewType, IconName> = {
+  fix: "check",
+  feature: "highlight",
+  update: "settings",
+  docs: "info",
 };
 
-/** Dete��o autom�tica do tipo a partir do prefixo do commit (CI + publish). */
+const PUBLICATION_MSG_RE = /^publica[cç][aã]o\b/i;
+const RELEASE_CHORE_RE = /^chore\s*\(\s*release\s*\)\s*:/i;
+const LEGACY_EMOJI_ICONS = new Set(["🛠️", "✨", "⚙️", "📄", "🔧", "🆕"]);
+
+function isIgnoredCommitMessage(message: string): boolean {
+  const m = String(message || "").trim();
+  if (!m) return true;
+  return PUBLICATION_MSG_RE.test(m) || RELEASE_CHORE_RE.test(m);
+}
+
+/** Deteção automática do tipo a partir do prefixo do commit (CI + publish). */
 export function inferWhatsNewType(message: string): WhatsNewType {
   const m = String(message || "").trim().toLowerCase();
   const match = m.match(/^(fix|feat|feature|update|chore|docs)(\(|:|\b)/);
@@ -42,7 +53,7 @@ export function inferWhatsNewType(message: string): WhatsNewType {
   return "update";
 }
 
-export function iconForWhatsNewType(type: WhatsNewType): string {
+export function iconForWhatsNewType(type: WhatsNewType): IconName {
   return WHATS_NEW_TYPE_ICONS[type] ?? WHATS_NEW_TYPE_ICONS.update;
 }
 
@@ -54,12 +65,38 @@ function isNewsType(value: unknown): value is WhatsNewType {
   return value === "fix" || value === "feature" || value === "update" || value === "docs";
 }
 
+function isIconName(value: string): value is IconName {
+  return (
+    value === "check" ||
+    value === "highlight" ||
+    value === "settings" ||
+    value === "info" ||
+    value === "fix" ||
+    value === "feature" ||
+    value === "update" ||
+    value === "docs"
+  );
+}
+
+function resolveIcon(raw: unknown, type: WhatsNewType): IconName {
+  if (typeof raw === "string" && raw.trim()) {
+    const v = raw.trim();
+    if (LEGACY_EMOJI_ICONS.has(v)) return iconForWhatsNewType(type);
+    if (v === "fix") return "check";
+    if (v === "feature") return "highlight";
+    if (v === "update") return "settings";
+    if (v === "docs") return "info";
+    if (isIconName(v)) return v;
+  }
+  return iconForWhatsNewType(type);
+}
+
 function shortTitle(message: string, version: string): string {
   const line = String(message || "")
     .trim()
     .split(/\r?\n/)[0]
     .trim();
-  if (!line) return `Publica��o ${version}`;
+  if (!line) return `Release ${version}`;
   return line.length > 90 ? `${line.slice(0, 87)}...` : line;
 }
 
@@ -76,32 +113,35 @@ function normalizeEntry(raw: unknown): WhatsNewEntry | null {
   const src = raw as Record<string, unknown>;
   const version = typeof src.version === "string" ? src.version.trim() : "";
   if (!version) return null;
-  const description =
+
+  let description =
     typeof src.description === "string"
       ? src.description
       : typeof src.commitMessage === "string"
         ? src.commitMessage
         : "";
+  let title =
+    typeof src.title === "string" && src.title.trim() ? src.title.trim() : "";
+
+  // Nunca mostrar texto estático de publicação
+  if (isIgnoredCommitMessage(description)) description = "";
+  if (isIgnoredCommitMessage(title)) title = "";
+
+  if (!description && title) description = title;
+  if (!title) title = shortTitle(description, version);
+  if (!description) description = title;
+
   const publishedAt =
     typeof src.publishedAt === "string" && src.publishedAt
       ? src.publishedAt
       : new Date().toISOString();
-  const type: WhatsNewType = isNewsType(src.type) ? src.type : inferType(description);
-  const title =
-    typeof src.title === "string" && src.title.trim()
-      ? src.title.trim()
-      : shortTitle(description, version);
+  const type: WhatsNewType = isNewsType(src.type)
+    ? src.type
+    : inferType(description || title);
   const author = typeof src.author === "string" ? src.author : undefined;
   const commit =
     typeof src.commit === "string" && src.commit.trim() ? src.commit.trim() : undefined;
-  const actionUrl =
-    typeof src.actionUrl === "string" && src.actionUrl.trim()
-      ? src.actionUrl.trim()
-      : undefined;
-  const icon =
-    typeof src.icon === "string" && src.icon.trim()
-      ? src.icon.trim()
-      : iconForWhatsNewType(type);
+  const icon = resolveIcon(src.icon, type);
 
   return {
     version,
@@ -112,7 +152,6 @@ function normalizeEntry(raw: unknown): WhatsNewEntry | null {
     author,
     icon,
     ...(commit ? { commit } : {}),
-    ...(actionUrl ? { actionUrl } : {}),
   };
 }
 
@@ -145,7 +184,7 @@ async function fetchJson(url: string): Promise<unknown> {
 }
 
 /**
- * Prefer�ncia: /updates/news.json. Se falhar (404/HTML), tenta o legado.
+ * Preferência: /updates/news.json. Se falhar (404/HTML), tenta o legado.
  */
 export async function loadWhatsNewNews(): Promise<WhatsNewEntry[]> {
   try {

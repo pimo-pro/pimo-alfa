@@ -2,6 +2,7 @@
  * Append Whats New entry to public/updates/news.json (deploy / publish).
  * Preserves existing entries; never deletes history (cap MAX_ENTRIES).
  * Optionally merges remote production file before append (CI).
+ * Texto = commit message real (nunca "Publicação PIMO — Sistema Industrial").
  */
 
 import fs from "node:fs";
@@ -15,14 +16,10 @@ const NEWS_REL = path.join("public", "updates", "news.json");
 const NEWS_PATH = path.join(rootDir, NEWS_REL);
 const MAX_ENTRIES = 300;
 const PROD_NEWS_URL = process.env.PIMO_NEWS_URL || "https://pimo.pro/updates/news.json";
-const GITHUB_REPO = process.env.PIMO_GITHUB_REPO || "pimo-pro/pimo-criativo";
 
-const TYPE_ICONS = {
-  fix: "🛠️",
-  feature: "✨",
-  update: "⚙️",
-  docs: "📄",
-};
+/** Mensagens de commit de release a ignorar na resolução do texto das Novidades. */
+const PUBLICATION_MSG_RE = /^publica[cç][aã]o\b/i;
+const RELEASE_CHORE_RE = /^chore\s*\(\s*release\s*\)\s*:/i;
 
 function run(cmd) {
   try {
@@ -32,16 +29,20 @@ function run(cmd) {
   }
 }
 
+function isIgnoredCommitMessage(message) {
+  const m = String(message || "").trim();
+  if (!m) return true;
+  return PUBLICATION_MSG_RE.test(m) || RELEASE_CHORE_RE.test(m);
+}
+
 function inferType(message) {
   const m = String(message || "").trim().toLowerCase();
-  // Prefixo conventional: "fix:", "feat(scope):", "chore:", "docs:", etc.
   const match = m.match(/^(fix|feat|feature|update|chore|docs)(\(|:|\b)/);
   if (!match) return "update";
   const prefix = match[1];
   if (prefix === "fix") return "fix";
   if (prefix === "feat" || prefix === "feature") return "feature";
   if (prefix === "docs") return "docs";
-  // update: | chore:
   return "update";
 }
 
@@ -49,8 +50,13 @@ function isNewsType(value) {
   return value === "fix" || value === "feature" || value === "update" || value === "docs";
 }
 
+/** Ícone lógico (mapeado para SVG no frontend) — sem emoji. */
 function iconForType(type) {
-  return TYPE_ICONS[isNewsType(type) ? type : "update"] || TYPE_ICONS.update;
+  const t = isNewsType(type) ? type : "update";
+  if (t === "fix") return "fix";
+  if (t === "feature") return "feature";
+  if (t === "docs") return "docs";
+  return "update";
 }
 
 function sortByPublishedAtDesc(list) {
@@ -66,8 +72,8 @@ function shortTitle(message, version) {
     .trim()
     .split(/\r?\n/)[0]
     .trim();
-  if (!line) return `Publicação ${version}`;
-  return line.length > 90 ? `${line.slice(0, 87)}...` : line;
+  if (!line) return `Release ${version}`;
+  return line.length > 120 ? `${line.slice(0, 117)}...` : line;
 }
 
 function emptyFile() {
@@ -79,36 +85,89 @@ function isHtmlPayload(text) {
   return t.startsWith("<!doctype") || t.startsWith("<html");
 }
 
+/**
+ * Resolve a mensagem real do commit (ignora commits de publicação/release).
+ */
+function resolveRealCommitMessage(fallbackVersion) {
+  const fromEnv = String(process.env.DEPLOY_COMMIT_MESSAGE || "").trim();
+  if (fromEnv && !isIgnoredCommitMessage(fromEnv)) return fromEnv;
+
+  const subjects = run("git log -40 --format=%s")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const subject of subjects) {
+    if (!isIgnoredCommitMessage(subject)) return subject;
+  }
+
+  if (fromEnv) return fromEnv;
+  return `Release ${fallbackVersion || ""}`.trim();
+}
+
+function resolveCommitHash() {
+  const fromEnv = process.env.DEPLOY_SHA || process.env.GITHUB_SHA || "";
+  if (fromEnv && /^[0-9a-f]{7,40}$/i.test(fromEnv)) {
+    return fromEnv.slice(0, 7).toLowerCase();
+  }
+  const short = run("git rev-parse --short HEAD");
+  return short || undefined;
+}
+
+function messageForCommitHash(hash) {
+  if (!hash) return "";
+  const subject = run(`git log -1 --format=%s ${hash}`);
+  if (subject && !isIgnoredCommitMessage(subject)) return subject;
+  // Commit de publicação: usar o pai
+  const parent = run(`git log -1 --format=%s ${hash}^`);
+  if (parent && !isIgnoredCommitMessage(parent)) return parent;
+  const walk = run(`git log -15 --format=%s ${hash}`)
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter((s) => s && !isIgnoredCommitMessage(s));
+  return walk[0] || "";
+}
+
 function normalizeEntry(raw) {
   if (!raw || typeof raw !== "object") return null;
   const version = typeof raw.version === "string" ? raw.version.trim() : "";
   if (!version) return null;
-  const description =
+  let description =
     typeof raw.description === "string"
       ? raw.description
       : typeof raw.commitMessage === "string"
         ? raw.commitMessage
         : "";
+  const commit =
+    typeof raw.commit === "string" && raw.commit.trim() ? raw.commit.trim() : undefined;
+
+  // Corrigir entradas históricas com texto fixo de publicação
+  if (isIgnoredCommitMessage(description) && commit) {
+    const repaired = messageForCommitHash(commit);
+    if (repaired) description = repaired;
+  }
+  if (isIgnoredCommitMessage(description)) {
+    description = "";
+  }
+
   const publishedAt =
     typeof raw.publishedAt === "string" && raw.publishedAt
       ? raw.publishedAt
       : new Date().toISOString();
-  const type = isNewsType(raw.type) ? raw.type : inferType(description);
-  const title =
-    typeof raw.title === "string" && raw.title.trim()
-      ? raw.title.trim()
-      : shortTitle(description, version);
+  const type = isNewsType(raw.type)
+    ? raw.type
+    : inferType(description || String(raw.title || ""));
+  let title =
+    typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : shortTitle(description, version);
+  if (isIgnoredCommitMessage(title)) {
+    title = shortTitle(description, version);
+  }
+  if (!description) description = title;
   const author = typeof raw.author === "string" && raw.author.trim() ? raw.author.trim() : "pimo-pro";
-  const commit =
-    typeof raw.commit === "string" && raw.commit.trim() ? raw.commit.trim() : undefined;
-  const actionUrl =
-    typeof raw.actionUrl === "string" && raw.actionUrl.trim() ? raw.actionUrl.trim() : undefined;
-  const icon =
-    typeof raw.icon === "string" && raw.icon.trim() ? raw.icon.trim() : iconForType(type);
+  // Sem actionUrl — não exibir link GitHub Action
+  const icon = iconForType(type);
 
   const out = { version, title, description, publishedAt, type, author, icon };
   if (commit) out.commit = commit;
-  if (actionUrl) out.actionUrl = actionUrl;
   return out;
 }
 
@@ -162,15 +221,29 @@ function mergeNews(localList, remoteList) {
       byVersion.set(entry.version, entry);
       continue;
     }
-    // Prefer entry with richer metadata / newer publishedAt
     const prevT = Date.parse(prev.publishedAt) || 0;
     const nextT = Date.parse(entry.publishedAt) || 0;
     const prevScore =
-      (prev.commit ? 1 : 0) + (prev.actionUrl ? 1 : 0) + (prev.icon ? 1 : 0);
+      (prev.commit ? 1 : 0) +
+      (prev.description && !isIgnoredCommitMessage(prev.description) ? 2 : 0);
     const nextScore =
-      (entry.commit ? 1 : 0) + (entry.actionUrl ? 1 : 0) + (entry.icon ? 1 : 0);
+      (entry.commit ? 1 : 0) +
+      (entry.description && !isIgnoredCommitMessage(entry.description) ? 2 : 0);
     if (nextT > prevT || (nextT === prevT && nextScore >= prevScore)) {
-      byVersion.set(entry.version, { ...prev, ...entry, icon: entry.icon || prev.icon });
+      // Preferir mensagem real sobre texto de publicação
+      const merged = { ...prev, ...entry, icon: entry.icon || prev.icon };
+      if (
+        isIgnoredCommitMessage(merged.description) &&
+        prev.description &&
+        !isIgnoredCommitMessage(prev.description)
+      ) {
+        merged.description = prev.description;
+        merged.title = prev.title;
+        merged.type = prev.type;
+        merged.icon = prev.icon;
+      }
+      delete merged.actionUrl;
+      byVersion.set(entry.version, merged);
     }
   }
   return sortByPublishedAtDesc([...byVersion.values()]);
@@ -183,34 +256,9 @@ function writeNews(file) {
     news: sortByPublishedAtDesc(file.news).slice(0, MAX_ENTRIES),
   };
   const json = `${JSON.stringify(payload, null, 2)}\n`;
-  // Validate round-trip
   JSON.parse(json);
   fs.writeFileSync(NEWS_PATH, json, "utf8");
   return payload;
-}
-
-function resolveActionUrl() {
-  const runId =
-    process.env.GITHUB_RUN_ID ||
-    process.env.DEPLOY_GITHUB_RUN_ID ||
-    "";
-  if (runId && /^\d+$/.test(String(runId))) {
-    return `https://github.com/${GITHUB_REPO}/actions/runs/${runId}`;
-  }
-  // Fallback: run number alone is not enough for a valid Actions URL � omit.
-  return undefined;
-}
-
-function resolveCommitHash() {
-  const fromEnv =
-    process.env.DEPLOY_SHA ||
-    process.env.GITHUB_SHA ||
-    "";
-  if (fromEnv && /^[0-9a-f]{7,40}$/i.test(fromEnv)) {
-    return fromEnv.slice(0, 7).toLowerCase();
-  }
-  const short = run("git rev-parse --short HEAD");
-  return short || undefined;
 }
 
 function resolveMeta() {
@@ -228,11 +276,7 @@ function resolveMeta() {
     run("git describe --tags --exact-match HEAD 2>nul") ||
     "unknown";
 
-  const commitMessage =
-    process.env.DEPLOY_COMMIT_MESSAGE ||
-    run("git log -1 --format=%s") ||
-    `Publicação ${version}`;
-
+  const commitMessage = resolveRealCommitMessage(version);
   const author = process.env.DEPLOY_AUTHOR || run("git log -1 --format=%an") || "pimo-pro";
   const publishedAt = process.env.DEPLOY_PUBLISHED_AT || new Date().toISOString();
   const type = isNewsType(process.env.DEPLOY_NEWS_TYPE)
@@ -252,9 +296,6 @@ function resolveMeta() {
   const commit = resolveCommitHash();
   if (commit) entry.commit = commit;
 
-  const actionUrl = resolveActionUrl();
-  if (actionUrl) entry.actionUrl = actionUrl;
-
   return entry;
 }
 
@@ -265,20 +306,22 @@ async function main() {
 
   const entry = resolveMeta();
   if (!entry.version || entry.version === "unknown") {
-    console.error("appendWhatsNewNews: versão inválida � abort.");
+    console.error("appendWhatsNewNews: versão inválida — abort.");
     process.exit(1);
   }
 
-  // Replace same version if re-deployed, else add
   news = news.filter((n) => n.version !== entry.version);
   news.push(entry);
-  news = sortByPublishedAtDesc(news);
+  news = sortByPublishedAtDesc(news).map((n) => {
+    const copy = { ...n };
+    delete copy.actionUrl;
+    return copy;
+  });
 
   const written = writeNews({ news });
   console.log(
     `Whats New: ${entry.version} (${entry.type} ${entry.icon}) → ${NEWS_REL} — total ${written.news.length} registos` +
-      (entry.commit ? ` commit=${entry.commit}` : "") +
-      (entry.actionUrl ? ` action=${entry.actionUrl}` : "")
+      (entry.commit ? ` commit=${entry.commit}` : "")
   );
 }
 
@@ -292,3 +335,11 @@ if (isDirectRun) {
     process.exit(1);
   });
 }
+
+export {
+  inferType,
+  isIgnoredCommitMessage,
+  resolveRealCommitMessage,
+  normalizeEntry,
+  iconForType,
+};

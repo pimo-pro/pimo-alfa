@@ -77,9 +77,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Mensagem real: o append ignora "Publicação…" / chore(release) e percorre o histórico.
           MSG="$(git log -1 --format=%s 2>/dev/null || true)"
           AUTHOR="$(git log -1 --format=%an 2>/dev/null || true)"
-          export DEPLOY_COMMIT_MESSAGE="${MSG:-Publicação ${DEPLOY_VERSION}}"
+          export DEPLOY_COMMIT_MESSAGE="${MSG:-}"
           export DEPLOY_AUTHOR="${AUTHOR:-pimo-pro}"
           if [ -z "${DEPLOY_PUBLISHED_AT:-}" ]; then
             export DEPLOY_PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
