@@ -1,15 +1,26 @@
 {
-  "updatedAt": "2026-07-25T18:05:23.232Z",
+  "updatedAt": "2026-07-25T18:24:15.118Z",
   "news": [
     {
-      "version": "v6.0725.1905",
-      "title": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
-      "description": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
-      "publishedAt": "2026-07-25T18:05:23.131Z",
+      "version": "v6.0725.1924",
+      "title": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
+      "description": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
+      "publishedAt": "2026-07-25T18:24:15.019Z",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "🛠️",
-      "commit": "ef7e143"
+      "commit": "a1df219"
+    },
+    {
+      "version": "v6.0725.1905",
+      "title": "Publicação PIMO — Sistema Industrial",
+      "description": "Publicação PIMO — Sistema Industrial",
+      "publishedAt": "2026-07-25T19:07:30+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "⚙️",
+      "commit": "458b3ef",
+      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30169004117"
     },
     {
       "version": "v6.0725.1848",

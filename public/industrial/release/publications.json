@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T18:24:14.320Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
+      "version": "v6.0725.1924"
+    },
+    {
       "publishedAt": "2026-07-25T18:05:22.442Z",
       "author": "pimo-pro",
       "commitMessage": "fix(config,thumbs): servir /config/global e evitar POST thumb sem imagem.",
