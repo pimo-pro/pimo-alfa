@@ -145,7 +145,7 @@ function emitPackedWidths(
   stats: SegmentFillStats,
   modules: AutoFillPlacedModule[],
   finishes: AutoFillFinishSpec[],
-  cornerAtStart: boolean,
+  _cornerAtStart: boolean,
   roomWidthMm: number,
   roomDepthMm: number
 ): number {
