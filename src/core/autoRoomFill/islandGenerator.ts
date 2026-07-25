@@ -86,11 +86,11 @@ export function generateIslandModules(
     finishes.push({
       boxIndex: idx,
       wallId: ISLAND_LAYOUT_WALL_ID,
-      remateDir: i === ids.length - 1,
-      remateEsq: i === 0,
+      remateDir: false,
+      remateEsq: false,
       hematiDir: true,
       hematiEsq: true,
-      rodapeSimple: true,
+      rodapeSimple: false,
     });
 
     cursorX += w + (i < ids.length - 1 ? Math.min(80, MIN_MODULE_GAP_MM - w) : 0);

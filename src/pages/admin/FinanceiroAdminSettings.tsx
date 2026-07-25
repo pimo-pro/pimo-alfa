@@ -215,7 +215,8 @@ export default function FinanceiroAdminSettings() {
       <div style={cardStyle}>
         <h3 style={{ margin: 0, fontSize: 14 }}>Portes (transporte)</h3>
         <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-          Fórmula: max(mínimo, taxaBase +€/kg×peso +€/m³×volume + €/km×distância)
+          Fórmula: max(mínimo, taxaBase +€/kg×peso +€/m³×volume + €/km×distância). No projeto,
+          Portes = 0 até o utilizador marcar «Incluir portes».
         </p>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
           <input

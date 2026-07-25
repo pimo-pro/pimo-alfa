@@ -55,6 +55,11 @@ export type FinanceiroOverrides = {
   ivaPct?: number;
   /** Distância de transporte (km) para cálculo de portes. */
   distanciaKm?: number;
+  /**
+   * Escolha explícita de incluir portes/transporte no projeto.
+   * Sem isto (e sem override manual de custos.portes), Portes = 0.
+   */
+  incluirPortes?: boolean;
   /** Substitui o custo calculado quando definido (número ? 0). */
   custos?: FinanceiroCustosOverrides;
   notas?: string;
@@ -173,6 +178,10 @@ export function normalizeFinanceiroOverrides(raw: unknown): FinanceiroOverrides 
 
   if (typeof src.distanciaKm === "number" && Number.isFinite(src.distanciaKm) && src.distanciaKm >= 0) {
     out.distanciaKm = src.distanciaKm;
+  }
+
+  if (typeof src.incluirPortes === "boolean") {
+    out.incluirPortes = src.incluirPortes;
   }
 
   if (src.custos && typeof src.custos === "object") {

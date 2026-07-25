@@ -13,16 +13,16 @@ describe("centralPricingConfig", () => {
     setCentralPricingCacheForTests(null);
   });
 
-  it("builtin espelha defaults day-1", () => {
+  it("builtin mercado: portes off por defeito (ativoSomenteComEscolha)", () => {
     const p = getBuiltinCentralPricing();
-    expect(p.material?.precoChapaMdf19EurM2).toBe(35);
-    expect(p.material?.fallbackEurM2).toBe(25);
+    expect(p.material?.precoChapaMdf19EurM2).toBe(31);
+    expect(p.material?.fallbackEurM2).toBe(20);
     expect(p.ivaPct).toBe(23);
-    expect(p.financeiroAdmin?.adm?.valor).toBe(10);
-    expect(p.financeiroAdmin?.portes?.minimo).toBe(35);
+    expect(p.portes?.ativoSomenteComEscolha).toBe(true);
+    expect(p.financeiroAdmin?.portes?.enabled).toBe(false);
   });
 
-  it("normalize aplica orcamentos e financeiroAdmin", () => {
+  it("normalize aplica orcamentos e financeiroAdmin legados", () => {
     const n = normalizeCentralPricing({
       version: 1,
       orcamentos: {

@@ -69,7 +69,8 @@ export function defaultFinanceiroAdminSettings(): FinanceiroAdminSettings {
     adm: { enabled: true, mode: "percentagem", valor: 10 },
     montagem: { enabled: true, mode: "fixo_por_caixa", valor: 50 },
     portes: {
-      enabled: true,
+      // Tarifas de fábrica; cobrança no projeto só com escolha explícita (incluirPortes).
+      enabled: false,
       taxaBase: 25,
       porKg: 0.15,
       porM3: 40,

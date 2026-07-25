@@ -116,7 +116,7 @@ function appendHoodForCooktop(
     finishes.push({
       boxIndex: modules.length - 1,
       wallId: run.wallId,
-      remateDir: true,
+      remateDir: false,
       hematiCima: true,
     });
 

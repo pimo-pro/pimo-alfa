@@ -272,6 +272,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
       valor: num(mao.montagem_caixa_m2, 17),
     },
     portes: {
+      // Tarifas disponùveis; cobranùa no projeto sù com incluirPortes (ativoSomenteComEscolha).
       enabled: !portesSoComEscolha,
       taxaBase: num(portes.local_caixa, 12),
       porKg: num(portes.local_kg, 3.5),

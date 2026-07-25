@@ -54,6 +54,11 @@ export function migrateRemateV1ToRematePiece(v1: ProjectRemate): RematePiece {
   const placementMode: RematePlacementMode = v1.placementFree ? "FREE" : "SNAPPED";
   const productType = mapV1ToProductType(v1);
   const mountSlot = mapV1ToMountSlot(v1);
+  // Não inventar dimensões (ex.: 19×720) — sem dims válidas, peça fica fora da cutlist/custo.
+  const width = Number(v1.dimensions?.widthMm) || 0;
+  const height = Number(v1.dimensions?.heightMm) || 0;
+  const depth = Number(v1.dimensions?.depthMm) || 0;
+  const hasValidDims = width > 0 && height > 0;
   return {
     id: v1.id,
     parentBoxId: v1.parentBoxId,
@@ -62,9 +67,9 @@ export function migrateRemateV1ToRematePiece(v1: ProjectRemate): RematePiece {
     productOptions: normalizeProductOptions(productType, {}),
     tipo: deriveLegacyTipo(productType, mountSlot),
     placementMode,
-    width: Math.max(1, v1.dimensions?.widthMm ?? 19),
-    height: Math.max(1, v1.dimensions?.heightMm ?? 720),
-    depth: Math.max(1, v1.dimensions?.depthMm ?? 100),
+    width,
+    height,
+    depth: depth > 0 ? depth : 0,
     materialPresetId: v1.materialId,
     position: {
       xMm: v1.transform?.xMm ?? 0,
@@ -81,6 +86,7 @@ export function migrateRemateV1ToRematePiece(v1: ProjectRemate): RematePiece {
     parentGroupId: v1.parentGroupId,
     partIndex: v1.partIndex,
     isInitialPlacement: false,
+    visible: hasValidDims ? undefined : false,
     transform: v1.transform
       ? {
           xMm: v1.transform.xMm,

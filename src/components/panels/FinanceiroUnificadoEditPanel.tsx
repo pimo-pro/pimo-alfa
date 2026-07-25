@@ -5,6 +5,7 @@ import Button from "../ui/Button";
 import {
   FINANCEIRO_CUSTO_KEYS,
   FINANCEIRO_IVA_DEFAULT_PCT,
+  computeFinanceiroAdminCustos,
   type FinanceiroCustoKey,
   type FinanceiroOverrides,
   type FinanceiroUnificadoSnapshot,
@@ -49,6 +50,7 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
 
   const [ivaPct, setIvaPct] = useState(String(snap.ivaPct ?? FINANCEIRO_IVA_DEFAULT_PCT));
   const [distanciaKm, setDistanciaKm] = useState(String(snap.distanciaKm ?? 0));
+  const [incluirPortes, setIncluirPortes] = useState(snap.overrides.incluirPortes === true);
   const [custos, setCustos] = useState<Record<FinanceiroCustoKey, string>>(() => {
     const init = {} as Record<FinanceiroCustoKey, string>;
     for (const key of FINANCEIRO_CUSTO_KEYS) {
@@ -60,11 +62,6 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
   const [notas, setNotas] = useState(snap.overrides.notas ?? "");
 
   const preview = useMemo(() => {
-    const effective = {} as Record<FinanceiroCustoKey, number>;
-    for (const key of FINANCEIRO_CUSTO_KEYS) {
-      const parsed = parseOptionalNumber(custos[key]);
-      effective[key] = typeof parsed === "number" ? parsed : snap.custosComputed[key];
-    }
     const materialKeys: FinanceiroCustoKey[] = [
       "paineis",
       "portas",
@@ -80,6 +77,40 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
       "logistica",
       "operacoesAvancadas",
     ];
+    const effective = {} as Record<FinanceiroCustoKey, number>;
+    for (const key of materialKeys) {
+      const parsed = parseOptionalNumber(custos[key]);
+      effective[key] = typeof parsed === "number" ? parsed : snap.custosComputed[key];
+    }
+    for (const key of ["adm", "montagem"] as const) {
+      const parsed = parseOptionalNumber(custos[key]);
+      effective[key] = typeof parsed === "number" ? parsed : snap.custosComputed[key];
+    }
+
+    const portesParsed = parseOptionalNumber(custos.portes);
+    if (typeof portesParsed === "number") {
+      effective.portes = portesParsed;
+    } else if (!incluirPortes) {
+      effective.portes = 0;
+    } else {
+      const dist =
+        parseOptionalNumber(distanciaKm) ??
+        (Number.isFinite(snap.distanciaKm) ? snap.distanciaKm : 0);
+      const subtotalPreview = materialKeys.reduce((s, k) => s + effective[k], 0);
+      const calc = computeFinanceiroAdminCustos({
+        subtotalMateriais: subtotalPreview,
+        caixas: snap.caixas,
+        pesoTotalKg: snap.pesoTotalKg,
+        volumeMontadoM3: snap.areaTotalMontadoM3,
+        distanciaKm: dist,
+        settings: {
+          ...snap.adminSettings,
+          portes: { ...snap.adminSettings.portes, enabled: true },
+        },
+      });
+      effective.portes = calc.portes;
+    }
+
     const subtotal = materialKeys.reduce((s, k) => s + effective[k], 0);
     const ivaN = Number(String(ivaPct).replace(",", "."));
     const ivaPctN = Number.isFinite(ivaN) && ivaN >= 0 ? ivaN : FINANCEIRO_IVA_DEFAULT_PCT;
@@ -87,11 +118,12 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
     const total =
       subtotal + effective.adm + effective.montagem + effective.portes + iva;
     return { subtotal, ivaPctN, iva, total, effective };
-  }, [custos, ivaPct, snap.custosComputed]);
+  }, [custos, ivaPct, incluirPortes, distanciaKm, snap]);
 
   const handleSave = () => {
     const next: FinanceiroOverrides = {
       ivaPct: preview.ivaPctN,
+      incluirPortes,
     };
     const dist = parseOptionalNumber(distanciaKm);
     if (typeof dist === "number") next.distanciaKm = dist;
@@ -114,6 +146,7 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
   const handleClearOverrides = () => {
     setIvaPct(String(FINANCEIRO_IVA_DEFAULT_PCT));
     setDistanciaKm("0");
+    setIncluirPortes(false);
     setCustos(() => {
       const init = {} as Record<FinanceiroCustoKey, string>;
       for (const key of FINANCEIRO_CUSTO_KEYS) init[key] = "";
@@ -137,7 +170,8 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
     <Panel title="Editar Financeiro Unificado">
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0 }}>
         Deixe o campo de custo vazio para usar o valor calculado. IVA aplica-se sobre o subtotal de
-        materiais. ADM / montagem / portes entram no total (regras em Admin ? Financeiro).
+        materiais. ADM / montagem / portes entram no total (regras em Admin ? Financeiro). Portes
+        só são cobrados com escolha explícita abaixo.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -160,10 +194,28 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
             step={0.1}
             value={distanciaKm}
             onChange={(e) => setDistanciaKm(e.target.value)}
+            disabled={!incluirPortes}
             style={{ display: "block", width: "100%", marginTop: 4 }}
           />
         </label>
       </div>
+
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 12,
+          marginBottom: 16,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={incluirPortes}
+          onChange={(e) => setIncluirPortes(e.target.checked)}
+        />
+        Incluir portes (transporte) — sem isto, Portes = 0€
+      </label>
 
       <div style={{ marginBottom: 12 }}>
         <div style={{ ...fieldStyle, fontWeight: 700, color: "var(--text-muted)" }}>
@@ -174,7 +226,11 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
         {CUSTO_FIELDS.map(({ key, label }) => (
           <div key={key} style={fieldStyle}>
             <span>{label}</span>
-            <span>{formatCurrency(snap.custosComputed[key])}</span>
+            <span>
+              {formatCurrency(
+                key === "portes" ? preview.effective.portes : snap.custosComputed[key]
+              )}
+            </span>
             <input
               type="number"
               min={0}

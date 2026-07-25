@@ -17,15 +17,17 @@ function buildBoxNameLookup(boxes: readonly BoxModule[]): Record<string, string>
   return out;
 }
 
+/** Inclui só rodapés visíveis com dimensões reais (> 0). Não inventar 1×1 mm. */
+function isRodapeIncludedInCutlist(rodape: ProjectRodape): boolean {
+  if (rodape.visible === false) return false;
+  const L = Number(rodape.dimensions?.widthMm ?? rodape.autoLengthMm) || 0;
+  const A = Number(rodape.heightMm ?? rodape.dimensions?.heightMm) || 0;
+  return L > 0 && A > 0;
+}
+
 function toCutDimensions(rodape: ProjectRodape): CutListItem["dimensoes"] {
-  const largura = Math.max(
-    1,
-    Number(rodape.dimensions?.widthMm ?? rodape.autoLengthMm ?? 0)
-  );
-  const altura = Math.max(
-    1,
-    Number(rodape.heightMm ?? rodape.dimensions?.heightMm ?? 0)
-  );
+  const largura = Number(rodape.dimensions?.widthMm ?? rodape.autoLengthMm) || 0;
+  const altura = Number(rodape.heightMm ?? rodape.dimensions?.heightMm) || 0;
   const profundidade = Math.max(
     1,
     Number(rodape.thicknessMm ?? rodape.dimensions?.depthMm ?? 19)
@@ -37,11 +39,11 @@ export function buildRodapeCutlistItems(
   rodapes: readonly ProjectRodape[],
   boxes: readonly BoxModule[]
 ): CutListItemComPreco[] {
-  const visible = rodapes.filter((r) => r.visible !== false);
+  const included = rodapes.filter(isRodapeIncludedInCutlist);
   const boxNameById = buildBoxNameLookup(boxes);
-  const industrialLabels = buildRodapeIndustrialLabelsForRodapes(visible, boxNameById);
+  const industrialLabels = buildRodapeIndustrialLabelsForRodapes(included, boxNameById);
 
-  const items: CutListItem[] = visible.map((rodape) => {
+  const items: CutListItem[] = included.map((rodape) => {
     const material = getMaterialByIdOrLabel(rodape.materialId);
     const materialLabel = material?.label ?? rodape.materialId;
     const boxId = rodape.parentBoxId ?? "";

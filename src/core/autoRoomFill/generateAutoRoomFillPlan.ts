@@ -177,12 +177,12 @@ function emitPackedWidths(
         ...pos,
       },
       {
-        remateDir: true,
-        remateEsq: i === 0 && !cornerAtStart,
+        remateDir: false,
+        remateEsq: false,
         hematiDir: tier === "lower",
         hematiEsq: tier === "lower",
         hematiCima: tier === "upper",
-        rodapeSimple: tier === "lower",
+        rodapeSimple: false,
       }
     );
     cursor += width;
@@ -209,7 +209,7 @@ function emitPackedWidths(
         fillerWidthMm: fillerW,
         ...pos,
       },
-      { remateDir: true, rodapeSimple: tier === "lower" }
+      { remateDir: false, rodapeSimple: false }
     );
     stats.wastedMm += Math.max(0, packed.fillerMm - fillerW);
     cursor += fillerW;
@@ -270,11 +270,11 @@ function fillSegmentOnWall(
       stats,
       { catalogId: cornerId, role: "corner", ...pos },
       {
-        remateL: true,
+        remateL: false,
         hematiDir: !isUpper,
         hematiEsq: !isUpper,
         hematiCima: isUpper,
-        rodapeSimple: !isUpper,
+        rodapeSimple: false,
       }
     );
     cursor += w;
@@ -327,11 +327,11 @@ function fillSegmentOnWall(
         ...pos,
       },
       {
-        remateDir: true,
+        remateDir: false,
         hematiDir: !isUpper,
         hematiEsq: !isUpper,
         hematiCima: isUpper,
-        rodapeSimple: !isUpper,
+        rodapeSimple: false,
       }
     );
     cursor = special.alongMm + w;
@@ -508,12 +508,11 @@ export function generateAutoRoomFillPlan(
         allFinishes.push({
           boxIndex: allModules.length - 1,
           wallId: run.wallId,
-          remateDir: true,
+          remateDir: false,
           hematiCima: true,
         });
         wallStats.special += 1;
         wallStats.specials.push("hood");
-        wallStats.remate += 1;
         wallStats.hemati += 1;
       }
     }

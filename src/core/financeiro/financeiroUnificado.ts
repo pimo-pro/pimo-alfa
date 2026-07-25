@@ -304,18 +304,35 @@ export function computeFinanceiroUnificado(
       ? overrides.distanciaKm
       : adminSettings.distanciaKmDefault;
 
+  // Portes = 0 sem escolha explícita (incluirPortes ou override manual de custos.portes).
+  const portesOverride = overrides.custos?.portes;
+  const hasManualPortesOverride =
+    typeof portesOverride === "number" && Number.isFinite(portesOverride) && portesOverride >= 0;
+  const hasExplicitPortes = overrides.incluirPortes === true || hasManualPortesOverride;
+
+  const adminSettingsForCalc: FinanceiroAdminSettings = hasExplicitPortes
+    ? {
+        ...adminSettings,
+        // Com escolha explícita, aplicar tarifas mesmo se o default admin estiver off.
+        portes: { ...adminSettings.portes, enabled: true },
+      }
+    : {
+        ...adminSettings,
+        portes: { ...adminSettings.portes, enabled: false },
+      };
+
   const adminCalc = computeFinanceiroAdminCustos({
     subtotalMateriais: subtotal,
     caixas: boxes.length,
     pesoTotalKg,
     volumeMontadoM3: areaTotalMontadoM3,
     distanciaKm,
-    settings: adminSettings,
+    settings: adminSettingsForCalc,
   });
 
   custosComputed.adm = adminCalc.adm;
   custosComputed.montagem = adminCalc.montagem;
-  custosComputed.portes = adminCalc.portes;
+  custosComputed.portes = hasExplicitPortes ? adminCalc.portes : 0;
 
   for (const key of ["adm", "montagem", "portes"] as const) {
     const ov = overrides.custos?.[key];
@@ -405,13 +422,18 @@ export function financeiroMetricRows(snap: FinanceiroUnificadoSnapshot): Array<[
 export function financeiroCustoRows(
   snap: FinanceiroUnificadoSnapshot
 ): Array<{ label: string; valor: number | null; emBreve?: boolean; total?: boolean }> {
-  return [
+  const rows: Array<{ label: string; valor: number | null; emBreve?: boolean; total?: boolean }> = [
     { label: "Painéis", valor: snap.custosEffective.paineis },
     { label: "Portas", valor: snap.custosEffective.portas },
     { label: "Gavetas", valor: snap.custosEffective.gavetas },
     { label: "Ferragens", valor: snap.custosEffective.ferragens },
     { label: "Orla", valor: snap.custosEffective.orla },
-    { label: "Remates / Rodapes", valor: snap.custosEffective.remates },
+  ];
+  // Remates só aparecem com pelo menos uma peça remate/rodapé com custo > 0.
+  if ((snap.custosEffective.remates ?? 0) > 0) {
+    rows.push({ label: "Remates / Rodapes", valor: snap.custosEffective.remates });
+  }
+  rows.push(
     { label: "Operacoes (CNC/Drill)", valor: snap.custosEffective.operacoes },
     { label: "Desperdicio", valor: snap.custosEffective.desperdicio },
     { label: "Serragem", valor: snap.custosEffective.serragem },
@@ -423,6 +445,7 @@ export function financeiroCustoRows(
     { label: "Montagem", valor: snap.custosEffective.montagem },
     { label: "Portes", valor: snap.custosEffective.portes },
     { label: `IVA (${snap.ivaPct}%)`, valor: snap.ivaValor },
-    { label: "Total projeto", valor: snap.totalProjeto, total: true },
-  ];
+    { label: "Total projeto", valor: snap.totalProjeto, total: true }
+  );
+  return rows;
 }
