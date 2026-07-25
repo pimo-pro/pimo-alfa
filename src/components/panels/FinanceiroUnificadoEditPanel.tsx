@@ -23,7 +23,7 @@ const CUSTO_FIELDS: { key: FinanceiroCustoKey; label: string }[] = [
   { key: "gavetas", label: "Gavetas" },
   { key: "ferragens", label: "Ferragens" },
   { key: "orla", label: "Orla" },
-  { key: "remates", label: "Remates" },
+  { key: "remates", label: "Remates / Rodapes" },
   { key: "operacoes", label: "Operações (CNC/Drill)" },
   { key: "desperdicio", label: "Desperdício" },
   { key: "serragem", label: "Serragem" },

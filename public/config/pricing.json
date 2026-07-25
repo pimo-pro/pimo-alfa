@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-25T15:30:00.000Z",
+  "notes": {
+    "precoRemates": "Sem tarifa fixa — Remates/Rodapés = material peç na cutlist (área × custo_m2). Não inventar fallback €.",
+    "precoOrla": "Presets de orla (precoPorMetro) — fora deste ficheiro até fase orla SSOT.",
+    "precoFerragens": "Via A (regras) por defeito; Via B se orcamentos.ferragens.enableUnificacao."
+  },
+  "material": {
+    "precoChapaMdf19EurM2": 35,
+    "fallbackEurM2": 25,
+    "densidadePadraoKgM3": 750
+  },
+  "ivaPct": 23,
+  "orcamentos": {
+    "perfuracoes": {
+      "drillEurPorFuro": 0,
+      "nestingEurPorOperacao": 0
+    },
+    "custosIndustriais": {
+      "desperdicioEurPorM2": 0,
+      "serragemEurPorM2": 0,
+      "custoChapaReal": 0,
+      "custoOperacoesEspeciais": 0,
+      "valorHoraMaquina": 0,
+      "custoLogisticaPorKg": 0,
+      "custoMontagemPorPeca": 0,
+      "materialCostMode": "por_peca",
+      "enableDesperdicio": false,
+      "enableSerragem": false,
+      "enableLogistica": false,
+      "enableMaoDeObra": false
+    },
+    "operacoesAvancadas": {
+      "precoForo5mm": 0,
+      "precoForoCavilha10x13": 0,
+      "precoForoCavilha10x30": 0,
+      "precoForoCalcoGrupo": 0,
+      "precoForoDobradicaGrupo": 0,
+      "precoRasgoGaveta": 0,
+      "precoCorteManualPorMetro": 0,
+      "precoMeQuadrilha": 0
+    },
+    "ferragens": {
+      "enableUnificacao": false
+    }
+  },
+  "financeiroAdmin": {
+    "adm": { "enabled": true, "mode": "percentagem", "valor": 10 },
+    "montagem": { "enabled": true, "mode": "fixo_por_caixa", "valor": 50 },
+    "portes": {
+      "enabled": true,
+      "taxaBase": 25,
+      "porKg": 0.15,
+      "porM3": 40,
+      "porKm": 0.8,
+      "minimo": 35
+    },
+    "distanciaKmDefault": 0
+  },
+  "aliases": {
+    "precoChapa": "material.precoChapaMdf19EurM2 | orcamentos.custosIndustriais.custoChapaReal",
+    "precoCNC": "orcamentos.perfuracoes.nestingEurPorOperacao",
+    "precoDrill": "orcamentos.perfuracoes.drillEurPorFuro",
+    "precoMontagem": "financeiroAdmin.montagem.valor",
+    "precoADM": "financeiroAdmin.adm.valor",
+    "precoPortes": "financeiroAdmin.portes.*",
+    "precoDesperdicio": "orcamentos.custosIndustriais.desperdicioEurPorM2",
+    "precoSerragem": "orcamentos.custosIndustriais.serragemEurPorM2",
+    "precoMaoDeObra": "orcamentos.custosIndustriais.valorHoraMaquina",
+    "precoOpsAvancadas": "orcamentos.operacoesAvancadas.*",
+    "precoRemates": "cutlist material peç (sem tarifa fixa)"
+  }
+}

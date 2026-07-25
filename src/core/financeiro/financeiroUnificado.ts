@@ -142,6 +142,12 @@ function resolveAdminSettings(project: FinanceiroUnificadoProjectSlice): Finance
     return normalizeFinanceiroAdminSettings(project.financeiroAdminSettings);
   }
   try {
+    const fromSystem = getSettings().financeiroAdmin;
+    if (fromSystem) return normalizeFinanceiroAdminSettings(fromSystem);
+  } catch {
+    /* ignore */
+  }
+  try {
     return loadGlobalFinanceiroAdminSettings();
   } catch {
     return defaultFinanceiroAdminSettings();
@@ -324,7 +330,15 @@ export function computeFinanceiroUnificado(
   const ivaPct =
     typeof overrides.ivaPct === "number" && Number.isFinite(overrides.ivaPct)
       ? overrides.ivaPct
-      : FINANCEIRO_IVA_DEFAULT_PCT;
+      : (() => {
+          try {
+            const fromSettings = getSettings().ivaPctDefault;
+            if (typeof fromSettings === "number" && Number.isFinite(fromSettings)) return fromSettings;
+          } catch {
+            /* ignore */
+          }
+          return FINANCEIRO_IVA_DEFAULT_PCT;
+        })();
   // IVA sobre subtotal de materiais (antes de ADM/montagem/portes) — P3.5 confirmado
   const ivaValor = subtotal * (ivaPct / 100);
   const subtotalComAdmin =
@@ -397,7 +411,7 @@ export function financeiroCustoRows(
     { label: "Gavetas", valor: snap.custosEffective.gavetas },
     { label: "Ferragens", valor: snap.custosEffective.ferragens },
     { label: "Orla", valor: snap.custosEffective.orla },
-    { label: "Remates", valor: snap.custosEffective.remates },
+    { label: "Remates / Rodapes", valor: snap.custosEffective.remates },
     { label: "Operacoes (CNC/Drill)", valor: snap.custosEffective.operacoes },
     { label: "Desperdicio", valor: snap.custosEffective.desperdicio },
     { label: "Serragem", valor: snap.custosEffective.serragem },

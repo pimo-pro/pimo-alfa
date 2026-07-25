@@ -13,8 +13,8 @@ import {
 import Button from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
 import { useProject } from "../../context/useProject";
+import { useSettings } from "../../context/SettingsContext";
 import {
-  defaultFinanceiroAdminSettings,
   loadGlobalFinanceiroAdminSettings,
   normalizeFinanceiroAdminSettings,
   saveGlobalFinanceiroAdminSettings,
@@ -22,6 +22,8 @@ import {
   type FinanceiroMontagemMode,
   type FinanceiroValorMode,
 } from "../../core/financeiro";
+import { financeiroAdminDefaultsFromCentral } from "../../core/pricing/centralPricingConfig";
+import { getSettings } from "../../core/settings/settingsService";
 
 const cardStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,0.1)",
@@ -41,16 +43,21 @@ const grid2: React.CSSProperties = {
 export default function FinanceiroAdminSettings() {
   const { showToast } = useToast();
   const { project, actions } = useProject();
+  const { updateSettings } = useSettings();
   const [draft, setDraft] = useState<FinanceiroAdminSettings>(() =>
     normalizeFinanceiroAdminSettings(
-      project?.financeiroAdminSettings ?? loadGlobalFinanceiroAdminSettings()
+      project?.financeiroAdminSettings ??
+        getSettings().financeiroAdmin ??
+        loadGlobalFinanceiroAdminSettings()
     )
   );
 
   useEffect(() => {
     setDraft(
       normalizeFinanceiroAdminSettings(
-        project?.financeiroAdminSettings ?? loadGlobalFinanceiroAdminSettings()
+        project?.financeiroAdminSettings ??
+          getSettings().financeiroAdmin ??
+          loadGlobalFinanceiroAdminSettings()
       )
     );
   }, [project?.financeiroAdminSettings]);
@@ -58,17 +65,23 @@ export default function FinanceiroAdminSettings() {
   const handleSave = () => {
     const next = normalizeFinanceiroAdminSettings(draft);
     saveGlobalFinanceiroAdminSettings(next);
+    const result = updateSettings({ financeiroAdmin: next });
     try {
       actions.setFinanceiroAdminSettings(next);
     } catch {
       /* projeto pode não estar disponível em alguns contextos */
     }
     setDraft(next);
-    showToast("Configurações financeiras ADMIN guardadas.", "info");
+    showToast(
+      result.success
+        ? "Configurações financeiras ADMIN guardadas (sync remoto se autenticado)."
+        : result.message,
+      result.success ? "info" : "error"
+    );
   };
 
   const handleReset = () => {
-    const next = defaultFinanceiroAdminSettings();
+    const next = financeiroAdminDefaultsFromCentral();
     setDraft(next);
   };
 

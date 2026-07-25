@@ -105,6 +105,11 @@ export type RematePiece = {
   lockWoodGrain?: boolean;
   /** true = medidas editadas manualmente; nunca sobrescrever por recalc/resnap/migração. */
   userDimensionsLocked?: boolean;
+  /**
+   * false = oculto na UI e excluído da cutlist/custos (como rodapes.visible).
+   * undefined / true = incluído.
+   */
+  visible?: boolean;
 };
 
 export type CreateRematePieceInput = {
@@ -148,6 +153,7 @@ export type UpdateRematePieceInput = Partial<
     | "userDimensionsLocked"
     | "isInitialPlacement"
     | "transform"
+    | "visible"
   >
 >;
 

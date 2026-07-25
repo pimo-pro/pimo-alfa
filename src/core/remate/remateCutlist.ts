@@ -30,14 +30,23 @@ function buildBoxNameLookup(boxes: readonly BoxModule[]): Record<string, string>
   return out;
 }
 
+function isRemateIncludedInCutlist(remate: RematePiece): boolean {
+  if (remate.visible === false) return false;
+  // Usar width/height brutos — resolveRemateSheetCutDimensions faz Math.max(1,…) e mascararia 0
+  const L = Number(remate.width) || 0;
+  const A = Number(remate.height) || 0;
+  return L > 0 && A > 0;
+}
+
 export function buildRemateCutlistItems(
   remates: readonly RematePiece[],
   boxes: readonly BoxModule[]
 ): CutListItemComPreco[] {
+  const included = remates.filter(isRemateIncludedInCutlist);
   const boxNameById = buildBoxNameLookup(boxes);
-  const industrialLabels = buildRemateIndustrialLabelsForRemates(remates, boxNameById);
+  const industrialLabels = buildRemateIndustrialLabelsForRemates(included, boxNameById);
 
-  const items: CutListItem[] = remates.map((remate) => {
+  const items: CutListItem[] = included.map((remate) => {
     const material = getMaterialByIdOrLabel(remate.materialPresetId);
     const materialLabel = material?.label ?? remate.materialPresetId;
     const boxId = remate.parentBoxId ?? "";
@@ -51,13 +60,14 @@ export function buildRemateCutlistItems(
       lockWoodGrain: remate.lockWoodGrain,
       materialId,
     });
+    const sheet = resolveRemateSheetCutDimensions(remate);
 
     return {
       id: remate.id,
       nome,
       quantidade: 1,
       dimensoes: toCutDimensions(remate),
-      espessura: resolveRemateSheetCutDimensions(remate).espessuraMm,
+      espessura: sheet.espessuraMm,
       material: materialLabel,
       tipo: "remate",
       sourceType: "parametric",

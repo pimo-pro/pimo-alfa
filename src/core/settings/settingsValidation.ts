@@ -7,6 +7,8 @@ import { sanitizeOrlaRulesInput } from "../../3d/viewer-engine/orla/orlaVisualRu
 import { SETTINGS_SCHEMA_VERSION, settingsDefaults, type SettingsSchema } from "./settingsSchema";
 import { clamp, deepMergeSettings, normalizeDepths, toNumber, type ValidationResult } from "./settingsMerge";
 import { normalizeOrcamentosSettings } from "../orcamentos";
+import { normalizeFinanceiroAdminSettings } from "../financeiro/financeiroAdminRules";
+import { FINANCEIRO_IVA_DEFAULT_PCT } from "../financeiro/financeiroUnificadoTypes";
 
 const DRAWER_SLIDE_TYPES = [
   "Blum Tandem",
@@ -82,6 +84,14 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       valorHoraMaquina: clamp(toNumber(merged.precos.valorHoraMaquina, settingsDefaults.precos.valorHoraMaquina), 0, 10000),
     },
     orcamentos: normalizeOrcamentosSettings(merged.orcamentos),
+    financeiroAdmin: normalizeFinanceiroAdminSettings(
+      (merged as SettingsSchema).financeiroAdmin ?? settingsDefaults.financeiroAdmin
+    ),
+    ivaPctDefault: clamp(
+      toNumber((merged as SettingsSchema).ivaPctDefault, settingsDefaults.ivaPctDefault ?? FINANCEIRO_IVA_DEFAULT_PCT),
+      0,
+      100
+    ),
     materiais: {
       categoriaPadraoId: typeof merged.materiais.categoriaPadraoId === "string" && merged.materiais.categoriaPadraoId.trim()
         ? merged.materiais.categoriaPadraoId.trim()

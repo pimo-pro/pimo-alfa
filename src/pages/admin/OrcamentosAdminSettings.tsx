@@ -13,9 +13,8 @@ import {
 import Button from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
 import { useSettings } from "../../context/SettingsContext";
-import { getSettings, saveSettings } from "../../core/settings/settingsService";
+import { getSettings } from "../../core/settings/settingsService";
 import {
-  defaultOrcamentosSettings,
   normalizeOrcamentosSettings,
   type OrcamentosMargemModo,
   type OrcamentosMaterialCostMode,
@@ -79,7 +78,7 @@ function NumberInput({
 
 export default function OrcamentosAdminSettings() {
   const { showToast } = useToast();
-  const { refreshSettings } = useSettings();
+  const { refreshSettings, updateSettings } = useSettings();
   const [draft, setDraft] = useState<OrcamentosSettings>(() =>
     normalizeOrcamentosSettings(getSettings().orcamentos)
   );
@@ -90,20 +89,22 @@ export default function OrcamentosAdminSettings() {
 
   const handleSave = () => {
     const next = normalizeOrcamentosSettings(draft);
-    const current = getSettings();
-    const result = saveSettings({ ...current, orcamentos: next });
+    const result = updateSettings({ orcamentos: next });
     setDraft(result.settings.orcamentos);
     refreshSettings();
     showToast(
       result.success
-        ? "Orcamentos guardados. Unificacao ferragens so afecta totais se a flag estiver activa."
+        ? "Orcamentos guardados (sync remoto se autenticado). Unificacao ferragens so afecta totais se a flag estiver activa."
         : result.message,
       result.success ? "info" : "error"
     );
   };
 
   const handleReset = () => {
-    setDraft(defaultOrcamentosSettings());
+    // Preferir SSOT /config/pricing.json
+    void import("../../core/pricing/centralPricingConfig").then(({ orcamentosDefaultsFromCentral }) => {
+      setDraft(orcamentosDefaultsFromCentral());
+    });
   };
 
   return (

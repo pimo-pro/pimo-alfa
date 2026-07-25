@@ -40,6 +40,32 @@ export function deepMergeSettings(
       base.orcamentos,
       isObject(patch.orcamentos) ? patch.orcamentos : {}
     ),
+    financeiroAdmin: {
+      ...base.financeiroAdmin,
+      ...(isObject(patch.financeiroAdmin) ? patch.financeiroAdmin : {}),
+      adm: {
+        ...base.financeiroAdmin?.adm,
+        ...(isObject((patch.financeiroAdmin as Record<string, unknown> | undefined)?.adm)
+          ? ((patch.financeiroAdmin as Record<string, unknown>).adm as object)
+          : {}),
+      },
+      montagem: {
+        ...base.financeiroAdmin?.montagem,
+        ...(isObject((patch.financeiroAdmin as Record<string, unknown> | undefined)?.montagem)
+          ? ((patch.financeiroAdmin as Record<string, unknown>).montagem as object)
+          : {}),
+      },
+      portes: {
+        ...base.financeiroAdmin?.portes,
+        ...(isObject((patch.financeiroAdmin as Record<string, unknown> | undefined)?.portes)
+          ? ((patch.financeiroAdmin as Record<string, unknown>).portes as object)
+          : {}),
+      },
+    } as SettingsSchema["financeiroAdmin"],
+    ivaPctDefault:
+      typeof (patch as Partial<SettingsSchema>).ivaPctDefault === "number"
+        ? (patch as Partial<SettingsSchema>).ivaPctDefault!
+        : base.ivaPctDefault,
     materiais: { ...base.materiais, ...(isObject(patch.materiais) ? patch.materiais : {}) },
     cnc: { ...base.cnc, ...(isObject(patch.cnc) ? patch.cnc : {}) },
     nesting: { ...base.nesting, ...(isObject(patch.nesting) ? patch.nesting : {}) },

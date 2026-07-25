@@ -1,5 +1,6 @@
 import type { CutListItem, CutListItemComPreco } from "../types";
 import { listOfficialMaterials, resolveMaterial } from "../materials/materials.api";
+import { materialFallbackEurM2FromCentral } from "./centralPricingConfig";
 
 // Interface para preço de material
 interface PrecoMaterial {
@@ -39,8 +40,8 @@ export function getPrecoPorMaterial(material: string, espessura: number): number
     return precoPadrao.precoPorM2 * fatorEspessura;
   }
 
-  // Preço padrão se material não encontrado
-  return 25.0;
+  // Preço padrão se material não encontrado — SSOT /config/pricing.json
+  return materialFallbackEurM2FromCentral();
 }
 
 /**

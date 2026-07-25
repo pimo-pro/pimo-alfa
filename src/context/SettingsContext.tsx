@@ -19,6 +19,17 @@ import {
   type SettingsSchema,
 } from "../core/settings/settingsService";
 import { mergeOrcamentosSettings } from "../core/orcamentos";
+import {
+  loadCentralPricing,
+  orcamentosDefaultsFromCentral,
+  financeiroAdminDefaultsFromCentral,
+  ivaPctFromCentral,
+} from "../core/pricing/centralPricingConfig";
+import {
+  saveGlobalFinanceiroAdminSettings,
+  FINANCEIRO_ADMIN_SETTINGS_STORAGE_KEY,
+} from "../core/financeiro/financeiroAdminRules";
+import { normalizeFinanceiroAdminSettings } from "../core/financeiro/financeiroAdminRules";
 
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends (infer U)[]
@@ -61,17 +72,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     void (async () => {
+      // SSOT /config/pricing.json — mesmos defaults local e produção
+      try {
+        await loadCentralPricing();
+        if (typeof localStorage !== "undefined" && !localStorage.getItem(FINANCEIRO_ADMIN_SETTINGS_STORAGE_KEY)) {
+          saveGlobalFinanceiroAdminSettings(financeiroAdminDefaultsFromCentral());
+        }
+      } catch {
+        /* builtin fallback já em cache */
+      }
+      if (cancelled) return;
+
       const globalPartial = await fetchGlobalSettings();
       if (cancelled) return;
 
       if (!token) {
         try {
           const resolved = resolveUserSettingsPipeline(null, globalPartial);
-          const result = saveSettings(resolved);
+          const withPricing = {
+            ...resolved,
+            orcamentos: mergeOrcamentosSettings(
+              orcamentosDefaultsFromCentral(),
+              resolved.orcamentos ?? {}
+            ),
+            financeiroAdmin: normalizeFinanceiroAdminSettings(
+              resolved.financeiroAdmin ?? financeiroAdminDefaultsFromCentral()
+            ),
+            ivaPctDefault:
+              typeof resolved.ivaPctDefault === "number"
+                ? resolved.ivaPctDefault
+                : ivaPctFromCentral(),
+          };
+          const result = saveSettings(withPricing);
           if (!cancelled) setSettings(result.settings);
           if (import.meta.env.DEV) {
             devLogger.info(
-              "[PIMO][settings] visitante: pipeline com global",
+              "[PIMO][settings] visitante: pipeline com global + pricing.json",
               globalPartial ? "GET /config/global ok" : "fallback (sem global)"
             );
           }
@@ -93,11 +129,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       try {
         const resolved = resolveUserSettingsPipeline(online, globalPartial);
-        const result = saveSettings(resolved);
+        const withPricing = {
+          ...resolved,
+          orcamentos: mergeOrcamentosSettings(
+            orcamentosDefaultsFromCentral(),
+            resolved.orcamentos ?? {}
+          ),
+          financeiroAdmin: normalizeFinanceiroAdminSettings(
+            resolved.financeiroAdmin ?? financeiroAdminDefaultsFromCentral()
+          ),
+          ivaPctDefault:
+            typeof resolved.ivaPctDefault === "number"
+              ? resolved.ivaPctDefault
+              : ivaPctFromCentral(),
+        };
+        const result = saveSettings(withPricing);
         if (!cancelled) setSettings(result.settings);
         if (import.meta.env.DEV) {
           devLogger.info(
-            "[PIMO][settings] autenticado: pipeline com global + user",
+            "[PIMO][settings] autenticado: pipeline com global + user + pricing.json",
             globalPartial ? "global ok" : "global fallback"
           );
         }
@@ -136,6 +186,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       fabrica: { ...settings.fabrica, ...(patch.fabrica ?? {}) },
       precos: { ...settings.precos, ...(patch.precos ?? {}) },
       orcamentos: mergeOrcamentosSettings(settings.orcamentos, patch.orcamentos ?? {}),
+      financeiroAdmin: normalizeFinanceiroAdminSettings({
+        ...settings.financeiroAdmin,
+        ...(patch.financeiroAdmin ?? {}),
+        adm: { ...settings.financeiroAdmin?.adm, ...(patch.financeiroAdmin?.adm ?? {}) },
+        montagem: {
+          ...settings.financeiroAdmin?.montagem,
+          ...(patch.financeiroAdmin?.montagem ?? {}),
+        },
+        portes: { ...settings.financeiroAdmin?.portes, ...(patch.financeiroAdmin?.portes ?? {}) },
+      }),
+      ivaPctDefault:
+        typeof patch.ivaPctDefault === "number" ? patch.ivaPctDefault : settings.ivaPctDefault,
       materiais: { ...settings.materiais, ...(patch.materiais ?? {}) },
       cnc: { ...settings.cnc, ...(patch.cnc ?? {}) },
       nesting: { ...settings.nesting, ...(patch.nesting ?? {}) },
@@ -159,6 +221,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     };
     const result = saveSettings(merged as SettingsSchema);
     setSettings(result.settings);
+    if (result.success && result.settings.financeiroAdmin) {
+      saveGlobalFinanceiroAdminSettings(result.settings.financeiroAdmin);
+    }
     if (token) {
       scheduleUserSettingsRemotePatch(patch);
       void flushUserSettingsRemoteQueue();

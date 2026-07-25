@@ -13,6 +13,11 @@ import {
   defaultOrcamentosSettings,
   type OrcamentosSettings,
 } from "../orcamentos";
+import {
+  defaultFinanceiroAdminSettings,
+  type FinanceiroAdminSettings,
+} from "../financeiro/financeiroAdminRules";
+import { FINANCEIRO_IVA_DEFAULT_PCT } from "../financeiro/financeiroUnificadoTypes";
 
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -62,6 +67,12 @@ export interface SettingsSchema {
    * Fase 1: persistido; sem ligação a cálculos financeiros.
    */
   orcamentos: OrcamentosSettings;
+  /**
+   * P3.6 — ADM / Montagem / Portes (SSOT syncável via user settings + pricing.json).
+   */
+  financeiroAdmin: FinanceiroAdminSettings;
+  /** IVA % default (override por projeto em financeiroOverrides.ivaPct). */
+  ivaPctDefault: number;
   materiais: {
     categoriaPadraoId: string;
     presetVisualPadraoId: string;
@@ -259,6 +270,8 @@ export const settingsDefaults: SettingsSchema = {
     valorHoraMaquina: 35,
   },
   orcamentos: defaultOrcamentosSettings(),
+  financeiroAdmin: defaultFinanceiroAdminSettings(),
+  ivaPctDefault: FINANCEIRO_IVA_DEFAULT_PCT,
   materiais: {
     categoriaPadraoId: "mdf",
     presetVisualPadraoId: "mdf_branco",
