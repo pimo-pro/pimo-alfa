@@ -456,6 +456,8 @@ export function cutlistComPrecoFromBox(
         doorId: doorLayer?.id,
         doorPositionKind: resolveDoorPositionKind(doorLayer, doorIndex, doorsLayer),
         doorDisplayLabel: resolveDoorLabel(doorLayer, doorIndex, doorsLayer),
+        hingeSide: doorLayer?.hingeSide,
+        doorsLayerIndex: doorIndex,
       };
     } else if (isDivisor) {
       divIndex += 1;

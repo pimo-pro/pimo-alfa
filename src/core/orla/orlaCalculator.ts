@@ -161,6 +161,10 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
           : typeof item.metadata?.doorsLayerIndex === "number"
             ? Number(item.metadata.doorsLayerIndex)
             : undefined,
+      doorPositionKind:
+        typeof item.metadata?.doorPositionKind === "string"
+          ? String(item.metadata.doorPositionKind)
+          : undefined,
     };
     const allowedSides = new Set(resolveOrlaSidesForPieceTipo(tipo, pieceCtx));
     const edges = getOrlaEdgeLengthsMm(item);
@@ -302,6 +306,10 @@ export function buildOrlaPiecesForBox(
           : typeof item.metadata?.doorsLayerIndex === "number"
             ? Number(item.metadata.doorsLayerIndex)
             : undefined,
+      doorPositionKind:
+        typeof item.metadata?.doorPositionKind === "string"
+          ? String(item.metadata.doorPositionKind)
+          : undefined,
     });
     if (!cfg) {
       delete next[panelId];

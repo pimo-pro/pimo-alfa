@@ -21,7 +21,7 @@ function piece(
 }
 
 describe("computeOperacoesFinanceiras (P3.9 F3a)", () => {
-  it("tarifas 0 ? tudo zero (baseline Unificado)", () => {
+  it("tarifas 0 → tudo zero (baseline Unificado)", () => {
     const cutlist = [
       piece({ id: "a", drillHoles: [{ x: 1 } as never, { x: 2 } as never] }),
       piece({ id: "b" }),
@@ -29,6 +29,7 @@ describe("computeOperacoesFinanceiras (P3.9 F3a)", () => {
     const r = computeOperacoesFinanceiras(cutlist, {
       drillEurPorFuro: 0,
       nestingEurPorOperacao: 0,
+      corteEurPorMetro: 0,
     });
     expect(r.precoCNC).toBe(0);
     expect(r.precoDrill).toBe(0);
@@ -36,34 +37,40 @@ describe("computeOperacoesFinanceiras (P3.9 F3a)", () => {
     expect(r.eurByPieceId.size).toBe(0);
   });
 
-  it("CNC + Drill com tarifas > 0", () => {
+  it("CNC = perímetro × €/m; Drill = furos reais (sem grooves)", () => {
     const cutlist = [
       piece({
         id: "p1",
         quantidade: 2,
-        drillHoles: [{}, {}, {}] as CutListItemComPreco["drillHoles"],
+        dimensoes: { largura: 1000, altura: 500, profundidade: 18 },
+        drillHoles: [
+          { x: 1 },
+          { x: 2 },
+          { x: 3, holeSubtype: "groove" },
+        ] as CutListItemComPreco["drillHoles"],
       }),
     ];
     const r = computeOperacoesFinanceiras(cutlist, {
-      nestingEurPorOperacao: 0.5,
+      corteEurPorMetro: 0.5,
       drillEurPorFuro: 0.05,
+      nestingEurPorOperacao: 99, // legado ignorado
     });
-    // CNC: 0.5 * 2 = 1; Drill: 3 * 0.05 * 2 = 0.3
-    expect(r.precoCNC).toBe(1);
-    expect(r.precoDrill).toBe(0.3);
-    expect(r.precoTotal).toBe(1.3);
-    expect(r.eurByPieceId.get("p1")).toBe(1.3);
+    // perímetro = 2*(1+0.5)=3 m × 0.5 × 2 = 3; drill = 2 furos × 0.05 × 2 = 0.2
+    expect(r.precoCNC).toBe(3);
+    expect(r.precoDrill).toBe(0.2);
+    expect(r.precoTotal).toBe(3.2);
   });
 
-  it("? eurByPieceId === precoTotal", () => {
+  it("Σ eurByPieceId === precoTotal", () => {
     const cutlist = [
       piece({ id: "a", drillHoles: [{}] as CutListItemComPreco["drillHoles"] }),
       piece({ id: "b" }),
       piece({ id: "c", dimensoes: { largura: 0, altura: 0, profundidade: 0 }, espessura: 0 }),
     ];
     const r = computeOperacoesFinanceiras(cutlist, {
-      nestingEurPorOperacao: 1,
+      corteEurPorMetro: 1,
       drillEurPorFuro: 2,
+      nestingEurPorOperacao: 0,
     });
     let sum = 0;
     for (const v of r.eurByPieceId.values()) sum += v;

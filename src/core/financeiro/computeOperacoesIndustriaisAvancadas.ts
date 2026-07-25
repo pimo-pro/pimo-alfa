@@ -1,6 +1,6 @@
 /**
- * P3.9 F4 ó SSOT operaÁıes industriais avanÁadas (tarifas tipadas).
- * LÍ cutlist drillHoles / metadata; n„o altera CNC/TCN/cutlist/drill/PDFs.
+ * P3.9 F4 ù SSOT operaùùes industriais avanùadas (tarifas tipadas).
+ * Lù cutlist drillHoles / metadata; nùo altera CNC/TCN/cutlist/drill/PDFs.
  */
 
 import type { CutListItemComPreco, PanelDrillHole } from "../types";
@@ -11,7 +11,7 @@ import {
   normalizeOperacoesAvancadasSettings,
 } from "../orcamentos/orcamentosSettings";
 
-/** Mapeamentos documentais (IDs internos ? heurÌstica cutlist). */
+/** Mapeamentos documentais (IDs internos ? heurùstica cutlist). */
 export const OPS_ADV_MAP = {
   foro5mm: "furo_5mm",
   cavilha10x13: "cavilha_10x13_frente",
@@ -104,7 +104,7 @@ function classifyCavilha(
   const d = Number(h.diameter) || 0;
   const depth = Number(h.depth) || 0;
   if (!(approx(d, 10, 1.5) || d === 0)) {
-    // cavilha tipada sem di‚metro explÌcito ó classifica sÛ por depth
+    // cavilha tipada sem diùmetro explùcito ù classifica sù por depth
     if (approx(depth, 13, 3)) return "cavilha10x13";
     if (approx(depth, 30, 4)) return "cavilha10x30";
     return null;
@@ -155,7 +155,11 @@ function pricePiece(
 
   for (const h of holes) {
     if (isGroove(h)) {
-      nRasgo += 1;
+      // Rasgos sÛ em peÁas de gaveta reais ó n„o inventar em laterais/portas.
+      const t = String(item.tipo ?? "").toLowerCase();
+      if (t.includes("gav") || t.includes("gaveta") || t.includes("drawer")) {
+        nRasgo += 1;
+      }
       continue;
     }
     if (isCalcoHole(h)) {
@@ -234,7 +238,7 @@ function pricePiece(
 }
 
 /**
- * Calcula custos tipados F4 a partir da cutlist e tarifas OrÁamentos.
+ * Calcula custos tipados F4 a partir da cutlist e tarifas Orùamentos.
  */
 export function computeOperacoesIndustriaisAvancadas(
   cutlist: CutListItemComPreco[],

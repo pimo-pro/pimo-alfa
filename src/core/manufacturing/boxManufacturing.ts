@@ -602,7 +602,18 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   }
 
   if (box.portaTipo !== "sem_porta") {
-    const dobradicas = box.portaTipo === "porta_dupla" ? 4 : 2;
+    const doorsLayer = box.doorsLayer ?? [];
+    // Soft-close: 2 por folha típica; porta dupla = 4 no total (não 8).
+    const dobradicas =
+      doorsLayer.length > 0
+        ? doorsLayer.reduce(
+            (sum, door) =>
+              sum + getNumDobradicas(Math.max(0, Number(door.height) || 0), rules),
+            0
+          )
+        : box.portaTipo === "porta_dupla"
+          ? 4
+          : 2;
     addFerragem("dobradicas", dobradicas);
     if (calcoCfg.refs["00"].ativo) {
       addFerragem(CALCO_00_ID, dobradicas);
@@ -612,8 +623,10 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
     addFerragem(CALCO_03_ID, countPortasFrenteFixa(box));
   }
 
-  if (box.gavetas > 0 && (box.drawersLayer?.length ?? 0) === 0) {
-    addFerragem("corredicas", Math.max(0, Math.floor(box.gavetas)) * 2);
+  // Corrediças só com gavetas reais (drawersLayer). Não usar box.gavetas sozinho.
+  const drawerCount = box.drawersLayer?.length ?? 0;
+  if (drawerCount > 0) {
+    addFerragem("corredicas", drawerCount * 2);
   }
 
   if (box.prateleiras > 0) {

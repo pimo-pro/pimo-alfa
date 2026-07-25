@@ -22,7 +22,8 @@ export type PesPlasticoConfig = {
 
 export const PES_PLASTICO_CONFIG_DEFAULT: PesPlasticoConfig = {
   ativo: true,
-  precoUnitario: 2.8,
+  // Pé plástico ajustável — custo unitário típico 0.20–0.40 €
+  precoUnitario: 0.3,
   alturaMm: DEFAULT_FEET_HEIGHT_MM,
   ref: "P\u00e9-Pl\u00e1stico",
 };

@@ -1,5 +1,5 @@
 /**
- * P3.9 F3a — reconciliação ops Peças ? Unificado.
+ * P3.9 F3a ? reconcilia??o ops Pe?as ? Unificado.
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
@@ -49,6 +49,7 @@ describe("P3.9 F3a operacoes reconciliation", () => {
     const r = computeOperacoesFinanceiras(cutlist, {
       drillEurPorFuro: 0,
       nestingEurPorOperacao: 0,
+      corteEurPorMetro: 0,
     });
     expect(r.precoTotal).toBe(0);
   });

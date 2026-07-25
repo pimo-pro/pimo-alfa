@@ -13,12 +13,14 @@ import { EMPTY_ORLA_SIDES, type PieceOrlaConfig } from "./orlaTypes";
 export const MIN_ORLA_PANEL_THICKNESS_MM = 16;
 
 export type OrlaPieceSideContext = {
-  /** Nome da peça (ex. PORT_ESQ). */
+  /** Nome da peça (ex. PORT_ESQ / port_esq). */
   nome?: string;
   /** Lado da dobradiça (porta). */
   hingeSide?: string;
   /** Índice da folha em porta dupla (0 = esq, 1 = dir). */
   doorsLayerIndex?: number;
+  /** Kind industrial: esq | dir | cima | baixa. */
+  doorPositionKind?: string;
 };
 
 /** Normaliza tipo cutlist para matching. */
@@ -86,8 +88,14 @@ export function resolveDoubleDoorLeaf(
   if (/porta_esq|port_esq|_esq\b|esquerda/.test(blob) && /porta|port_/.test(blob)) return "esq";
   if (/porta_dir|port_dir|_dir\b|direita/.test(blob) && /porta|port_/.test(blob)) return "dir";
 
+  const kind = String(
+    (ctx as OrlaPieceSideContext & { doorPositionKind?: string })?.doorPositionKind ?? ""
+  ).toLowerCase();
+  if (kind === "esq" || kind === "esquerda") return "esq";
+  if (kind === "dir" || kind === "direita") return "dir";
+
   const hinge = String(ctx?.hingeSide ?? "").toLowerCase();
-  if (t.includes("porta") && (t.includes("dupla") || ctx?.doorsLayerIndex != null || hinge)) {
+  if (t.includes("porta") && (t.includes("dupla") || ctx?.doorsLayerIndex != null || hinge || kind)) {
     if (hinge === "left" || hinge === "esq") return "esq";
     if (hinge === "right" || hinge === "dir") return "dir";
     if (ctx?.doorsLayerIndex === 0) return "esq";

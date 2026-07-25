@@ -154,7 +154,7 @@ const createBox = (
   models: models ?? [],
   prateleiras: 0,
   portaTipo: "porta_simples",
-  gavetas: 1,
+  gavetas: 0,
   alturaGaveta: 200,
   ferragens: [],
   cutList: [],

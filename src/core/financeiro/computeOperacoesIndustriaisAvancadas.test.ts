@@ -48,7 +48,7 @@ describe("computeOperacoesIndustriaisAvancadas (P3.9 F4)", () => {
     expect(r.eurByPieceId.size).toBe(0);
   });
 
-  it("calço: 6 furos ? 2 grupos", () => {
+  it("cal?o: 6 furos ? 2 grupos", () => {
     const cutlist = [
       piece({
         id: "p1",
@@ -66,7 +66,7 @@ describe("computeOperacoesIndustriaisAvancadas (P3.9 F4)", () => {
     expect(r.precoTotal).toBe(2.6);
   });
 
-  it("dobradiça: 2 canecos ? 2 grupos (fixações excluídas de foro 5)", () => {
+  it("dobradi?a: 2 canecos ? 2 grupos (fixa??es exclu?das de foro 5)", () => {
     const cutlist = [
       piece({
         id: "porta",
@@ -114,6 +114,7 @@ describe("computeOperacoesIndustriaisAvancadas (P3.9 F4)", () => {
     const cutlist = [
       piece({
         id: "g",
+        tipo: "gaveta_lat_esq",
         drillHoles: [
           hole({ holeSubtype: "groove", diameter: 0, grooveWidth: 4, grooveLength: 500 }),
           hole({ holeType: "cavilha", diameter: 10, depth: 13 }),

@@ -37,6 +37,14 @@ import {
 import { computeCustosAvancadosFinanceiras } from "./computeCustosAvancadosFinanceiras";
 import { computeOperacoesIndustriaisAvancadas } from "./computeOperacoesIndustriaisAvancadas";
 import {
+  computeOrlaFerragem,
+  syncOrlaPiecesForProject,
+} from "../orla/orlaCalculator";
+import { normalizeOrlaPresets, DEFAULT_ORLA_PRESETS } from "../orla/orlaPresets";
+import type { CutListItem } from "../types";
+import type { RematePiece } from "../remate/rematePieceTypes";
+import type { ProjectRodape } from "../rodape/rodapeTypes";
+import {
   FINANCEIRO_CUSTO_MATERIAL_KEYS,
   FINANCEIRO_IVA_DEFAULT_PCT,
   FINANCEIRO_PIECE_MATERIAL_KEYS,
@@ -45,6 +53,67 @@ import {
   type FinanceiroOverrides,
   type FinanceiroUnificadoSnapshot,
 } from "./financeiroUnificadoTypes";
+
+/** Remate/rodapé conta como peça real só com dims > 0 e visible !== false. */
+function hasRealRemateOrRodapePieces(
+  remates: readonly RematePiece[] | undefined,
+  rodapes: readonly ProjectRodape[] | undefined
+): boolean {
+  for (const r of remates ?? []) {
+    if (r.visible === false) continue;
+    if ((Number(r.width) || 0) > 0 && (Number(r.height) || 0) > 0) return true;
+  }
+  for (const r of rodapes ?? []) {
+    if (r.visible === false) continue;
+    const L = Number(r.dimensions?.widthMm ?? r.autoLengthMm) || 0;
+    const A = Number(r.heightMm ?? r.dimensions?.heightMm) || 0;
+    if (L > 0 && A > 0) return true;
+  }
+  return false;
+}
+
+/** Recalcula orla industrial (nunca confiar em ferragemOrla stale). */
+function computeOrlaFinanceirasLive(
+  boxes: BoxModule[],
+  cutlist: CutListItemComPreco[],
+  orlaPresetsRaw?: unknown
+): { metros: number; custo: number } {
+  if (boxes.length === 0) return { metros: 0, custo: 0 };
+  const orlaPresets = normalizeOrlaPresets(
+    Array.isArray(orlaPresetsRaw) ? (orlaPresetsRaw as never) : DEFAULT_ORLA_PRESETS
+  );
+  const defaultOrlaId = orlaPresets[0]?.id ?? null;
+  const extrasByBoxId: Record<string, CutListItem[]> = {};
+  for (const item of cutlist) {
+    const bid = String(item.boxId ?? "");
+    if (!bid) continue;
+    (extrasByBoxId[bid] ??= []).push(item as CutListItem);
+  }
+  // Usar cutList da caixa se existir; senão injetar extras do cutlist SSOT.
+  const boxesForOrla = boxes.map((box) => {
+    const fromCutlist = cutlist.filter((i) => i.boxId === box.id) as CutListItem[];
+    if ((box.cutList?.length ?? 0) > 0) return box;
+    return { ...box, cutList: fromCutlist };
+  });
+  const orlaPieces = syncOrlaPiecesForProject(
+    boxesForOrla,
+    {},
+    defaultOrlaId,
+    extrasByBoxId,
+    orlaPresets
+  );
+  const ferragem = computeOrlaFerragem({
+    boxes: boxesForOrla,
+    orlaPresets,
+    orlaPieces,
+    orlaJuntoPairs: [],
+    extraCutListItems: cutlist as Array<CutListItem & { boxId?: string; boxNome?: string }>,
+  });
+  return {
+    metros: Number(ferragem.metrosTotal) || 0,
+    custo: Number(ferragem.custoTotal) || 0,
+  };
+}
 
 export type FinanceiroUnificadoProjectSlice = Pick<
   ProjectState,
@@ -56,6 +125,7 @@ export type FinanceiroUnificadoProjectSlice = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "ferragemOrla"
+  | "orlaPresets"
 > & {
   industrialPieceEdits?: IndustrialPieceEditsStore;
   financeiroOverrides?: FinanceiroOverrides;
@@ -223,14 +293,21 @@ export function computeFinanceiroUnificado(
   const pesoTotalKg = cutlist.reduce((s, i) => s + pieceWeightKg(i, materials), 0);
   const areaTotalMontadoM3 = boxes.reduce((s, b) => s + boxVolumeMontadoM3(b), 0);
 
-  const orlaTotalM = Number(project.ferragemOrla?.metrosTotal) || 0;
-  const custoOrla = Number(project.ferragemOrla?.custoTotal) || 0;
+  const orlaLive = computeOrlaFinanceirasLive(boxes, cutlist, project.orlaPresets);
+  const orlaTotalM = orlaLive.metros;
+  const custoOrla = orlaLive.custo;
 
   const custosComputed = emptyCustos();
+  const hasRematesReais = hasRealRemateOrRodapePieces(project.remates, project.rodapes);
   for (const item of cutlist) {
     const key = classifyFinanceiroCustoKey(String(item.tipo ?? ""));
     if (NON_CUTLIST_CUSTO_KEYS.has(key)) continue;
+    // Sem peças remate/rodapé reais: nunca acumular neste bucket (sem fallback).
+    if (key === "remates" && !hasRematesReais) continue;
     custosComputed[key] += Number(item.precoTotal) || 0;
+  }
+  if (!hasRematesReais) {
+    custosComputed.remates = 0;
   }
   custosComputed.ferragens = ferragensEur;
   custosComputed.orla = custoOrla;
@@ -293,10 +370,15 @@ export function computeFinanceiroUnificado(
     total: opsAvancadas.precoTotal,
   };
 
-  // Materiais efetivos (com overrides) ? base para ADM/montagem/portes e IVA
+  // Materiais efetivos (com overrides) — base para ADM/montagem/portes e IVA
   const custosEffective = emptyCustos();
   const custoKeysOverridden: FinanceiroCustoKey[] = [];
   for (const key of FINANCEIRO_CUSTO_MATERIAL_KEYS) {
+    // Remates: sem peças reais, ignorar override fantasma (ex. 20€).
+    if (key === "remates" && !hasRematesReais) {
+      custosEffective.remates = 0;
+      continue;
+    }
     const ov = overrides.custos?.[key];
     if (typeof ov === "number" && Number.isFinite(ov) && ov >= 0) {
       custosEffective[key] = ov;
@@ -439,7 +521,7 @@ export function financeiroCustoRows(
     { label: "Ferragens", valor: snap.custosEffective.ferragens },
     { label: "Orla", valor: snap.custosEffective.orla },
   ];
-  // Remates só aparecem com pelo menos uma peça remate/rodapé com custo > 0.
+  // Remates só aparecem com valor > 0 (sem peças reais o Unificado força 0).
   if ((snap.custosEffective.remates ?? 0) > 0) {
     rows.push({ label: "Remates / Rodapes", valor: snap.custosEffective.remates });
   }

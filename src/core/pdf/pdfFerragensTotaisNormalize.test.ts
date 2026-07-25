@@ -237,19 +237,41 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(pe?.ref).toBe(PE_REF);
     expect(pe?.medida).toBe("100mm");
     expect(pe?.quantidade).toBe(4);
-    expect(pe?.preco).toBe(2.8);
+    expect(pe?.preco).toBe(0.3);
     expect(rows.find((r) => r.material === DOBRADICA)).toBeUndefined();
   });
 
-    it("inclui Orla em metros com material sem espessura", () => {
+    it("recalcula Orla no PDF (ignora ferragemOrla stale) a partir de porta", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [],
-      cutlistItems: [],
+      cutlistItems: [
+        {
+          id: "p1",
+          tipo: "porta_simples",
+          nome: "porta",
+          boxId: "b1",
+          quantidade: 1,
+          dimensoes: { largura: 598, altura: 718, profundidade: 19 },
+          espessura: 19,
+          metadata: { panelId: "p1" },
+        },
+      ],
       boxes: [
         {
           id: "b1",
           nome: "Caixa",
           material: "mdf_branco",
+          cutList: [
+            {
+              id: "p1",
+              nome: "porta",
+              tipo: "porta_simples",
+              quantidade: 1,
+              dimensoes: { largura: 598, altura: 718, profundidade: 19 },
+              espessura: 19,
+              metadata: { panelId: "p1" },
+            },
+          ],
           dimensoes: { largura: 600, altura: 720, profundidade: 560 },
         } as BoxModule,
       ],
@@ -265,6 +287,7 @@ describe("pdfFerragensTotaisNormalize", () => {
           precoPorMetro: 1.5,
         },
       ],
+      // Stale: metros inventados — devem ser ignorados a favor do recalculo.
       ferragemOrla: {
         linhas: [
           {
@@ -286,15 +309,16 @@ describe("pdfFerragensTotaisNormalize", () => {
       },
     });
 
-    const orla = rows.find((r) => r.medida === "12.35 m");
+    const orla = rows.find((r) => /^\d+([.,]\d+)?\s*m$/i.test(String(r.medida)));
     expect(orla).toBeDefined();
-    expect(orla?.quantidade).toBe(12.35);
-    expect(orla?.ref).toBe("PVC 0.8mm");
+    // Porta 598×718 → perímetro 2.632 m (não o stale 12.35)
+    expect(orla?.quantidade).toBeCloseTo(2.632, 2);
+    expect(orla?.ref).toMatch(/0\.8mm/);
     expect(orla?.material).not.toMatch(/\d+\s*mm/i);
     expect(orla?.preco).toBe(1.5);
   });
 
-  it("recalcula Orla no PDF quando ferragemOrla esta vazio mas ha prateleira", () => {
+  it("prateleira nao gera Orla no PDF (regra industrial)", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [],
       cutlistItems: [
@@ -340,9 +364,6 @@ describe("pdfFerragensTotaisNormalize", () => {
     });
 
     const orla = rows.find((r) => /^\d+([.,]\d+)?\s*m$/i.test(String(r.medida)));
-    expect(orla).toBeDefined();
-    expect(orla?.quantidade).toBeGreaterThan(0);
-    expect(orla?.ref).toMatch(/0\.8mm/);
-    expect(orla?.preco).toBe(1.5);
+    expect(orla).toBeUndefined();
   });
 });

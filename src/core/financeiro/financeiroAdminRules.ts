@@ -73,6 +73,7 @@ export function defaultFinanceiroAdminSettings(): FinanceiroAdminSettings {
     adm: { enabled: true, mode: "percentagem", valor: 10 },
     // pricing.json maoDeObra.montagem_caixa_m2 = 17 €/m²
     montagem: { enabled: true, mode: "eur_por_m2", valor: 17 },
+    // Sem fallback de remates — remates/rodapés só via peças reais no Unificado.
     portes: {
       // Tarifas de fábrica; cobrança no projeto só com escolha explícita (incluirPortes).
       enabled: false,

@@ -462,9 +462,9 @@ export function normalizeFerragensTotaisForPdf(
   }
 
   const orlaPresets = normalizeOrlaPresets(input.orlaPresets);
+  // Sempre recalcular orla com regras industriais actuais (costa/prateleira/duplas).
   let ferragemOrla = input.ferragemOrla;
-  // Fallback: se o estado ainda nao tem metros (caixa nova sem sync), recalcular no PDF.
-  if ((!ferragemOrla?.linhas?.length) && (input.boxes?.length ?? 0) > 0) {
+  if ((input.boxes?.length ?? 0) > 0) {
     const defaultOrlaId = orlaPresets[0]?.id ?? null;
     const extrasByBoxId: Record<string, CutListItem[]> = {};
     for (const item of input.cutlistItems ?? []) {
@@ -472,15 +472,20 @@ export function normalizeFerragensTotaisForPdf(
       if (!bid) continue;
       (extrasByBoxId[bid] ??= []).push(item as CutListItem);
     }
+    const boxesForOrla = (input.boxes ?? []).map((box) => {
+      const fromCutlist = (input.cutlistItems ?? []).filter((i) => i.boxId === box.id) as CutListItem[];
+      if ((box.cutList?.length ?? 0) > 0) return box;
+      return { ...box, cutList: fromCutlist };
+    });
     const orlaPieces = syncOrlaPiecesForProject(
-      input.boxes ?? [],
+      boxesForOrla,
       {},
       defaultOrlaId,
       extrasByBoxId,
       orlaPresets
     );
     ferragemOrla = computeOrlaFerragem({
-      boxes: input.boxes ?? [],
+      boxes: boxesForOrla,
       orlaPresets,
       orlaPieces,
       orlaJuntoPairs: [],

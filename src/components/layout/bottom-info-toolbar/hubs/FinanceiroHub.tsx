@@ -52,6 +52,7 @@ export default function FinanceiroHub() {
           extractedPartsByBoxId: project.extractedPartsByBoxId,
           industrialPieceEdits: project.industrialPieceEdits,
           ferragemOrla: project.ferragemOrla,
+          orlaPresets: project.orlaPresets,
           financeiroOverrides: project.financeiroOverrides,
           financeiroAdminSettings: project.financeiroAdminSettings,
         },

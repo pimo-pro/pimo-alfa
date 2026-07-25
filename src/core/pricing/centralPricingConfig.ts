@@ -220,14 +220,15 @@ function mapMarketToLegacy(src: CentralPricingFile): {
   const orcamentos = normalizeOrcamentosSettings({
     ...(src.orcamentos && typeof src.orcamentos === "object" ? src.orcamentos : {}),
     perfuracoes: {
-      drillEurPorFuro: num(operacoes.drill_manual, 0.03),
-      nestingEurPorOperacao: num(operacoes.furo_cnc, 0.045),
+      // Drill = furo CNC real; nesting flat-fee legado = 0 (CNC usa corte_cnc_metro).
+      drillEurPorFuro: num(operacoes.furo_cnc, 0.045),
+      nestingEurPorOperacao: 0,
       ...(typeof src.orcamentos === "object" && src.orcamentos && "perfuracoes" in src.orcamentos
         ? (src.orcamentos as { perfuracoes?: object }).perfuracoes
         : {}),
     },
     custosIndustriais: {
-      // DesperdÌcio monetizado em % do custo de painÈis (pricing.json desperdicio.percentual).
+      // Desperdùcio monetizado em % do custo de painùis (pricing.json desperdicio.percentual).
       desperdicioEurPorM2: 0,
       serragemEurPorM2: serragem,
       custoChapaReal: 0,
