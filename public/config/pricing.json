@@ -1,6 +1,7 @@
 {
   "chapas": {
     "MDF_BRANCO_LAMINADO_19": 31,
+    "MDF_BRANCO_10": 20,
     "MDF_CRU_19": 20,
     "MDF_LACADO_19": 130,
     "MDF_PRETO_LAMINADO_19": 48,
@@ -20,7 +21,7 @@
   },
 
   "ferragens": {
-    "dobradica_soft_close": 1.50,
+    "dobradica_soft_close": 2.50,
     "parafuso": 0.03,
     "suporte_prateleira": 0.15,
     "corredica_telescopica": 4.20,

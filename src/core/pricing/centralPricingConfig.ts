@@ -17,6 +17,7 @@ export const CENTRAL_PRICING_URL = "/config/pricing.json";
 
 export type CentralChapasPricing = {
   MDF_BRANCO_LAMINADO_19?: number;
+  MDF_BRANCO_10?: number;
   MDF_CRU_19?: number;
   MDF_LACADO_19?: number;
   MDF_PRETO_LAMINADO_19?: number;
@@ -117,6 +118,7 @@ function pickNums(src: Record<string, unknown> | undefined, keys: string[]): Rec
 const MARKET_BUILTIN_RAW: CentralPricingFile = {
   chapas: {
     MDF_BRANCO_LAMINADO_19: 31,
+    MDF_BRANCO_10: 20,
     MDF_CRU_19: 20,
     MDF_LACADO_19: 130,
     MDF_PRETO_LAMINADO_19: 48,
@@ -134,7 +136,7 @@ const MARKET_BUILTIN_RAW: CentralPricingFile = {
     regraCarvalhoUsaFolhaMadeira: true,
   },
   ferragens: {
-    dobradica_soft_close: 1.5,
+    dobradica_soft_close: 2.5,
     parafuso: 0.03,
     suporte_prateleira: 0.15,
     corredica_telescopica: 4.2,
@@ -246,17 +248,18 @@ function mapMarketToLegacy(src: CentralPricingFile): {
         : {}),
     },
     operacoesAvancadas: {
-      precoForo5mm: num(operacoes.furo_cnc, 0.045),
-      precoForoCavilha10x13: num(operacoes.furo_cnc, 0.045),
-      precoForoCavilha10x30: num(operacoes.furo_cnc, 0.045),
-      precoForoCalcoGrupo: 0,
-      precoForoDobradicaGrupo: 0,
       precoRasgoGaveta: num(operacoes.rasgo_cnc_metro, 0.55),
-      precoCorteManualPorMetro: num(operacoes.corte_cnc_metro, 0.28),
-      precoMeQuadrilha: 0,
       ...(typeof src.orcamentos === "object" && src.orcamentos && "operacoesAvancadas" in src.orcamentos
         ? (src.orcamentos as { operacoesAvancadas?: object }).operacoesAvancadas
         : {}),
+      // Foros/cavilhas/corte manual jù cobrados em CNC/Drill ù forùar 0 (apùs spread).
+      precoForo5mm: 0,
+      precoForoCavilha10x13: 0,
+      precoForoCavilha10x30: 0,
+      precoForoCalcoGrupo: 0,
+      precoForoDobradicaGrupo: 0,
+      precoCorteManualPorMetro: 0,
+      precoMeQuadrilha: 0,
     },
     ferragens: { enableUnificacao: false },
   });
@@ -304,6 +307,7 @@ export function normalizeCentralPricing(raw: unknown): CentralPricingFile {
       chapas: {
         ...pickNums(chapasSrc, [
           "MDF_BRANCO_LAMINADO_19",
+          "MDF_BRANCO_10",
           "MDF_CRU_19",
           "MDF_LACADO_19",
           "MDF_PRETO_LAMINADO_19",
@@ -456,7 +460,8 @@ const CHAPA_KEY_BY_FAMILY: Record<string, string> = {
 
 /**
  * Preùo ù/mù a partir de chapas do pricing.json.
- * Espessuras &lt; referùncia (19/18) aplicam espessuraReducaoPct (-5%).
+ * Costa / painùis ?10 mm ? MDF_BRANCO_10 / MDF_CRU (20 ù/mù).
+ * Espessuras intermùdias (&lt;19) aplicam espessuraReducaoPct.
  */
 export function chapaEurM2FromCentral(
   materialKey: string,
@@ -473,6 +478,26 @@ export function chapaEurM2FromCentral(
     .replace(/\s+/g, "_");
   const family = keyNorm.replace(/-\d+(\.\d+)?$/, "").replace(/_\d+(\.\d+)?$/, "");
   const chapaKey = CHAPA_KEY_BY_FAMILY[family] ?? CHAPA_KEY_BY_FAMILY[keyNorm];
+
+  // Costa / 10 mm: preùo dedicado (nùo 31ù0.95).
+  if (espessuraMm > 0 && espessuraMm <= 10.5) {
+    const thinBranco = num(
+      (chapas as Record<string, number>).MDF_BRANCO_10,
+      num(chapas.MDF_CRU_19, 20)
+    );
+    if (
+      !family ||
+      family.includes("mdf_branco") ||
+      family.includes("branco") ||
+      family === "mdf" ||
+      keyNorm.includes("costa")
+    ) {
+      return thinBranco;
+    }
+    if (family.includes("cru") || family.includes("hdf")) {
+      return num(chapas.MDF_CRU_19, thinBranco);
+    }
+  }
 
   let base: number | undefined;
   let refMm = 19;

@@ -74,11 +74,24 @@ function resolveTarifas(
       return undefined;
     }
   })();
-  return normalizeOperacoesAvancadasSettings({
+  const merged = normalizeOperacoesAvancadasSettings({
     ...defaultOperacoesAvancadasSettings(),
     ...fromSettings,
     ...override,
   });
+  // Foros/cavilhas/corte manual ja cobrados em CNC/Drill ó forcar 0
+  // (excepto override explicito em testes/caller).
+  const o = override && typeof override === "object" ? override : null;
+  return {
+    ...merged,
+    precoForo5mm: o && "precoForo5mm" in o ? merged.precoForo5mm : 0,
+    precoForoCavilha10x13: o && "precoForoCavilha10x13" in o ? merged.precoForoCavilha10x13 : 0,
+    precoForoCavilha10x30: o && "precoForoCavilha10x30" in o ? merged.precoForoCavilha10x30 : 0,
+    precoForoCalcoGrupo: o && "precoForoCalcoGrupo" in o ? merged.precoForoCalcoGrupo : 0,
+    precoForoDobradicaGrupo: o && "precoForoDobradicaGrupo" in o ? merged.precoForoDobradicaGrupo : 0,
+    precoCorteManualPorMetro: o && "precoCorteManualPorMetro" in o ? merged.precoCorteManualPorMetro : 0,
+    precoMeQuadrilha: o && "precoMeQuadrilha" in o ? merged.precoMeQuadrilha : 0,
+  };
 }
 
 function isGroove(h: PanelDrillHole): boolean {
@@ -155,7 +168,7 @@ function pricePiece(
 
   for (const h of holes) {
     if (isGroove(h)) {
-      // Rasgos sÛ em peÁas de gaveta reais ó n„o inventar em laterais/portas.
+      // Rasgos sù em peùas de gaveta reais ù nùo inventar em laterais/portas.
       const t = String(item.tipo ?? "").toLowerCase();
       if (t.includes("gav") || t.includes("gaveta") || t.includes("drawer")) {
         nRasgo += 1;

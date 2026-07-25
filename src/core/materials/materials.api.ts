@@ -76,7 +76,7 @@ const INDUSTRIAL_SHEETS_SEED: IndustrialSheetSeed[] = [
     label: "MDF Branco 19",
     espessuraPadrao: 19,
     viewerMaterialId: "mdf_branco",
-    custo_m2: 35,
+    custo_m2: 31,
     densidade: 750,
     legacyAliases: [
       "mdf_branco",
@@ -92,7 +92,7 @@ const INDUSTRIAL_SHEETS_SEED: IndustrialSheetSeed[] = [
     label: "MDF Branco 16",
     espessuraPadrao: 16,
     viewerMaterialId: "mdf_branco",
-    custo_m2: 35,
+    custo_m2: 29.45,
     densidade: 750,
   },
   {
@@ -100,7 +100,7 @@ const INDUSTRIAL_SHEETS_SEED: IndustrialSheetSeed[] = [
     label: "MDF Branco 10",
     espessuraPadrao: 10,
     viewerMaterialId: "mdf_branco",
-    custo_m2: 35,
+    custo_m2: 20,
     densidade: 750,
   },
   // Laminado Linho Cancun

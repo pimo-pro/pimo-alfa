@@ -9,6 +9,8 @@ import {
 } from "../materials/materials.api";
 import { getMaterialForBox, getIndustrialMaterial } from "../materials/service";
 import { getNumDobradicas } from "../rules/rulesConfig";
+import { getPrecoPorMaterial } from "../pricing/pricing";
+import { getCentralPricingCached } from "../pricing/centralPricingConfig";
 import {
   loadPesPlasticoConfig,
   quantidadePesParaCaixa,
@@ -562,16 +564,7 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   const ferragens: FerragemIndustrial[] = [];
   const peCfg = loadPesPlasticoConfig();
   const calcoCfg = loadCalcoConfig();
-  const tabela: Record<string, number> = {
-    dobradicas: 2.5,
-    corredicas: 19,
-    suportes_prateleira: 0.9,
-    cavilha_10mm: 0.12,
-    parafuso_4x50: 0.15,
-    pe_plastico: peCfg.precoUnitario,
-    [CALCO_00_ID]: calcoCfg.refs["00"].precoUnitario,
-    [CALCO_03_ID]: calcoCfg.refs["03"].precoUnitario,
-  };
+  const tabela = ferragensUnitPriceTable(peCfg.precoUnitario, calcoCfg);
   const addFerragem = (tipo: string, quantidade: number) => {
     if (quantidade <= 0) return;
     ferragens.push({
@@ -584,10 +577,7 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
 
   if (isCaixaFornoBox(box)) {
     const doorsLayer = box.doorsLayer ?? [];
-    const totalDobradicas = doorsLayer.reduce(
-      (sum, door) => sum + getNumDobradicas(Math.max(0, Number(door.height) || 0), rules),
-      0
-    );
+    const totalDobradicas = countDobradicasForBox(box, doorsLayer, rules);
     addFerragem("dobradicas", totalDobradicas);
     if (calcoCfg.refs["00"].ativo) {
       addFerragem(CALCO_00_ID, totalDobradicas);
@@ -603,17 +593,8 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
 
   if (box.portaTipo !== "sem_porta") {
     const doorsLayer = box.doorsLayer ?? [];
-    // Soft-close: 2 por folha típica; porta dupla = 4 no total (não 8).
-    const dobradicas =
-      doorsLayer.length > 0
-        ? doorsLayer.reduce(
-            (sum, door) =>
-              sum + getNumDobradicas(Math.max(0, Number(door.height) || 0), rules),
-            0
-          )
-        : box.portaTipo === "porta_dupla"
-          ? 4
-          : 2;
+    // Soft-close: porta dupla = 2 por folha (4 no total), nunca 8.
+    const dobradicas = countDobradicasForBox(box, doorsLayer, rules);
     addFerragem("dobradicas", dobradicas);
     if (calcoCfg.refs["00"].ativo) {
       addFerragem(CALCO_00_ID, dobradicas);
@@ -651,22 +632,73 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   return ferragens;
 }
 
+/**
+ * Consumo = área real da peça × €/m² (pricing.json / central).
+ * Costa ≤10 mm → MDF 10 mm (20 €/m²). Sem fallback de chapa inteira.
+ */
 export function calcularCustoPainel(painel: PainelIndustrial, material = getMaterial(painel.material)) {
   const area_m2 = (painel.largura_mm / 1000) * (painel.altura_mm / 1000);
-  return area_m2 * material.custo_m2;
+  const esp =
+    Number(painel.espessura_mm) ||
+    Number(material?.espessuraPadrao) ||
+    19;
+  const key = material?.id || material?.nome || painel.material || "";
+  return area_m2 * getPrecoPorMaterial(String(key), esp);
+}
+
+function ferragensUnitPriceTable(
+  peUnit: number,
+  calcoCfg: ReturnType<typeof loadCalcoConfig>
+): Record<string, number> {
+  const f = getCentralPricingCached().ferragens ?? {};
+  const dob =
+    typeof f.dobradica_soft_close === "number" && Number.isFinite(f.dobradica_soft_close)
+      ? f.dobradica_soft_close
+      : 2.5;
+  const suporte =
+    typeof f.suporte_prateleira === "number" && Number.isFinite(f.suporte_prateleira)
+      ? f.suporte_prateleira
+      : 0.15;
+  const corredica =
+    typeof f.corredica_soft_close === "number" && Number.isFinite(f.corredica_soft_close)
+      ? f.corredica_soft_close
+      : typeof f.corredica_telescopica === "number" && Number.isFinite(f.corredica_telescopica)
+        ? f.corredica_telescopica
+        : 7.5;
+  return {
+    // Soft-close: pricing.json; fallback 2.5 se ausente.
+    dobradicas: dob > 0 ? dob : 2.5,
+    // Par de corrediças = 2× unitário; tipo "corredicas" cobra por unidade (par=2).
+    corredicas: corredica,
+    suportes_prateleira: suporte,
+    cavilha_10mm: 0.12,
+    parafuso_4x50: typeof f.parafuso === "number" ? f.parafuso : 0.15,
+    pe_plastico: peUnit,
+    [CALCO_00_ID]: calcoCfg.refs["00"].precoUnitario,
+    [CALCO_03_ID]: calcoCfg.refs["03"].precoUnitario,
+  };
+}
+
+/** Porta dupla: máx. 2 dobradiças por folha (4 no total). */
+function countDobradicasForBox(
+  box: BoxModule,
+  doorsLayer: { height?: number }[],
+  rules: RulesConfig
+): number {
+  if (doorsLayer.length > 0) {
+    return doorsLayer.reduce((sum, door) => {
+      const n = getNumDobradicas(Math.max(0, Number(door.height) || 0), rules);
+      if (box.portaTipo === "porta_dupla") return sum + Math.min(2, n);
+      return sum + n;
+    }, 0);
+  }
+  return box.portaTipo === "porta_dupla" ? 4 : 2;
 }
 
 export function calcularCustoFerragens(ferragens: FerragemIndustrial[]) {
   const peCfg = loadPesPlasticoConfig();
   const calcoCfg = loadCalcoConfig();
-  const tabela: Record<string, number> = {
-    dobradicas: 2.5,
-    corredicas: 19,
-    suportes_prateleira: 0.9,
-    pe_plastico: peCfg.precoUnitario,
-    [CALCO_00_ID]: calcoCfg.refs["00"].precoUnitario,
-    [CALCO_03_ID]: calcoCfg.refs["03"].precoUnitario,
-  };
+  const tabela = ferragensUnitPriceTable(peCfg.precoUnitario, calcoCfg);
   return ferragens.reduce((total, item) => {
     if (Number.isFinite(item.custo)) {
       return total + item.custo;

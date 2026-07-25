@@ -49,7 +49,7 @@ function boxWith(cutList: CutListItem[], presetId: string | null = PRESET.id): B
 }
 
 describe("orlaCalculator industrial", () => {
-  it("costa = 0 m; gav_frent_int so topo; porta 4 lados", () => {
+  it("costa = 0 m; gavetas sem orla; porta 4 lados", () => {
     const items = [
       piece("c1", "costa", { largura: 600, altura: 720 }),
       piece("g1", "gav_frent_int", { largura: 500, altura: 150 }),
@@ -58,8 +58,7 @@ describe("orlaCalculator industrial", () => {
     const box = boxWith(items);
     const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {});
     expect(orlaPieces.c1).toBeUndefined();
-    expect(orlaPieces.g1?.sides.front.enabled).toBe(true);
-    expect(orlaPieces.g1?.sides.back.enabled).toBe(false);
+    expect(orlaPieces.g1).toBeUndefined();
     expect(orlaPieces.p1?.sides.left.enabled).toBe(true);
 
     const ferragem = computeOrlaFerragem({
@@ -68,8 +67,8 @@ describe("orlaCalculator industrial", () => {
       orlaPieces,
       orlaJuntoPairs: [],
     });
-    // gaveta: 500mm; porta: 2*(598+718)=2632mm
-    expect(ferragem.metrosTotal).toBeCloseTo(0.5 + 2.632, 3);
+    // porta: 2*(598+718)=2632mm
+    expect(ferragem.metrosTotal).toBeCloseTo(2.632, 3);
   });
 
   it("edge lengths: gav_frent_int = largura no front", () => {
@@ -132,16 +131,16 @@ describe("orlaCalculator industrial", () => {
         materialId: "carvalho-19",
       },
       {
-        ...piece("fundo1", "fundo", { largura: 560, altura: 400 }),
+        ...piece("porta2", "porta_simples", { largura: 400, altura: 700 }),
         material: "MDF Branco 19mm",
       },
     ];
     const box = boxWith(items);
     const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {}, [], presets);
-    expect(orlaPieces.cima1?.orlaMaterialLabel).toMatch(/MDF Branco/i);
+    expect(orlaPieces.cima1).toBeUndefined();
     expect(orlaPieces.porta1?.orlaMaterialLabel).toMatch(/Carvalho/i);
     expect(orlaPieces.porta1?.sides.front.presetId).toBe(carvalhoPreset.id);
-    expect(orlaPieces.fundo1?.orlaMaterialLabel).toMatch(/MDF Branco/i);
+    expect(orlaPieces.porta2?.orlaMaterialLabel).toMatch(/MDF Branco/i);
 
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: items }],
@@ -156,7 +155,7 @@ describe("orlaCalculator industrial", () => {
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("gaveta_traseira so topo; nao mistura com costa do modulo", () => {
+  it("gaveta_traseira e costa do modulo: sem orla", () => {
     const items = [
       piece("c1", "costa", { largura: 600, altura: 720 }),
       piece("t1", "gaveta_traseira", { largura: 480, altura: 120, profundidade: 16 }),
@@ -164,23 +163,22 @@ describe("orlaCalculator industrial", () => {
     const box = boxWith(items);
     const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {});
     expect(orlaPieces.c1).toBeUndefined();
-    expect(orlaPieces.t1?.sides.front.enabled).toBe(true);
-    expect(orlaPieces.t1?.sides.back.enabled).toBe(false);
+    expect(orlaPieces.t1).toBeUndefined();
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: items }],
       orlaPresets: [PRESET],
       orlaPieces,
       orlaJuntoPairs: [],
     });
-    expect(ferragem.metrosTotal).toBeCloseTo(0.48, 3);
+    expect(ferragem.metrosTotal).toBe(0);
   });
 
-  it("inclui remate extra no calculo", () => {
+  it("remate extra: sem orla (so portas)", () => {
     const box = boxWith([piece("cima1", "cima", { largura: 600, altura: 560 })]);
     const remate = piece("r1", "remate", { largura: 2000, altura: 100 });
     (remate as CutListItem & { boxId: string }).boxId = "b1";
     const orlaPieces = buildOrlaPiecesForBox(box, PRESET.id, {}, [remate]);
-    expect(orlaPieces.r1?.sides.front.enabled).toBe(true);
+    expect(orlaPieces.r1).toBeUndefined();
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: box.cutList }],
       orlaPresets: [PRESET],
@@ -188,15 +186,19 @@ describe("orlaCalculator industrial", () => {
       orlaJuntoPairs: [],
       extraCutListItems: [remate as CutListItem & { boxId: string }],
     });
-    expect(ferragem.metrosTotal).toBeGreaterThan(2);
+    expect(ferragem.metrosTotal).toBe(0);
   });
 
-  it("sync com defaultPreset aplica orla a caixa sem orlaPresetId (sem prateleira)", () => {
-    const items = [piece("cima1", "cima", { largura: 560, altura: 400, profundidade: 19 })];
+  it("sync com defaultPreset: cima sem orla; porta com orla", () => {
+    const items = [
+      piece("cima1", "cima", { largura: 560, altura: 400, profundidade: 19 }),
+      piece("porta1", "porta_simples", { largura: 560, altura: 700, profundidade: 19 }),
+    ];
     const box = boxWith(items, null);
     expect(box.orlaPresetId).toBeUndefined();
     const orlaPieces = syncOrlaPiecesForProject([box], {}, PRESET.id);
-    expect(orlaPieces.cima1?.sides.front.enabled).toBe(true);
+    expect(orlaPieces.cima1).toBeUndefined();
+    expect(orlaPieces.porta1?.sides.front.enabled).toBe(true);
     const ferragem = computeOrlaFerragem({
       boxes: [{ ...box, cutList: items }],
       orlaPresets: [PRESET],

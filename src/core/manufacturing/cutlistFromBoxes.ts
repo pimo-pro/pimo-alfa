@@ -510,11 +510,22 @@ export function cutlistComPrecoFromBox(
       material: itemMaterial,
       tipo: p.tipo,
       grainDirection,
-      precoUnitario: p.quantidade > 0 ? p.custo / p.quantidade : 0,
-      precoTotal: p.custo,
+      precoUnitario: 0,
+      precoTotal: 0,
       drillHoles,
     });
   });
+
+  // Re-preço SSOT: área × €/m² (pricing.json), independente do seed industrial.
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]!;
+    const priced = calcularPrecoCutList([it])[0]!;
+    items[i] = {
+      ...it,
+      precoUnitario: priced.precoUnitario,
+      precoTotal: priced.precoTotal,
+    };
+  }
 
   if (drawersLayer.length > 0) {
     const lowestDrawerIndex1Based =
