@@ -32,3 +32,7 @@ deploy_key.pub
 api/data/users.json
 
 .claude/
+
+# DEV local (@PIMO-SOON) — nunca incluir na publicacao
+/dev/
+~$*
