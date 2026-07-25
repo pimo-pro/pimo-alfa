@@ -1,15 +1,36 @@
 {
-  "updatedAt": "2026-07-25T18:24:15.118Z",
+  "updatedAt": "2026-07-25T18:56:03.161Z",
   "news": [
     {
-      "version": "v6.0725.1924",
-      "title": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
-      "description": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
-      "publishedAt": "2026-07-25T18:24:15.019Z",
+      "version": "v6.0725.1956",
+      "title": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
+      "description": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
+      "publishedAt": "2026-07-25T18:56:02.978Z",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "🛠️",
-      "commit": "a1df219"
+      "commit": "7ec5514"
+    },
+    {
+      "version": "v6.0725.1953",
+      "title": "fix(financeiro): eliminar remates fantasma, orla stale, ferragens e CNC inflados.",
+      "description": "fix(financeiro): eliminar remates fantasma, orla stale, ferragens e CNC inflados.",
+      "publishedAt": "2026-07-25T18:53:24.963Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "🛠️",
+      "commit": "6aa7809"
+    },
+    {
+      "version": "v6.0725.1924",
+      "title": "Publicação PIMO — Sistema Industrial",
+      "description": "Publicação PIMO — Sistema Industrial",
+      "publishedAt": "2026-07-25T19:26:22+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "⚙️",
+      "commit": "faf58b5",
+      "actionUrl": "https://github.com/pimo-pro/pimo-criativo/actions/runs/30169629737"
     },
     {
       "version": "v6.0725.1905",

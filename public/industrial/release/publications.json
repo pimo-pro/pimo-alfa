@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T18:56:02.255Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): tornar orlaPresets opcional no slice Unificado.",
+      "version": "v6.0725.1956"
+    },
+    {
+      "publishedAt": "2026-07-25T18:53:24.267Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(financeiro): eliminar remates fantasma, orla stale, ferragens e CNC inflados.",
+      "version": "v6.0725.1953"
+    },
+    {
       "publishedAt": "2026-07-25T18:24:14.320Z",
       "author": "pimo-pro",
       "commitMessage": "fix(financeiro): corrigir desperdício, orla, montagem e remates fantasma.",
