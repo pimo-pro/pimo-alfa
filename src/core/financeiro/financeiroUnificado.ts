@@ -125,8 +125,8 @@ export type FinanceiroUnificadoProjectSlice = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "ferragemOrla"
-  | "orlaPresets"
 > & {
+  orlaPresets?: ProjectState["orlaPresets"];
   industrialPieceEdits?: IndustrialPieceEditsStore;
   financeiroOverrides?: FinanceiroOverrides;
   financeiroAdminSettings?: FinanceiroAdminSettings;
