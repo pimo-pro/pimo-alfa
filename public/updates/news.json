@@ -1,6 +1,26 @@
 {
-  "updatedAt": "2026-07-25T23:38:41.011Z",
+  "updatedAt": "2026-07-25T23:44:12.017Z",
   "news": [
+    {
+      "version": "v6.0726.0044",
+      "title": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
+      "description": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
+      "publishedAt": "2026-07-25T23:44:11.907Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "4bb6d8f"
+    },
+    {
+      "version": "v6.0726.0040",
+      "title": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
+      "description": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
+      "publishedAt": "2026-07-25T23:40:26.378Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "4bb6d8f"
+    },
     {
       "version": "v6.0726.0038",
       "title": "Hub de Documentação Interna completo — Fases 10–12 + pimo-soon",
@@ -9,6 +29,26 @@
       "type": "feature",
       "author": "pimo-pro",
       "icon": "feature"
+    },
+    {
+      "version": "v6.0725.2240",
+      "title": "chore: excluir pasta DEV (@PIMO-SOON) da publicação estável",
+      "description": "chore: excluir pasta DEV (@PIMO-SOON) da publicação estável",
+      "publishedAt": "2026-07-25T22:40:54+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "1962045"
+    },
+    {
+      "version": "v6.0725.2148",
+      "title": "fix: correção da apresentação das Novidades do Sistema + SVG + remoção de texto fixo",
+      "description": "fix: correção da apresentação das Novidades do Sistema + SVG + remoção de texto fixo",
+      "publishedAt": "2026-07-25T21:48:13+01:00",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "6597ee8"
     },
     {
       "version": "v6.0725.2055",

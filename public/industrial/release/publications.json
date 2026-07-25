@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-25T23:44:11.143Z",
+      "author": "pimo-pro",
+      "commitMessage": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
+      "version": "v6.0726.0044"
+    },
+    {
+      "publishedAt": "2026-07-25T23:40:25.608Z",
+      "author": "pimo-pro",
+      "commitMessage": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
+      "version": "v6.0726.0040"
+    },
+    {
       "publishedAt": "2026-07-25T19:55:08.440Z",
       "author": "pimo-pro",
       "commitMessage": "fix(financeiro): tipar ADM do pricing central no Unificado.",

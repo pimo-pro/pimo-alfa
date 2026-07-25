@@ -159,12 +159,12 @@ function GraphCard({ graph }: { graph: DashboardGraph }) {
       }}
     >
       <h3 style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: C.text }}>{graph.title}</h3>
-      {graph.kind === "timeline" || graph.kind === "line" ? (
-        <LineChart series={graph.series} />
+      {graph.kind === "donut" ? (
+        <DonutChart slices={graph.slices} />
       ) : graph.kind === "bars" ? (
         <BarChart bars={graph.bars} max={graph.max} />
       ) : (
-        <DonutChart slices={graph.slices} />
+        <LineChart series={graph.series} />
       )}
     </article>
   );
