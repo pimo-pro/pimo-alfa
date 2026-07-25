@@ -1,7 +1,7 @@
 /**
- * SSOT de tarifas de f·brica ó public/config/pricing.json
- * Local e produÁ„o leem o mesmo ficheiro (Vite public/ + deploy FTP).
- * N„o altera fÛrmulas industriais; sÛ defaults / baselines.
+ * SSOT de tarifas de fùbrica ù public/config/pricing.json
+ * Local e produùùo leem o mesmo ficheiro (Vite public/ + deploy FTP).
+ * Schema de mercado (chapas/orlas/ù) mapeia para Orùamentos + Financeiro ADMIN.
  */
 
 import {
@@ -15,10 +15,75 @@ import {
 
 export const CENTRAL_PRICING_URL = "/config/pricing.json";
 
+export type CentralChapasPricing = {
+  MDF_BRANCO_LAMINADO_19?: number;
+  MDF_CRU_19?: number;
+  MDF_LACADO_19?: number;
+  MDF_PRETO_LAMINADO_19?: number;
+  CARVALHO_LAMINADO_19?: number;
+  AGLOMERADO_BRANCO_19?: number;
+  CONTRAPLACADO_CARVALHO_18?: number;
+  HDF_CRU_3?: number;
+  espessuraReducaoPct?: number;
+  [key: string]: number | undefined;
+};
+
+export type CentralOrlasPricing = {
+  PVC_BRANCO_1?: number;
+  PVC_CARVALHO_1?: number;
+  MELAMINA_05?: number;
+  FOLHA_MADEIRA_05?: number;
+  regraCarvalhoUsaFolhaMadeira?: boolean;
+  [key: string]: number | boolean | undefined;
+};
+
+export type CentralFerragensPricing = {
+  dobradica_soft_close?: number;
+  parafuso?: number;
+  suporte_prateleira?: number;
+  corredica_telescopica?: number;
+  corredica_soft_close?: number;
+  gaveta_metalica?: number;
+  [key: string]: number | undefined;
+};
+
+export type CentralOperacoesPricing = {
+  corte_cnc_metro?: number;
+  furo_cnc?: number;
+  rasgo_cnc_metro?: number;
+  drill_manual?: number;
+  [key: string]: number | undefined;
+};
+
 export type CentralPricingFile = {
-  version: number;
+  version?: number;
   updatedAt?: string;
   notes?: Record<string, string>;
+  /** Schema de mercado (SSOT actual). */
+  chapas?: CentralChapasPricing;
+  orlas?: CentralOrlasPricing;
+  ferragens?: CentralFerragensPricing;
+  operacoes?: CentralOperacoesPricing;
+  desperdicio?: { percentual?: number };
+  maoDeObra?: {
+    montagem_caixa_m2?: number;
+    montagem_gaveta?: number;
+    montagem_remate_metro?: number;
+  };
+  custosAdicionais?: {
+    serragem?: number;
+    adm_percentual?: number;
+    logistica?: number;
+  };
+  portes?: {
+    ativoSomenteComEscolha?: boolean;
+    local_kg?: number;
+    local_caixa?: number;
+    internacional_kg?: number;
+    internacional_caixa?: number;
+    material_extra?: number;
+  };
+  /** Campos derivados / legado (preenchidos no normalize). */
   material?: {
     precoChapaMdf19EurM2?: number;
     fallbackEurM2?: number;
@@ -33,58 +98,79 @@ export type CentralPricingFile = {
 let cached: CentralPricingFile | null = null;
 let loadPromise: Promise<CentralPricingFile | null> | null = null;
 
+function num(v: unknown, fallback: number): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function pickNums(src: Record<string, unknown> | undefined, keys: string[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!src) return out;
+  for (const k of keys) {
+    if (typeof src[k] === "number" && Number.isFinite(src[k] as number)) {
+      out[k] = src[k] as number;
+    }
+  }
+  return out;
+}
+
+const MARKET_BUILTIN_RAW: CentralPricingFile = {
+  chapas: {
+    MDF_BRANCO_LAMINADO_19: 31,
+    MDF_CRU_19: 20,
+    MDF_LACADO_19: 130,
+    MDF_PRETO_LAMINADO_19: 48,
+    CARVALHO_LAMINADO_19: 95,
+    AGLOMERADO_BRANCO_19: 29,
+    CONTRAPLACADO_CARVALHO_18: 155,
+    HDF_CRU_3: 15,
+    espessuraReducaoPct: 0.95,
+  },
+  orlas: {
+    PVC_BRANCO_1: 0.53,
+    PVC_CARVALHO_1: 0.65,
+    MELAMINA_05: 1.7,
+    FOLHA_MADEIRA_05: 1.7,
+    regraCarvalhoUsaFolhaMadeira: true,
+  },
+  ferragens: {
+    dobradica_soft_close: 1.5,
+    parafuso: 0.03,
+    suporte_prateleira: 0.15,
+    corredica_telescopica: 4.2,
+    corredica_soft_close: 7.5,
+    gaveta_metalica: 15,
+  },
+  operacoes: {
+    corte_cnc_metro: 0.28,
+    furo_cnc: 0.045,
+    rasgo_cnc_metro: 0.55,
+    drill_manual: 0.03,
+  },
+  desperdicio: { percentual: 0.18 },
+  maoDeObra: {
+    montagem_caixa_m2: 17,
+    montagem_gaveta: 7.5,
+    montagem_remate_metro: 25,
+  },
+  custosAdicionais: {
+    serragem: 0.8,
+    adm_percentual: 0.1,
+    logistica: 5,
+  },
+  portes: {
+    ativoSomenteComEscolha: true,
+    local_kg: 3.5,
+    local_caixa: 12,
+    internacional_kg: 11,
+    internacional_caixa: 28,
+    material_extra: 8,
+  },
+};
+
 /** Baseline embutido (espelha public/config/pricing.json). */
 export function getBuiltinCentralPricing(): CentralPricingFile {
-  return {
-    version: 1,
-    material: {
-      precoChapaMdf19EurM2: 35,
-      fallbackEurM2: 25,
-      densidadePadraoKgM3: 750,
-    },
-    ivaPct: 23,
-    orcamentos: {
-      perfuracoes: { drillEurPorFuro: 0, nestingEurPorOperacao: 0 },
-      custosIndustriais: {
-        desperdicioEurPorM2: 0,
-        serragemEurPorM2: 0,
-        custoChapaReal: 0,
-        custoOperacoesEspeciais: 0,
-        valorHoraMaquina: 0,
-        custoLogisticaPorKg: 0,
-        custoMontagemPorPeca: 0,
-        materialCostMode: "por_peca",
-        enableDesperdicio: false,
-        enableSerragem: false,
-        enableLogistica: false,
-        enableMaoDeObra: false,
-      },
-      operacoesAvancadas: {
-        precoForo5mm: 0,
-        precoForoCavilha10x13: 0,
-        precoForoCavilha10x30: 0,
-        precoForoCalcoGrupo: 0,
-        precoForoDobradicaGrupo: 0,
-        precoRasgoGaveta: 0,
-        precoCorteManualPorMetro: 0,
-        precoMeQuadrilha: 0,
-      },
-      ferragens: { enableUnificacao: false },
-    },
-    financeiroAdmin: {
-      adm: { enabled: true, mode: "percentagem", valor: 10 },
-      montagem: { enabled: true, mode: "fixo_por_caixa", valor: 50 },
-      portes: {
-        enabled: true,
-        taxaBase: 25,
-        porKg: 0.15,
-        porM3: 40,
-        porKm: 0.8,
-        minimo: 35,
-      },
-      distanciaKmDefault: 0,
-    },
-  };
+  return normalizeCentralPricing(MARKET_BUILTIN_RAW);
 }
 
 export function getCentralPricingCached(): CentralPricingFile {
@@ -101,39 +187,193 @@ function isHtmlPayload(text: string): boolean {
   return t.startsWith("<!doctype") || t.startsWith("<html");
 }
 
+function isMarketSchema(src: Record<string, unknown>): boolean {
+  return src.chapas != null && typeof src.chapas === "object";
+}
+
+function mapMarketToLegacy(src: CentralPricingFile): {
+  material: NonNullable<CentralPricingFile["material"]>;
+  ivaPct: number;
+  orcamentos: OrcamentosSettings;
+  financeiroAdmin: FinanceiroAdminSettings;
+} {
+  const chapas = src.chapas ?? {};
+  const operacoes = src.operacoes ?? {};
+  const custos = src.custosAdicionais ?? {};
+  const mao = src.maoDeObra ?? {};
+  const portes = src.portes ?? {};
+  const despPct = num(src.desperdicio?.percentual, 0.18);
+
+  const mdfBranco = num(chapas.MDF_BRANCO_LAMINADO_19, 31);
+  const mdfCru = num(chapas.MDF_CRU_19, 20);
+  const serragem = num(custos.serragem, 0.8);
+  const admPct = num(custos.adm_percentual, 0.1);
+  const logistica = num(custos.logistica, 5);
+  const portesSoComEscolha = portes.ativoSomenteComEscolha !== false;
+
+  const material = {
+    precoChapaMdf19EurM2: mdfBranco,
+    fallbackEurM2: mdfCru,
+    densidadePadraoKgM3: 750,
+  };
+
+  const orcamentos = normalizeOrcamentosSettings({
+    ...(src.orcamentos && typeof src.orcamentos === "object" ? src.orcamentos : {}),
+    perfuracoes: {
+      drillEurPorFuro: num(operacoes.drill_manual, 0.03),
+      nestingEurPorOperacao: num(operacoes.furo_cnc, 0.045),
+      ...(typeof src.orcamentos === "object" && src.orcamentos && "perfuracoes" in src.orcamentos
+        ? (src.orcamentos as { perfuracoes?: object }).perfuracoes
+        : {}),
+    },
+    custosIndustriais: {
+      desperdicioEurPorM2: mdfBranco,
+      serragemEurPorM2: serragem,
+      custoChapaReal: 0,
+      custoOperacoesEspeciais: 0,
+      valorHoraMaquina: 0,
+      custoLogisticaPorKg: num(portes.local_kg, 3.5),
+      custoMontagemPorPeca: num(mao.montagem_gaveta, 7.5),
+      materialCostMode: "por_peca",
+      enableDesperdicio: despPct > 0,
+      enableSerragem: serragem > 0,
+      enableLogistica: logistica > 0 || num(portes.local_kg, 0) > 0,
+      enableMaoDeObra: num(mao.montagem_caixa_m2, 0) > 0 || num(mao.montagem_gaveta, 0) > 0,
+      ...(typeof src.orcamentos === "object" && src.orcamentos && "custosIndustriais" in src.orcamentos
+        ? (src.orcamentos as { custosIndustriais?: object }).custosIndustriais
+        : {}),
+    },
+    operacoesAvancadas: {
+      precoForo5mm: num(operacoes.furo_cnc, 0.045),
+      precoForoCavilha10x13: num(operacoes.furo_cnc, 0.045),
+      precoForoCavilha10x30: num(operacoes.furo_cnc, 0.045),
+      precoForoCalcoGrupo: 0,
+      precoForoDobradicaGrupo: 0,
+      precoRasgoGaveta: num(operacoes.rasgo_cnc_metro, 0.55),
+      precoCorteManualPorMetro: num(operacoes.corte_cnc_metro, 0.28),
+      precoMeQuadrilha: 0,
+      ...(typeof src.orcamentos === "object" && src.orcamentos && "operacoesAvancadas" in src.orcamentos
+        ? (src.orcamentos as { operacoesAvancadas?: object }).operacoesAvancadas
+        : {}),
+    },
+    ferragens: { enableUnificacao: false },
+  });
+
+  const financeiroAdmin = normalizeFinanceiroAdminSettings({
+    ...(src.financeiroAdmin && typeof src.financeiroAdmin === "object" ? src.financeiroAdmin : {}),
+    adm: {
+      enabled: admPct > 0,
+      mode: "percentagem",
+      valor: admPct <= 1 ? admPct * 100 : admPct,
+    },
+    montagem: {
+      enabled: num(mao.montagem_caixa_m2, 0) > 0,
+      mode: "fixo_por_caixa",
+      valor: num(mao.montagem_caixa_m2, 17),
+    },
+    portes: {
+      enabled: !portesSoComEscolha,
+      taxaBase: num(portes.local_caixa, 12),
+      porKg: num(portes.local_kg, 3.5),
+      porM3: num(portes.material_extra, 8),
+      porKm: 0,
+      minimo: num(portes.local_caixa, 12),
+    },
+    distanciaKmDefault: 0,
+  });
+
+  return { material, ivaPct: 23, orcamentos, financeiroAdmin };
+}
+
 export function normalizeCentralPricing(raw: unknown): CentralPricingFile {
-  const builtin = getBuiltinCentralPricing();
-  if (!raw || typeof raw !== "object") return builtin;
-  const src = raw as CentralPricingFile;
+  const src = (
+    !raw || typeof raw !== "object" ? MARKET_BUILTIN_RAW : raw
+  ) as CentralPricingFile & Record<string, unknown>;
+
+  if (isMarketSchema(src)) {
+    const chapasSrc = (src.chapas ?? {}) as Record<string, unknown>;
+    const orlasSrc = (src.orlas ?? {}) as Record<string, unknown>;
+    const mapped = mapMarketToLegacy(src);
+    return {
+      version: typeof src.version === "number" && Number.isFinite(src.version) ? src.version : 2,
+      updatedAt: typeof src.updatedAt === "string" ? src.updatedAt : undefined,
+      notes: src.notes && typeof src.notes === "object" ? src.notes : undefined,
+      chapas: {
+        ...pickNums(chapasSrc, [
+          "MDF_BRANCO_LAMINADO_19",
+          "MDF_CRU_19",
+          "MDF_LACADO_19",
+          "MDF_PRETO_LAMINADO_19",
+          "CARVALHO_LAMINADO_19",
+          "AGLOMERADO_BRANCO_19",
+          "CONTRAPLACADO_CARVALHO_18",
+          "HDF_CRU_3",
+          "espessuraReducaoPct",
+        ]),
+      },
+      orlas: {
+        ...pickNums(orlasSrc, ["PVC_BRANCO_1", "PVC_CARVALHO_1", "MELAMINA_05", "FOLHA_MADEIRA_05"]),
+        regraCarvalhoUsaFolhaMadeira: orlasSrc.regraCarvalhoUsaFolhaMadeira === true,
+      },
+      ferragens: pickNums((src.ferragens ?? {}) as Record<string, unknown>, [
+        "dobradica_soft_close",
+        "parafuso",
+        "suporte_prateleira",
+        "corredica_telescopica",
+        "corredica_soft_close",
+        "gaveta_metalica",
+      ]),
+      operacoes: pickNums((src.operacoes ?? {}) as Record<string, unknown>, [
+        "corte_cnc_metro",
+        "furo_cnc",
+        "rasgo_cnc_metro",
+        "drill_manual",
+      ]),
+      desperdicio: {
+        percentual: num(src.desperdicio?.percentual, 0.18),
+      },
+      maoDeObra: {
+        montagem_caixa_m2: num(src.maoDeObra?.montagem_caixa_m2, 17),
+        montagem_gaveta: num(src.maoDeObra?.montagem_gaveta, 7.5),
+        montagem_remate_metro: num(src.maoDeObra?.montagem_remate_metro, 25),
+      },
+      custosAdicionais: {
+        serragem: num(src.custosAdicionais?.serragem, 0.8),
+        adm_percentual: num(src.custosAdicionais?.adm_percentual, 0.1),
+        logistica: num(src.custosAdicionais?.logistica, 5),
+      },
+      portes: {
+        ativoSomenteComEscolha: src.portes?.ativoSomenteComEscolha !== false,
+        local_kg: num(src.portes?.local_kg, 3.5),
+        local_caixa: num(src.portes?.local_caixa, 12),
+        internacional_kg: num(src.portes?.internacional_kg, 11),
+        internacional_caixa: num(src.portes?.internacional_caixa, 28),
+        material_extra: num(src.portes?.material_extra, 8),
+      },
+      material: mapped.material,
+      ivaPct: mapped.ivaPct,
+      orcamentos: mapped.orcamentos,
+      financeiroAdmin: mapped.financeiroAdmin,
+      aliases: src.aliases && typeof src.aliases === "object" ? src.aliases : undefined,
+    };
+  }
+
+  // Schema legado (material/orcamentos/financeiroAdmin)
   const materialSrc = src.material && typeof src.material === "object" ? src.material : {};
   return {
     version: typeof src.version === "number" && Number.isFinite(src.version) ? src.version : 1,
     updatedAt: typeof src.updatedAt === "string" ? src.updatedAt : undefined,
     notes: src.notes && typeof src.notes === "object" ? src.notes : undefined,
     material: {
-      precoChapaMdf19EurM2:
-        typeof materialSrc.precoChapaMdf19EurM2 === "number"
-          ? materialSrc.precoChapaMdf19EurM2
-          : builtin.material!.precoChapaMdf19EurM2,
-      fallbackEurM2:
-        typeof materialSrc.fallbackEurM2 === "number"
-          ? materialSrc.fallbackEurM2
-          : builtin.material!.fallbackEurM2,
-      densidadePadraoKgM3:
-        typeof materialSrc.densidadePadraoKgM3 === "number"
-          ? materialSrc.densidadePadraoKgM3
-          : builtin.material!.densidadePadraoKgM3,
+      precoChapaMdf19EurM2: num(materialSrc.precoChapaMdf19EurM2, 31),
+      fallbackEurM2: num(materialSrc.fallbackEurM2, 20),
+      densidadePadraoKgM3: num(materialSrc.densidadePadraoKgM3, 750),
     },
-    ivaPct:
-      typeof src.ivaPct === "number" && Number.isFinite(src.ivaPct) && src.ivaPct >= 0
-        ? src.ivaPct
-        : builtin.ivaPct,
+    ivaPct: num(src.ivaPct, 23),
     orcamentos: normalizeOrcamentosSettings({
-      ...(builtin.orcamentos as object),
       ...(src.orcamentos && typeof src.orcamentos === "object" ? src.orcamentos : {}),
     }),
     financeiroAdmin: normalizeFinanceiroAdminSettings({
-      ...(builtin.financeiroAdmin as object),
       ...(src.financeiroAdmin && typeof src.financeiroAdmin === "object"
         ? src.financeiroAdmin
         : {}),
@@ -142,7 +382,7 @@ export function normalizeCentralPricing(raw: unknown): CentralPricingFile {
   };
 }
 
-/** Fetch /config/pricing.json (idempotente). Falha ? builtin (mesmos n˙meros). */
+/** Fetch /config/pricing.json (idempotente). Falha ? builtin (mesmos nùmeros). */
 export async function loadCentralPricing(url = CENTRAL_PRICING_URL): Promise<CentralPricingFile> {
   if (cached) return cached;
   if (loadPromise) {
@@ -189,11 +429,75 @@ export function financeiroAdminDefaultsFromCentral(
 export function materialFallbackEurM2FromCentral(pricing?: CentralPricingFile | null): number {
   const p = pricing ?? getCentralPricingCached();
   const n = p.material?.fallbackEurM2;
-  return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : 25;
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : 20;
 }
 
 export function ivaPctFromCentral(pricing?: CentralPricingFile | null): number {
   const p = pricing ?? getCentralPricingCached();
   const n = p.ivaPct;
   return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : 23;
+}
+
+/** Famùlia viewer / canonical ? chave de chapa no pricing de mercado. */
+const CHAPA_KEY_BY_FAMILY: Record<string, string> = {
+  mdf_branco: "MDF_BRANCO_LAMINADO_19",
+  mdf_preto: "MDF_PRETO_LAMINADO_19",
+  carvalho_natural: "CARVALHO_LAMINADO_19",
+  carvalho: "CARVALHO_LAMINADO_19",
+  agl_carvalho: "CARVALHO_LAMINADO_19",
+  hdf_cru: "MDF_CRU_19",
+  lacado: "MDF_LACADO_19",
+  laminado_linho_cancun: "AGLOMERADO_BRANCO_19",
+  nogueira: "CARVALHO_LAMINADO_19",
+};
+
+/**
+ * Preùo ù/mù a partir de chapas do pricing.json.
+ * Espessuras &lt; referùncia (19/18) aplicam espessuraReducaoPct (-5%).
+ */
+export function chapaEurM2FromCentral(
+  materialKey: string,
+  espessuraMm: number,
+  pricing?: CentralPricingFile | null
+): number | null {
+  const p = pricing ?? getCentralPricingCached();
+  const chapas = p.chapas;
+  if (!chapas) return null;
+
+  const keyNorm = String(materialKey || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const family = keyNorm.replace(/-\d+(\.\d+)?$/, "").replace(/_\d+(\.\d+)?$/, "");
+  const chapaKey = CHAPA_KEY_BY_FAMILY[family] ?? CHAPA_KEY_BY_FAMILY[keyNorm];
+
+  let base: number | undefined;
+  let refMm = 19;
+
+  if (family === "hdf_cru" && espessuraMm > 0 && espessuraMm <= 5) {
+    base = chapas.HDF_CRU_3;
+    refMm = 3;
+  } else if (chapaKey && typeof chapas[chapaKey] === "number") {
+    base = chapas[chapaKey];
+    if (chapaKey.includes("_18")) refMm = 18;
+    else if (chapaKey.includes("_3")) refMm = 3;
+    else refMm = 19;
+  }
+
+  if (base == null || !Number.isFinite(base)) return null;
+
+  const reducao = num(chapas.espessuraReducaoPct, 0.95);
+  if (espessuraMm > 0 && espessuraMm < refMm - 0.5) {
+    return base * reducao;
+  }
+  return base;
+}
+
+export function orlaEurMFromCentral(
+  kind: "PVC_BRANCO_1" | "PVC_CARVALHO_1" | "MELAMINA_05" | "FOLHA_MADEIRA_05",
+  pricing?: CentralPricingFile | null
+): number | null {
+  const p = pricing ?? getCentralPricingCached();
+  const v = p.orlas?.[kind];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }

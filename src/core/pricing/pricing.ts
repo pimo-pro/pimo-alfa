@@ -1,6 +1,9 @@
 import type { CutListItem, CutListItemComPreco } from "../types";
 import { listOfficialMaterials, resolveMaterial } from "../materials/materials.api";
-import { materialFallbackEurM2FromCentral } from "./centralPricingConfig";
+import {
+  chapaEurM2FromCentral,
+  materialFallbackEurM2FromCentral,
+} from "./centralPricingConfig";
 
 // Interface para preço de material
 interface PrecoMaterial {
@@ -23,6 +26,14 @@ const PRECOS_MATERIAIS: PrecoMaterial[] = listOfficialMaterials()
  */
 export function getPrecoPorMaterial(material: string, espessura: number): number {
   const resolved = resolveMaterial(material);
+  const lookupKey =
+    resolved?.canonicalId ||
+    resolved?.viewerMaterialId ||
+    resolved?.label ||
+    material;
+  const fromCentral = chapaEurM2FromCentral(lookupKey, espessura);
+  if (fromCentral != null) return fromCentral;
+
   const effectiveMaterial = resolved?.label ?? material;
   const preco = PRECOS_MATERIAIS.find(
     (p) => p.material === effectiveMaterial && p.espessura === espessura

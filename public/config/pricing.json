@@ -1,74 +1,62 @@
 {
-  "version": 1,
-  "updatedAt": "2026-07-25T15:30:00.000Z",
-  "notes": {
-    "precoRemates": "Sem tarifa fixa — Remates/Rodapés = material peç na cutlist (área × custo_m2). Não inventar fallback €.",
-    "precoOrla": "Presets de orla (precoPorMetro) — fora deste ficheiro até fase orla SSOT.",
-    "precoFerragens": "Via A (regras) por defeito; Via B se orcamentos.ferragens.enableUnificacao."
+  "chapas": {
+    "MDF_BRANCO_LAMINADO_19": 31,
+    "MDF_CRU_19": 20,
+    "MDF_LACADO_19": 130,
+    "MDF_PRETO_LAMINADO_19": 48,
+    "CARVALHO_LAMINADO_19": 95,
+    "AGLOMERADO_BRANCO_19": 29,
+    "CONTRAPLACADO_CARVALHO_18": 155,
+    "HDF_CRU_3": 15,
+    "espessuraReducaoPct": 0.95
   },
-  "material": {
-    "precoChapaMdf19EurM2": 35,
-    "fallbackEurM2": 25,
-    "densidadePadraoKgM3": 750
+
+  "orlas": {
+    "PVC_BRANCO_1": 0.53,
+    "PVC_CARVALHO_1": 0.65,
+    "MELAMINA_05": 1.70,
+    "FOLHA_MADEIRA_05": 1.70,
+    "regraCarvalhoUsaFolhaMadeira": true
   },
-  "ivaPct": 23,
-  "orcamentos": {
-    "perfuracoes": {
-      "drillEurPorFuro": 0,
-      "nestingEurPorOperacao": 0
-    },
-    "custosIndustriais": {
-      "desperdicioEurPorM2": 0,
-      "serragemEurPorM2": 0,
-      "custoChapaReal": 0,
-      "custoOperacoesEspeciais": 0,
-      "valorHoraMaquina": 0,
-      "custoLogisticaPorKg": 0,
-      "custoMontagemPorPeca": 0,
-      "materialCostMode": "por_peca",
-      "enableDesperdicio": false,
-      "enableSerragem": false,
-      "enableLogistica": false,
-      "enableMaoDeObra": false
-    },
-    "operacoesAvancadas": {
-      "precoForo5mm": 0,
-      "precoForoCavilha10x13": 0,
-      "precoForoCavilha10x30": 0,
-      "precoForoCalcoGrupo": 0,
-      "precoForoDobradicaGrupo": 0,
-      "precoRasgoGaveta": 0,
-      "precoCorteManualPorMetro": 0,
-      "precoMeQuadrilha": 0
-    },
-    "ferragens": {
-      "enableUnificacao": false
-    }
+
+  "ferragens": {
+    "dobradica_soft_close": 1.50,
+    "parafuso": 0.03,
+    "suporte_prateleira": 0.15,
+    "corredica_telescopica": 4.20,
+    "corredica_soft_close": 7.50,
+    "gaveta_metalica": 15
   },
-  "financeiroAdmin": {
-    "adm": { "enabled": true, "mode": "percentagem", "valor": 10 },
-    "montagem": { "enabled": true, "mode": "fixo_por_caixa", "valor": 50 },
-    "portes": {
-      "enabled": true,
-      "taxaBase": 25,
-      "porKg": 0.15,
-      "porM3": 40,
-      "porKm": 0.8,
-      "minimo": 35
-    },
-    "distanciaKmDefault": 0
+
+  "operacoes": {
+    "corte_cnc_metro": 0.28,
+    "furo_cnc": 0.045,
+    "rasgo_cnc_metro": 0.55,
+    "drill_manual": 0.03
   },
-  "aliases": {
-    "precoChapa": "material.precoChapaMdf19EurM2 | orcamentos.custosIndustriais.custoChapaReal",
-    "precoCNC": "orcamentos.perfuracoes.nestingEurPorOperacao",
-    "precoDrill": "orcamentos.perfuracoes.drillEurPorFuro",
-    "precoMontagem": "financeiroAdmin.montagem.valor",
-    "precoADM": "financeiroAdmin.adm.valor",
-    "precoPortes": "financeiroAdmin.portes.*",
-    "precoDesperdicio": "orcamentos.custosIndustriais.desperdicioEurPorM2",
-    "precoSerragem": "orcamentos.custosIndustriais.serragemEurPorM2",
-    "precoMaoDeObra": "orcamentos.custosIndustriais.valorHoraMaquina",
-    "precoOpsAvancadas": "orcamentos.operacoesAvancadas.*",
-    "precoRemates": "cutlist material peç (sem tarifa fixa)"
+
+  "desperdicio": {
+    "percentual": 0.18
+  },
+
+  "maoDeObra": {
+    "montagem_caixa_m2": 17,
+    "montagem_gaveta": 7.5,
+    "montagem_remate_metro": 25
+  },
+
+  "custosAdicionais": {
+    "serragem": 0.80,
+    "adm_percentual": 0.10,
+    "logistica": 5
+  },
+
+  "portes": {
+    "ativoSomenteComEscolha": true,
+    "local_kg": 3.5,
+    "local_caixa": 12,
+    "internacional_kg": 11,
+    "internacional_caixa": 28,
+    "material_extra": 8
   }
 }
