@@ -1,0 +1,333 @@
+import fs from "node:fs";
+import path from "node:path";
+
+const file = path.join("src/pages/documentacao/HubDocumentacaoInterna.tsx");
+
+const doc = "Documenta\u00e7\u00e3o";
+const secoes = "sec\u00e7\u00f5es";
+const conteudo = "Conte\u00fado";
+const historico = "hist\u00f3rico";
+const dominio = "dom\u00ednio";
+const indice = "\u00cdndice";
+
+const content = `/**
+ * Hub ${doc} Interna — hibrido A+C.
+ * Rota: /documentacao. Layout full-width / full-height responsivo.
+ */
+
+import { useCallback, useEffect, useState } from "react";
+import { Icon } from "@/components/icons";
+import {
+  AJUDA_PAGE_TOKENS as C,
+  ajudaPageFont as font,
+} from "../ajuda/ajudaPageTokens";
+import {
+  DEFAULT_HUB_SECTION,
+  HUB_SECTIONS,
+  parseHubSectionHash,
+  type HubSectionId,
+} from "./hubSections";
+import HubHistoricoContent from "./HubHistoricoContent";
+import HubAdicionadosContent from "./HubAdicionadosContent";
+import HubLogsContent from "./HubLogsContent";
+import HubRemovidosContent from "./HubRemovidosContent";
+import HubRefsContent from "./HubRefsContent";
+import HubProgressoContent from "./HubProgressoContent";
+
+type HubDocumentacaoInternaProps = {
+  /** Secao inicial. Alias: defaultSection. */
+  initialSection?: HubSectionId;
+  /** Alias Admin embeds (equiv. a initialSection). */
+  defaultSection?: HubSectionId;
+  /**
+   * Embed no Admin: respeita defaultSection/initialSection no mount
+   * (nao deixa um hash residual de outra pagina sobrescrever).
+   * Continua a atualizar hash via replaceState ao navegar nas secoes.
+   */
+  embedded?: boolean;
+};
+
+export default function HubDocumentacaoInterna({
+  initialSection,
+  defaultSection,
+  embedded = false,
+}: HubDocumentacaoInternaProps) {
+  const startSection = defaultSection ?? initialSection ?? DEFAULT_HUB_SECTION;
+  const [active, setActive] = useState<HubSectionId>(startSection);
+
+  useEffect(() => {
+    if (embedded) {
+      setActive(startSection);
+      const next = \`#\${startSection}\`;
+      if (window.location.hash !== next) {
+        window.history.replaceState(null, "", \`\${window.location.pathname}\${next}\`);
+      }
+      return;
+    }
+    const fromHash = parseHubSectionHash(window.location.hash);
+    if (fromHash) setActive(fromHash);
+  }, [embedded, startSection]);
+
+  const selectSection = useCallback((id: HubSectionId) => {
+    setActive(id);
+    const next = \`#\${id}\`;
+    if (window.location.hash !== next) {
+      window.history.replaceState(null, "", \`\${window.location.pathname}\${next}\`);
+    }
+  }, []);
+
+  const activeDef = HUB_SECTIONS.find((s) => s.id === active) ?? HUB_SECTIONS[0];
+
+  return (
+    <main
+      style={{
+        flex: 1,
+        width: "100%",
+        maxWidth: "none",
+        minHeight: "100%",
+        height: "100%",
+        boxSizing: "border-box",
+        overflowY: "auto",
+        scrollBehavior: "smooth",
+        background: C.bg,
+        color: C.text,
+        fontFamily: font,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "none",
+          margin: 0,
+          padding: "0 clamp(12px, 2vw, 28px) 48px",
+          boxSizing: "border-box",
+          minHeight: "100%",
+        }}
+      >
+        <header
+          style={{
+            padding: "clamp(24px, 4vw, 40px) 0 24px",
+            borderBottom: \`1px solid \${C.border}\`,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 12,
+              padding: "3px 10px",
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              background: C.accentBg,
+              color: C.accent,
+              border: \`1px solid \${C.accentBd}\`,
+            }}
+          >
+            ${doc} interna
+          </div>
+          <h1
+            style={{
+              fontSize: "clamp(1.6rem, 3.5vw, 2.1rem)",
+              fontWeight: 800,
+              margin: "0 0 8px",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Hub de ${doc} Interna
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: C.muted, maxWidth: "72ch", lineHeight: 1.55 }}>
+            Hub A+C — mapa de ${secoes} e leitura editorial. ${conteudo} ligado a
+            ${historico}, novidades, refs e progresso.
+          </p>
+        </header>
+
+        <section
+          aria-label="Mapa de ${secoes}"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))",
+            gap: 10,
+            marginBottom: 28,
+            width: "100%",
+          }}
+        >
+          {HUB_SECTIONS.map((sec) => {
+            const isActive = sec.id === active;
+            return (
+              <button
+                key={sec.id}
+                type="button"
+                onClick={() => selectSection(sec.id)}
+                aria-pressed={isActive}
+                style={{
+                  textAlign: "left",
+                  padding: "14px 14px 12px",
+                  borderRadius: 10,
+                  border: \`1px solid \${isActive ? C.accentBd : C.border}\`,
+                  background: isActive ? C.accentBg : C.surface,
+                  color: C.text,
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <Icon name={sec.icon} size={16} aria-hidden />
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{sec.label}</span>
+                </span>
+                <span style={{ fontSize: 11, color: C.muted, lineHeight: 1.4 }}>{sec.blurb}</span>
+              </button>
+            );
+          })}
+        </section>
+
+        <div
+          className="hub-doc-body"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(160px, 220px) minmax(0, 1fr)",
+            gap: "clamp(12px, 2vw, 28px)",
+            alignItems: "start",
+            width: "100%",
+          }}
+        >
+          <nav
+            aria-label="${indice} do hub"
+            style={{
+              position: "sticky",
+              top: 12,
+              padding: 10,
+              borderRadius: 10,
+              border: \`1px solid \${C.border}\`,
+              background: C.surface,
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              width: "100%",
+              boxSizing: "border-box",
+            }}
+          >
+            {HUB_SECTIONS.map((sec) => {
+              const isActive = sec.id === active;
+              return (
+                <button
+                  key={\`nav-\${sec.id}\`}
+                  type="button"
+                  onClick={() => selectSection(sec.id)}
+                  aria-current={isActive ? "page" : undefined}
+                  style={{
+                    textAlign: "left",
+                    padding: "8px 10px",
+                    border: "none",
+                    borderRadius: 6,
+                    background: isActive ? C.accentBg : "transparent",
+                    color: isActive ? C.text : C.muted,
+                    fontSize: 12,
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: "pointer",
+                    width: "100%",
+                  }}
+                >
+                  {sec.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          <section
+            id={active}
+            aria-labelledby={\`hub-section-title-\${active}\`}
+            style={{
+              padding: "clamp(14px, 2vw, 22px)",
+              borderRadius: 10,
+              border: \`1px solid \${C.border}\`,
+              background: C.surface,
+              minHeight: 220,
+              width: "100%",
+              boxSizing: "border-box",
+              minWidth: 0,
+            }}
+          >
+            <h2
+              id={\`hub-section-title-\${active}\`}
+              style={{
+                margin: "0 0 8px",
+                fontSize: 16,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Icon name={activeDef.icon} size={18} aria-hidden />
+              {activeDef.label}
+            </h2>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
+              {activeDef.blurb}
+            </p>
+            {active === "historico" ? (
+              <HubHistoricoContent />
+            ) : active === "adicionados" ? (
+              <HubAdicionadosContent />
+            ) : active === "logs" ? (
+              <HubLogsContent />
+            ) : active === "removidos" ? (
+              <HubRemovidosContent />
+            ) : active === "refs" ? (
+              <HubRefsContent />
+            ) : active === "progresso" ? (
+              <HubProgressoContent />
+            ) : (
+              <div
+                data-hub-placeholder={active}
+                style={{
+                  padding: "20px 16px",
+                  borderRadius: 8,
+                  border: \`1px dashed \${C.border}\`,
+                  fontSize: 12,
+                  color: C.muted,
+                  lineHeight: 1.55,
+                }}
+              >
+                Placeholder — conteudo desta seccao sera ligado nas fases seguintes
+                (documentacao atual / planeamento). Sem dados nesta fase.
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+      <style>{\`
+        @media (max-width: 820px) {
+          .hub-doc-body {
+            grid-template-columns: 1fr !important;
+          }
+          .hub-doc-body > nav {
+            position: static !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+          }
+          .hub-doc-body > nav button {
+            width: auto !important;
+          }
+        }
+      \`}</style>
+    </main>
+  );
+}
+`;
+
+fs.writeFileSync(file, content, { encoding: "utf8" });
+const check = fs.readFileSync(file, "utf8");
+console.log("wrote", file);
+console.log("Documentação", check.includes("Documentação"));
+console.log("FFFD", check.includes("\uFFFD"));
+console.log("maxWidth 1120", check.includes("1120"));
+console.log("full width", check.includes('maxWidth: "none"'));

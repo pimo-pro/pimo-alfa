@@ -8,20 +8,14 @@ import {
 } from "../../../core/deploy/publishedVersion";
 
 interface FooterProps {
-  onShowSystemDocs?: () => void;
   onShowAjuda?: () => void;
   onShowUserProjects?: () => void;
-  onShowProjectProgress?: () => void;
-  onShowPainelReferencia?: () => void;
   onShowLanding?: () => void;
 }
 
 export default function Footer({
-  onShowSystemDocs,
   onShowAjuda,
   onShowUserProjects,
-  onShowProjectProgress,
-  onShowPainelReferencia,
   onShowLanding,
 }: FooterProps) {
   const navigate = useNavigate();
@@ -117,45 +111,18 @@ export default function Footer({
           Ajuda
         </span>
         <span style={{ cursor: "pointer" }}>Contacto</span>
-        <span style={{ cursor: "pointer" }}>Documentação</span>
         <span
           style={{ cursor: "pointer" }}
-          onClick={onShowSystemDocs}
+          onClick={() => navigate("/documentacao")}
           role="button"
           tabIndex={0}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
-              onShowSystemDocs?.();
+              navigate("/documentacao");
             }
           }}
         >
-          Documentação do Sistema
-        </span>
-        <span
-          style={{ cursor: "pointer" }}
-          onClick={onShowProjectProgress}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              onShowProjectProgress?.();
-            }
-          }}
-        >
-          Progresso do Projeto
-        </span>
-        <span
-          style={{ cursor: "pointer" }}
-          onClick={onShowPainelReferencia}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              onShowPainelReferencia?.();
-            }
-          }}
-        >
-          Painel de Referência
+          Documentação interna
         </span>
         <span
           style={{ cursor: "pointer" }}

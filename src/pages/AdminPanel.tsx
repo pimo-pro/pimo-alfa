@@ -21,7 +21,6 @@ import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
 import IndustrialSectionsAdminPage from "../components/admin/IndustrialSectionsAdminPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import ThemeTemplatesAdminPage from "../components/admin/ThemeTemplatesAdminPage";
-import PainelReferencia from "./PainelReferencia";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import FinanceiroAdminSettings from "./admin/FinanceiroAdminSettings";
 import OrcamentosAdminSettings from "./admin/OrcamentosAdminSettings";
@@ -29,7 +28,7 @@ import DeployInfoPage from "./admin/DeployInfoPage";
 import { useAuth } from "../auth/useAuth";
 import { hasFullAccess } from "../auth/rbac";
 
-const ProjectProgress = lazy(() => import("./ProjectProgress"));
+const HubDocumentacaoInterna = lazy(() => import("./documentacao/HubDocumentacaoInterna"));
 
 type AdminTab =
   | "Gestão de Materiais"
@@ -284,7 +283,7 @@ export default function AdminPanel() {
             <DoorRulesAdminPage />
           ) : active === "Project Progress" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
-              <ProjectProgress />
+              <HubDocumentacaoInterna embedded defaultSection="progresso" />
             </Suspense>
           ) : active === "Configuração de Etiquetas (v5)" ? (
             canSeeAdminOnlyMenus ? (
@@ -334,7 +333,7 @@ export default function AdminPanel() {
             )
           ) : active === "Painel Referência" ? (
             <Suspense fallback={<div style={{ fontSize: 12, color: "var(--text-muted)" }}>Carregando…</div>}>
-              <PainelReferencia />
+              <HubDocumentacaoInterna embedded defaultSection="refs" />
             </Suspense>
           ) : active === "icons" ? (
             <IconGallery />

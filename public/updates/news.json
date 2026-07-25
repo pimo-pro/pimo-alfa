@@ -1,6 +1,15 @@
 {
-  "updatedAt": "2026-07-25T20:46:37.294Z",
+  "updatedAt": "2026-07-25T23:38:41.011Z",
   "news": [
+    {
+      "version": "v6.0726.0038",
+      "title": "Hub de Documentação Interna completo — Fases 10–12 + pimo-soon",
+      "description": "Hub de Documentação Interna completo em /documentacao: Fase 10 — Planeamento Futuro integrada; Fase 11 — Atual (Estado do Sistema) adicionada; Fase 12 — Dashboard Avançado publicada; pimo-soon — Plano Futuro (fases 13–18) como secção oficial; layout full-width + grelha responsiva; encoding UTF-8 sem BOM validado; KPIs, snapshots, gráficos SVG e ligações cruzadas ativos. Secções: Histórico + Refs + Progresso + Planeamento + Atual + Dashboard + pimo-soon.",
+      "publishedAt": "2026-07-25T23:38:41.011Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature"
+    },
     {
       "version": "v6.0725.2055",
       "title": "fix(financeiro): tipar ADM do pricing central no Unificado.",

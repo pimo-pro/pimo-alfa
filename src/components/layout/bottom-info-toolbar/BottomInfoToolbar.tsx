@@ -77,8 +77,8 @@ const toolbarStyle: React.CSSProperties = {
   borderTop: "1px solid var(--toolbar-border)",
   borderBottom: "1px solid var(--toolbar-border)",
   flexShrink: 0,
-  minHeight: 52,
-  height: 52,
+  minHeight: 40,
+  height: 40,
   boxSizing: "border-box",
 };
 
@@ -90,18 +90,18 @@ const leftButtonsWrapStyle: React.CSSProperties = {
 };
 
 const buttonBaseStyle: React.CSSProperties = {
-  padding: "8px 12px",
-  border: "1px solid var(--button-ghost-border)",
-  borderRadius: "var(--pi-btn-radius, 6px)",
+  padding: "4px 6px",
+  border: "none",
+  borderRadius: 0,
   fontSize: 12,
   fontWeight: 500,
   cursor: "pointer",
   color: "var(--text-main)",
-  background: "var(--button-ghost-bg)",
+  background: "transparent",
   whiteSpace: "nowrap",
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: 6,
   transition: "opacity 0.15s ease",
 };
 
@@ -944,8 +944,7 @@ export default function BottomInfoToolbar() {
                 onClick={() => togglePanel(id)}
                 style={{
                   ...buttonBaseStyle,
-                  background: isActive ? "var(--toolbar-pressed-bg)" : "var(--button-ghost-bg)",
-                  borderColor: isActive ? "var(--border-selected)" : "var(--button-ghost-border)",
+                  background: isActive ? "var(--toolbar-pressed-bg)" : "transparent",
                   color: isActive ? "var(--text-main)" : "var(--text-muted)",
                 }}
                 onMouseEnter={(e) => {
@@ -955,7 +954,7 @@ export default function BottomInfoToolbar() {
                   e.currentTarget.style.opacity = "1";
                 }}
               >
-                <IndustrialToolbarIcon name={icon} size={18} />
+                <IndustrialToolbarIcon name={icon} size={16} />
                 {label}
                 {badge != null && badge > 0 ? <span style={badgeStyle}>{badge}</span> : null}
               </button>
@@ -984,7 +983,7 @@ export default function BottomInfoToolbar() {
               e.currentTarget.style.background = componentsPopoverOpen ? "rgba(59, 130, 246, 0.2)" : "transparent";
             }}
           >
-            <Icon name="grid" size={14} aria-hidden />
+            <Icon name="grid" size={16} aria-hidden />
             componentes
           </button>
           <button
@@ -1010,6 +1009,7 @@ export default function BottomInfoToolbar() {
               e.currentTarget.style.background = historyPanelOpen ? "rgba(59, 130, 246, 0.2)" : "transparent";
             }}
           >
+            <Icon name="undo" size={16} aria-hidden />
             Histórico
           </button>
 

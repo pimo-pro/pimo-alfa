@@ -1,0 +1,44 @@
+[
+  {
+    "id": "doc-page-documentation-tsx",
+    "title": "Página Documentation.tsx (legado)",
+    "removedIn": "2025-06-01",
+    "replacedBy": "/painel-referencia (PainelReferencia)",
+    "notes": "Removida e substituída pelo Painel de Referência dedicado. Registo a partir do histórico interno do projeto."
+  },
+  {
+    "id": "roadmap-semanal-legado",
+    "title": "Roadmap semanal (legado)",
+    "removedIn": "2025-08-01",
+    "replacedBy": "ProjectRoadmap / Phases",
+    "notes": "Planeamento semanal removido e substituído por Phases com progresso global e por fase."
+  },
+  {
+    "id": "left-panel-selecionar-caixa",
+    "title": "Secção Selecionar Caixa do Projeto (painel esquerdo)",
+    "removedIn": "2025-04-01",
+    "replacedBy": null,
+    "notes": "Remoção da secção do painel esquerdo por falta de utilidade no fluxo atual."
+  },
+  {
+    "id": "bottom-ultima-atualizacao",
+    "title": "Bloco Última Atualização (painel inferior)",
+    "removedIn": "2025-05-01",
+    "replacedBy": null,
+    "notes": "Bloco removido do painel inferior durante a consolidação Cutlist / Financeiro."
+  },
+  {
+    "id": "footer-botao-documentacao-orfao",
+    "title": "Botão footer Documentação (órfão)",
+    "removedIn": "2026-07-25",
+    "replacedBy": "Documentação do Sistema → /documentacao (Hub)",
+    "notes": "Span sem onClick removido do Footer; a rota oficial permanece Documentação do Sistema / Hub interno."
+  },
+  {
+    "id": "documentacao-sistema-pagina-monolitica",
+    "title": "Documentacao.tsx monolítica (conteúdo inline)",
+    "removedIn": "2026-07-25",
+    "replacedBy": "Hub /documentacao + core/docs/archive (Histórico)",
+    "notes": "Conteúdo legado migrado para arquivo tipado; a rota /documentacao passou a ser o Hub de Documentação Interna."
+  }
+]

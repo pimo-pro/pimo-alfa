@@ -23,7 +23,6 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_VIEWER_OPTIONS, VIEWER_BACKGROUND } from "./constants/viewerOptions";
 import { useUiStore } from "./stores/uiStore";
-import PainelReferencia from "./pages/PainelReferencia";
 import HelpPage from "./pages/HelpPage";
 import LandingPage from "./pages/LandingPage";
 import UserProjectsPage from "./pages/UserProjectsPage";
@@ -88,7 +87,6 @@ import { ajudaRoutes } from "./routes/ajudaRoutes";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
-const ProjectProgress = lazy(() => import("./pages/ProjectProgress"));
 const V4Page = lazy(() => import("./pages/V4Page"));
 const NestingV3RoutePage = lazy(() => import("./app/nesting-v3/NestingV3RoutePage"));
 const DevPimoTest = import.meta.env.DEV
@@ -130,10 +128,8 @@ function LegacyApp() {
   const handleResizeEnd = () => {
     resizeState.current.active = false;
   };
-  const [showPainelReferencia, setShowPainelReferencia] = useState(false);
   const [showSystemDocs, setShowSystemDocs] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [showProjectProgress, setShowProjectProgress] = useState(false);
   const [showDevTest, setShowDevTest] = useState(false);
   const [showAjuda, setShowAjuda] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
@@ -143,23 +139,29 @@ function LegacyApp() {
   const location = useLocation();
 
   const syncRoute = useCallback(() => {
-    const pathname = window.location.pathname;
+    let pathname = window.location.pathname;
+
+    // Fase 8 — redirects das rotas antigas → Hub /documentacao
+    if (pathname === "/painel-referencia") {
+      window.history.replaceState({}, "", "/documentacao#refs");
+      pathname = "/documentacao";
+    } else if (pathname === "/project-progress") {
+      window.history.replaceState({}, "", "/documentacao#progresso");
+      pathname = "/documentacao";
+    }
+
     const isSystemDocs = pathname === "/documentacao";
     const isAdmin = pathname === "/admin";
-    const isProjectProgress = pathname === "/project-progress";
     if (!import.meta.env.DEV && pathname === "/dev-test") {
       window.history.replaceState({}, "", "/");
     }
     const isDevTest = import.meta.env.DEV && pathname === "/dev-test";
-    const isPainelReferencia = pathname === "/painel-referencia";
     const isAjuda = pathname === "/ajuda";
     const isLanding = pathname === "/landing" || pathname === "/apresentacao";
     const isUserProjects = pathname === "/meus-projetos";
     setShowSystemDocs(isSystemDocs);
     setShowAdmin(isAdmin);
-    setShowProjectProgress(isProjectProgress);
     setShowDevTest(isDevTest);
-    setShowPainelReferencia(isPainelReferencia);
     setShowAjuda(isAjuda);
     setShowLanding(isLanding);
     setShowUserProjects(isUserProjects);
@@ -175,42 +177,8 @@ function LegacyApp() {
     syncRoute();
   }, [location.pathname, syncRoute]);
 
-  const navigateToSystemDocs = () => {
-    window.history.pushState({}, "", "/documentacao");
-    setShowSystemDocs(true);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
-  };
-
-  const navigateToProjectProgress = () => {
-    window.history.pushState({}, "", "/project-progress");
-    setShowProjectProgress(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowPainelReferencia(false);
-    setShowAjuda(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
-  };
-
   const navigateToAjuda = () => {
     navigate("/ajuda");
-  };
-
-  const navigateToPainelReferencia = () => {
-    window.history.pushState({}, "", "/painel-referencia");
-    setShowPainelReferencia(true);
-    setShowSystemDocs(false);
-    setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowAjuda(false);
-    setShowLanding(false);
-    setShowDevTest(false);
-    setShowUserProjects(false);
   };
 
   const navigateToLanding = () => {
@@ -219,8 +187,6 @@ function LegacyApp() {
     setShowAjuda(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
-    setShowProjectProgress(false);
-    setShowPainelReferencia(false);
     setShowDevTest(false);
     setShowUserProjects(false);
   };
@@ -231,9 +197,8 @@ function LegacyApp() {
     setShowAjuda(false);
     setShowSystemDocs(false);
     setShowAdmin(false);
-    setShowProjectProgress(false);
     setShowDevTest(false);
-    setShowPainelReferencia(false);
+    setShowLanding(false);
   };
 
   const navigateToNestingV3 = (payload?: { pieces?: V3Piece[]; projectId?: string; projectName?: string }) => {
@@ -273,16 +238,12 @@ function LegacyApp() {
 
         {/* MAIN AREA */}
         <div className="app-main">
-          {showPainelReferencia || showSystemDocs || showAdmin || showProjectProgress || showDevTest || showAjuda || showLanding || showUserProjects ? (
+          {showSystemDocs || showAdmin || showDevTest || showAjuda || showLanding || showUserProjects ? (
             <Suspense fallback={<div style={{ padding: 20, color: "var(--text-muted)" }}>Carregando…</div>}>
-              {showPainelReferencia ? (
-                <PainelReferencia />
-              ) : showSystemDocs ? (
+              {showSystemDocs ? (
                 <Documentacao />
               ) : showAdmin ? (
                 <AdminPanel />
-              ) : showProjectProgress ? (
-                <ProjectProgress />
               ) : showDevTest && DevPimoTest ? (
                 <DevPimoTest />
               ) : showAjuda ? (
@@ -370,11 +331,8 @@ function LegacyApp() {
         </div>
 
         <Footer
-          onShowSystemDocs={navigateToSystemDocs}
           onShowAjuda={navigateToAjuda}
           onShowUserProjects={navigateToUserProjects}
-          onShowProjectProgress={navigateToProjectProgress}
-          onShowPainelReferencia={navigateToPainelReferencia}
           onShowLanding={navigateToLanding}
         />
 
@@ -585,6 +543,9 @@ export default function App() {
           <Route path="/v4" element={<V4Page />} /> {/* TEMPORARY — remove before production */}
         </Route>
         <Route path="/" element={<LegacyApp />} />
+        {/* Fase 8 — redirects → Hub /documentacao */}
+        <Route path="/painel-referencia" element={<Navigate to="/documentacao#refs" replace />} />
+        <Route path="/project-progress" element={<Navigate to="/documentacao#progresso" replace />} />
         {/* Painel legacy (AdminPanel): mesmo shell que / — syncRoute em LegacyApp lê pathname /admin */}
         <Route path="/admin" element={<LegacyApp />} />
         {/* Projeto importado de ficheiro — workspace completo em /{slug} */}
