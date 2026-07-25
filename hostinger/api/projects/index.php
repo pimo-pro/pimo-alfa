@@ -580,6 +580,14 @@ if ($method === "POST" && $action === "thumb") {
     if (isset($_FILES["file"]) && is_array($_FILES["file"])) {
         $fileErr = (int)($_FILES["file"]["error"] ?? UPLOAD_ERR_NO_FILE);
         $tmpPath = (string)($_FILES["file"]["tmp_name"] ?? "");
+        if ($fileErr === UPLOAD_ERR_NO_FILE || $fileErr === UPLOAD_ERR_PARTIAL) {
+            respond_json([
+                "status" => "error",
+                "message" => "thumbnail missing",
+                "hint" => "Campo 'file' em falta ou upload incompleto.",
+                "uploadError" => $fileErr,
+            ], 400);
+        }
         if ($fileErr !== UPLOAD_ERR_OK) {
             respond_json([
                 "status" => "error",
@@ -588,7 +596,11 @@ if ($method === "POST" && $action === "thumb") {
             ], 400);
         }
         if ($tmpPath === "" || !is_file($tmpPath) || (int)filesize($tmpPath) <= 0) {
-            respond_json(["status" => "error", "message" => "ficheiro em falta ou vazio"], 400);
+            respond_json([
+                "status" => "error",
+                "message" => "thumbnail missing",
+                "hint" => "Ficheiro de thumbnail vazio ou em falta.",
+            ], 400);
         }
 
         $mime = detect_upload_mime($tmpPath, (string)($_FILES["file"]["type"] ?? "image/jpeg"));
@@ -623,8 +635,15 @@ if ($method === "POST" && $action === "thumb") {
         ]);
     }
 
-    // Caminho B: JSON com dataUrl (base64) — fallback quando multipart falha
+    // Caminho B: JSON com dataUrl (base64) — preferido pelo frontend
     $dataUrl = is_array($jsonBody) ? (string)($jsonBody["dataUrl"] ?? "") : "";
+    if ($dataUrl === "" && is_array($jsonBody) && array_key_exists("dataUrl", $jsonBody)) {
+        respond_json([
+            "status" => "error",
+            "message" => "thumbnail missing",
+            "hint" => "JSON dataUrl vazio.",
+        ], 400);
+    }
     if ($dataUrl !== "" && preg_match('#^data:(image/(?:jpeg|jpg|png|webp));base64,#i', $dataUrl, $m)) {
         $mime = strtolower($m[1]);
         if ($mime === "image/jpg") {
@@ -633,7 +652,11 @@ if ($method === "POST" && $action === "thumb") {
         $b64 = substr($dataUrl, strlen($m[0]));
         $bytes = base64_decode($b64, true);
         if ($bytes === false || $bytes === "") {
-            respond_json(["status" => "error", "message" => "dataUrl inválido"], 400);
+            respond_json([
+                "status" => "error",
+                "message" => "thumbnail missing",
+                "hint" => "dataUrl inválido ou sem bytes.",
+            ], 400);
         }
         $url = save_thumbnail_bytes($thumbsDir, $uploadName, $bytes, $mime);
         if ($url === null) {
@@ -644,8 +667,8 @@ if ($method === "POST" && $action === "thumb") {
 
     respond_json([
         "status" => "error",
-        "message" => "ficheiro em falta",
-        "hint" => "Envie multipart field 'file' ou JSON { name, dataUrl }.",
+        "message" => "thumbnail missing",
+        "hint" => "Envie multipart field 'file' ou JSON { name, dataUrl } com imagem válida.",
     ], 400);
 }
 

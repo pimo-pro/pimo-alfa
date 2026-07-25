@@ -74,11 +74,18 @@ export function validateGlobalSettings(doc: unknown): { valid: boolean; errors: 
     return { valid: false, errors };
   }
   const d = doc as Record<string, unknown>;
-  if (d.status !== "ok") errors.push('status deve ser "ok"');
-  if (typeof d.version !== "string" || d.version.trim() === "") errors.push("version em falta");
-  const st = d.settings;
-  if (!isObject(st)) {
-    errors.push("settings deve ser objeto (não array)");
+  // Documento vazio ou sem status → tratado como ok (ficheiro placeholder)
+  if (Object.keys(d).length === 0) {
+    return { valid: true, errors: [] };
+  }
+  if (d.status != null && d.status !== "ok") errors.push('status deve ser "ok"');
+  if (d.version != null && (typeof d.version !== "string" || d.version.trim() === "")) {
+    errors.push("version inválida");
+  }
+  if (d.settings != null) {
+    if (!isObject(d.settings)) {
+      errors.push("settings deve ser objeto (não array)");
+    }
   }
   return { valid: errors.length === 0, errors };
 }
@@ -93,14 +100,19 @@ export async function fetchGlobalSettings(): Promise<Record<string, unknown> | n
   }
   const v = validateGlobalSettings(raw as GlobalSettingsRemoteResponse);
   if (!v.valid) {
-    devLogger.error("[PIMO][globalSettings] documento inválido:", v.errors);
+    // Não lançar: log + fallback (ficheiro vazio / placeholder não deve partir o arranque)
+    if (import.meta.env.DEV) {
+      devLogger.warn("[PIMO][globalSettings] documento inválido — a ignorar:", v.errors);
+    }
     return null;
   }
   if (import.meta.env.DEV) {
     devLogger.info("[PIMO][globalSettings] carregado", raw.version, raw.updatedAt ?? "—");
   }
   const s = raw.settings;
-  return isObject(s) ? s : null;
+  if (!isObject(s)) return null;
+  // settings {} é válido — devolve objeto vazio (pipeline trata como sem override)
+  return s;
 }
 
 /**

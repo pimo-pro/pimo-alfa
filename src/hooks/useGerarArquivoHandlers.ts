@@ -1054,7 +1054,8 @@ export function useGerarArquivoHandlers() {
             const thumbBlob = await captureWorkspaceProjectThumbnail((opts) =>
               viewerSync.renderScene!(opts)
             );
-            if (thumbBlob) {
+            // Só POST thumb depois do save e com imagem realmente gerada
+            if (thumbBlob && thumbBlob.size > 0) {
               await uploadProjectThumbnail(projectName, thumbBlob);
             }
           }

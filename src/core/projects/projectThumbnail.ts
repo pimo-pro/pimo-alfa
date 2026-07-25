@@ -4,6 +4,8 @@ import type { ViewerRenderOptions, ViewerRenderResult } from "../../context/proj
 import { buildProjectsUrl } from "./projectsApi";
 
 const THUMBS_BASE = "/api/projects/thumbs";
+/** Mínimo para considerar uma imagem gerada válida (evita POST vazio). */
+const MIN_THUMB_BYTES = 64;
 
 export type ProjectThumbnailRenderScene = (
   options: ViewerRenderOptions
@@ -50,6 +52,25 @@ export function resolveProjectThumbnailSrc(
   return `${buildApiUrl(path)}${suffix}`;
 }
 
+export function isValidThumbnailBlob(blob: Blob | null | undefined): blob is Blob {
+  if (!blob || typeof blob.size !== "number") return false;
+  if (blob.size < MIN_THUMB_BYTES) return false;
+  const type = String(blob.type || "").toLowerCase();
+  if (type && !type.startsWith("image/")) return false;
+  return true;
+}
+
+export function isValidThumbnailDataUrl(dataUrl: string | null | undefined): boolean {
+  if (typeof dataUrl !== "string") return false;
+  const trimmed = dataUrl.trim();
+  if (!trimmed.startsWith("data:image/")) return false;
+  const comma = trimmed.indexOf(",");
+  if (comma < 0) return false;
+  const b64 = trimmed.slice(comma + 1).trim();
+  // ~base64 de pelo menos MIN_THUMB_BYTES
+  return b64.length >= Math.ceil((MIN_THUMB_BYTES * 4) / 3);
+}
+
 export async function projectThumbnailExists(
   projectName: string
 ): Promise<{ exists: boolean; url: string | null }> {
@@ -81,7 +102,8 @@ export async function projectThumbnailExists(
 export async function dataUrlToBlob(dataUrl: string): Promise<Blob | null> {
   try {
     const response = await fetch(dataUrl);
-    return await response.blob();
+    const blob = await response.blob();
+    return isValidThumbnailBlob(blob) ? blob : null;
   } catch {
     return null;
   }
@@ -113,54 +135,56 @@ export async function captureWorkspaceProjectThumbnail(
     advancedRealism: true,
     watermark: false,
   });
-  if (!result?.dataUrl) return null;
+  if (!result?.dataUrl || !isValidThumbnailDataUrl(result.dataUrl)) return null;
   return dataUrlToBlob(result.dataUrl);
 }
 
 /**
- * Upload de thumbnail: multipart primeiro; se 400, fallback JSON dataUrl.
- * name vai sempre na query string (além do body) para não depender só de $_POST.
+ * Upload de thumbnail só com imagem válida.
+ * Preferência: JSON dataUrl (evita multipart vazio em proxies); fallback multipart.
  */
 export async function uploadProjectThumbnail(
   projectName: string,
   blob: Blob
 ): Promise<string | null> {
   const name = coerceSafeProjectThumbName(projectName);
-  if (!name || !blob || blob.size === 0) return null;
+  if (!name || !isValidThumbnailBlob(blob)) return null;
 
   const ext = blob.type.includes("webp") ? "webp" : "jpg";
   const params = new URLSearchParams({ action: "thumb", name });
 
   const parseUrl = async (response: Response): Promise<string | null> => {
-    const payload = (await response.json().catch(() => null)) as { url?: string; status?: string } | null;
+    const payload = (await response.json().catch(() => null)) as
+      | { url?: string; status?: string; message?: string }
+      | null;
     if (!response.ok) return null;
     const url = typeof payload?.url === "string" ? payload.url : buildProjectThumbnailPath(name, ext);
     return url.startsWith("/") ? buildApiUrl(url) : url;
   };
 
   try {
-    const form = new FormData();
-    form.append("name", name);
-    form.append("file", blob, `${name}.${ext}`);
-
-    const multipartResponse = await fetch(buildProjectsUrl(params), {
-      method: "POST",
-      body: form,
-    });
-    if (multipartResponse.ok) {
-      return parseUrl(multipartResponse);
-    }
-
-    // Fallback: JSON com dataUrl (quando proxy/host rejeita multipart)
     const dataUrl = await blobToDataUrl(blob);
-    if (!dataUrl) return null;
+    if (!dataUrl || !isValidThumbnailDataUrl(dataUrl)) return null;
 
+    // Caminho principal: JSON com dataUrl (payload explícito, sem ficheiro vazio)
     const jsonResponse = await fetch(buildProjectsUrl(params), {
       method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({ name, dataUrl, mime: blob.type || "image/jpeg" }),
     });
-    return parseUrl(jsonResponse);
+    if (jsonResponse.ok) {
+      return parseUrl(jsonResponse);
+    }
+
+    // Fallback multipart só se o JSON falhar (ex.: limite de body)
+    const form = new FormData();
+    form.append("name", name);
+    form.append("file", blob, `${name}.${ext}`);
+    const multipartResponse = await fetch(buildProjectsUrl(params), {
+      method: "POST",
+      body: form,
+    });
+    return parseUrl(multipartResponse);
   } catch {
     return null;
   }
@@ -170,6 +194,7 @@ export async function ensureProjectThumbnailUploaded(
   projectName: string,
   blob: Blob
 ): Promise<string | null> {
+  if (!isValidThumbnailBlob(blob)) return null;
   const existing = await projectThumbnailExists(projectName);
   if (existing.exists) return existing.url;
   return uploadProjectThumbnail(projectName, blob);

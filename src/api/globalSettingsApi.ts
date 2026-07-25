@@ -25,21 +25,79 @@ function parsePatchError(error: unknown): string {
   return "Erro ao gravar configuração global";
 }
 
-function parseError(_error: unknown): null {
-  return null;
+/**
+ * Normaliza payload de /config/global ou /config/global.json.
+ * Aceita documento vazio / settings {} sem lançar.
+ */
+export function normalizeGlobalSettingsRemotePayload(
+  raw: unknown
+): GlobalSettingsRemoteResponse | null {
+  if (raw == null) return null;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return { status: "ok", version: "v0", updatedAt: null, settings: {} };
+    }
+    try {
+      return normalizeGlobalSettingsRemotePayload(JSON.parse(trimmed));
+    } catch {
+      return null;
+    }
+  }
+  if (typeof raw !== "object" || Array.isArray(raw)) return null;
+  const doc = raw as Record<string, unknown>;
+
+  // Documento vazio {} → defaults seguros
+  if (Object.keys(doc).length === 0) {
+    return { status: "ok", version: "v0", updatedAt: null, settings: {} };
+  }
+
+  const status = typeof doc.status === "string" && doc.status.trim() ? doc.status : "ok";
+  if (status !== "ok") return null;
+
+  const version =
+    typeof doc.version === "string" && doc.version.trim() ? doc.version.trim() : "v0";
+  const updatedAt =
+    typeof doc.updatedAt === "string" && doc.updatedAt.trim() ? doc.updatedAt : null;
+
+  let settings: Record<string, unknown> = {};
+  if (doc.settings == null) {
+    settings = {};
+  } else if (typeof doc.settings === "object" && !Array.isArray(doc.settings)) {
+    settings = doc.settings as Record<string, unknown>;
+  } else {
+    return null;
+  }
+
+  return { status: "ok", version, updatedAt, settings };
 }
 
 /**
- * GET /config/global. Em falha de rede ou resposta inválida devolve `null` (fallback no serviço).
+ * GET /config/global (rewrite → global.json em produção).
+ * Em falha de rede, 404 ou payload vazio/ inválido devolve `null` (fallback no serviço).
  */
 export async function getGlobalSettingsRemote(): Promise<GlobalSettingsRemoteResponse | null> {
   try {
-    const { data } = await apiClient.get<GlobalSettingsRemoteResponse>("/config/global");
-    if (!data || data.status !== "ok") return null;
-    return data;
-  } catch (error) {
-    parseError(error);
-    return null;
+    const { data, status } = await apiClient.get<unknown>("/config/global", {
+      validateStatus: (s) => (s >= 200 && s < 300) || s === 404,
+    });
+    if (status === 404) return null;
+    return normalizeGlobalSettingsRemotePayload(data);
+  } catch {
+    // Fallback estático explícito (mesmo conteúdo que o rewrite serve)
+    try {
+      const res = await fetch("/config/global.json", {
+        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+      });
+      if (!res.ok) return null;
+      const text = await res.text();
+      if (!text.trim()) {
+        return { status: "ok", version: "v0", updatedAt: null, settings: {} };
+      }
+      return normalizeGlobalSettingsRemotePayload(JSON.parse(text));
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -51,11 +109,12 @@ export async function patchGlobalSettingsRemote(
   body: PatchGlobalSettingsBody
 ): Promise<GlobalSettingsRemoteResponse> {
   try {
-    const { data } = await apiClient.patch<GlobalSettingsRemoteResponse>("/config/global", body);
-    if (!data || data.status !== "ok") {
+    const { data } = await apiClient.patch<unknown>("/config/global", body);
+    const normalized = normalizeGlobalSettingsRemotePayload(data);
+    if (!normalized) {
       throw new Error("Resposta inválida do servidor");
     }
-    return data;
+    return normalized;
   } catch (error) {
     throw new Error(parsePatchError(error));
   }

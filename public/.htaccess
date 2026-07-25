@@ -7,6 +7,9 @@
   RewriteRule ^me$ api/auth/index.php [L]
   RewriteRule ^users$ api/users/index.php [L]
 
+  # GET /config/global → ficheiro estático (evita 404 do bloco /config/ abaixo)
+  RewriteRule ^config/global$ config/global.json [L]
+
   # Assets Vite: se o ficheiro não existir, 404 real (NUNCA index.html / MIME text/html)
   RewriteCond %{REQUEST_URI} ^/assets/
   RewriteCond %{REQUEST_FILENAME} !-f

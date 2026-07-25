@@ -84,6 +84,10 @@ const gitkeep = path.join(root, "api", "data", ".gitkeep");
 if (fs.existsSync(gitkeep)) {
   copyFile(gitkeep, path.join(dist, "api", "_impl", "data", ".gitkeep"));
 }
+const srcGlobalSettings = path.join(root, "api", "data", "global-settings.json");
+if (fs.existsSync(srcGlobalSettings)) {
+  copyFile(srcGlobalSettings, path.join(dist, "api", "_impl", "data", "global-settings.json"));
+}
 
 const authStub = `<?php
 define('PIMO_AUTH_ROUTER', true);

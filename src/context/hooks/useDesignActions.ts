@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getCurrentProjectUser } from "../../core/projects/currentUser";
 import { saveProject } from "../../core/projects/projectsClient";
+import { isValidThumbnailDataUrl } from "../../core/projects/projectThumbnail";
 import type { ProjectActions, ProjectSnapshot, ProjectState } from "../projectTypes";
 import {
   appendChangelog,
@@ -125,7 +126,8 @@ export function useDesignActions(ctx: ProjectActionsExecutionContext): DesignAct
           quality: 0.72,
           advancedRealism: false,
         });
-        thumbnailDataUrl = render?.dataUrl ?? null;
+        const raw = render?.dataUrl ?? null;
+        thumbnailDataUrl = raw && isValidThumbnailDataUrl(raw) ? raw : null;
       } catch {
         thumbnailDataUrl = null;
       }
