@@ -1,6 +1,6 @@
 /**
  * Drawers Domain
- * 
+ *
  * Sistema completo de gerenciamento de gavetas:
  * - Cálculos paramétricos (DrawerParametrics)
  * - Modelo de gavetas (Drawer)
@@ -8,7 +8,27 @@
  * - Geração automática (DrawerGenerationService)
  * - Movimento e animação (DrawerMotionService)
  * - Adaptadores para layers (adapters/)
+ *
+ * Modelo A = sistema atual (este domínio). Pode ser desativado via drawerSystemFlags.
+ * Modelo B = Sistema Europeu (esqueleto em ./european/) — ainda sem implementação.
  */
+
+// Feature flags / gates Modelo A
+export {
+  DRAWER_MODELO_A_CHANGE_EVENT,
+  DRAWER_MODELO_A_DEFAULT_ENABLED,
+  DRAWER_MODELO_A_STORAGE_KEY,
+  isDrawerModeloAActive,
+  isDrawerModeloADeactivationRequested,
+  setDrawerModeloADeactivated,
+  setDrawerModeloAEnabled,
+  subscribeDrawerModeloAFlags,
+} from "./drawerSystemFlags";
+export {
+  boxHasActiveDrawers,
+  resolveActiveDrawersLayer,
+  resolveActiveGavetasCount,
+} from "./drawerModeloAGate";
 
 // Core types
 export type { DrawerDimensions, DrawerPieceSpec, DrawerCalculatedSpecs, DrawerParametricSettings, DrawerParametricOverrides } from "./DrawerParametrics";
