@@ -132,6 +132,7 @@ export type FinanceiroUnificadoProjectSlice = Pick<
   industrialPieceEdits?: IndustrialPieceEditsStore;
   financeiroOverrides?: FinanceiroOverrides;
   financeiroAdminSettings?: FinanceiroAdminSettings;
+  workspaceBoxes?: ProjectState["workspaceBoxes"];
 };
 
 function pieceWeightKg(

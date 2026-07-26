@@ -134,9 +134,9 @@ type IndustrialBottomProjectSlice = Pick<
   | "ferragemOrla"
   | "financeiroOverrides"
   | "financeiroAdminSettings"
-  | "workspaceBoxes"
 > & {
   industrialPieceEdits?: IndustrialPieceEditsStore;
+  workspaceBoxes?: ProjectState["workspaceBoxes"];
 };
 
 /** P3.5 — summary SSOT; pecas mantidas para vista online (lista). */
@@ -200,8 +200,9 @@ type FerragensTotaisProjectSlice = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "pieceObservacoes"
-  | "workspaceBoxes"
->;
+> & {
+  workspaceBoxes?: ProjectState["workspaceBoxes"];
+};
 
 /**
  * Totais agregados para o PDF ferragens_totais (armazém):

@@ -34,9 +34,8 @@ type FerragensTotaisProject = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "pieceObservacoes"
-  | "workspaceBoxes"
 > &
-  Partial<Pick<ProjectState, "ferragemOrla" | "orlaPresets">>;
+  Partial<Pick<ProjectState, "ferragemOrla" | "orlaPresets" | "workspaceBoxes">>;
 
 /**
  * Design original (b303113) ampliado apenas com colunas pedidas:
