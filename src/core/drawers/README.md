@@ -2,6 +2,28 @@
 
 Sistema completo e independente para gerenciamento de gavetas no PIMO-CRIATIVO.
 
+## Modelo A vs Modelo B
+
+| | Modelo A (atual) | Modelo B (europeu) |
+|---|---|---|
+| Local | este domínio (`src/core/drawers/**`) | `src/core/drawers/european/**` |
+| Estado | implementado | **só estrutura** (sem regras/furos/medidas) |
+| Flag | `drawerSystemFlags.ts` — default **ATIVO** | ainda sem flag de produção |
+| Admin | **Produtos → Gavetas** (+ páginas legadas) | pré-visualização no hub Admin |
+
+### Desativar Modelo A
+
+Em **Admin → Produtos → Gavetas**, o toggle
+**“Desativar Sistema Atual de Gavetas (Modelo A)”**:
+
+- **Não apaga** código nem dados do projeto
+- Torna o Modelo A invisível/inativo (UI, geração, furos, PDF, reconhecimento)
+- O projeto continua funcional sem gavetas
+
+Helpers: `isDrawerModeloAActive()`, `resolveActiveDrawersLayer()`, `resolveActiveGavetasCount()`.
+
+---
+
 ## Regras de Marcenaria (Padrões Globais)
 
 Este domínio implementa regras reais de marcenaria para gavetas:
