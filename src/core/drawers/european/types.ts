@@ -101,22 +101,27 @@ export type DrawerPieceBox = {
 
 /**
  * Geometria completa de uma gaveta europeia.
- * Industrial: frente madeira + corpo metalico + fundo (e traseira se aplicavel).
+ * Industrial Modelo B: frente madeira + laterais/costa/fundo madeira + corrediùa Hettich.
  */
 export type DrawerGeometry = {
   systemId: EuropeanDrawerSystemId;
   front: DrawerPieceBox;
+  /** Frente interna opcional (gav_fre_int). */
+  frontInt?: DrawerPieceBox;
   bottom: DrawerPieceBox;
-  /** Laterais madeira ù tipicamente ausentes em caixa metalica (width=0). */
   leftSide: DrawerPieceBox;
   rightSide: DrawerPieceBox;
   back: DrawerPieceBox;
-  /** Largura util interna do corpo (mm). */
+  /** Largura externa do corpo (caixa interna ? 14 mm). */
+  externalWidthMm: number;
+  /** Largura util interna do corpo entre laterais (mm). */
   internalWidthMm: number;
   /** Altura util do sistema (mm). */
   usefulHeightMm: number;
-  /** Profundidade nominal do runner (mm). */
+  /** Profundidade nominal do runner Hettich (mm). */
   runnerDepthMm: number;
+  /** Profundidade do corpo sem frente = runner ? 10 (mm). */
+  bodyDepthMm: number;
 };
 
 /**
@@ -141,6 +146,8 @@ export type DrawerAssemblyRules = {
 export type DrawerCutlistItem = {
   id: string;
   nome: string;
+  /** Cùdigo industrial (gav_fren, gav_lat_dir, ù). */
+  codigo?: string;
   quantidade: number;
   /** Largura / altura / profundidade da peca (mm). */
   larguraMm: number;
@@ -152,6 +159,8 @@ export type DrawerCutlistItem = {
   kind: "wood" | "metal" | "hardware" | "optional";
   tipo: string;
   observacoesIndustriais?: string;
+  /** Label industrial completo BOX_codigo_NN. */
+  industrialLabel?: string;
 };
 
 /**
@@ -213,6 +222,13 @@ export type EuropeanDrawerBoxConfig = {
   pushOpen: boolean;
   /** Quantidade de gavetas (empilhadas). Se omitido, usa box.gavetas. */
   count?: number;
+  /** Material independente da frente (canonical id). */
+  frontMaterialId?: string;
+  /** Overrides opcionais da frente externa (mm). */
+  frontWidthMm?: number;
+  frontHeightMm?: number;
+  /** Gerar frente interna (gav_fre_int). */
+  dualFront?: boolean;
 };
 
 /** Caixa de entrada para geracao (subset do WorkspaceBox). */
@@ -223,6 +239,10 @@ export type EuropeanDrawerBoxInput = {
   espessura: number;
   gavetas?: number;
   material?: string;
+  /** Profundidade ˙til interna (mm) ó preferida para seleÁ„o Hettich. */
+  profundidadeInternaUtilMm?: number;
+  espessuraCosta?: number;
+  costaAtiva?: boolean;
   europeanDrawerConfig?: EuropeanDrawerBoxConfig;
 };
 
@@ -234,7 +254,7 @@ export type EuropeanDrawerResult = {
   valid: boolean;
   errors: string[];
   warnings: string[];
-  /** DescriÁıes de auto-fix disponÌveis (sem funÁıes ó serializ·vel). */
+  /** Descriùùes de auto-fix disponùveis (sem funùùes ù serializùvel). */
   autoFixes: Array<{ code: string; description: string }>;
   geometry: DrawerGeometry;
   holes: EuropeanDrawerHole[];
