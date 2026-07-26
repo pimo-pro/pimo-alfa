@@ -1,6 +1,6 @@
 /**
- * Repara encoding UTF-8 (sem BOM) do Hub Documentação.
- * Usa apenas escapes \\u — seguro em qualquer codepage.
+ * Repara encoding UTF-8 (sem BOM) do Hub DocumentaÃ§Ã£o.
+ * Usa apenas escapes \\u â€” seguro em qualquer codepage.
  */
 import fs from "node:fs";
 import path from "node:path";

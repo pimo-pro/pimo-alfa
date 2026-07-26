@@ -10,16 +10,16 @@ const ROOTS = [
 ];
 
 const MOJIBAKE = [
-  "\u251c\u00ba", // ?�
-  "\u251c\u00a3", // ?�
-  "\u251c\u00a1", // ?�
-  "\u251c\u00a9", // ?�
-  "\u00c3\u00a1", // á
-  "\u00c3\u00a9", // é
-  "\u00c3\u00a7", // ç
-  "\u00c3\u00a3", // ã
-  "\u00c3\u00b3", // ó
-  "\u00c3\u00ba", // ú
+  "\u251c\u00ba", // ├º
+  "\u251c\u00a3", // ├£
+  "\u251c\u00a1", // ├¡
+  "\u251c\u00a9", // ├©
+  "\u00c3\u00a1", // Ã¡
+  "\u00c3\u00a9", // Ã©
+  "\u00c3\u00a7", // Ã§
+  "\u00c3\u00a3", // Ã£
+  "\u00c3\u00b3", // Ã³
+  "\u00c3\u00ba", // Ãº
   "\u00ef\u00bf\u00bd", // UTF-8 of FFFD as Latin-1
 ];
 
@@ -43,7 +43,7 @@ for (const root of ROOTS) {
     const fffd = (text.match(/\uFFFD/g) || []).length;
     const moji = MOJIBAKE.filter((m) => text.includes(m));
     // sample latin accents present
-    const hasLatin = /[����������������]/.test(text);
+    const hasLatin = /[áéíóúçãõÁÉÍÓÚÇÃÕ]/.test(text);
     if (bom || fffd || moji.length) {
       issues.push({ file, bom, fffd, moji, hasLatin });
     }

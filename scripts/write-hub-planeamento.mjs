@@ -1,5 +1,5 @@
 /**
- * Fase 10 — gera core/docs/planeamento + HubPlaneamentoContent (UTF-8 via \\u).
+ * Fase 10 â€” gera core/docs/planeamento + HubPlaneamentoContent (UTF-8 via \\u).
  */
 import fs from "node:fs";
 import path from "node:path";

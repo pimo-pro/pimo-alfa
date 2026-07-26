@@ -1,6 +1,7 @@
 /**
- * Bloco de Estatísticas do Projeto — topo do Hub (híbrido A+C).
- * Dados via loadHubStats (local, sem fetch).
+ * Bloco de Estatisticas do Projeto � topo do Hub (hibrido A+C).
+ * Visivel apenas na seccao "Documentacao atual".
+ * Dados via loadHubStats (local) + contagem dinamica de projetos.
  */
 
 import { useMemo } from "react";
@@ -11,26 +12,27 @@ import {
   type HubStatIcon,
   type HubStatTone,
 } from "./loadHubStats";
+import {
+  applyHubProjectCount,
+  useHubProjectCount,
+} from "./useHubProjectCount";
 
 const TONE: Record<
   HubStatTone,
-  { icon: string; chip: string; chipBd: string; chipBg: string }
+  { icon: string; chipBd: string; chipBg: string }
 > = {
   neutral: {
     icon: C.muted,
-    chip: C.muted,
     chipBd: C.border,
     chipBg: "transparent",
   },
   blue: {
     icon: C.accent,
-    chip: C.accent,
     chipBd: C.accentBd,
     chipBg: C.accentBg,
   },
   green: {
     icon: "var(--status-done-color, var(--ci-success, #22c55e))",
-    chip: "var(--status-done-color, var(--ci-success, #22c55e))",
     chipBd: "color-mix(in srgb, var(--status-done-color, var(--ci-success, #22c55e)) 35%, transparent)",
     chipBg: "color-mix(in srgb, var(--status-done-color, var(--ci-success, #22c55e)) 12%, transparent)",
   },
@@ -40,11 +42,16 @@ const UP_GREEN = "var(--status-done-color, var(--ci-success, #22c55e))";
 
 export default function HubStatsContent() {
   const snapshot = useMemo(() => loadHubStats(), []);
+  const totalProjects = useHubProjectCount();
+  const cards = useMemo(
+    () => applyHubProjectCount(snapshot.cards, totalProjects),
+    [snapshot.cards, totalProjects]
+  );
 
   return (
     <section
       data-hub-stats
-      aria-label="Estatísticas do Projeto"
+      aria-label={"Estat\u00edsticas do Projeto"}
       style={{
         width: "100%",
         marginBottom: 24,
@@ -71,7 +78,7 @@ export default function HubStatsContent() {
             color: C.muted,
           }}
         >
-          Estatísticas do Projeto
+          {"Estat\u00edsticas do Projeto"}
         </h2>
         <span style={{ fontSize: 11, color: C.muted }}>{snapshot.sourceLabel}</span>
       </div>
@@ -80,12 +87,12 @@ export default function HubStatsContent() {
         className="hub-stats-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
           gap: 10,
           width: "100%",
         }}
       >
-        {snapshot.cards.map((card) => (
+        {cards.map((card) => (
           <StatCard key={card.id} card={card} />
         ))}
       </div>
@@ -107,63 +114,89 @@ function StatCard({ card }: { card: HubStatCard }) {
     <article
       style={{
         display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        padding: "14px 14px 12px",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 12px",
         borderRadius: 10,
         border: `1px solid ${C.border}`,
         background: C.surface,
         width: "100%",
         boxSizing: "border-box",
         minWidth: 0,
+        minHeight: 0,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span
-          aria-hidden
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            border: `1px solid ${tone.chipBd}`,
-            background: tone.chipBg,
-            color: tone.icon,
-          }}
-        >
-          <StatIcon name={card.icon} />
-        </span>
-        {card.delta && card.delta.direction === "up" ? (
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: UP_GREEN,
-              letterSpacing: "0.02em",
-            }}
-          >
-            ↑ {card.delta.percentLabel}
-          </span>
-        ) : null}
-      </div>
+      <span
+        aria-hidden
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flex: "0 0 auto",
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          border: `1px solid ${tone.chipBd}`,
+          background: tone.chipBg,
+          color: tone.icon,
+        }}
+      >
+        <StatIcon name={card.icon} />
+      </span>
 
-      <div>
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
         <div
           style={{
-            fontSize: "clamp(1.25rem, 2.4vw, 1.55rem)",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-            color: C.text,
-            lineHeight: 1.15,
+            display: "flex",
+            alignItems: "baseline",
+            flexWrap: "wrap",
+            gap: "4px 10px",
           }}
         >
-          {card.value}
+          <span
+            style={{
+              fontSize: "clamp(1.15rem, 2.2vw, 1.4rem)",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              color: C.text,
+              lineHeight: 1.1,
+            }}
+          >
+            {card.value}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.text, lineHeight: 1.2 }}>
+            {card.label}
+          </span>
+          {card.delta && card.delta.direction === "up" ? (
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: 11,
+                fontWeight: 700,
+                color: UP_GREEN,
+                letterSpacing: "0.02em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {"\u2191"} {card.delta.percentLabel}
+            </span>
+          ) : null}
         </div>
-        <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: C.text }}>{card.label}</div>
         {card.hint ? (
-          <div style={{ marginTop: 2, fontSize: 11, color: C.muted, lineHeight: 1.4 }}>{card.hint}</div>
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 11,
+              color: C.muted,
+              lineHeight: 1.35,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {card.hint}
+          </div>
         ) : null}
       </div>
     </article>

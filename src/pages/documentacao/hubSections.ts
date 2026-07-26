@@ -1,6 +1,6 @@
 /**
- * Secções do Hub de Documentação Interna (/documentacao).
- * Ids estáveis para hash e navegação.
+ * Seccoes do Hub de Documentacao (/documentacao).
+ * Ids estaveis para hash e navegacao.
  */
 
 import type { IconName } from "@/components/icons";
@@ -27,14 +27,14 @@ export type HubSectionDef = {
 export const HUB_SECTIONS: HubSectionDef[] = [
   {
     id: "atual",
-    label: "Documentação atual",
-    blurb: "Índice curado e referências vigentes",
+    label: "Documenta\u00e7\u00e3o atual",
+    blurb: "\u00cdndice curado e refer\u00eancias vigentes",
     icon: "adminDocs",
   },
   {
     id: "historico",
-    label: "Documentação histórica",
-    blurb: "Arquivo imutável migrado do legado",
+    label: "Documenta\u00e7\u00e3o hist\u00f3rica",
+    blurb: "Arquivo imut\u00e1vel migrado do legado",
     icon: "adminArchive",
   },
   {
@@ -52,13 +52,13 @@ export const HUB_SECTIONS: HubSectionDef[] = [
   {
     id: "progresso",
     label: "Progresso do projeto",
-    blurb: "Estado de construção e fases",
+    blurb: "Estado de constru\u00e7\u00e3o e fases",
     icon: "adminChart",
   },
   {
     id: "refs",
-    label: "Referências técnicas",
-    blurb: "architectureIndex e módulos core",
+    label: "Refer\u00eancias t\u00e9cnicas",
+    blurb: "architectureIndex e m\u00f3dulos core",
     icon: "blueprint",
   },
   {
@@ -70,25 +70,25 @@ export const HUB_SECTIONS: HubSectionDef[] = [
   {
     id: "planeamento",
     label: "Planeamento futuro",
-    blurb: "Próximas etapas e roadmap",
+    blurb: "Pr\u00f3ximas etapas e roadmap",
     icon: "adminChecklist",
   },
   {
     id: "dashboard",
-    label: "Dashboard avançado",
-    blurb: "KPIs, gráficos SVG e saúde do Hub",
+    label: "Dashboard avan\u00e7ado",
+    blurb: "KPIs, gr\u00e1ficos SVG e sa\u00fade do Hub",
     icon: "adminChart",
   },
   {
     id: "pimo-soon",
     label: "pimo-soon",
-    blurb: "Plano oficial de fases futuras (13–18)",
+    blurb: "Plano oficial de fases futuras (13\u201318)",
     icon: "adminChecklist",
   },
 ];
 
-/** Secção inicial de /documentacao quando não há hash (e sem override Admin). */
-export const DEFAULT_HUB_SECTION: HubSectionId = "progresso";
+/** Seccao inicial de /documentacao quando nao ha hash (e sem override Admin). */
+export const DEFAULT_HUB_SECTION: HubSectionId = "atual";
 
 export function isHubSectionId(value: string): value is HubSectionId {
   return HUB_SECTIONS.some((s) => s.id === value);

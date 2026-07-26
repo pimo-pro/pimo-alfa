@@ -1,5 +1,5 @@
 /**
- * Parte 2 — headers/comentários e labels UI restantes (UTF-8 via \\u).
+ * Parte 2 â€” headers/comentÃ¡rios e labels UI restantes (UTF-8 via \\u).
  */
 import fs from "node:fs";
 
@@ -273,7 +273,7 @@ patch("src/core/docs/archive/historicoNotas.ts", [
 // Documentacao.tsx wrapper comment
 patch("src/pages/Documentacao.tsx", [
   [
-    `* Rota /documentacao — Hub de Documentação Interna (scaffold A+C).`,
+    `* Rota /documentacao â€” Hub de DocumentaÃ§Ã£o Interna (scaffold A+C).`,
     `* Rota /documentacao ${emdash} Hub de ${Documentacao} Interna (scaffold A+C).`,
   ],
 ]);

@@ -11,7 +11,7 @@ const dominio = "dom\u00ednio";
 const indice = "\u00cdndice";
 
 const content = `/**
- * Hub ${doc} Interna — hibrido A+C.
+ * Hub ${doc} Interna ï¿½ hibrido A+C.
  * Rota: /documentacao. Layout full-width / full-height responsivo.
  */
 
@@ -141,7 +141,7 @@ export default function HubDocumentacaoInterna({
             Hub de ${doc} Interna
           </h1>
           <p style={{ margin: 0, fontSize: 14, color: C.muted, maxWidth: "72ch", lineHeight: 1.55 }}>
-            Hub A+C — mapa de ${secoes} e leitura editorial. ${conteudo} ligado a
+            Hub A+C ï¿½ mapa de ${secoes} e leitura editorial. ${conteudo} ligado a
             ${historico}, novidades, refs e progresso.
           </p>
         </header>
@@ -297,7 +297,7 @@ export default function HubDocumentacaoInterna({
                   lineHeight: 1.55,
                 }}
               >
-                Placeholder — conteudo desta seccao sera ligado nas fases seguintes
+                Placeholder ï¿½ conteudo desta seccao sera ligado nas fases seguintes
                 (documentacao atual / planeamento). Sem dados nesta fase.
               </div>
             )}
@@ -327,7 +327,7 @@ export default function HubDocumentacaoInterna({
 fs.writeFileSync(file, content, { encoding: "utf8" });
 const check = fs.readFileSync(file, "utf8");
 console.log("wrote", file);
-console.log("Documentação", check.includes("Documentação"));
+console.log("Documentaï¿½ï¿½o", check.includes("Documentaï¿½ï¿½o"));
 console.log("FFFD", check.includes("\uFFFD"));
 console.log("maxWidth 1120", check.includes("1120"));
 console.log("full width", check.includes('maxWidth: "none"'));

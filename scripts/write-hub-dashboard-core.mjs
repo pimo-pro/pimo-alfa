@@ -1,5 +1,5 @@
 /**
- * Fase 12 — Dashboard avançado (UTF-8 via \\u, sem libs).
+ * Fase 12 â€” Dashboard avanÃ§ado (UTF-8 via \\u, sem libs).
  */
 import fs from "node:fs";
 import path from "node:path";

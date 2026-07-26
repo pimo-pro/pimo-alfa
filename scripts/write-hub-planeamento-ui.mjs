@@ -172,7 +172,7 @@ export default function HubPlaneamentoContent() {
                 <span style={{ color: C.muted }}>
                   {" "}
                   ${em} resumo:{e.links?.progressoResumoId}
-                  {e.links?.progressoSectionId ? \` · progresso:#\${e.links.progressoSectionId}\` : ""}
+                  {e.links?.progressoSectionId ? \` Â· progresso:#\${e.links.progressoSectionId}\` : ""}
                 </span>
               </li>
             ))}
@@ -199,7 +199,7 @@ export default function HubPlaneamentoContent() {
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
               <strong style={{ fontSize: 13, color: C.text }}>{phase.title}</strong>
               <span style={{ fontSize: 11, color: C.accent }}>
-                {phase.statusLabel} · {phase.doneTasks}/{phase.totalTasks} · {phase.progress}%
+                {phase.statusLabel} Â· {phase.doneTasks}/{phase.totalTasks} Â· {phase.progress}%
               </span>
             </div>
             <p style={{ margin: "6px 0 8px", fontSize: 12, color: C.muted, lineHeight: 1.45 }}>
@@ -307,7 +307,7 @@ function EtapaCard({
         {entry.links?.progressoSectionId ? (
           <span>
             progresso: <a href={\`#progresso\`} style={{ color: C.accent }}>#{entry.links.progressoSectionId}</a>
-            {entry.links.progressoItemLabel ? \` · \${entry.links.progressoItemLabel.slice(0, 48)}\` : ""}
+            {entry.links.progressoItemLabel ? \` Â· \${entry.links.progressoItemLabel.slice(0, 48)}\` : ""}
           </span>
         ) : null}
         {entry.links?.progressoResumoId ? (

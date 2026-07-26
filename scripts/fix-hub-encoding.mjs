@@ -9,11 +9,11 @@ const ROOTS = [
 ];
 
 const MOJIBAKE_MARKERS = [
-  "?",
-  "Ã",
-  "Â",
-  "",
-  "ï»¿", // BOM as latin1
+  "â”œ",
+  "Ãƒ",
+  "Ã‚",
+  "ï¿½",
+  "Ã¯Â»Â¿", // BOM as latin1
 ];
 
 function walk(dir, out = []) {
@@ -38,12 +38,12 @@ function looksMojibake(text) {
 /** Fix classic UTF-8 interpreted as Windows-1252/Latin1 mojibake. */
 function fixMojibake(text) {
   // If we see typical double-encoding patterns, try latin1->utf8 roundtrip
-  if (!/Ã.|Â.|?.|/.test(text)) return text;
+  if (!/Ãƒ.|Ã‚.|â”œ.|ï¿½/.test(text)) return text;
   try {
     const repaired = Buffer.from(text, "latin1").toString("utf8");
     // Only accept if repair reduces mojibake markers and keeps printable PT chars
-    const before = (text.match(/Ã.|Â.|?./g) || []).length;
-    const after = (repaired.match(/Ã.|Â.|?./g) || []).length;
+    const before = (text.match(/Ãƒ.|Ã‚.|â”œ./g) || []).length;
+    const after = (repaired.match(/Ãƒ.|Ã‚.|â”œ./g) || []).length;
     if (after < before && !repaired.includes("\uFFFD")) return repaired;
   } catch {
     /* keep original */

@@ -1,5 +1,5 @@
 /**
- * Rota /documentacao — Hub de Documentação Interna (scaffold A+C).
+ * Rota /documentacao — Documentacao Interna (scaffold A+C).
  * Legado preservado em core/docs/archive/DocumentacaoSistemaLegacy.tsx.bak (Fase 4).
  */
 

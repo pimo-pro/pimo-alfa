@@ -1,5 +1,5 @@
 /**
- * Hub Documentação Interna — híbrido A+C.
+ * Documentação Interna — híbrido A+C.
  * Rota: /documentacao. Layout full-width / full-height responsivo.
  */
 
@@ -74,7 +74,7 @@ export default function HubDocumentacaoInterna({
       setActive(fromHash);
       return;
     }
-    // Sem hash: Progresso do Projeto é a secção inicial oficial.
+    // Sem hash: Documentação atual é a secção inicial oficial.
     setActive(DEFAULT_HUB_SECTION);
     const next = `#${DEFAULT_HUB_SECTION}`;
     if (window.location.hash !== next) {
@@ -142,7 +142,7 @@ export default function HubDocumentacaoInterna({
               border: `1px solid ${C.accentBd}`,
             }}
           >
-            Documentação interna
+            Documentação avançada
           </div>
           <h1
             style={{
@@ -152,7 +152,7 @@ export default function HubDocumentacaoInterna({
               letterSpacing: "-0.02em",
             }}
           >
-            Hub de Documentação Interna
+            Documentação Interna
           </h1>
           <p style={{ margin: 0, fontSize: 14, color: C.muted, maxWidth: "72ch", lineHeight: 1.55 }}>
             Hub A+C — mapa de secções e leitura editorial. Conteúdo ligado a
@@ -160,7 +160,7 @@ export default function HubDocumentacaoInterna({
           </p>
         </header>
 
-        <HubStatsContent />
+        {active === "atual" ? <HubStatsContent /> : null}
 
         <section
           aria-label="Mapa de secções"

@@ -42,23 +42,31 @@ export function buildDashboardKpis(): {
   const progresso = loadHubProgresso();
   const atual = loadHubAtual();
 
+  const projectsValue = stats.totalProjects.toLocaleString("pt-PT");
+
   const kpis: DashboardKpi[] = stats.cards.map((card) => {
-    const valueNum = parsePtNumber(card.value);
+    const value =
+      card.id === "projects" ? projectsValue : card.value;
+    const valueNum =
+      card.id === "projects" ? stats.totalProjects : parsePtNumber(value);
     const up = card.delta ? parsePtPercent(card.delta.percentLabel) : 0;
     return {
       id: card.id,
       label: card.label,
-      value: card.value,
-      hint: card.hint,
+      value,
+      hint:
+        card.id === "projects"
+          ? "Din\u00e2mico \u2014 alinhado a /PROJETOS"
+          : card.hint,
       tone: toneOf(card.id),
       deltaLabel:
         card.delta && card.delta.direction === "up"
-          ? "↑ " + card.delta.percentLabel
+          ? "\u2191 " + card.delta.percentLabel
           : undefined,
       sparkline:
         card.delta && valueNum > 0
           ? sparkFromDelta(valueNum, up)
-          : [1, 1, 1, 1, 1, Math.max(1, valueNum || Number(card.value) || 1)],
+          : [1, 1, 1, 1, 1, Math.max(1, valueNum || 1)],
     };
   });
 

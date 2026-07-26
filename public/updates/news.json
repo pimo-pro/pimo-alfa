@@ -1,6 +1,15 @@
 {
-  "updatedAt": "2026-07-25T23:44:12.017Z",
+  "updatedAt": "2026-07-26T00:26:38.444Z",
   "news": [
+    {
+      "version": "v6.0726.0126",
+      "title": "Melhoria visual/estrutural do Hub: Documentação avançada",
+      "description": "Melhoria visual/estrutural do Hub de Documentação: renomeação para Documentação avançada / Documentação Interna; secção inicial Documentação atual; cards superiores só em #atual; cards redesenhadas (layout horizontal profissional); conteúdo full-width nas outras secções; Roadmap SVG + fases editoriais; Dashboard com KPIs horizontais + sparkline; layout responsivo preservado (<820px); contagem dinâmica de Projetos criados; nada industrial tocado.",
+      "publishedAt": "2026-07-26T00:26:38.444Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature"
+    },
     {
       "version": "v6.0726.0044",
       "title": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",

@@ -23,7 +23,7 @@ body = body.replace(/ as const/g, "");
 
 const header = `/**
  * Secoes de progresso migradas do antigo ProjectProgress.tsx (Fase 9).
- * Conteudo 1:1 — sem reescrita.
+ * Conteudo 1:1 â€” sem reescrita.
  */
 
 export type ProgressoItemStatus = "completed" | "in-progress" | "planned";

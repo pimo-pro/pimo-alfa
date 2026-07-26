@@ -122,7 +122,7 @@ export default function Footer({
             }
           }}
         >
-          Documentação interna
+          {"Documenta\u00e7\u00e3o avan\u00e7ada"}
         </span>
         <span
           style={{ cursor: "pointer" }}

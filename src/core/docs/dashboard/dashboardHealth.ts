@@ -94,7 +94,7 @@ export function buildDashboardHealth(): DashboardHealth {
     id: "health-nav",
     label: "Navegação / hash",
     status: "ok",
-    detail: "Hash #dashboard suportado; default /documentacao permanece #progresso.",
+    detail: "Hash #dashboard suportado; default /documentacao permanece #atual.",
   });
 
   let overall: DashboardHealthStatus = "ok";

@@ -1,5 +1,5 @@
 /**
- * Fase pimo-soon — plano futuro (UTF-8 via \\u).
+ * Fase pimo-soon â€” plano futuro (UTF-8 via \\u).
  */
 import fs from "node:fs";
 import path from "node:path";

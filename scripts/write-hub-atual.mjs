@@ -1,5 +1,5 @@
 /**
- * Fase 11 — core/docs/atual + HubAtualContent (UTF-8 via \\u).
+ * Fase 11 â€” core/docs/atual + HubAtualContent (UTF-8 via \\u).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -61,7 +61,7 @@ export type AtualHistoricoItem = {
   kind: string;
 };
 
-/** Alterações async preenchidas no UI via loaders existentes (sem fetch no loader atual). */
+/** AlteraÃ§Ãµes async preenchidas no UI via loaders existentes (sem fetch no loader atual). */
 export type AtualRecentChange = {
   id: string;
   source: "novidades" | "removidos" | "historico";
@@ -194,7 +194,7 @@ function buildAlerts(
           : null,
       ]
         .filter(Boolean)
-        .join(" · "),
+        .join(" Â· "),
     });
   }
 
@@ -224,7 +224,7 @@ export function buildAtualSnapshot(): AtualSnapshot {
       dateStyle: "medium",
       timeStyle: "short",
     }),
-    sourceLabel: \`\${stats.sourceLabel} · progresso · planeamento · archive\`,
+    sourceLabel: \`\${stats.sourceLabel} Â· progresso Â· planeamento Â· archive\`,
     kpis: stats.cards,
     resumo: {
       faseAtual: toPhaseSummary("em_andamento", stages.em_andamento),
@@ -358,7 +358,7 @@ export default function HubAtualContent() {
           id: \`news-\${n.version}-\${n.publishedAt}\`,
           source: "novidades" as const,
           title: n.title,
-          meta: \`\${n.version} · \${n.type}\`,
+          meta: \`\${n.version} Â· \${n.type}\`,
         }));
       const rem = removed.slice(0, 5).map((r) => ({
         id: \`rem-\${r.id}\`,
@@ -403,8 +403,8 @@ export default function HubAtualContent() {
         title="Fases (progresso + planeamento)"
         subtitle={
           snapshot.resumo.currentPhaseTitle
-            ? \`Roadmap \${snapshot.resumo.roadmapProgress}% · Phase: \${snapshot.resumo.currentPhaseTitle} · Conclus${u(0xe3)}o sec${u(0xe7)}${u(0xf5)}es \${snapshot.resumo.progressoCompletionPercent}%\`
-            : \`Roadmap \${snapshot.resumo.roadmapProgress}% · Conclus${u(0xe3)}o sec${u(0xe7)}${u(0xf5)}es \${snapshot.resumo.progressoCompletionPercent}%\`
+            ? \`Roadmap \${snapshot.resumo.roadmapProgress}% Â· Phase: \${snapshot.resumo.currentPhaseTitle} Â· Conclus${u(0xe3)}o sec${u(0xe7)}${u(0xf5)}es \${snapshot.resumo.progressoCompletionPercent}%\`
+            : \`Roadmap \${snapshot.resumo.roadmapProgress}% Â· Conclus${u(0xe3)}o sec${u(0xe7)}${u(0xf5)}es \${snapshot.resumo.progressoCompletionPercent}%\`
         }
       >
         <div
@@ -440,14 +440,14 @@ export default function HubAtualContent() {
         )}
       </EditorialBlock>
 
-      <EditorialBlock title="${u(0xda)}ltimas altera${u(0xe7)}${u(0xf5)}es" subtitle="novidades · removidos · hist${u(0xf3)}rico">
+      <EditorialBlock title="${u(0xda)}ltimas altera${u(0xe7)}${u(0xf5)}es" subtitle="novidades Â· removidos Â· hist${u(0xf3)}rico">
         <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
           {recent.map((r) => (
             <li key={r.id} style={{ fontSize: 12, color: C.text, lineHeight: 1.4 }}>
               <span style={{ color: C.accent, fontWeight: 600 }}>{r.source}</span>
-              {" · "}
+              {" Â· "}
               {r.title}
-              {r.meta ? <span style={{ color: C.muted }}> · {r.meta}</span> : null}
+              {r.meta ? <span style={{ color: C.muted }}> Â· {r.meta}</span> : null}
             </li>
           ))}
         </ul>

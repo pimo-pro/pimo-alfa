@@ -1,5 +1,5 @@
 /**
- * Fase 12 — HubDashboardContent + patches + KPI/graph polish (UTF-8 via \\u).
+ * Fase 12 â€” HubDashboardContent + patches + KPI/graph polish (UTF-8 via \\u).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -322,7 +322,7 @@ export default function HubDashboardContent() {
     <div data-hub-dashboard style={{ display: "flex", flexDirection: "column", gap: 18, width: "100%" }}>
       <p style={{ margin: 0, fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
         Dashboard avan${u(0xe7)}ado ${em} snapshot {data.generatedAtLabel}. Contadores:{" "}
-        {data.counters.completed} conclu${u(0xed)}dos · {data.counters.inProgress} andamento ·{" "}
+        {data.counters.completed} conclu${u(0xed)}dos Â· {data.counters.inProgress} andamento Â·{" "}
         {data.counters.planned} planeados ({data.counters.completionPercent}%).
       </p>
 

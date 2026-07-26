@@ -13,6 +13,10 @@ import {
   type DashboardTone,
 } from "@/core/docs/dashboard";
 import { AJUDA_PAGE_TOKENS as C } from "../ajuda/ajudaPageTokens";
+import {
+  applyHubProjectCount,
+  useHubProjectCount,
+} from "./useHubProjectCount";
 
 const TONE: Record<DashboardTone, string> = {
   neutral: C.muted,
@@ -29,6 +33,11 @@ const HEALTH_COLOR = {
 
 export default function HubDashboardContent() {
   const data = useMemo(() => loadHubDashboard(), []);
+  const totalProjects = useHubProjectCount();
+  const kpis = useMemo(
+    () => applyHubProjectCount(data.kpis, totalProjects),
+    [data.kpis, totalProjects]
+  );
 
   return (
     <div data-hub-dashboard style={{ display: "flex", flexDirection: "column", gap: 18, width: "100%" }}>
@@ -42,12 +51,12 @@ export default function HubDashboardContent() {
         className="hub-dash-kpi-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-          gap: 12,
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 10,
           width: "100%",
         }}
       >
-        {data.kpis.map((kpi) => (
+        {kpis.map((kpi) => (
           <KpiCard key={kpi.id} kpi={kpi} />
         ))}
       </div>
@@ -118,29 +127,87 @@ function KpiCard({ kpi }: { kpi: DashboardKpi }) {
   return (
     <article
       style={{
-        padding: "14px 14px 12px",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 12px",
         borderRadius: 10,
         border: `1px solid ${C.border}`,
         background: C.surface,
         width: "100%",
         boxSizing: "border-box",
         minWidth: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
+        minHeight: 0,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{kpi.label}</span>
-        {kpi.deltaLabel ? (
-          <span style={{ fontSize: 11, fontWeight: 700, color: TONE.green }}>{kpi.deltaLabel}</span>
+      <span
+        aria-hidden
+        style={{
+          flex: "0 0 auto",
+          width: 4,
+          alignSelf: "stretch",
+          borderRadius: 999,
+          background: color,
+          minHeight: 36,
+        }}
+      />
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            flexWrap: "wrap",
+            gap: "4px 10px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "clamp(1.15rem, 2.2vw, 1.4rem)",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              color: C.text,
+              lineHeight: 1.1,
+            }}
+          >
+            {kpi.value}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.text, lineHeight: 1.2 }}>
+            {kpi.label}
+          </span>
+          {kpi.deltaLabel ? (
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: 11,
+                fontWeight: 700,
+                color: TONE.green,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {kpi.deltaLabel}
+            </span>
+          ) : null}
+        </div>
+        {kpi.hint ? (
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 11,
+              color: C.muted,
+              lineHeight: 1.35,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {kpi.hint}
+          </div>
         ) : null}
       </div>
-      <div style={{ fontSize: "clamp(1.4rem, 2.6vw, 1.8rem)", fontWeight: 800, color: C.text, letterSpacing: "-0.02em" }}>
-        {kpi.value}
+      <div style={{ flex: "0 0 auto", width: 72, opacity: 0.9 }}>
+        <Sparkline values={kpi.sparkline} color={color} compact />
       </div>
-      {kpi.hint ? <div style={{ fontSize: 11, color: C.muted }}>{kpi.hint}</div> : null}
-      <Sparkline values={kpi.sparkline} color={color} />
     </article>
   );
 }
@@ -170,9 +237,17 @@ function GraphCard({ graph }: { graph: DashboardGraph }) {
   );
 }
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  const w = 120;
-  const h = 28;
+function Sparkline({
+  values,
+  color,
+  compact = false,
+}: {
+  values: number[];
+  color: string;
+  compact?: boolean;
+}) {
+  const w = compact ? 72 : 120;
+  const h = compact ? 24 : 28;
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);
   const span = Math.max(1, max - min);
@@ -184,7 +259,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
     })
     .join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={28} role="img" aria-hidden>
+    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-hidden>
       <polyline fill="none" stroke={color} strokeWidth="1.75" points={pts} />
     </svg>
   );

@@ -133,13 +133,24 @@ export function buildAtualSnapshot(): AtualSnapshot {
 
   const stages = planeamento.stages;
 
+  const projectsValue = stats.totalProjects.toLocaleString("pt-PT");
+  const kpis = stats.cards.map((card) =>
+    card.id === "projects"
+      ? {
+          ...card,
+          value: projectsValue,
+          hint: "Din\u00e2mico \u2014 alinhado a /PROJETOS",
+        }
+      : card
+  );
+
   return {
     generatedAtLabel: new Date().toLocaleString("pt-PT", {
       dateStyle: "medium",
       timeStyle: "short",
     }),
-    sourceLabel: `${stats.sourceLabel} · progresso · planeamento · archive`,
-    kpis: stats.cards,
+    sourceLabel: `${stats.sourceLabel} \u00b7 progresso \u00b7 planeamento \u00b7 archive`,
+    kpis,
     resumo: {
       faseAtual: toPhaseSummary("em_andamento", stages.em_andamento),
       proximaFase: toPhaseSummary("futura", stages.futura),
