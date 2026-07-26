@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-07-26T21:04:40.351Z",
+  "updatedAt": "2026-07-26T21:45:25.872Z",
   "news": [
+    {
+      "version": "v6.0726.3D-B-FIX",
+      "title": "Correção 3D — Gavetas Europeias (Modelo B)",
+      "description": "O sistema de gavetas europeias foi actualizado com um novo pipeline 3D alinhado ao Modelo A. As gavetas passam a ser posicionadas correctamente dentro da caixa, com stacking industrial, offsets locais e distribuição correcta das peças (laterais, costa, fundo, frente).",
+      "publishedAt": "2026-07-26T21:45:25.872Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "942114f"
+    },
     {
       "version": "v6.0726.2204",
       "title": "release: publicação completa do projeto após correções de encoding e binding Modelo B",

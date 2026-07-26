@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-26T21:45:26.050Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(drawers-modeloB-3d): alinhamento completo do 3D do Modelo B com o Modelo A (placement, stacking, bounding box, transforms)",
+      "version": "v6.0726.3D-B-FIX"
+    },
+    {
       "publishedAt": "2026-07-26T21:04:39.372Z",
       "author": "pimo-pro",
       "commitMessage": "release: publicação completa do projeto após correções de encoding e binding Modelo B",
