@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-07-26T00:36:27.362Z",
+  "updatedAt": "2026-07-26T14:11:24.204Z",
   "news": [
+    {
+      "version": "v6.0726.0136-rollback",
+      "title": "Rollback visual do Hub — retorno à versão estável v6.0726.0136 (commit 805134d)",
+      "description": "Rollback completo do Hub de Documentação para a versão estável publicada v6.0726.0136 (commit 805134d / Publish & Deploy #641). Removidas alterações visuais experimentais posteriores; sidebar textual, Documentação atual e layout A+C restaurados. Nada industrial tocado.",
+      "publishedAt": "2026-07-26T14:11:24.204Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "805134d"
+    },
     {
       "version": "v6.0726.0125",
       "title": "Melhoria visual/estrutural do Hub: Documentação avançada",
