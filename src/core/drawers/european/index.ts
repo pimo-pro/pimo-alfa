@@ -1,10 +1,10 @@
 /**
- * Sistema Europeu de Gavetas ó Modelo B
+ * Sistema Europeu de Gavetas ù Modelo B
  *
  * API principal: generateEuropeanDrawer(model|systemId, box)
  *
  * Activo apenas quando o Modelo A estiver desactivado.
- * N„o altera o n˙cleo do Modelo A nem src/industrial/**.
+ * Nùo altera o nùcleo do Modelo A nem src/industrial/**.
  */
 
 export type {
@@ -104,6 +104,24 @@ export {
   type EuropeanDrawerValidationResult,
   type EuropeanDrawerAutoFixAction,
 } from "./validation";
+
+export {
+  ALL_SCENARIOS,
+  buildEuropeanQaScenarios,
+  runScenario,
+  runStressTests,
+  buildQaSummary,
+  formatQaSummaryText,
+  formatScenarioConsoleLine,
+  reportConsole,
+  downloadQaResultsJson,
+  serializeQaResultsJson,
+  QA_RESULTS_FILENAME,
+  type EuropeanQaScenario,
+  type EuropeanQaScenarioResult,
+  type EuropeanQaSummary,
+  type RunStressTestsOptions,
+} from "./qa";
 
 import type {
   DrawerEuropeanModel,
@@ -292,7 +310,7 @@ export function generateEuropeanDrawer(
       config,
       valid: false,
       errors: [
-        "Modelo A ainda activo ó desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
+        "Modelo A ainda activo ù desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
       ],
       warnings: [],
       autoFixes: [],
