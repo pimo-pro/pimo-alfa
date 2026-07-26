@@ -8,6 +8,7 @@ import {
   findHeightProfile,
   generateEuropeanDrawer,
   listEuropeanDrawerModels,
+  suggestEuropeanAutoFixedConfig,
   type EuropeanDrawerBoxConfig,
   type EuropeanDrawerSystemId,
 } from "../index";
@@ -39,28 +40,50 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
 
   const preview = useMemo(
     () =>
-      generateEuropeanDrawer(model.id, {
-        id: box.id,
-        nome: box.nome,
-        dimensoes: box.dimensoes,
-        espessura: box.espessura,
-        gavetas: config.count ?? box.gavetas,
-        material: box.material,
-        europeanDrawerConfig: config,
-      }),
+      generateEuropeanDrawer(
+        model.id,
+        {
+          id: box.id,
+          nome: box.nome,
+          dimensoes: box.dimensoes,
+          espessura: box.espessura,
+          gavetas: config.count ?? box.gavetas,
+          material: box.material,
+          europeanDrawerConfig: config,
+        },
+        undefined,
+        { applyAutoFixes: false }
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dims/espessura suficientes
-    [box.id, box.nome, box.dimensoes.largura, box.dimensoes.altura, box.dimensoes.profundidade, box.espessura, box.material, box.gavetas, model.id, config]
+    [
+      box.id,
+      box.nome,
+      box.dimensoes.largura,
+      box.dimensoes.altura,
+      box.dimensoes.profundidade,
+      box.espessura,
+      box.material,
+      box.gavetas,
+      model.id,
+      config,
+    ]
   );
 
   const patch = (partial: Partial<EuropeanDrawerBoxConfig>) => {
-    const next: EuropeanDrawerBoxConfig = { ...config, ...partial, systemId: partial.systemId ?? config.systemId };
+    const next: EuropeanDrawerBoxConfig = {
+      ...config,
+      ...partial,
+      systemId: partial.systemId ?? config.systemId,
+    };
     if (partial.systemId) {
       const m = models.find((x) => x.id === partial.systemId)!;
       const h = m.heights.find((x) => x.heightMm === next.heightMm) ?? m.heights[0]!;
       next.heightMm = h.heightMm;
       next.heightCode = h.code || undefined;
       if (!m.depthsMm.includes(next.depthMm)) {
-        next.depthMm = m.depthsMm.includes(500) ? 500 : m.depthsMm[Math.floor(m.depthsMm.length / 2)]!;
+        next.depthMm = m.depthsMm.includes(500)
+          ? 500
+          : m.depthsMm[Math.floor(m.depthsMm.length / 2)]!;
       }
     }
     if (partial.heightMm != null) {
@@ -71,9 +94,41 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
     onChange(next, Math.max(1, Math.floor(next.count ?? 1)));
   };
 
+  const applyAutoFixes = () => {
+    const fixed = suggestEuropeanAutoFixedConfig(
+      {
+        id: box.id,
+        nome: box.nome,
+        dimensoes: box.dimensoes,
+        espessura: box.espessura,
+        gavetas: config.count ?? box.gavetas,
+        material: box.material,
+        europeanDrawerConfig: config,
+      },
+      config
+    );
+    onChange(fixed, Math.max(1, Math.floor(fixed.count ?? 1)));
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <strong style={{ fontSize: 12 }}>Sistema Europeu (Modelo B)</strong>
+
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          padding: "6px 8px",
+          borderRadius: 6,
+          border: preview.valid
+            ? "1px solid rgba(52,211,153,0.45)"
+            : "1px solid rgba(248,113,113,0.45)",
+          background: preview.valid ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)",
+          color: preview.valid ? "#34d399" : "#f87171",
+        }}
+      >
+        {preview.valid ? "Gaveta valida" : "Gaveta invalida"}
+      </div>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Marca / Sistema</span>
@@ -165,14 +220,15 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
         </div>
         <div>Largura interna corpo: {preview.geometry.internalWidthMm.toFixed(1)} mm</div>
         <div>
-          Frente: {preview.geometry.front.widthMm.toFixed(1)} × {preview.geometry.front.heightMm.toFixed(1)} mm
+          Frente: {preview.geometry.front.widthMm.toFixed(1)} x {preview.geometry.front.heightMm.toFixed(1)} mm
         </div>
         <div>Runner: {preview.geometry.runnerDepthMm} mm</div>
-        <div>Folga lateral: 2×{model.side.clearanceMm} mm</div>
+        <div>Folga lateral: 2x{model.side.clearanceMm} mm</div>
       </div>
 
       {preview.errors.length > 0 ? (
-        <div style={{ fontSize: 11, color: "#fca5a5" }}>
+        <div style={{ fontSize: 11, color: "#fca5a5", lineHeight: 1.45 }}>
+          <strong>Erros</strong>
           {preview.errors.map((e) => (
             <div key={e}>{e}</div>
           ))}
@@ -180,11 +236,18 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
       ) : null}
 
       {preview.warnings.length > 0 ? (
-        <div style={{ fontSize: 11, color: "#fde68a" }}>
-          {preview.warnings.slice(0, 4).map((w) => (
-            <div key={w}>! {w}</div>
+        <div style={{ fontSize: 11, color: "#fde68a", lineHeight: 1.45 }}>
+          <strong>Avisos</strong>
+          {preview.warnings.slice(0, 6).map((w) => (
+            <div key={w}>{w}</div>
           ))}
         </div>
+      ) : null}
+
+      {!preview.valid && preview.autoFixes.length > 0 ? (
+        <button type="button" className="button button-ghost" onClick={applyAutoFixes}>
+          Aplicar correcoes automaticas ({preview.autoFixes.length})
+        </button>
       ) : null}
     </div>
   );
