@@ -29,6 +29,7 @@ import {
   backupLayerMaterials,
   restoreLayerMaterials,
 } from "../core/viewer/materialPreservation";
+import { isDrawerModeloAActive } from "../core/drawers/drawerSystemFlags";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -107,7 +108,9 @@ export function regenerateLayersForBox(
   const thickness = clamp(box.espessura, 18);
 
   const drawerCount = Math.max(0, Math.floor(box.gavetas || 0));
-  const hasDrawers = drawerCount > 0;
+  // Modelo A desativado: não gera gavetas novas; preserva drawersLayer existente (dados intactos).
+  const modeloAActive = isDrawerModeloAActive();
+  const hasDrawers = modeloAActive && drawerCount > 0;
 
   if (isCaixaFornoBox(box)) {
     const synced = syncCaixaFornoOnDimensoesChange(box);
@@ -248,9 +251,12 @@ export function regenerateLayersForBox(
   }
 
   // GAVETAS:
-  // - Geral: gerar se gavetas > 0
+  // - Geral: gerar se gavetas > 0 e Modelo A ativo
   // - Roupeiro H/J (cfg7/cfg8): gerar apenas no lado direito e apenas na zona inferior
-  if (hasDrawers) {
+  // - Modelo A off: preservar drawersLayer sem regenerar (código/dados intactos)
+  if (!modeloAActive) {
+    drawersLayer.push(...(box.drawersLayer ?? []));
+  } else if (hasDrawers) {
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";
     const mode = box.drawerHeightMode ?? drawerSettings.gavetaAlturaModoPadrao;
@@ -407,6 +413,25 @@ export function createManualDoor(box: WorkspaceBox): DoorLayerItem {
 }
 
 export function createManualDrawer(box: WorkspaceBox): DrawerLayerItem {
+  if (!isDrawerModeloAActive()) {
+    // Stub seguro: Modelo A desativado — não cria gaveta real (ação deve ser no-op antes).
+    return {
+      id: createId("drawer-inactive"),
+      parentBoxId: box.id,
+      width: 0,
+      height: 0,
+      depth: 0,
+      frontThickness: 0,
+      posX: 0,
+      posY: 0,
+      posZ: 0,
+      rotY: 0,
+      isOpen: false,
+      material: defaultDrawerMaterial,
+      materialId: defaultDrawerMaterial,
+    };
+  }
+
   const settings = getSettings();
   const thickness = clamp(box.espessura, 18);
   const drawerSettings = settings.gavetas;

@@ -14,6 +14,7 @@ import { appendFerragensIndustriaisSection } from "./pdfFerragensIndustriais";
 import { appendResumoFinanceiroSection } from "./pdfResumoFinanceiro";
 import { appendPecasTotaisSection } from "./pdfPecasTotais";
 import { appendFerragensTotaisSection } from "./pdfFerragensTotais";
+import { isDrawerModeloAActive } from "../drawers/drawerSystemFlags";
 import type { RematePiece } from "../remate/rematePieceTypes";
 import type { ProjectRodape } from "../rodape/rodapeTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
@@ -92,6 +93,9 @@ function addPortasSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void
 }
 
 function addGavetasSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void {
+  // Gate Modelo A: sem secção de gavetas no PDF quando o sistema atual está desativado.
+  if (!isDrawerModeloAActive()) return;
+
   const comGavetas = project.boxes.filter((b) => (b.gavetas ?? 0) > 0);
   if (comGavetas.length === 0) return;
   doc.addPage("a4", "portrait");

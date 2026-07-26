@@ -31,6 +31,11 @@ import {
   buildEuropeanModuleLateralCorredicaDrilling,
   resolveEuropeanModuleRunnerLinesYMm,
 } from "../drawers/drilling/DrawerDrillingRules";
+import {
+  isDrawerModeloAActive,
+  resolveActiveDrawersLayer,
+  resolveActiveGavetasCount,
+} from "../drawers";
 import { buildDivSepDrilling, mergeDrillHoles } from "../divSep/drilling";
 import { boxUsesDivShelfMode, buildDivShelfDrilling } from "../divSep/shelfDrilling";
 import { buildDivSepIndustrialLabel } from "../divSep/labels";
@@ -158,8 +163,8 @@ export function cutlistComPrecoFromBox(
       espessura: box.espessura,
       portaTipo: box.portaTipo,
       doorsLayer: box.doorsLayer,
-      drawersLayer: box.drawersLayer,
-      gavetas: box.gavetas,
+      drawersLayer: resolveActiveDrawersLayer(box),
+      gavetas: resolveActiveGavetasCount(box),
       costaAtiva: box.costaAtiva,
     },
     resolveCostaThicknessMm(box)
@@ -169,11 +174,13 @@ export function cutlistComPrecoFromBox(
     : getFallbackMaterial();
   const items: CutListItemComPreco[] = [];
   const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
-  const drawersLayer = box.drawersLayer ?? [];
+  const drawersLayer = resolveActiveDrawersLayer(box);
   const isPiBox = isPiBaseCabinetId(box.baseCabinetId);
-  const hasDrawers = isPiBox
-    ? drawersLayer.length > 0
-    : Math.max(0, Math.floor(box.gavetas ?? 0)) > 0 || drawersLayer.length > 0;
+  const hasDrawers = !isDrawerModeloAActive()
+    ? false
+    : isPiBox
+      ? drawersLayer.length > 0
+      : resolveActiveGavetasCount(box) > 0 || drawersLayer.length > 0;
   // Roupeiros: gavetas apenas na zona inferior; furos 32mm de prateleira devem ser calculados sem “bloqueio” por gavetas.
   const hasDrawersForShelfDrilling = isWardrobeModel(box.baseCabinetId) ? false : hasDrawers;
 

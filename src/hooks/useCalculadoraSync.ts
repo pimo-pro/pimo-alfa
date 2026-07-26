@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
 import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
@@ -13,6 +13,11 @@ import { mmToM } from "../utils/units";
 import { devLogger } from "../utils/devLogger";
 import { getViewerMaterialId } from "../core/materials/service";
 import { resolveDrawerFrontMaterialId } from "../core/drawers/drawerFrontMaterial";
+import {
+  isDrawerModeloAActive,
+  resolveActiveDrawersLayer,
+  subscribeDrawerModeloAFlags,
+} from "../core/drawers";
 import { syncDrawerFrontMaterialToViewer } from "../industrial/viewerIntegration";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
@@ -39,7 +44,7 @@ function getStructureFingerprint(
 ): string {
   const d = wsBox.dimensoes;
   const doors = wsBox.doorsLayer ?? [];
-  const drawers = wsBox.drawersLayer ?? [];
+  const drawers = resolveActiveDrawersLayer(wsBox);
   const doorSig = doors.map((door) => ({
     id: door.id,
     width: door.width,
@@ -114,6 +119,7 @@ function getStructureFingerprint(
     piLateralDrillCountSig: piLateralDrillCountSig ?? null,
     doors: doorSig,
     drawers: drawerSig,
+    modeloAActive: isDrawerModeloAActive(),
     divisores: divSig,
     separadores: sepSig,
     material: wsBox.material,
@@ -225,6 +231,9 @@ export const useCalculadoraSync = (
   /** Última estrutura conhecida por box id; quando igual, só enviamos position/rotation para evitar rebuild no Viewer. */
   const lastStructureFingerprintRef = useRef<Map<string, string>>(new Map());
   const lastDrawerFrontMaterialsFingerprintRef = useRef<Map<string, string>>(new Map());
+  const [modeloAActive, setModeloAActive] = useState(() => isDrawerModeloAActive());
+
+  useEffect(() => subscribeDrawerModeloAFlags(setModeloAActive), []);
 
   // Atualizar refs durante o render para que o effect de sync use sempre boxes/workspaceBoxes mais recentes
   // (evita condição de corrida em que o effect roda antes dos refs serem atualizados).
@@ -311,8 +320,8 @@ export const useCalculadoraSync = (
             espessura: wsBox.espessura,
             portaTipo: wsBox.portaTipo,
             doorsLayer: wsBox.doorsLayer,
-            drawersLayer: wsBox.drawersLayer,
-            gavetas: wsBox.gavetas,
+            drawersLayer: resolveActiveDrawersLayer(wsBox),
+            gavetas: isDrawerModeloAActive() ? wsBox.gavetas : 0,
             costaAtiva: resolveCostaAtivaForBox(wsBox),
           },
           espessuraCostaMm
@@ -344,7 +353,7 @@ export const useCalculadoraSync = (
       const pe_cm = feetHeight / 10;
       const feetEnabled = wsBox?.feetEnabled ?? (cabinetType === "lower");
       const autoRotateEnabled = wsBox?.autoRotateEnabled;
-      const drawerLayerItems = wsBox?.drawersLayer ?? [];
+      const drawerLayerItems = resolveActiveDrawersLayer(wsBox ?? {});
       if (import.meta.env.DEV && doorLayerItems.length > 0) {
         devLogger.debug("[DOOR-MAT] useCalculadoraSync doorLayerItems por box", {
           boxId: wsBox.id,
@@ -498,7 +507,7 @@ export const useCalculadoraSync = (
       prevViewerReadyRef.current = true;
     }
     syncFromCalculator();
-  }, [boxes, workspaceBoxes, syncFromCalculator, viewerReady, showDrawerDrilling]);
+  }, [boxes, workspaceBoxes, syncFromCalculator, viewerReady, showDrawerDrilling, modeloAActive]);
 
   useEffect(() => {
     const api = viewerApiRef.current;

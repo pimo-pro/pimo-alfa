@@ -8,6 +8,7 @@ import type { BoxModule, CutListItem, CutListItemComPreco, PanelDrillHole } from
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
 import { getNumDobradicas, type RulesConfig } from "../rules/rulesConfig";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
+import { resolveActiveDrawersLayer, resolveActiveGavetasCount } from "../drawers/drawerModeloAGate";
 import {
   aggregatePesPlasticoFromBoxes,
   loadPesPlasticoConfig,
@@ -133,7 +134,7 @@ function classifyFerragem(nome: string, ref: string): Bucket {
 function drawerDepthMm(box: BoxModule): number {
   const fromDim = Number(box.dimensoes?.profundidade);
   if (Number.isFinite(fromDim) && fromDim > 0) return fromDim;
-  const layer = box.drawersLayer ?? [];
+  const layer = resolveActiveDrawersLayer(box);
   for (const d of layer) {
     const util = Number((d as { profundidadeUtilMm?: number }).profundidadeUtilMm);
     if (Number.isFinite(util) && util > 0) return util;
@@ -142,9 +143,9 @@ function drawerDepthMm(box: BoxModule): number {
 }
 
 function countDrawersInBox(box: BoxModule): number {
-  const layer = box.drawersLayer ?? [];
+  const layer = resolveActiveDrawersLayer(box);
   if (layer.length > 0) return layer.length;
-  return Math.max(0, Math.floor(Number(box.gavetas) || 0));
+  return resolveActiveGavetasCount(box);
 }
 
 /**

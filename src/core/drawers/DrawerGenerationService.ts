@@ -25,6 +25,7 @@ import type { DrawerHeightMode } from "./drawerHeightModeTypes";
 import type { ErgonomicHeightRules, KitchenZoneProfile } from "./drawerErgonomicsHeights";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
 import { resolveDrawerGroupPosZMm } from "./drawerViewerLayout";
+import { isDrawerModeloAActive } from "./drawerSystemFlags";
 
 export interface DrawerGenerationConfig {
   // Box dimensions
@@ -71,6 +72,23 @@ export interface DrawerGenerationConfig {
  * REESCRITO: Distribuição proporcional e posicionamento correto
  */
 export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup {
+  // Gate Modelo A: sistema atual desativado → grupo vazio (código preservado).
+  if (!isDrawerModeloAActive()) {
+    return {
+      id: `drawer-group-${config.boxId}-inactive`,
+      parentBoxId: config.boxId,
+      drawers: [],
+      heightMode: config.heightMode ?? "equal",
+      customHeights: config.customHeights,
+      boxDimensions: {
+        width: config.boxWidth,
+        height: config.boxHeight,
+        depth: config.boxDepth,
+        thickness: config.boxThickness,
+      },
+    };
+  }
+
   const {
     boxWidth,
     boxHeight,
@@ -235,6 +253,13 @@ export function canBoxHaveDrawers(
   boxDepth: number,
   drawerCount: number
 ): { valid: boolean; reason?: string } {
+  if (!isDrawerModeloAActive()) {
+    return {
+      valid: false,
+      reason: "Sistema atual de gavetas (Modelo A) está desativado no Admin.",
+    };
+  }
+
   if (drawerCount <= 0) {
     return { valid: false, reason: "Número de gavetas deve ser maior que zero" };
   }

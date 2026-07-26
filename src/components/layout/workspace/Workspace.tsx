@@ -44,6 +44,7 @@ import {
   toggleAllDrawersSequential,
   toggleDrawer,
 } from "../../../core/drawers/DrawerController";
+import { isDrawerModeloAActive } from "../../../core/drawers/drawerSystemFlags";
 
 type WorkspaceProps = {
   viewerBackground?: string;
@@ -325,6 +326,7 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnBoxDoubleClick?.((boxId) => {
+      if (!isDrawerModeloAActive()) return;
       const box = project.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
       if (!box || (box.drawersLayer?.length ?? 0) === 0) return;
 
@@ -345,6 +347,7 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnDrawerLayerClick?.((boxId, drawerLayerId) => {
+      if (!isDrawerModeloAActive()) return;
       const box = projectRef.current.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
       if (!box) return;
 

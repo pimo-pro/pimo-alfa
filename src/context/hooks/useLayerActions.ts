@@ -16,6 +16,7 @@ import {
 } from "../../core/doors/doorLayerGeometry";
 import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValidation";
 import { getSettings } from "../../core/settings/settingsService";
+import { isDrawerModeloAActive } from "../../core/drawers/drawerSystemFlags";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { commitMaterialSync, refreshViewerAfterMaterialSync, syncDrawerFrontMaterialToViewer } from "../../core/materials/materialSync";
@@ -86,6 +87,9 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         );
       },
       setGavetas: (quantidade) => {
+        // Gate Modelo A: sistema desativado → nenhuma gaveta é reconhecida/criada.
+        if (!isDrawerModeloAActive()) return;
+
         const valor = Math.max(0, Math.floor(quantidade));
         updateProject(
           (prev) => {
@@ -342,6 +346,8 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         );
       },
       addDrawerLayerItem: () => {
+        if (!isDrawerModeloAActive()) return;
+
         updateProject(
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);

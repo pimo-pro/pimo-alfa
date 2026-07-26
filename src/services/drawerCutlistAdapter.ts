@@ -9,6 +9,7 @@
 import {
   resolveMetalBoxProfile,
 } from "../core/drawers/drawerMetalBoxCatalog";
+import { isDrawerModeloAActive } from "../core/drawers/drawerSystemFlags";
 import type { CutListItem } from "../core/types";
 import {
   resolveDrawerExternalFrontHeightMm,
@@ -67,6 +68,7 @@ export function isDrawerSideOrBackPieceTipo(tipo: string): boolean {
 }
 
 export function boxUsesModernDrawerPipeline(box: { drawersLayer?: DrawerLayerItem[] | null }): boolean {
+  if (!isDrawerModeloAActive()) return false;
   return (box.drawersLayer?.length ?? 0) > 0;
 }
 
@@ -499,6 +501,8 @@ export function extractDrawerCutlistFromLayerItems(
   bodyMaterialIdOrLegacyLabel?: string,
   boxName?: string
 ): CutListItem[] {
+  if (!isDrawerModeloAActive()) return [];
+
   const allPieces: CutListItem[] = [];
 
   for (let i = 0; i < layerItems.length; i++) {
