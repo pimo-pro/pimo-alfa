@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-07-26T21:58:36.760Z",
+  "updatedAt": "2026-07-26T23:21:01.364Z",
   "news": [
+    {
+      "version": "v6.0727.0021",
+      "title": "fix(freeagem): tornar workspaceBoxes opcional nos slices de PDF/financeiro",
+      "description": "fix(freeagem): tornar workspaceBoxes opcional nos slices de PDF/financeiro",
+      "publishedAt": "2026-07-26T23:21:01.282Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "e2dd451"
+    },
     {
       "version": "v6.0726.3D-B-FIX",
       "title": "Correção 3D — Gavetas Europeias (Modelo B)",
       "description": "O sistema de gavetas europeias foi actualizado com um novo pipeline 3D alinhado ao Modelo A. As gavetas passam a ser posicionadas correctamente dentro da caixa, com stacking industrial, offsets locais e distribuição correcta das peças (laterais, costa, fundo, frente).",
-      "publishedAt": "2026-07-26T21:58:36.759Z",
+      "publishedAt": "2026-07-26T22:58:37+01:00",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "fix",
@@ -13,13 +23,13 @@
     },
     {
       "version": "v6.0726.2204",
-      "title": "release: publicação completa do projeto após correções de encoding e binding Modelo B",
-      "description": "release: publicação completa do projeto após correções de encoding e binding Modelo B",
-      "publishedAt": "2026-07-26T21:04:40.278Z",
+      "title": "Release v6.0726.2204",
+      "description": "Release v6.0726.2204",
+      "publishedAt": "2026-07-26T22:06:15+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
-      "commit": "a31ec11"
+      "commit": "f759594"
     },
     {
       "version": "v6.0726.2056",
