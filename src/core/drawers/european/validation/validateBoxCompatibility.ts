@@ -1,19 +1,23 @@
 /**
- * validateBoxCompatibility.ts — Compatibilidade modulo ? sistema europeu.
+ * validateBoxCompatibility.ts — Compatibilidade módulo ? sistema europeu.
  */
 
 import type { DrawerEuropeanModel, EuropeanDrawerBoxConfig, EuropeanDrawerBoxInput } from "../types";
-import { calcBoxInternalWidthMm, calcDrawerInternalWidthMm } from "../measures";
+import {
+  EUROPEAN_SIDE_CLEARANCE_EACH_MM,
+  calcBoxInternalWidthMm,
+  calcDrawerExternalWidthMm,
+  resolveEuropeanUsefulInternalDepthMm,
+  selectHettichRunnerDepth,
+} from "../measures";
 import { calcUsefulCabinetHeightMm } from "../geometry";
 import { euError, EU_ERROR_CODES } from "./errors";
 import { emptyValidationResult, type EuropeanDrawerValidationResult } from "./types";
-import { pickRunnerDepthMm } from "../measures";
 
 const PARALLEL_TOL_MM = 1;
 
 /**
- * Valida se a caixa aceita a configuracao europeia.
- * Regras: altura/prof/largura internas, dims > 0, paralelismo ±1 mm.
+ * Valida se a caixa aceita a configuração europeia.
  */
 export function validateBoxCompatibility(
   box: EuropeanDrawerBoxInput,
@@ -31,7 +35,6 @@ export function validateBoxCompatibility(
     );
   }
 
-  // Paralelismo: espessura uniforme implica paredes paralelas; desvio tipico via arredondamento.
   const halfTol = PARALLEL_TOL_MM;
   if (Math.abs(esp - Math.round(esp)) > halfTol && esp > 0) {
     result.errors.push(
@@ -55,26 +58,34 @@ export function validateBoxCompatibility(
     );
   }
 
-  const runner = pickRunnerDepthMm(model, config.depthMm, profundidade, esp);
-  const internalDepth = Math.max(0, profundidade - esp - 20);
-  if (runner > internalDepth + 0.5) {
+  const usefulDepth = resolveEuropeanUsefulInternalDepthMm(box);
+  const runner = selectHettichRunnerDepth(usefulDepth);
+  if (runner >= usefulDepth && usefulDepth > 0) {
     result.errors.push(
       euError(
         EU_ERROR_CODES.BOX_DEPTH,
-        `Profundidade interna (${internalDepth.toFixed(0)} mm) < runner ${runner} mm.`,
+        `Profundidade útil interna (${usefulDepth.toFixed(0)} mm) não admite corrediça Hettich < útil.`,
         "box.dimensoes.profundidade"
+      )
+    );
+  }
+  if (config.depthMm >= usefulDepth && usefulDepth > 0) {
+    result.errors.push(
+      euError(
+        EU_ERROR_CODES.BOX_DEPTH,
+        `Corrediça ${config.depthMm} mm deve ser < profundidade útil ${usefulDepth.toFixed(0)} mm.`,
+        "config.depthMm"
       )
     );
   }
 
   const boxInternalW = calcBoxInternalWidthMm(box);
-  const bodyW = calcDrawerInternalWidthMm(box, model);
-  const required = bodyW + 2 * model.side.clearanceMm;
-  if (boxInternalW + 0.5 < required || bodyW < 150) {
+  const externalW = calcDrawerExternalWidthMm(box);
+  if (boxInternalW < 150 || externalW < 120) {
     result.errors.push(
       euError(
         EU_ERROR_CODES.BOX_WIDTH,
-        `Largura interna insuficiente para folgas 2x${model.side.clearanceMm} mm (corpo ${bodyW.toFixed(0)} mm).`,
+        `Largura interna insuficiente para folgas 2x${EUROPEAN_SIDE_CLEARANCE_EACH_MM} mm (externa gaveta ${externalW.toFixed(0)} mm).`,
         "box.dimensoes.largura"
       )
     );

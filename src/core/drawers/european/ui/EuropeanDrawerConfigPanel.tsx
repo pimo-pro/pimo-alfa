@@ -1,10 +1,12 @@
 /**
  * ui/EuropeanDrawerConfigPanel — UI do Modelo B.
- * Visivel apenas quando o Modelo A esta desactivado.
+ * Visível apenas quando o Modelo A está desactivado.
  */
 
 import { useMemo } from "react";
 import {
+  EUROPEAN_SIDE_CLEARANCE_EACH_MM,
+  HETTICH_RUNNER_LENGTHS_MM,
   findHeightProfile,
   generateEuropeanDrawer,
   listEuropeanDrawerModels,
@@ -17,21 +19,27 @@ import type { WorkspaceBox } from "../../../types";
 export type EuropeanDrawerConfigPanelProps = {
   box: WorkspaceBox;
   onChange: (_config: EuropeanDrawerBoxConfig, _count: number) => void;
+  /** Materiais oficiais para a frente independente. */
+  materialOptions?: Array<{ id: string; label: string }>;
 };
 
-export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfigPanelProps) {
+export function EuropeanDrawerConfigPanel({
+  box,
+  onChange,
+  materialOptions = [],
+}: EuropeanDrawerConfigPanelProps) {
   const models = listEuropeanDrawerModels();
 
   const config: EuropeanDrawerBoxConfig = useMemo(
     () =>
       box.europeanDrawerConfig ?? {
-        systemId: "blum-legrabox",
-        heightMm: 90,
-        heightCode: "M",
-        depthMm: 500,
+        systemId: "hettich-innotech-atira",
+        heightMm: 144,
+        depthMm: 450,
         softClose: true,
         pushOpen: false,
         count: Math.max(1, box.gavetas || 1),
+        dualFront: false,
       },
     [box.europeanDrawerConfig, box.gavetas]
   );
@@ -80,10 +88,8 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
       const h = m.heights.find((x) => x.heightMm === next.heightMm) ?? m.heights[0]!;
       next.heightMm = h.heightMm;
       next.heightCode = h.code || undefined;
-      if (!m.depthsMm.includes(next.depthMm)) {
-        next.depthMm = m.depthsMm.includes(500)
-          ? 500
-          : m.depthsMm[Math.floor(m.depthsMm.length / 2)]!;
+      if (!(HETTICH_RUNNER_LENGTHS_MM as readonly number[]).includes(next.depthMm)) {
+        next.depthMm = 450;
       }
     }
     if (partial.heightMm != null) {
@@ -127,7 +133,7 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
           color: preview.valid ? "#34d399" : "#f87171",
         }}
       >
-        {preview.valid ? "Gaveta valida" : "Gaveta invalida"}
+        {preview.valid ? "Gaveta válida" : "Gaveta inválida"}
       </div>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -161,13 +167,15 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Profundidade</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          Corrediça Hettich (mm)
+        </span>
         <select
           className="select select-xs"
           value={config.depthMm}
           onChange={(e) => patch({ depthMm: Number(e.target.value) })}
         >
-          {model.depthsMm.map((d) => (
+          {HETTICH_RUNNER_LENGTHS_MM.map((d) => (
             <option key={d} value={d}>
               {d} mm
             </option>
@@ -185,6 +193,74 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
           value={config.count ?? 1}
           onChange={(e) => patch({ count: Math.max(1, Number(e.target.value) || 1) })}
         />
+      </label>
+
+      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          Material da frente (independente)
+        </span>
+        {materialOptions.length > 0 ? (
+          <select
+            className="select select-xs"
+            value={config.frontMaterialId ?? box.material ?? ""}
+            onChange={(e) => patch({ frontMaterialId: e.target.value || undefined })}
+          >
+            <option value="">Igual à caixa</option>
+            {materialOptions.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className="input input-xs"
+            type="text"
+            placeholder={box.material ?? "material id"}
+            value={config.frontMaterialId ?? ""}
+            onChange={(e) => patch({ frontMaterialId: e.target.value || undefined })}
+          />
+        )}
+      </label>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Largura frente (mm)</span>
+          <input
+            className="input input-xs"
+            type="number"
+            min={50}
+            placeholder={String(Math.round(preview.geometry.front.widthMm))}
+            value={config.frontWidthMm ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              patch({ frontWidthMm: v === "" ? undefined : Math.max(1, Number(v) || 0) });
+            }}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Altura frente (mm)</span>
+          <input
+            className="input input-xs"
+            type="number"
+            min={50}
+            placeholder={String(Math.round(preview.geometry.front.heightMm))}
+            value={config.frontHeightMm ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              patch({ frontHeightMm: v === "" ? undefined : Math.max(1, Number(v) || 0) });
+            }}
+          />
+        </label>
+      </div>
+
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+        <input
+          type="checkbox"
+          checked={config.dualFront === true}
+          onChange={(e) => patch({ dualFront: e.target.checked })}
+        />
+        Frente interna (gav_fre_int)
       </label>
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
@@ -216,14 +292,18 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
         }}
       >
         <div>
-          <strong>Pre-visualizacao</strong>
+          <strong>Pré-visualização</strong>
         </div>
-        <div>Largura interna corpo: {preview.geometry.internalWidthMm.toFixed(1)} mm</div>
+        <div>Largura externa: {preview.geometry.externalWidthMm.toFixed(1)} mm</div>
+        <div>Corpo (sem frente): {preview.geometry.bodyDepthMm} mm</div>
         <div>
-          Frente: {preview.geometry.front.widthMm.toFixed(1)} x {preview.geometry.front.heightMm.toFixed(1)} mm
+          Frente: {preview.geometry.front.widthMm.toFixed(1)} ×{" "}
+          {preview.geometry.front.heightMm.toFixed(1)} mm
         </div>
-        <div>Runner: {preview.geometry.runnerDepthMm} mm</div>
-        <div>Folga lateral: 2x{model.side.clearanceMm} mm</div>
+        <div>Corrediça Hettich: {preview.geometry.runnerDepthMm} mm</div>
+        <div>
+          Folga lateral: {EUROPEAN_SIDE_CLEARANCE_EACH_MM}+{EUROPEAN_SIDE_CLEARANCE_EACH_MM} mm
+        </div>
       </div>
 
       {preview.errors.length > 0 ? (
@@ -246,7 +326,7 @@ export function EuropeanDrawerConfigPanel({ box, onChange }: EuropeanDrawerConfi
 
       {!preview.valid && preview.autoFixes.length > 0 ? (
         <button type="button" className="button button-ghost" onClick={applyAutoFixes}>
-          Aplicar correcoes automaticas ({preview.autoFixes.length})
+          Aplicar correções automáticas ({preview.autoFixes.length})
         </button>
       ) : null}
     </div>

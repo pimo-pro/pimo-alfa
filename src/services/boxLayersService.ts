@@ -12,6 +12,7 @@ import { resolveDrawerErgonomicsRules } from "../core/drawers/drawerErgonomicsCo
 import { isErgonomicDrawerHeightMode } from "../core/drawers/drawerHeightModeTypes";
 import { devLogger } from "../utils/devLogger";
 import { getDefaultOfficialMaterial, resolveCostaThicknessMm } from "../core/materials/materials.api";
+import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
 import {
   computeWardrobeLocalLayout,
   getWardrobeDoorCountForWidth,
@@ -287,20 +288,44 @@ export function regenerateLayersForBox(
         gavetas: euCount,
         material: box.material,
         europeanDrawerConfig: euConfig,
+        profundidadeInternaUtilMm: getProfundidadeInternaUtilMm(
+          box,
+          resolveCostaThicknessMm(box)
+        ),
+        espessuraCosta: resolveCostaThicknessMm(box),
+        costaAtiva: box.costaAtiva,
       });
       // Validacao industrial: nao renderizar layers se gaveta invalida
       if (result.valid) {
-        drawersLayer.push(...europeanResultToLayerItems(result, box.id));
+        drawersLayer.push(
+          ...europeanResultToLayerItems(result, box.id, {
+            material: box.material,
+            frontMaterial: euConfig.frontMaterialId ?? box.material,
+          })
+        );
         for (let i = 0; i < drawersLayer.length; i++) {
           const existing =
             (box.drawersLayer ?? []).find((d) => d.metadata?.modeloB && d.id === drawersLayer[i]!.id) ??
             (box.drawersLayer ?? [])[i];
           if (existing) {
+            const frontMat =
+              existing.materialId ??
+              existing.metadata?.frontMaterial ??
+              existing.material ??
+              drawersLayer[i]!.materialId;
             drawersLayer[i] = {
               ...drawersLayer[i]!,
               isOpen: existing.isOpen ?? false,
-              materialId: existing.materialId ?? drawersLayer[i]!.materialId,
-              material: existing.material ?? drawersLayer[i]!.material,
+              // Material da frente independente — não reconstrói o corpo
+              materialId: frontMat,
+              material: frontMat,
+              metadata: {
+                ...drawersLayer[i]!.metadata,
+                ...existing.metadata,
+                modeloB: true,
+                frontMaterial: frontMat,
+                europeanSystemId: systemId,
+              },
             };
           }
         }

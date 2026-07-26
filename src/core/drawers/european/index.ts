@@ -1,10 +1,10 @@
 /**
- * Sistema Europeu de Gavetas ù Modelo B
+ * Sistema Europeu de Gavetas ó Modelo B
  *
  * API principal: generateEuropeanDrawer(model|systemId, box)
  *
  * Activo apenas quando o Modelo A estiver desactivado.
- * Nao altera o nucleo do Modelo A nem src/industrial/**.
+ * N„o altera o n˙cleo do Modelo A nem src/industrial/**.
  */
 
 export type {
@@ -41,12 +41,20 @@ export {
 export {
   calcBoxInternalWidthMm,
   calcDrawerInternalWidthMm,
+  calcDrawerExternalWidthMm,
   calcFrontWidthMm,
   calcFrontHeightMm,
   calcBottomWidthMm,
   calcBottomDepthMm,
+  calcBodyDepthWithoutFrontMm,
   calcIndustrialClearances,
   pickRunnerDepthMm,
+  pickHettichRunnerForBox,
+  selectHettichRunnerDepth,
+  HETTICH_RUNNER_LENGTHS_MM,
+  resolveEuropeanUsefulInternalDepthMm,
+  EUROPEAN_SIDE_CLEARANCE_EACH_MM,
+  EUROPEAN_BODY_DEPTH_SLIDE_CLEARANCE_MM,
 } from "./measures";
 
 export {
@@ -60,6 +68,8 @@ export {
   generateModuleLateralHoles,
   generateFrontFixationHoles,
   generateBottomHoles,
+  generateDrawerSideHolesFromModeloA,
+  generateDrawerBackHolesFromModeloA,
   europeanHolesToPanelDrillHoles,
 } from "./drilling";
 
@@ -80,6 +90,13 @@ export {
 } from "./adapter";
 
 export {
+  resolveEuropeanPieceNaming,
+  europeanBodyIndustrialName,
+  europeanFrontIndustrialName,
+  formatEuropeanIndustrialLabel,
+} from "./naming";
+
+export {
   runEuropeanDrawerValidation,
   applyEuropeanAutoFixes,
   buildEuropeanAutoFixes,
@@ -96,11 +113,7 @@ import type {
   EuropeanDrawerResult,
   EuropeanDrawerSystemId,
 } from "./types";
-import {
-  findHeightProfile,
-  findNearestDepthMm,
-  getEuropeanDrawerModel,
-} from "./catalog";
+import { findHeightProfile, getEuropeanDrawerModel } from "./catalog";
 import { buildEuropeanDrawerGeometry } from "./geometry";
 import { generateEuropeanDrawerHoles } from "./drilling";
 import { getAssemblyRules } from "./assembly";
@@ -112,6 +125,12 @@ import {
   applyEuropeanAutoFixes,
   runEuropeanDrawerValidation,
 } from "./validation";
+import {
+  HETTICH_RUNNER_LENGTHS_MM,
+  isHettichRunnerLengthMm,
+  pickHettichRunnerForBox,
+  resolveEuropeanUsefulInternalDepthMm,
+} from "./measures";
 
 function resolveModel(
   modelOrId: DrawerEuropeanModel | EuropeanDrawerSystemId
@@ -120,14 +139,28 @@ function resolveModel(
   return modelOrId;
 }
 
+function snapHettichDepth(requestedMm: number, usefulInternalMm: number): number {
+  const picked = pickHettichRunnerForBox({
+    id: "_",
+    dimensoes: { largura: 1, altura: 1, profundidade: usefulInternalMm + 50 },
+    espessura: 19,
+    profundidadeInternaUtilMm: usefulInternalMm,
+  });
+  if (isHettichRunnerLengthMm(requestedMm) && requestedMm < usefulInternalMm) {
+    return requestedMm;
+  }
+  return picked;
+}
+
 /** Config default a partir do modelo + caixa. */
 export function defaultEuropeanDrawerConfig(
   box: EuropeanDrawerBoxInput,
-  systemId: EuropeanDrawerSystemId = "blum-legrabox"
+  systemId: EuropeanDrawerSystemId = "hettich-innotech-atira"
 ): EuropeanDrawerBoxConfig {
   const model = getEuropeanDrawerModel(systemId);
   const height = model.heights[1] ?? model.heights[0]!;
-  const depth = findNearestDepthMm(model, Math.min(500, box.dimensoes.profundidade - 40));
+  const useful = resolveEuropeanUsefulInternalDepthMm(box);
+  const depth = pickHettichRunnerForBox({ ...box, profundidadeInternaUtilMm: useful });
   return {
     systemId,
     heightMm: height.heightMm,
@@ -136,10 +169,16 @@ export function defaultEuropeanDrawerConfig(
     softClose: true,
     pushOpen: false,
     count: Math.max(1, Math.floor(box.gavetas ?? 1)),
+    dualFront: false,
   };
 }
 
-function emptyPdf(model: DrawerEuropeanModel, config: EuropeanDrawerBoxConfig, geometry: EuropeanDrawerResult["geometry"], boxName?: string): DrawerPDFSection {
+function emptyPdf(
+  model: DrawerEuropeanModel,
+  config: EuropeanDrawerBoxConfig,
+  geometry: EuropeanDrawerResult["geometry"],
+  boxName?: string
+): DrawerPDFSection {
   return buildEuropeanDrawerPdfSection({
     model,
     config,
@@ -159,6 +198,7 @@ function buildPipeline(
   const drawersGeo = [];
   const allHoles = [];
   const allCutlist = [];
+  const frontMat = config.frontMaterialId ?? box.material;
 
   for (let i = 0; i < count; i++) {
     const geometry = buildEuropeanDrawerGeometry(box, model, config, i, count);
@@ -176,7 +216,9 @@ function buildPipeline(
       config,
       geometry,
       drawerIndex: i,
+      drawerCount: count,
       materialLabel: box.material,
+      frontMaterialLabel: frontMat,
     });
     drawersGeo.push({
       id: `eu-drawer-${box.id}-${i}`,
@@ -232,17 +274,26 @@ export function generateEuropeanDrawer(
   const heightProfile = findHeightProfile(model, config.heightMm);
   config.heightMm = heightProfile.heightMm;
   config.heightCode = heightProfile.code || config.heightCode;
-  config.depthMm = findNearestDepthMm(model, config.depthMm);
+
+  const useful = resolveEuropeanUsefulInternalDepthMm(box);
+  config.depthMm = snapHettichDepth(config.depthMm, useful);
   config.count = Math.max(1, Math.floor(config.count ?? box.gavetas ?? 1));
 
+  const boxWithUseful: EuropeanDrawerBoxInput = {
+    ...box,
+    profundidadeInternaUtilMm: box.profundidadeInternaUtilMm ?? useful,
+  };
+
   if (isDrawerModeloAActive()) {
-    const emptyGeo = buildEuropeanDrawerGeometry(box, model, config, 0, 1);
+    const emptyGeo = buildEuropeanDrawerGeometry(boxWithUseful, model, config, 0, 1);
     return {
       systemId: model.id,
       model,
       config,
       valid: false,
-      errors: ["Modelo A ainda activo ù desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B."],
+      errors: [
+        "Modelo A ainda activo ó desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
+      ],
       warnings: [],
       autoFixes: [],
       geometry: emptyGeo,
@@ -254,9 +305,9 @@ export function generateEuropeanDrawer(
     };
   }
 
-  let built = buildPipeline(box, model, config);
+  let built = buildPipeline(boxWithUseful, model, config);
   let validation = runEuropeanDrawerValidation({
-    box,
+    box: boxWithUseful,
     model,
     config,
     geometry: built.primaryGeometry,
@@ -267,16 +318,15 @@ export function generateEuropeanDrawer(
     assembly: built.assembly,
   });
 
-  // Auto-fix seguro (1 passagem) ù nunca altera catalogo
   if (applyFixes && validation.errors.length > 0 && validation.autoFixes.length > 0) {
     config = applyEuropeanAutoFixes(config, validation.autoFixes);
-    config.depthMm = findNearestDepthMm(model, config.depthMm);
+    config.depthMm = snapHettichDepth(config.depthMm, useful);
     const hp = findHeightProfile(model, config.heightMm);
     config.heightMm = hp.heightMm;
     config.heightCode = hp.code || config.heightCode;
-    built = buildPipeline(box, model, config);
+    built = buildPipeline(boxWithUseful, model, config);
     validation = runEuropeanDrawerValidation({
-      box,
+      box: boxWithUseful,
       model,
       config,
       geometry: built.primaryGeometry,
@@ -293,7 +343,6 @@ export function generateEuropeanDrawer(
     description: f.description,
   }));
 
-  // Gaveta invalida: nao emitir cutlist / PDF util / viewer
   if (!validation.valid) {
     return {
       systemId: model.id,
@@ -311,6 +360,8 @@ export function generateEuropeanDrawer(
       assembly: built.assembly,
     };
   }
+
+  void HETTICH_RUNNER_LENGTHS_MM;
 
   return {
     systemId: model.id,
@@ -347,5 +398,5 @@ export function suggestEuropeanAutoFixedConfig(
  * Gera N gavetas europeias e devolve layer items (para boxLayersService).
  */
 export function generateEuropeanDrawersForBox(box: EuropeanDrawerBoxInput) {
-  return generateEuropeanDrawer(box.europeanDrawerConfig?.systemId ?? "blum-legrabox", box);
+  return generateEuropeanDrawer(box.europeanDrawerConfig?.systemId ?? "hettich-innotech-atira", box);
 }

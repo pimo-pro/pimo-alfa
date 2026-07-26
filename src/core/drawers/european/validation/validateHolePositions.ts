@@ -1,5 +1,6 @@
 /**
  * validateHolePositions.ts — Furos do Sistema Europeu.
+ * Laterais/costa da gaveta: regras Modelo A (não forçar pitch 32 do módulo).
  */
 
 import type {
@@ -8,40 +9,77 @@ import type {
   EuropeanDrawerBoxInput,
   EuropeanDrawerHole,
 } from "../types";
+import { EUROPEAN_BACK_THICKNESS_MM, EUROPEAN_SIDE_THICKNESS_MM } from "../measures";
 import { euError, EU_ERROR_CODES } from "./errors";
 import { emptyValidationResult, type EuropeanDrawerValidationResult } from "./types";
 
 const EPS = 0.6;
 
+function isDrawerWoodPieceRef(pieceRef: string): boolean {
+  return (
+    pieceRef === "gav_lat_esq" ||
+    pieceRef === "gav_lat_dir" ||
+    pieceRef === "gav_costa" ||
+    pieceRef === "gav_fun"
+  );
+}
+
 function pieceBounds(
   hole: EuropeanDrawerHole,
   geometry: DrawerGeometry,
   box: EuropeanDrawerBoxInput
-): { maxX: number; maxY: number; maxThickness: number } {
+): { maxX: number; maxY: number; maxThickness: number; allowEdgeDepth: boolean } {
   if (hole.pieceRef === "front") {
     return {
       maxX: geometry.front.widthMm,
       maxY: geometry.front.heightMm,
       maxThickness: geometry.front.thicknessMm,
+      allowEdgeDepth: false,
     };
   }
-  if (hole.pieceRef === "bottom") {
+  if (hole.pieceRef === "bottom" || hole.pieceRef === "gav_fun") {
     return {
-      maxX: geometry.bottom.depthMm,
-      maxY: geometry.bottom.widthMm,
+      maxX: Math.max(geometry.bottom.depthMm, geometry.bottom.widthMm),
+      maxY: Math.max(geometry.bottom.depthMm, geometry.bottom.widthMm),
       maxThickness: geometry.bottom.thicknessMm,
+      allowEdgeDepth: false,
     };
   }
-  // Laterais do modulo
+  if (hole.pieceRef === "gav_lat_esq") {
+    return {
+      maxX: geometry.leftSide.depthMm,
+      maxY: geometry.leftSide.heightMm,
+      maxThickness: EUROPEAN_SIDE_THICKNESS_MM,
+      allowEdgeDepth: true,
+    };
+  }
+  if (hole.pieceRef === "gav_lat_dir") {
+    return {
+      maxX: geometry.rightSide.depthMm,
+      maxY: geometry.rightSide.heightMm,
+      maxThickness: EUROPEAN_SIDE_THICKNESS_MM,
+      allowEdgeDepth: true,
+    };
+  }
+  if (hole.pieceRef === "gav_costa") {
+    return {
+      maxX: geometry.back.widthMm,
+      maxY: geometry.back.heightMm,
+      maxThickness: EUROPEAN_BACK_THICKNESS_MM,
+      allowEdgeDepth: true,
+    };
+  }
+  // Laterais do módulo
   return {
     maxX: box.dimensoes.profundidade,
     maxY: box.dimensoes.altura,
     maxThickness: box.espessura,
+    allowEdgeDepth: false,
   };
 }
 
 /**
- * Valida coordenadas, profundidades e padrao oficial (32 mm / setback / bottom gap).
+ * Valida coordenadas, profundidades e padrão oficial (módulo 32 mm / setback).
  */
 export function validateHolePositions(
   box: EuropeanDrawerBoxInput,
@@ -54,21 +92,29 @@ export function validateHolePositions(
 
   for (const hole of holes) {
     const bounds = pieceBounds(hole, geometry, box);
+    // Rasgo / groove: diâmetro 0 permitido
+    const isGroove = hole.diameter === 0 && hole.holeType === "fixacao_estrutural";
+
     if (hole.x < -EPS || hole.y < -EPS || hole.x > bounds.maxX + EPS || hole.y > bounds.maxY + EPS) {
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_BOUNDS,
-          `Furo fora da peca ${hole.pieceRef}: X=${hole.x.toFixed(1)} Y=${hole.y.toFixed(1)}.`,
+          `Furo fora da peça ${hole.pieceRef}: X=${hole.x.toFixed(1)} Y=${hole.y.toFixed(1)}.`,
           `holes.${hole.pieceRef}`
         )
       );
     }
-    if (hole.depth < 0 || hole.diameter <= 0) {
+    if (hole.depth < 0 || (!isGroove && hole.diameter <= 0)) {
       result.errors.push(
-        euError(EU_ERROR_CODES.HOLE_DEPTH, `Furo com profundidade/diametro invalido em ${hole.pieceRef}.`, `holes.${hole.pieceRef}`)
+        euError(
+          EU_ERROR_CODES.HOLE_DEPTH,
+          `Furo com profundidade/diâmetro inválido em ${hole.pieceRef}.`,
+          `holes.${hole.pieceRef}`
+        )
       );
     }
-    if (hole.depth > bounds.maxThickness + EPS) {
+    // Furos de face/topo Modelo A podem ter profundidade > espessura (orientação de face)
+    if (!bounds.allowEdgeDepth && hole.depth > bounds.maxThickness + EPS) {
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_THICKNESS,
@@ -79,11 +125,14 @@ export function validateHolePositions(
     }
   }
 
-  // Setback frontal exacto nos furos de corredica / frente
-  const runnerHoles = holes.filter((h) => h.holeType === "corredica");
-  for (const h of runnerHoles) {
+  // Pitch 32 / setback: apenas furos de corrediça nas laterais do módulo
+  const moduleRunnerHoles = holes.filter(
+    (h) =>
+      h.holeType === "corredica" &&
+      (h.pieceRef === "module_lat_esq" || h.pieceRef === "module_lat_dir")
+  );
+  for (const h of moduleRunnerHoles) {
     const distToSetback = Math.abs(h.x - pattern.setbackFrontMm);
-    // Aceita setback ou setback + n*32
     const fromSetback = h.x - pattern.setbackFrontMm;
     const onPitch =
       Math.abs(fromSetback % pattern.systemPitchMm) < EPS ||
@@ -92,7 +141,7 @@ export function validateHolePositions(
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_PITCH32,
-          `Furo corredica X=${h.x.toFixed(1)} nao respeita setback ${pattern.setbackFrontMm} + sistema ${pattern.systemPitchMm} mm.`,
+          `Furo corrediça módulo X=${h.x.toFixed(1)} não respeita setback ${pattern.setbackFrontMm} + sistema ${pattern.systemPitchMm} mm.`,
           "holes.corredica"
         )
       );
@@ -107,16 +156,14 @@ export function validateHolePositions(
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_SETBACK,
-          `Fixacao frente X=${h.x.toFixed(1)} nao respeita setback oficial ${pattern.setbackFrontMm} mm.`,
+          `Fixação frente X=${h.x.toFixed(1)} não respeita setback oficial ${pattern.setbackFrontMm} mm.`,
           "holes.front"
         )
       );
     }
   }
 
-  // Bottom gap: Y dos furos de corredica relativamente a base da gaveta
-  for (const h of runnerHoles) {
-    // yFromBottom ja inclui bottomGap na geracao; verificar coerencia com padrao
+  for (const h of moduleRunnerHoles) {
     const expectedMin = pattern.bottomGapMm;
     if (h.y + EPS < expectedMin) {
       result.errors.push(
@@ -129,6 +176,7 @@ export function validateHolePositions(
     }
   }
 
+  void isDrawerWoodPieceRef;
   result.valid = result.errors.length === 0;
   return result;
 }
