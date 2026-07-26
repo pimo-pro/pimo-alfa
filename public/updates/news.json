@@ -1,6 +1,26 @@
 {
-  "updatedAt": "2026-07-26T14:11:24.204Z",
+  "updatedAt": "2026-07-26T18:51:27.431Z",
   "news": [
+    {
+      "version": "v6.0726.1951",
+      "title": "fix: correções mínimas TypeScript para build PIMO.PRO-V5.0",
+      "description": "fix: correções mínimas TypeScript para build PIMO.PRO-V5.0",
+      "publishedAt": "2026-07-26T18:51:27.357Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "9784e68"
+    },
+    {
+      "version": "v6.0726.0136",
+      "title": "Rollback completo: retorno à versão estável v6.0726.0136 (commit 805134d)",
+      "description": "Rollback completo: retorno à versão estável v6.0726.0136 (commit 805134d)",
+      "publishedAt": "2026-07-26T15:11:25+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "6b66ccf"
+    },
     {
       "version": "v6.0726.0136-rollback",
       "title": "Rollback visual do Hub — retorno à versão estável v6.0726.0136 (commit 805134d)",
@@ -23,22 +43,23 @@
     },
     {
       "version": "v6.0726.0126",
-      "title": "Melhoria visual/estrutural do Hub: Documentação avançada",
-      "description": "Melhoria visual/estrutural do Hub de Documentação: renomeação para Documentação avançada / Documentação Interna; secção inicial Documentação atual; cards superiores só em #atual; cards redesenhadas (layout horizontal profissional); conteúdo full-width nas outras secções; Roadmap SVG + fases editoriais; Dashboard com KPIs horizontais + sparkline; layout responsivo preservado (<820px); contagem dinâmica de Projetos criados; nada industrial tocado.",
-      "publishedAt": "2026-07-26T00:26:38.444Z",
-      "type": "feature",
-      "author": "pimo-pro",
-      "icon": "feature"
-    },
-    {
-      "version": "v6.0726.0044",
-      "title": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
-      "description": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
-      "publishedAt": "2026-07-25T23:44:11.907Z",
+      "title": "Melhoria visual/estrutural do Hub: nomes, cards, comportamento, layout",
+      "description": "Melhoria visual/estrutural do Hub: nomes, cards, comportamento, layout",
+      "publishedAt": "2026-07-26T01:27:24+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
-      "commit": "4bb6d8f"
+      "commit": "902890d"
+    },
+    {
+      "version": "v6.0726.0044",
+      "title": "Release v6.0726.0044",
+      "description": "Release v6.0726.0044",
+      "publishedAt": "2026-07-26T00:46:20+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "5b865dd"
     },
     {
       "version": "v6.0726.0040",

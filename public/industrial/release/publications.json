@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-26T18:51:26.725Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix: correções mínimas TypeScript para build PIMO.PRO-V5.0",
+      "version": "v6.0726.1951"
+    },
+    {
       "publishedAt": "2026-07-25T23:44:11.143Z",
       "author": "pimo-pro",
       "commitMessage": "Hub completo: Fase 10 + Fase 11 + Fase 12 + pimo-soon + Novidades",
