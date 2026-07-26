@@ -1,15 +1,25 @@
 {
-  "updatedAt": "2026-07-26T19:56:37.354Z",
+  "updatedAt": "2026-07-26T21:04:40.351Z",
   "news": [
+    {
+      "version": "v6.0726.2204",
+      "title": "release: publicação completa do projeto após correções de encoding e binding Modelo B",
+      "description": "release: publicação completa do projeto após correções de encoding e binding Modelo B",
+      "publishedAt": "2026-07-26T21:04:40.278Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "a31ec11"
+    },
     {
       "version": "v6.0726.2056",
       "title": "fix: activar Modelo B como default + binding completo na UI/Admin/layers",
       "description": "fix: activar Modelo B como default + binding completo na UI/Admin/layers",
-      "publishedAt": "2026-07-26T19:56:37.278Z",
-      "type": "fix",
+      "publishedAt": "2026-07-26T20:58:09+01:00",
+      "type": "update",
       "author": "pimo-pro",
-      "icon": "fix",
-      "commit": "e8b9c65"
+      "icon": "update",
+      "commit": "1f9a23f"
     },
     {
       "version": "v6.0726.2038",
