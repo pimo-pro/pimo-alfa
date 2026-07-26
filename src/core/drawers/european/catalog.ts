@@ -1,5 +1,5 @@
 /**
- * catalog.ts ó Catalogo oficial dos 4 sistemas europeus (Modelo B).
+ * catalog.ts ù Catalogo oficial dos 4 sistemas europeus (Modelo B).
  *
  * Specs industriais fornecidas para esta fase (SSOT Modelo B).
  * Nao reutiliza drawerMetalBoxCatalog do Modelo A (alturas diferentes).
@@ -10,6 +10,7 @@ import type {
   DrawerHolePattern,
   EuropeanDrawerSystemId,
 } from "./types";
+import { HETTICH_RUNNER_LENGTHS_MM } from "./measures/hettichRunners";
 
 function depthRange(minMm: number, maxMm: number, extras: number[] = []): number[] {
   const step = 50;
@@ -36,11 +37,10 @@ function holePattern(partial: Partial<DrawerHolePattern> & Pick<DrawerHolePatter
 
 const ASSEMBLY_BASE = {
   order: [
-    "1. Fixar corredicas nas laterais do modulo (sistema 32 mm)",
-    "2. Montar caixa metalica / laterais do sistema",
-    "3. Encaixar fundo",
-    "4. Fixar frente na caixa metalica",
-    "5. Regular Soft-Close / Push-Open",
+    "1. Fixar corrediùas Hettich nas laterais do mùdulo (sistema 32 mm)",
+    "2. Montar laterais 16 mm + costa 16 mm + fundo 10 mm",
+    "3. Fixar frente interna (se dual) / frente externa (material independente)",
+    "4. Regular Soft-Close / Push-Open",
   ],
   toleranceMm: 0.5,
   frontGapMm: 1,
@@ -53,25 +53,26 @@ export const BLUM_LEGRABOX: DrawerEuropeanModel = {
   brand: "Blum",
   displayName: "Blum Legrabox",
   heights: [
-    { code: "N", heightMm: 66, label: "N ó 66 mm" },
-    { code: "M", heightMm: 90, label: "M ó 90 mm" },
-    { code: "K", heightMm: 128, label: "K ó 128 mm" },
-    { code: "F", heightMm: 185, label: "F ó 185 mm" },
-    { code: "H", heightMm: 241, label: "H ó 241 mm" },
+    { code: "N", heightMm: 66, label: "N ù 66 mm" },
+    { code: "M", heightMm: 90, label: "M ù 90 mm" },
+    { code: "K", heightMm: 128, label: "K ù 128 mm" },
+    { code: "F", heightMm: 185, label: "F ù 185 mm" },
+    { code: "H", heightMm: 241, label: "H ù 241 mm" },
   ],
-  depthsMm: depthRange(270, 600, [270]),
-  depthProfile: { nominalMm: 500, minMm: 270, maxMm: 600, stepMm: 50 },
-  side: { clearanceMm: 13, wallThicknessMm: 13, runnerFamily: "Blum Movento / Legrabox" },
+  depthsMm: depthRange(300, 600, [300]),
+  depthProfile: { nominalMm: 500, minMm: 300, maxMm: 600, stepMm: 50 },
+  side: { clearanceMm: 7, wallThicknessMm: 16, runnerFamily: "Blum Movento / Legrabox" },
   holePattern: holePattern({ bottomGapMm: 12.5, lateralOffsetMm: 10 }),
   assembly: {
     ...ASSEMBLY_BASE,
     warnings: [
-      "Largura interna = caixa interna - 2x13 mm",
-      "Setback frontal 37 mm; bottom gap 12.5 mm; offset lateral 10 mm; sistema 32 mm",
+      "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
+      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
+      "Setback frontal 37 mm; bottom gap 12.5 mm; sistema 32 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
-  recommendedBottomThicknessMm: 16,
+  recommendedBottomThicknessMm: 10,
   notes: "Soft-Close e Push-Open suportados.",
 };
 
@@ -80,25 +81,25 @@ export const BLUM_TANDEMBOX_ANTARO: DrawerEuropeanModel = {
   brand: "Blum",
   displayName: "Blum TandemBox Antaro",
   heights: [
-    { code: "D", heightMm: 68, label: "D ó 68 mm" },
-    { code: "M", heightMm: 83, label: "M ó 83 mm" },
-    { code: "K", heightMm: 115, label: "K ó 115 mm" },
-    { code: "C", heightMm: 167, label: "C ó 167 mm" },
-    { code: "F", heightMm: 199, label: "F ó 199 mm" },
+    { code: "D", heightMm: 68, label: "D ù 68 mm" },
+    { code: "M", heightMm: 83, label: "M ù 83 mm" },
+    { code: "K", heightMm: 115, label: "K ù 115 mm" },
+    { code: "C", heightMm: 167, label: "C ù 167 mm" },
+    { code: "F", heightMm: 199, label: "F ù 199 mm" },
   ],
-  depthsMm: depthRange(270, 600, [270]),
-  depthProfile: { nominalMm: 500, minMm: 270, maxMm: 600, stepMm: 50 },
-  side: { clearanceMm: 15, wallThicknessMm: 15, runnerFamily: "Blum Tandem / Antaro" },
+  depthsMm: depthRange(300, 600, [300]),
+  depthProfile: { nominalMm: 500, minMm: 300, maxMm: 600, stepMm: 50 },
+  side: { clearanceMm: 7, wallThicknessMm: 16, runnerFamily: "Blum Tandem / Antaro" },
   holePattern: holePattern({ bottomGapMm: 12.5, lateralOffsetMm: 0 }),
   assembly: {
     ...ASSEMBLY_BASE,
     warnings: [
-      "Largura interna = caixa interna - 2x15 mm",
-      "Furos: setback 37 mm, bottom gap 12.5 mm, sistema 32 mm",
+      "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
+      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
-  recommendedBottomThicknessMm: 16,
+  recommendedBottomThicknessMm: 10,
   notes: "Soft-Close e Push-Open suportados.",
 };
 
@@ -112,19 +113,19 @@ export const HETTICH_INNOTECH_ATIRA: DrawerEuropeanModel = {
     { code: "", heightMm: 176, label: "176 mm" },
     { code: "", heightMm: 208, label: "208 mm" },
   ],
-  depthsMm: depthRange(260, 600, [260]),
-  depthProfile: { nominalMm: 500, minMm: 260, maxMm: 600, stepMm: 50 },
-  side: { clearanceMm: 12, wallThicknessMm: 12, runnerFamily: "Hettich InnoTech Atira" },
+  depthsMm: depthRange(300, 600, [300]),
+  depthProfile: { nominalMm: 500, minMm: 300, maxMm: 600, stepMm: 50 },
+  side: { clearanceMm: 7, wallThicknessMm: 16, runnerFamily: "Hettich InnoTech Atira" },
   holePattern: holePattern({ bottomGapMm: 12, lateralOffsetMm: 0 }),
   assembly: {
     ...ASSEMBLY_BASE,
     warnings: [
-      "Largura interna = caixa interna - 2x12 mm",
-      "Furos: setback 37 mm, bottom gap 12 mm, sistema 32 mm",
+      "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
+      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
-  recommendedBottomThicknessMm: 16,
+  recommendedBottomThicknessMm: 10,
   notes: "Soft-Close e Push-Open suportados.",
 };
 
@@ -138,23 +139,23 @@ export const GRASS_NOVA_PRO_SCALA: DrawerEuropeanModel = {
     { code: "", heightMm: 186, label: "186 mm" },
     { code: "", heightMm: 250, label: "250 mm" },
   ],
-  depthsMm: depthRange(260, 600, [260]),
-  depthProfile: { nominalMm: 500, minMm: 260, maxMm: 600, stepMm: 50 },
-  side: { clearanceMm: 14, wallThicknessMm: 14, runnerFamily: "Grass Nova Pro Scala" },
+  depthsMm: depthRange(300, 600, [300]),
+  depthProfile: { nominalMm: 500, minMm: 300, maxMm: 600, stepMm: 50 },
+  side: { clearanceMm: 7, wallThicknessMm: 16, runnerFamily: "Grass Nova Pro Scala" },
   holePattern: holePattern({ bottomGapMm: 12.5, lateralOffsetMm: 0 }),
   assembly: {
     ...ASSEMBLY_BASE,
     warnings: [
-      "Largura interna = caixa interna - 2x14 mm",
-      "Furos: setback 37 mm, bottom gap 12.5 mm, sistema 32 mm",
+      "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
+      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
-  recommendedBottomThicknessMm: 16,
+  recommendedBottomThicknessMm: 10,
   notes: "Soft-Close e Push-Open suportados.",
 };
 
-/** Catalogo completo ó ordem estavel para UI. */
+/** Catalogo completo ù ordem estavel para UI. */
 export const EUROPEAN_DRAWER_SYSTEMS: readonly DrawerEuropeanModel[] = [
   BLUM_LEGRABOX,
   BLUM_TANDEMBOX_ANTARO,
@@ -177,8 +178,8 @@ export function listEuropeanDrawerModels(): readonly DrawerEuropeanModel[] {
   return EUROPEAN_DRAWER_SYSTEMS;
 }
 
-export function findNearestDepthMm(model: DrawerEuropeanModel, depthMm: number): number {
-  const list = model.depthsMm;
+export function findNearestDepthMm(_model: DrawerEuropeanModel, depthMm: number): number {
+  const list = [...HETTICH_RUNNER_LENGTHS_MM];
   if (list.length === 0) return depthMm;
   let best = list[0]!;
   let bestDist = Math.abs(best - depthMm);

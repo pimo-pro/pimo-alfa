@@ -1,5 +1,6 @@
 /**
  * geometry/ — Geometria pura do Sistema Europeu (Modelo B).
+ * Corpo em madeira: laterais/costa/fundo + frente externa (sobreposta).
  */
 
 import type {
@@ -10,27 +11,24 @@ import type {
   EuropeanDrawerBoxInput,
 } from "../types";
 import {
+  EUROPEAN_BACK_THICKNESS_MM,
+  EUROPEAN_BOTTOM_THICKNESS_MM,
+  EUROPEAN_FRONT_INT_THICKNESS_MM,
+  EUROPEAN_SIDE_CLEARANCE_EACH_MM,
+  EUROPEAN_SIDE_THICKNESS_MM,
   calcBackHeightMm,
   calcBackWidthMm,
+  calcBodyDepthWithoutFrontMm,
   calcBottomDepthMm,
   calcBottomWidthMm,
+  calcDrawerExternalWidthMm,
   calcDrawerInternalWidthMm,
   calcFrontHeightMm,
+  calcFrontIntWidthMm,
   calcFrontWidthMm,
-  pickRunnerDepthMm,
+  resolveEuropeanUsefulInternalDepthMm,
+  selectHettichRunnerDepth,
 } from "../measures";
-
-function emptyPiece(): DrawerPieceBox {
-  return {
-    widthMm: 0,
-    heightMm: 0,
-    depthMm: 0,
-    thicknessMm: 0,
-    originXMm: 0,
-    originYMm: 0,
-    originZMm: 0,
-  };
-}
 
 /**
  * Calcula geometria completa de uma gaveta europeia no sistema local do modulo.
@@ -43,32 +41,47 @@ export function buildEuropeanDrawerGeometry(
   stackIndex: number,
   stackCount: number
 ): DrawerGeometry {
-  const runnerDepthMm = pickRunnerDepthMm(
-    model,
-    config.depthMm,
-    box.dimensoes.profundidade,
-    box.espessura
-  );
+  const usefulResolved = resolveEuropeanUsefulInternalDepthMm(box);
+  const autoRunner = selectHettichRunnerDepth(usefulResolved);
+  const configDepth = Number(config.depthMm);
+  const runner =
+    Number.isFinite(configDepth) &&
+    configDepth > 0 &&
+    configDepth < usefulResolved &&
+    [300, 350, 400, 450, 500, 550, 600].includes(configDepth)
+      ? configDepth
+      : autoRunner;
+
+  const externalWidthMm = calcDrawerExternalWidthMm(box);
   const internalWidthMm = calcDrawerInternalWidthMm(box, model);
+  const bodyDepthMm = calcBodyDepthWithoutFrontMm(runner);
   const usefulHeightMm = config.heightMm;
-  const frontThickness = model.recommendedFrontThicknessMm;
-  const bottomThickness = model.recommendedBottomThicknessMm;
 
-  const frontW = calcFrontWidthMm(box);
-  const frontH = calcFrontHeightMm(usefulHeightMm);
-  const bottomW = calcBottomWidthMm(internalWidthMm);
-  const bottomD = calcBottomDepthMm(runnerDepthMm);
+  const frontThickness = Math.max(1, box.espessura);
+  const bottomThickness = EUROPEAN_BOTTOM_THICKNESS_MM;
+  const sideT = EUROPEAN_SIDE_THICKNESS_MM;
+  const backT = EUROPEAN_BACK_THICKNESS_MM;
+  const hasInnerFront = config.dualFront === true;
 
-  // Empilhamento vertical a partir da base util (offset 41 mm tipico + gaps).
+  const frontW =
+    typeof config.frontWidthMm === "number" && config.frontWidthMm > 0
+      ? config.frontWidthMm
+      : calcFrontWidthMm(box);
+  const frontH =
+    typeof config.frontHeightMm === "number" && config.frontHeightMm > 0
+      ? config.frontHeightMm
+      : calcFrontHeightMm(usefulHeightMm);
+
+  const bottomW = calcBottomWidthMm(externalWidthMm);
+  const bottomD = calcBottomDepthMm(bodyDepthMm, { hasInnerFront, backThicknessMm: backT });
+
   const baseOffsetMm = 41;
   const gapMm = 6;
-  const totalStack = stackCount * usefulHeightMm + Math.max(0, stackCount - 1) * gapMm;
   const startY = -box.dimensoes.altura / 2 + box.espessura + baseOffsetMm;
-  const yCenter =
-    startY + usefulHeightMm / 2 + stackIndex * (usefulHeightMm + gapMm);
+  const yCenter = startY + usefulHeightMm / 2 + stackIndex * (usefulHeightMm + gapMm);
 
-  void totalStack;
-
+  const boxHalfD = box.dimensoes.profundidade / 2;
+  // Frente fora da caixa (sobreposta à estrutura frontal)
   const front: DrawerPieceBox = {
     widthMm: frontW,
     heightMm: frontH,
@@ -76,9 +89,49 @@ export function buildEuropeanDrawerGeometry(
     thicknessMm: frontThickness,
     originXMm: 0,
     originYMm: yCenter,
-    originZMm: box.dimensoes.profundidade / 2 + frontThickness / 2,
+    originZMm: boxHalfD + frontThickness / 2,
   };
 
+  const bodyFrontZ = boxHalfD;
+  const bodyCenterZ = bodyFrontZ - bodyDepthMm / 2;
+
+  const sideHeight = usefulHeightMm;
+  const sideDepth = bodyDepthMm;
+  const sideOriginXHalf = externalWidthMm / 2 - sideT / 2;
+
+  const leftSide: DrawerPieceBox = {
+    widthMm: sideT,
+    heightMm: sideHeight,
+    depthMm: sideDepth,
+    thicknessMm: sideT,
+    originXMm: -sideOriginXHalf,
+    originYMm: yCenter,
+    originZMm: bodyCenterZ,
+  };
+
+  const rightSide: DrawerPieceBox = {
+    widthMm: sideT,
+    heightMm: sideHeight,
+    depthMm: sideDepth,
+    thicknessMm: sideT,
+    originXMm: sideOriginXHalf,
+    originYMm: yCenter,
+    originZMm: bodyCenterZ,
+  };
+
+  const backW = calcBackWidthMm(externalWidthMm);
+  const backH = calcBackHeightMm(usefulHeightMm, bottomThickness);
+  const back: DrawerPieceBox = {
+    widthMm: backW,
+    heightMm: backH,
+    depthMm: backT,
+    thicknessMm: backT,
+    originXMm: 0,
+    originYMm: yCenter - usefulHeightMm / 2 + bottomThickness + backH / 2,
+    originZMm: bodyFrontZ - bodyDepthMm + backT / 2,
+  };
+
+  const bottomFrontInset = hasInnerFront ? 0 : 10;
   const bottom: DrawerPieceBox = {
     widthMm: bottomW,
     heightMm: bottomThickness,
@@ -86,33 +139,40 @@ export function buildEuropeanDrawerGeometry(
     thicknessMm: bottomThickness,
     originXMm: 0,
     originYMm: yCenter - usefulHeightMm / 2 + bottomThickness / 2,
-    originZMm: box.dimensoes.profundidade / 2 - frontThickness - bottomD / 2 - 5,
+    originZMm: bodyFrontZ - bottomFrontInset - bottomD / 2,
   };
 
-  const back: DrawerPieceBox = {
-    widthMm: calcBackWidthMm(internalWidthMm),
-    heightMm: calcBackHeightMm(usefulHeightMm, bottomThickness),
-    depthMm: model.side.wallThicknessMm,
-    thicknessMm: model.side.wallThicknessMm,
-    originXMm: 0,
-    originYMm: yCenter + bottomThickness / 4,
-    originZMm: bottom.originZMm - bottomD / 2,
-  };
+  let frontInt: DrawerPieceBox | undefined;
+  if (hasInnerFront) {
+    const fiW = calcFrontIntWidthMm(box);
+    frontInt = {
+      widthMm: fiW,
+      heightMm: usefulHeightMm,
+      depthMm: EUROPEAN_FRONT_INT_THICKNESS_MM,
+      thicknessMm: EUROPEAN_FRONT_INT_THICKNESS_MM,
+      originXMm: 0,
+      originYMm: yCenter,
+      originZMm: bodyFrontZ - EUROPEAN_FRONT_INT_THICKNESS_MM / 2,
+    };
+  }
 
-  // Caixa metalica: laterais madeira a zero (compensacao de montagem no metal).
-  const leftSide = emptyPiece();
-  const rightSide = emptyPiece();
+  void EUROPEAN_SIDE_CLEARANCE_EACH_MM;
+  void stackCount;
+  void gapMm;
 
   return {
     systemId: model.id,
     front,
+    frontInt,
     bottom,
     leftSide,
     rightSide,
     back,
+    externalWidthMm,
     internalWidthMm,
     usefulHeightMm,
-    runnerDepthMm,
+    runnerDepthMm: runner,
+    bodyDepthMm,
   };
 }
 
@@ -122,10 +182,10 @@ export function calcUsefulCabinetHeightMm(box: EuropeanDrawerBoxInput): number {
 }
 
 /** Tolerancias industriais documentadas. */
-export function getIndustrialTolerances(model: DrawerEuropeanModel) {
+export function getIndustrialTolerances(_model: DrawerEuropeanModel) {
   return {
-    assemblyMm: model.assembly.toleranceMm,
-    frontGapMm: model.assembly.frontGapMm,
-    sideClearanceMm: model.side.clearanceMm,
+    assemblyMm: 0.5,
+    frontGapMm: 1,
+    sideClearanceMm: EUROPEAN_SIDE_CLEARANCE_EACH_MM,
   };
 }

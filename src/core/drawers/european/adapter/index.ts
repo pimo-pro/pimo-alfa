@@ -1,6 +1,6 @@
 /**
  * adapter/ — Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
- * Permite reutilizar viewer/cutlist sem alterar o nucleo do Modelo A.
+ * Permite reutilizar viewer/cutlist sem alterar o núcleo do Modelo A.
  */
 
 import type { DrawerLayerItem } from "../../../../models/BoxLayers";
@@ -13,6 +13,7 @@ import type {
   EuropeanDrawerSystemId,
 } from "../types";
 import { europeanHolesToPanelDrillHoles } from "../drilling";
+import { EUROPEAN_SIDE_THICKNESS_MM } from "../measures";
 
 const SYSTEM_TO_METAL_LABEL: Record<EuropeanDrawerSystemId, string> = {
   "blum-legrabox": "Blum Legrabox",
@@ -28,38 +29,56 @@ export function europeanGeometryToLayerItem(params: {
   systemId: EuropeanDrawerSystemId;
   softClose: boolean;
   material?: string;
+  frontMaterial?: string;
   isOpen?: boolean;
+  dualFront?: boolean;
 }): DrawerLayerItem {
-  const { id, parentBoxId, geometry, systemId, softClose, material, isOpen } = params;
+  const {
+    id,
+    parentBoxId,
+    geometry,
+    systemId,
+    softClose,
+    material,
+    frontMaterial,
+    isOpen,
+    dualFront,
+  } = params;
   const g = geometry;
+  const bodyMat = material ?? "mdf_branco";
+  const frontMat = frontMaterial ?? bodyMat;
   return {
     id,
     parentBoxId,
     type: "pro",
     drawerType: "pro",
-    sideMaterial: "aluminum",
+    sideMaterial: "wood",
     slideType: "Genérica",
     metalBoxType: SYSTEM_TO_METAL_LABEL[systemId] as DrawerLayerItem["metalBoxType"],
     softClose,
     width: g.front.widthMm,
     height: g.front.heightMm,
-    depth: g.runnerDepthMm,
+    depth: g.bodyDepthMm,
     frontThickness: g.front.thicknessMm,
-    bodyWidth: g.internalWidthMm,
+    frontIntWidth: g.frontInt?.widthMm,
+    frontIntHeight: g.frontInt?.heightMm,
+    frontIntThickness: g.frontInt?.thicknessMm,
+    bodyWidth: g.externalWidthMm,
     bodyHeight: g.usefulHeightMm,
-    bodyDepth: g.runnerDepthMm,
+    bodyDepth: g.bodyDepthMm,
     bottomWidth: g.bottom.widthMm,
     bottomDepth: g.bottom.depthMm,
     bottomThickness: g.bottom.thicknessMm,
     backWidth: g.back.widthMm,
     backHeight: g.back.heightMm,
     backThickness: g.back.thicknessMm,
-    leftSideWidth: 0,
-    leftSideHeight: 0,
-    leftSideDepth: 0,
-    rightSideWidth: 0,
-    rightSideHeight: 0,
-    rightSideDepth: 0,
+    sideThickness: EUROPEAN_SIDE_THICKNESS_MM,
+    leftSideWidth: g.leftSide.widthMm,
+    leftSideHeight: g.leftSide.heightMm,
+    leftSideDepth: g.leftSide.depthMm,
+    rightSideWidth: g.rightSide.widthMm,
+    rightSideHeight: g.rightSide.heightMm,
+    rightSideDepth: g.rightSide.depthMm,
     frontPosX: g.front.originXMm,
     frontPosY: g.front.originYMm,
     frontPosZ: g.front.originZMm,
@@ -69,8 +88,14 @@ export function europeanGeometryToLayerItem(params: {
     backPosX: g.back.originXMm,
     backPosY: g.back.originYMm,
     backPosZ: g.back.originZMm,
-    material: material ?? "mdf_branco",
-    materialId: material ?? "mdf_branco",
+    leftSidePosX: g.leftSide.originXMm,
+    leftSidePosY: g.leftSide.originYMm,
+    leftSidePosZ: g.leftSide.originZMm,
+    rightSidePosX: g.rightSide.originXMm,
+    rightSidePosY: g.rightSide.originYMm,
+    rightSidePosZ: g.rightSide.originZMm,
+    material: frontMat,
+    materialId: frontMat,
     openDirection: "pull",
     isOpen: isOpen ?? false,
     pullDistanceMm: Math.max(100, g.runnerDepthMm - 40),
@@ -84,6 +109,10 @@ export function europeanGeometryToLayerItem(params: {
       nominalDepth: g.runnerDepthMm,
       europeanSystemId: systemId,
       modeloB: true,
+      frontMaterial: frontMat,
+      frontHeightMm: g.front.heightMm,
+      dualFront: dualFront === true,
+      bodyMaterial: bodyMat,
     } as DrawerLayerItem["metadata"],
   };
 }
@@ -96,7 +125,7 @@ export function europeanCutlistToCutListItems(
     .filter((i) => i.kind === "wood")
     .map((i) => ({
       id: i.id,
-      nome: i.nome,
+      nome: i.industrialLabel ?? i.nome,
       quantidade: i.quantidade,
       dimensoes: {
         largura: i.larguraMm,
@@ -112,11 +141,21 @@ export function europeanCutlistToCutListItems(
         modeloB: true,
         observacoesIndustriais: i.observacoesIndustriais,
         kind: i.kind,
+        codigo: i.codigo,
+        industrialLabel: i.industrialLabel,
+        pieceName: i.nome,
       },
     }));
 }
 
-export function europeanResultToLayerItems(result: EuropeanDrawerResult, boxId: string): DrawerLayerItem[] {
+export function europeanResultToLayerItems(
+  result: EuropeanDrawerResult,
+  boxId: string,
+  options?: { material?: string; frontMaterial?: string }
+): DrawerLayerItem[] {
+  const bodyMat = options?.material ?? result.config.frontMaterialId;
+  const frontMat =
+    options?.frontMaterial ?? result.config.frontMaterialId ?? options?.material;
   return result.viewer.drawers.map((d) =>
     europeanGeometryToLayerItem({
       id: d.id,
@@ -124,6 +163,9 @@ export function europeanResultToLayerItems(result: EuropeanDrawerResult, boxId: 
       geometry: d.geometry,
       systemId: result.systemId,
       softClose: result.config.softClose,
+      material: bodyMat,
+      frontMaterial: frontMat,
+      dualFront: result.config.dualFront,
     })
   );
 }
