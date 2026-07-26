@@ -42,6 +42,7 @@ import {
 } from "../../core/drawers/drawerViewerLayout";
 import { resolveProfundidadeExternaFromUtilMm, resolveDrawerSideDepthMm } from "../../core/drawers/drawerSlideDepth";
 import { settingsDefaults } from "../../core/settings/settingsSchema";
+import { resolveDrawerGroup3DPose } from "../groups/drawerGroup3D";
 
 const drawerOpenState = new Map<string, boolean>();
 const drawerPositionState = new Map<string, number>();
@@ -151,87 +152,159 @@ export function buildDrawerSpecs(
   items: DrawerLayerItem[],
   options: BuildDrawerSpecsOptions = {}
 ): DrawerSpec[] {
-  return items.map((item, index) => ({
-    id: item.id,
-    type: "drawer",
-    widthM: Math.max(0.001, item.width / 1000),
-    heightM: Math.max(0.001, resolveDrawerExternalFrontHeightMm(item) / 1000),
-    depthM: Math.max(0.001, item.depth / 1000),
-    frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
-    frontIntWidthM: Math.max(0.001, (item.frontIntWidth ?? item.bodyWidth ?? item.width) / 1000),
-    frontIntHeightM: Math.max(0.001, resolveDrawerInternalFrontHeightMm(item) / 1000),
-    frontIntThicknessM: Math.max(
-      0.001,
-      (item.frontIntThickness ?? item.sideThickness ?? 16) / 1000
-    ),
-    bodyWidthM: item.bodyWidth ? Math.max(0.001, item.bodyWidth / 1000) : undefined,
-    bodyHeightM: item.bodyHeight ? Math.max(0.001, item.bodyHeight / 1000) : undefined,
-    bodyDepthM: item.bodyDepth ? Math.max(0.001, item.bodyDepth / 1000) : undefined,
-    leftSideWidthM: item.leftSideWidth ? Math.max(0.001, item.leftSideWidth / 1000) : undefined,
-    leftSideHeightM: item.leftSideHeight ? Math.max(0.001, item.leftSideHeight / 1000) : undefined,
-    leftSideDepthM: item.leftSideDepth ? Math.max(0.001, item.leftSideDepth / 1000) : undefined,
-    rightSideWidthM: item.rightSideWidth ? Math.max(0.001, item.rightSideWidth / 1000) : undefined,
-    rightSideHeightM: item.rightSideHeight ? Math.max(0.001, item.rightSideHeight / 1000) : undefined,
-    rightSideDepthM: item.rightSideDepth ? Math.max(0.001, item.rightSideDepth / 1000) : undefined,
-    backWidthM: item.backWidth ? Math.max(0.001, item.backWidth / 1000) : undefined,
-    backHeightM: item.backHeight ? Math.max(0.001, item.backHeight / 1000) : undefined,
-    backThicknessM: item.backThickness ? Math.max(0.001, item.backThickness / 1000) : undefined,
-    bottomWidthM: item.bottomWidth ? Math.max(0.001, item.bottomWidth / 1000) : undefined,
-    bottomDepthM: item.bottomDepth ? Math.max(0.001, item.bottomDepth / 1000) : undefined,
-    bottomThicknessM: item.bottomThickness ? Math.max(0.001, item.bottomThickness / 1000) : undefined,
-    frontPosX: Number.isFinite(item.frontPosX) ? (item.frontPosX as number) / 1000 : undefined,
-    frontPosY: Number.isFinite(item.frontPosY) ? (item.frontPosY as number) / 1000 : undefined,
-    frontPosZ: Number.isFinite(item.frontPosZ) ? (item.frontPosZ as number) / 1000 : undefined,
-    leftSidePosX: Number.isFinite(item.leftSidePosX) ? (item.leftSidePosX as number) / 1000 : undefined,
-    leftSidePosY: Number.isFinite(item.leftSidePosY) ? (item.leftSidePosY as number) / 1000 : undefined,
-    leftSidePosZ: Number.isFinite(item.leftSidePosZ) ? (item.leftSidePosZ as number) / 1000 : undefined,
-    rightSidePosX: Number.isFinite(item.rightSidePosX) ? (item.rightSidePosX as number) / 1000 : undefined,
-    rightSidePosY: Number.isFinite(item.rightSidePosY) ? (item.rightSidePosY as number) / 1000 : undefined,
-    rightSidePosZ: Number.isFinite(item.rightSidePosZ) ? (item.rightSidePosZ as number) / 1000 : undefined,
-    bottomPosX: Number.isFinite(item.bottomPosX) ? (item.bottomPosX as number) / 1000 : undefined,
-    bottomPosY: Number.isFinite(item.bottomPosY) ? (item.bottomPosY as number) / 1000 : undefined,
-    bottomPosZ: Number.isFinite(item.bottomPosZ) ? (item.bottomPosZ as number) / 1000 : undefined,
-    backPosX: Number.isFinite(item.backPosX) ? (item.backPosX as number) / 1000 : undefined,
-    backPosY: Number.isFinite(item.backPosY) ? (item.backPosY as number) / 1000 : undefined,
-    backPosZ: Number.isFinite(item.backPosZ) ? (item.backPosZ as number) / 1000 : undefined,
-    woodBodyHeightM: item.backHeight
-      ? Math.max(0.001, item.backHeight / 1000)
-      : item.leftSideHeight
-        ? Math.max(0.001, item.leftSideHeight / 1000)
-        : undefined,
-    bodyCenterOffsetYM: Number.isFinite(item.bodyCenterOffsetY)
-      ? (item.bodyCenterOffsetY as number) / 1000
-      : resolveDrawerBodyCenterOffsetYMm(resolveDrawerExternalFrontHeightMm(item)) / 1000,
-    frontIntPosZ: undefined,
-    sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
-    x: (item.posX ?? 0) / 1000,
-    y: (item.posY ?? 0) / 1000,
-    z: (item.posZ ?? 0) / 1000,
-    rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
-    isOpen: Boolean(item.isOpen),
-    pullDistanceM: Math.max(0, (item.pullDistanceMm ?? 0) / 1000),
-    handleType: item.handleType ?? "Nenhum",
-    handlePosition: item.handlePosition ?? "Centro",
-    handleOffsetM: (item.handleOffsetMm ?? 0) / 1000,
-    handleProfileId: item.metadata?.handleProfileId,
-    handleCenterDistanceMm: item.metadata?.handleCenterDistanceMm,
-    handleOffsetXMm: item.metadata?.handleOffsetXMm,
-    handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
-    handlePositionPercent: item.metadata?.handlePositionPercent,
-    slideType: item.slideType ?? "Genérica",
-    metalBoxType: item.metalBoxType ?? "Nenhuma",
-    metalBoxProfileId: item.metadata?.metalBoxProfileId,
-    metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
-    softClose: Boolean(item.softClose),
-    showDrillingMarkers: options.showDrillingMarkers === true,
-    modeloB: item.metadata?.modeloB === true,
-    drawerDisplayName: resolveDrawerDisplayName(item, index),
-    frontDisplayName: item.metadata?.frontPieceName?.trim() || undefined,
-    profundidadeUtilM:
-      options.profundidadeUtilM != null && Number.isFinite(options.profundidadeUtilM) && options.profundidadeUtilM > 0
-        ? options.profundidadeUtilM
-        : undefined,
-  }));
+  return items.map((item, index) => {
+    const modeloB = item.metadata?.modeloB === true;
+    // Modelo B: layer guarda origens absolutas (centro do módulo) — converter para
+    // locais relativas ao centro da frente, como o Modelo A espera no DrawerFactory.
+    const euPose = modeloB ? resolveDrawerGroup3DPose(item) : null;
+
+    return {
+      id: item.id,
+      type: "drawer" as const,
+      widthM: Math.max(0.001, item.width / 1000),
+      heightM: Math.max(0.001, resolveDrawerExternalFrontHeightMm(item) / 1000),
+      depthM: Math.max(0.001, item.depth / 1000),
+      frontThicknessM: Math.max(0.001, item.frontThickness / 1000),
+      frontIntWidthM: Math.max(0.001, (item.frontIntWidth ?? item.bodyWidth ?? item.width) / 1000),
+      frontIntHeightM: Math.max(0.001, resolveDrawerInternalFrontHeightMm(item) / 1000),
+      frontIntThicknessM: Math.max(
+        0.001,
+        (item.frontIntThickness ?? item.sideThickness ?? 16) / 1000
+      ),
+      bodyWidthM: item.bodyWidth ? Math.max(0.001, item.bodyWidth / 1000) : undefined,
+      bodyHeightM: item.bodyHeight ? Math.max(0.001, item.bodyHeight / 1000) : undefined,
+      bodyDepthM: item.bodyDepth ? Math.max(0.001, item.bodyDepth / 1000) : undefined,
+      leftSideWidthM: item.leftSideWidth ? Math.max(0.001, item.leftSideWidth / 1000) : undefined,
+      leftSideHeightM: item.leftSideHeight ? Math.max(0.001, item.leftSideHeight / 1000) : undefined,
+      leftSideDepthM: item.leftSideDepth ? Math.max(0.001, item.leftSideDepth / 1000) : undefined,
+      rightSideWidthM: item.rightSideWidth ? Math.max(0.001, item.rightSideWidth / 1000) : undefined,
+      rightSideHeightM: item.rightSideHeight ? Math.max(0.001, item.rightSideHeight / 1000) : undefined,
+      rightSideDepthM: item.rightSideDepth ? Math.max(0.001, item.rightSideDepth / 1000) : undefined,
+      backWidthM: item.backWidth ? Math.max(0.001, item.backWidth / 1000) : undefined,
+      backHeightM: item.backHeight ? Math.max(0.001, item.backHeight / 1000) : undefined,
+      backThicknessM: item.backThickness ? Math.max(0.001, item.backThickness / 1000) : undefined,
+      bottomWidthM: item.bottomWidth ? Math.max(0.001, item.bottomWidth / 1000) : undefined,
+      bottomDepthM: item.bottomDepth ? Math.max(0.001, item.bottomDepth / 1000) : undefined,
+      bottomThicknessM: item.bottomThickness ? Math.max(0.001, item.bottomThickness / 1000) : undefined,
+      frontPosX: euPose
+        ? euPose.frontLocal.x
+        : Number.isFinite(item.frontPosX)
+          ? (item.frontPosX as number) / 1000
+          : undefined,
+      frontPosY: euPose
+        ? euPose.frontLocal.y
+        : Number.isFinite(item.frontPosY)
+          ? (item.frontPosY as number) / 1000
+          : undefined,
+      frontPosZ: euPose
+        ? euPose.frontLocal.z
+        : Number.isFinite(item.frontPosZ)
+          ? (item.frontPosZ as number) / 1000
+          : undefined,
+      leftSidePosX: euPose
+        ? euPose.leftSideLocal.x
+        : Number.isFinite(item.leftSidePosX)
+          ? (item.leftSidePosX as number) / 1000
+          : undefined,
+      leftSidePosY: euPose
+        ? euPose.leftSideLocal.y
+        : Number.isFinite(item.leftSidePosY)
+          ? (item.leftSidePosY as number) / 1000
+          : undefined,
+      leftSidePosZ: euPose
+        ? euPose.leftSideLocal.z
+        : Number.isFinite(item.leftSidePosZ)
+          ? (item.leftSidePosZ as number) / 1000
+          : undefined,
+      rightSidePosX: euPose
+        ? euPose.rightSideLocal.x
+        : Number.isFinite(item.rightSidePosX)
+          ? (item.rightSidePosX as number) / 1000
+          : undefined,
+      rightSidePosY: euPose
+        ? euPose.rightSideLocal.y
+        : Number.isFinite(item.rightSidePosY)
+          ? (item.rightSidePosY as number) / 1000
+          : undefined,
+      rightSidePosZ: euPose
+        ? euPose.rightSideLocal.z
+        : Number.isFinite(item.rightSidePosZ)
+          ? (item.rightSidePosZ as number) / 1000
+          : undefined,
+      bottomPosX: euPose
+        ? euPose.bottomLocal.x
+        : Number.isFinite(item.bottomPosX)
+          ? (item.bottomPosX as number) / 1000
+          : undefined,
+      bottomPosY: euPose
+        ? euPose.bottomLocal.y
+        : Number.isFinite(item.bottomPosY)
+          ? (item.bottomPosY as number) / 1000
+          : undefined,
+      bottomPosZ: euPose
+        ? euPose.bottomLocal.z
+        : Number.isFinite(item.bottomPosZ)
+          ? (item.bottomPosZ as number) / 1000
+          : undefined,
+      backPosX: euPose
+        ? euPose.backLocal.x
+        : Number.isFinite(item.backPosX)
+          ? (item.backPosX as number) / 1000
+          : undefined,
+      backPosY: euPose
+        ? euPose.backLocal.y
+        : Number.isFinite(item.backPosY)
+          ? (item.backPosY as number) / 1000
+          : undefined,
+      backPosZ: euPose
+        ? euPose.backLocal.z
+        : Number.isFinite(item.backPosZ)
+          ? (item.backPosZ as number) / 1000
+          : undefined,
+      woodBodyHeightM: item.backHeight
+        ? Math.max(0.001, item.backHeight / 1000)
+        : item.leftSideHeight
+          ? Math.max(0.001, item.leftSideHeight / 1000)
+          : undefined,
+      bodyCenterOffsetYM: Number.isFinite(item.bodyCenterOffsetY)
+        ? (item.bodyCenterOffsetY as number) / 1000
+        : modeloB
+          ? 0
+          : resolveDrawerBodyCenterOffsetYMm(resolveDrawerExternalFrontHeightMm(item)) / 1000,
+      frontIntPosZ: undefined,
+      sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
+      x: euPose ? euPose.x : (item.posX ?? 0) / 1000,
+      y: euPose ? euPose.y : (item.posY ?? 0) / 1000,
+      z: euPose ? euPose.z : (item.posZ ?? 0) / 1000,
+      rotY: Number.isFinite(item.rotY) ? item.rotY : 0,
+      isOpen: Boolean(item.isOpen),
+      pullDistanceM: Math.max(0, (item.pullDistanceMm ?? 0) / 1000),
+      handleType: item.handleType ?? "Nenhum",
+      handlePosition: item.handlePosition ?? "Centro",
+      handleOffsetM: (item.handleOffsetMm ?? 0) / 1000,
+      handleProfileId: item.metadata?.handleProfileId,
+      handleCenterDistanceMm: item.metadata?.handleCenterDistanceMm,
+      handleOffsetXMm: item.metadata?.handleOffsetXMm,
+      handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
+      handlePositionPercent: item.metadata?.handlePositionPercent,
+      slideType: item.slideType ?? "Genérica",
+      // Modelo B: corpo madeira europeu — não forçar laterais metálicas do catálogo A
+      metalBoxType: modeloB ? "Nenhuma" : item.metalBoxType ?? "Nenhuma",
+      metalBoxProfileId: modeloB ? undefined : item.metadata?.metalBoxProfileId,
+      metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
+      softClose: Boolean(item.softClose),
+      showDrillingMarkers: options.showDrillingMarkers === true,
+      modeloB,
+      drawerDisplayName: resolveDrawerDisplayName(item, index),
+      frontDisplayName: item.metadata?.frontPieceName?.trim() || undefined,
+      profundidadeUtilM:
+        options.profundidadeUtilM != null &&
+        Number.isFinite(options.profundidadeUtilM) &&
+        options.profundidadeUtilM > 0
+          ? options.profundidadeUtilM
+          : undefined,
+    };
+  });
 }
 
 export type DrawerObjectMaterials = {
@@ -516,6 +589,7 @@ export function getDrawerStructureFingerprint(
     metalBoxType: spec.metalBoxType,
     softClose: spec.softClose,
     showDrillingMarkers: spec.showDrillingMarkers,
+    modeloB: spec.modeloB === true,
     frontMaterial,
     bodyMaterial,
     profundidadeUtilM: spec.profundidadeUtilM,
@@ -593,13 +667,14 @@ export function createDrawerObject(
   const frontIntMaterial = bodyMaterial.clone();
   frontIntMaterial.needsUpdate = true;
 
-  const flushLayout = resolveDrawerFlushLayoutM(spec);
+  const flushLayout = spec.modeloB ? null : resolveDrawerFlushLayoutM(spec);
   const groupPosZ = flushLayout ? flushLayout.frontPosZ / 1000 : spec.z;
 
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
   group.userData.drawerDisplayName = spec.drawerDisplayName;
   group.userData.pieceDisplayName = spec.frontDisplayName ?? spec.drawerDisplayName;
+  group.userData.modeloB = spec.modeloB === true;
   group.position.set(spec.x, spec.y, groupPosZ);
   if (spec.rotY !== 0) group.rotation.y = spec.rotY;
 
@@ -612,11 +687,15 @@ export function createDrawerObject(
   animateDrawerBodyZ(spec.id, drawerGroup, targetPullOffset);
 
   const frontLocalX = Number.isFinite(spec.frontPosX) ? (spec.frontPosX as number) : 0;
-  const frontLocalZ = 0;
+  // Modelo B: frente no centro local do grupo (offsets europeus já convertidos).
+  // Modelo A: Z local da frente = 0; Y pode vir do layer.
+  const frontLocalZ =
+    Number.isFinite(spec.frontPosZ) && spec.modeloB ? (spec.frontPosZ as number) : 0;
   let woodSideLayout: DrawerViewerWoodSideLayoutMm | null = null;
   let frontLocalY = Number.isFinite(spec.frontPosY) ? (spec.frontPosY as number) : 0;
 
   if (
+    !spec.modeloB &&
     resolveDrawerSideRenderMode(spec) === "wood" &&
     spec.bodyWidthM &&
     spec.bodyHeightM &&
@@ -762,6 +841,77 @@ export function createDrawerObject(
   }
 
   if (spec.bodyWidthM && spec.bodyHeightM && spec.bodyDepthM) {
+    // Modelo B: peças madeira nas coordenadas locais europeias (sem layout A / metal).
+    if (spec.modeloB) {
+      if (spec.leftSideWidthM && spec.leftSideHeightM && spec.leftSideDepthM) {
+        const leftSide = panelFactory.createPanel(
+          spec.leftSideWidthM,
+          spec.leftSideHeightM,
+          spec.leftSideDepthM,
+          `drawer-left-${spec.id}`,
+          "left",
+          { singleMaterial: bodyPanelMaterial }
+        );
+        leftSide.position.set(
+          Number.isFinite(spec.leftSidePosX) ? (spec.leftSidePosX as number) : 0,
+          Number.isFinite(spec.leftSidePosY) ? (spec.leftSidePosY as number) : 0,
+          Number.isFinite(spec.leftSidePosZ) ? (spec.leftSidePosZ as number) : 0
+        );
+        applyDrawerBodyPartIdentity(leftSide, "left-side");
+        drawerGroup.add(leftSide);
+      }
+      if (spec.rightSideWidthM && spec.rightSideHeightM && spec.rightSideDepthM) {
+        const rightSide = panelFactory.createPanel(
+          spec.rightSideWidthM,
+          spec.rightSideHeightM,
+          spec.rightSideDepthM,
+          `drawer-right-${spec.id}`,
+          "right",
+          { singleMaterial: bodyPanelMaterial }
+        );
+        rightSide.position.set(
+          Number.isFinite(spec.rightSidePosX) ? (spec.rightSidePosX as number) : 0,
+          Number.isFinite(spec.rightSidePosY) ? (spec.rightSidePosY as number) : 0,
+          Number.isFinite(spec.rightSidePosZ) ? (spec.rightSidePosZ as number) : 0
+        );
+        applyDrawerBodyPartIdentity(rightSide, "right-side");
+        drawerGroup.add(rightSide);
+      }
+      if (spec.bottomWidthM && spec.bottomDepthM && spec.bottomThicknessM) {
+        const bottom = panelFactory.createPanel(
+          spec.bottomWidthM,
+          spec.bottomThicknessM,
+          spec.bottomDepthM,
+          `drawer-bottom-${spec.id}`,
+          "bottom",
+          { singleMaterial: bodyPanelMaterial }
+        );
+        bottom.position.set(
+          Number.isFinite(spec.bottomPosX) ? (spec.bottomPosX as number) : 0,
+          Number.isFinite(spec.bottomPosY) ? (spec.bottomPosY as number) : 0,
+          Number.isFinite(spec.bottomPosZ) ? (spec.bottomPosZ as number) : 0
+        );
+        applyDrawerBodyPartIdentity(bottom, "bottom");
+        drawerGroup.add(bottom);
+      }
+      if (spec.backWidthM && spec.backHeightM && spec.backThicknessM) {
+        const back = panelFactory.createPanel(
+          spec.backWidthM,
+          spec.backHeightM,
+          spec.backThicknessM,
+          `drawer-back-${spec.id}`,
+          "back",
+          { singleMaterial: bodyPanelMaterial }
+        );
+        back.position.set(
+          Number.isFinite(spec.backPosX) ? (spec.backPosX as number) : 0,
+          Number.isFinite(spec.backPosY) ? (spec.backPosY as number) : 0,
+          Number.isFinite(spec.backPosZ) ? (spec.backPosZ as number) : 0
+        );
+        applyDrawerBodyPartIdentity(back, "back");
+        drawerGroup.add(back);
+      }
+    } else {
     const viewerBodyDepthM = resolveViewerBodyDepthM(spec) ?? spec.bodyDepthM;
     const bodyCenterZm = resolveSpecBodyCenterZM(spec);
     const sideCenterZm = resolveSpecSideCenterZM(spec);
@@ -962,6 +1112,7 @@ export function createDrawerObject(
       rightRail.userData.drawerPart = "slide-rail";
       drawerGroup.add(rightRail);
     }
+    } // end !modeloB
   }
 
   if (spec.showDrillingMarkers && spec.bodyDepthM && spec.bodyHeightM && !spec.modeloB) {
