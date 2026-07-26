@@ -310,6 +310,23 @@ async function main() {
     process.exit(1);
   }
 
+  // Preservar título/descrição já preparados no repo (ex.: release notes manuais).
+  const preset = local.news.find((n) => n.version === entry.version);
+  if (
+    preset &&
+    preset.title &&
+    !isIgnoredCommitMessage(preset.title) &&
+    preset.description &&
+    !isIgnoredCommitMessage(preset.description) &&
+    (preset.title !== entry.title || preset.description !== entry.description)
+  ) {
+    entry.title = preset.title;
+    entry.description = preset.description;
+    if (preset.type) entry.type = preset.type;
+    if (preset.icon) entry.icon = preset.icon;
+    if (preset.commit) entry.commit = preset.commit;
+  }
+
   news = news.filter((n) => n.version !== entry.version);
   news.push(entry);
   news = sortByPublishedAtDesc(news).map((n) => {
