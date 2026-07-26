@@ -1,15 +1,25 @@
 {
-  "updatedAt": "2026-07-26T18:51:27.431Z",
+  "updatedAt": "2026-07-26T19:38:11.814Z",
   "news": [
+    {
+      "version": "v6.0726.2038",
+      "title": "fix: activar Modelo B como default + binding completo na UI/Admin/layers",
+      "description": "fix: activar Modelo B como default + binding completo na UI/Admin/layers",
+      "publishedAt": "2026-07-26T19:38:11.719Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "e314da5"
+    },
     {
       "version": "v6.0726.1951",
       "title": "fix: correções mínimas TypeScript para build PIMO.PRO-V5.0",
       "description": "fix: correções mínimas TypeScript para build PIMO.PRO-V5.0",
-      "publishedAt": "2026-07-26T18:51:27.357Z",
-      "type": "fix",
+      "publishedAt": "2026-07-26T19:53:00+01:00",
+      "type": "update",
       "author": "pimo-pro",
-      "icon": "fix",
-      "commit": "9784e68"
+      "icon": "update",
+      "commit": "d335eb5"
     },
     {
       "version": "v6.0726.0136",
