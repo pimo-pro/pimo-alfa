@@ -2,7 +2,7 @@
  * DrawersAdminHubPage
  *
  * Admin ? Produtos ? Gavetas
- * Hub unificado: toggle Modelo A, inventario, regras, mapa e catalogo Modelo B.
+ * Hub unificado: toggle Modelo A, inventario, regras, mapa, catalogo Modelo B e Auto QA.
  */
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -20,7 +20,15 @@ import {
   DRAWER_OFFICIAL_PIPELINE,
   countDrawerReferenceStats,
 } from "../../core/drawers/DrawerSystemReference";
-import { listEuropeanDrawerModels } from "../../core/drawers/european";
+import {
+  ALL_SCENARIOS,
+  buildQaSummary,
+  downloadQaResultsJson,
+  listEuropeanDrawerModels,
+  runStressTests,
+  type EuropeanQaScenarioResult,
+  type EuropeanQaSummary,
+} from "../../core/drawers/european";
 
 type HubSection = "visao" | "regras" | "mapa" | "modelo-b";
 
@@ -51,9 +59,40 @@ export default function DrawersAdminHubPage() {
   const stats = useMemo(() => countDrawerReferenceStats(), []);
   const europeanModels = useMemo(() => listEuropeanDrawerModels(), []);
 
+  const [qaRunning, setQaRunning] = useState(false);
+  const [qaProgress, setQaProgress] = useState<{ index: number; total: number } | null>(null);
+  const [qaResults, setQaResults] = useState<EuropeanQaScenarioResult[] | null>(null);
+  const [qaSummary, setQaSummary] = useState<EuropeanQaSummary | null>(null);
+  const [qaError, setQaError] = useState<string | null>(null);
+
   useEffect(() => subscribeDrawerModeloAFlags(setModeloAActive), []);
 
   const deactivated = !modeloAActive;
+
+  const runAutoQa = async () => {
+    if (modeloAActive) {
+      setQaError("Desactive o Modelo A para executar o Auto QA do Modelo B.");
+      return;
+    }
+    setQaError(null);
+    setQaRunning(true);
+    setQaProgress({ index: 0, total: ALL_SCENARIOS.length });
+    setQaResults(null);
+    setQaSummary(null);
+    try {
+      const results = await runStressTests({
+        onProgress: (p) => setQaProgress({ index: p.index, total: p.total }),
+        yieldEvery: 4,
+      });
+      const summary = buildQaSummary(results);
+      setQaResults(results);
+      setQaSummary(summary);
+    } catch (err) {
+      setQaError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setQaRunning(false);
+    }
+  };
 
   return (
     <div style={{ ...adminPageShellStyle, maxWidth: 1200 }}>
@@ -190,44 +229,172 @@ export default function DrawersAdminHubPage() {
       {section === "mapa" ? <DrawerSystemUnifiedAdminPage /> : null}
 
       {section === "modelo-b" ? (
-        <Panel
-          title="Sistema Europeu de Gavetas — Modelo B"
-          description="Catalogo oficial implementado. Activo no projeto quando o Modelo A esta desactivado."
-        >
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0, lineHeight: 1.5 }}>
-            API: <code>generateEuropeanDrawer(systemId, box)</code> — measures, geometry, drilling, cutlist, PDF e viewer.
-          </p>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Sistema</th>
-                  <th style={thStyle}>Alturas</th>
-                  <th style={thStyle}>Profundidades</th>
-                  <th style={thStyle}>Folga</th>
-                  <th style={thStyle}>Furos</th>
-                </tr>
-              </thead>
-              <tbody>
-                {europeanModels.map((m) => (
-                  <tr key={m.id}>
-                    <td style={tdStyle}>
-                      <strong>{m.displayName}</strong>
-                    </td>
-                    <td style={tdStyle}>{m.heights.map((h) => h.label).join(", ")}</td>
-                    <td style={tdStyle}>
-                      {m.depthProfile.minMm}–{m.depthProfile.maxMm} mm
-                    </td>
-                    <td style={tdStyle}>2×{m.side.clearanceMm} mm</td>
-                    <td style={tdStyle}>
-                      {m.holePattern.setbackFrontMm} / {m.holePattern.bottomGapMm} / {m.holePattern.systemPitchMm}
-                    </td>
+        <>
+          <Panel
+            title="Sistema Europeu de Gavetas — Modelo B"
+            description="Catalogo oficial implementado. Activo no projeto quando o Modelo A esta desactivado."
+          >
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0, lineHeight: 1.5 }}>
+              API: <code>generateEuropeanDrawer(systemId, box)</code> — measures, geometry, drilling, cutlist, PDF e
+              viewer.
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Sistema</th>
+                    <th style={thStyle}>Alturas</th>
+                    <th style={thStyle}>Profundidades</th>
+                    <th style={thStyle}>Folga</th>
+                    <th style={thStyle}>Furos</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
+                </thead>
+                <tbody>
+                  {europeanModels.map((m) => (
+                    <tr key={m.id}>
+                      <td style={tdStyle}>
+                        <strong>{m.displayName}</strong>
+                      </td>
+                      <td style={tdStyle}>{m.heights.map((h) => h.label).join(", ")}</td>
+                      <td style={tdStyle}>
+                        {m.depthProfile.minMm}–{m.depthProfile.maxMm} mm
+                      </td>
+                      <td style={tdStyle}>2×{m.side.clearanceMm} mm</td>
+                      <td style={tdStyle}>
+                        {m.holePattern.setbackFrontMm} / {m.holePattern.bottomGapMm} / {m.holePattern.systemPitchMm}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+
+          <Panel
+            title="Auto QA — Stress Testing (Modelo B)"
+            description={`${ALL_SCENARIOS.length} cenários industriais. Simulação pura: sem CNC, sem industrial/**, sem alterar o projeto.`}
+          >
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <button
+                type="button"
+                className="button"
+                disabled={qaRunning || modeloAActive}
+                onClick={() => void runAutoQa()}
+              >
+                {qaRunning ? "A executar…" : "Executar testes automáticos"}
+              </button>
+              {qaResults && qaSummary ? (
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => downloadQaResultsJson(qaResults, qaSummary)}
+                >
+                  Descarregar qa-results.json
+                </button>
+              ) : null}
+              {modeloAActive ? (
+                <span style={{ fontSize: 11, color: "#f87171" }}>
+                  Requisito: desactivar Modelo A para correr o QA.
+                </span>
+              ) : null}
+            </div>
+
+            {qaProgress ? (
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-muted)" }}>
+                Progresso: {qaProgress.index}/{qaProgress.total}
+                {qaRunning ? "…" : " (concluído)"}
+              </div>
+            ) : null}
+
+            {qaError ? (
+              <div style={{ marginTop: 10, fontSize: 12, color: "#fca5a5" }}>{qaError}</div>
+            ) : null}
+
+            {qaSummary ? (
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {[
+                    { label: "Válidos", value: `${qaSummary.pctValid}%`, color: "#34d399" },
+                    { label: "Inválidos", value: `${qaSummary.pctInvalid}%`, color: "#f87171" },
+                    { label: "AutoFix", value: `${qaSummary.pctAutoFixed}%`, color: "#93c5fd" },
+                    { label: "Ran / Skip", value: `${qaSummary.ran}/${qaSummary.skipped}`, color: "var(--text)" },
+                  ].map((card) => (
+                    <div
+                      key={card.label}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        minWidth: 110,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{card.label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: card.color }}>{card.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <strong style={{ fontSize: 12 }}>Top 10 erros</strong>
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
+                      {qaSummary.topErrors.length === 0 ? <li>Nenhum</li> : null}
+                      {qaSummary.topErrors.map((e) => (
+                        <li key={e.message}>
+                          [{e.count}] {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: 12 }}>Top 10 avisos</strong>
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
+                      {qaSummary.topWarnings.length === 0 ? <li>Nenhum</li> : null}
+                      {qaSummary.topWarnings.map((w) => (
+                        <li key={w.message}>
+                          [{w.count}] {w.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, fontSize: 11 }}>
+                  <div>
+                    <strong>Modelos c/ falhas</strong>
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: "var(--text-muted)" }}>
+                      {qaSummary.failuresByModel.slice(0, 6).map((m) => (
+                        <li key={m.modelId}>
+                          {m.modelId}: {m.failures}/{m.total}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <strong>Profundidades c/ falhas</strong>
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: "var(--text-muted)" }}>
+                      {qaSummary.failuresByDepth.slice(0, 6).map((d) => (
+                        <li key={d.profundidadeInternaMm}>
+                          {d.profundidadeInternaMm} mm: {d.failures}/{d.total}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <strong>Larguras c/ falhas</strong>
+                    <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: "var(--text-muted)" }}>
+                      {qaSummary.failuresByWidth.slice(0, 6).map((w) => (
+                        <li key={w.larguraInternaMm}>
+                          {w.larguraInternaMm} mm: {w.failures}/{w.total}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </Panel>
+        </>
       ) : null}
     </div>
   );
