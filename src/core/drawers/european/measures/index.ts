@@ -4,7 +4,7 @@
  */
 
 import type { DrawerEuropeanModel, EuropeanDrawerBoxInput } from "../types";
-import { selectHettichRunnerDepth, HETTICH_RUNNER_LENGTHS_MM } from "./hettichRunners";
+import { selectHettichRunnerDepth } from "./hettichRunners";
 import { ensureNonNegative } from "../robustness/safeNumbers";
 
 export {

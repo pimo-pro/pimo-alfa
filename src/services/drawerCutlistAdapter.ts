@@ -18,6 +18,7 @@ import {
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import { buildCutlistRotationMetadata } from "../core/manufacturing/cutlistRotationMetadata";
 import type { DrawerLayerItem } from "../models/BoxLayers";
+import { resolveActiveDrawersLayer } from "../core/drawers/drawerModeloAGate";
 import {
   resolveIndustrialBoxId,
   assertIndustrialMaterial,

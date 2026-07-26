@@ -502,6 +502,8 @@ export function createManualDrawer(box: WorkspaceBox): DrawerLayerItem {
       posZ: 0,
       rotY: 0,
       isOpen: false,
+      openDirection: "pull",
+      pullDistanceMm: 0,
       material: defaultDrawerMaterial,
       materialId: defaultDrawerMaterial,
     };

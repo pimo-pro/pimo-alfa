@@ -1,7 +1,7 @@
 /**
- * drilling/ ù Geradores de furos do Sistema Europeu (Modelo B).
+ * drilling/ ? Geradores de furos do Sistema Europeu (Modelo B).
  * Laterais + costa: reutiliza pipeline do Modelo A (DrawerDrillingRules).
- * Nùo toca em industrial/**.
+ * N?o toca em industrial/**.
  */
 
 import type { PieceType } from "../../../drilling/drillingService";
@@ -51,13 +51,13 @@ function toEuropeanHole(
 
 /**
  * Furos nas laterais da gaveta (gav_lat_esq / gav_lat_dir) via Modelo A.
- * Inclui corrediùa + estrutural (cavilha / costa / rasgo fundo).
+ * Inclui corredi?a + estrutural (cavilha / costa / rasgo fundo).
  */
 export function generateDrawerSideHolesFromModeloA(
   geometry: DrawerGeometry,
   softClose: boolean
 ): EuropeanDrawerHole[] {
-  const rules = getDrawerSlideDrillingRules("Genùrica", "Nenhuma", {
+  const rules = getDrawerSlideDrillingRules("Gen?rica", "Nenhuma", {
     softClose,
     mode: "drawer_piece",
   });
@@ -110,7 +110,7 @@ export function generateDrawerBackHolesFromModeloA(geometry: DrawerGeometry): Eu
 }
 
 /**
- * Furos nas laterais do modulo (sistema 32 mm) ù referùncia de montagem.
+ * Furos nas laterais do modulo (sistema 32 mm) ? refer?ncia de montagem.
  */
 export function generateModuleLateralHoles(input: EuropeanDrillingInput): EuropeanDrawerHole[] {
   const { model, box, config, stackIndex, stackCount } = input;
@@ -151,7 +151,7 @@ export function generateModuleLateralHoles(input: EuropeanDrillingInput): Europe
   return holes;
 }
 
-/** Furos de fixaùùo da frente. */
+/** Furos de fixa??o da frente. */
 export function generateFrontFixationHoles(input: EuropeanDrillingInput): EuropeanDrawerHole[] {
   const { model, box, config, stackIndex, stackCount } = input;
   const geo = buildEuropeanDrawerGeometry(box, model, config, stackIndex, stackCount);
@@ -229,7 +229,7 @@ function generateEuropeanDrawerHolesCore(input: EuropeanDrillingInput): European
   ]);
 }
 
-/** Furos memoizados (cùlculos puros ù sem ficheiros industriais). */
+/** Furos memoizados (c?lculos puros ? sem ficheiros industriais). */
 export const generateEuropeanDrawerHoles = memo(generateEuropeanDrawerHolesCore, {
   namespace: "eu.drilling",
   maxSize: 256,
@@ -253,7 +253,7 @@ export function europeanHolesToPanelDrillHoles(
 }
 
 /** Export helper: furos estruturais Modelo A para consumo externo. */
-export function europeanDrawerWoodPieceDrillHoles(geometry: DrawerGeometry, softClose: boolean): {
+export function europeanDrawerWoodPieceDrillHoles(geometry: DrawerGeometry, _softClose: boolean): {
   latEsq: TechnicalDrillHole[];
   latDir: TechnicalDrillHole[];
   costa: TechnicalDrillHole[];

@@ -1,6 +1,6 @@
 /**
- * adapter/  Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
- * Permite reutilizar viewer/cutlist sem alterar o ncleo do Modelo A.
+ * adapter/ ï¿½ Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
+ * Permite reutilizar viewer/cutlist sem alterar o nï¿½cleo do Modelo A.
  */
 
 import type { DrawerLayerItem } from "../../../../models/BoxLayers";
@@ -54,7 +54,7 @@ function europeanGeometryToLayerItemCore(params: {
     type: "pro",
     drawerType: "pro",
     sideMaterial: "wood",
-    slideType: "Genrica",
+    slideType: "Gen\u00e9rica",
     metalBoxType: SYSTEM_TO_METAL_LABEL[systemId] as DrawerLayerItem["metalBoxType"],
     softClose,
     width: g.front.widthMm,
@@ -119,8 +119,8 @@ function europeanGeometryToLayerItemCore(params: {
 }
 
 /**
- * Layer memoizado. Material da frente faz parte da chave —
- * mudança só de material reutiliza hit se args iguais; dims iguais + mat diferente = só overlay leve via cache miss mínimo.
+ * Layer memoizado. Material da frente faz parte da chave ï¿½
+ * mudanï¿½a sï¿½ de material reutiliza hit se args iguais; dims iguais + mat diferente = sï¿½ overlay leve via cache miss mï¿½nimo.
  */
 export const europeanGeometryToLayerItem = memo(europeanGeometryToLayerItemCore, {
   namespace: "eu.adapter.layer",
