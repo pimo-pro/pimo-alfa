@@ -1,10 +1,10 @@
-/**
- * Sistema Europeu de Gavetas � Modelo B
+﻿/**
+ * Sistema Europeu de Gavetas  Modelo B
  *
  * API principal: generateEuropeanDrawer(model|systemId, box)
  *
  * Activo apenas quando o Modelo A estiver desactivado.
- * N�o altera o n�cleo do Modelo A nem src/industrial/**.
+ * No altera o ncleo do Modelo A nem src/industrial/**.
  */
 
 export type {
@@ -98,12 +98,22 @@ export {
 
 export {
   runEuropeanDrawerValidation,
+  validateAll,
   applyEuropeanAutoFixes,
   buildEuropeanAutoFixes,
   validationMessages,
   type EuropeanDrawerValidationResult,
   type EuropeanDrawerAutoFixAction,
 } from "./validation";
+
+export {
+  memo,
+  bumpEuropeanPerfConfigEpoch,
+  clearAllEuropeanMemos,
+  getEuropeanPerfConfigEpoch,
+} from "./perf/memo";
+
+export { getCachedEuropeanViewerData, buildViewerDimKey } from "./viewer/perf";
 
 export {
   ALL_SCENARIOS,
@@ -141,8 +151,11 @@ import { buildEuropeanViewerData } from "./viewer";
 import { isDrawerModeloAActive } from "../drawerSystemFlags";
 import {
   applyEuropeanAutoFixes,
-  runEuropeanDrawerValidation,
+  buildEuropeanAutoFixes,
+  validateAll,
+  validateBoxCompatibility,
 } from "./validation";
+import { bumpEuropeanPerfConfigEpoch } from "./perf/memo";
 import {
   HETTICH_RUNNER_LENGTHS_MM,
   isHettichRunnerLengthMm,
@@ -265,14 +278,15 @@ function buildPipeline(
 }
 
 export type GenerateEuropeanDrawerOptions = {
-  /** Aplicar auto-fixes seguros 1x e regenerar (default true). */
+  /** Aplicar auto-fixes seguros antes da geração (default true). */
   applyAutoFixes?: boolean;
 };
 
 /**
  * Gera gaveta(s) europeias completas para um modulo.
  *
- * Pipeline: geometria ? furos ? cutlist/PDF/viewer ? validacao industrial ? auto-fix ? gate saidas.
+ * Pipeline otimizado: autoFix (leve) ? 1× buildPipeline ? validateAll ? gate.
+ * Sem alteração de regras industriais — apenas menos passagens.
  */
 export function generateEuropeanDrawer(
   modelOrId: DrawerEuropeanModel | EuropeanDrawerSystemId,
@@ -310,7 +324,7 @@ export function generateEuropeanDrawer(
       config,
       valid: false,
       errors: [
-        "Modelo A ainda activo � desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
+        "Modelo A ainda activo — desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
       ],
       warnings: [],
       autoFixes: [],
@@ -323,8 +337,24 @@ export function generateEuropeanDrawer(
     };
   }
 
-  let built = buildPipeline(boxWithUseful, model, config);
-  let validation = runEuropeanDrawerValidation({
+  // AutoFix antes da geracao (mesmas regras; so se caixa incompativel)
+  if (applyFixes) {
+    const boxCheck = validateBoxCompatibility(boxWithUseful, model, config);
+    if (!boxCheck.valid) {
+      const preFixes = buildEuropeanAutoFixes(boxWithUseful, model, config, boxCheck.errors);
+      if (preFixes.length > 0) {
+        config = applyEuropeanAutoFixes(config, preFixes);
+        config.depthMm = snapHettichDepth(config.depthMm, useful);
+        const hp = findHeightProfile(model, config.heightMm);
+        config.heightMm = hp.heightMm;
+        config.heightCode = hp.code || config.heightCode;
+        bumpEuropeanPerfConfigEpoch();
+      }
+    }
+  }
+
+  const built = buildPipeline(boxWithUseful, model, config);
+  const validation = validateAll({
     box: boxWithUseful,
     model,
     config,
@@ -335,26 +365,6 @@ export function generateEuropeanDrawer(
     viewer: built.viewer,
     assembly: built.assembly,
   });
-
-  if (applyFixes && validation.errors.length > 0 && validation.autoFixes.length > 0) {
-    config = applyEuropeanAutoFixes(config, validation.autoFixes);
-    config.depthMm = snapHettichDepth(config.depthMm, useful);
-    const hp = findHeightProfile(model, config.heightMm);
-    config.heightMm = hp.heightMm;
-    config.heightCode = hp.code || config.heightCode;
-    built = buildPipeline(boxWithUseful, model, config);
-    validation = runEuropeanDrawerValidation({
-      box: boxWithUseful,
-      model,
-      config,
-      geometry: built.primaryGeometry,
-      holes: built.allHoles,
-      cutlist: built.allCutlist,
-      pdf: built.pdf,
-      viewer: built.viewer,
-      assembly: built.assembly,
-    });
-  }
 
   const autoFixMeta = validation.autoFixes.map((f) => ({
     code: f.code,
